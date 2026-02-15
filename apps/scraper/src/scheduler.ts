@@ -1,4 +1,6 @@
-import "dotenv/config";
+import { config } from "dotenv";
+import { resolve } from "path";
+config({ path: resolve(import.meta.dirname, "../../../.env") });
 import cron from "node-cron";
 import { createLogger } from "@shopify-tracking/shared";
 import { enqueueScraperJob, closeQueue } from "./queue.js";

@@ -1,4 +1,6 @@
-import "dotenv/config";
+import { config } from "dotenv";
+import { resolve } from "path";
+config({ path: resolve(import.meta.dirname, "../../../.env") });
 import { Worker, type Job } from "bullmq";
 import { createDb } from "@shopify-tracking/db";
 import { createLogger } from "@shopify-tracking/shared";

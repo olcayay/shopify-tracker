@@ -1,4 +1,6 @@
-import "dotenv/config";
+import { config } from "dotenv";
+import { resolve } from "path";
+config({ path: resolve(import.meta.dirname, "../../../.env") });
 import { createDb } from "@shopify-tracking/db";
 import { trackedKeywords, apps } from "@shopify-tracking/db";
 import { CategoryScraper } from "./scrapers/category-scraper.js";

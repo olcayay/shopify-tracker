@@ -1,4 +1,6 @@
-import "dotenv/config";
+import { config } from "dotenv";
+import { resolve } from "path";
+config({ path: resolve(import.meta.dirname, "../../../.env") });
 import Fastify from "fastify";
 import cors from "@fastify/cors";
 import { createDb } from "@shopify-tracking/db";
