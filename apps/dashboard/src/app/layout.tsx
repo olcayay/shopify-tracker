@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
-import { Sidebar } from "@/components/sidebar";
+import { AuthProvider } from "@/lib/auth-context";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -15,7 +15,8 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: "Shopify App Store Tracker",
-  description: "Track Shopify App Store categories, apps, keywords, and reviews",
+  description:
+    "Track Shopify App Store categories, apps, keywords, and reviews",
 };
 
 export default function RootLayout({
@@ -28,10 +29,7 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
-        <div className="flex min-h-screen">
-          <Sidebar />
-          <main className="flex-1 p-6 overflow-auto">{children}</main>
-        </div>
+        <AuthProvider>{children}</AuthProvider>
       </body>
     </html>
   );

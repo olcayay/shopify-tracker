@@ -74,7 +74,7 @@ export default async function AppsPage() {
                     colSpan={5}
                     className="text-center text-muted-foreground"
                   >
-                    No tracked apps. Add apps in the Admin panel.
+                    No tracked apps yet. Add apps in Settings.
                   </TableCell>
                 </TableRow>
               )}

@@ -6,6 +6,8 @@ import * as categoriesSchema from "./schema/categories.js";
 import * as appsSchema from "./schema/apps.js";
 import * as reviewsSchema from "./schema/reviews.js";
 import * as keywordsSchema from "./schema/keywords.js";
+import * as authSchema from "./schema/auth.js";
+import * as accountTrackingSchema from "./schema/account-tracking.js";
 
 export const schema = {
   ...scrapeRunsSchema,
@@ -13,6 +15,8 @@ export const schema = {
   ...appsSchema,
   ...reviewsSchema,
   ...keywordsSchema,
+  ...authSchema,
+  ...accountTrackingSchema,
 };
 
 export function createDb(databaseUrl: string) {
@@ -40,3 +44,15 @@ export {
   keywordSnapshots,
   appKeywordRankings,
 } from "./schema/keywords.js";
+export {
+  accounts,
+  accountRoleEnum,
+  users,
+  invitations,
+  refreshTokens,
+} from "./schema/auth.js";
+export {
+  accountTrackedApps,
+  accountTrackedKeywords,
+  accountCompetitorApps,
+} from "./schema/account-tracking.js";

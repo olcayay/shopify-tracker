@@ -15,6 +15,13 @@
       "when": 1771165434881,
       "tag": "0001_bent_dazzler",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1771179846950,
+      "tag": "0002_striped_fantastic_four",
+      "breakpoints": true
     }
   ]
 }

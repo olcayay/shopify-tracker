@@ -1,5 +1,5 @@
 import type { FastifyPluginAsync } from "fastify";
-import { eq, desc, sql, and } from "drizzle-orm";
+import { eq, desc, sql, and, inArray } from "drizzle-orm";
 import { createDb } from "@shopify-tracking/db";
 import {
   apps,
@@ -8,6 +8,7 @@ import {
   appKeywordRankings,
   reviews,
   trackedKeywords,
+  accountTrackedApps,
 } from "@shopify-tracking/db";
 
 type Db = ReturnType<typeof createDb>;
@@ -15,19 +16,26 @@ type Db = ReturnType<typeof createDb>;
 export const appRoutes: FastifyPluginAsync = async (app) => {
   const db: Db = (app as any).db;
 
-  // GET /api/apps — list tracked apps with latest snapshot summary
-  // ?tracked=true (default) | false | all
+  // GET /api/apps — list account's tracked apps with latest snapshot summary
   app.get("/", async (request) => {
-    const { tracked = "true" } = request.query as { tracked?: string };
+    const { accountId } = request.user;
 
-    let query = db.select().from(apps);
-    if (tracked === "true") {
-      query = query.where(eq(apps.isTracked, true)) as typeof query;
-    } else if (tracked === "false") {
-      query = query.where(eq(apps.isTracked, false)) as typeof query;
+    // Get app slugs tracked by this account
+    const trackedRows = await db
+      .select({ appSlug: accountTrackedApps.appSlug })
+      .from(accountTrackedApps)
+      .where(eq(accountTrackedApps.accountId, accountId));
+
+    if (trackedRows.length === 0) {
+      return [];
     }
 
-    const rows = await query.orderBy(apps.name);
+    const slugs = trackedRows.map((r) => r.appSlug);
+    const rows = await db
+      .select()
+      .from(apps)
+      .where(inArray(apps.slug, slugs))
+      .orderBy(apps.name);
 
     // Get latest snapshot for each app
     const result = await Promise.all(

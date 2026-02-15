@@ -4,10 +4,14 @@ config({ path: resolve(import.meta.dirname, "../../../.env") });
 import Fastify from "fastify";
 import cors from "@fastify/cors";
 import { createDb } from "@shopify-tracking/db";
+import { registerAuthMiddleware } from "./middleware/auth.js";
 import { categoryRoutes } from "./routes/categories.js";
 import { appRoutes } from "./routes/apps.js";
 import { keywordRoutes } from "./routes/keywords.js";
-import { adminRoutes } from "./routes/admin.js";
+import { authRoutes } from "./routes/auth.js";
+import { accountRoutes } from "./routes/account.js";
+import { systemAdminRoutes } from "./routes/system-admin.js";
+import { invitationRoutes } from "./routes/invitations.js";
 
 const databaseUrl = process.env.DATABASE_URL;
 if (!databaseUrl) {
@@ -21,24 +25,19 @@ const app = Fastify({ logger: true });
 
 await app.register(cors, { origin: true });
 
-// Auth middleware — checks API_KEY header for admin routes
-const apiKey = process.env.API_KEY;
 app.decorate("db", db);
 
-app.addHook("onRequest", async (request, reply) => {
-  if (apiKey && request.url.startsWith("/api/admin")) {
-    const provided = request.headers["x-api-key"];
-    if (provided !== apiKey) {
-      reply.code(401).send({ error: "Unauthorized" });
-    }
-  }
-});
+// JWT auth middleware (replaces old API key auth)
+registerAuthMiddleware(app);
 
 // Register routes
+await app.register(authRoutes, { prefix: "/api/auth" });
 await app.register(categoryRoutes, { prefix: "/api/categories" });
 await app.register(appRoutes, { prefix: "/api/apps" });
 await app.register(keywordRoutes, { prefix: "/api/keywords" });
-await app.register(adminRoutes, { prefix: "/api/admin" });
+await app.register(accountRoutes, { prefix: "/api/account" });
+await app.register(systemAdminRoutes, { prefix: "/api/system-admin" });
+await app.register(invitationRoutes, { prefix: "/api/invitations" });
 
 // Error handler
 app.setErrorHandler((error: any, _request, reply) => {

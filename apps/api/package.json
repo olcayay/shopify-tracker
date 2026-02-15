@@ -10,16 +10,21 @@
     "start": "node dist/index.js"
   },
   "dependencies": {
-    "@shopify-tracking/shared": "*",
-    "@shopify-tracking/db": "*",
-    "fastify": "^5.2.0",
+    "@fastify/cookie": "^11.0.2",
     "@fastify/cors": "^11.0.0",
+    "@shopify-tracking/db": "*",
+    "@shopify-tracking/shared": "*",
+    "bcryptjs": "^3.0.3",
     "bullmq": "^5.0.0",
-    "drizzle-orm": "^0.38.0",
     "dotenv": "^16.4.0",
+    "drizzle-orm": "^0.38.0",
+    "fastify": "^5.2.0",
+    "jsonwebtoken": "^9.0.3",
     "zod": "^3.24.0"
   },
   "devDependencies": {
+    "@types/bcryptjs": "^2.4.6",
+    "@types/jsonwebtoken": "^9.0.10",
     "tsx": "^4.19.0",
     "typescript": "^5.7.0"
   }

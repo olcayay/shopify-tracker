@@ -1,10 +1,11 @@
 import type { FastifyPluginAsync } from "fastify";
-import { eq, desc, sql, and } from "drizzle-orm";
+import { eq, desc, sql, and, inArray } from "drizzle-orm";
 import { createDb } from "@shopify-tracking/db";
 import {
   trackedKeywords,
   keywordSnapshots,
   appKeywordRankings,
+  accountTrackedKeywords,
 } from "@shopify-tracking/db";
 
 type Db = ReturnType<typeof createDb>;
@@ -12,19 +13,26 @@ type Db = ReturnType<typeof createDb>;
 export const keywordRoutes: FastifyPluginAsync = async (app) => {
   const db: Db = (app as any).db;
 
-  // GET /api/keywords — list tracked keywords
-  // ?active=true (default) | false | all
+  // GET /api/keywords — list account's tracked keywords
   app.get("/", async (request) => {
-    const { active = "true" } = request.query as { active?: string };
+    const { accountId } = request.user;
 
-    let query = db.select().from(trackedKeywords);
-    if (active === "true") {
-      query = query.where(eq(trackedKeywords.isActive, true)) as typeof query;
-    } else if (active === "false") {
-      query = query.where(eq(trackedKeywords.isActive, false)) as typeof query;
+    // Get keyword IDs tracked by this account
+    const trackedRows = await db
+      .select({ keywordId: accountTrackedKeywords.keywordId })
+      .from(accountTrackedKeywords)
+      .where(eq(accountTrackedKeywords.accountId, accountId));
+
+    if (trackedRows.length === 0) {
+      return [];
     }
 
-    const rows = await query.orderBy(trackedKeywords.keyword);
+    const ids = trackedRows.map((r) => r.keywordId);
+    const rows = await db
+      .select()
+      .from(trackedKeywords)
+      .where(inArray(trackedKeywords.id, ids))
+      .orderBy(trackedKeywords.keyword);
 
     // Get latest snapshot for each keyword
     const result = await Promise.all(

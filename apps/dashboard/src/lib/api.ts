@@ -1,11 +1,24 @@
+import { cookies } from "next/headers";
+
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
 
+async function getAuthToken(): Promise<string | undefined> {
+  try {
+    const cookieStore = await cookies();
+    return cookieStore.get("access_token")?.value;
+  } catch {
+    return undefined;
+  }
+}
+
 async function fetchApi<T>(path: string, options?: RequestInit): Promise<T> {
+  const token = await getAuthToken();
   const url = `${API_BASE}${path}`;
   const res = await fetch(url, {
     ...options,
     headers: {
       "Content-Type": "application/json",
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
       ...(options?.headers || {}),
     },
     cache: "no-store",
@@ -33,8 +46,8 @@ export function getCategoryHistory(slug: string, limit = 20) {
 }
 
 // --- Apps ---
-export function getApps(tracked: "true" | "false" | "all" = "true") {
-  return fetchApi<any[]>(`/api/apps?tracked=${tracked}`);
+export function getApps() {
+  return fetchApi<any[]>(`/api/apps`);
 }
 
 export function getApp(slug: string) {
@@ -73,48 +86,49 @@ export function getKeywordRankings(id: number, days = 30) {
   return fetchApi<any>(`/api/keywords/${id}/rankings?days=${days}`);
 }
 
-// --- Admin ---
-export function getAdminStats() {
-  return fetchApi<any>(`/api/admin/stats`, {
-    headers: { "x-api-key": process.env.API_KEY || "" },
-  });
+// --- Auth ---
+export function getUserProfile() {
+  return fetchApi<any>(`/api/auth/me`);
+}
+
+// --- Account ---
+export function getAccountInfo() {
+  return fetchApi<any>(`/api/account`);
+}
+
+export function getAccountMembers() {
+  return fetchApi<any[]>(`/api/account/members`);
+}
+
+export function getAccountTrackedApps() {
+  return fetchApi<any[]>(`/api/account/tracked-apps`);
+}
+
+export function getAccountTrackedKeywords() {
+  return fetchApi<any[]>(`/api/account/tracked-keywords`);
+}
+
+export function getAccountCompetitors() {
+  return fetchApi<any[]>(`/api/account/competitors`);
+}
+
+// --- System Admin ---
+export function getSystemAccounts() {
+  return fetchApi<any[]>(`/api/system-admin/accounts`);
+}
+
+export function getSystemAccount(id: string) {
+  return fetchApi<any>(`/api/system-admin/accounts/${id}`);
+}
+
+export function getSystemUsers() {
+  return fetchApi<any[]>(`/api/system-admin/users`);
+}
+
+export function getSystemStats() {
+  return fetchApi<any>(`/api/system-admin/stats`);
 }
 
 export function getScraperRuns(limit = 20) {
-  return fetchApi<any[]>(`/api/admin/scraper/runs?limit=${limit}`, {
-    headers: { "x-api-key": process.env.API_KEY || "" },
-  });
-}
-
-export async function addTrackedApp(slug: string) {
-  return fetchApi<any>(`/api/admin/tracked-apps`, {
-    method: "POST",
-    body: JSON.stringify({ slug }),
-  });
-}
-
-export async function removeTrackedApp(slug: string) {
-  return fetchApi<any>(`/api/admin/tracked-apps/${slug}`, {
-    method: "DELETE",
-  });
-}
-
-export async function addTrackedKeyword(keyword: string) {
-  return fetchApi<any>(`/api/admin/tracked-keywords`, {
-    method: "POST",
-    body: JSON.stringify({ keyword }),
-  });
-}
-
-export async function removeTrackedKeyword(id: number) {
-  return fetchApi<any>(`/api/admin/tracked-keywords/${id}`, {
-    method: "DELETE",
-  });
-}
-
-export async function triggerScraper(type: string) {
-  return fetchApi<any>(`/api/admin/scraper/trigger`, {
-    method: "POST",
-    body: JSON.stringify({ type }),
-  });
+  return fetchApi<any[]>(`/api/system-admin/scraper/runs?limit=${limit}`);
 }
