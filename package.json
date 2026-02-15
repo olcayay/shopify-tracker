@@ -1,0 +1,26 @@
+{
+  "name": "shopify-tracking",
+  "private": true,
+  "workspaces": [
+    "packages/*",
+    "apps/*"
+  ],
+  "scripts": {
+    "build": "turbo build",
+    "dev": "turbo dev",
+    "lint": "turbo lint",
+    "db:generate": "turbo db:generate",
+    "db:migrate": "turbo db:migrate",
+    "scraper:start": "turbo --filter=scraper start",
+    "api:start": "turbo --filter=api start",
+    "dashboard:dev": "turbo --filter=dashboard dev"
+  },
+  "devDependencies": {
+    "turbo": "^2.4.0",
+    "typescript": "^5.7.0"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "packageManager": "npm@10.9.2"
+}
