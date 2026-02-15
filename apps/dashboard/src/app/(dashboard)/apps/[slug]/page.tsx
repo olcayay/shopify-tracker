@@ -153,6 +153,8 @@ export default async function AppDetailPage({
                     date: new Date(r.scrapedAt).toLocaleDateString(),
                     position: r.position,
                     label: r.keyword,
+                    slug: r.keywordSlug,
+                    linkPrefix: "/keywords/",
                   }))}
                 />
               </CardContent>

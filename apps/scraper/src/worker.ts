@@ -38,13 +38,47 @@ async function processJob(job: Job<ScraperJobData>): Promise<void> {
 
     case "app_details": {
       const scraper = new AppDetailsScraper(db, httpClient);
-      await scraper.scrapeTracked();
+      if (job.data.slug) {
+        await scraper.scrapeApp(job.data.slug);
+        log.info("single app scrape completed", { slug: job.data.slug });
+      } else {
+        await scraper.scrapeTracked();
+      }
       break;
     }
 
     case "keyword_search": {
       const scraper = new KeywordScraper(db, httpClient);
-      await scraper.scrapeAll();
+      if (job.data.keyword) {
+        // Single keyword scrape — find the keyword row and scrape it
+        const { eq } = await import("drizzle-orm");
+        const { trackedKeywords, scrapeRuns } = await import("@shopify-tracking/db");
+        const [kw] = await db
+          .select()
+          .from(trackedKeywords)
+          .where(eq(trackedKeywords.keyword, job.data.keyword))
+          .limit(1);
+        if (kw) {
+          const [run] = await db
+            .insert(scrapeRuns)
+            .values({
+              scraperType: "keyword_search",
+              status: "running",
+              startedAt: new Date(),
+            })
+            .returning();
+          await scraper.scrapeKeyword(kw.id, kw.keyword, run.id);
+          await db
+            .update(scrapeRuns)
+            .set({ status: "completed", completedAt: new Date(), metadata: { items_scraped: 1, items_failed: 0 } })
+            .where(eq(scrapeRuns.id, run.id));
+          log.info("single keyword scrape completed", { keyword: kw.keyword });
+        } else {
+          log.warn("keyword not found for single scrape", { keyword: job.data.keyword });
+        }
+      } else {
+        await scraper.scrapeAll();
+      }
       break;
     }
 

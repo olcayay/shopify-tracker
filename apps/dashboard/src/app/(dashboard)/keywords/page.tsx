@@ -82,7 +82,11 @@ export default function KeywordsPage() {
       body: JSON.stringify({ keyword }),
     });
     if (res.ok) {
-      setMessage(`"${keyword}" added to tracking`);
+      const data = await res.json().catch(() => ({}));
+      const scrapeMsg = data.scraperEnqueued
+        ? " Scraping started — results will appear shortly."
+        : "";
+      setMessage(`"${keyword}" added to tracking.${scrapeMsg}`);
       setQuery("");
       setSuggestions([]);
       setShowSuggestions(false);
@@ -136,7 +140,7 @@ export default function KeywordsPage() {
               className="pl-9"
             />
           </div>
-          {showSuggestions && suggestions.length > 0 && (
+          {showSuggestions && (suggestions.length > 0 || (query.length >= 1 && !searchLoading)) && (
             <div className="absolute z-50 top-full mt-1 w-full bg-popover border rounded-md shadow-md max-h-60 overflow-auto">
               {suggestions.map((s) => (
                 <button
@@ -155,11 +159,20 @@ export default function KeywordsPage() {
                   )}
                 </button>
               ))}
-            </div>
-          )}
-          {showSuggestions && query.length >= 1 && suggestions.length === 0 && !searchLoading && (
-            <div className="absolute z-50 top-full mt-1 w-full bg-popover border rounded-md shadow-md p-3 text-sm text-muted-foreground">
-              No keywords found for &ldquo;{query}&rdquo;
+              {query.trim().length >= 1 &&
+                !suggestions.some(
+                  (s) => s.keyword.toLowerCase() === query.trim().toLowerCase()
+                ) && (
+                <button
+                  className="w-full text-left px-3 py-2 hover:bg-accent text-sm flex items-center justify-between border-t"
+                  onClick={() => trackKeyword(query.trim())}
+                >
+                  <span>
+                    Track &ldquo;{query.trim()}&rdquo; as new keyword
+                  </span>
+                  <Plus className="h-4 w-4 text-primary" />
+                </button>
+              )}
             </div>
           )}
         </div>

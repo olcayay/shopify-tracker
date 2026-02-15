@@ -82,7 +82,11 @@ export default function AppsPage() {
       body: JSON.stringify({ slug }),
     });
     if (res.ok) {
-      setMessage(`"${name}" added to tracking`);
+      const data = await res.json().catch(() => ({}));
+      const scrapeMsg = data.scraperEnqueued
+        ? " Scraping started — details will appear shortly."
+        : "";
+      setMessage(`"${name}" added to tracking.${scrapeMsg}`);
       setQuery("");
       setSuggestions([]);
       setShowSuggestions(false);

@@ -34,22 +34,22 @@ export default async function CategoryDetailPage({
   return (
     <div className="space-y-6">
       <div>
+        {category.breadcrumb?.length > 0 && (
+          <nav className="flex items-center gap-1 text-sm text-muted-foreground mb-1">
+            {category.breadcrumb.map((item: any, i: number) => (
+              <span key={item.slug} className="flex items-center gap-1">
+                {i > 0 && <span>&rsaquo;</span>}
+                <Link
+                  href={`/categories/${item.slug}`}
+                  className="hover:underline hover:text-foreground"
+                >
+                  {item.title}
+                </Link>
+              </span>
+            ))}
+          </nav>
+        )}
         <h1 className="text-2xl font-bold">{category.title}</h1>
-        <p className="text-muted-foreground">
-          Level {category.categoryLevel} &middot; {category.slug}
-          {category.parentSlug && (
-            <>
-              {" "}
-              &middot; Parent:{" "}
-              <Link
-                href={`/categories/${category.parentSlug}`}
-                className="text-primary hover:underline"
-              >
-                {category.parentSlug}
-              </Link>
-            </>
-          )}
-        </p>
       </div>
 
       {/* Children */}

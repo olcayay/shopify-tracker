@@ -303,6 +303,7 @@ export const appRoutes: FastifyPluginAsync = async (app) => {
         .select({
           keywordId: appKeywordRankings.keywordId,
           keyword: trackedKeywords.keyword,
+          keywordSlug: trackedKeywords.slug,
           position: appKeywordRankings.position,
           scrapedAt: appKeywordRankings.scrapedAt,
         })

@@ -1,5 +1,5 @@
 import type { FastifyPluginAsync } from "fastify";
-import { eq, desc, isNull, sql } from "drizzle-orm";
+import { eq, desc, isNull, sql, inArray } from "drizzle-orm";
 import { createDb } from "@shopify-tracking/db";
 import { categories, categorySnapshots } from "@shopify-tracking/db";
 
@@ -17,11 +17,37 @@ export const categoryRoutes: FastifyPluginAsync = async (app) => {
       tracked?: string;
     };
 
-    let query = db.select().from(categories);
-    if (tracked === "true") {
-      query = query.where(eq(categories.isTracked, true)) as typeof query;
-    }
-    const rows = await query.orderBy(categories.categoryLevel, categories.title);
+    // Subquery for latest appCount per category
+    const latestSnapshot = db
+      .select({
+        categorySlug: categorySnapshots.categorySlug,
+        appCount: categorySnapshots.appCount,
+        rn: sql<number>`row_number() over (partition by ${categorySnapshots.categorySlug} order by ${categorySnapshots.scrapedAt} desc)`.as("rn"),
+      })
+      .from(categorySnapshots)
+      .as("ls");
+
+    const rows = await db
+      .select({
+        id: categories.id,
+        slug: categories.slug,
+        title: categories.title,
+        url: categories.url,
+        parentSlug: categories.parentSlug,
+        categoryLevel: categories.categoryLevel,
+        description: categories.description,
+        isTracked: categories.isTracked,
+        createdAt: categories.createdAt,
+        updatedAt: categories.updatedAt,
+        appCount: latestSnapshot.appCount,
+      })
+      .from(categories)
+      .leftJoin(
+        latestSnapshot,
+        sql`${latestSnapshot.categorySlug} = ${categories.slug} and ${latestSnapshot.rn} = 1`
+      )
+      .where(tracked === "true" ? eq(categories.isTracked, true) : undefined)
+      .orderBy(categories.categoryLevel, categories.title);
 
     if (format === "flat") {
       return rows;
@@ -57,7 +83,23 @@ export const categoryRoutes: FastifyPluginAsync = async (app) => {
       .from(categories)
       .where(eq(categories.parentSlug, slug));
 
-    return { ...category, latestSnapshot: latestSnapshot || null, children };
+    // Build breadcrumb by walking up the parent chain
+    const breadcrumb: { slug: string; title: string }[] = [];
+    let currentParent = category.parentSlug;
+    const visited = new Set<string>();
+    while (currentParent && !visited.has(currentParent)) {
+      visited.add(currentParent);
+      const [parent] = await db
+        .select({ slug: categories.slug, title: categories.title, parentSlug: categories.parentSlug })
+        .from(categories)
+        .where(eq(categories.slug, currentParent))
+        .limit(1);
+      if (!parent) break;
+      breadcrumb.unshift({ slug: parent.slug, title: parent.title });
+      currentParent = parent.parentSlug;
+    }
+
+    return { ...category, latestSnapshot: latestSnapshot || null, children, breadcrumb };
   });
 
   // GET /api/categories/:slug/history — historical snapshots

@@ -11,6 +11,17 @@ import {
   ResponsiveContainer,
 } from "recharts";
 
+const COLORS = [
+  "hsl(var(--primary))",
+  "hsl(221, 83%, 53%)",
+  "hsl(142, 71%, 45%)",
+  "hsl(38, 92%, 50%)",
+  "hsl(0, 72%, 51%)",
+  "hsl(262, 83%, 58%)",
+  "hsl(280, 65%, 60%)",
+  "hsl(200, 80%, 50%)",
+];
+
 interface RankingData {
   date: string;
   position: number;
@@ -24,71 +35,122 @@ export function RankingChart({ data }: { data: RankingData[] }) {
     return <p className="text-muted-foreground text-sm">No data available.</p>;
   }
 
-  // Group by label for multiple lines
+  // Group by label
   const labels = [...new Set(data.map((d) => d.label))];
 
-  if (labels.length === 1) {
-    const item = data[0];
-    return (
-      <div className="space-y-2">
-        {item.slug && item.linkPrefix && (
-          <Link
-            href={`${item.linkPrefix}${item.slug}`}
-            className="text-sm text-primary hover:underline"
-          >
-            {labels[0]}
-          </Link>
-        )}
-        <ResponsiveContainer width="100%" height={250}>
-          <LineChart data={data}>
-            <CartesianGrid strokeDasharray="3 3" />
-            <XAxis dataKey="date" fontSize={12} />
-            <YAxis reversed domain={[1, "auto"]} fontSize={12} />
-            <Tooltip />
-            <Line
-              type="monotone"
-              dataKey="position"
-              stroke="hsl(var(--primary))"
-              strokeWidth={2}
-              dot={{ r: 4 }}
-              name={labels[0]}
-            />
-          </LineChart>
-        </ResponsiveContainer>
-      </div>
-    );
+  // Build per-label info for links
+  const labelMeta = new Map<string, { slug?: string; linkPrefix?: string }>();
+  for (const d of data) {
+    if (!labelMeta.has(d.label)) {
+      labelMeta.set(d.label, { slug: d.slug, linkPrefix: d.linkPrefix });
+    }
   }
 
-  // Multiple labels — show as table with links
-  const labelMap = new Map<string, RankingData>();
-  for (const d of data) {
-    labelMap.set(d.label, d);
-  }
+  // Pivot data: each unique date gets one row with a column per label
+  const dates = [...new Set(data.map((d) => d.date))];
+  const pivoted = dates.map((date) => {
+    const row: Record<string, any> = { date };
+    for (const label of labels) {
+      const item = data.find((d) => d.date === date && d.label === label);
+      if (item) row[label] = item.position;
+    }
+    return row;
+  });
+
+  // Get latest + previous position per label for change indicator
+  const labelStats = labels.map((label) => {
+    const items = data.filter((d) => d.label === label);
+    const latest = items[items.length - 1];
+    const previous = items.length >= 2 ? items[items.length - 2] : undefined;
+    const change =
+      latest && previous ? previous.position - latest.position : undefined;
+    return { label, position: latest?.position, change };
+  });
 
   return (
-    <div className="space-y-2">
-      {labels.map((label) => {
-        const items = data.filter((d) => d.label === label);
-        const latest = items[items.length - 1];
-        const item = labelMap.get(label);
-        const href =
-          item?.slug && item?.linkPrefix
-            ? `${item.linkPrefix}${item.slug}`
-            : undefined;
+    <div className="space-y-4">
+      <ResponsiveContainer width="100%" height={labels.length === 1 ? 250 : 300}>
+        <LineChart data={pivoted}>
+          <CartesianGrid strokeDasharray="3 3" />
+          <XAxis dataKey="date" fontSize={12} />
+          <YAxis reversed domain={[1, "auto"]} fontSize={12} />
+          <Tooltip />
+          {labels.map((label, idx) => (
+            <Line
+              key={label}
+              type="monotone"
+              dataKey={label}
+              stroke={COLORS[idx % COLORS.length]}
+              strokeWidth={2}
+              dot={{ r: labels.length === 1 ? 4 : 3 }}
+              connectNulls
+            />
+          ))}
+        </LineChart>
+      </ResponsiveContainer>
 
-        return (
-          <div key={label} className="flex items-center justify-between text-sm">
-            {href ? (
-              <Link href={href} className="text-primary hover:underline">
-                {label}
-              </Link>
-            ) : (
-              <span className="font-mono">{label}</span>
-            )}
-            <span className="font-semibold">#{latest?.position}</span>
-          </div>
-        );
-      })}
+      {/* Ranking table */}
+      <div className="border rounded-md overflow-hidden">
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="border-b bg-muted/50">
+              <th className="text-left px-3 py-2 font-medium">Name</th>
+              <th className="text-right px-3 py-2 font-medium w-24">Position</th>
+              <th className="text-right px-3 py-2 font-medium w-24">Change</th>
+            </tr>
+          </thead>
+          <tbody>
+            {labelStats.map((stat, idx) => {
+              const meta = labelMeta.get(stat.label);
+              const href =
+                meta?.slug && meta?.linkPrefix
+                  ? `${meta.linkPrefix}${meta.slug}`
+                  : undefined;
+
+              return (
+                <tr key={stat.label} className="border-b last:border-0">
+                  <td className="px-3 py-2">
+                    <div className="flex items-center gap-2">
+                      <span
+                        className="inline-block w-2.5 h-2.5 rounded-full shrink-0"
+                        style={{ backgroundColor: COLORS[idx % COLORS.length] }}
+                      />
+                      {href ? (
+                        <Link
+                          href={href}
+                          className="text-primary hover:underline"
+                        >
+                          {stat.label}
+                        </Link>
+                      ) : (
+                        <span>{stat.label}</span>
+                      )}
+                    </div>
+                  </td>
+                  <td className="text-right px-3 py-2 font-semibold">
+                    #{stat.position}
+                  </td>
+                  <td className="text-right px-3 py-2">
+                    {stat.change !== undefined && stat.change !== 0 ? (
+                      <span
+                        className={
+                          stat.change > 0
+                            ? "text-green-600"
+                            : "text-red-500"
+                        }
+                      >
+                        {stat.change > 0 ? `+${stat.change}` : stat.change}
+                      </span>
+                    ) : (
+                      <span className="text-muted-foreground">—</span>
+                    )}
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 }

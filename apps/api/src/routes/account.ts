@@ -1,19 +1,45 @@
 import type { FastifyPluginAsync } from "fastify";
 import { eq, sql } from "drizzle-orm";
 import crypto from "crypto";
+import { Queue } from "bullmq";
 import {
   createDb,
   accounts,
   users,
   invitations,
   apps,
+  appSnapshots,
   trackedKeywords,
+  keywordSnapshots,
   keywordToSlug,
   accountTrackedApps,
   accountTrackedKeywords,
   accountCompetitorApps,
 } from "@shopify-tracking/db";
 import { requireRole } from "../middleware/authorize.js";
+
+const QUEUE_NAME = "scraper-jobs";
+
+function getRedisConnection() {
+  const url = process.env.REDIS_URL || "redis://localhost:6379";
+  const parsed = new URL(url);
+  return {
+    host: parsed.hostname,
+    port: parseInt(parsed.port || "6379", 10),
+    password: parsed.password || undefined,
+  };
+}
+
+let scraperQueue: Queue | null = null;
+
+function getScraperQueue(): Queue {
+  if (!scraperQueue) {
+    scraperQueue = new Queue(QUEUE_NAME, {
+      connection: getRedisConnection(),
+    });
+  }
+  return scraperQueue;
+}
 
 type Db = ReturnType<typeof createDb>;
 
@@ -348,7 +374,29 @@ export const accountRoutes: FastifyPluginAsync = async (app) => {
         return reply.code(409).send({ error: "App already tracked" });
       }
 
-      return result;
+      // If app has no snapshots yet, enqueue a scraper job
+      const [existingSnapshot] = await db
+        .select({ id: appSnapshots.id })
+        .from(appSnapshots)
+        .where(eq(appSnapshots.appSlug, slug))
+        .limit(1);
+
+      let scraperEnqueued = false;
+      if (!existingSnapshot) {
+        try {
+          const queue = getScraperQueue();
+          await queue.add("scrape:app_details", {
+            type: "app_details",
+            slug,
+            triggeredBy: "api",
+          });
+          scraperEnqueued = true;
+        } catch {
+          // Redis unavailable — scraper will pick it up on next scheduled run
+        }
+      }
+
+      return { ...result, scraperEnqueued };
     }
   );
 
@@ -452,7 +500,29 @@ export const accountRoutes: FastifyPluginAsync = async (app) => {
         return reply.code(409).send({ error: "Keyword already tracked" });
       }
 
-      return { ...result, keyword: kw.keyword };
+      // If keyword has no snapshots yet, enqueue a scraper job
+      const [existingSnapshot] = await db
+        .select({ id: keywordSnapshots.id })
+        .from(keywordSnapshots)
+        .where(eq(keywordSnapshots.keywordId, kw.id))
+        .limit(1);
+
+      let scraperEnqueued = false;
+      if (!existingSnapshot) {
+        try {
+          const queue = getScraperQueue();
+          await queue.add("scrape:keyword_search", {
+            type: "keyword_search",
+            keyword: kw.keyword,
+            triggeredBy: "api",
+          });
+          scraperEnqueued = true;
+        } catch {
+          // Redis unavailable — scraper will pick it up on next scheduled run
+        }
+      }
+
+      return { ...result, keyword: kw.keyword, scraperEnqueued };
     }
   );
 
