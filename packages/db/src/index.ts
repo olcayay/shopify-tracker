@@ -43,6 +43,7 @@ export {
   trackedKeywords,
   keywordSnapshots,
   appKeywordRankings,
+  keywordToSlug,
 } from "./schema/keywords.js";
 export {
   accounts,

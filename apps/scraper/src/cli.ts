@@ -2,7 +2,7 @@ import { config } from "dotenv";
 import { resolve } from "path";
 config({ path: resolve(import.meta.dirname, "../../../.env") });
 import { createDb } from "@shopify-tracking/db";
-import { trackedKeywords, apps } from "@shopify-tracking/db";
+import { trackedKeywords, keywordToSlug, apps } from "@shopify-tracking/db";
 import { CategoryScraper } from "./scrapers/category-scraper.js";
 import { AppDetailsScraper } from "./scrapers/app-details-scraper.js";
 import { KeywordScraper } from "./scrapers/keyword-scraper.js";
@@ -75,7 +75,7 @@ async function main() {
       // Ensure keyword is tracked
       const [kw] = await db
         .insert(trackedKeywords)
-        .values({ keyword })
+        .values({ keyword, slug: keywordToSlug(keyword) })
         .onConflictDoUpdate({
           target: trackedKeywords.keyword,
           set: { isActive: true, updatedAt: new Date() },
@@ -138,7 +138,7 @@ async function main() {
       }
       await db
         .insert(trackedKeywords)
-        .values({ keyword })
+        .values({ keyword, slug: keywordToSlug(keyword) })
         .onConflictDoUpdate({
           target: trackedKeywords.keyword,
           set: { isActive: true, updatedAt: new Date() },

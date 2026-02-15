@@ -1,5 +1,5 @@
 import type { FastifyPluginAsync } from "fastify";
-import { eq, desc, sql, and, inArray } from "drizzle-orm";
+import { eq, desc, sql, and, inArray, ilike } from "drizzle-orm";
 import { createDb } from "@shopify-tracking/db";
 import {
   apps,
@@ -8,6 +8,7 @@ import {
   appKeywordRankings,
   reviews,
   trackedKeywords,
+  categories,
   accountTrackedApps,
 } from "@shopify-tracking/db";
 
@@ -59,9 +60,28 @@ export const appRoutes: FastifyPluginAsync = async (app) => {
     return result;
   });
 
-  // GET /api/apps/:slug — app detail + latest snapshot
+  // GET /api/apps/search?q= — search all apps by name prefix
+  app.get("/search", async (request) => {
+    const { q = "" } = request.query as { q?: string };
+    if (q.length < 1) return [];
+
+    const rows = await db
+      .select({
+        slug: apps.slug,
+        name: apps.name,
+      })
+      .from(apps)
+      .where(ilike(apps.name, `%${q}%`))
+      .orderBy(apps.name)
+      .limit(20);
+
+    return rows;
+  });
+
+  // GET /api/apps/:slug — app detail + latest snapshot + track status
   app.get<{ Params: { slug: string } }>("/:slug", async (request, reply) => {
     const { slug } = request.params;
+    const { accountId } = request.user;
 
     const [appRow] = await db
       .select()
@@ -80,7 +100,21 @@ export const appRoutes: FastifyPluginAsync = async (app) => {
       .orderBy(desc(appSnapshots.scrapedAt))
       .limit(1);
 
-    return { ...appRow, latestSnapshot: latestSnapshot || null };
+    const [tracked] = await db
+      .select({ appSlug: accountTrackedApps.appSlug })
+      .from(accountTrackedApps)
+      .where(
+        and(
+          eq(accountTrackedApps.accountId, accountId),
+          eq(accountTrackedApps.appSlug, slug)
+        )
+      );
+
+    return {
+      ...appRow,
+      latestSnapshot: latestSnapshot || null,
+      isTrackedByAccount: !!tracked,
+    };
   });
 
   // GET /api/apps/:slug/history — historical snapshots
@@ -202,13 +236,19 @@ export const appRoutes: FastifyPluginAsync = async (app) => {
       since.setDate(since.getDate() - parseInt(days, 10));
       const sinceStr = since.toISOString();
 
-      const categoryRankings = await db
+      const categoryRankingsRaw = await db
         .select({
           categorySlug: appCategoryRankings.categorySlug,
+          categoryTitle: categories.title,
+          categoryParentSlug: categories.parentSlug,
           position: appCategoryRankings.position,
           scrapedAt: appCategoryRankings.scrapedAt,
         })
         .from(appCategoryRankings)
+        .innerJoin(
+          categories,
+          eq(categories.slug, appCategoryRankings.categorySlug)
+        )
         .where(
           and(
             eq(appCategoryRankings.appSlug, slug),
@@ -216,6 +256,48 @@ export const appRoutes: FastifyPluginAsync = async (app) => {
           )
         )
         .orderBy(appCategoryRankings.scrapedAt);
+
+      // Build category breadcrumb (parent > child)
+      const allCategorySlugs = new Set<string>();
+      for (const r of categoryRankingsRaw) {
+        allCategorySlugs.add(r.categorySlug);
+        if (r.categoryParentSlug) allCategorySlugs.add(r.categoryParentSlug);
+      }
+
+      // Fetch all relevant categories for breadcrumb building
+      const categoryMap = new Map<string, { title: string; parentSlug: string | null }>();
+      if (allCategorySlugs.size > 0) {
+        const cats = await db
+          .select({
+            slug: categories.slug,
+            title: categories.title,
+            parentSlug: categories.parentSlug,
+          })
+          .from(categories)
+          .where(inArray(categories.slug, [...allCategorySlugs]));
+        for (const c of cats) {
+          categoryMap.set(c.slug, { title: c.title, parentSlug: c.parentSlug });
+        }
+      }
+
+      function buildBreadcrumb(slug: string): string {
+        const parts: string[] = [];
+        let current: string | null = slug;
+        while (current) {
+          const cat = categoryMap.get(current);
+          if (!cat) break;
+          parts.unshift(cat.title);
+          current = cat.parentSlug;
+        }
+        return parts.join(" > ");
+      }
+
+      const categoryRankings = categoryRankingsRaw.map((r) => ({
+        categorySlug: r.categorySlug,
+        categoryTitle: buildBreadcrumb(r.categorySlug),
+        position: r.position,
+        scrapedAt: r.scrapedAt,
+      }));
 
       const keywordRankings = await db
         .select({

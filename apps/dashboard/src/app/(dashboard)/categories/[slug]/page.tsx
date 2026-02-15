@@ -132,29 +132,38 @@ export default async function CategoryDetailPage({
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {snapshot.firstPageApps.map((app: any, i: number) => (
-                      <TableRow key={app.slug}>
+                    {snapshot.firstPageApps.map((app: any, i: number) => {
+                      const appSlug = app.app_url
+                        ?.replace("https://apps.shopify.com/", "")
+                        ?.split("?")[0];
+                      return (
+                      <TableRow key={appSlug || i}>
                         <TableCell>{app.position || i + 1}</TableCell>
                         <TableCell>
+                          {appSlug ? (
                           <Link
-                            href={`/apps/${app.slug}`}
+                            href={`/apps/${appSlug}`}
                             className="text-primary hover:underline"
                           >
                             {app.name}
                           </Link>
+                          ) : (
+                            <span>{app.name}</span>
+                          )}
                           {app.is_sponsored && (
                             <Badge variant="secondary" className="ml-2">
                               Ad
                             </Badge>
                           )}
                         </TableCell>
-                        <TableCell>{app.rating?.toFixed(1) ?? "—"}</TableCell>
-                        <TableCell>{app.review_count ?? "—"}</TableCell>
+                        <TableCell>{app.average_rating?.toFixed(1) ?? "—"}</TableCell>
+                        <TableCell>{app.rating_count ?? "—"}</TableCell>
                         <TableCell>
-                          {app.built_for_shopify ? "Yes" : "—"}
+                          {app.is_built_for_shopify ? "Yes" : "—"}
                         </TableCell>
                       </TableRow>
-                    ))}
+                      );
+                    })}
                   </TableBody>
                 </Table>
               </>

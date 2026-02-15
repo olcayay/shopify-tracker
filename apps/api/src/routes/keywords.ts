@@ -1,5 +1,5 @@
 import type { FastifyPluginAsync } from "fastify";
-import { eq, desc, sql, and, inArray } from "drizzle-orm";
+import { eq, desc, sql, and, inArray, ilike } from "drizzle-orm";
 import { createDb } from "@shopify-tracking/db";
 import {
   trackedKeywords,
@@ -17,7 +17,6 @@ export const keywordRoutes: FastifyPluginAsync = async (app) => {
   app.get("/", async (request) => {
     const { accountId } = request.user;
 
-    // Get keyword IDs tracked by this account
     const trackedRows = await db
       .select({ keywordId: accountTrackedKeywords.keywordId })
       .from(accountTrackedKeywords)
@@ -34,7 +33,6 @@ export const keywordRoutes: FastifyPluginAsync = async (app) => {
       .where(inArray(trackedKeywords.id, ids))
       .orderBy(trackedKeywords.keyword);
 
-    // Get latest snapshot for each keyword
     const result = await Promise.all(
       rows.map(async (kw) => {
         const [snapshot] = await db
@@ -55,14 +53,34 @@ export const keywordRoutes: FastifyPluginAsync = async (app) => {
     return result;
   });
 
-  // GET /api/keywords/:id — keyword detail + latest snapshot (full results)
-  app.get<{ Params: { id: string } }>("/:id", async (request, reply) => {
-    const id = parseInt(request.params.id, 10);
+  // GET /api/keywords/search?q= — search all keywords by prefix
+  app.get("/search", async (request) => {
+    const { q = "" } = request.query as { q?: string };
+    if (q.length < 1) return [];
+
+    const rows = await db
+      .select({
+        id: trackedKeywords.id,
+        keyword: trackedKeywords.keyword,
+        slug: trackedKeywords.slug,
+      })
+      .from(trackedKeywords)
+      .where(ilike(trackedKeywords.keyword, `${q}%`))
+      .orderBy(trackedKeywords.keyword)
+      .limit(20);
+
+    return rows;
+  });
+
+  // GET /api/keywords/:slug — keyword detail + latest snapshot + track status
+  app.get<{ Params: { slug: string } }>("/:slug", async (request, reply) => {
+    const { slug } = request.params;
+    const { accountId } = request.user;
 
     const [kw] = await db
       .select()
       .from(trackedKeywords)
-      .where(eq(trackedKeywords.id, id))
+      .where(eq(trackedKeywords.slug, slug))
       .limit(1);
 
     if (!kw) {
@@ -72,19 +90,32 @@ export const keywordRoutes: FastifyPluginAsync = async (app) => {
     const [latestSnapshot] = await db
       .select()
       .from(keywordSnapshots)
-      .where(eq(keywordSnapshots.keywordId, id))
+      .where(eq(keywordSnapshots.keywordId, kw.id))
       .orderBy(desc(keywordSnapshots.scrapedAt))
       .limit(1);
 
-    return { ...kw, latestSnapshot: latestSnapshot || null };
+    const [tracked] = await db
+      .select({ keywordId: accountTrackedKeywords.keywordId })
+      .from(accountTrackedKeywords)
+      .where(
+        and(
+          eq(accountTrackedKeywords.accountId, accountId),
+          eq(accountTrackedKeywords.keywordId, kw.id)
+        )
+      );
+
+    return {
+      ...kw,
+      latestSnapshot: latestSnapshot || null,
+      isTrackedByAccount: !!tracked,
+    };
   });
 
-  // GET /api/keywords/:id/rankings — ranking history for tracked apps
-  // ?days=30&appSlug=formful (optional filter)
-  app.get<{ Params: { id: string } }>(
-    "/:id/rankings",
+  // GET /api/keywords/:slug/rankings
+  app.get<{ Params: { slug: string } }>(
+    "/:slug/rankings",
     async (request, reply) => {
-      const id = parseInt(request.params.id, 10);
+      const { slug } = request.params;
       const { days = "30", appSlug } = request.query as {
         days?: string;
         appSlug?: string;
@@ -93,7 +124,7 @@ export const keywordRoutes: FastifyPluginAsync = async (app) => {
       const [kw] = await db
         .select()
         .from(trackedKeywords)
-        .where(eq(trackedKeywords.id, id))
+        .where(eq(trackedKeywords.slug, slug))
         .limit(1);
 
       if (!kw) {
@@ -105,7 +136,7 @@ export const keywordRoutes: FastifyPluginAsync = async (app) => {
       const sinceStr = since.toISOString();
 
       const conditions = [
-        eq(appKeywordRankings.keywordId, id),
+        eq(appKeywordRankings.keywordId, kw.id),
         sql`${appKeywordRankings.scrapedAt} >= ${sinceStr}`,
       ];
 
@@ -123,12 +154,11 @@ export const keywordRoutes: FastifyPluginAsync = async (app) => {
     }
   );
 
-  // GET /api/keywords/:id/history — snapshot history
-  // ?limit=20&offset=0
-  app.get<{ Params: { id: string } }>(
-    "/:id/history",
+  // GET /api/keywords/:slug/history
+  app.get<{ Params: { slug: string } }>(
+    "/:slug/history",
     async (request, reply) => {
-      const id = parseInt(request.params.id, 10);
+      const { slug } = request.params;
       const { limit = "20", offset = "0" } = request.query as {
         limit?: string;
         offset?: string;
@@ -137,7 +167,7 @@ export const keywordRoutes: FastifyPluginAsync = async (app) => {
       const [kw] = await db
         .select()
         .from(trackedKeywords)
-        .where(eq(trackedKeywords.id, id))
+        .where(eq(trackedKeywords.slug, slug))
         .limit(1);
 
       if (!kw) {
@@ -147,7 +177,7 @@ export const keywordRoutes: FastifyPluginAsync = async (app) => {
       const snapshots = await db
         .select()
         .from(keywordSnapshots)
-        .where(eq(keywordSnapshots.keywordId, id))
+        .where(eq(keywordSnapshots.keywordId, kw.id))
         .orderBy(desc(keywordSnapshots.scrapedAt))
         .limit(parseInt(limit, 10))
         .offset(parseInt(offset, 10));
@@ -155,7 +185,7 @@ export const keywordRoutes: FastifyPluginAsync = async (app) => {
       const [{ count }] = await db
         .select({ count: sql<number>`count(*)::int` })
         .from(keywordSnapshots)
-        .where(eq(keywordSnapshots.keywordId, id));
+        .where(eq(keywordSnapshots.keywordId, kw.id));
 
       return { keyword: kw, snapshots, total: count };
     }

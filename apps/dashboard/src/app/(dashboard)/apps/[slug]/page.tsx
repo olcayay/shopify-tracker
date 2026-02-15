@@ -11,6 +11,7 @@ import {
 } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { RankingChart } from "@/components/ranking-chart";
+import { TrackAppButton } from "./track-button";
 
 export default async function AppDetailPage({
   params,
@@ -36,9 +37,16 @@ export default async function AppDetailPage({
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold">{app.name}</h1>
-        <p className="text-muted-foreground">{app.slug}</p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold">{app.name}</h1>
+          <p className="text-muted-foreground">{app.slug}</p>
+        </div>
+        <TrackAppButton
+          appSlug={app.slug}
+          appName={app.name}
+          initialTracked={app.isTrackedByAccount}
+        />
       </div>
 
       {/* Summary cards */}
@@ -126,7 +134,9 @@ export default async function AppDetailPage({
                   data={rankings.categoryRankings.map((r: any) => ({
                     date: new Date(r.scrapedAt).toLocaleDateString(),
                     position: r.position,
-                    label: r.categorySlug,
+                    label: r.categoryTitle || r.categorySlug,
+                    slug: r.categorySlug,
+                    linkPrefix: "/categories/",
                   }))}
                 />
               </CardContent>

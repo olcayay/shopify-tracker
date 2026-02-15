@@ -23,7 +23,10 @@ const db = createDb(databaseUrl);
 
 const app = Fastify({ logger: true });
 
-await app.register(cors, { origin: true });
+await app.register(cors, {
+  origin: true,
+  methods: ["GET", "HEAD", "PUT", "POST", "PATCH", "DELETE"],
+});
 
 app.decorate("db", db);
 

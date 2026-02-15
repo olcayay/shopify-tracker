@@ -33,7 +33,7 @@ export function getJwtSecret(): string {
 }
 
 export function registerAuthMiddleware(app: FastifyInstance) {
-  app.decorateRequest("user", null);
+  app.decorateRequest("user", null as unknown as JwtPayload);
 
   app.addHook(
     "onRequest",

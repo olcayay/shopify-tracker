@@ -8,6 +8,7 @@ import {
   invitations,
   apps,
   trackedKeywords,
+  keywordToSlug,
   accountTrackedApps,
   accountTrackedKeywords,
   accountCompetitorApps,
@@ -317,14 +318,24 @@ export const accountRoutes: FastifyPluginAsync = async (app) => {
         });
       }
 
-      // Ensure app exists in global table
+      // Check app exists in global table
+      const [existingApp] = await db
+        .select({ slug: apps.slug })
+        .from(apps)
+        .where(eq(apps.slug, slug))
+        .limit(1);
+
+      if (!existingApp) {
+        return reply
+          .code(404)
+          .send({ error: "App not found. Only existing apps can be tracked." });
+      }
+
+      // Mark as tracked
       await db
-        .insert(apps)
-        .values({ slug, name: slug, isTracked: true })
-        .onConflictDoUpdate({
-          target: apps.slug,
-          set: { isTracked: true, updatedAt: new Date() },
-        });
+        .update(apps)
+        .set({ isTracked: true, updatedAt: new Date() })
+        .where(eq(apps.slug, slug));
 
       // Add to account tracking
       const [result] = await db
@@ -420,9 +431,10 @@ export const accountRoutes: FastifyPluginAsync = async (app) => {
       }
 
       // Ensure keyword exists in global table
+      const slug = keywordToSlug(keyword);
       const [kw] = await db
         .insert(trackedKeywords)
-        .values({ keyword })
+        .values({ keyword, slug })
         .onConflictDoUpdate({
           target: trackedKeywords.keyword,
           set: { isActive: true, updatedAt: new Date() },
@@ -519,14 +531,24 @@ export const accountRoutes: FastifyPluginAsync = async (app) => {
         });
       }
 
-      // Ensure app exists in global table
+      // Check app exists in global table
+      const [existingApp] = await db
+        .select({ slug: apps.slug })
+        .from(apps)
+        .where(eq(apps.slug, slug))
+        .limit(1);
+
+      if (!existingApp) {
+        return reply
+          .code(404)
+          .send({ error: "App not found. Only existing apps can be added as competitors." });
+      }
+
+      // Mark as tracked
       await db
-        .insert(apps)
-        .values({ slug, name: slug, isTracked: true })
-        .onConflictDoUpdate({
-          target: apps.slug,
-          set: { isTracked: true, updatedAt: new Date() },
-        });
+        .update(apps)
+        .set({ isTracked: true, updatedAt: new Date() })
+        .where(eq(apps.slug, slug));
 
       // Add to account competitors
       const [result] = await db

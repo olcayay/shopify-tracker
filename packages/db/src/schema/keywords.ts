@@ -17,10 +17,21 @@ import { apps } from "./apps";
 export const trackedKeywords = pgTable("tracked_keywords", {
   id: serial("id").primaryKey(),
   keyword: varchar("keyword", { length: 255 }).notNull().unique(),
+  slug: varchar("slug", { length: 255 }).notNull().unique(),
   isActive: boolean("is_active").notNull().default(true),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });
+
+/** Generate a URL-safe slug from a keyword text */
+export function keywordToSlug(keyword: string): string {
+  return keyword
+    .toLowerCase()
+    .replace(/[^a-z0-9\s-]/g, "")
+    .replace(/\s+/g, "-")
+    .replace(/-+/g, "-")
+    .replace(/^-|-$/g, "");
+}
 
 export const keywordSnapshots = pgTable(
   "keyword_snapshots",

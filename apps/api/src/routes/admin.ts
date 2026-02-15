@@ -5,6 +5,7 @@ import { createDb } from "@shopify-tracking/db";
 import {
   apps,
   trackedKeywords,
+  keywordToSlug,
   scrapeRuns,
 } from "@shopify-tracking/db";
 
@@ -90,7 +91,7 @@ export const adminRoutes: FastifyPluginAsync = async (app) => {
 
     const [result] = await db
       .insert(trackedKeywords)
-      .values({ keyword })
+      .values({ keyword, slug: keywordToSlug(keyword) })
       .onConflictDoUpdate({
         target: trackedKeywords.keyword,
         set: { isActive: true, updatedAt: new Date() },

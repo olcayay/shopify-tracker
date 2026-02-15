@@ -73,17 +73,26 @@ export function getAppRankings(slug: string, days = 30) {
   return fetchApi<any>(`/api/apps/${slug}/rankings?days=${days}`);
 }
 
+// --- Apps (search) ---
+export function searchApps(q: string) {
+  return fetchApi<any[]>(`/api/apps/search?q=${encodeURIComponent(q)}`);
+}
+
 // --- Keywords ---
 export function getKeywords() {
   return fetchApi<any[]>(`/api/keywords`);
 }
 
-export function getKeyword(id: number) {
-  return fetchApi<any>(`/api/keywords/${id}`);
+export function getKeyword(slug: string) {
+  return fetchApi<any>(`/api/keywords/${slug}`);
 }
 
-export function getKeywordRankings(id: number, days = 30) {
-  return fetchApi<any>(`/api/keywords/${id}/rankings?days=${days}`);
+export function getKeywordRankings(slug: string, days = 30) {
+  return fetchApi<any>(`/api/keywords/${slug}/rankings?days=${days}`);
+}
+
+export function searchKeywords(q: string) {
+  return fetchApi<any[]>(`/api/keywords/search?q=${encodeURIComponent(q)}`);
 }
 
 // --- Auth ---

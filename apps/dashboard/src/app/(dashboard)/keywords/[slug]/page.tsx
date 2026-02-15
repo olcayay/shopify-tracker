@@ -10,21 +10,21 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { TrackKeywordButton } from "./track-button";
 
 export default async function KeywordDetailPage({
   params,
 }: {
-  params: Promise<{ id: string }>;
+  params: Promise<{ slug: string }>;
 }) {
-  const { id } = await params;
-  const keywordId = parseInt(id, 10);
+  const { slug } = await params;
 
   let keyword: any;
   let rankings: any;
   try {
     [keyword, rankings] = await Promise.all([
-      getKeyword(keywordId),
-      getKeywordRankings(keywordId),
+      getKeyword(slug),
+      getKeywordRankings(slug),
     ]);
   } catch {
     return <p className="text-muted-foreground">Keyword not found.</p>;
@@ -35,18 +35,27 @@ export default async function KeywordDetailPage({
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold">&ldquo;{keyword.keyword}&rdquo;</h1>
-        <p className="text-muted-foreground">
-          {snapshot?.totalResults?.toLocaleString() ?? "?"} total results
-          {snapshot?.scrapedAt && (
-            <>
-              {" "}
-              &middot; Last scraped:{" "}
-              {new Date(snapshot.scrapedAt).toLocaleDateString()}
-            </>
-          )}
-        </p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold">
+            &ldquo;{keyword.keyword}&rdquo;
+          </h1>
+          <p className="text-muted-foreground">
+            {snapshot?.totalResults?.toLocaleString() ?? "?"} total results
+            {snapshot?.scrapedAt && (
+              <>
+                {" "}
+                &middot; Last scraped:{" "}
+                {new Date(snapshot.scrapedAt).toLocaleDateString()}
+              </>
+            )}
+          </p>
+        </div>
+        <TrackKeywordButton
+          keywordId={keyword.id}
+          keywordText={keyword.keyword}
+          initialTracked={keyword.isTrackedByAccount}
+        />
       </div>
 
       {/* Search Results */}
@@ -80,15 +89,17 @@ export default async function KeywordDetailPage({
                       {app.short_description}
                     </p>
                   </TableCell>
-                  <TableCell>{app.average_rating?.toFixed(1) ?? "—"}</TableCell>
                   <TableCell>
-                    {app.rating_count?.toLocaleString() ?? "—"}
+                    {app.average_rating?.toFixed(1) ?? "\u2014"}
+                  </TableCell>
+                  <TableCell>
+                    {app.rating_count?.toLocaleString() ?? "\u2014"}
                   </TableCell>
                   <TableCell>
                     {app.is_sponsored ? (
                       <Badge variant="secondary">Ad</Badge>
                     ) : (
-                      "—"
+                      "\u2014"
                     )}
                   </TableCell>
                 </TableRow>
