@@ -43,7 +43,7 @@ export class CategoryScraper {
    * Crawl the full category tree starting from the 6 seed categories.
    * Returns the complete tree as an array of root nodes.
    */
-  async crawl(): Promise<CategoryNode[]> {
+  async crawl(triggeredBy?: string): Promise<CategoryNode[]> {
     log.info("starting full category tree crawl");
 
     // Create scrape run
@@ -53,6 +53,7 @@ export class CategoryScraper {
         scraperType: "category",
         status: "running",
         startedAt: new Date(),
+        triggeredBy,
       })
       .returning();
 

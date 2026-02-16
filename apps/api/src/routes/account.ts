@@ -1,5 +1,5 @@
 import type { FastifyPluginAsync } from "fastify";
-import { eq, sql } from "drizzle-orm";
+import { eq, sql, and } from "drizzle-orm";
 import crypto from "crypto";
 import { Queue } from "bullmq";
 import {
@@ -15,6 +15,9 @@ import {
   accountTrackedApps,
   accountTrackedKeywords,
   accountCompetitorApps,
+  accountStarredCategories,
+  accountTrackedFeatures,
+  categories,
 } from "@shopify-tracking/db";
 import { requireRole } from "../middleware/authorize.js";
 
@@ -107,6 +110,11 @@ export const accountRoutes: FastifyPluginAsync = async (app) => {
       .from(accountCompetitorApps)
       .where(eq(accountCompetitorApps.accountId, accountId));
 
+    const [trackedFeaturesCount] = await db
+      .select({ count: sql<number>`count(*)::int` })
+      .from(accountTrackedFeatures)
+      .where(eq(accountTrackedFeatures.accountId, accountId));
+
     return {
       id: account.id,
       name: account.name,
@@ -115,11 +123,13 @@ export const accountRoutes: FastifyPluginAsync = async (app) => {
         maxTrackedApps: account.maxTrackedApps,
         maxTrackedKeywords: account.maxTrackedKeywords,
         maxCompetitorApps: account.maxCompetitorApps,
+        maxTrackedFeatures: account.maxTrackedFeatures,
       },
       usage: {
         trackedApps: trackedAppsCount.count,
         trackedKeywords: trackedKeywordsCount.count,
         competitorApps: competitorAppsCount.count,
+        trackedFeatures: trackedFeaturesCount.count,
       },
     };
   });
@@ -406,7 +416,7 @@ export const accountRoutes: FastifyPluginAsync = async (app) => {
     { preHandler: [requireRole("owner", "editor")] },
     async (request, reply) => {
       const { accountId } = request.user;
-      const { slug } = request.params;
+      const slug = decodeURIComponent(request.params.slug);
 
       const deleted = await db
         .delete(accountTrackedApps)
@@ -631,7 +641,29 @@ export const accountRoutes: FastifyPluginAsync = async (app) => {
         return reply.code(409).send({ error: "Competitor already tracked" });
       }
 
-      return result;
+      // If app has no snapshots yet, enqueue a scraper job
+      const [existingSnapshot] = await db
+        .select({ id: appSnapshots.id })
+        .from(appSnapshots)
+        .where(eq(appSnapshots.appSlug, slug))
+        .limit(1);
+
+      let scraperEnqueued = false;
+      if (!existingSnapshot) {
+        try {
+          const queue = getScraperQueue();
+          await queue.add("scrape:app_details", {
+            type: "app_details",
+            slug,
+            triggeredBy: "api",
+          });
+          scraperEnqueued = true;
+        } catch {
+          // Redis unavailable — scraper will pick it up on next scheduled run
+        }
+      }
+
+      return { ...result, scraperEnqueued };
     }
   );
 
@@ -641,7 +673,7 @@ export const accountRoutes: FastifyPluginAsync = async (app) => {
     { preHandler: [requireRole("owner", "editor")] },
     async (request, reply) => {
       const { accountId } = request.user;
-      const { slug } = request.params;
+      const slug = decodeURIComponent(request.params.slug);
 
       const deleted = await db
         .delete(accountCompetitorApps)
@@ -657,6 +689,204 @@ export const accountRoutes: FastifyPluginAsync = async (app) => {
       await syncAppTrackedFlag(db, slug);
 
       return { message: "Competitor removed" };
+    }
+  );
+
+  // --- Starred Categories ---
+
+  // GET /api/account/starred-categories
+  app.get("/starred-categories", async (request) => {
+    const { accountId } = request.user;
+
+    const rows = await db
+      .select({
+        categorySlug: accountStarredCategories.categorySlug,
+        createdAt: accountStarredCategories.createdAt,
+        categoryTitle: categories.title,
+        parentSlug: categories.parentSlug,
+      })
+      .from(accountStarredCategories)
+      .innerJoin(
+        categories,
+        eq(categories.slug, accountStarredCategories.categorySlug)
+      )
+      .where(eq(accountStarredCategories.accountId, accountId));
+
+    return rows;
+  });
+
+  // POST /api/account/starred-categories
+  app.post(
+    "/starred-categories",
+    { preHandler: [requireRole("owner", "editor")] },
+    async (request, reply) => {
+      const { accountId } = request.user;
+      const { slug } = request.body as { slug?: string };
+
+      if (!slug) {
+        return reply.code(400).send({ error: "slug is required" });
+      }
+
+      const [result] = await db
+        .insert(accountStarredCategories)
+        .values({ accountId, categorySlug: slug })
+        .onConflictDoNothing()
+        .returning();
+
+      if (!result) {
+        return reply.code(409).send({ error: "Category already starred" });
+      }
+
+      return result;
+    }
+  );
+
+  // DELETE /api/account/starred-categories/:slug
+  app.delete<{ Params: { slug: string } }>(
+    "/starred-categories/:slug",
+    { preHandler: [requireRole("owner", "editor")] },
+    async (request, reply) => {
+      const { accountId } = request.user;
+      const slug = decodeURIComponent(request.params.slug);
+
+      const deleted = await db
+        .delete(accountStarredCategories)
+        .where(
+          sql`${accountStarredCategories.accountId} = ${accountId} AND ${accountStarredCategories.categorySlug} = ${slug}`
+        )
+        .returning();
+
+      if (deleted.length === 0) {
+        return reply.code(404).send({ error: "Starred category not found" });
+      }
+
+      return { message: "Category unstarred" };
+    }
+  );
+
+  // --- Tracked Features ---
+
+  // GET /api/account/tracked-features
+  app.get("/tracked-features", async (request) => {
+    const { accountId } = request.user;
+
+    const rows = await db
+      .select({
+        featureHandle: accountTrackedFeatures.featureHandle,
+        featureTitle: accountTrackedFeatures.featureTitle,
+        createdAt: accountTrackedFeatures.createdAt,
+      })
+      .from(accountTrackedFeatures)
+      .where(eq(accountTrackedFeatures.accountId, accountId));
+
+    // Enrich with category info from snapshots
+    if (rows.length > 0) {
+      const handles = rows.map((r) => r.featureHandle);
+      const handleList = sql.join(handles.map((h) => sql`${h}`), sql`,`);
+      const catResult = await db.execute(sql`
+        SELECT DISTINCT ON (f->>'feature_handle')
+          f->>'feature_handle' AS handle,
+          cat->>'title' AS category_title,
+          sub->>'title' AS subcategory_title
+        FROM app_snapshots,
+          jsonb_array_elements(categories) AS cat,
+          jsonb_array_elements(cat->'subcategories') AS sub,
+          jsonb_array_elements(sub->'features') AS f
+        WHERE f->>'feature_handle' IN (${handleList})
+        ORDER BY f->>'feature_handle'
+      `);
+      const catRows: any[] = (catResult as any).rows ?? catResult;
+      const catMap = new Map(catRows.map((r: any) => [r.handle, r]));
+      return rows.map((r) => {
+        const cat = catMap.get(r.featureHandle);
+        return {
+          ...r,
+          categoryTitle: cat?.category_title || null,
+          subcategoryTitle: cat?.subcategory_title || null,
+        };
+      });
+    }
+
+    return rows;
+  });
+
+  // POST /api/account/tracked-features
+  app.post(
+    "/tracked-features",
+    { preHandler: [requireRole("owner", "editor")] },
+    async (request, reply) => {
+      const { accountId } = request.user;
+      const { handle, title } = request.body as {
+        handle?: string;
+        title?: string;
+      };
+
+      if (!handle || !title) {
+        return reply
+          .code(400)
+          .send({ error: "handle and title are required" });
+      }
+
+      // Check limit
+      const [account] = await db
+        .select()
+        .from(accounts)
+        .where(eq(accounts.id, accountId));
+
+      const [{ count }] = await db
+        .select({ count: sql<number>`count(*)::int` })
+        .from(accountTrackedFeatures)
+        .where(eq(accountTrackedFeatures.accountId, accountId));
+
+      if (count >= account.maxTrackedFeatures) {
+        return reply.code(403).send({
+          error: "Tracked features limit reached",
+          current: count,
+          max: account.maxTrackedFeatures,
+        });
+      }
+
+      const [result] = await db
+        .insert(accountTrackedFeatures)
+        .values({
+          accountId,
+          featureHandle: handle,
+          featureTitle: title,
+        })
+        .onConflictDoNothing()
+        .returning();
+
+      if (!result) {
+        return reply.code(409).send({ error: "Feature already tracked" });
+      }
+
+      return result;
+    }
+  );
+
+  // DELETE /api/account/tracked-features/:handle
+  app.delete<{ Params: { handle: string } }>(
+    "/tracked-features/:handle",
+    { preHandler: [requireRole("owner", "editor")] },
+    async (request, reply) => {
+      const { accountId } = request.user;
+      const { handle } = request.params;
+
+      const deleted = await db
+        .delete(accountTrackedFeatures)
+        .where(
+          and(
+            eq(accountTrackedFeatures.accountId, accountId),
+            eq(accountTrackedFeatures.featureHandle, handle)
+          )
+        )
+        .returning();
+
+      if (deleted.length === 0) {
+        return reply.code(404).send({ error: "Tracked feature not found" });
+      }
+
+      return { message: "Feature removed from tracking" };
     }
   );
 };

@@ -9,6 +9,8 @@ import {
   jsonb,
   smallint,
   index,
+  uniqueIndex,
+  date,
 } from "drizzle-orm/pg-core";
 import type { KeywordSearchApp } from "@shopify-tracking/shared";
 import { scrapeRuns } from "./scrape-runs";
@@ -79,6 +81,36 @@ export const appKeywordRankings = pgTable(
       table.appSlug,
       table.keywordId,
       table.scrapedAt
+    ),
+  ]
+);
+
+export const keywordAdSightings = pgTable(
+  "keyword_ad_sightings",
+  {
+    id: serial("id").primaryKey(),
+    appSlug: varchar("app_slug", { length: 255 })
+      .notNull()
+      .references(() => apps.slug),
+    keywordId: integer("keyword_id")
+      .notNull()
+      .references(() => trackedKeywords.id),
+    seenDate: date("seen_date", { mode: "string" }).notNull(),
+    firstSeenRunId: uuid("first_seen_run_id")
+      .notNull()
+      .references(() => scrapeRuns.id),
+    lastSeenRunId: uuid("last_seen_run_id")
+      .notNull()
+      .references(() => scrapeRuns.id),
+    timesSeenInDay: smallint("times_seen_in_day").notNull().default(1),
+  },
+  (table) => [
+    index("idx_kw_ad_sightings_kw_date").on(table.keywordId, table.seenDate),
+    index("idx_kw_ad_sightings_app_date").on(table.appSlug, table.seenDate),
+    uniqueIndex("idx_kw_ad_sightings_unique").on(
+      table.appSlug,
+      table.keywordId,
+      table.seenDate
     ),
   ]
 );

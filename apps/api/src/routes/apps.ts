@@ -6,10 +6,12 @@ import {
   appSnapshots,
   appCategoryRankings,
   appKeywordRankings,
+  keywordAdSightings,
   reviews,
   trackedKeywords,
   categories,
   accountTrackedApps,
+  accountCompetitorApps,
 } from "@shopify-tracking/db";
 
 type Db = ReturnType<typeof createDb>;
@@ -69,11 +71,52 @@ export const appRoutes: FastifyPluginAsync = async (app) => {
       .select({
         slug: apps.slug,
         name: apps.name,
+        averageRating: appSnapshots.averageRating,
+        ratingCount: appSnapshots.ratingCount,
       })
       .from(apps)
+      .leftJoin(
+        appSnapshots,
+        sql`${appSnapshots.appSlug} = ${apps.slug}
+          AND ${appSnapshots.id} = (
+            SELECT s2.id FROM app_snapshots s2
+            WHERE s2.app_slug = ${apps.slug}
+            ORDER BY s2.scraped_at DESC LIMIT 1
+          )`
+      )
       .where(ilike(apps.name, `%${q}%`))
       .orderBy(apps.name)
       .limit(20);
+
+    return rows;
+  });
+
+  // GET /api/apps/by-developer?name= — list apps by developer name
+  app.get("/by-developer", async (request) => {
+    const { name = "" } = request.query as { name?: string };
+    if (name.length < 1) return [];
+
+    // Find apps whose latest snapshot has matching developer name
+    const rows = await db
+      .select({
+        slug: apps.slug,
+        name: apps.name,
+        averageRating: appSnapshots.averageRating,
+        ratingCount: appSnapshots.ratingCount,
+        pricing: appSnapshots.pricing,
+        developer: appSnapshots.developer,
+      })
+      .from(apps)
+      .innerJoin(appSnapshots, eq(appSnapshots.appSlug, apps.slug))
+      .where(
+        sql`${appSnapshots.developer}->>'name' = ${name}
+          AND ${appSnapshots.id} = (
+            SELECT s2.id FROM app_snapshots s2
+            WHERE s2.app_slug = ${apps.slug}
+            ORDER BY s2.scraped_at DESC LIMIT 1
+          )`
+      )
+      .orderBy(apps.name);
 
     return rows;
   });
@@ -110,10 +153,21 @@ export const appRoutes: FastifyPluginAsync = async (app) => {
         )
       );
 
+    const [competitor] = await db
+      .select({ appSlug: accountCompetitorApps.appSlug })
+      .from(accountCompetitorApps)
+      .where(
+        and(
+          eq(accountCompetitorApps.accountId, accountId),
+          eq(accountCompetitorApps.appSlug, slug)
+        )
+      );
+
     return {
       ...appRow,
       latestSnapshot: latestSnapshot || null,
       isTrackedByAccount: !!tracked,
+      isCompetitor: !!competitor,
     };
   });
 
@@ -320,7 +374,29 @@ export const appRoutes: FastifyPluginAsync = async (app) => {
         )
         .orderBy(appKeywordRankings.scrapedAt);
 
-      return { app: appRow, categoryRankings, keywordRankings };
+      const sinceDateStr = since.toISOString().slice(0, 10);
+      const keywordAds = await db
+        .select({
+          keywordId: keywordAdSightings.keywordId,
+          keyword: trackedKeywords.keyword,
+          keywordSlug: trackedKeywords.slug,
+          seenDate: keywordAdSightings.seenDate,
+          timesSeenInDay: keywordAdSightings.timesSeenInDay,
+        })
+        .from(keywordAdSightings)
+        .innerJoin(
+          trackedKeywords,
+          eq(keywordAdSightings.keywordId, trackedKeywords.id)
+        )
+        .where(
+          and(
+            eq(keywordAdSightings.appSlug, slug),
+            sql`${keywordAdSightings.seenDate} >= ${sinceDateStr}`
+          )
+        )
+        .orderBy(desc(keywordAdSightings.seenDate));
+
+      return { app: appRow, categoryRankings, keywordRankings, keywordAds };
     }
   );
 };

@@ -1,0 +1,1 @@
+ALTER TABLE "scrape_runs" ADD COLUMN "created_at" timestamp DEFAULT now() NOT NULL;

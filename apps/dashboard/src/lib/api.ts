@@ -78,6 +78,10 @@ export function searchApps(q: string) {
   return fetchApi<any[]>(`/api/apps/search?q=${encodeURIComponent(q)}`);
 }
 
+export function getAppsByDeveloper(name: string) {
+  return fetchApi<any[]>(`/api/apps/by-developer?name=${encodeURIComponent(name)}`);
+}
+
 // --- Keywords ---
 export function getKeywords() {
   return fetchApi<any[]>(`/api/keywords`);
@@ -87,12 +91,38 @@ export function getKeyword(slug: string) {
   return fetchApi<any>(`/api/keywords/${slug}`);
 }
 
-export function getKeywordRankings(slug: string, days = 30) {
-  return fetchApi<any>(`/api/keywords/${slug}/rankings?days=${days}`);
+export function getKeywordRankings(
+  slug: string,
+  days = 30,
+  scope?: "account"
+) {
+  const params = new URLSearchParams({ days: String(days) });
+  if (scope) params.set("scope", scope);
+  return fetchApi<any>(`/api/keywords/${slug}/rankings?${params}`);
+}
+
+export function getKeywordAds(slug: string, days = 30) {
+  return fetchApi<any>(`/api/keywords/${slug}/ads?days=${days}`);
 }
 
 export function searchKeywords(q: string) {
   return fetchApi<any[]>(`/api/keywords/search?q=${encodeURIComponent(q)}`);
+}
+
+// --- Features ---
+export function getFeature(handle: string) {
+  return fetchApi<any>(`/api/features/${encodeURIComponent(handle)}`);
+}
+
+export function searchFeatures(q: string) {
+  return fetchApi<any[]>(`/api/features/search?q=${encodeURIComponent(q)}`);
+}
+
+export function getFeaturesByCategory(category?: string, subcategory?: string) {
+  const params = new URLSearchParams();
+  if (category) params.set("category", category);
+  if (subcategory) params.set("subcategory", subcategory);
+  return fetchApi<any[]>(`/api/features/by-category?${params.toString()}`);
 }
 
 // --- Auth ---
@@ -119,6 +149,10 @@ export function getAccountTrackedKeywords() {
 
 export function getAccountCompetitors() {
   return fetchApi<any[]>(`/api/account/competitors`);
+}
+
+export function getAccountTrackedFeatures() {
+  return fetchApi<any[]>(`/api/account/tracked-features`);
 }
 
 // --- System Admin ---

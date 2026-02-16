@@ -1,16 +1,23 @@
 import type { FastifyPluginAsync } from "fastify";
-import { eq, desc, sql } from "drizzle-orm";
+import { eq, desc, sql, and } from "drizzle-orm";
 import { Queue } from "bullmq";
 import {
   createDb,
   accounts,
   users,
   apps,
+  appSnapshots,
   trackedKeywords,
+  keywordSnapshots,
   scrapeRuns,
   accountTrackedApps,
   accountTrackedKeywords,
   accountCompetitorApps,
+  accountTrackedFeatures,
+  categories,
+  categorySnapshots,
+  reviews,
+  refreshTokens,
 } from "@shopify-tracking/db";
 
 type Db = ReturnType<typeof createDb>;
@@ -62,17 +69,34 @@ export const systemAdminRoutes: FastifyPluginAsync = async (app) => {
           .from(accountCompetitorApps)
           .where(eq(accountCompetitorApps.accountId, account.id));
 
+        const [trackedFeaturesCount] = await db
+          .select({ count: sql<number>`count(*)::int` })
+          .from(accountTrackedFeatures)
+          .where(eq(accountTrackedFeatures.accountId, account.id));
+
         const [memberCount] = await db
           .select({ count: sql<number>`count(*)::int` })
           .from(users)
           .where(eq(users.accountId, account.id));
 
+        const [lastSeenResult] = await db
+          .select({
+            lastSeen: sql<string | null>`(
+              SELECT max(rt.created_at) FROM refresh_tokens rt
+              WHERE rt.user_id IN (SELECT id FROM users WHERE account_id = ${account.id})
+            )`,
+          })
+          .from(accounts)
+          .where(eq(accounts.id, account.id));
+
         return {
           ...account,
+          lastSeen: lastSeenResult?.lastSeen ?? null,
           usage: {
             trackedApps: trackedAppsCount.count,
             trackedKeywords: trackedKeywordsCount.count,
             competitorApps: competitorAppsCount.count,
+            trackedFeatures: trackedFeaturesCount.count,
             members: memberCount.count,
           },
         };
@@ -111,6 +135,10 @@ export const systemAdminRoutes: FastifyPluginAsync = async (app) => {
       .select({
         appSlug: accountTrackedApps.appSlug,
         appName: apps.name,
+        lastScrapedAt: sql<string | null>`(
+          SELECT max(scraped_at) FROM app_snapshots
+          WHERE app_slug = ${accountTrackedApps.appSlug}
+        )`,
       })
       .from(accountTrackedApps)
       .innerJoin(apps, eq(apps.slug, accountTrackedApps.appSlug))
@@ -120,6 +148,10 @@ export const systemAdminRoutes: FastifyPluginAsync = async (app) => {
       .select({
         keywordId: accountTrackedKeywords.keywordId,
         keyword: trackedKeywords.keyword,
+        lastScrapedAt: sql<string | null>`(
+          SELECT max(scraped_at) FROM keyword_snapshots
+          WHERE keyword_id = ${accountTrackedKeywords.keywordId}
+        )`,
       })
       .from(accountTrackedKeywords)
       .innerJoin(
@@ -132,10 +164,22 @@ export const systemAdminRoutes: FastifyPluginAsync = async (app) => {
       .select({
         appSlug: accountCompetitorApps.appSlug,
         appName: apps.name,
+        lastScrapedAt: sql<string | null>`(
+          SELECT max(scraped_at) FROM app_snapshots
+          WHERE app_slug = ${accountCompetitorApps.appSlug}
+        )`,
       })
       .from(accountCompetitorApps)
       .innerJoin(apps, eq(apps.slug, accountCompetitorApps.appSlug))
       .where(eq(accountCompetitorApps.accountId, id));
+
+    const trackedFeaturesList = await db
+      .select({
+        featureHandle: accountTrackedFeatures.featureHandle,
+        featureTitle: accountTrackedFeatures.featureTitle,
+      })
+      .from(accountTrackedFeatures)
+      .where(eq(accountTrackedFeatures.accountId, id));
 
     return {
       ...account,
@@ -143,6 +187,7 @@ export const systemAdminRoutes: FastifyPluginAsync = async (app) => {
       trackedApps: trackedAppsList,
       trackedKeywords: trackedKeywordsList,
       competitorApps: competitorAppsList,
+      trackedFeatures: trackedFeaturesList,
     };
   });
 
@@ -156,6 +201,7 @@ export const systemAdminRoutes: FastifyPluginAsync = async (app) => {
         maxTrackedApps?: number;
         maxTrackedKeywords?: number;
         maxCompetitorApps?: number;
+        maxTrackedFeatures?: number;
         isSuspended?: boolean;
       };
 
@@ -176,6 +222,8 @@ export const systemAdminRoutes: FastifyPluginAsync = async (app) => {
         updates.maxTrackedKeywords = body.maxTrackedKeywords;
       if (body.maxCompetitorApps !== undefined)
         updates.maxCompetitorApps = body.maxCompetitorApps;
+      if (body.maxTrackedFeatures !== undefined)
+        updates.maxTrackedFeatures = body.maxTrackedFeatures;
       if (body.isSuspended !== undefined)
         updates.isSuspended = body.isSuspended;
 
@@ -244,6 +292,10 @@ export const systemAdminRoutes: FastifyPluginAsync = async (app) => {
         accountId: users.accountId,
         accountName: accounts.name,
         createdAt: users.createdAt,
+        lastSeen: sql<string | null>`(
+          SELECT max(created_at) FROM refresh_tokens
+          WHERE user_id = ${users.id}
+        )`,
       })
       .from(users)
       .innerJoin(accounts, eq(accounts.id, users.accountId));
@@ -251,30 +303,261 @@ export const systemAdminRoutes: FastifyPluginAsync = async (app) => {
     return allUsers;
   });
 
+  // GET /api/system-admin/users/:id — user detail with account tracked items
+  app.get<{ Params: { id: string } }>("/users/:id", async (request, reply) => {
+    const { id } = request.params;
+
+    const [user] = await db
+      .select({
+        id: users.id,
+        email: users.email,
+        name: users.name,
+        role: users.role,
+        isSystemAdmin: users.isSystemAdmin,
+        accountId: users.accountId,
+        accountName: accounts.name,
+        createdAt: users.createdAt,
+      })
+      .from(users)
+      .innerJoin(accounts, eq(accounts.id, users.accountId))
+      .where(eq(users.id, id));
+
+    if (!user) {
+      return reply.code(404).send({ error: "User not found" });
+    }
+
+    // Get user's account tracked items
+    const trackedAppsList = await db
+      .select({
+        appSlug: accountTrackedApps.appSlug,
+        appName: apps.name,
+        createdAt: accountTrackedApps.createdAt,
+        lastScrapedAt: sql<string | null>`(
+          SELECT max(scraped_at) FROM app_snapshots
+          WHERE app_slug = ${accountTrackedApps.appSlug}
+        )`,
+      })
+      .from(accountTrackedApps)
+      .innerJoin(apps, eq(apps.slug, accountTrackedApps.appSlug))
+      .where(eq(accountTrackedApps.accountId, user.accountId));
+
+    const trackedKeywordsList = await db
+      .select({
+        keywordId: accountTrackedKeywords.keywordId,
+        keyword: trackedKeywords.keyword,
+        createdAt: accountTrackedKeywords.createdAt,
+        lastScrapedAt: sql<string | null>`(
+          SELECT max(scraped_at) FROM keyword_snapshots
+          WHERE keyword_id = ${accountTrackedKeywords.keywordId}
+        )`,
+      })
+      .from(accountTrackedKeywords)
+      .innerJoin(
+        trackedKeywords,
+        eq(trackedKeywords.id, accountTrackedKeywords.keywordId)
+      )
+      .where(eq(accountTrackedKeywords.accountId, user.accountId));
+
+    const competitorAppsList = await db
+      .select({
+        appSlug: accountCompetitorApps.appSlug,
+        appName: apps.name,
+        createdAt: accountCompetitorApps.createdAt,
+        lastScrapedAt: sql<string | null>`(
+          SELECT max(scraped_at) FROM app_snapshots
+          WHERE app_slug = ${accountCompetitorApps.appSlug}
+        )`,
+      })
+      .from(accountCompetitorApps)
+      .innerJoin(apps, eq(apps.slug, accountCompetitorApps.appSlug))
+      .where(eq(accountCompetitorApps.accountId, user.accountId));
+
+    const trackedFeaturesList = await db
+      .select({
+        featureHandle: accountTrackedFeatures.featureHandle,
+        featureTitle: accountTrackedFeatures.featureTitle,
+        createdAt: accountTrackedFeatures.createdAt,
+      })
+      .from(accountTrackedFeatures)
+      .where(eq(accountTrackedFeatures.accountId, user.accountId));
+
+    return {
+      ...user,
+      trackedApps: trackedAppsList,
+      trackedKeywords: trackedKeywordsList,
+      competitorApps: competitorAppsList,
+      trackedFeatures: trackedFeaturesList,
+    };
+  });
+
   // --- Scraper Control (moved from admin.ts) ---
 
   // GET /api/system-admin/scraper/runs
   app.get("/scraper/runs", async (request) => {
-    const { type, limit = "20" } = request.query as {
+    const { type, triggeredBy: triggerFilter, limit = "20", offset = "0" } = request.query as {
       type?: string;
+      triggeredBy?: string;
       limit?: string;
+      offset?: string;
     };
 
-    let query = db.select().from(scrapeRuns);
+    const conditions = [];
     if (
       type &&
       ["category", "app_details", "keyword_search", "reviews"].includes(type)
     ) {
-      query = query.where(
-        eq(scrapeRuns.scraperType, type as any)
-      ) as typeof query;
+      conditions.push(eq(scrapeRuns.scraperType, type as any));
+    }
+    if (triggerFilter === "scheduler") {
+      conditions.push(eq(scrapeRuns.triggeredBy, "scheduler"));
+    } else if (triggerFilter === "manual") {
+      conditions.push(sql`${scrapeRuns.triggeredBy} IS NOT NULL AND ${scrapeRuns.triggeredBy} != 'scheduler'`);
     }
 
-    const rows = await query
-      .orderBy(desc(scrapeRuns.startedAt))
-      .limit(parseInt(limit, 10));
+    let query = db.select().from(scrapeRuns);
+    if (conditions.length === 1) {
+      query = query.where(conditions[0]) as typeof query;
+    } else if (conditions.length > 1) {
+      query = query.where(and(...conditions)) as typeof query;
+    }
 
-    return rows;
+    // Get total count for pagination
+    let countQuery = db.select({ count: sql<number>`count(*)::int` }).from(scrapeRuns);
+    if (conditions.length === 1) {
+      countQuery = countQuery.where(conditions[0]) as typeof countQuery;
+    } else if (conditions.length > 1) {
+      countQuery = countQuery.where(and(...conditions)) as typeof countQuery;
+    }
+    const [{ count: total }] = await countQuery;
+
+    const rows = await query
+      .orderBy(desc(scrapeRuns.createdAt))
+      .limit(parseInt(limit, 10))
+      .offset(parseInt(offset, 10));
+
+    // Enrich runs with scraped asset names
+    const enriched = await Promise.all(
+      rows.map(async (run) => {
+        const itemsScraped =
+          (run.metadata as any)?.items_scraped ?? 0;
+
+        // Only fetch asset names for small runs (≤ 10 items)
+        let assets: string[] = [];
+        if (itemsScraped > 0 && itemsScraped <= 10) {
+          if (run.scraperType === "app_details") {
+            const snapshots = await db
+              .select({ appSlug: appSnapshots.appSlug })
+              .from(appSnapshots)
+              .where(eq(appSnapshots.scrapeRunId, run.id));
+            // Get app names
+            if (snapshots.length > 0) {
+              const appRows = await db
+                .select({ slug: apps.slug, name: apps.name })
+                .from(apps)
+                .where(
+                  sql`${apps.slug} IN (${sql.join(
+                    snapshots.map((s) => sql`${s.appSlug}`),
+                    sql`,`
+                  )})`
+                );
+              const nameMap = new Map(appRows.map((a) => [a.slug, a.name]));
+              assets = snapshots.map(
+                (s) => nameMap.get(s.appSlug) || s.appSlug
+              );
+            }
+          } else if (run.scraperType === "keyword_search") {
+            const snapshots = await db
+              .select({ keywordId: keywordSnapshots.keywordId })
+              .from(keywordSnapshots)
+              .where(eq(keywordSnapshots.scrapeRunId, run.id));
+            if (snapshots.length > 0) {
+              const kwRows = await db
+                .select({
+                  id: trackedKeywords.id,
+                  keyword: trackedKeywords.keyword,
+                })
+                .from(trackedKeywords)
+                .where(
+                  sql`${trackedKeywords.id} IN (${sql.join(
+                    snapshots.map((s) => sql`${s.keywordId}`),
+                    sql`,`
+                  )})`
+                );
+              const nameMap = new Map(kwRows.map((k) => [k.id, k.keyword]));
+              assets = snapshots.map(
+                (s) => nameMap.get(s.keywordId) || `keyword#${s.keywordId}`
+              );
+            }
+          } else if (run.scraperType === "category") {
+            const snapshots = await db
+              .select({ categorySlug: categorySnapshots.categorySlug })
+              .from(categorySnapshots)
+              .where(eq(categorySnapshots.scrapeRunId, run.id))
+              .limit(10);
+            assets = snapshots.map((s) => s.categorySlug);
+          }
+        }
+
+        return { ...run, assets };
+      })
+    );
+
+    return { runs: enriched, total };
+  });
+
+  // GET /api/system-admin/scraper/queue — queue status
+  app.get("/scraper/queue", async () => {
+    try {
+      const queue = getScraperQueue();
+      const [waiting, active, delayed, failed] = await Promise.all([
+        queue.getWaiting(0, 50),
+        queue.getActive(0, 10),
+        queue.getDelayed(0, 10),
+        queue.getFailed(0, 10),
+      ]);
+
+      return {
+        counts: {
+          waiting: waiting.length,
+          active: active.length,
+          delayed: delayed.length,
+          failed: failed.length,
+        },
+        jobs: [
+          ...active.map((j) => ({
+            id: j.id,
+            type: j.data?.type,
+            status: "active" as const,
+            createdAt: j.timestamp ? new Date(j.timestamp).toISOString() : null,
+            data: j.data,
+          })),
+          ...waiting.map((j) => ({
+            id: j.id,
+            type: j.data?.type,
+            status: "waiting" as const,
+            createdAt: j.timestamp ? new Date(j.timestamp).toISOString() : null,
+            data: j.data,
+          })),
+          ...delayed.map((j) => ({
+            id: j.id,
+            type: j.data?.type,
+            status: "delayed" as const,
+            createdAt: j.timestamp ? new Date(j.timestamp).toISOString() : null,
+            data: j.data,
+          })),
+          ...failed.map((j) => ({
+            id: j.id,
+            type: j.data?.type,
+            status: "failed" as const,
+            createdAt: j.timestamp ? new Date(j.timestamp).toISOString() : null,
+            failedReason: j.failedReason,
+            data: j.data,
+          })),
+        ],
+      };
+    } catch {
+      return { counts: { waiting: 0, active: 0, delayed: 0, failed: 0 }, jobs: [] };
+    }
   });
 
   // POST /api/system-admin/scraper/trigger
@@ -292,14 +575,16 @@ export const systemAdminRoutes: FastifyPluginAsync = async (app) => {
       });
     }
 
+    const userEmail = (request as any).user?.email || "api";
+
     try {
       const queue = getScraperQueue();
       const job = await queue.add(`scrape:${type}`, {
         type,
-        triggeredBy: "api",
+        triggeredBy: userEmail,
       });
 
-      app.log.info(`Scraper triggered: ${type}, jobId=${job.id}`);
+      app.log.info(`Scraper triggered: ${type}, jobId=${job.id}, by=${userEmail}`);
 
       return {
         message: `Scraper "${type}" enqueued`,
@@ -314,6 +599,7 @@ export const systemAdminRoutes: FastifyPluginAsync = async (app) => {
         .values({
           scraperType: type as any,
           status: "pending",
+          triggeredBy: userEmail,
         })
         .returning();
 
@@ -324,6 +610,115 @@ export const systemAdminRoutes: FastifyPluginAsync = async (app) => {
       };
     }
   });
+
+  // GET /api/system-admin/apps — all apps with last scraped info + account counts
+  app.get("/apps", async (request) => {
+    const { tracked } = request.query as { tracked?: string };
+
+    let query = db
+      .select({
+        slug: apps.slug,
+        name: apps.name,
+        isTracked: apps.isTracked,
+        createdAt: apps.createdAt,
+        lastScrapedAt: sql<string | null>`(
+          SELECT max(scraped_at) FROM app_snapshots
+          WHERE app_slug = ${apps.slug}
+        )`,
+        trackedByCount: sql<number>`(
+          SELECT count(*)::int FROM account_tracked_apps
+          WHERE app_slug = ${apps.slug}
+        )`,
+        competitorByCount: sql<number>`(
+          SELECT count(*)::int FROM account_competitor_apps
+          WHERE app_slug = ${apps.slug}
+        )`,
+      })
+      .from(apps);
+
+    if (tracked === "true") {
+      query = query.where(eq(apps.isTracked, true)) as typeof query;
+    }
+
+    const rows = await query.orderBy(apps.name);
+    return rows;
+  });
+
+  // GET /api/system-admin/apps/:slug/accounts — accounts that track this app
+  app.get<{ Params: { slug: string } }>(
+    "/apps/:slug/accounts",
+    async (request) => {
+      const { slug } = request.params;
+
+      const trackedBy = await db
+        .select({
+          accountId: accountTrackedApps.accountId,
+          accountName: accounts.name,
+          type: sql<string>`'tracked'`,
+        })
+        .from(accountTrackedApps)
+        .innerJoin(accounts, eq(accounts.id, accountTrackedApps.accountId))
+        .where(eq(accountTrackedApps.appSlug, slug));
+
+      const competitorBy = await db
+        .select({
+          accountId: accountCompetitorApps.accountId,
+          accountName: accounts.name,
+          type: sql<string>`'competitor'`,
+        })
+        .from(accountCompetitorApps)
+        .innerJoin(accounts, eq(accounts.id, accountCompetitorApps.accountId))
+        .where(eq(accountCompetitorApps.appSlug, slug));
+
+      return [...trackedBy, ...competitorBy];
+    }
+  );
+
+  // GET /api/system-admin/keywords — all tracked keywords with last scraped info + account counts
+  app.get("/keywords", async () => {
+    const rows = await db
+      .select({
+        id: trackedKeywords.id,
+        keyword: trackedKeywords.keyword,
+        slug: trackedKeywords.slug,
+        isActive: trackedKeywords.isActive,
+        createdAt: trackedKeywords.createdAt,
+        lastScrapedAt: sql<string | null>`(
+          SELECT max(scraped_at) FROM keyword_snapshots
+          WHERE keyword_id = ${trackedKeywords.id}
+        )`,
+        trackedByCount: sql<number>`(
+          SELECT count(*)::int FROM account_tracked_keywords
+          WHERE keyword_id = ${trackedKeywords.id}
+        )`,
+      })
+      .from(trackedKeywords)
+      .orderBy(trackedKeywords.keyword);
+
+    return rows;
+  });
+
+  // GET /api/system-admin/keywords/:id/accounts — accounts that track this keyword
+  app.get<{ Params: { id: string } }>(
+    "/keywords/:id/accounts",
+    async (request) => {
+      const keywordId = parseInt(request.params.id, 10);
+
+      const trackedBy = await db
+        .select({
+          accountId: accountTrackedKeywords.accountId,
+          accountName: accounts.name,
+        })
+        .from(accountTrackedKeywords)
+        .innerJoin(
+          accounts,
+          eq(accounts.id, accountTrackedKeywords.accountId)
+        )
+        .where(eq(accountTrackedKeywords.keywordId, keywordId));
+
+      return trackedBy;
+    }
+  );
 
   // GET /api/system-admin/stats — global system stats
   app.get("/stats", async () => {
@@ -349,6 +744,10 @@ export const systemAdminRoutes: FastifyPluginAsync = async (app) => {
       .select({ count: sql<number>`count(*)::int` })
       .from(apps);
 
+    const [featuresCount] = await db
+      .select({ count: sql<number>`count(DISTINCT feature_handle)::int` })
+      .from(accountTrackedFeatures);
+
     const latestRuns = await db
       .select()
       .from(scrapeRuns)
@@ -369,9 +768,48 @@ export const systemAdminRoutes: FastifyPluginAsync = async (app) => {
       users: userCount.count,
       trackedApps: appCount.count,
       trackedKeywords: kwCount.count,
+      trackedFeatures: featuresCount.count,
       totalApps: totalApps.count,
       latestRuns,
       freshness,
     };
   });
+
+  // GET /api/system-admin/features — all tracked features with account counts
+  app.get("/features", async () => {
+    // Get unique features with their tracking counts
+    const rows = await db
+      .select({
+        featureHandle: accountTrackedFeatures.featureHandle,
+        featureTitle: accountTrackedFeatures.featureTitle,
+        trackedByCount: sql<number>`count(*)::int`,
+      })
+      .from(accountTrackedFeatures)
+      .groupBy(accountTrackedFeatures.featureHandle, accountTrackedFeatures.featureTitle)
+      .orderBy(accountTrackedFeatures.featureTitle);
+
+    return rows;
+  });
+
+  // GET /api/system-admin/features/:handle/accounts — accounts tracking this feature
+  app.get<{ Params: { handle: string } }>(
+    "/features/:handle/accounts",
+    async (request) => {
+      const { handle } = request.params;
+
+      const trackedBy = await db
+        .select({
+          accountId: accountTrackedFeatures.accountId,
+          accountName: accounts.name,
+        })
+        .from(accountTrackedFeatures)
+        .innerJoin(
+          accounts,
+          eq(accounts.id, accountTrackedFeatures.accountId)
+        )
+        .where(eq(accountTrackedFeatures.featureHandle, handle));
+
+      return trackedBy;
+    }
+  );
 };

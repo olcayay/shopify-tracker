@@ -1,9 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { useAuth } from "@/lib/auth-context";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import {
   Card,
   CardContent,
@@ -38,23 +38,31 @@ export default function SystemAdminPage() {
   const [runs, setRuns] = useState<any[]>([]);
   const [triggering, setTriggering] = useState<string | null>(null);
   const [message, setMessage] = useState("");
+  const [activeTab, setActiveTab] = useState("accounts");
 
   useEffect(() => {
     loadData();
   }, []);
 
   async function loadData() {
-    const [statsRes, accountsRes, usersRes, runsRes] = await Promise.all([
-      fetchWithAuth("/api/system-admin/stats"),
-      fetchWithAuth("/api/system-admin/accounts"),
-      fetchWithAuth("/api/system-admin/users"),
-      fetchWithAuth("/api/system-admin/scraper/runs?limit=20"),
-    ]);
+    try {
+      const [statsRes, accountsRes, usersRes, runsRes] = await Promise.all([
+        fetchWithAuth("/api/system-admin/stats"),
+        fetchWithAuth("/api/system-admin/accounts"),
+        fetchWithAuth("/api/system-admin/users"),
+        fetchWithAuth("/api/system-admin/scraper/runs?limit=10"),
+      ]);
 
-    if (statsRes.ok) setStats(await statsRes.json());
-    if (accountsRes.ok) setAccounts(await accountsRes.json());
-    if (usersRes.ok) setUsers(await usersRes.json());
-    if (runsRes.ok) setRuns(await runsRes.json());
+      if (statsRes.ok) setStats(await statsRes.json());
+      if (accountsRes.ok) setAccounts(await accountsRes.json());
+      if (usersRes.ok) setUsers(await usersRes.json());
+      if (runsRes.ok) {
+        const data = await runsRes.json();
+        setRuns(data.runs ?? data);
+      }
+    } catch (err) {
+      console.error("Failed to load system admin data:", err);
+    }
   }
 
   async function triggerScraper(type: string) {
@@ -95,43 +103,63 @@ export default function SystemAdminPage() {
 
       {/* Global Stats */}
       {stats && (
-        <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-          <Card>
-            <CardHeader className="pb-2">
-              <CardDescription>Accounts</CardDescription>
-              <CardTitle className="text-2xl">{stats.accounts}</CardTitle>
-            </CardHeader>
-          </Card>
-          <Card>
-            <CardHeader className="pb-2">
-              <CardDescription>Users</CardDescription>
-              <CardTitle className="text-2xl">{stats.users}</CardTitle>
-            </CardHeader>
-          </Card>
-          <Card>
-            <CardHeader className="pb-2">
-              <CardDescription>Total Apps</CardDescription>
-              <CardTitle className="text-2xl">{stats.totalApps}</CardTitle>
-            </CardHeader>
-          </Card>
-          <Card>
-            <CardHeader className="pb-2">
-              <CardDescription>Tracked Apps</CardDescription>
-              <CardTitle className="text-2xl">{stats.trackedApps}</CardTitle>
-            </CardHeader>
-          </Card>
-          <Card>
-            <CardHeader className="pb-2">
-              <CardDescription>Keywords</CardDescription>
-              <CardTitle className="text-2xl">
-                {stats.trackedKeywords}
-              </CardTitle>
-            </CardHeader>
-          </Card>
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+          <Link href="/system-admin/accounts">
+            <Card className="cursor-pointer hover:border-primary/50 transition-colors">
+              <CardHeader className="pb-2">
+                <CardDescription>Accounts</CardDescription>
+                <CardTitle className="text-2xl">{stats.accounts}</CardTitle>
+              </CardHeader>
+            </Card>
+          </Link>
+          <Link href="/system-admin/users">
+            <Card className="cursor-pointer hover:border-primary/50 transition-colors">
+              <CardHeader className="pb-2">
+                <CardDescription>Users</CardDescription>
+                <CardTitle className="text-2xl">{stats.users}</CardTitle>
+              </CardHeader>
+            </Card>
+          </Link>
+          <Link href="/system-admin/apps">
+            <Card className="cursor-pointer hover:border-primary/50 transition-colors">
+              <CardHeader className="pb-2">
+                <CardDescription>Total Apps</CardDescription>
+                <CardTitle className="text-2xl">{stats.totalApps}</CardTitle>
+              </CardHeader>
+            </Card>
+          </Link>
+          <Link href="/system-admin/apps">
+            <Card className="cursor-pointer hover:border-primary/50 transition-colors">
+              <CardHeader className="pb-2">
+                <CardDescription>Tracked Apps</CardDescription>
+                <CardTitle className="text-2xl">{stats.trackedApps}</CardTitle>
+              </CardHeader>
+            </Card>
+          </Link>
+          <Link href="/system-admin/keywords">
+            <Card className="cursor-pointer hover:border-primary/50 transition-colors">
+              <CardHeader className="pb-2">
+                <CardDescription>Keywords</CardDescription>
+                <CardTitle className="text-2xl">
+                  {stats.trackedKeywords}
+                </CardTitle>
+              </CardHeader>
+            </Card>
+          </Link>
+          <Link href="/system-admin/features">
+            <Card className="cursor-pointer hover:border-primary/50 transition-colors">
+              <CardHeader className="pb-2">
+                <CardDescription>Features</CardDescription>
+                <CardTitle className="text-2xl">
+                  {stats.trackedFeatures ?? 0}
+                </CardTitle>
+              </CardHeader>
+            </Card>
+          </Link>
         </div>
       )}
 
-      <Tabs defaultValue="accounts">
+      <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList>
           <TabsTrigger value="accounts">Accounts</TabsTrigger>
           <TabsTrigger value="users">Users</TabsTrigger>
@@ -150,6 +178,7 @@ export default function SystemAdminPage() {
                     <TableHead>Apps</TableHead>
                     <TableHead>Keywords</TableHead>
                     <TableHead>Competitors</TableHead>
+                    <TableHead>Features</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead />
                   </TableRow>
@@ -157,7 +186,14 @@ export default function SystemAdminPage() {
                 <TableBody>
                   {accounts.map((acc: any) => (
                     <TableRow key={acc.id}>
-                      <TableCell className="font-medium">{acc.name}</TableCell>
+                      <TableCell>
+                        <Link
+                          href={`/system-admin/accounts/${acc.id}`}
+                          className="text-primary hover:underline font-medium"
+                        >
+                          {acc.name}
+                        </Link>
+                      </TableCell>
                       <TableCell>{acc.usage?.members ?? "-"}</TableCell>
                       <TableCell>
                         {acc.usage?.trackedApps ?? 0}/{acc.maxTrackedApps}
@@ -169,6 +205,10 @@ export default function SystemAdminPage() {
                       <TableCell>
                         {acc.usage?.competitorApps ?? 0}/
                         {acc.maxCompetitorApps}
+                      </TableCell>
+                      <TableCell>
+                        {acc.usage?.trackedFeatures ?? 0}/
+                        {acc.maxTrackedFeatures}
                       </TableCell>
                       <TableCell>
                         <Badge
@@ -215,10 +255,22 @@ export default function SystemAdminPage() {
                 <TableBody>
                   {users.map((u: any) => (
                     <TableRow key={u.id}>
-                      <TableCell className="font-medium">{u.name}</TableCell>
+                      <TableCell>
+                        <Link
+                          href={`/system-admin/users/${u.id}`}
+                          className="text-primary hover:underline font-medium"
+                        >
+                          {u.name}
+                        </Link>
+                      </TableCell>
                       <TableCell className="text-sm">{u.email}</TableCell>
-                      <TableCell className="text-sm">
-                        {u.accountName || u.accountId}
+                      <TableCell>
+                        <Link
+                          href={`/system-admin/accounts/${u.accountId}`}
+                          className="text-sm text-primary hover:underline"
+                        >
+                          {u.accountName || u.accountId}
+                        </Link>
                       </TableCell>
                       <TableCell>
                         <Badge variant="outline">{u.role}</Badge>
@@ -240,10 +292,20 @@ export default function SystemAdminPage() {
         <TabsContent value="scraper" className="space-y-4">
           <Card>
             <CardHeader>
-              <CardTitle>Trigger Scraper</CardTitle>
-              <CardDescription>
-                Manually trigger scraper jobs
-              </CardDescription>
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle>Trigger Scraper</CardTitle>
+                  <CardDescription>
+                    Manually trigger scraper jobs
+                  </CardDescription>
+                </div>
+                <Link
+                  href="/system-admin/scraper"
+                  className="text-sm text-primary hover:underline"
+                >
+                  Full scraper page
+                </Link>
+              </div>
             </CardHeader>
             <CardContent>
               <div className="flex flex-wrap gap-2">
@@ -264,7 +326,15 @@ export default function SystemAdminPage() {
 
           <Card>
             <CardHeader>
-              <CardTitle>Recent Runs</CardTitle>
+              <div className="flex items-center justify-between">
+                <CardTitle>Recent Runs</CardTitle>
+                <Link
+                  href="/system-admin/scraper"
+                  className="text-sm text-primary hover:underline"
+                >
+                  View all
+                </Link>
+              </div>
             </CardHeader>
             <CardContent>
               <Table>
@@ -272,7 +342,6 @@ export default function SystemAdminPage() {
                   <TableRow>
                     <TableHead>Type</TableHead>
                     <TableHead>Status</TableHead>
-                    <TableHead>Triggered By</TableHead>
                     <TableHead>Started</TableHead>
                     <TableHead>Duration</TableHead>
                   </TableRow>
@@ -296,9 +365,6 @@ export default function SystemAdminPage() {
                           {run.status}
                         </Badge>
                       </TableCell>
-                      <TableCell className="text-sm">
-                        {run.triggeredBy}
-                      </TableCell>
                       <TableCell className="text-sm text-muted-foreground">
                         {run.startedAt
                           ? new Date(run.startedAt).toLocaleString()
@@ -314,7 +380,7 @@ export default function SystemAdminPage() {
                   {runs.length === 0 && (
                     <TableRow>
                       <TableCell
-                        colSpan={5}
+                        colSpan={4}
                         className="text-center text-muted-foreground"
                       >
                         No scraper runs yet

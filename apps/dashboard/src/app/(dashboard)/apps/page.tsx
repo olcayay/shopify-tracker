@@ -15,6 +15,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { X, Plus, Search } from "lucide-react";
+import { ConfirmModal } from "@/components/confirm-modal";
 
 export default function AppsPage() {
   const { fetchWithAuth, user, account, refreshUser } = useAuth();
@@ -25,6 +26,10 @@ export default function AppsPage() {
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [searchLoading, setSearchLoading] = useState(false);
   const [message, setMessage] = useState("");
+  const [confirmRemove, setConfirmRemove] = useState<{
+    slug: string;
+    name: string;
+  } | null>(null);
   const searchRef = useRef<HTMLDivElement>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout>>(undefined);
 
@@ -151,7 +156,14 @@ export default function AppsPage() {
                     trackApp(s.slug, s.name);
                   }}
                 >
-                  <span>{s.name}</span>
+                  <span>
+                    {s.name}
+                    {s.averageRating != null && (
+                      <span className="text-muted-foreground ml-1">
+                        ({Number(s.averageRating).toFixed(1)} / {s.ratingCount?.toLocaleString() ?? 0})
+                      </span>
+                    )}
+                  </span>
                   {trackedSlugs.has(s.slug) ? (
                     <span className="text-xs text-muted-foreground">Tracked</span>
                   ) : (
@@ -181,7 +193,7 @@ export default function AppsPage() {
                   <TableHead>Rating</TableHead>
                   <TableHead>Reviews</TableHead>
                   <TableHead>Pricing</TableHead>
-                  <TableHead>Last Scraped</TableHead>
+                  <TableHead>Last Updated</TableHead>
                   {canEdit && <TableHead className="w-12" />}
                 </TableRow>
               </TableHeader>
@@ -218,7 +230,12 @@ export default function AppsPage() {
                           variant="ghost"
                           size="icon"
                           className="h-8 w-8 text-muted-foreground hover:text-destructive"
-                          onClick={() => untrackApp(app.slug, app.name)}
+                          onClick={() =>
+                            setConfirmRemove({
+                              slug: app.slug,
+                              name: app.name,
+                            })
+                          }
                         >
                           <X className="h-4 w-4" />
                         </Button>
@@ -242,6 +259,19 @@ export default function AppsPage() {
           )}
         </CardContent>
       </Card>
+
+      <ConfirmModal
+        open={!!confirmRemove}
+        title="Remove Tracked App"
+        description={`Are you sure you want to stop tracking "${confirmRemove?.name}"?`}
+        onConfirm={() => {
+          if (confirmRemove) {
+            untrackApp(confirmRemove.slug, confirmRemove.name);
+            setConfirmRemove(null);
+          }
+        }}
+        onCancel={() => setConfirmRemove(null)}
+      />
     </div>
   );
 }

@@ -1,4 +1,4 @@
-import { pgTable, uuid, pgEnum, timestamp, jsonb, text, index } from "drizzle-orm/pg-core";
+import { pgTable, uuid, pgEnum, timestamp, jsonb, text, varchar, index } from "drizzle-orm/pg-core";
 
 export const scraperTypeEnum = pgEnum("scraper_type", [
   "category",
@@ -20,8 +20,10 @@ export const scrapeRuns = pgTable(
     id: uuid("id").primaryKey().defaultRandom(),
     scraperType: scraperTypeEnum("scraper_type").notNull(),
     status: scrapeRunStatusEnum("status").notNull().default("pending"),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
     startedAt: timestamp("started_at"),
     completedAt: timestamp("completed_at"),
+    triggeredBy: varchar("triggered_by", { length: 255 }),
     metadata: jsonb("metadata").$type<Record<string, unknown>>(),
     error: text("error"),
   },

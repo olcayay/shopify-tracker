@@ -1,4 +1,4 @@
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import type { Database } from "@shopify-tracking/db";
 import {
   scrapeRuns,
@@ -6,6 +6,7 @@ import {
   keywordSnapshots,
   apps,
   appKeywordRankings,
+  keywordAdSightings,
 } from "@shopify-tracking/db";
 import { urls, createLogger } from "@shopify-tracking/shared";
 
@@ -23,7 +24,7 @@ export class KeywordScraper {
   }
 
   /** Scrape search results for all active keywords */
-  async scrapeAll(): Promise<void> {
+  async scrapeAll(triggeredBy?: string): Promise<void> {
     const keywords = await this.db
       .select()
       .from(trackedKeywords)
@@ -42,6 +43,7 @@ export class KeywordScraper {
         scraperType: "keyword_search",
         status: "running",
         startedAt: new Date(),
+        triggeredBy,
       })
       .returning();
 
@@ -89,7 +91,7 @@ export class KeywordScraper {
     });
     const data = parseSearchPage(html, keyword, 1);
 
-    // Insert keyword snapshot
+    // Insert keyword snapshot (keeps all results including sponsored)
     await this.db.insert(keywordSnapshots).values({
       keywordId,
       scrapeRunId: runId,
@@ -98,10 +100,16 @@ export class KeywordScraper {
       results: data.apps,
     });
 
-    // Record individual app rankings
     const now = new Date();
-    for (const app of data.apps) {
-      // Upsert app record
+    const todayStr = now.toISOString().slice(0, 10); // YYYY-MM-DD
+
+    // Separate organic, sponsored, and built-in
+    const organicApps = data.apps.filter((a) => !a.is_sponsored && !a.is_built_in);
+    const sponsoredApps = data.apps.filter((a) => a.is_sponsored);
+
+    // Record organic rankings (position re-calculated excluding ads)
+    for (let i = 0; i < organicApps.length; i++) {
+      const app = organicApps[i];
       await this.db
         .insert(apps)
         .values({ slug: app.app_slug, name: app.app_name })
@@ -112,8 +120,38 @@ export class KeywordScraper {
         keywordId,
         scrapeRunId: runId,
         scrapedAt: now,
-        position: app.position,
+        position: i + 1,
       });
+    }
+
+    // Record ad sightings (upsert per app+keyword+day)
+    for (const app of sponsoredApps) {
+      await this.db
+        .insert(apps)
+        .values({ slug: app.app_slug, name: app.app_name })
+        .onConflictDoNothing();
+
+      await this.db
+        .insert(keywordAdSightings)
+        .values({
+          appSlug: app.app_slug,
+          keywordId,
+          seenDate: todayStr,
+          firstSeenRunId: runId,
+          lastSeenRunId: runId,
+          timesSeenInDay: 1,
+        })
+        .onConflictDoUpdate({
+          target: [
+            keywordAdSightings.appSlug,
+            keywordAdSightings.keywordId,
+            keywordAdSightings.seenDate,
+          ],
+          set: {
+            lastSeenRunId: sql`${runId}`,
+            timesSeenInDay: sql`${keywordAdSightings.timesSeenInDay} + 1`,
+          },
+        });
     }
   }
 }

@@ -70,23 +70,28 @@ function parseSearchAppCards($: cheerio.CheerioAPI): KeywordSearchApp[] {
     if (seenSlugs.has(appSlug)) return;
     seenSlugs.add(appSlug);
 
-    position++;
+    const isBuiltIn = appSlug.startsWith("bif:");
+    const isSponsored = !isBuiltIn && appLink.includes("surface_type=search_ad");
+    // Only increment position for organic (non-sponsored, non-built-in) results
+    if (!isSponsored && !isBuiltIn) position++;
 
     const cardText = $card.text();
     const { rating, count } = extractRating(cardText);
-    const isSponsored = appLink.includes("surface_type=search_ad");
     const shortDescription = extractDescription($card);
 
     apps.push({
-      position,
+      position: isSponsored || isBuiltIn ? 0 : position,
       app_slug: appSlug,
       app_name: appName,
       short_description: shortDescription,
       average_rating: rating,
       rating_count: count,
-      app_url: `https://apps.shopify.com/${appSlug}`,
+      app_url: isBuiltIn
+        ? `https://apps.shopify.com/built-in-features/${appSlug.replace("bif:", "")}`
+        : `https://apps.shopify.com/${appSlug}`,
       logo_url: logoUrl,
       is_sponsored: isSponsored,
+      is_built_in: isBuiltIn,
     });
   });
 

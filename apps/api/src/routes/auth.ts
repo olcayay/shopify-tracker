@@ -11,6 +11,7 @@ import {
   accountTrackedApps,
   accountTrackedKeywords,
   accountCompetitorApps,
+  accountTrackedFeatures,
 } from "@shopify-tracking/db";
 import { getJwtSecret, type JwtPayload } from "../middleware/auth.js";
 
@@ -322,6 +323,11 @@ export const authRoutes: FastifyPluginAsync = async (app) => {
       .from(accountCompetitorApps)
       .where(eq(accountCompetitorApps.accountId, user.accountId));
 
+    const [trackedFeaturesCount] = await db
+      .select({ count: sql<number>`count(*)::int` })
+      .from(accountTrackedFeatures)
+      .where(eq(accountTrackedFeatures.accountId, user.accountId));
+
     return {
       user: {
         id: user.id,
@@ -338,11 +344,13 @@ export const authRoutes: FastifyPluginAsync = async (app) => {
           maxTrackedApps: account.maxTrackedApps,
           maxTrackedKeywords: account.maxTrackedKeywords,
           maxCompetitorApps: account.maxCompetitorApps,
+          maxTrackedFeatures: account.maxTrackedFeatures,
         },
         usage: {
           trackedApps: trackedAppsCount.count,
           trackedKeywords: trackedKeywordsCount.count,
           competitorApps: competitorAppsCount.count,
+          trackedFeatures: trackedFeaturesCount.count,
         },
       },
     };

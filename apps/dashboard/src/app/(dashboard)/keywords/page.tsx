@@ -15,6 +15,9 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { X, Plus, Search } from "lucide-react";
+import { ConfirmModal } from "@/components/confirm-modal";
+import { KeywordSearchModal } from "@/components/keyword-search-modal";
+import { LiveSearchTrigger } from "@/components/live-search-trigger";
 
 export default function KeywordsPage() {
   const { fetchWithAuth, user, account, refreshUser } = useAuth();
@@ -25,6 +28,10 @@ export default function KeywordsPage() {
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [searchLoading, setSearchLoading] = useState(false);
   const [message, setMessage] = useState("");
+  const [confirmRemove, setConfirmRemove] = useState<{
+    id: number;
+    keyword: string;
+  } | null>(null);
   const searchRef = useRef<HTMLDivElement>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout>>(undefined);
 
@@ -122,6 +129,7 @@ export default function KeywordsPage() {
           Tracked Keywords ({keywords.length}
           {account ? `/${account.limits.maxTrackedKeywords}` : ""})
         </h1>
+        <KeywordSearchModal />
       </div>
 
       {message && (
@@ -189,7 +197,8 @@ export default function KeywordsPage() {
                   <TableHead>Keyword</TableHead>
                   <TableHead>Total Results</TableHead>
                   <TableHead>Apps Found</TableHead>
-                  <TableHead>Last Scraped</TableHead>
+                  <TableHead>Last Updated</TableHead>
+                  <TableHead className="w-10" />
                   {canEdit && <TableHead className="w-12" />}
                 </TableRow>
               </TableHeader>
@@ -213,13 +222,21 @@ export default function KeywordsPage() {
                         ? new Date(kw.latestSnapshot.scrapedAt).toLocaleDateString()
                         : "Never"}
                     </TableCell>
+                    <TableCell>
+                      <LiveSearchTrigger keyword={kw.keyword} variant="icon" />
+                    </TableCell>
                     {canEdit && (
                       <TableCell>
                         <Button
                           variant="ghost"
                           size="icon"
                           className="h-8 w-8 text-muted-foreground hover:text-destructive"
-                          onClick={() => untrackKeyword(kw.id, kw.keyword)}
+                          onClick={() =>
+                            setConfirmRemove({
+                              id: kw.id,
+                              keyword: kw.keyword,
+                            })
+                          }
                         >
                           <X className="h-4 w-4" />
                         </Button>
@@ -230,7 +247,7 @@ export default function KeywordsPage() {
                 {keywords.length === 0 && (
                   <TableRow>
                     <TableCell
-                      colSpan={canEdit ? 5 : 4}
+                      colSpan={canEdit ? 6 : 5}
                       className="text-center text-muted-foreground"
                     >
                       No tracked keywords yet. Use the search above to find and
@@ -243,6 +260,19 @@ export default function KeywordsPage() {
           )}
         </CardContent>
       </Card>
+
+      <ConfirmModal
+        open={!!confirmRemove}
+        title="Remove Tracked Keyword"
+        description={`Are you sure you want to stop tracking "${confirmRemove?.keyword}"?`}
+        onConfirm={() => {
+          if (confirmRemove) {
+            untrackKeyword(confirmRemove.id, confirmRemove.keyword);
+            setConfirmRemove(null);
+          }
+        }}
+        onCancel={() => setConfirmRemove(null)}
+      />
     </div>
   );
 }

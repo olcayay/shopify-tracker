@@ -9,6 +9,26 @@ import {
 import { accounts } from "./auth";
 import { apps } from "./apps";
 import { trackedKeywords } from "./keywords";
+import { categories } from "./categories";
+
+export const accountTrackedFeatures = pgTable(
+  "account_tracked_features",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    accountId: uuid("account_id")
+      .notNull()
+      .references(() => accounts.id, { onDelete: "cascade" }),
+    featureHandle: varchar("feature_handle", { length: 255 }).notNull(),
+    featureTitle: varchar("feature_title", { length: 500 }).notNull(),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+  },
+  (table) => [
+    uniqueIndex("idx_account_tracked_features_unique").on(
+      table.accountId,
+      table.featureHandle
+    ),
+  ]
+);
 
 export const accountTrackedApps = pgTable(
   "account_tracked_apps",
@@ -46,6 +66,26 @@ export const accountTrackedKeywords = pgTable(
     uniqueIndex("idx_account_tracked_keywords_unique").on(
       table.accountId,
       table.keywordId
+    ),
+  ]
+);
+
+export const accountStarredCategories = pgTable(
+  "account_starred_categories",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    accountId: uuid("account_id")
+      .notNull()
+      .references(() => accounts.id, { onDelete: "cascade" }),
+    categorySlug: varchar("category_slug", { length: 255 })
+      .notNull()
+      .references(() => categories.slug),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+  },
+  (table) => [
+    uniqueIndex("idx_account_starred_categories_unique").on(
+      table.accountId,
+      table.categorySlug
     ),
   ]
 );

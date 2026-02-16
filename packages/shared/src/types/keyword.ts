@@ -9,6 +9,7 @@ export interface KeywordSearchApp {
   app_url: string;
   logo_url: string;
   is_sponsored?: boolean;
+  is_built_in?: boolean;
 }
 
 /** Parsed data from a keyword search page */

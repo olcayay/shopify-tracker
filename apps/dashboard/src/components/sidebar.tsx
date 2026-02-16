@@ -7,6 +7,8 @@ import {
   FolderTree,
   AppWindow,
   Search,
+  Star,
+  Puzzle,
   Settings,
   Shield,
   LogOut,
@@ -19,6 +21,8 @@ const navItems = [
   { href: "/categories", label: "Categories", icon: FolderTree },
   { href: "/apps", label: "Apps", icon: AppWindow },
   { href: "/keywords", label: "Keywords", icon: Search },
+  { href: "/competitors", label: "Competitors", icon: Star },
+  { href: "/features", label: "Features", icon: Puzzle },
   { href: "/settings", label: "Settings", icon: Settings },
 ];
 

@@ -5,7 +5,11 @@ import {
   trackedKeywords,
   keywordSnapshots,
   appKeywordRankings,
+  keywordAdSightings,
+  apps,
   accountTrackedKeywords,
+  accountTrackedApps,
+  accountCompetitorApps,
 } from "@shopify-tracking/db";
 
 type Db = ReturnType<typeof createDb>;
@@ -112,14 +116,17 @@ export const keywordRoutes: FastifyPluginAsync = async (app) => {
   });
 
   // GET /api/keywords/:slug/rankings
+  // ?days=30&appSlug=xxx&scope=account (filter to tracked+competitor apps)
   app.get<{ Params: { slug: string } }>(
     "/:slug/rankings",
     async (request, reply) => {
       const { slug } = request.params;
-      const { days = "30", appSlug } = request.query as {
+      const { days = "30", appSlug, scope } = request.query as {
         days?: string;
         appSlug?: string;
+        scope?: string;
       };
+      const { accountId } = request.user;
 
       const [kw] = await db
         .select()
@@ -144,13 +151,90 @@ export const keywordRoutes: FastifyPluginAsync = async (app) => {
         conditions.push(eq(appKeywordRankings.appSlug, appSlug));
       }
 
+      // If scope=account, filter to only tracked + competitor apps
+      if (scope === "account" && !appSlug) {
+        const trackedRows = await db
+          .select({ appSlug: accountTrackedApps.appSlug })
+          .from(accountTrackedApps)
+          .where(eq(accountTrackedApps.accountId, accountId));
+
+        const competitorRows = await db
+          .select({ appSlug: accountCompetitorApps.appSlug })
+          .from(accountCompetitorApps)
+          .where(eq(accountCompetitorApps.accountId, accountId));
+
+        const slugs = [
+          ...new Set([
+            ...trackedRows.map((r) => r.appSlug),
+            ...competitorRows.map((r) => r.appSlug),
+          ]),
+        ];
+
+        if (slugs.length > 0) {
+          conditions.push(inArray(appKeywordRankings.appSlug, slugs));
+        } else {
+          return { keyword: kw, rankings: [] };
+        }
+      }
+
       const rankings = await db
-        .select()
+        .select({
+          id: appKeywordRankings.id,
+          appSlug: appKeywordRankings.appSlug,
+          appName: apps.name,
+          keywordId: appKeywordRankings.keywordId,
+          scrapeRunId: appKeywordRankings.scrapeRunId,
+          scrapedAt: appKeywordRankings.scrapedAt,
+          position: appKeywordRankings.position,
+        })
         .from(appKeywordRankings)
+        .innerJoin(apps, eq(apps.slug, appKeywordRankings.appSlug))
         .where(and(...conditions))
         .orderBy(appKeywordRankings.scrapedAt, appKeywordRankings.position);
 
       return { keyword: kw, rankings };
+    }
+  );
+
+  // GET /api/keywords/:slug/ads — ad sightings history
+  app.get<{ Params: { slug: string } }>(
+    "/:slug/ads",
+    async (request, reply) => {
+      const { slug } = request.params;
+      const { days = "30" } = request.query as { days?: string };
+
+      const [kw] = await db
+        .select()
+        .from(trackedKeywords)
+        .where(eq(trackedKeywords.slug, slug))
+        .limit(1);
+
+      if (!kw) {
+        return reply.code(404).send({ error: "Keyword not found" });
+      }
+
+      const since = new Date();
+      since.setDate(since.getDate() - parseInt(days, 10));
+      const sinceStr = since.toISOString().slice(0, 10);
+
+      const adSightings = await db
+        .select({
+          appSlug: keywordAdSightings.appSlug,
+          appName: apps.name,
+          seenDate: keywordAdSightings.seenDate,
+          timesSeenInDay: keywordAdSightings.timesSeenInDay,
+        })
+        .from(keywordAdSightings)
+        .innerJoin(apps, eq(keywordAdSightings.appSlug, apps.slug))
+        .where(
+          and(
+            eq(keywordAdSightings.keywordId, kw.id),
+            sql`${keywordAdSightings.seenDate} >= ${sinceStr}`
+          )
+        )
+        .orderBy(desc(keywordAdSightings.seenDate));
+
+      return { keyword: kw, adSightings };
     }
   );
 

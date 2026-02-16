@@ -17,7 +17,7 @@ export class AppDetailsScraper {
   }
 
   /** Scrape details for all tracked apps */
-  async scrapeTracked(): Promise<void> {
+  async scrapeTracked(triggeredBy?: string): Promise<void> {
     const trackedApps = await this.db
       .select({ slug: apps.slug, name: apps.name })
       .from(apps)
@@ -36,6 +36,7 @@ export class AppDetailsScraper {
         scraperType: "app_details",
         status: "running",
         startedAt: new Date(),
+        triggeredBy,
       })
       .returning();
 
@@ -70,7 +71,7 @@ export class AppDetailsScraper {
   }
 
   /** Scrape a single app by slug */
-  async scrapeApp(slug: string, runId?: string): Promise<void> {
+  async scrapeApp(slug: string, runId?: string, triggeredBy?: string): Promise<void> {
     log.info("scraping app", { slug });
 
     // Create run if not provided
@@ -81,6 +82,7 @@ export class AppDetailsScraper {
           scraperType: "app_details",
           status: "running",
           startedAt: new Date(),
+          triggeredBy,
         })
         .returning();
       runId = run.id;

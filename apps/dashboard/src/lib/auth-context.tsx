@@ -28,11 +28,13 @@ export interface Account {
     maxTrackedApps: number;
     maxTrackedKeywords: number;
     maxCompetitorApps: number;
+    maxTrackedFeatures: number;
   };
   usage: {
     trackedApps: number;
     trackedKeywords: number;
     competitorApps: number;
+    trackedFeatures: number;
   };
 }
 
@@ -78,11 +80,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const fetchWithAuth = useCallback(
     async (path: string, options?: RequestInit): Promise<Response> => {
       const token = getCookie("access_token");
+      const headers: Record<string, string> = {
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      };
+      if (options?.body) {
+        headers["Content-Type"] = "application/json";
+      }
       return fetch(`${API_BASE}${path}`, {
         ...options,
         headers: {
-          "Content-Type": "application/json",
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          ...headers,
           ...(options?.headers || {}),
         },
       });

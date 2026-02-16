@@ -23,7 +23,8 @@ export function parseCategoryPage(
   const $ = cheerio.load(html);
 
   const slug = extractSlugFromUrl(url);
-  const title = $("h1").first().text().trim() || slug;
+  const rawTitle = $("h1").first().text().trim() || slug;
+  const title = rawTitle.replace(/\s+apps?\s*$/i, "");
 
   let breadcrumb = "";
   try { breadcrumb = parseBreadcrumb($, slug); } catch (e) {
@@ -182,7 +183,7 @@ function parseSubcategoryLinks(
     seen.add(slug);
 
     // Take first line of text (avoid multiline card descriptions)
-    const title = $el.text().trim().split("\n")[0].trim();
+    const title = $el.text().trim().split("\n")[0].trim().replace(/\s+apps?\s*$/i, "");
     if (title && title.length < 200) {
       subcategories.push({
         slug,

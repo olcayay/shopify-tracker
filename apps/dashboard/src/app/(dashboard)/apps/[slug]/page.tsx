@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { getApp, getAppReviews, getAppRankings } from "@/lib/api";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -11,7 +12,9 @@ import {
 } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { RankingChart } from "@/components/ranking-chart";
+import { ExternalLink } from "lucide-react";
 import { TrackAppButton } from "./track-button";
+import { StarAppButton } from "@/components/star-app-button";
 
 export default async function AppDetailPage({
   params,
@@ -42,11 +45,26 @@ export default async function AppDetailPage({
           <h1 className="text-2xl font-bold">{app.name}</h1>
           <p className="text-muted-foreground">{app.slug}</p>
         </div>
-        <TrackAppButton
-          appSlug={app.slug}
-          appName={app.name}
-          initialTracked={app.isTrackedByAccount}
-        />
+        <div className="flex items-center gap-2">
+          <a
+            href={`https://apps.shopify.com/${app.slug}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            title="View on Shopify App Store"
+            className="inline-flex items-center justify-center h-9 w-9 rounded-md hover:bg-accent transition-colors"
+          >
+            <ExternalLink className="h-5 w-5 text-muted-foreground" />
+          </a>
+          <StarAppButton
+            appSlug={app.slug}
+            initialStarred={app.isCompetitor}
+          />
+          <TrackAppButton
+            appSlug={app.slug}
+            appName={app.name}
+            initialTracked={app.isTrackedByAccount}
+          />
+        </div>
       </div>
 
       {/* Summary cards */}
@@ -93,15 +111,22 @@ export default async function AppDetailPage({
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <span className="text-sm">
-                {snapshot.developer?.name || "—"}
-              </span>
+              {snapshot.developer?.name ? (
+                <Link
+                  href={`/developers?name=${encodeURIComponent(snapshot.developer.name)}`}
+                  className="text-sm text-primary hover:underline"
+                >
+                  {snapshot.developer.name}
+                </Link>
+              ) : (
+                <span className="text-sm">—</span>
+              )}
             </CardContent>
           </Card>
           <Card>
             <CardHeader className="pb-2">
               <CardTitle className="text-sm text-muted-foreground">
-                Last Scraped
+                Last Updated
               </CardTitle>
             </CardHeader>
             <CardContent>
@@ -263,6 +288,43 @@ export default async function AppDetailPage({
                 </Card>
               )}
 
+              {(snapshot.languages?.length > 0 || snapshot.worksWith?.length > 0) && (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {snapshot.languages?.length > 0 && (
+                    <Card>
+                      <CardHeader>
+                        <CardTitle>Languages</CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="flex flex-wrap gap-1.5">
+                          {snapshot.languages.map((lang: string, i: number) => (
+                            <Badge key={i} variant="outline" className="text-xs">
+                              {lang}
+                            </Badge>
+                          ))}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  )}
+                  {snapshot.worksWith?.length > 0 && (
+                    <Card>
+                      <CardHeader>
+                        <CardTitle>Works With</CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="flex flex-wrap gap-1.5">
+                          {snapshot.worksWith.map((item: string, i: number) => (
+                            <Badge key={i} variant="secondary" className="text-xs">
+                              {item}
+                            </Badge>
+                          ))}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  )}
+                </div>
+              )}
+
               {snapshot.pricingTiers?.length > 0 && (
                 <Card>
                   <CardHeader>
@@ -313,13 +375,17 @@ export default async function AppDetailPage({
                             </h5>
                             <div className="flex flex-wrap gap-1 mt-1">
                               {sub.features?.map((f: any, k: number) => (
-                                <Badge
+                                <Link
                                   key={k}
-                                  variant="secondary"
-                                  className="text-xs"
+                                  href={`/features/${encodeURIComponent(f.feature_handle)}`}
                                 >
-                                  {f.title}
-                                </Badge>
+                                  <Badge
+                                    variant="secondary"
+                                    className="text-xs hover:bg-primary hover:text-primary-foreground cursor-pointer transition-colors"
+                                  >
+                                    {f.title}
+                                  </Badge>
+                                </Link>
                               ))}
                             </div>
                           </div>
@@ -333,6 +399,72 @@ export default async function AppDetailPage({
           )}
         </TabsContent>
       </Tabs>
+
+      {/* Keyword Ads — standalone section */}
+      {rankings?.keywordAds?.length > 0 && (() => {
+        // Group by keyword, show last seen date and total sightings
+        const adsByKeyword = new Map<string, { keyword: string; keywordSlug: string; lastSeen: string; totalSightings: number; sightings: any[] }>();
+        for (const ad of rankings.keywordAds) {
+          const existing = adsByKeyword.get(ad.keyword);
+          if (existing) {
+            existing.totalSightings += ad.timesSeenInDay;
+            existing.sightings.push(ad);
+            if (ad.seenDate > existing.lastSeen) existing.lastSeen = ad.seenDate;
+          } else {
+            adsByKeyword.set(ad.keyword, {
+              keyword: ad.keyword,
+              keywordSlug: ad.keywordSlug,
+              lastSeen: ad.seenDate,
+              totalSightings: ad.timesSeenInDay,
+              sightings: [ad],
+            });
+          }
+        }
+        const groupedAds = [...adsByKeyword.values()].sort((a, b) => b.lastSeen.localeCompare(a.lastSeen));
+
+        return (
+          <Card>
+            <CardHeader>
+              <CardTitle>Keyword Ads ({groupedAds.length} keywords)</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Keyword</TableHead>
+                    <TableHead>Last Seen</TableHead>
+                    <TableHead className="text-right">Total Sightings</TableHead>
+                    <TableHead className="text-right">Days Active</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {groupedAds.map((ad) => (
+                    <TableRow key={ad.keyword}>
+                      <TableCell>
+                        <Link
+                          href={`/keywords/${ad.keywordSlug}`}
+                          className="text-primary hover:underline font-medium"
+                        >
+                          {ad.keyword}
+                        </Link>
+                      </TableCell>
+                      <TableCell className="text-sm text-muted-foreground">
+                        {new Date(ad.lastSeen).toLocaleDateString()}
+                      </TableCell>
+                      <TableCell className="text-right font-mono">
+                        {ad.totalSightings}
+                      </TableCell>
+                      <TableCell className="text-right font-mono">
+                        {ad.sightings.length}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+        );
+      })()}
     </div>
   );
 }

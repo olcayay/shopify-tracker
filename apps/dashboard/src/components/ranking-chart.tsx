@@ -96,6 +96,7 @@ export function RankingChart({ data }: { data: RankingData[] }) {
             <tr className="border-b bg-muted/50">
               <th className="text-left px-3 py-2 font-medium">Name</th>
               <th className="text-right px-3 py-2 font-medium w-24">Position</th>
+              <th className="text-right px-3 py-2 font-medium w-16">Page</th>
               <th className="text-right px-3 py-2 font-medium w-24">Change</th>
             </tr>
           </thead>
@@ -129,6 +130,11 @@ export function RankingChart({ data }: { data: RankingData[] }) {
                   </td>
                   <td className="text-right px-3 py-2 font-semibold">
                     #{stat.position}
+                  </td>
+                  <td className="text-right px-3 py-2 text-muted-foreground">
+                    {stat.position != null
+                      ? `p${Math.ceil(stat.position / 24)}`
+                      : "\u2014"}
                   </td>
                   <td className="text-right px-3 py-2">
                     {stat.change !== undefined && stat.change !== 0 ? (

@@ -1,10 +1,29 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useMemo } from "react";
 import Link from "next/link";
 import { useAuth } from "@/lib/auth-context";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { ChevronRight, ChevronDown, Folder, FolderOpen } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import {
+  ChevronRight,
+  ChevronDown,
+  Folder,
+  FolderOpen,
+  Star,
+  X,
+  Search,
+} from "lucide-react";
+import { ConfirmModal } from "@/components/confirm-modal";
 
 interface CategoryNode {
   slug: string;
@@ -16,23 +35,76 @@ interface CategoryNode {
   children: CategoryNode[];
 }
 
+interface StarredCategory {
+  categorySlug: string;
+  categoryTitle: string;
+  parentSlug: string | null;
+  createdAt: string;
+}
+
 export default function CategoriesPage() {
-  const { fetchWithAuth } = useAuth();
+  const { fetchWithAuth, user } = useAuth();
   const [tree, setTree] = useState<CategoryNode[]>([]);
+  const [starred, setStarred] = useState<StarredCategory[]>([]);
   const [loading, setLoading] = useState(true);
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
+  const [searchQuery, setSearchQuery] = useState("");
+  const [confirmUnstar, setConfirmUnstar] = useState<{
+    slug: string;
+    title: string;
+  } | null>(null);
+
+  const canEdit = user?.role === "owner" || user?.role === "editor";
 
   useEffect(() => {
-    loadCategories();
+    loadData();
   }, []);
 
-  async function loadCategories() {
+  async function loadData() {
     setLoading(true);
-    const res = await fetchWithAuth("/api/categories?format=tree");
-    if (res.ok) {
-      setTree(await res.json());
-    }
+    const [treeRes, starredRes] = await Promise.all([
+      fetchWithAuth("/api/categories?format=tree"),
+      fetchWithAuth("/api/account/starred-categories"),
+    ]);
+    if (treeRes.ok) setTree(await treeRes.json());
+    if (starredRes.ok) setStarred(await starredRes.json());
     setLoading(false);
+  }
+
+  async function doUnstar(slug: string) {
+    const res = await fetchWithAuth(
+      `/api/account/starred-categories/${slug}`,
+      { method: "DELETE" }
+    );
+    if (res.ok) {
+      setStarred((prev) => prev.filter((s) => s.categorySlug !== slug));
+    }
+  }
+
+  async function toggleStar(slug: string) {
+    const isStarred = starredSlugs.has(slug);
+    if (isStarred) {
+      const cat = findCategoryBySlug(tree, slug);
+      setConfirmUnstar({
+        slug,
+        title: cat?.title || slug,
+      });
+    } else {
+      const res = await fetchWithAuth("/api/account/starred-categories", {
+        method: "POST",
+        body: JSON.stringify({ slug }),
+      });
+      if (res.ok) {
+        const starredRes = await fetchWithAuth(
+          "/api/account/starred-categories"
+        );
+        if (starredRes.ok) setStarred(await starredRes.json());
+      }
+    }
+  }
+
+  function handleUnstarFromTable(slug: string, title: string) {
+    setConfirmUnstar({ slug, title });
   }
 
   const toggle = useCallback((slug: string) => {
@@ -71,7 +143,60 @@ export default function CategoriesPage() {
     return count;
   }
 
+  function findCategoryBySlug(
+    nodes: CategoryNode[],
+    slug: string
+  ): CategoryNode | null {
+    for (const n of nodes) {
+      if (n.slug === slug) return n;
+      const found = findCategoryBySlug(n.children, slug);
+      if (found) return found;
+    }
+    return null;
+  }
+
+  // Filter tree by search query
+  const filteredTree = useMemo(() => {
+    if (!searchQuery.trim()) return tree;
+    const q = searchQuery.toLowerCase();
+
+    function filterNodes(nodes: CategoryNode[]): CategoryNode[] {
+      const result: CategoryNode[] = [];
+      for (const node of nodes) {
+        const matchesSelf = node.title.toLowerCase().includes(q);
+        const filteredChildren = filterNodes(node.children);
+        if (matchesSelf || filteredChildren.length > 0) {
+          result.push({
+            ...node,
+            children: matchesSelf ? node.children : filteredChildren,
+          });
+        }
+      }
+      return result;
+    }
+
+    return filterNodes(tree);
+  }, [tree, searchQuery]);
+
+  // Auto-expand when searching
+  useEffect(() => {
+    if (searchQuery.trim()) {
+      const slugsToExpand = new Set<string>();
+      function collectParents(nodes: CategoryNode[]) {
+        for (const n of nodes) {
+          if (n.children.length > 0) {
+            slugsToExpand.add(n.slug);
+            collectParents(n.children);
+          }
+        }
+      }
+      collectParents(filteredTree);
+      setExpanded(slugsToExpand);
+    }
+  }, [filteredTree, searchQuery]);
+
   const totalCount = countAll(tree);
+  const starredSlugs = new Set(starred.map((s) => s.categorySlug));
 
   return (
     <div className="space-y-6">
@@ -94,22 +219,95 @@ export default function CategoriesPage() {
         </div>
       </div>
 
+      {/* Search */}
+      <div className="relative max-w-md">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+        <Input
+          placeholder="Filter categories..."
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          className="pl-9"
+        />
+      </div>
+
+      {/* Starred Categories */}
+      {starred.length > 0 && !searchQuery && (
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base flex items-center gap-2">
+              <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
+              Starred Categories
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Category</TableHead>
+                  <TableHead>Added</TableHead>
+                  {canEdit && <TableHead className="w-12" />}
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {starred.map((s) => (
+                  <TableRow key={s.categorySlug}>
+                    <TableCell>
+                      <Link
+                        href={`/categories/${s.categorySlug}`}
+                        className="text-primary hover:underline font-medium"
+                      >
+                        {s.categoryTitle}
+                      </Link>
+                    </TableCell>
+                    <TableCell className="text-sm text-muted-foreground">
+                      {new Date(s.createdAt).toLocaleDateString()}
+                    </TableCell>
+                    {canEdit && (
+                      <TableCell>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                          onClick={() =>
+                            handleUnstarFromTable(
+                              s.categorySlug,
+                              s.categoryTitle
+                            )
+                          }
+                        >
+                          <X className="h-4 w-4" />
+                        </Button>
+                      </TableCell>
+                    )}
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* All Categories Tree */}
       <Card>
         <CardContent className="pt-6">
           {loading ? (
             <p className="text-muted-foreground text-center py-8">Loading...</p>
-          ) : tree.length === 0 ? (
+          ) : filteredTree.length === 0 ? (
             <p className="text-muted-foreground text-center py-8">
-              No categories found.
+              {searchQuery
+                ? `No categories matching "${searchQuery}"`
+                : "No categories found."}
             </p>
           ) : (
             <div className="space-y-0.5">
-              {tree.map((node) => (
+              {filteredTree.map((node) => (
                 <CategoryRow
                   key={node.slug}
                   node={node}
                   expanded={expanded}
                   toggle={toggle}
+                  toggleStar={canEdit ? toggleStar : undefined}
+                  starredSlugs={starredSlugs}
                   depth={0}
                 />
               ))}
@@ -117,6 +315,20 @@ export default function CategoriesPage() {
           )}
         </CardContent>
       </Card>
+
+      <ConfirmModal
+        open={!!confirmUnstar}
+        title="Remove Starred Category"
+        description={`Are you sure you want to remove "${confirmUnstar?.title}" from starred categories?`}
+        confirmLabel="Remove"
+        onConfirm={() => {
+          if (confirmUnstar) {
+            doUnstar(confirmUnstar.slug);
+            setConfirmUnstar(null);
+          }
+        }}
+        onCancel={() => setConfirmUnstar(null)}
+      />
     </div>
   );
 }
@@ -125,15 +337,20 @@ function CategoryRow({
   node,
   expanded,
   toggle,
+  toggleStar,
+  starredSlugs,
   depth,
 }: {
   node: CategoryNode;
   expanded: Set<string>;
   toggle: (slug: string) => void;
+  toggleStar?: (slug: string) => void;
+  starredSlugs: Set<string>;
   depth: number;
 }) {
   const isOpen = expanded.has(node.slug);
   const hasChildren = node.children.length > 0;
+  const isStarred = starredSlugs.has(node.slug);
 
   return (
     <>
@@ -179,6 +396,17 @@ function CategoryRow({
           </span>
         )}
 
+        {toggleStar && (
+          <button
+            onClick={() => toggleStar(node.slug)}
+            className="opacity-0 group-hover:opacity-100 transition-opacity ml-1 shrink-0"
+          >
+            <Star
+              className={`h-3.5 w-3.5 ${isStarred ? "fill-yellow-400 text-yellow-400" : "text-muted-foreground hover:text-yellow-400"}`}
+            />
+          </button>
+        )}
+
         <span className="flex-1" />
 
         {node.appCount != null && (
@@ -196,6 +424,8 @@ function CategoryRow({
             node={child}
             expanded={expanded}
             toggle={toggle}
+            toggleStar={toggleStar}
+            starredSlugs={starredSlugs}
             depth={depth + 1}
           />
         ))}

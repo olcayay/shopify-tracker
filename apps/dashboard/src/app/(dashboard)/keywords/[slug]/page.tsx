@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { getKeyword, getKeywordRankings } from "@/lib/api";
+import { getKeyword, getKeywordRankings, getKeywordAds, getAccountCompetitors, getAccountTrackedApps } from "@/lib/api";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -10,7 +10,11 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { ExternalLink } from "lucide-react";
+import { RankingChart } from "@/components/ranking-chart";
 import { TrackKeywordButton } from "./track-button";
+import { StarAppButton } from "@/components/star-app-button";
+import { LiveSearchTrigger } from "@/components/live-search-trigger";
 
 export default async function KeywordDetailPage({
   params,
@@ -21,17 +25,38 @@ export default async function KeywordDetailPage({
 
   let keyword: any;
   let rankings: any;
+  let adData: any;
+  let competitors: any[] = [];
+  let trackedApps: any[] = [];
   try {
-    [keyword, rankings] = await Promise.all([
+    [keyword, rankings, adData, competitors, trackedApps] = await Promise.all([
       getKeyword(slug),
-      getKeywordRankings(slug),
+      getKeywordRankings(slug, 30, "account"),
+      getKeywordAds(slug),
+      getAccountCompetitors().catch(() => []),
+      getAccountTrackedApps().catch(() => []),
     ]);
   } catch {
     return <p className="text-muted-foreground">Keyword not found.</p>;
   }
 
+  const competitorSlugs = new Set(competitors.map((c: any) => c.appSlug));
+  const trackedSlugs = new Set(trackedApps.map((a: any) => a.appSlug));
+
   const snapshot = keyword.latestSnapshot;
-  const apps = snapshot?.results || [];
+  const allApps = snapshot?.results || [];
+  const builtInApps = allApps.filter((a: any) => a.is_built_in);
+  const organicApps = allApps.filter((a: any) => !a.is_sponsored && !a.is_built_in);
+  const sponsoredApps = allApps.filter((a: any) => a.is_sponsored);
+
+  // Build ranking chart data from rankings (filtered to tracked + competitor apps)
+  const rankingChartData = (rankings?.rankings || []).map((r: any) => ({
+    date: new Date(r.scrapedAt).toLocaleDateString(),
+    position: r.position,
+    label: r.appName || r.appSlug,
+    slug: r.appSlug,
+    linkPrefix: "/apps/",
+  }));
 
   return (
     <div className="space-y-6">
@@ -45,23 +70,81 @@ export default async function KeywordDetailPage({
             {snapshot?.scrapedAt && (
               <>
                 {" "}
-                &middot; Last scraped:{" "}
+                &middot; Last updated:{" "}
                 {new Date(snapshot.scrapedAt).toLocaleDateString()}
               </>
             )}
           </p>
         </div>
-        <TrackKeywordButton
-          keywordId={keyword.id}
-          keywordText={keyword.keyword}
-          initialTracked={keyword.isTrackedByAccount}
-        />
+        <div className="flex items-center gap-2">
+          <LiveSearchTrigger keyword={keyword.keyword} />
+          <a
+            href={`https://apps.shopify.com/search?q=${encodeURIComponent(keyword.keyword)}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            title="Search on Shopify App Store"
+            className="inline-flex items-center justify-center h-9 w-9 rounded-md hover:bg-accent transition-colors"
+          >
+            <ExternalLink className="h-5 w-5 text-muted-foreground" />
+          </a>
+          <TrackKeywordButton
+            keywordId={keyword.id}
+            keywordText={keyword.keyword}
+            initialTracked={keyword.isTrackedByAccount}
+          />
+        </div>
       </div>
 
-      {/* Search Results */}
+      {/* Shopify Built-in Features */}
+      {builtInApps.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle>
+              Shopify Built-in ({builtInApps.length})
+              <Badge variant="secondary" className="ml-2">Built-in Feature</Badge>
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Feature</TableHead>
+                  <TableHead>Description</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {builtInApps.map((app: any) => (
+                  <TableRow key={app.app_slug} className="bg-blue-50/50 border-l-2 border-l-blue-400">
+                    <TableCell>
+                      <div className="flex items-center gap-1.5">
+                        <a
+                          href={app.app_url || `https://apps.shopify.com/built-in-features/${app.app_slug.replace("bif:", "")}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="font-medium text-primary hover:underline"
+                        >
+                          {app.app_name}
+                        </a>
+                        <Badge className="text-[10px] px-1 py-0 h-4 bg-blue-100 text-blue-700 border-blue-300" variant="outline">
+                          Built-in
+                        </Badge>
+                      </div>
+                    </TableCell>
+                    <TableCell className="text-sm text-muted-foreground">
+                      {app.short_description || "\u2014"}
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Organic Search Results */}
       <Card>
         <CardHeader>
-          <CardTitle>Search Results ({apps.length} apps)</CardTitle>
+          <CardTitle>Organic Results ({organicApps.length})</CardTitle>
         </CardHeader>
         <CardContent>
           <Table>
@@ -71,20 +154,27 @@ export default async function KeywordDetailPage({
                 <TableHead>App</TableHead>
                 <TableHead>Rating</TableHead>
                 <TableHead>Reviews</TableHead>
-                <TableHead>Sponsored</TableHead>
+                <TableHead className="w-10" />
               </TableRow>
             </TableHeader>
             <TableBody>
-              {apps.map((app: any) => (
-                <TableRow key={app.app_slug}>
-                  <TableCell className="font-mono">{app.position}</TableCell>
+              {organicApps.map((app: any, idx: number) => {
+                const isTracked = trackedSlugs.has(app.app_slug);
+                const isCompetitor = competitorSlugs.has(app.app_slug);
+                return (
+                <TableRow key={app.app_slug} className={isTracked ? "border-l-2 border-l-primary bg-primary/5" : isCompetitor ? "border-l-2 border-l-yellow-500 bg-yellow-500/5" : ""}>
+                  <TableCell className="font-mono">{idx + 1}</TableCell>
                   <TableCell>
-                    <Link
-                      href={`/apps/${app.app_slug}`}
-                      className="text-primary hover:underline font-medium"
-                    >
-                      {app.app_name}
-                    </Link>
+                    <div className="flex items-center gap-1.5">
+                      <Link
+                        href={`/apps/${app.app_slug}`}
+                        className="text-primary hover:underline font-medium"
+                      >
+                        {app.app_name}
+                      </Link>
+                      {isTracked && <Badge variant="outline" className="text-[10px] px-1 py-0 h-4 border-primary text-primary">Tracked</Badge>}
+                      {isCompetitor && <Badge variant="outline" className="text-[10px] px-1 py-0 h-4 border-yellow-500 text-yellow-600">Competitor</Badge>}
+                    </div>
                     <p className="text-xs text-muted-foreground mt-0.5 line-clamp-1">
                       {app.short_description}
                     </p>
@@ -96,51 +186,141 @@ export default async function KeywordDetailPage({
                     {app.rating_count?.toLocaleString() ?? "\u2014"}
                   </TableCell>
                   <TableCell>
-                    {app.is_sponsored ? (
-                      <Badge variant="secondary">Ad</Badge>
-                    ) : (
-                      "\u2014"
-                    )}
+                    <StarAppButton
+                      appSlug={app.app_slug}
+                      initialStarred={competitorSlugs.has(app.app_slug)}
+                      size="sm"
+                    />
                   </TableCell>
                 </TableRow>
-              ))}
+                );
+              })}
             </TableBody>
           </Table>
         </CardContent>
       </Card>
 
-      {/* Ranking History */}
-      {rankings?.rankings?.length > 0 && (
+      {/* Sponsored Apps */}
+      {sponsoredApps.length > 0 && (
         <Card>
           <CardHeader>
-            <CardTitle>Ranking History</CardTitle>
+            <CardTitle>
+              Sponsored Apps ({sponsoredApps.length})
+              <Badge variant="secondary" className="ml-2">Ads</Badge>
+            </CardTitle>
           </CardHeader>
           <CardContent>
             <Table>
               <TableHeader>
                 <TableRow>
                   <TableHead>App</TableHead>
-                  <TableHead>Position</TableHead>
-                  <TableHead>Date</TableHead>
+                  <TableHead>Rating</TableHead>
+                  <TableHead>Reviews</TableHead>
+                  <TableHead className="w-10" />
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {rankings.rankings.map((r: any, i: number) => (
-                  <TableRow key={i}>
+                {sponsoredApps.map((app: any) => {
+                  const isTracked = trackedSlugs.has(app.app_slug);
+                  const isCompetitor = competitorSlugs.has(app.app_slug);
+                  return (
+                  <TableRow key={app.app_slug} className={isTracked ? "border-l-2 border-l-primary bg-primary/5" : isCompetitor ? "border-l-2 border-l-yellow-500 bg-yellow-500/5" : ""}>
                     <TableCell>
-                      <Link
-                        href={`/apps/${r.appSlug}`}
-                        className="text-primary hover:underline"
-                      >
-                        {r.appSlug}
-                      </Link>
+                      <div className="flex items-center gap-1.5">
+                        <Link
+                          href={`/apps/${app.app_slug}`}
+                          className="text-primary hover:underline font-medium"
+                        >
+                          {app.app_name}
+                        </Link>
+                        {isTracked && <Badge variant="outline" className="text-[10px] px-1 py-0 h-4 border-primary text-primary">Tracked</Badge>}
+                        {isCompetitor && <Badge variant="outline" className="text-[10px] px-1 py-0 h-4 border-yellow-500 text-yellow-600">Competitor</Badge>}
+                      </div>
                     </TableCell>
-                    <TableCell className="font-mono">#{r.position}</TableCell>
-                    <TableCell className="text-sm text-muted-foreground">
-                      {new Date(r.scrapedAt).toLocaleDateString()}
+                    <TableCell>
+                      {app.average_rating?.toFixed(1) ?? "\u2014"}
+                    </TableCell>
+                    <TableCell>
+                      {app.rating_count?.toLocaleString() ?? "\u2014"}
+                    </TableCell>
+                    <TableCell>
+                      <StarAppButton
+                        appSlug={app.app_slug}
+                        initialStarred={competitorSlugs.has(app.app_slug)}
+                        size="sm"
+                      />
                     </TableCell>
                   </TableRow>
-                ))}
+                  );
+                })}
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Organic Ranking History */}
+      {rankingChartData.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Organic Ranking History</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <RankingChart data={rankingChartData} />
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Ad History */}
+      {adData?.adSightings?.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Ad History</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>App</TableHead>
+                  <TableHead>Date</TableHead>
+                  <TableHead className="text-right">Times Seen</TableHead>
+                  <TableHead className="w-10" />
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {adData.adSightings.map((ad: any, i: number) => {
+                  const isTracked = trackedSlugs.has(ad.appSlug);
+                  const isCompetitor = competitorSlugs.has(ad.appSlug);
+                  return (
+                  <TableRow key={i} className={isTracked ? "border-l-2 border-l-primary bg-primary/5" : isCompetitor ? "border-l-2 border-l-yellow-500 bg-yellow-500/5" : ""}>
+                    <TableCell>
+                      <div className="flex items-center gap-1.5">
+                        <Link
+                          href={`/apps/${ad.appSlug}`}
+                          className="text-primary hover:underline"
+                        >
+                          {ad.appName}
+                        </Link>
+                        {isTracked && <Badge variant="outline" className="text-[10px] px-1 py-0 h-4 border-primary text-primary">Tracked</Badge>}
+                        {isCompetitor && <Badge variant="outline" className="text-[10px] px-1 py-0 h-4 border-yellow-500 text-yellow-600">Competitor</Badge>}
+                      </div>
+                    </TableCell>
+                    <TableCell className="text-sm text-muted-foreground">
+                      {new Date(ad.seenDate).toLocaleDateString()}
+                    </TableCell>
+                    <TableCell className="text-right font-mono">
+                      {ad.timesSeenInDay}
+                    </TableCell>
+                    <TableCell>
+                      <StarAppButton
+                        appSlug={ad.appSlug}
+                        initialStarred={competitorSlugs.has(ad.appSlug)}
+                        size="sm"
+                      />
+                    </TableCell>
+                  </TableRow>
+                  );
+                })}
               </TableBody>
             </Table>
           </CardContent>

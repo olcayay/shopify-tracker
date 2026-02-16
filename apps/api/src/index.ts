@@ -12,6 +12,8 @@ import { authRoutes } from "./routes/auth.js";
 import { accountRoutes } from "./routes/account.js";
 import { systemAdminRoutes } from "./routes/system-admin.js";
 import { invitationRoutes } from "./routes/invitations.js";
+import { featureRoutes } from "./routes/features.js";
+import { liveSearchRoutes } from "./routes/live-search.js";
 
 const databaseUrl = process.env.DATABASE_URL;
 if (!databaseUrl) {
@@ -41,6 +43,8 @@ await app.register(keywordRoutes, { prefix: "/api/keywords" });
 await app.register(accountRoutes, { prefix: "/api/account" });
 await app.register(systemAdminRoutes, { prefix: "/api/system-admin" });
 await app.register(invitationRoutes, { prefix: "/api/invitations" });
+await app.register(featureRoutes, { prefix: "/api/features" });
+await app.register(liveSearchRoutes, { prefix: "/api/live-search" });
 
 // Error handler
 app.setErrorHandler((error: any, _request, reply) => {

@@ -32,17 +32,17 @@ async function processJob(job: Job<ScraperJobData>): Promise<void> {
   switch (type) {
     case "category": {
       const scraper = new CategoryScraper(db, { httpClient });
-      await scraper.crawl();
+      await scraper.crawl(triggeredBy);
       break;
     }
 
     case "app_details": {
       const scraper = new AppDetailsScraper(db, httpClient);
       if (job.data.slug) {
-        await scraper.scrapeApp(job.data.slug);
+        await scraper.scrapeApp(job.data.slug, undefined, triggeredBy);
         log.info("single app scrape completed", { slug: job.data.slug });
       } else {
-        await scraper.scrapeTracked();
+        await scraper.scrapeTracked(triggeredBy);
       }
       break;
     }
@@ -65,6 +65,7 @@ async function processJob(job: Job<ScraperJobData>): Promise<void> {
               scraperType: "keyword_search",
               status: "running",
               startedAt: new Date(),
+              triggeredBy,
             })
             .returning();
           await scraper.scrapeKeyword(kw.id, kw.keyword, run.id);
@@ -77,14 +78,14 @@ async function processJob(job: Job<ScraperJobData>): Promise<void> {
           log.warn("keyword not found for single scrape", { keyword: job.data.keyword });
         }
       } else {
-        await scraper.scrapeAll();
+        await scraper.scrapeAll(triggeredBy);
       }
       break;
     }
 
     case "reviews": {
       const scraper = new ReviewScraper(db, httpClient);
-      await scraper.scrapeTracked();
+      await scraper.scrapeTracked(triggeredBy);
       break;
     }
 

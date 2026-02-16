@@ -43,6 +43,7 @@ export {
   trackedKeywords,
   keywordSnapshots,
   appKeywordRankings,
+  keywordAdSightings,
   keywordToSlug,
 } from "./schema/keywords.js";
 export {
@@ -56,4 +57,6 @@ export {
   accountTrackedApps,
   accountTrackedKeywords,
   accountCompetitorApps,
+  accountStarredCategories,
+  accountTrackedFeatures,
 } from "./schema/account-tracking.js";

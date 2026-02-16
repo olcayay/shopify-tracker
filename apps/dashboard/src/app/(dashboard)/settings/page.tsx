@@ -21,18 +21,11 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Trash2, UserPlus } from "lucide-react";
+import Link from "next/link";
 
 export default function SettingsPage() {
   const { user, account, fetchWithAuth, refreshUser } = useAuth();
   const [members, setMembers] = useState<any[]>([]);
-  const [trackedApps, setTrackedApps] = useState<any[]>([]);
-  const [trackedKeywords, setTrackedKeywords] = useState<any[]>([]);
-  const [competitors, setCompetitors] = useState<any[]>([]);
-
-  // Form states
-  const [newAppSlug, setNewAppSlug] = useState("");
-  const [newKeyword, setNewKeyword] = useState("");
-  const [newCompetitorSlug, setNewCompetitorSlug] = useState("");
   const [inviteEmail, setInviteEmail] = useState("");
   const [inviteRole, setInviteRole] = useState<"editor" | "viewer">("viewer");
   const [message, setMessage] = useState("");
@@ -45,18 +38,8 @@ export default function SettingsPage() {
   }, []);
 
   async function loadData() {
-    const [membersRes, appsRes, keywordsRes, competitorsRes] =
-      await Promise.all([
-        fetchWithAuth("/api/account/members"),
-        fetchWithAuth("/api/account/tracked-apps"),
-        fetchWithAuth("/api/account/tracked-keywords"),
-        fetchWithAuth("/api/account/competitors"),
-      ]);
-
+    const membersRes = await fetchWithAuth("/api/account/members");
     if (membersRes.ok) setMembers(await membersRes.json());
-    if (appsRes.ok) setTrackedApps(await appsRes.json());
-    if (keywordsRes.ok) setTrackedKeywords(await keywordsRes.json());
-    if (competitorsRes.ok) setCompetitors(await competitorsRes.json());
   }
 
   async function handleAction(
@@ -78,42 +61,6 @@ export default function SettingsPage() {
       const data = await res.json().catch(() => ({}));
       setError(data.error || "Operation failed");
     }
-  }
-
-  async function addTrackedApp(e: React.FormEvent) {
-    e.preventDefault();
-    if (!newAppSlug.trim()) return;
-    await handleAction(
-      "/api/account/tracked-apps",
-      "POST",
-      { slug: newAppSlug.trim() },
-      "App added"
-    );
-    setNewAppSlug("");
-  }
-
-  async function addTrackedKeyword(e: React.FormEvent) {
-    e.preventDefault();
-    if (!newKeyword.trim()) return;
-    await handleAction(
-      "/api/account/tracked-keywords",
-      "POST",
-      { keyword: newKeyword.trim() },
-      "Keyword added"
-    );
-    setNewKeyword("");
-  }
-
-  async function addCompetitor(e: React.FormEvent) {
-    e.preventDefault();
-    if (!newCompetitorSlug.trim()) return;
-    await handleAction(
-      "/api/account/competitors",
-      "POST",
-      { slug: newCompetitorSlug.trim() },
-      "Competitor added"
-    );
-    setNewCompetitorSlug("");
   }
 
   async function inviteMember(e: React.FormEvent) {
@@ -149,244 +96,35 @@ export default function SettingsPage() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-3 gap-4 text-center">
-            <div>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
+            <Link href="/apps" className="block hover:bg-accent/50 rounded-lg p-3 -m-1 transition-colors">
               <p className="text-2xl font-bold">
                 {account?.usage.trackedApps}/{account?.limits.maxTrackedApps}
               </p>
               <p className="text-sm text-muted-foreground">Tracked Apps</p>
-            </div>
-            <div>
+            </Link>
+            <Link href="/keywords" className="block hover:bg-accent/50 rounded-lg p-3 -m-1 transition-colors">
               <p className="text-2xl font-bold">
                 {account?.usage.trackedKeywords}/
                 {account?.limits.maxTrackedKeywords}
               </p>
               <p className="text-sm text-muted-foreground">Keywords</p>
-            </div>
-            <div>
+            </Link>
+            <Link href="/competitors" className="block hover:bg-accent/50 rounded-lg p-3 -m-1 transition-colors">
               <p className="text-2xl font-bold">
                 {account?.usage.competitorApps}/
                 {account?.limits.maxCompetitorApps}
               </p>
               <p className="text-sm text-muted-foreground">Competitors</p>
-            </div>
+            </Link>
+            <Link href="/features" className="block hover:bg-accent/50 rounded-lg p-3 -m-1 transition-colors">
+              <p className="text-2xl font-bold">
+                {account?.usage.trackedFeatures}/
+                {account?.limits.maxTrackedFeatures}
+              </p>
+              <p className="text-sm text-muted-foreground">Features</p>
+            </Link>
           </div>
-        </CardContent>
-      </Card>
-
-      {/* Tracked Apps */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Tracked Apps</CardTitle>
-          <CardDescription>
-            Apps your account is tracking ({trackedApps.length}/
-            {account?.limits.maxTrackedApps})
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          {(isOwner || user?.role === "editor") && (
-            <form onSubmit={addTrackedApp} className="flex gap-2">
-              <Input
-                value={newAppSlug}
-                onChange={(e) => setNewAppSlug(e.target.value)}
-                placeholder="App slug (e.g. formful)"
-                className="flex-1"
-              />
-              <Button type="submit" variant="outline">
-                Add
-              </Button>
-            </form>
-          )}
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>App Slug</TableHead>
-                <TableHead>Added</TableHead>
-                {(isOwner || user?.role === "editor") && (
-                  <TableHead className="w-12" />
-                )}
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {trackedApps.map((app: any) => (
-                <TableRow key={app.appSlug}>
-                  <TableCell className="font-mono">{app.appSlug}</TableCell>
-                  <TableCell className="text-sm text-muted-foreground">
-                    {new Date(app.createdAt).toLocaleDateString()}
-                  </TableCell>
-                  {(isOwner || user?.role === "editor") && (
-                    <TableCell>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() =>
-                          handleAction(
-                            `/api/account/tracked-apps/${app.appSlug}`,
-                            "DELETE",
-                            undefined,
-                            "App removed"
-                          )
-                        }
-                      >
-                        <Trash2 className="h-4 w-4 text-destructive" />
-                      </Button>
-                    </TableCell>
-                  )}
-                </TableRow>
-              ))}
-              {trackedApps.length === 0 && (
-                <TableRow>
-                  <TableCell colSpan={3} className="text-center text-muted-foreground">
-                    No tracked apps yet
-                  </TableCell>
-                </TableRow>
-              )}
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
-
-      {/* Tracked Keywords */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Tracked Keywords</CardTitle>
-          <CardDescription>
-            Keywords your account is tracking ({trackedKeywords.length}/
-            {account?.limits.maxTrackedKeywords})
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          {(isOwner || user?.role === "editor") && (
-            <form onSubmit={addTrackedKeyword} className="flex gap-2">
-              <Input
-                value={newKeyword}
-                onChange={(e) => setNewKeyword(e.target.value)}
-                placeholder="Keyword (e.g. form builder)"
-                className="flex-1"
-              />
-              <Button type="submit" variant="outline">
-                Add
-              </Button>
-            </form>
-          )}
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Keyword</TableHead>
-                <TableHead>Added</TableHead>
-                {(isOwner || user?.role === "editor") && (
-                  <TableHead className="w-12" />
-                )}
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {trackedKeywords.map((kw: any) => (
-                <TableRow key={kw.keywordId}>
-                  <TableCell>{kw.keyword || `#${kw.keywordId}`}</TableCell>
-                  <TableCell className="text-sm text-muted-foreground">
-                    {new Date(kw.createdAt).toLocaleDateString()}
-                  </TableCell>
-                  {(isOwner || user?.role === "editor") && (
-                    <TableCell>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() =>
-                          handleAction(
-                            `/api/account/tracked-keywords/${kw.keywordId}`,
-                            "DELETE",
-                            undefined,
-                            "Keyword removed"
-                          )
-                        }
-                      >
-                        <Trash2 className="h-4 w-4 text-destructive" />
-                      </Button>
-                    </TableCell>
-                  )}
-                </TableRow>
-              ))}
-              {trackedKeywords.length === 0 && (
-                <TableRow>
-                  <TableCell colSpan={3} className="text-center text-muted-foreground">
-                    No tracked keywords yet
-                  </TableCell>
-                </TableRow>
-              )}
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
-
-      {/* Competitor Apps */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Competitor Apps</CardTitle>
-          <CardDescription>
-            Competitor apps to watch ({competitors.length}/
-            {account?.limits.maxCompetitorApps})
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          {(isOwner || user?.role === "editor") && (
-            <form onSubmit={addCompetitor} className="flex gap-2">
-              <Input
-                value={newCompetitorSlug}
-                onChange={(e) => setNewCompetitorSlug(e.target.value)}
-                placeholder="App slug"
-                className="flex-1"
-              />
-              <Button type="submit" variant="outline">
-                Add
-              </Button>
-            </form>
-          )}
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>App Slug</TableHead>
-                <TableHead>Added</TableHead>
-                {(isOwner || user?.role === "editor") && (
-                  <TableHead className="w-12" />
-                )}
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {competitors.map((c: any) => (
-                <TableRow key={c.appSlug}>
-                  <TableCell className="font-mono">{c.appSlug}</TableCell>
-                  <TableCell className="text-sm text-muted-foreground">
-                    {new Date(c.createdAt).toLocaleDateString()}
-                  </TableCell>
-                  {(isOwner || user?.role === "editor") && (
-                    <TableCell>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() =>
-                          handleAction(
-                            `/api/account/competitors/${c.appSlug}`,
-                            "DELETE",
-                            undefined,
-                            "Competitor removed"
-                          )
-                        }
-                      >
-                        <Trash2 className="h-4 w-4 text-destructive" />
-                      </Button>
-                    </TableCell>
-                  )}
-                </TableRow>
-              ))}
-              {competitors.length === 0 && (
-                <TableRow>
-                  <TableCell colSpan={3} className="text-center text-muted-foreground">
-                    No competitor apps yet
-                  </TableCell>
-                </TableRow>
-              )}
-            </TableBody>
-          </Table>
         </CardContent>
       </Card>
 

@@ -1,4 +1,8 @@
-import { getUserProfile, getSystemStats, getScraperRuns } from "@/lib/api";
+"use client";
+
+import { useEffect, useState } from "react";
+import Link from "next/link";
+import { useAuth } from "@/lib/auth-context";
 import {
   Card,
   CardContent,
@@ -7,6 +11,14 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 
 const SCRAPER_LABELS: Record<string, string> = {
   category: "Categories",
@@ -34,196 +46,429 @@ function freshnessColor(
   return "destructive";
 }
 
-export default async function OverviewPage() {
-  let profile: any = null;
-  let systemStats: any = null;
-  let recentRuns: any[] = [];
+export default function OverviewPage() {
+  const { fetchWithAuth, user, account } = useAuth();
+  const [apps, setApps] = useState<any[]>([]);
+  const [keywords, setKeywords] = useState<any[]>([]);
+  const [competitors, setCompetitors] = useState<any[]>([]);
+  const [features, setFeatures] = useState<any[]>([]);
+  const [systemStats, setSystemStats] = useState<any>(null);
+  const [recentRuns, setRecentRuns] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  try {
-    profile = await getUserProfile();
+  useEffect(() => {
+    loadData();
+  }, []);
 
-    // If system admin, also get global stats
-    if (profile?.user?.isSystemAdmin) {
-      [systemStats, recentRuns] = await Promise.all([
-        getSystemStats().catch(() => null),
-        getScraperRuns(10).catch(() => []),
-      ]);
+  async function loadData() {
+    setLoading(true);
+    const promises: Promise<any>[] = [
+      fetchWithAuth("/api/apps").then((r) => (r.ok ? r.json() : [])),
+      fetchWithAuth("/api/keywords").then((r) => (r.ok ? r.json() : [])),
+      fetchWithAuth("/api/account/competitors").then((r) =>
+        r.ok ? r.json() : []
+      ),
+      fetchWithAuth("/api/account/tracked-features").then((r) =>
+        r.ok ? r.json() : []
+      ),
+    ];
+
+    if (user?.isSystemAdmin) {
+      promises.push(
+        fetchWithAuth("/api/system-admin/stats").then((r) =>
+          r.ok ? r.json() : null
+        ),
+        fetchWithAuth("/api/system-admin/scraper/runs?limit=10").then((r) =>
+          r.ok ? r.json() : []
+        )
+      );
     }
-  } catch {
-    // API may not be running
+
+    const results = await Promise.all(promises);
+    setApps(results[0] || []);
+    setKeywords(results[1] || []);
+    setCompetitors(results[2] || []);
+    setFeatures(results[3] || []);
+    if (user?.isSystemAdmin) {
+      setSystemStats(results[4]);
+      setRecentRuns(results[5] || []);
+    }
+    setLoading(false);
+  }
+
+  if (loading) {
+    return (
+      <div className="space-y-6">
+        <h1 className="text-2xl font-bold">Overview</h1>
+        <p className="text-muted-foreground">Loading...</p>
+      </div>
+    );
   }
 
   return (
     <div className="space-y-6">
       <h1 className="text-2xl font-bold">Overview</h1>
 
-      {!profile ? (
-        <Card>
-          <CardContent className="p-6 text-muted-foreground">
-            API is not reachable. Start the API server first.
-          </CardContent>
-        </Card>
-      ) : (
-        <>
-          {/* Account Usage */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <Card>
-              <CardHeader className="pb-2">
-                <CardDescription>Tracked Apps</CardDescription>
-                <CardTitle className="text-3xl">
-                  {profile.account.usage.trackedApps}
-                  <span className="text-lg text-muted-foreground font-normal">
-                    /{profile.account.limits.maxTrackedApps}
-                  </span>
-                </CardTitle>
-              </CardHeader>
-            </Card>
+      {/* Account Usage Cards - clickable */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <Link href="/apps">
+          <Card className="hover:border-primary/50 transition-colors cursor-pointer">
+            <CardHeader className="pb-2">
+              <CardDescription>Tracked Apps</CardDescription>
+              <CardTitle className="text-3xl">
+                {account?.usage.trackedApps ?? apps.length}
+                <span className="text-lg text-muted-foreground font-normal">
+                  /{account?.limits.maxTrackedApps}
+                </span>
+              </CardTitle>
+            </CardHeader>
+          </Card>
+        </Link>
 
-            <Card>
-              <CardHeader className="pb-2">
-                <CardDescription>Tracked Keywords</CardDescription>
-                <CardTitle className="text-3xl">
-                  {profile.account.usage.trackedKeywords}
-                  <span className="text-lg text-muted-foreground font-normal">
-                    /{profile.account.limits.maxTrackedKeywords}
-                  </span>
-                </CardTitle>
-              </CardHeader>
-            </Card>
+        <Link href="/keywords">
+          <Card className="hover:border-primary/50 transition-colors cursor-pointer">
+            <CardHeader className="pb-2">
+              <CardDescription>Tracked Keywords</CardDescription>
+              <CardTitle className="text-3xl">
+                {account?.usage.trackedKeywords ?? keywords.length}
+                <span className="text-lg text-muted-foreground font-normal">
+                  /{account?.limits.maxTrackedKeywords}
+                </span>
+              </CardTitle>
+            </CardHeader>
+          </Card>
+        </Link>
 
-            <Card>
-              <CardHeader className="pb-2">
-                <CardDescription>Competitor Apps</CardDescription>
-                <CardTitle className="text-3xl">
-                  {profile.account.usage.competitorApps}
-                  <span className="text-lg text-muted-foreground font-normal">
-                    /{profile.account.limits.maxCompetitorApps}
-                  </span>
-                </CardTitle>
-              </CardHeader>
-            </Card>
+        <Link href="/competitors">
+          <Card className="hover:border-primary/50 transition-colors cursor-pointer">
+            <CardHeader className="pb-2">
+              <CardDescription>Competitor Apps</CardDescription>
+              <CardTitle className="text-3xl">
+                {account?.usage.competitorApps ?? competitors.length}
+                <span className="text-lg text-muted-foreground font-normal">
+                  /{account?.limits.maxCompetitorApps}
+                </span>
+              </CardTitle>
+            </CardHeader>
+          </Card>
+        </Link>
+
+        <Link href="/features">
+          <Card className="hover:border-primary/50 transition-colors cursor-pointer">
+            <CardHeader className="pb-2">
+              <CardDescription>Tracked Features</CardDescription>
+              <CardTitle className="text-3xl">
+                {account?.usage.trackedFeatures ?? features.length}
+                <span className="text-lg text-muted-foreground font-normal">
+                  /{account?.limits.maxTrackedFeatures}
+                </span>
+              </CardTitle>
+            </CardHeader>
+          </Card>
+        </Link>
+      </div>
+
+      {/* Tracked Apps List */}
+      <Card>
+        <CardHeader className="pb-3">
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-base">Tracked Apps</CardTitle>
+            <Link href="/apps" className="text-sm text-primary hover:underline">
+              View all
+            </Link>
           </div>
+        </CardHeader>
+        <CardContent>
+          {apps.length === 0 ? (
+            <p className="text-sm text-muted-foreground">
+              No tracked apps yet.{" "}
+              <Link href="/apps" className="text-primary hover:underline">
+                Add apps
+              </Link>
+            </p>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>App</TableHead>
+                  <TableHead>Rating</TableHead>
+                  <TableHead>Reviews</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {apps.slice(0, 10).map((app: any) => (
+                  <TableRow key={app.slug}>
+                    <TableCell>
+                      <Link
+                        href={`/apps/${app.slug}`}
+                        className="text-primary hover:underline font-medium"
+                      >
+                        {app.name}
+                      </Link>
+                    </TableCell>
+                    <TableCell>
+                      {app.latestSnapshot?.averageRating ?? "\u2014"}
+                    </TableCell>
+                    <TableCell>
+                      {app.latestSnapshot?.ratingCount ?? "\u2014"}
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          )}
+        </CardContent>
+      </Card>
 
-          {/* System Admin: Global Stats */}
-          {systemStats && (
-            <>
-              <Card>
-                <CardHeader>
-                  <CardTitle>System Stats</CardTitle>
-                  <CardDescription>Global platform statistics</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                    <div>
-                      <p className="text-2xl font-bold">
-                        {systemStats.accounts}
-                      </p>
-                      <p className="text-sm text-muted-foreground">Accounts</p>
-                    </div>
-                    <div>
-                      <p className="text-2xl font-bold">{systemStats.users}</p>
-                      <p className="text-sm text-muted-foreground">Users</p>
-                    </div>
-                    <div>
-                      <p className="text-2xl font-bold">
-                        {systemStats.totalApps}
-                      </p>
-                      <p className="text-sm text-muted-foreground">
-                        Total Apps
-                      </p>
-                    </div>
-                    <div>
-                      <p className="text-2xl font-bold">
-                        {systemStats.trackedApps}
-                      </p>
-                      <p className="text-sm text-muted-foreground">
-                        Tracked (global)
-                      </p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
+      {/* Tracked Keywords List */}
+      <Card>
+        <CardHeader className="pb-3">
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-base">Tracked Keywords</CardTitle>
+            <Link href="/keywords" className="text-sm text-primary hover:underline">
+              View all
+            </Link>
+          </div>
+        </CardHeader>
+        <CardContent>
+          {keywords.length === 0 ? (
+            <p className="text-sm text-muted-foreground">
+              No tracked keywords yet.{" "}
+              <Link href="/keywords" className="text-primary hover:underline">
+                Add keywords
+              </Link>
+            </p>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Keyword</TableHead>
+                  <TableHead>Total Results</TableHead>
+                  <TableHead>Apps Found</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {keywords.slice(0, 10).map((kw: any) => (
+                  <TableRow key={kw.id}>
+                    <TableCell>
+                      <Link
+                        href={`/keywords/${kw.slug}`}
+                        className="text-primary hover:underline font-medium"
+                      >
+                        {kw.keyword}
+                      </Link>
+                    </TableCell>
+                    <TableCell>
+                      {kw.latestSnapshot?.totalResults?.toLocaleString() ?? "\u2014"}
+                    </TableCell>
+                    <TableCell>
+                      {kw.latestSnapshot?.appCount ?? "\u2014"}
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          )}
+        </CardContent>
+      </Card>
 
-              {/* Data Freshness */}
-              {systemStats.freshness?.length > 0 && (
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Data Freshness</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                      {systemStats.freshness.map((f: any) => (
-                        <div key={f.scraperType} className="space-y-1">
-                          <p className="text-sm font-medium">
-                            {SCRAPER_LABELS[f.scraperType] || f.scraperType}
-                          </p>
-                          {f.lastCompletedAt ? (
-                            <>
-                              <Badge
-                                variant={freshnessColor(f.lastCompletedAt)}
-                              >
-                                {timeAgo(f.lastCompletedAt)}
-                              </Badge>
-                              {f.lastDurationMs && (
-                                <p className="text-xs text-muted-foreground">
-                                  took {Math.round(f.lastDurationMs / 1000)}s
-                                </p>
-                              )}
-                            </>
-                          ) : (
-                            <Badge variant="destructive">never</Badge>
+      {/* Competitor Apps List */}
+      <Card>
+        <CardHeader className="pb-3">
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-base">Competitor Apps</CardTitle>
+            <Link href="/competitors" className="text-sm text-primary hover:underline">
+              View all
+            </Link>
+          </div>
+        </CardHeader>
+        <CardContent>
+          {competitors.length === 0 ? (
+            <p className="text-sm text-muted-foreground">
+              No competitor apps yet. Star an app to add it as a competitor.
+            </p>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>App</TableHead>
+                  <TableHead>Added</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {competitors.slice(0, 10).map((c: any) => (
+                  <TableRow key={c.appSlug}>
+                    <TableCell>
+                      <Link
+                        href={`/apps/${c.appSlug}`}
+                        className="text-primary hover:underline font-medium"
+                      >
+                        {c.appName || c.appSlug}
+                      </Link>
+                    </TableCell>
+                    <TableCell className="text-sm text-muted-foreground">
+                      {new Date(c.createdAt).toLocaleDateString()}
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Tracked Features List */}
+      <Card>
+        <CardHeader className="pb-3">
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-base">Tracked Features</CardTitle>
+            <Link href="/features" className="text-sm text-primary hover:underline">
+              View all
+            </Link>
+          </div>
+        </CardHeader>
+        <CardContent>
+          {features.length === 0 ? (
+            <p className="text-sm text-muted-foreground">
+              No tracked features yet.{" "}
+              <Link href="/features" className="text-primary hover:underline">
+                Add features
+              </Link>
+            </p>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Feature</TableHead>
+                  <TableHead>Added</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {features.slice(0, 10).map((f: any) => (
+                  <TableRow key={f.featureHandle}>
+                    <TableCell>
+                      <Link
+                        href={`/features/${encodeURIComponent(f.featureHandle)}`}
+                        className="text-primary hover:underline font-medium"
+                      >
+                        {f.featureTitle}
+                      </Link>
+                    </TableCell>
+                    <TableCell className="text-sm text-muted-foreground">
+                      {new Date(f.createdAt).toLocaleDateString()}
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* System Admin: Global Stats */}
+      {systemStats && (
+        <>
+          <Card>
+            <CardHeader>
+              <CardTitle>System Stats</CardTitle>
+              <CardDescription>Global platform statistics</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div>
+                  <p className="text-2xl font-bold">{systemStats.accounts}</p>
+                  <p className="text-sm text-muted-foreground">Accounts</p>
+                </div>
+                <div>
+                  <p className="text-2xl font-bold">{systemStats.users}</p>
+                  <p className="text-sm text-muted-foreground">Users</p>
+                </div>
+                <div>
+                  <p className="text-2xl font-bold">{systemStats.totalApps}</p>
+                  <p className="text-sm text-muted-foreground">Total Apps</p>
+                </div>
+                <div>
+                  <p className="text-2xl font-bold">{systemStats.trackedApps}</p>
+                  <p className="text-sm text-muted-foreground">Tracked (global)</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {systemStats.freshness?.length > 0 && (
+            <Card>
+              <CardHeader>
+                <CardTitle>Data Freshness</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  {systemStats.freshness.map((f: any) => (
+                    <div key={f.scraperType} className="space-y-1">
+                      <p className="text-sm font-medium">
+                        {SCRAPER_LABELS[f.scraperType] || f.scraperType}
+                      </p>
+                      {f.lastCompletedAt ? (
+                        <>
+                          <Badge variant={freshnessColor(f.lastCompletedAt)}>
+                            {timeAgo(f.lastCompletedAt)}
+                          </Badge>
+                          {f.lastDurationMs && (
+                            <p className="text-xs text-muted-foreground">
+                              took {Math.round(f.lastDurationMs / 1000)}s
+                            </p>
                           )}
-                        </div>
-                      ))}
+                        </>
+                      ) : (
+                        <Badge variant="destructive">never</Badge>
+                      )}
                     </div>
-                  </CardContent>
-                </Card>
-              )}
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          )}
 
-              {/* Recent Runs */}
-              {recentRuns.length > 0 && (
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Recent Scraper Runs</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-2">
-                      {recentRuns.map((run: any) => (
-                        <div
-                          key={run.id}
-                          className="flex items-center justify-between border-b pb-2 last:border-0"
+          {recentRuns.length > 0 && (
+            <Card>
+              <CardHeader>
+                <CardTitle>Recent Scraper Runs</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-2">
+                  {recentRuns.map((run: any) => (
+                    <div
+                      key={run.id}
+                      className="flex items-center justify-between border-b pb-2 last:border-0"
+                    >
+                      <div className="flex items-center gap-3">
+                        <Badge
+                          variant={
+                            run.status === "completed"
+                              ? "default"
+                              : run.status === "running"
+                                ? "secondary"
+                                : "destructive"
+                          }
                         >
-                          <div className="flex items-center gap-3">
-                            <Badge
-                              variant={
-                                run.status === "completed"
-                                  ? "default"
-                                  : run.status === "running"
-                                    ? "secondary"
-                                    : "destructive"
-                              }
-                            >
-                              {run.status}
-                            </Badge>
-                            <span className="font-mono text-sm">
-                              {run.scraperType}
-                            </span>
-                            {run.metadata?.duration_ms && (
-                              <span className="text-xs text-muted-foreground">
-                                ({Math.round(run.metadata.duration_ms / 1000)}s)
-                              </span>
-                            )}
-                          </div>
-                          <span className="text-sm text-muted-foreground">
-                            {run.startedAt ? timeAgo(run.startedAt) : "\u2014"}
+                          {run.status}
+                        </Badge>
+                        <span className="font-mono text-sm">
+                          {run.scraperType}
+                        </span>
+                        {run.metadata?.duration_ms && (
+                          <span className="text-xs text-muted-foreground">
+                            ({Math.round(run.metadata.duration_ms / 1000)}s)
                           </span>
-                        </div>
-                      ))}
+                        )}
+                      </div>
+                      <span className="text-sm text-muted-foreground">
+                        {run.startedAt ? timeAgo(run.startedAt) : "\u2014"}
+                      </span>
                     </div>
-                  </CardContent>
-                </Card>
-              )}
-            </>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
           )}
         </>
       )}

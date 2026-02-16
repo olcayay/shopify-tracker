@@ -23,7 +23,7 @@ export class ReviewScraper {
   }
 
   /** Scrape reviews for all tracked apps */
-  async scrapeTracked(): Promise<void> {
+  async scrapeTracked(triggeredBy?: string): Promise<void> {
     const trackedApps = await this.db
       .select({ slug: apps.slug })
       .from(apps)
@@ -42,6 +42,7 @@ export class ReviewScraper {
         scraperType: "reviews",
         status: "running",
         startedAt: new Date(),
+        triggeredBy,
       })
       .returning();
 
