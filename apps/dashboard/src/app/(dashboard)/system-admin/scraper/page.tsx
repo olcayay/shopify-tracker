@@ -22,11 +22,15 @@ import {
 } from "@/components/ui/table";
 import {
   Play,
+  Pause,
   RefreshCw,
   ChevronDown,
   ChevronRight,
   ChevronLeft,
+  Trash2,
+  X,
 } from "lucide-react";
+import { ConfirmModal } from "@/components/confirm-modal";
 
 const SCRAPER_TYPES = [
   {
@@ -87,6 +91,7 @@ export default function ScraperPage() {
   const [filterTrigger, setFilterTrigger] = useState<string>("");
   const [page, setPage] = useState(0);
   const [expandedRunId, setExpandedRunId] = useState<string | null>(null);
+  const [drainConfirm, setDrainConfirm] = useState(false);
 
   useEffect(() => {
     loadData();
@@ -131,6 +136,40 @@ export default function ScraperPage() {
     setTriggering(null);
   }
 
+  async function togglePause() {
+    const endpoint = queueStatus?.isPaused
+      ? "/api/system-admin/scraper/queue/resume"
+      : "/api/system-admin/scraper/queue/pause";
+    const res = await fetchWithAuth(endpoint, { method: "POST" });
+    if (res.ok) {
+      setMessage(queueStatus?.isPaused ? "Queue resumed" : "Queue paused");
+      loadData();
+    }
+  }
+
+  async function removeJob(jobId: string) {
+    const res = await fetchWithAuth(
+      `/api/system-admin/scraper/queue/jobs/${jobId}`,
+      { method: "DELETE" }
+    );
+    if (res.ok) {
+      setMessage(`Job ${jobId} removed`);
+      loadData();
+    }
+  }
+
+  async function drainQueue() {
+    const res = await fetchWithAuth(
+      "/api/system-admin/scraper/queue/jobs",
+      { method: "DELETE" }
+    );
+    if (res.ok) {
+      setMessage("All waiting jobs removed");
+      setDrainConfirm(false);
+      loadData();
+    }
+  }
+
   // Build freshness map
   const freshnessMap = new Map<string, any>();
   if (stats?.freshness) {
@@ -140,6 +179,13 @@ export default function ScraperPage() {
   }
 
   const totalPages = Math.ceil(total / PAGE_SIZE);
+
+  const hasQueueJobs =
+    queueStatus &&
+    (queueStatus.counts.waiting > 0 ||
+      queueStatus.counts.active > 0 ||
+      queueStatus.counts.delayed > 0 ||
+      queueStatus.counts.failed > 0);
 
   return (
     <div className="space-y-6">
@@ -158,107 +204,156 @@ export default function ScraperPage() {
       )}
 
       {/* Queue Status */}
-      {queueStatus &&
-        (queueStatus.counts.waiting > 0 ||
-          queueStatus.counts.active > 0) && (
-          <Card className="border-blue-200 bg-blue-50/50">
-            <CardHeader className="pb-2">
-              <CardTitle className="text-base">Queue Status</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="flex gap-4 mb-3">
-                <div className="text-sm">
-                  <span className="text-muted-foreground">Active:</span>{" "}
-                  <Badge variant="secondary">
-                    {queueStatus.counts.active}
-                  </Badge>
-                </div>
-                <div className="text-sm">
-                  <span className="text-muted-foreground">Waiting:</span>{" "}
-                  <Badge variant="outline">
-                    {queueStatus.counts.waiting}
-                  </Badge>
-                </div>
-                {queueStatus.counts.delayed > 0 && (
-                  <div className="text-sm">
-                    <span className="text-muted-foreground">Delayed:</span>{" "}
-                    <Badge variant="outline">
-                      {queueStatus.counts.delayed}
-                    </Badge>
-                  </div>
+      {(hasQueueJobs || queueStatus?.isPaused) && (
+        <Card className={queueStatus?.isPaused ? "border-yellow-300 bg-yellow-50/50" : "border-blue-200 bg-blue-50/50"}>
+          <CardHeader className="pb-2">
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-base">
+                Queue Status
+                {queueStatus?.isPaused && (
+                  <Badge variant="secondary" className="ml-2">Paused</Badge>
                 )}
-                {queueStatus.counts.failed > 0 && (
-                  <div className="text-sm">
-                    <span className="text-muted-foreground">Failed:</span>{" "}
-                    <Badge variant="destructive">
-                      {queueStatus.counts.failed}
-                    </Badge>
-                  </div>
+              </CardTitle>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-7 text-xs"
+                  onClick={togglePause}
+                >
+                  {queueStatus?.isPaused ? (
+                    <>
+                      <Play className="h-3 w-3 mr-1" />
+                      Resume
+                    </>
+                  ) : (
+                    <>
+                      <Pause className="h-3 w-3 mr-1" />
+                      Pause
+                    </>
+                  )}
+                </Button>
+                {queueStatus?.counts.waiting > 0 && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-7 text-xs text-destructive hover:text-destructive"
+                    onClick={() => setDrainConfirm(true)}
+                  >
+                    <Trash2 className="h-3 w-3 mr-1" />
+                    Clear Waiting
+                  </Button>
                 )}
               </div>
-              {queueStatus.jobs.length > 0 && (
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Job ID</TableHead>
-                      <TableHead>Type</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead>Queued At</TableHead>
-                      <TableHead>Details</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {queueStatus.jobs.map((job: any) => (
-                      <TableRow key={job.id}>
-                        <TableCell className="font-mono text-xs">
-                          {job.id}
-                        </TableCell>
-                        <TableCell className="font-mono text-sm">
-                          {job.type}
-                        </TableCell>
-                        <TableCell>
-                          <Badge
-                            variant={
-                              job.status === "active"
-                                ? "secondary"
-                                : job.status === "failed"
-                                  ? "destructive"
-                                  : "outline"
-                            }
-                          >
-                            {job.status}
-                          </Badge>
-                        </TableCell>
-                        <TableCell className="text-sm text-muted-foreground">
-                          {job.createdAt
-                            ? formatDate(job.createdAt)
-                            : "\u2014"}
-                        </TableCell>
-                        <TableCell className="text-sm">
-                          {job.data?.slug && (
-                            <span className="text-muted-foreground">
-                              app: {job.data.slug}
-                            </span>
-                          )}
-                          {job.data?.keyword && (
-                            <span className="text-muted-foreground">
-                              keyword: {job.data.keyword}
-                            </span>
-                          )}
-                          {job.failedReason && (
-                            <span className="text-destructive text-xs">
-                              {job.failedReason}
-                            </span>
-                          )}
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="flex gap-4 mb-3">
+              <div className="text-sm">
+                <span className="text-muted-foreground">Active:</span>{" "}
+                <Badge variant="secondary">
+                  {queueStatus.counts.active}
+                </Badge>
+              </div>
+              <div className="text-sm">
+                <span className="text-muted-foreground">Waiting:</span>{" "}
+                <Badge variant="outline">
+                  {queueStatus.counts.waiting}
+                </Badge>
+              </div>
+              {queueStatus.counts.delayed > 0 && (
+                <div className="text-sm">
+                  <span className="text-muted-foreground">Delayed:</span>{" "}
+                  <Badge variant="outline">
+                    {queueStatus.counts.delayed}
+                  </Badge>
+                </div>
               )}
-            </CardContent>
-          </Card>
-        )}
+              {queueStatus.counts.failed > 0 && (
+                <div className="text-sm">
+                  <span className="text-muted-foreground">Failed:</span>{" "}
+                  <Badge variant="destructive">
+                    {queueStatus.counts.failed}
+                  </Badge>
+                </div>
+              )}
+            </div>
+            {queueStatus.jobs.length > 0 && (
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Job ID</TableHead>
+                    <TableHead>Type</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Queued At</TableHead>
+                    <TableHead>Details</TableHead>
+                    <TableHead />
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {queueStatus.jobs.map((job: any) => (
+                    <TableRow key={job.id}>
+                      <TableCell className="font-mono text-xs">
+                        {job.id}
+                      </TableCell>
+                      <TableCell className="font-mono text-sm">
+                        {job.type}
+                      </TableCell>
+                      <TableCell>
+                        <Badge
+                          variant={
+                            job.status === "active"
+                              ? "secondary"
+                              : job.status === "failed"
+                                ? "destructive"
+                                : "outline"
+                          }
+                        >
+                          {job.status}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-sm text-muted-foreground">
+                        {job.createdAt
+                          ? formatDate(job.createdAt)
+                          : "\u2014"}
+                      </TableCell>
+                      <TableCell className="text-sm">
+                        {job.data?.slug && (
+                          <span className="text-muted-foreground">
+                            app: {job.data.slug}
+                          </span>
+                        )}
+                        {job.data?.keyword && (
+                          <span className="text-muted-foreground">
+                            keyword: {job.data.keyword}
+                          </span>
+                        )}
+                        {job.failedReason && (
+                          <span className="text-destructive text-xs">
+                            {job.failedReason}
+                          </span>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        {job.status !== "active" && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-7 w-7 p-0 text-muted-foreground hover:text-destructive"
+                            onClick={() => removeJob(job.id)}
+                          >
+                            <X className="h-3.5 w-3.5" />
+                          </Button>
+                        )}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            )}
+          </CardContent>
+        </Card>
+      )}
 
       {/* Scraper Types with Trigger + Freshness */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -550,6 +645,15 @@ export default function ScraperPage() {
           )}
         </CardContent>
       </Card>
+
+      <ConfirmModal
+        open={drainConfirm}
+        title="Clear Waiting Jobs"
+        description={`All ${queueStatus?.counts.waiting ?? 0} waiting jobs will be removed from the queue. Active jobs will not be affected. This action cannot be undone.`}
+        confirmLabel="Clear All"
+        onConfirm={drainQueue}
+        onCancel={() => setDrainConfirm(false)}
+      />
     </div>
   );
 }

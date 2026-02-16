@@ -77,7 +77,7 @@ export class KeywordScraper {
     log.info("scraping complete", { itemsScraped, itemsFailed, durationMs: Date.now() - startTime });
   }
 
-  /** Scrape search results for a single keyword */
+  /** Scrape search results for a single keyword (fetches up to 4 pages) */
   async scrapeKeyword(
     keywordId: number,
     keyword: string,
@@ -85,27 +85,53 @@ export class KeywordScraper {
   ): Promise<void> {
     log.info("scraping keyword", { keyword });
 
-    const searchUrl = urls.search(keyword);
-    const html = await this.httpClient.fetchPage(searchUrl, {
-      "Turbo-Frame": "search_page",
-    });
-    const data = parseSearchPage(html, keyword, 1);
+    const MAX_PAGES = 4;
+    const allApps: import("@shopify-tracking/shared").KeywordSearchApp[] = [];
+    const seenSlugs = new Set<string>();
+    let totalResults: number | null = null;
+    let organicCount = 0;
+
+    for (let page = 1; page <= MAX_PAGES; page++) {
+      const searchUrl = urls.search(keyword, page);
+      const html = await this.httpClient.fetchPage(searchUrl, {
+        "Turbo-Frame": "search_page",
+      });
+      const data = parseSearchPage(html, keyword, page, organicCount);
+
+      if (page === 1) totalResults = data.total_results;
+
+      // Deduplicate across pages
+      for (const app of data.apps) {
+        if (!seenSlugs.has(app.app_slug)) {
+          seenSlugs.add(app.app_slug);
+          allApps.push(app);
+          if (!app.is_sponsored && !app.is_built_in) organicCount++;
+        }
+      }
+
+      if (!data.has_next_page) {
+        log.info("no more pages", { keyword, stoppedAtPage: page });
+        break;
+      }
+    }
+
+    log.info("keyword pages scraped", { keyword, totalApps: allApps.length, organicCount });
 
     // Insert keyword snapshot (keeps all results including sponsored)
     await this.db.insert(keywordSnapshots).values({
       keywordId,
       scrapeRunId: runId,
       scrapedAt: new Date(),
-      totalResults: data.total_results,
-      results: data.apps,
+      totalResults,
+      results: allApps,
     });
 
     const now = new Date();
     const todayStr = now.toISOString().slice(0, 10); // YYYY-MM-DD
 
     // Separate organic, sponsored, and built-in
-    const organicApps = data.apps.filter((a) => !a.is_sponsored && !a.is_built_in);
-    const sponsoredApps = data.apps.filter((a) => a.is_sponsored);
+    const organicApps = allApps.filter((a) => !a.is_sponsored && !a.is_built_in);
+    const sponsoredApps = allApps.filter((a) => a.is_sponsored);
 
     // Record organic rankings (position re-calculated excluding ads)
     for (let i = 0; i < organicApps.length; i++) {

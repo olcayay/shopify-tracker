@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useRef } from "react";
+import { Fragment, useEffect, useState, useRef } from "react";
 import Link from "next/link";
 import { useAuth } from "@/lib/auth-context";
 import { Button } from "@/components/ui/button";
@@ -14,7 +14,8 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { X, Plus, Search } from "lucide-react";
+import { X, Plus, Search, Target, Eye, ChevronDown, ChevronRight } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 import { ConfirmModal } from "@/components/confirm-modal";
 import { KeywordSearchModal } from "@/components/keyword-search-modal";
 import { LiveSearchTrigger } from "@/components/live-search-trigger";
@@ -32,6 +33,7 @@ export default function KeywordsPage() {
     id: number;
     keyword: string;
   } | null>(null);
+  const [expandedId, setExpandedId] = useState<number | null>(null);
   const searchRef = useRef<HTMLDivElement>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout>>(undefined);
 
@@ -197,36 +199,73 @@ export default function KeywordsPage() {
                   <TableHead>Keyword</TableHead>
                   <TableHead>Total Results</TableHead>
                   <TableHead>Apps Found</TableHead>
+                  <TableHead>Tracked</TableHead>
+                  <TableHead>Competitor</TableHead>
                   <TableHead>Last Updated</TableHead>
                   <TableHead className="w-10" />
                   {canEdit && <TableHead className="w-12" />}
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {keywords.map((kw) => (
-                  <TableRow key={kw.id}>
+                {keywords.map((kw) => {
+                  const hasApps = kw.trackedInResults > 0 || kw.competitorInResults > 0;
+                  const isExpanded = expandedId === kw.id;
+                  return (
+                  <Fragment key={kw.id}>
+                  <TableRow
+                    className={hasApps ? "cursor-pointer hover:bg-muted/50" : ""}
+                    onClick={() => hasApps && setExpandedId(isExpanded ? null : kw.id)}
+                  >
                     <TableCell>
-                      <Link
-                        href={`/keywords/${kw.slug}`}
-                        className="text-primary hover:underline font-medium"
-                      >
-                        {kw.keyword}
-                      </Link>
+                      <div className="flex items-center gap-1.5">
+                        {hasApps ? (
+                          isExpanded ? <ChevronDown className="h-4 w-4 text-muted-foreground shrink-0" /> : <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />
+                        ) : (
+                          <span className="w-4" />
+                        )}
+                        <Link
+                          href={`/keywords/${kw.slug}`}
+                          className="text-primary hover:underline font-medium"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          {kw.keyword}
+                        </Link>
+                      </div>
                     </TableCell>
                     <TableCell>
                       {kw.latestSnapshot?.totalResults?.toLocaleString() ?? "\u2014"}
                     </TableCell>
                     <TableCell>{kw.latestSnapshot?.appCount ?? "\u2014"}</TableCell>
+                    <TableCell>
+                      {kw.trackedInResults > 0 ? (
+                        <Badge variant="outline" className="border-primary text-primary">
+                          <Target className="h-3 w-3 mr-1" />
+                          {kw.trackedInResults}
+                        </Badge>
+                      ) : (
+                        <span className="text-muted-foreground">{"\u2014"}</span>
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      {kw.competitorInResults > 0 ? (
+                        <Badge variant="outline" className="border-yellow-500 text-yellow-600">
+                          <Eye className="h-3 w-3 mr-1" />
+                          {kw.competitorInResults}
+                        </Badge>
+                      ) : (
+                        <span className="text-muted-foreground">{"\u2014"}</span>
+                      )}
+                    </TableCell>
                     <TableCell className="text-sm text-muted-foreground">
                       {kw.latestSnapshot?.scrapedAt
                         ? new Date(kw.latestSnapshot.scrapedAt).toLocaleDateString()
                         : "Never"}
                     </TableCell>
-                    <TableCell>
+                    <TableCell onClick={(e) => e.stopPropagation()}>
                       <LiveSearchTrigger keyword={kw.keyword} variant="icon" />
                     </TableCell>
                     {canEdit && (
-                      <TableCell>
+                      <TableCell onClick={(e) => e.stopPropagation()}>
                         <Button
                           variant="ghost"
                           size="icon"
@@ -243,11 +282,69 @@ export default function KeywordsPage() {
                       </TableCell>
                     )}
                   </TableRow>
-                ))}
+                  {isExpanded && (
+                    <TableRow>
+                      <TableCell colSpan={canEdit ? 8 : 7} className="bg-muted/30 p-4">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          {kw.trackedAppsInResults?.length > 0 && (
+                            <div>
+                              <h4 className="text-sm font-medium mb-2 flex items-center gap-1.5">
+                                <Target className="h-3.5 w-3.5 text-primary" />
+                                Tracked Apps
+                              </h4>
+                              <div className="space-y-1">
+                                {kw.trackedAppsInResults.map((app: any) => (
+                                  <div key={app.app_slug} className="flex items-center justify-between text-sm py-1 px-2 rounded bg-primary/5 border-l-2 border-l-primary">
+                                    <Link
+                                      href={`/apps/${app.app_slug}`}
+                                      className="text-primary hover:underline font-medium"
+                                      onClick={(e) => e.stopPropagation()}
+                                    >
+                                      {app.app_name}
+                                    </Link>
+                                    <span className="font-mono text-muted-foreground text-xs">
+                                      #{app.position}
+                                    </span>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                          {kw.competitorAppsInResults?.length > 0 && (
+                            <div>
+                              <h4 className="text-sm font-medium mb-2 flex items-center gap-1.5">
+                                <Eye className="h-3.5 w-3.5 text-yellow-500" />
+                                Competitor Apps
+                              </h4>
+                              <div className="space-y-1">
+                                {kw.competitorAppsInResults.map((app: any) => (
+                                  <div key={app.app_slug} className="flex items-center justify-between text-sm py-1 px-2 rounded bg-yellow-500/5 border-l-2 border-l-yellow-500">
+                                    <Link
+                                      href={`/apps/${app.app_slug}`}
+                                      className="text-primary hover:underline font-medium"
+                                      onClick={(e) => e.stopPropagation()}
+                                    >
+                                      {app.app_name}
+                                    </Link>
+                                    <span className="font-mono text-muted-foreground text-xs">
+                                      #{app.position}
+                                    </span>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  )}
+                  </Fragment>
+                  );
+                })}
                 {keywords.length === 0 && (
                   <TableRow>
                     <TableCell
-                      colSpan={canEdit ? 6 : 5}
+                      colSpan={canEdit ? 8 : 7}
                       className="text-center text-muted-foreground"
                     >
                       No tracked keywords yet. Use the search above to find and

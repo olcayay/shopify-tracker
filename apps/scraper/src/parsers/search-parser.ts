@@ -11,7 +11,8 @@ const log = createLogger("search-parser");
 export function parseSearchPage(
   html: string,
   keyword: string,
-  currentPage: number
+  currentPage: number,
+  positionOffset = 0
 ): SearchPageData {
   const $ = cheerio.load(html);
 
@@ -21,7 +22,7 @@ export function parseSearchPage(
   }
 
   let apps: KeywordSearchApp[] = [];
-  try { apps = parseSearchAppCards($); } catch (e) {
+  try { apps = parseSearchAppCards($, positionOffset); } catch (e) {
     log.warn("failed to parse search app cards", { keyword, error: String(e) });
   }
 
@@ -53,10 +54,10 @@ function parseTotalResults($: cheerio.CheerioAPI): number | null {
   return null;
 }
 
-function parseSearchAppCards($: cheerio.CheerioAPI): KeywordSearchApp[] {
+function parseSearchAppCards($: cheerio.CheerioAPI, positionOffset = 0): KeywordSearchApp[] {
   const apps: KeywordSearchApp[] = [];
   const seenSlugs = new Set<string>();
-  let position = 0;
+  let position = positionOffset;
 
   $('[data-controller="app-card"]').each((_, el) => {
     const $card = $(el);

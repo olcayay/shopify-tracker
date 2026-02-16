@@ -29,12 +29,14 @@ export interface Account {
     maxTrackedKeywords: number;
     maxCompetitorApps: number;
     maxTrackedFeatures: number;
+    maxUsers: number;
   };
   usage: {
     trackedApps: number;
     trackedKeywords: number;
     competitorApps: number;
     trackedFeatures: number;
+    users: number;
   };
 }
 

@@ -15,6 +15,7 @@ import { RankingChart } from "@/components/ranking-chart";
 import { TrackKeywordButton } from "./track-button";
 import { StarAppButton } from "@/components/star-app-button";
 import { LiveSearchTrigger } from "@/components/live-search-trigger";
+import { KeywordAppResults } from "./app-results";
 
 export default async function KeywordDetailPage({
   params,
@@ -142,63 +143,11 @@ export default async function KeywordDetailPage({
       )}
 
       {/* Organic Search Results */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Organic Results ({organicApps.length})</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead className="w-12">#</TableHead>
-                <TableHead>App</TableHead>
-                <TableHead>Rating</TableHead>
-                <TableHead>Reviews</TableHead>
-                <TableHead className="w-10" />
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {organicApps.map((app: any, idx: number) => {
-                const isTracked = trackedSlugs.has(app.app_slug);
-                const isCompetitor = competitorSlugs.has(app.app_slug);
-                return (
-                <TableRow key={app.app_slug} className={isTracked ? "border-l-2 border-l-primary bg-primary/5" : isCompetitor ? "border-l-2 border-l-yellow-500 bg-yellow-500/5" : ""}>
-                  <TableCell className="font-mono">{idx + 1}</TableCell>
-                  <TableCell>
-                    <div className="flex items-center gap-1.5">
-                      <Link
-                        href={`/apps/${app.app_slug}`}
-                        className="text-primary hover:underline font-medium"
-                      >
-                        {app.app_name}
-                      </Link>
-                      {isTracked && <Badge variant="outline" className="text-[10px] px-1 py-0 h-4 border-primary text-primary">Tracked</Badge>}
-                      {isCompetitor && <Badge variant="outline" className="text-[10px] px-1 py-0 h-4 border-yellow-500 text-yellow-600">Competitor</Badge>}
-                    </div>
-                    <p className="text-xs text-muted-foreground mt-0.5 line-clamp-1">
-                      {app.short_description}
-                    </p>
-                  </TableCell>
-                  <TableCell>
-                    {app.average_rating?.toFixed(1) ?? "\u2014"}
-                  </TableCell>
-                  <TableCell>
-                    {app.rating_count?.toLocaleString() ?? "\u2014"}
-                  </TableCell>
-                  <TableCell>
-                    <StarAppButton
-                      appSlug={app.app_slug}
-                      initialStarred={competitorSlugs.has(app.app_slug)}
-                      size="sm"
-                    />
-                  </TableCell>
-                </TableRow>
-                );
-              })}
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
+      <KeywordAppResults
+        apps={organicApps}
+        trackedSlugs={Array.from(trackedSlugs)}
+        competitorSlugs={Array.from(competitorSlugs)}
+      />
 
       {/* Sponsored Apps */}
       {sponsoredApps.length > 0 && (

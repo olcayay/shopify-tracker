@@ -110,7 +110,7 @@ export default function OverviewPage() {
       <h1 className="text-2xl font-bold">Overview</h1>
 
       {/* Account Usage Cards - clickable */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
         <Link href="/apps">
           <Card className="hover:border-primary/50 transition-colors cursor-pointer">
             <CardHeader className="pb-2">
@@ -161,6 +161,20 @@ export default function OverviewPage() {
                 {account?.usage.trackedFeatures ?? features.length}
                 <span className="text-lg text-muted-foreground font-normal">
                   /{account?.limits.maxTrackedFeatures}
+                </span>
+              </CardTitle>
+            </CardHeader>
+          </Card>
+        </Link>
+
+        <Link href="/settings">
+          <Card className="hover:border-primary/50 transition-colors cursor-pointer">
+            <CardHeader className="pb-2">
+              <CardDescription>Users</CardDescription>
+              <CardTitle className="text-3xl">
+                {account?.usage.users ?? 1}
+                <span className="text-lg text-muted-foreground font-normal">
+                  /{account?.limits.maxUsers}
                 </span>
               </CardTitle>
             </CardHeader>

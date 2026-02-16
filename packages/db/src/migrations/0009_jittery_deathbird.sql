@@ -1,0 +1,1 @@
+ALTER TABLE "accounts" ADD COLUMN "max_users" integer DEFAULT 5 NOT NULL;

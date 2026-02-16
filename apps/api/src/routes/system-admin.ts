@@ -14,6 +14,8 @@ import {
   accountTrackedKeywords,
   accountCompetitorApps,
   accountTrackedFeatures,
+  appKeywordRankings,
+  keywordAdSightings,
   categories,
   categorySnapshots,
   reviews,
@@ -202,6 +204,7 @@ export const systemAdminRoutes: FastifyPluginAsync = async (app) => {
         maxTrackedKeywords?: number;
         maxCompetitorApps?: number;
         maxTrackedFeatures?: number;
+        maxUsers?: number;
         isSuspended?: boolean;
       };
 
@@ -224,6 +227,7 @@ export const systemAdminRoutes: FastifyPluginAsync = async (app) => {
         updates.maxCompetitorApps = body.maxCompetitorApps;
       if (body.maxTrackedFeatures !== undefined)
         updates.maxTrackedFeatures = body.maxTrackedFeatures;
+      if (body.maxUsers !== undefined) updates.maxUsers = body.maxUsers;
       if (body.isSuspended !== undefined)
         updates.isSuspended = body.isSuspended;
 
@@ -509,14 +513,16 @@ export const systemAdminRoutes: FastifyPluginAsync = async (app) => {
   app.get("/scraper/queue", async () => {
     try {
       const queue = getScraperQueue();
-      const [waiting, active, delayed, failed] = await Promise.all([
+      const [waiting, active, delayed, failed, isPaused] = await Promise.all([
         queue.getWaiting(0, 50),
         queue.getActive(0, 10),
         queue.getDelayed(0, 10),
         queue.getFailed(0, 10),
+        queue.isPaused(),
       ]);
 
       return {
+        isPaused,
         counts: {
           waiting: waiting.length,
           active: active.length,
@@ -556,7 +562,56 @@ export const systemAdminRoutes: FastifyPluginAsync = async (app) => {
         ],
       };
     } catch {
-      return { counts: { waiting: 0, active: 0, delayed: 0, failed: 0 }, jobs: [] };
+      return { isPaused: false, counts: { waiting: 0, active: 0, delayed: 0, failed: 0 }, jobs: [] };
+    }
+  });
+
+  // POST /api/system-admin/scraper/queue/pause — pause the queue
+  app.post("/scraper/queue/pause", async (_request, reply) => {
+    try {
+      const queue = getScraperQueue();
+      await queue.pause();
+      return { ok: true, paused: true };
+    } catch {
+      return reply.code(500).send({ error: "Failed to pause queue" });
+    }
+  });
+
+  // POST /api/system-admin/scraper/queue/resume — resume the queue
+  app.post("/scraper/queue/resume", async (_request, reply) => {
+    try {
+      const queue = getScraperQueue();
+      await queue.resume();
+      return { ok: true, paused: false };
+    } catch {
+      return reply.code(500).send({ error: "Failed to resume queue" });
+    }
+  });
+
+  // DELETE /api/system-admin/scraper/queue/jobs/:jobId — remove a job from queue
+  app.delete<{ Params: { jobId: string } }>(
+    "/scraper/queue/jobs/:jobId",
+    async (request, reply) => {
+      try {
+        const queue = getScraperQueue();
+        const job = await queue.getJob(request.params.jobId);
+        if (!job) return reply.code(404).send({ error: "Job not found" });
+        await job.remove();
+        return { ok: true };
+      } catch {
+        return reply.code(500).send({ error: "Failed to remove job" });
+      }
+    }
+  );
+
+  // DELETE /api/system-admin/scraper/queue/jobs — drain all waiting jobs
+  app.delete("/scraper/queue/jobs", async (_request, reply) => {
+    try {
+      const queue = getScraperQueue();
+      await queue.drain();
+      return { ok: true };
+    } catch {
+      return reply.code(500).send({ error: "Failed to drain queue" });
     }
   });
 
@@ -717,6 +772,30 @@ export const systemAdminRoutes: FastifyPluginAsync = async (app) => {
         .where(eq(accountTrackedKeywords.keywordId, keywordId));
 
       return trackedBy;
+    }
+  );
+
+  // DELETE /api/system-admin/keywords/:id — delete a keyword and all related data
+  app.delete<{ Params: { id: string } }>(
+    "/keywords/:id",
+    async (request, reply) => {
+      const keywordId = parseInt(request.params.id, 10);
+
+      const [kw] = await db
+        .select({ id: trackedKeywords.id })
+        .from(trackedKeywords)
+        .where(eq(trackedKeywords.id, keywordId));
+
+      if (!kw) return reply.code(404).send({ error: "Keyword not found" });
+
+      // Delete related data in order (foreign key constraints)
+      await db.delete(accountTrackedKeywords).where(eq(accountTrackedKeywords.keywordId, keywordId));
+      await db.delete(appKeywordRankings).where(eq(appKeywordRankings.keywordId, keywordId));
+      await db.delete(keywordAdSightings).where(eq(keywordAdSightings.keywordId, keywordId));
+      await db.delete(keywordSnapshots).where(eq(keywordSnapshots.keywordId, keywordId));
+      await db.delete(trackedKeywords).where(eq(trackedKeywords.id, keywordId));
+
+      return { ok: true };
     }
   );
 

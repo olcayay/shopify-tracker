@@ -35,6 +35,7 @@ export default function AccountDetailPage() {
     maxTrackedKeywords: 0,
     maxCompetitorApps: 0,
     maxTrackedFeatures: 0,
+    maxUsers: 0,
   });
 
   useEffect(() => {
@@ -52,6 +53,7 @@ export default function AccountDetailPage() {
         maxTrackedKeywords: data.maxTrackedKeywords,
         maxCompetitorApps: data.maxCompetitorApps,
         maxTrackedFeatures: data.maxTrackedFeatures,
+        maxUsers: data.maxUsers,
       });
     }
     setLoading(false);
@@ -163,7 +165,7 @@ export default function AccountDetailPage() {
           </div>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
             <div>
               <p className="text-sm text-muted-foreground">Tracked Apps</p>
               <p className="text-2xl font-bold">
@@ -256,6 +258,30 @@ export default function AccountDetailPage() {
                     />
                   ) : (
                     account.maxTrackedFeatures
+                  )}
+                </span>
+              </p>
+            </div>
+            <div>
+              <p className="text-sm text-muted-foreground">Users</p>
+              <p className="text-2xl font-bold">
+                {account.members?.length ?? 0}
+                <span className="text-lg text-muted-foreground font-normal">
+                  /
+                  {editLimits ? (
+                    <Input
+                      type="number"
+                      className="w-20 inline-block h-7 text-sm ml-1"
+                      value={limits.maxUsers}
+                      onChange={(e) =>
+                        setLimits((l) => ({
+                          ...l,
+                          maxUsers: Number(e.target.value),
+                        }))
+                      }
+                    />
+                  ) : (
+                    account.maxUsers
                   )}
                 </span>
               </p>

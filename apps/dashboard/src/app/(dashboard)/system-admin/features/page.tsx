@@ -1,13 +1,13 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Fragment, useEffect, useState, useMemo } from "react";
 import Link from "next/link";
 import { useAuth } from "@/lib/auth-context";
+import { Input } from "@/components/ui/input";
 import {
   Card,
   CardContent,
 } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import {
   Table,
   TableBody,
@@ -16,12 +16,19 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { Search, ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
+
+type SortKey = "title" | "handle" | "trackedBy";
+type SortDir = "asc" | "desc";
 
 export default function FeaturesListPage() {
   const { fetchWithAuth } = useAuth();
   const [features, setFeatures] = useState<any[]>([]);
   const [expandedHandle, setExpandedHandle] = useState<string | null>(null);
   const [accountsList, setAccountsList] = useState<any[]>([]);
+  const [search, setSearch] = useState("");
+  const [sortKey, setSortKey] = useState<SortKey>("title");
+  const [sortDir, setSortDir] = useState<SortDir>("asc");
 
   useEffect(() => {
     loadFeatures();
@@ -45,6 +52,56 @@ export default function FeaturesListPage() {
     if (res.ok) setAccountsList(await res.json());
   }
 
+  function toggleSort(key: SortKey) {
+    if (sortKey === key) {
+      setSortDir((d) => (d === "asc" ? "desc" : "asc"));
+    } else {
+      setSortKey(key);
+      setSortDir(key === "title" || key === "handle" ? "asc" : "desc");
+    }
+  }
+
+  function SortIcon({ col }: { col: SortKey }) {
+    if (sortKey !== col)
+      return <ArrowUpDown className="inline h-3.5 w-3.5 ml-1 opacity-40" />;
+    return sortDir === "asc" ? (
+      <ArrowUp className="inline h-3.5 w-3.5 ml-1" />
+    ) : (
+      <ArrowDown className="inline h-3.5 w-3.5 ml-1" />
+    );
+  }
+
+  const filtered = useMemo(() => {
+    let result = features;
+
+    if (search.trim()) {
+      const q = search.toLowerCase();
+      result = result.filter(
+        (f) =>
+          f.featureTitle.toLowerCase().includes(q) ||
+          f.featureHandle.toLowerCase().includes(q)
+      );
+    }
+
+    result = [...result].sort((a, b) => {
+      let cmp = 0;
+      switch (sortKey) {
+        case "title":
+          cmp = a.featureTitle.localeCompare(b.featureTitle);
+          break;
+        case "handle":
+          cmp = a.featureHandle.localeCompare(b.featureHandle);
+          break;
+        case "trackedBy":
+          cmp = (a.trackedByCount ?? 0) - (b.trackedByCount ?? 0);
+          break;
+      }
+      return sortDir === "asc" ? cmp : -cmp;
+    });
+
+    return result;
+  }, [features, search, sortKey, sortDir]);
+
   return (
     <div className="space-y-6">
       <div>
@@ -55,8 +112,18 @@ export default function FeaturesListPage() {
           {" > Features"}
         </p>
         <h1 className="text-2xl font-bold">
-          Tracked Features ({features.length})
+          Features ({filtered.length})
         </h1>
+      </div>
+
+      <div className="relative w-full sm:w-64">
+        <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+        <Input
+          placeholder="Search title or handle..."
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          className="pl-9 h-9"
+        />
       </div>
 
       <Card>
@@ -64,15 +131,30 @@ export default function FeaturesListPage() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Feature</TableHead>
-                <TableHead>Handle</TableHead>
-                <TableHead>Tracked By</TableHead>
+                <TableHead
+                  className="cursor-pointer select-none"
+                  onClick={() => toggleSort("title")}
+                >
+                  Feature <SortIcon col="title" />
+                </TableHead>
+                <TableHead
+                  className="cursor-pointer select-none"
+                  onClick={() => toggleSort("handle")}
+                >
+                  Handle <SortIcon col="handle" />
+                </TableHead>
+                <TableHead
+                  className="cursor-pointer select-none"
+                  onClick={() => toggleSort("trackedBy")}
+                >
+                  Tracked By <SortIcon col="trackedBy" />
+                </TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {features.map((f: any) => (
-                <>
-                  <TableRow key={f.featureHandle}>
+              {filtered.map((f: any) => (
+                <Fragment key={f.featureHandle}>
+                  <TableRow>
                     <TableCell>
                       <Link
                         href={`/features/${f.featureHandle}`}
@@ -101,7 +183,7 @@ export default function FeaturesListPage() {
                     </TableCell>
                   </TableRow>
                   {expandedHandle === f.featureHandle && (
-                    <TableRow key={`${f.featureHandle}-accounts`}>
+                    <TableRow>
                       <TableCell colSpan={3} className="bg-muted/30 p-4">
                         <div className="text-sm font-medium mb-2">
                           Accounts tracking &quot;{f.featureTitle}&quot;
@@ -126,15 +208,15 @@ export default function FeaturesListPage() {
                       </TableCell>
                     </TableRow>
                   )}
-                </>
+                </Fragment>
               ))}
-              {features.length === 0 && (
+              {filtered.length === 0 && (
                 <TableRow>
                   <TableCell
                     colSpan={3}
                     className="text-center text-muted-foreground"
                   >
-                    No tracked features
+                    No features found
                   </TableCell>
                 </TableRow>
               )}

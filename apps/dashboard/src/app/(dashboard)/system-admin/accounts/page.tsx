@@ -1,9 +1,10 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import Link from "next/link";
 import { useAuth } from "@/lib/auth-context";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import {
   Card,
   CardContent,
@@ -17,6 +18,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { Search, ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
 
 function formatDate(dateStr: string): string {
   return new Date(dateStr).toLocaleString("tr-TR", {
@@ -28,10 +30,18 @@ function formatDate(dateStr: string): string {
   });
 }
 
+type SortKey = "name" | "members" | "apps" | "keywords" | "status" | "createdAt";
+type SortDir = "asc" | "desc";
+type StatusFilter = "all" | "active" | "suspended";
+
 export default function AccountsListPage() {
   const { fetchWithAuth } = useAuth();
   const [accounts, setAccounts] = useState<any[]>([]);
   const [message, setMessage] = useState("");
+  const [search, setSearch] = useState("");
+  const [sortKey, setSortKey] = useState<SortKey>("name");
+  const [sortDir, setSortDir] = useState<SortDir>("asc");
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
 
   useEffect(() => {
     loadAccounts();
@@ -53,6 +63,78 @@ export default function AccountsListPage() {
     }
   }
 
+  function toggleSort(key: SortKey) {
+    if (sortKey === key) {
+      setSortDir((d) => (d === "asc" ? "desc" : "asc"));
+    } else {
+      setSortKey(key);
+      setSortDir(key === "name" ? "asc" : "desc");
+    }
+  }
+
+  function SortIcon({ col }: { col: SortKey }) {
+    if (sortKey !== col)
+      return <ArrowUpDown className="inline h-3.5 w-3.5 ml-1 opacity-40" />;
+    return sortDir === "asc" ? (
+      <ArrowUp className="inline h-3.5 w-3.5 ml-1" />
+    ) : (
+      <ArrowDown className="inline h-3.5 w-3.5 ml-1" />
+    );
+  }
+
+  const filtered = useMemo(() => {
+    let result = accounts;
+
+    if (search.trim()) {
+      const q = search.toLowerCase();
+      result = result.filter((a) => a.name.toLowerCase().includes(q));
+    }
+
+    if (statusFilter === "active") {
+      result = result.filter((a) => !a.isSuspended);
+    } else if (statusFilter === "suspended") {
+      result = result.filter((a) => a.isSuspended);
+    }
+
+    result = [...result].sort((a, b) => {
+      let cmp = 0;
+      switch (sortKey) {
+        case "name":
+          cmp = a.name.localeCompare(b.name);
+          break;
+        case "members":
+          cmp = (a.usage?.members ?? 0) - (b.usage?.members ?? 0);
+          break;
+        case "apps":
+          cmp = (a.usage?.trackedApps ?? 0) - (b.usage?.trackedApps ?? 0);
+          break;
+        case "keywords":
+          cmp = (a.usage?.trackedKeywords ?? 0) - (b.usage?.trackedKeywords ?? 0);
+          break;
+        case "status":
+          cmp = (a.isSuspended ? 1 : 0) - (b.isSuspended ? 1 : 0);
+          break;
+        case "createdAt":
+          cmp = new Date(a.createdAt || 0).getTime() - new Date(b.createdAt || 0).getTime();
+          break;
+      }
+      return sortDir === "asc" ? cmp : -cmp;
+    });
+
+    return result;
+  }, [accounts, search, statusFilter, sortKey, sortDir]);
+
+  const statusCounts = useMemo(() => {
+    const base = search.trim()
+      ? accounts.filter((a) => a.name.toLowerCase().includes(search.toLowerCase()))
+      : accounts;
+    return {
+      all: base.length,
+      active: base.filter((a) => !a.isSuspended).length,
+      suspended: base.filter((a) => a.isSuspended).length,
+    };
+  }, [accounts, search]);
+
   return (
     <div className="space-y-6">
       <div>
@@ -63,7 +145,7 @@ export default function AccountsListPage() {
           {" > Accounts"}
         </p>
         <h1 className="text-2xl font-bold">
-          Accounts ({accounts.length})
+          Accounts ({filtered.length})
         </h1>
       </div>
 
@@ -71,25 +153,89 @@ export default function AccountsListPage() {
         <div className="text-sm px-3 py-2 rounded-md bg-muted">{message}</div>
       )}
 
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="relative w-full sm:w-64">
+          <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Search accounts..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="pl-9 h-9"
+          />
+        </div>
+        <div className="flex gap-1.5">
+          {(
+            [
+              ["all", "All"],
+              ["active", "Active"],
+              ["suspended", "Suspended"],
+            ] as const
+          ).map(([key, label]) => (
+            <Button
+              key={key}
+              variant={statusFilter === key ? "default" : "outline"}
+              size="sm"
+              className="h-7 text-xs"
+              onClick={() => setStatusFilter(key)}
+            >
+              {label}
+              {statusCounts[key] > 0 && (
+                <span className="ml-1 opacity-70">({statusCounts[key]})</span>
+              )}
+            </Button>
+          ))}
+        </div>
+      </div>
+
       <Card>
         <CardContent className="pt-6">
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Account</TableHead>
-                <TableHead>Members</TableHead>
-                <TableHead>Apps</TableHead>
-                <TableHead>Keywords</TableHead>
+                <TableHead
+                  className="cursor-pointer select-none"
+                  onClick={() => toggleSort("name")}
+                >
+                  Account <SortIcon col="name" />
+                </TableHead>
+                <TableHead
+                  className="cursor-pointer select-none"
+                  onClick={() => toggleSort("members")}
+                >
+                  Members <SortIcon col="members" />
+                </TableHead>
+                <TableHead
+                  className="cursor-pointer select-none"
+                  onClick={() => toggleSort("apps")}
+                >
+                  Apps <SortIcon col="apps" />
+                </TableHead>
+                <TableHead
+                  className="cursor-pointer select-none"
+                  onClick={() => toggleSort("keywords")}
+                >
+                  Keywords <SortIcon col="keywords" />
+                </TableHead>
                 <TableHead>Competitors</TableHead>
                 <TableHead>Features</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Created</TableHead>
+                <TableHead
+                  className="cursor-pointer select-none"
+                  onClick={() => toggleSort("status")}
+                >
+                  Status <SortIcon col="status" />
+                </TableHead>
+                <TableHead
+                  className="cursor-pointer select-none"
+                  onClick={() => toggleSort("createdAt")}
+                >
+                  Created <SortIcon col="createdAt" />
+                </TableHead>
                 <TableHead>Last Seen</TableHead>
                 <TableHead />
               </TableRow>
             </TableHeader>
             <TableBody>
-              {accounts.map((acc: any) => (
+              {filtered.map((acc: any) => (
                 <TableRow key={acc.id}>
                   <TableCell>
                     <Link
@@ -143,13 +289,13 @@ export default function AccountsListPage() {
                   </TableCell>
                 </TableRow>
               ))}
-              {accounts.length === 0 && (
+              {filtered.length === 0 && (
                 <TableRow>
                   <TableCell
                     colSpan={10}
                     className="text-center text-muted-foreground"
                   >
-                    No accounts
+                    No accounts found
                   </TableCell>
                 </TableRow>
               )}

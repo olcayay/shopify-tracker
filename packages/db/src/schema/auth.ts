@@ -22,6 +22,7 @@ export const accounts = pgTable("accounts", {
   maxTrackedKeywords: integer("max_tracked_keywords").notNull().default(10),
   maxCompetitorApps: integer("max_competitor_apps").notNull().default(5),
   maxTrackedFeatures: integer("max_tracked_features").notNull().default(10),
+  maxUsers: integer("max_users").notNull().default(5),
   isSuspended: boolean("is_suspended").notNull().default(false),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),

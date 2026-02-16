@@ -64,6 +64,13 @@
       "when": 1771199931591,
       "tag": "0008_salty_randall",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1771273723286,
+      "tag": "0009_jittery_deathbird",
+      "breakpoints": true
     }
   ]
 }

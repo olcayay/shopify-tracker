@@ -20,16 +20,19 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Trash2, UserPlus } from "lucide-react";
+import { Trash2, UserPlus, Clock, Check, X, Copy } from "lucide-react";
 import Link from "next/link";
+import { ConfirmModal } from "@/components/confirm-modal";
 
 export default function SettingsPage() {
   const { user, account, fetchWithAuth, refreshUser } = useAuth();
   const [members, setMembers] = useState<any[]>([]);
+  const [pendingInvitations, setPendingInvitations] = useState<any[]>([]);
   const [inviteEmail, setInviteEmail] = useState("");
   const [inviteRole, setInviteRole] = useState<"editor" | "viewer">("viewer");
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
+  const [confirmCancel, setConfirmCancel] = useState<{ id: string; email: string } | null>(null);
 
   const isOwner = user?.role === "owner";
 
@@ -38,8 +41,12 @@ export default function SettingsPage() {
   }, []);
 
   async function loadData() {
-    const membersRes = await fetchWithAuth("/api/account/members");
+    const [membersRes, invitationsRes] = await Promise.all([
+      fetchWithAuth("/api/account/members"),
+      fetchWithAuth("/api/account/invitations"),
+    ]);
     if (membersRes.ok) setMembers(await membersRes.json());
+    if (invitationsRes.ok) setPendingInvitations(await invitationsRes.json());
   }
 
   async function handleAction(
@@ -96,7 +103,7 @@ export default function SettingsPage() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
+          <div className="grid grid-cols-2 md:grid-cols-5 gap-4 text-center">
             <Link href="/apps" className="block hover:bg-accent/50 rounded-lg p-3 -m-1 transition-colors">
               <p className="text-2xl font-bold">
                 {account?.usage.trackedApps}/{account?.limits.maxTrackedApps}
@@ -124,6 +131,12 @@ export default function SettingsPage() {
               </p>
               <p className="text-sm text-muted-foreground">Features</p>
             </Link>
+            <div className="rounded-lg p-3 -m-1">
+              <p className="text-2xl font-bold">
+                {account?.usage.users}/{account?.limits.maxUsers}
+              </p>
+              <p className="text-sm text-muted-foreground">Users</p>
+            </div>
           </div>
         </CardContent>
       </Card>
@@ -200,9 +213,105 @@ export default function SettingsPage() {
                 ))}
               </TableBody>
             </Table>
+
+            {/* Pending Invitations */}
+            {pendingInvitations.length > 0 && (
+              <div className="pt-4 border-t mt-4">
+                <h3 className="text-sm font-medium mb-3">Pending Invitations</h3>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Email</TableHead>
+                      <TableHead>Role</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead>Sent</TableHead>
+                      <TableHead className="w-20" />
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {pendingInvitations.map((inv: any) => (
+                      <TableRow key={inv.id}>
+                        <TableCell className="text-sm">{inv.email}</TableCell>
+                        <TableCell>
+                          <Badge variant="outline">{inv.role}</Badge>
+                        </TableCell>
+                        <TableCell>
+                          {inv.accepted ? (
+                            <Badge variant="outline" className="border-green-500 text-green-600">
+                              <Check className="h-3 w-3 mr-1" />
+                              Accepted
+                            </Badge>
+                          ) : inv.expired ? (
+                            <Badge variant="outline" className="border-destructive text-destructive">
+                              <Clock className="h-3 w-3 mr-1" />
+                              Expired
+                            </Badge>
+                          ) : (
+                            <Badge variant="outline" className="border-yellow-500 text-yellow-600">
+                              <Clock className="h-3 w-3 mr-1" />
+                              Pending
+                            </Badge>
+                          )}
+                        </TableCell>
+                        <TableCell className="text-sm text-muted-foreground">
+                          {new Date(inv.createdAt).toLocaleDateString()}
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex gap-1">
+                            {!inv.accepted && !inv.expired && (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-8 w-8 p-0"
+                                title="Copy invite link"
+                                onClick={() => {
+                                  navigator.clipboard.writeText(
+                                    `${window.location.origin}/invite/accept/${inv.token}`
+                                  );
+                                  setMessage("Invite link copied to clipboard");
+                                }}
+                              >
+                                <Copy className="h-4 w-4 text-muted-foreground" />
+                              </Button>
+                            )}
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-8 w-8 p-0"
+                              title="Cancel invitation"
+                              onClick={() => setConfirmCancel({ id: inv.id, email: inv.email })}
+                            >
+                              <X className="h-4 w-4 text-destructive" />
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            )}
           </CardContent>
         </Card>
       )}
+
+      <ConfirmModal
+        open={!!confirmCancel}
+        title="Cancel Invitation"
+        description={`Are you sure you want to cancel the invitation for "${confirmCancel?.email}"?`}
+        onConfirm={() => {
+          if (confirmCancel) {
+            handleAction(
+              `/api/account/invitations/${confirmCancel.id}`,
+              "DELETE",
+              undefined,
+              "Invitation cancelled"
+            );
+            setConfirmCancel(null);
+          }
+        }}
+        onCancel={() => setConfirmCancel(null)}
+      />
     </div>
   );
 }

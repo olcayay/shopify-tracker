@@ -328,6 +328,11 @@ export const authRoutes: FastifyPluginAsync = async (app) => {
       .from(accountTrackedFeatures)
       .where(eq(accountTrackedFeatures.accountId, user.accountId));
 
+    const [usersCount] = await db
+      .select({ count: sql<number>`count(*)::int` })
+      .from(users)
+      .where(eq(users.accountId, user.accountId));
+
     return {
       user: {
         id: user.id,
@@ -345,12 +350,14 @@ export const authRoutes: FastifyPluginAsync = async (app) => {
           maxTrackedKeywords: account.maxTrackedKeywords,
           maxCompetitorApps: account.maxCompetitorApps,
           maxTrackedFeatures: account.maxTrackedFeatures,
+          maxUsers: account.maxUsers,
         },
         usage: {
           trackedApps: trackedAppsCount.count,
           trackedKeywords: trackedKeywordsCount.count,
           competitorApps: competitorAppsCount.count,
           trackedFeatures: trackedFeaturesCount.count,
+          users: usersCount.count,
         },
       },
     };

@@ -30,6 +30,20 @@ export const keywordRoutes: FastifyPluginAsync = async (app) => {
       return [];
     }
 
+    // Get account's tracked apps and competitors for matching
+    const [trackedAppRows, competitorRows] = await Promise.all([
+      db
+        .select({ appSlug: accountTrackedApps.appSlug })
+        .from(accountTrackedApps)
+        .where(eq(accountTrackedApps.accountId, accountId)),
+      db
+        .select({ appSlug: accountCompetitorApps.appSlug })
+        .from(accountCompetitorApps)
+        .where(eq(accountCompetitorApps.accountId, accountId)),
+    ]);
+    const trackedSlugs = trackedAppRows.map((r) => r.appSlug);
+    const competitorSlugs = competitorRows.map((r) => r.appSlug);
+
     const ids = trackedRows.map((r) => r.keywordId);
     const rows = await db
       .select()
@@ -44,13 +58,44 @@ export const keywordRoutes: FastifyPluginAsync = async (app) => {
             totalResults: keywordSnapshots.totalResults,
             scrapedAt: keywordSnapshots.scrapedAt,
             appCount: sql<number>`jsonb_array_length(${keywordSnapshots.results})::int`,
+            results: keywordSnapshots.results,
           })
           .from(keywordSnapshots)
           .where(eq(keywordSnapshots.keywordId, kw.id))
           .orderBy(desc(keywordSnapshots.scrapedAt))
           .limit(1);
 
-        return { ...kw, latestSnapshot: snapshot || null };
+        const trackedAppsInResults: { app_slug: string; app_name: string; position: number }[] = [];
+        const competitorAppsInResults: { app_slug: string; app_name: string; position: number }[] = [];
+        if (snapshot?.results) {
+          for (const app of snapshot.results as any[]) {
+            if (trackedSlugs.includes(app.app_slug)) {
+              trackedAppsInResults.push({
+                app_slug: app.app_slug,
+                app_name: app.app_name,
+                position: app.position || 0,
+              });
+            }
+            if (competitorSlugs.includes(app.app_slug)) {
+              competitorAppsInResults.push({
+                app_slug: app.app_slug,
+                app_name: app.app_name,
+                position: app.position || 0,
+              });
+            }
+          }
+        }
+
+        const { results: _, ...snapshotWithoutResults } = snapshot || ({} as any);
+
+        return {
+          ...kw,
+          latestSnapshot: snapshot ? snapshotWithoutResults : null,
+          trackedInResults: trackedAppsInResults.length,
+          competitorInResults: competitorAppsInResults.length,
+          trackedAppsInResults,
+          competitorAppsInResults,
+        };
       })
     );
 

@@ -115,6 +115,11 @@ export const accountRoutes: FastifyPluginAsync = async (app) => {
       .from(accountTrackedFeatures)
       .where(eq(accountTrackedFeatures.accountId, accountId));
 
+    const [usersCount] = await db
+      .select({ count: sql<number>`count(*)::int` })
+      .from(users)
+      .where(eq(users.accountId, accountId));
+
     return {
       id: account.id,
       name: account.name,
@@ -124,12 +129,14 @@ export const accountRoutes: FastifyPluginAsync = async (app) => {
         maxTrackedKeywords: account.maxTrackedKeywords,
         maxCompetitorApps: account.maxCompetitorApps,
         maxTrackedFeatures: account.maxTrackedFeatures,
+        maxUsers: account.maxUsers,
       },
       usage: {
         trackedApps: trackedAppsCount.count,
         trackedKeywords: trackedKeywordsCount.count,
         competitorApps: competitorAppsCount.count,
         trackedFeatures: trackedFeaturesCount.count,
+        users: usersCount.count,
       },
     };
   });
@@ -197,16 +204,64 @@ export const accountRoutes: FastifyPluginAsync = async (app) => {
           .send({ error: "role must be editor or viewer" });
       }
 
-      // Check if email is already in this account
-      const [existing] = await db
+      // Check user limit (members + pending invitations)
+      const [account] = await db
+        .select()
+        .from(accounts)
+        .where(eq(accounts.id, accountId));
+
+      const [{ memberCount }] = await db
+        .select({ memberCount: sql<number>`count(*)::int` })
+        .from(users)
+        .where(eq(users.accountId, accountId));
+
+      const [{ pendingCount }] = await db
+        .select({ pendingCount: sql<number>`count(*)::int` })
+        .from(invitations)
+        .where(
+          and(
+            eq(invitations.accountId, accountId),
+            sql`${invitations.acceptedAt} IS NULL`,
+            sql`${invitations.expiresAt} > NOW()`
+          )
+        );
+
+      if (memberCount + pendingCount >= account.maxUsers) {
+        return reply.code(403).send({
+          error: "User limit reached",
+          current: memberCount + pendingCount,
+          max: account.maxUsers,
+        });
+      }
+
+      // Check if email is already a member
+      const [existingUser] = await db
         .select({ id: users.id })
         .from(users)
         .where(eq(users.email, email.toLowerCase()));
 
-      if (existing) {
+      if (existingUser) {
         return reply
           .code(409)
           .send({ error: "User with this email already exists" });
+      }
+
+      // Check if there's already a pending invitation for this email
+      const [existingInvite] = await db
+        .select({ id: invitations.id })
+        .from(invitations)
+        .where(
+          and(
+            eq(invitations.accountId, accountId),
+            eq(invitations.email, email.toLowerCase()),
+            sql`${invitations.acceptedAt} IS NULL`
+          )
+        );
+
+      if (existingInvite) {
+        return reply
+          .code(409)
+          .send({ error: "An invitation has already been sent to this email" });
       }
 
       const token = crypto.randomBytes(32).toString("hex");
@@ -231,6 +286,57 @@ export const accountRoutes: FastifyPluginAsync = async (app) => {
         token: invitation.token,
         expiresAt: invitation.expiresAt,
       };
+    }
+  );
+
+  // GET /api/account/invitations — pending invitations
+  app.get(
+    "/invitations",
+    { preHandler: [requireRole("owner")] },
+    async (request) => {
+      const { accountId } = request.user;
+
+      const rows = await db
+        .select({
+          id: invitations.id,
+          email: invitations.email,
+          role: invitations.role,
+          token: invitations.token,
+          createdAt: invitations.createdAt,
+          expiresAt: invitations.expiresAt,
+          acceptedAt: invitations.acceptedAt,
+        })
+        .from(invitations)
+        .where(eq(invitations.accountId, accountId));
+
+      return rows.map((r) => ({
+        ...r,
+        expired: r.expiresAt < new Date() && !r.acceptedAt,
+        accepted: !!r.acceptedAt,
+      }));
+    }
+  );
+
+  // DELETE /api/account/invitations/:id — cancel/revoke invitation
+  app.delete<{ Params: { id: string } }>(
+    "/invitations/:id",
+    { preHandler: [requireRole("owner")] },
+    async (request, reply) => {
+      const { accountId } = request.user;
+      const { id } = request.params;
+
+      const deleted = await db
+        .delete(invitations)
+        .where(
+          and(eq(invitations.id, id), eq(invitations.accountId, accountId))
+        )
+        .returning();
+
+      if (deleted.length === 0) {
+        return reply.code(404).send({ error: "Invitation not found" });
+      }
+
+      return { message: "Invitation cancelled" };
     }
   );
 
