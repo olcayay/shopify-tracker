@@ -80,7 +80,7 @@ export const appRoutes: FastifyPluginAsync = async (app) => {
         sql`${appSnapshots.appSlug} = ${apps.slug}
           AND ${appSnapshots.id} = (
             SELECT s2.id FROM app_snapshots s2
-            WHERE s2.app_slug = ${apps.slug}
+            WHERE s2.app_slug = "apps"."slug"
             ORDER BY s2.scraped_at DESC LIMIT 1
           )`
       )
@@ -112,7 +112,7 @@ export const appRoutes: FastifyPluginAsync = async (app) => {
         sql`${appSnapshots.developer}->>'name' = ${name}
           AND ${appSnapshots.id} = (
             SELECT s2.id FROM app_snapshots s2
-            WHERE s2.app_slug = ${apps.slug}
+            WHERE s2.app_slug = "apps"."slug"
             ORDER BY s2.scraped_at DESC LIMIT 1
           )`
       )

@@ -137,7 +137,7 @@ export const systemAdminRoutes: FastifyPluginAsync = async (app) => {
         appName: apps.name,
         lastScrapedAt: sql<string | null>`(
           SELECT max(scraped_at) FROM app_snapshots
-          WHERE app_slug = ${accountTrackedApps.appSlug}
+          WHERE app_slug = "account_tracked_apps"."app_slug"
         )`,
       })
       .from(accountTrackedApps)
@@ -150,7 +150,7 @@ export const systemAdminRoutes: FastifyPluginAsync = async (app) => {
         keyword: trackedKeywords.keyword,
         lastScrapedAt: sql<string | null>`(
           SELECT max(scraped_at) FROM keyword_snapshots
-          WHERE keyword_id = ${accountTrackedKeywords.keywordId}
+          WHERE keyword_id = "account_tracked_keywords"."keyword_id"
         )`,
       })
       .from(accountTrackedKeywords)
@@ -166,7 +166,7 @@ export const systemAdminRoutes: FastifyPluginAsync = async (app) => {
         appName: apps.name,
         lastScrapedAt: sql<string | null>`(
           SELECT max(scraped_at) FROM app_snapshots
-          WHERE app_slug = ${accountCompetitorApps.appSlug}
+          WHERE app_slug = "account_competitor_apps"."app_slug"
         )`,
       })
       .from(accountCompetitorApps)
@@ -294,7 +294,7 @@ export const systemAdminRoutes: FastifyPluginAsync = async (app) => {
         createdAt: users.createdAt,
         lastSeen: sql<string | null>`(
           SELECT max(created_at) FROM refresh_tokens
-          WHERE user_id = ${users.id}
+          WHERE user_id = "users"."id"
         )`,
       })
       .from(users)
@@ -334,7 +334,7 @@ export const systemAdminRoutes: FastifyPluginAsync = async (app) => {
         createdAt: accountTrackedApps.createdAt,
         lastScrapedAt: sql<string | null>`(
           SELECT max(scraped_at) FROM app_snapshots
-          WHERE app_slug = ${accountTrackedApps.appSlug}
+          WHERE app_slug = "account_tracked_apps"."app_slug"
         )`,
       })
       .from(accountTrackedApps)
@@ -348,7 +348,7 @@ export const systemAdminRoutes: FastifyPluginAsync = async (app) => {
         createdAt: accountTrackedKeywords.createdAt,
         lastScrapedAt: sql<string | null>`(
           SELECT max(scraped_at) FROM keyword_snapshots
-          WHERE keyword_id = ${accountTrackedKeywords.keywordId}
+          WHERE keyword_id = "account_tracked_keywords"."keyword_id"
         )`,
       })
       .from(accountTrackedKeywords)
@@ -365,7 +365,7 @@ export const systemAdminRoutes: FastifyPluginAsync = async (app) => {
         createdAt: accountCompetitorApps.createdAt,
         lastScrapedAt: sql<string | null>`(
           SELECT max(scraped_at) FROM app_snapshots
-          WHERE app_slug = ${accountCompetitorApps.appSlug}
+          WHERE app_slug = "account_competitor_apps"."app_slug"
         )`,
       })
       .from(accountCompetitorApps)
@@ -623,15 +623,15 @@ export const systemAdminRoutes: FastifyPluginAsync = async (app) => {
         createdAt: apps.createdAt,
         lastScrapedAt: sql<string | null>`(
           SELECT max(scraped_at) FROM app_snapshots
-          WHERE app_slug = ${apps.slug}
+          WHERE app_slug = "apps"."slug"
         )`,
         trackedByCount: sql<number>`(
           SELECT count(*)::int FROM account_tracked_apps
-          WHERE app_slug = ${apps.slug}
+          WHERE app_slug = "apps"."slug"
         )`,
         competitorByCount: sql<number>`(
           SELECT count(*)::int FROM account_competitor_apps
-          WHERE app_slug = ${apps.slug}
+          WHERE app_slug = "apps"."slug"
         )`,
       })
       .from(apps);
@@ -685,11 +685,11 @@ export const systemAdminRoutes: FastifyPluginAsync = async (app) => {
         createdAt: trackedKeywords.createdAt,
         lastScrapedAt: sql<string | null>`(
           SELECT max(scraped_at) FROM keyword_snapshots
-          WHERE keyword_id = ${trackedKeywords.id}
+          WHERE keyword_id = "tracked_keywords"."id"
         )`,
         trackedByCount: sql<number>`(
           SELECT count(*)::int FROM account_tracked_keywords
-          WHERE keyword_id = ${trackedKeywords.id}
+          WHERE keyword_id = "tracked_keywords"."id"
         )`,
       })
       .from(trackedKeywords)

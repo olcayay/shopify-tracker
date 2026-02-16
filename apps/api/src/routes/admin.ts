@@ -228,7 +228,7 @@ export const adminRoutes: FastifyPluginAsync = async (app) => {
         lastDurationMs: sql<number>`(
           SELECT (metadata->>'duration_ms')::int
           FROM scrape_runs sr2
-          WHERE sr2.scraper_type = ${scrapeRuns.scraperType}
+          WHERE sr2.scraper_type = "scrape_runs"."scraper_type"
             AND sr2.status = 'completed'
           ORDER BY sr2.completed_at DESC LIMIT 1
         )`,
