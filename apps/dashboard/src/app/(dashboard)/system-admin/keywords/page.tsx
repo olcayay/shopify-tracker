@@ -28,7 +28,7 @@ type StatusFilter = "all" | "active" | "inactive";
 
 export default function KeywordsListPage() {
   const { fetchWithAuth } = useAuth();
-  const { formatDateTime, formatDateOnly } = useFormatDate();
+  const { formatDateTime } = useFormatDate();
   const [keywords, setKeywords] = useState<any[]>([]);
   const [expandedId, setExpandedId] = useState<number | null>(null);
   const [accountsList, setAccountsList] = useState<any[]>([]);
@@ -263,7 +263,7 @@ export default function KeywordsListPage() {
                     </TableCell>
                     <TableCell className="text-sm text-muted-foreground">
                       {kw.createdAt
-                        ? formatDateOnly(kw.createdAt)
+                        ? formatDateTime(kw.createdAt)
                         : "\u2014"}
                     </TableCell>
                     <TableCell className="text-sm text-muted-foreground">
