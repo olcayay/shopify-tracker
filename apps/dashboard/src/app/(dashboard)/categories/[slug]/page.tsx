@@ -171,7 +171,7 @@ export default async function CategoryDetailPage({
                       const isTracked = appSlug && trackedSlugs.has(appSlug);
                       const isCompetitor = appSlug && competitorSlugs.has(appSlug);
                       return (
-                      <TableRow key={appSlug || i} className={isTracked ? "border-l-2 border-l-primary bg-primary/5" : isCompetitor ? "border-l-2 border-l-yellow-500 bg-yellow-500/5" : ""}>
+                      <TableRow key={appSlug || i} className={isTracked ? "border-l-2 border-l-emerald-500 bg-emerald-500/10" : isCompetitor ? "border-l-2 border-l-amber-500 bg-amber-500/10" : ""}>
                         <TableCell>{app.position || i + 1}</TableCell>
                         <TableCell>
                           <div className="flex items-center gap-1.5">
@@ -191,8 +191,8 @@ export default async function CategoryDetailPage({
                               </Badge>
                             )}
                             {app.is_built_for_shopify && <span title="Built for Shopify">💎</span>}
-                            {isTracked && <Badge variant="outline" className="text-[10px] px-1 py-0 h-4 border-primary text-primary">Tracked</Badge>}
-                            {isCompetitor && <Badge variant="outline" className="text-[10px] px-1 py-0 h-4 border-yellow-500 text-yellow-600">Competitor</Badge>}
+                            {isTracked && <Badge className="text-[10px] px-1.5 py-0 h-4 bg-emerald-500/20 text-emerald-700 dark:text-emerald-400 border-emerald-500/50">Tracked</Badge>}
+                            {isCompetitor && <Badge className="text-[10px] px-1.5 py-0 h-4 bg-amber-500/20 text-amber-700 dark:text-amber-400 border-amber-500/50">Competitor</Badge>}
                           </div>
                         </TableCell>
                         <TableCell>{app.average_rating?.toFixed(1) ?? "—"}</TableCell>

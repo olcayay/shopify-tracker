@@ -247,7 +247,7 @@ export default function KeywordsPage() {
                     <TableCell>{kw.latestSnapshot?.appCount ?? "\u2014"}</TableCell>
                     <TableCell>
                       {kw.trackedInResults > 0 ? (
-                        <Badge variant="outline" className="border-primary text-primary">
+                        <Badge className="bg-emerald-500/20 text-emerald-700 dark:text-emerald-400 border-emerald-500/50">
                           <Target className="h-3 w-3 mr-1" />
                           {kw.trackedInResults}
                         </Badge>
@@ -257,7 +257,7 @@ export default function KeywordsPage() {
                     </TableCell>
                     <TableCell>
                       {kw.competitorInResults > 0 ? (
-                        <Badge variant="outline" className="border-yellow-500 text-yellow-600">
+                        <Badge className="bg-amber-500/20 text-amber-700 dark:text-amber-400 border-amber-500/50">
                           <Eye className="h-3 w-3 mr-1" />
                           {kw.competitorInResults}
                         </Badge>
@@ -303,7 +303,7 @@ export default function KeywordsPage() {
                               </h4>
                               <div className="space-y-1">
                                 {kw.trackedAppsInResults.map((app: any) => (
-                                  <div key={app.app_slug} className="flex items-center justify-between text-sm py-1 px-2 rounded bg-primary/5 border-l-2 border-l-primary">
+                                  <div key={app.app_slug} className="flex items-center justify-between text-sm py-1 px-2 rounded bg-emerald-500/10 border-l-2 border-l-emerald-500">
                                     <Link
                                       href={`/apps/${app.app_slug}`}
                                       className="text-primary hover:underline font-medium"
@@ -327,7 +327,7 @@ export default function KeywordsPage() {
                               </h4>
                               <div className="space-y-1">
                                 {kw.competitorAppsInResults.map((app: any) => (
-                                  <div key={app.app_slug} className="flex items-center justify-between text-sm py-1 px-2 rounded bg-yellow-500/5 border-l-2 border-l-yellow-500">
+                                  <div key={app.app_slug} className="flex items-center justify-between text-sm py-1 px-2 rounded bg-amber-500/10 border-l-2 border-l-amber-500">
                                     <Link
                                       href={`/apps/${app.app_slug}`}
                                       className="text-primary hover:underline font-medium"
