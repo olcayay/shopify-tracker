@@ -80,8 +80,8 @@ export default async function AppDetailPage({
       {/* Summary cards */}
       {snapshot && (
         <div className="grid grid-cols-2 md:grid-cols-6 gap-4">
-          <Card>
-            <CardHeader className="pb-2">
+          <Card className="py-3 gap-1">
+            <CardHeader>
               <CardTitle className="text-sm text-muted-foreground">
                 Rating
               </CardTitle>
@@ -92,8 +92,8 @@ export default async function AppDetailPage({
               </span>
             </CardContent>
           </Card>
-          <Card>
-            <CardHeader className="pb-2">
+          <Card className="py-3 gap-1">
+            <CardHeader>
               <CardTitle className="text-sm text-muted-foreground">
                 Reviews
               </CardTitle>
@@ -104,18 +104,36 @@ export default async function AppDetailPage({
               </span>
             </CardContent>
           </Card>
-          <Card>
-            <CardHeader className="pb-2">
+          <Card className="py-3 gap-1">
+            <CardHeader>
               <CardTitle className="text-sm text-muted-foreground">
                 Pricing
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <span className="text-sm">{snapshot.pricing || "—"}</span>
+              {snapshot.pricingPlans && snapshot.pricingPlans.length > 0 ? (
+                <div className="flex flex-wrap gap-1.5">
+                  {snapshot.pricingPlans.map((plan: any) => (
+                    <span
+                      key={plan.name}
+                      className="inline-flex items-baseline gap-1 rounded-md bg-muted px-2 py-0.5 text-xs"
+                    >
+                      <span className="font-medium">{plan.name}</span>
+                      <span className="text-muted-foreground">
+                        {plan.price == null
+                          ? "Free"
+                          : `$${plan.price}/${plan.period || "mo"}`}
+                      </span>
+                    </span>
+                  ))}
+                </div>
+              ) : (
+                <span className="text-sm">{snapshot.pricing || "—"}</span>
+              )}
             </CardContent>
           </Card>
-          <Card>
-            <CardHeader className="pb-2">
+          <Card className="py-3 gap-1">
+            <CardHeader>
               <CardTitle className="text-sm text-muted-foreground">
                 Developer
               </CardTitle>
@@ -133,8 +151,8 @@ export default async function AppDetailPage({
               )}
             </CardContent>
           </Card>
-          <Card>
-            <CardHeader className="pb-2">
+          <Card className="py-3 gap-1">
+            <CardHeader>
               <CardTitle className="text-sm text-muted-foreground">
                 Launched
               </CardTitle>
@@ -145,8 +163,8 @@ export default async function AppDetailPage({
               </span>
             </CardContent>
           </Card>
-          <Card>
-            <CardHeader className="pb-2">
+          <Card className="py-3 gap-1">
+            <CardHeader>
               <CardTitle className="text-sm text-muted-foreground">
                 Last Updated
               </CardTitle>
