@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
 import {
   LineChart,
@@ -32,12 +33,20 @@ interface RankingData {
 }
 
 export function RankingChart({ data }: { data: RankingData[] }) {
+  const [hidden, setHidden] = useState<Set<string>>(new Set());
+
   if (data.length === 0) {
     return <p className="text-muted-foreground text-sm">No data available.</p>;
   }
 
   // Group by label
   const labels = [...new Set(data.map((d) => d.label))];
+
+  // Stable color map: label → color (based on original order, never changes)
+  const colorMap = new Map<string, string>();
+  labels.forEach((label, idx) => {
+    colorMap.set(label, COLORS[idx % COLORS.length]);
+  });
 
   // Build per-label info for links
   const labelMeta = new Map<string, { slug?: string; linkPrefix?: string; isBuiltForShopify?: boolean }>();
@@ -82,6 +91,18 @@ export function RankingChart({ data }: { data: RankingData[] }) {
     return (a.position ?? Infinity) - (b.position ?? Infinity);
   });
 
+  function toggleLabel(label: string) {
+    setHidden((prev) => {
+      const next = new Set(prev);
+      if (next.has(label)) {
+        next.delete(label);
+      } else {
+        next.add(label);
+      }
+      return next;
+    });
+  }
+
   return (
     <div className="space-y-4">
       <ResponsiveContainer width="100%" height={labels.length === 1 ? 250 : 300}>
@@ -90,14 +111,15 @@ export function RankingChart({ data }: { data: RankingData[] }) {
           <XAxis dataKey="date" fontSize={12} />
           <YAxis reversed domain={[1, "auto"]} fontSize={12} />
           <Tooltip />
-          {labels.map((label, idx) => (
+          {labels.map((label) => (
             <Line
               key={label}
               type="monotone"
               dataKey={label}
-              stroke={COLORS[idx % COLORS.length]}
+              stroke={colorMap.get(label)}
               strokeWidth={2}
               dot={{ r: labels.length === 1 ? 4 : 3 }}
+              hide={hidden.has(label)}
             />
           ))}
         </LineChart>
@@ -115,25 +137,35 @@ export function RankingChart({ data }: { data: RankingData[] }) {
             </tr>
           </thead>
           <tbody>
-            {labelStats.map((stat, idx) => {
+            {labelStats.map((stat) => {
               const meta = labelMeta.get(stat.label);
               const href =
                 meta?.slug && meta?.linkPrefix
                   ? `${meta.linkPrefix}${meta.slug}`
                   : undefined;
+              const isHidden = hidden.has(stat.label);
+              const color = colorMap.get(stat.label)!;
 
               return (
-                <tr key={stat.label} className="border-b last:border-0">
+                <tr
+                  key={stat.label}
+                  className={`border-b last:border-0 cursor-pointer select-none transition-opacity ${isHidden ? "opacity-40" : "hover:bg-muted/30"}`}
+                  onClick={() => toggleLabel(stat.label)}
+                >
                   <td className="px-3 py-2">
                     <div className="flex items-center gap-2">
                       <span
-                        className="inline-block w-2.5 h-2.5 rounded-full shrink-0"
-                        style={{ backgroundColor: COLORS[idx % COLORS.length] }}
+                        className="inline-block w-2.5 h-2.5 rounded-full shrink-0 transition-colors"
+                        style={{
+                          backgroundColor: isHidden ? "transparent" : color,
+                          boxShadow: isHidden ? `inset 0 0 0 1.5px ${color}` : "none",
+                        }}
                       />
                       {href ? (
                         <Link
                           href={href}
                           className="text-primary hover:underline"
+                          onClick={(e) => e.stopPropagation()}
                         >
                           {stat.label}
                         </Link>
