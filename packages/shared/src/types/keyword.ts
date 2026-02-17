@@ -10,6 +10,7 @@ export interface KeywordSearchApp {
   logo_url: string;
   is_sponsored?: boolean;
   is_built_in?: boolean;
+  is_built_for_shopify?: boolean;
 }
 
 /** Parsed data from a keyword search page */

@@ -151,7 +151,6 @@ export default async function CategoryDetailPage({
                       <TableHead>App</TableHead>
                       <TableHead>Rating</TableHead>
                       <TableHead>Reviews</TableHead>
-                      <TableHead>BFS</TableHead>
                       <TableHead className="w-10" />
                     </TableRow>
                   </TableHeader>
@@ -182,15 +181,13 @@ export default async function CategoryDetailPage({
                                 Ad
                               </Badge>
                             )}
+                            {app.is_built_for_shopify && <span title="Built for Shopify">💎</span>}
                             {isTracked && <Badge variant="outline" className="text-[10px] px-1 py-0 h-4 border-primary text-primary">Tracked</Badge>}
                             {isCompetitor && <Badge variant="outline" className="text-[10px] px-1 py-0 h-4 border-yellow-500 text-yellow-600">Competitor</Badge>}
                           </div>
                         </TableCell>
                         <TableCell>{app.average_rating?.toFixed(1) ?? "—"}</TableCell>
                         <TableCell>{app.rating_count ?? "—"}</TableCell>
-                        <TableCell>
-                          {app.is_built_for_shopify ? "Yes" : "—"}
-                        </TableCell>
                         <TableCell>
                           {appSlug && (
                             <StarAppButton

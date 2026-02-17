@@ -7,6 +7,7 @@ import {
   appKeywordRankings,
   keywordAdSightings,
   apps,
+  appSnapshots,
   accountTrackedKeywords,
   accountTrackedApps,
   accountCompetitorApps,
@@ -136,12 +137,12 @@ export const keywordRoutes: FastifyPluginAsync = async (app) => {
       return reply.code(404).send({ error: "Keyword not found" });
     }
 
-    const [latestSnapshot] = await db
+    const [latestSnapshot, previousSnapshot] = await db
       .select()
       .from(keywordSnapshots)
       .where(eq(keywordSnapshots.keywordId, kw.id))
       .orderBy(desc(keywordSnapshots.scrapedAt))
-      .limit(1);
+      .limit(2);
 
     const [tracked] = await db
       .select({ keywordId: accountTrackedKeywords.keywordId })
@@ -153,9 +154,52 @@ export const keywordRoutes: FastifyPluginAsync = async (app) => {
         )
       );
 
+    // Build position change map from previous snapshot
+    let positionChanges: Record<string, number> | null = null;
+    if (latestSnapshot && previousSnapshot) {
+      const prevPositions = new Map<string, number>();
+      for (const app of (previousSnapshot.results as any[]) || []) {
+        if (!app.is_sponsored && !app.is_built_in && app.position) {
+          prevPositions.set(app.app_slug, app.position);
+        }
+      }
+      positionChanges = {};
+      for (const app of (latestSnapshot.results as any[]) || []) {
+        if (!app.is_sponsored && !app.is_built_in && app.position) {
+          const prev = prevPositions.get(app.app_slug);
+          if (prev !== undefined) {
+            positionChanges[app.app_slug] = prev - app.position;
+          }
+        }
+      }
+    }
+
+    // Enrich snapshot results with BFS flag from apps table
+    let enrichedSnapshot = latestSnapshot || null;
+    if (enrichedSnapshot?.results && (enrichedSnapshot.results as any[]).length > 0) {
+      const resultSlugs = (enrichedSnapshot.results as any[])
+        .map((a: any) => a.app_slug)
+        .filter((s: string) => s && !s.startsWith("bif:"));
+      if (resultSlugs.length > 0) {
+        const bfsRows = await db
+          .select({ slug: apps.slug, isBuiltForShopify: apps.isBuiltForShopify })
+          .from(apps)
+          .where(and(inArray(apps.slug, resultSlugs), eq(apps.isBuiltForShopify, true)));
+        const bfsSet = new Set(bfsRows.map((r) => r.slug));
+        enrichedSnapshot = {
+          ...enrichedSnapshot,
+          results: (enrichedSnapshot.results as any[]).map((a: any) => ({
+            ...a,
+            is_built_for_shopify: a.is_built_for_shopify || bfsSet.has(a.app_slug),
+          })),
+        };
+      }
+    }
+
     return {
       ...kw,
-      latestSnapshot: latestSnapshot || null,
+      latestSnapshot: enrichedSnapshot,
+      positionChanges,
       isTrackedByAccount: !!tracked,
     };
   });
@@ -227,6 +271,7 @@ export const keywordRoutes: FastifyPluginAsync = async (app) => {
           id: appKeywordRankings.id,
           appSlug: appKeywordRankings.appSlug,
           appName: apps.name,
+          isBuiltForShopify: apps.isBuiltForShopify,
           keywordId: appKeywordRankings.keywordId,
           scrapeRunId: appKeywordRankings.scrapeRunId,
           scrapedAt: appKeywordRankings.scrapedAt,
@@ -266,6 +311,16 @@ export const keywordRoutes: FastifyPluginAsync = async (app) => {
         .select({
           appSlug: keywordAdSightings.appSlug,
           appName: apps.name,
+          averageRating: sql<string>`(
+            SELECT average_rating FROM app_snapshots
+            WHERE app_slug = ${keywordAdSightings.appSlug}
+            ORDER BY scraped_at DESC LIMIT 1
+          )`,
+          ratingCount: sql<number>`(
+            SELECT rating_count FROM app_snapshots
+            WHERE app_slug = ${keywordAdSightings.appSlug}
+            ORDER BY scraped_at DESC LIMIT 1
+          )`,
           seenDate: keywordAdSightings.seenDate,
           timesSeenInDay: keywordAdSightings.timesSeenInDay,
         })

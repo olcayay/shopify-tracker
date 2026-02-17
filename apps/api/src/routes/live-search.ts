@@ -16,6 +16,7 @@ interface SearchApp {
   rating_count: number;
   is_sponsored: boolean;
   is_built_in: boolean;
+  is_built_for_shopify: boolean;
 }
 
 function parseSearchResults(html: string) {
@@ -47,6 +48,7 @@ function parseSearchResults(html: string) {
 
     const isBuiltIn = appSlug.startsWith("bif:");
     const isSponsored = !isBuiltIn && appLink.includes("surface_type=search_ad");
+    const isBuiltForShopify = $card.find('[class*="built-for-shopify"]').length > 0;
     // Only increment position for organic (non-sponsored, non-built-in) results
     if (!isSponsored && !isBuiltIn) position++;
 
@@ -85,6 +87,7 @@ function parseSearchResults(html: string) {
       rating_count: ratingCount,
       is_sponsored: isSponsored,
       is_built_in: isBuiltIn,
+      is_built_for_shopify: isBuiltForShopify,
     });
   });
 

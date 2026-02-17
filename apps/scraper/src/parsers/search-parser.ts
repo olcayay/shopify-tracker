@@ -85,6 +85,8 @@ function parseSearchAppCards($: cheerio.CheerioAPI, positionOffset = 0): Keyword
     // Only increment position for organic (non-sponsored, non-built-in) results
     if (!isSponsored && !isBuiltIn) position++;
 
+    const isBuiltForShopify = $card.find('[class*="built-for-shopify"]').length > 0;
+
     const cardText = $card.text();
     const { rating, count } = extractRating(cardText);
     const shortDescription = extractDescription($card);
@@ -102,6 +104,7 @@ function parseSearchAppCards($: cheerio.CheerioAPI, positionOffset = 0): Keyword
       logo_url: logoUrl,
       is_sponsored: isSponsored,
       is_built_in: isBuiltIn,
+      is_built_for_shopify: isBuiltForShopify,
     });
   });
 

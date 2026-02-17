@@ -143,8 +143,11 @@ export class KeywordScraper {
       const app = organicApps[i];
       await this.db
         .insert(apps)
-        .values({ slug: app.app_slug, name: app.app_name })
-        .onConflictDoNothing();
+        .values({ slug: app.app_slug, name: app.app_name, isBuiltForShopify: !!app.is_built_for_shopify })
+        .onConflictDoUpdate({
+          target: apps.slug,
+          set: { isBuiltForShopify: !!app.is_built_for_shopify },
+        });
 
       await this.db.insert(appKeywordRankings).values({
         appSlug: app.app_slug,
@@ -159,8 +162,11 @@ export class KeywordScraper {
     for (const app of sponsoredApps) {
       await this.db
         .insert(apps)
-        .values({ slug: app.app_slug, name: app.app_name })
-        .onConflictDoNothing();
+        .values({ slug: app.app_slug, name: app.app_name, isBuiltForShopify: !!app.is_built_for_shopify })
+        .onConflictDoUpdate({
+          target: apps.slug,
+          set: { isBuiltForShopify: !!app.is_built_for_shopify },
+        });
 
       await this.db
         .insert(keywordAdSightings)

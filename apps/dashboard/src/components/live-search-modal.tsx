@@ -17,6 +17,7 @@ interface SearchApp {
   rating_count: number;
   is_sponsored: boolean;
   is_built_in?: boolean;
+  is_built_for_shopify?: boolean;
 }
 
 interface LiveSearchResult {
@@ -242,6 +243,7 @@ export function LiveSearchModal({
                             >
                               {app.app_name}
                             </Link>
+                            {app.is_built_for_shopify && <span title="Built for Shopify" className="shrink-0">💎</span>}
                             {isTracked && (
                               <Badge
                                 variant="outline"
@@ -318,6 +320,7 @@ export function LiveSearchModal({
                             >
                               {app.app_name}
                             </Link>
+                            {app.is_built_for_shopify && <span title="Built for Shopify" className="shrink-0">💎</span>}
                             {isTracked && (
                               <Badge
                                 variant="outline"

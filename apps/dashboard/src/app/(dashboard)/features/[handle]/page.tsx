@@ -102,6 +102,7 @@ export default async function FeatureDetailPage({
                         >
                           {app.name}
                         </Link>
+                        {app.is_built_for_shopify && <span title="Built for Shopify">💎</span>}
                         {isTracked && <Badge variant="outline" className="text-[10px] px-1 py-0 h-4 border-primary text-primary">Tracked</Badge>}
                         {isCompetitor && <Badge variant="outline" className="text-[10px] px-1 py-0 h-4 border-yellow-500 text-yellow-600">Competitor</Badge>}
                       </div>

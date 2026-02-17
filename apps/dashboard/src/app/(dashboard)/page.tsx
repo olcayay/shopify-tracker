@@ -219,6 +219,7 @@ export default function OverviewPage() {
                       >
                         {app.name}
                       </Link>
+                      {app.isBuiltForShopify && <span title="Built for Shopify" className="ml-1">💎</span>}
                     </TableCell>
                     <TableCell>
                       {app.latestSnapshot?.averageRating ?? "\u2014"}
@@ -319,6 +320,7 @@ export default function OverviewPage() {
                       >
                         {c.appName || c.appSlug}
                       </Link>
+                      {c.isBuiltForShopify && <span title="Built for Shopify" className="ml-1">💎</span>}
                     </TableCell>
                     <TableCell className="text-sm text-muted-foreground">
                       {new Date(c.createdAt).toLocaleDateString()}

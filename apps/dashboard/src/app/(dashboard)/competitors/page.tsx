@@ -204,6 +204,7 @@ export default function CompetitorsPage() {
                       >
                         {c.appName || c.appSlug}
                       </Link>
+                      {c.isBuiltForShopify && <span title="Built for Shopify" className="ml-1">💎</span>}
                     </TableCell>
                     <TableCell className="text-sm text-muted-foreground">
                       {new Date(c.createdAt).toLocaleDateString()}

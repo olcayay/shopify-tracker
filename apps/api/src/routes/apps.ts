@@ -71,6 +71,7 @@ export const appRoutes: FastifyPluginAsync = async (app) => {
       .select({
         slug: apps.slug,
         name: apps.name,
+        isBuiltForShopify: apps.isBuiltForShopify,
         averageRating: appSnapshots.averageRating,
         ratingCount: appSnapshots.ratingCount,
       })

@@ -34,6 +34,7 @@ interface App {
   app_url: string;
   is_sponsored: boolean;
   is_built_in: boolean;
+  is_built_for_shopify?: boolean;
 }
 
 type SortKey = "position" | "app_name" | "average_rating" | "rating_count";
@@ -46,10 +47,12 @@ export function KeywordAppResults({
   apps,
   trackedSlugs,
   competitorSlugs,
+  positionChanges,
 }: {
   apps: App[];
   trackedSlugs: string[];
   competitorSlugs: string[];
+  positionChanges?: Record<string, number> | null;
 }) {
   const [search, setSearch] = useState("");
   const [sortKey, setSortKey] = useState<SortKey>("position");
@@ -223,6 +226,7 @@ export function KeywordAppResults({
               >
                 Reviews <SortIcon col="rating_count" />
               </TableHead>
+              <TableHead className="w-16">Change</TableHead>
               <TableHead className="w-10" />
             </TableRow>
           </TableHeader>
@@ -230,7 +234,7 @@ export function KeywordAppResults({
             {paged.length === 0 ? (
               <TableRow>
                 <TableCell
-                  colSpan={5}
+                  colSpan={6}
                   className="text-center text-muted-foreground py-8"
                 >
                   No apps found.
@@ -260,6 +264,9 @@ export function KeywordAppResults({
                         >
                           {app.app_name}
                         </Link>
+                        {app.is_built_for_shopify && (
+                          <span title="Built for Shopify">💎</span>
+                        )}
                         {isTracked && (
                           <Badge
                             variant="outline"
@@ -286,6 +293,15 @@ export function KeywordAppResults({
                     </TableCell>
                     <TableCell>
                       {app.rating_count?.toLocaleString() ?? "\u2014"}
+                    </TableCell>
+                    <TableCell className="text-center">
+                      {positionChanges?.[app.app_slug] !== undefined && positionChanges[app.app_slug] !== 0 ? (
+                        <span className={positionChanges[app.app_slug] > 0 ? "text-green-600" : "text-red-500"}>
+                          {positionChanges[app.app_slug] > 0 ? `+${positionChanges[app.app_slug]}` : positionChanges[app.app_slug]}
+                        </span>
+                      ) : (
+                        <span className="text-muted-foreground">{"\u2014"}</span>
+                      )}
                     </TableCell>
                     <TableCell>
                       <StarAppButton

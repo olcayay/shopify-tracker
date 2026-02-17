@@ -207,6 +207,7 @@ export default function AppsPage() {
                       >
                         {app.name}
                       </Link>
+                      {app.isBuiltForShopify && <span title="Built for Shopify" className="ml-1">💎</span>}
                     </TableCell>
                     <TableCell>
                       {app.latestSnapshot?.averageRating ?? "\u2014"}

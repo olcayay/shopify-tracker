@@ -228,7 +228,7 @@ export class CategoryScraper {
    * then record their category ranking positions.
    */
   private async recordAppRankings(
-    appList: { app_url: string; name: string }[],
+    appList: { app_url: string; name: string; is_built_for_shopify?: boolean }[],
     categorySlug: string,
     runId: string
   ): Promise<void> {
@@ -244,8 +244,11 @@ export class CategoryScraper {
       // Upsert app master record
       await this.db
         .insert(apps)
-        .values({ slug: appSlug, name: app.name })
-        .onConflictDoNothing();
+        .values({ slug: appSlug, name: app.name, isBuiltForShopify: !!app.is_built_for_shopify })
+        .onConflictDoUpdate({
+          target: apps.slug,
+          set: { isBuiltForShopify: !!app.is_built_for_shopify },
+        });
 
       // Record ranking
       await this.db.insert(appCategoryRankings).values({

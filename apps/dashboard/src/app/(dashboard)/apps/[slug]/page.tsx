@@ -42,7 +42,10 @@ export default async function AppDetailPage({
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold">{app.name}</h1>
+          <h1 className="text-2xl font-bold">
+            {app.name}
+            {app.isBuiltForShopify && <span title="Built for Shopify" className="ml-1.5">💎</span>}
+          </h1>
           <p className="text-muted-foreground">{app.slug}</p>
         </div>
         <div className="flex items-center gap-2">

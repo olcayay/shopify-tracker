@@ -57,6 +57,7 @@ export default async function KeywordDetailPage({
     label: r.appName || r.appSlug,
     slug: r.appSlug,
     linkPrefix: "/apps/",
+    isBuiltForShopify: r.isBuiltForShopify,
   }));
 
   return (
@@ -147,6 +148,7 @@ export default async function KeywordDetailPage({
         apps={organicApps}
         trackedSlugs={Array.from(trackedSlugs)}
         competitorSlugs={Array.from(competitorSlugs)}
+        positionChanges={keyword.positionChanges}
       />
 
       {/* Sponsored Apps */}
@@ -182,6 +184,7 @@ export default async function KeywordDetailPage({
                         >
                           {app.app_name}
                         </Link>
+                        {app.is_built_for_shopify && <span title="Built for Shopify">💎</span>}
                         {isTracked && <Badge variant="outline" className="text-[10px] px-1 py-0 h-4 border-primary text-primary">Tracked</Badge>}
                         {isCompetitor && <Badge variant="outline" className="text-[10px] px-1 py-0 h-4 border-yellow-500 text-yellow-600">Competitor</Badge>}
                       </div>
@@ -221,27 +224,57 @@ export default async function KeywordDetailPage({
       )}
 
       {/* Ad History */}
-      {adData?.adSightings?.length > 0 && (
+      {adData?.adSightings?.length > 0 && (() => {
+        // Group by app
+        const adsByApp = new Map<string, { appSlug: string; appName: string; averageRating: any; ratingCount: any; lastSeen: string; totalSightings: number; daysActive: number }>();
+        for (const ad of adData.adSightings) {
+          const existing = adsByApp.get(ad.appSlug);
+          if (existing) {
+            existing.totalSightings += ad.timesSeenInDay;
+            existing.daysActive += 1;
+            if (ad.seenDate > existing.lastSeen) {
+              existing.lastSeen = ad.seenDate;
+              existing.averageRating = ad.averageRating;
+              existing.ratingCount = ad.ratingCount;
+            }
+          } else {
+            adsByApp.set(ad.appSlug, {
+              appSlug: ad.appSlug,
+              appName: ad.appName,
+              averageRating: ad.averageRating,
+              ratingCount: ad.ratingCount,
+              lastSeen: ad.seenDate,
+              totalSightings: ad.timesSeenInDay,
+              daysActive: 1,
+            });
+          }
+        }
+        const groupedAds = [...adsByApp.values()].sort((a, b) => b.lastSeen.localeCompare(a.lastSeen));
+
+        return (
         <Card>
           <CardHeader>
-            <CardTitle>Ad History</CardTitle>
+            <CardTitle>Ad History ({groupedAds.length} apps)</CardTitle>
           </CardHeader>
           <CardContent>
             <Table>
               <TableHeader>
                 <TableRow>
                   <TableHead>App</TableHead>
-                  <TableHead>Date</TableHead>
-                  <TableHead className="text-right">Times Seen</TableHead>
+                  <TableHead>Rating</TableHead>
+                  <TableHead>Reviews</TableHead>
+                  <TableHead>Last Seen</TableHead>
+                  <TableHead className="text-right">Total Sightings</TableHead>
+                  <TableHead className="text-right">Days Active</TableHead>
                   <TableHead className="w-10" />
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {adData.adSightings.map((ad: any, i: number) => {
+                {groupedAds.map((ad) => {
                   const isTracked = trackedSlugs.has(ad.appSlug);
                   const isCompetitor = competitorSlugs.has(ad.appSlug);
                   return (
-                  <TableRow key={i} className={isTracked ? "border-l-2 border-l-primary bg-primary/5" : isCompetitor ? "border-l-2 border-l-yellow-500 bg-yellow-500/5" : ""}>
+                  <TableRow key={ad.appSlug} className={isTracked ? "border-l-2 border-l-primary bg-primary/5" : isCompetitor ? "border-l-2 border-l-yellow-500 bg-yellow-500/5" : ""}>
                     <TableCell>
                       <div className="flex items-center gap-1.5">
                         <Link
@@ -254,11 +287,20 @@ export default async function KeywordDetailPage({
                         {isCompetitor && <Badge variant="outline" className="text-[10px] px-1 py-0 h-4 border-yellow-500 text-yellow-600">Competitor</Badge>}
                       </div>
                     </TableCell>
+                    <TableCell>
+                      {ad.averageRating ? Number(ad.averageRating).toFixed(1) : "\u2014"}
+                    </TableCell>
+                    <TableCell>
+                      {ad.ratingCount?.toLocaleString() ?? "\u2014"}
+                    </TableCell>
                     <TableCell className="text-sm text-muted-foreground">
-                      {new Date(ad.seenDate).toLocaleDateString()}
+                      {new Date(ad.lastSeen).toLocaleDateString()}
                     </TableCell>
                     <TableCell className="text-right font-mono">
-                      {ad.timesSeenInDay}
+                      {ad.totalSightings}
+                    </TableCell>
+                    <TableCell className="text-right font-mono">
+                      {ad.daysActive}
                     </TableCell>
                     <TableCell>
                       <StarAppButton
@@ -274,7 +316,8 @@ export default async function KeywordDetailPage({
             </Table>
           </CardContent>
         </Card>
-      )}
+        );
+      })()}
     </div>
   );
 }

@@ -421,6 +421,7 @@ export const accountRoutes: FastifyPluginAsync = async (app) => {
         appSlug: accountTrackedApps.appSlug,
         createdAt: accountTrackedApps.createdAt,
         appName: apps.name,
+        isBuiltForShopify: apps.isBuiltForShopify,
       })
       .from(accountTrackedApps)
       .innerJoin(apps, eq(apps.slug, accountTrackedApps.appSlug))
@@ -678,6 +679,7 @@ export const accountRoutes: FastifyPluginAsync = async (app) => {
         appSlug: accountCompetitorApps.appSlug,
         createdAt: accountCompetitorApps.createdAt,
         appName: apps.name,
+        isBuiltForShopify: apps.isBuiltForShopify,
       })
       .from(accountCompetitorApps)
       .innerJoin(apps, eq(apps.slug, accountCompetitorApps.appSlug))

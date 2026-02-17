@@ -124,6 +124,7 @@ export const featureRoutes: FastifyPluginAsync = async (app) => {
         SELECT
           a.slug,
           a.name,
+          a.is_built_for_shopify,
           s.average_rating,
           s.rating_count,
           s.pricing

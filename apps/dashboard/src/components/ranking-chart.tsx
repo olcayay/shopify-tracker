@@ -28,6 +28,7 @@ interface RankingData {
   label: string;
   slug?: string;
   linkPrefix?: string;
+  isBuiltForShopify?: boolean;
 }
 
 export function RankingChart({ data }: { data: RankingData[] }) {
@@ -39,10 +40,10 @@ export function RankingChart({ data }: { data: RankingData[] }) {
   const labels = [...new Set(data.map((d) => d.label))];
 
   // Build per-label info for links
-  const labelMeta = new Map<string, { slug?: string; linkPrefix?: string }>();
+  const labelMeta = new Map<string, { slug?: string; linkPrefix?: string; isBuiltForShopify?: boolean }>();
   for (const d of data) {
     if (!labelMeta.has(d.label)) {
-      labelMeta.set(d.label, { slug: d.slug, linkPrefix: d.linkPrefix });
+      labelMeta.set(d.label, { slug: d.slug, linkPrefix: d.linkPrefix, isBuiltForShopify: d.isBuiltForShopify });
     }
   }
 
@@ -126,6 +127,7 @@ export function RankingChart({ data }: { data: RankingData[] }) {
                       ) : (
                         <span>{stat.label}</span>
                       )}
+                      {meta?.isBuiltForShopify && <span title="Built for Shopify">💎</span>}
                     </div>
                   </td>
                   <td className="text-right px-3 py-2 font-semibold">
