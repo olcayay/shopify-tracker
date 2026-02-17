@@ -25,6 +25,9 @@ import {
   ArrowDown,
   ChevronLeft,
   ChevronRight,
+  Zap,
+  Loader2,
+  Check,
 } from "lucide-react";
 import { useFormatDate } from "@/lib/format-date";
 
@@ -45,6 +48,7 @@ export default function AppsListPage() {
   const [sortDir, setSortDir] = useState<SortDir>("asc");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("tracked");
   const [page, setPage] = useState(1);
+  const [scrapeStatus, setScrapeStatus] = useState<Record<string, "idle" | "loading" | "done">>({});
 
   useEffect(() => {
     loadApps();
@@ -70,6 +74,22 @@ export default function AppsListPage() {
     setExpandedSlug(slug);
     const res = await fetchWithAuth(`/api/system-admin/apps/${slug}/accounts`);
     if (res.ok) setAccountsList(await res.json());
+  }
+
+  async function triggerScrape(slug: string) {
+    const status = scrapeStatus[slug];
+    if (status === "loading" || status === "done") return;
+    setScrapeStatus((s) => ({ ...s, [slug]: "loading" }));
+    try {
+      await fetchWithAuth("/api/system-admin/scraper/trigger", {
+        method: "POST",
+        body: JSON.stringify({ type: "app_details", slug }),
+      });
+      setScrapeStatus((s) => ({ ...s, [slug]: "done" }));
+      setTimeout(() => setScrapeStatus((s) => ({ ...s, [slug]: "idle" })), 3000);
+    } catch {
+      setScrapeStatus((s) => ({ ...s, [slug]: "idle" }));
+    }
   }
 
   function toggleSort(key: SortKey) {
@@ -243,6 +263,7 @@ export default function AppsListPage() {
                 >
                   Last Scraped <SortIcon col="lastScraped" />
                 </TableHead>
+                <TableHead />
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -298,10 +319,28 @@ export default function AppsListPage() {
                         ? formatDateTime(app.lastScrapedAt)
                         : "\u2014"}
                     </TableCell>
+                    <TableCell>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-7 w-7 p-0 text-amber-600 hover:text-amber-700 hover:bg-amber-50"
+                        onClick={() => triggerScrape(app.slug)}
+                        disabled={scrapeStatus[app.slug] === "loading"}
+                        title="Scrape app"
+                      >
+                        {scrapeStatus[app.slug] === "loading" ? (
+                          <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                        ) : scrapeStatus[app.slug] === "done" ? (
+                          <Check className="h-3.5 w-3.5 text-green-600" />
+                        ) : (
+                          <Zap className="h-3.5 w-3.5" />
+                        )}
+                      </Button>
+                    </TableCell>
                   </TableRow>
                   {expandedSlug === app.slug && (
                     <TableRow>
-                      <TableCell colSpan={6} className="bg-muted/30 p-4">
+                      <TableCell colSpan={7} className="bg-muted/30 p-4">
                         <div className="text-sm font-medium mb-2">
                           Accounts using &quot;{app.name}&quot;
                         </div>
@@ -340,7 +379,7 @@ export default function AppsListPage() {
               {paged.length === 0 && (
                 <TableRow>
                   <TableCell
-                    colSpan={6}
+                    colSpan={7}
                     className="text-center text-muted-foreground"
                   >
                     No apps found

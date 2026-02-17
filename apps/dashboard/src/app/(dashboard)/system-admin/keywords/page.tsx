@@ -18,7 +18,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Search, ArrowUpDown, ArrowUp, ArrowDown, Trash2 } from "lucide-react";
+import { Search, ArrowUpDown, ArrowUp, ArrowDown, Trash2, Zap, Loader2, Check } from "lucide-react";
 import { ConfirmModal } from "@/components/confirm-modal";
 import { useFormatDate } from "@/lib/format-date";
 
@@ -37,6 +37,7 @@ export default function KeywordsListPage() {
   const [sortDir, setSortDir] = useState<SortDir>("asc");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
   const [deleteTarget, setDeleteTarget] = useState<{ id: number; keyword: string } | null>(null);
+  const [scrapeStatus, setScrapeStatus] = useState<Record<string, "idle" | "loading" | "done">>({});
 
   useEffect(() => {
     loadKeywords();
@@ -71,6 +72,22 @@ export default function KeywordsListPage() {
     if (res.ok) {
       setDeleteTarget(null);
       loadKeywords();
+    }
+  }
+
+  async function triggerScrape(keyword: string) {
+    const status = scrapeStatus[keyword];
+    if (status === "loading" || status === "done") return;
+    setScrapeStatus((s) => ({ ...s, [keyword]: "loading" }));
+    try {
+      await fetchWithAuth("/api/system-admin/scraper/trigger", {
+        method: "POST",
+        body: JSON.stringify({ type: "keyword_search", keyword }),
+      });
+      setScrapeStatus((s) => ({ ...s, [keyword]: "done" }));
+      setTimeout(() => setScrapeStatus((s) => ({ ...s, [keyword]: "idle" })), 3000);
+    } catch {
+      setScrapeStatus((s) => ({ ...s, [keyword]: "idle" }));
     }
   }
 
@@ -272,14 +289,32 @@ export default function KeywordsListPage() {
                         : "\u2014"}
                     </TableCell>
                     <TableCell>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="h-7 w-7 p-0 text-muted-foreground hover:text-destructive"
-                        onClick={() => setDeleteTarget({ id: kw.id, keyword: kw.keyword })}
-                      >
-                        <Trash2 className="h-3.5 w-3.5" />
-                      </Button>
+                      <div className="flex items-center gap-1">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-7 w-7 p-0 text-amber-600 hover:text-amber-700 hover:bg-amber-50"
+                          onClick={() => triggerScrape(kw.keyword)}
+                          disabled={scrapeStatus[kw.keyword] === "loading"}
+                          title="Scrape keyword"
+                        >
+                          {scrapeStatus[kw.keyword] === "loading" ? (
+                            <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                          ) : scrapeStatus[kw.keyword] === "done" ? (
+                            <Check className="h-3.5 w-3.5 text-green-600" />
+                          ) : (
+                            <Zap className="h-3.5 w-3.5" />
+                          )}
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-7 w-7 p-0 text-muted-foreground hover:text-destructive"
+                          onClick={() => setDeleteTarget({ id: kw.id, keyword: kw.keyword })}
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </Button>
+                      </div>
                     </TableCell>
                   </TableRow>
                   {expandedId === kw.id && (
