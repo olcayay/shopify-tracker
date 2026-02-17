@@ -134,6 +134,13 @@
       "when": 1771359000000,
       "tag": "0018_nullable_ranking_position",
       "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "7",
+      "when": 1771440000000,
+      "tag": "0019_app_field_changes",
+      "breakpoints": true
     }
   ]
 }

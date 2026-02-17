@@ -77,6 +77,26 @@ export const appSnapshots = pgTable(
   ]
 );
 
+export const appFieldChanges = pgTable(
+  "app_field_changes",
+  {
+    id: serial("id").primaryKey(),
+    appSlug: varchar("app_slug", { length: 255 })
+      .notNull()
+      .references(() => apps.slug),
+    field: varchar("field", { length: 50 }).notNull(),
+    oldValue: text("old_value"),
+    newValue: text("new_value"),
+    detectedAt: timestamp("detected_at").notNull().defaultNow(),
+    scrapeRunId: uuid("scrape_run_id")
+      .notNull()
+      .references(() => scrapeRuns.id),
+  },
+  (table) => [
+    index("idx_app_field_changes_slug").on(table.appSlug, table.detectedAt),
+  ]
+);
+
 export const appCategoryRankings = pgTable(
   "app_category_rankings",
   {

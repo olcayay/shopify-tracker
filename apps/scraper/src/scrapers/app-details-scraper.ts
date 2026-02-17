@@ -1,6 +1,6 @@
-import { eq } from "drizzle-orm";
+import { eq, desc } from "drizzle-orm";
 import type { Database } from "@shopify-tracking/db";
-import { scrapeRuns, apps, appSnapshots } from "@shopify-tracking/db";
+import { scrapeRuns, apps, appSnapshots, appFieldChanges } from "@shopify-tracking/db";
 import { urls, createLogger } from "@shopify-tracking/shared";
 
 const log = createLogger("app-details-scraper");
@@ -93,6 +93,63 @@ export class AppDetailsScraper {
     try {
       const html = await this.httpClient.fetchPage(urls.app(slug));
       const details = parseAppPage(html, slug);
+
+      // Change detection: compare against current state
+      const changes: { field: string; oldValue: string | null; newValue: string | null }[] = [];
+
+      const [currentApp] = await this.db
+        .select({ name: apps.name })
+        .from(apps)
+        .where(eq(apps.slug, slug));
+
+      if (currentApp && currentApp.name !== details.app_name) {
+        changes.push({ field: "name", oldValue: currentApp.name, newValue: details.app_name });
+      }
+
+      const [prevSnapshot] = await this.db
+        .select({
+          appIntroduction: appSnapshots.appIntroduction,
+          appDetails: appSnapshots.appDetails,
+          features: appSnapshots.features,
+          seoTitle: appSnapshots.seoTitle,
+          seoMetaDescription: appSnapshots.seoMetaDescription,
+        })
+        .from(appSnapshots)
+        .where(eq(appSnapshots.appSlug, slug))
+        .orderBy(desc(appSnapshots.scrapedAt))
+        .limit(1);
+
+      if (prevSnapshot) {
+        const fieldMap: Record<string, [string, string]> = {
+          appIntroduction: [prevSnapshot.appIntroduction, details.app_introduction],
+          appDetails: [prevSnapshot.appDetails, details.app_details],
+          seoTitle: [prevSnapshot.seoTitle, details.seo_title],
+          seoMetaDescription: [prevSnapshot.seoMetaDescription, details.seo_meta_description],
+        };
+        for (const [field, [oldVal, newVal]] of Object.entries(fieldMap)) {
+          if (oldVal !== newVal) {
+            changes.push({ field, oldValue: oldVal, newValue: newVal });
+          }
+        }
+        const oldFeatures = JSON.stringify(prevSnapshot.features);
+        const newFeatures = JSON.stringify(details.features);
+        if (oldFeatures !== newFeatures) {
+          changes.push({ field: "features", oldValue: oldFeatures, newValue: newFeatures });
+        }
+      }
+
+      if (changes.length > 0) {
+        await this.db.insert(appFieldChanges).values(
+          changes.map((c) => ({
+            appSlug: slug,
+            field: c.field,
+            oldValue: c.oldValue,
+            newValue: c.newValue,
+            scrapeRunId: runId!,
+          }))
+        );
+        log.info("detected field changes", { slug, fields: changes.map((c) => c.field) });
+      }
 
       // Upsert app master record
       await this.db

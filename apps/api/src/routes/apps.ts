@@ -4,6 +4,7 @@ import { createDb } from "@shopify-tracking/db";
 import {
   apps,
   appSnapshots,
+  appFieldChanges,
   appCategoryRankings,
   appKeywordRankings,
   keywordAdSightings,
@@ -398,6 +399,24 @@ export const appRoutes: FastifyPluginAsync = async (app) => {
         .orderBy(desc(keywordAdSightings.seenDate));
 
       return { app: appRow, categoryRankings, keywordRankings, keywordAds };
+    }
+  );
+
+  // GET /api/apps/:slug/changes — field-level change history
+  // ?limit=50
+  app.get<{ Params: { slug: string } }>(
+    "/:slug/changes",
+    async (request) => {
+      const { slug } = request.params;
+      const { limit = "50" } = request.query as { limit?: string };
+      const maxLimit = Math.min(parseInt(limit, 10) || 50, 200);
+
+      return db
+        .select()
+        .from(appFieldChanges)
+        .where(eq(appFieldChanges.appSlug, slug))
+        .orderBy(desc(appFieldChanges.detectedAt))
+        .limit(maxLimit);
     }
   );
 };

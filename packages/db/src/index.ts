@@ -36,6 +36,7 @@ export { categories, categorySnapshots } from "./schema/categories.js";
 export {
   apps,
   appSnapshots,
+  appFieldChanges,
   appCategoryRankings,
 } from "./schema/apps.js";
 export { reviews } from "./schema/reviews.js";

@@ -73,6 +73,10 @@ export function getAppRankings(slug: string, days = 30) {
   return fetchApi<any>(`/api/apps/${slug}/rankings?days=${days}`);
 }
 
+export function getAppChanges(slug: string, limit = 50) {
+  return fetchApi<any[]>(`/api/apps/${slug}/changes?limit=${limit}`);
+}
+
 // --- Apps (search) ---
 export function searchApps(q: string) {
   return fetchApi<any[]>(`/api/apps/search?q=${encodeURIComponent(q)}`);
