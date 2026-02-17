@@ -700,7 +700,12 @@ export const accountRoutes: FastifyPluginAsync = async (app) => {
           .orderBy(desc(appSnapshots.scrapedAt))
           .limit(1);
 
-        return { ...row, latestSnapshot: snapshot || null };
+        const [change] = await db
+          .select({ detectedAt: sql<string | null>`max(detected_at)` })
+          .from(sql`app_field_changes`)
+          .where(sql`app_slug = ${row.appSlug}`);
+
+        return { ...row, latestSnapshot: snapshot || null, lastChangeAt: change?.detectedAt || null };
       })
     );
 

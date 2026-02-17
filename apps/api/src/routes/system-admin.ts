@@ -786,6 +786,10 @@ export const systemAdminRoutes: FastifyPluginAsync = async (app) => {
           SELECT count(*)::int FROM account_competitor_apps
           WHERE app_slug = "apps"."slug"
         )`,
+        lastChangeAt: sql<string | null>`(
+          SELECT max(detected_at) FROM app_field_changes
+          WHERE app_slug = "apps"."slug"
+        )`,
       })
       .from(apps);
 

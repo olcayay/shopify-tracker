@@ -15,6 +15,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { StarAppButton } from "@/components/star-app-button";
+import { useFormatDate } from "@/lib/format-date";
 import {
   ArrowUpDown,
   ArrowUp,
@@ -48,12 +49,15 @@ export function KeywordAppResults({
   trackedSlugs,
   competitorSlugs,
   positionChanges,
+  lastChanges,
 }: {
   apps: App[];
   trackedSlugs: string[];
   competitorSlugs: string[];
   positionChanges?: Record<string, number> | null;
+  lastChanges?: Record<string, string>;
 }) {
+  const { formatDateOnly } = useFormatDate();
   const [search, setSearch] = useState("");
   const [sortKey, setSortKey] = useState<SortKey>("position");
   const [sortDir, setSortDir] = useState<SortDir>("asc");
@@ -226,6 +230,7 @@ export function KeywordAppResults({
               >
                 Reviews <SortIcon col="rating_count" />
               </TableHead>
+              <TableHead>Last Change</TableHead>
               <TableHead className="w-16">Change</TableHead>
               <TableHead className="w-10" />
             </TableRow>
@@ -234,7 +239,7 @@ export function KeywordAppResults({
             {paged.length === 0 ? (
               <TableRow>
                 <TableCell
-                  colSpan={6}
+                  colSpan={7}
                   className="text-center text-muted-foreground py-8"
                 >
                   No apps found.
@@ -291,6 +296,11 @@ export function KeywordAppResults({
                     </TableCell>
                     <TableCell>
                       {app.rating_count?.toLocaleString() ?? "\u2014"}
+                    </TableCell>
+                    <TableCell className="text-sm text-muted-foreground">
+                      {lastChanges?.[app.app_slug]
+                        ? formatDateOnly(lastChanges[app.app_slug])
+                        : "\u2014"}
                     </TableCell>
                     <TableCell className="text-center">
                       {positionChanges?.[app.app_slug] !== undefined && positionChanges[app.app_slug] !== 0 ? (

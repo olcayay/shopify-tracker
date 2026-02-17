@@ -200,6 +200,7 @@ export default function CompetitorsPage() {
                   <TableHead>Rating</TableHead>
                   <TableHead>Reviews</TableHead>
                   <TableHead>Pricing</TableHead>
+                  <TableHead>Last Change</TableHead>
                   <TableHead>Launched</TableHead>
                   {canEdit && <TableHead className="w-12" />}
                 </TableRow>
@@ -224,6 +225,11 @@ export default function CompetitorsPage() {
                     </TableCell>
                     <TableCell className="text-sm">
                       {c.latestSnapshot?.pricing ?? "\u2014"}
+                    </TableCell>
+                    <TableCell className="text-sm text-muted-foreground">
+                      {c.lastChangeAt
+                        ? formatDateOnly(c.lastChangeAt)
+                        : "\u2014"}
                     </TableCell>
                     <TableCell className="text-sm text-muted-foreground">
                       {c.launchedDate
@@ -252,7 +258,7 @@ export default function CompetitorsPage() {
                 {competitors.length === 0 && (
                   <TableRow>
                     <TableCell
-                      colSpan={canEdit ? 6 : 5}
+                      colSpan={canEdit ? 7 : 6}
                       className="text-center text-muted-foreground"
                     >
                       No competitor apps yet. Use the search above or star apps

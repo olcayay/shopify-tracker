@@ -1,6 +1,6 @@
 import Link from "next/link";
-import { formatDateTime } from "@/lib/format-date";
-import { getCategory, getCategoryHistory, getAccountCompetitors, getAccountTrackedApps } from "@/lib/api";
+import { formatDateTime, formatDateOnly } from "@/lib/format-date";
+import { getCategory, getCategoryHistory, getAccountCompetitors, getAccountTrackedApps, getAppsLastChanges } from "@/lib/api";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -41,6 +41,12 @@ export default async function CategoryDetailPage({
   const trackedSlugs = new Set(trackedApps.map((a: any) => a.appSlug));
 
   const snapshot = category.latestSnapshot;
+
+  // Fetch last change dates for first page apps
+  const firstPageSlugs = (snapshot?.firstPageApps || [])
+    .map((app: any) => app.app_url?.replace("https://apps.shopify.com/", "")?.split("?")[0])
+    .filter(Boolean);
+  const lastChanges = await getAppsLastChanges(firstPageSlugs).catch(() => ({} as Record<string, string>));
 
   return (
     <div className="space-y-6">
@@ -161,6 +167,7 @@ export default async function CategoryDetailPage({
                       <TableHead>Rating</TableHead>
                       <TableHead>Reviews</TableHead>
                       <TableHead>Pricing</TableHead>
+                      <TableHead>Last Change</TableHead>
                       <TableHead className="w-10" />
                     </TableRow>
                   </TableHeader>
@@ -199,6 +206,9 @@ export default async function CategoryDetailPage({
                         <TableCell>{app.average_rating?.toFixed(1) ?? "—"}</TableCell>
                         <TableCell>{app.rating_count ?? "—"}</TableCell>
                         <TableCell className="text-sm text-muted-foreground">{app.pricing_hint || "—"}</TableCell>
+                        <TableCell className="text-sm text-muted-foreground">
+                          {appSlug && lastChanges[appSlug] ? formatDateOnly(lastChanges[appSlug]) : "\u2014"}
+                        </TableCell>
                         <TableCell>
                           {appSlug && (
                             <StarAppButton

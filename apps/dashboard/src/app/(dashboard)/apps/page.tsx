@@ -200,6 +200,7 @@ export default function AppsPage() {
                   <TableHead>Rating</TableHead>
                   <TableHead>Reviews</TableHead>
                   <TableHead>Pricing</TableHead>
+                  <TableHead>Last Change</TableHead>
                   <TableHead>Launched</TableHead>
                   {canEdit && <TableHead className="w-12" />}
                 </TableRow>
@@ -224,6 +225,11 @@ export default function AppsPage() {
                     </TableCell>
                     <TableCell className="text-sm">
                       {app.latestSnapshot?.pricing ?? "\u2014"}
+                    </TableCell>
+                    <TableCell className="text-sm text-muted-foreground">
+                      {app.lastChangeAt
+                        ? formatDateOnly(app.lastChangeAt)
+                        : "\u2014"}
                     </TableCell>
                     <TableCell className="text-sm text-muted-foreground">
                       {app.launchedDate
@@ -252,7 +258,7 @@ export default function AppsPage() {
                 {apps.length === 0 && (
                   <TableRow>
                     <TableCell
-                      colSpan={canEdit ? 6 : 5}
+                      colSpan={canEdit ? 7 : 6}
                       className="text-center text-muted-foreground"
                     >
                       No tracked apps yet. Use the search above to find and

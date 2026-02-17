@@ -77,6 +77,14 @@ export function getAppChanges(slug: string, limit = 50) {
   return fetchApi<any[]>(`/api/apps/${slug}/changes?limit=${limit}`);
 }
 
+export function getAppsLastChanges(slugs: string[]) {
+  if (slugs.length === 0) return Promise.resolve({} as Record<string, string>);
+  return fetchApi<Record<string, string>>(`/api/apps/last-changes`, {
+    method: "POST",
+    body: JSON.stringify({ slugs }),
+  });
+}
+
 // --- Apps (search) ---
 export function searchApps(q: string) {
   return fetchApi<any[]>(`/api/apps/search?q=${encodeURIComponent(q)}`);

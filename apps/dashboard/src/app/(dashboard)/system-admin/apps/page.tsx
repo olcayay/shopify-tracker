@@ -31,7 +31,7 @@ import {
 } from "lucide-react";
 import { useFormatDate } from "@/lib/format-date";
 
-type SortKey = "name" | "slug" | "trackedBy" | "competitorBy" | "lastScraped";
+type SortKey = "name" | "slug" | "trackedBy" | "competitorBy" | "lastScraped" | "lastChange";
 type SortDir = "asc" | "desc";
 type StatusFilter = "all" | "tracked" | "untracked";
 
@@ -150,6 +150,11 @@ export default function AppsListPage() {
             new Date(a.lastScrapedAt || 0).getTime() -
             new Date(b.lastScrapedAt || 0).getTime();
           break;
+        case "lastChange":
+          cmp =
+            new Date(a.lastChangeAt || 0).getTime() -
+            new Date(b.lastChangeAt || 0).getTime();
+          break;
       }
       return sortDir === "asc" ? cmp : -cmp;
     });
@@ -263,6 +268,12 @@ export default function AppsListPage() {
                 >
                   Last Scraped <SortIcon col="lastScraped" />
                 </TableHead>
+                <TableHead
+                  className="cursor-pointer select-none"
+                  onClick={() => toggleSort("lastChange")}
+                >
+                  Last Change <SortIcon col="lastChange" />
+                </TableHead>
                 <TableHead />
               </TableRow>
             </TableHeader>
@@ -319,6 +330,11 @@ export default function AppsListPage() {
                         ? formatDateTime(app.lastScrapedAt)
                         : "\u2014"}
                     </TableCell>
+                    <TableCell className="text-sm text-muted-foreground">
+                      {app.lastChangeAt
+                        ? formatDateTime(app.lastChangeAt)
+                        : "\u2014"}
+                    </TableCell>
                     <TableCell>
                       <Button
                         variant="ghost"
@@ -340,7 +356,7 @@ export default function AppsListPage() {
                   </TableRow>
                   {expandedSlug === app.slug && (
                     <TableRow>
-                      <TableCell colSpan={7} className="bg-muted/30 p-4">
+                      <TableCell colSpan={8} className="bg-muted/30 p-4">
                         <div className="text-sm font-medium mb-2">
                           Accounts using &quot;{app.name}&quot;
                         </div>
@@ -379,7 +395,7 @@ export default function AppsListPage() {
               {paged.length === 0 && (
                 <TableRow>
                   <TableCell
-                    colSpan={7}
+                    colSpan={8}
                     className="text-center text-muted-foreground"
                   >
                     No apps found

@@ -56,10 +56,38 @@ export const appRoutes: FastifyPluginAsync = async (app) => {
           .orderBy(desc(appSnapshots.scrapedAt))
           .limit(1);
 
-        return { ...appRow, latestSnapshot: snapshot || null };
+        const [change] = await db
+          .select({ detectedAt: appFieldChanges.detectedAt })
+          .from(appFieldChanges)
+          .where(eq(appFieldChanges.appSlug, appRow.slug))
+          .orderBy(desc(appFieldChanges.detectedAt))
+          .limit(1);
+
+        return { ...appRow, latestSnapshot: snapshot || null, lastChangeAt: change?.detectedAt || null };
       })
     );
 
+    return result;
+  });
+
+  // POST /api/apps/last-changes — bulk lookup lastChangeAt for multiple apps
+  app.post("/last-changes", async (request) => {
+    const { slugs } = request.body as { slugs: string[] };
+    if (!slugs?.length) return {};
+
+    const rows = await db
+      .select({
+        appSlug: appFieldChanges.appSlug,
+        lastChangeAt: sql<string>`max(${appFieldChanges.detectedAt})`,
+      })
+      .from(appFieldChanges)
+      .where(inArray(appFieldChanges.appSlug, slugs))
+      .groupBy(appFieldChanges.appSlug);
+
+    const result: Record<string, string> = {};
+    for (const r of rows) {
+      result[r.appSlug] = r.lastChangeAt;
+    }
     return result;
   });
 

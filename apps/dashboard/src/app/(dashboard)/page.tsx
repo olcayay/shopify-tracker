@@ -209,6 +209,7 @@ export default function OverviewPage() {
                   <TableHead>App</TableHead>
                   <TableHead>Rating</TableHead>
                   <TableHead>Reviews</TableHead>
+                  <TableHead>Last Change</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -228,6 +229,9 @@ export default function OverviewPage() {
                     </TableCell>
                     <TableCell>
                       {app.latestSnapshot?.ratingCount ?? "\u2014"}
+                    </TableCell>
+                    <TableCell className="text-sm text-muted-foreground">
+                      {app.lastChangeAt ? formatDateOnly(app.lastChangeAt) : "\u2014"}
                     </TableCell>
                   </TableRow>
                 ))}
@@ -309,6 +313,7 @@ export default function OverviewPage() {
               <TableHeader>
                 <TableRow>
                   <TableHead>App</TableHead>
+                  <TableHead>Last Change</TableHead>
                   <TableHead>Added</TableHead>
                 </TableRow>
               </TableHeader>
@@ -323,6 +328,9 @@ export default function OverviewPage() {
                         {c.appName || c.appSlug}
                       </Link>
                       {c.isBuiltForShopify && <span title="Built for Shopify" className="ml-1">💎</span>}
+                    </TableCell>
+                    <TableCell className="text-sm text-muted-foreground">
+                      {c.lastChangeAt ? formatDateOnly(c.lastChangeAt) : "\u2014"}
                     </TableCell>
                     <TableCell className="text-sm text-muted-foreground">
                       {formatDateOnly(c.createdAt)}

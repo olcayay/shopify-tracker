@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { formatDateOnly } from "@/lib/format-date";
-import { getKeyword, getKeywordRankings, getKeywordAds, getAccountCompetitors, getAccountTrackedApps } from "@/lib/api";
+import { getKeyword, getKeywordRankings, getKeywordAds, getAccountCompetitors, getAccountTrackedApps, getAppsLastChanges } from "@/lib/api";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -52,6 +52,14 @@ export default async function KeywordDetailPage({
   const builtInApps = allApps.filter((a: any) => a.is_built_in);
   const organicApps = allApps.filter((a: any) => !a.is_sponsored && !a.is_built_in);
   const sponsoredApps = allApps.filter((a: any) => a.is_sponsored);
+
+  // Fetch last change dates for all apps on this keyword page
+  const allAppSlugs = [
+    ...allApps.map((a: any) => a.app_slug),
+    ...(adData?.adSightings || []).map((s: any) => s.appSlug),
+  ].filter(Boolean);
+  const uniqueSlugs = [...new Set(allAppSlugs)];
+  const lastChanges = await getAppsLastChanges(uniqueSlugs).catch(() => ({} as Record<string, string>));
 
   // Build ranking chart data from rankings (filtered to tracked + competitor apps)
   const rankingChartData = (rankings?.rankings || []).map((r: any) => ({
@@ -157,6 +165,7 @@ export default async function KeywordDetailPage({
         trackedSlugs={Array.from(trackedSlugs)}
         competitorSlugs={Array.from(competitorSlugs)}
         positionChanges={keyword.positionChanges}
+        lastChanges={lastChanges}
       />
 
       {/* Sponsored Apps */}
@@ -276,6 +285,7 @@ export default async function KeywordDetailPage({
                   <TableHead>App</TableHead>
                   <TableHead>Rating</TableHead>
                   <TableHead>Reviews</TableHead>
+                  <TableHead>Last Change</TableHead>
                   <TableHead>Last Seen</TableHead>
                   <TableHead className="text-right">Total Sightings</TableHead>
                   <TableHead className="text-right">Days Active</TableHead>
@@ -305,6 +315,9 @@ export default async function KeywordDetailPage({
                     </TableCell>
                     <TableCell>
                       {ad.ratingCount?.toLocaleString() ?? "\u2014"}
+                    </TableCell>
+                    <TableCell className="text-sm text-muted-foreground">
+                      {lastChanges[ad.appSlug] ? formatDateOnly(lastChanges[ad.appSlug]) : "\u2014"}
                     </TableCell>
                     <TableCell className="text-sm text-muted-foreground">
                       {formatDateOnly(ad.lastSeen)}

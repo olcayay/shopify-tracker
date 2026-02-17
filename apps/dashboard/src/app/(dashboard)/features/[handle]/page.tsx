@@ -1,5 +1,6 @@
 import Link from "next/link";
-import { getFeature, getAccountCompetitors, getAccountTrackedApps } from "@/lib/api";
+import { getFeature, getAccountCompetitors, getAccountTrackedApps, getAppsLastChanges } from "@/lib/api";
+import { formatDateOnly } from "@/lib/format-date";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -35,6 +36,9 @@ export default async function FeatureDetailPage({
 
   const competitorSlugs = new Set(competitors.map((c: any) => c.appSlug));
   const trackedSlugs = new Set(trackedApps.map((a: any) => a.appSlug));
+
+  const featureAppSlugs = (feature.apps || []).map((a: any) => a.slug).filter(Boolean);
+  const lastChanges = await getAppsLastChanges(featureAppSlugs).catch(() => ({} as Record<string, string>));
 
   return (
     <div className="space-y-6">
@@ -85,6 +89,7 @@ export default async function FeatureDetailPage({
                   <TableHead>Rating</TableHead>
                   <TableHead>Reviews</TableHead>
                   <TableHead>Pricing</TableHead>
+                  <TableHead>Last Change</TableHead>
                   <TableHead className="w-10" />
                 </TableRow>
               </TableHeader>
@@ -119,6 +124,9 @@ export default async function FeatureDetailPage({
                     </TableCell>
                     <TableCell className="text-sm">
                       {app.pricing ?? "\u2014"}
+                    </TableCell>
+                    <TableCell className="text-sm text-muted-foreground">
+                      {lastChanges[app.slug] ? formatDateOnly(lastChanges[app.slug]) : "\u2014"}
                     </TableCell>
                     <TableCell>
                       <StarAppButton
