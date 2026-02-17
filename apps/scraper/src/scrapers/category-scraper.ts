@@ -282,7 +282,7 @@ export class CategoryScraper {
    * then record their category ranking positions.
    */
   private async recordAppRankings(
-    appList: { app_url: string; name: string; is_built_for_shopify?: boolean; position?: number }[],
+    appList: { app_url: string; name: string; short_description?: string; is_built_for_shopify?: boolean; position?: number }[],
     categorySlug: string,
     runId: string
   ): Promise<void> {
@@ -298,10 +298,10 @@ export class CategoryScraper {
       // Upsert app master record with name and BFS flag
       await this.db
         .insert(apps)
-        .values({ slug: appSlug, name: app.name, isBuiltForShopify: !!app.is_built_for_shopify })
+        .values({ slug: appSlug, name: app.name, isBuiltForShopify: !!app.is_built_for_shopify, appCardSubtitle: app.short_description || undefined })
         .onConflictDoUpdate({
           target: apps.slug,
-          set: { name: app.name, isBuiltForShopify: !!app.is_built_for_shopify, updatedAt: now },
+          set: { name: app.name, isBuiltForShopify: !!app.is_built_for_shopify, appCardSubtitle: app.short_description || undefined, updatedAt: now },
         });
 
       // Record ranking (prefer data-attribute position, fallback to array index)

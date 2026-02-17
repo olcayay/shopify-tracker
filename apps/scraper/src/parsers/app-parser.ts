@@ -6,7 +6,8 @@ import {
   type AppCategory,
   type AppSubcategoryGroup,
   type AppFeature,
-  type PricingTier,
+  type PricingPlan,
+  type AppSupport,
 } from "@shopify-tracking/shared";
 
 const log = createLogger("app-parser");
@@ -28,22 +29,30 @@ export function parseAppPage(html: string, slug: string): AppDetails {
     }
   };
 
-  const title = safeParse("title", () => parseTitle($), "");
-  const description = safeParse("description", () => parseFullDescription($), "");
+  const appIntroduction = safeParse("appIntroduction", () => parseAppIntroduction($), "");
+  const appDetails = safeParse("appDetails", () => parseAppDetails($), "");
+  const seoTitle = safeParse("seoTitle", () => parseSeoTitle($), "");
+  const seoMetaDescription = safeParse("seoMetaDescription", () => parseSeoMetaDescription($), "");
+  const features = safeParse("features", () => parseFeatures($), []);
   const pricing = safeParse("pricing", () => parsePricingSummary($), "");
   const developer = safeParse("developer", () => parseDeveloper($), { name: "", url: "" });
   const demoStoreUrl = safeParse("demoStoreUrl", () => parseDemoStoreUrl($), null);
   const languages = safeParse("languages", () => parseLanguages($), []);
-  const worksWith = safeParse("worksWith", () => parseWorksWith($), []);
+  const integrations = safeParse("integrations", () => parseIntegrations($), []);
   const categories = safeParse("categories", () => parseCategories($), []);
-  const pricingTiers = safeParse("pricingTiers", () => parsePricingTiers($), []);
+  const pricingPlans = safeParse("pricingPlans", () => parsePricingPlans($), []);
   const launchedDate = safeParse("launchedDate", () => parseLaunchedDate($), null);
+  const support = safeParse("support", () => parseSupport($), null);
 
   return {
     app_slug: slug,
     app_name: appName,
-    title,
-    description,
+    icon_url: jsonLd?.image ?? null,
+    app_introduction: appIntroduction,
+    app_details: appDetails,
+    seo_title: seoTitle,
+    seo_meta_description: seoMetaDescription,
+    features,
     pricing,
     average_rating: jsonLd?.ratingValue ?? null,
     rating_count: jsonLd?.ratingCount ?? null,
@@ -51,9 +60,10 @@ export function parseAppPage(html: string, slug: string): AppDetails {
     launched_date: launchedDate,
     demo_store_url: demoStoreUrl,
     languages,
-    works_with: worksWith,
+    integrations,
     categories,
-    pricing_tiers: pricingTiers,
+    pricing_plans: pricingPlans,
+    support,
   };
 }
 
@@ -63,6 +73,7 @@ interface JsonLdData {
   name: string;
   ratingValue: number | null;
   ratingCount: number | null;
+  image: string | null;
 }
 
 function parseJsonLd($: cheerio.CheerioAPI): JsonLdData | null {
@@ -76,6 +87,7 @@ function parseJsonLd($: cheerio.CheerioAPI): JsonLdData | null {
           name: data.name || "",
           ratingValue: data.aggregateRating?.ratingValue ?? null,
           ratingCount: data.aggregateRating?.ratingCount ?? null,
+          image: data.image || null,
         };
       }
     } catch {}
@@ -86,8 +98,18 @@ function parseJsonLd($: cheerio.CheerioAPI): JsonLdData | null {
 
 // --- Parsers ---
 
-function parseTitle($: cheerio.CheerioAPI): string {
-  // h2 after "Featured images gallery" is the tagline/title
+function parseAppIntroduction($: cheerio.CheerioAPI): string {
+  // The app introduction (short tagline) is the h2 inside #app-details
+  const detailsSection = $("#app-details");
+  if (detailsSection.length) {
+    const h2 = detailsSection.find("h2").first();
+    if (h2.length) {
+      const text = h2.text().trim();
+      if (text.length > 5 && text.length < 500) return text;
+    }
+  }
+
+  // Fallback: h2 after "Featured images gallery" (old logic)
   const h2s = $("h2");
   let found = false;
   let title = "";
@@ -95,7 +117,6 @@ function parseTitle($: cheerio.CheerioAPI): string {
   h2s.each((_, el) => {
     const text = $(el).text().trim();
     if (found && !title && text.length > 5 && text.length < 300) {
-      // Skip known non-title h2s
       if (
         !text.startsWith("Pricing") &&
         !text.startsWith("Reviews") &&
@@ -115,9 +136,52 @@ function parseTitle($: cheerio.CheerioAPI): string {
   return title;
 }
 
-function parseFullDescription($: cheerio.CheerioAPI): string {
+function parseAppDetails($: cheerio.CheerioAPI): string {
+  // The app details body text is inside #app-details — a <p> with lg:tw-block (desktop version)
+  const detailsSection = $("#app-details");
+  if (detailsSection.length) {
+    // Desktop paragraph (hidden on mobile, shown on lg+)
+    const desktopP = detailsSection.find("p.lg\\:tw-block").first();
+    if (desktopP.length) {
+      const text = desktopP.text().trim();
+      if (text.length > 10) return text;
+    }
+
+    // Fallback: truncated content (mobile version)
+    const truncated = detailsSection.find("[data-truncate-content-copy]").first();
+    if (truncated.length) {
+      const text = truncated.text().trim();
+      if (text.length > 10) return text;
+    }
+  }
+
+  return "";
+}
+
+function parseSeoTitle($: cheerio.CheerioAPI): string {
+  return $("title").text().trim();
+}
+
+function parseSeoMetaDescription($: cheerio.CheerioAPI): string {
   const metaDesc = $('meta[name="description"]').attr("content")?.trim();
   return metaDesc || "";
+}
+
+function parseFeatures($: cheerio.CheerioAPI): string[] {
+  // The 5 feature bullet points are in a <ul class="tw-list-disc"> inside #app-details
+  const features: string[] = [];
+
+  const detailsSection = $("#app-details");
+  if (detailsSection.length) {
+    detailsSection.find("ul.tw-list-disc li").each((_, el) => {
+      const text = $(el).text().trim();
+      if (text && text.length > 5 && text.length < 500) {
+        features.push(text);
+      }
+    });
+  }
+
+  return features;
 }
 
 function parsePricingSummary($: cheerio.CheerioAPI): string {
@@ -201,7 +265,7 @@ function parseLanguages($: cheerio.CheerioAPI): string[] {
     .filter((l) => l.length > 0 && l.length < 50);
 }
 
-function parseWorksWith($: cheerio.CheerioAPI): string[] {
+function parseIntegrations($: cheerio.CheerioAPI): string[] {
   const bodyText = $.text();
   const match = bodyText.match(/Works with\s+([\s\S]*?)(?:Categories|Built for|$)/);
   if (!match) return [];
@@ -211,6 +275,37 @@ function parseWorksWith($: cheerio.CheerioAPI): string[] {
     .split(/[,\n]/)
     .map((w) => w.trim())
     .filter((w) => w.length > 0 && w.length < 100);
+}
+
+function parseSupport($: cheerio.CheerioAPI): AppSupport | null {
+  // Support email is in data attribute on #adp-developer section
+  const devSection = $("section#adp-developer");
+  const email = devSection.attr("data-developer-support-email") || null;
+
+  // Look for support portal URL in the developer section
+  let portalUrl: string | null = null;
+  devSection.find("a[href]").each((_, el) => {
+    const href = $(el).attr("href") || "";
+    const text = $(el).text().trim().toLowerCase();
+    if (
+      text.includes("support") ||
+      text.includes("help") ||
+      text.includes("contact")
+    ) {
+      if (href.startsWith("http") && !href.includes("shopify.com")) {
+        portalUrl = href;
+      }
+    }
+  });
+
+  // No support info found
+  if (!email && !portalUrl) return null;
+
+  return {
+    email,
+    portal_url: portalUrl,
+    phone: null, // Phone rarely appears on public listing pages
+  };
 }
 
 function parseCategories($: cheerio.CheerioAPI): AppCategory[] {
@@ -241,9 +336,6 @@ function parseCategories($: cheerio.CheerioAPI): AppCategory[] {
     if (!categorySlugMatch) return;
 
     const categorySlug = categorySlugMatch[1].replace(/\/all$/, "");
-    const categoryTitle = categorySlug
-      .split("-")
-      .pop() || categorySlug;
 
     if (!featuresByCategory.has(categorySlug)) {
       featuresByCategory.set(categorySlug, {
@@ -278,6 +370,7 @@ function parseCategories($: cheerio.CheerioAPI): AppCategory[] {
   });
 
   // Group features into subcategory groups based on handle prefix
+  let catIndex = 0;
   for (const [, cat] of featuresByCategory) {
     const groups = new Map<string, AppSubcategoryGroup>();
 
@@ -297,10 +390,12 @@ function parseCategories($: cheerio.CheerioAPI): AppCategory[] {
     }
 
     categories.push({
+      type: catIndex === 0 ? "primary" : "secondary",
       title: cat.title || "Unknown",
       url: cat.url,
       subcategories: [...groups.values()],
     });
+    catIndex++;
   }
 
   return categories;
@@ -327,8 +422,8 @@ function parseLaunchedDate($: cheerio.CheerioAPI): Date | null {
   return launched;
 }
 
-function parsePricingTiers($: cheerio.CheerioAPI): PricingTier[] {
-  const tiers: PricingTier[] = [];
+function parsePricingPlans($: cheerio.CheerioAPI): PricingPlan[] {
+  const plans: PricingPlan[] = [];
 
   $(".app-details-pricing-plan-card").each((_, el) => {
     const $card = $(el);
@@ -384,7 +479,7 @@ function parsePricingTiers($: cheerio.CheerioAPI): PricingTier[] {
       });
     }
 
-    tiers.push({
+    plans.push({
       name,
       price,
       period,
@@ -395,7 +490,7 @@ function parsePricingTiers($: cheerio.CheerioAPI): PricingTier[] {
     });
   });
 
-  return tiers;
+  return plans;
 }
 
 function extractPlanName(text: string): string {

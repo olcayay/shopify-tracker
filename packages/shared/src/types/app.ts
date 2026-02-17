@@ -20,13 +20,14 @@ export interface AppSubcategoryGroup {
 
 /** A category listing from the app detail page */
 export interface AppCategory {
+  type?: "primary" | "secondary";
   title: string;
   url: string;
   subcategories: AppSubcategoryGroup[];
 }
 
-/** A pricing tier from the app detail page */
-export interface PricingTier {
+/** A pricing plan from the app detail page */
+export interface PricingPlan {
   name: string;
   price: string | null;
   period: string | null;
@@ -36,12 +37,23 @@ export interface PricingTier {
   features: string[];
 }
 
+/** Support contact info from the app detail page */
+export interface AppSupport {
+  email: string | null;
+  portal_url: string | null;
+  phone: string | null;
+}
+
 /** Full app details scraped from a single app page */
 export interface AppDetails {
   app_slug: string;
   app_name: string;
-  title: string;
-  description: string;
+  icon_url: string | null;
+  app_introduction: string;
+  app_details: string;
+  seo_title: string;
+  seo_meta_description: string;
+  features: string[];
   pricing: string;
   average_rating: number | null;
   rating_count: number | null;
@@ -49,7 +61,8 @@ export interface AppDetails {
   launched_date: Date | null;
   demo_store_url: string | null;
   languages: string[];
-  works_with: string[];
+  integrations: string[];
   categories: AppCategory[];
-  pricing_tiers: PricingTier[];
+  pricing_plans: PricingPlan[];
+  support: AppSupport | null;
 }

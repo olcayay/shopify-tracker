@@ -15,7 +15,8 @@ import {
 import type {
   AppDeveloper,
   AppCategory,
-  PricingTier,
+  PricingPlan,
+  AppSupport,
 } from "@shopify-tracking/shared";
 import { scrapeRuns } from "./scrape-runs";
 
@@ -28,6 +29,8 @@ export const apps = pgTable(
     isTracked: boolean("is_tracked").notNull().default(false),
     isBuiltForShopify: boolean("is_built_for_shopify").notNull().default(false),
     launchedDate: timestamp("launched_date"),
+    iconUrl: varchar("icon_url", { length: 1000 }),
+    appCardSubtitle: varchar("app_card_subtitle", { length: 500 }),
     createdAt: timestamp("created_at").notNull().defaultNow(),
     updatedAt: timestamp("updated_at").notNull().defaultNow(),
   },
@@ -47,23 +50,27 @@ export const appSnapshots = pgTable(
       .notNull()
       .references(() => scrapeRuns.id),
     scrapedAt: timestamp("scraped_at").notNull().defaultNow(),
-    title: varchar("title", { length: 500 }).notNull().default(""),
-    description: text("description").notNull().default(""),
+    appIntroduction: varchar("app_introduction", { length: 500 }).notNull().default(""),
+    appDetails: text("app_details").notNull().default(""),
+    seoMetaDescription: text("seo_meta_description").notNull().default(""),
+    seoTitle: varchar("seo_title", { length: 500 }).notNull().default(""),
+    features: jsonb("features").$type<string[]>().notNull().default([]),
     pricing: varchar("pricing", { length: 500 }).notNull().default(""),
     averageRating: decimal("average_rating", { precision: 3, scale: 2 }),
     ratingCount: integer("rating_count"),
     developer: jsonb("developer").$type<AppDeveloper>(),
     demoStoreUrl: varchar("demo_store_url", { length: 500 }),
     languages: jsonb("languages").$type<string[]>().notNull().default([]),
-    worksWith: jsonb("works_with").$type<string[]>().notNull().default([]),
+    integrations: jsonb("integrations").$type<string[]>().notNull().default([]),
     categories: jsonb("categories")
       .$type<AppCategory[]>()
       .notNull()
       .default([]),
-    pricingTiers: jsonb("pricing_tiers")
-      .$type<PricingTier[]>()
+    pricingPlans: jsonb("pricing_plans")
+      .$type<PricingPlan[]>()
       .notNull()
       .default([]),
+    support: jsonb("support").$type<AppSupport>(),
   },
   (table) => [
     index("idx_app_snapshots_slug_date").on(table.appSlug, table.scrapedAt),

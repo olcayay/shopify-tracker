@@ -97,10 +97,21 @@ export class AppDetailsScraper {
       // Upsert app master record
       await this.db
         .insert(apps)
-        .values({ slug, name: details.app_name, isTracked: true, launchedDate: details.launched_date })
+        .values({
+          slug,
+          name: details.app_name,
+          isTracked: true,
+          launchedDate: details.launched_date,
+          iconUrl: details.icon_url,
+        })
         .onConflictDoUpdate({
           target: apps.slug,
-          set: { name: details.app_name, launchedDate: details.launched_date, updatedAt: new Date() },
+          set: {
+            name: details.app_name,
+            launchedDate: details.launched_date,
+            iconUrl: details.icon_url,
+            updatedAt: new Date(),
+          },
         });
 
       // Insert snapshot
@@ -108,17 +119,21 @@ export class AppDetailsScraper {
         appSlug: slug,
         scrapeRunId: runId,
         scrapedAt: new Date(),
-        title: details.title,
-        description: details.description,
+        appIntroduction: details.app_introduction,
+        appDetails: details.app_details,
+        seoTitle: details.seo_title,
+        seoMetaDescription: details.seo_meta_description,
+        features: details.features,
         pricing: details.pricing,
         averageRating: details.average_rating?.toString() ?? null,
         ratingCount: details.rating_count,
         developer: details.developer,
         demoStoreUrl: details.demo_store_url,
         languages: details.languages,
-        worksWith: details.works_with,
+        integrations: details.integrations,
         categories: details.categories,
-        pricingTiers: details.pricing_tiers,
+        pricingPlans: details.pricing_plans,
+        support: details.support,
       });
 
       // Complete the run in standalone mode

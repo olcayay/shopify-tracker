@@ -143,10 +143,10 @@ export class KeywordScraper {
       const app = organicApps[i];
       await this.db
         .insert(apps)
-        .values({ slug: app.app_slug, name: app.app_name, isBuiltForShopify: !!app.is_built_for_shopify })
+        .values({ slug: app.app_slug, name: app.app_name, isBuiltForShopify: !!app.is_built_for_shopify, appCardSubtitle: app.short_description || undefined })
         .onConflictDoUpdate({
           target: apps.slug,
-          set: { isBuiltForShopify: !!app.is_built_for_shopify },
+          set: { isBuiltForShopify: !!app.is_built_for_shopify, appCardSubtitle: app.short_description || undefined },
         });
 
       await this.db.insert(appKeywordRankings).values({
@@ -162,10 +162,10 @@ export class KeywordScraper {
     for (const app of sponsoredApps) {
       await this.db
         .insert(apps)
-        .values({ slug: app.app_slug, name: app.app_name, isBuiltForShopify: !!app.is_built_for_shopify })
+        .values({ slug: app.app_slug, name: app.app_name, isBuiltForShopify: !!app.is_built_for_shopify, appCardSubtitle: app.short_description || undefined })
         .onConflictDoUpdate({
           target: apps.slug,
-          set: { isBuiltForShopify: !!app.is_built_for_shopify },
+          set: { isBuiltForShopify: !!app.is_built_for_shopify, appCardSubtitle: app.short_description || undefined },
         });
 
       await this.db

@@ -11,7 +11,8 @@ export type {
   AppFeature,
   AppSubcategoryGroup,
   AppCategory,
-  PricingTier,
+  PricingPlan,
+  AppSupport,
   AppDetails,
 } from "./types/app.js";
 

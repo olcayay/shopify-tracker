@@ -299,18 +299,47 @@ export default async function AppDetailPage({
         <TabsContent value="details" className="space-y-4">
           {snapshot && (
             <>
-              {snapshot.description && (
+              {snapshot.appIntroduction && (
                 <Card>
                   <CardHeader>
-                    <CardTitle>Description</CardTitle>
+                    <CardTitle>App Introduction</CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <p className="text-sm">{snapshot.description}</p>
+                    <p className="text-sm font-medium">{snapshot.appIntroduction}</p>
                   </CardContent>
                 </Card>
               )}
 
-              {(snapshot.languages?.length > 0 || snapshot.worksWith?.length > 0) && (
+              {snapshot.appDetails && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle>App Details</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <p className="text-sm">{snapshot.appDetails}</p>
+                  </CardContent>
+                </Card>
+              )}
+
+              {snapshot.features?.length > 0 && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Features</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <ul className="space-y-2">
+                      {snapshot.features.map((f: string, i: number) => (
+                        <li key={i} className="text-sm flex gap-2">
+                          <span className="text-muted-foreground shrink-0">{i + 1}.</span>
+                          {f}
+                        </li>
+                      ))}
+                    </ul>
+                  </CardContent>
+                </Card>
+              )}
+
+              {(snapshot.languages?.length > 0 || snapshot.integrations?.length > 0) && (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {snapshot.languages?.length > 0 && (
                     <Card>
@@ -328,14 +357,14 @@ export default async function AppDetailPage({
                       </CardContent>
                     </Card>
                   )}
-                  {snapshot.worksWith?.length > 0 && (
+                  {snapshot.integrations?.length > 0 && (
                     <Card>
                       <CardHeader>
-                        <CardTitle>Works With</CardTitle>
+                        <CardTitle>Integrations</CardTitle>
                       </CardHeader>
                       <CardContent>
                         <div className="flex flex-wrap gap-1.5">
-                          {snapshot.worksWith.map((item: string, i: number) => (
+                          {snapshot.integrations.map((item: string, i: number) => (
                             <Badge key={i} variant="secondary" className="text-xs">
                               {item}
                             </Badge>
@@ -347,24 +376,24 @@ export default async function AppDetailPage({
                 </div>
               )}
 
-              {snapshot.pricingTiers?.length > 0 && (
+              {snapshot.pricingPlans?.length > 0 && (
                 <Card>
                   <CardHeader>
                     <CardTitle>Pricing Plans</CardTitle>
                   </CardHeader>
                   <CardContent>
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                      {snapshot.pricingTiers.map((tier: any, i: number) => (
+                      {snapshot.pricingPlans.map((plan: any, i: number) => (
                         <div key={i} className="border rounded-lg p-4">
-                          <h4 className="font-semibold">{tier.name}</h4>
+                          <h4 className="font-semibold">{plan.name}</h4>
                           <p className="text-lg font-bold mt-1">
-                            {tier.price
-                              ? `$${tier.price}/${tier.period}`
+                            {plan.price
+                              ? `$${plan.price}/${plan.period}`
                               : "Free"}
                           </p>
-                          {tier.features?.length > 0 && (
+                          {plan.features?.length > 0 && (
                             <ul className="mt-2 space-y-1">
-                              {tier.features.map((f: string, j: number) => (
+                              {plan.features.map((f: string, j: number) => (
                                 <li
                                   key={j}
                                   className="text-sm text-muted-foreground"
@@ -381,6 +410,39 @@ export default async function AppDetailPage({
                 </Card>
               )}
 
+              {snapshot.support && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Support</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-1 text-sm">
+                      {snapshot.support.email && (
+                        <p>
+                          <span className="text-muted-foreground">Email:</span>{" "}
+                          <a href={`mailto:${snapshot.support.email}`} className="text-primary hover:underline">
+                            {snapshot.support.email}
+                          </a>
+                        </p>
+                      )}
+                      {snapshot.support.portal_url && (
+                        <p>
+                          <span className="text-muted-foreground">Support Portal:</span>{" "}
+                          <a href={snapshot.support.portal_url} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
+                            {snapshot.support.portal_url}
+                          </a>
+                        </p>
+                      )}
+                      {snapshot.support.phone && (
+                        <p>
+                          <span className="text-muted-foreground">Phone:</span> {snapshot.support.phone}
+                        </p>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+
               {snapshot.categories?.length > 0 && (
                 <Card>
                   <CardHeader>
@@ -389,7 +451,14 @@ export default async function AppDetailPage({
                   <CardContent>
                     {snapshot.categories.map((cat: any, i: number) => (
                       <div key={i} className="mb-4">
-                        <h4 className="font-medium">{cat.title}</h4>
+                        <div className="flex items-center gap-2">
+                          <h4 className="font-medium">{cat.title}</h4>
+                          {cat.type && (
+                            <Badge variant="outline" className="text-xs">
+                              {cat.type}
+                            </Badge>
+                          )}
+                        </div>
                         {cat.subcategories?.map((sub: any, j: number) => (
                           <div key={j} className="ml-4 mt-2">
                             <h5 className="text-sm font-medium text-muted-foreground">
@@ -414,6 +483,30 @@ export default async function AppDetailPage({
                         ))}
                       </div>
                     ))}
+                  </CardContent>
+                </Card>
+              )}
+
+              {(snapshot.seoTitle || snapshot.seoMetaDescription) && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Web Search Content</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-3">
+                      {snapshot.seoTitle && (
+                        <div>
+                          <p className="text-xs text-muted-foreground mb-1">Title Tag</p>
+                          <p className="text-sm">{snapshot.seoTitle}</p>
+                        </div>
+                      )}
+                      {snapshot.seoMetaDescription && (
+                        <div>
+                          <p className="text-xs text-muted-foreground mb-1">Meta Description</p>
+                          <p className="text-sm">{snapshot.seoMetaDescription}</p>
+                        </div>
+                      )}
+                    </div>
                   </CardContent>
                 </Card>
               )}
