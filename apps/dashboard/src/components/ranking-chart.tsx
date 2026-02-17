@@ -24,7 +24,7 @@ const COLORS = [
 
 interface RankingData {
   date: string;
-  position: number;
+  position: number | null;
   label: string;
   slug?: string;
   linkPrefix?: string;
@@ -48,24 +48,38 @@ export function RankingChart({ data }: { data: RankingData[] }) {
   }
 
   // Pivot data: each unique date gets one row with a column per label
+  // null position means "dropped" — we set it explicitly so the chart line breaks
   const dates = [...new Set(data.map((d) => d.date))];
   const pivoted = dates.map((date) => {
     const row: Record<string, any> = { date };
     for (const label of labels) {
       const item = data.find((d) => d.date === date && d.label === label);
-      if (item) row[label] = item.position;
+      if (item) row[label] = item.position; // null stays null → line breaks
     }
     return row;
   });
 
   // Get latest + previous position per label for change indicator
+  const latestDate = dates[dates.length - 1];
   const labelStats = labels.map((label) => {
     const items = data.filter((d) => d.label === label);
     const latest = items[items.length - 1];
     const previous = items.length >= 2 ? items[items.length - 2] : undefined;
+    // Dropped if: explicit null position OR no data point on the most recent date
+    const dropped = latest?.position === null || latest?.date !== latestDate;
     const change =
-      latest && previous ? previous.position - latest.position : undefined;
-    return { label, position: latest?.position, change };
+      !dropped && latest?.position != null && previous?.position != null
+        ? previous.position - latest.position
+        : undefined;
+    return { label, position: latest?.position ?? null, change, dropped };
+  });
+
+  // Sort by position ascending, dropped apps go to the bottom
+  labelStats.sort((a, b) => {
+    if (a.dropped && !b.dropped) return 1;
+    if (!a.dropped && b.dropped) return -1;
+    if (a.dropped && b.dropped) return a.label.localeCompare(b.label);
+    return (a.position ?? Infinity) - (b.position ?? Infinity);
   });
 
   return (
@@ -84,7 +98,6 @@ export function RankingChart({ data }: { data: RankingData[] }) {
               stroke={COLORS[idx % COLORS.length]}
               strokeWidth={2}
               dot={{ r: labels.length === 1 ? 4 : 3 }}
-              connectNulls
             />
           ))}
         </LineChart>
@@ -131,15 +144,21 @@ export function RankingChart({ data }: { data: RankingData[] }) {
                     </div>
                   </td>
                   <td className="text-right px-3 py-2 font-semibold">
-                    #{stat.position}
+                    {stat.dropped ? (
+                      <span className="text-red-500 font-normal text-xs">Dropped</span>
+                    ) : (
+                      `#${stat.position}`
+                    )}
                   </td>
                   <td className="text-right px-3 py-2 text-muted-foreground">
-                    {stat.position != null
+                    {stat.position != null && !stat.dropped
                       ? `p${Math.ceil(stat.position / 24)}`
                       : "\u2014"}
                   </td>
                   <td className="text-right px-3 py-2">
-                    {stat.change !== undefined && stat.change !== 0 ? (
+                    {stat.dropped ? (
+                      <span className="text-red-500">{"\u2014"}</span>
+                    ) : stat.change !== undefined && stat.change !== 0 ? (
                       <span
                         className={
                           stat.change > 0
@@ -150,7 +169,7 @@ export function RankingChart({ data }: { data: RankingData[] }) {
                         {stat.change > 0 ? `+${stat.change}` : stat.change}
                       </span>
                     ) : (
-                      <span className="text-muted-foreground">—</span>
+                      <span className="text-muted-foreground">{"\u2014"}</span>
                     )}
                   </td>
                 </tr>

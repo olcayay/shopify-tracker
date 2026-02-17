@@ -74,7 +74,7 @@ export const appKeywordRankings = pgTable(
       .notNull()
       .references(() => scrapeRuns.id),
     scrapedAt: timestamp("scraped_at").notNull().defaultNow(),
-    position: smallint("position").notNull(),
+    position: smallint("position"),
   },
   (table) => [
     index("idx_app_kw_rank").on(

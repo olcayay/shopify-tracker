@@ -196,13 +196,13 @@ export async function buildDigestForAccount(
   const todayMap = new Map<string, number>();
   for (const r of todayRankings) {
     const key = `${r.appSlug}::${r.keywordId}`;
-    if (!todayMap.has(key)) todayMap.set(key, r.position);
+    if (!todayMap.has(key) && r.position != null) todayMap.set(key, r.position);
   }
 
   const yesterdayMap = new Map<string, number>();
   for (const r of yesterdayRankings) {
     const key = `${r.appSlug}::${r.keywordId}`;
-    if (!yesterdayMap.has(key)) yesterdayMap.set(key, r.position);
+    if (!yesterdayMap.has(key) && r.position != null) yesterdayMap.set(key, r.position);
   }
 
   // Get app names

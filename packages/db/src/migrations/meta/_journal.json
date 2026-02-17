@@ -127,6 +127,13 @@
       "when": 1771358000000,
       "tag": "0017_shopify_terminology",
       "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "7",
+      "when": 1771359000000,
+      "tag": "0018_nullable_ranking_position",
+      "breakpoints": true
     }
   ]
 }

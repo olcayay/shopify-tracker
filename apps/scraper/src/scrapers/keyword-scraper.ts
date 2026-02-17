@@ -1,4 +1,4 @@
-import { eq, sql } from "drizzle-orm";
+import { eq, sql, and, isNotNull, desc } from "drizzle-orm";
 import type { Database } from "@shopify-tracking/db";
 import {
   scrapeRuns,
@@ -156,6 +156,54 @@ export class KeywordScraper {
         scrapedAt: now,
         position: i + 1,
       });
+    }
+
+    // Record null position for apps that dropped out of results
+    const currentOrganicSlugs = new Set(organicApps.map((a) => a.app_slug));
+
+    // Find distinct apps that had a non-null position in the previous scrape run
+    const previousRun = await this.db
+      .select({ id: scrapeRuns.id })
+      .from(scrapeRuns)
+      .where(
+        and(
+          eq(scrapeRuns.scraperType, "keyword_search"),
+          eq(scrapeRuns.status, "completed"),
+          sql`${scrapeRuns.id} != ${runId}`
+        )
+      )
+      .orderBy(desc(scrapeRuns.startedAt))
+      .limit(1);
+
+    if (previousRun.length > 0) {
+      const prevRanked = await this.db
+        .select({ appSlug: appKeywordRankings.appSlug })
+        .from(appKeywordRankings)
+        .where(
+          and(
+            eq(appKeywordRankings.keywordId, keywordId),
+            eq(appKeywordRankings.scrapeRunId, previousRun[0].id),
+            isNotNull(appKeywordRankings.position)
+          )
+        );
+
+      const droppedSlugs = prevRanked
+        .map((r) => r.appSlug)
+        .filter((slug) => !currentOrganicSlugs.has(slug));
+
+      for (const slug of droppedSlugs) {
+        await this.db.insert(appKeywordRankings).values({
+          appSlug: slug,
+          keywordId,
+          scrapeRunId: runId,
+          scrapedAt: now,
+          position: null,
+        });
+      }
+
+      if (droppedSlugs.length > 0) {
+        log.info("recorded dropped apps", { keyword, count: droppedSlugs.length, slugs: droppedSlugs });
+      }
     }
 
     // Record ad sightings (upsert per app+keyword+day)
