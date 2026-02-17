@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useAuth } from "@/lib/auth-context";
+import { useFormatDate } from "@/lib/format-date";
 import {
   Card,
   CardContent,
@@ -48,6 +49,7 @@ function freshnessColor(
 
 export default function OverviewPage() {
   const { fetchWithAuth, user, account } = useAuth();
+  const { formatDateOnly } = useFormatDate();
   const [apps, setApps] = useState<any[]>([]);
   const [keywords, setKeywords] = useState<any[]>([]);
   const [competitors, setCompetitors] = useState<any[]>([]);
@@ -323,7 +325,7 @@ export default function OverviewPage() {
                       {c.isBuiltForShopify && <span title="Built for Shopify" className="ml-1">💎</span>}
                     </TableCell>
                     <TableCell className="text-sm text-muted-foreground">
-                      {new Date(c.createdAt).toLocaleDateString()}
+                      {formatDateOnly(c.createdAt)}
                     </TableCell>
                   </TableRow>
                 ))}
@@ -371,7 +373,7 @@ export default function OverviewPage() {
                       </Link>
                     </TableCell>
                     <TableCell className="text-sm text-muted-foreground">
-                      {new Date(f.createdAt).toLocaleDateString()}
+                      {formatDateOnly(f.createdAt)}
                     </TableCell>
                   </TableRow>
                 ))}

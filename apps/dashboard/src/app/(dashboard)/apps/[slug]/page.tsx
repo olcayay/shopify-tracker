@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { formatDateOnly } from "@/lib/format-date";
 import { getApp, getAppReviews, getAppRankings } from "@/lib/api";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -140,7 +141,7 @@ export default async function AppDetailPage({
             </CardHeader>
             <CardContent>
               <span className="text-sm">
-                {new Date(snapshot.scrapedAt).toLocaleDateString()}
+                {formatDateOnly(snapshot.scrapedAt)}
               </span>
             </CardContent>
           </Card>
@@ -166,7 +167,7 @@ export default async function AppDetailPage({
               <CardContent>
                 <RankingChart
                   data={rankings.categoryRankings.map((r: any) => ({
-                    date: new Date(r.scrapedAt).toLocaleDateString(),
+                    date: formatDateOnly(r.scrapedAt),
                     position: r.position,
                     label: r.categoryTitle || r.categorySlug,
                     slug: r.categorySlug,
@@ -184,7 +185,7 @@ export default async function AppDetailPage({
               <CardContent>
                 <RankingChart
                   data={rankings.keywordRankings.map((r: any) => ({
-                    date: new Date(r.scrapedAt).toLocaleDateString(),
+                    date: formatDateOnly(r.scrapedAt),
                     position: r.position,
                     label: r.keyword,
                     slug: r.keywordSlug,
@@ -458,7 +459,7 @@ export default async function AppDetailPage({
                         </Link>
                       </TableCell>
                       <TableCell className="text-sm text-muted-foreground">
-                        {new Date(ad.lastSeen).toLocaleDateString()}
+                        {formatDateOnly(ad.lastSeen)}
                       </TableCell>
                       <TableCell className="text-right font-mono">
                         {ad.totalSightings}

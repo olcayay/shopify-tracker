@@ -20,6 +20,7 @@ import {
 } from "@/components/ui/table";
 import { Search, ArrowUpDown, ArrowUp, ArrowDown, Trash2 } from "lucide-react";
 import { ConfirmModal } from "@/components/confirm-modal";
+import { useFormatDate } from "@/lib/format-date";
 
 type SortKey = "keyword" | "trackedBy" | "createdAt" | "lastScraped";
 type SortDir = "asc" | "desc";
@@ -27,6 +28,7 @@ type StatusFilter = "all" | "active" | "inactive";
 
 export default function KeywordsListPage() {
   const { fetchWithAuth } = useAuth();
+  const { formatDateTime, formatDateOnly } = useFormatDate();
   const [keywords, setKeywords] = useState<any[]>([]);
   const [expandedId, setExpandedId] = useState<number | null>(null);
   const [accountsList, setAccountsList] = useState<any[]>([]);
@@ -261,18 +263,12 @@ export default function KeywordsListPage() {
                     </TableCell>
                     <TableCell className="text-sm text-muted-foreground">
                       {kw.createdAt
-                        ? new Date(kw.createdAt).toLocaleDateString()
+                        ? formatDateOnly(kw.createdAt)
                         : "\u2014"}
                     </TableCell>
                     <TableCell className="text-sm text-muted-foreground">
                       {kw.lastScrapedAt
-                        ? new Date(kw.lastScrapedAt).toLocaleString("tr-TR", {
-                            day: "2-digit",
-                            month: "2-digit",
-                            year: "numeric",
-                            hour: "2-digit",
-                            minute: "2-digit",
-                          })
+                        ? formatDateTime(kw.lastScrapedAt)
                         : "\u2014"}
                     </TableCell>
                     <TableCell>

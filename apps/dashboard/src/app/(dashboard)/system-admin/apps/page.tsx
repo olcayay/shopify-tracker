@@ -26,6 +26,7 @@ import {
   ChevronLeft,
   ChevronRight,
 } from "lucide-react";
+import { useFormatDate } from "@/lib/format-date";
 
 type SortKey = "name" | "slug" | "trackedBy" | "competitorBy" | "lastScraped";
 type SortDir = "asc" | "desc";
@@ -35,6 +36,7 @@ const PAGE_SIZE = 30;
 
 export default function AppsListPage() {
   const { fetchWithAuth } = useAuth();
+  const { formatDateTime } = useFormatDate();
   const [apps, setApps] = useState<any[]>([]);
   const [expandedSlug, setExpandedSlug] = useState<string | null>(null);
   const [accountsList, setAccountsList] = useState<any[]>([]);
@@ -293,13 +295,7 @@ export default function AppsListPage() {
                     </TableCell>
                     <TableCell className="text-sm text-muted-foreground">
                       {app.lastScrapedAt
-                        ? new Date(app.lastScrapedAt).toLocaleString("tr-TR", {
-                            day: "2-digit",
-                            month: "2-digit",
-                            year: "numeric",
-                            hour: "2-digit",
-                            minute: "2-digit",
-                          })
+                        ? formatDateTime(app.lastScrapedAt)
                         : "\u2014"}
                     </TableCell>
                   </TableRow>

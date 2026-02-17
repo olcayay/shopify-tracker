@@ -3,6 +3,7 @@
 import { Fragment, useEffect, useState, useRef } from "react";
 import Link from "next/link";
 import { useAuth } from "@/lib/auth-context";
+import { useFormatDate } from "@/lib/format-date";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
@@ -23,6 +24,7 @@ import { AdminScraperTrigger } from "@/components/admin-scraper-trigger";
 
 export default function KeywordsPage() {
   const { fetchWithAuth, user, account, refreshUser } = useAuth();
+  const { formatDateOnly } = useFormatDate();
   const [keywords, setKeywords] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [query, setQuery] = useState("");
@@ -265,7 +267,7 @@ export default function KeywordsPage() {
                     </TableCell>
                     <TableCell className="text-sm text-muted-foreground">
                       {kw.latestSnapshot?.scrapedAt
-                        ? new Date(kw.latestSnapshot.scrapedAt).toLocaleDateString()
+                        ? formatDateOnly(kw.latestSnapshot.scrapedAt)
                         : "Never"}
                     </TableCell>
                     <TableCell onClick={(e) => e.stopPropagation()}>

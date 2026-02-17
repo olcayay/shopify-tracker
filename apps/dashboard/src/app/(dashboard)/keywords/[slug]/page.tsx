@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { formatDateOnly } from "@/lib/format-date";
 import { getKeyword, getKeywordRankings, getKeywordAds, getAccountCompetitors, getAccountTrackedApps } from "@/lib/api";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -53,7 +54,7 @@ export default async function KeywordDetailPage({
 
   // Build ranking chart data from rankings (filtered to tracked + competitor apps)
   const rankingChartData = (rankings?.rankings || []).map((r: any) => ({
-    date: new Date(r.scrapedAt).toLocaleDateString(),
+    date: formatDateOnly(r.scrapedAt),
     position: r.position,
     label: r.appName || r.appSlug,
     slug: r.appSlug,
@@ -74,7 +75,7 @@ export default async function KeywordDetailPage({
               <>
                 {" "}
                 &middot; Last updated:{" "}
-                {new Date(snapshot.scrapedAt).toLocaleDateString()}
+                {formatDateOnly(snapshot.scrapedAt)}
               </>
             )}
           </p>
@@ -300,7 +301,7 @@ export default async function KeywordDetailPage({
                       {ad.ratingCount?.toLocaleString() ?? "\u2014"}
                     </TableCell>
                     <TableCell className="text-sm text-muted-foreground">
-                      {new Date(ad.lastSeen).toLocaleDateString()}
+                      {formatDateOnly(ad.lastSeen)}
                     </TableCell>
                     <TableCell className="text-right font-mono">
                       {ad.totalSightings}

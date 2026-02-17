@@ -3,6 +3,7 @@
 import { useEffect, useState, useRef } from "react";
 import Link from "next/link";
 import { useAuth } from "@/lib/auth-context";
+import { useFormatDate } from "@/lib/format-date";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
@@ -20,6 +21,7 @@ import { AdminScraperTrigger } from "@/components/admin-scraper-trigger";
 
 export default function AppsPage() {
   const { fetchWithAuth, user, account, refreshUser } = useAuth();
+  const { formatDateOnly } = useFormatDate();
   const [apps, setApps] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [query, setQuery] = useState("");
@@ -225,9 +227,7 @@ export default function AppsPage() {
                     </TableCell>
                     <TableCell className="text-sm text-muted-foreground">
                       {app.latestSnapshot?.scrapedAt
-                        ? new Date(
-                            app.latestSnapshot.scrapedAt
-                          ).toLocaleDateString()
+                        ? formatDateOnly(app.latestSnapshot.scrapedAt)
                         : "Never"}
                     </TableCell>
                     {canEdit && (

@@ -22,6 +22,7 @@ import {
 } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Play } from "lucide-react";
+import { useFormatDate } from "@/lib/format-date";
 
 const SCRAPER_TYPES = [
   { type: "category", label: "Categories" },
@@ -32,6 +33,7 @@ const SCRAPER_TYPES = [
 
 export default function SystemAdminPage() {
   const { fetchWithAuth } = useAuth();
+  const { formatDateTime } = useFormatDate();
   const [stats, setStats] = useState<any>(null);
   const [accounts, setAccounts] = useState<any[]>([]);
   const [users, setUsers] = useState<any[]>([]);
@@ -367,7 +369,7 @@ export default function SystemAdminPage() {
                       </TableCell>
                       <TableCell className="text-sm text-muted-foreground">
                         {run.startedAt
-                          ? new Date(run.startedAt).toLocaleString()
+                          ? formatDateTime(run.startedAt)
                           : "\u2014"}
                       </TableCell>
                       <TableCell className="text-sm">

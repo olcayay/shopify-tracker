@@ -20,10 +20,12 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { useFormatDate } from "@/lib/format-date";
 
 export default function UserDetailPage() {
   const { id } = useParams<{ id: string }>();
   const { fetchWithAuth } = useAuth();
+  const { formatDateTime, formatDateOnly } = useFormatDate();
   const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
@@ -96,7 +98,7 @@ export default function UserDetailPage() {
             </div>
             <div>
               <span className="text-muted-foreground">Joined:</span>{" "}
-              <span>{new Date(user.createdAt).toLocaleDateString()}</span>
+              <span>{formatDateOnly(user.createdAt)}</span>
             </div>
           </div>
         </CardContent>
@@ -169,17 +171,11 @@ export default function UserDetailPage() {
                     {a.appSlug}
                   </TableCell>
                   <TableCell className="text-sm text-muted-foreground">
-                    {a.createdAt ? new Date(a.createdAt).toLocaleDateString() : "\u2014"}
+                    {a.createdAt ? formatDateOnly(a.createdAt) : "\u2014"}
                   </TableCell>
                   <TableCell className="text-sm text-muted-foreground">
                     {a.lastScrapedAt
-                      ? new Date(a.lastScrapedAt).toLocaleString("tr-TR", {
-                          day: "2-digit",
-                          month: "2-digit",
-                          year: "numeric",
-                          hour: "2-digit",
-                          minute: "2-digit",
-                        })
+                      ? formatDateTime(a.lastScrapedAt)
                       : "\u2014"}
                   </TableCell>
                 </TableRow>
@@ -222,17 +218,11 @@ export default function UserDetailPage() {
                     </Link>
                   </TableCell>
                   <TableCell className="text-sm text-muted-foreground">
-                    {k.createdAt ? new Date(k.createdAt).toLocaleDateString() : "\u2014"}
+                    {k.createdAt ? formatDateOnly(k.createdAt) : "\u2014"}
                   </TableCell>
                   <TableCell className="text-sm text-muted-foreground">
                     {k.lastScrapedAt
-                      ? new Date(k.lastScrapedAt).toLocaleString("tr-TR", {
-                          day: "2-digit",
-                          month: "2-digit",
-                          year: "numeric",
-                          hour: "2-digit",
-                          minute: "2-digit",
-                        })
+                      ? formatDateTime(k.lastScrapedAt)
                       : "\u2014"}
                   </TableCell>
                 </TableRow>
@@ -275,17 +265,11 @@ export default function UserDetailPage() {
                     </Link>
                   </TableCell>
                   <TableCell className="text-sm text-muted-foreground">
-                    {c.createdAt ? new Date(c.createdAt).toLocaleDateString() : "\u2014"}
+                    {c.createdAt ? formatDateOnly(c.createdAt) : "\u2014"}
                   </TableCell>
                   <TableCell className="text-sm text-muted-foreground">
                     {c.lastScrapedAt
-                      ? new Date(c.lastScrapedAt).toLocaleString("tr-TR", {
-                          day: "2-digit",
-                          month: "2-digit",
-                          year: "numeric",
-                          hour: "2-digit",
-                          minute: "2-digit",
-                        })
+                      ? formatDateTime(c.lastScrapedAt)
                       : "\u2014"}
                   </TableCell>
                 </TableRow>
@@ -327,7 +311,7 @@ export default function UserDetailPage() {
                     </Link>
                   </TableCell>
                   <TableCell className="text-sm text-muted-foreground">
-                    {f.createdAt ? new Date(f.createdAt).toLocaleDateString() : "\u2014"}
+                    {f.createdAt ? formatDateOnly(f.createdAt) : "\u2014"}
                   </TableCell>
                 </TableRow>
               ))}

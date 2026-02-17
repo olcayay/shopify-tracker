@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useAuth } from "@/lib/auth-context";
+import { useFormatDate } from "@/lib/format-date";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -26,6 +27,7 @@ import { ConfirmModal } from "@/components/confirm-modal";
 
 export default function SettingsPage() {
   const { user, account, fetchWithAuth, refreshUser } = useAuth();
+  const { formatDateOnly } = useFormatDate();
   const [members, setMembers] = useState<any[]>([]);
   const [pendingInvitations, setPendingInvitations] = useState<any[]>([]);
   const [inviteEmail, setInviteEmail] = useState("");
@@ -254,7 +256,7 @@ export default function SettingsPage() {
                           )}
                         </TableCell>
                         <TableCell className="text-sm text-muted-foreground">
-                          {new Date(inv.createdAt).toLocaleDateString()}
+                          {formatDateOnly(inv.createdAt)}
                         </TableCell>
                         <TableCell>
                           <div className="flex gap-1">

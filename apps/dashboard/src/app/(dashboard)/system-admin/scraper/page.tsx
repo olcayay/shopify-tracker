@@ -31,6 +31,7 @@ import {
   X,
 } from "lucide-react";
 import { ConfirmModal } from "@/components/confirm-modal";
+import { useFormatDate } from "@/lib/format-date";
 
 const SCRAPER_TYPES = [
   {
@@ -73,19 +74,9 @@ function timeAgo(dateStr: string): string {
   return `${days}d ago`;
 }
 
-function formatDate(dateStr: string): string {
-  return new Date(dateStr).toLocaleString("tr-TR", {
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-    second: "2-digit",
-  });
-}
-
 export default function ScraperPage() {
   const { fetchWithAuth } = useAuth();
+  const { formatDateTime } = useFormatDate();
   const [stats, setStats] = useState<any>(null);
   const [runs, setRuns] = useState<any[]>([]);
   const [total, setTotal] = useState(0);
@@ -319,7 +310,7 @@ export default function ScraperPage() {
                       </TableCell>
                       <TableCell className="text-sm text-muted-foreground">
                         {job.createdAt
-                          ? formatDate(job.createdAt)
+                          ? formatDateTime(job.createdAt)
                           : "\u2014"}
                       </TableCell>
                       <TableCell className="text-sm">
@@ -530,10 +521,10 @@ export default function ScraperPage() {
                       )}
                     </TableCell>
                     <TableCell className="text-sm text-muted-foreground">
-                      {run.createdAt ? formatDate(run.createdAt) : "\u2014"}
+                      {run.createdAt ? formatDateTime(run.createdAt) : "\u2014"}
                     </TableCell>
                     <TableCell className="text-sm text-muted-foreground">
-                      {run.startedAt ? formatDate(run.startedAt) : "\u2014"}
+                      {run.startedAt ? formatDateTime(run.startedAt) : "\u2014"}
                     </TableCell>
                     <TableCell className="text-sm">
                       {run.metadata?.duration_ms

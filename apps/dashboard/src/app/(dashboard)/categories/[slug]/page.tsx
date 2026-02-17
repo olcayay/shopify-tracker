@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { formatDateTime } from "@/lib/format-date";
 import { getCategory, getCategoryHistory, getAccountCompetitors, getAccountTrackedApps } from "@/lib/api";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -120,7 +121,7 @@ export default async function CategoryDetailPage({
               <div>
                 <div className="text-sm text-muted-foreground">Scraped At</div>
                 <div className="text-sm">
-                  {new Date(snapshot.scrapedAt).toLocaleString()}
+                  {formatDateTime(snapshot.scrapedAt)}
                 </div>
               </div>
               {snapshot.firstPageMetrics && (
@@ -235,7 +236,7 @@ export default async function CategoryDetailPage({
                 {history.snapshots.map((s: any) => (
                   <TableRow key={s.id}>
                     <TableCell>
-                      {new Date(s.scrapedAt).toLocaleString()}
+                      {formatDateTime(s.scrapedAt)}
                     </TableCell>
                     <TableCell>{s.appCount ?? "—"}</TableCell>
                     <TableCell>{s.firstPageApps?.length ?? 0}</TableCell>

@@ -19,16 +19,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Search, ArrowUpDown, ArrowUp, ArrowDown, Send, Mail, MailX } from "lucide-react";
-
-function formatDate(dateStr: string): string {
-  return new Date(dateStr).toLocaleString("tr-TR", {
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-}
+import { useFormatDate } from "@/lib/format-date";
 
 type SortKey = "name" | "email" | "account" | "role" | "createdAt";
 type SortDir = "asc" | "desc";
@@ -36,6 +27,7 @@ type RoleFilter = "all" | "owner" | "editor" | "viewer" | "admin";
 
 export default function UsersListPage() {
   const { fetchWithAuth } = useAuth();
+  const { formatDateTime } = useFormatDate();
   const [users, setUsers] = useState<any[]>([]);
   const [search, setSearch] = useState("");
   const [sortKey, setSortKey] = useState<SortKey>("name");
@@ -287,13 +279,13 @@ export default function UsersListPage() {
                     )}
                   </TableCell>
                   <TableCell className="text-sm text-muted-foreground">
-                    {u.lastDigestSentAt ? formatDate(u.lastDigestSentAt) : "\u2014"}
+                    {u.lastDigestSentAt ? formatDateTime(u.lastDigestSentAt) : "\u2014"}
                   </TableCell>
                   <TableCell className="text-sm text-muted-foreground">
-                    {u.createdAt ? formatDate(u.createdAt) : "\u2014"}
+                    {u.createdAt ? formatDateTime(u.createdAt) : "\u2014"}
                   </TableCell>
                   <TableCell className="text-sm text-muted-foreground">
-                    {u.lastSeen ? formatDate(u.lastSeen) : "\u2014"}
+                    {u.lastSeen ? formatDateTime(u.lastSeen) : "\u2014"}
                   </TableCell>
                   <TableCell>
                     <Button

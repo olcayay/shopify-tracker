@@ -22,10 +22,12 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { useFormatDate } from "@/lib/format-date";
 
 export default function AccountDetailPage() {
   const { id } = useParams<{ id: string }>();
   const { fetchWithAuth } = useAuth();
+  const { formatDateTime, formatDateOnly } = useFormatDate();
   const [account, setAccount] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState("");
@@ -325,7 +327,7 @@ export default function AccountDetailPage() {
                     {m.isSystemAdmin && <Badge>Admin</Badge>}
                   </TableCell>
                   <TableCell className="text-sm text-muted-foreground">
-                    {new Date(m.createdAt).toLocaleDateString()}
+                    {formatDateOnly(m.createdAt)}
                   </TableCell>
                 </TableRow>
               ))}
@@ -364,13 +366,7 @@ export default function AccountDetailPage() {
                   </TableCell>
                   <TableCell className="text-sm text-muted-foreground">
                     {a.lastScrapedAt
-                      ? new Date(a.lastScrapedAt).toLocaleString("tr-TR", {
-                          day: "2-digit",
-                          month: "2-digit",
-                          year: "numeric",
-                          hour: "2-digit",
-                          minute: "2-digit",
-                        })
+                      ? formatDateTime(a.lastScrapedAt)
                       : "\u2014"}
                   </TableCell>
                 </TableRow>
@@ -415,13 +411,7 @@ export default function AccountDetailPage() {
                   </TableCell>
                   <TableCell className="text-sm text-muted-foreground">
                     {k.lastScrapedAt
-                      ? new Date(k.lastScrapedAt).toLocaleString("tr-TR", {
-                          day: "2-digit",
-                          month: "2-digit",
-                          year: "numeric",
-                          hour: "2-digit",
-                          minute: "2-digit",
-                        })
+                      ? formatDateTime(k.lastScrapedAt)
                       : "\u2014"}
                   </TableCell>
                 </TableRow>
@@ -470,13 +460,7 @@ export default function AccountDetailPage() {
                   </TableCell>
                   <TableCell className="text-sm text-muted-foreground">
                     {c.lastScrapedAt
-                      ? new Date(c.lastScrapedAt).toLocaleString("tr-TR", {
-                          day: "2-digit",
-                          month: "2-digit",
-                          year: "numeric",
-                          hour: "2-digit",
-                          minute: "2-digit",
-                        })
+                      ? formatDateTime(c.lastScrapedAt)
                       : "\u2014"}
                   </TableCell>
                 </TableRow>

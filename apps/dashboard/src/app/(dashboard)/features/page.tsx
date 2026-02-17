@@ -3,6 +3,7 @@
 import { useEffect, useState, useRef } from "react";
 import Link from "next/link";
 import { useAuth } from "@/lib/auth-context";
+import { useFormatDate } from "@/lib/format-date";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
@@ -19,6 +20,7 @@ import { ConfirmModal } from "@/components/confirm-modal";
 
 export default function FeaturesPage() {
   const { fetchWithAuth, user, account, refreshUser } = useAuth();
+  const { formatDateOnly } = useFormatDate();
   const [features, setFeatures] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [query, setQuery] = useState("");
@@ -214,7 +216,7 @@ export default function FeaturesPage() {
                         .join(" > ") || "\u2014"}
                     </TableCell>
                     <TableCell className="text-sm text-muted-foreground">
-                      {new Date(f.createdAt).toLocaleDateString()}
+                      {formatDateOnly(f.createdAt)}
                     </TableCell>
                     {canEdit && (
                       <TableCell>

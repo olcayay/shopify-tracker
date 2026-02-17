@@ -19,16 +19,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Search, ArrowUpDown, ArrowUp, ArrowDown, Send } from "lucide-react";
-
-function formatDate(dateStr: string): string {
-  return new Date(dateStr).toLocaleString("tr-TR", {
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-}
+import { useFormatDate } from "@/lib/format-date";
 
 type SortKey = "name" | "members" | "apps" | "keywords" | "status" | "createdAt";
 type SortDir = "asc" | "desc";
@@ -36,6 +27,7 @@ type StatusFilter = "all" | "active" | "suspended";
 
 export default function AccountsListPage() {
   const { fetchWithAuth } = useAuth();
+  const { formatDateTime } = useFormatDate();
   const [accounts, setAccounts] = useState<any[]>([]);
   const [message, setMessage] = useState("");
   const [search, setSearch] = useState("");
@@ -302,10 +294,10 @@ export default function AccountsListPage() {
                     </Badge>
                   </TableCell>
                   <TableCell className="text-sm text-muted-foreground">
-                    {acc.createdAt ? formatDate(acc.createdAt) : "\u2014"}
+                    {acc.createdAt ? formatDateTime(acc.createdAt) : "\u2014"}
                   </TableCell>
                   <TableCell className="text-sm text-muted-foreground">
-                    {acc.lastSeen ? formatDate(acc.lastSeen) : "\u2014"}
+                    {acc.lastSeen ? formatDateTime(acc.lastSeen) : "\u2014"}
                   </TableCell>
                   <TableCell>
                     <div className="flex gap-1">

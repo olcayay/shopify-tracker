@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback, useMemo } from "react";
 import Link from "next/link";
 import { useAuth } from "@/lib/auth-context";
+import { useFormatDate } from "@/lib/format-date";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -45,6 +46,7 @@ interface StarredCategory {
 
 export default function CategoriesPage() {
   const { fetchWithAuth, user } = useAuth();
+  const { formatDateOnly } = useFormatDate();
   const [tree, setTree] = useState<CategoryNode[]>([]);
   const [starred, setStarred] = useState<StarredCategory[]>([]);
   const [loading, setLoading] = useState(true);
@@ -265,7 +267,7 @@ export default function CategoriesPage() {
                       </Link>
                     </TableCell>
                     <TableCell className="text-sm text-muted-foreground">
-                      {new Date(s.createdAt).toLocaleDateString()}
+                      {formatDateOnly(s.createdAt)}
                     </TableCell>
                     {canEdit && (
                       <TableCell>

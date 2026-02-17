@@ -3,6 +3,7 @@
 import { useEffect, useState, useRef } from "react";
 import Link from "next/link";
 import { useAuth } from "@/lib/auth-context";
+import { useFormatDate } from "@/lib/format-date";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
@@ -20,6 +21,7 @@ import { AdminScraperTrigger } from "@/components/admin-scraper-trigger";
 
 export default function CompetitorsPage() {
   const { fetchWithAuth, user, account, refreshUser } = useAuth();
+  const { formatDateOnly } = useFormatDate();
   const [competitors, setCompetitors] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [query, setQuery] = useState("");
@@ -212,7 +214,7 @@ export default function CompetitorsPage() {
                       {c.isBuiltForShopify && <span title="Built for Shopify" className="ml-1">💎</span>}
                     </TableCell>
                     <TableCell className="text-sm text-muted-foreground">
-                      {new Date(c.createdAt).toLocaleDateString()}
+                      {formatDateOnly(c.createdAt)}
                     </TableCell>
                     {canEdit && (
                       <TableCell>
