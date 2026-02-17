@@ -18,6 +18,8 @@ export interface User {
   name: string;
   role: "owner" | "editor" | "viewer";
   isSystemAdmin: boolean;
+  emailDigestEnabled: boolean;
+  timezone: string;
 }
 
 export interface Account {

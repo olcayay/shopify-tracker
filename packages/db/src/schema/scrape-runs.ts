@@ -5,6 +5,7 @@ export const scraperTypeEnum = pgEnum("scraper_type", [
   "app_details",
   "keyword_search",
   "reviews",
+  "daily_digest",
 ]);
 
 export const scrapeRunStatusEnum = pgEnum("scrape_run_status", [

@@ -71,6 +71,27 @@
       "when": 1771273723286,
       "tag": "0009_jittery_deathbird",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1771275964147,
+      "tag": "0010_absurd_adam_destine",
+      "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1771276710443,
+      "tag": "0011_square_black_crow",
+      "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1771276976335,
+      "tag": "0012_tired_dreaming_celestial",
+      "breakpoints": true
     }
   ]
 }

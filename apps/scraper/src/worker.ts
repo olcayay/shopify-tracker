@@ -89,6 +89,109 @@ async function processJob(job: Job<ScraperJobData>): Promise<void> {
       break;
     }
 
+    case "daily_digest": {
+      const { getDigestRecipients, buildDigestForAccount } = await import("./email/digest-builder.js");
+      const { buildDigestHtml, buildDigestSubject } = await import("./email/digest-template.js");
+      const { sendMail } = await import("./email/mailer.js");
+      const { eq: eqOp } = await import("drizzle-orm");
+      const { users: usersTable } = await import("@shopify-tracking/db");
+
+      // Single-user digest (manual trigger from admin)
+      if (job.data.userId) {
+        const [targetUser] = await db
+          .select({ id: usersTable.id, email: usersTable.email, name: usersTable.name, accountId: usersTable.accountId })
+          .from(usersTable)
+          .where(eqOp(usersTable.id, job.data.userId));
+
+        if (!targetUser) {
+          log.warn("user not found for manual digest", { userId: job.data.userId });
+          break;
+        }
+
+        const data = await buildDigestForAccount(db, targetUser.accountId);
+        if (!data) {
+          log.info("no digest data for user's account", { userId: targetUser.id, accountId: targetUser.accountId });
+          break;
+        }
+
+        const html = buildDigestHtml(data);
+        const subject = buildDigestSubject(data);
+        await sendMail(targetUser.email, subject, html);
+        await db.update(usersTable).set({ lastDigestSentAt: new Date() }).where(eqOp(usersTable.id, targetUser.id));
+        log.info("manual digest sent", { email: targetUser.email });
+        break;
+      }
+
+      // Account-level digest (manual trigger from admin — all users in account)
+      if (job.data.accountId) {
+        const accountUsers = await db
+          .select({ id: usersTable.id, email: usersTable.email, name: usersTable.name })
+          .from(usersTable)
+          .where(eqOp(usersTable.accountId, job.data.accountId));
+
+        if (accountUsers.length === 0) {
+          log.warn("no users found for account digest", { accountId: job.data.accountId });
+          break;
+        }
+
+        const data = await buildDigestForAccount(db, job.data.accountId);
+        if (!data) {
+          log.info("no digest data for account", { accountId: job.data.accountId });
+          break;
+        }
+
+        const html = buildDigestHtml(data);
+        const subject = buildDigestSubject(data);
+        let sent = 0;
+        for (const u of accountUsers) {
+          try {
+            await sendMail(u.email, subject, html);
+            await db.update(usersTable).set({ lastDigestSentAt: new Date() }).where(eqOp(usersTable.id, u.id));
+            sent++;
+          } catch (err) {
+            log.error("failed to send account digest", { email: u.email, error: String(err) });
+          }
+        }
+        log.info("account digest completed", { accountId: job.data.accountId, sent, total: accountUsers.length });
+        break;
+      }
+
+      // Bulk digest for all eligible users
+      const recipients = await getDigestRecipients(db);
+      log.info("digest recipients found", { count: recipients.length });
+
+      // Group recipients by account
+      const byAccount = new Map<string, typeof recipients>();
+      for (const r of recipients) {
+        const list = byAccount.get(r.accountId) || [];
+        list.push(r);
+        byAccount.set(r.accountId, list);
+      }
+
+      let sent = 0;
+      let skipped = 0;
+      for (const [accountId, accountUsers] of byAccount) {
+        const data = await buildDigestForAccount(db, accountId);
+        if (!data) {
+          skipped++;
+          continue;
+        }
+        const html = buildDigestHtml(data);
+        const subject = buildDigestSubject(data);
+        for (const user of accountUsers) {
+          try {
+            await sendMail(user.email, subject, html);
+            await db.update(usersTable).set({ lastDigestSentAt: new Date() }).where(eqOp(usersTable.email, user.email));
+            sent++;
+          } catch (err) {
+            log.error("failed to send digest", { email: user.email, error: String(err) });
+          }
+        }
+      }
+      log.info("digest completed", { sent, skipped, totalAccounts: byAccount.size });
+      break;
+    }
+
     default:
       throw new Error(`Unknown scraper type: ${type}`);
   }

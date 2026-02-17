@@ -262,6 +262,46 @@ export const systemAdminRoutes: FastifyPluginAsync = async (app) => {
     }
   );
 
+  // POST /api/system-admin/accounts/:id/send-digest — send digest to all users in account
+  app.post<{ Params: { id: string } }>(
+    "/accounts/:id/send-digest",
+    async (request, reply) => {
+      const { id } = request.params;
+
+      const [account] = await db
+        .select({ id: accounts.id, name: accounts.name })
+        .from(accounts)
+        .where(eq(accounts.id, id));
+
+      if (!account) {
+        return reply.code(404).send({ error: "Account not found" });
+      }
+
+      const memberCount = await db
+        .select({ count: sql<number>`count(*)::int` })
+        .from(users)
+        .where(eq(users.accountId, id));
+
+      const userEmail = (request as any).user?.email || "api";
+
+      try {
+        const queue = getScraperQueue();
+        const job = await queue.add("scrape:daily_digest", {
+          type: "daily_digest",
+          accountId: id,
+          triggeredBy: userEmail,
+        });
+
+        return {
+          message: `Digest email queued for ${memberCount[0].count} users in "${account.name}"`,
+          jobId: job.id,
+        };
+      } catch {
+        return reply.code(500).send({ error: "Failed to enqueue digest job" });
+      }
+    }
+  );
+
   // GET /api/system-admin/accounts/:id/members
   app.get<{ Params: { id: string } }>(
     "/accounts/:id/members",
@@ -293,6 +333,8 @@ export const systemAdminRoutes: FastifyPluginAsync = async (app) => {
         name: users.name,
         role: users.role,
         isSystemAdmin: users.isSystemAdmin,
+        emailDigestEnabled: users.emailDigestEnabled,
+        lastDigestSentAt: users.lastDigestSentAt,
         accountId: users.accountId,
         accountName: accounts.name,
         createdAt: users.createdAt,
@@ -393,6 +435,41 @@ export const systemAdminRoutes: FastifyPluginAsync = async (app) => {
       trackedFeatures: trackedFeaturesList,
     };
   });
+
+  // POST /api/system-admin/users/:id/send-digest — manually trigger digest email for a user
+  app.post<{ Params: { id: string } }>(
+    "/users/:id/send-digest",
+    async (request, reply) => {
+      const { id } = request.params;
+
+      const [user] = await db
+        .select({ id: users.id, email: users.email, accountId: users.accountId })
+        .from(users)
+        .where(eq(users.id, id));
+
+      if (!user) {
+        return reply.code(404).send({ error: "User not found" });
+      }
+
+      const userEmail = (request as any).user?.email || "api";
+
+      try {
+        const queue = getScraperQueue();
+        const job = await queue.add("scrape:daily_digest", {
+          type: "daily_digest",
+          userId: id,
+          triggeredBy: userEmail,
+        });
+
+        return {
+          message: `Digest email queued for ${user.email}`,
+          jobId: job.id,
+        };
+      } catch (err) {
+        return reply.code(500).send({ error: "Failed to enqueue digest job" });
+      }
+    }
+  );
 
   // --- Scraper Control (moved from admin.ts) ---
 
@@ -623,6 +700,7 @@ export const systemAdminRoutes: FastifyPluginAsync = async (app) => {
       "app_details",
       "keyword_search",
       "reviews",
+      "daily_digest",
     ];
     if (!type || !validTypes.includes(type)) {
       return reply.code(400).send({

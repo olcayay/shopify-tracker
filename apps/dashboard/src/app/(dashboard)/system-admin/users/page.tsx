@@ -18,7 +18,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Search, ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
+import { Search, ArrowUpDown, ArrowUp, ArrowDown, Send, Mail, MailX } from "lucide-react";
 
 function formatDate(dateStr: string): string {
   return new Date(dateStr).toLocaleString("tr-TR", {
@@ -41,6 +41,8 @@ export default function UsersListPage() {
   const [sortKey, setSortKey] = useState<SortKey>("name");
   const [sortDir, setSortDir] = useState<SortDir>("asc");
   const [roleFilter, setRoleFilter] = useState<RoleFilter>("all");
+  const [sendingDigest, setSendingDigest] = useState<string | null>(null);
+  const [message, setMessage] = useState("");
 
   useEffect(() => {
     loadUsers();
@@ -49,6 +51,26 @@ export default function UsersListPage() {
   async function loadUsers() {
     const res = await fetchWithAuth("/api/system-admin/users");
     if (res.ok) setUsers(await res.json());
+  }
+
+  async function sendDigest(userId: string, email: string) {
+    setSendingDigest(userId);
+    setMessage("");
+    try {
+      const res = await fetchWithAuth(`/api/system-admin/users/${userId}/send-digest`, {
+        method: "POST",
+      });
+      if (res.ok) {
+        setMessage(`Digest email queued for ${email}`);
+      } else {
+        const data = await res.json().catch(() => ({}));
+        setMessage(data.error || "Failed to send digest");
+      }
+    } catch {
+      setMessage("Failed to send digest");
+    } finally {
+      setSendingDigest(null);
+    }
   }
 
   function toggleSort(key: SortKey) {
@@ -146,6 +168,12 @@ export default function UsersListPage() {
         <h1 className="text-2xl font-bold">Users ({filtered.length})</h1>
       </div>
 
+      {message && (
+        <div className="text-sm px-3 py-2 rounded-md text-green-700 bg-green-50">
+          {message}
+        </div>
+      )}
+
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="relative w-full sm:w-64">
           <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
@@ -211,7 +239,8 @@ export default function UsersListPage() {
                 >
                   Role <SortIcon col="role" />
                 </TableHead>
-                <TableHead>Admin</TableHead>
+                <TableHead>Digest</TableHead>
+                <TableHead>Last Digest</TableHead>
                 <TableHead
                   className="cursor-pointer select-none"
                   onClick={() => toggleSort("createdAt")}
@@ -219,6 +248,7 @@ export default function UsersListPage() {
                   Created <SortIcon col="createdAt" />
                 </TableHead>
                 <TableHead>Last Seen</TableHead>
+                <TableHead className="w-12" />
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -245,9 +275,14 @@ export default function UsersListPage() {
                     <Badge variant="outline">{u.role}</Badge>
                   </TableCell>
                   <TableCell>
-                    {u.isSystemAdmin && (
-                      <Badge variant="default">Admin</Badge>
+                    {u.emailDigestEnabled ? (
+                      <Mail className="h-4 w-4 text-green-600" />
+                    ) : (
+                      <MailX className="h-4 w-4 text-muted-foreground" />
                     )}
+                  </TableCell>
+                  <TableCell className="text-sm text-muted-foreground">
+                    {u.lastDigestSentAt ? formatDate(u.lastDigestSentAt) : "\u2014"}
                   </TableCell>
                   <TableCell className="text-sm text-muted-foreground">
                     {u.createdAt ? formatDate(u.createdAt) : "\u2014"}
@@ -255,12 +290,24 @@ export default function UsersListPage() {
                   <TableCell className="text-sm text-muted-foreground">
                     {u.lastSeen ? formatDate(u.lastSeen) : "\u2014"}
                   </TableCell>
+                  <TableCell>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-8 w-8 p-0"
+                      title="Send digest email"
+                      disabled={sendingDigest === u.id}
+                      onClick={() => sendDigest(u.id, u.email)}
+                    >
+                      <Send className="h-4 w-4" />
+                    </Button>
+                  </TableCell>
                 </TableRow>
               ))}
               {filtered.length === 0 && (
                 <TableRow>
                   <TableCell
-                    colSpan={7}
+                    colSpan={9}
                     className="text-center text-muted-foreground"
                   >
                     No users found

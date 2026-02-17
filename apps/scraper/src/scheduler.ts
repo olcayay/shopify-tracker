@@ -29,6 +29,11 @@ const SCHEDULES = [
     cron: "0 6,18 * * *", // Every 12 hours (06:00, 18:00)
     type: "reviews" as const,
   },
+  {
+    name: "daily_digest",
+    cron: "0 5 * * *", // Daily at 05:00 UTC (08:00 Istanbul)
+    type: "daily_digest" as const,
+  },
 ];
 
 log.info("starting scheduler", {

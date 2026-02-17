@@ -53,6 +53,11 @@ const SCRAPER_TYPES = [
     label: "Reviews",
     description: "Scrape reviews for tracked apps",
   },
+  {
+    type: "daily_digest",
+    label: "Daily Digest",
+    description: "Send ranking report emails to users",
+  },
 ];
 
 const PAGE_SIZE = 20;

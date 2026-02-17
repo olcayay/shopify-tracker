@@ -293,6 +293,8 @@ export const authRoutes: FastifyPluginAsync = async (app) => {
         name: users.name,
         role: users.role,
         isSystemAdmin: users.isSystemAdmin,
+        emailDigestEnabled: users.emailDigestEnabled,
+        timezone: users.timezone,
         accountId: users.accountId,
       })
       .from(users)
@@ -340,6 +342,8 @@ export const authRoutes: FastifyPluginAsync = async (app) => {
         name: user.name,
         role: user.role,
         isSystemAdmin: user.isSystemAdmin,
+        emailDigestEnabled: user.emailDigestEnabled,
+        timezone: user.timezone,
       },
       account: {
         id: account.id,
@@ -361,5 +365,49 @@ export const authRoutes: FastifyPluginAsync = async (app) => {
         },
       },
     };
+  });
+
+  // PATCH /api/auth/me — update user preferences
+  app.patch("/me", async (request, reply) => {
+    if (!request.user) {
+      return reply.code(401).send({ error: "Unauthorized" });
+    }
+
+    const { emailDigestEnabled, timezone } = request.body as {
+      emailDigestEnabled?: boolean;
+      timezone?: string;
+    };
+
+    const updates: Record<string, unknown> = {};
+    if (typeof emailDigestEnabled === "boolean") {
+      updates.emailDigestEnabled = emailDigestEnabled;
+    }
+    if (typeof timezone === "string" && timezone.length > 0) {
+      updates.timezone = timezone;
+    }
+
+    if (Object.keys(updates).length === 0) {
+      return reply.code(400).send({ error: "No valid fields to update" });
+    }
+
+    updates.updatedAt = new Date();
+
+    await db
+      .update(users)
+      .set(updates)
+      .where(eq(users.id, request.user.userId));
+
+    const [updated] = await db
+      .select({
+        id: users.id,
+        email: users.email,
+        name: users.name,
+        emailDigestEnabled: users.emailDigestEnabled,
+        timezone: users.timezone,
+      })
+      .from(users)
+      .where(eq(users.id, request.user.userId));
+
+    return updated;
   });
 };

@@ -1,0 +1,1 @@
+ALTER TYPE "public"."scraper_type" ADD VALUE 'daily_digest';

@@ -18,7 +18,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Search, ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
+import { Search, ArrowUpDown, ArrowUp, ArrowDown, Send } from "lucide-react";
 
 function formatDate(dateStr: string): string {
   return new Date(dateStr).toLocaleString("tr-TR", {
@@ -42,6 +42,7 @@ export default function AccountsListPage() {
   const [sortKey, setSortKey] = useState<SortKey>("name");
   const [sortDir, setSortDir] = useState<SortDir>("asc");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
+  const [sendingDigest, setSendingDigest] = useState<string | null>(null);
 
   useEffect(() => {
     loadAccounts();
@@ -50,6 +51,27 @@ export default function AccountsListPage() {
   async function loadAccounts() {
     const res = await fetchWithAuth("/api/system-admin/accounts");
     if (res.ok) setAccounts(await res.json());
+  }
+
+  async function sendDigest(accountId: string, accountName: string) {
+    setSendingDigest(accountId);
+    setMessage("");
+    try {
+      const res = await fetchWithAuth(`/api/system-admin/accounts/${accountId}/send-digest`, {
+        method: "POST",
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setMessage(data.message);
+      } else {
+        const data = await res.json().catch(() => ({}));
+        setMessage(data.error || "Failed to send digest");
+      }
+    } catch {
+      setMessage("Failed to send digest");
+    } finally {
+      setSendingDigest(null);
+    }
   }
 
   async function updateAccount(id: string, updates: any) {
@@ -275,17 +297,28 @@ export default function AccountsListPage() {
                     {acc.lastSeen ? formatDate(acc.lastSeen) : "\u2014"}
                   </TableCell>
                   <TableCell>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() =>
-                        updateAccount(acc.id, {
-                          isSuspended: !acc.isSuspended,
-                        })
-                      }
-                    >
-                      {acc.isSuspended ? "Activate" : "Suspend"}
-                    </Button>
+                    <div className="flex gap-1">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-8 w-8 p-0"
+                        disabled={sendingDigest === acc.id}
+                        onClick={() => sendDigest(acc.id, acc.name)}
+                      >
+                        <Send className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() =>
+                          updateAccount(acc.id, {
+                            isSuspended: !acc.isSuspended,
+                          })
+                        }
+                      >
+                        {acc.isSuspended ? "Activate" : "Suspend"}
+                      </Button>
+                    </div>
                   </TableCell>
                 </TableRow>
               ))}

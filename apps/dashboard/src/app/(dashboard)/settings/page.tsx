@@ -20,7 +20,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Trash2, UserPlus, Clock, Check, X, Copy } from "lucide-react";
+import { Trash2, UserPlus, Clock, Check, X, Copy, Mail } from "lucide-react";
 import Link from "next/link";
 import { ConfirmModal } from "@/components/confirm-modal";
 
@@ -294,6 +294,78 @@ export default function SettingsPage() {
           </CardContent>
         </Card>
       )}
+
+      {/* Email Notifications */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Mail className="h-5 w-5" />
+            Email Notifications
+          </CardTitle>
+          <CardDescription>
+            Receive daily ranking reports with keyword position changes and competitor updates
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium">Daily Ranking Digest</p>
+              <p className="text-xs text-muted-foreground">
+                Keyword ranking changes, new entries, and competitor performance
+              </p>
+            </div>
+            <Button
+              variant={user?.emailDigestEnabled ? "default" : "outline"}
+              size="sm"
+              onClick={async () => {
+                const res = await fetchWithAuth("/api/auth/me", {
+                  method: "PATCH",
+                  body: JSON.stringify({ emailDigestEnabled: !user?.emailDigestEnabled }),
+                });
+                if (res.ok) {
+                  await refreshUser();
+                  setMessage(user?.emailDigestEnabled ? "Email digest disabled" : "Email digest enabled");
+                }
+              }}
+            >
+              {user?.emailDigestEnabled ? "Enabled" : "Disabled"}
+            </Button>
+          </div>
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium">Timezone</p>
+              <p className="text-xs text-muted-foreground">
+                Emails are sent at 08:00 in your timezone
+              </p>
+            </div>
+            <select
+              value={user?.timezone || "Europe/Istanbul"}
+              onChange={async (e) => {
+                const res = await fetchWithAuth("/api/auth/me", {
+                  method: "PATCH",
+                  body: JSON.stringify({ timezone: e.target.value }),
+                });
+                if (res.ok) {
+                  await refreshUser();
+                  setMessage("Timezone updated");
+                }
+              }}
+              className="border rounded-md px-3 py-1.5 text-sm bg-background"
+            >
+              <option value="Europe/Istanbul">Europe/Istanbul (UTC+3)</option>
+              <option value="Europe/London">Europe/London (UTC+0/+1)</option>
+              <option value="Europe/Berlin">Europe/Berlin (UTC+1/+2)</option>
+              <option value="America/New_York">America/New York (UTC-5/-4)</option>
+              <option value="America/Los_Angeles">America/Los Angeles (UTC-8/-7)</option>
+              <option value="America/Chicago">America/Chicago (UTC-6/-5)</option>
+              <option value="Asia/Tokyo">Asia/Tokyo (UTC+9)</option>
+              <option value="Asia/Shanghai">Asia/Shanghai (UTC+8)</option>
+              <option value="Asia/Dubai">Asia/Dubai (UTC+4)</option>
+              <option value="Australia/Sydney">Australia/Sydney (UTC+10/+11)</option>
+            </select>
+          </div>
+        </CardContent>
+      </Card>
 
       <ConfirmModal
         open={!!confirmCancel}

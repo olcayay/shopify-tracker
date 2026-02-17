@@ -2,13 +2,17 @@ import { Queue, type ConnectionOptions } from "bullmq";
 
 export const QUEUE_NAME = "scraper-jobs";
 
-export type ScraperJobType = "category" | "app_details" | "keyword_search" | "reviews";
+export type ScraperJobType = "category" | "app_details" | "keyword_search" | "reviews" | "daily_digest";
 
 export interface ScraperJobData {
   type: ScraperJobType;
   /** Optional: specific slug for single-app or single-keyword scrapes */
   slug?: string;
   keyword?: string;
+  /** Optional: specific user ID for single-user digest email */
+  userId?: string;
+  /** Optional: specific account ID for account-level digest email */
+  accountId?: string;
   /** Triggered by: "api" | "scheduler" | "cli" */
   triggeredBy: string;
 }
