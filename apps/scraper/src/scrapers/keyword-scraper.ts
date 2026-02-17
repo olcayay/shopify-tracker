@@ -87,7 +87,8 @@ export class KeywordScraper {
 
     const MAX_PAGES = 4;
     const allApps: import("@shopify-tracking/shared").KeywordSearchApp[] = [];
-    const seenSlugs = new Set<string>();
+    const seenSponsoredSlugs = new Set<string>();
+    const seenOrganicSlugs = new Set<string>();
     let totalResults: number | null = null;
     let organicCount = 0;
 
@@ -100,13 +101,17 @@ export class KeywordScraper {
 
       if (page === 1) totalResults = data.total_results;
 
-      // Deduplicate across pages
+      // Deduplicate across pages, per type (same app can be both sponsored and organic)
       for (const app of data.apps) {
-        if (!seenSlugs.has(app.app_slug)) {
-          seenSlugs.add(app.app_slug);
-          allApps.push(app);
-          if (!app.is_sponsored && !app.is_built_in) organicCount++;
+        if (app.is_sponsored) {
+          if (seenSponsoredSlugs.has(app.app_slug)) continue;
+          seenSponsoredSlugs.add(app.app_slug);
+        } else {
+          if (seenOrganicSlugs.has(app.app_slug)) continue;
+          seenOrganicSlugs.add(app.app_slug);
+          if (!app.is_built_in) organicCount++;
         }
+        allApps.push(app);
       }
 
       if (!data.has_next_page) {

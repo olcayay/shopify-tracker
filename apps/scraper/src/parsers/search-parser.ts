@@ -56,7 +56,8 @@ function parseTotalResults($: cheerio.CheerioAPI): number | null {
 
 function parseSearchAppCards($: cheerio.CheerioAPI, positionOffset = 0): KeywordSearchApp[] {
   const apps: KeywordSearchApp[] = [];
-  const seenSlugs = new Set<string>();
+  const seenSponsoredSlugs = new Set<string>();
+  const seenOrganicSlugs = new Set<string>();
   let position = positionOffset;
 
   $('[data-controller="app-card"]').each((_, el) => {
@@ -68,11 +69,19 @@ function parseSearchAppCards($: cheerio.CheerioAPI, positionOffset = 0): Keyword
     const appLink = $card.attr("data-app-card-app-link-value") || "";
 
     if (!appSlug || !appName) return;
-    if (seenSlugs.has(appSlug)) return;
-    seenSlugs.add(appSlug);
 
     const isBuiltIn = appSlug.startsWith("bif:");
     const isSponsored = !isBuiltIn && appLink.includes("surface_type=search_ad");
+
+    // Deduplicate per type: same app can appear as both sponsored and organic
+    if (isSponsored) {
+      if (seenSponsoredSlugs.has(appSlug)) return;
+      seenSponsoredSlugs.add(appSlug);
+    } else {
+      if (seenOrganicSlugs.has(appSlug)) return;
+      seenOrganicSlugs.add(appSlug);
+    }
+
     // Only increment position for organic (non-sponsored, non-built-in) results
     if (!isSponsored && !isBuiltIn) position++;
 

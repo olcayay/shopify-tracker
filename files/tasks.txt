@@ -1,0 +1,75 @@
+Mode: Implementation-first
+
+Rules:
+- Skip design discussions unless explicitly asked
+- Skip confirmations
+- Assume approval unless explicitly stated otherwise
+- Output production-ready code
+
+
+
+Implement the features below using the rules above.
+
+- paid ve organic ranking'in ayrılması
+    keyword ranking sadece organic search resultları için olmalı
+    bir keyword için hangi app'lerin reklam verdiği de ayrıca görülmeli.
+
+    bir app'in sayfasında keywordlere benzer bir şekilde bu app'in reklamlarının hangi keywordlerde çıktığı da gösterilmeli
+
+    paid'de sıralama çok önemli değil. önemli olan bir app'in bir keyword için reklam verip vermediği. bir scrappingte bir app paid olarak görünürken başka bir requestte görülmeyebilir. bu nedenle gösterim de buna uygun olarak yapılmalı. yani bir scraping te 4 tane app'in reklamı çıkıyorsa o gün farklı farklı 10 app reklam vermiş olabilir.
+
+- kategori isimlerinin sonundaki apps ifadesini kaldır
+    Finding products apps -> Finding products
+    kategorinin gösterildiği hemen hemen her yerde bu durum var.
+
+- overview sayfasında appleri, keywordlar ve rakiplerin listesini göster. bu listeler ve yukarıda limitleri gösteren cardlara basıldığında ilgili assetin liste sayfasına gidilmeli
+
+- app starlama özelliği ekle. starlanan app'ler Competitor App olsun.
+
+- /keywords/<id> sayfasında Ranking History'de
+    tracked app ve Competitor Appleri olduğu bir tablo ve chart olsun.
+
+- rakipler için ayrı bir sayfa hazırla
+
+- /apps/<id> sayfasında developer'a tıkladığımız o developer'ın diğer appleri listelensin.
+
+- site genelinde Last Scraped ifadesi yerine last updated gibi bir ifade kullan
+
+- category starlama özelliği olsun. /categories sayfasında starlanan kategoriler ayrı bir tabloda gösterilsin
+
+- /apps sayfasında bir app'i arattığımda eğer elimizde varsa app'in adının sonunda parantez içinde rating ve rating count'u da gösterelim.
+
+- kullanıcı bir assetin takibini kaldırmak istediğinde bir confirmation modal'ı çıkar
+
+- settings sayfasındaki Tracked Apps, Tracked Keywords, Competitor Apps listelerini kaldır
+
+- features/<id> sayfaları olsun. apps/<id> sayfalarındaki Featurelara tıkladğımızda buraya gitsin.
+
+- /features sayfası da olsun. featurelar da keywordler gibi track edilebilsin ve onların da limitleri olsun. feaure'ın sayfasında o feaure altındaki app'lerin listesini görebilelim.
+
+- ranking te page bilgisini de tut. ya da her bir sayfada 24 ürün gösterildiğine göre bunu kendin hesaplayıp göster
+
+- app starlama /categories/<id> ve /keywords/<id> sayfalarındaki tablolarda da yapılabilsin.
+
+- /apps/<id> sayfasında ilgili app'in reklam verdiği keywordlerin listesini de ayrı bir section'da göster
+
+- bir app Competitor olarak eklendiği ilgili app'in detayları yoksa ilgili job trigger et
+
+- eğer bir app'i track ediyorsam ya da rakip olarak eklediysem app'lerin listelendiği /keywords/<id> ve /categories/<id> vb sayfalardaki tablolarda bu app'lerin zaten takip edildiğini görsel olarak da göster. bir icon ya da background color vb birşey ile bu app'in ayırt edilebilmesini sağla
+
+- keyword sayfasına live search desteği ekle. Buna basınca bir modal açılsın. real time search yapılarak sonucu burada gösterilsin. shimmer loading animasyonu olsun. search bitince sonucu bu modalda gösterilsin
+
+- app, kategori, feature, keyword vb detay sayfalarına icon koy buna tıklayınca direk app shopify'da ilgili sayfayı farklı bir tab'ta açsın
+
+
+- shopify'da category sayfalarında kısa kısa açıklamalar var. Bunları da scrap et.
+örneğin forms için "Capture customer information with your own custom forms."
+https://apps.shopify.com/categories/store-design-notifications-forms/all
+bu bilgiyi de category sayfasında göster
+
+- shopify app sayfasındaki bu bilgileri çek
+    desciption
+    languages
+    Works with
+
+- feature için de bir limit olsun. şimdilik 10 diyebiliriz
