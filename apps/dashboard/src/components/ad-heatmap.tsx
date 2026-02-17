@@ -4,17 +4,18 @@ import Link from "next/link";
 import { useMemo } from "react";
 import { Badge } from "@/components/ui/badge";
 
-interface AdSighting {
-  appSlug: string;
-  appName: string;
+interface HeatmapSighting {
+  slug: string;
+  name: string;
   seenDate: string;
   timesSeenInDay: number;
 }
 
 interface AdHeatmapProps {
-  adSightings: AdSighting[];
-  trackedSlugs: string[];
-  competitorSlugs: string[];
+  sightings: HeatmapSighting[];
+  linkPrefix?: string;
+  trackedSlugs?: string[];
+  competitorSlugs?: string[];
 }
 
 function buildDateRange(days: number): string[] {
@@ -41,32 +42,33 @@ function intensityClass(count: number): string {
 }
 
 export function AdHeatmap({
-  adSightings,
-  trackedSlugs,
-  competitorSlugs,
+  sightings: adSightings,
+  linkPrefix = "/apps/",
+  trackedSlugs = [],
+  competitorSlugs = [],
 }: AdHeatmapProps) {
   const trackedSet = useMemo(() => new Set(trackedSlugs), [trackedSlugs]);
   const competitorSet = useMemo(() => new Set(competitorSlugs), [competitorSlugs]);
 
-  const { apps, dates, matrix } = useMemo(() => {
+  const { items, dates, matrix } = useMemo(() => {
     const dates = buildDateRange(30);
 
-    // Build lookup: appSlug -> { date -> timesSeenInDay }
-    const appMap = new Map<
+    // Build lookup: slug -> { date -> timesSeenInDay }
+    const itemMap = new Map<
       string,
       { slug: string; name: string; total: number; sightings: Map<string, number> }
     >();
 
     for (const s of adSightings) {
-      let entry = appMap.get(s.appSlug);
+      let entry = itemMap.get(s.slug);
       if (!entry) {
         entry = {
-          slug: s.appSlug,
-          name: s.appName,
+          slug: s.slug,
+          name: s.name,
           total: 0,
           sightings: new Map(),
         };
-        appMap.set(s.appSlug, entry);
+        itemMap.set(s.slug, entry);
       }
       entry.total += s.timesSeenInDay;
       const existing = entry.sightings.get(s.seenDate) ?? 0;
@@ -74,17 +76,17 @@ export function AdHeatmap({
     }
 
     // Sort by total activity (most active first)
-    const apps = [...appMap.values()].sort((a, b) => b.total - a.total);
+    const items = [...itemMap.values()].sort((a, b) => b.total - a.total);
 
-    // Build matrix: apps × dates → count
-    const matrix = apps.map((app) =>
-      dates.map((date) => app.sightings.get(date) ?? 0)
+    // Build matrix: items × dates → count
+    const matrix = items.map((item) =>
+      dates.map((date) => item.sightings.get(date) ?? 0)
     );
 
-    return { apps, dates, matrix };
+    return { items, dates, matrix };
   }, [adSightings]);
 
-  if (apps.length === 0) return null;
+  if (items.length === 0) return null;
 
   // Show date labels every ~5 days
   const labelEvery = Math.max(1, Math.ceil(dates.length / 6));
@@ -111,13 +113,13 @@ export function AdHeatmap({
           </div>
         </div>
 
-        {/* App rows */}
-        {apps.map((app, appIdx) => {
-          const isTracked = trackedSet.has(app.slug);
-          const isCompetitor = competitorSet.has(app.slug);
+        {/* Rows */}
+        {items.map((item, itemIdx) => {
+          const isTracked = trackedSet.has(item.slug);
+          const isCompetitor = competitorSet.has(item.slug);
           return (
             <div
-              key={app.slug}
+              key={item.slug}
               className={`flex items-center gap-0 py-[2px] ${
                 isTracked
                   ? "bg-emerald-500/5"
@@ -126,14 +128,14 @@ export function AdHeatmap({
                     : ""
               }`}
             >
-              {/* App label */}
+              {/* Label */}
               <div className="w-[180px] shrink-0 pr-2 flex items-center gap-1 min-w-0">
                 <Link
-                  href={`/apps/${app.slug}`}
+                  href={`${linkPrefix}${item.slug}`}
                   className="text-xs text-primary hover:underline truncate"
-                  title={app.name}
+                  title={item.name}
                 >
-                  {app.name}
+                  {item.name}
                 </Link>
                 {isTracked && (
                   <Badge className="text-[8px] px-1 py-0 h-3 bg-emerald-500/20 text-emerald-700 dark:text-emerald-400 border-emerald-500/50 shrink-0">
@@ -149,13 +151,13 @@ export function AdHeatmap({
 
               {/* Heatmap cells */}
               <div className="flex-1 flex gap-[2px]">
-                {matrix[appIdx].map((count, dateIdx) => (
+                {matrix[itemIdx].map((count, dateIdx) => (
                   <div
                     key={dates[dateIdx]}
                     className={`flex-1 min-w-[14px] h-[14px] rounded-[2px] ${intensityClass(count)}`}
                     title={
                       count > 0
-                        ? `${app.name} — ${formatShortDate(dates[dateIdx])} — seen ${count} time${count !== 1 ? "s" : ""}`
+                        ? `${item.name} — ${formatShortDate(dates[dateIdx])} — seen ${count} time${count !== 1 ? "s" : ""}`
                         : `${formatShortDate(dates[dateIdx])} — no ad`
                     }
                   />

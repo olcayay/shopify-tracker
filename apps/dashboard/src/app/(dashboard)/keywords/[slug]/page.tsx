@@ -266,7 +266,7 @@ export default async function KeywordDetailPage({
           </CardHeader>
           <CardContent className="space-y-6">
             <AdHeatmap
-              adSightings={adData.adSightings}
+              sightings={adData.adSightings.map((s: any) => ({ slug: s.appSlug, name: s.appName, seenDate: s.seenDate, timesSeenInDay: s.timesSeenInDay }))}
               trackedSlugs={Array.from(trackedSlugs)}
               competitorSlugs={Array.from(competitorSlugs)}
             />

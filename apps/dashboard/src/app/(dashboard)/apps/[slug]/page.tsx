@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { RankingChart } from "@/components/ranking-chart";
+import { AdHeatmap } from "@/components/ad-heatmap";
 import { ExternalLink } from "lucide-react";
 import { TrackAppButton } from "./track-button";
 import { StarAppButton } from "@/components/star-app-button";
@@ -560,7 +561,11 @@ export default async function AppDetailPage({
             <CardHeader>
               <CardTitle>Keyword Ads ({groupedAds.length} keywords)</CardTitle>
             </CardHeader>
-            <CardContent>
+            <CardContent className="space-y-6">
+              <AdHeatmap
+                sightings={rankings.keywordAds.map((ad: any) => ({ slug: ad.keywordSlug, name: ad.keyword, seenDate: ad.seenDate, timesSeenInDay: ad.timesSeenInDay }))}
+                linkPrefix="/keywords/"
+              />
               <Table>
                 <TableHeader>
                   <TableRow>
