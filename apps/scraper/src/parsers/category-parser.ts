@@ -283,13 +283,17 @@ function extractDescription(
   $: cheerio.CheerioAPI,
   $card: cheerio.Cheerio<AnyNode>
 ): string {
-  // The description is usually in a <p> tag within the card
-  const paragraphs = $card.find("p");
-  let bestDesc = "";
+  // Shopify renders the app card subtitle in a <div> with these Tailwind classes
+  const descDiv = $card.find("div.tw-text-fg-secondary.tw-text-body-xs:not(:has(*))");
+  if (descDiv.length > 0) {
+    const text = $(descDiv.first()).text().trim();
+    if (text.length > 5) return text;
+  }
 
-  paragraphs.each((_, el) => {
+  // Fallback: search <p> and <div> tags for the longest descriptive text
+  let bestDesc = "";
+  $card.find("p, div").each((_, el) => {
     const text = $(el).text().trim();
-    // Skip very short texts and known non-description texts
     if (
       text.length > 10 &&
       !text.includes("out of 5 stars") &&
@@ -297,6 +301,7 @@ function extractDescription(
       !text.includes("paid search result") &&
       !text.includes("highest standards") &&
       !text.includes("Built for Shopify") &&
+      !text.includes("Included with Shopify") &&
       text.length > bestDesc.length
     ) {
       bestDesc = text;

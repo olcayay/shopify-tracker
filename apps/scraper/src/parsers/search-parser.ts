@@ -128,17 +128,26 @@ function extractRating(text: string): { rating: number; count: number } {
 function extractDescription(
   $card: cheerio.Cheerio<AnyNode>
 ): string {
-  let bestDesc = "";
+  // Shopify renders the app card subtitle in a <div> with these Tailwind classes
+  const descDiv = $card.find("div.tw-text-fg-secondary.tw-text-body-xs:not(:has(*))");
+  if (descDiv.length > 0) {
+    const text = descDiv.first().text().trim();
+    if (text.length > 5) return text;
+  }
 
-  $card.find("p").each((_, el) => {
-    const text = cheerio.load(el)("p").text().trim();
+  // Fallback: search <p> and <div> tags for the longest descriptive text
+  let bestDesc = "";
+  $card.find("p, div").each((_, el) => {
+    const text = cheerio.load(el)(el.tagName).text().trim();
     if (
       text.length > 10 &&
       text.length > bestDesc.length &&
       !text.includes("out of 5 stars") &&
       !text.includes("total reviews") &&
       !text.includes("paid search") &&
-      !text.includes("highest standards")
+      !text.includes("highest standards") &&
+      !text.includes("Built for Shopify") &&
+      !text.includes("Included with Shopify")
     ) {
       bestDesc = text;
     }
