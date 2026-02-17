@@ -18,6 +18,7 @@ export const accountRoleEnum = pgEnum("account_role", [
 export const accounts = pgTable("accounts", {
   id: uuid("id").primaryKey().defaultRandom(),
   name: varchar("name", { length: 255 }).notNull(),
+  company: varchar("company", { length: 255 }),
   maxTrackedApps: integer("max_tracked_apps").notNull().default(10),
   maxTrackedKeywords: integer("max_tracked_keywords").notNull().default(10),
   maxCompetitorApps: integer("max_competitor_apps").notNull().default(5),

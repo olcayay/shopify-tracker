@@ -25,6 +25,7 @@ export interface User {
 export interface Account {
   id: string;
   name: string;
+  company?: string | null;
   isSuspended: boolean;
   limits: {
     maxTrackedApps: number;
@@ -51,7 +52,8 @@ interface AuthState {
     email: string,
     password: string,
     name: string,
-    accountName: string
+    accountName: string,
+    company?: string
   ) => Promise<void>;
   logout: () => Promise<void>;
   refreshUser: () => Promise<void>;
@@ -155,12 +157,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     email: string,
     password: string,
     name: string,
-    accountName: string
+    accountName: string,
+    company?: string
   ) => {
     const res = await fetch(`${API_BASE}/api/auth/register`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email, password, name, accountName }),
+      body: JSON.stringify({ email, password, name, accountName, company: company || undefined }),
     });
 
     if (!res.ok) {

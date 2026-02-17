@@ -99,7 +99,7 @@ export default function SettingsPage() {
         <CardHeader>
           <CardTitle>Account</CardTitle>
           <CardDescription>
-            {account?.name} &middot; {user?.role}
+            {account?.name}{account?.company ? ` · ${account.company}` : ""} · {user?.role}
           </CardDescription>
         </CardHeader>
         <CardContent>

@@ -39,11 +39,12 @@ export const authRoutes: FastifyPluginAsync = async (app) => {
 
   // POST /api/auth/register — create account + owner user
   app.post("/register", async (request, reply) => {
-    const { email, password, name, accountName } = request.body as {
+    const { email, password, name, accountName, company } = request.body as {
       email?: string;
       password?: string;
       name?: string;
       accountName?: string;
+      company?: string;
     };
 
     if (!email || !password || !name || !accountName) {
@@ -73,7 +74,7 @@ export const authRoutes: FastifyPluginAsync = async (app) => {
     // Create account
     const [account] = await db
       .insert(accounts)
-      .values({ name: accountName })
+      .values({ name: accountName, company: company || null })
       .returning();
 
     // Create owner user
@@ -348,6 +349,7 @@ export const authRoutes: FastifyPluginAsync = async (app) => {
       account: {
         id: account.id,
         name: account.name,
+        company: account.company,
         isSuspended: account.isSuspended,
         limits: {
           maxTrackedApps: account.maxTrackedApps,

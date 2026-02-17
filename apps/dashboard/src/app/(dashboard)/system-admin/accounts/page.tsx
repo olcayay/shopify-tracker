@@ -109,7 +109,11 @@ export default function AccountsListPage() {
 
     if (search.trim()) {
       const q = search.toLowerCase();
-      result = result.filter((a) => a.name.toLowerCase().includes(q));
+      result = result.filter(
+        (a) =>
+          a.name.toLowerCase().includes(q) ||
+          (a.company || "").toLowerCase().includes(q)
+      );
     }
 
     if (statusFilter === "active") {
@@ -148,7 +152,10 @@ export default function AccountsListPage() {
 
   const statusCounts = useMemo(() => {
     const base = search.trim()
-      ? accounts.filter((a) => a.name.toLowerCase().includes(search.toLowerCase()))
+      ? accounts.filter((a) => {
+          const q = search.toLowerCase();
+          return a.name.toLowerCase().includes(q) || (a.company || "").toLowerCase().includes(q);
+        })
       : accounts;
     return {
       all: base.length,
@@ -179,7 +186,7 @@ export default function AccountsListPage() {
         <div className="relative w-full sm:w-64">
           <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
           <Input
-            placeholder="Search accounts..."
+            placeholder="Search accounts or company..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="pl-9 h-9"
@@ -220,6 +227,7 @@ export default function AccountsListPage() {
                 >
                   Account <SortIcon col="name" />
                 </TableHead>
+                <TableHead>Company</TableHead>
                 <TableHead
                   className="cursor-pointer select-none"
                   onClick={() => toggleSort("members")}
@@ -266,6 +274,9 @@ export default function AccountsListPage() {
                     >
                       {acc.name}
                     </Link>
+                  </TableCell>
+                  <TableCell className="text-sm text-muted-foreground">
+                    {acc.company || "\u2014"}
                   </TableCell>
                   <TableCell>{acc.usage?.members ?? "-"}</TableCell>
                   <TableCell>
@@ -325,7 +336,7 @@ export default function AccountsListPage() {
               {filtered.length === 0 && (
                 <TableRow>
                   <TableCell
-                    colSpan={10}
+                    colSpan={11}
                     className="text-center text-muted-foreground"
                   >
                     No accounts found

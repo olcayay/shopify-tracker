@@ -19,6 +19,7 @@ export default function RegisterPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [accountName, setAccountName] = useState("");
+  const [company, setCompany] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
@@ -27,7 +28,7 @@ export default function RegisterPage() {
     setError("");
     setLoading(true);
     try {
-      await register(email, password, name, accountName);
+      await register(email, password, name, accountName, company || undefined);
     } catch (err: any) {
       setError(err.message);
     } finally {
@@ -99,8 +100,20 @@ export default function RegisterPage() {
               type="text"
               value={accountName}
               onChange={(e) => setAccountName(e.target.value)}
-              placeholder="My Company"
+              placeholder="My Team"
               required
+            />
+          </div>
+          <div className="flex flex-col gap-2">
+            <label htmlFor="company" className="text-sm font-medium">
+              Company <span className="text-muted-foreground font-normal">(optional)</span>
+            </label>
+            <Input
+              id="company"
+              type="text"
+              value={company}
+              onChange={(e) => setCompany(e.target.value)}
+              placeholder="Acme Inc."
             />
           </div>
           <Button type="submit" disabled={loading} className="w-full">

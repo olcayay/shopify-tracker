@@ -101,7 +101,8 @@ export default function UsersListPage() {
         (u) =>
           u.name.toLowerCase().includes(q) ||
           u.email.toLowerCase().includes(q) ||
-          (u.accountName || "").toLowerCase().includes(q)
+          (u.accountName || "").toLowerCase().includes(q) ||
+          (u.accountCompany || "").toLowerCase().includes(q)
       );
     }
 
@@ -143,7 +144,8 @@ export default function UsersListPage() {
           return (
             u.name.toLowerCase().includes(q) ||
             u.email.toLowerCase().includes(q) ||
-            (u.accountName || "").toLowerCase().includes(q)
+            (u.accountName || "").toLowerCase().includes(q) ||
+            (u.accountCompany || "").toLowerCase().includes(q)
           );
         })
       : users;
@@ -178,7 +180,7 @@ export default function UsersListPage() {
         <div className="relative w-full sm:w-64">
           <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
           <Input
-            placeholder="Search name, email, account..."
+            placeholder="Search name, email, account, company..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="pl-9 h-9"
@@ -270,6 +272,9 @@ export default function UsersListPage() {
                     >
                       {u.accountName || u.accountId}
                     </Link>
+                    {u.accountCompany && (
+                      <p className="text-xs text-muted-foreground">{u.accountCompany}</p>
+                    )}
                   </TableCell>
                   <TableCell>
                     <Badge variant="outline">{u.role}</Badge>

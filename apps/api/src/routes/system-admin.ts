@@ -200,6 +200,7 @@ export const systemAdminRoutes: FastifyPluginAsync = async (app) => {
       const { id } = request.params;
       const body = request.body as {
         name?: string;
+        company?: string;
         maxTrackedApps?: number;
         maxTrackedKeywords?: number;
         maxCompetitorApps?: number;
@@ -219,6 +220,7 @@ export const systemAdminRoutes: FastifyPluginAsync = async (app) => {
 
       const updates: Record<string, any> = { updatedAt: new Date() };
       if (body.name !== undefined) updates.name = body.name;
+      if (body.company !== undefined) updates.company = body.company;
       if (body.maxTrackedApps !== undefined)
         updates.maxTrackedApps = body.maxTrackedApps;
       if (body.maxTrackedKeywords !== undefined)
@@ -337,6 +339,7 @@ export const systemAdminRoutes: FastifyPluginAsync = async (app) => {
         lastDigestSentAt: users.lastDigestSentAt,
         accountId: users.accountId,
         accountName: accounts.name,
+        accountCompany: accounts.company,
         createdAt: users.createdAt,
         lastSeen: sql<string | null>`(
           SELECT max(created_at) FROM refresh_tokens
@@ -362,6 +365,7 @@ export const systemAdminRoutes: FastifyPluginAsync = async (app) => {
         isSystemAdmin: users.isSystemAdmin,
         accountId: users.accountId,
         accountName: accounts.name,
+        accountCompany: accounts.company,
         createdAt: users.createdAt,
       })
       .from(users)
