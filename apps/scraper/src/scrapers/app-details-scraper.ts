@@ -97,10 +97,10 @@ export class AppDetailsScraper {
       // Upsert app master record
       await this.db
         .insert(apps)
-        .values({ slug, name: details.app_name, isTracked: true })
+        .values({ slug, name: details.app_name, isTracked: true, launchedDate: details.launched_date })
         .onConflictDoUpdate({
           target: apps.slug,
-          set: { name: details.app_name, updatedAt: new Date() },
+          set: { name: details.app_name, launchedDate: details.launched_date, updatedAt: new Date() },
         });
 
       // Insert snapshot

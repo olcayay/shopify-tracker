@@ -37,6 +37,7 @@ export function parseAppPage(html: string, slug: string): AppDetails {
   const worksWith = safeParse("worksWith", () => parseWorksWith($), []);
   const categories = safeParse("categories", () => parseCategories($), []);
   const pricingTiers = safeParse("pricingTiers", () => parsePricingTiers($), []);
+  const launchedDate = safeParse("launchedDate", () => parseLaunchedDate($), null);
 
   return {
     app_slug: slug,
@@ -47,6 +48,7 @@ export function parseAppPage(html: string, slug: string): AppDetails {
     average_rating: jsonLd?.ratingValue ?? null,
     rating_count: jsonLd?.ratingCount ?? null,
     developer,
+    launched_date: launchedDate,
     demo_store_url: demoStoreUrl,
     languages,
     works_with: worksWith,
@@ -302,6 +304,27 @@ function parseCategories($: cheerio.CheerioAPI): AppCategory[] {
   }
 
   return categories;
+}
+
+function parseLaunchedDate($: cheerio.CheerioAPI): Date | null {
+  let launched: Date | null = null;
+  $("p").each((_, el) => {
+    const text = $(el).text().trim();
+    if (text === "Launched") {
+      const $next = $(el).next("p");
+      if ($next.length) {
+        // Get only direct text content (first text node), not child elements like Changelog links
+        const raw = $next.contents().first().text().trim().replace(/[·•].*$/, "").trim();
+        if (raw) {
+          const parsed = new Date(raw);
+          if (!isNaN(parsed.getTime())) {
+            launched = parsed;
+          }
+        }
+      }
+    }
+  });
+  return launched;
 }
 
 function parsePricingTiers($: cheerio.CheerioAPI): PricingTier[] {

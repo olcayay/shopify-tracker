@@ -1,0 +1,1 @@
+ALTER TABLE "apps" ALTER COLUMN "launched_date" SET DATA TYPE timestamp;

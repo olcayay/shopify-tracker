@@ -1,0 +1,1 @@
+ALTER TABLE "apps" ADD COLUMN "launched_date" varchar(50);

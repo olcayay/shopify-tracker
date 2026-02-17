@@ -79,7 +79,7 @@ export default async function AppDetailPage({
 
       {/* Summary cards */}
       {snapshot && (
-        <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+        <div className="grid grid-cols-2 md:grid-cols-6 gap-4">
           <Card>
             <CardHeader className="pb-2">
               <CardTitle className="text-sm text-muted-foreground">
@@ -131,6 +131,18 @@ export default async function AppDetailPage({
               ) : (
                 <span className="text-sm">—</span>
               )}
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm text-muted-foreground">
+                Launched
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <span className="text-sm">
+                {app.launchedDate ? formatDateOnly(app.launchedDate) : "—"}
+              </span>
             </CardContent>
           </Card>
           <Card>

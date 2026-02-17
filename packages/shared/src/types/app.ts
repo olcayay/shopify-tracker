@@ -46,6 +46,7 @@ export interface AppDetails {
   average_rating: number | null;
   rating_count: number | null;
   developer: AppDeveloper;
+  launched_date: Date | null;
   demo_store_url: string | null;
   languages: string[];
   works_with: string[];

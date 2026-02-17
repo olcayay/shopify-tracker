@@ -27,6 +27,7 @@ export const apps = pgTable(
     name: varchar("name", { length: 500 }).notNull(),
     isTracked: boolean("is_tracked").notNull().default(false),
     isBuiltForShopify: boolean("is_built_for_shopify").notNull().default(false),
+    launchedDate: timestamp("launched_date"),
     createdAt: timestamp("created_at").notNull().defaultNow(),
     updatedAt: timestamp("updated_at").notNull().defaultNow(),
   },
