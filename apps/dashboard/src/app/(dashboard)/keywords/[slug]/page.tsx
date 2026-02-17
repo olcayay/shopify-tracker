@@ -18,6 +18,7 @@ import { StarAppButton } from "@/components/star-app-button";
 import { LiveSearchTrigger } from "@/components/live-search-trigger";
 import { AdminScraperTrigger } from "@/components/admin-scraper-trigger";
 import { KeywordAppResults } from "./app-results";
+import { AdHeatmap } from "@/components/ad-heatmap";
 
 export default async function KeywordDetailPage({
   params,
@@ -263,7 +264,12 @@ export default async function KeywordDetailPage({
           <CardHeader>
             <CardTitle>Ad History ({groupedAds.length} apps)</CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className="space-y-6">
+            <AdHeatmap
+              adSightings={adData.adSightings}
+              trackedSlugs={Array.from(trackedSlugs)}
+              competitorSlugs={Array.from(competitorSlugs)}
+            />
             <Table>
               <TableHeader>
                 <TableRow>
