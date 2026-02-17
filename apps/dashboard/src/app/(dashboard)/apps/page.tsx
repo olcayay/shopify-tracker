@@ -200,7 +200,7 @@ export default function AppsPage() {
                   <TableHead>Rating</TableHead>
                   <TableHead>Reviews</TableHead>
                   <TableHead>Pricing</TableHead>
-                  <TableHead>Last Updated</TableHead>
+                  <TableHead>Launched</TableHead>
                   {canEdit && <TableHead className="w-12" />}
                 </TableRow>
               </TableHeader>
@@ -226,9 +226,9 @@ export default function AppsPage() {
                       {app.latestSnapshot?.pricing ?? "\u2014"}
                     </TableCell>
                     <TableCell className="text-sm text-muted-foreground">
-                      {app.latestSnapshot?.scrapedAt
-                        ? formatDateOnly(app.latestSnapshot.scrapedAt)
-                        : "Never"}
+                      {app.launchedDate
+                        ? formatDateOnly(app.launchedDate)
+                        : "\u2014"}
                     </TableCell>
                     {canEdit && (
                       <TableCell>

@@ -1,5 +1,5 @@
 import type { FastifyPluginAsync } from "fastify";
-import { eq, sql, and } from "drizzle-orm";
+import { eq, sql, and, desc } from "drizzle-orm";
 import crypto from "crypto";
 import { Queue } from "bullmq";
 import {
@@ -680,12 +680,31 @@ export const accountRoutes: FastifyPluginAsync = async (app) => {
         createdAt: accountCompetitorApps.createdAt,
         appName: apps.name,
         isBuiltForShopify: apps.isBuiltForShopify,
+        launchedDate: apps.launchedDate,
       })
       .from(accountCompetitorApps)
       .innerJoin(apps, eq(apps.slug, accountCompetitorApps.appSlug))
       .where(eq(accountCompetitorApps.accountId, accountId));
 
-    return rows;
+    // Attach latest snapshot summary for each competitor
+    const result = await Promise.all(
+      rows.map(async (row) => {
+        const [snapshot] = await db
+          .select({
+            averageRating: appSnapshots.averageRating,
+            ratingCount: appSnapshots.ratingCount,
+            pricing: appSnapshots.pricing,
+          })
+          .from(appSnapshots)
+          .where(eq(appSnapshots.appSlug, row.appSlug))
+          .orderBy(desc(appSnapshots.scrapedAt))
+          .limit(1);
+
+        return { ...row, latestSnapshot: snapshot || null };
+      })
+    );
+
+    return result;
   });
 
   // POST /api/account/competitors

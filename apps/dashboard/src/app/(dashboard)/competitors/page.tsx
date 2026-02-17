@@ -197,7 +197,10 @@ export default function CompetitorsPage() {
               <TableHeader>
                 <TableRow>
                   <TableHead>App</TableHead>
-                  <TableHead>Added</TableHead>
+                  <TableHead>Rating</TableHead>
+                  <TableHead>Reviews</TableHead>
+                  <TableHead>Pricing</TableHead>
+                  <TableHead>Launched</TableHead>
                   {canEdit && <TableHead className="w-12" />}
                 </TableRow>
               </TableHeader>
@@ -213,8 +216,19 @@ export default function CompetitorsPage() {
                       </Link>
                       {c.isBuiltForShopify && <span title="Built for Shopify" className="ml-1">💎</span>}
                     </TableCell>
+                    <TableCell>
+                      {c.latestSnapshot?.averageRating ?? "\u2014"}
+                    </TableCell>
+                    <TableCell>
+                      {c.latestSnapshot?.ratingCount ?? "\u2014"}
+                    </TableCell>
+                    <TableCell className="text-sm">
+                      {c.latestSnapshot?.pricing ?? "\u2014"}
+                    </TableCell>
                     <TableCell className="text-sm text-muted-foreground">
-                      {formatDateOnly(c.createdAt)}
+                      {c.launchedDate
+                        ? formatDateOnly(c.launchedDate)
+                        : "\u2014"}
                     </TableCell>
                     {canEdit && (
                       <TableCell>
@@ -238,7 +252,7 @@ export default function CompetitorsPage() {
                 {competitors.length === 0 && (
                   <TableRow>
                     <TableCell
-                      colSpan={canEdit ? 3 : 2}
+                      colSpan={canEdit ? 6 : 5}
                       className="text-center text-muted-foreground"
                     >
                       No competitor apps yet. Use the search above or star apps
