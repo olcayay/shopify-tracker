@@ -90,6 +90,7 @@ function parseSearchAppCards($: cheerio.CheerioAPI, positionOffset = 0): Keyword
     const cardText = $card.text();
     const { rating, count } = extractRating(cardText);
     const shortDescription = extractDescription($card);
+    const pricingHint = extractPricingHint($card);
 
     apps.push({
       position: isSponsored || isBuiltIn ? 0 : position,
@@ -102,6 +103,7 @@ function parseSearchAppCards($: cheerio.CheerioAPI, positionOffset = 0): Keyword
         ? `https://apps.shopify.com/built-in-features/${appSlug.replace("bif:", "")}`
         : `https://apps.shopify.com/${appSlug}`,
       logo_url: logoUrl,
+      pricing_hint: pricingHint || undefined,
       is_sponsored: isSponsored,
       is_built_in: isBuiltIn,
       is_built_for_shopify: isBuiltForShopify,
@@ -143,4 +145,30 @@ function extractDescription(
   });
 
   return bestDesc;
+}
+
+function extractPricingHint(
+  $card: cheerio.Cheerio<AnyNode>
+): string {
+  let pricing = "";
+  $card.find("span").each((_, el) => {
+    const text = cheerio.load(el)("span").first().text().trim();
+    if (
+      text.length > 2 &&
+      !text.includes("out of 5") &&
+      !text.includes("total review") &&
+      text !== "•" &&
+      !/^\([\d,]+\)$/.test(text) &&
+      !/^[\d.]+$/.test(text) &&
+      (text.includes("Free") ||
+        text.includes("$") ||
+        text.includes("/month") ||
+        text.includes("install") ||
+        text.includes("day") ||
+        text.includes("trial"))
+    ) {
+      pricing = text;
+    }
+  });
+  return pricing;
 }

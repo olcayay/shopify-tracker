@@ -160,6 +160,7 @@ export default async function CategoryDetailPage({
                       <TableHead>App</TableHead>
                       <TableHead>Rating</TableHead>
                       <TableHead>Reviews</TableHead>
+                      <TableHead>Pricing</TableHead>
                       <TableHead className="w-10" />
                     </TableRow>
                   </TableHeader>
@@ -197,6 +198,7 @@ export default async function CategoryDetailPage({
                         </TableCell>
                         <TableCell>{app.average_rating?.toFixed(1) ?? "—"}</TableCell>
                         <TableCell>{app.rating_count ?? "—"}</TableCell>
+                        <TableCell className="text-sm text-muted-foreground">{app.pricing_hint || "—"}</TableCell>
                         <TableCell>
                           {appSlug && (
                             <StarAppButton

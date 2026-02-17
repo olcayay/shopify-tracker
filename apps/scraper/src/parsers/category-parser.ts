@@ -212,6 +212,7 @@ function parseAppCards($: cheerio.CheerioAPI): FirstPageApp[] {
     const name = ($card.attr("data-app-card-name-value") || "").trim();
     const logoUrl = $card.attr("data-app-card-icon-url-value") || "";
     const appLink = $card.attr("data-app-card-app-link-value") || "";
+    const intraPosition = $card.attr("data-app-card-intra-position-value");
 
     if (!appSlug || !name) return;
 
@@ -222,7 +223,9 @@ function parseAppCards($: cheerio.CheerioAPI): FirstPageApp[] {
     const appUrl = `https://apps.shopify.com/${appSlug}`;
 
     // Determine if sponsored from the app link URL
-    const isSponsored = appLink.includes("surface_type=category_ad");
+    const isSponsored =
+      appLink.includes("surface_type=category_ad") ||
+      appLink.includes("surface_type=search_ad");
 
     // Extract rating and review count from card text
     const cardText = $card.text();
@@ -235,6 +238,12 @@ function parseAppCards($: cheerio.CheerioAPI): FirstPageApp[] {
     // Extract short description
     const shortDescription = extractDescription($, $card);
 
+    // Extract pricing hint (e.g. "Free plan available", "$9.99/month")
+    const pricingHint = extractPricingHint($, $card);
+
+    // Position from data attribute
+    const position = intraPosition ? parseInt(intraPosition, 10) : undefined;
+
     apps.push({
       name,
       short_description: shortDescription,
@@ -242,6 +251,8 @@ function parseAppCards($: cheerio.CheerioAPI): FirstPageApp[] {
       rating_count: count,
       app_url: appUrl,
       logo_url: logoUrl,
+      position: position || undefined,
+      pricing_hint: pricingHint || undefined,
       is_sponsored: isSponsored,
       is_built_for_shopify: isBuiltForShopify,
     });
@@ -293,6 +304,35 @@ function extractDescription(
   });
 
   return bestDesc;
+}
+
+function extractPricingHint(
+  $: cheerio.CheerioAPI,
+  $card: cheerio.Cheerio<AnyNode>
+): string {
+  // Pricing hint appears after the bullet "•" separator in the meta line
+  // e.g. "Free plan available", "Free", "Free to install", "$9.99/month"
+  let pricing = "";
+  $card.find("span").each((_, el) => {
+    const text = $(el).text().trim();
+    if (
+      text.length > 2 &&
+      !text.includes("out of 5") &&
+      !text.includes("total review") &&
+      text !== "•" &&
+      !/^\([\d,]+\)$/.test(text) &&
+      !/^[\d.]+$/.test(text) &&
+      (text.includes("Free") ||
+        text.includes("$") ||
+        text.includes("/month") ||
+        text.includes("install") ||
+        text.includes("day") ||
+        text.includes("trial"))
+    ) {
+      pricing = text;
+    }
+  });
+  return pricing;
 }
 
 // --- Metrics computation ---

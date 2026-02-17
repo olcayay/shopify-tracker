@@ -6,6 +6,8 @@ export interface FirstPageApp {
   rating_count: number;
   app_url: string;
   logo_url: string;
+  position?: number;
+  pricing_hint?: string;
   is_sponsored?: boolean;
   is_built_for_shopify?: boolean;
 }

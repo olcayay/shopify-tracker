@@ -8,6 +8,7 @@ export interface KeywordSearchApp {
   rating_count: number;
   app_url: string;
   logo_url: string;
+  pricing_hint?: string;
   is_sponsored?: boolean;
   is_built_in?: boolean;
   is_built_for_shopify?: boolean;
