@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { formatDateOnly } from "@/lib/format-date";
-import { getApp, getAppReviews, getAppRankings, getAppChanges } from "@/lib/api";
+import { getApp, getAppReviews, getAppRankings, getAppChanges, getAppHistory } from "@/lib/api";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -14,6 +14,7 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { RankingChart } from "@/components/ranking-chart";
 import { AdHeatmap } from "@/components/ad-heatmap";
+import { RatingReviewChart } from "@/components/rating-review-chart";
 import { ExternalLink } from "lucide-react";
 import { TrackAppButton } from "./track-button";
 import { StarAppButton } from "@/components/star-app-button";
@@ -30,12 +31,14 @@ export default async function AppDetailPage({
   let reviewData: any;
   let rankings: any;
   let changes: any[] = [];
+  let history: any = { snapshots: [] };
   try {
-    [app, reviewData, rankings, changes] = await Promise.all([
+    [app, reviewData, rankings, changes, history] = await Promise.all([
       getApp(slug),
       getAppReviews(slug, 10),
       getAppRankings(slug),
       getAppChanges(slug, 50).catch(() => []),
+      getAppHistory(slug, 90).catch(() => ({ snapshots: [] })),
     ]);
   } catch {
     return <p className="text-muted-foreground">App not found.</p>;
@@ -246,6 +249,9 @@ export default async function AppDetailPage({
 
         {/* Reviews Tab */}
         <TabsContent value="reviews" className="space-y-4">
+          {history?.snapshots?.length > 1 && (
+            <RatingReviewChart snapshots={history.snapshots} />
+          )}
           {reviewData?.distribution?.length > 0 && (
             <Card>
               <CardHeader>
