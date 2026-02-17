@@ -32,7 +32,12 @@ async function processJob(job: Job<ScraperJobData>): Promise<void> {
   switch (type) {
     case "category": {
       const scraper = new CategoryScraper(db, { httpClient });
-      await scraper.crawl(triggeredBy);
+      if (job.data.slug) {
+        await scraper.scrapeSingle(job.data.slug, triggeredBy);
+        log.info("single category scrape completed", { slug: job.data.slug });
+      } else {
+        await scraper.crawl(triggeredBy);
+      }
       break;
     }
 

@@ -16,6 +16,7 @@ import {
 } from "@/components/ui/table";
 import { X, Plus, Search } from "lucide-react";
 import { ConfirmModal } from "@/components/confirm-modal";
+import { AdminScraperTrigger } from "@/components/admin-scraper-trigger";
 
 export default function AppsPage() {
   const { fetchWithAuth, user, account, refreshUser } = useAuth();
@@ -127,6 +128,10 @@ export default function AppsPage() {
           Tracked Apps ({apps.length}
           {account ? `/${account.limits.maxTrackedApps}` : ""})
         </h1>
+        <AdminScraperTrigger
+          scraperType="app_details"
+          label="Scrape All Apps"
+        />
       </div>
 
       {message && (

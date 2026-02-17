@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/table";
 import { ExternalLink } from "lucide-react";
 import { StarAppButton } from "@/components/star-app-button";
+import { AdminScraperTrigger } from "@/components/admin-scraper-trigger";
 
 export default async function CategoryDetailPage({
   params,
@@ -64,15 +65,22 @@ export default async function CategoryDetailPage({
             <p className="text-muted-foreground mt-1">{category.description}</p>
           )}
         </div>
-        <a
-          href={`https://apps.shopify.com/categories/${category.slug}`}
-          target="_blank"
-          rel="noopener noreferrer"
-          title="View on Shopify App Store"
-          className="inline-flex items-center justify-center h-9 w-9 rounded-md hover:bg-accent transition-colors shrink-0"
-        >
-          <ExternalLink className="h-5 w-5 text-muted-foreground" />
-        </a>
+        <div className="flex items-center gap-2 shrink-0">
+          <AdminScraperTrigger
+            scraperType="category"
+            slug={category.slug}
+            label="Scrape Category"
+          />
+          <a
+            href={`https://apps.shopify.com/categories/${category.slug}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            title="View on Shopify App Store"
+            className="inline-flex items-center justify-center h-9 w-9 rounded-md hover:bg-accent transition-colors"
+          >
+            <ExternalLink className="h-5 w-5 text-muted-foreground" />
+          </a>
+        </div>
       </div>
 
       {/* Children */}

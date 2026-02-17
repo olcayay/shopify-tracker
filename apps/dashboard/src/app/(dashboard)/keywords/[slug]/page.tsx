@@ -15,6 +15,7 @@ import { RankingChart } from "@/components/ranking-chart";
 import { TrackKeywordButton } from "./track-button";
 import { StarAppButton } from "@/components/star-app-button";
 import { LiveSearchTrigger } from "@/components/live-search-trigger";
+import { AdminScraperTrigger } from "@/components/admin-scraper-trigger";
 import { KeywordAppResults } from "./app-results";
 
 export default async function KeywordDetailPage({
@@ -89,6 +90,11 @@ export default async function KeywordDetailPage({
           >
             <ExternalLink className="h-5 w-5 text-muted-foreground" />
           </a>
+          <AdminScraperTrigger
+            scraperType="keyword_search"
+            keyword={keyword.keyword}
+            label="Scrape Keyword"
+          />
           <TrackKeywordButton
             keywordId={keyword.id}
             keywordText={keyword.keyword}

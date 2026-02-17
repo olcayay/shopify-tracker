@@ -24,6 +24,7 @@ import {
   Search,
 } from "lucide-react";
 import { ConfirmModal } from "@/components/confirm-modal";
+import { AdminScraperTrigger } from "@/components/admin-scraper-trigger";
 
 interface CategoryNode {
   slug: string;
@@ -202,7 +203,11 @@ export default function CategoriesPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold">Categories ({totalCount})</h1>
-        <div className="flex gap-2">
+        <div className="flex items-center gap-2">
+          <AdminScraperTrigger
+            scraperType="category"
+            label="Scrape All Categories"
+          />
           <button
             onClick={expandAll}
             className="text-sm text-muted-foreground hover:text-foreground"

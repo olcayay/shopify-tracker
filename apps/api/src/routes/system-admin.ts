@@ -694,7 +694,11 @@ export const systemAdminRoutes: FastifyPluginAsync = async (app) => {
 
   // POST /api/system-admin/scraper/trigger
   app.post("/scraper/trigger", async (request, reply) => {
-    const { type } = request.body as { type?: string };
+    const { type, slug, keyword } = request.body as {
+      type?: string;
+      slug?: string;
+      keyword?: string;
+    };
     const validTypes = [
       "category",
       "app_details",
@@ -712,10 +716,13 @@ export const systemAdminRoutes: FastifyPluginAsync = async (app) => {
 
     try {
       const queue = getScraperQueue();
-      const job = await queue.add(`scrape:${type}`, {
+      const jobData: Record<string, string> = {
         type,
         triggeredBy: userEmail,
-      });
+      };
+      if (slug) jobData.slug = slug;
+      if (keyword) jobData.keyword = keyword;
+      const job = await queue.add(`scrape:${type}`, jobData);
 
       app.log.info(`Scraper triggered: ${type}, jobId=${job.id}, by=${userEmail}`);
 

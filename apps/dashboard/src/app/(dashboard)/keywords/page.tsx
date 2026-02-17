@@ -19,6 +19,7 @@ import { Badge } from "@/components/ui/badge";
 import { ConfirmModal } from "@/components/confirm-modal";
 import { KeywordSearchModal } from "@/components/keyword-search-modal";
 import { LiveSearchTrigger } from "@/components/live-search-trigger";
+import { AdminScraperTrigger } from "@/components/admin-scraper-trigger";
 
 export default function KeywordsPage() {
   const { fetchWithAuth, user, account, refreshUser } = useAuth();
@@ -131,7 +132,13 @@ export default function KeywordsPage() {
           Tracked Keywords ({keywords.length}
           {account ? `/${account.limits.maxTrackedKeywords}` : ""})
         </h1>
-        <KeywordSearchModal />
+        <div className="flex items-center gap-2">
+          <AdminScraperTrigger
+            scraperType="keyword_search"
+            label="Scrape All Keywords"
+          />
+          <KeywordSearchModal />
+        </div>
       </div>
 
       {message && (

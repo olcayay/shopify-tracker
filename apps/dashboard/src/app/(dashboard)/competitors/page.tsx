@@ -16,6 +16,7 @@ import {
 } from "@/components/ui/table";
 import { X, Plus, Search } from "lucide-react";
 import { ConfirmModal } from "@/components/confirm-modal";
+import { AdminScraperTrigger } from "@/components/admin-scraper-trigger";
 
 export default function CompetitorsPage() {
   const { fetchWithAuth, user, account, refreshUser } = useAuth();
@@ -122,6 +123,10 @@ export default function CompetitorsPage() {
           Competitor Apps ({competitors.length}
           {account ? `/${account.limits.maxCompetitorApps}` : ""})
         </h1>
+        <AdminScraperTrigger
+          scraperType="app_details"
+          label="Scrape All Apps"
+        />
       </div>
 
       {message && (

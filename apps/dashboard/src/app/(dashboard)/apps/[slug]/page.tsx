@@ -15,6 +15,7 @@ import { RankingChart } from "@/components/ranking-chart";
 import { ExternalLink } from "lucide-react";
 import { TrackAppButton } from "./track-button";
 import { StarAppButton } from "@/components/star-app-button";
+import { AdminScraperTrigger } from "@/components/admin-scraper-trigger";
 
 export default async function AppDetailPage({
   params,
@@ -58,6 +59,11 @@ export default async function AppDetailPage({
           >
             <ExternalLink className="h-5 w-5 text-muted-foreground" />
           </a>
+          <AdminScraperTrigger
+            scraperType="app_details"
+            slug={app.slug}
+            label="Scrape App"
+          />
           <StarAppButton
             appSlug={app.slug}
             initialStarred={app.isCompetitor}

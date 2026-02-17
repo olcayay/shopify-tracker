@@ -32,6 +32,7 @@ export class CategoryScraper {
   private httpClient: HttpClient;
   private maxDepth: number;
   private visited = new Set<string>();
+  private singleMode = false;
 
   constructor(db: Database, options: CategoryScraperOptions = {}) {
     this.db = db;
@@ -110,6 +111,59 @@ export class CategoryScraper {
     }
 
     return tree;
+  }
+
+  /**
+   * Scrape a single category (no recursion into subcategories).
+   */
+  async scrapeSingle(slug: string, triggeredBy?: string): Promise<void> {
+    log.info("scraping single category", { slug });
+
+    // Look up existing category info
+    const [existing] = await this.db
+      .select({ parentSlug: categories.parentSlug, categoryLevel: categories.categoryLevel })
+      .from(categories)
+      .where(eq(categories.slug, slug))
+      .limit(1);
+
+    const [run] = await this.db
+      .insert(scrapeRuns)
+      .values({
+        scraperType: "category",
+        status: "running",
+        startedAt: new Date(),
+        triggeredBy,
+      })
+      .returning();
+
+    const startTime = Date.now();
+    this.singleMode = true;
+    try {
+      const depth = existing?.categoryLevel ?? 1;
+      await this.crawlCategory(slug, existing?.parentSlug ?? null, depth, run.id);
+      await this.db
+        .update(scrapeRuns)
+        .set({
+          status: "completed",
+          completedAt: new Date(),
+          metadata: { items_scraped: 1, items_failed: 0, duration_ms: Date.now() - startTime },
+        })
+        .where(eq(scrapeRuns.id, run.id));
+      log.info("single category scrape completed", { slug, durationMs: Date.now() - startTime });
+    } catch (error) {
+      await this.db
+        .update(scrapeRuns)
+        .set({
+          status: "failed",
+          completedAt: new Date(),
+          error: String(error),
+          metadata: { duration_ms: Date.now() - startTime },
+        })
+        .where(eq(scrapeRuns.id, run.id));
+      throw error;
+    } finally {
+      this.singleMode = false;
+    }
   }
 
   private async crawlCategory(
@@ -193,9 +247,9 @@ export class CategoryScraper {
       );
     }
 
-    // Recurse into subcategories
+    // Recurse into subcategories (skip in single mode)
     const children: CategoryNode[] = [];
-    if (depth < this.maxDepth) {
+    if (!this.singleMode && depth < this.maxDepth) {
       for (const sub of pageData.subcategory_links) {
         const childNode = await this.crawlCategory(
           sub.slug,
