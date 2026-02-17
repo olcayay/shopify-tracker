@@ -43,6 +43,7 @@ export const users = pgTable(
     isSystemAdmin: boolean("is_system_admin").notNull().default(false),
     emailDigestEnabled: boolean("email_digest_enabled").notNull().default(true),
     timezone: varchar("timezone", { length: 100 }).notNull().default("Europe/Istanbul"),
+    lastSeenAt: timestamp("last_seen_at"),
     lastDigestSentAt: timestamp("last_digest_sent_at"),
     createdAt: timestamp("created_at").notNull().defaultNow(),
     updatedAt: timestamp("updated_at").notNull().defaultNow(),

@@ -297,12 +297,23 @@ export const authRoutes: FastifyPluginAsync = async (app) => {
         emailDigestEnabled: users.emailDigestEnabled,
         timezone: users.timezone,
         accountId: users.accountId,
+        lastSeenAt: users.lastSeenAt,
       })
       .from(users)
       .where(eq(users.id, request.user.userId));
 
     if (!user) {
       return reply.code(404).send({ error: "User not found" });
+    }
+
+    // Update lastSeenAt (throttled: only if >5 min since last update)
+    const fiveMinAgo = new Date(Date.now() - 5 * 60_000);
+    if (!user.lastSeenAt || new Date(user.lastSeenAt) < fiveMinAgo) {
+      db.update(users)
+        .set({ lastSeenAt: new Date() })
+        .where(eq(users.id, user.id))
+        .then(() => {})
+        .catch(() => {});
     }
 
     const [account] = await db

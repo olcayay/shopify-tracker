@@ -84,8 +84,7 @@ export const systemAdminRoutes: FastifyPluginAsync = async (app) => {
         const [lastSeenResult] = await db
           .select({
             lastSeen: sql<string | null>`(
-              SELECT max(rt.created_at) FROM refresh_tokens rt
-              WHERE rt.user_id IN (SELECT id FROM users WHERE account_id = ${account.id})
+              SELECT max(last_seen_at) FROM users WHERE account_id = ${account.id}
             )`,
           })
           .from(accounts)
@@ -341,10 +340,7 @@ export const systemAdminRoutes: FastifyPluginAsync = async (app) => {
         accountName: accounts.name,
         accountCompany: accounts.company,
         createdAt: users.createdAt,
-        lastSeen: sql<string | null>`(
-          SELECT max(created_at) FROM refresh_tokens
-          WHERE user_id = "users"."id"
-        )`,
+        lastSeen: users.lastSeenAt,
       })
       .from(users)
       .innerJoin(accounts, eq(accounts.id, users.accountId));
@@ -366,6 +362,7 @@ export const systemAdminRoutes: FastifyPluginAsync = async (app) => {
         accountId: users.accountId,
         accountName: accounts.name,
         accountCompany: accounts.company,
+        lastSeen: users.lastSeenAt,
         createdAt: users.createdAt,
       })
       .from(users)
