@@ -516,21 +516,20 @@ export const systemAdminRoutes: FastifyPluginAsync = async (app) => {
       .limit(parseInt(limit, 10))
       .offset(parseInt(offset, 10));
 
-    // Enrich runs with scraped asset names
+    // Enrich runs with scraped asset names and links
     const enriched = await Promise.all(
       rows.map(async (run) => {
         const itemsScraped =
           (run.metadata as any)?.items_scraped ?? 0;
 
         // Only fetch asset names for small runs (≤ 10 items)
-        let assets: string[] = [];
+        let assets: { name: string; href: string }[] = [];
         if (itemsScraped > 0 && itemsScraped <= 10) {
           if (run.scraperType === "app_details") {
             const snapshots = await db
               .select({ appSlug: appSnapshots.appSlug })
               .from(appSnapshots)
               .where(eq(appSnapshots.scrapeRunId, run.id));
-            // Get app names
             if (snapshots.length > 0) {
               const appRows = await db
                 .select({ slug: apps.slug, name: apps.name })
@@ -542,9 +541,10 @@ export const systemAdminRoutes: FastifyPluginAsync = async (app) => {
                   )})`
                 );
               const nameMap = new Map(appRows.map((a) => [a.slug, a.name]));
-              assets = snapshots.map(
-                (s) => nameMap.get(s.appSlug) || s.appSlug
-              );
+              assets = snapshots.map((s) => ({
+                name: nameMap.get(s.appSlug) || s.appSlug,
+                href: `/apps/${s.appSlug}`,
+              }));
             }
           } else if (run.scraperType === "keyword_search") {
             const snapshots = await db
@@ -556,6 +556,7 @@ export const systemAdminRoutes: FastifyPluginAsync = async (app) => {
                 .select({
                   id: trackedKeywords.id,
                   keyword: trackedKeywords.keyword,
+                  slug: trackedKeywords.slug,
                 })
                 .from(trackedKeywords)
                 .where(
@@ -564,18 +565,29 @@ export const systemAdminRoutes: FastifyPluginAsync = async (app) => {
                     sql`,`
                   )})`
                 );
-              const nameMap = new Map(kwRows.map((k) => [k.id, k.keyword]));
-              assets = snapshots.map(
-                (s) => nameMap.get(s.keywordId) || `keyword#${s.keywordId}`
-              );
+              const infoMap = new Map(kwRows.map((k) => [k.id, k]));
+              assets = snapshots.map((s) => {
+                const kw = infoMap.get(s.keywordId);
+                return {
+                  name: kw?.keyword || `keyword#${s.keywordId}`,
+                  href: `/keywords/${kw?.slug || s.keywordId}`,
+                };
+              });
             }
           } else if (run.scraperType === "category") {
             const snapshots = await db
-              .select({ categorySlug: categorySnapshots.categorySlug })
+              .select({
+                categorySlug: categorySnapshots.categorySlug,
+                title: categories.title,
+              })
               .from(categorySnapshots)
+              .leftJoin(categories, eq(categories.slug, categorySnapshots.categorySlug))
               .where(eq(categorySnapshots.scrapeRunId, run.id))
               .limit(10);
-            assets = snapshots.map((s) => s.categorySlug);
+            assets = snapshots.map((s) => ({
+              name: s.title || s.categorySlug,
+              href: `/categories/${s.categorySlug}`,
+            }));
           }
         }
 

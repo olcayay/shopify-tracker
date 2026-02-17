@@ -74,7 +74,9 @@ export class AppDetailsScraper {
   async scrapeApp(slug: string, runId?: string, triggeredBy?: string): Promise<void> {
     log.info("scraping app", { slug });
 
-    // Create run if not provided
+    // Create run if not provided (standalone mode)
+    const isStandalone = !runId;
+    const startTime = Date.now();
     if (!runId) {
       const [run] = await this.db
         .insert(scrapeRuns)
@@ -88,34 +90,65 @@ export class AppDetailsScraper {
       runId = run.id;
     }
 
-    const html = await this.httpClient.fetchPage(urls.app(slug));
-    const details = parseAppPage(html, slug);
+    try {
+      const html = await this.httpClient.fetchPage(urls.app(slug));
+      const details = parseAppPage(html, slug);
 
-    // Upsert app master record
-    await this.db
-      .insert(apps)
-      .values({ slug, name: details.app_name, isTracked: true })
-      .onConflictDoUpdate({
-        target: apps.slug,
-        set: { name: details.app_name, updatedAt: new Date() },
+      // Upsert app master record
+      await this.db
+        .insert(apps)
+        .values({ slug, name: details.app_name, isTracked: true })
+        .onConflictDoUpdate({
+          target: apps.slug,
+          set: { name: details.app_name, updatedAt: new Date() },
+        });
+
+      // Insert snapshot
+      await this.db.insert(appSnapshots).values({
+        appSlug: slug,
+        scrapeRunId: runId,
+        scrapedAt: new Date(),
+        title: details.title,
+        description: details.description,
+        pricing: details.pricing,
+        averageRating: details.average_rating?.toString() ?? null,
+        ratingCount: details.rating_count,
+        developer: details.developer,
+        demoStoreUrl: details.demo_store_url,
+        languages: details.languages,
+        worksWith: details.works_with,
+        categories: details.categories,
+        pricingTiers: details.pricing_tiers,
       });
 
-    // Insert snapshot
-    await this.db.insert(appSnapshots).values({
-      appSlug: slug,
-      scrapeRunId: runId,
-      scrapedAt: new Date(),
-      title: details.title,
-      description: details.description,
-      pricing: details.pricing,
-      averageRating: details.average_rating?.toString() ?? null,
-      ratingCount: details.rating_count,
-      developer: details.developer,
-      demoStoreUrl: details.demo_store_url,
-      languages: details.languages,
-      worksWith: details.works_with,
-      categories: details.categories,
-      pricingTiers: details.pricing_tiers,
-    });
+      // Complete the run in standalone mode
+      if (isStandalone) {
+        await this.db
+          .update(scrapeRuns)
+          .set({
+            status: "completed",
+            completedAt: new Date(),
+            metadata: {
+              items_scraped: 1,
+              items_failed: 0,
+              duration_ms: Date.now() - startTime,
+            },
+          })
+          .where(eq(scrapeRuns.id, runId));
+      }
+    } catch (error) {
+      if (isStandalone) {
+        await this.db
+          .update(scrapeRuns)
+          .set({
+            status: "failed",
+            completedAt: new Date(),
+            error: String(error),
+            metadata: { duration_ms: Date.now() - startTime },
+          })
+          .where(eq(scrapeRuns.id, runId));
+      }
+      throw error;
+    }
   }
 }

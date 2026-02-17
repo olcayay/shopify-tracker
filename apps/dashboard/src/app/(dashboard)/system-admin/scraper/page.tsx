@@ -557,8 +557,25 @@ export default function ScraperPage() {
                     <TableCell className="text-sm text-muted-foreground">
                       {run.assets && run.assets.length > 0
                         ? run.assets.length <= 3
-                          ? run.assets.join(", ")
-                          : `${run.assets.slice(0, 2).join(", ")} +${run.assets.length - 2}`
+                          ? run.assets.map((a: any, i: number) => (
+                              <span key={i}>
+                                {i > 0 && ", "}
+                                <Link href={a.href} className="text-primary hover:underline" onClick={(e) => e.stopPropagation()}>
+                                  {a.name}
+                                </Link>
+                              </span>
+                            ))
+                          : <>
+                              {run.assets.slice(0, 2).map((a: any, i: number) => (
+                                <span key={i}>
+                                  {i > 0 && ", "}
+                                  <Link href={a.href} className="text-primary hover:underline" onClick={(e) => e.stopPropagation()}>
+                                    {a.name}
+                                  </Link>
+                                </span>
+                              ))}
+                              {` +${run.assets.length - 2}`}
+                            </>
                         : "\u2014"}
                     </TableCell>
                   </TableRow>
@@ -582,14 +599,15 @@ export default function ScraperPage() {
                             </div>
                             <div className="flex flex-wrap gap-1">
                               {run.assets.map(
-                                (asset: string, i: number) => (
-                                  <Badge
-                                    key={i}
-                                    variant="outline"
-                                    className="text-xs"
-                                  >
-                                    {asset}
-                                  </Badge>
+                                (asset: any, i: number) => (
+                                  <Link key={i} href={asset.href}>
+                                    <Badge
+                                      variant="outline"
+                                      className="text-xs cursor-pointer hover:bg-primary hover:text-primary-foreground transition-colors"
+                                    >
+                                      {asset.name}
+                                    </Badge>
+                                  </Link>
                                 )
                               )}
                             </div>
