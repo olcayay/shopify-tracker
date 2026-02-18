@@ -4,6 +4,15 @@ export const QUEUE_NAME = "scraper-jobs";
 
 export type ScraperJobType = "category" | "app_details" | "keyword_search" | "reviews" | "daily_digest";
 
+export interface ScraperJobOptions {
+  /** For category/keyword: how many pages to scrape */
+  pages?: "first" | "all" | number;
+  /** After scraping list, also scrape app details for discovered apps */
+  scrapeAppDetails?: boolean;
+  /** Also scrape reviews (for app_details directly, or cascaded through scrapeAppDetails) */
+  scrapeReviews?: boolean;
+}
+
 export interface ScraperJobData {
   type: ScraperJobType;
   /** Optional: specific slug for single-app or single-keyword scrapes */
@@ -15,6 +24,8 @@ export interface ScraperJobData {
   accountId?: string;
   /** Triggered by: "api" | "scheduler" | "cli" */
   triggeredBy: string;
+  /** Optional: scraper configuration options */
+  options?: ScraperJobOptions;
 }
 
 export function getRedisConnection(): ConnectionOptions {

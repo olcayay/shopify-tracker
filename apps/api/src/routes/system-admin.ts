@@ -750,10 +750,11 @@ export const systemAdminRoutes: FastifyPluginAsync = async (app) => {
 
   // POST /api/system-admin/scraper/trigger
   app.post("/scraper/trigger", async (request, reply) => {
-    const { type, slug, keyword } = request.body as {
+    const { type, slug, keyword, options } = request.body as {
       type?: string;
       slug?: string;
       keyword?: string;
+      options?: { pages?: "first" | "all" | number; scrapeAppDetails?: boolean; scrapeReviews?: boolean };
     };
     const validTypes = [
       "category",
@@ -772,12 +773,13 @@ export const systemAdminRoutes: FastifyPluginAsync = async (app) => {
 
     try {
       const queue = getScraperQueue();
-      const jobData: Record<string, string> = {
+      const jobData: Record<string, any> = {
         type,
         triggeredBy: userEmail,
       };
       if (slug) jobData.slug = slug;
       if (keyword) jobData.keyword = keyword;
+      if (options) jobData.options = options;
       const job = await queue.add(`scrape:${type}`, jobData);
 
       app.log.info(`Scraper triggered: ${type}, jobId=${job.id}, by=${userEmail}`);

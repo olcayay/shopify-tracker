@@ -18,7 +18,12 @@ import { HttpClient } from "../http-client.js";
 import {
   parseCategoryPage,
   shouldUseAllPage,
+  hasNextPage,
 } from "../parsers/category-parser.js";
+
+export interface ScrapePageOptions {
+  pages?: "first" | "all" | number;
+}
 
 const log = createLogger("category-scraper");
 
@@ -44,7 +49,7 @@ export class CategoryScraper {
    * Crawl the full category tree starting from the 6 seed categories.
    * Returns the complete tree as an array of root nodes.
    */
-  async crawl(triggeredBy?: string): Promise<CategoryNode[]> {
+  async crawl(triggeredBy?: string, pageOptions?: ScrapePageOptions): Promise<{ tree: CategoryNode[]; discoveredSlugs: string[] }> {
     log.info("starting full category tree crawl");
 
     // Create scrape run
@@ -60,17 +65,19 @@ export class CategoryScraper {
 
     const startTime = Date.now();
     const tree: CategoryNode[] = [];
+    const allDiscoveredSlugs = new Set<string>();
     let itemsScraped = 0;
     let itemsFailed = 0;
 
     try {
       for (const slug of SEED_CATEGORY_SLUGS) {
         try {
-          const node = await this.crawlCategory(slug, null, 0, run.id);
+          const { node, appSlugs } = await this.crawlCategory(slug, null, 0, run.id, pageOptions);
           if (node) {
             tree.push(node);
             itemsScraped += this.countNodes(node);
           }
+          for (const s of appSlugs) allDiscoveredSlugs.add(s);
         } catch (error) {
           log.error("failed to crawl root category", { slug, error: String(error) });
           itemsFailed++;
@@ -91,7 +98,7 @@ export class CategoryScraper {
         })
         .where(eq(scrapeRuns.id, run.id));
 
-      log.info("crawl completed", { itemsScraped, itemsFailed, durationMs: Date.now() - startTime });
+      log.info("crawl completed", { itemsScraped, itemsFailed, discoveredApps: allDiscoveredSlugs.size, durationMs: Date.now() - startTime });
     } catch (error) {
       await this.db
         .update(scrapeRuns)
@@ -110,13 +117,13 @@ export class CategoryScraper {
       throw error;
     }
 
-    return tree;
+    return { tree, discoveredSlugs: [...allDiscoveredSlugs] };
   }
 
   /**
    * Scrape a single category (no recursion into subcategories).
    */
-  async scrapeSingle(slug: string, triggeredBy?: string): Promise<void> {
+  async scrapeSingle(slug: string, triggeredBy?: string, pageOptions?: ScrapePageOptions): Promise<string[]> {
     log.info("scraping single category", { slug });
 
     // Look up existing category info
@@ -138,9 +145,11 @@ export class CategoryScraper {
 
     const startTime = Date.now();
     this.singleMode = true;
+    let discoveredSlugs: string[] = [];
     try {
       const depth = existing?.categoryLevel ?? 1;
-      await this.crawlCategory(slug, existing?.parentSlug ?? null, depth, run.id);
+      const result = await this.crawlCategory(slug, existing?.parentSlug ?? null, depth, run.id, pageOptions);
+      discoveredSlugs = result.appSlugs;
       await this.db
         .update(scrapeRuns)
         .set({
@@ -149,7 +158,7 @@ export class CategoryScraper {
           metadata: { items_scraped: 1, items_failed: 0, duration_ms: Date.now() - startTime },
         })
         .where(eq(scrapeRuns.id, run.id));
-      log.info("single category scrape completed", { slug, durationMs: Date.now() - startTime });
+      log.info("single category scrape completed", { slug, discoveredApps: discoveredSlugs.length, durationMs: Date.now() - startTime });
     } catch (error) {
       await this.db
         .update(scrapeRuns)
@@ -164,20 +173,23 @@ export class CategoryScraper {
     } finally {
       this.singleMode = false;
     }
+    return discoveredSlugs;
   }
 
   private async crawlCategory(
     slug: string,
     parentSlug: string | null,
     depth: number,
-    runId: string
-  ): Promise<CategoryNode | null> {
-    if (this.visited.has(slug)) return null;
+    runId: string,
+    pageOptions?: ScrapePageOptions
+  ): Promise<{ node: CategoryNode | null; appSlugs: string[] }> {
+    if (this.visited.has(slug)) return { node: null, appSlugs: [] };
     this.visited.add(slug);
 
     log.info("crawling category", { slug, depth });
 
     const categoryUrl = urls.category(slug);
+    const discoveredSlugs: string[] = [];
 
     // For root categories (depth 0), we just extract subcategory links
     // For deeper categories, we get app listings
@@ -188,7 +200,7 @@ export class CategoryScraper {
       html = await this.httpClient.fetchPage(categoryUrl);
     } catch (error) {
       log.error("failed to fetch category page", { url: categoryUrl, error: String(error) });
-      return null;
+      return { node: null, appSlugs: [] };
     }
 
     // Check if we need to use the /all page for app listings
@@ -245,35 +257,79 @@ export class CategoryScraper {
         slug,
         runId
       );
+
+      // Collect discovered slugs from first page
+      for (const app of pageData.first_page_apps) {
+        const appSlug = app.app_url.replace("https://apps.shopify.com/", "");
+        if (appSlug) discoveredSlugs.push(appSlug);
+      }
+    }
+
+    // Multi-page support: fetch additional pages if configured
+    if (depth > 0 && pageOptions?.pages !== "first" && pageOptions?.pages !== undefined) {
+      const maxPages = pageOptions.pages === "all" ? 50
+        : typeof pageOptions.pages === "number" ? pageOptions.pages
+        : 1;
+
+      if (maxPages > 1) {
+        let currentPage = 1;
+        let currentHtml = html;
+
+        while (currentPage < maxPages && hasNextPage(currentHtml)) {
+          currentPage++;
+          const pageUrl = urls.categoryAll(slug, currentPage);
+          try {
+            currentHtml = await this.httpClient.fetchPage(pageUrl);
+            const nextPageData = parseCategoryPage(currentHtml, pageUrl);
+
+            // Record additional page app rankings
+            await this.recordAppRankings(nextPageData.first_page_apps, slug, runId);
+            for (const app of nextPageData.first_page_apps) {
+              const appSlug = app.app_url.replace("https://apps.shopify.com/", "");
+              if (appSlug) discoveredSlugs.push(appSlug);
+            }
+
+            log.info("category page scraped", { slug, page: currentPage, apps: nextPageData.first_page_apps.length });
+          } catch (error) {
+            log.warn("failed to fetch category page", { slug, page: currentPage, error: String(error) });
+            break;
+          }
+        }
+      }
     }
 
     // Recurse into subcategories (skip in single mode)
     const children: CategoryNode[] = [];
     if (!this.singleMode && depth < this.maxDepth) {
       for (const sub of pageData.subcategory_links) {
-        const childNode = await this.crawlCategory(
+        const { node: childNode, appSlugs: childSlugs } = await this.crawlCategory(
           sub.slug,
           slug,
           depth + 1,
-          runId
+          runId,
+          pageOptions
         );
         if (childNode) children.push(childNode);
+        for (const s of childSlugs) discoveredSlugs.push(s);
       }
     }
 
     return {
-      slug,
-      url: categoryUrl,
-      data_source_url: dataSourceUrl,
-      title: pageData.title,
-      breadcrumb: pageData.breadcrumb,
-      description: pageData.description,
-      app_count: depth === 0 ? null : pageData.app_count,
-      first_page_metrics: depth === 0 ? null : pageData.first_page_metrics,
-      first_page_apps: depth === 0 ? [] : pageData.first_page_apps,
-      parent_slug: parentSlug,
-      category_level: depth,
-      children,
+      node: {
+        slug,
+        url: categoryUrl,
+        data_source_url: dataSourceUrl,
+        title: pageData.title,
+        breadcrumb: pageData.breadcrumb,
+        description: pageData.description,
+        app_count: depth === 0 ? null : pageData.app_count,
+        first_page_metrics: depth === 0 ? null : pageData.first_page_metrics,
+        first_page_apps: depth === 0 ? [] : pageData.first_page_apps,
+        parent_slug: parentSlug,
+        category_level: depth,
+        children,
+      },
+      appSlugs: discoveredSlugs,
     };
   }
 

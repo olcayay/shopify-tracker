@@ -4,7 +4,7 @@ config({ path: resolve(import.meta.dirname, "../../../.env") });
 import { Worker, type Job } from "bullmq";
 import { createDb } from "@shopify-tracking/db";
 import { createLogger } from "@shopify-tracking/shared";
-import { QUEUE_NAME, getRedisConnection, type ScraperJobData } from "./queue.js";
+import { QUEUE_NAME, getRedisConnection, enqueueScraperJob, type ScraperJobData } from "./queue.js";
 import { CategoryScraper } from "./scrapers/category-scraper.js";
 import { AppDetailsScraper } from "./scrapers/app-details-scraper.js";
 import { KeywordScraper } from "./scrapers/keyword-scraper.js";
@@ -29,14 +29,33 @@ async function processJob(job: Job<ScraperJobData>): Promise<void> {
   const { type, triggeredBy } = job.data;
   log.info("processing job", { jobId: job.id, type, triggeredBy });
 
+  const opts = job.data.options;
+  const pageOptions = opts?.pages !== undefined ? { pages: opts.pages } : undefined;
+
   switch (type) {
     case "category": {
       const scraper = new CategoryScraper(db, { httpClient });
+      let discoveredSlugs: string[] = [];
       if (job.data.slug) {
-        await scraper.scrapeSingle(job.data.slug, triggeredBy);
-        log.info("single category scrape completed", { slug: job.data.slug });
+        discoveredSlugs = await scraper.scrapeSingle(job.data.slug, triggeredBy, pageOptions);
+        log.info("single category scrape completed", { slug: job.data.slug, discoveredApps: discoveredSlugs.length });
       } else {
-        await scraper.crawl(triggeredBy);
+        const result = await scraper.crawl(triggeredBy, pageOptions);
+        discoveredSlugs = result.discoveredSlugs;
+      }
+
+      // Cascade: enqueue app_details jobs for discovered apps
+      if (opts?.scrapeAppDetails && discoveredSlugs.length > 0) {
+        const uniqueSlugs = [...new Set(discoveredSlugs)];
+        for (const slug of uniqueSlugs) {
+          await enqueueScraperJob({
+            type: "app_details",
+            slug,
+            triggeredBy: `${triggeredBy}:cascade`,
+            options: opts.scrapeReviews ? { scrapeReviews: true } : undefined,
+          });
+        }
+        log.info("cascaded app_details jobs", { count: uniqueSlugs.length });
       }
       break;
     }
@@ -46,14 +65,43 @@ async function processJob(job: Job<ScraperJobData>): Promise<void> {
       if (job.data.slug) {
         await scraper.scrapeApp(job.data.slug, undefined, triggeredBy);
         log.info("single app scrape completed", { slug: job.data.slug });
+
+        // Cascade: enqueue review job
+        if (opts?.scrapeReviews) {
+          await enqueueScraperJob({
+            type: "reviews",
+            slug: job.data.slug,
+            triggeredBy: `${triggeredBy}:cascade`,
+          });
+          log.info("cascaded reviews job", { slug: job.data.slug });
+        }
       } else {
         await scraper.scrapeTracked(triggeredBy);
+
+        // Cascade: enqueue review jobs for all tracked apps
+        if (opts?.scrapeReviews) {
+          const { eq: eqOp } = await import("drizzle-orm");
+          const { apps: appsTable } = await import("@shopify-tracking/db");
+          const trackedApps = await db
+            .select({ slug: appsTable.slug })
+            .from(appsTable)
+            .where(eqOp(appsTable.isTracked, true));
+          for (const app of trackedApps) {
+            await enqueueScraperJob({
+              type: "reviews",
+              slug: app.slug,
+              triggeredBy: `${triggeredBy}:cascade`,
+            });
+          }
+          log.info("cascaded reviews jobs", { count: trackedApps.length });
+        }
       }
       break;
     }
 
     case "keyword_search": {
       const scraper = new KeywordScraper(db, httpClient);
+      let discoveredSlugs: string[] = [];
       if (job.data.keyword) {
         // Single keyword scrape — find the keyword row and scrape it
         const { eq } = await import("drizzle-orm");
@@ -73,17 +121,31 @@ async function processJob(job: Job<ScraperJobData>): Promise<void> {
               triggeredBy,
             })
             .returning();
-          await scraper.scrapeKeyword(kw.id, kw.keyword, run.id);
+          discoveredSlugs = await scraper.scrapeKeyword(kw.id, kw.keyword, run.id, pageOptions);
           await db
             .update(scrapeRuns)
             .set({ status: "completed", completedAt: new Date(), metadata: { items_scraped: 1, items_failed: 0 } })
             .where(eq(scrapeRuns.id, run.id));
-          log.info("single keyword scrape completed", { keyword: kw.keyword });
+          log.info("single keyword scrape completed", { keyword: kw.keyword, discoveredApps: discoveredSlugs.length });
         } else {
           log.warn("keyword not found for single scrape", { keyword: job.data.keyword });
         }
       } else {
-        await scraper.scrapeAll(triggeredBy);
+        discoveredSlugs = await scraper.scrapeAll(triggeredBy, pageOptions);
+      }
+
+      // Cascade: enqueue app_details jobs for discovered apps
+      if (opts?.scrapeAppDetails && discoveredSlugs.length > 0) {
+        const uniqueSlugs = [...new Set(discoveredSlugs)];
+        for (const slug of uniqueSlugs) {
+          await enqueueScraperJob({
+            type: "app_details",
+            slug,
+            triggeredBy: `${triggeredBy}:cascade`,
+            options: opts.scrapeReviews ? { scrapeReviews: true } : undefined,
+          });
+        }
+        log.info("cascaded app_details jobs", { count: uniqueSlugs.length });
       }
       break;
     }

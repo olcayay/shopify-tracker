@@ -13,8 +13,9 @@ export const urls = {
   /** Category page: /categories/store-design */
   category: (slug: string) => `${BASE_URL}/categories/${slug}`,
 
-  /** Category full app list: /categories/store-design/all */
-  categoryAll: (slug: string) => `${BASE_URL}/categories/${slug}/all`,
+  /** Category full app list: /categories/store-design/all?page=2 */
+  categoryAll: (slug: string, page?: number) =>
+    `${BASE_URL}/categories/${slug}/all${page && page > 1 ? `?page=${page}` : ""}`,
 
   /** Keyword search: /search?q=form */
   search: (keyword: string, page = 1) =>

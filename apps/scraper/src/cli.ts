@@ -41,9 +41,9 @@ async function main() {
   switch (command) {
     case "categories": {
       const scraper = new CategoryScraper(db, { httpClient });
-      const tree = await scraper.crawl();
+      const result = await scraper.crawl();
       console.log(
-        `\nCategory tree crawl complete. ${JSON.stringify(tree.map((n) => n.title))}`
+        `\nCategory tree crawl complete. ${JSON.stringify(result.tree.map((n) => n.title))}`
       );
       break;
     }

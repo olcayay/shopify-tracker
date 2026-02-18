@@ -25,7 +25,7 @@ export class KeywordScraper {
   }
 
   /** Scrape search results for all active keywords */
-  async scrapeAll(triggeredBy?: string): Promise<void> {
+  async scrapeAll(triggeredBy?: string, pageOptions?: { pages?: "first" | "all" | number }): Promise<string[]> {
     const keywords = await this.db
       .select()
       .from(trackedKeywords)
@@ -33,7 +33,7 @@ export class KeywordScraper {
 
     if (keywords.length === 0) {
       log.info("no active keywords found");
-      return;
+      return [];
     }
 
     log.info("scraping tracked keywords", { count: keywords.length });
@@ -49,12 +49,14 @@ export class KeywordScraper {
       .returning();
 
     const startTime = Date.now();
+    const allDiscoveredSlugs = new Set<string>();
     let itemsScraped = 0;
     let itemsFailed = 0;
 
     for (const kw of keywords) {
       try {
-        await this.scrapeKeyword(kw.id, kw.keyword, run.id);
+        const slugs = await this.scrapeKeyword(kw.id, kw.keyword, run.id, pageOptions);
+        for (const s of slugs) allDiscoveredSlugs.add(s);
         itemsScraped++;
       } catch (error) {
         log.error("failed to scrape keyword", { keyword: kw.keyword, error: String(error) });
@@ -75,18 +77,23 @@ export class KeywordScraper {
       })
       .where(eq(scrapeRuns.id, run.id));
 
-    log.info("scraping complete", { itemsScraped, itemsFailed, durationMs: Date.now() - startTime });
+    log.info("scraping complete", { itemsScraped, itemsFailed, discoveredApps: allDiscoveredSlugs.size, durationMs: Date.now() - startTime });
+    return [...allDiscoveredSlugs];
   }
 
-  /** Scrape search results for a single keyword (fetches up to 4 pages) */
+  /** Scrape search results for a single keyword */
   async scrapeKeyword(
     keywordId: number,
     keyword: string,
-    runId: string
-  ): Promise<void> {
+    runId: string,
+    pageOptions?: { pages?: "first" | "all" | number }
+  ): Promise<string[]> {
     log.info("scraping keyword", { keyword });
 
-    const MAX_PAGES = 4;
+    const MAX_PAGES = pageOptions?.pages === "first" ? 1
+      : pageOptions?.pages === "all" ? 20
+      : typeof pageOptions?.pages === "number" ? pageOptions.pages
+      : 4;
     const allApps: import("@shopify-tracking/shared").KeywordSearchApp[] = [];
     const seenSponsoredSlugs = new Set<string>();
     const seenOrganicSlugs = new Set<string>();
@@ -277,5 +284,8 @@ export class KeywordScraper {
           },
         });
     }
+
+    // Return unique organic app slugs
+    return [...new Set(organicApps.map((a) => a.app_slug))];
   }
 }
