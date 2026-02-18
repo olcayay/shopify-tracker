@@ -484,10 +484,18 @@ export default async function AppDetailPage({
                     <CardTitle>Categories & Features</CardTitle>
                   </CardHeader>
                   <CardContent>
-                    {snapshot.categories.map((cat: any, i: number) => (
+                    {snapshot.categories.map((cat: any, i: number) => {
+                      const catSlug = cat.url?.match(/\/categories\/([^/?]+)/)?.[1];
+                      return (
                       <div key={i} className="mb-4">
                         <div className="flex items-center gap-2">
-                          <h4 className="font-medium">{cat.title}</h4>
+                          {catSlug ? (
+                            <Link href={`/categories/${catSlug}`} className="font-medium text-primary hover:underline">
+                              {cat.title}
+                            </Link>
+                          ) : (
+                            <h4 className="font-medium">{cat.title}</h4>
+                          )}
                           {cat.type && (
                             <Badge variant="outline" className="text-xs">
                               {cat.type}
@@ -517,7 +525,8 @@ export default async function AppDetailPage({
                           </div>
                         ))}
                       </div>
-                    ))}
+                    );
+                    })}
                   </CardContent>
                 </Card>
               )}
