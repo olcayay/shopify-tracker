@@ -131,6 +131,7 @@ export const appRoutes: FastifyPluginAsync = async (app) => {
       .select({
         slug: apps.slug,
         name: apps.name,
+        iconUrl: apps.iconUrl,
         averageRating: appSnapshots.averageRating,
         ratingCount: appSnapshots.ratingCount,
         pricing: appSnapshots.pricing,

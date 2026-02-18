@@ -52,7 +52,7 @@ export default async function AppDetailPage({
       <div className="flex items-center justify-between">
         <div className="flex items-start gap-3">
           {app.iconUrl && (
-            <img src={app.iconUrl} alt="" className="h-10 w-10 rounded-lg shrink-0 mt-0.5" />
+            <img src={app.iconUrl} alt="" className="h-16 w-16 rounded-lg shrink-0" />
           )}
           <div>
             <h1 className="text-2xl font-bold">

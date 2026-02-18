@@ -83,12 +83,17 @@ function DeveloperAppsContent() {
                 {apps.map((app: any) => (
                   <TableRow key={app.slug}>
                     <TableCell>
-                      <Link
-                        href={`/apps/${app.slug}`}
-                        className="text-primary hover:underline font-medium"
-                      >
-                        {app.name}
-                      </Link>
+                      <div className="flex items-center gap-2">
+                        {app.iconUrl && (
+                          <img src={app.iconUrl} alt="" className="h-6 w-6 rounded shrink-0" />
+                        )}
+                        <Link
+                          href={`/apps/${app.slug}`}
+                          className="text-primary hover:underline font-medium"
+                        >
+                          {app.name}
+                        </Link>
+                      </div>
                     </TableCell>
                     <TableCell>
                       {app.averageRating != null
