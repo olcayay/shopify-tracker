@@ -216,13 +216,18 @@ export default function OverviewPage() {
                 {apps.slice(0, 10).map((app: any) => (
                   <TableRow key={app.slug}>
                     <TableCell>
-                      <Link
-                        href={`/apps/${app.slug}`}
-                        className="text-primary hover:underline font-medium"
-                      >
-                        {app.name}
-                      </Link>
-                      {app.isBuiltForShopify && <span title="Built for Shopify" className="ml-1">💎</span>}
+                      <div className="flex items-center gap-2">
+                        {app.iconUrl && (
+                          <img src={app.iconUrl} alt="" className="h-5 w-5 rounded shrink-0" />
+                        )}
+                        <Link
+                          href={`/apps/${app.slug}`}
+                          className="text-primary hover:underline font-medium"
+                        >
+                          {app.name}
+                        </Link>
+                        {app.isBuiltForShopify && <span title="Built for Shopify">💎</span>}
+                      </div>
                     </TableCell>
                     <TableCell>
                       {app.latestSnapshot?.averageRating ?? "\u2014"}
@@ -321,13 +326,18 @@ export default function OverviewPage() {
                 {competitors.slice(0, 10).map((c: any) => (
                   <TableRow key={c.appSlug}>
                     <TableCell>
-                      <Link
-                        href={`/apps/${c.appSlug}`}
-                        className="text-primary hover:underline font-medium"
-                      >
-                        {c.appName || c.appSlug}
-                      </Link>
-                      {c.isBuiltForShopify && <span title="Built for Shopify" className="ml-1">💎</span>}
+                      <div className="flex items-center gap-2">
+                        {c.iconUrl && (
+                          <img src={c.iconUrl} alt="" className="h-5 w-5 rounded shrink-0" />
+                        )}
+                        <Link
+                          href={`/apps/${c.appSlug}`}
+                          className="text-primary hover:underline font-medium"
+                        >
+                          {c.appName || c.appSlug}
+                        </Link>
+                        {c.isBuiltForShopify && <span title="Built for Shopify">💎</span>}
+                      </div>
                     </TableCell>
                     <TableCell className="text-sm text-muted-foreground">
                       {c.lastChangeAt ? formatDateOnly(c.lastChangeAt) : "\u2014"}

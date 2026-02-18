@@ -69,6 +69,7 @@ export default async function KeywordDetailPage({
     slug: r.appSlug,
     linkPrefix: "/apps/",
     isBuiltForShopify: r.isBuiltForShopify,
+    iconUrl: r.iconUrl,
   }));
 
   return (
@@ -134,18 +135,23 @@ export default async function KeywordDetailPage({
                 {builtInApps.map((app: any) => (
                   <TableRow key={app.app_slug} className="bg-blue-50/50 border-l-2 border-l-blue-400">
                     <TableCell>
-                      <div className="flex items-center gap-1.5">
-                        <a
-                          href={app.app_url || `https://apps.shopify.com/built-in-features/${app.app_slug.replace("bif:", "")}`}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="font-medium text-primary hover:underline"
-                        >
-                          {app.app_name}
-                        </a>
-                        <Badge className="text-[10px] px-1 py-0 h-4 bg-blue-100 text-blue-700 border-blue-300" variant="outline">
-                          Built-in
-                        </Badge>
+                      <div className="flex items-center gap-2">
+                        {app.logo_url && (
+                          <img src={app.logo_url} alt="" className="h-6 w-6 rounded shrink-0" />
+                        )}
+                        <div className="flex items-center gap-1.5">
+                          <a
+                            href={app.app_url || `https://apps.shopify.com/built-in-features/${app.app_slug.replace("bif:", "")}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="font-medium text-primary hover:underline"
+                          >
+                            {app.app_name}
+                          </a>
+                          <Badge className="text-[10px] px-1 py-0 h-4 bg-blue-100 text-blue-700 border-blue-300" variant="outline">
+                            Built-in
+                          </Badge>
+                        </div>
                       </div>
                     </TableCell>
                     <TableCell className="text-sm text-muted-foreground">
@@ -194,16 +200,21 @@ export default async function KeywordDetailPage({
                   return (
                   <TableRow key={app.app_slug} className={isTracked ? "border-l-2 border-l-emerald-500 bg-emerald-500/10" : isCompetitor ? "border-l-2 border-l-amber-500 bg-amber-500/10" : ""}>
                     <TableCell>
-                      <div className="flex items-center gap-1.5">
-                        <Link
-                          href={`/apps/${app.app_slug}`}
-                          className="text-primary hover:underline font-medium"
-                        >
-                          {app.app_name}
-                        </Link>
-                        {app.is_built_for_shopify && <span title="Built for Shopify">💎</span>}
-                        {isTracked && <Badge className="text-[10px] px-1.5 py-0 h-4 bg-emerald-500/20 text-emerald-700 dark:text-emerald-400 border-emerald-500/50">Tracked</Badge>}
-                        {isCompetitor && <Badge className="text-[10px] px-1.5 py-0 h-4 bg-amber-500/20 text-amber-700 dark:text-amber-400 border-amber-500/50">Competitor</Badge>}
+                      <div className="flex items-center gap-2">
+                        {app.logo_url && (
+                          <img src={app.logo_url} alt="" className="h-6 w-6 rounded shrink-0" />
+                        )}
+                        <div className="flex items-center gap-1.5">
+                          <Link
+                            href={`/apps/${app.app_slug}`}
+                            className="text-primary hover:underline font-medium"
+                          >
+                            {app.app_name}
+                          </Link>
+                          {app.is_built_for_shopify && <span title="Built for Shopify">💎</span>}
+                          {isTracked && <Badge className="text-[10px] px-1.5 py-0 h-4 bg-emerald-500/20 text-emerald-700 dark:text-emerald-400 border-emerald-500/50">Tracked</Badge>}
+                          {isCompetitor && <Badge className="text-[10px] px-1.5 py-0 h-4 bg-amber-500/20 text-amber-700 dark:text-amber-400 border-amber-500/50">Competitor</Badge>}
+                        </div>
                       </div>
                     </TableCell>
                     <TableCell>
@@ -275,7 +286,7 @@ export default async function KeywordDetailPage({
           </CardHeader>
           <CardContent className="space-y-6">
             <AdHeatmap
-              sightings={adData.adSightings.map((s: any) => ({ slug: s.appSlug, name: s.appName, seenDate: s.seenDate, timesSeenInDay: s.timesSeenInDay }))}
+              sightings={adData.adSightings.map((s: any) => ({ slug: s.appSlug, name: s.appName, seenDate: s.seenDate, timesSeenInDay: s.timesSeenInDay, iconUrl: s.iconUrl }))}
               trackedSlugs={Array.from(trackedSlugs)}
               competitorSlugs={Array.from(competitorSlugs)}
             />

@@ -304,13 +304,18 @@ export default function KeywordsPage() {
                               <div className="space-y-1">
                                 {kw.trackedAppsInResults.map((app: any) => (
                                   <div key={app.app_slug} className="flex items-center justify-between text-sm py-1 px-2 rounded bg-emerald-500/10 border-l-2 border-l-emerald-500">
-                                    <Link
-                                      href={`/apps/${app.app_slug}`}
-                                      className="text-primary hover:underline font-medium"
-                                      onClick={(e) => e.stopPropagation()}
-                                    >
-                                      {app.app_name}
-                                    </Link>
+                                    <div className="flex items-center gap-2">
+                                      {app.logo_url && (
+                                        <img src={app.logo_url} alt="" className="h-5 w-5 rounded shrink-0" />
+                                      )}
+                                      <Link
+                                        href={`/apps/${app.app_slug}`}
+                                        className="text-primary hover:underline font-medium"
+                                        onClick={(e) => e.stopPropagation()}
+                                      >
+                                        {app.app_name}
+                                      </Link>
+                                    </div>
                                     <span className="font-mono text-muted-foreground text-xs">
                                       #{app.position}
                                     </span>
@@ -328,13 +333,18 @@ export default function KeywordsPage() {
                               <div className="space-y-1">
                                 {kw.competitorAppsInResults.map((app: any) => (
                                   <div key={app.app_slug} className="flex items-center justify-between text-sm py-1 px-2 rounded bg-amber-500/10 border-l-2 border-l-amber-500">
-                                    <Link
-                                      href={`/apps/${app.app_slug}`}
-                                      className="text-primary hover:underline font-medium"
-                                      onClick={(e) => e.stopPropagation()}
-                                    >
-                                      {app.app_name}
-                                    </Link>
+                                    <div className="flex items-center gap-2">
+                                      {app.logo_url && (
+                                        <img src={app.logo_url} alt="" className="h-5 w-5 rounded shrink-0" />
+                                      )}
+                                      <Link
+                                        href={`/apps/${app.app_slug}`}
+                                        className="text-primary hover:underline font-medium"
+                                        onClick={(e) => e.stopPropagation()}
+                                      >
+                                        {app.app_name}
+                                      </Link>
+                                    </div>
                                     <span className="font-mono text-muted-foreground text-xs">
                                       #{app.position}
                                     </span>

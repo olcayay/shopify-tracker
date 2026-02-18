@@ -66,8 +66,8 @@ export const keywordRoutes: FastifyPluginAsync = async (app) => {
           .orderBy(desc(keywordSnapshots.scrapedAt))
           .limit(1);
 
-        const trackedAppsInResults: { app_slug: string; app_name: string; position: number }[] = [];
-        const competitorAppsInResults: { app_slug: string; app_name: string; position: number }[] = [];
+        const trackedAppsInResults: { app_slug: string; app_name: string; position: number; logo_url?: string }[] = [];
+        const competitorAppsInResults: { app_slug: string; app_name: string; position: number; logo_url?: string }[] = [];
         if (snapshot?.results) {
           for (const app of snapshot.results as any[]) {
             if (trackedSlugs.includes(app.app_slug)) {
@@ -75,6 +75,7 @@ export const keywordRoutes: FastifyPluginAsync = async (app) => {
                 app_slug: app.app_slug,
                 app_name: app.app_name,
                 position: app.position || 0,
+                logo_url: app.logo_url,
               });
             }
             if (competitorSlugs.includes(app.app_slug)) {
@@ -82,6 +83,7 @@ export const keywordRoutes: FastifyPluginAsync = async (app) => {
                 app_slug: app.app_slug,
                 app_name: app.app_name,
                 position: app.position || 0,
+                logo_url: app.logo_url,
               });
             }
           }
@@ -272,6 +274,7 @@ export const keywordRoutes: FastifyPluginAsync = async (app) => {
           appSlug: appKeywordRankings.appSlug,
           appName: apps.name,
           isBuiltForShopify: apps.isBuiltForShopify,
+          iconUrl: apps.iconUrl,
           keywordId: appKeywordRankings.keywordId,
           scrapeRunId: appKeywordRankings.scrapeRunId,
           scrapedAt: appKeywordRankings.scrapedAt,
@@ -311,6 +314,7 @@ export const keywordRoutes: FastifyPluginAsync = async (app) => {
         .select({
           appSlug: keywordAdSightings.appSlug,
           appName: apps.name,
+          iconUrl: apps.iconUrl,
           averageRating: sql<string>`(
             SELECT average_rating FROM app_snapshots
             WHERE app_slug = ${keywordAdSightings.appSlug}

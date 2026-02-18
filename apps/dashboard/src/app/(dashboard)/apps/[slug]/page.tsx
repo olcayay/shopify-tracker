@@ -50,15 +50,20 @@ export default async function AppDetailPage({
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold">
-            {app.name}
-            {app.isBuiltForShopify && <span title="Built for Shopify" className="ml-1.5">💎</span>}
-          </h1>
-          <p className="text-muted-foreground">{app.slug}</p>
+        <div className="flex items-start gap-3">
+          {app.iconUrl && (
+            <img src={app.iconUrl} alt="" className="h-10 w-10 rounded-lg shrink-0 mt-0.5" />
+          )}
+          <div>
+            <h1 className="text-2xl font-bold">
+              {app.name}
+              {app.isBuiltForShopify && <span title="Built for Shopify" className="ml-1.5">💎</span>}
+            </h1>
+            <p className="text-muted-foreground">{app.slug}</p>
           {app.appCardSubtitle && (
             <p className="text-sm text-muted-foreground italic mt-1">{app.appCardSubtitle}</p>
           )}
+          </div>
         </div>
         <div className="flex items-center gap-2">
           <a

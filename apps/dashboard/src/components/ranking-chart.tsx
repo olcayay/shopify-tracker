@@ -30,6 +30,7 @@ interface RankingData {
   slug?: string;
   linkPrefix?: string;
   isBuiltForShopify?: boolean;
+  iconUrl?: string;
 }
 
 export function RankingChart({ data }: { data: RankingData[] }) {
@@ -49,10 +50,10 @@ export function RankingChart({ data }: { data: RankingData[] }) {
   });
 
   // Build per-label info for links
-  const labelMeta = new Map<string, { slug?: string; linkPrefix?: string; isBuiltForShopify?: boolean }>();
+  const labelMeta = new Map<string, { slug?: string; linkPrefix?: string; isBuiltForShopify?: boolean; iconUrl?: string }>();
   for (const d of data) {
     if (!labelMeta.has(d.label)) {
-      labelMeta.set(d.label, { slug: d.slug, linkPrefix: d.linkPrefix, isBuiltForShopify: d.isBuiltForShopify });
+      labelMeta.set(d.label, { slug: d.slug, linkPrefix: d.linkPrefix, isBuiltForShopify: d.isBuiltForShopify, iconUrl: d.iconUrl });
     }
   }
 
@@ -161,6 +162,9 @@ export function RankingChart({ data }: { data: RankingData[] }) {
                           boxShadow: isHidden ? `inset 0 0 0 1.5px ${color}` : "none",
                         }}
                       />
+                      {meta?.iconUrl && (
+                        <img src={meta.iconUrl} alt="" className="h-5 w-5 rounded shrink-0" />
+                      )}
                       {href ? (
                         <Link
                           href={href}

@@ -209,13 +209,22 @@ export default function AppsPage() {
                 {apps.map((app) => (
                   <TableRow key={app.slug}>
                     <TableCell>
-                      <Link
-                        href={`/apps/${app.slug}`}
-                        className="text-primary hover:underline font-medium"
-                      >
-                        {app.name}
-                      </Link>
-                      {app.isBuiltForShopify && <span title="Built for Shopify" className="ml-1">💎</span>}
+                      <div className="flex items-center gap-2">
+                        {app.iconUrl && (
+                          <img src={app.iconUrl} alt="" className="h-6 w-6 rounded shrink-0" />
+                        )}
+                        <div>
+                          <div className="flex items-center gap-1.5">
+                            <Link
+                              href={`/apps/${app.slug}`}
+                              className="text-primary hover:underline font-medium"
+                            >
+                              {app.name}
+                            </Link>
+                            {app.isBuiltForShopify && <span title="Built for Shopify">💎</span>}
+                          </div>
+                        </div>
+                      </div>
                     </TableCell>
                     <TableCell>
                       {app.latestSnapshot?.averageRating ?? "\u2014"}

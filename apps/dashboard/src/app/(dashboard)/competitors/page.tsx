@@ -209,13 +209,20 @@ export default function CompetitorsPage() {
                 {competitors.map((c) => (
                   <TableRow key={c.appSlug}>
                     <TableCell>
-                      <Link
-                        href={`/apps/${c.appSlug}`}
-                        className="text-primary hover:underline font-medium"
-                      >
-                        {c.appName || c.appSlug}
-                      </Link>
-                      {c.isBuiltForShopify && <span title="Built for Shopify" className="ml-1">💎</span>}
+                      <div className="flex items-center gap-2">
+                        {c.iconUrl && (
+                          <img src={c.iconUrl} alt="" className="h-6 w-6 rounded shrink-0" />
+                        )}
+                        <div className="flex items-center gap-1.5">
+                          <Link
+                            href={`/apps/${c.appSlug}`}
+                            className="text-primary hover:underline font-medium"
+                          >
+                            {c.appName || c.appSlug}
+                          </Link>
+                          {c.isBuiltForShopify && <span title="Built for Shopify">💎</span>}
+                        </div>
+                      </div>
                     </TableCell>
                     <TableCell>
                       {c.latestSnapshot?.averageRating ?? "\u2014"}

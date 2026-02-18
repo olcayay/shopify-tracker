@@ -125,6 +125,7 @@ export const featureRoutes: FastifyPluginAsync = async (app) => {
           a.slug,
           a.name,
           a.is_built_for_shopify,
+          a.icon_url,
           s.average_rating,
           s.rating_count,
           s.pricing

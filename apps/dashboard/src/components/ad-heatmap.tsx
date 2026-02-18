@@ -9,6 +9,7 @@ interface HeatmapSighting {
   name: string;
   seenDate: string;
   timesSeenInDay: number;
+  iconUrl?: string;
 }
 
 interface AdHeatmapProps {
@@ -56,7 +57,7 @@ export function AdHeatmap({
     // Build lookup: slug -> { date -> timesSeenInDay }
     const itemMap = new Map<
       string,
-      { slug: string; name: string; total: number; sightings: Map<string, number> }
+      { slug: string; name: string; iconUrl?: string; total: number; sightings: Map<string, number> }
     >();
 
     for (const s of adSightings) {
@@ -65,6 +66,7 @@ export function AdHeatmap({
         entry = {
           slug: s.slug,
           name: s.name,
+          iconUrl: s.iconUrl,
           total: 0,
           sightings: new Map(),
         };
@@ -96,7 +98,7 @@ export function AdHeatmap({
       <div className="min-w-[600px]">
         {/* Date headers */}
         <div className="flex items-end gap-0 mb-1">
-          <div className="w-[180px] shrink-0" />
+          <div className="w-[200px] shrink-0" />
           <div className="flex-1 flex gap-[2px]">
             {dates.map((date, i) => (
               <div
@@ -129,7 +131,10 @@ export function AdHeatmap({
               }`}
             >
               {/* Label */}
-              <div className="w-[180px] shrink-0 pr-2 flex items-center gap-1 min-w-0">
+              <div className="w-[200px] shrink-0 pr-2 flex items-center gap-1.5 min-w-0">
+                {item.iconUrl && (
+                  <img src={item.iconUrl} alt="" className="h-4 w-4 rounded shrink-0" />
+                )}
                 <Link
                   href={`${linkPrefix}${item.slug}`}
                   className="text-xs text-primary hover:underline truncate"

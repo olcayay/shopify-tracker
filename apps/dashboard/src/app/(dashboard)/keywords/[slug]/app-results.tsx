@@ -36,6 +36,7 @@ interface App {
   is_sponsored: boolean;
   is_built_in: boolean;
   is_built_for_shopify?: boolean;
+  logo_url?: string;
 }
 
 type SortKey = "position" | "app_name" | "average_rating" | "rating_count";
@@ -262,34 +263,41 @@ export function KeywordAppResults({
                   >
                     <TableCell className="font-mono">{app.position}</TableCell>
                     <TableCell>
-                      <div className="flex items-center gap-1.5">
-                        <Link
-                          href={`/apps/${app.app_slug}`}
-                          className="text-primary hover:underline font-medium"
-                        >
-                          {app.app_name}
-                        </Link>
-                        {app.is_built_for_shopify && (
-                          <span title="Built for Shopify">💎</span>
+                      <div className="flex items-center gap-2">
+                        {app.logo_url && (
+                          <img src={app.logo_url} alt="" className="h-6 w-6 rounded shrink-0" />
                         )}
-                        {isTracked && (
-                          <Badge
-                            className="text-[10px] px-1.5 py-0 h-4 bg-emerald-500/20 text-emerald-700 dark:text-emerald-400 border-emerald-500/50"
-                          >
-                            Tracked
-                          </Badge>
-                        )}
-                        {isCompetitor && (
-                          <Badge
-                            className="text-[10px] px-1.5 py-0 h-4 bg-amber-500/20 text-amber-700 dark:text-amber-400 border-amber-500/50"
-                          >
-                            Competitor
-                          </Badge>
-                        )}
+                        <div>
+                          <div className="flex items-center gap-1.5">
+                            <Link
+                              href={`/apps/${app.app_slug}`}
+                              className="text-primary hover:underline font-medium"
+                            >
+                              {app.app_name}
+                            </Link>
+                            {app.is_built_for_shopify && (
+                              <span title="Built for Shopify">💎</span>
+                            )}
+                            {isTracked && (
+                              <Badge
+                                className="text-[10px] px-1.5 py-0 h-4 bg-emerald-500/20 text-emerald-700 dark:text-emerald-400 border-emerald-500/50"
+                              >
+                                Tracked
+                              </Badge>
+                            )}
+                            {isCompetitor && (
+                              <Badge
+                                className="text-[10px] px-1.5 py-0 h-4 bg-amber-500/20 text-amber-700 dark:text-amber-400 border-amber-500/50"
+                              >
+                                Competitor
+                              </Badge>
+                            )}
+                          </div>
+                          <p className="text-xs text-muted-foreground mt-0.5 line-clamp-1">
+                            {app.short_description}
+                          </p>
+                        </div>
                       </div>
-                      <p className="text-xs text-muted-foreground mt-0.5 line-clamp-1">
-                        {app.short_description}
-                      </p>
                     </TableCell>
                     <TableCell>
                       {app.average_rating?.toFixed(1) ?? "\u2014"}

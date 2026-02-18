@@ -190,7 +190,11 @@ export default async function CategoryDetailPage({
                       <TableRow key={appSlug || i} className={isTracked ? "border-l-2 border-l-emerald-500 bg-emerald-500/10" : isCompetitor ? "border-l-2 border-l-amber-500 bg-amber-500/10" : ""}>
                         <TableCell>{app.position || i + 1}</TableCell>
                         <TableCell>
-                          <div className="flex items-center gap-1.5">
+                          <div className="flex items-center gap-2">
+                            {app.logo_url && (
+                              <img src={app.logo_url} alt="" className="h-6 w-6 rounded shrink-0" />
+                            )}
+                            <div className="flex items-center gap-1.5">
                             {appSlug ? (
                             <Link
                               href={`/apps/${appSlug}`}
@@ -209,6 +213,7 @@ export default async function CategoryDetailPage({
                             {app.is_built_for_shopify && <span title="Built for Shopify">💎</span>}
                             {isTracked && <Badge className="text-[10px] px-1.5 py-0 h-4 bg-emerald-500/20 text-emerald-700 dark:text-emerald-400 border-emerald-500/50">Tracked</Badge>}
                             {isCompetitor && <Badge className="text-[10px] px-1.5 py-0 h-4 bg-amber-500/20 text-amber-700 dark:text-amber-400 border-amber-500/50">Competitor</Badge>}
+                            </div>
                           </div>
                         </TableCell>
                         <TableCell>{app.average_rating?.toFixed(1) ?? "—"}</TableCell>
