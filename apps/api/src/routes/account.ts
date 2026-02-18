@@ -4,6 +4,7 @@ import crypto from "crypto";
 import { Queue } from "bullmq";
 import {
   createDb,
+  packages,
   accounts,
   users,
   invitations,
@@ -120,10 +121,27 @@ export const accountRoutes: FastifyPluginAsync = async (app) => {
       .from(users)
       .where(eq(users.accountId, accountId));
 
+    // Fetch package details
+    let pkg = null;
+    if (account.packageId) {
+      const [found] = await db.select().from(packages).where(eq(packages.id, account.packageId));
+      pkg = found ?? null;
+    }
+
     return {
       id: account.id,
       name: account.name,
       isSuspended: account.isSuspended,
+      package: pkg ? { slug: pkg.slug, name: pkg.name } : null,
+      packageLimits: pkg
+        ? {
+            maxTrackedApps: pkg.maxTrackedApps,
+            maxTrackedKeywords: pkg.maxTrackedKeywords,
+            maxCompetitorApps: pkg.maxCompetitorApps,
+            maxTrackedFeatures: pkg.maxTrackedFeatures,
+            maxUsers: pkg.maxUsers,
+          }
+        : null,
       limits: {
         maxTrackedApps: account.maxTrackedApps,
         maxTrackedKeywords: account.maxTrackedKeywords,

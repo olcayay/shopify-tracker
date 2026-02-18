@@ -96,46 +96,46 @@ export default function SettingsPage() {
         </div>
       )}
 
-      {/* Account Info */}
+      {/* Account Info & Package */}
       <Card>
         <CardHeader>
-          <CardTitle>Account</CardTitle>
+          <CardTitle className="flex items-center gap-2">
+            Account
+            {account?.package && (
+              <Badge variant="outline" className="text-sm font-normal">
+                {account.package.name}
+              </Badge>
+            )}
+          </CardTitle>
           <CardDescription>
             {account?.name}{account?.company ? ` · ${account.company}` : ""} · {user?.role}
           </CardDescription>
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-2 md:grid-cols-5 gap-4 text-center">
-            <Link href="/apps" className="block hover:bg-accent/50 rounded-lg p-3 -m-1 transition-colors">
-              <p className="text-2xl font-bold">
-                {account?.usage.trackedApps}/{account?.limits.maxTrackedApps}
-              </p>
-              <p className="text-sm text-muted-foreground">Tracked Apps</p>
-            </Link>
-            <Link href="/keywords" className="block hover:bg-accent/50 rounded-lg p-3 -m-1 transition-colors">
-              <p className="text-2xl font-bold">
-                {account?.usage.trackedKeywords}/
-                {account?.limits.maxTrackedKeywords}
-              </p>
-              <p className="text-sm text-muted-foreground">Keywords</p>
-            </Link>
-            <Link href="/competitors" className="block hover:bg-accent/50 rounded-lg p-3 -m-1 transition-colors">
-              <p className="text-2xl font-bold">
-                {account?.usage.competitorApps}/
-                {account?.limits.maxCompetitorApps}
-              </p>
-              <p className="text-sm text-muted-foreground">Competitors</p>
-            </Link>
-            <Link href="/features" className="block hover:bg-accent/50 rounded-lg p-3 -m-1 transition-colors">
-              <p className="text-2xl font-bold">
-                {account?.usage.trackedFeatures}/
-                {account?.limits.maxTrackedFeatures}
-              </p>
-              <p className="text-sm text-muted-foreground">Features</p>
-            </Link>
+            {([
+              { href: "/apps", usage: account?.usage.trackedApps, limit: account?.limits.maxTrackedApps, pkgLimit: account?.packageLimits?.maxTrackedApps, label: "Tracked Apps" },
+              { href: "/keywords", usage: account?.usage.trackedKeywords, limit: account?.limits.maxTrackedKeywords, pkgLimit: account?.packageLimits?.maxTrackedKeywords, label: "Keywords" },
+              { href: "/competitors", usage: account?.usage.competitorApps, limit: account?.limits.maxCompetitorApps, pkgLimit: account?.packageLimits?.maxCompetitorApps, label: "Competitors" },
+              { href: "/features", usage: account?.usage.trackedFeatures, limit: account?.limits.maxTrackedFeatures, pkgLimit: account?.packageLimits?.maxTrackedFeatures, label: "Features" },
+            ] as const).map(({ href, usage, limit, pkgLimit, label }) => {
+              const isOverridden = pkgLimit != null && limit !== pkgLimit;
+              return (
+                <Link key={label} href={href} className="block hover:bg-accent/50 rounded-lg p-3 -m-1 transition-colors">
+                  <p className="text-2xl font-bold">
+                    {usage}/{limit}
+                    {isOverridden && <span className="text-amber-500 text-sm ml-0.5" title={`Package default: ${pkgLimit}`}>*</span>}
+                  </p>
+                  <p className="text-sm text-muted-foreground">{label}</p>
+                </Link>
+              );
+            })}
             <div className="rounded-lg p-3 -m-1">
               <p className="text-2xl font-bold">
                 {account?.usage.users}/{account?.limits.maxUsers}
+                {account?.packageLimits && account?.limits.maxUsers !== account?.packageLimits.maxUsers && (
+                  <span className="text-amber-500 text-sm ml-0.5" title={`Package default: ${account.packageLimits.maxUsers}`}>*</span>
+                )}
               </p>
               <p className="text-sm text-muted-foreground">Users</p>
             </div>

@@ -24,11 +24,32 @@ import {
 } from "@/components/ui/table";
 import { useFormatDate } from "@/lib/format-date";
 
+interface Package {
+  id: number;
+  slug: string;
+  name: string;
+  maxTrackedApps: number;
+  maxTrackedKeywords: number;
+  maxCompetitorApps: number;
+  maxTrackedFeatures: number;
+  maxUsers: number;
+  sortOrder: number;
+}
+
+const LIMIT_KEYS = [
+  { key: "maxTrackedApps", label: "Tracked Apps", usageKey: "trackedApps" },
+  { key: "maxTrackedKeywords", label: "Keywords", usageKey: "trackedKeywords" },
+  { key: "maxCompetitorApps", label: "Competitors", usageKey: "competitorApps" },
+  { key: "maxTrackedFeatures", label: "Features", usageKey: "trackedFeatures" },
+  { key: "maxUsers", label: "Users", usageKey: "members" },
+] as const;
+
 export default function AccountDetailPage() {
   const { id } = useParams<{ id: string }>();
   const { fetchWithAuth } = useAuth();
   const { formatDateTime, formatDateOnly } = useFormatDate();
   const [account, setAccount] = useState<any>(null);
+  const [allPackages, setAllPackages] = useState<Package[]>([]);
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState("");
   const [editLimits, setEditLimits] = useState(false);
@@ -41,14 +62,17 @@ export default function AccountDetailPage() {
   });
 
   useEffect(() => {
-    loadAccount();
+    loadData();
   }, [id]);
 
-  async function loadAccount() {
+  async function loadData() {
     setLoading(true);
-    const res = await fetchWithAuth(`/api/system-admin/accounts/${id}`);
-    if (res.ok) {
-      const data = await res.json();
+    const [accRes, pkgRes] = await Promise.all([
+      fetchWithAuth(`/api/system-admin/accounts/${id}`),
+      fetchWithAuth("/api/system-admin/packages"),
+    ]);
+    if (accRes.ok) {
+      const data = await accRes.json();
       setAccount(data);
       setLimits({
         maxTrackedApps: data.maxTrackedApps,
@@ -57,6 +81,9 @@ export default function AccountDetailPage() {
         maxTrackedFeatures: data.maxTrackedFeatures,
         maxUsers: data.maxUsers,
       });
+    }
+    if (pkgRes.ok) {
+      setAllPackages(await pkgRes.json());
     }
     setLoading(false);
   }
@@ -70,9 +97,37 @@ export default function AccountDetailPage() {
     if (res.ok) {
       setMessage("Limits updated");
       setEditLimits(false);
-      loadAccount();
+      loadData();
     } else {
       setMessage("Failed to update limits");
+    }
+  }
+
+  async function changePackage(packageId: number) {
+    setMessage("");
+    const res = await fetchWithAuth(`/api/system-admin/accounts/${id}`, {
+      method: "PATCH",
+      body: JSON.stringify({ packageId, applyPackageDefaults: true }),
+    });
+    if (res.ok) {
+      setMessage("Package changed — limits reset to package defaults");
+      loadData();
+    } else {
+      setMessage("Failed to change package");
+    }
+  }
+
+  async function resetToPackageDefaults() {
+    if (!account?.packageId) return;
+    setMessage("");
+    const res = await fetchWithAuth(`/api/system-admin/accounts/${id}`, {
+      method: "PATCH",
+      body: JSON.stringify({ packageId: account.packageId, applyPackageDefaults: true }),
+    });
+    if (res.ok) {
+      setMessage("Limits reset to package defaults");
+      setEditLimits(false);
+      loadData();
     }
   }
 
@@ -84,7 +139,7 @@ export default function AccountDetailPage() {
     });
     if (res.ok) {
       setMessage(account.isSuspended ? "Account activated" : "Account suspended");
-      loadAccount();
+      loadData();
     }
   }
 
@@ -101,6 +156,21 @@ export default function AccountDetailPage() {
     return <p className="text-muted-foreground">Account not found.</p>;
   }
 
+  const pkg: Package | undefined = account.package ?? undefined;
+  const hasOverrides = pkg
+    ? LIMIT_KEYS.some(
+        ({ key }) => account[key] !== (pkg as any)[key]
+      )
+    : false;
+
+  const usageCounts: Record<string, number> = {
+    trackedApps: account.trackedApps?.length ?? 0,
+    trackedKeywords: account.trackedKeywords?.length ?? 0,
+    competitorApps: account.competitorApps?.length ?? 0,
+    trackedFeatures: account.trackedFeatures?.length ?? 0,
+    members: account.members?.length ?? 0,
+  };
+
   return (
     <div className="space-y-6">
       <div>
@@ -108,7 +178,11 @@ export default function AccountDetailPage() {
           <Link href="/system-admin" className="hover:underline">
             System Admin
           </Link>
-          {" > Accounts > "}
+          {" > "}
+          <Link href="/system-admin/accounts" className="hover:underline">
+            Accounts
+          </Link>
+          {" > "}
           {account.name}
         </p>
         <div className="flex items-center gap-3">
@@ -116,6 +190,12 @@ export default function AccountDetailPage() {
           <Badge variant={account.isSuspended ? "destructive" : "default"}>
             {account.isSuspended ? "Suspended" : "Active"}
           </Badge>
+          {pkg && (
+            <Badge variant="outline">
+              {pkg.name}
+              {hasOverrides && <span className="ml-0.5 text-amber-500">*</span>}
+            </Badge>
+          )}
         </div>
       </div>
 
@@ -123,13 +203,53 @@ export default function AccountDetailPage() {
         <div className="text-sm px-3 py-2 rounded-md bg-muted">{message}</div>
       )}
 
+      {/* Package Selection */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Package</CardTitle>
+          <CardDescription>
+            {pkg
+              ? `Current: ${pkg.name}${hasOverrides ? " (with custom overrides)" : ""}`
+              : "No package assigned"}
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="flex flex-wrap gap-2">
+            {allPackages.map((p) => (
+              <Button
+                key={p.id}
+                variant={account.packageId === p.id ? "default" : "outline"}
+                size="sm"
+                onClick={() => {
+                  if (account.packageId !== p.id) changePackage(p.id);
+                }}
+              >
+                {p.name}
+                <span className="ml-1.5 text-xs opacity-70">
+                  ({p.maxTrackedApps}/{p.maxTrackedKeywords}/{p.maxCompetitorApps})
+                </span>
+              </Button>
+            ))}
+          </div>
+          {pkg && (
+            <p className="text-xs text-muted-foreground mt-3">
+              Package defaults: Apps {pkg.maxTrackedApps} · Keywords {pkg.maxTrackedKeywords} · Competitors {pkg.maxCompetitorApps} · Features {pkg.maxTrackedFeatures} · Users {pkg.maxUsers}
+            </p>
+          )}
+        </CardContent>
+      </Card>
+
       {/* Limits */}
       <Card>
         <CardHeader>
           <div className="flex items-center justify-between">
             <div>
               <CardTitle>Limits & Usage</CardTitle>
-              <CardDescription>Account resource limits</CardDescription>
+              <CardDescription>
+                {hasOverrides
+                  ? "Custom limits (differs from package defaults)"
+                  : "Account resource limits"}
+              </CardDescription>
             </div>
             <div className="flex gap-2">
               {editLimits ? (
@@ -137,10 +257,24 @@ export default function AccountDetailPage() {
                   <Button size="sm" onClick={saveLimits}>
                     Save
                   </Button>
+                  {hasOverrides && pkg && (
+                    <Button size="sm" variant="outline" onClick={resetToPackageDefaults}>
+                      Reset to Defaults
+                    </Button>
+                  )}
                   <Button
                     size="sm"
                     variant="outline"
-                    onClick={() => setEditLimits(false)}
+                    onClick={() => {
+                      setEditLimits(false);
+                      setLimits({
+                        maxTrackedApps: account.maxTrackedApps,
+                        maxTrackedKeywords: account.maxTrackedKeywords,
+                        maxCompetitorApps: account.maxCompetitorApps,
+                        maxTrackedFeatures: account.maxTrackedFeatures,
+                        maxUsers: account.maxUsers,
+                      });
+                    }}
                   >
                     Cancel
                   </Button>
@@ -168,126 +302,40 @@ export default function AccountDetailPage() {
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-            <div>
-              <p className="text-sm text-muted-foreground">Tracked Apps</p>
-              <p className="text-2xl font-bold">
-                {account.trackedApps?.length ?? 0}
-                <span className="text-lg text-muted-foreground font-normal">
-                  /
-                  {editLimits ? (
-                    <Input
-                      type="number"
-                      className="w-20 inline-block h-7 text-sm ml-1"
-                      value={limits.maxTrackedApps}
-                      onChange={(e) =>
-                        setLimits((l) => ({
-                          ...l,
-                          maxTrackedApps: Number(e.target.value),
-                        }))
-                      }
-                    />
-                  ) : (
-                    account.maxTrackedApps
-                  )}
-                </span>
-              </p>
-            </div>
-            <div>
-              <p className="text-sm text-muted-foreground">Keywords</p>
-              <p className="text-2xl font-bold">
-                {account.trackedKeywords?.length ?? 0}
-                <span className="text-lg text-muted-foreground font-normal">
-                  /
-                  {editLimits ? (
-                    <Input
-                      type="number"
-                      className="w-20 inline-block h-7 text-sm ml-1"
-                      value={limits.maxTrackedKeywords}
-                      onChange={(e) =>
-                        setLimits((l) => ({
-                          ...l,
-                          maxTrackedKeywords: Number(e.target.value),
-                        }))
-                      }
-                    />
-                  ) : (
-                    account.maxTrackedKeywords
-                  )}
-                </span>
-              </p>
-            </div>
-            <div>
-              <p className="text-sm text-muted-foreground">Competitors</p>
-              <p className="text-2xl font-bold">
-                {account.competitorApps?.length ?? 0}
-                <span className="text-lg text-muted-foreground font-normal">
-                  /
-                  {editLimits ? (
-                    <Input
-                      type="number"
-                      className="w-20 inline-block h-7 text-sm ml-1"
-                      value={limits.maxCompetitorApps}
-                      onChange={(e) =>
-                        setLimits((l) => ({
-                          ...l,
-                          maxCompetitorApps: Number(e.target.value),
-                        }))
-                      }
-                    />
-                  ) : (
-                    account.maxCompetitorApps
-                  )}
-                </span>
-              </p>
-            </div>
-            <div>
-              <p className="text-sm text-muted-foreground">Features</p>
-              <p className="text-2xl font-bold">
-                {account.trackedFeatures?.length ?? 0}
-                <span className="text-lg text-muted-foreground font-normal">
-                  /
-                  {editLimits ? (
-                    <Input
-                      type="number"
-                      className="w-20 inline-block h-7 text-sm ml-1"
-                      value={limits.maxTrackedFeatures}
-                      onChange={(e) =>
-                        setLimits((l) => ({
-                          ...l,
-                          maxTrackedFeatures: Number(e.target.value),
-                        }))
-                      }
-                    />
-                  ) : (
-                    account.maxTrackedFeatures
-                  )}
-                </span>
-              </p>
-            </div>
-            <div>
-              <p className="text-sm text-muted-foreground">Users</p>
-              <p className="text-2xl font-bold">
-                {account.members?.length ?? 0}
-                <span className="text-lg text-muted-foreground font-normal">
-                  /
-                  {editLimits ? (
-                    <Input
-                      type="number"
-                      className="w-20 inline-block h-7 text-sm ml-1"
-                      value={limits.maxUsers}
-                      onChange={(e) =>
-                        setLimits((l) => ({
-                          ...l,
-                          maxUsers: Number(e.target.value),
-                        }))
-                      }
-                    />
-                  ) : (
-                    account.maxUsers
-                  )}
-                </span>
-              </p>
-            </div>
+            {LIMIT_KEYS.map(({ key, label, usageKey }) => {
+              const isOverridden = pkg && account[key] !== (pkg as any)[key];
+              return (
+                <div key={key}>
+                  <p className="text-sm text-muted-foreground flex items-center gap-1">
+                    {label}
+                    {isOverridden && (
+                      <span className="text-amber-500 text-xs" title={`Package default: ${(pkg as any)[key]}`}>*</span>
+                    )}
+                  </p>
+                  <p className="text-2xl font-bold">
+                    {usageCounts[usageKey]}
+                    <span className="text-lg text-muted-foreground font-normal">
+                      /
+                      {editLimits ? (
+                        <Input
+                          type="number"
+                          className="w-20 inline-block h-7 text-sm ml-1"
+                          value={(limits as any)[key]}
+                          onChange={(e) =>
+                            setLimits((l) => ({
+                              ...l,
+                              [key]: Number(e.target.value),
+                            }))
+                          }
+                        />
+                      ) : (
+                        account[key]
+                      )}
+                    </span>
+                  </p>
+                </div>
+              );
+            })}
           </div>
         </CardContent>
       </Card>

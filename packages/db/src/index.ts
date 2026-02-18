@@ -48,6 +48,7 @@ export {
   keywordToSlug,
 } from "./schema/keywords.js";
 export {
+  packages,
   accounts,
   accountRoleEnum,
   users,

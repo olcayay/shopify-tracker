@@ -219,6 +219,7 @@ export default function AccountsListPage() {
                 >
                   Account <SortIcon col="name" />
                 </TableHead>
+                <TableHead>Package</TableHead>
                 <TableHead>Company</TableHead>
                 <TableHead
                   className="cursor-pointer select-none"
@@ -266,6 +267,18 @@ export default function AccountsListPage() {
                     >
                       {acc.name}
                     </Link>
+                  </TableCell>
+                  <TableCell>
+                    {acc.packageName ? (
+                      <Badge variant="outline" className="font-normal">
+                        {acc.packageName}
+                        {acc.hasLimitOverrides && (
+                          <span className="ml-0.5 text-amber-500" title="Custom limit overrides">*</span>
+                        )}
+                      </Badge>
+                    ) : (
+                      <span className="text-muted-foreground text-sm">{"\u2014"}</span>
+                    )}
                   </TableCell>
                   <TableCell className="text-sm text-muted-foreground">
                     {acc.company || "\u2014"}
@@ -328,7 +341,7 @@ export default function AccountsListPage() {
               {filtered.length === 0 && (
                 <TableRow>
                   <TableCell
-                    colSpan={11}
+                    colSpan={12}
                     className="text-center text-muted-foreground"
                   >
                     No accounts found

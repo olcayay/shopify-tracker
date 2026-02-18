@@ -7,6 +7,7 @@ import {
   timestamp,
   integer,
   index,
+  serial,
 } from "drizzle-orm/pg-core";
 
 export const accountRoleEnum = pgEnum("account_role", [
@@ -15,10 +16,24 @@ export const accountRoleEnum = pgEnum("account_role", [
   "viewer",
 ]);
 
+export const packages = pgTable("packages", {
+  id: serial("id").primaryKey(),
+  slug: varchar("slug", { length: 50 }).notNull().unique(),
+  name: varchar("name", { length: 100 }).notNull(),
+  maxTrackedApps: integer("max_tracked_apps").notNull().default(5),
+  maxTrackedKeywords: integer("max_tracked_keywords").notNull().default(5),
+  maxCompetitorApps: integer("max_competitor_apps").notNull().default(3),
+  maxTrackedFeatures: integer("max_tracked_features").notNull().default(5),
+  maxUsers: integer("max_users").notNull().default(2),
+  sortOrder: integer("sort_order").notNull().default(0),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
 export const accounts = pgTable("accounts", {
   id: uuid("id").primaryKey().defaultRandom(),
   name: varchar("name", { length: 255 }).notNull(),
   company: varchar("company", { length: 255 }),
+  packageId: integer("package_id").references(() => packages.id),
   maxTrackedApps: integer("max_tracked_apps").notNull().default(10),
   maxTrackedKeywords: integer("max_tracked_keywords").notNull().default(10),
   maxCompetitorApps: integer("max_competitor_apps").notNull().default(5),

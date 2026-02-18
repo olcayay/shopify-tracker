@@ -27,6 +27,14 @@ export interface Account {
   name: string;
   company?: string | null;
   isSuspended: boolean;
+  package?: { slug: string; name: string } | null;
+  packageLimits?: {
+    maxTrackedApps: number;
+    maxTrackedKeywords: number;
+    maxCompetitorApps: number;
+    maxTrackedFeatures: number;
+    maxUsers: number;
+  } | null;
   limits: {
     maxTrackedApps: number;
     maxTrackedKeywords: number;

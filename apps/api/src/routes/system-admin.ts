@@ -3,6 +3,7 @@ import { eq, desc, sql, and } from "drizzle-orm";
 import { Queue } from "bullmq";
 import {
   createDb,
+  packages,
   accounts,
   users,
   apps,
@@ -53,6 +54,8 @@ export const systemAdminRoutes: FastifyPluginAsync = async (app) => {
   // GET /api/system-admin/accounts — all accounts with usage stats
   app.get("/accounts", async () => {
     const accountList = await db.select().from(accounts);
+    const packageList = await db.select().from(packages);
+    const packageMap = new Map(packageList.map((p) => [p.id, p]));
 
     const result = await Promise.all(
       accountList.map(async (account) => {
@@ -90,8 +93,20 @@ export const systemAdminRoutes: FastifyPluginAsync = async (app) => {
           .from(accounts)
           .where(eq(accounts.id, account.id));
 
+        const pkg = account.packageId ? packageMap.get(account.packageId) : null;
+        const hasOverrides = pkg
+          ? account.maxTrackedApps !== pkg.maxTrackedApps ||
+            account.maxTrackedKeywords !== pkg.maxTrackedKeywords ||
+            account.maxCompetitorApps !== pkg.maxCompetitorApps ||
+            account.maxTrackedFeatures !== pkg.maxTrackedFeatures ||
+            account.maxUsers !== pkg.maxUsers
+          : false;
+
         return {
           ...account,
+          packageName: pkg?.name ?? null,
+          packageSlug: pkg?.slug ?? null,
+          hasLimitOverrides: hasOverrides,
           lastSeen: lastSeenResult?.lastSeen ?? null,
           usage: {
             trackedApps: trackedAppsCount.count,
@@ -182,8 +197,16 @@ export const systemAdminRoutes: FastifyPluginAsync = async (app) => {
       .from(accountTrackedFeatures)
       .where(eq(accountTrackedFeatures.accountId, id));
 
+    // Attach package info
+    let pkg = null;
+    if (account.packageId) {
+      const [found] = await db.select().from(packages).where(eq(packages.id, account.packageId));
+      pkg = found ?? null;
+    }
+
     return {
       ...account,
+      package: pkg,
       members,
       trackedApps: trackedAppsList,
       trackedKeywords: trackedKeywordsList,
@@ -192,7 +215,7 @@ export const systemAdminRoutes: FastifyPluginAsync = async (app) => {
     };
   });
 
-  // PATCH /api/system-admin/accounts/:id — update account (limits, suspend)
+  // PATCH /api/system-admin/accounts/:id — update account (limits, suspend, package)
   app.patch<{ Params: { id: string } }>(
     "/accounts/:id",
     async (request, reply) => {
@@ -200,6 +223,8 @@ export const systemAdminRoutes: FastifyPluginAsync = async (app) => {
       const body = request.body as {
         name?: string;
         company?: string;
+        packageId?: number | null;
+        applyPackageDefaults?: boolean;
         maxTrackedApps?: number;
         maxTrackedKeywords?: number;
         maxCompetitorApps?: number;
@@ -220,6 +245,26 @@ export const systemAdminRoutes: FastifyPluginAsync = async (app) => {
       const updates: Record<string, any> = { updatedAt: new Date() };
       if (body.name !== undefined) updates.name = body.name;
       if (body.company !== undefined) updates.company = body.company;
+      if (body.packageId !== undefined) updates.packageId = body.packageId;
+      if (body.isSuspended !== undefined)
+        updates.isSuspended = body.isSuspended;
+
+      // If changing package and applyPackageDefaults is true, reset limits to package defaults
+      if (body.applyPackageDefaults && body.packageId) {
+        const [pkg] = await db
+          .select()
+          .from(packages)
+          .where(eq(packages.id, body.packageId));
+        if (pkg) {
+          updates.maxTrackedApps = pkg.maxTrackedApps;
+          updates.maxTrackedKeywords = pkg.maxTrackedKeywords;
+          updates.maxCompetitorApps = pkg.maxCompetitorApps;
+          updates.maxTrackedFeatures = pkg.maxTrackedFeatures;
+          updates.maxUsers = pkg.maxUsers;
+        }
+      }
+
+      // Manual limit overrides (take precedence over package defaults)
       if (body.maxTrackedApps !== undefined)
         updates.maxTrackedApps = body.maxTrackedApps;
       if (body.maxTrackedKeywords !== undefined)
@@ -229,8 +274,6 @@ export const systemAdminRoutes: FastifyPluginAsync = async (app) => {
       if (body.maxTrackedFeatures !== undefined)
         updates.maxTrackedFeatures = body.maxTrackedFeatures;
       if (body.maxUsers !== undefined) updates.maxUsers = body.maxUsers;
-      if (body.isSuspended !== undefined)
-        updates.isSuspended = body.isSuspended;
 
       const [updated] = await db
         .update(accounts)
@@ -991,6 +1034,120 @@ export const systemAdminRoutes: FastifyPluginAsync = async (app) => {
         .where(eq(accountTrackedFeatures.featureHandle, handle));
 
       return trackedBy;
+    }
+  );
+
+  // --- Packages ---
+
+  // GET /api/system-admin/packages — all packages
+  app.get("/packages", async () => {
+    return db.select().from(packages).orderBy(packages.sortOrder);
+  });
+
+  // POST /api/system-admin/packages — create package
+  app.post("/packages", async (request, reply) => {
+    const body = request.body as {
+      slug: string;
+      name: string;
+      maxTrackedApps?: number;
+      maxTrackedKeywords?: number;
+      maxCompetitorApps?: number;
+      maxTrackedFeatures?: number;
+      maxUsers?: number;
+      sortOrder?: number;
+    };
+
+    if (!body.slug || !body.name) {
+      return reply.code(400).send({ error: "slug and name are required" });
+    }
+
+    const [created] = await db
+      .insert(packages)
+      .values({
+        slug: body.slug,
+        name: body.name,
+        maxTrackedApps: body.maxTrackedApps ?? 5,
+        maxTrackedKeywords: body.maxTrackedKeywords ?? 5,
+        maxCompetitorApps: body.maxCompetitorApps ?? 3,
+        maxTrackedFeatures: body.maxTrackedFeatures ?? 5,
+        maxUsers: body.maxUsers ?? 2,
+        sortOrder: body.sortOrder ?? 0,
+      })
+      .returning();
+
+    return created;
+  });
+
+  // PATCH /api/system-admin/packages/:id — update package
+  app.patch<{ Params: { id: string } }>(
+    "/packages/:id",
+    async (request, reply) => {
+      const id = parseInt(request.params.id, 10);
+      const body = request.body as {
+        name?: string;
+        maxTrackedApps?: number;
+        maxTrackedKeywords?: number;
+        maxCompetitorApps?: number;
+        maxTrackedFeatures?: number;
+        maxUsers?: number;
+        sortOrder?: number;
+      };
+
+      const updates: Record<string, any> = {};
+      if (body.name !== undefined) updates.name = body.name;
+      if (body.maxTrackedApps !== undefined) updates.maxTrackedApps = body.maxTrackedApps;
+      if (body.maxTrackedKeywords !== undefined) updates.maxTrackedKeywords = body.maxTrackedKeywords;
+      if (body.maxCompetitorApps !== undefined) updates.maxCompetitorApps = body.maxCompetitorApps;
+      if (body.maxTrackedFeatures !== undefined) updates.maxTrackedFeatures = body.maxTrackedFeatures;
+      if (body.maxUsers !== undefined) updates.maxUsers = body.maxUsers;
+      if (body.sortOrder !== undefined) updates.sortOrder = body.sortOrder;
+
+      if (Object.keys(updates).length === 0) {
+        return reply.code(400).send({ error: "No fields to update" });
+      }
+
+      const [updated] = await db
+        .update(packages)
+        .set(updates)
+        .where(eq(packages.id, id))
+        .returning();
+
+      if (!updated) {
+        return reply.code(404).send({ error: "Package not found" });
+      }
+
+      return updated;
+    }
+  );
+
+  // DELETE /api/system-admin/packages/:id — delete package
+  app.delete<{ Params: { id: string } }>(
+    "/packages/:id",
+    async (request, reply) => {
+      const id = parseInt(request.params.id, 10);
+
+      // Check if any accounts use this package
+      const [{ count }] = await db
+        .select({ count: sql<number>`count(*)::int` })
+        .from(accounts)
+        .where(eq(accounts.packageId, id));
+
+      if (count > 0) {
+        return reply.code(409).send({
+          error: `Cannot delete: ${count} account(s) use this package`,
+        });
+      }
+
+      const deleted = await db
+        .delete(packages)
+        .where(eq(packages.id, id))
+        .returning();
+
+      if (deleted.length === 0) {
+        return reply.code(404).send({ error: "Package not found" });
+      }
+
+      return { ok: true };
     }
   );
 };
