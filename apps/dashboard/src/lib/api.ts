@@ -86,8 +86,8 @@ export function getAppsLastChanges(slugs: string[]) {
 }
 
 export function getAppsMinPaidPrices(slugs: string[]) {
-  if (slugs.length === 0) return Promise.resolve({} as Record<string, number>);
-  return fetchApi<Record<string, number>>(`/api/apps/min-paid-prices`, {
+  if (slugs.length === 0) return Promise.resolve({} as Record<string, number | null>);
+  return fetchApi<Record<string, number | null>>(`/api/apps/min-paid-prices`, {
     method: "POST",
     body: JSON.stringify({ slugs }),
   });

@@ -1,7 +1,7 @@
 import type { FastifyPluginAsync } from "fastify";
-import { eq, desc, isNull, sql, inArray } from "drizzle-orm";
+import { eq, desc, sql, and, asc } from "drizzle-orm";
 import { createDb } from "@shopify-tracking/db";
-import { categories, categorySnapshots } from "@shopify-tracking/db";
+import { categories, categorySnapshots, appCategoryRankings, apps } from "@shopify-tracking/db";
 
 type Db = ReturnType<typeof createDb>;
 
@@ -99,7 +99,62 @@ export const categoryRoutes: FastifyPluginAsync = async (app) => {
       currentParent = parent.parentSlug;
     }
 
-    return { ...category, latestSnapshot: latestSnapshot || null, children, breadcrumb };
+    // Fetch all ranked apps from the latest snapshot's scrape run
+    let rankedApps: any[] = [];
+    if (latestSnapshot) {
+      try {
+        const rankings = await db
+          .select({
+            position: appCategoryRankings.position,
+            appSlug: appCategoryRankings.appSlug,
+            name: apps.name,
+            iconUrl: apps.iconUrl,
+            isBuiltForShopify: apps.isBuiltForShopify,
+          })
+          .from(appCategoryRankings)
+          .innerJoin(apps, eq(apps.slug, appCategoryRankings.appSlug))
+          .where(
+            and(
+              eq(appCategoryRankings.scrapeRunId, latestSnapshot.scrapeRunId),
+              eq(appCategoryRankings.categorySlug, slug)
+            )
+          )
+          .orderBy(asc(appCategoryRankings.position));
+
+        if (rankings.length > 0) {
+          // Get latest snapshot data for each ranked app (rating, reviews, pricing)
+          const slugs = rankings.map((r) => r.appSlug);
+          const slugList = sql.join(slugs.map((s) => sql`${s}`), sql`, `);
+          const snapResult = await db.execute(sql`
+            SELECT DISTINCT ON (app_slug) app_slug, average_rating, rating_count, pricing
+            FROM app_snapshots
+            WHERE app_slug IN (${slugList})
+            ORDER BY app_slug, scraped_at DESC
+          `);
+          const snapRows: any[] = (snapResult as any).rows ?? snapResult;
+
+          const snapshotMap = new Map(snapRows.map((s: any) => [s.app_slug, s]));
+
+          rankedApps = rankings.map((r) => {
+            const snap = snapshotMap.get(r.appSlug);
+            return {
+              position: r.position,
+              slug: r.appSlug,
+              name: r.name,
+              icon_url: r.iconUrl,
+              is_built_for_shopify: r.isBuiltForShopify,
+              average_rating: snap?.average_rating ? Number(snap.average_rating) : null,
+              rating_count: snap?.rating_count ?? null,
+              pricing: snap?.pricing || null,
+            };
+          });
+        }
+      } catch (err) {
+        app.log.warn(`Failed to fetch ranked apps for category ${slug}: ${err}`);
+      }
+    }
+
+    return { ...category, latestSnapshot: latestSnapshot || null, children, breadcrumb, rankedApps };
   });
 
   // GET /api/categories/:slug/history — historical snapshots

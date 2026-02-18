@@ -22,7 +22,7 @@ function getMinPaidPrice(plans: any[] | null | undefined): number | null {
   const prices = plans
     .filter((p: any) => p.price != null && parseFloat(p.price) > 0)
     .map((p: any) => parseFloat(p.price));
-  return prices.length > 0 ? Math.min(...prices) : null;
+  return prices.length > 0 ? Math.min(...prices) : 0;
 }
 
 export const appRoutes: FastifyPluginAsync = async (app) => {
@@ -121,10 +121,9 @@ export const appRoutes: FastifyPluginAsync = async (app) => {
         )
       );
 
-    const result: Record<string, number> = {};
+    const result: Record<string, number | null> = {};
     for (const r of rows) {
-      const price = getMinPaidPrice(r.pricingPlans);
-      if (price != null) result[r.appSlug] = price;
+      result[r.appSlug] = getMinPaidPrice(r.pricingPlans);
     }
     return result;
   });

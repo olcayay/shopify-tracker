@@ -27,36 +27,32 @@ import {
 
 interface App {
   position: number;
-  app_slug: string;
-  app_name: string;
-  short_description: string;
-  average_rating: number;
-  rating_count: number;
-  app_url: string;
-  is_sponsored: boolean;
-  is_built_in: boolean;
-  is_built_for_shopify?: boolean;
+  name: string;
+  slug: string;
   logo_url?: string;
+  average_rating?: number;
+  rating_count?: number;
+  pricing_hint?: string;
+  is_sponsored?: boolean;
+  is_built_for_shopify?: boolean;
 }
 
-type SortKey = "position" | "app_name" | "average_rating" | "rating_count" | "min_paid";
+type SortKey = "position" | "name" | "average_rating" | "rating_count" | "min_paid";
 type SortDir = "asc" | "desc";
 type StatusFilter = "all" | "tracked" | "competitor";
 
 const PAGE_SIZE = 24;
 
-export function KeywordAppResults({
+export function CategoryAppResults({
   apps,
   trackedSlugs,
   competitorSlugs,
-  positionChanges,
   lastChanges,
   minPaidPrices,
 }: {
   apps: App[];
   trackedSlugs: string[];
   competitorSlugs: string[];
-  positionChanges?: Record<string, number> | null;
   lastChanges?: Record<string, string>;
   minPaidPrices?: Record<string, number | null>;
 }) {
@@ -68,40 +64,30 @@ export function KeywordAppResults({
   const [page, setPage] = useState(1);
 
   const trackedSet = useMemo(() => new Set(trackedSlugs), [trackedSlugs]);
-  const competitorSet = useMemo(
-    () => new Set(competitorSlugs),
-    [competitorSlugs]
-  );
+  const competitorSet = useMemo(() => new Set(competitorSlugs), [competitorSlugs]);
 
   const filtered = useMemo(() => {
     let result = apps;
 
-    // Search
     if (search.trim()) {
       const q = search.toLowerCase();
-      result = result.filter(
-        (a) =>
-          a.app_name.toLowerCase().includes(q) ||
-          a.short_description.toLowerCase().includes(q)
-      );
+      result = result.filter((a) => a.name.toLowerCase().includes(q));
     }
 
-    // Status filter
     if (statusFilter === "tracked") {
-      result = result.filter((a) => trackedSet.has(a.app_slug));
+      result = result.filter((a) => trackedSet.has(a.slug));
     } else if (statusFilter === "competitor") {
-      result = result.filter((a) => competitorSet.has(a.app_slug));
+      result = result.filter((a) => competitorSet.has(a.slug));
     }
 
-    // Sort
     result = [...result].sort((a, b) => {
       let cmp = 0;
       switch (sortKey) {
         case "position":
           cmp = a.position - b.position;
           break;
-        case "app_name":
-          cmp = a.app_name.localeCompare(b.app_name);
+        case "name":
+          cmp = a.name.localeCompare(b.name);
           break;
         case "average_rating":
           cmp = (a.average_rating ?? 0) - (b.average_rating ?? 0);
@@ -110,8 +96,8 @@ export function KeywordAppResults({
           cmp = (a.rating_count ?? 0) - (b.rating_count ?? 0);
           break;
         case "min_paid": {
-          const aPrice = minPaidPrices?.[a.app_slug] ?? Infinity;
-          const bPrice = minPaidPrices?.[b.app_slug] ?? Infinity;
+          const aPrice = minPaidPrices?.[a.slug] ?? Infinity;
+          const bPrice = minPaidPrices?.[b.slug] ?? Infinity;
           cmp = (aPrice === null ? Infinity : aPrice) - (bPrice === null ? Infinity : bPrice);
           break;
         }
@@ -124,10 +110,7 @@ export function KeywordAppResults({
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const safePage = Math.min(page, totalPages);
-  const paged = filtered.slice(
-    (safePage - 1) * PAGE_SIZE,
-    safePage * PAGE_SIZE
-  );
+  const paged = filtered.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
 
   function toggleSort(key: SortKey) {
     if (sortKey === key) {
@@ -151,18 +134,12 @@ export function KeywordAppResults({
 
   const statusCounts = useMemo(() => {
     const base = search.trim()
-      ? apps.filter((a) => {
-          const q = search.toLowerCase();
-          return (
-            a.app_name.toLowerCase().includes(q) ||
-            a.short_description.toLowerCase().includes(q)
-          );
-        })
+      ? apps.filter((a) => a.name.toLowerCase().includes(search.toLowerCase()))
       : apps;
     return {
       all: base.length,
-      tracked: base.filter((a) => trackedSet.has(a.app_slug)).length,
-      competitor: base.filter((a) => competitorSet.has(a.app_slug)).length,
+      tracked: base.filter((a) => trackedSet.has(a.slug)).length,
+      competitor: base.filter((a) => competitorSet.has(a.slug)).length,
     };
   }, [apps, search, trackedSet, competitorSet]);
 
@@ -170,7 +147,7 @@ export function KeywordAppResults({
     <Card>
       <CardHeader>
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <CardTitle>Organic Results ({filtered.length})</CardTitle>
+          <CardTitle>Apps ({filtered.length})</CardTitle>
           <div className="relative w-full sm:w-64">
             <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
             <Input
@@ -184,7 +161,6 @@ export function KeywordAppResults({
             />
           </div>
         </div>
-        {/* Status filter */}
         <div className="flex gap-1.5 pt-1">
           {(
             [
@@ -223,9 +199,9 @@ export function KeywordAppResults({
               </TableHead>
               <TableHead
                 className="cursor-pointer select-none"
-                onClick={() => toggleSort("app_name")}
+                onClick={() => toggleSort("name")}
               >
-                App <SortIcon col="app_name" />
+                App <SortIcon col="name" />
               </TableHead>
               <TableHead
                 className="cursor-pointer select-none"
@@ -239,6 +215,7 @@ export function KeywordAppResults({
               >
                 Reviews <SortIcon col="rating_count" />
               </TableHead>
+              <TableHead>Pricing</TableHead>
               <TableHead
                 className="cursor-pointer select-none"
                 onClick={() => toggleSort("min_paid")}
@@ -246,7 +223,6 @@ export function KeywordAppResults({
                 Min. Paid <SortIcon col="min_paid" />
               </TableHead>
               <TableHead>Last Change</TableHead>
-              <TableHead className="w-16">Change</TableHead>
               <TableHead className="w-10" />
             </TableRow>
           </TableHeader>
@@ -262,11 +238,11 @@ export function KeywordAppResults({
               </TableRow>
             ) : (
               paged.map((app) => {
-                const isTracked = trackedSet.has(app.app_slug);
-                const isCompetitor = competitorSet.has(app.app_slug);
+                const isTracked = trackedSet.has(app.slug);
+                const isCompetitor = competitorSet.has(app.slug);
                 return (
                   <TableRow
-                    key={app.app_slug}
+                    key={app.slug}
                     className={
                       isTracked
                         ? "border-l-2 border-l-emerald-500 bg-emerald-500/10"
@@ -281,69 +257,53 @@ export function KeywordAppResults({
                         {app.logo_url && (
                           <img src={app.logo_url} alt="" className="h-6 w-6 rounded shrink-0" />
                         )}
-                        <div>
-                          <div className="flex items-center gap-1.5">
-                            <Link
-                              href={`/apps/${app.app_slug}`}
-                              className="text-primary hover:underline font-medium"
-                            >
-                              {app.app_name}
-                            </Link>
-                            {app.is_built_for_shopify && (
-                              <span title="Built for Shopify">💎</span>
-                            )}
-                            {isTracked && (
-                              <Badge
-                                className="text-[10px] px-1.5 py-0 h-4 bg-emerald-500/20 text-emerald-700 dark:text-emerald-400 border-emerald-500/50"
-                              >
-                                Tracked
-                              </Badge>
-                            )}
-                            {isCompetitor && (
-                              <Badge
-                                className="text-[10px] px-1.5 py-0 h-4 bg-amber-500/20 text-amber-700 dark:text-amber-400 border-amber-500/50"
-                              >
-                                Competitor
-                              </Badge>
-                            )}
-                          </div>
-                          <p className="text-xs text-muted-foreground mt-0.5 line-clamp-1">
-                            {app.short_description}
-                          </p>
+                        <div className="flex items-center gap-1.5">
+                          <Link
+                            href={`/apps/${app.slug}`}
+                            className="text-primary hover:underline font-medium"
+                          >
+                            {app.name}
+                          </Link>
+                          {app.is_sponsored && (
+                            <Badge variant="secondary" className="ml-1">
+                              Ad
+                            </Badge>
+                          )}
+                          {app.is_built_for_shopify && <span title="Built for Shopify">💎</span>}
+                          {isTracked && (
+                            <Badge className="text-[10px] px-1.5 py-0 h-4 bg-emerald-500/20 text-emerald-700 dark:text-emerald-400 border-emerald-500/50">
+                              Tracked
+                            </Badge>
+                          )}
+                          {isCompetitor && (
+                            <Badge className="text-[10px] px-1.5 py-0 h-4 bg-amber-500/20 text-amber-700 dark:text-amber-400 border-amber-500/50">
+                              Competitor
+                            </Badge>
+                          )}
                         </div>
                       </div>
                     </TableCell>
-                    <TableCell>
-                      {app.average_rating?.toFixed(1) ?? "\u2014"}
-                    </TableCell>
-                    <TableCell>
-                      {app.rating_count?.toLocaleString() ?? "\u2014"}
+                    <TableCell>{app.average_rating?.toFixed(1) ?? "\u2014"}</TableCell>
+                    <TableCell>{app.rating_count?.toLocaleString() ?? "\u2014"}</TableCell>
+                    <TableCell className="text-sm text-muted-foreground">
+                      {app.pricing_hint || "\u2014"}
                     </TableCell>
                     <TableCell className="text-sm">
-                      {minPaidPrices?.[app.app_slug] != null
-                        ? minPaidPrices[app.app_slug] === 0
+                      {minPaidPrices?.[app.slug] != null
+                        ? minPaidPrices[app.slug] === 0
                           ? "Free"
-                          : `$${minPaidPrices[app.app_slug]}/mo`
+                          : `$${minPaidPrices[app.slug]}/mo`
                         : "\u2014"}
                     </TableCell>
                     <TableCell className="text-sm text-muted-foreground">
-                      {lastChanges?.[app.app_slug]
-                        ? formatDateOnly(lastChanges[app.app_slug])
+                      {lastChanges?.[app.slug]
+                        ? formatDateOnly(lastChanges[app.slug])
                         : "\u2014"}
-                    </TableCell>
-                    <TableCell className="text-center">
-                      {positionChanges?.[app.app_slug] !== undefined && positionChanges[app.app_slug] !== 0 ? (
-                        <span className={positionChanges[app.app_slug] > 0 ? "text-green-600" : "text-red-500"}>
-                          {positionChanges[app.app_slug] > 0 ? `+${positionChanges[app.app_slug]}` : positionChanges[app.app_slug]}
-                        </span>
-                      ) : (
-                        <span className="text-muted-foreground">{"\u2014"}</span>
-                      )}
                     </TableCell>
                     <TableCell>
                       <StarAppButton
-                        appSlug={app.app_slug}
-                        initialStarred={competitorSet.has(app.app_slug)}
+                        appSlug={app.slug}
+                        initialStarred={competitorSet.has(app.slug)}
                         size="sm"
                       />
                     </TableCell>
@@ -354,7 +314,6 @@ export function KeywordAppResults({
           </TableBody>
         </Table>
 
-        {/* Pagination */}
         {totalPages > 1 && (
           <div className="flex items-center justify-between pt-4 border-t mt-4">
             <p className="text-sm text-muted-foreground">

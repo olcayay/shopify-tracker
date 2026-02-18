@@ -61,7 +61,7 @@ export default async function KeywordDetailPage({
   const uniqueSlugs = [...new Set(allAppSlugs)];
   const [lastChanges, minPaidPrices] = await Promise.all([
     getAppsLastChanges(uniqueSlugs).catch(() => ({} as Record<string, string>)),
-    getAppsMinPaidPrices(uniqueSlugs).catch(() => ({} as Record<string, number>)),
+    getAppsMinPaidPrices(uniqueSlugs).catch(() => ({} as Record<string, number | null>)),
   ]);
 
   // Build ranking chart data from rankings (filtered to tracked + competitor apps)

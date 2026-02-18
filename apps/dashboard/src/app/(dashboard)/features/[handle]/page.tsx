@@ -40,7 +40,7 @@ export default async function FeatureDetailPage({
   const featureAppSlugs = (feature.apps || []).map((a: any) => a.slug).filter(Boolean);
   const [lastChanges, minPaidPrices] = await Promise.all([
     getAppsLastChanges(featureAppSlugs).catch(() => ({} as Record<string, string>)),
-    getAppsMinPaidPrices(featureAppSlugs).catch(() => ({} as Record<string, number>)),
+    getAppsMinPaidPrices(featureAppSlugs).catch(() => ({} as Record<string, number | null>)),
   ]);
 
   return (
@@ -136,7 +136,9 @@ export default async function FeatureDetailPage({
                     </TableCell>
                     <TableCell className="text-sm">
                       {minPaidPrices[app.slug] != null
-                        ? `$${minPaidPrices[app.slug]}/mo`
+                        ? minPaidPrices[app.slug] === 0
+                          ? "Free"
+                          : `$${minPaidPrices[app.slug]}/mo`
                         : "\u2014"}
                     </TableCell>
                     <TableCell className="text-sm text-muted-foreground">

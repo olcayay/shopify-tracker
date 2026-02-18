@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { formatDateTime, formatDateOnly } from "@/lib/format-date";
+import { formatDateTime } from "@/lib/format-date";
 import { getCategory, getCategoryHistory, getAccountCompetitors, getAccountTrackedApps, getAccountStarredCategories, getAppsLastChanges, getAppsMinPaidPrices } from "@/lib/api";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -12,9 +12,9 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { ExternalLink } from "lucide-react";
-import { StarAppButton } from "@/components/star-app-button";
 import { StarCategoryButton } from "@/components/star-category-button";
 import { AdminScraperTrigger } from "@/components/admin-scraper-trigger";
+import { CategoryAppResults } from "./app-results";
 
 export default async function CategoryDetailPage({
   params,
@@ -46,13 +46,16 @@ export default async function CategoryDetailPage({
 
   const snapshot = category.latestSnapshot;
 
-  // Fetch last change dates for first page apps
-  const firstPageSlugs = (snapshot?.firstPageApps || [])
-    .map((app: any) => app.app_url?.replace("https://apps.shopify.com/", "")?.split("?")[0])
-    .filter(Boolean);
+  // Use rankedApps (all pages) if available, fall back to firstPageApps
+  const hasRankedApps = category.rankedApps?.length > 0;
+  const appSlugs: string[] = hasRankedApps
+    ? category.rankedApps.map((a: any) => a.slug)
+    : (snapshot?.firstPageApps || [])
+        .map((app: any) => app.app_url?.replace("https://apps.shopify.com/", "")?.split("?")[0])
+        .filter(Boolean);
   const [lastChanges, minPaidPrices] = await Promise.all([
-    getAppsLastChanges(firstPageSlugs).catch(() => ({} as Record<string, string>)),
-    getAppsMinPaidPrices(firstPageSlugs).catch(() => ({} as Record<string, number>)),
+    getAppsLastChanges(appSlugs).catch(() => ({} as Record<string, string>)),
+    getAppsMinPaidPrices(appSlugs).catch(() => ({} as Record<string, number | null>)),
   ]);
 
   return (
@@ -164,91 +167,46 @@ export default async function CategoryDetailPage({
               )}
             </div>
 
-            {/* First Page Apps */}
-            {snapshot.firstPageApps?.length > 0 && (
-              <>
-                <h3 className="font-semibold mt-4">
-                  First Page Apps ({snapshot.firstPageApps.length})
-                </h3>
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>#</TableHead>
-                      <TableHead>App</TableHead>
-                      <TableHead>Rating</TableHead>
-                      <TableHead>Reviews</TableHead>
-                      <TableHead>Pricing</TableHead>
-                      <TableHead>Min. Paid</TableHead>
-                      <TableHead>Last Change</TableHead>
-                      <TableHead className="w-10" />
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {snapshot.firstPageApps.map((app: any, i: number) => {
-                      const appSlug = app.app_url
-                        ?.replace("https://apps.shopify.com/", "")
-                        ?.split("?")[0];
-                      const isTracked = appSlug && trackedSlugs.has(appSlug);
-                      const isCompetitor = appSlug && competitorSlugs.has(appSlug);
-                      return (
-                      <TableRow key={appSlug || i} className={isTracked ? "border-l-2 border-l-emerald-500 bg-emerald-500/10" : isCompetitor ? "border-l-2 border-l-amber-500 bg-amber-500/10" : ""}>
-                        <TableCell>{app.position || i + 1}</TableCell>
-                        <TableCell>
-                          <div className="flex items-center gap-2">
-                            {app.logo_url && (
-                              <img src={app.logo_url} alt="" className="h-6 w-6 rounded shrink-0" />
-                            )}
-                            <div className="flex items-center gap-1.5">
-                            {appSlug ? (
-                            <Link
-                              href={`/apps/${appSlug}`}
-                              className="text-primary hover:underline"
-                            >
-                              {app.name}
-                            </Link>
-                            ) : (
-                              <span>{app.name}</span>
-                            )}
-                            {app.is_sponsored && (
-                              <Badge variant="secondary" className="ml-1">
-                                Ad
-                              </Badge>
-                            )}
-                            {app.is_built_for_shopify && <span title="Built for Shopify">💎</span>}
-                            {isTracked && <Badge className="text-[10px] px-1.5 py-0 h-4 bg-emerald-500/20 text-emerald-700 dark:text-emerald-400 border-emerald-500/50">Tracked</Badge>}
-                            {isCompetitor && <Badge className="text-[10px] px-1.5 py-0 h-4 bg-amber-500/20 text-amber-700 dark:text-amber-400 border-amber-500/50">Competitor</Badge>}
-                            </div>
-                          </div>
-                        </TableCell>
-                        <TableCell>{app.average_rating?.toFixed(1) ?? "—"}</TableCell>
-                        <TableCell>{app.rating_count ?? "—"}</TableCell>
-                        <TableCell className="text-sm text-muted-foreground">{app.pricing_hint || "—"}</TableCell>
-                        <TableCell className="text-sm">
-                          {appSlug && minPaidPrices[appSlug] != null
-                            ? `$${minPaidPrices[appSlug]}/mo`
-                            : "\u2014"}
-                        </TableCell>
-                        <TableCell className="text-sm text-muted-foreground">
-                          {appSlug && lastChanges[appSlug] ? formatDateOnly(lastChanges[appSlug]) : "\u2014"}
-                        </TableCell>
-                        <TableCell>
-                          {appSlug && (
-                            <StarAppButton
-                              appSlug={appSlug}
-                              initialStarred={competitorSlugs.has(appSlug)}
-                              size="sm"
-                            />
-                          )}
-                        </TableCell>
-                      </TableRow>
-                      );
-                    })}
-                  </TableBody>
-                </Table>
-              </>
-            )}
           </CardContent>
         </Card>
+      )}
+
+      {/* Ranked Apps (all pages when available, otherwise first page) */}
+      {appSlugs.length > 0 && (
+        <CategoryAppResults
+          apps={hasRankedApps
+            ? category.rankedApps.map((app: any) => ({
+                position: app.position,
+                name: app.name,
+                slug: app.slug,
+                logo_url: app.icon_url,
+                average_rating: app.average_rating,
+                rating_count: app.rating_count,
+                pricing_hint: app.pricing,
+                is_built_for_shopify: app.is_built_for_shopify,
+              }))
+            : snapshot.firstPageApps.map((app: any, i: number) => {
+                const appSlug = app.app_url
+                  ?.replace("https://apps.shopify.com/", "")
+                  ?.split("?")[0] || "";
+                return {
+                  position: app.position || i + 1,
+                  name: app.name,
+                  slug: appSlug,
+                  logo_url: app.logo_url,
+                  average_rating: app.average_rating,
+                  rating_count: app.rating_count,
+                  pricing_hint: app.pricing_hint,
+                  is_sponsored: app.is_sponsored,
+                  is_built_for_shopify: app.is_built_for_shopify,
+                };
+              })
+          }
+          trackedSlugs={[...trackedSlugs]}
+          competitorSlugs={[...competitorSlugs]}
+          lastChanges={lastChanges}
+          minPaidPrices={minPaidPrices}
+        />
       )}
 
       {/* History */}

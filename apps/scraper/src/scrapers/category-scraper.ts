@@ -274,6 +274,7 @@ export class CategoryScraper {
       if (maxPages > 1) {
         let currentPage = 1;
         let currentHtml = html;
+        let totalAppsRecorded = pageData.first_page_apps.length;
 
         while (currentPage < maxPages && hasNextPage(currentHtml)) {
           currentPage++;
@@ -282,8 +283,9 @@ export class CategoryScraper {
             currentHtml = await this.httpClient.fetchPage(pageUrl);
             const nextPageData = parseCategoryPage(currentHtml, pageUrl);
 
-            // Record additional page app rankings
-            await this.recordAppRankings(nextPageData.first_page_apps, slug, runId);
+            // Record additional page app rankings with global position offset
+            await this.recordAppRankings(nextPageData.first_page_apps, slug, runId, totalAppsRecorded);
+            totalAppsRecorded += nextPageData.first_page_apps.length;
             for (const app of nextPageData.first_page_apps) {
               const appSlug = app.app_url.replace("https://apps.shopify.com/", "");
               if (appSlug) discoveredSlugs.push(appSlug);
@@ -340,7 +342,8 @@ export class CategoryScraper {
   private async recordAppRankings(
     appList: { app_url: string; name: string; short_description?: string; is_built_for_shopify?: boolean; position?: number }[],
     categorySlug: string,
-    runId: string
+    runId: string,
+    positionOffset = 0
   ): Promise<void> {
     const now = new Date();
 
@@ -360,13 +363,13 @@ export class CategoryScraper {
           set: { name: app.name, isBuiltForShopify: !!app.is_built_for_shopify, appCardSubtitle: app.short_description || undefined, updatedAt: now },
         });
 
-      // Record ranking (prefer data-attribute position, fallback to array index)
+      // Record ranking with global position across pages
       await this.db.insert(appCategoryRankings).values({
         appSlug,
         categorySlug,
         scrapeRunId: runId,
         scrapedAt: now,
-        position: app.position || i + 1,
+        position: positionOffset + (app.position || i + 1),
       });
     }
   }
