@@ -1,5 +1,5 @@
 import type { FastifyPluginAsync } from "fastify";
-import { eq, sql, and, desc } from "drizzle-orm";
+import { eq, sql, and, desc, inArray } from "drizzle-orm";
 import crypto from "crypto";
 import { Queue } from "bullmq";
 import {
@@ -19,6 +19,7 @@ import {
   accountStarredCategories,
   accountTrackedFeatures,
   categories,
+  categorySnapshots,
 } from "@shopify-tracking/db";
 import { requireRole } from "../middleware/authorize.js";
 
@@ -863,7 +864,60 @@ export const accountRoutes: FastifyPluginAsync = async (app) => {
       )
       .where(eq(accountStarredCategories.accountId, accountId));
 
-    return rows;
+    if (rows.length === 0) return rows;
+
+    // Get tracked + competitor slugs for this account
+    const [trackedApps, competitorApps] = await Promise.all([
+      db.select({ appSlug: accountTrackedApps.appSlug }).from(accountTrackedApps).where(eq(accountTrackedApps.accountId, accountId)),
+      db.select({ appSlug: accountCompetitorApps.appSlug }).from(accountCompetitorApps).where(eq(accountCompetitorApps.accountId, accountId)),
+    ]);
+    const trackedSet = new Set(trackedApps.map((a) => a.appSlug));
+    const competitorSet = new Set(competitorApps.map((a) => a.appSlug));
+
+    // Get latest snapshot per starred category for firstPageApps + appCount
+    const categorySlugs = rows.map((r) => r.categorySlug);
+    const snapshots = await db
+      .select({
+        categorySlug: categorySnapshots.categorySlug,
+        appCount: categorySnapshots.appCount,
+        firstPageApps: categorySnapshots.firstPageApps,
+      })
+      .from(categorySnapshots)
+      .where(
+        and(
+          inArray(categorySnapshots.categorySlug, categorySlugs),
+          sql`${categorySnapshots.id} = (
+            SELECT s2.id FROM category_snapshots s2
+            WHERE s2.category_slug = ${categorySnapshots.categorySlug}
+            ORDER BY s2.scraped_at DESC LIMIT 1
+          )`
+        )
+      );
+
+    const snapshotMap = new Map(snapshots.map((s) => [s.categorySlug, s]));
+
+    function extractSlug(appUrl: string): string {
+      return appUrl.replace(/^https?:\/\/apps\.shopify\.com\//, "").replace(/^\/apps\//, "").split("?")[0];
+    }
+
+    return rows.map((row) => {
+      const snap = snapshotMap.get(row.categorySlug);
+      const fpApps = (snap?.firstPageApps ?? []) as any[];
+      const trackedAppsInResults = fpApps
+        .filter((a) => trackedSet.has(extractSlug(a.app_url)))
+        .map((a) => ({ ...a, app_slug: extractSlug(a.app_url) }));
+      const competitorAppsInResults = fpApps
+        .filter((a) => competitorSet.has(extractSlug(a.app_url)))
+        .map((a) => ({ ...a, app_slug: extractSlug(a.app_url) }));
+      return {
+        ...row,
+        appCount: snap?.appCount ?? null,
+        trackedInResults: trackedAppsInResults.length,
+        competitorInResults: competitorAppsInResults.length,
+        trackedAppsInResults,
+        competitorAppsInResults,
+      };
+    });
   });
 
   // POST /api/account/starred-categories

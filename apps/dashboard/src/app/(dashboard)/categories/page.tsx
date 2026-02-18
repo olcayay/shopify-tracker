@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback, useMemo } from "react";
+import { Fragment, useEffect, useState, useCallback, useMemo } from "react";
 import Link from "next/link";
 import { useAuth } from "@/lib/auth-context";
 import { useFormatDate } from "@/lib/format-date";
@@ -15,6 +15,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { Badge } from "@/components/ui/badge";
 import {
   ChevronRight,
   ChevronDown,
@@ -23,6 +24,8 @@ import {
   Star,
   X,
   Search,
+  Target,
+  Eye,
 } from "lucide-react";
 import { ConfirmModal } from "@/components/confirm-modal";
 import { AdminScraperTrigger } from "@/components/admin-scraper-trigger";
@@ -42,6 +45,11 @@ interface StarredCategory {
   categoryTitle: string;
   parentSlug: string | null;
   createdAt: string;
+  appCount: number | null;
+  trackedInResults: number;
+  competitorInResults: number;
+  trackedAppsInResults: any[];
+  competitorAppsInResults: any[];
 }
 
 export default function CategoriesPage() {
@@ -52,6 +60,7 @@ export default function CategoriesPage() {
   const [loading, setLoading] = useState(true);
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const [searchQuery, setSearchQuery] = useState("");
+  const [expandedStarred, setExpandedStarred] = useState<string | null>(null);
   const [confirmUnstar, setConfirmUnstar] = useState<{
     slug: string;
     title: string;
@@ -201,6 +210,31 @@ export default function CategoriesPage() {
   const totalCount = countAll(tree);
   const starredSlugs = new Set(starred.map((s) => s.categorySlug));
 
+  // Build flat slug→node map for ancestor lookups
+  const slugMap = useMemo(() => {
+    const map = new Map<string, CategoryNode>();
+    function collect(nodes: CategoryNode[]) {
+      for (const n of nodes) {
+        map.set(n.slug, n);
+        collect(n.children);
+      }
+    }
+    collect(tree);
+    return map;
+  }, [tree]);
+
+  function getAncestors(slug: string): CategoryNode[] {
+    const ancestors: CategoryNode[] = [];
+    let node = slugMap.get(slug);
+    while (node?.parentSlug) {
+      const parent = slugMap.get(node.parentSlug);
+      if (!parent) break;
+      ancestors.unshift(parent);
+      node = parent;
+    }
+    return ancestors;
+  }
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -238,7 +272,7 @@ export default function CategoriesPage() {
       </div>
 
       {/* Starred Categories */}
-      {starred.length > 0 && !searchQuery && (
+      {!searchQuery && (
         <Card>
           <CardHeader className="pb-3">
             <CardTitle className="text-base flex items-center gap-2">
@@ -247,30 +281,91 @@ export default function CategoriesPage() {
             </CardTitle>
           </CardHeader>
           <CardContent>
+            {starred.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-10 text-center">
+                <Folder className="h-10 w-10 text-muted-foreground/20 mb-3" />
+                <p className="text-sm font-medium text-muted-foreground mb-1">
+                  No starred categories yet
+                </p>
+                <p className="text-xs text-muted-foreground/70 max-w-xs">
+                  Star categories from the tree below or from category detail pages to track them here.
+                </p>
+              </div>
+            ) : (
             <Table>
               <TableHeader>
                 <TableRow>
                   <TableHead>Category</TableHead>
-                  <TableHead>Added</TableHead>
+                  <TableHead>Total Apps</TableHead>
+                  <TableHead>Tracked</TableHead>
+                  <TableHead>Competitor</TableHead>
                   {canEdit && <TableHead className="w-12" />}
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {starred.map((s) => (
-                  <TableRow key={s.categorySlug}>
+                {starred.map((s) => {
+                  const ancestors = getAncestors(s.categorySlug);
+                  const hasApps = s.trackedInResults > 0 || s.competitorInResults > 0;
+                  const isExpanded = expandedStarred === s.categorySlug;
+                  return (
+                  <Fragment key={s.categorySlug}>
+                  <TableRow
+                    className={hasApps ? "cursor-pointer hover:bg-muted/50" : ""}
+                    onClick={() => hasApps && setExpandedStarred(isExpanded ? null : s.categorySlug)}
+                  >
                     <TableCell>
-                      <Link
-                        href={`/categories/${s.categorySlug}`}
-                        className="text-primary hover:underline font-medium"
-                      >
-                        {s.categoryTitle}
-                      </Link>
+                      <div className="flex items-center gap-1 text-sm">
+                        {hasApps ? (
+                          isExpanded ? <ChevronDown className="h-4 w-4 text-muted-foreground shrink-0" /> : <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />
+                        ) : (
+                          <span className="w-4 shrink-0" />
+                        )}
+                        {ancestors.map((a) => (
+                          <span key={a.slug} className="flex items-center gap-1">
+                            <Link
+                              href={`/categories/${a.slug}`}
+                              className="text-muted-foreground hover:underline hover:text-foreground"
+                              onClick={(e) => e.stopPropagation()}
+                            >
+                              {a.title}
+                            </Link>
+                            <ChevronRight className="h-3 w-3 text-muted-foreground shrink-0" />
+                          </span>
+                        ))}
+                        <Link
+                          href={`/categories/${s.categorySlug}`}
+                          className="text-primary hover:underline font-medium"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          {s.categoryTitle}
+                        </Link>
+                      </div>
                     </TableCell>
-                    <TableCell className="text-sm text-muted-foreground">
-                      {formatDateOnly(s.createdAt)}
+                    <TableCell>
+                      {s.appCount != null ? s.appCount.toLocaleString() : "\u2014"}
+                    </TableCell>
+                    <TableCell>
+                      {s.trackedInResults > 0 ? (
+                        <Badge className="bg-emerald-500/20 text-emerald-700 dark:text-emerald-400 border-emerald-500/50">
+                          <Target className="h-3 w-3 mr-1" />
+                          {s.trackedInResults}
+                        </Badge>
+                      ) : (
+                        <span className="text-muted-foreground">{"\u2014"}</span>
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      {s.competitorInResults > 0 ? (
+                        <Badge className="bg-amber-500/20 text-amber-700 dark:text-amber-400 border-amber-500/50">
+                          <Eye className="h-3 w-3 mr-1" />
+                          {s.competitorInResults}
+                        </Badge>
+                      ) : (
+                        <span className="text-muted-foreground">{"\u2014"}</span>
+                      )}
                     </TableCell>
                     {canEdit && (
-                      <TableCell>
+                      <TableCell onClick={(e) => e.stopPropagation()}>
                         <Button
                           variant="ghost"
                           size="icon"
@@ -287,9 +382,82 @@ export default function CategoriesPage() {
                       </TableCell>
                     )}
                   </TableRow>
-                ))}
+                  {isExpanded && (
+                    <TableRow>
+                      <TableCell colSpan={canEdit ? 5 : 4} className="bg-muted/30 p-4">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          {s.trackedAppsInResults?.length > 0 && (
+                            <div>
+                              <h4 className="text-sm font-medium mb-2 flex items-center gap-1.5">
+                                <Target className="h-3.5 w-3.5 text-primary" />
+                                Tracked Apps
+                              </h4>
+                              <div className="space-y-1">
+                                {s.trackedAppsInResults.map((app: any) => (
+                                  <div key={app.app_slug} className="flex items-center justify-between text-sm py-1 px-2 rounded bg-emerald-500/10 border-l-2 border-l-emerald-500">
+                                    <div className="flex items-center gap-2">
+                                      {app.logo_url && (
+                                        <img src={app.logo_url} alt="" className="h-5 w-5 rounded shrink-0" />
+                                      )}
+                                      <Link
+                                        href={`/apps/${app.app_slug}`}
+                                        className="text-primary hover:underline font-medium"
+                                        onClick={(e) => e.stopPropagation()}
+                                      >
+                                        {app.name}
+                                      </Link>
+                                    </div>
+                                    {app.position != null && (
+                                      <span className="font-mono text-muted-foreground text-xs">
+                                        #{app.position}
+                                      </span>
+                                    )}
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                          {s.competitorAppsInResults?.length > 0 && (
+                            <div>
+                              <h4 className="text-sm font-medium mb-2 flex items-center gap-1.5">
+                                <Eye className="h-3.5 w-3.5 text-yellow-500" />
+                                Competitor Apps
+                              </h4>
+                              <div className="space-y-1">
+                                {s.competitorAppsInResults.map((app: any) => (
+                                  <div key={app.app_slug} className="flex items-center justify-between text-sm py-1 px-2 rounded bg-amber-500/10 border-l-2 border-l-amber-500">
+                                    <div className="flex items-center gap-2">
+                                      {app.logo_url && (
+                                        <img src={app.logo_url} alt="" className="h-5 w-5 rounded shrink-0" />
+                                      )}
+                                      <Link
+                                        href={`/apps/${app.app_slug}`}
+                                        className="text-primary hover:underline font-medium"
+                                        onClick={(e) => e.stopPropagation()}
+                                      >
+                                        {app.name}
+                                      </Link>
+                                    </div>
+                                    {app.position != null && (
+                                      <span className="font-mono text-muted-foreground text-xs">
+                                        #{app.position}
+                                      </span>
+                                    )}
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  )}
+                  </Fragment>
+                  );
+                })}
               </TableBody>
             </Table>
+            )}
           </CardContent>
         </Card>
       )}
