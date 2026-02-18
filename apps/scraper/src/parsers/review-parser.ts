@@ -15,7 +15,10 @@ export function parseReviewPage(
 
   const reviews: Review[] = [];
 
-  const reviewElements = $("[data-merchant-review]");
+  const reviewElements = $("[data-merchant-review]").filter((_, el) => {
+    // Exclude archived reviews (hidden inside #archived-reviews-container)
+    return $(el).closest("#archived-reviews-container").length === 0;
+  });
 
   if (reviewElements.length === 0 && currentPage === 1) {
     log.warn("no [data-merchant-review] elements found — possible HTML structure change");
@@ -41,6 +44,23 @@ export function parseReviewPage(
         if (m && !reviewDate) reviewDate = m[1];
       });
       if (!reviewDate) return;
+
+      // Developer reply — parse before removing from DOM
+      let developerReplyDate: string | null = null;
+      let developerReplyText: string | null = null;
+
+      const replySection = $review.find("[data-merchant-review-reply]");
+      const replyContent = replySection.text().trim();
+      if (replyContent.length > 0) {
+        const replyDateMatch = replyContent.match(
+          /\b((?:January|February|March|April|May|June|July|August|September|October|November|December)\s+\d{1,2},\s+\d{4})\b/
+        );
+        developerReplyDate = replyDateMatch ? replyDateMatch[1] : null;
+        developerReplyText = replySection.find("p").text().trim() || null;
+      }
+
+      // Remove reply section so content extraction doesn't include it
+      replySection.remove();
 
       // Content — inside [data-truncate-content-copy] p
       const content =
@@ -72,20 +92,6 @@ export function parseReviewPage(
           reviewerCountry = t;
         }
       });
-
-      // Developer reply
-      let developerReplyDate: string | null = null;
-      let developerReplyText: string | null = null;
-
-      const replySection = $review.find("[data-merchant-review-reply]");
-      const replyContent = replySection.text().trim();
-      if (replyContent.length > 0) {
-        const replyDateMatch = replyContent.match(
-          /\b((?:January|February|March|April|May|June|July|August|September|October|November|December)\s+\d{1,2},\s+\d{4})\b/
-        );
-        developerReplyDate = replyDateMatch ? replyDateMatch[1] : null;
-        developerReplyText = replySection.find("p").text().trim() || null;
-      }
 
       reviews.push({
         review_date: reviewDate,

@@ -10,16 +10,12 @@ import { parseReviewPage } from "../parsers/review-parser.js";
 export class ReviewScraper {
   private db: Database;
   private httpClient: HttpClient;
-  private maxPages: number;
-
   constructor(
     db: Database,
     httpClient?: HttpClient,
-    maxPages = 5
   ) {
     this.db = db;
     this.httpClient = httpClient || new HttpClient();
-    this.maxPages = maxPages;
   }
 
   /** Scrape reviews for all tracked apps */
@@ -92,7 +88,7 @@ export class ReviewScraper {
     let newReviews = 0;
     let page = 1;
 
-    while (page <= this.maxPages) {
+    while (true) {
       const reviewUrl = urls.appReviews(slug, page);
       const html = await this.httpClient.fetchPage(reviewUrl);
       const data = parseReviewPage(html, page);

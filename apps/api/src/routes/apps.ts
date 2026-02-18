@@ -283,6 +283,11 @@ export const appRoutes: FastifyPluginAsync = async (app) => {
         .from(reviews)
         .where(eq(reviews.appSlug, slug));
 
+      const [{ withContentCount }] = await db
+        .select({ withContentCount: sql<number>`count(*)::int` })
+        .from(reviews)
+        .where(and(eq(reviews.appSlug, slug), sql`content != ''`));
+
       // Rating distribution
       const distribution = await db
         .select({
@@ -294,7 +299,7 @@ export const appRoutes: FastifyPluginAsync = async (app) => {
         .groupBy(reviews.rating)
         .orderBy(reviews.rating);
 
-      return { app: appRow, reviews: rows, total: count, distribution };
+      return { app: appRow, reviews: rows, total: count, withContentCount, distribution };
     }
   );
 

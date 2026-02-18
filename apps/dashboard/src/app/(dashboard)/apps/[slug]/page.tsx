@@ -19,6 +19,7 @@ import { ExternalLink } from "lucide-react";
 import { TrackAppButton } from "./track-button";
 import { StarAppButton } from "@/components/star-app-button";
 import { AdminScraperTrigger } from "@/components/admin-scraper-trigger";
+import { ReviewList } from "./review-list";
 
 export default async function AppDetailPage({
   params,
@@ -131,6 +132,11 @@ export default async function AppDetailPage({
               <span className="text-2xl font-bold">
                 {snapshot.ratingCount ?? "—"}
               </span>
+              {reviewData?.total != null && reviewData.total > 0 && (
+                <p className="text-xs text-muted-foreground mt-1">
+                  {reviewData.withContentCount} with content
+                </p>
+              )}
             </CardContent>
           </Card>
           <Card className="py-3 gap-1">
@@ -308,46 +314,11 @@ export default async function AppDetailPage({
             </Card>
           )}
 
-          <Card>
-            <CardHeader>
-              <CardTitle>Recent Reviews</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                {reviewData?.reviews?.map((review: any) => (
-                  <div
-                    key={review.id}
-                    className="border-b pb-4 last:border-0 last:pb-0"
-                  >
-                    <div className="flex items-center justify-between mb-1">
-                      <div className="flex items-center gap-2">
-                        <span className="font-medium">
-                          {review.reviewerName}
-                        </span>
-                        {review.reviewerCountry && (
-                          <span className="text-sm text-muted-foreground">
-                            {review.reviewerCountry}
-                          </span>
-                        )}
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <Badge variant="outline">{review.rating}★</Badge>
-                        <span className="text-sm text-muted-foreground">
-                          {review.reviewDate}
-                        </span>
-                      </div>
-                    </div>
-                    <p className="text-sm">{review.content}</p>
-                    {review.durationUsingApp && (
-                      <p className="text-xs text-muted-foreground mt-1">
-                        {review.durationUsingApp}
-                      </p>
-                    )}
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
+          <ReviewList
+            appSlug={app.slug}
+            initialReviews={reviewData?.reviews ?? []}
+            total={reviewData?.total ?? 0}
+          />
         </TabsContent>
 
         {/* Details Tab */}

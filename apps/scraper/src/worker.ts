@@ -90,7 +90,11 @@ async function processJob(job: Job<ScraperJobData>): Promise<void> {
 
     case "reviews": {
       const scraper = new ReviewScraper(db, httpClient);
-      await scraper.scrapeTracked(triggeredBy);
+      if (job.data.slug) {
+        await scraper.scrapeAppReviews(job.data.slug, "");
+      } else {
+        await scraper.scrapeTracked(triggeredBy);
+      }
       break;
     }
 
