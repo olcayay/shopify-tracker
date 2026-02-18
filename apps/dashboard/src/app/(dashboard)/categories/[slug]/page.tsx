@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { formatDateTime, formatDateOnly } from "@/lib/format-date";
-import { getCategory, getCategoryHistory, getAccountCompetitors, getAccountTrackedApps, getAppsLastChanges } from "@/lib/api";
+import { getCategory, getCategoryHistory, getAccountCompetitors, getAccountTrackedApps, getAccountStarredCategories, getAppsLastChanges } from "@/lib/api";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/table";
 import { ExternalLink } from "lucide-react";
 import { StarAppButton } from "@/components/star-app-button";
+import { StarCategoryButton } from "@/components/star-category-button";
 import { AdminScraperTrigger } from "@/components/admin-scraper-trigger";
 
 export default async function CategoryDetailPage({
@@ -26,12 +27,14 @@ export default async function CategoryDetailPage({
   let history: any;
   let competitors: any[] = [];
   let trackedApps: any[] = [];
+  let starredCategories: any[] = [];
   try {
-    [category, history, competitors, trackedApps] = await Promise.all([
+    [category, history, competitors, trackedApps, starredCategories] = await Promise.all([
       getCategory(slug),
       getCategoryHistory(slug, 10),
       getAccountCompetitors().catch(() => []),
       getAccountTrackedApps().catch(() => []),
+      getAccountStarredCategories().catch(() => []),
     ]);
   } catch {
     return <p className="text-muted-foreground">Category not found.</p>;
@@ -39,6 +42,7 @@ export default async function CategoryDetailPage({
 
   const competitorSlugs = new Set(competitors.map((c: any) => c.appSlug));
   const trackedSlugs = new Set(trackedApps.map((a: any) => a.appSlug));
+  const isStarred = starredCategories.some((sc: any) => sc.categorySlug === slug);
 
   const snapshot = category.latestSnapshot;
 
@@ -73,6 +77,10 @@ export default async function CategoryDetailPage({
           )}
         </div>
         <div className="flex items-center gap-2 shrink-0">
+          <StarCategoryButton
+            categorySlug={category.slug}
+            initialStarred={isStarred}
+          />
           <AdminScraperTrigger
             scraperType="category"
             slug={category.slug}

@@ -167,6 +167,10 @@ export function getAccountTrackedFeatures() {
   return fetchApi<any[]>(`/api/account/tracked-features`);
 }
 
+export function getAccountStarredCategories() {
+  return fetchApi<any[]>(`/api/account/starred-categories`);
+}
+
 // --- System Admin ---
 export function getSystemAccounts() {
   return fetchApi<any[]>(`/api/system-admin/accounts`);
