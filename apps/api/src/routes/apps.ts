@@ -17,6 +17,14 @@ import {
 
 type Db = ReturnType<typeof createDb>;
 
+function getMinPaidPrice(plans: any[] | null | undefined): number | null {
+  if (!plans || plans.length === 0) return null;
+  const prices = plans
+    .filter((p: any) => p.price != null && parseFloat(p.price) > 0)
+    .map((p: any) => parseFloat(p.price));
+  return prices.length > 0 ? Math.min(...prices) : null;
+}
+
 export const appRoutes: FastifyPluginAsync = async (app) => {
   const db: Db = (app as any).db;
 
@@ -49,6 +57,7 @@ export const appRoutes: FastifyPluginAsync = async (app) => {
             averageRating: appSnapshots.averageRating,
             ratingCount: appSnapshots.ratingCount,
             pricing: appSnapshots.pricing,
+            pricingPlans: appSnapshots.pricingPlans,
             scrapedAt: appSnapshots.scrapedAt,
           })
           .from(appSnapshots)
@@ -63,7 +72,10 @@ export const appRoutes: FastifyPluginAsync = async (app) => {
           .orderBy(desc(appFieldChanges.detectedAt))
           .limit(1);
 
-        return { ...appRow, latestSnapshot: snapshot || null, lastChangeAt: change?.detectedAt || null };
+        const minPaidPrice = getMinPaidPrice(snapshot?.pricingPlans);
+        const { pricingPlans: _, ...snapshotRest } = snapshot || ({} as any);
+
+        return { ...appRow, latestSnapshot: snapshot ? snapshotRest : null, minPaidPrice, lastChangeAt: change?.detectedAt || null };
       })
     );
 
@@ -87,6 +99,32 @@ export const appRoutes: FastifyPluginAsync = async (app) => {
     const result: Record<string, string> = {};
     for (const r of rows) {
       result[r.appSlug] = r.lastChangeAt;
+    }
+    return result;
+  });
+
+  // POST /api/apps/min-paid-prices — bulk lookup minPaidPrice for multiple apps
+  app.post("/min-paid-prices", async (request) => {
+    const { slugs } = request.body as { slugs: string[] };
+    if (!slugs?.length) return {};
+
+    const rows = await db
+      .select({
+        appSlug: appSnapshots.appSlug,
+        pricingPlans: appSnapshots.pricingPlans,
+      })
+      .from(appSnapshots)
+      .where(
+        and(
+          inArray(appSnapshots.appSlug, slugs),
+          sql`${appSnapshots.id} = (SELECT s2.id FROM app_snapshots s2 WHERE s2.app_slug = ${appSnapshots.appSlug} ORDER BY s2.scraped_at DESC LIMIT 1)`
+        )
+      );
+
+    const result: Record<string, number> = {};
+    for (const r of rows) {
+      const price = getMinPaidPrice(r.pricingPlans);
+      if (price != null) result[r.appSlug] = price;
     }
     return result;
   });

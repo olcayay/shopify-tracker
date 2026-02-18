@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, useMemo } from "react";
 import Link from "next/link";
 import { useAuth } from "@/lib/auth-context";
 import { useFormatDate } from "@/lib/format-date";
@@ -15,9 +15,12 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { X, Plus, Search } from "lucide-react";
+import { X, Plus, Search, ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
 import { ConfirmModal } from "@/components/confirm-modal";
 import { AdminScraperTrigger } from "@/components/admin-scraper-trigger";
+
+type SortKey = "name" | "rating" | "reviews" | "minPaidPrice" | "lastChangeAt" | "launchedDate";
+type SortDir = "asc" | "desc";
 
 export default function CompetitorsPage() {
   const { fetchWithAuth, user, account, refreshUser } = useAuth();
@@ -36,11 +39,60 @@ export default function CompetitorsPage() {
   const searchRef = useRef<HTMLDivElement>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout>>(undefined);
 
+  const [sortKey, setSortKey] = useState<SortKey>("name");
+  const [sortDir, setSortDir] = useState<SortDir>("asc");
+
   const canEdit = user?.role === "owner" || user?.role === "editor";
 
   useEffect(() => {
     loadCompetitors();
   }, []);
+
+  const sorted = useMemo(() => {
+    return [...competitors].sort((a, b) => {
+      let cmp = 0;
+      switch (sortKey) {
+        case "name":
+          cmp = (a.appName || a.appSlug).localeCompare(b.appName || b.appSlug);
+          break;
+        case "rating":
+          cmp = (a.latestSnapshot?.averageRating ?? 0) - (b.latestSnapshot?.averageRating ?? 0);
+          break;
+        case "reviews":
+          cmp = (a.latestSnapshot?.ratingCount ?? 0) - (b.latestSnapshot?.ratingCount ?? 0);
+          break;
+        case "minPaidPrice":
+          cmp = (a.minPaidPrice ?? 0) - (b.minPaidPrice ?? 0);
+          break;
+        case "lastChangeAt":
+          cmp = (a.lastChangeAt || "").localeCompare(b.lastChangeAt || "");
+          break;
+        case "launchedDate":
+          cmp = (a.launchedDate || "").localeCompare(b.launchedDate || "");
+          break;
+      }
+      return sortDir === "asc" ? cmp : -cmp;
+    });
+  }, [competitors, sortKey, sortDir]);
+
+  function toggleSort(key: SortKey) {
+    if (sortKey === key) {
+      setSortDir((d) => (d === "asc" ? "desc" : "asc"));
+    } else {
+      setSortKey(key);
+      setSortDir(key === "name" ? "asc" : "desc");
+    }
+  }
+
+  function SortIcon({ col }: { col: SortKey }) {
+    if (sortKey !== col)
+      return <ArrowUpDown className="inline h-3.5 w-3.5 ml-1 opacity-40" />;
+    return sortDir === "asc" ? (
+      <ArrowUp className="inline h-3.5 w-3.5 ml-1" />
+    ) : (
+      <ArrowDown className="inline h-3.5 w-3.5 ml-1" />
+    );
+  }
 
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
@@ -196,17 +248,30 @@ export default function CompetitorsPage() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>App</TableHead>
-                  <TableHead>Rating</TableHead>
-                  <TableHead>Reviews</TableHead>
+                  <TableHead className="cursor-pointer select-none" onClick={() => toggleSort("name")}>
+                    App <SortIcon col="name" />
+                  </TableHead>
+                  <TableHead className="cursor-pointer select-none" onClick={() => toggleSort("rating")}>
+                    Rating <SortIcon col="rating" />
+                  </TableHead>
+                  <TableHead className="cursor-pointer select-none" onClick={() => toggleSort("reviews")}>
+                    Reviews <SortIcon col="reviews" />
+                  </TableHead>
                   <TableHead>Pricing</TableHead>
-                  <TableHead>Last Change</TableHead>
-                  <TableHead>Launched</TableHead>
+                  <TableHead className="cursor-pointer select-none" onClick={() => toggleSort("minPaidPrice")}>
+                    Min. Paid <SortIcon col="minPaidPrice" />
+                  </TableHead>
+                  <TableHead className="cursor-pointer select-none" onClick={() => toggleSort("lastChangeAt")}>
+                    Last Change <SortIcon col="lastChangeAt" />
+                  </TableHead>
+                  <TableHead className="cursor-pointer select-none" onClick={() => toggleSort("launchedDate")}>
+                    Launched <SortIcon col="launchedDate" />
+                  </TableHead>
                   {canEdit && <TableHead className="w-12" />}
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {competitors.map((c) => (
+                {sorted.map((c) => (
                   <TableRow key={c.appSlug}>
                     <TableCell>
                       <div className="flex items-center gap-2">
@@ -232,6 +297,11 @@ export default function CompetitorsPage() {
                     </TableCell>
                     <TableCell className="text-sm">
                       {c.latestSnapshot?.pricing ?? "\u2014"}
+                    </TableCell>
+                    <TableCell className="text-sm">
+                      {c.minPaidPrice != null
+                        ? `$${c.minPaidPrice}/mo`
+                        : "\u2014"}
                     </TableCell>
                     <TableCell className="text-sm text-muted-foreground">
                       {c.lastChangeAt
@@ -265,7 +335,7 @@ export default function CompetitorsPage() {
                 {competitors.length === 0 && (
                   <TableRow>
                     <TableCell
-                      colSpan={canEdit ? 7 : 6}
+                      colSpan={canEdit ? 8 : 7}
                       className="text-center text-muted-foreground"
                     >
                       No competitor apps yet. Use the search above or star apps

@@ -51,12 +51,14 @@ export function KeywordAppResults({
   competitorSlugs,
   positionChanges,
   lastChanges,
+  minPaidPrices,
 }: {
   apps: App[];
   trackedSlugs: string[];
   competitorSlugs: string[];
   positionChanges?: Record<string, number> | null;
   lastChanges?: Record<string, string>;
+  minPaidPrices?: Record<string, number>;
 }) {
   const { formatDateOnly } = useFormatDate();
   const [search, setSearch] = useState("");
@@ -231,6 +233,7 @@ export function KeywordAppResults({
               >
                 Reviews <SortIcon col="rating_count" />
               </TableHead>
+              <TableHead>Min. Paid</TableHead>
               <TableHead>Last Change</TableHead>
               <TableHead className="w-16">Change</TableHead>
               <TableHead className="w-10" />
@@ -240,7 +243,7 @@ export function KeywordAppResults({
             {paged.length === 0 ? (
               <TableRow>
                 <TableCell
-                  colSpan={7}
+                  colSpan={8}
                   className="text-center text-muted-foreground py-8"
                 >
                   No apps found.
@@ -304,6 +307,11 @@ export function KeywordAppResults({
                     </TableCell>
                     <TableCell>
                       {app.rating_count?.toLocaleString() ?? "\u2014"}
+                    </TableCell>
+                    <TableCell className="text-sm">
+                      {minPaidPrices?.[app.app_slug] != null
+                        ? `$${minPaidPrices[app.app_slug]}/mo`
+                        : "\u2014"}
                     </TableCell>
                     <TableCell className="text-sm text-muted-foreground">
                       {lastChanges?.[app.app_slug]

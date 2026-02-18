@@ -25,6 +25,14 @@ import { requireRole } from "../middleware/authorize.js";
 
 const QUEUE_NAME = "scraper-jobs";
 
+function getMinPaidPrice(plans: any[] | null | undefined): number | null {
+  if (!plans || plans.length === 0) return null;
+  const prices = plans
+    .filter((p: any) => p.price != null && parseFloat(p.price) > 0)
+    .map((p: any) => parseFloat(p.price));
+  return prices.length > 0 ? Math.min(...prices) : null;
+}
+
 function getRedisConnection() {
   const url = process.env.REDIS_URL || "redis://localhost:6379";
   const parsed = new URL(url);
@@ -714,6 +722,7 @@ export const accountRoutes: FastifyPluginAsync = async (app) => {
             averageRating: appSnapshots.averageRating,
             ratingCount: appSnapshots.ratingCount,
             pricing: appSnapshots.pricing,
+            pricingPlans: appSnapshots.pricingPlans,
           })
           .from(appSnapshots)
           .where(eq(appSnapshots.appSlug, row.appSlug))
@@ -725,7 +734,10 @@ export const accountRoutes: FastifyPluginAsync = async (app) => {
           .from(sql`app_field_changes`)
           .where(sql`app_slug = ${row.appSlug}`);
 
-        return { ...row, latestSnapshot: snapshot || null, lastChangeAt: change?.detectedAt || null };
+        const minPaidPrice = getMinPaidPrice(snapshot?.pricingPlans);
+        const { pricingPlans: _, ...snapshotRest } = snapshot || ({} as any);
+
+        return { ...row, latestSnapshot: snapshot ? snapshotRest : null, minPaidPrice, lastChangeAt: change?.detectedAt || null };
       })
     );
 

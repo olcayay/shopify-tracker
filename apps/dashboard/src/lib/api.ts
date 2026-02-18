@@ -85,6 +85,14 @@ export function getAppsLastChanges(slugs: string[]) {
   });
 }
 
+export function getAppsMinPaidPrices(slugs: string[]) {
+  if (slugs.length === 0) return Promise.resolve({} as Record<string, number>);
+  return fetchApi<Record<string, number>>(`/api/apps/min-paid-prices`, {
+    method: "POST",
+    body: JSON.stringify({ slugs }),
+  });
+}
+
 // --- Apps (search) ---
 export function searchApps(q: string) {
   return fetchApi<any[]>(`/api/apps/search?q=${encodeURIComponent(q)}`);
