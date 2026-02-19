@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from "react";
 import { useAuth } from "@/lib/auth-context";
 import { Button } from "@/components/ui/button";
-import { Plus, Check, ChevronDown } from "lucide-react";
+import { Plus, Check } from "lucide-react";
 import { ConfirmModal } from "@/components/confirm-modal";
 
 export function TrackKeywordButton({
@@ -25,6 +25,7 @@ export function TrackKeywordButton({
   const [showConfirm, setShowConfirm] = useState(false);
   const [showAppPicker, setShowAppPicker] = useState(false);
   const [myApps, setMyApps] = useState<any[]>([]);
+  const [selectedApps, setSelectedApps] = useState<Set<string>>(new Set());
   const [errorMsg, setErrorMsg] = useState("");
   const [showError, setShowError] = useState(false);
   const pickerRef = useRef<HTMLDivElement>(null);
@@ -35,15 +36,55 @@ export function TrackKeywordButton({
     function handleClickOutside(e: MouseEvent) {
       if (pickerRef.current && !pickerRef.current.contains(e.target as Node)) {
         setShowAppPicker(false);
+        setSelectedApps(new Set());
       }
     }
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  async function doTrack(targetAppSlug: string) {
+  function toggleApp(slug: string) {
+    setSelectedApps((prev) => {
+      const next = new Set(prev);
+      if (next.has(slug)) {
+        next.delete(slug);
+      } else {
+        next.add(slug);
+      }
+      return next;
+    });
+  }
+
+  async function doTrackSelected() {
     setLoading(true);
     setShowAppPicker(false);
+    let anyOk = false;
+    for (const appSlug of selectedApps) {
+      const res = await fetchWithAuth(
+        `/api/account/tracked-apps/${encodeURIComponent(appSlug)}/keywords`,
+        {
+          method: "POST",
+          body: JSON.stringify({ keyword: keywordText }),
+        }
+      );
+      if (res.ok) {
+        anyOk = true;
+      } else {
+        const data = await res.json().catch(() => ({}));
+        setErrorMsg(data.error || "Failed to track keyword");
+        setShowError(true);
+      }
+    }
+    if (anyOk) {
+      setTracked(true);
+      refreshUser();
+    }
+    setSelectedApps(new Set());
+    setLoading(false);
+  }
+
+  async function doTrackSingle(targetAppSlug: string) {
+    setLoading(true);
     const res = await fetchWithAuth(
       `/api/account/tracked-apps/${encodeURIComponent(targetAppSlug)}/keywords`,
       {
@@ -94,11 +135,11 @@ export function TrackKeywordButton({
     }
 
     if (trackedAppSlug) {
-      doTrack(trackedAppSlug);
+      doTrackSingle(trackedAppSlug);
       return;
     }
 
-    // Need to pick which my-app
+    // Need to pick which my-app(s)
     const res = await fetchWithAuth("/api/account/tracked-apps");
     if (res.ok) {
       const apps = await res.json();
@@ -107,8 +148,16 @@ export function TrackKeywordButton({
         setErrorMsg("Follow an app first to track keywords");
         setShowError(true);
       } else if (apps.length === 1) {
-        doTrack(apps[0].appSlug);
+        doTrackSingle(apps[0].appSlug);
       } else {
+        // Pre-select all apps that don't already track this keyword
+        const alreadyTracked = new Set(trackedForApps || []);
+        const preSelected = new Set<string>(
+          apps
+            .map((a: any) => a.appSlug as string)
+            .filter((s: string) => !alreadyTracked.has(s))
+        );
+        setSelectedApps(preSelected);
         setShowAppPicker(true);
       }
     }
@@ -139,18 +188,58 @@ export function TrackKeywordButton({
           <div className="px-3 py-2 text-xs text-muted-foreground border-b">
             Track keyword for:
           </div>
-          {myApps.map((a) => (
-            <button
-              key={a.appSlug}
-              className="w-full text-left px-3 py-2 hover:bg-accent text-sm flex items-center gap-2"
-              onClick={() => doTrack(a.appSlug)}
+          {myApps.map((a) => {
+            const alreadyTracked = (trackedForApps || []).includes(a.appSlug);
+            const isSelected = selectedApps.has(a.appSlug);
+            return (
+              <button
+                key={a.appSlug}
+                className={`w-full text-left px-3 py-2 text-sm flex items-center gap-2 ${
+                  alreadyTracked
+                    ? "opacity-50 cursor-default"
+                    : "hover:bg-accent"
+                }`}
+                onClick={() => {
+                  if (!alreadyTracked) toggleApp(a.appSlug);
+                }}
+              >
+                <div
+                  className={`h-4 w-4 rounded border shrink-0 flex items-center justify-center ${
+                    isSelected || alreadyTracked
+                      ? "bg-primary border-primary"
+                      : "border-input"
+                  }`}
+                >
+                  {(isSelected || alreadyTracked) && (
+                    <Check className="h-3 w-3 text-primary-foreground" />
+                  )}
+                </div>
+                {a.iconUrl && (
+                  <img
+                    src={a.iconUrl}
+                    alt=""
+                    className="h-5 w-5 rounded shrink-0"
+                  />
+                )}
+                <span className="flex-1 truncate">{a.appName}</span>
+                {alreadyTracked && (
+                  <span className="text-[10px] text-muted-foreground">
+                    Tracked
+                  </span>
+                )}
+              </button>
+            );
+          })}
+          <div className="px-3 py-2 border-t flex justify-end">
+            <Button
+              size="sm"
+              className="h-7 text-xs"
+              disabled={selectedApps.size === 0}
+              onClick={doTrackSelected}
             >
-              {a.iconUrl && (
-                <img src={a.iconUrl} alt="" className="h-5 w-5 rounded shrink-0" />
-              )}
-              {a.appName}
-            </button>
-          ))}
+              Track ({selectedApps.size})
+            </Button>
+          </div>
         </div>
       )}
 
