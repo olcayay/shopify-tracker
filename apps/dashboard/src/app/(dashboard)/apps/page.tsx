@@ -19,7 +19,7 @@ import { X, Plus, Search, ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
 import { ConfirmModal } from "@/components/confirm-modal";
 import { AdminScraperTrigger } from "@/components/admin-scraper-trigger";
 
-type SortKey = "name" | "rating" | "reviews" | "minPaidPrice" | "lastChangeAt" | "launchedDate";
+type SortKey = "name" | "rating" | "reviews" | "minPaidPrice" | "lastChangeAt" | "launchedDate" | "competitorCount" | "keywordCount";
 type SortDir = "asc" | "desc";
 
 export default function AppsPage() {
@@ -69,6 +69,12 @@ export default function AppsPage() {
           break;
         case "launchedDate":
           cmp = (a.launchedDate || "").localeCompare(b.launchedDate || "");
+          break;
+        case "competitorCount":
+          cmp = (a.competitorCount ?? 0) - (b.competitorCount ?? 0);
+          break;
+        case "keywordCount":
+          cmp = (a.keywordCount ?? 0) - (b.keywordCount ?? 0);
           break;
       }
       return sortDir === "asc" ? cmp : -cmp;
@@ -257,6 +263,12 @@ export default function AppsPage() {
                   <TableHead className="cursor-pointer select-none" onClick={() => toggleSort("reviews")}>
                     Reviews <SortIcon col="reviews" />
                   </TableHead>
+                  <TableHead className="cursor-pointer select-none" onClick={() => toggleSort("competitorCount")}>
+                    Competitors <SortIcon col="competitorCount" />
+                  </TableHead>
+                  <TableHead className="cursor-pointer select-none" onClick={() => toggleSort("keywordCount")}>
+                    Keywords <SortIcon col="keywordCount" />
+                  </TableHead>
                   <TableHead>Pricing</TableHead>
                   <TableHead className="cursor-pointer select-none" onClick={() => toggleSort("minPaidPrice")}>
                     Min. Paid <SortIcon col="minPaidPrice" />
@@ -298,6 +310,12 @@ export default function AppsPage() {
                       {app.latestSnapshot?.ratingCount ?? "\u2014"}
                     </TableCell>
                     <TableCell className="text-sm">
+                      {app.competitorCount ?? 0}
+                    </TableCell>
+                    <TableCell className="text-sm">
+                      {app.keywordCount ?? 0}
+                    </TableCell>
+                    <TableCell className="text-sm">
                       {app.latestSnapshot?.pricing ?? "\u2014"}
                     </TableCell>
                     <TableCell className="text-sm">
@@ -337,7 +355,7 @@ export default function AppsPage() {
                 {apps.length === 0 && (
                   <TableRow>
                     <TableCell
-                      colSpan={canEdit ? 8 : 7}
+                      colSpan={canEdit ? 10 : 9}
                       className="text-center text-muted-foreground"
                     >
                       No apps yet. Search and follow an app to get started.

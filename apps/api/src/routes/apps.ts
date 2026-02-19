@@ -50,6 +50,28 @@ export const appRoutes: FastifyPluginAsync = async (app) => {
       .where(inArray(apps.slug, slugs))
       .orderBy(apps.name);
 
+    // Get competitor and keyword counts per tracked app
+    const competitorCounts = await db
+      .select({
+        trackedAppSlug: accountCompetitorApps.trackedAppSlug,
+        count: sql<number>`count(*)::int`,
+      })
+      .from(accountCompetitorApps)
+      .where(eq(accountCompetitorApps.accountId, accountId))
+      .groupBy(accountCompetitorApps.trackedAppSlug);
+
+    const keywordCounts = await db
+      .select({
+        trackedAppSlug: accountTrackedKeywords.trackedAppSlug,
+        count: sql<number>`count(*)::int`,
+      })
+      .from(accountTrackedKeywords)
+      .where(eq(accountTrackedKeywords.accountId, accountId))
+      .groupBy(accountTrackedKeywords.trackedAppSlug);
+
+    const compCountMap = new Map(competitorCounts.map((r) => [r.trackedAppSlug, r.count]));
+    const kwCountMap = new Map(keywordCounts.map((r) => [r.trackedAppSlug, r.count]));
+
     // Get latest snapshot for each app
     const result = await Promise.all(
       rows.map(async (appRow) => {
@@ -76,7 +98,14 @@ export const appRoutes: FastifyPluginAsync = async (app) => {
         const minPaidPrice = getMinPaidPrice(snapshot?.pricingPlans);
         const { pricingPlans: _, ...snapshotRest } = snapshot || ({} as any);
 
-        return { ...appRow, latestSnapshot: snapshot ? snapshotRest : null, minPaidPrice, lastChangeAt: change?.detectedAt || null };
+        return {
+          ...appRow,
+          latestSnapshot: snapshot ? snapshotRest : null,
+          minPaidPrice,
+          lastChangeAt: change?.detectedAt || null,
+          competitorCount: compCountMap.get(appRow.slug) ?? 0,
+          keywordCount: kwCountMap.get(appRow.slug) ?? 0,
+        };
       })
     );
 

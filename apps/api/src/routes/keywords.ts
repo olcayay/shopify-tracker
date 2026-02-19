@@ -333,6 +333,7 @@ export const keywordRoutes: FastifyPluginAsync = async (app) => {
           appSlug: keywordAdSightings.appSlug,
           appName: apps.name,
           iconUrl: apps.iconUrl,
+          isBuiltForShopify: apps.isBuiltForShopify,
           averageRating: sql<string>`(
             SELECT average_rating FROM app_snapshots
             WHERE app_slug = ${keywordAdSightings.appSlug}

@@ -259,7 +259,7 @@ export default async function KeywordDetailPage({
       {/* Ad History */}
       {adData?.adSightings?.length > 0 && (() => {
         // Group by app
-        const adsByApp = new Map<string, { appSlug: string; appName: string; averageRating: any; ratingCount: any; lastSeen: string; totalSightings: number; daysActive: number }>();
+        const adsByApp = new Map<string, { appSlug: string; appName: string; iconUrl: string | null; isBuiltForShopify: boolean; averageRating: any; ratingCount: any; lastSeen: string; totalSightings: number; daysActive: number }>();
         for (const ad of adData.adSightings) {
           const existing = adsByApp.get(ad.appSlug);
           if (existing) {
@@ -274,6 +274,8 @@ export default async function KeywordDetailPage({
             adsByApp.set(ad.appSlug, {
               appSlug: ad.appSlug,
               appName: ad.appName,
+              iconUrl: ad.iconUrl || null,
+              isBuiltForShopify: !!ad.isBuiltForShopify,
               averageRating: ad.averageRating,
               ratingCount: ad.ratingCount,
               lastSeen: ad.seenDate,
@@ -315,15 +317,21 @@ export default async function KeywordDetailPage({
                   return (
                   <TableRow key={ad.appSlug} className={isTracked ? "border-l-2 border-l-emerald-500 bg-emerald-500/10" : isCompetitor ? "border-l-2 border-l-amber-500 bg-amber-500/10" : ""}>
                     <TableCell>
-                      <div className="flex items-center gap-1.5">
-                        <Link
-                          href={`/apps/${ad.appSlug}`}
-                          className="text-primary hover:underline"
-                        >
-                          {ad.appName}
-                        </Link>
-                        {isTracked && <Badge className="text-[10px] px-1.5 py-0 h-4 bg-emerald-500/20 text-emerald-700 dark:text-emerald-400 border-emerald-500/50">Tracked</Badge>}
-                        {isCompetitor && <Badge className="text-[10px] px-1.5 py-0 h-4 bg-amber-500/20 text-amber-700 dark:text-amber-400 border-amber-500/50">Competitor</Badge>}
+                      <div className="flex items-center gap-2">
+                        {ad.iconUrl && (
+                          <img src={ad.iconUrl} alt="" className="h-6 w-6 rounded shrink-0" />
+                        )}
+                        <div className="flex items-center gap-1.5">
+                          <Link
+                            href={`/apps/${ad.appSlug}`}
+                            className="text-primary hover:underline"
+                          >
+                            {ad.appName}
+                          </Link>
+                          {ad.isBuiltForShopify && <span title="Built for Shopify">💎</span>}
+                          {isTracked && <Badge className="text-[10px] px-1.5 py-0 h-4 bg-emerald-500/20 text-emerald-700 dark:text-emerald-400 border-emerald-500/50">Tracked</Badge>}
+                          {isCompetitor && <Badge className="text-[10px] px-1.5 py-0 h-4 bg-amber-500/20 text-amber-700 dark:text-amber-400 border-amber-500/50">Competitor</Badge>}
+                        </div>
                       </div>
                     </TableCell>
                     <TableCell>
