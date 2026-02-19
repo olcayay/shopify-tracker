@@ -21,6 +21,7 @@ export function CompetitorsSection({ appSlug }: { appSlug: string }) {
   const { fetchWithAuth, user, account, refreshUser } = useAuth();
   const { formatDateOnly } = useFormatDate();
   const [competitors, setCompetitors] = useState<any[]>([]);
+  const [lastChanges, setLastChanges] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
   const [query, setQuery] = useState("");
   const [suggestions, setSuggestions] = useState<any[]>([]);
@@ -59,7 +60,20 @@ export function CompetitorsSection({ appSlug }: { appSlug: string }) {
       `/api/account/tracked-apps/${encodeURIComponent(appSlug)}/competitors`
     );
     if (res.ok) {
-      setCompetitors(await res.json());
+      const comps = await res.json();
+      setCompetitors(comps);
+
+      // Fetch last changes for all competitors
+      const slugs = comps.map((c: any) => c.appSlug);
+      if (slugs.length > 0) {
+        const changesRes = await fetchWithAuth(`/api/apps/last-changes`, {
+          method: "POST",
+          body: JSON.stringify({ slugs }),
+        });
+        if (changesRes.ok) {
+          setLastChanges(await changesRes.json());
+        }
+      }
     }
     setLoading(false);
   }
@@ -218,6 +232,7 @@ export function CompetitorsSection({ appSlug }: { appSlug: string }) {
               <TableHead>Pricing</TableHead>
               <TableHead>Min. Paid</TableHead>
               <TableHead>Launched</TableHead>
+              <TableHead>Last Change</TableHead>
               {canEdit && <TableHead className="w-12" />}
             </TableRow>
           </TableHeader>
@@ -263,6 +278,11 @@ export function CompetitorsSection({ appSlug }: { appSlug: string }) {
                 <TableCell className="text-sm text-muted-foreground">
                   {comp.launchedDate
                     ? formatDateOnly(comp.launchedDate)
+                    : "\u2014"}
+                </TableCell>
+                <TableCell className="text-sm text-muted-foreground">
+                  {lastChanges[comp.appSlug]
+                    ? formatDateOnly(lastChanges[comp.appSlug])
                     : "\u2014"}
                 </TableCell>
                 {canEdit && (

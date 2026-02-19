@@ -24,7 +24,15 @@ interface AppData {
     categories: any[];
     seoTitle: string;
     seoMetaDescription: string;
+    averageRating: string | null;
+    ratingCount: number | null;
   } | null;
+}
+
+interface CategoryRanking {
+  categorySlug: string;
+  categoryTitle: string;
+  position: number;
 }
 
 function CharBadge({ count, max }: { count: number; max?: number }) {
@@ -174,6 +182,9 @@ export default function ComparePage() {
     new Map()
   );
   const [selectedSlugs, setSelectedSlugs] = useState<Set<string>>(new Set());
+  const [rankingsData, setRankingsData] = useState<Map<string, CategoryRanking[]>>(
+    new Map()
+  );
   const [loading, setLoading] = useState(true);
   const [activeDetailSlug, setActiveDetailSlug] = useState<string>("");
 
@@ -294,6 +305,35 @@ export default function ComparePage() {
       }
       setCompetitorData(map);
     }
+
+    // Fetch category rankings for all apps in parallel
+    const allSlugs = [slug, ...compList.map((c) => c.slug)];
+    const rankingResults = await Promise.all(
+      allSlugs.map(async (s) => {
+        const res = await fetchWithAuth(
+          `/api/apps/${encodeURIComponent(s)}/rankings?days=7`
+        );
+        if (res.ok) {
+          const data = await res.json();
+          // Get latest position per category (ordered asc by scrapedAt, so last wins)
+          const latestPerCat = new Map<string, CategoryRanking>();
+          for (const r of data.categoryRankings || []) {
+            latestPerCat.set(r.categorySlug, {
+              categorySlug: r.categorySlug,
+              categoryTitle: r.categoryTitle,
+              position: r.position,
+            });
+          }
+          return [s, [...latestPerCat.values()]] as [string, CategoryRanking[]];
+        }
+        return [s, []] as [string, CategoryRanking[]];
+      })
+    );
+    const rankMap = new Map<string, CategoryRanking[]>();
+    for (const [s, rankings] of rankingResults) {
+      rankMap.set(s, rankings);
+    }
+    setRankingsData(rankMap);
 
     selectionInitialized.current = true;
     setLoading(false);
@@ -500,11 +540,11 @@ export default function ComparePage() {
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b">
-                    <th className="text-left py-2 pr-4 text-muted-foreground font-medium">
+                    <th className="text-left py-2 pr-4 text-muted-foreground font-medium w-[160px] min-w-[160px]">
                       #
                     </th>
                     {selectedApps.map((app) => (
-                      <th key={app.slug} className="py-2 px-2 pb-6 min-w-[200px]">
+                      <th key={app.slug} className="py-2 px-2 pb-6 min-w-[130px]">
                         <div className="flex justify-center">
                           <LinkedAppIcon app={app} />
                         </div>
@@ -521,7 +561,7 @@ export default function ComparePage() {
                     ),
                   }).map((_, i) => (
                     <tr key={i} className="border-b last:border-0">
-                      <td className="py-2 pr-4 text-muted-foreground align-top">
+                      <td className="py-2 pr-4 text-muted-foreground align-top w-[160px] min-w-[160px]">
                         {i + 1}
                       </td>
                       {selectedApps.map((app) => (
@@ -559,10 +599,19 @@ export default function ComparePage() {
             getItems={(app) => app.latestSnapshot?.integrations || []}
           />
 
-          {/* Pricing Plans */}
-          <PricingComparison
-            sectionKey="pricingPlans"
-            collapsed={isCollapsed("pricingPlans")}
+          {/* Category Ranking */}
+          <CategoryRankingSection
+            sectionKey="categoryRanking"
+            collapsed={isCollapsed("categoryRanking")}
+            onToggle={toggleSection}
+            apps={selectedApps}
+            rankingsData={rankingsData}
+          />
+
+          {/* Reviews and Ratings */}
+          <ReviewsRatingsSection
+            sectionKey="reviewsRatings"
+            collapsed={isCollapsed("reviewsRatings")}
             onToggle={toggleSection}
             apps={selectedApps}
           />
@@ -571,6 +620,14 @@ export default function ComparePage() {
           <CategoriesComparison
             sectionKey="categoriesFeatures"
             collapsed={isCollapsed("categoriesFeatures")}
+            onToggle={toggleSection}
+            apps={selectedApps}
+          />
+
+          {/* Pricing Plans */}
+          <PricingComparison
+            sectionKey="pricingPlans"
+            collapsed={isCollapsed("pricingPlans")}
             onToggle={toggleSection}
             apps={selectedApps}
           />
@@ -725,11 +782,11 @@ function BadgeComparisonSection({
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b">
-              <th className="text-left py-2 pr-4 text-muted-foreground font-medium">
+              <th className="text-left py-2 pr-4 text-muted-foreground font-medium w-[160px] min-w-[160px]">
                 {title}
               </th>
               {apps.map((app) => (
-                <th key={app.slug} className="py-2 px-2 pb-6 text-center">
+                <th key={app.slug} className="py-2 px-2 pb-6 text-center min-w-[130px]">
                   <div className="flex justify-center">
                     <LinkedAppIcon app={app} />
                   </div>
@@ -740,7 +797,7 @@ function BadgeComparisonSection({
           <tbody>
             {allItems.map((item) => (
               <tr key={item} className="border-b last:border-0">
-                <td className="py-1.5 pr-4">
+                <td className="py-1.5 pr-4 w-[160px] min-w-[160px]">
                   <Badge variant="outline" className="text-xs">
                     {item}
                   </Badge>
@@ -803,11 +860,11 @@ function PricingComparison({
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b">
-              <th className="text-left py-2 pr-4 text-muted-foreground font-medium w-[80px]">
+              <th className="text-left py-2 pr-4 text-muted-foreground font-medium w-[160px] min-w-[160px]">
                 Tier
               </th>
               {apps.map((app) => (
-                <th key={app.slug} className="py-2 px-2 pb-6" style={{ minWidth: 200 }}>
+                <th key={app.slug} className="py-2 px-2 pb-6 min-w-[130px]">
                   <div className="flex justify-center">
                     <LinkedAppIcon app={app} />
                   </div>
@@ -877,6 +934,242 @@ function PlanCard({ plan }: { plan: any }) {
         </ul>
       )}
     </div>
+  );
+}
+
+function CategoryRankingSection({
+  sectionKey,
+  collapsed,
+  onToggle,
+  apps,
+  rankingsData,
+}: {
+  sectionKey: string;
+  collapsed: boolean;
+  onToggle: (key: string) => void;
+  apps: AppData[];
+  rankingsData: Map<string, CategoryRanking[]>;
+}) {
+  // Build per-app ranking lookup: appSlug → categorySlug → position
+  const appRankingMap = useMemo(() => {
+    const map = new Map<string, Map<string, number>>();
+    for (const app of apps) {
+      const rankings = rankingsData.get(app.slug) || [];
+      const catMap = new Map<string, number>();
+      for (const r of rankings) {
+        catMap.set(r.categorySlug, r.position);
+      }
+      map.set(app.slug, catMap);
+    }
+    return map;
+  }, [apps, rankingsData]);
+
+  // Get primary category per app (first category from snapshot)
+  const appPrimaryCategory = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const app of apps) {
+      const cats = app.latestSnapshot?.categories || [];
+      if (cats.length > 0) {
+        map.set(app.slug, cats[0].title || "—");
+      }
+    }
+    return map;
+  }, [apps]);
+
+  // Collect all unique categories across all apps' rankings
+  const allCategories = useMemo(() => {
+    const catMap = new Map<string, string>(); // slug → title
+    for (const app of apps) {
+      for (const r of rankingsData.get(app.slug) || []) {
+        if (!catMap.has(r.categorySlug)) {
+          catMap.set(r.categorySlug, r.categoryTitle);
+        }
+      }
+    }
+    return [...catMap.entries()].sort((a, b) => a[1].localeCompare(b[1]));
+  }, [apps, rankingsData]);
+
+  if (allCategories.length === 0) return null;
+
+  return (
+    <CompareSection
+      title="Category Ranking"
+      sectionKey={sectionKey}
+      collapsed={collapsed}
+      onToggle={onToggle}
+    >
+      <div className="overflow-x-auto">
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="border-b">
+              <th className="text-left py-2 pr-4 text-muted-foreground font-medium w-[160px] min-w-[160px]" />
+              {apps.map((app) => (
+                <th key={app.slug} className="py-2 px-2 pb-6 text-center min-w-[130px]">
+                  <div className="flex justify-center">
+                    <LinkedAppIcon app={app} />
+                  </div>
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            <tr className="border-b">
+              <td className="py-2 pr-4 text-muted-foreground font-medium w-[160px] min-w-[160px]">
+                App category
+              </td>
+              {apps.map((app) => (
+                <td key={app.slug} className="py-2 px-2 text-center font-medium">
+                  {appPrimaryCategory.get(app.slug) || "—"}
+                </td>
+              ))}
+            </tr>
+            {allCategories.map(([catSlug, catTitle]) => (
+              <tr key={catSlug} className="border-b last:border-0">
+                <td className="py-2 pr-4">
+                  <Link
+                    href={`/categories/${catSlug}`}
+                    className="text-primary hover:underline"
+                  >
+                    {catTitle}
+                  </Link>
+                </td>
+                {apps.map((app) => {
+                  const pos = appRankingMap.get(app.slug)?.get(catSlug);
+                  return (
+                    <td key={app.slug} className="py-2 px-2 text-center">
+                      {pos != null ? (
+                        <span className="font-bold">{pos}</span>
+                      ) : (
+                        <span className="text-muted-foreground">-</span>
+                      )}
+                    </td>
+                  );
+                })}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </CompareSection>
+  );
+}
+
+function StarRating({ rating }: { rating: number }) {
+  return (
+    <div className="inline-flex gap-0.5">
+      {[1, 2, 3, 4, 5].map((star) => {
+        const fill = Math.min(1, Math.max(0, rating - (star - 1)));
+        return (
+          <div key={star} className="relative h-4 w-4">
+            <svg
+              viewBox="0 0 24 24"
+              className="h-4 w-4 text-muted-foreground/30"
+              fill="currentColor"
+            >
+              <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
+            </svg>
+            <div
+              className="absolute inset-0 overflow-hidden"
+              style={{ width: `${fill * 100}%` }}
+            >
+              <svg
+                viewBox="0 0 24 24"
+                className="h-4 w-4 text-yellow-500"
+                fill="currentColor"
+              >
+                <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
+              </svg>
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+function ReviewsRatingsSection({
+  sectionKey,
+  collapsed,
+  onToggle,
+  apps,
+}: {
+  sectionKey: string;
+  collapsed: boolean;
+  onToggle: (key: string) => void;
+  apps: AppData[];
+}) {
+  const hasAnyRatings = apps.some(
+    (a) => a.latestSnapshot?.averageRating != null
+  );
+  if (!hasAnyRatings) return null;
+
+  return (
+    <CompareSection
+      title="Reviews and Ratings"
+      sectionKey={sectionKey}
+      collapsed={collapsed}
+      onToggle={onToggle}
+    >
+      <div className="overflow-x-auto">
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="border-b">
+              <th className="text-left py-2 pr-4 text-muted-foreground font-medium w-[160px] min-w-[160px]" />
+              {apps.map((app) => (
+                <th key={app.slug} className="py-2 px-2 pb-6 text-center min-w-[130px]">
+                  <div className="flex justify-center">
+                    <LinkedAppIcon app={app} />
+                  </div>
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            <tr className="border-b">
+              <td className="py-2 pr-4 text-muted-foreground font-medium w-[160px] min-w-[160px]">
+                Average rating
+              </td>
+              {apps.map((app) => {
+                const rating = app.latestSnapshot?.averageRating
+                  ? Number(app.latestSnapshot.averageRating)
+                  : null;
+                return (
+                  <td key={app.slug} className="py-2 px-2 text-center">
+                    {rating != null ? (
+                      <div className="flex flex-col items-center gap-1">
+                        <StarRating rating={rating} />
+                        <span className="font-bold">{rating}</span>
+                      </div>
+                    ) : (
+                      <span className="text-muted-foreground">-</span>
+                    )}
+                  </td>
+                );
+              })}
+            </tr>
+            <tr className="border-b last:border-0">
+              <td className="py-2 pr-4 text-muted-foreground font-medium">
+                Ratings number
+              </td>
+              {apps.map((app) => {
+                const count = app.latestSnapshot?.ratingCount;
+                return (
+                  <td key={app.slug} className="py-2 px-2 text-center">
+                    {count != null ? (
+                      <span className="font-bold">
+                        {count.toLocaleString()}
+                      </span>
+                    ) : (
+                      <span className="text-muted-foreground">-</span>
+                    )}
+                  </td>
+                );
+              })}
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </CompareSection>
   );
 }
 
@@ -973,7 +1266,7 @@ function CategoriesComparison({
 
   return (
     <CompareSection
-      title="Categories & Features"
+      title="Features"
       sectionKey={sectionKey}
       collapsed={collapsed}
       onToggle={onToggle}
@@ -982,11 +1275,11 @@ function CategoriesComparison({
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b">
-              <th className="text-left py-2 pr-4 text-muted-foreground font-medium">
+              <th className="text-left py-2 pr-4 text-muted-foreground font-medium w-[160px] min-w-[160px]">
                 Feature
               </th>
               {apps.map((app) => (
-                <th key={app.slug} className="py-2 px-2 pb-6 text-center">
+                <th key={app.slug} className="py-2 px-2 pb-6 text-center min-w-[130px]">
                   <div className="flex justify-center">
                     <LinkedAppIcon app={app} />
                   </div>
