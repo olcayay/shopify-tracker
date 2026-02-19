@@ -536,15 +536,15 @@ export default function ComparePage() {
             collapsed={isCollapsed("features")}
             onToggle={toggleSection}
           >
-            <div className="overflow-x-auto">
+            <div className="overflow-auto max-h-[60vh]">
               <table className="w-full text-sm">
                 <thead>
-                  <tr className="border-b">
-                    <th className="text-left py-2 pr-4 text-muted-foreground font-medium w-[160px] min-w-[160px]">
+                  <tr>
+                    <th className="text-left py-2 pr-4 text-muted-foreground font-medium w-[160px] min-w-[160px] sticky top-0 bg-card z-10 border-b border-border shadow-[0_1px_0_0_hsl(var(--border))]">
                       #
                     </th>
                     {selectedApps.map((app) => (
-                      <th key={app.slug} className="py-2 px-2 pb-6 min-w-[130px]">
+                      <th key={app.slug} className="py-2 px-2 pb-6 min-w-[130px] sticky top-0 bg-card z-10 border-b border-border shadow-[0_1px_0_0_hsl(var(--border))]">
                         <div className="flex justify-center">
                           <LinkedAppIcon app={app} />
                         </div>
@@ -778,15 +778,15 @@ function BadgeComparisonSection({
       collapsed={collapsed}
       onToggle={onToggle}
     >
-      <div className="overflow-x-auto">
+      <div className="overflow-auto max-h-[60vh]">
         <table className="w-full text-sm">
           <thead>
-            <tr className="border-b">
-              <th className="text-left py-2 pr-4 text-muted-foreground font-medium w-[160px] min-w-[160px]">
+            <tr>
+              <th className="text-left py-2 pr-4 text-muted-foreground font-medium w-[160px] min-w-[160px] sticky top-0 bg-card z-10 border-b border-border shadow-[0_1px_0_0_hsl(var(--border))]">
                 {title}
               </th>
               {apps.map((app) => (
-                <th key={app.slug} className="py-2 px-2 pb-6 text-center min-w-[130px]">
+                <th key={app.slug} className="py-2 px-2 pb-6 text-center min-w-[130px] sticky top-0 bg-card z-10 border-b border-border shadow-[0_1px_0_0_hsl(var(--border))]">
                   <div className="flex justify-center">
                     <LinkedAppIcon app={app} />
                   </div>
@@ -856,15 +856,15 @@ function PricingComparison({
       collapsed={collapsed}
       onToggle={onToggle}
     >
-      <div className="overflow-x-auto">
+      <div className="overflow-auto max-h-[60vh]">
         <table className="w-full text-sm">
           <thead>
-            <tr className="border-b">
-              <th className="text-left py-2 pr-4 text-muted-foreground font-medium w-[160px] min-w-[160px]">
+            <tr>
+              <th className="text-left py-2 pr-4 text-muted-foreground font-medium w-[160px] min-w-[160px] sticky top-0 bg-card z-10 border-b border-border shadow-[0_1px_0_0_hsl(var(--border))]">
                 Tier
               </th>
               {apps.map((app) => (
-                <th key={app.slug} className="py-2 px-2 pb-6 min-w-[130px]">
+                <th key={app.slug} className="py-2 px-2 pb-6 min-w-[130px] sticky top-0 bg-card z-10 border-b border-border shadow-[0_1px_0_0_hsl(var(--border))]">
                   <div className="flex justify-center">
                     <LinkedAppIcon app={app} />
                   </div>
@@ -998,13 +998,13 @@ function CategoryRankingSection({
       collapsed={collapsed}
       onToggle={onToggle}
     >
-      <div className="overflow-x-auto">
+      <div className="overflow-auto max-h-[60vh]">
         <table className="w-full text-sm">
           <thead>
-            <tr className="border-b">
-              <th className="text-left py-2 pr-4 text-muted-foreground font-medium w-[160px] min-w-[160px]" />
+            <tr>
+              <th className="text-left py-2 pr-4 text-muted-foreground font-medium w-[160px] min-w-[160px] sticky top-0 bg-card z-10 border-b border-border shadow-[0_1px_0_0_hsl(var(--border))]" />
               {apps.map((app) => (
-                <th key={app.slug} className="py-2 px-2 pb-6 text-center min-w-[130px]">
+                <th key={app.slug} className="py-2 px-2 pb-6 text-center min-w-[130px] sticky top-0 bg-card z-10 border-b border-border shadow-[0_1px_0_0_hsl(var(--border))]">
                   <div className="flex justify-center">
                     <LinkedAppIcon app={app} />
                   </div>
@@ -1271,15 +1271,15 @@ function CategoriesComparison({
       collapsed={collapsed}
       onToggle={onToggle}
     >
-      <div className="overflow-x-auto">
+      <div className="overflow-auto max-h-[60vh]">
         <table className="w-full text-sm">
           <thead>
-            <tr className="border-b">
-              <th className="text-left py-2 pr-4 text-muted-foreground font-medium w-[160px] min-w-[160px]">
+            <tr>
+              <th className="text-left py-2 pr-4 text-muted-foreground font-medium w-[160px] min-w-[160px] sticky top-0 bg-card z-10 border-b border-border shadow-[0_1px_0_0_hsl(var(--border))]">
                 Feature
               </th>
               {apps.map((app) => (
-                <th key={app.slug} className="py-2 px-2 pb-6 text-center min-w-[130px]">
+                <th key={app.slug} className="py-2 px-2 pb-6 text-center min-w-[130px] sticky top-0 bg-card z-10 border-b border-border shadow-[0_1px_0_0_hsl(var(--border))]">
                   <div className="flex justify-center">
                     <LinkedAppIcon app={app} />
                   </div>
