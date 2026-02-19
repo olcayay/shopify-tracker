@@ -24,10 +24,10 @@ import { useAuth } from "@/lib/auth-context";
 
 const navItems = [
   { href: "/", label: "Overview", icon: LayoutDashboard },
-  { href: "/categories", label: "Categories", icon: FolderTree },
   { href: "/apps", label: "Apps", icon: AppWindow },
-  { href: "/keywords", label: "Keywords", icon: Search },
   { href: "/competitors", label: "Competitors", icon: Star },
+  { href: "/keywords", label: "Keywords", icon: Search },
+  { href: "/categories", label: "Categories", icon: FolderTree },
   { href: "/features", label: "Features", icon: Puzzle },
   { href: "/settings", label: "Settings", icon: Settings },
 ];
