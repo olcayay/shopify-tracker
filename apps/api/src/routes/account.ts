@@ -1545,35 +1545,64 @@ export const accountRoutes: FastifyPluginAsync = async (app) => {
       .from(accountTrackedFeatures)
       .where(eq(accountTrackedFeatures.accountId, accountId));
 
-    // Enrich with category info from snapshots
-    if (rows.length > 0) {
-      const handles = rows.map((r) => r.featureHandle);
-      const handleList = sql.join(handles.map((h) => sql`${h}`), sql`,`);
-      const catResult = await db.execute(sql`
-        SELECT DISTINCT ON (f->>'feature_handle')
-          f->>'feature_handle' AS handle,
-          cat->>'title' AS category_title,
-          sub->>'title' AS subcategory_title
-        FROM app_snapshots,
-          jsonb_array_elements(categories) AS cat,
-          jsonb_array_elements(cat->'subcategories') AS sub,
-          jsonb_array_elements(sub->'features') AS f
-        WHERE f->>'feature_handle' IN (${handleList})
-        ORDER BY f->>'feature_handle'
-      `);
-      const catRows: any[] = (catResult as any).rows ?? catResult;
-      const catMap = new Map(catRows.map((r: any) => [r.handle, r]));
-      return rows.map((r) => {
-        const cat = catMap.get(r.featureHandle);
-        return {
-          ...r,
-          categoryTitle: cat?.category_title || null,
-          subcategoryTitle: cat?.subcategory_title || null,
-        };
-      });
+    if (rows.length === 0) return rows;
+
+    const handles = rows.map((r) => r.featureHandle);
+    const handleList = sql.join(handles.map((h) => sql`${h}`), sql`,`);
+
+    // Get category info + app slugs per feature in one query
+    const enrichResult = await db.execute(sql`
+      SELECT
+        f->>'feature_handle' AS handle,
+        cat->>'title' AS category_title,
+        sub->>'title' AS subcategory_title,
+        a.slug AS app_slug
+      FROM (
+        SELECT DISTINCT ON (app_slug) id, app_slug, categories
+        FROM app_snapshots
+        ORDER BY app_slug, scraped_at DESC
+      ) s
+      INNER JOIN apps a ON a.slug = s.app_slug,
+      jsonb_array_elements(s.categories) AS cat,
+      jsonb_array_elements(cat->'subcategories') AS sub,
+      jsonb_array_elements(sub->'features') AS f
+      WHERE f->>'feature_handle' IN (${handleList})
+    `);
+    const enrichRows: any[] = (enrichResult as any).rows ?? enrichResult;
+
+    // Build category map (first match per handle) and app slugs per feature
+    const catMap = new Map<string, { category_title: string; subcategory_title: string }>();
+    const featureAppsMap = new Map<string, Set<string>>();
+    for (const r of enrichRows) {
+      if (!catMap.has(r.handle)) {
+        catMap.set(r.handle, { category_title: r.category_title, subcategory_title: r.subcategory_title });
+      }
+      if (!featureAppsMap.has(r.handle)) featureAppsMap.set(r.handle, new Set());
+      featureAppsMap.get(r.handle)!.add(r.app_slug);
     }
 
-    return rows;
+    // Get tracked + competitor slugs for this account
+    const [trackedAppsRows, competitorAppsRows] = await Promise.all([
+      db.select({ appSlug: accountTrackedApps.appSlug }).from(accountTrackedApps).where(eq(accountTrackedApps.accountId, accountId)),
+      db.select({ appSlug: accountCompetitorApps.appSlug }).from(accountCompetitorApps).where(eq(accountCompetitorApps.accountId, accountId)),
+    ]);
+    const trackedSet = new Set(trackedAppsRows.map((a) => a.appSlug));
+    const competitorSet = new Set(competitorAppsRows.map((a) => a.appSlug));
+
+    return rows.map((r) => {
+      const cat = catMap.get(r.featureHandle);
+      const appSlugs = featureAppsMap.get(r.featureHandle) ?? new Set<string>();
+      const trackedInFeature = [...appSlugs].filter((s) => trackedSet.has(s)).length;
+      const competitorInFeature = [...appSlugs].filter((s) => competitorSet.has(s)).length;
+      return {
+        ...r,
+        categoryTitle: cat?.category_title || null,
+        subcategoryTitle: cat?.subcategory_title || null,
+        appCount: appSlugs.size,
+        trackedInFeature,
+        competitorInFeature,
+      };
+    });
   });
 
   // POST /api/account/starred-features
