@@ -8,7 +8,24 @@ Rules:
 
 
 
-Implement the features below using the rules above.
+Implement the features below using the rules above. Commit the changes after every task is completed. Share a detail report after you are done with all tasks.
+
+- app için kullanılan prop ve proplarının nameleri shopify listing'i ile aynı hale getir
+
+
+- Ad History için nasıl historical bir görünüm eklenebilir. örneğin github commitleri gibi bir tablo görseli aklıma geldi sence bunu en iyi nasıl gösterebiliriz.
+
+
+- Tracked appler için kullanılan badge color ve background color'ı daha belirgin bir renk ile değiştir
+
+- category sayfalarını scrap ederken de app ile ilgili alabileceğin bütün bilgileri (review count, rating count, bfs, etc.) liste üzerinden çekebildiğin kadar çek
+
+- system admin tarafından görülen "Last Seen" kullanıcı aktif olduğu sürece güncellenmeli. zaten loginim sitede biraz gezindim "Last Seen" güncellenmeli	
+
+- System Admin > Keywords sayfasında created at kolununa saat ve dakika bilgisi de ekle
+
+- fiyat ve limit paketleri tanımla.
+
 
 - paid ve organic ranking'in ayrılması
     keyword ranking sadece organic search resultları için olmalı
@@ -73,3 +90,249 @@ bu bilgiyi de category sayfasında göster
     Works with
 
 - feature için de bir limit olsun. şimdilik 10 diyebiliriz
+
+
+
+
+Şimdi biraz kapsamlı bir değişikliğe bağlayacağız. Bu projenin core'unu app'ler oluşturuyor. Bu nedenle app'ler ile ilgili scrap edilen bilgiler oldukça kritik. Bu bilgilerin mümkün olduğunca strachted bir şekilde çekilmesini ve kullanılan prop namelerin shopify'ın kendi terminoloji ile aynı olmasını istiyorum. Bu projeyi kullanacak kişiler shopify app developerları olacağı için shopify listing sayfasında kullanılan varible nameler ve bu variable'ların ayrıştırılması shopify'a uygun olmalı.
+
+seninle shopify developer listing sayfasındaki alanları ve shopify'ın bunları nasıl isimlendirdiği ve örnek bir app için aşağıda bulabilirsin. Bazı alanlar için shopify'in kendi info'larını ekledim. Bunları kullanarak bu bilgileri nerede bulabileceğini ve ne anlama geldiğini bulabilirsin.
+
+
+App Name
+    Jotform AI Chatbot - Live Chat
+
+App icon
+
+Primary category
+    Store management › Support › Chat
+
+Secondary category
+    Store management › Support › Helpdesk
+
+Primary category details
+    Store management › Support › Chat
+    Real-time messaging
+        AI chatbots
+        Live chat
+        Multi-language
+        Customer insights
+
+    Automated responses
+        FAQs
+        Product recommendations
+        Order updates
+        Quick replies
+        Surveys
+        Discounts
+
+    Customization
+        Agent avatar
+        Chat window
+        Color and font
+        Welcome messages
+        Chat buttons
+
+
+Secondary category details
+Store management › Support › Helpdesk
+    Channels
+        Chatbot
+        Phone
+        Self-service
+        Help center
+        FAQs
+        Live chat
+        Social media
+    Workflow automation
+        AI responses
+        Auto-reply
+        Customer notifications
+        Rule-based triggers
+        Ticketing
+        Feedback surveys
+
+
+Languages
+    German, English, Spanish, French, Italian, Portuguese (Brazil), Turkish
+
+App introduction
+    Info: <Introduce your app with two brief sentences that clearly summarize your app’s purpose and main merchant benefit. This will display in prominently placed text on your listing.>
+
+    Jotform AI Chatbot automates customer support & customer service, boosts conversions & sales
+
+App details
+    Info: <Explain how your app solves problems and helps merchants run their businesses better. Keep it brief, informative, and factual. Make sure to follow the complete guidelines.>
+
+    These AI-powered help desk solutions help businesses manage customer conversations automatically across chat, FAQ and live interactions. Intelligent agents respond instantly, resolve issues, and guide users in real time, 24/7. A built-in support workspace brings together live messaging, automated replies, and self-service answers to reduce workload and speed up responses. Merchants can provide faster, more consistent help through a scalable communication experience with an AI assistant. 
+
+Features
+    Feature 1
+        AI chatbots provide real-time, personalized assistance on products and policies.
+
+    Feature 2
+        Shopify integration keeps product and order details updated  no coding needed.
+
+
+    Feature 3
+        Smart automation handles inquiries, guides purchases, and recommends products.
+
+
+    Feature 4
+        Provide customer support over chat and voice calls with human-like AI responses.
+
+
+    Feature 5
+        Your customers can communicate with you via WhatsApp, Instagram, and Messenger.
+
+Demo store URL
+    https://store.jotform.com
+
+Feature media
+    Info: <Upload a video or image that highlights the impact of your app.
+
+    Videos are best to showcase the buyer experience or how the app influences the merchant’s business. Static images are best to show a specific impactful part of the app, or how a merchant’s workflow can be improved.
+
+    Media will display in the header area of the listing page.>
+
+    Video
+        Video URL
+        https://www.youtube.com/watch?v=d5RFwasRehU
+
+    Image
+        Image URL
+
+Screenshots
+    Desktop screenshots
+        SCREENSHOT 1
+        SCREENSHOT 2
+        SCREENSHOT 3
+        SCREENSHOT 4
+        SCREENSHOT 5
+    Mobile screenshots (optional)
+    Point of Sale screenshots (optional)
+
+
+
+Integrations
+    WhatsApp
+    Messenger
+    Google Drive
+    Slack
+    OneDrive
+    Instagram
+
+Support
+    Info: <Preferred support channel
+
+        Will be linked prominently from your app listing and the Shopify admin>
+
+    Support email address
+        support@jotform.com
+
+    Support portal URL
+        https://www.jotform.com/contact/
+
+    Support phone number
+
+
+Pricing details
+
+
+App card subtitle
+    Info: <Your app card appears in Shopify App Store search results and app recommendations.
+
+    These are almost always viewed alongside other apps. A subtitle helps merchants quickly understand your app and what sets it apart from others. It should encourage merchants to want to visit your listing page to learn more.>
+
+
+    Improve customer support with AI livechat and boost your sales
+
+Web search content
+    Info: <Provide SEO content that you want to feed to Google and other search engines. This content helps the search engines to understand the purpose of your app listing page and to connect it to relevant search questions.>
+
+
+    Title tag
+        AI Chatbot & Live Chat for Shopify Automate Customer 
+
+    Meta description
+        Boost customer support on Shopify with an AI chatbot and live chat. Answer FAQs instantly, reduce tickets, and improve customer satisfaction no coding required
+
+
+
+/apps/<slug> sayfasındaki Keyword Ads section'ı için /keywords/<slug> sayfasında ki gibi github commit history görünümü yap
+
+/apps/<slug> sayfasında "App card subtitle" alanını da göster. Bu alan shopify'da app sayfasında değil search, category, feature vb listing sayfalarında görülüyor. Buralarda görülse de bu bilgi de app tablosunda tutulmalı ve /apps/<slug> sayfasında gösterilmeli
+
+applerdeki değişiklikleri yakalamak için bir sistem değiştir. bütün değişiklikler değil ama aşağıdaki alanlar için değişiklikleri takip et
+    App Introduction
+    App Details
+    Features
+    Web Search Content
+    App name
+    App card subtitle
+
+appler için keyword successionları yap
+
+appler için keyword analizi yapılabilir mi?
+
+appler için raporlar oluşturup support emaillerine otomatik olarak gönderilebilir mi?
+
+
+appler için dikkat edilmesi gereken rakip appler önerilebilinir mi? bir ürünün rakibinde bir değişiklik varsa app developer'ına bunun için email gönderebilir miyiz? Kullanıcı isterse bunları tutar isterse siler  
+
+
+fiyat ve limit paketleri tanımla. 
+system admin accountların paketleri görebilsin ve yönetsin. 
+system admin accountların paketlerini değiştirebilsin. gerekirse bazı limitleri account bazı esnetebilsin.
+accounttaki userlar da settings sayfasında hangi pakette olduklarını ve her bir paket için limitleri görebilsin. 
+
+applerin review count'unu ve rating'i historical olarak tut. app sayfasında chatlarını göster
+
+bir ürünün en uygun fiyatını tablolarda göster
+
+category ve keyword sayfalarında ortalama en uygun paket fiyatlarını göster
+
+
+/apps/<id> sayfasında rating cardına yıldızlı gösterim de ekle
+
+/apps/<id> sayfasında reviews cardına review (bütün reviewler) ve feedback (feedbackli review) sayılarını ayrı ayrı göster
+
+categories/<slug> sayfasına sağ üst köşeye yıldız butonu ekle. yıldızlandığında Starred Categories listesine eklensin
+
+
+apps/<slug> sayfasınaki feedback sectionına pagination ekle
+
+app icon'un listing sayfalarında gönserilmesi
+
+/categories sayfasında "Starred Categories" listesinde categorilerin eğer varsa grand parent ve parenlarını da ekle
+
+******************************************************************
+
+/features sayfasına featurelar için bir directory oluştur. /categories sayfasındaki yukarıda track edilen altta hepsi olsun.
+
+
+keywordlere ve app'lere tag eklenebilir mi? appleri ve keywordleri gruplamak için kullanılabilir.
+
+/keywords sayfasında tracked ve Competitorlar'ın her birinin bir kolon olarak eklendiği bütün applerin tek bir ve keyword rankinglerinin tek bir kolonda olduğu bir sayfa tasarla
+
+App'in Language listesinde son dil "and Portuguese (Brazil)" şeklinde görülüyor
+
+Integrationlar için de ayrı bir sayfa yapılabilir mi? Integrationlara tıklayınca ilgili integration'a sahip applerin listesi çıksın.
+
+Son 2 gündür reklamlar neden görülmüyor.
+
+Değişiklik tespit edilen applerin listelenmesi
+
+features sayfasındaki kategoriler tıklanabilir olsun.
+
+features sayfasında categories sayfasında olduğu track edilen ve Competitor app'leri sayısını göster. row'a tıklayınca expend olsun ve track edilen ve Competitor appleri göstersin
+
+/keywords sayfasındaki Total Results, Tracked, Competitor sortable olsun
+
+/categories sayfasında categori tree açık olarak gelse. bu tabloya Tracked, Competitor sayılarını da eklesek nasıl olur?
+
+/apps/<slug> sayfasında track edilen keyword'lere özel ne yapılabilir? Competitor'ları listelemek gibi belki?
+
+tracked app, competitor app ve keyword arasındaki ideal ilişki nasıl olmalı?
+
+şu an app icon'lar direk shopify'daki icon url'leri bu projeyi publish ettiğimde bu bir problem yaratır mı?
