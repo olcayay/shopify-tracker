@@ -166,12 +166,6 @@ export default function KeywordsPage() {
 
   const trackedIds = new Set(keywords.map((k) => k.id));
 
-  // Build app name map
-  const appNameMap = new Map<string, string>();
-  for (const a of myApps) {
-    appNameMap.set(a.appSlug, a.appName);
-  }
-
   // Count unique keywords
   const uniqueCount = new Set(keywords.map((k) => k.id)).size;
 
@@ -287,9 +281,7 @@ export default function KeywordsPage() {
               <TableHeader>
                 <TableRow>
                   <TableHead>Keyword</TableHead>
-                  <TableHead>My Apps</TableHead>
                   <TableHead>Total Results</TableHead>
-                  <TableHead>Apps Found</TableHead>
                   <TableHead>Tracked</TableHead>
                   <TableHead>Competitor</TableHead>
                   <TableHead>Last Updated</TableHead>
@@ -335,31 +327,9 @@ export default function KeywordsPage() {
                             </Link>
                           </div>
                         </TableCell>
-                        <TableCell onClick={(e) => e.stopPropagation()}>
-                          <div className="flex flex-wrap gap-1">
-                            {(kw.trackedForApps || []).map(
-                              (slug: string) => (
-                                <Link
-                                  key={slug}
-                                  href={`/apps/${slug}`}
-                                >
-                                  <Badge
-                                    variant="outline"
-                                    className="text-xs hover:bg-accent cursor-pointer"
-                                  >
-                                    {appNameMap.get(slug) || slug}
-                                  </Badge>
-                                </Link>
-                              )
-                            )}
-                          </div>
-                        </TableCell>
                         <TableCell>
                           {kw.latestSnapshot?.totalResults?.toLocaleString() ??
                             "\u2014"}
-                        </TableCell>
-                        <TableCell>
-                          {kw.latestSnapshot?.appCount ?? "\u2014"}
                         </TableCell>
                         <TableCell>
                           {kw.trackedInResults > 0 ? (
@@ -418,7 +388,7 @@ export default function KeywordsPage() {
                       {isExpanded && (
                         <TableRow>
                           <TableCell
-                            colSpan={canEdit ? 9 : 8}
+                            colSpan={canEdit ? 7 : 6}
                             className="bg-muted/30 p-4"
                           >
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -512,7 +482,7 @@ export default function KeywordsPage() {
                 {keywords.length === 0 && (
                   <TableRow>
                     <TableCell
-                      colSpan={canEdit ? 9 : 8}
+                      colSpan={canEdit ? 7 : 6}
                       className="text-center text-muted-foreground"
                     >
                       No tracked keywords yet. Add keywords from your app

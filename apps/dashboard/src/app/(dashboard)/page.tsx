@@ -12,6 +12,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import {
   Table,
   TableBody,
@@ -20,6 +21,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { Target, Eye, ChevronLeft, ChevronRight } from "lucide-react";
 
 const SCRAPER_LABELS: Record<string, string> = {
   category: "Categories",
@@ -27,6 +29,8 @@ const SCRAPER_LABELS: Record<string, string> = {
   keyword_search: "Keywords",
   reviews: "Reviews",
 };
+
+const PAGE_SIZE = 10;
 
 function timeAgo(dateStr: string): string {
   const diff = Date.now() - new Date(dateStr).getTime();
@@ -47,6 +51,45 @@ function freshnessColor(
   return "destructive";
 }
 
+function Pagination({
+  page,
+  totalPages,
+  onPageChange,
+}: {
+  page: number;
+  totalPages: number;
+  onPageChange: (page: number) => void;
+}) {
+  if (totalPages <= 1) return null;
+  return (
+    <div className="flex items-center justify-between pt-3 border-t">
+      <span className="text-xs text-muted-foreground">
+        Page {page + 1} of {totalPages}
+      </span>
+      <div className="flex items-center gap-1">
+        <Button
+          variant="ghost"
+          size="icon"
+          className="h-7 w-7"
+          disabled={page === 0}
+          onClick={() => onPageChange(page - 1)}
+        >
+          <ChevronLeft className="h-4 w-4" />
+        </Button>
+        <Button
+          variant="ghost"
+          size="icon"
+          className="h-7 w-7"
+          disabled={page >= totalPages - 1}
+          onClick={() => onPageChange(page + 1)}
+        >
+          <ChevronRight className="h-4 w-4" />
+        </Button>
+      </div>
+    </div>
+  );
+}
+
 export default function OverviewPage() {
   const { fetchWithAuth, user, account } = useAuth();
   const { formatDateOnly } = useFormatDate();
@@ -54,9 +97,17 @@ export default function OverviewPage() {
   const [keywords, setKeywords] = useState<any[]>([]);
   const [competitors, setCompetitors] = useState<any[]>([]);
   const [features, setFeatures] = useState<any[]>([]);
+  const [categories, setCategories] = useState<any[]>([]);
   const [systemStats, setSystemStats] = useState<any>(null);
   const [recentRuns, setRecentRuns] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+
+  // Pagination state
+  const [appsPage, setAppsPage] = useState(0);
+  const [keywordsPage, setKeywordsPage] = useState(0);
+  const [competitorsPage, setCompetitorsPage] = useState(0);
+  const [featuresPage, setFeaturesPage] = useState(0);
+  const [categoriesPage, setCategoriesPage] = useState(0);
 
   useEffect(() => {
     loadData();
@@ -71,6 +122,9 @@ export default function OverviewPage() {
         r.ok ? r.json() : []
       ),
       fetchWithAuth("/api/account/starred-features").then((r) =>
+        r.ok ? r.json() : []
+      ),
+      fetchWithAuth("/api/account/starred-categories").then((r) =>
         r.ok ? r.json() : []
       ),
     ];
@@ -91,9 +145,10 @@ export default function OverviewPage() {
     setKeywords(results[1] || []);
     setCompetitors(results[2] || []);
     setFeatures(results[3] || []);
+    setCategories(results[4] || []);
     if (user?.isSystemAdmin) {
-      setSystemStats(results[4]);
-      setRecentRuns(results[5] || []);
+      setSystemStats(results[5]);
+      setRecentRuns(results[6] || []);
     }
     setLoading(false);
   }
@@ -107,12 +162,18 @@ export default function OverviewPage() {
     );
   }
 
+  const appsTotalPages = Math.ceil(apps.length / PAGE_SIZE);
+  const keywordsTotalPages = Math.ceil(keywords.length / PAGE_SIZE);
+  const competitorsTotalPages = Math.ceil(competitors.length / PAGE_SIZE);
+  const featuresTotalPages = Math.ceil(features.length / PAGE_SIZE);
+  const categoriesTotalPages = Math.ceil(categories.length / PAGE_SIZE);
+
   return (
     <div className="space-y-6">
       <h1 className="text-2xl font-bold">Overview</h1>
 
       {/* Account Usage Cards - clickable */}
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <Link href="/apps">
           <Card className="hover:border-primary/50 transition-colors cursor-pointer">
             <CardHeader className="pb-2">
@@ -155,17 +216,6 @@ export default function OverviewPage() {
           </Card>
         </Link>
 
-        <Link href="/features">
-          <Card className="hover:border-primary/50 transition-colors cursor-pointer">
-            <CardHeader className="pb-2">
-              <CardDescription>Starred Features</CardDescription>
-              <CardTitle className="text-3xl">
-                {account?.usage.starredFeatures ?? features.length}
-              </CardTitle>
-            </CardHeader>
-          </Card>
-        </Link>
-
         <Link href="/settings">
           <Card className="hover:border-primary/50 transition-colors cursor-pointer">
             <CardHeader className="pb-2">
@@ -200,45 +250,50 @@ export default function OverviewPage() {
               </Link>
             </p>
           ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>App</TableHead>
-                  <TableHead>Rating</TableHead>
-                  <TableHead>Reviews</TableHead>
-                  <TableHead>Last Change</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {apps.slice(0, 10).map((app: any) => (
-                  <TableRow key={app.slug}>
-                    <TableCell>
-                      <div className="flex items-center gap-2">
-                        {app.iconUrl && (
-                          <img src={app.iconUrl} alt="" className="h-5 w-5 rounded shrink-0" />
-                        )}
-                        <Link
-                          href={`/apps/${app.slug}`}
-                          className="text-primary hover:underline font-medium"
-                        >
-                          {app.name}
-                        </Link>
-                        {app.isBuiltForShopify && <span title="Built for Shopify">💎</span>}
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      {app.latestSnapshot?.averageRating ?? "\u2014"}
-                    </TableCell>
-                    <TableCell>
-                      {app.latestSnapshot?.ratingCount ?? "\u2014"}
-                    </TableCell>
-                    <TableCell className="text-sm text-muted-foreground">
-                      {app.lastChangeAt ? formatDateOnly(app.lastChangeAt) : "\u2014"}
-                    </TableCell>
+            <>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>App</TableHead>
+                    <TableHead>Rating</TableHead>
+                    <TableHead>Reviews</TableHead>
+                    <TableHead>Last Change</TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+                </TableHeader>
+                <TableBody>
+                  {apps
+                    .slice(appsPage * PAGE_SIZE, (appsPage + 1) * PAGE_SIZE)
+                    .map((app: any) => (
+                      <TableRow key={app.slug}>
+                        <TableCell>
+                          <div className="flex items-center gap-2">
+                            {app.iconUrl && (
+                              <img src={app.iconUrl} alt="" className="h-5 w-5 rounded shrink-0" />
+                            )}
+                            <Link
+                              href={`/apps/${app.slug}`}
+                              className="text-primary hover:underline font-medium"
+                            >
+                              {app.name}
+                            </Link>
+                            {app.isBuiltForShopify && <span title="Built for Shopify">💎</span>}
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          {app.latestSnapshot?.averageRating ?? "\u2014"}
+                        </TableCell>
+                        <TableCell>
+                          {app.latestSnapshot?.ratingCount ?? "\u2014"}
+                        </TableCell>
+                        <TableCell className="text-sm text-muted-foreground">
+                          {app.lastChangeAt ? formatDateOnly(app.lastChangeAt) : "\u2014"}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                </TableBody>
+              </Table>
+              <Pagination page={appsPage} totalPages={appsTotalPages} onPageChange={setAppsPage} />
+            </>
           )}
         </CardContent>
       </Card>
@@ -262,35 +317,58 @@ export default function OverviewPage() {
               </Link>
             </p>
           ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Keyword</TableHead>
-                  <TableHead>Total Results</TableHead>
-                  <TableHead>Apps Found</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {keywords.slice(0, 10).map((kw: any) => (
-                  <TableRow key={kw.id}>
-                    <TableCell>
-                      <Link
-                        href={`/keywords/${kw.slug}`}
-                        className="text-primary hover:underline font-medium"
-                      >
-                        {kw.keyword}
-                      </Link>
-                    </TableCell>
-                    <TableCell>
-                      {kw.latestSnapshot?.totalResults?.toLocaleString() ?? "\u2014"}
-                    </TableCell>
-                    <TableCell>
-                      {kw.latestSnapshot?.appCount ?? "\u2014"}
-                    </TableCell>
+            <>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Keyword</TableHead>
+                    <TableHead>Total Results</TableHead>
+                    <TableHead>Tracked</TableHead>
+                    <TableHead>Competitor</TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+                </TableHeader>
+                <TableBody>
+                  {keywords
+                    .slice(keywordsPage * PAGE_SIZE, (keywordsPage + 1) * PAGE_SIZE)
+                    .map((kw: any) => (
+                      <TableRow key={kw.id}>
+                        <TableCell>
+                          <Link
+                            href={`/keywords/${kw.slug}`}
+                            className="text-primary hover:underline font-medium"
+                          >
+                            {kw.keyword}
+                          </Link>
+                        </TableCell>
+                        <TableCell>
+                          {kw.latestSnapshot?.totalResults?.toLocaleString() ?? "\u2014"}
+                        </TableCell>
+                        <TableCell>
+                          {kw.trackedInResults > 0 ? (
+                            <Badge className="bg-emerald-500/20 text-emerald-700 dark:text-emerald-400 border-emerald-500/50">
+                              <Target className="h-3 w-3 mr-1" />
+                              {kw.trackedInResults}
+                            </Badge>
+                          ) : (
+                            <span className="text-muted-foreground">{"\u2014"}</span>
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          {kw.competitorInResults > 0 ? (
+                            <Badge className="bg-amber-500/20 text-amber-700 dark:text-amber-400 border-amber-500/50">
+                              <Eye className="h-3 w-3 mr-1" />
+                              {kw.competitorInResults}
+                            </Badge>
+                          ) : (
+                            <span className="text-muted-foreground">{"\u2014"}</span>
+                          )}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                </TableBody>
+              </Table>
+              <Pagination page={keywordsPage} totalPages={keywordsTotalPages} onPageChange={setKeywordsPage} />
+            </>
           )}
         </CardContent>
       </Card>
@@ -311,41 +389,46 @@ export default function OverviewPage() {
               No competitor apps yet. Star an app to add it as a competitor.
             </p>
           ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>App</TableHead>
-                  <TableHead>Last Change</TableHead>
-                  <TableHead>Added</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {competitors.slice(0, 10).map((c: any) => (
-                  <TableRow key={c.appSlug}>
-                    <TableCell>
-                      <div className="flex items-center gap-2">
-                        {c.iconUrl && (
-                          <img src={c.iconUrl} alt="" className="h-5 w-5 rounded shrink-0" />
-                        )}
-                        <Link
-                          href={`/apps/${c.appSlug}`}
-                          className="text-primary hover:underline font-medium"
-                        >
-                          {c.appName || c.appSlug}
-                        </Link>
-                        {c.isBuiltForShopify && <span title="Built for Shopify">💎</span>}
-                      </div>
-                    </TableCell>
-                    <TableCell className="text-sm text-muted-foreground">
-                      {c.lastChangeAt ? formatDateOnly(c.lastChangeAt) : "\u2014"}
-                    </TableCell>
-                    <TableCell className="text-sm text-muted-foreground">
-                      {formatDateOnly(c.createdAt)}
-                    </TableCell>
+            <>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>App</TableHead>
+                    <TableHead>Last Change</TableHead>
+                    <TableHead>Added</TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+                </TableHeader>
+                <TableBody>
+                  {competitors
+                    .slice(competitorsPage * PAGE_SIZE, (competitorsPage + 1) * PAGE_SIZE)
+                    .map((c: any) => (
+                      <TableRow key={c.appSlug}>
+                        <TableCell>
+                          <div className="flex items-center gap-2">
+                            {c.iconUrl && (
+                              <img src={c.iconUrl} alt="" className="h-5 w-5 rounded shrink-0" />
+                            )}
+                            <Link
+                              href={`/apps/${c.appSlug}`}
+                              className="text-primary hover:underline font-medium"
+                            >
+                              {c.appName || c.appSlug}
+                            </Link>
+                            {c.isBuiltForShopify && <span title="Built for Shopify">💎</span>}
+                          </div>
+                        </TableCell>
+                        <TableCell className="text-sm text-muted-foreground">
+                          {c.lastChangeAt ? formatDateOnly(c.lastChangeAt) : "\u2014"}
+                        </TableCell>
+                        <TableCell className="text-sm text-muted-foreground">
+                          {formatDateOnly(c.createdAt)}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                </TableBody>
+              </Table>
+              <Pagination page={competitorsPage} totalPages={competitorsTotalPages} onPageChange={setCompetitorsPage} />
+            </>
           )}
         </CardContent>
       </Card>
@@ -369,31 +452,133 @@ export default function OverviewPage() {
               </Link>
             </p>
           ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Feature</TableHead>
-                  <TableHead>Added</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {features.slice(0, 10).map((f: any) => (
-                  <TableRow key={f.featureHandle}>
-                    <TableCell>
-                      <Link
-                        href={`/features/${encodeURIComponent(f.featureHandle)}`}
-                        className="text-primary hover:underline font-medium"
-                      >
-                        {f.featureTitle}
-                      </Link>
-                    </TableCell>
-                    <TableCell className="text-sm text-muted-foreground">
-                      {formatDateOnly(f.createdAt)}
-                    </TableCell>
+            <>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Feature</TableHead>
+                    <TableHead>Apps</TableHead>
+                    <TableHead>Tracked</TableHead>
+                    <TableHead>Competitor</TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+                </TableHeader>
+                <TableBody>
+                  {features
+                    .slice(featuresPage * PAGE_SIZE, (featuresPage + 1) * PAGE_SIZE)
+                    .map((f: any) => (
+                      <TableRow key={f.featureHandle}>
+                        <TableCell>
+                          <Link
+                            href={`/features/${encodeURIComponent(f.featureHandle)}`}
+                            className="text-primary hover:underline font-medium"
+                          >
+                            {f.featureTitle}
+                          </Link>
+                        </TableCell>
+                        <TableCell className="text-sm text-muted-foreground">
+                          {f.appCount ?? "\u2014"}
+                        </TableCell>
+                        <TableCell>
+                          {f.trackedInFeature > 0 ? (
+                            <Badge className="bg-emerald-500/20 text-emerald-700 dark:text-emerald-400 border-emerald-500/50">
+                              <Target className="h-3 w-3 mr-1" />
+                              {f.trackedInFeature}
+                            </Badge>
+                          ) : (
+                            <span className="text-muted-foreground">{"\u2014"}</span>
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          {f.competitorInFeature > 0 ? (
+                            <Badge className="bg-amber-500/20 text-amber-700 dark:text-amber-400 border-amber-500/50">
+                              <Eye className="h-3 w-3 mr-1" />
+                              {f.competitorInFeature}
+                            </Badge>
+                          ) : (
+                            <span className="text-muted-foreground">{"\u2014"}</span>
+                          )}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                </TableBody>
+              </Table>
+              <Pagination page={featuresPage} totalPages={featuresTotalPages} onPageChange={setFeaturesPage} />
+            </>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Starred Categories List */}
+      <Card>
+        <CardHeader className="pb-3">
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-base">Starred Categories</CardTitle>
+            <Link href="/categories" className="text-sm text-primary hover:underline">
+              View all
+            </Link>
+          </div>
+        </CardHeader>
+        <CardContent>
+          {categories.length === 0 ? (
+            <p className="text-sm text-muted-foreground">
+              No starred categories yet.{" "}
+              <Link href="/categories" className="text-primary hover:underline">
+                Star categories
+              </Link>
+            </p>
+          ) : (
+            <>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Category</TableHead>
+                    <TableHead>Apps</TableHead>
+                    <TableHead>Tracked</TableHead>
+                    <TableHead>Competitor</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {categories
+                    .slice(categoriesPage * PAGE_SIZE, (categoriesPage + 1) * PAGE_SIZE)
+                    .map((c: any) => (
+                      <TableRow key={c.categorySlug}>
+                        <TableCell>
+                          <Link
+                            href={`/categories/${c.categorySlug}`}
+                            className="text-primary hover:underline font-medium"
+                          >
+                            {c.categoryTitle}
+                          </Link>
+                        </TableCell>
+                        <TableCell className="text-sm text-muted-foreground">
+                          {c.appCount?.toLocaleString() ?? "\u2014"}
+                        </TableCell>
+                        <TableCell>
+                          {c.trackedInResults > 0 ? (
+                            <Badge className="bg-emerald-500/20 text-emerald-700 dark:text-emerald-400 border-emerald-500/50">
+                              <Target className="h-3 w-3 mr-1" />
+                              {c.trackedInResults}
+                            </Badge>
+                          ) : (
+                            <span className="text-muted-foreground">{"\u2014"}</span>
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          {c.competitorInResults > 0 ? (
+                            <Badge className="bg-amber-500/20 text-amber-700 dark:text-amber-400 border-amber-500/50">
+                              <Eye className="h-3 w-3 mr-1" />
+                              {c.competitorInResults}
+                            </Badge>
+                          ) : (
+                            <span className="text-muted-foreground">{"\u2014"}</span>
+                          )}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                </TableBody>
+              </Table>
+              <Pagination page={categoriesPage} totalPages={categoriesTotalPages} onPageChange={setCategoriesPage} />
+            </>
           )}
         </CardContent>
       </Card>
