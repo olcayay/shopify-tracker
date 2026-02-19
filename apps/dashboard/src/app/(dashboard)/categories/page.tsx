@@ -390,7 +390,7 @@ export default function CategoriesPage() {
                             <div>
                               <h4 className="text-sm font-medium mb-2 flex items-center gap-1.5">
                                 <Target className="h-3.5 w-3.5 text-primary" />
-                                Tracked Apps
+                                My Apps
                               </h4>
                               <div className="space-y-1">
                                 {s.trackedAppsInResults.map((app: any) => (

@@ -26,7 +26,11 @@ function ShimmerRow() {
   );
 }
 
-export function KeywordSearchModal() {
+export function KeywordSearchModal({
+  trackedAppSlug,
+}: {
+  trackedAppSlug?: string;
+} = {}) {
   const { fetchWithAuth, refreshUser, user, account } = useAuth();
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
@@ -35,12 +39,14 @@ export function KeywordSearchModal() {
   const [trackedIds, setTrackedIds] = useState<Set<number>>(new Set());
   const [trackingSlug, setTrackingSlug] = useState<string | null>(null);
   const [message, setMessage] = useState("");
+  const [myApps, setMyApps] = useState<any[]>([]);
+  const [selectedApp, setSelectedApp] = useState<string>(trackedAppSlug || "");
   const inputRef = useRef<HTMLInputElement>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout>>(undefined);
 
   const canEdit = user?.role === "owner" || user?.role === "editor";
 
-  // Load tracked keyword IDs when modal opens
+  // Load tracked keyword IDs and my-apps when modal opens
   useEffect(() => {
     if (open) {
       fetchWithAuth("/api/keywords").then(async (res) => {
@@ -49,6 +55,17 @@ export function KeywordSearchModal() {
           setTrackedIds(new Set(data.map((k: any) => k.id)));
         }
       });
+      if (!trackedAppSlug) {
+        fetchWithAuth("/api/account/tracked-apps").then(async (res) => {
+          if (res.ok) {
+            const apps = await res.json();
+            setMyApps(apps);
+            if (apps.length === 1 && !selectedApp) {
+              setSelectedApp(apps[0].appSlug);
+            }
+          }
+        });
+      }
       setTimeout(() => inputRef.current?.focus(), 100);
     } else {
       setQuery("");
@@ -100,18 +117,31 @@ export function KeywordSearchModal() {
     doSearch(value);
   }
 
+  function getEffectiveApp(): string | null {
+    if (trackedAppSlug) return trackedAppSlug;
+    if (selectedApp) return selectedApp;
+    if (myApps.length === 1) return myApps[0].appSlug;
+    return null;
+  }
+
   async function trackKeyword(keyword: string) {
+    const appSlug = getEffectiveApp();
+    if (!appSlug) {
+      setMessage("Select an app first to track keywords");
+      return;
+    }
     setTrackingSlug(keyword);
     setMessage("");
-    const res = await fetchWithAuth("/api/account/tracked-keywords", {
-      method: "POST",
-      body: JSON.stringify({ keyword }),
-    });
+    const res = await fetchWithAuth(
+      `/api/account/tracked-apps/${encodeURIComponent(appSlug)}/keywords`,
+      {
+        method: "POST",
+        body: JSON.stringify({ keyword }),
+      }
+    );
     if (res.ok) {
       const data = await res.json().catch(() => ({}));
-      const scrapeMsg = data.scraperEnqueued
-        ? " Scraping started."
-        : "";
+      const scrapeMsg = data.scraperEnqueued ? " Scraping started." : "";
       setMessage(`"${keyword}" tracked.${scrapeMsg}`);
       refreshUser();
       // Refresh tracked IDs
@@ -145,8 +175,29 @@ export function KeywordSearchModal() {
 
   return (
     <div className="fixed inset-0 z-50 flex items-start justify-center pt-[15vh]">
-      <div className="fixed inset-0 bg-black/50" onClick={() => setOpen(false)} />
+      <div
+        className="fixed inset-0 bg-black/50"
+        onClick={() => setOpen(false)}
+      />
       <div className="relative bg-background border rounded-lg shadow-lg w-full max-w-lg mx-4 overflow-hidden">
+        {/* App selector (when no trackedAppSlug prop and multiple apps) */}
+        {!trackedAppSlug && myApps.length > 1 && (
+          <div className="px-4 py-2 border-b bg-muted/30">
+            <select
+              className="w-full h-8 rounded-md border border-input bg-background px-2 text-sm"
+              value={selectedApp}
+              onChange={(e) => setSelectedApp(e.target.value)}
+            >
+              <option value="">Select app to track for...</option>
+              {myApps.map((a) => (
+                <option key={a.appSlug} value={a.appSlug}>
+                  {a.appName}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
+
         {/* Search Input */}
         <div className="flex items-center border-b px-4">
           <Search className="h-4 w-4 text-muted-foreground shrink-0" />
@@ -154,7 +205,12 @@ export function KeywordSearchModal() {
             ref={inputRef}
             value={query}
             onChange={(e) => handleInput(e.target.value)}
-            placeholder="Search keywords..."
+            placeholder={
+              getEffectiveApp()
+                ? "Search keywords..."
+                : "Select an app first..."
+            }
+            disabled={!getEffectiveApp()}
             className="border-0 focus-visible:ring-0 shadow-none"
           />
           <button
@@ -210,7 +266,9 @@ export function KeywordSearchModal() {
                           variant="ghost"
                           size="sm"
                           className="h-7 text-xs"
-                          disabled={trackingSlug === kw.keyword}
+                          disabled={
+                            trackingSlug === kw.keyword || !getEffectiveApp()
+                          }
                           onClick={() => trackKeyword(kw.keyword)}
                         >
                           <Plus className="h-3 w-3 mr-1" />
@@ -233,7 +291,8 @@ export function KeywordSearchModal() {
               {/* Option to track as new keyword */}
               {query.trim().length >= 1 &&
                 !results.some(
-                  (r) => r.keyword.toLowerCase() === query.trim().toLowerCase()
+                  (r) =>
+                    r.keyword.toLowerCase() === query.trim().toLowerCase()
                 ) &&
                 canEdit && (
                   <div className="flex items-center justify-between px-4 py-3 border-t hover:bg-accent/50 transition-colors">
@@ -244,7 +303,9 @@ export function KeywordSearchModal() {
                       variant="ghost"
                       size="sm"
                       className="h-7 text-xs"
-                      disabled={trackingSlug === query.trim()}
+                      disabled={
+                        trackingSlug === query.trim() || !getEffectiveApp()
+                      }
                       onClick={() => trackKeyword(query.trim())}
                     >
                       <Plus className="h-3 w-3 mr-1" />
@@ -262,7 +323,9 @@ export function KeywordSearchModal() {
                 <Button
                   variant="outline"
                   size="sm"
-                  disabled={trackingSlug === query.trim()}
+                  disabled={
+                    trackingSlug === query.trim() || !getEffectiveApp()
+                  }
                   onClick={() => trackKeyword(query.trim())}
                 >
                   <Plus className="h-3 w-3 mr-1" />
@@ -272,7 +335,9 @@ export function KeywordSearchModal() {
             </div>
           ) : (
             <div className="px-4 py-8 text-center text-sm text-muted-foreground">
-              Start typing to search keywords...
+              {getEffectiveApp()
+                ? "Start typing to search keywords..."
+                : "Select an app above first, then search keywords."}
             </div>
           )}
         </div>

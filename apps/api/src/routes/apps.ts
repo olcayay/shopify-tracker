@@ -13,6 +13,7 @@ import {
   categories,
   accountTrackedApps,
   accountCompetitorApps,
+  accountTrackedKeywords,
 } from "@shopify-tracking/db";
 
 type Db = ReturnType<typeof createDb>;
@@ -221,21 +222,28 @@ export const appRoutes: FastifyPluginAsync = async (app) => {
         )
       );
 
-    const [competitor] = await db
-      .select({ appSlug: accountCompetitorApps.appSlug })
-      .from(accountCompetitorApps)
-      .where(
-        and(
-          eq(accountCompetitorApps.accountId, accountId),
-          eq(accountCompetitorApps.appSlug, slug)
-        )
-      );
+    let competitorForApps: string[] = [];
+    try {
+      const competitorLinks = await db
+        .select({ trackedAppSlug: accountCompetitorApps.trackedAppSlug })
+        .from(accountCompetitorApps)
+        .where(
+          and(
+            eq(accountCompetitorApps.accountId, accountId),
+            eq(accountCompetitorApps.appSlug, slug)
+          )
+        );
+      competitorForApps = competitorLinks.map((r) => r.trackedAppSlug);
+    } catch {
+      // Column may not exist if migration 0022 hasn't been applied yet
+    }
 
     return {
       ...appRow,
       latestSnapshot: latestSnapshot || null,
       isTrackedByAccount: !!tracked,
-      isCompetitor: !!competitor,
+      isCompetitor: competitorForApps.length > 0,
+      competitorForApps,
     };
   });
 
@@ -348,6 +356,7 @@ export const appRoutes: FastifyPluginAsync = async (app) => {
     async (request, reply) => {
       const { slug } = request.params;
       const { days = "30" } = request.query as { days?: string };
+      const { accountId } = request.user;
 
       const [appRow] = await db
         .select()
@@ -426,48 +435,68 @@ export const appRoutes: FastifyPluginAsync = async (app) => {
         scrapedAt: r.scrapedAt,
       }));
 
-      const keywordRankings = await db
-        .select({
-          keywordId: appKeywordRankings.keywordId,
-          keyword: trackedKeywords.keyword,
-          keywordSlug: trackedKeywords.slug,
-          position: appKeywordRankings.position,
-          scrapedAt: appKeywordRankings.scrapedAt,
-        })
-        .from(appKeywordRankings)
-        .innerJoin(
-          trackedKeywords,
-          eq(appKeywordRankings.keywordId, trackedKeywords.id)
-        )
+      // Get keyword IDs linked to this app for this account
+      const linkedKeywordRows = await db
+        .select({ keywordId: accountTrackedKeywords.keywordId })
+        .from(accountTrackedKeywords)
         .where(
           and(
-            eq(appKeywordRankings.appSlug, slug),
-            sql`${appKeywordRankings.scrapedAt} >= ${sinceStr}`
+            eq(accountTrackedKeywords.accountId, accountId),
+            eq(accountTrackedKeywords.trackedAppSlug, slug)
           )
-        )
-        .orderBy(appKeywordRankings.scrapedAt);
+        );
+      const linkedKeywordIds = linkedKeywordRows.map((r) => r.keywordId);
+
+      let keywordRankings: any[] = [];
+      if (linkedKeywordIds.length > 0) {
+        keywordRankings = await db
+          .select({
+            keywordId: appKeywordRankings.keywordId,
+            keyword: trackedKeywords.keyword,
+            keywordSlug: trackedKeywords.slug,
+            position: appKeywordRankings.position,
+            scrapedAt: appKeywordRankings.scrapedAt,
+          })
+          .from(appKeywordRankings)
+          .innerJoin(
+            trackedKeywords,
+            eq(appKeywordRankings.keywordId, trackedKeywords.id)
+          )
+          .where(
+            and(
+              eq(appKeywordRankings.appSlug, slug),
+              inArray(appKeywordRankings.keywordId, linkedKeywordIds),
+              sql`${appKeywordRankings.scrapedAt} >= ${sinceStr}`
+            )
+          )
+          .orderBy(appKeywordRankings.scrapedAt);
+      }
 
       const sinceDateStr = since.toISOString().slice(0, 10);
-      const keywordAds = await db
-        .select({
-          keywordId: keywordAdSightings.keywordId,
-          keyword: trackedKeywords.keyword,
-          keywordSlug: trackedKeywords.slug,
-          seenDate: keywordAdSightings.seenDate,
-          timesSeenInDay: keywordAdSightings.timesSeenInDay,
-        })
-        .from(keywordAdSightings)
-        .innerJoin(
-          trackedKeywords,
-          eq(keywordAdSightings.keywordId, trackedKeywords.id)
-        )
-        .where(
-          and(
-            eq(keywordAdSightings.appSlug, slug),
-            sql`${keywordAdSightings.seenDate} >= ${sinceDateStr}`
+      let keywordAds: any[] = [];
+      if (linkedKeywordIds.length > 0) {
+        keywordAds = await db
+          .select({
+            keywordId: keywordAdSightings.keywordId,
+            keyword: trackedKeywords.keyword,
+            keywordSlug: trackedKeywords.slug,
+            seenDate: keywordAdSightings.seenDate,
+            timesSeenInDay: keywordAdSightings.timesSeenInDay,
+          })
+          .from(keywordAdSightings)
+          .innerJoin(
+            trackedKeywords,
+            eq(keywordAdSightings.keywordId, trackedKeywords.id)
           )
-        )
-        .orderBy(desc(keywordAdSightings.seenDate));
+          .where(
+            and(
+              eq(keywordAdSightings.appSlug, slug),
+              inArray(keywordAdSightings.keywordId, linkedKeywordIds),
+              sql`${keywordAdSightings.seenDate} >= ${sinceDateStr}`
+            )
+          )
+          .orderBy(desc(keywordAdSightings.seenDate));
+      }
 
       return { app: appRow, categoryRankings, keywordRankings, keywordAds };
     }

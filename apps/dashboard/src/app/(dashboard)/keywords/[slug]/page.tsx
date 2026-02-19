@@ -113,6 +113,7 @@ export default async function KeywordDetailPage({
             keywordId={keyword.id}
             keywordText={keyword.keyword}
             initialTracked={keyword.isTrackedByAccount}
+            trackedForApps={keyword.trackedForApps}
           />
         </div>
       </div>

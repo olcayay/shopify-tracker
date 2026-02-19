@@ -116,7 +116,7 @@ export default function OverviewPage() {
         <Link href="/apps">
           <Card className="hover:border-primary/50 transition-colors cursor-pointer">
             <CardHeader className="pb-2">
-              <CardDescription>Tracked Apps</CardDescription>
+              <CardDescription>My Apps</CardDescription>
               <CardTitle className="text-3xl">
                 {account?.usage.trackedApps ?? apps.length}
                 <span className="text-lg text-muted-foreground font-normal">
@@ -184,11 +184,11 @@ export default function OverviewPage() {
         </Link>
       </div>
 
-      {/* Tracked Apps List */}
+      {/* My Apps List */}
       <Card>
         <CardHeader className="pb-3">
           <div className="flex items-center justify-between">
-            <CardTitle className="text-base">Tracked Apps</CardTitle>
+            <CardTitle className="text-base">My Apps</CardTitle>
             <Link href="/apps" className="text-sm text-primary hover:underline">
               View all
             </Link>
@@ -197,7 +197,7 @@ export default function OverviewPage() {
         <CardContent>
           {apps.length === 0 ? (
             <p className="text-sm text-muted-foreground">
-              No tracked apps yet.{" "}
+              No apps yet.{" "}
               <Link href="/apps" className="text-primary hover:underline">
                 Add apps
               </Link>

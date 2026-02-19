@@ -146,7 +146,7 @@ export default function AppsPage() {
       const scrapeMsg = data.scraperEnqueued
         ? " Scraping started — details will appear shortly."
         : "";
-      setMessage(`"${name}" added to tracking.${scrapeMsg}`);
+      setMessage(`Now following "${name}".${scrapeMsg}`);
       setQuery("");
       setSuggestions([]);
       setShowSuggestions(false);
@@ -164,7 +164,7 @@ export default function AppsPage() {
       method: "DELETE",
     });
     if (res.ok) {
-      setMessage(`"${name}" removed from tracking`);
+      setMessage(`Unfollowed "${name}"`);
       loadApps();
       refreshUser();
     } else {
@@ -179,7 +179,7 @@ export default function AppsPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold">
-          Tracked Apps ({apps.length}
+          My Apps ({apps.length}
           {account ? `/${account.limits.maxTrackedApps}` : ""})
         </h1>
         <AdminScraperTrigger
@@ -197,7 +197,7 @@ export default function AppsPage() {
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
-              placeholder="Search apps to track..."
+              placeholder="Search apps to follow..."
               value={query}
               onChange={(e) => handleSearchInput(e.target.value)}
               onFocus={() => suggestions.length > 0 && setShowSuggestions(true)}
@@ -224,7 +224,7 @@ export default function AppsPage() {
                     )}
                   </span>
                   {trackedSlugs.has(s.slug) ? (
-                    <span className="text-xs text-muted-foreground">Tracked</span>
+                    <span className="text-xs text-muted-foreground">Following</span>
                   ) : (
                     <Plus className="h-4 w-4 text-muted-foreground" />
                   )}
@@ -340,8 +340,7 @@ export default function AppsPage() {
                       colSpan={canEdit ? 8 : 7}
                       className="text-center text-muted-foreground"
                     >
-                      No tracked apps yet. Use the search above to find and
-                      track apps.
+                      No apps yet. Search and follow an app to get started.
                     </TableCell>
                   </TableRow>
                 )}
@@ -353,8 +352,8 @@ export default function AppsPage() {
 
       <ConfirmModal
         open={!!confirmRemove}
-        title="Remove Tracked App"
-        description={`Are you sure you want to stop tracking "${confirmRemove?.name}"?`}
+        title="Unfollow App"
+        description={`Are you sure you want to unfollow "${confirmRemove?.name}"? Its competitors and keywords will also be removed.`}
         onConfirm={() => {
           if (confirmRemove) {
             untrackApp(confirmRemove.slug, confirmRemove.name);

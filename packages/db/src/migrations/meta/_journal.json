@@ -155,6 +155,13 @@
       "when": 1771612800000,
       "tag": "0021_widen_varchar_to_text",
       "breakpoints": true
+    },
+    {
+      "idx": 22,
+      "version": "7",
+      "when": 1771699200000,
+      "tag": "0022_per_app_competitors_keywords",
+      "breakpoints": true
     }
   ]
 }

@@ -111,12 +111,12 @@ export const accountRoutes: FastifyPluginAsync = async (app) => {
       .where(eq(accountTrackedApps.accountId, accountId));
 
     const [trackedKeywordsCount] = await db
-      .select({ count: sql<number>`count(*)::int` })
+      .select({ count: sql<number>`count(distinct ${accountTrackedKeywords.keywordId})::int` })
       .from(accountTrackedKeywords)
       .where(eq(accountTrackedKeywords.accountId, accountId));
 
     const [competitorAppsCount] = await db
-      .select({ count: sql<number>`count(*)::int` })
+      .select({ count: sql<number>`count(distinct ${accountCompetitorApps.appSlug})::int` })
       .from(accountCompetitorApps)
       .where(eq(accountCompetitorApps.accountId, accountId));
 
@@ -448,6 +448,7 @@ export const accountRoutes: FastifyPluginAsync = async (app) => {
         appSlug: accountTrackedApps.appSlug,
         createdAt: accountTrackedApps.createdAt,
         appName: apps.name,
+        iconUrl: apps.iconUrl,
         isBuiltForShopify: apps.isBuiltForShopify,
       })
       .from(accountTrackedApps)
@@ -552,18 +553,79 @@ export const accountRoutes: FastifyPluginAsync = async (app) => {
       const { accountId } = request.user;
       const slug = decodeURIComponent(request.params.slug);
 
-      const deleted = await db
-        .delete(accountTrackedApps)
+      // Check if tracked app exists
+      const [existing] = await db
+        .select({ id: accountTrackedApps.id })
+        .from(accountTrackedApps)
         .where(
-          sql`${accountTrackedApps.accountId} = ${accountId} AND ${accountTrackedApps.appSlug} = ${slug}`
-        )
-        .returning();
+          and(
+            eq(accountTrackedApps.accountId, accountId),
+            eq(accountTrackedApps.appSlug, slug)
+          )
+        );
 
-      if (deleted.length === 0) {
+      if (!existing) {
         return reply.code(404).send({ error: "Tracked app not found" });
       }
 
+      // Cascade: collect affected competitors and keywords before deleting
+      const affectedCompetitors = await db
+        .select({ appSlug: accountCompetitorApps.appSlug })
+        .from(accountCompetitorApps)
+        .where(
+          and(
+            eq(accountCompetitorApps.accountId, accountId),
+            eq(accountCompetitorApps.trackedAppSlug, slug)
+          )
+        );
+
+      const affectedKeywords = await db
+        .select({ keywordId: accountTrackedKeywords.keywordId })
+        .from(accountTrackedKeywords)
+        .where(
+          and(
+            eq(accountTrackedKeywords.accountId, accountId),
+            eq(accountTrackedKeywords.trackedAppSlug, slug)
+          )
+        );
+
+      // Delete associated competitors and keywords
+      await db
+        .delete(accountCompetitorApps)
+        .where(
+          and(
+            eq(accountCompetitorApps.accountId, accountId),
+            eq(accountCompetitorApps.trackedAppSlug, slug)
+          )
+        );
+
+      await db
+        .delete(accountTrackedKeywords)
+        .where(
+          and(
+            eq(accountTrackedKeywords.accountId, accountId),
+            eq(accountTrackedKeywords.trackedAppSlug, slug)
+          )
+        );
+
+      // Delete the tracked app itself
+      await db
+        .delete(accountTrackedApps)
+        .where(
+          and(
+            eq(accountTrackedApps.accountId, accountId),
+            eq(accountTrackedApps.appSlug, slug)
+          )
+        );
+
+      // Sync flags for the tracked app and all removed competitors
       await syncAppTrackedFlag(db, slug);
+      for (const c of affectedCompetitors) {
+        await syncAppTrackedFlag(db, c.appSlug);
+      }
+      for (const k of affectedKeywords) {
+        await syncKeywordActiveFlag(db, k.keywordId);
+      }
 
       return { message: "App removed from tracking" };
     }
@@ -578,6 +640,7 @@ export const accountRoutes: FastifyPluginAsync = async (app) => {
     const rows = await db
       .select({
         keywordId: accountTrackedKeywords.keywordId,
+        trackedAppSlug: accountTrackedKeywords.trackedAppSlug,
         createdAt: accountTrackedKeywords.createdAt,
         keyword: trackedKeywords.keyword,
       })
@@ -597,20 +660,42 @@ export const accountRoutes: FastifyPluginAsync = async (app) => {
     { preHandler: [requireRole("owner", "editor")] },
     async (request, reply) => {
       const { accountId } = request.user;
-      const { keyword } = request.body as { keyword?: string };
+      const { keyword, trackedAppSlug } = request.body as {
+        keyword?: string;
+        trackedAppSlug?: string;
+      };
 
       if (!keyword) {
         return reply.code(400).send({ error: "keyword is required" });
       }
+      if (!trackedAppSlug) {
+        return reply.code(400).send({ error: "trackedAppSlug is required" });
+      }
 
-      // Check limit
+      // Verify the tracked app belongs to this account
+      const [trackedApp] = await db
+        .select({ id: accountTrackedApps.id })
+        .from(accountTrackedApps)
+        .where(
+          and(
+            eq(accountTrackedApps.accountId, accountId),
+            eq(accountTrackedApps.appSlug, trackedAppSlug)
+          )
+        );
+      if (!trackedApp) {
+        return reply.code(404).send({ error: "App not in your apps" });
+      }
+
+      // Check limit (unique keywords across all my-apps)
       const [account] = await db
         .select()
         .from(accounts)
         .where(eq(accounts.id, accountId));
 
       const [{ count }] = await db
-        .select({ count: sql<number>`count(*)::int` })
+        .select({
+          count: sql<number>`count(distinct ${accountTrackedKeywords.keywordId})::int`,
+        })
         .from(accountTrackedKeywords)
         .where(eq(accountTrackedKeywords.accountId, accountId));
 
@@ -633,15 +718,17 @@ export const accountRoutes: FastifyPluginAsync = async (app) => {
         })
         .returning();
 
-      // Add to account tracking
+      // Add to account tracking with trackedAppSlug
       const [result] = await db
         .insert(accountTrackedKeywords)
-        .values({ accountId, keywordId: kw.id })
+        .values({ accountId, trackedAppSlug, keywordId: kw.id })
         .onConflictDoNothing()
         .returning();
 
       if (!result) {
-        return reply.code(409).send({ error: "Keyword already tracked" });
+        return reply
+          .code(409)
+          .send({ error: "Keyword already tracked for this app" });
       }
 
       // If keyword has no snapshots yet, enqueue a scraper job
@@ -677,12 +764,23 @@ export const accountRoutes: FastifyPluginAsync = async (app) => {
     async (request, reply) => {
       const { accountId } = request.user;
       const keywordId = parseInt(request.params.id, 10);
+      const { trackedAppSlug } = request.query as {
+        trackedAppSlug?: string;
+      };
+
+      const whereConditions = [
+        eq(accountTrackedKeywords.accountId, accountId),
+        eq(accountTrackedKeywords.keywordId, keywordId),
+      ];
+      if (trackedAppSlug) {
+        whereConditions.push(
+          eq(accountTrackedKeywords.trackedAppSlug, trackedAppSlug)
+        );
+      }
 
       const deleted = await db
         .delete(accountTrackedKeywords)
-        .where(
-          sql`${accountTrackedKeywords.accountId} = ${accountId} AND ${accountTrackedKeywords.keywordId} = ${keywordId}`
-        )
+        .where(and(...whereConditions))
         .returning();
 
       if (deleted.length === 0) {
@@ -697,13 +795,14 @@ export const accountRoutes: FastifyPluginAsync = async (app) => {
 
   // --- Competitor Apps ---
 
-  // GET /api/account/competitors
+  // GET /api/account/competitors — aggregate view (all competitors with trackedAppSlug)
   app.get("/competitors", async (request) => {
     const { accountId } = request.user;
 
     const rows = await db
       .select({
         appSlug: accountCompetitorApps.appSlug,
+        trackedAppSlug: accountCompetitorApps.trackedAppSlug,
         createdAt: accountCompetitorApps.createdAt,
         appName: apps.name,
         isBuiltForShopify: apps.isBuiltForShopify,
@@ -737,33 +836,62 @@ export const accountRoutes: FastifyPluginAsync = async (app) => {
         const minPaidPrice = getMinPaidPrice(snapshot?.pricingPlans);
         const { pricingPlans: _, ...snapshotRest } = snapshot || ({} as any);
 
-        return { ...row, latestSnapshot: snapshot ? snapshotRest : null, minPaidPrice, lastChangeAt: change?.detectedAt || null };
+        return {
+          ...row,
+          latestSnapshot: snapshot ? snapshotRest : null,
+          minPaidPrice,
+          lastChangeAt: change?.detectedAt || null,
+        };
       })
     );
 
     return result;
   });
 
-  // POST /api/account/competitors
+  // POST /api/account/competitors — add competitor (requires trackedAppSlug)
   app.post(
     "/competitors",
     { preHandler: [requireRole("owner", "editor")] },
     async (request, reply) => {
       const { accountId } = request.user;
-      const { slug } = request.body as { slug?: string };
+      const { slug, trackedAppSlug } = request.body as {
+        slug?: string;
+        trackedAppSlug?: string;
+      };
 
       if (!slug) {
         return reply.code(400).send({ error: "slug is required" });
       }
+      if (!trackedAppSlug) {
+        return reply
+          .code(400)
+          .send({ error: "trackedAppSlug is required" });
+      }
 
-      // Check limit
+      // Verify the tracked app belongs to this account
+      const [trackedApp] = await db
+        .select({ id: accountTrackedApps.id })
+        .from(accountTrackedApps)
+        .where(
+          and(
+            eq(accountTrackedApps.accountId, accountId),
+            eq(accountTrackedApps.appSlug, trackedAppSlug)
+          )
+        );
+      if (!trackedApp) {
+        return reply.code(404).send({ error: "App not in your apps" });
+      }
+
+      // Check limit (unique competitors across all my-apps)
       const [account] = await db
         .select()
         .from(accounts)
         .where(eq(accounts.id, accountId));
 
       const [{ count }] = await db
-        .select({ count: sql<number>`count(*)::int` })
+        .select({
+          count: sql<number>`count(distinct ${accountCompetitorApps.appSlug})::int`,
+        })
         .from(accountCompetitorApps)
         .where(eq(accountCompetitorApps.accountId, accountId));
 
@@ -783,9 +911,10 @@ export const accountRoutes: FastifyPluginAsync = async (app) => {
         .limit(1);
 
       if (!existingApp) {
-        return reply
-          .code(404)
-          .send({ error: "App not found. Only existing apps can be added as competitors." });
+        return reply.code(404).send({
+          error:
+            "App not found. Only existing apps can be added as competitors.",
+        });
       }
 
       // Mark as tracked
@@ -794,15 +923,17 @@ export const accountRoutes: FastifyPluginAsync = async (app) => {
         .set({ isTracked: true, updatedAt: new Date() })
         .where(eq(apps.slug, slug));
 
-      // Add to account competitors
+      // Add to account competitors with trackedAppSlug
       const [result] = await db
         .insert(accountCompetitorApps)
-        .values({ accountId, appSlug: slug })
+        .values({ accountId, trackedAppSlug, appSlug: slug })
         .onConflictDoNothing()
         .returning();
 
       if (!result) {
-        return reply.code(409).send({ error: "Competitor already tracked" });
+        return reply
+          .code(409)
+          .send({ error: "Competitor already added for this app" });
       }
 
       // If app has no snapshots yet, enqueue a scraper job
@@ -838,12 +969,23 @@ export const accountRoutes: FastifyPluginAsync = async (app) => {
     async (request, reply) => {
       const { accountId } = request.user;
       const slug = decodeURIComponent(request.params.slug);
+      const { trackedAppSlug } = request.query as {
+        trackedAppSlug?: string;
+      };
+
+      const whereConditions = [
+        eq(accountCompetitorApps.accountId, accountId),
+        eq(accountCompetitorApps.appSlug, slug),
+      ];
+      if (trackedAppSlug) {
+        whereConditions.push(
+          eq(accountCompetitorApps.trackedAppSlug, trackedAppSlug)
+        );
+      }
 
       const deleted = await db
         .delete(accountCompetitorApps)
-        .where(
-          sql`${accountCompetitorApps.accountId} = ${accountId} AND ${accountCompetitorApps.appSlug} = ${slug}`
-        )
+        .where(and(...whereConditions))
         .returning();
 
       if (deleted.length === 0) {
@@ -853,6 +995,415 @@ export const accountRoutes: FastifyPluginAsync = async (app) => {
       await syncAppTrackedFlag(db, slug);
 
       return { message: "Competitor removed" };
+    }
+  );
+
+  // --- Per-app nested routes ---
+
+  // GET /api/account/tracked-apps/:slug/competitors
+  app.get<{ Params: { slug: string } }>(
+    "/tracked-apps/:slug/competitors",
+    async (request, reply) => {
+      const { accountId } = request.user;
+      const slug = decodeURIComponent(request.params.slug);
+
+      // Verify tracked app belongs to this account
+      const [trackedApp] = await db
+        .select({ id: accountTrackedApps.id })
+        .from(accountTrackedApps)
+        .where(
+          and(
+            eq(accountTrackedApps.accountId, accountId),
+            eq(accountTrackedApps.appSlug, slug)
+          )
+        );
+      if (!trackedApp) {
+        return reply.code(404).send({ error: "App not in your apps" });
+      }
+
+      const rows = await db
+        .select({
+          appSlug: accountCompetitorApps.appSlug,
+          createdAt: accountCompetitorApps.createdAt,
+          appName: apps.name,
+          isBuiltForShopify: apps.isBuiltForShopify,
+          launchedDate: apps.launchedDate,
+          iconUrl: apps.iconUrl,
+        })
+        .from(accountCompetitorApps)
+        .innerJoin(apps, eq(apps.slug, accountCompetitorApps.appSlug))
+        .where(
+          and(
+            eq(accountCompetitorApps.accountId, accountId),
+            eq(accountCompetitorApps.trackedAppSlug, slug)
+          )
+        );
+
+      const result = await Promise.all(
+        rows.map(async (row) => {
+          const [snapshot] = await db
+            .select({
+              averageRating: appSnapshots.averageRating,
+              ratingCount: appSnapshots.ratingCount,
+              pricing: appSnapshots.pricing,
+              pricingPlans: appSnapshots.pricingPlans,
+            })
+            .from(appSnapshots)
+            .where(eq(appSnapshots.appSlug, row.appSlug))
+            .orderBy(desc(appSnapshots.scrapedAt))
+            .limit(1);
+
+          const [change] = await db
+            .select({ detectedAt: sql<string | null>`max(detected_at)` })
+            .from(sql`app_field_changes`)
+            .where(sql`app_slug = ${row.appSlug}`);
+
+          const minPaidPrice = getMinPaidPrice(snapshot?.pricingPlans);
+          const { pricingPlans: _, ...snapshotRest } = snapshot || ({} as any);
+
+          return {
+            ...row,
+            latestSnapshot: snapshot ? snapshotRest : null,
+            minPaidPrice,
+            lastChangeAt: change?.detectedAt || null,
+          };
+        })
+      );
+
+      return result;
+    }
+  );
+
+  // POST /api/account/tracked-apps/:slug/competitors
+  app.post<{ Params: { slug: string } }>(
+    "/tracked-apps/:slug/competitors",
+    { preHandler: [requireRole("owner", "editor")] },
+    async (request, reply) => {
+      const { accountId } = request.user;
+      const trackedAppSlug = decodeURIComponent(request.params.slug);
+      const { slug: competitorSlug } = request.body as { slug?: string };
+
+      if (!competitorSlug) {
+        return reply.code(400).send({ error: "slug is required" });
+      }
+
+      // Verify tracked app belongs to this account
+      const [trackedApp] = await db
+        .select({ id: accountTrackedApps.id })
+        .from(accountTrackedApps)
+        .where(
+          and(
+            eq(accountTrackedApps.accountId, accountId),
+            eq(accountTrackedApps.appSlug, trackedAppSlug)
+          )
+        );
+      if (!trackedApp) {
+        return reply.code(404).send({ error: "App not in your apps" });
+      }
+
+      // Check limit (unique competitors across all my-apps)
+      const [account] = await db
+        .select()
+        .from(accounts)
+        .where(eq(accounts.id, accountId));
+
+      const [{ count }] = await db
+        .select({
+          count: sql<number>`count(distinct ${accountCompetitorApps.appSlug})::int`,
+        })
+        .from(accountCompetitorApps)
+        .where(eq(accountCompetitorApps.accountId, accountId));
+
+      if (count >= account.maxCompetitorApps) {
+        return reply.code(403).send({
+          error: "Competitor apps limit reached",
+          current: count,
+          max: account.maxCompetitorApps,
+        });
+      }
+
+      // Check app exists
+      const [existingApp] = await db
+        .select({ slug: apps.slug })
+        .from(apps)
+        .where(eq(apps.slug, competitorSlug))
+        .limit(1);
+
+      if (!existingApp) {
+        return reply.code(404).send({
+          error:
+            "App not found. Only existing apps can be added as competitors.",
+        });
+      }
+
+      // Mark as tracked globally
+      await db
+        .update(apps)
+        .set({ isTracked: true, updatedAt: new Date() })
+        .where(eq(apps.slug, competitorSlug));
+
+      const [result] = await db
+        .insert(accountCompetitorApps)
+        .values({
+          accountId,
+          trackedAppSlug,
+          appSlug: competitorSlug,
+        })
+        .onConflictDoNothing()
+        .returning();
+
+      if (!result) {
+        return reply
+          .code(409)
+          .send({ error: "Competitor already added for this app" });
+      }
+
+      // Enqueue scraper if no snapshots
+      const [existingSnapshot] = await db
+        .select({ id: appSnapshots.id })
+        .from(appSnapshots)
+        .where(eq(appSnapshots.appSlug, competitorSlug))
+        .limit(1);
+
+      let scraperEnqueued = false;
+      if (!existingSnapshot) {
+        try {
+          const queue = getScraperQueue();
+          await queue.add("scrape:app_details", {
+            type: "app_details",
+            slug: competitorSlug,
+            triggeredBy: "api",
+          });
+          scraperEnqueued = true;
+        } catch {
+          // Redis unavailable
+        }
+      }
+
+      return { ...result, scraperEnqueued };
+    }
+  );
+
+  // DELETE /api/account/tracked-apps/:slug/competitors/:competitorSlug
+  app.delete<{ Params: { slug: string; competitorSlug: string } }>(
+    "/tracked-apps/:slug/competitors/:competitorSlug",
+    { preHandler: [requireRole("owner", "editor")] },
+    async (request, reply) => {
+      const { accountId } = request.user;
+      const trackedAppSlug = decodeURIComponent(request.params.slug);
+      const competitorSlug = decodeURIComponent(
+        request.params.competitorSlug
+      );
+
+      const deleted = await db
+        .delete(accountCompetitorApps)
+        .where(
+          and(
+            eq(accountCompetitorApps.accountId, accountId),
+            eq(accountCompetitorApps.trackedAppSlug, trackedAppSlug),
+            eq(accountCompetitorApps.appSlug, competitorSlug)
+          )
+        )
+        .returning();
+
+      if (deleted.length === 0) {
+        return reply.code(404).send({ error: "Competitor not found" });
+      }
+
+      await syncAppTrackedFlag(db, competitorSlug);
+
+      return { message: "Competitor removed" };
+    }
+  );
+
+  // GET /api/account/tracked-apps/:slug/keywords
+  app.get<{ Params: { slug: string } }>(
+    "/tracked-apps/:slug/keywords",
+    async (request, reply) => {
+      const { accountId } = request.user;
+      const slug = decodeURIComponent(request.params.slug);
+
+      // Verify tracked app belongs to this account
+      const [trackedApp] = await db
+        .select({ id: accountTrackedApps.id })
+        .from(accountTrackedApps)
+        .where(
+          and(
+            eq(accountTrackedApps.accountId, accountId),
+            eq(accountTrackedApps.appSlug, slug)
+          )
+        );
+      if (!trackedApp) {
+        return reply.code(404).send({ error: "App not in your apps" });
+      }
+
+      const rows = await db
+        .select({
+          keywordId: accountTrackedKeywords.keywordId,
+          createdAt: accountTrackedKeywords.createdAt,
+          keyword: trackedKeywords.keyword,
+          keywordSlug: trackedKeywords.slug,
+        })
+        .from(accountTrackedKeywords)
+        .innerJoin(
+          trackedKeywords,
+          eq(trackedKeywords.id, accountTrackedKeywords.keywordId)
+        )
+        .where(
+          and(
+            eq(accountTrackedKeywords.accountId, accountId),
+            eq(accountTrackedKeywords.trackedAppSlug, slug)
+          )
+        );
+
+      // Enrich with latest snapshot
+      const result = await Promise.all(
+        rows.map(async (row) => {
+          const [snapshot] = await db
+            .select({
+              totalResults: keywordSnapshots.totalResults,
+              scrapedAt: keywordSnapshots.scrapedAt,
+            })
+            .from(keywordSnapshots)
+            .where(eq(keywordSnapshots.keywordId, row.keywordId))
+            .orderBy(desc(keywordSnapshots.scrapedAt))
+            .limit(1);
+
+          return {
+            ...row,
+            latestSnapshot: snapshot || null,
+          };
+        })
+      );
+
+      return result;
+    }
+  );
+
+  // POST /api/account/tracked-apps/:slug/keywords
+  app.post<{ Params: { slug: string } }>(
+    "/tracked-apps/:slug/keywords",
+    { preHandler: [requireRole("owner", "editor")] },
+    async (request, reply) => {
+      const { accountId } = request.user;
+      const trackedAppSlug = decodeURIComponent(request.params.slug);
+      const { keyword } = request.body as { keyword?: string };
+
+      if (!keyword) {
+        return reply.code(400).send({ error: "keyword is required" });
+      }
+
+      // Verify tracked app belongs to this account
+      const [trackedApp] = await db
+        .select({ id: accountTrackedApps.id })
+        .from(accountTrackedApps)
+        .where(
+          and(
+            eq(accountTrackedApps.accountId, accountId),
+            eq(accountTrackedApps.appSlug, trackedAppSlug)
+          )
+        );
+      if (!trackedApp) {
+        return reply.code(404).send({ error: "App not in your apps" });
+      }
+
+      // Check limit (unique keywords across all my-apps)
+      const [account] = await db
+        .select()
+        .from(accounts)
+        .where(eq(accounts.id, accountId));
+
+      const [{ count }] = await db
+        .select({
+          count: sql<number>`count(distinct ${accountTrackedKeywords.keywordId})::int`,
+        })
+        .from(accountTrackedKeywords)
+        .where(eq(accountTrackedKeywords.accountId, accountId));
+
+      if (count >= account.maxTrackedKeywords) {
+        return reply.code(403).send({
+          error: "Tracked keywords limit reached",
+          current: count,
+          max: account.maxTrackedKeywords,
+        });
+      }
+
+      // Ensure keyword exists in global table
+      const kwSlug = keywordToSlug(keyword);
+      const [kw] = await db
+        .insert(trackedKeywords)
+        .values({ keyword, slug: kwSlug })
+        .onConflictDoUpdate({
+          target: trackedKeywords.keyword,
+          set: { isActive: true, updatedAt: new Date() },
+        })
+        .returning();
+
+      const [result] = await db
+        .insert(accountTrackedKeywords)
+        .values({ accountId, trackedAppSlug, keywordId: kw.id })
+        .onConflictDoNothing()
+        .returning();
+
+      if (!result) {
+        return reply
+          .code(409)
+          .send({ error: "Keyword already tracked for this app" });
+      }
+
+      // Enqueue scraper if no snapshots
+      const [existingSnapshot] = await db
+        .select({ id: keywordSnapshots.id })
+        .from(keywordSnapshots)
+        .where(eq(keywordSnapshots.keywordId, kw.id))
+        .limit(1);
+
+      let scraperEnqueued = false;
+      if (!existingSnapshot) {
+        try {
+          const queue = getScraperQueue();
+          await queue.add("scrape:keyword_search", {
+            type: "keyword_search",
+            keyword: kw.keyword,
+            triggeredBy: "api",
+          });
+          scraperEnqueued = true;
+        } catch {
+          // Redis unavailable
+        }
+      }
+
+      return { ...result, keyword: kw.keyword, scraperEnqueued };
+    }
+  );
+
+  // DELETE /api/account/tracked-apps/:slug/keywords/:keywordId
+  app.delete<{ Params: { slug: string; keywordId: string } }>(
+    "/tracked-apps/:slug/keywords/:keywordId",
+    { preHandler: [requireRole("owner", "editor")] },
+    async (request, reply) => {
+      const { accountId } = request.user;
+      const trackedAppSlug = decodeURIComponent(request.params.slug);
+      const keywordId = parseInt(request.params.keywordId, 10);
+
+      const deleted = await db
+        .delete(accountTrackedKeywords)
+        .where(
+          and(
+            eq(accountTrackedKeywords.accountId, accountId),
+            eq(accountTrackedKeywords.trackedAppSlug, trackedAppSlug),
+            eq(accountTrackedKeywords.keywordId, keywordId)
+          )
+        )
+        .returning();
+
+      if (deleted.length === 0) {
+        return reply.code(404).send({ error: "Tracked keyword not found" });
+      }
+
+      await syncKeywordActiveFlag(db, keywordId);
+
+      return { message: "Keyword removed from tracking" };
     }
   );
 

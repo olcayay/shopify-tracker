@@ -57,6 +57,9 @@ export const accountTrackedKeywords = pgTable(
     accountId: uuid("account_id")
       .notNull()
       .references(() => accounts.id, { onDelete: "cascade" }),
+    trackedAppSlug: varchar("tracked_app_slug", { length: 255 })
+      .notNull()
+      .references(() => apps.slug),
     keywordId: integer("keyword_id")
       .notNull()
       .references(() => trackedKeywords.id),
@@ -65,6 +68,7 @@ export const accountTrackedKeywords = pgTable(
   (table) => [
     uniqueIndex("idx_account_tracked_keywords_unique").on(
       table.accountId,
+      table.trackedAppSlug,
       table.keywordId
     ),
   ]
@@ -97,6 +101,9 @@ export const accountCompetitorApps = pgTable(
     accountId: uuid("account_id")
       .notNull()
       .references(() => accounts.id, { onDelete: "cascade" }),
+    trackedAppSlug: varchar("tracked_app_slug", { length: 255 })
+      .notNull()
+      .references(() => apps.slug),
     appSlug: varchar("app_slug", { length: 255 })
       .notNull()
       .references(() => apps.slug),
@@ -105,6 +112,7 @@ export const accountCompetitorApps = pgTable(
   (table) => [
     uniqueIndex("idx_account_competitor_apps_unique").on(
       table.accountId,
+      table.trackedAppSlug,
       table.appSlug
     ),
   ]

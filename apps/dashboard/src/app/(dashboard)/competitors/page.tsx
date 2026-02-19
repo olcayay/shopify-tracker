@@ -1,12 +1,11 @@
 "use client";
 
-import { useEffect, useState, useRef, useMemo } from "react";
+import { useEffect, useState, useMemo } from "react";
 import Link from "next/link";
 import { useAuth } from "@/lib/auth-context";
 import { useFormatDate } from "@/lib/format-date";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Table,
   TableBody,
@@ -15,29 +14,32 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { X, Plus, Search, ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { X, ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
 import { ConfirmModal } from "@/components/confirm-modal";
 import { AdminScraperTrigger } from "@/components/admin-scraper-trigger";
 
-type SortKey = "name" | "rating" | "reviews" | "minPaidPrice" | "lastChangeAt" | "launchedDate";
+type SortKey =
+  | "name"
+  | "rating"
+  | "reviews"
+  | "minPaidPrice"
+  | "lastChangeAt"
+  | "launchedDate";
 type SortDir = "asc" | "desc";
 
 export default function CompetitorsPage() {
   const { fetchWithAuth, user, account, refreshUser } = useAuth();
   const { formatDateOnly } = useFormatDate();
   const [competitors, setCompetitors] = useState<any[]>([]);
+  const [myApps, setMyApps] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [query, setQuery] = useState("");
-  const [suggestions, setSuggestions] = useState<any[]>([]);
-  const [showSuggestions, setShowSuggestions] = useState(false);
-  const [searchLoading, setSearchLoading] = useState(false);
   const [message, setMessage] = useState("");
   const [confirmRemove, setConfirmRemove] = useState<{
     slug: string;
     name: string;
+    trackedAppSlug: string;
   } | null>(null);
-  const searchRef = useRef<HTMLDivElement>(null);
-  const debounceRef = useRef<ReturnType<typeof setTimeout>>(undefined);
 
   const [sortKey, setSortKey] = useState<SortKey>("name");
   const [sortDir, setSortDir] = useState<SortDir>("asc");
@@ -45,21 +47,83 @@ export default function CompetitorsPage() {
   const canEdit = user?.role === "owner" || user?.role === "editor";
 
   useEffect(() => {
-    loadCompetitors();
+    loadData();
   }, []);
 
-  const sorted = useMemo(() => {
-    return [...competitors].sort((a, b) => {
+  async function loadData() {
+    setLoading(true);
+    const [compRes, appsRes] = await Promise.all([
+      fetchWithAuth("/api/account/competitors"),
+      fetchWithAuth("/api/account/tracked-apps"),
+    ]);
+    if (compRes.ok) setCompetitors(await compRes.json());
+    if (appsRes.ok) setMyApps(await appsRes.json());
+    setLoading(false);
+  }
+
+  async function removeCompetitor(
+    slug: string,
+    name: string,
+    trackedAppSlug: string
+  ) {
+    setMessage("");
+    const res = await fetchWithAuth(
+      `/api/account/tracked-apps/${encodeURIComponent(trackedAppSlug)}/competitors/${encodeURIComponent(slug)}`,
+      { method: "DELETE" }
+    );
+    if (res.ok) {
+      setMessage(`"${name}" removed from competitors`);
+      loadData();
+      refreshUser();
+    } else {
+      const data = await res.json().catch(() => ({}));
+      setMessage(data.error || "Failed to remove competitor");
+    }
+  }
+
+  // Group competitors by trackedAppSlug
+  const grouped = useMemo(() => {
+    const map = new Map<string, any[]>();
+    for (const c of competitors) {
+      const key = c.trackedAppSlug;
+      if (!map.has(key)) map.set(key, []);
+      map.get(key)!.push(c);
+    }
+    return map;
+  }, [competitors]);
+
+  // Build app name lookup
+  const appNameMap = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const a of myApps) {
+      map.set(a.appSlug, a.appName);
+    }
+    return map;
+  }, [myApps]);
+
+  // Count unique competitors
+  const uniqueCount = useMemo(() => {
+    return new Set(competitors.map((c) => c.appSlug)).size;
+  }, [competitors]);
+
+  function sortCompetitors(list: any[]) {
+    return [...list].sort((a, b) => {
       let cmp = 0;
       switch (sortKey) {
         case "name":
-          cmp = (a.appName || a.appSlug).localeCompare(b.appName || b.appSlug);
+          cmp = (a.appName || a.appSlug).localeCompare(
+            b.appName || b.appSlug
+          );
           break;
         case "rating":
-          cmp = (a.latestSnapshot?.averageRating ?? 0) - (b.latestSnapshot?.averageRating ?? 0);
+          cmp =
+            (a.latestSnapshot?.averageRating ?? 0) -
+            (b.latestSnapshot?.averageRating ?? 0);
           break;
         case "reviews":
-          cmp = (a.latestSnapshot?.ratingCount ?? 0) - (b.latestSnapshot?.ratingCount ?? 0);
+          cmp =
+            (a.latestSnapshot?.ratingCount ?? 0) -
+            (b.latestSnapshot?.ratingCount ?? 0);
           break;
         case "minPaidPrice":
           cmp = (a.minPaidPrice ?? 0) - (b.minPaidPrice ?? 0);
@@ -73,7 +137,7 @@ export default function CompetitorsPage() {
       }
       return sortDir === "asc" ? cmp : -cmp;
     });
-  }, [competitors, sortKey, sortDir]);
+  }
 
   function toggleSort(key: SortKey) {
     if (sortKey === key) {
@@ -86,7 +150,9 @@ export default function CompetitorsPage() {
 
   function SortIcon({ col }: { col: SortKey }) {
     if (sortKey !== col)
-      return <ArrowUpDown className="inline h-3.5 w-3.5 ml-1 opacity-40" />;
+      return (
+        <ArrowUpDown className="inline h-3.5 w-3.5 ml-1 opacity-40" />
+      );
     return sortDir === "asc" ? (
       <ArrowUp className="inline h-3.5 w-3.5 ml-1" />
     ) : (
@@ -94,87 +160,11 @@ export default function CompetitorsPage() {
     );
   }
 
-  useEffect(() => {
-    function handleClickOutside(e: MouseEvent) {
-      if (searchRef.current && !searchRef.current.contains(e.target as Node)) {
-        setShowSuggestions(false);
-      }
-    }
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, []);
-
-  async function loadCompetitors() {
-    setLoading(true);
-    const res = await fetchWithAuth("/api/account/competitors");
-    if (res.ok) {
-      setCompetitors(await res.json());
-    }
-    setLoading(false);
-  }
-
-  function handleSearchInput(value: string) {
-    setQuery(value);
-    if (debounceRef.current) clearTimeout(debounceRef.current);
-    if (value.length < 1) {
-      setSuggestions([]);
-      setShowSuggestions(false);
-      return;
-    }
-    setSearchLoading(true);
-    debounceRef.current = setTimeout(async () => {
-      const res = await fetchWithAuth(
-        `/api/apps/search?q=${encodeURIComponent(value)}`
-      );
-      if (res.ok) {
-        setSuggestions(await res.json());
-        setShowSuggestions(true);
-      }
-      setSearchLoading(false);
-    }, 300);
-  }
-
-  async function addCompetitor(slug: string, name: string) {
-    setMessage("");
-    const res = await fetchWithAuth("/api/account/competitors", {
-      method: "POST",
-      body: JSON.stringify({ slug }),
-    });
-    if (res.ok) {
-      setMessage(`"${name}" added as competitor.`);
-      setQuery("");
-      setSuggestions([]);
-      setShowSuggestions(false);
-      loadCompetitors();
-      refreshUser();
-    } else {
-      const data = await res.json().catch(() => ({}));
-      setMessage(data.error || "Failed to add competitor");
-    }
-  }
-
-  async function removeCompetitor(slug: string, name: string) {
-    setMessage("");
-    const res = await fetchWithAuth(`/api/account/competitors/${slug}`, {
-      method: "DELETE",
-    });
-    if (res.ok) {
-      setMessage(`"${name}" removed from competitors`);
-      loadCompetitors();
-      refreshUser();
-    } else {
-      const data = await res.json().catch(() => ({}));
-      setMessage(data.error || "Failed to remove competitor");
-    }
-  }
-
-  const competitorSlugs = new Set(competitors.map((c) => c.appSlug));
-
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold">
-          Competitor Apps ({competitors.length}
+          Competitor Apps ({uniqueCount} unique
           {account ? `/${account.limits.maxCompetitorApps}` : ""})
         </h1>
         <AdminScraperTrigger
@@ -184,178 +174,171 @@ export default function CompetitorsPage() {
       </div>
 
       {message && (
-        <div className="text-sm px-3 py-2 rounded-md bg-muted">{message}</div>
-      )}
-
-      {canEdit && (
-        <div ref={searchRef} className="relative max-w-md">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Search apps to add as competitor..."
-              value={query}
-              onChange={(e) => handleSearchInput(e.target.value)}
-              onFocus={() => suggestions.length > 0 && setShowSuggestions(true)}
-              className="pl-9"
-            />
-          </div>
-          {showSuggestions && suggestions.length > 0 && (
-            <div className="absolute z-50 top-full mt-1 w-full bg-popover border rounded-md shadow-md max-h-60 overflow-auto">
-              {suggestions.map((s) => (
-                <button
-                  key={s.slug}
-                  className="w-full text-left px-3 py-2 hover:bg-accent text-sm flex items-center justify-between"
-                  onClick={() => {
-                    if (competitorSlugs.has(s.slug)) return;
-                    addCompetitor(s.slug, s.name);
-                  }}
-                >
-                  <span>
-                    {s.name}
-                    {s.averageRating != null && (
-                      <span className="text-muted-foreground ml-1">
-                        ({Number(s.averageRating).toFixed(1)} / {s.ratingCount?.toLocaleString() ?? 0})
-                      </span>
-                    )}
-                  </span>
-                  {competitorSlugs.has(s.slug) ? (
-                    <span className="text-xs text-muted-foreground">
-                      Competitor
-                    </span>
-                  ) : (
-                    <Plus className="h-4 w-4 text-muted-foreground" />
-                  )}
-                </button>
-              ))}
-            </div>
-          )}
-          {showSuggestions &&
-            query.length >= 1 &&
-            suggestions.length === 0 &&
-            !searchLoading && (
-              <div className="absolute z-50 top-full mt-1 w-full bg-popover border rounded-md shadow-md p-3 text-sm text-muted-foreground">
-                No apps found for &ldquo;{query}&rdquo;
-              </div>
-            )}
+        <div className="text-sm px-3 py-2 rounded-md bg-muted">
+          {message}
         </div>
       )}
 
-      <Card>
-        <CardContent className="pt-6">
-          {loading ? (
-            <p className="text-muted-foreground text-center py-8">Loading...</p>
-          ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="cursor-pointer select-none" onClick={() => toggleSort("name")}>
-                    App <SortIcon col="name" />
-                  </TableHead>
-                  <TableHead className="cursor-pointer select-none" onClick={() => toggleSort("rating")}>
-                    Rating <SortIcon col="rating" />
-                  </TableHead>
-                  <TableHead className="cursor-pointer select-none" onClick={() => toggleSort("reviews")}>
-                    Reviews <SortIcon col="reviews" />
-                  </TableHead>
-                  <TableHead>Pricing</TableHead>
-                  <TableHead className="cursor-pointer select-none" onClick={() => toggleSort("minPaidPrice")}>
-                    Min. Paid <SortIcon col="minPaidPrice" />
-                  </TableHead>
-                  <TableHead className="cursor-pointer select-none" onClick={() => toggleSort("lastChangeAt")}>
-                    Last Change <SortIcon col="lastChangeAt" />
-                  </TableHead>
-                  <TableHead className="cursor-pointer select-none" onClick={() => toggleSort("launchedDate")}>
-                    Launched <SortIcon col="launchedDate" />
-                  </TableHead>
-                  {canEdit && <TableHead className="w-12" />}
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {sorted.map((c) => (
-                  <TableRow key={c.appSlug}>
-                    <TableCell>
-                      <div className="flex items-center gap-2">
-                        {c.iconUrl && (
-                          <img src={c.iconUrl} alt="" className="h-6 w-6 rounded shrink-0" />
-                        )}
-                        <div className="flex items-center gap-1.5">
-                          <Link
-                            href={`/apps/${c.appSlug}`}
-                            className="text-primary hover:underline font-medium"
-                          >
-                            {c.appName || c.appSlug}
-                          </Link>
-                          {c.isBuiltForShopify && <span title="Built for Shopify">💎</span>}
-                        </div>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      {c.latestSnapshot?.averageRating ?? "\u2014"}
-                    </TableCell>
-                    <TableCell>
-                      {c.latestSnapshot?.ratingCount ?? "\u2014"}
-                    </TableCell>
-                    <TableCell className="text-sm">
-                      {c.latestSnapshot?.pricing ?? "\u2014"}
-                    </TableCell>
-                    <TableCell className="text-sm">
-                      {c.minPaidPrice != null
-                        ? `$${c.minPaidPrice}/mo`
-                        : "\u2014"}
-                    </TableCell>
-                    <TableCell className="text-sm text-muted-foreground">
-                      {c.lastChangeAt
-                        ? formatDateOnly(c.lastChangeAt)
-                        : "\u2014"}
-                    </TableCell>
-                    <TableCell className="text-sm text-muted-foreground">
-                      {c.launchedDate
-                        ? formatDateOnly(c.launchedDate)
-                        : "\u2014"}
-                    </TableCell>
-                    {canEdit && (
-                      <TableCell>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-8 w-8 text-muted-foreground hover:text-destructive"
-                          onClick={() =>
-                            setConfirmRemove({
-                              slug: c.appSlug,
-                              name: c.appName || c.appSlug,
-                            })
-                          }
-                        >
-                          <X className="h-4 w-4" />
-                        </Button>
-                      </TableCell>
-                    )}
-                  </TableRow>
-                ))}
-                {competitors.length === 0 && (
+      {loading ? (
+        <p className="text-muted-foreground text-center py-8">Loading...</p>
+      ) : competitors.length === 0 ? (
+        <Card>
+          <CardContent className="pt-6">
+            <p className="text-muted-foreground text-center py-8">
+              No competitor apps yet. Add competitors from your app detail
+              pages.
+            </p>
+          </CardContent>
+        </Card>
+      ) : (
+        [...grouped.entries()].map(([trackedAppSlug, comps]) => (
+          <Card key={trackedAppSlug}>
+            <CardHeader className="pb-3">
+              <div className="flex items-center gap-2">
+                <CardTitle className="text-base">
+                  <Link
+                    href={`/apps/${trackedAppSlug}`}
+                    className="text-primary hover:underline"
+                  >
+                    {appNameMap.get(trackedAppSlug) || trackedAppSlug}
+                  </Link>
+                </CardTitle>
+                <Badge variant="secondary" className="text-xs">
+                  {comps.length} competitor{comps.length !== 1 ? "s" : ""}
+                </Badge>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <Table>
+                <TableHeader>
                   <TableRow>
-                    <TableCell
-                      colSpan={canEdit ? 8 : 7}
-                      className="text-center text-muted-foreground"
+                    <TableHead
+                      className="cursor-pointer select-none"
+                      onClick={() => toggleSort("name")}
                     >
-                      No competitor apps yet. Use the search above or star apps
-                      from their detail page.
-                    </TableCell>
+                      App <SortIcon col="name" />
+                    </TableHead>
+                    <TableHead
+                      className="cursor-pointer select-none"
+                      onClick={() => toggleSort("rating")}
+                    >
+                      Rating <SortIcon col="rating" />
+                    </TableHead>
+                    <TableHead
+                      className="cursor-pointer select-none"
+                      onClick={() => toggleSort("reviews")}
+                    >
+                      Reviews <SortIcon col="reviews" />
+                    </TableHead>
+                    <TableHead>Pricing</TableHead>
+                    <TableHead
+                      className="cursor-pointer select-none"
+                      onClick={() => toggleSort("minPaidPrice")}
+                    >
+                      Min. Paid <SortIcon col="minPaidPrice" />
+                    </TableHead>
+                    <TableHead
+                      className="cursor-pointer select-none"
+                      onClick={() => toggleSort("lastChangeAt")}
+                    >
+                      Last Change <SortIcon col="lastChangeAt" />
+                    </TableHead>
+                    <TableHead
+                      className="cursor-pointer select-none"
+                      onClick={() => toggleSort("launchedDate")}
+                    >
+                      Launched <SortIcon col="launchedDate" />
+                    </TableHead>
+                    {canEdit && <TableHead className="w-12" />}
                   </TableRow>
-                )}
-              </TableBody>
-            </Table>
-          )}
-        </CardContent>
-      </Card>
+                </TableHeader>
+                <TableBody>
+                  {sortCompetitors(comps).map((c) => (
+                    <TableRow key={`${trackedAppSlug}-${c.appSlug}`}>
+                      <TableCell>
+                        <div className="flex items-center gap-2">
+                          {c.iconUrl && (
+                            <img
+                              src={c.iconUrl}
+                              alt=""
+                              className="h-6 w-6 rounded shrink-0"
+                            />
+                          )}
+                          <div className="flex items-center gap-1.5">
+                            <Link
+                              href={`/apps/${c.appSlug}`}
+                              className="text-primary hover:underline font-medium"
+                            >
+                              {c.appName || c.appSlug}
+                            </Link>
+                            {c.isBuiltForShopify && (
+                              <span title="Built for Shopify">💎</span>
+                            )}
+                          </div>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        {c.latestSnapshot?.averageRating ?? "\u2014"}
+                      </TableCell>
+                      <TableCell>
+                        {c.latestSnapshot?.ratingCount ?? "\u2014"}
+                      </TableCell>
+                      <TableCell className="text-sm">
+                        {c.latestSnapshot?.pricing ?? "\u2014"}
+                      </TableCell>
+                      <TableCell className="text-sm">
+                        {c.minPaidPrice != null
+                          ? `$${c.minPaidPrice}/mo`
+                          : "\u2014"}
+                      </TableCell>
+                      <TableCell className="text-sm text-muted-foreground">
+                        {c.lastChangeAt
+                          ? formatDateOnly(c.lastChangeAt)
+                          : "\u2014"}
+                      </TableCell>
+                      <TableCell className="text-sm text-muted-foreground">
+                        {c.launchedDate
+                          ? formatDateOnly(c.launchedDate)
+                          : "\u2014"}
+                      </TableCell>
+                      {canEdit && (
+                        <TableCell>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                            onClick={() =>
+                              setConfirmRemove({
+                                slug: c.appSlug,
+                                name: c.appName || c.appSlug,
+                                trackedAppSlug,
+                              })
+                            }
+                          >
+                            <X className="h-4 w-4" />
+                          </Button>
+                        </TableCell>
+                      )}
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+        ))
+      )}
 
       <ConfirmModal
         open={!!confirmRemove}
         title="Remove Competitor"
-        description={`Are you sure you want to remove "${confirmRemove?.name}" from competitors?`}
+        description={`Are you sure you want to remove "${confirmRemove?.name}" from competitors of "${appNameMap.get(confirmRemove?.trackedAppSlug || "") || confirmRemove?.trackedAppSlug}"?`}
         onConfirm={() => {
           if (confirmRemove) {
-            removeCompetitor(confirmRemove.slug, confirmRemove.name);
+            removeCompetitor(
+              confirmRemove.slug,
+              confirmRemove.name,
+              confirmRemove.trackedAppSlug
+            );
             setConfirmRemove(null);
           }
         }}

@@ -66,20 +66,20 @@ export function TrackAppButton({
       >
         {tracked ? (
           <>
-            <Check className="h-4 w-4 mr-1" /> Tracked
+            <Check className="h-4 w-4 mr-1" /> Following
           </>
         ) : (
           <>
-            <Plus className="h-4 w-4 mr-1" /> Track
+            <Plus className="h-4 w-4 mr-1" /> Follow
           </>
         )}
       </Button>
 
       <ConfirmModal
         open={showConfirm}
-        title="Stop Tracking App"
-        description={`Are you sure you want to stop tracking "${appName}"? You will lose access to ranking and snapshot history for this app.`}
-        confirmLabel="Untrack"
+        title="Unfollow App"
+        description={`Are you sure you want to unfollow "${appName}"? Its competitors and keywords will also be removed.`}
+        confirmLabel="Unfollow"
         onConfirm={() => {
           setShowConfirm(false);
           doUntrack();

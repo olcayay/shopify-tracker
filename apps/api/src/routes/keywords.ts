@@ -23,12 +23,25 @@ export const keywordRoutes: FastifyPluginAsync = async (app) => {
     const { accountId } = request.user;
 
     const trackedRows = await db
-      .select({ keywordId: accountTrackedKeywords.keywordId })
+      .select({
+        keywordId: accountTrackedKeywords.keywordId,
+        trackedAppSlug: accountTrackedKeywords.trackedAppSlug,
+      })
       .from(accountTrackedKeywords)
       .where(eq(accountTrackedKeywords.accountId, accountId));
 
     if (trackedRows.length === 0) {
       return [];
+    }
+
+    // Build trackedForApps map: keywordId -> trackedAppSlug[]
+    const trackedForAppsMap = new Map<number, string[]>();
+    for (const row of trackedRows) {
+      const existing = trackedForAppsMap.get(row.keywordId) || [];
+      if (!existing.includes(row.trackedAppSlug)) {
+        existing.push(row.trackedAppSlug);
+      }
+      trackedForAppsMap.set(row.keywordId, existing);
     }
 
     // Get account's tracked apps and competitors for matching
@@ -43,9 +56,9 @@ export const keywordRoutes: FastifyPluginAsync = async (app) => {
         .where(eq(accountCompetitorApps.accountId, accountId)),
     ]);
     const trackedSlugs = trackedAppRows.map((r) => r.appSlug);
-    const competitorSlugs = competitorRows.map((r) => r.appSlug);
+    const competitorSlugs = [...new Set(competitorRows.map((r) => r.appSlug))];
 
-    const ids = trackedRows.map((r) => r.keywordId);
+    const ids = [...new Set(trackedRows.map((r) => r.keywordId))];
     const rows = await db
       .select()
       .from(trackedKeywords)
@@ -94,6 +107,7 @@ export const keywordRoutes: FastifyPluginAsync = async (app) => {
         return {
           ...kw,
           latestSnapshot: snapshot ? snapshotWithoutResults : null,
+          trackedForApps: trackedForAppsMap.get(kw.id) || [],
           trackedInResults: trackedAppsInResults.length,
           competitorInResults: competitorAppsInResults.length,
           trackedAppsInResults,
@@ -146,8 +160,11 @@ export const keywordRoutes: FastifyPluginAsync = async (app) => {
       .orderBy(desc(keywordSnapshots.scrapedAt))
       .limit(2);
 
-    const [tracked] = await db
-      .select({ keywordId: accountTrackedKeywords.keywordId })
+    const trackedRows = await db
+      .select({
+        keywordId: accountTrackedKeywords.keywordId,
+        trackedAppSlug: accountTrackedKeywords.trackedAppSlug,
+      })
       .from(accountTrackedKeywords)
       .where(
         and(
@@ -202,7 +219,8 @@ export const keywordRoutes: FastifyPluginAsync = async (app) => {
       ...kw,
       latestSnapshot: enrichedSnapshot,
       positionChanges,
-      isTrackedByAccount: !!tracked,
+      isTrackedByAccount: trackedRows.length > 0,
+      trackedForApps: trackedRows.map((r) => r.trackedAppSlug),
     };
   });
 

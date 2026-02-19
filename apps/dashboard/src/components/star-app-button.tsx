@@ -1,17 +1,21 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useAuth } from "@/lib/auth-context";
-import { Star } from "lucide-react";
+import { Star, ChevronDown } from "lucide-react";
 import { ConfirmModal } from "@/components/confirm-modal";
 
 export function StarAppButton({
   appSlug,
   initialStarred,
+  trackedAppSlug,
+  competitorForApps,
   size = "default",
 }: {
   appSlug: string;
   initialStarred: boolean;
+  trackedAppSlug?: string;
+  competitorForApps?: string[];
   size?: "default" | "sm";
 }) {
   const { fetchWithAuth, refreshUser, account } = useAuth();
@@ -19,15 +23,42 @@ export function StarAppButton({
   const [loading, setLoading] = useState(false);
   const [showLimitModal, setShowLimitModal] = useState(false);
   const [showUnstarConfirm, setShowUnstarConfirm] = useState(false);
+  const [showAppPicker, setShowAppPicker] = useState(false);
+  const [myApps, setMyApps] = useState<any[]>([]);
   const [errorMsg, setErrorMsg] = useState("");
+  const pickerRef = useRef<HTMLDivElement>(null);
 
-  async function doStar() {
+  // Determine the effective trackedAppSlug
+  const effectiveTrackedAppSlug = trackedAppSlug;
+
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (pickerRef.current && !pickerRef.current.contains(e.target as Node)) {
+        setShowAppPicker(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  async function loadMyApps() {
+    const res = await fetchWithAuth("/api/account/tracked-apps");
+    if (res.ok) {
+      setMyApps(await res.json());
+    }
+  }
+
+  async function doStar(targetAppSlug: string) {
     setLoading(true);
     setErrorMsg("");
-    const res = await fetchWithAuth("/api/account/competitors", {
-      method: "POST",
-      body: JSON.stringify({ slug: appSlug }),
-    });
+    setShowAppPicker(false);
+    const res = await fetchWithAuth(
+      `/api/account/tracked-apps/${encodeURIComponent(targetAppSlug)}/competitors`,
+      {
+        method: "POST",
+        body: JSON.stringify({ slug: appSlug }),
+      }
+    );
     if (res.ok) {
       setStarred(true);
       refreshUser();
@@ -41,25 +72,70 @@ export function StarAppButton({
 
   async function doUnstar() {
     setLoading(true);
-    const res = await fetchWithAuth(`/api/account/competitors/${encodeURIComponent(appSlug)}`, {
-      method: "DELETE",
-    });
-    if (res.ok) {
+    // Remove from all my-apps this is a competitor for
+    const forApps = competitorForApps || [];
+    if (forApps.length > 0) {
+      for (const ta of forApps) {
+        await fetchWithAuth(
+          `/api/account/tracked-apps/${encodeURIComponent(ta)}/competitors/${encodeURIComponent(appSlug)}`,
+          { method: "DELETE" }
+        );
+      }
       setStarred(false);
       refreshUser();
     } else {
-      const data = await res.json().catch(() => ({}));
-      setErrorMsg(data.error || "Failed to remove competitor");
-      setShowLimitModal(true);
+      // Fallback: use flat endpoint
+      const res = await fetchWithAuth(
+        `/api/account/competitors/${encodeURIComponent(appSlug)}`,
+        { method: "DELETE" }
+      );
+      if (res.ok) {
+        setStarred(false);
+        refreshUser();
+      } else {
+        const data = await res.json().catch(() => ({}));
+        setErrorMsg(data.error || "Failed to remove competitor");
+        setShowLimitModal(true);
+      }
     }
     setLoading(false);
   }
 
-  function handleClick() {
+  async function handleClick() {
     if (starred) {
       setShowUnstarConfirm(true);
+      return;
+    }
+
+    // If we have a specific tracked app context, star directly
+    if (effectiveTrackedAppSlug) {
+      doStar(effectiveTrackedAppSlug);
+      return;
+    }
+
+    // Otherwise need to pick which my-app to add this competitor to
+    await loadMyApps();
+    if (myApps.length === 0) {
+      // Re-check after load
+      const res = await fetchWithAuth("/api/account/tracked-apps");
+      if (res.ok) {
+        const apps = await res.json();
+        setMyApps(apps);
+        if (apps.length === 0) {
+          setErrorMsg("Follow an app first to add competitors");
+          setShowLimitModal(true);
+          return;
+        }
+        if (apps.length === 1) {
+          doStar(apps[0].appSlug);
+          return;
+        }
+        setShowAppPicker(true);
+      }
+    } else if (myApps.length === 1) {
+      doStar(myApps[0].appSlug);
     } else {
-      doStar();
+      setShowAppPicker(true);
     }
   }
 
@@ -71,7 +147,7 @@ export function StarAppButton({
     : "";
 
   return (
-    <>
+    <div className="relative" ref={pickerRef}>
       <button
         onClick={handleClick}
         disabled={loading}
@@ -83,10 +159,33 @@ export function StarAppButton({
         />
       </button>
 
+      {/* App picker popover */}
+      {showAppPicker && myApps.length > 0 && (
+        <div className="absolute right-0 top-full mt-1 z-50 w-64 bg-popover border rounded-md shadow-md">
+          <div className="px-3 py-2 text-xs text-muted-foreground border-b">
+            Add as competitor for:
+          </div>
+          {myApps
+            .filter((a) => a.appSlug !== appSlug)
+            .map((a) => (
+              <button
+                key={a.appSlug}
+                className="w-full text-left px-3 py-2 hover:bg-accent text-sm flex items-center gap-2"
+                onClick={() => doStar(a.appSlug)}
+              >
+                {a.iconUrl && (
+                  <img src={a.iconUrl} alt="" className="h-5 w-5 rounded shrink-0" />
+                )}
+                {a.appName}
+              </button>
+            ))}
+        </div>
+      )}
+
       <ConfirmModal
         open={showUnstarConfirm}
         title="Remove Competitor"
-        description={`Are you sure you want to remove "${appSlug}" from competitors?`}
+        description={`Are you sure you want to remove "${appSlug}" from competitors?${competitorForApps && competitorForApps.length > 1 ? ` It will be removed from ${competitorForApps.length} apps.` : ""}`}
         confirmLabel="Remove"
         onConfirm={() => {
           setShowUnstarConfirm(false);
@@ -105,6 +204,6 @@ export function StarAppButton({
         onConfirm={() => setShowLimitModal(false)}
         onCancel={() => setShowLimitModal(false)}
       />
-    </>
+    </div>
   );
 }

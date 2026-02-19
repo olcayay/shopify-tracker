@@ -114,7 +114,7 @@ export default function SettingsPage() {
         <CardContent>
           <div className="grid grid-cols-2 md:grid-cols-5 gap-4 text-center">
             {([
-              { href: "/apps", usage: account?.usage.trackedApps, limit: account?.limits.maxTrackedApps, pkgLimit: account?.packageLimits?.maxTrackedApps, label: "Tracked Apps" },
+              { href: "/apps", usage: account?.usage.trackedApps, limit: account?.limits.maxTrackedApps, pkgLimit: account?.packageLimits?.maxTrackedApps, label: "My Apps" },
               { href: "/keywords", usage: account?.usage.trackedKeywords, limit: account?.limits.maxTrackedKeywords, pkgLimit: account?.packageLimits?.maxTrackedKeywords, label: "Keywords" },
               { href: "/competitors", usage: account?.usage.competitorApps, limit: account?.limits.maxCompetitorApps, pkgLimit: account?.packageLimits?.maxCompetitorApps, label: "Competitors" },
               { href: "/features", usage: account?.usage.trackedFeatures, limit: account?.limits.maxTrackedFeatures, pkgLimit: account?.packageLimits?.maxTrackedFeatures, label: "Features" },

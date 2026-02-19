@@ -20,6 +20,8 @@ import { TrackAppButton } from "./track-button";
 import { StarAppButton } from "@/components/star-app-button";
 import { AdminScraperTrigger } from "@/components/admin-scraper-trigger";
 import { ReviewList } from "./review-list";
+import { CompetitorsSection } from "./competitors-section";
+import { KeywordsSection } from "./keywords-section";
 
 export default async function AppDetailPage({
   params,
@@ -83,6 +85,7 @@ export default async function AppDetailPage({
           <StarAppButton
             appSlug={app.slug}
             initialStarred={app.isCompetitor}
+            competitorForApps={app.competitorForApps}
           />
           <TrackAppButton
             appSlug={app.slug}
@@ -218,8 +221,14 @@ export default async function AppDetailPage({
         </div>
       )}
 
-      <Tabs defaultValue="rankings">
+      <Tabs defaultValue={app.isTrackedByAccount ? "competitors" : "rankings"}>
         <TabsList>
+          {app.isTrackedByAccount && (
+            <>
+              <TabsTrigger value="competitors">Competitors</TabsTrigger>
+              <TabsTrigger value="keywords">Keywords</TabsTrigger>
+            </>
+          )}
           <TabsTrigger value="rankings">Rankings</TabsTrigger>
           <TabsTrigger value="reviews">
             Reviews ({reviewData?.total ?? 0})
@@ -231,6 +240,20 @@ export default async function AppDetailPage({
             </TabsTrigger>
           )}
         </TabsList>
+
+        {/* Competitors Tab */}
+        {app.isTrackedByAccount && (
+          <TabsContent value="competitors">
+            <CompetitorsSection appSlug={app.slug} />
+          </TabsContent>
+        )}
+
+        {/* Keywords Tab */}
+        {app.isTrackedByAccount && (
+          <TabsContent value="keywords">
+            <KeywordsSection appSlug={app.slug} />
+          </TabsContent>
+        )}
 
         {/* Rankings Tab */}
         <TabsContent value="rankings" className="space-y-4">
