@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { formatDateOnly } from "@/lib/format-date";
-import { getApp, getAppReviews, getAppRankings, getAppChanges } from "@/lib/api";
+import { getApp, getAppReviews, getAppRankings, getAppChanges, getAppCompetitors, getAppKeywords } from "@/lib/api";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ArrowRight, TrendingUp, Star, MessageSquare, FileText, History, Users, Search } from "lucide-react";
@@ -16,13 +16,21 @@ export default async function AppOverviewPage({
   let reviewData: any;
   let rankings: any;
   let changes: any[] = [];
+  let competitors: any[] = [];
+  let keywords: any[] = [];
   try {
     [app, reviewData, rankings, changes] = await Promise.all([
       getApp(slug),
-      getAppReviews(slug, 3).catch(() => ({ reviews: [], total: 0 })),
+      getAppReviews(slug, 5).catch(() => ({ reviews: [], total: 0 })),
       getAppRankings(slug).catch(() => ({})),
       getAppChanges(slug, 5).catch(() => []),
     ]);
+    if (app.isTrackedByAccount) {
+      [competitors, keywords] = await Promise.all([
+        getAppCompetitors(slug).catch(() => []),
+        getAppKeywords(slug).catch(() => []),
+      ]);
+    }
   } catch {
     return <p className="text-muted-foreground">App not found.</p>;
   }
@@ -116,7 +124,7 @@ export default async function AppOverviewPage({
           <CardContent>
             {reviewData?.reviews?.length > 0 ? (
               <div className="space-y-2">
-                {reviewData.reviews.slice(0, 3).map((r: any, i: number) => (
+                {reviewData.reviews.slice(0, 5).map((r: any, i: number) => (
                   <div key={i} className="text-sm">
                     <div className="flex items-center gap-1.5">
                       <span className="text-yellow-500">{"★".repeat(r.rating)}</span>
@@ -142,14 +150,30 @@ export default async function AppOverviewPage({
             <CardHeader className="flex flex-row items-center justify-between pb-2">
               <CardTitle className="text-sm font-medium flex items-center gap-2">
                 <Users className="h-4 w-4 text-muted-foreground" />
-                Competitors
+                Competitors ({competitors.length})
               </CardTitle>
               <ArrowRight className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors" />
             </CardHeader>
             <CardContent>
-              <p className="text-sm text-muted-foreground">
-                Manage competitor apps and track their performance
-              </p>
+              {competitors.length > 0 ? (
+                <div className="space-y-2">
+                  {competitors.slice(0, 5).map((c: any) => (
+                    <div key={c.appSlug} className="flex items-center gap-2 text-sm">
+                      {c.iconUrl ? (
+                        <img src={c.iconUrl} alt="" className="h-5 w-5 rounded shrink-0" />
+                      ) : (
+                        <div className="h-5 w-5 rounded bg-muted shrink-0" />
+                      )}
+                      <span className="truncate text-muted-foreground">{c.appName || c.appSlug}</span>
+                    </div>
+                  ))}
+                  {competitors.length > 5 && (
+                    <p className="text-xs text-muted-foreground">+{competitors.length - 5} more</p>
+                  )}
+                </div>
+              ) : (
+                <p className="text-sm text-muted-foreground">No competitors added yet</p>
+              )}
             </CardContent>
           </Card>
         </Link>
@@ -162,14 +186,37 @@ export default async function AppOverviewPage({
             <CardHeader className="flex flex-row items-center justify-between pb-2">
               <CardTitle className="text-sm font-medium flex items-center gap-2">
                 <Search className="h-4 w-4 text-muted-foreground" />
-                Keywords
+                Keywords ({keywords.length})
               </CardTitle>
               <ArrowRight className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors" />
             </CardHeader>
             <CardContent>
-              <p className="text-sm text-muted-foreground">
-                Manage tracked keywords and monitor search rankings
-              </p>
+              {keywords.length > 0 ? (
+                <div className="flex flex-wrap gap-1.5">
+                  {[...keywords]
+                    .sort((a, b) => {
+                      const posA = latestKwPositions.get(a.keywordSlug)?.position ?? Infinity;
+                      const posB = latestKwPositions.get(b.keywordSlug)?.position ?? Infinity;
+                      return posA - posB;
+                    })
+                    .slice(0, 20)
+                    .map((k: any) => {
+                      const pos = latestKwPositions.get(k.keywordSlug)?.position;
+                      return (
+                        <Badge key={k.keywordId} variant="secondary" className="text-xs">
+                          {k.keyword}{pos != null && ` (#${pos})`}
+                        </Badge>
+                      );
+                    })}
+                  {keywords.length > 20 && (
+                    <Badge variant="outline" className="text-xs text-muted-foreground">
+                      +{keywords.length - 20}
+                    </Badge>
+                  )}
+                </div>
+              ) : (
+                <p className="text-sm text-muted-foreground">No keywords tracked yet</p>
+              )}
             </CardContent>
           </Card>
         </Link>
@@ -186,10 +233,19 @@ export default async function AppOverviewPage({
             <ArrowRight className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors" />
           </CardHeader>
           <CardContent>
-            {app.latestSnapshot?.appIntroduction ? (
-              <p className="text-sm text-muted-foreground line-clamp-2">
-                {app.latestSnapshot.appIntroduction}
-              </p>
+            {app.latestSnapshot?.appIntroduction || app.latestSnapshot?.appDetails ? (
+              <div className="space-y-2">
+                {app.latestSnapshot.appIntroduction && (
+                  <p className="text-sm font-medium line-clamp-2">
+                    {app.latestSnapshot.appIntroduction}
+                  </p>
+                )}
+                {app.latestSnapshot.appDetails && (
+                  <p className="text-sm text-muted-foreground line-clamp-5">
+                    {app.latestSnapshot.appDetails}
+                  </p>
+                )}
+              </div>
             ) : (
               <p className="text-sm text-muted-foreground">No details available</p>
             )}

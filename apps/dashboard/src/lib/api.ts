@@ -172,6 +172,14 @@ export function getAccountCompetitors() {
   return fetchApi<any[]>(`/api/account/competitors`);
 }
 
+export function getAppCompetitors(slug: string) {
+  return fetchApi<any[]>(`/api/account/tracked-apps/${encodeURIComponent(slug)}/competitors`);
+}
+
+export function getAppKeywords(slug: string) {
+  return fetchApi<any[]>(`/api/account/tracked-apps/${encodeURIComponent(slug)}/keywords`);
+}
+
 export function getAccountTrackedFeatures() {
   return fetchApi<any[]>(`/api/account/tracked-features`);
 }

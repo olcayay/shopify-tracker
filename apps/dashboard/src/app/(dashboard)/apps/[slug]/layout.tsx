@@ -38,7 +38,6 @@ export default async function AppDetailLayout({
               {app.name}
               {app.isBuiltForShopify && <span title="Built for Shopify" className="ml-1.5">💎</span>}
             </h1>
-            <p className="text-muted-foreground">{app.slug}</p>
             {app.appCardSubtitle && (
               <p className="text-sm text-muted-foreground italic mt-1">{app.appCardSubtitle}</p>
             )}
