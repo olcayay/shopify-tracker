@@ -148,6 +148,13 @@
       "when": 1771526400000,
       "tag": "0020_packages",
       "breakpoints": true
+    },
+    {
+      "idx": 21,
+      "version": "7",
+      "when": 1771612800000,
+      "tag": "0021_widen_varchar_to_text",
+      "breakpoints": true
     }
   ]
 }

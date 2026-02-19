@@ -336,3 +336,28 @@ features sayfasında categories sayfasında olduğu track edilen ve Competitor a
 tracked app, competitor app ve keyword arasındaki ideal ilişki nasıl olmalı?
 
 şu an app icon'lar direk shopify'daki icon url'leri bu projeyi publish ettiğimde bu bir problem yaratır mı?
+
+her app için bir landing sayfası yapılabilir mi?
+hulkapp'inki gibi
+
+App Tweak
+
+- description için keyword counter, density
+- aso score / app power üretme
+- app sayfasında rakiplerin meta dataları ile yan yana karşılaştırma
+- app sayfasında rakipler ile karşılaştırma
+- app sayfasında rakip ekleme, silme, enable/disable etme
+- app meta data limitlerini nasıl kullanmış. Örneğin 30 karakterlik bir başlığın kaç karakterini kullanmış
+
+
+
+tracked app, competitor app ve keyword ilişkisini yeniden kurgulamak istiyorum.
+
+- tracked apps yerine my apps 
+- competitor apps bu şekilde kalabilir.
+- kullanıcı applerini seçip bu applere rakip olan appleri seçeçecekler
+- keywordler direk olarak my apps'e eklenecek. 
+- bir app birden fazla app için rakip app olarak eklenebilir
+- bir keyword birden fazla app için eklenebilir.
+- limit havuzu ise ortak olacak. eklenen bütün rakipler ve keywordler unique olarak limitlerden düşücek.
+
