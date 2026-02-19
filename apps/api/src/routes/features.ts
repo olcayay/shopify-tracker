@@ -162,7 +162,7 @@ export const featureRoutes: FastifyPluginAsync = async (app) => {
         title: feature.title,
         categoryTitle: feature.category_title || null,
         subcategoryTitle: feature.subcategory_title || null,
-        isTrackedByAccount: !!tracked,
+        isStarredByAccount: !!tracked,
         apps: (appsResult as any).rows ?? appsResult,
       };
     }

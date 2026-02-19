@@ -180,8 +180,8 @@ export function getAppKeywords(slug: string) {
   return fetchApi<any[]>(`/api/account/tracked-apps/${encodeURIComponent(slug)}/keywords`);
 }
 
-export function getAccountTrackedFeatures() {
-  return fetchApi<any[]>(`/api/account/tracked-features`);
+export function getAccountStarredFeatures() {
+  return fetchApi<any[]>(`/api/account/starred-features`);
 }
 
 export function getAccountStarredCategories() {

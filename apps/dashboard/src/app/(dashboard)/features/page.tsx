@@ -6,7 +6,7 @@ import { useAuth } from "@/lib/auth-context";
 import { useFormatDate } from "@/lib/format-date";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Table,
   TableBody,
@@ -15,11 +15,11 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { X, Plus, Search } from "lucide-react";
+import { X, Star, Search } from "lucide-react";
 import { ConfirmModal } from "@/components/confirm-modal";
 
 export default function FeaturesPage() {
-  const { fetchWithAuth, user, account, refreshUser } = useAuth();
+  const { fetchWithAuth, user, refreshUser } = useAuth();
   const { formatDateOnly } = useFormatDate();
   const [features, setFeatures] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -56,7 +56,7 @@ export default function FeaturesPage() {
 
   async function loadFeatures() {
     setLoading(true);
-    const res = await fetchWithAuth("/api/account/tracked-features");
+    const res = await fetchWithAuth("/api/account/starred-features");
     if (res.ok) {
       setFeatures(await res.json());
     }
@@ -85,14 +85,14 @@ export default function FeaturesPage() {
     }, 300);
   }
 
-  async function trackFeature(handle: string, title: string) {
+  async function starFeature(handle: string, title: string) {
     setMessage("");
-    const res = await fetchWithAuth("/api/account/tracked-features", {
+    const res = await fetchWithAuth("/api/account/starred-features", {
       method: "POST",
       body: JSON.stringify({ handle, title }),
     });
     if (res.ok) {
-      setMessage(`"${title}" added to tracking.`);
+      setMessage(`"${title}" starred.`);
       setQuery("");
       setSuggestions([]);
       setShowSuggestions(false);
@@ -100,35 +100,32 @@ export default function FeaturesPage() {
       refreshUser();
     } else {
       const data = await res.json().catch(() => ({}));
-      setMessage(data.error || "Failed to track feature");
+      setMessage(data.error || "Failed to star feature");
     }
   }
 
-  async function untrackFeature(handle: string, title: string) {
+  async function unstarFeature(handle: string, title: string) {
     setMessage("");
     const res = await fetchWithAuth(
-      `/api/account/tracked-features/${encodeURIComponent(handle)}`,
+      `/api/account/starred-features/${encodeURIComponent(handle)}`,
       { method: "DELETE" }
     );
     if (res.ok) {
-      setMessage(`"${title}" removed from tracking`);
+      setMessage(`"${title}" unstarred.`);
       loadFeatures();
       refreshUser();
     } else {
       const data = await res.json().catch(() => ({}));
-      setMessage(data.error || "Failed to untrack feature");
+      setMessage(data.error || "Failed to unstar feature");
     }
   }
 
-  const trackedHandles = new Set(features.map((f) => f.featureHandle));
+  const starredHandles = new Set(features.map((f) => f.featureHandle));
 
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold">
-          Tracked Features ({features.length}
-          {account ? `/${account.limits.maxTrackedFeatures}` : ""})
-        </h1>
+        <h1 className="text-2xl font-bold">Features</h1>
       </div>
 
       {message && (
@@ -140,7 +137,7 @@ export default function FeaturesPage() {
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
-              placeholder="Search features to track..."
+              placeholder="Search features to star..."
               value={query}
               onChange={(e) => handleSearchInput(e.target.value)}
               onFocus={() =>
@@ -156,17 +153,15 @@ export default function FeaturesPage() {
                   key={s.handle}
                   className="w-full text-left px-3 py-2 hover:bg-accent text-sm flex items-center justify-between"
                   onClick={() => {
-                    if (trackedHandles.has(s.handle)) return;
-                    trackFeature(s.handle, s.title);
+                    if (starredHandles.has(s.handle)) return;
+                    starFeature(s.handle, s.title);
                   }}
                 >
                   <span>{s.title}</span>
-                  {trackedHandles.has(s.handle) ? (
-                    <span className="text-xs text-muted-foreground">
-                      Tracked
-                    </span>
+                  {starredHandles.has(s.handle) ? (
+                    <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
                   ) : (
-                    <Plus className="h-4 w-4 text-muted-foreground" />
+                    <Star className="h-4 w-4 text-muted-foreground" />
                   )}
                 </button>
               ))}
@@ -184,12 +179,18 @@ export default function FeaturesPage() {
       )}
 
       <Card>
-        <CardContent className="pt-6">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
+            Starred Features ({features.length})
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
           {loading ? (
             <p className="text-muted-foreground text-center py-8">
               Loading...
             </p>
-          ) : (
+          ) : features.length > 0 ? (
             <Table>
               <TableHeader>
                 <TableRow>
@@ -237,30 +238,24 @@ export default function FeaturesPage() {
                     )}
                   </TableRow>
                 ))}
-                {features.length === 0 && (
-                  <TableRow>
-                    <TableCell
-                      colSpan={canEdit ? 4 : 3}
-                      className="text-center text-muted-foreground"
-                    >
-                      No tracked features yet. Use the search above to find and
-                      track features.
-                    </TableCell>
-                  </TableRow>
-                )}
               </TableBody>
             </Table>
+          ) : (
+            <p className="text-center text-muted-foreground py-8">
+              No starred features yet. Use the search above to find and star features.
+            </p>
           )}
         </CardContent>
       </Card>
 
       <ConfirmModal
         open={!!confirmRemove}
-        title="Remove Tracked Feature"
-        description={`Are you sure you want to stop tracking "${confirmRemove?.title}"?`}
+        title="Unstar Feature"
+        description={`Are you sure you want to unstar "${confirmRemove?.title}"?`}
+        confirmLabel="Unstar"
         onConfirm={() => {
           if (confirmRemove) {
-            untrackFeature(confirmRemove.handle, confirmRemove.title);
+            unstarFeature(confirmRemove.handle, confirmRemove.title);
             setConfirmRemove(null);
           }
         }}

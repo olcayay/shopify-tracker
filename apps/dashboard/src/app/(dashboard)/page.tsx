@@ -70,7 +70,7 @@ export default function OverviewPage() {
       fetchWithAuth("/api/account/competitors").then((r) =>
         r.ok ? r.json() : []
       ),
-      fetchWithAuth("/api/account/tracked-features").then((r) =>
+      fetchWithAuth("/api/account/starred-features").then((r) =>
         r.ok ? r.json() : []
       ),
     ];
@@ -158,12 +158,9 @@ export default function OverviewPage() {
         <Link href="/features">
           <Card className="hover:border-primary/50 transition-colors cursor-pointer">
             <CardHeader className="pb-2">
-              <CardDescription>Tracked Features</CardDescription>
+              <CardDescription>Starred Features</CardDescription>
               <CardTitle className="text-3xl">
-                {account?.usage.trackedFeatures ?? features.length}
-                <span className="text-lg text-muted-foreground font-normal">
-                  /{account?.limits.maxTrackedFeatures}
-                </span>
+                {account?.usage.starredFeatures ?? features.length}
               </CardTitle>
             </CardHeader>
           </Card>
@@ -353,11 +350,11 @@ export default function OverviewPage() {
         </CardContent>
       </Card>
 
-      {/* Tracked Features List */}
+      {/* Starred Features List */}
       <Card>
         <CardHeader className="pb-3">
           <div className="flex items-center justify-between">
-            <CardTitle className="text-base">Tracked Features</CardTitle>
+            <CardTitle className="text-base">Starred Features</CardTitle>
             <Link href="/features" className="text-sm text-primary hover:underline">
               View all
             </Link>
@@ -366,9 +363,9 @@ export default function OverviewPage() {
         <CardContent>
           {features.length === 0 ? (
             <p className="text-sm text-muted-foreground">
-              No tracked features yet.{" "}
+              No starred features yet.{" "}
               <Link href="/features" className="text-primary hover:underline">
-                Add features
+                Star features
               </Link>
             </p>
           ) : (

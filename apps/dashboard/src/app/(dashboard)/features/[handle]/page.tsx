@@ -11,7 +11,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { TrackFeatureButton } from "./track-button";
+import { StarFeatureButton } from "./track-button";
 import { StarAppButton } from "@/components/star-app-button";
 
 export default async function FeatureDetailPage({
@@ -71,10 +71,10 @@ export default async function FeatureDetailPage({
           <h1 className="text-2xl font-bold">{feature.title}</h1>
         </div>
         <div className="flex items-center gap-2">
-          <TrackFeatureButton
+          <StarFeatureButton
             featureHandle={feature.handle}
             featureTitle={feature.title}
-            initialTracked={feature.isTrackedByAccount}
+            initialStarred={feature.isStarredByAccount}
           />
         </div>
       </div>

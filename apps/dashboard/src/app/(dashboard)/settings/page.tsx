@@ -117,7 +117,6 @@ export default function SettingsPage() {
               { href: "/apps", usage: account?.usage.trackedApps, limit: account?.limits.maxTrackedApps, pkgLimit: account?.packageLimits?.maxTrackedApps, label: "My Apps" },
               { href: "/keywords", usage: account?.usage.trackedKeywords, limit: account?.limits.maxTrackedKeywords, pkgLimit: account?.packageLimits?.maxTrackedKeywords, label: "Keywords" },
               { href: "/competitors", usage: account?.usage.competitorApps, limit: account?.limits.maxCompetitorApps, pkgLimit: account?.packageLimits?.maxCompetitorApps, label: "Competitors" },
-              { href: "/features", usage: account?.usage.trackedFeatures, limit: account?.limits.maxTrackedFeatures, pkgLimit: account?.packageLimits?.maxTrackedFeatures, label: "Features" },
             ] as const).map(({ href, usage, limit, pkgLimit, label }) => {
               const isOverridden = pkgLimit != null && limit !== pkgLimit;
               return (

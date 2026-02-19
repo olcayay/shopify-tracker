@@ -32,21 +32,19 @@ export interface Account {
     maxTrackedApps: number;
     maxTrackedKeywords: number;
     maxCompetitorApps: number;
-    maxTrackedFeatures: number;
     maxUsers: number;
   } | null;
   limits: {
     maxTrackedApps: number;
     maxTrackedKeywords: number;
     maxCompetitorApps: number;
-    maxTrackedFeatures: number;
     maxUsers: number;
   };
   usage: {
     trackedApps: number;
     trackedKeywords: number;
     competitorApps: number;
-    trackedFeatures: number;
+    starredFeatures: number;
     users: number;
   };
 }

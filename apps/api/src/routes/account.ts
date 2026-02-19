@@ -120,7 +120,7 @@ export const accountRoutes: FastifyPluginAsync = async (app) => {
       .from(accountCompetitorApps)
       .where(eq(accountCompetitorApps.accountId, accountId));
 
-    const [trackedFeaturesCount] = await db
+    const [starredFeaturesCount] = await db
       .select({ count: sql<number>`count(*)::int` })
       .from(accountTrackedFeatures)
       .where(eq(accountTrackedFeatures.accountId, accountId));
@@ -147,7 +147,6 @@ export const accountRoutes: FastifyPluginAsync = async (app) => {
             maxTrackedApps: pkg.maxTrackedApps,
             maxTrackedKeywords: pkg.maxTrackedKeywords,
             maxCompetitorApps: pkg.maxCompetitorApps,
-            maxTrackedFeatures: pkg.maxTrackedFeatures,
             maxUsers: pkg.maxUsers,
           }
         : null,
@@ -155,14 +154,13 @@ export const accountRoutes: FastifyPluginAsync = async (app) => {
         maxTrackedApps: account.maxTrackedApps,
         maxTrackedKeywords: account.maxTrackedKeywords,
         maxCompetitorApps: account.maxCompetitorApps,
-        maxTrackedFeatures: account.maxTrackedFeatures,
         maxUsers: account.maxUsers,
       },
       usage: {
         trackedApps: trackedAppsCount.count,
         trackedKeywords: trackedKeywordsCount.count,
         competitorApps: competitorAppsCount.count,
-        trackedFeatures: trackedFeaturesCount.count,
+        starredFeatures: starredFeaturesCount.count,
         users: usersCount.count,
       },
     };
@@ -1534,8 +1532,8 @@ export const accountRoutes: FastifyPluginAsync = async (app) => {
 
   // --- Tracked Features ---
 
-  // GET /api/account/tracked-features
-  app.get("/tracked-features", async (request) => {
+  // GET /api/account/starred-features
+  app.get("/starred-features", async (request) => {
     const { accountId } = request.user;
 
     const rows = await db
@@ -1578,9 +1576,9 @@ export const accountRoutes: FastifyPluginAsync = async (app) => {
     return rows;
   });
 
-  // POST /api/account/tracked-features
+  // POST /api/account/starred-features
   app.post(
-    "/tracked-features",
+    "/starred-features",
     { preHandler: [requireRole("owner", "editor")] },
     async (request, reply) => {
       const { accountId } = request.user;
@@ -1595,25 +1593,6 @@ export const accountRoutes: FastifyPluginAsync = async (app) => {
           .send({ error: "handle and title are required" });
       }
 
-      // Check limit
-      const [account] = await db
-        .select()
-        .from(accounts)
-        .where(eq(accounts.id, accountId));
-
-      const [{ count }] = await db
-        .select({ count: sql<number>`count(*)::int` })
-        .from(accountTrackedFeatures)
-        .where(eq(accountTrackedFeatures.accountId, accountId));
-
-      if (count >= account.maxTrackedFeatures) {
-        return reply.code(403).send({
-          error: "Tracked features limit reached",
-          current: count,
-          max: account.maxTrackedFeatures,
-        });
-      }
-
       const [result] = await db
         .insert(accountTrackedFeatures)
         .values({
@@ -1625,16 +1604,16 @@ export const accountRoutes: FastifyPluginAsync = async (app) => {
         .returning();
 
       if (!result) {
-        return reply.code(409).send({ error: "Feature already tracked" });
+        return reply.code(409).send({ error: "Feature already starred" });
       }
 
       return result;
     }
   );
 
-  // DELETE /api/account/tracked-features/:handle
+  // DELETE /api/account/starred-features/:handle
   app.delete<{ Params: { handle: string } }>(
-    "/tracked-features/:handle",
+    "/starred-features/:handle",
     { preHandler: [requireRole("owner", "editor")] },
     async (request, reply) => {
       const { accountId } = request.user;
@@ -1651,10 +1630,10 @@ export const accountRoutes: FastifyPluginAsync = async (app) => {
         .returning();
 
       if (deleted.length === 0) {
-        return reply.code(404).send({ error: "Tracked feature not found" });
+        return reply.code(404).send({ error: "Starred feature not found" });
       }
 
-      return { message: "Feature removed from tracking" };
+      return { message: "Feature unstarred" };
     }
   );
 };
