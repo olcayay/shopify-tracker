@@ -36,18 +36,29 @@ interface CategoryRanking {
 }
 
 function CharBadge({ count, max }: { count: number; max?: number }) {
-  const good = max ? count >= max * 0.7 && count <= max : count > 0;
+  let colorClass = "border-muted-foreground text-muted-foreground";
+  if (max) {
+    const pct = count / max;
+    if (pct > 1) {
+      colorClass = "border-red-600 text-red-600";
+    } else if (pct >= 0.9) {
+      colorClass = "border-green-600 text-green-600";
+    } else if (pct >= 0.8) {
+      colorClass = "border-lime-600 text-lime-600";
+    } else if (pct >= 0.7) {
+      colorClass = "border-yellow-600 text-yellow-600";
+    } else if (pct >= 0.6) {
+      colorClass = "border-orange-500 text-orange-500";
+    } else {
+      colorClass = "border-red-600 text-red-600";
+    }
+  }
   return (
     <Badge
       variant="outline"
-      className={cn(
-        "text-xs ml-2 shrink-0",
-        good
-          ? "border-green-600 text-green-600"
-          : "border-orange-500 text-orange-500"
-      )}
+      className={cn("text-xs ml-2 shrink-0", colorClass)}
     >
-      {count} characters
+      {count}{max ? `/${max}` : ""} chars
     </Badge>
   );
 }
@@ -457,6 +468,27 @@ export default function ComparePage() {
             )}
           </VerticalListSection>
 
+          {/* App Card Subtitle */}
+          <VerticalListSection
+            title="App Card Subtitle"
+            sectionKey="appCardSubtitle"
+            collapsed={isCollapsed("appCardSubtitle")}
+            onToggle={toggleSection}
+            apps={selectedApps}
+            mainSlug={mainApp.slug}
+          >
+            {(app) => (
+              <div className="flex items-center">
+                <span className="text-sm">
+                  {app.appCardSubtitle || "—"}
+                </span>
+                {app.appCardSubtitle && (
+                  <CharBadge count={app.appCardSubtitle.length} max={62} />
+                )}
+              </div>
+            )}
+          </VerticalListSection>
+
           {/* App Introduction */}
           <VerticalListSection
             title="App Introduction"
@@ -475,6 +507,7 @@ export default function ComparePage() {
                   {app.latestSnapshot?.appIntroduction && (
                     <CharBadge
                       count={app.latestSnapshot.appIntroduction.length}
+                      max={100}
                     />
                   )}
                 </div>
@@ -520,6 +553,7 @@ export default function ComparePage() {
                 <div>
                   <CharBadge
                     count={active.latestSnapshot.appDetails.length}
+                    max={500}
                   />
                   <p className="text-sm mt-2 whitespace-pre-line">
                     {active.latestSnapshot.appDetails}
@@ -564,14 +598,22 @@ export default function ComparePage() {
                       <td className="py-2 pr-4 text-muted-foreground align-top w-[160px] min-w-[160px]">
                         {i + 1}
                       </td>
-                      {selectedApps.map((app) => (
-                        <td
-                          key={app.slug}
-                          className="py-2 px-2 align-top"
-                        >
-                          {app.latestSnapshot?.features?.[i] || ""}
-                        </td>
-                      ))}
+                      {selectedApps.map((app) => {
+                        const feat = app.latestSnapshot?.features?.[i];
+                        return (
+                          <td
+                            key={app.slug}
+                            className="py-2 px-2 align-top"
+                          >
+                            {feat ? (
+                              <div className="flex items-start gap-1">
+                                <span className="flex-1">{feat}</span>
+                                <CharBadge count={feat.length} max={80} />
+                              </div>
+                            ) : ""}
+                          </td>
+                        );
+                      })}
                     </tr>
                   ))}
                 </tbody>
@@ -653,7 +695,7 @@ export default function ComparePage() {
                       <span className="text-xs text-muted-foreground">
                         Title Tag
                       </span>
-                      <CharBadge count={s.seoTitle.length} max={70} />
+                      <CharBadge count={s.seoTitle.length} max={60} />
                       <p className="text-sm mt-0.5">{s.seoTitle}</p>
                     </div>
                   )}
