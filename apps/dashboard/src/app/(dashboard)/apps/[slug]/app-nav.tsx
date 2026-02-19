@@ -20,6 +20,7 @@ export function AppNav({
       ? [
           { href: `${base}/competitors`, label: "Competitors" },
           { href: `${base}/keywords`, label: "Keywords" },
+          { href: `${base}/compare`, label: "Compare" },
         ]
       : []),
     { href: `${base}/rankings`, label: "Rankings" },
