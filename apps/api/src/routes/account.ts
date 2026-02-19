@@ -813,24 +813,26 @@ export const accountRoutes: FastifyPluginAsync = async (app) => {
 
     if (rows.length === 0) return [];
 
-    // Get account's tracked keyword IDs
+    // Get account's tracked keyword IDs (deduplicated)
     const accountKeywords = await db
       .select({ keywordId: accountTrackedKeywords.keywordId })
       .from(accountTrackedKeywords)
       .where(eq(accountTrackedKeywords.accountId, accountId));
-    const trackedKeywordIds = accountKeywords.map((k) => k.keywordId);
+    const trackedKeywordIds = [...new Set(accountKeywords.map((k) => k.keywordId))];
 
     // Count distinct keywords each competitor is ranked in (latest ranking per keyword, non-null position)
     const competitorSlugs = [...new Set(rows.map((r) => r.appSlug))];
     let rankedKeywordMap = new Map<string, number>();
     if (trackedKeywordIds.length > 0 && competitorSlugs.length > 0) {
+      const slugList = sql.join(competitorSlugs.map((s) => sql`${s}`), sql`, `);
+      const idList = sql.join(trackedKeywordIds.map((id) => sql`${id}`), sql`, `);
       const rankedRows = await db.execute(sql`
         SELECT app_slug, COUNT(DISTINCT keyword_id)::int AS ranked_keywords
         FROM (
           SELECT DISTINCT ON (app_slug, keyword_id) app_slug, keyword_id, position
           FROM app_keyword_rankings
-          WHERE app_slug = ANY(ARRAY[${sql.join(competitorSlugs.map((s) => sql`${s}`), sql`,`)}])
-            AND keyword_id = ANY(ARRAY[${sql.join(trackedKeywordIds.map((id) => sql`${id}`), sql`,`)}])
+          WHERE app_slug IN (${slugList})
+            AND keyword_id IN (${idList})
           ORDER BY app_slug, keyword_id, scraped_at DESC
         ) latest
         WHERE position IS NOT NULL

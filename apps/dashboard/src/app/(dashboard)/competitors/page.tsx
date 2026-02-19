@@ -168,7 +168,7 @@ export default function CompetitorsPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold">
-          Competitor Apps ({uniqueCount} unique
+          Competitor Apps ({uniqueCount}
           {account ? `/${account.limits.maxCompetitorApps}` : ""})
         </h1>
         <AdminScraperTrigger
@@ -198,165 +198,204 @@ export default function CompetitorsPage() {
           </CardContent>
         </Card>
       ) : (
-        myApps.map((myApp) => {
-          const comps = grouped.get(myApp.appSlug) || [];
-          return (
-            <Card key={myApp.appSlug}>
-              <CardHeader className="pb-3">
-                <div className="flex items-center gap-2">
-                  <CardTitle className="text-base">
-                    <Link
-                      href={`/apps/${myApp.appSlug}`}
-                      className="text-primary hover:underline"
-                    >
-                      {myApp.appName || myApp.appSlug}
-                    </Link>
-                  </CardTitle>
-                  <Badge variant="secondary" className="text-xs">
-                    {comps.length} competitor{comps.length !== 1 ? "s" : ""}
-                  </Badge>
-                </div>
-              </CardHeader>
-              <CardContent>
-                {comps.length === 0 ? (
-                  <p className="text-sm text-muted-foreground text-center py-6">
-                    No competitors yet.{" "}
-                    <Link
-                      href={`/apps/${myApp.appSlug}/competitors`}
-                      className="text-primary hover:underline"
-                    >
-                      Add competitors
-                    </Link>
-                  </p>
-                ) : (
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead
-                          className="cursor-pointer select-none"
-                          onClick={() => toggleSort("name")}
+        <>
+          {/* Apps with competitors first */}
+          {myApps
+            .filter((myApp) => (grouped.get(myApp.appSlug) || []).length > 0)
+            .map((myApp) => {
+              const comps = grouped.get(myApp.appSlug)!;
+              return (
+                <Card key={myApp.appSlug}>
+                  <CardHeader className="pb-3">
+                    <div className="flex items-center gap-2">
+                      {myApp.iconUrl && (
+                        <img
+                          src={myApp.iconUrl}
+                          alt=""
+                          className="h-6 w-6 rounded shrink-0"
+                        />
+                      )}
+                      <CardTitle className="text-base">
+                        <Link
+                          href={`/apps/${myApp.appSlug}`}
+                          className="text-primary hover:underline"
                         >
-                          App <SortIcon col="name" />
-                        </TableHead>
-                        <TableHead
-                          className="cursor-pointer select-none"
-                          onClick={() => toggleSort("rating")}
-                        >
-                          Rating <SortIcon col="rating" />
-                        </TableHead>
-                        <TableHead
-                          className="cursor-pointer select-none"
-                          onClick={() => toggleSort("reviews")}
-                        >
-                          Reviews <SortIcon col="reviews" />
-                        </TableHead>
-                        <TableHead>Pricing</TableHead>
-                        <TableHead
-                          className="cursor-pointer select-none"
-                          onClick={() => toggleSort("minPaidPrice")}
-                        >
-                          Min. Paid <SortIcon col="minPaidPrice" />
-                        </TableHead>
-                        <TableHead
-                          className="cursor-pointer select-none"
-                          onClick={() => toggleSort("rankedKeywords")}
-                        >
-                          Keywords <SortIcon col="rankedKeywords" />
-                        </TableHead>
-                        <TableHead
-                          className="cursor-pointer select-none"
-                          onClick={() => toggleSort("lastChangeAt")}
-                        >
-                          Last Change <SortIcon col="lastChangeAt" />
-                        </TableHead>
-                        <TableHead
-                          className="cursor-pointer select-none"
-                          onClick={() => toggleSort("launchedDate")}
-                        >
-                          Launched <SortIcon col="launchedDate" />
-                        </TableHead>
-                        {canEdit && <TableHead className="w-12" />}
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {sortCompetitors(comps).map((c) => (
-                        <TableRow key={`${myApp.appSlug}-${c.appSlug}`}>
-                          <TableCell>
-                            <div className="flex items-center gap-2">
-                              {c.iconUrl && (
-                                <img
-                                  src={c.iconUrl}
-                                  alt=""
-                                  className="h-6 w-6 rounded shrink-0"
-                                />
-                              )}
-                              <div className="flex items-center gap-1.5">
-                                <Link
-                                  href={`/apps/${c.appSlug}`}
-                                  className="text-primary hover:underline font-medium"
-                                >
-                                  {c.appName || c.appSlug}
-                                </Link>
-                                {c.isBuiltForShopify && (
-                                  <span title="Built for Shopify">💎</span>
-                                )}
-                              </div>
-                            </div>
-                          </TableCell>
-                          <TableCell>
-                            {c.latestSnapshot?.averageRating ?? "\u2014"}
-                          </TableCell>
-                          <TableCell>
-                            {c.latestSnapshot?.ratingCount ?? "\u2014"}
-                          </TableCell>
-                          <TableCell className="text-sm">
-                            {c.latestSnapshot?.pricing ?? "\u2014"}
-                          </TableCell>
-                          <TableCell className="text-sm">
-                            {c.minPaidPrice != null
-                              ? `$${c.minPaidPrice}/mo`
-                              : "\u2014"}
-                          </TableCell>
-                          <TableCell className="text-sm">
-                            {c.rankedKeywords ?? 0}
-                          </TableCell>
-                          <TableCell className="text-sm text-muted-foreground">
-                            {c.lastChangeAt
-                              ? formatDateOnly(c.lastChangeAt)
-                              : "\u2014"}
-                          </TableCell>
-                          <TableCell className="text-sm text-muted-foreground">
-                            {c.launchedDate
-                              ? formatDateOnly(c.launchedDate)
-                              : "\u2014"}
-                          </TableCell>
-                          {canEdit && (
-                            <TableCell>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-8 w-8 text-muted-foreground hover:text-destructive"
-                                onClick={() =>
-                                  setConfirmRemove({
-                                    slug: c.appSlug,
-                                    name: c.appName || c.appSlug,
-                                    trackedAppSlug: myApp.appSlug,
-                                  })
-                                }
-                              >
-                                <X className="h-4 w-4" />
-                              </Button>
-                            </TableCell>
-                          )}
+                          {myApp.appName || myApp.appSlug}
+                        </Link>
+                      </CardTitle>
+                      <Badge variant="secondary" className="text-xs">
+                        {comps.length} competitor{comps.length !== 1 ? "s" : ""}
+                      </Badge>
+                    </div>
+                  </CardHeader>
+                  <CardContent>
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead
+                            className="cursor-pointer select-none"
+                            onClick={() => toggleSort("name")}
+                          >
+                            App <SortIcon col="name" />
+                          </TableHead>
+                          <TableHead
+                            className="cursor-pointer select-none"
+                            onClick={() => toggleSort("rating")}
+                          >
+                            Rating <SortIcon col="rating" />
+                          </TableHead>
+                          <TableHead
+                            className="cursor-pointer select-none"
+                            onClick={() => toggleSort("reviews")}
+                          >
+                            Reviews <SortIcon col="reviews" />
+                          </TableHead>
+                          <TableHead>Pricing</TableHead>
+                          <TableHead
+                            className="cursor-pointer select-none"
+                            onClick={() => toggleSort("minPaidPrice")}
+                          >
+                            Min. Paid <SortIcon col="minPaidPrice" />
+                          </TableHead>
+                          <TableHead
+                            className="cursor-pointer select-none"
+                            onClick={() => toggleSort("rankedKeywords")}
+                          >
+                            Keywords <SortIcon col="rankedKeywords" />
+                          </TableHead>
+                          <TableHead
+                            className="cursor-pointer select-none"
+                            onClick={() => toggleSort("lastChangeAt")}
+                          >
+                            Last Change <SortIcon col="lastChangeAt" />
+                          </TableHead>
+                          <TableHead
+                            className="cursor-pointer select-none"
+                            onClick={() => toggleSort("launchedDate")}
+                          >
+                            Launched <SortIcon col="launchedDate" />
+                          </TableHead>
+                          {canEdit && <TableHead className="w-12" />}
                         </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                )}
+                      </TableHeader>
+                      <TableBody>
+                        {sortCompetitors(comps).map((c) => (
+                          <TableRow key={`${myApp.appSlug}-${c.appSlug}`}>
+                            <TableCell>
+                              <div className="flex items-center gap-2">
+                                {c.iconUrl && (
+                                  <img
+                                    src={c.iconUrl}
+                                    alt=""
+                                    className="h-6 w-6 rounded shrink-0"
+                                  />
+                                )}
+                                <div className="flex items-center gap-1.5">
+                                  <Link
+                                    href={`/apps/${c.appSlug}`}
+                                    className="text-primary hover:underline font-medium"
+                                  >
+                                    {c.appName || c.appSlug}
+                                  </Link>
+                                  {c.isBuiltForShopify && (
+                                    <span title="Built for Shopify">💎</span>
+                                  )}
+                                </div>
+                              </div>
+                            </TableCell>
+                            <TableCell>
+                              {c.latestSnapshot?.averageRating ?? "\u2014"}
+                            </TableCell>
+                            <TableCell>
+                              {c.latestSnapshot?.ratingCount ?? "\u2014"}
+                            </TableCell>
+                            <TableCell className="text-sm">
+                              {c.latestSnapshot?.pricing ?? "\u2014"}
+                            </TableCell>
+                            <TableCell className="text-sm">
+                              {c.minPaidPrice != null
+                                ? `$${c.minPaidPrice}/mo`
+                                : "\u2014"}
+                            </TableCell>
+                            <TableCell className="text-sm">
+                              {c.rankedKeywords ?? 0}
+                            </TableCell>
+                            <TableCell className="text-sm text-muted-foreground">
+                              {c.lastChangeAt
+                                ? formatDateOnly(c.lastChangeAt)
+                                : "\u2014"}
+                            </TableCell>
+                            <TableCell className="text-sm text-muted-foreground">
+                              {c.launchedDate
+                                ? formatDateOnly(c.launchedDate)
+                                : "\u2014"}
+                            </TableCell>
+                            {canEdit && (
+                              <TableCell>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                                  onClick={() =>
+                                    setConfirmRemove({
+                                      slug: c.appSlug,
+                                      name: c.appName || c.appSlug,
+                                      trackedAppSlug: myApp.appSlug,
+                                    })
+                                  }
+                                >
+                                  <X className="h-4 w-4" />
+                                </Button>
+                              </TableCell>
+                            )}
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </CardContent>
+                </Card>
+              );
+            })}
+
+          {/* Apps without competitors at the bottom */}
+          {myApps.filter(
+            (myApp) => (grouped.get(myApp.appSlug) || []).length === 0
+          ).length > 0 && (
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-base text-muted-foreground">
+                  Apps without competitors
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="flex flex-wrap gap-3">
+                {myApps
+                  .filter(
+                    (myApp) =>
+                      (grouped.get(myApp.appSlug) || []).length === 0
+                  )
+                  .map((myApp) => (
+                    <Link
+                      key={myApp.appSlug}
+                      href={`/apps/${myApp.appSlug}/competitors`}
+                      className="inline-flex items-center gap-2 px-3 py-2 rounded-md border text-sm hover:bg-muted transition-colors"
+                    >
+                      {myApp.iconUrl && (
+                        <img
+                          src={myApp.iconUrl}
+                          alt=""
+                          className="h-5 w-5 rounded shrink-0"
+                        />
+                      )}
+                      {myApp.appName || myApp.appSlug}
+                      <Badge variant="outline" className="text-xs">
+                        Add
+                      </Badge>
+                    </Link>
+                  ))}
               </CardContent>
             </Card>
-          );
-        })
+          )}
+        </>
       )}
 
       <ConfirmModal
