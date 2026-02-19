@@ -1,7 +1,8 @@
 "use client";
 
+import { useEffect, useRef } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
 
 export function AppNav({
@@ -12,7 +13,29 @@ export function AppNav({
   isTracked: boolean;
 }) {
   const pathname = usePathname();
+  const router = useRouter();
   const base = `/apps/${slug}`;
+  const didMount = useRef(false);
+
+  useEffect(() => {
+    if (!didMount.current) {
+      didMount.current = true;
+      // On initial mount at base URL, redirect to saved tab
+      if (pathname === base) {
+        try {
+          const saved = localStorage.getItem(`app-tab-${slug}`);
+          if (saved && saved !== base && saved.startsWith(`${base}/`)) {
+            router.replace(saved);
+            return;
+          }
+        } catch {}
+      }
+    }
+    // Save current tab
+    try {
+      localStorage.setItem(`app-tab-${slug}`, pathname);
+    } catch {}
+  }, [pathname, slug, base, router]);
 
   const tabs = [
     { href: base, label: "Overview", exact: true },

@@ -1,11 +1,12 @@
 "use client";
 
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState, useMemo, useRef } from "react";
 import { useParams } from "next/navigation";
+import Link from "next/link";
 import { useAuth } from "@/lib/auth-context";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Check } from "lucide-react";
+import { Check, ChevronDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface AppData {
@@ -58,41 +59,105 @@ function AppIcon({
 }) {
   const sizeClass = size === "sm" ? "h-8 w-8" : "h-10 w-10";
   return (
-    <button
-      onClick={onClick}
-      disabled={isMain}
-      title={app.name}
-      className={cn(
-        "relative rounded-lg transition-all shrink-0",
-        sizeClass,
-        selected
-          ? "ring-2 ring-emerald-500 ring-offset-2 ring-offset-background"
-          : "opacity-35 hover:opacity-60 grayscale hover:grayscale-0",
-        isMain && "ring-2 ring-emerald-500 ring-offset-2 ring-offset-background cursor-default"
-      )}
+    <div className="group relative flex flex-col items-center">
+      <button
+        onClick={onClick}
+        disabled={isMain}
+        className={cn(
+          "relative rounded-lg transition-all shrink-0",
+          sizeClass,
+          selected
+            ? "ring-2 ring-emerald-500 ring-offset-2 ring-offset-background"
+            : "opacity-35 hover:opacity-60 grayscale hover:grayscale-0",
+          isMain && "ring-2 ring-emerald-500 ring-offset-2 ring-offset-background cursor-default"
+        )}
+      >
+        {app.iconUrl ? (
+          <img
+            src={app.iconUrl}
+            alt={app.name}
+            className={cn("rounded-lg", sizeClass)}
+          />
+        ) : (
+          <div
+            className={cn(
+              "rounded-lg bg-muted flex items-center justify-center text-xs font-bold",
+              sizeClass
+            )}
+          >
+            {app.name.charAt(0)}
+          </div>
+        )}
+        {selected && !isMain && (
+          <div className="absolute -top-1 -right-1 h-4 w-4 rounded-full bg-emerald-500 flex items-center justify-center">
+            <Check className="h-2.5 w-2.5 text-white" />
+          </div>
+        )}
+      </button>
+      <span className="absolute -bottom-5 left-1/2 -translate-x-1/2 text-[10px] text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none">
+        {app.name}
+      </span>
+    </div>
+  );
+}
+
+function LinkedAppIcon({
+  app,
+}: {
+  app: { slug: string; name: string; iconUrl: string | null };
+}) {
+  return (
+    <Link
+      href={`/apps/${app.slug}`}
+      className="group relative inline-flex flex-col items-center"
     >
       {app.iconUrl ? (
         <img
           src={app.iconUrl}
           alt={app.name}
-          className={cn("rounded-lg", sizeClass)}
+          className="h-6 w-6 rounded"
         />
       ) : (
-        <div
-          className={cn(
-            "rounded-lg bg-muted flex items-center justify-center text-xs font-bold",
-            sizeClass
-          )}
-        >
-          {app.name.charAt(0)}
-        </div>
+        <span className="text-xs font-bold">{app.name.charAt(0)}</span>
       )}
-      {selected && !isMain && (
-        <div className="absolute -top-1 -right-1 h-4 w-4 rounded-full bg-emerald-500 flex items-center justify-center">
-          <Check className="h-2.5 w-2.5 text-white" />
+      <span className="absolute -bottom-4 left-1/2 -translate-x-1/2 text-[10px] text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none">
+        {app.name}
+      </span>
+    </Link>
+  );
+}
+
+function CompareSection({
+  title,
+  sectionKey,
+  collapsed,
+  onToggle,
+  children,
+}: {
+  title: string;
+  sectionKey: string;
+  collapsed: boolean;
+  onToggle: (key: string) => void;
+  children: React.ReactNode;
+}) {
+  return (
+    <Card>
+      <CardHeader
+        className="cursor-pointer select-none"
+        onClick={() => onToggle(sectionKey)}
+      >
+        <div className="flex items-center justify-between">
+          <CardTitle>{title}</CardTitle>
+          <ChevronDown
+            className={cn(
+              "h-4 w-4 text-muted-foreground transition-transform",
+              collapsed && "-rotate-90"
+            )}
+          />
         </div>
-      )}
-    </button>
+      </CardHeader>
+      {!collapsed && <CardContent>{children}</CardContent>}
+    </Card>
   );
 }
 
@@ -112,12 +177,54 @@ export default function ComparePage() {
   const [loading, setLoading] = useState(true);
   const [activeDetailSlug, setActiveDetailSlug] = useState<string>("");
 
+  // Collapsible sections — persisted globally
+  const [collapsedSections, setCollapsedSections] = useState<Set<string>>(
+    () => {
+      try {
+        const saved = localStorage.getItem("compare-collapsed");
+        return saved ? new Set(JSON.parse(saved)) : new Set();
+      } catch {
+        return new Set();
+      }
+    }
+  );
+
+  // Track whether initial selection was loaded from localStorage
+  const selectionInitialized = useRef(false);
+
+  useEffect(() => {
+    localStorage.setItem(
+      "compare-collapsed",
+      JSON.stringify([...collapsedSections])
+    );
+  }, [collapsedSections]);
+
+  // Persist selected slugs per app
+  useEffect(() => {
+    if (selectionInitialized.current && competitors.length > 0) {
+      localStorage.setItem(
+        `compare-selected-${slug}`,
+        JSON.stringify([...selectedSlugs])
+      );
+    }
+  }, [selectedSlugs, slug, competitors.length]);
+
+  function toggleSection(key: string) {
+    setCollapsedSections((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
+  }
+
   useEffect(() => {
     loadData();
   }, [slug]);
 
   async function loadData() {
     setLoading(true);
+    selectionInitialized.current = false;
 
     // Fetch main app + competitor list in parallel
     const [appRes, compRes] = await Promise.all([
@@ -144,7 +251,26 @@ export default function ComparePage() {
         iconUrl: c.iconUrl,
       }));
       setCompetitors(compList);
-      setSelectedSlugs(new Set(compList.map((c) => c.slug)));
+
+      // Restore saved selection or default to all
+      try {
+        const saved = localStorage.getItem(`compare-selected-${slug}`);
+        if (saved) {
+          const savedArr: string[] = JSON.parse(saved);
+          const validSlugs = new Set(
+            savedArr.filter((s) => compList.some((c) => c.slug === s))
+          );
+          setSelectedSlugs(
+            validSlugs.size > 0
+              ? validSlugs
+              : new Set(compList.map((c) => c.slug))
+          );
+        } else {
+          setSelectedSlugs(new Set(compList.map((c) => c.slug)));
+        }
+      } catch {
+        setSelectedSlugs(new Set(compList.map((c) => c.slug)));
+      }
     }
 
     // Fetch full data for all competitors in parallel
@@ -169,6 +295,7 @@ export default function ComparePage() {
       setCompetitorData(map);
     }
 
+    selectionInitialized.current = true;
     setLoading(false);
   }
 
@@ -204,6 +331,8 @@ export default function ComparePage() {
     return apps;
   }, [mainApp, competitors, selectedSlugs, competitorData]);
 
+  const isCollapsed = (key: string) => collapsedSections.has(key);
+
   if (loading) {
     return (
       <p className="text-muted-foreground text-center py-8">Loading...</p>
@@ -232,7 +361,7 @@ export default function ComparePage() {
       {/* App Selector Bar */}
       <Card>
         <CardContent className="pt-6">
-          <div className="flex items-center gap-3 flex-wrap">
+          <div className="flex items-center gap-3 flex-wrap pb-4">
             <AppIcon
               app={{
                 slug: mainApp.slug,
@@ -272,12 +401,17 @@ export default function ComparePage() {
       {selectedApps.length > 1 && (
         <>
           {/* App Name */}
-          <VerticalListSection title="App Name" apps={selectedApps} mainSlug={mainApp.slug}>
+          <VerticalListSection
+            title="App Name"
+            sectionKey="appName"
+            collapsed={isCollapsed("appName")}
+            onToggle={toggleSection}
+            apps={selectedApps}
+            mainSlug={mainApp.slug}
+          >
             {(app) => (
               <div className="flex items-center">
-                <span className="text-sm font-medium">
-                  {app.name}
-                </span>
+                <span className="text-sm font-medium">{app.name}</span>
                 <CharBadge count={app.name.length} max={30} />
               </div>
             )}
@@ -286,6 +420,9 @@ export default function ComparePage() {
           {/* App Introduction */}
           <VerticalListSection
             title="App Introduction"
+            sectionKey="appIntroduction"
+            collapsed={isCollapsed("appIntroduction")}
+            onToggle={toggleSection}
             apps={selectedApps}
             mainSlug={mainApp.slug}
           >
@@ -306,114 +443,108 @@ export default function ComparePage() {
           </VerticalListSection>
 
           {/* App Details — icon-tab mode */}
-          <Card>
-            <CardHeader>
-              <CardTitle>App Details</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="flex items-center gap-2 mb-4">
-                {selectedApps.map((app) => (
-                  <AppIcon
-                    key={app.slug}
-                    app={{
-                      slug: app.slug,
-                      name: app.name,
-                      iconUrl: app.iconUrl,
-                    }}
-                    selected={activeDetailSlug === app.slug}
-                    onClick={() => setActiveDetailSlug(app.slug)}
-                    size="sm"
-                    isMain={false}
-                  />
-                ))}
-              </div>
-              {(() => {
-                const active = selectedApps.find(
-                  (a) => a.slug === activeDetailSlug
-                );
-                if (!active?.latestSnapshot?.appDetails) {
-                  return (
-                    <p className="text-sm text-muted-foreground">
-                      No app details available.
-                    </p>
-                  );
-                }
+          <CompareSection
+            title="App Details"
+            sectionKey="appDetails"
+            collapsed={isCollapsed("appDetails")}
+            onToggle={toggleSection}
+          >
+            <div className="flex items-center gap-2 mb-4">
+              {selectedApps.map((app) => (
+                <AppIcon
+                  key={app.slug}
+                  app={{
+                    slug: app.slug,
+                    name: app.name,
+                    iconUrl: app.iconUrl,
+                  }}
+                  selected={activeDetailSlug === app.slug}
+                  onClick={() => setActiveDetailSlug(app.slug)}
+                  size="sm"
+                  isMain={false}
+                />
+              ))}
+            </div>
+            {(() => {
+              const active = selectedApps.find(
+                (a) => a.slug === activeDetailSlug
+              );
+              if (!active?.latestSnapshot?.appDetails) {
                 return (
-                  <div>
-                    <CharBadge
-                      count={active.latestSnapshot.appDetails.length}
-                    />
-                    <p className="text-sm mt-2 whitespace-pre-line">
-                      {active.latestSnapshot.appDetails}
-                    </p>
-                  </div>
+                  <p className="text-sm text-muted-foreground">
+                    No app details available.
+                  </p>
                 );
-              })()}
-            </CardContent>
-          </Card>
+              }
+              return (
+                <div>
+                  <CharBadge
+                    count={active.latestSnapshot.appDetails.length}
+                  />
+                  <p className="text-sm mt-2 whitespace-pre-line">
+                    {active.latestSnapshot.appDetails}
+                  </p>
+                </div>
+              );
+            })()}
+          </CompareSection>
 
           {/* Features */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Features</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="border-b">
-                      <th className="text-left py-2 pr-4 text-muted-foreground font-medium">
-                        #
+          <CompareSection
+            title="Features"
+            sectionKey="features"
+            collapsed={isCollapsed("features")}
+            onToggle={toggleSection}
+          >
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b">
+                    <th className="text-left py-2 pr-4 text-muted-foreground font-medium">
+                      #
+                    </th>
+                    {selectedApps.map((app) => (
+                      <th key={app.slug} className="py-2 px-2 pb-6 min-w-[200px]">
+                        <div className="flex justify-center">
+                          <LinkedAppIcon app={app} />
+                        </div>
                       </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {Array.from({
+                    length: Math.max(
+                      ...selectedApps.map(
+                        (a) => a.latestSnapshot?.features?.length || 0
+                      )
+                    ),
+                  }).map((_, i) => (
+                    <tr key={i} className="border-b last:border-0">
+                      <td className="py-2 pr-4 text-muted-foreground align-top">
+                        {i + 1}
+                      </td>
                       {selectedApps.map((app) => (
-                        <th key={app.slug} className="py-2 px-2 min-w-[200px]">
-                          <div className="flex justify-center">
-                            {app.iconUrl ? (
-                              <img
-                                src={app.iconUrl}
-                                alt={app.name}
-                                title={app.name}
-                                className="h-6 w-6 rounded"
-                              />
-                            ) : (
-                              <span className="text-xs">{app.name}</span>
-                            )}
-                          </div>
-                        </th>
+                        <td
+                          key={app.slug}
+                          className="py-2 px-2 align-top"
+                        >
+                          {app.latestSnapshot?.features?.[i] || ""}
+                        </td>
                       ))}
                     </tr>
-                  </thead>
-                  <tbody>
-                    {Array.from({
-                      length: Math.max(
-                        ...selectedApps.map(
-                          (a) => a.latestSnapshot?.features?.length || 0
-                        )
-                      ),
-                    }).map((_, i) => (
-                      <tr key={i} className="border-b last:border-0">
-                        <td className="py-2 pr-4 text-muted-foreground align-top">
-                          {i + 1}
-                        </td>
-                        {selectedApps.map((app) => (
-                          <td
-                            key={app.slug}
-                            className="py-2 px-2 align-top"
-                          >
-                            {app.latestSnapshot?.features?.[i] || ""}
-                          </td>
-                        ))}
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </CardContent>
-          </Card>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </CompareSection>
 
           {/* Languages */}
           <BadgeComparisonSection
             title="Languages"
+            sectionKey="languages"
+            collapsed={isCollapsed("languages")}
+            onToggle={toggleSection}
             apps={selectedApps}
             getItems={(app) => app.latestSnapshot?.languages || []}
           />
@@ -421,19 +552,35 @@ export default function ComparePage() {
           {/* Integrations */}
           <BadgeComparisonSection
             title="Integrations"
+            sectionKey="integrations"
+            collapsed={isCollapsed("integrations")}
+            onToggle={toggleSection}
             apps={selectedApps}
             getItems={(app) => app.latestSnapshot?.integrations || []}
           />
 
           {/* Pricing Plans */}
-          <PricingComparison apps={selectedApps} />
+          <PricingComparison
+            sectionKey="pricingPlans"
+            collapsed={isCollapsed("pricingPlans")}
+            onToggle={toggleSection}
+            apps={selectedApps}
+          />
 
           {/* Categories & Features */}
-          <CategoriesComparison apps={selectedApps} />
+          <CategoriesComparison
+            sectionKey="categoriesFeatures"
+            collapsed={isCollapsed("categoriesFeatures")}
+            onToggle={toggleSection}
+            apps={selectedApps}
+          />
 
           {/* Web Search Content */}
           <VerticalListSection
             title="Web Search Content"
+            sectionKey="webSearchContent"
+            collapsed={isCollapsed("webSearchContent")}
+            onToggle={toggleSection}
             apps={selectedApps}
             mainSlug={mainApp.slug}
           >
@@ -476,21 +623,29 @@ export default function ComparePage() {
 
 function VerticalListSection({
   title,
+  sectionKey,
+  collapsed,
+  onToggle,
   apps,
   mainSlug,
   children,
 }: {
   title: string;
+  sectionKey: string;
+  collapsed: boolean;
+  onToggle: (key: string) => void;
   apps: AppData[];
   mainSlug: string;
   children: (app: AppData) => React.ReactNode;
 }) {
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>{title}</CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-3">
+    <CompareSection
+      title={title}
+      sectionKey={sectionKey}
+      collapsed={collapsed}
+      onToggle={onToggle}
+    >
+      <div className="space-y-3">
         {apps.map((app) => (
           <div
             key={app.slug}
@@ -499,32 +654,39 @@ function VerticalListSection({
               app.slug === mainSlug && "bg-muted/50"
             )}
           >
-            {app.iconUrl ? (
-              <img
-                src={app.iconUrl}
-                alt=""
-                title={app.name}
-                className="h-6 w-6 rounded shrink-0 mt-0.5"
-              />
-            ) : (
-              <div className="h-6 w-6 rounded bg-muted flex items-center justify-center text-xs font-bold shrink-0 mt-0.5">
-                {app.name.charAt(0)}
-              </div>
-            )}
+            <Link href={`/apps/${app.slug}`} title={app.name} className="shrink-0 mt-0.5">
+              {app.iconUrl ? (
+                <img
+                  src={app.iconUrl}
+                  alt={app.name}
+                  className="h-6 w-6 rounded"
+                />
+              ) : (
+                <div className="h-6 w-6 rounded bg-muted flex items-center justify-center text-xs font-bold">
+                  {app.name.charAt(0)}
+                </div>
+              )}
+            </Link>
             <div className="flex-1 min-w-0">{children(app)}</div>
           </div>
         ))}
-      </CardContent>
-    </Card>
+      </div>
+    </CompareSection>
   );
 }
 
 function BadgeComparisonSection({
   title,
+  sectionKey,
+  collapsed,
+  onToggle,
   apps,
   getItems,
 }: {
   title: string;
+  sectionKey: string;
+  collapsed: boolean;
+  onToggle: (key: string) => void;
   apps: AppData[];
   getItems: (app: AppData) => string[];
 }) {
@@ -553,62 +715,65 @@ function BadgeComparisonSection({
   if (allItems.length === 0) return null;
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>{title}</CardTitle>
-      </CardHeader>
-      <CardContent>
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b">
-                <th className="text-left py-2 pr-4 text-muted-foreground font-medium">
-                  {title}
+    <CompareSection
+      title={title}
+      sectionKey={sectionKey}
+      collapsed={collapsed}
+      onToggle={onToggle}
+    >
+      <div className="overflow-x-auto">
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="border-b">
+              <th className="text-left py-2 pr-4 text-muted-foreground font-medium">
+                {title}
+              </th>
+              {apps.map((app) => (
+                <th key={app.slug} className="py-2 px-2 pb-6 text-center">
+                  <div className="flex justify-center">
+                    <LinkedAppIcon app={app} />
+                  </div>
                 </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {allItems.map((item) => (
+              <tr key={item} className="border-b last:border-0">
+                <td className="py-1.5 pr-4">
+                  <Badge variant="outline" className="text-xs">
+                    {item}
+                  </Badge>
+                </td>
                 {apps.map((app) => (
-                  <th key={app.slug} className="py-2 px-2 text-center">
-                    {app.iconUrl ? (
-                      <img
-                        src={app.iconUrl}
-                        alt={app.name}
-                        title={app.name}
-                        className="h-6 w-6 rounded mx-auto"
-                      />
+                  <td key={app.slug} className="py-1.5 px-2 text-center">
+                    {presenceMap.get(item)?.has(app.slug) ? (
+                      <Check className="h-4 w-4 text-green-600 mx-auto" />
                     ) : (
-                      <span className="text-xs">{app.name.charAt(0)}</span>
+                      <span className="text-muted-foreground">—</span>
                     )}
-                  </th>
+                  </td>
                 ))}
               </tr>
-            </thead>
-            <tbody>
-              {allItems.map((item) => (
-                <tr key={item} className="border-b last:border-0">
-                  <td className="py-1.5 pr-4">
-                    <Badge variant="outline" className="text-xs">
-                      {item}
-                    </Badge>
-                  </td>
-                  {apps.map((app) => (
-                    <td key={app.slug} className="py-1.5 px-2 text-center">
-                      {presenceMap.get(item)?.has(app.slug) ? (
-                        <Check className="h-4 w-4 text-green-600 mx-auto" />
-                      ) : (
-                        <span className="text-muted-foreground">—</span>
-                      )}
-                    </td>
-                  ))}
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </CardContent>
-    </Card>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </CompareSection>
   );
 }
 
-function PricingComparison({ apps }: { apps: AppData[] }) {
+function PricingComparison({
+  sectionKey,
+  collapsed,
+  onToggle,
+  apps,
+}: {
+  sectionKey: string;
+  collapsed: boolean;
+  onToggle: (key: string) => void;
+  apps: AppData[];
+}) {
   // Split each app's plans into free + paid (sorted by price ascending)
   const appPlans = useMemo(() => {
     return apps.map((app) => {
@@ -628,74 +793,65 @@ function PricingComparison({ apps }: { apps: AppData[] }) {
   if (totalRows === 0) return null;
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Pricing Plans</CardTitle>
-      </CardHeader>
-      <CardContent>
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b">
-                <th className="text-left py-2 pr-4 text-muted-foreground font-medium w-[80px]">
-                  Tier
+    <CompareSection
+      title="Pricing Plans"
+      sectionKey={sectionKey}
+      collapsed={collapsed}
+      onToggle={onToggle}
+    >
+      <div className="overflow-x-auto">
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="border-b">
+              <th className="text-left py-2 pr-4 text-muted-foreground font-medium w-[80px]">
+                Tier
+              </th>
+              {apps.map((app) => (
+                <th key={app.slug} className="py-2 px-2 pb-6" style={{ minWidth: 200 }}>
+                  <div className="flex justify-center">
+                    <LinkedAppIcon app={app} />
+                  </div>
                 </th>
-                {apps.map((app) => (
-                  <th key={app.slug} className="py-2 px-2" style={{ minWidth: 200 }}>
-                    <div className="flex justify-center">
-                      {app.iconUrl ? (
-                        <img
-                          src={app.iconUrl}
-                          alt={app.name}
-                          title={app.name}
-                          className="h-6 w-6 rounded"
-                        />
-                      ) : (
-                        <span className="text-xs">{app.name.charAt(0)}</span>
-                      )}
-                    </div>
-                  </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {hasAnyFree && (
+              <tr className="border-b align-top">
+                <td className="py-2 pr-4 text-muted-foreground font-medium">
+                  Free
+                </td>
+                {appPlans.map((ap, idx) => (
+                  <td key={apps[idx].slug} className="py-2 px-2">
+                    {ap.free.length > 0 ? (
+                      <PlanCard plan={ap.free[0]} />
+                    ) : (
+                      <div className="text-muted-foreground text-center">—</div>
+                    )}
+                  </td>
                 ))}
               </tr>
-            </thead>
-            <tbody>
-              {hasAnyFree && (
-                <tr className="border-b align-top">
-                  <td className="py-2 pr-4 text-muted-foreground font-medium">
-                    Free
+            )}
+            {Array.from({ length: maxPaid }).map((_, rowIdx) => (
+              <tr key={`paid-${rowIdx}`} className="border-b last:border-0 align-top">
+                <td className="py-2 pr-4 text-muted-foreground font-medium">
+                  {hasAnyFree ? `Paid ${rowIdx + 1}` : `Plan ${rowIdx + 1}`}
+                </td>
+                {appPlans.map((ap, idx) => (
+                  <td key={apps[idx].slug} className="py-2 px-2">
+                    {ap.paid[rowIdx] ? (
+                      <PlanCard plan={ap.paid[rowIdx]} />
+                    ) : (
+                      <div className="text-muted-foreground text-center">—</div>
+                    )}
                   </td>
-                  {appPlans.map((ap, idx) => (
-                    <td key={apps[idx].slug} className="py-2 px-2">
-                      {ap.free.length > 0 ? (
-                        <PlanCard plan={ap.free[0]} />
-                      ) : (
-                        <div className="text-muted-foreground text-center">—</div>
-                      )}
-                    </td>
-                  ))}
-                </tr>
-              )}
-              {Array.from({ length: maxPaid }).map((_, rowIdx) => (
-                <tr key={`paid-${rowIdx}`} className="border-b last:border-0 align-top">
-                  <td className="py-2 pr-4 text-muted-foreground font-medium">
-                    {hasAnyFree ? `Paid ${rowIdx + 1}` : `Plan ${rowIdx + 1}`}
-                  </td>
-                  {appPlans.map((ap, idx) => (
-                    <td key={apps[idx].slug} className="py-2 px-2">
-                      {ap.paid[rowIdx] ? (
-                        <PlanCard plan={ap.paid[rowIdx]} />
-                      ) : (
-                        <div className="text-muted-foreground text-center">—</div>
-                      )}
-                    </td>
-                  ))}
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </CardContent>
-    </Card>
+                ))}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </CompareSection>
   );
 }
 
@@ -724,21 +880,33 @@ function PlanCard({ plan }: { plan: any }) {
   );
 }
 
-function CategoriesComparison({ apps }: { apps: AppData[] }) {
+function CategoriesComparison({
+  sectionKey,
+  collapsed,
+  onToggle,
+  apps,
+}: {
+  sectionKey: string;
+  collapsed: boolean;
+  onToggle: (key: string) => void;
+  apps: AppData[];
+}) {
   // Collect all unique feature handles across all apps
   const allFeatures = useMemo(() => {
     const featureMap = new Map<
       string,
-      { title: string; category: string; subcategory: string }
+      { title: string; category: string; categorySlug: string | null; subcategory: string }
     >();
     for (const app of apps) {
       for (const cat of app.latestSnapshot?.categories || []) {
+        const catSlug = cat.url?.match(/\/categories\/([^/?]+)/)?.[1] || null;
         for (const sub of cat.subcategories || []) {
           for (const f of sub.features || []) {
             if (!featureMap.has(f.feature_handle)) {
               featureMap.set(f.feature_handle, {
                 title: f.title,
                 category: cat.title,
+                categorySlug: catSlug,
                 subcategory: sub.title,
               });
             }
@@ -771,6 +939,7 @@ function CategoriesComparison({ apps }: { apps: AppData[] }) {
   const grouped = useMemo(() => {
     const result: {
       category: string;
+      categorySlug: string | null;
       subcategories: {
         subcategory: string;
         features: { handle: string; title: string }[];
@@ -779,21 +948,23 @@ function CategoriesComparison({ apps }: { apps: AppData[] }) {
 
     const catMap = new Map<
       string,
-      Map<string, { handle: string; title: string }[]>
+      { slug: string | null; subMap: Map<string, { handle: string; title: string }[]> }
     >();
     for (const [handle, info] of allFeatures) {
-      if (!catMap.has(info.category)) catMap.set(info.category, new Map());
-      const subMap = catMap.get(info.category)!;
+      if (!catMap.has(info.category)) {
+        catMap.set(info.category, { slug: info.categorySlug, subMap: new Map() });
+      }
+      const { subMap } = catMap.get(info.category)!;
       if (!subMap.has(info.subcategory)) subMap.set(info.subcategory, []);
       subMap.get(info.subcategory)!.push({ handle, title: info.title });
     }
 
-    for (const [category, subMap] of catMap) {
+    for (const [category, { slug, subMap }] of catMap) {
       const subcategories = [];
       for (const [subcategory, features] of subMap) {
         subcategories.push({ subcategory, features });
       }
-      result.push({ category, subcategories });
+      result.push({ category, categorySlug: slug, subcategories });
     }
     return result;
   }, [allFeatures]);
@@ -801,85 +972,91 @@ function CategoriesComparison({ apps }: { apps: AppData[] }) {
   if (allFeatures.size === 0) return null;
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Categories & Features</CardTitle>
-      </CardHeader>
-      <CardContent>
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b">
-                <th className="text-left py-2 pr-4 text-muted-foreground font-medium">
-                  Feature
+    <CompareSection
+      title="Categories & Features"
+      sectionKey={sectionKey}
+      collapsed={collapsed}
+      onToggle={onToggle}
+    >
+      <div className="overflow-x-auto">
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="border-b">
+              <th className="text-left py-2 pr-4 text-muted-foreground font-medium">
+                Feature
+              </th>
+              {apps.map((app) => (
+                <th key={app.slug} className="py-2 px-2 pb-6 text-center">
+                  <div className="flex justify-center">
+                    <LinkedAppIcon app={app} />
+                  </div>
                 </th>
-                {apps.map((app) => (
-                  <th key={app.slug} className="py-2 px-2 text-center">
-                    {app.iconUrl ? (
-                      <img
-                        src={app.iconUrl}
-                        alt={app.name}
-                        title={app.name}
-                        className="h-6 w-6 rounded mx-auto"
-                      />
-                    ) : (
-                      <span className="text-xs">{app.name.charAt(0)}</span>
-                    )}
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {grouped.map((cat) => (
-                <>
-                  <tr key={`cat-${cat.category}`}>
-                    <td
-                      colSpan={apps.length + 1}
-                      className="pt-4 pb-1 font-semibold text-xs uppercase tracking-wide text-muted-foreground"
-                    >
-                      {cat.category}
-                    </td>
-                  </tr>
-                  {cat.subcategories.map((sub) => (
-                    <>
-                      <tr key={`sub-${cat.category}-${sub.subcategory}`}>
-                        <td
-                          colSpan={apps.length + 1}
-                          className="pt-2 pb-1 pl-2 text-xs font-medium text-muted-foreground"
-                        >
-                          {sub.subcategory}
-                        </td>
-                      </tr>
-                      {sub.features.map((f) => (
-                        <tr
-                          key={f.handle}
-                          className="border-b last:border-0"
-                        >
-                          <td className="py-1 pl-4 pr-4">{f.title}</td>
-                          {apps.map((app) => (
-                            <td
-                              key={app.slug}
-                              className="py-1 px-2 text-center"
-                            >
-                              {featurePresence.get(f.handle)?.has(app.slug) ? (
-                                <Check className="h-4 w-4 text-green-600 mx-auto" />
-                              ) : (
-                                <span className="text-muted-foreground">
-                                  —
-                                </span>
-                              )}
-                            </td>
-                          ))}
-                        </tr>
-                      ))}
-                    </>
-                  ))}
-                </>
               ))}
-            </tbody>
-          </table>
-        </div>
-      </CardContent>
-    </Card>
+            </tr>
+          </thead>
+          <tbody>
+            {grouped.map((cat) => (
+              <>
+                <tr key={`cat-${cat.category}`}>
+                  <td
+                    colSpan={apps.length + 1}
+                    className="pt-4 pb-1 font-semibold text-xs uppercase tracking-wide text-muted-foreground"
+                  >
+                    {cat.categorySlug ? (
+                      <Link href={`/categories/${cat.categorySlug}`} className="hover:text-foreground transition-colors">
+                        {cat.category}
+                      </Link>
+                    ) : (
+                      cat.category
+                    )}
+                  </td>
+                </tr>
+                {cat.subcategories.map((sub) => (
+                  <>
+                    <tr key={`sub-${cat.category}-${sub.subcategory}`}>
+                      <td
+                        colSpan={apps.length + 1}
+                        className="pt-2 pb-1 pl-2 text-xs font-medium text-muted-foreground"
+                      >
+                        {sub.subcategory}
+                      </td>
+                    </tr>
+                    {sub.features.map((f) => (
+                      <tr
+                        key={f.handle}
+                        className="border-b last:border-0"
+                      >
+                        <td className="py-1 pl-4 pr-4">
+                          <Link
+                            href={`/features/${encodeURIComponent(f.handle)}`}
+                            className="text-primary hover:underline"
+                          >
+                            {f.title}
+                          </Link>
+                        </td>
+                        {apps.map((app) => (
+                          <td
+                            key={app.slug}
+                            className="py-1 px-2 text-center"
+                          >
+                            {featurePresence.get(f.handle)?.has(app.slug) ? (
+                              <Check className="h-4 w-4 text-green-600 mx-auto" />
+                            ) : (
+                              <span className="text-muted-foreground">
+                                —
+                              </span>
+                            )}
+                          </td>
+                        ))}
+                      </tr>
+                    ))}
+                  </>
+                ))}
+              </>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </CompareSection>
   );
 }

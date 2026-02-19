@@ -258,10 +258,10 @@ function parseLanguages($: cheerio.CheerioAPI): string[] {
   if (!match) return [];
 
   const langText = match[1].trim();
-  // Split by common delimiters and clean up
+  // Split by common delimiters, strip leading "and " from last item, and clean up
   return langText
     .split(/[,\n]/)
-    .map((l) => l.trim())
+    .map((l) => l.trim().replace(/^and\s+/i, ""))
     .filter((l) => l.length > 0 && l.length < 50);
 }
 
@@ -273,8 +273,8 @@ function parseIntegrations($: cheerio.CheerioAPI): string[] {
   const text = match[1].trim();
   return text
     .split(/[,\n]/)
-    .map((w) => w.trim())
-    .filter((w) => w.length > 0 && w.length < 100);
+    .map((w) => w.trim().replace(/^and\s+/i, ""))
+    .filter((w) => w.length > 0 && w.length < 100 && !/^\+?\d+\+?\s*integrations$/i.test(w));
 }
 
 function parseSupport($: cheerio.CheerioAPI): AppSupport | null {
