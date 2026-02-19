@@ -88,6 +88,7 @@ export default function ScraperPage() {
   const [page, setPage] = useState(0);
   const [expandedRunId, setExpandedRunId] = useState<string | null>(null);
   const [drainConfirm, setDrainConfirm] = useState(false);
+  const [clearFailedConfirm, setClearFailedConfirm] = useState(false);
 
   useEffect(() => {
     loadData();
@@ -166,6 +167,19 @@ export default function ScraperPage() {
     }
   }
 
+  async function clearFailedJobs() {
+    const res = await fetchWithAuth(
+      "/api/system-admin/scraper/queue/failed",
+      { method: "DELETE" }
+    );
+    if (res.ok) {
+      const data = await res.json();
+      setMessage(`${data.removed} failed job(s) removed`);
+      setClearFailedConfirm(false);
+      loadData();
+    }
+  }
+
   // Build freshness map
   const freshnessMap = new Map<string, any>();
   if (stats?.freshness) {
@@ -238,6 +252,17 @@ export default function ScraperPage() {
                   >
                     <Trash2 className="h-3 w-3 mr-1" />
                     Clear Waiting
+                  </Button>
+                )}
+                {queueStatus?.counts.failed > 0 && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-7 text-xs text-destructive hover:text-destructive"
+                    onClick={() => setClearFailedConfirm(true)}
+                  >
+                    <Trash2 className="h-3 w-3 mr-1" />
+                    Clear Failed
                   </Button>
                 )}
               </div>
@@ -667,6 +692,15 @@ export default function ScraperPage() {
         confirmLabel="Clear All"
         onConfirm={drainQueue}
         onCancel={() => setDrainConfirm(false)}
+      />
+
+      <ConfirmModal
+        open={clearFailedConfirm}
+        title="Clear Failed Jobs"
+        description={`All ${queueStatus?.counts.failed ?? 0} failed jobs will be removed from the queue. This action cannot be undone.`}
+        confirmLabel="Clear All"
+        onConfirm={clearFailedJobs}
+        onCancel={() => setClearFailedConfirm(false)}
       />
     </div>
   );

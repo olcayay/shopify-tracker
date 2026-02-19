@@ -353,11 +353,13 @@ App Tweak
 
 tracked app, competitor app ve keyword ilişkisini yeniden kurgulamak istiyorum.
 
-- tracked apps yerine my apps 
-- competitor apps bu şekilde kalabilir.
+- tracked apps yerine my apps (follow, unfollow, following ifaleri kullanılabilir)
+- competitor apps bu şekilde kalabilir. (add competitor)
 - kullanıcı applerini seçip bu applere rakip olan appleri seçeçecekler
 - keywordler direk olarak my apps'e eklenecek. 
 - bir app birden fazla app için rakip app olarak eklenebilir
 - bir keyword birden fazla app için eklenebilir.
 - limit havuzu ise ortak olacak. eklenen bütün rakipler ve keywordler unique olarak limitlerden düşücek.
+- data structure yapısını buna uygun olarak güncellemek gerekiyor.
+- özellikle /apps/<slug> sayfasının da buna uygun olarak güncellenmeli. rakiplerin görüntülenmesi, rakip ekleme, keywordlerin görüntülenmesi, yeni keyword ekleme gibi actionları tekrar üzerinden geçilmesi gerekiyor
 

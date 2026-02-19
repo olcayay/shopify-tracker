@@ -748,6 +748,18 @@ export const systemAdminRoutes: FastifyPluginAsync = async (app) => {
     }
   });
 
+  // DELETE /api/system-admin/scraper/queue/failed — remove all failed jobs
+  app.delete("/scraper/queue/failed", async (_request, reply) => {
+    try {
+      const queue = getScraperQueue();
+      const failed = await queue.getFailed(0, 1000);
+      await Promise.all(failed.map((j) => j.remove()));
+      return { ok: true, removed: failed.length };
+    } catch {
+      return reply.code(500).send({ error: "Failed to clear failed jobs" });
+    }
+  });
+
   // POST /api/system-admin/scraper/trigger
   app.post("/scraper/trigger", async (request, reply) => {
     const { type, slug, keyword, options } = request.body as {
