@@ -811,6 +811,37 @@ export const accountRoutes: FastifyPluginAsync = async (app) => {
       .innerJoin(apps, eq(apps.slug, accountCompetitorApps.appSlug))
       .where(eq(accountCompetitorApps.accountId, accountId));
 
+    if (rows.length === 0) return [];
+
+    // Get account's tracked keyword IDs
+    const accountKeywords = await db
+      .select({ keywordId: accountTrackedKeywords.keywordId })
+      .from(accountTrackedKeywords)
+      .where(eq(accountTrackedKeywords.accountId, accountId));
+    const trackedKeywordIds = accountKeywords.map((k) => k.keywordId);
+
+    // Count distinct keywords each competitor is ranked in (latest ranking per keyword, non-null position)
+    const competitorSlugs = [...new Set(rows.map((r) => r.appSlug))];
+    let rankedKeywordMap = new Map<string, number>();
+    if (trackedKeywordIds.length > 0 && competitorSlugs.length > 0) {
+      const rankedRows = await db.execute(sql`
+        SELECT app_slug, COUNT(DISTINCT keyword_id)::int AS ranked_keywords
+        FROM (
+          SELECT DISTINCT ON (app_slug, keyword_id) app_slug, keyword_id, position
+          FROM app_keyword_rankings
+          WHERE app_slug = ANY(ARRAY[${sql.join(competitorSlugs.map((s) => sql`${s}`), sql`,`)}])
+            AND keyword_id = ANY(ARRAY[${sql.join(trackedKeywordIds.map((id) => sql`${id}`), sql`,`)}])
+          ORDER BY app_slug, keyword_id, scraped_at DESC
+        ) latest
+        WHERE position IS NOT NULL
+        GROUP BY app_slug
+      `);
+      const rankedData: any[] = (rankedRows as any).rows ?? rankedRows;
+      for (const r of rankedData) {
+        rankedKeywordMap.set(r.app_slug, r.ranked_keywords);
+      }
+    }
+
     // Attach latest snapshot summary for each competitor
     const result = await Promise.all(
       rows.map(async (row) => {
@@ -839,6 +870,7 @@ export const accountRoutes: FastifyPluginAsync = async (app) => {
           latestSnapshot: snapshot ? snapshotRest : null,
           minPaidPrice,
           lastChangeAt: change?.detectedAt || null,
+          rankedKeywords: rankedKeywordMap.get(row.appSlug) ?? 0,
         };
       })
     );

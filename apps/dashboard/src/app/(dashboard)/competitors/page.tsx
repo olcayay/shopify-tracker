@@ -24,6 +24,7 @@ type SortKey =
   | "rating"
   | "reviews"
   | "minPaidPrice"
+  | "rankedKeywords"
   | "lastChangeAt"
   | "launchedDate";
 type SortDir = "asc" | "desc";
@@ -128,6 +129,9 @@ export default function CompetitorsPage() {
         case "minPaidPrice":
           cmp = (a.minPaidPrice ?? 0) - (b.minPaidPrice ?? 0);
           break;
+        case "rankedKeywords":
+          cmp = (a.rankedKeywords ?? 0) - (b.rankedKeywords ?? 0);
+          break;
         case "lastChangeAt":
           cmp = (a.lastChangeAt || "").localeCompare(b.lastChangeAt || "");
           break;
@@ -181,151 +185,178 @@ export default function CompetitorsPage() {
 
       {loading ? (
         <p className="text-muted-foreground text-center py-8">Loading...</p>
-      ) : competitors.length === 0 ? (
+      ) : myApps.length === 0 ? (
         <Card>
           <CardContent className="pt-6">
             <p className="text-muted-foreground text-center py-8">
-              No competitor apps yet. Add competitors from your app detail
-              pages.
+              No tracked apps yet.{" "}
+              <Link href="/apps" className="text-primary hover:underline">
+                Add apps
+              </Link>{" "}
+              first, then add competitors from app detail pages.
             </p>
           </CardContent>
         </Card>
       ) : (
-        [...grouped.entries()].map(([trackedAppSlug, comps]) => (
-          <Card key={trackedAppSlug}>
-            <CardHeader className="pb-3">
-              <div className="flex items-center gap-2">
-                <CardTitle className="text-base">
-                  <Link
-                    href={`/apps/${trackedAppSlug}`}
-                    className="text-primary hover:underline"
-                  >
-                    {appNameMap.get(trackedAppSlug) || trackedAppSlug}
-                  </Link>
-                </CardTitle>
-                <Badge variant="secondary" className="text-xs">
-                  {comps.length} competitor{comps.length !== 1 ? "s" : ""}
-                </Badge>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead
-                      className="cursor-pointer select-none"
-                      onClick={() => toggleSort("name")}
+        myApps.map((myApp) => {
+          const comps = grouped.get(myApp.appSlug) || [];
+          return (
+            <Card key={myApp.appSlug}>
+              <CardHeader className="pb-3">
+                <div className="flex items-center gap-2">
+                  <CardTitle className="text-base">
+                    <Link
+                      href={`/apps/${myApp.appSlug}`}
+                      className="text-primary hover:underline"
                     >
-                      App <SortIcon col="name" />
-                    </TableHead>
-                    <TableHead
-                      className="cursor-pointer select-none"
-                      onClick={() => toggleSort("rating")}
+                      {myApp.appName || myApp.appSlug}
+                    </Link>
+                  </CardTitle>
+                  <Badge variant="secondary" className="text-xs">
+                    {comps.length} competitor{comps.length !== 1 ? "s" : ""}
+                  </Badge>
+                </div>
+              </CardHeader>
+              <CardContent>
+                {comps.length === 0 ? (
+                  <p className="text-sm text-muted-foreground text-center py-6">
+                    No competitors yet.{" "}
+                    <Link
+                      href={`/apps/${myApp.appSlug}/competitors`}
+                      className="text-primary hover:underline"
                     >
-                      Rating <SortIcon col="rating" />
-                    </TableHead>
-                    <TableHead
-                      className="cursor-pointer select-none"
-                      onClick={() => toggleSort("reviews")}
-                    >
-                      Reviews <SortIcon col="reviews" />
-                    </TableHead>
-                    <TableHead>Pricing</TableHead>
-                    <TableHead
-                      className="cursor-pointer select-none"
-                      onClick={() => toggleSort("minPaidPrice")}
-                    >
-                      Min. Paid <SortIcon col="minPaidPrice" />
-                    </TableHead>
-                    <TableHead
-                      className="cursor-pointer select-none"
-                      onClick={() => toggleSort("lastChangeAt")}
-                    >
-                      Last Change <SortIcon col="lastChangeAt" />
-                    </TableHead>
-                    <TableHead
-                      className="cursor-pointer select-none"
-                      onClick={() => toggleSort("launchedDate")}
-                    >
-                      Launched <SortIcon col="launchedDate" />
-                    </TableHead>
-                    {canEdit && <TableHead className="w-12" />}
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {sortCompetitors(comps).map((c) => (
-                    <TableRow key={`${trackedAppSlug}-${c.appSlug}`}>
-                      <TableCell>
-                        <div className="flex items-center gap-2">
-                          {c.iconUrl && (
-                            <img
-                              src={c.iconUrl}
-                              alt=""
-                              className="h-6 w-6 rounded shrink-0"
-                            />
+                      Add competitors
+                    </Link>
+                  </p>
+                ) : (
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead
+                          className="cursor-pointer select-none"
+                          onClick={() => toggleSort("name")}
+                        >
+                          App <SortIcon col="name" />
+                        </TableHead>
+                        <TableHead
+                          className="cursor-pointer select-none"
+                          onClick={() => toggleSort("rating")}
+                        >
+                          Rating <SortIcon col="rating" />
+                        </TableHead>
+                        <TableHead
+                          className="cursor-pointer select-none"
+                          onClick={() => toggleSort("reviews")}
+                        >
+                          Reviews <SortIcon col="reviews" />
+                        </TableHead>
+                        <TableHead>Pricing</TableHead>
+                        <TableHead
+                          className="cursor-pointer select-none"
+                          onClick={() => toggleSort("minPaidPrice")}
+                        >
+                          Min. Paid <SortIcon col="minPaidPrice" />
+                        </TableHead>
+                        <TableHead
+                          className="cursor-pointer select-none"
+                          onClick={() => toggleSort("rankedKeywords")}
+                        >
+                          Keywords <SortIcon col="rankedKeywords" />
+                        </TableHead>
+                        <TableHead
+                          className="cursor-pointer select-none"
+                          onClick={() => toggleSort("lastChangeAt")}
+                        >
+                          Last Change <SortIcon col="lastChangeAt" />
+                        </TableHead>
+                        <TableHead
+                          className="cursor-pointer select-none"
+                          onClick={() => toggleSort("launchedDate")}
+                        >
+                          Launched <SortIcon col="launchedDate" />
+                        </TableHead>
+                        {canEdit && <TableHead className="w-12" />}
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {sortCompetitors(comps).map((c) => (
+                        <TableRow key={`${myApp.appSlug}-${c.appSlug}`}>
+                          <TableCell>
+                            <div className="flex items-center gap-2">
+                              {c.iconUrl && (
+                                <img
+                                  src={c.iconUrl}
+                                  alt=""
+                                  className="h-6 w-6 rounded shrink-0"
+                                />
+                              )}
+                              <div className="flex items-center gap-1.5">
+                                <Link
+                                  href={`/apps/${c.appSlug}`}
+                                  className="text-primary hover:underline font-medium"
+                                >
+                                  {c.appName || c.appSlug}
+                                </Link>
+                                {c.isBuiltForShopify && (
+                                  <span title="Built for Shopify">💎</span>
+                                )}
+                              </div>
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            {c.latestSnapshot?.averageRating ?? "\u2014"}
+                          </TableCell>
+                          <TableCell>
+                            {c.latestSnapshot?.ratingCount ?? "\u2014"}
+                          </TableCell>
+                          <TableCell className="text-sm">
+                            {c.latestSnapshot?.pricing ?? "\u2014"}
+                          </TableCell>
+                          <TableCell className="text-sm">
+                            {c.minPaidPrice != null
+                              ? `$${c.minPaidPrice}/mo`
+                              : "\u2014"}
+                          </TableCell>
+                          <TableCell className="text-sm">
+                            {c.rankedKeywords ?? 0}
+                          </TableCell>
+                          <TableCell className="text-sm text-muted-foreground">
+                            {c.lastChangeAt
+                              ? formatDateOnly(c.lastChangeAt)
+                              : "\u2014"}
+                          </TableCell>
+                          <TableCell className="text-sm text-muted-foreground">
+                            {c.launchedDate
+                              ? formatDateOnly(c.launchedDate)
+                              : "\u2014"}
+                          </TableCell>
+                          {canEdit && (
+                            <TableCell>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                                onClick={() =>
+                                  setConfirmRemove({
+                                    slug: c.appSlug,
+                                    name: c.appName || c.appSlug,
+                                    trackedAppSlug: myApp.appSlug,
+                                  })
+                                }
+                              >
+                                <X className="h-4 w-4" />
+                              </Button>
+                            </TableCell>
                           )}
-                          <div className="flex items-center gap-1.5">
-                            <Link
-                              href={`/apps/${c.appSlug}`}
-                              className="text-primary hover:underline font-medium"
-                            >
-                              {c.appName || c.appSlug}
-                            </Link>
-                            {c.isBuiltForShopify && (
-                              <span title="Built for Shopify">💎</span>
-                            )}
-                          </div>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        {c.latestSnapshot?.averageRating ?? "\u2014"}
-                      </TableCell>
-                      <TableCell>
-                        {c.latestSnapshot?.ratingCount ?? "\u2014"}
-                      </TableCell>
-                      <TableCell className="text-sm">
-                        {c.latestSnapshot?.pricing ?? "\u2014"}
-                      </TableCell>
-                      <TableCell className="text-sm">
-                        {c.minPaidPrice != null
-                          ? `$${c.minPaidPrice}/mo`
-                          : "\u2014"}
-                      </TableCell>
-                      <TableCell className="text-sm text-muted-foreground">
-                        {c.lastChangeAt
-                          ? formatDateOnly(c.lastChangeAt)
-                          : "\u2014"}
-                      </TableCell>
-                      <TableCell className="text-sm text-muted-foreground">
-                        {c.launchedDate
-                          ? formatDateOnly(c.launchedDate)
-                          : "\u2014"}
-                      </TableCell>
-                      {canEdit && (
-                        <TableCell>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8 text-muted-foreground hover:text-destructive"
-                            onClick={() =>
-                              setConfirmRemove({
-                                slug: c.appSlug,
-                                name: c.appName || c.appSlug,
-                                trackedAppSlug,
-                              })
-                            }
-                          >
-                            <X className="h-4 w-4" />
-                          </Button>
-                        </TableCell>
-                      )}
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </CardContent>
-          </Card>
-        ))
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                )}
+              </CardContent>
+            </Card>
+          );
+        })
       )}
 
       <ConfirmModal

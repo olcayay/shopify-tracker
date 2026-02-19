@@ -234,32 +234,15 @@ export class KeywordScraper {
     }
 
     // Record ad sightings (upsert per app+keyword+day)
+    // NOTE: Sponsored listings may show a different subtitle (e.g. "The app developer paid to promote...")
+    // so we do NOT detect subtitle changes or update appCardSubtitle from sponsored results.
     for (const app of sponsoredApps) {
-      const newSubtitle = app.short_description || null;
-
-      // Detect appCardSubtitle changes
-      if (newSubtitle) {
-        const [existing] = await this.db
-          .select({ appCardSubtitle: apps.appCardSubtitle })
-          .from(apps)
-          .where(eq(apps.slug, app.app_slug));
-        if (existing && existing.appCardSubtitle !== newSubtitle) {
-          await this.db.insert(appFieldChanges).values({
-            appSlug: app.app_slug,
-            field: "appCardSubtitle",
-            oldValue: existing.appCardSubtitle,
-            newValue: newSubtitle,
-            scrapeRunId: runId,
-          });
-        }
-      }
-
       await this.db
         .insert(apps)
-        .values({ slug: app.app_slug, name: app.app_name, isBuiltForShopify: !!app.is_built_for_shopify, appCardSubtitle: app.short_description || undefined })
+        .values({ slug: app.app_slug, name: app.app_name, isBuiltForShopify: !!app.is_built_for_shopify })
         .onConflictDoUpdate({
           target: apps.slug,
-          set: { isBuiltForShopify: !!app.is_built_for_shopify, appCardSubtitle: app.short_description || undefined },
+          set: { isBuiltForShopify: !!app.is_built_for_shopify },
         });
 
       await this.db
