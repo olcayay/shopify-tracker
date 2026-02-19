@@ -1,29 +1,11 @@
 import Link from "next/link";
 import { formatDateOnly } from "@/lib/format-date";
-import { getApp, getAppReviews, getAppRankings, getAppChanges, getAppHistory } from "@/lib/api";
+import { getApp, getAppReviews, getAppRankings, getAppChanges } from "@/lib/api";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { RankingChart } from "@/components/ranking-chart";
-import { AdHeatmap } from "@/components/ad-heatmap";
-import { RatingReviewChart } from "@/components/rating-review-chart";
-import { ExternalLink } from "lucide-react";
-import { TrackAppButton } from "./track-button";
-import { StarAppButton } from "@/components/star-app-button";
-import { AdminScraperTrigger } from "@/components/admin-scraper-trigger";
-import { ReviewList } from "./review-list";
-import { CompetitorsSection } from "./competitors-section";
-import { KeywordsSection } from "./keywords-section";
+import { ArrowRight, TrendingUp, Star, MessageSquare, FileText, History, Users, Search } from "lucide-react";
 
-export default async function AppDetailPage({
+export default async function AppOverviewPage({
   params,
 }: {
   params: Promise<{ slug: string }>;
@@ -34,704 +16,222 @@ export default async function AppDetailPage({
   let reviewData: any;
   let rankings: any;
   let changes: any[] = [];
-  let history: any = { snapshots: [] };
   try {
-    [app, reviewData, rankings, changes, history] = await Promise.all([
+    [app, reviewData, rankings, changes] = await Promise.all([
       getApp(slug),
-      getAppReviews(slug, 10),
-      getAppRankings(slug),
-      getAppChanges(slug, 50).catch(() => []),
-      getAppHistory(slug, 90).catch(() => ({ snapshots: [] })),
+      getAppReviews(slug, 3).catch(() => ({ reviews: [], total: 0 })),
+      getAppRankings(slug).catch(() => ({})),
+      getAppChanges(slug, 5).catch(() => []),
     ]);
   } catch {
     return <p className="text-muted-foreground">App not found.</p>;
   }
 
-  const snapshot = app.latestSnapshot;
+  // Compute summary stats
+  const catRankings = rankings?.categoryRankings || [];
+  const kwRankings = rankings?.keywordRankings || [];
+  const kwAds = rankings?.keywordAds || [];
+
+  // Latest position per category
+  const latestCatPositions = new Map<string, { label: string; position: number }>();
+  for (const r of catRankings) {
+    const key = r.categorySlug;
+    if (!latestCatPositions.has(key)) {
+      latestCatPositions.set(key, { label: r.categoryTitle || r.categorySlug, position: r.position });
+    }
+  }
+
+  // Latest position per keyword
+  const latestKwPositions = new Map<string, { label: string; position: number }>();
+  for (const r of kwRankings) {
+    const key = r.keywordSlug;
+    if (!latestKwPositions.has(key)) {
+      latestKwPositions.set(key, { label: r.keyword, position: r.position });
+    }
+  }
+
+  // Unique keyword ad count
+  const uniqueAdKeywords = new Set(kwAds.map((a: any) => a.keyword)).size;
+
+  const fieldLabels: Record<string, string> = {
+    name: "App Name",
+    appIntroduction: "App Introduction",
+    appDetails: "App Details",
+    features: "Features",
+    seoTitle: "SEO Title",
+    seoMetaDescription: "SEO Meta Description",
+    appCardSubtitle: "App Card Subtitle",
+  };
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div className="flex items-start gap-3">
-          {app.iconUrl && (
-            <img src={app.iconUrl} alt="" className="h-16 w-16 rounded-lg shrink-0" />
-          )}
-          <div>
-            <h1 className="text-2xl font-bold">
-              {app.name}
-              {app.isBuiltForShopify && <span title="Built for Shopify" className="ml-1.5">💎</span>}
-            </h1>
-            <p className="text-muted-foreground">{app.slug}</p>
-          {app.appCardSubtitle && (
-            <p className="text-sm text-muted-foreground italic mt-1">{app.appCardSubtitle}</p>
-          )}
-          </div>
-        </div>
-        <div className="flex items-center gap-2">
-          <a
-            href={`https://apps.shopify.com/${app.slug}`}
-            target="_blank"
-            rel="noopener noreferrer"
-            title="View on Shopify App Store"
-            className="inline-flex items-center justify-center h-9 w-9 rounded-md hover:bg-accent transition-colors"
-          >
-            <ExternalLink className="h-5 w-5 text-muted-foreground" />
-          </a>
-          <AdminScraperTrigger
-            scraperType="app_details"
-            slug={app.slug}
-            label="Scrape App"
-          />
-          <StarAppButton
-            appSlug={app.slug}
-            initialStarred={app.isCompetitor}
-            competitorForApps={app.competitorForApps}
-          />
-          <TrackAppButton
-            appSlug={app.slug}
-            appName={app.name}
-            initialTracked={app.isTrackedByAccount}
-          />
-        </div>
-      </div>
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      {/* Rankings Summary */}
+      <Link href={`/apps/${slug}/rankings`} className="group">
+        <Card className="h-full transition-colors group-hover:border-primary/50">
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <CardTitle className="text-sm font-medium flex items-center gap-2">
+              <TrendingUp className="h-4 w-4 text-muted-foreground" />
+              Rankings
+            </CardTitle>
+            <ArrowRight className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors" />
+          </CardHeader>
+          <CardContent>
+            {latestCatPositions.size > 0 || latestKwPositions.size > 0 ? (
+              <div className="space-y-2">
+                {[...latestCatPositions.values()].slice(0, 3).map((r) => (
+                  <div key={r.label} className="flex items-center justify-between text-sm">
+                    <span className="truncate text-muted-foreground">{r.label}</span>
+                    <Badge variant="secondary" className="ml-2 shrink-0">#{r.position}</Badge>
+                  </div>
+                ))}
+                {[...latestKwPositions.values()].slice(0, 3).map((r) => (
+                  <div key={r.label} className="flex items-center justify-between text-sm">
+                    <span className="truncate text-muted-foreground">{r.label}</span>
+                    <Badge variant="outline" className="ml-2 shrink-0">#{r.position}</Badge>
+                  </div>
+                ))}
+                {uniqueAdKeywords > 0 && (
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Ads on {uniqueAdKeywords} keyword{uniqueAdKeywords > 1 ? "s" : ""}
+                  </p>
+                )}
+              </div>
+            ) : (
+              <p className="text-sm text-muted-foreground">No ranking data yet</p>
+            )}
+          </CardContent>
+        </Card>
+      </Link>
 
-      {/* Summary cards */}
-      {snapshot && (
-        <div className="grid grid-cols-2 md:grid-cols-6 gap-4">
-          <Card className="py-3 gap-1">
-            <CardHeader>
-              <CardTitle className="text-sm text-muted-foreground">
-                Rating
+      {/* Reviews Summary */}
+      <Link href={`/apps/${slug}/reviews`} className="group">
+        <Card className="h-full transition-colors group-hover:border-primary/50">
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <CardTitle className="text-sm font-medium flex items-center gap-2">
+              <MessageSquare className="h-4 w-4 text-muted-foreground" />
+              Reviews ({reviewData?.total ?? 0})
+            </CardTitle>
+            <ArrowRight className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors" />
+          </CardHeader>
+          <CardContent>
+            {reviewData?.reviews?.length > 0 ? (
+              <div className="space-y-2">
+                {reviewData.reviews.slice(0, 3).map((r: any, i: number) => (
+                  <div key={i} className="text-sm">
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-yellow-500">{"★".repeat(r.rating)}</span>
+                      <span className="text-muted-foreground text-xs">{r.reviewerName}</span>
+                    </div>
+                    <p className="text-muted-foreground line-clamp-1 text-xs mt-0.5">
+                      {r.content}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="text-sm text-muted-foreground">No reviews yet</p>
+            )}
+          </CardContent>
+        </Card>
+      </Link>
+
+      {/* Competitors Summary (tracked only) */}
+      {app.isTrackedByAccount && (
+        <Link href={`/apps/${slug}/competitors`} className="group">
+          <Card className="h-full transition-colors group-hover:border-primary/50">
+            <CardHeader className="flex flex-row items-center justify-between pb-2">
+              <CardTitle className="text-sm font-medium flex items-center gap-2">
+                <Users className="h-4 w-4 text-muted-foreground" />
+                Competitors
               </CardTitle>
+              <ArrowRight className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors" />
             </CardHeader>
             <CardContent>
-              <span className="text-2xl font-bold">
-                {snapshot.averageRating ?? "—"}
-              </span>
-              {snapshot.averageRating != null && (
-                <div className="flex gap-0.5 mt-1">
-                  {[1, 2, 3, 4, 5].map((star) => {
-                    const rating = Number(snapshot.averageRating);
-                    const fill = Math.min(1, Math.max(0, rating - (star - 1)));
-                    return (
-                      <div key={star} className="relative h-4 w-4">
-                        <svg viewBox="0 0 24 24" className="h-4 w-4 text-muted-foreground/30" fill="currentColor">
-                          <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
-                        </svg>
-                        <div className="absolute inset-0 overflow-hidden" style={{ width: `${fill * 100}%` }}>
-                          <svg viewBox="0 0 24 24" className="h-4 w-4 text-yellow-500" fill="currentColor">
-                            <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
-                          </svg>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
+              <p className="text-sm text-muted-foreground">
+                Manage competitor apps and track their performance
+              </p>
             </CardContent>
           </Card>
-          <Card className="py-3 gap-1">
-            <CardHeader>
-              <CardTitle className="text-sm text-muted-foreground">
-                Reviews
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <span className="text-2xl font-bold">
-                {snapshot.ratingCount ?? "—"}
-              </span>
-              {reviewData?.total != null && reviewData.total > 0 && (
-                <p className="text-xs text-muted-foreground mt-1">
-                  {reviewData.withContentCount} with content
-                </p>
-              )}
-            </CardContent>
-          </Card>
-          <Card className="py-3 gap-1">
-            <CardHeader>
-              <CardTitle className="text-sm text-muted-foreground">
-                Pricing
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              {snapshot.pricingPlans && snapshot.pricingPlans.length > 0 ? (
-                <div className="flex flex-wrap gap-1.5">
-                  {snapshot.pricingPlans.map((plan: any) => (
-                    <span
-                      key={plan.name}
-                      className="inline-flex items-baseline gap-1 rounded-md bg-muted px-2 py-0.5 text-xs"
-                    >
-                      <span className="font-medium">{plan.name}</span>
-                      <span className="text-muted-foreground">
-                        {plan.price == null
-                          ? "Free"
-                          : `$${plan.price}/${plan.period || "mo"}`}
-                      </span>
-                    </span>
-                  ))}
-                </div>
-              ) : (
-                <span className="text-sm">{snapshot.pricing || "—"}</span>
-              )}
-            </CardContent>
-          </Card>
-          <Card className="py-3 gap-1">
-            <CardHeader>
-              <CardTitle className="text-sm text-muted-foreground">
-                Developer
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              {snapshot.developer?.name ? (
-                <Link
-                  href={`/developers?name=${encodeURIComponent(snapshot.developer.name)}`}
-                  className="text-sm text-primary hover:underline"
-                >
-                  {snapshot.developer.name}
-                </Link>
-              ) : (
-                <span className="text-sm">—</span>
-              )}
-            </CardContent>
-          </Card>
-          <Card className="py-3 gap-1">
-            <CardHeader>
-              <CardTitle className="text-sm text-muted-foreground">
-                Launched
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <span className="text-sm">
-                {app.launchedDate ? formatDateOnly(app.launchedDate) : "—"}
-              </span>
-            </CardContent>
-          </Card>
-          <Card className="py-3 gap-1">
-            <CardHeader>
-              <CardTitle className="text-sm text-muted-foreground">
-                Last Updated
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <span className="text-sm">
-                {formatDateOnly(snapshot.scrapedAt)}
-              </span>
-            </CardContent>
-          </Card>
-        </div>
+        </Link>
       )}
 
-      <Tabs defaultValue={app.isTrackedByAccount ? "competitors" : "rankings"}>
-        <TabsList>
-          {app.isTrackedByAccount && (
-            <>
-              <TabsTrigger value="competitors">Competitors</TabsTrigger>
-              <TabsTrigger value="keywords">Keywords</TabsTrigger>
-            </>
-          )}
-          <TabsTrigger value="rankings">Rankings</TabsTrigger>
-          <TabsTrigger value="reviews">
-            Reviews ({reviewData?.total ?? 0})
-          </TabsTrigger>
-          <TabsTrigger value="details">Details</TabsTrigger>
-          {changes.length > 0 && (
-            <TabsTrigger value="changes">
-              Changes ({changes.length})
-            </TabsTrigger>
-          )}
-        </TabsList>
-
-        {/* Competitors Tab */}
-        {app.isTrackedByAccount && (
-          <TabsContent value="competitors">
-            <CompetitorsSection appSlug={app.slug} />
-          </TabsContent>
-        )}
-
-        {/* Keywords Tab */}
-        {app.isTrackedByAccount && (
-          <TabsContent value="keywords">
-            <KeywordsSection appSlug={app.slug} />
-          </TabsContent>
-        )}
-
-        {/* Rankings Tab */}
-        <TabsContent value="rankings" className="space-y-4">
-          {rankings?.categoryRankings?.length > 0 && (
-            <Card>
-              <CardHeader>
-                <CardTitle>Category Rankings</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <RankingChart
-                  data={rankings.categoryRankings.map((r: any) => ({
-                    date: formatDateOnly(r.scrapedAt),
-                    position: r.position,
-                    label: r.categoryTitle || r.categorySlug,
-                    slug: r.categorySlug,
-                    linkPrefix: "/categories/",
-                  }))}
-                />
-              </CardContent>
-            </Card>
-          )}
-          {rankings?.keywordRankings?.length > 0 && (
-            <Card>
-              <CardHeader>
-                <CardTitle>Keyword Rankings</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <RankingChart
-                  data={rankings.keywordRankings.map((r: any) => ({
-                    date: formatDateOnly(r.scrapedAt),
-                    position: r.position,
-                    label: r.keyword,
-                    slug: r.keywordSlug,
-                    linkPrefix: "/keywords/",
-                  }))}
-                />
-              </CardContent>
-            </Card>
-          )}
-          {!rankings?.categoryRankings?.length &&
-            !rankings?.keywordRankings?.length && (
-              <p className="text-muted-foreground">
-                No ranking data yet. Run scrapers to collect data.
-              </p>
-            )}
-        </TabsContent>
-
-        {/* Reviews Tab */}
-        <TabsContent value="reviews" className="space-y-4">
-          {history?.snapshots?.length > 1 && (
-            <RatingReviewChart snapshots={history.snapshots} />
-          )}
-          {reviewData?.distribution?.length > 0 && (
-            <Card>
-              <CardHeader>
-                <CardTitle>Rating Distribution</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-2">
-                  {[5, 4, 3, 2, 1].map((star) => {
-                    const item = reviewData.distribution.find(
-                      (d: any) => d.rating === star
-                    );
-                    const count = item?.count || 0;
-                    const pct =
-                      reviewData.total > 0
-                        ? (count / reviewData.total) * 100
-                        : 0;
-                    return (
-                      <div key={star} className="flex items-center gap-3">
-                        <span className="w-8 text-sm text-right">{star}★</span>
-                        <div className="flex-1 bg-muted rounded-full h-3">
-                          <div
-                            className="bg-primary rounded-full h-3"
-                            style={{ width: `${pct}%` }}
-                          />
-                        </div>
-                        <span className="w-10 text-sm text-muted-foreground text-right">
-                          {count}
-                        </span>
-                      </div>
-                    );
-                  })}
-                </div>
-              </CardContent>
-            </Card>
-          )}
-
-          <ReviewList
-            appSlug={app.slug}
-            initialReviews={reviewData?.reviews ?? []}
-            total={reviewData?.total ?? 0}
-          />
-        </TabsContent>
-
-        {/* Details Tab */}
-        <TabsContent value="details" className="space-y-4">
-          {snapshot && (
-            <>
-              {snapshot.appIntroduction && (
-                <Card>
-                  <CardHeader>
-                    <CardTitle>App Introduction</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <p className="text-sm font-medium">{snapshot.appIntroduction}</p>
-                  </CardContent>
-                </Card>
-              )}
-
-              {snapshot.appDetails && (
-                <Card>
-                  <CardHeader>
-                    <CardTitle>App Details</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <p className="text-sm">{snapshot.appDetails}</p>
-                  </CardContent>
-                </Card>
-              )}
-
-              {snapshot.features?.length > 0 && (
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Features</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <ul className="space-y-2">
-                      {snapshot.features.map((f: string, i: number) => (
-                        <li key={i} className="text-sm flex gap-2">
-                          <span className="text-muted-foreground shrink-0">{i + 1}.</span>
-                          {f}
-                        </li>
-                      ))}
-                    </ul>
-                  </CardContent>
-                </Card>
-              )}
-
-              {(snapshot.languages?.length > 0 || snapshot.integrations?.length > 0) && (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {snapshot.languages?.length > 0 && (
-                    <Card>
-                      <CardHeader>
-                        <CardTitle>Languages</CardTitle>
-                      </CardHeader>
-                      <CardContent>
-                        <div className="flex flex-wrap gap-1.5">
-                          {snapshot.languages.map((lang: string, i: number) => (
-                            <Badge key={i} variant="outline" className="text-xs">
-                              {lang}
-                            </Badge>
-                          ))}
-                        </div>
-                      </CardContent>
-                    </Card>
-                  )}
-                  {snapshot.integrations?.length > 0 && (
-                    <Card>
-                      <CardHeader>
-                        <CardTitle>Integrations</CardTitle>
-                      </CardHeader>
-                      <CardContent>
-                        <div className="flex flex-wrap gap-1.5">
-                          {snapshot.integrations.map((item: string, i: number) => (
-                            <Badge key={i} variant="secondary" className="text-xs">
-                              {item}
-                            </Badge>
-                          ))}
-                        </div>
-                      </CardContent>
-                    </Card>
-                  )}
-                </div>
-              )}
-
-              {snapshot.pricingPlans?.length > 0 && (
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Pricing Plans</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                      {snapshot.pricingPlans.map((plan: any, i: number) => (
-                        <div key={i} className="border rounded-lg p-4">
-                          <h4 className="font-semibold">{plan.name}</h4>
-                          <p className="text-lg font-bold mt-1">
-                            {plan.price
-                              ? `$${plan.price}/${plan.period}`
-                              : "Free"}
-                          </p>
-                          {plan.features?.length > 0 && (
-                            <ul className="mt-2 space-y-1">
-                              {plan.features.map((f: string, j: number) => (
-                                <li
-                                  key={j}
-                                  className="text-sm text-muted-foreground"
-                                >
-                                  • {f}
-                                </li>
-                              ))}
-                            </ul>
-                          )}
-                        </div>
-                      ))}
-                    </div>
-                  </CardContent>
-                </Card>
-              )}
-
-              {snapshot.support && (
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Support</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-1 text-sm">
-                      {snapshot.support.email && (
-                        <p>
-                          <span className="text-muted-foreground">Email:</span>{" "}
-                          <a href={`mailto:${snapshot.support.email}`} className="text-primary hover:underline">
-                            {snapshot.support.email}
-                          </a>
-                        </p>
-                      )}
-                      {snapshot.support.portal_url && (
-                        <p>
-                          <span className="text-muted-foreground">Support Portal:</span>{" "}
-                          <a href={snapshot.support.portal_url} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
-                            {snapshot.support.portal_url}
-                          </a>
-                        </p>
-                      )}
-                      {snapshot.support.phone && (
-                        <p>
-                          <span className="text-muted-foreground">Phone:</span> {snapshot.support.phone}
-                        </p>
-                      )}
-                    </div>
-                  </CardContent>
-                </Card>
-              )}
-
-              {snapshot.categories?.length > 0 && (
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Categories & Features</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    {snapshot.categories.map((cat: any, i: number) => {
-                      const catSlug = cat.url?.match(/\/categories\/([^/?]+)/)?.[1];
-                      return (
-                      <div key={i} className="mb-4">
-                        <div className="flex items-center gap-2">
-                          {catSlug ? (
-                            <Link href={`/categories/${catSlug}`} className="font-medium text-primary hover:underline">
-                              {cat.title}
-                            </Link>
-                          ) : (
-                            <h4 className="font-medium">{cat.title}</h4>
-                          )}
-                          {cat.type && (
-                            <Badge variant="outline" className="text-xs">
-                              {cat.type}
-                            </Badge>
-                          )}
-                        </div>
-                        {cat.subcategories?.map((sub: any, j: number) => (
-                          <div key={j} className="ml-4 mt-2">
-                            <h5 className="text-sm font-medium text-muted-foreground">
-                              {sub.title}
-                            </h5>
-                            <div className="flex flex-wrap gap-1 mt-1">
-                              {sub.features?.map((f: any, k: number) => (
-                                <Link
-                                  key={k}
-                                  href={`/features/${encodeURIComponent(f.feature_handle)}`}
-                                >
-                                  <Badge
-                                    variant="secondary"
-                                    className="text-xs hover:bg-primary hover:text-primary-foreground cursor-pointer transition-colors"
-                                  >
-                                    {f.title}
-                                  </Badge>
-                                </Link>
-                              ))}
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    );
-                    })}
-                  </CardContent>
-                </Card>
-              )}
-
-              {(snapshot.seoTitle || snapshot.seoMetaDescription) && (
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Web Search Content</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-3">
-                      {snapshot.seoTitle && (
-                        <div>
-                          <p className="text-xs text-muted-foreground mb-1">Title Tag</p>
-                          <p className="text-sm">{snapshot.seoTitle}</p>
-                        </div>
-                      )}
-                      {snapshot.seoMetaDescription && (
-                        <div>
-                          <p className="text-xs text-muted-foreground mb-1">Meta Description</p>
-                          <p className="text-sm">{snapshot.seoMetaDescription}</p>
-                        </div>
-                      )}
-                    </div>
-                  </CardContent>
-                </Card>
-              )}
-            </>
-          )}
-        </TabsContent>
-
-        {/* Changes Tab */}
-        {changes.length > 0 && (
-          <TabsContent value="changes" className="space-y-4">
-            <Card>
-              <CardHeader>
-                <CardTitle>Listing Changes</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  {changes.map((change: any) => {
-                    const fieldLabels: Record<string, string> = {
-                      name: "App Name",
-                      appIntroduction: "App Introduction",
-                      appDetails: "App Details",
-                      features: "Features",
-                      seoTitle: "SEO Title",
-                      seoMetaDescription: "SEO Meta Description",
-                      appCardSubtitle: "App Card Subtitle",
-                    };
-                    const isFeatures = change.field === "features";
-                    let addedFeatures: string[] = [];
-                    let removedFeatures: string[] = [];
-                    if (isFeatures) {
-                      try {
-                        const oldArr: string[] = JSON.parse(change.oldValue || "[]");
-                        const newArr: string[] = JSON.parse(change.newValue || "[]");
-                        addedFeatures = newArr.filter((f) => !oldArr.includes(f));
-                        removedFeatures = oldArr.filter((f) => !newArr.includes(f));
-                      } catch { /* ignore parse errors */ }
-                    }
-
-                    return (
-                      <div
-                        key={change.id}
-                        className="border-b pb-4 last:border-0 last:pb-0"
-                      >
-                        <div className="flex items-center gap-2 mb-2">
-                          <Badge variant="outline" className="text-xs">
-                            {fieldLabels[change.field] || change.field}
-                          </Badge>
-                          <span className="text-xs text-muted-foreground">
-                            {formatDateOnly(change.detectedAt)}
-                          </span>
-                        </div>
-                        {isFeatures ? (
-                          <div className="space-y-1 text-sm">
-                            {removedFeatures.map((f, i) => (
-                              <p key={`r-${i}`} className="text-red-500 line-through">
-                                - {f}
-                              </p>
-                            ))}
-                            {addedFeatures.map((f, i) => (
-                              <p key={`a-${i}`} className="text-green-600">
-                                + {f}
-                              </p>
-                            ))}
-                            {addedFeatures.length === 0 && removedFeatures.length === 0 && (
-                              <p className="text-muted-foreground italic">Order changed</p>
-                            )}
-                          </div>
-                        ) : (
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm">
-                            <div>
-                              <p className="text-xs text-muted-foreground mb-1">Before</p>
-                              <p className="text-red-500/80 line-clamp-3">
-                                {change.oldValue || <span className="italic">(empty)</span>}
-                              </p>
-                            </div>
-                            <div>
-                              <p className="text-xs text-muted-foreground mb-1">After</p>
-                              <p className="text-green-600/80 line-clamp-3">
-                                {change.newValue || <span className="italic">(empty)</span>}
-                              </p>
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
-        )}
-      </Tabs>
-
-      {/* Keyword Ads — standalone section */}
-      {rankings?.keywordAds?.length > 0 && (() => {
-        // Group by keyword, show last seen date and total sightings
-        const adsByKeyword = new Map<string, { keyword: string; keywordSlug: string; lastSeen: string; totalSightings: number; sightings: any[] }>();
-        for (const ad of rankings.keywordAds) {
-          const existing = adsByKeyword.get(ad.keyword);
-          if (existing) {
-            existing.totalSightings += ad.timesSeenInDay;
-            existing.sightings.push(ad);
-            if (ad.seenDate > existing.lastSeen) existing.lastSeen = ad.seenDate;
-          } else {
-            adsByKeyword.set(ad.keyword, {
-              keyword: ad.keyword,
-              keywordSlug: ad.keywordSlug,
-              lastSeen: ad.seenDate,
-              totalSightings: ad.timesSeenInDay,
-              sightings: [ad],
-            });
-          }
-        }
-        const groupedAds = [...adsByKeyword.values()].sort((a, b) => b.lastSeen.localeCompare(a.lastSeen));
-
-        return (
-          <Card>
-            <CardHeader>
-              <CardTitle>Keyword Ads ({groupedAds.length} keywords)</CardTitle>
+      {/* Keywords Summary (tracked only) */}
+      {app.isTrackedByAccount && (
+        <Link href={`/apps/${slug}/keywords`} className="group">
+          <Card className="h-full transition-colors group-hover:border-primary/50">
+            <CardHeader className="flex flex-row items-center justify-between pb-2">
+              <CardTitle className="text-sm font-medium flex items-center gap-2">
+                <Search className="h-4 w-4 text-muted-foreground" />
+                Keywords
+              </CardTitle>
+              <ArrowRight className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors" />
             </CardHeader>
-            <CardContent className="space-y-6">
-              <AdHeatmap
-                sightings={rankings.keywordAds.map((ad: any) => ({ slug: ad.keywordSlug, name: ad.keyword, seenDate: ad.seenDate, timesSeenInDay: ad.timesSeenInDay }))}
-                linkPrefix="/keywords/"
-              />
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Keyword</TableHead>
-                    <TableHead>Last Seen</TableHead>
-                    <TableHead className="text-right">Total Sightings</TableHead>
-                    <TableHead className="text-right">Days Active</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {groupedAds.map((ad) => (
-                    <TableRow key={ad.keyword}>
-                      <TableCell>
-                        <Link
-                          href={`/keywords/${ad.keywordSlug}`}
-                          className="text-primary hover:underline font-medium"
-                        >
-                          {ad.keyword}
-                        </Link>
-                      </TableCell>
-                      <TableCell className="text-sm text-muted-foreground">
-                        {formatDateOnly(ad.lastSeen)}
-                      </TableCell>
-                      <TableCell className="text-right font-mono">
-                        {ad.totalSightings}
-                      </TableCell>
-                      <TableCell className="text-right font-mono">
-                        {ad.sightings.length}
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+            <CardContent>
+              <p className="text-sm text-muted-foreground">
+                Manage tracked keywords and monitor search rankings
+              </p>
             </CardContent>
           </Card>
-        );
-      })()}
+        </Link>
+      )}
+
+      {/* Details Summary */}
+      <Link href={`/apps/${slug}/details`} className="group">
+        <Card className="h-full transition-colors group-hover:border-primary/50">
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <CardTitle className="text-sm font-medium flex items-center gap-2">
+              <FileText className="h-4 w-4 text-muted-foreground" />
+              Details
+            </CardTitle>
+            <ArrowRight className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors" />
+          </CardHeader>
+          <CardContent>
+            {app.latestSnapshot?.appIntroduction ? (
+              <p className="text-sm text-muted-foreground line-clamp-2">
+                {app.latestSnapshot.appIntroduction}
+              </p>
+            ) : (
+              <p className="text-sm text-muted-foreground">No details available</p>
+            )}
+          </CardContent>
+        </Card>
+      </Link>
+
+      {/* Changes Summary */}
+      <Link href={`/apps/${slug}/changes`} className="group">
+        <Card className="h-full transition-colors group-hover:border-primary/50">
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <CardTitle className="text-sm font-medium flex items-center gap-2">
+              <History className="h-4 w-4 text-muted-foreground" />
+              Changes
+            </CardTitle>
+            <ArrowRight className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors" />
+          </CardHeader>
+          <CardContent>
+            {changes.length > 0 ? (
+              <div className="space-y-1.5">
+                {changes.slice(0, 3).map((c: any) => (
+                  <div key={c.id} className="flex items-center gap-2 text-sm">
+                    <Badge variant="outline" className="text-[10px] shrink-0">
+                      {fieldLabels[c.field] || c.field}
+                    </Badge>
+                    <span className="text-xs text-muted-foreground">
+                      {formatDateOnly(c.detectedAt)}
+                    </span>
+                  </div>
+                ))}
+                {changes.length > 3 && (
+                  <p className="text-xs text-muted-foreground">
+                    +{changes.length - 3} more
+                  </p>
+                )}
+              </div>
+            ) : (
+              <p className="text-sm text-muted-foreground">No changes detected yet</p>
+            )}
+          </CardContent>
+        </Card>
+      </Link>
     </div>
   );
 }

@@ -1,3 +1,4 @@
+import { cache } from "react";
 import { cookies } from "next/headers";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
@@ -50,32 +51,32 @@ export function getApps() {
   return fetchApi<any[]>(`/api/apps`);
 }
 
-export function getApp(slug: string) {
+export const getApp = cache((slug: string) => {
   return fetchApi<any>(`/api/apps/${slug}`);
-}
+});
 
-export function getAppHistory(slug: string, limit = 20) {
+export const getAppHistory = cache((slug: string, limit = 20) => {
   return fetchApi<any>(`/api/apps/${slug}/history?limit=${limit}`);
-}
+});
 
-export function getAppReviews(
+export const getAppReviews = cache((
   slug: string,
   limit = 20,
   offset = 0,
   sort = "newest"
-) {
+) => {
   return fetchApi<any>(
     `/api/apps/${slug}/reviews?limit=${limit}&offset=${offset}&sort=${sort}`
   );
-}
+});
 
-export function getAppRankings(slug: string, days = 30) {
+export const getAppRankings = cache((slug: string, days = 30) => {
   return fetchApi<any>(`/api/apps/${slug}/rankings?days=${days}`);
-}
+});
 
-export function getAppChanges(slug: string, limit = 50) {
+export const getAppChanges = cache((slug: string, limit = 50) => {
   return fetchApi<any[]>(`/api/apps/${slug}/changes?limit=${limit}`);
-}
+});
 
 export function getAppsLastChanges(slugs: string[]) {
   if (slugs.length === 0) return Promise.resolve({} as Record<string, string>);
