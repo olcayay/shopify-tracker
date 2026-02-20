@@ -340,7 +340,7 @@ export class CategoryScraper {
    * then record their category ranking positions.
    */
   private async recordAppRankings(
-    appList: { app_url: string; name: string; short_description?: string; is_built_for_shopify?: boolean; position?: number }[],
+    appList: { app_url: string; name: string; short_description?: string; is_built_for_shopify?: boolean; is_sponsored?: boolean; position?: number }[],
     categorySlug: string,
     runId: string,
     positionOffset = 0
@@ -354,13 +354,16 @@ export class CategoryScraper {
         ""
       );
 
+      // Sponsored listings show ad boilerplate instead of real subtitle — skip subtitle update
+      const subtitle = app.is_sponsored ? undefined : (app.short_description || undefined);
+
       // Upsert app master record with name and BFS flag
       await this.db
         .insert(apps)
-        .values({ slug: appSlug, name: app.name, isBuiltForShopify: !!app.is_built_for_shopify, appCardSubtitle: app.short_description || undefined })
+        .values({ slug: appSlug, name: app.name, isBuiltForShopify: !!app.is_built_for_shopify, appCardSubtitle: subtitle })
         .onConflictDoUpdate({
           target: apps.slug,
-          set: { name: app.name, isBuiltForShopify: !!app.is_built_for_shopify, appCardSubtitle: app.short_description || undefined, updatedAt: now },
+          set: { name: app.name, isBuiltForShopify: !!app.is_built_for_shopify, ...(subtitle !== undefined && { appCardSubtitle: subtitle }), updatedAt: now },
         });
 
       // Record ranking with global position across pages

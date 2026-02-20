@@ -279,6 +279,15 @@ function extractRatingFromText(text: string): {
   return { rating, count };
 }
 
+/** Detect Shopify ad/sponsored card boilerplate text */
+function isAdText(text: string): boolean {
+  return (
+    text.includes("app developer paid to promote") ||
+    text.includes("This ad is based on") ||
+    text.includes("paid search")
+  );
+}
+
 function extractDescription(
   $: cheerio.CheerioAPI,
   $card: cheerio.Cheerio<AnyNode>
@@ -287,7 +296,7 @@ function extractDescription(
   const descDiv = $card.find("div.tw-text-fg-secondary.tw-text-body-xs:not(:has(*))");
   if (descDiv.length > 0) {
     const text = $(descDiv.first()).text().trim();
-    if (text.length > 5) return text;
+    if (text.length > 5 && !isAdText(text)) return text;
   }
 
   // Fallback: search <p> and <div> tags for the longest descriptive text
@@ -296,9 +305,9 @@ function extractDescription(
     const text = $(el).text().trim();
     if (
       text.length > 10 &&
+      !isAdText(text) &&
       !text.includes("out of 5 stars") &&
       !text.includes("total reviews") &&
-      !text.includes("paid search result") &&
       !text.includes("highest standards") &&
       !text.includes("Built for Shopify") &&
       !text.includes("Included with Shopify") &&
