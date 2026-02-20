@@ -220,7 +220,8 @@ export default function PreviewPage() {
       {/* Main content: Preview left, Editor right */}
       <div className="flex-1 flex min-h-0">
         {/* Left — Preview (scrollable) */}
-        <div className="flex-1 overflow-y-auto p-6 space-y-6 min-w-0">
+        <div className="flex-1 overflow-y-auto p-6 min-w-0">
+          <div className="max-w-[1400px] mx-auto space-y-6">
           {/* Search / Category Result Cards — side by side */}
           <div>
             <p className="text-xs text-muted-foreground font-medium mb-3 uppercase tracking-wide">
@@ -466,6 +467,7 @@ export default function PreviewPage() {
                 </div>
               )}
             </div>
+          </div>
           </div>
         </div>
 
