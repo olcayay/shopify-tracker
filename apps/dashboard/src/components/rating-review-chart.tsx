@@ -17,24 +17,32 @@ interface Snapshot {
   ratingCount: number | null;
 }
 
-function deduplicateByDate(snapshots: Snapshot[]) {
+function getWeekStart(dateStr: string): string {
+  const d = new Date(dateStr);
+  const day = d.getUTCDay();
+  const diff = day === 0 ? 6 : day - 1; // Monday = 0
+  d.setUTCDate(d.getUTCDate() - diff);
+  return d.toISOString().slice(0, 10);
+}
+
+function deduplicateByWeek(snapshots: Snapshot[]) {
   // Snapshots come newest-first from API — reverse to chronological
   const chronological = [...snapshots].reverse();
-  const byDate = new Map<string, { date: string; averageRating: number | null; ratingCount: number | null }>();
+  const byWeek = new Map<string, { date: string; averageRating: number | null; ratingCount: number | null }>();
   for (const s of chronological) {
-    const date = s.scrapedAt.slice(0, 10);
-    // Latest snapshot per day wins (overwrite)
-    byDate.set(date, {
-      date,
+    const week = getWeekStart(s.scrapedAt);
+    // Latest snapshot per week wins (overwrite)
+    byWeek.set(week, {
+      date: week,
       averageRating: s.averageRating != null ? Number(s.averageRating) : null,
       ratingCount: s.ratingCount != null ? Number(s.ratingCount) : null,
     });
   }
-  return [...byDate.values()];
+  return [...byWeek.values()];
 }
 
 export function RatingReviewChart({ snapshots }: { snapshots: Snapshot[] }) {
-  const data = deduplicateByDate(snapshots);
+  const data = deduplicateByWeek(snapshots);
 
   if (data.length < 2) return null;
 
@@ -69,7 +77,7 @@ export function RatingReviewChart({ snapshots }: { snapshots: Snapshot[] }) {
                 />
                 <Tooltip
                   formatter={(value) => [Number(value).toFixed(2), "Rating"]}
-                  labelFormatter={(label) => `Date: ${label}`}
+                  labelFormatter={(label) => `Week of ${label}`}
                 />
                 <Line
                   type="monotone"
@@ -102,7 +110,7 @@ export function RatingReviewChart({ snapshots }: { snapshots: Snapshot[] }) {
                     Number(value).toLocaleString(),
                     "Reviews",
                   ]}
-                  labelFormatter={(label) => `Date: ${label}`}
+                  labelFormatter={(label) => `Week of ${label}`}
                 />
                 <Line
                   type="monotone"
