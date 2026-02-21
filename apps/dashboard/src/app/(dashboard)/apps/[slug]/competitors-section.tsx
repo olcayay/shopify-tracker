@@ -17,7 +17,7 @@ import {
 import { X, Plus, Search, ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
 import { ConfirmModal } from "@/components/confirm-modal";
 
-type SortKey = "name" | "rating" | "reviews" | "pricing" | "minPaidPrice" | "launchedDate" | "lastChange" | "featured";
+type SortKey = "name" | "rating" | "reviews" | "pricing" | "minPaidPrice" | "launchedDate" | "lastChange" | "featured" | "ads";
 type SortDir = "asc" | "desc";
 
 export function CompetitorsSection({ appSlug }: { appSlug: string }) {
@@ -170,6 +170,9 @@ export function CompetitorsSection({ appSlug }: { appSlug: string }) {
         case "featured":
           cmp = (a.featuredSections ?? 0) - (b.featuredSections ?? 0);
           break;
+        case "ads":
+          cmp = (a.adKeywords ?? 0) - (b.adKeywords ?? 0);
+          break;
       }
       return sortDir === "asc" ? cmp : -cmp;
     });
@@ -304,6 +307,9 @@ export function CompetitorsSection({ appSlug }: { appSlug: string }) {
               <TableHead className="cursor-pointer select-none" onClick={() => toggleSort("featured")}>
                 Featured <SortIcon col="featured" />
               </TableHead>
+              <TableHead className="cursor-pointer select-none" onClick={() => toggleSort("ads")}>
+                Ads <SortIcon col="ads" />
+              </TableHead>
               <TableHead className="cursor-pointer select-none" onClick={() => toggleSort("lastChange")}>
                 Last Change <SortIcon col="lastChange" />
               </TableHead>
@@ -361,6 +367,18 @@ export function CompetitorsSection({ appSlug }: { appSlug: string }) {
                       className="text-primary hover:underline"
                     >
                       {comp.featuredSections}
+                    </Link>
+                  ) : (
+                    <span className="text-muted-foreground">{"\u2014"}</span>
+                  )}
+                </TableCell>
+                <TableCell className="text-sm">
+                  {comp.adKeywords > 0 ? (
+                    <Link
+                      href={`/apps/${comp.appSlug}/ads`}
+                      className="text-primary hover:underline"
+                    >
+                      {comp.adKeywords}
                     </Link>
                   ) : (
                     <span className="text-muted-foreground">{"\u2014"}</span>

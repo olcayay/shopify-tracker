@@ -66,6 +66,32 @@ export const keywordRoutes: FastifyPluginAsync = async (app) => {
       .where(inArray(trackedKeywords.id, ids))
       .orderBy(trackedKeywords.keyword);
 
+    // Batch-fetch ad app counts per keyword (last 30 days)
+    const adSince = new Date();
+    adSince.setDate(adSince.getDate() - 30);
+    const adSinceStr = adSince.toISOString().slice(0, 10);
+
+    const adAppCountMap = new Map<number, number>();
+    if (ids.length > 0) {
+      const adAppCounts = await db
+        .select({
+          keywordId: keywordAdSightings.keywordId,
+          appCount: sql<number>`count(distinct ${keywordAdSightings.appSlug})`,
+        })
+        .from(keywordAdSightings)
+        .where(
+          and(
+            inArray(keywordAdSightings.keywordId, ids),
+            sql`${keywordAdSightings.seenDate} >= ${adSinceStr}`
+          )
+        )
+        .groupBy(keywordAdSightings.keywordId);
+
+      for (const ac of adAppCounts) {
+        adAppCountMap.set(ac.keywordId, ac.appCount);
+      }
+    }
+
     const result = await Promise.all(
       rows.map(async (kw) => {
         const [snapshot] = await db
@@ -113,6 +139,7 @@ export const keywordRoutes: FastifyPluginAsync = async (app) => {
           competitorInResults: competitorAppsInResults.length,
           trackedAppsInResults,
           competitorAppsInResults,
+          adApps: adAppCountMap.get(kw.id) ?? 0,
         };
       })
     );

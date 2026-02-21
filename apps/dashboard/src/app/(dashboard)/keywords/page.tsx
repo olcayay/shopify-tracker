@@ -284,6 +284,7 @@ export default function KeywordsPage() {
                   <TableHead>Total Results</TableHead>
                   <TableHead>Tracked</TableHead>
                   <TableHead>Competitor</TableHead>
+                  <TableHead>Ads</TableHead>
                   <TableHead>Last Updated</TableHead>
                   <TableHead className="w-10" />
                   {canEdit && <TableHead className="w-12" />}
@@ -355,6 +356,21 @@ export default function KeywordsPage() {
                             </span>
                           )}
                         </TableCell>
+                        <TableCell className="text-sm">
+                          {kw.adApps > 0 ? (
+                            <Link
+                              href={`/keywords/${kw.slug}`}
+                              className="text-primary hover:underline"
+                              onClick={(e) => e.stopPropagation()}
+                            >
+                              {kw.adApps}
+                            </Link>
+                          ) : (
+                            <span className="text-muted-foreground">
+                              {"\u2014"}
+                            </span>
+                          )}
+                        </TableCell>
                         <TableCell className="text-sm text-muted-foreground">
                           {kw.latestSnapshot?.scrapedAt
                             ? formatDateOnly(kw.latestSnapshot.scrapedAt)
@@ -388,7 +404,7 @@ export default function KeywordsPage() {
                       {isExpanded && (
                         <TableRow>
                           <TableCell
-                            colSpan={canEdit ? 7 : 6}
+                            colSpan={canEdit ? 8 : 7}
                             className="bg-muted/30 p-4"
                           >
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -482,7 +498,7 @@ export default function KeywordsPage() {
                 {keywords.length === 0 && (
                   <TableRow>
                     <TableCell
-                      colSpan={canEdit ? 7 : 6}
+                      colSpan={canEdit ? 8 : 7}
                       className="text-center text-muted-foreground"
                     >
                       No tracked keywords yet. Add keywords from your app

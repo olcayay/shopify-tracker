@@ -23,6 +23,7 @@ import {
   appKeywordRankings,
   keywordAutoSuggestions,
   featuredAppSightings,
+  keywordAdSightings,
 } from "@shopify-tracking/db";
 import { requireRole } from "../middleware/authorize.js";
 
@@ -1101,6 +1102,28 @@ export const accountRoutes: FastifyPluginAsync = async (app) => {
         }
       }
 
+      // Batch-fetch ad keyword counts (last 30 days)
+      const adKeywordCountMap = new Map<string, number>();
+      if (competitorSlugs.length > 0) {
+        const adKeywordCounts = await db
+          .select({
+            appSlug: keywordAdSightings.appSlug,
+            keywordCount: sql<number>`count(distinct ${keywordAdSightings.keywordId})`,
+          })
+          .from(keywordAdSightings)
+          .where(
+            and(
+              inArray(keywordAdSightings.appSlug, competitorSlugs),
+              sql`${keywordAdSightings.seenDate} >= ${featuredSinceStr}`
+            )
+          )
+          .groupBy(keywordAdSightings.appSlug);
+
+        for (const ac of adKeywordCounts) {
+          adKeywordCountMap.set(ac.appSlug, ac.keywordCount);
+        }
+      }
+
       const result = await Promise.all(
         rows.map(async (row) => {
           const [snapshot] = await db
@@ -1129,6 +1152,7 @@ export const accountRoutes: FastifyPluginAsync = async (app) => {
             minPaidPrice,
             lastChangeAt: change?.detectedAt || null,
             featuredSections: featuredCountMap.get(row.appSlug) ?? 0,
+            adKeywords: adKeywordCountMap.get(row.appSlug) ?? 0,
           };
         })
       );

@@ -86,6 +86,10 @@ export const getAppFeaturedPlacements = cache((slug: string, days = 30) => {
   return fetchApi<any>(`/api/apps/${slug}/featured-placements?days=${days}`);
 });
 
+export const getAppAdSightings = cache((slug: string, days = 30) => {
+  return fetchApi<any>(`/api/apps/${slug}/ad-sightings?days=${days}`);
+});
+
 // --- Featured Apps ---
 export function getFeaturedApps(
   days = 30,

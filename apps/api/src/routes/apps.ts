@@ -679,4 +679,40 @@ export const appRoutes: FastifyPluginAsync = async (app) => {
       return { sightings };
     }
   );
+
+  // GET /api/apps/:slug/ad-sightings — which keywords is this app advertising on
+  app.get<{ Params: { slug: string } }>(
+    "/:slug/ad-sightings",
+    async (request, reply) => {
+      const { slug } = request.params;
+      const { days = "30" } = request.query as { days?: string };
+
+      const since = new Date();
+      since.setDate(since.getDate() - parseInt(days, 10));
+      const sinceStr = since.toISOString().slice(0, 10);
+
+      const sightings = await db
+        .select({
+          keywordId: keywordAdSightings.keywordId,
+          keyword: trackedKeywords.keyword,
+          keywordSlug: trackedKeywords.slug,
+          seenDate: keywordAdSightings.seenDate,
+          timesSeenInDay: keywordAdSightings.timesSeenInDay,
+        })
+        .from(keywordAdSightings)
+        .innerJoin(
+          trackedKeywords,
+          eq(keywordAdSightings.keywordId, trackedKeywords.id)
+        )
+        .where(
+          and(
+            eq(keywordAdSightings.appSlug, slug),
+            sql`${keywordAdSightings.seenDate} >= ${sinceStr}`
+          )
+        )
+        .orderBy(desc(keywordAdSightings.seenDate));
+
+      return { sightings };
+    }
+  );
 };
