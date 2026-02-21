@@ -6,6 +6,7 @@ import {
   keywordSnapshots,
   appKeywordRankings,
   keywordAdSightings,
+  keywordAutoSuggestions,
   apps,
   appSnapshots,
   accountTrackedKeywords,
@@ -395,6 +396,38 @@ export const keywordRoutes: FastifyPluginAsync = async (app) => {
         .where(eq(keywordSnapshots.keywordId, kw.id));
 
       return { keyword: kw, snapshots, total: count };
+    }
+  );
+
+  // GET /api/keywords/:slug/suggestions — autocomplete suggestions for a keyword
+  app.get<{ Params: { slug: string } }>(
+    "/:slug/suggestions",
+    async (request, reply) => {
+      const { slug } = request.params;
+
+      const [kw] = await db
+        .select()
+        .from(trackedKeywords)
+        .where(eq(trackedKeywords.slug, slug))
+        .limit(1);
+
+      if (!kw) {
+        return reply.code(404).send({ error: "Keyword not found" });
+      }
+
+      const [row] = await db
+        .select({
+          suggestions: keywordAutoSuggestions.suggestions,
+          scrapedAt: keywordAutoSuggestions.scrapedAt,
+        })
+        .from(keywordAutoSuggestions)
+        .where(eq(keywordAutoSuggestions.keywordId, kw.id))
+        .limit(1);
+
+      return {
+        suggestions: row?.suggestions || [],
+        scrapedAt: row?.scrapedAt || null,
+      };
     }
   );
 };

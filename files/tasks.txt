@@ -363,3 +363,32 @@ tracked app, competitor app ve keyword ilişkisini yeniden kurgulamak istiyorum.
 - data structure yapısını buna uygun olarak güncellemek gerekiyor.
 - özellikle /apps/<slug> sayfasının da buna uygun olarak güncellenmeli. rakiplerin görüntülenmesi, rakip ekleme, keywordlerin görüntülenmesi, yeni keyword ekleme gibi actionları tekrar üzerinden geçilmesi gerekiyor
 
+
+ana sayfada
+    - hero section'ında 6 app
+
+1. seviye kategori sayfasında
+- 1. seviye kategoriler için recommended appler (12 adet)
+- her bir 2. seviye için 1 feature app
+- bir app hangi kategorilerde featured ve recommended olmuş. historical olarak göster
+
+
+
+her bir app sayfanın altında More apps like this alanı var. Bunları da çekip similar apps gibi bir alanda app sayfasında gösterebiliriz. Eğer bu app'ler zamanla değişişiyorsa bunu historical olarak da gösterebiliriz.
+
+similar applerin similar applerini de gösterebiliriz.
+
+Ayrıca bizim app'imiz hangi applerin similar appleri listesinde çıkıyor. Bu bilgiye kullanıcının shopify'da erişmesi çok zor
+
+
+
+auto suggestion
+https://apps.shopify.com/ sayfasındaki search apps alanında birşeyler aramak istediğimizde shopify bize neler öneriyor. sadece keyword suggestionlar olacak. kategori, feature ve guide suggestionları olmayacak.
+
+apps/<slug>/keywords sayfasındaki tabloda her bir keyword için bir ampül ikonu olacak kullanıcı buna tıkladığında bir modal içinde bir liste açılacak ve keyword shopify'da aratıldığında hangi keywordleri suggest ettiğinin listesi gösterilecek. kullancı isterse bu listedeki + ikonuna basarak bu keywordleri kendi listesine ekleyecek.
+
+artık her bir keyword scrapper işlemi sırasında auto suggestionları çekme işlemi de yapılacak.
+
+
+
+scrapping sırasında bir app birden fazla yerde karşımıza çıkabilir. category, feature, keyword vb. Bu nedenle eğer bir app bir scrapping sırasında karşımıza çıkıyorsa bir süre belirleyelim (örneğin 1 saat) bu süre içinde zaten scrap edildiyse onu pas geç. ama system admin ilgili app için manuel olarak scrapping'i başlatırsa bu zaman checkini yapmasın.

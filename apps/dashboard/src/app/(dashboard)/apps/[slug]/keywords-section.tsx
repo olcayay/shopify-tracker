@@ -1,11 +1,12 @@
 "use client";
 
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, useMemo } from "react";
 import Link from "next/link";
 import { useAuth } from "@/lib/auth-context";
-import { useFormatDate } from "@/lib/format-date";
+import { cn } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
 import {
   Table,
   TableBody,
@@ -14,12 +15,64 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { X, Plus, Search } from "lucide-react";
+import { X, Plus, Search, Check, ArrowDown, ExternalLink, Lightbulb } from "lucide-react";
 import { ConfirmModal } from "@/components/confirm-modal";
+import { LiveSearchTrigger } from "@/components/live-search-trigger";
+import { KeywordSuggestionsModal } from "@/components/keyword-suggestions-modal";
+
+// --- App icon with selection state (same as compare page) ---
+function AppIcon({
+  app,
+  selected,
+  onClick,
+  isMain,
+}: {
+  app: { slug: string; name: string; iconUrl: string | null };
+  selected: boolean;
+  onClick?: () => void;
+  isMain?: boolean;
+}) {
+  return (
+    <div className="group relative flex flex-col items-center">
+      <button
+        onClick={onClick}
+        disabled={isMain}
+        className={cn(
+          "relative rounded-lg transition-all shrink-0 h-10 w-10",
+          selected
+            ? "ring-2 ring-emerald-500 ring-offset-2 ring-offset-background"
+            : "opacity-35 hover:opacity-60 grayscale hover:grayscale-0",
+          isMain && "ring-2 ring-emerald-500 ring-offset-2 ring-offset-background cursor-default"
+        )}
+      >
+        {app.iconUrl ? (
+          <img src={app.iconUrl} alt={app.name} className="rounded-lg h-10 w-10" />
+        ) : (
+          <div className="rounded-lg bg-muted flex items-center justify-center text-xs font-bold h-10 w-10">
+            {app.name.charAt(0)}
+          </div>
+        )}
+        {selected && !isMain && (
+          <div className="absolute -top-1 -right-1 h-4 w-4 rounded-full bg-emerald-500 flex items-center justify-center">
+            <Check className="h-2.5 w-2.5 text-white" />
+          </div>
+        )}
+      </button>
+      <span className="absolute -bottom-5 left-1/2 -translate-x-1/2 text-[10px] text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none">
+        {app.name}
+      </span>
+    </div>
+  );
+}
+
+interface SimpleApp {
+  slug: string;
+  name: string;
+  iconUrl: string | null;
+}
 
 export function KeywordsSection({ appSlug }: { appSlug: string }) {
   const { fetchWithAuth, user, account, refreshUser } = useAuth();
-  const { formatDateOnly } = useFormatDate();
   const [keywords, setKeywords] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [query, setQuery] = useState("");
@@ -34,18 +87,78 @@ export function KeywordsSection({ appSlug }: { appSlug: string }) {
   const searchRef = useRef<HTMLDivElement>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout>>(undefined);
 
+  // App selector state
+  const [mainApp, setMainApp] = useState<SimpleApp | null>(null);
+  const [competitors, setCompetitors] = useState<SimpleApp[]>([]);
+  const [selectedSlugs, setSelectedSlugs] = useState<Set<string>>(new Set());
+  const selectionInitialized = useRef(false);
+
+  // Sort state: which app slug to sort by ranking
+  const [sortBySlug, setSortBySlug] = useState<string>(appSlug);
+
+  // Suggestions modal state
+  const [suggestionsKeyword, setSuggestionsKeyword] = useState<{
+    slug: string;
+    keyword: string;
+  } | null>(null);
+
   const canEdit = user?.role === "owner" || user?.role === "editor";
 
+  // Ordered list of selected apps for table columns
+  const selectedApps = useMemo(() => {
+    const apps: SimpleApp[] = [];
+    if (mainApp) apps.push(mainApp);
+    for (const c of competitors) {
+      if (selectedSlugs.has(c.slug)) apps.push(c);
+    }
+    return apps;
+  }, [mainApp, competitors, selectedSlugs]);
+
+  // Build appSlugs query param
+  const appSlugsParam = useMemo(() => {
+    return selectedApps.map((a) => a.slug).join(",");
+  }, [selectedApps]);
+
+  // Sorted keywords by selected app ranking
+  const sortedKeywords = useMemo(() => {
+    if (!sortBySlug || keywords.length === 0) return keywords;
+    return [...keywords].sort((a, b) => {
+      const posA = a.rankings?.[sortBySlug];
+      const posB = b.rankings?.[sortBySlug];
+      // ranked items first (lower position = better), unranked at bottom
+      if (posA != null && posB != null) return posA - posB;
+      if (posA != null) return -1;
+      if (posB != null) return 1;
+      return 0;
+    });
+  }, [keywords, sortBySlug]);
+
+  // Load main app + competitors on mount
   useEffect(() => {
-    loadKeywords();
+    loadAppsAndKeywords();
   }, []);
 
+  // Re-fetch keywords when selection changes (after initial load)
+  useEffect(() => {
+    if (selectionInitialized.current) {
+      loadKeywords(appSlugsParam);
+    }
+  }, [appSlugsParam]);
+
+  // Persist selection to localStorage
+  useEffect(() => {
+    if (selectionInitialized.current && competitors.length > 0) {
+      localStorage.setItem(
+        `keywords-selected-${appSlug}`,
+        JSON.stringify([...selectedSlugs])
+      );
+    }
+  }, [selectedSlugs, appSlug, competitors.length]);
+
+  // Click outside handler for suggestions
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
-      if (
-        searchRef.current &&
-        !searchRef.current.contains(e.target as Node)
-      ) {
+      if (searchRef.current && !searchRef.current.contains(e.target as Node)) {
         setShowSuggestions(false);
       }
     }
@@ -53,15 +166,89 @@ export function KeywordsSection({ appSlug }: { appSlug: string }) {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  async function loadKeywords() {
+  async function loadAppsAndKeywords() {
     setLoading(true);
-    const res = await fetchWithAuth(
-      `/api/account/tracked-apps/${encodeURIComponent(appSlug)}/keywords`
-    );
+
+    // Fetch main app + competitors in parallel
+    const [appRes, compRes] = await Promise.all([
+      fetchWithAuth(`/api/apps/${encodeURIComponent(appSlug)}`),
+      fetchWithAuth(`/api/account/tracked-apps/${encodeURIComponent(appSlug)}/competitors`),
+    ]);
+
+    let main: SimpleApp | null = null;
+    let comps: SimpleApp[] = [];
+
+    if (appRes.ok) {
+      const data = await appRes.json();
+      main = { slug: data.slug, name: data.name, iconUrl: data.iconUrl };
+      setMainApp(main);
+    }
+
+    if (compRes.ok) {
+      const data = await compRes.json();
+      comps = data.map((c: any) => ({
+        slug: c.appSlug,
+        name: c.appName,
+        iconUrl: c.iconUrl,
+      }));
+      setCompetitors(comps);
+    }
+
+    // Restore selection from localStorage
+    let selected = new Set<string>();
+    try {
+      const saved = localStorage.getItem(`keywords-selected-${appSlug}`);
+      if (saved) {
+        const arr = JSON.parse(saved) as string[];
+        const validSlugs = new Set(comps.map((c) => c.slug));
+        selected = new Set(arr.filter((s) => validSlugs.has(s)));
+      }
+    } catch {}
+
+    // Default: select all competitors
+    if (selected.size === 0 && comps.length > 0) {
+      selected = new Set(comps.map((c) => c.slug));
+    }
+
+    setSelectedSlugs(selected);
+    selectionInitialized.current = true;
+
+    // Build slugs for initial fetch
+    const allSlugs = [appSlug, ...Array.from(selected)].join(",");
+    await loadKeywords(allSlugs);
+  }
+
+  async function loadKeywords(slugsParam?: string) {
+    setLoading(true);
+    let url = `/api/account/tracked-apps/${encodeURIComponent(appSlug)}/keywords`;
+    if (slugsParam) {
+      url += `?appSlugs=${encodeURIComponent(slugsParam)}`;
+    }
+    const res = await fetchWithAuth(url);
     if (res.ok) {
       setKeywords(await res.json());
     }
     setLoading(false);
+  }
+
+  function toggleCompetitor(compSlug: string) {
+    setSelectedSlugs((prev) => {
+      const next = new Set(prev);
+      if (next.has(compSlug)) {
+        next.delete(compSlug);
+      } else {
+        next.add(compSlug);
+      }
+      return next;
+    });
+  }
+
+  function toggleAll() {
+    if (selectedSlugs.size === competitors.length) {
+      setSelectedSlugs(new Set());
+    } else {
+      setSelectedSlugs(new Set(competitors.map((c) => c.slug)));
+    }
   }
 
   function handleSearchInput(value: string) {
@@ -103,7 +290,7 @@ export function KeywordsSection({ appSlug }: { appSlug: string }) {
       setQuery("");
       setSuggestions([]);
       setShowSuggestions(false);
-      loadKeywords();
+      loadKeywords(appSlugsParam);
       refreshUser();
     } else {
       const data = await res.json().catch(() => ({}));
@@ -119,7 +306,7 @@ export function KeywordsSection({ appSlug }: { appSlug: string }) {
     );
     if (res.ok) {
       setMessage(`"${keyword}" removed`);
-      loadKeywords();
+      loadKeywords(appSlugsParam);
       refreshUser();
     } else {
       const data = await res.json().catch(() => ({}));
@@ -131,6 +318,34 @@ export function KeywordsSection({ appSlug }: { appSlug: string }) {
 
   return (
     <div className="space-y-4">
+      {/* App selector bar */}
+      {competitors.length > 0 && (
+        <Card>
+          <CardContent className="pt-6">
+            <div className="flex items-center gap-3 flex-wrap pb-4">
+              {mainApp && (
+                <AppIcon app={mainApp} selected isMain />
+              )}
+              <div className="w-px h-8 bg-border" />
+              {competitors.map((c) => (
+                <AppIcon
+                  key={c.slug}
+                  app={c}
+                  selected={selectedSlugs.has(c.slug)}
+                  onClick={() => toggleCompetitor(c.slug)}
+                />
+              ))}
+              <button
+                onClick={toggleAll}
+                className="text-xs text-muted-foreground hover:text-foreground ml-2 transition-colors"
+              >
+                {selectedSlugs.size === competitors.length ? "Deselect all" : "Select all"}
+              </button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       <div className="flex items-center justify-between">
         <p className="text-sm text-muted-foreground">
           Keywords for this app
@@ -232,13 +447,31 @@ export function KeywordsSection({ appSlug }: { appSlug: string }) {
           <TableHeader>
             <TableRow>
               <TableHead>Keyword</TableHead>
+              {selectedApps.map((app) => (
+                <TableHead key={app.slug} className="text-center w-16">
+                  <button
+                    onClick={() => setSortBySlug(app.slug)}
+                    className="flex items-center justify-center gap-0.5 mx-auto"
+                    title={`Sort by ${app.name} ranking`}
+                  >
+                    {app.iconUrl ? (
+                      <img src={app.iconUrl} alt={app.name} className="h-6 w-6 rounded" />
+                    ) : (
+                      <span className="text-xs font-bold">{app.name.charAt(0)}</span>
+                    )}
+                    {sortBySlug === app.slug && (
+                      <ArrowDown className="h-3 w-3 text-muted-foreground" />
+                    )}
+                  </button>
+                </TableHead>
+              ))}
               <TableHead>Total Results</TableHead>
-              <TableHead>Last Updated</TableHead>
+              <TableHead className="w-10" />
               {canEdit && <TableHead className="w-12" />}
             </TableRow>
           </TableHeader>
           <TableBody>
-            {keywords.map((kw) => (
+            {sortedKeywords.map((kw) => (
               <TableRow key={kw.keywordId}>
                 <TableCell>
                   <Link
@@ -248,13 +481,50 @@ export function KeywordsSection({ appSlug }: { appSlug: string }) {
                     {kw.keyword}
                   </Link>
                 </TableCell>
+                {selectedApps.map((app) => {
+                  const position = kw.rankings?.[app.slug];
+                  return (
+                    <TableCell key={app.slug} className="text-center">
+                      {position != null ? (
+                        <span className="font-semibold text-sm">#{position}</span>
+                      ) : (
+                        <span className="text-muted-foreground">&mdash;</span>
+                      )}
+                    </TableCell>
+                  );
+                })}
                 <TableCell>
                   {kw.latestSnapshot?.totalResults ?? "\u2014"}
                 </TableCell>
-                <TableCell className="text-sm text-muted-foreground">
-                  {kw.latestSnapshot?.scrapedAt
-                    ? formatDateOnly(kw.latestSnapshot.scrapedAt)
-                    : "\u2014"}
+                <TableCell>
+                  <div className="flex items-center gap-0.5">
+                    {kw.hasSuggestions ? (
+                      <button
+                        onClick={() =>
+                          setSuggestionsKeyword({
+                            slug: kw.keywordSlug,
+                            keyword: kw.keyword,
+                          })
+                        }
+                        title={`Suggestions for "${kw.keyword}"`}
+                        className="inline-flex items-center justify-center h-8 w-8 rounded-md hover:bg-accent transition-colors"
+                      >
+                        <Lightbulb className="h-4 w-4 text-yellow-500" />
+                      </button>
+                    ) : (
+                      <span className="inline-flex h-8 w-8" />
+                    )}
+                    <LiveSearchTrigger keyword={kw.keyword} variant="icon" />
+                    <a
+                      href={`https://apps.shopify.com/search?q=${encodeURIComponent(kw.keyword)}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      title={`Search "${kw.keyword}" on Shopify`}
+                      className="inline-flex items-center justify-center h-8 w-8 rounded-md hover:bg-accent transition-colors"
+                    >
+                      <ExternalLink className="h-4 w-4 text-muted-foreground" />
+                    </a>
+                  </div>
                 </TableCell>
                 {canEdit && (
                   <TableCell>
@@ -291,6 +561,20 @@ export function KeywordsSection({ appSlug }: { appSlug: string }) {
         }}
         onCancel={() => setConfirmRemove(null)}
       />
+
+      {suggestionsKeyword && (
+        <KeywordSuggestionsModal
+          keywordSlug={suggestionsKeyword.slug}
+          keyword={suggestionsKeyword.keyword}
+          appSlug={appSlug}
+          open={!!suggestionsKeyword}
+          onClose={() => setSuggestionsKeyword(null)}
+          onKeywordAdded={() => {
+            loadKeywords(appSlugsParam);
+            refreshUser();
+          }}
+        />
+      )}
     </div>
   );
 }

@@ -126,6 +126,10 @@ export function getKeywordAds(slug: string, days = 30) {
   return fetchApi<any>(`/api/keywords/${slug}/ads?days=${days}`);
 }
 
+export function getKeywordSuggestions(slug: string) {
+  return fetchApi<{ suggestions: string[]; scrapedAt: string | null }>(`/api/keywords/${slug}/suggestions`);
+}
+
 export function searchKeywords(q: string) {
   return fetchApi<any[]>(`/api/keywords/search?q=${encodeURIComponent(q)}`);
 }

@@ -20,6 +20,8 @@ import {
   accountTrackedFeatures,
   categories,
   categorySnapshots,
+  appKeywordRankings,
+  keywordAutoSuggestions,
 } from "@shopify-tracking/db";
 import { requireRole } from "../middleware/authorize.js";
 
@@ -1248,12 +1250,13 @@ export const accountRoutes: FastifyPluginAsync = async (app) => {
     }
   );
 
-  // GET /api/account/tracked-apps/:slug/keywords
-  app.get<{ Params: { slug: string } }>(
+  // GET /api/account/tracked-apps/:slug/keywords?appSlugs=slug1,slug2
+  app.get<{ Params: { slug: string }; Querystring: { appSlugs?: string } }>(
     "/tracked-apps/:slug/keywords",
     async (request, reply) => {
       const { accountId } = request.user;
       const slug = decodeURIComponent(request.params.slug);
+      const { appSlugs: appSlugsParam } = request.query;
 
       // Verify tracked app belongs to this account
       const [trackedApp] = await db
@@ -1308,7 +1311,56 @@ export const accountRoutes: FastifyPluginAsync = async (app) => {
         })
       );
 
-      return result;
+      // Optionally enrich with latest ranking position per app
+      const slugList = appSlugsParam?.split(",").filter(Boolean) || [];
+      const keywordIds = rows.map((r) => r.keywordId);
+
+      // Check which keywords have auto-suggestions
+      let suggestionSet = new Set<number>();
+      if (keywordIds.length > 0) {
+        const suggRows = await db
+          .select({ keywordId: keywordAutoSuggestions.keywordId })
+          .from(keywordAutoSuggestions)
+          .where(and(
+            inArray(keywordAutoSuggestions.keywordId, keywordIds),
+            sql`jsonb_array_length(${keywordAutoSuggestions.suggestions}) > 0`
+          ));
+        suggestionSet = new Set(suggRows.map((r) => r.keywordId));
+      }
+
+      if (slugList.length > 0 && keywordIds.length > 0) {
+        const slugSql = sql.join(slugList.map((s) => sql`${s}`), sql`, `);
+        const idSql = sql.join(keywordIds.map((id) => sql`${id}`), sql`, `);
+        const rawResult = await db.execute(sql`
+            SELECT DISTINCT ON (app_slug, keyword_id)
+              app_slug, keyword_id, position
+            FROM app_keyword_rankings
+            WHERE app_slug IN (${slugSql})
+              AND keyword_id IN (${idSql})
+            ORDER BY app_slug, keyword_id, scraped_at DESC
+          `);
+        const rankingRows: any[] = (rawResult as any).rows ?? rawResult;
+
+        // Build lookup: appSlug -> keywordId -> position
+        const lookup = new Map<string, Map<number, number | null>>();
+        for (const r of rankingRows) {
+          if (!lookup.has(r.app_slug)) lookup.set(r.app_slug, new Map());
+          lookup.get(r.app_slug)!.set(r.keyword_id, r.position);
+        }
+
+        return result.map((row) => ({
+          ...row,
+          hasSuggestions: suggestionSet.has(row.keywordId),
+          rankings: Object.fromEntries(
+            slugList.map((s) => [s, lookup.get(s)?.get(row.keywordId) ?? null])
+          ),
+        }));
+      }
+
+      return result.map((row) => ({
+        ...row,
+        hasSuggestions: suggestionSet.has(row.keywordId),
+      }));
     }
   );
 

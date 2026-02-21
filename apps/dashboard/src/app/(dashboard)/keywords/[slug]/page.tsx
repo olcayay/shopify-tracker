@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { formatDateOnly } from "@/lib/format-date";
-import { getKeyword, getKeywordRankings, getKeywordAds, getAccountCompetitors, getAccountTrackedApps, getAppsLastChanges, getAppsMinPaidPrices } from "@/lib/api";
+import { getKeyword, getKeywordRankings, getKeywordAds, getKeywordSuggestions, getAccountCompetitors, getAccountTrackedApps, getAppsLastChanges, getAppsMinPaidPrices } from "@/lib/api";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -19,6 +19,7 @@ import { LiveSearchTrigger } from "@/components/live-search-trigger";
 import { AdminScraperTrigger } from "@/components/admin-scraper-trigger";
 import { KeywordAppResults } from "./app-results";
 import { AdHeatmap } from "@/components/ad-heatmap";
+import { KeywordSuggestionsTrigger } from "@/components/keyword-suggestions-trigger";
 
 export default async function KeywordDetailPage({
   params,
@@ -32,13 +33,15 @@ export default async function KeywordDetailPage({
   let adData: any;
   let competitors: any[] = [];
   let trackedApps: any[] = [];
+  let suggestions: { suggestions: string[]; scrapedAt: string | null } = { suggestions: [], scrapedAt: null };
   try {
-    [keyword, rankings, adData, competitors, trackedApps] = await Promise.all([
+    [keyword, rankings, adData, competitors, trackedApps, suggestions] = await Promise.all([
       getKeyword(slug),
       getKeywordRankings(slug, 30, "account"),
       getKeywordAds(slug),
       getAccountCompetitors().catch(() => []),
       getAccountTrackedApps().catch(() => []),
+      getKeywordSuggestions(slug).catch(() => ({ suggestions: [], scrapedAt: null })),
     ]);
   } catch {
     return <p className="text-muted-foreground">Keyword not found.</p>;
@@ -94,6 +97,13 @@ export default async function KeywordDetailPage({
           </p>
         </div>
         <div className="flex items-center gap-2">
+          {suggestions.suggestions.length > 0 && (
+            <KeywordSuggestionsTrigger
+              keywordSlug={slug}
+              keyword={keyword.keyword}
+              appSlug={keyword.trackedForApps?.[0] || ""}
+            />
+          )}
           <LiveSearchTrigger keyword={keyword.keyword} />
           <a
             href={`https://apps.shopify.com/search?q=${encodeURIComponent(keyword.keyword)}`}

@@ -85,6 +85,25 @@ export const appKeywordRankings = pgTable(
   ]
 );
 
+export const keywordAutoSuggestions = pgTable(
+  "keyword_auto_suggestions",
+  {
+    id: serial("id").primaryKey(),
+    keywordId: integer("keyword_id")
+      .notNull()
+      .references(() => trackedKeywords.id),
+    suggestions: jsonb("suggestions")
+      .$type<string[]>()
+      .notNull()
+      .default([]),
+    scrapedAt: timestamp("scraped_at").notNull().defaultNow(),
+    scrapeRunId: uuid("scrape_run_id").references(() => scrapeRuns.id),
+  },
+  (table) => [
+    uniqueIndex("idx_kw_auto_suggestions_kw").on(table.keywordId),
+  ]
+);
+
 export const keywordAdSightings = pgTable(
   "keyword_ad_sightings",
   {

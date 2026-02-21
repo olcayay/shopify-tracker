@@ -8,6 +8,7 @@ import { QUEUE_NAME, getRedisConnection, enqueueScraperJob, type ScraperJobData 
 import { CategoryScraper } from "./scrapers/category-scraper.js";
 import { AppDetailsScraper } from "./scrapers/app-details-scraper.js";
 import { KeywordScraper } from "./scrapers/keyword-scraper.js";
+import { KeywordSuggestionScraper } from "./scrapers/keyword-suggestion-scraper.js";
 import { ReviewScraper } from "./scrapers/review-scraper.js";
 import { HttpClient } from "./http-client.js";
 
@@ -146,6 +147,49 @@ async function processJob(job: Job<ScraperJobData>): Promise<void> {
           });
         }
         log.info("cascaded app_details jobs", { count: uniqueSlugs.length });
+      }
+
+      // Cascade: enqueue keyword_suggestions job
+      await enqueueScraperJob({
+        type: "keyword_suggestions",
+        triggeredBy: `${triggeredBy}:cascade`,
+      });
+      log.info("cascaded keyword_suggestions job");
+      break;
+    }
+
+    case "keyword_suggestions": {
+      const suggestionScraper = new KeywordSuggestionScraper(db, httpClient);
+      if (job.data.keyword) {
+        // Single keyword suggestion scrape
+        const { eq } = await import("drizzle-orm");
+        const { trackedKeywords, scrapeRuns } = await import("@shopify-tracking/db");
+        const [kw] = await db
+          .select()
+          .from(trackedKeywords)
+          .where(eq(trackedKeywords.keyword, job.data.keyword))
+          .limit(1);
+        if (kw) {
+          const [run] = await db
+            .insert(scrapeRuns)
+            .values({
+              scraperType: "keyword_suggestions",
+              status: "running",
+              startedAt: new Date(),
+              triggeredBy,
+            })
+            .returning();
+          await suggestionScraper.scrapeSuggestions(kw.id, kw.keyword, run.id);
+          await db
+            .update(scrapeRuns)
+            .set({ status: "completed", completedAt: new Date(), metadata: { items_scraped: 1, items_failed: 0 } })
+            .where(eq(scrapeRuns.id, run.id));
+          log.info("single keyword suggestion scrape completed", { keyword: kw.keyword });
+        } else {
+          log.warn("keyword not found for suggestion scrape", { keyword: job.data.keyword });
+        }
+      } else {
+        await suggestionScraper.scrapeAll(triggeredBy);
       }
       break;
     }

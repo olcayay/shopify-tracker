@@ -45,6 +45,7 @@ export {
   keywordSnapshots,
   appKeywordRankings,
   keywordAdSightings,
+  keywordAutoSuggestions,
   keywordToSlug,
 } from "./schema/keywords.js";
 export {

@@ -20,4 +20,8 @@ export const urls = {
   /** Keyword search: /search?q=form */
   search: (keyword: string, page = 1) =>
     `${BASE_URL}/search?q=${encodeURIComponent(keyword)}&st_source=autocomplete&page=${page}`,
+
+  /** Autocomplete suggestions: /search/autocomplete?q=form */
+  autocomplete: (keyword: string) =>
+    `${BASE_URL}/search/autocomplete?q=${encodeURIComponent(keyword)}`,
 } as const;
