@@ -14,8 +14,11 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { X, Plus, Search } from "lucide-react";
+import { X, Plus, Search, ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
 import { ConfirmModal } from "@/components/confirm-modal";
+
+type SortKey = "name" | "rating" | "reviews" | "pricing" | "minPaidPrice" | "launchedDate" | "lastChange";
+type SortDir = "asc" | "desc";
 
 export function CompetitorsSection({ appSlug }: { appSlug: string }) {
   const { fetchWithAuth, user, account, refreshUser } = useAuth();
@@ -34,6 +37,8 @@ export function CompetitorsSection({ appSlug }: { appSlug: string }) {
   } | null>(null);
   const searchRef = useRef<HTMLDivElement>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout>>(undefined);
+  const [sortKey, setSortKey] = useState<SortKey>("name");
+  const [sortDir, setSortDir] = useState<SortDir>("asc");
 
   const canEdit = user?.role === "owner" || user?.role === "editor";
 
@@ -137,6 +142,55 @@ export function CompetitorsSection({ appSlug }: { appSlug: string }) {
     }
   }
 
+  function sortedCompetitors() {
+    return [...competitors].sort((a, b) => {
+      let cmp = 0;
+      switch (sortKey) {
+        case "name":
+          cmp = (a.appName || a.appSlug).localeCompare(b.appName || b.appSlug);
+          break;
+        case "rating":
+          cmp = (a.latestSnapshot?.averageRating ?? 0) - (b.latestSnapshot?.averageRating ?? 0);
+          break;
+        case "reviews":
+          cmp = (a.latestSnapshot?.ratingCount ?? 0) - (b.latestSnapshot?.ratingCount ?? 0);
+          break;
+        case "pricing":
+          cmp = (a.latestSnapshot?.pricing || "").localeCompare(b.latestSnapshot?.pricing || "");
+          break;
+        case "minPaidPrice":
+          cmp = (a.minPaidPrice ?? 0) - (b.minPaidPrice ?? 0);
+          break;
+        case "launchedDate":
+          cmp = (a.launchedDate || "").localeCompare(b.launchedDate || "");
+          break;
+        case "lastChange":
+          cmp = (lastChanges[a.appSlug] || "").localeCompare(lastChanges[b.appSlug] || "");
+          break;
+      }
+      return sortDir === "asc" ? cmp : -cmp;
+    });
+  }
+
+  function toggleSort(key: SortKey) {
+    if (sortKey === key) {
+      setSortDir((d) => (d === "asc" ? "desc" : "asc"));
+    } else {
+      setSortKey(key);
+      setSortDir(key === "name" ? "asc" : "desc");
+    }
+  }
+
+  function SortIcon({ col }: { col: SortKey }) {
+    if (sortKey !== col)
+      return <ArrowUpDown className="inline h-3.5 w-3.5 ml-1 opacity-40" />;
+    return sortDir === "asc" ? (
+      <ArrowUp className="inline h-3.5 w-3.5 ml-1" />
+    ) : (
+      <ArrowDown className="inline h-3.5 w-3.5 ml-1" />
+    );
+  }
+
   const competitorSlugs = new Set(competitors.map((c) => c.appSlug));
 
   return (
@@ -226,18 +280,32 @@ export function CompetitorsSection({ appSlug }: { appSlug: string }) {
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>App</TableHead>
-              <TableHead>Rating</TableHead>
-              <TableHead>Reviews</TableHead>
-              <TableHead>Pricing</TableHead>
-              <TableHead>Min. Paid</TableHead>
-              <TableHead>Launched</TableHead>
-              <TableHead>Last Change</TableHead>
+              <TableHead className="cursor-pointer select-none" onClick={() => toggleSort("name")}>
+                App <SortIcon col="name" />
+              </TableHead>
+              <TableHead className="cursor-pointer select-none" onClick={() => toggleSort("rating")}>
+                Rating <SortIcon col="rating" />
+              </TableHead>
+              <TableHead className="cursor-pointer select-none" onClick={() => toggleSort("reviews")}>
+                Reviews <SortIcon col="reviews" />
+              </TableHead>
+              <TableHead className="cursor-pointer select-none" onClick={() => toggleSort("pricing")}>
+                Pricing <SortIcon col="pricing" />
+              </TableHead>
+              <TableHead className="cursor-pointer select-none" onClick={() => toggleSort("minPaidPrice")}>
+                Min. Paid <SortIcon col="minPaidPrice" />
+              </TableHead>
+              <TableHead className="cursor-pointer select-none" onClick={() => toggleSort("launchedDate")}>
+                Launched <SortIcon col="launchedDate" />
+              </TableHead>
+              <TableHead className="cursor-pointer select-none" onClick={() => toggleSort("lastChange")}>
+                Last Change <SortIcon col="lastChange" />
+              </TableHead>
               {canEdit && <TableHead className="w-12" />}
             </TableRow>
           </TableHeader>
           <TableBody>
-            {competitors.map((comp) => (
+            {sortedCompetitors().map((comp) => (
               <TableRow key={comp.appSlug}>
                 <TableCell>
                   <div className="flex items-center gap-2">
