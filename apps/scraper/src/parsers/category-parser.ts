@@ -331,9 +331,47 @@ function extractPricingHint(
   const pricingSpan = $card.find("span.tw-overflow-hidden.tw-whitespace-nowrap.tw-text-ellipsis");
   if (pricingSpan.length > 0) {
     const text = pricingSpan.first().text().trim();
-    if (text.length > 0) return text;
+    if (text.length > 0) return normalizePricingHint(text);
   }
   return "";
+}
+
+/**
+ * Normalize non-English Shopify pricing hints to English.
+ * Shopify uses a fixed set of pricing hint templates that get translated
+ * per app listing locale. We detect the pattern and map to English.
+ */
+function normalizePricingHint(text: string): string {
+  // Already English or contains price — return as-is
+  if (/^(Free|From |\$|£|€)/.test(text)) return text;
+
+  // Keyword-based detection for non-English pricing hints.
+  // Shopify translates its ~5 pricing templates into each locale.
+  const t = text.toLowerCase();
+
+  // "Free to install" pattern (check before generic "free" — more specific)
+  if (/インストール|安装|설치|installa|instalar|installer|installier/i.test(text)) {
+    return "Free to install";
+  }
+  // "Free trial available" pattern
+  if (/体験|试用|체험|trial|essai|prueba|prova|Testversion|deneme/i.test(text)) {
+    return "Free trial available";
+  }
+  // "Free plan available" pattern
+  if (/プラン|计划|플랜|plan|forfait|Tarif/i.test(text)) {
+    return "Free plan available";
+  }
+  // Generic "Free" — standalone free word in any language
+  if (/^(無料|免费|무료|Kostenlos|Gratuit|Gratis|Gratuito|Ücretsiz|Бесплатно)$/i.test(text)) {
+    return "Free";
+  }
+
+  // Contains a currency/price pattern in any locale (¥, ₩, etc.)
+  if (/[$€£¥₩₹]|\/月|\/Monat|\/mois|\/mes|\/mese|\/ay/i.test(text)) {
+    return text; // Keep original — it's a localized price like "¥980/月"
+  }
+
+  return text;
 }
 
 // --- Metrics computation ---
