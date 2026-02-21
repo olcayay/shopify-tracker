@@ -22,6 +22,7 @@ import {
   categorySnapshots,
   appKeywordRankings,
   keywordAutoSuggestions,
+  featuredAppSightings,
 } from "@shopify-tracking/db";
 import { requireRole } from "../middleware/authorize.js";
 
@@ -1073,6 +1074,33 @@ export const accountRoutes: FastifyPluginAsync = async (app) => {
           )
         );
 
+      // Batch-fetch featured section counts (last 30 days)
+      const competitorSlugs = rows.map((r) => r.appSlug);
+      const featuredSince = new Date();
+      featuredSince.setDate(featuredSince.getDate() - 30);
+      const featuredSinceStr = featuredSince.toISOString().slice(0, 10);
+
+      const featuredCountMap = new Map<string, number>();
+      if (competitorSlugs.length > 0) {
+        const featuredCounts = await db
+          .select({
+            appSlug: featuredAppSightings.appSlug,
+            sectionCount: sql<number>`count(distinct ${featuredAppSightings.surface} || ':' || ${featuredAppSightings.surfaceDetail} || ':' || ${featuredAppSightings.sectionHandle})`,
+          })
+          .from(featuredAppSightings)
+          .where(
+            and(
+              inArray(featuredAppSightings.appSlug, competitorSlugs),
+              sql`${featuredAppSightings.seenDate} >= ${featuredSinceStr}`
+            )
+          )
+          .groupBy(featuredAppSightings.appSlug);
+
+        for (const fc of featuredCounts) {
+          featuredCountMap.set(fc.appSlug, fc.sectionCount);
+        }
+      }
+
       const result = await Promise.all(
         rows.map(async (row) => {
           const [snapshot] = await db
@@ -1100,6 +1128,7 @@ export const accountRoutes: FastifyPluginAsync = async (app) => {
             latestSnapshot: snapshot ? snapshotRest : null,
             minPaidPrice,
             lastChangeAt: change?.detectedAt || null,
+            featuredSections: featuredCountMap.get(row.appSlug) ?? 0,
           };
         })
       );

@@ -17,7 +17,7 @@ import {
 import { X, Plus, Search, ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
 import { ConfirmModal } from "@/components/confirm-modal";
 
-type SortKey = "name" | "rating" | "reviews" | "pricing" | "minPaidPrice" | "launchedDate" | "lastChange";
+type SortKey = "name" | "rating" | "reviews" | "pricing" | "minPaidPrice" | "launchedDate" | "lastChange" | "featured";
 type SortDir = "asc" | "desc";
 
 export function CompetitorsSection({ appSlug }: { appSlug: string }) {
@@ -167,6 +167,9 @@ export function CompetitorsSection({ appSlug }: { appSlug: string }) {
         case "lastChange":
           cmp = (lastChanges[a.appSlug] || "").localeCompare(lastChanges[b.appSlug] || "");
           break;
+        case "featured":
+          cmp = (a.featuredSections ?? 0) - (b.featuredSections ?? 0);
+          break;
       }
       return sortDir === "asc" ? cmp : -cmp;
     });
@@ -298,6 +301,9 @@ export function CompetitorsSection({ appSlug }: { appSlug: string }) {
               <TableHead className="cursor-pointer select-none" onClick={() => toggleSort("launchedDate")}>
                 Launched <SortIcon col="launchedDate" />
               </TableHead>
+              <TableHead className="cursor-pointer select-none" onClick={() => toggleSort("featured")}>
+                Featured <SortIcon col="featured" />
+              </TableHead>
               <TableHead className="cursor-pointer select-none" onClick={() => toggleSort("lastChange")}>
                 Last Change <SortIcon col="lastChange" />
               </TableHead>
@@ -347,6 +353,18 @@ export function CompetitorsSection({ appSlug }: { appSlug: string }) {
                   {comp.launchedDate
                     ? formatDateOnly(comp.launchedDate)
                     : "\u2014"}
+                </TableCell>
+                <TableCell className="text-sm">
+                  {comp.featuredSections > 0 ? (
+                    <Link
+                      href={`/apps/${comp.appSlug}/featured`}
+                      className="text-primary hover:underline"
+                    >
+                      {comp.featuredSections}
+                    </Link>
+                  ) : (
+                    <span className="text-muted-foreground">{"\u2014"}</span>
+                  )}
                 </TableCell>
                 <TableCell className="text-sm text-muted-foreground">
                   {lastChanges[comp.appSlug]
