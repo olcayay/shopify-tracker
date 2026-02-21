@@ -374,22 +374,21 @@ ana sayfada
 
 
 
-her bir app sayfanın altında More apps like this alanı var. Bunları da çekip similar apps gibi bir alanda app sayfasında gösterebiliriz. Eğer bu app'ler zamanla değişişiyorsa bunu historical (/keywords/<slug> sayfasında ad history için yaptığımız gibi) olarak da gösterebiliriz.
+DONE: Similar Apps feature - /apps/<slug>/similar sayfası oluşturuldu.
+- similar_app_sightings tablosu (historical, heatmap pattern)
+- parseSimilarApps() parser (Shopify "More apps like this" section)
+- app-details-scraper her scrape'de similar app'leri kaydediyor
+- GET /api/apps/:slug/similar-apps endpoint (direct, reverse, 2nd degree)
+- Dashboard: 3 section (Direct, Reverse, 2nd Degree) heatmap ile
+- Deep scrape: jotform rakiplerinin ve onların similar app'leri çekildi (69 sighting)
 
-similar applerin similar applerini de gösterebiliriz.
-
-Ayrıca bizim app'imiz hangi applerin similar appleri listesinde çıkıyor. Bu bilgiye kullanıcının shopify'da erişmesi çok zor.
-
-bu yeni sayfada hem de 3 şey görmek istiyorum. bu appin similar app'leri neler? similar applerin similarları neler? bu app hangi app'lerin similar app'lerinde çıkıyor.
 
 
-
-auto suggestion
-https://apps.shopify.com/ sayfasındaki search apps alanında birşeyler aramak istediğimizde shopify bize neler öneriyor. sadece keyword suggestionlar olacak. kategori, feature ve guide suggestionları olmayacak.
-
-apps/<slug>/keywords sayfasındaki tabloda her bir keyword için bir ampül ikonu olacak kullanıcı buna tıkladığında bir modal içinde bir liste açılacak ve keyword shopify'da aratıldığında hangi keywordleri suggest ettiğinin listesi gösterilecek. kullancı isterse bu listedeki + ikonuna basarak bu keywordleri kendi listesine ekleyecek.
-
-artık her bir keyword scrapper işlemi sırasında auto suggestionları çekme işlemi de yapılacak.
+DONE: Auto Suggestion
+- keyword_auto_suggestions tablosu ve scraper
+- Keywords tablosunda ampül ikonu (sadece suggestion varsa)
+- Keyword detay sayfasında da ampül ikonu
+- Suggestion modal: keyword'e tıklayınca suggestion listesi, + ile ekleme
 
 
 

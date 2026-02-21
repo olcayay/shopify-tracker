@@ -508,3 +508,58 @@ function extractPlanName(text: string): string {
   const firstWord = text.split(/[\s,]/)[0];
   return firstWord.length < 30 ? firstWord : "Plan";
 }
+
+// --- Similar Apps ("More apps like this") ---
+
+export interface SimilarApp {
+  slug: string;
+  name: string;
+  icon_url: string;
+  position?: number;
+}
+
+/**
+ * Parse the "More apps like this" section from an app detail page.
+ * App cards use data-controller="app-card" with standard data attributes.
+ */
+export function parseSimilarApps(html: string): SimilarApp[] {
+  const $ = cheerio.load(html);
+  const result: SimilarApp[] = [];
+  const seenSlugs = new Set<string>();
+
+  // Find the "More apps like this" heading and its parent section
+  const h2s = $("h2");
+  let sectionEl: ReturnType<typeof $> | null = null;
+
+  for (let i = 0; i < h2s.length; i++) {
+    const text = $(h2s[i]).text().trim();
+    if (text.startsWith("More apps like this")) {
+      const parent = $(h2s[i]).closest("section, [class*='tw-grid']").parent();
+      sectionEl = parent.length > 0 ? parent : $(h2s[i]).parent().parent();
+      break;
+    }
+  }
+
+  if (!sectionEl) return result;
+
+  sectionEl.find('[data-controller="app-card"]').each((_, el) => {
+    const $card = $(el);
+    const slug = $card.attr("data-app-card-handle-value") || "";
+    const name = ($card.attr("data-app-card-name-value") || "").trim();
+    const iconUrl = $card.attr("data-app-card-icon-url-value") || "";
+    const intraPosition = $card.attr("data-app-card-intra-position-value");
+
+    if (!slug || !name) return;
+    if (seenSlugs.has(slug)) return;
+    seenSlugs.add(slug);
+
+    result.push({
+      slug,
+      name,
+      icon_url: iconUrl,
+      position: intraPosition ? parseInt(intraPosition, 10) : undefined,
+    });
+  });
+
+  return result;
+}

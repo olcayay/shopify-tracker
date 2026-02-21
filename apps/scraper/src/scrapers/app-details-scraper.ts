@@ -1,11 +1,11 @@
-import { eq, desc } from "drizzle-orm";
+import { eq, desc, sql } from "drizzle-orm";
 import type { Database } from "@shopify-tracking/db";
-import { scrapeRuns, apps, appSnapshots, appFieldChanges } from "@shopify-tracking/db";
+import { scrapeRuns, apps, appSnapshots, appFieldChanges, similarAppSightings } from "@shopify-tracking/db";
 import { urls, createLogger } from "@shopify-tracking/shared";
 
 const log = createLogger("app-details-scraper");
 import { HttpClient } from "../http-client.js";
-import { parseAppPage } from "../parsers/app-parser.js";
+import { parseAppPage, parseSimilarApps } from "../parsers/app-parser.js";
 
 export class AppDetailsScraper {
   private db: Database;
@@ -192,6 +192,56 @@ export class AppDetailsScraper {
         pricingPlans: details.pricing_plans,
         support: details.support,
       });
+
+      // Record similar apps ("More apps like this")
+      const similarApps = parseSimilarApps(html);
+      if (similarApps.length > 0) {
+        const todayStr = new Date().toISOString().slice(0, 10);
+        for (const similar of similarApps) {
+          // Ensure similar app exists in apps table
+          await this.db
+            .insert(apps)
+            .values({
+              slug: similar.slug,
+              name: similar.name,
+              iconUrl: similar.icon_url || null,
+            })
+            .onConflictDoUpdate({
+              target: apps.slug,
+              set: {
+                name: similar.name,
+                iconUrl: similar.icon_url || undefined,
+                updatedAt: new Date(),
+              },
+            });
+
+          // Upsert sighting (one per appSlug + similarAppSlug + date)
+          await this.db
+            .insert(similarAppSightings)
+            .values({
+              appSlug: slug,
+              similarAppSlug: similar.slug,
+              position: similar.position ?? null,
+              seenDate: todayStr,
+              firstSeenRunId: runId!,
+              lastSeenRunId: runId!,
+              timesSeenInDay: 1,
+            })
+            .onConflictDoUpdate({
+              target: [
+                similarAppSightings.appSlug,
+                similarAppSightings.similarAppSlug,
+                similarAppSightings.seenDate,
+              ],
+              set: {
+                lastSeenRunId: runId!,
+                position: similar.position ?? null,
+                timesSeenInDay: sql`${similarAppSightings.timesSeenInDay} + 1`,
+              },
+            });
+        }
+        log.info("recorded similar apps", { slug, count: similarApps.length });
+      }
 
       // Complete the run in standalone mode
       if (isStandalone) {

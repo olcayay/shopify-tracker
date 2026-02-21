@@ -14,6 +14,7 @@ import {
   accountTrackedApps,
   accountCompetitorApps,
   accountTrackedKeywords,
+  similarAppSightings,
 } from "@shopify-tracking/db";
 
 type Db = ReturnType<typeof createDb>;
@@ -546,6 +547,101 @@ export const appRoutes: FastifyPluginAsync = async (app) => {
         .where(eq(appFieldChanges.appSlug, slug))
         .orderBy(desc(appFieldChanges.detectedAt))
         .limit(maxLimit);
+    }
+  );
+
+  // GET /api/apps/:slug/similar-apps — direct, reverse, 2nd degree similar apps
+  app.get<{ Params: { slug: string } }>(
+    "/:slug/similar-apps",
+    async (request, reply) => {
+      const { slug } = request.params;
+      const { days = "30" } = request.query as { days?: string };
+
+      const [appRow] = await db
+        .select({ slug: apps.slug, name: apps.name, iconUrl: apps.iconUrl })
+        .from(apps)
+        .where(eq(apps.slug, slug))
+        .limit(1);
+
+      if (!appRow) {
+        return reply.code(404).send({ error: "App not found" });
+      }
+
+      const since = new Date();
+      since.setDate(since.getDate() - parseInt(days, 10));
+      const sinceStr = since.toISOString().slice(0, 10);
+
+      // DIRECT: apps in this app's "More apps like this"
+      const direct = await db
+        .select({
+          slug: similarAppSightings.similarAppSlug,
+          name: apps.name,
+          iconUrl: apps.iconUrl,
+          seenDate: similarAppSightings.seenDate,
+          timesSeenInDay: similarAppSightings.timesSeenInDay,
+          position: similarAppSightings.position,
+        })
+        .from(similarAppSightings)
+        .innerJoin(apps, eq(apps.slug, similarAppSightings.similarAppSlug))
+        .where(
+          and(
+            eq(similarAppSightings.appSlug, slug),
+            sql`${similarAppSightings.seenDate} >= ${sinceStr}`
+          )
+        )
+        .orderBy(desc(similarAppSightings.seenDate));
+
+      // REVERSE: apps that list THIS app as similar
+      const reverse = await db
+        .select({
+          slug: similarAppSightings.appSlug,
+          name: apps.name,
+          iconUrl: apps.iconUrl,
+          seenDate: similarAppSightings.seenDate,
+          timesSeenInDay: similarAppSightings.timesSeenInDay,
+          position: similarAppSightings.position,
+        })
+        .from(similarAppSightings)
+        .innerJoin(apps, eq(apps.slug, similarAppSightings.appSlug))
+        .where(
+          and(
+            eq(similarAppSightings.similarAppSlug, slug),
+            sql`${similarAppSightings.seenDate} >= ${sinceStr}`
+          )
+        )
+        .orderBy(desc(similarAppSightings.seenDate));
+
+      // 2ND DEGREE: similar apps of direct similar apps (excluding self + directs)
+      const directSlugs = [...new Set(direct.map((d) => d.slug))];
+      let secondDegree: typeof direct = [];
+
+      if (directSlugs.length > 0) {
+        const excludeSlugs = [slug, ...directSlugs];
+        secondDegree = await db
+          .select({
+            slug: similarAppSightings.similarAppSlug,
+            name: apps.name,
+            iconUrl: apps.iconUrl,
+            seenDate: similarAppSightings.seenDate,
+            timesSeenInDay: similarAppSightings.timesSeenInDay,
+            position: similarAppSightings.position,
+          })
+          .from(similarAppSightings)
+          .innerJoin(apps, eq(apps.slug, similarAppSightings.similarAppSlug))
+          .where(
+            and(
+              inArray(similarAppSightings.appSlug, directSlugs),
+              sql`${similarAppSightings.seenDate} >= ${sinceStr}`,
+              sql`${similarAppSightings.similarAppSlug} NOT IN (${sql.join(
+                excludeSlugs.map((s) => sql`${s}`),
+                sql`, `
+              )})`
+            )
+          )
+          .orderBy(desc(similarAppSightings.seenDate));
+      }
+
+      return { app: appRow, direct, reverse, secondDegree };
     }
   );
 };

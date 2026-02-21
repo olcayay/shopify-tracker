@@ -78,6 +78,10 @@ export const getAppChanges = cache((slug: string, limit = 50) => {
   return fetchApi<any[]>(`/api/apps/${slug}/changes?limit=${limit}`);
 });
 
+export const getAppSimilarApps = cache((slug: string, days = 30) => {
+  return fetchApi<any>(`/api/apps/${slug}/similar-apps?days=${days}`);
+});
+
 export function getAppsLastChanges(slugs: string[]) {
   if (slugs.length === 0) return Promise.resolve({} as Record<string, string>);
   return fetchApi<Record<string, string>>(`/api/apps/last-changes`, {
