@@ -26,6 +26,7 @@ import {
   keywordAdSightings,
   keywordTags,
   keywordTagAssignments,
+  appCategoryRankings,
 } from "@shopify-tracking/db";
 import { requireRole } from "../middleware/authorize.js";
 
@@ -852,6 +853,46 @@ export const accountRoutes: FastifyPluginAsync = async (app) => {
       }
     }
 
+    // Ad keyword counts (last 30 days)
+    const adKeywordMap = new Map<string, number>();
+    const adSinceStr = new Date(Date.now() - 30 * 86400000).toISOString().slice(0, 10);
+    if (competitorSlugs.length > 0) {
+      const adCounts = await db
+        .select({
+          appSlug: keywordAdSightings.appSlug,
+          count: sql<number>`count(distinct ${keywordAdSightings.keywordId})`,
+        })
+        .from(keywordAdSightings)
+        .where(
+          and(
+            inArray(keywordAdSightings.appSlug, competitorSlugs),
+            sql`${keywordAdSightings.seenDate} >= ${adSinceStr}`
+          )
+        )
+        .groupBy(keywordAdSightings.appSlug);
+      for (const ac of adCounts) {
+        adKeywordMap.set(ac.appSlug, ac.count);
+      }
+    }
+
+    // Latest category rankings for each competitor
+    const categoryRankingMap = new Map<string, { categorySlug: string; categoryTitle: string; position: number }[]>();
+    if (competitorSlugs.length > 0) {
+      const catRankRows: any[] = await db.execute(sql`
+        SELECT DISTINCT ON (r.app_slug, r.category_slug)
+          r.app_slug, r.category_slug, c.title AS category_title, r.position
+        FROM app_category_rankings r
+        JOIN categories c ON c.slug = r.category_slug
+        WHERE r.app_slug IN (${sql.join(competitorSlugs.map((s) => sql`${s}`), sql`, `)})
+        ORDER BY r.app_slug, r.category_slug, r.scraped_at DESC
+      `).then((res: any) => (res as any).rows ?? res);
+      for (const r of catRankRows) {
+        const arr = categoryRankingMap.get(r.app_slug) ?? [];
+        arr.push({ categorySlug: r.category_slug, categoryTitle: r.category_title, position: r.position });
+        categoryRankingMap.set(r.app_slug, arr);
+      }
+    }
+
     // Attach latest snapshot summary for each competitor
     const result = await Promise.all(
       rows.map(async (row) => {
@@ -861,6 +902,7 @@ export const accountRoutes: FastifyPluginAsync = async (app) => {
             ratingCount: appSnapshots.ratingCount,
             pricing: appSnapshots.pricing,
             pricingPlans: appSnapshots.pricingPlans,
+            categories: appSnapshots.categories,
           })
           .from(appSnapshots)
           .where(eq(appSnapshots.appSlug, row.appSlug))
@@ -873,7 +915,8 @@ export const accountRoutes: FastifyPluginAsync = async (app) => {
           .where(sql`app_slug = ${row.appSlug}`);
 
         const minPaidPrice = getMinPaidPrice(snapshot?.pricingPlans);
-        const { pricingPlans: _, ...snapshotRest } = snapshot || ({} as any);
+        const { pricingPlans: _, categories: cats, ...snapshotRest } = snapshot || ({} as any);
+        const appCategories = (cats as any[]) || [];
 
         return {
           ...row,
@@ -881,6 +924,12 @@ export const accountRoutes: FastifyPluginAsync = async (app) => {
           minPaidPrice,
           lastChangeAt: change?.detectedAt || null,
           rankedKeywords: rankedKeywordMap.get(row.appSlug) ?? 0,
+          adKeywords: adKeywordMap.get(row.appSlug) ?? 0,
+          categories: appCategories.map((c: any) => {
+            const slug = c.url ? c.url.replace(/.*\/categories\//, "").replace(/\/.*/, "") : null;
+            return { type: c.type || "primary", title: c.title, slug };
+          }),
+          categoryRankings: categoryRankingMap.get(row.appSlug) ?? [],
         };
       })
     );

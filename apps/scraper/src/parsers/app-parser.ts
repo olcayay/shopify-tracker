@@ -31,7 +31,7 @@ export function parseAppPage(html: string, slug: string): AppDetails {
 
   const appIntroduction = safeParse("appIntroduction", () => parseAppIntroduction($), "");
   const appDetails = safeParse("appDetails", () => parseAppDetails($), "");
-  const seoTitle = safeParse("seoTitle", () => parseSeoTitle($), "");
+  const seoTitle = safeParse("seoTitle", () => parseSeoTitle($, appName), "");
   const seoMetaDescription = safeParse("seoMetaDescription", () => parseSeoMetaDescription($), "");
   const features = safeParse("features", () => parseFeatures($), []);
   const pricing = safeParse("pricing", () => parsePricingSummary($), "");
@@ -158,8 +158,19 @@ function parseAppDetails($: cheerio.CheerioAPI): string {
   return "";
 }
 
-function parseSeoTitle($: cheerio.CheerioAPI): string {
-  return $("title").text().trim();
+function parseSeoTitle($: cheerio.CheerioAPI, appName: string): string {
+  let title = $("title").text().trim();
+  // Strip trailing " | Shopify App Store"
+  title = title.replace(/\s*\|\s*Shopify App Store\s*$/, "");
+  // Strip leading app name + separator (e.g. "Jotform AI Chatbot ‑ Live Chat - ")
+  if (appName) {
+    const prefix = new RegExp(
+      `^${appName.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\s*[-–‑—]\\s*`,
+      "i"
+    );
+    title = title.replace(prefix, "");
+  }
+  return title.trim();
 }
 
 function parseSeoMetaDescription($: cheerio.CheerioAPI): string {

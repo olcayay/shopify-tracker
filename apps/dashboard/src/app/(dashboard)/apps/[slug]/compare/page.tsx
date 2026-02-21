@@ -58,7 +58,7 @@ function CharBadge({ count, max }: { count: number; max?: number }) {
       variant="outline"
       className={cn("text-xs ml-2 shrink-0", colorClass)}
     >
-      {count}{max ? `/${max}` : ""} chars
+      {count}{max ? `/${max}` : ""}
     </Badge>
   );
 }
@@ -666,9 +666,11 @@ export default function ComparePage() {
                             className="py-2 px-2 align-top"
                           >
                             {feat ? (
-                              <div className="flex items-start gap-1">
-                                <span className="flex-1">{feat}</span>
-                                <CharBadge count={feat.length} max={80} />
+                              <div>
+                                <span>{feat}</span>
+                                <div className="mt-1">
+                                  <CharBadge count={feat.length} max={80} />
+                                </div>
                               </div>
                             ) : ""}
                           </td>

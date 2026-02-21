@@ -257,6 +257,9 @@ export default function OverviewPage() {
                     <TableHead>App</TableHead>
                     <TableHead>Rating</TableHead>
                     <TableHead>Reviews</TableHead>
+                    <TableHead>Competitors</TableHead>
+                    <TableHead>Keywords</TableHead>
+                    <TableHead>Ranked</TableHead>
                     <TableHead>Last Change</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -284,6 +287,19 @@ export default function OverviewPage() {
                         </TableCell>
                         <TableCell>
                           {app.latestSnapshot?.ratingCount ?? "\u2014"}
+                        </TableCell>
+                        <TableCell>
+                          {app.competitorCount || "\u2014"}
+                        </TableCell>
+                        <TableCell>
+                          {app.keywordCount || "\u2014"}
+                        </TableCell>
+                        <TableCell>
+                          {app.keywordCount > 0 ? (
+                            <span>
+                              {app.rankedKeywordCount}/{app.keywordCount}
+                            </span>
+                          ) : "\u2014"}
                         </TableCell>
                         <TableCell className="text-sm text-muted-foreground">
                           {app.lastChangeAt ? formatDateOnly(app.lastChangeAt) : "\u2014"}
@@ -390,12 +406,13 @@ export default function OverviewPage() {
             </p>
           ) : (
             <>
+              <div className="overflow-auto">
               <Table>
                 <TableHeader>
                   <TableRow>
                     <TableHead>App</TableHead>
-                    <TableHead>Last Change</TableHead>
-                    <TableHead>Added</TableHead>
+                    <TableHead>Rating</TableHead>
+                    <TableHead>Reviews</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -417,16 +434,17 @@ export default function OverviewPage() {
                             {c.isBuiltForShopify && <span title="Built for Shopify">💎</span>}
                           </div>
                         </TableCell>
-                        <TableCell className="text-sm text-muted-foreground">
-                          {c.lastChangeAt ? formatDateOnly(c.lastChangeAt) : "\u2014"}
+                        <TableCell>
+                          {c.latestSnapshot?.averageRating ?? "\u2014"}
                         </TableCell>
-                        <TableCell className="text-sm text-muted-foreground">
-                          {formatDateOnly(c.createdAt)}
+                        <TableCell>
+                          {c.latestSnapshot?.ratingCount ?? "\u2014"}
                         </TableCell>
                       </TableRow>
                     ))}
                 </TableBody>
               </Table>
+              </div>
               <Pagination page={competitorsPage} totalPages={competitorsTotalPages} onPageChange={setCompetitorsPage} />
             </>
           )}

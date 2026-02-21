@@ -15,7 +15,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { X, ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
+import { X, ArrowUpDown, ArrowUp, ArrowDown, ExternalLink } from "lucide-react";
 import { ConfirmModal } from "@/components/confirm-modal";
 import { AdminScraperTrigger } from "@/components/admin-scraper-trigger";
 
@@ -25,6 +25,7 @@ type SortKey =
   | "reviews"
   | "minPaidPrice"
   | "rankedKeywords"
+  | "adKeywords"
   | "lastChangeAt"
   | "launchedDate";
 type SortDir = "asc" | "desc";
@@ -131,6 +132,9 @@ export default function CompetitorsPage() {
           break;
         case "rankedKeywords":
           cmp = (a.rankedKeywords ?? 0) - (b.rankedKeywords ?? 0);
+          break;
+        case "adKeywords":
+          cmp = (a.adKeywords ?? 0) - (b.adKeywords ?? 0);
           break;
         case "lastChangeAt":
           cmp = (a.lastChangeAt || "").localeCompare(b.lastChangeAt || "");
@@ -265,6 +269,14 @@ export default function CompetitorsPage() {
                           </TableHead>
                           <TableHead
                             className="cursor-pointer select-none"
+                            onClick={() => toggleSort("adKeywords")}
+                          >
+                            Ads <SortIcon col="adKeywords" />
+                          </TableHead>
+                          <TableHead>Categories</TableHead>
+                          <TableHead>Cat. Rank</TableHead>
+                          <TableHead
+                            className="cursor-pointer select-none"
                             onClick={() => toggleSort("lastChangeAt")}
                           >
                             Last Change <SortIcon col="lastChangeAt" />
@@ -275,6 +287,7 @@ export default function CompetitorsPage() {
                           >
                             Launched <SortIcon col="launchedDate" />
                           </TableHead>
+                          <TableHead className="w-10" />
                           {canEdit && <TableHead className="w-12" />}
                         </TableRow>
                       </TableHeader>
@@ -320,6 +333,34 @@ export default function CompetitorsPage() {
                             <TableCell className="text-sm">
                               {c.rankedKeywords ?? 0}
                             </TableCell>
+                            <TableCell className="text-sm">
+                              {c.adKeywords || "\u2014"}
+                            </TableCell>
+                            <TableCell className="text-sm">
+                              {(() => {
+                                const primary = c.categories?.find((cat: any) => cat.type === "primary");
+                                const secondary = c.categories?.find((cat: any) => cat.type === "secondary");
+                                if (!primary && !secondary) return "\u2014";
+                                return (
+                                  <div className="space-y-0.5">
+                                    {primary && <div>{primary.slug ? <Link href={`/categories/${primary.slug}`} className="text-primary hover:underline">{primary.title}</Link> : primary.title}</div>}
+                                    {secondary && <div className="text-muted-foreground">{secondary.slug ? <Link href={`/categories/${secondary.slug}`} className="hover:underline">{secondary.title}</Link> : secondary.title}</div>}
+                                  </div>
+                                );
+                              })()}
+                            </TableCell>
+                            <TableCell className="text-sm">
+                              {c.categoryRankings?.length > 0 ? (
+                                <div className="space-y-0.5">
+                                  {c.categoryRankings.map((cr: any) => (
+                                    <div key={cr.categorySlug}>
+                                      <span className="font-medium">#{cr.position}</span>
+                                      <Link href={`/categories/${cr.categorySlug}`} className="text-muted-foreground hover:underline ml-1">{cr.categoryTitle}</Link>
+                                    </div>
+                                  ))}
+                                </div>
+                              ) : "\u2014"}
+                            </TableCell>
                             <TableCell className="text-sm text-muted-foreground">
                               {c.lastChangeAt
                                 ? formatDateOnly(c.lastChangeAt)
@@ -329,6 +370,16 @@ export default function CompetitorsPage() {
                               {c.launchedDate
                                 ? formatDateOnly(c.launchedDate)
                                 : "\u2014"}
+                            </TableCell>
+                            <TableCell>
+                              <a
+                                href={`https://apps.shopify.com/${c.appSlug}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                title="View on Shopify App Store"
+                              >
+                                <ExternalLink className="h-4 w-4 text-muted-foreground hover:text-foreground" />
+                              </a>
                             </TableCell>
                             {canEdit && (
                               <TableCell>

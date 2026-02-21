@@ -49,7 +49,7 @@ function CharBadge({ count, max }: { count: number; max: number }) {
   }
   return (
     <Badge variant="outline" className={cn("text-xs shrink-0", colorClass)}>
-      {count}/{max} chars
+      {count}/{max}
     </Badge>
   );
 }
@@ -539,7 +539,7 @@ export default function PreviewPage() {
           <div className="space-y-2">
             <div className="flex items-center justify-between">
               <span className="text-sm font-medium">
-                Features <span className="text-muted-foreground">(80 chars each)</span>
+                Features <span className="text-muted-foreground">(max 80)</span>
               </span>
               <Button variant="outline" size="sm" onClick={addFeature}>
                 <Plus className="h-3.5 w-3.5 mr-1" />

@@ -74,6 +74,42 @@ export const appRoutes: FastifyPluginAsync = async (app) => {
     const compCountMap = new Map(competitorCounts.map((r) => [r.trackedAppSlug, r.count]));
     const kwCountMap = new Map(keywordCounts.map((r) => [r.trackedAppSlug, r.count]));
 
+    // Get ranked keyword counts per tracked app
+    const rankedKwMap = new Map<string, number>();
+    const allKeywordRows = await db
+      .select({
+        trackedAppSlug: accountTrackedKeywords.trackedAppSlug,
+        keywordId: accountTrackedKeywords.keywordId,
+      })
+      .from(accountTrackedKeywords)
+      .where(eq(accountTrackedKeywords.accountId, accountId));
+
+    if (allKeywordRows.length > 0) {
+      const kwByApp = new Map<string, number[]>();
+      for (const row of allKeywordRows) {
+        const arr = kwByApp.get(row.trackedAppSlug) ?? [];
+        arr.push(row.keywordId);
+        kwByApp.set(row.trackedAppSlug, arr);
+      }
+
+      for (const [appSlug, keywordIds] of kwByApp) {
+        const idList = sql.join(keywordIds.map((id) => sql`${id}`), sql`,`);
+        const rankedRows = await db.execute(sql`
+          SELECT COUNT(DISTINCT keyword_id)::int AS cnt
+          FROM (
+            SELECT DISTINCT ON (keyword_id) keyword_id, position
+            FROM app_keyword_rankings
+            WHERE app_slug = ${appSlug}
+              AND keyword_id IN (${idList})
+            ORDER BY keyword_id, scraped_at DESC
+          ) latest
+          WHERE position IS NOT NULL
+        `);
+        const data: any[] = (rankedRows as any).rows ?? rankedRows;
+        rankedKwMap.set(appSlug, data[0]?.cnt ?? 0);
+      }
+    }
+
     // Get latest snapshot for each app
     const result = await Promise.all(
       rows.map(async (appRow) => {
@@ -107,6 +143,7 @@ export const appRoutes: FastifyPluginAsync = async (app) => {
           lastChangeAt: change?.detectedAt || null,
           competitorCount: compCountMap.get(appRow.slug) ?? 0,
           keywordCount: kwCountMap.get(appRow.slug) ?? 0,
+          rankedKeywordCount: rankedKwMap.get(appRow.slug) ?? 0,
         };
       })
     );
