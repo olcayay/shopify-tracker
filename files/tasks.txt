@@ -374,11 +374,13 @@ ana sayfada
 
 
 
-her bir app sayfanın altında More apps like this alanı var. Bunları da çekip similar apps gibi bir alanda app sayfasında gösterebiliriz. Eğer bu app'ler zamanla değişişiyorsa bunu historical olarak da gösterebiliriz.
+her bir app sayfanın altında More apps like this alanı var. Bunları da çekip similar apps gibi bir alanda app sayfasında gösterebiliriz. Eğer bu app'ler zamanla değişişiyorsa bunu historical (/keywords/<slug> sayfasında ad history için yaptığımız gibi) olarak da gösterebiliriz.
 
 similar applerin similar applerini de gösterebiliriz.
 
-Ayrıca bizim app'imiz hangi applerin similar appleri listesinde çıkıyor. Bu bilgiye kullanıcının shopify'da erişmesi çok zor
+Ayrıca bizim app'imiz hangi applerin similar appleri listesinde çıkıyor. Bu bilgiye kullanıcının shopify'da erişmesi çok zor.
+
+bu yeni sayfada hem de 3 şey görmek istiyorum. bu appin similar app'leri neler? similar applerin similarları neler? bu app hangi app'lerin similar app'lerinde çıkıyor.
 
 
 
