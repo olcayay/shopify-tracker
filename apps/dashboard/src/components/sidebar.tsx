@@ -19,6 +19,7 @@ import {
   Package,
   ChevronDown,
   ChevronRight,
+  Sparkles,
 } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
 
@@ -28,6 +29,7 @@ const navItems = [
   { href: "/competitors", label: "Competitors", icon: Star },
   { href: "/keywords", label: "Keywords", icon: Search },
   { href: "/categories", label: "Categories", icon: FolderTree },
+  { href: "/featured", label: "Featured", icon: Sparkles },
   { href: "/features", label: "Features", icon: Puzzle },
   { href: "/settings", label: "Settings", icon: Settings },
 ];

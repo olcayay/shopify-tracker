@@ -30,6 +30,11 @@ const SCHEDULES = [
     type: "reviews" as const,
   },
   {
+    name: "featured_apps",
+    cron: "0 4 * * *", // Daily at 04:00 (after categories at 03:00)
+    type: "featured_apps" as const,
+  },
+  {
     name: "daily_digest",
     cron: "0 5 * * *", // Daily at 05:00 UTC (08:00 Istanbul)
     type: "daily_digest" as const,

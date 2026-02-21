@@ -52,6 +52,7 @@ export function AppNav({
     { href: `${base}/details`, label: "Details" },
     { href: `${base}/changes`, label: "Changes" },
     { href: `${base}/similar`, label: "Similar" },
+    { href: `${base}/featured`, label: "Featured" },
   ];
 
   return (

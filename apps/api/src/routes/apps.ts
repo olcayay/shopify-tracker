@@ -15,6 +15,7 @@ import {
   accountCompetitorApps,
   accountTrackedKeywords,
   similarAppSightings,
+  featuredAppSightings,
 } from "@shopify-tracking/db";
 
 type Db = ReturnType<typeof createDb>;
@@ -642,6 +643,40 @@ export const appRoutes: FastifyPluginAsync = async (app) => {
       }
 
       return { app: appRow, direct, reverse, secondDegree };
+    }
+  );
+
+  // GET /api/apps/:slug/featured-placements — where is this app featured
+  app.get<{ Params: { slug: string } }>(
+    "/:slug/featured-placements",
+    async (request, reply) => {
+      const { slug } = request.params;
+      const { days = "30" } = request.query as { days?: string };
+
+      const since = new Date();
+      since.setDate(since.getDate() - parseInt(days, 10));
+      const sinceStr = since.toISOString().slice(0, 10);
+
+      const sightings = await db
+        .select({
+          surface: featuredAppSightings.surface,
+          surfaceDetail: featuredAppSightings.surfaceDetail,
+          sectionHandle: featuredAppSightings.sectionHandle,
+          sectionTitle: featuredAppSightings.sectionTitle,
+          position: featuredAppSightings.position,
+          seenDate: featuredAppSightings.seenDate,
+          timesSeenInDay: featuredAppSightings.timesSeenInDay,
+        })
+        .from(featuredAppSightings)
+        .where(
+          and(
+            eq(featuredAppSightings.appSlug, slug),
+            sql`${featuredAppSightings.seenDate} >= ${sinceStr}`
+          )
+        )
+        .orderBy(desc(featuredAppSightings.seenDate));
+
+      return { sightings };
     }
   );
 };

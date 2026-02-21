@@ -82,6 +82,21 @@ export const getAppSimilarApps = cache((slug: string, days = 30) => {
   return fetchApi<any>(`/api/apps/${slug}/similar-apps?days=${days}`);
 });
 
+export const getAppFeaturedPlacements = cache((slug: string, days = 30) => {
+  return fetchApi<any>(`/api/apps/${slug}/featured-placements?days=${days}`);
+});
+
+// --- Featured Apps ---
+export function getFeaturedApps(days = 30, surface?: string) {
+  const params = new URLSearchParams({ days: String(days) });
+  if (surface) params.set("surface", surface);
+  return fetchApi<any>(`/api/featured-apps?${params}`);
+}
+
+export function getFeaturedSections(days = 30) {
+  return fetchApi<any[]>(`/api/featured-apps/sections?days=${days}`);
+}
+
 export function getAppsLastChanges(slugs: string[]) {
   if (slugs.length === 0) return Promise.resolve({} as Record<string, string>);
   return fetchApi<Record<string, string>>(`/api/apps/last-changes`, {

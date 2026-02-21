@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 
 interface HeatmapSighting {
@@ -17,6 +17,8 @@ interface AdHeatmapProps {
   linkPrefix?: string;
   trackedSlugs?: string[];
   competitorSlugs?: string[];
+  /** When set, show at most this many rows initially with a "Show all" toggle */
+  initialVisible?: number;
 }
 
 function buildDateRange(days: number): string[] {
@@ -47,9 +49,11 @@ export function AdHeatmap({
   linkPrefix = "/apps/",
   trackedSlugs = [],
   competitorSlugs = [],
+  initialVisible,
 }: AdHeatmapProps) {
   const trackedSet = useMemo(() => new Set(trackedSlugs), [trackedSlugs]);
   const competitorSet = useMemo(() => new Set(competitorSlugs), [competitorSlugs]);
+  const [expanded, setExpanded] = useState(false);
 
   const { items, dates, matrix } = useMemo(() => {
     const dates = buildDateRange(30);
@@ -90,6 +94,12 @@ export function AdHeatmap({
 
   if (items.length === 0) return null;
 
+  // Pagination: show limited rows when initialVisible is set and not expanded
+  const needsPagination = initialVisible != null && items.length > initialVisible;
+  const visibleCount = needsPagination && !expanded ? initialVisible : items.length;
+  const visibleItems = items.slice(0, visibleCount);
+  const visibleMatrix = matrix.slice(0, visibleCount);
+
   // Show date labels every ~5 days
   const labelEvery = Math.max(1, Math.ceil(dates.length / 6));
 
@@ -116,7 +126,7 @@ export function AdHeatmap({
         </div>
 
         {/* Rows */}
-        {items.map((item, itemIdx) => {
+        {visibleItems.map((item, itemIdx) => {
           const isTracked = trackedSet.has(item.slug);
           const isCompetitor = competitorSet.has(item.slug);
           return (
@@ -156,7 +166,7 @@ export function AdHeatmap({
 
               {/* Heatmap cells */}
               <div className="flex-1 flex gap-[2px]">
-                {matrix[itemIdx].map((count, dateIdx) => (
+                {visibleMatrix[itemIdx].map((count, dateIdx) => (
                   <div
                     key={dates[dateIdx]}
                     className={`flex-1 min-w-[14px] h-[14px] rounded-[2px] ${intensityClass(count)}`}
@@ -171,6 +181,18 @@ export function AdHeatmap({
             </div>
           );
         })}
+
+        {/* Show more/less toggle */}
+        {needsPagination && (
+          <button
+            onClick={() => setExpanded(!expanded)}
+            className="mt-2 text-xs text-primary hover:underline"
+          >
+            {expanded
+              ? "Show less"
+              : `Show all ${items.length} apps`}
+          </button>
+        )}
 
         {/* Legend */}
         <div className="flex items-center gap-2 mt-3 text-[10px] text-muted-foreground">

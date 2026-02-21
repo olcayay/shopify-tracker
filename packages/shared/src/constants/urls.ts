@@ -3,6 +3,9 @@ const BASE_URL = "https://apps.shopify.com";
 export const urls = {
   base: BASE_URL,
 
+  /** Homepage: apps.shopify.com */
+  home: () => BASE_URL,
+
   /** App detail page: /formful */
   app: (slug: string) => `${BASE_URL}/${slug}`,
 

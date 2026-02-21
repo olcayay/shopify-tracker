@@ -20,6 +20,7 @@ if (!command) {
   console.log("  keyword-tracked         Scrape all tracked keywords");
   console.log("  reviews <slug>          Scrape reviews for an app");
   console.log("  reviews-tracked         Scrape reviews for all tracked apps");
+  console.log("  featured                Scrape featured apps from homepage + categories");
   console.log("  track-app <slug>        Mark an app as tracked");
   console.log("  track-keyword <keyword> Add a keyword to tracking");
   process.exit(1);
@@ -110,6 +111,14 @@ async function main() {
     case "reviews-tracked": {
       const scraper = new ReviewScraper(db, httpClient);
       await scraper.scrapeTracked();
+      break;
+    }
+
+    case "featured": {
+      const { FeaturedAppsScraper } = await import("./scrapers/featured-apps-scraper.js");
+      const featuredScraper = new FeaturedAppsScraper(db, httpClient);
+      await featuredScraper.scrapeAll("cli");
+      console.log("Featured apps scrape completed.");
       break;
     }
 

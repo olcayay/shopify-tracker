@@ -9,6 +9,7 @@ import * as keywordsSchema from "./schema/keywords.js";
 import * as authSchema from "./schema/auth.js";
 import * as accountTrackingSchema from "./schema/account-tracking.js";
 import * as similarAppsSchema from "./schema/similar-apps.js";
+import * as featuredAppsSchema from "./schema/featured-apps.js";
 
 export const schema = {
   ...scrapeRunsSchema,
@@ -19,6 +20,7 @@ export const schema = {
   ...authSchema,
   ...accountTrackingSchema,
   ...similarAppsSchema,
+  ...featuredAppsSchema,
 };
 
 export function createDb(databaseUrl: string) {
@@ -66,3 +68,4 @@ export {
   accountTrackedFeatures,
 } from "./schema/account-tracking.js";
 export { similarAppSightings } from "./schema/similar-apps.js";
+export { featuredAppSightings } from "./schema/featured-apps.js";

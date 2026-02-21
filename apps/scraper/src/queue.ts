@@ -2,7 +2,7 @@ import { Queue, type ConnectionOptions } from "bullmq";
 
 export const QUEUE_NAME = "scraper-jobs";
 
-export type ScraperJobType = "category" | "app_details" | "keyword_search" | "keyword_suggestions" | "reviews" | "daily_digest";
+export type ScraperJobType = "category" | "app_details" | "keyword_search" | "keyword_suggestions" | "reviews" | "daily_digest" | "featured_apps";
 
 export interface ScraperJobOptions {
   /** For category/keyword: how many pages to scrape */

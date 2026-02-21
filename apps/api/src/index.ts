@@ -14,6 +14,7 @@ import { systemAdminRoutes } from "./routes/system-admin.js";
 import { invitationRoutes } from "./routes/invitations.js";
 import { featureRoutes } from "./routes/features.js";
 import { liveSearchRoutes } from "./routes/live-search.js";
+import { featuredAppRoutes } from "./routes/featured-apps.js";
 
 const databaseUrl = process.env.DATABASE_URL;
 if (!databaseUrl) {
@@ -45,6 +46,7 @@ await app.register(systemAdminRoutes, { prefix: "/api/system-admin" });
 await app.register(invitationRoutes, { prefix: "/api/invitations" });
 await app.register(featureRoutes, { prefix: "/api/features" });
 await app.register(liveSearchRoutes, { prefix: "/api/live-search" });
+await app.register(featuredAppRoutes, { prefix: "/api/featured-apps" });
 
 // Error handler
 app.setErrorHandler((error: any, _request, reply) => {
