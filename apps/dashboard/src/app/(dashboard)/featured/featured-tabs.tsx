@@ -125,7 +125,7 @@ function SectionCard({
           linkPrefix="/apps/"
           trackedSlugs={trackedSlugs}
           competitorSlugs={competitorSlugs}
-          initialVisible={10}
+          initialVisible={12}
         />
       </CardContent>
     </Card>

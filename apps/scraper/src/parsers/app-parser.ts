@@ -84,7 +84,7 @@ function parseJsonLd($: cheerio.CheerioAPI): JsonLdData | null {
       const data = JSON.parse($(el).html() || "");
       if (data["@type"] === "SoftwareApplication") {
         result = {
-          name: data.name || "",
+          name: (data.name || "").trim(),
           ratingValue: data.aggregateRating?.ratingValue ?? null,
           ratingCount: data.aggregateRating?.ratingCount ?? null,
           image: data.image || null,

@@ -393,3 +393,10 @@ DONE: Auto Suggestion
 
 
 scrapping sırasında bir app birden fazla yerde karşımıza çıkabilir. category, feature, keyword vb. Bu nedenle eğer bir app bir scrapping sırasında karşımıza çıkıyorsa bir süre belirleyelim (örneğin 1 saat) bu süre içinde zaten scrap edildiyse onu pas geç. ama system admin ilgili app için manuel olarak scrapping'i başlatırsa bu zaman checkini yapmasın.
+
+
+http://localhost:3000/system-admin/scraper
+bu sayfada Queued ve Started timeların sanki time stamptleri ya da gösterimleri birbirinden farklı
+
+
+featured sayfasındaki paginationları 12'lik yap

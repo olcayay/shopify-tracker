@@ -220,7 +220,7 @@ export default async function CategoryDetailPage({
                   linkPrefix="/apps/"
                   trackedSlugs={featuredData.trackedSlugs}
                   competitorSlugs={featuredData.competitorSlugs}
-                  initialVisible={10}
+                  initialVisible={12}
                 />
               </div>
             ))}
