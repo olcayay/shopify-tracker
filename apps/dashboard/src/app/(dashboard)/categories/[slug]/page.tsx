@@ -45,15 +45,8 @@ export default async function CategoryDetailPage({
   const trackedSlugs = new Set(trackedApps.map((a: any) => a.appSlug));
   const isStarred = starredCategories.some((sc: any) => sc.categorySlug === slug);
 
-  const snapshot = category.latestSnapshot;
-
-  // Use rankedApps (all pages) if available, fall back to firstPageApps
-  const hasRankedApps = category.rankedApps?.length > 0;
-  const appSlugs: string[] = hasRankedApps
-    ? category.rankedApps.map((a: any) => a.slug)
-    : (snapshot?.firstPageApps || [])
-        .map((app: any) => app.app_url?.replace("https://apps.shopify.com/", "")?.split("?")[0])
-        .filter(Boolean);
+  const rankedApps = category.rankedApps || [];
+  const appSlugs: string[] = rankedApps.map((a: any) => a.slug);
   const [lastChanges, minPaidPrices, featuredData] = await Promise.all([
     getAppsLastChanges(appSlugs).catch(() => ({} as Record<string, string>)),
     getAppsMinPaidPrices(appSlugs).catch(() => ({} as Record<string, number | null>)),
@@ -156,53 +149,6 @@ export default async function CategoryDetailPage({
         </Card>
       )}
 
-      {/* Latest Snapshot */}
-      {snapshot && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Latest Snapshot</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              <div>
-                <div className="text-sm text-muted-foreground">App Count</div>
-                <div className="text-xl font-semibold">
-                  {snapshot.appCount ?? "—"}
-                </div>
-              </div>
-              <div>
-                <div className="text-sm text-muted-foreground">Scraped At</div>
-                <div className="text-sm">
-                  {formatDateTime(snapshot.scrapedAt)}
-                </div>
-              </div>
-              {snapshot.firstPageMetrics && (
-                <>
-                  <div>
-                    <div className="text-sm text-muted-foreground">
-                      Avg Rating
-                    </div>
-                    <div className="text-xl font-semibold">
-                      {snapshot.firstPageMetrics.avg_rating?.toFixed(2) ?? "—"}
-                    </div>
-                  </div>
-                  <div>
-                    <div className="text-sm text-muted-foreground">
-                      Avg Reviews
-                    </div>
-                    <div className="text-xl font-semibold">
-                      {snapshot.firstPageMetrics.avg_review_count?.toFixed(0) ??
-                        "—"}
-                    </div>
-                  </div>
-                </>
-              )}
-            </div>
-
-          </CardContent>
-        </Card>
-      )}
-
       {/* Recommended by Shopify */}
       {sortedFeaturedSections.length > 0 && (
         <Card>
@@ -228,37 +174,19 @@ export default async function CategoryDetailPage({
         </Card>
       )}
 
-      {/* Ranked Apps (all pages when available, otherwise first page) */}
-      {appSlugs.length > 0 && (
+      {/* Ranked Apps */}
+      {rankedApps.length > 0 && (
         <CategoryAppResults
-          apps={hasRankedApps
-            ? category.rankedApps.map((app: any) => ({
-                position: app.position,
-                name: app.name,
-                slug: app.slug,
-                logo_url: app.icon_url,
-                average_rating: app.average_rating,
-                rating_count: app.rating_count,
-                pricing_hint: app.pricing,
-                is_built_for_shopify: app.is_built_for_shopify,
-              }))
-            : snapshot.firstPageApps.map((app: any, i: number) => {
-                const appSlug = app.app_url
-                  ?.replace("https://apps.shopify.com/", "")
-                  ?.split("?")[0] || "";
-                return {
-                  position: app.position || i + 1,
-                  name: app.name,
-                  slug: appSlug,
-                  logo_url: app.logo_url,
-                  average_rating: app.average_rating,
-                  rating_count: app.rating_count,
-                  pricing_hint: app.pricing_hint,
-                  is_sponsored: app.is_sponsored,
-                  is_built_for_shopify: app.is_built_for_shopify,
-                };
-              })
-          }
+          apps={rankedApps.map((app: any) => ({
+            position: app.position,
+            name: app.name,
+            slug: app.slug,
+            logo_url: app.icon_url,
+            average_rating: app.average_rating,
+            rating_count: app.rating_count,
+            pricing_hint: app.pricing_hint,
+            is_built_for_shopify: app.is_built_for_shopify,
+          }))}
           trackedSlugs={[...trackedSlugs]}
           competitorSlugs={[...competitorSlugs]}
           lastChanges={lastChanges}
@@ -278,7 +206,6 @@ export default async function CategoryDetailPage({
                 <TableRow>
                   <TableHead>Date</TableHead>
                   <TableHead>App Count</TableHead>
-                  <TableHead>First Page Apps</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -288,7 +215,6 @@ export default async function CategoryDetailPage({
                       {formatDateTime(s.scrapedAt)}
                     </TableCell>
                     <TableCell>{s.appCount ?? "—"}</TableCell>
-                    <TableCell>{s.firstPageApps?.length ?? 0}</TableCell>
                   </TableRow>
                 ))}
               </TableBody>

@@ -87,7 +87,9 @@ export function shouldUseAllPage(html: string): boolean {
 /** Check if there's a next page for pagination */
 export function hasNextPage(html: string): boolean {
   const $ = cheerio.load(html);
-  return $('a[rel="next"]').length > 0 || $('a[href*="page="]').length > 0;
+  // Only check for explicit "next" link — a[href*="page="] also matches
+  // previous/numbered page links, causing false positives on the last page
+  return $('a[rel="next"]').length > 0;
 }
 
 // --- Internal helpers ---

@@ -1,4 +1,5 @@
 import * as cheerio from "cheerio";
+import type { AnyNode } from "domhandler";
 import { createLogger } from "@shopify-tracking/shared";
 
 const log = createLogger("featured-parser");
@@ -95,7 +96,7 @@ export function parseFeaturedSections(html: string): FeaturedSection[] {
 
 function parseCards(
   $: cheerio.CheerioAPI,
-  $container: cheerio.Cheerio<cheerio.AnyNode>,
+  $container: cheerio.Cheerio<AnyNode>,
   existingSlugs: string[]
 ): FeaturedApp[] {
   const apps: FeaturedApp[] = [];
@@ -125,7 +126,7 @@ function parseCards(
 
 function extractTitle(
   $: cheerio.CheerioAPI,
-  $el: cheerio.Cheerio<cheerio.AnyNode>
+  $el: cheerio.Cheerio<AnyNode>
 ): string {
   // Look for h2/h3 inside the element
   const inner = $el.find("h2, h3").first().text().trim();

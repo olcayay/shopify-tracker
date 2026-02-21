@@ -168,12 +168,32 @@ export class KeywordScraper {
         }
       }
 
+      // Only write rating/count if genuinely > 0 (0 means parser extraction failed)
+      const hasRating = app.average_rating != null && app.average_rating > 0;
+      const hasCount = app.rating_count != null && app.rating_count > 0;
+
       await this.db
         .insert(apps)
-        .values({ slug: app.app_slug, name: app.app_name, isBuiltForShopify: !!app.is_built_for_shopify, appCardSubtitle: app.short_description || undefined })
+        .values({
+          slug: app.app_slug,
+          name: app.app_name,
+          isBuiltForShopify: !!app.is_built_for_shopify,
+          appCardSubtitle: app.short_description || undefined,
+          ...(app.logo_url && { iconUrl: app.logo_url }),
+          ...(hasRating && { averageRating: String(app.average_rating) }),
+          ...(hasCount && { ratingCount: app.rating_count }),
+          ...(app.pricing_hint && { pricingHint: app.pricing_hint }),
+        })
         .onConflictDoUpdate({
           target: apps.slug,
-          set: { isBuiltForShopify: !!app.is_built_for_shopify, appCardSubtitle: app.short_description || undefined },
+          set: {
+            isBuiltForShopify: !!app.is_built_for_shopify,
+            appCardSubtitle: app.short_description || undefined,
+            ...(app.logo_url && { iconUrl: sql`COALESCE(${apps.iconUrl}, ${app.logo_url})` }),
+            ...(hasRating && { averageRating: String(app.average_rating) }),
+            ...(hasCount && { ratingCount: app.rating_count }),
+            ...(app.pricing_hint && { pricingHint: app.pricing_hint }),
+          },
         });
 
       await this.db.insert(appKeywordRankings).values({
@@ -237,12 +257,29 @@ export class KeywordScraper {
     // NOTE: Sponsored listings may show a different subtitle (e.g. "The app developer paid to promote...")
     // so we do NOT detect subtitle changes or update appCardSubtitle from sponsored results.
     for (const app of sponsoredApps) {
+      const hasAdRating = app.average_rating != null && app.average_rating > 0;
+      const hasAdCount = app.rating_count != null && app.rating_count > 0;
+
       await this.db
         .insert(apps)
-        .values({ slug: app.app_slug, name: app.app_name, isBuiltForShopify: !!app.is_built_for_shopify })
+        .values({
+          slug: app.app_slug,
+          name: app.app_name,
+          isBuiltForShopify: !!app.is_built_for_shopify,
+          ...(app.logo_url && { iconUrl: app.logo_url }),
+          ...(hasAdRating && { averageRating: String(app.average_rating) }),
+          ...(hasAdCount && { ratingCount: app.rating_count }),
+          ...(app.pricing_hint && { pricingHint: app.pricing_hint }),
+        })
         .onConflictDoUpdate({
           target: apps.slug,
-          set: { isBuiltForShopify: !!app.is_built_for_shopify },
+          set: {
+            isBuiltForShopify: !!app.is_built_for_shopify,
+            ...(app.logo_url && { iconUrl: sql`COALESCE(${apps.iconUrl}, ${app.logo_url})` }),
+            ...(hasAdRating && { averageRating: String(app.average_rating) }),
+            ...(hasAdCount && { ratingCount: app.rating_count }),
+            ...(app.pricing_hint && { pricingHint: app.pricing_hint }),
+          },
         });
 
       await this.db

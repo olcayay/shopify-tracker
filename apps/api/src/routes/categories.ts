@@ -110,6 +110,9 @@ export const categoryRoutes: FastifyPluginAsync = async (app) => {
             name: apps.name,
             iconUrl: apps.iconUrl,
             isBuiltForShopify: apps.isBuiltForShopify,
+            averageRating: apps.averageRating,
+            ratingCount: apps.ratingCount,
+            pricingHint: apps.pricingHint,
           })
           .from(appCategoryRankings)
           .innerJoin(apps, eq(apps.slug, appCategoryRankings.appSlug))
@@ -121,40 +124,30 @@ export const categoryRoutes: FastifyPluginAsync = async (app) => {
           )
           .orderBy(asc(appCategoryRankings.position));
 
-        if (rankings.length > 0) {
-          // Get latest snapshot data for each ranked app (rating, reviews, pricing)
-          const slugs = rankings.map((r) => r.appSlug);
-          const slugList = sql.join(slugs.map((s) => sql`${s}`), sql`, `);
-          const snapResult = await db.execute(sql`
-            SELECT DISTINCT ON (app_slug) app_slug, average_rating, rating_count, pricing
-            FROM app_snapshots
-            WHERE app_slug IN (${slugList})
-            ORDER BY app_slug, scraped_at DESC
-          `);
-          const snapRows: any[] = (snapResult as any).rows ?? snapResult;
-
-          const snapshotMap = new Map(snapRows.map((s: any) => [s.app_slug, s]));
-
-          rankedApps = rankings.map((r) => {
-            const snap = snapshotMap.get(r.appSlug);
-            return {
-              position: r.position,
-              slug: r.appSlug,
-              name: r.name,
-              icon_url: r.iconUrl,
-              is_built_for_shopify: r.isBuiltForShopify,
-              average_rating: snap?.average_rating ? Number(snap.average_rating) : null,
-              rating_count: snap?.rating_count ?? null,
-              pricing: snap?.pricing || null,
-            };
-          });
-        }
+        rankedApps = rankings.map((r) => ({
+          position: r.position,
+          slug: r.appSlug,
+          name: r.name,
+          icon_url: r.iconUrl || null,
+          is_built_for_shopify: r.isBuiltForShopify,
+          average_rating: r.averageRating ? Number(r.averageRating) : null,
+          rating_count: r.ratingCount ?? null,
+          pricing_hint: r.pricingHint || null,
+        }));
       } catch (err) {
         app.log.warn(`Failed to fetch ranked apps for category ${slug}: ${err}`);
       }
     }
 
-    return { ...category, latestSnapshot: latestSnapshot || null, children, breadcrumb, rankedApps };
+    return {
+      ...category,
+      latestSnapshot: latestSnapshot
+        ? { appCount: latestSnapshot.appCount, scrapedAt: latestSnapshot.scrapedAt }
+        : null,
+      children,
+      breadcrumb,
+      rankedApps,
+    };
   });
 
   // GET /api/categories/:slug/history — historical snapshots
@@ -179,19 +172,40 @@ export const categoryRoutes: FastifyPluginAsync = async (app) => {
       }
 
       const snapshots = await db
-        .select()
+        .select({
+          id: categorySnapshots.id,
+          scrapeRunId: categorySnapshots.scrapeRunId,
+          scrapedAt: categorySnapshots.scrapedAt,
+          appCount: categorySnapshots.appCount,
+        })
         .from(categorySnapshots)
         .where(eq(categorySnapshots.categorySlug, slug))
         .orderBy(desc(categorySnapshots.scrapedAt))
         .limit(parseInt(limit, 10))
         .offset(parseInt(offset, 10));
 
+      // Enrich with ranking count per snapshot (actual number of apps scraped)
+      const enriched = await Promise.all(
+        snapshots.map(async (s) => {
+          const [{ rankCount }] = await db
+            .select({ rankCount: sql<number>`count(*)::int` })
+            .from(appCategoryRankings)
+            .where(
+              and(
+                eq(appCategoryRankings.scrapeRunId, s.scrapeRunId),
+                eq(appCategoryRankings.categorySlug, slug)
+              )
+            );
+          return { ...s, appCount: s.appCount ?? (rankCount || null) };
+        })
+      );
+
       const [{ count }] = await db
         .select({ count: sql<number>`count(*)::int` })
         .from(categorySnapshots)
         .where(eq(categorySnapshots.categorySlug, slug));
 
-      return { category, snapshots, total: count };
+      return { category, snapshots: enriched, total: count };
     }
   );
 };

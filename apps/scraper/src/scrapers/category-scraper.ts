@@ -1,4 +1,4 @@
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import type { Database } from "@shopify-tracking/db";
 import {
   scrapeRuns,
@@ -17,7 +17,6 @@ import {
 import { HttpClient } from "../http-client.js";
 import {
   parseCategoryPage,
-  shouldUseAllPage,
   hasNextPage,
 } from "../parsers/category-parser.js";
 
@@ -188,7 +187,10 @@ export class CategoryScraper {
 
     log.info("crawling category", { slug, depth });
 
-    const categoryUrl = urls.category(slug);
+    // Always use /all URL to avoid redirect issues (Shopify 302-redirects
+    // /categories/{slug} to /categories/{slug}/all, but may drop ?page=N params)
+    const categoryUrl = urls.categoryAll(slug);
+    const canonicalUrl = urls.category(slug);
     const discoveredSlugs: string[] = [];
 
     // For root categories (depth 0), we just extract subcategory links
@@ -203,26 +205,15 @@ export class CategoryScraper {
       return { node: null, appSlugs: [] };
     }
 
-    // Check if we need to use the /all page for app listings
-    if (depth > 0 && shouldUseAllPage(html)) {
-      const allUrl = urls.categoryAll(slug);
-      try {
-        html = await this.httpClient.fetchPage(allUrl);
-        dataSourceUrl = allUrl;
-      } catch (error) {
-        log.warn("failed to fetch /all page, using main page", { slug });
-      }
-    }
-
     const pageData = parseCategoryPage(html, dataSourceUrl);
 
-    // Upsert category master record
+    // Upsert category master record (store canonical URL without /all)
     await this.db
       .insert(categories)
       .values({
         slug,
         title: pageData.title,
-        url: categoryUrl,
+        url: canonicalUrl,
         parentSlug,
         categoryLevel: depth,
         description: pageData.description,
@@ -238,6 +229,9 @@ export class CategoryScraper {
         },
       });
 
+    // Track seen app slugs across all pages for deduplication
+    const seenAppSlugs = new Set<string>();
+
     // Insert snapshot (skip for root categories with no app data)
     if (depth > 0 || pageData.first_page_apps.length > 0) {
       await this.db.insert(categorySnapshots).values({
@@ -247,7 +241,7 @@ export class CategoryScraper {
         dataSourceUrl,
         appCount: pageData.app_count,
         firstPageMetrics: pageData.first_page_metrics,
-        firstPageApps: pageData.first_page_apps,
+        firstPageApps: [], // All app data now lives in app_category_rankings + apps tables
         breadcrumb: pageData.breadcrumb,
       });
 
@@ -261,7 +255,10 @@ export class CategoryScraper {
       // Collect discovered slugs from first page
       for (const app of pageData.first_page_apps) {
         const appSlug = app.app_url.replace("https://apps.shopify.com/", "");
-        if (appSlug) discoveredSlugs.push(appSlug);
+        if (appSlug) {
+          discoveredSlugs.push(appSlug);
+          seenAppSlugs.add(appSlug);
+        }
       }
     }
 
@@ -278,22 +275,48 @@ export class CategoryScraper {
 
         while (currentPage < maxPages && hasNextPage(currentHtml)) {
           currentPage++;
+          // Use /all?page=N directly to avoid redirect issues
+          // (Shopify 302-redirects /categories/{slug}?page=N and may drop the page param)
           const pageUrl = urls.categoryAll(slug, currentPage);
           try {
             currentHtml = await this.httpClient.fetchPage(pageUrl);
-            const nextPageData = parseCategoryPage(currentHtml, pageUrl);
-
-            // Record additional page app rankings with global position offset
-            await this.recordAppRankings(nextPageData.first_page_apps, slug, runId, totalAppsRecorded);
-            totalAppsRecorded += nextPageData.first_page_apps.length;
-            for (const app of nextPageData.first_page_apps) {
-              const appSlug = app.app_url.replace("https://apps.shopify.com/", "");
-              if (appSlug) discoveredSlugs.push(appSlug);
-            }
-
-            log.info("category page scraped", { slug, page: currentPage, apps: nextPageData.first_page_apps.length });
           } catch (error) {
             log.warn("failed to fetch category page", { slug, page: currentPage, error: String(error) });
+            break;
+          }
+
+          const nextPageData = parseCategoryPage(currentHtml, pageUrl);
+
+          // Deduplicate across pages (sponsored apps can appear on multiple pages)
+          const newApps = nextPageData.first_page_apps.filter(app => {
+            const appSlug = app.app_url.replace("https://apps.shopify.com/", "");
+            if (seenAppSlugs.has(appSlug)) return false;
+            seenAppSlugs.add(appSlug);
+            return true;
+          });
+
+          // Record additional page app rankings with global position offset
+          await this.recordAppRankings(newApps, slug, runId, totalAppsRecorded);
+          totalAppsRecorded += newApps.length;
+          for (const app of newApps) {
+            const appSlug = app.app_url.replace("https://apps.shopify.com/", "");
+            if (appSlug) discoveredSlugs.push(appSlug);
+          }
+
+          // Debug logging — helps diagnose data extraction issues per page
+          const sampleApp = nextPageData.first_page_apps[0];
+          log.info("category page scraped", {
+            slug, page: currentPage,
+            totalParsed: nextPageData.first_page_apps.length,
+            newApps: newApps.length,
+            sampleHasLogo: !!sampleApp?.logo_url,
+            sampleHasRating: (sampleApp?.average_rating ?? 0) > 0,
+            sampleHasPricing: !!sampleApp?.pricing_hint,
+          });
+
+          // If page returned 0 new apps, we've likely hit the end or a loop
+          if (newApps.length === 0) {
+            log.info("no new apps found, stopping pagination", { slug, page: currentPage });
             break;
           }
         }
@@ -319,7 +342,7 @@ export class CategoryScraper {
     return {
       node: {
         slug,
-        url: categoryUrl,
+        url: canonicalUrl,
         data_source_url: dataSourceUrl,
         title: pageData.title,
         breadcrumb: pageData.breadcrumb,
@@ -340,7 +363,7 @@ export class CategoryScraper {
    * then record their category ranking positions.
    */
   private async recordAppRankings(
-    appList: { app_url: string; name: string; short_description?: string; is_built_for_shopify?: boolean; is_sponsored?: boolean; position?: number }[],
+    appList: { app_url: string; name: string; short_description?: string; is_built_for_shopify?: boolean; is_sponsored?: boolean; position?: number; logo_url?: string; average_rating?: number; rating_count?: number; pricing_hint?: string }[],
     categorySlug: string,
     runId: string,
     positionOffset = 0
@@ -357,13 +380,35 @@ export class CategoryScraper {
       // Sponsored listings show ad boilerplate instead of real subtitle — skip subtitle update
       const subtitle = app.is_sponsored ? undefined : (app.short_description || undefined);
 
-      // Upsert app master record with name and BFS flag
+      // Only write rating/count if genuinely > 0 (0 means parser extraction failed, don't overwrite valid data)
+      const hasRating = app.average_rating != null && app.average_rating > 0;
+      const hasCount = app.rating_count != null && app.rating_count > 0;
+
+      // Upsert app master record with all listing data
       await this.db
         .insert(apps)
-        .values({ slug: appSlug, name: app.name, isBuiltForShopify: !!app.is_built_for_shopify, appCardSubtitle: subtitle })
+        .values({
+          slug: appSlug,
+          name: app.name,
+          isBuiltForShopify: !!app.is_built_for_shopify,
+          appCardSubtitle: subtitle,
+          ...(app.logo_url && { iconUrl: app.logo_url }),
+          ...(hasRating && { averageRating: String(app.average_rating) }),
+          ...(hasCount && { ratingCount: app.rating_count }),
+          ...(app.pricing_hint && { pricingHint: app.pricing_hint }),
+        })
         .onConflictDoUpdate({
           target: apps.slug,
-          set: { name: app.name, isBuiltForShopify: !!app.is_built_for_shopify, ...(subtitle !== undefined && { appCardSubtitle: subtitle }), updatedAt: now },
+          set: {
+            name: app.name,
+            isBuiltForShopify: !!app.is_built_for_shopify,
+            ...(subtitle !== undefined && { appCardSubtitle: subtitle }),
+            ...(app.logo_url && { iconUrl: sql`COALESCE(${apps.iconUrl}, ${app.logo_url})` }),
+            ...(hasRating && { averageRating: String(app.average_rating) }),
+            ...(hasCount && { ratingCount: app.rating_count }),
+            ...(app.pricing_hint && { pricingHint: app.pricing_hint }),
+            updatedAt: now,
+          },
         });
 
       // Record ranking with global position across pages

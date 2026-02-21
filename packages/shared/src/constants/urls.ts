@@ -16,7 +16,11 @@ export const urls = {
   /** Category page: /categories/store-design */
   category: (slug: string) => `${BASE_URL}/categories/${slug}`,
 
-  /** Category full app list: /categories/store-design/all?page=2 */
+  /** Category page with pagination: /categories/store-design?page=2 */
+  categoryPage: (slug: string, page?: number) =>
+    `${BASE_URL}/categories/${slug}${page && page > 1 ? `?page=${page}` : ""}`,
+
+  /** Legacy /all variant (some categories still use this) */
   categoryAll: (slug: string, page?: number) =>
     `${BASE_URL}/categories/${slug}/all${page && page > 1 ? `?page=${page}` : ""}`,
 
