@@ -311,7 +311,13 @@ app icon'un listing sayfalarında gönserilmesi
 /features sayfasına featurelar için bir directory oluştur. /categories sayfasındaki yukarıda track edilen altta hepsi olsun.
 
 
-keywordlere ve app'lere tag eklenebilir mi? appleri ve keywordleri gruplamak için kullanılabilir.
+DONE: keywordlere tag eklenebilir mi? keywordleri gruplamak için kullanılabilir.
+- keyword_tags + keyword_tag_assignments tabloları (account-scoped, many-to-many)
+- Tag CRUD API endpoints (create, update, delete, assign, unassign)
+- Keyword list API'leri tags[] ile zenginleştirildi
+- 10 renkli tag paleti, badge, filter bar, tag manager dropdown
+- /keywords ve /apps/[slug]/keywords sayfalarında tag gösterimi ve yönetimi
+- Tag manager (+) butonu sadece hover'da görünür (temiz tablo görünümü)
 
 /keywords sayfasında tracked ve Competitorlar'ın her birinin bir kolon olarak eklendiği bütün applerin tek bir ve keyword rankinglerinin tek bir kolonda olduğu bir sayfa tasarla
 

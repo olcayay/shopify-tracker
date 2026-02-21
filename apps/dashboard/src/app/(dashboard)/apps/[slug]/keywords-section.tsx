@@ -19,6 +19,9 @@ import { X, Plus, Search, Check, ArrowDown, ExternalLink, Lightbulb } from "luci
 import { ConfirmModal } from "@/components/confirm-modal";
 import { LiveSearchTrigger } from "@/components/live-search-trigger";
 import { KeywordSuggestionsModal } from "@/components/keyword-suggestions-modal";
+import { KeywordTagBadge } from "@/components/keyword-tag-badge";
+import { KeywordTagManager } from "@/components/keyword-tag-manager";
+import { KeywordTagFilter } from "@/components/keyword-tag-filter";
 
 // --- App icon with selection state (same as compare page) ---
 function AppIcon({
@@ -84,6 +87,10 @@ export function KeywordsSection({ appSlug }: { appSlug: string }) {
     keywordId: number;
     keyword: string;
   } | null>(null);
+  const [tags, setTags] = useState<any[]>([]);
+  const [activeTagFilter, setActiveTagFilter] = useState<Set<string>>(
+    new Set()
+  );
   const searchRef = useRef<HTMLDivElement>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout>>(undefined);
 
@@ -119,10 +126,18 @@ export function KeywordsSection({ appSlug }: { appSlug: string }) {
     return selectedApps.map((a) => a.slug).join(",");
   }, [selectedApps]);
 
+  // Filter keywords by active tags
+  const filteredKeywords = useMemo(() => {
+    if (activeTagFilter.size === 0) return keywords;
+    return keywords.filter((kw) =>
+      kw.tags?.some((t: any) => activeTagFilter.has(t.id))
+    );
+  }, [keywords, activeTagFilter]);
+
   // Sorted keywords by selected app ranking
   const sortedKeywords = useMemo(() => {
-    if (!sortBySlug || keywords.length === 0) return keywords;
-    return [...keywords].sort((a, b) => {
+    if (!sortBySlug || filteredKeywords.length === 0) return filteredKeywords;
+    return [...filteredKeywords].sort((a, b) => {
       const posA = a.rankings?.[sortBySlug];
       const posB = b.rankings?.[sortBySlug];
       // ranked items first (lower position = better), unranked at bottom
@@ -131,7 +146,7 @@ export function KeywordsSection({ appSlug }: { appSlug: string }) {
       if (posB != null) return 1;
       return 0;
     });
-  }, [keywords, sortBySlug]);
+  }, [filteredKeywords, sortBySlug]);
 
   // Load main app + competitors on mount
   useEffect(() => {
@@ -169,11 +184,14 @@ export function KeywordsSection({ appSlug }: { appSlug: string }) {
   async function loadAppsAndKeywords() {
     setLoading(true);
 
-    // Fetch main app + competitors in parallel
-    const [appRes, compRes] = await Promise.all([
+    // Fetch main app + competitors + tags in parallel
+    const [appRes, compRes, tagsRes] = await Promise.all([
       fetchWithAuth(`/api/apps/${encodeURIComponent(appSlug)}`),
       fetchWithAuth(`/api/account/tracked-apps/${encodeURIComponent(appSlug)}/competitors`),
+      fetchWithAuth("/api/account/keyword-tags"),
     ]);
+
+    if (tagsRes.ok) setTags(await tagsRes.json());
 
     let main: SimpleApp | null = null;
     let comps: SimpleApp[] = [];
@@ -314,6 +332,74 @@ export function KeywordsSection({ appSlug }: { appSlug: string }) {
     }
   }
 
+  // Tag operations
+  async function reloadKeywordsAndTags() {
+    const [kwRes, tagsRes] = await Promise.all([
+      fetchWithAuth(
+        `/api/account/tracked-apps/${encodeURIComponent(appSlug)}/keywords${appSlugsParam ? `?appSlugs=${encodeURIComponent(appSlugsParam)}` : ""}`
+      ),
+      fetchWithAuth("/api/account/keyword-tags"),
+    ]);
+    if (kwRes.ok) setKeywords(await kwRes.json());
+    if (tagsRes.ok) setTags(await tagsRes.json());
+  }
+
+  async function assignTag(tagId: string, keywordId: number) {
+    await fetchWithAuth(
+      `/api/account/keyword-tags/${tagId}/keywords/${keywordId}`,
+      { method: "POST" }
+    );
+    await reloadKeywordsAndTags();
+  }
+
+  async function unassignTag(tagId: string, keywordId: number) {
+    await fetchWithAuth(
+      `/api/account/keyword-tags/${tagId}/keywords/${keywordId}`,
+      { method: "DELETE" }
+    );
+    await reloadKeywordsAndTags();
+  }
+
+  async function createTag(name: string, color: string) {
+    await fetchWithAuth("/api/account/keyword-tags", {
+      method: "POST",
+      body: JSON.stringify({ name, color }),
+    });
+    await reloadKeywordsAndTags();
+  }
+
+  async function deleteTag(tagId: string) {
+    await fetchWithAuth(`/api/account/keyword-tags/${tagId}`, {
+      method: "DELETE",
+    });
+    setActiveTagFilter((prev) => {
+      const next = new Set(prev);
+      next.delete(tagId);
+      return next;
+    });
+    await reloadKeywordsAndTags();
+  }
+
+  async function updateTag(tagId: string, color: string, name?: string) {
+    await fetchWithAuth(`/api/account/keyword-tags/${tagId}`, {
+      method: "PATCH",
+      body: JSON.stringify({ color, ...(name ? { name } : {}) }),
+    });
+    await reloadKeywordsAndTags();
+  }
+
+  function toggleTagFilter(tagId: string) {
+    setActiveTagFilter((prev) => {
+      const next = new Set(prev);
+      if (next.has(tagId)) {
+        next.delete(tagId);
+      } else {
+        next.add(tagId);
+      }
+      return next;
+    });
+  }
+
   const trackedKeywordIds = new Set(keywords.map((k) => k.keywordId));
 
   return (
@@ -435,6 +521,15 @@ export function KeywordsSection({ appSlug }: { appSlug: string }) {
         </div>
       )}
 
+      {tags.length > 0 && (
+        <KeywordTagFilter
+          tags={tags}
+          activeTags={activeTagFilter}
+          onToggle={toggleTagFilter}
+          onClearAll={() => setActiveTagFilter(new Set())}
+        />
+      )}
+
       {loading ? (
         <p className="text-muted-foreground text-center py-8">Loading...</p>
       ) : keywords.length === 0 ? (
@@ -473,13 +568,47 @@ export function KeywordsSection({ appSlug }: { appSlug: string }) {
           <TableBody>
             {sortedKeywords.map((kw) => (
               <TableRow key={kw.keywordId}>
-                <TableCell>
-                  <Link
-                    href={`/keywords/${kw.keywordSlug}`}
-                    className="text-primary hover:underline font-medium"
-                  >
-                    {kw.keyword}
-                  </Link>
+                <TableCell className="group/kw">
+                  <div>
+                    <Link
+                      href={`/keywords/${kw.keywordSlug}`}
+                      className="text-primary hover:underline font-medium"
+                    >
+                      {kw.keyword}
+                    </Link>
+                    {(kw.tags?.length > 0 || canEdit) && (
+                      <div className="flex items-center gap-1 mt-0.5 flex-wrap">
+                        {kw.tags?.map((tag: any) => (
+                          <KeywordTagBadge
+                            key={tag.id}
+                            tag={tag}
+                            onRemove={
+                              canEdit
+                                ? () => unassignTag(tag.id, kw.keywordId)
+                                : undefined
+                            }
+                          />
+                        ))}
+                        {canEdit && (
+                          <KeywordTagManager
+                            keywordId={kw.keywordId}
+                            currentTags={kw.tags || []}
+                            allTags={tags}
+                            className="opacity-0 group-hover/kw:opacity-100 transition-opacity"
+                            onAssign={(tagId) =>
+                              assignTag(tagId, kw.keywordId)
+                            }
+                            onUnassign={(tagId) =>
+                              unassignTag(tagId, kw.keywordId)
+                            }
+                            onCreateTag={createTag}
+                            onDeleteTag={deleteTag}
+                            onUpdateTag={updateTag}
+                          />
+                        )}
+                      </div>
+                    )}
+                  </div>
                 </TableCell>
                 {selectedApps.map((app) => {
                   const position = kw.rankings?.[app.slug];

@@ -7,6 +7,8 @@ import {
   appKeywordRankings,
   keywordAdSightings,
   keywordAutoSuggestions,
+  keywordTags,
+  keywordTagAssignments,
   apps,
   appSnapshots,
   accountTrackedKeywords,
@@ -92,6 +94,37 @@ export const keywordRoutes: FastifyPluginAsync = async (app) => {
       }
     }
 
+    // Batch-fetch tags for all keywords
+    const tagMap = new Map<
+      number,
+      Array<{ id: string; name: string; color: string }>
+    >();
+    if (ids.length > 0) {
+      const tagRows = await db
+        .select({
+          keywordId: keywordTagAssignments.keywordId,
+          tagId: keywordTags.id,
+          tagName: keywordTags.name,
+          tagColor: keywordTags.color,
+        })
+        .from(keywordTagAssignments)
+        .innerJoin(
+          keywordTags,
+          eq(keywordTags.id, keywordTagAssignments.tagId)
+        )
+        .where(
+          and(
+            eq(keywordTags.accountId, accountId),
+            inArray(keywordTagAssignments.keywordId, ids)
+          )
+        );
+      for (const tr of tagRows) {
+        const list = tagMap.get(tr.keywordId) || [];
+        list.push({ id: tr.tagId, name: tr.tagName, color: tr.tagColor });
+        tagMap.set(tr.keywordId, list);
+      }
+    }
+
     const result = await Promise.all(
       rows.map(async (kw) => {
         const [snapshot] = await db
@@ -140,6 +173,7 @@ export const keywordRoutes: FastifyPluginAsync = async (app) => {
           trackedAppsInResults,
           competitorAppsInResults,
           adApps: adAppCountMap.get(kw.id) ?? 0,
+          tags: tagMap.get(kw.id) || [],
         };
       })
     );

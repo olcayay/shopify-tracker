@@ -1,6 +1,6 @@
 "use client";
 
-import { Fragment, useEffect, useState, useRef } from "react";
+import { Fragment, useEffect, useState, useRef, useMemo } from "react";
 import Link from "next/link";
 import { useAuth } from "@/lib/auth-context";
 import { useFormatDate } from "@/lib/format-date";
@@ -29,12 +29,19 @@ import { ConfirmModal } from "@/components/confirm-modal";
 import { KeywordSearchModal } from "@/components/keyword-search-modal";
 import { LiveSearchTrigger } from "@/components/live-search-trigger";
 import { AdminScraperTrigger } from "@/components/admin-scraper-trigger";
+import { KeywordTagBadge } from "@/components/keyword-tag-badge";
+import { KeywordTagManager } from "@/components/keyword-tag-manager";
+import { KeywordTagFilter } from "@/components/keyword-tag-filter";
 
 export default function KeywordsPage() {
   const { fetchWithAuth, user, account, refreshUser } = useAuth();
   const { formatDateOnly } = useFormatDate();
   const [keywords, setKeywords] = useState<any[]>([]);
   const [myApps, setMyApps] = useState<any[]>([]);
+  const [tags, setTags] = useState<any[]>([]);
+  const [activeTagFilter, setActiveTagFilter] = useState<Set<string>>(
+    new Set()
+  );
   const [loading, setLoading] = useState(true);
   const [query, setQuery] = useState("");
   const [suggestions, setSuggestions] = useState<any[]>([]);
@@ -52,6 +59,14 @@ export default function KeywordsPage() {
   const debounceRef = useRef<ReturnType<typeof setTimeout>>(undefined);
 
   const canEdit = user?.role === "owner" || user?.role === "editor";
+
+  // Filter keywords by active tags
+  const filteredKeywords = useMemo(() => {
+    if (activeTagFilter.size === 0) return keywords;
+    return keywords.filter((kw) =>
+      kw.tags?.some((t: any) => activeTagFilter.has(t.id))
+    );
+  }, [keywords, activeTagFilter]);
 
   useEffect(() => {
     loadData();
@@ -72,9 +87,10 @@ export default function KeywordsPage() {
 
   async function loadData() {
     setLoading(true);
-    const [kwRes, appsRes] = await Promise.all([
+    const [kwRes, appsRes, tagsRes] = await Promise.all([
       fetchWithAuth("/api/keywords"),
       fetchWithAuth("/api/account/tracked-apps"),
+      fetchWithAuth("/api/account/keyword-tags"),
     ]);
     if (kwRes.ok) setKeywords(await kwRes.json());
     if (appsRes.ok) {
@@ -84,7 +100,17 @@ export default function KeywordsPage() {
         setSelectedApp(apps[0].appSlug);
       }
     }
+    if (tagsRes.ok) setTags(await tagsRes.json());
     setLoading(false);
+  }
+
+  async function loadKeywordsAndTags() {
+    const [kwRes, tagsRes] = await Promise.all([
+      fetchWithAuth("/api/keywords"),
+      fetchWithAuth("/api/account/keyword-tags"),
+    ]);
+    if (kwRes.ok) setKeywords(await kwRes.json());
+    if (tagsRes.ok) setTags(await tagsRes.json());
   }
 
   function handleSearchInput(value: string) {
@@ -152,7 +178,6 @@ export default function KeywordsPage() {
     trackedForApps: string[]
   ) {
     setMessage("");
-    // Remove from all apps this keyword is tracked for
     for (const appSlug of trackedForApps) {
       await fetchWithAuth(
         `/api/account/tracked-apps/${encodeURIComponent(appSlug)}/keywords/${keywordId}`,
@@ -164,9 +189,64 @@ export default function KeywordsPage() {
     refreshUser();
   }
 
-  const trackedIds = new Set(keywords.map((k) => k.id));
+  // Tag operations
+  async function assignTag(tagId: string, keywordId: number) {
+    await fetchWithAuth(
+      `/api/account/keyword-tags/${tagId}/keywords/${keywordId}`,
+      { method: "POST" }
+    );
+    await loadKeywordsAndTags();
+  }
 
-  // Count unique keywords
+  async function unassignTag(tagId: string, keywordId: number) {
+    await fetchWithAuth(
+      `/api/account/keyword-tags/${tagId}/keywords/${keywordId}`,
+      { method: "DELETE" }
+    );
+    await loadKeywordsAndTags();
+  }
+
+  async function createTag(name: string, color: string) {
+    await fetchWithAuth("/api/account/keyword-tags", {
+      method: "POST",
+      body: JSON.stringify({ name, color }),
+    });
+    await loadKeywordsAndTags();
+  }
+
+  async function deleteTag(tagId: string) {
+    await fetchWithAuth(`/api/account/keyword-tags/${tagId}`, {
+      method: "DELETE",
+    });
+    setActiveTagFilter((prev) => {
+      const next = new Set(prev);
+      next.delete(tagId);
+      return next;
+    });
+    await loadKeywordsAndTags();
+  }
+
+  async function updateTag(tagId: string, color: string, name?: string) {
+    await fetchWithAuth(`/api/account/keyword-tags/${tagId}`, {
+      method: "PATCH",
+      body: JSON.stringify({ color, ...(name ? { name } : {}) }),
+    });
+    await loadKeywordsAndTags();
+  }
+
+  function toggleTagFilter(tagId: string) {
+    setActiveTagFilter((prev) => {
+      const next = new Set(prev);
+      if (next.has(tagId)) {
+        next.delete(tagId);
+      } else {
+        next.add(tagId);
+      }
+      return next;
+    });
+  }
+
+  const trackedIds = new Set(keywords.map((k) => k.id));
   const uniqueCount = new Set(keywords.map((k) => k.id)).size;
 
   return (
@@ -270,6 +350,15 @@ export default function KeywordsPage() {
         </div>
       )}
 
+      {tags.length > 0 && (
+        <KeywordTagFilter
+          tags={tags}
+          activeTags={activeTagFilter}
+          onToggle={toggleTagFilter}
+          onClearAll={() => setActiveTagFilter(new Set())}
+        />
+      )}
+
       <Card>
         <CardContent className="pt-6">
           {loading ? (
@@ -291,7 +380,7 @@ export default function KeywordsPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {keywords.map((kw) => {
+                {filteredKeywords.map((kw) => {
                   const hasApps =
                     kw.trackedInResults > 0 || kw.competitorInResults > 0;
                   const isExpanded = expandedId === kw.id;
@@ -308,7 +397,7 @@ export default function KeywordsPage() {
                           setExpandedId(isExpanded ? null : kw.id)
                         }
                       >
-                        <TableCell>
+                        <TableCell className="group/kw">
                           <div className="flex items-center gap-1.5">
                             {hasApps ? (
                               isExpanded ? (
@@ -319,13 +408,51 @@ export default function KeywordsPage() {
                             ) : (
                               <span className="w-4" />
                             )}
-                            <Link
-                              href={`/keywords/${kw.slug}`}
-                              className="text-primary hover:underline font-medium"
-                              onClick={(e) => e.stopPropagation()}
-                            >
-                              {kw.keyword}
-                            </Link>
+                            <div>
+                              <Link
+                                href={`/keywords/${kw.slug}`}
+                                className="text-primary hover:underline font-medium"
+                                onClick={(e) => e.stopPropagation()}
+                              >
+                                {kw.keyword}
+                              </Link>
+                              {(kw.tags?.length > 0 || canEdit) && (
+                                <div
+                                  className="flex items-center gap-1 mt-0.5 flex-wrap"
+                                  onClick={(e) => e.stopPropagation()}
+                                >
+                                  {kw.tags?.map((tag: any) => (
+                                    <KeywordTagBadge
+                                      key={tag.id}
+                                      tag={tag}
+                                      onRemove={
+                                        canEdit
+                                          ? () =>
+                                              unassignTag(tag.id, kw.id)
+                                          : undefined
+                                      }
+                                    />
+                                  ))}
+                                  {canEdit && (
+                                    <KeywordTagManager
+                                      keywordId={kw.id}
+                                      currentTags={kw.tags || []}
+                                      allTags={tags}
+                                      className="opacity-0 group-hover/kw:opacity-100 transition-opacity"
+                                      onAssign={(tagId) =>
+                                        assignTag(tagId, kw.id)
+                                      }
+                                      onUnassign={(tagId) =>
+                                        unassignTag(tagId, kw.id)
+                                      }
+                                      onCreateTag={createTag}
+                                      onDeleteTag={deleteTag}
+                                      onUpdateTag={updateTag}
+                                    />
+                                  )}
+                                </div>
+                              )}
+                            </div>
                           </div>
                         </TableCell>
                         <TableCell>
@@ -495,14 +622,15 @@ export default function KeywordsPage() {
                     </Fragment>
                   );
                 })}
-                {keywords.length === 0 && (
+                {filteredKeywords.length === 0 && (
                   <TableRow>
                     <TableCell
                       colSpan={canEdit ? 8 : 7}
                       className="text-center text-muted-foreground"
                     >
-                      No tracked keywords yet. Add keywords from your app
-                      detail pages.
+                      {keywords.length === 0
+                        ? "No tracked keywords yet. Add keywords from your app detail pages."
+                        : "No keywords match the selected tags."}
                     </TableCell>
                   </TableRow>
                 )}

@@ -24,6 +24,8 @@ import {
   keywordAutoSuggestions,
   featuredAppSightings,
   keywordAdSightings,
+  keywordTags,
+  keywordTagAssignments,
 } from "@shopify-tracking/db";
 import { requireRole } from "../middleware/authorize.js";
 
@@ -1364,9 +1366,44 @@ export const accountRoutes: FastifyPluginAsync = async (app) => {
         })
       );
 
+      // Batch-fetch tags for all keywords
+      const keywordIds = rows.map((r) => r.keywordId);
+      const tagMap = new Map<
+        number,
+        Array<{ id: string; name: string; color: string }>
+      >();
+      if (keywordIds.length > 0) {
+        const tagRows = await db
+          .select({
+            keywordId: keywordTagAssignments.keywordId,
+            tagId: keywordTags.id,
+            tagName: keywordTags.name,
+            tagColor: keywordTags.color,
+          })
+          .from(keywordTagAssignments)
+          .innerJoin(
+            keywordTags,
+            eq(keywordTags.id, keywordTagAssignments.tagId)
+          )
+          .where(
+            and(
+              eq(keywordTags.accountId, accountId),
+              inArray(keywordTagAssignments.keywordId, keywordIds)
+            )
+          );
+        for (const tr of tagRows) {
+          const list = tagMap.get(tr.keywordId) || [];
+          list.push({
+            id: tr.tagId,
+            name: tr.tagName,
+            color: tr.tagColor,
+          });
+          tagMap.set(tr.keywordId, list);
+        }
+      }
+
       // Optionally enrich with latest ranking position per app
       const slugList = appSlugsParam?.split(",").filter(Boolean) || [];
-      const keywordIds = rows.map((r) => r.keywordId);
 
       // Check which keywords have auto-suggestions
       let suggestionSet = new Set<number>();
@@ -1403,6 +1440,7 @@ export const accountRoutes: FastifyPluginAsync = async (app) => {
 
         return result.map((row) => ({
           ...row,
+          tags: tagMap.get(row.keywordId) || [],
           hasSuggestions: suggestionSet.has(row.keywordId),
           rankings: Object.fromEntries(
             slugList.map((s) => [s, lookup.get(s)?.get(row.keywordId) ?? null])
@@ -1412,6 +1450,7 @@ export const accountRoutes: FastifyPluginAsync = async (app) => {
 
       return result.map((row) => ({
         ...row,
+        tags: tagMap.get(row.keywordId) || [],
         hasSuggestions: suggestionSet.has(row.keywordId),
       }));
     }
@@ -1802,6 +1841,207 @@ export const accountRoutes: FastifyPluginAsync = async (app) => {
       }
 
       return { message: "Feature unstarred" };
+    }
+  );
+
+  // ── Keyword Tags ──────────────────────────────────────────────
+
+  const TAG_COLORS = [
+    "red",
+    "orange",
+    "amber",
+    "emerald",
+    "cyan",
+    "blue",
+    "violet",
+    "pink",
+    "slate",
+    "rose",
+  ];
+
+  // GET /api/account/keyword-tags
+  app.get("/keyword-tags", async (request) => {
+    const { accountId } = request.user;
+    return db
+      .select()
+      .from(keywordTags)
+      .where(eq(keywordTags.accountId, accountId))
+      .orderBy(keywordTags.name);
+  });
+
+  // POST /api/account/keyword-tags
+  app.post(
+    "/keyword-tags",
+    { preHandler: [requireRole("owner", "editor")] },
+    async (request, reply) => {
+      const { accountId } = request.user;
+      const { name, color } = request.body as {
+        name?: string;
+        color?: string;
+      };
+
+      if (!name?.trim() || !color) {
+        return reply
+          .code(400)
+          .send({ error: "name and color are required" });
+      }
+      if (!TAG_COLORS.includes(color)) {
+        return reply.code(400).send({ error: "Invalid color" });
+      }
+
+      try {
+        const [result] = await db
+          .insert(keywordTags)
+          .values({ accountId, name: name.trim(), color })
+          .returning();
+        return result;
+      } catch (err: any) {
+        if (err.code === "23505") {
+          return reply
+            .code(409)
+            .send({ error: "Tag name already exists" });
+        }
+        throw err;
+      }
+    }
+  );
+
+  // PATCH /api/account/keyword-tags/:id
+  app.patch<{ Params: { id: string } }>(
+    "/keyword-tags/:id",
+    { preHandler: [requireRole("owner", "editor")] },
+    async (request, reply) => {
+      const { accountId } = request.user;
+      const { id } = request.params;
+      const { color, name } = request.body as {
+        color?: string;
+        name?: string;
+      };
+
+      const updates: Record<string, any> = {};
+      if (color) {
+        if (!TAG_COLORS.includes(color)) {
+          return reply.code(400).send({ error: "Invalid color" });
+        }
+        updates.color = color;
+      }
+      if (name?.trim()) {
+        updates.name = name.trim();
+      }
+
+      if (Object.keys(updates).length === 0) {
+        return reply.code(400).send({ error: "Nothing to update" });
+      }
+
+      const [updated] = await db
+        .update(keywordTags)
+        .set(updates)
+        .where(
+          and(eq(keywordTags.id, id), eq(keywordTags.accountId, accountId))
+        )
+        .returning();
+
+      if (!updated) {
+        return reply.code(404).send({ error: "Tag not found" });
+      }
+      return updated;
+    }
+  );
+
+  // DELETE /api/account/keyword-tags/:id
+  app.delete<{ Params: { id: string } }>(
+    "/keyword-tags/:id",
+    { preHandler: [requireRole("owner", "editor")] },
+    async (request, reply) => {
+      const { accountId } = request.user;
+      const { id } = request.params;
+
+      const deleted = await db
+        .delete(keywordTags)
+        .where(
+          and(eq(keywordTags.id, id), eq(keywordTags.accountId, accountId))
+        )
+        .returning();
+
+      if (deleted.length === 0) {
+        return reply.code(404).send({ error: "Tag not found" });
+      }
+      return { message: "Tag deleted" };
+    }
+  );
+
+  // POST /api/account/keyword-tags/:id/keywords/:keywordId — assign tag
+  app.post<{ Params: { id: string; keywordId: string } }>(
+    "/keyword-tags/:id/keywords/:keywordId",
+    { preHandler: [requireRole("owner", "editor")] },
+    async (request, reply) => {
+      const { accountId } = request.user;
+      const { id: tagId, keywordId } = request.params;
+
+      // Verify tag belongs to account
+      const [tag] = await db
+        .select({ id: keywordTags.id })
+        .from(keywordTags)
+        .where(
+          and(eq(keywordTags.id, tagId), eq(keywordTags.accountId, accountId))
+        );
+      if (!tag) {
+        return reply.code(404).send({ error: "Tag not found" });
+      }
+
+      try {
+        const [result] = await db
+          .insert(keywordTagAssignments)
+          .values({ tagId, keywordId: parseInt(keywordId, 10) })
+          .returning();
+        return result;
+      } catch (err: any) {
+        if (err.code === "23505") {
+          return reply.code(409).send({ error: "Tag already assigned" });
+        }
+        throw err;
+      }
+    }
+  );
+
+  // DELETE /api/account/keyword-tags/:id/keywords/:keywordId — unassign tag
+  app.delete<{ Params: { id: string; keywordId: string } }>(
+    "/keyword-tags/:id/keywords/:keywordId",
+    { preHandler: [requireRole("owner", "editor")] },
+    async (request, reply) => {
+      const { accountId } = request.user;
+      const { id: tagId, keywordId } = request.params;
+
+      // Verify tag belongs to account
+      const [tag] = await db
+        .select({ id: keywordTags.id })
+        .from(keywordTags)
+        .where(
+          and(eq(keywordTags.id, tagId), eq(keywordTags.accountId, accountId))
+        );
+      if (!tag) {
+        return reply.code(404).send({ error: "Tag not found" });
+      }
+
+      const deleted = await db
+        .delete(keywordTagAssignments)
+        .where(
+          and(
+            eq(keywordTagAssignments.tagId, tagId),
+            eq(
+              keywordTagAssignments.keywordId,
+              parseInt(keywordId, 10)
+            )
+          )
+        )
+        .returning();
+
+      if (deleted.length === 0) {
+        return reply
+          .code(404)
+          .send({ error: "Assignment not found" });
+      }
+      return { message: "Tag removed from keyword" };
     }
   );
 };
