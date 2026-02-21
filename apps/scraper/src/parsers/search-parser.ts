@@ -168,25 +168,12 @@ function extractDescription(
 function extractPricingHint(
   $card: cheerio.Cheerio<AnyNode>
 ): string {
-  let pricing = "";
-  $card.find("span").each((_, el) => {
-    const text = cheerio.load(el)("span").first().text().trim();
-    if (
-      text.length > 2 &&
-      !text.includes("out of 5") &&
-      !text.includes("total review") &&
-      text !== "•" &&
-      !/^\([\d,]+\)$/.test(text) &&
-      !/^[\d.]+$/.test(text) &&
-      (text.includes("Free") ||
-        text.includes("$") ||
-        text.includes("/month") ||
-        text.includes("install") ||
-        text.includes("day") ||
-        text.includes("trial"))
-    ) {
-      pricing = text;
-    }
-  });
-  return pricing;
+  // Shopify renders exactly one pricing span per card with this class combo
+  // (language-agnostic — works for "Free", "無料プランあり", "$9.99/month", etc.)
+  const pricingSpan = $card.find("span.tw-overflow-hidden.tw-whitespace-nowrap.tw-text-ellipsis");
+  if (pricingSpan.length > 0) {
+    const text = pricingSpan.first().text().trim();
+    if (text.length > 0) return text;
+  }
+  return "";
 }
