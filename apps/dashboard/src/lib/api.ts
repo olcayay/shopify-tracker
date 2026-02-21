@@ -87,9 +87,16 @@ export const getAppFeaturedPlacements = cache((slug: string, days = 30) => {
 });
 
 // --- Featured Apps ---
-export function getFeaturedApps(days = 30, surface?: string) {
+export function getFeaturedApps(
+  days = 30,
+  surface?: string,
+  surfaceDetail?: string,
+  surfaceDetailPrefix?: string,
+) {
   const params = new URLSearchParams({ days: String(days) });
   if (surface) params.set("surface", surface);
+  if (surfaceDetail) params.set("surfaceDetail", surfaceDetail);
+  if (surfaceDetailPrefix) params.set("surfaceDetailPrefix", surfaceDetailPrefix);
   return fetchApi<any>(`/api/featured-apps?${params}`);
 }
 

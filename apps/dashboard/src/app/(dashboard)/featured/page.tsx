@@ -1,69 +1,45 @@
-import { getFeaturedApps, getFeaturedSections } from "@/lib/api";
-import Link from "next/link";
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { AdHeatmap } from "@/components/ad-heatmap";
-import { ExternalLink } from "lucide-react";
+import { getFeaturedApps, getFeaturedSections, getCategories } from "@/lib/api";
+import { FeaturedTabs } from "./featured-tabs";
 
 export default async function FeaturedPage() {
-  const [data, sections] = await Promise.all([
-    getFeaturedApps(30).catch(() => ({
+  const [homeData, sections, allCategories] = await Promise.all([
+    getFeaturedApps(30, "home").catch(() => ({
       sightings: [],
       trackedSlugs: [],
       competitorSlugs: [],
     })),
     getFeaturedSections(30).catch(() => []),
+    getCategories("flat").catch(() => []),
   ]);
 
-  const { sightings, trackedSlugs, competitorSlugs } = data;
+  // Build L1 category options from sections that have featured data
+  const categorySlugsWithData = new Set(
+    sections
+      .filter((s: any) => s.surface === "category")
+      .map((s: any) => s.surfaceDetail)
+  );
 
-  // Group sightings by surface > surfaceDetail > sectionHandle
-  const grouped = new Map<
-    string,
-    {
-      surface: string;
-      surfaceDetail: string;
-      sectionHandle: string;
-      sectionTitle: string;
-      sightings: any[];
-    }
-  >();
+  // Find top-level (L0) categories that have featured data (self or children)
+  const l0Categories = allCategories
+    .filter((c: any) => c.categoryLevel === 0)
+    .filter((c: any) =>
+      [...categorySlugsWithData].some(
+        (slug: string) => slug === c.slug || slug.startsWith(c.slug + "-")
+      )
+    )
+    .map((c: any) => ({ slug: c.slug, title: c.title }))
+    .sort((a: any, b: any) => a.title.localeCompare(b.title));
 
-  for (const s of sightings) {
-    const key = `${s.surface}:${s.surfaceDetail}:${s.sectionHandle}`;
-    if (!grouped.has(key)) {
-      grouped.set(key, {
-        surface: s.surface,
-        surfaceDetail: s.surfaceDetail,
-        sectionHandle: s.sectionHandle,
-        sectionTitle: s.sectionTitle || s.sectionHandle,
-        sightings: [],
-      });
-    }
-    grouped.get(key)!.sightings.push({
-      slug: s.appSlug,
-      name: s.appName,
-      seenDate: s.seenDate,
-      timesSeenInDay: s.timesSeenInDay ?? 1,
-      iconUrl: s.iconUrl,
-    });
+  // Build slug -> title map for all categories (used for group headings)
+  const categoryTitles: Record<string, string> = {};
+  for (const c of allCategories) {
+    categoryTitles[c.slug] = c.title;
   }
 
-  // Sort: homepage first, then categories alphabetically
-  const sortedGroups = [...grouped.values()].sort((a, b) => {
-    if (a.surface !== b.surface) return a.surface === "home" ? -1 : 1;
-    if (a.surfaceDetail !== b.surfaceDetail)
-      return a.surfaceDetail.localeCompare(b.surfaceDetail);
-    return a.sectionHandle.localeCompare(b.sectionHandle);
-  });
-
-  const uniqueApps = new Set(sightings.map((s: any) => s.appSlug)).size;
-  const homeSections = sections.filter((s: any) => s.surface === "home").length;
+  // L1 category slugs (used to group L2s under their parent L1)
+  const l1Slugs = allCategories
+    .filter((c: any) => c.categoryLevel === 1)
+    .map((c: any) => c.slug as string);
 
   return (
     <div className="space-y-6">
@@ -75,96 +51,15 @@ export default async function FeaturedPage() {
         </p>
       </div>
 
-      <div className="grid grid-cols-3 gap-4">
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              Sections Tracked
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <span className="text-2xl font-bold">{sections.length}</span>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              Unique Apps Featured
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <span className="text-2xl font-bold">{uniqueApps}</span>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              Homepage Sections
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <span className="text-2xl font-bold">{homeSections}</span>
-          </CardContent>
-        </Card>
-      </div>
-
-      {sortedGroups.length === 0 && (
-        <p className="text-muted-foreground text-center py-8">
-          No featured app data yet. Run the featured apps scraper to collect
-          data.
-        </p>
-      )}
-
-      {sortedGroups.map((group) => {
-        const isCategory = group.surface === "category";
-        const shopifyUrl = isCategory
-          ? `https://apps.shopify.com/categories/${group.surfaceDetail}`
-          : "https://apps.shopify.com";
-
-        return (
-          <Card
-            key={`${group.surface}:${group.surfaceDetail}:${group.sectionHandle}`}
-          >
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                {group.sectionTitle}
-                {isCategory ? (
-                  <Link href={`/categories/${group.surfaceDetail}`}>
-                    <Badge
-                      variant="outline"
-                      className="text-xs cursor-pointer hover:bg-accent"
-                    >
-                      {group.surfaceDetail}
-                    </Badge>
-                  </Link>
-                ) : (
-                  <Badge variant="outline" className="text-xs">
-                    Homepage
-                  </Badge>
-                )}
-                <a
-                  href={shopifyUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-muted-foreground hover:text-foreground transition-colors"
-                  title="View on Shopify App Store"
-                >
-                  <ExternalLink className="h-3.5 w-3.5" />
-                </a>
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <AdHeatmap
-                sightings={group.sightings}
-                linkPrefix="/apps/"
-                trackedSlugs={trackedSlugs}
-                competitorSlugs={competitorSlugs}
-                initialVisible={10}
-              />
-            </CardContent>
-          </Card>
-        );
-      })}
+      <FeaturedTabs
+        homeSightings={homeData.sightings}
+        trackedSlugs={homeData.trackedSlugs}
+        competitorSlugs={homeData.competitorSlugs}
+        sections={sections}
+        categoryOptions={l0Categories}
+        categoryTitles={categoryTitles}
+        l1Slugs={l1Slugs}
+      />
     </div>
   );
 }

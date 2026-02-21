@@ -13,11 +13,13 @@ type Db = ReturnType<typeof createDb>;
 export const featuredAppRoutes: FastifyPluginAsync = async (app) => {
   const db: Db = (app as any).db;
 
-  // GET /api/featured-apps?days=30&surface=home|category
+  // GET /api/featured-apps?days=30&surface=home|category&surfaceDetail=slug&surfaceDetailPrefix=slug
   app.get("/", async (request) => {
-    const { days = "30", surface } = request.query as {
+    const { days = "30", surface, surfaceDetail, surfaceDetailPrefix } = request.query as {
       days?: string;
       surface?: string;
+      surfaceDetail?: string;
+      surfaceDetailPrefix?: string;
     };
     const since = new Date();
     since.setDate(since.getDate() - parseInt(days, 10));
@@ -28,6 +30,14 @@ export const featuredAppRoutes: FastifyPluginAsync = async (app) => {
     ];
     if (surface) {
       conditions.push(eq(featuredAppSightings.surface, surface));
+    }
+    if (surfaceDetail) {
+      conditions.push(eq(featuredAppSightings.surfaceDetail, surfaceDetail));
+    }
+    if (surfaceDetailPrefix) {
+      conditions.push(
+        sql`${featuredAppSightings.surfaceDetail} LIKE ${surfaceDetailPrefix + "%"}`
+      );
     }
 
     const rows = await db

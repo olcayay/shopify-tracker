@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { formatDateTime } from "@/lib/format-date";
-import { getCategory, getCategoryHistory, getAccountCompetitors, getAccountTrackedApps, getAccountStarredCategories, getAppsLastChanges, getAppsMinPaidPrices } from "@/lib/api";
+import { getCategory, getCategoryHistory, getAccountCompetitors, getAccountTrackedApps, getAccountStarredCategories, getAppsLastChanges, getAppsMinPaidPrices, getFeaturedApps } from "@/lib/api";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -14,6 +14,7 @@ import {
 import { ExternalLink } from "lucide-react";
 import { StarCategoryButton } from "@/components/star-category-button";
 import { AdminScraperTrigger } from "@/components/admin-scraper-trigger";
+import { AdHeatmap } from "@/components/ad-heatmap";
 import { CategoryAppResults } from "./app-results";
 
 export default async function CategoryDetailPage({
@@ -53,10 +54,41 @@ export default async function CategoryDetailPage({
     : (snapshot?.firstPageApps || [])
         .map((app: any) => app.app_url?.replace("https://apps.shopify.com/", "")?.split("?")[0])
         .filter(Boolean);
-  const [lastChanges, minPaidPrices] = await Promise.all([
+  const [lastChanges, minPaidPrices, featuredData] = await Promise.all([
     getAppsLastChanges(appSlugs).catch(() => ({} as Record<string, string>)),
     getAppsMinPaidPrices(appSlugs).catch(() => ({} as Record<string, number | null>)),
+    getFeaturedApps(30, "category", slug).catch(() => ({
+      sightings: [],
+      trackedSlugs: [],
+      competitorSlugs: [],
+    })),
   ]);
+
+  // Group featured sightings by section
+  const featuredSections = new Map<
+    string,
+    { sectionHandle: string; sectionTitle: string; sightings: any[] }
+  >();
+  for (const s of featuredData.sightings) {
+    const key = s.sectionHandle;
+    if (!featuredSections.has(key)) {
+      featuredSections.set(key, {
+        sectionHandle: s.sectionHandle,
+        sectionTitle: s.sectionTitle || s.sectionHandle,
+        sightings: [],
+      });
+    }
+    featuredSections.get(key)!.sightings.push({
+      slug: s.appSlug,
+      name: s.appName,
+      seenDate: s.seenDate,
+      timesSeenInDay: s.timesSeenInDay ?? 1,
+      iconUrl: s.iconUrl,
+    });
+  }
+  const sortedFeaturedSections = [...featuredSections.values()].sort((a, b) =>
+    a.sectionHandle.localeCompare(b.sectionHandle)
+  );
 
   return (
     <div className="space-y-6">
@@ -167,6 +199,31 @@ export default async function CategoryDetailPage({
               )}
             </div>
 
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Recommended by Shopify */}
+      {sortedFeaturedSections.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Recommended by Shopify</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            {sortedFeaturedSections.map((section) => (
+              <div key={section.sectionHandle}>
+                {sortedFeaturedSections.length > 1 && (
+                  <h3 className="text-sm font-medium mb-2">{section.sectionTitle}</h3>
+                )}
+                <AdHeatmap
+                  sightings={section.sightings}
+                  linkPrefix="/apps/"
+                  trackedSlugs={featuredData.trackedSlugs}
+                  competitorSlugs={featuredData.competitorSlugs}
+                  initialVisible={10}
+                />
+              </div>
+            ))}
           </CardContent>
         </Card>
       )}
