@@ -1,4 +1,4 @@
-import { eq, sql, and, isNotNull, desc } from "drizzle-orm";
+import { eq, sql, and } from "drizzle-orm";
 import type { Database } from "@shopify-tracking/db";
 import {
   scrapeRuns,
@@ -205,52 +205,39 @@ export class KeywordScraper {
       });
     }
 
-    // Record null position for apps that dropped out of results
+    // Record null position for apps that dropped out of results.
+    // Use the LATEST ranking per app (not just the previous run) to catch apps
+    // that dropped multiple runs ago but never got a position:null recorded.
     const currentOrganicSlugs = new Set(organicApps.map((a) => a.app_slug));
 
-    // Find distinct apps that had a non-null position in the previous scrape run
-    const previousRun = await this.db
-      .select({ id: scrapeRuns.id })
-      .from(scrapeRuns)
-      .where(
-        and(
-          eq(scrapeRuns.scraperType, "keyword_search"),
-          eq(scrapeRuns.status, "completed"),
-          sql`${scrapeRuns.id} != ${runId}`
-        )
-      )
-      .orderBy(desc(scrapeRuns.startedAt))
-      .limit(1);
+    const previouslyRanked = await this.db.execute(sql`
+      SELECT app_slug FROM (
+        SELECT DISTINCT ON (app_slug) app_slug, position
+        FROM app_keyword_rankings
+        WHERE keyword_id = ${keywordId}
+          AND scrape_run_id != ${runId}
+        ORDER BY app_slug, scraped_at DESC
+      ) latest
+      WHERE position IS NOT NULL
+    `);
+    const prevRows: { app_slug: string }[] = (previouslyRanked as any).rows ?? previouslyRanked;
 
-    if (previousRun.length > 0) {
-      const prevRanked = await this.db
-        .select({ appSlug: appKeywordRankings.appSlug })
-        .from(appKeywordRankings)
-        .where(
-          and(
-            eq(appKeywordRankings.keywordId, keywordId),
-            eq(appKeywordRankings.scrapeRunId, previousRun[0].id),
-            isNotNull(appKeywordRankings.position)
-          )
-        );
+    const droppedSlugs = prevRows
+      .map((r) => r.app_slug)
+      .filter((slug) => !currentOrganicSlugs.has(slug));
 
-      const droppedSlugs = prevRanked
-        .map((r) => r.appSlug)
-        .filter((slug) => !currentOrganicSlugs.has(slug));
+    for (const slug of droppedSlugs) {
+      await this.db.insert(appKeywordRankings).values({
+        appSlug: slug,
+        keywordId,
+        scrapeRunId: runId,
+        scrapedAt: now,
+        position: null,
+      });
+    }
 
-      for (const slug of droppedSlugs) {
-        await this.db.insert(appKeywordRankings).values({
-          appSlug: slug,
-          keywordId,
-          scrapeRunId: runId,
-          scrapedAt: now,
-          position: null,
-        });
-      }
-
-      if (droppedSlugs.length > 0) {
-        log.info("recorded dropped apps", { keyword, count: droppedSlugs.length, slugs: droppedSlugs });
-      }
+    if (droppedSlugs.length > 0) {
+      log.info("recorded dropped apps", { keyword, count: droppedSlugs.length, slugs: droppedSlugs });
     }
 
     // Record ad sightings (upsert per app+keyword+day)
