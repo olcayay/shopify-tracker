@@ -14,10 +14,10 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { X, Plus, Search, ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
+import { X, Plus, Search, ArrowUpDown, ArrowUp, ArrowDown, ChevronUp, ChevronDown } from "lucide-react";
 import { ConfirmModal } from "@/components/confirm-modal";
 
-type SortKey = "name" | "rating" | "reviews" | "pricing" | "minPaidPrice" | "launchedDate" | "lastChange" | "featured" | "ads";
+type SortKey = "order" | "name" | "rating" | "reviews" | "pricing" | "minPaidPrice" | "launchedDate" | "lastChange" | "featured" | "ads";
 type SortDir = "asc" | "desc";
 
 export function CompetitorsSection({ appSlug }: { appSlug: string }) {
@@ -37,8 +37,9 @@ export function CompetitorsSection({ appSlug }: { appSlug: string }) {
   } | null>(null);
   const searchRef = useRef<HTMLDivElement>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout>>(undefined);
-  const [sortKey, setSortKey] = useState<SortKey>("name");
+  const [sortKey, setSortKey] = useState<SortKey>("order");
   const [sortDir, setSortDir] = useState<SortDir>("asc");
+  const [reordering, setReordering] = useState(false);
 
   const canEdit = user?.role === "owner" || user?.role === "editor";
 
@@ -142,7 +143,31 @@ export function CompetitorsSection({ appSlug }: { appSlug: string }) {
     }
   }
 
+  async function moveCompetitor(index: number, direction: "up" | "down") {
+    const newList = [...competitors];
+    const targetIndex = direction === "up" ? index - 1 : index + 1;
+    if (targetIndex < 0 || targetIndex >= newList.length) return;
+
+    [newList[index], newList[targetIndex]] = [newList[targetIndex], newList[index]];
+    setCompetitors(newList);
+
+    setReordering(true);
+    const slugs = newList.map((c) => c.appSlug);
+    await fetchWithAuth(
+      `/api/account/tracked-apps/${encodeURIComponent(appSlug)}/competitors/reorder`,
+      {
+        method: "PATCH",
+        body: JSON.stringify({ slugs }),
+      }
+    );
+    setReordering(false);
+  }
+
+  // Whether we're in custom order mode (showing move buttons)
+  const isCustomOrder = sortKey === "order";
+
   function sortedCompetitors() {
+    if (sortKey === "order") return competitors; // preserve API order
     return [...competitors].sort((a, b) => {
       let cmp = 0;
       switch (sortKey) {
@@ -183,7 +208,7 @@ export function CompetitorsSection({ appSlug }: { appSlug: string }) {
       setSortDir((d) => (d === "asc" ? "desc" : "asc"));
     } else {
       setSortKey(key);
-      setSortDir(key === "name" ? "asc" : "desc");
+      setSortDir(key === "name" || key === "order" ? "asc" : "desc");
     }
   }
 
@@ -286,6 +311,14 @@ export function CompetitorsSection({ appSlug }: { appSlug: string }) {
         <Table>
           <TableHeader>
             <TableRow>
+              {canEdit && (
+                <TableHead
+                  className="w-12 cursor-pointer select-none"
+                  onClick={() => toggleSort("order")}
+                >
+                  # <SortIcon col="order" />
+                </TableHead>
+              )}
               <TableHead className="cursor-pointer select-none" onClick={() => toggleSort("name")}>
                 App <SortIcon col="name" />
               </TableHead>
@@ -317,8 +350,32 @@ export function CompetitorsSection({ appSlug }: { appSlug: string }) {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {sortedCompetitors().map((comp) => (
+            {sortedCompetitors().map((comp, idx) => (
               <TableRow key={comp.appSlug}>
+                {canEdit && (
+                  <TableCell className="py-1">
+                    {isCustomOrder ? (
+                      <div className="flex flex-col items-center gap-0">
+                        <button
+                          className="h-5 w-5 flex items-center justify-center rounded hover:bg-accent disabled:opacity-20 transition-colors"
+                          disabled={idx === 0 || reordering}
+                          onClick={() => moveCompetitor(idx, "up")}
+                        >
+                          <ChevronUp className="h-3.5 w-3.5" />
+                        </button>
+                        <button
+                          className="h-5 w-5 flex items-center justify-center rounded hover:bg-accent disabled:opacity-20 transition-colors"
+                          disabled={idx === competitors.length - 1 || reordering}
+                          onClick={() => moveCompetitor(idx, "down")}
+                        >
+                          <ChevronDown className="h-3.5 w-3.5" />
+                        </button>
+                      </div>
+                    ) : (
+                      <span className="text-xs text-muted-foreground">{idx + 1}</span>
+                    )}
+                  </TableCell>
+                )}
                 <TableCell>
                   <div className="flex items-center gap-2">
                     {comp.iconUrl && (

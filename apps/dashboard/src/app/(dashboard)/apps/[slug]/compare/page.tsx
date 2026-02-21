@@ -198,6 +198,8 @@ export default function ComparePage() {
   );
   const [loading, setLoading] = useState(true);
   const [activeDetailSlug, setActiveDetailSlug] = useState<string>("");
+  const [dragIndex, setDragIndex] = useState<number | null>(null);
+  const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
 
   // Collapsible sections — persisted globally
   const [collapsedSections, setCollapsedSections] = useState<Set<string>>(
@@ -370,6 +372,45 @@ export default function ComparePage() {
     }
   }
 
+  function handleDragStart(index: number) {
+    setDragIndex(index);
+  }
+
+  function handleDragOver(e: React.DragEvent, index: number) {
+    e.preventDefault();
+    setDragOverIndex(index);
+  }
+
+  function handleDrop(targetIndex: number) {
+    if (dragIndex === null || dragIndex === targetIndex) {
+      setDragIndex(null);
+      setDragOverIndex(null);
+      return;
+    }
+
+    const newList = [...competitors];
+    const [moved] = newList.splice(dragIndex, 1);
+    newList.splice(targetIndex, 0, moved);
+    setCompetitors(newList);
+    setDragIndex(null);
+    setDragOverIndex(null);
+
+    // Persist to API
+    const slugs = newList.map((c) => c.slug);
+    fetchWithAuth(
+      `/api/account/tracked-apps/${encodeURIComponent(slug)}/competitors/reorder`,
+      {
+        method: "PATCH",
+        body: JSON.stringify({ slugs }),
+      }
+    );
+  }
+
+  function handleDragEnd() {
+    setDragIndex(null);
+    setDragOverIndex(null);
+  }
+
   // Build ordered list of selected apps (main first, then selected competitors)
   const selectedApps = useMemo(() => {
     const apps: AppData[] = [];
@@ -423,13 +464,32 @@ export default function ComparePage() {
               isMain
             />
             <div className="w-px h-8 bg-border" />
-            {competitors.map((c) => (
-              <AppIcon
+            {competitors.map((c, idx) => (
+              <div
                 key={c.slug}
-                app={c}
-                selected={selectedSlugs.has(c.slug)}
-                onClick={() => toggleCompetitor(c.slug)}
-              />
+                draggable
+                onDragStart={() => handleDragStart(idx)}
+                onDragOver={(e) => handleDragOver(e, idx)}
+                onDrop={() => handleDrop(idx)}
+                onDragEnd={handleDragEnd}
+                className={cn(
+                  "relative cursor-grab active:cursor-grabbing transition-all",
+                  dragIndex === idx && "opacity-30",
+                  dragOverIndex === idx && dragIndex !== idx && "scale-110"
+                )}
+              >
+                {dragOverIndex === idx && dragIndex !== null && dragIndex !== idx && (
+                  <div className={cn(
+                    "absolute top-0 bottom-0 w-0.5 bg-emerald-500 z-10",
+                    dragIndex > idx ? "-left-1.5" : "-right-1.5"
+                  )} />
+                )}
+                <AppIcon
+                  app={c}
+                  selected={selectedSlugs.has(c.slug)}
+                  onClick={() => toggleCompetitor(c.slug)}
+                />
+              </div>
             ))}
             <button
               onClick={toggleAll}

@@ -107,6 +107,7 @@ export const accountCompetitorApps = pgTable(
     appSlug: varchar("app_slug", { length: 255 })
       .notNull()
       .references(() => apps.slug),
+    sortOrder: integer("sort_order").notNull().default(0),
     createdAt: timestamp("created_at").notNull().defaultNow(),
   },
   (table) => [

@@ -1,5 +1,5 @@
 import type { FastifyPluginAsync } from "fastify";
-import { eq, sql, and, desc, inArray } from "drizzle-orm";
+import { eq, sql, and, asc, desc, inArray } from "drizzle-orm";
 import crypto from "crypto";
 import { Queue } from "bullmq";
 import {
@@ -807,6 +807,7 @@ export const accountRoutes: FastifyPluginAsync = async (app) => {
       .select({
         appSlug: accountCompetitorApps.appSlug,
         trackedAppSlug: accountCompetitorApps.trackedAppSlug,
+        sortOrder: accountCompetitorApps.sortOrder,
         createdAt: accountCompetitorApps.createdAt,
         appName: apps.name,
         isBuiltForShopify: apps.isBuiltForShopify,
@@ -815,7 +816,8 @@ export const accountRoutes: FastifyPluginAsync = async (app) => {
       })
       .from(accountCompetitorApps)
       .innerJoin(apps, eq(apps.slug, accountCompetitorApps.appSlug))
-      .where(eq(accountCompetitorApps.accountId, accountId));
+      .where(eq(accountCompetitorApps.accountId, accountId))
+      .orderBy(asc(accountCompetitorApps.sortOrder));
 
     if (rows.length === 0) return [];
 
@@ -961,10 +963,21 @@ export const accountRoutes: FastifyPluginAsync = async (app) => {
         .set({ isTracked: true, updatedAt: new Date() })
         .where(eq(apps.slug, slug));
 
+      // Determine next sortOrder for this (account, trackedApp) group
+      const [{ maxOrder }] = await db
+        .select({ maxOrder: sql<number>`coalesce(max(${accountCompetitorApps.sortOrder}), 0)` })
+        .from(accountCompetitorApps)
+        .where(
+          and(
+            eq(accountCompetitorApps.accountId, accountId),
+            eq(accountCompetitorApps.trackedAppSlug, trackedAppSlug)
+          )
+        );
+
       // Add to account competitors with trackedAppSlug
       const [result] = await db
         .insert(accountCompetitorApps)
-        .values({ accountId, trackedAppSlug, appSlug: slug })
+        .values({ accountId, trackedAppSlug, appSlug: slug, sortOrder: maxOrder + 1 })
         .onConflictDoNothing()
         .returning();
 
@@ -1062,6 +1075,7 @@ export const accountRoutes: FastifyPluginAsync = async (app) => {
       const rows = await db
         .select({
           appSlug: accountCompetitorApps.appSlug,
+          sortOrder: accountCompetitorApps.sortOrder,
           createdAt: accountCompetitorApps.createdAt,
           appName: apps.name,
           isBuiltForShopify: apps.isBuiltForShopify,
@@ -1075,7 +1089,8 @@ export const accountRoutes: FastifyPluginAsync = async (app) => {
             eq(accountCompetitorApps.accountId, accountId),
             eq(accountCompetitorApps.trackedAppSlug, slug)
           )
-        );
+        )
+        .orderBy(asc(accountCompetitorApps.sortOrder));
 
       // Batch-fetch featured section counts (last 30 days)
       const competitorSlugs = rows.map((r) => r.appSlug);
@@ -1231,12 +1246,24 @@ export const accountRoutes: FastifyPluginAsync = async (app) => {
         .set({ isTracked: true, updatedAt: new Date() })
         .where(eq(apps.slug, competitorSlug));
 
+      // Determine next sortOrder for this (account, trackedApp) group
+      const [{ maxOrder: maxOrd }] = await db
+        .select({ maxOrder: sql<number>`coalesce(max(${accountCompetitorApps.sortOrder}), 0)` })
+        .from(accountCompetitorApps)
+        .where(
+          and(
+            eq(accountCompetitorApps.accountId, accountId),
+            eq(accountCompetitorApps.trackedAppSlug, trackedAppSlug)
+          )
+        );
+
       const [result] = await db
         .insert(accountCompetitorApps)
         .values({
           accountId,
           trackedAppSlug,
           appSlug: competitorSlug,
+          sortOrder: maxOrd + 1,
         })
         .onConflictDoNothing()
         .returning();
@@ -1302,6 +1329,39 @@ export const accountRoutes: FastifyPluginAsync = async (app) => {
       await syncAppTrackedFlag(db, competitorSlug);
 
       return { message: "Competitor removed" };
+    }
+  );
+
+  // PATCH /api/account/tracked-apps/:slug/competitors/reorder
+  app.patch<{ Params: { slug: string } }>(
+    "/tracked-apps/:slug/competitors/reorder",
+    { preHandler: [requireRole("owner", "editor")] },
+    async (request, reply) => {
+      const { accountId } = request.user;
+      const trackedAppSlug = decodeURIComponent(request.params.slug);
+      const { slugs } = request.body as { slugs?: string[] };
+
+      if (!Array.isArray(slugs) || slugs.length === 0) {
+        return reply.code(400).send({ error: "slugs array is required" });
+      }
+
+      // Update sort_order for each slug based on array index
+      await Promise.all(
+        slugs.map((slug, index) =>
+          db
+            .update(accountCompetitorApps)
+            .set({ sortOrder: index + 1 })
+            .where(
+              and(
+                eq(accountCompetitorApps.accountId, accountId),
+                eq(accountCompetitorApps.trackedAppSlug, trackedAppSlug),
+                eq(accountCompetitorApps.appSlug, slug)
+              )
+            )
+        )
+      );
+
+      return { message: "Competitors reordered" };
     }
   );
 
