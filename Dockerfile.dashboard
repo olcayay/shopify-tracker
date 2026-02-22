@@ -6,7 +6,7 @@ WORKDIR /app
 FROM base AS deps
 COPY package.json package-lock.json turbo.json tsconfig.base.json ./
 COPY packages/shared/package.json packages/shared/tsconfig.json ./packages/shared/
-COPY packages/db/package.json packages/db/tsconfig.json packages/db/drizzle.config.ts ./packages/db/
+COPY packages/db/package.json packages/db/tsconfig.json packages/db/tsconfig.build.json packages/db/drizzle.config.ts ./packages/db/
 COPY apps/dashboard/package.json apps/dashboard/tsconfig.json apps/dashboard/next.config.ts apps/dashboard/postcss.config.mjs ./apps/dashboard/
 RUN npm ci --include=dev
 
@@ -22,7 +22,7 @@ COPY apps/dashboard/public ./apps/dashboard/public
 
 # Build shared packages then dashboard (tsc from root node_modules)
 RUN ./node_modules/.bin/tsc -p packages/shared && \
-    ./node_modules/.bin/tsc -p packages/db && \
+    ./node_modules/.bin/tsc -p packages/db/tsconfig.build.json && \
     cd apps/dashboard && npm run build
 
 # ---- Production ----
