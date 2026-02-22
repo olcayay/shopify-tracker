@@ -20,16 +20,10 @@ COPY packages/db/src ./packages/db/src
 COPY apps/dashboard/src ./apps/dashboard/src
 COPY apps/dashboard/public ./apps/dashboard/public
 
-# Build shared packages first (without turbo)
-WORKDIR /app/packages/shared
-RUN npx tsc
-
-WORKDIR /app/packages/db
-RUN npx tsc
-
-# Build dashboard
-WORKDIR /app/apps/dashboard
-RUN npm run build
+# Build shared packages then dashboard (tsc from root node_modules)
+RUN ./node_modules/.bin/tsc -p packages/shared && \
+    ./node_modules/.bin/tsc -p packages/db && \
+    cd apps/dashboard && npm run build
 
 # ---- Production ----
 FROM base AS runner

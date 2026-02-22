@@ -16,15 +16,10 @@ COPY packages/shared/src ./packages/shared/src
 COPY packages/db/src ./packages/db/src
 COPY apps/scraper/src ./apps/scraper/src
 
-# Build shared packages first (without turbo)
-WORKDIR /app/packages/shared
-RUN npx tsc
-
-WORKDIR /app/packages/db
-RUN npx tsc
-
-WORKDIR /app/apps/scraper
-RUN npx tsc
+# Build shared packages then scraper (tsc from root node_modules)
+RUN ./node_modules/.bin/tsc -p packages/shared && \
+    ./node_modules/.bin/tsc -p packages/db && \
+    ./node_modules/.bin/tsc -p apps/scraper
 
 # ---- Production ----
 FROM base AS runner
