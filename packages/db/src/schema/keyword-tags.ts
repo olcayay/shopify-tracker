@@ -7,8 +7,8 @@ import {
   uniqueIndex,
   index,
 } from "drizzle-orm/pg-core";
-import { accounts } from "./auth";
-import { trackedKeywords } from "./keywords";
+import { accounts } from "./auth.js";
+import { trackedKeywords } from "./keywords.js";
 
 export const keywordTags = pgTable(
   "keyword_tags",

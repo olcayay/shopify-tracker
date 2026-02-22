@@ -12,7 +12,7 @@ import {
   index,
 } from "drizzle-orm/pg-core";
 import type { FirstPageMetrics, FirstPageApp } from "@shopify-tracking/shared";
-import { scrapeRuns } from "./scrape-runs";
+import { scrapeRuns } from "./scrape-runs.js";
 
 export const categories = pgTable("categories", {
   id: serial("id").primaryKey(),

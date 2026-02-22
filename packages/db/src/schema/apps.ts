@@ -18,7 +18,7 @@ import type {
   PricingPlan,
   AppSupport,
 } from "@shopify-tracking/shared";
-import { scrapeRuns } from "./scrape-runs";
+import { scrapeRuns } from "./scrape-runs.js";
 
 export const apps = pgTable(
   "apps",

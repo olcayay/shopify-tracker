@@ -13,8 +13,8 @@ import {
   date,
 } from "drizzle-orm/pg-core";
 import type { KeywordSearchApp } from "@shopify-tracking/shared";
-import { scrapeRuns } from "./scrape-runs";
-import { apps } from "./apps";
+import { scrapeRuns } from "./scrape-runs.js";
+import { apps } from "./apps.js";
 
 export const trackedKeywords = pgTable("tracked_keywords", {
   id: serial("id").primaryKey(),

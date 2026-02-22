@@ -6,10 +6,10 @@ import {
   timestamp,
   uniqueIndex,
 } from "drizzle-orm/pg-core";
-import { accounts } from "./auth";
-import { apps } from "./apps";
-import { trackedKeywords } from "./keywords";
-import { categories } from "./categories";
+import { accounts } from "./auth.js";
+import { apps } from "./apps.js";
+import { trackedKeywords } from "./keywords.js";
+import { categories } from "./categories.js";
 
 export const accountTrackedFeatures = pgTable(
   "account_tracked_features",

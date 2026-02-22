@@ -8,8 +8,8 @@ import {
   index,
   uniqueIndex,
 } from "drizzle-orm/pg-core";
-import { apps } from "./apps";
-import { scrapeRuns } from "./scrape-runs";
+import { apps } from "./apps.js";
+import { scrapeRuns } from "./scrape-runs.js";
 
 export const featuredAppSightings = pgTable(
   "featured_app_sightings",
