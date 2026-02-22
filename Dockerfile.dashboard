@@ -1,0 +1,40 @@
+# ---- Base ----
+FROM node:20-alpine AS base
+WORKDIR /app
+
+# ---- Dependencies ----
+FROM base AS deps
+COPY package.json package-lock.json turbo.json tsconfig.base.json ./
+COPY packages/shared/package.json packages/shared/tsconfig.json ./packages/shared/
+COPY packages/db/package.json packages/db/tsconfig.json packages/db/drizzle.config.ts ./packages/db/
+COPY apps/dashboard/package.json apps/dashboard/tsconfig.json apps/dashboard/next.config.ts apps/dashboard/postcss.config.mjs ./apps/dashboard/
+RUN npm ci
+
+# ---- Build ----
+FROM deps AS build
+ARG NEXT_PUBLIC_API_URL
+ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
+
+COPY packages/shared/src ./packages/shared/src
+COPY packages/db/src ./packages/db/src
+COPY apps/dashboard/src ./apps/dashboard/src
+COPY apps/dashboard/public ./apps/dashboard/public
+RUN npx turbo build --filter=@shopify-tracking/dashboard
+
+# ---- Production ----
+FROM base AS runner
+ENV NODE_ENV=production
+
+RUN addgroup --system --gid 1001 nodejs && \
+    adduser --system --uid 1001 nextjs
+
+COPY --from=build /app/apps/dashboard/public ./apps/dashboard/public
+COPY --from=build --chown=nextjs:nodejs /app/apps/dashboard/.next/standalone ./
+COPY --from=build --chown=nextjs:nodejs /app/apps/dashboard/.next/static ./apps/dashboard/.next/static
+
+USER nextjs
+EXPOSE 3000
+ENV PORT=3000
+ENV HOSTNAME=0.0.0.0
+
+CMD ["node", "apps/dashboard/server.js"]

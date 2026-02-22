@@ -1,0 +1,15 @@
+node_modules
+dist
+.next
+.turbo
+*.tsbuildinfo
+.env
+.env.prod
+.git
+.gitignore
+.dockerignore
+dump.rdb
+Dockerfile*
+docker-compose*
+*.md
+files/

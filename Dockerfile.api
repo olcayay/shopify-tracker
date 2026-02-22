@@ -1,0 +1,37 @@
+# ---- Base ----
+FROM node:20-alpine AS base
+WORKDIR /app
+
+# ---- Dependencies ----
+FROM base AS deps
+COPY package.json package-lock.json turbo.json tsconfig.base.json ./
+COPY packages/shared/package.json packages/shared/tsconfig.json ./packages/shared/
+COPY packages/db/package.json packages/db/tsconfig.json packages/db/drizzle.config.ts ./packages/db/
+COPY apps/api/package.json apps/api/tsconfig.json ./apps/api/
+RUN npm ci
+
+# ---- Build ----
+FROM deps AS build
+COPY packages/shared/src ./packages/shared/src
+COPY packages/db/src ./packages/db/src
+COPY apps/api/src ./apps/api/src
+RUN npx turbo build --filter=@shopify-tracking/api
+
+# ---- Production ----
+FROM base AS runner
+ENV NODE_ENV=production
+
+COPY package.json package-lock.json ./
+COPY packages/shared/package.json ./packages/shared/
+COPY packages/db/package.json ./packages/db/
+COPY apps/api/package.json ./apps/api/
+RUN npm ci --omit=dev
+
+COPY --from=build /app/packages/shared/dist ./packages/shared/dist
+COPY --from=build /app/packages/db/dist ./packages/db/dist
+COPY --from=build /app/packages/db/src/migrations ./packages/db/src/migrations
+COPY --from=build /app/packages/db/drizzle.config.ts ./packages/db/drizzle.config.ts
+COPY --from=build /app/apps/api/dist ./apps/api/dist
+
+EXPOSE 3001
+CMD ["node", "apps/api/dist/index.js"]
