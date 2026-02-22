@@ -3,8 +3,10 @@ import { resolve } from "path";
 config({ path: resolve(import.meta.dirname, "../../../.env") });
 import Fastify from "fastify";
 import cors from "@fastify/cors";
-import { createDb } from "@shopify-tracking/db";
+import { createDb, accounts, users } from "@shopify-tracking/db";
 import { migrate } from "drizzle-orm/postgres-js/migrator";
+import { eq } from "drizzle-orm";
+import bcrypt from "bcryptjs";
 import { registerAuthMiddleware } from "./middleware/auth.js";
 import { categoryRoutes } from "./routes/categories.js";
 import { appRoutes } from "./routes/apps.js";
@@ -29,6 +31,35 @@ const db = createDb(databaseUrl);
 console.log("Running database migrations...");
 await migrate(db, { migrationsFolder: "packages/db/src/migrations" });
 console.log("Database migrations complete.");
+
+// Seed admin user on first run
+const adminEmail = process.env.ADMIN_EMAIL;
+const adminPassword = process.env.ADMIN_PASSWORD;
+if (adminEmail && adminPassword) {
+  const existingAccounts = await db.select().from(accounts).limit(1);
+  if (existingAccounts.length === 0) {
+    console.log("No accounts found, seeding admin user...");
+    const [account] = await db
+      .insert(accounts)
+      .values({
+        name: "Default Account",
+        maxTrackedApps: 100,
+        maxTrackedKeywords: 100,
+        maxCompetitorApps: 50,
+      })
+      .returning();
+    const passwordHash = await bcrypt.hash(adminPassword, 12);
+    await db.insert(users).values({
+      email: adminEmail.toLowerCase(),
+      passwordHash,
+      name: "System Admin",
+      accountId: account.id,
+      role: "owner",
+      isSystemAdmin: true,
+    });
+    console.log(`Admin user created: ${adminEmail}`);
+  }
+}
 
 const app = Fastify({ logger: true });
 
