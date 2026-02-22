@@ -187,25 +187,35 @@ export class CategoryScraper {
 
     log.info("crawling category", { slug, depth });
 
-    // Always use /all URL to avoid redirect issues (Shopify 302-redirects
-    // /categories/{slug} to /categories/{slug}/all, but may drop ?page=N params)
-    const categoryUrl = urls.categoryAll(slug);
+    // Listing pages use /all suffix to avoid redirect issues (Shopify 302-redirects
+    // /categories/{slug} to /categories/{slug}/all, but may drop ?page=N params).
+    // Hub pages (level 0, some level 1) don't have /all URLs → use canonical URL.
+    // Strategy: try /all first; on 404, fall back to canonical URL.
+    const allUrl = urls.categoryAll(slug);
     const canonicalUrl = urls.category(slug);
     const discoveredSlugs: string[] = [];
 
-    // For root categories (depth 0), we just extract subcategory links
-    // For deeper categories, we get app listings
-    let dataSourceUrl = categoryUrl;
+    let dataSourceUrl: string;
     let html: string;
 
     try {
-      html = await this.httpClient.fetchPage(categoryUrl);
+      html = await this.httpClient.fetchPage(allUrl);
+      dataSourceUrl = allUrl;
     } catch (error) {
-      log.error("failed to fetch category page", { url: categoryUrl, error: String(error) });
-      return { node: null, appSlugs: [] };
+      // /all URL failed (hub pages return 404) → try canonical URL
+      try {
+        html = await this.httpClient.fetchPage(canonicalUrl);
+        dataSourceUrl = canonicalUrl;
+      } catch (error2) {
+        log.error("failed to fetch category page", { url: canonicalUrl, error: String(error2) });
+        return { node: null, appSlugs: [] };
+      }
     }
 
     const pageData = parseCategoryPage(html, dataSourceUrl);
+
+    // Detect listing page: hub pages never have "N apps" count text
+    const isListingPage = pageData.app_count !== null;
 
     // Upsert category master record (store canonical URL without /all)
     await this.db
@@ -217,6 +227,7 @@ export class CategoryScraper {
         parentSlug,
         categoryLevel: depth,
         description: pageData.description,
+        isListingPage,
       })
       .onConflictDoUpdate({
         target: categories.slug,
@@ -225,6 +236,7 @@ export class CategoryScraper {
           description: pageData.description,
           parentSlug,
           categoryLevel: depth,
+          isListingPage,
           updatedAt: new Date(),
         },
       });
@@ -241,18 +253,25 @@ export class CategoryScraper {
         dataSourceUrl,
         appCount: pageData.app_count,
         firstPageMetrics: pageData.first_page_metrics,
-        firstPageApps: [], // All app data now lives in app_category_rankings + apps tables
+        // Listing pages: app data lives in app_category_rankings
+        // Hub pages: store featured apps here (they're NOT rankings)
+        firstPageApps: isListingPage ? [] : pageData.first_page_apps,
         breadcrumb: pageData.breadcrumb,
       });
 
-      // Record app rankings from first page
-      await this.recordAppRankings(
-        pageData.first_page_apps,
-        slug,
-        runId
-      );
+      if (isListingPage) {
+        // Record app rankings from first page (only for listing pages)
+        await this.recordAppRankings(
+          pageData.first_page_apps,
+          slug,
+          runId
+        );
+      } else {
+        // Hub pages: still upsert app master records for discovery (without rankings)
+        await this.ensureAppRecords(pageData.first_page_apps);
+      }
 
-      // Collect discovered slugs from first page
+      // Collect discovered slugs from first page (always, regardless of page type)
       for (const app of pageData.first_page_apps) {
         const appSlug = app.app_url.replace("https://apps.shopify.com/", "");
         if (appSlug) {
@@ -262,8 +281,8 @@ export class CategoryScraper {
       }
     }
 
-    // Multi-page support: fetch additional pages if configured
-    if (depth > 0 && pageOptions?.pages !== "first" && pageOptions?.pages !== undefined) {
+    // Multi-page support: fetch additional pages if configured (listing pages only)
+    if (isListingPage && depth > 0 && pageOptions?.pages !== "first" && pageOptions?.pages !== undefined) {
       const maxPages = pageOptions.pages === "all" ? 50
         : typeof pageOptions.pages === "number" ? pageOptions.pages
         : 1;
@@ -419,6 +438,48 @@ export class CategoryScraper {
         scrapedAt: now,
         position: positionOffset + (app.position || i + 1),
       });
+    }
+  }
+
+  /**
+   * Upsert app master records without recording rankings.
+   * Used for hub pages where apps are featured/recommended, not ranked.
+   */
+  private async ensureAppRecords(
+    appList: { app_url: string; name: string; short_description?: string; is_built_for_shopify?: boolean; is_sponsored?: boolean; logo_url?: string; average_rating?: number; rating_count?: number; pricing_hint?: string }[]
+  ): Promise<void> {
+    const now = new Date();
+    for (const app of appList) {
+      const appSlug = app.app_url.replace("https://apps.shopify.com/", "");
+      const subtitle = app.is_sponsored ? undefined : (app.short_description || undefined);
+      const hasRating = app.average_rating != null && app.average_rating > 0;
+      const hasCount = app.rating_count != null && app.rating_count > 0;
+
+      await this.db
+        .insert(apps)
+        .values({
+          slug: appSlug,
+          name: app.name,
+          isBuiltForShopify: !!app.is_built_for_shopify,
+          appCardSubtitle: subtitle,
+          ...(app.logo_url && { iconUrl: app.logo_url }),
+          ...(hasRating && { averageRating: String(app.average_rating) }),
+          ...(hasCount && { ratingCount: app.rating_count }),
+          ...(app.pricing_hint && { pricingHint: app.pricing_hint }),
+        })
+        .onConflictDoUpdate({
+          target: apps.slug,
+          set: {
+            name: app.name,
+            isBuiltForShopify: !!app.is_built_for_shopify,
+            ...(subtitle !== undefined && { appCardSubtitle: subtitle }),
+            ...(app.logo_url && { iconUrl: sql`COALESCE(${apps.iconUrl}, ${app.logo_url})` }),
+            ...(hasRating && { averageRating: String(app.average_rating) }),
+            ...(hasCount && { ratingCount: app.rating_count }),
+            ...(app.pricing_hint && { pricingHint: app.pricing_hint }),
+            updatedAt: now,
+          },
+        });
     }
   }
 

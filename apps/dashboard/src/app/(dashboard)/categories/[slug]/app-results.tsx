@@ -35,11 +35,13 @@ interface App {
   pricing_hint?: string;
   is_sponsored?: boolean;
   is_built_for_shopify?: boolean;
+  launched_date?: string;
+  source_categories?: { title: string; slug: string }[];
 }
 
-type SortKey = "position" | "name" | "average_rating" | "rating_count" | "min_paid";
+type SortKey = "position" | "name" | "average_rating" | "rating_count" | "min_paid" | "launched_date" | "reverse_similar";
 type SortDir = "asc" | "desc";
-type StatusFilter = "all" | "tracked" | "competitor";
+type StatusFilter = "all" | "tracked_or_competitor";
 
 const PAGE_SIZE = 24;
 
@@ -49,17 +51,21 @@ export function CategoryAppResults({
   competitorSlugs,
   lastChanges,
   minPaidPrices,
+  reverseSimilarCounts,
+  isHubPage,
 }: {
   apps: App[];
   trackedSlugs: string[];
   competitorSlugs: string[];
   lastChanges?: Record<string, string>;
   minPaidPrices?: Record<string, number | null>;
+  reverseSimilarCounts?: Record<string, number>;
+  isHubPage?: boolean;
 }) {
   const { formatDateOnly } = useFormatDate();
   const [search, setSearch] = useState("");
-  const [sortKey, setSortKey] = useState<SortKey>("position");
-  const [sortDir, setSortDir] = useState<SortDir>("asc");
+  const [sortKey, setSortKey] = useState<SortKey>(isHubPage ? "rating_count" : "position");
+  const [sortDir, setSortDir] = useState<SortDir>(isHubPage ? "desc" : "asc");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
   const [page, setPage] = useState(1);
 
@@ -74,10 +80,8 @@ export function CategoryAppResults({
       result = result.filter((a) => a.name.toLowerCase().includes(q));
     }
 
-    if (statusFilter === "tracked") {
-      result = result.filter((a) => trackedSet.has(a.slug));
-    } else if (statusFilter === "competitor") {
-      result = result.filter((a) => competitorSet.has(a.slug));
+    if (statusFilter === "tracked_or_competitor") {
+      result = result.filter((a) => trackedSet.has(a.slug) || competitorSet.has(a.slug));
     }
 
     result = [...result].sort((a, b) => {
@@ -101,12 +105,21 @@ export function CategoryAppResults({
           cmp = (aPrice === null ? Infinity : aPrice) - (bPrice === null ? Infinity : bPrice);
           break;
         }
+        case "launched_date": {
+          const aDate = a.launched_date ? new Date(a.launched_date).getTime() : 0;
+          const bDate = b.launched_date ? new Date(b.launched_date).getTime() : 0;
+          cmp = aDate - bDate;
+          break;
+        }
+        case "reverse_similar":
+          cmp = (reverseSimilarCounts?.[a.slug] ?? 0) - (reverseSimilarCounts?.[b.slug] ?? 0);
+          break;
       }
       return sortDir === "asc" ? cmp : -cmp;
     });
 
     return result;
-  }, [apps, search, statusFilter, sortKey, sortDir, trackedSet, competitorSet, minPaidPrices]);
+  }, [apps, search, statusFilter, sortKey, sortDir, trackedSet, competitorSet, minPaidPrices, reverseSimilarCounts]);
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const safePage = Math.min(page, totalPages);
@@ -138,8 +151,7 @@ export function CategoryAppResults({
       : apps;
     return {
       all: base.length,
-      tracked: base.filter((a) => trackedSet.has(a.slug)).length,
-      competitor: base.filter((a) => competitorSet.has(a.slug)).length,
+      tracked_or_competitor: base.filter((a) => trackedSet.has(a.slug) || competitorSet.has(a.slug)).length,
     };
   }, [apps, search, trackedSet, competitorSet]);
 
@@ -165,8 +177,7 @@ export function CategoryAppResults({
           {(
             [
               ["all", "All"],
-              ["tracked", "Tracked"],
-              ["competitor", "Competitor"],
+              ["tracked_or_competitor", "Tracked & Competitors"],
             ] as const
           ).map(([key, label]) => (
             <Button
@@ -191,12 +202,14 @@ export function CategoryAppResults({
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead
-                className="w-12 cursor-pointer select-none"
-                onClick={() => toggleSort("position")}
-              >
-                # <SortIcon col="position" />
-              </TableHead>
+              {!isHubPage && (
+                <TableHead
+                  className="w-12 cursor-pointer select-none"
+                  onClick={() => toggleSort("position")}
+                >
+                  # <SortIcon col="position" />
+                </TableHead>
+              )}
               <TableHead
                 className="cursor-pointer select-none"
                 onClick={() => toggleSort("name")}
@@ -222,6 +235,20 @@ export function CategoryAppResults({
               >
                 Min. Paid <SortIcon col="min_paid" />
               </TableHead>
+              <TableHead
+                className="cursor-pointer select-none"
+                onClick={() => toggleSort("reverse_similar")}
+                title="Number of apps that list this app as similar"
+              >
+                Similar <SortIcon col="reverse_similar" />
+              </TableHead>
+              {isHubPage && <TableHead>Category</TableHead>}
+              <TableHead
+                className="cursor-pointer select-none"
+                onClick={() => toggleSort("launched_date")}
+              >
+                Launched <SortIcon col="launched_date" />
+              </TableHead>
               <TableHead>Last Change</TableHead>
               <TableHead className="w-10" />
             </TableRow>
@@ -230,7 +257,7 @@ export function CategoryAppResults({
             {paged.length === 0 ? (
               <TableRow>
                 <TableCell
-                  colSpan={8}
+                  colSpan={10}
                   className="text-center text-muted-foreground py-8"
                 >
                   No apps found.
@@ -251,7 +278,9 @@ export function CategoryAppResults({
                           : ""
                     }
                   >
-                    <TableCell className="font-mono">{app.position}</TableCell>
+                    {!isHubPage && (
+                      <TableCell className="font-mono">{app.position}</TableCell>
+                    )}
                     <TableCell>
                       <div className="flex items-center gap-2">
                         {app.logo_url && (
@@ -293,6 +322,31 @@ export function CategoryAppResults({
                         ? minPaidPrices[app.slug] === 0
                           ? "Free"
                           : `$${minPaidPrices[app.slug]}/mo`
+                        : "\u2014"}
+                    </TableCell>
+                    <TableCell className="text-sm">
+                      {reverseSimilarCounts?.[app.slug] ?? "\u2014"}
+                    </TableCell>
+                    {isHubPage && (
+                      <TableCell className="text-sm">
+                        {app.source_categories?.length ? (
+                          <div className="flex flex-col gap-0.5">
+                            {app.source_categories.map((cat) => (
+                              <Link
+                                key={cat.slug}
+                                href={`/categories/${cat.slug}`}
+                                className="text-primary hover:underline"
+                              >
+                                {cat.title}
+                              </Link>
+                            ))}
+                          </div>
+                        ) : "\u2014"}
+                      </TableCell>
+                    )}
+                    <TableCell className="text-sm text-muted-foreground">
+                      {app.launched_date
+                        ? formatDateOnly(app.launched_date)
                         : "\u2014"}
                     </TableCell>
                     <TableCell className="text-sm text-muted-foreground">

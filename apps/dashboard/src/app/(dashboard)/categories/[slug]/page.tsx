@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { formatDateTime } from "@/lib/format-date";
-import { getCategory, getCategoryHistory, getAccountCompetitors, getAccountTrackedApps, getAccountStarredCategories, getAppsLastChanges, getAppsMinPaidPrices, getFeaturedApps } from "@/lib/api";
+import { getCategory, getCategoryHistory, getAccountCompetitors, getAccountTrackedApps, getAccountStarredCategories, getAppsLastChanges, getAppsMinPaidPrices, getAppsReverseSimilarCounts, getFeaturedApps } from "@/lib/api";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -11,7 +11,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { ExternalLink } from "lucide-react";
+import { ExternalLink, Info } from "lucide-react";
 import { StarCategoryButton } from "@/components/star-category-button";
 import { AdminScraperTrigger } from "@/components/admin-scraper-trigger";
 import { AdHeatmap } from "@/components/ad-heatmap";
@@ -47,9 +47,10 @@ export default async function CategoryDetailPage({
 
   const rankedApps = category.rankedApps || [];
   const appSlugs: string[] = rankedApps.map((a: any) => a.slug);
-  const [lastChanges, minPaidPrices, featuredData] = await Promise.all([
+  const [lastChanges, minPaidPrices, reverseSimilarCounts, featuredData] = await Promise.all([
     getAppsLastChanges(appSlugs).catch(() => ({} as Record<string, string>)),
     getAppsMinPaidPrices(appSlugs).catch(() => ({} as Record<string, number | null>)),
+    getAppsReverseSimilarCounts(appSlugs).catch(() => ({} as Record<string, number>)),
     getFeaturedApps(30, "category", slug).catch(() => ({
       sightings: [],
       trackedSlugs: [],
@@ -174,7 +175,16 @@ export default async function CategoryDetailPage({
         </Card>
       )}
 
-      {/* Ranked Apps */}
+      {/* Ranked Apps (listing pages) or Aggregated Apps (hub pages) */}
+      {!category.isListingPage && rankedApps.length > 0 && (
+        <div className="flex items-start gap-2 rounded-md border border-blue-200 bg-blue-50 dark:border-blue-900 dark:bg-blue-950/30 px-4 py-3 text-sm">
+          <Info className="h-4 w-4 text-blue-500 mt-0.5 shrink-0" />
+          <span className="text-muted-foreground">
+            This is not a listing category. The apps below are aggregated from child listing categories and their order does not represent Shopify rankings. By default, they are sorted by review count.
+          </span>
+        </div>
+      )}
+
       {rankedApps.length > 0 && (
         <CategoryAppResults
           apps={rankedApps.map((app: any) => ({
@@ -186,16 +196,20 @@ export default async function CategoryDetailPage({
             rating_count: app.rating_count,
             pricing_hint: app.pricing_hint,
             is_built_for_shopify: app.is_built_for_shopify,
+            launched_date: app.launched_date,
+            source_categories: app.source_categories,
           }))}
           trackedSlugs={[...trackedSlugs]}
           competitorSlugs={[...competitorSlugs]}
           lastChanges={lastChanges}
           minPaidPrices={minPaidPrices}
+          reverseSimilarCounts={reverseSimilarCounts}
+          isHubPage={!category.isListingPage}
         />
       )}
 
-      {/* History */}
-      {history?.snapshots?.length > 0 && (
+      {/* History (listing pages only) */}
+      {category.isListingPage && history?.snapshots?.length > 0 && (
         <Card>
           <CardHeader>
             <CardTitle>History ({history.total} snapshots)</CardTitle>

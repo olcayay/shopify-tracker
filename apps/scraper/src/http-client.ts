@@ -74,7 +74,14 @@ export class HttpClient {
         });
 
         if (!response.ok) {
-          throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+          const err = new Error(`HTTP ${response.status}: ${response.statusText}`);
+          // Don't retry on 4xx client errors (404, 403, etc.) — they won't change
+          if (response.status >= 400 && response.status < 500) {
+            log.warn("non-retryable client error", { url, status: response.status });
+            lastError = err;
+            break;
+          }
+          throw err;
         }
 
         return await response.text();

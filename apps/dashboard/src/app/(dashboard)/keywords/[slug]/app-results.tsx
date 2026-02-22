@@ -39,9 +39,9 @@ interface App {
   logo_url?: string;
 }
 
-type SortKey = "position" | "app_name" | "average_rating" | "rating_count" | "min_paid";
+type SortKey = "position" | "app_name" | "average_rating" | "rating_count" | "min_paid" | "reverse_similar" | "launched_date";
 type SortDir = "asc" | "desc";
-type StatusFilter = "all" | "tracked" | "competitor";
+type StatusFilter = "all" | "tracked_or_competitor";
 
 const PAGE_SIZE = 24;
 
@@ -52,6 +52,9 @@ export function KeywordAppResults({
   positionChanges,
   lastChanges,
   minPaidPrices,
+  reverseSimilarCounts,
+  launchedDates,
+  appCategories,
 }: {
   apps: App[];
   trackedSlugs: string[];
@@ -59,6 +62,9 @@ export function KeywordAppResults({
   positionChanges?: Record<string, number> | null;
   lastChanges?: Record<string, string>;
   minPaidPrices?: Record<string, number | null>;
+  reverseSimilarCounts?: Record<string, number>;
+  launchedDates?: Record<string, string | null>;
+  appCategories?: Record<string, { title: string; slug: string }[]>;
 }) {
   const { formatDateOnly } = useFormatDate();
   const [search, setSearch] = useState("");
@@ -87,10 +93,8 @@ export function KeywordAppResults({
     }
 
     // Status filter
-    if (statusFilter === "tracked") {
-      result = result.filter((a) => trackedSet.has(a.app_slug));
-    } else if (statusFilter === "competitor") {
-      result = result.filter((a) => competitorSet.has(a.app_slug));
+    if (statusFilter === "tracked_or_competitor") {
+      result = result.filter((a) => trackedSet.has(a.app_slug) || competitorSet.has(a.app_slug));
     }
 
     // Sort
@@ -115,12 +119,21 @@ export function KeywordAppResults({
           cmp = (aPrice === null ? Infinity : aPrice) - (bPrice === null ? Infinity : bPrice);
           break;
         }
+        case "reverse_similar":
+          cmp = (reverseSimilarCounts?.[a.app_slug] ?? 0) - (reverseSimilarCounts?.[b.app_slug] ?? 0);
+          break;
+        case "launched_date": {
+          const aDate = launchedDates?.[a.app_slug] ? new Date(launchedDates[a.app_slug]!).getTime() : 0;
+          const bDate = launchedDates?.[b.app_slug] ? new Date(launchedDates[b.app_slug]!).getTime() : 0;
+          cmp = aDate - bDate;
+          break;
+        }
       }
       return sortDir === "asc" ? cmp : -cmp;
     });
 
     return result;
-  }, [apps, search, statusFilter, sortKey, sortDir, trackedSet, competitorSet, minPaidPrices]);
+  }, [apps, search, statusFilter, sortKey, sortDir, trackedSet, competitorSet, minPaidPrices, reverseSimilarCounts, launchedDates]);
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const safePage = Math.min(page, totalPages);
@@ -161,8 +174,7 @@ export function KeywordAppResults({
       : apps;
     return {
       all: base.length,
-      tracked: base.filter((a) => trackedSet.has(a.app_slug)).length,
-      competitor: base.filter((a) => competitorSet.has(a.app_slug)).length,
+      tracked_or_competitor: base.filter((a) => trackedSet.has(a.app_slug) || competitorSet.has(a.app_slug)).length,
     };
   }, [apps, search, trackedSet, competitorSet]);
 
@@ -189,8 +201,7 @@ export function KeywordAppResults({
           {(
             [
               ["all", "All"],
-              ["tracked", "Tracked"],
-              ["competitor", "Competitor"],
+              ["tracked_or_competitor", "Tracked & Competitors"],
             ] as const
           ).map(([key, label]) => (
             <Button
@@ -245,6 +256,20 @@ export function KeywordAppResults({
               >
                 Min. Paid <SortIcon col="min_paid" />
               </TableHead>
+              <TableHead
+                className="cursor-pointer select-none"
+                onClick={() => toggleSort("reverse_similar")}
+                title="Number of apps that list this app as similar"
+              >
+                Similar <SortIcon col="reverse_similar" />
+              </TableHead>
+              <TableHead>Category</TableHead>
+              <TableHead
+                className="cursor-pointer select-none"
+                onClick={() => toggleSort("launched_date")}
+              >
+                Launched <SortIcon col="launched_date" />
+              </TableHead>
               <TableHead>Last Change</TableHead>
               <TableHead className="w-16">Change</TableHead>
               <TableHead className="w-10" />
@@ -254,7 +279,7 @@ export function KeywordAppResults({
             {paged.length === 0 ? (
               <TableRow>
                 <TableCell
-                  colSpan={8}
+                  colSpan={11}
                   className="text-center text-muted-foreground py-8"
                 >
                   No apps found.
@@ -324,6 +349,29 @@ export function KeywordAppResults({
                         ? minPaidPrices[app.app_slug] === 0
                           ? "Free"
                           : `$${minPaidPrices[app.app_slug]}/mo`
+                        : "\u2014"}
+                    </TableCell>
+                    <TableCell className="text-sm">
+                      {reverseSimilarCounts?.[app.app_slug] ?? "\u2014"}
+                    </TableCell>
+                    <TableCell className="text-sm">
+                      {appCategories?.[app.app_slug]?.length ? (
+                        <div className="flex flex-col gap-0.5">
+                          {appCategories[app.app_slug].map((cat) => (
+                            <Link
+                              key={cat.slug}
+                              href={`/categories/${cat.slug}`}
+                              className="text-primary hover:underline"
+                            >
+                              {cat.title}
+                            </Link>
+                          ))}
+                        </div>
+                      ) : "\u2014"}
+                    </TableCell>
+                    <TableCell className="text-sm text-muted-foreground">
+                      {launchedDates?.[app.app_slug]
+                        ? formatDateOnly(launchedDates[app.app_slug]!)
                         : "\u2014"}
                     </TableCell>
                     <TableCell className="text-sm text-muted-foreground">

@@ -343,6 +343,8 @@ export function CompetitorsSection({ appSlug }: { appSlug: string }) {
               <TableHead className="cursor-pointer select-none" onClick={() => toggleSort("ads")}>
                 Ads <SortIcon col="ads" />
               </TableHead>
+              <TableHead>Categories</TableHead>
+              <TableHead>Cat. Rank</TableHead>
               <TableHead className="cursor-pointer select-none" onClick={() => toggleSort("lastChange")}>
                 Last Change <SortIcon col="lastChange" />
               </TableHead>
@@ -440,6 +442,31 @@ export function CompetitorsSection({ appSlug }: { appSlug: string }) {
                   ) : (
                     <span className="text-muted-foreground">{"\u2014"}</span>
                   )}
+                </TableCell>
+                <TableCell className="text-sm">
+                  {(() => {
+                    const primary = comp.categories?.find((cat: any) => cat.type === "primary");
+                    const secondary = comp.categories?.find((cat: any) => cat.type === "secondary");
+                    if (!primary && !secondary) return "\u2014";
+                    return (
+                      <div className="space-y-0.5">
+                        {primary && <div>{primary.slug ? <Link href={`/categories/${primary.slug}`} className="text-primary hover:underline">{primary.title}</Link> : primary.title}</div>}
+                        {secondary && <div className="text-muted-foreground">{secondary.slug ? <Link href={`/categories/${secondary.slug}`} className="hover:underline">{secondary.title}</Link> : secondary.title}</div>}
+                      </div>
+                    );
+                  })()}
+                </TableCell>
+                <TableCell className="text-sm">
+                  {comp.categoryRankings?.length > 0 ? (
+                    <div className="space-y-0.5">
+                      {comp.categoryRankings.map((cr: any) => (
+                        <div key={cr.categorySlug}>
+                          <span className="font-medium">#{cr.position}</span>
+                          <Link href={`/categories/${cr.categorySlug}`} className="text-muted-foreground hover:underline ml-1">{cr.categoryTitle}</Link>
+                        </div>
+                      ))}
+                    </div>
+                  ) : "\u2014"}
                 </TableCell>
                 <TableCell className="text-sm text-muted-foreground">
                   {lastChanges[comp.appSlug]

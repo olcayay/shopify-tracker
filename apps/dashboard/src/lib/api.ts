@@ -124,6 +124,30 @@ export function getAppsMinPaidPrices(slugs: string[]) {
   });
 }
 
+export function getAppsReverseSimilarCounts(slugs: string[]) {
+  if (slugs.length === 0) return Promise.resolve({} as Record<string, number>);
+  return fetchApi<Record<string, number>>(`/api/apps/reverse-similar-counts`, {
+    method: "POST",
+    body: JSON.stringify({ slugs }),
+  });
+}
+
+export function getAppsCategories(slugs: string[]) {
+  if (slugs.length === 0) return Promise.resolve({} as Record<string, { title: string; slug: string }[]>);
+  return fetchApi<Record<string, { title: string; slug: string }[]>>(`/api/apps/categories`, {
+    method: "POST",
+    body: JSON.stringify({ slugs }),
+  });
+}
+
+export function getAppsLaunchedDates(slugs: string[]) {
+  if (slugs.length === 0) return Promise.resolve({} as Record<string, string | null>);
+  return fetchApi<Record<string, string | null>>(`/api/apps/launched-dates`, {
+    method: "POST",
+    body: JSON.stringify({ slugs }),
+  });
+}
+
 // --- Apps (search) ---
 export function searchApps(q: string) {
   return fetchApi<any[]>(`/api/apps/search?q=${encodeURIComponent(q)}`);

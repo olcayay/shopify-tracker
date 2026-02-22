@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { formatDateOnly } from "@/lib/format-date";
-import { getKeyword, getKeywordRankings, getKeywordAds, getKeywordSuggestions, getAccountCompetitors, getAccountTrackedApps, getAppsLastChanges, getAppsMinPaidPrices } from "@/lib/api";
+import { getKeyword, getKeywordRankings, getKeywordAds, getKeywordSuggestions, getAccountCompetitors, getAccountTrackedApps, getAppsLastChanges, getAppsMinPaidPrices, getAppsReverseSimilarCounts, getAppsLaunchedDates, getAppsCategories } from "@/lib/api";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -62,9 +62,12 @@ export default async function KeywordDetailPage({
     ...(adData?.adSightings || []).map((s: any) => s.appSlug),
   ].filter(Boolean);
   const uniqueSlugs = [...new Set(allAppSlugs)];
-  const [lastChanges, minPaidPrices] = await Promise.all([
+  const [lastChanges, minPaidPrices, reverseSimilarCounts, launchedDates, appCategories] = await Promise.all([
     getAppsLastChanges(uniqueSlugs).catch(() => ({} as Record<string, string>)),
     getAppsMinPaidPrices(uniqueSlugs).catch(() => ({} as Record<string, number | null>)),
+    getAppsReverseSimilarCounts(uniqueSlugs).catch(() => ({} as Record<string, number>)),
+    getAppsLaunchedDates(uniqueSlugs).catch(() => ({} as Record<string, string | null>)),
+    getAppsCategories(uniqueSlugs).catch(() => ({} as Record<string, { title: string; slug: string }[]>)),
   ]);
 
   // Build ranking chart data from rankings (filtered to tracked + competitor apps)
@@ -187,6 +190,9 @@ export default async function KeywordDetailPage({
         positionChanges={keyword.positionChanges}
         lastChanges={lastChanges}
         minPaidPrices={minPaidPrices}
+        reverseSimilarCounts={reverseSimilarCounts}
+        launchedDates={launchedDates}
+        appCategories={appCategories}
       />
 
       {/* Sponsored Apps */}

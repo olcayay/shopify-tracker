@@ -23,6 +23,7 @@ export const categories = pgTable("categories", {
   categoryLevel: smallint("category_level").notNull(),
   description: text("description").notNull().default(""),
   isTracked: boolean("is_tracked").notNull().default(true),
+  isListingPage: boolean("is_listing_page").notNull().default(true),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });

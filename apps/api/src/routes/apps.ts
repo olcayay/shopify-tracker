@@ -197,6 +197,85 @@ export const appRoutes: FastifyPluginAsync = async (app) => {
     return result;
   });
 
+  // POST /api/apps/launched-dates — bulk lookup launchedDate for multiple apps
+  app.post("/launched-dates", async (request) => {
+    const { slugs } = request.body as { slugs: string[] };
+    if (!slugs?.length) return {};
+
+    const rows = await db
+      .select({ slug: apps.slug, launchedDate: apps.launchedDate })
+      .from(apps)
+      .where(inArray(apps.slug, slugs));
+
+    const result: Record<string, string | null> = {};
+    for (const r of rows) {
+      result[r.slug] = r.launchedDate ? r.launchedDate.toISOString() : null;
+    }
+    return result;
+  });
+
+  // POST /api/apps/categories — bulk lookup leaf categories for multiple apps
+  app.post("/categories", async (request) => {
+    const { slugs } = request.body as { slugs: string[] };
+    if (!slugs?.length) return {};
+
+    // Get distinct category slugs per app from latest rankings (listing pages only)
+    const rows = await db
+      .selectDistinctOn([appCategoryRankings.appSlug, appCategoryRankings.categorySlug], {
+        appSlug: appCategoryRankings.appSlug,
+        categorySlug: appCategoryRankings.categorySlug,
+        categoryTitle: categories.title,
+      })
+      .from(appCategoryRankings)
+      .innerJoin(categories, and(
+        eq(categories.slug, appCategoryRankings.categorySlug),
+        eq(categories.isListingPage, true),
+      ))
+      .where(inArray(appCategoryRankings.appSlug, slugs))
+      .orderBy(appCategoryRankings.appSlug, appCategoryRankings.categorySlug, desc(appCategoryRankings.scrapedAt));
+
+    // Group by app
+    const result: Record<string, { title: string; slug: string }[]> = {};
+    for (const r of rows) {
+      if (!result[r.appSlug]) result[r.appSlug] = [];
+      result[r.appSlug].push({ title: r.categoryTitle, slug: r.categorySlug });
+    }
+
+    // Keep only leaf categories per app
+    for (const appSlug of Object.keys(result)) {
+      const cats = result[appSlug];
+      if (cats.length > 1) {
+        result[appSlug] = cats.filter(
+          (cat) => !cats.some((other) => other.slug !== cat.slug && other.slug.startsWith(cat.slug + '-'))
+        );
+      }
+    }
+
+    return result;
+  });
+
+  // POST /api/apps/reverse-similar-counts — count how many apps list each slug as a similar app
+  app.post("/reverse-similar-counts", async (request) => {
+    const { slugs } = request.body as { slugs: string[] };
+    if (!slugs?.length) return {};
+
+    // Count distinct app_slug per similar_app_slug (how many apps recommend this app)
+    const rows = await db
+      .select({
+        similarAppSlug: similarAppSightings.similarAppSlug,
+        count: sql<number>`count(distinct ${similarAppSightings.appSlug})::int`,
+      })
+      .from(similarAppSightings)
+      .where(inArray(similarAppSightings.similarAppSlug, slugs))
+      .groupBy(similarAppSightings.similarAppSlug);
+
+    const result: Record<string, number> = {};
+    for (const r of rows) {
+      result[r.similarAppSlug] = r.count;
+    }
+    return result;
+  });
+
   // GET /api/apps/search?q= — search all apps by name prefix
   app.get("/search", async (request) => {
     const { q = "" } = request.query as { q?: string };
@@ -456,7 +535,8 @@ export const appRoutes: FastifyPluginAsync = async (app) => {
         .where(
           and(
             eq(appCategoryRankings.appSlug, slug),
-            sql`${appCategoryRankings.scrapedAt} >= ${sinceStr}`
+            sql`${appCategoryRankings.scrapedAt} >= ${sinceStr}`,
+            eq(categories.isListingPage, true)
           )
         )
         .orderBy(appCategoryRankings.scrapedAt);

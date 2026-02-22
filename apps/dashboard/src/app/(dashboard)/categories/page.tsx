@@ -37,6 +37,7 @@ interface CategoryNode {
   parentSlug: string | null;
   appCount: number | null;
   isTracked: boolean;
+  isListingPage: boolean;
   children: CategoryNode[];
 }
 
@@ -571,6 +572,12 @@ function CategoryRow({
           </span>
         )}
 
+        {!node.isListingPage && (
+          <Badge variant="secondary" className="text-[10px] px-1 py-0 ml-1 shrink-0">
+            Hub
+          </Badge>
+        )}
+
         {toggleStar && (
           <button
             onClick={() => toggleStar(node.slug)}
@@ -584,7 +591,7 @@ function CategoryRow({
 
         <span className="flex-1" />
 
-        {node.appCount != null && (
+        {node.isListingPage && node.appCount != null && (
           <span className="text-xs text-muted-foreground tabular-nums shrink-0">
             {node.appCount.toLocaleString()} apps
           </span>
