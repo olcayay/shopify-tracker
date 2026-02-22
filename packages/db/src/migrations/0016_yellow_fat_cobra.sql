@@ -1,1 +1,1 @@
-ALTER TABLE "apps" ALTER COLUMN "launched_date" SET DATA TYPE timestamp;
+ALTER TABLE "apps" ALTER COLUMN "launched_date" SET DATA TYPE timestamp USING launched_date::timestamp;
