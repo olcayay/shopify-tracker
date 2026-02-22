@@ -15,7 +15,16 @@ FROM deps AS build
 COPY packages/shared/src ./packages/shared/src
 COPY packages/db/src ./packages/db/src
 COPY apps/scraper/src ./apps/scraper/src
-RUN npx turbo build --filter=@shopify-tracking/scraper
+
+# Build shared packages first (without turbo)
+WORKDIR /app/packages/shared
+RUN npx tsc
+
+WORKDIR /app/packages/db
+RUN npx tsc
+
+WORKDIR /app/apps/scraper
+RUN npx tsc
 
 # ---- Production ----
 FROM base AS runner
