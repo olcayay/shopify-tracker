@@ -8,7 +8,7 @@ COPY package.json package-lock.json turbo.json tsconfig.base.json ./
 COPY packages/shared/package.json packages/shared/tsconfig.json ./packages/shared/
 COPY packages/db/package.json packages/db/tsconfig.json packages/db/drizzle.config.ts ./packages/db/
 COPY apps/dashboard/package.json apps/dashboard/tsconfig.json apps/dashboard/next.config.ts apps/dashboard/postcss.config.mjs ./apps/dashboard/
-RUN npm ci
+RUN npm ci --include=dev
 
 # ---- Build ----
 FROM deps AS build
