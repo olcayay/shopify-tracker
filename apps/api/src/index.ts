@@ -4,6 +4,7 @@ config({ path: resolve(import.meta.dirname, "../../../.env") });
 import Fastify from "fastify";
 import cors from "@fastify/cors";
 import { createDb } from "@shopify-tracking/db";
+import { migrate } from "drizzle-orm/postgres-js/migrator";
 import { registerAuthMiddleware } from "./middleware/auth.js";
 import { categoryRoutes } from "./routes/categories.js";
 import { appRoutes } from "./routes/apps.js";
@@ -23,6 +24,11 @@ if (!databaseUrl) {
 }
 
 const db = createDb(databaseUrl);
+
+// Run pending migrations on startup
+console.log("Running database migrations...");
+await migrate(db, { migrationsFolder: "packages/db/src/migrations" });
+console.log("Database migrations complete.");
 
 const app = Fastify({ logger: true });
 
