@@ -25,6 +25,7 @@ export class FeaturedAppsScraper {
       .values({
         scraperType: "featured_apps",
         status: "running",
+        createdAt: new Date(),
         startedAt: new Date(),
         triggeredBy,
       })

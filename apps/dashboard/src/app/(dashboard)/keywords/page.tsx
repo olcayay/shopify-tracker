@@ -23,6 +23,9 @@ import {
   Eye,
   ChevronDown,
   ChevronRight,
+  ArrowUpDown,
+  ArrowUp,
+  ArrowDown,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { ConfirmModal } from "@/components/confirm-modal";
@@ -32,6 +35,9 @@ import { AdminScraperTrigger } from "@/components/admin-scraper-trigger";
 import { KeywordTagBadge } from "@/components/keyword-tag-badge";
 import { KeywordTagManager } from "@/components/keyword-tag-manager";
 import { KeywordTagFilter } from "@/components/keyword-tag-filter";
+
+type SortKey = "keyword" | "totalResults" | "tracked" | "competitor" | "ads" | "lastUpdated";
+type SortDir = "asc" | "desc";
 
 export default function KeywordsPage() {
   const { fetchWithAuth, user, account, refreshUser } = useAuth();
@@ -43,6 +49,8 @@ export default function KeywordsPage() {
     new Set()
   );
   const [loading, setLoading] = useState(true);
+  const [sortKey, setSortKey] = useState<SortKey>("keyword");
+  const [sortDir, setSortDir] = useState<SortDir>("asc");
   const [query, setQuery] = useState("");
   const [suggestions, setSuggestions] = useState<any[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
@@ -60,13 +68,60 @@ export default function KeywordsPage() {
 
   const canEdit = user?.role === "owner" || user?.role === "editor";
 
-  // Filter keywords by active tags
+  // Filter and sort keywords
   const filteredKeywords = useMemo(() => {
-    if (activeTagFilter.size === 0) return keywords;
-    return keywords.filter((kw) =>
-      kw.tags?.some((t: any) => activeTagFilter.has(t.id))
+    let result = activeTagFilter.size === 0
+      ? keywords
+      : keywords.filter((kw) =>
+          kw.tags?.some((t: any) => activeTagFilter.has(t.id))
+        );
+
+    result = [...result].sort((a, b) => {
+      let cmp = 0;
+      switch (sortKey) {
+        case "keyword":
+          cmp = a.keyword.localeCompare(b.keyword);
+          break;
+        case "totalResults":
+          cmp = (a.latestSnapshot?.totalResults ?? 0) - (b.latestSnapshot?.totalResults ?? 0);
+          break;
+        case "tracked":
+          cmp = (a.trackedInResults ?? 0) - (b.trackedInResults ?? 0);
+          break;
+        case "competitor":
+          cmp = (a.competitorInResults ?? 0) - (b.competitorInResults ?? 0);
+          break;
+        case "ads":
+          cmp = (a.adApps ?? 0) - (b.adApps ?? 0);
+          break;
+        case "lastUpdated":
+          cmp = (a.latestSnapshot?.scrapedAt || "").localeCompare(b.latestSnapshot?.scrapedAt || "");
+          break;
+      }
+      return sortDir === "asc" ? cmp : -cmp;
+    });
+
+    return result;
+  }, [keywords, activeTagFilter, sortKey, sortDir]);
+
+  function toggleSort(key: SortKey) {
+    if (sortKey === key) {
+      setSortDir((d) => (d === "asc" ? "desc" : "asc"));
+    } else {
+      setSortKey(key);
+      setSortDir(key === "keyword" ? "asc" : "desc");
+    }
+  }
+
+  function SortIcon({ col }: { col: SortKey }) {
+    if (sortKey !== col)
+      return <ArrowUpDown className="inline h-3.5 w-3.5 ml-1 opacity-40" />;
+    return sortDir === "asc" ? (
+      <ArrowUp className="inline h-3.5 w-3.5 ml-1" />
+    ) : (
+      <ArrowDown className="inline h-3.5 w-3.5 ml-1" />
     );
-  }, [keywords, activeTagFilter]);
+  }
 
   useEffect(() => {
     loadData();
@@ -369,12 +424,24 @@ export default function KeywordsPage() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Keyword</TableHead>
-                  <TableHead>Total Results</TableHead>
-                  <TableHead>Tracked</TableHead>
-                  <TableHead>Competitor</TableHead>
-                  <TableHead>Ads</TableHead>
-                  <TableHead>Last Updated</TableHead>
+                  <TableHead className="cursor-pointer select-none" onClick={() => toggleSort("keyword")}>
+                    Keyword <SortIcon col="keyword" />
+                  </TableHead>
+                  <TableHead className="cursor-pointer select-none" onClick={() => toggleSort("totalResults")}>
+                    Total Results <SortIcon col="totalResults" />
+                  </TableHead>
+                  <TableHead className="cursor-pointer select-none" onClick={() => toggleSort("tracked")}>
+                    Tracked <SortIcon col="tracked" />
+                  </TableHead>
+                  <TableHead className="cursor-pointer select-none" onClick={() => toggleSort("competitor")}>
+                    Competitor <SortIcon col="competitor" />
+                  </TableHead>
+                  <TableHead className="cursor-pointer select-none" onClick={() => toggleSort("ads")}>
+                    Ads <SortIcon col="ads" />
+                  </TableHead>
+                  <TableHead className="cursor-pointer select-none" onClick={() => toggleSort("lastUpdated")}>
+                    Last Updated <SortIcon col="lastUpdated" />
+                  </TableHead>
                   <TableHead className="w-10" />
                   {canEdit && <TableHead className="w-12" />}
                 </TableRow>

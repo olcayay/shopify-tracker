@@ -118,6 +118,7 @@ async function processJob(job: Job<ScraperJobData>): Promise<void> {
             .values({
               scraperType: "keyword_search",
               status: "running",
+              createdAt: new Date(),
               startedAt: new Date(),
               triggeredBy,
             })
@@ -175,6 +176,7 @@ async function processJob(job: Job<ScraperJobData>): Promise<void> {
             .values({
               scraperType: "keyword_suggestions",
               status: "running",
+              createdAt: new Date(),
               startedAt: new Date(),
               triggeredBy,
             })

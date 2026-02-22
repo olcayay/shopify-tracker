@@ -35,6 +35,7 @@ export class AppDetailsScraper {
       .values({
         scraperType: "app_details",
         status: "running",
+        createdAt: new Date(),
         startedAt: new Date(),
         triggeredBy,
       })
@@ -73,6 +74,22 @@ export class AppDetailsScraper {
   /** Scrape a single app by slug */
   async scrapeApp(slug: string, runId?: string, triggeredBy?: string): Promise<void> {
     log.info("scraping app", { slug });
+
+    // Skip if already scraped within 6 hours
+    const [recentSnapshot] = await this.db
+      .select({ scrapedAt: appSnapshots.scrapedAt })
+      .from(appSnapshots)
+      .where(eq(appSnapshots.appSlug, slug))
+      .orderBy(desc(appSnapshots.scrapedAt))
+      .limit(1);
+
+    if (recentSnapshot) {
+      const hoursSince = (Date.now() - recentSnapshot.scrapedAt.getTime()) / (1000 * 60 * 60);
+      if (hoursSince < 6) {
+        log.info("skipping recently scraped app", { slug, hoursSince: hoursSince.toFixed(1) });
+        return;
+      }
+    }
 
     // Create run if not provided (standalone mode)
     const isStandalone = !runId;

@@ -38,6 +38,7 @@ export class KeywordSuggestionScraper {
       .values({
         scraperType: "keyword_suggestions",
         status: "running",
+        createdAt: new Date(),
         startedAt: new Date(),
         triggeredBy,
       })

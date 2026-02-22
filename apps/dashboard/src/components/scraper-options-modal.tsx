@@ -25,7 +25,7 @@ export function ScraperOptionsModal({
   onCancel,
 }: ScraperOptionsModalProps) {
   const [pagesMode, setPagesMode] = useState<"first" | "number" | "all">("first");
-  const [pagesCount, setPagesCount] = useState(4);
+  const [pagesCount, setPagesCount] = useState(5);
   const [scrapeAppDetails, setScrapeAppDetails] = useState(false);
   const [scrapeReviews, setScrapeReviews] = useState(false);
 

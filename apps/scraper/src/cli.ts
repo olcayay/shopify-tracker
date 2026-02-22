@@ -168,7 +168,7 @@ async function createRun(type: "category" | "app_details" | "keyword_search" | "
   const { scrapeRuns } = await import("@shopify-tracking/db");
   const [run] = await db
     .insert(scrapeRuns)
-    .values({ scraperType: type, status: "running", startedAt: new Date() })
+    .values({ scraperType: type, status: "running", createdAt: new Date(), startedAt: new Date() })
     .returning();
   return run.id;
 }

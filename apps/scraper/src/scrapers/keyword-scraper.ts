@@ -43,6 +43,7 @@ export class KeywordScraper {
       .values({
         scraperType: "keyword_search",
         status: "running",
+        createdAt: new Date(),
         startedAt: new Date(),
         triggeredBy,
       })

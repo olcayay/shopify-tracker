@@ -214,13 +214,13 @@ export default function ScraperPage() {
       )}
 
       {/* Queue Status */}
-      {(hasQueueJobs || queueStatus?.isPaused) && (
-        <Card className={queueStatus?.isPaused ? "border-yellow-300 bg-yellow-50/50" : "border-blue-200 bg-blue-50/50"}>
+      {queueStatus && (
+        <Card className={queueStatus.isPaused ? "border-yellow-300 bg-yellow-50/50" : hasQueueJobs ? "border-blue-200 bg-blue-50/50" : ""}>
           <CardHeader className="pb-2">
             <div className="flex items-center justify-between">
               <CardTitle className="text-base">
                 Queue Status
-                {queueStatus?.isPaused && (
+                {queueStatus.isPaused && (
                   <Badge variant="secondary" className="ml-2">Paused</Badge>
                 )}
               </CardTitle>
@@ -231,7 +231,7 @@ export default function ScraperPage() {
                   className="h-7 text-xs"
                   onClick={togglePause}
                 >
-                  {queueStatus?.isPaused ? (
+                  {queueStatus.isPaused ? (
                     <>
                       <Play className="h-3 w-3 mr-1" />
                       Resume
@@ -243,7 +243,7 @@ export default function ScraperPage() {
                     </>
                   )}
                 </Button>
-                {queueStatus?.counts.waiting > 0 && (
+                {queueStatus.counts.waiting > 0 && (
                   <Button
                     variant="outline"
                     size="sm"
@@ -254,7 +254,7 @@ export default function ScraperPage() {
                     Clear Waiting
                   </Button>
                 )}
-                {queueStatus?.counts.failed > 0 && (
+                {queueStatus.counts.failed > 0 && (
                   <Button
                     variant="outline"
                     size="sm"
@@ -269,6 +269,7 @@ export default function ScraperPage() {
             </div>
           </CardHeader>
           <CardContent>
+            {hasQueueJobs ? (
             <div className="flex gap-4 mb-3">
               <div className="text-sm">
                 <span className="text-muted-foreground">Active:</span>{" "}
@@ -299,6 +300,9 @@ export default function ScraperPage() {
                 </div>
               )}
             </div>
+            ) : (
+              <p className="text-sm text-muted-foreground mb-3">Queue is empty — no jobs waiting or running.</p>
+            )}
             {queueStatus.jobs.length > 0 && (
               <Table>
                 <TableHeader>

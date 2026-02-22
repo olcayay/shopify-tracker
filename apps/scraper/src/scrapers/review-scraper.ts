@@ -37,6 +37,7 @@ export class ReviewScraper {
       .values({
         scraperType: "reviews",
         status: "running",
+        createdAt: new Date(),
         startedAt: new Date(),
         triggeredBy,
       })

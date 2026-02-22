@@ -646,21 +646,22 @@ export const systemAdminRoutes: FastifyPluginAsync = async (app) => {
   app.get("/scraper/queue", async () => {
     try {
       const queue = getScraperQueue();
-      const [waiting, active, delayed, failed, isPaused] = await Promise.all([
+      const [waiting, active, delayed, failed, isPaused, jobCounts] = await Promise.all([
         queue.getWaiting(0, 50),
         queue.getActive(0, 10),
         queue.getDelayed(0, 10),
         queue.getFailed(0, 10),
         queue.isPaused(),
+        queue.getJobCounts("waiting", "active", "delayed", "failed"),
       ]);
 
       return {
         isPaused,
         counts: {
-          waiting: waiting.length,
-          active: active.length,
-          delayed: delayed.length,
-          failed: failed.length,
+          waiting: jobCounts.waiting ?? waiting.length,
+          active: jobCounts.active ?? active.length,
+          delayed: jobCounts.delayed ?? delayed.length,
+          failed: jobCounts.failed ?? failed.length,
         },
         jobs: [
           ...active.map((j) => ({
@@ -809,6 +810,7 @@ export const systemAdminRoutes: FastifyPluginAsync = async (app) => {
         .values({
           scraperType: type as any,
           status: "pending",
+          createdAt: new Date(),
           triggeredBy: userEmail,
         })
         .returning();

@@ -57,6 +57,7 @@ export class CategoryScraper {
       .values({
         scraperType: "category",
         status: "running",
+        createdAt: new Date(),
         startedAt: new Date(),
         triggeredBy,
       })
@@ -137,6 +138,7 @@ export class CategoryScraper {
       .values({
         scraperType: "category",
         status: "running",
+        createdAt: new Date(),
         startedAt: new Date(),
         triggeredBy,
       })

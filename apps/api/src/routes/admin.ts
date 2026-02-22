@@ -187,6 +187,7 @@ export const adminRoutes: FastifyPluginAsync = async (app) => {
         .values({
           scraperType: type as any,
           status: "pending",
+          createdAt: new Date(),
         })
         .returning();
 
