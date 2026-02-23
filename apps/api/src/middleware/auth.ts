@@ -38,7 +38,10 @@ export function registerAuthMiddleware(app: FastifyInstance) {
   app.addHook(
     "onRequest",
     async (request: FastifyRequest, reply: FastifyReply) => {
-      // Skip auth for public paths
+      // Skip auth for preflight and public paths
+      if (request.method === "OPTIONS") {
+        return;
+      }
       if (PUBLIC_PATHS.some((p) => request.url.startsWith(p))) {
         return;
       }

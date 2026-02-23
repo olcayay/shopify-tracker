@@ -65,7 +65,8 @@ const app = Fastify({ logger: true });
 
 await app.register(cors, {
   origin: true,
-  methods: ["GET", "HEAD", "PUT", "POST", "PATCH", "DELETE"],
+  credentials: true,
+  methods: ["GET", "HEAD", "PUT", "POST", "PATCH", "DELETE", "OPTIONS"],
 });
 
 app.decorate("db", db);
