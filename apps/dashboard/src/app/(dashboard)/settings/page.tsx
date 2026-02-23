@@ -36,6 +36,10 @@ export default function SettingsPage() {
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
 
+  // Account state
+  const [accountName, setAccountName] = useState("");
+  const [accountCompany, setAccountCompany] = useState("");
+
   // Create user state
   const [newUserName, setNewUserName] = useState("");
   const [newUserEmail, setNewUserEmail] = useState("");
@@ -50,6 +54,13 @@ export default function SettingsPage() {
       setProfileEmail(user.email);
     }
   }, [user]);
+
+  useEffect(() => {
+    if (account) {
+      setAccountName(account.name);
+      setAccountCompany(account.company || "");
+    }
+  }, [account]);
 
   useEffect(() => {
     loadData();
@@ -79,6 +90,23 @@ export default function SettingsPage() {
       const data = await res.json().catch(() => ({}));
       setError(data.error || "Operation failed");
     }
+  }
+
+  async function handleAccountUpdate(e: React.FormEvent) {
+    e.preventDefault();
+    setError("");
+    setMessage("");
+
+    const body: Record<string, string> = {};
+    if (accountName !== account?.name) body.name = accountName;
+    if (accountCompany !== (account?.company || "")) body.company = accountCompany;
+
+    if (Object.keys(body).length === 0) {
+      setMessage("No changes to save");
+      return;
+    }
+
+    await handleAction("/api/account", "PUT", body, "Account updated");
   }
 
   async function handleProfileUpdate(e: React.FormEvent) {
@@ -166,7 +194,31 @@ export default function SettingsPage() {
             {account?.name}{account?.company ? ` · ${account.company}` : ""} · {user?.role}
           </CardDescription>
         </CardHeader>
-        <CardContent>
+        <CardContent className="space-y-4">
+          {isOwner && (
+            <form onSubmit={handleAccountUpdate} className="flex gap-2 items-end">
+              <div className="flex-1">
+                <label className="text-sm font-medium mb-1 block">Account Name</label>
+                <Input
+                  value={accountName}
+                  onChange={(e) => setAccountName(e.target.value)}
+                  placeholder="Account name"
+                  required
+                />
+              </div>
+              <div className="flex-1">
+                <label className="text-sm font-medium mb-1 block">Company</label>
+                <Input
+                  value={accountCompany}
+                  onChange={(e) => setAccountCompany(e.target.value)}
+                  placeholder="Company name (optional)"
+                />
+              </div>
+              <Button type="submit" variant="outline" size="sm" className="mb-0.5">
+                Save
+              </Button>
+            </form>
+          )}
           <div className="grid grid-cols-2 md:grid-cols-5 gap-4 text-center">
             {([
               { href: "/apps", usage: account?.usage.trackedApps, limit: account?.limits.maxTrackedApps, pkgLimit: account?.packageLimits?.maxTrackedApps, label: "My Apps" },

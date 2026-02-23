@@ -174,21 +174,31 @@ export const accountRoutes: FastifyPluginAsync = async (app) => {
     };
   });
 
-  // PUT /api/account — update account name
+  // PUT /api/account — update account name and company
   app.put(
     "/",
     { preHandler: [requireRole("owner")] },
     async (request, reply) => {
       const { accountId } = request.user;
-      const { name } = request.body as { name?: string };
+      const { name, company } = request.body as { name?: string; company?: string };
 
-      if (!name) {
-        return reply.code(400).send({ error: "name is required" });
+      const updates: Record<string, unknown> = {};
+      if (typeof name === "string" && name.trim().length > 0) {
+        updates.name = name.trim();
       }
+      if (typeof company === "string") {
+        updates.company = company.trim() || null;
+      }
+
+      if (Object.keys(updates).length === 0) {
+        return reply.code(400).send({ error: "No valid fields to update" });
+      }
+
+      updates.updatedAt = new Date();
 
       const [updated] = await db
         .update(accounts)
-        .set({ name, updatedAt: new Date() })
+        .set(updates)
         .where(eq(accounts.id, accountId))
         .returning();
 
