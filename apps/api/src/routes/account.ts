@@ -1,6 +1,7 @@
 import type { FastifyPluginAsync } from "fastify";
 import { eq, sql, and, asc, desc, inArray } from "drizzle-orm";
 import crypto from "crypto";
+import bcrypt from "bcryptjs";
 import { Queue } from "bullmq";
 import {
   createDb,
@@ -214,6 +215,83 @@ export const accountRoutes: FastifyPluginAsync = async (app) => {
 
     return members;
   });
+
+  // POST /api/account/members — create a user directly (owner only)
+  app.post(
+    "/members",
+    { preHandler: [requireRole("owner")] },
+    async (request, reply) => {
+      const { accountId } = request.user;
+      const { email, name, password, role = "viewer" } = request.body as {
+        email?: string;
+        name?: string;
+        password?: string;
+        role?: "editor" | "viewer";
+      };
+
+      if (!email || !name || !password) {
+        return reply.code(400).send({ error: "email, name, and password are required" });
+      }
+
+      if (password.length < 8) {
+        return reply.code(400).send({ error: "Password must be at least 8 characters" });
+      }
+
+      if (!["editor", "viewer"].includes(role)) {
+        return reply.code(400).send({ error: "role must be editor or viewer" });
+      }
+
+      // Check user limit
+      const [account] = await db
+        .select()
+        .from(accounts)
+        .where(eq(accounts.id, accountId));
+
+      const [{ memberCount }] = await db
+        .select({ memberCount: sql<number>`count(*)::int` })
+        .from(users)
+        .where(eq(users.accountId, accountId));
+
+      if (memberCount >= account.maxUsers) {
+        return reply.code(403).send({
+          error: "User limit reached",
+          current: memberCount,
+          max: account.maxUsers,
+        });
+      }
+
+      // Check if email is already taken
+      const [existingUser] = await db
+        .select({ id: users.id })
+        .from(users)
+        .where(eq(users.email, email.toLowerCase()));
+
+      if (existingUser) {
+        return reply.code(409).send({ error: "User with this email already exists" });
+      }
+
+      const passwordHash = await bcrypt.hash(password, 12);
+
+      const [newUser] = await db
+        .insert(users)
+        .values({
+          email: email.toLowerCase(),
+          passwordHash,
+          name,
+          accountId,
+          role: role as "editor" | "viewer",
+        })
+        .returning();
+
+      return {
+        id: newUser.id,
+        email: newUser.email,
+        name: newUser.name,
+        role: newUser.role,
+        createdAt: newUser.createdAt,
+      };
+    }
+  );
 
   // POST /api/account/members/invite
   app.post(

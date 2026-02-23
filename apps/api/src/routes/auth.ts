@@ -380,23 +380,67 @@ export const authRoutes: FastifyPluginAsync = async (app) => {
     };
   });
 
-  // PATCH /api/auth/me — update user preferences
+  // PATCH /api/auth/me — update user profile & preferences
   app.patch("/me", async (request, reply) => {
     if (!request.user) {
       return reply.code(401).send({ error: "Unauthorized" });
     }
 
-    const { emailDigestEnabled, timezone } = request.body as {
+    const { emailDigestEnabled, timezone, name, email, currentPassword, newPassword } = request.body as {
       emailDigestEnabled?: boolean;
       timezone?: string;
+      name?: string;
+      email?: string;
+      currentPassword?: string;
+      newPassword?: string;
     };
 
     const updates: Record<string, unknown> = {};
+
     if (typeof emailDigestEnabled === "boolean") {
       updates.emailDigestEnabled = emailDigestEnabled;
     }
     if (typeof timezone === "string" && timezone.length > 0) {
       updates.timezone = timezone;
+    }
+
+    // Name update
+    if (typeof name === "string" && name.trim().length > 0) {
+      updates.name = name.trim();
+    }
+
+    // Email update
+    if (typeof email === "string" && email.trim().length > 0) {
+      const normalizedEmail = email.trim().toLowerCase();
+      if (normalizedEmail !== request.user.email) {
+        const [existing] = await db
+          .select({ id: users.id })
+          .from(users)
+          .where(eq(users.email, normalizedEmail));
+        if (existing) {
+          return reply.code(409).send({ error: "Email already in use" });
+        }
+        updates.email = normalizedEmail;
+      }
+    }
+
+    // Password update
+    if (newPassword) {
+      if (!currentPassword) {
+        return reply.code(400).send({ error: "Current password is required to change password" });
+      }
+      if (newPassword.length < 8) {
+        return reply.code(400).send({ error: "New password must be at least 8 characters" });
+      }
+      const [currentUser] = await db
+        .select({ passwordHash: users.passwordHash })
+        .from(users)
+        .where(eq(users.id, request.user.userId));
+      const valid = await bcrypt.compare(currentPassword, currentUser.passwordHash);
+      if (!valid) {
+        return reply.code(403).send({ error: "Current password is incorrect" });
+      }
+      updates.passwordHash = await bcrypt.hash(newPassword, 12);
     }
 
     if (Object.keys(updates).length === 0) {

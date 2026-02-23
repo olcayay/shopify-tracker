@@ -1,0 +1,7 @@
+Settings page profile edit & direct user creation notes:
+
+- PATCH /api/auth/me extended: name, email (uniqueness check), password change (current password verification)
+- POST /api/account/members added: owner-only direct user creation (email, name, password, role)
+- JWT email update: no re-issuing needed, next token refresh (15min) picks up new email
+- Invitation API routes kept for backward compatibility, just not used from dashboard anymore
+- bcrypt imported in account.ts for password hashing in user creation

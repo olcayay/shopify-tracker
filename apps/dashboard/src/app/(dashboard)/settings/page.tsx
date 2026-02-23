@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from "react";
 import { useAuth } from "@/lib/auth-context";
-import { useFormatDate } from "@/lib/format-date";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -21,34 +20,44 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Trash2, UserPlus, Clock, Check, X, Copy, Mail } from "lucide-react";
+import { Trash2, UserPlus, Mail } from "lucide-react";
 import Link from "next/link";
-import { ConfirmModal } from "@/components/confirm-modal";
 
 export default function SettingsPage() {
   const { user, account, fetchWithAuth, refreshUser } = useAuth();
-  const { formatDateOnly } = useFormatDate();
   const [members, setMembers] = useState<any[]>([]);
-  const [pendingInvitations, setPendingInvitations] = useState<any[]>([]);
-  const [inviteEmail, setInviteEmail] = useState("");
-  const [inviteRole, setInviteRole] = useState<"editor" | "viewer">("viewer");
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
-  const [confirmCancel, setConfirmCancel] = useState<{ id: string; email: string } | null>(null);
+
+  // Profile state
+  const [profileName, setProfileName] = useState("");
+  const [profileEmail, setProfileEmail] = useState("");
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+
+  // Create user state
+  const [newUserName, setNewUserName] = useState("");
+  const [newUserEmail, setNewUserEmail] = useState("");
+  const [newUserPassword, setNewUserPassword] = useState("");
+  const [newUserRole, setNewUserRole] = useState<"editor" | "viewer">("viewer");
 
   const isOwner = user?.role === "owner";
+
+  useEffect(() => {
+    if (user) {
+      setProfileName(user.name);
+      setProfileEmail(user.email);
+    }
+  }, [user]);
 
   useEffect(() => {
     loadData();
   }, []);
 
   async function loadData() {
-    const [membersRes, invitationsRes] = await Promise.all([
-      fetchWithAuth("/api/account/members"),
-      fetchWithAuth("/api/account/invitations"),
-    ]);
+    const membersRes = await fetchWithAuth("/api/account/members");
     if (membersRes.ok) setMembers(await membersRes.json());
-    if (invitationsRes.ok) setPendingInvitations(await invitationsRes.json());
   }
 
   async function handleAction(
@@ -72,16 +81,62 @@ export default function SettingsPage() {
     }
   }
 
-  async function inviteMember(e: React.FormEvent) {
+  async function handleProfileUpdate(e: React.FormEvent) {
     e.preventDefault();
-    if (!inviteEmail.trim()) return;
+    setError("");
+    setMessage("");
+
+    const body: Record<string, string> = {};
+    if (profileName !== user?.name) body.name = profileName;
+    if (profileEmail !== user?.email) body.email = profileEmail;
+
+    if (Object.keys(body).length === 0) {
+      setMessage("No changes to save");
+      return;
+    }
+
+    await handleAction("/api/auth/me", "PATCH", body, "Profile updated");
+  }
+
+  async function handlePasswordChange(e: React.FormEvent) {
+    e.preventDefault();
+    setError("");
+    setMessage("");
+
+    if (newPassword !== confirmPassword) {
+      setError("Passwords do not match");
+      return;
+    }
+
     await handleAction(
-      "/api/account/members/invite",
-      "POST",
-      { email: inviteEmail.trim(), role: inviteRole },
-      "Invitation sent"
+      "/api/auth/me",
+      "PATCH",
+      { currentPassword, newPassword },
+      "Password changed"
     );
-    setInviteEmail("");
+    setCurrentPassword("");
+    setNewPassword("");
+    setConfirmPassword("");
+  }
+
+  async function createUser(e: React.FormEvent) {
+    e.preventDefault();
+    if (!newUserEmail.trim() || !newUserName.trim() || !newUserPassword.trim()) return;
+    await handleAction(
+      "/api/account/members",
+      "POST",
+      {
+        email: newUserEmail.trim(),
+        name: newUserName.trim(),
+        password: newUserPassword.trim(),
+        role: newUserRole,
+      },
+      "User created"
+    );
+    setNewUserName("");
+    setNewUserEmail("");
+    setNewUserPassword("");
+    setNewUserRole("viewer");
   }
 
   return (
@@ -142,7 +197,77 @@ export default function SettingsPage() {
         </CardContent>
       </Card>
 
-      {/* Members (owner only) */}
+      {/* Profile */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Profile</CardTitle>
+          <CardDescription>Update your personal information</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          <form onSubmit={handleProfileUpdate} className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="text-sm font-medium mb-1 block">Name</label>
+                <Input
+                  value={profileName}
+                  onChange={(e) => setProfileName(e.target.value)}
+                  placeholder="Your name"
+                  required
+                />
+              </div>
+              <div>
+                <label className="text-sm font-medium mb-1 block">Email</label>
+                <Input
+                  type="email"
+                  value={profileEmail}
+                  onChange={(e) => setProfileEmail(e.target.value)}
+                  placeholder="your@email.com"
+                  required
+                />
+              </div>
+            </div>
+            <Button type="submit" variant="outline" size="sm">
+              Save Changes
+            </Button>
+          </form>
+
+          <div className="border-t pt-6">
+            <h3 className="text-sm font-medium mb-4">Change Password</h3>
+            <form onSubmit={handlePasswordChange} className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <Input
+                  type="password"
+                  value={currentPassword}
+                  onChange={(e) => setCurrentPassword(e.target.value)}
+                  placeholder="Current password"
+                  required
+                />
+                <Input
+                  type="password"
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                  placeholder="New password (min 8 chars)"
+                  required
+                  minLength={8}
+                />
+                <Input
+                  type="password"
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  placeholder="Confirm new password"
+                  required
+                  minLength={8}
+                />
+              </div>
+              <Button type="submit" variant="outline" size="sm">
+                Change Password
+              </Button>
+            </form>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Team Members (owner only) */}
       {isOwner && (
         <Card>
           <CardHeader>
@@ -152,28 +277,45 @@ export default function SettingsPage() {
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <form onSubmit={inviteMember} className="flex gap-2">
+            <form onSubmit={createUser} className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <Input
+                type="text"
+                value={newUserName}
+                onChange={(e) => setNewUserName(e.target.value)}
+                placeholder="Name"
+                required
+              />
               <Input
                 type="email"
-                value={inviteEmail}
-                onChange={(e) => setInviteEmail(e.target.value)}
+                value={newUserEmail}
+                onChange={(e) => setNewUserEmail(e.target.value)}
                 placeholder="Email address"
-                className="flex-1"
+                required
               />
-              <select
-                value={inviteRole}
-                onChange={(e) =>
-                  setInviteRole(e.target.value as "editor" | "viewer")
-                }
-                className="border rounded-md px-3 py-2 text-sm bg-background"
-              >
-                <option value="viewer">Viewer</option>
-                <option value="editor">Editor</option>
-              </select>
-              <Button type="submit" variant="outline">
-                <UserPlus className="h-4 w-4 mr-1" />
-                Invite
-              </Button>
+              <Input
+                type="password"
+                value={newUserPassword}
+                onChange={(e) => setNewUserPassword(e.target.value)}
+                placeholder="Password (min 8 chars)"
+                required
+                minLength={8}
+              />
+              <div className="flex gap-2">
+                <select
+                  value={newUserRole}
+                  onChange={(e) =>
+                    setNewUserRole(e.target.value as "editor" | "viewer")
+                  }
+                  className="border rounded-md px-3 py-2 text-sm bg-background flex-1"
+                >
+                  <option value="viewer">Viewer</option>
+                  <option value="editor">Editor</option>
+                </select>
+                <Button type="submit" variant="outline">
+                  <UserPlus className="h-4 w-4 mr-1" />
+                  Create User
+                </Button>
+              </div>
             </form>
             <Table>
               <TableHeader>
@@ -214,84 +356,6 @@ export default function SettingsPage() {
                 ))}
               </TableBody>
             </Table>
-
-            {/* Pending Invitations */}
-            {pendingInvitations.length > 0 && (
-              <div className="pt-4 border-t mt-4">
-                <h3 className="text-sm font-medium mb-3">Pending Invitations</h3>
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Email</TableHead>
-                      <TableHead>Role</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead>Sent</TableHead>
-                      <TableHead className="w-20" />
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {pendingInvitations.map((inv: any) => (
-                      <TableRow key={inv.id}>
-                        <TableCell className="text-sm">{inv.email}</TableCell>
-                        <TableCell>
-                          <Badge variant="outline">{inv.role}</Badge>
-                        </TableCell>
-                        <TableCell>
-                          {inv.accepted ? (
-                            <Badge variant="outline" className="border-green-500 text-green-600">
-                              <Check className="h-3 w-3 mr-1" />
-                              Accepted
-                            </Badge>
-                          ) : inv.expired ? (
-                            <Badge variant="outline" className="border-destructive text-destructive">
-                              <Clock className="h-3 w-3 mr-1" />
-                              Expired
-                            </Badge>
-                          ) : (
-                            <Badge variant="outline" className="border-yellow-500 text-yellow-600">
-                              <Clock className="h-3 w-3 mr-1" />
-                              Pending
-                            </Badge>
-                          )}
-                        </TableCell>
-                        <TableCell className="text-sm text-muted-foreground">
-                          {formatDateOnly(inv.createdAt)}
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex gap-1">
-                            {!inv.accepted && !inv.expired && (
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                className="h-8 w-8 p-0"
-                                title="Copy invite link"
-                                onClick={() => {
-                                  navigator.clipboard.writeText(
-                                    `${window.location.origin}/invite/accept/${inv.token}`
-                                  );
-                                  setMessage("Invite link copied to clipboard");
-                                }}
-                              >
-                                <Copy className="h-4 w-4 text-muted-foreground" />
-                              </Button>
-                            )}
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="h-8 w-8 p-0"
-                              title="Cancel invitation"
-                              onClick={() => setConfirmCancel({ id: inv.id, email: inv.email })}
-                            >
-                              <X className="h-4 w-4 text-destructive" />
-                            </Button>
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
-            )}
           </CardContent>
         </Card>
       )}
@@ -367,24 +431,6 @@ export default function SettingsPage() {
           </div>
         </CardContent>
       </Card>
-
-      <ConfirmModal
-        open={!!confirmCancel}
-        title="Cancel Invitation"
-        description={`Are you sure you want to cancel the invitation for "${confirmCancel?.email}"?`}
-        onConfirm={() => {
-          if (confirmCancel) {
-            handleAction(
-              `/api/account/invitations/${confirmCancel.id}`,
-              "DELETE",
-              undefined,
-              "Invitation cancelled"
-            );
-            setConfirmCancel(null);
-          }
-        }}
-        onCancel={() => setConfirmCancel(null)}
-      />
     </div>
   );
 }
