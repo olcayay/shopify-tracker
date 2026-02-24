@@ -14,6 +14,165 @@
 **Domain:** appranks.io (Namecheap)
 **SSL:** Let's Encrypt (auto via Coolify/Traefik)
 
+### Architecture Diagram
+
+```
+┌─────────────────────────────────────────────────────────────────────┐
+│  Hetzner VPS (CPX21) — 5.78.101.102                                │
+│                                                                     │
+│  ┌──────────────────────────────────────────────────────────────┐   │
+│  │  Coolify (PaaS) — :8000                                     │   │
+│  │                                                              │   │
+│  │  ┌────────────────────────────────────────────────────────┐  │   │
+│  │  │  Traefik (Reverse Proxy) — :80 / :443                 │  │   │
+│  │  │                                                        │  │   │
+│  │  │  appranks.io ──────► Dashboard (:3000)                 │  │   │
+│  │  │  api.appranks.io ──► API (:3001)                       │  │   │
+│  │  │                      Let's Encrypt SSL (auto)          │  │   │
+│  │  └────────────────────────────────────────────────────────┘  │   │
+│  │                                                              │   │
+│  │  ┌──────────────┐  ┌──────────────┐  ┌──────────────────┐   │   │
+│  │  │  Dashboard   │  │  API         │  │  Worker          │   │   │
+│  │  │  Next.js 16  │  │  Fastify 5   │  │  BullMQ + Cron   │   │   │
+│  │  │  SSR + SPA   │  │  REST + JWT  │  │  Scraper + Sched │   │   │
+│  │  │  :3000       │  │  :3001       │  │  (no port)       │   │   │
+│  │  └──────┬───────┘  └───┬──────┬───┘  └───┬──────┬───────┘   │   │
+│  │         │              │      │           │      │           │   │
+│  │         │  HTTP/JSON   │      │           │      │           │   │
+│  │         └──────────────┘      │           │      │           │   │
+│  │                               │           │      │           │   │
+│  │              ┌────────────────┴───────────┘      │           │   │
+│  │              │                                   │           │   │
+│  │         ┌────▼─────────┐              ┌──────────▼────────┐  │   │
+│  │         │  PostgreSQL  │              │  Redis            │  │   │
+│  │         │  v16-alpine  │              │  v7-alpine        │  │   │
+│  │         │  :5432       │              │  :6379            │  │   │
+│  │         │  (internal)  │              │  (internal)       │  │   │
+│  │         └──────────────┘              └───────────────────┘  │   │
+│  │                                                              │   │
+│  └──────────────────────────────────────────────────────────────┘   │
+└─────────────────────────────────────────────────────────────────────┘
+```
+
+### Service Communication
+
+```
+┌───────────┐         ┌───────────┐         ┌───────────┐
+│  Browser  │ HTTPS   │ Dashboard │  HTTP   │    API    │
+│  (User)   ├────────►│ Next.js   ├────────►│  Fastify  │
+│           │◄────────┤ SSR + SPA │◄────────┤  REST     │
+└───────────┘         └───────────┘         └─────┬─────┘
+                                                  │
+                                          SQL     │
+                                   ┌──────────────┘
+                                   │
+                                   ▼
+                            ┌─────────────┐
+                            │ PostgreSQL  │
+                            │  (Tables,   │
+                            │  Migrations)│
+                            └──────▲──────┘
+                                   │
+                                   │ SQL
+                                   │
+┌────────────────────────────────┐  │
+│  Worker                        │  │
+│  ┌──────────┐  ┌────────────┐  │  │
+│  │Scheduler │  │ BullMQ     │──┼──┘
+│  │(node-cron│  │ Consumer   │  │
+│  │ enqueue) │  │ (scrape &  │  │
+│  └────┬─────┘  │  persist)  │  │
+│       │        └──────▲─────┘  │
+│       │ enqueue       │ dequeue│
+│       │        ┌──────┴─────┐  │
+│       └───────►│   Redis    │  │
+│                │  (BullMQ   │  │
+│                │   Queue)   │  │
+│                └────────────┘  │
+└────────────────────────────────┘
+```
+
+### Data Flow
+
+```
+                    Shopify App Store
+                         │
+                    HTTP/Cheerio
+                         │
+                         ▼
+┌─────────────────────────────────────────────────────────┐
+│  Worker                                                 │
+│                                                         │
+│  Scheduler (cron)                                       │
+│    │                                                    │
+│    ├── 03:00 UTC ──► category scrape jobs               │
+│    ├── every 6h ───► app_details scrape jobs            │
+│    ├── 00:00/12:00 ► keyword_search scrape jobs         │
+│    ├── 06:00/18:00 ► reviews scrape jobs                │
+│    ├── 04:00 UTC ──► featured_apps scrape jobs          │
+│    └── 05:00 UTC ──► daily_digest email jobs            │
+│              │                                          │
+│              ▼                                          │
+│         ┌─────────┐    ┌──────────────────┐             │
+│         │  Redis  │───►│ BullMQ Consumer  │             │
+│         │ (Queue) │    │                  │             │
+│         └─────────┘    │ • Scrape HTML    │             │
+│                        │ • Parse data     │             │
+│                        │ • Detect changes │             │
+│                        │ • Save snapshots │             │
+│                        └────────┬─────────┘             │
+│                                 │                       │
+└─────────────────────────────────┼───────────────────────┘
+                                  │ SQL
+                                  ▼
+┌──────────────────────────────────────────────────────────┐
+│  PostgreSQL                                              │
+│                                                          │
+│  Global Data (shared)          Account-Scoped Data       │
+│  ┌──────────────────┐          ┌──────────────────────┐  │
+│  │ apps             │          │ account_tracked_apps │  │
+│  │ app_snapshots    │          │ account_tracked_kw   │  │
+│  │ tracked_keywords │          │ account_competitor   │  │
+│  │ keyword_snapshots│          │ account_starred_cat  │  │
+│  │ categories       │          │ account_tracked_feat │  │
+│  │ category_snapshot│          │ keyword_tags         │  │
+│  │ app_keyword_rank │          │ keyword_tag_assign   │  │
+│  │ reviews          │          │ users                │  │
+│  │ featured_app_... │          │ accounts             │  │
+│  │ keyword_ad_...   │          │ invitations          │  │
+│  │ similar_app_...  │          │ refresh_tokens       │  │
+│  └──────────────────┘          └──────────────────────┘  │
+│                                                          │
+└──────────────────────────────────────────────────────────┘
+                                  ▲
+                                  │ SQL (read/write)
+                                  │
+┌──────────────────────────────────────────────────────────┐
+│  API (Fastify)                                           │
+│                                                          │
+│  /api/auth/*     ── JWT login, register, refresh         │
+│  /api/account/*  ── tracked apps, keywords, competitors  │
+│  /api/apps/*     ── app details, snapshots, rankings     │
+│  /api/keywords/* ── keyword details, rankings            │
+│  /api/categories/* ── category listings, snapshots       │
+│  /api/admin/*    ── system admin operations              │
+│                                                          │
+└──────────────────────────────────────────────────────────┘
+                                  ▲
+                                  │ HTTPS (api.appranks.io)
+                                  │
+┌──────────────────────────────────────────────────────────┐
+│  Dashboard (Next.js)                                     │
+│                                                          │
+│  Server-side: fetchApi() ── Bearer token from cookies    │
+│  Client-side: fetchWithAuth() ── Bearer token from state │
+│                                                          │
+│  Pages: /apps, /keywords, /competitors, /categories,     │
+│         /features, /settings, /system-admin/*            │
+│                                                          │
+└──────────────────────────────────────────────────────────┘
+```
+
 ---
 
 ## Coolify Setup
