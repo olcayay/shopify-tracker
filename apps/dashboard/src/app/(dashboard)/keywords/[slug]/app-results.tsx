@@ -345,11 +345,13 @@ export function KeywordAppResults({
                       {app.rating_count?.toLocaleString() ?? "\u2014"}
                     </TableCell>
                     <TableCell className="text-sm">
-                      {minPaidPrices?.[app.app_slug] != null
-                        ? minPaidPrices[app.app_slug] === 0
-                          ? "Free"
-                          : `$${minPaidPrices[app.app_slug]}/mo`
-                        : "\u2014"}
+                      {minPaidPrices?.[app.app_slug] != null ? (
+                        <Link href={`/apps/${app.app_slug}/details#pricing-plans`} className="text-primary hover:underline">
+                          {minPaidPrices[app.app_slug] === 0
+                            ? "Free"
+                            : `$${minPaidPrices[app.app_slug]}/mo`}
+                        </Link>
+                      ) : "\u2014"}
                     </TableCell>
                     <TableCell className="text-sm">
                       {reverseSimilarCounts?.[app.app_slug] ?? "\u2014"}

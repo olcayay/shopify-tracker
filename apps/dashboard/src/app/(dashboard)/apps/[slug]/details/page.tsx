@@ -102,7 +102,7 @@ export default async function DetailsPage({
       )}
 
       {snapshot.pricingPlans?.length > 0 && (
-        <Card>
+        <Card id="pricing-plans">
           <CardHeader>
             <CardTitle>Pricing Plans</CardTitle>
           </CardHeader>

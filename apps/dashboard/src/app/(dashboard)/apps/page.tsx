@@ -319,9 +319,11 @@ export default function AppsPage() {
                       {app.latestSnapshot?.pricing ?? "\u2014"}
                     </TableCell>
                     <TableCell className="text-sm">
-                      {app.minPaidPrice != null
-                        ? `$${app.minPaidPrice}/mo`
-                        : "\u2014"}
+                      {app.minPaidPrice != null ? (
+                        <Link href={`/apps/${app.slug}/details#pricing-plans`} className="text-primary hover:underline">
+                          ${app.minPaidPrice}/mo
+                        </Link>
+                      ) : "\u2014"}
                     </TableCell>
                     <TableCell className="text-sm text-muted-foreground">
                       {app.lastChangeAt

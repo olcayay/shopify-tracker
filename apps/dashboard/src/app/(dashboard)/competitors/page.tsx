@@ -26,6 +26,7 @@ type SortKey =
   | "minPaidPrice"
   | "rankedKeywords"
   | "adKeywords"
+  | "featured"
   | "lastChangeAt"
   | "launchedDate";
 type SortDir = "asc" | "desc";
@@ -135,6 +136,9 @@ export default function CompetitorsPage() {
           break;
         case "adKeywords":
           cmp = (a.adKeywords ?? 0) - (b.adKeywords ?? 0);
+          break;
+        case "featured":
+          cmp = (a.featuredSections ?? 0) - (b.featuredSections ?? 0);
           break;
         case "lastChangeAt":
           cmp = (a.lastChangeAt || "").localeCompare(b.lastChangeAt || "");
@@ -273,6 +277,12 @@ export default function CompetitorsPage() {
                           >
                             Ads <SortIcon col="adKeywords" />
                           </TableHead>
+                          <TableHead
+                            className="cursor-pointer select-none"
+                            onClick={() => toggleSort("featured")}
+                          >
+                            Featured <SortIcon col="featured" />
+                          </TableHead>
                           <TableHead>Categories</TableHead>
                           <TableHead>Cat. Rank</TableHead>
                           <TableHead
@@ -320,21 +330,42 @@ export default function CompetitorsPage() {
                               {c.latestSnapshot?.averageRating ?? "\u2014"}
                             </TableCell>
                             <TableCell>
-                              {c.latestSnapshot?.ratingCount ?? "\u2014"}
+                              {c.latestSnapshot?.ratingCount != null ? (
+                                <Link href={`/apps/${c.appSlug}/reviews`} className="text-primary hover:underline">
+                                  {c.latestSnapshot.ratingCount}
+                                </Link>
+                              ) : "\u2014"}
                             </TableCell>
                             <TableCell className="text-sm">
                               {c.latestSnapshot?.pricing ?? "\u2014"}
                             </TableCell>
                             <TableCell className="text-sm">
-                              {c.minPaidPrice != null
-                                ? `$${c.minPaidPrice}/mo`
-                                : "\u2014"}
+                              {c.minPaidPrice != null ? (
+                                <Link href={`/apps/${c.appSlug}/details#pricing-plans`} className="text-primary hover:underline">
+                                  ${c.minPaidPrice}/mo
+                                </Link>
+                              ) : "\u2014"}
                             </TableCell>
                             <TableCell className="text-sm">
-                              {c.rankedKeywords ?? 0}
+                              {(c.rankedKeywords ?? 0) > 0 ? (
+                                <Link href={`/apps/${c.appSlug}/keywords`} className="text-primary hover:underline">
+                                  {c.rankedKeywords}
+                                </Link>
+                              ) : 0}
                             </TableCell>
                             <TableCell className="text-sm">
-                              {c.adKeywords || "\u2014"}
+                              {c.adKeywords > 0 ? (
+                                <Link href={`/apps/${c.appSlug}/ads`} className="text-primary hover:underline">
+                                  {c.adKeywords}
+                                </Link>
+                              ) : "\u2014"}
+                            </TableCell>
+                            <TableCell className="text-sm">
+                              {c.featuredSections > 0 ? (
+                                <Link href={`/apps/${c.appSlug}/featured`} className="text-primary hover:underline">
+                                  {c.featuredSections}
+                                </Link>
+                              ) : "\u2014"}
                             </TableCell>
                             <TableCell className="text-sm">
                               {(() => {
@@ -361,10 +392,12 @@ export default function CompetitorsPage() {
                                 </div>
                               ) : "\u2014"}
                             </TableCell>
-                            <TableCell className="text-sm text-muted-foreground">
-                              {c.lastChangeAt
-                                ? formatDateOnly(c.lastChangeAt)
-                                : "\u2014"}
+                            <TableCell className="text-sm">
+                              {c.lastChangeAt ? (
+                                <Link href={`/apps/${c.appSlug}/changes`} className="text-primary hover:underline">
+                                  {formatDateOnly(c.lastChangeAt)}
+                                </Link>
+                              ) : "\u2014"}
                             </TableCell>
                             <TableCell className="text-sm text-muted-foreground">
                               {c.launchedDate

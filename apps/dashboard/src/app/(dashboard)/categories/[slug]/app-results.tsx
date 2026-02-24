@@ -318,11 +318,13 @@ export function CategoryAppResults({
                       {app.pricing_hint || "\u2014"}
                     </TableCell>
                     <TableCell className="text-sm">
-                      {minPaidPrices?.[app.slug] != null
-                        ? minPaidPrices[app.slug] === 0
-                          ? "Free"
-                          : `$${minPaidPrices[app.slug]}/mo`
-                        : "\u2014"}
+                      {minPaidPrices?.[app.slug] != null ? (
+                        <Link href={`/apps/${app.slug}/details#pricing-plans`} className="text-primary hover:underline">
+                          {minPaidPrices[app.slug] === 0
+                            ? "Free"
+                            : `$${minPaidPrices[app.slug]}/mo`}
+                        </Link>
+                      ) : "\u2014"}
                     </TableCell>
                     <TableCell className="text-sm">
                       {reverseSimilarCounts?.[app.slug] ?? "\u2014"}

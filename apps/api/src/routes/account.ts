@@ -963,6 +963,28 @@ export const accountRoutes: FastifyPluginAsync = async (app) => {
       }
     }
 
+    // Batch-fetch featured section counts (last 30 days)
+    const featuredCountMap = new Map<string, number>();
+    if (competitorSlugs.length > 0) {
+      const featuredSinceStr = new Date(Date.now() - 30 * 86400000).toISOString().slice(0, 10);
+      const featuredCounts = await db
+        .select({
+          appSlug: featuredAppSightings.appSlug,
+          sectionCount: sql<number>`count(distinct ${featuredAppSightings.surface} || ':' || ${featuredAppSightings.surfaceDetail} || ':' || ${featuredAppSightings.sectionHandle})`,
+        })
+        .from(featuredAppSightings)
+        .where(
+          and(
+            inArray(featuredAppSightings.appSlug, competitorSlugs),
+            sql`${featuredAppSightings.seenDate} >= ${featuredSinceStr}`
+          )
+        )
+        .groupBy(featuredAppSightings.appSlug);
+      for (const fc of featuredCounts) {
+        featuredCountMap.set(fc.appSlug, fc.sectionCount);
+      }
+    }
+
     // Latest category rankings for each competitor
     const categoryRankingMap = new Map<string, { categorySlug: string; categoryTitle: string; position: number }[]>();
     if (competitorSlugs.length > 0) {
@@ -1014,6 +1036,7 @@ export const accountRoutes: FastifyPluginAsync = async (app) => {
           lastChangeAt: change?.detectedAt || null,
           rankedKeywords: rankedKeywordMap.get(row.appSlug) ?? 0,
           adKeywords: adKeywordMap.get(row.appSlug) ?? 0,
+          featuredSections: featuredCountMap.get(row.appSlug) ?? 0,
           categories: appCategories.map((c: any) => {
             const slug = c.url ? c.url.replace(/.*\/categories\//, "").replace(/\/.*/, "") : null;
             return { type: c.type || "primary", title: c.title, slug };

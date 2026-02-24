@@ -404,15 +404,21 @@ export function CompetitorsSection({ appSlug }: { appSlug: string }) {
                   {comp.latestSnapshot?.averageRating ?? "\u2014"}
                 </TableCell>
                 <TableCell>
-                  {comp.latestSnapshot?.ratingCount ?? "\u2014"}
+                  {comp.latestSnapshot?.ratingCount != null ? (
+                    <Link href={`/apps/${comp.appSlug}/reviews`} className="text-primary hover:underline">
+                      {comp.latestSnapshot.ratingCount}
+                    </Link>
+                  ) : "\u2014"}
                 </TableCell>
                 <TableCell className="text-sm">
                   {comp.latestSnapshot?.pricing ?? "\u2014"}
                 </TableCell>
                 <TableCell className="text-sm">
-                  {comp.minPaidPrice != null
-                    ? `$${comp.minPaidPrice}/mo`
-                    : "\u2014"}
+                  {comp.minPaidPrice != null ? (
+                    <Link href={`/apps/${comp.appSlug}/details#pricing-plans`} className="text-primary hover:underline">
+                      ${comp.minPaidPrice}/mo
+                    </Link>
+                  ) : "\u2014"}
                 </TableCell>
                 <TableCell className="text-sm text-muted-foreground">
                   {comp.launchedDate
@@ -468,10 +474,12 @@ export function CompetitorsSection({ appSlug }: { appSlug: string }) {
                     </div>
                   ) : "\u2014"}
                 </TableCell>
-                <TableCell className="text-sm text-muted-foreground">
-                  {lastChanges[comp.appSlug]
-                    ? formatDateOnly(lastChanges[comp.appSlug])
-                    : "\u2014"}
+                <TableCell className="text-sm">
+                  {lastChanges[comp.appSlug] ? (
+                    <Link href={`/apps/${comp.appSlug}/changes`} className="text-primary hover:underline">
+                      {formatDateOnly(lastChanges[comp.appSlug])}
+                    </Link>
+                  ) : "\u2014"}
                 </TableCell>
                 {canEdit && (
                   <TableCell>
