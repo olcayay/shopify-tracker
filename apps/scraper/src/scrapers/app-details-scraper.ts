@@ -85,7 +85,7 @@ export class AppDetailsScraper {
 
     if (recentSnapshot) {
       const hoursSince = (Date.now() - recentSnapshot.scrapedAt.getTime()) / (1000 * 60 * 60);
-      if (hoursSince < 6) {
+      if (hoursSince < 12) {
         log.info("skipping recently scraped app", { slug, hoursSince: hoursSince.toFixed(1) });
         return;
       }

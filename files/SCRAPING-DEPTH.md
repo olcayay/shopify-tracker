@@ -110,9 +110,9 @@ After scraping, the scraper compares current results against the previous run. A
 
 Runs on **tracked apps only** (apps associated with an account).
 
-### 6-Hour Cache
+### 12-Hour Cache
 
-Before scraping, checks the most recent snapshot. If the app was scraped within the last **6 hours**, it is skipped. This prevents redundant scraping when multiple triggers hit the same app.
+Before scraping, checks the most recent snapshot. If the app was scraped within the last **12 hours**, it is skipped. This prevents redundant scraping when multiple triggers hit the same app.
 
 ### What It Collects
 
@@ -276,7 +276,7 @@ HTTP 4xx errors (404, 403, etc.) fail immediately without retrying.
                                Listing data    ┌──────────────┐
                                (rankings)      │  APP DETAILS │
   01:00, 13:00                                 │ 1 page/app   │
-                                               │ (6h cache)   │
+                                               │ (12h cache)  │
                                                │ tracked only │
                                                └──────┬───────┘
                                                       │
