@@ -431,3 +431,4 @@ app için keyword successions
 
 reviewlerin son 1 ay, 3 ay, 6 ay, 1 yıl gibi kırabilir miyiz?
 
+applere rakip önerebilir miyiz? (app name, kategori, similar, common keywords, etc.)
