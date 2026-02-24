@@ -41,11 +41,17 @@ const httpClient = new HttpClient({
 async function main() {
   switch (command) {
     case "categories": {
+      const slug = process.argv[3];
       const scraper = new CategoryScraper(db, { httpClient });
-      const result = await scraper.crawl();
-      console.log(
-        `\nCategory tree crawl complete. ${JSON.stringify(result.tree.map((n) => n.title))}`
-      );
+      if (slug) {
+        const discovered = await scraper.scrapeSingle(slug, "cli");
+        console.log(`\nSingle category scrape complete. Discovered ${discovered.length} apps.`);
+      } else {
+        const result = await scraper.crawl();
+        console.log(
+          `\nCategory tree crawl complete. ${JSON.stringify(result.tree.map((n) => n.title))}`
+        );
+      }
       break;
     }
 

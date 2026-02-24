@@ -412,6 +412,15 @@ kategori sayfalarında da reklamlar olabiliyor. hangi applerin hangi kategoriler
 
 bütün action buttonları için hoverda tooltip benzer bir şey çıkması
 
-/apps/[slug]/compare sayfasında her bir alan için empty textarea ekleyip sıfırdan metin ekleyebilmesini sağla. dinamik bir şekilde karakter say ve limiti geçmesine izin verme. apptweak'te olduğu gibi
+/apps/[slug]/compare sayfasında her bir alan için empty textarea ekleyip sıfırdan metin ekleyebilmesini sağla. dinamik bir şekilde karakter say ve limiti geçmesine izin verme. apptweak'te olduğu gibi. ekte screenshotlar mevcut.
+
+app name
+app card subtitle
+app introduction
+
+için en tepeye bir alan ekle. 
+
+
+
 
 

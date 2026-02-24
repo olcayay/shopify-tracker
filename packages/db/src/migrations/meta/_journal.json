@@ -162,6 +162,13 @@
       "when": 1771699200000,
       "tag": "0022_per_app_competitors_keywords",
       "breakpoints": true
+    },
+    {
+      "idx": 23,
+      "version": "7",
+      "when": 1771804800000,
+      "tag": "0032_category_ad_sightings",
+      "breakpoints": true
     }
   ]
 }

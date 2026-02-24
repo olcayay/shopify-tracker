@@ -11,6 +11,7 @@ import * as accountTrackingSchema from "./schema/account-tracking.js";
 import * as similarAppsSchema from "./schema/similar-apps.js";
 import * as featuredAppsSchema from "./schema/featured-apps.js";
 import * as keywordTagsSchema from "./schema/keyword-tags.js";
+import * as categoryAdSightingsSchema from "./schema/category-ad-sightings.js";
 
 export const schema = {
   ...scrapeRunsSchema,
@@ -23,6 +24,7 @@ export const schema = {
   ...similarAppsSchema,
   ...featuredAppsSchema,
   ...keywordTagsSchema,
+  ...categoryAdSightingsSchema,
 };
 
 export function createDb(databaseUrl: string) {
@@ -75,3 +77,4 @@ export {
   keywordTags,
   keywordTagAssignments,
 } from "./schema/keyword-tags.js";
+export { categoryAdSightings } from "./schema/category-ad-sightings.js";

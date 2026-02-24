@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { formatDateTime } from "@/lib/format-date";
-import { getCategory, getCategoryHistory, getAccountCompetitors, getAccountTrackedApps, getAccountStarredCategories, getAppsLastChanges, getAppsMinPaidPrices, getAppsReverseSimilarCounts, getFeaturedApps } from "@/lib/api";
+import { getCategory, getCategoryHistory, getAccountCompetitors, getAccountTrackedApps, getAccountStarredCategories, getAppsLastChanges, getAppsMinPaidPrices, getAppsReverseSimilarCounts, getFeaturedApps, getCategoryAds } from "@/lib/api";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -47,7 +47,7 @@ export default async function CategoryDetailPage({
 
   const rankedApps = category.rankedApps || [];
   const appSlugs: string[] = rankedApps.map((a: any) => a.slug);
-  const [lastChanges, minPaidPrices, reverseSimilarCounts, featuredData] = await Promise.all([
+  const [lastChanges, minPaidPrices, reverseSimilarCounts, featuredData, categoryAdData] = await Promise.all([
     getAppsLastChanges(appSlugs).catch(() => ({} as Record<string, string>)),
     getAppsMinPaidPrices(appSlugs).catch(() => ({} as Record<string, number | null>)),
     getAppsReverseSimilarCounts(appSlugs).catch(() => ({} as Record<string, number>)),
@@ -56,6 +56,7 @@ export default async function CategoryDetailPage({
       trackedSlugs: [],
       competitorSlugs: [],
     })),
+    getCategoryAds(slug).catch(() => ({ adSightings: [] })),
   ]);
 
   // Group featured sightings by section
@@ -174,6 +175,41 @@ export default async function CategoryDetailPage({
           </CardContent>
         </Card>
       )}
+
+      {/* Sponsored Apps */}
+      <Card>
+        <CardHeader>
+          <CardTitle>
+            Sponsored Apps
+            {categoryAdData.adSightings?.length > 0 && (
+              <span className="text-sm font-normal text-muted-foreground ml-2">
+                {new Set(categoryAdData.adSightings.map((s: any) => s.appSlug)).size} apps, last 30 days
+              </span>
+            )}
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          {categoryAdData.adSightings?.length > 0 ? (
+            <AdHeatmap
+              sightings={categoryAdData.adSightings.map((s: any) => ({
+                slug: s.appSlug,
+                name: s.appName,
+                seenDate: s.seenDate,
+                timesSeenInDay: s.timesSeenInDay,
+                iconUrl: s.iconUrl,
+              }))}
+              linkPrefix="/apps/"
+              trackedSlugs={[...trackedSlugs]}
+              competitorSlugs={[...competitorSlugs]}
+              initialVisible={12}
+            />
+          ) : (
+            <p className="text-muted-foreground text-center py-8">
+              No sponsored app sightings recorded for this category yet.
+            </p>
+          )}
+        </CardContent>
+      </Card>
 
       {/* Ranked Apps (listing pages) or Aggregated Apps (hub pages) */}
       {!category.isListingPage && rankedApps.length > 0 && (

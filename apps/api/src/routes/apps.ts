@@ -8,6 +8,7 @@ import {
   appCategoryRankings,
   appKeywordRankings,
   keywordAdSightings,
+  categoryAdSightings,
   reviews,
   trackedKeywords,
   categories,
@@ -836,6 +837,41 @@ export const appRoutes: FastifyPluginAsync = async (app) => {
           )
         )
         .orderBy(desc(keywordAdSightings.seenDate));
+
+      return { sightings };
+    }
+  );
+
+  // GET /api/apps/:slug/category-ad-sightings — which categories is this app advertising in
+  app.get<{ Params: { slug: string } }>(
+    "/:slug/category-ad-sightings",
+    async (request, reply) => {
+      const { slug } = request.params;
+      const { days = "30" } = request.query as { days?: string };
+
+      const since = new Date();
+      since.setDate(since.getDate() - parseInt(days, 10));
+      const sinceStr = since.toISOString().slice(0, 10);
+
+      const sightings = await db
+        .select({
+          categorySlug: categoryAdSightings.categorySlug,
+          categoryTitle: categories.title,
+          seenDate: categoryAdSightings.seenDate,
+          timesSeenInDay: categoryAdSightings.timesSeenInDay,
+        })
+        .from(categoryAdSightings)
+        .innerJoin(
+          categories,
+          eq(categoryAdSightings.categorySlug, categories.slug)
+        )
+        .where(
+          and(
+            eq(categoryAdSightings.appSlug, slug),
+            sql`${categoryAdSightings.seenDate} >= ${sinceStr}`
+          )
+        )
+        .orderBy(desc(categoryAdSightings.seenDate));
 
       return { sightings };
     }

@@ -90,6 +90,14 @@ export const getAppAdSightings = cache((slug: string, days = 30) => {
   return fetchApi<any>(`/api/apps/${slug}/ad-sightings?days=${days}`);
 });
 
+export const getAppCategoryAdSightings = cache((slug: string, days = 30) => {
+  return fetchApi<any>(`/api/apps/${slug}/category-ad-sightings?days=${days}`);
+});
+
+export const getCategoryAds = cache((slug: string, days = 30) => {
+  return fetchApi<any>(`/api/categories/${slug}/ads?days=${days}`);
+});
+
 // --- Featured Apps ---
 export function getFeaturedApps(
   days = 30,

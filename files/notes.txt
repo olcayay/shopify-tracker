@@ -28,3 +28,12 @@ Compare page keyword density & test mode:
 - App Details section now uses side-by-side layout (text left, keyword density table right)
 - Collapsible "Test a new description" panel: textarea with CharBadge, Analyze/Clear buttons
 - When analyzed, shows draft text + keyword density table in grid-cols-2 layout
+
+Category ad sightings — historical tracking:
+- New DB table: category_ad_sightings (appSlug, categorySlug, seenDate, timesSeenInDay, firstSeenRunId, lastSeenRunId)
+- Unique index on (appSlug, categorySlug, seenDate) with upsert-on-conflict for timesSeenInDay increment
+- Category scraper: recordCategoryAdSightings() called for every page (first + additional), filters is_sponsored apps
+- API: GET /api/apps/:slug/category-ad-sightings and GET /api/categories/:slug/ads endpoints
+- Dashboard: App Ads page split into "Keyword Ad History" + "Category Ad History" cards
+- Dashboard: Category page gets "Sponsored Apps" heatmap section with empty state
+- CLI: categories command now accepts optional slug for single-category scrape

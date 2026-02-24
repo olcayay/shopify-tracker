@@ -7,6 +7,7 @@ import {
   apps,
   appCategoryRankings,
   featuredAppSightings,
+  categoryAdSightings,
 } from "@shopify-tracking/db";
 import {
   SEED_CATEGORY_SLUGS,
@@ -40,6 +41,7 @@ export class CategoryScraper {
   private visited = new Set<string>();
   private singleMode = false;
   private featuredSightingsCount = 0;
+  private categoryAdSightingsCount = 0;
 
   constructor(db: Database, options: CategoryScraperOptions = {}) {
     this.db = db;
@@ -72,6 +74,7 @@ export class CategoryScraper {
     let itemsScraped = 0;
     let itemsFailed = 0;
     this.featuredSightingsCount = 0;
+    this.categoryAdSightingsCount = 0;
 
     try {
       // Scrape homepage featured apps before category crawl
@@ -106,12 +109,13 @@ export class CategoryScraper {
             items_scraped: itemsScraped,
             items_failed: itemsFailed,
             featured_sightings: this.featuredSightingsCount,
+            category_ad_sightings: this.categoryAdSightingsCount,
             duration_ms: Date.now() - startTime,
           },
         })
         .where(eq(scrapeRuns.id, run.id));
 
-      log.info("crawl completed", { itemsScraped, itemsFailed, featuredSightings: this.featuredSightingsCount, discoveredApps: allDiscoveredSlugs.size, durationMs: Date.now() - startTime });
+      log.info("crawl completed", { itemsScraped, itemsFailed, featuredSightings: this.featuredSightingsCount, categoryAdSightings: this.categoryAdSightingsCount, discoveredApps: allDiscoveredSlugs.size, durationMs: Date.now() - startTime });
     } catch (error) {
       await this.db
         .update(scrapeRuns)
@@ -295,6 +299,9 @@ export class CategoryScraper {
         await this.ensureAppRecords(pageData.first_page_apps);
       }
 
+      // Record category ad sightings for sponsored apps (both listing and hub pages)
+      await this.recordCategoryAdSightings(pageData.first_page_apps, slug, runId);
+
       // Collect discovered slugs from first page (always, regardless of page type)
       for (const app of pageData.first_page_apps) {
         const appSlug = app.app_url.replace("https://apps.shopify.com/", "");
@@ -340,6 +347,7 @@ export class CategoryScraper {
 
           // Record additional page app rankings with global position offset
           await this.recordAppRankings(newApps, slug, runId, totalAppsRecorded);
+          await this.recordCategoryAdSightings(newApps, slug, runId);
           totalAppsRecorded += newApps.length;
           for (const app of newApps) {
             const appSlug = app.app_url.replace("https://apps.shopify.com/", "");
@@ -462,6 +470,47 @@ export class CategoryScraper {
         scrapedAt: now,
         position: positionOffset + (app.position || i + 1),
       });
+    }
+  }
+
+  /**
+   * Record category ad sightings for sponsored apps.
+   */
+  private async recordCategoryAdSightings(
+    appList: { app_url: string; is_sponsored?: boolean }[],
+    categorySlug: string,
+    runId: string
+  ): Promise<void> {
+    const todayStr = new Date().toISOString().slice(0, 10);
+
+    for (const app of appList) {
+      if (!app.is_sponsored) continue;
+      const appSlug = app.app_url.replace("https://apps.shopify.com/", "");
+      if (!appSlug) continue;
+
+      await this.db
+        .insert(categoryAdSightings)
+        .values({
+          appSlug,
+          categorySlug,
+          seenDate: todayStr,
+          firstSeenRunId: runId,
+          lastSeenRunId: runId,
+          timesSeenInDay: 1,
+        })
+        .onConflictDoUpdate({
+          target: [
+            categoryAdSightings.appSlug,
+            categoryAdSightings.categorySlug,
+            categoryAdSightings.seenDate,
+          ],
+          set: {
+            lastSeenRunId: runId,
+            timesSeenInDay: sql`${categoryAdSightings.timesSeenInDay} + 1`,
+          },
+        });
+
+      this.categoryAdSightingsCount++;
     }
   }
 

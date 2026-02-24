@@ -1,7 +1,7 @@
 import type { FastifyPluginAsync } from "fastify";
 import { eq, desc, sql, and, asc } from "drizzle-orm";
 import { createDb } from "@shopify-tracking/db";
-import { categories, categorySnapshots, appCategoryRankings, apps } from "@shopify-tracking/db";
+import { categories, categorySnapshots, appCategoryRankings, apps, categoryAdSightings } from "@shopify-tracking/db";
 
 type Db = ReturnType<typeof createDb>;
 
@@ -307,6 +307,39 @@ export const categoryRoutes: FastifyPluginAsync = async (app) => {
         .where(eq(categorySnapshots.categorySlug, slug));
 
       return { category, snapshots: enriched, total: count };
+    }
+  );
+
+  // GET /api/categories/:slug/ads — ad sightings for this category
+  app.get<{ Params: { slug: string } }>(
+    "/:slug/ads",
+    async (request, reply) => {
+      const { slug } = request.params;
+      const { days = "30" } = request.query as { days?: string };
+
+      const since = new Date();
+      since.setDate(since.getDate() - parseInt(days, 10));
+      const sinceStr = since.toISOString().slice(0, 10);
+
+      const adSightings = await db
+        .select({
+          appSlug: categoryAdSightings.appSlug,
+          appName: apps.name,
+          iconUrl: apps.iconUrl,
+          seenDate: categoryAdSightings.seenDate,
+          timesSeenInDay: categoryAdSightings.timesSeenInDay,
+        })
+        .from(categoryAdSightings)
+        .innerJoin(apps, eq(categoryAdSightings.appSlug, apps.slug))
+        .where(
+          and(
+            eq(categoryAdSightings.categorySlug, slug),
+            sql`${categoryAdSightings.seenDate} >= ${sinceStr}`
+          )
+        )
+        .orderBy(desc(categoryAdSightings.seenDate));
+
+      return { adSightings };
     }
   );
 };
