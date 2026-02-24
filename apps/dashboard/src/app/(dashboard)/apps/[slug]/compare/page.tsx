@@ -6,7 +6,7 @@ import Link from "next/link";
 import { useAuth } from "@/lib/auth-context";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Check, ChevronDown } from "lucide-react";
+import { Check, ChevronDown, Pencil } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface AppData {
@@ -60,6 +60,59 @@ function CharBadge({ count, max }: { count: number; max?: number }) {
     >
       {count}{max ? `/${max}` : ""}
     </Badge>
+  );
+}
+
+function DraftInput({
+  value,
+  onChange,
+  max,
+  placeholder,
+  label,
+  multiline,
+}: {
+  value: string;
+  onChange: (v: string) => void;
+  max: number;
+  placeholder: string;
+  label: string;
+  multiline?: boolean;
+}) {
+  const count = value.length;
+  const pct = max > 0 ? count / max : 0;
+  return (
+    <div className="flex items-start gap-3 p-2 rounded-md border border-dashed border-muted-foreground/30">
+      <Pencil className="h-5 w-5 text-muted-foreground shrink-0 mt-1" />
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center gap-2 mb-1">
+          <CharBadge count={count} max={max} />
+          {count > 0 && pct >= 0.9 && pct <= 1 && (
+            <span className="text-xs text-green-600">
+              The length of the {label} looks great!
+            </span>
+          )}
+        </div>
+        {multiline ? (
+          <textarea
+            value={value}
+            onChange={(e) => onChange(e.target.value.slice(0, max))}
+            maxLength={max}
+            placeholder={placeholder}
+            className="w-full bg-transparent text-sm resize-none outline-none placeholder:text-muted-foreground/50"
+            rows={2}
+          />
+        ) : (
+          <input
+            type="text"
+            value={value}
+            onChange={(e) => onChange(e.target.value.slice(0, max))}
+            maxLength={max}
+            placeholder={placeholder}
+            className="w-full bg-transparent text-sm outline-none placeholder:text-muted-foreground/50"
+          />
+        )}
+      </div>
+    </div>
   );
 }
 
@@ -200,6 +253,9 @@ export default function ComparePage() {
   const [activeDetailSlug, setActiveDetailSlug] = useState<string>("");
   const [dragIndex, setDragIndex] = useState<number | null>(null);
   const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
+  const [draftName, setDraftName] = useState("");
+  const [draftSubtitle, setDraftSubtitle] = useState("");
+  const [draftIntro, setDraftIntro] = useState("");
 
   // Collapsible sections — persisted globally
   const [collapsedSections, setCollapsedSections] = useState<Set<string>>(
@@ -519,6 +575,15 @@ export default function ComparePage() {
             onToggle={toggleSection}
             apps={selectedApps}
             mainSlug={mainApp.slug}
+            header={
+              <DraftInput
+                value={draftName}
+                onChange={setDraftName}
+                max={30}
+                placeholder="Test a new App Name!"
+                label="App Name"
+              />
+            }
           >
             {(app) => (
               <div className="flex items-center">
@@ -536,6 +601,15 @@ export default function ComparePage() {
             onToggle={toggleSection}
             apps={selectedApps}
             mainSlug={mainApp.slug}
+            header={
+              <DraftInput
+                value={draftSubtitle}
+                onChange={setDraftSubtitle}
+                max={62}
+                placeholder="Test a new Subtitle!"
+                label="App Card Subtitle"
+              />
+            }
           >
             {(app) => (
               <div className="flex items-center">
@@ -557,6 +631,16 @@ export default function ComparePage() {
             onToggle={toggleSection}
             apps={selectedApps}
             mainSlug={mainApp.slug}
+            header={
+              <DraftInput
+                value={draftIntro}
+                onChange={setDraftIntro}
+                max={100}
+                placeholder="Test a new Introduction!"
+                label="App Introduction"
+                multiline
+              />
+            }
           >
             {(app) => (
               <div>
@@ -790,6 +874,7 @@ function VerticalListSection({
   apps,
   mainSlug,
   children,
+  header,
 }: {
   title: string;
   sectionKey: string;
@@ -798,6 +883,7 @@ function VerticalListSection({
   apps: AppData[];
   mainSlug: string;
   children: (app: AppData) => React.ReactNode;
+  header?: React.ReactNode;
 }) {
   return (
     <CompareSection
@@ -807,6 +893,7 @@ function VerticalListSection({
       onToggle={onToggle}
     >
       <div className="space-y-3">
+        {header}
         {apps.map((app) => (
           <div
             key={app.slug}

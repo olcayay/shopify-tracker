@@ -408,3 +408,10 @@ bu sayfada Queued ve Started timeların sanki time stamptleri ya da gösterimler
 featured sayfasındaki paginationları 12'lik yap
 
 
+kategori sayfalarında da reklamlar olabiliyor. hangi applerin hangi kategorilerde reklamının çıktığına dair bir tablo. 
+
+bütün action buttonları için hoverda tooltip benzer bir şey çıkması
+
+/apps/[slug]/compare sayfasında her bir alan için empty textarea ekleyip sıfırdan metin ekleyebilmesini sağla. dinamik bir şekilde karakter say ve limiti geçmesine izin verme. apptweak'te olduğu gibi
+
+
