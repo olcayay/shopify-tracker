@@ -318,9 +318,12 @@ export const appRoutes: FastifyPluginAsync = async (app) => {
         slug: apps.slug,
         name: apps.name,
         iconUrl: apps.iconUrl,
+        isBuiltForShopify: apps.isBuiltForShopify,
+        launchedDate: apps.launchedDate,
         averageRating: appSnapshots.averageRating,
         ratingCount: appSnapshots.ratingCount,
         pricing: appSnapshots.pricing,
+        pricingPlans: appSnapshots.pricingPlans,
         developer: appSnapshots.developer,
       })
       .from(apps)
@@ -335,7 +338,11 @@ export const appRoutes: FastifyPluginAsync = async (app) => {
       )
       .orderBy(apps.name);
 
-    return rows;
+    return rows.map((r) => {
+      const minPaidPrice = getMinPaidPrice(r.pricingPlans);
+      const { pricingPlans: _, ...rest } = r;
+      return { ...rest, minPaidPrice };
+    });
   });
 
   // GET /api/apps/:slug — app detail + latest snapshot + track status
