@@ -39,19 +39,23 @@ interface CategoryRanking {
 function CharBadge({ count, max }: { count: number; max?: number }) {
   let colorClass = "border-muted-foreground text-muted-foreground";
   if (max) {
-    const pct = count / max;
-    if (pct > 1) {
-      colorClass = "border-red-600 text-red-600";
-    } else if (pct >= 0.9) {
-      colorClass = "border-green-600 text-green-600";
-    } else if (pct >= 0.8) {
-      colorClass = "border-lime-600 text-lime-600";
-    } else if (pct >= 0.7) {
-      colorClass = "border-yellow-600 text-yellow-600";
-    } else if (pct >= 0.6) {
-      colorClass = "border-orange-500 text-orange-500";
+    if (count === 0) {
+      colorClass = "border-muted-foreground/50 text-muted-foreground/50";
     } else {
-      colorClass = "border-red-600 text-red-600";
+      const pct = count / max;
+      if (pct > 1) {
+        colorClass = "border-red-600 text-red-600";
+      } else if (pct >= 0.9) {
+        colorClass = "border-green-600 text-green-600";
+      } else if (pct >= 0.8) {
+        colorClass = "border-lime-600 text-lime-600";
+      } else if (pct >= 0.7) {
+        colorClass = "border-yellow-600 text-yellow-600";
+      } else if (pct >= 0.6) {
+        colorClass = "border-orange-500 text-orange-500";
+      } else {
+        colorClass = "border-red-600 text-red-600";
+      }
     }
   }
   return (
@@ -69,50 +73,24 @@ function DraftInput({
   onChange,
   max,
   placeholder,
-  label,
-  multiline,
 }: {
   value: string;
   onChange: (v: string) => void;
   max: number;
   placeholder: string;
-  label: string;
-  multiline?: boolean;
 }) {
-  const count = value.length;
-  const pct = max > 0 ? count / max : 0;
   return (
-    <div className="flex items-start gap-3 p-2 rounded-md border border-dashed border-muted-foreground/30">
-      <Pencil className="h-5 w-5 text-muted-foreground shrink-0 mt-1" />
-      <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-2 mb-1">
-          <CharBadge count={count} max={max} />
-          {count > 0 && pct >= 0.9 && pct <= 1 && (
-            <span className="text-xs text-green-600">
-              The length of the {label} looks great!
-            </span>
-          )}
-        </div>
-        {multiline ? (
-          <textarea
-            value={value}
-            onChange={(e) => onChange(e.target.value.slice(0, max))}
-            maxLength={max}
-            placeholder={placeholder}
-            className="w-full bg-transparent text-sm resize-none outline-none placeholder:text-muted-foreground/50"
-            rows={2}
-          />
-        ) : (
-          <input
-            type="text"
-            value={value}
-            onChange={(e) => onChange(e.target.value.slice(0, max))}
-            maxLength={max}
-            placeholder={placeholder}
-            className="w-full bg-transparent text-sm outline-none placeholder:text-muted-foreground/50"
-          />
-        )}
-      </div>
+    <div className="flex items-center gap-2 p-2 rounded-md border border-dashed border-muted-foreground/30">
+      <Pencil className="h-4 w-4 text-muted-foreground shrink-0" />
+      <CharBadge count={value.length} max={max} />
+      <input
+        type="text"
+        value={value}
+        onChange={(e) => onChange(e.target.value.slice(0, max))}
+        maxLength={max}
+        placeholder={placeholder}
+        className="flex-1 min-w-0 bg-transparent text-sm outline-none placeholder:text-muted-foreground/50"
+      />
     </div>
   );
 }
@@ -140,28 +118,47 @@ function useKeywordDensity(text: string) {
     if (totalWords === 0) return [];
 
     const counts = new Map<string, number>();
+
+    // 1-word keywords
     for (const w of words) {
       if (w.length < 2 || STOP_WORDS.has(w)) continue;
       counts.set(w, (counts.get(w) || 0) + 1);
     }
 
-    // Group by count, only include count > 1
-    const grouped = new Map<number, string[]>();
-    for (const [keyword, count] of counts) {
-      if (count <= 1) continue;
-      if (!grouped.has(count)) grouped.set(count, []);
-      grouped.get(count)!.push(keyword);
+    // 2-word phrases (skip if starts or ends with stop word)
+    for (let i = 0; i < words.length - 1; i++) {
+      if (STOP_WORDS.has(words[i]) || STOP_WORDS.has(words[i + 1])) continue;
+      if (words[i].length < 2 || words[i + 1].length < 2) continue;
+      const phrase = `${words[i]} ${words[i + 1]}`;
+      counts.set(phrase, (counts.get(phrase) || 0) + 1);
     }
 
-    return [...grouped.entries()]
-      .sort((a, b) => b[0] - a[0])
-      .map(([count, keywords]) => ({
-        keywords: keywords.sort(),
+    // 3-word phrases (skip if starts or ends with stop word)
+    for (let i = 0; i < words.length - 2; i++) {
+      if (STOP_WORDS.has(words[i]) || STOP_WORDS.has(words[i + 2])) continue;
+      if (words[i].length < 2 || words[i + 2].length < 2) continue;
+      const phrase = `${words[i]} ${words[i + 1]} ${words[i + 2]}`;
+      counts.set(phrase, (counts.get(phrase) || 0) + 1);
+    }
+
+    return [...counts.entries()]
+      .filter(([, count]) => count > 1)
+      .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
+      .slice(0, 30)
+      .map(([keyword, count]) => ({
+        keyword,
         count,
+        n: keyword.split(" ").length as 1 | 2 | 3,
         density: ((count / totalWords) * 100).toFixed(2),
       }));
   }, [text]);
 }
+
+const N_GRAM_COLORS = {
+  1: "bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300",
+  2: "bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-300",
+  3: "bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300",
+} as const;
 
 function KeywordDensityTable({ text }: { text: string }) {
   const analysis = useKeywordDensity(text);
@@ -173,15 +170,24 @@ function KeywordDensityTable({ text }: { text: string }) {
       <table className="w-full text-sm">
         <thead>
           <tr className="bg-muted/50">
-            <th className="text-left py-1.5 px-3 font-medium">Keyword(s)</th>
+            <th className="text-left py-1.5 px-3 font-medium">Keyword</th>
             <th className="text-right py-1.5 px-3 font-medium">Count</th>
             <th className="text-right py-1.5 px-3 font-medium">Density</th>
           </tr>
         </thead>
         <tbody>
           {analysis.map((row) => (
-            <tr key={row.count} className="border-t">
-              <td className="py-1 px-3">{row.keywords.join(", ")}</td>
+            <tr key={row.keyword} className="border-t">
+              <td className="py-1 px-3">
+                <span className="flex items-center gap-1.5">
+                  {row.keyword}
+                  {row.n > 1 && (
+                    <span className={`text-[10px] px-1 rounded ${N_GRAM_COLORS[row.n]}`}>
+                      {row.n}w
+                    </span>
+                  )}
+                </span>
+              </td>
               <td className="py-1 px-3 text-right">{row.count}</td>
               <td className="py-1 px-3 text-right">{row.density}%</td>
             </tr>
@@ -660,7 +666,6 @@ export default function ComparePage() {
                 onChange={setDraftName}
                 max={30}
                 placeholder="Test a new App Name!"
-                label="App Name"
               />
             }
           >
@@ -686,7 +691,6 @@ export default function ComparePage() {
                 onChange={setDraftSubtitle}
                 max={62}
                 placeholder="Test a new Subtitle!"
-                label="App Card Subtitle"
               />
             }
           >
@@ -716,8 +720,6 @@ export default function ComparePage() {
                 onChange={setDraftIntro}
                 max={100}
                 placeholder="Test a new Introduction!"
-                label="App Introduction"
-                multiline
               />
             }
           >
@@ -763,16 +765,12 @@ export default function ComparePage() {
                 <div className="px-3 pb-3 space-y-3">
                   <div>
                     <div className="flex items-center gap-2 mb-1">
-                      <CharBadge count={draftDetails.length} />
-                      {draftDetails.length > 0 && (
-                        <span className="text-xs text-muted-foreground">
-                          characters
-                        </span>
-                      )}
+                      <CharBadge count={draftDetails.length} max={500} />
                     </div>
                     <textarea
                       value={draftDetails}
-                      onChange={(e) => setDraftDetails(e.target.value)}
+                      onChange={(e) => setDraftDetails(e.target.value.slice(0, 500))}
+                      maxLength={500}
                       placeholder="Test a new Description for your app!"
                       className="w-full bg-muted/30 text-sm rounded-md border p-3 outline-none resize-none placeholder:text-muted-foreground/50 min-h-[120px]"
                       rows={6}
