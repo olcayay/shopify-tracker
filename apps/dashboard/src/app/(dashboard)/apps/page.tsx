@@ -32,6 +32,7 @@ export default function AppsPage() {
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [searchLoading, setSearchLoading] = useState(false);
   const [message, setMessage] = useState("");
+  const [appCategories, setAppCategories] = useState<Record<string, { title: string; slug: string; position: number | null }[]>>({});
   const [confirmRemove, setConfirmRemove] = useState<{
     slug: string;
     name: string;
@@ -114,7 +115,17 @@ export default function AppsPage() {
     setLoading(true);
     const res = await fetchWithAuth("/api/apps");
     if (res.ok) {
-      setApps(await res.json());
+      const loadedApps = await res.json();
+      setApps(loadedApps);
+
+      const slugs = loadedApps.map((a: any) => a.slug).filter(Boolean);
+      if (slugs.length > 0) {
+        const catRes = await fetchWithAuth("/api/apps/categories", {
+          method: "POST",
+          body: JSON.stringify({ slugs }),
+        });
+        if (catRes.ok) setAppCategories(await catRes.json());
+      }
     }
     setLoading(false);
   }
@@ -269,6 +280,7 @@ export default function AppsPage() {
                   <TableHead className="cursor-pointer select-none" onClick={() => toggleSort("keywordCount")}>
                     Keywords <SortIcon col="keywordCount" />
                   </TableHead>
+                  <TableHead>Categories</TableHead>
                   <TableHead>Pricing</TableHead>
                   <TableHead className="cursor-pointer select-none" onClick={() => toggleSort("minPaidPrice")}>
                     Min. Paid <SortIcon col="minPaidPrice" />
@@ -326,6 +338,22 @@ export default function AppsPage() {
                           {app.keywordCount}
                         </Link>
                       ) : "0"}
+                    </TableCell>
+                    <TableCell className="text-sm">
+                      {appCategories[app.slug]?.length ? (
+                        <div className="flex flex-col gap-0.5">
+                          {appCategories[app.slug].map((cat) => (
+                            <div key={cat.slug} className="flex items-center gap-1">
+                              {cat.position != null && (
+                                <span className="font-medium text-muted-foreground">#{cat.position}</span>
+                              )}
+                              <Link href={`/categories/${cat.slug}`} className="text-primary hover:underline">
+                                {cat.title}
+                              </Link>
+                            </div>
+                          ))}
+                        </div>
+                      ) : "\u2014"}
                     </TableCell>
                     <TableCell className="text-sm">
                       {app.latestSnapshot?.pricing ?? "\u2014"}

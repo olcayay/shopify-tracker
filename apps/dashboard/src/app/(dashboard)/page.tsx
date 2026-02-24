@@ -98,6 +98,7 @@ export default function OverviewPage() {
   const [competitors, setCompetitors] = useState<any[]>([]);
   const [features, setFeatures] = useState<any[]>([]);
   const [categories, setCategories] = useState<any[]>([]);
+  const [appCategories, setAppCategories] = useState<Record<string, { title: string; slug: string; position: number | null }[]>>({});
   const [systemStats, setSystemStats] = useState<any>(null);
   const [recentRuns, setRecentRuns] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -141,7 +142,8 @@ export default function OverviewPage() {
     }
 
     const results = await Promise.all(promises);
-    setApps(results[0] || []);
+    const loadedApps = results[0] || [];
+    setApps(loadedApps);
     setKeywords(results[1] || []);
     setCompetitors(results[2] || []);
     setFeatures(results[3] || []);
@@ -151,6 +153,16 @@ export default function OverviewPage() {
       setRecentRuns(results[6] || []);
     }
     setLoading(false);
+
+    // Fetch categories with rankings for apps
+    const appSlugs = loadedApps.map((a: any) => a.slug).filter(Boolean);
+    if (appSlugs.length > 0) {
+      const catRes = await fetchWithAuth("/api/apps/categories", {
+        method: "POST",
+        body: JSON.stringify({ slugs: appSlugs }),
+      });
+      if (catRes.ok) setAppCategories(await catRes.json());
+    }
   }
 
   if (loading) {
@@ -260,6 +272,7 @@ export default function OverviewPage() {
                     <TableHead>Competitors</TableHead>
                     <TableHead>Keywords</TableHead>
                     <TableHead>Ranked</TableHead>
+                    <TableHead>Categories</TableHead>
                     <TableHead>Last Change</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -311,6 +324,22 @@ export default function OverviewPage() {
                             <Link href={`/apps/${app.slug}/keywords`} className="text-primary hover:underline">
                               {app.rankedKeywordCount}/{app.keywordCount}
                             </Link>
+                          ) : "\u2014"}
+                        </TableCell>
+                        <TableCell className="text-sm">
+                          {appCategories[app.slug]?.length ? (
+                            <div className="flex flex-col gap-0.5">
+                              {appCategories[app.slug].map((cat) => (
+                                <div key={cat.slug} className="flex items-center gap-1">
+                                  {cat.position != null && (
+                                    <span className="font-medium text-muted-foreground">#{cat.position}</span>
+                                  )}
+                                  <Link href={`/categories/${cat.slug}`} className="text-primary hover:underline">
+                                    {cat.title}
+                                  </Link>
+                                </div>
+                              ))}
+                            </div>
                           ) : "\u2014"}
                         </TableCell>
                         <TableCell className="text-sm">
