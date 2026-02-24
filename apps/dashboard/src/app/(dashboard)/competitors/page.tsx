@@ -18,6 +18,7 @@ import { Badge } from "@/components/ui/badge";
 import { X, ArrowUpDown, ArrowUp, ArrowDown, ExternalLink } from "lucide-react";
 import { ConfirmModal } from "@/components/confirm-modal";
 import { AdminScraperTrigger } from "@/components/admin-scraper-trigger";
+import { AppSearchBar } from "@/components/app-search-bar";
 
 type SortKey =
   | "name"
@@ -109,6 +110,9 @@ export default function CompetitorsPage() {
     return new Set(competitors.map((c) => c.appSlug)).size;
   }, [competitors]);
 
+  const trackedSlugs = useMemo(() => new Set(myApps.map((a) => a.appSlug)), [myApps]);
+  const competitorSlugs = useMemo(() => new Set(competitors.map((c) => c.appSlug)), [competitors]);
+
   function sortCompetitors(list: any[]) {
     return [...list].sort((a, b) => {
       let cmp = 0;
@@ -179,10 +183,19 @@ export default function CompetitorsPage() {
           Competitor Apps ({uniqueCount}
           {account ? `/${account.limits.maxCompetitorApps}` : ""})
         </h1>
-        <AdminScraperTrigger
-          scraperType="app_details"
-          label="Scrape All Apps"
-        />
+        <div className="flex items-center gap-3">
+          <AppSearchBar
+            mode="browse-only"
+            trackedSlugs={trackedSlugs}
+            competitorSlugs={competitorSlugs}
+            placeholder="Search apps..."
+            className="w-72"
+          />
+          <AdminScraperTrigger
+            scraperType="app_details"
+            label="Scrape All Apps"
+          />
+        </div>
       </div>
 
       {message && (

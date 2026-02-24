@@ -1,3 +1,14 @@
+App search & browse feature:
+- New reusable AppSearchBar component (components/app-search-bar.tsx) with 3 modes: follow, competitor, browse-only
+- Search results show app icon, name (clickable Link to /apps/{slug}), rating/reviews, and status badges (Following/Competitor/This app)
+- + button action depends on mode: follow mode adds as my app, competitor mode adds as competitor
+- + button has title tooltip on hover explaining the action
+- Browse (clicking app name) available to all roles; action buttons only for owner/editor
+- Replaced duplicated inline search code in /apps/page.tsx and competitors-section.tsx
+- Added search to homepage (My Apps card: follow mode, Competitor Apps card: browse-only)
+- Added search to /competitors page (browse-only mode)
+- API: added iconUrl to GET /api/apps/search response
+
 Settings page profile edit & direct user creation notes:
 
 - PATCH /api/auth/me extended: name, email (uniqueness check), password change (current password verification)

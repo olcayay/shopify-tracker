@@ -1,9 +1,10 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import Link from "next/link";
 import { useAuth } from "@/lib/auth-context";
 import { useFormatDate } from "@/lib/format-date";
+import { AppSearchBar } from "@/components/app-search-bar";
 import {
   Card,
   CardContent,
@@ -91,7 +92,7 @@ function Pagination({
 }
 
 export default function OverviewPage() {
-  const { fetchWithAuth, user, account } = useAuth();
+  const { fetchWithAuth, user, account, refreshUser } = useAuth();
   const { formatDateOnly } = useFormatDate();
   const [apps, setApps] = useState<any[]>([]);
   const [keywords, setKeywords] = useState<any[]>([]);
@@ -102,6 +103,11 @@ export default function OverviewPage() {
   const [systemStats, setSystemStats] = useState<any>(null);
   const [recentRuns, setRecentRuns] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [message, setMessage] = useState("");
+
+  const canEdit = user?.role === "owner" || user?.role === "editor";
+  const trackedSlugs = useMemo(() => new Set(apps.map((a: any) => a.slug)), [apps]);
+  const competitorSlugs = useMemo(() => new Set(competitors.map((c: any) => c.appSlug)), [competitors]);
 
   // Pagination state
   const [appsPage, setAppsPage] = useState(0);
@@ -162,6 +168,26 @@ export default function OverviewPage() {
         body: JSON.stringify({ slugs: appSlugs }),
       });
       if (catRes.ok) setAppCategories(await catRes.json());
+    }
+  }
+
+  async function trackApp(slug: string, name: string) {
+    setMessage("");
+    const res = await fetchWithAuth("/api/account/tracked-apps", {
+      method: "POST",
+      body: JSON.stringify({ slug }),
+    });
+    if (res.ok) {
+      const data = await res.json().catch(() => ({}));
+      const scrapeMsg = data.scraperEnqueued
+        ? " Scraping started — details will appear shortly."
+        : "";
+      setMessage(`Now following "${name}".${scrapeMsg}`);
+      loadData();
+      refreshUser();
+    } else {
+      const data = await res.json().catch(() => ({}));
+      setMessage(data.error || "Failed to track app");
     }
   }
 
@@ -243,14 +269,28 @@ export default function OverviewPage() {
         </Link>
       </div>
 
+      {message && (
+        <div className="text-sm px-3 py-2 rounded-md bg-muted">{message}</div>
+      )}
+
       {/* My Apps List */}
       <Card>
         <CardHeader className="pb-3">
           <div className="flex items-center justify-between">
             <CardTitle className="text-base">My Apps</CardTitle>
-            <Link href="/apps" className="text-sm text-primary hover:underline">
-              View all
-            </Link>
+            <div className="flex items-center gap-3">
+              <AppSearchBar
+                mode="follow"
+                trackedSlugs={trackedSlugs}
+                competitorSlugs={competitorSlugs}
+                onFollow={trackApp}
+                placeholder="Search apps..."
+                className="w-64"
+              />
+              <Link href="/apps" className="text-sm text-primary hover:underline shrink-0">
+                View all
+              </Link>
+            </div>
           </div>
         </CardHeader>
         <CardContent>
@@ -439,9 +479,18 @@ export default function OverviewPage() {
         <CardHeader className="pb-3">
           <div className="flex items-center justify-between">
             <CardTitle className="text-base">Competitor Apps</CardTitle>
-            <Link href="/competitors" className="text-sm text-primary hover:underline">
-              View all
-            </Link>
+            <div className="flex items-center gap-3">
+              <AppSearchBar
+                mode="browse-only"
+                trackedSlugs={trackedSlugs}
+                competitorSlugs={competitorSlugs}
+                placeholder="Search apps..."
+                className="w-64"
+              />
+              <Link href="/competitors" className="text-sm text-primary hover:underline shrink-0">
+                View all
+              </Link>
+            </div>
           </div>
         </CardHeader>
         <CardContent>

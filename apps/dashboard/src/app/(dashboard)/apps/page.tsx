@@ -1,11 +1,10 @@
 "use client";
 
-import { useEffect, useState, useRef, useMemo } from "react";
+import { useEffect, useState, useMemo } from "react";
 import Link from "next/link";
 import { useAuth } from "@/lib/auth-context";
 import { useFormatDate } from "@/lib/format-date";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import {
   Table,
@@ -15,9 +14,10 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { X, Plus, Search, ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
+import { X, ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
 import { ConfirmModal } from "@/components/confirm-modal";
 import { AdminScraperTrigger } from "@/components/admin-scraper-trigger";
+import { AppSearchBar } from "@/components/app-search-bar";
 
 type SortKey = "name" | "rating" | "reviews" | "minPaidPrice" | "lastChangeAt" | "launchedDate" | "competitorCount" | "keywordCount";
 type SortDir = "asc" | "desc";
@@ -27,23 +27,19 @@ export default function AppsPage() {
   const { formatDateOnly } = useFormatDate();
   const [apps, setApps] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [query, setQuery] = useState("");
-  const [suggestions, setSuggestions] = useState<any[]>([]);
-  const [showSuggestions, setShowSuggestions] = useState(false);
-  const [searchLoading, setSearchLoading] = useState(false);
   const [message, setMessage] = useState("");
   const [appCategories, setAppCategories] = useState<Record<string, { title: string; slug: string; position: number | null }[]>>({});
   const [confirmRemove, setConfirmRemove] = useState<{
     slug: string;
     name: string;
   } | null>(null);
-  const searchRef = useRef<HTMLDivElement>(null);
-  const debounceRef = useRef<ReturnType<typeof setTimeout>>(undefined);
 
   const [sortKey, setSortKey] = useState<SortKey>("name");
   const [sortDir, setSortDir] = useState<SortDir>("asc");
 
   const canEdit = user?.role === "owner" || user?.role === "editor";
+
+  const trackedSlugs = useMemo(() => new Set(apps.map((a) => a.slug)), [apps]);
 
   useEffect(() => {
     loadApps();
@@ -101,16 +97,6 @@ export default function AppsPage() {
     );
   }
 
-  useEffect(() => {
-    function handleClickOutside(e: MouseEvent) {
-      if (searchRef.current && !searchRef.current.contains(e.target as Node)) {
-        setShowSuggestions(false);
-      }
-    }
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, []);
-
   async function loadApps() {
     setLoading(true);
     const res = await fetchWithAuth("/api/apps");
@@ -130,28 +116,6 @@ export default function AppsPage() {
     setLoading(false);
   }
 
-  function handleSearchInput(value: string) {
-    setQuery(value);
-    if (debounceRef.current) clearTimeout(debounceRef.current);
-    if (value.length < 1) {
-      setSuggestions([]);
-      setShowSuggestions(false);
-      return;
-    }
-    setSearchLoading(true);
-    debounceRef.current = setTimeout(async () => {
-      const res = await fetchWithAuth(
-        `/api/apps/search?q=${encodeURIComponent(value)}`
-      );
-      if (res.ok) {
-        const data = await res.json();
-        setSuggestions(data);
-        setShowSuggestions(true);
-      }
-      setSearchLoading(false);
-    }, 300);
-  }
-
   async function trackApp(slug: string, name: string) {
     setMessage("");
     const res = await fetchWithAuth("/api/account/tracked-apps", {
@@ -164,9 +128,6 @@ export default function AppsPage() {
         ? " Scraping started — details will appear shortly."
         : "";
       setMessage(`Now following "${name}".${scrapeMsg}`);
-      setQuery("");
-      setSuggestions([]);
-      setShowSuggestions(false);
       loadApps();
       refreshUser();
     } else {
@@ -190,8 +151,6 @@ export default function AppsPage() {
     }
   }
 
-  const trackedSlugs = new Set(apps.map((a) => a.slug));
-
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -209,53 +168,13 @@ export default function AppsPage() {
         <div className="text-sm px-3 py-2 rounded-md bg-muted">{message}</div>
       )}
 
-      {canEdit && (
-        <div ref={searchRef} className="relative max-w-md">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Search apps to follow..."
-              value={query}
-              onChange={(e) => handleSearchInput(e.target.value)}
-              onFocus={() => suggestions.length > 0 && setShowSuggestions(true)}
-              className="pl-9"
-            />
-          </div>
-          {showSuggestions && suggestions.length > 0 && (
-            <div className="absolute z-50 top-full mt-1 w-full bg-popover border rounded-md shadow-md max-h-60 overflow-auto">
-              {suggestions.map((s) => (
-                <button
-                  key={s.slug}
-                  className="w-full text-left px-3 py-2 hover:bg-accent text-sm flex items-center justify-between"
-                  onClick={() => {
-                    if (trackedSlugs.has(s.slug)) return;
-                    trackApp(s.slug, s.name);
-                  }}
-                >
-                  <span>
-                    {s.name}
-                    {s.averageRating != null && (
-                      <span className="text-muted-foreground ml-1">
-                        ({Number(s.averageRating).toFixed(1)} / {s.ratingCount?.toLocaleString() ?? 0})
-                      </span>
-                    )}
-                  </span>
-                  {trackedSlugs.has(s.slug) ? (
-                    <span className="text-xs text-muted-foreground">Following</span>
-                  ) : (
-                    <Plus className="h-4 w-4 text-muted-foreground" />
-                  )}
-                </button>
-              ))}
-            </div>
-          )}
-          {showSuggestions && query.length >= 1 && suggestions.length === 0 && !searchLoading && (
-            <div className="absolute z-50 top-full mt-1 w-full bg-popover border rounded-md shadow-md p-3 text-sm text-muted-foreground">
-              No apps found for &ldquo;{query}&rdquo;
-            </div>
-          )}
-        </div>
-      )}
+      <AppSearchBar
+        mode="follow"
+        trackedSlugs={trackedSlugs}
+        onFollow={trackApp}
+        placeholder="Search apps..."
+        className="max-w-md"
+      />
 
       <Card>
         <CardContent className="pt-6">

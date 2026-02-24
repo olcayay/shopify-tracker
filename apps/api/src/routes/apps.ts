@@ -287,6 +287,7 @@ export const appRoutes: FastifyPluginAsync = async (app) => {
       .select({
         slug: apps.slug,
         name: apps.name,
+        iconUrl: apps.iconUrl,
         isBuiltForShopify: apps.isBuiltForShopify,
         averageRating: appSnapshots.averageRating,
         ratingCount: appSnapshots.ratingCount,

@@ -424,3 +424,10 @@ için en tepeye bir alan ekle.
 
 
 
+DONE: App search & browse — reusable AppSearchBar component (follow/competitor/browse-only modes) added to homepage, /apps, /competitors, /apps/[slug]/competitors. Click app name to browse detail page; + button to follow or add as competitor. Tooltip on hover for + button.
+
+
+app için keyword successions
+
+reviewlerin son 1 ay, 3 ay, 6 ay, 1 yıl gibi kırabilir miyiz?
+
