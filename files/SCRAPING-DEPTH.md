@@ -142,9 +142,9 @@ Compares current values against previous snapshot for: `name`, `appIntroduction`
 
 | Mode | Pages Per App | Hard Limit |
 |------|---------------|------------|
-| **Cron (default)** | **Unlimited** | None |
+| **Cron (default)** | **10** (most recent) | 10 |
 
-The review scraper has **no hard page limit**. It pages through all review pages until it reaches the end.
+Reviews are sorted newest-first by Shopify, so the first 10 pages contain the most recent reviews.
 
 ### Scope
 
@@ -152,16 +152,17 @@ Runs on **tracked apps only**.
 
 ### Stop Conditions
 
-1. Page returns **0 reviews** (empty page)
-2. `has_next_page` is false (no next button in HTML)
+1. Reached page limit (default 10)
+2. Page returns **0 reviews** (empty page)
+3. `has_next_page` is false (no next button in HTML)
 
 ### Duplicate Handling
 
 Uses `onConflictDoNothing()` on insert — relies on database unique constraints to prevent duplicate reviews. This means it safely re-scrapes pages it has already visited without creating duplicates.
 
-### Note on Performance
+### Note on Sort Order
 
-Because pagination is unlimited, an app with thousands of reviews will generate many HTTP requests. This is throttled by the HTTP client's 2-second delay between requests.
+Shopify defaults to newest-first review ordering. The 10-page limit ensures only the most recent reviews are scraped, keeping HTTP requests predictable.
 
 ---
 
@@ -284,7 +285,7 @@ HTTP 4xx errors (404, 403, etc.) fail immediately without retrying.
                                                Detail data
                                                (snapshots)
 
-  06:00 daily ──► REVIEWS (ALL pages, no limit, tracked apps only)
+  06:00 daily ──► REVIEWS (max 10 pages, most recent, tracked apps only)
   05:00 daily ──► DAILY DIGEST (email notifications, no scraping)
 ```
 
@@ -295,4 +296,4 @@ HTTP 4xx errors (404, 403, etc.) fail immediately without retrying.
 - **App details** and **reviews** run as separate cron jobs on their own schedules, operating only on tracked apps
 - **Keyword suggestions** is the only cascade that runs automatically from cron
 - All other cascades (listing → details → reviews) are opt-in via manual triggers
-- The review scraper is the only one with **unlimited pagination** — all others have hard caps
+- All scrapers have hard page caps (10 pages for category, keyword, and reviews)

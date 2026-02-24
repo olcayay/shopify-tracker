@@ -86,10 +86,11 @@ export class ReviewScraper {
   ): Promise<number> {
     log.info("scraping reviews", { slug });
 
+    const MAX_PAGES = 10;
     let newReviews = 0;
     let page = 1;
 
-    while (true) {
+    while (page <= MAX_PAGES) {
       const reviewUrl = urls.appReviews(slug, page);
       const html = await this.httpClient.fetchPage(reviewUrl);
       const data = parseReviewPage(html, page);
