@@ -33,7 +33,8 @@ try {
   await migrate(db, { migrationsFolder: "packages/db/src/migrations" });
   console.log("Database migrations complete.");
 } catch (err: any) {
-  console.warn("Migration warning (likely already applied):", err.message || err);
+  console.error("Migration ERROR:", err.message || err);
+  console.error("Full error:", JSON.stringify(err, null, 2));
 }
 
 // Seed admin user on first run

@@ -166,6 +166,69 @@
     {
       "idx": 23,
       "version": "7",
+      "when": 1771700000000,
+      "tag": "0023_cleanup_sponsored_subtitle_changes",
+      "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "7",
+      "when": 1771700100000,
+      "tag": "0024_cleanup_and_prefix_languages",
+      "breakpoints": true
+    },
+    {
+      "idx": 25,
+      "version": "7",
+      "when": 1771700200000,
+      "tag": "0025_keyword_auto_suggestions",
+      "breakpoints": true
+    },
+    {
+      "idx": 26,
+      "version": "7",
+      "when": 1771700300000,
+      "tag": "0026_similar_app_sightings",
+      "breakpoints": true
+    },
+    {
+      "idx": 27,
+      "version": "7",
+      "when": 1771700400000,
+      "tag": "0027_featured_app_sightings",
+      "breakpoints": true
+    },
+    {
+      "idx": 28,
+      "version": "7",
+      "when": 1771700500000,
+      "tag": "0028_keyword_tags",
+      "breakpoints": true
+    },
+    {
+      "idx": 29,
+      "version": "7",
+      "when": 1771700600000,
+      "tag": "0029_apps_listing_fields",
+      "breakpoints": true
+    },
+    {
+      "idx": 30,
+      "version": "7",
+      "when": 1771700700000,
+      "tag": "0030_competitor_sort_order",
+      "breakpoints": true
+    },
+    {
+      "idx": 31,
+      "version": "7",
+      "when": 1771700800000,
+      "tag": "0031_category_listing_page",
+      "breakpoints": true
+    },
+    {
+      "idx": 32,
+      "version": "7",
       "when": 1771804800000,
       "tag": "0032_category_ad_sightings",
       "breakpoints": true
