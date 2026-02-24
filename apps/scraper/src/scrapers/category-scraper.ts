@@ -176,7 +176,7 @@ export class CategoryScraper {
           metadata: { items_scraped: 1, items_failed: 0, duration_ms: Date.now() - startTime },
         })
         .where(eq(scrapeRuns.id, run.id));
-      log.info("single category scrape completed", { slug, discoveredApps: discoveredSlugs.length, durationMs: Date.now() - startTime });
+      log.info("single category scrape completed", { slug, discoveredApps: discoveredSlugs.length, categoryAdSightings: this.categoryAdSightingsCount, durationMs: Date.now() - startTime });
     } catch (error) {
       await this.db
         .update(scrapeRuns)
@@ -481,6 +481,13 @@ export class CategoryScraper {
     categorySlug: string,
     runId: string
   ): Promise<void> {
+    const sponsoredApps = appList.filter((a) => a.is_sponsored);
+    log.info("recording category ad sightings", {
+      categorySlug,
+      totalApps: appList.length,
+      sponsoredCount: sponsoredApps.length,
+      sponsoredSlugs: sponsoredApps.map((a) => a.app_url.replace("https://apps.shopify.com/", "")),
+    });
     const todayStr = new Date().toISOString().slice(0, 10);
 
     for (const app of appList) {
