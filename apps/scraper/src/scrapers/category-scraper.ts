@@ -6,6 +6,7 @@ import {
   categorySnapshots,
   apps,
   appCategoryRankings,
+  featuredAppSightings,
 } from "@shopify-tracking/db";
 import {
   SEED_CATEGORY_SLUGS,
@@ -19,6 +20,7 @@ import {
   parseCategoryPage,
   hasNextPage,
 } from "../parsers/category-parser.js";
+import { parseFeaturedSections } from "../parsers/featured-parser.js";
 
 export interface ScrapePageOptions {
   pages?: "first" | "all" | number;
@@ -37,6 +39,7 @@ export class CategoryScraper {
   private maxDepth: number;
   private visited = new Set<string>();
   private singleMode = false;
+  private featuredSightingsCount = 0;
 
   constructor(db: Database, options: CategoryScraperOptions = {}) {
     this.db = db;
@@ -68,8 +71,17 @@ export class CategoryScraper {
     const allDiscoveredSlugs = new Set<string>();
     let itemsScraped = 0;
     let itemsFailed = 0;
+    this.featuredSightingsCount = 0;
 
     try {
+      // Scrape homepage featured apps before category crawl
+      try {
+        const homeHtml = await this.httpClient.fetchPage(urls.home());
+        await this.recordFeaturedSightings(homeHtml, run.id, urls.home());
+      } catch (error) {
+        log.error("failed to scrape homepage featured apps", { error: String(error) });
+      }
+
       for (const slug of SEED_CATEGORY_SLUGS) {
         try {
           const { node, appSlugs } = await this.crawlCategory(slug, null, 0, run.id, pageOptions);
@@ -93,12 +105,13 @@ export class CategoryScraper {
           metadata: {
             items_scraped: itemsScraped,
             items_failed: itemsFailed,
+            featured_sightings: this.featuredSightingsCount,
             duration_ms: Date.now() - startTime,
           },
         })
         .where(eq(scrapeRuns.id, run.id));
 
-      log.info("crawl completed", { itemsScraped, itemsFailed, discoveredApps: allDiscoveredSlugs.size, durationMs: Date.now() - startTime });
+      log.info("crawl completed", { itemsScraped, itemsFailed, featuredSightings: this.featuredSightingsCount, discoveredApps: allDiscoveredSlugs.size, durationMs: Date.now() - startTime });
     } catch (error) {
       await this.db
         .update(scrapeRuns)
@@ -215,6 +228,15 @@ export class CategoryScraper {
     }
 
     const pageData = parseCategoryPage(html, dataSourceUrl);
+
+    // Parse featured sections from this page (only L0-L2 have featured content)
+    if (depth <= 2) {
+      try {
+        await this.recordFeaturedSightings(html, runId, dataSourceUrl);
+      } catch (error) {
+        log.warn("failed to parse featured sections", { slug, error: String(error) });
+      }
+    }
 
     // Detect listing page: hub pages never have "N apps" count text
     const isListingPage = pageData.app_count !== null;
@@ -483,6 +505,97 @@ export class CategoryScraper {
           },
         });
     }
+  }
+
+  /**
+   * Parse featured sections from HTML and record sightings.
+   * Ported from FeaturedAppsScraper.scrapePage().
+   */
+  private async recordFeaturedSightings(html: string, runId: string, pageUrl: string): Promise<void> {
+    const sections = parseFeaturedSections(html);
+    if (sections.length === 0) return;
+
+    // Fix Shopify's occasional wrong handles on category L2 pages:
+    // The main section (h2 "Recommended ...") sometimes has a handle from a
+    // different category due to a Shopify bug. Use the URL slug as truth.
+    const urlSlug = pageUrl.match(/\/categories\/(.+?)(?:\?|\/|$)/)?.[1];
+    if (urlSlug) {
+      const mainSection = sections.find(
+        (s) =>
+          s.sectionTitle.toLowerCase().startsWith("recommended") ||
+          s.sectionHandle === urlSlug
+      );
+      if (mainSection && mainSection.sectionHandle !== urlSlug) {
+        log.warn("correcting mismatched section handle from URL", {
+          url: pageUrl,
+          oldHandle: mainSection.sectionHandle,
+          newHandle: urlSlug,
+        });
+        mainSection.sectionHandle = urlSlug;
+        mainSection.surfaceDetail = urlSlug;
+      }
+    }
+
+    const todayStr = new Date().toISOString().slice(0, 10);
+
+    for (const section of sections) {
+      for (const app of section.apps) {
+        // Upsert app master record
+        await this.db
+          .insert(apps)
+          .values({
+            slug: app.slug,
+            name: app.name,
+            iconUrl: app.iconUrl || null,
+          })
+          .onConflictDoUpdate({
+            target: apps.slug,
+            set: {
+              name: app.name,
+              ...(app.iconUrl ? { iconUrl: app.iconUrl } : {}),
+              updatedAt: new Date(),
+            },
+          });
+
+        // Upsert featured sighting
+        await this.db
+          .insert(featuredAppSightings)
+          .values({
+            appSlug: app.slug,
+            surface: section.surface,
+            surfaceDetail: section.surfaceDetail,
+            sectionHandle: section.sectionHandle,
+            sectionTitle: section.sectionTitle,
+            position: app.position,
+            seenDate: todayStr,
+            firstSeenRunId: runId,
+            lastSeenRunId: runId,
+            timesSeenInDay: 1,
+          })
+          .onConflictDoUpdate({
+            target: [
+              featuredAppSightings.appSlug,
+              featuredAppSightings.sectionHandle,
+              featuredAppSightings.surfaceDetail,
+              featuredAppSightings.seenDate,
+            ],
+            set: {
+              lastSeenRunId: runId,
+              position: app.position,
+              sectionTitle: section.sectionTitle,
+              timesSeenInDay: sql`${featuredAppSightings.timesSeenInDay} + 1`,
+            },
+          });
+
+        this.featuredSightingsCount++;
+      }
+    }
+
+    log.info("recorded featured sightings", {
+      url: pageUrl,
+      sections: sections.length,
+      sightings: sections.reduce((sum, s) => sum + s.apps.length, 0),
+    });
   }
 
   private countNodes(node: CategoryNode): number {

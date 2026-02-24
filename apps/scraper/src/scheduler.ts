@@ -26,13 +26,8 @@ const SCHEDULES = [
   },
   {
     name: "reviews",
-    cron: "0 6,18 * * *", // Every 12 hours (06:00, 18:00)
+    cron: "0 6 * * *", // Daily at 06:00 UTC
     type: "reviews" as const,
-  },
-  {
-    name: "featured_apps",
-    cron: "0 4 * * *", // Daily at 04:00 (after categories at 03:00)
-    type: "featured_apps" as const,
   },
   {
     name: "daily_digest",

@@ -114,14 +114,6 @@ async function main() {
       break;
     }
 
-    case "featured": {
-      const { FeaturedAppsScraper } = await import("./scrapers/featured-apps-scraper.js");
-      const featuredScraper = new FeaturedAppsScraper(db, httpClient);
-      await featuredScraper.scrapeAll("cli");
-      console.log("Featured apps scrape completed.");
-      break;
-    }
-
     case "track-app": {
       const slug = process.argv[3];
       if (!slug) {

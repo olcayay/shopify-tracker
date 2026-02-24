@@ -8,11 +8,10 @@ This document describes how deep each cron job scrapes, how many pages it visits
 
 | Job | Schedule | Frequency | Source |
 |-----|----------|-----------|--------|
-| **Categories** | `0 3 * * *` | Daily at 03:00 UTC | `scheduler.ts` |
+| **Categories + Featured** | `0 3 * * *` | Daily at 03:00 UTC | `scheduler.ts` |
 | **App Details** | `0 1,13 * * *` | Every 12 hours (01:00, 13:00) | `scheduler.ts` |
 | **Keyword Search** | `0 0,12 * * *` | Every 12 hours (00:00, 12:00) | `scheduler.ts` |
-| **Reviews** | `0 6,18 * * *` | Every 12 hours (06:00, 18:00) | `scheduler.ts` |
-| **Featured Apps** | `0 4 * * *` | Daily at 04:00 UTC | `scheduler.ts` |
+| **Reviews** | `0 6 * * *` | Daily at 06:00 UTC | `scheduler.ts` |
 | **Daily Digest** | `0 5 * * *` | Daily at 05:00 UTC (08:00 Istanbul) | `scheduler.ts` |
 
 All schedules are defined in `apps/scraper/src/scheduler.ts`.
@@ -39,13 +38,23 @@ All schedules are defined in `apps/scraper/src/scheduler.ts`.
 
 ### Stop Conditions
 
-1. Reached page limit (default 1)
+1. Reached page limit (default 10)
 2. No `<a rel="next">` link found on the page
 3. Zero new apps found after deduplication (sponsored apps can repeat across pages)
 
 ### Deduplication
 
 Tracks seen app slugs across pages with a `Set`. If a page returns only already-seen apps, pagination stops early.
+
+### Featured Apps (Integrated)
+
+The category scraper also extracts **featured app sections** from the same HTML it already fetches. This replaces the former standalone Featured Apps scraper.
+
+- **Homepage**: Fetched before the category tree crawl begins
+- **Category pages (depth 0-2)**: Featured sections parsed from each page
+- **Depth 3+**: Skipped (no featured sections at deep levels)
+- Uses `parseFeaturedSections()` from `featured-parser.ts`
+- Records to `featured_app_sightings` table (app slug, section, position, date)
 
 ### Does It Scrape App Details?
 
@@ -68,7 +77,7 @@ Tracks seen app slugs across pages with a `Set`. If a page returns only already-
 
 ### Stop Conditions
 
-1. Reached page limit (default 4)
+1. Reached page limit (default 10)
 2. `has_next_page` is false (no next button in HTML)
 
 ### Deduplication
@@ -89,30 +98,7 @@ After scraping, the scraper compares current results against the previous run. A
 
 ---
 
-## 4. Featured Apps Scraper
-
-**Source:** `apps/scraper/src/scrapers/featured-apps-scraper.ts`
-
-### Page Depth
-
-| Target | Pages |
-|--------|-------|
-| **Homepage** | 1 |
-| **Category pages** (level 0, 1, 2) | 1 each |
-
-There is **no pagination** within pages — each page is fetched once and all featured app sections are extracted from that single HTML response.
-
-### Scope
-
-Scrapes the homepage plus all categories with `categoryLevel <= 2`. Deeper subcategories (level 3, 4) are skipped.
-
-### Does It Scrape App Details?
-
-**No.** Only records featured app sightings (app slug, section name, position, date).
-
----
-
-## 5. App Details Scraper
+## 4. App Details Scraper
 
 **Source:** `apps/scraper/src/scrapers/app-details-scraper.ts`
 
@@ -148,7 +134,7 @@ Compares current values against previous snapshot for: `name`, `appIntroduction`
 
 ---
 
-## 6. Review Scraper
+## 5. Review Scraper
 
 **Source:** `apps/scraper/src/scrapers/review-scraper.ts`
 
@@ -179,7 +165,7 @@ Because pagination is unlimited, an app with thousands of reviews will generate 
 
 ---
 
-## 7. Keyword Suggestion Scraper
+## 6. Keyword Suggestion Scraper
 
 **Source:** `apps/scraper/src/scrapers/keyword-suggestion-scraper.ts`
 
@@ -195,7 +181,7 @@ Not triggered by a cron job directly. Always cascaded automatically from the `ke
 
 ---
 
-## 8. Cascade (Chaining) Behavior
+## 7. Cascade (Chaining) Behavior
 
 Cascade means one scraper job automatically enqueues another job after completion.
 
@@ -227,7 +213,7 @@ Cascade options (`scrapeAppDetails`, `scrapeReviews`) can be enabled when jobs a
 
 ---
 
-## 9. Rate Limiting & HTTP Configuration
+## 8. Rate Limiting & HTTP Configuration
 
 **Source:** `apps/scraper/src/http-client.ts`, `apps/scraper/src/worker.ts`
 
@@ -255,60 +241,57 @@ HTTP 4xx errors (404, 403, etc.) fail immediately without retrying.
 
 ---
 
-## 10. Data Flow Overview
+## 9. Data Flow Overview
 
 ```
                           ┌────────────────────────────────────────────────────────┐
                           │                    CRON SCHEDULER                      │
                           │                   (scheduler.ts)                       │
-                          └──┬──────┬──────┬──────┬──────┬──────┬────────────────┘
-                             │      │      │      │      │      │
-                             ▼      │      │      │      │      │
-                 ┌───────────────┐  │      │      │      │      │
-  03:00 daily    │  CATEGORIES   │  │      │      │      │      │
-                 │  1 page/cat   │  │      │      │      │      │
-                 │  depth 0-4    │  │      │      │      │      │
-                 └───────┬───────┘  │      │      │      │      │
-                         │          │      │      │      │      │
-                         ▼          ▼      │      │      │      │
-                   Listing data   ┌───────────────┐     │      │
-                   (positions)    │ KEYWORD SEARCH │     │      │
-  00:00, 12:00                    │  4 pages/kw    │     │      │
-                                  └──┬──────┬──────┘     │      │
-                                     │      │            │      │
-                                     │      ▼            │      │
-                                     │  ┌──────────┐     │      │
-                                     │  │ KEYWORD  │     │      │
-                                     │  │ SUGGEST  │     │      │
-                                     │  │ (always) │     │      │
-                                     │  └──────────┘     │      │
-                                     │                   │      │
-                                     ▼                   ▼      │
-                               Listing data    ┌──────────────┐ │
-                               (rankings)      │  APP DETAILS │ │
-  Every 6h                                     │ 1 page/app   │ │
-                                               │ (6h cache)   │ │
-                                               │ tracked only │ │
-                                               └──────┬───────┘ │
-                                                      │         │
-                                                      ▼         ▼
-                                               Detail data   ┌──────────┐
-                                               (snapshots)   │ REVIEWS  │
-  06:00, 18:00                                               │ ALL pages│
-                                                             │ no limit │
-                                                             │ tracked  │
-                                                             └──────────┘
-                                                                  │
-                                                                  ▼
-                                                             Review data
+                          └──┬──────┬──────┬──────┬──────┬───────────────────────┘
+                             │      │      │      │      │
+                             ▼      │      │      │      │
+                 ┌───────────────┐  │      │      │      │
+  03:00 daily    │  CATEGORIES   │  │      │      │      │
+                 │ 10 pages/cat  │  │      │      │      │
+                 │  depth 0-4    │  │      │      │      │
+                 │  + homepage   │  │      │      │      │
+                 │  + featured   │  │      │      │      │
+                 │  (L0-L2)      │  │      │      │      │
+                 └───────┬───────┘  │      │      │      │
+                         │          │      │      │      │
+                         ▼          ▼      │      │      │
+                 Listing data +   ┌───────────────┐     │
+                 featured data    │ KEYWORD SEARCH │     │
+  00:00, 12:00                    │ 10 pages/kw    │     │
+                                  └──┬──────┬──────┘     │
+                                     │      │            │
+                                     │      ▼            │
+                                     │  ┌──────────┐     │
+                                     │  │ KEYWORD  │     │
+                                     │  │ SUGGEST  │     │
+                                     │  │ (always) │     │
+                                     │  └──────────┘     │
+                                     │                   │
+                                     ▼                   ▼
+                               Listing data    ┌──────────────┐
+                               (rankings)      │  APP DETAILS │
+  01:00, 13:00                                 │ 1 page/app   │
+                                               │ (6h cache)   │
+                                               │ tracked only │
+                                               └──────┬───────┘
+                                                      │
+                                                      ▼
+                                               Detail data
+                                               (snapshots)
 
-  04:00 daily ──► FEATURED APPS (homepage + L0-L2 categories, 1 page each)
+  06:00 daily ──► REVIEWS (ALL pages, no limit, tracked apps only)
   05:00 daily ──► DAILY DIGEST (email notifications, no scraping)
 ```
 
 ### Key Points
 
-- **Listing scrapers** (category, keyword, featured) only collect app slugs + positions — they do **not** visit app detail pages
+- **Listing scrapers** (category, keyword) only collect app slugs + positions — they do **not** visit app detail pages
+- **Category scraper also extracts featured app sightings** from homepage + L0-L2 pages (no separate cron needed)
 - **App details** and **reviews** run as separate cron jobs on their own schedules, operating only on tracked apps
 - **Keyword suggestions** is the only cascade that runs automatically from cron
 - All other cascades (listing → details → reviews) are opt-in via manual triggers

@@ -206,13 +206,6 @@ async function processJob(job: Job<ScraperJobData>): Promise<void> {
       break;
     }
 
-    case "featured_apps": {
-      const { FeaturedAppsScraper } = await import("./scrapers/featured-apps-scraper.js");
-      const featuredScraper = new FeaturedAppsScraper(db, httpClient);
-      await featuredScraper.scrapeAll(triggeredBy);
-      break;
-    }
-
     case "daily_digest": {
       const { getDigestRecipients, buildDigestForAccount } = await import("./email/digest-builder.js");
       const { buildDigestHtml, buildDigestSubject } = await import("./email/digest-template.js");
