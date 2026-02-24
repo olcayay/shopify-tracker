@@ -231,6 +231,11 @@ export class CategoryScraper {
       }
     }
 
+    // Debug: check if HTML contains ad markers
+    const hasAdUrl = html.includes("surface_type=category_ad") || html.includes("surface_type=search_ad");
+    const hasAdText = html.includes("app developer paid to promote") || html.includes("This ad is based on");
+    log.info("ad markers in HTML", { slug, hasAdUrl, hasAdText });
+
     const pageData = parseCategoryPage(html, dataSourceUrl);
 
     // Parse featured sections from this page (only L0-L2 have featured content)

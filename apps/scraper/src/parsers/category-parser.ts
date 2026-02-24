@@ -224,13 +224,16 @@ function parseAppCards($: cheerio.CheerioAPI): FirstPageApp[] {
 
     const appUrl = `https://apps.shopify.com/${appSlug}`;
 
-    // Determine if sponsored from the app link URL
+    // Extract card text once for reuse
+    const cardText = $card.text();
+
+    // Determine if sponsored: URL parameter OR ad disclaimer text in card
     const isSponsored =
       appLink.includes("surface_type=category_ad") ||
-      appLink.includes("surface_type=search_ad");
+      appLink.includes("surface_type=search_ad") ||
+      isAdText(cardText);
 
     // Extract rating and review count from card text
-    const cardText = $card.text();
     const { rating, count } = extractRatingFromText(cardText);
 
     // Check for "Built for Shopify" badge
