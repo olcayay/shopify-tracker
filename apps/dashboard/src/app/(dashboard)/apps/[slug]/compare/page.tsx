@@ -909,10 +909,8 @@ function BadgeComparisonSection({
                 {apps.map((app) => (
                   <td key={app.slug} className="py-1.5 px-2 text-center">
                     {presenceMap.get(item)?.has(app.slug) ? (
-                      <Check className="h-4 w-4 text-green-600 mx-auto" />
-                    ) : (
-                      <span className="text-muted-foreground">—</span>
-                    )}
+                      <Check className="h-4 w-4 text-green-600 mx-auto" strokeWidth={2.5} />
+                    ) : null}
                   </td>
                 ))}
               </tr>
@@ -1437,12 +1435,8 @@ function CategoriesComparison({
                             className="py-1 px-2 text-center"
                           >
                             {featurePresence.get(f.handle)?.has(app.slug) ? (
-                              <Check className="h-4 w-4 text-green-600 mx-auto" />
-                            ) : (
-                              <span className="text-muted-foreground">
-                                —
-                              </span>
-                            )}
+                              <Check className="h-4 w-4 text-green-600 mx-auto" strokeWidth={2.5} />
+                            ) : null}
                           </td>
                         ))}
                       </tr>
