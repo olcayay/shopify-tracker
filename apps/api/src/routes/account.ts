@@ -25,6 +25,7 @@ import {
   keywordAutoSuggestions,
   featuredAppSightings,
   keywordAdSightings,
+  similarAppSightings,
   keywordTags,
   keywordTagAssignments,
   appCategoryRankings,
@@ -1340,6 +1341,56 @@ export const accountRoutes: FastifyPluginAsync = async (app) => {
         }
       }
 
+      // Batch-fetch reverse similar counts (how many apps list each competitor as similar)
+      const reverseSimilarMap = new Map<string, number>();
+      if (competitorSlugs.length > 0) {
+        const rsCounts = await db
+          .select({
+            similarAppSlug: similarAppSightings.similarAppSlug,
+            count: sql<number>`count(distinct ${similarAppSightings.appSlug})::int`,
+          })
+          .from(similarAppSightings)
+          .where(inArray(similarAppSightings.similarAppSlug, competitorSlugs))
+          .groupBy(similarAppSightings.similarAppSlug);
+        for (const r of rsCounts) {
+          reverseSimilarMap.set(r.similarAppSlug, r.count);
+        }
+      }
+
+      // Batch-fetch ranked keyword counts per competitor
+      const rankedKeywordMap = new Map<string, number>();
+      if (competitorSlugs.length > 0) {
+        const kwRows = await db
+          .select({ keywordId: accountTrackedKeywords.keywordId })
+          .from(accountTrackedKeywords)
+          .where(
+            and(
+              eq(accountTrackedKeywords.accountId, accountId),
+              eq(accountTrackedKeywords.trackedAppSlug, slug)
+            )
+          );
+        if (kwRows.length > 0) {
+          const kwIds = kwRows.map((r) => r.keywordId);
+          const idList = sql.join(kwIds.map((id) => sql`${id}`), sql`,`);
+          const slugList = sql.join(competitorSlugs.map((s) => sql`${s}`), sql`,`);
+          const rankedRows: any[] = await db.execute(sql`
+            SELECT app_slug, COUNT(DISTINCT keyword_id)::int AS cnt
+            FROM (
+              SELECT DISTINCT ON (app_slug, keyword_id) app_slug, keyword_id, position
+              FROM app_keyword_rankings
+              WHERE app_slug IN (${slugList})
+                AND keyword_id IN (${idList})
+              ORDER BY app_slug, keyword_id, scraped_at DESC
+            ) latest
+            WHERE position IS NOT NULL
+            GROUP BY app_slug
+          `).then((res: any) => (res as any).rows ?? res);
+          for (const r of rankedRows) {
+            rankedKeywordMap.set(r.app_slug, r.cnt);
+          }
+        }
+      }
+
       const result = await Promise.all(
         allRows.map(async (row) => {
           const [snapshot] = await db
@@ -1376,6 +1427,8 @@ export const accountRoutes: FastifyPluginAsync = async (app) => {
               return { type: c.type || "primary", title: c.title, slug: catSlug };
             }),
             categoryRankings: categoryRankingMap.get(row.appSlug) ?? [],
+            reverseSimilarCount: reverseSimilarMap.get(row.appSlug) ?? 0,
+            rankedKeywordCount: rankedKeywordMap.get(row.appSlug) ?? 0,
             isSelf: includeSelf && row.appSlug === slug,
           };
         })

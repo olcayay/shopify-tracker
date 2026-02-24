@@ -17,7 +17,7 @@ import {
 import { X, Plus, Search, ArrowUpDown, ArrowUp, ArrowDown, ChevronUp, ChevronDown } from "lucide-react";
 import { ConfirmModal } from "@/components/confirm-modal";
 
-type SortKey = "order" | "name" | "rating" | "reviews" | "pricing" | "minPaidPrice" | "launchedDate" | "lastChange" | "featured" | "ads";
+type SortKey = "order" | "name" | "rating" | "reviews" | "pricing" | "minPaidPrice" | "launchedDate" | "lastChange" | "featured" | "ads" | "ranked" | "similar";
 type SortDir = "asc" | "desc";
 
 export function CompetitorsSection({ appSlug }: { appSlug: string }) {
@@ -203,6 +203,12 @@ export function CompetitorsSection({ appSlug }: { appSlug: string }) {
         case "ads":
           cmp = (a.adKeywords ?? 0) - (b.adKeywords ?? 0);
           break;
+        case "ranked":
+          cmp = (a.rankedKeywordCount ?? 0) - (b.rankedKeywordCount ?? 0);
+          break;
+        case "similar":
+          cmp = (a.reverseSimilarCount ?? 0) - (b.reverseSimilarCount ?? 0);
+          break;
       }
       return sortDir === "asc" ? cmp : -cmp;
     })];
@@ -348,6 +354,12 @@ export function CompetitorsSection({ appSlug }: { appSlug: string }) {
               <TableHead className="cursor-pointer select-none" onClick={() => toggleSort("ads")}>
                 Ads <SortIcon col="ads" />
               </TableHead>
+              <TableHead className="cursor-pointer select-none" onClick={() => toggleSort("ranked")}>
+                Ranked <SortIcon col="ranked" />
+              </TableHead>
+              <TableHead className="cursor-pointer select-none" onClick={() => toggleSort("similar")}>
+                Similar <SortIcon col="similar" />
+              </TableHead>
               <TableHead>Categories</TableHead>
               <TableHead>Cat. Rank</TableHead>
               <TableHead className="cursor-pointer select-none" onClick={() => toggleSort("lastChange")}>
@@ -381,7 +393,7 @@ export function CompetitorsSection({ appSlug }: { appSlug: string }) {
                         </button>
                       </div>
                     ) : (
-                      <span className="text-xs text-muted-foreground">{idx + 1}</span>
+                      <span className="text-xs text-muted-foreground">{idx + 1 - (competitors.some((c) => c.isSelf) ? 1 : 0)}</span>
                     )}
                   </TableCell>
                 )}
@@ -451,6 +463,24 @@ export function CompetitorsSection({ appSlug }: { appSlug: string }) {
                       className="text-primary hover:underline"
                     >
                       {comp.adKeywords}
+                    </Link>
+                  ) : (
+                    <span className="text-muted-foreground">{"\u2014"}</span>
+                  )}
+                </TableCell>
+                <TableCell className="text-sm">
+                  {comp.rankedKeywordCount > 0 ? (
+                    <Link href={`/apps/${comp.appSlug}/keywords`} className="text-primary hover:underline">
+                      {comp.rankedKeywordCount}
+                    </Link>
+                  ) : (
+                    <span className="text-muted-foreground">{"\u2014"}</span>
+                  )}
+                </TableCell>
+                <TableCell className="text-sm">
+                  {comp.reverseSimilarCount > 0 ? (
+                    <Link href={`/apps/${comp.appSlug}/similar`} className="text-primary hover:underline">
+                      {comp.reverseSimilarCount}
                     </Link>
                   ) : (
                     <span className="text-muted-foreground">{"\u2014"}</span>
