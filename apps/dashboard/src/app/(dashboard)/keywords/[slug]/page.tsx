@@ -67,7 +67,7 @@ export default async function KeywordDetailPage({
     getAppsMinPaidPrices(uniqueSlugs).catch(() => ({} as Record<string, number | null>)),
     getAppsReverseSimilarCounts(uniqueSlugs).catch(() => ({} as Record<string, number>)),
     getAppsLaunchedDates(uniqueSlugs).catch(() => ({} as Record<string, string | null>)),
-    getAppsCategories(uniqueSlugs).catch(() => ({} as Record<string, { title: string; slug: string }[]>)),
+    getAppsCategories(uniqueSlugs).catch(() => ({} as Record<string, { title: string; slug: string; position: number | null }[]>)),
   ]);
 
   // Build ranking chart data from rankings (filtered to tracked + competitor apps)
@@ -242,7 +242,11 @@ export default async function KeywordDetailPage({
                       {app.average_rating?.toFixed(1) ?? "\u2014"}
                     </TableCell>
                     <TableCell>
-                      {app.rating_count?.toLocaleString() ?? "\u2014"}
+                      {app.rating_count != null ? (
+                        <Link href={`/apps/${app.app_slug}/reviews`} className="text-primary hover:underline">
+                          {app.rating_count.toLocaleString()}
+                        </Link>
+                      ) : "\u2014"}
                     </TableCell>
                     <TableCell>
                       <StarAppButton
@@ -354,10 +358,18 @@ export default async function KeywordDetailPage({
                       {ad.averageRating ? Number(ad.averageRating).toFixed(1) : "\u2014"}
                     </TableCell>
                     <TableCell>
-                      {ad.ratingCount?.toLocaleString() ?? "\u2014"}
+                      {ad.ratingCount != null ? (
+                        <Link href={`/apps/${ad.appSlug}/reviews`} className="text-primary hover:underline">
+                          {ad.ratingCount.toLocaleString()}
+                        </Link>
+                      ) : "\u2014"}
                     </TableCell>
-                    <TableCell className="text-sm text-muted-foreground">
-                      {lastChanges[ad.appSlug] ? formatDateOnly(lastChanges[ad.appSlug]) : "\u2014"}
+                    <TableCell className="text-sm">
+                      {lastChanges[ad.appSlug] ? (
+                        <Link href={`/apps/${ad.appSlug}/changes`} className="text-primary hover:underline">
+                          {formatDateOnly(lastChanges[ad.appSlug])}
+                        </Link>
+                      ) : "\u2014"}
                     </TableCell>
                     <TableCell className="text-sm text-muted-foreground">
                       {formatDateOnly(ad.lastSeen)}

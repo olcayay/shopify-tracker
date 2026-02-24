@@ -225,6 +225,7 @@ export const appRoutes: FastifyPluginAsync = async (app) => {
         appSlug: appCategoryRankings.appSlug,
         categorySlug: appCategoryRankings.categorySlug,
         categoryTitle: categories.title,
+        position: appCategoryRankings.position,
       })
       .from(appCategoryRankings)
       .innerJoin(categories, and(
@@ -235,10 +236,10 @@ export const appRoutes: FastifyPluginAsync = async (app) => {
       .orderBy(appCategoryRankings.appSlug, appCategoryRankings.categorySlug, desc(appCategoryRankings.scrapedAt));
 
     // Group by app
-    const result: Record<string, { title: string; slug: string }[]> = {};
+    const result: Record<string, { title: string; slug: string; position: number | null }[]> = {};
     for (const r of rows) {
       if (!result[r.appSlug]) result[r.appSlug] = [];
-      result[r.appSlug].push({ title: r.categoryTitle, slug: r.categorySlug });
+      result[r.appSlug].push({ title: r.categoryTitle, slug: r.categorySlug, position: r.position });
     }
 
     // Keep only leaf categories per app

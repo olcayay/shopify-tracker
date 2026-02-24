@@ -133,8 +133,8 @@ export function getAppsReverseSimilarCounts(slugs: string[]) {
 }
 
 export function getAppsCategories(slugs: string[]) {
-  if (slugs.length === 0) return Promise.resolve({} as Record<string, { title: string; slug: string }[]>);
-  return fetchApi<Record<string, { title: string; slug: string }[]>>(`/api/apps/categories`, {
+  if (slugs.length === 0) return Promise.resolve({} as Record<string, { title: string; slug: string; position: number | null }[]>);
+  return fetchApi<Record<string, { title: string; slug: string; position: number | null }[]>>(`/api/apps/categories`, {
     method: "POST",
     body: JSON.stringify({ slugs }),
   });

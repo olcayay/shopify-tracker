@@ -64,7 +64,7 @@ export function KeywordAppResults({
   minPaidPrices?: Record<string, number | null>;
   reverseSimilarCounts?: Record<string, number>;
   launchedDates?: Record<string, string | null>;
-  appCategories?: Record<string, { title: string; slug: string }[]>;
+  appCategories?: Record<string, { title: string; slug: string; position: number | null }[]>;
 }) {
   const { formatDateOnly } = useFormatDate();
   const [search, setSearch] = useState("");
@@ -342,7 +342,11 @@ export function KeywordAppResults({
                       {app.average_rating?.toFixed(1) ?? "\u2014"}
                     </TableCell>
                     <TableCell>
-                      {app.rating_count?.toLocaleString() ?? "\u2014"}
+                      {app.rating_count != null ? (
+                        <Link href={`/apps/${app.app_slug}/reviews`} className="text-primary hover:underline">
+                          {app.rating_count.toLocaleString()}
+                        </Link>
+                      ) : "\u2014"}
                     </TableCell>
                     <TableCell className="text-sm">
                       {minPaidPrices?.[app.app_slug] != null ? (
@@ -354,19 +358,27 @@ export function KeywordAppResults({
                       ) : "\u2014"}
                     </TableCell>
                     <TableCell className="text-sm">
-                      {reverseSimilarCounts?.[app.app_slug] ?? "\u2014"}
+                      {reverseSimilarCounts?.[app.app_slug] ? (
+                        <Link href={`/apps/${app.app_slug}/similar`} className="text-primary hover:underline">
+                          {reverseSimilarCounts[app.app_slug]}
+                        </Link>
+                      ) : "\u2014"}
                     </TableCell>
                     <TableCell className="text-sm">
                       {appCategories?.[app.app_slug]?.length ? (
                         <div className="flex flex-col gap-0.5">
                           {appCategories[app.app_slug].map((cat) => (
-                            <Link
-                              key={cat.slug}
-                              href={`/categories/${cat.slug}`}
-                              className="text-primary hover:underline"
-                            >
-                              {cat.title}
-                            </Link>
+                            <div key={cat.slug} className="flex items-center gap-1">
+                              {cat.position != null && (
+                                <span className="font-medium text-muted-foreground">#{cat.position}</span>
+                              )}
+                              <Link
+                                href={`/categories/${cat.slug}`}
+                                className="text-primary hover:underline"
+                              >
+                                {cat.title}
+                              </Link>
+                            </div>
                           ))}
                         </div>
                       ) : "\u2014"}
@@ -376,10 +388,12 @@ export function KeywordAppResults({
                         ? formatDateOnly(launchedDates[app.app_slug]!)
                         : "\u2014"}
                     </TableCell>
-                    <TableCell className="text-sm text-muted-foreground">
-                      {lastChanges?.[app.app_slug]
-                        ? formatDateOnly(lastChanges[app.app_slug])
-                        : "\u2014"}
+                    <TableCell className="text-sm">
+                      {lastChanges?.[app.app_slug] ? (
+                        <Link href={`/apps/${app.app_slug}/changes`} className="text-primary hover:underline">
+                          {formatDateOnly(lastChanges[app.app_slug])}
+                        </Link>
+                      ) : "\u2014"}
                     </TableCell>
                     <TableCell className="text-center">
                       {positionChanges?.[app.app_slug] !== undefined && positionChanges[app.app_slug] !== 0 ? (
