@@ -21,3 +21,10 @@ Developer page table enrichment:
 - /api/apps/by-developer now returns isBuiltForShopify, launchedDate, minPaidPrice (computed from pricingPlans)
 - Developer page table matches /apps page: sortable columns, BFS badge, linked Reviews/Min. Paid/Last Change cells, Categories with ranking, Launched date
 - Batch-fetches categories and last-changes in parallel after loading apps
+
+Compare page keyword density & test mode:
+- Added KeywordDensityTable component with stop word filtering, grouped by count (only count > 1)
+- useKeywordDensity hook: tokenizes text, filters stop words, groups keywords by frequency, calculates density %
+- App Details section now uses side-by-side layout (text left, keyword density table right)
+- Collapsible "Test a new description" panel: textarea with CharBadge, Analyze/Clear buttons
+- When analyzed, shows draft text + keyword density table in grid-cols-2 layout

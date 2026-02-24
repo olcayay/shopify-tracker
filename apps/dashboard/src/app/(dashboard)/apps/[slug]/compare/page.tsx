@@ -6,7 +6,8 @@ import Link from "next/link";
 import { useAuth } from "@/lib/auth-context";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Check, ChevronDown, Pencil } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Check, ChevronDown, ChevronUp, Pencil } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface AppData {
@@ -112,6 +113,81 @@ function DraftInput({
           />
         )}
       </div>
+    </div>
+  );
+}
+
+const STOP_WORDS = new Set([
+  "the","a","an","is","are","am","was","were","be","been","being",
+  "in","on","at","to","for","of","and","or","but","not","with",
+  "by","from","as","it","its","this","that","these","those",
+  "i","you","he","she","we","they","my","your","our","his","her","their",
+  "me","us","him","them","do","does","did","have","has","had",
+  "will","would","can","could","shall","should","may","might","must",
+  "so","if","then","than","no","all","any","each","every","some",
+  "such","very","just","about","up","out","how","what","which","who",
+  "when","where","also","more","other","into","over","after","before",
+]);
+
+function useKeywordDensity(text: string) {
+  return useMemo(() => {
+    const words = text
+      .toLowerCase()
+      .replace(/[^a-z0-9\s'-]/g, " ")
+      .split(/\s+/)
+      .filter(Boolean);
+    const totalWords = words.length;
+    if (totalWords === 0) return [];
+
+    const counts = new Map<string, number>();
+    for (const w of words) {
+      if (w.length < 2 || STOP_WORDS.has(w)) continue;
+      counts.set(w, (counts.get(w) || 0) + 1);
+    }
+
+    // Group by count, only include count > 1
+    const grouped = new Map<number, string[]>();
+    for (const [keyword, count] of counts) {
+      if (count <= 1) continue;
+      if (!grouped.has(count)) grouped.set(count, []);
+      grouped.get(count)!.push(keyword);
+    }
+
+    return [...grouped.entries()]
+      .sort((a, b) => b[0] - a[0])
+      .map(([count, keywords]) => ({
+        keywords: keywords.sort(),
+        count,
+        density: ((count / totalWords) * 100).toFixed(2),
+      }));
+  }, [text]);
+}
+
+function KeywordDensityTable({ text }: { text: string }) {
+  const analysis = useKeywordDensity(text);
+
+  if (analysis.length === 0) return null;
+
+  return (
+    <div className="border rounded-md overflow-hidden">
+      <table className="w-full text-sm">
+        <thead>
+          <tr className="bg-muted/50">
+            <th className="text-left py-1.5 px-3 font-medium">Keyword(s)</th>
+            <th className="text-right py-1.5 px-3 font-medium">Count</th>
+            <th className="text-right py-1.5 px-3 font-medium">Density</th>
+          </tr>
+        </thead>
+        <tbody>
+          {analysis.map((row) => (
+            <tr key={row.count} className="border-t">
+              <td className="py-1 px-3">{row.keywords.join(", ")}</td>
+              <td className="py-1 px-3 text-right">{row.count}</td>
+              <td className="py-1 px-3 text-right">{row.density}%</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
     </div>
   );
 }
@@ -256,6 +332,9 @@ export default function ComparePage() {
   const [draftName, setDraftName] = useState("");
   const [draftSubtitle, setDraftSubtitle] = useState("");
   const [draftIntro, setDraftIntro] = useState("");
+  const [draftDetails, setDraftDetails] = useState("");
+  const [draftDetailsAnalyzed, setDraftDetailsAnalyzed] = useState("");
+  const [draftDetailsOpen, setDraftDetailsOpen] = useState(false);
 
   // Collapsible sections — persisted globally
   const [collapsedSections, setCollapsedSections] = useState<Set<string>>(
@@ -659,13 +738,79 @@ export default function ComparePage() {
             )}
           </VerticalListSection>
 
-          {/* App Details — icon-tab mode */}
+          {/* App Details — icon-tab mode with keyword density */}
           <CompareSection
             title="App Details"
             sectionKey="appDetails"
             collapsed={isCollapsed("appDetails")}
             onToggle={toggleSection}
           >
+            {/* Test a new description — collapsible */}
+            <div className="mb-4 border rounded-md">
+              <button
+                className="w-full flex items-center gap-2 px-3 py-2 text-sm font-medium hover:bg-muted/50 transition-colors"
+                onClick={() => setDraftDetailsOpen((v) => !v)}
+              >
+                <Pencil className="h-4 w-4 text-muted-foreground" />
+                Test a new description
+                {draftDetailsOpen ? (
+                  <ChevronUp className="h-4 w-4 text-muted-foreground ml-auto" />
+                ) : (
+                  <ChevronDown className="h-4 w-4 text-muted-foreground ml-auto" />
+                )}
+              </button>
+              {draftDetailsOpen && (
+                <div className="px-3 pb-3 space-y-3">
+                  <div>
+                    <div className="flex items-center gap-2 mb-1">
+                      <CharBadge count={draftDetails.length} />
+                      {draftDetails.length > 0 && (
+                        <span className="text-xs text-muted-foreground">
+                          characters
+                        </span>
+                      )}
+                    </div>
+                    <textarea
+                      value={draftDetails}
+                      onChange={(e) => setDraftDetails(e.target.value)}
+                      placeholder="Test a new Description for your app!"
+                      className="w-full bg-muted/30 text-sm rounded-md border p-3 outline-none resize-none placeholder:text-muted-foreground/50 min-h-[120px]"
+                      rows={6}
+                    />
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      size="sm"
+                      onClick={() => setDraftDetailsAnalyzed(draftDetails)}
+                      disabled={draftDetails.trim().length === 0}
+                    >
+                      Analyze
+                    </Button>
+                    {draftDetailsAnalyzed && (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => {
+                          setDraftDetails("");
+                          setDraftDetailsAnalyzed("");
+                        }}
+                      >
+                        Clear
+                      </Button>
+                    )}
+                  </div>
+                  {draftDetailsAnalyzed && (
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 pt-2">
+                      <p className="text-sm whitespace-pre-line border rounded-md p-3 bg-muted/20 max-h-[400px] overflow-auto">
+                        {draftDetailsAnalyzed}
+                      </p>
+                      <KeywordDensityTable text={draftDetailsAnalyzed} />
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+
             <div className="flex items-center gap-2 mb-4">
               {selectedApps.map((app) => (
                 <AppIcon
@@ -697,11 +842,13 @@ export default function ComparePage() {
                 <div>
                   <CharBadge
                     count={active.latestSnapshot.appDetails.length}
-                    max={500}
                   />
-                  <p className="text-sm mt-2 whitespace-pre-line">
-                    {active.latestSnapshot.appDetails}
-                  </p>
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mt-2">
+                    <p className="text-sm whitespace-pre-line">
+                      {active.latestSnapshot.appDetails}
+                    </p>
+                    <KeywordDensityTable text={active.latestSnapshot.appDetails} />
+                  </div>
                 </div>
               );
             })()}
