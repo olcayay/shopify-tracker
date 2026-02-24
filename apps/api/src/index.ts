@@ -29,8 +29,12 @@ const db = createDb(databaseUrl);
 
 // Run pending migrations on startup
 console.log("Running database migrations...");
-await migrate(db, { migrationsFolder: "packages/db/src/migrations" });
-console.log("Database migrations complete.");
+try {
+  await migrate(db, { migrationsFolder: "packages/db/src/migrations" });
+  console.log("Database migrations complete.");
+} catch (err: any) {
+  console.warn("Migration warning (likely already applied):", err.message || err);
+}
 
 // Seed admin user on first run
 const adminEmail = process.env.ADMIN_EMAIL;

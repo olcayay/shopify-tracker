@@ -176,9 +176,29 @@ Shopify defaults to newest-first review ordering. The 10-page limit ensures only
 
 There is **no pagination**. The response contains all suggestions in one payload.
 
+### What It Collects
+
+- Autocomplete suggestions returned by Shopify's search API
+- Filters out suggestions that match the keyword itself (case-insensitive)
+- Stores as a JSON array of strings
+
+### Storage
+
+- Table: `keyword_auto_suggestions`
+- **One record per keyword** — uses upsert (`onConflictDoUpdate` on `keywordId`)
+- Each scrape overwrites the previous suggestions for that keyword
+- Fields: `keywordId`, `suggestions` (jsonb array), `scrapedAt`, `scrapeRunId`
+
 ### Trigger
 
 Not triggered by a cron job directly. Always cascaded automatically from the `keyword_search` job after it completes.
+
+### Cascade Scoping
+
+- **Full keyword scrape** → suggestions run for **all active keywords**
+- **Single keyword scrape** → suggestions run for **only that keyword**
+
+The cascade passes the `keyword` field from the parent job. When undefined (full scrape), `scrapeAll()` runs. When set (single keyword), only that keyword's suggestions are scraped.
 
 ---
 

@@ -307,13 +307,25 @@ export default function AppsPage() {
                       {app.latestSnapshot?.averageRating ?? "\u2014"}
                     </TableCell>
                     <TableCell>
-                      {app.latestSnapshot?.ratingCount ?? "\u2014"}
+                      {app.latestSnapshot?.ratingCount != null ? (
+                        <Link href={`/apps/${app.slug}/reviews`} className="text-primary hover:underline">
+                          {app.latestSnapshot.ratingCount}
+                        </Link>
+                      ) : "\u2014"}
                     </TableCell>
                     <TableCell className="text-sm">
-                      {app.competitorCount ?? 0}
+                      {app.competitorCount ? (
+                        <Link href={`/apps/${app.slug}/competitors`} className="text-primary hover:underline">
+                          {app.competitorCount}
+                        </Link>
+                      ) : "0"}
                     </TableCell>
                     <TableCell className="text-sm">
-                      {app.keywordCount ?? 0}
+                      {app.keywordCount ? (
+                        <Link href={`/apps/${app.slug}/keywords`} className="text-primary hover:underline">
+                          {app.keywordCount}
+                        </Link>
+                      ) : "0"}
                     </TableCell>
                     <TableCell className="text-sm">
                       {app.latestSnapshot?.pricing ?? "\u2014"}
@@ -325,10 +337,12 @@ export default function AppsPage() {
                         </Link>
                       ) : "\u2014"}
                     </TableCell>
-                    <TableCell className="text-sm text-muted-foreground">
-                      {app.lastChangeAt
-                        ? formatDateOnly(app.lastChangeAt)
-                        : "\u2014"}
+                    <TableCell className="text-sm">
+                      {app.lastChangeAt ? (
+                        <Link href={`/apps/${app.slug}/changes`} className="text-primary hover:underline">
+                          {formatDateOnly(app.lastChangeAt)}
+                        </Link>
+                      ) : "\u2014"}
                     </TableCell>
                     <TableCell className="text-sm text-muted-foreground">
                       {app.launchedDate

@@ -63,13 +63,13 @@ export function CompetitorsSection({ appSlug }: { appSlug: string }) {
   async function loadCompetitors() {
     setLoading(true);
     const res = await fetchWithAuth(
-      `/api/account/tracked-apps/${encodeURIComponent(appSlug)}/competitors`
+      `/api/account/tracked-apps/${encodeURIComponent(appSlug)}/competitors?includeSelf=true`
     );
     if (res.ok) {
       const comps = await res.json();
       setCompetitors(comps);
 
-      // Fetch last changes for all competitors
+      // Fetch last changes for all apps (including self)
       const slugs = comps.map((c: any) => c.appSlug);
       if (slugs.length > 0) {
         const changesRes = await fetchWithAuth(`/api/apps/last-changes`, {
@@ -147,12 +147,14 @@ export function CompetitorsSection({ appSlug }: { appSlug: string }) {
     const newList = [...competitors];
     const targetIndex = direction === "up" ? index - 1 : index + 1;
     if (targetIndex < 0 || targetIndex >= newList.length) return;
+    // Don't swap with the self row
+    if (newList[targetIndex]?.isSelf || newList[index]?.isSelf) return;
 
     [newList[index], newList[targetIndex]] = [newList[targetIndex], newList[index]];
     setCompetitors(newList);
 
     setReordering(true);
-    const slugs = newList.map((c) => c.appSlug);
+    const slugs = newList.filter((c) => !c.isSelf).map((c) => c.appSlug);
     await fetchWithAuth(
       `/api/account/tracked-apps/${encodeURIComponent(appSlug)}/competitors/reorder`,
       {
@@ -168,7 +170,10 @@ export function CompetitorsSection({ appSlug }: { appSlug: string }) {
 
   function sortedCompetitors() {
     if (sortKey === "order") return competitors; // preserve API order
-    return [...competitors].sort((a, b) => {
+    // Always keep self row at the top
+    const self = competitors.filter((c) => c.isSelf);
+    const rest = competitors.filter((c) => !c.isSelf);
+    return [...self, ...rest.sort((a, b) => {
       let cmp = 0;
       switch (sortKey) {
         case "name":
@@ -200,7 +205,7 @@ export function CompetitorsSection({ appSlug }: { appSlug: string }) {
           break;
       }
       return sortDir === "asc" ? cmp : -cmp;
-    });
+    })];
   }
 
   function toggleSort(key: SortKey) {
@@ -353,10 +358,12 @@ export function CompetitorsSection({ appSlug }: { appSlug: string }) {
           </TableHeader>
           <TableBody>
             {sortedCompetitors().map((comp, idx) => (
-              <TableRow key={comp.appSlug}>
+              <TableRow key={comp.appSlug} className={comp.isSelf ? "border-l-2 border-l-emerald-500 bg-emerald-500/10" : ""}>
                 {canEdit && (
                   <TableCell className="py-1">
-                    {isCustomOrder ? (
+                    {comp.isSelf ? (
+                      <span />
+                    ) : isCustomOrder ? (
                       <div className="flex flex-col items-center gap-0">
                         <button
                           className="h-5 w-5 flex items-center justify-center rounded hover:bg-accent disabled:opacity-20 transition-colors"
@@ -483,19 +490,21 @@ export function CompetitorsSection({ appSlug }: { appSlug: string }) {
                 </TableCell>
                 {canEdit && (
                   <TableCell>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-8 w-8 text-muted-foreground hover:text-destructive"
-                      onClick={() =>
-                        setConfirmRemove({
-                          slug: comp.appSlug,
-                          name: comp.appName,
-                        })
-                      }
-                    >
-                      <X className="h-4 w-4" />
-                    </Button>
+                    {!comp.isSelf && (
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                        onClick={() =>
+                          setConfirmRemove({
+                            slug: comp.appSlug,
+                            name: comp.appName,
+                          })
+                        }
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                    )}
                   </TableCell>
                 )}
               </TableRow>

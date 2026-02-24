@@ -8,3 +8,11 @@ Settings page profile edit & direct user creation notes:
 
 Scraping depth documentation:
 - Created files/SCRAPING-DEPTH.md documenting all cron job schedules, pagination limits, stop conditions, cascade behavior, rate limiting, and data flow
+
+Dashboard table links & competitors self-row:
+- Overview and /apps pages: table cells (Reviews, Competitors, Keywords, Ranked, Last Change) now link to their respective detail pages
+- /apps/[slug]/competitors: tracked app itself shown at top with green highlight (border-l-emerald-500 bg-emerald-500/10)
+- API: GET /api/account/tracked-apps/:slug/competitors?includeSelf=true prepends self app with isSelf flag
+- Self row excluded from reorder/delete actions, always pinned to top when sorting
+- Migration startup wrapped in try-catch for idempotent restarts
+- SCRAPING-DEPTH.md updated with keyword suggestion details (storage, cascade scoping)

@@ -1233,6 +1233,8 @@ export const accountRoutes: FastifyPluginAsync = async (app) => {
         return reply.code(404).send({ error: "App not in your apps" });
       }
 
+      const includeSelf = (request.query as any).includeSelf === "true";
+
       const rows = await db
         .select({
           appSlug: accountCompetitorApps.appSlug,
@@ -1253,8 +1255,25 @@ export const accountRoutes: FastifyPluginAsync = async (app) => {
         )
         .orderBy(asc(accountCompetitorApps.sortOrder));
 
+      // Optionally prepend the tracked app itself for side-by-side comparison
+      let allRows: typeof rows = [...rows];
+      if (includeSelf) {
+        const [selfApp] = await db
+          .select({
+            appName: apps.name,
+            isBuiltForShopify: apps.isBuiltForShopify,
+            launchedDate: apps.launchedDate,
+            iconUrl: apps.iconUrl,
+          })
+          .from(apps)
+          .where(eq(apps.slug, slug));
+        if (selfApp) {
+          allRows = [{ appSlug: slug, sortOrder: -1, createdAt: new Date(), ...selfApp } as any, ...rows];
+        }
+      }
+
       // Batch-fetch featured section counts (last 30 days)
-      const competitorSlugs = rows.map((r) => r.appSlug);
+      const competitorSlugs = allRows.map((r) => r.appSlug);
       const featuredSince = new Date();
       featuredSince.setDate(featuredSince.getDate() - 30);
       const featuredSinceStr = featuredSince.toISOString().slice(0, 10);
@@ -1322,7 +1341,7 @@ export const accountRoutes: FastifyPluginAsync = async (app) => {
       }
 
       const result = await Promise.all(
-        rows.map(async (row) => {
+        allRows.map(async (row) => {
           const [snapshot] = await db
             .select({
               averageRating: appSnapshots.averageRating,
@@ -1353,10 +1372,11 @@ export const accountRoutes: FastifyPluginAsync = async (app) => {
             featuredSections: featuredCountMap.get(row.appSlug) ?? 0,
             adKeywords: adKeywordCountMap.get(row.appSlug) ?? 0,
             categories: appCategories.map((c: any) => {
-              const slug = c.url ? c.url.replace(/.*\/categories\//, "").replace(/\/.*/, "") : null;
-              return { type: c.type || "primary", title: c.title, slug };
+              const catSlug = c.url ? c.url.replace(/.*\/categories\//, "").replace(/\/.*/, "") : null;
+              return { type: c.type || "primary", title: c.title, slug: catSlug };
             }),
             categoryRankings: categoryRankingMap.get(row.appSlug) ?? [],
+            isSelf: includeSelf && row.appSlug === slug,
           };
         })
       );
