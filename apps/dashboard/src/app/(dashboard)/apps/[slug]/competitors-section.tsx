@@ -490,7 +490,7 @@ export function CompetitorsSection({ appSlug }: { appSlug: string }) {
                     const primary = comp.categories?.find((cat: any) => cat.type === "primary");
                     const secondary = comp.categories?.find((cat: any) => cat.type === "secondary");
                     if (!primary && !secondary) return "\u2014";
-                    const rankMap = new Map((comp.categoryRankings ?? []).map((cr: any) => [cr.categorySlug, cr.position]));
+                    const rankMap = new Map<string, number>((comp.categoryRankings ?? []).map((cr: any) => [cr.categorySlug, cr.position]));
                     return (
                       <div className="space-y-0.5">
                         {primary && (
