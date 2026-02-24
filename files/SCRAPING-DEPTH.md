@@ -9,7 +9,7 @@ This document describes how deep each cron job scrapes, how many pages it visits
 | Job | Schedule | Frequency | Source |
 |-----|----------|-----------|--------|
 | **Categories** | `0 3 * * *` | Daily at 03:00 UTC | `scheduler.ts` |
-| **App Details** | `0 */6 * * *` | Every 6 hours | `scheduler.ts` |
+| **App Details** | `0 1,13 * * *` | Every 12 hours (01:00, 13:00) | `scheduler.ts` |
 | **Keyword Search** | `0 0,12 * * *` | Every 12 hours (00:00, 12:00) | `scheduler.ts` |
 | **Reviews** | `0 6,18 * * *` | Every 12 hours (06:00, 18:00) | `scheduler.ts` |
 | **Featured Apps** | `0 4 * * *` | Daily at 04:00 UTC | `scheduler.ts` |

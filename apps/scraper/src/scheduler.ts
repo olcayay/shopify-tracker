@@ -16,7 +16,7 @@ const SCHEDULES = [
   },
   {
     name: "app_details",
-    cron: "0 */6 * * *", // Every 6 hours
+    cron: "0 1,13 * * *", // Every 12 hours (01:00, 13:00)
     type: "app_details" as const,
   },
   {
