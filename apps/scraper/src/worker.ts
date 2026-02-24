@@ -153,6 +153,7 @@ async function processJob(job: Job<ScraperJobData>): Promise<void> {
       // Cascade: enqueue keyword_suggestions job
       await enqueueScraperJob({
         type: "keyword_suggestions",
+        keyword: job.data.keyword,
         triggeredBy: `${triggeredBy}:cascade`,
       });
       log.info("cascaded keyword_suggestions job");
