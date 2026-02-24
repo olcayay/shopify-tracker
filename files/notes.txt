@@ -5,3 +5,6 @@ Settings page profile edit & direct user creation notes:
 - JWT email update: no re-issuing needed, next token refresh (15min) picks up new email
 - Invitation API routes kept for backward compatibility, just not used from dashboard anymore
 - bcrypt imported in account.ts for password hashing in user creation
+
+Scraping depth documentation:
+- Created files/SCRAPING-DEPTH.md documenting all cron job schedules, pagination limits, stop conditions, cascade behavior, rate limiting, and data flow

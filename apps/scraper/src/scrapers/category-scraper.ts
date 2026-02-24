@@ -283,11 +283,11 @@ export class CategoryScraper {
       }
     }
 
-    // Multi-page support: fetch additional pages if configured (listing pages only)
-    if (isListingPage && depth > 0 && pageOptions?.pages !== "first" && pageOptions?.pages !== undefined) {
-      const maxPages = pageOptions.pages === "all" ? 50
-        : typeof pageOptions.pages === "number" ? pageOptions.pages
-        : 1;
+    // Multi-page support: fetch additional pages (listing pages only, default 10 pages)
+    if (isListingPage && depth > 0 && pageOptions?.pages !== "first") {
+      const maxPages = pageOptions?.pages === "all" ? 50
+        : typeof pageOptions?.pages === "number" ? pageOptions.pages
+        : 10;
 
       if (maxPages > 1) {
         let currentPage = 1;

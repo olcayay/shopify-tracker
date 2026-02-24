@@ -94,7 +94,7 @@ export class KeywordScraper {
     const MAX_PAGES = pageOptions?.pages === "first" ? 1
       : pageOptions?.pages === "all" ? 20
       : typeof pageOptions?.pages === "number" ? pageOptions.pages
-      : 4;
+      : 10;
     const allApps: import("@shopify-tracking/shared").KeywordSearchApp[] = [];
     const seenSponsoredSlugs = new Set<string>();
     const seenOrganicSlugs = new Set<string>();
