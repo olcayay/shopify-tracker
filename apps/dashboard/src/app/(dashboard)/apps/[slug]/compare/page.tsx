@@ -1083,19 +1083,14 @@ function BadgeComparisonSection({
   apps: AppData[];
   getItems: (app: AppData) => string[];
 }) {
-  // Collect all unique items
-  const allItems = useMemo(() => {
+  // Build presence map
+  const presenceMap = useMemo(() => {
     const set = new Set<string>();
     for (const app of apps) {
       for (const item of getItems(app)) set.add(item);
     }
-    return [...set].sort();
-  }, [apps, getItems]);
-
-  // Build presence map
-  const presenceMap = useMemo(() => {
     const map = new Map<string, Set<string>>();
-    for (const item of allItems) {
+    for (const item of set) {
       const appSlugs = new Set<string>();
       for (const app of apps) {
         if (getItems(app).includes(item)) appSlugs.add(app.slug);
@@ -1103,7 +1098,16 @@ function BadgeComparisonSection({
       map.set(item, appSlugs);
     }
     return map;
-  }, [allItems, apps, getItems]);
+  }, [apps, getItems]);
+
+  // Collect all unique items, sorted by count desc then alphabetically
+  const allItems = useMemo(() => {
+    return [...presenceMap.keys()].sort((a, b) => {
+      const countDiff = (presenceMap.get(b)?.size || 0) - (presenceMap.get(a)?.size || 0);
+      if (countDiff !== 0) return countDiff;
+      return a.localeCompare(b);
+    });
+  }, [presenceMap]);
 
   if (allItems.length === 0) return null;
 
@@ -1135,7 +1139,7 @@ function BadgeComparisonSection({
               <tr key={item} className="border-b last:border-0">
                 <td className="py-1.5 pr-4 w-[160px] min-w-[160px]">
                   <Badge variant="outline" className="text-xs">
-                    {item}
+                    {item} ({presenceMap.get(item)?.size || 0})
                   </Badge>
                 </td>
                 {apps.map((app) => (
@@ -1589,12 +1593,17 @@ function CategoriesComparison({
     for (const [category, { slug, subMap }] of catMap) {
       const subcategories = [];
       for (const [subcategory, features] of subMap) {
+        features.sort((a, b) => {
+          const countDiff = (featurePresence.get(b.handle)?.size || 0) - (featurePresence.get(a.handle)?.size || 0);
+          if (countDiff !== 0) return countDiff;
+          return a.title.localeCompare(b.title);
+        });
         subcategories.push({ subcategory, features });
       }
       result.push({ category, categorySlug: slug, subcategories });
     }
     return result;
-  }, [allFeatures]);
+  }, [allFeatures, featurePresence]);
 
   if (allFeatures.size === 0) return null;
 
@@ -1658,7 +1667,7 @@ function CategoriesComparison({
                             href={`/features/${encodeURIComponent(f.handle)}`}
                             className="text-primary hover:underline"
                           >
-                            {f.title}
+                            {f.title} ({featurePresence.get(f.handle)?.size || 0})
                           </Link>
                         </td>
                         {apps.map((app) => (
