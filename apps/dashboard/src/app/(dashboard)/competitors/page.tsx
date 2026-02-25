@@ -29,7 +29,8 @@ type SortKey =
   | "adKeywords"
   | "featured"
   | "lastChangeAt"
-  | "launchedDate";
+  | "launchedDate"
+  | "catRank";
 type SortDir = "asc" | "desc";
 
 export default function CompetitorsPage() {
@@ -150,6 +151,19 @@ export default function CompetitorsPage() {
         case "launchedDate":
           cmp = (a.launchedDate || "").localeCompare(b.launchedDate || "");
           break;
+        case "catRank": {
+          const bestRank = (comp: any) => {
+            const rankings = comp.categoryRankings ?? [];
+            if (!rankings.length) return Infinity;
+            let best = Infinity;
+            for (const cr of rankings) {
+              if (cr.position != null && cr.position < best) best = cr.position;
+            }
+            return best;
+          };
+          cmp = bestRank(a) - bestRank(b);
+          break;
+        }
       }
       return sortDir === "asc" ? cmp : -cmp;
     });
@@ -160,7 +174,7 @@ export default function CompetitorsPage() {
       setSortDir((d) => (d === "asc" ? "desc" : "asc"));
     } else {
       setSortKey(key);
-      setSortDir(key === "name" ? "asc" : "desc");
+      setSortDir(key === "name" || key === "catRank" ? "asc" : "desc");
     }
   }
 
@@ -296,8 +310,9 @@ export default function CompetitorsPage() {
                           >
                             Featured <SortIcon col="featured" />
                           </TableHead>
-                          <TableHead>Categories</TableHead>
-                          <TableHead>Cat. Rank</TableHead>
+                          <TableHead className="cursor-pointer select-none" onClick={() => toggleSort("catRank")}>
+                            Cat. Rank <SortIcon col="catRank" />
+                          </TableHead>
                           <TableHead
                             className="cursor-pointer select-none"
                             onClick={() => toggleSort("lastChangeAt")}
@@ -385,25 +400,24 @@ export default function CompetitorsPage() {
                                 const primary = c.categories?.find((cat: any) => cat.type === "primary");
                                 const secondary = c.categories?.find((cat: any) => cat.type === "secondary");
                                 if (!primary && !secondary) return "\u2014";
+                                const rankMap = new Map<string, number>((c.categoryRankings ?? []).map((cr: any) => [cr.categorySlug, cr.position]));
                                 return (
                                   <div className="space-y-0.5">
-                                    {primary && <div>{primary.slug ? <Link href={`/categories/${primary.slug}`} className="text-primary hover:underline">{primary.title}</Link> : primary.title}</div>}
-                                    {secondary && <div className="text-muted-foreground">{secondary.slug ? <Link href={`/categories/${secondary.slug}`} className="hover:underline">{secondary.title}</Link> : secondary.title}</div>}
+                                    {primary && (
+                                      <div className="flex items-center gap-1">
+                                        {rankMap.has(primary.slug) && <span className="font-medium text-muted-foreground">#{rankMap.get(primary.slug)}</span>}
+                                        {primary.slug ? <Link href={`/categories/${primary.slug}`} className="text-primary hover:underline">{primary.title}</Link> : primary.title}
+                                      </div>
+                                    )}
+                                    {secondary && (
+                                      <div className="flex items-center gap-1 text-muted-foreground">
+                                        {rankMap.has(secondary.slug) && <span className="font-medium">#{rankMap.get(secondary.slug)}</span>}
+                                        {secondary.slug ? <Link href={`/categories/${secondary.slug}`} className="hover:underline">{secondary.title}</Link> : secondary.title}
+                                      </div>
+                                    )}
                                   </div>
                                 );
                               })()}
-                            </TableCell>
-                            <TableCell className="text-sm">
-                              {c.categoryRankings?.length > 0 ? (
-                                <div className="space-y-0.5">
-                                  {c.categoryRankings.map((cr: any) => (
-                                    <div key={cr.categorySlug}>
-                                      <span className="font-medium">#{cr.position}</span>
-                                      <Link href={`/categories/${cr.categorySlug}`} className="text-muted-foreground hover:underline ml-1">{cr.categoryTitle}</Link>
-                                    </div>
-                                  ))}
-                                </div>
-                              ) : "\u2014"}
                             </TableCell>
                             <TableCell className="text-sm">
                               {c.lastChangeAt ? (

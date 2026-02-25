@@ -930,6 +930,7 @@ export default function ComparePage() {
             onToggle={toggleSection}
             apps={selectedApps}
             getItems={(app) => app.latestSnapshot?.integrations || []}
+            linkPrefix="/integrations"
           />
 
           {/* Category Ranking */}
@@ -1075,6 +1076,7 @@ function BadgeComparisonSection({
   onToggle,
   apps,
   getItems,
+  linkPrefix,
 }: {
   title: string;
   sectionKey: string;
@@ -1082,6 +1084,7 @@ function BadgeComparisonSection({
   onToggle: (key: string) => void;
   apps: AppData[];
   getItems: (app: AppData) => string[];
+  linkPrefix?: string;
 }) {
   // Build presence map
   const presenceMap = useMemo(() => {
@@ -1138,9 +1141,17 @@ function BadgeComparisonSection({
             {allItems.map((item) => (
               <tr key={item} className="border-b last:border-0">
                 <td className="py-1.5 pr-4 w-[160px] min-w-[160px]">
-                  <Badge variant="outline" className="text-xs">
-                    {item} ({presenceMap.get(item)?.size || 0})
-                  </Badge>
+                  {linkPrefix ? (
+                    <Link href={`${linkPrefix}/${encodeURIComponent(item)}`}>
+                      <Badge variant="outline" className="text-xs hover:bg-accent cursor-pointer">
+                        {item} ({presenceMap.get(item)?.size || 0})
+                      </Badge>
+                    </Link>
+                  ) : (
+                    <Badge variant="outline" className="text-xs">
+                      {item} ({presenceMap.get(item)?.size || 0})
+                    </Badge>
+                  )}
                 </td>
                 {apps.map((app) => (
                   <td key={app.slug} className="py-1.5 px-2 text-center">

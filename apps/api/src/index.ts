@@ -16,6 +16,7 @@ import { accountRoutes } from "./routes/account.js";
 import { systemAdminRoutes } from "./routes/system-admin.js";
 import { invitationRoutes } from "./routes/invitations.js";
 import { featureRoutes } from "./routes/features.js";
+import { integrationRoutes } from "./routes/integrations.js";
 import { liveSearchRoutes } from "./routes/live-search.js";
 import { featuredAppRoutes } from "./routes/featured-apps.js";
 
@@ -88,6 +89,7 @@ await app.register(accountRoutes, { prefix: "/api/account" });
 await app.register(systemAdminRoutes, { prefix: "/api/system-admin" });
 await app.register(invitationRoutes, { prefix: "/api/invitations" });
 await app.register(featureRoutes, { prefix: "/api/features" });
+await app.register(integrationRoutes, { prefix: "/api/integrations" });
 await app.register(liveSearchRoutes, { prefix: "/api/live-search" });
 await app.register(featuredAppRoutes, { prefix: "/api/featured-apps" });
 

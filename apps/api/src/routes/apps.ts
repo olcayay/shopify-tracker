@@ -278,6 +278,66 @@ export const appRoutes: FastifyPluginAsync = async (app) => {
     return result;
   });
 
+  // POST /api/apps/featured-section-counts — count distinct featured sections per app (last 30 days)
+  app.post("/featured-section-counts", async (request) => {
+    const { slugs } = request.body as { slugs: string[] };
+    if (!slugs?.length) return {};
+
+    const since = new Date();
+    since.setDate(since.getDate() - 30);
+    const sinceStr = since.toISOString().slice(0, 10);
+
+    const rows = await db
+      .select({
+        appSlug: featuredAppSightings.appSlug,
+        sectionCount: sql<number>`count(distinct ${featuredAppSightings.surface} || ':' || ${featuredAppSightings.surfaceDetail} || ':' || ${featuredAppSightings.sectionHandle})`,
+      })
+      .from(featuredAppSightings)
+      .where(
+        and(
+          inArray(featuredAppSightings.appSlug, slugs),
+          sql`${featuredAppSightings.seenDate} >= ${sinceStr}`
+        )
+      )
+      .groupBy(featuredAppSightings.appSlug);
+
+    const result: Record<string, number> = {};
+    for (const r of rows) {
+      result[r.appSlug] = r.sectionCount;
+    }
+    return result;
+  });
+
+  // POST /api/apps/ad-keyword-counts — count distinct ad keywords per app (last 30 days)
+  app.post("/ad-keyword-counts", async (request) => {
+    const { slugs } = request.body as { slugs: string[] };
+    if (!slugs?.length) return {};
+
+    const since = new Date();
+    since.setDate(since.getDate() - 30);
+    const sinceStr = since.toISOString().slice(0, 10);
+
+    const rows = await db
+      .select({
+        appSlug: keywordAdSightings.appSlug,
+        keywordCount: sql<number>`count(distinct ${keywordAdSightings.keywordId})`,
+      })
+      .from(keywordAdSightings)
+      .where(
+        and(
+          inArray(keywordAdSightings.appSlug, slugs),
+          sql`${keywordAdSightings.seenDate} >= ${sinceStr}`
+        )
+      )
+      .groupBy(keywordAdSightings.appSlug);
+
+    const result: Record<string, number> = {};
+    for (const r of rows) {
+      result[r.appSlug] = r.keywordCount;
+    }
+    return result;
+  });
+
   // GET /api/apps/search?q= — search all apps by name prefix
   app.get("/search", async (request) => {
     const { q = "" } = request.query as { q?: string };

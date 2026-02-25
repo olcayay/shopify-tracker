@@ -17,7 +17,7 @@ import { X, ArrowUpDown, ArrowUp, ArrowDown, ChevronUp, ChevronDown } from "luci
 import { ConfirmModal } from "@/components/confirm-modal";
 import { AppSearchBar } from "@/components/app-search-bar";
 
-type SortKey = "order" | "name" | "rating" | "reviews" | "pricing" | "minPaidPrice" | "launchedDate" | "lastChange" | "featured" | "ads" | "ranked" | "similar";
+type SortKey = "order" | "name" | "rating" | "reviews" | "pricing" | "minPaidPrice" | "launchedDate" | "lastChange" | "featured" | "ads" | "ranked" | "similar" | "catRank";
 type SortDir = "asc" | "desc";
 
 export function CompetitorsSection({ appSlug }: { appSlug: string }) {
@@ -166,6 +166,19 @@ export function CompetitorsSection({ appSlug }: { appSlug: string }) {
         case "similar":
           cmp = (a.reverseSimilarCount ?? 0) - (b.reverseSimilarCount ?? 0);
           break;
+        case "catRank": {
+          const bestRank = (comp: any) => {
+            const rankings = comp.categoryRankings ?? [];
+            if (!rankings.length) return Infinity;
+            let best = Infinity;
+            for (const cr of rankings) {
+              if (cr.position != null && cr.position < best) best = cr.position;
+            }
+            return best;
+          };
+          cmp = bestRank(a) - bestRank(b);
+          break;
+        }
       }
       return sortDir === "asc" ? cmp : -cmp;
     })];
@@ -176,7 +189,7 @@ export function CompetitorsSection({ appSlug }: { appSlug: string }) {
       setSortDir((d) => (d === "asc" ? "desc" : "asc"));
     } else {
       setSortKey(key);
-      setSortDir(key === "name" || key === "order" ? "asc" : "desc");
+      setSortDir(key === "name" || key === "order" || key === "catRank" ? "asc" : "desc");
     }
   }
 
@@ -265,7 +278,9 @@ export function CompetitorsSection({ appSlug }: { appSlug: string }) {
               <TableHead className="cursor-pointer select-none" onClick={() => toggleSort("similar")}>
                 Similar <SortIcon col="similar" />
               </TableHead>
-              <TableHead>Categories</TableHead>
+              <TableHead className="cursor-pointer select-none" onClick={() => toggleSort("catRank")}>
+                Cat. Rank <SortIcon col="catRank" />
+              </TableHead>
               <TableHead className="cursor-pointer select-none" onClick={() => toggleSort("lastChange")}>
                 Last Change <SortIcon col="lastChange" />
               </TableHead>

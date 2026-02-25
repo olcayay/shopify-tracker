@@ -156,6 +156,22 @@ export function getAppsLaunchedDates(slugs: string[]) {
   });
 }
 
+export function getAppsFeaturedSectionCounts(slugs: string[]) {
+  if (slugs.length === 0) return Promise.resolve({} as Record<string, number>);
+  return fetchApi<Record<string, number>>(`/api/apps/featured-section-counts`, {
+    method: "POST",
+    body: JSON.stringify({ slugs }),
+  });
+}
+
+export function getAppsAdKeywordCounts(slugs: string[]) {
+  if (slugs.length === 0) return Promise.resolve({} as Record<string, number>);
+  return fetchApi<Record<string, number>>(`/api/apps/ad-keyword-counts`, {
+    method: "POST",
+    body: JSON.stringify({ slugs }),
+  });
+}
+
 // --- Apps (search) ---
 export function searchApps(q: string) {
   return fetchApi<any[]>(`/api/apps/search?q=${encodeURIComponent(q)}`);
@@ -210,6 +226,11 @@ export function getFeaturesByCategory(category?: string, subcategory?: string) {
   if (category) params.set("category", category);
   if (subcategory) params.set("subcategory", subcategory);
   return fetchApi<any[]>(`/api/features/by-category?${params.toString()}`);
+}
+
+// --- Integrations ---
+export function getIntegration(name: string) {
+  return fetchApi<any>(`/api/integrations/${encodeURIComponent(name)}`);
 }
 
 // --- Auth ---
