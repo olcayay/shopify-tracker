@@ -1004,16 +1004,16 @@ export const systemAdminRoutes: FastifyPluginAsync = async (app) => {
       .where(eq(scrapeRuns.status, "completed" as any))
       .groupBy(scrapeRuns.scraperType);
 
-    // Avg duration & items from last 3 scheduler-triggered completed runs per type
+    // Avg duration & items from last 3 completed runs per type
     const workerStats: { scraper_type: string; avg_duration_ms: number; avg_items: number }[] = await db.execute(sql`
       SELECT scraper_type,
         ROUND(AVG((metadata->>'duration_ms')::numeric))::int AS avg_duration_ms,
-        ROUND(AVG((metadata->>'items_scraped')::numeric))::int AS avg_items
+        ROUND(AVG(COALESCE((metadata->>'items_scraped')::numeric, (metadata->>'apps_computed')::numeric)))::int AS avg_items
       FROM (
         SELECT scraper_type, metadata,
           ROW_NUMBER() OVER (PARTITION BY scraper_type ORDER BY completed_at DESC) AS rn
         FROM scrape_runs
-        WHERE status = 'completed' AND triggered_by = 'scheduler'
+        WHERE status = 'completed'
           AND metadata->>'duration_ms' IS NOT NULL
       ) sub
       WHERE rn <= 3
