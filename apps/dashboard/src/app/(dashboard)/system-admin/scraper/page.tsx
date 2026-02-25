@@ -33,48 +33,56 @@ import {
 import { ConfirmModal } from "@/components/confirm-modal";
 import { useFormatDate } from "@/lib/format-date";
 
+function utcToLocal(utcHour: number): string {
+  const d = new Date();
+  d.setUTCHours(utcHour, 0, 0, 0);
+  return d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+}
+
+function formatSchedule(cronHours: number[] | null, prefix?: string): string {
+  if (!cronHours) return prefix ?? "";
+  const localTimes = cronHours.map(utcToLocal);
+  if (cronHours.length === 1) return `Daily at ${localTimes[0]}`;
+  return `Every ${Math.round(24 / cronHours.length)}h (${localTimes.join(", ")})`;
+}
+
 const SCRAPER_TYPES = [
   {
     type: "category",
     label: "Categories",
     description: "Scrape Shopify app categories tree",
-    schedule: "Daily at 03:00 UTC",
     cronHours: [3],
   },
   {
     type: "app_details",
     label: "App Details",
     description: "Scrape tracked app details and snapshots",
-    schedule: "Every 12h (01:00, 13:00 UTC)",
     cronHours: [1, 13],
   },
   {
     type: "keyword_search",
     label: "Keywords",
     description: "Search tracked keywords and record rankings",
-    schedule: "Every 12h (00:00, 12:00 UTC)",
     cronHours: [0, 12],
   },
   {
     type: "reviews",
     label: "Reviews",
     description: "Scrape reviews for tracked apps (+ computes review metrics)",
-    schedule: "Daily at 06:00 UTC",
     cronHours: [6],
   },
   {
     type: "daily_digest",
     label: "Daily Digest",
     description: "Send ranking report emails to users",
-    schedule: "Daily at 05:00 UTC",
     cronHours: [5],
   },
   {
     type: "compute_review_metrics",
     label: "Review Metrics",
     description: "Compute review velocity & acceleration for tracked apps",
-    schedule: "Auto (after reviews scraper)",
     cronHours: null,
+    scheduleLabel: "Auto (after reviews scraper)",
   },
 ];
 
@@ -108,6 +116,18 @@ function formatRelativeTime(ms: number): string {
   const mins = totalMins % 60;
   if (mins === 0) return `in ${hours}h`;
   return `in ${hours}h ${mins}m`;
+}
+
+function formatDuration(ms: number): string {
+  if (ms < 1000) return `${ms}ms`;
+  const secs = Math.round(ms / 1000);
+  if (secs < 60) return `${secs}s`;
+  const mins = Math.floor(secs / 60);
+  const remSecs = secs % 60;
+  if (mins < 60) return remSecs > 0 ? `${mins}m ${remSecs}s` : `${mins}m`;
+  const hours = Math.floor(mins / 60);
+  const remMins = mins % 60;
+  return remMins > 0 ? `${hours}h ${remMins}m` : `${hours}h`;
 }
 
 const PAGE_SIZE = 20;
@@ -236,6 +256,26 @@ export default function ScraperPage() {
       freshnessMap.set(f.scraperType, f);
     }
   }
+
+  // Build worker stats map (avg duration & items from last 3 scheduler runs)
+  const workerStatsMap = new Map<string, { avg_duration_ms: number; avg_items: number }>();
+  if (stats?.workerStats) {
+    for (const w of stats.workerStats) {
+      workerStatsMap.set(w.scraper_type, w);
+    }
+  }
+
+  // Asset count per scraper type (what it will process next)
+  const assetCountMap: Record<string, { count: number; label: string }> = stats
+    ? {
+        category: { count: stats.totalCategories ?? 0, label: "categories" },
+        app_details: { count: stats.trackedApps ?? 0, label: "apps" },
+        keyword_search: { count: stats.trackedKeywords ?? 0, label: "keywords" },
+        reviews: { count: stats.trackedApps ?? 0, label: "apps" },
+        daily_digest: { count: stats.users ?? 0, label: "users" },
+        compute_review_metrics: { count: stats.trackedApps ?? 0, label: "apps" },
+      }
+    : {};
 
   const totalPages = Math.ceil(total / PAGE_SIZE);
 
@@ -433,6 +473,8 @@ export default function ScraperPage() {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {SCRAPER_TYPES.map((s) => {
           const freshness = freshnessMap.get(s.type);
+          const wStats = workerStatsMap.get(s.type);
+          const asset = assetCountMap[s.type];
           return (
             <Card key={s.type}>
               <CardHeader className="pb-2">
@@ -454,7 +496,7 @@ export default function ScraperPage() {
                 <div className="space-y-1.5">
                   <div className="flex items-center gap-2 text-sm">
                     <span className="text-muted-foreground">Schedule:</span>
-                    <span>{s.schedule}</span>
+                    <span>{formatSchedule(s.cronHours, (s as any).scheduleLabel)}</span>
                   </div>
                   {s.cronHours && (
                     <div className="flex items-center gap-2 text-sm">
@@ -486,6 +528,18 @@ export default function ScraperPage() {
                       <span className="text-muted-foreground">Never</span>
                     )}
                   </div>
+                  {asset && asset.count > 0 && (
+                    <div className="flex items-center gap-2 text-sm">
+                      <span className="text-muted-foreground">Assets:</span>
+                      <span>{asset.count} {asset.label}</span>
+                    </div>
+                  )}
+                  {wStats?.avg_duration_ms != null && (
+                    <div className="flex items-center gap-2 text-sm">
+                      <span className="text-muted-foreground">Avg duration:</span>
+                      <span>{formatDuration(wStats.avg_duration_ms)}</span>
+                    </div>
+                  )}
                 </div>
               </CardContent>
             </Card>
