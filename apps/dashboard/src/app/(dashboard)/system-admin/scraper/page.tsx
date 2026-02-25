@@ -59,6 +59,11 @@ const SCRAPER_TYPES = [
     label: "Daily Digest",
     description: "Send ranking report emails to users",
   },
+  {
+    type: "compute_review_metrics",
+    label: "Review Metrics",
+    description: "Compute review velocity & acceleration for tracked apps",
+  },
 ];
 
 const PAGE_SIZE = 20;

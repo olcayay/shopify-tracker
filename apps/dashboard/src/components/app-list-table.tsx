@@ -21,6 +21,10 @@ import {
   ArrowDown,
 } from "lucide-react";
 import { TablePagination } from "@/components/pagination";
+import { VelocityCell } from "@/components/velocity-cell";
+import { MomentumBadge } from "@/components/momentum-badge";
+import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
+import type { ReviewVelocityMetrics } from "@/lib/api";
 
 interface AppItem {
   slug: string;
@@ -36,6 +40,10 @@ type SortKey =
   | "name"
   | "average_rating"
   | "rating_count"
+  | "v7d"
+  | "v30d"
+  | "v90d"
+  | "momentum"
   | "min_paid"
   | "last_change"
   | "launched_date"
@@ -60,6 +68,7 @@ export function AppListTable({
   reverseSimilarCounts,
   featuredSectionCounts,
   adKeywordCounts,
+  reviewVelocity,
 }: {
   title: string;
   apps: AppItem[];
@@ -72,6 +81,7 @@ export function AppListTable({
   reverseSimilarCounts: Record<string, number>;
   featuredSectionCounts: Record<string, number>;
   adKeywordCounts: Record<string, number>;
+  reviewVelocity?: Record<string, ReviewVelocityMetrics>;
 }) {
   const { formatDateOnly } = useFormatDate();
   const [sortKey, setSortKey] = useState<SortKey>("rating_count");
@@ -113,6 +123,20 @@ export function AppListTable({
         case "rating_count":
           cmp = (Number(a.rating_count) || 0) - (Number(b.rating_count) || 0);
           break;
+        case "v7d":
+          cmp = (reviewVelocity?.[a.slug]?.v7d ?? -Infinity) - (reviewVelocity?.[b.slug]?.v7d ?? -Infinity);
+          break;
+        case "v30d":
+          cmp = (reviewVelocity?.[a.slug]?.v30d ?? -Infinity) - (reviewVelocity?.[b.slug]?.v30d ?? -Infinity);
+          break;
+        case "v90d":
+          cmp = (reviewVelocity?.[a.slug]?.v90d ?? -Infinity) - (reviewVelocity?.[b.slug]?.v90d ?? -Infinity);
+          break;
+        case "momentum": {
+          const order: Record<string, number> = { spike: 5, accelerating: 4, stable: 3, slowing: 2, flat: 1 };
+          cmp = (order[reviewVelocity?.[a.slug]?.momentum ?? ""] ?? 0) - (order[reviewVelocity?.[b.slug]?.momentum ?? ""] ?? 0);
+          break;
+        }
         case "min_paid": {
           const aP = minPaidPrices[a.slug] ?? Infinity;
           const bP = minPaidPrices[b.slug] ?? Infinity;
@@ -170,6 +194,7 @@ export function AppListTable({
     reverseSimilarCounts,
     featuredSectionCounts,
     adKeywordCounts,
+    reviewVelocity,
   ]);
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
@@ -263,12 +288,44 @@ export function AppListTable({
               >
                 Reviews <SortIcon col="rating_count" />
               </TableHead>
+              {reviewVelocity && (
+                <TableHead
+                  className="cursor-pointer select-none"
+                  onClick={() => toggleSort("v7d")}
+                >
+                  <Tooltip><TooltipTrigger asChild><span>R7d <SortIcon col="v7d" /></span></TooltipTrigger><TooltipContent>Reviews received in the last 7 days</TooltipContent></Tooltip>
+                </TableHead>
+              )}
+              {reviewVelocity && (
+                <TableHead
+                  className="cursor-pointer select-none"
+                  onClick={() => toggleSort("v30d")}
+                >
+                  <Tooltip><TooltipTrigger asChild><span>R30d <SortIcon col="v30d" /></span></TooltipTrigger><TooltipContent>Reviews received in the last 30 days</TooltipContent></Tooltip>
+                </TableHead>
+              )}
+              {reviewVelocity && (
+                <TableHead
+                  className="cursor-pointer select-none"
+                  onClick={() => toggleSort("v90d")}
+                >
+                  <Tooltip><TooltipTrigger asChild><span>R90d <SortIcon col="v90d" /></span></TooltipTrigger><TooltipContent>Reviews received in the last 90 days</TooltipContent></Tooltip>
+                </TableHead>
+              )}
+              {reviewVelocity && (
+                <TableHead
+                  className="cursor-pointer select-none"
+                  onClick={() => toggleSort("momentum")}
+                >
+                  <Tooltip><TooltipTrigger asChild><span>Momentum <SortIcon col="momentum" /></span></TooltipTrigger><TooltipContent>Review growth trend: compares recent pace (7d) vs longer-term pace (30d/90d)</TooltipContent></Tooltip>
+                </TableHead>
+              )}
               <TableHead>Pricing</TableHead>
               <TableHead
                 className="cursor-pointer select-none"
                 onClick={() => toggleSort("min_paid")}
               >
-                Min. Paid <SortIcon col="min_paid" />
+                <Tooltip><TooltipTrigger asChild><span>Min. Paid <SortIcon col="min_paid" /></span></TooltipTrigger><TooltipContent>Lowest paid plan price per month</TooltipContent></Tooltip>
               </TableHead>
               <TableHead
                 className="cursor-pointer select-none"
@@ -279,23 +336,20 @@ export function AppListTable({
               <TableHead
                 className="cursor-pointer select-none"
                 onClick={() => toggleSort("similar")}
-                title="Number of apps that list this app as similar"
               >
-                Similar <SortIcon col="similar" />
+                <Tooltip><TooltipTrigger asChild><span>Similar <SortIcon col="similar" /></span></TooltipTrigger><TooltipContent>Number of other apps that list this app as similar</TooltipContent></Tooltip>
               </TableHead>
               <TableHead
                 className="cursor-pointer select-none"
                 onClick={() => toggleSort("featured")}
-                title="Featured sections (last 30 days)"
               >
-                Featured <SortIcon col="featured" />
+                <Tooltip><TooltipTrigger asChild><span>Featured <SortIcon col="featured" /></span></TooltipTrigger><TooltipContent>Number of featured sections this app appears in</TooltipContent></Tooltip>
               </TableHead>
               <TableHead
                 className="cursor-pointer select-none"
                 onClick={() => toggleSort("ads")}
-                title="Ad keywords (last 30 days)"
               >
-                Ads <SortIcon col="ads" />
+                <Tooltip><TooltipTrigger asChild><span>Ads <SortIcon col="ads" /></span></TooltipTrigger><TooltipContent>Number of keywords this app is running ads for</TooltipContent></Tooltip>
               </TableHead>
               <TableHead
                 className="cursor-pointer select-none"
@@ -307,7 +361,7 @@ export function AppListTable({
                 className="cursor-pointer select-none"
                 onClick={() => toggleSort("last_change")}
               >
-                Last Change <SortIcon col="last_change" />
+                <Tooltip><TooltipTrigger asChild><span>Last Change <SortIcon col="last_change" /></span></TooltipTrigger><TooltipContent>Date of the most recent detected change in app listing</TooltipContent></Tooltip>
               </TableHead>
               <TableHead className="w-10" />
             </TableRow>
@@ -316,7 +370,7 @@ export function AppListTable({
             {paged.length === 0 ? (
               <TableRow>
                 <TableCell
-                  colSpan={12}
+                  colSpan={reviewVelocity ? 16 : 12}
                   className="text-center text-muted-foreground py-8"
                 >
                   No apps found.
@@ -390,6 +444,26 @@ export function AppListTable({
                         "\u2014"
                       )}
                     </TableCell>
+                    {reviewVelocity && (
+                      <TableCell className="text-sm">
+                        <VelocityCell value={reviewVelocity[app.slug]?.v7d} />
+                      </TableCell>
+                    )}
+                    {reviewVelocity && (
+                      <TableCell className="text-sm">
+                        <VelocityCell value={reviewVelocity[app.slug]?.v30d} />
+                      </TableCell>
+                    )}
+                    {reviewVelocity && (
+                      <TableCell className="text-sm">
+                        <VelocityCell value={reviewVelocity[app.slug]?.v90d} />
+                      </TableCell>
+                    )}
+                    {reviewVelocity && (
+                      <TableCell className="text-sm">
+                        <MomentumBadge momentum={reviewVelocity[app.slug]?.momentum} />
+                      </TableCell>
+                    )}
                     <TableCell className="text-sm">
                       {app.pricing ?? "\u2014"}
                     </TableCell>

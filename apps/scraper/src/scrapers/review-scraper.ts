@@ -86,9 +86,15 @@ export class ReviewScraper {
   ): Promise<number> {
     log.info("scraping reviews", { slug });
 
-    const MAX_PAGES = 10;
+    const MAX_PAGES = 50;
+    const CUTOFF_DAYS = 90;
+    const cutoffDate = new Date();
+    cutoffDate.setDate(cutoffDate.getDate() - CUTOFF_DAYS);
+    const cutoffStr = cutoffDate.toISOString().slice(0, 10); // "YYYY-MM-DD"
+
     let newReviews = 0;
     let page = 1;
+    let hitCutoff = false;
 
     while (page <= MAX_PAGES) {
       const reviewUrl = urls.appReviews(slug, page);
@@ -101,6 +107,12 @@ export class ReviewScraper {
         try {
           // Parse date string to proper date format
           const parsedDate = parseReviewDate(review.review_date);
+
+          // Stop if we've gone past the 90-day window (reviews sorted newest first)
+          if (parsedDate < cutoffStr) {
+            hitCutoff = true;
+            break;
+          }
 
           await this.db
             .insert(reviews)
@@ -130,10 +142,11 @@ export class ReviewScraper {
         }
       }
 
-      if (!data.has_next_page) break;
+      if (hitCutoff || !data.has_next_page) break;
       page++;
     }
 
+    log.info("reviews scraped", { slug, newReviews, pages: page, hitCutoff });
     return newReviews;
   }
 }

@@ -429,6 +429,10 @@ DONE: App search & browse — reusable AppSearchBar component (follow/competitor
 
 app için keyword successions
 
-reviewlerin son 1 ay, 3 ay, 6 ay, 1 yıl gibi kırabilir miyiz?
+DONE: reviewlerin son 1 ay, 3 ay, 6 ay, 1 yıl gibi kırabilir miyiz?
+- app_review_metrics tablosu: R7d, R30d, R90d + acceleration + momentum
+- Reviews scraper: sort_by=newest, 90-day cutoff
+- Reviews worker otomatik olarak metrics hesaplıyor (ayrı cron gerekmez)
+- Competitors ve app-list tablolarında R7d/R30d/R90d/Momentum kolonları
 
 applere rakip önerebilir miyiz? (app name, kategori, similar, common keywords, etc.)

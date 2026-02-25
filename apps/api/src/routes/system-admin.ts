@@ -775,6 +775,7 @@ export const systemAdminRoutes: FastifyPluginAsync = async (app) => {
       "keyword_search",
       "reviews",
       "daily_digest",
+      "compute_review_metrics",
     ];
     if (!type || !validTypes.includes(type)) {
       return reply.code(400).send({

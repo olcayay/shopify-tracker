@@ -29,6 +29,7 @@ import {
   keywordTags,
   keywordTagAssignments,
   appCategoryRankings,
+  appReviewMetrics,
 } from "@shopify-tracking/db";
 import { requireRole } from "../middleware/authorize.js";
 
@@ -1005,6 +1006,23 @@ export const accountRoutes: FastifyPluginAsync = async (app) => {
       }
     }
 
+    // Batch-fetch review velocity metrics (graceful if table not yet migrated)
+    const velocityMap = new Map<string, { v7d: number | null; v30d: number | null; v90d: number | null; momentum: string | null }>();
+    if (competitorSlugs.length > 0) {
+      try {
+        const velRows: any[] = await db.execute(sql`
+          SELECT DISTINCT ON (app_slug)
+            app_slug, v7d, v30d, v90d, momentum
+          FROM app_review_metrics
+          WHERE app_slug IN (${sql.join(competitorSlugs.map(s => sql`${s}`), sql`, `)})
+          ORDER BY app_slug, computed_at DESC
+        `).then((res: any) => (res as any).rows ?? res);
+        for (const r of velRows) {
+          velocityMap.set(r.app_slug, { v7d: r.v7d, v30d: r.v30d, v90d: r.v90d, momentum: r.momentum });
+        }
+      } catch { /* table may not exist yet */ }
+    }
+
     // Attach latest snapshot summary for each competitor
     const result = await Promise.all(
       rows.map(async (row) => {
@@ -1043,6 +1061,7 @@ export const accountRoutes: FastifyPluginAsync = async (app) => {
             return { type: c.type || "primary", title: c.title, slug };
           }),
           categoryRankings: categoryRankingMap.get(row.appSlug) ?? [],
+          reviewVelocity: velocityMap.get(row.appSlug) ?? null,
         };
       })
     );
@@ -1357,6 +1376,23 @@ export const accountRoutes: FastifyPluginAsync = async (app) => {
         }
       }
 
+      // Batch-fetch review velocity metrics (graceful if table not yet migrated)
+      const velocityMap2 = new Map<string, { v7d: number | null; v30d: number | null; v90d: number | null; momentum: string | null }>();
+      if (competitorSlugs.length > 0) {
+        try {
+          const velRows: any[] = await db.execute(sql`
+            SELECT DISTINCT ON (app_slug)
+              app_slug, v7d, v30d, v90d, momentum
+            FROM app_review_metrics
+            WHERE app_slug IN (${sql.join(competitorSlugs.map(s => sql`${s}`), sql`, `)})
+            ORDER BY app_slug, computed_at DESC
+          `).then((res: any) => (res as any).rows ?? res);
+          for (const r of velRows) {
+            velocityMap2.set(r.app_slug, { v7d: r.v7d, v30d: r.v30d, v90d: r.v90d, momentum: r.momentum });
+          }
+        } catch { /* table may not exist yet */ }
+      }
+
       // Batch-fetch ranked keyword counts per competitor
       const rankedKeywordMap = new Map<string, number>();
       if (competitorSlugs.length > 0) {
@@ -1429,6 +1465,7 @@ export const accountRoutes: FastifyPluginAsync = async (app) => {
             categoryRankings: categoryRankingMap.get(row.appSlug) ?? [],
             reverseSimilarCount: reverseSimilarMap.get(row.appSlug) ?? 0,
             rankedKeywordCount: rankedKeywordMap.get(row.appSlug) ?? 0,
+            reviewVelocity: velocityMap2.get(row.appSlug) ?? null,
             isSelf: includeSelf && row.appSlug === slug,
           };
         })

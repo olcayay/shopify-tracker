@@ -232,6 +232,13 @@
       "when": 1771804800000,
       "tag": "0032_category_ad_sightings",
       "breakpoints": true
+    },
+    {
+      "idx": 33,
+      "version": "7",
+      "when": 1771891200000,
+      "tag": "0033_app_review_metrics",
+      "breakpoints": true
     }
   ]
 }

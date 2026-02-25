@@ -9,6 +9,7 @@ import {
   getAppsReverseSimilarCounts,
   getAppsFeaturedSectionCounts,
   getAppsAdKeywordCounts,
+  getAppsReviewVelocity,
 } from "@/lib/api";
 import { AppListTable } from "@/components/app-list-table";
 
@@ -34,7 +35,7 @@ export default async function IntegrationDetailPage({
   }
 
   const appSlugs = (integration.apps || []).map((a: any) => a.slug).filter(Boolean);
-  const [lastChanges, minPaidPrices, launchedDates, appCategories, reverseSimilarCounts, featuredSectionCounts, adKeywordCounts] = await Promise.all([
+  const [lastChanges, minPaidPrices, launchedDates, appCategories, reverseSimilarCounts, featuredSectionCounts, adKeywordCounts, reviewVelocity] = await Promise.all([
     getAppsLastChanges(appSlugs).catch(() => ({} as Record<string, string>)),
     getAppsMinPaidPrices(appSlugs).catch(() => ({} as Record<string, number | null>)),
     getAppsLaunchedDates(appSlugs).catch(() => ({} as Record<string, string | null>)),
@@ -42,6 +43,7 @@ export default async function IntegrationDetailPage({
     getAppsReverseSimilarCounts(appSlugs).catch(() => ({} as Record<string, number>)),
     getAppsFeaturedSectionCounts(appSlugs).catch(() => ({} as Record<string, number>)),
     getAppsAdKeywordCounts(appSlugs).catch(() => ({} as Record<string, number>)),
+    getAppsReviewVelocity(appSlugs).catch(() => ({})),
   ]);
 
   return (
@@ -60,6 +62,7 @@ export default async function IntegrationDetailPage({
         reverseSimilarCounts={reverseSimilarCounts}
         featuredSectionCounts={featuredSectionCounts}
         adKeywordCounts={adKeywordCounts}
+        reviewVelocity={reviewVelocity}
       />
     </div>
   );

@@ -12,6 +12,7 @@ import * as similarAppsSchema from "./schema/similar-apps.js";
 import * as featuredAppsSchema from "./schema/featured-apps.js";
 import * as keywordTagsSchema from "./schema/keyword-tags.js";
 import * as categoryAdSightingsSchema from "./schema/category-ad-sightings.js";
+import * as appReviewMetricsSchema from "./schema/app-review-metrics.js";
 
 export const schema = {
   ...scrapeRunsSchema,
@@ -25,6 +26,7 @@ export const schema = {
   ...featuredAppsSchema,
   ...keywordTagsSchema,
   ...categoryAdSightingsSchema,
+  ...appReviewMetricsSchema,
 };
 
 export function createDb(databaseUrl: string) {
@@ -78,3 +80,4 @@ export {
   keywordTagAssignments,
 } from "./schema/keyword-tags.js";
 export { categoryAdSightings } from "./schema/category-ad-sightings.js";
+export { appReviewMetrics } from "./schema/app-review-metrics.js";

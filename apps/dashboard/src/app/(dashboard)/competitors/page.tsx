@@ -19,11 +19,19 @@ import { X, ArrowUpDown, ArrowUp, ArrowDown, ExternalLink } from "lucide-react";
 import { ConfirmModal } from "@/components/confirm-modal";
 import { AdminScraperTrigger } from "@/components/admin-scraper-trigger";
 import { AppSearchBar } from "@/components/app-search-bar";
+import { VelocityCell } from "@/components/velocity-cell";
+import { MomentumBadge } from "@/components/momentum-badge";
+import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
+import type { ReviewVelocityMetrics } from "@/lib/api";
 
 type SortKey =
   | "name"
   | "rating"
   | "reviews"
+  | "v7d"
+  | "v30d"
+  | "v90d"
+  | "momentum"
   | "minPaidPrice"
   | "rankedKeywords"
   | "adKeywords"
@@ -151,6 +159,20 @@ export default function CompetitorsPage() {
         case "launchedDate":
           cmp = (a.launchedDate || "").localeCompare(b.launchedDate || "");
           break;
+        case "v7d":
+          cmp = (a.reviewVelocity?.v7d ?? -Infinity) - (b.reviewVelocity?.v7d ?? -Infinity);
+          break;
+        case "v30d":
+          cmp = (a.reviewVelocity?.v30d ?? -Infinity) - (b.reviewVelocity?.v30d ?? -Infinity);
+          break;
+        case "v90d":
+          cmp = (a.reviewVelocity?.v90d ?? -Infinity) - (b.reviewVelocity?.v90d ?? -Infinity);
+          break;
+        case "momentum": {
+          const order: Record<string, number> = { spike: 5, accelerating: 4, stable: 3, slowing: 2, flat: 1 };
+          cmp = (order[a.reviewVelocity?.momentum ?? ""] ?? 0) - (order[b.reviewVelocity?.momentum ?? ""] ?? 0);
+          break;
+        }
         case "catRank": {
           const bestRank = (comp: any) => {
             const rankings = comp.categoryRankings ?? [];
@@ -285,30 +307,54 @@ export default function CompetitorsPage() {
                           >
                             Reviews <SortIcon col="reviews" />
                           </TableHead>
+                          <TableHead
+                            className="cursor-pointer select-none"
+                            onClick={() => toggleSort("v7d")}
+                          >
+                            <Tooltip><TooltipTrigger asChild><span>R7d <SortIcon col="v7d" /></span></TooltipTrigger><TooltipContent>Reviews received in the last 7 days</TooltipContent></Tooltip>
+                          </TableHead>
+                          <TableHead
+                            className="cursor-pointer select-none"
+                            onClick={() => toggleSort("v30d")}
+                          >
+                            <Tooltip><TooltipTrigger asChild><span>R30d <SortIcon col="v30d" /></span></TooltipTrigger><TooltipContent>Reviews received in the last 30 days</TooltipContent></Tooltip>
+                          </TableHead>
+                          <TableHead
+                            className="cursor-pointer select-none"
+                            onClick={() => toggleSort("v90d")}
+                          >
+                            <Tooltip><TooltipTrigger asChild><span>R90d <SortIcon col="v90d" /></span></TooltipTrigger><TooltipContent>Reviews received in the last 90 days</TooltipContent></Tooltip>
+                          </TableHead>
+                          <TableHead
+                            className="cursor-pointer select-none"
+                            onClick={() => toggleSort("momentum")}
+                          >
+                            <Tooltip><TooltipTrigger asChild><span>Momentum <SortIcon col="momentum" /></span></TooltipTrigger><TooltipContent>Review growth trend: compares recent pace (7d) vs longer-term pace (30d/90d)</TooltipContent></Tooltip>
+                          </TableHead>
                           <TableHead>Pricing</TableHead>
                           <TableHead
                             className="cursor-pointer select-none"
                             onClick={() => toggleSort("minPaidPrice")}
                           >
-                            Min. Paid <SortIcon col="minPaidPrice" />
+                            <Tooltip><TooltipTrigger asChild><span>Min. Paid <SortIcon col="minPaidPrice" /></span></TooltipTrigger><TooltipContent>Lowest paid plan price per month</TooltipContent></Tooltip>
                           </TableHead>
                           <TableHead
                             className="cursor-pointer select-none"
                             onClick={() => toggleSort("rankedKeywords")}
                           >
-                            Keywords <SortIcon col="rankedKeywords" />
+                            <Tooltip><TooltipTrigger asChild><span>Keywords <SortIcon col="rankedKeywords" /></span></TooltipTrigger><TooltipContent>Number of keywords this app ranks for in search results</TooltipContent></Tooltip>
                           </TableHead>
                           <TableHead
                             className="cursor-pointer select-none"
                             onClick={() => toggleSort("adKeywords")}
                           >
-                            Ads <SortIcon col="adKeywords" />
+                            <Tooltip><TooltipTrigger asChild><span>Ads <SortIcon col="adKeywords" /></span></TooltipTrigger><TooltipContent>Number of keywords this app is running ads for</TooltipContent></Tooltip>
                           </TableHead>
                           <TableHead
                             className="cursor-pointer select-none"
                             onClick={() => toggleSort("featured")}
                           >
-                            Featured <SortIcon col="featured" />
+                            <Tooltip><TooltipTrigger asChild><span>Featured <SortIcon col="featured" /></span></TooltipTrigger><TooltipContent>Number of featured sections this app appears in</TooltipContent></Tooltip>
                           </TableHead>
                           <TableHead className="cursor-pointer select-none" onClick={() => toggleSort("catRank")}>
                             Cat. Rank <SortIcon col="catRank" />
@@ -317,7 +363,7 @@ export default function CompetitorsPage() {
                             className="cursor-pointer select-none"
                             onClick={() => toggleSort("lastChangeAt")}
                           >
-                            Last Change <SortIcon col="lastChangeAt" />
+                            <Tooltip><TooltipTrigger asChild><span>Last Change <SortIcon col="lastChangeAt" /></span></TooltipTrigger><TooltipContent>Date of the most recent detected change in app listing</TooltipContent></Tooltip>
                           </TableHead>
                           <TableHead
                             className="cursor-pointer select-none"
@@ -363,6 +409,18 @@ export default function CompetitorsPage() {
                                   {c.latestSnapshot.ratingCount}
                                 </Link>
                               ) : "\u2014"}
+                            </TableCell>
+                            <TableCell className="text-sm">
+                              <VelocityCell value={c.reviewVelocity?.v7d} />
+                            </TableCell>
+                            <TableCell className="text-sm">
+                              <VelocityCell value={c.reviewVelocity?.v30d} />
+                            </TableCell>
+                            <TableCell className="text-sm">
+                              <VelocityCell value={c.reviewVelocity?.v90d} />
+                            </TableCell>
+                            <TableCell className="text-sm">
+                              <MomentumBadge momentum={c.reviewVelocity?.momentum} />
                             </TableCell>
                             <TableCell className="text-sm">
                               {c.latestSnapshot?.pricing ?? "\u2014"}

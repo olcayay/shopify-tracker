@@ -40,6 +40,17 @@ Compare page keyword density & test mode:
 - Collapsible "Test a new description" panel: textarea with CharBadge, Analyze/Clear buttons
 - When analyzed, shows draft text + keyword density table in grid-cols-2 layout
 
+Review velocity & acceleration metrics:
+- New DB table: app_review_metrics (v7d, v30d, v90d, accMicro, accMacro, momentum)
+- Computation job counts reviews from reviews table (COUNT FILTER WHERE review_date >= N days ago)
+- Review scraper updated: sort_by=newest, 90-day cutoff, max 50 pages
+- Reviews worker auto-triggers metrics computation after scraping (no separate cron needed)
+- API: POST /api/apps/review-velocity bulk endpoint, competitors endpoints enriched
+- Dashboard: R7d, R30d, R90d, Momentum columns on competitors page, per-app competitors, app-list-table
+- MomentumBadge component with emoji states (Accelerating/Stable/Slowing/Spike/Flat)
+- Instant tooltips on table headers using Radix UI Tooltip (delayDuration=0)
+- Admin can still manually trigger compute_review_metrics from scraper page
+
 Category ad sightings — historical tracking:
 - New DB table: category_ad_sightings (appSlug, categorySlug, seenDate, timesSeenInDay, firstSeenRunId, lastSeenRunId)
 - Unique index on (appSlug, categorySlug, seenDate) with upsert-on-conflict for timesSeenInDay increment

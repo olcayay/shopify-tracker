@@ -16,8 +16,11 @@ import {
 import { X, ArrowUpDown, ArrowUp, ArrowDown, ChevronUp, ChevronDown } from "lucide-react";
 import { ConfirmModal } from "@/components/confirm-modal";
 import { AppSearchBar } from "@/components/app-search-bar";
+import { VelocityCell } from "@/components/velocity-cell";
+import { MomentumBadge } from "@/components/momentum-badge";
+import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 
-type SortKey = "order" | "name" | "rating" | "reviews" | "pricing" | "minPaidPrice" | "launchedDate" | "lastChange" | "featured" | "ads" | "ranked" | "similar" | "catRank";
+type SortKey = "order" | "name" | "rating" | "reviews" | "v7d" | "v30d" | "v90d" | "momentum" | "pricing" | "minPaidPrice" | "launchedDate" | "lastChange" | "featured" | "ads" | "ranked" | "similar" | "catRank";
 type SortDir = "asc" | "desc";
 
 export function CompetitorsSection({ appSlug }: { appSlug: string }) {
@@ -142,6 +145,20 @@ export function CompetitorsSection({ appSlug }: { appSlug: string }) {
         case "reviews":
           cmp = (a.latestSnapshot?.ratingCount ?? 0) - (b.latestSnapshot?.ratingCount ?? 0);
           break;
+        case "v7d":
+          cmp = (a.reviewVelocity?.v7d ?? -Infinity) - (b.reviewVelocity?.v7d ?? -Infinity);
+          break;
+        case "v30d":
+          cmp = (a.reviewVelocity?.v30d ?? -Infinity) - (b.reviewVelocity?.v30d ?? -Infinity);
+          break;
+        case "v90d":
+          cmp = (a.reviewVelocity?.v90d ?? -Infinity) - (b.reviewVelocity?.v90d ?? -Infinity);
+          break;
+        case "momentum": {
+          const order: Record<string, number> = { spike: 5, accelerating: 4, stable: 3, slowing: 2, flat: 1 };
+          cmp = (order[a.reviewVelocity?.momentum ?? ""] ?? 0) - (order[b.reviewVelocity?.momentum ?? ""] ?? 0);
+          break;
+        }
         case "pricing":
           cmp = (a.latestSnapshot?.pricing || "").localeCompare(b.latestSnapshot?.pricing || "");
           break;
@@ -257,32 +274,44 @@ export function CompetitorsSection({ appSlug }: { appSlug: string }) {
               <TableHead className="cursor-pointer select-none" onClick={() => toggleSort("reviews")}>
                 Reviews <SortIcon col="reviews" />
               </TableHead>
+              <TableHead className="cursor-pointer select-none" onClick={() => toggleSort("v7d")}>
+                <Tooltip><TooltipTrigger asChild><span>R7d <SortIcon col="v7d" /></span></TooltipTrigger><TooltipContent>Reviews received in the last 7 days</TooltipContent></Tooltip>
+              </TableHead>
+              <TableHead className="cursor-pointer select-none" onClick={() => toggleSort("v30d")}>
+                <Tooltip><TooltipTrigger asChild><span>R30d <SortIcon col="v30d" /></span></TooltipTrigger><TooltipContent>Reviews received in the last 30 days</TooltipContent></Tooltip>
+              </TableHead>
+              <TableHead className="cursor-pointer select-none" onClick={() => toggleSort("v90d")}>
+                <Tooltip><TooltipTrigger asChild><span>R90d <SortIcon col="v90d" /></span></TooltipTrigger><TooltipContent>Reviews received in the last 90 days</TooltipContent></Tooltip>
+              </TableHead>
+              <TableHead className="cursor-pointer select-none" onClick={() => toggleSort("momentum")}>
+                <Tooltip><TooltipTrigger asChild><span>Momentum <SortIcon col="momentum" /></span></TooltipTrigger><TooltipContent>Review growth trend: compares recent pace (7d) vs longer-term pace (30d/90d)</TooltipContent></Tooltip>
+              </TableHead>
               <TableHead className="cursor-pointer select-none" onClick={() => toggleSort("pricing")}>
                 Pricing <SortIcon col="pricing" />
               </TableHead>
               <TableHead className="cursor-pointer select-none" onClick={() => toggleSort("minPaidPrice")}>
-                Min. Paid <SortIcon col="minPaidPrice" />
+                <Tooltip><TooltipTrigger asChild><span>Min. Paid <SortIcon col="minPaidPrice" /></span></TooltipTrigger><TooltipContent>Lowest paid plan price per month</TooltipContent></Tooltip>
               </TableHead>
               <TableHead className="cursor-pointer select-none" onClick={() => toggleSort("launchedDate")}>
                 Launched <SortIcon col="launchedDate" />
               </TableHead>
               <TableHead className="cursor-pointer select-none" onClick={() => toggleSort("featured")}>
-                Featured <SortIcon col="featured" />
+                <Tooltip><TooltipTrigger asChild><span>Featured <SortIcon col="featured" /></span></TooltipTrigger><TooltipContent>Number of featured sections this app appears in</TooltipContent></Tooltip>
               </TableHead>
               <TableHead className="cursor-pointer select-none" onClick={() => toggleSort("ads")}>
-                Ads <SortIcon col="ads" />
+                <Tooltip><TooltipTrigger asChild><span>Ads <SortIcon col="ads" /></span></TooltipTrigger><TooltipContent>Number of keywords this app is running ads for</TooltipContent></Tooltip>
               </TableHead>
               <TableHead className="cursor-pointer select-none" onClick={() => toggleSort("ranked")}>
-                Ranked <SortIcon col="ranked" />
+                <Tooltip><TooltipTrigger asChild><span>Ranked <SortIcon col="ranked" /></span></TooltipTrigger><TooltipContent>Number of keywords this app ranks for in search results</TooltipContent></Tooltip>
               </TableHead>
               <TableHead className="cursor-pointer select-none" onClick={() => toggleSort("similar")}>
-                Similar <SortIcon col="similar" />
+                <Tooltip><TooltipTrigger asChild><span>Similar <SortIcon col="similar" /></span></TooltipTrigger><TooltipContent>Number of other apps that list this app as similar</TooltipContent></Tooltip>
               </TableHead>
               <TableHead className="cursor-pointer select-none" onClick={() => toggleSort("catRank")}>
                 Cat. Rank <SortIcon col="catRank" />
               </TableHead>
               <TableHead className="cursor-pointer select-none" onClick={() => toggleSort("lastChange")}>
-                Last Change <SortIcon col="lastChange" />
+                <Tooltip><TooltipTrigger asChild><span>Last Change <SortIcon col="lastChange" /></span></TooltipTrigger><TooltipContent>Date of the most recent detected change in app listing</TooltipContent></Tooltip>
               </TableHead>
               {canEdit && <TableHead className="w-12" />}
             </TableRow>
@@ -347,6 +376,18 @@ export function CompetitorsSection({ appSlug }: { appSlug: string }) {
                       {comp.latestSnapshot.ratingCount}
                     </Link>
                   ) : "\u2014"}
+                </TableCell>
+                <TableCell className="text-sm">
+                  <VelocityCell value={comp.reviewVelocity?.v7d} />
+                </TableCell>
+                <TableCell className="text-sm">
+                  <VelocityCell value={comp.reviewVelocity?.v30d} />
+                </TableCell>
+                <TableCell className="text-sm">
+                  <VelocityCell value={comp.reviewVelocity?.v90d} />
+                </TableCell>
+                <TableCell className="text-sm">
+                  <MomentumBadge momentum={comp.reviewVelocity?.momentum} />
                 </TableCell>
                 <TableCell className="text-sm">
                   {comp.latestSnapshot?.pricing ?? "\u2014"}

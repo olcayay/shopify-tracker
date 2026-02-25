@@ -17,6 +17,7 @@ import {
   accountTrackedKeywords,
   similarAppSightings,
   featuredAppSightings,
+  appReviewMetrics,
 } from "@shopify-tracking/db";
 
 type Db = ReturnType<typeof createDb>;
@@ -335,6 +336,33 @@ export const appRoutes: FastifyPluginAsync = async (app) => {
     for (const r of rows) {
       result[r.appSlug] = r.keywordCount;
     }
+    return result;
+  });
+
+  // POST /api/apps/review-velocity — bulk review velocity metrics from pre-computed table
+  app.post("/review-velocity", async (request) => {
+    const { slugs } = request.body as { slugs: string[] };
+    if (!slugs?.length) return {};
+
+    // Get latest computed metrics per slug (graceful if table not yet migrated)
+    const result: Record<string, { v7d: number | null; v30d: number | null; v90d: number | null; momentum: string | null }> = {};
+    try {
+      const rows: any[] = await db.execute(sql`
+        SELECT DISTINCT ON (app_slug)
+          app_slug, v7d, v30d, v90d, momentum
+        FROM app_review_metrics
+        WHERE app_slug IN (${sql.join(slugs.map(s => sql`${s}`), sql`, `)})
+        ORDER BY app_slug, computed_at DESC
+      `).then((res: any) => (res as any).rows ?? res);
+      for (const r of rows) {
+        result[r.app_slug] = {
+          v7d: r.v7d,
+          v30d: r.v30d,
+          v90d: r.v90d,
+          momentum: r.momentum,
+        };
+      }
+    } catch { /* table may not exist yet */ }
     return result;
   });
 

@@ -9,9 +9,9 @@ export const urls = {
   /** App detail page: /formful */
   app: (slug: string) => `${BASE_URL}/${slug}`,
 
-  /** App reviews page: /formful/reviews?page=1 */
+  /** App reviews page: /formful/reviews?sort_by=newest&page=1 */
   appReviews: (slug: string, page = 1) =>
-    `${BASE_URL}/${slug}/reviews?page=${page}`,
+    `${BASE_URL}/${slug}/reviews?sort_by=newest&page=${page}`,
 
   /** Category page: /categories/store-design */
   category: (slug: string) => `${BASE_URL}/categories/${slug}`,

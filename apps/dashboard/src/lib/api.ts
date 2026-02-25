@@ -172,6 +172,21 @@ export function getAppsAdKeywordCounts(slugs: string[]) {
   });
 }
 
+export interface ReviewVelocityMetrics {
+  v7d: number | null;
+  v30d: number | null;
+  v90d: number | null;
+  momentum: string | null;
+}
+
+export function getAppsReviewVelocity(slugs: string[]) {
+  if (slugs.length === 0) return Promise.resolve({} as Record<string, ReviewVelocityMetrics>);
+  return fetchApi<Record<string, ReviewVelocityMetrics>>(`/api/apps/review-velocity`, {
+    method: "POST",
+    body: JSON.stringify({ slugs }),
+  });
+}
+
 // --- Apps (search) ---
 export function searchApps(q: string) {
   return fetchApi<any[]>(`/api/apps/search?q=${encodeURIComponent(q)}`);

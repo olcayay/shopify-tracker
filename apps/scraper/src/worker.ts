@@ -204,6 +204,15 @@ async function processJob(job: Job<ScraperJobData>): Promise<void> {
       } else {
         await scraper.scrapeTracked(triggeredBy);
       }
+      // Always recompute review metrics after reviews are scraped
+      const { computeReviewMetrics } = await import("./jobs/compute-review-metrics.js");
+      await computeReviewMetrics(db, `${triggeredBy}:reviews`);
+      break;
+    }
+
+    case "compute_review_metrics": {
+      const { computeReviewMetrics } = await import("./jobs/compute-review-metrics.js");
+      await computeReviewMetrics(db, triggeredBy);
       break;
     }
 

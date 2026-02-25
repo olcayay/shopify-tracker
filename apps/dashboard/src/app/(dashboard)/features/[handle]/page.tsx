@@ -10,6 +10,7 @@ import {
   getAppsReverseSimilarCounts,
   getAppsFeaturedSectionCounts,
   getAppsAdKeywordCounts,
+  getAppsReviewVelocity,
 } from "@/lib/api";
 import { StarFeatureButton } from "./track-button";
 import { AppListTable } from "@/components/app-list-table";
@@ -35,7 +36,7 @@ export default async function FeatureDetailPage({
   }
 
   const featureAppSlugs = (feature.apps || []).map((a: any) => a.slug).filter(Boolean);
-  const [lastChanges, minPaidPrices, launchedDates, appCategories, reverseSimilarCounts, featuredSectionCounts, adKeywordCounts] = await Promise.all([
+  const [lastChanges, minPaidPrices, launchedDates, appCategories, reverseSimilarCounts, featuredSectionCounts, adKeywordCounts, reviewVelocity] = await Promise.all([
     getAppsLastChanges(featureAppSlugs).catch(() => ({} as Record<string, string>)),
     getAppsMinPaidPrices(featureAppSlugs).catch(() => ({} as Record<string, number | null>)),
     getAppsLaunchedDates(featureAppSlugs).catch(() => ({} as Record<string, string | null>)),
@@ -43,6 +44,7 @@ export default async function FeatureDetailPage({
     getAppsReverseSimilarCounts(featureAppSlugs).catch(() => ({} as Record<string, number>)),
     getAppsFeaturedSectionCounts(featureAppSlugs).catch(() => ({} as Record<string, number>)),
     getAppsAdKeywordCounts(featureAppSlugs).catch(() => ({} as Record<string, number>)),
+    getAppsReviewVelocity(featureAppSlugs).catch(() => ({})),
   ]);
 
   return (
@@ -93,6 +95,7 @@ export default async function FeatureDetailPage({
         reverseSimilarCounts={reverseSimilarCounts}
         featuredSectionCounts={featuredSectionCounts}
         adKeywordCounts={adKeywordCounts}
+        reviewVelocity={reviewVelocity}
       />
     </div>
   );
