@@ -38,33 +38,77 @@ const SCRAPER_TYPES = [
     type: "category",
     label: "Categories",
     description: "Scrape Shopify app categories tree",
+    schedule: "Daily at 03:00 UTC",
+    cronHours: [3],
   },
   {
     type: "app_details",
     label: "App Details",
     description: "Scrape tracked app details and snapshots",
+    schedule: "Every 12h (01:00, 13:00 UTC)",
+    cronHours: [1, 13],
   },
   {
     type: "keyword_search",
     label: "Keywords",
     description: "Search tracked keywords and record rankings",
+    schedule: "Every 12h (00:00, 12:00 UTC)",
+    cronHours: [0, 12],
   },
   {
     type: "reviews",
     label: "Reviews",
-    description: "Scrape reviews for tracked apps",
+    description: "Scrape reviews for tracked apps (+ computes review metrics)",
+    schedule: "Daily at 06:00 UTC",
+    cronHours: [6],
   },
   {
     type: "daily_digest",
     label: "Daily Digest",
     description: "Send ranking report emails to users",
+    schedule: "Daily at 05:00 UTC",
+    cronHours: [5],
   },
   {
     type: "compute_review_metrics",
     label: "Review Metrics",
     description: "Compute review velocity & acceleration for tracked apps",
+    schedule: "Auto (after reviews scraper)",
+    cronHours: null,
   },
 ];
+
+function getNextRun(cronHours: number[] | null): string | null {
+  if (!cronHours) return null;
+  const now = new Date();
+  const h = now.getUTCHours();
+  const m = now.getUTCMinutes();
+
+  // Find next matching hour today
+  for (const ch of cronHours) {
+    if (ch > h || (ch === h && m === 0)) {
+      const next = new Date(now);
+      next.setUTCHours(ch, 0, 0, 0);
+      return formatRelativeTime(next.getTime() - now.getTime());
+    }
+  }
+
+  // Tomorrow at first hour
+  const next = new Date(now);
+  next.setUTCDate(next.getUTCDate() + 1);
+  next.setUTCHours(cronHours[0], 0, 0, 0);
+  return formatRelativeTime(next.getTime() - now.getTime());
+}
+
+function formatRelativeTime(ms: number): string {
+  const totalMins = Math.round(ms / 60000);
+  if (totalMins < 1) return "now";
+  if (totalMins < 60) return `in ${totalMins}m`;
+  const hours = Math.floor(totalMins / 60);
+  const mins = totalMins % 60;
+  if (mins === 0) return `in ${hours}h`;
+  return `in ${hours}h ${mins}m`;
+}
 
 const PAGE_SIZE = 20;
 
@@ -407,32 +451,42 @@ export default function ScraperPage() {
                 <CardDescription>{s.description}</CardDescription>
               </CardHeader>
               <CardContent>
-                {freshness?.lastCompletedAt ? (
+                <div className="space-y-1.5">
+                  <div className="flex items-center gap-2 text-sm">
+                    <span className="text-muted-foreground">Schedule:</span>
+                    <span>{s.schedule}</span>
+                  </div>
+                  {s.cronHours && (
+                    <div className="flex items-center gap-2 text-sm">
+                      <span className="text-muted-foreground">Next run:</span>
+                      <span>{getNextRun(s.cronHours)}</span>
+                    </div>
+                  )}
                   <div className="flex items-center gap-2 text-sm">
                     <span className="text-muted-foreground">Last run:</span>
-                    <Badge
-                      variant={
-                        Date.now() -
-                          new Date(freshness.lastCompletedAt).getTime() <
-                        24 * 60 * 60 * 1000
-                          ? "default"
-                          : Date.now() -
-                                new Date(
-                                  freshness.lastCompletedAt
-                                ).getTime() <
-                              72 * 60 * 60 * 1000
-                            ? "secondary"
-                            : "destructive"
-                      }
-                    >
-                      {timeAgo(freshness.lastCompletedAt)}
-                    </Badge>
+                    {freshness?.lastCompletedAt ? (
+                      <Badge
+                        variant={
+                          Date.now() -
+                            new Date(freshness.lastCompletedAt).getTime() <
+                          24 * 60 * 60 * 1000
+                            ? "default"
+                            : Date.now() -
+                                  new Date(
+                                    freshness.lastCompletedAt
+                                  ).getTime() <
+                                72 * 60 * 60 * 1000
+                              ? "secondary"
+                              : "destructive"
+                        }
+                      >
+                        {timeAgo(freshness.lastCompletedAt)}
+                      </Badge>
+                    ) : (
+                      <span className="text-muted-foreground">Never</span>
+                    )}
                   </div>
-                ) : (
-                  <span className="text-sm text-muted-foreground">
-                    Never run
-                  </span>
-                )}
+                </div>
               </CardContent>
             </Card>
           );
