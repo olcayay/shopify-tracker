@@ -1,1 +1,1 @@
-ALTER TABLE "apps" ADD COLUMN "launched_date" varchar(50);
+ALTER TABLE "apps" ADD COLUMN IF NOT EXISTS "launched_date" varchar(50);

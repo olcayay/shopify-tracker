@@ -3,10 +3,10 @@
 
 -- Step 1: Add tracked_app_slug columns (nullable first for data migration)
 ALTER TABLE "account_competitor_apps"
-  ADD COLUMN "tracked_app_slug" varchar(255) REFERENCES "apps"("slug");
+  ADD COLUMN IF NOT EXISTS "tracked_app_slug" varchar(255) REFERENCES "apps"("slug");
 
 ALTER TABLE "account_tracked_keywords"
-  ADD COLUMN "tracked_app_slug" varchar(255) REFERENCES "apps"("slug");
+  ADD COLUMN IF NOT EXISTS "tracked_app_slug" varchar(255) REFERENCES "apps"("slug");
 
 -- Step 2: Assign existing rows to account's first tracked app (by created_at)
 UPDATE "account_competitor_apps" ac
@@ -36,9 +36,9 @@ ALTER TABLE "account_tracked_keywords"
 
 -- Step 5: Replace unique indexes with three-column versions
 DROP INDEX IF EXISTS "idx_account_competitor_apps_unique";
-CREATE UNIQUE INDEX "idx_account_competitor_apps_unique"
+CREATE UNIQUE INDEX IF NOT EXISTS "idx_account_competitor_apps_unique"
   ON "account_competitor_apps" ("account_id", "tracked_app_slug", "app_slug");
 
 DROP INDEX IF EXISTS "idx_account_tracked_keywords_unique";
-CREATE UNIQUE INDEX "idx_account_tracked_keywords_unique"
+CREATE UNIQUE INDEX IF NOT EXISTS "idx_account_tracked_keywords_unique"
   ON "account_tracked_keywords" ("account_id", "tracked_app_slug", "keyword_id");

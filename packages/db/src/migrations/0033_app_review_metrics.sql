@@ -15,7 +15,10 @@ CREATE TABLE IF NOT EXISTS "app_review_metrics" (
   "created_at" timestamp DEFAULT now() NOT NULL
 );
 
-ALTER TABLE "app_review_metrics" ADD CONSTRAINT "app_review_metrics_app_slug_apps_slug_fk" FOREIGN KEY ("app_slug") REFERENCES "public"."apps"("slug") ON DELETE no action ON UPDATE no action;
+DO $$ BEGIN
+  ALTER TABLE "app_review_metrics" ADD CONSTRAINT "app_review_metrics_app_slug_apps_slug_fk" FOREIGN KEY ("app_slug") REFERENCES "public"."apps"("slug") ON DELETE no action ON UPDATE no action;
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
 
-CREATE UNIQUE INDEX "idx_app_review_metrics_unique" ON "app_review_metrics" USING btree ("app_slug", "computed_at");
-CREATE INDEX "idx_app_review_metrics_date" ON "app_review_metrics" USING btree ("computed_at");
+CREATE UNIQUE INDEX IF NOT EXISTS "idx_app_review_metrics_unique" ON "app_review_metrics" USING btree ("app_slug", "computed_at");
+CREATE INDEX IF NOT EXISTS "idx_app_review_metrics_date" ON "app_review_metrics" USING btree ("computed_at");

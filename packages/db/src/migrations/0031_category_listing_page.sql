@@ -1,5 +1,5 @@
 -- Add is_listing_page flag to categories table
-ALTER TABLE categories ADD COLUMN is_listing_page boolean NOT NULL DEFAULT true;
+ALTER TABLE categories ADD COLUMN IF NOT EXISTS is_listing_page boolean NOT NULL DEFAULT true;
 
 -- Root categories (level 0) are always hub pages
 UPDATE categories SET is_listing_page = false WHERE category_level = 0;

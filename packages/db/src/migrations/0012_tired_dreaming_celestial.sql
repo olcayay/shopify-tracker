@@ -1,1 +1,1 @@
-ALTER TYPE "public"."scraper_type" ADD VALUE 'daily_digest';
+ALTER TYPE "public"."scraper_type" ADD VALUE IF NOT EXISTS 'daily_digest';

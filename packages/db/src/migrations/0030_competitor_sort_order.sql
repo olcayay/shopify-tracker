@@ -1,4 +1,4 @@
-ALTER TABLE account_competitor_apps ADD COLUMN sort_order integer NOT NULL DEFAULT 0;
+ALTER TABLE account_competitor_apps ADD COLUMN IF NOT EXISTS sort_order integer NOT NULL DEFAULT 0;
 
 -- Backfill existing rows: assign sort_order based on creation order within each (account, tracked_app) group
 UPDATE account_competitor_apps
