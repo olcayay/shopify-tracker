@@ -13,7 +13,8 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { X, ArrowUpDown, ArrowUp, ArrowDown, ChevronUp, ChevronDown, Pin, PinOff, ExternalLink } from "lucide-react";
+import { X, ArrowUpDown, ArrowUp, ArrowDown, ChevronUp, ChevronDown, Pin, PinOff, ExternalLink, Settings2, Check } from "lucide-react";
+import { DropdownMenu as DropdownMenuPrimitive } from "radix-ui";
 import { ConfirmModal } from "@/components/confirm-modal";
 import { AppSearchBar } from "@/components/app-search-bar";
 import { VelocityCell } from "@/components/velocity-cell";
@@ -22,6 +23,24 @@ import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip
 
 type SortKey = "order" | "name" | "rating" | "reviews" | "v7d" | "v30d" | "v90d" | "momentum" | "pricing" | "minPaidPrice" | "launchedDate" | "lastChange" | "featured" | "ads" | "ranked" | "similar" | "catRank";
 type SortDir = "asc" | "desc";
+
+const TOGGLEABLE_COLUMNS: { key: string; label: string; tip?: string }[] = [
+  { key: "rating", label: "Rating" },
+  { key: "reviews", label: "Reviews" },
+  { key: "v7d", label: "R7d", tip: "Reviews received in the last 7 days" },
+  { key: "v30d", label: "R30d", tip: "Reviews received in the last 30 days" },
+  { key: "v90d", label: "R90d", tip: "Reviews received in the last 90 days" },
+  { key: "momentum", label: "Momentum", tip: "Review growth trend: compares recent vs longer-term pace" },
+  { key: "pricing", label: "Pricing" },
+  { key: "minPaidPrice", label: "Min. Paid", tip: "Lowest paid plan price per month" },
+  { key: "launchedDate", label: "Launched" },
+  { key: "featured", label: "Featured", tip: "Number of featured sections this app appears in" },
+  { key: "ads", label: "Ads", tip: "Number of keywords this app is running ads for" },
+  { key: "ranked", label: "Ranked", tip: "Number of keywords this app ranks for in search results" },
+  { key: "similar", label: "Similar", tip: "Number of other apps that list this app as similar" },
+  { key: "catRank", label: "Category Rank", tip: "Average category ranking across all categories" },
+  { key: "lastChange", label: "Last Change", tip: "Date of the most recent detected change in app listing" },
+];
 
 export function CompetitorsSection({ appSlug }: { appSlug: string }) {
   const { fetchWithAuth, user, account, refreshUser } = useAuth();
@@ -38,13 +57,37 @@ export function CompetitorsSection({ appSlug }: { appSlug: string }) {
   const [sortDir, setSortDir] = useState<SortDir>("asc");
   const [reordering, setReordering] = useState(false);
   const [selfPinned, setSelfPinned] = useState(true);
+  const [hiddenColumns, setHiddenColumns] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     try {
       const saved = localStorage.getItem(`competitors-pin-self-${appSlug}`);
       if (saved !== null) setSelfPinned(JSON.parse(saved));
     } catch {}
+    try {
+      const saved = localStorage.getItem(`competitors-columns-${appSlug}`);
+      if (saved) setHiddenColumns(new Set(JSON.parse(saved)));
+    } catch {}
   }, [appSlug]);
+
+  function toggleColumn(key: string) {
+    setHiddenColumns((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) {
+        next.delete(key);
+      } else {
+        next.add(key);
+        if (sortKey === key) {
+          setSortKey("order");
+          setSortDir("asc");
+        }
+      }
+      localStorage.setItem(`competitors-columns-${appSlug}`, JSON.stringify([...next]));
+      return next;
+    });
+  }
+
+  const isCol = (key: string) => !hiddenColumns.has(key);
 
   function toggleSelfPinned() {
     const next = !selfPinned;
@@ -254,14 +297,90 @@ export function CompetitorsSection({ appSlug }: { appSlug: string }) {
         <div className="text-sm px-3 py-2 rounded-md bg-muted">{message}</div>
       )}
 
-      <AppSearchBar
-        mode="competitor"
-        competitorSlugs={competitorSlugs}
-        currentAppSlug={appSlug}
-        onAddCompetitor={addCompetitor}
-        placeholder="Search apps..."
-        className="max-w-md"
-      />
+      <div className="flex items-center gap-2">
+        <AppSearchBar
+          mode="competitor"
+          competitorSlugs={competitorSlugs}
+          currentAppSlug={appSlug}
+          onAddCompetitor={addCompetitor}
+          placeholder="Search apps..."
+          className="max-w-md flex-1"
+        />
+        <DropdownMenuPrimitive.Root>
+          <DropdownMenuPrimitive.Trigger asChild>
+            <Button variant="outline" size="icon" className="shrink-0 relative">
+              <Settings2 className="h-4 w-4" />
+              {hiddenColumns.size > 0 && (
+                <span className="absolute -top-1.5 -right-1.5 min-w-[18px] h-[18px] flex items-center justify-center rounded-full bg-primary text-primary-foreground text-[10px] font-medium leading-none px-1">
+                  {hiddenColumns.size}
+                </span>
+              )}
+            </Button>
+          </DropdownMenuPrimitive.Trigger>
+          <DropdownMenuPrimitive.Portal>
+            <DropdownMenuPrimitive.Content
+              align="end"
+              className="z-50 min-w-[200px] bg-popover border rounded-md shadow-md p-1 animate-in fade-in-0 zoom-in-95"
+            >
+              <DropdownMenuPrimitive.Label className="px-2 py-1.5 text-xs font-semibold text-muted-foreground">
+                Toggle columns
+              </DropdownMenuPrimitive.Label>
+              <div className="flex items-center gap-1 px-2 py-1">
+                <button
+                  className="text-xs text-primary hover:underline"
+                  onClick={() => {
+                    setHiddenColumns(new Set());
+                    localStorage.setItem(`competitors-columns-${appSlug}`, JSON.stringify([]));
+                  }}
+                >
+                  Show all
+                </button>
+                <span className="text-muted-foreground text-xs">·</span>
+                <button
+                  className="text-xs text-primary hover:underline"
+                  onClick={() => {
+                    const allKeys = new Set(TOGGLEABLE_COLUMNS.map((c) => c.key));
+                    setHiddenColumns(allKeys);
+                    localStorage.setItem(`competitors-columns-${appSlug}`, JSON.stringify([...allKeys]));
+                    if (allKeys.has(sortKey)) {
+                      setSortKey("order");
+                      setSortDir("asc");
+                    }
+                  }}
+                >
+                  Hide all
+                </button>
+              </div>
+              <DropdownMenuPrimitive.Separator className="h-px bg-border my-1" />
+              <div className="max-h-[300px] overflow-y-auto">
+                {TOGGLEABLE_COLUMNS.map((col) => (
+                  <DropdownMenuPrimitive.CheckboxItem
+                    key={col.key}
+                    checked={isCol(col.key)}
+                    onCheckedChange={() => toggleColumn(col.key)}
+                    onSelect={(e) => e.preventDefault()}
+                    className="flex items-center gap-2 px-2 py-1.5 text-sm rounded-sm cursor-pointer outline-none hover:bg-accent focus:bg-accent"
+                  >
+                    <span className="w-4 h-4 flex items-center justify-center shrink-0">
+                      {isCol(col.key) && <Check className="h-3 w-3" />}
+                    </span>
+                    {col.tip ? (
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <span className="border-b border-dotted border-muted-foreground/50">{col.label}</span>
+                        </TooltipTrigger>
+                        <TooltipContent side="left">{col.tip}</TooltipContent>
+                      </Tooltip>
+                    ) : (
+                      <span>{col.label}</span>
+                    )}
+                  </DropdownMenuPrimitive.CheckboxItem>
+                ))}
+              </div>
+            </DropdownMenuPrimitive.Content>
+          </DropdownMenuPrimitive.Portal>
+        </DropdownMenuPrimitive.Root>
+      </div>
 
       {loading ? (
         <p className="text-muted-foreground text-center py-8">Loading...</p>
@@ -285,51 +404,51 @@ export function CompetitorsSection({ appSlug }: { appSlug: string }) {
               <TableHead className={`cursor-pointer select-none sticky z-20 bg-background shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)] ${canEdit ? "left-12" : "left-0"}`} onClick={() => toggleSort("name")}>
                 App <SortIcon col="name" />
               </TableHead>
-              <TableHead className="cursor-pointer select-none" onClick={() => toggleSort("rating")}>
+              {isCol("rating") && <TableHead className="cursor-pointer select-none" onClick={() => toggleSort("rating")}>
                 Rating <SortIcon col="rating" />
-              </TableHead>
-              <TableHead className="cursor-pointer select-none" onClick={() => toggleSort("reviews")}>
+              </TableHead>}
+              {isCol("reviews") && <TableHead className="cursor-pointer select-none" onClick={() => toggleSort("reviews")}>
                 Reviews <SortIcon col="reviews" />
-              </TableHead>
-              <TableHead className="cursor-pointer select-none" onClick={() => toggleSort("v7d")}>
+              </TableHead>}
+              {isCol("v7d") && <TableHead className="cursor-pointer select-none" onClick={() => toggleSort("v7d")}>
                 <Tooltip><TooltipTrigger asChild><span>R7d <SortIcon col="v7d" /></span></TooltipTrigger><TooltipContent>Reviews received in the last 7 days</TooltipContent></Tooltip>
-              </TableHead>
-              <TableHead className="cursor-pointer select-none" onClick={() => toggleSort("v30d")}>
+              </TableHead>}
+              {isCol("v30d") && <TableHead className="cursor-pointer select-none" onClick={() => toggleSort("v30d")}>
                 <Tooltip><TooltipTrigger asChild><span>R30d <SortIcon col="v30d" /></span></TooltipTrigger><TooltipContent>Reviews received in the last 30 days</TooltipContent></Tooltip>
-              </TableHead>
-              <TableHead className="cursor-pointer select-none" onClick={() => toggleSort("v90d")}>
+              </TableHead>}
+              {isCol("v90d") && <TableHead className="cursor-pointer select-none" onClick={() => toggleSort("v90d")}>
                 <Tooltip><TooltipTrigger asChild><span>R90d <SortIcon col="v90d" /></span></TooltipTrigger><TooltipContent>Reviews received in the last 90 days</TooltipContent></Tooltip>
-              </TableHead>
-              <TableHead className="cursor-pointer select-none" onClick={() => toggleSort("momentum")}>
+              </TableHead>}
+              {isCol("momentum") && <TableHead className="cursor-pointer select-none" onClick={() => toggleSort("momentum")}>
                 <Tooltip><TooltipTrigger asChild><span>Momentum <SortIcon col="momentum" /></span></TooltipTrigger><TooltipContent>Review growth trend: compares recent pace (7d) vs longer-term pace (30d/90d)</TooltipContent></Tooltip>
-              </TableHead>
-              <TableHead className="cursor-pointer select-none" onClick={() => toggleSort("pricing")}>
+              </TableHead>}
+              {isCol("pricing") && <TableHead className="cursor-pointer select-none" onClick={() => toggleSort("pricing")}>
                 Pricing <SortIcon col="pricing" />
-              </TableHead>
-              <TableHead className="cursor-pointer select-none" onClick={() => toggleSort("minPaidPrice")}>
+              </TableHead>}
+              {isCol("minPaidPrice") && <TableHead className="cursor-pointer select-none" onClick={() => toggleSort("minPaidPrice")}>
                 <Tooltip><TooltipTrigger asChild><span>Min. Paid <SortIcon col="minPaidPrice" /></span></TooltipTrigger><TooltipContent>Lowest paid plan price per month</TooltipContent></Tooltip>
-              </TableHead>
-              <TableHead className="cursor-pointer select-none" onClick={() => toggleSort("launchedDate")}>
+              </TableHead>}
+              {isCol("launchedDate") && <TableHead className="cursor-pointer select-none" onClick={() => toggleSort("launchedDate")}>
                 Launched <SortIcon col="launchedDate" />
-              </TableHead>
-              <TableHead className="cursor-pointer select-none" onClick={() => toggleSort("featured")}>
+              </TableHead>}
+              {isCol("featured") && <TableHead className="cursor-pointer select-none" onClick={() => toggleSort("featured")}>
                 <Tooltip><TooltipTrigger asChild><span>Featured <SortIcon col="featured" /></span></TooltipTrigger><TooltipContent>Number of featured sections this app appears in</TooltipContent></Tooltip>
-              </TableHead>
-              <TableHead className="cursor-pointer select-none" onClick={() => toggleSort("ads")}>
+              </TableHead>}
+              {isCol("ads") && <TableHead className="cursor-pointer select-none" onClick={() => toggleSort("ads")}>
                 <Tooltip><TooltipTrigger asChild><span>Ads <SortIcon col="ads" /></span></TooltipTrigger><TooltipContent>Number of keywords this app is running ads for</TooltipContent></Tooltip>
-              </TableHead>
-              <TableHead className="cursor-pointer select-none" onClick={() => toggleSort("ranked")}>
+              </TableHead>}
+              {isCol("ranked") && <TableHead className="cursor-pointer select-none" onClick={() => toggleSort("ranked")}>
                 <Tooltip><TooltipTrigger asChild><span>Ranked <SortIcon col="ranked" /></span></TooltipTrigger><TooltipContent>Number of keywords this app ranks for in search results</TooltipContent></Tooltip>
-              </TableHead>
-              <TableHead className="cursor-pointer select-none" onClick={() => toggleSort("similar")}>
+              </TableHead>}
+              {isCol("similar") && <TableHead className="cursor-pointer select-none" onClick={() => toggleSort("similar")}>
                 <Tooltip><TooltipTrigger asChild><span>Similar <SortIcon col="similar" /></span></TooltipTrigger><TooltipContent>Number of other apps that list this app as similar</TooltipContent></Tooltip>
-              </TableHead>
-              <TableHead className="cursor-pointer select-none" onClick={() => toggleSort("catRank")}>
+              </TableHead>}
+              {isCol("catRank") && <TableHead className="cursor-pointer select-none" onClick={() => toggleSort("catRank")}>
                 Category Rank <SortIcon col="catRank" />
-              </TableHead>
-              <TableHead className="cursor-pointer select-none" onClick={() => toggleSort("lastChange")}>
+              </TableHead>}
+              {isCol("lastChange") && <TableHead className="cursor-pointer select-none" onClick={() => toggleSort("lastChange")}>
                 <Tooltip><TooltipTrigger asChild><span>Last Change <SortIcon col="lastChange" /></span></TooltipTrigger><TooltipContent>Date of the most recent detected change in app listing</TooltipContent></Tooltip>
-              </TableHead>
+              </TableHead>}
               {canEdit && <TableHead className="w-12" />}
             </TableRow>
           </TableHeader>
@@ -403,29 +522,29 @@ export function CompetitorsSection({ appSlug }: { appSlug: string }) {
                     </div>
                   </div>
                 </TableCell>
-                <TableCell>
+                {isCol("rating") && <TableCell>
                   {comp.latestSnapshot?.averageRating ?? "\u2014"}
-                </TableCell>
-                <TableCell>
+                </TableCell>}
+                {isCol("reviews") && <TableCell>
                   {comp.latestSnapshot?.ratingCount != null ? (
                     <Link href={`/apps/${comp.appSlug}/reviews`} className="text-primary hover:underline">
                       {comp.latestSnapshot.ratingCount}
                     </Link>
                   ) : "\u2014"}
-                </TableCell>
-                <TableCell className="text-sm">
+                </TableCell>}
+                {isCol("v7d") && <TableCell className="text-sm">
                   <VelocityCell value={comp.reviewVelocity?.v7d} />
-                </TableCell>
-                <TableCell className="text-sm">
+                </TableCell>}
+                {isCol("v30d") && <TableCell className="text-sm">
                   <VelocityCell value={comp.reviewVelocity?.v30d} />
-                </TableCell>
-                <TableCell className="text-sm">
+                </TableCell>}
+                {isCol("v90d") && <TableCell className="text-sm">
                   <VelocityCell value={comp.reviewVelocity?.v90d} />
-                </TableCell>
-                <TableCell className="text-sm">
+                </TableCell>}
+                {isCol("momentum") && <TableCell className="text-sm">
                   <MomentumBadge momentum={comp.reviewVelocity?.momentum} />
-                </TableCell>
-                <TableCell className="text-sm whitespace-nowrap">
+                </TableCell>}
+                {isCol("pricing") && <TableCell className="text-sm whitespace-nowrap">
                   {(() => {
                     const p = comp.latestSnapshot?.pricing;
                     if (!p) return "\u2014";
@@ -443,20 +562,20 @@ export function CompetitorsSection({ appSlug }: { appSlug: string }) {
                       </Tooltip>
                     );
                   })()}
-                </TableCell>
-                <TableCell className="text-sm">
+                </TableCell>}
+                {isCol("minPaidPrice") && <TableCell className="text-sm">
                   {comp.minPaidPrice != null ? (
                     <Link href={`/apps/${comp.appSlug}/details#pricing-plans`} className="text-primary hover:underline">
                       ${comp.minPaidPrice}/mo
                     </Link>
                   ) : "\u2014"}
-                </TableCell>
-                <TableCell className="text-sm text-muted-foreground">
+                </TableCell>}
+                {isCol("launchedDate") && <TableCell className="text-sm text-muted-foreground">
                   {comp.launchedDate
                     ? formatDateOnly(comp.launchedDate)
                     : "\u2014"}
-                </TableCell>
-                <TableCell className="text-sm">
+                </TableCell>}
+                {isCol("featured") && <TableCell className="text-sm">
                   {comp.featuredSections > 0 ? (
                     <Link
                       href={`/apps/${comp.appSlug}/featured`}
@@ -467,8 +586,8 @@ export function CompetitorsSection({ appSlug }: { appSlug: string }) {
                   ) : (
                     <span className="text-muted-foreground">{"\u2014"}</span>
                   )}
-                </TableCell>
-                <TableCell className="text-sm">
+                </TableCell>}
+                {isCol("ads") && <TableCell className="text-sm">
                   {comp.adKeywords > 0 ? (
                     <Link
                       href={`/apps/${comp.appSlug}/ads`}
@@ -479,8 +598,8 @@ export function CompetitorsSection({ appSlug }: { appSlug: string }) {
                   ) : (
                     <span className="text-muted-foreground">{"\u2014"}</span>
                   )}
-                </TableCell>
-                <TableCell className="text-sm">
+                </TableCell>}
+                {isCol("ranked") && <TableCell className="text-sm">
                   {comp.rankedKeywordCount > 0 ? (
                     <Link href={`/apps/${comp.appSlug}/keywords`} className="text-primary hover:underline">
                       {comp.rankedKeywordCount}
@@ -488,8 +607,8 @@ export function CompetitorsSection({ appSlug }: { appSlug: string }) {
                   ) : (
                     <span className="text-muted-foreground">{"\u2014"}</span>
                   )}
-                </TableCell>
-                <TableCell className="text-sm">
+                </TableCell>}
+                {isCol("similar") && <TableCell className="text-sm">
                   {comp.reverseSimilarCount > 0 ? (
                     <Link href={`/apps/${comp.appSlug}/similar`} className="text-primary hover:underline">
                       {comp.reverseSimilarCount}
@@ -497,8 +616,8 @@ export function CompetitorsSection({ appSlug }: { appSlug: string }) {
                   ) : (
                     <span className="text-muted-foreground">{"\u2014"}</span>
                   )}
-                </TableCell>
-                <TableCell className="text-sm">
+                </TableCell>}
+                {isCol("catRank") && <TableCell className="text-sm">
                   {(() => {
                     const primary = comp.categories?.find((cat: any) => cat.type === "primary");
                     const secondary = comp.categories?.find((cat: any) => cat.type === "secondary");
@@ -548,14 +667,14 @@ export function CompetitorsSection({ appSlug }: { appSlug: string }) {
                       </div>
                     );
                   })()}
-                </TableCell>
-                <TableCell className="text-sm">
+                </TableCell>}
+                {isCol("lastChange") && <TableCell className="text-sm">
                   {lastChanges[comp.appSlug] ? (
                     <Link href={`/apps/${comp.appSlug}/changes`} className="text-primary hover:underline">
                       {formatDateOnly(lastChanges[comp.appSlug])}
                     </Link>
                   ) : "\u2014"}
-                </TableCell>
+                </TableCell>}
                 {canEdit && (
                   <TableCell>
                     <div className="flex items-center gap-0.5">

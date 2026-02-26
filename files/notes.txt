@@ -61,6 +61,17 @@ Competitors page enhancements (pin, rank change, avg sort, percentile):
 - Displayed as "Top X%" with tooltip showing "Rank N of M apps"
 - Single combined SQL query serves both rank change and percentile (no extra round trips)
 
+Competitors table UI polish & column visibility:
+- Column visibility toggle: Settings2 icon button next to search bar opens Radix DropdownMenu
+- 15 toggleable columns (Rating through Last Change); #, App, Action always visible
+- Hidden columns persisted in localStorage per appSlug (competitors-columns-{appSlug})
+- Show all / Hide all bulk actions at top of dropdown
+- Badge on settings icon shows count of hidden columns
+- Scrollable dropdown list (max-h-300px) with tooltips on non-obvious column names
+- Hiding sorted column resets sort to default order
+- MomentumBadge: icon stacked above label (flex-col), Category Rank header expanded from "Cat. Rank"
+- Pricing column abbreviated with tooltip, Shopify external link per row, frozen #/App columns
+
 Category ad sightings — historical tracking:
 - New DB table: category_ad_sightings (appSlug, categorySlug, seenDate, timesSeenInDay, firstSeenRunId, lastSeenRunId)
 - Unique index on (appSlug, categorySlug, seenDate) with upsert-on-conflict for timesSeenInDay increment
