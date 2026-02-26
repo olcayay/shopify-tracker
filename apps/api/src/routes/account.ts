@@ -1401,6 +1401,30 @@ export const accountRoutes: FastifyPluginAsync = async (app) => {
         } catch { /* table may not exist yet */ }
       }
 
+      // Batch-fetch similarity scores
+      const similarityMap = new Map<string, { overall: string; category: string; feature: string; keyword: string; text: string }>();
+      if (competitorSlugs.length > 0) {
+        try {
+          const simRows: any[] = await db.execute(sql`
+            SELECT app_slug_a, app_slug_b,
+              overall_score, category_score, feature_score, keyword_score, text_score
+            FROM app_similarity_scores
+            WHERE (app_slug_a = ${slug} AND app_slug_b IN (${sql.join(competitorSlugs.map(s => sql`${s}`), sql`, `)}))
+               OR (app_slug_b = ${slug} AND app_slug_a IN (${sql.join(competitorSlugs.map(s => sql`${s}`), sql`, `)}))
+          `).then((res: any) => (res as any).rows ?? res);
+          for (const r of simRows) {
+            const compSlug = r.app_slug_a === slug ? r.app_slug_b : r.app_slug_a;
+            similarityMap.set(compSlug, {
+              overall: r.overall_score,
+              category: r.category_score,
+              feature: r.feature_score,
+              keyword: r.keyword_score,
+              text: r.text_score,
+            });
+          }
+        } catch { /* table may not exist yet */ }
+      }
+
       // Batch-fetch ranked keyword counts per competitor
       const rankedKeywordMap = new Map<string, number>();
       if (competitorSlugs.length > 0) {
@@ -1474,6 +1498,7 @@ export const accountRoutes: FastifyPluginAsync = async (app) => {
             reverseSimilarCount: reverseSimilarMap.get(row.appSlug) ?? 0,
             rankedKeywordCount: rankedKeywordMap.get(row.appSlug) ?? 0,
             reviewVelocity: velocityMap2.get(row.appSlug) ?? null,
+            similarityScore: similarityMap.get(row.appSlug) ?? null,
             isSelf: includeSelf && row.appSlug === slug,
           };
         })

@@ -84,6 +84,13 @@ const SCRAPER_TYPES = [
     cronHours: null,
     scheduleLabel: "Auto (after reviews scraper)",
   },
+  {
+    type: "compute_similarity_scores",
+    label: "Similarity Scores",
+    description: "Compute similarity scores between tracked apps and their competitors",
+    cronHours: null,
+    scheduleLabel: "Manual trigger",
+  },
 ];
 
 function getNextRun(cronHours: number[] | null): string | null {
@@ -274,6 +281,7 @@ export default function ScraperPage() {
         reviews: { count: stats.trackedApps ?? 0, label: "apps" },
         daily_digest: { count: stats.users ?? 0, label: "users" },
         compute_review_metrics: { count: stats.trackedApps ?? 0, label: "apps" },
+        compute_similarity_scores: { count: stats.trackedApps ?? 0, label: "apps" },
       }
     : {};
 

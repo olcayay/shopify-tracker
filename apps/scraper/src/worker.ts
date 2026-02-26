@@ -244,6 +244,12 @@ async function processJob(job: Job<ScraperJobData>): Promise<void> {
       break;
     }
 
+    case "compute_similarity_scores": {
+      const { computeSimilarityScores } = await import("./jobs/compute-similarity-scores.js");
+      await computeSimilarityScores(db, triggeredBy);
+      break;
+    }
+
     case "daily_digest": {
       const { getDigestRecipients, buildDigestForAccount } = await import("./email/digest-builder.js");
       const { buildDigestHtml, buildDigestSubject } = await import("./email/digest-template.js");

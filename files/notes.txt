@@ -80,3 +80,16 @@ Category ad sightings — historical tracking:
 - Dashboard: App Ads page split into "Keyword Ad History" + "Category Ad History" cards
 - Dashboard: Category page gets "Sponsored Apps" heatmap section with empty state
 - CLI: categories command now accepts optional slug for single-category scrape
+
+App similarity scores — multi-dimensional scoring:
+- New DB table: app_similarity_scores (appSlugA, appSlugB, overallScore, categoryScore, featureScore, keywordScore, textScore, computedAt)
+- Canonical ordering: appSlugA < appSlugB, unique index on (appSlugA, appSlugB)
+- Jaccard index for each dimension: category slug overlap, feature_handle overlap, keyword ranking overlap, tokenized text overlap
+- Text similarity: name + subtitle + appIntroduction, tokenized with stop words removed (English + Shopify-specific)
+- Weighted average: 25% each for category, feature, keyword, text
+- Pre-computed via compute_similarity_scores job (same pattern as compute_review_metrics)
+- Job collects all unique (trackedApp, competitor) pairs across accounts, batch-fetches data, computes in memory
+- API: competitors endpoint enriched with similarityScore { overall, category, feature, keyword, text }
+- Dashboard: Similarity column on competitors table with progress bar + percentage, color-coded (red >=70%, amber 40-69%, green <40%)
+- Tooltip shows 4 component breakdowns, sortable, toggleable column
+- Admin scraper page: manual trigger for compute_similarity_scores job

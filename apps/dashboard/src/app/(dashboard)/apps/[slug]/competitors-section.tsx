@@ -21,10 +21,11 @@ import { VelocityCell } from "@/components/velocity-cell";
 import { MomentumBadge } from "@/components/momentum-badge";
 import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 
-type SortKey = "order" | "name" | "rating" | "reviews" | "v7d" | "v30d" | "v90d" | "momentum" | "pricing" | "minPaidPrice" | "launchedDate" | "lastChange" | "featured" | "ads" | "ranked" | "similar" | "catRank";
+type SortKey = "order" | "name" | "similarity" | "rating" | "reviews" | "v7d" | "v30d" | "v90d" | "momentum" | "pricing" | "minPaidPrice" | "launchedDate" | "lastChange" | "featured" | "ads" | "ranked" | "similar" | "catRank";
 type SortDir = "asc" | "desc";
 
 const TOGGLEABLE_COLUMNS: { key: string; label: string; tip?: string }[] = [
+  { key: "similarity", label: "Similarity", tip: "Similarity score based on categories, features, keywords, and text" },
   { key: "rating", label: "Rating" },
   { key: "reviews", label: "Reviews" },
   { key: "v7d", label: "R7d", tip: "Reviews received in the last 7 days" },
@@ -194,6 +195,9 @@ export function CompetitorsSection({ appSlug }: { appSlug: string }) {
       switch (sortKey) {
         case "name":
           cmp = (a.appName || a.appSlug).localeCompare(b.appName || b.appSlug);
+          break;
+        case "similarity":
+          cmp = parseFloat(a.similarityScore?.overall ?? "0") - parseFloat(b.similarityScore?.overall ?? "0");
           break;
         case "rating":
           cmp = (a.latestSnapshot?.averageRating ?? 0) - (b.latestSnapshot?.averageRating ?? 0);
@@ -404,6 +408,9 @@ export function CompetitorsSection({ appSlug }: { appSlug: string }) {
               <TableHead className={`cursor-pointer select-none sticky z-20 bg-background shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)] ${canEdit ? "left-12" : "left-0"}`} onClick={() => toggleSort("name")}>
                 App <SortIcon col="name" />
               </TableHead>
+              {isCol("similarity") && <TableHead className="cursor-pointer select-none" onClick={() => toggleSort("similarity")}>
+                <Tooltip><TooltipTrigger asChild><span>Similarity <SortIcon col="similarity" /></span></TooltipTrigger><TooltipContent>Similarity score based on categories, features, keywords, and text</TooltipContent></Tooltip>
+              </TableHead>}
               {isCol("rating") && <TableHead className="cursor-pointer select-none" onClick={() => toggleSort("rating")}>
                 Rating <SortIcon col="rating" />
               </TableHead>}
@@ -522,6 +529,37 @@ export function CompetitorsSection({ appSlug }: { appSlug: string }) {
                     </div>
                   </div>
                 </TableCell>
+                {isCol("similarity") && <TableCell className="text-sm">
+                  {comp.isSelf ? "\u2014" : comp.similarityScore ? (
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <div className="flex items-center gap-1.5">
+                          <div className="w-16 h-2 rounded-full bg-muted overflow-hidden">
+                            <div
+                              className={`h-full rounded-full ${
+                                parseFloat(comp.similarityScore.overall) >= 0.7 ? "bg-red-500" :
+                                parseFloat(comp.similarityScore.overall) >= 0.4 ? "bg-amber-500" :
+                                "bg-emerald-500"
+                              }`}
+                              style={{ width: `${(parseFloat(comp.similarityScore.overall) * 100).toFixed(0)}%` }}
+                            />
+                          </div>
+                          <span className="tabular-nums font-medium">
+                            {(parseFloat(comp.similarityScore.overall) * 100).toFixed(0)}%
+                          </span>
+                        </div>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <div className="text-xs space-y-1">
+                          <div>Category: {(parseFloat(comp.similarityScore.category) * 100).toFixed(0)}%</div>
+                          <div>Features: {(parseFloat(comp.similarityScore.feature) * 100).toFixed(0)}%</div>
+                          <div>Keywords: {(parseFloat(comp.similarityScore.keyword) * 100).toFixed(0)}%</div>
+                          <div>Text: {(parseFloat(comp.similarityScore.text) * 100).toFixed(0)}%</div>
+                        </div>
+                      </TooltipContent>
+                    </Tooltip>
+                  ) : "\u2014"}
+                </TableCell>}
                 {isCol("rating") && <TableCell>
                   {comp.latestSnapshot?.averageRating ?? "\u2014"}
                 </TableCell>}

@@ -13,6 +13,7 @@ import * as featuredAppsSchema from "./schema/featured-apps.js";
 import * as keywordTagsSchema from "./schema/keyword-tags.js";
 import * as categoryAdSightingsSchema from "./schema/category-ad-sightings.js";
 import * as appReviewMetricsSchema from "./schema/app-review-metrics.js";
+import * as appSimilarityScoresSchema from "./schema/app-similarity-scores.js";
 
 export const schema = {
   ...scrapeRunsSchema,
@@ -27,6 +28,7 @@ export const schema = {
   ...keywordTagsSchema,
   ...categoryAdSightingsSchema,
   ...appReviewMetricsSchema,
+  ...appSimilarityScoresSchema,
 };
 
 export function createDb(databaseUrl: string) {
@@ -81,3 +83,4 @@ export {
 } from "./schema/keyword-tags.js";
 export { categoryAdSightings } from "./schema/category-ad-sightings.js";
 export { appReviewMetrics } from "./schema/app-review-metrics.js";
+export { appSimilarityScores } from "./schema/app-similarity-scores.js";

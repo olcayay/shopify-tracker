@@ -17,7 +17,7 @@ https://appranks.io/apps/jotform-ai-chatbot/competitors
 - app'in yaşını nasıl kategorize edip gösterebiliriz.
 
 
-- app'ler için similarity score'u oluşturabilir miyiz?
+- [done] app'ler için similarity score'u oluşturabilir miyiz?
     - aynı kategorilerde olmak (app'lerin genelde 2 kategorisi oluyor. ama tek kategorisi olanlar da var)
     - aynı featurelara sahip olmak
     - aynı keywordlerde rank etmek
@@ -37,5 +37,11 @@ https://appranks.io/apps/jotform-ai-chatbot/competitors
     Sonra hepsini ağırlıklı ortalama ile birleştiririz.
 
 
+
+
+
 https://appranks.io/apps/jotform-ai-chatbot/compare
     sayfasında features yerine categori features başlığını kullan
+
+
+siteyi mobile responsive hale getir
