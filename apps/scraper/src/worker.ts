@@ -2,7 +2,8 @@ import { config } from "dotenv";
 import { resolve } from "path";
 config({ path: resolve(import.meta.dirname, "../../../.env") });
 import { Worker, type Job } from "bullmq";
-import { createDb } from "@shopify-tracking/db";
+import { createDb, scrapeRuns } from "@shopify-tracking/db";
+import { eq } from "drizzle-orm";
 import { createLogger } from "@shopify-tracking/shared";
 import { QUEUE_NAME, getRedisConnection, enqueueScraperJob, type ScraperJobData } from "./queue.js";
 import { CategoryScraper } from "./scrapers/category-scraper.js";
@@ -200,7 +201,34 @@ async function processJob(job: Job<ScraperJobData>): Promise<void> {
     case "reviews": {
       const scraper = new ReviewScraper(db, httpClient);
       if (job.data.slug) {
-        await scraper.scrapeAppReviews(job.data.slug, "");
+        const startTime = Date.now();
+        const [run] = await db
+          .insert(scrapeRuns)
+          .values({
+            scraperType: "reviews",
+            status: "running",
+            createdAt: new Date(),
+            startedAt: new Date(),
+            triggeredBy,
+          })
+          .returning();
+        try {
+          const newReviews = await scraper.scrapeAppReviews(job.data.slug, run.id);
+          await db
+            .update(scrapeRuns)
+            .set({
+              status: "completed",
+              completedAt: new Date(),
+              metadata: { items_scraped: 1, items_failed: 0, new_reviews: newReviews, duration_ms: Date.now() - startTime },
+            })
+            .where(eq(scrapeRuns.id, run.id));
+        } catch (err) {
+          await db
+            .update(scrapeRuns)
+            .set({ status: "failed", completedAt: new Date(), error: String(err) })
+            .where(eq(scrapeRuns.id, run.id));
+          throw err;
+        }
       } else {
         await scraper.scrapeTracked(triggeredBy);
       }
