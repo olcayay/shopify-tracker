@@ -31,7 +31,7 @@ import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
 import { VisuallyHidden } from "radix-ui";
 
 const navItems = [
-  { href: "/", label: "Overview", icon: LayoutDashboard },
+  { href: "/overview", label: "Overview", icon: LayoutDashboard },
   { href: "/apps", label: "Apps", icon: AppWindow },
   { href: "/competitors", label: "Competitors", icon: Star },
   { href: "/keywords", label: "Keywords", icon: Search },
@@ -100,7 +100,7 @@ function SidebarContent({
     <>
       {showCollapseToggle && (
         <div className={`flex items-center mb-6 ${collapsed ? "justify-center" : "justify-between px-1"}`}>
-          {!collapsed && <span className="font-semibold text-lg px-2">Shopify Tracker</span>}
+          {!collapsed && <span className="font-semibold text-lg px-2">AppRanks</span>}
           <button
             onClick={onToggleCollapsed}
             className="h-8 w-8 flex items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground transition-colors shrink-0"
@@ -112,9 +112,7 @@ function SidebarContent({
       <nav className="flex flex-col gap-1 flex-1">
         {navItems.map((item) => {
           const isActive =
-            item.href === "/"
-              ? pathname === "/"
-              : pathname.startsWith(item.href);
+            pathname === item.href || pathname.startsWith(item.href + "/");
           return (
             <NavLink key={item.href} href={item.href} icon={item.icon} label={item.label} isActive={isActive} />
           );

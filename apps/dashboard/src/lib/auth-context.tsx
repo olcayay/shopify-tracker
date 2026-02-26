@@ -155,7 +155,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setCookie("refresh_token", data.refreshToken, 7 * 86400);
     setUser(data.user);
     await refreshUser();
-    router.push("/");
+    router.push("/overview");
     router.refresh();
   };
 
@@ -182,7 +182,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setCookie("refresh_token", data.refreshToken, 7 * 86400);
     setUser(data.user);
     await refreshUser();
-    router.push("/");
+    router.push("/overview");
     router.refresh();
   };
 

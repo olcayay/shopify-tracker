@@ -2,17 +2,17 @@ import { NextResponse, type NextRequest } from "next/server";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
 
-const PUBLIC_PATHS = ["/login", "/register", "/invite"];
+const PUBLIC_PATHS = ["/", "/login", "/register", "/invite"];
 
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   // Allow public paths
-  if (PUBLIC_PATHS.some((p) => pathname.startsWith(p))) {
-    // If already authenticated, redirect to dashboard
+  if (PUBLIC_PATHS.some((p) => pathname === p || (p !== "/" && pathname.startsWith(p)))) {
     const token = request.cookies.get("access_token")?.value;
-    if (token && (pathname === "/login" || pathname === "/register")) {
-      return NextResponse.redirect(new URL("/", request.url));
+    // Authenticated users: redirect landing/login/register → dashboard
+    if (token && (pathname === "/" || pathname === "/login" || pathname === "/register")) {
+      return NextResponse.redirect(new URL("/overview", request.url));
     }
     return NextResponse.next();
   }
@@ -92,7 +92,7 @@ export async function proxy(request: NextRequest) {
 
     // Block non-system-admin from system-admin routes
     if (pathname.startsWith("/system-admin") && !payload.isSystemAdmin) {
-      return NextResponse.redirect(new URL("/", request.url));
+      return NextResponse.redirect(new URL("/overview", request.url));
     }
   } catch {
     return NextResponse.redirect(new URL("/login", request.url));

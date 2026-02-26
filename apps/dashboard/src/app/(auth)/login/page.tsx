@@ -36,7 +36,7 @@ export default function LoginPage() {
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-2xl">Shopify Tracker</CardTitle>
+        <CardTitle className="text-2xl">AppRanks</CardTitle>
         <CardDescription>Sign in to your account</CardDescription>
       </CardHeader>
       <CardContent>
