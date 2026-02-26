@@ -23,9 +23,12 @@ import {
   Sparkles,
   PanelLeftClose,
   PanelLeftOpen,
+  Menu,
 } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
 import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
+import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
+import { VisuallyHidden } from "radix-ui";
 
 const navItems = [
   { href: "/", label: "Overview", icon: LayoutDashboard },
@@ -49,25 +52,21 @@ const systemAdminItems = [
   { href: "/system-admin/scraper", label: "Scraper", icon: Bot },
 ];
 
-export function Sidebar() {
+function SidebarContent({
+  collapsed = false,
+  onNavigate,
+  showCollapseToggle = false,
+  onToggleCollapsed,
+}: {
+  collapsed?: boolean;
+  onNavigate?: () => void;
+  showCollapseToggle?: boolean;
+  onToggleCollapsed?: () => void;
+}) {
   const pathname = usePathname();
   const { user, account, logout } = useAuth();
   const isSystemAdmin = user?.isSystemAdmin;
   const isAdminSection = pathname.startsWith("/system-admin");
-  const [collapsed, setCollapsed] = useState(false);
-
-  useEffect(() => {
-    try {
-      const saved = localStorage.getItem("sidebar-collapsed");
-      if (saved !== null) setCollapsed(JSON.parse(saved));
-    } catch {}
-  }, []);
-
-  function toggleCollapsed() {
-    const next = !collapsed;
-    setCollapsed(next);
-    localStorage.setItem("sidebar-collapsed", JSON.stringify(next));
-  }
 
   function NavLink({ href, icon: Icon, label, isActive, iconSize = "h-4 w-4", className = "" }: {
     href: string; icon: any; label: string; isActive: boolean; iconSize?: string; className?: string;
@@ -75,6 +74,7 @@ export function Sidebar() {
     const content = (
       <Link
         href={href}
+        onClick={onNavigate}
         className={`flex items-center gap-3 rounded-md text-sm transition-colors ${collapsed ? "justify-center px-2 py-2" : "px-3 py-2"} ${className} ${
           isActive
             ? "bg-primary text-primary-foreground"
@@ -97,16 +97,18 @@ export function Sidebar() {
   }
 
   return (
-    <aside className={`${collapsed ? "w-14" : "w-60"} border-r bg-muted/30 min-h-screen p-2 flex flex-col transition-[width] duration-200`}>
-      <div className={`flex items-center mb-6 ${collapsed ? "justify-center" : "justify-between px-1"}`}>
-        {!collapsed && <span className="font-semibold text-lg px-2">Shopify Tracker</span>}
-        <button
-          onClick={toggleCollapsed}
-          className="h-8 w-8 flex items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground transition-colors shrink-0"
-        >
-          {collapsed ? <PanelLeftOpen className="h-4 w-4" /> : <PanelLeftClose className="h-4 w-4" />}
-        </button>
-      </div>
+    <>
+      {showCollapseToggle && (
+        <div className={`flex items-center mb-6 ${collapsed ? "justify-center" : "justify-between px-1"}`}>
+          {!collapsed && <span className="font-semibold text-lg px-2">Shopify Tracker</span>}
+          <button
+            onClick={onToggleCollapsed}
+            className="h-8 w-8 flex items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground transition-colors shrink-0"
+          >
+            {collapsed ? <PanelLeftOpen className="h-4 w-4" /> : <PanelLeftClose className="h-4 w-4" />}
+          </button>
+        </div>
+      )}
       <nav className="flex flex-col gap-1 flex-1">
         {navItems.map((item) => {
           const isActive =
@@ -125,6 +127,7 @@ export function Sidebar() {
             ) : (
               <Link
                 href="/system-admin"
+                onClick={onNavigate}
                 className={`flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium transition-colors ${
                   isAdminSection
                     ? "text-foreground"
@@ -200,6 +203,56 @@ export function Sidebar() {
           )}
         </div>
       )}
+    </>
+  );
+}
+
+export function Sidebar() {
+  const [collapsed, setCollapsed] = useState(false);
+
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem("sidebar-collapsed");
+      if (saved !== null) setCollapsed(JSON.parse(saved));
+    } catch {}
+  }, []);
+
+  function toggleCollapsed() {
+    const next = !collapsed;
+    setCollapsed(next);
+    localStorage.setItem("sidebar-collapsed", JSON.stringify(next));
+  }
+
+  return (
+    <aside className={`${collapsed ? "w-14" : "w-60"} border-r bg-muted/30 min-h-screen p-2 hidden md:flex flex-col transition-[width] duration-200`}>
+      <SidebarContent
+        collapsed={collapsed}
+        showCollapseToggle
+        onToggleCollapsed={toggleCollapsed}
+      />
     </aside>
+  );
+}
+
+export function MobileSidebar() {
+  const [open, setOpen] = useState(false);
+
+  return (
+    <>
+      <button
+        onClick={() => setOpen(true)}
+        className="h-9 w-9 flex items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+      >
+        <Menu className="h-5 w-5" />
+      </button>
+      <Sheet open={open} onOpenChange={setOpen}>
+        <SheetContent side="left" className="w-60 p-2">
+          <VisuallyHidden.Root>
+            <SheetTitle>Navigation</SheetTitle>
+          </VisuallyHidden.Root>
+          <SidebarContent onNavigate={() => setOpen(false)} />
+        </SheetContent>
+      </Sheet>
+    </>
   );
 }

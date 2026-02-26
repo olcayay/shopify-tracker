@@ -280,7 +280,7 @@ export default function CompetitorsPage() {
     return (
       <TableRow>
         <TableHead
-          className="cursor-pointer select-none sticky left-0 z-20 bg-background shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]"
+          className="cursor-pointer select-none md:sticky md:left-0 md:z-20 bg-background md:shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]"
           onClick={() => toggleSort("name")}
         >
           App <SortIcon col="name" />
@@ -374,7 +374,7 @@ export default function CompetitorsPage() {
   function renderCompetitorRow(c: any, myAppSlug: string) {
     return (
       <TableRow key={`${myAppSlug}-${c.appSlug}`}>
-        <TableCell className="sticky left-0 z-10 bg-background shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]">
+        <TableCell className="md:sticky md:left-0 md:z-10 bg-background md:shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]">
           <div className="flex items-center gap-2">
             {c.iconUrl && (
               <img
@@ -632,18 +632,18 @@ export default function CompetitorsPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold">
+      <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+        <h1 className="text-2xl font-bold shrink-0">
           Competitor Apps ({uniqueCount}
           {account ? `/${account.limits.maxCompetitorApps}` : ""})
         </h1>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3 flex-wrap sm:ml-auto">
           <AppSearchBar
             mode="browse-only"
             trackedSlugs={trackedSlugs}
             competitorSlugs={competitorSlugs}
             placeholder="Search apps..."
-            className="w-72"
+            className="w-full sm:w-72"
           />
           <DropdownMenuPrimitive.Root>
             <DropdownMenuPrimitive.Trigger asChild>

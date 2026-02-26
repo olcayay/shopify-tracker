@@ -28,7 +28,7 @@ export default async function AppDetailLayout({
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div className="flex items-start gap-3">
           {app.iconUrl && (
             <img src={app.iconUrl} alt="" className="h-16 w-16 rounded-lg shrink-0" />

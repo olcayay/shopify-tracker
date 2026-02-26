@@ -1,4 +1,4 @@
-import { Sidebar } from "@/components/sidebar";
+import { Sidebar, MobileSidebar } from "@/components/sidebar";
 
 export default function DashboardLayout({
   children,
@@ -8,9 +8,15 @@ export default function DashboardLayout({
   return (
     <div className="flex min-h-screen">
       <Sidebar />
-      <main className="flex-1 p-6 overflow-auto">
-        {children}
-      </main>
+      <div className="flex flex-col flex-1 min-w-0">
+        <header className="md:hidden flex items-center gap-3 border-b px-4 h-14 shrink-0">
+          <MobileSidebar />
+          <span className="font-semibold">Shopify Tracker</span>
+        </header>
+        <main className="flex-1 p-4 md:p-6 overflow-auto">
+          {children}
+        </main>
+      </div>
     </div>
   );
 }

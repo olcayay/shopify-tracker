@@ -44,4 +44,26 @@ https://appranks.io/apps/jotform-ai-chatbot/compare
     sayfasında features yerine categori features başlığını kullan
 
 
-siteyi mobile responsive hale getir
+[done] siteyi mobile responsive hale getir
+- bütün sayfaları gez. mobile uygun olmayan komponentları mobile responsive hale getir.
+- sidebar: mobile'da Sheet (drawer) ile hamburger menu, desktop'ta gizle (hidden md:flex)
+- AppNav tabs: horizontal scroll with hidden scrollbar
+- page headers: flex-col sm:flex-row pattern
+- content padding: p-4 md:p-6
+- search bars: w-full sm:w-64/72
+- tables: already had overflow-x-auto via shadcn Table component
+
+
+google play entegrasyonu
+
+microsoft clarity entegrasyonu
+
+ana sayfa hazırlama
+
+term and condition sayfasında
+
+feedback sayfası
+
+kime hangi durumda nasıl emailler gönderilebilinir.
+
+cronjobları düzenle

@@ -57,26 +57,28 @@ export function AppNav({
   ];
 
   return (
-    <div className="inline-flex w-fit items-center justify-center rounded-lg bg-muted p-[3px] h-9 text-muted-foreground">
-      {tabs.map((tab) => {
-        const isActive = tab.exact
-          ? pathname === tab.href
-          : pathname.startsWith(tab.href);
-        return (
-          <Link
-            key={tab.href}
-            href={tab.href}
-            className={cn(
-              "inline-flex h-[calc(100%-1px)] flex-1 items-center justify-center rounded-md border border-transparent px-2 py-1 text-sm font-medium whitespace-nowrap transition-all",
-              "text-foreground/60 hover:text-foreground",
-              isActive &&
-                "bg-background text-foreground shadow-sm border-input"
-            )}
-          >
-            {tab.label}
-          </Link>
-        );
-      })}
+    <div className="overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+      <div className="inline-flex w-max items-center justify-start rounded-lg bg-muted p-[3px] h-9 text-muted-foreground">
+        {tabs.map((tab) => {
+          const isActive = tab.exact
+            ? pathname === tab.href
+            : pathname.startsWith(tab.href);
+          return (
+            <Link
+              key={tab.href}
+              href={tab.href}
+              className={cn(
+                "inline-flex h-[calc(100%-1px)] flex-1 items-center justify-center rounded-md border border-transparent px-2 py-1 text-sm font-medium whitespace-nowrap transition-all",
+                "text-foreground/60 hover:text-foreground",
+                isActive &&
+                  "bg-background text-foreground shadow-sm border-input"
+              )}
+            >
+              {tab.label}
+            </Link>
+          );
+        })}
+      </div>
     </div>
   );
 }

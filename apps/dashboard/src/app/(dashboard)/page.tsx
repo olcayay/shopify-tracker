@@ -276,16 +276,16 @@ export default function OverviewPage() {
       {/* My Apps List */}
       <Card>
         <CardHeader className="pb-3">
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col sm:flex-row sm:items-center gap-3">
             <CardTitle className="text-base">My Apps</CardTitle>
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-3 sm:ml-auto">
               <AppSearchBar
                 mode="follow"
                 trackedSlugs={trackedSlugs}
                 competitorSlugs={competitorSlugs}
                 onFollow={trackApp}
                 placeholder="Search apps..."
-                className="w-64"
+                className="w-full sm:w-64"
               />
               <Link href="/apps" className="text-sm text-primary hover:underline shrink-0">
                 View all
@@ -477,15 +477,15 @@ export default function OverviewPage() {
       {/* Competitor Apps List */}
       <Card>
         <CardHeader className="pb-3">
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col sm:flex-row sm:items-center gap-3">
             <CardTitle className="text-base">Competitor Apps</CardTitle>
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-3 sm:ml-auto">
               <AppSearchBar
                 mode="browse-only"
                 trackedSlugs={trackedSlugs}
                 competitorSlugs={competitorSlugs}
                 placeholder="Search apps..."
-                className="w-64"
+                className="w-full sm:w-64"
               />
               <Link href="/competitors" className="text-sm text-primary hover:underline shrink-0">
                 View all
