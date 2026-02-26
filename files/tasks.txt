@@ -1,60 +1,6 @@
 app için keyword successions
 
-
-
-https://appranks.io/apps/jotform-ai-chatbot/competitors
-- [done] bu sayfada my app için bir pin icon'u olsun. bu icon app'in yukarıda sticky mi olacağını yoksa diğer appler arasında sorting'e göre yerleşeceğini mi belirlesin
-
-
-- [done] Category Rank için parantez içinde değişimi de göstersin
-
-- [done] Category Rank sorting kategorilerin ortalama ranking'ine göre çalışsın
-
-- [done] Categoriler için %'lik kaç dilimde olduğunu da göster. içinde 1000 app olduğu bir kategori ile 100 app'in olduğu bir kategoride ilk %10 luk dilime girmek çok farklı
-    category_percentile = 1 - (rank / total_apps_in_category)
-
-
-- app'in yaşını nasıl kategorize edip gösterebiliriz.
-
-
-- [done] app'ler için similarity score'u oluşturabilir miyiz?
-    - aynı kategorilerde olmak (app'lerin genelde 2 kategorisi oluyor. ama tek kategorisi olanlar da var)
-    - aynı featurelara sahip olmak
-    - aynı keywordlerde rank etmek
-    - app name, app introduction ve card subtitle'da benzer kelimeler kullanmak
-
-    Similarity Score = Çok Boyutlu Olmalı
-
-    Tek boyutlu similarity işe yaramaz.
-
-    Önerilen bileşenler:
-        1.	Category Similarity
-        2.	Feature Similarity
-        3.	Keyword Overlap Similarity
-        4.	Textual Similarity (Name + Subtitle + Intro)
-        5.	(Opsiyonel) Rank Position Overlap
-
-    Sonra hepsini ağırlıklı ortalama ile birleştiririz.
-
-
-
-
-
-https://appranks.io/apps/jotform-ai-chatbot/compare
-    sayfasında features yerine categori features başlığını kullan
-
-
-[done] siteyi mobile responsive hale getir
-- bütün sayfaları gez. mobile uygun olmayan komponentları mobile responsive hale getir.
-- sidebar: mobile'da Sheet (drawer) ile hamburger menu, desktop'ta gizle (hidden md:flex)
-- AppNav tabs: horizontal scroll with hidden scrollbar
-- page headers: flex-col sm:flex-row pattern
-- content padding: p-4 md:p-6
-- search bars: w-full sm:w-64/72
-- tables: already had overflow-x-auto via shadcn Table component
-
-
-google play entegrasyonu
+google analytics entegrasyonu
 
 microsoft clarity entegrasyonu
 
