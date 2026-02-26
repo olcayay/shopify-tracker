@@ -1,4 +1,3 @@
--- This must run outside a transaction (ALTER TYPE ... ADD VALUE cannot run inside a transaction block)
--- Run manually: psql -c "ALTER TYPE scraper_type ADD VALUE IF NOT EXISTS 'compute_similarity_scores';"
--- Then run migration 0035 for the table creation.
-ALTER TYPE "scraper_type" ADD VALUE IF NOT EXISTS 'compute_similarity_scores';
+-- Enum value 'compute_similarity_scores' is added at API startup (before migrations)
+-- because ALTER TYPE ... ADD VALUE cannot run inside a transaction block.
+-- This file is intentionally empty to keep migration numbering consistent.

@@ -5,7 +5,7 @@ import Fastify from "fastify";
 import cors from "@fastify/cors";
 import { createDb, accounts, users } from "@shopify-tracking/db";
 import { migrate } from "drizzle-orm/postgres-js/migrator";
-import { eq } from "drizzle-orm";
+import { sql, eq } from "drizzle-orm";
 import bcrypt from "bcryptjs";
 import { registerAuthMiddleware } from "./middleware/auth.js";
 import { categoryRoutes } from "./routes/categories.js";
@@ -27,6 +27,15 @@ if (!databaseUrl) {
 }
 
 const db = createDb(databaseUrl);
+
+// Pre-migration: add enum values outside of transaction
+// (ALTER TYPE ... ADD VALUE cannot run inside a transaction block)
+try {
+  await db.execute(sql`ALTER TYPE scraper_type ADD VALUE IF NOT EXISTS 'compute_similarity_scores'`);
+} catch (e: any) {
+  // Ignore if already exists
+  if (!e.message?.includes("already exists")) console.error("Pre-migration enum error:", e.message);
+}
 
 // Run pending migrations on startup
 console.log("Running database migrations...");
