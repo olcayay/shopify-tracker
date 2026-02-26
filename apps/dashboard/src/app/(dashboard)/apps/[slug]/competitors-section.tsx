@@ -13,7 +13,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { X, ArrowUpDown, ArrowUp, ArrowDown, ChevronUp, ChevronDown, Pin, PinOff } from "lucide-react";
+import { X, ArrowUpDown, ArrowUp, ArrowDown, ChevronUp, ChevronDown, Pin, PinOff, ExternalLink } from "lucide-react";
 import { ConfirmModal } from "@/components/confirm-modal";
 import { AppSearchBar } from "@/components/app-search-bar";
 import { VelocityCell } from "@/components/velocity-cell";
@@ -425,8 +425,24 @@ export function CompetitorsSection({ appSlug }: { appSlug: string }) {
                 <TableCell className="text-sm">
                   <MomentumBadge momentum={comp.reviewVelocity?.momentum} />
                 </TableCell>
-                <TableCell className="text-sm">
-                  {comp.latestSnapshot?.pricing ?? "\u2014"}
+                <TableCell className="text-sm whitespace-nowrap">
+                  {(() => {
+                    const p = comp.latestSnapshot?.pricing;
+                    if (!p) return "\u2014";
+                    const abbr: Record<string, string> = {
+                      "Free plan available": "Free plan",
+                      "Free to install": "Free install",
+                      "Free trial available": "Free trial",
+                    };
+                    const short = abbr[p];
+                    if (!short) return p;
+                    return (
+                      <Tooltip>
+                        <TooltipTrigger asChild><span>{short}</span></TooltipTrigger>
+                        <TooltipContent>{p}</TooltipContent>
+                      </Tooltip>
+                    );
+                  })()}
                 </TableCell>
                 <TableCell className="text-sm">
                   {comp.minPaidPrice != null ? (
@@ -542,21 +558,31 @@ export function CompetitorsSection({ appSlug }: { appSlug: string }) {
                 </TableCell>
                 {canEdit && (
                   <TableCell>
-                    {!comp.isSelf && (
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8 text-muted-foreground hover:text-destructive"
-                        onClick={() =>
-                          setConfirmRemove({
-                            slug: comp.appSlug,
-                            name: comp.appName,
-                          })
-                        }
+                    <div className="flex items-center gap-0.5">
+                      <a
+                        href={`https://apps.shopify.com/${comp.appSlug}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="h-8 w-8 inline-flex items-center justify-center rounded-md text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"
                       >
-                        <X className="h-4 w-4" />
-                      </Button>
-                    )}
+                        <ExternalLink className="h-4 w-4" />
+                      </a>
+                      {!comp.isSelf && (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                          onClick={() =>
+                            setConfirmRemove({
+                              slug: comp.appSlug,
+                              name: comp.appName,
+                            })
+                          }
+                        >
+                          <X className="h-4 w-4" />
+                        </Button>
+                      )}
+                    </div>
                   </TableCell>
                 )}
               </TableRow>
