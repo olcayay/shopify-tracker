@@ -64,6 +64,26 @@ function getScraperQueue(): Queue {
   return scraperQueue;
 }
 
+/** Enqueue app_details + reviews jobs for a single app after it's tracked */
+async function enqueueAppScrapeJobs(slug: string): Promise<boolean> {
+  try {
+    const queue = getScraperQueue();
+    await queue.add("scrape:app_details", {
+      type: "app_details",
+      slug,
+      triggeredBy: "api:track",
+    });
+    await queue.add("scrape:reviews", {
+      type: "reviews",
+      slug,
+      triggeredBy: "api:track",
+    });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 type Db = ReturnType<typeof createDb>;
 
 /** After adding/removing a tracked app, sync the global isTracked flag */
@@ -614,27 +634,7 @@ export const accountRoutes: FastifyPluginAsync = async (app) => {
         return reply.code(409).send({ error: "App already tracked" });
       }
 
-      // If app has no snapshots yet, enqueue a scraper job
-      const [existingSnapshot] = await db
-        .select({ id: appSnapshots.id })
-        .from(appSnapshots)
-        .where(eq(appSnapshots.appSlug, slug))
-        .limit(1);
-
-      let scraperEnqueued = false;
-      if (!existingSnapshot) {
-        try {
-          const queue = getScraperQueue();
-          await queue.add("scrape:app_details", {
-            type: "app_details",
-            slug,
-            triggeredBy: "api",
-          });
-          scraperEnqueued = true;
-        } catch {
-          // Redis unavailable — scraper will pick it up on next scheduled run
-        }
-      }
+      const scraperEnqueued = await enqueueAppScrapeJobs(slug);
 
       return { ...result, scraperEnqueued };
     }
@@ -1168,27 +1168,7 @@ export const accountRoutes: FastifyPluginAsync = async (app) => {
           .send({ error: "Competitor already added for this app" });
       }
 
-      // If app has no snapshots yet, enqueue a scraper job
-      const [existingSnapshot] = await db
-        .select({ id: appSnapshots.id })
-        .from(appSnapshots)
-        .where(eq(appSnapshots.appSlug, slug))
-        .limit(1);
-
-      let scraperEnqueued = false;
-      if (!existingSnapshot) {
-        try {
-          const queue = getScraperQueue();
-          await queue.add("scrape:app_details", {
-            type: "app_details",
-            slug,
-            triggeredBy: "api",
-          });
-          scraperEnqueued = true;
-        } catch {
-          // Redis unavailable — scraper will pick it up on next scheduled run
-        }
-      }
+      const scraperEnqueued = await enqueueAppScrapeJobs(slug);
 
       return { ...result, scraperEnqueued };
     }
@@ -1571,27 +1551,7 @@ export const accountRoutes: FastifyPluginAsync = async (app) => {
           .send({ error: "Competitor already added for this app" });
       }
 
-      // Enqueue scraper if no snapshots
-      const [existingSnapshot] = await db
-        .select({ id: appSnapshots.id })
-        .from(appSnapshots)
-        .where(eq(appSnapshots.appSlug, competitorSlug))
-        .limit(1);
-
-      let scraperEnqueued = false;
-      if (!existingSnapshot) {
-        try {
-          const queue = getScraperQueue();
-          await queue.add("scrape:app_details", {
-            type: "app_details",
-            slug: competitorSlug,
-            triggeredBy: "api",
-          });
-          scraperEnqueued = true;
-        } catch {
-          // Redis unavailable
-        }
-      }
+      const scraperEnqueued = await enqueueAppScrapeJobs(competitorSlug);
 
       return { ...result, scraperEnqueued };
     }
