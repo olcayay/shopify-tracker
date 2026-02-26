@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { CardSkeleton } from "@/components/skeletons";
 import { RotateCcw, Plus, X as XIcon } from "lucide-react";
 
 interface AppData {
@@ -146,8 +147,9 @@ export default function PreviewPage() {
 
   if (loading) {
     return (
-      <div className="fixed inset-0 z-50 bg-background flex items-center justify-center">
-        <p className="text-muted-foreground">Loading...</p>
+      <div className="space-y-4">
+        <CardSkeleton lines={3} />
+        <CardSkeleton lines={5} />
       </div>
     );
   }

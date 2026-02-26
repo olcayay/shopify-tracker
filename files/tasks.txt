@@ -2,7 +2,9 @@ app için keyword successions
 
         google analytics entegrasyonu
 
-microsoft clarity entegrasyonu
+        microsoft clarity entegrasyonu
+
+        loading skeleton shimmer
 
 ana sayfa hazırla
 

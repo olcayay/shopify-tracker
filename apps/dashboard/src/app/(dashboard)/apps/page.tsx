@@ -18,6 +18,7 @@ import { X, ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
 import { ConfirmModal } from "@/components/confirm-modal";
 import { AdminScraperTrigger } from "@/components/admin-scraper-trigger";
 import { AppSearchBar } from "@/components/app-search-bar";
+import { TableSkeleton } from "@/components/skeletons";
 
 type SortKey = "name" | "rating" | "reviews" | "minPaidPrice" | "lastChangeAt" | "launchedDate" | "competitorCount" | "keywordCount";
 type SortDir = "asc" | "desc";
@@ -179,7 +180,7 @@ export default function AppsPage() {
       <Card>
         <CardContent className="pt-6">
           {loading ? (
-            <p className="text-muted-foreground text-center py-8">Loading...</p>
+            <TableSkeleton rows={8} cols={5} />
           ) : (
             <Table>
               <TableHeader>

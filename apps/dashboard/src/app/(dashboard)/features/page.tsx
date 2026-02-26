@@ -4,6 +4,7 @@ import { useEffect, useState, useRef, useCallback, useMemo } from "react";
 import Link from "next/link";
 import { useAuth } from "@/lib/auth-context";
 import { useFormatDate } from "@/lib/format-date";
+import { TableSkeleton } from "@/components/skeletons";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -313,9 +314,7 @@ export default function FeaturesPage() {
         </CardHeader>
         <CardContent>
           {loading ? (
-            <p className="text-muted-foreground text-center py-8">
-              Loading...
-            </p>
+            <TableSkeleton rows={5} cols={5} />
           ) : features.length > 0 ? (
             <Table>
               <TableHeader>
@@ -411,7 +410,7 @@ export default function FeaturesPage() {
       <Card>
         <CardContent className="pt-6">
           {loading ? (
-            <p className="text-muted-foreground text-center py-8">Loading...</p>
+            <TableSkeleton rows={8} cols={4} />
           ) : filteredTree.length === 0 ? (
             <p className="text-muted-foreground text-center py-8">
               {filterQuery

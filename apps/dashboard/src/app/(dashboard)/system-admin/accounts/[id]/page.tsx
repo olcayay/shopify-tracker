@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import { useAuth } from "@/lib/auth-context";
+import { CardSkeleton } from "@/components/skeletons";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -147,7 +148,8 @@ export default function AccountDetailPage() {
     return (
       <div className="space-y-6">
         <h1 className="text-2xl font-bold">Account Detail</h1>
-        <p className="text-muted-foreground">Loading...</p>
+        <CardSkeleton lines={4} />
+        <CardSkeleton lines={6} />
       </div>
     );
   }

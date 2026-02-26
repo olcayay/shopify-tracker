@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Check, ChevronDown, ChevronUp, Pencil } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { CardSkeleton } from "@/components/skeletons";
 
 interface AppData {
   slug: string;
@@ -568,7 +569,11 @@ export default function ComparePage() {
 
   if (loading) {
     return (
-      <p className="text-muted-foreground text-center py-8">Loading...</p>
+      <div className="space-y-4">
+        <CardSkeleton lines={4} />
+        <CardSkeleton lines={6} />
+        <CardSkeleton lines={4} />
+      </div>
     );
   }
 

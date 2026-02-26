@@ -4,6 +4,7 @@ import { Fragment, useEffect, useState, useCallback, useMemo } from "react";
 import Link from "next/link";
 import { useAuth } from "@/lib/auth-context";
 import { useFormatDate } from "@/lib/format-date";
+import { TableSkeleton } from "@/components/skeletons";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -467,7 +468,7 @@ export default function CategoriesPage() {
       <Card>
         <CardContent className="pt-6">
           {loading ? (
-            <p className="text-muted-foreground text-center py-8">Loading...</p>
+            <TableSkeleton rows={8} cols={5} />
           ) : filteredTree.length === 0 ? (
             <p className="text-muted-foreground text-center py-8">
               {searchQuery

@@ -23,6 +23,8 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Target, Eye, ChevronLeft, ChevronRight } from "lucide-react";
+import { Skeleton } from "@/components/ui/skeleton";
+import { StatCardSkeleton, TableSkeleton } from "@/components/skeletons";
 
 const SCRAPER_LABELS: Record<string, string> = {
   category: "Categories",
@@ -195,7 +197,19 @@ export default function OverviewPage() {
     return (
       <div className="space-y-6">
         <h1 className="text-2xl font-bold">Overview</h1>
-        <p className="text-muted-foreground">Loading...</p>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <StatCardSkeleton key={i} />
+          ))}
+        </div>
+        <Card>
+          <CardHeader>
+            <Skeleton className="h-5 w-32" />
+          </CardHeader>
+          <CardContent>
+            <TableSkeleton rows={5} cols={4} />
+          </CardContent>
+        </Card>
       </div>
     );
   }

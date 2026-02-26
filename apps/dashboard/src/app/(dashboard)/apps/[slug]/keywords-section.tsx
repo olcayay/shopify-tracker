@@ -4,6 +4,7 @@ import { useEffect, useState, useRef, useMemo } from "react";
 import Link from "next/link";
 import { useAuth } from "@/lib/auth-context";
 import { cn } from "@/lib/utils";
+import { TableSkeleton } from "@/components/skeletons";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -593,7 +594,7 @@ export function KeywordsSection({ appSlug }: { appSlug: string }) {
       )}
 
       {loading ? (
-        <p className="text-muted-foreground text-center py-8">Loading...</p>
+        <TableSkeleton rows={5} cols={6} />
       ) : keywords.length === 0 ? (
         <p className="text-muted-foreground text-center py-8">
           No keywords added yet.

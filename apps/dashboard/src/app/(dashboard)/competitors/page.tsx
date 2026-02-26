@@ -4,6 +4,7 @@ import { useEffect, useState, useMemo } from "react";
 import Link from "next/link";
 import { useAuth } from "@/lib/auth-context";
 import { useFormatDate } from "@/lib/format-date";
+import { TableSkeleton } from "@/components/skeletons";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -733,7 +734,7 @@ export default function CompetitorsPage() {
       )}
 
       {loading ? (
-        <p className="text-muted-foreground text-center py-8">Loading...</p>
+        <TableSkeleton rows={8} cols={6} />
       ) : myApps.length === 0 ? (
         <Card>
           <CardContent className="pt-6">

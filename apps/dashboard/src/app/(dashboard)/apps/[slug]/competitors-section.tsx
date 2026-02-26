@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useAuth } from "@/lib/auth-context";
 import { useFormatDate } from "@/lib/format-date";
+import { TableSkeleton } from "@/components/skeletons";
 import { Button } from "@/components/ui/button";
 import {
   Table,
@@ -387,7 +388,7 @@ export function CompetitorsSection({ appSlug }: { appSlug: string }) {
       </div>
 
       {loading ? (
-        <p className="text-muted-foreground text-center py-8">Loading...</p>
+        <TableSkeleton rows={5} cols={6} />
       ) : competitors.length === 0 ? (
         <p className="text-muted-foreground text-center py-8">
           No competitors added yet.

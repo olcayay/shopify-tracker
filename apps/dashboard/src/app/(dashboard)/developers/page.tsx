@@ -15,6 +15,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
+import { TableSkeleton } from "@/components/skeletons";
 
 type SortKey = "name" | "rating" | "reviews" | "minPaidPrice" | "lastChangeAt" | "launchedDate";
 type SortDir = "asc" | "desc";
@@ -22,7 +23,7 @@ type SortDir = "asc" | "desc";
 export default function DeveloperAppsPage() {
   return (
     <Suspense
-      fallback={<p className="text-muted-foreground">Loading...</p>}
+      fallback={<TableSkeleton rows={8} cols={5} />}
     >
       <DeveloperAppsContent />
     </Suspense>
@@ -138,7 +139,7 @@ function DeveloperAppsContent() {
         </CardHeader>
         <CardContent>
           {loading ? (
-            <p className="text-muted-foreground text-center py-8">Loading...</p>
+            <TableSkeleton rows={8} cols={5} />
           ) : apps.length === 0 ? (
             <p className="text-muted-foreground text-center py-8">
               No apps found for this developer.

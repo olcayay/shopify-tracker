@@ -4,6 +4,7 @@ import { Fragment, useEffect, useState, useRef, useMemo } from "react";
 import Link from "next/link";
 import { useAuth } from "@/lib/auth-context";
 import { useFormatDate } from "@/lib/format-date";
+import { TableSkeleton } from "@/components/skeletons";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
@@ -417,9 +418,7 @@ export default function KeywordsPage() {
       <Card>
         <CardContent className="pt-6">
           {loading ? (
-            <p className="text-muted-foreground text-center py-8">
-              Loading...
-            </p>
+            <TableSkeleton rows={8} cols={6} />
           ) : (
             <Table>
               <TableHeader>
