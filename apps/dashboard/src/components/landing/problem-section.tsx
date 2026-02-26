@@ -5,45 +5,51 @@ import {
   EyeOff,
   Clock,
   Timer,
+  type LucideIcon,
 } from "lucide-react";
-import { Card, CardContent } from "@/components/ui/card";
 
-const problems = [
+const problems: { icon: LucideIcon; title: string; description: string; emoji: string }[] = [
   {
     icon: TrendingDown,
+    emoji: "📉",
     title: "No Ranking History",
     description:
-      "You can see your current category position, but there's no way to track how it changes over time — or what caused the change.",
+      "Where were you ranked last week? Last month? No idea.",
   },
   {
     icon: Eye,
+    emoji: "🕵️",
     title: "Manual Competitor Monitoring",
     description:
-      "Checking if a competitor changed their pricing, added features, or gained reviews means visiting their listing every day.",
+      "Checking competitor listings every day? That's not a strategy, that's a chore.",
   },
   {
     icon: HelpCircle,
+    emoji: "🎯",
     title: "Keyword Guesswork",
     description:
-      "You don't know which keywords drive traffic, where you rank for them, or who's advertising on them.",
+      "You don't know which keywords drive installs — or who's advertising on them.",
   },
   {
     icon: EyeOff,
+    emoji: "👻",
     title: "Invisible Featured Placements",
     description:
-      "When Shopify features an app in a category or on the homepage, there's no record of it.",
+      "Shopify featured your competitor and you didn't even notice.",
   },
   {
     icon: Clock,
-    title: "Time-Consuming Review Analysis",
+    emoji: "📊",
+    title: "Spreadsheet Hell",
     description:
-      "Comparing review trends across your app and competitors requires spreadsheets and manual tracking.",
+      "Tracking reviews in a spreadsheet? There has to be a better way. (There is.)",
   },
   {
     icon: Timer,
+    emoji: "⏰",
     title: "Hours of Market Research",
     description:
-      "Understanding category dynamics, competitive density, and market opportunities means crawling through hundreds of listings.",
+      "Crawling through hundreds of listings to understand your market? Not anymore.",
   },
 ];
 
@@ -51,31 +57,26 @@ export function ProblemSection() {
   return (
     <section className="py-20 bg-muted/30 px-4 md:px-6">
       <div className="mx-auto max-w-6xl">
-        <h2 className="text-3xl font-bold text-center">
-          The Shopify App Store is a Black Box
+        <h2 className="text-3xl md:text-4xl font-bold text-center">
+          Sound Familiar?
         </h2>
-        <p className="mt-4 text-center text-muted-foreground max-w-2xl mx-auto">
-          Shopify provides no native analytics for developers. You&apos;re left
-          guessing about your performance, your competitors, and your market.
+        <p className="mt-4 text-center text-muted-foreground max-w-2xl mx-auto text-lg">
+          The Shopify App Store gives you zero analytics.
+          You&apos;re flying blind.
         </p>
 
         <div className="mt-12 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {problems.map((problem) => (
-            <Card key={problem.title}>
-              <CardContent className="pt-6">
-                <div className="flex items-start gap-4">
-                  <div className="shrink-0 w-10 h-10 rounded-lg bg-destructive/10 flex items-center justify-center">
-                    <problem.icon className="h-5 w-5 text-destructive" />
-                  </div>
-                  <div>
-                    <h3 className="font-semibold">{problem.title}</h3>
-                    <p className="mt-1 text-sm text-muted-foreground">
-                      {problem.description}
-                    </p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+            <div
+              key={problem.title}
+              className="group rounded-xl border bg-card p-6 transition-all duration-300 hover:shadow-lg hover:-translate-y-1 hover:border-primary/30"
+            >
+              <div className="text-3xl mb-3">{problem.emoji}</div>
+              <h3 className="font-semibold text-lg">{problem.title}</h3>
+              <p className="mt-2 text-sm text-muted-foreground leading-relaxed">
+                {problem.description}
+              </p>
+            </div>
           ))}
         </div>
       </div>

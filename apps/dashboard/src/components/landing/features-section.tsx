@@ -8,90 +8,77 @@ import {
   GitCompare,
   Compass,
   Users,
+  type LucideIcon,
 } from "lucide-react";
-import { Card, CardContent } from "@/components/ui/card";
 
-const features = [
+const features: {
+  icon: LucideIcon;
+  title: string;
+  description: string;
+  gradient: string;
+}[] = [
   {
     icon: AppWindow,
-    title: "App Tracking & Monitoring",
-    points: [
-      "Track any app's details, pricing, ratings, and reviews",
-      "Historical snapshots preserve every change",
-      "Change detection for descriptions, features, and SEO",
-    ],
+    title: "App Tracking",
+    description:
+      "Track any app's details, pricing, ratings, and reviews. Historical snapshots preserve every change.",
+    gradient: "from-blue-500 to-cyan-500",
   },
   {
     icon: Search,
     title: "Keyword Intelligence",
-    points: [
-      "Track keyword search positions over time",
-      "Organic vs. sponsored result separation",
-      "Ad sighting heatmaps with daily frequency data",
-    ],
+    description:
+      "Track search positions over time. See organic vs. sponsored results and ad sighting heatmaps.",
+    gradient: "from-violet-500 to-purple-500",
   },
   {
     icon: BarChart3,
     title: "Category Rankings",
-    points: [
-      "Full category tree with 5+ levels of depth",
-      "Historical position tracking with trend charts",
-      "Category percentile: Top X% of Y apps",
-    ],
+    description:
+      "Full category tree with position history, rank changes, and percentile rankings.",
+    gradient: "from-emerald-500 to-green-500",
   },
   {
     icon: Swords,
-    title: "Competitor Intelligence",
-    points: [
-      "Side-by-side competitor monitoring",
-      "Review velocity comparison (7d, 30d, 90d)",
-      "Multi-dimensional similarity scoring",
-    ],
+    title: "Competitor Intel",
+    description:
+      "Side-by-side monitoring with review velocity comparison and similarity scoring.",
+    gradient: "from-orange-500 to-red-500",
   },
   {
     icon: MessageSquareText,
     title: "Review Analytics",
-    points: [
-      "Rating and review count trend charts",
-      "Velocity and acceleration metrics",
-      "Momentum: Accelerating, Stable, Slowing, Spike, Flat",
-    ],
+    description:
+      "Rating trends, velocity metrics, and momentum analysis — Accelerating, Stable, Slowing, or Spike.",
+    gradient: "from-pink-500 to-rose-500",
   },
   {
     icon: Megaphone,
-    title: "Featured & Ad Tracking",
-    points: [
-      "Monitor featured section appearances",
-      "Keyword and category ad sighting heatmaps",
-      "Historical ad frequency data",
-    ],
+    title: "Ad Tracking",
+    description:
+      "Monitor featured placements and ad sightings with calendar heatmaps and frequency data.",
+    gradient: "from-amber-500 to-yellow-500",
   },
   {
     icon: GitCompare,
     title: "App Comparison",
-    points: [
-      "Side-by-side: descriptions, features, pricing",
-      "Character count and content analysis",
-      "Keyword density analysis with draft testing",
-    ],
+    description:
+      "Compare descriptions, features, pricing side-by-side with keyword density analysis.",
+    gradient: "from-teal-500 to-cyan-500",
   },
   {
     icon: Compass,
     title: "Market Discovery",
-    points: [
-      "Browse by developer, integration, or category",
-      "Similar app recommendations and connections",
-      "Feature tracking across categories",
-    ],
+    description:
+      "Browse by developer, integration, or category. Find similar apps and market opportunities.",
+    gradient: "from-indigo-500 to-blue-500",
   },
   {
     icon: Users,
     title: "Team Collaboration",
-    points: [
-      "Multi-user accounts with role-based access",
-      "Direct user creation and invitations",
-      "Daily email digests with timezone support",
-    ],
+    description:
+      "Multi-user accounts with roles, direct invitations, and daily email digests.",
+    gradient: "from-fuchsia-500 to-pink-500",
   },
 ];
 
@@ -99,37 +86,34 @@ export function FeaturesSection() {
   return (
     <section className="py-20 px-4 md:px-6">
       <div className="mx-auto max-w-6xl">
-        <h2 className="text-3xl font-bold text-center">
-          Everything You Need to Grow Your Shopify App
+        <h2 className="text-3xl md:text-4xl font-bold text-center">
+          Your Unfair Advantage
         </h2>
-        <p className="mt-4 text-center text-muted-foreground max-w-2xl mx-auto">
-          From keyword tracking to competitor intelligence, AppRanks gives you
-          the complete picture of your app&apos;s performance.
+        <p className="mt-4 text-center text-muted-foreground max-w-2xl mx-auto text-lg">
+          9 powerful tools in one dashboard. Everything you need to outrank,
+          outsmart, and outgrow your competitors.
         </p>
 
-        <div className="mt-12 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+        <div className="mt-12 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {features.map((feature) => (
-            <Card key={feature.title} className="relative">
-              <CardContent className="pt-6">
-                <div className="w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center mb-4">
-                  <feature.icon className="h-6 w-6 text-primary" />
-                </div>
-                <h3 className="font-semibold text-lg">{feature.title}</h3>
-                <ul className="mt-3 space-y-2">
-                  {feature.points.map((point) => (
-                    <li
-                      key={point}
-                      className="text-sm text-muted-foreground flex items-start gap-2"
-                    >
-                      <span className="text-primary mt-1 shrink-0">
-                        &bull;
-                      </span>
-                      {point}
-                    </li>
-                  ))}
-                </ul>
-              </CardContent>
-            </Card>
+            <div
+              key={feature.title}
+              className="group relative rounded-xl border bg-card p-6 transition-all duration-300 hover:shadow-lg hover:-translate-y-1"
+            >
+              {/* Gradient top border on hover */}
+              <div
+                className={`absolute inset-x-0 top-0 h-0.5 rounded-t-xl bg-gradient-to-r ${feature.gradient} opacity-0 transition-opacity duration-300 group-hover:opacity-100`}
+              />
+              <div
+                className={`w-11 h-11 rounded-lg bg-gradient-to-br ${feature.gradient} flex items-center justify-center mb-4 shadow-sm`}
+              >
+                <feature.icon className="h-5 w-5 text-white" />
+              </div>
+              <h3 className="font-semibold text-lg">{feature.title}</h3>
+              <p className="mt-2 text-sm text-muted-foreground leading-relaxed">
+                {feature.description}
+              </p>
+            </div>
           ))}
         </div>
       </div>
