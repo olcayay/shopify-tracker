@@ -93,3 +93,12 @@ App similarity scores — multi-dimensional scoring:
 - Dashboard: Similarity column on competitors table with progress bar + percentage, color-coded (red >=70%, amber 40-69%, green <40%)
 - Tooltip shows 4 component breakdowns, sortable, toggleable column
 - Admin scraper page: manual trigger for compute_similarity_scores job
+
+Unit test infrastructure & pre-commit hooks:
+- Vitest + @testing-library/react + @testing-library/jest-dom + @testing-library/user-event + jsdom
+- 510 tests across 39 test files covering all pages, components, lib functions, API, proxy routing, auth, system admin, scraper, settings, invitation
+- Test categories: lib utilities (cn, format-date, tag-colors, analytics), auth context, UI components (confirm-modal, pagination, velocity, momentum, keyword-tag, skeletons, sidebar, star-buttons), landing page components (hero, features, problem, how-it-works, differentiators, CTA, footer, header), auth pages (login, register, invitation accept), legal pages (terms, privacy), system admin pages (dashboard, users list, user detail, accounts list, account detail, scraper management, apps list, keywords list, packages, features list), settings page, API functions (47 tests), proxy routing (22 tests)
+- Husky v9 pre-commit hook: runs ESLint (blocks on errors) + Vitest (blocks on test failures)
+- ESLint 9 flat config: React Compiler rules + TypeScript strict rules downgraded to warnings
+- Global test setup mocks: next/navigation, next/link, next/headers, radix-ui (Slot + VisuallyHidden), IntersectionObserver, ResizeObserver, matchMedia
+- Test utils: mock user/admin/viewer objects, mock account, setupAuthMock helper for per-test auth overrides

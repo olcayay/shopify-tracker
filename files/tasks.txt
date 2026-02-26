@@ -1,11 +1,13 @@
 app için keyword successions
 
-    ana sayfa hazırla
-
-term and condition sayfasında
-
 feedback sayfası
 
 kime hangi durumda nasıl emailler gönderilebilinir.
 
 cronjobları düzenle
+
+
+DONE: unit test altyapısı kuruldu (Vitest + Testing Library + jsdom)
+DONE: 510 test, 39 test dosyası — tüm sayfalar, componentlar, lib fonksiyonları, API, proxy, auth, system admin, scraper, settings, invitation
+DONE: husky pre-commit hook (lint + test) — lint hatası veya test başarısız olursa commit engelleniyor
+DONE: ESLint config güncellendi — error seviyesi kurallar warning'e düşürüldü

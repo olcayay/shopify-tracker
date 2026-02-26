@@ -1,0 +1,9 @@
+cd apps/dashboard
+
+echo "Running lint..."
+npx eslint src/ || exit 1
+
+echo "Running tests..."
+npx vitest run || exit 1
+
+echo "All checks passed!"
