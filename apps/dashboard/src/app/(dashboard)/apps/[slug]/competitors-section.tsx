@@ -13,7 +13,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { X, ArrowUpDown, ArrowUp, ArrowDown, ChevronUp, ChevronDown } from "lucide-react";
+import { X, ArrowUpDown, ArrowUp, ArrowDown, ChevronUp, ChevronDown, Pin, PinOff } from "lucide-react";
 import { ConfirmModal } from "@/components/confirm-modal";
 import { AppSearchBar } from "@/components/app-search-bar";
 import { VelocityCell } from "@/components/velocity-cell";
@@ -37,6 +37,20 @@ export function CompetitorsSection({ appSlug }: { appSlug: string }) {
   const [sortKey, setSortKey] = useState<SortKey>("order");
   const [sortDir, setSortDir] = useState<SortDir>("asc");
   const [reordering, setReordering] = useState(false);
+  const [selfPinned, setSelfPinned] = useState(true);
+
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem(`competitors-pin-self-${appSlug}`);
+      if (saved !== null) setSelfPinned(JSON.parse(saved));
+    } catch {}
+  }, [appSlug]);
+
+  function toggleSelfPinned() {
+    const next = !selfPinned;
+    setSelfPinned(next);
+    localStorage.setItem(`competitors-pin-self-${appSlug}`, JSON.stringify(next));
+  }
 
   const canEdit = user?.role === "owner" || user?.role === "editor";
 
@@ -130,10 +144,9 @@ export function CompetitorsSection({ appSlug }: { appSlug: string }) {
 
   function sortedCompetitors() {
     if (sortKey === "order") return competitors; // preserve API order
-    // Always keep self row at the top
-    const self = competitors.filter((c) => c.isSelf);
-    const rest = competitors.filter((c) => !c.isSelf);
-    return [...self, ...rest.sort((a, b) => {
+    const pinnedSelf = selfPinned ? competitors.filter((c) => c.isSelf) : [];
+    const rest = selfPinned ? competitors.filter((c) => !c.isSelf) : [...competitors];
+    return [...pinnedSelf, ...rest.sort((a, b) => {
       let cmp = 0;
       switch (sortKey) {
         case "name":
@@ -184,16 +197,20 @@ export function CompetitorsSection({ appSlug }: { appSlug: string }) {
           cmp = (a.reverseSimilarCount ?? 0) - (b.reverseSimilarCount ?? 0);
           break;
         case "catRank": {
-          const bestRank = (comp: any) => {
+          const avgRank = (comp: any) => {
             const rankings = comp.categoryRankings ?? [];
             if (!rankings.length) return Infinity;
-            let best = Infinity;
+            let sum = 0;
+            let count = 0;
             for (const cr of rankings) {
-              if (cr.position != null && cr.position < best) best = cr.position;
+              if (cr.position != null) {
+                sum += cr.position;
+                count++;
+              }
             }
-            return best;
+            return count > 0 ? sum / count : Infinity;
           };
-          cmp = bestRank(a) - bestRank(b);
+          cmp = avgRank(a) - avgRank(b);
           break;
         }
       }
@@ -317,12 +334,31 @@ export function CompetitorsSection({ appSlug }: { appSlug: string }) {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {sortedCompetitors().map((comp, idx) => (
+            {(() => {
+              const sorted = sortedCompetitors();
+              let competitorNum = 0;
+              return sorted.map((comp, idx) => {
+              if (!comp.isSelf || !selfPinned) competitorNum++;
+              return (
               <TableRow key={comp.appSlug} className={comp.isSelf ? "border-l-2 border-l-emerald-500 bg-emerald-500/10" : ""}>
                 {canEdit && (
                   <TableCell className="py-1">
                     {comp.isSelf ? (
-                      <span />
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <button
+                            className="h-5 w-5 flex items-center justify-center rounded hover:bg-accent transition-colors"
+                            onClick={toggleSelfPinned}
+                          >
+                            {selfPinned
+                              ? <Pin className="h-3.5 w-3.5 text-emerald-500" />
+                              : <PinOff className="h-3.5 w-3.5 text-muted-foreground" />}
+                          </button>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          {selfPinned ? "Unpin: sort this app with competitors" : "Pin: keep this app at the top"}
+                        </TooltipContent>
+                      </Tooltip>
                     ) : isCustomOrder ? (
                       <div className="flex flex-col items-center gap-0">
                         <button
@@ -341,7 +377,7 @@ export function CompetitorsSection({ appSlug }: { appSlug: string }) {
                         </button>
                       </div>
                     ) : (
-                      <span className="text-xs text-muted-foreground">{idx + 1 - (competitors.some((c) => c.isSelf) ? 1 : 0)}</span>
+                      <span className="text-xs text-muted-foreground">{competitorNum}</span>
                     )}
                   </TableCell>
                 )}
@@ -451,21 +487,48 @@ export function CompetitorsSection({ appSlug }: { appSlug: string }) {
                     const primary = comp.categories?.find((cat: any) => cat.type === "primary");
                     const secondary = comp.categories?.find((cat: any) => cat.type === "secondary");
                     if (!primary && !secondary) return "\u2014";
-                    const rankMap = new Map<string, number>((comp.categoryRankings ?? []).map((cr: any) => [cr.categorySlug, cr.position]));
+                    const rankMap = new Map<string, { position: number; prevPosition: number | null; appCount: number | null }>(
+                      (comp.categoryRankings ?? []).map((cr: any) => [
+                        cr.categorySlug,
+                        { position: cr.position, prevPosition: cr.prevPosition ?? null, appCount: cr.appCount ?? null },
+                      ])
+                    );
+
+                    function renderCategory(cat: { slug: string; title: string }, isPrimary: boolean) {
+                      const rank = rankMap.get(cat.slug);
+                      const change = rank && rank.prevPosition != null ? rank.prevPosition - rank.position : null;
+                      const topPercent = rank && rank.appCount != null && rank.appCount > 0
+                        ? Math.max(1, Math.ceil((rank.position / rank.appCount) * 100))
+                        : null;
+                      return (
+                        <div className={`flex items-center gap-1.5 ${isPrimary ? "" : "mt-1"}`}>
+                          {rank && <span className={`font-semibold tabular-nums shrink-0 ${isPrimary ? "" : "text-muted-foreground"}`}>#{rank.position}</span>}
+                          {change != null && change !== 0 && (
+                            <span className={`text-xs font-medium shrink-0 ${change > 0 ? "text-green-600" : "text-red-500"}`}>
+                              {change > 0 ? "\u2191" : "\u2193"}{Math.abs(change)}
+                            </span>
+                          )}
+                          {cat.slug ? <Link href={`/categories/${cat.slug}`} className={`hover:underline truncate ${isPrimary ? "text-primary" : "text-muted-foreground"}`}>{cat.title}</Link> : <span className={isPrimary ? "" : "text-muted-foreground"}>{cat.title}</span>}
+                          {topPercent != null && (
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <span className={`text-xs px-1 py-0.5 rounded shrink-0 ${topPercent <= 5 ? "bg-emerald-500/10 text-emerald-600" : topPercent <= 20 ? "bg-blue-500/10 text-blue-600" : "bg-muted text-muted-foreground"}`}>
+                                  Top {topPercent}%
+                                </span>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                Rank {rank.position} of {rank.appCount} apps
+                              </TooltipContent>
+                            </Tooltip>
+                          )}
+                        </div>
+                      );
+                    }
+
                     return (
-                      <div className="space-y-0.5">
-                        {primary && (
-                          <div className="flex items-center gap-1">
-                            {rankMap.has(primary.slug) && <span className="font-medium text-muted-foreground">#{rankMap.get(primary.slug)}</span>}
-                            {primary.slug ? <Link href={`/categories/${primary.slug}`} className="text-primary hover:underline">{primary.title}</Link> : primary.title}
-                          </div>
-                        )}
-                        {secondary && (
-                          <div className="flex items-center gap-1 text-muted-foreground">
-                            {rankMap.has(secondary.slug) && <span className="font-medium">#{rankMap.get(secondary.slug)}</span>}
-                            {secondary.slug ? <Link href={`/categories/${secondary.slug}`} className="hover:underline">{secondary.title}</Link> : secondary.title}
-                          </div>
-                        )}
+                      <div>
+                        {primary && renderCategory(primary, true)}
+                        {secondary && renderCategory(secondary, false)}
                       </div>
                     );
                   })()}
@@ -497,7 +560,9 @@ export function CompetitorsSection({ appSlug }: { appSlug: string }) {
                   </TableCell>
                 )}
               </TableRow>
-            ))}
+              );
+              });
+            })()}
           </TableBody>
         </Table>
       )}

@@ -1321,21 +1321,49 @@ export const accountRoutes: FastifyPluginAsync = async (app) => {
         }
       }
 
-      // Latest category rankings for each competitor
-      const categoryRankingMap = new Map<string, { categorySlug: string; categoryTitle: string; position: number }[]>();
+      // Latest category rankings for each competitor (with previous position + app count for percentile)
+      const categoryRankingMap = new Map<string, { categorySlug: string; categoryTitle: string; position: number; prevPosition: number | null; appCount: number | null }[]>();
       if (competitorSlugs.length > 0) {
         const catRankRows: any[] = await db.execute(sql`
-          SELECT DISTINCT ON (r.app_slug, r.category_slug)
-            r.app_slug, r.category_slug, c.title AS category_title, r.position
-          FROM app_category_rankings r
-          JOIN categories c ON c.slug = r.category_slug
-          WHERE r.app_slug IN (${sql.join(competitorSlugs.map((s) => sql`${s}`), sql`, `)})
+          SELECT
+            sub.app_slug, sub.category_slug, c.title AS category_title,
+            sub.position, sub.prev_position, cs.app_count
+          FROM (
+            SELECT
+              r.app_slug,
+              r.category_slug,
+              r.position,
+              LAG(r.position) OVER (
+                PARTITION BY r.app_slug, r.category_slug
+                ORDER BY r.scraped_at DESC
+              ) AS prev_position,
+              ROW_NUMBER() OVER (
+                PARTITION BY r.app_slug, r.category_slug
+                ORDER BY r.scraped_at DESC
+              ) AS rn
+            FROM app_category_rankings r
+            WHERE r.app_slug IN (${sql.join(competitorSlugs.map((s) => sql`${s}`), sql`, `)})
+          ) sub
+          JOIN categories c ON c.slug = sub.category_slug
+          LEFT JOIN LATERAL (
+            SELECT s.app_count
+            FROM category_snapshots s
+            WHERE s.category_slug = sub.category_slug
+            ORDER BY s.scraped_at DESC
+            LIMIT 1
+          ) cs ON true
+          WHERE sub.rn = 1
             AND c.is_listing_page = true
-          ORDER BY r.app_slug, r.category_slug, r.scraped_at DESC
         `).then((res: any) => (res as any).rows ?? res);
         for (const r of catRankRows) {
           const arr = categoryRankingMap.get(r.app_slug) ?? [];
-          arr.push({ categorySlug: r.category_slug, categoryTitle: r.category_title, position: r.position });
+          arr.push({
+            categorySlug: r.category_slug,
+            categoryTitle: r.category_title,
+            position: r.position,
+            prevPosition: r.prev_position ?? null,
+            appCount: r.app_count ?? null,
+          });
           categoryRankingMap.set(r.app_slug, arr);
         }
       }
