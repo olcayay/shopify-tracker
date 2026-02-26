@@ -1620,7 +1620,7 @@ function CategoriesComparison({
 
   return (
     <CompareSection
-      title="Features"
+      title="Category Features"
       sectionKey={sectionKey}
       collapsed={collapsed}
       onToggle={onToggle}
