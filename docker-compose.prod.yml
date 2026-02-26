@@ -58,6 +58,8 @@ services:
       dockerfile: Dockerfile.dashboard
       args:
         NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:3001}
+        NEXT_PUBLIC_GA_ID: ${NEXT_PUBLIC_GA_ID:-}
+        NEXT_PUBLIC_CLARITY_ID: ${NEXT_PUBLIC_CLARITY_ID:-}
     restart: always
     ports:
       - "127.0.0.1:3000:3000"

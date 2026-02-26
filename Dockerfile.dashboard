@@ -13,7 +13,11 @@ RUN npm ci --include=dev
 # ---- Build ----
 FROM deps AS build
 ARG NEXT_PUBLIC_API_URL
+ARG NEXT_PUBLIC_GA_ID
+ARG NEXT_PUBLIC_CLARITY_ID
 ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
+ENV NEXT_PUBLIC_GA_ID=$NEXT_PUBLIC_GA_ID
+ENV NEXT_PUBLIC_CLARITY_ID=$NEXT_PUBLIC_CLARITY_ID
 
 COPY packages/shared/src ./packages/shared/src
 COPY packages/db/src ./packages/db/src
