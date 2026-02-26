@@ -276,13 +276,13 @@ export function CompetitorsSection({ appSlug }: { appSlug: string }) {
             <TableRow>
               {canEdit && (
                 <TableHead
-                  className="w-12 cursor-pointer select-none"
+                  className="w-12 cursor-pointer select-none sticky left-0 z-20 bg-background"
                   onClick={() => toggleSort("order")}
                 >
                   # <SortIcon col="order" />
                 </TableHead>
               )}
-              <TableHead className="cursor-pointer select-none" onClick={() => toggleSort("name")}>
+              <TableHead className={`cursor-pointer select-none sticky z-20 bg-background shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)] ${canEdit ? "left-12" : "left-0"}`} onClick={() => toggleSort("name")}>
                 App <SortIcon col="name" />
               </TableHead>
               <TableHead className="cursor-pointer select-none" onClick={() => toggleSort("rating")}>
@@ -342,7 +342,7 @@ export function CompetitorsSection({ appSlug }: { appSlug: string }) {
               return (
               <TableRow key={comp.appSlug} className={comp.isSelf ? "border-l-2 border-l-emerald-500 bg-emerald-500/10" : ""}>
                 {canEdit && (
-                  <TableCell className="py-1">
+                  <TableCell className={`py-1 sticky left-0 z-10 ${comp.isSelf ? "bg-emerald-50 dark:bg-emerald-950/30" : "bg-background"}`}>
                     {comp.isSelf ? (
                       <Tooltip>
                         <TooltipTrigger asChild>
@@ -381,7 +381,7 @@ export function CompetitorsSection({ appSlug }: { appSlug: string }) {
                     )}
                   </TableCell>
                 )}
-                <TableCell>
+                <TableCell className={`sticky z-10 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)] ${canEdit ? "left-12" : "left-0"} ${comp.isSelf ? "bg-emerald-50 dark:bg-emerald-950/30" : "bg-background"}`}>
                   <div className="flex items-center gap-2">
                     {comp.iconUrl && (
                       <img
@@ -533,7 +533,7 @@ export function CompetitorsSection({ appSlug }: { appSlug: string }) {
                                 </span>
                               </TooltipTrigger>
                               <TooltipContent>
-                                Rank {rank.position} of {rank.appCount} apps
+                                Rank {rank!.position} of {rank!.appCount} apps
                               </TooltipContent>
                             </Tooltip>
                           )}
