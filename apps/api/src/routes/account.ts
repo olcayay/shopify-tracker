@@ -987,23 +987,96 @@ export const accountRoutes: FastifyPluginAsync = async (app) => {
       }
     }
 
-    // Latest category rankings for each competitor
-    const categoryRankingMap = new Map<string, { categorySlug: string; categoryTitle: string; position: number }[]>();
+    // Latest category rankings for each competitor (with previous position + app count for percentile)
+    const categoryRankingMap = new Map<string, { categorySlug: string; categoryTitle: string; position: number; prevPosition: number | null; appCount: number | null }[]>();
     if (competitorSlugs.length > 0) {
       const catRankRows: any[] = await db.execute(sql`
-        SELECT DISTINCT ON (r.app_slug, r.category_slug)
-          r.app_slug, r.category_slug, c.title AS category_title, r.position
-        FROM app_category_rankings r
-        JOIN categories c ON c.slug = r.category_slug
-        WHERE r.app_slug IN (${sql.join(competitorSlugs.map((s) => sql`${s}`), sql`, `)})
+        SELECT
+          sub.app_slug, sub.category_slug, c.title AS category_title,
+          sub.position, sub.prev_position, cs.app_count
+        FROM (
+          SELECT
+            r.app_slug,
+            r.category_slug,
+            r.position,
+            LAG(r.position) OVER (
+              PARTITION BY r.app_slug, r.category_slug
+              ORDER BY r.scraped_at DESC
+            ) AS prev_position,
+            ROW_NUMBER() OVER (
+              PARTITION BY r.app_slug, r.category_slug
+              ORDER BY r.scraped_at DESC
+            ) AS rn
+          FROM app_category_rankings r
+          WHERE r.app_slug IN (${sql.join(competitorSlugs.map((s) => sql`${s}`), sql`, `)})
+        ) sub
+        JOIN categories c ON c.slug = sub.category_slug
+        LEFT JOIN LATERAL (
+          SELECT s.app_count
+          FROM category_snapshots s
+          WHERE s.category_slug = sub.category_slug
+          ORDER BY s.scraped_at DESC
+          LIMIT 1
+        ) cs ON true
+        WHERE sub.rn = 1
           AND c.is_listing_page = true
-        ORDER BY r.app_slug, r.category_slug, r.scraped_at DESC
       `).then((res: any) => (res as any).rows ?? res);
       for (const r of catRankRows) {
         const arr = categoryRankingMap.get(r.app_slug) ?? [];
-        arr.push({ categorySlug: r.category_slug, categoryTitle: r.category_title, position: r.position });
+        arr.push({
+          categorySlug: r.category_slug,
+          categoryTitle: r.category_title,
+          position: r.position,
+          prevPosition: r.prev_position ?? null,
+          appCount: r.app_count ?? null,
+        });
         categoryRankingMap.set(r.app_slug, arr);
       }
+    }
+
+    // Batch-fetch reverse similar counts
+    const reverseSimilarMap = new Map<string, number>();
+    if (competitorSlugs.length > 0) {
+      const rsCounts = await db
+        .select({
+          similarAppSlug: similarAppSightings.similarAppSlug,
+          count: sql<number>`count(distinct ${similarAppSightings.appSlug})::int`,
+        })
+        .from(similarAppSightings)
+        .where(inArray(similarAppSightings.similarAppSlug, competitorSlugs))
+        .groupBy(similarAppSightings.similarAppSlug);
+      for (const r of rsCounts) {
+        reverseSimilarMap.set(r.similarAppSlug, r.count);
+      }
+    }
+
+    // Batch-fetch similarity scores per (trackedApp, competitor) pair
+    const similarityMap = new Map<string, Map<string, { overall: string; category: string; feature: string; keyword: string; text: string }>>();
+    if (competitorSlugs.length > 0) {
+      try {
+        const trackedSlugs = [...new Set(rows.map((r) => r.trackedAppSlug))];
+        const allPairSlugs = [...new Set([...trackedSlugs, ...competitorSlugs])];
+        const slugList = sql.join(allPairSlugs.map((s) => sql`${s}`), sql`, `);
+        const simRows: any[] = await db.execute(sql`
+          SELECT app_slug_a, app_slug_b,
+            overall_score, category_score, feature_score, keyword_score, text_score
+          FROM app_similarity_scores
+          WHERE app_slug_a IN (${slugList}) AND app_slug_b IN (${slugList})
+        `).then((res: any) => (res as any).rows ?? res);
+        for (const r of simRows) {
+          // Store both directions for easy lookup
+          for (const [tracked, comp] of [[r.app_slug_a, r.app_slug_b], [r.app_slug_b, r.app_slug_a]]) {
+            if (!similarityMap.has(tracked)) similarityMap.set(tracked, new Map());
+            similarityMap.get(tracked)!.set(comp, {
+              overall: r.overall_score,
+              category: r.category_score,
+              feature: r.feature_score,
+              keyword: r.keyword_score,
+              text: r.text_score,
+            });
+          }
+        }
+      } catch { /* table may not exist yet */ }
     }
 
     // Batch-fetch review velocity metrics (graceful if table not yet migrated)
@@ -1056,12 +1129,14 @@ export const accountRoutes: FastifyPluginAsync = async (app) => {
           rankedKeywords: rankedKeywordMap.get(row.appSlug) ?? 0,
           adKeywords: adKeywordMap.get(row.appSlug) ?? 0,
           featuredSections: featuredCountMap.get(row.appSlug) ?? 0,
+          reverseSimilarCount: reverseSimilarMap.get(row.appSlug) ?? 0,
           categories: appCategories.map((c: any) => {
             const slug = c.url ? c.url.replace(/.*\/categories\//, "").replace(/\/.*/, "") : null;
             return { type: c.type || "primary", title: c.title, slug };
           }),
           categoryRankings: categoryRankingMap.get(row.appSlug) ?? [],
           reviewVelocity: velocityMap.get(row.appSlug) ?? null,
+          similarityScore: similarityMap.get(row.trackedAppSlug)?.get(row.appSlug) ?? null,
         };
       })
     );
