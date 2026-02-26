@@ -280,7 +280,7 @@ export default function CompetitorsPage() {
     return (
       <TableRow>
         <TableHead
-          className="cursor-pointer select-none"
+          className="cursor-pointer select-none sticky left-0 z-20 bg-background shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]"
           onClick={() => toggleSort("name")}
         >
           App <SortIcon col="name" />
@@ -374,7 +374,7 @@ export default function CompetitorsPage() {
   function renderCompetitorRow(c: any, myAppSlug: string) {
     return (
       <TableRow key={`${myAppSlug}-${c.appSlug}`}>
-        <TableCell>
+        <TableCell className="sticky left-0 z-10 bg-background shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]">
           <div className="flex items-center gap-2">
             {c.iconUrl && (
               <img
