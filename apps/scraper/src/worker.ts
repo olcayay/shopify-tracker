@@ -98,6 +98,13 @@ async function processJob(job: Job<ScraperJobData>): Promise<void> {
           log.info("cascaded reviews jobs", { count: trackedApps.length });
         }
       }
+
+      // Cascade: recompute similarity scores (app snapshot data may have changed)
+      await enqueueScraperJob({
+        type: "compute_similarity_scores",
+        triggeredBy: `${triggeredBy}:cascade`,
+      });
+      log.info("cascaded compute_similarity_scores job");
       break;
     }
 
@@ -158,6 +165,13 @@ async function processJob(job: Job<ScraperJobData>): Promise<void> {
         triggeredBy: `${triggeredBy}:cascade`,
       });
       log.info("cascaded keyword_suggestions job");
+
+      // Cascade: recompute similarity scores (keyword rankings may have changed)
+      await enqueueScraperJob({
+        type: "compute_similarity_scores",
+        triggeredBy: `${triggeredBy}:cascade`,
+      });
+      log.info("cascaded compute_similarity_scores job");
       break;
     }
 
