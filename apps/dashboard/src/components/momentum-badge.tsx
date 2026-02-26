@@ -23,9 +23,9 @@ export function MomentumBadge({ momentum }: { momentum?: string | null }) {
   return (
     <Tooltip>
       <TooltipTrigger asChild>
-        <span className={`inline-flex items-center gap-1 ${config.color}`}>
-          <span>{config.symbol}</span>
-          <span className="text-xs">{config.label}</span>
+        <span className={`inline-flex flex-col items-center leading-none ${config.color}`}>
+          <span className="text-sm">{config.symbol}</span>
+          <span className="text-[10px]">{config.label}</span>
         </span>
       </TooltipTrigger>
       <TooltipContent>{config.description}</TooltipContent>

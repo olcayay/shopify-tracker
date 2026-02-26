@@ -325,7 +325,7 @@ export function CompetitorsSection({ appSlug }: { appSlug: string }) {
                 <Tooltip><TooltipTrigger asChild><span>Similar <SortIcon col="similar" /></span></TooltipTrigger><TooltipContent>Number of other apps that list this app as similar</TooltipContent></Tooltip>
               </TableHead>
               <TableHead className="cursor-pointer select-none" onClick={() => toggleSort("catRank")}>
-                Cat. Rank <SortIcon col="catRank" />
+                Category Rank <SortIcon col="catRank" />
               </TableHead>
               <TableHead className="cursor-pointer select-none" onClick={() => toggleSort("lastChange")}>
                 <Tooltip><TooltipTrigger asChild><span>Last Change <SortIcon col="lastChange" /></span></TooltipTrigger><TooltipContent>Date of the most recent detected change in app listing</TooltipContent></Tooltip>
