@@ -1,6 +1,6 @@
 app için keyword successions
 
-ana sayfa hazırla
+    ana sayfa hazırla
 
 term and condition sayfasında
 

@@ -2,7 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
 
-const PUBLIC_PATHS = ["/", "/login", "/register", "/invite"];
+const PUBLIC_PATHS = ["/", "/login", "/register", "/invite", "/terms", "/privacy"];
 
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
