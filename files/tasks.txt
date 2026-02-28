@@ -1,5 +1,7 @@
 app için keyword suggestions ✅
 
+keyword loading states & polling ✅
+
 feedback sayfası
 
 kime hangi durumda nasıl emailler gönderilebilinir.

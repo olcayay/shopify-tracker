@@ -131,3 +131,12 @@ Keyword suggestions from app metadata (PLA-10):
 - UI shows: keyword, source field badges, count × score, Shopify search link, Add/Added state
 - Weight legend footer for algorithm transparency during iteration
 - 35 new tests (24 extraction algorithm + 11 component)
+
+Keyword loading states & polling (PLA-13):
+- When a new keyword is added with scraperEnqueued:true, its keywordId is tracked in pendingKeywordIds Set
+- Polling: useEffect with setInterval (5s) fetches keywords when pendingKeywordIds is non-empty
+- When a pending keyword gets latestSnapshot !== null, it moves to resolvedKeywordIds for animation
+- Pending state: Skeleton pulse in ranking cells + Skeleton + Loader2 spinner in Total Results cell
+- New row: animate-in fade-in slide-in-from-top CSS animation on the TableRow
+- Resolved state: animate-in fade-in duration-700 on ranking and results cells (2s auto-clear)
+- No API changes — uses existing keywordId, scraperEnqueued, latestSnapshot fields

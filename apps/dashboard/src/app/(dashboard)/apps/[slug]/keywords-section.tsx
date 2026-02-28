@@ -16,7 +16,8 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { X, Plus, Search, Check, ArrowDown, ExternalLink, Lightbulb } from "lucide-react";
+import { X, Plus, Search, Check, ArrowDown, ExternalLink, Lightbulb, Loader2 } from "lucide-react";
+import { Skeleton } from "@/components/ui/skeleton";
 import { ConfirmModal } from "@/components/confirm-modal";
 import { LiveSearchTrigger } from "@/components/live-search-trigger";
 import { KeywordSuggestionsModal } from "@/components/keyword-suggestions-modal";
@@ -96,6 +97,8 @@ export function KeywordsSection({ appSlug }: { appSlug: string }) {
     new Set()
   );
   const [activeWordFilter, setActiveWordFilter] = useState<string | null>(null);
+  const [pendingKeywordIds, setPendingKeywordIds] = useState<Set<number>>(new Set());
+  const [resolvedKeywordIds, setResolvedKeywordIds] = useState<Set<number>>(new Set());
   const searchRef = useRef<HTMLDivElement>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout>>(undefined);
 
@@ -196,6 +199,53 @@ export function KeywordsSection({ appSlug }: { appSlug: string }) {
       );
     }
   }, [selectedSlugs, appSlug, competitors.length]);
+
+  // Poll for pending keywords that are being scraped
+  useEffect(() => {
+    if (pendingKeywordIds.size === 0) return;
+
+    const interval = setInterval(async () => {
+      let url = `/api/account/tracked-apps/${encodeURIComponent(appSlug)}/keywords`;
+      if (appSlugsParam) {
+        url += `?appSlugs=${encodeURIComponent(appSlugsParam)}`;
+      }
+      const res = await fetchWithAuth(url);
+      if (!res.ok) return;
+      const freshKeywords = await res.json();
+      setKeywords(freshKeywords);
+
+      // Check which pending keywords now have results
+      const newlyResolved = new Set<number>();
+      const stillPending = new Set<number>();
+      for (const id of pendingKeywordIds) {
+        const kw = freshKeywords.find((k: any) => k.keywordId === id);
+        if (kw && kw.latestSnapshot !== null) {
+          newlyResolved.add(id);
+        } else {
+          stillPending.add(id);
+        }
+      }
+
+      if (newlyResolved.size > 0) {
+        setPendingKeywordIds(stillPending);
+        setResolvedKeywordIds((prev) => {
+          const next = new Set(prev);
+          for (const id of newlyResolved) next.add(id);
+          return next;
+        });
+        // Clear resolved animation after 2 seconds
+        setTimeout(() => {
+          setResolvedKeywordIds((prev) => {
+            const next = new Set(prev);
+            for (const id of newlyResolved) next.delete(id);
+            return next;
+          });
+        }, 2000);
+      }
+    }, 5000);
+
+    return () => clearInterval(interval);
+  }, [pendingKeywordIds, appSlug, appSlugsParam]);
 
   // Click outside handler for suggestions
   useEffect(() => {
@@ -374,6 +424,10 @@ export function KeywordsSection({ appSlug }: { appSlug: string }) {
       setQuery("");
       setSuggestions([]);
       setShowSuggestions(false);
+      // Track pending keyword if scraper was enqueued
+      if (data.scraperEnqueued && data.keywordId) {
+        setPendingKeywordIds((prev) => new Set(prev).add(data.keywordId));
+      }
       loadKeywords(appSlugsParam, true);
       refreshUser();
     } else {
@@ -672,8 +726,16 @@ export function KeywordsSection({ appSlug }: { appSlug: string }) {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {sortedKeywords.map((kw) => (
-              <TableRow key={kw.keywordId}>
+            {sortedKeywords.map((kw) => {
+              const isPending = pendingKeywordIds.has(kw.keywordId);
+              const isResolved = resolvedKeywordIds.has(kw.keywordId);
+              return (
+              <TableRow
+                key={kw.keywordId}
+                className={cn(
+                  isPending && "animate-in fade-in slide-in-from-top duration-300",
+                )}
+              >
                 <TableCell className="group/kw">
                   <div>
                     <Link
@@ -720,7 +782,13 @@ export function KeywordsSection({ appSlug }: { appSlug: string }) {
                   const position = kw.rankings?.[app.slug];
                   return (
                     <TableCell key={app.slug} className="text-center">
-                      {position != null ? (
+                      {isPending ? (
+                        <Skeleton className="h-4 w-8 mx-auto" />
+                      ) : isResolved ? (
+                        <span className="animate-in fade-in duration-700 font-semibold text-sm">
+                          {position != null ? `#${position}` : "\u2014"}
+                        </span>
+                      ) : position != null ? (
                         <span className="font-semibold text-sm">#{position}</span>
                       ) : (
                         <span className="text-muted-foreground">&mdash;</span>
@@ -729,7 +797,18 @@ export function KeywordsSection({ appSlug }: { appSlug: string }) {
                   );
                 })}
                 <TableCell>
-                  {kw.latestSnapshot?.totalResults ?? "\u2014"}
+                  {isPending ? (
+                    <div className="flex items-center gap-2">
+                      <Skeleton className="h-4 w-16" />
+                      <Loader2 className="h-3 w-3 animate-spin text-muted-foreground" />
+                    </div>
+                  ) : isResolved ? (
+                    <span className="animate-in fade-in duration-700">
+                      {kw.latestSnapshot?.totalResults ?? "\u2014"}
+                    </span>
+                  ) : (
+                    kw.latestSnapshot?.totalResults ?? "\u2014"
+                  )}
                 </TableCell>
                 <TableCell>
                   <div className="flex items-center gap-0.5">
@@ -779,7 +858,8 @@ export function KeywordsSection({ appSlug }: { appSlug: string }) {
                   </TableCell>
                 )}
               </TableRow>
-            ))}
+              );
+            })}
           </TableBody>
         </Table>
       )}
