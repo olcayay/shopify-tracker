@@ -14,6 +14,8 @@ competitor suggestions (PLA-12) ✅
 
 fix broken category links (PLA-18) ✅
 
+compare page sorting (PLA-17) ✅
+
 feedback sayfası
 
 kime hangi durumda nasıl emailler gönderilebilinir.

@@ -1108,14 +1108,16 @@ function BadgeComparisonSection({
     return map;
   }, [apps, getItems]);
 
-  // Collect all unique items, sorted by count desc then alphabetically
+  // Sort: primary app items first (alphabetically), then rest (alphabetically)
   const allItems = useMemo(() => {
+    const primarySlug = apps[0]?.slug;
     return [...presenceMap.keys()].sort((a, b) => {
-      const countDiff = (presenceMap.get(b)?.size || 0) - (presenceMap.get(a)?.size || 0);
-      if (countDiff !== 0) return countDiff;
+      const aInPrimary = primarySlug ? (presenceMap.get(a)?.has(primarySlug) || false) : false;
+      const bInPrimary = primarySlug ? (presenceMap.get(b)?.has(primarySlug) || false) : false;
+      if (aInPrimary !== bInPrimary) return aInPrimary ? -1 : 1;
       return a.localeCompare(b);
     });
-  }, [presenceMap]);
+  }, [presenceMap, apps]);
 
   if (allItems.length === 0) return null;
 
@@ -1331,6 +1333,7 @@ function CategoryRankingSection({
   }, [apps]);
 
   // Collect all unique categories across all apps' rankings
+  // Sort: primary app categories first (alphabetically), then rest (alphabetically)
   const allCategories = useMemo(() => {
     const catMap = new Map<string, string>(); // slug → title
     for (const app of apps) {
@@ -1340,8 +1343,15 @@ function CategoryRankingSection({
         }
       }
     }
-    return [...catMap.entries()].sort((a, b) => a[1].localeCompare(b[1]));
-  }, [apps, rankingsData]);
+    const primarySlug = apps[0]?.slug;
+    const primaryRankings = primarySlug ? appRankingMap.get(primarySlug) : undefined;
+    return [...catMap.entries()].sort((a, b) => {
+      const aInPrimary = primaryRankings?.has(a[0]) || false;
+      const bInPrimary = primaryRankings?.has(b[0]) || false;
+      if (aInPrimary !== bInPrimary) return aInPrimary ? -1 : 1;
+      return a[1].localeCompare(b[1]);
+    });
+  }, [apps, rankingsData, appRankingMap]);
 
   if (allCategories.length === 0) return null;
 
@@ -1609,9 +1619,11 @@ function CategoriesComparison({
     for (const [category, { slug, subMap }] of catMap) {
       const subcategories = [];
       for (const [subcategory, features] of subMap) {
+        const primarySlug = apps[0]?.slug;
         features.sort((a, b) => {
-          const countDiff = (featurePresence.get(b.handle)?.size || 0) - (featurePresence.get(a.handle)?.size || 0);
-          if (countDiff !== 0) return countDiff;
+          const aInPrimary = primarySlug ? (featurePresence.get(a.handle)?.has(primarySlug) || false) : false;
+          const bInPrimary = primarySlug ? (featurePresence.get(b.handle)?.has(primarySlug) || false) : false;
+          if (aInPrimary !== bInPrimary) return aInPrimary ? -1 : 1;
           return a.title.localeCompare(b.title);
         });
         subcategories.push({ subcategory, features });

@@ -209,6 +209,14 @@ Queue tracking in scrape_runs (PLA-17):
 - cascadeOpts computed once from queueName in createProcessJob(), passed to all 7 enqueueScraperJob cascade calls
 - Files: scrape-runs.ts, 0036_scrape_runs_queue.sql, process-job.ts, worker.ts, interactive-worker.ts, category-scraper.ts, app-details-scraper.ts, review-scraper.ts, keyword-scraper.ts, keyword-suggestion-scraper.ts, compute-review-metrics.ts, compute-similarity-scores.ts, system-admin.ts (API), scraper/page.tsx, scraper-page.test.tsx
 
+Compare page sorting (PLA-17):
+- Fixed default sorting in 4 comparison tables: Languages, Integrations, Category Features, Category Rankings
+- New sorting logic: primary app (apps[0]) items first, sorted alphabetically; then remaining items sorted alphabetically
+- BadgeComparisonSection (Languages, Integrations): changed from count-desc to primary-first sorting
+- CategoryRankingSection: categories where primary app has a ranking appear first
+- CategoriesComparison (Category Features): features within each subcategory sorted primary-first
+- File changed: apps/dashboard/src/app/(dashboard)/apps/[slug]/compare/page.tsx
+
 Competitor suggestions (PLA-12):
 - Similarity utilities extracted from scraper to packages/shared/src/similarity.ts
   - STOP_WORDS, jaccard(), tokenize(), extractCategorySlugs(), extractFeatureHandles(), computeSimilarityBetween()
