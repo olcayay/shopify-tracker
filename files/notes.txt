@@ -140,3 +140,5 @@ Keyword loading states & polling (PLA-13):
 - New row: animate-in fade-in slide-in-from-top CSS animation on the TableRow
 - Resolved state: animate-in fade-in duration-700 on ranking and results cells (2s auto-clear)
 - No API changes — uses existing keywordId, scraperEnqueued, latestSnapshot fields
+- onKeywordAdded callback signature changed to (keywordId?, scraperEnqueued?) across MetadataKeywordSuggestions and KeywordSuggestionsModal
+- Both suggestion components now parse POST response and forward keywordId/scraperEnqueued to parent
