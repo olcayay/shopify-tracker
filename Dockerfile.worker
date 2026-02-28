@@ -33,6 +33,7 @@ RUN npm ci --omit=dev
 
 COPY --from=build /app/packages/shared/dist ./packages/shared/dist
 COPY --from=build /app/packages/db/dist ./packages/db/dist
+COPY --from=build /app/packages/db/src/migrations ./packages/db/src/migrations
 COPY --from=build /app/apps/scraper/dist ./apps/scraper/dist
 
 # WORKER_MODE: "background" (default) runs worker + scheduler

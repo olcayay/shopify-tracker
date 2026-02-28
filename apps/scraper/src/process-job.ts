@@ -1,6 +1,7 @@
 import type { Job } from "bullmq";
 import { createDb, scrapeRuns } from "@shopify-tracking/db";
 import { eq } from "drizzle-orm";
+import { migrate } from "drizzle-orm/postgres-js/migrator";
 import { createLogger } from "@shopify-tracking/shared";
 import { enqueueScraperJob, type ScraperJobData } from "./queue.js";
 import { CategoryScraper } from "./scrapers/category-scraper.js";
@@ -26,6 +27,15 @@ export function initWorkerDeps() {
   });
 
   return { db, httpClient };
+}
+
+export async function runMigrations(db: ReturnType<typeof createDb>) {
+  try {
+    await migrate(db, { migrationsFolder: "packages/db/src/migrations" });
+    log.info("database migrations complete");
+  } catch (err) {
+    log.error("migration error (non-fatal)", { error: String(err) });
+  }
 }
 
 export function createProcessJob(db: ReturnType<typeof createDb>, httpClient: HttpClient, queueName?: string) {

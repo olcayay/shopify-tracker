@@ -4,11 +4,12 @@ config({ path: resolve(import.meta.dirname, "../../../.env") });
 import { Worker } from "bullmq";
 import { createLogger } from "@shopify-tracking/shared";
 import { BACKGROUND_QUEUE_NAME, getRedisConnection, type ScraperJobData } from "./queue.js";
-import { initWorkerDeps, createProcessJob } from "./process-job.js";
+import { initWorkerDeps, createProcessJob, runMigrations } from "./process-job.js";
 
 const log = createLogger("background-worker");
 
 const { db, httpClient } = initWorkerDeps();
+await runMigrations(db);
 const processJob = createProcessJob(db, httpClient, "background");
 
 const worker = new Worker<ScraperJobData>(
