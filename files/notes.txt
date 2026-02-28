@@ -145,15 +145,18 @@ Keyword loading states & polling (PLA-13):
 
 Competitor loading states & polling (PLA-15):
 - Same pattern as PLA-13 keywords, applied to competitors page (/apps/[slug]/competitors)
-- API: POST competitor endpoint now checks for existing app_snapshots before setting scraperEnqueued=true
-  - If no snapshot exists: scraperEnqueued=true (frontend shows loading state)
-  - If snapshot exists: still enqueues scraper but scraperEnqueued=false (data already available)
-- Frontend: pendingCompetitorSlugs / resolvedCompetitorSlugs state Sets (keyed by appSlug)
+- API: POST competitor endpoint always returns scraperEnqueued=true (enqueues scrape pipeline)
+  - Unlike keywords, competitor apps often already have a basic snapshot from search
+  - The scrape pipeline (app_details → reviews → compute_review_metrics → compute_similarity_scores) produces enriched data
+- Frontend: pendingCompetitorSlugs Map<string, number> (slug → addedAt timestamp) + resolvedCompetitorSlugs Set
 - loadCompetitors() accepts silent=true param to skip full table skeleton
 - addCompetitor() uses silent load + tracks pending slug when scraperEnqueued=true
 - Polling: 5s interval when pendingCompetitorSlugs is non-empty, refreshes competitors + last changes
-- Resolution: when latestSnapshot !== null, competitor moves from pending to resolved
-- Pending cells: Skeleton placeholders across all data columns + Loader2 spinner on Reviews cell
+- Resolution: when reviewVelocity !== null OR similarityScore !== null (enriched data from compute jobs)
+  - 120s timeout fallback for edge cases where compute jobs don't produce output
+- Skeleton shown only on compute-job cells (similarity, v7d/v30d/v90d, momentum)
+- Already-available cells (rating, reviews, pricing, featured, etc.) show actual data immediately
+- Loader2 spinner next to app name while pending
 - Resolved cells: animate-in fade-in duration-700 animation (2s auto-clear)
 - New row: animate-in fade-in slide-in-from-top on the TableRow
 - Files changed: account.ts (API), competitors-section.tsx (dashboard)

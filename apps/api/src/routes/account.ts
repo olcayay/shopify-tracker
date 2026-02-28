@@ -1679,20 +1679,7 @@ export const accountRoutes: FastifyPluginAsync = async (app) => {
           .send({ error: "Competitor already added for this app" });
       }
 
-      // Only flag scraperEnqueued when no existing snapshot (matches keyword behaviour)
-      const [existingSnapshot] = await db
-        .select({ id: appSnapshots.id })
-        .from(appSnapshots)
-        .where(eq(appSnapshots.appSlug, competitorSlug))
-        .limit(1);
-
-      let scraperEnqueued = false;
-      if (!existingSnapshot) {
-        scraperEnqueued = await enqueueAppScrapeJobs(competitorSlug);
-      } else {
-        // Still enqueue a fresh scrape, but don't flag as pending
-        await enqueueAppScrapeJobs(competitorSlug);
-      }
+      const scraperEnqueued = await enqueueAppScrapeJobs(competitorSlug);
 
       return { ...result, scraperEnqueued };
     }
