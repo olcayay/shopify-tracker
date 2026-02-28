@@ -38,7 +38,20 @@ export default async function CategoryDetailPage({
       getAccountStarredCategories().catch(() => []),
     ]);
   } catch {
-    return <p className="text-muted-foreground">Category not found.</p>;
+    return (
+      <div className="flex flex-col items-center justify-center py-16 text-center">
+        <h2 className="text-lg font-semibold mb-2">Category not indexed yet</h2>
+        <p className="text-muted-foreground mb-4">
+          This category hasn&apos;t been discovered by the crawler yet. It may appear after the next scrape cycle.
+        </p>
+        <Link
+          href="/categories"
+          className="text-sm text-primary hover:underline"
+        >
+          Browse all categories
+        </Link>
+      </div>
+    );
   }
 
   const competitorSlugs = new Set(competitors.map((c: any) => c.appSlug));

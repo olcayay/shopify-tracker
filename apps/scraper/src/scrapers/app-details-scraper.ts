@@ -1,6 +1,6 @@
 import { eq, desc, sql } from "drizzle-orm";
 import type { Database } from "@shopify-tracking/db";
-import { scrapeRuns, apps, appSnapshots, appFieldChanges, similarAppSightings } from "@shopify-tracking/db";
+import { scrapeRuns, apps, appSnapshots, appFieldChanges, similarAppSightings, categories } from "@shopify-tracking/db";
 import { urls, createLogger } from "@shopify-tracking/shared";
 
 const log = createLogger("app-details-scraper");
@@ -211,6 +211,27 @@ export class AppDetailsScraper {
         pricingPlans: details.pricing_plans,
         support: details.support,
       });
+
+      // Register missing categories from snapshot data
+      if (details.categories.length > 0) {
+        for (const cat of details.categories) {
+          const slugMatch = cat.url.match(/\/categories\/([^/]+)/);
+          if (!slugMatch) continue;
+          const catSlug = slugMatch[1];
+          await this.db
+            .insert(categories)
+            .values({
+              slug: catSlug,
+              title: cat.title,
+              url: cat.url,
+              parentSlug: null,
+              categoryLevel: 0,
+              isTracked: false,
+              isListingPage: true,
+            })
+            .onConflictDoNothing({ target: categories.slug });
+        }
+      }
 
       // Record similar apps ("More apps like this")
       const similarApps = parseSimilarApps(html);

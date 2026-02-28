@@ -1,3 +1,14 @@
+Fix broken category links (PLA-18):
+- App scraper now registers missing categories at scrape time
+  - After inserting app snapshot, loops through details.categories and upserts each slug into categories table
+  - Uses ON CONFLICT (slug) DO NOTHING — never overwrites richer data from category crawler
+  - New categories created with isTracked=false, categoryLevel=0, isListingPage=true
+- Dashboard category "not found" page improved
+  - Shows "Category not indexed yet" heading with helpful explanation
+  - Links back to /categories to browse all categories
+  - Styled consistently with other empty states (centered, py-16)
+- Files changed: app-details-scraper.ts, categories/[slug]/page.tsx
+
 App search & browse feature:
 - New reusable AppSearchBar component (components/app-search-bar.tsx) with 3 modes: follow, competitor, browse-only
 - Search results show app icon, name (clickable Link to /apps/{slug}), rating/reviews, and status badges (Following/Competitor/This app)
