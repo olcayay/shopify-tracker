@@ -263,8 +263,8 @@ export function KeywordsSection({ appSlug }: { appSlug: string }) {
     await loadKeywords(allSlugs);
   }
 
-  async function loadKeywords(slugsParam?: string) {
-    setLoading(true);
+  async function loadKeywords(slugsParam?: string, silent = false) {
+    if (!silent) setLoading(true);
     let url = `/api/account/tracked-apps/${encodeURIComponent(appSlug)}/keywords`;
     if (slugsParam) {
       url += `?appSlugs=${encodeURIComponent(slugsParam)}`;
@@ -374,7 +374,7 @@ export function KeywordsSection({ appSlug }: { appSlug: string }) {
       setQuery("");
       setSuggestions([]);
       setShowSuggestions(false);
-      loadKeywords(appSlugsParam);
+      loadKeywords(appSlugsParam, true);
       refreshUser();
     } else {
       const data = await res.json().catch(() => ({}));
@@ -390,7 +390,7 @@ export function KeywordsSection({ appSlug }: { appSlug: string }) {
     );
     if (res.ok) {
       setMessage(`"${keyword}" removed`);
-      loadKeywords(appSlugsParam);
+      loadKeywords(appSlugsParam, true);
       refreshUser();
     } else {
       const data = await res.json().catch(() => ({}));
@@ -606,14 +606,15 @@ export function KeywordsSection({ appSlug }: { appSlug: string }) {
         </div>
       )}
 
-      {canEdit && keywords.length > 0 && (
+      {canEdit && !loading && (
         <MetadataKeywordSuggestions
           appSlug={appSlug}
           trackedKeywords={new Set(keywords.map((k: any) => k.keyword.toLowerCase()))}
           onKeywordAdded={() => {
-            loadKeywords(appSlugsParam);
+            loadKeywords(appSlugsParam, true);
             refreshUser();
           }}
+          prominent={keywords.length === 0}
         />
       )}
 
@@ -637,21 +638,11 @@ export function KeywordsSection({ appSlug }: { appSlug: string }) {
       {loading ? (
         <TableSkeleton rows={5} cols={6} />
       ) : keywords.length === 0 ? (
-        canEdit ? (
-          <MetadataKeywordSuggestions
-            appSlug={appSlug}
-            trackedKeywords={new Set()}
-            onKeywordAdded={() => {
-              loadKeywords(appSlugsParam);
-              refreshUser();
-            }}
-            prominent
-          />
-        ) : (
+        !canEdit ? (
           <p className="text-muted-foreground text-center py-8">
             No keywords added yet.
           </p>
-        )
+        ) : null
       ) : (
         <Table>
           <TableHeader>
@@ -814,7 +805,7 @@ export function KeywordsSection({ appSlug }: { appSlug: string }) {
           open={!!suggestionsKeyword}
           onClose={() => setSuggestionsKeyword(null)}
           onKeywordAdded={() => {
-            loadKeywords(appSlugsParam);
+            loadKeywords(appSlugsParam, true);
             refreshUser();
           }}
         />

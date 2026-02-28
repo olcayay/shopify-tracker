@@ -80,9 +80,11 @@ export function MetadataKeywordSuggestions({
 
   // Auto-open and fetch when prominent (empty state)
   useEffect(() => {
-    if (prominent && !open && !data && !loading) {
+    if (prominent && !open) {
       setOpen(true);
-      loadSuggestions();
+      if (!data && !loading) {
+        loadSuggestions();
+      }
     }
   }, [prominent]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -95,6 +97,7 @@ export function MetadataKeywordSuggestions({
 
   async function addKeyword(keyword: string) {
     setAddingKeyword(keyword);
+    setError("");
     try {
       const res = await fetchWithAuth(
         `/api/account/tracked-apps/${encodeURIComponent(appSlug)}/keywords`,
@@ -103,8 +106,13 @@ export function MetadataKeywordSuggestions({
       if (res.ok) {
         setAddedKeywords((prev) => new Set([...prev, keyword.toLowerCase()]));
         onKeywordAdded();
+      } else {
+        const data = await res.json().catch(() => ({}));
+        setError(data.error || `Failed to add keyword (${res.status})`);
       }
-    } catch {}
+    } catch (err: any) {
+      setError(err.message || "Network error");
+    }
     setAddingKeyword(null);
   }
 
@@ -137,7 +145,7 @@ export function MetadataKeywordSuggestions({
           variant="outline"
           size="sm"
           onClick={handleToggle}
-          className="gap-1.5 text-xs"
+          className="gap-1.5 text-xs border-amber-300 text-amber-700 hover:bg-amber-50 hover:text-amber-800 dark:border-amber-600 dark:text-amber-400 dark:hover:bg-amber-950"
         >
           <Sparkles className="h-3.5 w-3.5" />
           Suggest keywords
