@@ -23,6 +23,8 @@ import { KeywordSuggestionsModal } from "@/components/keyword-suggestions-modal"
 import { KeywordTagBadge } from "@/components/keyword-tag-badge";
 import { KeywordTagManager } from "@/components/keyword-tag-manager";
 import { KeywordTagFilter } from "@/components/keyword-tag-filter";
+import { KeywordWordGroupFilter } from "@/components/keyword-word-group-filter";
+import { extractWordGroups, filterKeywordsByWord } from "@/lib/keyword-word-groups";
 
 // --- App icon with selection state (same as compare page) ---
 function AppIcon({
@@ -92,6 +94,7 @@ export function KeywordsSection({ appSlug }: { appSlug: string }) {
   const [activeTagFilter, setActiveTagFilter] = useState<Set<string>>(
     new Set()
   );
+  const [activeWordFilter, setActiveWordFilter] = useState<string | null>(null);
   const searchRef = useRef<HTMLDivElement>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout>>(undefined);
 
@@ -131,13 +134,24 @@ export function KeywordsSection({ appSlug }: { appSlug: string }) {
     return selectedApps.map((a) => a.slug).join(",");
   }, [selectedApps]);
 
-  // Filter keywords by active tags
+  // Extract word groups from all keywords (stable regardless of filters)
+  const wordGroups = useMemo(() => {
+    return extractWordGroups(keywords.map((kw) => kw.keyword));
+  }, [keywords]);
+
+  // Filter keywords by active tags and word group
   const filteredKeywords = useMemo(() => {
-    if (activeTagFilter.size === 0) return keywords;
-    return keywords.filter((kw) =>
-      kw.tags?.some((t: any) => activeTagFilter.has(t.id))
-    );
-  }, [keywords, activeTagFilter]);
+    let result = keywords;
+    if (activeTagFilter.size > 0) {
+      result = result.filter((kw) =>
+        kw.tags?.some((t: any) => activeTagFilter.has(t.id))
+      );
+    }
+    if (activeWordFilter) {
+      result = filterKeywordsByWord(result, activeWordFilter);
+    }
+    return result;
+  }, [keywords, activeTagFilter, activeWordFilter]);
 
   // Sorted keywords by selected app ranking
   const sortedKeywords = useMemo(() => {
@@ -152,6 +166,13 @@ export function KeywordsSection({ appSlug }: { appSlug: string }) {
       return 0;
     });
   }, [filteredKeywords, sortBySlug]);
+
+  // Clear word filter if the active word no longer exists in word groups
+  useEffect(() => {
+    if (activeWordFilter && !wordGroups.some((g) => g.word === activeWordFilter)) {
+      setActiveWordFilter(null);
+    }
+  }, [wordGroups, activeWordFilter]);
 
   // Load main app + competitors on mount
   useEffect(() => {
@@ -590,6 +611,14 @@ export function KeywordsSection({ appSlug }: { appSlug: string }) {
           activeTags={activeTagFilter}
           onToggle={toggleTagFilter}
           onClearAll={() => setActiveTagFilter(new Set())}
+        />
+      )}
+
+      {wordGroups.length > 0 && (
+        <KeywordWordGroupFilter
+          wordGroups={wordGroups}
+          activeWord={activeWordFilter}
+          onSelect={setActiveWordFilter}
         />
       )}
 

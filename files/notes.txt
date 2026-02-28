@@ -102,3 +102,14 @@ Unit test infrastructure & pre-commit hooks:
 - ESLint 9 flat config: React Compiler rules + TypeScript strict rules downgraded to warnings
 - Global test setup mocks: next/navigation, next/link, next/headers, radix-ui (Slot + VisuallyHidden), IntersectionObserver, ResizeObserver, matchMedia
 - Test utils: mock user/admin/viewer objects, mock account, setupAuthMock helper for per-test auth overrides
+
+Keyword grouping (PLA-11):
+- Pure frontend feature, no API/DB changes
+- New utility: lib/keyword-word-groups.ts — extractWordGroups() splits keywords into words, counts frequency (min 2), filters stop words (a/the/for/app/apps etc.), returns sorted by count desc then alphabetically
+- filterKeywordsByWord() uses whole-word matching (not substring) to avoid "ai" matching "email"
+- Words deduplicated within a single keyword, case-insensitive, min 2 chars
+- New component: KeywordWordGroupFilter — visually distinct from tags: dashed border, rounded-md (not pill), monochrome (no colors), count badge suffix, "Common words:" label
+- Single-select toggle (vs tags' multi-select), AND logic with tag filter
+- Word groups computed from full keyword list (not filtered), so buttons stay stable when tag filter is active
+- useEffect clears activeWordFilter if the word disappears from wordGroups after keyword add/remove
+- 26 new tests (18 utility + 8 component)

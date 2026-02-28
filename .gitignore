@@ -14,3 +14,6 @@ apps/*/src/**/*.d.ts.map
 
 # Docker & Redis
 dump.rdb
+
+# MCP config (contains API keys)
+.mcp.json

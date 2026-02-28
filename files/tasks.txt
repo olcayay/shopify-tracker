@@ -6,8 +6,8 @@ kime hangi durumda nasıl emailler gönderilebilinir.
 
 cronjobları düzenle
 
+email servis hizmeti alınması
 
-DONE: unit test altyapısı kuruldu (Vitest + Testing Library + jsdom)
-DONE: 510 test, 39 test dosyası — tüm sayfalar, componentlar, lib fonksiyonları, API, proxy, auth, system admin, scraper, settings, invitation
-DONE: husky pre-commit hook (lint + test) — lint hatası veya test başarısız olursa commit engelleniyor
-DONE: ESLint config güncellendi — error seviyesi kurallar warning'e düşürüldü
+keywordler için ekstra bilgiler (ilk sayfadaki app'lere dair
+    bilgiler
+)
