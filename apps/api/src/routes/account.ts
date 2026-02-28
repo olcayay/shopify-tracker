@@ -2168,7 +2168,26 @@ export const accountRoutes: FastifyPluginAsync = async (app) => {
         return reply.code(404).send({ error: "App not tracked by this account" });
       }
 
-      // 2. Get tracked app's latest snapshot → extract category slugs
+      // 2. Get tracked app's categories from actual rankings (not snapshot URLs,
+      //    which may contain subcategory slugs that don't exist in appCategoryRankings)
+      const trackedCatRows: any[] = await db
+        .execute(
+          sql`
+          SELECT DISTINCT ON (category_slug) category_slug
+          FROM app_category_rankings
+          WHERE app_slug = ${slug}
+          ORDER BY category_slug, scraped_at DESC
+        `
+        )
+        .then((res: any) => (res as any).rows ?? res);
+
+      const trackedCatSlugs = new Set(trackedCatRows.map((r: any) => r.category_slug as string));
+
+      if (trackedCatSlugs.size === 0) {
+        return { suggestions: [] };
+      }
+
+      // Also get latest snapshot for similarity computation
       const [trackedSnapshot] = await db
         .select({ categories: appSnapshots.categories, appIntroduction: appSnapshots.appIntroduction })
         .from(appSnapshots)
@@ -2176,19 +2195,10 @@ export const accountRoutes: FastifyPluginAsync = async (app) => {
         .orderBy(desc(appSnapshots.scrapedAt))
         .limit(1);
 
-      if (!trackedSnapshot) {
-        return { suggestions: [] };
-      }
-
       const { extractCategorySlugs, extractFeatureHandles, tokenize, computeSimilarityBetween } =
         await import("@shopify-tracking/shared");
 
-      const trackedCategories = (trackedSnapshot.categories as any[]) ?? [];
-      const trackedCatSlugs = extractCategorySlugs(trackedCategories);
-
-      if (trackedCatSlugs.size === 0) {
-        return { suggestions: [] };
-      }
+      const trackedCategories = (trackedSnapshot?.categories as any[]) ?? [];
 
       // 3. Get existing competitors for this (account, trackedAppSlug) pair
       const existingComps = await db
@@ -2299,7 +2309,7 @@ export const accountRoutes: FastifyPluginAsync = async (app) => {
       const trackedTextParts = [
         trackedAppInfo?.name ?? "",
         trackedAppInfo?.app_card_subtitle ?? "",
-        trackedSnapshot.appIntroduction ?? "",
+        trackedSnapshot?.appIntroduction ?? "",
       ].join(" ");
 
       const trackedData = {
