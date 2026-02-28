@@ -35,5 +35,7 @@ COPY --from=build /app/packages/shared/dist ./packages/shared/dist
 COPY --from=build /app/packages/db/dist ./packages/db/dist
 COPY --from=build /app/apps/scraper/dist ./apps/scraper/dist
 
-# Start both worker and scheduler
-CMD ["sh", "-c", "node apps/scraper/dist/worker.js & node apps/scraper/dist/scheduler.js & wait"]
+# WORKER_MODE: "background" (default) runs worker + scheduler
+#               "interactive" runs only the interactive worker
+ENV WORKER_MODE=background
+CMD ["sh", "-c", "if [ \"$WORKER_MODE\" = \"interactive\" ]; then node apps/scraper/dist/interactive-worker.js; else node apps/scraper/dist/worker.js & node apps/scraper/dist/scheduler.js & wait; fi"]
