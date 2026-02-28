@@ -9,7 +9,7 @@ import { initWorkerDeps, createProcessJob, runMigrations } from "./process-job.j
 const log = createLogger("interactive-worker");
 
 const { db, httpClient } = initWorkerDeps();
-await runMigrations(db);
+await runMigrations(db, "interactive-worker");
 const processJob = createProcessJob(db, httpClient, "interactive");
 
 const worker = new Worker<ScraperJobData>(

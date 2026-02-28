@@ -253,6 +253,13 @@
       "when": 1771977700000,
       "tag": "0035_app_similarity_scores_table",
       "breakpoints": true
+    },
+    {
+      "idx": 36,
+      "version": "7",
+      "when": 1772064000000,
+      "tag": "0036_scrape_runs_queue",
+      "breakpoints": true
     }
   ]
 }

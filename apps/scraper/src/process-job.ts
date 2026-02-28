@@ -29,12 +29,15 @@ export function initWorkerDeps() {
   return { db, httpClient };
 }
 
-export async function runMigrations(db: ReturnType<typeof createDb>) {
+export async function runMigrations(db: ReturnType<typeof createDb>, label?: string) {
+  const migrationsFolder = "packages/db/src/migrations";
+  const ctx = label || "worker";
+  log.info(`[${ctx}] running database migrations`, { migrationsFolder });
   try {
-    await migrate(db, { migrationsFolder: "packages/db/src/migrations" });
-    log.info("database migrations complete");
+    await migrate(db, { migrationsFolder });
+    log.info(`[${ctx}] database migrations complete`);
   } catch (err) {
-    log.error("migration error (non-fatal)", { error: String(err) });
+    log.error(`[${ctx}] migration failed`, { error: String(err), stack: (err as Error).stack });
   }
 }
 
