@@ -190,4 +190,6 @@ Queue tracking in scrape_runs (PLA-17):
 - API: GET /api/system-admin/scraper/runs now supports ?queue=interactive|background filter
 - Dashboard Run History table: new "Queue" column with badge (interactive/background), queue filter dropdown alongside type/trigger filters
 - Existing runs have queue=null (shown as dash in UI)
+- Cascade jobs inherit the originating queue: when app_details runs on interactive queue, its cascade jobs (compute_similarity_scores, reviews, etc.) also go to the interactive queue instead of always defaulting to background
+- cascadeOpts computed once from queueName in createProcessJob(), passed to all 7 enqueueScraperJob cascade calls
 - Files: scrape-runs.ts, 0036_scrape_runs_queue.sql, process-job.ts, worker.ts, interactive-worker.ts, category-scraper.ts, app-details-scraper.ts, review-scraper.ts, keyword-scraper.ts, keyword-suggestion-scraper.ts, compute-review-metrics.ts, compute-similarity-scores.ts, system-admin.ts (API), scraper/page.tsx, scraper-page.test.tsx

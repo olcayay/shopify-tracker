@@ -42,6 +42,8 @@ export async function runMigrations(db: ReturnType<typeof createDb>, label?: str
 }
 
 export function createProcessJob(db: ReturnType<typeof createDb>, httpClient: HttpClient, queueName?: string) {
+  const cascadeOpts = queueName ? { queue: queueName as "interactive" | "background" } : undefined;
+
   return async function processJob(job: Job<ScraperJobData>): Promise<void> {
     const { type, triggeredBy } = job.data;
     log.info("processing job", { jobId: job.id, type, triggeredBy });
@@ -70,7 +72,7 @@ export function createProcessJob(db: ReturnType<typeof createDb>, httpClient: Ht
               slug,
               triggeredBy: `${triggeredBy}:cascade`,
               options: opts.scrapeReviews ? { scrapeReviews: true } : undefined,
-            });
+            }, cascadeOpts);
           }
           log.info("cascaded app_details jobs", { count: uniqueSlugs.length });
         }
@@ -89,7 +91,7 @@ export function createProcessJob(db: ReturnType<typeof createDb>, httpClient: Ht
               type: "reviews",
               slug: job.data.slug,
               triggeredBy: `${triggeredBy}:cascade`,
-            });
+            }, cascadeOpts);
             log.info("cascaded reviews job", { slug: job.data.slug });
           }
         } else {
@@ -108,7 +110,7 @@ export function createProcessJob(db: ReturnType<typeof createDb>, httpClient: Ht
                 type: "reviews",
                 slug: app.slug,
                 triggeredBy: `${triggeredBy}:cascade`,
-              });
+              }, cascadeOpts);
             }
             log.info("cascaded reviews jobs", { count: trackedApps.length });
           }
@@ -118,7 +120,7 @@ export function createProcessJob(db: ReturnType<typeof createDb>, httpClient: Ht
         await enqueueScraperJob({
           type: "compute_similarity_scores",
           triggeredBy: `${triggeredBy}:cascade`,
-        });
+        }, cascadeOpts);
         log.info("cascaded compute_similarity_scores job");
         break;
       }
@@ -169,7 +171,7 @@ export function createProcessJob(db: ReturnType<typeof createDb>, httpClient: Ht
               slug,
               triggeredBy: `${triggeredBy}:cascade`,
               options: opts.scrapeReviews ? { scrapeReviews: true } : undefined,
-            });
+            }, cascadeOpts);
           }
           log.info("cascaded app_details jobs", { count: uniqueSlugs.length });
         }
@@ -179,14 +181,14 @@ export function createProcessJob(db: ReturnType<typeof createDb>, httpClient: Ht
           type: "keyword_suggestions",
           keyword: job.data.keyword,
           triggeredBy: `${triggeredBy}:cascade`,
-        });
+        }, cascadeOpts);
         log.info("cascaded keyword_suggestions job");
 
         // Cascade: recompute similarity scores (keyword rankings may have changed)
         await enqueueScraperJob({
           type: "compute_similarity_scores",
           triggeredBy: `${triggeredBy}:cascade`,
-        });
+        }, cascadeOpts);
         log.info("cascaded compute_similarity_scores job");
         break;
       }
