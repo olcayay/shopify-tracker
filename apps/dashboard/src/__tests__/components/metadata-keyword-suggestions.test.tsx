@@ -208,6 +208,79 @@ describe("MetadataKeywordSuggestions", () => {
     });
   });
 
+  it("passes keywordId and scraperEnqueued to onKeywordAdded", async () => {
+    const user = userEvent.setup();
+    const onKeywordAdded = vi.fn();
+
+    mockFetchWithAuth
+      .mockResolvedValueOnce({
+        ok: true,
+        json: () => Promise.resolve(mockSuggestionsResponse),
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        json: () => Promise.resolve({ keywordId: 42, scraperEnqueued: true }),
+      });
+
+    render(
+      <MetadataKeywordSuggestions
+        appSlug="test-app"
+        trackedKeywords={new Set()}
+        onKeywordAdded={onKeywordAdded}
+      />
+    );
+
+    await user.click(screen.getByText("Suggest keywords"));
+
+    await waitFor(() => {
+      expect(screen.getByText("customer support")).toBeInTheDocument();
+    });
+
+    const addButtons = screen.getAllByTitle(/Track "/);
+    await user.click(addButtons[0]);
+
+    await waitFor(() => {
+      expect(onKeywordAdded).toHaveBeenCalledWith(42, true);
+    });
+  });
+
+  it("passes undefined keywordId when scraper not enqueued", async () => {
+    const user = userEvent.setup();
+    const onKeywordAdded = vi.fn();
+
+    mockFetchWithAuth
+      .mockResolvedValueOnce({
+        ok: true,
+        json: () => Promise.resolve(mockSuggestionsResponse),
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        json: () =>
+          Promise.resolve({ keywordId: 10, scraperEnqueued: false }),
+      });
+
+    render(
+      <MetadataKeywordSuggestions
+        appSlug="test-app"
+        trackedKeywords={new Set()}
+        onKeywordAdded={onKeywordAdded}
+      />
+    );
+
+    await user.click(screen.getByText("Suggest keywords"));
+
+    await waitFor(() => {
+      expect(screen.getByText("customer support")).toBeInTheDocument();
+    });
+
+    const addButtons = screen.getAllByTitle(/Track "/);
+    await user.click(addButtons[0]);
+
+    await waitFor(() => {
+      expect(onKeywordAdded).toHaveBeenCalledWith(10, false);
+    });
+  });
+
   it("shows error state on fetch failure", async () => {
     const user = userEvent.setup();
     mockFetchWithAuth.mockResolvedValue({
