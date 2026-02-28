@@ -91,6 +91,13 @@ const SCRAPER_TYPES = [
     cronHours: null,
     scheduleLabel: "Manual trigger",
   },
+  {
+    type: "backfill_categories",
+    label: "Backfill Categories",
+    description: "Register missing categories from existing app snapshot data",
+    cronHours: null,
+    scheduleLabel: "Manual trigger",
+  },
 ];
 
 function getNextRun(cronHours: number[] | null): string | null {
@@ -284,6 +291,7 @@ export default function ScraperPage() {
         daily_digest: { count: stats.users ?? 0, label: "users" },
         compute_review_metrics: { count: stats.trackedApps ?? 0, label: "apps" },
         compute_similarity_scores: { count: stats.trackedApps ?? 0, label: "apps" },
+        backfill_categories: { count: stats.trackedApps ?? 0, label: "apps" },
       }
     : {};
 

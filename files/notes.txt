@@ -7,7 +7,11 @@ Fix broken category links (PLA-18):
   - Shows "Category not indexed yet" heading with helpful explanation
   - Links back to /categories to browse all categories
   - Styled consistently with other empty states (centered, py-16)
-- Files changed: app-details-scraper.ts, categories/[slug]/page.tsx
+- Backfill job: backfill_categories job reads latest snapshot per tracked app, extracts category slugs, inserts missing ones
+  - New scraper_type enum value added via migration 0037
+  - Registered in process-job.ts, admin API validTypes, scraper dashboard page
+  - Triggerable from system-admin scraper page
+- Files changed: app-details-scraper.ts, categories/[slug]/page.tsx, backfill-categories.ts, queue.ts, process-job.ts, scrape-runs.ts, system-admin.ts, scraper/page.tsx
 
 App search & browse feature:
 - New reusable AppSearchBar component (components/app-search-bar.tsx) with 3 modes: follow, competitor, browse-only

@@ -131,7 +131,7 @@ describe("ScraperPage", () => {
     render(<ScraperPage />);
     await waitFor(() => {
       const runButtons = screen.getAllByText("Run");
-      expect(runButtons.length).toBe(7);
+      expect(runButtons.length).toBe(8);
     });
   });
 
@@ -139,7 +139,7 @@ describe("ScraperPage", () => {
     const user = userEvent.setup();
     render(<ScraperPage />);
     await waitFor(() => {
-      expect(screen.getAllByText("Run").length).toBe(7);
+      expect(screen.getAllByText("Run").length).toBe(8);
     });
     mockFetchWithAuth.mockResolvedValueOnce({ ok: true, json: () => Promise.resolve({}) });
     const runButtons = screen.getAllByText("Run");

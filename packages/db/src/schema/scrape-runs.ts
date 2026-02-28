@@ -10,6 +10,7 @@ export const scraperTypeEnum = pgEnum("scraper_type", [
   "featured_apps",
   "compute_review_metrics",
   "compute_similarity_scores",
+  "backfill_categories",
 ]);
 
 export const scrapeRunStatusEnum = pgEnum("scrape_run_status", [

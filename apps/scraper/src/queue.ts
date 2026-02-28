@@ -5,7 +5,7 @@ export const INTERACTIVE_QUEUE_NAME = "scraper-jobs-interactive";
 /** @deprecated Use BACKGROUND_QUEUE_NAME or INTERACTIVE_QUEUE_NAME */
 export const QUEUE_NAME = BACKGROUND_QUEUE_NAME;
 
-export type ScraperJobType = "category" | "app_details" | "keyword_search" | "keyword_suggestions" | "reviews" | "daily_digest" | "compute_review_metrics" | "compute_similarity_scores";
+export type ScraperJobType = "category" | "app_details" | "keyword_search" | "keyword_suggestions" | "reviews" | "daily_digest" | "compute_review_metrics" | "compute_similarity_scores" | "backfill_categories";
 
 export interface ScraperJobOptions {
   /** For category/keyword: how many pages to scrape */

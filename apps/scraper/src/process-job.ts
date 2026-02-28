@@ -284,6 +284,12 @@ export function createProcessJob(db: ReturnType<typeof createDb>, httpClient: Ht
         break;
       }
 
+      case "backfill_categories": {
+        const { backfillCategories } = await import("./jobs/backfill-categories.js");
+        await backfillCategories(db, triggeredBy, queueName);
+        break;
+      }
+
       case "daily_digest": {
         const { getDigestRecipients, buildDigestForAccount } = await import("./email/digest-builder.js");
         const { buildDigestHtml, buildDigestSubject } = await import("./email/digest-template.js");
