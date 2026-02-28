@@ -14,7 +14,9 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { X, ArrowUpDown, ArrowUp, ArrowDown, ChevronUp, ChevronDown, Pin, PinOff, ExternalLink, Settings2, Check } from "lucide-react";
+import { X, ArrowUpDown, ArrowUp, ArrowDown, ChevronUp, ChevronDown, Pin, PinOff, ExternalLink, Settings2, Check, Loader2 } from "lucide-react";
+import { Skeleton } from "@/components/ui/skeleton";
+import { cn } from "@/lib/utils";
 import { DropdownMenu as DropdownMenuPrimitive } from "radix-ui";
 import { ConfirmModal } from "@/components/confirm-modal";
 import { AppSearchBar } from "@/components/app-search-bar";
@@ -60,6 +62,8 @@ export function CompetitorsSection({ appSlug }: { appSlug: string }) {
   const [reordering, setReordering] = useState(false);
   const [selfPinned, setSelfPinned] = useState(true);
   const [hiddenColumns, setHiddenColumns] = useState<Set<string>>(new Set());
+  const [pendingCompetitorSlugs, setPendingCompetitorSlugs] = useState<Set<string>>(new Set());
+  const [resolvedCompetitorSlugs, setResolvedCompetitorSlugs] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     try {
@@ -103,8 +107,65 @@ export function CompetitorsSection({ appSlug }: { appSlug: string }) {
     loadCompetitors();
   }, []);
 
-  async function loadCompetitors() {
-    setLoading(true);
+  // Poll for pending competitors that are being scraped
+  useEffect(() => {
+    if (pendingCompetitorSlugs.size === 0) return;
+
+    const interval = setInterval(async () => {
+      const res = await fetchWithAuth(
+        `/api/account/tracked-apps/${encodeURIComponent(appSlug)}/competitors?includeSelf=true`
+      );
+      if (!res.ok) return;
+      const freshCompetitors = await res.json();
+      setCompetitors(freshCompetitors);
+
+      // Also refresh last changes
+      const slugs = freshCompetitors.map((c: any) => c.appSlug);
+      if (slugs.length > 0) {
+        const changesRes = await fetchWithAuth(`/api/apps/last-changes`, {
+          method: "POST",
+          body: JSON.stringify({ slugs }),
+        });
+        if (changesRes.ok) {
+          setLastChanges(await changesRes.json());
+        }
+      }
+
+      // Check which pending competitors now have data
+      const newlyResolved = new Set<string>();
+      const stillPending = new Set<string>();
+      for (const slug of pendingCompetitorSlugs) {
+        const comp = freshCompetitors.find((c: any) => c.appSlug === slug);
+        if (comp && comp.latestSnapshot !== null) {
+          newlyResolved.add(slug);
+        } else {
+          stillPending.add(slug);
+        }
+      }
+
+      if (newlyResolved.size > 0) {
+        setPendingCompetitorSlugs(stillPending);
+        setResolvedCompetitorSlugs((prev) => {
+          const next = new Set(prev);
+          for (const s of newlyResolved) next.add(s);
+          return next;
+        });
+        // Clear resolved animation after 2 seconds
+        setTimeout(() => {
+          setResolvedCompetitorSlugs((prev) => {
+            const next = new Set(prev);
+            for (const s of newlyResolved) next.delete(s);
+            return next;
+          });
+        }, 2000);
+      }
+    }, 5000);
+
+    return () => clearInterval(interval);
+  }, [pendingCompetitorSlugs, appSlug]);
+
+  async function loadCompetitors(silent = false) {
+    if (!silent) setLoading(true);
     const res = await fetchWithAuth(
       `/api/account/tracked-apps/${encodeURIComponent(appSlug)}/competitors?includeSelf=true`
     );
@@ -137,8 +198,12 @@ export function CompetitorsSection({ appSlug }: { appSlug: string }) {
       }
     );
     if (res.ok) {
+      const data = await res.json().catch(() => ({}));
+      if (data.scraperEnqueued) {
+        setPendingCompetitorSlugs((prev) => new Set(prev).add(slug));
+      }
       setMessage(`"${name}" added as competitor`);
-      loadCompetitors();
+      loadCompetitors(true);
       refreshUser();
     } else {
       const data = await res.json().catch(() => ({}));
@@ -466,8 +531,13 @@ export function CompetitorsSection({ appSlug }: { appSlug: string }) {
               let competitorNum = 0;
               return sorted.map((comp, idx) => {
               if (!comp.isSelf || !selfPinned) competitorNum++;
+              const isPending = pendingCompetitorSlugs.has(comp.appSlug);
+              const isResolved = resolvedCompetitorSlugs.has(comp.appSlug);
               return (
-              <TableRow key={comp.appSlug} className={comp.isSelf ? "border-l-2 border-l-emerald-500 bg-emerald-500/10" : ""}>
+              <TableRow key={comp.appSlug} className={cn(
+                comp.isSelf && "border-l-2 border-l-emerald-500 bg-emerald-500/10",
+                isPending && "animate-in fade-in slide-in-from-top duration-300",
+              )}>
                 {canEdit && (
                   <TableCell className={`py-1 md:sticky md:left-0 md:z-10 ${comp.isSelf ? "bg-emerald-50 dark:bg-emerald-950/30" : "bg-background"}`}>
                     {comp.isSelf ? (
@@ -531,7 +601,13 @@ export function CompetitorsSection({ appSlug }: { appSlug: string }) {
                   </div>
                 </TableCell>
                 {isCol("similarity") && <TableCell className="text-sm">
-                  {comp.isSelf ? "\u2014" : comp.similarityScore ? (
+                  {isPending ? (
+                    <Skeleton className="h-4 w-16" />
+                  ) : isResolved ? (
+                    <span className="animate-in fade-in duration-700">
+                      {comp.isSelf ? "\u2014" : comp.similarityScore ? `${(parseFloat(comp.similarityScore.overall) * 100).toFixed(0)}%` : "\u2014"}
+                    </span>
+                  ) : comp.isSelf ? "\u2014" : comp.similarityScore ? (
                     <Tooltip>
                       <TooltipTrigger asChild>
                         <div className="flex items-center gap-1.5">
@@ -562,29 +638,58 @@ export function CompetitorsSection({ appSlug }: { appSlug: string }) {
                   ) : "\u2014"}
                 </TableCell>}
                 {isCol("rating") && <TableCell>
-                  {comp.latestSnapshot?.averageRating ?? "\u2014"}
+                  {isPending ? (
+                    <Skeleton className="h-4 w-8" />
+                  ) : isResolved ? (
+                    <span className="animate-in fade-in duration-700">{comp.latestSnapshot?.averageRating ?? "\u2014"}</span>
+                  ) : (
+                    comp.latestSnapshot?.averageRating ?? "\u2014"
+                  )}
                 </TableCell>}
                 {isCol("reviews") && <TableCell>
-                  {comp.latestSnapshot?.ratingCount != null ? (
+                  {isPending ? (
+                    <div className="flex items-center gap-2">
+                      <Skeleton className="h-4 w-12" />
+                      <Loader2 className="h-3 w-3 animate-spin text-muted-foreground" />
+                    </div>
+                  ) : isResolved ? (
+                    <span className="animate-in fade-in duration-700">
+                      {comp.latestSnapshot?.ratingCount != null ? (
+                        <Link href={`/apps/${comp.appSlug}/reviews`} className="text-primary hover:underline">
+                          {comp.latestSnapshot.ratingCount}
+                        </Link>
+                      ) : "\u2014"}
+                    </span>
+                  ) : comp.latestSnapshot?.ratingCount != null ? (
                     <Link href={`/apps/${comp.appSlug}/reviews`} className="text-primary hover:underline">
                       {comp.latestSnapshot.ratingCount}
                     </Link>
                   ) : "\u2014"}
                 </TableCell>}
                 {isCol("v7d") && <TableCell className="text-sm">
-                  <VelocityCell value={comp.reviewVelocity?.v7d} />
+                  {isPending ? <Skeleton className="h-4 w-8" /> : isResolved ? (
+                    <span className="animate-in fade-in duration-700"><VelocityCell value={comp.reviewVelocity?.v7d} /></span>
+                  ) : <VelocityCell value={comp.reviewVelocity?.v7d} />}
                 </TableCell>}
                 {isCol("v30d") && <TableCell className="text-sm">
-                  <VelocityCell value={comp.reviewVelocity?.v30d} />
+                  {isPending ? <Skeleton className="h-4 w-8" /> : isResolved ? (
+                    <span className="animate-in fade-in duration-700"><VelocityCell value={comp.reviewVelocity?.v30d} /></span>
+                  ) : <VelocityCell value={comp.reviewVelocity?.v30d} />}
                 </TableCell>}
                 {isCol("v90d") && <TableCell className="text-sm">
-                  <VelocityCell value={comp.reviewVelocity?.v90d} />
+                  {isPending ? <Skeleton className="h-4 w-8" /> : isResolved ? (
+                    <span className="animate-in fade-in duration-700"><VelocityCell value={comp.reviewVelocity?.v90d} /></span>
+                  ) : <VelocityCell value={comp.reviewVelocity?.v90d} />}
                 </TableCell>}
                 {isCol("momentum") && <TableCell className="text-sm">
-                  <MomentumBadge momentum={comp.reviewVelocity?.momentum} />
+                  {isPending ? <Skeleton className="h-4 w-16" /> : isResolved ? (
+                    <span className="animate-in fade-in duration-700"><MomentumBadge momentum={comp.reviewVelocity?.momentum} /></span>
+                  ) : <MomentumBadge momentum={comp.reviewVelocity?.momentum} />}
                 </TableCell>}
                 {isCol("pricing") && <TableCell className="text-sm whitespace-nowrap">
-                  {(() => {
+                  {isPending ? (
+                    <Skeleton className="h-4 w-16" />
+                  ) : (() => {
                     const p = comp.latestSnapshot?.pricing;
                     if (!p) return "\u2014";
                     const abbr: Record<string, string> = {
@@ -593,71 +698,103 @@ export function CompetitorsSection({ appSlug }: { appSlug: string }) {
                       "Free trial available": "Free trial",
                     };
                     const short = abbr[p];
-                    if (!short) return p;
-                    return (
+                    const content = short ? (
                       <Tooltip>
                         <TooltipTrigger asChild><span>{short}</span></TooltipTrigger>
                         <TooltipContent>{p}</TooltipContent>
                       </Tooltip>
-                    );
+                    ) : p;
+                    return isResolved ? <span className="animate-in fade-in duration-700">{content}</span> : content;
                   })()}
                 </TableCell>}
                 {isCol("minPaidPrice") && <TableCell className="text-sm">
-                  {comp.minPaidPrice != null ? (
+                  {isPending ? (
+                    <Skeleton className="h-4 w-12" />
+                  ) : isResolved ? (
+                    <span className="animate-in fade-in duration-700">
+                      {comp.minPaidPrice != null ? (
+                        <Link href={`/apps/${comp.appSlug}/details#pricing-plans`} className="text-primary hover:underline">
+                          ${comp.minPaidPrice}/mo
+                        </Link>
+                      ) : "\u2014"}
+                    </span>
+                  ) : comp.minPaidPrice != null ? (
                     <Link href={`/apps/${comp.appSlug}/details#pricing-plans`} className="text-primary hover:underline">
                       ${comp.minPaidPrice}/mo
                     </Link>
                   ) : "\u2014"}
                 </TableCell>}
                 {isCol("launchedDate") && <TableCell className="text-sm text-muted-foreground">
-                  {comp.launchedDate
-                    ? formatDateOnly(comp.launchedDate)
-                    : "\u2014"}
+                  {isPending ? (
+                    <Skeleton className="h-4 w-16" />
+                  ) : isResolved ? (
+                    <span className="animate-in fade-in duration-700">{comp.launchedDate ? formatDateOnly(comp.launchedDate) : "\u2014"}</span>
+                  ) : comp.launchedDate ? formatDateOnly(comp.launchedDate) : "\u2014"}
                 </TableCell>}
                 {isCol("featured") && <TableCell className="text-sm">
-                  {comp.featuredSections > 0 ? (
-                    <Link
-                      href={`/apps/${comp.appSlug}/featured`}
-                      className="text-primary hover:underline"
-                    >
-                      {comp.featuredSections}
-                    </Link>
+                  {isPending ? (
+                    <Skeleton className="h-4 w-8" />
+                  ) : isResolved ? (
+                    <span className="animate-in fade-in duration-700">
+                      {comp.featuredSections > 0 ? (
+                        <Link href={`/apps/${comp.appSlug}/featured`} className="text-primary hover:underline">{comp.featuredSections}</Link>
+                      ) : <span className="text-muted-foreground">{"\u2014"}</span>}
+                    </span>
+                  ) : comp.featuredSections > 0 ? (
+                    <Link href={`/apps/${comp.appSlug}/featured`} className="text-primary hover:underline">{comp.featuredSections}</Link>
                   ) : (
                     <span className="text-muted-foreground">{"\u2014"}</span>
                   )}
                 </TableCell>}
                 {isCol("ads") && <TableCell className="text-sm">
-                  {comp.adKeywords > 0 ? (
-                    <Link
-                      href={`/apps/${comp.appSlug}/ads`}
-                      className="text-primary hover:underline"
-                    >
-                      {comp.adKeywords}
-                    </Link>
+                  {isPending ? (
+                    <Skeleton className="h-4 w-8" />
+                  ) : isResolved ? (
+                    <span className="animate-in fade-in duration-700">
+                      {comp.adKeywords > 0 ? (
+                        <Link href={`/apps/${comp.appSlug}/ads`} className="text-primary hover:underline">{comp.adKeywords}</Link>
+                      ) : <span className="text-muted-foreground">{"\u2014"}</span>}
+                    </span>
+                  ) : comp.adKeywords > 0 ? (
+                    <Link href={`/apps/${comp.appSlug}/ads`} className="text-primary hover:underline">{comp.adKeywords}</Link>
                   ) : (
                     <span className="text-muted-foreground">{"\u2014"}</span>
                   )}
                 </TableCell>}
                 {isCol("ranked") && <TableCell className="text-sm">
-                  {comp.rankedKeywordCount > 0 ? (
-                    <Link href={`/apps/${comp.appSlug}/keywords`} className="text-primary hover:underline">
-                      {comp.rankedKeywordCount}
-                    </Link>
+                  {isPending ? (
+                    <Skeleton className="h-4 w-8" />
+                  ) : isResolved ? (
+                    <span className="animate-in fade-in duration-700">
+                      {comp.rankedKeywordCount > 0 ? (
+                        <Link href={`/apps/${comp.appSlug}/keywords`} className="text-primary hover:underline">{comp.rankedKeywordCount}</Link>
+                      ) : <span className="text-muted-foreground">{"\u2014"}</span>}
+                    </span>
+                  ) : comp.rankedKeywordCount > 0 ? (
+                    <Link href={`/apps/${comp.appSlug}/keywords`} className="text-primary hover:underline">{comp.rankedKeywordCount}</Link>
                   ) : (
                     <span className="text-muted-foreground">{"\u2014"}</span>
                   )}
                 </TableCell>}
                 {isCol("similar") && <TableCell className="text-sm">
-                  {comp.reverseSimilarCount > 0 ? (
-                    <Link href={`/apps/${comp.appSlug}/similar`} className="text-primary hover:underline">
-                      {comp.reverseSimilarCount}
-                    </Link>
+                  {isPending ? (
+                    <Skeleton className="h-4 w-8" />
+                  ) : isResolved ? (
+                    <span className="animate-in fade-in duration-700">
+                      {comp.reverseSimilarCount > 0 ? (
+                        <Link href={`/apps/${comp.appSlug}/similar`} className="text-primary hover:underline">{comp.reverseSimilarCount}</Link>
+                      ) : <span className="text-muted-foreground">{"\u2014"}</span>}
+                    </span>
+                  ) : comp.reverseSimilarCount > 0 ? (
+                    <Link href={`/apps/${comp.appSlug}/similar`} className="text-primary hover:underline">{comp.reverseSimilarCount}</Link>
                   ) : (
                     <span className="text-muted-foreground">{"\u2014"}</span>
                   )}
                 </TableCell>}
                 {isCol("catRank") && <TableCell className="text-sm">
-                  {(() => {
+                  {isPending ? (
+                    <Skeleton className="h-4 w-20" />
+                  ) : (() => {
                     const primary = comp.categories?.find((cat: any) => cat.type === "primary");
                     const secondary = comp.categories?.find((cat: any) => cat.type === "secondary");
                     if (!primary && !secondary) return "\u2014";
@@ -699,16 +836,25 @@ export function CompetitorsSection({ appSlug }: { appSlug: string }) {
                       );
                     }
 
-                    return (
+                    const content = (
                       <div>
                         {primary && renderCategory(primary, true)}
                         {secondary && renderCategory(secondary, false)}
                       </div>
                     );
+                    return isResolved ? <span className="animate-in fade-in duration-700">{content}</span> : content;
                   })()}
                 </TableCell>}
                 {isCol("lastChange") && <TableCell className="text-sm">
-                  {lastChanges[comp.appSlug] ? (
+                  {isPending ? (
+                    <Skeleton className="h-4 w-16" />
+                  ) : isResolved ? (
+                    <span className="animate-in fade-in duration-700">
+                      {lastChanges[comp.appSlug] ? (
+                        <Link href={`/apps/${comp.appSlug}/changes`} className="text-primary hover:underline">{formatDateOnly(lastChanges[comp.appSlug])}</Link>
+                      ) : "\u2014"}
+                    </span>
+                  ) : lastChanges[comp.appSlug] ? (
                     <Link href={`/apps/${comp.appSlug}/changes`} className="text-primary hover:underline">
                       {formatDateOnly(lastChanges[comp.appSlug])}
                     </Link>
