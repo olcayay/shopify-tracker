@@ -167,3 +167,17 @@ Keyword alphabetical sorting (PLA-16):
 - localeCompare for proper alphabetical ordering
 - ArrowDown indicator shows when alphabetical sort is active
 - Clicking any app icon column switches back to ranking sort for that app
+
+Worker re-structure — dual queue architecture (PLA-14):
+- Problem: single BullMQ queue (scraper-jobs) with concurrency=1 meant user-triggered jobs waited behind long-running scheduled jobs
+- Solution: two separate queues with dedicated workers in separate containers
+  - scraper-jobs-interactive: processes user-triggered jobs (track app, track keyword, add competitor) with no rate limiter
+  - scraper-jobs-background: processes scheduled/cron jobs, cascade jobs, admin triggers with rate limiter (1 job/5s)
+- Shared job processor: process-job.ts extracted from worker.ts, both workers import the same processJob function
+- API routing: account.ts routes → interactive queue, scheduler/admin → background queue
+- Cascade jobs always go to background queue (not user-blocking)
+- System admin scraper page shows per-queue breakdown (interactive/background) with combined totals
+- Queue management endpoints (pause/resume/drain/clear) operate on both queues
+- Trigger endpoint accepts optional queue parameter (default: background)
+- Docker: same Dockerfile.worker image, two services in docker-compose (worker + worker-interactive)
+- Files: queue.ts, process-job.ts (new), worker.ts, interactive-worker.ts (new), account.ts, system-admin.ts, admin.ts, scraper page, docker-compose.prod.yml, package.json

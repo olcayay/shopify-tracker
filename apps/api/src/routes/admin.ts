@@ -9,7 +9,7 @@ import {
   scrapeRuns,
 } from "@shopify-tracking/db";
 
-const QUEUE_NAME = "scraper-jobs";
+const BACKGROUND_QUEUE_NAME = "scraper-jobs-background";
 
 function getRedisConnection() {
   const url = process.env.REDIS_URL || "redis://localhost:6379";
@@ -25,7 +25,7 @@ let scraperQueue: Queue | null = null;
 
 function getScraperQueue(): Queue {
   if (!scraperQueue) {
-    scraperQueue = new Queue(QUEUE_NAME, {
+    scraperQueue = new Queue(BACKGROUND_QUEUE_NAME, {
       connection: getRedisConnection(),
     });
   }

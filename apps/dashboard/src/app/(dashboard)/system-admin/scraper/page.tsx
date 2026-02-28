@@ -367,38 +367,38 @@ export default function ScraperPage() {
           </CardHeader>
           <CardContent>
             {hasQueueJobs ? (
-            <div className="flex gap-4 mb-3">
-              <div className="text-sm">
-                <span className="text-muted-foreground">Active:</span>{" "}
-                <Badge variant="secondary">
-                  {queueStatus.counts.active}
-                </Badge>
-              </div>
-              <div className="text-sm">
-                <span className="text-muted-foreground">Waiting:</span>{" "}
-                <Badge variant="outline">
-                  {queueStatus.counts.waiting}
-                </Badge>
-              </div>
-              {queueStatus.counts.delayed > 0 && (
-                <div className="text-sm">
-                  <span className="text-muted-foreground">Delayed:</span>{" "}
-                  <Badge variant="outline">
-                    {queueStatus.counts.delayed}
-                  </Badge>
+            <>
+              {/* Per-queue breakdown */}
+              {queueStatus.queues && (
+                <div className="grid grid-cols-2 gap-4 mb-3">
+                  {(["interactive", "background"] as const).map((qName) => {
+                    const q = queueStatus.queues[qName];
+                    if (!q) return null;
+                    const hasJobs = q.counts.waiting > 0 || q.counts.active > 0 || q.counts.delayed > 0 || q.counts.failed > 0;
+                    return (
+                      <div key={qName} className="flex flex-col gap-1 p-2 rounded-md border bg-background">
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs font-medium uppercase tracking-wider text-muted-foreground">{qName}</span>
+                          {q.isPaused && <Badge variant="secondary" className="text-[10px] py-0">Paused</Badge>}
+                        </div>
+                        {hasJobs ? (
+                          <div className="flex gap-3 text-xs">
+                            <span><span className="text-muted-foreground">Active:</span> {q.counts.active}</span>
+                            <span><span className="text-muted-foreground">Waiting:</span> {q.counts.waiting}</span>
+                            {q.counts.delayed > 0 && <span><span className="text-muted-foreground">Delayed:</span> {q.counts.delayed}</span>}
+                            {q.counts.failed > 0 && <span className="text-destructive">Failed: {q.counts.failed}</span>}
+                          </div>
+                        ) : (
+                          <span className="text-xs text-muted-foreground">Empty</span>
+                        )}
+                      </div>
+                    );
+                  })}
                 </div>
               )}
-              {queueStatus.counts.failed > 0 && (
-                <div className="text-sm">
-                  <span className="text-muted-foreground">Failed:</span>{" "}
-                  <Badge variant="destructive">
-                    {queueStatus.counts.failed}
-                  </Badge>
-                </div>
-              )}
-            </div>
+            </>
             ) : (
-              <p className="text-sm text-muted-foreground mb-3">Queue is empty — no jobs waiting or running.</p>
+              <p className="text-sm text-muted-foreground mb-3">Queues are empty — no jobs waiting or running.</p>
             )}
             {queueStatus.jobs.length > 0 && (
               <Table>
@@ -406,6 +406,7 @@ export default function ScraperPage() {
                   <TableRow>
                     <TableHead>Job ID</TableHead>
                     <TableHead>Type</TableHead>
+                    <TableHead>Queue</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead>Queued At</TableHead>
                     <TableHead>Details</TableHead>
@@ -414,12 +415,17 @@ export default function ScraperPage() {
                 </TableHeader>
                 <TableBody>
                   {queueStatus.jobs.map((job: any) => (
-                    <TableRow key={job.id}>
+                    <TableRow key={`${job.queue}-${job.id}`}>
                       <TableCell className="font-mono text-xs">
                         {job.id}
                       </TableCell>
                       <TableCell className="font-mono text-sm">
                         {job.type}
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant="outline" className="text-[10px]">
+                          {job.queue || "background"}
+                        </Badge>
                       </TableCell>
                       <TableCell>
                         <Badge
@@ -813,7 +819,7 @@ export default function ScraperPage() {
       <ConfirmModal
         open={drainConfirm}
         title="Clear Waiting Jobs"
-        description={`All ${queueStatus?.counts.waiting ?? 0} waiting jobs will be removed from the queue. Active jobs will not be affected. This action cannot be undone.`}
+        description={`All ${queueStatus?.counts.waiting ?? 0} waiting jobs will be removed from both queues. Active jobs will not be affected. This action cannot be undone.`}
         confirmLabel="Clear All"
         onConfirm={drainQueue}
         onCancel={() => setDrainConfirm(false)}
@@ -822,7 +828,7 @@ export default function ScraperPage() {
       <ConfirmModal
         open={clearFailedConfirm}
         title="Clear Failed Jobs"
-        description={`All ${queueStatus?.counts.failed ?? 0} failed jobs will be removed from the queue. This action cannot be undone.`}
+        description={`All ${queueStatus?.counts.failed ?? 0} failed jobs will be removed from both queues. This action cannot be undone.`}
         confirmLabel="Clear All"
         onConfirm={clearFailedJobs}
         onCancel={() => setClearFailedConfirm(false)}

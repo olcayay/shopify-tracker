@@ -33,7 +33,7 @@ import {
 } from "@shopify-tracking/db";
 import { requireRole } from "../middleware/authorize.js";
 
-const QUEUE_NAME = "scraper-jobs";
+const INTERACTIVE_QUEUE_NAME = "scraper-jobs-interactive";
 
 function getMinPaidPrice(plans: any[] | null | undefined): number | null {
   if (!plans || plans.length === 0) return null;
@@ -57,7 +57,7 @@ let scraperQueue: Queue | null = null;
 
 function getScraperQueue(): Queue {
   if (!scraperQueue) {
-    scraperQueue = new Queue(QUEUE_NAME, {
+    scraperQueue = new Queue(INTERACTIVE_QUEUE_NAME, {
       connection: getRedisConnection(),
     });
   }

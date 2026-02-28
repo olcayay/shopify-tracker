@@ -25,7 +25,8 @@ import {
 
 type Db = ReturnType<typeof createDb>;
 
-const QUEUE_NAME = "scraper-jobs";
+const BACKGROUND_QUEUE_NAME = "scraper-jobs-background";
+const INTERACTIVE_QUEUE_NAME = "scraper-jobs-interactive";
 
 function getRedisConnection() {
   const url = process.env.REDIS_URL || "redis://localhost:6379";
@@ -37,15 +38,30 @@ function getRedisConnection() {
   };
 }
 
-let scraperQueue: Queue | null = null;
+let _backgroundQueue: Queue | null = null;
+let _interactiveQueue: Queue | null = null;
 
-function getScraperQueue(): Queue {
-  if (!scraperQueue) {
-    scraperQueue = new Queue(QUEUE_NAME, {
+function getBackgroundQueue(): Queue {
+  if (!_backgroundQueue) {
+    _backgroundQueue = new Queue(BACKGROUND_QUEUE_NAME, {
       connection: getRedisConnection(),
     });
   }
-  return scraperQueue;
+  return _backgroundQueue;
+}
+
+function getInteractiveQueue(): Queue {
+  if (!_interactiveQueue) {
+    _interactiveQueue = new Queue(INTERACTIVE_QUEUE_NAME, {
+      connection: getRedisConnection(),
+    });
+  }
+  return _interactiveQueue;
+}
+
+/** @deprecated Use getBackgroundQueue() or getInteractiveQueue() */
+function getScraperQueue(): Queue {
+  return getBackgroundQueue();
 }
 
 export const systemAdminRoutes: FastifyPluginAsync = async (app) => {
@@ -329,7 +345,7 @@ export const systemAdminRoutes: FastifyPluginAsync = async (app) => {
       const userEmail = (request as any).user?.email || "api";
 
       try {
-        const queue = getScraperQueue();
+        const queue = getBackgroundQueue();
         const job = await queue.add("scrape:daily_digest", {
           type: "daily_digest",
           accountId: id,
@@ -498,7 +514,7 @@ export const systemAdminRoutes: FastifyPluginAsync = async (app) => {
       const userEmail = (request as any).user?.email || "api";
 
       try {
-        const queue = getScraperQueue();
+        const queue = getBackgroundQueue();
         const job = await queue.add("scrape:daily_digest", {
           type: "daily_digest",
           userId: id,
@@ -642,10 +658,9 @@ export const systemAdminRoutes: FastifyPluginAsync = async (app) => {
     return { runs: enriched, total };
   });
 
-  // GET /api/system-admin/scraper/queue — queue status
+  // GET /api/system-admin/scraper/queue — queue status (both queues)
   app.get("/scraper/queue", async () => {
-    try {
-      const queue = getScraperQueue();
+    async function getQueueStatus(queue: Queue, queueLabel: string) {
       const [waiting, active, delayed, failed, isPaused, jobCounts] = await Promise.all([
         queue.getWaiting(0, 50),
         queue.getActive(0, 10),
@@ -668,6 +683,7 @@ export const systemAdminRoutes: FastifyPluginAsync = async (app) => {
             id: j.id,
             type: j.data?.type,
             status: "active" as const,
+            queue: queueLabel,
             createdAt: j.timestamp ? new Date(j.timestamp).toISOString() : null,
             data: j.data,
           })),
@@ -675,6 +691,7 @@ export const systemAdminRoutes: FastifyPluginAsync = async (app) => {
             id: j.id,
             type: j.data?.type,
             status: "waiting" as const,
+            queue: queueLabel,
             createdAt: j.timestamp ? new Date(j.timestamp).toISOString() : null,
             data: j.data,
           })),
@@ -682,6 +699,7 @@ export const systemAdminRoutes: FastifyPluginAsync = async (app) => {
             id: j.id,
             type: j.data?.type,
             status: "delayed" as const,
+            queue: queueLabel,
             createdAt: j.timestamp ? new Date(j.timestamp).toISOString() : null,
             data: j.data,
           })),
@@ -689,73 +707,107 @@ export const systemAdminRoutes: FastifyPluginAsync = async (app) => {
             id: j.id,
             type: j.data?.type,
             status: "failed" as const,
+            queue: queueLabel,
             createdAt: j.timestamp ? new Date(j.timestamp).toISOString() : null,
             failedReason: j.failedReason,
             data: j.data,
           })),
         ],
       };
+    }
+
+    const emptyQueue = { isPaused: false, counts: { waiting: 0, active: 0, delayed: 0, failed: 0 }, jobs: [] as any[] };
+
+    try {
+      const [background, interactive] = await Promise.all([
+        getQueueStatus(getBackgroundQueue(), "background").catch(() => emptyQueue),
+        getQueueStatus(getInteractiveQueue(), "interactive").catch(() => emptyQueue),
+      ]);
+
+      return {
+        // Combined counts for backwards compatibility
+        isPaused: background.isPaused && interactive.isPaused,
+        counts: {
+          waiting: background.counts.waiting + interactive.counts.waiting,
+          active: background.counts.active + interactive.counts.active,
+          delayed: background.counts.delayed + interactive.counts.delayed,
+          failed: background.counts.failed + interactive.counts.failed,
+        },
+        jobs: [...interactive.jobs, ...background.jobs],
+        // Per-queue breakdown
+        queues: { background, interactive },
+      };
     } catch {
-      return { isPaused: false, counts: { waiting: 0, active: 0, delayed: 0, failed: 0 }, jobs: [] };
+      return { isPaused: false, counts: { waiting: 0, active: 0, delayed: 0, failed: 0 }, jobs: [], queues: { background: emptyQueue, interactive: emptyQueue } };
     }
   });
 
-  // POST /api/system-admin/scraper/queue/pause — pause the queue
+  // POST /api/system-admin/scraper/queue/pause — pause both queues
   app.post("/scraper/queue/pause", async (_request, reply) => {
     try {
-      const queue = getScraperQueue();
-      await queue.pause();
+      await Promise.all([
+        getBackgroundQueue().pause(),
+        getInteractiveQueue().pause(),
+      ]);
       return { ok: true, paused: true };
     } catch {
-      return reply.code(500).send({ error: "Failed to pause queue" });
+      return reply.code(500).send({ error: "Failed to pause queues" });
     }
   });
 
-  // POST /api/system-admin/scraper/queue/resume — resume the queue
+  // POST /api/system-admin/scraper/queue/resume — resume both queues
   app.post("/scraper/queue/resume", async (_request, reply) => {
     try {
-      const queue = getScraperQueue();
-      await queue.resume();
+      await Promise.all([
+        getBackgroundQueue().resume(),
+        getInteractiveQueue().resume(),
+      ]);
       return { ok: true, paused: false };
     } catch {
-      return reply.code(500).send({ error: "Failed to resume queue" });
+      return reply.code(500).send({ error: "Failed to resume queues" });
     }
   });
 
-  // DELETE /api/system-admin/scraper/queue/jobs/:jobId — remove a job from queue
+  // DELETE /api/system-admin/scraper/queue/jobs/:jobId — remove a job from either queue
   app.delete<{ Params: { jobId: string } }>(
     "/scraper/queue/jobs/:jobId",
     async (request, reply) => {
       try {
-        const queue = getScraperQueue();
-        const job = await queue.getJob(request.params.jobId);
-        if (!job) return reply.code(404).send({ error: "Job not found" });
-        await job.remove();
-        return { ok: true };
+        const { jobId } = request.params;
+        // Try both queues
+        const bgJob = await getBackgroundQueue().getJob(jobId);
+        if (bgJob) { await bgJob.remove(); return { ok: true }; }
+        const intJob = await getInteractiveQueue().getJob(jobId);
+        if (intJob) { await intJob.remove(); return { ok: true }; }
+        return reply.code(404).send({ error: "Job not found" });
       } catch {
         return reply.code(500).send({ error: "Failed to remove job" });
       }
     }
   );
 
-  // DELETE /api/system-admin/scraper/queue/jobs — drain all waiting jobs
+  // DELETE /api/system-admin/scraper/queue/jobs — drain all waiting jobs from both queues
   app.delete("/scraper/queue/jobs", async (_request, reply) => {
     try {
-      const queue = getScraperQueue();
-      await queue.drain();
+      await Promise.all([
+        getBackgroundQueue().drain(),
+        getInteractiveQueue().drain(),
+      ]);
       return { ok: true };
     } catch {
-      return reply.code(500).send({ error: "Failed to drain queue" });
+      return reply.code(500).send({ error: "Failed to drain queues" });
     }
   });
 
-  // DELETE /api/system-admin/scraper/queue/failed — remove all failed jobs
+  // DELETE /api/system-admin/scraper/queue/failed — remove all failed jobs from both queues
   app.delete("/scraper/queue/failed", async (_request, reply) => {
     try {
-      const queue = getScraperQueue();
-      const failed = await queue.getFailed(0, 1000);
-      await Promise.all(failed.map((j) => j.remove()));
-      return { ok: true, removed: failed.length };
+      const [bgFailed, intFailed] = await Promise.all([
+        getBackgroundQueue().getFailed(0, 1000),
+        getInteractiveQueue().getFailed(0, 1000),
+      ]);
+      await Promise.all([...bgFailed, ...intFailed].map((j) => j.remove()));
+      return { ok: true, removed: bgFailed.length + intFailed.length };
     } catch {
       return reply.code(500).send({ error: "Failed to clear failed jobs" });
     }
@@ -763,11 +815,12 @@ export const systemAdminRoutes: FastifyPluginAsync = async (app) => {
 
   // POST /api/system-admin/scraper/trigger
   app.post("/scraper/trigger", async (request, reply) => {
-    const { type, slug, keyword, options } = request.body as {
+    const { type, slug, keyword, options, queue: targetQueue } = request.body as {
       type?: string;
       slug?: string;
       keyword?: string;
       options?: { pages?: "first" | "all" | number; scrapeAppDetails?: boolean; scrapeReviews?: boolean };
+      queue?: "interactive" | "background";
     };
     const validTypes = [
       "category",
@@ -787,7 +840,7 @@ export const systemAdminRoutes: FastifyPluginAsync = async (app) => {
     const userEmail = (request as any).user?.email || "api";
 
     try {
-      const queue = getScraperQueue();
+      const queue = targetQueue === "interactive" ? getInteractiveQueue() : getBackgroundQueue();
       const jobData: Record<string, any> = {
         type,
         triggeredBy: userEmail,
@@ -797,11 +850,12 @@ export const systemAdminRoutes: FastifyPluginAsync = async (app) => {
       if (options) jobData.options = options;
       const job = await queue.add(`scrape:${type}`, jobData);
 
-      app.log.info(`Scraper triggered: ${type}, jobId=${job.id}, by=${userEmail}`);
+      app.log.info(`Scraper triggered: ${type}, jobId=${job.id}, by=${userEmail}, queue=${targetQueue || "background"}`);
 
       return {
         message: `Scraper "${type}" enqueued`,
         jobId: job.id,
+        queue: targetQueue || "background",
         status: "queued",
       };
     } catch (err) {

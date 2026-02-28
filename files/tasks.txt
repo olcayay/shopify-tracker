@@ -6,6 +6,8 @@ competitor loading states & polling ✅
 
 keyword alphabetical sorting ✅
 
+worker re-structure (dual queue) ✅
+
 feedback sayfası
 
 kime hangi durumda nasıl emailler gönderilebilinir.

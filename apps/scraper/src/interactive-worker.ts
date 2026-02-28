@@ -3,24 +3,21 @@ import { resolve } from "path";
 config({ path: resolve(import.meta.dirname, "../../../.env") });
 import { Worker } from "bullmq";
 import { createLogger } from "@shopify-tracking/shared";
-import { BACKGROUND_QUEUE_NAME, getRedisConnection, type ScraperJobData } from "./queue.js";
+import { INTERACTIVE_QUEUE_NAME, getRedisConnection, type ScraperJobData } from "./queue.js";
 import { initWorkerDeps, createProcessJob } from "./process-job.js";
 
-const log = createLogger("background-worker");
+const log = createLogger("interactive-worker");
 
 const { db, httpClient } = initWorkerDeps();
 const processJob = createProcessJob(db, httpClient);
 
 const worker = new Worker<ScraperJobData>(
-  BACKGROUND_QUEUE_NAME,
+  INTERACTIVE_QUEUE_NAME,
   processJob,
   {
     connection: getRedisConnection(),
-    concurrency: 1, // Only 1 scraper job at a time to respect rate limits
-    limiter: {
-      max: 1,
-      duration: 5000, // At most 1 job per 5 seconds
-    },
+    concurrency: 1,
+    // No rate limiter — interactive jobs should process as fast as possible
   }
 );
 
@@ -37,11 +34,11 @@ worker.on("error", (err) => {
   log.error("worker error", { error: String(err) });
 });
 
-log.info("background worker started, waiting for jobs...");
+log.info("interactive worker started, waiting for jobs...");
 
 // Graceful shutdown
 const shutdown = async () => {
-  log.info("shutting down background worker...");
+  log.info("shutting down interactive worker...");
   await worker.close();
   process.exit(0);
 };

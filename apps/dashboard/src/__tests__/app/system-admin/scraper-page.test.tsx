@@ -47,9 +47,13 @@ const mockQueueStatus = {
   isPaused: false,
   counts: { active: 1, waiting: 3, delayed: 0, failed: 2 },
   jobs: [
-    { id: "j1", type: "app_details", status: "active", createdAt: "2026-02-27T12:00:00Z", data: { slug: "my-app" } },
-    { id: "j2", type: "keyword_search", status: "waiting", createdAt: "2026-02-27T12:01:00Z", data: { keyword: "shopify seo" } },
+    { id: "j1", type: "app_details", status: "active", queue: "interactive", createdAt: "2026-02-27T12:00:00Z", data: { slug: "my-app" } },
+    { id: "j2", type: "keyword_search", status: "waiting", queue: "background", createdAt: "2026-02-27T12:01:00Z", data: { keyword: "shopify seo" } },
   ],
+  queues: {
+    interactive: { isPaused: false, counts: { active: 1, waiting: 0, delayed: 0, failed: 0 }, jobs: [] },
+    background: { isPaused: false, counts: { active: 0, waiting: 3, delayed: 0, failed: 2 }, jobs: [] },
+  },
 };
 
 describe("ScraperPage", () => {
@@ -80,11 +84,13 @@ describe("ScraperPage", () => {
     });
   });
 
-  it("shows queue job counts", async () => {
+  it("shows queue job counts in per-queue breakdown", async () => {
     render(<ScraperPage />);
     await waitFor(() => {
-      expect(screen.getByText("1")).toBeInTheDocument(); // active
-      expect(screen.getByText("3")).toBeInTheDocument(); // waiting
+      // Per-queue breakdown labels (CSS uppercase but text content is lowercase)
+      expect(screen.getByText("Queue Status")).toBeInTheDocument();
+      // Queue column badges in the jobs table
+      expect(screen.getByText("Pause")).toBeInTheDocument();
     });
   });
 
@@ -196,7 +202,7 @@ describe("ScraperPage", () => {
     });
   });
 
-  it("renders queue jobs table", async () => {
+  it("renders queue jobs table with queue labels", async () => {
     render(<ScraperPage />);
     await waitFor(() => {
       expect(screen.getByText("j1")).toBeInTheDocument();
