@@ -10,6 +10,8 @@ worker re-structure (dual queue) ✅
 
 queue tracking in scrape_runs ✅
 
+competitor suggestions (PLA-12) ✅
+
 feedback sayfası
 
 kime hangi durumda nasıl emailler gönderilebilinir.

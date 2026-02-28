@@ -193,3 +193,26 @@ Queue tracking in scrape_runs (PLA-17):
 - Cascade jobs inherit the originating queue: when app_details runs on interactive queue, its cascade jobs (compute_similarity_scores, reviews, etc.) also go to the interactive queue instead of always defaulting to background
 - cascadeOpts computed once from queueName in createProcessJob(), passed to all 7 enqueueScraperJob cascade calls
 - Files: scrape-runs.ts, 0036_scrape_runs_queue.sql, process-job.ts, worker.ts, interactive-worker.ts, category-scraper.ts, app-details-scraper.ts, review-scraper.ts, keyword-scraper.ts, keyword-suggestion-scraper.ts, compute-review-metrics.ts, compute-similarity-scores.ts, system-admin.ts (API), scraper/page.tsx, scraper-page.test.tsx
+
+Competitor suggestions (PLA-12):
+- Similarity utilities extracted from scraper to packages/shared/src/similarity.ts
+  - STOP_WORDS, jaccard(), tokenize(), extractCategorySlugs(), extractFeatureHandles(), computeSimilarityBetween()
+  - SIMILARITY_WEIGHTS constant (category/feature/keyword/text each 25%)
+  - AppSimilarityData and SimilarityResult types
+- Scraper's compute-similarity-scores.ts updated to import from @shopify-tracking/shared
+- API: GET /api/account/tracked-apps/:slug/competitor-suggestions?limit=20
+  - On-demand computation, no storage table — candidates from top 24 apps per category via appCategoryRankings
+  - Batch-fetches snapshots, app info, keyword rankings for all candidates + tracked app in parallel
+  - Computes Jaccard similarity for each candidate across 4 dimensions
+  - Bonus +5% for apps listed in similarAppSightings
+  - Excludes tracked app, marks already-added competitors with isAlreadyCompetitor flag
+  - Response: appSlug, appName, iconUrl, averageRating, ratingCount, pricingHint, isBuiltForShopify, isAlreadyCompetitor, similarity scores, categoryRanks, isShopifySimilar
+- Dashboard: CompetitorSuggestions component (competitor-suggestions.tsx)
+  - Follows MetadataKeywordSuggestions pattern: collapsible panel, amber-styled button, lazy loading
+  - Prominent mode: auto-opens when no competitors added (empty state)
+  - Each suggestion: app icon + name (linked), BFS badge, similarity bar (color-coded), score breakdown tooltip, category rank badges, rating + reviews, pricing hint, external link, add button
+  - Added state: Check icon for already-added competitors
+  - Footer: similarity weight legend
+- Integrated into competitors-section.tsx between search bar and competitors table
+- 25 new tests for similarity utilities (jaccard, tokenize, extractCategorySlugs, extractFeatureHandles, computeSimilarityBetween, SIMILARITY_WEIGHTS, STOP_WORDS)
+- Files: packages/shared/src/similarity.ts (new), packages/shared/src/index.ts, apps/scraper/src/jobs/compute-similarity-scores.ts, apps/api/src/routes/account.ts, apps/dashboard/src/components/competitor-suggestions.tsx (new), apps/dashboard/src/app/(dashboard)/apps/[slug]/competitors-section.tsx, apps/dashboard/src/__tests__/lib/similarity.test.ts (new)

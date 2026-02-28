@@ -1,77 +1,16 @@
 import { eq, sql } from "drizzle-orm";
 import type { Database } from "@shopify-tracking/db";
 import { scrapeRuns, appSimilarityScores, accountCompetitorApps } from "@shopify-tracking/db";
-import { createLogger } from "@shopify-tracking/shared";
+import {
+  createLogger,
+  SIMILARITY_WEIGHTS,
+  jaccard,
+  tokenize,
+  extractCategorySlugs,
+  extractFeatureHandles,
+} from "@shopify-tracking/shared";
 
 const log = createLogger("compute-similarity-scores");
-
-// Weights for each component (must sum to 1)
-const W_CATEGORY = 0.25;
-const W_FEATURE = 0.25;
-const W_KEYWORD = 0.25;
-const W_TEXT = 0.25;
-
-const STOP_WORDS = new Set([
-  "the", "a", "an", "is", "are", "am", "was", "were", "be", "been", "being",
-  "in", "on", "at", "to", "for", "of", "and", "or", "but", "not", "with",
-  "by", "from", "as", "it", "its", "this", "that", "these", "those",
-  "i", "you", "he", "she", "we", "they", "my", "your", "our", "his", "her", "their",
-  "me", "us", "him", "them", "do", "does", "did", "have", "has", "had",
-  "will", "would", "can", "could", "shall", "should", "may", "might", "must",
-  "so", "if", "then", "than", "no", "all", "any", "each", "every", "some",
-  "such", "very", "just", "about", "up", "out", "how", "what", "which", "who",
-  "when", "where", "also", "more", "other", "into", "over", "after", "before",
-  // Shopify-specific stop words
-  "app", "apps", "shopify", "store", "stores", "shop", "shops", "your", "our",
-]);
-
-/** Jaccard index: |A ∩ B| / |A ∪ B| */
-function jaccard(setA: Set<string>, setB: Set<string>): number {
-  if (setA.size === 0 && setB.size === 0) return 0;
-  let intersection = 0;
-  const [smaller, larger] = setA.size <= setB.size ? [setA, setB] : [setB, setA];
-  for (const item of smaller) {
-    if (larger.has(item)) intersection++;
-  }
-  const union = setA.size + setB.size - intersection;
-  return union === 0 ? 0 : intersection / union;
-}
-
-/** Tokenize text into a set of normalized words */
-function tokenize(text: string): Set<string> {
-  return new Set(
-    text
-      .toLowerCase()
-      .replace(/[^a-z0-9\s]/g, " ")
-      .split(/\s+/)
-      .filter((w) => w.length >= 3 && !STOP_WORDS.has(w))
-  );
-}
-
-/** Extract category slugs from snapshot categories JSONB */
-function extractCategorySlugs(categories: any[]): Set<string> {
-  const slugs = new Set<string>();
-  for (const c of categories) {
-    if (c.url) {
-      const slug = c.url.replace(/.*\/categories\//, "").replace(/\/.*/, "");
-      if (slug) slugs.add(slug);
-    }
-  }
-  return slugs;
-}
-
-/** Extract feature_handle values from snapshot categories JSONB */
-function extractFeatureHandles(categories: any[]): Set<string> {
-  const handles = new Set<string>();
-  for (const c of categories) {
-    for (const sub of c.subcategories ?? []) {
-      for (const f of sub.features ?? []) {
-        if (f.feature_handle) handles.add(f.feature_handle);
-      }
-    }
-  }
-  return handles;
-}
 
 export async function computeSimilarityScores(db: Database, triggeredBy: string, queue?: string): Promise<void> {
   const startTime = Date.now();
@@ -207,7 +146,7 @@ export async function computeSimilarityScores(db: Database, triggeredBy: string,
       const kwScore = jaccard(keywordMap.get(slugA) ?? new Set(), keywordMap.get(slugB) ?? new Set());
       const txtScore = jaccard(tokenMap.get(slugA) ?? new Set(), tokenMap.get(slugB) ?? new Set());
 
-      const overall = W_CATEGORY * catScore + W_FEATURE * featScore + W_KEYWORD * kwScore + W_TEXT * txtScore;
+      const overall = SIMILARITY_WEIGHTS.category * catScore + SIMILARITY_WEIGHTS.feature * featScore + SIMILARITY_WEIGHTS.keyword * kwScore + SIMILARITY_WEIGHTS.text * txtScore;
 
       await db
         .insert(appSimilarityScores)

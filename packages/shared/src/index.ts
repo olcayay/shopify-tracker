@@ -46,6 +46,21 @@ export type {
   ScoredKeyword,
 } from "./keyword-extraction.js";
 
+// Similarity
+export {
+  STOP_WORDS,
+  SIMILARITY_WEIGHTS,
+  jaccard,
+  tokenize,
+  extractCategorySlugs,
+  extractFeatureHandles,
+  computeSimilarityBetween,
+} from "./similarity.js";
+export type {
+  AppSimilarityData,
+  SimilarityResult,
+} from "./similarity.js";
+
 // Logger
 export { Logger, createLogger } from "./logger.js";
 export type { LogLevel, LogContext } from "./logger.js";

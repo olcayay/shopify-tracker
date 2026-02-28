@@ -2143,6 +2143,249 @@ export const accountRoutes: FastifyPluginAsync = async (app) => {
     }
   );
 
+  // GET /api/account/tracked-apps/:slug/competitor-suggestions
+  app.get<{ Params: { slug: string } }>(
+    "/tracked-apps/:slug/competitor-suggestions",
+    async (request, reply) => {
+      const { accountId } = request.user;
+      const slug = decodeURIComponent(request.params.slug);
+      const { limit: limitStr = "20" } = request.query as { limit?: string };
+      const maxResults = Math.min(parseInt(limitStr, 10) || 20, 48);
+
+      // 1. Verify tracked app belongs to account
+      const [tracked] = await db
+        .select({ appSlug: accountTrackedApps.appSlug })
+        .from(accountTrackedApps)
+        .where(
+          and(
+            eq(accountTrackedApps.accountId, accountId),
+            eq(accountTrackedApps.appSlug, slug)
+          )
+        )
+        .limit(1);
+
+      if (!tracked) {
+        return reply.code(404).send({ error: "App not tracked by this account" });
+      }
+
+      // 2. Get tracked app's latest snapshot → extract category slugs
+      const [trackedSnapshot] = await db
+        .select({ categories: appSnapshots.categories, appIntroduction: appSnapshots.appIntroduction })
+        .from(appSnapshots)
+        .where(eq(appSnapshots.appSlug, slug))
+        .orderBy(desc(appSnapshots.scrapedAt))
+        .limit(1);
+
+      if (!trackedSnapshot) {
+        return { suggestions: [] };
+      }
+
+      const { extractCategorySlugs, extractFeatureHandles, tokenize, computeSimilarityBetween } =
+        await import("@shopify-tracking/shared");
+
+      const trackedCategories = (trackedSnapshot.categories as any[]) ?? [];
+      const trackedCatSlugs = extractCategorySlugs(trackedCategories);
+
+      if (trackedCatSlugs.size === 0) {
+        return { suggestions: [] };
+      }
+
+      // 3. Get existing competitors for this (account, trackedAppSlug) pair
+      const existingComps = await db
+        .select({ appSlug: accountCompetitorApps.appSlug })
+        .from(accountCompetitorApps)
+        .where(
+          and(
+            eq(accountCompetitorApps.accountId, accountId),
+            eq(accountCompetitorApps.trackedAppSlug, slug)
+          )
+        );
+      const existingCompSlugs = new Set(existingComps.map((c) => c.appSlug));
+
+      // 4. Gather candidate apps — top 24 per category from appCategoryRankings
+      const catSlugArray = [...trackedCatSlugs];
+      const catSlugList = sql.join(catSlugArray.map((s) => sql`${s}`), sql`, `);
+
+      const candidateRows: any[] = await db
+        .execute(
+          sql`
+          WITH latest_positions AS (
+            SELECT DISTINCT ON (app_slug, category_slug)
+              app_slug, category_slug, position
+            FROM app_category_rankings
+            WHERE category_slug IN (${catSlugList})
+              AND app_slug != ${slug}
+            ORDER BY app_slug, category_slug, scraped_at DESC
+          ),
+          ranked AS (
+            SELECT *, ROW_NUMBER() OVER (PARTITION BY category_slug ORDER BY position) AS rn
+            FROM latest_positions
+          )
+          SELECT app_slug, category_slug, position FROM ranked WHERE rn <= 24
+        `
+        )
+        .then((res: any) => (res as any).rows ?? res);
+
+      if (candidateRows.length === 0) {
+        return { suggestions: [] };
+      }
+
+      // Build candidate slug → category ranks map
+      const candidateCatRanks = new Map<string, Array<{ categorySlug: string; position: number }>>();
+      const candidateSlugs = new Set<string>();
+      for (const row of candidateRows) {
+        candidateSlugs.add(row.app_slug);
+        if (!candidateCatRanks.has(row.app_slug)) candidateCatRanks.set(row.app_slug, []);
+        candidateCatRanks.get(row.app_slug)!.push({ categorySlug: row.category_slug, position: row.position });
+      }
+
+      // 5. Batch-fetch data for all candidates + tracked app
+      const allSlugs = [...candidateSlugs, slug];
+      const slugList = sql.join(allSlugs.map((s) => sql`${s}`), sql`, `);
+
+      // Fetch snapshots, app info, and keywords in parallel
+      const [snapshotRows, appInfoRows, kwRows] = await Promise.all([
+        db
+          .execute(
+            sql`
+            SELECT DISTINCT ON (app_slug)
+              app_slug, categories, app_introduction
+            FROM app_snapshots
+            WHERE app_slug IN (${slugList})
+            ORDER BY app_slug, scraped_at DESC
+          `
+          )
+          .then((res: any) => (res as any).rows ?? res) as Promise<any[]>,
+
+        db
+          .execute(
+            sql`
+            SELECT slug, name, app_card_subtitle, icon_url, average_rating, rating_count,
+                   pricing_hint, is_built_for_shopify
+            FROM apps
+            WHERE slug IN (${slugList})
+          `
+          )
+          .then((res: any) => (res as any).rows ?? res) as Promise<any[]>,
+
+        db
+          .execute(
+            sql`
+            SELECT DISTINCT ON (app_slug, keyword_id) app_slug, keyword_id
+            FROM app_keyword_rankings
+            WHERE app_slug IN (${slugList})
+              AND position IS NOT NULL
+            ORDER BY app_slug, keyword_id, scraped_at DESC
+          `
+          )
+          .then((res: any) => (res as any).rows ?? res) as Promise<any[]>,
+      ]);
+
+      // Build lookup maps
+      const snapshotMap = new Map<string, any>();
+      for (const r of snapshotRows) snapshotMap.set(r.app_slug, r);
+
+      const appInfoMap = new Map<string, any>();
+      for (const r of appInfoRows) appInfoMap.set(r.slug, r);
+
+      const keywordMap = new Map<string, Set<string>>();
+      for (const r of kwRows) {
+        if (!keywordMap.has(r.app_slug)) keywordMap.set(r.app_slug, new Set());
+        keywordMap.get(r.app_slug)!.add(String(r.keyword_id));
+      }
+
+      // 6. Prepare tracked app's similarity data
+      const trackedAppInfo = appInfoMap.get(slug);
+      const trackedTextParts = [
+        trackedAppInfo?.name ?? "",
+        trackedAppInfo?.app_card_subtitle ?? "",
+        trackedSnapshot.appIntroduction ?? "",
+      ].join(" ");
+
+      const trackedData = {
+        categorySlugs: trackedCatSlugs,
+        featureHandles: extractFeatureHandles(trackedCategories),
+        keywordIds: keywordMap.get(slug) ?? new Set<string>(),
+        textTokens: tokenize(trackedTextParts),
+      };
+
+      // 7. Check similarAppSightings for bonus signal
+      const candidateSlugArray = [...candidateSlugs];
+      const candidateSlugList = sql.join(candidateSlugArray.map((s) => sql`${s}`), sql`, `);
+      const similarRows: any[] = await db
+        .execute(
+          sql`
+          SELECT DISTINCT similar_app_slug
+          FROM similar_app_sightings
+          WHERE app_slug = ${slug}
+            AND similar_app_slug IN (${candidateSlugList})
+        `
+        )
+        .then((res: any) => (res as any).rows ?? res);
+      const shopifySimilarSlugs = new Set(similarRows.map((r: any) => r.similar_app_slug));
+
+      // 8. Compute similarity for each candidate
+      const suggestions: any[] = [];
+      for (const candidateSlug of candidateSlugs) {
+        const snap = snapshotMap.get(candidateSlug);
+        const info = appInfoMap.get(candidateSlug);
+        if (!info) continue;
+
+        const cats = snap?.categories ?? [];
+        const candidateCatSlugsSet = cats.length > 0
+          ? extractCategorySlugs(cats)
+          : new Set(candidateCatRanks.get(candidateSlug)?.map((cr) => cr.categorySlug) ?? []);
+
+        const candidateTextParts = [
+          info.name ?? "",
+          info.app_card_subtitle ?? "",
+          snap?.app_introduction ?? "",
+        ].join(" ");
+
+        const candidateData = {
+          categorySlugs: candidateCatSlugsSet,
+          featureHandles: snap ? extractFeatureHandles(cats) : new Set<string>(),
+          keywordIds: keywordMap.get(candidateSlug) ?? new Set<string>(),
+          textTokens: tokenize(candidateTextParts),
+        };
+
+        const similarity = computeSimilarityBetween(trackedData, candidateData);
+
+        // Bonus for Shopify-listed similar apps (add 5% to overall, capped at 1)
+        if (shopifySimilarSlugs.has(candidateSlug)) {
+          similarity.overall = Math.min(1, similarity.overall + 0.05);
+        }
+
+        const isAlreadyCompetitor = existingCompSlugs.has(candidateSlug);
+
+        suggestions.push({
+          appSlug: candidateSlug,
+          appName: info.name,
+          iconUrl: info.icon_url ?? null,
+          averageRating: info.average_rating ?? null,
+          ratingCount: info.rating_count != null ? Number(info.rating_count) : null,
+          pricingHint: info.pricing_hint ?? null,
+          isBuiltForShopify: info.is_built_for_shopify ?? false,
+          isAlreadyCompetitor,
+          similarity: {
+            overall: Math.round(similarity.overall * 10000) / 10000,
+            category: Math.round(similarity.category * 10000) / 10000,
+            feature: Math.round(similarity.feature * 10000) / 10000,
+            keyword: Math.round(similarity.keyword * 10000) / 10000,
+            text: Math.round(similarity.text * 10000) / 10000,
+          },
+          categoryRanks: candidateCatRanks.get(candidateSlug) ?? [],
+          isShopifySimilar: shopifySimilarSlugs.has(candidateSlug),
+        });
+      }
+
+      // 9. Sort by overall score descending, return top N
+      suggestions.sort((a, b) => b.similarity.overall - a.similarity.overall);
+
+      return { suggestions: suggestions.slice(0, maxResults) };
+    }
+  );
+
   // --- Starred Categories ---
 
   // GET /api/account/starred-categories

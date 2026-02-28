@@ -20,6 +20,7 @@ import { cn } from "@/lib/utils";
 import { DropdownMenu as DropdownMenuPrimitive } from "radix-ui";
 import { ConfirmModal } from "@/components/confirm-modal";
 import { AppSearchBar } from "@/components/app-search-bar";
+import { CompetitorSuggestions } from "@/components/competitor-suggestions";
 import { VelocityCell } from "@/components/velocity-cell";
 import { MomentumBadge } from "@/components/momentum-badge";
 import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
@@ -453,6 +454,13 @@ export function CompetitorsSection({ appSlug }: { appSlug: string }) {
           </DropdownMenuPrimitive.Portal>
         </DropdownMenuPrimitive.Root>
       </div>
+
+      <CompetitorSuggestions
+        appSlug={appSlug}
+        competitorSlugs={competitorSlugs}
+        onCompetitorAdded={(slug, name) => addCompetitor(slug, name)}
+        prominent={competitors.filter((c) => !c.isSelf).length === 0 && !loading}
+      />
 
       {loading ? (
         <TableSkeleton rows={5} cols={6} />
