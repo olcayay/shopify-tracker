@@ -96,9 +96,8 @@ services:
   worker-interactive:
     build:
       context: .
-      dockerfile: Dockerfile.worker
+      dockerfile: Dockerfile.worker-interactive
     restart: always
-    command: ["node", "apps/scraper/dist/interactive-worker.js"]
     environment:
       DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-shopify_tracking}
       REDIS_URL: redis://redis:6379
