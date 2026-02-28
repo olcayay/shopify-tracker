@@ -49,7 +49,7 @@ export function MetadataKeywordSuggestions({
 }: {
   appSlug: string;
   trackedKeywords: Set<string>;
-  onKeywordAdded: () => void;
+  onKeywordAdded: (keywordId?: number, scraperEnqueued?: boolean) => void;
   prominent?: boolean;
 }) {
   const { fetchWithAuth } = useAuth();
@@ -104,8 +104,9 @@ export function MetadataKeywordSuggestions({
         { method: "POST", body: JSON.stringify({ keyword }) }
       );
       if (res.ok) {
+        const data = await res.json().catch(() => ({}));
         setAddedKeywords((prev) => new Set([...prev, keyword.toLowerCase()]));
-        onKeywordAdded();
+        onKeywordAdded(data.keywordId, data.scraperEnqueued);
       } else {
         const data = await res.json().catch(() => ({}));
         setError(data.error || `Failed to add keyword (${res.status})`);

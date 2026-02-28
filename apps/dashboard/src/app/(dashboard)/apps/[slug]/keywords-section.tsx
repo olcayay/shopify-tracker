@@ -664,7 +664,10 @@ export function KeywordsSection({ appSlug }: { appSlug: string }) {
         <MetadataKeywordSuggestions
           appSlug={appSlug}
           trackedKeywords={new Set(keywords.map((k: any) => k.keyword.toLowerCase()))}
-          onKeywordAdded={() => {
+          onKeywordAdded={(keywordId, scraperEnqueued) => {
+            if (scraperEnqueued && keywordId) {
+              setPendingKeywordIds((prev) => new Set(prev).add(keywordId));
+            }
             loadKeywords(appSlugsParam, true);
             refreshUser();
           }}
@@ -884,7 +887,10 @@ export function KeywordsSection({ appSlug }: { appSlug: string }) {
           appSlug={appSlug}
           open={!!suggestionsKeyword}
           onClose={() => setSuggestionsKeyword(null)}
-          onKeywordAdded={() => {
+          onKeywordAdded={(keywordId, scraperEnqueued) => {
+            if (scraperEnqueued && keywordId) {
+              setPendingKeywordIds((prev) => new Set(prev).add(keywordId));
+            }
             loadKeywords(appSlugsParam, true);
             refreshUser();
           }}

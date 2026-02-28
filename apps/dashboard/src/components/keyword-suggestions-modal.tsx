@@ -28,7 +28,7 @@ export function KeywordSuggestionsModal({
   appSlug: string;
   open: boolean;
   onClose: () => void;
-  onKeywordAdded?: () => void;
+  onKeywordAdded?: (keywordId?: number, scraperEnqueued?: boolean) => void;
 }) {
   const { fetchWithAuth } = useAuth();
   const [suggestions, setSuggestions] = useState<string[]>([]);
@@ -101,8 +101,9 @@ export function KeywordSuggestionsModal({
         }
       );
       if (res.ok) {
+        const data = await res.json().catch(() => ({}));
         setAddedKeywords((prev) => new Set([...prev, suggestion.toLowerCase()]));
-        onKeywordAdded?.();
+        onKeywordAdded?.(data.keywordId, data.scraperEnqueued);
       }
     } catch {}
     setAddingKeyword(null);
