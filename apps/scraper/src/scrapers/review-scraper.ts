@@ -19,7 +19,7 @@ export class ReviewScraper {
   }
 
   /** Scrape reviews for all tracked apps */
-  async scrapeTracked(triggeredBy?: string): Promise<void> {
+  async scrapeTracked(triggeredBy?: string, queue?: string): Promise<void> {
     const trackedApps = await this.db
       .select({ slug: apps.slug })
       .from(apps)
@@ -40,6 +40,7 @@ export class ReviewScraper {
         createdAt: new Date(),
         startedAt: new Date(),
         triggeredBy,
+        queue,
       })
       .returning();
 

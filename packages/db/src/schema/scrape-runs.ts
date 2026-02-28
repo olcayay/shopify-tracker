@@ -29,6 +29,7 @@ export const scrapeRuns = pgTable(
     startedAt: timestamp("started_at"),
     completedAt: timestamp("completed_at"),
     triggeredBy: varchar("triggered_by", { length: 255 }),
+    queue: varchar("queue", { length: 20 }),
     metadata: jsonb("metadata").$type<Record<string, unknown>>(),
     error: text("error"),
   },

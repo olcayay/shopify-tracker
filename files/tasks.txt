@@ -8,6 +8,8 @@ keyword alphabetical sorting ✅
 
 worker re-structure (dual queue) ✅
 
+queue tracking in scrape_runs ✅
+
 feedback sayfası
 
 kime hangi durumda nasıl emailler gönderilebilinir.

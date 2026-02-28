@@ -73,7 +73,7 @@ function extractFeatureHandles(categories: any[]): Set<string> {
   return handles;
 }
 
-export async function computeSimilarityScores(db: Database, triggeredBy: string): Promise<void> {
+export async function computeSimilarityScores(db: Database, triggeredBy: string, queue?: string): Promise<void> {
   const startTime = Date.now();
 
   const [run] = await db
@@ -84,6 +84,7 @@ export async function computeSimilarityScores(db: Database, triggeredBy: string)
       createdAt: new Date(),
       startedAt: new Date(),
       triggeredBy,
+      queue,
     })
     .returning();
 

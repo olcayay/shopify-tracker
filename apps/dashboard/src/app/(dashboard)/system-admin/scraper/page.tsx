@@ -161,6 +161,7 @@ export default function ScraperPage() {
   const [message, setMessage] = useState("");
   const [filterType, setFilterType] = useState<string>("");
   const [filterTrigger, setFilterTrigger] = useState<string>("");
+  const [filterQueue, setFilterQueue] = useState<string>("");
   const [page, setPage] = useState(0);
   const [expandedRunId, setExpandedRunId] = useState<string | null>(null);
   const [drainConfirm, setDrainConfirm] = useState(false);
@@ -168,12 +169,13 @@ export default function ScraperPage() {
 
   useEffect(() => {
     loadData();
-  }, [filterType, filterTrigger, page]);
+  }, [filterType, filterTrigger, filterQueue, page]);
 
   async function loadData() {
     const params = new URLSearchParams();
     if (filterType) params.set("type", filterType);
     if (filterTrigger) params.set("triggeredBy", filterTrigger);
+    if (filterQueue) params.set("queue", filterQueue);
     params.set("limit", String(PAGE_SIZE));
     params.set("offset", String(page * PAGE_SIZE));
 
@@ -594,6 +596,18 @@ export default function ScraperPage() {
                 <option value="scheduler">Scheduler</option>
                 <option value="manual">Manual</option>
               </select>
+              <select
+                value={filterQueue}
+                onChange={(e) => {
+                  setFilterQueue(e.target.value);
+                  setPage(0);
+                }}
+                className="border rounded-md px-3 py-1.5 text-sm bg-background"
+              >
+                <option value="">All queues</option>
+                <option value="interactive">Interactive</option>
+                <option value="background">Background</option>
+              </select>
               <Button variant="ghost" size="sm" onClick={loadData}>
                 <RefreshCw className="h-4 w-4" />
               </Button>
@@ -607,6 +621,7 @@ export default function ScraperPage() {
                 <TableHead className="w-8" />
                 <TableHead>Type</TableHead>
                 <TableHead>Status</TableHead>
+                <TableHead>Queue</TableHead>
                 <TableHead>Triggered By</TableHead>
                 <TableHead>Queued</TableHead>
                 <TableHead>Started</TableHead>
@@ -660,6 +675,15 @@ export default function ScraperPage() {
                       >
                         {run.status}
                       </Badge>
+                    </TableCell>
+                    <TableCell>
+                      {run.queue ? (
+                        <Badge variant="outline" className="text-[10px]">
+                          {run.queue}
+                        </Badge>
+                      ) : (
+                        <span className="text-muted-foreground">{"\u2014"}</span>
+                      )}
                     </TableCell>
                     <TableCell className="text-sm">
                       {run.triggeredBy ? (
@@ -728,7 +752,7 @@ export default function ScraperPage() {
                   </TableRow>
                   {expandedRunId === run.id && (
                     <TableRow key={`${run.id}-details`}>
-                      <TableCell colSpan={9} className="bg-muted/30 p-4">
+                      <TableCell colSpan={10} className="bg-muted/30 p-4">
                         {run.error && (
                           <div className="mb-3">
                             <div className="text-sm font-medium text-destructive mb-1">
@@ -774,7 +798,7 @@ export default function ScraperPage() {
               {runs.length === 0 && (
                 <TableRow>
                   <TableCell
-                    colSpan={9}
+                    colSpan={10}
                     className="text-center text-muted-foreground"
                   >
                     No scraper runs yet

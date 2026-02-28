@@ -535,9 +535,10 @@ export const systemAdminRoutes: FastifyPluginAsync = async (app) => {
 
   // GET /api/system-admin/scraper/runs
   app.get("/scraper/runs", async (request) => {
-    const { type, triggeredBy: triggerFilter, limit = "20", offset = "0" } = request.query as {
+    const { type, triggeredBy: triggerFilter, queue: queueFilter, limit = "20", offset = "0" } = request.query as {
       type?: string;
       triggeredBy?: string;
+      queue?: string;
       limit?: string;
       offset?: string;
     };
@@ -553,6 +554,9 @@ export const systemAdminRoutes: FastifyPluginAsync = async (app) => {
       conditions.push(eq(scrapeRuns.triggeredBy, "scheduler"));
     } else if (triggerFilter === "manual") {
       conditions.push(sql`${scrapeRuns.triggeredBy} IS NOT NULL AND ${scrapeRuns.triggeredBy} != 'scheduler'`);
+    }
+    if (queueFilter && ["interactive", "background"].includes(queueFilter)) {
+      conditions.push(eq(scrapeRuns.queue, queueFilter));
     }
 
     let query = db.select().from(scrapeRuns);

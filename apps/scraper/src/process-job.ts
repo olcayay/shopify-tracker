@@ -28,7 +28,7 @@ export function initWorkerDeps() {
   return { db, httpClient };
 }
 
-export function createProcessJob(db: ReturnType<typeof createDb>, httpClient: HttpClient) {
+export function createProcessJob(db: ReturnType<typeof createDb>, httpClient: HttpClient, queueName?: string) {
   return async function processJob(job: Job<ScraperJobData>): Promise<void> {
     const { type, triggeredBy } = job.data;
     log.info("processing job", { jobId: job.id, type, triggeredBy });
@@ -41,10 +41,10 @@ export function createProcessJob(db: ReturnType<typeof createDb>, httpClient: Ht
         const scraper = new CategoryScraper(db, { httpClient });
         let discoveredSlugs: string[] = [];
         if (job.data.slug) {
-          discoveredSlugs = await scraper.scrapeSingle(job.data.slug, triggeredBy, pageOptions);
+          discoveredSlugs = await scraper.scrapeSingle(job.data.slug, triggeredBy, pageOptions, queueName);
           log.info("single category scrape completed", { slug: job.data.slug, discoveredApps: discoveredSlugs.length });
         } else {
-          const result = await scraper.crawl(triggeredBy, pageOptions);
+          const result = await scraper.crawl(triggeredBy, pageOptions, queueName);
           discoveredSlugs = result.discoveredSlugs;
         }
 
@@ -67,7 +67,7 @@ export function createProcessJob(db: ReturnType<typeof createDb>, httpClient: Ht
       case "app_details": {
         const scraper = new AppDetailsScraper(db, httpClient);
         if (job.data.slug) {
-          await scraper.scrapeApp(job.data.slug, undefined, triggeredBy);
+          await scraper.scrapeApp(job.data.slug, undefined, triggeredBy, queueName);
           log.info("single app scrape completed", { slug: job.data.slug });
 
           // Cascade: enqueue review job
@@ -80,7 +80,7 @@ export function createProcessJob(db: ReturnType<typeof createDb>, httpClient: Ht
             log.info("cascaded reviews job", { slug: job.data.slug });
           }
         } else {
-          await scraper.scrapeTracked(triggeredBy);
+          await scraper.scrapeTracked(triggeredBy, queueName);
 
           // Cascade: enqueue review jobs for all tracked apps
           if (opts?.scrapeReviews) {
@@ -131,6 +131,7 @@ export function createProcessJob(db: ReturnType<typeof createDb>, httpClient: Ht
                 createdAt: new Date(),
                 startedAt: new Date(),
                 triggeredBy,
+                queue: queueName,
               })
               .returning();
             discoveredSlugs = await scraper.scrapeKeyword(kw.id, kw.keyword, run.id, pageOptions);
@@ -143,7 +144,7 @@ export function createProcessJob(db: ReturnType<typeof createDb>, httpClient: Ht
             log.warn("keyword not found for single scrape", { keyword: job.data.keyword });
           }
         } else {
-          discoveredSlugs = await scraper.scrapeAll(triggeredBy, pageOptions);
+          discoveredSlugs = await scraper.scrapeAll(triggeredBy, pageOptions, queueName);
         }
 
         // Cascade: enqueue app_details jobs for discovered apps
@@ -197,6 +198,7 @@ export function createProcessJob(db: ReturnType<typeof createDb>, httpClient: Ht
                 createdAt: new Date(),
                 startedAt: new Date(),
                 triggeredBy,
+                queue: queueName,
               })
               .returning();
             await suggestionScraper.scrapeSuggestions(kw.id, kw.keyword, run.id);
@@ -209,7 +211,7 @@ export function createProcessJob(db: ReturnType<typeof createDb>, httpClient: Ht
             log.warn("keyword not found for suggestion scrape", { keyword: job.data.keyword });
           }
         } else {
-          await suggestionScraper.scrapeAll(triggeredBy);
+          await suggestionScraper.scrapeAll(triggeredBy, queueName);
         }
         break;
       }
@@ -226,6 +228,7 @@ export function createProcessJob(db: ReturnType<typeof createDb>, httpClient: Ht
               createdAt: new Date(),
               startedAt: new Date(),
               triggeredBy,
+              queue: queueName,
             })
             .returning();
           try {
@@ -246,23 +249,23 @@ export function createProcessJob(db: ReturnType<typeof createDb>, httpClient: Ht
             throw err;
           }
         } else {
-          await scraper.scrapeTracked(triggeredBy);
+          await scraper.scrapeTracked(triggeredBy, queueName);
         }
         // Always recompute review metrics after reviews are scraped
         const { computeReviewMetrics } = await import("./jobs/compute-review-metrics.js");
-        await computeReviewMetrics(db, `${triggeredBy}:reviews`);
+        await computeReviewMetrics(db, `${triggeredBy}:reviews`, queueName);
         break;
       }
 
       case "compute_review_metrics": {
         const { computeReviewMetrics } = await import("./jobs/compute-review-metrics.js");
-        await computeReviewMetrics(db, triggeredBy);
+        await computeReviewMetrics(db, triggeredBy, queueName);
         break;
       }
 
       case "compute_similarity_scores": {
         const { computeSimilarityScores } = await import("./jobs/compute-similarity-scores.js");
-        await computeSimilarityScores(db, triggeredBy);
+        await computeSimilarityScores(db, triggeredBy, queueName);
         break;
       }
 

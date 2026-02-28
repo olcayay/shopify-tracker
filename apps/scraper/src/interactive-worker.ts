@@ -9,7 +9,7 @@ import { initWorkerDeps, createProcessJob } from "./process-job.js";
 const log = createLogger("interactive-worker");
 
 const { db, httpClient } = initWorkerDeps();
-const processJob = createProcessJob(db, httpClient);
+const processJob = createProcessJob(db, httpClient, "interactive");
 
 const worker = new Worker<ScraperJobData>(
   INTERACTIVE_QUEUE_NAME,

@@ -20,7 +20,7 @@ export class KeywordSuggestionScraper {
   }
 
   /** Scrape autocomplete suggestions for all active keywords */
-  async scrapeAll(triggeredBy?: string): Promise<void> {
+  async scrapeAll(triggeredBy?: string, queue?: string): Promise<void> {
     const keywords = await this.db
       .select()
       .from(trackedKeywords)
@@ -41,6 +41,7 @@ export class KeywordSuggestionScraper {
         createdAt: new Date(),
         startedAt: new Date(),
         triggeredBy,
+        queue,
       })
       .returning();
 

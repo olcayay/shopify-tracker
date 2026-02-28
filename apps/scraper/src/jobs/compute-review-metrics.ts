@@ -47,7 +47,7 @@ function computeMetrics(v7d: number, v30d: number, v90d: number): ReviewVelocity
   return { v7d, v30d, v90d, accMicro, accMacro, momentum };
 }
 
-export async function computeReviewMetrics(db: Database, triggeredBy: string): Promise<void> {
+export async function computeReviewMetrics(db: Database, triggeredBy: string, queue?: string): Promise<void> {
   const startTime = Date.now();
 
   // Create scrape run record
@@ -59,6 +59,7 @@ export async function computeReviewMetrics(db: Database, triggeredBy: string): P
       createdAt: new Date(),
       startedAt: new Date(),
       triggeredBy,
+      queue,
     })
     .returning();
 

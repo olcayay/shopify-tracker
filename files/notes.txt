@@ -181,3 +181,13 @@ Worker re-structure — dual queue architecture (PLA-14):
 - Trigger endpoint accepts optional queue parameter (default: background)
 - Docker: same Dockerfile.worker image, two services in docker-compose (worker + worker-interactive)
 - Files: queue.ts, process-job.ts (new), worker.ts, interactive-worker.ts (new), account.ts, system-admin.ts, admin.ts, scraper page, docker-compose.prod.yml, package.json
+
+Queue tracking in scrape_runs (PLA-17):
+- New DB column: scrape_runs.queue (varchar(20), nullable for backward compat)
+- Migration: 0036_scrape_runs_queue.sql — simple ALTER TABLE ADD COLUMN
+- createProcessJob() accepts queueName parameter, workers pass "background" or "interactive"
+- All scrape_run inserts include queue: category-scraper (crawl, scrapeSingle), app-details-scraper (scrapeTracked, scrapeApp), review-scraper (scrapeTracked), keyword-scraper (scrapeAll), keyword-suggestion-scraper (scrapeAll), compute-review-metrics, compute-similarity-scores, process-job inline inserts (keyword_search single, keyword_suggestions single, reviews single)
+- API: GET /api/system-admin/scraper/runs now supports ?queue=interactive|background filter
+- Dashboard Run History table: new "Queue" column with badge (interactive/background), queue filter dropdown alongside type/trigger filters
+- Existing runs have queue=null (shown as dash in UI)
+- Files: scrape-runs.ts, 0036_scrape_runs_queue.sql, process-job.ts, worker.ts, interactive-worker.ts, category-scraper.ts, app-details-scraper.ts, review-scraper.ts, keyword-scraper.ts, keyword-suggestion-scraper.ts, compute-review-metrics.ts, compute-similarity-scores.ts, system-admin.ts (API), scraper/page.tsx, scraper-page.test.tsx

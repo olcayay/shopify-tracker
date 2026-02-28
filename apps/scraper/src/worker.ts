@@ -9,7 +9,7 @@ import { initWorkerDeps, createProcessJob } from "./process-job.js";
 const log = createLogger("background-worker");
 
 const { db, httpClient } = initWorkerDeps();
-const processJob = createProcessJob(db, httpClient);
+const processJob = createProcessJob(db, httpClient, "background");
 
 const worker = new Worker<ScraperJobData>(
   BACKGROUND_QUEUE_NAME,

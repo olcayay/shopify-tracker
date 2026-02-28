@@ -53,7 +53,7 @@ export class CategoryScraper {
    * Crawl the full category tree starting from the 6 seed categories.
    * Returns the complete tree as an array of root nodes.
    */
-  async crawl(triggeredBy?: string, pageOptions?: ScrapePageOptions): Promise<{ tree: CategoryNode[]; discoveredSlugs: string[] }> {
+  async crawl(triggeredBy?: string, pageOptions?: ScrapePageOptions, queue?: string): Promise<{ tree: CategoryNode[]; discoveredSlugs: string[] }> {
     log.info("starting full category tree crawl");
 
     // Create scrape run
@@ -65,6 +65,7 @@ export class CategoryScraper {
         createdAt: new Date(),
         startedAt: new Date(),
         triggeredBy,
+        queue,
       })
       .returning();
 
@@ -140,7 +141,7 @@ export class CategoryScraper {
   /**
    * Scrape a single category (no recursion into subcategories).
    */
-  async scrapeSingle(slug: string, triggeredBy?: string, pageOptions?: ScrapePageOptions): Promise<string[]> {
+  async scrapeSingle(slug: string, triggeredBy?: string, pageOptions?: ScrapePageOptions, queue?: string): Promise<string[]> {
     log.info("scraping single category", { slug });
 
     // Look up existing category info
@@ -158,6 +159,7 @@ export class CategoryScraper {
         createdAt: new Date(),
         startedAt: new Date(),
         triggeredBy,
+        queue,
       })
       .returning();
 

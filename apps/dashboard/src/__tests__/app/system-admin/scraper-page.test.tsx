@@ -37,8 +37,8 @@ const mockStats = {
 
 const mockRuns = {
   runs: [
-    { id: "r1", scraperType: "category", status: "completed", triggeredBy: "scheduler", createdAt: "2026-02-27T03:00:00Z", startedAt: "2026-02-27T03:00:01Z", metadata: { duration_ms: 5000, items_scraped: 20, items_failed: 0 }, error: null, assets: [] },
-    { id: "r2", scraperType: "app_details", status: "failed", triggeredBy: "manual", createdAt: "2026-02-27T10:00:00Z", startedAt: "2026-02-27T10:00:01Z", metadata: { duration_ms: 2000, items_scraped: 5, items_failed: 2 }, error: "Timeout error", assets: [{ name: "my-app", href: "/apps/my-app" }] },
+    { id: "r1", scraperType: "category", status: "completed", triggeredBy: "scheduler", queue: "background", createdAt: "2026-02-27T03:00:00Z", startedAt: "2026-02-27T03:00:01Z", metadata: { duration_ms: 5000, items_scraped: 20, items_failed: 0 }, error: null, assets: [] },
+    { id: "r2", scraperType: "app_details", status: "failed", triggeredBy: "manual", queue: "interactive", createdAt: "2026-02-27T10:00:00Z", startedAt: "2026-02-27T10:00:01Z", metadata: { duration_ms: 2000, items_scraped: 5, items_failed: 2 }, error: "Timeout error", assets: [{ name: "my-app", href: "/apps/my-app" }] },
   ],
   total: 2,
 };

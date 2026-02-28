@@ -25,7 +25,7 @@ export class KeywordScraper {
   }
 
   /** Scrape search results for all active keywords */
-  async scrapeAll(triggeredBy?: string, pageOptions?: { pages?: "first" | "all" | number }): Promise<string[]> {
+  async scrapeAll(triggeredBy?: string, pageOptions?: { pages?: "first" | "all" | number }, queue?: string): Promise<string[]> {
     const keywords = await this.db
       .select()
       .from(trackedKeywords)
@@ -46,6 +46,7 @@ export class KeywordScraper {
         createdAt: new Date(),
         startedAt: new Date(),
         triggeredBy,
+        queue,
       })
       .returning();
 
