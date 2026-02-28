@@ -15,7 +15,7 @@
     "api:start": "turbo --filter=api start",
     "test": "turbo --filter=@shopify-tracking/dashboard test",
     "dashboard:dev": "turbo --filter=dashboard dev",
-    "prepare": "husky"
+    "prepare": "husky || true"
   },
   "devDependencies": {
     "husky": "^9.1.7",
