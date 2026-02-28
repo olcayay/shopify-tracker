@@ -4,6 +4,8 @@ keyword loading states & polling ✅
 
 competitor loading states & polling ✅
 
+keyword alphabetical sorting ✅
+
 feedback sayfası
 
 kime hangi durumda nasıl emailler gönderilebilinir.

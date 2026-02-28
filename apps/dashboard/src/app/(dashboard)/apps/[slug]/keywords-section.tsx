@@ -157,9 +157,14 @@ export function KeywordsSection({ appSlug }: { appSlug: string }) {
     return result;
   }, [keywords, activeTagFilter, activeWordFilter]);
 
-  // Sorted keywords by selected app ranking
+  // Sorted keywords by selected app ranking or alphabetically
   const sortedKeywords = useMemo(() => {
     if (!sortBySlug || filteredKeywords.length === 0) return filteredKeywords;
+    if (sortBySlug === "_alpha") {
+      return [...filteredKeywords].sort((a, b) =>
+        a.keyword.localeCompare(b.keyword)
+      );
+    }
     return [...filteredKeywords].sort((a, b) => {
       const posA = a.rankings?.[sortBySlug];
       const posB = b.rankings?.[sortBySlug];
@@ -704,7 +709,18 @@ export function KeywordsSection({ appSlug }: { appSlug: string }) {
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Keyword</TableHead>
+              <TableHead>
+                <button
+                  onClick={() => setSortBySlug("_alpha")}
+                  className="flex items-center gap-0.5"
+                  title="Sort alphabetically"
+                >
+                  Keyword
+                  {sortBySlug === "_alpha" && (
+                    <ArrowDown className="h-3 w-3 text-muted-foreground" />
+                  )}
+                </button>
+              </TableHead>
               {selectedApps.map((app) => (
                 <TableHead key={app.slug} className="text-center w-16">
                   <button

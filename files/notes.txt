@@ -160,3 +160,10 @@ Competitor loading states & polling (PLA-15):
 - Resolved cells: animate-in fade-in duration-700 animation (2s auto-clear)
 - New row: animate-in fade-in slide-in-from-top on the TableRow
 - Files changed: account.ts (API), competitors-section.tsx (dashboard)
+
+Keyword alphabetical sorting (PLA-16):
+- "Keyword" table header in keywords-section.tsx is now clickable to sort alphabetically
+- Uses sortBySlug === "_alpha" as a special value (distinct from app slugs used for ranking sort)
+- localeCompare for proper alphabetical ordering
+- ArrowDown indicator shows when alphabetical sort is active
+- Clicking any app icon column switches back to ranking sort for that app
