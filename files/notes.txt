@@ -113,3 +113,21 @@ Keyword grouping (PLA-11):
 - Word groups computed from full keyword list (not filtered), so buttons stay stable when tag filter is active
 - useEffect clears activeWordFilter if the word disappears from wordGroups after keyword add/remove
 - 26 new tests (18 utility + 8 component)
+
+Keyword suggestions from app metadata (PLA-10):
+- New shared utility: packages/shared/src/keyword-extraction.ts — pure function, no DB dependency
+- N-gram generation: unigrams (4+ chars, not stop word), bigrams (1+ non-stop), trigrams (2+ non-stop)
+- 7 weighted fields: name(10), subtitle(5), introduction(4), categories(3), features(2), description(2), categoryFeatures(2)
+- Word count multiplier: 1-word=1x, 2-word=2x, 3-word=3x boosts multi-word keywords
+- Filters: must appear in primary field (name/subtitle/intro/description), min 2 fields, max 3 words
+- Scores accumulate across fields — same keyword in name(10) + subtitle(5) = 15
+- Stop words: common English + Shopify-specific (app, store, tool, solution, powerful, easy, etc.)
+- API: GET /api/account/tracked-apps/:slug/keyword-suggestions?debug=true&limit=100
+- API returns tracked:boolean per keyword (no longer filtered out, shown as "Added" in UI)
+- Computed on-demand (not pre-stored), 4 simple indexed queries + in-memory scoring
+- Dashboard component: MetadataKeywordSuggestions with prominent/normal modes
+- Prominent mode (empty state): auto-opens, larger CTA button, integrated into keywords empty state
+- Normal mode: collapsible "Suggest keywords" outline button above keyword table
+- UI shows: keyword, source field badges, count × score, Shopify search link, Add/Added state
+- Weight legend footer for algorithm transparency during iteration
+- 35 new tests (24 extraction algorithm + 11 component)

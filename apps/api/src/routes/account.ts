@@ -2028,6 +2028,121 @@ export const accountRoutes: FastifyPluginAsync = async (app) => {
     }
   );
 
+  // GET /api/account/tracked-apps/:slug/keyword-suggestions
+  app.get<{ Params: { slug: string } }>(
+    "/tracked-apps/:slug/keyword-suggestions",
+    async (request, reply) => {
+      const { accountId } = request.user;
+      const slug = decodeURIComponent(request.params.slug);
+      const { limit: limitStr = "50", debug = "false" } = request.query as {
+        limit?: string;
+        debug?: string;
+      };
+      const isDebug = debug === "true";
+      const maxResults = Math.min(parseInt(limitStr, 10) || 50, 200);
+
+      // Verify app is tracked by this account
+      const [tracked] = await db
+        .select({ appSlug: accountTrackedApps.appSlug })
+        .from(accountTrackedApps)
+        .where(
+          and(
+            eq(accountTrackedApps.accountId, accountId),
+            eq(accountTrackedApps.appSlug, slug)
+          )
+        )
+        .limit(1);
+
+      if (!tracked) {
+        return reply.code(404).send({ error: "App not tracked by this account" });
+      }
+
+      // Fetch app row + latest snapshot
+      const [appRow] = await db
+        .select({
+          name: apps.name,
+          subtitle: apps.appCardSubtitle,
+        })
+        .from(apps)
+        .where(eq(apps.slug, slug))
+        .limit(1);
+
+      if (!appRow) {
+        return reply.code(404).send({ error: "App not found" });
+      }
+
+      const [snapshot] = await db
+        .select({
+          appIntroduction: appSnapshots.appIntroduction,
+          appDetails: appSnapshots.appDetails,
+          features: appSnapshots.features,
+          categories: appSnapshots.categories,
+        })
+        .from(appSnapshots)
+        .where(eq(appSnapshots.appSlug, slug))
+        .orderBy(desc(appSnapshots.scrapedAt))
+        .limit(1);
+
+      // Get already-tracked keywords for this app+account
+      const trackedKws = await db
+        .select({ keyword: trackedKeywords.keyword })
+        .from(accountTrackedKeywords)
+        .innerJoin(
+          trackedKeywords,
+          eq(trackedKeywords.id, accountTrackedKeywords.keywordId)
+        )
+        .where(
+          and(
+            eq(accountTrackedKeywords.accountId, accountId),
+            eq(accountTrackedKeywords.trackedAppSlug, slug)
+          )
+        );
+
+      const trackedSet = new Set(
+        trackedKws.map((k) => k.keyword.toLowerCase())
+      );
+
+      // Extract keyword suggestions
+      const { extractKeywordsFromAppMetadata } = await import(
+        "@shopify-tracking/shared"
+      );
+
+      const allSuggestions = extractKeywordsFromAppMetadata({
+        name: appRow.name ?? "",
+        subtitle: appRow.subtitle,
+        introduction: snapshot?.appIntroduction ?? null,
+        description: snapshot?.appDetails ?? null,
+        features: (snapshot?.features as string[]) ?? [],
+        categories: (snapshot?.categories as any[]) ?? [],
+      });
+
+      const suggestions = allSuggestions.slice(0, maxResults).map((s: any) => ({
+        keyword: s.keyword,
+        score: Math.round(s.score * 10) / 10,
+        count: s.count,
+        tracked: trackedSet.has(s.keyword.toLowerCase()),
+        ...(isDebug && {
+          sources: s.sources.map((src: any) => ({
+            field: src.field,
+            weight: src.weight,
+          })),
+        }),
+      }));
+
+      return {
+        suggestions,
+        ...(isDebug && {
+          weights: (await import("@shopify-tracking/shared")).FIELD_WEIGHTS,
+          metadata: {
+            appName: appRow.name,
+            totalCandidates: allSuggestions.length,
+            afterFiltering: suggestions.length,
+          },
+        }),
+      };
+    }
+  );
+
   // --- Starred Categories ---
 
   // GET /api/account/starred-categories

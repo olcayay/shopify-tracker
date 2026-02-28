@@ -25,6 +25,7 @@ import { KeywordTagManager } from "@/components/keyword-tag-manager";
 import { KeywordTagFilter } from "@/components/keyword-tag-filter";
 import { KeywordWordGroupFilter } from "@/components/keyword-word-group-filter";
 import { extractWordGroups, filterKeywordsByWord } from "@/lib/keyword-word-groups";
+import { MetadataKeywordSuggestions } from "@/components/metadata-keyword-suggestions";
 
 // --- App icon with selection state (same as compare page) ---
 function AppIcon({
@@ -605,6 +606,17 @@ export function KeywordsSection({ appSlug }: { appSlug: string }) {
         </div>
       )}
 
+      {canEdit && keywords.length > 0 && (
+        <MetadataKeywordSuggestions
+          appSlug={appSlug}
+          trackedKeywords={new Set(keywords.map((k: any) => k.keyword.toLowerCase()))}
+          onKeywordAdded={() => {
+            loadKeywords(appSlugsParam);
+            refreshUser();
+          }}
+        />
+      )}
+
       {tags.length > 0 && (
         <KeywordTagFilter
           tags={tags}
@@ -625,10 +637,21 @@ export function KeywordsSection({ appSlug }: { appSlug: string }) {
       {loading ? (
         <TableSkeleton rows={5} cols={6} />
       ) : keywords.length === 0 ? (
-        <p className="text-muted-foreground text-center py-8">
-          No keywords added yet.
-          {canEdit && " Use the search above or press Enter to add keywords."}
-        </p>
+        canEdit ? (
+          <MetadataKeywordSuggestions
+            appSlug={appSlug}
+            trackedKeywords={new Set()}
+            onKeywordAdded={() => {
+              loadKeywords(appSlugsParam);
+              refreshUser();
+            }}
+            prominent
+          />
+        ) : (
+          <p className="text-muted-foreground text-center py-8">
+            No keywords added yet.
+          </p>
+        )
       ) : (
         <Table>
           <TableHeader>
