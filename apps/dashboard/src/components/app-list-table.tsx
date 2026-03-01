@@ -314,7 +314,7 @@ export function AppListTable({
               )}
               {reviewVelocity && (
                 <TableHead
-                  className="cursor-pointer select-none"
+                  className="cursor-pointer select-none text-center"
                   onClick={() => toggleSort("momentum")}
                 >
                   <Tooltip><TooltipTrigger asChild><span>Momentum <SortIcon col="momentum" /></span></TooltipTrigger><TooltipContent>Review growth trend: compares recent pace (7d) vs longer-term pace (30d/90d)</TooltipContent></Tooltip>
@@ -460,7 +460,7 @@ export function AppListTable({
                       </TableCell>
                     )}
                     {reviewVelocity && (
-                      <TableCell className="text-sm">
+                      <TableCell className="text-sm text-center">
                         <MomentumBadge momentum={reviewVelocity[app.slug]?.momentum} />
                       </TableCell>
                     )}

@@ -16,6 +16,8 @@ fix broken category links (PLA-18) ✅
 
 compare page sorting (PLA-17) ✅
 
+momentum column alignment (PLA-19) ✅
+
 feedback sayfası
 
 kime hangi durumda nasıl emailler gönderilebilinir.

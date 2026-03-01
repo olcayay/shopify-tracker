@@ -507,7 +507,7 @@ export function CompetitorsSection({ appSlug }: { appSlug: string }) {
               {isCol("v90d") && <TableHead className="cursor-pointer select-none" onClick={() => toggleSort("v90d")}>
                 <Tooltip><TooltipTrigger asChild><span>R90d <SortIcon col="v90d" /></span></TooltipTrigger><TooltipContent>Reviews received in the last 90 days</TooltipContent></Tooltip>
               </TableHead>}
-              {isCol("momentum") && <TableHead className="cursor-pointer select-none" onClick={() => toggleSort("momentum")}>
+              {isCol("momentum") && <TableHead className="cursor-pointer select-none text-center" onClick={() => toggleSort("momentum")}>
                 <Tooltip><TooltipTrigger asChild><span>Momentum <SortIcon col="momentum" /></span></TooltipTrigger><TooltipContent>Review growth trend: compares recent pace (7d) vs longer-term pace (30d/90d)</TooltipContent></Tooltip>
               </TableHead>}
               {isCol("pricing") && <TableHead className="cursor-pointer select-none" onClick={() => toggleSort("pricing")}>
@@ -680,8 +680,8 @@ export function CompetitorsSection({ appSlug }: { appSlug: string }) {
                     <span className="animate-in fade-in duration-700"><VelocityCell value={comp.reviewVelocity?.v90d} /></span>
                   ) : <VelocityCell value={comp.reviewVelocity?.v90d} />}
                 </TableCell>}
-                {isCol("momentum") && <TableCell className="text-sm">
-                  {isPending ? <Skeleton className="h-4 w-16" /> : isResolved ? (
+                {isCol("momentum") && <TableCell className="text-sm text-center">
+                  {isPending ? <Skeleton className="h-4 w-16 mx-auto" /> : isResolved ? (
                     <span className="animate-in fade-in duration-700"><MomentumBadge momentum={comp.reviewVelocity?.momentum} /></span>
                   ) : <MomentumBadge momentum={comp.reviewVelocity?.momentum} />}
                 </TableCell>}

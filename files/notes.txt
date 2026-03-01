@@ -209,6 +209,15 @@ Queue tracking in scrape_runs (PLA-17):
 - cascadeOpts computed once from queueName in createProcessJob(), passed to all 7 enqueueScraperJob cascade calls
 - Files: scrape-runs.ts, 0036_scrape_runs_queue.sql, process-job.ts, worker.ts, interactive-worker.ts, category-scraper.ts, app-details-scraper.ts, review-scraper.ts, keyword-scraper.ts, keyword-suggestion-scraper.ts, compute-review-metrics.ts, compute-similarity-scores.ts, system-admin.ts (API), scraper/page.tsx, scraper-page.test.tsx
 
+Momentum column alignment (PLA-19):
+- Fixed MomentumBadge alignment across all tables (competitors, app competitors, app list)
+- MomentumBadge: added fixed width (w-[4.5rem]) so all momentum states align consistently regardless of label length
+- Added justify-center to null/unknown states for consistent centering
+- Added gap-0.5 between emoji and label, font-medium on label for better readability
+- All momentum TableHead and TableCell elements now have text-center class
+- Skeleton loading state in competitors-section centered with mx-auto
+- Files changed: momentum-badge.tsx, competitors/page.tsx, competitors-section.tsx, app-list-table.tsx
+
 Compare page sorting (PLA-17):
 - Fixed default sorting in 4 comparison tables: Languages, Integrations, Category Features, Category Rankings
 - New sorting logic: primary app (apps[0]) items first, sorted alphabetically; then remaining items sorted alphabetically

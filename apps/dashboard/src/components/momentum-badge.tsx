@@ -12,20 +12,20 @@ const MOMENTUM_CONFIG: Record<string, { symbol: string; color: string; label: st
 
 export function MomentumBadge({ momentum }: { momentum?: string | null }) {
   if (!momentum) {
-    return <span className="text-muted-foreground">{"\u2014"}</span>;
+    return <span className="inline-flex w-[4.5rem] justify-center text-muted-foreground">{"\u2014"}</span>;
   }
 
   const config = MOMENTUM_CONFIG[momentum];
   if (!config) {
-    return <span className="text-muted-foreground">{momentum}</span>;
+    return <span className="inline-flex w-[4.5rem] justify-center text-muted-foreground">{momentum}</span>;
   }
 
   return (
     <Tooltip>
       <TooltipTrigger asChild>
-        <span className={`inline-flex flex-col items-center leading-none ${config.color}`}>
+        <span className={`inline-flex w-[4.5rem] flex-col items-center gap-0.5 leading-none ${config.color}`}>
           <span className="text-sm">{config.symbol}</span>
-          <span className="text-[10px]">{config.label}</span>
+          <span className="text-[10px] font-medium">{config.label}</span>
         </span>
       </TooltipTrigger>
       <TooltipContent>{config.description}</TooltipContent>
