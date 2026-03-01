@@ -32,6 +32,8 @@ overview tab: category leaders & competitor grouping (PLA-22 follow-up) ✅
 
 keyword opportunity scoring (PLA-25) ✅
 
+expandable score detail columns in keywords table (PLA-25 follow-up) ✅
+
 feedback sayfası
 
 kime hangi durumda nasıl emailler gönderilebilinir.

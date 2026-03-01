@@ -322,6 +322,21 @@ Keyword opportunity scoring (PLA-25):
 - Files created: packages/shared/src/keyword-opportunity.ts, apps/dashboard/src/components/keyword-opportunity-popover.tsx, apps/dashboard/src/__tests__/lib/keyword-opportunity.test.ts
 - Files modified: packages/shared/src/index.ts, apps/api/src/routes/keywords.ts, apps/dashboard/src/app/(dashboard)/apps/[slug]/keywords-section.tsx
 
+Expandable score detail columns in keywords table (PLA-25 follow-up):
+- Toggle icon (Columns3) in Score header expands 14 inline sub-columns after the Score column
+- 3 grouped column headers with two-row thead: Scores (5 cols), First Page (7 cols), Concentration (2 cols)
+- Scores group: Room/Demand/Organic/Maturity/Quality — percentage values, color-coded (green ≥60%, amber ≥30%, red <30%)
+- First Page group: Results/Organic/Ads/Rating/BFS/1000+/100+ — plain numbers (rating 1 decimal)
+- Concentration group: Top 1/Top 4 — percentage values
+- All 14 sub-columns are sortable (sort keys: _s_room, _s_demand, _s_organic, _s_maturity, _s_quality, _fp_results, _fp_organic, _fp_ads, _fp_rating, _fp_bfs, _fp_1000, _fp_100, _c_top1, _c_top4)
+- Sorting works even when details are collapsed (sort order preserved)
+- Score badge: shows popover when collapsed, plain badge when expanded (data already visible inline)
+- Table wrapped in overflow-x-auto for horizontal scrolling on narrow viewports
+- Loading state: skeleton per cell; no data: em dash
+- Helper functions outside component: getDetailValue, formatDetailValue, detailCellClass, SCORE_DETAIL_COLUMNS constant
+- No API/backend changes — all data from existing opportunityData state
+- File modified: apps/dashboard/src/app/(dashboard)/apps/[slug]/keywords-section.tsx
+
 App detail stat cards tablet responsiveness (PLA-21):
 - Fixed stat cards (Rating, Reviews, Pricing, Developer, Launched, Last Updated) overlapping on tablet/narrow desktop
 - Changed grid breakpoints: grid-cols-2 → sm:grid-cols-3 → lg:grid-cols-6 (was md:grid-cols-6)

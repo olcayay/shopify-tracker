@@ -16,7 +16,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { X, Plus, Search, Check, ArrowDown, ExternalLink, Lightbulb, Loader2, TrendingUp } from "lucide-react";
+import { X, Plus, Search, Check, ArrowDown, ExternalLink, Lightbulb, Loader2, TrendingUp, Columns3 } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ConfirmModal } from "@/components/confirm-modal";
 import { LiveSearchTrigger } from "@/components/live-search-trigger";
@@ -81,6 +81,59 @@ interface SimpleApp {
   iconUrl: string | null;
 }
 
+const SCORE_DETAIL_COLUMNS = [
+  { key: "_s_room", label: "R", title: "Room" },
+  { key: "_s_demand", label: "D", title: "Demand" },
+  { key: "_s_organic", label: "O", title: "Organic" },
+  { key: "_s_maturity", label: "M", title: "Maturity" },
+  { key: "_s_quality", label: "Q", title: "Quality" },
+  { key: "_fp_results", label: "Res", title: "Results" },
+  { key: "_fp_organic", label: "Org", title: "Organic" },
+  { key: "_fp_ads", label: "Ad", title: "Ads" },
+  { key: "_fp_rating", label: "Rt", title: "Rating" },
+  { key: "_fp_bfs", label: "B", title: "BFS" },
+  { key: "_fp_1000", label: "1K", title: "1000+" },
+  { key: "_fp_100", label: "1H", title: "100+" },
+  { key: "_c_top1", label: "T1", title: "Top 1" },
+  { key: "_c_top4", label: "T4", title: "Top 4" },
+] as const;
+
+function getDetailValue(key: string, data: KeywordOpportunityMetrics): number | null {
+  switch (key) {
+    case "_s_room": return data.scores.room;
+    case "_s_demand": return data.scores.demand;
+    case "_s_organic": return data.scores.organic;
+    case "_s_maturity": return data.scores.maturity;
+    case "_s_quality": return data.scores.quality;
+    case "_fp_results": return data.stats.totalResults;
+    case "_fp_organic": return data.stats.organicCount;
+    case "_fp_ads": return data.stats.sponsoredCount;
+    case "_fp_rating": return data.stats.firstPageAvgRating;
+    case "_fp_bfs": return data.stats.bfsCount;
+    case "_fp_1000": return data.stats.count1000;
+    case "_fp_100": return data.stats.count100;
+    case "_c_top1": return data.stats.top1ReviewShare;
+    case "_c_top4": return data.stats.top4ReviewShare;
+    default: return null;
+  }
+}
+
+function formatDetailValue(key: string, value: number | null): string {
+  if (value == null) return "\u2014";
+  if (key.startsWith("_s_")) return `${Math.round(value * 100)}%`;
+  if (key === "_fp_rating") return value.toFixed(1);
+  if (key.startsWith("_c_")) return `${Math.round(value * 100)}%`;
+  return String(value);
+}
+
+function detailCellClass(key: string, value: number | null): string {
+  if (value == null || !key.startsWith("_s_")) return "";
+  const pct = Math.round(value * 100);
+  if (pct >= 60) return "text-green-600 dark:text-green-400";
+  if (pct >= 30) return "text-amber-600 dark:text-amber-400";
+  return "text-red-600 dark:text-red-400";
+}
+
 export function KeywordsSection({ appSlug }: { appSlug: string }) {
   const { fetchWithAuth, user, account, refreshUser } = useAuth();
   const [keywords, setKeywords] = useState<any[]>([]);
@@ -103,6 +156,7 @@ export function KeywordsSection({ appSlug }: { appSlug: string }) {
   const [resolvedKeywordIds, setResolvedKeywordIds] = useState<Set<number>>(new Set());
   const [opportunityData, setOpportunityData] = useState<Record<string, KeywordOpportunityMetrics>>({});
   const [opportunityLoading, setOpportunityLoading] = useState(false);
+  const [showScoreDetails, setShowScoreDetails] = useState(false);
   const searchRef = useRef<HTMLDivElement>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout>>(undefined);
 
@@ -174,6 +228,18 @@ export function KeywordsSection({ appSlug }: { appSlug: string }) {
         const scoreA = opportunityData[a.keywordSlug]?.opportunityScore ?? -1;
         const scoreB = opportunityData[b.keywordSlug]?.opportunityScore ?? -1;
         return scoreB - scoreA;
+      });
+    }
+    if (sortBySlug.startsWith("_s_") || sortBySlug.startsWith("_fp_") || sortBySlug.startsWith("_c_")) {
+      return [...filteredKeywords].sort((a, b) => {
+        const dataA = opportunityData[a.keywordSlug];
+        const dataB = opportunityData[b.keywordSlug];
+        const valA = dataA ? getDetailValue(sortBySlug, dataA) : null;
+        const valB = dataB ? getDetailValue(sortBySlug, dataB) : null;
+        if (valA != null && valB != null) return valB - valA;
+        if (valA != null) return -1;
+        if (valB != null) return 1;
+        return 0;
       });
     }
     return [...filteredKeywords].sort((a, b) => {
@@ -737,10 +803,11 @@ export function KeywordsSection({ appSlug }: { appSlug: string }) {
           </p>
         ) : null
       ) : (
+        <div className="overflow-x-auto">
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>
+              <TableHead {...(showScoreDetails ? { rowSpan: 2 } : {})}>
                 <button
                   onClick={() => setSortBySlug("_alpha")}
                   className="flex items-center gap-0.5"
@@ -753,7 +820,7 @@ export function KeywordsSection({ appSlug }: { appSlug: string }) {
                 </button>
               </TableHead>
               {selectedApps.map((app) => (
-                <TableHead key={app.slug} className="text-center w-16">
+                <TableHead key={app.slug} className="text-center w-16" {...(showScoreDetails ? { rowSpan: 2 } : {})}>
                   <button
                     onClick={() => setSortBySlug(app.slug)}
                     className="flex items-center justify-center gap-0.5 mx-auto"
@@ -770,22 +837,59 @@ export function KeywordsSection({ appSlug }: { appSlug: string }) {
                   </button>
                 </TableHead>
               ))}
-              <TableHead>Total Results</TableHead>
-              <TableHead className="text-center w-16">
-                <button
-                  onClick={() => setSortBySlug("_score")}
-                  className="flex items-center justify-center gap-0.5 mx-auto"
-                  title="Sort by opportunity score"
-                >
-                  Score
-                  {sortBySlug === "_score" && (
-                    <ArrowDown className="h-3 w-3 text-muted-foreground" />
-                  )}
-                </button>
+              <TableHead {...(showScoreDetails ? { rowSpan: 2 } : {})}>Total Results</TableHead>
+              <TableHead className="text-center w-16" {...(showScoreDetails ? { rowSpan: 2 } : {})}>
+                <div className="flex items-center justify-center gap-1">
+                  <button
+                    onClick={() => setSortBySlug("_score")}
+                    className="flex items-center justify-center gap-0.5"
+                    title="Sort by opportunity score"
+                  >
+                    Score
+                    {sortBySlug === "_score" && (
+                      <ArrowDown className="h-3 w-3 text-muted-foreground" />
+                    )}
+                  </button>
+                  <button
+                    onClick={() => setShowScoreDetails(v => !v)}
+                    className={cn(
+                      "p-0.5 rounded hover:bg-accent transition-colors",
+                      showScoreDetails && "bg-accent text-foreground"
+                    )}
+                    title="Toggle score details"
+                  >
+                    <Columns3 className="h-3.5 w-3.5 text-muted-foreground" />
+                  </button>
+                </div>
               </TableHead>
-              <TableHead className="w-10" />
-              {canEdit && <TableHead className="w-12" />}
+              {showScoreDetails && (
+                <>
+                  <TableHead colSpan={5} className="bg-muted/30 text-xs font-medium text-muted-foreground text-center border-b">Scores</TableHead>
+                  <TableHead colSpan={7} className="bg-muted/30 text-xs font-medium text-muted-foreground text-center border-b">First Page</TableHead>
+                  <TableHead colSpan={2} className="bg-muted/30 text-xs font-medium text-muted-foreground text-center border-b">Concentration</TableHead>
+                </>
+              )}
+              <TableHead className="w-10" {...(showScoreDetails ? { rowSpan: 2 } : {})} />
+              {canEdit && <TableHead className="w-12" {...(showScoreDetails ? { rowSpan: 2 } : {})} />}
             </TableRow>
+            {showScoreDetails && (
+              <TableRow>
+                {SCORE_DETAIL_COLUMNS.map(({ key, label, title }) => (
+                  <TableHead key={key} className="text-[11px] text-muted-foreground text-center px-2">
+                    <button
+                      onClick={() => setSortBySlug(key)}
+                      className="flex items-center justify-center gap-0.5 mx-auto"
+                      title={`Sort by ${title}`}
+                    >
+                      {label}
+                      {sortBySlug === key && (
+                        <ArrowDown className="h-2.5 w-2.5" />
+                      )}
+                    </button>
+                  </TableHead>
+                ))}
+              </TableRow>
+            )}
           </TableHeader>
           <TableBody>
             {sortedKeywords.map((kw) => {
@@ -876,24 +980,47 @@ export function KeywordsSection({ appSlug }: { appSlug: string }) {
                   {opportunityLoading ? (
                     <Skeleton className="h-5 w-8 mx-auto rounded-full" />
                   ) : opportunityData[kw.keywordSlug] ? (
-                    <KeywordOpportunityPopover metrics={opportunityData[kw.keywordSlug]}>
-                      <button
-                        className={cn(
-                          "inline-flex items-center justify-center h-6 min-w-[2rem] px-1.5 rounded-full text-xs font-semibold tabular-nums cursor-pointer transition-colors",
-                          opportunityData[kw.keywordSlug].opportunityScore >= 60
-                            ? "bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-300 hover:bg-green-200 dark:hover:bg-green-900/70"
-                            : opportunityData[kw.keywordSlug].opportunityScore >= 30
-                              ? "bg-amber-100 text-amber-800 dark:bg-amber-900/50 dark:text-amber-300 hover:bg-amber-200 dark:hover:bg-amber-900/70"
-                              : "bg-red-100 text-red-800 dark:bg-red-900/50 dark:text-red-300 hover:bg-red-200 dark:hover:bg-red-900/70"
-                        )}
-                      >
-                        {opportunityData[kw.keywordSlug].opportunityScore}
-                      </button>
-                    </KeywordOpportunityPopover>
+                    (() => {
+                      const score = opportunityData[kw.keywordSlug].opportunityScore;
+                      const badgeClass = cn(
+                        "inline-flex items-center justify-center h-6 min-w-[2rem] px-1.5 rounded-full text-xs font-semibold tabular-nums",
+                        score >= 60
+                          ? "bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-300"
+                          : score >= 30
+                            ? "bg-amber-100 text-amber-800 dark:bg-amber-900/50 dark:text-amber-300"
+                            : "bg-red-100 text-red-800 dark:bg-red-900/50 dark:text-red-300"
+                      );
+                      return showScoreDetails ? (
+                        <span className={badgeClass}>{score}</span>
+                      ) : (
+                        <KeywordOpportunityPopover metrics={opportunityData[kw.keywordSlug]}>
+                          <button className={cn(badgeClass, "cursor-pointer transition-colors hover:opacity-80")}>
+                            {score}
+                          </button>
+                        </KeywordOpportunityPopover>
+                      );
+                    })()
                   ) : (
                     <span className="text-muted-foreground">&mdash;</span>
                   )}
                 </TableCell>
+                {showScoreDetails && SCORE_DETAIL_COLUMNS.map(({ key }) => {
+                  const data = opportunityData[kw.keywordSlug];
+                  const val = data ? getDetailValue(key, data) : null;
+                  return (
+                    <TableCell key={key} className="text-center text-xs tabular-nums px-2">
+                      {opportunityLoading ? (
+                        <Skeleton className="h-4 w-6 mx-auto" />
+                      ) : data ? (
+                        <span className={detailCellClass(key, val)}>
+                          {formatDetailValue(key, val)}
+                        </span>
+                      ) : (
+                        <span className="text-muted-foreground">&mdash;</span>
+                      )}
+                    </TableCell>
+                  );
+                })}
                 <TableCell>
                   <div className="flex items-center gap-0.5">
                     {kw.hasSuggestions ? (
@@ -946,6 +1073,7 @@ export function KeywordsSection({ appSlug }: { appSlug: string }) {
             })}
           </TableBody>
         </Table>
+        </div>
       )}
 
       <ConfirmModal
