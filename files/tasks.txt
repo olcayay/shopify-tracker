@@ -18,6 +18,8 @@ compare page sorting (PLA-17) ✅
 
 momentum column alignment (PLA-19) ✅
 
+competitor suggestions table redesign (PLA-20) ✅
+
 feedback sayfası
 
 kime hangi durumda nasıl emailler gönderilebilinir.

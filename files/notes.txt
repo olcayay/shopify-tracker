@@ -226,6 +226,17 @@ Compare page sorting (PLA-17):
 - CategoriesComparison (Category Features): features within each subcategory sorted primary-first
 - File changed: apps/dashboard/src/app/(dashboard)/apps/[slug]/compare/page.tsx
 
+Competitor suggestions table redesign (PLA-20):
+- Redesigned competitor-suggestions.tsx from single-line horizontal layout to two-line card layout
+- Row 1: Larger icon (8x8), full app name (no truncation), star rating with review count, Shopify link, Add/Added button
+- Row 2: Badges (Built for Shopify, Similar), similarity bar + percentage, category rank badges, pricing hint
+- Second row indented with pl-[42px] to align under app name (past icon)
+- Rating moved from far right to directly next to app name with amber star icon
+- "Built for Shopify" now shown as text badge (violet) instead of diamond emoji
+- Shimmer loading skeleton updated to match two-line layout
+- Icon size increased from h-6 w-6 to h-8 w-8 for better visual hierarchy
+- File changed: apps/dashboard/src/components/competitor-suggestions.tsx
+
 Competitor suggestions (PLA-12):
 - Similarity utilities extracted from scraper to packages/shared/src/similarity.ts
   - STOP_WORDS, jaccard(), tokenize(), extractCategorySlugs(), extractFeatureHandles(), computeSimilarityBetween()

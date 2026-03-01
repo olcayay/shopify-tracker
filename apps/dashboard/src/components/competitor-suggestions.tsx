@@ -41,13 +41,19 @@ interface SuggestionsResponse {
 
 function ShimmerRow() {
   return (
-    <div className="flex items-center gap-3 px-3 py-2.5 border-b last:border-0">
-      <div className="h-6 w-6 bg-muted rounded animate-pulse shrink-0" />
-      <div className="h-4 w-36 bg-muted rounded animate-pulse" />
-      <div className="flex-1" />
-      <div className="h-4 w-16 bg-muted rounded animate-pulse shrink-0" />
-      <div className="h-4 w-10 bg-muted rounded animate-pulse shrink-0" />
-      <div className="h-6 w-6 bg-muted rounded animate-pulse shrink-0" />
+    <div className="px-3 py-2.5 border-b last:border-0 space-y-1.5">
+      <div className="flex items-center gap-2.5">
+        <div className="h-8 w-8 bg-muted rounded animate-pulse shrink-0" />
+        <div className="h-4 w-44 bg-muted rounded animate-pulse" />
+        <div className="flex-1" />
+        <div className="h-4 w-20 bg-muted rounded animate-pulse shrink-0" />
+        <div className="h-6 w-6 bg-muted rounded animate-pulse shrink-0" />
+      </div>
+      <div className="flex items-center gap-2 pl-[42px]">
+        <div className="h-3 w-16 bg-muted rounded animate-pulse" />
+        <div className="h-3 w-12 bg-muted rounded animate-pulse" />
+        <div className="h-3 w-24 bg-muted rounded animate-pulse" />
+      </div>
     </div>
   );
 }
@@ -209,73 +215,118 @@ export function CompetitorSuggestions({
               data.suggestions.map((s) => (
                 <div
                   key={s.appSlug}
-                  className="flex items-center gap-3 px-3 py-2 border-b last:border-0 hover:bg-accent/50 transition-colors"
+                  className="px-3 py-2.5 border-b last:border-0 hover:bg-accent/50 transition-colors"
                 >
-                  {/* Icon + Name */}
-                  <div className="flex items-center gap-2 min-w-0 shrink-0">
+                  {/* Row 1: Icon + Name + Rating + Actions */}
+                  <div className="flex items-center gap-2.5">
                     {s.iconUrl ? (
                       <img
                         src={s.iconUrl}
                         alt=""
-                        className="h-6 w-6 rounded shrink-0"
+                        className="h-8 w-8 rounded shrink-0"
                       />
                     ) : (
-                      <div className="h-6 w-6 rounded bg-muted shrink-0" />
+                      <div className="h-8 w-8 rounded bg-muted shrink-0" />
                     )}
-                    <Link
-                      href={`/apps/${s.appSlug}`}
-                      className="text-sm font-medium text-primary hover:underline truncate max-w-[180px]"
+
+                    <div className="min-w-0 flex-1">
+                      <Link
+                        href={`/apps/${s.appSlug}`}
+                        className="text-sm font-medium text-primary hover:underline truncate block"
+                      >
+                        {s.appName}
+                      </Link>
+                    </div>
+
+                    {/* Rating — close to name */}
+                    {s.averageRating && (
+                      <span className="text-sm tabular-nums shrink-0 flex items-center gap-1">
+                        <span className="text-amber-500">&#9733;</span>
+                        <span className="font-medium">{parseFloat(s.averageRating).toFixed(1)}</span>
+                        {s.ratingCount != null && (
+                          <span className="text-xs text-muted-foreground">({s.ratingCount.toLocaleString()})</span>
+                        )}
+                      </span>
+                    )}
+
+                    {/* Shopify link */}
+                    <a
+                      href={`https://apps.shopify.com/${s.appSlug}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="p-1 rounded hover:bg-accent shrink-0"
+                      title="View on Shopify"
                     >
-                      {s.appName}
-                    </Link>
+                      <ExternalLink className="h-3.5 w-3.5 text-muted-foreground" />
+                    </a>
+
+                    {/* Add / Added */}
+                    {isAdded(s) ? (
+                      <div className="flex items-center gap-1 text-xs text-muted-foreground shrink-0">
+                        <Check className="h-3.5 w-3.5" />
+                        Added
+                      </div>
+                    ) : (
+                      <button
+                        onClick={() => addCompetitor(s)}
+                        disabled={addingSlug === s.appSlug}
+                        className="p-1 rounded hover:bg-accent shrink-0"
+                        title={`Add "${s.appName}" as competitor`}
+                      >
+                        <Plus className="h-4 w-4 text-muted-foreground" />
+                      </button>
+                    )}
+                  </div>
+
+                  {/* Row 2: Badges + Similarity + Category ranks + Pricing */}
+                  <div className="flex items-center gap-2 mt-1 pl-[42px] flex-wrap">
+                    {/* Badges */}
                     {s.isBuiltForShopify && (
-                      <span title="Built for Shopify" className="shrink-0">
-                        💎
+                      <span title="Built for Shopify" className="text-[11px] px-1.5 py-0.5 rounded bg-violet-500/10 text-violet-600 dark:text-violet-400 shrink-0">
+                        Built for Shopify
                       </span>
                     )}
                     {s.isShopifySimilar && (
                       <Tooltip>
                         <TooltipTrigger asChild>
-                          <span className="text-[10px] px-1 py-0.5 rounded bg-blue-500/10 text-blue-600 shrink-0">
+                          <span className="text-[11px] px-1.5 py-0.5 rounded bg-blue-500/10 text-blue-600 dark:text-blue-400 shrink-0">
                             Similar
                           </span>
                         </TooltipTrigger>
                         <TooltipContent>Listed as similar app by Shopify</TooltipContent>
                       </Tooltip>
                     )}
-                  </div>
 
-                  {/* Similarity score */}
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <div className="flex items-center gap-1.5 shrink-0">
-                        <div className="w-16 h-2 rounded-full bg-muted overflow-hidden">
-                          <div
-                            className={`h-full rounded-full ${similarityColor(s.similarity.overall)}`}
-                            style={{ width: `${(s.similarity.overall * 100).toFixed(0)}%` }}
-                          />
+                    {/* Similarity score */}
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <div className="flex items-center gap-1.5 shrink-0">
+                          <div className="w-14 h-1.5 rounded-full bg-muted overflow-hidden">
+                            <div
+                              className={`h-full rounded-full ${similarityColor(s.similarity.overall)}`}
+                              style={{ width: `${(s.similarity.overall * 100).toFixed(0)}%` }}
+                            />
+                          </div>
+                          <span className="text-[11px] tabular-nums text-muted-foreground">
+                            {(s.similarity.overall * 100).toFixed(0)}%
+                          </span>
                         </div>
-                        <span className="text-xs tabular-nums font-medium w-8 text-right">
-                          {(s.similarity.overall * 100).toFixed(0)}%
-                        </span>
-                      </div>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      <div className="text-xs space-y-1">
-                        <div>Category: {(s.similarity.category * 100).toFixed(0)}%</div>
-                        <div>Features: {(s.similarity.feature * 100).toFixed(0)}%</div>
-                        <div>Keywords: {(s.similarity.keyword * 100).toFixed(0)}%</div>
-                        <div>Text: {(s.similarity.text * 100).toFixed(0)}%</div>
-                      </div>
-                    </TooltipContent>
-                  </Tooltip>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <div className="text-xs space-y-1">
+                          <div>Category: {(s.similarity.category * 100).toFixed(0)}%</div>
+                          <div>Features: {(s.similarity.feature * 100).toFixed(0)}%</div>
+                          <div>Keywords: {(s.similarity.keyword * 100).toFixed(0)}%</div>
+                          <div>Text: {(s.similarity.text * 100).toFixed(0)}%</div>
+                        </div>
+                      </TooltipContent>
+                    </Tooltip>
 
-                  {/* Category rank badges */}
-                  <div className="flex items-center gap-1 shrink-0">
+                    {/* Category rank badges */}
                     {s.categoryRanks.slice(0, 2).map((cr) => (
                       <Tooltip key={cr.categorySlug}>
                         <TooltipTrigger asChild>
-                          <span className="text-[10px] px-1.5 py-0.5 rounded bg-muted text-muted-foreground tabular-nums">
+                          <span className="text-[11px] px-1.5 py-0.5 rounded bg-muted text-muted-foreground tabular-nums">
                             #{cr.position}
                           </span>
                         </TooltipTrigger>
@@ -284,54 +335,14 @@ export function CompetitorSuggestions({
                         </TooltipContent>
                       </Tooltip>
                     ))}
+
+                    {/* Pricing */}
+                    {s.pricingHint && (
+                      <span className="text-[11px] px-1.5 py-0.5 rounded bg-muted text-muted-foreground shrink-0">
+                        {s.pricingHint}
+                      </span>
+                    )}
                   </div>
-
-                  <div className="flex-1" />
-
-                  {/* Rating */}
-                  {s.averageRating && (
-                    <span className="text-xs text-muted-foreground tabular-nums shrink-0">
-                      {parseFloat(s.averageRating).toFixed(1)}
-                      {s.ratingCount != null && (
-                        <span className="ml-0.5">({s.ratingCount})</span>
-                      )}
-                    </span>
-                  )}
-
-                  {/* Pricing */}
-                  {s.pricingHint && (
-                    <span className="text-[10px] px-1.5 py-0.5 rounded bg-muted text-muted-foreground shrink-0 hidden sm:inline">
-                      {s.pricingHint}
-                    </span>
-                  )}
-
-                  {/* Shopify link */}
-                  <a
-                    href={`https://apps.shopify.com/${s.appSlug}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="p-1 rounded hover:bg-accent shrink-0"
-                    title="View on Shopify"
-                  >
-                    <ExternalLink className="h-3.5 w-3.5 text-muted-foreground" />
-                  </a>
-
-                  {/* Add / Added */}
-                  {isAdded(s) ? (
-                    <div className="flex items-center gap-1 text-xs text-muted-foreground shrink-0">
-                      <Check className="h-3.5 w-3.5" />
-                      Added
-                    </div>
-                  ) : (
-                    <button
-                      onClick={() => addCompetitor(s)}
-                      disabled={addingSlug === s.appSlug}
-                      className="p-1 rounded hover:bg-accent shrink-0"
-                      title={`Add "${s.appName}" as competitor`}
-                    >
-                      <Plus className="h-4 w-4 text-muted-foreground" />
-                    </button>
-                  )}
                 </div>
               ))
             ) : null}
