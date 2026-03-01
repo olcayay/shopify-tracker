@@ -82,17 +82,17 @@ interface SimpleApp {
 }
 
 const SCORE_DETAIL_COLUMNS = [
-  { key: "_s_room", label: "R", title: "Room" },
-  { key: "_s_demand", label: "D", title: "Demand" },
-  { key: "_s_maturity", label: "M", title: "Maturity" },
-  { key: "_s_quality", label: "Q", title: "Quality" },
-  { key: "_fp_results", label: "Res", title: "Results" },
-  { key: "_fp_rating", label: "Rt", title: "Rating" },
-  { key: "_fp_bfs", label: "B", title: "BFS" },
-  { key: "_fp_1000", label: "1K", title: "1000+" },
-  { key: "_fp_100", label: "1H", title: "100+" },
-  { key: "_c_top1", label: "T1", title: "Top 1" },
-  { key: "_c_top4", label: "T4", title: "Top 4" },
+  { key: "_s_room", label: "Room", tooltip: "Room score (40% weight)\nHow crowded the top results are.\nHigher = fewer reviews in top 8 = more room.\n1 − (top 8 reviews / 20,000)" },
+  { key: "_s_demand", label: "Demand", tooltip: "Demand score (25% weight)\nMarket size by total search results.\nHigher = more apps listed = stronger demand.\ntotal results / 1,000" },
+  { key: "_s_maturity", label: "Maturity", tooltip: "Maturity score (10% weight)\nHow established the market is.\nHigher = fewer apps with 1000+ reviews.\n1 − (apps with 1000+ reviews / 12)" },
+  { key: "_s_quality", label: "Quality", tooltip: "Quality score (25% weight)\nQuality gap in existing apps.\nHigher = fewer BFS apps & lower ratings.\nBased on BFS count and top 4 avg rating." },
+  { key: "_fp_results", label: "Results", tooltip: "Total number of apps returned by Shopify search for this keyword." },
+  { key: "_fp_rating", label: "Rating", tooltip: "Average rating of organic (non-sponsored) apps on the first page." },
+  { key: "_fp_bfs", label: "BFS", tooltip: "Number of 'Built for Shopify' certified apps on the first page." },
+  { key: "_fp_1000", label: "1000+", tooltip: "Number of first page apps with 1,000 or more reviews." },
+  { key: "_fp_100", label: "100+", tooltip: "Number of first page apps with 100 or more reviews." },
+  { key: "_c_top1", label: "Top 1", tooltip: "Review share of the #1 app.\nWhat % of first page reviews belong to the top app.\nHigh = the leader dominates." },
+  { key: "_c_top4", label: "Top 4", tooltip: "Review share of top 4 apps.\nWhat % of first page reviews are held by the top 4.\nHigh = market dominated by few players." },
 ] as const;
 
 function getDetailValue(key: string, data: KeywordOpportunityMetrics): number | null {
@@ -166,6 +166,7 @@ export function KeywordsSection({ appSlug }: { appSlug: string }) {
 
   // Sort state: which app slug to sort by ranking
   const [sortBySlug, setSortBySlug] = useState<string>(appSlug);
+  const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
 
   // Suggestions modal state
   const [suggestionsKeyword, setSuggestionsKeyword] = useState<{
@@ -174,6 +175,15 @@ export function KeywordsSection({ appSlug }: { appSlug: string }) {
   } | null>(null);
 
   const canEdit = user?.role === "owner" || user?.role === "editor";
+
+  function handleSort(key: string) {
+    if (sortBySlug === key) {
+      setSortDirection(prev => prev === "asc" ? "desc" : "asc");
+    } else {
+      setSortBySlug(key);
+      setSortDirection(key === "_alpha" || !key.startsWith("_") ? "asc" : "desc");
+    }
+  }
 
   // Ordered list of selected apps for table columns
   const selectedApps = useMemo(() => {
@@ -212,16 +222,17 @@ export function KeywordsSection({ appSlug }: { appSlug: string }) {
   // Sorted keywords by selected app ranking, alphabetically, or by score
   const sortedKeywords = useMemo(() => {
     if (!sortBySlug || filteredKeywords.length === 0) return filteredKeywords;
+    const dir = sortDirection === "asc" ? 1 : -1;
     if (sortBySlug === "_alpha") {
       return [...filteredKeywords].sort((a, b) =>
-        a.keyword.localeCompare(b.keyword)
+        dir * a.keyword.localeCompare(b.keyword)
       );
     }
     if (sortBySlug === "_score") {
       return [...filteredKeywords].sort((a, b) => {
         const scoreA = opportunityData[a.keywordSlug]?.opportunityScore ?? -1;
         const scoreB = opportunityData[b.keywordSlug]?.opportunityScore ?? -1;
-        return scoreB - scoreA;
+        return dir * (scoreA - scoreB);
       });
     }
     if (sortBySlug.startsWith("_s_") || sortBySlug.startsWith("_fp_") || sortBySlug.startsWith("_c_")) {
@@ -230,7 +241,7 @@ export function KeywordsSection({ appSlug }: { appSlug: string }) {
         const dataB = opportunityData[b.keywordSlug];
         const valA = dataA ? getDetailValue(sortBySlug, dataA) : null;
         const valB = dataB ? getDetailValue(sortBySlug, dataB) : null;
-        if (valA != null && valB != null) return valB - valA;
+        if (valA != null && valB != null) return dir * (valA - valB);
         if (valA != null) return -1;
         if (valB != null) return 1;
         return 0;
@@ -239,13 +250,12 @@ export function KeywordsSection({ appSlug }: { appSlug: string }) {
     return [...filteredKeywords].sort((a, b) => {
       const posA = a.rankings?.[sortBySlug];
       const posB = b.rankings?.[sortBySlug];
-      // ranked items first (lower position = better), unranked at bottom
-      if (posA != null && posB != null) return posA - posB;
+      if (posA != null && posB != null) return dir * (posA - posB);
       if (posA != null) return -1;
       if (posB != null) return 1;
       return 0;
     });
-  }, [filteredKeywords, sortBySlug, opportunityData]);
+  }, [filteredKeywords, sortBySlug, sortDirection, opportunityData]);
 
   // Clear word filter if the active word no longer exists in word groups
   useEffect(() => {
@@ -803,20 +813,20 @@ export function KeywordsSection({ appSlug }: { appSlug: string }) {
             <TableRow>
               <TableHead {...(showScoreDetails ? { rowSpan: 2 } : {})}>
                 <button
-                  onClick={() => setSortBySlug("_alpha")}
+                  onClick={() => handleSort("_alpha")}
                   className="flex items-center gap-0.5"
                   title="Sort alphabetically"
                 >
                   Keyword
                   {sortBySlug === "_alpha" && (
-                    <ArrowDown className="h-3 w-3 text-muted-foreground" />
+                    <ArrowDown className={cn("h-3 w-3 text-muted-foreground transition-transform", sortDirection === "asc" && "rotate-180")} />
                   )}
                 </button>
               </TableHead>
               {selectedApps.map((app) => (
                 <TableHead key={app.slug} className="text-center w-16" {...(showScoreDetails ? { rowSpan: 2 } : {})}>
                   <button
-                    onClick={() => setSortBySlug(app.slug)}
+                    onClick={() => handleSort(app.slug)}
                     className="flex items-center justify-center gap-0.5 mx-auto"
                     title={`Sort by ${app.name} ranking`}
                   >
@@ -826,7 +836,7 @@ export function KeywordsSection({ appSlug }: { appSlug: string }) {
                       <span className="text-xs font-bold">{app.name.charAt(0)}</span>
                     )}
                     {sortBySlug === app.slug && (
-                      <ArrowDown className="h-3 w-3 text-muted-foreground" />
+                      <ArrowDown className={cn("h-3 w-3 text-muted-foreground transition-transform", sortDirection === "asc" && "rotate-180")} />
                     )}
                   </button>
                 </TableHead>
@@ -835,13 +845,13 @@ export function KeywordsSection({ appSlug }: { appSlug: string }) {
               <TableHead className="text-center w-16" {...(showScoreDetails ? { rowSpan: 2 } : {})}>
                 <div className="flex items-center justify-center gap-1">
                   <button
-                    onClick={() => setSortBySlug("_score")}
+                    onClick={() => handleSort("_score")}
                     className="flex items-center justify-center gap-0.5"
-                    title="Sort by opportunity score"
+                    title={"Opportunity score (0-100)\nWeighted: Room 40%, Demand 25%, Maturity 10%, Quality 25%\nClick column icon to expand score details."}
                   >
                     Score
                     {sortBySlug === "_score" && (
-                      <ArrowDown className="h-3 w-3 text-muted-foreground" />
+                      <ArrowDown className={cn("h-3 w-3 text-muted-foreground transition-transform", sortDirection === "asc" && "rotate-180")} />
                     )}
                   </button>
                   <button
@@ -868,16 +878,16 @@ export function KeywordsSection({ appSlug }: { appSlug: string }) {
             </TableRow>
             {showScoreDetails && (
               <TableRow>
-                {SCORE_DETAIL_COLUMNS.map(({ key, label, title }) => (
+                {SCORE_DETAIL_COLUMNS.map(({ key, label, tooltip }) => (
                   <TableHead key={key} className="text-[11px] text-muted-foreground text-center px-2">
                     <button
-                      onClick={() => setSortBySlug(key)}
+                      onClick={() => handleSort(key)}
                       className="flex items-center justify-center gap-0.5 mx-auto"
-                      title={`Sort by ${title}`}
+                      title={tooltip}
                     >
                       {label}
                       {sortBySlug === key && (
-                        <ArrowDown className="h-2.5 w-2.5" />
+                        <ArrowDown className={cn("h-2.5 w-2.5 transition-transform", sortDirection === "asc" && "rotate-180")} />
                       )}
                     </button>
                   </TableHead>
@@ -974,26 +984,20 @@ export function KeywordsSection({ appSlug }: { appSlug: string }) {
                   {opportunityLoading ? (
                     <Skeleton className="h-5 w-8 mx-auto rounded-full" />
                   ) : opportunityData[kw.keywordSlug] ? (
-                    (() => {
-                      const score = opportunityData[kw.keywordSlug].opportunityScore;
-                      const badgeClass = cn(
-                        "inline-flex items-center justify-center h-6 min-w-[2rem] px-1.5 rounded-full text-xs font-semibold tabular-nums",
-                        score >= 60
-                          ? "bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-300"
-                          : score >= 30
-                            ? "bg-amber-100 text-amber-800 dark:bg-amber-900/50 dark:text-amber-300"
-                            : "bg-red-100 text-red-800 dark:bg-red-900/50 dark:text-red-300"
-                      );
-                      return showScoreDetails ? (
-                        <span className={badgeClass}>{score}</span>
-                      ) : (
-                        <KeywordOpportunityPopover metrics={opportunityData[kw.keywordSlug]}>
-                          <button className={cn(badgeClass, "cursor-pointer transition-colors hover:opacity-80")}>
-                            {score}
-                          </button>
-                        </KeywordOpportunityPopover>
-                      );
-                    })()
+                    <KeywordOpportunityPopover metrics={opportunityData[kw.keywordSlug]}>
+                      <button
+                        className={cn(
+                          "inline-flex items-center justify-center h-6 min-w-[2rem] px-1.5 rounded-full text-xs font-semibold tabular-nums cursor-pointer transition-colors hover:opacity-80",
+                          opportunityData[kw.keywordSlug].opportunityScore >= 60
+                            ? "bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-300"
+                            : opportunityData[kw.keywordSlug].opportunityScore >= 30
+                              ? "bg-amber-100 text-amber-800 dark:bg-amber-900/50 dark:text-amber-300"
+                              : "bg-red-100 text-red-800 dark:bg-red-900/50 dark:text-red-300"
+                        )}
+                      >
+                        {opportunityData[kw.keywordSlug].opportunityScore}
+                      </button>
+                    </KeywordOpportunityPopover>
                   ) : (
                     <span className="text-muted-foreground">&mdash;</span>
                   )}
