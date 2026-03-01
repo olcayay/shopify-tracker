@@ -22,6 +22,8 @@ competitor suggestions table redesign (PLA-20) ✅
 
 app detail stat cards tablet responsiveness (PLA-21) ✅
 
+app detail overview tab redesign (PLA-22) ✅
+
 feedback sayfası
 
 kime hangi durumda nasıl emailler gönderilebilinir.

@@ -237,6 +237,23 @@ Competitor suggestions table redesign (PLA-20):
 - Icon size increased from h-6 w-6 to h-8 w-8 for better visual hierarchy
 - File changed: apps/dashboard/src/components/competitor-suggestions.tsx
 
+App detail overview tab redesign (PLA-22):
+- Complete rewrite of app overview page (/apps/[slug]) from static summary cards to 6 dynamic dashboard cards
+- 2-column responsive grid (1-col mobile, 2-col desktop), each card clickable with hover border effect
+- Card 1 — Review Pulse: velocity strip (7d/30d/90d counts, green if positive), MomentumBadge, mini rating distribution bars, 3 latest reviews with relative dates
+- Card 2 — Keyword Performance (tracked only): "X of Y ranked" header, top 3 movers with position deltas (colored arrows), top 3 best positions, empty state with CTA
+- Card 3 — Category Rankings: each category with position badge + change indicator (up/down/steady arrows), computed from time-series latest vs previous
+- Card 4 — Competitor Watch (tracked only): "Tracking X competitors" header, self position by rating ("2nd of 6"), top 5 competitor list with icons/ratings, empty state with CTA
+- Card 5 — Listing Changes: grouped by recency (Today/This Week/Earlier), colored field badges per change type, up to 5 recent changes
+- Card 6 — Visibility & Discovery: 3 sub-sections (Featured editorial sections, Search Ads keywords, Similar Apps reverse count), each independently linked to its tab
+- Untracked apps show 4 cards (Review Pulse, Category Rankings, Listing Changes, Visibility) — no keyword/competitor cards
+- All empty states with muted icons, descriptive text, and optional CTA buttons
+- API helper: getAppReviewMetrics(slug) wraps getAppsReviewVelocity for single-slug convenience
+- No backend API changes — all data from existing endpoints
+- Helper functions: relativeDate(), ordinal(), computeRankingChanges() for time-series delta computation
+- Field badge colors: distinct per field type (blue/purple/indigo/green/amber/orange/pink)
+- Files changed: apps/dashboard/src/lib/api.ts, apps/dashboard/src/app/(dashboard)/apps/[slug]/page.tsx
+
 App detail stat cards tablet responsiveness (PLA-21):
 - Fixed stat cards (Rating, Reviews, Pricing, Developer, Launched, Last Updated) overlapping on tablet/narrow desktop
 - Changed grid breakpoints: grid-cols-2 → sm:grid-cols-3 → lg:grid-cols-6 (was md:grid-cols-6)

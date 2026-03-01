@@ -187,6 +187,11 @@ export function getAppsReviewVelocity(slugs: string[]) {
   });
 }
 
+export async function getAppReviewMetrics(slug: string): Promise<ReviewVelocityMetrics | null> {
+  const result = await getAppsReviewVelocity([slug]);
+  return result[slug] ?? null;
+}
+
 // --- Apps (search) ---
 export function searchApps(q: string) {
   return fetchApi<any[]>(`/api/apps/search?q=${encodeURIComponent(q)}`);
