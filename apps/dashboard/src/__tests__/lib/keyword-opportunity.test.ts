@@ -41,7 +41,6 @@ describe("computeKeywordOpportunity", () => {
     const result = computeKeywordOpportunity([], null);
     expect(result.opportunityScore).toBeGreaterThanOrEqual(0);
     expect(result.stats.organicCount).toBe(0);
-    expect(result.stats.sponsoredCount).toBe(0);
     expect(result.topApps).toHaveLength(0);
   });
 
@@ -52,8 +51,6 @@ describe("computeKeywordOpportunity", () => {
     expect(result.scores.room).toBeLessThanOrEqual(1);
     expect(result.scores.demand).toBeGreaterThanOrEqual(0);
     expect(result.scores.demand).toBeLessThanOrEqual(1);
-    expect(result.scores.organic).toBeGreaterThanOrEqual(0);
-    expect(result.scores.organic).toBeLessThanOrEqual(1);
     expect(result.scores.maturity).toBeGreaterThanOrEqual(0);
     expect(result.scores.maturity).toBeLessThanOrEqual(1);
     expect(result.scores.quality).toBeGreaterThanOrEqual(0);
@@ -76,7 +73,6 @@ describe("computeKeywordOpportunity", () => {
     ];
     const result = computeKeywordOpportunity(apps, 100);
     expect(result.stats.organicCount).toBe(2);
-    expect(result.stats.sponsoredCount).toBe(1);
   });
 
   it("counts BFS apps on first page", () => {
@@ -164,22 +160,6 @@ describe("computeKeywordOpportunity", () => {
     expect(result.scores.demand).toBe(0.05);
   });
 
-  // --- Organic ---
-  it("organic is 1 when no sponsored apps", () => {
-    const apps = makeResults(24);
-    const result = computeKeywordOpportunity(apps, 500);
-    expect(result.scores.organic).toBe(1);
-  });
-
-  it("organic decreases with more sponsored apps", () => {
-    const organic = makeResults(20);
-    const sponsored = Array.from({ length: 4 }, (_, i) =>
-      makeApp({ app_slug: `sponsored-${i}`, is_sponsored: true })
-    );
-    const result = computeKeywordOpportunity([...organic, ...sponsored], 500);
-    expect(result.scores.organic).toBeCloseTo(20 / 24, 2);
-  });
-
   // --- Maturity ---
   it("maturity is 1 when no apps have 1000+ reviews", () => {
     const apps = makeResults(24, { rating_count: 50 });
@@ -213,7 +193,7 @@ describe("computeKeywordOpportunity", () => {
   });
 
   // --- Composite ---
-  it("high opportunity scenario: few reviews, high demand, no ads, no BFS, low ratings", () => {
+  it("high opportunity scenario: few reviews, high demand, no BFS, low ratings", () => {
     const apps = makeResults(24, {
       rating_count: 10,
       average_rating: 3.0,
@@ -223,8 +203,8 @@ describe("computeKeywordOpportunity", () => {
     expect(result.opportunityScore).toBeGreaterThan(70);
   });
 
-  it("low opportunity scenario: many reviews, low demand, many ads, many BFS, high ratings", () => {
-    const organic = Array.from({ length: 20 }, (_, i) =>
+  it("low opportunity scenario: many reviews, low demand, many BFS, high ratings", () => {
+    const apps = Array.from({ length: 24 }, (_, i) =>
       makeApp({
         position: i + 1,
         app_slug: `app-${i}`,
@@ -233,10 +213,7 @@ describe("computeKeywordOpportunity", () => {
         is_built_for_shopify: true,
       })
     );
-    const sponsored = Array.from({ length: 4 }, (_, i) =>
-      makeApp({ app_slug: `sp-${i}`, is_sponsored: true })
-    );
-    const result = computeKeywordOpportunity([...organic, ...sponsored], 50);
+    const result = computeKeywordOpportunity(apps, 50);
     expect(result.opportunityScore).toBeLessThan(20);
   });
 });

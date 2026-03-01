@@ -16,7 +16,6 @@ export interface TopAppInfo {
 export interface KeywordOpportunityStats {
   totalResults: number;
   organicCount: number;
-  sponsoredCount: number;
   bfsCount: number;
   count1000: number;
   count100: number;
@@ -32,7 +31,6 @@ export interface KeywordOpportunityStats {
 export interface KeywordOpportunityScores {
   room: number;
   demand: number;
-  organic: number;
   maturity: number;
   quality: number;
 }
@@ -49,11 +47,10 @@ export interface KeywordOpportunityMetrics {
 // ---------------------------------------------------------------------------
 
 export const OPPORTUNITY_WEIGHTS = {
-  room: 0.35,
-  demand: 0.20,
-  organic: 0.15,
+  room: 0.40,
+  demand: 0.25,
   maturity: 0.10,
-  quality: 0.20,
+  quality: 0.25,
 } as const;
 
 // ---------------------------------------------------------------------------
@@ -83,7 +80,6 @@ export function computeKeywordOpportunity(
   const organic = results.filter(
     (r) => !r.is_sponsored && !r.is_built_in,
   );
-  const sponsored = results.filter((r) => r.is_sponsored);
 
   const firstPage = organic.slice(0, PAGE_SIZE);
   const top4 = organic.slice(0, 4);
@@ -135,7 +131,6 @@ export function computeKeywordOpportunity(
   const stats: KeywordOpportunityStats = {
     totalResults: safeTotalResults,
     organicCount: firstPage.length,
-    sponsoredCount: sponsored.length,
     bfsCount,
     count1000,
     count100,
@@ -151,9 +146,6 @@ export function computeKeywordOpportunity(
   // Score components
   const room = clamp01(1 - top8TotalReviews / ROOM_CAP);
   const demand = clamp01(safeTotalResults / DEMAND_CAP);
-  const organicScore = clamp01(
-    (PAGE_SIZE - sponsored.length) / PAGE_SIZE,
-  );
   const maturity = 1 - clamp01(count1000 / MATURITY_APP_CAP);
 
   const bfsFactor = clamp01(1 - bfsCount / PAGE_SIZE);
@@ -166,7 +158,6 @@ export function computeKeywordOpportunity(
   const scores: KeywordOpportunityScores = {
     room,
     demand,
-    organic: organicScore,
     maturity,
     quality,
   };
@@ -174,7 +165,6 @@ export function computeKeywordOpportunity(
   const raw =
     OPPORTUNITY_WEIGHTS.room * room +
     OPPORTUNITY_WEIGHTS.demand * demand +
-    OPPORTUNITY_WEIGHTS.organic * organicScore +
     OPPORTUNITY_WEIGHTS.maturity * maturity +
     OPPORTUNITY_WEIGHTS.quality * quality;
 

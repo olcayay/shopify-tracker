@@ -77,11 +77,10 @@ export function KeywordOpportunityPopover({
 
           {/* Score breakdown */}
           <div className="space-y-1.5 mb-4">
-            <ScoreBar label="Room" value={scores.room} weight={0.35} />
-            <ScoreBar label="Demand" value={scores.demand} weight={0.20} />
-            <ScoreBar label="Organic" value={scores.organic} weight={0.15} />
+            <ScoreBar label="Room" value={scores.room} weight={0.40} />
+            <ScoreBar label="Demand" value={scores.demand} weight={0.25} />
             <ScoreBar label="Maturity" value={scores.maturity} weight={0.10} />
-            <ScoreBar label="Quality" value={scores.quality} weight={0.20} />
+            <ScoreBar label="Quality" value={scores.quality} weight={0.25} />
           </div>
 
           {/* First Page Stats */}
@@ -90,7 +89,6 @@ export function KeywordOpportunityPopover({
             <div className="space-y-1">
               <StatRow label="Total Results" value={stats.totalResults.toLocaleString()} />
               <StatRow label="Organic Apps" value={stats.organicCount} />
-              <StatRow label="Sponsored Ads" value={stats.sponsoredCount} />
               <StatRow
                 label="Avg Rating"
                 value={stats.firstPageAvgRating != null ? stats.firstPageAvgRating.toFixed(1) : "\u2014"}
