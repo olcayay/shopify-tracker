@@ -88,7 +88,6 @@ export function KeywordOpportunityPopover({
             <p className="text-xs font-medium text-muted-foreground mb-2">First Page Analysis</p>
             <div className="space-y-1">
               <StatRow label="Total Results" value={stats.totalResults.toLocaleString()} />
-              <StatRow label="Organic Apps" value={stats.organicCount} />
               <StatRow
                 label="Avg Rating"
                 value={stats.firstPageAvgRating != null ? stats.firstPageAvgRating.toFixed(1) : "\u2014"}

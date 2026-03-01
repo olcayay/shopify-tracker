@@ -15,7 +15,6 @@ export interface TopAppInfo {
 
 export interface KeywordOpportunityStats {
   totalResults: number;
-  organicCount: number;
   bfsCount: number;
   count1000: number;
   count100: number;
@@ -130,7 +129,6 @@ export function computeKeywordOpportunity(
 
   const stats: KeywordOpportunityStats = {
     totalResults: safeTotalResults,
-    organicCount: firstPage.length,
     bfsCount,
     count1000,
     count100,

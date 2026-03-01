@@ -87,7 +87,6 @@ const SCORE_DETAIL_COLUMNS = [
   { key: "_s_maturity", label: "M", title: "Maturity" },
   { key: "_s_quality", label: "Q", title: "Quality" },
   { key: "_fp_results", label: "Res", title: "Results" },
-  { key: "_fp_organic", label: "Org", title: "Organic" },
   { key: "_fp_rating", label: "Rt", title: "Rating" },
   { key: "_fp_bfs", label: "B", title: "BFS" },
   { key: "_fp_1000", label: "1K", title: "1000+" },
@@ -103,7 +102,6 @@ function getDetailValue(key: string, data: KeywordOpportunityMetrics): number | 
     case "_s_maturity": return data.scores.maturity;
     case "_s_quality": return data.scores.quality;
     case "_fp_results": return data.stats.totalResults;
-    case "_fp_organic": return data.stats.organicCount;
     case "_fp_rating": return data.stats.firstPageAvgRating;
     case "_fp_bfs": return data.stats.bfsCount;
     case "_fp_1000": return data.stats.count1000;
@@ -861,7 +859,7 @@ export function KeywordsSection({ appSlug }: { appSlug: string }) {
               {showScoreDetails && (
                 <>
                   <TableHead colSpan={4} className="bg-muted/30 text-xs font-medium text-muted-foreground text-center border-b">Scores</TableHead>
-                  <TableHead colSpan={6} className="bg-muted/30 text-xs font-medium text-muted-foreground text-center border-b">First Page</TableHead>
+                  <TableHead colSpan={5} className="bg-muted/30 text-xs font-medium text-muted-foreground text-center border-b">First Page</TableHead>
                   <TableHead colSpan={2} className="bg-muted/30 text-xs font-medium text-muted-foreground text-center border-b">Concentration</TableHead>
                 </>
               )}

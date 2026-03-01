@@ -40,7 +40,6 @@ describe("computeKeywordOpportunity", () => {
   it("returns zero score for empty results", () => {
     const result = computeKeywordOpportunity([], null);
     expect(result.opportunityScore).toBeGreaterThanOrEqual(0);
-    expect(result.stats.organicCount).toBe(0);
     expect(result.topApps).toHaveLength(0);
   });
 
@@ -64,7 +63,7 @@ describe("computeKeywordOpportunity", () => {
     expect(result.opportunityScore).toBeLessThanOrEqual(100);
   });
 
-  it("filters out sponsored and built-in apps from organic count", () => {
+  it("filters out sponsored and built-in apps from first page", () => {
     const apps = [
       makeApp({ position: 1, app_slug: "organic-1" }),
       makeApp({ position: 2, app_slug: "sponsored-1", is_sponsored: true }),
@@ -72,7 +71,7 @@ describe("computeKeywordOpportunity", () => {
       makeApp({ position: 4, app_slug: "organic-2" }),
     ];
     const result = computeKeywordOpportunity(apps, 100);
-    expect(result.stats.organicCount).toBe(2);
+    expect(result.topApps).toHaveLength(2);
   });
 
   it("counts BFS apps on first page", () => {
