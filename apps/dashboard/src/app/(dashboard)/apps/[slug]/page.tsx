@@ -10,6 +10,7 @@ import {
   getAppFeaturedPlacements,
   getAppAdSightings,
   getAppSimilarApps,
+  getAppsMinPaidPrices,
 } from "@/lib/api";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -62,6 +63,7 @@ function computeRankingChanges(
 ): { slug: string; label: string; position: number; prevPosition: number | null; delta: number }[] {
   const grouped = new Map<string, any[]>();
   for (const r of rankings) {
+    if (r.position == null || r.position <= 0) continue;
     const key = r[slugKey];
     if (!grouped.has(key)) grouped.set(key, []);
     grouped.get(key)!.push(r);
@@ -119,9 +121,10 @@ export default async function AppOverviewPage({
   let featuredData: any;
   let adData: any;
   let similarData: any;
+  let selfMinPaidPriceMap: Record<string, number | null>;
 
   try {
-    [app, reviewData, rankings, changes, reviewMetrics, featuredData, adData, similarData] =
+    [app, reviewData, rankings, changes, reviewMetrics, featuredData, adData, similarData, selfMinPaidPriceMap] =
       await Promise.all([
         getApp(slug),
         getAppReviews(slug, 3).catch(() => ({ reviews: [], total: 0, distribution: [] })),
@@ -131,6 +134,7 @@ export default async function AppOverviewPage({
         getAppFeaturedPlacements(slug).catch(() => ({ sightings: [] })),
         getAppAdSightings(slug).catch(() => ({ sightings: [] })),
         getAppSimilarApps(slug).catch(() => ({ direct: [], reverse: [], secondDegree: [] })),
+        getAppsMinPaidPrices([slug]).catch(() => ({})),
       ]);
   } catch {
     return <p className="text-muted-foreground">App not found.</p>;
@@ -146,6 +150,28 @@ export default async function AppOverviewPage({
     ]);
   }
 
+  // Round 3: competitor changes (need competitor slugs from Round 2)
+  let competitorChanges: any[] = [];
+  if (competitors.length > 0) {
+    const changeBatches = await Promise.all(
+      competitors.slice(0, 10).map((c: any) =>
+        getAppChanges(c.appSlug, 3)
+          .then((arr: any[]) =>
+            arr.map((ch) => ({
+              ...ch,
+              competitorName: c.appName || c.appSlug,
+              competitorSlug: c.appSlug,
+              competitorIcon: c.iconUrl,
+            }))
+          )
+          .catch(() => [])
+      )
+    );
+    competitorChanges = changeBatches
+      .flat()
+      .sort((a, b) => new Date(b.detectedAt).getTime() - new Date(a.detectedAt).getTime());
+  }
+
   const isTracked = app.isTrackedByAccount;
 
   // === Business Logic ===
@@ -154,12 +180,13 @@ export default async function AppOverviewPage({
   const catRankings = rankings?.categoryRankings || [];
   const catChanges = computeRankingChanges(catRankings, "categorySlug", "categoryTitle");
 
-  // Keyword ranking changes
+  // Keyword ranking changes (filtered to valid positions in computeRankingChanges)
   const kwRankings = rankings?.keywordRankings || [];
   const kwChanges = computeRankingChanges(kwRankings, "keywordSlug", "keyword");
 
-  // Keywords ranked count
-  const rankedKeywordCount = keywords.filter((k: any) => k.rankings?.[slug] != null).length;
+  // Keywords ranked count — use kwChanges (from rankings time-series) since
+  // getAppKeywords doesn't populate rankings without appSlugs param
+  const rankedKeywordCount = kwChanges.length;
 
   // Keyword movers (top 3 by absolute delta)
   const kwMovers = [...kwChanges]
@@ -172,21 +199,33 @@ export default async function AppOverviewPage({
     .sort((a, b) => a.position - b.position)
     .slice(0, 3);
 
-  // Competitor ranking
+  // Competitor ranking — by rating, by reviews, by price
   const selfRating = parseFloat(app.latestSnapshot?.averageRating) || 0;
   const selfReviews = app.latestSnapshot?.ratingCount || 0;
+  const selfMinPaidPrice = selfMinPaidPriceMap[slug] ?? null;
+
   const allWithSelf = [
-    { slug: app.slug, name: app.name, iconUrl: app.iconUrl, rating: selfRating, reviews: selfReviews, isSelf: true },
+    { slug: app.slug, name: app.name, iconUrl: app.iconUrl, rating: selfRating, reviews: selfReviews, minPaidPrice: selfMinPaidPrice, isSelf: true },
     ...competitors.map((c: any) => ({
       slug: c.appSlug,
       name: c.appName || c.appSlug,
       iconUrl: c.iconUrl,
       rating: parseFloat(c.latestSnapshot?.averageRating) || 0,
       reviews: c.latestSnapshot?.ratingCount || 0,
+      minPaidPrice: (c.minPaidPrice as number | null) ?? null,
       isSelf: false,
     })),
-  ].sort((a, b) => b.rating - a.rating || b.reviews - a.reviews);
-  const selfPosition = allWithSelf.findIndex((c) => c.isSelf) + 1;
+  ];
+
+  const byRating = [...allWithSelf].sort((a, b) => b.rating - a.rating || b.reviews - a.reviews);
+  const selfRatingPos = byRating.findIndex((c) => c.isSelf) + 1;
+
+  const byReviewCount = [...allWithSelf].sort((a, b) => b.reviews - a.reviews || b.rating - a.rating);
+  const selfReviewsPos = byReviewCount.findIndex((c) => c.isSelf) + 1;
+
+  const withPrice = allWithSelf.filter((c) => c.minPaidPrice != null && c.minPaidPrice > 0);
+  const byPrice = [...withPrice].sort((a, b) => a.minPaidPrice! - b.minPaidPrice!);
+  const selfPricePos = byPrice.findIndex((c) => c.isSelf) + 1;
 
   // Featured sections dedup
   const featuredSections = [...new Set((featuredData?.sightings || []).map((s: any) => s.sectionTitle))];
@@ -201,7 +240,10 @@ export default async function AppOverviewPage({
   const distribution: { rating: number; count: number }[] = reviewData?.distribution || [];
   const maxDistCount = Math.max(...distribution.map((d) => d.count), 1);
 
-  // Change grouping
+  // Change grouping (for competitor changes or own changes)
+  const changesToShow = isTracked && competitorChanges.length > 0 ? competitorChanges : changes;
+  const showCompetitorChanges = isTracked && competitorChanges.length > 0;
+
   const startOfToday = new Date();
   startOfToday.setHours(0, 0, 0, 0);
   const oneWeekAgo = new Date(startOfToday);
@@ -210,7 +252,7 @@ export default async function AppOverviewPage({
   const todayChanges: any[] = [];
   const weekChanges: any[] = [];
   const earlierChanges: any[] = [];
-  for (const c of changes.slice(0, 5)) {
+  for (const c of changesToShow.slice(0, 5)) {
     const d = new Date(c.detectedAt);
     if (d >= startOfToday) todayChanges.push(c);
     else if (d >= oneWeekAgo) weekChanges.push(c);
@@ -293,7 +335,7 @@ export default async function AppOverviewPage({
                             {"\u2605".repeat(r.rating)}{"\u2606".repeat(5 - r.rating)}
                           </span>
                           <span className="text-muted-foreground text-xs font-medium">{r.reviewerName}</span>
-                          <span className="text-muted-foreground/60 text-xs">&middot;</span>
+                          <span className="text-muted-foreground/60 text-xs">{"\u00B7"}</span>
                           <span className="text-muted-foreground/60 text-xs">{relativeDate(r.reviewDate)}</span>
                         </div>
                         <p className="text-muted-foreground line-clamp-1 text-xs mt-0.5">{r.content}</p>
@@ -304,7 +346,7 @@ export default async function AppOverviewPage({
 
                 {/* Footer */}
                 <p className="text-xs text-muted-foreground pt-1">
-                  View all {reviewData.total} reviews &rarr;
+                  View all {reviewData.total} reviews {"\u2192"}
                 </p>
               </div>
             ) : (
@@ -381,7 +423,7 @@ export default async function AppOverviewPage({
                   )}
 
                   {/* Footer */}
-                  <p className="text-xs text-muted-foreground pt-1">Manage keywords &rarr;</p>
+                  <p className="text-xs text-muted-foreground pt-1">Manage keywords {"\u2192"}</p>
                 </div>
               ) : (
                 <div className="flex flex-col items-center justify-center py-6 text-center">
@@ -428,7 +470,7 @@ export default async function AppOverviewPage({
                     </div>
                   </div>
                 ))}
-                <p className="text-xs text-muted-foreground pt-1">View full rankings &rarr;</p>
+                <p className="text-xs text-muted-foreground pt-1">View full rankings {"\u2192"}</p>
               </div>
             ) : (
               <div className="flex flex-col items-center justify-center py-6 text-center">
@@ -463,10 +505,22 @@ export default async function AppOverviewPage({
                     competitor{competitors.length !== 1 ? "s" : ""}
                   </p>
 
-                  {/* Your position */}
-                  <div className="rounded-md bg-muted/50 px-3 py-2 text-sm">
-                    <span className="font-medium">{ordinal(selfPosition)}</span>
-                    <span className="text-muted-foreground"> of {allWithSelf.length} by rating</span>
+                  {/* Your position — multi-metric */}
+                  <div className={`grid gap-2 ${selfPricePos > 0 ? "grid-cols-3" : "grid-cols-2"}`}>
+                    <div className="rounded-md bg-muted/50 px-2 py-1.5 text-center">
+                      <div className="text-sm font-semibold">{ordinal(selfRatingPos)}</div>
+                      <div className="text-[10px] text-muted-foreground">by rating</div>
+                    </div>
+                    <div className="rounded-md bg-muted/50 px-2 py-1.5 text-center">
+                      <div className="text-sm font-semibold">{ordinal(selfReviewsPos)}</div>
+                      <div className="text-[10px] text-muted-foreground">by reviews</div>
+                    </div>
+                    {selfPricePos > 0 && (
+                      <div className="rounded-md bg-muted/50 px-2 py-1.5 text-center">
+                        <div className="text-sm font-semibold">{ordinal(selfPricePos)}</div>
+                        <div className="text-[10px] text-muted-foreground">cheapest</div>
+                      </div>
+                    )}
                   </div>
 
                   {/* Competitor list */}
@@ -480,14 +534,15 @@ export default async function AppOverviewPage({
                         )}
                         <span className="truncate flex-1">{c.name}</span>
                         <span className="text-xs text-muted-foreground shrink-0">
-                          &starf; {c.rating.toFixed(1)} &middot; {c.reviews}
+                          <Star className="h-3 w-3 text-yellow-500 fill-yellow-500 inline align-text-bottom" />{" "}
+                          {c.rating.toFixed(1)} {"\u00B7"} {c.reviews}
                         </span>
                       </div>
                     ))}
                   </div>
 
                   {/* Footer */}
-                  <p className="text-xs text-muted-foreground pt-1">View all competitors &rarr;</p>
+                  <p className="text-xs text-muted-foreground pt-1">View all competitors {"\u2192"}</p>
                 </div>
               ) : (
                 <div className="flex flex-col items-center justify-center py-6 text-center">
@@ -506,36 +561,42 @@ export default async function AppOverviewPage({
         </Link>
       )}
 
-      {/* Card 5: Listing Changes */}
+      {/* Card 5: Listing Changes — shows competitor updates for tracked apps, own changes otherwise */}
       <Link href={`/apps/${slug}/changes`} className="group">
         <Card className="h-full transition-colors group-hover:border-primary/50">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-sm font-medium flex items-center gap-2">
               <History className="h-4 w-4 text-muted-foreground" />
-              Listing Changes
+              {showCompetitorChanges ? "Competitor Updates" : "Listing Changes"}
             </CardTitle>
             <ArrowRight className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors" />
           </CardHeader>
           <CardContent>
-            {changes.length > 0 ? (
+            {changesToShow.length > 0 ? (
               <div className="space-y-3">
                 {todayChanges.length > 0 && (
-                  <ChangeGroup label="Today" items={todayChanges} />
+                  <ChangeGroup label="Today" items={todayChanges} showCompetitor={showCompetitorChanges} />
                 )}
                 {weekChanges.length > 0 && (
-                  <ChangeGroup label="This Week" items={weekChanges} />
+                  <ChangeGroup label="This Week" items={weekChanges} showCompetitor={showCompetitorChanges} />
                 )}
                 {earlierChanges.length > 0 && (
-                  <ChangeGroup label="Earlier" items={earlierChanges} />
+                  <ChangeGroup label="Earlier" items={earlierChanges} showCompetitor={showCompetitorChanges} />
                 )}
-                <p className="text-xs text-muted-foreground pt-1">View all changes &rarr;</p>
+                <p className="text-xs text-muted-foreground pt-1">
+                  {showCompetitorChanges ? "View all competitors" : "View all changes"} {"\u2192"}
+                </p>
               </div>
             ) : (
               <div className="flex flex-col items-center justify-center py-6 text-center">
                 <History className="h-8 w-8 text-muted-foreground/30 mb-2" />
-                <p className="text-sm font-medium text-muted-foreground">No changes detected yet</p>
+                <p className="text-sm font-medium text-muted-foreground">
+                  {showCompetitorChanges ? "No competitor updates yet" : "No changes detected yet"}
+                </p>
                 <p className="text-xs text-muted-foreground mt-1">
-                  We monitor your listing for any updates.
+                  {showCompetitorChanges
+                    ? "We monitor your competitors for listing updates."
+                    : "We monitor your listing for any updates."}
                 </p>
               </div>
             )}
@@ -583,10 +644,11 @@ export default async function AppOverviewPage({
                 <div className="flex items-center gap-2 text-sm">
                   <Megaphone className="h-4 w-4 text-blue-500 shrink-0" />
                   <span>
-                    Active on{" "}
+                    Advertising on{" "}
                     <span className="font-semibold">{adKeywords.length}</span>{" "}
                     keyword{adKeywords.length !== 1 ? "s" : ""}
                   </span>
+                  <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-4 shrink-0">Ad</Badge>
                 </div>
                 {adKeywords.length > 0 && (
                   <p className="text-xs text-muted-foreground mt-0.5 ml-6 truncate">
@@ -627,21 +689,31 @@ export default async function AppOverviewPage({
 
 // --- Sub-components ---
 
-function ChangeGroup({ label, items }: { label: string; items: any[] }) {
+function ChangeGroup({ label, items, showCompetitor }: { label: string; items: any[]; showCompetitor: boolean }) {
   return (
     <div>
       <p className="text-xs font-medium text-muted-foreground mb-1.5">{label}</p>
-      <div className="space-y-1">
+      <div className="space-y-1.5">
         {items.map((c: any) => (
           <div key={c.id} className="flex items-center gap-2 text-sm">
+            {showCompetitor && (
+              <>
+                {c.competitorIcon ? (
+                  <img src={c.competitorIcon} alt="" className="h-4 w-4 rounded shrink-0" />
+                ) : (
+                  <div className="h-4 w-4 rounded bg-muted shrink-0" />
+                )}
+                <span className="text-xs font-medium truncate max-w-[120px]">{c.competitorName}</span>
+              </>
+            )}
             <span
-              className={`inline-flex items-center rounded px-1.5 py-0.5 text-[10px] font-medium ${
+              className={`inline-flex items-center rounded px-1.5 py-0.5 text-[10px] font-medium shrink-0 ${
                 FIELD_COLORS[c.field] || "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300"
               }`}
             >
               {FIELD_LABELS[c.field] || c.field}
             </span>
-            <span className="text-xs text-muted-foreground">{relativeDate(c.detectedAt)}</span>
+            <span className="text-xs text-muted-foreground shrink-0">{relativeDate(c.detectedAt)}</span>
           </div>
         ))}
       </div>

@@ -254,6 +254,21 @@ App detail overview tab redesign (PLA-22):
 - Field badge colors: distinct per field type (blue/purple/indigo/green/amber/orange/pink)
 - Files changed: apps/dashboard/src/lib/api.ts, apps/dashboard/src/app/(dashboard)/apps/[slug]/page.tsx
 
+Overview tab improvements (PLA-23):
+- Listing Changes card: now shows competitor updates (not own app) for tracked apps with competitors; falls back to own changes for untracked apps
+  - Fetches up to 3 changes per competitor (max 10 competitors) in parallel, merges and sorts by date
+  - Each entry shows competitor icon + name + field badge + relative date
+  - Card title changes to "Competitor Updates" when showing competitor data
+- Visibility card: "Active on X keywords" changed to "Advertising on X keywords" with an "Ad" badge to clarify these are sponsored/paid placements
+- Keyword Performance: fixed "0 of N keywords ranked" bug — getAppKeywords without appSlugs param returns empty rankings object; now uses kwChanges count from getAppRankings time-series instead
+- Keyword Performance: fixed unranked keywords showing in Top Positions — computeRankingChanges now filters out entries with position <= 0 or null
+- Competitor Watch: fixed star character showing as HTML entity "&starf;" — replaced with Lucide Star icon component for consistent rendering
+- Competitor Watch: added multi-metric ranking (by rating, by reviews, by cheapest price) in a grid layout instead of single "by rating" line
+  - Fetches self app's minPaidPrice via getAppsMinPaidPrices in Round 1
+  - Price ranking only shown when self has a valid paid price
+- Replaced all HTML entities (&rarr;, &middot;, &starf;) with Unicode characters or React components for reliable rendering
+- Files changed: apps/dashboard/src/app/(dashboard)/apps/[slug]/page.tsx
+
 App detail stat cards tablet responsiveness (PLA-21):
 - Fixed stat cards (Rating, Reviews, Pricing, Developer, Launched, Last Updated) overlapping on tablet/narrow desktop
 - Changed grid breakpoints: grid-cols-2 → sm:grid-cols-3 → lg:grid-cols-6 (was md:grid-cols-6)

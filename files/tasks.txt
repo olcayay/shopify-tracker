@@ -24,6 +24,8 @@ app detail stat cards tablet responsiveness (PLA-21) ✅
 
 app detail overview tab redesign (PLA-22) ✅
 
+overview tab improvements (PLA-23) ✅
+
 feedback sayfası
 
 kime hangi durumda nasıl emailler gönderilebilinir.
