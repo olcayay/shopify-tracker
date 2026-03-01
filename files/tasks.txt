@@ -26,6 +26,8 @@ app detail overview tab redesign (PLA-22) ✅
 
 overview tab improvements (PLA-23) ✅
 
+overview page section counts (PLA-24) ✅
+
 feedback sayfası
 
 kime hangi durumda nasıl emailler gönderilebilinir.

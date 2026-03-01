@@ -254,6 +254,12 @@ App detail overview tab redesign (PLA-22):
 - Field badge colors: distinct per field type (blue/purple/indigo/green/amber/orange/pink)
 - Files changed: apps/dashboard/src/lib/api.ts, apps/dashboard/src/app/(dashboard)/apps/[slug]/page.tsx
 
+Overview page section counts (PLA-24):
+- Added item counts to all 5 section titles on the /overview dashboard page
+- "My Apps" → "My Apps (X)", "Tracked Keywords (X)", "Competitor Apps (X)", "Starred Features (X)", "Starred Categories (X)"
+- Counts come from existing state arrays (apps.length, keywords.length, etc.)
+- File changed: apps/dashboard/src/app/(dashboard)/overview/page.tsx
+
 Overview tab improvements (PLA-23):
 - Listing Changes card: now shows competitor updates (not own app) for tracked apps with competitors; falls back to own changes for untracked apps
   - Fetches up to 3 changes per competitor (max 10 competitors) in parallel, merges and sorts by date
