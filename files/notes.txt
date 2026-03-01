@@ -237,6 +237,14 @@ Competitor suggestions table redesign (PLA-20):
 - Icon size increased from h-6 w-6 to h-8 w-8 for better visual hierarchy
 - File changed: apps/dashboard/src/components/competitor-suggestions.tsx
 
+App detail stat cards tablet responsiveness (PLA-21):
+- Fixed stat cards (Rating, Reviews, Pricing, Developer, Launched, Last Updated) overlapping on tablet/narrow desktop
+- Changed grid breakpoints: grid-cols-2 → sm:grid-cols-3 → lg:grid-cols-6 (was md:grid-cols-6)
+- At tablet width (768-1023px) cards now show in 3 columns (2 rows) instead of cramped 6 columns
+- Added min-w-0 to all cards to prevent grid blowout from long content
+- Added truncate to developer name link for long developer names
+- File changed: apps/dashboard/src/app/(dashboard)/apps/[slug]/layout.tsx
+
 Competitor suggestions (PLA-12):
 - Similarity utilities extracted from scraper to packages/shared/src/similarity.ts
   - STOP_WORDS, jaccard(), tokenize(), extractCategorySlugs(), extractFeatureHandles(), computeSimilarityBetween()

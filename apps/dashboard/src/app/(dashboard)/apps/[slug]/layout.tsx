@@ -72,8 +72,8 @@ export default async function AppDetailLayout({
       </div>
 
       {snapshot && (
-        <div className="grid grid-cols-2 md:grid-cols-6 gap-4">
-          <Card className="py-3 gap-1">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
+          <Card className="min-w-0 py-3 gap-1">
             <CardHeader>
               <CardTitle className="text-sm text-muted-foreground">Rating</CardTitle>
             </CardHeader>
@@ -103,7 +103,7 @@ export default async function AppDetailLayout({
               )}
             </CardContent>
           </Card>
-          <Card className="py-3 gap-1">
+          <Card className="min-w-0 py-3 gap-1">
             <CardHeader>
               <CardTitle className="text-sm text-muted-foreground">Reviews</CardTitle>
             </CardHeader>
@@ -113,7 +113,7 @@ export default async function AppDetailLayout({
               </span>
             </CardContent>
           </Card>
-          <Card className="py-3 gap-1">
+          <Card className="min-w-0 py-3 gap-1">
             <CardHeader>
               <CardTitle className="text-sm text-muted-foreground">Pricing</CardTitle>
             </CardHeader>
@@ -139,7 +139,7 @@ export default async function AppDetailLayout({
               )}
             </CardContent>
           </Card>
-          <Card className="py-3 gap-1">
+          <Card className="min-w-0 py-3 gap-1">
             <CardHeader>
               <CardTitle className="text-sm text-muted-foreground">Developer</CardTitle>
             </CardHeader>
@@ -147,7 +147,7 @@ export default async function AppDetailLayout({
               {snapshot.developer?.name ? (
                 <Link
                   href={`/developers?name=${encodeURIComponent(snapshot.developer.name)}`}
-                  className="text-sm text-primary hover:underline"
+                  className="text-sm text-primary hover:underline truncate block"
                 >
                   {snapshot.developer.name}
                 </Link>
@@ -156,7 +156,7 @@ export default async function AppDetailLayout({
               )}
             </CardContent>
           </Card>
-          <Card className="py-3 gap-1">
+          <Card className="min-w-0 py-3 gap-1">
             <CardHeader>
               <CardTitle className="text-sm text-muted-foreground">Launched</CardTitle>
             </CardHeader>
@@ -166,7 +166,7 @@ export default async function AppDetailLayout({
               </span>
             </CardContent>
           </Card>
-          <Card className="py-3 gap-1">
+          <Card className="min-w-0 py-3 gap-1">
             <CardHeader>
               <CardTitle className="text-sm text-muted-foreground">Last Updated</CardTitle>
             </CardHeader>

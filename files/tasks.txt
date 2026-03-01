@@ -20,6 +20,8 @@ momentum column alignment (PLA-19) ✅
 
 competitor suggestions table redesign (PLA-20) ✅
 
+app detail stat cards tablet responsiveness (PLA-21) ✅
+
 feedback sayfası
 
 kime hangi durumda nasıl emailler gönderilebilinir.
