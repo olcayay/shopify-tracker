@@ -286,6 +286,9 @@ Overview tab follow-up improvements (PLA-22 comment):
   - Footer "View all competitors" links to /apps/{slug}/competitors (not changes page)
   - Card no longer wrapped in outer Link (inner rows have individual links)
   - ChangeGroup component simplified (removed showCompetitor prop, only used for own changes)
+- Category Rankings card: added app count per category from latestSnapshot.appCount
+  - Displayed as "Support > Chat (142)" next to category label
+  - categoryLeadersMap renamed to categoryInfoMap storing { leaders, appCount }
 - Files changed: apps/dashboard/src/app/(dashboard)/apps/[slug]/page.tsx
 
 App detail stat cards tablet responsiveness (PLA-21):

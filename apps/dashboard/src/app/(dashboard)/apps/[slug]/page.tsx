@@ -148,7 +148,7 @@ export default async function AppOverviewPage({
   // Round 2: tracked-only fetches + category leaders (all parallel)
   let competitors: any[] = [];
   let keywords: any[] = [];
-  const categoryLeadersMap = new Map<string, any[]>();
+  const categoryInfoMap = new Map<string, { leaders: any[]; appCount: number | null }>();
 
   await Promise.all([
     ...(app.isTrackedByAccount
@@ -160,7 +160,10 @@ export default async function AppOverviewPage({
     ...catChanges.map((cat) =>
       getCategory(cat.slug)
         .then((catData: any) => {
-          categoryLeadersMap.set(cat.slug, (catData?.rankedApps || []).slice(0, 3));
+          categoryInfoMap.set(cat.slug, {
+            leaders: (catData?.rankedApps || []).slice(0, 3),
+            appCount: catData?.latestSnapshot?.appCount ?? null,
+          });
         })
         .catch(() => {})
     ),
@@ -500,11 +503,18 @@ export default async function AppOverviewPage({
             {catChanges.length > 0 ? (
               <div className="space-y-4">
                 {catChanges.map((cat) => {
-                  const leaders = categoryLeadersMap.get(cat.slug) || [];
+                  const catInfo = categoryInfoMap.get(cat.slug);
+                  const leaders = catInfo?.leaders || [];
+                  const appCount = catInfo?.appCount;
                   return (
                     <div key={cat.slug}>
                       <div className="flex items-center justify-between text-sm">
-                        <span className="truncate text-muted-foreground">{cat.label}</span>
+                        <span className="truncate text-muted-foreground">
+                          {cat.label}
+                          {appCount != null && (
+                            <span className="text-xs text-muted-foreground/60"> ({appCount})</span>
+                          )}
+                        </span>
                         <div className="flex items-center gap-1.5 shrink-0 ml-2">
                           <Badge variant="secondary">#{cat.position}</Badge>
                           {cat.delta > 0 ? (
