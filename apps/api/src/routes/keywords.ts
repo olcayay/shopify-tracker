@@ -15,6 +15,8 @@ import {
   accountTrackedApps,
   accountCompetitorApps,
 } from "@shopify-tracking/db";
+import { computeKeywordOpportunity } from "@shopify-tracking/shared";
+import type { KeywordSearchApp } from "@shopify-tracking/shared";
 
 type Db = ReturnType<typeof createDb>;
 
@@ -489,6 +491,43 @@ export const keywordRoutes: FastifyPluginAsync = async (app) => {
         suggestions: row?.suggestions || [],
         scrapedAt: row?.scrapedAt || null,
       };
+    }
+  );
+
+  // POST /api/keywords/opportunity — bulk keyword opportunity scores
+  app.post<{ Body: { slugs: string[] } }>(
+    "/opportunity",
+    async (request, reply) => {
+      const { slugs } = request.body || {};
+      if (!Array.isArray(slugs) || slugs.length === 0) {
+        return reply.status(400).send({ error: "slugs array is required" });
+      }
+      if (slugs.length > 100) {
+        return reply.status(400).send({ error: "Maximum 100 slugs allowed" });
+      }
+
+      // Get latest snapshot per keyword slug
+      const rows = await db.execute(sql`
+        SELECT DISTINCT ON (ks.keyword_id)
+          tk.slug,
+          ks.total_results,
+          ks.results
+        FROM keyword_snapshots ks
+        JOIN tracked_keywords tk ON tk.id = ks.keyword_id
+        WHERE tk.slug = ANY(${slugs})
+        ORDER BY ks.keyword_id, ks.scraped_at DESC
+      `);
+
+      const result: Record<string, any> = {};
+      const rowList = (rows as any).rows ?? rows;
+      for (const row of rowList) {
+        const kwSlug = row.slug as string;
+        const totalResults = row.total_results as number | null;
+        const results = (row.results as KeywordSearchApp[]) || [];
+        result[kwSlug] = computeKeywordOpportunity(results, totalResults);
+      }
+
+      return result;
     }
   );
 };

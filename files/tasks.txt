@@ -30,6 +30,8 @@ overview page section counts (PLA-24) ✅
 
 overview tab: category leaders & competitor grouping (PLA-22 follow-up) ✅
 
+keyword opportunity scoring (PLA-25) ✅
+
 feedback sayfası
 
 kime hangi durumda nasıl emailler gönderilebilinir.

@@ -61,6 +61,18 @@ export type {
   SimilarityResult,
 } from "./similarity.js";
 
+// Keyword opportunity
+export {
+  OPPORTUNITY_WEIGHTS,
+  computeKeywordOpportunity,
+} from "./keyword-opportunity.js";
+export type {
+  TopAppInfo,
+  KeywordOpportunityStats,
+  KeywordOpportunityScores,
+  KeywordOpportunityMetrics,
+} from "./keyword-opportunity.js";
+
 // Logger
 export { Logger, createLogger } from "./logger.js";
 export type { LogLevel, LogContext } from "./logger.js";

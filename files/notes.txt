@@ -291,6 +291,37 @@ Overview tab follow-up improvements (PLA-22 comment):
   - categoryLeadersMap renamed to categoryInfoMap storing { leaders, appCount }
 - Files changed: apps/dashboard/src/app/(dashboard)/apps/[slug]/page.tsx
 
+Keyword opportunity scoring (PLA-25):
+- Composite opportunity score (0-100) per keyword computed from keywordSnapshots.results JSONB
+- 5 scoring components: Room(35%), Demand(20%), Organic(15%), Maturity(10%), Quality(20%)
+  - Room: max(0, min(1, 1 - top8Reviews/20000)) — fewer reviews in top 8 = more room
+  - Demand: min(1, totalResults/1000) — more total results = more popular
+  - Organic: (24 - sponsoredCount)/24 — fewer ads = more organic opportunity
+  - Maturity: 1 - min(1, count1000/12) — fewer 1000+ review apps = less mature market
+  - Quality: bfsFactor × ratingFactor — fewer BFS apps and lower top4 rating = quality gap
+- Shared utility: packages/shared/src/keyword-opportunity.ts
+  - computeKeywordOpportunity(results, totalResults) → KeywordOpportunityMetrics
+  - Separates organic vs sponsored/built-in, computes raw stats + scores + topApps info
+  - Exported types: KeywordOpportunityMetrics, KeywordOpportunityScores, KeywordOpportunityStats, TopAppInfo
+- API: POST /api/keywords/opportunity — bulk endpoint
+  - Input: { slugs: string[] } (max 100)
+  - Reads latest keywordSnapshot per slug via DISTINCT ON query
+  - Returns Record<slug, KeywordOpportunityMetrics>
+- Dashboard: Score column in keywords table
+  - Color-coded badge: green(≥60), amber(30-59), red(<30)
+  - Lazy-loaded via fetchWithAuth after keywords load
+  - Sortable by score (sortBySlug="_score")
+- KeywordOpportunityPopover component: click score badge to see breakdown
+  - 5 component bars with percentage + weight labels
+  - First Page Analysis: total results, organic/sponsored count, avg rating, BFS count, 1000+/100+ counts
+  - Review Concentration: top 1 share %, top 4 share %
+  - Top Apps: top 4 with icon, name, rating, review count, BFS badge
+  - Uses Radix Popover from radix-ui package
+- 23 unit tests covering scoring components, edge cases, composite scenarios
+- No DB changes — all data from existing keywordSnapshots.results JSONB
+- Files created: packages/shared/src/keyword-opportunity.ts, apps/dashboard/src/components/keyword-opportunity-popover.tsx, apps/dashboard/src/__tests__/lib/keyword-opportunity.test.ts
+- Files modified: packages/shared/src/index.ts, apps/api/src/routes/keywords.ts, apps/dashboard/src/app/(dashboard)/apps/[slug]/keywords-section.tsx
+
 App detail stat cards tablet responsiveness (PLA-21):
 - Fixed stat cards (Rating, Reviews, Pricing, Developer, Launched, Last Updated) overlapping on tablet/narrow desktop
 - Changed grid breakpoints: grid-cols-2 → sm:grid-cols-3 → lg:grid-cols-6 (was md:grid-cols-6)

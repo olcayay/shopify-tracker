@@ -16,7 +16,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { X, Plus, Search, Check, ArrowDown, ExternalLink, Lightbulb, Loader2 } from "lucide-react";
+import { X, Plus, Search, Check, ArrowDown, ExternalLink, Lightbulb, Loader2, TrendingUp } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ConfirmModal } from "@/components/confirm-modal";
 import { LiveSearchTrigger } from "@/components/live-search-trigger";
@@ -27,6 +27,8 @@ import { KeywordTagFilter } from "@/components/keyword-tag-filter";
 import { KeywordWordGroupFilter } from "@/components/keyword-word-group-filter";
 import { extractWordGroups, filterKeywordsByWord } from "@/lib/keyword-word-groups";
 import { MetadataKeywordSuggestions } from "@/components/metadata-keyword-suggestions";
+import { KeywordOpportunityPopover } from "@/components/keyword-opportunity-popover";
+import type { KeywordOpportunityMetrics } from "@shopify-tracking/shared";
 
 // --- App icon with selection state (same as compare page) ---
 function AppIcon({
@@ -99,6 +101,8 @@ export function KeywordsSection({ appSlug }: { appSlug: string }) {
   const [activeWordFilter, setActiveWordFilter] = useState<string | null>(null);
   const [pendingKeywordIds, setPendingKeywordIds] = useState<Set<number>>(new Set());
   const [resolvedKeywordIds, setResolvedKeywordIds] = useState<Set<number>>(new Set());
+  const [opportunityData, setOpportunityData] = useState<Record<string, KeywordOpportunityMetrics>>({});
+  const [opportunityLoading, setOpportunityLoading] = useState(false);
   const searchRef = useRef<HTMLDivElement>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout>>(undefined);
 
@@ -157,13 +161,20 @@ export function KeywordsSection({ appSlug }: { appSlug: string }) {
     return result;
   }, [keywords, activeTagFilter, activeWordFilter]);
 
-  // Sorted keywords by selected app ranking or alphabetically
+  // Sorted keywords by selected app ranking, alphabetically, or by score
   const sortedKeywords = useMemo(() => {
     if (!sortBySlug || filteredKeywords.length === 0) return filteredKeywords;
     if (sortBySlug === "_alpha") {
       return [...filteredKeywords].sort((a, b) =>
         a.keyword.localeCompare(b.keyword)
       );
+    }
+    if (sortBySlug === "_score") {
+      return [...filteredKeywords].sort((a, b) => {
+        const scoreA = opportunityData[a.keywordSlug]?.opportunityScore ?? -1;
+        const scoreB = opportunityData[b.keywordSlug]?.opportunityScore ?? -1;
+        return scoreB - scoreA;
+      });
     }
     return [...filteredKeywords].sort((a, b) => {
       const posA = a.rankings?.[sortBySlug];
@@ -174,7 +185,7 @@ export function KeywordsSection({ appSlug }: { appSlug: string }) {
       if (posB != null) return 1;
       return 0;
     });
-  }, [filteredKeywords, sortBySlug]);
+  }, [filteredKeywords, sortBySlug, opportunityData]);
 
   // Clear word filter if the active word no longer exists in word groups
   useEffect(() => {
@@ -251,6 +262,26 @@ export function KeywordsSection({ appSlug }: { appSlug: string }) {
 
     return () => clearInterval(interval);
   }, [pendingKeywordIds, appSlug, appSlugsParam]);
+
+  // Fetch opportunity scores when keywords change
+  useEffect(() => {
+    if (keywords.length === 0) return;
+    const slugs = keywords.map((kw: any) => kw.keywordSlug).filter(Boolean);
+    if (slugs.length === 0) return;
+    setOpportunityLoading(true);
+    fetchWithAuth("/api/keywords/opportunity", {
+      method: "POST",
+      body: JSON.stringify({ slugs }),
+    })
+      .then(async (res) => {
+        if (res.ok) {
+          const data = await res.json();
+          setOpportunityData(data);
+        }
+      })
+      .catch(() => {})
+      .finally(() => setOpportunityLoading(false));
+  }, [keywords]);
 
   // Click outside handler for suggestions
   useEffect(() => {
@@ -740,6 +771,18 @@ export function KeywordsSection({ appSlug }: { appSlug: string }) {
                 </TableHead>
               ))}
               <TableHead>Total Results</TableHead>
+              <TableHead className="text-center w-16">
+                <button
+                  onClick={() => setSortBySlug("_score")}
+                  className="flex items-center justify-center gap-0.5 mx-auto"
+                  title="Sort by opportunity score"
+                >
+                  Score
+                  {sortBySlug === "_score" && (
+                    <ArrowDown className="h-3 w-3 text-muted-foreground" />
+                  )}
+                </button>
+              </TableHead>
               <TableHead className="w-10" />
               {canEdit && <TableHead className="w-12" />}
             </TableRow>
@@ -827,6 +870,28 @@ export function KeywordsSection({ appSlug }: { appSlug: string }) {
                     </span>
                   ) : (
                     kw.latestSnapshot?.totalResults ?? "\u2014"
+                  )}
+                </TableCell>
+                <TableCell className="text-center">
+                  {opportunityLoading ? (
+                    <Skeleton className="h-5 w-8 mx-auto rounded-full" />
+                  ) : opportunityData[kw.keywordSlug] ? (
+                    <KeywordOpportunityPopover metrics={opportunityData[kw.keywordSlug]}>
+                      <button
+                        className={cn(
+                          "inline-flex items-center justify-center h-6 min-w-[2rem] px-1.5 rounded-full text-xs font-semibold tabular-nums cursor-pointer transition-colors",
+                          opportunityData[kw.keywordSlug].opportunityScore >= 60
+                            ? "bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-300 hover:bg-green-200 dark:hover:bg-green-900/70"
+                            : opportunityData[kw.keywordSlug].opportunityScore >= 30
+                              ? "bg-amber-100 text-amber-800 dark:bg-amber-900/50 dark:text-amber-300 hover:bg-amber-200 dark:hover:bg-amber-900/70"
+                              : "bg-red-100 text-red-800 dark:bg-red-900/50 dark:text-red-300 hover:bg-red-200 dark:hover:bg-red-900/70"
+                        )}
+                      >
+                        {opportunityData[kw.keywordSlug].opportunityScore}
+                      </button>
+                    </KeywordOpportunityPopover>
+                  ) : (
+                    <span className="text-muted-foreground">&mdash;</span>
                   )}
                 </TableCell>
                 <TableCell>
