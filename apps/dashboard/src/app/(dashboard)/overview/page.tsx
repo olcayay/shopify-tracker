@@ -291,7 +291,7 @@ export default function OverviewPage() {
       <Card>
         <CardHeader className="pb-3">
           <div className="flex flex-col sm:flex-row sm:items-center gap-3">
-            <CardTitle className="text-base">My Apps ({apps.length})</CardTitle>
+            <CardTitle className="text-base">My Apps ({apps.length}/{account?.limits.maxTrackedApps})</CardTitle>
             <div className="flex items-center gap-3 sm:ml-auto">
               <AppSearchBar
                 mode="follow"
@@ -417,7 +417,7 @@ export default function OverviewPage() {
       <Card>
         <CardHeader className="pb-3">
           <div className="flex items-center justify-between">
-            <CardTitle className="text-base">Tracked Keywords ({keywords.length})</CardTitle>
+            <CardTitle className="text-base">Tracked Keywords ({keywords.length}/{account?.limits.maxTrackedKeywords})</CardTitle>
             <Link href="/keywords" className="text-sm text-primary hover:underline">
               View all
             </Link>
@@ -492,7 +492,7 @@ export default function OverviewPage() {
       <Card>
         <CardHeader className="pb-3">
           <div className="flex flex-col sm:flex-row sm:items-center gap-3">
-            <CardTitle className="text-base">Competitor Apps ({competitors.length})</CardTitle>
+            <CardTitle className="text-base">Competitor Apps ({competitors.length}/{account?.limits.maxCompetitorApps})</CardTitle>
             <div className="flex items-center gap-3 sm:ml-auto">
               <AppSearchBar
                 mode="browse-only"
