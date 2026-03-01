@@ -506,25 +506,41 @@ export const keywordRoutes: FastifyPluginAsync = async (app) => {
         return reply.status(400).send({ error: "Maximum 100 slugs allowed" });
       }
 
-      // Get latest snapshot per keyword slug
-      const rows = await db.execute(sql`
-        SELECT DISTINCT ON (ks.keyword_id)
-          tk.slug,
-          ks.total_results,
-          ks.results
-        FROM keyword_snapshots ks
-        JOIN tracked_keywords tk ON tk.id = ks.keyword_id
-        WHERE tk.slug = ANY(${slugs})
-        ORDER BY ks.keyword_id, ks.scraped_at DESC
-      `);
+      // Step 1: Get keyword slug -> id mapping
+      const kwRows = await db
+        .select({ id: trackedKeywords.id, slug: trackedKeywords.slug })
+        .from(trackedKeywords)
+        .where(inArray(trackedKeywords.slug, slugs));
 
+      if (kwRows.length === 0) return {};
+
+      const slugByKeywordId = new Map(kwRows.map((r) => [r.id, r.slug]));
+
+      // Step 2: Get latest snapshot per keyword (parallel)
+      const snapshotResults = await Promise.all(
+        kwRows.map(async (kw) => {
+          const [row] = await db
+            .select({
+              keywordId: keywordSnapshots.keywordId,
+              totalResults: keywordSnapshots.totalResults,
+              results: keywordSnapshots.results,
+            })
+            .from(keywordSnapshots)
+            .where(eq(keywordSnapshots.keywordId, kw.id))
+            .orderBy(desc(keywordSnapshots.scrapedAt))
+            .limit(1);
+          return row;
+        })
+      );
+
+      // Step 3: Compute opportunity scores
       const result: Record<string, any> = {};
-      const rowList = (rows as any).rows ?? rows;
-      for (const row of rowList) {
-        const kwSlug = row.slug as string;
-        const totalResults = row.total_results as number | null;
+      for (const row of snapshotResults) {
+        if (!row) continue;
+        const kwSlug = slugByKeywordId.get(row.keywordId);
+        if (!kwSlug) continue;
         const results = (row.results as KeywordSearchApp[]) || [];
-        result[kwSlug] = computeKeywordOpportunity(results, totalResults);
+        result[kwSlug] = computeKeywordOpportunity(results, row.totalResults);
       }
 
       return result;
