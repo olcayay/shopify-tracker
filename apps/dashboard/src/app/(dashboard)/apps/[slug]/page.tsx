@@ -11,6 +11,7 @@ import {
   getAppAdSightings,
   getAppSimilarApps,
   getAppsMinPaidPrices,
+  getCategory,
 } from "@/lib/api";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -140,15 +141,30 @@ export default async function AppOverviewPage({
     return <p className="text-muted-foreground">App not found.</p>;
   }
 
-  // Round 2: tracked-only fetches
+  // Category ranking changes (computed early for category leader fetches)
+  const catRankings = rankings?.categoryRankings || [];
+  const catChanges = computeRankingChanges(catRankings, "categorySlug", "categoryTitle");
+
+  // Round 2: tracked-only fetches + category leaders (all parallel)
   let competitors: any[] = [];
   let keywords: any[] = [];
-  if (app.isTrackedByAccount) {
-    [competitors, keywords] = await Promise.all([
-      getAppCompetitors(slug).catch(() => []),
-      getAppKeywords(slug).catch(() => []),
-    ]);
-  }
+  const categoryLeadersMap = new Map<string, any[]>();
+
+  await Promise.all([
+    ...(app.isTrackedByAccount
+      ? [
+          getAppCompetitors(slug).catch(() => []).then((c: any[]) => { competitors = c; }),
+          getAppKeywords(slug).catch(() => []).then((k: any[]) => { keywords = k; }),
+        ]
+      : []),
+    ...catChanges.map((cat) =>
+      getCategory(cat.slug)
+        .then((catData: any) => {
+          categoryLeadersMap.set(cat.slug, (catData?.rankedApps || []).slice(0, 3));
+        })
+        .catch(() => {})
+    ),
+  ]);
 
   // Round 3: competitor changes (need competitor slugs from Round 2)
   let competitorChanges: any[] = [];
@@ -175,10 +191,6 @@ export default async function AppOverviewPage({
   const isTracked = app.isTrackedByAccount;
 
   // === Business Logic ===
-
-  // Category ranking changes
-  const catRankings = rankings?.categoryRankings || [];
-  const catChanges = computeRankingChanges(catRankings, "categorySlug", "categoryTitle");
 
   // Keyword ranking changes (filtered to valid positions in computeRankingChanges)
   const kwRankings = rankings?.keywordRankings || [];
@@ -257,6 +269,38 @@ export default async function AppOverviewPage({
     if (d >= startOfToday) todayChanges.push(c);
     else if (d >= oneWeekAgo) weekChanges.push(c);
     else earlierChanges.push(c);
+  }
+
+  // Grouped competitor changes (combine same-app field updates into one row)
+  const groupedCompChanges: {
+    competitorName: string;
+    competitorSlug: string;
+    competitorIcon: string | null;
+    fields: string[];
+    latestDate: string;
+  }[] = [];
+
+  if (showCompetitorChanges) {
+    const compMap = new Map<string, (typeof groupedCompChanges)[0]>();
+    for (const c of competitorChanges) {
+      const existing = compMap.get(c.competitorSlug);
+      if (existing) {
+        if (!existing.fields.includes(c.field)) existing.fields.push(c.field);
+        if (new Date(c.detectedAt) > new Date(existing.latestDate)) {
+          existing.latestDate = c.detectedAt;
+        }
+      } else {
+        compMap.set(c.competitorSlug, {
+          competitorName: c.competitorName,
+          competitorSlug: c.competitorSlug,
+          competitorIcon: c.competitorIcon,
+          fields: [c.field],
+          latestDate: c.detectedAt,
+        });
+      }
+    }
+    groupedCompChanges.push(...compMap.values());
+    groupedCompChanges.sort((a, b) => new Date(b.latestDate).getTime() - new Date(a.latestDate).getTime());
   }
 
   // Review velocity
@@ -454,22 +498,44 @@ export default async function AppOverviewPage({
           </CardHeader>
           <CardContent>
             {catChanges.length > 0 ? (
-              <div className="space-y-2">
-                {catChanges.map((cat) => (
-                  <div key={cat.slug} className="flex items-center justify-between text-sm">
-                    <span className="truncate text-muted-foreground">{cat.label}</span>
-                    <div className="flex items-center gap-1.5 shrink-0 ml-2">
-                      <Badge variant="secondary">#{cat.position}</Badge>
-                      {cat.delta > 0 ? (
-                        <ArrowUpRight className="h-3.5 w-3.5 text-green-600 dark:text-green-400" />
-                      ) : cat.delta < 0 ? (
-                        <ArrowDownRight className="h-3.5 w-3.5 text-red-600 dark:text-red-400" />
-                      ) : (
-                        <Minus className="h-3.5 w-3.5 text-muted-foreground/50" />
+              <div className="space-y-4">
+                {catChanges.map((cat) => {
+                  const leaders = categoryLeadersMap.get(cat.slug) || [];
+                  return (
+                    <div key={cat.slug}>
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="truncate text-muted-foreground">{cat.label}</span>
+                        <div className="flex items-center gap-1.5 shrink-0 ml-2">
+                          <Badge variant="secondary">#{cat.position}</Badge>
+                          {cat.delta > 0 ? (
+                            <ArrowUpRight className="h-3.5 w-3.5 text-green-600 dark:text-green-400" />
+                          ) : cat.delta < 0 ? (
+                            <ArrowDownRight className="h-3.5 w-3.5 text-red-600 dark:text-red-400" />
+                          ) : (
+                            <Minus className="h-3.5 w-3.5 text-muted-foreground/50" />
+                          )}
+                        </div>
+                      </div>
+                      {leaders.length > 0 && (
+                        <div className="mt-1.5 ml-1 space-y-1">
+                          {leaders.map((leader: any) => (
+                            <div key={leader.slug} className="flex items-center gap-2 text-xs text-muted-foreground">
+                              <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-4 shrink-0 font-mono">
+                                #{leader.position}
+                              </Badge>
+                              {leader.icon_url ? (
+                                <img src={leader.icon_url} alt="" className="h-4 w-4 rounded shrink-0" />
+                              ) : (
+                                <div className="h-4 w-4 rounded bg-muted shrink-0" />
+                              )}
+                              <span className="truncate">{leader.name}</span>
+                            </div>
+                          ))}
+                        </div>
                       )}
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
                 <p className="text-xs text-muted-foreground pt-1">View full rankings {"\u2192"}</p>
               </div>
             ) : (
@@ -561,48 +627,100 @@ export default async function AppOverviewPage({
         </Link>
       )}
 
-      {/* Card 5: Listing Changes — shows competitor updates for tracked apps, own changes otherwise */}
-      <Link href={`/apps/${slug}/changes`} className="group">
-        <Card className="h-full transition-colors group-hover:border-primary/50">
+      {/* Card 5: Listing Changes / Competitor Updates */}
+      {showCompetitorChanges ? (
+        <Card className="h-full">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-sm font-medium flex items-center gap-2">
               <History className="h-4 w-4 text-muted-foreground" />
-              {showCompetitorChanges ? "Competitor Updates" : "Listing Changes"}
+              Competitor Updates
             </CardTitle>
-            <ArrowRight className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors" />
           </CardHeader>
           <CardContent>
-            {changesToShow.length > 0 ? (
-              <div className="space-y-3">
-                {todayChanges.length > 0 && (
-                  <ChangeGroup label="Today" items={todayChanges} showCompetitor={showCompetitorChanges} />
-                )}
-                {weekChanges.length > 0 && (
-                  <ChangeGroup label="This Week" items={weekChanges} showCompetitor={showCompetitorChanges} />
-                )}
-                {earlierChanges.length > 0 && (
-                  <ChangeGroup label="Earlier" items={earlierChanges} showCompetitor={showCompetitorChanges} />
-                )}
-                <p className="text-xs text-muted-foreground pt-1">
-                  {showCompetitorChanges ? "View all competitors" : "View all changes"} {"\u2192"}
-                </p>
+            {groupedCompChanges.length > 0 ? (
+              <div className="space-y-1.5">
+                {groupedCompChanges.slice(0, 5).map((g) => (
+                  <Link
+                    key={g.competitorSlug}
+                    href={`/apps/${g.competitorSlug}/changes`}
+                    className="flex items-center gap-2 text-sm rounded-md p-1.5 -mx-1.5 hover:bg-muted/50 transition-colors"
+                  >
+                    {g.competitorIcon ? (
+                      <img src={g.competitorIcon} alt="" className="h-5 w-5 rounded shrink-0" />
+                    ) : (
+                      <div className="h-5 w-5 rounded bg-muted shrink-0" />
+                    )}
+                    <span className="font-medium truncate">{g.competitorName}</span>
+                    <div className="flex items-center gap-1 shrink-0 ml-auto">
+                      {g.fields.map((f) => (
+                        <span
+                          key={f}
+                          className={`inline-flex items-center rounded px-1.5 py-0.5 text-[10px] font-medium shrink-0 ${
+                            FIELD_COLORS[f] || "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300"
+                          }`}
+                        >
+                          {FIELD_LABELS[f] || f}
+                        </span>
+                      ))}
+                    </div>
+                    <span className="text-xs text-muted-foreground shrink-0">{relativeDate(g.latestDate)}</span>
+                  </Link>
+                ))}
+                <Link
+                  href={`/apps/${slug}/competitors`}
+                  className="block text-xs text-muted-foreground pt-2 hover:text-primary transition-colors"
+                >
+                  View all competitors {"\u2192"}
+                </Link>
               </div>
             ) : (
               <div className="flex flex-col items-center justify-center py-6 text-center">
                 <History className="h-8 w-8 text-muted-foreground/30 mb-2" />
-                <p className="text-sm font-medium text-muted-foreground">
-                  {showCompetitorChanges ? "No competitor updates yet" : "No changes detected yet"}
-                </p>
+                <p className="text-sm font-medium text-muted-foreground">No competitor updates yet</p>
                 <p className="text-xs text-muted-foreground mt-1">
-                  {showCompetitorChanges
-                    ? "We monitor your competitors for listing updates."
-                    : "We monitor your listing for any updates."}
+                  We monitor your competitors for listing updates.
                 </p>
               </div>
             )}
           </CardContent>
         </Card>
-      </Link>
+      ) : (
+        <Link href={`/apps/${slug}/changes`} className="group">
+          <Card className="h-full transition-colors group-hover:border-primary/50">
+            <CardHeader className="flex flex-row items-center justify-between pb-2">
+              <CardTitle className="text-sm font-medium flex items-center gap-2">
+                <History className="h-4 w-4 text-muted-foreground" />
+                Listing Changes
+              </CardTitle>
+              <ArrowRight className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors" />
+            </CardHeader>
+            <CardContent>
+              {changes.length > 0 ? (
+                <div className="space-y-3">
+                  {todayChanges.length > 0 && (
+                    <ChangeGroup label="Today" items={todayChanges} />
+                  )}
+                  {weekChanges.length > 0 && (
+                    <ChangeGroup label="This Week" items={weekChanges} />
+                  )}
+                  {earlierChanges.length > 0 && (
+                    <ChangeGroup label="Earlier" items={earlierChanges} />
+                  )}
+                  <p className="text-xs text-muted-foreground pt-1">View all changes {"\u2192"}</p>
+                </div>
+              ) : (
+                <div className="flex flex-col items-center justify-center py-6 text-center">
+                  <History className="h-8 w-8 text-muted-foreground/30 mb-2" />
+                  <p className="text-sm font-medium text-muted-foreground">No changes detected yet</p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    We monitor your listing for any updates.
+                  </p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </Link>
+      )}
 
       {/* Card 6: Visibility & Discovery */}
       <Card className="h-full">
@@ -689,23 +807,13 @@ export default async function AppOverviewPage({
 
 // --- Sub-components ---
 
-function ChangeGroup({ label, items, showCompetitor }: { label: string; items: any[]; showCompetitor: boolean }) {
+function ChangeGroup({ label, items }: { label: string; items: any[] }) {
   return (
     <div>
       <p className="text-xs font-medium text-muted-foreground mb-1.5">{label}</p>
       <div className="space-y-1.5">
         {items.map((c: any) => (
           <div key={c.id} className="flex items-center gap-2 text-sm">
-            {showCompetitor && (
-              <>
-                {c.competitorIcon ? (
-                  <img src={c.competitorIcon} alt="" className="h-4 w-4 rounded shrink-0" />
-                ) : (
-                  <div className="h-4 w-4 rounded bg-muted shrink-0" />
-                )}
-                <span className="text-xs font-medium truncate max-w-[120px]">{c.competitorName}</span>
-              </>
-            )}
             <span
               className={`inline-flex items-center rounded px-1.5 py-0.5 text-[10px] font-medium shrink-0 ${
                 FIELD_COLORS[c.field] || "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300"

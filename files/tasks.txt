@@ -28,6 +28,8 @@ overview tab improvements (PLA-23) ✅
 
 overview page section counts (PLA-24) ✅
 
+overview tab: category leaders & competitor grouping (PLA-22 follow-up) ✅
+
 feedback sayfası
 
 kime hangi durumda nasıl emailler gönderilebilinir.

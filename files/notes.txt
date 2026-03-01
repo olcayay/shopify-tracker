@@ -275,6 +275,19 @@ Overview tab improvements (PLA-23):
 - Replaced all HTML entities (&rarr;, &middot;, &starf;) with Unicode characters or React components for reliable rendering
 - Files changed: apps/dashboard/src/app/(dashboard)/apps/[slug]/page.tsx
 
+Overview tab follow-up improvements (PLA-22 comment):
+- Category Rankings card: added category leaders (top 3 apps) for each category
+  - Fetches getCategory(slug) for each category in parallel with Round 2
+  - Shows position badge, icon, and name for top 3 ranked apps under each category row
+  - categoryLeadersMap stores leaders per category slug
+- Competitor Updates card: restructured with grouped rows
+  - Same-app field updates combined into one row (e.g., "AppName [Details] [Features] 2d ago")
+  - Each row is a clickable Link to /apps/{competitorSlug}/changes
+  - Footer "View all competitors" links to /apps/{slug}/competitors (not changes page)
+  - Card no longer wrapped in outer Link (inner rows have individual links)
+  - ChangeGroup component simplified (removed showCompetitor prop, only used for own changes)
+- Files changed: apps/dashboard/src/app/(dashboard)/apps/[slug]/page.tsx
+
 App detail stat cards tablet responsiveness (PLA-21):
 - Fixed stat cards (Rating, Reviews, Pricing, Developer, Launched, Last Updated) overlapping on tablet/narrow desktop
 - Changed grid breakpoints: grid-cols-2 → sm:grid-cols-3 → lg:grid-cols-6 (was md:grid-cols-6)
