@@ -34,6 +34,8 @@ keyword opportunity scoring (PLA-25) ✅
 
 expandable score detail columns in keywords table (PLA-25 follow-up) ✅
 
+system admin user impersonation (PLA-26) ✅
+
 feedback sayfası
 
 kime hangi durumda nasıl emailler gönderilebilinir.

@@ -367,3 +367,24 @@ Competitor suggestions (PLA-12):
 - Integrated into competitors-section.tsx between search bar and competitors table
 - 25 new tests for similarity utilities (jaccard, tokenize, extractCategorySlugs, extractFeatureHandles, computeSimilarityBetween, SIMILARITY_WEIGHTS, STOP_WORDS)
 - Files: packages/shared/src/similarity.ts (new), packages/shared/src/index.ts, apps/scraper/src/jobs/compute-similarity-scores.ts, apps/api/src/routes/account.ts, apps/dashboard/src/components/competitor-suggestions.tsx (new), apps/dashboard/src/app/(dashboard)/apps/[slug]/competitors-section.tsx, apps/dashboard/src/__tests__/lib/similarity.test.ts (new)
+
+System admin user impersonation (PLA-26):
+- JWT-based impersonation: main JWT fields (userId, accountId, role) set to target user for automatic data scoping; realAdmin field preserves admin identity; isSystemAdmin stays true
+- API endpoints: POST /api/system-admin/impersonate/:userId (start), POST /api/system-admin/stop-impersonation (stop)
+- Security hardening: no nested impersonation, cannot impersonate other system admins or self, 30min token expiry (no refresh token), target user validated on every request, password/email changes blocked, all start/stop actions audit-logged
+- New DB table: impersonation_audit_logs (adminUserId, targetUserId, action, createdAt) with indexes
+- Auth middleware: JwtPayload extended with optional realAdmin field, isImpersonating flag on FastifyRequest, target user existence check
+- generateAccessToken exported from auth.ts with configurable expiry parameter
+- GET /api/auth/me: returns impersonation metadata (realAdmin info, targetUser info) when active
+- PATCH /api/auth/me: blocks password and email changes during impersonation (403)
+- Dashboard auth context: impersonation state, startImpersonation/stopImpersonation functions, mutation confirmation dialog (intercepts POST/PUT/PATCH/DELETE with ConfirmModal)
+- ImpersonationBanner component: amber sticky banner showing "Viewing as [name] ([email])" with Stop button
+- Dashboard layout: banner rendered above main flex container
+- Users list page: UserCheck icon button per non-admin user row, confirmation dialog before starting
+- Sidebar: amber "Viewing as [name]" indicator in user info section
+- Refresh token safety: admin's refresh token unchanged, refresh always produces clean admin JWT (no realAdmin)
+- 31 API tests (JWT generation, security validations, endpoint patterns, audit logging)
+- 25+ dashboard tests (banner, auth context impersonation, users page impersonate button, sidebar indicator)
+- Total: 685 tests across 54 test files (654 dashboard + 31 API)
+- Files created: packages/db/src/schema/impersonation-audit-logs.ts, packages/db/src/migrations/0038_impersonation_audit_logs.sql, apps/dashboard/src/components/impersonation-banner.tsx, apps/api/vitest.config.ts, apps/api/src/__tests__/impersonation.test.ts, apps/dashboard/src/__tests__/components/impersonation-banner.test.tsx, apps/dashboard/src/__tests__/lib/auth-context-impersonation.test.tsx, apps/dashboard/src/__tests__/app/system-admin/users-list-impersonate.test.tsx, apps/dashboard/src/__tests__/components/sidebar-impersonation.test.tsx
+- Files modified: packages/db/src/index.ts, packages/db/src/migrations/meta/_journal.json, apps/api/src/middleware/auth.ts, apps/api/src/routes/system-admin.ts, apps/api/src/routes/auth.ts, apps/api/package.json, apps/dashboard/src/lib/auth-context.tsx, apps/dashboard/src/app/(dashboard)/layout.tsx, apps/dashboard/src/app/(dashboard)/system-admin/users/page.tsx, apps/dashboard/src/components/sidebar.tsx

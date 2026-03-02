@@ -14,6 +14,7 @@ import * as keywordTagsSchema from "./schema/keyword-tags.js";
 import * as categoryAdSightingsSchema from "./schema/category-ad-sightings.js";
 import * as appReviewMetricsSchema from "./schema/app-review-metrics.js";
 import * as appSimilarityScoresSchema from "./schema/app-similarity-scores.js";
+import * as impersonationAuditLogsSchema from "./schema/impersonation-audit-logs.js";
 
 export const schema = {
   ...scrapeRunsSchema,
@@ -29,6 +30,7 @@ export const schema = {
   ...categoryAdSightingsSchema,
   ...appReviewMetricsSchema,
   ...appSimilarityScoresSchema,
+  ...impersonationAuditLogsSchema,
 };
 
 export function createDb(databaseUrl: string) {
@@ -84,3 +86,4 @@ export {
 export { categoryAdSightings } from "./schema/category-ad-sightings.js";
 export { appReviewMetrics } from "./schema/app-review-metrics.js";
 export { appSimilarityScores } from "./schema/app-similarity-scores.js";
+export { impersonationAuditLogs } from "./schema/impersonation-audit-logs.js";

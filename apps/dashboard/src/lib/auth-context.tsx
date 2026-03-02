@@ -9,6 +9,7 @@ import {
   type ReactNode,
 } from "react";
 import { useRouter } from "next/navigation";
+import { ConfirmModal } from "@/components/confirm-modal";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
 
@@ -49,10 +50,17 @@ export interface Account {
   };
 }
 
+export interface ImpersonationState {
+  isImpersonating: boolean;
+  realAdmin: { userId: string; email: string; name: string } | null;
+  targetUser: { userId: string; email: string; name: string } | null;
+}
+
 interface AuthState {
   user: User | null;
   account: Account | null;
   isLoading: boolean;
+  impersonation: ImpersonationState | null;
   login: (email: string, password: string) => Promise<void>;
   register: (
     email: string,
@@ -64,6 +72,8 @@ interface AuthState {
   logout: () => Promise<void>;
   refreshUser: () => Promise<void>;
   fetchWithAuth: (path: string, options?: RequestInit) => Promise<Response>;
+  startImpersonation: (userId: string) => Promise<void>;
+  stopImpersonation: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthState | null>(null);
@@ -83,13 +93,27 @@ function getCookie(name: string): string | undefined {
   return match ? decodeURIComponent(match[1]) : undefined;
 }
 
+// Paths that should skip the impersonation confirmation dialog
+const IMPERSONATION_SKIP_PATHS = [
+  "/api/system-admin/stop-impersonation",
+  "/api/system-admin/impersonate/",
+  "/api/auth/me",
+  "/api/auth/logout",
+];
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [account, setAccount] = useState<Account | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [impersonation, setImpersonation] =
+    useState<ImpersonationState | null>(null);
+  const [pendingConfirm, setPendingConfirm] = useState<{
+    resolve: () => void;
+    reject: () => void;
+  } | null>(null);
   const router = useRouter();
 
-  const fetchWithAuth = useCallback(
+  const doFetch = useCallback(
     async (path: string, options?: RequestInit): Promise<Response> => {
       const token = getCookie("access_token");
       const headers: Record<string, string> = {
@@ -109,11 +133,48 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     []
   );
 
+  const fetchWithAuth = useCallback(
+    async (path: string, options?: RequestInit): Promise<Response> => {
+      const method = (options?.method || "GET").toUpperCase();
+      const isMutating = ["POST", "PUT", "PATCH", "DELETE"].includes(method);
+      const shouldSkip = IMPERSONATION_SKIP_PATHS.some((p) =>
+        path.includes(p)
+      );
+
+      // Show confirmation dialog for mutating requests during impersonation
+      if (
+        impersonation?.isImpersonating &&
+        isMutating &&
+        !shouldSkip
+      ) {
+        const confirmed = await new Promise<boolean>((resolve) => {
+          setPendingConfirm({
+            resolve: () => {
+              resolve(true);
+              setPendingConfirm(null);
+            },
+            reject: () => {
+              resolve(false);
+              setPendingConfirm(null);
+            },
+          });
+        });
+        if (!confirmed) {
+          throw new Error("Action cancelled by user");
+        }
+      }
+
+      return doFetch(path, options);
+    },
+    [doFetch, impersonation]
+  );
+
   const refreshUser = useCallback(async () => {
     const token = getCookie("access_token");
     if (!token) {
       setUser(null);
       setAccount(null);
+      setImpersonation(null);
       return;
     }
     try {
@@ -124,13 +185,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const data = await res.json();
         setUser(data.user);
         setAccount(data.account);
+        if (data.impersonation) {
+          setImpersonation(data.impersonation);
+        } else {
+          setImpersonation(null);
+        }
       } else {
         setUser(null);
         setAccount(null);
+        setImpersonation(null);
       }
     } catch {
       setUser(null);
       setAccount(null);
+      setImpersonation(null);
     }
   }, []);
 
@@ -201,7 +269,40 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     deleteCookie("refresh_token");
     setUser(null);
     setAccount(null);
+    setImpersonation(null);
     router.push("/login");
+    router.refresh();
+  };
+
+  const startImpersonation = async (userId: string) => {
+    const res = await doFetch(
+      `/api/system-admin/impersonate/${userId}`,
+      { method: "POST" }
+    );
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}));
+      throw new Error(body.error || "Failed to start impersonation");
+    }
+    const data = await res.json();
+    setCookie("access_token", data.accessToken, 1800); // 30 min
+    // Do NOT update refresh_token — keep admin's refresh token
+    await refreshUser();
+    router.push("/overview");
+    router.refresh();
+  };
+
+  const stopImpersonation = async () => {
+    const res = await doFetch("/api/system-admin/stop-impersonation", {
+      method: "POST",
+    });
+    if (!res.ok) {
+      throw new Error("Failed to stop impersonation");
+    }
+    const data = await res.json();
+    setCookie("access_token", data.accessToken, 900); // normal 15 min
+    setImpersonation(null);
+    await refreshUser();
+    router.push("/system-admin/users");
     router.refresh();
   };
 
@@ -211,14 +312,27 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         user,
         account,
         isLoading,
+        impersonation,
         login,
         register,
         logout,
         refreshUser,
         fetchWithAuth,
+        startImpersonation,
+        stopImpersonation,
       }}
     >
       {children}
+      <ConfirmModal
+        open={!!pendingConfirm}
+        title="Confirm action on behalf of user"
+        description={`You are about to perform this action on behalf of ${impersonation?.targetUser?.name} (${impersonation?.targetUser?.email}). Are you sure you want to proceed?`}
+        confirmLabel="Proceed"
+        cancelLabel="Cancel"
+        onConfirm={() => pendingConfirm?.resolve()}
+        onCancel={() => pendingConfirm?.reject()}
+        destructive={false}
+      />
     </AuthContext.Provider>
   );
 }

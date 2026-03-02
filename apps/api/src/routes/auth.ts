@@ -20,10 +20,13 @@ type Db = ReturnType<typeof createDb>;
 const ACCESS_TOKEN_EXPIRY = "15m";
 const REFRESH_TOKEN_EXPIRY_DAYS = 7;
 
-function generateAccessToken(payload: JwtPayload): string {
+export function generateAccessToken(
+  payload: JwtPayload,
+  expiresIn?: string | number
+): string {
   return jwt.sign(payload, getJwtSecret(), {
-    expiresIn: ACCESS_TOKEN_EXPIRY,
-  });
+    expiresIn: expiresIn ?? ACCESS_TOKEN_EXPIRY,
+  } as jwt.SignOptions);
 }
 
 function generateRefreshToken(): string {
@@ -347,7 +350,7 @@ export const authRoutes: FastifyPluginAsync = async (app) => {
       .from(users)
       .where(eq(users.accountId, user.accountId));
 
-    return {
+    const response: Record<string, unknown> = {
       user: {
         id: user.id,
         email: user.email,
@@ -378,6 +381,30 @@ export const authRoutes: FastifyPluginAsync = async (app) => {
         },
       },
     };
+
+    // Include impersonation metadata if active
+    if (request.user.realAdmin) {
+      const [adminUser] = await db
+        .select({ name: users.name, email: users.email })
+        .from(users)
+        .where(eq(users.id, request.user.realAdmin.userId));
+
+      response.impersonation = {
+        isImpersonating: true,
+        realAdmin: {
+          userId: request.user.realAdmin.userId,
+          email: request.user.realAdmin.email,
+          name: adminUser?.name,
+        },
+        targetUser: {
+          userId: user.id,
+          email: user.email,
+          name: user.name,
+        },
+      };
+    }
+
+    return response;
   });
 
   // PATCH /api/auth/me — update user profile & preferences
@@ -394,6 +421,13 @@ export const authRoutes: FastifyPluginAsync = async (app) => {
       currentPassword?: string;
       newPassword?: string;
     };
+
+    // Block sensitive changes during impersonation
+    if (request.isImpersonating && (newPassword || email)) {
+      return reply.code(403).send({
+        error: "Cannot change password or email while impersonating",
+      });
+    }
 
     const updates: Record<string, unknown> = {};
 

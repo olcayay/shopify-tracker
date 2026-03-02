@@ -18,15 +18,16 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Search, ArrowUpDown, ArrowUp, ArrowDown, Send, Mail, MailX } from "lucide-react";
+import { Search, ArrowUpDown, ArrowUp, ArrowDown, Send, Mail, MailX, UserCheck } from "lucide-react";
 import { useFormatDate } from "@/lib/format-date";
+import { ConfirmModal } from "@/components/confirm-modal";
 
 type SortKey = "name" | "email" | "account" | "role" | "createdAt";
 type SortDir = "asc" | "desc";
 type RoleFilter = "all" | "owner" | "editor" | "viewer" | "admin";
 
 export default function UsersListPage() {
-  const { fetchWithAuth } = useAuth();
+  const { fetchWithAuth, user: currentUser, startImpersonation } = useAuth();
   const { formatDateTime } = useFormatDate();
   const [users, setUsers] = useState<any[]>([]);
   const [search, setSearch] = useState("");
@@ -35,6 +36,10 @@ export default function UsersListPage() {
   const [roleFilter, setRoleFilter] = useState<RoleFilter>("all");
   const [sendingDigest, setSendingDigest] = useState<string | null>(null);
   const [message, setMessage] = useState("");
+  const [impersonateTarget, setImpersonateTarget] = useState<{
+    id: string;
+    name: string;
+  } | null>(null);
 
   useEffect(() => {
     loadUsers();
@@ -63,6 +68,16 @@ export default function UsersListPage() {
     } finally {
       setSendingDigest(null);
     }
+  }
+
+  async function confirmImpersonate() {
+    if (!impersonateTarget) return;
+    try {
+      await startImpersonation(impersonateTarget.id);
+    } catch (err: any) {
+      setMessage(err.message || "Failed to impersonate");
+    }
+    setImpersonateTarget(null);
   }
 
   function toggleSort(key: SortKey) {
@@ -243,6 +258,7 @@ export default function UsersListPage() {
                 </TableHead>
                 <TableHead>Last Seen</TableHead>
                 <TableHead className="w-12" />
+                <TableHead className="w-12" />
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -288,6 +304,21 @@ export default function UsersListPage() {
                     {u.lastSeen ? formatDateTime(u.lastSeen) : "\u2014"}
                   </TableCell>
                   <TableCell>
+                    {!u.isSystemAdmin && u.id !== currentUser?.id && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-8 w-8 p-0 text-amber-600 hover:text-amber-700 hover:bg-amber-50"
+                        title={`Impersonate ${u.name}`}
+                        onClick={() =>
+                          setImpersonateTarget({ id: u.id, name: u.name })
+                        }
+                      >
+                        <UserCheck className="h-4 w-4" />
+                      </Button>
+                    )}
+                  </TableCell>
+                  <TableCell>
                     <Button
                       variant="ghost"
                       size="sm"
@@ -304,7 +335,7 @@ export default function UsersListPage() {
               {filtered.length === 0 && (
                 <TableRow>
                   <TableCell
-                    colSpan={9}
+                    colSpan={10}
                     className="text-center text-muted-foreground"
                   >
                     No users found
@@ -315,6 +346,17 @@ export default function UsersListPage() {
           </Table>
         </CardContent>
       </Card>
+
+      <ConfirmModal
+        open={!!impersonateTarget}
+        title="Start impersonation"
+        description={`You are about to impersonate ${impersonateTarget?.name}. You will see the site from their perspective. Continue?`}
+        confirmLabel="Impersonate"
+        cancelLabel="Cancel"
+        onConfirm={confirmImpersonate}
+        onCancel={() => setImpersonateTarget(null)}
+        destructive={false}
+      />
     </div>
   );
 }

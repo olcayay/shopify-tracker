@@ -1,7 +1,7 @@
 import type { FastifyInstance, FastifyRequest, FastifyReply } from "fastify";
 import jwt from "jsonwebtoken";
 import { eq } from "drizzle-orm";
-import { accounts } from "@shopify-tracking/db";
+import { accounts, users } from "@shopify-tracking/db";
 
 export interface JwtPayload {
   userId: string;
@@ -9,11 +9,17 @@ export interface JwtPayload {
   accountId: string;
   role: "owner" | "editor" | "viewer";
   isSystemAdmin: boolean;
+  realAdmin?: {
+    userId: string;
+    email: string;
+    accountId: string;
+  };
 }
 
 declare module "fastify" {
   interface FastifyRequest {
     user: JwtPayload;
+    isImpersonating: boolean;
   }
 }
 
@@ -34,6 +40,7 @@ export function getJwtSecret(): string {
 
 export function registerAuthMiddleware(app: FastifyInstance) {
   app.decorateRequest("user", null as unknown as JwtPayload);
+  app.decorateRequest("isImpersonating", false);
 
   app.addHook(
     "onRequest",
@@ -59,6 +66,24 @@ export function registerAuthMiddleware(app: FastifyInstance) {
         return reply.code(401).send({ error: "Invalid or expired token" });
       }
 
+      // Set impersonation flag
+      request.isImpersonating = !!request.user.realAdmin;
+
+      const db = (app as any).db;
+
+      // When impersonating, validate target user still exists
+      if (request.isImpersonating) {
+        const [targetUser] = await db
+          .select({ id: users.id })
+          .from(users)
+          .where(eq(users.id, request.user.userId));
+        if (!targetUser) {
+          return reply
+            .code(403)
+            .send({ error: "Impersonated user no longer exists" });
+        }
+      }
+
       // System admin route check
       if (
         request.url.startsWith("/api/system-admin") &&
@@ -68,7 +93,6 @@ export function registerAuthMiddleware(app: FastifyInstance) {
       }
 
       // Account suspension check
-      const db = (app as any).db;
       const [account] = await db
         .select({ isSuspended: accounts.isSuspended })
         .from(accounts)

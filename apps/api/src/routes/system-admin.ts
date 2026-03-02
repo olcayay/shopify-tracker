@@ -21,7 +21,10 @@ import {
   categorySnapshots,
   reviews,
   refreshTokens,
+  impersonationAuditLogs,
 } from "@shopify-tracking/db";
+import { generateAccessToken } from "./auth.js";
+import type { JwtPayload } from "../middleware/auth.js";
 
 type Db = ReturnType<typeof createDb>;
 
@@ -1249,4 +1252,135 @@ export const systemAdminRoutes: FastifyPluginAsync = async (app) => {
       return { ok: true };
     }
   );
+
+  // POST /api/system-admin/impersonate/:userId — start impersonation
+  app.post<{ Params: { userId: string } }>(
+    "/impersonate/:userId",
+    async (request, reply) => {
+      const { userId: targetUserId } = request.params;
+      const adminUser = request.user;
+
+      // Block nested impersonation
+      if (adminUser.realAdmin) {
+        return reply
+          .code(403)
+          .send({ error: "Cannot create nested impersonation" });
+      }
+
+      // Look up target user
+      const [targetUser] = await db
+        .select()
+        .from(users)
+        .where(eq(users.id, targetUserId));
+
+      if (!targetUser) {
+        return reply.code(404).send({ error: "User not found" });
+      }
+
+      // Cannot impersonate another system admin
+      if (targetUser.isSystemAdmin) {
+        return reply
+          .code(403)
+          .send({ error: "Cannot impersonate another system admin" });
+      }
+
+      // Cannot impersonate yourself
+      if (targetUser.id === adminUser.userId) {
+        return reply
+          .code(400)
+          .send({ error: "Cannot impersonate yourself" });
+      }
+
+      // Build impersonation JWT
+      const impersonationPayload: JwtPayload = {
+        userId: targetUser.id,
+        email: targetUser.email,
+        accountId: targetUser.accountId,
+        role: targetUser.role,
+        isSystemAdmin: true,
+        realAdmin: {
+          userId: adminUser.userId,
+          email: adminUser.email,
+          accountId: adminUser.accountId,
+        },
+      };
+
+      const accessToken = generateAccessToken(impersonationPayload, "30m");
+
+      // Audit log
+      await db.insert(impersonationAuditLogs).values({
+        adminUserId: adminUser.userId,
+        targetUserId: targetUser.id,
+        action: "start",
+      });
+
+      // Get target account for display
+      const [targetAccount] = await db
+        .select({ name: accounts.name })
+        .from(accounts)
+        .where(eq(accounts.id, targetUser.accountId));
+
+      return {
+        accessToken,
+        impersonating: {
+          userId: targetUser.id,
+          email: targetUser.email,
+          name: targetUser.name,
+          role: targetUser.role,
+          accountId: targetUser.accountId,
+          accountName: targetAccount?.name,
+        },
+      };
+    }
+  );
+
+  // POST /api/system-admin/stop-impersonation — stop impersonation
+  app.post("/stop-impersonation", async (request, reply) => {
+    const { user } = request;
+
+    if (!user.realAdmin) {
+      return reply
+        .code(400)
+        .send({ error: "Not currently impersonating" });
+    }
+
+    // Look up real admin user
+    const [adminUser] = await db
+      .select()
+      .from(users)
+      .where(eq(users.id, user.realAdmin.userId));
+
+    if (!adminUser) {
+      return reply.code(500).send({ error: "Admin user not found" });
+    }
+
+    // Generate normal admin token
+    const adminPayload: JwtPayload = {
+      userId: adminUser.id,
+      email: adminUser.email,
+      accountId: adminUser.accountId,
+      role: adminUser.role,
+      isSystemAdmin: adminUser.isSystemAdmin,
+    };
+
+    const accessToken = generateAccessToken(adminPayload);
+
+    // Audit log
+    await db.insert(impersonationAuditLogs).values({
+      adminUserId: user.realAdmin.userId,
+      targetUserId: user.userId,
+      action: "stop",
+    });
+
+    return {
+      accessToken,
+      user: {
+        id: adminUser.id,
+        email: adminUser.email,
+        name: adminUser.name,
+        role: adminUser.role,
+        isSystemAdmin: adminUser.isSystemAdmin,
+      },
+    };
+  });
 };

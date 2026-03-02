@@ -64,7 +64,7 @@ function SidebarContent({
   onToggleCollapsed?: () => void;
 }) {
   const pathname = usePathname();
-  const { user, account, logout } = useAuth();
+  const { user, account, logout, impersonation } = useAuth();
   const isSystemAdmin = user?.isSystemAdmin;
   const isAdminSection = pathname.startsWith("/system-admin");
 
@@ -156,6 +156,11 @@ function SidebarContent({
       </nav>
       {user && (
         <div className="border-t pt-3 mt-3">
+          {impersonation?.isImpersonating && !collapsed && (
+            <div className="px-3 py-1.5 text-xs text-amber-700 bg-amber-50 rounded-md mb-2 font-medium">
+              Viewing as {impersonation.targetUser?.name}
+            </div>
+          )}
           {collapsed ? (
             <Tooltip>
               <TooltipTrigger asChild>
