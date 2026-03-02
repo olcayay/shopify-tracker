@@ -134,13 +134,13 @@ describe("computeKeywordOpportunity", () => {
   });
 
   // --- Room ---
-  it("room is high when top 8 have few reviews", () => {
+  it("room is high when top 4 have few reviews", () => {
     const apps = makeResults(24, { rating_count: 10 });
     const result = computeKeywordOpportunity(apps, 500);
     expect(result.scores.room).toBeGreaterThan(0.9);
   });
 
-  it("room is low when top 8 have many reviews", () => {
+  it("room is low when top 4 have many reviews", () => {
     const apps = makeResults(24, { rating_count: 5000 });
     const result = computeKeywordOpportunity(apps, 500);
     expect(result.scores.room).toBe(0);

@@ -82,7 +82,7 @@ interface SimpleApp {
 }
 
 const SCORE_DETAIL_COLUMNS = [
-  { key: "_s_room", label: "Room", tooltip: "Room score (40% weight)\nHow crowded the top results are.\nHigher = fewer reviews in top 8 = more room.\n1 − (top 8 reviews / 20,000)" },
+  { key: "_s_room", label: "Room", tooltip: "Room score (40% weight)\nHow crowded the top results are.\nHigher = fewer reviews in top 4 = more room.\n1 − (top 4 reviews / 20,000)" },
   { key: "_s_demand", label: "Demand", tooltip: "Demand score (25% weight)\nMarket size by total search results.\nHigher = more apps listed = stronger demand.\ntotal results / 1,000" },
   { key: "_s_maturity", label: "Maturity", tooltip: "Maturity score (10% weight)\nHow established the market is.\nHigher = fewer apps with 1000+ reviews.\n1 − (apps with 1000+ reviews / 12)" },
   { key: "_s_quality", label: "Quality", tooltip: "Quality score (25% weight)\nQuality gap in existing apps.\nHigher = fewer BFS apps & lower ratings.\nBased on BFS count and top 4 avg rating." },
@@ -871,6 +871,7 @@ export function KeywordsSection({ appSlug }: { appSlug: string }) {
                   <TableHead colSpan={4} className="bg-muted/30 text-xs font-medium text-muted-foreground text-center border-b">Scores</TableHead>
                   <TableHead colSpan={5} className="bg-muted/30 text-xs font-medium text-muted-foreground text-center border-b">First Page</TableHead>
                   <TableHead colSpan={2} className="bg-muted/30 text-xs font-medium text-muted-foreground text-center border-b">Concentration</TableHead>
+                  <TableHead colSpan={4} className="bg-muted/30 text-xs font-medium text-muted-foreground text-center border-b">Top Apps</TableHead>
                 </>
               )}
               <TableHead className="w-10" {...(showScoreDetails ? { rowSpan: 2 } : {})} />
@@ -890,6 +891,11 @@ export function KeywordsSection({ appSlug }: { appSlug: string }) {
                         <ArrowDown className={cn("h-2.5 w-2.5 transition-transform", sortDirection === "asc" && "rotate-180")} />
                       )}
                     </button>
+                  </TableHead>
+                ))}
+                {[1, 2, 3, 4].map((n) => (
+                  <TableHead key={`top${n}`} className="text-[11px] text-muted-foreground text-center px-2">
+                    #{n}
                   </TableHead>
                 ))}
               </TableRow>
@@ -1015,6 +1021,33 @@ export function KeywordsSection({ appSlug }: { appSlug: string }) {
                         </span>
                       ) : (
                         <span className="text-muted-foreground">&mdash;</span>
+                      )}
+                    </TableCell>
+                  );
+                })}
+                {showScoreDetails && [0, 1, 2, 3].map((i) => {
+                  const data = opportunityData[kw.keywordSlug];
+                  const app = data?.topApps[i];
+                  return (
+                    <TableCell key={`top${i}`} className="px-2">
+                      {opportunityLoading ? (
+                        <Skeleton className="h-8 w-20" />
+                      ) : app ? (
+                        <div className="flex items-center gap-1 text-xs whitespace-nowrap">
+                          {app.logoUrl ? (
+                            <img src={app.logoUrl} alt="" className="h-4 w-4 rounded shrink-0" />
+                          ) : (
+                            <div className="h-4 w-4 rounded bg-muted shrink-0" />
+                          )}
+                          <div className="min-w-0">
+                            <div className="truncate max-w-[10ch] font-medium leading-tight">{app.name}</div>
+                            <div className="text-muted-foreground text-[10px] leading-tight tabular-nums">
+                              {app.rating.toFixed(1)} &middot; {app.reviews.toLocaleString()}
+                            </div>
+                          </div>
+                        </div>
+                      ) : (
+                        <span className="text-muted-foreground text-xs">&mdash;</span>
                       )}
                     </TableCell>
                   );

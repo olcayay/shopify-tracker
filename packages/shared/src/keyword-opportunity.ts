@@ -82,7 +82,6 @@ export function computeKeywordOpportunity(
 
   const firstPage = organic.slice(0, PAGE_SIZE);
   const top4 = organic.slice(0, 4);
-  const top8 = organic.slice(0, 8);
   const top1 = organic[0] ?? null;
 
   // Raw stats
@@ -91,10 +90,6 @@ export function computeKeywordOpportunity(
     0,
   );
   const top4TotalReviews = top4.reduce(
-    (s, a) => s + (a.rating_count || 0),
-    0,
-  );
-  const top8TotalReviews = top8.reduce(
     (s, a) => s + (a.rating_count || 0),
     0,
   );
@@ -142,7 +137,7 @@ export function computeKeywordOpportunity(
   };
 
   // Score components
-  const room = clamp01(1 - top8TotalReviews / ROOM_CAP);
+  const room = clamp01(1 - top4TotalReviews / ROOM_CAP);
   const demand = clamp01(safeTotalResults / DEMAND_CAP);
   const maturity = 1 - clamp01(count1000 / MATURITY_APP_CAP);
 
