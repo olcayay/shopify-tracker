@@ -4,7 +4,7 @@
  * Components:
  * 1. Rating Score (weight 0.35) - averageRating / 5
  * 2. Review Authority (weight 0.25) - log10(ratingCount + 1), normalized per category
- * 3. Category Rank Score (weight 0.25) - 1/log2(position+1) * page_penalty
+ * 3. Category Rank Score (weight 0.25) - sqrt(1/log2(position+1)) * page_penalty
  * 4. Momentum (weight 0.15) - review acceleration (accMacro)
  */
 
@@ -43,20 +43,23 @@ export interface PowerComponents {
   powerRaw: number;
 }
 
+/** Page decay specific to power scoring (softer than visibility's 0.3) */
+const POWER_PAGE_DECAY = 0.5;
+
 /**
  * Compute the category rank score for a single category.
  *
- * rankWeight = 1 / log2(position + 1)   — logarithmic decay by rank
- * pagePenalty = PAGE_DECAY ^ floor((position-1) / PAGE_SIZE)
- * score = rankWeight * pagePenalty        — always in [0, 1]
+ * rankWeight = sqrt(1 / log2(position + 1))  — softened logarithmic decay
+ * pagePenalty = POWER_PAGE_DECAY ^ floor((position-1) / PAGE_SIZE)
+ * score = rankWeight * pagePenalty             — always in [0, 1]
  */
 export function computeCategoryRankScore(input: CategoryRankInput): number {
   if (input.totalApps <= 0 || input.position < 1) return 0;
   if (input.position > input.totalApps) return 0;
 
-  const rankWeight = 1 / Math.log2(input.position + 1);
+  const rankWeight = Math.sqrt(1 / Math.log2(input.position + 1));
   const page = Math.floor((input.position - 1) / PAGE_SIZE);
-  const pagePenalty = Math.pow(PAGE_DECAY, page);
+  const pagePenalty = Math.pow(POWER_PAGE_DECAY, page);
 
   return rankWeight * pagePenalty;
 }
