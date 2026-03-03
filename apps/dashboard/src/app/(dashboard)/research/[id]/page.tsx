@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useRef, useCallback, useMemo } from "react";
+import React, { useEffect, useState, useRef, useCallback, useMemo } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -69,6 +69,7 @@ interface ResearchData {
   featureCoverage: {
     feature: string; title: string; count: number; total: number;
     competitors: string[]; isGap: boolean;
+    categoryType?: string; categoryTitle?: string; subcategoryTitle?: string;
   }[];
   opportunities: {
     keyword: string; slug: string; opportunityScore: number;
@@ -1540,18 +1541,53 @@ function FeatureCoverage({
     () => new Set(features.flatMap((f) => f.competitors)),
     [features]
   );
-  // Only show competitors that appear in at least one feature
   const relevantCompetitors = useMemo(
     () => competitors.filter((c) => competitorSet.has(c.slug)),
     [competitors, competitorSet]
   );
+
+  // Group features by categoryType → subcategoryTitle
+  const grouped = useMemo(() => {
+    const typeOrder = ["primary", "secondary", "other"];
+    const typeMap = new Map<string, Map<string, typeof features>>();
+
+    for (const f of features) {
+      const catType = f.categoryType || "other";
+      const subTitle = f.subcategoryTitle || "Other";
+      if (!typeMap.has(catType)) typeMap.set(catType, new Map());
+      const subMap = typeMap.get(catType)!;
+      if (!subMap.has(subTitle)) subMap.set(subTitle, []);
+      subMap.get(subTitle)!.push(f);
+    }
+
+    const result: { type: string; categoryTitle: string; subcategories: { title: string; features: typeof features }[] }[] = [];
+
+    for (const type of typeOrder) {
+      const subMap = typeMap.get(type);
+      if (!subMap) continue;
+      // Get categoryTitle from first feature in this type
+      const firstFeature = [...subMap.values()][0]?.[0];
+      const categoryTitle = firstFeature?.categoryTitle || type;
+      const subcategories = [...subMap.entries()]
+        .map(([title, feats]) => ({ title, features: feats.sort((a, b) => b.count - a.count) }));
+      result.push({ type, categoryTitle, subcategories });
+    }
+
+    return result;
+  }, [features]);
+
+  const typeBadgeClass: Record<string, string> = {
+    primary: "bg-blue-500/10 text-blue-700 dark:text-blue-400 border-blue-500/30",
+    secondary: "bg-purple-500/10 text-purple-700 dark:text-purple-400 border-purple-500/30",
+    other: "bg-muted text-muted-foreground border-border",
+  };
 
   return (
     <div className="overflow-x-auto">
       <Table>
         <TableHeader>
           <TableRow>
-            <TableHead className="w-[180px] min-w-[140px]">Feature</TableHead>
+            <TableHead className="w-[220px] min-w-[160px]">Feature</TableHead>
             {relevantCompetitors.map((comp) => (
               <TableHead key={comp.slug} className="text-center px-2">
                 <Link href={`/apps/${comp.slug}`} className="inline-flex flex-col items-center gap-1 group" title={comp.name}>
@@ -1566,24 +1602,44 @@ function FeatureCoverage({
           </TableRow>
         </TableHeader>
         <TableBody>
-          {features.map((f) => (
-            <TableRow key={f.feature}>
-              <TableCell className="text-sm truncate" title={f.title}>
-                <Link href={`/features/${encodeURIComponent(f.feature)}`} className="hover:underline">
-                  {f.title}
-                </Link>
-                <span className="ml-1 text-xs text-muted-foreground">({f.count}/{f.total})</span>
-              </TableCell>
-              {relevantCompetitors.map((comp) => (
-                <TableCell key={comp.slug} className="text-center px-2">
-                  {f.competitors.includes(comp.slug) ? (
-                    <Check className="h-4 w-4 text-green-600 mx-auto" />
-                  ) : (
-                    <span className="text-muted-foreground/30">{"\u2014"}</span>
-                  )}
-                </TableCell>
-              ))}
-            </TableRow>
+          {grouped.map((group) => (
+            group.subcategories.map((sub, si) => (
+              <React.Fragment key={`${group.type}-${sub.title}`}>
+                {/* Subcategory header row */}
+                <TableRow className="bg-muted/40 hover:bg-muted/40">
+                  <TableCell colSpan={relevantCompetitors.length + 1} className="py-1.5">
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs font-semibold text-foreground">{sub.title}</span>
+                      {si === 0 && (
+                        <Badge variant="outline" className={`text-[10px] px-1.5 py-0 h-4 ${typeBadgeClass[group.type] || typeBadgeClass.other}`}>
+                          {group.type}
+                        </Badge>
+                      )}
+                    </div>
+                  </TableCell>
+                </TableRow>
+                {/* Feature rows */}
+                {sub.features.map((f) => (
+                  <TableRow key={f.feature}>
+                    <TableCell className="text-sm truncate pl-6" title={f.title}>
+                      <Link href={`/features/${encodeURIComponent(f.feature)}`} className="hover:underline">
+                        {f.title}
+                      </Link>
+                      <span className="ml-1 text-xs text-muted-foreground">({f.count}/{f.total})</span>
+                    </TableCell>
+                    {relevantCompetitors.map((comp) => (
+                      <TableCell key={comp.slug} className="text-center px-2">
+                        {f.competitors.includes(comp.slug) ? (
+                          <Check className="h-4 w-4 text-green-600 mx-auto" />
+                        ) : (
+                          <span className="text-muted-foreground/30">{"\u2014"}</span>
+                        )}
+                      </TableCell>
+                    ))}
+                  </TableRow>
+                ))}
+              </React.Fragment>
+            ))
           ))}
         </TableBody>
       </Table>

@@ -1109,23 +1109,38 @@ export const researchRoutes: FastifyPluginAsync = async (app) => {
         .sort((a, b) => b.competitorCount - a.competitorCount);
     }
 
-    // 11. Feature coverage
+    // 11. Feature coverage (grouped by category type → subcategory)
     let featureCoverage: any[] = [];
     if (competitorSlugs.length >= 2) {
-      const featureMap = new Map<string, { title: string; competitors: Set<string> }>();
+      const featureMap = new Map<
+        string,
+        {
+          title: string;
+          categoryType: string;
+          categoryTitle: string;
+          subcategoryTitle: string;
+          competitors: Set<string>;
+        }
+      >();
 
       for (const comp of competitorData) {
-        // Extract features from categories (subcategory features)
         for (const cat of comp.categories || []) {
+          const catType = cat.type || "other";
+          const catTitle = cat.title || "";
           for (const sub of cat.subcategories || []) {
             for (const feat of sub.features || []) {
-              if (!featureMap.has(feat.feature_handle)) {
+              const existing = featureMap.get(feat.feature_handle);
+              if (!existing) {
                 featureMap.set(feat.feature_handle, {
                   title: feat.title,
-                  competitors: new Set(),
+                  categoryType: catType,
+                  categoryTitle: catTitle,
+                  subcategoryTitle: sub.title || "",
+                  competitors: new Set([comp.slug]),
                 });
+              } else {
+                existing.competitors.add(comp.slug);
               }
-              featureMap.get(feat.feature_handle)!.competitors.add(comp.slug);
             }
           }
         }
@@ -1135,6 +1150,9 @@ export const researchRoutes: FastifyPluginAsync = async (app) => {
         .map(([handle, data]) => ({
           feature: handle,
           title: data.title,
+          categoryType: data.categoryType,
+          categoryTitle: data.categoryTitle,
+          subcategoryTitle: data.subcategoryTitle,
           count: data.competitors.size,
           total: competitorSlugs.length,
           competitors: Array.from(data.competitors),
