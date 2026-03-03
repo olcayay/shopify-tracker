@@ -53,6 +53,10 @@ export default function ResearchKeywordsPage() {
   const [input, setInput] = useState("");
   const [filterQuery, setFilterQuery] = useState("");
   const [adding, setAdding] = useState(false);
+  const [suggestions, setSuggestions] = useState<{ id: number; keyword: string; slug: string }[]>([]);
+  const [suggestionsOpen, setSuggestionsOpen] = useState(false);
+  const suggestDebounceRef = useRef<ReturnType<typeof setTimeout>>(undefined);
+  const suggestContainerRef = useRef<HTMLDivElement>(null);
 
   // Polling
   const [pendingKeywords, setPendingKeywords] = useState<Set<number>>(new Set());
@@ -138,6 +142,58 @@ export default function ResearchKeywordsPage() {
     if (res.ok) await fetchData();
   }
 
+  function handleInputChange(value: string) {
+    setInput(value);
+    if (suggestDebounceRef.current) clearTimeout(suggestDebounceRef.current);
+    if (value.trim().length < 2) { setSuggestions([]); setSuggestionsOpen(false); return; }
+    suggestDebounceRef.current = setTimeout(async () => {
+      const res = await fetchWithAuth(`/api/keywords/search?q=${encodeURIComponent(value.trim())}`);
+      if (res.ok) {
+        const results = await res.json();
+        const existingSlugs = new Set(data?.keywords.map((k) => k.slug) || []);
+        setSuggestions(results.filter((r: any) => !existingSlugs.has(r.slug)));
+        setSuggestionsOpen(true);
+      }
+    }, 300);
+  }
+
+  async function handleSelectSuggestion(keyword: string) {
+    setInput(keyword);
+    setSuggestionsOpen(false);
+    setSuggestions([]);
+    // Auto-add
+    setAdding(true);
+    try {
+      const res = await fetchWithAuth(`/api/research-projects/${id}/keywords`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ keyword }),
+      });
+      if (res.ok) {
+        const result = await res.json();
+        if (result.scraperEnqueued) {
+          setPendingKeywords((prev) => new Set(prev).add(result.keywordId));
+        }
+        setInput("");
+        await fetchData();
+      }
+    } finally {
+      setAdding(false);
+    }
+  }
+
+  // Close suggestions on outside click
+  useEffect(() => {
+    if (!suggestionsOpen) return;
+    function handleClick(e: MouseEvent) {
+      if (suggestContainerRef.current && !suggestContainerRef.current.contains(e.target as Node)) {
+        setSuggestionsOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
+  }, [suggestionsOpen]);
+
   // Sorting
   type KwSortKey = "keyword" | "results" | "opportunity";
   const [sortKey, setSortKey] = useState<KwSortKey>("keyword");
@@ -218,15 +274,32 @@ export default function ResearchKeywordsPage() {
               <Badge variant="secondary" className="text-xs font-normal">{data.keywords.length}</Badge>
             </CardTitle>
             {canEdit && (
-              <div className="flex gap-2">
-                <Input
-                  value={input}
-                  onChange={(e) => setInput(e.target.value)}
-                  onKeyDown={(e) => { if (e.key === "Enter") handleAdd(); }}
-                  placeholder="Add keyword..."
-                  className="h-8 w-48 text-sm"
-                  disabled={adding}
-                />
+              <div ref={suggestContainerRef} className="relative flex gap-2">
+                <div className="relative">
+                  <Input
+                    value={input}
+                    onChange={(e) => handleInputChange(e.target.value)}
+                    onKeyDown={(e) => { if (e.key === "Enter") { setSuggestionsOpen(false); handleAdd(); } if (e.key === "Escape") setSuggestionsOpen(false); }}
+                    onFocus={() => { if (suggestions.length > 0) setSuggestionsOpen(true); }}
+                    placeholder="Add keyword..."
+                    className="h-8 w-56 text-sm"
+                    disabled={adding}
+                  />
+                  {suggestionsOpen && suggestions.length > 0 && (
+                    <div className="absolute left-0 top-full mt-1 w-72 bg-popover border rounded-md shadow-lg z-50 max-h-60 overflow-y-auto">
+                      {suggestions.slice(0, 10).map((s) => (
+                        <button
+                          key={s.id}
+                          className="w-full text-left px-3 py-1.5 text-sm hover:bg-muted/50 flex items-center justify-between"
+                          onClick={() => handleSelectSuggestion(s.keyword)}
+                        >
+                          <span>{s.keyword}</span>
+                          <Plus className="h-3.5 w-3.5 text-muted-foreground" />
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
                 <Button size="sm" variant="outline" onClick={handleAdd} disabled={!input.trim() || adding}>
                   {adding ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Plus className="h-3.5 w-3.5" />}
                 </Button>
