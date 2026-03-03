@@ -4,7 +4,7 @@
  * Components:
  * 1. Rating Score (weight 0.35) - averageRating / 5
  * 2. Review Authority (weight 0.25) - log10(ratingCount + 1), normalized per category
- * 3. Category Rank Score (weight 0.25) - percentile * page_penalty * size_weight
+ * 3. Category Rank Score (weight 0.25) - 1/log2(position+1) * page_penalty
  * 4. Momentum (weight 0.15) - review acceleration (accMacro)
  */
 
@@ -46,21 +46,19 @@ export interface PowerComponents {
 /**
  * Compute the category rank score for a single category.
  *
- * percentile = 1 - (rank / totalApps)
- * page_penalty = PAGE_DECAY ^ floor((rank-1) / PAGE_SIZE)
- * size_weight = log10(totalApps + 1)
- * score = percentile * page_penalty * size_weight
+ * rankWeight = 1 / log2(position + 1)   — logarithmic decay by rank
+ * pagePenalty = PAGE_DECAY ^ floor((position-1) / PAGE_SIZE)
+ * score = rankWeight * pagePenalty        — always in [0, 1]
  */
 export function computeCategoryRankScore(input: CategoryRankInput): number {
   if (input.totalApps <= 0 || input.position < 1) return 0;
-  const percentile = 1 - (input.position / input.totalApps);
-  if (percentile <= 0) return 0;
+  if (input.position > input.totalApps) return 0;
 
+  const rankWeight = 1 / Math.log2(input.position + 1);
   const page = Math.floor((input.position - 1) / PAGE_SIZE);
   const pagePenalty = Math.pow(PAGE_DECAY, page);
-  const sizeWeight = Math.log10(input.totalApps + 1);
 
-  return percentile * pagePenalty * sizeWeight;
+  return rankWeight * pagePenalty;
 }
 
 /**

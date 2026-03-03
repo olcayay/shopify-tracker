@@ -116,6 +116,7 @@ interface PowerCategory {
   title: string;
   powerScore: number;
   appCount: number;
+  position?: number | null;
   ratingScore: number;
   reviewScore: number;
   categoryScore: number;
@@ -173,7 +174,7 @@ export function WeightedPowerPopover({
                     <span className="font-medium text-foreground truncate flex-1">
                       {cat.title}
                       <span className="text-muted-foreground/60 ml-1">
-                        ({cat.appCount} apps, {weightPct}%)
+                        ({cat.position != null ? `#${cat.position}/` : ""}{cat.appCount} apps, {weightPct}%)
                       </span>
                     </span>
                     <span

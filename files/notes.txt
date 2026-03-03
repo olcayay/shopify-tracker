@@ -466,5 +466,14 @@ Score Breakdown Popovers (Hover):
   - Each category shows: title, app count, weight %, overall power score, plus Rating/Review Auth./Category Rank/Momentum bars
   - API: both competitor endpoints enriched with ratingScore, reviewScore, categoryScore, momentumScore per powerCategory entry
   - Scrollable content (max-h-[70vh]) for apps with many categories
+- Category Rank formula fix: replaced `percentile * pagePenalty * sizeWeight` with `1/log₂(position+1) * pagePenalty`
+  - Old formula: sizeWeight = log10(totalApps+1) inflated scores >1.0, so all page-1 apps showed 100% Category Rank
+  - New formula: logarithmic rank decay (same as visibility), score always in [0, 1], meaningful spread within page 1
+  - Expected scores: Rank 1→100%, Rank 5→39%, Rank 10→29%, Rank 20→23%, Rank 25 (page 2)→6%
+  - Requires compute_app_scores job re-run to update stored values
+- Competitor power queries: INNER JOIN with is_listing_page=true to exclude parent categories
+- WeightedPowerPopover: shows rank position per category (#N/M apps, X%)
+  - API: both competitor endpoints enriched with rank_position via LATERAL join to app_category_rankings
+- Column headers: renamed "Vis"→"Visibility" and "Pwr"→"Power" in all table headers
 - Files created: apps/dashboard/src/components/power-score-popover.tsx, apps/dashboard/src/components/visibility-score-popover.tsx
-- Files modified: apps/api/src/routes/account.ts, apps/api/src/routes/apps.ts, apps/api/src/routes/categories.ts, apps/dashboard/src/app/(dashboard)/categories/[slug]/page.tsx, apps/dashboard/src/app/(dashboard)/categories/[slug]/app-results.tsx, apps/dashboard/src/app/(dashboard)/apps/[slug]/page.tsx, apps/dashboard/src/app/(dashboard)/apps/[slug]/competitors-section.tsx, apps/dashboard/src/app/(dashboard)/competitors/page.tsx
+- Files modified: packages/shared/src/app-power.ts, apps/api/src/routes/account.ts, apps/api/src/routes/apps.ts, apps/api/src/routes/categories.ts, apps/dashboard/src/app/(dashboard)/categories/[slug]/page.tsx, apps/dashboard/src/app/(dashboard)/categories/[slug]/app-results.tsx, apps/dashboard/src/app/(dashboard)/apps/[slug]/page.tsx, apps/dashboard/src/app/(dashboard)/apps/[slug]/competitors-section.tsx, apps/dashboard/src/app/(dashboard)/competitors/page.tsx
