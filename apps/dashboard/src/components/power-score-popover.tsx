@@ -13,7 +13,7 @@ function ScoreBar({
   value: number;
   weight: number;
 }) {
-  const pct = Math.round(value * 100);
+  const pct = Math.min(Math.round(value * 100), 100);
   return (
     <div className="flex items-center gap-2 text-xs">
       <span className="w-20 text-muted-foreground shrink-0">{label}</span>
