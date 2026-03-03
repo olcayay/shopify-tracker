@@ -279,7 +279,6 @@ export default function ResearchCompetitorsPage() {
                 <TableHeader>
                   <TableRow>
                     <TableHead>App</TableHead>
-                    <TableHead className="w-8" />
                     <TableHead className="text-right">Rating</TableHead>
                     <TableHead className="text-right">Reviews</TableHead>
                     <TableHead className="text-right">Pricing</TableHead>
@@ -318,16 +317,6 @@ export default function ResearchCompetitorsPage() {
                             </Link>
                             {isPending && <Loader2 className="h-3 w-3 animate-spin text-muted-foreground" />}
                           </div>
-                        </TableCell>
-                        <TableCell>
-                          <a
-                            href={`https://apps.shopify.com/${comp.slug}`}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="text-muted-foreground hover:text-foreground"
-                          >
-                            <ExternalLink className="h-3.5 w-3.5" />
-                          </a>
                         </TableCell>
                         <TableCell className="text-right">
                           {isPending ? (
@@ -453,12 +442,23 @@ export default function ResearchCompetitorsPage() {
                         </TableCell>
                         {canEdit && (
                           <TableCell>
-                            <button
-                              onClick={() => handleRemove(comp.slug)}
-                              className="p-1 rounded hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors"
-                            >
-                              <X className="h-3.5 w-3.5" />
-                            </button>
+                            <div className="flex items-center gap-0.5">
+                              <a
+                                href={`https://apps.shopify.com/${comp.slug}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="p-1 rounded hover:bg-accent text-muted-foreground hover:text-foreground transition-colors"
+                                title="View on Shopify App Store"
+                              >
+                                <ExternalLink className="h-3.5 w-3.5" />
+                              </a>
+                              <button
+                                onClick={() => handleRemove(comp.slug)}
+                                className="p-1 rounded hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors"
+                              >
+                                <X className="h-3.5 w-3.5" />
+                              </button>
+                            </div>
                           </TableCell>
                         )}
                       </TableRow>
