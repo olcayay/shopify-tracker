@@ -33,6 +33,7 @@ import {
   Type,
   Loader2,
   GitCompareArrows,
+  ExternalLink,
 } from "lucide-react";
 import Link from "next/link";
 
@@ -1251,12 +1252,23 @@ function CompetitorTable({
                 </TableCell>
                 {canEdit && (
                   <TableCell>
-                    <button
-                      onClick={() => onRemove(comp.slug)}
-                      className="p-1 rounded hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors"
-                    >
-                      <X className="h-3.5 w-3.5" />
-                    </button>
+                    <div className="flex items-center gap-0.5">
+                      <a
+                        href={`https://apps.shopify.com/${comp.slug}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="p-1 rounded hover:bg-accent text-muted-foreground hover:text-foreground transition-colors"
+                        title="View on Shopify App Store"
+                      >
+                        <ExternalLink className="h-3.5 w-3.5" />
+                      </a>
+                      <button
+                        onClick={() => onRemove(comp.slug)}
+                        className="p-1 rounded hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors"
+                      >
+                        <X className="h-3.5 w-3.5" />
+                      </button>
+                    </div>
                   </TableCell>
                 )}
               </TableRow>
