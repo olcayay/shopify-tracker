@@ -1569,7 +1569,12 @@ function FeatureCoverage({
       const firstFeature = [...subMap.values()][0]?.[0];
       const categoryTitle = firstFeature?.categoryTitle || type;
       const subcategories = [...subMap.entries()]
-        .map(([title, feats]) => ({ title, features: feats.sort((a, b) => b.count - a.count) }));
+        .map(([title, feats]) => ({ title, features: feats.sort((a, b) => b.count - a.count) }))
+        .sort((a, b) => {
+          const avgA = a.features.reduce((s, f) => s + f.count, 0) / a.features.length;
+          const avgB = b.features.reduce((s, f) => s + f.count, 0) / b.features.length;
+          return avgB - avgA;
+        });
       result.push({ type, categoryTitle, subcategories });
     }
 
