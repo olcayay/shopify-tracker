@@ -1576,12 +1576,6 @@ function FeatureCoverage({
     return result;
   }, [features]);
 
-  const typeBadgeClass: Record<string, string> = {
-    primary: "bg-blue-500/10 text-blue-700 dark:text-blue-400 border-blue-500/30",
-    secondary: "bg-purple-500/10 text-purple-700 dark:text-purple-400 border-purple-500/30",
-    other: "bg-muted text-muted-foreground border-border",
-  };
-
   return (
     <div className="overflow-x-auto">
       <Table>
@@ -1608,14 +1602,7 @@ function FeatureCoverage({
                 {/* Subcategory header row */}
                 <TableRow className="bg-muted/40 hover:bg-muted/40">
                   <TableCell colSpan={relevantCompetitors.length + 1} className="py-1.5">
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs font-semibold text-foreground">{sub.title}</span>
-                      {si === 0 && (
-                        <Badge variant="outline" className={`text-[10px] px-1.5 py-0 h-4 ${typeBadgeClass[group.type] || typeBadgeClass.other}`}>
-                          {group.type}
-                        </Badge>
-                      )}
-                    </div>
+                    <span className="text-xs font-semibold text-foreground">{sub.title}</span>
                   </TableCell>
                 </TableRow>
                 {/* Feature rows */}
