@@ -18,6 +18,8 @@ import {
   similarAppSightings,
   featuredAppSightings,
   appReviewMetrics,
+  appVisibilityScores,
+  appPowerScores,
 } from "@shopify-tracking/db";
 
 type Db = ReturnType<typeof createDb>;
@@ -965,4 +967,81 @@ export const appRoutes: FastifyPluginAsync = async (app) => {
       return { sightings };
     }
   );
+
+  // GET /api/apps/:slug/scores — latest visibility + power scores for an app
+  app.get("/:slug/scores", async (request) => {
+    const { slug } = request.params as { slug: string };
+
+    const visRows = await db
+      .select()
+      .from(appVisibilityScores)
+      .where(eq(appVisibilityScores.appSlug, slug))
+      .orderBy(desc(appVisibilityScores.computedAt))
+      .limit(10); // max 10 categories
+
+    const powRows = await db
+      .select()
+      .from(appPowerScores)
+      .where(eq(appPowerScores.appSlug, slug))
+      .orderBy(desc(appPowerScores.computedAt))
+      .limit(10);
+
+    // Group by category, take latest per category
+    const visByCategory = new Map<string, typeof visRows[0]>();
+    for (const r of visRows) {
+      if (!visByCategory.has(r.categorySlug)) {
+        visByCategory.set(r.categorySlug, r);
+      }
+    }
+
+    const powByCategory = new Map<string, typeof powRows[0]>();
+    for (const r of powRows) {
+      if (!powByCategory.has(r.categorySlug)) {
+        powByCategory.set(r.categorySlug, r);
+      }
+    }
+
+    const allCategories = new Set([...visByCategory.keys(), ...powByCategory.keys()]);
+    const scores = [...allCategories].map((catSlug) => ({
+      categorySlug: catSlug,
+      visibility: visByCategory.get(catSlug) || null,
+      power: powByCategory.get(catSlug) || null,
+    }));
+
+    return { scores };
+  });
+
+  // GET /api/apps/:slug/scores/history — historical score data for trend charts
+  app.get("/:slug/scores/history", async (request) => {
+    const { slug } = request.params as { slug: string };
+    const { days = "30", category } = request.query as { days?: string; category?: string };
+    const daysNum = Math.min(parseInt(days) || 30, 90);
+    const sinceStr = new Date(Date.now() - daysNum * 86400000).toISOString().slice(0, 10);
+
+    const visConditions = [
+      eq(appVisibilityScores.appSlug, slug),
+      sql`${appVisibilityScores.computedAt} >= ${sinceStr}`,
+    ];
+    if (category) visConditions.push(eq(appVisibilityScores.categorySlug, category));
+
+    const visibility = await db
+      .select()
+      .from(appVisibilityScores)
+      .where(and(...visConditions))
+      .orderBy(appVisibilityScores.computedAt);
+
+    const powConditions = [
+      eq(appPowerScores.appSlug, slug),
+      sql`${appPowerScores.computedAt} >= ${sinceStr}`,
+    ];
+    if (category) powConditions.push(eq(appPowerScores.categorySlug, category));
+
+    const power = await db
+      .select()
+      .from(appPowerScores)
+      .where(and(...powConditions))
+      .orderBy(appPowerScores.computedAt);
+
+    return { visibility, power };
+  });
 };

@@ -274,6 +274,13 @@
       "when": 1772236800000,
       "tag": "0038_impersonation_audit_logs",
       "breakpoints": true
+    },
+    {
+      "idx": 39,
+      "version": "7",
+      "when": 1772323200000,
+      "tag": "0039_app_scores",
+      "breakpoints": true
     }
   ]
 }

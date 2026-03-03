@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { formatDateTime } from "@/lib/format-date";
-import { getCategory, getCategoryHistory, getAccountCompetitors, getAccountTrackedApps, getAccountStarredCategories, getAppsLastChanges, getAppsMinPaidPrices, getAppsReverseSimilarCounts, getFeaturedApps, getCategoryAds } from "@/lib/api";
+import { getCategory, getCategoryHistory, getAccountCompetitors, getAccountTrackedApps, getAccountStarredCategories, getAppsLastChanges, getAppsMinPaidPrices, getAppsReverseSimilarCounts, getFeaturedApps, getCategoryAds, getCategoryScores } from "@/lib/api";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -60,7 +60,7 @@ export default async function CategoryDetailPage({
 
   const rankedApps = category.rankedApps || [];
   const appSlugs: string[] = rankedApps.map((a: any) => a.slug);
-  const [lastChanges, minPaidPrices, reverseSimilarCounts, featuredData, categoryAdData] = await Promise.all([
+  const [lastChanges, minPaidPrices, reverseSimilarCounts, featuredData, categoryAdData, categoryScoresData] = await Promise.all([
     getAppsLastChanges(appSlugs).catch(() => ({} as Record<string, string>)),
     getAppsMinPaidPrices(appSlugs).catch(() => ({} as Record<string, number | null>)),
     getAppsReverseSimilarCounts(appSlugs).catch(() => ({} as Record<string, number>)),
@@ -70,7 +70,20 @@ export default async function CategoryDetailPage({
       competitorSlugs: [],
     })),
     getCategoryAds(slug).catch(() => ({ adSightings: [] })),
+    getCategoryScores(slug).catch(() => ({ scores: [], computedAt: null })),
   ]);
+
+  // Build score lookup maps
+  const categoryScores = (categoryScoresData?.scores?.length > 0)
+    ? {
+        visibilityScore: Object.fromEntries(
+          (categoryScoresData.scores as any[]).map((s: any) => [s.appSlug, s.visibilityScore])
+        ) as Record<string, number>,
+        powerScore: Object.fromEntries(
+          (categoryScoresData.scores as any[]).map((s: any) => [s.appSlug, s.powerScore])
+        ) as Record<string, number>,
+      }
+    : undefined;
 
   // Group featured sightings by section
   const featuredSections = new Map<
@@ -254,6 +267,7 @@ export default async function CategoryDetailPage({
           minPaidPrices={minPaidPrices}
           reverseSimilarCounts={reverseSimilarCounts}
           isHubPage={!category.isListingPage}
+          categoryScores={categoryScores}
         />
       )}
 

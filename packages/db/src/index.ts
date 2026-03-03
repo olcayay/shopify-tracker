@@ -15,6 +15,7 @@ import * as categoryAdSightingsSchema from "./schema/category-ad-sightings.js";
 import * as appReviewMetricsSchema from "./schema/app-review-metrics.js";
 import * as appSimilarityScoresSchema from "./schema/app-similarity-scores.js";
 import * as impersonationAuditLogsSchema from "./schema/impersonation-audit-logs.js";
+import * as appScoresSchema from "./schema/app-scores.js";
 
 export const schema = {
   ...scrapeRunsSchema,
@@ -31,6 +32,7 @@ export const schema = {
   ...appReviewMetricsSchema,
   ...appSimilarityScoresSchema,
   ...impersonationAuditLogsSchema,
+  ...appScoresSchema,
 };
 
 export function createDb(databaseUrl: string) {
@@ -87,3 +89,4 @@ export { categoryAdSightings } from "./schema/category-ad-sightings.js";
 export { appReviewMetrics } from "./schema/app-review-metrics.js";
 export { appSimilarityScores } from "./schema/app-similarity-scores.js";
 export { impersonationAuditLogs } from "./schema/impersonation-audit-logs.js";
+export { appVisibilityScores, appPowerScores } from "./schema/app-scores.js";

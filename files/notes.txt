@@ -388,3 +388,30 @@ System admin user impersonation (PLA-26):
 - Total: 685 tests across 54 test files (654 dashboard + 31 API)
 - Files created: packages/db/src/schema/impersonation-audit-logs.ts, packages/db/src/migrations/0038_impersonation_audit_logs.sql, apps/dashboard/src/components/impersonation-banner.tsx, apps/api/vitest.config.ts, apps/api/src/__tests__/impersonation.test.ts, apps/dashboard/src/__tests__/components/impersonation-banner.test.tsx, apps/dashboard/src/__tests__/lib/auth-context-impersonation.test.tsx, apps/dashboard/src/__tests__/app/system-admin/users-list-impersonate.test.tsx, apps/dashboard/src/__tests__/components/sidebar-impersonation.test.tsx
 - Files modified: packages/db/src/index.ts, packages/db/src/migrations/meta/_journal.json, apps/api/src/middleware/auth.ts, apps/api/src/routes/system-admin.ts, apps/api/src/routes/auth.ts, apps/api/package.json, apps/dashboard/src/lib/auth-context.tsx, apps/dashboard/src/app/(dashboard)/layout.tsx, apps/dashboard/src/app/(dashboard)/system-admin/users/page.tsx, apps/dashboard/src/components/sidebar.tsx
+
+App Visibility & App Power Scores:
+- New DB tables: app_visibility_scores (historical daily per app per category) and app_power_scores (historical daily per app per category)
+- Migration: 0039_app_scores.sql — extends scraper_type enum with compute_app_scores, creates both tables with indexes
+- Drizzle schema: packages/db/src/schema/app-scores.ts
+- Shared scoring functions (pure, no DB dependency):
+  - packages/shared/src/app-visibility.ts: page-boundary decay model (24 apps/page, PAGE_DECAY=0.3), rank_weight = (1/log2(rank+1)) * decay^page, visibility_raw = SUM(totalResults * rank_weight)
+  - packages/shared/src/app-power.ts: 4-component weighted score — rating(35%), review authority(25%, log scale), category rank(25%, percentile * page_penalty * size_weight), momentum(15%, accMacro normalized)
+- Compute job: apps/scraper/src/jobs/compute-app-scores.ts
+  - Prerequisite check: requires app_details, keyword_search, reviews, category completed today
+  - If not met before 18:00 UTC: re-enqueues with 30min delay; after cutoff: creates failed run
+  - Batch SQL queries: latest keyword rankings, totalResults, category ranks, category sizes, app info, momentum
+  - Normalizes scores per category (0-100): max visibility/power in each category = 100
+  - Idempotent: ON CONFLICT DO UPDATE for re-runs
+  - Scheduled daily at 09:00 UTC
+- API endpoints:
+  - GET /api/apps/:slug/scores — latest visibility + power per category
+  - GET /api/apps/:slug/scores/history — historical data with days/category filters
+  - GET /api/categories/:slug/scores — leaderboard (sort by visibility or power)
+  - GET /api/categories/:slug/scores/history — category-level trends
+- Dashboard:
+  - App overview page: new "App Scores" card with Visibility (blue) and Power (purple) display per category, showing score 0-100, keyword count, and component breakdown
+  - Category page: Vis and Pwr sortable columns in CategoryAppResults table (blue/purple colored)
+  - API utility: getAppScores, getAppScoresHistory, getCategoryScores in lib/api.ts
+- System Admin: compute_app_scores added to validTypes, SCRAPER_TYPES (cronHours: [9]), runs filter expanded to accept all types
+- Files created: packages/db/src/schema/app-scores.ts, packages/db/src/migrations/0039_app_scores.sql, packages/shared/src/app-visibility.ts, packages/shared/src/app-power.ts, apps/scraper/src/jobs/compute-app-scores.ts
+- Files modified: packages/db/src/index.ts, packages/db/src/schema/scrape-runs.ts, packages/db/src/migrations/meta/_journal.json, packages/shared/src/index.ts, apps/scraper/src/queue.ts, apps/scraper/src/scheduler.ts, apps/scraper/src/process-job.ts, apps/api/src/routes/apps.ts, apps/api/src/routes/categories.ts, apps/api/src/routes/system-admin.ts, apps/dashboard/src/lib/api.ts, apps/dashboard/src/app/(dashboard)/apps/[slug]/page.tsx, apps/dashboard/src/app/(dashboard)/categories/[slug]/page.tsx, apps/dashboard/src/app/(dashboard)/categories/[slug]/app-results.tsx, apps/dashboard/src/app/(dashboard)/system-admin/scraper/page.tsx, files/tasks.txt

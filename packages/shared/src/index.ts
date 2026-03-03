@@ -73,6 +73,31 @@ export type {
   KeywordOpportunityMetrics,
 } from "./keyword-opportunity.js";
 
+// App Visibility
+export {
+  PAGE_SIZE,
+  PAGE_DECAY,
+  computeRankWeight,
+  computeAppVisibility,
+  normalizeScore,
+} from "./app-visibility.js";
+export type {
+  KeywordRankingInput,
+  VisibilityResult,
+} from "./app-visibility.js";
+
+// App Power
+export {
+  POWER_WEIGHTS,
+  computeCategoryRankScore,
+  computeAppPower,
+} from "./app-power.js";
+export type {
+  CategoryRankInput,
+  PowerInput,
+  PowerComponents,
+} from "./app-power.js";
+
 // Logger
 export { Logger, createLogger } from "./logger.js";
 export type { LogLevel, LogContext } from "./logger.js";

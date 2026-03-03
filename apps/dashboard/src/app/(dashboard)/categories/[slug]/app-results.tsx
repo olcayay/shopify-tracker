@@ -38,7 +38,7 @@ interface App {
   source_categories?: { title: string; slug: string }[];
 }
 
-type SortKey = "position" | "name" | "average_rating" | "rating_count" | "min_paid" | "launched_date" | "reverse_similar";
+type SortKey = "position" | "name" | "average_rating" | "rating_count" | "min_paid" | "launched_date" | "reverse_similar" | "visibility_score" | "power_score";
 type SortDir = "asc" | "desc";
 type StatusFilter = "all" | "tracked_or_competitor";
 
@@ -52,6 +52,7 @@ export function CategoryAppResults({
   minPaidPrices,
   reverseSimilarCounts,
   isHubPage,
+  categoryScores,
 }: {
   apps: App[];
   trackedSlugs: string[];
@@ -60,6 +61,7 @@ export function CategoryAppResults({
   minPaidPrices?: Record<string, number | null>;
   reverseSimilarCounts?: Record<string, number>;
   isHubPage?: boolean;
+  categoryScores?: { visibilityScore: Record<string, number>; powerScore: Record<string, number> };
 }) {
   const { formatDateOnly } = useFormatDate();
   const [search, setSearch] = useState("");
@@ -113,12 +115,18 @@ export function CategoryAppResults({
         case "reverse_similar":
           cmp = (reverseSimilarCounts?.[a.slug] ?? 0) - (reverseSimilarCounts?.[b.slug] ?? 0);
           break;
+        case "visibility_score":
+          cmp = (categoryScores?.visibilityScore[a.slug] ?? 0) - (categoryScores?.visibilityScore[b.slug] ?? 0);
+          break;
+        case "power_score":
+          cmp = (categoryScores?.powerScore[a.slug] ?? 0) - (categoryScores?.powerScore[b.slug] ?? 0);
+          break;
       }
       return sortDir === "asc" ? cmp : -cmp;
     });
 
     return result;
-  }, [apps, search, statusFilter, sortKey, sortDir, trackedSet, competitorSet, minPaidPrices, reverseSimilarCounts]);
+  }, [apps, search, statusFilter, sortKey, sortDir, trackedSet, competitorSet, minPaidPrices, reverseSimilarCounts, categoryScores]);
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const safePage = Math.min(page, totalPages);
@@ -249,6 +257,24 @@ export function CategoryAppResults({
                 Launched <SortIcon col="launched_date" />
               </TableHead>
               <TableHead>Last Change</TableHead>
+              {categoryScores && (
+                <>
+                  <TableHead
+                    className="cursor-pointer select-none"
+                    onClick={() => toggleSort("visibility_score")}
+                    title="Visibility Score: How discoverable the app is in search results (0-100)"
+                  >
+                    Vis <SortIcon col="visibility_score" />
+                  </TableHead>
+                  <TableHead
+                    className="cursor-pointer select-none"
+                    onClick={() => toggleSort("power_score")}
+                    title="Power Score: Market authority and competitive strength (0-100)"
+                  >
+                    Pwr <SortIcon col="power_score" />
+                  </TableHead>
+                </>
+              )}
               <TableHead className="w-10" />
             </TableRow>
           </TableHeader>
@@ -256,7 +282,7 @@ export function CategoryAppResults({
             {paged.length === 0 ? (
               <TableRow>
                 <TableCell
-                  colSpan={10}
+                  colSpan={categoryScores ? 12 : 10}
                   className="text-center text-muted-foreground py-8"
                 >
                   No apps found.
@@ -355,6 +381,20 @@ export function CategoryAppResults({
                         ? formatDateOnly(lastChanges[app.slug])
                         : "\u2014"}
                     </TableCell>
+                    {categoryScores && (
+                      <>
+                        <TableCell className="text-sm font-medium">
+                          {categoryScores.visibilityScore[app.slug] != null ? (
+                            <span className="text-blue-600 dark:text-blue-400">{categoryScores.visibilityScore[app.slug]}</span>
+                          ) : "\u2014"}
+                        </TableCell>
+                        <TableCell className="text-sm font-medium">
+                          {categoryScores.powerScore[app.slug] != null ? (
+                            <span className="text-purple-600 dark:text-purple-400">{categoryScores.powerScore[app.slug]}</span>
+                          ) : "\u2014"}
+                        </TableCell>
+                      </>
+                    )}
                     <TableCell>
                       <StarAppButton
                         appSlug={app.slug}

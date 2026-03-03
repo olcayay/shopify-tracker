@@ -290,6 +290,12 @@ export function createProcessJob(db: ReturnType<typeof createDb>, httpClient: Ht
         break;
       }
 
+      case "compute_app_scores": {
+        const { computeAppScores } = await import("./jobs/compute-app-scores.js");
+        await computeAppScores(db, triggeredBy, queueName);
+        break;
+      }
+
       case "daily_digest": {
         const { getDigestRecipients, buildDigestForAccount } = await import("./email/digest-builder.js");
         const { buildDigestHtml, buildDigestSubject } = await import("./email/digest-template.js");

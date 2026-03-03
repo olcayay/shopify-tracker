@@ -36,6 +36,8 @@ expandable score detail columns in keywords table (PLA-25 follow-up) ✅
 
 system admin user impersonation (PLA-26) ✅
 
+app visibility & power scores (compute job + API + dashboard) ✅
+
 feedback sayfası
 
 kime hangi durumda nasıl emailler gönderilebilinir.

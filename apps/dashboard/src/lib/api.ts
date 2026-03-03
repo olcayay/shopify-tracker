@@ -295,6 +295,21 @@ export function getAccountStarredCategories() {
   return fetchApi<any[]>(`/api/account/starred-categories`);
 }
 
+// --- App Scores ---
+export const getAppScores = cache((slug: string) => {
+  return fetchApi<any>(`/api/apps/${slug}/scores`);
+});
+
+export const getAppScoresHistory = cache((slug: string, days = 30, category?: string) => {
+  const params = new URLSearchParams({ days: String(days) });
+  if (category) params.set("category", category);
+  return fetchApi<any>(`/api/apps/${slug}/scores/history?${params}`);
+});
+
+export const getCategoryScores = cache((slug: string, sort = "visibility", limit = 50) => {
+  return fetchApi<any>(`/api/categories/${slug}/scores?sort=${sort}&limit=${limit}`);
+});
+
 // --- System Admin ---
 export function getSystemAccounts() {
   return fetchApi<any[]>(`/api/system-admin/accounts`);

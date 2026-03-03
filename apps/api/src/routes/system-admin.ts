@@ -547,10 +547,7 @@ export const systemAdminRoutes: FastifyPluginAsync = async (app) => {
     };
 
     const conditions = [];
-    if (
-      type &&
-      ["category", "app_details", "keyword_search", "reviews"].includes(type)
-    ) {
+    if (type) {
       conditions.push(eq(scrapeRuns.scraperType, type as any));
     }
     if (triggerFilter === "scheduler") {
@@ -838,6 +835,7 @@ export const systemAdminRoutes: FastifyPluginAsync = async (app) => {
       "compute_review_metrics",
       "compute_similarity_scores",
       "backfill_categories",
+      "compute_app_scores",
     ];
     if (!type || !validTypes.includes(type)) {
       return reply.code(400).send({

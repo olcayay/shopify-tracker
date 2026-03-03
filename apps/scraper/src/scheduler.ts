@@ -34,6 +34,11 @@ const SCHEDULES = [
     cron: "0 5 * * *", // Daily at 05:00 UTC (08:00 Istanbul)
     type: "daily_digest" as const,
   },
+  {
+    name: "compute_app_scores",
+    cron: "0 9 * * *", // Daily at 09:00 UTC
+    type: "compute_app_scores" as const,
+  },
 ];
 
 log.info("starting scheduler", {

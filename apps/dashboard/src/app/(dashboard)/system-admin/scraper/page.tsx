@@ -98,6 +98,12 @@ const SCRAPER_TYPES = [
     cronHours: null,
     scheduleLabel: "Manual trigger",
   },
+  {
+    type: "compute_app_scores",
+    label: "App Scores",
+    description: "Compute App Visibility & App Power scores for all tracked apps",
+    cronHours: [9],
+  },
 ];
 
 function getNextRun(cronHours: number[] | null): string | null {

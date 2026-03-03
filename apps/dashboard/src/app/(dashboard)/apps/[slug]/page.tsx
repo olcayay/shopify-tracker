@@ -12,6 +12,7 @@ import {
   getAppSimilarApps,
   getAppsMinPaidPrices,
   getCategory,
+  getAppScores,
 } from "@/lib/api";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -31,6 +32,8 @@ import {
   Megaphone,
   Star,
   Minus,
+  Zap,
+  TrendingUp,
 } from "lucide-react";
 
 // --- Helper functions ---
@@ -123,9 +126,10 @@ export default async function AppOverviewPage({
   let adData: any;
   let similarData: any;
   let selfMinPaidPriceMap: Record<string, number | null>;
+  let scoresData: any;
 
   try {
-    [app, reviewData, rankings, changes, reviewMetrics, featuredData, adData, similarData, selfMinPaidPriceMap] =
+    [app, reviewData, rankings, changes, reviewMetrics, featuredData, adData, similarData, selfMinPaidPriceMap, scoresData] =
       await Promise.all([
         getApp(slug),
         getAppReviews(slug, 3).catch(() => ({ reviews: [], total: 0, distribution: [] })),
@@ -136,6 +140,7 @@ export default async function AppOverviewPage({
         getAppAdSightings(slug).catch(() => ({ sightings: [] })),
         getAppSimilarApps(slug).catch(() => ({ direct: [], reverse: [], secondDegree: [] })),
         getAppsMinPaidPrices([slug]).catch(() => ({})),
+        getAppScores(slug).catch(() => ({ scores: [] })),
       ]);
   } catch {
     return <p className="text-muted-foreground">App not found.</p>;
@@ -732,7 +737,65 @@ export default async function AppOverviewPage({
         </Link>
       )}
 
-      {/* Card 6: Visibility & Discovery */}
+      {/* Card 6: App Scores */}
+      <Card className="h-full">
+        <CardHeader className="flex flex-row items-center justify-between pb-2">
+          <CardTitle className="text-sm font-medium flex items-center gap-2">
+            <Zap className="h-4 w-4 text-muted-foreground" />
+            App Scores
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          {(scoresData?.scores || []).length > 0 ? (
+            <div className="space-y-3">
+              {(scoresData.scores as any[]).map((s: any) => (
+                <div key={s.categorySlug} className="space-y-2">
+                  <p className="text-xs font-medium text-muted-foreground truncate">
+                    {s.categorySlug.replace(/-/g, " ").replace(/\b\w/g, (c: string) => c.toUpperCase())}
+                  </p>
+                  <div className="grid grid-cols-2 gap-3">
+                    {/* Visibility */}
+                    <div className="rounded-lg bg-blue-50 dark:bg-blue-950/30 p-2.5">
+                      <div className="flex items-center gap-1.5 mb-1">
+                        <Eye className="h-3.5 w-3.5 text-blue-500" />
+                        <span className="text-[11px] font-medium text-blue-700 dark:text-blue-300">Visibility</span>
+                      </div>
+                      <p className="text-2xl font-bold text-blue-600 dark:text-blue-400">
+                        {s.visibility?.visibilityScore ?? "—"}
+                      </p>
+                      <p className="text-[10px] text-muted-foreground mt-0.5">
+                        {s.visibility?.keywordCount ?? 0} keywords
+                      </p>
+                    </div>
+                    {/* Power */}
+                    <div className="rounded-lg bg-purple-50 dark:bg-purple-950/30 p-2.5">
+                      <div className="flex items-center gap-1.5 mb-1">
+                        <TrendingUp className="h-3.5 w-3.5 text-purple-500" />
+                        <span className="text-[11px] font-medium text-purple-700 dark:text-purple-300">Power</span>
+                      </div>
+                      <p className="text-2xl font-bold text-purple-600 dark:text-purple-400">
+                        {s.power?.powerScore ?? "—"}
+                      </p>
+                      <p className="text-[10px] text-muted-foreground mt-0.5">
+                        rating {((Number(s.power?.ratingScore) || 0) * 100).toFixed(0)}% &middot; reviews {((Number(s.power?.reviewScore) || 0) * 100).toFixed(0)}%
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="flex flex-col items-center justify-center py-6 text-center">
+              <Zap className="h-8 w-8 text-muted-foreground/30 mb-2" />
+              <p className="text-sm text-muted-foreground">
+                Scores will appear after the daily computation runs
+              </p>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Card 7: Visibility & Discovery */}
       <Card className="h-full">
         <CardHeader className="flex flex-row items-center justify-between pb-2">
           <CardTitle className="text-sm font-medium flex items-center gap-2">
