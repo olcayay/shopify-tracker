@@ -480,5 +480,9 @@ Score Breakdown Popovers (Hover):
   - Category scraper already writes averageRating and ratingCount to apps table for ALL apps from listing pages
   - Fix ensures all apps with rating/review data (regardless of tracking status) contribute properly to power score normalization
   - Momentum (accMacro) still only available for tracked/competitor apps — acceptable since review metrics require review scraping
+- Rating score formula improved: `rating/5` (linear) → `((rating-2)/3)^1.5` (power curve with floor at 2.0)
+  - Old formula: 3.0→60%, 4.0→80%, 5.0→100% — too generous, only 20pp spread in 4.0-5.0 range
+  - New formula: 2.0→0%, 3.0→2%, 4.0→30%, 4.6→67%, 5.0→100% — better differentiation where it matters
+  - Floor at 2.0 (below 2.0 → 0%), power 1.5 curve rewards high ratings more
 - Files created: apps/dashboard/src/components/power-score-popover.tsx, apps/dashboard/src/components/visibility-score-popover.tsx
 - Files modified: packages/shared/src/app-power.ts, apps/api/src/routes/account.ts, apps/api/src/routes/apps.ts, apps/api/src/routes/categories.ts, apps/dashboard/src/app/(dashboard)/categories/[slug]/page.tsx, apps/dashboard/src/app/(dashboard)/categories/[slug]/app-results.tsx, apps/dashboard/src/app/(dashboard)/apps/[slug]/page.tsx, apps/dashboard/src/app/(dashboard)/apps/[slug]/competitors-section.tsx, apps/dashboard/src/app/(dashboard)/competitors/page.tsx

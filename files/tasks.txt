@@ -43,6 +43,7 @@ restructure visibility (account-scoped) & power (leaf categories only) ✅
 score breakdown popovers (hover) ✅
 score popover enhancements (position/totalApps, full category breakdowns) ✅
 fix power score: use all apps' rating/review data (not just tracked) ✅
+smarter rating score formula: ((rating-2)/3)^1.5 with floor at 2.0 ✅
 
 feedback sayfası
 

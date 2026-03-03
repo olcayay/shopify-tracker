@@ -2,7 +2,7 @@
  * App Power Score - measures overall market authority and competitive strength.
  *
  * Components:
- * 1. Rating Score (weight 0.35) - averageRating / 5
+ * 1. Rating Score (weight 0.35) - ((rating - 2) / 3) ^ 1.5, floor at 2.0
  * 2. Review Authority (weight 0.25) - log10(ratingCount + 1), normalized per category
  * 3. Category Rank Score (weight 0.25) - sqrt(1/log2(position+1)) * page_penalty
  * 4. Momentum (weight 0.15) - review acceleration (accMacro)
@@ -76,9 +76,9 @@ export function computeAppPower(
   maxReviewsInCategory: number,
   maxAccMacroInCategory: number,
 ): PowerComponents {
-  // Component 1: Rating (0-1)
+  // Component 1: Rating (0-1), shifted range with floor at 2.0
   const ratingScore = input.averageRating != null
-    ? Math.min(input.averageRating / 5, 1)
+    ? Math.pow(Math.max((input.averageRating - 2) / 3, 0), 1.5)
     : 0;
 
   // Component 2: Review authority (log scale, normalized per category)
