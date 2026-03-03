@@ -486,3 +486,77 @@ Score Breakdown Popovers (Hover):
   - Floor at 3.0 (below 3.0 → 0%), power 1.5 curve rewards high ratings more
 - Files created: apps/dashboard/src/components/power-score-popover.tsx, apps/dashboard/src/components/visibility-score-popover.tsx
 - Files modified: packages/shared/src/app-power.ts, apps/api/src/routes/account.ts, apps/api/src/routes/apps.ts, apps/api/src/routes/categories.ts, apps/dashboard/src/app/(dashboard)/categories/[slug]/page.tsx, apps/dashboard/src/app/(dashboard)/categories/[slug]/app-results.tsx, apps/dashboard/src/app/(dashboard)/apps/[slug]/page.tsx, apps/dashboard/src/app/(dashboard)/apps/[slug]/competitors-section.tsx, apps/dashboard/src/app/(dashboard)/competitors/page.tsx
+
+Research Projects — Single Page Onboarding with Snowball Suggestions:
+- Market research feature: explore a market without having a Shopify app first
+- Progressive single page: 4 layers reveal as data accumulates (empty → keywords → competitors → deep insights)
+- 3 new DB tables: research_projects, research_project_keywords, research_project_competitors
+  - Migration 0041_research_projects.sql, Drizzle schema research-projects.ts
+  - research_projects: account-scoped (FK accounts.id CASCADE), name, timestamps
+  - research_project_keywords: links to global tracked_keywords (reuses existing keyword/scraping infra)
+  - research_project_competitors: links to global apps by slug, with sort_order
+- API: apps/api/src/routes/research.ts registered at /api/research-projects
+  - Project CRUD: GET (list), POST (create), PATCH /:id (rename), DELETE /:id
+  - Keywords: POST /:id/keywords (add, enqueue scraper if no snapshot), DELETE /:id/keywords/:kwId
+  - Competitors: POST /:id/competitors (add, enqueue scraper if no snapshot), DELETE /:id/competitors/:slug
+  - Data endpoint: GET /:id/data — single endpoint returns ALL page data:
+    - project, keywords (with totalResults), competitors (enriched with app info, snapshot, power score)
+    - keywordRankings matrix (keyword_slug → app_slug → position)
+    - competitorSuggestions: apps that rank for project keywords, sorted by matched count
+    - keywordSuggestions: from competitor rankings (source A) + metadata extraction (source B), deduplicated
+    - wordAnalysis: market language word frequency from extractKeywordsFromAppMetadata across all competitors
+    - categories: category landscape with competitor positions from app_category_rankings
+    - featureCoverage: feature matrix from app snapshot categories/subcategories, gap detection (<50%)
+    - opportunities: keyword opportunity scores using computeKeywordOpportunity from shared
+- Snowball suggestion algorithms:
+  - Competitor suggestions: query app_keyword_rankings for apps ranking in project keywords, GROUP BY app_slug, enrich with app info + matched keyword names
+  - Keyword suggestions: Source A (ranking data) — keywords competitors rank for; Source B (metadata) — extractKeywordsFromAppMetadata per competitor, merge ≥2 apps
+  - Word analysis: aggregate extractKeywordsFromAppMetadata across all competitors, filter to ≥2 apps
+- Dashboard pages:
+  - Sidebar: "Research" link with FlaskConical icon from lucide-react
+  - /research (list): project cards with keyword/competitor counts, create/delete actions
+  - /research/[id] (detail): progressive single page with all 4 layers
+    - Layer 0: empty state with centered keyword input and example text
+    - Layer 1: keyword tags + competitor suggestions (app cards with matched keywords, Add button)
+    - Layer 2: competitor table (rating, reviews, pricing, power, ranking counts) + keyword suggestions
+    - Layer 3: market language (tag cloud + table), category landscape, feature coverage (bar chart with gap detection), keyword opportunities table
+  - Manual app search: debounced /api/apps/search, inline results with Add buttons
+  - Project name editing: inline with Pencil icon, Enter to save
+  - Polling: 5s interval when pendingKeywords or pendingCompetitors are non-empty
+  - Loading states: animate-pulse on pending badges, Loader2 spinners on add buttons
+  - Animations: animate-in fade-in-0 slide-in-from-bottom-4 duration-500 on section appearance
+- lib/api.ts: getResearchProjects(), getResearchProjectData(id) added
+- Files created: packages/db/src/migrations/0041_research_projects.sql, packages/db/src/schema/research-projects.ts, apps/api/src/routes/research.ts, apps/dashboard/src/app/(dashboard)/research/page.tsx, apps/dashboard/src/app/(dashboard)/research/[id]/page.tsx
+- Files modified: packages/db/src/index.ts, packages/db/src/migrations/meta/_journal.json, apps/api/src/index.ts, apps/dashboard/src/components/sidebar.tsx, apps/dashboard/src/lib/api.ts, files/tasks.txt, files/notes.txt
+
+Research Projects — Loading Shimmers, Detail Pages, Compare Page:
+- Loading shimmer improvements:
+  - API: competitor add now enqueues both scrape:app_details AND scrape:reviews (matching account-level)
+  - Keywords: pending keywords show Loader2 spinner + fade-in animation; resolved keywords get fade-in on totalResults
+  - Competitors: pending rows show Skeleton shimmers per data cell (rating, reviews, pricing, power, rankings, featured, similar, categories, launched) + Loader2 next to name; resolved rows get fade-in animation
+  - Added resolvedKeywords/resolvedCompetitors sets with 2s auto-clear for animation timing
+- UI improvements on research/[id] page:
+  - "Show More" buttons on Competitor Suggestions (initial 10) and Keyword Suggestions (initial 15)
+  - Manual search results sorted by review count, review count displayed
+  - Section reordering: Keywords → Competitors → Suggestions → Keyword Suggestions → Layer 3
+  - Keywords section header redesigned with CardHeader/CardTitle matching other cards
+  - Market Language table: sorted by appCount desc, per-field counts shown as "Name (5) Intro (3)"
+  - Creator name on research project cards (migration 0042_research_created_by)
+  - InlineAppSearch component in Your Competitors header for compact app search
+  - Count badges on Keywords and Competitors section titles
+  - Feature Coverage features are clickable links to /features/[handle]
+  - Categories column shows only leaf category name (full breadcrumb in tooltip)
+  - Header: Keywords/Competitors counts as styled link buttons to detail pages, plus Compare button
+  - SectionWrapper: added titleHref and headerAction props
+- New detail pages:
+  - /research/[id]/keywords: detailed keyword table with competitor ranking columns (app icons), total results, opportunity score, add/remove, pending shimmers, Shopify search links
+  - /research/[id]/competitors: detailed competitor table with all metrics, inline app search, add/remove, pending shimmers, external links
+  - /research/[id]/compare: full competitor comparison page
+    - App selector bar (toggle which competitors to compare)
+    - 11 collapsible sections: App Name, Subtitle, Introduction, App Details (with keyword density analysis), Features (positional row-based like apps/[slug]/compare), Languages, Integrations, Reviews/Ratings, Category Features (using feat.title for display, handle for links), Pricing Plans, Web Search Content (SEO)
+    - CharBadge with color-coded character count limits
+    - Keyword density analysis with 1/2/3-word phrases
+    - Section collapse state persisted to localStorage
+    - table-fixed layout with constrained label column width for proper app icon spacing
+- Files created: packages/db/src/migrations/0042_research_created_by.sql, apps/dashboard/src/app/(dashboard)/research/[id]/keywords/page.tsx, apps/dashboard/src/app/(dashboard)/research/[id]/competitors/page.tsx, apps/dashboard/src/app/(dashboard)/research/[id]/compare/page.tsx
+- Files modified: apps/api/src/routes/research.ts, apps/dashboard/src/app/(dashboard)/research/[id]/page.tsx, apps/dashboard/src/app/(dashboard)/research/page.tsx, packages/db/src/schema/research-projects.ts, packages/db/src/migrations/meta/_journal.json, files/tasks.txt, files/notes.txt

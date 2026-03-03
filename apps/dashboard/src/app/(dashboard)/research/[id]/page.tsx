@@ -1,0 +1,1350 @@
+"use client";
+
+import { useEffect, useState, useRef, useCallback, useMemo } from "react";
+import { useParams, useRouter } from "next/navigation";
+import { useAuth } from "@/lib/auth-context";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { Skeleton } from "@/components/ui/skeleton";
+import {
+  Search,
+  X,
+  Plus,
+  Star,
+  ArrowLeft,
+  Pencil,
+  Check,
+  Users,
+  Lightbulb,
+  BarChart3,
+  LayoutGrid,
+  Puzzle,
+  TrendingUp,
+  Type,
+  Loader2,
+  GitCompareArrows,
+} from "lucide-react";
+import Link from "next/link";
+
+// ─── Types ───────────────────────────────────────────────────
+
+interface ResearchData {
+  project: { id: string; name: string; createdAt: string; updatedAt: string };
+  keywords: { id: number; keyword: string; slug: string; totalResults: number | null; scrapedAt: string | null }[];
+  competitors: {
+    slug: string; name: string; iconUrl: string | null;
+    averageRating: number | null; ratingCount: number | null;
+    pricingHint: string | null; minPaidPrice: number | null;
+    powerScore: number | null; categories: any[]; features: string[];
+    categoryRankings: { slug: string; breadcrumb: string; position: number; totalApps: number | null }[];
+    launchedAt: string | null;
+    featuredSections: number;
+    reverseSimilarCount: number;
+  }[];
+  keywordRankings: Record<string, Record<string, number>>;
+  competitorSuggestions: {
+    slug: string; name: string; iconUrl: string | null;
+    averageRating: number | null; ratingCount: number | null;
+    matchedKeywords: string[]; matchedCount: number; avgPosition: number;
+  }[];
+  keywordSuggestions: {
+    keyword: string; slug?: string; competitorCount: number;
+    bestPosition?: number; source: "ranking" | "metadata";
+  }[];
+  wordAnalysis: { word: string; totalScore: number; appCount: number; sources: Record<string, number> }[];
+  categories: {
+    slug: string; title: string; competitorCount: number; total: number;
+    competitors: { slug: string; position: number }[];
+  }[];
+  featureCoverage: {
+    feature: string; title: string; count: number; total: number;
+    competitors: string[]; isGap: boolean;
+  }[];
+  opportunities: {
+    keyword: string; slug: string; opportunityScore: number;
+    room: number; demand: number; competitorCount: number; totalResults: number | null;
+  }[];
+}
+
+// ─── Main Page ───────────────────────────────────────────────
+
+export default function ResearchProjectPage() {
+  const params = useParams();
+  const router = useRouter();
+  const { fetchWithAuth, user } = useAuth();
+
+  const id = params.id as string;
+  const canEdit = user?.role === "owner" || user?.role === "editor";
+
+  const [data, setData] = useState<ResearchData | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  // Polling
+  const [pendingKeywords, setPendingKeywords] = useState<Set<number>>(new Set());
+  const [pendingCompetitors, setPendingCompetitors] = useState<Set<string>>(new Set());
+  const [resolvedKeywords, setResolvedKeywords] = useState<Set<number>>(new Set());
+  const [resolvedCompetitors, setResolvedCompetitors] = useState<Set<string>>(new Set());
+  const pollRef = useRef<ReturnType<typeof setInterval>>(undefined);
+
+  // Editing project name
+  const [editingName, setEditingName] = useState(false);
+  const [nameValue, setNameValue] = useState("");
+
+  const fetchData = useCallback(async () => {
+    try {
+      const res = await fetchWithAuth(`/api/research-projects/${id}/data`);
+      if (!res.ok) {
+        if (res.status === 404) {
+          setError("Project not found");
+          return;
+        }
+        throw new Error("Failed to load");
+      }
+      const newData: ResearchData = await res.json();
+      setData(newData);
+      setError(null);
+
+      // Clear pending items that have been resolved → move to resolved set
+      setPendingKeywords((prev) => {
+        const next = new Set(prev);
+        const justResolved: number[] = [];
+        for (const kwId of prev) {
+          const kw = newData.keywords.find((k) => k.id === kwId);
+          if (kw?.scrapedAt) {
+            next.delete(kwId);
+            justResolved.push(kwId);
+          }
+        }
+        if (justResolved.length > 0) {
+          setResolvedKeywords((r) => {
+            const n = new Set(r);
+            justResolved.forEach((id) => n.add(id));
+            return n;
+          });
+          setTimeout(() => {
+            setResolvedKeywords((r) => {
+              const n = new Set(r);
+              justResolved.forEach((id) => n.delete(id));
+              return n;
+            });
+          }, 2000);
+        }
+        return next;
+      });
+      setPendingCompetitors((prev) => {
+        const next = new Set(prev);
+        const justResolved: string[] = [];
+        for (const slug of prev) {
+          const comp = newData.competitors.find((c) => c.slug === slug);
+          if (comp?.averageRating != null) {
+            next.delete(slug);
+            justResolved.push(slug);
+          }
+        }
+        if (justResolved.length > 0) {
+          setResolvedCompetitors((r) => {
+            const n = new Set(r);
+            justResolved.forEach((s) => n.add(s));
+            return n;
+          });
+          setTimeout(() => {
+            setResolvedCompetitors((r) => {
+              const n = new Set(r);
+              justResolved.forEach((s) => n.delete(s));
+              return n;
+            });
+          }, 2000);
+        }
+        return next;
+      });
+    } catch {
+      setError("Failed to load project data");
+    } finally {
+      setLoading(false);
+    }
+  }, [id, fetchWithAuth]);
+
+  // Initial load
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
+
+  // Polling when pending items exist
+  useEffect(() => {
+    const hasPending = pendingKeywords.size > 0 || pendingCompetitors.size > 0;
+    if (hasPending) {
+      pollRef.current = setInterval(fetchData, 5000);
+    } else if (pollRef.current) {
+      clearInterval(pollRef.current);
+    }
+    return () => {
+      if (pollRef.current) clearInterval(pollRef.current);
+    };
+  }, [pendingKeywords.size, pendingCompetitors.size, fetchData]);
+
+  // Name editing
+  async function saveName() {
+    if (!nameValue.trim() || !data) return;
+    const res = await fetchWithAuth(`/api/research-projects/${id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name: nameValue.trim() }),
+    });
+    if (res.ok) {
+      setData((prev) => prev ? { ...prev, project: { ...prev.project, name: nameValue.trim() } } : prev);
+    }
+    setEditingName(false);
+  }
+
+  const hasKeywords = (data?.keywords.length ?? 0) > 0;
+  const hasCompetitors = (data?.competitors.length ?? 0) > 0;
+  const hasRichData = (data?.keywords.length ?? 0) >= 3 && (data?.competitors.length ?? 0) >= 2;
+
+  if (loading) {
+    return (
+      <div className="space-y-6">
+        <Skeleton className="h-8 w-64" />
+        <Skeleton className="h-48 w-full" />
+      </div>
+    );
+  }
+
+  if (error || !data) {
+    return (
+      <div className="flex flex-col items-center justify-center py-16">
+        <p className="text-muted-foreground mb-4">{error || "Project not found"}</p>
+        <Button variant="outline" onClick={() => router.push("/research")}>
+          <ArrowLeft className="h-4 w-4 mr-2" /> Back to Projects
+        </Button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex items-center gap-3">
+        <Link href="/research" className="text-muted-foreground hover:text-foreground">
+          <ArrowLeft className="h-5 w-5" />
+        </Link>
+        <div className="flex-1 min-w-0">
+          {editingName ? (
+            <div className="flex items-center gap-2">
+              <Input
+                value={nameValue}
+                onChange={(e) => setNameValue(e.target.value)}
+                onKeyDown={(e) => { if (e.key === "Enter") saveName(); if (e.key === "Escape") setEditingName(false); }}
+                className="text-xl font-bold h-auto py-1"
+                autoFocus
+              />
+              <Button size="sm" variant="ghost" onClick={saveName}><Check className="h-4 w-4" /></Button>
+              <Button size="sm" variant="ghost" onClick={() => setEditingName(false)}><X className="h-4 w-4" /></Button>
+            </div>
+          ) : (
+            <button
+              onClick={() => { if (canEdit) { setNameValue(data.project.name); setEditingName(true); } }}
+              className="flex items-center gap-2 group"
+            >
+              <h1 className="text-2xl font-bold truncate">{data.project.name}</h1>
+              {canEdit && <Pencil className="h-4 w-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />}
+            </button>
+          )}
+        </div>
+        <div className="flex items-center gap-2 shrink-0">
+          <Link href={`/research/${id}/keywords`}>
+            <Button variant="outline" size="sm">
+              <Search className="h-3.5 w-3.5 mr-1.5" />
+              {data.keywords.length} Keywords
+            </Button>
+          </Link>
+          <Link href={`/research/${id}/competitors`}>
+            <Button variant="outline" size="sm">
+              <BarChart3 className="h-3.5 w-3.5 mr-1.5" />
+              {data.competitors.length} Competitors
+            </Button>
+          </Link>
+          {hasCompetitors && (
+            <Link href={`/research/${id}/compare`}>
+              <Button variant="outline" size="sm">
+                <GitCompareArrows className="h-3.5 w-3.5 mr-1.5" />
+                Compare
+              </Button>
+            </Link>
+          )}
+        </div>
+      </div>
+
+      {/* Layer 0/1: Keywords Section */}
+      <KeywordsSection
+        projectId={id}
+        data={data}
+        canEdit={canEdit}
+        pendingKeywords={pendingKeywords}
+        resolvedKeywords={resolvedKeywords}
+        onAdd={async (keyword: string) => {
+          const res = await fetchWithAuth(`/api/research-projects/${id}/keywords`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ keyword }),
+          });
+          if (res.ok) {
+            const result = await res.json();
+            if (result.scraperEnqueued) {
+              setPendingKeywords((prev) => new Set(prev).add(result.keywordId));
+            }
+            await fetchData();
+          }
+        }}
+        onRemove={async (kwId: number) => {
+          const res = await fetchWithAuth(`/api/research-projects/${id}/keywords/${kwId}`, {
+            method: "DELETE",
+          });
+          if (res.ok) await fetchData();
+        }}
+      />
+
+      {/* Competitor Table (right after keywords) */}
+      {hasCompetitors && (
+        <SectionWrapper
+          title="Your Competitors"
+          icon={BarChart3}
+          count={data.competitors.length}
+          titleHref={`/research/${id}/competitors`}
+          headerAction={canEdit ? (
+            <InlineAppSearch
+              fetchWithAuth={fetchWithAuth}
+              existingSlugs={new Set(data.competitors.map((c) => c.slug))}
+              onAdd={async (slug: string) => {
+                const res = await fetchWithAuth(`/api/research-projects/${id}/competitors`, {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({ slug }),
+                });
+                if (res.ok) {
+                  const result = await res.json();
+                  if (result.scraperEnqueued) {
+                    setPendingCompetitors((prev) => new Set(prev).add(slug));
+                  }
+                  await fetchData();
+                }
+              }}
+            />
+          ) : undefined}
+        >
+          <CompetitorTable
+            competitors={data.competitors}
+            keywordRankings={data.keywordRankings}
+            keywords={data.keywords}
+            pendingCompetitors={pendingCompetitors}
+            resolvedCompetitors={resolvedCompetitors}
+            canEdit={canEdit}
+            onRemove={async (slug: string) => {
+              const res = await fetchWithAuth(`/api/research-projects/${id}/competitors/${slug}`, {
+                method: "DELETE",
+              });
+              if (res.ok) await fetchData();
+            }}
+          />
+        </SectionWrapper>
+      )}
+
+      {/* Competitor Suggestions */}
+      {hasKeywords && data.competitorSuggestions.length > 0 && (
+        <SectionWrapper title="Competitor Suggestions" icon={Users} subtitle="Apps that rank for your keywords">
+          <CompetitorSuggestions
+            suggestions={data.competitorSuggestions}
+            canEdit={canEdit}
+            onAdd={async (slug: string) => {
+              const res = await fetchWithAuth(`/api/research-projects/${id}/competitors`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ slug }),
+              });
+              if (res.ok) {
+                const result = await res.json();
+                if (result.scraperEnqueued) {
+                  setPendingCompetitors((prev) => new Set(prev).add(slug));
+                }
+                await fetchData();
+              }
+            }}
+          />
+        </SectionWrapper>
+      )}
+
+      {/* Manual app search (when no competitors yet) */}
+      {!hasCompetitors && hasKeywords && canEdit && (
+        <ManualAppSearch
+          fetchWithAuth={fetchWithAuth}
+          existingSlugs={new Set(data.competitors.map((c) => c.slug))}
+          onAdd={async (slug: string) => {
+            const res = await fetchWithAuth(`/api/research-projects/${id}/competitors`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ slug }),
+            });
+            if (res.ok) {
+              const result = await res.json();
+              if (result.scraperEnqueued) {
+                setPendingCompetitors((prev) => new Set(prev).add(slug));
+              }
+              await fetchData();
+            }
+          }}
+        />
+      )}
+
+      {/* Layer 2: Keyword Suggestions */}
+      {hasCompetitors && data.keywordSuggestions.length > 0 && (
+        <SectionWrapper title="More Keywords to Explore" icon={Lightbulb} subtitle="Based on your competitors' rankings & metadata">
+          <KeywordSuggestions
+            suggestions={data.keywordSuggestions}
+            canEdit={canEdit}
+            onAdd={async (keyword: string) => {
+              const res = await fetchWithAuth(`/api/research-projects/${id}/keywords`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ keyword }),
+              });
+              if (res.ok) {
+                const result = await res.json();
+                if (result.scraperEnqueued) {
+                  setPendingKeywords((prev) => new Set(prev).add(result.keywordId));
+                }
+                await fetchData();
+              }
+            }}
+          />
+        </SectionWrapper>
+      )}
+
+      {/* Layer 3: Market Language */}
+      {hasRichData && data.wordAnalysis.length > 0 && (
+        <SectionWrapper title="Market Language" icon={Type} subtitle="Common terms across your competitors">
+          <MarketLanguage words={data.wordAnalysis} totalCompetitors={data.competitors.length} />
+        </SectionWrapper>
+      )}
+
+      {/* Layer 3: Category Landscape */}
+      {hasRichData && data.categories.length > 0 && (
+        <SectionWrapper title="Category Landscape" icon={LayoutGrid} subtitle="Categories where your competitors are listed">
+          <CategoryLandscape categories={data.categories} competitors={data.competitors} />
+        </SectionWrapper>
+      )}
+
+      {/* Layer 3: Feature Coverage */}
+      {hasRichData && data.featureCoverage.length > 0 && (
+        <SectionWrapper title="Feature Coverage" icon={Puzzle} subtitle="Which features competitors have">
+          <FeatureCoverage features={data.featureCoverage} />
+        </SectionWrapper>
+      )}
+
+      {/* Layer 3: Opportunities */}
+      {hasRichData && data.opportunities.length > 0 && (
+        <SectionWrapper title="Keyword Opportunities" icon={TrendingUp} subtitle="Best opportunities based on your research">
+          <OpportunityTable opportunities={data.opportunities} />
+        </SectionWrapper>
+      )}
+    </div>
+  );
+}
+
+// ─── Section Wrapper ─────────────────────────────────────────
+
+function SectionWrapper({
+  title, icon: Icon, subtitle, count, headerAction, titleHref, children,
+}: {
+  title: string; icon: any; subtitle?: string; count?: number; headerAction?: React.ReactNode; titleHref?: string; children: React.ReactNode;
+}) {
+  return (
+    <Card className="animate-in fade-in-0 slide-in-from-bottom-4 duration-500">
+      <CardHeader className="pb-3">
+        <div className="flex items-center justify-between">
+          <CardTitle className="flex items-center gap-2 text-base">
+            <Icon className="h-4 w-4" />
+            {titleHref ? (
+              <Link href={titleHref} className="hover:underline">{title}</Link>
+            ) : (
+              title
+            )}
+            {count != null && <Badge variant="secondary" className="text-xs font-normal">{count}</Badge>}
+          </CardTitle>
+          {headerAction}
+        </div>
+        {subtitle && <p className="text-sm text-muted-foreground">{subtitle}</p>}
+      </CardHeader>
+      <CardContent>{children}</CardContent>
+    </Card>
+  );
+}
+
+// ─── Keywords Section ────────────────────────────────────────
+
+function KeywordsSection({
+  projectId, data, canEdit, pendingKeywords, resolvedKeywords, onAdd, onRemove,
+}: {
+  projectId: string; data: ResearchData; canEdit: boolean; pendingKeywords: Set<number>; resolvedKeywords: Set<number>;
+  onAdd: (keyword: string) => Promise<void>; onRemove: (kwId: number) => Promise<void>;
+}) {
+  const [input, setInput] = useState("");
+  const [adding, setAdding] = useState(false);
+
+  async function handleAdd() {
+    if (!input.trim() || adding) return;
+    setAdding(true);
+    try {
+      await onAdd(input.trim());
+      setInput("");
+    } finally {
+      setAdding(false);
+    }
+  }
+
+  const isEmpty = data.keywords.length === 0;
+
+  return (
+    <Card>
+      {isEmpty ? (
+        <CardContent className="py-12">
+          <div className="flex flex-col items-center text-center">
+            <Search className="h-10 w-10 text-muted-foreground mb-3" />
+            <h2 className="text-lg font-semibold mb-1">What market are you exploring?</h2>
+            <p className="text-sm text-muted-foreground mb-6 max-w-md">
+              Start with keywords your potential customers would search for in the Shopify App Store.
+            </p>
+            {canEdit && (
+              <div className="flex gap-2 w-full max-w-md">
+                <Input
+                  value={input}
+                  onChange={(e) => setInput(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === "Enter") handleAdd(); }}
+                  placeholder='e.g. "live chat", "email marketing"'
+                  disabled={adding}
+                />
+                <Button onClick={handleAdd} disabled={!input.trim() || adding}>
+                  {adding ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
+                </Button>
+              </div>
+            )}
+          </div>
+        </CardContent>
+      ) : (
+        <>
+          <CardHeader className="pb-3">
+            <div className="flex items-center justify-between">
+              <CardTitle className="flex items-center gap-2 text-base">
+                <Search className="h-4 w-4" />
+                <Link href={`/research/${projectId}/keywords`} className="hover:underline">Keywords</Link>
+                <Badge variant="secondary" className="text-xs font-normal">{data.keywords.length}</Badge>
+              </CardTitle>
+              {canEdit && (
+                <div className="flex gap-2">
+                  <Input
+                    value={input}
+                    onChange={(e) => setInput(e.target.value)}
+                    onKeyDown={(e) => { if (e.key === "Enter") handleAdd(); }}
+                    placeholder="Add keyword..."
+                    className="h-8 w-48 text-sm"
+                    disabled={adding}
+                  />
+                  <Button size="sm" variant="outline" onClick={handleAdd} disabled={!input.trim() || adding}>
+                    {adding ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Plus className="h-3.5 w-3.5" />}
+                  </Button>
+                </div>
+              )}
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="flex flex-wrap gap-2">
+              {data.keywords.map((kw) => {
+                const isPending = pendingKeywords.has(kw.id);
+                const isResolved = resolvedKeywords.has(kw.id);
+                return (
+                  <Badge
+                    key={kw.id}
+                    variant="secondary"
+                    className={`text-sm px-3 py-1 ${isPending ? "animate-in fade-in slide-in-from-top duration-300" : ""}`}
+                  >
+                    {kw.keyword}
+                    {isPending ? (
+                      <Loader2 className="ml-1.5 h-3 w-3 animate-spin text-muted-foreground" />
+                    ) : kw.totalResults != null ? (
+                      <span className={`ml-1.5 text-xs text-muted-foreground ${isResolved ? "animate-in fade-in duration-700" : ""}`}>
+                        ({kw.totalResults})
+                      </span>
+                    ) : null}
+                    {canEdit && (
+                      <button
+                        onClick={() => onRemove(kw.id)}
+                        className="ml-1.5 hover:text-destructive transition-colors"
+                      >
+                        <X className="h-3 w-3" />
+                      </button>
+                    )}
+                  </Badge>
+                );
+              })}
+            </div>
+          </CardContent>
+        </>
+      )}
+    </Card>
+  );
+}
+
+// ─── Competitor Suggestions ──────────────────────────────────
+
+function CompetitorSuggestions({
+  suggestions, canEdit, onAdd,
+}: {
+  suggestions: ResearchData["competitorSuggestions"]; canEdit: boolean;
+  onAdd: (slug: string) => Promise<void>;
+}) {
+  const [addingSlug, setAddingSlug] = useState<string | null>(null);
+  const [expanded, setExpanded] = useState(false);
+  const INITIAL_COUNT = 10;
+
+  async function handleAdd(slug: string) {
+    setAddingSlug(slug);
+    try {
+      await onAdd(slug);
+    } finally {
+      setAddingSlug(null);
+    }
+  }
+
+  const visible = expanded ? suggestions : suggestions.slice(0, INITIAL_COUNT);
+  const hasMore = suggestions.length > INITIAL_COUNT;
+
+  return (
+    <div className="space-y-2">
+      {visible.map((s) => (
+        <div key={s.slug} className="flex items-center justify-between py-2 px-3 rounded-md hover:bg-muted/50">
+          <div className="flex items-center gap-3 min-w-0">
+            {s.iconUrl ? (
+              <img src={s.iconUrl} alt="" className="h-8 w-8 rounded-md" />
+            ) : (
+              <div className="h-8 w-8 rounded-md bg-muted" />
+            )}
+            <div className="min-w-0">
+              <div className="font-medium text-sm truncate">{s.name}</div>
+              <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                {s.averageRating != null && (
+                  <span className="flex items-center gap-0.5">
+                    <Star className="h-3 w-3 fill-yellow-500 text-yellow-500" />
+                    {s.averageRating.toFixed(1)}
+                  </span>
+                )}
+                {s.ratingCount != null && <span>({s.ratingCount.toLocaleString()})</span>}
+                <span className="text-muted-foreground/60">|</span>
+                <span>Matches: {s.matchedKeywords.join(", ")}</span>
+              </div>
+            </div>
+          </div>
+          {canEdit && (
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => handleAdd(s.slug)}
+              disabled={addingSlug === s.slug}
+              className="shrink-0 ml-2"
+            >
+              {addingSlug === s.slug ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Plus className="h-3.5 w-3.5" />}
+              <span className="ml-1">Add</span>
+            </Button>
+          )}
+        </div>
+      ))}
+      {hasMore && (
+        <Button
+          variant="ghost"
+          size="sm"
+          className="w-full text-muted-foreground"
+          onClick={() => setExpanded(!expanded)}
+        >
+          {expanded ? "Show less" : `Show ${suggestions.length - INITIAL_COUNT} more`}
+        </Button>
+      )}
+    </div>
+  );
+}
+
+// ─── Inline App Search (header) ──────────────────────────────
+
+function InlineAppSearch({
+  fetchWithAuth, existingSlugs, onAdd,
+}: {
+  fetchWithAuth: (path: string, options?: any) => Promise<Response>;
+  existingSlugs: Set<string>; onAdd: (slug: string) => Promise<void>;
+}) {
+  const [open, setOpen] = useState(false);
+  const [query, setQuery] = useState("");
+  const [results, setResults] = useState<any[]>([]);
+  const [searching, setSearching] = useState(false);
+  const [addingSlug, setAddingSlug] = useState<string | null>(null);
+  const debounceRef = useRef<ReturnType<typeof setTimeout>>(undefined);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  // Close on outside click
+  useEffect(() => {
+    if (!open) return;
+    function handleClick(e: MouseEvent) {
+      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+        setOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
+  }, [open]);
+
+  function handleSearch(value: string) {
+    setQuery(value);
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    if (value.length < 2) { setResults([]); return; }
+    setSearching(true);
+    debounceRef.current = setTimeout(async () => {
+      const res = await fetchWithAuth(`/api/apps/search?q=${encodeURIComponent(value)}`);
+      if (res.ok) {
+        const data = await res.json();
+        setResults(
+          data
+            .filter((a: any) => !existingSlugs.has(a.slug))
+            .sort((a: any, b: any) => (b.ratingCount ?? 0) - (a.ratingCount ?? 0))
+        );
+      }
+      setSearching(false);
+    }, 300);
+  }
+
+  async function handleAdd(slug: string) {
+    setAddingSlug(slug);
+    try {
+      await onAdd(slug);
+      setResults((prev) => prev.filter((r) => r.slug !== slug));
+    } finally {
+      setAddingSlug(null);
+    }
+  }
+
+  if (!open) {
+    return (
+      <Button size="sm" variant="outline" onClick={() => setOpen(true)} className="h-8">
+        <Search className="h-3.5 w-3.5 mr-1.5" />
+        Add app
+      </Button>
+    );
+  }
+
+  return (
+    <div ref={containerRef} className="relative">
+      <Input
+        value={query}
+        onChange={(e) => handleSearch(e.target.value)}
+        placeholder="Search apps..."
+        className="h-8 w-56 text-sm"
+        autoFocus
+        onKeyDown={(e) => { if (e.key === "Escape") { setOpen(false); setQuery(""); setResults([]); } }}
+      />
+      {(results.length > 0 || searching) && (
+        <div className="absolute right-0 top-full mt-1 w-80 bg-popover border rounded-md shadow-lg z-50 max-h-72 overflow-y-auto">
+          {results.slice(0, 8).map((app) => (
+            <div key={app.slug} className="flex items-center justify-between py-1.5 px-3 hover:bg-muted/50">
+              <div className="flex items-center gap-2 min-w-0">
+                {app.iconUrl ? (
+                  <img src={app.iconUrl} alt="" className="h-6 w-6 rounded" />
+                ) : (
+                  <div className="h-6 w-6 rounded bg-muted" />
+                )}
+                <span className="text-sm truncate">{app.name}</span>
+                {app.averageRating != null && (
+                  <span className="text-xs text-muted-foreground shrink-0">
+                    <Star className="h-3 w-3 inline fill-yellow-500 text-yellow-500" /> {parseFloat(app.averageRating).toFixed(1)}
+                    {app.ratingCount != null && <span className="ml-1">({Number(app.ratingCount).toLocaleString()})</span>}
+                  </span>
+                )}
+              </div>
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={() => handleAdd(app.slug)}
+                disabled={addingSlug === app.slug}
+                className="shrink-0 ml-1"
+              >
+                {addingSlug === app.slug ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Plus className="h-3.5 w-3.5" />}
+              </Button>
+            </div>
+          ))}
+          {searching && <p className="text-xs text-muted-foreground px-3 py-2">Searching...</p>}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── Manual App Search ───────────────────────────────────────
+
+function ManualAppSearch({
+  fetchWithAuth, existingSlugs, onAdd,
+}: {
+  fetchWithAuth: (path: string, options?: any) => Promise<Response>;
+  existingSlugs: Set<string>; onAdd: (slug: string) => Promise<void>;
+}) {
+  const [query, setQuery] = useState("");
+  const [results, setResults] = useState<any[]>([]);
+  const [searching, setSearching] = useState(false);
+  const [addingSlug, setAddingSlug] = useState<string | null>(null);
+  const debounceRef = useRef<ReturnType<typeof setTimeout>>(undefined);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  function handleSearch(value: string) {
+    setQuery(value);
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    if (value.length < 2) { setResults([]); return; }
+    setSearching(true);
+    debounceRef.current = setTimeout(async () => {
+      const res = await fetchWithAuth(`/api/apps/search?q=${encodeURIComponent(value)}`);
+      if (res.ok) {
+        const data = await res.json();
+        setResults(
+          data
+            .filter((a: any) => !existingSlugs.has(a.slug))
+            .sort((a: any, b: any) => (b.ratingCount ?? 0) - (a.ratingCount ?? 0))
+        );
+      }
+      setSearching(false);
+    }, 300);
+  }
+
+  async function handleAdd(slug: string) {
+    setAddingSlug(slug);
+    try {
+      await onAdd(slug);
+      setResults((prev) => prev.filter((r) => r.slug !== slug));
+    } finally {
+      setAddingSlug(null);
+    }
+  }
+
+  return (
+    <Card>
+      <CardContent className="pt-6">
+        <div className="flex items-center gap-2 mb-2">
+          <Search className="h-4 w-4 text-muted-foreground" />
+          <span className="text-sm font-medium text-muted-foreground">Search & add manually</span>
+        </div>
+        <div ref={containerRef}>
+          <Input
+            value={query}
+            onChange={(e) => handleSearch(e.target.value)}
+            placeholder="Search apps..."
+            className="h-9"
+          />
+          {results.length > 0 && (
+            <div className="mt-2 space-y-1">
+              {results.slice(0, 8).map((app) => (
+                <div key={app.slug} className="flex items-center justify-between py-1.5 px-2 rounded hover:bg-muted/50">
+                  <div className="flex items-center gap-2 min-w-0">
+                    {app.iconUrl ? (
+                      <img src={app.iconUrl} alt="" className="h-6 w-6 rounded" />
+                    ) : (
+                      <div className="h-6 w-6 rounded bg-muted" />
+                    )}
+                    <span className="text-sm truncate">{app.name}</span>
+                    {app.averageRating != null && (
+                      <span className="text-xs text-muted-foreground">
+                        <Star className="h-3 w-3 inline fill-yellow-500 text-yellow-500" /> {parseFloat(app.averageRating).toFixed(1)}
+                        {app.ratingCount != null && <span className="ml-1">({Number(app.ratingCount).toLocaleString()})</span>}
+                      </span>
+                    )}
+                  </div>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => handleAdd(app.slug)}
+                    disabled={addingSlug === app.slug}
+                  >
+                    {addingSlug === app.slug ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Plus className="h-3.5 w-3.5" />}
+                  </Button>
+                </div>
+              ))}
+            </div>
+          )}
+          {searching && <p className="text-xs text-muted-foreground mt-2">Searching...</p>}
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+// ─── Competitor Table ────────────────────────────────────────
+
+function CompetitorTable({
+  competitors, keywordRankings, keywords, pendingCompetitors, resolvedCompetitors, canEdit, onRemove,
+}: {
+  competitors: ResearchData["competitors"];
+  keywordRankings: ResearchData["keywordRankings"];
+  keywords: ResearchData["keywords"];
+  pendingCompetitors: Set<string>; resolvedCompetitors: Set<string>; canEdit: boolean;
+  onRemove: (slug: string) => Promise<void>;
+}) {
+  return (
+    <div className="overflow-x-auto">
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead>App</TableHead>
+            <TableHead className="text-right">Rating</TableHead>
+            <TableHead className="text-right">Reviews</TableHead>
+            <TableHead className="text-right">Pricing</TableHead>
+            <TableHead className="text-right">Power</TableHead>
+            {keywords.length > 0 && <TableHead className="text-center">Rankings</TableHead>}
+            <TableHead className="text-right">Featured</TableHead>
+            <TableHead className="text-right">Similar</TableHead>
+            <TableHead>Categories</TableHead>
+            <TableHead className="text-right">Launched</TableHead>
+            {canEdit && <TableHead className="w-10" />}
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {competitors.map((comp) => {
+            const isPending = pendingCompetitors.has(comp.slug);
+            const isResolved = resolvedCompetitors.has(comp.slug);
+            const animate = isResolved ? "animate-in fade-in duration-700" : "";
+            // Count how many keywords this competitor ranks for
+            let rankCount = 0;
+            for (const kwSlug of Object.keys(keywordRankings)) {
+              if (keywordRankings[kwSlug]?.[comp.slug] != null) rankCount++;
+            }
+
+            return (
+              <TableRow key={comp.slug} className={isPending ? "animate-in fade-in slide-in-from-top duration-300" : ""}>
+                <TableCell>
+                  <div className="flex items-center gap-2">
+                    {comp.iconUrl ? (
+                      <img src={comp.iconUrl} alt="" className="h-7 w-7 rounded" />
+                    ) : (
+                      <div className="h-7 w-7 rounded bg-muted" />
+                    )}
+                    <Link href={`/apps/${comp.slug}`} className="font-medium text-sm hover:underline">
+                      {comp.name}
+                    </Link>
+                    {isPending && <Loader2 className="h-3 w-3 animate-spin text-muted-foreground" />}
+                  </div>
+                </TableCell>
+                <TableCell className="text-right">
+                  {isPending ? (
+                    <Skeleton className="h-4 w-10 ml-auto" />
+                  ) : comp.averageRating != null ? (
+                    <span className={`flex items-center justify-end gap-1 ${animate}`}>
+                      <Star className="h-3.5 w-3.5 fill-yellow-500 text-yellow-500" />
+                      {comp.averageRating.toFixed(1)}
+                    </span>
+                  ) : (
+                    <span className="text-muted-foreground">{"\u2014"}</span>
+                  )}
+                </TableCell>
+                <TableCell className="text-right">
+                  {isPending ? (
+                    <Skeleton className="h-4 w-12 ml-auto" />
+                  ) : (
+                    <span className={animate}>{comp.ratingCount?.toLocaleString() ?? "\u2014"}</span>
+                  )}
+                </TableCell>
+                <TableCell className="text-right text-sm">
+                  {isPending ? (
+                    <Skeleton className="h-4 w-14 ml-auto" />
+                  ) : (
+                    <span className={animate}>
+                      {comp.minPaidPrice != null
+                        ? `$${comp.minPaidPrice}/mo`
+                        : comp.pricingHint || "\u2014"}
+                    </span>
+                  )}
+                </TableCell>
+                <TableCell className="text-right">
+                  {isPending ? (
+                    <Skeleton className="h-5 w-8 ml-auto rounded-full" />
+                  ) : comp.powerScore != null ? (
+                    <span className={animate}>
+                      <Badge variant={comp.powerScore >= 70 ? "default" : "secondary"}>
+                        {comp.powerScore}
+                      </Badge>
+                    </span>
+                  ) : (
+                    <span className="text-muted-foreground">{"\u2014"}</span>
+                  )}
+                </TableCell>
+                {keywords.length > 0 && (
+                  <TableCell className="text-center text-sm text-muted-foreground">
+                    {isPending ? (
+                      <Skeleton className="h-4 w-12 mx-auto" />
+                    ) : (
+                      <span className={animate}>{rankCount > 0 ? `${rankCount}/${keywords.length} kw` : "\u2014"}</span>
+                    )}
+                  </TableCell>
+                )}
+                <TableCell className="text-right text-sm">
+                  {isPending ? (
+                    <Skeleton className="h-4 w-6 ml-auto" />
+                  ) : comp.featuredSections > 0 ? (
+                    <Link href={`/apps/${comp.slug}/featured`} className={`text-primary hover:underline ${animate}`}>{comp.featuredSections}</Link>
+                  ) : (
+                    <span className="text-muted-foreground">{"\u2014"}</span>
+                  )}
+                </TableCell>
+                <TableCell className="text-right text-sm">
+                  {isPending ? (
+                    <Skeleton className="h-4 w-6 ml-auto" />
+                  ) : comp.reverseSimilarCount > 0 ? (
+                    <Link href={`/apps/${comp.slug}/similar`} className={`text-primary hover:underline ${animate}`}>{comp.reverseSimilarCount}</Link>
+                  ) : (
+                    <span className="text-muted-foreground">{"\u2014"}</span>
+                  )}
+                </TableCell>
+                <TableCell>
+                  {isPending ? (
+                    <div className="space-y-1">
+                      <Skeleton className="h-3 w-32" />
+                      <Skeleton className="h-3 w-24" />
+                    </div>
+                  ) : comp.categoryRankings?.length > 0 ? (
+                    <div className={`space-y-1 ${animate}`}>
+                      {comp.categoryRankings.slice(0, 3).map((cr) => {
+                        const leafName = cr.breadcrumb.includes(" > ") ? cr.breadcrumb.split(" > ").pop() : cr.breadcrumb;
+                        return (
+                          <Link
+                            key={cr.slug}
+                            href={`/categories/${cr.slug}`}
+                            className="block text-[11px] leading-tight hover:underline"
+                            title={cr.breadcrumb}
+                          >
+                            <span className="text-muted-foreground">{leafName}</span>
+                            {cr.totalApps != null ? (
+                              <span className="ml-1 font-medium text-primary">(#{cr.position}/{cr.totalApps})</span>
+                            ) : (
+                              <span className="ml-1 font-medium text-primary">(#{cr.position})</span>
+                            )}
+                          </Link>
+                        );
+                      })}
+                      {comp.categoryRankings.length > 3 && (
+                        <span className="text-[11px] text-muted-foreground">
+                          +{comp.categoryRankings.length - 3} more
+                        </span>
+                      )}
+                    </div>
+                  ) : (
+                    <span className="text-muted-foreground">{"\u2014"}</span>
+                  )}
+                </TableCell>
+                <TableCell className="text-right text-sm text-muted-foreground whitespace-nowrap">
+                  {isPending ? (
+                    <Skeleton className="h-4 w-16 ml-auto" />
+                  ) : (
+                    <span className={animate}>
+                      {comp.launchedAt
+                        ? new Date(comp.launchedAt).toLocaleDateString("en-US", { month: "short", year: "numeric" })
+                        : "\u2014"}
+                    </span>
+                  )}
+                </TableCell>
+                {canEdit && (
+                  <TableCell>
+                    <button
+                      onClick={() => onRemove(comp.slug)}
+                      className="p-1 rounded hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors"
+                    >
+                      <X className="h-3.5 w-3.5" />
+                    </button>
+                  </TableCell>
+                )}
+              </TableRow>
+            );
+          })}
+        </TableBody>
+      </Table>
+    </div>
+  );
+}
+
+// ─── Keyword Suggestions ─────────────────────────────────────
+
+function KeywordSuggestions({
+  suggestions, canEdit, onAdd,
+}: {
+  suggestions: ResearchData["keywordSuggestions"]; canEdit: boolean;
+  onAdd: (keyword: string) => Promise<void>;
+}) {
+  const [addingKw, setAddingKw] = useState<string | null>(null);
+  const [expanded, setExpanded] = useState(false);
+  const INITIAL_COUNT = 15;
+
+  async function handleAdd(keyword: string) {
+    setAddingKw(keyword);
+    try {
+      await onAdd(keyword);
+    } finally {
+      setAddingKw(null);
+    }
+  }
+
+  const visible = expanded ? suggestions : suggestions.slice(0, INITIAL_COUNT);
+  const hasMore = suggestions.length > INITIAL_COUNT;
+
+  return (
+    <div className="space-y-1">
+      {visible.map((s) => (
+        <div key={s.keyword} className="flex items-center justify-between py-1.5 px-3 rounded-md hover:bg-muted/50">
+          <div className="flex items-center gap-3">
+            <span className="text-sm font-medium">&ldquo;{s.keyword}&rdquo;</span>
+            <span className="text-xs text-muted-foreground">
+              {s.competitorCount} competitor{s.competitorCount !== 1 ? "s" : ""} rank
+            </span>
+            <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-4">
+              {s.source}
+            </Badge>
+          </div>
+          {canEdit && (
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={() => handleAdd(s.keyword)}
+              disabled={addingKw === s.keyword}
+            >
+              {addingKw === s.keyword ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Plus className="h-3.5 w-3.5" />}
+            </Button>
+          )}
+        </div>
+      ))}
+      {hasMore && (
+        <Button
+          variant="ghost"
+          size="sm"
+          className="w-full text-muted-foreground"
+          onClick={() => setExpanded(!expanded)}
+        >
+          {expanded ? "Show less" : `Show ${suggestions.length - INITIAL_COUNT} more`}
+        </Button>
+      )}
+    </div>
+  );
+}
+
+// ─── Market Language (Word Cloud + Table) ────────────────────
+
+function MarketLanguage({
+  words, totalCompetitors,
+}: {
+  words: ResearchData["wordAnalysis"]; totalCompetitors: number;
+}) {
+  const maxScore = useMemo(() => Math.max(...words.map((w) => w.totalScore), 1), [words]);
+
+  const fieldLabels: Record<string, { label: string; color: string }> = {
+    name: { label: "Name", color: "bg-blue-500/20 text-blue-700" },
+    subtitle: { label: "Subtitle", color: "bg-purple-500/20 text-purple-700" },
+    introduction: { label: "Intro", color: "bg-green-500/20 text-green-700" },
+    description: { label: "Desc", color: "bg-orange-500/20 text-orange-700" },
+    categories: { label: "Cat", color: "bg-pink-500/20 text-pink-700" },
+    features: { label: "Feat", color: "bg-cyan-500/20 text-cyan-700" },
+    categoryFeatures: { label: "CatFeat", color: "bg-amber-500/20 text-amber-700" },
+  };
+
+  return (
+    <div className="space-y-4">
+      {/* Tag Cloud */}
+      <div className="flex flex-wrap gap-x-3 gap-y-1.5 p-4 bg-muted/30 rounded-lg">
+        {words.slice(0, 30).map((w) => {
+          const sizeRatio = w.totalScore / maxScore;
+          const fontSize = 0.75 + sizeRatio * 1;
+          const opacity = 0.4 + (w.appCount / totalCompetitors) * 0.6;
+          return (
+            <span
+              key={w.word}
+              className="inline-block leading-tight font-medium"
+              style={{ fontSize: `${fontSize}rem`, opacity }}
+            >
+              {w.word}
+            </span>
+          );
+        })}
+      </div>
+
+      {/* Table */}
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead>Term</TableHead>
+            <TableHead className="text-right">Apps</TableHead>
+            <TableHead>Fields</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {words.slice(0, 20).map((w) => (
+            <TableRow key={w.word}>
+              <TableCell className="font-medium text-sm">{w.word}</TableCell>
+              <TableCell className="text-right text-sm">
+                {w.appCount}/{totalCompetitors}
+              </TableCell>
+              <TableCell>
+                <div className="flex gap-1 flex-wrap">
+                  {Object.entries(w.sources)
+                    .sort(([, a], [, b]) => b - a)
+                    .map(([field, count]) => {
+                      const info = fieldLabels[field] || { label: field, color: "bg-gray-500/20 text-gray-700" };
+                      return (
+                        <span key={field} className={`text-[10px] px-1.5 py-0.5 rounded ${info.color}`}>
+                          {info.label} ({count})
+                        </span>
+                      );
+                    })}
+                </div>
+              </TableCell>
+            </TableRow>
+          ))}
+        </TableBody>
+      </Table>
+    </div>
+  );
+}
+
+// ─── Category Landscape ──────────────────────────────────────
+
+function CategoryLandscape({
+  categories, competitors,
+}: {
+  categories: ResearchData["categories"]; competitors: ResearchData["competitors"];
+}) {
+  const compNameMap = useMemo(
+    () => new Map(competitors.map((c) => [c.slug, c.name])),
+    [competitors]
+  );
+
+  return (
+    <div className="space-y-3">
+      {categories.map((cat) => (
+        <div key={cat.slug} className="py-2">
+          <div className="flex items-center justify-between mb-1">
+            <Link href={`/categories/${cat.slug}`} className="font-medium text-sm hover:underline">
+              {cat.title}
+            </Link>
+            <span className="text-xs text-muted-foreground">
+              {cat.competitorCount} of {cat.total} competitors
+            </span>
+          </div>
+          <div className="text-xs text-muted-foreground pl-3 border-l-2 border-muted">
+            {cat.competitors.map((c, i) => (
+              <span key={c.slug}>
+                {i > 0 && ", "}
+                #{c.position} {compNameMap.get(c.slug) || c.slug}
+              </span>
+            ))}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// ─── Feature Coverage ────────────────────────────────────────
+
+function FeatureCoverage({
+  features,
+}: {
+  features: ResearchData["featureCoverage"];
+}) {
+  return (
+    <div className="space-y-2">
+      {features.slice(0, 20).map((f) => {
+        const ratio = f.count / f.total;
+        const barWidth = Math.max(ratio * 100, 4);
+        return (
+          <div key={f.feature} className="flex items-center gap-3">
+            <Link href={`/features/${encodeURIComponent(f.feature)}`} className="text-sm w-40 truncate shrink-0 hover:underline" title={f.title}>{f.title}</Link>
+            <div className="flex-1 h-5 bg-muted rounded-full overflow-hidden">
+              <div
+                className={`h-full rounded-full transition-all ${f.isGap ? "bg-amber-500/60" : "bg-primary/60"}`}
+                style={{ width: `${barWidth}%` }}
+              />
+            </div>
+            <span className="text-xs text-muted-foreground w-12 text-right shrink-0">
+              {f.count}/{f.total}
+            </span>
+            {f.isGap && (
+              <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-4 text-amber-600 border-amber-300 shrink-0">
+                Gap
+              </Badge>
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+// ─── Opportunity Table ───────────────────────────────────────
+
+function OpportunityTable({
+  opportunities,
+}: {
+  opportunities: ResearchData["opportunities"];
+}) {
+  function roomLabel(room: number): string {
+    if (room >= 0.7) return "High";
+    if (room >= 0.4) return "Med";
+    return "Low";
+  }
+
+  return (
+    <div className="overflow-x-auto">
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead>Keyword</TableHead>
+            <TableHead className="text-right">Opportunity</TableHead>
+            <TableHead className="text-right">Room</TableHead>
+            <TableHead className="text-right">Demand</TableHead>
+            <TableHead className="text-right">Competitors</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {opportunities.map((opp) => (
+            <TableRow key={opp.slug}>
+              <TableCell>
+                <Link href={`/keywords/${opp.slug}`} className="font-medium text-sm hover:underline">
+                  {opp.keyword}
+                </Link>
+              </TableCell>
+              <TableCell className="text-right">
+                <Badge variant={opp.opportunityScore >= 60 ? "default" : "secondary"}>
+                  {opp.opportunityScore}
+                </Badge>
+              </TableCell>
+              <TableCell className="text-right text-sm">
+                <span className={opp.room >= 0.7 ? "text-green-600" : opp.room >= 0.4 ? "text-yellow-600" : "text-red-600"}>
+                  {roomLabel(opp.room)}
+                </span>
+              </TableCell>
+              <TableCell className="text-right text-sm">
+                {opp.totalResults?.toLocaleString() ?? "\u2014"}
+              </TableCell>
+              <TableCell className="text-right text-sm text-muted-foreground">
+                {opp.competitorCount} rank
+              </TableCell>
+            </TableRow>
+          ))}
+        </TableBody>
+      </Table>
+    </div>
+  );
+}

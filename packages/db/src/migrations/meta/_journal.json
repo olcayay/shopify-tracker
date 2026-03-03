@@ -288,6 +288,20 @@
       "when": 1772409600000,
       "tag": "0040_restructure_visibility_scores",
       "breakpoints": true
+    },
+    {
+      "idx": 41,
+      "version": "7",
+      "when": 1772496000000,
+      "tag": "0041_research_projects",
+      "breakpoints": true
+    },
+    {
+      "idx": 42,
+      "version": "7",
+      "when": 1772582400000,
+      "tag": "0042_research_created_by",
+      "breakpoints": true
     }
   ]
 }

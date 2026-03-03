@@ -310,6 +310,15 @@ export const getCategoryScores = cache((slug: string, limit = 50) => {
   return fetchApi<any>(`/api/categories/${slug}/scores?limit=${limit}`);
 });
 
+// --- Research Projects ---
+export function getResearchProjects() {
+  return fetchApi<any[]>(`/api/research-projects`);
+}
+
+export function getResearchProjectData(id: string) {
+  return fetchApi<any>(`/api/research-projects/${id}/data`);
+}
+
 // --- System Admin ---
 export function getSystemAccounts() {
   return fetchApi<any[]>(`/api/system-admin/accounts`);

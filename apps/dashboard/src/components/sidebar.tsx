@@ -21,6 +21,7 @@ import {
   ChevronDown,
   ChevronRight,
   Sparkles,
+  FlaskConical,
   PanelLeftClose,
   PanelLeftOpen,
   Menu,
@@ -38,6 +39,7 @@ const navItems = [
   { href: "/categories", label: "Categories", icon: FolderTree },
   { href: "/featured", label: "Featured", icon: Sparkles },
   { href: "/features", label: "Features", icon: Puzzle },
+  { href: "/research", label: "Research", icon: FlaskConical },
   { href: "/settings", label: "Settings", icon: Settings },
 ];
 

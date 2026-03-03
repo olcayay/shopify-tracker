@@ -19,6 +19,7 @@ import { featureRoutes } from "./routes/features.js";
 import { integrationRoutes } from "./routes/integrations.js";
 import { liveSearchRoutes } from "./routes/live-search.js";
 import { featuredAppRoutes } from "./routes/featured-apps.js";
+import { researchRoutes } from "./routes/research.js";
 
 const databaseUrl = process.env.DATABASE_URL;
 if (!databaseUrl) {
@@ -40,7 +41,7 @@ try {
 // Run pending migrations on startup
 console.log("Running database migrations...");
 try {
-  await migrate(db, { migrationsFolder: "packages/db/src/migrations" });
+  await migrate(db, { migrationsFolder: resolve(import.meta.dirname, "../../../packages/db/src/migrations") });
   console.log("Database migrations complete.");
 } catch (err: any) {
   console.error("Migration ERROR:", err.message || err);
@@ -101,6 +102,7 @@ await app.register(featureRoutes, { prefix: "/api/features" });
 await app.register(integrationRoutes, { prefix: "/api/integrations" });
 await app.register(liveSearchRoutes, { prefix: "/api/live-search" });
 await app.register(featuredAppRoutes, { prefix: "/api/featured-apps" });
+await app.register(researchRoutes, { prefix: "/api/research-projects" });
 
 // Error handler
 app.setErrorHandler((error: any, _request, reply) => {

@@ -45,6 +45,9 @@ score popover enhancements (position/totalApps, full category breakdowns) ✅
 fix power score: use all apps' rating/review data (not just tracked) ✅
 smarter rating score formula: ((rating-3)/2)^1.5 with floor at 3.0 ✅
 
+research projects — single page onboarding with snowball suggestions ✅
+research projects — loading shimmers, detail pages, compare page ✅
+
 feedback sayfası
 
 kime hangi durumda nasıl emailler gönderilebilinir.
