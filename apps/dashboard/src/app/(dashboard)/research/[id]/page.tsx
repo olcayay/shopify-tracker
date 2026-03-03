@@ -39,6 +39,7 @@ import {
   ArrowDown,
 } from "lucide-react";
 import Link from "next/link";
+import { LiveSearchTrigger } from "@/components/live-search-trigger";
 
 // ─── Types ───────────────────────────────────────────────────
 
@@ -1424,14 +1425,15 @@ function KeywordSuggestions({
               </Badge>
             </div>
             <div className="flex items-center gap-0.5">
+              <LiveSearchTrigger keyword={s.keyword} variant="icon" />
               <a
                 href={`https://apps.shopify.com/search?q=${encodeURIComponent(s.keyword)}`}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="p-1 rounded text-muted-foreground hover:text-foreground transition-colors"
-                title="Search on Shopify App Store"
+                title={`Search "${s.keyword}" on Shopify`}
+                className="inline-flex items-center justify-center h-8 w-8 rounded-md hover:bg-accent transition-colors"
               >
-                <ExternalLink className="h-3.5 w-3.5" />
+                <ExternalLink className="h-4 w-4 text-muted-foreground" />
               </a>
               {canEdit && (
                 <Button
@@ -1565,15 +1567,18 @@ function MarketLanguage({
                 </div>
               </TableCell>
               <TableCell>
-                <a
-                  href={`https://apps.shopify.com/search?q=${encodeURIComponent(w.word)}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="p-1 rounded text-muted-foreground hover:text-foreground transition-colors"
-                  title="Search on Shopify App Store"
-                >
-                  <ExternalLink className="h-3.5 w-3.5" />
-                </a>
+                <div className="flex items-center gap-0.5">
+                  <LiveSearchTrigger keyword={w.word} variant="icon" />
+                  <a
+                    href={`https://apps.shopify.com/search?q=${encodeURIComponent(w.word)}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    title={`Search "${w.word}" on Shopify`}
+                    className="inline-flex items-center justify-center h-8 w-8 rounded-md hover:bg-accent transition-colors"
+                  >
+                    <ExternalLink className="h-4 w-4 text-muted-foreground" />
+                  </a>
+                </div>
               </TableCell>
             </TableRow>
           ))}
