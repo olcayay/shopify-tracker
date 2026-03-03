@@ -48,6 +48,8 @@ smarter rating score formula: ((rating-3)/2)^1.5 with floor at 3.0 ✅
 research projects — single page onboarding with snowball suggestions ✅
 research projects — loading shimmers, detail pages, compare page ✅
 
+unified tracking picker — add research projects + fix UX ✅
+
 feedback sayfası
 
 kime hangi durumda nasıl emailler gönderilebilinir.

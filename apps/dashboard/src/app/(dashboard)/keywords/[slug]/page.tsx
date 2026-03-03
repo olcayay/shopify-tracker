@@ -126,6 +126,7 @@ export default async function KeywordDetailPage({
           <TrackKeywordButton
             keywordId={keyword.id}
             keywordText={keyword.keyword}
+            keywordSlug={slug}
             initialTracked={keyword.isTrackedByAccount}
             trackedForApps={keyword.trackedForApps}
           />

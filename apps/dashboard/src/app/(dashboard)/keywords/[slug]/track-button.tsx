@@ -1,20 +1,26 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState } from "react";
 import { useAuth } from "@/lib/auth-context";
 import { Button } from "@/components/ui/button";
-import { Plus, Check } from "lucide-react";
+import { Plus, Check, Loader2 } from "lucide-react";
 import { ConfirmModal } from "@/components/confirm-modal";
+import {
+  AssignmentPickerModal,
+  type AssignmentItem,
+} from "@/components/assignment-picker-modal";
 
 export function TrackKeywordButton({
   keywordId,
   keywordText,
+  keywordSlug,
   initialTracked,
   trackedAppSlug,
   trackedForApps,
 }: {
   keywordId: number;
   keywordText: string;
+  keywordSlug: string;
   initialTracked: boolean;
   trackedAppSlug?: string;
   trackedForApps?: string[];
@@ -22,237 +28,173 @@ export function TrackKeywordButton({
   const { fetchWithAuth, user, refreshUser } = useAuth();
   const [tracked, setTracked] = useState(initialTracked);
   const [loading, setLoading] = useState(false);
-  const [showConfirm, setShowConfirm] = useState(false);
-  const [showAppPicker, setShowAppPicker] = useState(false);
-  const [myApps, setMyApps] = useState<any[]>([]);
-  const [selectedApps, setSelectedApps] = useState<Set<string>>(new Set());
+  const [showPicker, setShowPicker] = useState(false);
+  const [pickerItems, setPickerItems] = useState<AssignmentItem[]>([]);
+  const [initialChecked, setInitialChecked] = useState<Set<string>>(new Set());
   const [errorMsg, setErrorMsg] = useState("");
   const [showError, setShowError] = useState(false);
-  const pickerRef = useRef<HTMLDivElement>(null);
 
   const canEdit = user?.role === "owner" || user?.role === "editor";
 
-  useEffect(() => {
-    function handleClickOutside(e: MouseEvent) {
-      if (pickerRef.current && !pickerRef.current.contains(e.target as Node)) {
-        setShowAppPicker(false);
-        setSelectedApps(new Set());
-      }
-    }
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, []);
-
-  function toggleApp(slug: string) {
-    setSelectedApps((prev) => {
-      const next = new Set(prev);
-      if (next.has(slug)) {
-        next.delete(slug);
-      } else {
-        next.add(slug);
-      }
-      return next;
-    });
-  }
-
-  async function doTrackSelected() {
-    setLoading(true);
-    setShowAppPicker(false);
-    let anyOk = false;
-    for (const appSlug of selectedApps) {
+  async function handleClick() {
+    // Fast path: if trackedAppSlug prop and not yet tracked, add directly
+    if (trackedAppSlug && !tracked) {
+      setLoading(true);
       const res = await fetchWithAuth(
-        `/api/account/tracked-apps/${encodeURIComponent(appSlug)}/keywords`,
-        {
-          method: "POST",
-          body: JSON.stringify({ keyword: keywordText }),
-        }
+        `/api/account/tracked-apps/${encodeURIComponent(trackedAppSlug)}/keywords`,
+        { method: "POST", body: JSON.stringify({ keyword: keywordText }) }
       );
       if (res.ok) {
-        anyOk = true;
+        setTracked(true);
+        refreshUser();
       } else {
         const data = await res.json().catch(() => ({}));
         setErrorMsg(data.error || "Failed to track keyword");
         setShowError(true);
       }
+      setLoading(false);
+      return;
     }
-    if (anyOk) {
-      setTracked(true);
-      refreshUser();
-    }
-    setSelectedApps(new Set());
-    setLoading(false);
-  }
 
-  async function doTrackSingle(targetAppSlug: string) {
+    // Open picker: fetch apps, research projects, and membership in parallel
     setLoading(true);
-    const res = await fetchWithAuth(
-      `/api/account/tracked-apps/${encodeURIComponent(targetAppSlug)}/keywords`,
-      {
-        method: "POST",
-        body: JSON.stringify({ keyword: keywordText }),
+    try {
+      const [appsRes, projectsRes, membershipRes] = await Promise.all([
+        fetchWithAuth("/api/account/tracked-apps"),
+        fetchWithAuth("/api/research-projects"),
+        fetchWithAuth(`/api/keywords/${encodeURIComponent(keywordSlug)}/membership`),
+      ]);
+
+      const apps = appsRes.ok ? await appsRes.json() : [];
+      const projects = projectsRes.ok ? await projectsRes.json() : [];
+      const membership = membershipRes.ok
+        ? await membershipRes.json()
+        : { trackedAppSlugs: [], researchProjectIds: [] };
+
+      const items: AssignmentItem[] = [
+        ...apps.map((a: any) => ({
+          id: a.appSlug,
+          label: a.appName,
+          iconUrl: a.iconUrl,
+          type: "app" as const,
+        })),
+        ...projects.map((p: any) => ({
+          id: p.id,
+          label: p.name,
+          type: "research" as const,
+        })),
+      ];
+
+      if (items.length === 0) {
+        setErrorMsg("Follow an app or create a research project first");
+        setShowError(true);
+        setLoading(false);
+        return;
       }
-    );
-    if (res.ok) {
-      setTracked(true);
-      refreshUser();
-    } else {
-      const data = await res.json().catch(() => ({}));
-      setErrorMsg(data.error || "Failed to track keyword");
+
+      const checked = new Set<string>([
+        ...membership.trackedAppSlugs,
+        ...membership.researchProjectIds,
+      ]);
+
+      setPickerItems(items);
+      setInitialChecked(checked);
+      setShowPicker(true);
+    } catch {
+      setErrorMsg("Failed to load data");
       setShowError(true);
     }
     setLoading(false);
   }
 
-  async function doUntrack() {
-    setLoading(true);
-    const forApps = trackedForApps || [];
-    if (forApps.length > 0) {
-      for (const ta of forApps) {
-        await fetchWithAuth(
-          `/api/account/tracked-apps/${encodeURIComponent(ta)}/keywords/${keywordId}`,
-          { method: "DELETE" }
-        );
-      }
-      setTracked(false);
-      refreshUser();
-    } else {
-      const res = await fetchWithAuth(
-        `/api/account/tracked-keywords/${keywordId}`,
-        { method: "DELETE" }
-      );
-      if (res.ok) {
-        setTracked(false);
-        refreshUser();
-      }
-    }
-    setLoading(false);
-  }
+  async function handleSave(toAdd: AssignmentItem[], toRemove: AssignmentItem[]) {
+    const errors: string[] = [];
 
-  async function handleClick() {
-    if (tracked) {
-      setShowConfirm(true);
-      return;
-    }
+    const ops = [
+      ...toAdd.map((item) => async () => {
+        if (item.type === "app") {
+          const res = await fetchWithAuth(
+            `/api/account/tracked-apps/${encodeURIComponent(item.id)}/keywords`,
+            { method: "POST", body: JSON.stringify({ keyword: keywordText }) }
+          );
+          if (!res.ok) {
+            const data = await res.json().catch(() => ({}));
+            errors.push(data.error || `Failed to add to ${item.label}`);
+          }
+        } else {
+          const res = await fetchWithAuth(
+            `/api/research-projects/${item.id}/keywords`,
+            { method: "POST", body: JSON.stringify({ keyword: keywordText }) }
+          );
+          if (!res.ok) {
+            const data = await res.json().catch(() => ({}));
+            errors.push(data.error || `Failed to add to ${item.label}`);
+          }
+        }
+      }),
+      ...toRemove.map((item) => async () => {
+        if (item.type === "app") {
+          const res = await fetchWithAuth(
+            `/api/account/tracked-apps/${encodeURIComponent(item.id)}/keywords/${keywordId}`,
+            { method: "DELETE" }
+          );
+          if (!res.ok) {
+            const data = await res.json().catch(() => ({}));
+            errors.push(data.error || `Failed to remove from ${item.label}`);
+          }
+        } else {
+          const res = await fetchWithAuth(
+            `/api/research-projects/${item.id}/keywords/${keywordId}`,
+            { method: "DELETE" }
+          );
+          if (!res.ok) {
+            const data = await res.json().catch(() => ({}));
+            errors.push(data.error || `Failed to remove from ${item.label}`);
+          }
+        }
+      }),
+    ];
 
-    if (trackedAppSlug) {
-      doTrackSingle(trackedAppSlug);
-      return;
-    }
+    await Promise.all(ops.map((op) => op()));
 
-    // Need to pick which my-app(s)
-    const res = await fetchWithAuth("/api/account/tracked-apps");
-    if (res.ok) {
-      const apps = await res.json();
-      setMyApps(apps);
-      if (apps.length === 0) {
-        setErrorMsg("Follow an app first to track keywords");
-        setShowError(true);
-      } else if (apps.length === 1) {
-        doTrackSingle(apps[0].appSlug);
-      } else {
-        // Pre-select all apps that don't already track this keyword
-        const alreadyTracked = new Set(trackedForApps || []);
-        const preSelected = new Set<string>(
-          apps
-            .map((a: any) => a.appSlug as string)
-            .filter((s: string) => !alreadyTracked.has(s))
-        );
-        setSelectedApps(preSelected);
-        setShowAppPicker(true);
-      }
+    // Update tracked state: check if any app still has this keyword
+    const addedApps = toAdd.filter((i) => i.type === "app").length;
+    const removedApps = toRemove.filter((i) => i.type === "app").length;
+    const currentAppCount = (trackedForApps?.length || 0) + addedApps - removedApps;
+    setTracked(currentAppCount > 0);
+    refreshUser();
+
+    if (errors.length > 0) {
+      throw new Error(errors.join("; "));
     }
   }
 
   if (!canEdit) return null;
 
   return (
-    <div className="relative" ref={pickerRef}>
+    <>
       <Button
         variant={tracked ? "outline" : "default"}
         onClick={handleClick}
         disabled={loading}
       >
-        {tracked ? (
-          <>
-            <Check className="h-4 w-4 mr-1" /> Tracked
-          </>
+        {loading ? (
+          <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+        ) : tracked ? (
+          <Check className="h-4 w-4 mr-1" />
         ) : (
-          <>
-            <Plus className="h-4 w-4 mr-1" /> Track
-          </>
+          <Plus className="h-4 w-4 mr-1" />
         )}
+        {tracked ? "Tracked" : "Track"}
       </Button>
 
-      {showAppPicker && myApps.length > 0 && (
-        <div className="absolute right-0 top-full mt-1 z-50 w-64 bg-popover border rounded-md shadow-md">
-          <div className="px-3 py-2 text-xs text-muted-foreground border-b">
-            Track keyword for:
-          </div>
-          {myApps.map((a) => {
-            const alreadyTracked = (trackedForApps || []).includes(a.appSlug);
-            const isSelected = selectedApps.has(a.appSlug);
-            return (
-              <button
-                key={a.appSlug}
-                className={`w-full text-left px-3 py-2 text-sm flex items-center gap-2 ${
-                  alreadyTracked
-                    ? "opacity-50 cursor-default"
-                    : "hover:bg-accent"
-                }`}
-                onClick={() => {
-                  if (!alreadyTracked) toggleApp(a.appSlug);
-                }}
-              >
-                <div
-                  className={`h-4 w-4 rounded border shrink-0 flex items-center justify-center ${
-                    isSelected || alreadyTracked
-                      ? "bg-primary border-primary"
-                      : "border-input"
-                  }`}
-                >
-                  {(isSelected || alreadyTracked) && (
-                    <Check className="h-3 w-3 text-primary-foreground" />
-                  )}
-                </div>
-                {a.iconUrl && (
-                  <img
-                    src={a.iconUrl}
-                    alt=""
-                    className="h-5 w-5 rounded shrink-0"
-                  />
-                )}
-                <span className="flex-1 truncate">{a.appName}</span>
-                {alreadyTracked && (
-                  <span className="text-[10px] text-muted-foreground">
-                    Tracked
-                  </span>
-                )}
-              </button>
-            );
-          })}
-          <div className="px-3 py-2 border-t flex justify-end">
-            <Button
-              size="sm"
-              className="h-7 text-xs"
-              disabled={selectedApps.size === 0}
-              onClick={doTrackSelected}
-            >
-              Track ({selectedApps.size})
-            </Button>
-          </div>
-        </div>
-      )}
-
-      <ConfirmModal
-        open={showConfirm}
-        title="Stop Tracking Keyword"
-        description={`Are you sure you want to stop tracking "${keywordText}"?${trackedForApps && trackedForApps.length > 1 ? ` It will be removed from ${trackedForApps.length} apps.` : ""}`}
-        confirmLabel="Untrack"
-        onConfirm={() => {
-          setShowConfirm(false);
-          doUntrack();
-        }}
-        onCancel={() => setShowConfirm(false)}
+      <AssignmentPickerModal
+        open={showPicker}
+        onClose={() => setShowPicker(false)}
+        onSave={handleSave}
+        title={`Assign "${keywordText}"`}
+        items={pickerItems}
+        initialChecked={initialChecked}
       />
 
       <ConfirmModal
@@ -265,6 +207,6 @@ export function TrackKeywordButton({
         onConfirm={() => setShowError(false)}
         onCancel={() => setShowError(false)}
       />
-    </div>
+    </>
   );
 }

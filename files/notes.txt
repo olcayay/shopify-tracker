@@ -1,3 +1,25 @@
+Unified Tracking Picker — Add Research Projects + Fix UX:
+- Replaced old TrackKeywordButton inline dropdown + confirm-to-untrack modal with AssignmentPickerModal
+- Replaced old StarAppButton inline dropdown + confirm-to-remove modal with AssignmentPickerModal
+- New reusable AssignmentPickerModal component shows "Your Apps" and "Research Projects" sections with checkboxes
+- Pre-checks already-assigned items from new membership endpoints
+- Single Save button computes diff (toAdd/toRemove) and applies all changes
+- Backend: new GET /api/keywords/:slug/membership and GET /api/apps/:slug/membership endpoints
+  - Return which tracked apps and research projects contain the keyword/competitor
+  - Query accountTrackedKeywords + researchProjectKeywords (for keywords)
+  - Query accountCompetitorApps + researchProjectCompetitors (for apps)
+- TrackKeywordButton: new keywordSlug prop, opens picker on any click (tracked or not), fast-path kept for trackedAppSlug prop
+- StarAppButton: opens picker on any click (starred or not), excludes self from app list, fast-path kept for trackedAppSlug prop
+- Edge cases: zero items shows "Follow an app or create a research project first", partial save failure shows errors, loading spinner during save
+- Button visual: tracked/starred status based on app assignments only (not research-only membership)
+- Files changed:
+  - apps/api/src/routes/keywords.ts (membership endpoint)
+  - apps/api/src/routes/apps.ts (membership endpoint)
+  - apps/dashboard/src/components/assignment-picker-modal.tsx (new)
+  - apps/dashboard/src/app/(dashboard)/keywords/[slug]/track-button.tsx (redesigned)
+  - apps/dashboard/src/app/(dashboard)/keywords/[slug]/page.tsx (added keywordSlug prop)
+  - apps/dashboard/src/components/star-app-button.tsx (redesigned)
+
 Fix broken category links (PLA-18):
 - App scraper now registers missing categories at scrape time
   - After inserting app snapshot, loops through details.categories and upserts each slug into categories table

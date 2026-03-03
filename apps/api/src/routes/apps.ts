@@ -21,6 +21,8 @@ import {
   appReviewMetrics,
   appVisibilityScores,
   appPowerScores,
+  researchProjects,
+  researchProjectCompetitors,
 } from "@shopify-tracking/db";
 
 type Db = ReturnType<typeof createDb>;
@@ -437,6 +439,55 @@ export const appRoutes: FastifyPluginAsync = async (app) => {
       return { ...rest, minPaidPrice };
     });
   });
+
+  // GET /api/apps/:slug/membership — which tracked apps and research projects contain this app as competitor
+  app.get<{ Params: { slug: string } }>(
+    "/:slug/membership",
+    async (request, reply) => {
+      const { slug } = request.params;
+      const { accountId } = request.user;
+
+      const [appRow] = await db
+        .select({ slug: apps.slug })
+        .from(apps)
+        .where(eq(apps.slug, slug))
+        .limit(1);
+
+      if (!appRow) {
+        return reply.code(404).send({ error: "App not found" });
+      }
+
+      const [competitorRows, projectRows] = await Promise.all([
+        db
+          .select({ trackedAppSlug: accountCompetitorApps.trackedAppSlug })
+          .from(accountCompetitorApps)
+          .where(
+            and(
+              eq(accountCompetitorApps.accountId, accountId),
+              eq(accountCompetitorApps.appSlug, slug)
+            )
+          ),
+        db
+          .select({ projectId: researchProjectCompetitors.researchProjectId })
+          .from(researchProjectCompetitors)
+          .innerJoin(
+            researchProjects,
+            eq(researchProjects.id, researchProjectCompetitors.researchProjectId)
+          )
+          .where(
+            and(
+              eq(researchProjects.accountId, accountId),
+              eq(researchProjectCompetitors.appSlug, slug)
+            )
+          ),
+      ]);
+
+      return {
+        competitorForApps: competitorRows.map((r) => r.trackedAppSlug),
+        researchProjectIds: projectRows.map((r) => r.projectId),
+      };
+    }
+  );
 
   // GET /api/apps/:slug — app detail + latest snapshot + track status
   app.get<{ Params: { slug: string } }>("/:slug", async (request, reply) => {

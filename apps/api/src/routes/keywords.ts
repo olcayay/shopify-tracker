@@ -15,6 +15,8 @@ import {
   accountTrackedApps,
   accountCompetitorApps,
   keywordToSlug,
+  researchProjects,
+  researchProjectKeywords,
 } from "@shopify-tracking/db";
 import { computeKeywordOpportunity } from "@shopify-tracking/shared";
 import type { KeywordSearchApp } from "@shopify-tracking/shared";
@@ -556,6 +558,55 @@ export const keywordRoutes: FastifyPluginAsync = async (app) => {
       return {
         suggestions: row?.suggestions || [],
         scrapedAt: row?.scrapedAt || null,
+      };
+    }
+  );
+
+  // GET /api/keywords/:slug/membership — which apps and research projects contain this keyword
+  app.get<{ Params: { slug: string } }>(
+    "/:slug/membership",
+    async (request, reply) => {
+      const { slug } = request.params;
+      const { accountId } = request.user;
+
+      const [kw] = await db
+        .select({ id: trackedKeywords.id })
+        .from(trackedKeywords)
+        .where(eq(trackedKeywords.slug, slug))
+        .limit(1);
+
+      if (!kw) {
+        return reply.code(404).send({ error: "Keyword not found" });
+      }
+
+      const [trackedAppRows, projectRows] = await Promise.all([
+        db
+          .select({ trackedAppSlug: accountTrackedKeywords.trackedAppSlug })
+          .from(accountTrackedKeywords)
+          .where(
+            and(
+              eq(accountTrackedKeywords.accountId, accountId),
+              eq(accountTrackedKeywords.keywordId, kw.id)
+            )
+          ),
+        db
+          .select({ projectId: researchProjectKeywords.researchProjectId })
+          .from(researchProjectKeywords)
+          .innerJoin(
+            researchProjects,
+            eq(researchProjects.id, researchProjectKeywords.researchProjectId)
+          )
+          .where(
+            and(
+              eq(researchProjects.accountId, accountId),
+              eq(researchProjectKeywords.keywordId, kw.id)
+            )
+          ),
+      ]);
+
+      return {
+        trackedAppSlugs: trackedAppRows.map((r) => r.trackedAppSlug),
+        researchProjectIds: projectRows.map((r) => r.projectId),
       };
     }
   );
