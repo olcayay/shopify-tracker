@@ -40,6 +40,8 @@ app visibility & power scores (compute job + API + dashboard) ✅
 
 restructure visibility (account-scoped) & power (leaf categories only) ✅
 
+score breakdown popovers (hover) ✅
+
 feedback sayfası
 
 kime hangi durumda nasıl emailler gönderilebilinir.

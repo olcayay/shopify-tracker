@@ -441,3 +441,22 @@ Restructure Visibility (account-scoped) & Power (leaf categories only):
   - Category app table: removed Vis column, kept only Pwr column
 - Files modified: packages/db/src/schema/app-scores.ts, packages/shared/src/app-power.ts, packages/shared/src/index.ts, apps/scraper/src/jobs/compute-app-scores.ts, apps/api/src/routes/apps.ts, apps/api/src/routes/categories.ts, apps/api/src/routes/account.ts, apps/dashboard/src/lib/api.ts, apps/dashboard/src/app/(dashboard)/apps/[slug]/page.tsx, apps/dashboard/src/app/(dashboard)/apps/[slug]/competitors-section.tsx, apps/dashboard/src/app/(dashboard)/competitors/page.tsx, apps/dashboard/src/app/(dashboard)/categories/[slug]/app-results.tsx, apps/dashboard/src/app/(dashboard)/categories/[slug]/page.tsx
 - Files created: packages/db/src/migrations/0040_restructure_visibility_scores.sql
+
+Score Breakdown Popovers (Hover):
+- Hover-triggered Radix Popover components that explain how each score (Power 0-100, Visibility 0-100) was calculated
+- PowerScorePopover: shows 4-component breakdown with ScoreBar visuals — Rating(35%), Review Auth.(25%), Category Rank(25%), Momentum(15%), footer explains normalization
+- WeightedPowerPopover: shows per-category list with power score + app count weight + percentage, footer explains weighted average formula
+- VisibilityScorePopover: 5-step formula explanation — keyword count, contribution formula, rank weight table (1/log₂(rank+1)), page penalty (70% drop/page), raw score sum
+- API enrichment: competitor endpoints now return visibilityKeywordCount, visibilityRaw, powerCategories[] alongside existing visibilityScore and weightedPowerScore
+  - Power SQL query updated to JOIN categories table for c.title
+  - Visibility query expanded to select keywordCount + visibilityRaw
+  - Both global (/account/competitors) and per-app (/account/tracked-apps/:slug/competitors) endpoints enriched
+- Integration points:
+  - Category page (/categories/[slug]): Pwr column wraps score in PowerScorePopover, page.tsx passes ratingScore/reviewScore/categoryScore/momentumScore maps alongside powerScore
+  - App overview (/apps/[slug]): App Scores card wraps each visibility row in VisibilityScorePopover and each power row in PowerScorePopover, entire row is cursor-help clickable
+  - Per-app competitors (/apps/[slug]/competitors): Vis column uses VisibilityScorePopover, Pwr column uses WeightedPowerPopover
+  - Global competitors (/competitors): same wrapping as per-app
+- Visual design: dotted underline on hoverable score values (border-b border-dotted), cursor-help, consistent color coding (green ≥60, amber 30-59, red <30)
+- No DB schema changes — all data from existing tables (app_visibility_scores, app_power_scores, categories, category_snapshots)
+- Files created: apps/dashboard/src/components/power-score-popover.tsx, apps/dashboard/src/components/visibility-score-popover.tsx
+- Files modified: apps/api/src/routes/account.ts, apps/dashboard/src/app/(dashboard)/categories/[slug]/page.tsx, apps/dashboard/src/app/(dashboard)/categories/[slug]/app-results.tsx, apps/dashboard/src/app/(dashboard)/apps/[slug]/page.tsx, apps/dashboard/src/app/(dashboard)/apps/[slug]/competitors-section.tsx, apps/dashboard/src/app/(dashboard)/competitors/page.tsx

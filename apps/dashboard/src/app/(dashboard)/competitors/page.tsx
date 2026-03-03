@@ -24,6 +24,8 @@ import { AppSearchBar } from "@/components/app-search-bar";
 import { VelocityCell } from "@/components/velocity-cell";
 import { MomentumBadge } from "@/components/momentum-badge";
 import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
+import { VisibilityScorePopover } from "@/components/visibility-score-popover";
+import { WeightedPowerPopover } from "@/components/power-score-popover";
 
 type SortKey =
   | "name"
@@ -419,16 +421,37 @@ export default function CompetitorsPage() {
         </TableCell>
         {isCol("visibility") && (
           <TableCell className="text-sm">
-            <span className="text-blue-600 dark:text-blue-400 font-medium">
-              {c.visibilityScore != null ? c.visibilityScore : "\u2014"}
-            </span>
+            {c.visibilityScore != null ? (
+              <VisibilityScorePopover
+                visibilityScore={c.visibilityScore}
+                keywordCount={c.visibilityKeywordCount ?? 0}
+                visibilityRaw={c.visibilityRaw ?? 0}
+              >
+                <span className="text-blue-600 dark:text-blue-400 font-medium cursor-help border-b border-dotted border-blue-400/50">
+                  {c.visibilityScore}
+                </span>
+              </VisibilityScorePopover>
+            ) : (
+              <span className="text-muted-foreground">{"\u2014"}</span>
+            )}
           </TableCell>
         )}
         {isCol("power") && (
           <TableCell className="text-sm">
-            <span className="text-purple-600 dark:text-purple-400 font-medium">
-              {c.weightedPowerScore != null ? c.weightedPowerScore : "\u2014"}
-            </span>
+            {c.weightedPowerScore != null && c.powerCategories?.length > 0 ? (
+              <WeightedPowerPopover
+                weightedPowerScore={c.weightedPowerScore}
+                powerCategories={c.powerCategories}
+              >
+                <span className="text-purple-600 dark:text-purple-400 font-medium cursor-help border-b border-dotted border-purple-400/50">
+                  {c.weightedPowerScore}
+                </span>
+              </WeightedPowerPopover>
+            ) : (
+              <span className="text-purple-600 dark:text-purple-400 font-medium">
+                {c.weightedPowerScore != null ? c.weightedPowerScore : "\u2014"}
+              </span>
+            )}
           </TableCell>
         )}
         {isCol("similarity") && (

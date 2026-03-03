@@ -23,6 +23,7 @@ import {
   Search,
 } from "lucide-react";
 import { TablePagination } from "@/components/pagination";
+import { PowerScorePopover } from "@/components/power-score-popover";
 
 interface App {
   position: number;
@@ -61,7 +62,13 @@ export function CategoryAppResults({
   minPaidPrices?: Record<string, number | null>;
   reverseSimilarCounts?: Record<string, number>;
   isHubPage?: boolean;
-  categoryScores?: { powerScore: Record<string, number> };
+  categoryScores?: {
+    powerScore: Record<string, number>;
+    ratingScore: Record<string, number>;
+    reviewScore: Record<string, number>;
+    categoryScore: Record<string, number>;
+    momentumScore: Record<string, number>;
+  };
 }) {
   const { formatDateOnly } = useFormatDate();
   const [search, setSearch] = useState("");
@@ -372,7 +379,15 @@ export function CategoryAppResults({
                     {categoryScores && (
                       <TableCell className="text-sm font-medium">
                         {categoryScores.powerScore[app.slug] != null ? (
-                          <span className="text-purple-600 dark:text-purple-400">{categoryScores.powerScore[app.slug]}</span>
+                          <PowerScorePopover
+                            powerScore={categoryScores.powerScore[app.slug]}
+                            ratingScore={categoryScores.ratingScore[app.slug] ?? 0}
+                            reviewScore={categoryScores.reviewScore[app.slug] ?? 0}
+                            categoryScore={categoryScores.categoryScore[app.slug] ?? 0}
+                            momentumScore={categoryScores.momentumScore[app.slug] ?? 0}
+                          >
+                            <span className="text-purple-600 dark:text-purple-400 cursor-help border-b border-dotted border-purple-400/50">{categoryScores.powerScore[app.slug]}</span>
+                          </PowerScorePopover>
                         ) : "\u2014"}
                       </TableCell>
                     )}

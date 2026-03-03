@@ -1020,7 +1020,7 @@ export const appRoutes: FastifyPluginAsync = async (app) => {
       })
       .from(appPowerScores)
       .innerJoin(categories, eq(categories.slug, appPowerScores.categorySlug))
-      .where(eq(appPowerScores.appSlug, slug))
+      .where(and(eq(appPowerScores.appSlug, slug), eq(categories.isListingPage, true)))
       .orderBy(desc(appPowerScores.computedAt))
       .limit(50);
 

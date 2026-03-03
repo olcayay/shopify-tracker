@@ -24,6 +24,8 @@ import { CompetitorSuggestions } from "@/components/competitor-suggestions";
 import { VelocityCell } from "@/components/velocity-cell";
 import { MomentumBadge } from "@/components/momentum-badge";
 import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
+import { VisibilityScorePopover } from "@/components/visibility-score-popover";
+import { WeightedPowerPopover } from "@/components/power-score-popover";
 
 type SortKey = "order" | "name" | "similarity" | "rating" | "reviews" | "v7d" | "v30d" | "v90d" | "momentum" | "pricing" | "minPaidPrice" | "launchedDate" | "lastChange" | "featured" | "ads" | "ranked" | "similar" | "catRank" | "visibility" | "power";
 type SortDir = "asc" | "desc";
@@ -633,14 +635,31 @@ export function CompetitorsSection({ appSlug }: { appSlug: string }) {
                   </div>
                 </TableCell>
                 {isCol("visibility") && <TableCell className="text-sm">
-                  {isPending ? <Skeleton className="h-4 w-10" /> : (
-                    <span className="text-blue-600 dark:text-blue-400 font-medium">
-                      {comp.visibilityScore != null ? comp.visibilityScore : "\u2014"}
-                    </span>
+                  {isPending ? <Skeleton className="h-4 w-10" /> : comp.visibilityScore != null ? (
+                    <VisibilityScorePopover
+                      visibilityScore={comp.visibilityScore}
+                      keywordCount={comp.visibilityKeywordCount ?? 0}
+                      visibilityRaw={comp.visibilityRaw ?? 0}
+                    >
+                      <span className="text-blue-600 dark:text-blue-400 font-medium cursor-help border-b border-dotted border-blue-400/50">
+                        {comp.visibilityScore}
+                      </span>
+                    </VisibilityScorePopover>
+                  ) : (
+                    <span className="text-muted-foreground">{"\u2014"}</span>
                   )}
                 </TableCell>}
                 {isCol("power") && <TableCell className="text-sm">
-                  {isPending ? <Skeleton className="h-4 w-10" /> : (
+                  {isPending ? <Skeleton className="h-4 w-10" /> : comp.weightedPowerScore != null && comp.powerCategories?.length > 0 ? (
+                    <WeightedPowerPopover
+                      weightedPowerScore={comp.weightedPowerScore}
+                      powerCategories={comp.powerCategories}
+                    >
+                      <span className="text-purple-600 dark:text-purple-400 font-medium cursor-help border-b border-dotted border-purple-400/50">
+                        {comp.weightedPowerScore}
+                      </span>
+                    </WeightedPowerPopover>
+                  ) : (
                     <span className="text-purple-600 dark:text-purple-400 font-medium">
                       {comp.weightedPowerScore != null ? comp.weightedPowerScore : "\u2014"}
                     </span>

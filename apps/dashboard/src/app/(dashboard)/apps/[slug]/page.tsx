@@ -35,6 +35,8 @@ import {
   Zap,
   TrendingUp,
 } from "lucide-react";
+import { VisibilityScorePopover } from "@/components/visibility-score-popover";
+import { PowerScorePopover } from "@/components/power-score-popover";
 
 // --- Helper functions ---
 
@@ -756,13 +758,20 @@ export default async function AppOverviewPage({
                     <span className="text-xs font-medium text-blue-700 dark:text-blue-300">Visibility</span>
                   </div>
                   {(scoresData.visibility as any[]).map((v: any) => (
-                    <div key={v.trackedAppSlug} className="rounded-lg bg-blue-50 dark:bg-blue-950/30 p-2.5 flex items-center justify-between">
-                      <div>
-                        <p className="text-xs text-muted-foreground truncate">{v.trackedAppSlug.replace(/-/g, " ").replace(/\b\w/g, (c: string) => c.toUpperCase())}</p>
-                        <p className="text-[10px] text-muted-foreground">{v.keywordCount} keywords</p>
+                    <VisibilityScorePopover
+                      key={v.trackedAppSlug}
+                      visibilityScore={v.visibilityScore}
+                      keywordCount={v.keywordCount}
+                      visibilityRaw={parseFloat(v.visibilityRaw) || 0}
+                    >
+                      <div className="rounded-lg bg-blue-50 dark:bg-blue-950/30 p-2.5 flex items-center justify-between cursor-help">
+                        <div>
+                          <p className="text-xs text-muted-foreground truncate">{v.trackedAppSlug.replace(/-/g, " ").replace(/\b\w/g, (c: string) => c.toUpperCase())}</p>
+                          <p className="text-[10px] text-muted-foreground">{v.keywordCount} keywords</p>
+                        </div>
+                        <p className="text-2xl font-bold text-blue-600 dark:text-blue-400">{v.visibilityScore}</p>
                       </div>
-                      <p className="text-2xl font-bold text-blue-600 dark:text-blue-400">{v.visibilityScore}</p>
-                    </div>
+                    </VisibilityScorePopover>
                   ))}
                 </div>
               )}
@@ -779,15 +788,24 @@ export default async function AppOverviewPage({
                     )}
                   </div>
                   {(scoresData.power as any[]).map((p: any) => (
-                    <div key={p.categorySlug} className="rounded-lg bg-purple-50 dark:bg-purple-950/30 p-2.5 flex items-center justify-between">
-                      <div>
-                        <p className="text-xs text-muted-foreground truncate">{p.categoryTitle || p.categorySlug.replace(/-/g, " ").replace(/\b\w/g, (c: string) => c.toUpperCase())}</p>
-                        <p className="text-[10px] text-muted-foreground">
-                          rating {((Number(p.ratingScore) || 0) * 100).toFixed(0)}% &middot; reviews {((Number(p.reviewScore) || 0) * 100).toFixed(0)}%
-                        </p>
+                    <PowerScorePopover
+                      key={p.categorySlug}
+                      powerScore={p.powerScore}
+                      ratingScore={Number(p.ratingScore) || 0}
+                      reviewScore={Number(p.reviewScore) || 0}
+                      categoryScore={Number(p.categoryScore) || 0}
+                      momentumScore={Number(p.momentumScore) || 0}
+                    >
+                      <div className="rounded-lg bg-purple-50 dark:bg-purple-950/30 p-2.5 flex items-center justify-between cursor-help">
+                        <div>
+                          <p className="text-xs text-muted-foreground truncate">{p.categoryTitle || p.categorySlug.replace(/-/g, " ").replace(/\b\w/g, (c: string) => c.toUpperCase())}</p>
+                          <p className="text-[10px] text-muted-foreground">
+                            rating {((Number(p.ratingScore) || 0) * 100).toFixed(0)}% &middot; reviews {((Number(p.reviewScore) || 0) * 100).toFixed(0)}%
+                          </p>
+                        </div>
+                        <p className="text-2xl font-bold text-purple-600 dark:text-purple-400">{p.powerScore}</p>
                       </div>
-                      <p className="text-2xl font-bold text-purple-600 dark:text-purple-400">{p.powerScore}</p>
-                    </div>
+                    </PowerScorePopover>
                   ))}
                 </div>
               )}

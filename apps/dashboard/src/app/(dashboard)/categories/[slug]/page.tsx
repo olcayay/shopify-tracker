@@ -79,6 +79,18 @@ export default async function CategoryDetailPage({
         powerScore: Object.fromEntries(
           (categoryScoresData.scores as any[]).map((s: any) => [s.appSlug, s.powerScore])
         ) as Record<string, number>,
+        ratingScore: Object.fromEntries(
+          (categoryScoresData.scores as any[]).map((s: any) => [s.appSlug, Number(s.ratingScore) || 0])
+        ) as Record<string, number>,
+        reviewScore: Object.fromEntries(
+          (categoryScoresData.scores as any[]).map((s: any) => [s.appSlug, Number(s.reviewScore) || 0])
+        ) as Record<string, number>,
+        categoryScore: Object.fromEntries(
+          (categoryScoresData.scores as any[]).map((s: any) => [s.appSlug, Number(s.categoryScore) || 0])
+        ) as Record<string, number>,
+        momentumScore: Object.fromEntries(
+          (categoryScoresData.scores as any[]).map((s: any) => [s.appSlug, Number(s.momentumScore) || 0])
+        ) as Record<string, number>,
       }
     : undefined;
 
