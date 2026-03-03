@@ -68,6 +68,8 @@ export function CategoryAppResults({
     reviewScore: Record<string, number>;
     categoryScore: Record<string, number>;
     momentumScore: Record<string, number>;
+    position: Record<string, number>;
+    totalApps: number | null;
   };
 }) {
   const { formatDateOnly } = useFormatDate();
@@ -385,6 +387,8 @@ export function CategoryAppResults({
                             reviewScore={categoryScores.reviewScore[app.slug] ?? 0}
                             categoryScore={categoryScores.categoryScore[app.slug] ?? 0}
                             momentumScore={categoryScores.momentumScore[app.slug] ?? 0}
+                            position={categoryScores.position[app.slug]}
+                            totalApps={categoryScores.totalApps}
                           >
                             <span className="text-purple-600 dark:text-purple-400 cursor-help border-b border-dotted border-purple-400/50">{categoryScores.powerScore[app.slug]}</span>
                           </PowerScorePopover>

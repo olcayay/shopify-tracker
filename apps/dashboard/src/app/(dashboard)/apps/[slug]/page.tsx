@@ -795,10 +795,17 @@ export default async function AppOverviewPage({
                       reviewScore={Number(p.reviewScore) || 0}
                       categoryScore={Number(p.categoryScore) || 0}
                       momentumScore={Number(p.momentumScore) || 0}
+                      position={p.position}
+                      totalApps={p.totalApps}
                     >
                       <div className="rounded-lg bg-purple-50 dark:bg-purple-950/30 p-2.5 flex items-center justify-between cursor-help">
                         <div>
-                          <p className="text-xs text-muted-foreground truncate">{p.categoryTitle || p.categorySlug.replace(/-/g, " ").replace(/\b\w/g, (c: string) => c.toUpperCase())}</p>
+                          <p className="text-xs text-muted-foreground truncate">
+                            {p.categoryTitle || p.categorySlug.replace(/-/g, " ").replace(/\b\w/g, (c: string) => c.toUpperCase())}
+                            {p.position != null && p.totalApps != null && (
+                              <span className="ml-1 text-purple-500/70">(#{p.position}/{p.totalApps})</span>
+                            )}
+                          </p>
                           <p className="text-[10px] text-muted-foreground">
                             rating {((Number(p.ratingScore) || 0) * 100).toFixed(0)}% &middot; reviews {((Number(p.reviewScore) || 0) * 100).toFixed(0)}%
                           </p>

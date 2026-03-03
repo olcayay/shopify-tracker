@@ -45,6 +45,8 @@ export function PowerScorePopover({
   reviewScore,
   categoryScore,
   momentumScore,
+  position,
+  totalApps,
   children,
 }: {
   powerScore: number;
@@ -52,6 +54,8 @@ export function PowerScorePopover({
   reviewScore: number;
   categoryScore: number;
   momentumScore: number;
+  position?: number | null;
+  totalApps?: number | null;
   children: React.ReactNode;
 }) {
   return (
@@ -69,6 +73,11 @@ export function PowerScorePopover({
             <h4 className="text-sm font-semibold flex items-center gap-1.5">
               <TrendingUp className="h-4 w-4 text-purple-500" />
               Power Score
+              {position != null && totalApps != null && (
+                <span className="text-xs font-normal text-muted-foreground">
+                  (#{position}/{totalApps})
+                </span>
+              )}
             </h4>
             <span
               className={`inline-flex items-center justify-center h-7 min-w-[2.5rem] px-2 rounded-full text-sm font-bold tabular-nums ${
@@ -103,13 +112,23 @@ export function PowerScorePopover({
   );
 }
 
+interface PowerCategory {
+  title: string;
+  powerScore: number;
+  appCount: number;
+  ratingScore: number;
+  reviewScore: number;
+  categoryScore: number;
+  momentumScore: number;
+}
+
 export function WeightedPowerPopover({
   weightedPowerScore,
   powerCategories,
   children,
 }: {
   weightedPowerScore: number;
-  powerCategories: { title: string; powerScore: number; appCount: number }[];
+  powerCategories: PowerCategory[];
   children: React.ReactNode;
 }) {
   const totalAppCount = powerCategories.reduce((sum, c) => sum + c.appCount, 0);
@@ -122,7 +141,7 @@ export function WeightedPowerPopover({
           side="left"
           align="start"
           sideOffset={8}
-          className="z-50 w-80 rounded-lg border bg-popover p-4 shadow-lg animate-in fade-in-0 zoom-in-95 text-popover-foreground"
+          className="z-50 w-80 max-h-[70vh] overflow-y-auto rounded-lg border bg-popover p-4 shadow-lg animate-in fade-in-0 zoom-in-95 text-popover-foreground"
         >
           {/* Header */}
           <div className="flex items-center justify-between mb-3">
@@ -143,30 +162,39 @@ export function WeightedPowerPopover({
             </span>
           </div>
 
-          {/* Per-category list */}
-          <div className="space-y-1.5 mb-3">
+          {/* Per-category breakdowns */}
+          <div className="space-y-3 mb-3">
             {powerCategories.map((cat) => {
               const weightPct = totalAppCount > 0 ? Math.round((cat.appCount / totalAppCount) * 100) : 0;
               return (
-                <div key={cat.title} className="flex items-center gap-2 text-xs">
-                  <span className="flex-1 text-muted-foreground truncate">{cat.title}</span>
-                  <span
-                    className={`w-7 text-right tabular-nums font-medium ${
-                      cat.powerScore >= 60
-                        ? "text-green-600 dark:text-green-400"
-                        : cat.powerScore >= 30
-                          ? "text-amber-600 dark:text-amber-400"
-                          : "text-red-600 dark:text-red-400"
-                    }`}
-                  >
-                    {cat.powerScore}
-                  </span>
-                  <span className="w-10 text-right tabular-nums text-muted-foreground/50 text-[10px]">
-                    {cat.appCount} apps
-                  </span>
-                  <span className="w-8 text-right tabular-nums text-muted-foreground/50 text-[10px]">
-                    {weightPct}%
-                  </span>
+                <div key={cat.title} className="space-y-1">
+                  {/* Category header */}
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="font-medium text-foreground truncate flex-1">
+                      {cat.title}
+                      <span className="text-muted-foreground/60 ml-1">
+                        ({cat.appCount} apps, {weightPct}%)
+                      </span>
+                    </span>
+                    <span
+                      className={`ml-2 text-sm font-bold tabular-nums ${
+                        cat.powerScore >= 60
+                          ? "text-green-600 dark:text-green-400"
+                          : cat.powerScore >= 30
+                            ? "text-amber-600 dark:text-amber-400"
+                            : "text-red-600 dark:text-red-400"
+                      }`}
+                    >
+                      {cat.powerScore}
+                    </span>
+                  </div>
+                  {/* Score bars */}
+                  <div className="space-y-1 pl-1">
+                    <ScoreBar label="Rating" value={cat.ratingScore} weight={0.35} />
+                    <ScoreBar label="Review Auth." value={cat.reviewScore} weight={0.25} />
+                    <ScoreBar label="Category Rank" value={cat.categoryScore} weight={0.25} />
+                    <ScoreBar label="Momentum" value={cat.momentumScore} weight={0.15} />
+                  </div>
                 </div>
               );
             })}

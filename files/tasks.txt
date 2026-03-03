@@ -41,6 +41,7 @@ app visibility & power scores (compute job + API + dashboard) ✅
 restructure visibility (account-scoped) & power (leaf categories only) ✅
 
 score breakdown popovers (hover) ✅
+score popover enhancements (position/totalApps, full category breakdowns) ✅
 
 feedback sayfası
 

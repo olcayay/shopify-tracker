@@ -388,6 +388,18 @@ export const categoryRoutes: FastifyPluginAsync = async (app) => {
         : [];
       const appMap = new Map(appRows.map((r) => [r.slug, r]));
 
+      // Get totalApps from latest category snapshot
+      const [catSnap] = await db
+        .execute(
+          sql`
+          SELECT app_count FROM category_snapshots
+          WHERE category_slug = ${slug} AND app_count IS NOT NULL
+          ORDER BY scraped_at DESC LIMIT 1
+        `
+        )
+        .then((res: any) => (res as any).rows ?? res);
+      const totalApps: number | null = catSnap?.app_count ?? null;
+
       let scores = powRows.map((pow) => {
         const appInfo = appMap.get(pow.appSlug);
         return {
@@ -406,7 +418,7 @@ export const categoryRoutes: FastifyPluginAsync = async (app) => {
       scores.sort((a, b) => b.powerScore - a.powerScore);
       scores = scores.slice(0, limitNum);
 
-      return { scores, computedAt };
+      return { scores, computedAt, totalApps };
     }
   );
 

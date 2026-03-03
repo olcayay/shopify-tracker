@@ -1032,22 +1032,10 @@ export const appRoutes: FastifyPluginAsync = async (app) => {
       }
     }
 
-    const power = [...powByCategory.entries()].map(([categorySlug, r]) => ({
-      categorySlug,
-      categoryTitle: r.categoryTitle,
-      powerScore: r.powerScore,
-      powerRaw: r.powerRaw,
-      ratingScore: r.ratingScore,
-      reviewScore: r.reviewScore,
-      categoryScore: r.categoryScore,
-      momentumScore: r.momentumScore,
-      computedAt: r.computedAt,
-    }));
-
-    // Compute weighted power score
-    // Get appCount per category from latest category_snapshots
-    const catSlugs = power.map((p) => p.categorySlug);
-    let weightedPowerScore = 0;
+    // Get appCount + rank position per category
+    const catSlugs = [...powByCategory.keys()];
+    const catSizeMap = new Map<string, number>();
+    const catPositionMap = new Map<string, number>();
     if (catSlugs.length > 0) {
       const catSizeRows: { category_slug: string; app_count: number }[] = await db
         .execute(
@@ -1062,7 +1050,47 @@ export const appRoutes: FastifyPluginAsync = async (app) => {
         )
         .then((res: any) => (res as any).rows ?? res);
 
-      const catSizeMap = new Map(catSizeRows.map((r) => [r.category_slug, r.app_count]));
+      for (const r of catSizeRows) {
+        catSizeMap.set(r.category_slug, r.app_count);
+      }
+
+      // Fetch latest category ranking position for this app
+      const rankRows: { category_slug: string; position: number }[] = await db
+        .execute(
+          sql`
+          SELECT DISTINCT ON (category_slug)
+            category_slug, position
+          FROM app_category_rankings
+          WHERE app_slug = ${slug}
+            AND category_slug IN (${sql.join(catSlugs.map((s) => sql`${s}`), sql`, `)})
+            AND position IS NOT NULL
+          ORDER BY category_slug, scraped_at DESC
+        `
+        )
+        .then((res: any) => (res as any).rows ?? res);
+
+      for (const r of rankRows) {
+        catPositionMap.set(r.category_slug, r.position);
+      }
+    }
+
+    const power = [...powByCategory.entries()].map(([categorySlug, r]) => ({
+      categorySlug,
+      categoryTitle: r.categoryTitle,
+      powerScore: r.powerScore,
+      powerRaw: r.powerRaw,
+      ratingScore: r.ratingScore,
+      reviewScore: r.reviewScore,
+      categoryScore: r.categoryScore,
+      momentumScore: r.momentumScore,
+      computedAt: r.computedAt,
+      position: catPositionMap.get(categorySlug) ?? null,
+      totalApps: catSizeMap.get(categorySlug) ?? null,
+    }));
+
+    // Compute weighted power score
+    let weightedPowerScore = 0;
+    if (power.length > 0) {
       const inputs = power.map((p) => ({
         powerScore: p.powerScore,
         appCount: catSizeMap.get(p.categorySlug) || 1,

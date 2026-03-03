@@ -1136,11 +1136,12 @@ export const accountRoutes: FastifyPluginAsync = async (app) => {
 
     // Batch-fetch weighted power scores per competitor
     const weightedPowerMap = new Map<string, number>();
-    const powerCategoriesMap = new Map<string, { title: string; powerScore: number; appCount: number }[]>();
+    const powerCategoriesMap = new Map<string, { title: string; powerScore: number; appCount: number; ratingScore: number; reviewScore: number; categoryScore: number; momentumScore: number }[]>();
     if (competitorSlugs.length > 0) {
       try {
         const powRows: any[] = await db.execute(sql`
-          SELECT p.app_slug, p.power_score, cs.app_count, p.category_slug, c.title AS category_title
+          SELECT p.app_slug, p.power_score, p.rating_score, p.review_score, p.category_score, p.momentum_score,
+                 cs.app_count, p.category_slug, c.title AS category_title
           FROM app_power_scores p
           LEFT JOIN categories c ON c.slug = p.category_slug
           LEFT JOIN LATERAL (
@@ -1168,6 +1169,10 @@ export const accountRoutes: FastifyPluginAsync = async (app) => {
             title: r.category_title || r.category_slug,
             powerScore: r.power_score,
             appCount: r.app_count ?? 1,
+            ratingScore: parseFloat(r.rating_score) || 0,
+            reviewScore: parseFloat(r.review_score) || 0,
+            categoryScore: parseFloat(r.category_score) || 0,
+            momentumScore: parseFloat(r.momentum_score) || 0,
           });
         }
         for (const [appSlug, inputs] of appPowerInputs) {
@@ -1656,11 +1661,12 @@ export const accountRoutes: FastifyPluginAsync = async (app) => {
 
       // Batch-fetch weighted power scores per competitor
       const weightedPowerMap2 = new Map<string, number>();
-      const powerCategoriesMap2 = new Map<string, { title: string; powerScore: number; appCount: number }[]>();
+      const powerCategoriesMap2 = new Map<string, { title: string; powerScore: number; appCount: number; ratingScore: number; reviewScore: number; categoryScore: number; momentumScore: number }[]>();
       if (competitorSlugs.length > 0) {
         try {
           const powRows: any[] = await db.execute(sql`
-            SELECT p.app_slug, p.power_score, cs.app_count, p.category_slug, c.title AS category_title
+            SELECT p.app_slug, p.power_score, p.rating_score, p.review_score, p.category_score, p.momentum_score,
+                   cs.app_count, p.category_slug, c.title AS category_title
             FROM app_power_scores p
             LEFT JOIN categories c ON c.slug = p.category_slug
             LEFT JOIN LATERAL (
@@ -1687,6 +1693,10 @@ export const accountRoutes: FastifyPluginAsync = async (app) => {
               title: r.category_title || r.category_slug,
               powerScore: r.power_score,
               appCount: r.app_count ?? 1,
+              ratingScore: parseFloat(r.rating_score) || 0,
+              reviewScore: parseFloat(r.review_score) || 0,
+              categoryScore: parseFloat(r.category_score) || 0,
+              momentumScore: parseFloat(r.momentum_score) || 0,
             });
           }
           for (const [appSlug, inputs] of appPowerInputs) {

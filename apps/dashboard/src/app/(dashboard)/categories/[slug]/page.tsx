@@ -74,6 +74,7 @@ export default async function CategoryDetailPage({
   ]);
 
   // Build score lookup maps (power only, visibility is now account-scoped)
+  const scoreTotalApps: number | null = categoryScoresData?.totalApps ?? null;
   const categoryScores = (categoryScoresData?.scores?.length > 0)
     ? {
         powerScore: Object.fromEntries(
@@ -91,6 +92,11 @@ export default async function CategoryDetailPage({
         momentumScore: Object.fromEntries(
           (categoryScoresData.scores as any[]).map((s: any) => [s.appSlug, Number(s.momentumScore) || 0])
         ) as Record<string, number>,
+        // Position = rank in sorted scores (already sorted by powerScore desc from API)
+        position: Object.fromEntries(
+          (categoryScoresData.scores as any[]).map((s: any, i: number) => [s.appSlug, i + 1])
+        ) as Record<string, number>,
+        totalApps: scoreTotalApps,
       }
     : undefined;
 
