@@ -1572,13 +1572,27 @@ function FeatureCoverage({
           <TableRow>
             <TableHead className="w-[220px] min-w-[160px]">Feature</TableHead>
             {relevantCompetitors.map((comp) => (
-              <TableHead key={comp.slug} className="text-center px-2">
-                <Link href={`/apps/${comp.slug}`} className="inline-flex flex-col items-center gap-1 group" title={comp.name}>
+              <TableHead key={comp.slug} className="text-center px-2 min-w-[72px]">
+                <Link href={`/apps/${comp.slug}`} className="inline-flex flex-col items-center gap-0.5 group" title={comp.name}>
                   {comp.iconUrl ? (
                     <img src={comp.iconUrl} alt={comp.name} className="h-7 w-7 rounded group-hover:ring-2 ring-primary/50 transition-all" />
                   ) : (
                     <div className="h-7 w-7 rounded bg-muted group-hover:ring-2 ring-primary/50 transition-all" />
                   )}
+                  <span className="text-[10px] font-medium leading-tight max-w-[68px] truncate">{comp.name}</span>
+                  <div className="flex items-center gap-0.5 text-[9px] text-muted-foreground leading-none">
+                    {comp.averageRating != null && (
+                      <>
+                        <svg viewBox="0 0 24 24" className="h-2.5 w-2.5 text-yellow-500 shrink-0" fill="currentColor">
+                          <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
+                        </svg>
+                        <span>{Number(comp.averageRating).toFixed(1)}</span>
+                      </>
+                    )}
+                    {comp.ratingCount != null && (
+                      <span>({comp.ratingCount})</span>
+                    )}
+                  </div>
                 </Link>
               </TableHead>
             ))}
@@ -1590,6 +1604,7 @@ function FeatureCoverage({
               <TableRow className="bg-muted/40 hover:bg-muted/40">
                 <TableCell colSpan={relevantCompetitors.length + 1} className="py-1.5">
                   <span className="text-xs font-semibold text-foreground">{sub.title}</span>
+                  <span className="text-[10px] text-muted-foreground ml-1.5">({sub.totalChecks})</span>
                 </TableCell>
               </TableRow>
               {sub.features.map((f) => (
