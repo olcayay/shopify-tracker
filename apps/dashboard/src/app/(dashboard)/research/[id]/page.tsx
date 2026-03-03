@@ -1546,37 +1546,23 @@ function FeatureCoverage({
     [competitors, competitorSet]
   );
 
-  // Group features by categoryType → subcategoryTitle
+  // Group features by subcategory, sorted by total checks
   const grouped = useMemo(() => {
-    const typeMap = new Map<string, Map<string, typeof features>>();
+    const subMap = new Map<string, typeof features>();
 
     for (const f of features) {
-      const catType = f.categoryType || "other";
       const subTitle = f.subcategoryTitle || "Other";
-      if (!typeMap.has(catType)) typeMap.set(catType, new Map());
-      const subMap = typeMap.get(catType)!;
       if (!subMap.has(subTitle)) subMap.set(subTitle, []);
       subMap.get(subTitle)!.push(f);
     }
 
-    const result: { type: string; categoryTitle: string; totalChecks: number; subcategories: { title: string; features: typeof features }[] }[] = [];
-
-    for (const [type, subMap] of typeMap) {
-      const firstFeature = [...subMap.values()][0]?.[0];
-      const categoryTitle = firstFeature?.categoryTitle || type;
-      const subcategories = [...subMap.entries()]
-        .map(([title, feats]) => ({ title, features: feats.sort((a, b) => b.count - a.count) }))
-        .sort((a, b) => {
-          const sumA = a.features.reduce((s, f) => s + f.count, 0);
-          const sumB = b.features.reduce((s, f) => s + f.count, 0);
-          return sumB - sumA;
-        });
-      const totalChecks = subcategories.reduce((s, sub) => s + sub.features.reduce((s2, f) => s2 + f.count, 0), 0);
-      result.push({ type, categoryTitle, totalChecks, subcategories });
-    }
-
-    result.sort((a, b) => b.totalChecks - a.totalChecks);
-    return result;
+    return [...subMap.entries()]
+      .map(([title, feats]) => ({
+        title,
+        features: feats.sort((a, b) => b.count - a.count),
+        totalChecks: feats.reduce((s, f) => s + f.count, 0),
+      }))
+      .sort((a, b) => b.totalChecks - a.totalChecks);
   }, [features]);
 
   return (
@@ -1599,37 +1585,33 @@ function FeatureCoverage({
           </TableRow>
         </TableHeader>
         <TableBody>
-          {grouped.map((group) => (
-            group.subcategories.map((sub, si) => (
-              <React.Fragment key={`${group.type}-${sub.title}`}>
-                {/* Subcategory header row */}
-                <TableRow className="bg-muted/40 hover:bg-muted/40">
-                  <TableCell colSpan={relevantCompetitors.length + 1} className="py-1.5">
-                    <span className="text-xs font-semibold text-foreground">{sub.title}</span>
+          {grouped.map((sub) => (
+            <React.Fragment key={sub.title}>
+              <TableRow className="bg-muted/40 hover:bg-muted/40">
+                <TableCell colSpan={relevantCompetitors.length + 1} className="py-1.5">
+                  <span className="text-xs font-semibold text-foreground">{sub.title}</span>
+                </TableCell>
+              </TableRow>
+              {sub.features.map((f) => (
+                <TableRow key={f.feature}>
+                  <TableCell className="text-sm truncate pl-6" title={f.title}>
+                    <Link href={`/features/${encodeURIComponent(f.feature)}`} className="hover:underline">
+                      {f.title}
+                    </Link>
+                    <span className="ml-1 text-xs text-muted-foreground">({f.count}/{f.total})</span>
                   </TableCell>
-                </TableRow>
-                {/* Feature rows */}
-                {sub.features.map((f) => (
-                  <TableRow key={f.feature}>
-                    <TableCell className="text-sm truncate pl-6" title={f.title}>
-                      <Link href={`/features/${encodeURIComponent(f.feature)}`} className="hover:underline">
-                        {f.title}
-                      </Link>
-                      <span className="ml-1 text-xs text-muted-foreground">({f.count}/{f.total})</span>
+                  {relevantCompetitors.map((comp) => (
+                    <TableCell key={comp.slug} className="text-center px-2">
+                      {f.competitors.includes(comp.slug) ? (
+                        <Check className="h-4 w-4 text-green-600 mx-auto" />
+                      ) : (
+                        <span className="text-muted-foreground/30">{"\u2014"}</span>
+                      )}
                     </TableCell>
-                    {relevantCompetitors.map((comp) => (
-                      <TableCell key={comp.slug} className="text-center px-2">
-                        {f.competitors.includes(comp.slug) ? (
-                          <Check className="h-4 w-4 text-green-600 mx-auto" />
-                        ) : (
-                          <span className="text-muted-foreground/30">{"\u2014"}</span>
-                        )}
-                      </TableCell>
-                    ))}
-                  </TableRow>
-                ))}
-              </React.Fragment>
-            ))
+                  ))}
+                </TableRow>
+              ))}
+            </React.Fragment>
           ))}
         </TableBody>
       </Table>
