@@ -444,7 +444,7 @@ export default function ResearchProjectPage() {
       {/* Layer 3: Category Landscape */}
       {hasRichData && data.categories.length > 0 && (
         <SectionWrapper id="section-categories" title="Category Landscape" icon={LayoutGrid} subtitle="Categories where your competitors are listed">
-          <CategoryLandscape categories={data.categories} competitors={data.competitors} />
+          <CategoryLandscape categories={data.categories} competitors={data.competitors} keywordRankings={data.keywordRankings} />
         </SectionWrapper>
       )}
 
@@ -592,8 +592,8 @@ function SummaryCards({ data }: { data: ResearchData }) {
           </SummaryLink>
           {top3.map(c => (
             <SummaryLink key={c.slug} href="section-competitors">
-              <span className="text-xs text-muted-foreground w-16 truncate">{c.name}</span>
-              <div className="flex-1 mx-2 h-1.5 bg-muted rounded-full overflow-hidden">
+              <span className="text-xs text-muted-foreground w-24 truncate">{c.name}</span>
+              <div className="flex-1 mx-2 h-1 bg-muted rounded-full overflow-hidden">
                 <div className="h-full bg-gradient-to-r from-orange-500 to-amber-400 rounded-full" style={{ width: `${((c.powerScore ?? 0) / maxPower) * 100}%` }} />
               </div>
               <span className="text-xs font-medium w-6 text-right">{c.powerScore}</span>
@@ -1458,37 +1458,69 @@ function MarketLanguage({
 // ─── Category Landscape ──────────────────────────────────────
 
 function CategoryLandscape({
-  categories, competitors,
+  categories, competitors, keywordRankings,
 }: {
-  categories: ResearchData["categories"]; competitors: ResearchData["competitors"];
+  categories: ResearchData["categories"]; competitors: ResearchData["competitors"]; keywordRankings: ResearchData["keywordRankings"];
 }) {
-  const compNameMap = useMemo(
-    () => new Map(competitors.map((c) => [c.slug, c.name])),
+  const compMap = useMemo(
+    () => new Map(competitors.map((c) => [c.slug, c])),
     [competitors]
   );
 
+  const rankedKeywordCounts = useMemo(() => {
+    const counts = new Map<string, number>();
+    for (const appMap of Object.values(keywordRankings)) {
+      for (const slug of Object.keys(appMap)) {
+        counts.set(slug, (counts.get(slug) || 0) + 1);
+      }
+    }
+    return counts;
+  }, [keywordRankings]);
+
   return (
-    <div className="space-y-3">
+    <div className="space-y-5">
       {categories.map((cat) => (
-        <div key={cat.slug} className="py-2">
-          <div className="flex items-center justify-between mb-1">
+        <div key={cat.slug}>
+          <div className="flex items-center justify-between mb-2">
             <Link href={`/categories/${cat.slug}`} className="font-medium text-sm hover:underline">
               {cat.title}
             </Link>
             <span className="text-xs text-muted-foreground">
-              {cat.competitorCount} of {cat.total} competitors
+              {cat.competitorCount}/{cat.total} apps
             </span>
           </div>
-          <div className="text-xs text-muted-foreground pl-3 border-l-2 border-muted">
-            {cat.competitors.map((c, i) => (
-              <span key={c.slug}>
-                {i > 0 && ", "}
-                #{c.position}{" "}
-                <Link href={`/apps/${c.slug}`} className="hover:underline text-foreground">
-                  {compNameMap.get(c.slug) || c.slug}
-                </Link>
-              </span>
-            ))}
+          <div className="space-y-1.5 pl-3 border-l-2 border-muted">
+            {[...cat.competitors].sort((a, b) => a.position - b.position).map((c) => {
+              const comp = compMap.get(c.slug);
+              if (!comp) return null;
+              return (
+                <div key={c.slug} className="flex items-center gap-3 py-1">
+                  <span className="text-xs font-mono text-muted-foreground w-8 text-right shrink-0">#{c.position}</span>
+                  <Link href={`/apps/${c.slug}`} className="flex items-center gap-2 min-w-0 flex-1 group">
+                    {comp.iconUrl ? (
+                      <img src={comp.iconUrl} alt={comp.name} className="h-6 w-6 rounded shrink-0" />
+                    ) : (
+                      <div className="h-6 w-6 rounded bg-muted shrink-0" />
+                    )}
+                    <span className="text-sm font-medium truncate group-hover:underline">{comp.name}</span>
+                  </Link>
+                  <div className="flex items-center gap-3 shrink-0 text-xs text-muted-foreground">
+                    {comp.averageRating != null && (
+                      <span className="flex items-center gap-0.5">
+                        <Star className="h-3 w-3 fill-yellow-400 text-yellow-400" />
+                        {comp.averageRating.toFixed(1)}
+                      </span>
+                    )}
+                    {comp.ratingCount != null && (
+                      <span className="w-14 text-right">{comp.ratingCount.toLocaleString()} rev</span>
+                    )}
+                    {(rankedKeywordCounts.get(c.slug) ?? 0) > 0 && (
+                      <span className="w-12 text-right">{rankedKeywordCounts.get(c.slug)} kw</span>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
           </div>
         </div>
       ))}

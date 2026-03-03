@@ -20,6 +20,7 @@ import { AdminScraperTrigger } from "@/components/admin-scraper-trigger";
 import { KeywordAppResults } from "./app-results";
 import { AdHeatmap } from "@/components/ad-heatmap";
 import { KeywordSuggestionsTrigger } from "@/components/keyword-suggestions-trigger";
+import { KeywordPendingPoller } from "./pending-poller";
 
 export default async function KeywordDetailPage({
   params,
@@ -131,6 +132,9 @@ export default async function KeywordDetailPage({
         </div>
       </div>
 
+      {!snapshot && <KeywordPendingPoller slug={slug} />}
+
+      {snapshot && <>
       {/* Shopify Built-in Features */}
       {builtInApps.length > 0 && (
         <Card>
@@ -396,6 +400,7 @@ export default async function KeywordDetailPage({
         </Card>
         );
       })()}
+      </>}
     </div>
   );
 }
