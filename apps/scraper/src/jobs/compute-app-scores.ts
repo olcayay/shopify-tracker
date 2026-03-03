@@ -194,7 +194,7 @@ export async function computeAppScores(
         sql`
         SELECT slug, average_rating, rating_count
         FROM apps
-        WHERE is_tracked = true
+        WHERE average_rating IS NOT NULL OR rating_count IS NOT NULL
       `
       )
       .then((res: any) => (res as any).rows ?? res);
