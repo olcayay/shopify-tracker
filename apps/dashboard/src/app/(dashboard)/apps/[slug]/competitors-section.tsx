@@ -500,10 +500,10 @@ export function CompetitorsSection({ appSlug }: { appSlug: string }) {
                 App <SortIcon col="name" />
               </TableHead>
               {isCol("visibility") && <TableHead className="cursor-pointer select-none" onClick={() => toggleSort("visibility")}>
-                <Tooltip><TooltipTrigger asChild><span>Vis <SortIcon col="visibility" /></span></TooltipTrigger><TooltipContent>Visibility score for your tracked keywords (0-100)</TooltipContent></Tooltip>
+                <Tooltip><TooltipTrigger asChild><span>Visibility <SortIcon col="visibility" /></span></TooltipTrigger><TooltipContent>Visibility score for your tracked keywords (0-100)</TooltipContent></Tooltip>
               </TableHead>}
               {isCol("power") && <TableHead className="cursor-pointer select-none" onClick={() => toggleSort("power")}>
-                <Tooltip><TooltipTrigger asChild><span>Pwr <SortIcon col="power" /></span></TooltipTrigger><TooltipContent>Weighted aggregate power score (0-100)</TooltipContent></Tooltip>
+                <Tooltip><TooltipTrigger asChild><span>Power <SortIcon col="power" /></span></TooltipTrigger><TooltipContent>Weighted aggregate power score (0-100)</TooltipContent></Tooltip>
               </TableHead>}
               {isCol("similarity") && <TableHead className="cursor-pointer select-none" onClick={() => toggleSort("similarity")}>
                 <Tooltip><TooltipTrigger asChild><span>Similarity <SortIcon col="similarity" /></span></TooltipTrigger><TooltipContent>Similarity score based on categories, features, keywords, and text</TooltipContent></Tooltip>

@@ -1143,7 +1143,7 @@ export const accountRoutes: FastifyPluginAsync = async (app) => {
           SELECT p.app_slug, p.power_score, p.rating_score, p.review_score, p.category_score, p.momentum_score,
                  cs.app_count, p.category_slug, c.title AS category_title
           FROM app_power_scores p
-          LEFT JOIN categories c ON c.slug = p.category_slug
+          INNER JOIN categories c ON c.slug = p.category_slug AND c.is_listing_page = true
           LEFT JOIN LATERAL (
             SELECT s.app_count FROM category_snapshots s
             WHERE s.category_slug = p.category_slug
@@ -1668,7 +1668,7 @@ export const accountRoutes: FastifyPluginAsync = async (app) => {
             SELECT p.app_slug, p.power_score, p.rating_score, p.review_score, p.category_score, p.momentum_score,
                    cs.app_count, p.category_slug, c.title AS category_title
             FROM app_power_scores p
-            LEFT JOIN categories c ON c.slug = p.category_slug
+            INNER JOIN categories c ON c.slug = p.category_slug AND c.is_listing_page = true
             LEFT JOIN LATERAL (
               SELECT s.app_count FROM category_snapshots s
               WHERE s.category_slug = p.category_slug

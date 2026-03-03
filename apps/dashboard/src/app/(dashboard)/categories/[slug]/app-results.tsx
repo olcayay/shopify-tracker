@@ -269,7 +269,7 @@ export function CategoryAppResults({
                   onClick={() => toggleSort("power_score")}
                   title="Power Score: Market authority and competitive strength (0-100)"
                 >
-                  Pwr <SortIcon col="power_score" />
+                  Power <SortIcon col="power_score" />
                 </TableHead>
               )}
               <TableHead className="w-10" />
