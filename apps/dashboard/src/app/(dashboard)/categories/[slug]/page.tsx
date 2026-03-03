@@ -73,12 +73,9 @@ export default async function CategoryDetailPage({
     getCategoryScores(slug).catch(() => ({ scores: [], computedAt: null })),
   ]);
 
-  // Build score lookup maps
+  // Build score lookup maps (power only, visibility is now account-scoped)
   const categoryScores = (categoryScoresData?.scores?.length > 0)
     ? {
-        visibilityScore: Object.fromEntries(
-          (categoryScoresData.scores as any[]).map((s: any) => [s.appSlug, s.visibilityScore])
-        ) as Record<string, number>,
         powerScore: Object.fromEntries(
           (categoryScoresData.scores as any[]).map((s: any) => [s.appSlug, s.powerScore])
         ) as Record<string, number>,

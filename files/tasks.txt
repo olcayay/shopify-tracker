@@ -38,6 +38,8 @@ system admin user impersonation (PLA-26) ✅
 
 app visibility & power scores (compute job + API + dashboard) ✅
 
+restructure visibility (account-scoped) & power (leaf categories only) ✅
+
 feedback sayfası
 
 kime hangi durumda nasıl emailler gönderilebilinir.

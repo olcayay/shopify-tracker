@@ -415,3 +415,29 @@ App Visibility & App Power Scores:
 - System Admin: compute_app_scores added to validTypes, SCRAPER_TYPES (cronHours: [9]), runs filter expanded to accept all types
 - Files created: packages/db/src/schema/app-scores.ts, packages/db/src/migrations/0039_app_scores.sql, packages/shared/src/app-visibility.ts, packages/shared/src/app-power.ts, apps/scraper/src/jobs/compute-app-scores.ts
 - Files modified: packages/db/src/index.ts, packages/db/src/schema/scrape-runs.ts, packages/db/src/migrations/meta/_journal.json, packages/shared/src/index.ts, apps/scraper/src/queue.ts, apps/scraper/src/scheduler.ts, apps/scraper/src/process-job.ts, apps/api/src/routes/apps.ts, apps/api/src/routes/categories.ts, apps/api/src/routes/system-admin.ts, apps/dashboard/src/lib/api.ts, apps/dashboard/src/app/(dashboard)/apps/[slug]/page.tsx, apps/dashboard/src/app/(dashboard)/categories/[slug]/page.tsx, apps/dashboard/src/app/(dashboard)/categories/[slug]/app-results.tsx, apps/dashboard/src/app/(dashboard)/system-admin/scraper/page.tsx, files/tasks.txt
+
+Restructure Visibility (account-scoped) & Power (leaf categories only):
+- Visibility scores restructured from per-category to per-account per-tracked-app context
+  - Different tracked apps have different keywords, so same competitor gets different visibility scores per context
+  - Schema: app_visibility_scores drops categorySlug, adds accountId (FK accounts.id) + trackedAppSlug (FK apps.slug)
+  - Unique index: (accountId, trackedAppSlug, appSlug, computedAt)
+  - Migration 0040: DROP + CREATE (no production data yet)
+- Power scores now computed only for leaf categories (isListingPage=true)
+  - Schema unchanged, compute job filters to leaf categories only
+- New shared utility: computeWeightedPowerScore(inputs: { powerScore, appCount }[])
+  - Weighted average: sum(powerScore_i * appCount_i) / sum(appCount_i) — bigger categories weigh more
+- Compute job restructured into two phases:
+  - Phase A (Visibility): queries distinct (accountId, trackedAppSlug) from account_tracked_keywords, gets keyword IDs and competitor slugs per context, computes and normalizes visibility within each context
+  - Phase B (Power): filters to leaf categories only, rest unchanged
+- API changes:
+  - GET /api/apps/:slug/scores: returns { visibility: [...by trackedAppSlug], power: [...by categorySlug], weightedPowerScore }
+  - GET /api/apps/:slug/scores/history: accepts trackedApp query param for visibility, category for power
+  - GET /api/categories/:slug/scores: returns only power scores (no visibility)
+  - GET /api/account/competitors: enriched with visibilityScore + weightedPowerScore per competitor
+  - GET /api/account/tracked-apps/:slug/competitors: same enrichment, visibility scoped to tracked app
+- Dashboard:
+  - App overview "App Scores" card: visibility section (per tracked-app context) + power section (per leaf category) + weighted aggregate
+  - Competitor tables (per-app + global): new Vis (blue) and Pwr (purple) toggleable/sortable columns
+  - Category app table: removed Vis column, kept only Pwr column
+- Files modified: packages/db/src/schema/app-scores.ts, packages/shared/src/app-power.ts, packages/shared/src/index.ts, apps/scraper/src/jobs/compute-app-scores.ts, apps/api/src/routes/apps.ts, apps/api/src/routes/categories.ts, apps/api/src/routes/account.ts, apps/dashboard/src/lib/api.ts, apps/dashboard/src/app/(dashboard)/apps/[slug]/page.tsx, apps/dashboard/src/app/(dashboard)/apps/[slug]/competitors-section.tsx, apps/dashboard/src/app/(dashboard)/competitors/page.tsx, apps/dashboard/src/app/(dashboard)/categories/[slug]/app-results.tsx, apps/dashboard/src/app/(dashboard)/categories/[slug]/page.tsx
+- Files created: packages/db/src/migrations/0040_restructure_visibility_scores.sql

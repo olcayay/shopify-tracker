@@ -27,6 +27,8 @@ import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip
 
 type SortKey =
   | "name"
+  | "visibility"
+  | "power"
   | "similarity"
   | "rating"
   | "reviews"
@@ -46,6 +48,8 @@ type SortKey =
 type SortDir = "asc" | "desc";
 
 const TOGGLEABLE_COLUMNS: { key: string; label: string; tip?: string }[] = [
+  { key: "visibility", label: "Visibility", tip: "How discoverable this app is for your tracked keywords (0-100)" },
+  { key: "power", label: "Power", tip: "Weighted aggregate market authority score (0-100)" },
   { key: "similarity", label: "Similarity", tip: "Similarity score based on categories, features, keywords, and text" },
   { key: "rating", label: "Rating" },
   { key: "reviews", label: "Reviews" },
@@ -251,6 +255,12 @@ export default function CompetitorsPage() {
           cmp = avgRank(a) - avgRank(b);
           break;
         }
+        case "visibility":
+          cmp = (a.visibilityScore ?? -1) - (b.visibilityScore ?? -1);
+          break;
+        case "power":
+          cmp = (a.weightedPowerScore ?? -1) - (b.weightedPowerScore ?? -1);
+          break;
       }
       return sortDir === "asc" ? cmp : -cmp;
     });
@@ -286,6 +296,16 @@ export default function CompetitorsPage() {
         >
           App <SortIcon col="name" />
         </TableHead>
+        {isCol("visibility") && (
+          <TableHead className="cursor-pointer select-none" onClick={() => toggleSort("visibility")}>
+            <Tooltip><TooltipTrigger asChild><span>Vis <SortIcon col="visibility" /></span></TooltipTrigger><TooltipContent>Visibility score for your tracked keywords (0-100)</TooltipContent></Tooltip>
+          </TableHead>
+        )}
+        {isCol("power") && (
+          <TableHead className="cursor-pointer select-none" onClick={() => toggleSort("power")}>
+            <Tooltip><TooltipTrigger asChild><span>Pwr <SortIcon col="power" /></span></TooltipTrigger><TooltipContent>Weighted aggregate power score (0-100)</TooltipContent></Tooltip>
+          </TableHead>
+        )}
         {isCol("similarity") && (
           <TableHead className="cursor-pointer select-none" onClick={() => toggleSort("similarity")}>
             <Tooltip><TooltipTrigger asChild><span>Similarity <SortIcon col="similarity" /></span></TooltipTrigger><TooltipContent>Similarity score based on categories, features, keywords, and text</TooltipContent></Tooltip>
@@ -397,6 +417,20 @@ export default function CompetitorsPage() {
             </div>
           </div>
         </TableCell>
+        {isCol("visibility") && (
+          <TableCell className="text-sm">
+            <span className="text-blue-600 dark:text-blue-400 font-medium">
+              {c.visibilityScore != null ? c.visibilityScore : "\u2014"}
+            </span>
+          </TableCell>
+        )}
+        {isCol("power") && (
+          <TableCell className="text-sm">
+            <span className="text-purple-600 dark:text-purple-400 font-medium">
+              {c.weightedPowerScore != null ? c.weightedPowerScore : "\u2014"}
+            </span>
+          </TableCell>
+        )}
         {isCol("similarity") && (
           <TableCell className="text-sm">
             {c.similarityScore ? (

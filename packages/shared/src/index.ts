@@ -91,6 +91,7 @@ export {
   POWER_WEIGHTS,
   computeCategoryRankScore,
   computeAppPower,
+  computeWeightedPowerScore,
 } from "./app-power.js";
 export type {
   CategoryRankInput,

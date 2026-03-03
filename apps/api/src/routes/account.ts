@@ -30,7 +30,10 @@ import {
   keywordTagAssignments,
   appCategoryRankings,
   appReviewMetrics,
+  appVisibilityScores,
+  appPowerScores,
 } from "@shopify-tracking/db";
+import { computeWeightedPowerScore } from "@shopify-tracking/shared";
 import { requireRole } from "../middleware/authorize.js";
 
 const INTERACTIVE_QUEUE_NAME = "scraper-jobs-interactive";
@@ -1096,6 +1099,69 @@ export const accountRoutes: FastifyPluginAsync = async (app) => {
       } catch { /* table may not exist yet */ }
     }
 
+    // Batch-fetch visibility scores per (trackedAppSlug, competitorSlug) for this account
+    const visibilityMap = new Map<string, number>(); // key: "trackedApp:competitor"
+    if (competitorSlugs.length > 0) {
+      try {
+        const visRows = await db
+          .select({
+            trackedAppSlug: appVisibilityScores.trackedAppSlug,
+            appSlug: appVisibilityScores.appSlug,
+            visibilityScore: appVisibilityScores.visibilityScore,
+          })
+          .from(appVisibilityScores)
+          .where(
+            and(
+              eq(appVisibilityScores.accountId, accountId),
+              inArray(appVisibilityScores.appSlug, competitorSlugs),
+              sql`${appVisibilityScores.computedAt} = (
+                SELECT MAX(v2.computed_at) FROM app_visibility_scores v2
+                WHERE v2.account_id = ${appVisibilityScores.accountId}
+                  AND v2.tracked_app_slug = ${appVisibilityScores.trackedAppSlug}
+                  AND v2.app_slug = ${appVisibilityScores.appSlug}
+              )`,
+            )
+          );
+        for (const r of visRows) {
+          visibilityMap.set(`${r.trackedAppSlug}:${r.appSlug}`, r.visibilityScore);
+        }
+      } catch { /* table may not exist yet */ }
+    }
+
+    // Batch-fetch weighted power scores per competitor
+    const weightedPowerMap = new Map<string, number>();
+    if (competitorSlugs.length > 0) {
+      try {
+        const powRows: any[] = await db.execute(sql`
+          SELECT p.app_slug, p.power_score, cs.app_count, p.category_slug
+          FROM app_power_scores p
+          LEFT JOIN LATERAL (
+            SELECT s.app_count FROM category_snapshots s
+            WHERE s.category_slug = p.category_slug
+            ORDER BY s.scraped_at DESC LIMIT 1
+          ) cs ON true
+          WHERE p.app_slug IN (${sql.join(competitorSlugs.map(s => sql`${s}`), sql`, `)})
+            AND p.computed_at = (
+              SELECT MAX(p2.computed_at) FROM app_power_scores p2
+              WHERE p2.app_slug = p.app_slug AND p2.category_slug = p.category_slug
+            )
+        `).then((res: any) => (res as any).rows ?? res);
+
+        // Group by app, compute weighted average
+        const appPowerInputs = new Map<string, { powerScore: number; appCount: number }[]>();
+        for (const r of powRows) {
+          if (!appPowerInputs.has(r.app_slug)) appPowerInputs.set(r.app_slug, []);
+          appPowerInputs.get(r.app_slug)!.push({
+            powerScore: r.power_score,
+            appCount: r.app_count ?? 1,
+          });
+        }
+        for (const [appSlug, inputs] of appPowerInputs) {
+          weightedPowerMap.set(appSlug, computeWeightedPowerScore(inputs));
+        }
+      } catch { /* table may not exist yet */ }
+    }
+
     // Attach latest snapshot summary for each competitor
     const result = await Promise.all(
       rows.map(async (row) => {
@@ -1130,6 +1196,8 @@ export const accountRoutes: FastifyPluginAsync = async (app) => {
           adKeywords: adKeywordMap.get(row.appSlug) ?? 0,
           featuredSections: featuredCountMap.get(row.appSlug) ?? 0,
           reverseSimilarCount: reverseSimilarMap.get(row.appSlug) ?? 0,
+          visibilityScore: visibilityMap.get(`${row.trackedAppSlug}:${row.appSlug}`) ?? null,
+          weightedPowerScore: weightedPowerMap.get(row.appSlug) ?? null,
           categories: appCategories.map((c: any) => {
             const slug = c.url ? c.url.replace(/.*\/categories\//, "").replace(/\/.*/, "") : null;
             return { type: c.type || "primary", title: c.title, slug };
@@ -1534,6 +1602,68 @@ export const accountRoutes: FastifyPluginAsync = async (app) => {
         }
       }
 
+      // Batch-fetch visibility scores for this tracked-app context
+      const visibilityMap2 = new Map<string, number>();
+      if (competitorSlugs.length > 0) {
+        try {
+          const visRows = await db
+            .select({
+              appSlug: appVisibilityScores.appSlug,
+              visibilityScore: appVisibilityScores.visibilityScore,
+            })
+            .from(appVisibilityScores)
+            .where(
+              and(
+                eq(appVisibilityScores.accountId, accountId),
+                eq(appVisibilityScores.trackedAppSlug, slug),
+                inArray(appVisibilityScores.appSlug, competitorSlugs),
+                sql`${appVisibilityScores.computedAt} = (
+                  SELECT MAX(v2.computed_at) FROM app_visibility_scores v2
+                  WHERE v2.account_id = ${appVisibilityScores.accountId}
+                    AND v2.tracked_app_slug = ${appVisibilityScores.trackedAppSlug}
+                    AND v2.app_slug = ${appVisibilityScores.appSlug}
+                )`,
+              )
+            );
+          for (const r of visRows) {
+            visibilityMap2.set(r.appSlug, r.visibilityScore);
+          }
+        } catch { /* table may not exist yet */ }
+      }
+
+      // Batch-fetch weighted power scores per competitor
+      const weightedPowerMap2 = new Map<string, number>();
+      if (competitorSlugs.length > 0) {
+        try {
+          const powRows: any[] = await db.execute(sql`
+            SELECT p.app_slug, p.power_score, cs.app_count
+            FROM app_power_scores p
+            LEFT JOIN LATERAL (
+              SELECT s.app_count FROM category_snapshots s
+              WHERE s.category_slug = p.category_slug
+              ORDER BY s.scraped_at DESC LIMIT 1
+            ) cs ON true
+            WHERE p.app_slug IN (${sql.join(competitorSlugs.map(s => sql`${s}`), sql`, `)})
+              AND p.computed_at = (
+                SELECT MAX(p2.computed_at) FROM app_power_scores p2
+                WHERE p2.app_slug = p.app_slug AND p2.category_slug = p.category_slug
+              )
+          `).then((res: any) => (res as any).rows ?? res);
+
+          const appPowerInputs = new Map<string, { powerScore: number; appCount: number }[]>();
+          for (const r of powRows) {
+            if (!appPowerInputs.has(r.app_slug)) appPowerInputs.set(r.app_slug, []);
+            appPowerInputs.get(r.app_slug)!.push({
+              powerScore: r.power_score,
+              appCount: r.app_count ?? 1,
+            });
+          }
+          for (const [appSlug, inputs] of appPowerInputs) {
+            weightedPowerMap2.set(appSlug, computeWeightedPowerScore(inputs));
+          }
+        } catch { /* table may not exist yet */ }
+      }
+
       const result = await Promise.all(
         allRows.map(async (row) => {
           const [snapshot] = await db
@@ -1565,6 +1695,8 @@ export const accountRoutes: FastifyPluginAsync = async (app) => {
             lastChangeAt: change?.detectedAt || null,
             featuredSections: featuredCountMap.get(row.appSlug) ?? 0,
             adKeywords: adKeywordCountMap.get(row.appSlug) ?? 0,
+            visibilityScore: visibilityMap2.get(row.appSlug) ?? null,
+            weightedPowerScore: weightedPowerMap2.get(row.appSlug) ?? null,
             categories: appCategories.map((c: any) => {
               const catSlug = c.url ? c.url.replace(/.*\/categories\//, "").replace(/\/.*/, "") : null;
               return { type: c.type || "primary", title: c.title, slug: catSlug };

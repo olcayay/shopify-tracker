@@ -140,7 +140,7 @@ export default async function AppOverviewPage({
         getAppAdSightings(slug).catch(() => ({ sightings: [] })),
         getAppSimilarApps(slug).catch(() => ({ direct: [], reverse: [], secondDegree: [] })),
         getAppsMinPaidPrices([slug]).catch(() => ({})),
-        getAppScores(slug).catch(() => ({ scores: [] })),
+        getAppScores(slug).catch(() => ({ visibility: [], power: [], weightedPowerScore: 0 })),
       ]);
   } catch {
     return <p className="text-muted-foreground">App not found.</p>;
@@ -746,43 +746,51 @@ export default async function AppOverviewPage({
           </CardTitle>
         </CardHeader>
         <CardContent>
-          {(scoresData?.scores || []).length > 0 ? (
-            <div className="space-y-3">
-              {(scoresData.scores as any[]).map((s: any) => (
-                <div key={s.categorySlug} className="space-y-2">
-                  <p className="text-xs font-medium text-muted-foreground truncate">
-                    {s.categorySlug.replace(/-/g, " ").replace(/\b\w/g, (c: string) => c.toUpperCase())}
-                  </p>
-                  <div className="grid grid-cols-2 gap-3">
-                    {/* Visibility */}
-                    <div className="rounded-lg bg-blue-50 dark:bg-blue-950/30 p-2.5">
-                      <div className="flex items-center gap-1.5 mb-1">
-                        <Eye className="h-3.5 w-3.5 text-blue-500" />
-                        <span className="text-[11px] font-medium text-blue-700 dark:text-blue-300">Visibility</span>
-                      </div>
-                      <p className="text-2xl font-bold text-blue-600 dark:text-blue-400">
-                        {s.visibility?.visibilityScore ?? "—"}
-                      </p>
-                      <p className="text-[10px] text-muted-foreground mt-0.5">
-                        {s.visibility?.keywordCount ?? 0} keywords
-                      </p>
-                    </div>
-                    {/* Power */}
-                    <div className="rounded-lg bg-purple-50 dark:bg-purple-950/30 p-2.5">
-                      <div className="flex items-center gap-1.5 mb-1">
-                        <TrendingUp className="h-3.5 w-3.5 text-purple-500" />
-                        <span className="text-[11px] font-medium text-purple-700 dark:text-purple-300">Power</span>
-                      </div>
-                      <p className="text-2xl font-bold text-purple-600 dark:text-purple-400">
-                        {s.power?.powerScore ?? "—"}
-                      </p>
-                      <p className="text-[10px] text-muted-foreground mt-0.5">
-                        rating {((Number(s.power?.ratingScore) || 0) * 100).toFixed(0)}% &middot; reviews {((Number(s.power?.reviewScore) || 0) * 100).toFixed(0)}%
-                      </p>
-                    </div>
+          {((scoresData?.visibility || []).length > 0 || (scoresData?.power || []).length > 0) ? (
+            <div className="space-y-4">
+              {/* Visibility Section */}
+              {(scoresData.visibility as any[])?.length > 0 && (
+                <div className="space-y-2">
+                  <div className="flex items-center gap-1.5">
+                    <Eye className="h-3.5 w-3.5 text-blue-500" />
+                    <span className="text-xs font-medium text-blue-700 dark:text-blue-300">Visibility</span>
                   </div>
+                  {(scoresData.visibility as any[]).map((v: any) => (
+                    <div key={v.trackedAppSlug} className="rounded-lg bg-blue-50 dark:bg-blue-950/30 p-2.5 flex items-center justify-between">
+                      <div>
+                        <p className="text-xs text-muted-foreground truncate">{v.trackedAppSlug.replace(/-/g, " ").replace(/\b\w/g, (c: string) => c.toUpperCase())}</p>
+                        <p className="text-[10px] text-muted-foreground">{v.keywordCount} keywords</p>
+                      </div>
+                      <p className="text-2xl font-bold text-blue-600 dark:text-blue-400">{v.visibilityScore}</p>
+                    </div>
+                  ))}
                 </div>
-              ))}
+              )}
+              {/* Power Section */}
+              {(scoresData.power as any[])?.length > 0 && (
+                <div className="space-y-2">
+                  <div className="flex items-center gap-1.5">
+                    <TrendingUp className="h-3.5 w-3.5 text-purple-500" />
+                    <span className="text-xs font-medium text-purple-700 dark:text-purple-300">Power</span>
+                    {scoresData.weightedPowerScore > 0 && (
+                      <span className="ml-auto text-lg font-bold text-purple-600 dark:text-purple-400" title="Weighted aggregate power score">
+                        {scoresData.weightedPowerScore}
+                      </span>
+                    )}
+                  </div>
+                  {(scoresData.power as any[]).map((p: any) => (
+                    <div key={p.categorySlug} className="rounded-lg bg-purple-50 dark:bg-purple-950/30 p-2.5 flex items-center justify-between">
+                      <div>
+                        <p className="text-xs text-muted-foreground truncate">{p.categoryTitle || p.categorySlug.replace(/-/g, " ").replace(/\b\w/g, (c: string) => c.toUpperCase())}</p>
+                        <p className="text-[10px] text-muted-foreground">
+                          rating {((Number(p.ratingScore) || 0) * 100).toFixed(0)}% &middot; reviews {((Number(p.reviewScore) || 0) * 100).toFixed(0)}%
+                        </p>
+                      </div>
+                      <p className="text-2xl font-bold text-purple-600 dark:text-purple-400">{p.powerScore}</p>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           ) : (
             <div className="flex flex-col items-center justify-center py-6 text-center">

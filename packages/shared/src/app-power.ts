@@ -118,6 +118,24 @@ export function computeAppPower(
   };
 }
 
+/**
+ * Compute a weighted aggregate power score across multiple categories.
+ * Weight = category size (appCount), so larger categories contribute more.
+ */
+export function computeWeightedPowerScore(
+  inputs: { powerScore: number; appCount: number }[],
+): number {
+  if (inputs.length === 0) return 0;
+  let weightedSum = 0;
+  let totalWeight = 0;
+  for (const { powerScore, appCount } of inputs) {
+    const weight = Math.max(appCount, 1);
+    weightedSum += powerScore * weight;
+    totalWeight += weight;
+  }
+  return totalWeight > 0 ? Math.round(weightedSum / totalWeight) : 0;
+}
+
 function round4(n: number): number {
   return Math.round(n * 10000) / 10000;
 }

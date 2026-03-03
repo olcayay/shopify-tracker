@@ -306,8 +306,8 @@ export const getAppScoresHistory = cache((slug: string, days = 30, category?: st
   return fetchApi<any>(`/api/apps/${slug}/scores/history?${params}`);
 });
 
-export const getCategoryScores = cache((slug: string, sort = "visibility", limit = 50) => {
-  return fetchApi<any>(`/api/categories/${slug}/scores?sort=${sort}&limit=${limit}`);
+export const getCategoryScores = cache((slug: string, limit = 50) => {
+  return fetchApi<any>(`/api/categories/${slug}/scores?limit=${limit}`);
 });
 
 // --- System Admin ---

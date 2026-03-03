@@ -1,6 +1,7 @@
 import type { FastifyPluginAsync } from "fastify";
 import { eq, desc, sql, and, inArray, ilike } from "drizzle-orm";
 import { createDb } from "@shopify-tracking/db";
+import { computeWeightedPowerScore } from "@shopify-tracking/shared";
 import {
   apps,
   appSnapshots,
@@ -971,29 +972,59 @@ export const appRoutes: FastifyPluginAsync = async (app) => {
   // GET /api/apps/:slug/scores — latest visibility + power scores for an app
   app.get("/:slug/scores", async (request) => {
     const { slug } = request.params as { slug: string };
+    const { accountId } = request.user;
 
+    // Visibility: account-scoped, grouped by trackedAppSlug
     const visRows = await db
       .select()
       .from(appVisibilityScores)
-      .where(eq(appVisibilityScores.appSlug, slug))
+      .where(
+        and(
+          eq(appVisibilityScores.appSlug, slug),
+          eq(appVisibilityScores.accountId, accountId),
+        )
+      )
       .orderBy(desc(appVisibilityScores.computedAt))
-      .limit(10); // max 10 categories
+      .limit(50);
 
-    const powRows = await db
-      .select()
-      .from(appPowerScores)
-      .where(eq(appPowerScores.appSlug, slug))
-      .orderBy(desc(appPowerScores.computedAt))
-      .limit(10);
-
-    // Group by category, take latest per category
-    const visByCategory = new Map<string, typeof visRows[0]>();
+    // Group by trackedAppSlug, take latest per trackedApp
+    const visByTrackedApp = new Map<string, typeof visRows[0]>();
     for (const r of visRows) {
-      if (!visByCategory.has(r.categorySlug)) {
-        visByCategory.set(r.categorySlug, r);
+      if (!visByTrackedApp.has(r.trackedAppSlug)) {
+        visByTrackedApp.set(r.trackedAppSlug, r);
       }
     }
 
+    const visibility = [...visByTrackedApp.entries()].map(([trackedAppSlug, r]) => ({
+      trackedAppSlug,
+      visibilityScore: r.visibilityScore,
+      visibilityRaw: r.visibilityRaw,
+      keywordCount: r.keywordCount,
+      computedAt: r.computedAt,
+    }));
+
+    // Power: category-based (leaf categories), grouped by categorySlug
+    const powRows = await db
+      .select({
+        id: appPowerScores.id,
+        appSlug: appPowerScores.appSlug,
+        categorySlug: appPowerScores.categorySlug,
+        computedAt: appPowerScores.computedAt,
+        ratingScore: appPowerScores.ratingScore,
+        reviewScore: appPowerScores.reviewScore,
+        categoryScore: appPowerScores.categoryScore,
+        momentumScore: appPowerScores.momentumScore,
+        powerRaw: appPowerScores.powerRaw,
+        powerScore: appPowerScores.powerScore,
+        categoryTitle: categories.title,
+      })
+      .from(appPowerScores)
+      .innerJoin(categories, eq(categories.slug, appPowerScores.categorySlug))
+      .where(eq(appPowerScores.appSlug, slug))
+      .orderBy(desc(appPowerScores.computedAt))
+      .limit(50);
+
+    // Group by category, take latest per category
     const powByCategory = new Map<string, typeof powRows[0]>();
     for (const r of powRows) {
       if (!powByCategory.has(r.categorySlug)) {
@@ -1001,35 +1032,79 @@ export const appRoutes: FastifyPluginAsync = async (app) => {
       }
     }
 
-    const allCategories = new Set([...visByCategory.keys(), ...powByCategory.keys()]);
-    const scores = [...allCategories].map((catSlug) => ({
-      categorySlug: catSlug,
-      visibility: visByCategory.get(catSlug) || null,
-      power: powByCategory.get(catSlug) || null,
+    const power = [...powByCategory.entries()].map(([categorySlug, r]) => ({
+      categorySlug,
+      categoryTitle: r.categoryTitle,
+      powerScore: r.powerScore,
+      powerRaw: r.powerRaw,
+      ratingScore: r.ratingScore,
+      reviewScore: r.reviewScore,
+      categoryScore: r.categoryScore,
+      momentumScore: r.momentumScore,
+      computedAt: r.computedAt,
     }));
 
-    return { scores };
+    // Compute weighted power score
+    // Get appCount per category from latest category_snapshots
+    const catSlugs = power.map((p) => p.categorySlug);
+    let weightedPowerScore = 0;
+    if (catSlugs.length > 0) {
+      const catSizeRows: { category_slug: string; app_count: number }[] = await db
+        .execute(
+          sql`
+          SELECT DISTINCT ON (category_slug)
+            category_slug, app_count
+          FROM category_snapshots
+          WHERE category_slug IN (${sql.join(catSlugs.map((s) => sql`${s}`), sql`, `)})
+            AND app_count IS NOT NULL
+          ORDER BY category_slug, scraped_at DESC
+        `
+        )
+        .then((res: any) => (res as any).rows ?? res);
+
+      const catSizeMap = new Map(catSizeRows.map((r) => [r.category_slug, r.app_count]));
+      const inputs = power.map((p) => ({
+        powerScore: p.powerScore,
+        appCount: catSizeMap.get(p.categorySlug) || 1,
+      }));
+
+      weightedPowerScore = computeWeightedPowerScore(inputs);
+    }
+
+    return { visibility, power, weightedPowerScore };
   });
 
   // GET /api/apps/:slug/scores/history — historical score data for trend charts
+  // ?trackedApp=slug for visibility history, ?category=slug for power history
   app.get("/:slug/scores/history", async (request) => {
     const { slug } = request.params as { slug: string };
-    const { days = "30", category } = request.query as { days?: string; category?: string };
+    const { days = "30", category, trackedApp } = request.query as {
+      days?: string;
+      category?: string;
+      trackedApp?: string;
+    };
+    const { accountId } = request.user;
     const daysNum = Math.min(parseInt(days) || 30, 90);
     const sinceStr = new Date(Date.now() - daysNum * 86400000).toISOString().slice(0, 10);
 
-    const visConditions = [
-      eq(appVisibilityScores.appSlug, slug),
-      sql`${appVisibilityScores.computedAt} >= ${sinceStr}`,
-    ];
-    if (category) visConditions.push(eq(appVisibilityScores.categorySlug, category));
+    // Visibility history: requires trackedApp param, scoped to account
+    let visibility: any[] = [];
+    if (trackedApp) {
+      visibility = await db
+        .select()
+        .from(appVisibilityScores)
+        .where(
+          and(
+            eq(appVisibilityScores.appSlug, slug),
+            eq(appVisibilityScores.accountId, accountId),
+            eq(appVisibilityScores.trackedAppSlug, trackedApp),
+            sql`${appVisibilityScores.computedAt} >= ${sinceStr}`,
+          )
+        )
+        .orderBy(appVisibilityScores.computedAt);
+    }
 
-    const visibility = await db
-      .select()
-      .from(appVisibilityScores)
-      .where(and(...visConditions))
-      .orderBy(appVisibilityScores.computedAt);
-
+    // Power history: by category
     const powConditions = [
       eq(appPowerScores.appSlug, slug),
       sql`${appPowerScores.computedAt} >= ${sinceStr}`,

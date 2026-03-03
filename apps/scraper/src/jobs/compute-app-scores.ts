@@ -48,6 +48,11 @@ interface AppMomentumRow {
   acc_macro: string | null;
 }
 
+interface TrackedContextRow {
+  account_id: string;
+  tracked_app_slug: string;
+}
+
 /**
  * Check if all prerequisite jobs have completed today.
  * Returns list of missing job types, or empty array if all present.
@@ -120,7 +125,7 @@ export async function computeAppScores(
     .returning();
 
   try {
-    // === STEP 1: Fetch all source data ===
+    // === SHARED DATA: Fetch all source data ===
 
     // 1a. Latest keyword rankings per (app, keyword) where position IS NOT NULL
     const appKeywordRows: AppKeywordRow[] = await db
@@ -216,15 +221,14 @@ export async function computeAppScores(
       momentumMap.set(r.app_slug, r.acc_macro != null ? Number(r.acc_macro) : null);
     }
 
-    // === STEP 2: Build per-app structures ===
-
-    // Build keyword rankings per app: Map<appSlug, KeywordRankingInput[]>
-    const appKeywordRankings = new Map<string, { totalResults: number; position: number }[]>();
+    // Build global keyword rankings per app: Map<appSlug, { keywordId, totalResults, position }[]>
+    const globalAppKeywordRankings = new Map<string, { keywordId: number; totalResults: number; position: number }[]>();
     for (const r of appKeywordRows) {
       const totalResults = keywordTotals.get(r.keyword_id);
       if (totalResults == null || totalResults <= 0) continue;
-      if (!appKeywordRankings.has(r.app_slug)) appKeywordRankings.set(r.app_slug, []);
-      appKeywordRankings.get(r.app_slug)!.push({
+      if (!globalAppKeywordRankings.has(r.app_slug)) globalAppKeywordRankings.set(r.app_slug, []);
+      globalAppKeywordRankings.get(r.app_slug)!.push({
+        keywordId: r.keyword_id,
         totalResults,
         position: r.position,
       });
@@ -240,34 +244,145 @@ export async function computeAppScores(
       });
     }
 
-    // Collect all unique app slugs that have either keyword or category data
-    const allAppSlugs = new Set<string>();
-    for (const slug of appKeywordRankings.keys()) allAppSlugs.add(slug);
-    for (const slug of appCatRankings.keys()) allAppSlugs.add(slug);
-
-    // Build category -> apps mapping for normalization
+    // Build category -> apps mapping
     const categoryApps = new Map<string, Set<string>>();
     for (const r of appCategoryRows) {
       if (!categoryApps.has(r.category_slug)) categoryApps.set(r.category_slug, new Set());
       categoryApps.get(r.category_slug)!.add(r.app_slug);
     }
 
-    // === STEP 3: Compute raw visibility per app ===
+    const today = new Date().toISOString().slice(0, 10);
+    let visibilityUpserts = 0;
+    let powerUpserts = 0;
 
-    const appVisibilityRaw = new Map<string, { keywordCount: number; visibilityRaw: number }>();
-    for (const slug of allAppSlugs) {
-      const rankings = appKeywordRankings.get(slug) || [];
-      const result = computeAppVisibility(rankings);
-      appVisibilityRaw.set(slug, result);
+    // ============================================================
+    // PHASE A: Visibility (account-scoped, per tracked-app context)
+    // ============================================================
+
+    // Get all distinct (accountId, trackedAppSlug) contexts
+    const trackedContexts: TrackedContextRow[] = await db
+      .execute(
+        sql`
+        SELECT DISTINCT account_id, tracked_app_slug
+        FROM account_tracked_keywords
+      `
+      )
+      .then((res: any) => (res as any).rows ?? res);
+
+    log.info("phase A: computing visibility", { contexts: trackedContexts.length });
+
+    for (const ctx of trackedContexts) {
+      // Get keyword IDs for this context
+      const kwRows: { keyword_id: number }[] = await db
+        .execute(
+          sql`
+          SELECT DISTINCT keyword_id
+          FROM account_tracked_keywords
+          WHERE account_id = ${ctx.account_id}
+            AND tracked_app_slug = ${ctx.tracked_app_slug}
+        `
+        )
+        .then((res: any) => (res as any).rows ?? res);
+
+      const contextKeywordIds = new Set(kwRows.map((r) => r.keyword_id));
+      if (contextKeywordIds.size === 0) continue;
+
+      // Get competitor slugs for this context + the tracked app itself
+      const compRows: { app_slug: string }[] = await db
+        .execute(
+          sql`
+          SELECT DISTINCT app_slug
+          FROM account_competitor_apps
+          WHERE account_id = ${ctx.account_id}
+            AND tracked_app_slug = ${ctx.tracked_app_slug}
+        `
+        )
+        .then((res: any) => (res as any).rows ?? res);
+
+      const appSlugsInContext = new Set<string>([
+        ctx.tracked_app_slug,
+        ...compRows.map((r) => r.app_slug),
+      ]);
+
+      // Compute visibility for each app in this context using only context keywords
+      const contextVisRaw = new Map<string, { keywordCount: number; visibilityRaw: number }>();
+      let maxRaw = 0;
+
+      for (const appSlug of appSlugsInContext) {
+        const allRankings = globalAppKeywordRankings.get(appSlug) || [];
+        // Filter to only keywords in this context
+        const filteredRankings = allRankings
+          .filter((r) => contextKeywordIds.has(r.keywordId))
+          .map((r) => ({ totalResults: r.totalResults, position: r.position }));
+
+        const result = computeAppVisibility(filteredRankings);
+        contextVisRaw.set(appSlug, result);
+        if (result.visibilityRaw > maxRaw) maxRaw = result.visibilityRaw;
+      }
+
+      // Normalize and upsert
+      for (const [appSlug, vis] of contextVisRaw) {
+        const visScore = normalizeScore(vis.visibilityRaw, maxRaw);
+        await db
+          .insert(appVisibilityScores)
+          .values({
+            accountId: ctx.account_id,
+            trackedAppSlug: ctx.tracked_app_slug,
+            appSlug,
+            computedAt: today,
+            scrapeRunId: run.id,
+            keywordCount: vis.keywordCount,
+            visibilityRaw: vis.visibilityRaw.toFixed(4),
+            visibilityScore: visScore,
+          })
+          .onConflictDoUpdate({
+            target: [
+              appVisibilityScores.accountId,
+              appVisibilityScores.trackedAppSlug,
+              appVisibilityScores.appSlug,
+              appVisibilityScores.computedAt,
+            ],
+            set: {
+              scrapeRunId: run.id,
+              keywordCount: vis.keywordCount,
+              visibilityRaw: vis.visibilityRaw.toFixed(4),
+              visibilityScore: visScore,
+            },
+          });
+        visibilityUpserts++;
+      }
     }
 
-    // === STEP 4: Compute raw power components per (app, category) ===
+    // ============================================================
+    // PHASE B: Power (leaf categories only)
+    // ============================================================
+
+    // Get leaf category slugs
+    const leafCatRows: { slug: string }[] = await db
+      .execute(
+        sql`
+        SELECT slug FROM categories WHERE is_listing_page = true
+      `
+      )
+      .then((res: any) => (res as any).rows ?? res);
+
+    const leafCategorySlugs = new Set(leafCatRows.map((r) => r.slug));
+
+    log.info("phase B: computing power", { leafCategories: leafCategorySlugs.size });
+
+    // Filter categoryApps to only leaf categories
+    const leafCategoryApps = new Map<string, Set<string>>();
+    for (const [catSlug, appSlugs] of categoryApps) {
+      if (leafCategorySlugs.has(catSlug)) {
+        leafCategoryApps.set(catSlug, appSlugs);
+      }
+    }
 
     // For power score normalization, we need max reviews and max accMacro per category
     const categoryMaxReviews = new Map<string, number>();
     const categoryMaxAccMacro = new Map<string, number>();
 
-    for (const [catSlug, appSlugs] of categoryApps) {
+    for (const [catSlug, appSlugs] of leafCategoryApps) {
       let maxReviews = 0;
       let maxAccMacro = 0;
       for (const slug of appSlugs) {
@@ -284,28 +399,9 @@ export async function computeAppScores(
       categoryMaxAccMacro.set(catSlug, maxAccMacro);
     }
 
-    // === STEP 5: Normalize and upsert per (app, category) ===
-
-    const today = new Date().toISOString().slice(0, 10);
-    let appsComputed = 0;
-    let categoriesProcessed = 0;
-    const processedCategories = new Set<string>();
-
-    // Compute max visibility raw per category for normalization
-    const categoryMaxVisibility = new Map<string, number>();
-    for (const [catSlug, appSlugs] of categoryApps) {
-      let maxVis = 0;
-      for (const slug of appSlugs) {
-        const vis = appVisibilityRaw.get(slug);
-        if (vis) maxVis = Math.max(maxVis, vis.visibilityRaw);
-      }
-      categoryMaxVisibility.set(catSlug, maxVis);
-    }
-
-    // Compute max power raw per category for normalization
-    // First pass: compute all raw power scores, then find max per category
+    // Compute raw power scores per (app, leafCategory)
     const appPowerRawByCategory = new Map<string, Map<string, ReturnType<typeof computeAppPower>>>();
-    for (const [catSlug, appSlugs] of categoryApps) {
+    for (const [catSlug, appSlugs] of leafCategoryApps) {
       const catPowerMap = new Map<string, ReturnType<typeof computeAppPower>>();
       const maxReviews = categoryMaxReviews.get(catSlug) || 0;
       const maxAccMacro = categoryMaxAccMacro.get(catSlug) || 0;
@@ -314,7 +410,6 @@ export async function computeAppScores(
         const info = appInfoMap.get(slug);
         const catRankings = appCatRankings.get(slug) || [];
 
-        // Filter to this category's ranking for category score
         const thisCatRanking = catRankings.find((r) => r.categorySlug === catSlug);
         const categoryRankingsInput = thisCatRanking
           ? [{ position: thisCatRanking.position, totalApps: categorySizes.get(catSlug) || 0 }]
@@ -336,7 +431,7 @@ export async function computeAppScores(
       appPowerRawByCategory.set(catSlug, catPowerMap);
     }
 
-    // Find max power raw per category
+    // Find max power raw per category for normalization
     const categoryMaxPower = new Map<string, number>();
     for (const [catSlug, catPowerMap] of appPowerRawByCategory) {
       let maxPow = 0;
@@ -346,52 +441,33 @@ export async function computeAppScores(
       categoryMaxPower.set(catSlug, maxPow);
     }
 
-    // Upsert all scores
-    for (const [catSlug, appSlugs] of categoryApps) {
-      const maxVis = categoryMaxVisibility.get(catSlug) || 0;
+    // Upsert power scores
+    for (const [catSlug, catPowerMap] of appPowerRawByCategory) {
       const maxPow = categoryMaxPower.get(catSlug) || 0;
-      const catPowerMap = appPowerRawByCategory.get(catSlug)!;
 
-      for (const slug of appSlugs) {
-        const vis = appVisibilityRaw.get(slug) || { keywordCount: 0, visibilityRaw: 0 };
-        const visScore = normalizeScore(vis.visibilityRaw, maxVis);
-
-        // Upsert visibility score
+      for (const [slug, power] of catPowerMap) {
+        const powScore = normalizeScore(power.powerRaw, maxPow);
         await db
-          .insert(appVisibilityScores)
+          .insert(appPowerScores)
           .values({
             appSlug: slug,
             categorySlug: catSlug,
             computedAt: today,
             scrapeRunId: run.id,
-            keywordCount: vis.keywordCount,
-            visibilityRaw: vis.visibilityRaw.toFixed(4),
-            visibilityScore: visScore,
+            ratingScore: power.ratingScore.toFixed(4),
+            reviewScore: power.reviewScore.toFixed(4),
+            categoryScore: power.categoryScore.toFixed(4),
+            momentumScore: power.momentumScore.toFixed(4),
+            powerRaw: power.powerRaw.toFixed(4),
+            powerScore: powScore,
           })
           .onConflictDoUpdate({
             target: [
-              appVisibilityScores.appSlug,
-              appVisibilityScores.categorySlug,
-              appVisibilityScores.computedAt,
+              appPowerScores.appSlug,
+              appPowerScores.categorySlug,
+              appPowerScores.computedAt,
             ],
             set: {
-              scrapeRunId: run.id,
-              keywordCount: vis.keywordCount,
-              visibilityRaw: vis.visibilityRaw.toFixed(4),
-              visibilityScore: visScore,
-            },
-          });
-
-        // Upsert power score
-        const power = catPowerMap.get(slug);
-        if (power) {
-          const powScore = normalizeScore(power.powerRaw, maxPow);
-          await db
-            .insert(appPowerScores)
-            .values({
-              appSlug: slug,
-              categorySlug: catSlug,
-              computedAt: today,
               scrapeRunId: run.id,
               ratingScore: power.ratingScore.toFixed(4),
               reviewScore: power.reviewScore.toFixed(4),
@@ -399,36 +475,20 @@ export async function computeAppScores(
               momentumScore: power.momentumScore.toFixed(4),
               powerRaw: power.powerRaw.toFixed(4),
               powerScore: powScore,
-            })
-            .onConflictDoUpdate({
-              target: [
-                appPowerScores.appSlug,
-                appPowerScores.categorySlug,
-                appPowerScores.computedAt,
-              ],
-              set: {
-                scrapeRunId: run.id,
-                ratingScore: power.ratingScore.toFixed(4),
-                reviewScore: power.reviewScore.toFixed(4),
-                categoryScore: power.categoryScore.toFixed(4),
-                momentumScore: power.momentumScore.toFixed(4),
-                powerRaw: power.powerRaw.toFixed(4),
-                powerScore: powScore,
-              },
-            });
-        }
-
-        appsComputed++;
-      }
-
-      if (!processedCategories.has(catSlug)) {
-        processedCategories.add(catSlug);
-        categoriesProcessed++;
+            },
+          });
+        powerUpserts++;
       }
     }
 
     const durationMs = Date.now() - startTime;
-    log.info("app scores computed", { appsComputed, categoriesProcessed, durationMs });
+    log.info("app scores computed", {
+      visibilityUpserts,
+      powerUpserts,
+      trackedContexts: trackedContexts.length,
+      leafCategories: leafCategorySlugs.size,
+      durationMs,
+    });
 
     await db
       .update(scrapeRuns)
@@ -436,8 +496,10 @@ export async function computeAppScores(
         status: "completed",
         completedAt: new Date(),
         metadata: {
-          apps_computed: appsComputed,
-          categories_processed: categoriesProcessed,
+          visibility_upserts: visibilityUpserts,
+          power_upserts: powerUpserts,
+          tracked_contexts: trackedContexts.length,
+          leaf_categories: leafCategorySlugs.size,
           duration_ms: durationMs,
         },
       })

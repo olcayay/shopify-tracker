@@ -1,7 +1,7 @@
 import type { FastifyPluginAsync } from "fastify";
 import { eq, desc, sql, and, asc, inArray } from "drizzle-orm";
 import { createDb } from "@shopify-tracking/db";
-import { categories, categorySnapshots, appCategoryRankings, apps, categoryAdSightings, appVisibilityScores, appPowerScores } from "@shopify-tracking/db";
+import { categories, categorySnapshots, appCategoryRankings, apps, categoryAdSightings, appPowerScores } from "@shopify-tracking/db";
 
 type Db = ReturnType<typeof createDb>;
 
@@ -343,41 +343,29 @@ export const categoryRoutes: FastifyPluginAsync = async (app) => {
     }
   );
 
-  // GET /api/categories/:slug/scores — leaderboard by visibility or power (latest day)
+  // GET /api/categories/:slug/scores — power leaderboard (latest day)
   app.get(
     "/:slug/scores",
     async (request) => {
       const { slug } = request.params as { slug: string };
-      const { sort = "visibility", limit: limitStr = "50" } = request.query as {
-        sort?: string;
+      const { limit: limitStr = "50" } = request.query as {
         limit?: string;
       };
       const limitNum = Math.min(parseInt(limitStr) || 50, 200);
 
       // Get latest computedAt for this category
-      const [latestVis] = await db
-        .select({ computedAt: appVisibilityScores.computedAt })
-        .from(appVisibilityScores)
-        .where(eq(appVisibilityScores.categorySlug, slug))
-        .orderBy(desc(appVisibilityScores.computedAt))
+      const [latestPow] = await db
+        .select({ computedAt: appPowerScores.computedAt })
+        .from(appPowerScores)
+        .where(eq(appPowerScores.categorySlug, slug))
+        .orderBy(desc(appPowerScores.computedAt))
         .limit(1);
 
-      if (!latestVis) {
+      if (!latestPow) {
         return { scores: [], computedAt: null };
       }
 
-      const computedAt = latestVis.computedAt;
-
-      // Fetch visibility scores for latest day
-      const visRows = await db
-        .select()
-        .from(appVisibilityScores)
-        .where(
-          and(
-            eq(appVisibilityScores.categorySlug, slug),
-            eq(appVisibilityScores.computedAt, computedAt),
-          )
-        );
+      const computedAt = latestPow.computedAt;
 
       // Fetch power scores for latest day
       const powRows = await db
@@ -390,13 +378,8 @@ export const categoryRoutes: FastifyPluginAsync = async (app) => {
           )
         );
 
-      // Merge by appSlug
-      const visMap = new Map(visRows.map((r) => [r.appSlug, r]));
-      const powMap = new Map(powRows.map((r) => [r.appSlug, r]));
-      const allSlugs = new Set([...visMap.keys(), ...powMap.keys()]);
-
       // Fetch app names
-      const slugArray = [...allSlugs];
+      const slugArray = powRows.map((r) => r.appSlug);
       const appRows = slugArray.length > 0
         ? await db
             .select({ slug: apps.slug, name: apps.name, iconUrl: apps.iconUrl })
@@ -405,40 +388,29 @@ export const categoryRoutes: FastifyPluginAsync = async (app) => {
         : [];
       const appMap = new Map(appRows.map((r) => [r.slug, r]));
 
-      let scores = slugArray.map((appSlug) => {
-        const vis = visMap.get(appSlug);
-        const pow = powMap.get(appSlug);
-        const appInfo = appMap.get(appSlug);
+      let scores = powRows.map((pow) => {
+        const appInfo = appMap.get(pow.appSlug);
         return {
-          appSlug,
-          appName: appInfo?.name || appSlug,
+          appSlug: pow.appSlug,
+          appName: appInfo?.name || pow.appSlug,
           iconUrl: appInfo?.iconUrl || null,
-          visibilityScore: vis?.visibilityScore ?? 0,
-          visibilityRaw: vis?.visibilityRaw ?? "0",
-          keywordCount: vis?.keywordCount ?? 0,
-          powerScore: pow?.powerScore ?? 0,
-          powerRaw: pow?.powerRaw ?? "0",
-          ratingScore: pow?.ratingScore ?? "0",
-          reviewScore: pow?.reviewScore ?? "0",
-          categoryScore: pow?.categoryScore ?? "0",
-          momentumScore: pow?.momentumScore ?? "0",
+          powerScore: pow.powerScore,
+          powerRaw: pow.powerRaw,
+          ratingScore: pow.ratingScore,
+          reviewScore: pow.reviewScore,
+          categoryScore: pow.categoryScore,
+          momentumScore: pow.momentumScore,
         };
       });
 
-      // Sort
-      if (sort === "power") {
-        scores.sort((a, b) => b.powerScore - a.powerScore);
-      } else {
-        scores.sort((a, b) => b.visibilityScore - a.visibilityScore);
-      }
-
+      scores.sort((a, b) => b.powerScore - a.powerScore);
       scores = scores.slice(0, limitNum);
 
       return { scores, computedAt };
     }
   );
 
-  // GET /api/categories/:slug/scores/history — category-level score trends
+  // GET /api/categories/:slug/scores/history — category-level power score trends
   app.get(
     "/:slug/scores/history",
     async (request) => {
@@ -446,17 +418,6 @@ export const categoryRoutes: FastifyPluginAsync = async (app) => {
       const { days = "30" } = request.query as { days?: string };
       const daysNum = Math.min(parseInt(days) || 30, 90);
       const sinceStr = new Date(Date.now() - daysNum * 86400000).toISOString().slice(0, 10);
-
-      const visibility = await db
-        .select()
-        .from(appVisibilityScores)
-        .where(
-          and(
-            eq(appVisibilityScores.categorySlug, slug),
-            sql`${appVisibilityScores.computedAt} >= ${sinceStr}`,
-          )
-        )
-        .orderBy(appVisibilityScores.computedAt);
 
       const power = await db
         .select()
@@ -469,7 +430,7 @@ export const categoryRoutes: FastifyPluginAsync = async (app) => {
         )
         .orderBy(appPowerScores.computedAt);
 
-      return { visibility, power };
+      return { power };
     }
   );
 };

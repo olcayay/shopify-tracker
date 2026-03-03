@@ -10,6 +10,7 @@ import {
   uniqueIndex,
   uuid,
 } from "drizzle-orm/pg-core";
+import { accounts } from "./auth.js";
 import { apps } from "./apps.js";
 import { scrapeRuns } from "./scrape-runs.js";
 
@@ -17,10 +18,15 @@ export const appVisibilityScores = pgTable(
   "app_visibility_scores",
   {
     id: serial("id").primaryKey(),
+    accountId: uuid("account_id")
+      .notNull()
+      .references(() => accounts.id, { onDelete: "cascade" }),
+    trackedAppSlug: varchar("tracked_app_slug", { length: 255 })
+      .notNull()
+      .references(() => apps.slug),
     appSlug: varchar("app_slug", { length: 255 })
       .notNull()
       .references(() => apps.slug),
-    categorySlug: varchar("category_slug", { length: 255 }).notNull(),
     computedAt: date("computed_at").notNull(),
     scrapeRunId: uuid("scrape_run_id")
       .notNull()
@@ -32,11 +38,11 @@ export const appVisibilityScores = pgTable(
   },
   (table) => [
     uniqueIndex("idx_app_visibility_unique").on(
-      table.appSlug, table.categorySlug, table.computedAt,
+      table.accountId, table.trackedAppSlug, table.appSlug, table.computedAt,
     ),
     index("idx_app_visibility_app_date").on(table.appSlug, table.computedAt),
-    index("idx_app_visibility_cat_date_score").on(
-      table.categorySlug, table.computedAt, table.visibilityScore,
+    index("idx_app_visibility_account_tracked").on(
+      table.accountId, table.trackedAppSlug, table.computedAt,
     ),
   ]
 );

@@ -281,6 +281,13 @@
       "when": 1772323200000,
       "tag": "0039_app_scores",
       "breakpoints": true
+    },
+    {
+      "idx": 40,
+      "version": "7",
+      "when": 1772409600000,
+      "tag": "0040_restructure_visibility_scores",
+      "breakpoints": true
     }
   ]
 }
