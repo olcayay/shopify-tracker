@@ -14,11 +14,36 @@ import {
   accountTrackedKeywords,
   accountTrackedApps,
   accountCompetitorApps,
+  keywordToSlug,
 } from "@shopify-tracking/db";
 import { computeKeywordOpportunity } from "@shopify-tracking/shared";
 import type { KeywordSearchApp } from "@shopify-tracking/shared";
+import { Queue } from "bullmq";
 
 type Db = ReturnType<typeof createDb>;
+
+const INTERACTIVE_QUEUE_NAME =
+  process.env.INTERACTIVE_QUEUE_NAME || "scraper-jobs-interactive";
+let scraperQueue: Queue | null = null;
+
+function getRedisConnection() {
+  const url = process.env.REDIS_URL || "redis://localhost:6379";
+  const parsed = new URL(url);
+  return {
+    host: parsed.hostname,
+    port: Number(parsed.port) || 6379,
+    ...(parsed.password ? { password: parsed.password } : {}),
+  };
+}
+
+function getScraperQueue(): Queue {
+  if (!scraperQueue) {
+    scraperQueue = new Queue(INTERACTIVE_QUEUE_NAME, {
+      connection: getRedisConnection(),
+    });
+  }
+  return scraperQueue;
+}
 
 export const keywordRoutes: FastifyPluginAsync = async (app) => {
   const db: Db = (app as any).db;
@@ -184,6 +209,47 @@ export const keywordRoutes: FastifyPluginAsync = async (app) => {
   });
 
   // GET /api/keywords/search?q= — search all keywords by prefix
+  // POST /api/keywords/ensure — ensure keyword exists globally + trigger scraping if needed
+  app.post<{ Body: { keyword: string } }>("/ensure", async (request, reply) => {
+    const { keyword } = request.body;
+    if (!keyword?.trim()) {
+      return reply.code(400).send({ error: "Keyword is required" });
+    }
+
+    const slug = keywordToSlug(keyword.trim());
+    const [kw] = await db
+      .insert(trackedKeywords)
+      .values({ keyword: keyword.trim().toLowerCase(), slug })
+      .onConflictDoUpdate({
+        target: trackedKeywords.keyword,
+        set: { isActive: true, updatedAt: new Date() },
+      })
+      .returning();
+
+    let scraperEnqueued = false;
+    const [existingSnapshot] = await db
+      .select({ id: keywordSnapshots.id })
+      .from(keywordSnapshots)
+      .where(eq(keywordSnapshots.keywordId, kw.id))
+      .limit(1);
+
+    if (!existingSnapshot) {
+      try {
+        const queue = getScraperQueue();
+        await queue.add("scrape:keyword_search", {
+          type: "keyword_search",
+          keyword: kw.keyword,
+          triggeredBy: "api:ensure",
+        });
+        scraperEnqueued = true;
+      } catch {
+        // Redis unavailable
+      }
+    }
+
+    return { slug: kw.slug, keywordId: kw.id, scraperEnqueued };
+  });
+
   app.get("/search", async (request) => {
     const { q = "" } = request.query as { q?: string };
     if (q.length < 1) return [];

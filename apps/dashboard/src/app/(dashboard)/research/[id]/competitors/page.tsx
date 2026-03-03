@@ -202,7 +202,6 @@ export default function ResearchCompetitorsPage() {
           <h1 className="text-2xl font-bold truncate">{data.project.name}</h1>
           <p className="text-sm text-muted-foreground">Competitors</p>
         </div>
-        <Badge variant="secondary">{data.competitors.length} competitors</Badge>
       </div>
 
       <Card>
@@ -280,6 +279,7 @@ export default function ResearchCompetitorsPage() {
                 <TableHeader>
                   <TableRow>
                     <TableHead>App</TableHead>
+                    <TableHead className="w-8" />
                     <TableHead className="text-right">Rating</TableHead>
                     <TableHead className="text-right">Reviews</TableHead>
                     <TableHead className="text-right">Pricing</TableHead>
@@ -317,15 +317,17 @@ export default function ResearchCompetitorsPage() {
                               {comp.name}
                             </Link>
                             {isPending && <Loader2 className="h-3 w-3 animate-spin text-muted-foreground" />}
-                            <a
-                              href={`https://apps.shopify.com/${comp.slug}`}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="text-muted-foreground hover:text-foreground"
-                            >
-                              <ExternalLink className="h-3 w-3" />
-                            </a>
                           </div>
+                        </TableCell>
+                        <TableCell>
+                          <a
+                            href={`https://apps.shopify.com/${comp.slug}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-muted-foreground hover:text-foreground"
+                          >
+                            <ExternalLink className="h-3.5 w-3.5" />
+                          </a>
                         </TableCell>
                         <TableCell className="text-right">
                           {isPending ? (
@@ -415,20 +417,24 @@ export default function ResearchCompetitorsPage() {
                             </div>
                           ) : comp.categoryRankings?.length > 0 ? (
                             <div className={`space-y-1 ${animate}`}>
-                              {comp.categoryRankings.map((cr) => (
-                                <Link
-                                  key={cr.slug}
-                                  href={`/categories/${cr.slug}`}
-                                  className="block text-[11px] leading-tight hover:underline"
-                                >
-                                  <span className="text-muted-foreground">{cr.breadcrumb}</span>
-                                  {cr.totalApps != null ? (
-                                    <span className="ml-1 font-medium text-primary">(#{cr.position}/{cr.totalApps})</span>
-                                  ) : (
-                                    <span className="ml-1 font-medium text-primary">(#{cr.position})</span>
-                                  )}
-                                </Link>
-                              ))}
+                              {comp.categoryRankings.map((cr) => {
+                                const leafName = cr.breadcrumb.includes(" > ") ? cr.breadcrumb.split(" > ").pop() : cr.breadcrumb;
+                                return (
+                                  <Link
+                                    key={cr.slug}
+                                    href={`/categories/${cr.slug}`}
+                                    className="block text-[11px] leading-tight hover:underline"
+                                    title={cr.breadcrumb}
+                                  >
+                                    <span className="text-muted-foreground">{leafName}</span>
+                                    {cr.totalApps != null ? (
+                                      <span className="ml-1 font-medium text-primary">(#{cr.position}/{cr.totalApps})</span>
+                                    ) : (
+                                      <span className="ml-1 font-medium text-primary">(#{cr.position})</span>
+                                    )}
+                                  </Link>
+                                );
+                              })}
                             </div>
                           ) : (
                             <span className="text-muted-foreground">{"\u2014"}</span>

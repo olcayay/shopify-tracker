@@ -285,6 +285,9 @@ export default function ResearchProjectPage() {
         </div>
       </div>
 
+      {/* Summary Cards */}
+      <SummaryCards data={data} />
+
       {/* Layer 0/1: Keywords Section */}
       <KeywordsSection
         projectId={id}
@@ -317,6 +320,7 @@ export default function ResearchProjectPage() {
       {/* Competitor Table (right after keywords) */}
       {hasCompetitors && (
         <SectionWrapper
+          id="section-competitors"
           title="Your Competitors"
           icon={BarChart3}
           count={data.competitors.length}
@@ -361,7 +365,7 @@ export default function ResearchProjectPage() {
 
       {/* Competitor Suggestions */}
       {hasKeywords && data.competitorSuggestions.length > 0 && (
-        <SectionWrapper title="Competitor Suggestions" icon={Users} subtitle="Apps that rank for your keywords">
+        <SectionWrapper id="section-competitor-suggestions" title="Competitor Suggestions" icon={Users} subtitle="Apps that rank for your keywords">
           <CompetitorSuggestions
             suggestions={data.competitorSuggestions}
             canEdit={canEdit}
@@ -407,10 +411,11 @@ export default function ResearchProjectPage() {
 
       {/* Layer 2: Keyword Suggestions */}
       {hasCompetitors && data.keywordSuggestions.length > 0 && (
-        <SectionWrapper title="More Keywords to Explore" icon={Lightbulb} subtitle="Based on your competitors' rankings & metadata">
+        <SectionWrapper id="section-keyword-suggestions" title="More Keywords to Explore" icon={Lightbulb} subtitle="Based on your competitors' rankings & metadata">
           <KeywordSuggestions
             suggestions={data.keywordSuggestions}
             canEdit={canEdit}
+            fetchWithAuth={fetchWithAuth}
             onAdd={async (keyword: string) => {
               const res = await fetchWithAuth(`/api/research-projects/${id}/keywords`, {
                 method: "POST",
@@ -431,28 +436,28 @@ export default function ResearchProjectPage() {
 
       {/* Layer 3: Market Language */}
       {hasRichData && data.wordAnalysis.length > 0 && (
-        <SectionWrapper title="Market Language" icon={Type} subtitle="Common terms across your competitors">
+        <SectionWrapper id="section-market-language" title="Market Language" icon={Type} subtitle="Common terms across your competitors">
           <MarketLanguage words={data.wordAnalysis} totalCompetitors={data.competitors.length} />
         </SectionWrapper>
       )}
 
       {/* Layer 3: Category Landscape */}
       {hasRichData && data.categories.length > 0 && (
-        <SectionWrapper title="Category Landscape" icon={LayoutGrid} subtitle="Categories where your competitors are listed">
+        <SectionWrapper id="section-categories" title="Category Landscape" icon={LayoutGrid} subtitle="Categories where your competitors are listed">
           <CategoryLandscape categories={data.categories} competitors={data.competitors} />
         </SectionWrapper>
       )}
 
       {/* Layer 3: Feature Coverage */}
       {hasRichData && data.featureCoverage.length > 0 && (
-        <SectionWrapper title="Feature Coverage" icon={Puzzle} subtitle="Which features competitors have">
-          <FeatureCoverage features={data.featureCoverage} />
+        <SectionWrapper id="section-features" title="Feature Coverage" icon={Puzzle} subtitle="Which features competitors have">
+          <FeatureCoverage features={data.featureCoverage} competitors={data.competitors} />
         </SectionWrapper>
       )}
 
       {/* Layer 3: Opportunities */}
       {hasRichData && data.opportunities.length > 0 && (
-        <SectionWrapper title="Keyword Opportunities" icon={TrendingUp} subtitle="Best opportunities based on your research">
+        <SectionWrapper id="section-opportunities" title="Keyword Opportunities" icon={TrendingUp} subtitle="Best opportunities based on your research">
           <OpportunityTable opportunities={data.opportunities} />
         </SectionWrapper>
       )}
@@ -463,12 +468,12 @@ export default function ResearchProjectPage() {
 // ─── Section Wrapper ─────────────────────────────────────────
 
 function SectionWrapper({
-  title, icon: Icon, subtitle, count, headerAction, titleHref, children,
+  id, title, icon: Icon, subtitle, count, headerAction, titleHref, children,
 }: {
-  title: string; icon: any; subtitle?: string; count?: number; headerAction?: React.ReactNode; titleHref?: string; children: React.ReactNode;
+  id?: string; title: string; icon: any; subtitle?: string; count?: number; headerAction?: React.ReactNode; titleHref?: string; children: React.ReactNode;
 }) {
   return (
-    <Card className="animate-in fade-in-0 slide-in-from-bottom-4 duration-500">
+    <Card id={id} className="animate-in fade-in-0 slide-in-from-bottom-4 duration-500 scroll-mt-6">
       <CardHeader className="pb-3">
         <div className="flex items-center justify-between">
           <CardTitle className="flex items-center gap-2 text-base">
@@ -489,6 +494,163 @@ function SectionWrapper({
   );
 }
 
+// ─── Summary Cards ──────────────────────────────────────────
+
+function scrollTo(id: string) {
+  document.getElementById(id)?.scrollIntoView({ behavior: "smooth", block: "start" });
+}
+
+function SummaryLink({ href, children }: { href: string; children: React.ReactNode }) {
+  return (
+    <button
+      onClick={() => scrollTo(href)}
+      className="flex items-center justify-between w-full text-left hover:bg-accent/50 rounded-md px-2 py-1 -mx-2 transition-colors group"
+    >
+      {children}
+    </button>
+  );
+}
+
+function StatCard({ emoji, title, gradient, children }: {
+  emoji: string; title: string; gradient: string; children: React.ReactNode;
+}) {
+  return (
+    <Card className="overflow-hidden border-0 shadow-sm hover:shadow-md transition-shadow">
+      <div className={`h-1 ${gradient}`} />
+      <CardContent className="pt-3 pb-3 px-4">
+        <div className="flex flex-col items-center mb-2.5">
+          <span className="text-2xl mb-0.5">{emoji}</span>
+          <span className="text-sm font-semibold">{title}</span>
+        </div>
+        <div className="space-y-0.5 text-sm">{children}</div>
+      </CardContent>
+    </Card>
+  );
+}
+
+function SummaryCards({ data }: { data: ResearchData }) {
+  const hasCompetitors = data.competitors.length >= 2;
+  const hasOpportunities = data.opportunities.length > 0;
+  const hasKeywords = data.keywords.length > 0;
+
+  if (!hasCompetitors && !hasKeywords) return null;
+
+  const comps = data.competitors;
+  const ratings = comps.filter(c => c.averageRating != null);
+  const avgRating = ratings.length > 0 ? ratings.reduce((s, c) => s + c.averageRating!, 0) / ratings.length : null;
+  const avgReviews = ratings.length > 0 ? Math.round(ratings.reduce((s, c) => s + (c.ratingCount ?? 0), 0) / ratings.length) : null;
+  const prices = comps.map(c => c.minPaidPrice).filter((p): p is number => p != null);
+  const minPrice = prices.length > 0 ? Math.min(...prices) : null;
+  const maxPrice = prices.length > 0 ? Math.max(...prices) : null;
+  const powers = comps.map(c => c.powerScore).filter((p): p is number => p != null);
+  const avgPower = powers.length > 0 ? Math.round(powers.reduce((a, b) => a + b, 0) / powers.length) : null;
+  const strongest = powers.length > 0 ? comps.reduce((a, b) => (b.powerScore ?? 0) > (a.powerScore ?? 0) ? b : a) : null;
+  const top3 = [...comps].filter(c => c.powerScore != null).sort((a, b) => (b.powerScore ?? 0) - (a.powerScore ?? 0)).slice(0, 3);
+  const maxPower = top3.length > 0 ? (top3[0].powerScore ?? 1) : 1;
+  const bestOpp = data.opportunities.length > 0 ? data.opportunities[0] : null;
+  const highOppCount = data.opportunities.filter(o => o.opportunityScore >= 60).length;
+  const gapCount = data.featureCoverage.filter(f => f.isGap).length;
+  const hasDiscovery = hasKeywords && (data.competitorSuggestions.length > 0 || data.keywordSuggestions.length > 0 || data.wordAnalysis.length > 0);
+  const hasPowers = hasCompetitors && powers.length > 0;
+
+  const cardCount = [hasCompetitors, hasPowers, hasOpportunities, hasDiscovery].filter(Boolean).length;
+  const gridClass = cardCount <= 2 ? "grid-cols-1 md:grid-cols-2" : cardCount === 3 ? "grid-cols-2 md:grid-cols-3" : "grid-cols-2 md:grid-cols-4";
+
+  return (
+    <div className={`grid ${gridClass} gap-4`}>
+      {/* Card 1: Market Overview */}
+      {hasCompetitors && (
+        <StatCard emoji="📊" title="Market Overview" gradient="bg-gradient-to-r from-blue-500 to-cyan-400">
+          {avgRating != null && (
+            <SummaryLink href="section-competitors">
+              <span className="text-muted-foreground flex items-center gap-1">
+                <Star className="h-3 w-3 fill-yellow-400 text-yellow-400" />{avgRating.toFixed(1)} avg rating
+              </span>
+              <span className="font-medium text-xs">{avgReviews?.toLocaleString()} reviews</span>
+            </SummaryLink>
+          )}
+          <SummaryLink href="section-competitors">
+            <span className="text-muted-foreground">
+              {minPrice != null && maxPrice != null ? `$${minPrice} — $${maxPrice}/mo` : "No pricing data"}
+            </span>
+          </SummaryLink>
+          {data.categories.length > 0 && (
+            <SummaryLink href="section-categories">
+              <span className="text-muted-foreground">{data.categories.length} categories</span>
+              <span className="text-xs text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity">View →</span>
+            </SummaryLink>
+          )}
+        </StatCard>
+      )}
+
+      {/* Card 2: Competition */}
+      {hasPowers && (
+        <StatCard emoji="⚔️" title="Competition" gradient="bg-gradient-to-r from-orange-500 to-amber-400">
+          <SummaryLink href="section-competitors">
+            <span className="text-muted-foreground">{avgPower} avg power</span>
+            <span className="font-medium text-xs">{strongest?.powerScore} strongest</span>
+          </SummaryLink>
+          {top3.map(c => (
+            <SummaryLink key={c.slug} href="section-competitors">
+              <span className="text-xs text-muted-foreground w-16 truncate">{c.name}</span>
+              <div className="flex-1 mx-2 h-1.5 bg-muted rounded-full overflow-hidden">
+                <div className="h-full bg-gradient-to-r from-orange-500 to-amber-400 rounded-full" style={{ width: `${((c.powerScore ?? 0) / maxPower) * 100}%` }} />
+              </div>
+              <span className="text-xs font-medium w-6 text-right">{c.powerScore}</span>
+            </SummaryLink>
+          ))}
+        </StatCard>
+      )}
+
+      {/* Card 3: Opportunities */}
+      {hasOpportunities && (
+        <StatCard emoji="🚀" title="Opportunities" gradient="bg-gradient-to-r from-emerald-500 to-green-400">
+          {bestOpp && (
+            <SummaryLink href="section-opportunities">
+              <span className="text-muted-foreground truncate mr-2">Best: &quot;{bestOpp.keyword}&quot;</span>
+              <Badge variant="secondary" className="text-xs shrink-0">{bestOpp.opportunityScore}</Badge>
+            </SummaryLink>
+          )}
+          <SummaryLink href="section-opportunities">
+            <span className="text-muted-foreground">{highOppCount} high opportunities</span>
+            <span className="text-xs text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity">View →</span>
+          </SummaryLink>
+          {gapCount > 0 && (
+            <SummaryLink href="section-features">
+              <span className="text-muted-foreground">{gapCount} feature gaps</span>
+              <span className="text-xs text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity">View →</span>
+            </SummaryLink>
+          )}
+        </StatCard>
+      )}
+
+      {/* Card 4: Discovery */}
+      {hasDiscovery && (
+        <StatCard emoji="💡" title="Discovery" gradient="bg-gradient-to-r from-violet-500 to-purple-400">
+          {data.competitorSuggestions.length > 0 && (
+            <SummaryLink href="section-competitor-suggestions">
+              <span className="text-muted-foreground">{data.competitorSuggestions.length} app suggestions</span>
+              <span className="text-xs text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity">View →</span>
+            </SummaryLink>
+          )}
+          {data.keywordSuggestions.length > 0 && (
+            <SummaryLink href="section-keyword-suggestions">
+              <span className="text-muted-foreground">{data.keywordSuggestions.length} keyword ideas</span>
+              <span className="text-xs text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity">View →</span>
+            </SummaryLink>
+          )}
+          {data.wordAnalysis.length > 0 && (
+            <SummaryLink href="section-market-language">
+              <span className="text-muted-foreground">{data.wordAnalysis.length} market terms</span>
+              <span className="text-xs text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity">View →</span>
+            </SummaryLink>
+          )}
+        </StatCard>
+      )}
+    </div>
+  );
+}
+
 // ─── Keywords Section ────────────────────────────────────────
 
 function KeywordsSection({
@@ -499,6 +661,20 @@ function KeywordsSection({
 }) {
   const [input, setInput] = useState("");
   const [adding, setAdding] = useState(false);
+  const [open, setOpen] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  // Close on outside click
+  useEffect(() => {
+    if (!open) return;
+    function handleClick(e: MouseEvent) {
+      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+        setOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
+  }, [open]);
 
   async function handleAdd() {
     if (!input.trim() || adding) return;
@@ -514,7 +690,7 @@ function KeywordsSection({
   const isEmpty = data.keywords.length === 0;
 
   return (
-    <Card>
+    <Card id="section-keywords" className="scroll-mt-6">
       {isEmpty ? (
         <CardContent className="py-12">
           <div className="flex flex-col items-center text-center">
@@ -549,18 +725,29 @@ function KeywordsSection({
                 <Badge variant="secondary" className="text-xs font-normal">{data.keywords.length}</Badge>
               </CardTitle>
               {canEdit && (
-                <div className="flex gap-2">
-                  <Input
-                    value={input}
-                    onChange={(e) => setInput(e.target.value)}
-                    onKeyDown={(e) => { if (e.key === "Enter") handleAdd(); }}
-                    placeholder="Add keyword..."
-                    className="h-8 w-48 text-sm"
-                    disabled={adding}
-                  />
-                  <Button size="sm" variant="outline" onClick={handleAdd} disabled={!input.trim() || adding}>
-                    {adding ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Plus className="h-3.5 w-3.5" />}
-                  </Button>
+                <div ref={containerRef}>
+                  {!open ? (
+                    <Button size="sm" variant="outline" onClick={() => setOpen(true)} className="h-8">
+                      <Search className="h-3.5 w-3.5 mr-1.5" />
+                      Add keyword
+                    </Button>
+                  ) : (
+                    <div className="flex gap-2">
+                      <Input
+                        value={input}
+                        onChange={(e) => setInput(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") handleAdd();
+                          if (e.key === "Escape") { setOpen(false); setInput(""); }
+                        }}
+                        placeholder="Type keyword and press Enter..."
+                        className="h-8 w-56 text-sm"
+                        disabled={adding}
+                        autoFocus
+                      />
+                      {adding && <Loader2 className="h-4 w-4 animate-spin text-muted-foreground self-center" />}
+                    </div>
+                  )}
                 </div>
               )}
             </div>
@@ -576,7 +763,9 @@ function KeywordsSection({
                     variant="secondary"
                     className={`text-sm px-3 py-1 ${isPending ? "animate-in fade-in slide-in-from-top duration-300" : ""}`}
                   >
-                    {kw.keyword}
+                    <Link href={`/keywords/${kw.slug}`} className="hover:underline">
+                      {kw.keyword}
+                    </Link>
                     {isPending ? (
                       <Loader2 className="ml-1.5 h-3 w-3 animate-spin text-muted-foreground" />
                     ) : kw.totalResults != null ? (
@@ -638,7 +827,7 @@ function CompetitorSuggestions({
               <div className="h-8 w-8 rounded-md bg-muted" />
             )}
             <div className="min-w-0">
-              <div className="font-medium text-sm truncate">{s.name}</div>
+              <Link href={`/apps/${s.slug}`} className="font-medium text-sm truncate hover:underline block">{s.name}</Link>
               <div className="flex items-center gap-2 text-xs text-muted-foreground">
                 {s.averageRating != null && (
                   <span className="flex items-center gap-0.5">
@@ -1081,12 +1270,15 @@ function CompetitorTable({
 // ─── Keyword Suggestions ─────────────────────────────────────
 
 function KeywordSuggestions({
-  suggestions, canEdit, onAdd,
+  suggestions, canEdit, fetchWithAuth, onAdd,
 }: {
   suggestions: ResearchData["keywordSuggestions"]; canEdit: boolean;
+  fetchWithAuth: (path: string, options?: any) => Promise<Response>;
   onAdd: (keyword: string) => Promise<void>;
 }) {
+  const router = useRouter();
   const [addingKw, setAddingKw] = useState<string | null>(null);
+  const [ensuringKw, setEnsuringKw] = useState<string | null>(null);
   const [expanded, setExpanded] = useState(false);
   const INITIAL_COUNT = 15;
 
@@ -1099,6 +1291,29 @@ function KeywordSuggestions({
     }
   }
 
+  function toSlug(word: string) {
+    return word.toLowerCase().replace(/[^a-z0-9\s-]/g, "").replace(/\s+/g, "-").replace(/-+/g, "-").replace(/^-|-$/g, "");
+  }
+
+  async function handleKeywordClick(e: React.MouseEvent, s: ResearchData["keywordSuggestions"][0]) {
+    if (s.slug) return; // tracked keyword — let the Link handle it
+    e.preventDefault();
+    setEnsuringKw(s.keyword);
+    try {
+      const res = await fetchWithAuth("/api/keywords/ensure", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ keyword: s.keyword }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        router.push(`/keywords/${data.slug}`);
+      }
+    } finally {
+      setEnsuringKw(null);
+    }
+  }
+
   const visible = expanded ? suggestions : suggestions.slice(0, INITIAL_COUNT);
   const hasMore = suggestions.length > INITIAL_COUNT;
 
@@ -1107,7 +1322,20 @@ function KeywordSuggestions({
       {visible.map((s) => (
         <div key={s.keyword} className="flex items-center justify-between py-1.5 px-3 rounded-md hover:bg-muted/50">
           <div className="flex items-center gap-3">
-            <span className="text-sm font-medium">&ldquo;{s.keyword}&rdquo;</span>
+            <Link
+              href={`/keywords/${s.slug || toSlug(s.keyword)}`}
+              className="text-sm font-medium hover:underline"
+              onClick={(e) => handleKeywordClick(e, s)}
+            >
+              {ensuringKw === s.keyword ? (
+                <span className="flex items-center gap-1.5">
+                  <Loader2 className="h-3 w-3 animate-spin" />
+                  &ldquo;{s.keyword}&rdquo;
+                </span>
+              ) : (
+                <>&ldquo;{s.keyword}&rdquo;</>
+              )}
+            </Link>
             <span className="text-xs text-muted-foreground">
               {s.competitorCount} competitor{s.competitorCount !== 1 ? "s" : ""} rank
             </span>
@@ -1168,14 +1396,16 @@ function MarketLanguage({
           const sizeRatio = w.totalScore / maxScore;
           const fontSize = 0.75 + sizeRatio * 1;
           const opacity = 0.4 + (w.appCount / totalCompetitors) * 0.6;
+          const slug = w.word.toLowerCase().replace(/[^a-z0-9\s-]/g, "").replace(/\s+/g, "-").replace(/-+/g, "-").replace(/^-|-$/g, "");
           return (
-            <span
+            <Link
               key={w.word}
-              className="inline-block leading-tight font-medium"
+              href={`/keywords/${slug}`}
+              className="inline-block leading-tight font-medium hover:underline"
               style={{ fontSize: `${fontSize}rem`, opacity }}
             >
               {w.word}
-            </span>
+            </Link>
           );
         })}
       </div>
@@ -1192,7 +1422,14 @@ function MarketLanguage({
         <TableBody>
           {words.slice(0, 20).map((w) => (
             <TableRow key={w.word}>
-              <TableCell className="font-medium text-sm">{w.word}</TableCell>
+              <TableCell className="font-medium text-sm">
+                <Link
+                  href={`/keywords/${w.word.toLowerCase().replace(/[^a-z0-9\s-]/g, "").replace(/\s+/g, "-").replace(/-+/g, "-").replace(/^-|-$/g, "")}`}
+                  className="hover:underline"
+                >
+                  {w.word}
+                </Link>
+              </TableCell>
               <TableCell className="text-right text-sm">
                 {w.appCount}/{totalCompetitors}
               </TableCell>
@@ -1246,7 +1483,10 @@ function CategoryLandscape({
             {cat.competitors.map((c, i) => (
               <span key={c.slug}>
                 {i > 0 && ", "}
-                #{c.position} {compNameMap.get(c.slug) || c.slug}
+                #{c.position}{" "}
+                <Link href={`/apps/${c.slug}`} className="hover:underline text-foreground">
+                  {compNameMap.get(c.slug) || c.slug}
+                </Link>
               </span>
             ))}
           </div>
@@ -1259,35 +1499,62 @@ function CategoryLandscape({
 // ─── Feature Coverage ────────────────────────────────────────
 
 function FeatureCoverage({
-  features,
+  features, competitors,
 }: {
   features: ResearchData["featureCoverage"];
+  competitors: ResearchData["competitors"];
 }) {
+  const competitorSet = useMemo(
+    () => new Set(features.flatMap((f) => f.competitors)),
+    [features]
+  );
+  // Only show competitors that appear in at least one feature
+  const relevantCompetitors = useMemo(
+    () => competitors.filter((c) => competitorSet.has(c.slug)),
+    [competitors, competitorSet]
+  );
+
   return (
-    <div className="space-y-2">
-      {features.slice(0, 20).map((f) => {
-        const ratio = f.count / f.total;
-        const barWidth = Math.max(ratio * 100, 4);
-        return (
-          <div key={f.feature} className="flex items-center gap-3">
-            <Link href={`/features/${encodeURIComponent(f.feature)}`} className="text-sm w-40 truncate shrink-0 hover:underline" title={f.title}>{f.title}</Link>
-            <div className="flex-1 h-5 bg-muted rounded-full overflow-hidden">
-              <div
-                className={`h-full rounded-full transition-all ${f.isGap ? "bg-amber-500/60" : "bg-primary/60"}`}
-                style={{ width: `${barWidth}%` }}
-              />
-            </div>
-            <span className="text-xs text-muted-foreground w-12 text-right shrink-0">
-              {f.count}/{f.total}
-            </span>
-            {f.isGap && (
-              <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-4 text-amber-600 border-amber-300 shrink-0">
-                Gap
-              </Badge>
-            )}
-          </div>
-        );
-      })}
+    <div className="overflow-x-auto">
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead className="w-[180px] min-w-[140px]">Feature</TableHead>
+            {relevantCompetitors.map((comp) => (
+              <TableHead key={comp.slug} className="text-center px-2">
+                <Link href={`/apps/${comp.slug}`} className="inline-flex flex-col items-center gap-1 group" title={comp.name}>
+                  {comp.iconUrl ? (
+                    <img src={comp.iconUrl} alt={comp.name} className="h-7 w-7 rounded group-hover:ring-2 ring-primary/50 transition-all" />
+                  ) : (
+                    <div className="h-7 w-7 rounded bg-muted group-hover:ring-2 ring-primary/50 transition-all" />
+                  )}
+                </Link>
+              </TableHead>
+            ))}
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {features.map((f) => (
+            <TableRow key={f.feature}>
+              <TableCell className="text-sm truncate" title={f.title}>
+                <Link href={`/features/${encodeURIComponent(f.feature)}`} className="hover:underline">
+                  {f.title}
+                </Link>
+                <span className="ml-1 text-xs text-muted-foreground">({f.count}/{f.total})</span>
+              </TableCell>
+              {relevantCompetitors.map((comp) => (
+                <TableCell key={comp.slug} className="text-center px-2">
+                  {f.competitors.includes(comp.slug) ? (
+                    <Check className="h-4 w-4 text-green-600 mx-auto" />
+                  ) : (
+                    <span className="text-muted-foreground/30">{"\u2014"}</span>
+                  )}
+                </TableCell>
+              ))}
+            </TableRow>
+          ))}
+        </TableBody>
+      </Table>
     </div>
   );
 }

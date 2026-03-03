@@ -161,7 +161,6 @@ export default function ResearchKeywordsPage() {
           <h1 className="text-2xl font-bold truncate">{data.project.name}</h1>
           <p className="text-sm text-muted-foreground">Keywords</p>
         </div>
-        <Badge variant="secondary">{data.keywords.length} keywords</Badge>
       </div>
 
       <Card>
@@ -234,14 +233,6 @@ export default function ResearchKeywordsPage() {
                               {kw.keyword}
                             </Link>
                             {isPending && <Loader2 className="h-3 w-3 animate-spin text-muted-foreground" />}
-                            <a
-                              href={`https://apps.shopify.com/search?q=${encodeURIComponent(kw.keyword)}`}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="text-muted-foreground hover:text-foreground"
-                            >
-                              <ExternalLink className="h-3 w-3" />
-                            </a>
                           </div>
                         </TableCell>
                         {data.competitors.map((comp) => (
@@ -280,6 +271,14 @@ export default function ResearchKeywordsPage() {
                         </TableCell>
                         <TableCell>
                           <div className="flex items-center gap-1">
+                            <a
+                              href={`https://apps.shopify.com/search?q=${encodeURIComponent(kw.keyword)}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="p-1 rounded text-muted-foreground hover:text-foreground"
+                            >
+                              <ExternalLink className="h-3.5 w-3.5" />
+                            </a>
                             {canEdit && (
                               <button
                                 onClick={() => handleRemove(kw.id)}
