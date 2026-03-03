@@ -581,8 +581,12 @@ export const keywordRoutes: FastifyPluginAsync = async (app) => {
 
       const [trackedAppRows, projectRows] = await Promise.all([
         db
-          .select({ trackedAppSlug: accountTrackedKeywords.trackedAppSlug })
+          .select({
+            trackedAppSlug: accountTrackedKeywords.trackedAppSlug,
+            appName: apps.name,
+          })
           .from(accountTrackedKeywords)
+          .innerJoin(apps, eq(apps.slug, accountTrackedKeywords.trackedAppSlug))
           .where(
             and(
               eq(accountTrackedKeywords.accountId, accountId),
@@ -590,7 +594,10 @@ export const keywordRoutes: FastifyPluginAsync = async (app) => {
             )
           ),
         db
-          .select({ projectId: researchProjectKeywords.researchProjectId })
+          .select({
+            projectId: researchProjectKeywords.researchProjectId,
+            projectName: researchProjects.name,
+          })
           .from(researchProjectKeywords)
           .innerJoin(
             researchProjects,
@@ -607,6 +614,8 @@ export const keywordRoutes: FastifyPluginAsync = async (app) => {
       return {
         trackedAppSlugs: trackedAppRows.map((r) => r.trackedAppSlug),
         researchProjectIds: projectRows.map((r) => r.projectId),
+        trackedAppNames: trackedAppRows.map((r) => ({ slug: r.trackedAppSlug, name: r.appName })),
+        researchProjects: projectRows.map((r) => ({ id: r.projectId, name: r.projectName })),
       };
     }
   );

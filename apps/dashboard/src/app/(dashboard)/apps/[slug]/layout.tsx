@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { formatDateOnly } from "@/lib/format-date";
-import { getApp } from "@/lib/api";
+import { getApp, getAppMembership } from "@/lib/api";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import { ExternalLink } from "lucide-react";
 import { TrackAppButton } from "./track-button";
 import { StarAppButton } from "@/components/star-app-button";
@@ -18,13 +19,19 @@ export default async function AppDetailLayout({
   const { slug } = await params;
 
   let app: any;
+  let membership: any = {};
   try {
-    app = await getApp(slug);
+    [app, membership] = await Promise.all([
+      getApp(slug),
+      getAppMembership(slug).catch(() => ({})),
+    ]);
   } catch {
     return <p className="text-muted-foreground">App not found.</p>;
   }
 
   const snapshot = app.latestSnapshot;
+  const memberApps = membership.competitorForAppNames || [];
+  const memberProjects = membership.researchProjects || [];
 
   return (
     <div className="space-y-6">
@@ -40,6 +47,24 @@ export default async function AppDetailLayout({
             </h1>
             {app.appCardSubtitle && (
               <p className="text-sm text-muted-foreground italic mt-1">{app.appCardSubtitle}</p>
+            )}
+            {(memberApps.length > 0 || memberProjects.length > 0) && (
+              <div className="flex flex-wrap gap-1.5 mt-1.5">
+                {memberApps.map((a: any) => (
+                  <Link key={a.slug} href={`/apps/${a.slug}`}>
+                    <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-5 bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-500/30 hover:bg-amber-500/20">
+                      Competitor for {a.name}
+                    </Badge>
+                  </Link>
+                ))}
+                {memberProjects.map((p: any) => (
+                  <Link key={p.id} href={`/research/${p.id}`}>
+                    <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-5 bg-violet-500/10 text-violet-700 dark:text-violet-400 border-violet-500/30 hover:bg-violet-500/20">
+                      {p.name}
+                    </Badge>
+                  </Link>
+                ))}
+              </div>
             )}
           </div>
         </div>
@@ -60,6 +85,7 @@ export default async function AppDetailLayout({
           />
           <StarAppButton
             appSlug={app.slug}
+            appName={app.name}
             initialStarred={app.isCompetitor}
             competitorForApps={app.competitorForApps}
           />

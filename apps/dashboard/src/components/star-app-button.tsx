@@ -11,12 +11,14 @@ import {
 
 export function StarAppButton({
   appSlug,
+  appName,
   initialStarred,
   trackedAppSlug,
   competitorForApps,
   size = "default",
 }: {
   appSlug: string;
+  appName?: string;
   initialStarred: boolean;
   trackedAppSlug?: string;
   competitorForApps?: string[];
@@ -27,6 +29,7 @@ export function StarAppButton({
   const [loading, setLoading] = useState(false);
   const [showPicker, setShowPicker] = useState(false);
   const [pickerItems, setPickerItems] = useState<AssignmentItem[]>([]);
+  const [pickerTitle, setPickerTitle] = useState("");
   const [initialChecked, setInitialChecked] = useState<Set<string>>(new Set());
   const [showLimitModal, setShowLimitModal] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
@@ -54,17 +57,30 @@ export function StarAppButton({
     // Open picker: fetch apps, research projects, and membership in parallel
     setLoading(true);
     try {
-      const [appsRes, projectsRes, membershipRes] = await Promise.all([
+      const fetches: Promise<Response>[] = [
         fetchWithAuth("/api/account/tracked-apps"),
         fetchWithAuth("/api/research-projects"),
         fetchWithAuth(`/api/apps/${encodeURIComponent(appSlug)}/membership`),
-      ]);
+      ];
+      // Fetch app detail for name if not provided via prop
+      if (!appName) {
+        fetches.push(fetchWithAuth(`/api/apps/${encodeURIComponent(appSlug)}`));
+      }
+
+      const responses = await Promise.all(fetches);
+      const [appsRes, projectsRes, membershipRes] = responses;
 
       const apps = appsRes.ok ? await appsRes.json() : [];
       const projects = projectsRes.ok ? await projectsRes.json() : [];
       const membership = membershipRes.ok
         ? await membershipRes.json()
         : { competitorForApps: [], researchProjectIds: [] };
+
+      let displayName = appName || appSlug;
+      if (!appName && responses[3]?.ok) {
+        const appDetail = await responses[3].json();
+        displayName = appDetail.name || appSlug;
+      }
 
       const items: AssignmentItem[] = [
         ...apps.map((a: any) => ({
@@ -92,6 +108,7 @@ export function StarAppButton({
         ...membership.researchProjectIds,
       ]);
 
+      setPickerTitle(`Assign "${displayName}"`);
       setPickerItems(items);
       setInitialChecked(checked);
       setShowPicker(true);
@@ -192,7 +209,7 @@ export function StarAppButton({
         open={showPicker}
         onClose={() => setShowPicker(false)}
         onSave={handleSave}
-        title={`Assign "${appSlug}"`}
+        title={pickerTitle}
         items={pickerItems}
         initialChecked={initialChecked}
         excludeId={appSlug}

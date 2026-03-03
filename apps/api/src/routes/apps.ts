@@ -459,8 +459,12 @@ export const appRoutes: FastifyPluginAsync = async (app) => {
 
       const [competitorRows, projectRows] = await Promise.all([
         db
-          .select({ trackedAppSlug: accountCompetitorApps.trackedAppSlug })
+          .select({
+            trackedAppSlug: accountCompetitorApps.trackedAppSlug,
+            appName: apps.name,
+          })
           .from(accountCompetitorApps)
+          .innerJoin(apps, eq(apps.slug, accountCompetitorApps.trackedAppSlug))
           .where(
             and(
               eq(accountCompetitorApps.accountId, accountId),
@@ -468,7 +472,10 @@ export const appRoutes: FastifyPluginAsync = async (app) => {
             )
           ),
         db
-          .select({ projectId: researchProjectCompetitors.researchProjectId })
+          .select({
+            projectId: researchProjectCompetitors.researchProjectId,
+            projectName: researchProjects.name,
+          })
           .from(researchProjectCompetitors)
           .innerJoin(
             researchProjects,
@@ -485,6 +492,8 @@ export const appRoutes: FastifyPluginAsync = async (app) => {
       return {
         competitorForApps: competitorRows.map((r) => r.trackedAppSlug),
         researchProjectIds: projectRows.map((r) => r.projectId),
+        competitorForAppNames: competitorRows.map((r) => ({ slug: r.trackedAppSlug, name: r.appName })),
+        researchProjects: projectRows.map((r) => ({ id: r.projectId, name: r.projectName })),
       };
     }
   );

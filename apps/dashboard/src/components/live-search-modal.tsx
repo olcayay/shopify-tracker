@@ -279,6 +279,7 @@ export function LiveSearchModal({
                         </span>
                         <StarAppButton
                           appSlug={app.app_slug}
+                          appName={app.app_name}
                           initialStarred={isCompetitor}
                           size="sm"
                         />
@@ -356,6 +357,7 @@ export function LiveSearchModal({
                         </span>
                         <StarAppButton
                           appSlug={app.app_slug}
+                          appName={app.app_name}
                           initialStarred={isCompetitor}
                           size="sm"
                         />

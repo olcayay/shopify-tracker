@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { formatDateOnly } from "@/lib/format-date";
-import { getKeyword, getKeywordRankings, getKeywordAds, getKeywordSuggestions, getAccountCompetitors, getAccountTrackedApps, getAppsLastChanges, getAppsMinPaidPrices, getAppsReverseSimilarCounts, getAppsLaunchedDates, getAppsCategories } from "@/lib/api";
+import { getKeyword, getKeywordRankings, getKeywordAds, getKeywordSuggestions, getKeywordMembership, getAccountCompetitors, getAccountTrackedApps, getAppsLastChanges, getAppsMinPaidPrices, getAppsReverseSimilarCounts, getAppsLaunchedDates, getAppsCategories } from "@/lib/api";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -35,18 +35,23 @@ export default async function KeywordDetailPage({
   let competitors: any[] = [];
   let trackedApps: any[] = [];
   let suggestions: { suggestions: string[]; scrapedAt: string | null } = { suggestions: [], scrapedAt: null };
+  let kwMembership: any = {};
   try {
-    [keyword, rankings, adData, competitors, trackedApps, suggestions] = await Promise.all([
+    [keyword, rankings, adData, competitors, trackedApps, suggestions, kwMembership] = await Promise.all([
       getKeyword(slug),
       getKeywordRankings(slug, 30, "account"),
       getKeywordAds(slug),
       getAccountCompetitors().catch(() => []),
       getAccountTrackedApps().catch(() => []),
       getKeywordSuggestions(slug).catch(() => ({ suggestions: [], scrapedAt: null })),
+      getKeywordMembership(slug).catch(() => ({})),
     ]);
   } catch {
     return <p className="text-muted-foreground">Keyword not found.</p>;
   }
+
+  const kwMemberApps = kwMembership.trackedAppNames || [];
+  const kwMemberProjects = kwMembership.researchProjects || [];
 
   const competitorSlugs = new Set(competitors.map((c: any) => c.appSlug));
   const trackedSlugs = new Set(trackedApps.map((a: any) => a.appSlug));
@@ -99,6 +104,24 @@ export default async function KeywordDetailPage({
               </>
             )}
           </p>
+          {(kwMemberApps.length > 0 || kwMemberProjects.length > 0) && (
+            <div className="flex flex-wrap gap-1.5 mt-1.5">
+              {kwMemberApps.map((a: any) => (
+                <Link key={a.slug} href={`/apps/${a.slug}`}>
+                  <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-5 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-500/30 hover:bg-emerald-500/20">
+                    Tracked for {a.name}
+                  </Badge>
+                </Link>
+              ))}
+              {kwMemberProjects.map((p: any) => (
+                <Link key={p.id} href={`/research/${p.id}`}>
+                  <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-5 bg-violet-500/10 text-violet-700 dark:text-violet-400 border-violet-500/30 hover:bg-violet-500/20">
+                    {p.name}
+                  </Badge>
+                </Link>
+              ))}
+            </div>
+          )}
         </div>
         <div className="flex items-center gap-2">
           {suggestions.suggestions.length > 0 && (
@@ -256,6 +279,7 @@ export default async function KeywordDetailPage({
                     <TableCell>
                       <StarAppButton
                         appSlug={app.app_slug}
+                        appName={app.app_name}
                         initialStarred={competitorSlugs.has(app.app_slug)}
                         size="sm"
                       />
@@ -388,6 +412,7 @@ export default async function KeywordDetailPage({
                     <TableCell>
                       <StarAppButton
                         appSlug={ad.appSlug}
+                        appName={ad.appName}
                         initialStarred={competitorSlugs.has(ad.appSlug)}
                         size="sm"
                       />

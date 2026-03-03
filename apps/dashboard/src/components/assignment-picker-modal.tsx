@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Check, Loader2 } from "lucide-react";
 
@@ -33,6 +33,11 @@ export function AssignmentPickerModal({
   const [checked, setChecked] = useState<Set<string>>(new Set(initialChecked));
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+
+  // Sync checked state when initialChecked changes (e.g. after async fetch)
+  useEffect(() => {
+    setChecked(new Set(initialChecked));
+  }, [initialChecked]);
 
   if (!open) return null;
 

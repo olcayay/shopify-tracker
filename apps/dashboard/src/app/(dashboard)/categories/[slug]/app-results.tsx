@@ -398,6 +398,7 @@ export function CategoryAppResults({
                     <TableCell>
                       <StarAppButton
                         appSlug={app.slug}
+                        appName={app.name}
                         initialStarred={competitorSet.has(app.slug)}
                         size="sm"
                       />

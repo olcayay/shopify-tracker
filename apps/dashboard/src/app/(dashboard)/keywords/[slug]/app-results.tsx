@@ -406,6 +406,7 @@ export function KeywordAppResults({
                     <TableCell>
                       <StarAppButton
                         appSlug={app.app_slug}
+                        appName={app.app_name}
                         initialStarred={competitorSet.has(app.app_slug)}
                         size="sm"
                       />

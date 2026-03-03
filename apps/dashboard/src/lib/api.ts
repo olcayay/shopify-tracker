@@ -310,6 +310,19 @@ export const getCategoryScores = cache((slug: string, limit = 50) => {
   return fetchApi<any>(`/api/categories/${slug}/scores?limit=${limit}`);
 });
 
+// --- Membership ---
+export function getKeywordMembership(slug: string) {
+  return fetchApi<{ trackedAppSlugs: string[]; researchProjectIds: string[] }>(
+    `/api/keywords/${encodeURIComponent(slug)}/membership`
+  );
+}
+
+export function getAppMembership(slug: string) {
+  return fetchApi<{ competitorForApps: string[]; researchProjectIds: string[] }>(
+    `/api/apps/${encodeURIComponent(slug)}/membership`
+  );
+}
+
 // --- Research Projects ---
 export function getResearchProjects() {
   return fetchApi<any[]>(`/api/research-projects`);
