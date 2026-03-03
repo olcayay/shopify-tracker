@@ -1548,7 +1548,6 @@ function FeatureCoverage({
 
   // Group features by categoryType → subcategoryTitle
   const grouped = useMemo(() => {
-    const typeOrder = ["primary", "secondary", "other"];
     const typeMap = new Map<string, Map<string, typeof features>>();
 
     for (const f of features) {
@@ -1560,24 +1559,23 @@ function FeatureCoverage({
       subMap.get(subTitle)!.push(f);
     }
 
-    const result: { type: string; categoryTitle: string; subcategories: { title: string; features: typeof features }[] }[] = [];
+    const result: { type: string; categoryTitle: string; totalChecks: number; subcategories: { title: string; features: typeof features }[] }[] = [];
 
-    for (const type of typeOrder) {
-      const subMap = typeMap.get(type);
-      if (!subMap) continue;
-      // Get categoryTitle from first feature in this type
+    for (const [type, subMap] of typeMap) {
       const firstFeature = [...subMap.values()][0]?.[0];
       const categoryTitle = firstFeature?.categoryTitle || type;
       const subcategories = [...subMap.entries()]
         .map(([title, feats]) => ({ title, features: feats.sort((a, b) => b.count - a.count) }))
         .sort((a, b) => {
-          const avgA = a.features.reduce((s, f) => s + f.count, 0) / a.features.length;
-          const avgB = b.features.reduce((s, f) => s + f.count, 0) / b.features.length;
-          return avgB - avgA;
+          const sumA = a.features.reduce((s, f) => s + f.count, 0);
+          const sumB = b.features.reduce((s, f) => s + f.count, 0);
+          return sumB - sumA;
         });
-      result.push({ type, categoryTitle, subcategories });
+      const totalChecks = subcategories.reduce((s, sub) => s + sub.features.reduce((s2, f) => s2 + f.count, 0), 0);
+      result.push({ type, categoryTitle, totalChecks, subcategories });
     }
 
+    result.sort((a, b) => b.totalChecks - a.totalChecks);
     return result;
   }, [features]);
 
