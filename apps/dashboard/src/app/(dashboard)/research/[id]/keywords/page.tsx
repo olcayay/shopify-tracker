@@ -51,6 +51,7 @@ export default function ResearchKeywordsPage() {
   const [data, setData] = useState<ResearchData | null>(null);
   const [loading, setLoading] = useState(true);
   const [input, setInput] = useState("");
+  const [filterQuery, setFilterQuery] = useState("");
   const [adding, setAdding] = useState(false);
 
   // Polling
@@ -160,7 +161,12 @@ export default function ResearchKeywordsPage() {
 
   const sortedKeywords = useMemo(() => {
     if (!data) return [];
-    return [...data.keywords].sort((a, b) => {
+    let list = data.keywords;
+    if (filterQuery.trim()) {
+      const q = filterQuery.toLowerCase();
+      list = list.filter((kw) => kw.keyword.toLowerCase().includes(q));
+    }
+    return [...list].sort((a, b) => {
       let cmp = 0;
       switch (sortKey) {
         case "keyword": cmp = a.keyword.localeCompare(b.keyword); break;
@@ -174,7 +180,7 @@ export default function ResearchKeywordsPage() {
       }
       return sortDir === "asc" ? cmp : -cmp;
     });
-  }, [data, sortKey, sortDir, oppMap]);
+  }, [data, sortKey, sortDir, oppMap, filterQuery]);
 
   if (loading) {
     return (
@@ -235,7 +241,20 @@ export default function ResearchKeywordsPage() {
               <p className="text-muted-foreground text-sm">No keywords added yet.</p>
             </div>
           ) : (
-            <div className="overflow-x-auto">
+            <div className="space-y-3">
+              <div className="flex items-center gap-2">
+                <Search className="h-4 w-4 text-muted-foreground" />
+                <Input
+                  value={filterQuery}
+                  onChange={(e) => setFilterQuery(e.target.value)}
+                  placeholder="Filter keywords..."
+                  className="h-8 w-56 text-sm"
+                />
+                {filterQuery && (
+                  <span className="text-xs text-muted-foreground">{sortedKeywords.length} results</span>
+                )}
+              </div>
+              <div className="overflow-x-auto">
               <Table>
                 <TableHeader>
                   <TableRow>
@@ -334,6 +353,7 @@ export default function ResearchKeywordsPage() {
                   })}
                 </TableBody>
               </Table>
+              </div>
             </div>
           )}
         </CardContent>

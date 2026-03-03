@@ -1340,6 +1340,7 @@ function KeywordSuggestions({
   const [addingKw, setAddingKw] = useState<string | null>(null);
   const [ensuringKw, setEnsuringKw] = useState<string | null>(null);
   const [expanded, setExpanded] = useState(false);
+  const [search, setSearch] = useState("");
   const INITIAL_COUNT = 15;
 
   async function handleAdd(keyword: string) {
@@ -1374,57 +1375,88 @@ function KeywordSuggestions({
     }
   }
 
-  const visible = expanded ? suggestions : suggestions.slice(0, INITIAL_COUNT);
-  const hasMore = suggestions.length > INITIAL_COUNT;
+  const filtered = useMemo(() => {
+    if (!search.trim()) return suggestions;
+    const q = search.toLowerCase();
+    return suggestions.filter((s) => s.keyword.toLowerCase().includes(q));
+  }, [suggestions, search]);
+
+  const visible = search ? filtered : (expanded ? filtered : filtered.slice(0, INITIAL_COUNT));
+  const hasMore = !search && filtered.length > INITIAL_COUNT;
 
   return (
-    <div className="space-y-1">
-      {visible.map((s) => (
-        <div key={s.keyword} className="flex items-center justify-between py-1.5 px-3 rounded-md hover:bg-muted/50">
-          <div className="flex items-center gap-3">
-            <Link
-              href={`/keywords/${s.slug || toSlug(s.keyword)}`}
-              className="text-sm font-medium hover:underline"
-              onClick={(e) => handleKeywordClick(e, s)}
-            >
-              {ensuringKw === s.keyword ? (
-                <span className="flex items-center gap-1.5">
-                  <Loader2 className="h-3 w-3 animate-spin" />
-                  &ldquo;{s.keyword}&rdquo;
-                </span>
-              ) : (
-                <>&ldquo;{s.keyword}&rdquo;</>
+    <div className="space-y-2">
+      <div className="flex items-center gap-2 px-3">
+        <Search className="h-4 w-4 text-muted-foreground" />
+        <Input
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder="Filter suggestions..."
+          className="h-8 w-56 text-sm"
+        />
+        {search && (
+          <span className="text-xs text-muted-foreground">{filtered.length} results</span>
+        )}
+      </div>
+      <div className="space-y-1">
+        {visible.map((s) => (
+          <div key={s.keyword} className="flex items-center justify-between py-1.5 px-3 rounded-md hover:bg-muted/50">
+            <div className="flex items-center gap-3">
+              <Link
+                href={`/keywords/${s.slug || toSlug(s.keyword)}`}
+                className="text-sm font-medium hover:underline"
+                onClick={(e) => handleKeywordClick(e, s)}
+              >
+                {ensuringKw === s.keyword ? (
+                  <span className="flex items-center gap-1.5">
+                    <Loader2 className="h-3 w-3 animate-spin" />
+                    &ldquo;{s.keyword}&rdquo;
+                  </span>
+                ) : (
+                  <>&ldquo;{s.keyword}&rdquo;</>
+                )}
+              </Link>
+              <span className="text-xs text-muted-foreground">
+                {s.competitorCount} competitor{s.competitorCount !== 1 ? "s" : ""} rank
+              </span>
+              <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-4">
+                {s.source}
+              </Badge>
+            </div>
+            <div className="flex items-center gap-0.5">
+              <a
+                href={`https://apps.shopify.com/search?q=${encodeURIComponent(s.keyword)}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="p-1 rounded text-muted-foreground hover:text-foreground transition-colors"
+                title="Search on Shopify App Store"
+              >
+                <ExternalLink className="h-3.5 w-3.5" />
+              </a>
+              {canEdit && (
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => handleAdd(s.keyword)}
+                  disabled={addingKw === s.keyword}
+                >
+                  {addingKw === s.keyword ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Plus className="h-3.5 w-3.5" />}
+                </Button>
               )}
-            </Link>
-            <span className="text-xs text-muted-foreground">
-              {s.competitorCount} competitor{s.competitorCount !== 1 ? "s" : ""} rank
-            </span>
-            <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-4">
-              {s.source}
-            </Badge>
+            </div>
           </div>
-          {canEdit && (
-            <Button
-              size="sm"
-              variant="ghost"
-              onClick={() => handleAdd(s.keyword)}
-              disabled={addingKw === s.keyword}
-            >
-              {addingKw === s.keyword ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Plus className="h-3.5 w-3.5" />}
-            </Button>
-          )}
-        </div>
-      ))}
-      {hasMore && (
-        <Button
-          variant="ghost"
-          size="sm"
-          className="w-full text-muted-foreground"
-          onClick={() => setExpanded(!expanded)}
-        >
-          {expanded ? "Show less" : `Show ${suggestions.length - INITIAL_COUNT} more`}
-        </Button>
-      )}
+        ))}
+        {hasMore && (
+          <Button
+            variant="ghost"
+            size="sm"
+            className="w-full text-muted-foreground"
+            onClick={() => setExpanded(!expanded)}
+          >
+            {expanded ? "Show less" : `Show ${filtered.length - INITIAL_COUNT} more`}
+          </Button>
+        )}
+      </div>
     </div>
   );
 }
@@ -1436,7 +1468,14 @@ function MarketLanguage({
 }: {
   words: ResearchData["wordAnalysis"]; totalCompetitors: number;
 }) {
+  const [search, setSearch] = useState("");
   const maxScore = useMemo(() => Math.max(...words.map((w) => w.totalScore), 1), [words]);
+
+  const filtered = useMemo(() => {
+    if (!search.trim()) return words;
+    const q = search.toLowerCase();
+    return words.filter((w) => w.word.toLowerCase().includes(q));
+  }, [words, search]);
 
   const fieldLabels: Record<string, { label: string; color: string }> = {
     name: { label: "Name", color: "bg-blue-500/20 text-blue-700" },
@@ -1448,6 +1487,10 @@ function MarketLanguage({
     categoryFeatures: { label: "CatFeat", color: "bg-amber-500/20 text-amber-700" },
   };
 
+  function toSlug(word: string) {
+    return word.toLowerCase().replace(/[^a-z0-9\s-]/g, "").replace(/\s+/g, "-").replace(/-+/g, "-").replace(/^-|-$/g, "");
+  }
+
   return (
     <div className="space-y-4">
       {/* Tag Cloud */}
@@ -1456,11 +1499,10 @@ function MarketLanguage({
           const sizeRatio = w.totalScore / maxScore;
           const fontSize = 0.75 + sizeRatio * 1;
           const opacity = 0.4 + (w.appCount / totalCompetitors) * 0.6;
-          const slug = w.word.toLowerCase().replace(/[^a-z0-9\s-]/g, "").replace(/\s+/g, "-").replace(/-+/g, "-").replace(/^-|-$/g, "");
           return (
             <Link
               key={w.word}
-              href={`/keywords/${slug}`}
+              href={`/keywords/${toSlug(w.word)}`}
               className="inline-block leading-tight font-medium hover:underline"
               style={{ fontSize: `${fontSize}rem`, opacity }}
             >
@@ -1470,6 +1512,20 @@ function MarketLanguage({
         })}
       </div>
 
+      {/* Search */}
+      <div className="flex items-center gap-2">
+        <Search className="h-4 w-4 text-muted-foreground" />
+        <Input
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder="Filter terms..."
+          className="h-8 w-56 text-sm"
+        />
+        {search && (
+          <span className="text-xs text-muted-foreground">{filtered.length} results</span>
+        )}
+      </div>
+
       {/* Table */}
       <Table>
         <TableHeader>
@@ -1477,14 +1533,15 @@ function MarketLanguage({
             <TableHead>Term</TableHead>
             <TableHead className="text-right">Apps</TableHead>
             <TableHead>Fields</TableHead>
+            <TableHead className="w-10" />
           </TableRow>
         </TableHeader>
         <TableBody>
-          {words.slice(0, 20).map((w) => (
+          {(search ? filtered : filtered.slice(0, 20)).map((w) => (
             <TableRow key={w.word}>
               <TableCell className="font-medium text-sm">
                 <Link
-                  href={`/keywords/${w.word.toLowerCase().replace(/[^a-z0-9\s-]/g, "").replace(/\s+/g, "-").replace(/-+/g, "-").replace(/^-|-$/g, "")}`}
+                  href={`/keywords/${toSlug(w.word)}`}
                   className="hover:underline"
                 >
                   {w.word}
@@ -1506,6 +1563,17 @@ function MarketLanguage({
                       );
                     })}
                 </div>
+              </TableCell>
+              <TableCell>
+                <a
+                  href={`https://apps.shopify.com/search?q=${encodeURIComponent(w.word)}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="p-1 rounded text-muted-foreground hover:text-foreground transition-colors"
+                  title="Search on Shopify App Store"
+                >
+                  <ExternalLink className="h-3.5 w-3.5" />
+                </a>
               </TableCell>
             </TableRow>
           ))}
