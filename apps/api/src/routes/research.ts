@@ -105,14 +105,64 @@ export const researchRoutes: FastifyPluginAsync = async (app) => {
       .where(inArray(researchProjectCompetitors.researchProjectId, projectIds))
       .groupBy(researchProjectCompetitors.researchProjectId);
 
+    // Get competitor app stats per project using lateral join for latest snapshot
+    const compStats = await db.execute<{
+      projectId: string; avgRating: number | null; avgReviews: number | null;
+      minPrice: number | null; maxPrice: number | null;
+    }>(sql`
+      SELECT
+        rpc.research_project_id AS "projectId",
+        round(avg(ls.average_rating)::numeric, 1) AS "avgRating",
+        round(avg(ls.rating_count))::int AS "avgReviews",
+        min(ls.min_paid) AS "minPrice",
+        max(ls.min_paid) AS "maxPrice"
+      FROM research_project_competitors rpc
+      CROSS JOIN LATERAL (
+        SELECT s.average_rating, s.rating_count,
+          (SELECT min(p::numeric) FROM jsonb_array_elements_text(
+            jsonb_path_query_array(s.pricing_plans, '$[*].price')
+          ) AS p WHERE p IS NOT NULL AND p != 'null' AND p::numeric > 0) AS min_paid
+        FROM app_snapshots s
+        WHERE s.app_slug = rpc.app_slug
+        ORDER BY s.scraped_at DESC LIMIT 1
+      ) ls
+      WHERE rpc.research_project_id = ANY(${projectIds})
+      GROUP BY rpc.research_project_id
+    `);
+
+    const powerStats = await db.execute<{
+      projectId: string; avgPower: number | null; maxPower: number | null;
+    }>(sql`
+      SELECT
+        rpc.research_project_id AS "projectId",
+        round(avg(ps.overall_score))::int AS "avgPower",
+        max(ps.overall_score)::int AS "maxPower"
+      FROM research_project_competitors rpc
+      INNER JOIN app_power_scores ps ON ps.app_slug = rpc.app_slug
+      WHERE rpc.research_project_id = ANY(${projectIds})
+      GROUP BY rpc.research_project_id
+    `);
+
     const kwMap = Object.fromEntries(kwCounts.map((r) => [r.projectId, r.count]));
     const compMap = Object.fromEntries(compCounts.map((r) => [r.projectId, r.count]));
+    const statsMap = Object.fromEntries([...compStats].map((r: any) => [r.projectId, r]));
+    const powerMap = Object.fromEntries([...powerStats].map((r: any) => [r.projectId, r]));
 
-    return projects.map((p) => ({
-      ...p,
-      keywordCount: kwMap[p.id] || 0,
-      competitorCount: compMap[p.id] || 0,
-    }));
+    return projects.map((p) => {
+      const stats = statsMap[p.id];
+      const power = powerMap[p.id];
+      return {
+        ...p,
+        keywordCount: kwMap[p.id] || 0,
+        competitorCount: compMap[p.id] || 0,
+        avgRating: stats?.avgRating ? Number(Number(stats.avgRating).toFixed(1)) : null,
+        avgReviews: stats?.avgReviews ?? null,
+        minPrice: stats?.minPrice ? Number(stats.minPrice) : null,
+        maxPrice: stats?.maxPrice ? Number(stats.maxPrice) : null,
+        avgPower: power?.avgPower ?? null,
+        maxPower: power?.maxPower ?? null,
+      };
+    });
   });
 
   // POST /api/research-projects — create project
