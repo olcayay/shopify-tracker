@@ -34,6 +34,9 @@ import {
   Loader2,
   GitCompareArrows,
   ExternalLink,
+  ArrowUpDown,
+  ArrowUp,
+  ArrowDown,
 } from "lucide-react";
 import Link from "next/link";
 
@@ -1089,34 +1092,78 @@ function CompetitorTable({
   pendingCompetitors: Set<string>; resolvedCompetitors: Set<string>; canEdit: boolean;
   onRemove: (slug: string) => Promise<void>;
 }) {
+  type CompSortKey = "name" | "rating" | "reviews" | "pricing" | "power" | "rankings" | "featured" | "similar" | "launched";
+  const [sortKey, setSortKey] = useState<CompSortKey>("reviews");
+  const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
+
+  function toggleSort(key: CompSortKey) {
+    if (sortKey === key) {
+      setSortDir((d) => (d === "asc" ? "desc" : "asc"));
+    } else {
+      setSortKey(key);
+      setSortDir(key === "name" ? "asc" : "desc");
+    }
+  }
+
+  function SortIcon({ col }: { col: CompSortKey }) {
+    if (sortKey !== col) return <ArrowUpDown className="inline h-3 w-3 ml-0.5 opacity-40" />;
+    return sortDir === "asc" ? <ArrowUp className="inline h-3 w-3 ml-0.5" /> : <ArrowDown className="inline h-3 w-3 ml-0.5" />;
+  }
+
+  const rankCountMap = useMemo(() => {
+    const map = new Map<string, number>();
+    for (const comp of competitors) {
+      let count = 0;
+      for (const kwSlug of Object.keys(keywordRankings)) {
+        if (keywordRankings[kwSlug]?.[comp.slug] != null) count++;
+      }
+      map.set(comp.slug, count);
+    }
+    return map;
+  }, [competitors, keywordRankings]);
+
+  const sorted = useMemo(() => {
+    return [...competitors].sort((a, b) => {
+      let cmp = 0;
+      switch (sortKey) {
+        case "name": cmp = a.name.localeCompare(b.name); break;
+        case "rating": cmp = (a.averageRating ?? -1) - (b.averageRating ?? -1); break;
+        case "reviews": cmp = (a.ratingCount ?? -1) - (b.ratingCount ?? -1); break;
+        case "pricing": cmp = (a.minPaidPrice ?? -1) - (b.minPaidPrice ?? -1); break;
+        case "power": cmp = (a.powerScore ?? -1) - (b.powerScore ?? -1); break;
+        case "rankings": cmp = (rankCountMap.get(a.slug) ?? 0) - (rankCountMap.get(b.slug) ?? 0); break;
+        case "featured": cmp = (a.featuredSections ?? 0) - (b.featuredSections ?? 0); break;
+        case "similar": cmp = (a.reverseSimilarCount ?? 0) - (b.reverseSimilarCount ?? 0); break;
+        case "launched": cmp = (a.launchedAt ?? "").localeCompare(b.launchedAt ?? ""); break;
+      }
+      return sortDir === "asc" ? cmp : -cmp;
+    });
+  }, [competitors, sortKey, sortDir, rankCountMap]);
+
   return (
     <div className="overflow-x-auto">
       <Table>
         <TableHeader>
           <TableRow>
-            <TableHead>App</TableHead>
-            <TableHead className="text-right">Rating</TableHead>
-            <TableHead className="text-right">Reviews</TableHead>
-            <TableHead className="text-right">Pricing</TableHead>
-            <TableHead className="text-right">Power</TableHead>
-            {keywords.length > 0 && <TableHead className="text-center">Rankings</TableHead>}
-            <TableHead className="text-right">Featured</TableHead>
-            <TableHead className="text-right">Similar</TableHead>
+            <TableHead className="cursor-pointer select-none" onClick={() => toggleSort("name")}>App <SortIcon col="name" /></TableHead>
+            <TableHead className="text-right cursor-pointer select-none" onClick={() => toggleSort("rating")}>Rating <SortIcon col="rating" /></TableHead>
+            <TableHead className="text-right cursor-pointer select-none" onClick={() => toggleSort("reviews")}>Reviews <SortIcon col="reviews" /></TableHead>
+            <TableHead className="text-right cursor-pointer select-none" onClick={() => toggleSort("pricing")}>Pricing <SortIcon col="pricing" /></TableHead>
+            <TableHead className="text-right cursor-pointer select-none" onClick={() => toggleSort("power")}>Power <SortIcon col="power" /></TableHead>
+            {keywords.length > 0 && <TableHead className="text-center cursor-pointer select-none" onClick={() => toggleSort("rankings")}>Rankings <SortIcon col="rankings" /></TableHead>}
+            <TableHead className="text-right cursor-pointer select-none" onClick={() => toggleSort("featured")}>Featured <SortIcon col="featured" /></TableHead>
+            <TableHead className="text-right cursor-pointer select-none" onClick={() => toggleSort("similar")}>Similar <SortIcon col="similar" /></TableHead>
             <TableHead>Categories</TableHead>
-            <TableHead className="text-right">Launched</TableHead>
+            <TableHead className="text-right cursor-pointer select-none" onClick={() => toggleSort("launched")}>Launched <SortIcon col="launched" /></TableHead>
             {canEdit && <TableHead className="w-10" />}
           </TableRow>
         </TableHeader>
         <TableBody>
-          {competitors.map((comp) => {
+          {sorted.map((comp) => {
             const isPending = pendingCompetitors.has(comp.slug);
             const isResolved = resolvedCompetitors.has(comp.slug);
             const animate = isResolved ? "animate-in fade-in duration-700" : "";
-            // Count how many keywords this competitor ranks for
-            let rankCount = 0;
-            for (const kwSlug of Object.keys(keywordRankings)) {
-              if (keywordRankings[kwSlug]?.[comp.slug] != null) rankCount++;
-            }
+            const rankCount = rankCountMap.get(comp.slug) ?? 0;
 
             return (
               <TableRow key={comp.slug} className={isPending ? "animate-in fade-in slide-in-from-top duration-300" : ""}>
@@ -1653,6 +1700,38 @@ function OpportunityTable({
 }: {
   opportunities: ResearchData["opportunities"];
 }) {
+  type OppSortKey = "keyword" | "opportunity" | "room" | "demand" | "competitors";
+  const [sortKey, setSortKey] = useState<OppSortKey>("opportunity");
+  const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
+
+  function toggleSort(key: OppSortKey) {
+    if (sortKey === key) {
+      setSortDir((d) => (d === "asc" ? "desc" : "asc"));
+    } else {
+      setSortKey(key);
+      setSortDir(key === "keyword" ? "asc" : "desc");
+    }
+  }
+
+  function SortIcon({ col }: { col: OppSortKey }) {
+    if (sortKey !== col) return <ArrowUpDown className="inline h-3 w-3 ml-0.5 opacity-40" />;
+    return sortDir === "asc" ? <ArrowUp className="inline h-3 w-3 ml-0.5" /> : <ArrowDown className="inline h-3 w-3 ml-0.5" />;
+  }
+
+  const sorted = useMemo(() => {
+    return [...opportunities].sort((a, b) => {
+      let cmp = 0;
+      switch (sortKey) {
+        case "keyword": cmp = a.keyword.localeCompare(b.keyword); break;
+        case "opportunity": cmp = a.opportunityScore - b.opportunityScore; break;
+        case "room": cmp = a.room - b.room; break;
+        case "demand": cmp = (a.totalResults ?? -1) - (b.totalResults ?? -1); break;
+        case "competitors": cmp = a.competitorCount - b.competitorCount; break;
+      }
+      return sortDir === "asc" ? cmp : -cmp;
+    });
+  }, [opportunities, sortKey, sortDir]);
+
   function roomLabel(room: number): string {
     if (room >= 0.7) return "High";
     if (room >= 0.4) return "Med";
@@ -1664,15 +1743,15 @@ function OpportunityTable({
       <Table>
         <TableHeader>
           <TableRow>
-            <TableHead>Keyword</TableHead>
-            <TableHead className="text-right">Opportunity</TableHead>
-            <TableHead className="text-right">Room</TableHead>
-            <TableHead className="text-right">Demand</TableHead>
-            <TableHead className="text-right">Competitors</TableHead>
+            <TableHead className="cursor-pointer select-none" onClick={() => toggleSort("keyword")}>Keyword <SortIcon col="keyword" /></TableHead>
+            <TableHead className="text-right cursor-pointer select-none" onClick={() => toggleSort("opportunity")}>Opportunity <SortIcon col="opportunity" /></TableHead>
+            <TableHead className="text-right cursor-pointer select-none" onClick={() => toggleSort("room")}>Room <SortIcon col="room" /></TableHead>
+            <TableHead className="text-right cursor-pointer select-none" onClick={() => toggleSort("demand")}>Demand <SortIcon col="demand" /></TableHead>
+            <TableHead className="text-right cursor-pointer select-none" onClick={() => toggleSort("competitors")}>Competitors <SortIcon col="competitors" /></TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
-          {opportunities.map((opp) => (
+          {sorted.map((opp) => (
             <TableRow key={opp.slug}>
               <TableCell>
                 <Link href={`/keywords/${opp.slug}`} className="font-medium text-sm hover:underline">

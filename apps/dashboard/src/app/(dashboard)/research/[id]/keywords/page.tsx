@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useRef, useCallback } from "react";
+import { useEffect, useState, useRef, useCallback, useMemo } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import { useAuth } from "@/lib/auth-context";
@@ -24,6 +24,9 @@ import {
   X,
   Loader2,
   ExternalLink,
+  ArrowUpDown,
+  ArrowUp,
+  ArrowDown,
 } from "lucide-react";
 
 interface ResearchData {
@@ -134,6 +137,45 @@ export default function ResearchKeywordsPage() {
     if (res.ok) await fetchData();
   }
 
+  // Sorting
+  type KwSortKey = "keyword" | "results" | "opportunity";
+  const [sortKey, setSortKey] = useState<KwSortKey>("keyword");
+  const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
+
+  function toggleSort(key: KwSortKey) {
+    if (sortKey === key) {
+      setSortDir((d) => (d === "asc" ? "desc" : "asc"));
+    } else {
+      setSortKey(key);
+      setSortDir(key === "keyword" ? "asc" : "desc");
+    }
+  }
+
+  function SortIcon({ col }: { col: KwSortKey }) {
+    if (sortKey !== col) return <ArrowUpDown className="inline h-3 w-3 ml-0.5 opacity-40" />;
+    return sortDir === "asc" ? <ArrowUp className="inline h-3 w-3 ml-0.5" /> : <ArrowDown className="inline h-3 w-3 ml-0.5" />;
+  }
+
+  const oppMap = useMemo(() => data ? new Map(data.opportunities.map((o) => [o.slug, o])) : new Map(), [data]);
+
+  const sortedKeywords = useMemo(() => {
+    if (!data) return [];
+    return [...data.keywords].sort((a, b) => {
+      let cmp = 0;
+      switch (sortKey) {
+        case "keyword": cmp = a.keyword.localeCompare(b.keyword); break;
+        case "results": cmp = (a.totalResults ?? -1) - (b.totalResults ?? -1); break;
+        case "opportunity": {
+          const oa = oppMap.get(a.slug)?.opportunityScore ?? -1;
+          const ob = oppMap.get(b.slug)?.opportunityScore ?? -1;
+          cmp = oa - ob;
+          break;
+        }
+      }
+      return sortDir === "asc" ? cmp : -cmp;
+    });
+  }, [data, sortKey, sortDir, oppMap]);
+
   if (loading) {
     return (
       <div className="space-y-4">
@@ -147,8 +189,6 @@ export default function ResearchKeywordsPage() {
     return <p className="text-muted-foreground">Project not found.</p>;
   }
 
-  // Build opportunity score map
-  const oppMap = new Map(data.opportunities.map((o) => [o.slug, o]));
 
   return (
     <div className="space-y-4">
@@ -199,7 +239,7 @@ export default function ResearchKeywordsPage() {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Keyword</TableHead>
+                    <TableHead className="cursor-pointer select-none" onClick={() => toggleSort("keyword")}>Keyword <SortIcon col="keyword" /></TableHead>
                     {data.competitors.map((comp) => (
                       <TableHead key={comp.slug} className="text-center min-w-[60px]">
                         <Link href={`/apps/${comp.slug}`} className="flex flex-col items-center gap-1 hover:opacity-80" title={comp.name}>
@@ -212,13 +252,13 @@ export default function ResearchKeywordsPage() {
                         </Link>
                       </TableHead>
                     ))}
-                    <TableHead className="text-right">Results</TableHead>
-                    <TableHead className="text-right">Opportunity</TableHead>
+                    <TableHead className="text-right cursor-pointer select-none" onClick={() => toggleSort("results")}>Results <SortIcon col="results" /></TableHead>
+                    <TableHead className="text-right cursor-pointer select-none" onClick={() => toggleSort("opportunity")}>Opportunity <SortIcon col="opportunity" /></TableHead>
                     <TableHead className="w-16" />
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {data.keywords.map((kw) => {
+                  {sortedKeywords.map((kw) => {
                     const isPending = pendingKeywords.has(kw.id);
                     const isResolved = resolvedKeywords.has(kw.id);
                     const animate = isResolved ? "animate-in fade-in duration-700" : "";

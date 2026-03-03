@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useRef, useCallback } from "react";
+import { useEffect, useState, useRef, useCallback, useMemo } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import { useAuth } from "@/lib/auth-context";
@@ -26,6 +26,9 @@ import {
   Star,
   Search,
   ExternalLink,
+  ArrowUpDown,
+  ArrowUp,
+  ArrowDown,
 } from "lucide-react";
 
 interface Competitor {
@@ -178,6 +181,57 @@ export default function ResearchCompetitorsPage() {
     if (res.ok) await fetchData();
   }
 
+  // Sorting
+  type CompSortKey = "name" | "rating" | "reviews" | "pricing" | "power" | "rankings" | "featured" | "similar" | "launched";
+  const [sortKey, setSortKey] = useState<CompSortKey>("reviews");
+  const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
+
+  function toggleSort(key: CompSortKey) {
+    if (sortKey === key) {
+      setSortDir((d) => (d === "asc" ? "desc" : "asc"));
+    } else {
+      setSortKey(key);
+      setSortDir(key === "name" ? "asc" : "desc");
+    }
+  }
+
+  function SortIcon({ col }: { col: CompSortKey }) {
+    if (sortKey !== col) return <ArrowUpDown className="inline h-3 w-3 ml-0.5 opacity-40" />;
+    return sortDir === "asc" ? <ArrowUp className="inline h-3 w-3 ml-0.5" /> : <ArrowDown className="inline h-3 w-3 ml-0.5" />;
+  }
+
+  const rankCountMap = useMemo(() => {
+    if (!data) return new Map<string, number>();
+    const map = new Map<string, number>();
+    for (const comp of data.competitors) {
+      let count = 0;
+      for (const kwSlug of Object.keys(data.keywordRankings)) {
+        if (data.keywordRankings[kwSlug]?.[comp.slug] != null) count++;
+      }
+      map.set(comp.slug, count);
+    }
+    return map;
+  }, [data]);
+
+  const sortedCompetitors = useMemo(() => {
+    if (!data) return [];
+    return [...data.competitors].sort((a, b) => {
+      let cmp = 0;
+      switch (sortKey) {
+        case "name": cmp = a.name.localeCompare(b.name); break;
+        case "rating": cmp = (a.averageRating ?? -1) - (b.averageRating ?? -1); break;
+        case "reviews": cmp = (a.ratingCount ?? -1) - (b.ratingCount ?? -1); break;
+        case "pricing": cmp = (a.minPaidPrice ?? -1) - (b.minPaidPrice ?? -1); break;
+        case "power": cmp = (a.powerScore ?? -1) - (b.powerScore ?? -1); break;
+        case "rankings": cmp = (rankCountMap.get(a.slug) ?? 0) - (rankCountMap.get(b.slug) ?? 0); break;
+        case "featured": cmp = (a.featuredSections ?? 0) - (b.featuredSections ?? 0); break;
+        case "similar": cmp = (a.reverseSimilarCount ?? 0) - (b.reverseSimilarCount ?? 0); break;
+        case "launched": cmp = (a.launchedAt ?? "").localeCompare(b.launchedAt ?? ""); break;
+      }
+      return sortDir === "asc" ? cmp : -cmp;
+    });
+  }, [data, sortKey, sortDir, rankCountMap]);
+
   if (loading) {
     return (
       <div className="space-y-4">
@@ -278,30 +332,25 @@ export default function ResearchCompetitorsPage() {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>App</TableHead>
-                    <TableHead className="text-right">Rating</TableHead>
-                    <TableHead className="text-right">Reviews</TableHead>
-                    <TableHead className="text-right">Pricing</TableHead>
-                    <TableHead className="text-right">Power</TableHead>
-                    <TableHead className="text-center">Keywords Ranked</TableHead>
-                    <TableHead className="text-right">Featured</TableHead>
-                    <TableHead className="text-right">Similar</TableHead>
+                    <TableHead className="cursor-pointer select-none" onClick={() => toggleSort("name")}>App <SortIcon col="name" /></TableHead>
+                    <TableHead className="text-right cursor-pointer select-none" onClick={() => toggleSort("rating")}>Rating <SortIcon col="rating" /></TableHead>
+                    <TableHead className="text-right cursor-pointer select-none" onClick={() => toggleSort("reviews")}>Reviews <SortIcon col="reviews" /></TableHead>
+                    <TableHead className="text-right cursor-pointer select-none" onClick={() => toggleSort("pricing")}>Pricing <SortIcon col="pricing" /></TableHead>
+                    <TableHead className="text-right cursor-pointer select-none" onClick={() => toggleSort("power")}>Power <SortIcon col="power" /></TableHead>
+                    <TableHead className="text-center cursor-pointer select-none" onClick={() => toggleSort("rankings")}>Keywords Ranked <SortIcon col="rankings" /></TableHead>
+                    <TableHead className="text-right cursor-pointer select-none" onClick={() => toggleSort("featured")}>Featured <SortIcon col="featured" /></TableHead>
+                    <TableHead className="text-right cursor-pointer select-none" onClick={() => toggleSort("similar")}>Similar <SortIcon col="similar" /></TableHead>
                     <TableHead>Categories</TableHead>
-                    <TableHead className="text-right">Launched</TableHead>
+                    <TableHead className="text-right cursor-pointer select-none" onClick={() => toggleSort("launched")}>Launched <SortIcon col="launched" /></TableHead>
                     {canEdit && <TableHead className="w-10" />}
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {data.competitors.map((comp) => {
+                  {sortedCompetitors.map((comp) => {
                     const isPending = pendingCompetitors.has(comp.slug);
                     const isResolved = resolvedCompetitors.has(comp.slug);
                     const animate = isResolved ? "animate-in fade-in duration-700" : "";
-
-                    // Count keyword rankings
-                    let rankCount = 0;
-                    for (const kwSlug of Object.keys(data.keywordRankings)) {
-                      if (data.keywordRankings[kwSlug]?.[comp.slug] != null) rankCount++;
-                    }
+                    const rankCount = rankCountMap.get(comp.slug) ?? 0;
 
                     return (
                       <TableRow key={comp.slug} className={isPending ? "animate-in fade-in slide-in-from-top duration-300" : ""}>
