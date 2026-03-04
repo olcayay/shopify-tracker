@@ -62,10 +62,15 @@ export function parseReviewPage(
       // Remove reply section so content extraction doesn't include it
       replySection.remove();
 
-      // Content — inside [data-truncate-content-copy] p
-      const content =
-        $review.find("[data-truncate-content-copy] p").text().trim() ||
-        $review.find("[data-truncate-review] p").text().trim();
+      // Content — inside [data-truncate-content-copy] p (join paragraphs with newlines)
+      const contentEls = $review.find("[data-truncate-content-copy] p");
+      const fallbackEls = $review.find("[data-truncate-review] p");
+      const els = contentEls.length > 0 ? contentEls : fallbackEls;
+      const content = els
+        .map((_, p) => $(p).text().trim())
+        .get()
+        .filter(Boolean)
+        .join("\n");
 
       // Reviewer name — span with title inside .tw-text-heading-xs
       const reviewerName =

@@ -84,7 +84,7 @@ export function ReviewList({ appSlug, initialReviews, total }: ReviewListProps) 
                   </span>
                 </div>
               </div>
-              {review.content && <p className="text-sm">{review.content}</p>}
+              {review.content && <p className="text-sm whitespace-pre-line">{review.content}</p>}
               {review.durationUsingApp && (
                 <p className="text-xs text-muted-foreground mt-1">
                   {review.durationUsingApp}

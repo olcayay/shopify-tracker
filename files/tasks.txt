@@ -54,6 +54,8 @@ research project UX improvements (sorting, search, icons, list redesign, API fix
 
 fix edited reviews creating duplicates (PLA-27) ✅
 
+preserve newlines in review content (PLA-28) ✅
+
 feedback sayfası
 
 kime hangi durumda nasıl emailler gönderilebilinir.

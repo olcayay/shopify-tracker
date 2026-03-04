@@ -1,3 +1,12 @@
+Preserve newlines in review content (PLA-28):
+- Bug: Review content newlines were stripped — all paragraphs ran together
+- Parser used `.text()` on all `<p>` tags at once, which concatenates without separators
+- Fix: Extract each `<p>` text individually and join with `\n`
+- Dashboard: Added `whitespace-pre-line` to the review content `<p>` tag
+- Files changed:
+  - apps/scraper/src/parsers/review-parser.ts (join paragraphs with \n)
+  - apps/dashboard/src/app/(dashboard)/apps/[slug]/review-list.tsx (whitespace-pre-line)
+
 Fix edited reviews creating duplicates (PLA-27):
 - Bug: When a Shopify review was edited, the date changed (e.g. Feb 28 → "Edited March 2, 2026")
 - The unique index included reviewDate, so edited reviews were inserted as new rows instead of updating
