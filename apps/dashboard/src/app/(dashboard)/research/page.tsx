@@ -74,6 +74,7 @@ export default function ResearchListPage() {
   const [deleteTarget, setDeleteTarget] = useState<Project | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [nameValue, setNameValue] = useState("");
+  const [limitReached, setLimitReached] = useState(false);
 
   const canEdit = user?.role === "owner" || user?.role === "editor";
 
@@ -119,6 +120,8 @@ export default function ResearchListPage() {
       if (res.ok) {
         const project = await res.json();
         router.push(`/research/${project.id}`);
+      } else if (res.status === 403) {
+        setLimitReached(true);
       }
     } finally {
       setCreating(false);
@@ -176,10 +179,15 @@ export default function ResearchListPage() {
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-bold">Research Projects</h1>
         {canEdit && (
-          <Button onClick={createProject} disabled={creating}>
-            <Plus className="h-4 w-4 mr-2" />
-            {creating ? "Creating..." : "New Project"}
-          </Button>
+          <div className="flex items-center gap-3">
+            {limitReached && (
+              <span className="text-sm text-destructive">Research project limit reached</span>
+            )}
+            <Button onClick={createProject} disabled={creating || limitReached}>
+              <Plus className="h-4 w-4 mr-2" />
+              {creating ? "Creating..." : "New Project"}
+            </Button>
+          </div>
         )}
       </div>
 

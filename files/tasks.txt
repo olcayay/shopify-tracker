@@ -56,6 +56,8 @@ fix edited reviews creating duplicates (PLA-27) ✅
 
 preserve newlines in review content (PLA-28) ✅
 
+research project limits per plan tier (PLA-34) ✅
+
 feedback sayfası
 
 kime hangi durumda nasıl emailler gönderilebilinir.

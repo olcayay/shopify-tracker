@@ -32,6 +32,7 @@ import {
   appReviewMetrics,
   appVisibilityScores,
   appPowerScores,
+  researchProjects,
 } from "@shopify-tracking/db";
 import { computeWeightedPowerScore } from "@shopify-tracking/shared";
 import { requireRole } from "../middleware/authorize.js";
@@ -163,6 +164,11 @@ export const accountRoutes: FastifyPluginAsync = async (app) => {
       .from(users)
       .where(eq(users.accountId, accountId));
 
+    const [researchProjectsCount] = await db
+      .select({ count: sql<number>`count(*)::int` })
+      .from(researchProjects)
+      .where(eq(researchProjects.accountId, accountId));
+
     // Fetch package details
     let pkg = null;
     if (account.packageId) {
@@ -181,6 +187,7 @@ export const accountRoutes: FastifyPluginAsync = async (app) => {
             maxTrackedKeywords: pkg.maxTrackedKeywords,
             maxCompetitorApps: pkg.maxCompetitorApps,
             maxUsers: pkg.maxUsers,
+            maxResearchProjects: pkg.maxResearchProjects,
           }
         : null,
       limits: {
@@ -188,6 +195,7 @@ export const accountRoutes: FastifyPluginAsync = async (app) => {
         maxTrackedKeywords: account.maxTrackedKeywords,
         maxCompetitorApps: account.maxCompetitorApps,
         maxUsers: account.maxUsers,
+        maxResearchProjects: account.maxResearchProjects,
       },
       usage: {
         trackedApps: trackedAppsCount.count,
@@ -195,6 +203,7 @@ export const accountRoutes: FastifyPluginAsync = async (app) => {
         competitorApps: competitorAppsCount.count,
         starredFeatures: starredFeaturesCount.count,
         users: usersCount.count,
+        researchProjects: researchProjectsCount.count,
       },
     };
   });

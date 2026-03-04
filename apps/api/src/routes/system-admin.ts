@@ -22,6 +22,7 @@ import {
   reviews,
   refreshTokens,
   impersonationAuditLogs,
+  researchProjects,
 } from "@shopify-tracking/db";
 import { generateAccessToken } from "./auth.js";
 import type { JwtPayload } from "../middleware/auth.js";
@@ -103,6 +104,11 @@ export const systemAdminRoutes: FastifyPluginAsync = async (app) => {
           .from(users)
           .where(eq(users.accountId, account.id));
 
+        const [researchProjectsCount] = await db
+          .select({ count: sql<number>`count(*)::int` })
+          .from(researchProjects)
+          .where(eq(researchProjects.accountId, account.id));
+
         const [lastSeenResult] = await db
           .select({
             lastSeen: sql<string | null>`(
@@ -118,7 +124,8 @@ export const systemAdminRoutes: FastifyPluginAsync = async (app) => {
             account.maxTrackedKeywords !== pkg.maxTrackedKeywords ||
             account.maxCompetitorApps !== pkg.maxCompetitorApps ||
             account.maxTrackedFeatures !== pkg.maxTrackedFeatures ||
-            account.maxUsers !== pkg.maxUsers
+            account.maxUsers !== pkg.maxUsers ||
+            account.maxResearchProjects !== pkg.maxResearchProjects
           : false;
 
         return {
@@ -133,6 +140,7 @@ export const systemAdminRoutes: FastifyPluginAsync = async (app) => {
             competitorApps: competitorAppsCount.count,
             trackedFeatures: trackedFeaturesCount.count,
             members: memberCount.count,
+            researchProjects: researchProjectsCount.count,
           },
         };
       })
@@ -249,6 +257,7 @@ export const systemAdminRoutes: FastifyPluginAsync = async (app) => {
         maxCompetitorApps?: number;
         maxTrackedFeatures?: number;
         maxUsers?: number;
+        maxResearchProjects?: number;
         isSuspended?: boolean;
       };
 
@@ -280,6 +289,7 @@ export const systemAdminRoutes: FastifyPluginAsync = async (app) => {
           updates.maxCompetitorApps = pkg.maxCompetitorApps;
           updates.maxTrackedFeatures = pkg.maxTrackedFeatures;
           updates.maxUsers = pkg.maxUsers;
+          updates.maxResearchProjects = pkg.maxResearchProjects;
         }
       }
 
@@ -293,6 +303,8 @@ export const systemAdminRoutes: FastifyPluginAsync = async (app) => {
       if (body.maxTrackedFeatures !== undefined)
         updates.maxTrackedFeatures = body.maxTrackedFeatures;
       if (body.maxUsers !== undefined) updates.maxUsers = body.maxUsers;
+      if (body.maxResearchProjects !== undefined)
+        updates.maxResearchProjects = body.maxResearchProjects;
 
       const [updated] = await db
         .update(accounts)
@@ -1154,6 +1166,7 @@ export const systemAdminRoutes: FastifyPluginAsync = async (app) => {
       maxCompetitorApps?: number;
       maxTrackedFeatures?: number;
       maxUsers?: number;
+      maxResearchProjects?: number;
       sortOrder?: number;
     };
 
@@ -1171,6 +1184,7 @@ export const systemAdminRoutes: FastifyPluginAsync = async (app) => {
         maxCompetitorApps: body.maxCompetitorApps ?? 3,
         maxTrackedFeatures: body.maxTrackedFeatures ?? 5,
         maxUsers: body.maxUsers ?? 2,
+        maxResearchProjects: body.maxResearchProjects ?? 1,
         sortOrder: body.sortOrder ?? 0,
       })
       .returning();
@@ -1190,6 +1204,7 @@ export const systemAdminRoutes: FastifyPluginAsync = async (app) => {
         maxCompetitorApps?: number;
         maxTrackedFeatures?: number;
         maxUsers?: number;
+        maxResearchProjects?: number;
         sortOrder?: number;
       };
 
@@ -1200,6 +1215,7 @@ export const systemAdminRoutes: FastifyPluginAsync = async (app) => {
       if (body.maxCompetitorApps !== undefined) updates.maxCompetitorApps = body.maxCompetitorApps;
       if (body.maxTrackedFeatures !== undefined) updates.maxTrackedFeatures = body.maxTrackedFeatures;
       if (body.maxUsers !== undefined) updates.maxUsers = body.maxUsers;
+      if (body.maxResearchProjects !== undefined) updates.maxResearchProjects = body.maxResearchProjects;
       if (body.sortOrder !== undefined) updates.sortOrder = body.sortOrder;
 
       if (Object.keys(updates).length === 0) {

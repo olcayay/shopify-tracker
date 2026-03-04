@@ -219,11 +219,12 @@ export default function SettingsPage() {
               </Button>
             </form>
           )}
-          <div className="grid grid-cols-2 md:grid-cols-5 gap-4 text-center">
+          <div className="grid grid-cols-2 md:grid-cols-6 gap-4 text-center">
             {([
               { href: "/apps", usage: account?.usage.trackedApps, limit: account?.limits.maxTrackedApps, pkgLimit: account?.packageLimits?.maxTrackedApps, label: "My Apps" },
               { href: "/keywords", usage: account?.usage.trackedKeywords, limit: account?.limits.maxTrackedKeywords, pkgLimit: account?.packageLimits?.maxTrackedKeywords, label: "Keywords" },
               { href: "/competitors", usage: account?.usage.competitorApps, limit: account?.limits.maxCompetitorApps, pkgLimit: account?.packageLimits?.maxCompetitorApps, label: "Competitors" },
+              { href: "/research", usage: account?.usage.researchProjects, limit: account?.limits.maxResearchProjects, pkgLimit: account?.packageLimits?.maxResearchProjects, label: "Research" },
             ] as const).map(({ href, usage, limit, pkgLimit, label }) => {
               const isOverridden = pkgLimit != null && limit !== pkgLimit;
               return (

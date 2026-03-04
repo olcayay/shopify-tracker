@@ -15,6 +15,7 @@ import {
   researchProjectCompetitors,
   appPowerScores,
   users,
+  accounts,
   categories as categoriesTable,
   categorySnapshots,
   featuredAppSightings,
@@ -91,6 +92,25 @@ export const researchRoutes: FastifyPluginAsync = async (app) => {
     async (request, reply) => {
       const { accountId, userId } = request.user;
       const { name } = request.body || {};
+
+      // Check limit
+      const [account] = await db
+        .select()
+        .from(accounts)
+        .where(eq(accounts.id, accountId));
+
+      const [{ count }] = await db
+        .select({ count: sql<number>`count(*)::int` })
+        .from(researchProjects)
+        .where(eq(researchProjects.accountId, accountId));
+
+      if (count >= account.maxResearchProjects) {
+        return reply.code(403).send({
+          error: "Research projects limit reached",
+          current: count,
+          max: account.maxResearchProjects,
+        });
+      }
 
       const [project] = await db
         .insert(researchProjects)

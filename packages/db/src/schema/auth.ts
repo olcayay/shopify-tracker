@@ -25,6 +25,7 @@ export const packages = pgTable("packages", {
   maxCompetitorApps: integer("max_competitor_apps").notNull().default(3),
   maxTrackedFeatures: integer("max_tracked_features").notNull().default(5),
   maxUsers: integer("max_users").notNull().default(2),
+  maxResearchProjects: integer("max_research_projects").notNull().default(1),
   sortOrder: integer("sort_order").notNull().default(0),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
@@ -39,6 +40,7 @@ export const accounts = pgTable("accounts", {
   maxCompetitorApps: integer("max_competitor_apps").notNull().default(5),
   maxTrackedFeatures: integer("max_tracked_features").notNull().default(10),
   maxUsers: integer("max_users").notNull().default(5),
+  maxResearchProjects: integer("max_research_projects").notNull().default(1),
   isSuspended: boolean("is_suspended").notNull().default(false),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),

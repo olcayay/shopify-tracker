@@ -1,3 +1,38 @@
+Research project limits per plan tier (PLA-34):
+- Added maxResearchProjects to packages table (free:1, starter:2, pro:5, enterprise:10)
+- Added maxResearchProjects to accounts table (per-account override, like other limits)
+- API: POST /api/research-projects now checks limit, returns 403 when exceeded
+- GET /api/account returns researchProjects in both limits and usage
+- System admin: full CRUD support for maxResearchProjects on packages and accounts
+- Dashboard: research list page shows error and disables button when limit reached
+- Settings page shows research project usage/limit alongside other limits
+- Migration 0044 adds column, sets per-tier defaults, backfills existing accounts
+- Files changed:
+  - packages/db/src/schema/auth.ts
+  - packages/db/src/migrations/0044_research_project_limits.sql
+  - apps/api/src/routes/research.ts
+  - apps/api/src/routes/account.ts
+  - apps/api/src/routes/system-admin.ts
+  - apps/dashboard/src/app/(dashboard)/research/page.tsx
+  - apps/dashboard/src/app/(dashboard)/settings/page.tsx
+
+Research project limits per plan tier (PLA-34):
+- Added maxResearchProjects to packages table (free=1, starter=2, pro=5, enterprise=10)
+- Added maxResearchProjects to accounts table (per-account override, default 1)
+- Enforced in POST /api/research-projects — returns 403 when limit reached
+- Exposed in GET /api/account (limits + usage)
+- System-admin: hasOverrides check, PATCH accounts, packages CRUD all include maxResearchProjects
+- Dashboard: research list page shows error + disables button on 403; settings page shows usage/limit
+- Migration 0044 adds columns, seeds tier defaults, backfills existing accounts from their package
+- Files changed:
+  - packages/db/src/schema/auth.ts (packages + accounts tables)
+  - packages/db/src/migrations/0044_research_project_limits.sql
+  - apps/api/src/routes/research.ts (limit check)
+  - apps/api/src/routes/account.ts (usage + limits)
+  - apps/api/src/routes/system-admin.ts (overrides, packages CRUD)
+  - apps/dashboard/src/app/(dashboard)/research/page.tsx (limit UI)
+  - apps/dashboard/src/app/(dashboard)/settings/page.tsx (usage display)
+
 Preserve newlines in review content (PLA-28):
 - Bug: Review content newlines were stripped — all paragraphs ran together
 - Parser used `.text()` on all `<p>` tags at once, which concatenates without separators
