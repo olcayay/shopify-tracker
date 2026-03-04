@@ -1,3 +1,26 @@
+Research projects in system-admin area:
+- API: GET /stats now returns researchProjects count
+- API: GET /users returns researchProjectCount per user
+- API: new GET /research-projects endpoint lists all projects with account, creator, keyword/competitor counts
+- Sidebar: added Research link (FlaskConical icon) to system admin items
+- Overview page: added Research stat card, Research column in accounts tab
+- Accounts list: added Research column (usage/limit)
+- Users list: added Research column (per-user count)
+- New /system-admin/researches page: sortable/searchable table with project name, account, creator, keywords, competitors, created date
+- Fixed Account type: added researchProjects to usage and maxResearchProjects to limits/packageLimits
+- Research page: shows usage/limit in title (e.g. "Research Projects (2/5)")
+- Overview page: fixed maxResearchProjects showing undefined when loading
+- Files changed:
+  - apps/api/src/routes/system-admin.ts
+  - apps/dashboard/src/components/sidebar.tsx
+  - apps/dashboard/src/app/(dashboard)/system-admin/page.tsx
+  - apps/dashboard/src/app/(dashboard)/system-admin/accounts/page.tsx
+  - apps/dashboard/src/app/(dashboard)/system-admin/users/page.tsx
+  - apps/dashboard/src/app/(dashboard)/system-admin/researches/page.tsx (new)
+  - apps/dashboard/src/app/(dashboard)/overview/page.tsx
+  - apps/dashboard/src/app/(dashboard)/research/page.tsx
+  - apps/dashboard/src/lib/auth-context.tsx
+
 Add maxResearchProjects to system-admin pages:
 - Packages page: added Research column to limits grid (display + inline edit + create form)
 - Account detail page: added Research to LIMIT_KEYS, limits state, usage counts, package defaults text

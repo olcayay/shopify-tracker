@@ -248,6 +248,7 @@ export default function UsersListPage() {
                 >
                   Role <SortIcon col="role" />
                 </TableHead>
+                <TableHead>Research</TableHead>
                 <TableHead>Digest</TableHead>
                 <TableHead>Last Digest</TableHead>
                 <TableHead
@@ -287,6 +288,7 @@ export default function UsersListPage() {
                   <TableCell>
                     <Badge variant="outline">{u.role}</Badge>
                   </TableCell>
+                  <TableCell>{u.researchProjectCount ?? 0}</TableCell>
                   <TableCell>
                     {u.emailDigestEnabled ? (
                       <Mail className="h-4 w-4 text-green-600" />
@@ -335,7 +337,7 @@ export default function UsersListPage() {
               {filtered.length === 0 && (
                 <TableRow>
                   <TableCell
-                    colSpan={10}
+                    colSpan={11}
                     className="text-center text-muted-foreground"
                   >
                     No users found

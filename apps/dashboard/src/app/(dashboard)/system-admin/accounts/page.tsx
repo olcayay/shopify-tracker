@@ -241,6 +241,7 @@ export default function AccountsListPage() {
                 </TableHead>
                 <TableHead>Competitors</TableHead>
                 <TableHead>Features</TableHead>
+                <TableHead>Research</TableHead>
                 <TableHead
                   className="cursor-pointer select-none"
                   onClick={() => toggleSort("status")}
@@ -300,6 +301,10 @@ export default function AccountsListPage() {
                     {acc.maxTrackedFeatures}
                   </TableCell>
                   <TableCell>
+                    {acc.usage?.researchProjects ?? 0}/
+                    {acc.maxResearchProjects}
+                  </TableCell>
+                  <TableCell>
                     <Badge
                       variant={acc.isSuspended ? "destructive" : "default"}
                     >
@@ -341,7 +346,7 @@ export default function AccountsListPage() {
               {filtered.length === 0 && (
                 <TableRow>
                   <TableCell
-                    colSpan={12}
+                    colSpan={13}
                     className="text-center text-muted-foreground"
                   >
                     No accounts found

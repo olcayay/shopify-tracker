@@ -275,7 +275,7 @@ export default function OverviewPage() {
               <CardTitle className="text-3xl">
                 {account?.usage.researchProjects ?? 0}
                 <span className="text-lg text-muted-foreground font-normal">
-                  /{account?.limits.maxResearchProjects}
+                  /{account?.limits?.maxResearchProjects ?? 0}
                 </span>
               </CardTitle>
             </CardHeader>

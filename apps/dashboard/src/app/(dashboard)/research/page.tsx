@@ -65,7 +65,7 @@ interface ResearchData {
 // ─── Main Page ──────────────────────────────────────────────
 
 export default function ResearchListPage() {
-  const { fetchWithAuth, user } = useAuth();
+  const { fetchWithAuth, user, account } = useAuth();
   const router = useRouter();
   const [projects, setProjects] = useState<Project[]>([]);
   const [projectDataMap, setProjectDataMap] = useState<Record<string, ResearchData>>({});
@@ -168,7 +168,14 @@ export default function ResearchListPage() {
   if (loading) {
     return (
       <div>
-        <h1 className="text-2xl font-bold mb-6">Research Projects</h1>
+        <h1 className="text-2xl font-bold mb-6">
+          Research Projects
+          {account && (
+            <span className="text-lg text-muted-foreground font-normal ml-2">
+              ({account.usage.researchProjects}/{account.limits.maxResearchProjects})
+            </span>
+          )}
+        </h1>
         <TableSkeleton rows={3} cols={3} />
       </div>
     );
@@ -177,7 +184,14 @@ export default function ResearchListPage() {
   return (
     <div>
       <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-bold">Research Projects</h1>
+        <h1 className="text-2xl font-bold">
+          Research Projects
+          {account && (
+            <span className="text-lg text-muted-foreground font-normal ml-2">
+              ({account.usage.researchProjects}/{account.limits.maxResearchProjects})
+            </span>
+          )}
+        </h1>
         {canEdit && (
           <div className="flex items-center gap-3">
             {limitReached && (

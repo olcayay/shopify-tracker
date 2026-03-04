@@ -105,7 +105,7 @@ export default function SystemAdminPage() {
 
       {/* Global Stats */}
       {stats && (
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-4">
           <Link href="/system-admin/accounts">
             <Card className="cursor-pointer hover:border-primary/50 transition-colors">
               <CardHeader className="pb-2">
@@ -158,6 +158,16 @@ export default function SystemAdminPage() {
               </CardHeader>
             </Card>
           </Link>
+          <Link href="/system-admin/researches">
+            <Card className="cursor-pointer hover:border-primary/50 transition-colors">
+              <CardHeader className="pb-2">
+                <CardDescription>Research</CardDescription>
+                <CardTitle className="text-2xl">
+                  {stats.researchProjects ?? 0}
+                </CardTitle>
+              </CardHeader>
+            </Card>
+          </Link>
         </div>
       )}
 
@@ -181,6 +191,7 @@ export default function SystemAdminPage() {
                     <TableHead>Keywords</TableHead>
                     <TableHead>Competitors</TableHead>
                     <TableHead>Features</TableHead>
+                    <TableHead>Research</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead />
                   </TableRow>
@@ -211,6 +222,10 @@ export default function SystemAdminPage() {
                       <TableCell>
                         {acc.usage?.trackedFeatures ?? 0}/
                         {acc.maxTrackedFeatures}
+                      </TableCell>
+                      <TableCell>
+                        {acc.usage?.researchProjects ?? 0}/
+                        {acc.maxResearchProjects}
                       </TableCell>
                       <TableCell>
                         <Badge

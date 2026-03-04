@@ -23,6 +23,8 @@ import {
   refreshTokens,
   impersonationAuditLogs,
   researchProjects,
+  researchProjectKeywords,
+  researchProjectCompetitors,
 } from "@shopify-tracking/db";
 import { generateAccessToken } from "./auth.js";
 import type { JwtPayload } from "../middleware/auth.js";
@@ -421,6 +423,7 @@ export const systemAdminRoutes: FastifyPluginAsync = async (app) => {
         accountCompany: accounts.company,
         createdAt: users.createdAt,
         lastSeen: users.lastSeenAt,
+        researchProjectCount: sql<number>`(SELECT count(*)::int FROM research_projects WHERE created_by = ${users.id})`,
       })
       .from(users)
       .innerJoin(accounts, eq(accounts.id, users.accountId));
@@ -1103,6 +1106,10 @@ export const systemAdminRoutes: FastifyPluginAsync = async (app) => {
       .select({ count: sql<number>`count(*)::int` })
       .from(categories);
 
+    const [researchCount] = await db
+      .select({ count: sql<number>`count(*)::int` })
+      .from(researchProjects);
+
     return {
       accounts: accountCount.count,
       users: userCount.count,
@@ -1111,6 +1118,7 @@ export const systemAdminRoutes: FastifyPluginAsync = async (app) => {
       trackedFeatures: featuresCount.count,
       totalApps: totalApps.count,
       totalCategories: categoryCount.count,
+      researchProjects: researchCount.count,
       latestRuns,
       freshness,
       workerStats,
@@ -1154,6 +1162,28 @@ export const systemAdminRoutes: FastifyPluginAsync = async (app) => {
       return trackedBy;
     }
   );
+
+  // GET /api/system-admin/research-projects — all research projects across accounts
+  app.get("/research-projects", async () => {
+    const rows = await db
+      .select({
+        id: researchProjects.id,
+        name: researchProjects.name,
+        accountId: researchProjects.accountId,
+        accountName: accounts.name,
+        creatorId: researchProjects.createdBy,
+        creatorName: users.name,
+        keywordCount: sql<number>`(SELECT count(*)::int FROM research_project_keywords WHERE research_project_id = ${researchProjects.id})`,
+        competitorCount: sql<number>`(SELECT count(*)::int FROM research_project_competitors WHERE research_project_id = ${researchProjects.id})`,
+        createdAt: researchProjects.createdAt,
+      })
+      .from(researchProjects)
+      .innerJoin(accounts, eq(accounts.id, researchProjects.accountId))
+      .leftJoin(users, eq(users.id, researchProjects.createdBy))
+      .orderBy(desc(researchProjects.createdAt));
+
+    return rows;
+  });
 
   // --- Packages ---
 

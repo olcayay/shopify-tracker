@@ -34,12 +34,14 @@ export interface Account {
     maxTrackedKeywords: number;
     maxCompetitorApps: number;
     maxUsers: number;
+    maxResearchProjects: number;
   } | null;
   limits: {
     maxTrackedApps: number;
     maxTrackedKeywords: number;
     maxCompetitorApps: number;
     maxUsers: number;
+    maxResearchProjects: number;
   };
   usage: {
     trackedApps: number;
@@ -47,6 +49,7 @@ export interface Account {
     competitorApps: number;
     starredFeatures: number;
     users: number;
+    researchProjects: number;
   };
 }
 
