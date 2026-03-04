@@ -132,7 +132,7 @@ export const researchRoutes: FastifyPluginAsync = async (app) => {
         WHERE s.app_slug = rpc.app_slug
         ORDER BY s.scraped_at DESC LIMIT 1
       ) ls
-      WHERE rpc.research_project_id = ANY(${projectIds})
+      WHERE rpc.research_project_id IN (${sql.join(projectIds.map((id) => sql`${id}`), sql`, `)})
       GROUP BY rpc.research_project_id
     `);
 
@@ -149,7 +149,7 @@ export const researchRoutes: FastifyPluginAsync = async (app) => {
         WHERE p.app_slug = rpc.app_slug
         ORDER BY p.computed_at DESC LIMIT 1
       ) ps ON true
-      WHERE rpc.research_project_id = ANY(${projectIds})
+      WHERE rpc.research_project_id IN (${sql.join(projectIds.map((id) => sql`${id}`), sql`, `)})
       GROUP BY rpc.research_project_id
     `);
 
