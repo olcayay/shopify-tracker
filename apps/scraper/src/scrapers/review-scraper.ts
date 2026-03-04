@@ -131,7 +131,20 @@ export class ReviewScraper {
               developerReplyText: review.developer_reply_text,
               firstSeenRunId: runId,
             })
-            .onConflictDoNothing();
+            .onConflictDoUpdate({
+              target: [reviews.appSlug, reviews.reviewerName],
+              set: {
+                reviewDate: parsedDate,
+                content: review.content,
+                reviewerCountry: review.reviewer_country || null,
+                durationUsingApp: review.duration_using_app || null,
+                rating: review.rating,
+                developerReplyDate: review.developer_reply_date
+                  ? parseReviewDate(review.developer_reply_date)
+                  : null,
+                developerReplyText: review.developer_reply_text,
+              },
+            });
 
           newReviews++;
         } catch (err) {

@@ -35,8 +35,6 @@ export const reviews = pgTable(
     uniqueIndex("idx_reviews_dedup").on(
       table.appSlug,
       table.reviewerName,
-      table.reviewDate,
-      table.rating
     ),
     index("idx_reviews_app_date").on(table.appSlug, table.reviewDate),
   ]

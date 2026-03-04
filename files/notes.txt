@@ -1,3 +1,16 @@
+Fix edited reviews creating duplicates (PLA-27):
+- Bug: When a Shopify review was edited, the date changed (e.g. Feb 28 → "Edited March 2, 2026")
+- The unique index included reviewDate, so edited reviews were inserted as new rows instead of updating
+- Changed unique constraint from (appSlug, reviewerName, reviewDate, rating) to (appSlug, reviewerName)
+  since Shopify only allows one review per user per app
+- Changed `.onConflictDoNothing()` to `.onConflictDoUpdate()` in review-scraper.ts
+  so content, date, rating, and developer reply are updated when a review is re-scraped
+- Migration 0043 cleans up existing duplicates (keeps newest) before applying new index
+- Files changed:
+  - packages/db/src/schema/reviews.ts (unique index narrowed)
+  - packages/db/src/migrations/0043_review_dedup_by_reviewer.sql (migration)
+  - apps/scraper/src/scrapers/review-scraper.ts (onConflictDoUpdate)
+
 Unified Tracking Picker — Add Research Projects + Fix UX:
 - Replaced old TrackKeywordButton inline dropdown + confirm-to-untrack modal with AssignmentPickerModal
 - Replaced old StarAppButton inline dropdown + confirm-to-remove modal with AssignmentPickerModal
