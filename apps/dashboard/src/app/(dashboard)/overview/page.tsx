@@ -225,7 +225,7 @@ export default function OverviewPage() {
       <h1 className="text-2xl font-bold">Overview</h1>
 
       {/* Account Usage Cards - clickable */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
         <Link href="/apps">
           <Card className="hover:border-primary/50 transition-colors cursor-pointer">
             <CardHeader className="pb-2">
@@ -262,6 +262,20 @@ export default function OverviewPage() {
                 {account?.usage.competitorApps ?? competitors.length}
                 <span className="text-lg text-muted-foreground font-normal">
                   /{account?.limits.maxCompetitorApps}
+                </span>
+              </CardTitle>
+            </CardHeader>
+          </Card>
+        </Link>
+
+        <Link href="/research">
+          <Card className="hover:border-primary/50 transition-colors cursor-pointer">
+            <CardHeader className="pb-2">
+              <CardDescription>Research Projects</CardDescription>
+              <CardTitle className="text-3xl">
+                {account?.usage.researchProjects ?? 0}
+                <span className="text-lg text-muted-foreground font-normal">
+                  /{account?.limits.maxResearchProjects}
                 </span>
               </CardTitle>
             </CardHeader>

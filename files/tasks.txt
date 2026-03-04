@@ -58,6 +58,8 @@ preserve newlines in review content (PLA-28) ✅
 
 research project limits per plan tier (PLA-34) ✅
 
+show research project limit on overview page (PLA-40) ✅
+
 feedback sayfası
 
 kime hangi durumda nasıl emailler gönderilebilinir.
