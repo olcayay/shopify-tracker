@@ -224,6 +224,11 @@ export const systemAdminRoutes: FastifyPluginAsync = async (app) => {
       .from(accountTrackedFeatures)
       .where(eq(accountTrackedFeatures.accountId, id));
 
+    const [researchProjectsCount] = await db
+      .select({ count: sql<number>`count(*)::int` })
+      .from(researchProjects)
+      .where(eq(researchProjects.accountId, id));
+
     // Attach package info
     let pkg = null;
     if (account.packageId) {
@@ -239,6 +244,7 @@ export const systemAdminRoutes: FastifyPluginAsync = async (app) => {
       trackedKeywords: trackedKeywordsList,
       competitorApps: competitorAppsList,
       trackedFeatures: trackedFeaturesList,
+      researchProjects: researchProjectsCount.count,
     };
   });
 

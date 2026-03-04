@@ -34,6 +34,7 @@ interface Package {
   maxCompetitorApps: number;
   maxTrackedFeatures: number;
   maxUsers: number;
+  maxResearchProjects: number;
   sortOrder: number;
 }
 
@@ -43,6 +44,7 @@ const LIMIT_KEYS = [
   { key: "maxCompetitorApps", label: "Competitors", usageKey: "competitorApps" },
   { key: "maxTrackedFeatures", label: "Features", usageKey: "trackedFeatures" },
   { key: "maxUsers", label: "Users", usageKey: "members" },
+  { key: "maxResearchProjects", label: "Research", usageKey: "researchProjects" },
 ] as const;
 
 export default function AccountDetailPage() {
@@ -60,6 +62,7 @@ export default function AccountDetailPage() {
     maxCompetitorApps: 0,
     maxTrackedFeatures: 0,
     maxUsers: 0,
+    maxResearchProjects: 0,
   });
 
   useEffect(() => {
@@ -81,6 +84,7 @@ export default function AccountDetailPage() {
         maxCompetitorApps: data.maxCompetitorApps,
         maxTrackedFeatures: data.maxTrackedFeatures,
         maxUsers: data.maxUsers,
+        maxResearchProjects: data.maxResearchProjects,
       });
     }
     if (pkgRes.ok) {
@@ -171,6 +175,7 @@ export default function AccountDetailPage() {
     competitorApps: account.competitorApps?.length ?? 0,
     trackedFeatures: account.trackedFeatures?.length ?? 0,
     members: account.members?.length ?? 0,
+    researchProjects: account.researchProjects ?? 0,
   };
 
   return (
@@ -235,7 +240,7 @@ export default function AccountDetailPage() {
           </div>
           {pkg && (
             <p className="text-xs text-muted-foreground mt-3">
-              Package defaults: Apps {pkg.maxTrackedApps} · Keywords {pkg.maxTrackedKeywords} · Competitors {pkg.maxCompetitorApps} · Features {pkg.maxTrackedFeatures} · Users {pkg.maxUsers}
+              Package defaults: Apps {pkg.maxTrackedApps} · Keywords {pkg.maxTrackedKeywords} · Competitors {pkg.maxCompetitorApps} · Features {pkg.maxTrackedFeatures} · Users {pkg.maxUsers} · Research {pkg.maxResearchProjects}
             </p>
           )}
         </CardContent>
@@ -275,6 +280,7 @@ export default function AccountDetailPage() {
                         maxCompetitorApps: account.maxCompetitorApps,
                         maxTrackedFeatures: account.maxTrackedFeatures,
                         maxUsers: account.maxUsers,
+                        maxResearchProjects: account.maxResearchProjects,
                       });
                     }}
                   >
@@ -303,7 +309,7 @@ export default function AccountDetailPage() {
           </div>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+          <div className="grid grid-cols-2 md:grid-cols-6 gap-4">
             {LIMIT_KEYS.map(({ key, label, usageKey }) => {
               const isOverridden = pkg && account[key] !== (pkg as any)[key];
               return (

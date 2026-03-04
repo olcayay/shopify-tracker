@@ -1,3 +1,12 @@
+Add maxResearchProjects to system-admin pages:
+- Packages page: added Research column to limits grid (display + inline edit + create form)
+- Account detail page: added Research to LIMIT_KEYS, limits state, usage counts, package defaults text
+- API: account detail endpoint now returns researchProjects count
+- Files changed:
+  - apps/dashboard/src/app/(dashboard)/system-admin/packages/page.tsx
+  - apps/dashboard/src/app/(dashboard)/system-admin/accounts/[id]/page.tsx
+  - apps/api/src/routes/system-admin.ts
+
 Research project limits per plan tier (PLA-34):
 - Added maxResearchProjects to packages table (free:1, starter:2, pro:5, enterprise:10)
 - Added maxResearchProjects to accounts table (per-account override, like other limits)

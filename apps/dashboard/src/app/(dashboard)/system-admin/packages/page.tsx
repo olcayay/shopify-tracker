@@ -33,6 +33,7 @@ interface Package {
   maxCompetitorApps: number;
   maxTrackedFeatures: number;
   maxUsers: number;
+  maxResearchProjects: number;
   sortOrder: number;
 }
 
@@ -52,6 +53,7 @@ const EMPTY_FORM = {
   maxCompetitorApps: 3,
   maxTrackedFeatures: 5,
   maxUsers: 2,
+  maxResearchProjects: 1,
   sortOrder: 0,
 };
 
@@ -159,6 +161,7 @@ export default function PackagesPage() {
       maxCompetitorApps: pkg.maxCompetitorApps,
       maxTrackedFeatures: pkg.maxTrackedFeatures,
       maxUsers: pkg.maxUsers,
+      maxResearchProjects: pkg.maxResearchProjects,
       sortOrder: pkg.sortOrder,
     });
   }
@@ -238,7 +241,7 @@ export default function PackagesPage() {
                   />
                 </div>
               </div>
-              <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+              <div className="grid grid-cols-2 md:grid-cols-6 gap-3">
                 <div>
                   <label className="text-sm text-muted-foreground">Apps</label>
                   <Input
@@ -306,6 +309,19 @@ export default function PackagesPage() {
                       setCreateForm((f) => ({
                         ...f,
                         maxUsers: Number(e.target.value),
+                      }))
+                    }
+                  />
+                </div>
+                <div>
+                  <label className="text-sm text-muted-foreground">Research</label>
+                  <Input
+                    type="number"
+                    value={createForm.maxResearchProjects}
+                    onChange={(e) =>
+                      setCreateForm((f) => ({
+                        ...f,
+                        maxResearchProjects: Number(e.target.value),
                       }))
                     }
                   />
@@ -425,13 +441,14 @@ export default function PackagesPage() {
               </CardHeader>
               <CardContent className="space-y-4">
                 {/* Limits grid */}
-                <div className="grid grid-cols-5 gap-3 text-center">
+                <div className="grid grid-cols-6 gap-3 text-center">
                   {([
                     { key: "maxTrackedApps", label: "Apps" },
                     { key: "maxTrackedKeywords", label: "Keywords" },
                     { key: "maxCompetitorApps", label: "Competitors" },
                     { key: "maxTrackedFeatures", label: "Features" },
                     { key: "maxUsers", label: "Users" },
+                    { key: "maxResearchProjects", label: "Research" },
                   ] as const).map(({ key, label }) => (
                     <div key={key} className="bg-muted/50 rounded-md p-2">
                       {isEditing ? (
