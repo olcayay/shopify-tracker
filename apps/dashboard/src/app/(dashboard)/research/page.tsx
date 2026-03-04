@@ -7,9 +7,10 @@ import { useAuth } from "@/lib/auth-context";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { TableSkeleton } from "@/components/skeletons";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Plus, FlaskConical, Trash2, User, Star } from "lucide-react";
+import { Plus, FlaskConical, Trash2, User, Star, Pencil, Check, X } from "lucide-react";
 import { ConfirmModal } from "@/components/confirm-modal";
 
 // ─── Types ──────────────────────────────────────────────────
@@ -71,6 +72,8 @@ export default function ResearchListPage() {
   const [loading, setLoading] = useState(true);
   const [creating, setCreating] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<Project | null>(null);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [nameValue, setNameValue] = useState("");
 
   const canEdit = user?.role === "owner" || user?.role === "editor";
 
@@ -137,6 +140,20 @@ export default function ResearchListPage() {
     setDeleteTarget(null);
   }
 
+  async function renameProject(id: string) {
+    const trimmed = nameValue.trim();
+    if (!trimmed) { setEditingId(null); return; }
+    const res = await fetchWithAuth(`/api/research-projects/${id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name: trimmed }),
+    });
+    if (res.ok) {
+      setProjects((prev) => prev.map((p) => p.id === id ? { ...p, name: trimmed } : p));
+    }
+    setEditingId(null);
+  }
+
   function formatDate(date: string) {
     return new Date(date).toLocaleDateString("en-US", {
       month: "short",
@@ -191,8 +208,34 @@ export default function ResearchListPage() {
                 <Card className="hover:border-primary/50 transition-colors cursor-pointer group overflow-hidden">
                   {/* Title row */}
                   <div className="flex items-center justify-between px-5 pt-4 pb-3">
-                    <h3 className="text-lg font-semibold truncate">{p.name}</h3>
-                    {canEdit && (
+                    {editingId === p.id ? (
+                      <div className="flex items-center gap-2 flex-1 min-w-0" onClick={(e) => { e.preventDefault(); e.stopPropagation(); }}>
+                        <Input
+                          value={nameValue}
+                          onChange={(e) => setNameValue(e.target.value)}
+                          onKeyDown={(e) => { if (e.key === "Enter") renameProject(p.id); if (e.key === "Escape") setEditingId(null); }}
+                          className="text-lg font-semibold h-auto py-1"
+                          autoFocus
+                        />
+                        <Button size="sm" variant="ghost" onClick={() => renameProject(p.id)}><Check className="h-4 w-4" /></Button>
+                        <Button size="sm" variant="ghost" onClick={() => setEditingId(null)}><X className="h-4 w-4" /></Button>
+                      </div>
+                    ) : (
+                      <button
+                        onClick={(e) => {
+                          if (!canEdit) return;
+                          e.preventDefault();
+                          e.stopPropagation();
+                          setNameValue(p.name);
+                          setEditingId(p.id);
+                        }}
+                        className="flex items-center gap-2 group/title min-w-0"
+                      >
+                        <h3 className="text-lg font-semibold truncate">{p.name}</h3>
+                        {canEdit && <Pencil className="h-3.5 w-3.5 text-muted-foreground opacity-0 group-hover/title:opacity-100 transition-opacity shrink-0" />}
+                      </button>
+                    )}
+                    {canEdit && editingId !== p.id && (
                       <button
                         onClick={(e) => {
                           e.preventDefault();
