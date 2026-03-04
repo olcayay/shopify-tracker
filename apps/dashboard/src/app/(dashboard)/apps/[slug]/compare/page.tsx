@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useMemo, useRef } from "react";
+import { useEffect, useState, useMemo, useRef, useCallback } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import { useAuth } from "@/lib/auth-context";
@@ -283,12 +283,14 @@ function LinkedAppIcon({
 }
 
 function CompareSection({
+  id,
   title,
   sectionKey,
   collapsed,
   onToggle,
   children,
 }: {
+  id?: string;
   title: string;
   sectionKey: string;
   collapsed: boolean;
@@ -296,7 +298,7 @@ function CompareSection({
   children: React.ReactNode;
 }) {
   return (
-    <Card>
+    <Card id={id} className={id ? "scroll-mt-20" : undefined}>
       <CardHeader
         className="cursor-pointer select-none"
         onClick={() => onToggle(sectionKey)}
@@ -374,6 +376,57 @@ export default function ComparePage() {
       );
     }
   }, [selectedSlugs, slug, competitors.length]);
+
+  // Section navigation
+  const SECTIONS = useMemo(() => [
+    { id: "sec-name", key: "appName", label: "Name" },
+    { id: "sec-subtitle", key: "appCardSubtitle", label: "Subtitle" },
+    { id: "sec-intro", key: "appIntroduction", label: "Introduction" },
+    { id: "sec-details", key: "appDetails", label: "Details" },
+    { id: "sec-features", key: "features", label: "Features" },
+    { id: "sec-languages", key: "languages", label: "Languages" },
+    { id: "sec-integrations", key: "integrations", label: "Integrations" },
+    { id: "sec-rankings", key: "categoryRanking", label: "Rankings" },
+    { id: "sec-reviews", key: "reviewsRatings", label: "Reviews" },
+    { id: "sec-catfeatures", key: "categoriesFeatures", label: "Category Features" },
+    { id: "sec-pricing", key: "pricingPlans", label: "Pricing" },
+    { id: "sec-seo", key: "webSearchContent", label: "Web Search" },
+  ], []);
+
+  const [activeSection, setActiveSection] = useState<string>("sec-name");
+  const navRef = useRef<HTMLDivElement>(null);
+
+  // Intersection observer for active section tracking
+  useEffect(() => {
+    if (!mainApp || selectedSlugs.size <= 1) return;
+    const els = SECTIONS.map((s) => document.getElementById(s.id)).filter(Boolean) as HTMLElement[];
+    if (els.length === 0) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const visible = entries.filter((e) => e.isIntersecting);
+        if (visible.length > 0) {
+          visible.sort((a, b) => a.boundingClientRect.top - b.boundingClientRect.top);
+          setActiveSection(visible[0].target.id);
+        }
+      },
+      { rootMargin: "-80px 0px -60% 0px", threshold: 0 }
+    );
+    for (const el of els) observer.observe(el);
+    return () => observer.disconnect();
+  }, [mainApp, selectedSlugs.size, SECTIONS]);
+
+  const scrollToSection = useCallback((sectionId: string) => {
+    const el = document.getElementById(sectionId);
+    if (el) {
+      el.scrollIntoView({ behavior: "smooth", block: "start" });
+      setActiveSection(sectionId);
+    }
+    setTimeout(() => {
+      const pill = document.getElementById(`nav-${sectionId}`);
+      pill?.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "center" });
+    }, 100);
+  }, []);
 
   function toggleSection(key: string) {
     setCollapsedSections((prev) => {
@@ -657,8 +710,33 @@ export default function ComparePage() {
 
       {selectedApps.length > 1 && (
         <>
+          {/* Sticky section nav */}
+          <div
+            ref={navRef}
+            className="sticky top-0 z-20 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80 border-b -mx-4 px-4 py-2"
+          >
+            <div className="flex gap-1.5 overflow-x-auto scrollbar-hide">
+              {SECTIONS.map((s) => (
+                <button
+                  key={s.id}
+                  id={`nav-${s.id}`}
+                  onClick={() => scrollToSection(s.id)}
+                  className={cn(
+                    "px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap transition-colors shrink-0",
+                    activeSection === s.id
+                      ? "bg-primary text-primary-foreground shadow-sm"
+                      : "text-muted-foreground hover:text-foreground hover:bg-muted"
+                  )}
+                >
+                  {s.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
           {/* App Name */}
           <VerticalListSection
+            id="sec-name"
             title="App Name"
             sectionKey="appName"
             collapsed={isCollapsed("appName")}
@@ -684,6 +762,7 @@ export default function ComparePage() {
 
           {/* App Card Subtitle */}
           <VerticalListSection
+            id="sec-subtitle"
             title="App Card Subtitle"
             sectionKey="appCardSubtitle"
             collapsed={isCollapsed("appCardSubtitle")}
@@ -713,6 +792,7 @@ export default function ComparePage() {
 
           {/* App Introduction */}
           <VerticalListSection
+            id="sec-intro"
             title="App Introduction"
             sectionKey="appIntroduction"
             collapsed={isCollapsed("appIntroduction")}
@@ -747,6 +827,7 @@ export default function ComparePage() {
 
           {/* App Details — icon-tab mode with keyword density */}
           <CompareSection
+            id="sec-details"
             title="App Details"
             sectionKey="appDetails"
             collapsed={isCollapsed("appDetails")}
@@ -859,6 +940,7 @@ export default function ComparePage() {
 
           {/* Features */}
           <CompareSection
+            id="sec-features"
             title="Features"
             sectionKey="features"
             collapsed={isCollapsed("features")}
@@ -919,6 +1001,7 @@ export default function ComparePage() {
 
           {/* Languages */}
           <BadgeComparisonSection
+            id="sec-languages"
             title="Languages"
             sectionKey="languages"
             collapsed={isCollapsed("languages")}
@@ -929,6 +1012,7 @@ export default function ComparePage() {
 
           {/* Integrations */}
           <BadgeComparisonSection
+            id="sec-integrations"
             title="Integrations"
             sectionKey="integrations"
             collapsed={isCollapsed("integrations")}
@@ -940,6 +1024,7 @@ export default function ComparePage() {
 
           {/* Category Ranking */}
           <CategoryRankingSection
+            id="sec-rankings"
             sectionKey="categoryRanking"
             collapsed={isCollapsed("categoryRanking")}
             onToggle={toggleSection}
@@ -949,6 +1034,7 @@ export default function ComparePage() {
 
           {/* Reviews and Ratings */}
           <ReviewsRatingsSection
+            id="sec-reviews"
             sectionKey="reviewsRatings"
             collapsed={isCollapsed("reviewsRatings")}
             onToggle={toggleSection}
@@ -957,6 +1043,7 @@ export default function ComparePage() {
 
           {/* Categories & Features */}
           <CategoriesComparison
+            id="sec-catfeatures"
             sectionKey="categoriesFeatures"
             collapsed={isCollapsed("categoriesFeatures")}
             onToggle={toggleSection}
@@ -965,6 +1052,7 @@ export default function ComparePage() {
 
           {/* Pricing Plans */}
           <PricingComparison
+            id="sec-pricing"
             sectionKey="pricingPlans"
             collapsed={isCollapsed("pricingPlans")}
             onToggle={toggleSection}
@@ -973,6 +1061,7 @@ export default function ComparePage() {
 
           {/* Web Search Content */}
           <VerticalListSection
+            id="sec-seo"
             title="Web Search Content"
             sectionKey="webSearchContent"
             collapsed={isCollapsed("webSearchContent")}
@@ -1018,6 +1107,7 @@ export default function ComparePage() {
 // --- Reusable Section Components ---
 
 function VerticalListSection({
+  id,
   title,
   sectionKey,
   collapsed,
@@ -1027,6 +1117,7 @@ function VerticalListSection({
   children,
   header,
 }: {
+  id?: string;
   title: string;
   sectionKey: string;
   collapsed: boolean;
@@ -1038,6 +1129,7 @@ function VerticalListSection({
 }) {
   return (
     <CompareSection
+      id={id}
       title={title}
       sectionKey={sectionKey}
       collapsed={collapsed}
@@ -1075,6 +1167,7 @@ function VerticalListSection({
 }
 
 function BadgeComparisonSection({
+  id,
   title,
   sectionKey,
   collapsed,
@@ -1083,6 +1176,7 @@ function BadgeComparisonSection({
   getItems,
   linkPrefix,
 }: {
+  id?: string;
   title: string;
   sectionKey: string;
   collapsed: boolean;
@@ -1123,6 +1217,7 @@ function BadgeComparisonSection({
 
   return (
     <CompareSection
+      id={id}
       title={title}
       sectionKey={sectionKey}
       collapsed={collapsed}
@@ -1177,11 +1272,13 @@ function BadgeComparisonSection({
 }
 
 function PricingComparison({
+  id,
   sectionKey,
   collapsed,
   onToggle,
   apps,
 }: {
+  id?: string;
   sectionKey: string;
   collapsed: boolean;
   onToggle: (key: string) => void;
@@ -1207,6 +1304,7 @@ function PricingComparison({
 
   return (
     <CompareSection
+      id={id}
       title="Pricing Plans"
       sectionKey={sectionKey}
       collapsed={collapsed}
@@ -1294,12 +1392,14 @@ function PlanCard({ plan }: { plan: any }) {
 }
 
 function CategoryRankingSection({
+  id,
   sectionKey,
   collapsed,
   onToggle,
   apps,
   rankingsData,
 }: {
+  id?: string;
   sectionKey: string;
   collapsed: boolean;
   onToggle: (key: string) => void;
@@ -1357,6 +1457,7 @@ function CategoryRankingSection({
 
   return (
     <CompareSection
+      id={id}
       title="Category Ranking"
       sectionKey={sectionKey}
       collapsed={collapsed}
@@ -1452,11 +1553,13 @@ function StarRating({ rating }: { rating: number }) {
 }
 
 function ReviewsRatingsSection({
+  id,
   sectionKey,
   collapsed,
   onToggle,
   apps,
 }: {
+  id?: string;
   sectionKey: string;
   collapsed: boolean;
   onToggle: (key: string) => void;
@@ -1469,6 +1572,7 @@ function ReviewsRatingsSection({
 
   return (
     <CompareSection
+      id={id}
       title="Reviews and Ratings"
       sectionKey={sectionKey}
       collapsed={collapsed}
@@ -1538,11 +1642,13 @@ function ReviewsRatingsSection({
 }
 
 function CategoriesComparison({
+  id,
   sectionKey,
   collapsed,
   onToggle,
   apps,
 }: {
+  id?: string;
   sectionKey: string;
   collapsed: boolean;
   onToggle: (key: string) => void;
@@ -1637,6 +1743,7 @@ function CategoriesComparison({
 
   return (
     <CompareSection
+      id={id}
       title="Category Features"
       sectionKey={sectionKey}
       collapsed={collapsed}
