@@ -50,6 +50,8 @@ research projects — loading shimmers, detail pages, compare page ✅
 
 unified tracking picker — add research projects + fix UX ✅
 
+research project UX improvements (sorting, search, icons, list redesign, API fix) ✅
+
 feedback sayfası
 
 kime hangi durumda nasıl emailler gönderilebilinir.

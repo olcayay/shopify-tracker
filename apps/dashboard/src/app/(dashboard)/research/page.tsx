@@ -4,10 +4,11 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { TableSkeleton } from "@/components/skeletons";
-import { Plus, FlaskConical, Search, Users, Trash2, User, Star, DollarSign, Zap, Calendar } from "lucide-react";
+import { Plus, FlaskConical, Search, Users, Trash2, User, Star, Zap } from "lucide-react";
 import { ConfirmModal } from "@/components/confirm-modal";
 
 interface Project {
@@ -126,79 +127,75 @@ export default function ResearchListPage() {
         </Card>
       ) : (
         <div className="space-y-4">
-          {projects.map((project) => (
-            <Link key={project.id} href={`/research/${project.id}`}>
-              <Card className="hover:border-primary/50 transition-colors cursor-pointer group">
-                <CardHeader className="pb-3">
-                  <div className="flex items-start justify-between">
-                    <CardTitle className="text-lg">{project.name}</CardTitle>
-                    {canEdit && (
-                      <button
-                        onClick={(e) => {
-                          e.preventDefault();
-                          e.stopPropagation();
-                          setDeleteTarget(project);
-                        }}
-                        className="opacity-0 group-hover:opacity-100 p-1.5 rounded-md hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-all"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </button>
-                    )}
-                  </div>
-                </CardHeader>
-                <CardContent className="pt-0">
-                  {/* Summary stat cards */}
-                  <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 mb-4">
-                    <MiniStat
-                      icon={<Search className="h-3.5 w-3.5" />}
-                      label="Keywords"
-                      value={String(project.keywordCount)}
-                    />
-                    <MiniStat
-                      icon={<Users className="h-3.5 w-3.5" />}
-                      label="Competitors"
-                      value={String(project.competitorCount)}
-                    />
-                    <MiniStat
-                      icon={<Star className="h-3.5 w-3.5 text-yellow-500" />}
-                      label="Avg Rating"
-                      value={project.avgRating != null ? `${project.avgRating}` : "—"}
-                      sub={project.avgReviews != null ? `${project.avgReviews.toLocaleString()} avg reviews` : undefined}
-                    />
-                    <MiniStat
-                      icon={<DollarSign className="h-3.5 w-3.5" />}
-                      label="Pricing"
-                      value={
-                        project.minPrice != null && project.maxPrice != null
-                          ? `$${project.minPrice} — $${project.maxPrice}`
-                          : "—"
-                      }
-                    />
-                    <MiniStat
-                      icon={<Zap className="h-3.5 w-3.5" />}
-                      label="Avg Power"
-                      value={project.avgPower != null ? String(project.avgPower) : "—"}
-                      sub={project.maxPower != null ? `${project.maxPower} max` : undefined}
-                    />
-                    <MiniStat
-                      icon={<Calendar className="h-3.5 w-3.5" />}
-                      label="Updated"
-                      value={formatDate(project.updatedAt)}
-                    />
-                  </div>
+          {projects.map((p) => (
+            <Link key={p.id} href={`/research/${p.id}`}>
+              <Card className="hover:border-primary/50 transition-colors cursor-pointer group overflow-hidden">
+                {/* Title row */}
+                <div className="flex items-center justify-between px-5 pt-4 pb-2">
+                  <h3 className="text-lg font-semibold truncate">{p.name}</h3>
+                  {canEdit && (
+                    <button
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        setDeleteTarget(p);
+                      }}
+                      className="opacity-0 group-hover:opacity-100 p-1.5 rounded-md hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-all shrink-0"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </button>
+                  )}
+                </div>
 
-                  {/* Footer: creator + dates */}
-                  <div className="flex items-center gap-4 text-xs text-muted-foreground border-t pt-3">
-                    {project.creatorName && (
-                      <span className="inline-flex items-center gap-1">
-                        <User className="h-3 w-3" />
-                        {project.creatorName}
-                      </span>
+                {/* Summary stat cards — same style as detail page */}
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3 px-5 pb-3">
+                  {/* Market Overview */}
+                  <SummaryStatCard emoji="📊" title="Market Overview" gradient="from-blue-500 to-cyan-400">
+                    <StatRow label="Competitors" value={String(p.competitorCount)} />
+                    {p.avgRating != null && (
+                      <StatRow
+                        label={<span className="flex items-center gap-1"><Star className="h-3 w-3 fill-yellow-400 text-yellow-400" />{p.avgRating} avg</span>}
+                        value={p.avgReviews != null ? `${p.avgReviews.toLocaleString()} reviews` : ""}
+                      />
                     )}
-                    <span>Created {formatDate(project.createdAt)}</span>
-                    <span>Updated {formatDate(project.updatedAt)}</span>
+                    {p.minPrice != null && p.maxPrice != null && (
+                      <StatRow label="Pricing" value={`$${p.minPrice} — $${p.maxPrice}/mo`} />
+                    )}
+                  </SummaryStatCard>
+
+                  {/* Competition */}
+                  {p.avgPower != null ? (
+                    <SummaryStatCard emoji="⚔️" title="Competition" gradient="from-orange-500 to-amber-400">
+                      <StatRow label="Avg power" value={String(p.avgPower)} />
+                      {p.maxPower != null && (
+                        <StatRow label="Strongest" value={String(p.maxPower)} />
+                      )}
+                    </SummaryStatCard>
+                  ) : (
+                    <SummaryStatCard emoji="⚔️" title="Competition" gradient="from-orange-500 to-amber-400">
+                      <span className="text-xs text-muted-foreground">No data yet</span>
+                    </SummaryStatCard>
+                  )}
+
+                  {/* Keywords */}
+                  <SummaryStatCard emoji="🔍" title="Keywords" gradient="from-emerald-500 to-green-400">
+                    <StatRow label="Tracked" value={String(p.keywordCount)} />
+                  </SummaryStatCard>
+
+                  {/* Activity */}
+                  <SummaryStatCard emoji="📅" title="Activity" gradient="from-violet-500 to-purple-400">
+                    <StatRow label="Created" value={formatDate(p.createdAt)} />
+                    <StatRow label="Updated" value={formatDate(p.updatedAt)} />
+                  </SummaryStatCard>
+                </div>
+
+                {/* Footer */}
+                {p.creatorName && (
+                  <div className="px-5 pb-3 text-xs text-muted-foreground flex items-center gap-1">
+                    <User className="h-3 w-3" />
+                    {p.creatorName}
                   </div>
-                </CardContent>
+                )}
               </Card>
             </Link>
           ))}
@@ -217,25 +214,30 @@ export default function ResearchListPage() {
   );
 }
 
-function MiniStat({
-  icon,
-  label,
-  value,
-  sub,
+function SummaryStatCard({
+  emoji, title, gradient, children,
 }: {
-  icon: React.ReactNode;
-  label: string;
-  value: string;
-  sub?: string;
+  emoji: string; title: string; gradient: string; children: React.ReactNode;
 }) {
   return (
-    <div className="rounded-lg bg-muted/40 px-3 py-2">
-      <div className="flex items-center gap-1.5 text-muted-foreground mb-1">
-        {icon}
-        <span className="text-[11px]">{label}</span>
+    <div className="rounded-lg border overflow-hidden shadow-sm">
+      <div className={`h-1 bg-gradient-to-r ${gradient}`} />
+      <div className="px-3 pt-2 pb-2.5">
+        <div className="flex flex-col items-center mb-1.5">
+          <span className="text-lg">{emoji}</span>
+          <span className="text-xs font-semibold">{title}</span>
+        </div>
+        <div className="space-y-0.5 text-xs">{children}</div>
       </div>
-      <div className="text-sm font-semibold">{value}</div>
-      {sub && <div className="text-[10px] text-muted-foreground mt-0.5">{sub}</div>}
+    </div>
+  );
+}
+
+function StatRow({ label, value }: { label: React.ReactNode; value: string }) {
+  return (
+    <div className="flex items-center justify-between">
+      <span className="text-muted-foreground">{label}</span>
+      <span className="font-medium">{value}</span>
     </div>
   );
 }

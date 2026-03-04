@@ -20,6 +20,26 @@ Unified Tracking Picker — Add Research Projects + Fix UX:
   - apps/dashboard/src/app/(dashboard)/keywords/[slug]/page.tsx (added keywordSlug prop)
   - apps/dashboard/src/components/star-app-button.tsx (redesigned)
 
+Research project UX improvements:
+- Added count to Feature Coverage subcategory headers
+- Added app name, rating, review count to Feature Coverage column headers
+- Added Shopify URL link icon next to remove buttons in competitor tables (detail + competitors subpage)
+- Added column header sorting to all research tables (competitors, opportunities, keywords)
+- Added realtime search filters to keyword tables (Market Language, Keyword Suggestions, keywords subpage)
+- Added keyword auto-suggestions dropdown to keywords subpage (debounced /api/keywords/search)
+- Added LiveSearchTrigger icon to keyword rows in research pages (matching apps/[slug]/keywords pattern)
+- Redesigned research project list page with full-width cards showing summary stat cards (Market Overview, Competition, Keywords, Activity) matching detail page style
+- Fixed 500 error on research projects list API:
+  - Fixed pricing query: null-safe jsonb handling with CASE WHEN + jsonb_typeof check + regex validation
+  - Fixed power score column: overall_score → power_score
+  - Fixed power score query: INNER JOIN LATERAL for latest score per app
+- Files changed:
+  - apps/api/src/routes/research.ts (list endpoint SQL fixes + stats aggregation)
+  - apps/dashboard/src/app/(dashboard)/research/page.tsx (full card redesign)
+  - apps/dashboard/src/app/(dashboard)/research/[id]/page.tsx (sorting, search, icons, Feature Coverage enhancements)
+  - apps/dashboard/src/app/(dashboard)/research/[id]/competitors/page.tsx (sorting, Shopify link icon)
+  - apps/dashboard/src/app/(dashboard)/research/[id]/keywords/page.tsx (sorting, search, auto-suggestions, LiveSearchTrigger)
+
 Fix broken category links (PLA-18):
 - App scraper now registers missing categories at scrape time
   - After inserting app snapshot, loops through details.categories and upserts each slug into categories table

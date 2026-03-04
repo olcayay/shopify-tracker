@@ -119,9 +119,15 @@ export const researchRoutes: FastifyPluginAsync = async (app) => {
       FROM research_project_competitors rpc
       CROSS JOIN LATERAL (
         SELECT s.average_rating, s.rating_count,
-          (SELECT min(p::numeric) FROM jsonb_array_elements_text(
-            jsonb_path_query_array(s.pricing_plans, '$[*].price')
-          ) AS p WHERE p IS NOT NULL AND p != 'null' AND p::numeric > 0) AS min_paid
+          (SELECT min((plan->>'price')::numeric)
+           FROM jsonb_array_elements(
+             CASE WHEN s.pricing_plans IS NOT NULL AND jsonb_typeof(s.pricing_plans) = 'array'
+                  THEN s.pricing_plans ELSE '[]'::jsonb END
+           ) AS plan
+           WHERE plan->>'price' IS NOT NULL
+             AND (plan->>'price') ~ '^\d+(\.\d+)?$'
+             AND (plan->>'price')::numeric > 0
+          ) AS min_paid
         FROM app_snapshots s
         WHERE s.app_slug = rpc.app_slug
         ORDER BY s.scraped_at DESC LIMIT 1
@@ -135,10 +141,14 @@ export const researchRoutes: FastifyPluginAsync = async (app) => {
     }>(sql`
       SELECT
         rpc.research_project_id AS "projectId",
-        round(avg(ps.overall_score))::int AS "avgPower",
-        max(ps.overall_score)::int AS "maxPower"
+        round(avg(ps.power_score))::int AS "avgPower",
+        max(ps.power_score)::int AS "maxPower"
       FROM research_project_competitors rpc
-      INNER JOIN app_power_scores ps ON ps.app_slug = rpc.app_slug
+      INNER JOIN LATERAL (
+        SELECT p.power_score FROM app_power_scores p
+        WHERE p.app_slug = rpc.app_slug
+        ORDER BY p.computed_at DESC LIMIT 1
+      ) ps ON true
       WHERE rpc.research_project_id = ANY(${projectIds})
       GROUP BY rpc.research_project_id
     `);
