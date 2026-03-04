@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useMemo, useCallback } from "react";
+import { useEffect, useState, useMemo, useCallback, useRef } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import { useAuth } from "@/lib/auth-context";
@@ -129,13 +129,13 @@ function StarRating({ rating }: { rating: number }) {
 // ─── Collapsible Section ─────────────────────────────────────
 
 function CompareSection({
-  title, sectionKey, collapsed, onToggle, children,
+  id, title, sectionKey, collapsed, onToggle, children,
 }: {
-  title: string; sectionKey: string; collapsed: boolean;
+  id: string; title: string; sectionKey: string; collapsed: boolean;
   onToggle: (key: string) => void; children: React.ReactNode;
 }) {
   return (
-    <Card>
+    <Card id={id} className="scroll-mt-20">
       <CardHeader
         className="pb-0 cursor-pointer select-none"
         onClick={() => onToggle(sectionKey)}
@@ -216,6 +216,59 @@ export default function ResearchComparePage() {
     () => competitorSlugs.filter((s) => selectedSlugs.has(s)).map((s) => appDataMap.get(s)).filter(Boolean) as AppData[],
     [competitorSlugs, selectedSlugs, appDataMap]
   );
+
+  // Section navigation
+  const SECTIONS = [
+    { id: "sec-name", key: "name", label: "Name" },
+    { id: "sec-subtitle", key: "subtitle", label: "Subtitle" },
+    { id: "sec-intro", key: "intro", label: "Introduction" },
+    { id: "sec-details", key: "details", label: "Details" },
+    { id: "sec-features", key: "features", label: "Features" },
+    { id: "sec-languages", key: "languages", label: "Languages" },
+    { id: "sec-integrations", key: "integrations", label: "Integrations" },
+    { id: "sec-reviews", key: "reviews", label: "Reviews" },
+    { id: "sec-catfeatures", key: "catfeatures", label: "Category Features" },
+    { id: "sec-pricing", key: "pricing", label: "Pricing" },
+    { id: "sec-seo", key: "seo", label: "Web Search" },
+  ] as const;
+
+  const [activeSection, setActiveSection] = useState<string>(SECTIONS[0].id);
+  const navRef = useRef<HTMLDivElement>(null);
+
+  // Intersection observer for active section tracking
+  useEffect(() => {
+    if (selectedApps.length === 0) return;
+    const els = SECTIONS.map((s) => document.getElementById(s.id)).filter(Boolean) as HTMLElement[];
+    if (els.length === 0) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        // Find the topmost visible section
+        const visible = entries.filter((e) => e.isIntersecting);
+        if (visible.length > 0) {
+          // Pick the one closest to the top
+          visible.sort((a, b) => a.boundingClientRect.top - b.boundingClientRect.top);
+          setActiveSection(visible[0].target.id);
+        }
+      },
+      { rootMargin: "-80px 0px -60% 0px", threshold: 0 }
+    );
+    for (const el of els) observer.observe(el);
+    return () => observer.disconnect();
+  }, [selectedApps.length]);
+
+  function scrollToSection(sectionId: string) {
+    const el = document.getElementById(sectionId);
+    if (el) {
+      el.scrollIntoView({ behavior: "smooth", block: "start" });
+      setActiveSection(sectionId);
+    }
+    // Also auto-scroll nav pill into view
+    setTimeout(() => {
+      const pill = document.getElementById(`nav-${sectionId}`);
+      pill?.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "center" });
+    }, 100);
+  }
 
   if (loading) {
     return (
@@ -310,58 +363,82 @@ export default function ResearchComparePage() {
         </Card>
       ) : (
         <>
+          {/* Sticky section nav */}
+          <div
+            ref={navRef}
+            className="sticky top-0 z-20 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80 border-b -mx-4 px-4 py-2"
+          >
+            <div className="flex gap-1.5 overflow-x-auto scrollbar-hide">
+              {SECTIONS.map((s) => (
+                <button
+                  key={s.id}
+                  id={`nav-${s.id}`}
+                  onClick={() => scrollToSection(s.id)}
+                  className={cn(
+                    "px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap transition-colors shrink-0",
+                    activeSection === s.id
+                      ? "bg-primary text-primary-foreground shadow-sm"
+                      : "text-muted-foreground hover:text-foreground hover:bg-muted"
+                  )}
+                >
+                  {s.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
           {/* App Name */}
-          <CompareSection title="App Name" sectionKey="name" collapsed={!!collapsed["name"]} onToggle={toggleCollapse}>
+          <CompareSection id="sec-name" title="App Name" sectionKey="name" collapsed={!!collapsed["name"]} onToggle={toggleCollapse}>
             <VerticalListSection apps={selectedApps} field="name" max={30} />
           </CompareSection>
 
           {/* Subtitle */}
-          <CompareSection title="App Card Subtitle" sectionKey="subtitle" collapsed={!!collapsed["subtitle"]} onToggle={toggleCollapse}>
+          <CompareSection id="sec-subtitle" title="App Card Subtitle" sectionKey="subtitle" collapsed={!!collapsed["subtitle"]} onToggle={toggleCollapse}>
             <VerticalListSection apps={selectedApps} field="subtitle" max={62} />
           </CompareSection>
 
           {/* Introduction */}
-          <CompareSection title="App Introduction" sectionKey="intro" collapsed={!!collapsed["intro"]} onToggle={toggleCollapse}>
+          <CompareSection id="sec-intro" title="App Introduction" sectionKey="intro" collapsed={!!collapsed["intro"]} onToggle={toggleCollapse}>
             <VerticalListSection apps={selectedApps} field="introduction" max={100} />
           </CompareSection>
 
           {/* App Details */}
-          <CompareSection title="App Details" sectionKey="details" collapsed={!!collapsed["details"]} onToggle={toggleCollapse}>
+          <CompareSection id="sec-details" title="App Details" sectionKey="details" collapsed={!!collapsed["details"]} onToggle={toggleCollapse}>
             <AppDetailsSection apps={selectedApps} />
           </CompareSection>
 
           {/* Features */}
-          <CompareSection title="Features" sectionKey="features" collapsed={!!collapsed["features"]} onToggle={toggleCollapse}>
+          <CompareSection id="sec-features" title="Features" sectionKey="features" collapsed={!!collapsed["features"]} onToggle={toggleCollapse}>
             <FeaturesSection apps={selectedApps} />
           </CompareSection>
 
           {/* Languages */}
-          <CompareSection title="Languages" sectionKey="languages" collapsed={!!collapsed["languages"]} onToggle={toggleCollapse}>
+          <CompareSection id="sec-languages" title="Languages" sectionKey="languages" collapsed={!!collapsed["languages"]} onToggle={toggleCollapse}>
             <SetComparisonSection apps={selectedApps} field="languages" />
           </CompareSection>
 
           {/* Integrations */}
-          <CompareSection title="Integrations" sectionKey="integrations" collapsed={!!collapsed["integrations"]} onToggle={toggleCollapse}>
+          <CompareSection id="sec-integrations" title="Integrations" sectionKey="integrations" collapsed={!!collapsed["integrations"]} onToggle={toggleCollapse}>
             <SetComparisonSection apps={selectedApps} field="integrations" linkPrefix="/integrations/" />
           </CompareSection>
 
           {/* Reviews and Ratings */}
-          <CompareSection title="Reviews and Ratings" sectionKey="reviews" collapsed={!!collapsed["reviews"]} onToggle={toggleCollapse}>
+          <CompareSection id="sec-reviews" title="Reviews and Ratings" sectionKey="reviews" collapsed={!!collapsed["reviews"]} onToggle={toggleCollapse}>
             <ReviewsSection apps={selectedApps} />
           </CompareSection>
 
           {/* Category Features */}
-          <CompareSection title="Category Features" sectionKey="catfeatures" collapsed={!!collapsed["catfeatures"]} onToggle={toggleCollapse}>
+          <CompareSection id="sec-catfeatures" title="Category Features" sectionKey="catfeatures" collapsed={!!collapsed["catfeatures"]} onToggle={toggleCollapse}>
             <CategoryFeaturesSection apps={selectedApps} />
           </CompareSection>
 
           {/* Pricing */}
-          <CompareSection title="Pricing Plans" sectionKey="pricing" collapsed={!!collapsed["pricing"]} onToggle={toggleCollapse}>
+          <CompareSection id="sec-pricing" title="Pricing Plans" sectionKey="pricing" collapsed={!!collapsed["pricing"]} onToggle={toggleCollapse}>
             <PricingSection apps={selectedApps} />
           </CompareSection>
 
           {/* SEO */}
-          <CompareSection title="Web Search Content" sectionKey="seo" collapsed={!!collapsed["seo"]} onToggle={toggleCollapse}>
+          <CompareSection id="sec-seo" title="Web Search Content" sectionKey="seo" collapsed={!!collapsed["seo"]} onToggle={toggleCollapse}>
             <SeoSection apps={selectedApps} />
           </CompareSection>
         </>
