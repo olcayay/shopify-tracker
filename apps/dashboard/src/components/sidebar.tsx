@@ -31,7 +31,7 @@ import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
 import { VisuallyHidden } from "radix-ui";
 
-const navItems = [
+const navItems: { href: string; label: string; icon: any; badge?: string }[] = [
   { href: "/overview", label: "Overview", icon: LayoutDashboard },
   { href: "/apps", label: "Apps", icon: AppWindow },
   { href: "/competitors", label: "Competitors", icon: Star },
@@ -39,7 +39,7 @@ const navItems = [
   { href: "/categories", label: "Categories", icon: FolderTree },
   { href: "/featured", label: "Featured", icon: Sparkles },
   { href: "/features", label: "Features", icon: Puzzle },
-  { href: "/research", label: "Research", icon: FlaskConical },
+  { href: "/research", label: "Research", icon: FlaskConical, badge: "Beta" },
   { href: "/settings", label: "Settings", icon: Settings },
 ];
 
@@ -71,8 +71,8 @@ function SidebarContent({
   const isSystemAdmin = user?.isSystemAdmin;
   const isAdminSection = pathname.startsWith("/system-admin");
 
-  function NavLink({ href, icon: Icon, label, isActive, iconSize = "h-4 w-4", className = "" }: {
-    href: string; icon: any; label: string; isActive: boolean; iconSize?: string; className?: string;
+  function NavLink({ href, icon: Icon, label, isActive, iconSize = "h-4 w-4", className = "", badge }: {
+    href: string; icon: any; label: string; isActive: boolean; iconSize?: string; className?: string; badge?: string;
   }) {
     const content = (
       <Link
@@ -86,6 +86,13 @@ function SidebarContent({
       >
         <Icon className={`${iconSize} shrink-0`} />
         {!collapsed && label}
+        {!collapsed && badge && (
+          <span className={`ml-auto text-[10px] font-medium px-1.5 py-0.5 rounded-full ${
+            isActive ? "bg-primary-foreground/20 text-primary-foreground" : "bg-primary/10 text-primary"
+          }`}>
+            {badge}
+          </span>
+        )}
       </Link>
     );
     if (collapsed) {
@@ -117,7 +124,7 @@ function SidebarContent({
           const isActive =
             pathname === item.href || pathname.startsWith(item.href + "/");
           return (
-            <NavLink key={item.href} href={item.href} icon={item.icon} label={item.label} isActive={isActive} />
+            <NavLink key={item.href} href={item.href} icon={item.icon} label={item.label} isActive={isActive} badge={item.badge} />
           );
         })}
         {isSystemAdmin && (
