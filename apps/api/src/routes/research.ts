@@ -71,9 +71,7 @@ export const researchRoutes: FastifyPluginAsync = async (app) => {
     const projects = await db
       .select({
         id: researchProjects.id,
-        accountId: researchProjects.accountId,
         name: researchProjects.name,
-        createdBy: researchProjects.createdBy,
         createdAt: researchProjects.createdAt,
         updatedAt: researchProjects.updatedAt,
         creatorName: users.name,
@@ -83,96 +81,7 @@ export const researchRoutes: FastifyPluginAsync = async (app) => {
       .where(eq(researchProjects.accountId, accountId))
       .orderBy(desc(researchProjects.updatedAt));
 
-    // Get keyword + competitor counts per project
-    const projectIds = projects.map((p) => p.id);
-    if (projectIds.length === 0) return [];
-
-    const kwCounts = await db
-      .select({
-        projectId: researchProjectKeywords.researchProjectId,
-        count: sql<number>`count(*)::int`,
-      })
-      .from(researchProjectKeywords)
-      .where(inArray(researchProjectKeywords.researchProjectId, projectIds))
-      .groupBy(researchProjectKeywords.researchProjectId);
-
-    const compCounts = await db
-      .select({
-        projectId: researchProjectCompetitors.researchProjectId,
-        count: sql<number>`count(*)::int`,
-      })
-      .from(researchProjectCompetitors)
-      .where(inArray(researchProjectCompetitors.researchProjectId, projectIds))
-      .groupBy(researchProjectCompetitors.researchProjectId);
-
-    // Get competitor app stats per project using lateral join for latest snapshot
-    const compStats = await db.execute<{
-      projectId: string; avgRating: number | null; avgReviews: number | null;
-      minPrice: number | null; maxPrice: number | null;
-    }>(sql`
-      SELECT
-        rpc.research_project_id AS "projectId",
-        round(avg(ls.average_rating)::numeric, 1) AS "avgRating",
-        round(avg(ls.rating_count))::int AS "avgReviews",
-        min(ls.min_paid) AS "minPrice",
-        max(ls.min_paid) AS "maxPrice"
-      FROM research_project_competitors rpc
-      CROSS JOIN LATERAL (
-        SELECT s.average_rating, s.rating_count,
-          (SELECT min((plan->>'price')::numeric)
-           FROM jsonb_array_elements(
-             CASE WHEN s.pricing_plans IS NOT NULL AND jsonb_typeof(s.pricing_plans) = 'array'
-                  THEN s.pricing_plans ELSE '[]'::jsonb END
-           ) AS plan
-           WHERE plan->>'price' IS NOT NULL
-             AND (plan->>'price') ~ '^\d+(\.\d+)?$'
-             AND (plan->>'price')::numeric > 0
-          ) AS min_paid
-        FROM app_snapshots s
-        WHERE s.app_slug = rpc.app_slug
-        ORDER BY s.scraped_at DESC LIMIT 1
-      ) ls
-      WHERE rpc.research_project_id IN (${sql.join(projectIds.map((id) => sql`${id}`), sql`, `)})
-      GROUP BY rpc.research_project_id
-    `);
-
-    const powerStats = await db.execute<{
-      projectId: string; avgPower: number | null; maxPower: number | null;
-    }>(sql`
-      SELECT
-        rpc.research_project_id AS "projectId",
-        round(avg(ps.power_score))::int AS "avgPower",
-        max(ps.power_score)::int AS "maxPower"
-      FROM research_project_competitors rpc
-      INNER JOIN LATERAL (
-        SELECT p.power_score FROM app_power_scores p
-        WHERE p.app_slug = rpc.app_slug
-        ORDER BY p.computed_at DESC LIMIT 1
-      ) ps ON true
-      WHERE rpc.research_project_id IN (${sql.join(projectIds.map((id) => sql`${id}`), sql`, `)})
-      GROUP BY rpc.research_project_id
-    `);
-
-    const kwMap = Object.fromEntries(kwCounts.map((r) => [r.projectId, r.count]));
-    const compMap = Object.fromEntries(compCounts.map((r) => [r.projectId, r.count]));
-    const statsMap = Object.fromEntries([...compStats].map((r: any) => [r.projectId, r]));
-    const powerMap = Object.fromEntries([...powerStats].map((r: any) => [r.projectId, r]));
-
-    return projects.map((p) => {
-      const stats = statsMap[p.id];
-      const power = powerMap[p.id];
-      return {
-        ...p,
-        keywordCount: kwMap[p.id] || 0,
-        competitorCount: compMap[p.id] || 0,
-        avgRating: stats?.avgRating ? Number(Number(stats.avgRating).toFixed(1)) : null,
-        avgReviews: stats?.avgReviews ?? null,
-        minPrice: stats?.minPrice ? Number(stats.minPrice) : null,
-        maxPrice: stats?.maxPrice ? Number(stats.maxPrice) : null,
-        avgPower: power?.avgPower ?? null,
-        maxPower: power?.maxPower ?? null,
-      };
-    });
+    return projects;
   });
 
   // POST /api/research-projects — create project
