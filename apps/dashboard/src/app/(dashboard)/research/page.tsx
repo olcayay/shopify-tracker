@@ -183,11 +183,11 @@ export default function ResearchListPage() {
           </CardContent>
         </Card>
       ) : (
-        <div className="space-y-6">
+        <div className="flex flex-col gap-6">
           {projects.map((p) => {
             const data = projectDataMap[p.id];
             return (
-              <Link key={p.id} href={`/research/${p.id}`}>
+              <Link key={p.id} href={`/research/${p.id}`} className="block">
                 <Card className="hover:border-primary/50 transition-colors cursor-pointer group overflow-hidden">
                   {/* Title row */}
                   <div className="flex items-center justify-between px-5 pt-4 pb-3">
