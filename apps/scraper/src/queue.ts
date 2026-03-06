@@ -14,6 +14,8 @@ export interface ScraperJobOptions {
   scrapeAppDetails?: boolean;
   /** Also scrape reviews (for app_details directly, or cascaded through scrapeAppDetails) */
   scrapeReviews?: boolean;
+  /** Skip the 12-hour dedup check (for manual re-scrapes) */
+  force?: boolean;
 }
 
 export interface ScraperJobData {

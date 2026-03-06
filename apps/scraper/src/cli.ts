@@ -9,6 +9,7 @@ import { AppDetailsScraper } from "./scrapers/app-details-scraper.js";
 import { KeywordScraper } from "./scrapers/keyword-scraper.js";
 import { ReviewScraper } from "./scrapers/review-scraper.js";
 import { HttpClient } from "./http-client.js";
+import { BrowserClient } from "./browser-client.js";
 import { getModule } from "./platforms/registry.js";
 
 // Parse --platform flag (can appear anywhere in args)
@@ -61,10 +62,16 @@ const httpClient = new HttpClient({
 async function main() {
   console.log(`Platform: ${platformArg}`);
 
+  // Create browser client for platforms that need SPA rendering
+  let browserClient: BrowserClient | undefined;
+  if (platformArg === "salesforce") {
+    browserClient = new BrowserClient();
+  }
+
   // Get platform module
   let platformModule;
   try {
-    platformModule = getModule(platformArg, httpClient);
+    platformModule = getModule(platformArg, httpClient, browserClient);
   } catch {
     // Fall back to no module for unimplemented platforms
   }
@@ -91,8 +98,9 @@ async function main() {
         console.error("Usage: tsx src/cli.ts app <app-slug>");
         process.exit(1);
       }
+      const forceFlag = process.argv.includes("--force");
       const scraper = new AppDetailsScraper(db, httpClient, platformModule);
-      await scraper.scrapeApp(slug);
+      await scraper.scrapeApp(slug, undefined, "cli", undefined, forceFlag);
       console.log(`\nApp "${slug}" scraped successfully.`);
       break;
     }
@@ -202,6 +210,7 @@ async function main() {
       process.exit(1);
   }
 
+  if (browserClient) await browserClient.close();
   process.exit(0);
 }
 

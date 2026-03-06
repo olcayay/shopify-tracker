@@ -1,0 +1,405 @@
+{
+  "listingId": "a0N4V00000JTeWyUAL",
+  "id": "210f64ed-2cd4-4514-b604-1f2bf36382c3",
+  "appExchangeId": "a0N3u00000R8IOtEAN",
+  "name": "Jotform | Forms, surveys, agent, chatbot, e-sign, and workflow automation",
+  "title": "Jotform - Powerful forms get it done.",
+  "description": "Power your Salesforce data collection and lead capture with our no-code form builder, featuring dynamic prefill, e-signatures, custom PDF documents, and more — enhanced with AI agents that automatically create, update, and track records in real time.",
+  "fullDescription": "Save time and eliminate busywork with Jotform. Create dynamic forms right from your Salesforce dashboard with Jotform’s intuitive Form Builder. Collect lead information and automatically sync it to Salesforce — no manual entry needed. Instantly share personalized forms prefilled with real-time Salesforce data. \n\nAutomatically send files, e-signatures, and PDFs from Jotform to Salesforce records for easy management in one place. Detailed transfer logs, error alerts, and diagnostic tools ensure smooth, reliable data flow.\n\nDesigned for teams using Salesforce as their main CRM, the Jotform Salesforce Agent boosts efficiency through intelligent automation. It connects directly to Service, Experience, and Health Clouds, enabling real-time record creation, updates, and lookups during chat, web, or phone interactions. With predefined skills for lead management, case handling, order tracking, appointment scheduling, and HR support, it helps teams deliver 24/7 assistance and maintain accurate Salesforce data — no manual effort required.\n\nWith 30+ million users worldwide, Jotform is a trusted global brand that serves all types of industries and organizations. \n",
+  "technology": "force/package",
+  "publisher": {
+    "name": "Jotform Inc.",
+    "email": "salesforce-support@jotform.com",
+    "website": "https://www.jotform.com/",
+    "description": "Jotform helps eliminate busywork with powerful online forms that streamline data collection, process payments, and automate workflows. With over 18 years of experience and 30 million users worldwide, Jotform empowers organizations to manage their operations with a complete lineup of no-code solutions.\n\nBuild and share custom forms in minutes using the intuitive Form Builder. Manage responses with Jotform Tables and Inbox, collaborate in real time with Jotform Teams, and automate follow-up actions through Jotform Workflows.\n\nCollect e-signatures online with Jotform Sign, transform form data into professional documents with the PDF Editor, and create polished reports instantly using the Report Builder.\n\nExtend these capabilities with an AI-powered Salesforce Agent that automates CRM workflows by creating, updating, and tracking Salesforce records in real time.\n\nTrusted globally, Jotform was ranked No. 1 in G2’s 2025 Fall Report for Online Form Builders.",
+    "employees": 489,
+    "yearFounded": 2006,
+    "location": "San Francisco, CA",
+    "country": "US"
+  },
+  "extension": {
+    "supportedIndustries": [
+      "Horizontal Product",
+      "Healthcare & Life Sciences",
+      "Professional Services"
+    ],
+    "productsRequired": [
+      "Sales Cloud"
+    ],
+    "productsSupported": [
+      "Service Cloud",
+      "Experience Cloud",
+      "Health Cloud"
+    ],
+    "editions": [
+      "PE",
+      "EE",
+      "UE",
+      "DE",
+      "PP"
+    ],
+    "highlights": [
+      "Build Forms in No Time\nNo coding knowledge required. Simply drag and drop to create your form from scratch or choose from 10,000+ ready-made templates.",
+      "Connect Seamlessly with Salesforce\nDynamically pre-populate forms with the latest Salesforce data. Your forms automatically sync with Salesforce, keeping your account up to date every time you receive a new submission.",
+      "Keep Your Data Secure \nData security is a top priority at Jotform. Your data is protected with a 256-bit SSL connection, PCI certification, CCPA compliance, and GDPR compliance — as well as optional HIPAA features and form encryption.",
+      "Streamline Document Management\nSend e-signed documents, uploaded files, and submission PDFs from Jotform directly to Salesforce. Automatically attach files to relevant Salesforce records and manage everything from one centralized location.",
+      "Omnichannel AI Conversations\nManage conversations across chat, web, and phone with consistent, human-like responses. The agent detects and triggers the right Salesforce actions in real time, with detailed integration logs visible in each conversation.",
+      "Lead, Appointment & Ticket Management\nThe Jotform Salesforce Agent uses predefined skills to capture and update leads and opportunities, schedule appointments, and create or resolve support tickets — all in real time on standard or custom Salesforce."
+    ],
+    "publishedDate": "2023-08-28",
+    "recordType": "App",
+    "languages": [
+      "en"
+    ],
+    "targetUserPersona": [
+      "Business Operations Manager",
+      "Sales",
+      "Service Agent / Supervisor"
+    ],
+    "listingCategories": [
+      "Data Management",
+      "Sales",
+      "Surveys"
+    ]
+  },
+  "solution": {
+    "manifest": {
+      "hasLWC": true,
+      "tabsCount": 3,
+      "objectsCount": 2,
+      "applicationsCount": 1,
+      "globalComponentsCount": 4,
+      "cmtyBuilderComponentsCount": 0,
+      "isCommunityBuilder": false,
+      "isLightningAppBuilder": false,
+      "appBuilderComponentsCount": 0
+    },
+    "latestVersionDate": "2025-10-07T15:40:33.000Z",
+    "packageId": "0338e000000Gt7CAAS",
+    "namespacePrefix": "jotform",
+    "packageCategory": "Managed (2GP)",
+    "createdDate": "2025-10-07T15:40:33.000Z",
+    "lastModifiedDate": "2025-10-07T15:50:05.000Z"
+  },
+  "pricing": {
+    "price_model_type": "freemium",
+    "model": {
+      "plans": [
+        {
+          "plan_name": "Bronze",
+          "price": 39,
+          "currency_code": "USD",
+          "units": "user",
+          "frequency": "monthly",
+          "trial_days": 0
+        },
+        {
+          "plan_name": "Silver",
+          "price": 49,
+          "currency_code": "USD",
+          "units": "user",
+          "frequency": "monthly",
+          "trial_days": 0
+        },
+        {
+          "plan_name": "Gold",
+          "price": 129,
+          "currency_code": "USD",
+          "units": "user",
+          "frequency": "monthly",
+          "trial_days": 0
+        }
+      ],
+      "user_limitations": "Free users can enjoy up to 5 forms and 100 monthly submissions.\nUsers with needs exceeding limitations on the free starter plan are encouraged to opt for a paid plan.",
+      "additional_details": "For even greater needs or company-wide access, Jotform offers Enterprise solutions. \n\nhttps://www.jotform.com/pricing/ for more details.",
+      "display_plan_names": true,
+      "discounts_offered": true
+    }
+  },
+  "reviewsSummary": {
+    "reviewCount": 130,
+    "averageRating": 4.58
+  },
+  "businessNeeds": {
+    "marketing": {
+      "categories": [
+        "surveys"
+      ],
+      "isSelected": false
+    },
+    "customerService": {
+      "categories": [
+        "agentProductivity"
+      ],
+      "isSelected": true
+    }
+  },
+  "plugins": {
+    "videos": [
+      {
+        "url": "https://youtu.be/BEfRUVdgHB8",
+        "type": null,
+        "caption": null
+      }
+    ],
+    "resources": [
+      {
+        "url": "https://youtu.be/W0SExPriNMM",
+        "type": "Webinar",
+        "title": "Introducing Jotform for Salesforce"
+      },
+      {
+        "url": "https://www.jotform.com/all-you-need-to-know-about-form-builder/",
+        "type": "Whitepaper",
+        "title": "Need-to-know Form Builder features and updates"
+      },
+      {
+        "url": "https://www.jotform.com/enterprise/whitepapers/digitalization-in-finance/",
+        "type": "Whitepaper",
+        "title": "How digitalization in financial services optimizes security, operations, and customer service"
+      },
+      {
+        "url": "https://www.jotform.com/gdpr-compliance/",
+        "type": "Whitepaper",
+        "title": "GDPR Compliance Forms"
+      },
+      {
+        "url": "https://www.jotform.com/hipaa/",
+        "type": "Whitepaper",
+        "title": "HIPAA-Friendly Online Forms"
+      },
+      {
+        "url": "https://www.jotform.com/help/guide-jotform-for-salesforce/",
+        "type": "Customization Guide",
+        "title": "Jotform for Salesforce Guides"
+      },
+      {
+        "url": "https://www.jotform.com/help/1810-how-to-prefill-a-form-using-the-data-from-salesforce/",
+        "type": "Customization Guide",
+        "title": "How to Prefill a Form Using the Data From Salesforce?"
+      },
+      {
+        "url": "https://www.jotform.com/help/how-to-add-jotform-to-your-salesforce-account/",
+        "type": "Customization Guide",
+        "title": "How to Create a Salesforce Form in AppExchange"
+      },
+      {
+        "url": "https://www.jotform.com/help/how-to-create-a-required-field-in-salesforce/",
+        "type": "Customization Guide",
+        "title": "How to Create a Required Field in Salesforce"
+      },
+      {
+        "url": "https://www.jotform.com/help/394-salesforce-duplicate-checking/",
+        "type": "Customization Guide",
+        "title": "Salesforce Duplicate Checking"
+      },
+      {
+        "url": "https://www.jotform.com/help/how-to-enable-api-access-in-salesforce/",
+        "type": "Customization Guide",
+        "title": "How to Enable API Access in Salesforce"
+      },
+      {
+        "url": "https://www.jotform.com/help/382-how-to-find-your-salesforce-campaigns-id/",
+        "type": "Customization Guide",
+        "title": "How to Find Your Salesforce Campaign's ID"
+      },
+      {
+        "url": "https://www.jotform.com/enterprise/whitepapers/ai-for-nonprofits/",
+        "type": "Whitepaper",
+        "title": "5 ways your nonprofit can leverage AI in 2025"
+      },
+      {
+        "url": "https://www.jotform.com/customer-stories/falcon-events/",
+        "type": "Customer Testimonial",
+        "title": "Jotform and Salesforce help an event production company collect lead info and client assets"
+      },
+      {
+        "url": "https://www.jotform.com/customer-stories/uk-charity/",
+        "type": "Customer Testimonial",
+        "title": "A U.K. charity overhauls its fund application & distribution processes with Jotform and Salesforce"
+      },
+      {
+        "url": "https://www.jotform.com/customer-stories/uqual/",
+        "type": "Customer Testimonial",
+        "title": "How a fintech firm uses Jotform and Salesforce to help home buyers"
+      },
+      {
+        "url": "https://www.jotform.com/customer-stories/sonance/",
+        "type": "Customer Testimonial",
+        "title": "An architectural audio company improves customer communication with Jotform and Salesforce"
+      },
+      {
+        "url": "https://appexchange.salesforce.com/image_host/b3a96998-9943-4499-91a5-aeb613d56a98.pdf",
+        "type": "Customer Testimonial",
+        "title": "Dream on 3 uses Jotform & Salesforce to help make dreams come true"
+      },
+      {
+        "url": "https://www.jotform.com/help/1063-how-to-integrate-jotform-with-salesforce/",
+        "type": "Customization Guide",
+        "title": "How to Integrate Jotform with Salesforce"
+      },
+      {
+        "url": "https://www.jotform.com/help/how-to-embed-a-salesforce-form/",
+        "type": "Customization Guide",
+        "title": "How to Embed a Salesforce Form in a Website"
+      },
+      {
+        "url": "https://www.jotform.com/help/321-mastering-salesforce-with-jotform/",
+        "type": "Customization Guide",
+        "title": "Mastering Your Salesforce Integration with Jotform"
+      },
+      {
+        "url": "https://www.jotform.com/help/how-to-enable-api-access-in-salesforce/",
+        "type": "Customization Guide",
+        "title": "How to Enable API Access in Salesforce"
+      },
+      {
+        "url": "https://www.jotform.com/help/how-to-view-salesforce-integration-log-details/",
+        "type": "Customization Guide",
+        "title": "How to View Salesforce Integration Log Details"
+      },
+      {
+        "url": "https://www.jotform.com/help/understanding-refresh-tokens-in-salesforce/",
+        "type": "Customization Guide",
+        "title": "Understanding Refresh Tokens in Salesforce"
+      },
+      {
+        "url": "https://www.jotform.com/customer-stories/aish-detroit/",
+        "type": "Customer Testimonial",
+        "title": "A community organization uses Salesforce and Jotform to help strengthen families"
+      },
+      {
+        "url": "https://www.jotform.com/customer-stories/covermanager/",
+        "type": "Customer Testimonial",
+        "title": "How CoverManager uses Jotform for Salesforce to help thousands of restaurants thrive"
+      },
+      {
+        "url": "https://www.jotform.com/help/how-to-connect-jotform-with-salesforce/",
+        "type": "Customization Guide",
+        "title": "How to Connect Jotform with Salesforce"
+      },
+      {
+        "url": "https://www.jotform.com/help/how-to-connect-your-salesforce-agent-to-salesforce/",
+        "type": "Customization Guide",
+        "title": "How to Connect Your Salesforce Agent to Salesforce"
+      },
+      {
+        "url": "https://www.jotform.com/help/how-to-train-your-agent-to-use-salesforce-knowledge-articles/",
+        "type": "Customization Guide",
+        "title": "How to Train Your Agent to Use Salesforce Knowledge Articles"
+      },
+      {
+        "url": "https://www.jotform.com/help/how-to-test-your-salesforce-agent-before-going-live/",
+        "type": "Customization Guide",
+        "title": "How to Test Your Salesforce Agent Before Going Live"
+      },
+      {
+        "url": "https://www.jotform.com/help/how-to-add-the-jotform-ai-chatbot-to-your-salesforce-experience-cloud-site/",
+        "type": "Customization Guide",
+        "title": "How to Add the Jotform AI Chatbot to Your Salesforce Experience Cloud Site"
+      },
+      {
+        "url": "https://www.jotform.com/salesforce-forms/customer-stories/",
+        "type": "Customer Testimonial",
+        "title": "Salesforce Customer Stories"
+      }
+    ],
+    "carousel": [
+      {
+        "url": "https://appexchange.salesforce.com/image_host/aaa45cc0-0fb5-4906-9027-3d399f8d47dc.png",
+        "caption": "Create custom forms for free with Jotform’s form builder",
+        "altText": "Introducing Jotform for Salesforce, a powerful form builder on AppExchange"
+      },
+      {
+        "url": "https://appexchange.salesforce.com/image_host/103de7d9-8105-404c-8ee2-e05580ac3dcf.png",
+        "caption": "Manage Salesforce records instantly with AI",
+        "altText": "Jotform Salesforce Agent automates Salesforce tasks and streamlines lead management."
+      },
+      {
+        "url": "https://appexchange.salesforce.com/image_host/7a3ffa14-a817-480d-83e5-6d9ea4cfa033.png",
+        "caption": "Build powerful forms with a no-code form builder",
+        "altText": "Build powerful forms with Jotform’s form builder"
+      },
+      {
+        "url": "https://appexchange.salesforce.com/image_host/e47b8bf8-a748-496c-8a5a-6fca96c90f1b.png",
+        "caption": "Automate Salesforce workflows with AI Agents",
+        "altText": "Automate Salesforce tasks with AI Agents that manage leads, records, and 24/7 customer support."
+      },
+      {
+        "url": "https://appexchange.salesforce.com/image_host/573f5891-9374-45cf-963a-37255286bcc7.png",
+        "caption": "Build, send, and track documents for instant signing",
+        "altText": "Collect and manage e-signatures from any device with Jotform Sign"
+      },
+      {
+        "url": "https://appexchange.salesforce.com/image_host/c7b0bc3f-e33e-4c21-8887-c4a50bb1780c.png",
+        "caption": "Convert form responses into professional PDFs in seconds",
+        "altText": "Jotform generates professional PDFs from form responses to store, edit, and download online"
+      },
+      {
+        "url": "https://appexchange.salesforce.com/image_host/de5eb77d-b66d-4e86-a415-136196c2e210.png",
+        "caption": "Pre-populate form fields dynamically with your Salesforce data",
+        "altText": "Prefill your forms dynamically with Jotform for Salesforce"
+      },
+      {
+        "url": "https://appexchange.salesforce.com/image_host/287a726d-86de-4fc6-afbf-61cf21a3e9f9.png",
+        "caption": "Track and manage approvals in your workflow",
+        "altText": "Create a custom approval workflow with Jotform Approvals that you can track from one location"
+      },
+      {
+        "url": "https://appexchange.salesforce.com/image_host/3d172530-fc92-4dd8-81d8-d978c8d7a224.png",
+        "caption": "Receive secure online payments with 40+ payment gateways",
+        "altText": "Jotform lets you collect payments and send invoices securely using 40+ payment gateways"
+      },
+      {
+        "url": "https://appexchange.salesforce.com/image_host/2aa0c491-6875-4076-af6d-b2a28daf9431.png",
+        "caption": "Access a comprehensive collection of 240+ form integrations",
+        "altText": "Discover a comprehensive collection of 240+ form integrations with Jotform"
+      },
+      {
+        "url": "https://appexchange.salesforce.com/image_host/5e935459-7e4c-42d4-b5c6-a340114b1162.png",
+        "caption": "Discover how Jotform is used across industries worldwide",
+        "altText": "Discover Jotform use cases for sales, marketing, small businesses, event organizers, and nonprofits"
+      },
+      {
+        "url": "https://appexchange.salesforce.com/image_host/2117478b-542a-4026-a138-5a357e62db71.png",
+        "caption": "Keep Salesforce running smarter with AI-driven automation",
+        "altText": "Always-on Salesforce AI agent that captures leads, automates updates, and supports teams 24/7."
+      },
+      {
+        "url": "https://appexchange.salesforce.com/image_host/dd0d2b56-5ce7-4822-814f-c999cea70b5f.png",
+        "caption": "State-of-the-art security protects your data",
+        "altText": "Jotform gives access to advanced security features including 256-bit SSL, CCPA and GDPR compliance"
+      },
+      {
+        "url": "https://appexchange.salesforce.com/image_host/177f8362-b5b3-410c-8f3c-88b8fffebd14.png",
+        "caption": "Access 10,000+ free, ready-made form templates",
+        "altText": "Jotform offers 10,000+ free templates to choose from for powerful, custom forms"
+      },
+      {
+        "url": "https://appexchange.salesforce.com/image_host/f4d3485a-8e98-4faa-a454-bb97b55086c1.png",
+        "caption": "Learn why Jotform is trusted by 30+ million users and companies globally",
+        "altText": "Jotform is trusted by over 30 million users worldwide and was voted number one Form Builder on G2"
+      },
+      {
+        "url": "zotmgvaydO0",
+        "caption": "How to Create a Lead Generation Form in Salesforce",
+        "altText": null
+      },
+      {
+        "url": "iTgFBqlvD4g",
+        "caption": "How Nonprofits Can Use Jotform for Salesforce",
+        "altText": null
+      }
+    ],
+    "logos": [
+      {
+        "url": "https://appexchange.salesforce.com/image_host/ec365892-1d97-428b-a689-4a8bf1315261.png",
+        "logoType": "Logo"
+      },
+      {
+        "url": "https://appexchange.salesforce.com/image_host/a3f38316-f1b5-409c-9d37-b3ab5ced53fc.png",
+        "logoType": "Big Logo"
+      }
+    ]
+  }
+}

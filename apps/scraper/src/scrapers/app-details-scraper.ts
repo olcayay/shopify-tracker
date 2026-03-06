@@ -1,6 +1,6 @@
 import { eq, and, desc, sql } from "drizzle-orm";
 import type { Database } from "@appranks/db";
-import { scrapeRuns, apps, appSnapshots, appFieldChanges, similarAppSightings, categories } from "@appranks/db";
+import { scrapeRuns, apps, appSnapshots, appFieldChanges, similarAppSightings, categories, appCategoryRankings } from "@appranks/db";
 import { urls, createLogger, type PlatformId } from "@appranks/shared";
 
 const log = createLogger("app-details-scraper");
@@ -82,18 +82,18 @@ export class AppDetailsScraper {
   }
 
   /** Scrape a single app by slug */
-  async scrapeApp(slug: string, runId?: string, triggeredBy?: string, queue?: string): Promise<void> {
-    log.info("scraping app", { slug });
+  async scrapeApp(slug: string, runId?: string, triggeredBy?: string, queue?: string, force?: boolean): Promise<void> {
+    log.info("scraping app", { slug, force });
 
     // Look up the app's integer ID (or create if needed later)
     const [existingApp] = await this.db
       .select({ id: apps.id })
       .from(apps)
-      .where(eq(apps.slug, slug))
+      .where(and(eq(apps.slug, slug), eq(apps.platform, this.platform)))
       .limit(1);
 
-    // Skip if already scraped within 12 hours
-    if (existingApp) {
+    // Skip if already scraped within 12 hours (unless force=true)
+    if (!force && existingApp) {
       const [recentSnapshot] = await this.db
         .select({ scrapedAt: appSnapshots.scrapedAt })
         .from(appSnapshots)
@@ -138,30 +138,39 @@ export class AppDetailsScraper {
       const details = useGeneric
         ? (() => {
             const normalized = this.platformModule!.parseAppDetails(html, slug);
-            // Convert to legacy format for compatibility
+            const pd = normalized.platformData;
             return {
               app_slug: normalized.slug,
               app_name: normalized.name,
-              app_introduction: (normalized.platformData.description as string) || "",
-              app_details: "",
-              seo_title: "",
-              seo_meta_description: "",
-              features: [] as string[],
+              app_introduction: (pd.description as string) || "",
+              app_details: (pd.fullDescription as string) || "",
+              seo_title: normalized.name,
+              seo_meta_description: (pd.description as string) || "",
+              features: (pd.highlights as string[]) || [],
               pricing: normalized.pricingHint || "",
               average_rating: normalized.averageRating,
               rating_count: normalized.ratingCount,
               icon_url: normalized.iconUrl,
               developer: (normalized.developer
-                ? { name: normalized.developer.name, url: normalized.developer.url || "" }
+                ? { name: normalized.developer.name, url: normalized.developer.website || normalized.developer.url || "" }
                 : { name: "", url: "" }) as import("@appranks/shared").AppDeveloper,
-              launched_date: null as Date | null,
+              launched_date: pd.publishedDate
+                ? new Date(pd.publishedDate as string)
+                : null as Date | null,
               demo_store_url: null as string | null,
-              languages: [] as string[],
-              integrations: [] as string[],
-              categories: [] as import("@appranks/shared").AppCategory[],
-              pricing_plans: [] as import("@appranks/shared").PricingPlan[],
-              support: null as import("@appranks/shared").AppSupport | null,
-              _platformData: normalized.platformData,
+              languages: (pd.languages as string[]) || [],
+              integrations: [
+                ...((pd.productsSupported as string[]) || []),
+                ...((pd.productsRequired as string[]) || []),
+              ],
+              categories: ((pd.listingCategories as string[]) || []).map(
+                (cat) => ({ title: cat, url: "" })
+              ) as import("@appranks/shared").AppCategory[],
+              pricing_plans: (pd.pricingPlans as import("@appranks/shared").PricingPlan[]) || [],
+              support: normalized.developer?.website
+                ? { email: (pd.publisher as any)?.email || null, portal_url: normalized.developer.website, phone: null } as import("@appranks/shared").AppSupport
+                : null as import("@appranks/shared").AppSupport | null,
+              _platformData: pd,
             };
           })()
         : parseAppPage(html, slug);
@@ -172,7 +181,7 @@ export class AppDetailsScraper {
       const [currentApp] = await this.db
         .select({ name: apps.name })
         .from(apps)
-        .where(eq(apps.slug, slug));
+        .where(and(eq(apps.slug, slug), eq(apps.platform, this.platform)));
 
       if (currentApp && currentApp.name !== details.app_name) {
         changes.push({ field: "name", oldValue: currentApp.name, newValue: details.app_name });
@@ -212,13 +221,15 @@ export class AppDetailsScraper {
           seoMetaDescription: [prevSnapshot.seoMetaDescription, details.seo_meta_description],
         };
         for (const [field, [oldVal, newVal]] of Object.entries(fieldMap)) {
-          if (oldVal !== newVal) {
+          // Skip when old value was empty (first-time population, not a real change)
+          if (oldVal !== newVal && oldVal) {
             changes.push({ field, oldValue: oldVal, newValue: newVal });
           }
         }
         const oldFeatures = JSON.stringify(prevSnapshot.features);
         const newFeatures = JSON.stringify(details.features);
-        if (oldFeatures !== newFeatures) {
+        // Skip when features were empty (first-time population)
+        if (oldFeatures !== newFeatures && oldFeatures !== "[]") {
           changes.push({ field: "features", oldValue: oldFeatures, newValue: newFeatures });
         }
       }
@@ -280,27 +291,54 @@ export class AppDetailsScraper {
         categories: details.categories,
         pricingPlans: details.pricing_plans,
         support: details.support,
+        platformData: (("_platformData" in details ? details._platformData : undefined) ?? {}) as Record<string, unknown>,
       });
 
-      // Register missing categories from snapshot data (Shopify only)
-      if (this.isShopify && details.categories.length > 0) {
+      // Register missing categories from snapshot data
+      if (details.categories.length > 0) {
         for (const cat of details.categories) {
-          const slugMatch = cat.url.match(/\/categories\/([^/]+)/);
-          if (!slugMatch) continue;
-          const catSlug = slugMatch[1];
+          let catSlug: string;
+          if (this.isShopify) {
+            const slugMatch = cat.url.match(/\/categories\/([^/]+)/);
+            if (!slugMatch) continue;
+            catSlug = slugMatch[1];
+          } else {
+            // Generate slug from title for non-Shopify platforms
+            catSlug = cat.title
+              .toLowerCase()
+              .replace(/[^a-z0-9\s-]/g, "")
+              .replace(/\s+/g, "-")
+              .replace(/-+/g, "-")
+              .replace(/^-|-$/g, "");
+            if (!catSlug) continue;
+          }
+
           await this.db
             .insert(categories)
             .values({
               platform: this.platform,
               slug: catSlug,
               title: cat.title,
-              url: cat.url,
+              url: cat.url || "",
               parentSlug: null,
               categoryLevel: 0,
               isTracked: false,
               isListingPage: true,
             })
             .onConflictDoNothing({ target: [categories.platform, categories.slug] });
+
+          // For non-Shopify: also link the app to this category via rankings
+          if (!this.isShopify) {
+            await this.db
+              .insert(appCategoryRankings)
+              .values({
+                appId,
+                categorySlug: catSlug,
+                scrapeRunId: runId!,
+                scrapedAt: new Date(),
+                position: 0,
+              });
+          }
         }
       }
 

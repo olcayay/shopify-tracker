@@ -16,7 +16,7 @@ export function buildExternalCategoryUrl(platform: PlatformId, slug: string): st
     case "shopify":
       return `https://apps.shopify.com/categories/${slug}`;
     case "salesforce":
-      return `https://appexchange.salesforce.com/appxSearchKeyword/${slug}`;
+      return `https://appexchange.salesforce.com/explore/business-needs?category=${slug}`;
     case "canva":
       return `https://www.canva.com/apps/collections/${slug}`;
   }

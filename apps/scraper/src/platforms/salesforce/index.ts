@@ -8,6 +8,7 @@ import type {
   PlatformScoringConfig,
 } from "../platform-module.js";
 import { HttpClient } from "../../http-client.js";
+import type { BrowserClient } from "../../browser-client.js";
 import { salesforceUrls } from "./urls.js";
 import { SALESFORCE_CONSTANTS, SALESFORCE_SCORING } from "./constants.js";
 import { parseSalesforceSearchPage } from "./parsers/search-parser.js";
@@ -30,9 +31,11 @@ export class SalesforceModule implements PlatformModule {
   };
 
   private httpClient: HttpClient;
+  private browserClient?: BrowserClient;
 
-  constructor(httpClient?: HttpClient) {
+  constructor(httpClient?: HttpClient, browserClient?: BrowserClient) {
     this.httpClient = httpClient || new HttpClient();
+    this.browserClient = browserClient;
   }
 
   // --- URL builders ---
@@ -54,6 +57,10 @@ export class SalesforceModule implements PlatformModule {
   // --- Fetch ---
 
   async fetchAppPage(slug: string): Promise<string> {
+    if (this.browserClient) {
+      return this.browserClient.fetchPage(salesforceUrls.app(slug));
+    }
+    // Fallback to HTTP (will likely return empty SPA shell)
     return this.httpClient.fetchPage(salesforceUrls.app(slug));
   }
 

@@ -905,7 +905,7 @@ export const systemAdminRoutes: FastifyPluginAsync = async (app) => {
       type?: string;
       slug?: string;
       keyword?: string;
-      options?: { pages?: "first" | "all" | number; scrapeAppDetails?: boolean; scrapeReviews?: boolean };
+      options?: { pages?: "first" | "all" | number; scrapeAppDetails?: boolean; scrapeReviews?: boolean; force?: boolean };
       queue?: "interactive" | "background";
       platform?: string;
     };
@@ -937,7 +937,11 @@ export const systemAdminRoutes: FastifyPluginAsync = async (app) => {
       if (platformParam) jobData.platform = platformParam;
       if (slug) jobData.slug = slug;
       if (keyword) jobData.keyword = keyword;
-      if (options) jobData.options = options;
+      if (type === "app_details") {
+        jobData.options = { ...options, force: true };
+      } else if (options) {
+        jobData.options = options;
+      }
       const job = await queue.add(`scrape:${type}`, jobData);
 
       app.log.info(`Scraper triggered: ${type}, jobId=${job.id}, by=${userEmail}, queue=${targetQueue || "background"}`);

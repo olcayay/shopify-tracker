@@ -176,7 +176,8 @@ export default async function DetailsPage({
           </CardHeader>
           <CardContent>
             {snapshot.categories.map((cat: any, i: number) => {
-              const catSlug = cat.url?.match(/\/categories\/([^/?]+)/)?.[1];
+              const catSlug = cat.url?.match(/\/categories\/([^/?]+)/)?.[1]
+                || (cat.title ? cat.title.toLowerCase().replace(/[^a-z0-9\s-]/g, "").replace(/\s+/g, "-").replace(/-+/g, "-").replace(/^-|-$/g, "") : null);
               return (
                 <div key={i} className="mb-4">
                   <div className="flex items-center gap-2">

@@ -151,6 +151,41 @@ export const categoryRoutes: FastifyPluginAsync = async (app) => {
       } catch (err) {
         app.log.warn(`Failed to fetch ranked apps for category ${slug}: ${err}`);
       }
+    } else if (category.isListingPage && !latestSnapshot) {
+      // No snapshot (e.g. categories discovered from app details, not from crawling)
+      // Fetch latest ranking per app directly
+      try {
+        const rankings = await db
+          .selectDistinctOn([appCategoryRankings.appId], {
+            position: appCategoryRankings.position,
+            appSlug: apps.slug,
+            name: apps.name,
+            iconUrl: apps.iconUrl,
+            isBuiltForShopify: apps.isBuiltForShopify,
+            averageRating: apps.averageRating,
+            ratingCount: apps.ratingCount,
+            pricingHint: apps.pricingHint,
+            launchedDate: apps.launchedDate,
+          })
+          .from(appCategoryRankings)
+          .innerJoin(apps, eq(apps.id, appCategoryRankings.appId))
+          .where(eq(appCategoryRankings.categorySlug, slug))
+          .orderBy(appCategoryRankings.appId, desc(appCategoryRankings.scrapedAt));
+
+        rankedApps = rankings.map((r) => ({
+          position: r.position,
+          slug: r.appSlug,
+          name: r.name,
+          icon_url: r.iconUrl || null,
+          is_built_for_shopify: r.isBuiltForShopify,
+          average_rating: r.averageRating ? Number(r.averageRating) : null,
+          rating_count: r.ratingCount ?? null,
+          pricing_hint: r.pricingHint || null,
+          launched_date: r.launchedDate || null,
+        }));
+      } catch (err) {
+        app.log.warn(`Failed to fetch ranked apps for category ${slug} (no snapshot): ${err}`);
+      }
     } else if (!category.isListingPage) {
       // Hub page: return featured apps from snapshot + apps from descendant listing categories
       if (latestSnapshot?.firstPageApps) {

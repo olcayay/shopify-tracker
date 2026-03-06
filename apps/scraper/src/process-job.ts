@@ -10,6 +10,7 @@ import { KeywordScraper } from "./scrapers/keyword-scraper.js";
 import { KeywordSuggestionScraper } from "./scrapers/keyword-suggestion-scraper.js";
 import { ReviewScraper } from "./scrapers/review-scraper.js";
 import { HttpClient } from "./http-client.js";
+import { BrowserClient } from "./browser-client.js";
 import { getModule } from "./platforms/registry.js";
 
 const log = createLogger("worker");
@@ -53,10 +54,16 @@ export function createProcessJob(db: ReturnType<typeof createDb>, httpClient: Ht
     const opts = job.data.options;
     const pageOptions = opts?.pages !== undefined ? { pages: opts.pages } : undefined;
 
+    // Create browser client for platforms that need SPA rendering
+    let browserClient: BrowserClient | undefined;
+    if (platform === "salesforce" && type === "app_details") {
+      browserClient = new BrowserClient();
+    }
+
     // Get platform module (may throw for unimplemented platforms like canva)
     let platformModule;
     try {
-      platformModule = getModule(platform, httpClient);
+      platformModule = getModule(platform, httpClient, browserClient);
     } catch {
       // Fall back to no module (Shopify default behavior)
     }
@@ -93,7 +100,7 @@ export function createProcessJob(db: ReturnType<typeof createDb>, httpClient: Ht
       case "app_details": {
         const scraper = new AppDetailsScraper(db, httpClient, platformModule);
         if (job.data.slug) {
-          await scraper.scrapeApp(job.data.slug, undefined, triggeredBy, queueName);
+          await scraper.scrapeApp(job.data.slug, undefined, triggeredBy, queueName, opts?.force);
           log.info("single app scrape completed", { slug: job.data.slug });
 
           // Cascade: enqueue review job
@@ -421,6 +428,9 @@ export function createProcessJob(db: ReturnType<typeof createDb>, httpClient: Ht
       default:
         throw new Error(`Unknown scraper type: ${type}`);
     }
+
+    // Close browser if used
+    if (browserClient) await browserClient.close();
 
     log.info("job completed", { jobId: job.id, type });
   };
