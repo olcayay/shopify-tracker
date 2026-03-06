@@ -24,8 +24,8 @@ export default async function AppDetailLayout({
   let membership: any = {};
   try {
     [app, membership] = await Promise.all([
-      getApp(slug),
-      getAppMembership(slug).catch(() => ({})),
+      getApp(slug, platform as PlatformId),
+      getAppMembership(slug, platform as PlatformId).catch(() => ({})),
     ]);
   } catch {
     return <p className="text-muted-foreground">App not found.</p>;

@@ -1,4 +1,5 @@
 import { getAppAdSightings, getAppCategoryAdSightings } from "@/lib/api";
+import type { PlatformId } from "@appranks/shared";
 import {
   Card,
   CardContent,
@@ -19,8 +20,8 @@ export default async function AppAdsPage({
   let categoryData: any = { sightings: [] };
   try {
     [keywordData, categoryData] = await Promise.all([
-      getAppAdSightings(slug).catch(() => ({ sightings: [] })),
-      getAppCategoryAdSightings(slug).catch(() => ({ sightings: [] })),
+      getAppAdSightings(slug, 30, platform as PlatformId).catch(() => ({ sightings: [] })),
+      getAppCategoryAdSightings(slug, 30, platform as PlatformId).catch(() => ({ sightings: [] })),
     ]);
   } catch {
     // fallback

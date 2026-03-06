@@ -100,6 +100,36 @@ function getCookie(name: string): string | undefined {
   return match ? decodeURIComponent(match[1]) : undefined;
 }
 
+// Valid platform slugs for auto-injection
+const VALID_PLATFORMS = new Set(["shopify", "salesforce", "canva"]);
+
+/** Extract platform from the current browser URL path (e.g. /salesforce/keywords → salesforce) */
+function getPlatformFromPath(): string | undefined {
+  if (typeof window === "undefined") return undefined;
+  const seg = window.location.pathname.split("/")[1];
+  return seg && VALID_PLATFORMS.has(seg) ? seg : undefined;
+}
+
+// Paths that should NOT get automatic platform injection
+const PLATFORM_EXEMPT_PREFIXES = [
+  "/api/auth/",
+  "/api/system-admin/",
+  "/api/account/members",
+  "/api/platforms",
+];
+
+/** Append ?platform= to an API path if not already present and applicable */
+function withAutoPlatform(path: string): string {
+  // Already has platform param
+  if (/[?&]platform=/.test(path)) return path;
+  // Skip exempt paths
+  if (PLATFORM_EXEMPT_PREFIXES.some((p) => path.startsWith(p))) return path;
+  const platform = getPlatformFromPath();
+  if (!platform) return path;
+  const sep = path.includes("?") ? "&" : "?";
+  return `${path}${sep}platform=${platform}`;
+}
+
 // Paths that should skip the impersonation confirmation dialog
 const IMPERSONATION_SKIP_PATHS = [
   "/api/system-admin/stop-impersonation",
@@ -141,7 +171,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   );
 
   const fetchWithAuth = useCallback(
-    async (path: string, options?: RequestInit): Promise<Response> => {
+    async (rawPath: string, options?: RequestInit): Promise<Response> => {
+      const path = withAutoPlatform(rawPath);
       const method = (options?.method || "GET").toUpperCase();
       const isMutating = ["POST", "PUT", "PATCH", "DELETE"].includes(method);
       const shouldSkip = IMPERSONATION_SKIP_PATHS.some((p) =>

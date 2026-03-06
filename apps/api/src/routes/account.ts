@@ -36,6 +36,7 @@ import {
 } from "@appranks/db";
 import { computeWeightedPowerScore } from "@appranks/shared";
 import { requireRole } from "../middleware/authorize.js";
+import { getPlatformFromQuery } from "../utils/platform.js";
 
 const INTERACTIVE_QUEUE_NAME = "scraper-jobs-interactive";
 
@@ -569,6 +570,7 @@ export const accountRoutes: FastifyPluginAsync = async (app) => {
   // GET /api/account/tracked-apps
   app.get("/tracked-apps", async (request) => {
     const { accountId } = request.user;
+    const platform = getPlatformFromQuery(request.query as Record<string, unknown>);
 
     const rows = await db
       .select({
@@ -580,7 +582,7 @@ export const accountRoutes: FastifyPluginAsync = async (app) => {
       })
       .from(accountTrackedApps)
       .innerJoin(apps, eq(apps.id, accountTrackedApps.appId))
-      .where(eq(accountTrackedApps.accountId, accountId));
+      .where(and(eq(accountTrackedApps.accountId, accountId), eq(apps.platform, platform)));
 
     return rows;
   });
@@ -934,6 +936,7 @@ export const accountRoutes: FastifyPluginAsync = async (app) => {
   // GET /api/account/competitors — aggregate view (all competitors with trackedAppSlug)
   app.get("/competitors", async (request) => {
     const { accountId } = request.user;
+    const platform = getPlatformFromQuery(request.query as Record<string, unknown>);
 
     // Need to join twice: once for competitor app, once for tracked app slug
     const competitorAppsAlias = apps;
@@ -953,7 +956,7 @@ export const accountRoutes: FastifyPluginAsync = async (app) => {
       .from(accountCompetitorApps)
       .innerJoin(apps, eq(apps.id, accountCompetitorApps.competitorAppId))
       .innerJoin(sql`apps ta`, sql`ta.id = ${accountCompetitorApps.trackedAppId}`)
-      .where(eq(accountCompetitorApps.accountId, accountId))
+      .where(and(eq(accountCompetitorApps.accountId, accountId), eq(apps.platform, platform)))
       .orderBy(asc(accountCompetitorApps.sortOrder));
 
     if (rows.length === 0) return [];
@@ -1528,13 +1531,14 @@ export const accountRoutes: FastifyPluginAsync = async (app) => {
       if (includeSelf) {
         const [selfApp] = await db
           .select({
+            _appId: apps.id,
             appName: apps.name,
             isBuiltForShopify: apps.isBuiltForShopify,
             launchedDate: apps.launchedDate,
             iconUrl: apps.iconUrl,
           })
           .from(apps)
-          .where(eq(apps.slug, slug));
+          .where(eq(apps.id, trackedAppRow.id));
         if (selfApp) {
           allRows = [{ appSlug: slug, sortOrder: -1, createdAt: new Date(), ...selfApp } as any, ...rows];
         }
@@ -1596,32 +1600,33 @@ export const accountRoutes: FastifyPluginAsync = async (app) => {
 
       // Latest category rankings for each competitor (with previous position + app count for percentile)
       const categoryRankingMap = new Map<string, { categorySlug: string; categoryTitle: string; position: number; prevPosition: number | null; appCount: number | null }[]>();
-      if (competitorSlugs.length > 0) {
+      if (competitorAppIds.length > 0) {
         const catRankRows: any[] = await db.execute(sql`
           SELECT
-            sub.app_slug, sub.category_slug, c.title AS category_title,
+            a.slug AS app_slug, sub.category_slug, c.title AS category_title,
             sub.position, sub.prev_position, cs.app_count
           FROM (
             SELECT
-              r.app_slug,
+              r.app_id,
               r.category_slug,
               r.position,
               LAG(r.position) OVER (
-                PARTITION BY r.app_slug, r.category_slug
+                PARTITION BY r.app_id, r.category_slug
                 ORDER BY r.scraped_at DESC
               ) AS prev_position,
               ROW_NUMBER() OVER (
-                PARTITION BY r.app_slug, r.category_slug
+                PARTITION BY r.app_id, r.category_slug
                 ORDER BY r.scraped_at DESC
               ) AS rn
             FROM app_category_rankings r
-            WHERE r.app_slug IN (${sql.join(competitorSlugs.map((s) => sql`${s}`), sql`, `)})
+            WHERE r.app_id IN (${sql.join(competitorAppIds.map((id) => sql`${id}`), sql`, `)})
           ) sub
+          INNER JOIN apps a ON a.id = sub.app_id
           JOIN categories c ON c.slug = sub.category_slug
           LEFT JOIN LATERAL (
             SELECT s.app_count
             FROM category_snapshots s
-            WHERE s.category_slug = sub.category_slug
+            WHERE s.category_id = c.id
             ORDER BY s.scraped_at DESC
             LIMIT 1
           ) cs ON true
@@ -1660,14 +1665,15 @@ export const accountRoutes: FastifyPluginAsync = async (app) => {
 
       // Batch-fetch review velocity metrics (graceful if table not yet migrated)
       const velocityMap2 = new Map<string, { v7d: number | null; v30d: number | null; v90d: number | null; momentum: string | null }>();
-      if (competitorSlugs.length > 0) {
+      if (competitorAppIds.length > 0) {
         try {
           const velRows: any[] = await db.execute(sql`
-            SELECT DISTINCT ON (app_slug)
-              app_slug, v7d, v30d, v90d, momentum
-            FROM app_review_metrics
-            WHERE app_slug IN (${sql.join(competitorSlugs.map(s => sql`${s}`), sql`, `)})
-            ORDER BY app_slug, computed_at DESC
+            SELECT DISTINCT ON (m.app_id)
+              a.slug AS app_slug, m.v7d, m.v30d, m.v90d, m.momentum
+            FROM app_review_metrics m
+            INNER JOIN apps a ON a.id = m.app_id
+            WHERE m.app_id IN (${sql.join(competitorAppIds.map(id => sql`${id}`), sql`, `)})
+            ORDER BY m.app_id, m.computed_at DESC
           `).then((res: any) => (res as any).rows ?? res);
           for (const r of velRows) {
             velocityMap2.set(r.app_slug, { v7d: r.v7d, v30d: r.v30d, v90d: r.v90d, momentum: r.momentum });
@@ -1677,14 +1683,18 @@ export const accountRoutes: FastifyPluginAsync = async (app) => {
 
       // Batch-fetch similarity scores
       const similarityMap = new Map<string, { overall: string; category: string; feature: string; keyword: string; text: string }>();
-      if (competitorSlugs.length > 0) {
+      if (competitorAppIds.length > 0) {
         try {
+          const trackedId = trackedAppRow.id;
+          const compIdList = sql.join(competitorAppIds.map(id => sql`${id}`), sql`, `);
           const simRows: any[] = await db.execute(sql`
-            SELECT app_slug_a, app_slug_b,
-              overall_score, category_score, feature_score, keyword_score, text_score
-            FROM app_similarity_scores
-            WHERE (app_slug_a = ${slug} AND app_slug_b IN (${sql.join(competitorSlugs.map(s => sql`${s}`), sql`, `)}))
-               OR (app_slug_b = ${slug} AND app_slug_a IN (${sql.join(competitorSlugs.map(s => sql`${s}`), sql`, `)}))
+            SELECT a1.slug AS app_slug_a, a2.slug AS app_slug_b,
+              s.overall_score, s.category_score, s.feature_score, s.keyword_score, s.text_score
+            FROM app_similarity_scores s
+            INNER JOIN apps a1 ON a1.id = s.app_id_a
+            INNER JOIN apps a2 ON a2.id = s.app_id_b
+            WHERE (s.app_id_a = ${trackedId} AND s.app_id_b IN (${compIdList}))
+               OR (s.app_id_b = ${trackedId} AND s.app_id_a IN (${compIdList}))
           `).then((res: any) => (res as any).rows ?? res);
           for (const r of simRows) {
             const compSlug = r.app_slug_a === slug ? r.app_slug_b : r.app_slug_a;
@@ -1701,37 +1711,32 @@ export const accountRoutes: FastifyPluginAsync = async (app) => {
 
       // Batch-fetch ranked keyword counts per competitor
       const rankedKeywordMap = new Map<string, number>();
-      if (competitorSlugs.length > 0) {
-        // Look up tracked app ID for this slug
-        const [kwTrackedAppRow] = await db
-          .select({ id: apps.id })
-          .from(apps)
-          .where(eq(apps.slug, slug))
-          .limit(1);
-        const kwRows = kwTrackedAppRow ? await db
+      if (competitorAppIds.length > 0) {
+        const kwRows = await db
           .select({ keywordId: accountTrackedKeywords.keywordId })
           .from(accountTrackedKeywords)
           .where(
             and(
               eq(accountTrackedKeywords.accountId, accountId),
-              eq(accountTrackedKeywords.trackedAppId, kwTrackedAppRow.id)
+              eq(accountTrackedKeywords.trackedAppId, trackedAppRow.id)
             )
-          ) : [];
+          );
         if (kwRows.length > 0) {
           const kwIds = kwRows.map((r) => r.keywordId);
-          const idList = sql.join(kwIds.map((id) => sql`${id}`), sql`,`);
-          const slugList = sql.join(competitorSlugs.map((s) => sql`${s}`), sql`,`);
+          const kwIdList = sql.join(kwIds.map((id) => sql`${id}`), sql`,`);
+          const appIdList = sql.join(competitorAppIds.map((id) => sql`${id}`), sql`,`);
           const rankedRows: any[] = await db.execute(sql`
-            SELECT app_slug, COUNT(DISTINCT keyword_id)::int AS cnt
+            SELECT a.slug AS app_slug, COUNT(DISTINCT latest.keyword_id)::int AS cnt
             FROM (
-              SELECT DISTINCT ON (app_slug, keyword_id) app_slug, keyword_id, position
+              SELECT DISTINCT ON (app_id, keyword_id) app_id, keyword_id, position
               FROM app_keyword_rankings
-              WHERE app_slug IN (${slugList})
-                AND keyword_id IN (${idList})
-              ORDER BY app_slug, keyword_id, scraped_at DESC
+              WHERE app_id IN (${appIdList})
+                AND keyword_id IN (${kwIdList})
+              ORDER BY app_id, keyword_id, scraped_at DESC
             ) latest
+            INNER JOIN apps a ON a.id = latest.app_id
             WHERE position IS NOT NULL
-            GROUP BY app_slug
+            GROUP BY a.slug
           `).then((res: any) => (res as any).rows ?? res);
           for (const r of rankedRows) {
             rankedKeywordMap.set(r.app_slug, r.cnt);
@@ -1786,27 +1791,28 @@ export const accountRoutes: FastifyPluginAsync = async (app) => {
       // Batch-fetch weighted power scores per competitor
       const weightedPowerMap2 = new Map<string, number>();
       const powerCategoriesMap2 = new Map<string, { title: string; powerScore: number; appCount: number; position: number | null; ratingScore: number; reviewScore: number; categoryScore: number; momentumScore: number }[]>();
-      if (competitorSlugs.length > 0) {
+      if (competitorAppIds.length > 0) {
         try {
           const powRows: any[] = await db.execute(sql`
-            SELECT p.app_slug, p.power_score, p.rating_score, p.review_score, p.category_score, p.momentum_score,
+            SELECT a.slug AS app_slug, p.power_score, p.rating_score, p.review_score, p.category_score, p.momentum_score,
                    cs.app_count, rk.position AS rank_position, p.category_slug, c.title AS category_title
             FROM app_power_scores p
+            INNER JOIN apps a ON a.id = p.app_id
             INNER JOIN categories c ON c.slug = p.category_slug AND c.is_listing_page = true
             LEFT JOIN LATERAL (
               SELECT s.app_count FROM category_snapshots s
-              WHERE s.category_slug = p.category_slug
+              WHERE s.category_id = c.id
               ORDER BY s.scraped_at DESC LIMIT 1
             ) cs ON true
             LEFT JOIN LATERAL (
               SELECT r.position FROM app_category_rankings r
-              WHERE r.app_slug = p.app_slug AND r.category_slug = p.category_slug AND r.position IS NOT NULL
+              WHERE r.app_id = p.app_id AND r.category_slug = p.category_slug AND r.position IS NOT NULL
               ORDER BY r.scraped_at DESC LIMIT 1
             ) rk ON true
-            WHERE p.app_slug IN (${sql.join(competitorSlugs.map(s => sql`${s}`), sql`, `)})
+            WHERE p.app_id IN (${sql.join(competitorAppIds.map(id => sql`${id}`), sql`, `)})
               AND p.computed_at = (
                 SELECT MAX(p2.computed_at) FROM app_power_scores p2
-                WHERE p2.app_slug = p.app_slug AND p2.category_slug = p.category_slug
+                WHERE p2.app_id = p.app_id AND p2.category_slug = p.category_slug
               )
           `).then((res: any) => (res as any).rows ?? res);
 
@@ -2225,15 +2231,24 @@ export const accountRoutes: FastifyPluginAsync = async (app) => {
       }
 
       if (slugList.length > 0 && keywordIds.length > 0) {
-        const slugSql = sql.join(slugList.map((s) => sql`${s}`), sql`, `);
+        // Look up app IDs from slugs
+        const appIdRows = await db
+          .select({ id: apps.id, slug: apps.slug })
+          .from(apps)
+          .where(inArray(apps.slug, slugList));
+        const rankAppIds = appIdRows.map((r) => r.id);
+
+        if (rankAppIds.length > 0) {
+        const appIdSql = sql.join(rankAppIds.map((id) => sql`${id}`), sql`, `);
         const idSql = sql.join(keywordIds.map((id) => sql`${id}`), sql`, `);
         const rawResult = await db.execute(sql`
-            SELECT DISTINCT ON (app_slug, keyword_id)
-              app_slug, keyword_id, position
-            FROM app_keyword_rankings
-            WHERE app_slug IN (${slugSql})
-              AND keyword_id IN (${idSql})
-            ORDER BY app_slug, keyword_id, scraped_at DESC
+            SELECT DISTINCT ON (r.app_id, r.keyword_id)
+              a.slug AS app_slug, r.keyword_id, r.position
+            FROM app_keyword_rankings r
+            INNER JOIN apps a ON a.id = r.app_id
+            WHERE r.app_id IN (${appIdSql})
+              AND r.keyword_id IN (${idSql})
+            ORDER BY r.app_id, r.keyword_id, r.scraped_at DESC
           `);
         const rankingRows: any[] = (rawResult as any).rows ?? rawResult;
 
@@ -2252,6 +2267,7 @@ export const accountRoutes: FastifyPluginAsync = async (app) => {
             slugList.map((s) => [s, lookup.get(s)?.get(row.keywordId) ?? null])
           ),
         }));
+        } // end if (rankAppIds.length > 0)
       }
 
       return result.map((row) => ({
@@ -2321,12 +2337,13 @@ export const accountRoutes: FastifyPluginAsync = async (app) => {
       }
 
       // Ensure keyword exists in global table
+      const platform = getPlatformFromQuery(request.query as Record<string, unknown>);
       const kwSlug = keywordToSlug(keyword);
       const [kw] = await db
         .insert(trackedKeywords)
-        .values({ keyword, slug: kwSlug })
+        .values({ keyword, slug: kwSlug, platform })
         .onConflictDoUpdate({
-          target: trackedKeywords.keyword,
+          target: [trackedKeywords.platform, trackedKeywords.keyword],
           set: { isActive: true, updatedAt: new Date() },
         })
         .returning();
@@ -2357,6 +2374,7 @@ export const accountRoutes: FastifyPluginAsync = async (app) => {
           await queue.add("scrape:keyword_search", {
             type: "keyword_search",
             keyword: kw.keyword,
+            platform,
             triggeredBy: "api",
           });
           scraperEnqueued = true;
@@ -2565,7 +2583,7 @@ export const accountRoutes: FastifyPluginAsync = async (app) => {
           sql`
           SELECT DISTINCT ON (category_slug) category_slug
           FROM app_category_rankings
-          WHERE app_slug = ${slug}
+          WHERE app_id = ${compSugAppRow.id}
           ORDER BY category_slug, scraped_at DESC
         `
         )
@@ -2611,12 +2629,13 @@ export const accountRoutes: FastifyPluginAsync = async (app) => {
         .execute(
           sql`
           WITH latest_positions AS (
-            SELECT DISTINCT ON (app_slug, category_slug)
-              app_slug, category_slug, position
-            FROM app_category_rankings
-            WHERE category_slug IN (${catSlugList})
-              AND app_slug != ${slug}
-            ORDER BY app_slug, category_slug, scraped_at DESC
+            SELECT DISTINCT ON (r.app_id, r.category_slug)
+              a.slug AS app_slug, r.category_slug, r.position
+            FROM app_category_rankings r
+            INNER JOIN apps a ON a.id = r.app_id
+            WHERE r.category_slug IN (${catSlugList})
+              AND r.app_id != ${compSugAppRow.id}
+            ORDER BY r.app_id, r.category_slug, r.scraped_at DESC
           ),
           ranked AS (
             SELECT *, ROW_NUMBER() OVER (PARTITION BY category_slug ORDER BY position) AS rn
@@ -2649,11 +2668,12 @@ export const accountRoutes: FastifyPluginAsync = async (app) => {
         db
           .execute(
             sql`
-            SELECT DISTINCT ON (app_slug)
-              app_slug, categories, app_introduction
-            FROM app_snapshots
-            WHERE app_slug IN (${slugList})
-            ORDER BY app_slug, scraped_at DESC
+            SELECT DISTINCT ON (s.app_id)
+              a.slug AS app_slug, s.categories, s.app_introduction
+            FROM app_snapshots s
+            INNER JOIN apps a ON a.id = s.app_id
+            WHERE a.slug IN (${slugList})
+            ORDER BY s.app_id, s.scraped_at DESC
           `
           )
           .then((res: any) => (res as any).rows ?? res) as Promise<any[]>,
@@ -2672,11 +2692,12 @@ export const accountRoutes: FastifyPluginAsync = async (app) => {
         db
           .execute(
             sql`
-            SELECT DISTINCT ON (app_slug, keyword_id) app_slug, keyword_id
-            FROM app_keyword_rankings
-            WHERE app_slug IN (${slugList})
-              AND position IS NOT NULL
-            ORDER BY app_slug, keyword_id, scraped_at DESC
+            SELECT DISTINCT ON (r.app_id, r.keyword_id) a.slug AS app_slug, r.keyword_id
+            FROM app_keyword_rankings r
+            INNER JOIN apps a ON a.id = r.app_id
+            WHERE a.slug IN (${slugList})
+              AND r.position IS NOT NULL
+            ORDER BY r.app_id, r.keyword_id, r.scraped_at DESC
           `
           )
           .then((res: any) => (res as any).rows ?? res) as Promise<any[]>,
@@ -2712,18 +2733,33 @@ export const accountRoutes: FastifyPluginAsync = async (app) => {
 
       // 7. Check similarAppSightings for bonus signal
       const candidateSlugArray = [...candidateSlugs];
-      const candidateSlugList = sql.join(candidateSlugArray.map((s) => sql`${s}`), sql`, `);
-      const similarRows: any[] = await db
-        .execute(
-          sql`
-          SELECT DISTINCT similar_app_slug
-          FROM similar_app_sightings
-          WHERE app_slug = ${slug}
-            AND similar_app_slug IN (${candidateSlugList})
-        `
-        )
-        .then((res: any) => (res as any).rows ?? res);
-      const shopifySimilarSlugs = new Set(similarRows.map((r: any) => r.similar_app_slug));
+      // Look up candidate app IDs for similar_app_sightings query
+      const candidateAppIdRows = await db
+        .select({ id: apps.id, slug: apps.slug })
+        .from(apps)
+        .where(inArray(apps.slug, candidateSlugArray));
+      const candidateAppIdList = candidateAppIdRows.map((r) => r.id);
+      const candidateIdToSlug = new Map(candidateAppIdRows.map((r) => [r.id, r.slug]));
+
+      let shopifySimilarSlugs = new Set<string>();
+      if (candidateAppIdList.length > 0) {
+        const candidateIdSql = sql.join(candidateAppIdList.map((id) => sql`${id}`), sql`, `);
+        const similarRows: any[] = await db
+          .execute(
+            sql`
+            SELECT DISTINCT sa.similar_app_id
+            FROM similar_app_sightings sa
+            WHERE sa.app_id = ${compSugAppRow.id}
+              AND sa.similar_app_id IN (${candidateIdSql})
+          `
+          )
+          .then((res: any) => (res as any).rows ?? res);
+        shopifySimilarSlugs = new Set(
+          similarRows
+            .map((r: any) => candidateIdToSlug.get(r.similar_app_id))
+            .filter((s): s is string => !!s)
+        );
+      }
 
       // 8. Compute similarity for each candidate
       const suggestions: any[] = [];
@@ -2792,6 +2828,7 @@ export const accountRoutes: FastifyPluginAsync = async (app) => {
   // GET /api/account/starred-categories
   app.get("/starred-categories", async (request) => {
     const { accountId } = request.user;
+    const platform = getPlatformFromQuery(request.query as Record<string, unknown>);
 
     const rows = await db
       .select({
@@ -2805,7 +2842,7 @@ export const accountRoutes: FastifyPluginAsync = async (app) => {
         categories,
         eq(categories.id, accountStarredCategories.categoryId)
       )
-      .where(eq(accountStarredCategories.accountId, accountId));
+      .where(and(eq(accountStarredCategories.accountId, accountId), eq(categories.platform, platform)));
 
     if (rows.length === 0) return rows;
 
@@ -2972,11 +3009,11 @@ export const accountRoutes: FastifyPluginAsync = async (app) => {
         sub->>'title' AS subcategory_title,
         a.slug AS app_slug
       FROM (
-        SELECT DISTINCT ON (app_slug) id, app_slug, categories
-        FROM app_snapshots
-        ORDER BY app_slug, scraped_at DESC
+        SELECT DISTINCT ON (s.app_id) s.id, s.app_id, s.categories
+        FROM app_snapshots s
+        ORDER BY s.app_id, s.scraped_at DESC
       ) s
-      INNER JOIN apps a ON a.slug = s.app_slug,
+      INNER JOIN apps a ON a.id = s.app_id,
       jsonb_array_elements(s.categories) AS cat,
       jsonb_array_elements(cat->'subcategories') AS sub,
       jsonb_array_elements(sub->'features') AS f

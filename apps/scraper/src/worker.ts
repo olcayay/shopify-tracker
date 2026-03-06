@@ -3,47 +3,60 @@ import { resolve } from "path";
 config({ path: resolve(import.meta.dirname, "../../../.env") });
 import { Worker } from "bullmq";
 import { createLogger } from "@appranks/shared";
-import { BACKGROUND_QUEUE_NAME, getRedisConnection, type ScraperJobData } from "./queue.js";
+import { BACKGROUND_QUEUE_NAME, INTERACTIVE_QUEUE_NAME, getRedisConnection, type ScraperJobData } from "./queue.js";
 import { initWorkerDeps, createProcessJob, runMigrations } from "./process-job.js";
 
-const log = createLogger("background-worker");
+const log = createLogger("worker");
 
 const { db, httpClient } = initWorkerDeps();
-await runMigrations(db, "background-worker");
-const processJob = createProcessJob(db, httpClient, "background");
+await runMigrations(db, "worker");
 
-const worker = new Worker<ScraperJobData>(
+const bgProcessJob = createProcessJob(db, httpClient, "background");
+const intProcessJob = createProcessJob(db, httpClient, "interactive");
+
+const bgWorker = new Worker<ScraperJobData>(
   BACKGROUND_QUEUE_NAME,
-  processJob,
+  bgProcessJob,
   {
     connection: getRedisConnection(),
-    concurrency: 1, // Only 1 scraper job at a time to respect rate limits
+    concurrency: 1,
     limiter: {
       max: 1,
-      duration: 5000, // At most 1 job per 5 seconds
+      duration: 5000,
     },
   }
 );
 
-worker.on("failed", (job, err) => {
-  log.error("job failed", {
-    jobId: job?.id,
-    type: job?.data?.type,
-    attempt: job?.attemptsMade,
-    error: String(err),
+const intWorker = new Worker<ScraperJobData>(
+  INTERACTIVE_QUEUE_NAME,
+  intProcessJob,
+  {
+    connection: getRedisConnection(),
+    concurrency: 1,
+  }
+);
+
+for (const [name, w] of [["background", bgWorker], ["interactive", intWorker]] as const) {
+  w.on("failed", (job, err) => {
+    log.error(`[${name}] job failed`, {
+      jobId: job?.id,
+      type: job?.data?.type,
+      attempt: job?.attemptsMade,
+      error: String(err),
+    });
   });
-});
 
-worker.on("error", (err) => {
-  log.error("worker error", { error: String(err) });
-});
+  w.on("error", (err) => {
+    log.error(`[${name}] worker error`, { error: String(err) });
+  });
+}
 
-log.info("background worker started, waiting for jobs...");
+log.info("worker started, listening on background + interactive queues");
 
 // Graceful shutdown
 const shutdown = async () => {
-  log.info("shutting down background worker...");
-  await worker.close();
+  log.info("shutting down workers...");
+  await Promise.all([bgWorker.close(), intWorker.close()]);
   process.exit(0);
 };
 

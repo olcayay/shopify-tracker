@@ -72,6 +72,16 @@ multi-platform migration Phase 2: API + dashboard platform support ✅
 
 multi-platform migration Phase 3: shared types + compute jobs platform awareness ✅
 
+Salesforce AppExchange tracking — platform module, parsers, scraper refactoring ✅
+
+fix Salesforce page access & platform data isolation (migration + registration + admin API + dashboard platform params) ✅
+
+fix API endpoint platform filtering — comprehensive sweep of apps.ts & keywords.ts (18 endpoints) ✅
+
+fix dashboard scraper trigger — platform selector for system-admin, URL-based platform for admin trigger ✅
+
+fix worker dual-queue — interactive jobs not processing (worker now listens to both queues) ✅
+
 feedback sayfası
 
 kime hangi durumda nasıl emailler gönderilebilinir.

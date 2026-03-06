@@ -1,15 +1,22 @@
 import { getFeaturedApps, getFeaturedSections, getCategories } from "@/lib/api";
 import { FeaturedTabs } from "./featured-tabs";
+import type { PlatformId } from "@appranks/shared";
 
-export default async function FeaturedPage() {
+export default async function FeaturedPage({
+  params,
+}: {
+  params: Promise<{ platform: string }>;
+}) {
+  const { platform } = await params;
+
   const [homeData, sections, allCategories] = await Promise.all([
-    getFeaturedApps(30, "home").catch(() => ({
+    getFeaturedApps(30, "home", undefined, undefined, platform as PlatformId).catch(() => ({
       sightings: [],
       trackedSlugs: [],
       competitorSlugs: [],
     })),
-    getFeaturedSections(30).catch(() => []),
-    getCategories("flat").catch(() => []),
+    getFeaturedSections(30, platform as PlatformId).catch(() => []),
+    getCategories("flat", platform as PlatformId).catch(() => []),
   ]);
 
   // Build L1 category options from sections that have featured data

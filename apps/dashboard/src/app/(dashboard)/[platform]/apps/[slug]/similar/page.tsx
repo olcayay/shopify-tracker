@@ -1,4 +1,5 @@
 import { getAppSimilarApps, getAccountTrackedApps, getAccountCompetitors } from "@/lib/api";
+import type { PlatformId } from "@appranks/shared";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { AdHeatmap } from "@/components/ad-heatmap";
 
@@ -15,11 +16,11 @@ export default async function SimilarAppsPage({
 
   try {
     [data, trackedSlugs, competitorSlugs] = await Promise.all([
-      getAppSimilarApps(slug).catch(() => ({})),
-      getAccountTrackedApps()
+      getAppSimilarApps(slug, 30, platform as PlatformId).catch(() => ({})),
+      getAccountTrackedApps(platform as PlatformId)
         .then((rows: any[]) => rows.map((r) => r.appSlug))
         .catch(() => []),
-      getAccountCompetitors()
+      getAccountCompetitors(platform as PlatformId)
         .then((rows: any[]) => rows.map((r) => r.appSlug))
         .catch(() => []),
     ]);

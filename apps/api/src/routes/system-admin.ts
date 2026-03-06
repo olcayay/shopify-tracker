@@ -25,7 +25,9 @@ import {
   researchProjects,
   researchProjectKeywords,
   researchProjectCompetitors,
+  accountPlatforms,
 } from "@appranks/db";
+import { isPlatformId } from "@appranks/shared";
 import { generateAccessToken } from "./auth.js";
 import type { JwtPayload } from "../middleware/auth.js";
 
@@ -321,6 +323,65 @@ export const systemAdminRoutes: FastifyPluginAsync = async (app) => {
         .returning();
 
       return updated;
+    }
+  );
+
+  // POST /api/system-admin/accounts/:id/platforms — enable a platform for account
+  app.post<{ Params: { id: string } }>(
+    "/accounts/:id/platforms",
+    async (request, reply) => {
+      const { id } = request.params;
+      const { platform } = request.body as { platform?: string };
+
+      if (!platform || !isPlatformId(platform)) {
+        return reply.code(400).send({ error: "Valid platform is required" });
+      }
+
+      const [account] = await db
+        .select({ id: accounts.id })
+        .from(accounts)
+        .where(eq(accounts.id, id));
+
+      if (!account) {
+        return reply.code(404).send({ error: "Account not found" });
+      }
+
+      await db
+        .insert(accountPlatforms)
+        .values({ accountId: id, platform })
+        .onConflictDoNothing();
+
+      // Return updated platform list
+      const platforms = await db
+        .select({ platform: accountPlatforms.platform })
+        .from(accountPlatforms)
+        .where(eq(accountPlatforms.accountId, id));
+
+      return { enabledPlatforms: platforms.map((p) => p.platform) };
+    }
+  );
+
+  // DELETE /api/system-admin/accounts/:id/platforms/:platform — disable a platform
+  app.delete<{ Params: { id: string; platform: string } }>(
+    "/accounts/:id/platforms/:platform",
+    async (request, reply) => {
+      const { id, platform } = request.params;
+
+      await db
+        .delete(accountPlatforms)
+        .where(
+          and(
+            eq(accountPlatforms.accountId, id),
+            eq(accountPlatforms.platform, platform)
+          )
+        );
+
+      const platforms = await db
+        .select({ platform: accountPlatforms.platform })
+        .from(accountPlatforms)
+        .where(eq(accountPlatforms.accountId, id));
+
+      return { enabledPlatforms: platforms.map((p) => p.platform) };
     }
   );
 
@@ -840,12 +901,13 @@ export const systemAdminRoutes: FastifyPluginAsync = async (app) => {
 
   // POST /api/system-admin/scraper/trigger
   app.post("/scraper/trigger", async (request, reply) => {
-    const { type, slug, keyword, options, queue: targetQueue } = request.body as {
+    const { type, slug, keyword, options, queue: targetQueue, platform: platformParam } = request.body as {
       type?: string;
       slug?: string;
       keyword?: string;
       options?: { pages?: "first" | "all" | number; scrapeAppDetails?: boolean; scrapeReviews?: boolean };
       queue?: "interactive" | "background";
+      platform?: string;
     };
     const validTypes = [
       "category",
@@ -872,6 +934,7 @@ export const systemAdminRoutes: FastifyPluginAsync = async (app) => {
         type,
         triggeredBy: userEmail,
       };
+      if (platformParam) jobData.platform = platformParam;
       if (slug) jobData.slug = slug;
       if (keyword) jobData.keyword = keyword;
       if (options) jobData.options = options;
@@ -895,6 +958,7 @@ export const systemAdminRoutes: FastifyPluginAsync = async (app) => {
           status: "pending",
           createdAt: new Date(),
           triggeredBy: userEmail,
+          ...(platformParam && { platform: platformParam }),
         })
         .returning();
 

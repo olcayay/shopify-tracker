@@ -15,6 +15,7 @@ import {
   urls,
   createLogger,
   type CategoryNode,
+  type PlatformId,
 } from "@appranks/shared";
 import { HttpClient } from "../http-client.js";
 import {
@@ -22,6 +23,7 @@ import {
   hasNextPage,
 } from "../parsers/category-parser.js";
 import { parseFeaturedSections } from "../parsers/featured-parser.js";
+import type { PlatformModule, NormalizedCategoryApp } from "../platforms/platform-module.js";
 
 export interface ScrapePageOptions {
   pages?: "first" | "all" | number;
@@ -32,6 +34,7 @@ const log = createLogger("category-scraper");
 export interface CategoryScraperOptions {
   maxDepth?: number;
   httpClient?: HttpClient;
+  platformModule?: PlatformModule;
 }
 
 export class CategoryScraper {
@@ -42,11 +45,23 @@ export class CategoryScraper {
   private singleMode = false;
   private featuredSightingsCount = 0;
   private categoryAdSightingsCount = 0;
+  private platform: PlatformId;
+  private platformModule?: PlatformModule;
 
   constructor(db: Database, options: CategoryScraperOptions = {}) {
     this.db = db;
     this.httpClient = options.httpClient || new HttpClient();
-    this.maxDepth = options.maxDepth ?? MAX_CATEGORY_DEPTH;
+    this.platformModule = options.platformModule;
+    this.platform = options.platformModule?.platformId ?? "shopify";
+    this.maxDepth = options.maxDepth ?? (options.platformModule?.constants.maxCategoryDepth ?? MAX_CATEGORY_DEPTH);
+  }
+
+  private get seedCategories(): readonly string[] {
+    return this.platformModule?.constants.seedCategories ?? SEED_CATEGORY_SLUGS;
+  }
+
+  private get isShopify(): boolean {
+    return this.platform === "shopify";
   }
 
   /**
@@ -78,15 +93,17 @@ export class CategoryScraper {
     this.categoryAdSightingsCount = 0;
 
     try {
-      // Scrape homepage featured apps before category crawl
-      try {
-        const homeHtml = await this.httpClient.fetchPage(urls.home());
-        await this.recordFeaturedSightings(homeHtml, run.id, urls.home());
-      } catch (error) {
-        log.error("failed to scrape homepage featured apps", { error: String(error) });
+      // Scrape homepage featured apps before category crawl (Shopify only)
+      if (this.isShopify) {
+        try {
+          const homeHtml = await this.httpClient.fetchPage(urls.home());
+          await this.recordFeaturedSightings(homeHtml, run.id, urls.home());
+        } catch (error) {
+          log.error("failed to scrape homepage featured apps", { error: String(error) });
+        }
       }
 
-      for (const slug of SEED_CATEGORY_SLUGS) {
+      for (const slug of this.seedCategories) {
         try {
           const { node, appSlugs } = await this.crawlCategory(slug, null, 0, run.id, pageOptions);
           if (node) {
@@ -206,15 +223,22 @@ export class CategoryScraper {
     if (this.visited.has(slug)) return { node: null, appSlugs: [] };
     this.visited.add(slug);
 
-    log.info("crawling category", { slug, depth });
+    log.info("crawling category", { slug, depth, platform: this.platform });
 
+    const discoveredSlugs: string[] = [];
+
+    // Platform-specific fetch logic
+    if (this.platformModule && !this.isShopify) {
+      return this.crawlCategoryGeneric(slug, parentSlug, depth, runId, pageOptions);
+    }
+
+    // --- Shopify-specific fetch logic ---
     // Listing pages use /all suffix to avoid redirect issues (Shopify 302-redirects
     // /categories/{slug} to /categories/{slug}/all, but may drop ?page=N params).
     // Hub pages (level 0, some level 1) don't have /all URLs → use canonical URL.
     // Strategy: try /all first; on 404, fall back to canonical URL.
     const allUrl = urls.categoryAll(slug);
     const canonicalUrl = urls.category(slug);
-    const discoveredSlugs: string[] = [];
 
     let dataSourceUrl: string;
     let html: string;
@@ -256,7 +280,7 @@ export class CategoryScraper {
     const [upsertedCategory] = await this.db
       .insert(categories)
       .values({
-        platform: "shopify",
+        platform: this.platform,
         slug,
         title: pageData.title,
         url: canonicalUrl,
@@ -412,6 +436,165 @@ export class CategoryScraper {
         app_count: depth === 0 ? null : pageData.app_count,
         first_page_metrics: depth === 0 ? null : pageData.first_page_metrics,
         first_page_apps: depth === 0 ? [] : pageData.first_page_apps,
+        parent_slug: parentSlug,
+        category_level: depth,
+        children,
+      },
+      appSlugs: discoveredSlugs,
+    };
+  }
+
+  /**
+   * Generic category crawl using PlatformModule interface.
+   * Used for non-Shopify platforms (Salesforce, etc.) that return JSON from API.
+   */
+  private async crawlCategoryGeneric(
+    slug: string,
+    parentSlug: string | null,
+    depth: number,
+    runId: string,
+    pageOptions?: ScrapePageOptions
+  ): Promise<{ node: CategoryNode | null; appSlugs: string[] }> {
+    const mod = this.platformModule!;
+    const discoveredSlugs: string[] = [];
+    const canonicalUrl = mod.buildCategoryUrl(slug);
+
+    let json: string;
+    try {
+      json = await mod.fetchCategoryPage(slug, 1);
+    } catch (error) {
+      log.error("failed to fetch category page", { slug, platform: this.platform, error: String(error) });
+      return { node: null, appSlugs: [] };
+    }
+
+    const normalized = mod.parseCategoryPage(json, canonicalUrl);
+
+    // Upsert category master record
+    const [upsertedCategory] = await this.db
+      .insert(categories)
+      .values({
+        platform: this.platform,
+        slug,
+        title: normalized.title,
+        url: canonicalUrl,
+        parentSlug,
+        categoryLevel: depth,
+        description: normalized.description,
+        isListingPage: true,
+      })
+      .onConflictDoUpdate({
+        target: [categories.platform, categories.slug],
+        set: {
+          title: normalized.title,
+          description: normalized.description,
+          parentSlug,
+          categoryLevel: depth,
+          isListingPage: true,
+          updatedAt: new Date(),
+        },
+      })
+      .returning({ id: categories.id });
+
+    const categoryId = upsertedCategory.id;
+    const seenAppSlugs = new Set<string>();
+
+    // Insert snapshot
+    await this.db.insert(categorySnapshots).values({
+      categoryId,
+      scrapeRunId: runId,
+      scrapedAt: new Date(),
+      dataSourceUrl: canonicalUrl,
+      appCount: normalized.appCount,
+      firstPageMetrics: null,
+      firstPageApps: [],
+      breadcrumb: "",
+    });
+
+    // Record app rankings from first page
+    await this.recordNormalizedAppRankings(normalized.apps, slug, runId, 0);
+    await this.recordNormalizedCategoryAdSightings(normalized.apps, categoryId, runId);
+
+    for (const app of normalized.apps) {
+      if (app.slug && !seenAppSlugs.has(app.slug)) {
+        discoveredSlugs.push(app.slug);
+        seenAppSlugs.add(app.slug);
+      }
+    }
+
+    // Multi-page support
+    if (pageOptions?.pages !== "first") {
+      const maxPages = pageOptions?.pages === "all" ? 50
+        : typeof pageOptions?.pages === "number" ? pageOptions.pages
+        : mod.constants.defaultPagesPerCategory;
+
+      let currentPage = 1;
+      let lastHasNextPage = normalized.hasNextPage;
+      let totalOrganicRecorded = normalized.apps.filter(a => !a.isSponsored).length;
+
+      while (currentPage < maxPages && lastHasNextPage) {
+        currentPage++;
+        try {
+          const pageJson = await mod.fetchCategoryPage(slug, currentPage);
+          // Parse with organic offset for continuous positioning
+          const { parseSalesforceCategoryPage } = await import("../platforms/salesforce/parsers/category-parser.js");
+          const pageNormalized = parseSalesforceCategoryPage(pageJson, slug, currentPage, totalOrganicRecorded);
+
+          // Deduplicate across pages
+          const newApps = pageNormalized.apps.filter(app => {
+            if (seenAppSlugs.has(app.slug)) return false;
+            seenAppSlugs.add(app.slug);
+            return true;
+          });
+
+          await this.recordNormalizedAppRankings(newApps, slug, runId, 0);
+          await this.recordNormalizedCategoryAdSightings(newApps, categoryId, runId);
+          totalOrganicRecorded += newApps.filter(a => !a.isSponsored).length;
+
+          for (const app of newApps) {
+            if (app.slug) discoveredSlugs.push(app.slug);
+          }
+
+          log.info("category page scraped", {
+            slug, page: currentPage, platform: this.platform,
+            totalParsed: pageNormalized.apps.length,
+            newApps: newApps.length,
+          });
+
+          lastHasNextPage = pageNormalized.hasNextPage;
+          if (newApps.length === 0) {
+            log.info("no new apps found, stopping pagination", { slug, page: currentPage });
+            break;
+          }
+        } catch (error) {
+          log.warn("failed to fetch category page", { slug, page: currentPage, error: String(error) });
+          break;
+        }
+      }
+    }
+
+    // No subcategory recursion for flat platforms (maxCategoryDepth: 0)
+    const children: CategoryNode[] = [];
+    if (!this.singleMode && depth < this.maxDepth) {
+      for (const sub of normalized.subcategoryLinks) {
+        const { node: childNode, appSlugs: childSlugs } = await this.crawlCategory(
+          sub.slug, slug, depth + 1, runId, pageOptions
+        );
+        if (childNode) children.push(childNode);
+        for (const s of childSlugs) discoveredSlugs.push(s);
+      }
+    }
+
+    return {
+      node: {
+        slug,
+        url: canonicalUrl,
+        data_source_url: canonicalUrl,
+        title: normalized.title,
+        breadcrumb: "",
+        description: normalized.description,
+        app_count: normalized.appCount,
+        first_page_metrics: null,
+        first_page_apps: [],
         parent_slug: parentSlug,
         category_level: depth,
         children,
@@ -583,6 +766,106 @@ export class CategoryScraper {
             updatedAt: now,
           },
         });
+    }
+  }
+
+  /**
+   * Record app rankings from NormalizedCategoryApp[] (used by generic/non-Shopify platforms).
+   */
+  private async recordNormalizedAppRankings(
+    appList: NormalizedCategoryApp[],
+    categorySlug: string,
+    runId: string,
+    positionOffset = 0
+  ): Promise<void> {
+    const now = new Date();
+
+    for (let i = 0; i < appList.length; i++) {
+      const app = appList[i];
+      const subtitle = app.isSponsored ? undefined : (app.shortDescription || undefined);
+      const hasRating = app.averageRating > 0;
+      const hasCount = app.ratingCount > 0;
+
+      const [upsertedApp] = await this.db
+        .insert(apps)
+        .values({
+          platform: this.platform,
+          slug: app.slug,
+          name: app.name,
+          appCardSubtitle: subtitle,
+          ...(app.logoUrl && { iconUrl: app.logoUrl }),
+          ...(hasRating && { averageRating: String(app.averageRating) }),
+          ...(hasCount && { ratingCount: app.ratingCount }),
+          ...(app.pricingHint && { pricingHint: app.pricingHint }),
+        })
+        .onConflictDoUpdate({
+          target: [apps.platform, apps.slug],
+          set: {
+            name: app.name,
+            ...(subtitle !== undefined && { appCardSubtitle: subtitle }),
+            ...(app.logoUrl && { iconUrl: sql`COALESCE(${apps.iconUrl}, ${app.logoUrl})` }),
+            ...(hasRating && { averageRating: String(app.averageRating) }),
+            ...(hasCount && { ratingCount: app.ratingCount }),
+            ...(app.pricingHint && { pricingHint: app.pricingHint }),
+            updatedAt: now,
+          },
+        })
+        .returning({ id: apps.id });
+
+      await this.db.insert(appCategoryRankings).values({
+        appId: upsertedApp.id,
+        categorySlug,
+        scrapeRunId: runId,
+        scrapedAt: now,
+        position: positionOffset + (app.position || i + 1),
+      });
+    }
+  }
+
+  /**
+   * Record category ad sightings from NormalizedCategoryApp[] (used by generic/non-Shopify platforms).
+   */
+  private async recordNormalizedCategoryAdSightings(
+    appList: NormalizedCategoryApp[],
+    categoryId: number,
+    runId: string
+  ): Promise<void> {
+    const todayStr = new Date().toISOString().slice(0, 10);
+
+    for (const app of appList) {
+      if (!app.isSponsored) continue;
+
+      const [appRecord] = await this.db
+        .select({ id: apps.id })
+        .from(apps)
+        .where(eq(apps.slug, app.slug))
+        .limit(1);
+
+      if (!appRecord) continue;
+
+      await this.db
+        .insert(categoryAdSightings)
+        .values({
+          appId: appRecord.id,
+          categoryId,
+          seenDate: todayStr,
+          firstSeenRunId: runId,
+          lastSeenRunId: runId,
+          timesSeenInDay: 1,
+        })
+        .onConflictDoUpdate({
+          target: [
+            categoryAdSightings.appId,
+            categoryAdSightings.categoryId,
+            categoryAdSightings.seenDate,
+          ],
+          set: {
+            lastSeenRunId: runId,
+            timesSeenInDay: sql`${categoryAdSightings.timesSeenInDay} + 1`,
+          },
+        });
+
+      this.categoryAdSightingsCount++;
     }
   }
 

@@ -1,4 +1,5 @@
 import { getAppFeaturedPlacements } from "@/lib/api";
+import type { PlatformId } from "@appranks/shared";
 import {
   Card,
   CardContent,
@@ -10,13 +11,13 @@ import { FeaturedHistory } from "./featured-history";
 export default async function AppFeaturedPage({
   params,
 }: {
-  params: Promise<{ slug: string }>;
+  params: Promise<{ platform: string; slug: string }>;
 }) {
-  const { slug } = await params;
+  const { platform, slug } = await params;
 
   let data: any = { sightings: [] };
   try {
-    data = await getAppFeaturedPlacements(slug);
+    data = await getAppFeaturedPlacements(slug, 30, platform as PlatformId);
   } catch {
     // fallback
   }

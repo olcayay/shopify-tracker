@@ -10,6 +10,7 @@ import { KeywordScraper } from "./scrapers/keyword-scraper.js";
 import { KeywordSuggestionScraper } from "./scrapers/keyword-suggestion-scraper.js";
 import { ReviewScraper } from "./scrapers/review-scraper.js";
 import { HttpClient } from "./http-client.js";
+import { getModule } from "./platforms/registry.js";
 
 const log = createLogger("worker");
 
@@ -52,9 +53,17 @@ export function createProcessJob(db: ReturnType<typeof createDb>, httpClient: Ht
     const opts = job.data.options;
     const pageOptions = opts?.pages !== undefined ? { pages: opts.pages } : undefined;
 
+    // Get platform module (may throw for unimplemented platforms like canva)
+    let platformModule;
+    try {
+      platformModule = getModule(platform, httpClient);
+    } catch {
+      // Fall back to no module (Shopify default behavior)
+    }
+
     switch (type) {
       case "category": {
-        const scraper = new CategoryScraper(db, { httpClient });
+        const scraper = new CategoryScraper(db, { httpClient, platformModule });
         let discoveredSlugs: string[] = [];
         if (job.data.slug) {
           discoveredSlugs = await scraper.scrapeSingle(job.data.slug, triggeredBy, pageOptions, queueName);
@@ -71,6 +80,7 @@ export function createProcessJob(db: ReturnType<typeof createDb>, httpClient: Ht
             await enqueueScraperJob({
               type: "app_details",
               slug,
+              platform,
               triggeredBy: `${triggeredBy}:cascade`,
               options: opts.scrapeReviews ? { scrapeReviews: true } : undefined,
             }, cascadeOpts);
@@ -81,7 +91,7 @@ export function createProcessJob(db: ReturnType<typeof createDb>, httpClient: Ht
       }
 
       case "app_details": {
-        const scraper = new AppDetailsScraper(db, httpClient);
+        const scraper = new AppDetailsScraper(db, httpClient, platformModule);
         if (job.data.slug) {
           await scraper.scrapeApp(job.data.slug, undefined, triggeredBy, queueName);
           log.info("single app scrape completed", { slug: job.data.slug });
@@ -91,6 +101,7 @@ export function createProcessJob(db: ReturnType<typeof createDb>, httpClient: Ht
             await enqueueScraperJob({
               type: "reviews",
               slug: job.data.slug,
+              platform,
               triggeredBy: `${triggeredBy}:cascade`,
             }, cascadeOpts);
             log.info("cascaded reviews job", { slug: job.data.slug });
@@ -110,6 +121,7 @@ export function createProcessJob(db: ReturnType<typeof createDb>, httpClient: Ht
               await enqueueScraperJob({
                 type: "reviews",
                 slug: app.slug,
+                platform,
                 triggeredBy: `${triggeredBy}:cascade`,
               }, cascadeOpts);
             }
@@ -120,6 +132,7 @@ export function createProcessJob(db: ReturnType<typeof createDb>, httpClient: Ht
         // Cascade: recompute similarity scores (app snapshot data may have changed)
         await enqueueScraperJob({
           type: "compute_similarity_scores",
+          platform,
           triggeredBy: `${triggeredBy}:cascade`,
         }, cascadeOpts);
         log.info("cascaded compute_similarity_scores job");
@@ -127,16 +140,17 @@ export function createProcessJob(db: ReturnType<typeof createDb>, httpClient: Ht
       }
 
       case "keyword_search": {
-        const scraper = new KeywordScraper(db, httpClient);
+        const scraper = new KeywordScraper(db, httpClient, platformModule);
         let discoveredSlugs: string[] = [];
         if (job.data.keyword) {
           // Single keyword scrape — find the keyword row and scrape it
           const { eq } = await import("drizzle-orm");
           const { trackedKeywords, scrapeRuns } = await import("@appranks/db");
+          const { and: andOp } = await import("drizzle-orm");
           const [kw] = await db
             .select()
             .from(trackedKeywords)
-            .where(eq(trackedKeywords.keyword, job.data.keyword))
+            .where(andOp(eq(trackedKeywords.keyword, job.data.keyword), eq(trackedKeywords.platform, platform)))
             .limit(1);
           if (kw) {
             const [run] = await db
@@ -144,6 +158,7 @@ export function createProcessJob(db: ReturnType<typeof createDb>, httpClient: Ht
               .values({
                 scraperType: "keyword_search",
                 status: "running",
+                platform,
                 createdAt: new Date(),
                 startedAt: new Date(),
                 triggeredBy,
@@ -170,6 +185,7 @@ export function createProcessJob(db: ReturnType<typeof createDb>, httpClient: Ht
             await enqueueScraperJob({
               type: "app_details",
               slug,
+              platform,
               triggeredBy: `${triggeredBy}:cascade`,
               options: opts.scrapeReviews ? { scrapeReviews: true } : undefined,
             }, cascadeOpts);
@@ -181,6 +197,7 @@ export function createProcessJob(db: ReturnType<typeof createDb>, httpClient: Ht
         await enqueueScraperJob({
           type: "keyword_suggestions",
           keyword: job.data.keyword,
+          platform,
           triggeredBy: `${triggeredBy}:cascade`,
         }, cascadeOpts);
         log.info("cascaded keyword_suggestions job");
@@ -188,6 +205,7 @@ export function createProcessJob(db: ReturnType<typeof createDb>, httpClient: Ht
         // Cascade: recompute similarity scores (keyword rankings may have changed)
         await enqueueScraperJob({
           type: "compute_similarity_scores",
+          platform,
           triggeredBy: `${triggeredBy}:cascade`,
         }, cascadeOpts);
         log.info("cascaded compute_similarity_scores job");
@@ -198,12 +216,12 @@ export function createProcessJob(db: ReturnType<typeof createDb>, httpClient: Ht
         const suggestionScraper = new KeywordSuggestionScraper(db, httpClient);
         if (job.data.keyword) {
           // Single keyword suggestion scrape
-          const { eq } = await import("drizzle-orm");
+          const { eq, and: andOp2 } = await import("drizzle-orm");
           const { trackedKeywords, scrapeRuns } = await import("@appranks/db");
           const [kw] = await db
             .select()
             .from(trackedKeywords)
-            .where(eq(trackedKeywords.keyword, job.data.keyword))
+            .where(andOp2(eq(trackedKeywords.keyword, job.data.keyword), eq(trackedKeywords.platform, platform)))
             .limit(1);
           if (kw) {
             const [run] = await db

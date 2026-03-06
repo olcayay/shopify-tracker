@@ -1,0 +1,3001 @@
+[
+  {
+    "url": "https://api.appexchange.salesforce.com/recommendations/v3/listings?type=apps&page=1&pageSize=12&language=en&category=marketing",
+    "payload": {
+      "advancedQuery": "",
+      "queryText": "",
+      "searchQueryUid": "34918f15-9216-4e1b-b6a8-b0ec28ee46b9",
+      "totalCount": 898,
+      "listings": [
+        {
+          "oafId": "a0N30000003IzEDEA0",
+          "type": "force/package",
+          "title": "MassMailer - Native App, Email Marketing, Mass Email, Email Alerts, Attach Files",
+          "description": "✔ Mass Email, Bulk Email, Single Email to any Standard or Custom Object\n✔ Email Parent or Child objects\n✔ Attach Files\n✔ Email Alerts\n✔ Drip Campaigns\n✔ Merge Fields\n✔ Build Templates\n✔ Verify Emails\n✔ Track Emails & Statistics\n✔ Dedicated IP",
+          "listingCategories": [
+            "massEmailsAndMessaging",
+            "marketingAutomation",
+            "campaignManagement"
+          ],
+          "logos": [
+            {
+              "mediaId": "https://appexchange.salesforce.com/image_host/50eb66d5-c03b-4b53-90c7-b36aef23da14.png",
+              "logoType": "Logo",
+              "external_id": "a3L3A0000005DnaUAE"
+            },
+            {
+              "mediaId": "https://appexchange.salesforce.com/image_host/a1cb399e-f119-4527-83ae-27e7aaafdbe4.png",
+              "logoType": "Big Logo",
+              "external_id": "a3L4V000000ewm3UAA"
+            },
+            {
+              "mediaId": "https://appexchange.salesforce.com/partners/servlet/servlet.FileDownload?file=00P3000000P3PVKEA3",
+              "logoType": "High Res Logo",
+              "external_id": "a3L3000000009dxEAA"
+            },
+            {
+              "mediaId": "https://appexchange.salesforce.com/partners/servlet/servlet.FileDownload?file=00P4V00000uG3NdUAK",
+              "logoType": "High Res Svg",
+              "external_id": "a3L4V000000ewmSUAQ"
+            },
+            {
+              "mediaId": "https://appexchange.salesforce.com/partners/servlet/servlet.FileDownload?file=00P3A00000kGWv0UAG",
+              "logoType": "Small Svg Icon",
+              "external_id": "a3L3A0000005DawUAE"
+            }
+          ],
+          "publisher": "MassMailer, Inc",
+          "averageRating": 4.94,
+          "reviewsAmount": 164,
+          "chatEnabled": false,
+          "additionalProps": {
+            "agentCount": 0,
+            "topicCount": 0,
+            "actionCount": 0,
+            "agentDescription": ""
+          }
+        },
+        {
+          "oafId": "a0N3000000B3jSsEAJ",
+          "type": "force/package",
+          "title": "Salesvue - Sales Engagement Platform",
+          "description": "Salesvue’s engagement platform empowers teams to grow revenue by working more efficiently using repeatable, scalable cadences.  All industries, including 5 of the top 10 Annuity Providers, utilize Salesvue to continuously improve process & performance.",
+          "listingCategories": [
+            "salesProductivity",
+            "massEmailsAndMessaging",
+            "processManagement"
+          ],
+          "logos": [
+            {
+              "mediaId": "https://appexchange.salesforce.com/partners/servlet/servlet.FileDownload?file=00P4V00000ytIeOUAU",
+              "logoType": "Logo",
+              "external_id": "a3L4V000000Nu2hUAC"
+            },
+            {
+              "mediaId": "https://appexchange.salesforce.com/partners/servlet/servlet.FileDownload?file=00P4V00000ogciGUAQ",
+              "logoType": "Big Logo",
+              "external_id": "a3L4V000000KRn1UAG"
+            },
+            {
+              "mediaId": "https://appexchange.salesforce.com/partners/servlet/servlet.FileDownload?file=00P3000000P3VO9EAN",
+              "logoType": "High Res Logo",
+              "external_id": "a3L300000000FKeEAM"
+            },
+            {
+              "mediaId": "https://appexchange.salesforce.com/partners/servlet/servlet.FileDownload?file=00P4V00000ytIcmUAE",
+              "logoType": "High Res Svg",
+              "external_id": "a3L4V000000Nu2XUAS"
+            },
+            {
+              "mediaId": "https://appexchange.salesforce.com/partners/servlet/servlet.FileDownload?file=00P4V00000ytIeEUAU",
+              "logoType": "Small Svg Icon",
+              "external_id": "a3L4V000000Nu2cUAC"
+            }
+          ],
+          "publisher": "Salesvue",
+          "averageRating": 4.77,
+          "reviewsAmount": 120,
+          "chatEnabled": false,
+          "additionalProps": {
+            "agentCount": 0,
+            "topicCount": 0,
+            "actionCount": 0,
+            "agentDescription": ""
+          }
+        },
+        {
+          "oafId": "a0N30000001SVZmEAO",
+          "type": "force/package",
+          "title": "Marketo Sales Insight - Prioritise sales leads and close deals faster",
+          "description": "Marketo Sales Insight is a 100% native Force.com sales application that helps sales teams understand, prioritise, & interact with the hottest leads & opportunities to enable smart selling & close business faster. Be a Sales Genius with Sales Insight!",
+          "listingCategories": [
+            "marketingAutomation"
+          ],
+          "logos": [
+            {
+              "mediaId": "https://appexchange.salesforce.com/partners/servlet/servlet.FileDownload?file=00P4V00000oghRrUAI",
+              "logoType": "Logo",
+              "external_id": "a3L4V000000KSHaUAO"
+            },
+            {
+              "mediaId": "https://appexchange.salesforce.com/partners/servlet/servlet.FileDownload?file=00P4V00000oghRmUAI",
+              "logoType": "Big Logo",
+              "external_id": "a3L4V000000KSHVUA4"
+            }
+          ],
+          "publisher": "Marketo",
+          "averageRating": 4.58,
+          "reviewsAmount": 182,
+          "chatEnabled": false,
+          "additionalProps": {
+            "agentCount": 0,
+            "topicCount": 0,
+            "actionCount": 0,
+            "agentDescription": ""
+          }
+        },
+        {
+          "oafId": "a0N3000000B3KLuEAN",
+          "type": "force/package",
+          "title": "Adobe Marketo Measure (fka Bizible) ",
+          "description": "Adobe Marketo Measure (formerly known as Bizible) is the world's most popular and complete B2B marketing attribution solution. It automates measurement so marketers can make insight-driven decisions that maximize pipeline, revenue, and ROMI. ",
+          "listingCategories": [
+            "dashboardsAndReports",
+            "campaignManagement",
+            "dataManagement"
+          ],
+          "logos": [
+            {
+              "mediaId": "https://appexchange.salesforce.com/image_host/d697d53c-7eff-40c4-b199-26ac3a62f415.png",
+              "logoType": "Logo",
+              "external_id": "a3L3000000009a6EAA"
+            },
+            {
+              "mediaId": "https://appexchange.salesforce.com/partners/servlet/servlet.FileDownload?file=00P3A00000RsS6IUAV",
+              "logoType": "Big Logo",
+              "external_id": "a3L3A000000eP2JUAU"
+            },
+            {
+              "mediaId": "https://appexchange.salesforce.com/partners/servlet/servlet.FileDownload?file=00P3000000P3PRREA3",
+              "logoType": "High Res Logo",
+              "external_id": "a3L3000000009ZkEAI"
+            }
+          ],
+          "publisher": "Adobe Marketo Measure",
+          "averageRating": 4.97,
+          "reviewsAmount": 158,
+          "chatEnabled": false,
+          "additionalProps": {
+            "agentCount": 0,
+            "topicCount": 0,
+            "actionCount": 0,
+            "agentDescription": ""
+          }
+        },
+        {
+          "oafId": "a0N3A00000EcsT6UAJ",
+          "type": "force/package",
+          "title": "Ventas AI SMS App for Salesforce | AI Dialer | WhatsApp | AI Chatbot & Voice",
+          "description": "Ventas SMS offers 25+ features for Salesforce, including Salesforce Dialer, bulk SMS, WhatsApp automation, and AI-powered messaging. Automate cross-channel conversations and engage customers with smart SMS, WhatsApp, & AI voice interactions in Salesforce.",
+          "listingCategories": [
+            "sales",
+            "marketing",
+            "customerService"
+          ],
+          "logos": [
+            {
+              "mediaId": "https://appexchange.salesforce.com/partners/servlet/servlet.FileDownload?file=00P4V000010hUC6UAM",
+              "logoType": "High Res Svg",
+              "external_id": "a3L4V000000NvrwUAC"
+            },
+            {
+              "mediaId": "https://appexchange.salesforce.com/partners/servlet/servlet.FileDownload?file=00P4V000010hUCGUA2",
+              "logoType": "Small Svg Icon",
+              "external_id": "a3L4V000000Nvs1UAC"
+            },
+            {
+              "mediaId": "https://appexchange.salesforce.com/image_host/d8739f6c-0ba0-4be5-bf5e-6898e64c3995.png",
+              "logoType": "Logo",
+              "external_id": "fdba28d8-09b7-45ec-8d18-73d19136664a"
+            },
+            {
+              "mediaId": "https://appexchange.salesforce.com/image_host/7b4ed3a5-96ce-4b11-b602-3ff067495eb3.jpg",
+              "logoType": "Big Logo",
+              "external_id": "de92d772-c7f0-4178-8219-2474a33fadc2"
+            }
+          ],
+          "publisher": "Kcloud Technologies LLC",
+          "averageRating": 4.89,
+          "reviewsAmount": 149,
+          "chatEnabled": false,
+          "additionalProps": {
+            "agentCount": 0,
+            "topicCount": 0,
+            "actionCount": 0,
+            "agentDescription": ""
+          }
+        },
+        {
+          "oafId": "a0N3A00000EX3qVUAT",
+          "type": "force/package",
+          "title": "Blackthorn Events | Your events. Your data. All in Salesforce.",
+          "description": "Blackthorn Events | Your events. Your data. All in Salesforce.\n\nBlackthorn turns any organization’s Salesforce® CRM into event planning software powered by their connected data.",
+          "listingCategories": [
+            "marketing",
+            "campaignManagement",
+            "eventManagement"
+          ],
+          "logos": [
+            {
+              "mediaId": "https://appexchange.salesforce.com/partners/servlet/servlet.FileDownload?file=00P3A00000nHTtJUAW",
+              "logoType": "Medium Logo",
+              "external_id": "a3L3A000000eolrUAA"
+            },
+            {
+              "mediaId": "https://appexchange.salesforce.com/image_host/89f8952c-8ca3-41ec-b7be-5bcee8a65411.png",
+              "logoType": "Big Logo",
+              "external_id": "a3L4V00000AXHrfUAH"
+            },
+            {
+              "mediaId": "https://appexchange.salesforce.com/partners/servlet/servlet.FileDownload?file=00P4V000010m5CGUAY",
+              "logoType": "High Res Svg",
+              "external_id": "a3L4V00000AXHraUAH"
+            },
+            {
+              "mediaId": "https://appexchange.salesforce.com/partners/servlet/servlet.FileDownload?file=00P4V000010lxNzUAI",
+              "logoType": "Small Svg Icon",
+              "external_id": "a3L4V00000AXHpyUAH"
+            },
+            {
+              "mediaId": "https://appexchange.salesforce.com/image_host/6ee20749-c108-4c2e-a7b6-4b7507f76ae7.png",
+              "logoType": "Logo",
+              "external_id": "d5bc6dc8-0815-47f0-ab3f-002fee033435"
+            }
+          ],
+          "publisher": "Blackthorn.io, Inc.",
+          "averageRating": 4.97,
+          "reviewsAmount": 264,
+          "chatEnabled": true,
+          "additionalProps": {
+            "agentCount": 0,
+            "topicCount": 0,
+            "actionCount": 0,
+            "agentDescription": ""
+          }
+        },
+        {
+          "oafId": "a0N3000000194RHEAY",
+          "type": "force/package",
+          "title": "Rethink | Commercial Real Estate Software",
+          "description": "Rethink is a native CRE CRM app built entirely on the Salesforce platform. Built for commercial brokers, agents, property managers, and investors, Rethink enables CRE professionals to manage their entire business in one, easy-to-use application.",
+          "listingCategories": [
+            "sales",
+            "marketing",
+            "emailAndCalendarSync"
+          ],
+          "logos": [
+            {
+              "mediaId": "https://appexchange.salesforce.com/image_host/449d40f3-b511-47af-9bba-854fe50cc1c6.png",
+              "logoType": "Big Logo",
+              "external_id": "a3L3A000000LdlIUAS"
+            },
+            {
+              "mediaId": "https://appexchange.salesforce.com/partners/servlet/servlet.FileDownload?file=00P3000000P5BOLEA3",
+              "logoType": "High Res Logo",
+              "external_id": "a3L300000000RFKEA2"
+            },
+            {
+              "mediaId": "https://appexchange.salesforce.com/image_host/519927f0-6827-464a-873e-a07cdaf51e73.png",
+              "logoType": "Logo",
+              "external_id": "d4cad638-cde6-4f82-9887-baf66eca5854"
+            }
+          ],
+          "publisher": "Buildout",
+          "averageRating": 4.8,
+          "reviewsAmount": 210,
+          "chatEnabled": false,
+          "additionalProps": {
+            "agentCount": 0,
+            "topicCount": 0,
+            "actionCount": 0,
+            "agentDescription": ""
+          }
+        },
+        {
+          "oafId": "a0N30000003I2gDEAS",
+          "type": "force/package",
+          "title": "Survey Force by Salesforce Labs",
+          "description": "Survey Force (Lightning Ready) allows you to create, send, and capture customer feedback natively in salesforce.com.",
+          "listingCategories": [
+            "surveys"
+          ],
+          "logos": [
+            {
+              "mediaId": "https://appexchange.salesforce.com/partners/servlet/servlet.FileDownload?file=00P3000000SX9fLEAT",
+              "logoType": "Logo",
+              "external_id": "a3L300000000cLIEAY"
+            },
+            {
+              "mediaId": "https://appexchange.salesforce.com/image_host/bbf539de-2361-4ba3-b88b-a47fe1a1ac74.png",
+              "logoType": "Big Logo",
+              "external_id": "a3L4V0000009nImUAI"
+            }
+          ],
+          "publisher": "Salesforce Labs",
+          "averageRating": 3.16,
+          "reviewsAmount": 274,
+          "chatEnabled": false,
+          "additionalProps": {
+            "agentCount": 0,
+            "topicCount": 0,
+            "actionCount": 0,
+            "agentDescription": ""
+          }
+        },
+        {
+          "oafId": "a0N3A00000EFoedUAD",
+          "type": "force/package",
+          "title": "ValueText - Native Salesforce SMS & WhatsApp Messaging | AI Chatbot + Telephony",
+          "description": "ValueText is a native SMS & WhatsApp messaging app with AI-powered automation, chatbots, bulk campaigns & real-time alerts and complete CTI (Telephony). \n\nTrusted by 250+ organisations worldwide.\n\n👉 Book a demo: https://valuetext.io",
+          "listingCategories": [
+            "sales",
+            "marketingAutomation",
+            "customerService"
+          ],
+          "logos": [
+            {
+              "mediaId": "https://appexchange.salesforce.com/partners/servlet/servlet.FileDownload?file=00P4V00000vay0nUAA",
+              "logoType": "Logo",
+              "external_id": "a3L4V00000AMSrVUAX"
+            },
+            {
+              "mediaId": "https://appexchange.salesforce.com/partners/servlet/servlet.FileDownload?file=00P4V00000vaxwkUAA",
+              "logoType": "Big Logo",
+              "external_id": "a3L4V00000AMSr6UAH"
+            },
+            {
+              "mediaId": "https://appexchange.salesforce.com/partners/servlet/servlet.FileDownload?file=00P4V00000vay62UAA",
+              "logoType": "High Res Svg",
+              "external_id": "a3L4V00000AMSsxUAH"
+            },
+            {
+              "mediaId": "https://appexchange.salesforce.com/partners/servlet/servlet.FileDownload?file=00P4V00000vay5nUAA",
+              "logoType": "Small Svg Icon",
+              "external_id": "a3L4V00000AMSssUAH"
+            }
+          ],
+          "publisher": "ValueText | WorkDial",
+          "averageRating": 4.97,
+          "reviewsAmount": 106,
+          "chatEnabled": false,
+          "additionalProps": {
+            "agentCount": 0,
+            "topicCount": 0,
+            "actionCount": 0,
+            "agentDescription": ""
+          }
+        },
+        {
+          "oafId": "a0N3A00000EOHKrUAP",
+          "type": "salesforce-platform/api",
+          "title": "Account Mapping, Co-Sell, Channels, Alliances, Partner Ecosystem Sales",
+          "description": "PartnerTap is the leading partner ecosystem orchestration and co-selling solution for the enterprise. Our account mapping and co-selling platform drives more partner-sourced revenue and gives teams the detailed attribution data to prove it. ",
+          "listingCategories": [
+            "sales",
+            "partnerManagement",
+            "marketing"
+          ],
+          "logos": [
+            {
+              "mediaId": "https://appexchange.salesforce.com/partners/servlet/servlet.FileDownload?file=00P4V00000yX0O8UAK",
+              "logoType": "Logo",
+              "external_id": "a3L4V000009zKgkUAE"
+            },
+            {
+              "mediaId": "https://appexchange.salesforce.com/image_host/3abde092-8b0a-4fde-8d87-a6ee4b98312a.jpg",
+              "logoType": "Big Logo",
+              "external_id": "a3L4V000009zKhEUAU"
+            },
+            {
+              "mediaId": "https://appexchange.salesforce.com/partners/servlet/servlet.FileDownload?file=00P4V00000yX0YmUAK",
+              "logoType": "High Res Svg",
+              "external_id": "a3L4V000009zKilUAE"
+            },
+            {
+              "mediaId": "https://appexchange.salesforce.com/partners/servlet/servlet.FileDownload?file=00P4V00000yX0YcUAK",
+              "logoType": "Small Svg Icon",
+              "external_id": "a3L4V000009zKigUAE"
+            }
+          ],
+          "publisher": "PartnerTap: Ecosystem software for data mapping, coselling, and pipeline sharing",
+          "averageRating": 4.94,
+          "reviewsAmount": 145,
+          "chatEnabled": false,
+          "additionalProps": {
+            "agentCount": 0,
+            "topicCount": 0,
+            "actionCount": 0,
+            "agentDescription": ""
+          }
+        },
+        {
+          "oafId": "a0N300000016boHEAQ",
+          "type": "force/package",
+          "title": "Salesforce Pardot",
+          "description": "Meet Pardot: Smarter marketing automation on the world's #1 CRM. Pardot empowers marketing and sales teams to work together to find and nurture leads, close more deals, and maximize return on investment.",
+          "listingCategories": [
+            "marketingAutomation"
+          ],
+          "logos": [
+            {
+              "mediaId": "https://appexchange.salesforce.com/partners/servlet/servlet.FileDownload?file=00P3000000P3W20EAF",
+              "logoType": "Logo",
+              "external_id": "a3L300000000FyLEAU"
+            },
+            {
+              "mediaId": "https://appexchange.salesforce.com/partners/servlet/servlet.FileDownload?file=00P3A00000RrMMcUAN",
+              "logoType": "Big Logo",
+              "external_id": "a3L3A000000eO7hUAE"
+            },
+            {
+              "mediaId": "https://appexchange.salesforce.com/partners/servlet/servlet.FileDownload?file=00P3000000P3W2AEAV",
+              "logoType": "High Res Logo",
+              "external_id": "a3L300000000FyVEAU"
+            }
+          ],
+          "publisher": "Salesforce",
+          "averageRating": 4.49,
+          "reviewsAmount": 173,
+          "chatEnabled": false,
+          "additionalProps": {
+            "agentCount": 0,
+            "topicCount": 0,
+            "actionCount": 0,
+            "agentDescription": ""
+          }
+        },
+        {
+          "oafId": "a0N3A00000FMkfNUAT",
+          "type": "force/package",
+          "title": "Unsubscribe Link",
+          "description": "Include an easy way for recipients to unsubscribe from commercial email sent through Salesforce. By clicking the link, all contacts and leads with the relevant email address will be checked \"Email Opt Out.\"",
+          "listingCategories": [
+            "massEmailsAndMessaging"
+          ],
+          "logos": [
+            {
+              "mediaId": "https://appexchange.salesforce.com/partners/servlet/servlet.FileDownload?file=00P3A00000kHt4hUAC",
+              "logoType": "Logo",
+              "external_id": "a3L3A0000005KvnUAE"
+            },
+            {
+              "mediaId": "https://appexchange.salesforce.com/partners/servlet/servlet.FileDownload?file=00P3A00000kHt4cUAC",
+              "logoType": "Big Logo",
+              "external_id": "a3L3A0000005KviUAE"
+            }
+          ],
+          "publisher": "Salesforce Labs",
+          "averageRating": 4.21,
+          "reviewsAmount": 75,
+          "chatEnabled": false,
+          "additionalProps": {
+            "agentCount": 0,
+            "topicCount": 0,
+            "actionCount": 0,
+            "agentDescription": ""
+          }
+        }
+      ],
+      "featured": [
+        {
+          "oafId": "a0N3A00000EOBliUAH",
+          "type": "force/package",
+          "title": "SurveyMonkey for Salesforce",
+          "description": "Connect your survey data with Salesforce to drive results for your business. Automatically send surveys after key interactions and take real-time action on feedback. Enrich customer and prospect data by syncing survey responses into Salesforce.",
+          "listingCategories": [
+            "marketing",
+            "customerService",
+            "humanResources"
+          ],
+          "logos": [
+            {
+              "mediaId": "https://appexchange.salesforce.com/partners/servlet/servlet.FileDownload?file=00P4V00000su7MFUAY",
+              "logoType": "Medium Logo",
+              "external_id": "a3L4V000009yuyPUAQ"
+            },
+            {
+              "mediaId": "https://appexchange.salesforce.com/partners/servlet/servlet.FileDownload?file=00P4V00000wTImZUAW",
+              "logoType": "High Res Svg",
+              "external_id": "a3L4V000009kIvFUAU"
+            },
+            {
+              "mediaId": "https://appexchange.salesforce.com/partners/servlet/servlet.FileDownload?file=00P3A00000eYCYGUA4",
+              "logoType": "Small Svg Icon",
+              "external_id": "a3L3A000000964IUAQ"
+            },
+            {
+              "mediaId": "https://appexchange.salesforce.com/image_host/2d4d9cee-3dd1-40b4-9b85-45ce57082c69.jpg",
+              "logoType": "Logo",
+              "external_id": "2668b8ff-bc0c-4ec2-9815-18da59575f60"
+            },
+            {
+              "mediaId": "https://appexchange.salesforce.com/image_host/f0e9422a-3c81-4bb0-9d5e-13f47241e750.jpg",
+              "logoType": "Big Logo",
+              "external_id": "ef7b5f74-d449-41f9-9953-2cef8ea31387"
+            }
+          ],
+          "publisher": "SurveyMonkey",
+          "averageRating": 4.57,
+          "reviewsAmount": 67,
+          "pricing": "paid",
+          "chatEnabled": true,
+          "sponsored": true
+        },
+        {
+          "oafId": "a0N30000000q4u7EAA",
+          "type": "force/package",
+          "title": "Complete Leads | Routing | Matching | Round Robin | AI Workflows | No-Code",
+          "description": "Respond faster than the competition with automated matching and routing in Salesforce. Then automate all your data management with the most flexible, scalable AI-powered workflow engine — so your team can focus on closing deals, not chasing data.",
+          "listingCategories": [
+            "sales",
+            "marketing",
+            "dataManagement"
+          ],
+          "logos": [
+            {
+              "mediaId": "https://appexchange.salesforce.com/image_host/f2a76c5b-5395-41b7-a8dc-69e9f669c1e7.png",
+              "logoType": "Logo",
+              "external_id": "a3L4V000009z6CXUAY"
+            },
+            {
+              "mediaId": "https://appexchange.salesforce.com/partners/servlet/servlet.FileDownload?file=00P4V00000uJ5mSUAS",
+              "logoType": "Medium Logo",
+              "external_id": "a3L4V000000exjKUAQ"
+            },
+            {
+              "mediaId": "https://appexchange.salesforce.com/image_host/3a6248af-6df6-420c-9408-6ec7104c6272.png",
+              "logoType": "Big Logo",
+              "external_id": "a3L4V000000NvJfUAK"
+            },
+            {
+              "mediaId": "https://appexchange.salesforce.com/partners/servlet/servlet.FileDownload?file=00P3000000PXUWCEA5",
+              "logoType": "High Res Logo",
+              "external_id": "a3L300000000UGBEA2"
+            },
+            {
+              "mediaId": "https://appexchange.salesforce.com/partners/servlet/servlet.FileDownload?file=00P4V00000zq96UUAQ",
+              "logoType": "High Res Svg",
+              "external_id": "a3L4V000000NvJpUAK"
+            },
+            {
+              "mediaId": "https://appexchange.salesforce.com/partners/servlet/servlet.FileDownload?file=00P4V00000suEWqUAM",
+              "logoType": "Small Svg Icon",
+              "external_id": "a3L4V000009yvIhUAI"
+            }
+          ],
+          "publisher": "Traction Complete",
+          "averageRating": 5,
+          "reviewsAmount": 22,
+          "pricing": "paid",
+          "chatEnabled": false,
+          "sponsored": true
+        }
+      ]
+    }
+  },
+  {
+    "url": "https://api.appexchange.salesforce.com/recommendations/v3/listings?type=apps&page=2&pageSize=12&language=en&category=marketing",
+    "payload": {
+      "advancedQuery": "",
+      "queryText": "",
+      "searchQueryUid": "19f758ff-9215-49ed-8a7c-223be05e0b9f",
+      "totalCount": 898,
+      "listings": [
+        {
+          "oafId": "a0N3A00000EvaSKUAZ",
+          "type": "force/package",
+          "title": "Salesforce First Web Studio",
+          "description": "Run forms, portals, eSign, docs, and surveys directly on Salesforce.\nFrom $150 per org. No per-seat pricing. Nonprofit discounts available.\n",
+          "listingCategories": [
+            "contractManagement",
+            "websites",
+            "documentGeneration"
+          ],
+          "logos": [
+            {
+              "mediaId": "https://appexchange.salesforce.com/partners/servlet/servlet.FileDownload?file=00P4V00000qpEXiUAM",
+              "logoType": "Medium Logo",
+              "external_id": "a3L4V00000AM82lUAD"
+            },
+            {
+              "mediaId": "https://appexchange.salesforce.com/partners/servlet/servlet.FileDownload?file=00P4V00000qoU2WUAU",
+              "logoType": "High Res Svg",
+              "external_id": "a3L4V00000AM5h1UAD"
+            },
+            {
+              "mediaId": "https://appexchange.salesforce.com/partners/servlet/servlet.FileDownload?file=00P4V00000qoU06UAE",
+              "logoType": "Small Svg Icon",
+              "external_id": "a3L4V00000AM5grUAD"
+            },
+            {
+              "mediaId": "https://appexchange.salesforce.com/image_host/e603c1f0-2072-44bc-86a1-0cc1ad62fd16.png",
+              "logoType": "Logo",
+              "external_id": "ef059cb0-4d58-4367-aef2-e8f1c6520358"
+            },
+            {
+              "mediaId": "https://appexchange.salesforce.com/image_host/1597b8ea-a7e4-43d6-b03e-2664a81799dd.png",
+              "logoType": "Big Logo",
+              "external_id": "ba4b1cc5-d808-4e36-b7bf-ad135953738e"
+            }
+          ],
+          "publisher": "Titan",
+          "averageRating": 4.99,
+          "reviewsAmount": 317,
+          "chatEnabled": true,
+          "additionalProps": {
+            "agentCount": 0,
+            "topicCount": 0,
+            "actionCount": 0,
+            "agentDescription": ""
+          }
+        },
+        {
+          "oafId": "a0N3A00000EOHKrUAP",
+          "type": "salesforce-platform/api",
+          "title": "Account Mapping, Co-Sell, Channels, Alliances, Partner Ecosystem Sales",
+          "description": "PartnerTap is the leading partner ecosystem orchestration and co-selling solution for the enterprise. Our account mapping and co-selling platform drives more partner-sourced revenue and gives teams the detailed attribution data to prove it. ",
+          "listingCategories": [
+            "sales",
+            "partnerManagement",
+            "marketing"
+          ],
+          "logos": [
+            {
+              "mediaId": "https://appexchange.salesforce.com/partners/servlet/servlet.FileDownload?file=00P4V00000yX0O8UAK",
+              "logoType": "Logo",
+              "external_id": "a3L4V000009zKgkUAE"
+            },
+            {
+              "mediaId": "https://appexchange.salesforce.com/image_host/3abde092-8b0a-4fde-8d87-a6ee4b98312a.jpg",
+              "logoType": "Big Logo",
+              "external_id": "a3L4V000009zKhEUAU"
+            },
+            {
+              "mediaId": "https://appexchange.salesforce.com/partners/servlet/servlet.FileDownload?file=00P4V00000yX0YmUAK",
+              "logoType": "High Res Svg",
+              "external_id": "a3L4V000009zKilUAE"
+            },
+            {
+              "mediaId": "https://appexchange.salesforce.com/partners/servlet/servlet.FileDownload?file=00P4V00000yX0YcUAK",
+              "logoType": "Small Svg Icon",
+              "external_id": "a3L4V000009zKigUAE"
+            }
+          ],
+          "publisher": "PartnerTap: Ecosystem software for data mapping, coselling, and pipeline sharing",
+          "averageRating": 4.94,
+          "reviewsAmount": 145,
+          "chatEnabled": false,
+          "additionalProps": {
+            "agentCount": 0,
+            "topicCount": 0,
+            "actionCount": 0,
+            "agentDescription": ""
+          }
+        },
+        {
+          "oafId": "a0N3000000DylJTEAZ",
+          "type": "force/package",
+          "title": "123FormBuilder: Forms & Surveys, dynamically connected to any Salesforce object",
+          "description": "Build beautiful forms & surveys with drag & drop ease. Prefill forms dynamically with your existing Salesforce data. Highly secure, HIPAA-compliant and GDPR-ready. Collect data the smart way and integrate it bi-directionally with any Salesforce object.",
+          "listingCategories": [
+            "surveys",
+            "websites",
+            "dataManagement"
+          ],
+          "logos": [
+            {
+              "mediaId": "https://appexchange.salesforce.com/partners/servlet/servlet.FileDownload?file=00P3A00000gB9cCUAS",
+              "logoType": "Medium Logo",
+              "external_id": "a3L3A00000096dcUAA"
+            },
+            {
+              "mediaId": "https://appexchange.salesforce.com/image_host/10199725-f2d6-4e3a-b47d-40e360b00ab2.png",
+              "logoType": "Big Logo",
+              "external_id": "a3L4V000000NeYfUAK"
+            },
+            {
+              "mediaId": "https://appexchange.salesforce.com/partners/servlet/servlet.FileDownload?file=00P3A00000iWoQ7UAK",
+              "logoType": "High Res Svg",
+              "external_id": "a3L3A00000A1en0UAB"
+            },
+            {
+              "mediaId": "https://appexchange.salesforce.com/partners/servlet/servlet.FileDownload?file=00P3A00000iWQ7OUAW",
+              "logoType": "Small Svg Icon",
+              "external_id": "a3L3A00000A1eGfUAJ"
+            },
+            {
+              "mediaId": "https://appexchange.salesforce.com/image_host/97042c0b-7a15-4623-a860-65a4161c0f9e.png",
+              "logoType": "Logo",
+              "external_id": "cff42abb-f10f-4d44-845b-622be25d0fbb"
+            }
+          ],
+          "publisher": "123FormBuilder",
+          "averageRating": 4.89,
+          "reviewsAmount": 127,
+          "chatEnabled": false,
+          "additionalProps": {
+            "agentCount": 0,
+            "topicCount": 0,
+            "actionCount": 0,
+            "agentDescription": ""
+          }
+        },
+        {
+          "oafId": "a0N300000030psqEAA",
+          "type": "force/package",
+          "title": "iContact - Email Marketing for Small Business",
+          "description": "Easy to use email marketing platform for small businesses. \n\nCreate and send stunning emails to your customers in minutes - without having to leave Salesforce.\n",
+          "listingCategories": [
+            "sales",
+            "marketing",
+            "massEmailsAndMessaging"
+          ],
+          "logos": [
+            {
+              "mediaId": "https://appexchange.salesforce.com/partners/servlet/servlet.FileDownload?file=00P4V00000x9P4PUAU",
+              "logoType": "Logo",
+              "external_id": "a3L4V00000AHx7eUAD"
+            },
+            {
+              "mediaId": "https://appexchange.salesforce.com/partners/servlet/servlet.FileDownload?file=00P4V00000v3cVXUAY",
+              "logoType": "Big Logo",
+              "external_id": "a3L4V00000ABXqeUAH"
+            },
+            {
+              "mediaId": "https://appexchange.salesforce.com/partners/servlet/servlet.FileDownload?file=00P3000000P3RRTEA3",
+              "logoType": "High Res Logo",
+              "external_id": "a3L300000000BWsEAM"
+            },
+            {
+              "mediaId": "https://appexchange.salesforce.com/partners/servlet/servlet.FileDownload?file=00P4V00000v3cVcUAI",
+              "logoType": "High Res Svg",
+              "external_id": "a3L4V00000ABXqjUAH"
+            },
+            {
+              "mediaId": "https://appexchange.salesforce.com/partners/servlet/servlet.FileDownload?file=00P4V00000x9P5gUAE",
+              "logoType": "Small Svg Icon",
+              "external_id": "a3L4V00000AHx7sUAD"
+            }
+          ],
+          "publisher": "iContact LLC",
+          "averageRating": 4.6,
+          "reviewsAmount": 283,
+          "chatEnabled": false,
+          "additionalProps": {
+            "agentCount": 0,
+            "topicCount": 0,
+            "actionCount": 0,
+            "agentDescription": ""
+          }
+        },
+        {
+          "oafId": "a0N3000000B4lIxEAJ",
+          "type": "salesforce-platform/api",
+          "title": "SurveyMonkey Enterprise for CX: Surveys for Salesforce",
+          "description": "SurveyMonkey (maker of GetFeedback) is now focused on SurveyMonkey Enterprise as our primary solution for CX professionals. SurveyMonkey Enterprise equips CX teams with one intuitive yet powerful platform for NPS, CSAT, customer service feedback and more\n",
+          "listingCategories": [
+            "surveys"
+          ],
+          "logos": [
+            {
+              "mediaId": "https://appexchange.salesforce.com/partners/servlet/servlet.FileDownload?file=00P4V00000uHrCVUA0",
+              "logoType": "Medium Logo",
+              "external_id": "a3L4V000000exO4UAI"
+            },
+            {
+              "mediaId": "https://appexchange.salesforce.com/partners/servlet/servlet.FileDownload?file=00P3000000P3RNREA3",
+              "logoType": "High Res Logo",
+              "external_id": "a3L300000000BT5EAM"
+            },
+            {
+              "mediaId": "https://appexchange.salesforce.com/partners/servlet/servlet.FileDownload?file=00P4V00000wTuVGUA0",
+              "logoType": "High Res Svg",
+              "external_id": "a3L4V000009kJ2BUAU"
+            },
+            {
+              "mediaId": "https://appexchange.salesforce.com/partners/servlet/servlet.FileDownload?file=00P4V00000wTIj4UAG",
+              "logoType": "Small Svg Icon",
+              "external_id": "a3L4V000009kIv0UAE"
+            },
+            {
+              "mediaId": "https://appexchange.salesforce.com/image_host/49ca6b70-5429-4b68-8caa-31faa46f3af2.jpg",
+              "logoType": "Logo",
+              "external_id": "b4d2f6eb-5694-48c2-aa20-322d6d7ea130"
+            },
+            {
+              "mediaId": "https://appexchange.salesforce.com/image_host/6642b2c9-3553-4e2b-9754-ce89f3ea87ff.jpg",
+              "logoType": "Big Logo",
+              "external_id": "00cbaacc-c54e-4df1-a313-86d3f7d63fb4"
+            }
+          ],
+          "publisher": "SurveyMonkey",
+          "averageRating": 4.9,
+          "reviewsAmount": 325,
+          "chatEnabled": true,
+          "additionalProps": {
+            "agentCount": 0,
+            "topicCount": 0,
+            "actionCount": 0,
+            "agentDescription": ""
+          }
+        },
+        {
+          "oafId": "a0N3000000B3LePEAV",
+          "type": "force/package",
+          "title": "Simple Survey: 100% Native Surveys for Salesforce",
+          "description": "Capture feedback in Salesforce automatically with effortless, beautiful surveys. Get higher response rates, improve customer experience, increase CSAT and Net Promoter Score® (NPS), and boost agent effectiveness.",
+          "listingCategories": [
+            "ratingsAndReviews",
+            "surveys",
+            "customerService"
+          ],
+          "logos": [
+            {
+              "mediaId": "https://appexchange.salesforce.com/image_host/d97a9386-cc5f-4c31-8e6c-fcc9324e6846.png",
+              "logoType": "Logo",
+              "external_id": "a3L4V0000005hEAUAY"
+            },
+            {
+              "mediaId": "https://appexchange.salesforce.com/image_host/9ff54e8c-50f8-47f1-8b91-c3dbd4187b4b.jpg",
+              "logoType": "Big Logo",
+              "external_id": "a3L4V000000ALSpUAO"
+            },
+            {
+              "mediaId": "https://appexchange.salesforce.com/partners/servlet/servlet.FileDownload?file=00P3000000P3WpfEAF",
+              "logoType": "High Res Logo",
+              "external_id": "a3L300000000GkDEAU"
+            },
+            {
+              "mediaId": "https://appexchange.salesforce.com/partners/servlet/servlet.FileDownload?file=00P4V000010vLjPUAU",
+              "logoType": "High Res Svg",
+              "external_id": "a3L4V000000ALUHUA4"
+            },
+            {
+              "mediaId": "https://appexchange.salesforce.com/partners/servlet/servlet.FileDownload?file=00P4V00000ycZ60UAE",
+              "logoType": "Small Svg Icon",
+              "external_id": "a3L4V00000A2TPHUA3"
+            }
+          ],
+          "publisher": "Vicasso",
+          "averageRating": 5,
+          "reviewsAmount": 91,
+          "chatEnabled": true,
+          "additionalProps": {
+            "agentCount": 0,
+            "topicCount": 0,
+            "actionCount": 0,
+            "agentDescription": ""
+          }
+        },
+        {
+          "oafId": "a0N30000005utCcEAI",
+          "type": "force/package",
+          "title": "AAkonsult Campaign Status",
+          "description": "Quickly setup Campaign Status Defaults to one or many campaigns.\n\nStop setting up Campaign Member Statuses every time. Define defaults by Campaign Type and let the system assign them automatically. ",
+          "listingCategories": [
+            "campaignManagement"
+          ],
+          "logos": [
+            {
+              "mediaId": "https://appexchange.salesforce.com/image_host/f49eda2b-6dde-47dc-8c44-b12afebec185.jpg",
+              "logoType": "Logo",
+              "external_id": "a3L300000000erbEAA"
+            },
+            {
+              "mediaId": "https://appexchange.salesforce.com/image_host/44c52a72-418a-4756-8399-e70131b5b813.jpg",
+              "logoType": "Big Logo",
+              "external_id": "a3L3A0000005N72UAE"
+            },
+            {
+              "mediaId": "https://appexchange.salesforce.com/partners/servlet/servlet.FileDownload?file=00P3000000PanyzEAB",
+              "logoType": "High Res Logo",
+              "external_id": "a3L300000000WfDEAU"
+            }
+          ],
+          "publisher": "AAkonsult Pty Ltd",
+          "averageRating": 4.79,
+          "reviewsAmount": 72,
+          "chatEnabled": false,
+          "additionalProps": {
+            "agentCount": 0,
+            "topicCount": 0,
+            "actionCount": 0,
+            "agentDescription": ""
+          }
+        },
+        {
+          "oafId": "a0N3A00000FMYfyUAH",
+          "type": "force/package",
+          "title": "EventSpark - Salesforce Native Event Management, Event Registration & RSVPs",
+          "description": "👍 Published branded event landing pages\n👍 Send branded email invitations and reminders\n👍 Collect RSVPs with intelligent, customizable forms\n👍 Sell and Manage Tickets\n👍 Track registrations & attendance, leads & ROI for virtual & physical events\n",
+          "listingCategories": [
+            "campaignManagement",
+            "eventManagement",
+            "marketingAutomation"
+          ],
+          "logos": [
+            {
+              "mediaId": "https://appexchange.salesforce.com/partners/servlet/servlet.FileDownload?file=00P3A00000jGizsUAC",
+              "logoType": "Logo",
+              "external_id": "a3L3A00000059AxUAI"
+            },
+            {
+              "mediaId": "https://appexchange.salesforce.com/partners/servlet/servlet.FileDownload?file=00P4V000010kxKLUAY",
+              "logoType": "Big Logo",
+              "external_id": "a3L4V00000AXHTJUA5"
+            },
+            {
+              "mediaId": "https://appexchange.salesforce.com/partners/servlet/servlet.FileDownload?file=00P3A00000kH8tSUAS",
+              "logoType": "High Res Svg",
+              "external_id": "a3L3A0000005I0VUAU"
+            },
+            {
+              "mediaId": "https://appexchange.salesforce.com/partners/servlet/servlet.FileDownload?file=00P3A00000kH1v9UAC",
+              "logoType": "Small Svg Icon",
+              "external_id": "a3L3A0000005H3iUAE"
+            }
+          ],
+          "publisher": "SparkSmiths",
+          "averageRating": 4.96,
+          "reviewsAmount": 52,
+          "chatEnabled": false,
+          "additionalProps": {
+            "agentCount": 0,
+            "topicCount": 0,
+            "actionCount": 0,
+            "agentDescription": ""
+          }
+        },
+        {
+          "oafId": "a0N3A00000FMnPoUAL",
+          "type": "force/package",
+          "title": "Left Main REI | Salesforce CRM + AI Data for Real Estate Investors",
+          "description": "Left Main REI is the leading CRM and growth system for real estate investment teams. It delivers real-time motivation insights, accurate comps, and live property data so your team moves faster, makes smarter offers, and closes more deals.",
+          "listingCategories": [
+            "sales",
+            "marketing",
+            "productivity"
+          ],
+          "logos": [
+            {
+              "mediaId": "https://appexchange.salesforce.com/image_host/cdc077f2-de06-40db-967f-ad77ff92ddbd.png",
+              "logoType": "Logo",
+              "external_id": "a3L4V000000f0T4UAI"
+            },
+            {
+              "mediaId": "https://appexchange.salesforce.com/partners/servlet/servlet.FileDownload?file=00P4V00000yUw9TUAS",
+              "logoType": "High Res Svg",
+              "external_id": "a3L4V000000f0TEUAY"
+            },
+            {
+              "mediaId": "https://appexchange.salesforce.com/partners/servlet/servlet.FileDownload?file=00P4V00000yUw9OUAS",
+              "logoType": "Small Svg Icon",
+              "external_id": "a3L4V000000f0T9UAI"
+            },
+            {
+              "mediaId": "https://appexchange.salesforce.com/image_host/3bc1c377-23c9-4b58-b9d5-6d5e413dbccd.png",
+              "logoType": "Big Logo",
+              "external_id": "3dd77f50-9963-4083-8f1c-8e481e714ef8"
+            }
+          ],
+          "publisher": "Left Main REI",
+          "averageRating": 4.98,
+          "reviewsAmount": 62,
+          "chatEnabled": false,
+          "additionalProps": {
+            "agentCount": 0,
+            "topicCount": 0,
+            "actionCount": 0,
+            "agentDescription": ""
+          }
+        },
+        {
+          "oafId": "a0N3A00000E1l6iUAB",
+          "type": "force/package",
+          "title": "FinDock -the payment engine for Salesforce: processing, recovery, reconciliation",
+          "description": "FinDock, the Salesforce-native payment engine for Processing, Recovery & Reconciliation. Automate recurring payments, donations & billing — creating delightful customer experiences and streamlining payment operations.",
+          "listingCategories": [
+            "paymentsProcessing",
+            "subscriptions",
+            "personalization"
+          ],
+          "logos": [
+            {
+              "mediaId": "https://appexchange.salesforce.com/image_host/7f29805a-2b06-4dbb-a4a7-f3cb7c0dae70.png",
+              "logoType": "Logo",
+              "external_id": "a3L3A0000005ESyUAM"
+            },
+            {
+              "mediaId": "https://appexchange.salesforce.com/image_host/ecab0ebc-dfbf-4487-9276-24363db90c78.png",
+              "logoType": "Big Logo",
+              "external_id": "a3L4V0000002OwTUAU"
+            },
+            {
+              "mediaId": "https://appexchange.salesforce.com/partners/servlet/servlet.FileDownload?file=00P4V00000t34wZUAQ",
+              "logoType": "High Res Svg",
+              "external_id": "a3L4V0000002OxWUAU"
+            },
+            {
+              "mediaId": "https://appexchange.salesforce.com/partners/servlet/servlet.FileDownload?file=00P3A00000kGgS9UAK",
+              "logoType": "Small Svg Icon",
+              "external_id": "a3L3A0000005ETIUA2"
+            }
+          ],
+          "publisher": "FinDock",
+          "averageRating": 4.98,
+          "reviewsAmount": 53,
+          "chatEnabled": false,
+          "additionalProps": {
+            "agentCount": 0,
+            "topicCount": 0,
+            "actionCount": 0,
+            "agentDescription": ""
+          }
+        },
+        {
+          "oafId": "a0N3A00000ErAobUAF",
+          "type": "force/package",
+          "title": "Unified SMS, WhatsApp, CTI Call Experience | AI Powered SMS App for Salesforce",
+          "description": "Businesses are boosting engagement & conversion rate with Next-Gen AI Messaging & Calling App for Salesforce, GirikSMS. Experience seamless multi-channel messaging across SMS, WhatsApp, Web Chat & Voice with conversational intelligence on 100% native app.",
+          "listingCategories": [
+            "sales",
+            "marketing",
+            "customerService"
+          ],
+          "logos": [
+            {
+              "mediaId": "https://appexchange.salesforce.com/image_host/7442826f-8fae-4057-9419-1b168e10f4cc.jpg",
+              "logoType": "Big Logo",
+              "external_id": "a3L3A0000000wTpUAI"
+            },
+            {
+              "mediaId": "https://appexchange.salesforce.com/image_host/cff71ca9-2707-4f4f-89a5-69edd3488d0c.jpg",
+              "logoType": "Logo",
+              "external_id": "6626c1a1-f065-4012-b171-bc7f06d68a73"
+            }
+          ],
+          "publisher": "Girikon Inc.",
+          "averageRating": 4.94,
+          "reviewsAmount": 64,
+          "chatEnabled": false,
+          "additionalProps": {
+            "agentCount": 0,
+            "topicCount": 0,
+            "actionCount": 0,
+            "agentDescription": ""
+          }
+        },
+        {
+          "oafId": "a0N3000000B3taOEAR",
+          "type": "force/package",
+          "title": "Seismic Enablement Cloud™",
+          "description": "Seismic’s leading sales enablement solution delivers AI-guided personalized content at scale right from Salesforce. Align go-to-market teams to deliver the right content for each stage of the opportunity, improve productivity, and accelerate sales.",
+          "listingCategories": [
+            "salesIntelligence",
+            "salesProductivity",
+            "marketing"
+          ],
+          "logos": [
+            {
+              "mediaId": "https://appexchange.salesforce.com/partners/servlet/servlet.FileDownload?file=00P4V00000x73oLUAQ",
+              "logoType": "Logo",
+              "external_id": "a3L4V00000AHtoxUAD"
+            },
+            {
+              "mediaId": "https://appexchange.salesforce.com/partners/servlet/servlet.FileDownload?file=00P3000000P3XrCEAV",
+              "logoType": "High Res Logo",
+              "external_id": "a3L300000000HitEAE"
+            },
+            {
+              "mediaId": "https://appexchange.salesforce.com/partners/servlet/servlet.FileDownload?file=00P4V00000x73pEUAQ",
+              "logoType": "High Res Svg",
+              "external_id": "a3L4V00000AHtpCUAT"
+            },
+            {
+              "mediaId": "https://appexchange.salesforce.com/partners/servlet/servlet.FileDownload?file=00P4V00000x73p9UAA",
+              "logoType": "Small Svg Icon",
+              "external_id": "a3L4V00000AHtp7UAD"
+            },
+            {
+              "mediaId": "https://appexchange.salesforce.com/image_host/968f681c-219e-4d00-906a-c755f6efc463.png",
+              "logoType": "Big Logo",
+              "external_id": "a0f2c3fe-0846-4a79-94d4-99f00c9298bb"
+            }
+          ],
+          "publisher": "Seismic",
+          "averageRating": 4.75,
+          "reviewsAmount": 57,
+          "chatEnabled": false,
+          "additionalProps": {
+            "agentCount": 0,
+            "topicCount": 0,
+            "actionCount": 0,
+            "agentDescription": ""
+          }
+        }
+      ],
+      "featured": [
+        {
+          "oafId": "a0N30000000q4u7EAA",
+          "type": "force/package",
+          "title": "Complete Leads | Routing | Matching | Round Robin | AI Workflows | No-Code",
+          "description": "Respond faster than the competition with automated matching and routing in Salesforce. Then automate all your data management with the most flexible, scalable AI-powered workflow engine — so your team can focus on closing deals, not chasing data.",
+          "listingCategories": [
+            "sales",
+            "marketing",
+            "dataManagement"
+          ],
+          "logos": [
+            {
+              "mediaId": "https://appexchange.salesforce.com/image_host/f2a76c5b-5395-41b7-a8dc-69e9f669c1e7.png",
+              "logoType": "Logo",
+              "external_id": "a3L4V000009z6CXUAY"
+            },
+            {
+              "mediaId": "https://appexchange.salesforce.com/partners/servlet/servlet.FileDownload?file=00P4V00000uJ5mSUAS",
+              "logoType": "Medium Logo",
+              "external_id": "a3L4V000000exjKUAQ"
+            },
+            {
+              "mediaId": "https://appexchange.salesforce.com/image_host/3a6248af-6df6-420c-9408-6ec7104c6272.png",
+              "logoType": "Big Logo",
+              "external_id": "a3L4V000000NvJfUAK"
+            },
+            {
+              "mediaId": "https://appexchange.salesforce.com/partners/servlet/servlet.FileDownload?file=00P3000000PXUWCEA5",
+              "logoType": "High Res Logo",
+              "external_id": "a3L300000000UGBEA2"
+            },
+            {
+              "mediaId": "https://appexchange.salesforce.com/partners/servlet/servlet.FileDownload?file=00P4V00000zq96UUAQ",
+              "logoType": "High Res Svg",
+              "external_id": "a3L4V000000NvJpUAK"
+            },
+            {
+              "mediaId": "https://appexchange.salesforce.com/partners/servlet/servlet.FileDownload?file=00P4V00000suEWqUAM",
+              "logoType": "Small Svg Icon",
+              "external_id": "a3L4V000009yvIhUAI"
+            }
+          ],
+          "publisher": "Traction Complete",
+          "averageRating": 5,
+          "reviewsAmount": 22,
+          "pricing": "paid",
+          "chatEnabled": false,
+          "sponsored": true
+        },
+        {
+          "oafId": "a0N3A00000EOBliUAH",
+          "type": "force/package",
+          "title": "SurveyMonkey for Salesforce",
+          "description": "Connect your survey data with Salesforce to drive results for your business. Automatically send surveys after key interactions and take real-time action on feedback. Enrich customer and prospect data by syncing survey responses into Salesforce.",
+          "listingCategories": [
+            "marketing",
+            "customerService",
+            "humanResources"
+          ],
+          "logos": [
+            {
+              "mediaId": "https://appexchange.salesforce.com/partners/servlet/servlet.FileDownload?file=00P4V00000su7MFUAY",
+              "logoType": "Medium Logo",
+              "external_id": "a3L4V000009yuyPUAQ"
+            },
+            {
+              "mediaId": "https://appexchange.salesforce.com/partners/servlet/servlet.FileDownload?file=00P4V00000wTImZUAW",
+              "logoType": "High Res Svg",
+              "external_id": "a3L4V000009kIvFUAU"
+            },
+            {
+              "mediaId": "https://appexchange.salesforce.com/partners/servlet/servlet.FileDownload?file=00P3A00000eYCYGUA4",
+              "logoType": "Small Svg Icon",
+              "external_id": "a3L3A000000964IUAQ"
+            },
+            {
+              "mediaId": "https://appexchange.salesforce.com/image_host/2d4d9cee-3dd1-40b4-9b85-45ce57082c69.jpg",
+              "logoType": "Logo",
+              "external_id": "2668b8ff-bc0c-4ec2-9815-18da59575f60"
+            },
+            {
+              "mediaId": "https://appexchange.salesforce.com/image_host/f0e9422a-3c81-4bb0-9d5e-13f47241e750.jpg",
+              "logoType": "Big Logo",
+              "external_id": "ef7b5f74-d449-41f9-9953-2cef8ea31387"
+            }
+          ],
+          "publisher": "SurveyMonkey",
+          "averageRating": 4.57,
+          "reviewsAmount": 67,
+          "pricing": "paid",
+          "chatEnabled": true,
+          "sponsored": true
+        }
+      ]
+    }
+  },
+  {
+    "url": "https://api.appexchange.salesforce.com/recommendations/v3/listings?type=apps&page=3&pageSize=12&language=en&category=marketing",
+    "payload": {
+      "advancedQuery": "",
+      "queryText": "",
+      "searchQueryUid": "eb323cf5-1b0f-43fe-a3ba-7bc601d9ec05",
+      "totalCount": 898,
+      "listings": [
+        {
+          "oafId": "a0N4V00000HIkNdUAL",
+          "type": "force/package",
+          "title": "Salesforce GOV.UK Service Builder",
+          "description": "Create public facing government services to align with the GDS GOV.UK Design System standards without coding.",
+          "listingCategories": [
+            "websites",
+            "customerService",
+            "adminAndDeveloperTools"
+          ],
+          "logos": [
+            {
+              "mediaId": "https://appexchange.salesforce.com/partners/servlet/servlet.FileDownload?file=00P4V00000ufuIbUAI",
+              "logoType": "Logo",
+              "external_id": "a3L4V000000AFofUAG"
+            },
+            {
+              "mediaId": "https://appexchange.salesforce.com/partners/servlet/servlet.FileDownload?file=00P4V00000v66upUAA",
+              "logoType": "Big Logo",
+              "external_id": "a3L4V0000098ebCUAQ"
+            }
+          ],
+          "publisher": "Salesforce Labs",
+          "averageRating": 5,
+          "reviewsAmount": 4,
+          "chatEnabled": false,
+          "additionalProps": {
+            "agentCount": 0,
+            "topicCount": 0,
+            "actionCount": 0,
+            "agentDescription": ""
+          }
+        },
+        {
+          "oafId": "a0N30000008ZVcdEAG",
+          "type": "force/package",
+          "title": "Drag, Drop, and Upload Salesforce Files",
+          "description": "Thousands of users can't be wrong! They all rave about how much time their sales and marketing teams save by uploading multiple files, attachments, or content with just a single gesture to any standard or custom object, including files from Google Drive.",
+          "listingCategories": [
+            "marketing",
+            "documentManagement",
+            "customerService"
+          ],
+          "logos": [
+            {
+              "mediaId": "https://appexchange.salesforce.com/partners/servlet/servlet.FileDownload?file=00P4V00000tQ1sKUAS",
+              "logoType": "Logo",
+              "external_id": "a3L4V000009z9hKUAQ"
+            },
+            {
+              "mediaId": "https://appexchange.salesforce.com/partners/servlet/servlet.FileDownload?file=00P4V00000tQ1LdUAK",
+              "logoType": "Big Logo",
+              "external_id": "a3L4V000009z9hFUAQ"
+            },
+            {
+              "mediaId": "https://appexchange.salesforce.com/partners/servlet/servlet.FileDownload?file=00P3000000P3XAgEAN",
+              "logoType": "High Res Logo",
+              "external_id": "a3L300000000H4pEAE"
+            },
+            {
+              "mediaId": "https://appexchange.salesforce.com/partners/servlet/servlet.FileDownload?file=00P4V00000tQBkzUAG",
+              "logoType": "High Res Svg",
+              "external_id": "a3L4V000009z9lWUAQ"
+            },
+            {
+              "mediaId": "https://appexchange.salesforce.com/partners/servlet/servlet.FileDownload?file=00P4V00000tQBkuUAG",
+              "logoType": "Small Svg Icon",
+              "external_id": "a3L4V000009z9lRUAQ"
+            }
+          ],
+          "publisher": "SyncApps by Cazoomi",
+          "averageRating": 4.2,
+          "reviewsAmount": 93,
+          "chatEnabled": false,
+          "additionalProps": {
+            "agentCount": 0,
+            "topicCount": 0,
+            "actionCount": 0,
+            "agentDescription": ""
+          }
+        },
+        {
+          "oafId": "a0N4V00000GmPK3UAN",
+          "type": "force/package",
+          "title": "MoveData | Automatically Import Data from Popular Nonprofit Platforms",
+          "description": "Real time integration for Nonprofits who use Salesforce.\n\n⭐ Save time and gain accuracy\n⭐ Integrations are fully customisable\n⭐ Strong onboarding and ongoing support\n\nWe integrate Raisely, Funraisin', JustGiving, Enthuse and many other popular platforms.",
+          "listingCategories": [
+            "marketingAutomation",
+            "dataManagement",
+            "integration"
+          ],
+          "logos": [
+            {
+              "mediaId": "https://appexchange.salesforce.com/partners/servlet/servlet.FileDownload?file=00P4V00000rdifKUAQ",
+              "logoType": "Logo",
+              "external_id": "a3L4V00000AMHz9UAH"
+            },
+            {
+              "mediaId": "https://appexchange.salesforce.com/partners/servlet/servlet.FileDownload?file=00P4V00000rdigUUAQ",
+              "logoType": "Big Logo",
+              "external_id": "a3L4V00000AMHzEUAX"
+            },
+            {
+              "mediaId": "https://appexchange.salesforce.com/partners/servlet/servlet.FileDownload?file=00P4V00000rdigeUAA",
+              "logoType": "High Res Svg",
+              "external_id": "a3L4V00000AMHzOUAX"
+            },
+            {
+              "mediaId": "https://appexchange.salesforce.com/partners/servlet/servlet.FileDownload?file=00P4V00000rdigZUAQ",
+              "logoType": "Small Svg Icon",
+              "external_id": "a3L4V00000AMHzJUAX"
+            }
+          ],
+          "publisher": "MoveData",
+          "averageRating": 4.98,
+          "reviewsAmount": 60,
+          "chatEnabled": false,
+          "additionalProps": {
+            "agentCount": 0,
+            "topicCount": 0,
+            "actionCount": 0,
+            "agentDescription": ""
+          }
+        },
+        {
+          "oafId": "a0N3000000B41EWEAZ",
+          "type": "force/package",
+          "title": "ReferenceEdge",
+          "description": "ReferenceEdge℠ is a 100% native Salesforce app purpose-built to manage customer advocate information and automate all essential customer marketing program functions. \n• Improve sales & marketing efficiency\n• Accelerate “quote to cash”\n• Boost win rates",
+          "listingCategories": [
+            "sales",
+            "marketingAutomation",
+            "productivity"
+          ],
+          "logos": [
+            {
+              "mediaId": "https://appexchange.salesforce.com/partners/servlet/servlet.FileDownload?file=00P3000000P3XtMEAV",
+              "logoType": "Logo",
+              "external_id": "a3L300000000HkyEAE"
+            },
+            {
+              "mediaId": "https://appexchange.salesforce.com/partners/servlet/servlet.FileDownload?file=00P3000000P3XtPEAV",
+              "logoType": "Big Logo",
+              "external_id": "a3L300000000Hl1EAE"
+            },
+            {
+              "mediaId": "https://appexchange.salesforce.com/partners/servlet/servlet.FileDownload?file=00P3000000P3XsiEAF",
+              "logoType": "High Res Logo",
+              "external_id": "a3L300000000HkKEAU"
+            },
+            {
+              "mediaId": "https://appexchange.salesforce.com/partners/servlet/servlet.FileDownload?file=00P4V00000vaFl4UAE",
+              "logoType": "High Res Svg",
+              "external_id": "a3L4V00000AMR0NUAX"
+            },
+            {
+              "mediaId": "https://appexchange.salesforce.com/partners/servlet/servlet.FileDownload?file=00P4V00000vaFlHUAU",
+              "logoType": "Small Svg Icon",
+              "external_id": "a3L4V00000AMR0SUAX"
+            }
+          ],
+          "publisher": "Point of Reference, Inc.",
+          "averageRating": 4.96,
+          "reviewsAmount": 79,
+          "chatEnabled": false,
+          "additionalProps": {
+            "agentCount": 0,
+            "topicCount": 0,
+            "actionCount": 0,
+            "agentDescription": ""
+          }
+        },
+        {
+          "oafId": "a0N3000000B5cXCEAZ",
+          "type": "force/package",
+          "title": "Highspot Sales Enablement",
+          "description": "With Highspot and Salesforce, you can equip sellers with the right resources for every engagement - directly in any lead, contact and opportunity record - and quantify the business impact of your enablement initiatives, using patented AI.",
+          "listingCategories": [
+            "sales",
+            "salesMethodologies",
+            "marketing"
+          ],
+          "logos": [
+            {
+              "mediaId": "https://appexchange.salesforce.com/partners/servlet/servlet.FileDownload?file=00P4V00000rjzRhUAI",
+              "logoType": "Medium Logo",
+              "external_id": "a3L4V000009yhjVUAQ"
+            },
+            {
+              "mediaId": "https://appexchange.salesforce.com/partners/servlet/servlet.FileDownload?file=00P3000000P3PY0EAN",
+              "logoType": "High Res Logo",
+              "external_id": "a3L3000000009g9EAA"
+            },
+            {
+              "mediaId": "https://appexchange.salesforce.com/partners/servlet/servlet.FileDownload?file=00P3A00000mFAiDUAW",
+              "logoType": "High Res Svg",
+              "external_id": "a3L3A000000elDWUAY"
+            },
+            {
+              "mediaId": "https://appexchange.salesforce.com/partners/servlet/servlet.FileDownload?file=00P3A00000mErRFUA0",
+              "logoType": "Small Svg Icon",
+              "external_id": "a3L3A000000ekzyUAA"
+            },
+            {
+              "mediaId": "https://appexchange.salesforce.com/image_host/dde9f3d3-5772-4b9f-bd46-ad0f096ed7ca.png",
+              "logoType": "Logo",
+              "external_id": "df4facce-1dd6-4b1b-aa9f-25fdb738a728"
+            },
+            {
+              "mediaId": "https://appexchange.salesforce.com/image_host/f8f2955a-0558-427b-8065-7604533a63c7.png",
+              "logoType": "Big Logo",
+              "external_id": "4e6289ac-7534-42da-a9cc-ab7ac148193e"
+            }
+          ],
+          "publisher": "Highspot",
+          "averageRating": 4.96,
+          "reviewsAmount": 92,
+          "chatEnabled": false,
+          "additionalProps": {
+            "agentCount": 0,
+            "topicCount": 0,
+            "actionCount": 0,
+            "agentDescription": ""
+          }
+        },
+        {
+          "oafId": "a0N30000008agC1EAI",
+          "type": "force/package",
+          "title": "Campaign Monitor for Salesforce | Email Marketing & Mass Email (CM4SF)",
+          "description": "Discover why Campaign Monitor is the #1 Salesforce app. With this integration, you’ll no longer need your tech team to manually pull a list or gather data for you before you can create the hyper-targeted emails your subscribers expect.",
+          "listingCategories": [
+            "massEmailsAndMessaging",
+            "integration"
+          ],
+          "logos": [
+            {
+              "mediaId": "https://appexchange.salesforce.com/partners/servlet/servlet.FileDownload?file=00P3000000QH1f9EAD",
+              "logoType": "Big Logo",
+              "external_id": "a3L30000009CfQmEAK"
+            },
+            {
+              "mediaId": "https://appexchange.salesforce.com/partners/servlet/servlet.FileDownload?file=00P3000000P3TLtEAN",
+              "logoType": "High Res Logo",
+              "external_id": "a3L300000000DPAEA2"
+            },
+            {
+              "mediaId": "https://appexchange.salesforce.com/partners/servlet/servlet.FileDownload?file=00P3A00000ebGHcUAM",
+              "logoType": "High Res Svg",
+              "external_id": "a3L3A000000eYkgUAE"
+            },
+            {
+              "mediaId": "https://appexchange.salesforce.com/partners/servlet/servlet.FileDownload?file=00P3A00000ebGHhUAM",
+              "logoType": "Small Svg Icon",
+              "external_id": "a3L3A000000eYklUAE"
+            },
+            {
+              "mediaId": "https://appexchange.salesforce.com/image_host/80167704-a62a-4a05-8055-b2238d51d1ef.png",
+              "logoType": "Logo",
+              "external_id": "c78d54df-93e9-45dc-b654-156c941a5fe5"
+            }
+          ],
+          "publisher": "Beaufort 12 FZCO",
+          "averageRating": 4.85,
+          "reviewsAmount": 94,
+          "chatEnabled": false,
+          "additionalProps": {
+            "agentCount": 0,
+            "topicCount": 0,
+            "actionCount": 0,
+            "agentDescription": ""
+          }
+        },
+        {
+          "oafId": "a0N30000009xEnMEAU",
+          "type": "force/package",
+          "title": "Yesware: Calendar Sync & Summary Task Logging",
+          "description": "Click “Get It Now” to install our bi-directional calendar sync and our custom fields for summary task logging. Bi-directional calendar sync keeps your meeting data up to date. Summary task logging captures all email engagement data at email task record. ",
+          "listingCategories": [
+            "sales",
+            "marketing",
+            "emailAndCalendarSync"
+          ],
+          "logos": [
+            {
+              "mediaId": "https://appexchange.salesforce.com/image_host/dad536c8-2a8c-47d0-b3d9-10fe57fbd5e2.png",
+              "logoType": "Logo",
+              "external_id": "a3L300000000FC7EAM"
+            },
+            {
+              "mediaId": "https://appexchange.salesforce.com/partners/servlet/servlet.FileDownload?file=00P3A00000gMVCNUA4",
+              "logoType": "Big Logo",
+              "external_id": "a3L3A0000001VTtUAM"
+            },
+            {
+              "mediaId": "https://appexchange.salesforce.com/partners/servlet/servlet.FileDownload?file=00P3000000P3VF1EAN",
+              "logoType": "High Res Logo",
+              "external_id": "a3L300000000FCAEA2"
+            }
+          ],
+          "publisher": "Yesware, Inc.",
+          "averageRating": 4.78,
+          "reviewsAmount": 88,
+          "chatEnabled": false,
+          "additionalProps": {
+            "agentCount": 0,
+            "topicCount": 0,
+            "actionCount": 0,
+            "agentDescription": ""
+          }
+        },
+        {
+          "oafId": "a0N3A00000EOBliUAH",
+          "type": "force/package",
+          "title": "SurveyMonkey for Salesforce",
+          "description": "Connect your survey data with Salesforce to drive results for your business. Automatically send surveys after key interactions and take real-time action on feedback. Enrich customer and prospect data by syncing survey responses into Salesforce.",
+          "listingCategories": [
+            "marketing",
+            "customerService",
+            "humanResources"
+          ],
+          "logos": [
+            {
+              "mediaId": "https://appexchange.salesforce.com/partners/servlet/servlet.FileDownload?file=00P4V00000su7MFUAY",
+              "logoType": "Medium Logo",
+              "external_id": "a3L4V000009yuyPUAQ"
+            },
+            {
+              "mediaId": "https://appexchange.salesforce.com/partners/servlet/servlet.FileDownload?file=00P4V00000wTImZUAW",
+              "logoType": "High Res Svg",
+              "external_id": "a3L4V000009kIvFUAU"
+            },
+            {
+              "mediaId": "https://appexchange.salesforce.com/partners/servlet/servlet.FileDownload?file=00P3A00000eYCYGUA4",
+              "logoType": "Small Svg Icon",
+              "external_id": "a3L3A000000964IUAQ"
+            },
+            {
+              "mediaId": "https://appexchange.salesforce.com/image_host/2d4d9cee-3dd1-40b4-9b85-45ce57082c69.jpg",
+              "logoType": "Logo",
+              "external_id": "2668b8ff-bc0c-4ec2-9815-18da59575f60"
+            },
+            {
+              "mediaId": "https://appexchange.salesforce.com/image_host/f0e9422a-3c81-4bb0-9d5e-13f47241e750.jpg",
+              "logoType": "Big Logo",
+              "external_id": "ef7b5f74-d449-41f9-9953-2cef8ea31387"
+            }
+          ],
+          "publisher": "SurveyMonkey",
+          "averageRating": 4.57,
+          "reviewsAmount": 67,
+          "chatEnabled": true,
+          "additionalProps": {
+            "agentCount": 0,
+            "topicCount": 0,
+            "actionCount": 0,
+            "agentDescription": ""
+          }
+        },
+        {
+          "oafId": "a0N3A00000FvMzfUAF",
+          "type": "force/package",
+          "title": "Textolic: SMS & WhatsApp Messaging for Salesforce | AI-Powered Communication",
+          "description": "Textolic SMS & WhatsApp integration for Salesforce helps teams automate bulk messaging with AI workflows. This Salesforce SMS tool unifies SMS, WhatsApp, CTI, and AI chatbots to deliver smooth conversations and higher engagement.",
+          "listingCategories": [
+            "sales",
+            "marketing",
+            "customerService"
+          ],
+          "logos": [
+            {
+              "mediaId": "https://appexchange.salesforce.com/partners/servlet/servlet.FileDownload?file=00P4V00000sLW8RUAW",
+              "logoType": "Logo",
+              "external_id": "a3L4V00000AHol2UAD"
+            },
+            {
+              "mediaId": "https://appexchange.salesforce.com/partners/servlet/servlet.FileDownload?file=00P4V00000sLW8WUAW",
+              "logoType": "Big Logo",
+              "external_id": "a3L4V00000AHol7UAD"
+            }
+          ],
+          "publisher": "360 Degree Cloud Technologies Pvt. Ltd.",
+          "averageRating": 4.95,
+          "reviewsAmount": 80,
+          "chatEnabled": true,
+          "additionalProps": {
+            "agentCount": 0,
+            "topicCount": 0,
+            "actionCount": 0,
+            "agentDescription": ""
+          }
+        },
+        {
+          "oafId": "a0N30000007rUqwEAE",
+          "type": "force/package",
+          "title": "Full Circle Insights: Multi-Touch Attribution, Funnel Measurement, and ABM",
+          "description": "Full Circle Insights delivers multi- touch attribution, funnel measurement, customer journey tracking & ABM performance in Salesforce, helping optimize marketing ROI with confidence. ",
+          "listingCategories": [
+            "leadAndOpportunityManagement",
+            "campaignManagement",
+            "accountBasedMarketing"
+          ],
+          "logos": [
+            {
+              "mediaId": "https://appexchange.salesforce.com/image_host/2fcf410d-a67b-47cd-a121-bf7d6edfe2ae.jpg",
+              "logoType": "Big Logo",
+              "external_id": "a3L30000009GqDeEAK"
+            },
+            {
+              "mediaId": "https://appexchange.salesforce.com/partners/servlet/servlet.FileDownload?file=00P3000000PaUm8EAF",
+              "logoType": "High Res Logo",
+              "external_id": "a3L300000000WTvEAM"
+            },
+            {
+              "mediaId": "https://appexchange.salesforce.com/image_host/8db25e23-e3e8-4f61-a78e-5851d445d0f3.png",
+              "logoType": "Logo",
+              "external_id": "c2a89bda-19b2-4b0b-a44f-5d200434170c"
+            }
+          ],
+          "publisher": "Full Circle Insights",
+          "averageRating": 5,
+          "reviewsAmount": 53,
+          "chatEnabled": false,
+          "additionalProps": {
+            "agentCount": 0,
+            "topicCount": 0,
+            "actionCount": 0,
+            "agentDescription": ""
+          }
+        },
+        {
+          "oafId": "a0N3000000B3GQGEA3",
+          "type": "force/package",
+          "title": "Reference Management for Salesforce",
+          "description": "Request references from Salesforce, fulfill them in Influitive, and incentivize your top referenceable customers.\n",
+          "listingCategories": [
+            "sales",
+            "marketing",
+            "productivity"
+          ],
+          "logos": [
+            {
+              "mediaId": "https://appexchange.salesforce.com/partners/servlet/servlet.FileDownload?file=00P4V00000v9Ls0UAE",
+              "logoType": "Logo",
+              "external_id": "a3L4V000009H2POUA0"
+            },
+            {
+              "mediaId": "https://appexchange.salesforce.com/partners/servlet/servlet.FileDownload?file=00P4V00000v9PV9UAM",
+              "logoType": "Big Logo",
+              "external_id": "a3L4V000009H2QWUA0"
+            },
+            {
+              "mediaId": "https://appexchange.salesforce.com/partners/servlet/servlet.FileDownload?file=00P3000000P3P8xEAF",
+              "logoType": "High Res Logo",
+              "external_id": "a3L3000000009HQEAY"
+            },
+            {
+              "mediaId": "https://appexchange.salesforce.com/partners/servlet/servlet.FileDownload?file=00P4V00000v9M01UAE",
+              "logoType": "High Res Svg",
+              "external_id": "a3L4V000009H2PnUAK"
+            },
+            {
+              "mediaId": "https://appexchange.salesforce.com/partners/servlet/servlet.FileDownload?file=00P4V00000v9LrvUAE",
+              "logoType": "Small Svg Icon",
+              "external_id": "a3L4V000009H2PJUA0"
+            }
+          ],
+          "publisher": "Influitive",
+          "averageRating": 4.83,
+          "reviewsAmount": 89,
+          "chatEnabled": false,
+          "additionalProps": {
+            "agentCount": 0,
+            "topicCount": 0,
+            "actionCount": 0,
+            "agentDescription": ""
+          }
+        },
+        {
+          "oafId": "a0N300000016a08EAA",
+          "type": "force/package",
+          "title": "BridgeMail Email Marketing, Marketing Automation, & Lead Management",
+          "description": "Rated #1 for customer support/satisfaction + an 87% customer retention rate - READ THE REVIEWS!!! \n\nBe fully functional in less than 27 minutes with no integration partner and no errors. B2B & B2C.\n\nLearn more about the features/functionality below.",
+          "listingCategories": [
+            "marketingAutomation"
+          ],
+          "logos": [
+            {
+              "mediaId": "https://appexchange.salesforce.com/partners/servlet/servlet.FileDownload?file=00P3000000P3VwiEAF",
+              "logoType": "Logo",
+              "external_id": "a3L300000000Ft3EAE"
+            },
+            {
+              "mediaId": "https://appexchange.salesforce.com/partners/servlet/servlet.FileDownload?file=00P3A00000dPUauUAG",
+              "logoType": "Big Logo",
+              "external_id": "a3L3A00000010tHUAQ"
+            },
+            {
+              "mediaId": "https://appexchange.salesforce.com/partners/servlet/servlet.FileDownload?file=00P3000000P3VwjEAF",
+              "logoType": "High Res Logo",
+              "external_id": "a3L300000000Ft4EAE"
+            }
+          ],
+          "publisher": "Makesbridge Technology, Inc.",
+          "averageRating": 4.92,
+          "reviewsAmount": 64,
+          "chatEnabled": false,
+          "additionalProps": {
+            "agentCount": 0,
+            "topicCount": 0,
+            "actionCount": 0,
+            "agentDescription": ""
+          }
+        }
+      ],
+      "featured": [
+        {
+          "oafId": "a0N30000000q4u7EAA",
+          "type": "force/package",
+          "title": "Complete Leads | Routing | Matching | Round Robin | AI Workflows | No-Code",
+          "description": "Respond faster than the competition with automated matching and routing in Salesforce. Then automate all your data management with the most flexible, scalable AI-powered workflow engine — so your team can focus on closing deals, not chasing data.",
+          "listingCategories": [
+            "sales",
+            "marketing",
+            "dataManagement"
+          ],
+          "logos": [
+            {
+              "mediaId": "https://appexchange.salesforce.com/image_host/f2a76c5b-5395-41b7-a8dc-69e9f669c1e7.png",
+              "logoType": "Logo",
+              "external_id": "a3L4V000009z6CXUAY"
+            },
+            {
+              "mediaId": "https://appexchange.salesforce.com/partners/servlet/servlet.FileDownload?file=00P4V00000uJ5mSUAS",
+              "logoType": "Medium Logo",
+              "external_id": "a3L4V000000exjKUAQ"
+            },
+            {
+              "mediaId": "https://appexchange.salesforce.com/image_host/3a6248af-6df6-420c-9408-6ec7104c6272.png",
+              "logoType": "Big Logo",
+              "external_id": "a3L4V000000NvJfUAK"
+            },
+            {
+              "mediaId": "https://appexchange.salesforce.com/partners/servlet/servlet.FileDownload?file=00P3000000PXUWCEA5",
+              "logoType": "High Res Logo",
+              "external_id": "a3L300000000UGBEA2"
+            },
+            {
+              "mediaId": "https://appexchange.salesforce.com/partners/servlet/servlet.FileDownload?file=00P4V00000zq96UUAQ",
+              "logoType": "High Res Svg",
+              "external_id": "a3L4V000000NvJpUAK"
+            },
+            {
+              "mediaId": "https://appexchange.salesforce.com/partners/servlet/servlet.FileDownload?file=00P4V00000suEWqUAM",
+              "logoType": "Small Svg Icon",
+              "external_id": "a3L4V000009yvIhUAI"
+            }
+          ],
+          "publisher": "Traction Complete",
+          "averageRating": 5,
+          "reviewsAmount": 22,
+          "pricing": "paid",
+          "chatEnabled": false,
+          "sponsored": true
+        },
+        {
+          "oafId": "a0N3A00000EOBliUAH",
+          "type": "force/package",
+          "title": "SurveyMonkey for Salesforce",
+          "description": "Connect your survey data with Salesforce to drive results for your business. Automatically send surveys after key interactions and take real-time action on feedback. Enrich customer and prospect data by syncing survey responses into Salesforce.",
+          "listingCategories": [
+            "marketing",
+            "customerService",
+            "humanResources"
+          ],
+          "logos": [
+            {
+              "mediaId": "https://appexchange.salesforce.com/partners/servlet/servlet.FileDownload?file=00P4V00000su7MFUAY",
+              "logoType": "Medium Logo",
+              "external_id": "a3L4V000009yuyPUAQ"
+            },
+            {
+              "mediaId": "https://appexchange.salesforce.com/partners/servlet/servlet.FileDownload?file=00P4V00000wTImZUAW",
+              "logoType": "High Res Svg",
+              "external_id": "a3L4V000009kIvFUAU"
+            },
+            {
+              "mediaId": "https://appexchange.salesforce.com/partners/servlet/servlet.FileDownload?file=00P3A00000eYCYGUA4",
+              "logoType": "Small Svg Icon",
+              "external_id": "a3L3A000000964IUAQ"
+            },
+            {
+              "mediaId": "https://appexchange.salesforce.com/image_host/2d4d9cee-3dd1-40b4-9b85-45ce57082c69.jpg",
+              "logoType": "Logo",
+              "external_id": "2668b8ff-bc0c-4ec2-9815-18da59575f60"
+            },
+            {
+              "mediaId": "https://appexchange.salesforce.com/image_host/f0e9422a-3c81-4bb0-9d5e-13f47241e750.jpg",
+              "logoType": "Big Logo",
+              "external_id": "ef7b5f74-d449-41f9-9953-2cef8ea31387"
+            }
+          ],
+          "publisher": "SurveyMonkey",
+          "averageRating": 4.57,
+          "reviewsAmount": 67,
+          "pricing": "paid",
+          "chatEnabled": true,
+          "sponsored": true
+        }
+      ]
+    }
+  },
+  {
+    "url": "https://api.appexchange.salesforce.com/recommendations/v3/listings?type=apps&page=4&pageSize=12&language=en&category=marketing",
+    "payload": {
+      "advancedQuery": "",
+      "queryText": "",
+      "searchQueryUid": "88ad847d-0d58-479b-8c7e-35e460baa5c7",
+      "totalCount": 898,
+      "listings": [
+        {
+          "oafId": "a0N300000016a08EAA",
+          "type": "force/package",
+          "title": "BridgeMail Email Marketing, Marketing Automation, & Lead Management",
+          "description": "Rated #1 for customer support/satisfaction + an 87% customer retention rate - READ THE REVIEWS!!! \n\nBe fully functional in less than 27 minutes with no integration partner and no errors. B2B & B2C.\n\nLearn more about the features/functionality below.",
+          "listingCategories": [
+            "marketingAutomation"
+          ],
+          "logos": [
+            {
+              "mediaId": "https://appexchange.salesforce.com/partners/servlet/servlet.FileDownload?file=00P3000000P3VwiEAF",
+              "logoType": "Logo",
+              "external_id": "a3L300000000Ft3EAE"
+            },
+            {
+              "mediaId": "https://appexchange.salesforce.com/partners/servlet/servlet.FileDownload?file=00P3A00000dPUauUAG",
+              "logoType": "Big Logo",
+              "external_id": "a3L3A00000010tHUAQ"
+            },
+            {
+              "mediaId": "https://appexchange.salesforce.com/partners/servlet/servlet.FileDownload?file=00P3000000P3VwjEAF",
+              "logoType": "High Res Logo",
+              "external_id": "a3L300000000Ft4EAE"
+            }
+          ],
+          "publisher": "Makesbridge Technology, Inc.",
+          "averageRating": 4.92,
+          "reviewsAmount": 64,
+          "chatEnabled": false,
+          "additionalProps": {
+            "agentCount": 0,
+            "topicCount": 0,
+            "actionCount": 0,
+            "agentDescription": ""
+          }
+        },
+        {
+          "oafId": "a0N3A00000FP3yFUAT",
+          "type": "salesforce-platform/api",
+          "title": "Query Studio for Marketing Cloud",
+          "description": "Query studio allows you to quickly run queries in the Marketing Cloud with a similar experience to SQL Server Studio or MySQL workbench.",
+          "listingCategories": [
+            "marketing"
+          ],
+          "logos": [
+            {
+              "mediaId": "https://appexchange.salesforce.com/partners/servlet/servlet.FileDownload?file=00P3A00000lXA7fUAG",
+              "logoType": "Logo",
+              "external_id": "a3L3A00000A20hFUAR"
+            },
+            {
+              "mediaId": "https://appexchange.salesforce.com/partners/servlet/servlet.FileDownload?file=00P3A00000lXA7kUAG",
+              "logoType": "Big Logo",
+              "external_id": "a3L3A00000A20hKUAR"
+            }
+          ],
+          "publisher": "Salesforce Labs",
+          "averageRating": 3.88,
+          "reviewsAmount": 68,
+          "chatEnabled": false,
+          "additionalProps": {
+            "agentCount": 0,
+            "topicCount": 0,
+            "actionCount": 0,
+            "agentDescription": ""
+          }
+        },
+        {
+          "oafId": "a0N30000007rUqwEAE",
+          "type": "force/package",
+          "title": "Full Circle Insights: Multi-Touch Attribution, Funnel Measurement, and ABM",
+          "description": "Full Circle Insights delivers multi- touch attribution, funnel measurement, customer journey tracking & ABM performance in Salesforce, helping optimize marketing ROI with confidence. ",
+          "listingCategories": [
+            "leadAndOpportunityManagement",
+            "campaignManagement",
+            "accountBasedMarketing"
+          ],
+          "logos": [
+            {
+              "mediaId": "https://appexchange.salesforce.com/image_host/2fcf410d-a67b-47cd-a121-bf7d6edfe2ae.jpg",
+              "logoType": "Big Logo",
+              "external_id": "a3L30000009GqDeEAK"
+            },
+            {
+              "mediaId": "https://appexchange.salesforce.com/partners/servlet/servlet.FileDownload?file=00P3000000PaUm8EAF",
+              "logoType": "High Res Logo",
+              "external_id": "a3L300000000WTvEAM"
+            },
+            {
+              "mediaId": "https://appexchange.salesforce.com/image_host/8db25e23-e3e8-4f61-a78e-5851d445d0f3.png",
+              "logoType": "Logo",
+              "external_id": "c2a89bda-19b2-4b0b-a44f-5d200434170c"
+            }
+          ],
+          "publisher": "Full Circle Insights",
+          "averageRating": 5,
+          "reviewsAmount": 53,
+          "chatEnabled": false,
+          "additionalProps": {
+            "agentCount": 0,
+            "topicCount": 0,
+            "actionCount": 0,
+            "agentDescription": ""
+          }
+        },
+        {
+          "oafId": "a0N30000000ptq1EAA",
+          "type": "force/package",
+          "title": "Gimbal Barcode",
+          "description": "Flexible barcode and QR solutions for any business process in Salesforce. Common use cases: Inventory, Attendance, Field Service, Fulfillment, and others.  Excellent implementation assistance and support.",
+          "listingCategories": [
+            "eventManagement",
+            "fieldService",
+            "orderAndInventoryManagement"
+          ],
+          "logos": [
+            {
+              "mediaId": "https://appexchange.salesforce.com/partners/servlet/servlet.FileDownload?file=00P3000000P3Zd9EAF",
+              "logoType": "Logo",
+              "external_id": "a3L300000000JRXEA2"
+            },
+            {
+              "mediaId": "https://appexchange.salesforce.com/partners/servlet/servlet.FileDownload?file=00P3000000P3ZdUEAV",
+              "logoType": "Big Logo",
+              "external_id": "a3L300000000JRsEAM"
+            },
+            {
+              "mediaId": "https://appexchange.salesforce.com/partners/servlet/servlet.FileDownload?file=00P3000000P3Zd1EAF",
+              "logoType": "High Res Logo",
+              "external_id": "a3L300000000JRPEA2"
+            },
+            {
+              "mediaId": "https://appexchange.salesforce.com/partners/servlet/servlet.FileDownload?file=00P4V000011vx8rUAA",
+              "logoType": "High Res Svg",
+              "external_id": "a3L4V00000AyJDvUAN"
+            },
+            {
+              "mediaId": "https://appexchange.salesforce.com/partners/servlet/servlet.FileDownload?file=00P4V000011vx5TUAQ",
+              "logoType": "Small Svg Icon",
+              "external_id": "a3L4V00000AyJF2UAN"
+            }
+          ],
+          "publisher": "Gimbal Logic",
+          "averageRating": 4.86,
+          "reviewsAmount": 88,
+          "chatEnabled": false,
+          "additionalProps": {
+            "agentCount": 0,
+            "topicCount": 0,
+            "actionCount": 0,
+            "agentDescription": ""
+          }
+        },
+        {
+          "oafId": "a0N3A00000EOBliUAH",
+          "type": "force/package",
+          "title": "SurveyMonkey for Salesforce",
+          "description": "Connect your survey data with Salesforce to drive results for your business. Automatically send surveys after key interactions and take real-time action on feedback. Enrich customer and prospect data by syncing survey responses into Salesforce.",
+          "listingCategories": [
+            "marketing",
+            "customerService",
+            "humanResources"
+          ],
+          "logos": [
+            {
+              "mediaId": "https://appexchange.salesforce.com/partners/servlet/servlet.FileDownload?file=00P4V00000su7MFUAY",
+              "logoType": "Medium Logo",
+              "external_id": "a3L4V000009yuyPUAQ"
+            },
+            {
+              "mediaId": "https://appexchange.salesforce.com/partners/servlet/servlet.FileDownload?file=00P4V00000wTImZUAW",
+              "logoType": "High Res Svg",
+              "external_id": "a3L4V000009kIvFUAU"
+            },
+            {
+              "mediaId": "https://appexchange.salesforce.com/partners/servlet/servlet.FileDownload?file=00P3A00000eYCYGUA4",
+              "logoType": "Small Svg Icon",
+              "external_id": "a3L3A000000964IUAQ"
+            },
+            {
+              "mediaId": "https://appexchange.salesforce.com/image_host/2d4d9cee-3dd1-40b4-9b85-45ce57082c69.jpg",
+              "logoType": "Logo",
+              "external_id": "2668b8ff-bc0c-4ec2-9815-18da59575f60"
+            },
+            {
+              "mediaId": "https://appexchange.salesforce.com/image_host/f0e9422a-3c81-4bb0-9d5e-13f47241e750.jpg",
+              "logoType": "Big Logo",
+              "external_id": "ef7b5f74-d449-41f9-9953-2cef8ea31387"
+            }
+          ],
+          "publisher": "SurveyMonkey",
+          "averageRating": 4.57,
+          "reviewsAmount": 67,
+          "chatEnabled": true,
+          "additionalProps": {
+            "agentCount": 0,
+            "topicCount": 0,
+            "actionCount": 0,
+            "agentDescription": ""
+          }
+        },
+        {
+          "oafId": "a0N30000003ICFYEA4",
+          "type": "force/package",
+          "title": "Qualtrics - Customer Experience Management for Salesforce",
+          "description": "Combine customer experience data with operational data to better understand customer behavior and build strong client account relationships. Automate customer feedback across workflows, analyze data, and embed insights in your Salesforce dashboard.",
+          "listingCategories": [
+            "surveys"
+          ],
+          "logos": [
+            {
+              "mediaId": "https://appexchange.salesforce.com/partners/servlet/servlet.FileDownload?file=00P3A00000knfEqUAI",
+              "logoType": "Logo",
+              "external_id": "a3L3A000009xz5eUAA"
+            },
+            {
+              "mediaId": "https://appexchange.salesforce.com/partners/servlet/servlet.FileDownload?file=00P3A00000knfNqUAI",
+              "logoType": "Big Logo",
+              "external_id": "a3L3A000009xz5jUAA"
+            },
+            {
+              "mediaId": "https://appexchange.salesforce.com/partners/servlet/servlet.FileDownload?file=00P3A00000kndXGUAY",
+              "logoType": "High Res Svg",
+              "external_id": "a3L3A000009xz4RUAQ"
+            },
+            {
+              "mediaId": "https://appexchange.salesforce.com/partners/servlet/servlet.FileDownload?file=00P3A00000kndWwUAI",
+              "logoType": "Small Svg Icon",
+              "external_id": "a3L3A000009xz4MUAQ"
+            }
+          ],
+          "publisher": "Qualtrics",
+          "averageRating": 4,
+          "reviewsAmount": 60,
+          "chatEnabled": false,
+          "additionalProps": {
+            "agentCount": 0,
+            "topicCount": 0,
+            "actionCount": 0,
+            "agentDescription": ""
+          }
+        },
+        {
+          "oafId": "a0N30000009x6YDEAY",
+          "type": "force/package",
+          "title": "Impowr Free - Self-Service Import Solution for Salesforce",
+          "description": "Impowr Free is a self-service import solution designed for end-users, not administrators. Unlike Data Loader, Impowr Free enables users, partners and customers to import spreadsheet data to any Salesforce object within governed parameters.",
+          "listingCategories": [
+            "campaignManagement",
+            "integration",
+            "dataManagement"
+          ],
+          "logos": [
+            {
+              "mediaId": "https://appexchange.salesforce.com/partners/servlet/servlet.FileDownload?file=00P3000000P3Q0kEAF",
+              "logoType": "High Res Logo",
+              "external_id": "a3L300000000A8eEAE"
+            },
+            {
+              "mediaId": "https://appexchange.salesforce.com/partners/servlet/servlet.FileDownload?file=00P3A00000jWAY2UAO",
+              "logoType": "High Res Svg",
+              "external_id": "a3L3A000000Jt5YUAS"
+            },
+            {
+              "mediaId": "https://appexchange.salesforce.com/partners/servlet/servlet.FileDownload?file=00P3A00000jWAXxUAO",
+              "logoType": "Small Svg Icon",
+              "external_id": "a3L3A000000Jt5TUAS"
+            },
+            {
+              "mediaId": "https://appexchange.salesforce.com/image_host/77ceeeb3-152e-4ba8-8d62-668a6c40dd7d.png",
+              "logoType": "Logo",
+              "external_id": "3091a90a-f6bb-460f-9aeb-5b6ae4ad861d"
+            },
+            {
+              "mediaId": "https://appexchange.salesforce.com/image_host/ff2e8bd3-5dbc-49c6-aca0-b5d3bdac39a0.png",
+              "logoType": "Big Logo",
+              "external_id": "f15ab33c-2b45-4d82-80d5-1e1ff6ac4731"
+            }
+          ],
+          "publisher": "ProvenWorks",
+          "averageRating": 4.84,
+          "reviewsAmount": 50,
+          "chatEnabled": false,
+          "additionalProps": {
+            "agentCount": 0,
+            "topicCount": 0,
+            "actionCount": 0,
+            "agentDescription": ""
+          }
+        },
+        {
+          "oafId": "de2083cc-858b-4c71-946f-4cab33143629",
+          "type": "force/package",
+          "title": "BreezyBit: 100% Native Form Builder for Salesforce",
+          "description": "BreezyBit Form Builder, a native Form Builder for Salesforce, enables lightning-fast form creation with a user-friendly interface that mirrors Salesforce Lightning. It offers secure, code-free customization, streamlining the entire process efficiently. ",
+          "listingCategories": [
+            "marketing",
+            "surveys",
+            "itAndAdministration"
+          ],
+          "logos": [
+            {
+              "mediaId": "https://appexchange.salesforce.com/image_host/05055fd5-1d4e-48d5-aacf-a83306f5ca0d.png",
+              "logoType": "Logo",
+              "external_id": "90a00e99-160d-4f52-9e66-ebbe288fbe12"
+            },
+            {
+              "mediaId": "https://appexchange.salesforce.com/image_host/f000eea3-ba9a-4567-88c7-ea5c72c14030.png",
+              "logoType": "Big Logo",
+              "external_id": "05900cd4-dda1-4aa0-9aff-93b1dce45533"
+            }
+          ],
+          "publisher": "BreezyBit LLC",
+          "averageRating": 5,
+          "reviewsAmount": 18,
+          "chatEnabled": false,
+          "additionalProps": {
+            "agentCount": 0,
+            "topicCount": 0,
+            "actionCount": 0,
+            "agentDescription": ""
+          }
+        },
+        {
+          "oafId": "a0N4V00000GXZ1uUAH",
+          "type": "force/package",
+          "title": "Translation & Localization Intelligence",
+          "description": "Natively built on Salesforce.  Verbis is the first translation and localization intelligence layer applicable to all Salesforce clouds. Your Translation Management System TMS inside Salesforce. Install the trial and reach out to support@venizum.com\n\n",
+          "listingCategories": [
+            "marketing",
+            "customerService"
+          ],
+          "logos": [
+            {
+              "mediaId": "https://appexchange.salesforce.com/image_host/5ea28cda-0136-4a5d-86ba-f4340ce14384.png",
+              "logoType": "Big Logo",
+              "external_id": "a3L4V0000005g9FUAQ"
+            },
+            {
+              "mediaId": "https://appexchange.salesforce.com/partners/servlet/servlet.FileDownload?file=00P4V00000xKXTJUA4",
+              "logoType": "High Res Svg",
+              "external_id": "a3L4V0000005g9KUAQ"
+            },
+            {
+              "mediaId": "https://appexchange.salesforce.com/partners/servlet/servlet.FileDownload?file=00P4V00000rfInvUAE",
+              "logoType": "Small Svg Icon",
+              "external_id": "a3L4V00000AMJ1pUAH"
+            },
+            {
+              "mediaId": "https://appexchange.salesforce.com/image_host/af9a4095-4803-42f6-9004-3cd1aae59d4f.png",
+              "logoType": "Logo",
+              "external_id": "e844e7f1-2244-4df9-8d76-d30254692b4c"
+            }
+          ],
+          "publisher": "Venizum Marketing Technology AB",
+          "averageRating": 5,
+          "reviewsAmount": 14,
+          "chatEnabled": false,
+          "additionalProps": {
+            "agentCount": 0,
+            "topicCount": 0,
+            "actionCount": 0,
+            "agentDescription": ""
+          }
+        },
+        {
+          "oafId": "a0N4V00000FguNKUAZ",
+          "type": "force/package",
+          "title": "AC Events Enterprise: In-person, Virtual, and Hybrid Event Management",
+          "description": "✓A Salesforce-native go-to app for events on Experience Cloud ✓ Flexible & customisable ✓All types of private or public events of any complexity ✓ User-friendly interface ✓Customizable event pages ✓ Attendee management ✓ Automated communications",
+          "listingCategories": [
+            "marketing",
+            "eventManagement",
+            "campaignManagement"
+          ],
+          "logos": [
+            {
+              "mediaId": "https://appexchange.salesforce.com/partners/servlet/servlet.FileDownload?file=00P4V00000otx5wUAA",
+              "logoType": "Logo",
+              "external_id": "a3L4V0000009qIaUAI"
+            },
+            {
+              "mediaId": "https://appexchange.salesforce.com/partners/servlet/servlet.FileDownload?file=00P4V00000x8WQsUAM",
+              "logoType": "Big Logo",
+              "external_id": "a3L4V00000AHvULUA1"
+            },
+            {
+              "mediaId": "https://appexchange.salesforce.com/partners/servlet/servlet.FileDownload?file=00P4V00000x8WR7UAM",
+              "logoType": "High Res Svg",
+              "external_id": "a3L4V00000AHvUaUAL"
+            },
+            {
+              "mediaId": "https://appexchange.salesforce.com/partners/servlet/servlet.FileDownload?file=00P4V00000otzADUAY",
+              "logoType": "Small Svg Icon",
+              "external_id": "a3L4V0000009qM8UAI"
+            }
+          ],
+          "publisher": "Advanced Communities",
+          "averageRating": 4.94,
+          "reviewsAmount": 16,
+          "chatEnabled": false,
+          "additionalProps": {
+            "agentCount": 0,
+            "topicCount": 0,
+            "actionCount": 0,
+            "agentDescription": ""
+          }
+        },
+        {
+          "oafId": "a0N3A00000EFpKZUA1",
+          "type": "force/package",
+          "title": "Jifflenow",
+          "description": "Streamline your scheduling with the Jifflenow Salesforce App. Empower your sales team to book and manage customer meetings directly within Salesforce, eliminating the need to switch between platforms. Enhance your team's productivity and ensure a seamless",
+          "listingCategories": [
+            "sales",
+            "marketing",
+            "productivity"
+          ],
+          "logos": [
+            {
+              "mediaId": "https://appexchange.salesforce.com/image_host/76640a59-e61a-491f-9df2-afa0b9626f83.png",
+              "logoType": "Logo",
+              "external_id": "98c6b845-3d66-4f35-8095-57d258daaf18"
+            },
+            {
+              "mediaId": "https://appexchange.salesforce.com/image_host/40b53c57-f3ea-4da7-9336-432eddcc478c.png",
+              "logoType": "Big Logo",
+              "external_id": "c2a24b18-6ab5-44a9-bfc3-752010429402"
+            }
+          ],
+          "publisher": "Cvent, Inc.",
+          "averageRating": 4.88,
+          "reviewsAmount": 17,
+          "chatEnabled": false,
+          "additionalProps": {
+            "agentCount": 0,
+            "topicCount": 0,
+            "actionCount": 0,
+            "agentDescription": ""
+          }
+        },
+        {
+          "oafId": "09f140b4-fcb2-422b-a728-4895d629ecb2",
+          "type": "force/package",
+          "title": " Watbox - Whatsapp for Salesforce, SMS  and CTI",
+          "description": "WatBox is a Salesforce-native messaging and calling platform that enables sales and support teams to communicate with customers using WhatsApp, SMS, and CTI directly inside Salesforce. Built for Get Started with a 14 Days Free Trial  https://watbox.ai/",
+          "listingCategories": [
+            "sales",
+            "marketing",
+            "customerService"
+          ],
+          "logos": [
+            {
+              "mediaId": "https://appexchange.salesforce.com/image_host/a425a648-6601-480d-b1e8-1daa50633acc.png",
+              "logoType": "Logo",
+              "external_id": "5338f44d-3ec3-4664-b226-0705d4bc5263"
+            },
+            {
+              "mediaId": "https://appexchange.salesforce.com/image_host/e6d3e6f1-3861-47de-bdd7-70dcbbbb69b0.png",
+              "logoType": "Big Logo",
+              "external_id": "e36766a1-8eb3-444e-910a-3f1c06a02495"
+            }
+          ],
+          "publisher": "Inno Valley Works Private Limited",
+          "averageRating": 5,
+          "reviewsAmount": 29,
+          "chatEnabled": false,
+          "additionalProps": {
+            "agentCount": 0,
+            "topicCount": 0,
+            "actionCount": 0,
+            "agentDescription": ""
+          }
+        }
+      ],
+      "featured": [
+        {
+          "oafId": "a0N3A00000EOBliUAH",
+          "type": "force/package",
+          "title": "SurveyMonkey for Salesforce",
+          "description": "Connect your survey data with Salesforce to drive results for your business. Automatically send surveys after key interactions and take real-time action on feedback. Enrich customer and prospect data by syncing survey responses into Salesforce.",
+          "listingCategories": [
+            "marketing",
+            "customerService",
+            "humanResources"
+          ],
+          "logos": [
+            {
+              "mediaId": "https://appexchange.salesforce.com/partners/servlet/servlet.FileDownload?file=00P4V00000su7MFUAY",
+              "logoType": "Medium Logo",
+              "external_id": "a3L4V000009yuyPUAQ"
+            },
+            {
+              "mediaId": "https://appexchange.salesforce.com/partners/servlet/servlet.FileDownload?file=00P4V00000wTImZUAW",
+              "logoType": "High Res Svg",
+              "external_id": "a3L4V000009kIvFUAU"
+            },
+            {
+              "mediaId": "https://appexchange.salesforce.com/partners/servlet/servlet.FileDownload?file=00P3A00000eYCYGUA4",
+              "logoType": "Small Svg Icon",
+              "external_id": "a3L3A000000964IUAQ"
+            },
+            {
+              "mediaId": "https://appexchange.salesforce.com/image_host/2d4d9cee-3dd1-40b4-9b85-45ce57082c69.jpg",
+              "logoType": "Logo",
+              "external_id": "2668b8ff-bc0c-4ec2-9815-18da59575f60"
+            },
+            {
+              "mediaId": "https://appexchange.salesforce.com/image_host/f0e9422a-3c81-4bb0-9d5e-13f47241e750.jpg",
+              "logoType": "Big Logo",
+              "external_id": "ef7b5f74-d449-41f9-9953-2cef8ea31387"
+            }
+          ],
+          "publisher": "SurveyMonkey",
+          "averageRating": 4.57,
+          "reviewsAmount": 67,
+          "pricing": "paid",
+          "chatEnabled": true,
+          "sponsored": true
+        },
+        {
+          "oafId": "a0N30000000q4u7EAA",
+          "type": "force/package",
+          "title": "Complete Leads | Routing | Matching | Round Robin | AI Workflows | No-Code",
+          "description": "Respond faster than the competition with automated matching and routing in Salesforce. Then automate all your data management with the most flexible, scalable AI-powered workflow engine — so your team can focus on closing deals, not chasing data.",
+          "listingCategories": [
+            "sales",
+            "marketing",
+            "dataManagement"
+          ],
+          "logos": [
+            {
+              "mediaId": "https://appexchange.salesforce.com/image_host/f2a76c5b-5395-41b7-a8dc-69e9f669c1e7.png",
+              "logoType": "Logo",
+              "external_id": "a3L4V000009z6CXUAY"
+            },
+            {
+              "mediaId": "https://appexchange.salesforce.com/partners/servlet/servlet.FileDownload?file=00P4V00000uJ5mSUAS",
+              "logoType": "Medium Logo",
+              "external_id": "a3L4V000000exjKUAQ"
+            },
+            {
+              "mediaId": "https://appexchange.salesforce.com/image_host/3a6248af-6df6-420c-9408-6ec7104c6272.png",
+              "logoType": "Big Logo",
+              "external_id": "a3L4V000000NvJfUAK"
+            },
+            {
+              "mediaId": "https://appexchange.salesforce.com/partners/servlet/servlet.FileDownload?file=00P3000000PXUWCEA5",
+              "logoType": "High Res Logo",
+              "external_id": "a3L300000000UGBEA2"
+            },
+            {
+              "mediaId": "https://appexchange.salesforce.com/partners/servlet/servlet.FileDownload?file=00P4V00000zq96UUAQ",
+              "logoType": "High Res Svg",
+              "external_id": "a3L4V000000NvJpUAK"
+            },
+            {
+              "mediaId": "https://appexchange.salesforce.com/partners/servlet/servlet.FileDownload?file=00P4V00000suEWqUAM",
+              "logoType": "Small Svg Icon",
+              "external_id": "a3L4V000009yvIhUAI"
+            }
+          ],
+          "publisher": "Traction Complete",
+          "averageRating": 5,
+          "reviewsAmount": 22,
+          "pricing": "paid",
+          "chatEnabled": false,
+          "sponsored": true
+        }
+      ]
+    }
+  },
+  {
+    "url": "https://api.appexchange.salesforce.com/recommendations/v3/listings?type=apps&page=5&pageSize=12&language=en&category=marketing",
+    "payload": {
+      "advancedQuery": "",
+      "queryText": "",
+      "searchQueryUid": "3c474884-32d4-4526-81b2-fa0904a98cc8",
+      "totalCount": 898,
+      "listings": [
+        {
+          "oafId": "a0N4V00000DZQiVUAX",
+          "type": "force/package",
+          "title": "Creative Mail",
+          "description": "Creative Mail is a Salesforce-native email template and newsletter builder with integrated sending and analytics — built for teams that need reliable delivery and predictable pricing without exporting data or syncing contacts.",
+          "listingCategories": [
+            "massEmailsAndMessaging",
+            "personalization",
+            "campaignManagement"
+          ],
+          "logos": [
+            {
+              "mediaId": "https://appexchange.salesforce.com/image_host/53f67fca-cff1-407f-a715-fe23e4dca77e.png",
+              "logoType": "Logo",
+              "external_id": "a3L4V000009ABaDUAW"
+            },
+            {
+              "mediaId": "https://appexchange.salesforce.com/image_host/2086c2d8-320d-4927-bc10-2b97b41cfb04.png",
+              "logoType": "Big Logo",
+              "external_id": "a3L4V0000099tsJUAQ"
+            },
+            {
+              "mediaId": "https://appexchange.salesforce.com/partners/servlet/servlet.FileDownload?file=00P4V000010Ab0oUAC",
+              "logoType": "High Res Svg",
+              "external_id": "a3L4V000009ABU5UAO"
+            },
+            {
+              "mediaId": "https://appexchange.salesforce.com/partners/servlet/servlet.FileDownload?file=00P4V000010Ab1HUAS",
+              "logoType": "Small Svg Icon",
+              "external_id": "a3L4V000009ABUAUA4"
+            }
+          ],
+          "publisher": "Creative Tech Pty Ltd",
+          "averageRating": 4.94,
+          "reviewsAmount": 16,
+          "chatEnabled": false,
+          "additionalProps": {
+            "agentCount": 0,
+            "topicCount": 0,
+            "actionCount": 0,
+            "agentDescription": ""
+          }
+        },
+        {
+          "oafId": "a0N30000003ICFYEA4",
+          "type": "force/package",
+          "title": "Qualtrics - Customer Experience Management for Salesforce",
+          "description": "Combine customer experience data with operational data to better understand customer behavior and build strong client account relationships. Automate customer feedback across workflows, analyze data, and embed insights in your Salesforce dashboard.",
+          "listingCategories": [
+            "surveys"
+          ],
+          "logos": [
+            {
+              "mediaId": "https://appexchange.salesforce.com/partners/servlet/servlet.FileDownload?file=00P3A00000knfEqUAI",
+              "logoType": "Logo",
+              "external_id": "a3L3A000009xz5eUAA"
+            },
+            {
+              "mediaId": "https://appexchange.salesforce.com/partners/servlet/servlet.FileDownload?file=00P3A00000knfNqUAI",
+              "logoType": "Big Logo",
+              "external_id": "a3L3A000009xz5jUAA"
+            },
+            {
+              "mediaId": "https://appexchange.salesforce.com/partners/servlet/servlet.FileDownload?file=00P3A00000kndXGUAY",
+              "logoType": "High Res Svg",
+              "external_id": "a3L3A000009xz4RUAQ"
+            },
+            {
+              "mediaId": "https://appexchange.salesforce.com/partners/servlet/servlet.FileDownload?file=00P3A00000kndWwUAI",
+              "logoType": "Small Svg Icon",
+              "external_id": "a3L3A000009xz4MUAQ"
+            }
+          ],
+          "publisher": "Qualtrics",
+          "averageRating": 4,
+          "reviewsAmount": 60,
+          "chatEnabled": false,
+          "additionalProps": {
+            "agentCount": 0,
+            "topicCount": 0,
+            "actionCount": 0,
+            "agentDescription": ""
+          }
+        },
+        {
+          "oafId": "a0N3000000DpSjrEAF",
+          "type": "force/package",
+          "title": "Appinium for Media - native video enablement on Salesforce (formerly ViewTrac)",
+          "description": "Deliver (and track!) video, e-learning, PPT, PDF, and other media across your Sales Cloud, Service Cloud, or Communities. Then analyze the engagement and impact of your content, natively in Salesforce.",
+          "listingCategories": [
+            "sales",
+            "marketing",
+            "productivity"
+          ],
+          "logos": [
+            {
+              "mediaId": "https://appexchange.salesforce.com/partners/servlet/servlet.FileDownload?file=00P4V00000wMpv6UAC",
+              "logoType": "Logo",
+              "external_id": "a3L4V000009H355UAC"
+            },
+            {
+              "mediaId": "https://appexchange.salesforce.com/partners/servlet/servlet.FileDownload?file=00P4V00000v8rr2UAA",
+              "logoType": "Big Logo",
+              "external_id": "a3L4V000009H2MjUAK"
+            },
+            {
+              "mediaId": "https://appexchange.salesforce.com/partners/servlet/servlet.FileDownload?file=00P3A00000nL57SUAS",
+              "logoType": "High Res Svg",
+              "external_id": "a3L3A000009y98PUAQ"
+            },
+            {
+              "mediaId": "https://appexchange.salesforce.com/partners/servlet/servlet.FileDownload?file=00P3A00000nL57NUAS",
+              "logoType": "Small Svg Icon",
+              "external_id": "a3L3A000009y98KUAQ"
+            }
+          ],
+          "publisher": "Appinium, LLC",
+          "averageRating": 5,
+          "reviewsAmount": 25,
+          "chatEnabled": true,
+          "additionalProps": {
+            "agentCount": 0,
+            "topicCount": 0,
+            "actionCount": 0,
+            "agentDescription": ""
+          }
+        },
+        {
+          "oafId": "a0N300000059eEUEAY",
+          "type": "force/package",
+          "title": "Address Verification from To A Finish",
+          "description": "Uses Smarty.com (SmartyStreets) Address Cleansing to verify addresses in Salesforce.  Click, and all addresses on the current record are verified, geocoded & cleansed.  Works with standard, custom objects, & international lookups FREE 14-day Trial!",
+          "listingCategories": [
+            "dataCleansing",
+            "campaignManagement",
+            "productivity"
+          ],
+          "logos": [
+            {
+              "mediaId": "https://appexchange.salesforce.com/image_host/aba823ea-eef0-43a9-968e-5fdabbe155d7.png",
+              "logoType": "Logo",
+              "external_id": "a3L300000000A2BEAU"
+            },
+            {
+              "mediaId": "https://appexchange.salesforce.com/image_host/b2b4d156-9a84-4239-ae4f-fbad5c805f26.png",
+              "logoType": "Big Logo",
+              "external_id": "a3L300000000A1PEAU"
+            },
+            {
+              "mediaId": "https://appexchange.salesforce.com/partners/servlet/servlet.FileDownload?file=00P3000000P3PtuEAF",
+              "logoType": "High Res Logo",
+              "external_id": "a3L300000000A1oEAE"
+            }
+          ],
+          "publisher": "To A Finish LLC",
+          "averageRating": 5,
+          "reviewsAmount": 31,
+          "chatEnabled": false,
+          "additionalProps": {
+            "agentCount": 0,
+            "topicCount": 0,
+            "actionCount": 0,
+            "agentDescription": ""
+          }
+        },
+        {
+          "oafId": "cb060fcb-9641-4d9b-ab2f-2a9475b48081",
+          "type": "force/package",
+          "title": "Form Vista: 100% Native Forms, Surveys, Quizzes, Checklists, and Assessments",
+          "description": "All-in-one Salesforce-native solution for creating, managing, and analyzing forms and surveys. Effortlessly collect data, integrate with CRM for real-time insights, and act on data to enhance experiences, leveraging dynamic forms and robust security.",
+          "listingCategories": [
+            "ratingsAndReviews",
+            "marketing",
+            "informationManagement"
+          ],
+          "logos": [
+            {
+              "mediaId": "https://appexchange.salesforce.com/image_host/21026b1b-a069-4df6-b9d0-18dd5ef20412.png",
+              "logoType": "Big Logo",
+              "external_id": "4551f132-7354-4c68-8bca-6f471f1f5d19"
+            },
+            {
+              "mediaId": "https://appexchange.salesforce.com/image_host/385e5ffc-5ce7-4ab1-bb2d-37c8bbd4a693.png",
+              "logoType": "Logo",
+              "external_id": "67461bd4-7bfb-4660-8576-52cc1d7cb6d7"
+            }
+          ],
+          "publisher": "Ardira",
+          "averageRating": 5,
+          "reviewsAmount": 19,
+          "chatEnabled": false,
+          "additionalProps": {
+            "agentCount": 0,
+            "topicCount": 0,
+            "actionCount": 0,
+            "agentDescription": ""
+          }
+        },
+        {
+          "oafId": "a0N4V00000FguNKUAZ",
+          "type": "force/package",
+          "title": "AC Events Enterprise: In-person, Virtual, and Hybrid Event Management",
+          "description": "✓A Salesforce-native go-to app for events on Experience Cloud ✓ Flexible & customisable ✓All types of private or public events of any complexity ✓ User-friendly interface ✓Customizable event pages ✓ Attendee management ✓ Automated communications",
+          "listingCategories": [
+            "marketing",
+            "eventManagement",
+            "campaignManagement"
+          ],
+          "logos": [
+            {
+              "mediaId": "https://appexchange.salesforce.com/partners/servlet/servlet.FileDownload?file=00P4V00000otx5wUAA",
+              "logoType": "Logo",
+              "external_id": "a3L4V0000009qIaUAI"
+            },
+            {
+              "mediaId": "https://appexchange.salesforce.com/partners/servlet/servlet.FileDownload?file=00P4V00000x8WQsUAM",
+              "logoType": "Big Logo",
+              "external_id": "a3L4V00000AHvULUA1"
+            },
+            {
+              "mediaId": "https://appexchange.salesforce.com/partners/servlet/servlet.FileDownload?file=00P4V00000x8WR7UAM",
+              "logoType": "High Res Svg",
+              "external_id": "a3L4V00000AHvUaUAL"
+            },
+            {
+              "mediaId": "https://appexchange.salesforce.com/partners/servlet/servlet.FileDownload?file=00P4V00000otzADUAY",
+              "logoType": "Small Svg Icon",
+              "external_id": "a3L4V0000009qM8UAI"
+            }
+          ],
+          "publisher": "Advanced Communities",
+          "averageRating": 4.94,
+          "reviewsAmount": 16,
+          "chatEnabled": false,
+          "additionalProps": {
+            "agentCount": 0,
+            "topicCount": 0,
+            "actionCount": 0,
+            "agentDescription": ""
+          }
+        },
+        {
+          "oafId": "09f140b4-fcb2-422b-a728-4895d629ecb2",
+          "type": "force/package",
+          "title": " Watbox - Whatsapp for Salesforce, SMS  and CTI",
+          "description": "WatBox is a Salesforce-native messaging and calling platform that enables sales and support teams to communicate with customers using WhatsApp, SMS, and CTI directly inside Salesforce. Built for Get Started with a 14 Days Free Trial  https://watbox.ai/",
+          "listingCategories": [
+            "sales",
+            "marketing",
+            "customerService"
+          ],
+          "logos": [
+            {
+              "mediaId": "https://appexchange.salesforce.com/image_host/a425a648-6601-480d-b1e8-1daa50633acc.png",
+              "logoType": "Logo",
+              "external_id": "5338f44d-3ec3-4664-b226-0705d4bc5263"
+            },
+            {
+              "mediaId": "https://appexchange.salesforce.com/image_host/e6d3e6f1-3861-47de-bdd7-70dcbbbb69b0.png",
+              "logoType": "Big Logo",
+              "external_id": "e36766a1-8eb3-444e-910a-3f1c06a02495"
+            }
+          ],
+          "publisher": "Inno Valley Works Private Limited",
+          "averageRating": 5,
+          "reviewsAmount": 29,
+          "chatEnabled": false,
+          "additionalProps": {
+            "agentCount": 0,
+            "topicCount": 0,
+            "actionCount": 0,
+            "agentDescription": ""
+          }
+        },
+        {
+          "oafId": "a0N4V00000GXZ1uUAH",
+          "type": "force/package",
+          "title": "Translation & Localization Intelligence",
+          "description": "Natively built on Salesforce.  Verbis is the first translation and localization intelligence layer applicable to all Salesforce clouds. Your Translation Management System TMS inside Salesforce. Install the trial and reach out to support@venizum.com\n\n",
+          "listingCategories": [
+            "marketing",
+            "customerService"
+          ],
+          "logos": [
+            {
+              "mediaId": "https://appexchange.salesforce.com/image_host/5ea28cda-0136-4a5d-86ba-f4340ce14384.png",
+              "logoType": "Big Logo",
+              "external_id": "a3L4V0000005g9FUAQ"
+            },
+            {
+              "mediaId": "https://appexchange.salesforce.com/partners/servlet/servlet.FileDownload?file=00P4V00000xKXTJUA4",
+              "logoType": "High Res Svg",
+              "external_id": "a3L4V0000005g9KUAQ"
+            },
+            {
+              "mediaId": "https://appexchange.salesforce.com/partners/servlet/servlet.FileDownload?file=00P4V00000rfInvUAE",
+              "logoType": "Small Svg Icon",
+              "external_id": "a3L4V00000AMJ1pUAH"
+            },
+            {
+              "mediaId": "https://appexchange.salesforce.com/image_host/af9a4095-4803-42f6-9004-3cd1aae59d4f.png",
+              "logoType": "Logo",
+              "external_id": "e844e7f1-2244-4df9-8d76-d30254692b4c"
+            }
+          ],
+          "publisher": "Venizum Marketing Technology AB",
+          "averageRating": 5,
+          "reviewsAmount": 14,
+          "chatEnabled": false,
+          "additionalProps": {
+            "agentCount": 0,
+            "topicCount": 0,
+            "actionCount": 0,
+            "agentDescription": ""
+          }
+        },
+        {
+          "oafId": "a0N3A00000EcsYBUAZ",
+          "type": "force/package",
+          "title": "Proton Text",
+          "description": "SMS/MMS Text Lightning Component with Integration to Salesforce® Objects. 1-to-1 texting with optional Google Translate and Sms2Agent features. Proton Blaster handles bulk SMS to thousands, and our automation library makes SMS part of your workflow.",
+          "listingCategories": [
+            "campaignManagement",
+            "collaboration",
+            "agentProductivity"
+          ],
+          "logos": [
+            {
+              "mediaId": "https://appexchange.salesforce.com/partners/servlet/servlet.FileDownload?file=00P4V00000y12naUAA",
+              "logoType": "Logo",
+              "external_id": "a3L4V0000005gZzUAI"
+            },
+            {
+              "mediaId": "https://appexchange.salesforce.com/partners/servlet/servlet.FileDownload?file=00P4V00000y133aUAA",
+              "logoType": "Big Logo",
+              "external_id": "a3L4V0000005ga4UAA"
+            }
+          ],
+          "publisher": "Proton 7 Group",
+          "averageRating": 5,
+          "reviewsAmount": 30,
+          "chatEnabled": false,
+          "additionalProps": {
+            "agentCount": 0,
+            "topicCount": 0,
+            "actionCount": 0,
+            "agentDescription": ""
+          }
+        },
+        {
+          "oafId": "a0N4V00000JVVMLUA5",
+          "type": "force/package",
+          "title": "Account Engagement Automates... Record Creation",
+          "description": "Get ready for Marketing dreams to come true! Using External Actions, Account Engagement utilizes Engagement Studio and Flow to easily trigger the creation of a Contact, Account, Opportunity, and more.\n\nFind the User Guide under More Details below.",
+          "listingCategories": [
+            "marketingAutomation",
+            "adminAndDeveloperTools"
+          ],
+          "logos": [
+            {
+              "mediaId": "https://appexchange.salesforce.com/image_host/59103893-6721-41bc-b7fa-10a99dc1d69f.png",
+              "logoType": "Logo",
+              "external_id": "5a93c9e0-1587-4f85-9666-afdf912059f5"
+            },
+            {
+              "mediaId": "https://appexchange.salesforce.com/image_host/cdf47966-99c9-4a7e-9e3e-ade3af5d07f0.png",
+              "logoType": "Big Logo",
+              "external_id": "e9008422-e384-4e32-be43-db04418f9f92"
+            }
+          ],
+          "publisher": "Salesforce Labs",
+          "averageRating": 4.75,
+          "reviewsAmount": 4,
+          "chatEnabled": false,
+          "additionalProps": {
+            "agentCount": 0,
+            "topicCount": 0,
+            "actionCount": 0,
+            "agentDescription": ""
+          }
+        },
+        {
+          "oafId": "a0N30000000q4u7EAA",
+          "type": "force/package",
+          "title": "Complete Leads | Routing | Matching | Round Robin | AI Workflows | No-Code",
+          "description": "Respond faster than the competition with automated matching and routing in Salesforce. Then automate all your data management with the most flexible, scalable AI-powered workflow engine — so your team can focus on closing deals, not chasing data.",
+          "listingCategories": [
+            "sales",
+            "marketing",
+            "dataManagement"
+          ],
+          "logos": [
+            {
+              "mediaId": "https://appexchange.salesforce.com/image_host/f2a76c5b-5395-41b7-a8dc-69e9f669c1e7.png",
+              "logoType": "Logo",
+              "external_id": "a3L4V000009z6CXUAY"
+            },
+            {
+              "mediaId": "https://appexchange.salesforce.com/partners/servlet/servlet.FileDownload?file=00P4V00000uJ5mSUAS",
+              "logoType": "Medium Logo",
+              "external_id": "a3L4V000000exjKUAQ"
+            },
+            {
+              "mediaId": "https://appexchange.salesforce.com/image_host/3a6248af-6df6-420c-9408-6ec7104c6272.png",
+              "logoType": "Big Logo",
+              "external_id": "a3L4V000000NvJfUAK"
+            },
+            {
+              "mediaId": "https://appexchange.salesforce.com/partners/servlet/servlet.FileDownload?file=00P3000000PXUWCEA5",
+              "logoType": "High Res Logo",
+              "external_id": "a3L300000000UGBEA2"
+            },
+            {
+              "mediaId": "https://appexchange.salesforce.com/partners/servlet/servlet.FileDownload?file=00P4V00000zq96UUAQ",
+              "logoType": "High Res Svg",
+              "external_id": "a3L4V000000NvJpUAK"
+            },
+            {
+              "mediaId": "https://appexchange.salesforce.com/partners/servlet/servlet.FileDownload?file=00P4V00000suEWqUAM",
+              "logoType": "Small Svg Icon",
+              "external_id": "a3L4V000009yvIhUAI"
+            }
+          ],
+          "publisher": "Traction Complete",
+          "averageRating": 5,
+          "reviewsAmount": 22,
+          "chatEnabled": false,
+          "additionalProps": {
+            "agentCount": 0,
+            "topicCount": 0,
+            "actionCount": 0,
+            "agentDescription": ""
+          }
+        },
+        {
+          "oafId": "a0N3000000B4DyvEAF",
+          "type": "force/package",
+          "title": "SMS for Salesforce by Sinch Engage — SMS, MMS, WhatsApp & RCS",
+          "description": "Salesforce text messaging made simple. Send and automate SMS, MMS, WhatsApp, and RCS directly inside Salesforce. Improve response times, personalize communication, and keep every message on record. Fast setup, built-in compliance, and 24/7 support.",
+          "listingCategories": [
+            "sales",
+            "marketingAutomation",
+            "fieldService"
+          ],
+          "logos": [
+            {
+              "mediaId": "https://appexchange.salesforce.com/partners/servlet/servlet.FileDownload?file=00P3000000P3Qo1EAF",
+              "logoType": "High Res Logo",
+              "external_id": "a3L300000000Av7EAE"
+            },
+            {
+              "mediaId": "https://appexchange.salesforce.com/image_host/4fa970de-ebde-43d7-a7e0-2b063227c412.png",
+              "logoType": "Logo",
+              "external_id": "49ff912f-57e0-48f1-806d-65bf465e2bff"
+            },
+            {
+              "mediaId": "https://appexchange.salesforce.com/image_host/a95847c6-8bde-4cfe-9ae4-571600b50346.png",
+              "logoType": "Big Logo",
+              "external_id": "63ced137-f1fb-4d19-935c-d9008afe5d85"
+            }
+          ],
+          "publisher": "Sinch",
+          "averageRating": 4.9,
+          "reviewsAmount": 39,
+          "chatEnabled": false,
+          "additionalProps": {
+            "agentCount": 0,
+            "topicCount": 0,
+            "actionCount": 0,
+            "agentDescription": ""
+          }
+        }
+      ],
+      "featured": [
+        {
+          "oafId": "a0N30000000q4u7EAA",
+          "type": "force/package",
+          "title": "Complete Leads | Routing | Matching | Round Robin | AI Workflows | No-Code",
+          "description": "Respond faster than the competition with automated matching and routing in Salesforce. Then automate all your data management with the most flexible, scalable AI-powered workflow engine — so your team can focus on closing deals, not chasing data.",
+          "listingCategories": [
+            "sales",
+            "marketing",
+            "dataManagement"
+          ],
+          "logos": [
+            {
+              "mediaId": "https://appexchange.salesforce.com/image_host/f2a76c5b-5395-41b7-a8dc-69e9f669c1e7.png",
+              "logoType": "Logo",
+              "external_id": "a3L4V000009z6CXUAY"
+            },
+            {
+              "mediaId": "https://appexchange.salesforce.com/partners/servlet/servlet.FileDownload?file=00P4V00000uJ5mSUAS",
+              "logoType": "Medium Logo",
+              "external_id": "a3L4V000000exjKUAQ"
+            },
+            {
+              "mediaId": "https://appexchange.salesforce.com/image_host/3a6248af-6df6-420c-9408-6ec7104c6272.png",
+              "logoType": "Big Logo",
+              "external_id": "a3L4V000000NvJfUAK"
+            },
+            {
+              "mediaId": "https://appexchange.salesforce.com/partners/servlet/servlet.FileDownload?file=00P3000000PXUWCEA5",
+              "logoType": "High Res Logo",
+              "external_id": "a3L300000000UGBEA2"
+            },
+            {
+              "mediaId": "https://appexchange.salesforce.com/partners/servlet/servlet.FileDownload?file=00P4V00000zq96UUAQ",
+              "logoType": "High Res Svg",
+              "external_id": "a3L4V000000NvJpUAK"
+            },
+            {
+              "mediaId": "https://appexchange.salesforce.com/partners/servlet/servlet.FileDownload?file=00P4V00000suEWqUAM",
+              "logoType": "Small Svg Icon",
+              "external_id": "a3L4V000009yvIhUAI"
+            }
+          ],
+          "publisher": "Traction Complete",
+          "averageRating": 5,
+          "reviewsAmount": 22,
+          "pricing": "paid",
+          "chatEnabled": false,
+          "sponsored": true
+        },
+        {
+          "oafId": "a0N3A00000EOBliUAH",
+          "type": "force/package",
+          "title": "SurveyMonkey for Salesforce",
+          "description": "Connect your survey data with Salesforce to drive results for your business. Automatically send surveys after key interactions and take real-time action on feedback. Enrich customer and prospect data by syncing survey responses into Salesforce.",
+          "listingCategories": [
+            "marketing",
+            "customerService",
+            "humanResources"
+          ],
+          "logos": [
+            {
+              "mediaId": "https://appexchange.salesforce.com/partners/servlet/servlet.FileDownload?file=00P4V00000su7MFUAY",
+              "logoType": "Medium Logo",
+              "external_id": "a3L4V000009yuyPUAQ"
+            },
+            {
+              "mediaId": "https://appexchange.salesforce.com/partners/servlet/servlet.FileDownload?file=00P4V00000wTImZUAW",
+              "logoType": "High Res Svg",
+              "external_id": "a3L4V000009kIvFUAU"
+            },
+            {
+              "mediaId": "https://appexchange.salesforce.com/partners/servlet/servlet.FileDownload?file=00P3A00000eYCYGUA4",
+              "logoType": "Small Svg Icon",
+              "external_id": "a3L3A000000964IUAQ"
+            },
+            {
+              "mediaId": "https://appexchange.salesforce.com/image_host/2d4d9cee-3dd1-40b4-9b85-45ce57082c69.jpg",
+              "logoType": "Logo",
+              "external_id": "2668b8ff-bc0c-4ec2-9815-18da59575f60"
+            },
+            {
+              "mediaId": "https://appexchange.salesforce.com/image_host/f0e9422a-3c81-4bb0-9d5e-13f47241e750.jpg",
+              "logoType": "Big Logo",
+              "external_id": "ef7b5f74-d449-41f9-9953-2cef8ea31387"
+            }
+          ],
+          "publisher": "SurveyMonkey",
+          "averageRating": 4.57,
+          "reviewsAmount": 67,
+          "pricing": "paid",
+          "chatEnabled": true,
+          "sponsored": true
+        }
+      ]
+    }
+  }
+]

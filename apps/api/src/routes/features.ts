@@ -21,9 +21,9 @@ export const featureRoutes: FastifyPluginAsync = async (app) => {
         f->>'feature_handle' AS feature_handle,
         f->>'title' AS feature_title
       FROM (
-        SELECT DISTINCT ON (app_slug) categories
+        SELECT DISTINCT ON (app_id) categories
         FROM app_snapshots
-        ORDER BY app_slug, scraped_at DESC
+        ORDER BY app_id, scraped_at DESC
       ) latest,
       jsonb_array_elements(latest.categories) AS cat,
       jsonb_array_elements(cat->'subcategories') AS sub,
@@ -67,10 +67,10 @@ export const featureRoutes: FastifyPluginAsync = async (app) => {
         f->>'feature_handle' AS handle,
         f->>'title' AS title
       FROM (
-        SELECT DISTINCT ON (app_slug)
+        SELECT DISTINCT ON (app_id)
           categories
         FROM app_snapshots
-        ORDER BY app_slug, scraped_at DESC
+        ORDER BY app_id, scraped_at DESC
       ) latest,
       jsonb_array_elements(latest.categories) AS cat,
       jsonb_array_elements(cat->'subcategories') AS sub,
@@ -100,9 +100,9 @@ export const featureRoutes: FastifyPluginAsync = async (app) => {
           cat->>'title' AS category_title,
           sub->>'title' AS subcategory_title
         FROM (
-          SELECT DISTINCT ON (app_slug) categories
+          SELECT DISTINCT ON (app_id) categories
           FROM app_snapshots
-          ORDER BY app_slug, scraped_at DESC
+          ORDER BY app_id, scraped_at DESC
         ) latest,
         jsonb_array_elements(latest.categories) AS cat,
         jsonb_array_elements(cat->'subcategories') AS sub,
@@ -119,9 +119,9 @@ export const featureRoutes: FastifyPluginAsync = async (app) => {
           cat->>'title' AS category_title,
           sub->>'title' AS subcategory_title
         FROM (
-          SELECT DISTINCT ON (app_slug) categories
+          SELECT DISTINCT ON (app_id) categories
           FROM app_snapshots
-          ORDER BY app_slug, scraped_at DESC
+          ORDER BY app_id, scraped_at DESC
         ) latest,
         jsonb_array_elements(latest.categories) AS cat,
         jsonb_array_elements(cat->'subcategories') AS sub,
@@ -174,12 +174,12 @@ export const featureRoutes: FastifyPluginAsync = async (app) => {
           s.rating_count,
           s.pricing
         FROM (
-          SELECT DISTINCT ON (app_slug)
-            id, app_slug, categories, average_rating, rating_count, pricing
+          SELECT DISTINCT ON (app_id)
+            id, app_id, categories, average_rating, rating_count, pricing
           FROM app_snapshots
-          ORDER BY app_slug, scraped_at DESC
+          ORDER BY app_id, scraped_at DESC
         ) s
-        INNER JOIN apps a ON a.slug = s.app_slug
+        INNER JOIN apps a ON a.id = s.app_id
         WHERE EXISTS (
           SELECT 1
           FROM jsonb_array_elements(s.categories) AS cat,

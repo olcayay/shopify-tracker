@@ -19,11 +19,11 @@ export const PLATFORMS = {
     hasKeywordSearch: true,
     hasReviews: true,
     hasFeaturedSections: true,
-    hasAdTracking: false,
+    hasAdTracking: true,
     hasSimilarApps: true,
     hasAutoSuggestions: false,
     hasFeatureTaxonomy: false,
-    pageSize: 20,
+    pageSize: 12,
   },
   canva: {
     id: "canva" as const,
@@ -75,7 +75,7 @@ export function buildExternalCategoryUrl(platform: PlatformId, slug: string): st
     case "shopify":
       return `https://apps.shopify.com/categories/${slug}`;
     case "salesforce":
-      return `https://appexchange.salesforce.com/collection/${slug}`;
+      return `https://appexchange.salesforce.com/explore/business-needs?category=${slug}`;
     case "canva":
       return `https://www.canva.com/apps/collection/${slug}`;
   }

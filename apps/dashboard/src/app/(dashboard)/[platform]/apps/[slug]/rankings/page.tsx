@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { formatDateOnly } from "@/lib/format-date";
 import { getAppRankings } from "@/lib/api";
+import type { PlatformId } from "@appranks/shared";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Table,
@@ -22,7 +23,7 @@ export default async function RankingsPage({
 
   let rankings: any;
   try {
-    rankings = await getAppRankings(slug);
+    rankings = await getAppRankings(slug, 30, platform as PlatformId);
   } catch {
     rankings = {};
   }

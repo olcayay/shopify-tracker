@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { getFeaturesByCategory, getAccountStarredFeatures } from "@/lib/api";
+import type { PlatformId } from "@appranks/shared";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Star } from "lucide-react";
 import {
@@ -30,7 +31,7 @@ export default async function FeaturesByCategoryPage({
   let starredFeatures: any[] = [];
   try {
     [features, starredFeatures] = await Promise.all([
-      getFeaturesByCategory(category, subcategory),
+      getFeaturesByCategory(category, subcategory, platform as PlatformId),
       getAccountStarredFeatures().catch(() => []),
     ]);
   } catch {

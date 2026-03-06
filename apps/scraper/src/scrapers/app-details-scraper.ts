@@ -1,19 +1,28 @@
 import { eq, and, desc, sql } from "drizzle-orm";
 import type { Database } from "@appranks/db";
 import { scrapeRuns, apps, appSnapshots, appFieldChanges, similarAppSightings, categories } from "@appranks/db";
-import { urls, createLogger } from "@appranks/shared";
+import { urls, createLogger, type PlatformId } from "@appranks/shared";
 
 const log = createLogger("app-details-scraper");
 import { HttpClient } from "../http-client.js";
 import { parseAppPage, parseSimilarApps } from "../parsers/app-parser.js";
+import type { PlatformModule } from "../platforms/platform-module.js";
 
 export class AppDetailsScraper {
   private db: Database;
   private httpClient: HttpClient;
+  private platform: PlatformId;
+  private platformModule?: PlatformModule;
 
-  constructor(db: Database, httpClient?: HttpClient) {
+  constructor(db: Database, httpClient?: HttpClient, platformModule?: PlatformModule) {
     this.db = db;
     this.httpClient = httpClient || new HttpClient();
+    this.platformModule = platformModule;
+    this.platform = platformModule?.platformId ?? "shopify";
+  }
+
+  private get isShopify(): boolean {
+    return this.platform === "shopify";
   }
 
   /** Scrape details for all tracked apps */
@@ -21,7 +30,7 @@ export class AppDetailsScraper {
     const trackedApps = await this.db
       .select({ id: apps.id, slug: apps.slug, name: apps.name })
       .from(apps)
-      .where(eq(apps.isTracked, true));
+      .where(and(eq(apps.isTracked, true), eq(apps.platform, this.platform)));
 
     if (trackedApps.length === 0) {
       log.info("no tracked apps found");
@@ -119,8 +128,43 @@ export class AppDetailsScraper {
     }
 
     try {
-      const html = await this.httpClient.fetchPage(urls.app(slug));
-      const details = parseAppPage(html, slug);
+      // Fetch app page using platform module if available
+      const html = this.platformModule
+        ? await this.platformModule.fetchAppPage(slug)
+        : await this.httpClient.fetchPage(urls.app(slug));
+
+      // Use platform module for non-Shopify or fall back to Shopify parser
+      const useGeneric = this.platformModule && !this.isShopify;
+      const details = useGeneric
+        ? (() => {
+            const normalized = this.platformModule!.parseAppDetails(html, slug);
+            // Convert to legacy format for compatibility
+            return {
+              app_slug: normalized.slug,
+              app_name: normalized.name,
+              app_introduction: (normalized.platformData.description as string) || "",
+              app_details: "",
+              seo_title: "",
+              seo_meta_description: "",
+              features: [] as string[],
+              pricing: normalized.pricingHint || "",
+              average_rating: normalized.averageRating,
+              rating_count: normalized.ratingCount,
+              icon_url: normalized.iconUrl,
+              developer: (normalized.developer
+                ? { name: normalized.developer.name, url: normalized.developer.url || "" }
+                : { name: "", url: "" }) as import("@appranks/shared").AppDeveloper,
+              launched_date: null as Date | null,
+              demo_store_url: null as string | null,
+              languages: [] as string[],
+              integrations: [] as string[],
+              categories: [] as import("@appranks/shared").AppCategory[],
+              pricing_plans: [] as import("@appranks/shared").PricingPlan[],
+              support: null as import("@appranks/shared").AppSupport | null,
+              _platformData: normalized.platformData,
+            };
+          })()
+        : parseAppPage(html, slug);
 
       // Change detection: compare against current state
       const changes: { field: string; oldValue: string | null; newValue: string | null }[] = [];
@@ -183,7 +227,7 @@ export class AppDetailsScraper {
       const [upsertedApp] = await this.db
         .insert(apps)
         .values({
-          platform: "shopify",
+          platform: this.platform,
           slug,
           name: details.app_name,
           isTracked: true,
@@ -238,8 +282,8 @@ export class AppDetailsScraper {
         support: details.support,
       });
 
-      // Register missing categories from snapshot data
-      if (details.categories.length > 0) {
+      // Register missing categories from snapshot data (Shopify only)
+      if (this.isShopify && details.categories.length > 0) {
         for (const cat of details.categories) {
           const slugMatch = cat.url.match(/\/categories\/([^/]+)/);
           if (!slugMatch) continue;
@@ -247,7 +291,7 @@ export class AppDetailsScraper {
           await this.db
             .insert(categories)
             .values({
-              platform: "shopify",
+              platform: this.platform,
               slug: catSlug,
               title: cat.title,
               url: cat.url,
@@ -260,8 +304,8 @@ export class AppDetailsScraper {
         }
       }
 
-      // Record similar apps ("More apps like this")
-      const similarApps = parseSimilarApps(html);
+      // Record similar apps ("More apps like this") - Shopify only
+      const similarApps = this.isShopify ? parseSimilarApps(html) : [];
       if (similarApps.length > 0) {
         const todayStr = new Date().toISOString().slice(0, 10);
         for (const similar of similarApps) {
@@ -269,7 +313,7 @@ export class AppDetailsScraper {
           const [upsertedSimilar] = await this.db
             .insert(apps)
             .values({
-              platform: "shopify",
+              platform: this.platform,
               slug: similar.slug,
               name: similar.name,
               iconUrl: similar.icon_url || null,

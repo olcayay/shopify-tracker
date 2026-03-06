@@ -37,6 +37,7 @@ import {
 } from "lucide-react";
 import { VisibilityScorePopover } from "@/components/visibility-score-popover";
 import { PowerScorePopover } from "@/components/power-score-popover";
+import type { PlatformId } from "@appranks/shared";
 
 // --- Helper functions ---
 
@@ -133,16 +134,16 @@ export default async function AppOverviewPage({
   try {
     [app, reviewData, rankings, changes, reviewMetrics, featuredData, adData, similarData, selfMinPaidPriceMap, scoresData] =
       await Promise.all([
-        getApp(slug),
-        getAppReviews(slug, 3).catch(() => ({ reviews: [], total: 0, distribution: [] })),
-        getAppRankings(slug).catch(() => ({})),
-        getAppChanges(slug, 10).catch(() => []),
-        getAppReviewMetrics(slug).catch(() => null),
-        getAppFeaturedPlacements(slug).catch(() => ({ sightings: [] })),
-        getAppAdSightings(slug).catch(() => ({ sightings: [] })),
-        getAppSimilarApps(slug).catch(() => ({ direct: [], reverse: [], secondDegree: [] })),
-        getAppsMinPaidPrices([slug]).catch(() => ({})),
-        getAppScores(slug).catch(() => ({ visibility: [], power: [], weightedPowerScore: 0 })),
+        getApp(slug, platform as PlatformId),
+        getAppReviews(slug, 3, 0, "newest", platform as PlatformId).catch(() => ({ reviews: [], total: 0, distribution: [] })),
+        getAppRankings(slug, 30, platform as PlatformId).catch(() => ({})),
+        getAppChanges(slug, 10, platform as PlatformId).catch(() => []),
+        getAppReviewMetrics(slug, platform as PlatformId).catch(() => null),
+        getAppFeaturedPlacements(slug, 30, platform as PlatformId).catch(() => ({ sightings: [] })),
+        getAppAdSightings(slug, 30, platform as PlatformId).catch(() => ({ sightings: [] })),
+        getAppSimilarApps(slug, 30, platform as PlatformId).catch(() => ({ direct: [], reverse: [], secondDegree: [] })),
+        getAppsMinPaidPrices([slug], platform as PlatformId).catch(() => ({})),
+        getAppScores(slug, platform as PlatformId).catch(() => ({ visibility: [], power: [], weightedPowerScore: 0 })),
       ]);
   } catch {
     return <p className="text-muted-foreground">App not found.</p>;
@@ -160,12 +161,12 @@ export default async function AppOverviewPage({
   await Promise.all([
     ...(app.isTrackedByAccount
       ? [
-          getAppCompetitors(slug).catch(() => []).then((c: any[]) => { competitors = c; }),
-          getAppKeywords(slug).catch(() => []).then((k: any[]) => { keywords = k; }),
+          getAppCompetitors(slug, platform as PlatformId).catch(() => []).then((c: any[]) => { competitors = c; }),
+          getAppKeywords(slug, platform as PlatformId).catch(() => []).then((k: any[]) => { keywords = k; }),
         ]
       : []),
     ...catChanges.map((cat) =>
-      getCategory(cat.slug)
+      getCategory(cat.slug, platform as PlatformId)
         .then((catData: any) => {
           categoryInfoMap.set(cat.slug, {
             leaders: (catData?.rankedApps || []).slice(0, 3),
@@ -181,7 +182,7 @@ export default async function AppOverviewPage({
   if (competitors.length > 0) {
     const changeBatches = await Promise.all(
       competitors.slice(0, 10).map((c: any) =>
-        getAppChanges(c.appSlug, 3)
+        getAppChanges(c.appSlug, 3, platform as PlatformId)
           .then((arr: any[]) =>
             arr.map((ch) => ({
               ...ch,

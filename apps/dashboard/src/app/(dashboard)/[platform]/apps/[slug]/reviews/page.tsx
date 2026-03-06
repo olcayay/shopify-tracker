@@ -1,4 +1,5 @@
 import { getApp, getAppReviews, getAppHistory } from "@/lib/api";
+import type { PlatformId } from "@appranks/shared";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { RatingReviewChart } from "@/components/rating-review-chart";
 import { ReviewList } from "../review-list";
@@ -6,16 +7,16 @@ import { ReviewList } from "../review-list";
 export default async function ReviewsPage({
   params,
 }: {
-  params: Promise<{ slug: string }>;
+  params: Promise<{ platform: string; slug: string }>;
 }) {
-  const { slug } = await params;
+  const { platform, slug } = await params;
 
   let reviewData: any;
   let history: any = { snapshots: [] };
   try {
     [reviewData, history] = await Promise.all([
-      getAppReviews(slug, 10),
-      getAppHistory(slug, 90).catch(() => ({ snapshots: [] })),
+      getAppReviews(slug, 10, 0, "newest", platform as PlatformId),
+      getAppHistory(slug, 90, platform as PlatformId).catch(() => ({ snapshots: [] })),
     ]);
   } catch {
     reviewData = { reviews: [], total: 0, distribution: [] };

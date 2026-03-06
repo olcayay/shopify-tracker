@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { getApp } from "@/lib/api";
+import type { PlatformId } from "@appranks/shared";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 
@@ -12,7 +13,7 @@ export default async function DetailsPage({
 
   let app: any;
   try {
-    app = await getApp(slug);
+    app = await getApp(slug, platform as PlatformId);
   } catch {
     return <p className="text-muted-foreground">App not found.</p>;
   }

@@ -223,12 +223,13 @@ export const keywordRoutes: FastifyPluginAsync = async (app) => {
       return reply.code(400).send({ error: "Keyword is required" });
     }
 
+    const platform = getPlatformFromQuery(request.query as Record<string, unknown>);
     const slug = keywordToSlug(keyword.trim());
     const [kw] = await db
       .insert(trackedKeywords)
-      .values({ keyword: keyword.trim().toLowerCase(), slug })
+      .values({ keyword: keyword.trim().toLowerCase(), slug, platform })
       .onConflictDoUpdate({
-        target: trackedKeywords.keyword,
+        target: [trackedKeywords.platform, trackedKeywords.keyword],
         set: { isActive: true, updatedAt: new Date() },
       })
       .returning();
@@ -398,11 +399,11 @@ export const keywordRoutes: FastifyPluginAsync = async (app) => {
       ];
 
       if (appSlug) {
-        // Look up app ID from slug
+        // Look up app ID from slug (scoped to platform)
         const [appRow] = await db
           .select({ id: apps.id })
           .from(apps)
-          .where(eq(apps.slug, appSlug))
+          .where(and(eq(apps.slug, appSlug), eq(apps.platform, platform)))
           .limit(1);
         if (appRow) {
           conditions.push(eq(appKeywordRankings.appId, appRow.id));
@@ -434,6 +435,9 @@ export const keywordRoutes: FastifyPluginAsync = async (app) => {
           return { keyword: kw, rankings: [] };
         }
       }
+
+      // Also filter by apps.platform to prevent cross-platform data leakage
+      conditions.push(eq(apps.platform, platform));
 
       const rankings = await db
         .select({
@@ -502,6 +506,7 @@ export const keywordRoutes: FastifyPluginAsync = async (app) => {
         .where(
           and(
             eq(keywordAdSightings.keywordId, kw.id),
+            eq(apps.platform, platform),
             sql`${keywordAdSightings.seenDate} >= ${sinceStr}`
           )
         )

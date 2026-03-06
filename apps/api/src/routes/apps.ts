@@ -164,6 +164,7 @@ export const appRoutes: FastifyPluginAsync = async (app) => {
   app.post("/last-changes", async (request) => {
     const { slugs } = request.body as { slugs: string[] };
     if (!slugs?.length) return {};
+    const platform = getPlatformFromQuery(request.query as Record<string, unknown>);
 
     const rows = await db
       .select({
@@ -172,7 +173,7 @@ export const appRoutes: FastifyPluginAsync = async (app) => {
       })
       .from(appFieldChanges)
       .innerJoin(apps, eq(apps.id, appFieldChanges.appId))
-      .where(inArray(apps.slug, slugs))
+      .where(and(inArray(apps.slug, slugs), eq(apps.platform, platform)))
       .groupBy(apps.slug);
 
     const result: Record<string, string> = {};
@@ -186,6 +187,7 @@ export const appRoutes: FastifyPluginAsync = async (app) => {
   app.post("/min-paid-prices", async (request) => {
     const { slugs } = request.body as { slugs: string[] };
     if (!slugs?.length) return {};
+    const platform = getPlatformFromQuery(request.query as Record<string, unknown>);
 
     const rows = await db
       .select({
@@ -197,6 +199,7 @@ export const appRoutes: FastifyPluginAsync = async (app) => {
       .where(
         and(
           inArray(apps.slug, slugs),
+          eq(apps.platform, platform),
           sql`${appSnapshots.id} = (SELECT s2.id FROM app_snapshots s2 WHERE s2.app_id = ${appSnapshots.appId} ORDER BY s2.scraped_at DESC LIMIT 1)`
         )
       );
@@ -212,11 +215,12 @@ export const appRoutes: FastifyPluginAsync = async (app) => {
   app.post("/launched-dates", async (request) => {
     const { slugs } = request.body as { slugs: string[] };
     if (!slugs?.length) return {};
+    const platform = getPlatformFromQuery(request.query as Record<string, unknown>);
 
     const rows = await db
       .select({ slug: apps.slug, launchedDate: apps.launchedDate })
       .from(apps)
-      .where(inArray(apps.slug, slugs));
+      .where(and(inArray(apps.slug, slugs), eq(apps.platform, platform)));
 
     const result: Record<string, string | null> = {};
     for (const r of rows) {
@@ -229,12 +233,13 @@ export const appRoutes: FastifyPluginAsync = async (app) => {
   app.post("/categories", async (request) => {
     const { slugs } = request.body as { slugs: string[] };
     if (!slugs?.length) return {};
+    const platform = getPlatformFromQuery(request.query as Record<string, unknown>);
 
-    // Look up app IDs from slugs
+    // Look up app IDs from slugs (scoped to platform)
     const appRows = await db
       .select({ id: apps.id, slug: apps.slug })
       .from(apps)
-      .where(inArray(apps.slug, slugs));
+      .where(and(inArray(apps.slug, slugs), eq(apps.platform, platform)));
     const appIdsBySlug = new Map(appRows.map((a) => [a.id, a.slug]));
     const appIdList = appRows.map((a) => a.id);
 
@@ -281,12 +286,13 @@ export const appRoutes: FastifyPluginAsync = async (app) => {
   app.post("/reverse-similar-counts", async (request) => {
     const { slugs } = request.body as { slugs: string[] };
     if (!slugs?.length) return {};
+    const platform = getPlatformFromQuery(request.query as Record<string, unknown>);
 
-    // Look up app IDs from slugs
+    // Look up app IDs from slugs (scoped to platform)
     const appLookup = await db
       .select({ id: apps.id, slug: apps.slug })
       .from(apps)
-      .where(inArray(apps.slug, slugs));
+      .where(and(inArray(apps.slug, slugs), eq(apps.platform, platform)));
     const appSlugById = new Map(appLookup.map((a) => [a.id, a.slug]));
     const appIdList = appLookup.map((a) => a.id);
 
@@ -314,16 +320,17 @@ export const appRoutes: FastifyPluginAsync = async (app) => {
   app.post("/featured-section-counts", async (request) => {
     const { slugs } = request.body as { slugs: string[] };
     if (!slugs?.length) return {};
+    const platform = getPlatformFromQuery(request.query as Record<string, unknown>);
 
     const since = new Date();
     since.setDate(since.getDate() - 30);
     const sinceStr = since.toISOString().slice(0, 10);
 
-    // Look up app IDs from slugs
+    // Look up app IDs from slugs (scoped to platform)
     const featAppLookup = await db
       .select({ id: apps.id, slug: apps.slug })
       .from(apps)
-      .where(inArray(apps.slug, slugs));
+      .where(and(inArray(apps.slug, slugs), eq(apps.platform, platform)));
     const featSlugById = new Map(featAppLookup.map((a) => [a.id, a.slug]));
     const featAppIds = featAppLookup.map((a) => a.id);
 
@@ -355,16 +362,17 @@ export const appRoutes: FastifyPluginAsync = async (app) => {
   app.post("/ad-keyword-counts", async (request) => {
     const { slugs } = request.body as { slugs: string[] };
     if (!slugs?.length) return {};
+    const platform = getPlatformFromQuery(request.query as Record<string, unknown>);
 
     const since = new Date();
     since.setDate(since.getDate() - 30);
     const sinceStr = since.toISOString().slice(0, 10);
 
-    // Look up app IDs from slugs
+    // Look up app IDs from slugs (scoped to platform)
     const adAppLookup = await db
       .select({ id: apps.id, slug: apps.slug })
       .from(apps)
-      .where(inArray(apps.slug, slugs));
+      .where(and(inArray(apps.slug, slugs), eq(apps.platform, platform)));
     const adSlugById = new Map(adAppLookup.map((a) => [a.id, a.slug]));
     const adAppIds = adAppLookup.map((a) => a.id);
 
@@ -396,6 +404,7 @@ export const appRoutes: FastifyPluginAsync = async (app) => {
   app.post("/review-velocity", async (request) => {
     const { slugs } = request.body as { slugs: string[] };
     if (!slugs?.length) return {};
+    const platform = getPlatformFromQuery(request.query as Record<string, unknown>);
 
     // Get latest computed metrics per slug (graceful if table not yet migrated)
     const result: Record<string, { v7d: number | null; v30d: number | null; v90d: number | null; momentum: string | null }> = {};
@@ -406,6 +415,7 @@ export const appRoutes: FastifyPluginAsync = async (app) => {
         FROM app_review_metrics m
         INNER JOIN apps a ON a.id = m.app_id
         WHERE a.slug IN (${sql.join(slugs.map(s => sql`${s}`), sql`, `)})
+          AND a.platform = ${platform}
         ORDER BY a.slug, m.computed_at DESC
       `).then((res: any) => (res as any).rows ?? res);
       for (const r of rows) {
@@ -500,11 +510,12 @@ export const appRoutes: FastifyPluginAsync = async (app) => {
     async (request, reply) => {
       const { slug } = request.params;
       const { accountId } = request.user;
+      const platform = getPlatformFromQuery(request.query as Record<string, unknown>);
 
       const [appRow] = await db
         .select({ id: apps.id, slug: apps.slug })
         .from(apps)
-        .where(eq(apps.slug, slug))
+        .where(and(eq(apps.slug, slug), eq(apps.platform, platform)))
         .limit(1);
 
       if (!appRow) {
@@ -621,11 +632,12 @@ export const appRoutes: FastifyPluginAsync = async (app) => {
         limit?: string;
         offset?: string;
       };
+      const platform = getPlatformFromQuery(request.query as Record<string, unknown>);
 
       const [appRow] = await db
         .select()
         .from(apps)
-        .where(eq(apps.slug, slug))
+        .where(and(eq(apps.slug, slug), eq(apps.platform, platform)))
         .limit(1);
 
       if (!appRow) {
@@ -660,11 +672,12 @@ export const appRoutes: FastifyPluginAsync = async (app) => {
         offset = "0",
         sort = "newest",
       } = request.query as { limit?: string; offset?: string; sort?: string };
+      const platform = getPlatformFromQuery(request.query as Record<string, unknown>);
 
       const [appRow] = await db
         .select()
         .from(apps)
-        .where(eq(apps.slug, slug))
+        .where(and(eq(apps.slug, slug), eq(apps.platform, platform)))
         .limit(1);
 
       if (!appRow) {
@@ -721,11 +734,12 @@ export const appRoutes: FastifyPluginAsync = async (app) => {
       const { slug } = request.params;
       const { days = "30" } = request.query as { days?: string };
       const { accountId } = request.user;
+      const platform = getPlatformFromQuery(request.query as Record<string, unknown>);
 
       const [appRow] = await db
         .select()
         .from(apps)
-        .where(eq(apps.slug, slug))
+        .where(and(eq(apps.slug, slug), eq(apps.platform, platform)))
         .limit(1);
 
       if (!appRow) {
@@ -874,13 +888,14 @@ export const appRoutes: FastifyPluginAsync = async (app) => {
     async (request) => {
       const { slug } = request.params;
       const { limit = "50" } = request.query as { limit?: string };
+      const platform = getPlatformFromQuery(request.query as Record<string, unknown>);
       const maxLimit = Math.min(parseInt(limit, 10) || 50, 200);
 
-      // Look up app ID
+      // Look up app ID (scoped to platform)
       const [changeApp] = await db
         .select({ id: apps.id })
         .from(apps)
-        .where(eq(apps.slug, slug))
+        .where(and(eq(apps.slug, slug), eq(apps.platform, platform)))
         .limit(1);
 
       if (!changeApp) return [];
@@ -900,11 +915,12 @@ export const appRoutes: FastifyPluginAsync = async (app) => {
     async (request, reply) => {
       const { slug } = request.params;
       const { days = "30" } = request.query as { days?: string };
+      const platform = getPlatformFromQuery(request.query as Record<string, unknown>);
 
       const [appRow] = await db
         .select({ id: apps.id, slug: apps.slug, name: apps.name, iconUrl: apps.iconUrl })
         .from(apps)
-        .where(eq(apps.slug, slug))
+        .where(and(eq(apps.slug, slug), eq(apps.platform, platform)))
         .limit(1);
 
       if (!appRow) {
@@ -1003,13 +1019,14 @@ export const appRoutes: FastifyPluginAsync = async (app) => {
     async (request, reply) => {
       const { slug } = request.params;
       const { days = "30" } = request.query as { days?: string };
+      const platform = getPlatformFromQuery(request.query as Record<string, unknown>);
 
       const since = new Date();
       since.setDate(since.getDate() - parseInt(days, 10));
       const sinceStr = since.toISOString().slice(0, 10);
 
-      // Look up app ID
-      const [featApp] = await db.select({ id: apps.id }).from(apps).where(eq(apps.slug, slug)).limit(1);
+      // Look up app ID (scoped to platform)
+      const [featApp] = await db.select({ id: apps.id }).from(apps).where(and(eq(apps.slug, slug), eq(apps.platform, platform))).limit(1);
       if (!featApp) return { sightings: [] };
 
       const sightings = await db
@@ -1041,13 +1058,14 @@ export const appRoutes: FastifyPluginAsync = async (app) => {
     async (request, reply) => {
       const { slug } = request.params;
       const { days = "30" } = request.query as { days?: string };
+      const platform = getPlatformFromQuery(request.query as Record<string, unknown>);
 
       const since = new Date();
       since.setDate(since.getDate() - parseInt(days, 10));
       const sinceStr = since.toISOString().slice(0, 10);
 
-      // Look up app ID
-      const [adApp] = await db.select({ id: apps.id }).from(apps).where(eq(apps.slug, slug)).limit(1);
+      // Look up app ID (scoped to platform)
+      const [adApp] = await db.select({ id: apps.id }).from(apps).where(and(eq(apps.slug, slug), eq(apps.platform, platform))).limit(1);
       if (!adApp) return { sightings: [] };
 
       const sightings = await db
@@ -1081,13 +1099,14 @@ export const appRoutes: FastifyPluginAsync = async (app) => {
     async (request, reply) => {
       const { slug } = request.params;
       const { days = "30" } = request.query as { days?: string };
+      const platform = getPlatformFromQuery(request.query as Record<string, unknown>);
 
       const since = new Date();
       since.setDate(since.getDate() - parseInt(days, 10));
       const sinceStr = since.toISOString().slice(0, 10);
 
-      // Look up app ID
-      const [catAdApp] = await db.select({ id: apps.id }).from(apps).where(eq(apps.slug, slug)).limit(1);
+      // Look up app ID (scoped to platform)
+      const [catAdApp] = await db.select({ id: apps.id }).from(apps).where(and(eq(apps.slug, slug), eq(apps.platform, platform))).limit(1);
       if (!catAdApp) return { sightings: [] };
 
       const sightings = await db
@@ -1118,9 +1137,10 @@ export const appRoutes: FastifyPluginAsync = async (app) => {
   app.get("/:slug/scores", async (request) => {
     const { slug } = request.params as { slug: string };
     const { accountId } = request.user;
+    const platform = getPlatformFromQuery(request.query as Record<string, unknown>);
 
-    // Look up app ID
-    const [scoreApp] = await db.select({ id: apps.id }).from(apps).where(eq(apps.slug, slug)).limit(1);
+    // Look up app ID (scoped to platform)
+    const [scoreApp] = await db.select({ id: apps.id }).from(apps).where(and(eq(apps.slug, slug), eq(apps.platform, platform))).limit(1);
     if (!scoreApp) return { visibility: [], power: [], weightedPowerScore: 0 };
 
     // Visibility: account-scoped, grouped by trackedAppId
@@ -1274,18 +1294,19 @@ export const appRoutes: FastifyPluginAsync = async (app) => {
       trackedApp?: string;
     };
     const { accountId } = request.user;
+    const platform = getPlatformFromQuery(request.query as Record<string, unknown>);
     const daysNum = Math.min(parseInt(days) || 30, 90);
     const sinceStr = new Date(Date.now() - daysNum * 86400000).toISOString().slice(0, 10);
 
-    // Look up app ID
-    const [histApp] = await db.select({ id: apps.id }).from(apps).where(eq(apps.slug, slug)).limit(1);
+    // Look up app ID (scoped to platform)
+    const [histApp] = await db.select({ id: apps.id }).from(apps).where(and(eq(apps.slug, slug), eq(apps.platform, platform))).limit(1);
     if (!histApp) return { visibility: [], power: [] };
 
     // Visibility history: requires trackedApp param, scoped to account
     let visibility: any[] = [];
     if (trackedApp) {
-      // Look up trackedApp ID
-      const [trackedAppRow] = await db.select({ id: apps.id }).from(apps).where(eq(apps.slug, trackedApp)).limit(1);
+      // Look up trackedApp ID (scoped to platform)
+      const [trackedAppRow] = await db.select({ id: apps.id }).from(apps).where(and(eq(apps.slug, trackedApp), eq(apps.platform, platform))).limit(1);
       if (trackedAppRow) {
         visibility = await db
           .select()

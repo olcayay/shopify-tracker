@@ -1,0 +1,275 @@
+{
+  "keywords": "form",
+  "sponsored": [
+    {
+      "listing_id": "e8aee393-18ba-44b7-a1b9-ff5d19f1ce4a",
+      "listing_id_type": "uuid",
+      "name": "Forms by SharinPix - Offline Inspection Mobile Form with Photo-Video-Sketch-Plan",
+      "url": "https://appexchange.salesforce.com/appxListingDetail?listingId=e8aee393-18ba-44b7-a1b9-ff5d19f1ce4a",
+      "logo_url": "https://appexchange.salesforce.com/image_host/2f442c59-fc52-4a2c-95fd-e915a2dd438b.png",
+      "average_rating": 5,
+      "review_count": 4,
+      "short_description": "Mobile Offline Form Designed for Field Service Inspection/Audit \nPhotos-powered offline forms for field\nSalesforce-native guided assessments, surveys, checklists\nMarker on plans & sketch with personalized tools/background\nPDF to Form with AI \nAI summaries",
+      "categories": [
+        "customerService",
+        "fieldService",
+        "caseManagement"
+      ],
+      "position": 1,
+      "page": 1,
+      "is_sponsored": true,
+      "keywords": "form"
+    },
+    {
+      "listing_id": "a0N3A00000EOBliUAH",
+      "listing_id_type": "salesforce",
+      "name": "SurveyMonkey for Salesforce",
+      "url": "https://appexchange.salesforce.com/appxListingDetail?listingId=a0N3A00000EOBliUAH",
+      "logo_url": "https://appexchange.salesforce.com/image_host/2d4d9cee-3dd1-40b4-9b85-45ce57082c69.jpg",
+      "average_rating": 4.57,
+      "review_count": 67,
+      "short_description": "Connect your survey data with Salesforce to drive results for your business. Automatically send surveys after key interactions and take real-time action on feedback. Enrich customer and prospect data by syncing survey responses into Salesforce.",
+      "categories": [
+        "marketing",
+        "customerService",
+        "humanResources"
+      ],
+      "position": 2,
+      "page": 1,
+      "is_sponsored": true,
+      "keywords": "form"
+    },
+    {
+      "listing_id": "a0N3A00000EvaSKUAZ",
+      "listing_id_type": "salesforce",
+      "name": "Salesforce First Web Studio",
+      "url": "https://appexchange.salesforce.com/appxListingDetail?listingId=a0N3A00000EvaSKUAZ",
+      "logo_url": "https://appexchange.salesforce.com/image_host/e603c1f0-2072-44bc-86a1-0cc1ad62fd16.png",
+      "average_rating": 4.99,
+      "review_count": 317,
+      "short_description": "Run forms, portals, eSign, docs, and surveys directly on Salesforce.\nFrom $150 per org. No per-seat pricing. Nonprofit discounts available.",
+      "categories": [
+        "contractManagement",
+        "websites",
+        "documentGeneration"
+      ],
+      "position": 3,
+      "page": 1,
+      "is_sponsored": true,
+      "keywords": "form"
+    }
+  ],
+  "organic": [
+    {
+      "listing_id": "a0N4V00000GuFW6UAN",
+      "listing_id_type": "salesforce",
+      "name": "LeadLife",
+      "url": "https://appexchange.salesforce.com/appxListingDetail?listingId=a0N4V00000GuFW6UAN",
+      "logo_url": "https://appexchange.salesforce.com/partners/servlet/servlet.FileDownload?file=00P4V00000uyvqLUAQ",
+      "average_rating": 5,
+      "review_count": 1,
+      "short_description": "Step Up your Sales and Marketing Campaigns in a snap with a powerful tool called Leadlife! Have one space to efficiently keep track of all your leads and transform them into new opportunities. Stay on top of the game with LeadLife!",
+      "categories": [
+        "productivity"
+      ],
+      "position": 1,
+      "page": 1,
+      "is_sponsored": false,
+      "keywords": "form"
+    },
+    {
+      "listing_id": "a0N3000000B45oCEAR",
+      "listing_id_type": "salesforce",
+      "name": "Digioh - Form Builder for Marketing Cloud",
+      "url": "https://appexchange.salesforce.com/appxListingDetail?listingId=a0N3000000B45oCEAR",
+      "logo_url": "https://appexchange.salesforce.com/partners/servlet/servlet.FileDownload?file=00P3000000P3YCBEA3",
+      "average_rating": 5,
+      "review_count": 1,
+      "short_description": "The seamless way to create Salesforce Marketing Cloud/ExactTarget forms. \nBuild any form or widget you can envision. Add unlimited custom fields, pass data to your lists and data extensions in real-time, & trigger Journey Builder workflows.",
+      "categories": [
+        "campaignManagement"
+      ],
+      "position": 2,
+      "page": 1,
+      "is_sponsored": false,
+      "keywords": "form"
+    },
+    {
+      "listing_id": "a0N3A00000EmIRzUAN",
+      "listing_id_type": "salesforce",
+      "name": "Mobile Forms & Field Service Workflow Automation | TrueContext",
+      "url": "https://appexchange.salesforce.com/appxListingDetail?listingId=a0N3A00000EmIRzUAN",
+      "logo_url": "https://appexchange.salesforce.com/image_host/b2a04786-fb47-4a2f-9cd1-5b0a89bfbf7c.png",
+      "average_rating": 4.55,
+      "review_count": 29,
+      "short_description": "The largest, most asset-intensive operations run on TrueContext's intelligent field service workflow platform & mobile forms app. Powering productivity from accurate job guidance and purposeful mobile data collection to deep analytics that drive action.",
+      "categories": [
+        "productivity",
+        "fieldService"
+      ],
+      "position": 3,
+      "page": 1,
+      "is_sponsored": false,
+      "keywords": "form"
+    },
+    {
+      "listing_id": "a0N3A00000EcsATUAZ",
+      "listing_id_type": "salesforce",
+      "name": "Satrang Update Client Details",
+      "url": "https://appexchange.salesforce.com/appxListingDetail?listingId=a0N3A00000EcsATUAZ",
+      "logo_url": "https://appexchange.salesforce.com/image_host/6c30aafd-c22b-4a8c-a56e-10d10839fbbb.png",
+      "average_rating": 5,
+      "review_count": 6,
+      "short_description": "Empower customers with an easy web form to update Lead, Account, or Contact information.\n\n- Saves time\n- Multi-language support\n- Ensures accurate data\n- 100% native Force.com app\n- Improved experience\n\nFor a demo, schedule at https://bit.ly/3D6630a.",
+      "categories": [
+        "productivity",
+        "customerService",
+        "dataManagement"
+      ],
+      "position": 4,
+      "page": 1,
+      "is_sponsored": false,
+      "keywords": "form"
+    },
+    {
+      "listing_id": "a23e02c8-d2e2-4379-8c76-0eedfb1af1f7",
+      "listing_id_type": "uuid",
+      "name": "Knowledge Case Deflection - Contact Form (Einstein Flow Template)",
+      "url": "https://appexchange.salesforce.com/appxListingDetail?listingId=a23e02c8-d2e2-4379-8c76-0eedfb1af1f7",
+      "logo_url": "https://appexchange.salesforce.com/image_host/3e430e96-8084-49c3-92ee-b164cdc7a0e6.png",
+      "average_rating": 2.5,
+      "review_count": 2,
+      "short_description": "Deflect cases using a contact form that incorporates Einstein Article Recommendations",
+      "categories": [],
+      "position": 5,
+      "page": 1,
+      "is_sponsored": false,
+      "keywords": "form"
+    },
+    {
+      "listing_id": "a0N3A00000GCUcbUAH",
+      "listing_id_type": "salesforce",
+      "name": "Blufy - Student & School Management Platform",
+      "url": "https://appexchange.salesforce.com/appxListingDetail?listingId=a0N3A00000GCUcbUAH",
+      "logo_url": "https://appexchange.salesforce.com/partners/servlet/servlet.FileDownload?file=00P4V00000o7xtgUAA",
+      "average_rating": 5,
+      "review_count": 1,
+      "short_description": "Comprehensive platform for schools, private institutes & enrichment\ncentres to manage complete school operations. \n\nAutomates key functions for various departments including Student Management, Operations, Finance",
+      "categories": [
+        "productivity"
+      ],
+      "position": 6,
+      "page": 1,
+      "is_sponsored": false,
+      "keywords": "form"
+    },
+    {
+      "listing_id": "a0N3A00000EcrfoUAB",
+      "listing_id_type": "salesforce",
+      "name": "MobiForms: Salesforce Native Mobile Forms for Field Service and Beyond",
+      "url": "https://appexchange.salesforce.com/appxListingDetail?listingId=a0N3A00000EcrfoUAB",
+      "logo_url": "https://appexchange.salesforce.com/image_host/4a44ee60-712b-4cfa-9d2f-1be191e93b48.png",
+      "average_rating": 5,
+      "review_count": 1,
+      "short_description": "Start your FREE 30-day trial now! No code or integrations necessary. Quickly build mobile forms for field service inspections, customer surveys, and more. MobiForms is built on Salesforce and seamlessly captures data across any object.",
+      "categories": [
+        "sales",
+        "customerService",
+        "fieldService"
+      ],
+      "position": 7,
+      "page": 1,
+      "is_sponsored": false,
+      "keywords": "form"
+    },
+    {
+      "listing_id": "a0N3A00000DqCoUUAV",
+      "listing_id_type": "salesforce",
+      "name": "Simple Signature - Electronic Signatures & Document Generation for Salesforce",
+      "url": "https://appexchange.salesforce.com/appxListingDetail?listingId=a0N3A00000DqCoUUAV",
+      "logo_url": "https://appexchange.salesforce.com/image_host/c8cd75ec-5f65-4ed6-bcf7-23ddb2ff8ae7.png",
+      "average_rating": 4.79,
+      "review_count": 33,
+      "short_description": "Introducing an affordable solution to capture electronic signatures in Salesforce.  With Simple Signature, you can acquire e-signatures on release forms, petitions, waivers, and other simple forms that need key data elements and a signature.  Simple.",
+      "categories": [
+        "contractManagement",
+        "documentGeneration",
+        "processManagement"
+      ],
+      "position": 8,
+      "page": 1,
+      "is_sponsored": false,
+      "keywords": "form"
+    },
+    {
+      "listing_id": "a0N3A00000G12vyUAB",
+      "listing_id_type": "salesforce",
+      "name": "RSign - Digitizing Workflows with E-Signatures",
+      "url": "https://appexchange.salesforce.com/appxListingDetail?listingId=a0N3A00000G12vyUAB",
+      "logo_url": "https://appexchange.salesforce.com/partners/servlet/servlet.FileDownload?file=00P3A00000nLN5VUAW",
+      "average_rating": 5,
+      "review_count": 2,
+      "short_description": "RSign® is the simplest to use, most affordable, feature-rich e-sign service. We make it easy with an intuitive guided e-sign process. We’ll keep innovating for you with our advanced features, as we’ve been doing for users the world over for two decades.",
+      "categories": [
+        "contractManagement"
+      ],
+      "position": 9,
+      "page": 1,
+      "is_sponsored": false,
+      "keywords": "form"
+    },
+    {
+      "listing_id": "a0N4V00000Fz0VGUAZ",
+      "listing_id_type": "salesforce",
+      "name": "UltraFlow Designer",
+      "url": "https://appexchange.salesforce.com/appxListingDetail?listingId=a0N4V00000Fz0VGUAZ",
+      "logo_url": "https://appexchange.salesforce.com/image_host/6da37acc-e09f-4ab0-9bca-b9c77fc09b95.png",
+      "average_rating": 5,
+      "review_count": 3,
+      "short_description": "Build portals for your citizens and customers using de-coupled, re-usable components\nConfigure no-code Forms and Flows\nMake your own translations to all user-facing text to support any language\nCreate modular, reusable Apex to sync to Salesforce objects",
+      "categories": [
+        "commerce",
+        "customerService"
+      ],
+      "position": 10,
+      "page": 1,
+      "is_sponsored": false,
+      "keywords": "form"
+    },
+    {
+      "listing_id": "a0N3A00000E9l50UAB",
+      "listing_id_type": "salesforce",
+      "name": "Ideas Component Lite for Experience Cloud",
+      "url": "https://appexchange.salesforce.com/appxListingDetail?listingId=a0N3A00000E9l50UAB",
+      "logo_url": "https://appexchange.salesforce.com/partners/servlet/servlet.FileDownload?file=00P3A00000VsqqiUAB",
+      "average_rating": 4.73,
+      "review_count": 77,
+      "short_description": "Please note: This is a limited version with restrictions on the number of 100 ideas per community. \nPlease, see our enhanced app, AC Ideas Ultimate, here: https://appexchange.salesforce.com/listingDetail?listingId=a0N4V00000FguKaUAJ&tab=e",
+      "categories": [
+        "productivity",
+        "collaboration"
+      ],
+      "position": 11,
+      "page": 1,
+      "is_sponsored": false,
+      "keywords": "form"
+    },
+    {
+      "listing_id": "a0N3A00000FMttmUAD",
+      "listing_id_type": "salesforce",
+      "name": "Reg BI – Form CRS Powered by Broadridge",
+      "url": "https://appexchange.salesforce.com/appxListingDetail?listingId=a0N3A00000FMttmUAD",
+      "logo_url": "https://appexchange.salesforce.com/partners/servlet/servlet.FileDownload?file=00P4V00000ou7PCUAY",
+      "average_rating": 0,
+      "review_count": 0,
+      "short_description": "Under Regulation Best Interest (Reg BI), disclosures must be sent to clients and prospects. How can you deliver Form CRS anytime, anywhere?\nNow, with the Broadridge “Reg BI – Form CRS” app, advisors can deliver Form CRS with a simple click of a button.",
+      "categories": [
+        "customerService"
+      ],
+      "position": 12,
+      "page": 1,
+      "is_sponsored": false,
+      "keywords": "form"
+    }
+  ]
+}

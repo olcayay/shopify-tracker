@@ -33,11 +33,11 @@ export default async function CategoryDetailPage({
   let starredCategories: any[] = [];
   try {
     [category, history, competitors, trackedApps, starredCategories] = await Promise.all([
-      getCategory(slug),
-      getCategoryHistory(slug, 10),
-      getAccountCompetitors().catch(() => []),
-      getAccountTrackedApps().catch(() => []),
-      getAccountStarredCategories().catch(() => []),
+      getCategory(slug, platform as PlatformId),
+      getCategoryHistory(slug, 10, platform as PlatformId),
+      getAccountCompetitors(platform as PlatformId).catch(() => []),
+      getAccountTrackedApps(platform as PlatformId).catch(() => []),
+      getAccountStarredCategories(platform as PlatformId).catch(() => []),
     ]);
   } catch {
     return (
@@ -63,16 +63,16 @@ export default async function CategoryDetailPage({
   const rankedApps = category.rankedApps || [];
   const appSlugs: string[] = rankedApps.map((a: any) => a.slug);
   const [lastChanges, minPaidPrices, reverseSimilarCounts, featuredData, categoryAdData, categoryScoresData] = await Promise.all([
-    getAppsLastChanges(appSlugs).catch(() => ({} as Record<string, string>)),
-    getAppsMinPaidPrices(appSlugs).catch(() => ({} as Record<string, number | null>)),
-    getAppsReverseSimilarCounts(appSlugs).catch(() => ({} as Record<string, number>)),
-    getFeaturedApps(30, "category", slug).catch(() => ({
+    getAppsLastChanges(appSlugs, platform as PlatformId).catch(() => ({} as Record<string, string>)),
+    getAppsMinPaidPrices(appSlugs, platform as PlatformId).catch(() => ({} as Record<string, number | null>)),
+    getAppsReverseSimilarCounts(appSlugs, platform as PlatformId).catch(() => ({} as Record<string, number>)),
+    getFeaturedApps(30, "category", slug, undefined, platform as PlatformId).catch(() => ({
       sightings: [],
       trackedSlugs: [],
       competitorSlugs: [],
     })),
-    getCategoryAds(slug).catch(() => ({ adSightings: [] })),
-    getCategoryScores(slug).catch(() => ({ scores: [], computedAt: null })),
+    getCategoryAds(slug, 30, platform as PlatformId).catch(() => ({ adSightings: [] })),
+    getCategoryScores(slug, 50, platform as PlatformId).catch(() => ({ scores: [], computedAt: null })),
   ]);
 
   // Build score lookup maps (power only, visibility is now account-scoped)

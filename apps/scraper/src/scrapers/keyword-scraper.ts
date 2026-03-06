@@ -5,23 +5,33 @@ import {
   trackedKeywords,
   keywordSnapshots,
   apps,
+  appSnapshots,
   appKeywordRankings,
   keywordAdSightings,
   appFieldChanges,
 } from "@appranks/db";
-import { urls, createLogger } from "@appranks/shared";
+import { urls, createLogger, type PlatformId } from "@appranks/shared";
 
 const log = createLogger("keyword-scraper");
 import { HttpClient } from "../http-client.js";
 import { parseSearchPage } from "../parsers/search-parser.js";
+import type { PlatformModule, NormalizedSearchApp } from "../platforms/platform-module.js";
 
 export class KeywordScraper {
   private db: Database;
   private httpClient: HttpClient;
+  private platform: PlatformId;
+  private platformModule?: PlatformModule;
 
-  constructor(db: Database, httpClient?: HttpClient) {
+  constructor(db: Database, httpClient?: HttpClient, platformModule?: PlatformModule) {
     this.db = db;
     this.httpClient = httpClient || new HttpClient();
+    this.platformModule = platformModule;
+    this.platform = platformModule?.platformId ?? "shopify";
+  }
+
+  private get isShopify(): boolean {
+    return this.platform === "shopify";
   }
 
   /** Scrape search results for all active keywords */
@@ -29,7 +39,7 @@ export class KeywordScraper {
     const keywords = await this.db
       .select()
       .from(trackedKeywords)
-      .where(eq(trackedKeywords.isActive, true));
+      .where(and(eq(trackedKeywords.isActive, true), eq(trackedKeywords.platform, this.platform)));
 
     if (keywords.length === 0) {
       log.info("no active keywords found");
@@ -90,7 +100,12 @@ export class KeywordScraper {
     runId: string,
     pageOptions?: { pages?: "first" | "all" | number }
   ): Promise<string[]> {
-    log.info("scraping keyword", { keyword });
+    log.info("scraping keyword", { keyword, platform: this.platform });
+
+    // Use generic path for non-Shopify platforms
+    if (this.platformModule && !this.isShopify) {
+      return this.scrapeKeywordGeneric(keywordId, keyword, runId, pageOptions);
+    }
 
     const MAX_PAGES = pageOptions?.pages === "first" ? 1
       : pageOptions?.pages === "all" ? 20
@@ -177,7 +192,7 @@ export class KeywordScraper {
       const [upsertedApp] = await this.db
         .insert(apps)
         .values({
-          platform: "shopify",
+          platform: this.platform,
           slug: app.app_slug,
           name: app.app_name,
           isBuiltForShopify: !!app.is_built_for_shopify,
@@ -254,7 +269,7 @@ export class KeywordScraper {
       const [upsertedApp] = await this.db
         .insert(apps)
         .values({
-          platform: "shopify",
+          platform: this.platform,
           slug: app.app_slug,
           name: app.app_name,
           isBuiltForShopify: !!app.is_built_for_shopify,
@@ -300,5 +315,239 @@ export class KeywordScraper {
 
     // Return unique organic app slugs
     return [...new Set(organicApps.map((a) => a.app_slug))];
+  }
+
+  /**
+   * Generic keyword scraping using PlatformModule interface.
+   * Used for non-Shopify platforms (Salesforce, etc.)
+   */
+  private async scrapeKeywordGeneric(
+    keywordId: number,
+    keyword: string,
+    runId: string,
+    pageOptions?: { pages?: "first" | "all" | number }
+  ): Promise<string[]> {
+    const mod = this.platformModule!;
+
+    const MAX_PAGES = pageOptions?.pages === "first" ? 1
+      : pageOptions?.pages === "all" ? 20
+      : typeof pageOptions?.pages === "number" ? pageOptions.pages
+      : 10;
+
+    const allNormalizedApps: NormalizedSearchApp[] = [];
+    const seenSponsoredSlugs = new Set<string>();
+    const seenOrganicSlugs = new Set<string>();
+    let totalResults: number | null = null;
+    let organicCount = 0;
+
+    for (let page = 1; page <= MAX_PAGES; page++) {
+      const json = await mod.fetchSearchPage!(keyword, page);
+      if (!json) break;
+
+      const data = mod.parseSearchPage!(json, keyword, page, organicCount);
+      if (page === 1) totalResults = data.totalResults;
+
+      for (const app of data.apps) {
+        if (app.isSponsored) {
+          if (seenSponsoredSlugs.has(app.appSlug)) continue;
+          seenSponsoredSlugs.add(app.appSlug);
+        } else {
+          if (seenOrganicSlugs.has(app.appSlug)) continue;
+          seenOrganicSlugs.add(app.appSlug);
+          organicCount++;
+        }
+        allNormalizedApps.push(app);
+      }
+
+      if (!data.hasNextPage) {
+        log.info("no more pages", { keyword, stoppedAtPage: page });
+        break;
+      }
+    }
+
+    log.info("keyword pages scraped", { keyword, platform: this.platform, totalApps: allNormalizedApps.length, organicCount });
+
+    // Convert to snapshot format (KeywordSearchApp)
+    const snapshotResults = allNormalizedApps.map((app) => ({
+      app_slug: app.appSlug,
+      app_name: app.appName,
+      app_url: mod.buildAppUrl(app.appSlug),
+      short_description: app.shortDescription,
+      average_rating: app.averageRating,
+      rating_count: app.ratingCount,
+      logo_url: app.logoUrl,
+      pricing_hint: app.pricingHint || undefined,
+      is_sponsored: app.isSponsored,
+      is_built_for_shopify: false,
+      is_built_in: false,
+      position: app.position,
+      badges: app.badges,
+    }));
+
+    await this.db.insert(keywordSnapshots).values({
+      keywordId,
+      scrapeRunId: runId,
+      scrapedAt: new Date(),
+      totalResults,
+      results: snapshotResults,
+    });
+
+    const now = new Date();
+    const todayStr = now.toISOString().slice(0, 10);
+
+    const organicApps = allNormalizedApps.filter((a) => !a.isSponsored);
+    const sponsoredApps = allNormalizedApps.filter((a) => a.isSponsored);
+
+    // Record organic rankings
+    for (let i = 0; i < organicApps.length; i++) {
+      const app = organicApps[i];
+      const hasRating = app.averageRating > 0;
+      const hasCount = app.ratingCount > 0;
+
+      const [upsertedApp] = await this.db
+        .insert(apps)
+        .values({
+          platform: this.platform,
+          slug: app.appSlug,
+          name: app.appName,
+          appCardSubtitle: app.shortDescription || undefined,
+          ...(app.logoUrl && { iconUrl: app.logoUrl }),
+          ...(hasRating && { averageRating: String(app.averageRating) }),
+          ...(hasCount && { ratingCount: app.ratingCount }),
+          ...(app.pricingHint && { pricingHint: app.pricingHint }),
+        })
+        .onConflictDoUpdate({
+          target: [apps.platform, apps.slug],
+          set: {
+            appCardSubtitle: app.shortDescription || undefined,
+            ...(app.logoUrl && { iconUrl: sql`COALESCE(${apps.iconUrl}, ${app.logoUrl})` }),
+            ...(hasRating && { averageRating: String(app.averageRating) }),
+            ...(hasCount && { ratingCount: app.ratingCount }),
+            ...(app.pricingHint && { pricingHint: app.pricingHint }),
+          },
+        })
+        .returning({ id: apps.id });
+
+      await this.db.insert(appKeywordRankings).values({
+        appId: upsertedApp.id,
+        keywordId,
+        scrapeRunId: runId,
+        scrapedAt: now,
+        position: i + 1,
+      });
+
+      // For non-Shopify platforms: ensure a minimal snapshot exists so dashboard can show rating/pricing
+      if (this.platform !== "shopify" && (hasRating || hasCount)) {
+        const [existingSnap] = await this.db
+          .select({ id: appSnapshots.id })
+          .from(appSnapshots)
+          .where(eq(appSnapshots.appId, upsertedApp.id))
+          .limit(1);
+        if (!existingSnap) {
+          await this.db.insert(appSnapshots).values({
+            appId: upsertedApp.id,
+            scrapeRunId: runId,
+            scrapedAt: now,
+            averageRating: hasRating ? String(app.averageRating) : null,
+            ratingCount: hasCount ? app.ratingCount : null,
+            pricing: app.pricingHint || "",
+            appIntroduction: app.shortDescription || "",
+            appDetails: "",
+            seoTitle: "",
+            seoMetaDescription: "",
+            features: [],
+            developer: null,
+            demoStoreUrl: null,
+            languages: [],
+            integrations: [],
+            categories: [],
+            pricingPlans: [],
+            support: null,
+          });
+        }
+      }
+    }
+
+    // Record dropped apps
+    const currentOrganicSlugs = new Set(organicApps.map((a) => a.appSlug));
+    const previouslyRanked = await this.db.execute(sql`
+      SELECT a.id AS app_id, a.slug AS app_slug FROM (
+        SELECT DISTINCT ON (app_id) app_id, position
+        FROM app_keyword_rankings
+        WHERE keyword_id = ${keywordId}
+          AND scrape_run_id != ${runId}
+        ORDER BY app_id, scraped_at DESC
+      ) latest
+      JOIN apps a ON a.id = latest.app_id
+      WHERE latest.position IS NOT NULL
+    `);
+    const prevRows: { app_id: number; app_slug: string }[] = (previouslyRanked as any).rows ?? previouslyRanked;
+    const droppedApps = prevRows.filter((r) => !currentOrganicSlugs.has(r.app_slug));
+
+    for (const dropped of droppedApps) {
+      await this.db.insert(appKeywordRankings).values({
+        appId: dropped.app_id,
+        keywordId,
+        scrapeRunId: runId,
+        scrapedAt: now,
+        position: null,
+      });
+    }
+
+    if (droppedApps.length > 0) {
+      log.info("recorded dropped apps", { keyword, count: droppedApps.length });
+    }
+
+    // Record ad sightings
+    for (const app of sponsoredApps) {
+      const hasRating = app.averageRating > 0;
+      const hasCount = app.ratingCount > 0;
+
+      const [upsertedApp] = await this.db
+        .insert(apps)
+        .values({
+          platform: this.platform,
+          slug: app.appSlug,
+          name: app.appName,
+          ...(app.logoUrl && { iconUrl: app.logoUrl }),
+          ...(hasRating && { averageRating: String(app.averageRating) }),
+          ...(hasCount && { ratingCount: app.ratingCount }),
+          ...(app.pricingHint && { pricingHint: app.pricingHint }),
+        })
+        .onConflictDoUpdate({
+          target: [apps.platform, apps.slug],
+          set: {
+            ...(app.logoUrl && { iconUrl: sql`COALESCE(${apps.iconUrl}, ${app.logoUrl})` }),
+            ...(hasRating && { averageRating: String(app.averageRating) }),
+            ...(hasCount && { ratingCount: app.ratingCount }),
+            ...(app.pricingHint && { pricingHint: app.pricingHint }),
+          },
+        })
+        .returning({ id: apps.id });
+
+      await this.db
+        .insert(keywordAdSightings)
+        .values({
+          appId: upsertedApp.id,
+          keywordId,
+          seenDate: todayStr,
+          firstSeenRunId: runId,
+          lastSeenRunId: runId,
+          timesSeenInDay: 1,
+        })
+        .onConflictDoUpdate({
+          target: [
+            keywordAdSightings.appId,
+            keywordAdSightings.keywordId,
+            keywordAdSightings.seenDate,
+          ],
+          set: {
+            lastSeenRunId: sql`${runId}`,
+            timesSeenInDay: sql`${keywordAdSightings.timesSeenInDay} + 1`,
+          },
+        });
+    }
+
+    return [...new Set(organicApps.map((a) => a.appSlug))];
   }
 }

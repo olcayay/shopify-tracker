@@ -1,3 +1,138 @@
+Platform Access & Data Isolation Fix — Salesforce pages showing Shopify data
+============================================================================
+Problem 1: Salesforce pages were inaccessible because account_platforms table only had Shopify entries.
+Problem 2: Dashboard pages were showing Shopify data on Salesforce pages because ?platform= was missing from API calls.
+
+Fix (platform access):
+- Migration 0051_seed_salesforce_platform.sql: seeds salesforce access for all existing accounts
+- Registration endpoint (auth.ts): now inserts both shopify and salesforce into account_platforms for new accounts
+- System admin API: added POST/DELETE /api/system-admin/accounts/:id/platforms endpoints for platform management
+
+Fix (platform data isolation):
+- Client components: fetchWithAuth (auth-context.tsx) now auto-injects ?platform= from URL path
+  - withAutoPlatform() reads platform from window.location.pathname segment
+  - Exempt paths: /api/auth/, /api/system-admin/, /api/account/members, /api/platforms
+- Server components: added platform as PlatformId to all @/lib/api function calls across 17 files
+  - All apps/[slug] pages: layout, page, ads, changes, competitors, details, featured, keywords, rankings, reviews, similar
+  - categories/[slug], featured, features/[handle], features/category, integrations/[name], keywords/[slug]
+  - Fixed arg ordering for functions with intermediate defaults (days, limit, offset, sort before platform)
+
+---
+
+Salesforce AppExchange Tracking — Platform Module & Scraper Refactoring
+=======================================================================
+
+Platform Config:
+- hasAdTracking changed to true (Salesforce search returns sponsored/featured results)
+- pageSize changed to 12 (API default)
+- buildExternalCategoryUrl fixed: uses /explore/business-needs?category={slug}
+
+Salesforce Platform Module (apps/scraper/src/platforms/salesforce/):
+- SalesforceModule class implementing PlatformModule interface
+- JSON API at api.appexchange.salesforce.com/recommendations/v3/listings
+- Search: keyword param, 1-based pages, sponsoredCount=4 on first page
+- Categories: category param, 1-based pages, 16 flat seed categories (no subcategory tree)
+- Parsers: search-parser.ts & category-parser.ts parse JSON (not HTML)
+- App detail parser: stub with best-effort window.stores extraction (full needs Playwright)
+- Logo extraction prefers "Logo" logoType from logos[] array
+- Slug = oafId (Salesforce ID like a0N... or UUID)
+- listing_id_type detected and stored in extra/platformData
+
+Scraper Refactoring (all scrapers now platform-generic):
+- CategoryScraper: accepts PlatformModule via options, uses module for non-Shopify platforms
+  - Generic path (crawlCategoryGeneric) uses module.fetchCategoryPage/parseCategoryPage
+  - Homepage featured scraping gated to Shopify only
+  - Shopify /all URL logic preserved unchanged
+  - New recordNormalizedAppRankings/recordNormalizedCategoryAdSightings helpers
+- KeywordScraper: accepts PlatformModule as 3rd constructor arg
+  - Generic path (scrapeKeywordGeneric) uses module.fetchSearchPage/parseSearchPage
+  - Filters keywords by platform when scraping all
+- AppDetailsScraper: accepts PlatformModule as 3rd constructor arg
+  - Uses module.fetchAppPage/parseAppDetails for non-Shopify
+  - Converts NormalizedAppDetails to legacy format for snapshot compatibility
+  - Similar apps and category registration gated to Shopify
+- process-job.ts: instantiates PlatformModule via getModule() and passes to scrapers
+- cli.ts: --platform flag (default: shopify), passed to all scrapers and track commands
+
+Tests (27 tests, all passing):
+- search-parser.test.ts: 12 tests (total results, keyword, sponsored, organic, logos, ratings, publisher, ID type, pagination, hasNextPage)
+- category-parser.test.ts: 15 tests (slug, appCount, title, sponsored, organic, positions, subcategories, hasNextPage, URL, logos, ratings, multi-page)
+
+Files Created (8):
+- apps/scraper/src/platforms/salesforce/index.ts
+- apps/scraper/src/platforms/salesforce/urls.ts
+- apps/scraper/src/platforms/salesforce/constants.ts
+- apps/scraper/src/platforms/salesforce/parsers/search-parser.ts
+- apps/scraper/src/platforms/salesforce/parsers/category-parser.ts
+- apps/scraper/src/platforms/salesforce/parsers/app-parser.ts
+- apps/scraper/src/platforms/salesforce/parsers/__tests__/search-parser.test.ts
+- apps/scraper/src/platforms/salesforce/parsers/__tests__/category-parser.test.ts
+
+Files Modified (7):
+- packages/shared/src/constants/platforms.ts
+- apps/scraper/src/platforms/registry.ts
+- apps/scraper/src/scrapers/category-scraper.ts
+- apps/scraper/src/scrapers/keyword-scraper.ts
+- apps/scraper/src/scrapers/app-details-scraper.ts
+- apps/scraper/src/process-job.ts
+- apps/scraper/src/cli.ts
+
+---
+
+API Endpoint Platform Filtering — Comprehensive Sweep
+=====================================================
+Problem: API endpoints using app slug lookups (eq(apps.slug, slug)) returned apps from any platform.
+On Salesforce keyword pages, Ad History showed Shopify apps. Bulk POST endpoints also lacked platform filtering.
+
+Fix (keywords.ts):
+- /:slug/ads — added eq(apps.platform, platform) to ad sightings query
+- /:slug/rankings — added platform to app slug lookup and rankings query
+
+Fix (apps.ts — 18 endpoints):
+- All /:slug/* GET endpoints now use and(eq(apps.slug, slug), eq(apps.platform, platform)):
+  rankings, membership, history, reviews, changes, similar-apps, ad-sightings,
+  category-ad-sightings, featured-placements, scores, scores/history
+- All bulk POST endpoints now filter by platform:
+  /categories, /last-changes, /min-paid-prices, /launched-dates, /reverse-similar-counts,
+  /featured-section-counts, /ad-keyword-counts, /review-velocity
+- /review-velocity raw SQL: added AND a.platform = ${platform}
+
+---
+
+Dashboard Scraper Trigger Platform Support
+==========================================
+Problem: Scraper jobs triggered from dashboard UI didn't include platform, defaulting to Shopify.
+
+Fix (admin-scraper-trigger.tsx):
+- Extracts platform from URL pathname using usePathname()
+- VALID_PLATFORMS set validates extracted segment
+- Sends platform in request body when triggering scraper
+
+Fix (system-admin/scraper/page.tsx):
+- Added platform selector dropdown (triggerPlatform state, defaults to "shopify")
+- Uses PLATFORMS constant from @appranks/shared for dropdown options
+- Sends platform in triggerScraper() request body
+
+---
+
+Worker Dual-Queue Fix — Interactive Jobs Not Processing
+======================================================
+Problem: User-triggered scraper jobs (keyword_search, etc.) enqueued to interactive queue
+but worker.ts only listened to background queue. Jobs stayed in "waiting" state forever.
+
+Root cause: API routes (account.ts, keywords.ts, research.ts) each create their own
+getScraperQueue() connected to INTERACTIVE_QUEUE_NAME. But worker.ts only created
+a Worker for BACKGROUND_QUEUE_NAME.
+
+Fix (worker.ts):
+- Creates two BullMQ Worker instances: bgWorker (background queue) and intWorker (interactive queue)
+- Background worker: concurrency 1, rate limited (1 job per 5s)
+- Interactive worker: concurrency 1, no rate limit (immediate processing)
+- Both share error/failure logging with queue name prefix
+- Graceful shutdown closes both workers
+
+---
+
 Multi-Platform Migration — Phase 2: API + Dashboard Platform Support
 =====================================================================
 

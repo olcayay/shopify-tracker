@@ -210,12 +210,14 @@ export default function ScraperPage() {
     if (queueRes.ok) setQueueStatus(await queueRes.json());
   }
 
+  const [triggerPlatform, setTriggerPlatform] = useState<string>("shopify");
+
   async function triggerScraper(type: string) {
     setTriggering(type);
     setMessage("");
     const res = await fetchWithAuth("/api/system-admin/scraper/trigger", {
       method: "POST",
-      body: JSON.stringify({ type }),
+      body: JSON.stringify({ type, platform: triggerPlatform }),
     });
     if (res.ok) {
       setMessage(`Scraper "${type}" triggered`);
@@ -501,6 +503,22 @@ export default function ScraperPage() {
           </CardContent>
         </Card>
       )}
+
+      {/* Platform selector for triggering */}
+      <div className="flex items-center gap-2">
+        <span className="text-sm font-medium text-muted-foreground">Platform:</span>
+        <select
+          value={triggerPlatform}
+          onChange={(e) => setTriggerPlatform(e.target.value)}
+          className="border rounded-md px-3 py-1.5 text-sm bg-background"
+        >
+          {(Object.keys(PLATFORMS) as PlatformId[]).map((pid) => (
+            <option key={pid} value={pid}>
+              {PLATFORMS[pid].name}
+            </option>
+          ))}
+        </select>
+      </div>
 
       {/* Scraper Types with Trigger + Freshness */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

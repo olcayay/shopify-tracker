@@ -1,18 +1,19 @@
 import { formatDateOnly } from "@/lib/format-date";
 import { getAppChanges } from "@/lib/api";
+import type { PlatformId } from "@appranks/shared";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 
 export default async function ChangesPage({
   params,
 }: {
-  params: Promise<{ slug: string }>;
+  params: Promise<{ platform: string; slug: string }>;
 }) {
-  const { slug } = await params;
+  const { platform, slug } = await params;
 
   let changes: any[] = [];
   try {
-    changes = await getAppChanges(slug, 50);
+    changes = await getAppChanges(slug, 50, platform as PlatformId);
   } catch {
     changes = [];
   }

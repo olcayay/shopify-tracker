@@ -22,13 +22,14 @@ export const trackedKeywords = pgTable(
     id: serial("id").primaryKey(),
     platform: varchar("platform", { length: 20 }).notNull().default("shopify"),
     keyword: varchar("keyword", { length: 255 }).notNull(),
-    slug: varchar("slug", { length: 255 }).notNull().unique(),
+    slug: varchar("slug", { length: 255 }).notNull(),
     isActive: boolean("is_active").notNull().default(true),
     createdAt: timestamp("created_at").notNull().defaultNow(),
     updatedAt: timestamp("updated_at").notNull().defaultNow(),
   },
   (table) => [
     uniqueIndex("idx_tracked_keywords_platform_keyword").on(table.platform, table.keyword),
+    uniqueIndex("idx_tracked_keywords_platform_slug").on(table.platform, table.slug),
   ]
 );
 

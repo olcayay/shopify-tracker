@@ -3,15 +3,33 @@ import { resolve } from "path";
 config({ path: resolve(import.meta.dirname, "../../../.env") });
 import { createDb } from "@appranks/db";
 import { trackedKeywords, keywordToSlug, apps } from "@appranks/db";
+import { isPlatformId, type PlatformId } from "@appranks/shared";
 import { CategoryScraper } from "./scrapers/category-scraper.js";
 import { AppDetailsScraper } from "./scrapers/app-details-scraper.js";
 import { KeywordScraper } from "./scrapers/keyword-scraper.js";
 import { ReviewScraper } from "./scrapers/review-scraper.js";
 import { HttpClient } from "./http-client.js";
+import { getModule } from "./platforms/registry.js";
+
+// Parse --platform flag (can appear anywhere in args)
+const platformArgIdx = process.argv.indexOf("--platform");
+let platformArg: PlatformId = "shopify";
+if (platformArgIdx !== -1 && process.argv[platformArgIdx + 1]) {
+  const val = process.argv[platformArgIdx + 1];
+  if (isPlatformId(val)) {
+    platformArg = val;
+  } else {
+    console.error(`Unknown platform: ${val}. Valid: shopify, salesforce, canva`);
+    process.exit(1);
+  }
+  // Remove --platform and its value from argv so they don't interfere with positional args
+  process.argv.splice(platformArgIdx, 2);
+}
+
 const command = process.argv[2];
 
 if (!command) {
-  console.log("Usage: tsx src/cli.ts <command> [args]");
+  console.log("Usage: tsx src/cli.ts [--platform shopify|salesforce] <command> [args]");
   console.log("Commands:");
   console.log("  categories              Crawl full category tree");
   console.log("  app <slug>              Scrape single app details");
@@ -23,6 +41,8 @@ if (!command) {
   console.log("  featured                Scrape featured apps from homepage + categories");
   console.log("  track-app <slug>        Mark an app as tracked");
   console.log("  track-keyword <keyword> Add a keyword to tracking");
+  console.log("\nOptions:");
+  console.log("  --platform <id>         Platform to scrape (default: shopify)");
   process.exit(1);
 }
 
@@ -39,10 +59,20 @@ const httpClient = new HttpClient({
 });
 
 async function main() {
+  console.log(`Platform: ${platformArg}`);
+
+  // Get platform module
+  let platformModule;
+  try {
+    platformModule = getModule(platformArg, httpClient);
+  } catch {
+    // Fall back to no module for unimplemented platforms
+  }
+
   switch (command) {
     case "categories": {
       const slug = process.argv[3];
-      const scraper = new CategoryScraper(db, { httpClient });
+      const scraper = new CategoryScraper(db, { httpClient, platformModule });
       if (slug) {
         const discovered = await scraper.scrapeSingle(slug, "cli");
         console.log(`\nSingle category scrape complete. Discovered ${discovered.length} apps.`);
@@ -61,14 +91,14 @@ async function main() {
         console.error("Usage: tsx src/cli.ts app <app-slug>");
         process.exit(1);
       }
-      const scraper = new AppDetailsScraper(db, httpClient);
+      const scraper = new AppDetailsScraper(db, httpClient, platformModule);
       await scraper.scrapeApp(slug);
       console.log(`\nApp "${slug}" scraped successfully.`);
       break;
     }
 
     case "app-tracked": {
-      const scraper = new AppDetailsScraper(db, httpClient);
+      const scraper = new AppDetailsScraper(db, httpClient, platformModule);
       await scraper.scrapeTracked();
       break;
     }
@@ -82,21 +112,28 @@ async function main() {
       // Ensure keyword is tracked
       const [kw] = await db
         .insert(trackedKeywords)
-        .values({ keyword, slug: keywordToSlug(keyword) })
+        .values({ keyword, slug: keywordToSlug(keyword), platform: platformArg })
         .onConflictDoUpdate({
           target: [trackedKeywords.platform, trackedKeywords.keyword],
           set: { isActive: true, updatedAt: new Date() },
         })
         .returning();
 
-      const scraper = new KeywordScraper(db, httpClient);
-      await scraper.scrapeKeyword(kw.id, keyword, await createRun("keyword_search"));
+      const scraper = new KeywordScraper(db, httpClient, platformModule);
+      const runId = await createRun("keyword_search");
+      try {
+        await scraper.scrapeKeyword(kw.id, keyword, runId);
+        await completeRun(runId);
+      } catch (err) {
+        await completeRun(runId, String(err));
+        throw err;
+      }
       console.log(`\nKeyword "${keyword}" scraped successfully.`);
       break;
     }
 
     case "keyword-tracked": {
-      const scraper = new KeywordScraper(db, httpClient);
+      const scraper = new KeywordScraper(db, httpClient, platformModule);
       await scraper.scrapeAll();
       break;
     }
@@ -109,8 +146,14 @@ async function main() {
       }
       const scraper = new ReviewScraper(db, httpClient);
       const runId = await createRun("reviews");
-      const count = await scraper.scrapeAppReviews(slug, runId);
-      console.log(`\nScraped ${count} reviews for "${slug}".`);
+      try {
+        const count = await scraper.scrapeAppReviews(slug, runId);
+        await completeRun(runId);
+        console.log(`\nScraped ${count} reviews for "${slug}".`);
+      } catch (err) {
+        await completeRun(runId, String(err));
+        throw err;
+      }
       break;
     }
 
@@ -128,12 +171,12 @@ async function main() {
       }
       await db
         .insert(apps)
-        .values({ platform: "shopify", slug, name: slug, isTracked: true })
+        .values({ platform: platformArg, slug, name: slug, isTracked: true })
         .onConflictDoUpdate({
           target: [apps.platform, apps.slug],
           set: { isTracked: true, updatedAt: new Date() },
         });
-      console.log(`App "${slug}" is now tracked.`);
+      console.log(`App "${slug}" is now tracked on ${platformArg}.`);
       break;
     }
 
@@ -145,12 +188,12 @@ async function main() {
       }
       await db
         .insert(trackedKeywords)
-        .values({ keyword, slug: keywordToSlug(keyword) })
+        .values({ keyword, slug: keywordToSlug(keyword), platform: platformArg })
         .onConflictDoUpdate({
           target: [trackedKeywords.platform, trackedKeywords.keyword],
           set: { isActive: true, updatedAt: new Date() },
         });
-      console.log(`Keyword "${keyword}" is now tracked.`);
+      console.log(`Keyword "${keyword}" is now tracked on ${platformArg}.`);
       break;
     }
 
@@ -166,9 +209,22 @@ async function createRun(type: "category" | "app_details" | "keyword_search" | "
   const { scrapeRuns } = await import("@appranks/db");
   const [run] = await db
     .insert(scrapeRuns)
-    .values({ scraperType: type, status: "running", createdAt: new Date(), startedAt: new Date() })
+    .values({ scraperType: type, status: "running", platform: platformArg, createdAt: new Date(), startedAt: new Date() })
     .returning();
   return run.id;
+}
+
+async function completeRun(runId: string, error?: string): Promise<void> {
+  const { scrapeRuns } = await import("@appranks/db");
+  const { eq } = await import("drizzle-orm");
+  await db
+    .update(scrapeRuns)
+    .set({
+      status: error ? "failed" : "completed",
+      completedAt: new Date(),
+      ...(error ? { error } : {}),
+    })
+    .where(eq(scrapeRuns.id, runId));
 }
 
 main().catch((err) => {

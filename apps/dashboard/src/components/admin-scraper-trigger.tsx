@@ -1,10 +1,13 @@
 "use client";
 
 import { useState } from "react";
+import { usePathname } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
 import { Button } from "@/components/ui/button";
 import { Zap, Loader2, Check } from "lucide-react";
 import { ScraperOptionsModal, type ScraperOptions } from "./scraper-options-modal";
+
+const VALID_PLATFORMS = new Set(["shopify", "salesforce"]);
 
 interface AdminScraperTriggerProps {
   scraperType: string;
@@ -22,8 +25,13 @@ export function AdminScraperTrigger({
   const { user, fetchWithAuth } = useAuth();
   const [status, setStatus] = useState<"idle" | "loading" | "done">("idle");
   const [modalOpen, setModalOpen] = useState(false);
+  const pathname = usePathname();
 
   if (!user?.isSystemAdmin) return null;
+
+  // Extract platform from URL path (e.g. /shopify/keywords/... → "shopify")
+  const seg = pathname.split("/").filter(Boolean)[0];
+  const platform = seg && VALID_PLATFORMS.has(seg) ? seg : undefined;
 
   async function trigger(options: ScraperOptions) {
     setModalOpen(false);
@@ -31,6 +39,7 @@ export function AdminScraperTrigger({
     setStatus("loading");
     try {
       const body: Record<string, any> = { type: scraperType };
+      if (platform) body.platform = platform;
       if (slug) body.slug = slug;
       if (keyword) body.keyword = keyword;
       if (Object.keys(options).length > 0) body.options = options;

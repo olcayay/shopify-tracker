@@ -24,12 +24,12 @@ export const integrationRoutes: FastifyPluginAsync = async (app) => {
           s.rating_count,
           s.pricing
         FROM (
-          SELECT DISTINCT ON (app_slug)
-            id, app_slug, integrations, average_rating, rating_count, pricing
+          SELECT DISTINCT ON (app_id)
+            id, app_id, integrations, average_rating, rating_count, pricing
           FROM app_snapshots
-          ORDER BY app_slug, scraped_at DESC
+          ORDER BY app_id, scraped_at DESC
         ) s
-        INNER JOIN apps a ON a.slug = s.app_slug
+        INNER JOIN apps a ON a.id = s.app_id
         WHERE EXISTS (
           SELECT 1
           FROM jsonb_array_elements_text(s.integrations) AS elem

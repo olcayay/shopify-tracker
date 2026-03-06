@@ -1,23 +1,24 @@
 import { getApp } from "@/lib/api";
+import type { PlatformId } from "@appranks/shared";
 import { redirect } from "next/navigation";
 import { KeywordsSection } from "../keywords-section";
 
 export default async function KeywordsPage({
   params,
 }: {
-  params: Promise<{ slug: string }>;
+  params: Promise<{ platform: string; slug: string }>;
 }) {
-  const { slug } = await params;
+  const { platform, slug } = await params;
 
   let app: any;
   try {
-    app = await getApp(slug);
+    app = await getApp(slug, platform as PlatformId);
   } catch {
     return <p className="text-muted-foreground">App not found.</p>;
   }
 
   if (!app.isTrackedByAccount) {
-    redirect(`/apps/${slug}`);
+    redirect(`/${platform}/apps/${slug}`);
   }
 
   return <KeywordsSection appSlug={slug} />;

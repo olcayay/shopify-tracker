@@ -69,6 +69,7 @@ export const researchRoutes: FastifyPluginAsync = async (app) => {
   // GET /api/research-projects — list projects for account
   app.get("/", async (request) => {
     const { accountId } = request.user;
+    const platform = getPlatformFromQuery(request.query as Record<string, unknown>);
 
     const projects = await db
       .select({
@@ -80,7 +81,7 @@ export const researchRoutes: FastifyPluginAsync = async (app) => {
       })
       .from(researchProjects)
       .leftJoin(users, eq(researchProjects.createdBy, users.id))
-      .where(eq(researchProjects.accountId, accountId))
+      .where(and(eq(researchProjects.accountId, accountId), eq(researchProjects.platform, platform)))
       .orderBy(desc(researchProjects.updatedAt));
 
     return projects;
@@ -93,6 +94,7 @@ export const researchRoutes: FastifyPluginAsync = async (app) => {
     async (request, reply) => {
       const { accountId, userId } = request.user;
       const { name } = request.body || {};
+      const platform = getPlatformFromQuery(request.query as Record<string, unknown>);
 
       // Check limit
       const [account] = await db
@@ -117,6 +119,7 @@ export const researchRoutes: FastifyPluginAsync = async (app) => {
         .insert(researchProjects)
         .values({
           accountId,
+          platform,
           name: name || "Untitled Research",
           createdBy: userId,
         })

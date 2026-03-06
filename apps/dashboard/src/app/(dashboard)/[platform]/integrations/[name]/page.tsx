@@ -12,13 +12,14 @@ import {
   getAppsReviewVelocity,
 } from "@/lib/api";
 import { AppListTable } from "@/components/app-list-table";
+import type { PlatformId } from "@appranks/shared";
 
 export default async function IntegrationDetailPage({
   params,
 }: {
-  params: Promise<{ name: string }>;
+  params: Promise<{ platform: string; name: string }>;
 }) {
-  const { name } = await params;
+  const { platform, name } = await params;
   const decodedName = decodeURIComponent(name);
 
   let integration: any;
@@ -26,9 +27,9 @@ export default async function IntegrationDetailPage({
   let trackedApps: any[] = [];
   try {
     [integration, competitors, trackedApps] = await Promise.all([
-      getIntegration(decodedName),
-      getAccountCompetitors().catch(() => []),
-      getAccountTrackedApps().catch(() => []),
+      getIntegration(decodedName, platform as PlatformId),
+      getAccountCompetitors(platform as PlatformId).catch(() => []),
+      getAccountTrackedApps(platform as PlatformId).catch(() => []),
     ]);
   } catch {
     return <p className="text-muted-foreground">Integration not found.</p>;
@@ -36,14 +37,14 @@ export default async function IntegrationDetailPage({
 
   const appSlugs = (integration.apps || []).map((a: any) => a.slug).filter(Boolean);
   const [lastChanges, minPaidPrices, launchedDates, appCategories, reverseSimilarCounts, featuredSectionCounts, adKeywordCounts, reviewVelocity] = await Promise.all([
-    getAppsLastChanges(appSlugs).catch(() => ({} as Record<string, string>)),
-    getAppsMinPaidPrices(appSlugs).catch(() => ({} as Record<string, number | null>)),
-    getAppsLaunchedDates(appSlugs).catch(() => ({} as Record<string, string | null>)),
-    getAppsCategories(appSlugs).catch(() => ({} as Record<string, any[]>)),
-    getAppsReverseSimilarCounts(appSlugs).catch(() => ({} as Record<string, number>)),
-    getAppsFeaturedSectionCounts(appSlugs).catch(() => ({} as Record<string, number>)),
-    getAppsAdKeywordCounts(appSlugs).catch(() => ({} as Record<string, number>)),
-    getAppsReviewVelocity(appSlugs).catch(() => ({})),
+    getAppsLastChanges(appSlugs, platform as PlatformId).catch(() => ({} as Record<string, string>)),
+    getAppsMinPaidPrices(appSlugs, platform as PlatformId).catch(() => ({} as Record<string, number | null>)),
+    getAppsLaunchedDates(appSlugs, platform as PlatformId).catch(() => ({} as Record<string, string | null>)),
+    getAppsCategories(appSlugs, platform as PlatformId).catch(() => ({} as Record<string, any[]>)),
+    getAppsReverseSimilarCounts(appSlugs, platform as PlatformId).catch(() => ({} as Record<string, number>)),
+    getAppsFeaturedSectionCounts(appSlugs, platform as PlatformId).catch(() => ({} as Record<string, number>)),
+    getAppsAdKeywordCounts(appSlugs, platform as PlatformId).catch(() => ({} as Record<string, number>)),
+    getAppsReviewVelocity(appSlugs, platform as PlatformId).catch(() => ({})),
   ]);
 
   return (

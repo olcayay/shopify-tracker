@@ -82,6 +82,12 @@ export const authRoutes: FastifyPluginAsync = async (app) => {
       .values({ name: accountName, company: company || null })
       .returning();
 
+    // Enable default platforms for the new account
+    await db.insert(accountPlatforms).values([
+      { accountId: account.id, platform: "shopify" },
+      { accountId: account.id, platform: "salesforce" },
+    ]);
+
     // Create owner user
     const [user] = await db
       .insert(users)

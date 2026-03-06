@@ -40,13 +40,13 @@ export default async function KeywordDetailPage({
   let kwMembership: any = {};
   try {
     [keyword, rankings, adData, competitors, trackedApps, suggestions, kwMembership] = await Promise.all([
-      getKeyword(slug),
-      getKeywordRankings(slug, 30, "account"),
-      getKeywordAds(slug),
-      getAccountCompetitors().catch(() => []),
-      getAccountTrackedApps().catch(() => []),
-      getKeywordSuggestions(slug).catch(() => ({ suggestions: [], scrapedAt: null })),
-      getKeywordMembership(slug).catch(() => ({})),
+      getKeyword(slug, platform as PlatformId),
+      getKeywordRankings(slug, 30, "account", platform as PlatformId),
+      getKeywordAds(slug, 30, platform as PlatformId),
+      getAccountCompetitors(platform as PlatformId).catch(() => []),
+      getAccountTrackedApps(platform as PlatformId).catch(() => []),
+      getKeywordSuggestions(slug, platform as PlatformId).catch(() => ({ suggestions: [], scrapedAt: null })),
+      getKeywordMembership(slug, platform as PlatformId).catch(() => ({})),
     ]);
   } catch {
     return <p className="text-muted-foreground">Keyword not found.</p>;
@@ -71,11 +71,11 @@ export default async function KeywordDetailPage({
   ].filter(Boolean);
   const uniqueSlugs = [...new Set(allAppSlugs)];
   const [lastChanges, minPaidPrices, reverseSimilarCounts, launchedDates, appCategories] = await Promise.all([
-    getAppsLastChanges(uniqueSlugs).catch(() => ({} as Record<string, string>)),
-    getAppsMinPaidPrices(uniqueSlugs).catch(() => ({} as Record<string, number | null>)),
-    getAppsReverseSimilarCounts(uniqueSlugs).catch(() => ({} as Record<string, number>)),
-    getAppsLaunchedDates(uniqueSlugs).catch(() => ({} as Record<string, string | null>)),
-    getAppsCategories(uniqueSlugs).catch(() => ({} as Record<string, { title: string; slug: string; position: number | null }[]>)),
+    getAppsLastChanges(uniqueSlugs, platform as PlatformId).catch(() => ({} as Record<string, string>)),
+    getAppsMinPaidPrices(uniqueSlugs, platform as PlatformId).catch(() => ({} as Record<string, number | null>)),
+    getAppsReverseSimilarCounts(uniqueSlugs, platform as PlatformId).catch(() => ({} as Record<string, number>)),
+    getAppsLaunchedDates(uniqueSlugs, platform as PlatformId).catch(() => ({} as Record<string, string | null>)),
+    getAppsCategories(uniqueSlugs, platform as PlatformId).catch(() => ({} as Record<string, { title: string; slug: string; position: number | null }[]>)),
   ]);
 
   // Build ranking chart data from rankings (filtered to tracked + competitor apps)

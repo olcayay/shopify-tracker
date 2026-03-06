@@ -1,0 +1,1222 @@
+{
+  "category_url": "https://appexchange.salesforce.com/explore/business-needs?category=marketing",
+  "category": "marketing",
+  "sponsored": [
+    {
+      "listing_id": "a0N3A00000EOBliUAH",
+      "listing_id_type": "salesforce",
+      "name": "SurveyMonkey for Salesforce",
+      "url": "https://appexchange.salesforce.com/appxListingDetail?listingId=a0N3A00000EOBliUAH",
+      "logo_url": "https://appexchange.salesforce.com/image_host/2d4d9cee-3dd1-40b4-9b85-45ce57082c69.jpg",
+      "average_rating": 4.57,
+      "review_count": 67,
+      "short_description": "Connect your survey data with Salesforce to drive results for your business. Automatically send surveys after key interactions and take real-time action on feedback. Enrich customer and prospect data by syncing survey responses into Salesforce.",
+      "categories": [
+        "marketing",
+        "customerService",
+        "humanResources"
+      ],
+      "position": 1,
+      "page": 1,
+      "is_sponsored": true,
+      "category": "marketing",
+      "category_url": "https://appexchange.salesforce.com/explore/business-needs?category=marketing"
+    },
+    {
+      "listing_id": "a0N30000000q4u7EAA",
+      "listing_id_type": "salesforce",
+      "name": "Complete Leads | Routing | Matching | Round Robin | AI Workflows | No-Code",
+      "url": "https://appexchange.salesforce.com/appxListingDetail?listingId=a0N30000000q4u7EAA",
+      "logo_url": "https://appexchange.salesforce.com/image_host/f2a76c5b-5395-41b7-a8dc-69e9f669c1e7.png",
+      "average_rating": 5,
+      "review_count": 22,
+      "short_description": "Respond faster than the competition with automated matching and routing in Salesforce. Then automate all your data management with the most flexible, scalable AI-powered workflow engine — so your team can focus on closing deals, not chasing data.",
+      "categories": [
+        "sales",
+        "marketing",
+        "dataManagement"
+      ],
+      "position": 2,
+      "page": 1,
+      "is_sponsored": true,
+      "category": "marketing",
+      "category_url": "https://appexchange.salesforce.com/explore/business-needs?category=marketing"
+    }
+  ],
+  "organic": [
+    {
+      "listing_id": "a0N30000003IzEDEA0",
+      "listing_id_type": "salesforce",
+      "name": "MassMailer - Native App, Email Marketing, Mass Email, Email Alerts, Attach Files",
+      "url": "https://appexchange.salesforce.com/appxListingDetail?listingId=a0N30000003IzEDEA0",
+      "logo_url": "https://appexchange.salesforce.com/image_host/50eb66d5-c03b-4b53-90c7-b36aef23da14.png",
+      "average_rating": 4.94,
+      "review_count": 164,
+      "short_description": "✔ Mass Email, Bulk Email, Single Email to any Standard or Custom Object\n✔ Email Parent or Child objects\n✔ Attach Files\n✔ Email Alerts\n✔ Drip Campaigns\n✔ Merge Fields\n✔ Build Templates\n✔ Verify Emails\n✔ Track Emails & Statistics\n✔ Dedicated IP",
+      "categories": [
+        "massEmailsAndMessaging",
+        "marketingAutomation",
+        "campaignManagement"
+      ],
+      "position": 1,
+      "page": 1,
+      "is_sponsored": false,
+      "category": "marketing",
+      "category_url": "https://appexchange.salesforce.com/explore/business-needs?category=marketing"
+    },
+    {
+      "listing_id": "a0N3000000B3jSsEAJ",
+      "listing_id_type": "salesforce",
+      "name": "Salesvue - Sales Engagement Platform",
+      "url": "https://appexchange.salesforce.com/appxListingDetail?listingId=a0N3000000B3jSsEAJ",
+      "logo_url": "https://appexchange.salesforce.com/partners/servlet/servlet.FileDownload?file=00P4V00000ytIeOUAU",
+      "average_rating": 4.77,
+      "review_count": 120,
+      "short_description": "Salesvue’s engagement platform empowers teams to grow revenue by working more efficiently using repeatable, scalable cadences.  All industries, including 5 of the top 10 Annuity Providers, utilize Salesvue to continuously improve process & performance.",
+      "categories": [
+        "salesProductivity",
+        "massEmailsAndMessaging",
+        "processManagement"
+      ],
+      "position": 2,
+      "page": 1,
+      "is_sponsored": false,
+      "category": "marketing",
+      "category_url": "https://appexchange.salesforce.com/explore/business-needs?category=marketing"
+    },
+    {
+      "listing_id": "a0N30000001SVZmEAO",
+      "listing_id_type": "salesforce",
+      "name": "Marketo Sales Insight - Prioritise sales leads and close deals faster",
+      "url": "https://appexchange.salesforce.com/appxListingDetail?listingId=a0N30000001SVZmEAO",
+      "logo_url": "https://appexchange.salesforce.com/partners/servlet/servlet.FileDownload?file=00P4V00000oghRrUAI",
+      "average_rating": 4.58,
+      "review_count": 182,
+      "short_description": "Marketo Sales Insight is a 100% native Force.com sales application that helps sales teams understand, prioritise, & interact with the hottest leads & opportunities to enable smart selling & close business faster. Be a Sales Genius with Sales Insight!",
+      "categories": [
+        "marketingAutomation"
+      ],
+      "position": 3,
+      "page": 1,
+      "is_sponsored": false,
+      "category": "marketing",
+      "category_url": "https://appexchange.salesforce.com/explore/business-needs?category=marketing"
+    },
+    {
+      "listing_id": "a0N3000000B3KLuEAN",
+      "listing_id_type": "salesforce",
+      "name": "Adobe Marketo Measure (fka Bizible)",
+      "url": "https://appexchange.salesforce.com/appxListingDetail?listingId=a0N3000000B3KLuEAN",
+      "logo_url": "https://appexchange.salesforce.com/image_host/d697d53c-7eff-40c4-b199-26ac3a62f415.png",
+      "average_rating": 4.97,
+      "review_count": 158,
+      "short_description": "Adobe Marketo Measure (formerly known as Bizible) is the world's most popular and complete B2B marketing attribution solution. It automates measurement so marketers can make insight-driven decisions that maximize pipeline, revenue, and ROMI.",
+      "categories": [
+        "dashboardsAndReports",
+        "campaignManagement",
+        "dataManagement"
+      ],
+      "position": 4,
+      "page": 1,
+      "is_sponsored": false,
+      "category": "marketing",
+      "category_url": "https://appexchange.salesforce.com/explore/business-needs?category=marketing"
+    },
+    {
+      "listing_id": "a0N3A00000EcsT6UAJ",
+      "listing_id_type": "salesforce",
+      "name": "Ventas AI SMS App for Salesforce | AI Dialer | WhatsApp | AI Chatbot & Voice",
+      "url": "https://appexchange.salesforce.com/appxListingDetail?listingId=a0N3A00000EcsT6UAJ",
+      "logo_url": "https://appexchange.salesforce.com/image_host/d8739f6c-0ba0-4be5-bf5e-6898e64c3995.png",
+      "average_rating": 4.89,
+      "review_count": 149,
+      "short_description": "Ventas SMS offers 25+ features for Salesforce, including Salesforce Dialer, bulk SMS, WhatsApp automation, and AI-powered messaging. Automate cross-channel conversations and engage customers with smart SMS, WhatsApp, & AI voice interactions in Salesforce.",
+      "categories": [
+        "sales",
+        "marketing",
+        "customerService"
+      ],
+      "position": 5,
+      "page": 1,
+      "is_sponsored": false,
+      "category": "marketing",
+      "category_url": "https://appexchange.salesforce.com/explore/business-needs?category=marketing"
+    },
+    {
+      "listing_id": "a0N3A00000EX3qVUAT",
+      "listing_id_type": "salesforce",
+      "name": "Blackthorn Events | Your events. Your data. All in Salesforce.",
+      "url": "https://appexchange.salesforce.com/appxListingDetail?listingId=a0N3A00000EX3qVUAT",
+      "logo_url": "https://appexchange.salesforce.com/image_host/6ee20749-c108-4c2e-a7b6-4b7507f76ae7.png",
+      "average_rating": 4.97,
+      "review_count": 264,
+      "short_description": "Blackthorn Events | Your events. Your data. All in Salesforce.\n\nBlackthorn turns any organization’s Salesforce® CRM into event planning software powered by their connected data.",
+      "categories": [
+        "marketing",
+        "campaignManagement",
+        "eventManagement"
+      ],
+      "position": 6,
+      "page": 1,
+      "is_sponsored": false,
+      "category": "marketing",
+      "category_url": "https://appexchange.salesforce.com/explore/business-needs?category=marketing"
+    },
+    {
+      "listing_id": "a0N3000000194RHEAY",
+      "listing_id_type": "salesforce",
+      "name": "Rethink | Commercial Real Estate Software",
+      "url": "https://appexchange.salesforce.com/appxListingDetail?listingId=a0N3000000194RHEAY",
+      "logo_url": "https://appexchange.salesforce.com/image_host/519927f0-6827-464a-873e-a07cdaf51e73.png",
+      "average_rating": 4.8,
+      "review_count": 210,
+      "short_description": "Rethink is a native CRE CRM app built entirely on the Salesforce platform. Built for commercial brokers, agents, property managers, and investors, Rethink enables CRE professionals to manage their entire business in one, easy-to-use application.",
+      "categories": [
+        "sales",
+        "marketing",
+        "emailAndCalendarSync"
+      ],
+      "position": 7,
+      "page": 1,
+      "is_sponsored": false,
+      "category": "marketing",
+      "category_url": "https://appexchange.salesforce.com/explore/business-needs?category=marketing"
+    },
+    {
+      "listing_id": "a0N30000003I2gDEAS",
+      "listing_id_type": "salesforce",
+      "name": "Survey Force by Salesforce Labs",
+      "url": "https://appexchange.salesforce.com/appxListingDetail?listingId=a0N30000003I2gDEAS",
+      "logo_url": "https://appexchange.salesforce.com/partners/servlet/servlet.FileDownload?file=00P3000000SX9fLEAT",
+      "average_rating": 3.16,
+      "review_count": 274,
+      "short_description": "Survey Force (Lightning Ready) allows you to create, send, and capture customer feedback natively in salesforce.com.",
+      "categories": [
+        "surveys"
+      ],
+      "position": 8,
+      "page": 1,
+      "is_sponsored": false,
+      "category": "marketing",
+      "category_url": "https://appexchange.salesforce.com/explore/business-needs?category=marketing"
+    },
+    {
+      "listing_id": "a0N3A00000EFoedUAD",
+      "listing_id_type": "salesforce",
+      "name": "ValueText - Native Salesforce SMS & WhatsApp Messaging | AI Chatbot + Telephony",
+      "url": "https://appexchange.salesforce.com/appxListingDetail?listingId=a0N3A00000EFoedUAD",
+      "logo_url": "https://appexchange.salesforce.com/partners/servlet/servlet.FileDownload?file=00P4V00000vay0nUAA",
+      "average_rating": 4.97,
+      "review_count": 106,
+      "short_description": "ValueText is a native SMS & WhatsApp messaging app with AI-powered automation, chatbots, bulk campaigns & real-time alerts and complete CTI (Telephony). \n\nTrusted by 250+ organisations worldwide.\n\n👉 Book a demo: https://valuetext.io",
+      "categories": [
+        "sales",
+        "marketingAutomation",
+        "customerService"
+      ],
+      "position": 9,
+      "page": 1,
+      "is_sponsored": false,
+      "category": "marketing",
+      "category_url": "https://appexchange.salesforce.com/explore/business-needs?category=marketing"
+    },
+    {
+      "listing_id": "a0N3A00000EOHKrUAP",
+      "listing_id_type": "salesforce",
+      "name": "Account Mapping, Co-Sell, Channels, Alliances, Partner Ecosystem Sales",
+      "url": "https://appexchange.salesforce.com/appxListingDetail?listingId=a0N3A00000EOHKrUAP",
+      "logo_url": "https://appexchange.salesforce.com/partners/servlet/servlet.FileDownload?file=00P4V00000yX0O8UAK",
+      "average_rating": 4.94,
+      "review_count": 145,
+      "short_description": "PartnerTap is the leading partner ecosystem orchestration and co-selling solution for the enterprise. Our account mapping and co-selling platform drives more partner-sourced revenue and gives teams the detailed attribution data to prove it.",
+      "categories": [
+        "sales",
+        "partnerManagement",
+        "marketing"
+      ],
+      "position": 10,
+      "page": 1,
+      "is_sponsored": false,
+      "category": "marketing",
+      "category_url": "https://appexchange.salesforce.com/explore/business-needs?category=marketing"
+    },
+    {
+      "listing_id": "a0N300000016boHEAQ",
+      "listing_id_type": "salesforce",
+      "name": "Salesforce Pardot",
+      "url": "https://appexchange.salesforce.com/appxListingDetail?listingId=a0N300000016boHEAQ",
+      "logo_url": "https://appexchange.salesforce.com/partners/servlet/servlet.FileDownload?file=00P3000000P3W20EAF",
+      "average_rating": 4.49,
+      "review_count": 173,
+      "short_description": "Meet Pardot: Smarter marketing automation on the world's #1 CRM. Pardot empowers marketing and sales teams to work together to find and nurture leads, close more deals, and maximize return on investment.",
+      "categories": [
+        "marketingAutomation"
+      ],
+      "position": 11,
+      "page": 1,
+      "is_sponsored": false,
+      "category": "marketing",
+      "category_url": "https://appexchange.salesforce.com/explore/business-needs?category=marketing"
+    },
+    {
+      "listing_id": "a0N3A00000FMkfNUAT",
+      "listing_id_type": "salesforce",
+      "name": "Unsubscribe Link",
+      "url": "https://appexchange.salesforce.com/appxListingDetail?listingId=a0N3A00000FMkfNUAT",
+      "logo_url": "https://appexchange.salesforce.com/partners/servlet/servlet.FileDownload?file=00P3A00000kHt4hUAC",
+      "average_rating": 4.21,
+      "review_count": 75,
+      "short_description": "Include an easy way for recipients to unsubscribe from commercial email sent through Salesforce. By clicking the link, all contacts and leads with the relevant email address will be checked \"Email Opt Out.\"",
+      "categories": [
+        "massEmailsAndMessaging"
+      ],
+      "position": 12,
+      "page": 1,
+      "is_sponsored": false,
+      "category": "marketing",
+      "category_url": "https://appexchange.salesforce.com/explore/business-needs?category=marketing"
+    },
+    {
+      "listing_id": "a0N3A00000EvaSKUAZ",
+      "listing_id_type": "salesforce",
+      "name": "Salesforce First Web Studio",
+      "url": "https://appexchange.salesforce.com/appxListingDetail?listingId=a0N3A00000EvaSKUAZ",
+      "logo_url": "https://appexchange.salesforce.com/image_host/e603c1f0-2072-44bc-86a1-0cc1ad62fd16.png",
+      "average_rating": 4.99,
+      "review_count": 317,
+      "short_description": "Run forms, portals, eSign, docs, and surveys directly on Salesforce.\nFrom $150 per org. No per-seat pricing. Nonprofit discounts available.",
+      "categories": [
+        "contractManagement",
+        "websites",
+        "documentGeneration"
+      ],
+      "position": 13,
+      "page": 2,
+      "is_sponsored": false,
+      "category": "marketing",
+      "category_url": "https://appexchange.salesforce.com/explore/business-needs?category=marketing"
+    },
+    {
+      "listing_id": "a0N3A00000EOHKrUAP",
+      "listing_id_type": "salesforce",
+      "name": "Account Mapping, Co-Sell, Channels, Alliances, Partner Ecosystem Sales",
+      "url": "https://appexchange.salesforce.com/appxListingDetail?listingId=a0N3A00000EOHKrUAP",
+      "logo_url": "https://appexchange.salesforce.com/partners/servlet/servlet.FileDownload?file=00P4V00000yX0O8UAK",
+      "average_rating": 4.94,
+      "review_count": 145,
+      "short_description": "PartnerTap is the leading partner ecosystem orchestration and co-selling solution for the enterprise. Our account mapping and co-selling platform drives more partner-sourced revenue and gives teams the detailed attribution data to prove it.",
+      "categories": [
+        "sales",
+        "partnerManagement",
+        "marketing"
+      ],
+      "position": 14,
+      "page": 2,
+      "is_sponsored": false,
+      "category": "marketing",
+      "category_url": "https://appexchange.salesforce.com/explore/business-needs?category=marketing"
+    },
+    {
+      "listing_id": "a0N3000000DylJTEAZ",
+      "listing_id_type": "salesforce",
+      "name": "123FormBuilder: Forms & Surveys, dynamically connected to any Salesforce object",
+      "url": "https://appexchange.salesforce.com/appxListingDetail?listingId=a0N3000000DylJTEAZ",
+      "logo_url": "https://appexchange.salesforce.com/image_host/97042c0b-7a15-4623-a860-65a4161c0f9e.png",
+      "average_rating": 4.89,
+      "review_count": 127,
+      "short_description": "Build beautiful forms & surveys with drag & drop ease. Prefill forms dynamically with your existing Salesforce data. Highly secure, HIPAA-compliant and GDPR-ready. Collect data the smart way and integrate it bi-directionally with any Salesforce object.",
+      "categories": [
+        "surveys",
+        "websites",
+        "dataManagement"
+      ],
+      "position": 15,
+      "page": 2,
+      "is_sponsored": false,
+      "category": "marketing",
+      "category_url": "https://appexchange.salesforce.com/explore/business-needs?category=marketing"
+    },
+    {
+      "listing_id": "a0N300000030psqEAA",
+      "listing_id_type": "salesforce",
+      "name": "iContact - Email Marketing for Small Business",
+      "url": "https://appexchange.salesforce.com/appxListingDetail?listingId=a0N300000030psqEAA",
+      "logo_url": "https://appexchange.salesforce.com/partners/servlet/servlet.FileDownload?file=00P4V00000x9P4PUAU",
+      "average_rating": 4.6,
+      "review_count": 283,
+      "short_description": "Easy to use email marketing platform for small businesses. \n\nCreate and send stunning emails to your customers in minutes - without having to leave Salesforce.",
+      "categories": [
+        "sales",
+        "marketing",
+        "massEmailsAndMessaging"
+      ],
+      "position": 16,
+      "page": 2,
+      "is_sponsored": false,
+      "category": "marketing",
+      "category_url": "https://appexchange.salesforce.com/explore/business-needs?category=marketing"
+    },
+    {
+      "listing_id": "a0N3000000B4lIxEAJ",
+      "listing_id_type": "salesforce",
+      "name": "SurveyMonkey Enterprise for CX: Surveys for Salesforce",
+      "url": "https://appexchange.salesforce.com/appxListingDetail?listingId=a0N3000000B4lIxEAJ",
+      "logo_url": "https://appexchange.salesforce.com/image_host/49ca6b70-5429-4b68-8caa-31faa46f3af2.jpg",
+      "average_rating": 4.9,
+      "review_count": 325,
+      "short_description": "SurveyMonkey (maker of GetFeedback) is now focused on SurveyMonkey Enterprise as our primary solution for CX professionals. SurveyMonkey Enterprise equips CX teams with one intuitive yet powerful platform for NPS, CSAT, customer service feedback and more",
+      "categories": [
+        "surveys"
+      ],
+      "position": 17,
+      "page": 2,
+      "is_sponsored": false,
+      "category": "marketing",
+      "category_url": "https://appexchange.salesforce.com/explore/business-needs?category=marketing"
+    },
+    {
+      "listing_id": "a0N3000000B3LePEAV",
+      "listing_id_type": "salesforce",
+      "name": "Simple Survey: 100% Native Surveys for Salesforce",
+      "url": "https://appexchange.salesforce.com/appxListingDetail?listingId=a0N3000000B3LePEAV",
+      "logo_url": "https://appexchange.salesforce.com/image_host/d97a9386-cc5f-4c31-8e6c-fcc9324e6846.png",
+      "average_rating": 5,
+      "review_count": 91,
+      "short_description": "Capture feedback in Salesforce automatically with effortless, beautiful surveys. Get higher response rates, improve customer experience, increase CSAT and Net Promoter Score® (NPS), and boost agent effectiveness.",
+      "categories": [
+        "ratingsAndReviews",
+        "surveys",
+        "customerService"
+      ],
+      "position": 18,
+      "page": 2,
+      "is_sponsored": false,
+      "category": "marketing",
+      "category_url": "https://appexchange.salesforce.com/explore/business-needs?category=marketing"
+    },
+    {
+      "listing_id": "a0N30000005utCcEAI",
+      "listing_id_type": "salesforce",
+      "name": "AAkonsult Campaign Status",
+      "url": "https://appexchange.salesforce.com/appxListingDetail?listingId=a0N30000005utCcEAI",
+      "logo_url": "https://appexchange.salesforce.com/image_host/f49eda2b-6dde-47dc-8c44-b12afebec185.jpg",
+      "average_rating": 4.79,
+      "review_count": 72,
+      "short_description": "Quickly setup Campaign Status Defaults to one or many campaigns.\n\nStop setting up Campaign Member Statuses every time. Define defaults by Campaign Type and let the system assign them automatically.",
+      "categories": [
+        "campaignManagement"
+      ],
+      "position": 19,
+      "page": 2,
+      "is_sponsored": false,
+      "category": "marketing",
+      "category_url": "https://appexchange.salesforce.com/explore/business-needs?category=marketing"
+    },
+    {
+      "listing_id": "a0N3A00000FMYfyUAH",
+      "listing_id_type": "salesforce",
+      "name": "EventSpark - Salesforce Native Event Management, Event Registration & RSVPs",
+      "url": "https://appexchange.salesforce.com/appxListingDetail?listingId=a0N3A00000FMYfyUAH",
+      "logo_url": "https://appexchange.salesforce.com/partners/servlet/servlet.FileDownload?file=00P3A00000jGizsUAC",
+      "average_rating": 4.96,
+      "review_count": 52,
+      "short_description": "👍 Published branded event landing pages\n👍 Send branded email invitations and reminders\n👍 Collect RSVPs with intelligent, customizable forms\n👍 Sell and Manage Tickets\n👍 Track registrations & attendance, leads & ROI for virtual & physical events",
+      "categories": [
+        "campaignManagement",
+        "eventManagement",
+        "marketingAutomation"
+      ],
+      "position": 20,
+      "page": 2,
+      "is_sponsored": false,
+      "category": "marketing",
+      "category_url": "https://appexchange.salesforce.com/explore/business-needs?category=marketing"
+    },
+    {
+      "listing_id": "a0N3A00000FMnPoUAL",
+      "listing_id_type": "salesforce",
+      "name": "Left Main REI | Salesforce CRM + AI Data for Real Estate Investors",
+      "url": "https://appexchange.salesforce.com/appxListingDetail?listingId=a0N3A00000FMnPoUAL",
+      "logo_url": "https://appexchange.salesforce.com/image_host/cdc077f2-de06-40db-967f-ad77ff92ddbd.png",
+      "average_rating": 4.98,
+      "review_count": 62,
+      "short_description": "Left Main REI is the leading CRM and growth system for real estate investment teams. It delivers real-time motivation insights, accurate comps, and live property data so your team moves faster, makes smarter offers, and closes more deals.",
+      "categories": [
+        "sales",
+        "marketing",
+        "productivity"
+      ],
+      "position": 21,
+      "page": 2,
+      "is_sponsored": false,
+      "category": "marketing",
+      "category_url": "https://appexchange.salesforce.com/explore/business-needs?category=marketing"
+    },
+    {
+      "listing_id": "a0N3A00000E1l6iUAB",
+      "listing_id_type": "salesforce",
+      "name": "FinDock -the payment engine for Salesforce: processing, recovery, reconciliation",
+      "url": "https://appexchange.salesforce.com/appxListingDetail?listingId=a0N3A00000E1l6iUAB",
+      "logo_url": "https://appexchange.salesforce.com/image_host/7f29805a-2b06-4dbb-a4a7-f3cb7c0dae70.png",
+      "average_rating": 4.98,
+      "review_count": 53,
+      "short_description": "FinDock, the Salesforce-native payment engine for Processing, Recovery & Reconciliation. Automate recurring payments, donations & billing — creating delightful customer experiences and streamlining payment operations.",
+      "categories": [
+        "paymentsProcessing",
+        "subscriptions",
+        "personalization"
+      ],
+      "position": 22,
+      "page": 2,
+      "is_sponsored": false,
+      "category": "marketing",
+      "category_url": "https://appexchange.salesforce.com/explore/business-needs?category=marketing"
+    },
+    {
+      "listing_id": "a0N3A00000ErAobUAF",
+      "listing_id_type": "salesforce",
+      "name": "Unified SMS, WhatsApp, CTI Call Experience | AI Powered SMS App for Salesforce",
+      "url": "https://appexchange.salesforce.com/appxListingDetail?listingId=a0N3A00000ErAobUAF",
+      "logo_url": "https://appexchange.salesforce.com/image_host/cff71ca9-2707-4f4f-89a5-69edd3488d0c.jpg",
+      "average_rating": 4.94,
+      "review_count": 64,
+      "short_description": "Businesses are boosting engagement & conversion rate with Next-Gen AI Messaging & Calling App for Salesforce, GirikSMS. Experience seamless multi-channel messaging across SMS, WhatsApp, Web Chat & Voice with conversational intelligence on 100% native app.",
+      "categories": [
+        "sales",
+        "marketing",
+        "customerService"
+      ],
+      "position": 23,
+      "page": 2,
+      "is_sponsored": false,
+      "category": "marketing",
+      "category_url": "https://appexchange.salesforce.com/explore/business-needs?category=marketing"
+    },
+    {
+      "listing_id": "a0N3000000B3taOEAR",
+      "listing_id_type": "salesforce",
+      "name": "Seismic Enablement Cloud™",
+      "url": "https://appexchange.salesforce.com/appxListingDetail?listingId=a0N3000000B3taOEAR",
+      "logo_url": "https://appexchange.salesforce.com/partners/servlet/servlet.FileDownload?file=00P4V00000x73oLUAQ",
+      "average_rating": 4.75,
+      "review_count": 57,
+      "short_description": "Seismic’s leading sales enablement solution delivers AI-guided personalized content at scale right from Salesforce. Align go-to-market teams to deliver the right content for each stage of the opportunity, improve productivity, and accelerate sales.",
+      "categories": [
+        "salesIntelligence",
+        "salesProductivity",
+        "marketing"
+      ],
+      "position": 24,
+      "page": 2,
+      "is_sponsored": false,
+      "category": "marketing",
+      "category_url": "https://appexchange.salesforce.com/explore/business-needs?category=marketing"
+    },
+    {
+      "listing_id": "a0N4V00000HIkNdUAL",
+      "listing_id_type": "salesforce",
+      "name": "Salesforce GOV.UK Service Builder",
+      "url": "https://appexchange.salesforce.com/appxListingDetail?listingId=a0N4V00000HIkNdUAL",
+      "logo_url": "https://appexchange.salesforce.com/partners/servlet/servlet.FileDownload?file=00P4V00000ufuIbUAI",
+      "average_rating": 5,
+      "review_count": 4,
+      "short_description": "Create public facing government services to align with the GDS GOV.UK Design System standards without coding.",
+      "categories": [
+        "websites",
+        "customerService",
+        "adminAndDeveloperTools"
+      ],
+      "position": 25,
+      "page": 3,
+      "is_sponsored": false,
+      "category": "marketing",
+      "category_url": "https://appexchange.salesforce.com/explore/business-needs?category=marketing"
+    },
+    {
+      "listing_id": "a0N30000008ZVcdEAG",
+      "listing_id_type": "salesforce",
+      "name": "Drag, Drop, and Upload Salesforce Files",
+      "url": "https://appexchange.salesforce.com/appxListingDetail?listingId=a0N30000008ZVcdEAG",
+      "logo_url": "https://appexchange.salesforce.com/partners/servlet/servlet.FileDownload?file=00P4V00000tQ1sKUAS",
+      "average_rating": 4.2,
+      "review_count": 93,
+      "short_description": "Thousands of users can't be wrong! They all rave about how much time their sales and marketing teams save by uploading multiple files, attachments, or content with just a single gesture to any standard or custom object, including files from Google Drive.",
+      "categories": [
+        "marketing",
+        "documentManagement",
+        "customerService"
+      ],
+      "position": 26,
+      "page": 3,
+      "is_sponsored": false,
+      "category": "marketing",
+      "category_url": "https://appexchange.salesforce.com/explore/business-needs?category=marketing"
+    },
+    {
+      "listing_id": "a0N4V00000GmPK3UAN",
+      "listing_id_type": "salesforce",
+      "name": "MoveData | Automatically Import Data from Popular Nonprofit Platforms",
+      "url": "https://appexchange.salesforce.com/appxListingDetail?listingId=a0N4V00000GmPK3UAN",
+      "logo_url": "https://appexchange.salesforce.com/partners/servlet/servlet.FileDownload?file=00P4V00000rdifKUAQ",
+      "average_rating": 4.98,
+      "review_count": 60,
+      "short_description": "Real time integration for Nonprofits who use Salesforce.\n\n⭐ Save time and gain accuracy\n⭐ Integrations are fully customisable\n⭐ Strong onboarding and ongoing support\n\nWe integrate Raisely, Funraisin', JustGiving, Enthuse and many other popular platforms.",
+      "categories": [
+        "marketingAutomation",
+        "dataManagement",
+        "integration"
+      ],
+      "position": 27,
+      "page": 3,
+      "is_sponsored": false,
+      "category": "marketing",
+      "category_url": "https://appexchange.salesforce.com/explore/business-needs?category=marketing"
+    },
+    {
+      "listing_id": "a0N3000000B41EWEAZ",
+      "listing_id_type": "salesforce",
+      "name": "ReferenceEdge",
+      "url": "https://appexchange.salesforce.com/appxListingDetail?listingId=a0N3000000B41EWEAZ",
+      "logo_url": "https://appexchange.salesforce.com/partners/servlet/servlet.FileDownload?file=00P3000000P3XtMEAV",
+      "average_rating": 4.96,
+      "review_count": 79,
+      "short_description": "ReferenceEdge℠ is a 100% native Salesforce app purpose-built to manage customer advocate information and automate all essential customer marketing program functions. \n• Improve sales & marketing efficiency\n• Accelerate “quote to cash”\n• Boost win rates",
+      "categories": [
+        "sales",
+        "marketingAutomation",
+        "productivity"
+      ],
+      "position": 28,
+      "page": 3,
+      "is_sponsored": false,
+      "category": "marketing",
+      "category_url": "https://appexchange.salesforce.com/explore/business-needs?category=marketing"
+    },
+    {
+      "listing_id": "a0N3000000B5cXCEAZ",
+      "listing_id_type": "salesforce",
+      "name": "Highspot Sales Enablement",
+      "url": "https://appexchange.salesforce.com/appxListingDetail?listingId=a0N3000000B5cXCEAZ",
+      "logo_url": "https://appexchange.salesforce.com/image_host/dde9f3d3-5772-4b9f-bd46-ad0f096ed7ca.png",
+      "average_rating": 4.96,
+      "review_count": 92,
+      "short_description": "With Highspot and Salesforce, you can equip sellers with the right resources for every engagement - directly in any lead, contact and opportunity record - and quantify the business impact of your enablement initiatives, using patented AI.",
+      "categories": [
+        "sales",
+        "salesMethodologies",
+        "marketing"
+      ],
+      "position": 29,
+      "page": 3,
+      "is_sponsored": false,
+      "category": "marketing",
+      "category_url": "https://appexchange.salesforce.com/explore/business-needs?category=marketing"
+    },
+    {
+      "listing_id": "a0N30000008agC1EAI",
+      "listing_id_type": "salesforce",
+      "name": "Campaign Monitor for Salesforce | Email Marketing & Mass Email (CM4SF)",
+      "url": "https://appexchange.salesforce.com/appxListingDetail?listingId=a0N30000008agC1EAI",
+      "logo_url": "https://appexchange.salesforce.com/image_host/80167704-a62a-4a05-8055-b2238d51d1ef.png",
+      "average_rating": 4.85,
+      "review_count": 94,
+      "short_description": "Discover why Campaign Monitor is the #1 Salesforce app. With this integration, you’ll no longer need your tech team to manually pull a list or gather data for you before you can create the hyper-targeted emails your subscribers expect.",
+      "categories": [
+        "massEmailsAndMessaging",
+        "integration"
+      ],
+      "position": 30,
+      "page": 3,
+      "is_sponsored": false,
+      "category": "marketing",
+      "category_url": "https://appexchange.salesforce.com/explore/business-needs?category=marketing"
+    },
+    {
+      "listing_id": "a0N30000009xEnMEAU",
+      "listing_id_type": "salesforce",
+      "name": "Yesware: Calendar Sync & Summary Task Logging",
+      "url": "https://appexchange.salesforce.com/appxListingDetail?listingId=a0N30000009xEnMEAU",
+      "logo_url": "https://appexchange.salesforce.com/image_host/dad536c8-2a8c-47d0-b3d9-10fe57fbd5e2.png",
+      "average_rating": 4.78,
+      "review_count": 88,
+      "short_description": "Click “Get It Now” to install our bi-directional calendar sync and our custom fields for summary task logging. Bi-directional calendar sync keeps your meeting data up to date. Summary task logging captures all email engagement data at email task record.",
+      "categories": [
+        "sales",
+        "marketing",
+        "emailAndCalendarSync"
+      ],
+      "position": 31,
+      "page": 3,
+      "is_sponsored": false,
+      "category": "marketing",
+      "category_url": "https://appexchange.salesforce.com/explore/business-needs?category=marketing"
+    },
+    {
+      "listing_id": "a0N3A00000EOBliUAH",
+      "listing_id_type": "salesforce",
+      "name": "SurveyMonkey for Salesforce",
+      "url": "https://appexchange.salesforce.com/appxListingDetail?listingId=a0N3A00000EOBliUAH",
+      "logo_url": "https://appexchange.salesforce.com/image_host/2d4d9cee-3dd1-40b4-9b85-45ce57082c69.jpg",
+      "average_rating": 4.57,
+      "review_count": 67,
+      "short_description": "Connect your survey data with Salesforce to drive results for your business. Automatically send surveys after key interactions and take real-time action on feedback. Enrich customer and prospect data by syncing survey responses into Salesforce.",
+      "categories": [
+        "marketing",
+        "customerService",
+        "humanResources"
+      ],
+      "position": 32,
+      "page": 3,
+      "is_sponsored": false,
+      "category": "marketing",
+      "category_url": "https://appexchange.salesforce.com/explore/business-needs?category=marketing"
+    },
+    {
+      "listing_id": "a0N3A00000FvMzfUAF",
+      "listing_id_type": "salesforce",
+      "name": "Textolic: SMS & WhatsApp Messaging for Salesforce | AI-Powered Communication",
+      "url": "https://appexchange.salesforce.com/appxListingDetail?listingId=a0N3A00000FvMzfUAF",
+      "logo_url": "https://appexchange.salesforce.com/partners/servlet/servlet.FileDownload?file=00P4V00000sLW8RUAW",
+      "average_rating": 4.95,
+      "review_count": 80,
+      "short_description": "Textolic SMS & WhatsApp integration for Salesforce helps teams automate bulk messaging with AI workflows. This Salesforce SMS tool unifies SMS, WhatsApp, CTI, and AI chatbots to deliver smooth conversations and higher engagement.",
+      "categories": [
+        "sales",
+        "marketing",
+        "customerService"
+      ],
+      "position": 33,
+      "page": 3,
+      "is_sponsored": false,
+      "category": "marketing",
+      "category_url": "https://appexchange.salesforce.com/explore/business-needs?category=marketing"
+    },
+    {
+      "listing_id": "a0N30000007rUqwEAE",
+      "listing_id_type": "salesforce",
+      "name": "Full Circle Insights: Multi-Touch Attribution, Funnel Measurement, and ABM",
+      "url": "https://appexchange.salesforce.com/appxListingDetail?listingId=a0N30000007rUqwEAE",
+      "logo_url": "https://appexchange.salesforce.com/image_host/8db25e23-e3e8-4f61-a78e-5851d445d0f3.png",
+      "average_rating": 5,
+      "review_count": 53,
+      "short_description": "Full Circle Insights delivers multi- touch attribution, funnel measurement, customer journey tracking & ABM performance in Salesforce, helping optimize marketing ROI with confidence.",
+      "categories": [
+        "leadAndOpportunityManagement",
+        "campaignManagement",
+        "accountBasedMarketing"
+      ],
+      "position": 34,
+      "page": 3,
+      "is_sponsored": false,
+      "category": "marketing",
+      "category_url": "https://appexchange.salesforce.com/explore/business-needs?category=marketing"
+    },
+    {
+      "listing_id": "a0N3000000B3GQGEA3",
+      "listing_id_type": "salesforce",
+      "name": "Reference Management for Salesforce",
+      "url": "https://appexchange.salesforce.com/appxListingDetail?listingId=a0N3000000B3GQGEA3",
+      "logo_url": "https://appexchange.salesforce.com/partners/servlet/servlet.FileDownload?file=00P4V00000v9Ls0UAE",
+      "average_rating": 4.83,
+      "review_count": 89,
+      "short_description": "Request references from Salesforce, fulfill them in Influitive, and incentivize your top referenceable customers.",
+      "categories": [
+        "sales",
+        "marketing",
+        "productivity"
+      ],
+      "position": 35,
+      "page": 3,
+      "is_sponsored": false,
+      "category": "marketing",
+      "category_url": "https://appexchange.salesforce.com/explore/business-needs?category=marketing"
+    },
+    {
+      "listing_id": "a0N300000016a08EAA",
+      "listing_id_type": "salesforce",
+      "name": "BridgeMail Email Marketing, Marketing Automation, & Lead Management",
+      "url": "https://appexchange.salesforce.com/appxListingDetail?listingId=a0N300000016a08EAA",
+      "logo_url": "https://appexchange.salesforce.com/partners/servlet/servlet.FileDownload?file=00P3000000P3VwiEAF",
+      "average_rating": 4.92,
+      "review_count": 64,
+      "short_description": "Rated #1 for customer support/satisfaction + an 87% customer retention rate - READ THE REVIEWS!!! \n\nBe fully functional in less than 27 minutes with no integration partner and no errors. B2B & B2C.\n\nLearn more about the features/functionality below.",
+      "categories": [
+        "marketingAutomation"
+      ],
+      "position": 36,
+      "page": 3,
+      "is_sponsored": false,
+      "category": "marketing",
+      "category_url": "https://appexchange.salesforce.com/explore/business-needs?category=marketing"
+    },
+    {
+      "listing_id": "a0N300000016a08EAA",
+      "listing_id_type": "salesforce",
+      "name": "BridgeMail Email Marketing, Marketing Automation, & Lead Management",
+      "url": "https://appexchange.salesforce.com/appxListingDetail?listingId=a0N300000016a08EAA",
+      "logo_url": "https://appexchange.salesforce.com/partners/servlet/servlet.FileDownload?file=00P3000000P3VwiEAF",
+      "average_rating": 4.92,
+      "review_count": 64,
+      "short_description": "Rated #1 for customer support/satisfaction + an 87% customer retention rate - READ THE REVIEWS!!! \n\nBe fully functional in less than 27 minutes with no integration partner and no errors. B2B & B2C.\n\nLearn more about the features/functionality below.",
+      "categories": [
+        "marketingAutomation"
+      ],
+      "position": 37,
+      "page": 4,
+      "is_sponsored": false,
+      "category": "marketing",
+      "category_url": "https://appexchange.salesforce.com/explore/business-needs?category=marketing"
+    },
+    {
+      "listing_id": "a0N3A00000FP3yFUAT",
+      "listing_id_type": "salesforce",
+      "name": "Query Studio for Marketing Cloud",
+      "url": "https://appexchange.salesforce.com/appxListingDetail?listingId=a0N3A00000FP3yFUAT",
+      "logo_url": "https://appexchange.salesforce.com/partners/servlet/servlet.FileDownload?file=00P3A00000lXA7fUAG",
+      "average_rating": 3.88,
+      "review_count": 68,
+      "short_description": "Query studio allows you to quickly run queries in the Marketing Cloud with a similar experience to SQL Server Studio or MySQL workbench.",
+      "categories": [
+        "marketing"
+      ],
+      "position": 38,
+      "page": 4,
+      "is_sponsored": false,
+      "category": "marketing",
+      "category_url": "https://appexchange.salesforce.com/explore/business-needs?category=marketing"
+    },
+    {
+      "listing_id": "a0N30000007rUqwEAE",
+      "listing_id_type": "salesforce",
+      "name": "Full Circle Insights: Multi-Touch Attribution, Funnel Measurement, and ABM",
+      "url": "https://appexchange.salesforce.com/appxListingDetail?listingId=a0N30000007rUqwEAE",
+      "logo_url": "https://appexchange.salesforce.com/image_host/8db25e23-e3e8-4f61-a78e-5851d445d0f3.png",
+      "average_rating": 5,
+      "review_count": 53,
+      "short_description": "Full Circle Insights delivers multi- touch attribution, funnel measurement, customer journey tracking & ABM performance in Salesforce, helping optimize marketing ROI with confidence.",
+      "categories": [
+        "leadAndOpportunityManagement",
+        "campaignManagement",
+        "accountBasedMarketing"
+      ],
+      "position": 39,
+      "page": 4,
+      "is_sponsored": false,
+      "category": "marketing",
+      "category_url": "https://appexchange.salesforce.com/explore/business-needs?category=marketing"
+    },
+    {
+      "listing_id": "a0N30000000ptq1EAA",
+      "listing_id_type": "salesforce",
+      "name": "Gimbal Barcode",
+      "url": "https://appexchange.salesforce.com/appxListingDetail?listingId=a0N30000000ptq1EAA",
+      "logo_url": "https://appexchange.salesforce.com/partners/servlet/servlet.FileDownload?file=00P3000000P3Zd9EAF",
+      "average_rating": 4.86,
+      "review_count": 88,
+      "short_description": "Flexible barcode and QR solutions for any business process in Salesforce. Common use cases: Inventory, Attendance, Field Service, Fulfillment, and others.  Excellent implementation assistance and support.",
+      "categories": [
+        "eventManagement",
+        "fieldService",
+        "orderAndInventoryManagement"
+      ],
+      "position": 40,
+      "page": 4,
+      "is_sponsored": false,
+      "category": "marketing",
+      "category_url": "https://appexchange.salesforce.com/explore/business-needs?category=marketing"
+    },
+    {
+      "listing_id": "a0N3A00000EOBliUAH",
+      "listing_id_type": "salesforce",
+      "name": "SurveyMonkey for Salesforce",
+      "url": "https://appexchange.salesforce.com/appxListingDetail?listingId=a0N3A00000EOBliUAH",
+      "logo_url": "https://appexchange.salesforce.com/image_host/2d4d9cee-3dd1-40b4-9b85-45ce57082c69.jpg",
+      "average_rating": 4.57,
+      "review_count": 67,
+      "short_description": "Connect your survey data with Salesforce to drive results for your business. Automatically send surveys after key interactions and take real-time action on feedback. Enrich customer and prospect data by syncing survey responses into Salesforce.",
+      "categories": [
+        "marketing",
+        "customerService",
+        "humanResources"
+      ],
+      "position": 41,
+      "page": 4,
+      "is_sponsored": false,
+      "category": "marketing",
+      "category_url": "https://appexchange.salesforce.com/explore/business-needs?category=marketing"
+    },
+    {
+      "listing_id": "a0N30000003ICFYEA4",
+      "listing_id_type": "salesforce",
+      "name": "Qualtrics - Customer Experience Management for Salesforce",
+      "url": "https://appexchange.salesforce.com/appxListingDetail?listingId=a0N30000003ICFYEA4",
+      "logo_url": "https://appexchange.salesforce.com/partners/servlet/servlet.FileDownload?file=00P3A00000knfEqUAI",
+      "average_rating": 4,
+      "review_count": 60,
+      "short_description": "Combine customer experience data with operational data to better understand customer behavior and build strong client account relationships. Automate customer feedback across workflows, analyze data, and embed insights in your Salesforce dashboard.",
+      "categories": [
+        "surveys"
+      ],
+      "position": 42,
+      "page": 4,
+      "is_sponsored": false,
+      "category": "marketing",
+      "category_url": "https://appexchange.salesforce.com/explore/business-needs?category=marketing"
+    },
+    {
+      "listing_id": "a0N30000009x6YDEAY",
+      "listing_id_type": "salesforce",
+      "name": "Impowr Free - Self-Service Import Solution for Salesforce",
+      "url": "https://appexchange.salesforce.com/appxListingDetail?listingId=a0N30000009x6YDEAY",
+      "logo_url": "https://appexchange.salesforce.com/image_host/77ceeeb3-152e-4ba8-8d62-668a6c40dd7d.png",
+      "average_rating": 4.84,
+      "review_count": 50,
+      "short_description": "Impowr Free is a self-service import solution designed for end-users, not administrators. Unlike Data Loader, Impowr Free enables users, partners and customers to import spreadsheet data to any Salesforce object within governed parameters.",
+      "categories": [
+        "campaignManagement",
+        "integration",
+        "dataManagement"
+      ],
+      "position": 43,
+      "page": 4,
+      "is_sponsored": false,
+      "category": "marketing",
+      "category_url": "https://appexchange.salesforce.com/explore/business-needs?category=marketing"
+    },
+    {
+      "listing_id": "de2083cc-858b-4c71-946f-4cab33143629",
+      "listing_id_type": "uuid",
+      "name": "BreezyBit: 100% Native Form Builder for Salesforce",
+      "url": "https://appexchange.salesforce.com/appxListingDetail?listingId=de2083cc-858b-4c71-946f-4cab33143629",
+      "logo_url": "https://appexchange.salesforce.com/image_host/05055fd5-1d4e-48d5-aacf-a83306f5ca0d.png",
+      "average_rating": 5,
+      "review_count": 18,
+      "short_description": "BreezyBit Form Builder, a native Form Builder for Salesforce, enables lightning-fast form creation with a user-friendly interface that mirrors Salesforce Lightning. It offers secure, code-free customization, streamlining the entire process efficiently.",
+      "categories": [
+        "marketing",
+        "surveys",
+        "itAndAdministration"
+      ],
+      "position": 44,
+      "page": 4,
+      "is_sponsored": false,
+      "category": "marketing",
+      "category_url": "https://appexchange.salesforce.com/explore/business-needs?category=marketing"
+    },
+    {
+      "listing_id": "a0N4V00000GXZ1uUAH",
+      "listing_id_type": "salesforce",
+      "name": "Translation & Localization Intelligence",
+      "url": "https://appexchange.salesforce.com/appxListingDetail?listingId=a0N4V00000GXZ1uUAH",
+      "logo_url": "https://appexchange.salesforce.com/image_host/af9a4095-4803-42f6-9004-3cd1aae59d4f.png",
+      "average_rating": 5,
+      "review_count": 14,
+      "short_description": "Natively built on Salesforce.  Verbis is the first translation and localization intelligence layer applicable to all Salesforce clouds. Your Translation Management System TMS inside Salesforce. Install the trial and reach out to support@venizum.com",
+      "categories": [
+        "marketing",
+        "customerService"
+      ],
+      "position": 45,
+      "page": 4,
+      "is_sponsored": false,
+      "category": "marketing",
+      "category_url": "https://appexchange.salesforce.com/explore/business-needs?category=marketing"
+    },
+    {
+      "listing_id": "a0N4V00000FguNKUAZ",
+      "listing_id_type": "salesforce",
+      "name": "AC Events Enterprise: In-person, Virtual, and Hybrid Event Management",
+      "url": "https://appexchange.salesforce.com/appxListingDetail?listingId=a0N4V00000FguNKUAZ",
+      "logo_url": "https://appexchange.salesforce.com/partners/servlet/servlet.FileDownload?file=00P4V00000otx5wUAA",
+      "average_rating": 4.94,
+      "review_count": 16,
+      "short_description": "✓A Salesforce-native go-to app for events on Experience Cloud ✓ Flexible & customisable ✓All types of private or public events of any complexity ✓ User-friendly interface ✓Customizable event pages ✓ Attendee management ✓ Automated communications",
+      "categories": [
+        "marketing",
+        "eventManagement",
+        "campaignManagement"
+      ],
+      "position": 46,
+      "page": 4,
+      "is_sponsored": false,
+      "category": "marketing",
+      "category_url": "https://appexchange.salesforce.com/explore/business-needs?category=marketing"
+    },
+    {
+      "listing_id": "a0N3A00000EFpKZUA1",
+      "listing_id_type": "salesforce",
+      "name": "Jifflenow",
+      "url": "https://appexchange.salesforce.com/appxListingDetail?listingId=a0N3A00000EFpKZUA1",
+      "logo_url": "https://appexchange.salesforce.com/image_host/76640a59-e61a-491f-9df2-afa0b9626f83.png",
+      "average_rating": 4.88,
+      "review_count": 17,
+      "short_description": "Streamline your scheduling with the Jifflenow Salesforce App. Empower your sales team to book and manage customer meetings directly within Salesforce, eliminating the need to switch between platforms. Enhance your team's productivity and ensure a seamless",
+      "categories": [
+        "sales",
+        "marketing",
+        "productivity"
+      ],
+      "position": 47,
+      "page": 4,
+      "is_sponsored": false,
+      "category": "marketing",
+      "category_url": "https://appexchange.salesforce.com/explore/business-needs?category=marketing"
+    },
+    {
+      "listing_id": "09f140b4-fcb2-422b-a728-4895d629ecb2",
+      "listing_id_type": "uuid",
+      "name": "Watbox - Whatsapp for Salesforce, SMS  and CTI",
+      "url": "https://appexchange.salesforce.com/appxListingDetail?listingId=09f140b4-fcb2-422b-a728-4895d629ecb2",
+      "logo_url": "https://appexchange.salesforce.com/image_host/a425a648-6601-480d-b1e8-1daa50633acc.png",
+      "average_rating": 5,
+      "review_count": 29,
+      "short_description": "WatBox is a Salesforce-native messaging and calling platform that enables sales and support teams to communicate with customers using WhatsApp, SMS, and CTI directly inside Salesforce. Built for Get Started with a 14 Days Free Trial  https://watbox.ai/",
+      "categories": [
+        "sales",
+        "marketing",
+        "customerService"
+      ],
+      "position": 48,
+      "page": 4,
+      "is_sponsored": false,
+      "category": "marketing",
+      "category_url": "https://appexchange.salesforce.com/explore/business-needs?category=marketing"
+    },
+    {
+      "listing_id": "a0N4V00000DZQiVUAX",
+      "listing_id_type": "salesforce",
+      "name": "Creative Mail",
+      "url": "https://appexchange.salesforce.com/appxListingDetail?listingId=a0N4V00000DZQiVUAX",
+      "logo_url": "https://appexchange.salesforce.com/image_host/53f67fca-cff1-407f-a715-fe23e4dca77e.png",
+      "average_rating": 4.94,
+      "review_count": 16,
+      "short_description": "Creative Mail is a Salesforce-native email template and newsletter builder with integrated sending and analytics — built for teams that need reliable delivery and predictable pricing without exporting data or syncing contacts.",
+      "categories": [
+        "massEmailsAndMessaging",
+        "personalization",
+        "campaignManagement"
+      ],
+      "position": 49,
+      "page": 5,
+      "is_sponsored": false,
+      "category": "marketing",
+      "category_url": "https://appexchange.salesforce.com/explore/business-needs?category=marketing"
+    },
+    {
+      "listing_id": "a0N30000003ICFYEA4",
+      "listing_id_type": "salesforce",
+      "name": "Qualtrics - Customer Experience Management for Salesforce",
+      "url": "https://appexchange.salesforce.com/appxListingDetail?listingId=a0N30000003ICFYEA4",
+      "logo_url": "https://appexchange.salesforce.com/partners/servlet/servlet.FileDownload?file=00P3A00000knfEqUAI",
+      "average_rating": 4,
+      "review_count": 60,
+      "short_description": "Combine customer experience data with operational data to better understand customer behavior and build strong client account relationships. Automate customer feedback across workflows, analyze data, and embed insights in your Salesforce dashboard.",
+      "categories": [
+        "surveys"
+      ],
+      "position": 50,
+      "page": 5,
+      "is_sponsored": false,
+      "category": "marketing",
+      "category_url": "https://appexchange.salesforce.com/explore/business-needs?category=marketing"
+    },
+    {
+      "listing_id": "a0N3000000DpSjrEAF",
+      "listing_id_type": "salesforce",
+      "name": "Appinium for Media - native video enablement on Salesforce (formerly ViewTrac)",
+      "url": "https://appexchange.salesforce.com/appxListingDetail?listingId=a0N3000000DpSjrEAF",
+      "logo_url": "https://appexchange.salesforce.com/partners/servlet/servlet.FileDownload?file=00P4V00000wMpv6UAC",
+      "average_rating": 5,
+      "review_count": 25,
+      "short_description": "Deliver (and track!) video, e-learning, PPT, PDF, and other media across your Sales Cloud, Service Cloud, or Communities. Then analyze the engagement and impact of your content, natively in Salesforce.",
+      "categories": [
+        "sales",
+        "marketing",
+        "productivity"
+      ],
+      "position": 51,
+      "page": 5,
+      "is_sponsored": false,
+      "category": "marketing",
+      "category_url": "https://appexchange.salesforce.com/explore/business-needs?category=marketing"
+    },
+    {
+      "listing_id": "a0N300000059eEUEAY",
+      "listing_id_type": "salesforce",
+      "name": "Address Verification from To A Finish",
+      "url": "https://appexchange.salesforce.com/appxListingDetail?listingId=a0N300000059eEUEAY",
+      "logo_url": "https://appexchange.salesforce.com/image_host/aba823ea-eef0-43a9-968e-5fdabbe155d7.png",
+      "average_rating": 5,
+      "review_count": 31,
+      "short_description": "Uses Smarty.com (SmartyStreets) Address Cleansing to verify addresses in Salesforce.  Click, and all addresses on the current record are verified, geocoded & cleansed.  Works with standard, custom objects, & international lookups FREE 14-day Trial!",
+      "categories": [
+        "dataCleansing",
+        "campaignManagement",
+        "productivity"
+      ],
+      "position": 52,
+      "page": 5,
+      "is_sponsored": false,
+      "category": "marketing",
+      "category_url": "https://appexchange.salesforce.com/explore/business-needs?category=marketing"
+    },
+    {
+      "listing_id": "cb060fcb-9641-4d9b-ab2f-2a9475b48081",
+      "listing_id_type": "uuid",
+      "name": "Form Vista: 100% Native Forms, Surveys, Quizzes, Checklists, and Assessments",
+      "url": "https://appexchange.salesforce.com/appxListingDetail?listingId=cb060fcb-9641-4d9b-ab2f-2a9475b48081",
+      "logo_url": "https://appexchange.salesforce.com/image_host/385e5ffc-5ce7-4ab1-bb2d-37c8bbd4a693.png",
+      "average_rating": 5,
+      "review_count": 19,
+      "short_description": "All-in-one Salesforce-native solution for creating, managing, and analyzing forms and surveys. Effortlessly collect data, integrate with CRM for real-time insights, and act on data to enhance experiences, leveraging dynamic forms and robust security.",
+      "categories": [
+        "ratingsAndReviews",
+        "marketing",
+        "informationManagement"
+      ],
+      "position": 53,
+      "page": 5,
+      "is_sponsored": false,
+      "category": "marketing",
+      "category_url": "https://appexchange.salesforce.com/explore/business-needs?category=marketing"
+    },
+    {
+      "listing_id": "a0N4V00000FguNKUAZ",
+      "listing_id_type": "salesforce",
+      "name": "AC Events Enterprise: In-person, Virtual, and Hybrid Event Management",
+      "url": "https://appexchange.salesforce.com/appxListingDetail?listingId=a0N4V00000FguNKUAZ",
+      "logo_url": "https://appexchange.salesforce.com/partners/servlet/servlet.FileDownload?file=00P4V00000otx5wUAA",
+      "average_rating": 4.94,
+      "review_count": 16,
+      "short_description": "✓A Salesforce-native go-to app for events on Experience Cloud ✓ Flexible & customisable ✓All types of private or public events of any complexity ✓ User-friendly interface ✓Customizable event pages ✓ Attendee management ✓ Automated communications",
+      "categories": [
+        "marketing",
+        "eventManagement",
+        "campaignManagement"
+      ],
+      "position": 54,
+      "page": 5,
+      "is_sponsored": false,
+      "category": "marketing",
+      "category_url": "https://appexchange.salesforce.com/explore/business-needs?category=marketing"
+    },
+    {
+      "listing_id": "09f140b4-fcb2-422b-a728-4895d629ecb2",
+      "listing_id_type": "uuid",
+      "name": "Watbox - Whatsapp for Salesforce, SMS  and CTI",
+      "url": "https://appexchange.salesforce.com/appxListingDetail?listingId=09f140b4-fcb2-422b-a728-4895d629ecb2",
+      "logo_url": "https://appexchange.salesforce.com/image_host/a425a648-6601-480d-b1e8-1daa50633acc.png",
+      "average_rating": 5,
+      "review_count": 29,
+      "short_description": "WatBox is a Salesforce-native messaging and calling platform that enables sales and support teams to communicate with customers using WhatsApp, SMS, and CTI directly inside Salesforce. Built for Get Started with a 14 Days Free Trial  https://watbox.ai/",
+      "categories": [
+        "sales",
+        "marketing",
+        "customerService"
+      ],
+      "position": 55,
+      "page": 5,
+      "is_sponsored": false,
+      "category": "marketing",
+      "category_url": "https://appexchange.salesforce.com/explore/business-needs?category=marketing"
+    },
+    {
+      "listing_id": "a0N4V00000GXZ1uUAH",
+      "listing_id_type": "salesforce",
+      "name": "Translation & Localization Intelligence",
+      "url": "https://appexchange.salesforce.com/appxListingDetail?listingId=a0N4V00000GXZ1uUAH",
+      "logo_url": "https://appexchange.salesforce.com/image_host/af9a4095-4803-42f6-9004-3cd1aae59d4f.png",
+      "average_rating": 5,
+      "review_count": 14,
+      "short_description": "Natively built on Salesforce.  Verbis is the first translation and localization intelligence layer applicable to all Salesforce clouds. Your Translation Management System TMS inside Salesforce. Install the trial and reach out to support@venizum.com",
+      "categories": [
+        "marketing",
+        "customerService"
+      ],
+      "position": 56,
+      "page": 5,
+      "is_sponsored": false,
+      "category": "marketing",
+      "category_url": "https://appexchange.salesforce.com/explore/business-needs?category=marketing"
+    },
+    {
+      "listing_id": "a0N3A00000EcsYBUAZ",
+      "listing_id_type": "salesforce",
+      "name": "Proton Text",
+      "url": "https://appexchange.salesforce.com/appxListingDetail?listingId=a0N3A00000EcsYBUAZ",
+      "logo_url": "https://appexchange.salesforce.com/partners/servlet/servlet.FileDownload?file=00P4V00000y12naUAA",
+      "average_rating": 5,
+      "review_count": 30,
+      "short_description": "SMS/MMS Text Lightning Component with Integration to Salesforce® Objects. 1-to-1 texting with optional Google Translate and Sms2Agent features. Proton Blaster handles bulk SMS to thousands, and our automation library makes SMS part of your workflow.",
+      "categories": [
+        "campaignManagement",
+        "collaboration",
+        "agentProductivity"
+      ],
+      "position": 57,
+      "page": 5,
+      "is_sponsored": false,
+      "category": "marketing",
+      "category_url": "https://appexchange.salesforce.com/explore/business-needs?category=marketing"
+    },
+    {
+      "listing_id": "a0N4V00000JVVMLUA5",
+      "listing_id_type": "salesforce",
+      "name": "Account Engagement Automates... Record Creation",
+      "url": "https://appexchange.salesforce.com/appxListingDetail?listingId=a0N4V00000JVVMLUA5",
+      "logo_url": "https://appexchange.salesforce.com/image_host/59103893-6721-41bc-b7fa-10a99dc1d69f.png",
+      "average_rating": 4.75,
+      "review_count": 4,
+      "short_description": "Get ready for Marketing dreams to come true! Using External Actions, Account Engagement utilizes Engagement Studio and Flow to easily trigger the creation of a Contact, Account, Opportunity, and more.\n\nFind the User Guide under More Details below.",
+      "categories": [
+        "marketingAutomation",
+        "adminAndDeveloperTools"
+      ],
+      "position": 58,
+      "page": 5,
+      "is_sponsored": false,
+      "category": "marketing",
+      "category_url": "https://appexchange.salesforce.com/explore/business-needs?category=marketing"
+    },
+    {
+      "listing_id": "a0N30000000q4u7EAA",
+      "listing_id_type": "salesforce",
+      "name": "Complete Leads | Routing | Matching | Round Robin | AI Workflows | No-Code",
+      "url": "https://appexchange.salesforce.com/appxListingDetail?listingId=a0N30000000q4u7EAA",
+      "logo_url": "https://appexchange.salesforce.com/image_host/f2a76c5b-5395-41b7-a8dc-69e9f669c1e7.png",
+      "average_rating": 5,
+      "review_count": 22,
+      "short_description": "Respond faster than the competition with automated matching and routing in Salesforce. Then automate all your data management with the most flexible, scalable AI-powered workflow engine — so your team can focus on closing deals, not chasing data.",
+      "categories": [
+        "sales",
+        "marketing",
+        "dataManagement"
+      ],
+      "position": 59,
+      "page": 5,
+      "is_sponsored": false,
+      "category": "marketing",
+      "category_url": "https://appexchange.salesforce.com/explore/business-needs?category=marketing"
+    },
+    {
+      "listing_id": "a0N3000000B4DyvEAF",
+      "listing_id_type": "salesforce",
+      "name": "SMS for Salesforce by Sinch Engage — SMS, MMS, WhatsApp & RCS",
+      "url": "https://appexchange.salesforce.com/appxListingDetail?listingId=a0N3000000B4DyvEAF",
+      "logo_url": "https://appexchange.salesforce.com/image_host/4fa970de-ebde-43d7-a7e0-2b063227c412.png",
+      "average_rating": 4.9,
+      "review_count": 39,
+      "short_description": "Salesforce text messaging made simple. Send and automate SMS, MMS, WhatsApp, and RCS directly inside Salesforce. Improve response times, personalize communication, and keep every message on record. Fast setup, built-in compliance, and 24/7 support.",
+      "categories": [
+        "sales",
+        "marketingAutomation",
+        "fieldService"
+      ],
+      "position": 60,
+      "page": 5,
+      "is_sponsored": false,
+      "category": "marketing",
+      "category_url": "https://appexchange.salesforce.com/explore/business-needs?category=marketing"
+    }
+  ]
+}

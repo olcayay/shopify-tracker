@@ -1,0 +1,496 @@
+[
+  {
+    "url": "https://api.appexchange.salesforce.com/recommendations/v3/listings?type=apps&page=1&pageSize=12&language=en&keyword=form",
+    "payload": {
+      "advancedQuery": "",
+      "queryText": "form",
+      "searchQueryUid": "5577467d-176e-4b87-a6cf-5f76b20be5e2",
+      "totalCount": 1456,
+      "listings": [
+        {
+          "oafId": "a0N4V00000GuFW6UAN",
+          "type": "force/package",
+          "title": "LeadLife",
+          "description": "Step Up your Sales and Marketing Campaigns in a snap with a powerful tool called Leadlife! Have one space to efficiently keep track of all your leads and transform them into new opportunities. Stay on top of the game with LeadLife!",
+          "listingCategories": [
+            "productivity"
+          ],
+          "logos": [
+            {
+              "mediaId": "https://appexchange.salesforce.com/partners/servlet/servlet.FileDownload?file=00P4V00000uyvqLUAQ",
+              "logoType": "Logo",
+              "external_id": "a3L4V0000002lJgUAI"
+            },
+            {
+              "mediaId": "https://appexchange.salesforce.com/partners/servlet/servlet.FileDownload?file=00P4V00000wEZ4ZUAW",
+              "logoType": "Big Logo",
+              "external_id": "a3L4V0000002lcdUAA"
+            },
+            {
+              "mediaId": "https://appexchange.salesforce.com/partners/servlet/servlet.FileDownload?file=00P4V00000viOExUAM",
+              "logoType": "High Res Svg",
+              "external_id": "a3L4V00000A2QQ2UAN"
+            },
+            {
+              "mediaId": "https://appexchange.salesforce.com/partners/servlet/servlet.FileDownload?file=00P4V00000viNwkUAE",
+              "logoType": "Small Svg Icon",
+              "external_id": "a3L4V00000A2QPiUAN"
+            }
+          ],
+          "publisher": "Micronetbd Inc",
+          "averageRating": 5,
+          "reviewsAmount": 1,
+          "chatEnabled": false,
+          "additionalProps": {}
+        },
+        {
+          "oafId": "a0N3000000B45oCEAR",
+          "type": "force/package",
+          "title": "Digioh - Form Builder for Marketing Cloud",
+          "description": "The seamless way to create Salesforce Marketing Cloud/ExactTarget forms. \nBuild any form or widget you can envision. Add unlimited custom fields, pass data to your lists and data extensions in real-time, & trigger Journey Builder workflows.",
+          "listingCategories": [
+            "campaignManagement"
+          ],
+          "logos": [
+            {
+              "mediaId": "https://appexchange.salesforce.com/partners/servlet/servlet.FileDownload?file=00P3000000P3YCBEA3",
+              "logoType": "Logo",
+              "external_id": "a3L300000000I1mEAE"
+            },
+            {
+              "mediaId": "https://appexchange.salesforce.com/partners/servlet/servlet.FileDownload?file=00P3A00000iVo5UUAS",
+              "logoType": "Big Logo",
+              "external_id": "a3L3A00000A1dhkUAB"
+            },
+            {
+              "mediaId": "https://appexchange.salesforce.com/partners/servlet/servlet.FileDownload?file=00P3000000P3YCFEA3",
+              "logoType": "High Res Logo",
+              "external_id": "a3L300000000I1qEAE"
+            }
+          ],
+          "publisher": "Digioh",
+          "averageRating": 5,
+          "reviewsAmount": 1,
+          "chatEnabled": false,
+          "additionalProps": {}
+        },
+        {
+          "oafId": "a0N3A00000EmIRzUAN",
+          "type": "force/package",
+          "title": "Mobile Forms & Field Service Workflow Automation | TrueContext",
+          "description": "The largest, most asset-intensive operations run on TrueContext's intelligent field service workflow platform & mobile forms app. Powering productivity from accurate job guidance and purposeful mobile data collection to deep analytics that drive action.",
+          "listingCategories": [
+            "productivity",
+            "fieldService"
+          ],
+          "logos": [
+            {
+              "mediaId": "https://appexchange.salesforce.com/image_host/b2a04786-fb47-4a2f-9cd1-5b0a89bfbf7c.png",
+              "logoType": "Logo",
+              "external_id": "a3L3A000000JNdyUAG"
+            },
+            {
+              "mediaId": "https://appexchange.salesforce.com/partners/servlet/servlet.FileDownload?file=00P4V00000qbPDkUAM",
+              "logoType": "Medium Logo",
+              "external_id": "a3L3A000000enllUAA"
+            },
+            {
+              "mediaId": "https://appexchange.salesforce.com/image_host/2fbc4a04-e27f-4ea1-9430-27bc68ef84ca.png",
+              "logoType": "Big Logo",
+              "external_id": "a3L4V00000ABarEUAT"
+            },
+            {
+              "mediaId": "https://appexchange.salesforce.com/partners/servlet/servlet.FileDownload?file=00P3A00000kID83UAG",
+              "logoType": "High Res Svg",
+              "external_id": "a3L3A0000005M2fUAE"
+            },
+            {
+              "mediaId": "https://appexchange.salesforce.com/partners/servlet/servlet.FileDownload?file=00P3A00000kIM1CUAW",
+              "logoType": "Small Svg Icon",
+              "external_id": "a3L3A0000005MqaUAE"
+            }
+          ],
+          "publisher": "TrueContext, formerly ProntoForms",
+          "averageRating": 4.55,
+          "reviewsAmount": 29,
+          "chatEnabled": false,
+          "additionalProps": {}
+        },
+        {
+          "oafId": "a0N3A00000EcsATUAZ",
+          "type": "force/package",
+          "title": "Satrang Update Client Details",
+          "description": "Empower customers with an easy web form to update Lead, Account, or Contact information.\n\n- Saves time\n- Multi-language support\n- Ensures accurate data\n- 100% native Force.com app\n- Improved experience\n\nFor a demo, schedule at https://bit.ly/3D6630a.",
+          "listingCategories": [
+            "productivity",
+            "customerService",
+            "dataManagement"
+          ],
+          "logos": [
+            {
+              "mediaId": "https://appexchange.salesforce.com/image_host/680dcbfd-f074-453c-8f12-58728d45a754.png",
+              "logoType": "Big Logo",
+              "external_id": "a3L3A000000JJ1gUAG"
+            },
+            {
+              "mediaId": "https://appexchange.salesforce.com/partners/servlet/servlet.FileDownload?file=00P4V00000xhZ6mUAE",
+              "logoType": "Small Svg Icon",
+              "external_id": "a3L4V0000002sMjUAI"
+            },
+            {
+              "mediaId": "https://appexchange.salesforce.com/image_host/6c30aafd-c22b-4a8c-a56e-10d10839fbbb.png",
+              "logoType": "Logo",
+              "external_id": "4a9a1358-6328-495f-a125-6553ea0dbc2a"
+            }
+          ],
+          "publisher": "Satrang Technologies",
+          "averageRating": 5,
+          "reviewsAmount": 6,
+          "chatEnabled": false,
+          "additionalProps": {}
+        },
+        {
+          "oafId": "a23e02c8-d2e2-4379-8c76-0eedfb1af1f7",
+          "type": "force/flow",
+          "title": "Knowledge Case Deflection - Contact Form (Einstein Flow Template)",
+          "description": "Deflect cases using a contact form that incorporates Einstein Article Recommendations",
+          "listingCategories": [],
+          "logos": [
+            {
+              "mediaId": "https://appexchange.salesforce.com/image_host/3e430e96-8084-49c3-92ee-b164cdc7a0e6.png",
+              "logoType": "Logo",
+              "external_id": "ae959fd1-ecc3-4742-ab14-ec0ca2ad8c27"
+            },
+            {
+              "mediaId": "https://appexchange.salesforce.com/image_host/a8e78587-7e27-45db-b86d-540454338bbb.jpg",
+              "logoType": "Big Logo",
+              "external_id": "e477382f-bba6-47c2-91bd-42d2f9df0c31"
+            }
+          ],
+          "publisher": "Salesforce Labs",
+          "averageRating": 2.5,
+          "reviewsAmount": 2,
+          "chatEnabled": false,
+          "additionalProps": {}
+        },
+        {
+          "oafId": "a0N3A00000GCUcbUAH",
+          "type": "force/package",
+          "title": "Blufy - Student & School Management Platform",
+          "description": "Comprehensive platform for schools, private institutes & enrichment\ncentres to manage complete school operations. \n\nAutomates key functions for various departments including Student Management, Operations, Finance",
+          "listingCategories": [
+            "productivity"
+          ],
+          "logos": [
+            {
+              "mediaId": "https://appexchange.salesforce.com/partners/servlet/servlet.FileDownload?file=00P4V00000o7xtgUAA",
+              "logoType": "Logo",
+              "external_id": "a3L4V000000NTICUA4"
+            },
+            {
+              "mediaId": "https://appexchange.salesforce.com/partners/servlet/servlet.FileDownload?file=00P3A00000o62IuUAI",
+              "logoType": "Big Logo",
+              "external_id": "a3L3A000000NN4FUAW"
+            }
+          ],
+          "publisher": "TechMatrix Consulting",
+          "averageRating": 5,
+          "reviewsAmount": 1,
+          "chatEnabled": false,
+          "additionalProps": {}
+        },
+        {
+          "oafId": "a0N3A00000EcrfoUAB",
+          "type": "force/package",
+          "title": "MobiForms: Salesforce Native Mobile Forms for Field Service and Beyond",
+          "description": "Start your FREE 30-day trial now! No code or integrations necessary. Quickly build mobile forms for field service inspections, customer surveys, and more. MobiForms is built on Salesforce and seamlessly captures data across any object.",
+          "listingCategories": [
+            "sales",
+            "customerService",
+            "fieldService"
+          ],
+          "logos": [
+            {
+              "mediaId": "https://appexchange.salesforce.com/image_host/4a44ee60-712b-4cfa-9d2f-1be191e93b48.png",
+              "logoType": "Logo",
+              "external_id": "a3L3A000000LjmsUAC"
+            },
+            {
+              "mediaId": "https://appexchange.salesforce.com/partners/servlet/servlet.FileDownload?file=00P3A00000cTtV5UAK",
+              "logoType": "Big Logo",
+              "external_id": "a3L3A000000LjmiUAC"
+            }
+          ],
+          "publisher": "Pashtek",
+          "averageRating": 5,
+          "reviewsAmount": 1,
+          "chatEnabled": false,
+          "additionalProps": {}
+        },
+        {
+          "oafId": "a0N3A00000DqCoUUAV",
+          "type": "force/package",
+          "title": "Simple Signature - Electronic Signatures & Document Generation for Salesforce",
+          "description": "Introducing an affordable solution to capture electronic signatures in Salesforce.  With Simple Signature, you can acquire e-signatures on release forms, petitions, waivers, and other simple forms that need key data elements and a signature.  Simple.",
+          "listingCategories": [
+            "contractManagement",
+            "documentGeneration",
+            "processManagement"
+          ],
+          "logos": [
+            {
+              "mediaId": "https://appexchange.salesforce.com/image_host/c8cd75ec-5f65-4ed6-bcf7-23ddb2ff8ae7.png",
+              "logoType": "Logo",
+              "external_id": "a3L3A000000eOjqUAE"
+            },
+            {
+              "mediaId": "https://appexchange.salesforce.com/image_host/d54448f5-4d91-4c8a-a0d5-f1a4d4b00ff5.png",
+              "logoType": "Big Logo",
+              "external_id": "a3L3A000000eQiBUAU"
+            }
+          ],
+          "publisher": "To A Finish LLC",
+          "averageRating": 4.79,
+          "reviewsAmount": 33,
+          "chatEnabled": false,
+          "additionalProps": {}
+        },
+        {
+          "oafId": "a0N3A00000G12vyUAB",
+          "type": "force/package",
+          "title": "RSign - Digitizing Workflows with E-Signatures",
+          "description": "RSign® is the simplest to use, most affordable, feature-rich e-sign service. We make it easy with an intuitive guided e-sign process. We’ll keep innovating for you with our advanced features, as we’ve been doing for users the world over for two decades.",
+          "listingCategories": [
+            "contractManagement"
+          ],
+          "logos": [
+            {
+              "mediaId": "https://appexchange.salesforce.com/partners/servlet/servlet.FileDownload?file=00P3A00000nLN5VUAW",
+              "logoType": "Logo",
+              "external_id": "a3L3A000009y9jzUAA"
+            },
+            {
+              "mediaId": "https://appexchange.salesforce.com/partners/servlet/servlet.FileDownload?file=00P3A00000nLN5fUAG",
+              "logoType": "Big Logo",
+              "external_id": "a3L3A000009y9k4UAA"
+            }
+          ],
+          "publisher": "RPost",
+          "averageRating": 5,
+          "reviewsAmount": 2,
+          "chatEnabled": false,
+          "additionalProps": {}
+        },
+        {
+          "oafId": "a0N4V00000Fz0VGUAZ",
+          "type": "force/package",
+          "title": "UltraFlow Designer",
+          "description": "Build portals for your citizens and customers using de-coupled, re-usable components\nConfigure no-code Forms and Flows\nMake your own translations to all user-facing text to support any language\nCreate modular, reusable Apex to sync to Salesforce objects",
+          "listingCategories": [
+            "commerce",
+            "customerService"
+          ],
+          "logos": [
+            {
+              "mediaId": "https://appexchange.salesforce.com/image_host/6da37acc-e09f-4ab0-9bca-b9c77fc09b95.png",
+              "logoType": "Logo",
+              "external_id": "084e58b9-1802-4bca-8751-c55bfbeec8f4"
+            },
+            {
+              "mediaId": "https://appexchange.salesforce.com/image_host/cdccc116-4f23-4b99-94b6-468d64029002.png",
+              "logoType": "Big Logo",
+              "external_id": "2b24ccc3-20ee-419c-8d07-a205bbf46503"
+            }
+          ],
+          "publisher": "MIRA Innovations Pty Ltd",
+          "averageRating": 5,
+          "reviewsAmount": 3,
+          "chatEnabled": false,
+          "additionalProps": {}
+        },
+        {
+          "oafId": "a0N3A00000E9l50UAB",
+          "type": "force/lightning",
+          "title": "Ideas Component Lite for Experience Cloud",
+          "description": "Please note: This is a limited version with restrictions on the number of 100 ideas per community. \nPlease, see our enhanced app, AC Ideas Ultimate, here: https://appexchange.salesforce.com/listingDetail?listingId=a0N4V00000FguKaUAJ&tab=e",
+          "listingCategories": [
+            "productivity",
+            "collaboration"
+          ],
+          "logos": [
+            {
+              "mediaId": "https://appexchange.salesforce.com/partners/servlet/servlet.FileDownload?file=00P3A00000VsqqiUAB",
+              "logoType": "Logo",
+              "external_id": "a3L3A0000004ORqUAM"
+            },
+            {
+              "mediaId": "https://appexchange.salesforce.com/image_host/50a94d24-2e99-4662-897b-99ac34618b96.jpg",
+              "logoType": "Big Logo",
+              "external_id": "3fd036b0-9113-41b6-9623-e3ca9f6a967b"
+            }
+          ],
+          "publisher": "Advanced Communities",
+          "averageRating": 4.73,
+          "reviewsAmount": 77,
+          "chatEnabled": false,
+          "additionalProps": {}
+        },
+        {
+          "oafId": "a0N3A00000FMttmUAD",
+          "type": "force/package",
+          "title": "Reg BI – Form CRS Powered by Broadridge",
+          "description": "Under Regulation Best Interest (Reg BI), disclosures must be sent to clients and prospects. How can you deliver Form CRS anytime, anywhere?\nNow, with the Broadridge “Reg BI – Form CRS” app, advisors can deliver Form CRS with a simple click of a button.",
+          "listingCategories": [
+            "customerService"
+          ],
+          "logos": [
+            {
+              "mediaId": "https://appexchange.salesforce.com/partners/servlet/servlet.FileDownload?file=00P4V00000ou7PCUAY",
+              "logoType": "Logo",
+              "external_id": "a3L4V0000009qaFUAQ"
+            },
+            {
+              "mediaId": "https://appexchange.salesforce.com/partners/servlet/servlet.FileDownload?file=00P4V00000ou7PWUAY",
+              "logoType": "Big Logo",
+              "external_id": "a3L4V0000009qaKUAQ"
+            },
+            {
+              "mediaId": "https://appexchange.salesforce.com/partners/servlet/servlet.FileDownload?file=00P4V00000ou7RSUAY",
+              "logoType": "High Res Svg",
+              "external_id": "a3L4V0000009qb3UAA"
+            },
+            {
+              "mediaId": "https://appexchange.salesforce.com/partners/servlet/servlet.FileDownload?file=00P4V00000ou7QyUAI",
+              "logoType": "Small Svg Icon",
+              "external_id": "a3L4V0000009qatUAA"
+            }
+          ],
+          "publisher": "Broadridge Financial Solutions, Inc.",
+          "averageRating": 0,
+          "reviewsAmount": 0,
+          "chatEnabled": false,
+          "additionalProps": {}
+        }
+      ],
+      "featured": [
+        {
+          "oafId": "e8aee393-18ba-44b7-a1b9-ff5d19f1ce4a",
+          "type": "force/package",
+          "title": "Forms by SharinPix - Offline Inspection Mobile Form with Photo-Video-Sketch-Plan",
+          "description": "Mobile Offline Form Designed for Field Service Inspection/Audit \nPhotos-powered offline forms for field\nSalesforce-native guided assessments, surveys, checklists\nMarker on plans & sketch with personalized tools/background\nPDF to Form with AI \nAI summaries",
+          "listingCategories": [
+            "customerService",
+            "fieldService",
+            "caseManagement"
+          ],
+          "logos": [
+            {
+              "mediaId": "https://appexchange.salesforce.com/image_host/2f442c59-fc52-4a2c-95fd-e915a2dd438b.png",
+              "logoType": "Logo",
+              "external_id": "5edd094a-0b58-4323-a2e8-f45a52df16e5"
+            },
+            {
+              "mediaId": "https://appexchange.salesforce.com/image_host/483c5497-0aad-4d2b-bf79-637d2c58bedc.png",
+              "logoType": "Big Logo",
+              "external_id": "9328defa-c71b-464e-83cb-c0f39a9396b8"
+            }
+          ],
+          "publisher": "SharinPix - the Image experts for Salesforce",
+          "averageRating": 5,
+          "reviewsAmount": 4,
+          "pricing": "paid",
+          "chatEnabled": true,
+          "sponsored": true
+        },
+        {
+          "oafId": "a0N3A00000EOBliUAH",
+          "type": "force/package",
+          "title": "SurveyMonkey for Salesforce",
+          "description": "Connect your survey data with Salesforce to drive results for your business. Automatically send surveys after key interactions and take real-time action on feedback. Enrich customer and prospect data by syncing survey responses into Salesforce.",
+          "listingCategories": [
+            "marketing",
+            "customerService",
+            "humanResources"
+          ],
+          "logos": [
+            {
+              "mediaId": "https://appexchange.salesforce.com/partners/servlet/servlet.FileDownload?file=00P4V00000su7MFUAY",
+              "logoType": "Medium Logo",
+              "external_id": "a3L4V000009yuyPUAQ"
+            },
+            {
+              "mediaId": "https://appexchange.salesforce.com/partners/servlet/servlet.FileDownload?file=00P4V00000wTImZUAW",
+              "logoType": "High Res Svg",
+              "external_id": "a3L4V000009kIvFUAU"
+            },
+            {
+              "mediaId": "https://appexchange.salesforce.com/partners/servlet/servlet.FileDownload?file=00P3A00000eYCYGUA4",
+              "logoType": "Small Svg Icon",
+              "external_id": "a3L3A000000964IUAQ"
+            },
+            {
+              "mediaId": "https://appexchange.salesforce.com/image_host/2d4d9cee-3dd1-40b4-9b85-45ce57082c69.jpg",
+              "logoType": "Logo",
+              "external_id": "2668b8ff-bc0c-4ec2-9815-18da59575f60"
+            },
+            {
+              "mediaId": "https://appexchange.salesforce.com/image_host/f0e9422a-3c81-4bb0-9d5e-13f47241e750.jpg",
+              "logoType": "Big Logo",
+              "external_id": "ef7b5f74-d449-41f9-9953-2cef8ea31387"
+            }
+          ],
+          "publisher": "SurveyMonkey",
+          "averageRating": 4.57,
+          "reviewsAmount": 67,
+          "pricing": "paid",
+          "chatEnabled": true,
+          "sponsored": true
+        },
+        {
+          "oafId": "a0N3A00000EvaSKUAZ",
+          "type": "force/package",
+          "title": "Salesforce First Web Studio",
+          "description": "Run forms, portals, eSign, docs, and surveys directly on Salesforce.\nFrom $150 per org. No per-seat pricing. Nonprofit discounts available.\n",
+          "listingCategories": [
+            "contractManagement",
+            "websites",
+            "documentGeneration"
+          ],
+          "logos": [
+            {
+              "mediaId": "https://appexchange.salesforce.com/partners/servlet/servlet.FileDownload?file=00P4V00000qpEXiUAM",
+              "logoType": "Medium Logo",
+              "external_id": "a3L4V00000AM82lUAD"
+            },
+            {
+              "mediaId": "https://appexchange.salesforce.com/partners/servlet/servlet.FileDownload?file=00P4V00000qoU2WUAU",
+              "logoType": "High Res Svg",
+              "external_id": "a3L4V00000AM5h1UAD"
+            },
+            {
+              "mediaId": "https://appexchange.salesforce.com/partners/servlet/servlet.FileDownload?file=00P4V00000qoU06UAE",
+              "logoType": "Small Svg Icon",
+              "external_id": "a3L4V00000AM5grUAD"
+            },
+            {
+              "mediaId": "https://appexchange.salesforce.com/image_host/e603c1f0-2072-44bc-86a1-0cc1ad62fd16.png",
+              "logoType": "Logo",
+              "external_id": "ef059cb0-4d58-4367-aef2-e8f1c6520358"
+            },
+            {
+              "mediaId": "https://appexchange.salesforce.com/image_host/1597b8ea-a7e4-43d6-b03e-2664a81799dd.png",
+              "logoType": "Big Logo",
+              "external_id": "ba4b1cc5-d808-4e36-b7bf-ad135953738e"
+            }
+          ],
+          "publisher": "Titan",
+          "averageRating": 4.99,
+          "reviewsAmount": 317,
+          "pricing": "paid",
+          "chatEnabled": true,
+          "sponsored": true
+        }
+      ]
+    }
+  }
+]
