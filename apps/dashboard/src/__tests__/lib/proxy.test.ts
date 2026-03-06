@@ -81,31 +81,31 @@ describe("proxy routing", () => {
     expect(mockNext).toHaveBeenCalled();
   });
 
-  it("redirects authenticated user from / to /overview", async () => {
+  it("redirects authenticated user from / to /shopify/overview", async () => {
     const { proxy } = await import("@/proxy");
     const req = createMockRequest("/", { access_token: "valid-token" }) as any;
     await proxy(req);
     expect(mockRedirect).toHaveBeenCalled();
     const redirectUrl = mockRedirect.mock.calls[0][0];
-    expect(redirectUrl.pathname).toBe("/overview");
+    expect(redirectUrl.pathname).toBe("/shopify/overview");
   });
 
-  it("redirects authenticated user from /login to /overview", async () => {
+  it("redirects authenticated user from /login to /shopify/overview", async () => {
     const { proxy } = await import("@/proxy");
     const req = createMockRequest("/login", { access_token: "valid-token" }) as any;
     await proxy(req);
     expect(mockRedirect).toHaveBeenCalled();
     const redirectUrl = mockRedirect.mock.calls[0][0];
-    expect(redirectUrl.pathname).toBe("/overview");
+    expect(redirectUrl.pathname).toBe("/shopify/overview");
   });
 
-  it("redirects authenticated user from /register to /overview", async () => {
+  it("redirects authenticated user from /register to /shopify/overview", async () => {
     const { proxy } = await import("@/proxy");
     const req = createMockRequest("/register", { access_token: "valid-token" }) as any;
     await proxy(req);
     expect(mockRedirect).toHaveBeenCalled();
     const redirectUrl = mockRedirect.mock.calls[0][0];
-    expect(redirectUrl.pathname).toBe("/overview");
+    expect(redirectUrl.pathname).toBe("/shopify/overview");
   });
 
   it("does not redirect authenticated user from /terms", async () => {
@@ -122,18 +122,27 @@ describe("proxy routing", () => {
     expect(mockNext).toHaveBeenCalled();
   });
 
-  it("redirects unauthenticated user from /overview to /login", async () => {
+  it("redirects legacy /overview to /shopify/overview", async () => {
     const { proxy } = await import("@/proxy");
     const req = createMockRequest("/overview") as any;
     await proxy(req);
     expect(mockRedirect).toHaveBeenCalled();
     const redirectUrl = mockRedirect.mock.calls[0][0];
-    expect(redirectUrl.pathname).toBe("/login");
+    expect(redirectUrl.pathname).toBe("/shopify/overview");
   });
 
-  it("redirects unauthenticated user from /apps to /login", async () => {
+  it("redirects legacy /apps to /shopify/apps", async () => {
     const { proxy } = await import("@/proxy");
     const req = createMockRequest("/apps") as any;
+    await proxy(req);
+    expect(mockRedirect).toHaveBeenCalled();
+    const redirectUrl = mockRedirect.mock.calls[0][0];
+    expect(redirectUrl.pathname).toBe("/shopify/apps");
+  });
+
+  it("redirects unauthenticated user from /shopify/overview to /login", async () => {
+    const { proxy } = await import("@/proxy");
+    const req = createMockRequest("/shopify/overview") as any;
     await proxy(req);
     expect(mockRedirect).toHaveBeenCalled();
     const redirectUrl = mockRedirect.mock.calls[0][0];
@@ -154,17 +163,16 @@ describe("proxy routing", () => {
     expect(mockRedirect).toHaveBeenCalled();
   });
 
-  it("allows authenticated user to access /overview with valid token", async () => {
+  it("allows authenticated user to access /shopify/overview with valid token", async () => {
     const { proxy } = await import("@/proxy");
-    // Create a valid JWT payload (not expired, not system admin)
     const payload = { exp: Math.floor(Date.now() / 1000) + 3600, isSystemAdmin: false };
     const token = `header.${btoa(JSON.stringify(payload))}.signature`;
-    const req = createMockRequest("/overview", { access_token: token }) as any;
+    const req = createMockRequest("/shopify/overview", { access_token: token }) as any;
     await proxy(req);
     expect(mockNext).toHaveBeenCalled();
   });
 
-  it("redirects non-admin from /system-admin to /overview", async () => {
+  it("redirects non-admin from /system-admin to /shopify/overview", async () => {
     const { proxy } = await import("@/proxy");
     const payload = { exp: Math.floor(Date.now() / 1000) + 3600, isSystemAdmin: false };
     const token = `header.${btoa(JSON.stringify(payload))}.signature`;
@@ -172,7 +180,7 @@ describe("proxy routing", () => {
     await proxy(req);
     expect(mockRedirect).toHaveBeenCalled();
     const redirectUrl = mockRedirect.mock.calls[0][0];
-    expect(redirectUrl.pathname).toBe("/overview");
+    expect(redirectUrl.pathname).toBe("/shopify/overview");
   });
 
   it("allows system admin to access /system-admin", async () => {
@@ -188,7 +196,7 @@ describe("proxy routing", () => {
     const { proxy } = await import("@/proxy");
     const payload = { exp: Math.floor(Date.now() / 1000) - 3600 }; // expired
     const token = `header.${btoa(JSON.stringify(payload))}.signature`;
-    const req = createMockRequest("/overview", { access_token: token }) as any;
+    const req = createMockRequest("/shopify/overview", { access_token: token }) as any;
     await proxy(req);
     expect(mockRedirect).toHaveBeenCalled();
     const redirectUrl = mockRedirect.mock.calls[0][0];
@@ -197,7 +205,7 @@ describe("proxy routing", () => {
 
   it("redirects to /login when token has invalid format", async () => {
     const { proxy } = await import("@/proxy");
-    const req = createMockRequest("/overview", { access_token: "invalid-token" }) as any;
+    const req = createMockRequest("/shopify/overview", { access_token: "invalid-token" }) as any;
     await proxy(req);
     expect(mockRedirect).toHaveBeenCalled();
     const redirectUrl = mockRedirect.mock.calls[0][0];
@@ -210,10 +218,10 @@ describe("proxy routing", () => {
     expect(config.matcher[0]).toContain("_next/static");
   });
 
-  it("does not match / as prefix for /overview", async () => {
-    // Ensure "/" in PUBLIC_PATHS doesn't accidentally match "/overview"
+  it("does not match / as prefix for /shopify/overview", async () => {
+    // Ensure "/" in PUBLIC_PATHS doesn't accidentally match "/shopify/overview"
     const { proxy } = await import("@/proxy");
-    const req = createMockRequest("/overview") as any;
+    const req = createMockRequest("/shopify/overview") as any;
     await proxy(req);
     // Should NOT be treated as public - should try to validate token
     expect(mockRedirect).toHaveBeenCalled();

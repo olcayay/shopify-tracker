@@ -4,6 +4,22 @@ const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
 
 const PUBLIC_PATHS = ["/", "/login", "/register", "/invite", "/terms", "/privacy"];
 
+const VALID_PLATFORMS = ["shopify", "salesforce", "canva"];
+
+/** Dashboard pages that should be nested under a [platform] segment. */
+const PLATFORM_PAGES = [
+  "/overview",
+  "/apps",
+  "/competitors",
+  "/keywords",
+  "/categories",
+  "/featured",
+  "/features",
+  "/integrations",
+  "/developers",
+  "/research",
+];
+
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
@@ -12,9 +28,21 @@ export async function proxy(request: NextRequest) {
     const token = request.cookies.get("access_token")?.value;
     // Authenticated users: redirect landing/login/register → dashboard
     if (token && (pathname === "/" || pathname === "/login" || pathname === "/register")) {
-      return NextResponse.redirect(new URL("/overview", request.url));
+      return NextResponse.redirect(new URL("/shopify/overview", request.url));
     }
     return NextResponse.next();
+  }
+
+  // Redirect legacy non-platform paths to /shopify/* equivalents
+  // e.g. /apps/formful → /shopify/apps/formful, /overview → /shopify/overview
+  const firstSegment = pathname.split("/")[1];
+  if (
+    PLATFORM_PAGES.some((p) => pathname === p || pathname.startsWith(p + "/")) &&
+    !VALID_PLATFORMS.includes(firstSegment!)
+  ) {
+    return NextResponse.redirect(
+      new URL(`/shopify${pathname}`, request.url)
+    );
   }
 
   const accessToken = request.cookies.get("access_token")?.value;
@@ -92,7 +120,7 @@ export async function proxy(request: NextRequest) {
 
     // Block non-system-admin from system-admin routes
     if (pathname.startsWith("/system-admin") && !payload.isSystemAdmin) {
-      return NextResponse.redirect(new URL("/overview", request.url));
+      return NextResponse.redirect(new URL("/shopify/overview", request.url));
     }
   } catch {
     return NextResponse.redirect(new URL("/login", request.url));
