@@ -82,6 +82,10 @@ fix dashboard scraper trigger — platform selector for system-admin, URL-based 
 
 fix worker dual-queue — interactive jobs not processing (worker now listens to both queues) ✅
 
+truncate long app names in all dashboard tables (max-w-[260px]) ✅
+
+Salesforce live search support — API + dashboard modal with logos ✅
+
 feedback sayfası
 
 kime hangi durumda nasıl emailler gönderilebilinir.

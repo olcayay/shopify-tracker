@@ -234,7 +234,7 @@ export function KeywordAppResults({
                 # <SortIcon col="position" />
               </TableHead>
               <TableHead
-                className="cursor-pointer select-none"
+                className="cursor-pointer select-none max-w-[260px]"
                 onClick={() => toggleSort("app_name")}
               >
                 App <SortIcon col="app_name" />
@@ -302,16 +302,16 @@ export function KeywordAppResults({
                     }
                   >
                     <TableCell className="font-mono">{app.position}</TableCell>
-                    <TableCell>
+                    <TableCell className="max-w-[260px]">
                       <div className="flex items-center gap-2">
                         {app.logo_url && (
                           <img src={app.logo_url} alt="" className="h-6 w-6 rounded shrink-0" />
                         )}
-                        <div>
+                        <div className="min-w-0">
                           <div className="flex items-center gap-1.5">
                             <Link
                               href={`/${platform}/apps/${app.app_slug}`}
-                              className="text-primary hover:underline font-medium"
+                              className="text-primary hover:underline font-medium truncate"
                             >
                               {app.app_name}
                             </Link>

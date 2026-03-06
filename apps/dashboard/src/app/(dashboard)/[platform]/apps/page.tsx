@@ -187,7 +187,7 @@ export default function AppsPage() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead className="cursor-pointer select-none" onClick={() => toggleSort("name")}>
+                  <TableHead className="cursor-pointer select-none max-w-[260px]" onClick={() => toggleSort("name")}>
                     App <SortIcon col="name" />
                   </TableHead>
                   <TableHead className="cursor-pointer select-none" onClick={() => toggleSort("rating")}>
@@ -219,20 +219,20 @@ export default function AppsPage() {
               <TableBody>
                 {sorted.map((app) => (
                   <TableRow key={app.slug}>
-                    <TableCell>
+                    <TableCell className="max-w-[260px]">
                       <div className="flex items-center gap-2">
                         {app.iconUrl && (
                           <img src={app.iconUrl} alt="" className="h-6 w-6 rounded shrink-0" />
                         )}
-                        <div>
+                        <div className="min-w-0">
                           <div className="flex items-center gap-1.5">
                             <Link
                               href={`/${platform}/apps/${app.slug}`}
-                              className="text-primary hover:underline font-medium"
+                              className="text-primary hover:underline font-medium truncate"
                             >
                               {app.name}
                             </Link>
-                            {app.isBuiltForShopify && <span title="Built for Shopify">💎</span>}
+                            {app.isBuiltForShopify && <span title="Built for Shopify" className="shrink-0">💎</span>}
                           </div>
                         </div>
                       </div>

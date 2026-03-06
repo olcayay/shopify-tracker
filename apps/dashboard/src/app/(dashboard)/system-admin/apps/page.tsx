@@ -299,10 +299,10 @@ export default function AppsListPage() {
               {paged.map((app: any) => (
                 <Fragment key={app.slug}>
                   <TableRow>
-                    <TableCell>
+                    <TableCell className="max-w-[260px]">
                       <Link
                         href={`/apps/${app.slug}`}
-                        className="text-primary hover:underline font-medium"
+                        className="text-primary hover:underline font-medium truncate block"
                       >
                         {app.name}
                       </Link>

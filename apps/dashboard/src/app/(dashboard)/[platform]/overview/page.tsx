@@ -356,14 +356,14 @@ export default function OverviewPage() {
                     .slice(appsPage * PAGE_SIZE, (appsPage + 1) * PAGE_SIZE)
                     .map((app: any) => (
                       <TableRow key={app.slug}>
-                        <TableCell>
+                        <TableCell className="max-w-[260px]">
                           <div className="flex items-center gap-2">
                             {app.iconUrl && (
                               <img src={app.iconUrl} alt="" className="h-5 w-5 rounded shrink-0" />
                             )}
                             <Link
                               href={`/${platform}/apps/${app.slug}`}
-                              className="text-primary hover:underline font-medium"
+                              className="text-primary hover:underline font-medium truncate"
                             >
                               {app.name}
                             </Link>
@@ -549,14 +549,14 @@ export default function OverviewPage() {
                     .slice(competitorsPage * PAGE_SIZE, (competitorsPage + 1) * PAGE_SIZE)
                     .map((c: any) => (
                       <TableRow key={c.appSlug}>
-                        <TableCell>
+                        <TableCell className="max-w-[260px]">
                           <div className="flex items-center gap-2">
                             {c.iconUrl && (
                               <img src={c.iconUrl} alt="" className="h-5 w-5 rounded shrink-0" />
                             )}
                             <Link
                               href={`/${platform}/apps/${c.appSlug}`}
-                              className="text-primary hover:underline font-medium"
+                              className="text-primary hover:underline font-medium truncate"
                             >
                               {c.appName || c.appSlug}
                             </Link>

@@ -250,21 +250,21 @@ export default async function KeywordDetailPage({
                   const isCompetitor = competitorSlugs.has(app.app_slug);
                   return (
                   <TableRow key={app.app_slug} className={isTracked ? "border-l-2 border-l-emerald-500 bg-emerald-500/10" : isCompetitor ? "border-l-2 border-l-amber-500 bg-amber-500/10" : ""}>
-                    <TableCell>
+                    <TableCell className="max-w-[300px]">
                       <div className="flex items-center gap-2">
                         {app.logo_url && (
                           <img src={app.logo_url} alt="" className="h-6 w-6 rounded shrink-0" />
                         )}
-                        <div className="flex items-center gap-1.5">
+                        <div className="flex items-center gap-1.5 min-w-0">
                           <Link
                             href={`/${platform}/apps/${app.app_slug}`}
-                            className="text-primary hover:underline font-medium"
+                            className="text-primary hover:underline font-medium truncate"
                           >
                             {app.app_name}
                           </Link>
                           {app.is_built_for_shopify && <span title="Built for Shopify">💎</span>}
-                          {isTracked && <Badge className="text-[10px] px-1.5 py-0 h-4 bg-emerald-500/20 text-emerald-700 dark:text-emerald-400 border-emerald-500/50">Tracked</Badge>}
-                          {isCompetitor && <Badge className="text-[10px] px-1.5 py-0 h-4 bg-amber-500/20 text-amber-700 dark:text-amber-400 border-amber-500/50">Competitor</Badge>}
+                          {isTracked && <Badge className="text-[10px] px-1.5 py-0 h-4 shrink-0 bg-emerald-500/20 text-emerald-700 dark:text-emerald-400 border-emerald-500/50">Tracked</Badge>}
+                          {isCompetitor && <Badge className="text-[10px] px-1.5 py-0 h-4 shrink-0 bg-amber-500/20 text-amber-700 dark:text-amber-400 border-amber-500/50">Competitor</Badge>}
                         </div>
                       </div>
                     </TableCell>
@@ -367,21 +367,21 @@ export default async function KeywordDetailPage({
                   const isCompetitor = competitorSlugs.has(ad.appSlug);
                   return (
                   <TableRow key={ad.appSlug} className={isTracked ? "border-l-2 border-l-emerald-500 bg-emerald-500/10" : isCompetitor ? "border-l-2 border-l-amber-500 bg-amber-500/10" : ""}>
-                    <TableCell>
+                    <TableCell className="max-w-[300px]">
                       <div className="flex items-center gap-2">
                         {ad.iconUrl && (
                           <img src={ad.iconUrl} alt="" className="h-6 w-6 rounded shrink-0" />
                         )}
-                        <div className="flex items-center gap-1.5">
+                        <div className="flex items-center gap-1.5 min-w-0">
                           <Link
                             href={`/${platform}/apps/${ad.appSlug}`}
-                            className="text-primary hover:underline"
+                            className="text-primary hover:underline truncate"
                           >
                             {ad.appName}
                           </Link>
                           {ad.isBuiltForShopify && <span title="Built for Shopify">💎</span>}
-                          {isTracked && <Badge className="text-[10px] px-1.5 py-0 h-4 bg-emerald-500/20 text-emerald-700 dark:text-emerald-400 border-emerald-500/50">Tracked</Badge>}
-                          {isCompetitor && <Badge className="text-[10px] px-1.5 py-0 h-4 bg-amber-500/20 text-amber-700 dark:text-amber-400 border-amber-500/50">Competitor</Badge>}
+                          {isTracked && <Badge className="text-[10px] px-1.5 py-0 h-4 shrink-0 bg-emerald-500/20 text-emerald-700 dark:text-emerald-400 border-emerald-500/50">Tracked</Badge>}
+                          {isCompetitor && <Badge className="text-[10px] px-1.5 py-0 h-4 shrink-0 bg-amber-500/20 text-amber-700 dark:text-amber-400 border-amber-500/50">Competitor</Badge>}
                         </div>
                       </div>
                     </TableCell>

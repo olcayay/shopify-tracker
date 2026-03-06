@@ -15,6 +15,7 @@ interface SearchApp {
   short_description: string;
   average_rating: number;
   rating_count: number;
+  logo_url?: string;
   is_sponsored: boolean;
   is_built_in: boolean;
   is_built_for_shopify: boolean;
@@ -95,19 +96,97 @@ function parseSearchResults(html: string) {
   return { totalResults, apps };
 }
 
+async function salesforceLiveSearch(keyword: string) {
+  const API_BASE = "https://api.appexchange.salesforce.com/recommendations/v3/listings";
+  const params = new URLSearchParams({
+    type: "apps",
+    page: "1",
+    pageSize: "12",
+    language: "en",
+    keyword,
+    sponsoredCount: "4",
+  });
+  const url = `${API_BASE}?${params.toString()}`;
+
+  const response = await fetch(url, {
+    headers: {
+      Accept: "application/json",
+      "User-Agent": USER_AGENTS[Math.floor(Math.random() * USER_AGENTS.length)],
+    },
+  });
+
+  if (!response.ok) {
+    throw new Error(`Salesforce API returned ${response.status}`);
+  }
+
+  const data = await response.json() as {
+    totalCount: number;
+    listings: any[];
+    featured?: any[];
+  };
+
+  const apps: SearchApp[] = [];
+
+  // Sponsored/featured
+  if (data.featured) {
+    for (let i = 0; i < data.featured.length; i++) {
+      const item = data.featured[i];
+      const logo = item.logos?.find((l: any) => l.logoType === "Logo") || item.logos?.[0];
+      apps.push({
+        position: i + 1,
+        app_slug: item.oafId,
+        app_name: item.title,
+        short_description: item.description || "",
+        average_rating: item.averageRating ?? 0,
+        rating_count: item.reviewsAmount ?? 0,
+        logo_url: logo?.mediaId || undefined,
+        is_sponsored: true,
+        is_built_in: false,
+        is_built_for_shopify: false,
+      });
+    }
+  }
+
+  // Organic
+  for (let i = 0; i < data.listings.length; i++) {
+    const item = data.listings[i];
+    const logo = item.logos?.find((l: any) => l.logoType === "Logo") || item.logos?.[0];
+    apps.push({
+      position: i + 1,
+      app_slug: item.oafId,
+      app_name: item.title,
+      short_description: item.description || "",
+      average_rating: item.averageRating ?? 0,
+      rating_count: item.reviewsAmount ?? 0,
+      logo_url: logo?.mediaId || undefined,
+      is_sponsored: false,
+      is_built_in: false,
+      is_built_for_shopify: false,
+    });
+  }
+
+  return { totalResults: data.totalCount, apps };
+}
+
 export const liveSearchRoutes: FastifyPluginAsync = async (app) => {
-  // GET /api/live-search?q=keyword — real-time Shopify search
+  // GET /api/live-search?q=keyword — real-time search
   app.get("/", async (request, reply) => {
     const platform = getPlatformFromQuery(request.query as Record<string, unknown>);
-    if (platform !== "shopify") {
-      return reply.code(400).send({ error: "Live search is only available for Shopify" });
-    }
-
     const { q = "" } = request.query as { q?: string };
     if (q.length < 1) {
       return reply.code(400).send({ error: "q parameter is required" });
     }
 
+    if (platform === "salesforce") {
+      try {
+        const result = await salesforceLiveSearch(q);
+        return { keyword: q, totalResults: result.totalResults, apps: result.apps };
+      } catch (err: any) {
+        return reply.code(502).send({ error: `Failed to fetch from Salesforce: ${err.message}` });
+      }
+    }
+
+    // Default: Shopify
     const url = `https://apps.shopify.com/search?q=${encodeURIComponent(q)}&st_source=autocomplete&page=1`;
     const ua = USER_AGENTS[Math.floor(Math.random() * USER_AGENTS.length)];
 

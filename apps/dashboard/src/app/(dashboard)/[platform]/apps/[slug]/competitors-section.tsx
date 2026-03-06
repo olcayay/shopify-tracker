@@ -613,7 +613,7 @@ export function CompetitorsSection({ appSlug }: { appSlug: string }) {
                     )}
                   </TableCell>
                 )}
-                <TableCell className={`md:sticky md:z-10 md:shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)] ${canEdit ? "md:left-12" : "md:left-0"} ${comp.isSelf ? "bg-emerald-50 dark:bg-emerald-950/30" : "bg-background"}`}>
+                <TableCell className={`max-w-[260px] md:sticky md:z-10 md:shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)] ${canEdit ? "md:left-12" : "md:left-0"} ${comp.isSelf ? "bg-emerald-50 dark:bg-emerald-950/30" : "bg-background"}`}>
                   <div className="flex items-center gap-2">
                     {comp.iconUrl && (
                       <img
@@ -622,10 +622,10 @@ export function CompetitorsSection({ appSlug }: { appSlug: string }) {
                         className="h-6 w-6 rounded shrink-0"
                       />
                     )}
-                    <div className="flex items-center gap-1.5">
+                    <div className="flex items-center gap-1.5 min-w-0">
                       <Link
                         href={`/${platform}/apps/${comp.appSlug}`}
-                        className="text-primary hover:underline font-medium"
+                        className="text-primary hover:underline font-medium truncate"
                       >
                         {comp.appName}
                       </Link>

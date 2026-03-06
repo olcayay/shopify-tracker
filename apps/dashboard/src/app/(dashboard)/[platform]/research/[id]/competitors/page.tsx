@@ -357,14 +357,14 @@ export default function ResearchCompetitorsPage() {
 
                     return (
                       <TableRow key={comp.slug} className={isPending ? "animate-in fade-in slide-in-from-top duration-300" : ""}>
-                        <TableCell>
+                        <TableCell className="max-w-[260px]">
                           <div className="flex items-center gap-2">
                             {comp.iconUrl ? (
-                              <img src={comp.iconUrl} alt="" className="h-7 w-7 rounded" />
+                              <img src={comp.iconUrl} alt="" className="h-7 w-7 rounded shrink-0" />
                             ) : (
-                              <div className="h-7 w-7 rounded bg-muted" />
+                              <div className="h-7 w-7 rounded bg-muted shrink-0" />
                             )}
-                            <Link href={`/apps/${comp.slug}`} className="font-medium text-sm hover:underline">
+                            <Link href={`/apps/${comp.slug}`} className="font-medium text-sm hover:underline truncate">
                               {comp.name}
                             </Link>
                             {isPending && <Loader2 className="h-3 w-3 animate-spin text-muted-foreground" />}

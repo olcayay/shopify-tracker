@@ -18,6 +18,7 @@ interface SearchApp {
   short_description: string;
   average_rating: number;
   rating_count: number;
+  logo_url?: string;
   is_sponsored: boolean;
   is_built_in?: boolean;
   is_built_for_shopify?: boolean;
@@ -238,6 +239,9 @@ export function LiveSearchModal({
                         <span className="text-xs font-mono text-muted-foreground w-5 text-right shrink-0">
                           {app.position}
                         </span>
+                        {app.logo_url && (
+                          <img src={app.logo_url} alt="" className="h-6 w-6 rounded shrink-0" />
+                        )}
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-1.5">
                             <Link
@@ -316,6 +320,9 @@ export function LiveSearchModal({
                         <Badge variant="secondary" className="text-[10px] shrink-0">
                           Ad
                         </Badge>
+                        {app.logo_url && (
+                          <img src={app.logo_url} alt="" className="h-6 w-6 rounded shrink-0" />
+                        )}
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-1.5">
                             <Link

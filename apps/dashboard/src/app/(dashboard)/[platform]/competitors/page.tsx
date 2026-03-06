@@ -401,7 +401,7 @@ export default function CompetitorsPage() {
   function renderCompetitorRow(c: any, myAppSlug: string) {
     return (
       <TableRow key={`${myAppSlug}-${c.appSlug}`}>
-        <TableCell className="md:sticky md:left-0 md:z-10 bg-background md:shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]">
+        <TableCell className="max-w-[260px] md:sticky md:left-0 md:z-10 bg-background md:shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]">
           <div className="flex items-center gap-2">
             {c.iconUrl && (
               <img
@@ -410,15 +410,15 @@ export default function CompetitorsPage() {
                 className="h-6 w-6 rounded shrink-0"
               />
             )}
-            <div className="flex items-center gap-1.5">
+            <div className="flex items-center gap-1.5 min-w-0">
               <Link
                 href={`/${platform}/apps/${c.appSlug}`}
-                className="text-primary hover:underline font-medium"
+                className="text-primary hover:underline font-medium truncate"
               >
                 {c.appName || c.appSlug}
               </Link>
               {c.isBuiltForShopify && (
-                <span title="Built for Shopify">💎</span>
+                <span title="Built for Shopify" className="shrink-0">💎</span>
               )}
             </div>
           </div>

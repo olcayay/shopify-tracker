@@ -1,3 +1,24 @@
+App Name Truncation & Salesforce Live Search
+==============================================
+
+App name truncation:
+- Applied max-w-[260px] + truncate to app name columns across all 13 dashboard table views
+- Pattern: TableHead/TableCell max-w-[260px], Link truncate, flex container min-w-0, badges/icons shrink-0
+- Files: keywords/[slug]/app-results.tsx, keywords/[slug]/page.tsx, categories/[slug]/app-results.tsx,
+  app-list-table.tsx, apps/page.tsx, competitors/page.tsx, system-admin/apps/page.tsx,
+  overview/page.tsx, developers/page.tsx, apps/[slug]/competitors-section.tsx,
+  research/[id]/page.tsx, research/[id]/competitors/page.tsx
+
+Salesforce live search:
+- Added salesforceLiveSearch() to apps/api/src/routes/live-search.ts
+  - Calls Salesforce JSON API: api.appexchange.salesforce.com/recommendations/v3/listings
+  - Parses featured[] as sponsored, listings[] as organic
+  - Extracts logo_url from logos[].mediaId
+- API route branches on platform query param (auto-injected by fetchWithAuth)
+- Dashboard modal (live-search-modal.tsx): added logo_url to SearchApp interface, renders logos in result rows
+
+---
+
 Platform Access & Data Isolation Fix — Salesforce pages showing Shopify data
 ============================================================================
 Problem 1: Salesforce pages were inaccessible because account_platforms table only had Shopify entries.
