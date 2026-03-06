@@ -1,13 +1,13 @@
 import type { FastifyPluginAsync } from "fastify";
 import { eq, desc, sql } from "drizzle-orm";
 import { Queue } from "bullmq";
-import { createDb } from "@shopify-tracking/db";
+import { createDb } from "@appranks/db";
 import {
   apps,
   trackedKeywords,
   keywordToSlug,
   scrapeRuns,
-} from "@shopify-tracking/db";
+} from "@appranks/db";
 
 const BACKGROUND_QUEUE_NAME = "scraper-jobs-background";
 

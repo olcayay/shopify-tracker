@@ -7,7 +7,7 @@ import {
   computeSimilarityBetween,
   SIMILARITY_WEIGHTS,
   STOP_WORDS,
-} from "@shopify-tracking/shared";
+} from "@appranks/shared";
 
 describe("jaccard", () => {
   it("returns 0 for two empty sets", () => {

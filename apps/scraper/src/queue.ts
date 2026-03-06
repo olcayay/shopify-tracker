@@ -25,6 +25,8 @@ export interface ScraperJobData {
   userId?: string;
   /** Optional: specific account ID for account-level digest email */
   accountId?: string;
+  /** Platform to scope the job to (defaults to "shopify") */
+  platform?: string;
   /** Triggered by: "api" | "scheduler" | "cli" */
   triggeredBy: string;
   /** Optional: scraper configuration options */

@@ -1,6 +1,6 @@
 import { eq, sql } from "drizzle-orm";
-import type { Database } from "@shopify-tracking/db";
-import { scrapeRuns, appSimilarityScores, accountCompetitorApps } from "@shopify-tracking/db";
+import type { Database } from "@appranks/db";
+import { scrapeRuns, appSimilarityScores, accountCompetitorApps, apps } from "@appranks/db";
 import {
   createLogger,
   SIMILARITY_WEIGHTS,
@@ -8,11 +8,12 @@ import {
   tokenize,
   extractCategorySlugs,
   extractFeatureHandles,
-} from "@shopify-tracking/shared";
+  type PlatformId,
+} from "@appranks/shared";
 
 const log = createLogger("compute-similarity-scores");
 
-export async function computeSimilarityScores(db: Database, triggeredBy: string, queue?: string): Promise<void> {
+export async function computeSimilarityScores(db: Database, triggeredBy: string, queue?: string, platform: PlatformId = "shopify"): Promise<void> {
   const startTime = Date.now();
 
   const [run] = await db
@@ -28,13 +29,16 @@ export async function computeSimilarityScores(db: Database, triggeredBy: string,
     .returning();
 
   try {
-    // Collect all unique (trackedAppSlug, competitorSlug) pairs across all accounts
+    // Collect all unique (trackedAppId, competitorAppId) pairs across all accounts
+    // Filter by platform: only include pairs where the tracked app belongs to this platform
     const pairRows = await db
       .selectDistinct({
-        trackedAppSlug: accountCompetitorApps.trackedAppSlug,
-        appSlug: accountCompetitorApps.appSlug,
+        trackedAppId: accountCompetitorApps.trackedAppId,
+        competitorAppId: accountCompetitorApps.competitorAppId,
       })
-      .from(accountCompetitorApps);
+      .from(accountCompetitorApps)
+      .innerJoin(apps, eq(apps.id, accountCompetitorApps.trackedAppId))
+      .where(eq(apps.platform, platform));
 
     if (pairRows.length === 0) {
       log.info("no competitor pairs found");
@@ -49,80 +53,81 @@ export async function computeSimilarityScores(db: Database, triggeredBy: string,
       return;
     }
 
-    // Collect all unique app slugs
-    const allSlugs = new Set<string>();
+    // Collect all unique app IDs
+    const allAppIds = new Set<number>();
     for (const p of pairRows) {
-      allSlugs.add(p.trackedAppSlug);
-      allSlugs.add(p.appSlug);
+      allAppIds.add(p.trackedAppId);
+      allAppIds.add(p.competitorAppId);
     }
-    const slugArray = [...allSlugs];
-    const slugList = sql.join(slugArray.map((s) => sql`${s}`), sql`, `);
+    const idArray = [...allAppIds];
+    const idList = sql.join(idArray.map((id) => sql`${id}`), sql`, `);
 
     // Batch-fetch latest snapshots (categories + appIntroduction)
     const snapshotRows: any[] = await db
       .execute(
         sql`
-      SELECT DISTINCT ON (app_slug)
-        app_slug, categories, app_introduction
+      SELECT DISTINCT ON (app_id)
+        app_id, categories, app_introduction
       FROM app_snapshots
-      WHERE app_slug IN (${slugList})
-      ORDER BY app_slug, scraped_at DESC
+      WHERE app_id IN (${idList})
+      ORDER BY app_id, scraped_at DESC
     `
       )
       .then((res: any) => (res as any).rows ?? res);
 
-    // Batch-fetch app info (name + subtitle)
+    // Batch-fetch app info (name + subtitle), filtered by platform
     const appInfoRows: any[] = await db
       .execute(
         sql`
-      SELECT slug, name, app_card_subtitle
+      SELECT id, name, app_card_subtitle
       FROM apps
-      WHERE slug IN (${slugList})
+      WHERE id IN (${idList})
+        AND platform = ${platform}
     `
       )
       .then((res: any) => (res as any).rows ?? res);
 
     // Build lookup maps
-    const snapshotMap = new Map<string, any>();
-    for (const r of snapshotRows) snapshotMap.set(r.app_slug, r);
+    const snapshotMap = new Map<number, any>();
+    for (const r of snapshotRows) snapshotMap.set(r.app_id, r);
 
-    const appInfoMap = new Map<string, { name: string; subtitle: string | null }>();
-    for (const r of appInfoRows) appInfoMap.set(r.slug, { name: r.name, subtitle: r.app_card_subtitle });
+    const appInfoMap = new Map<number, { name: string; subtitle: string | null }>();
+    for (const r of appInfoRows) appInfoMap.set(r.id, { name: r.name, subtitle: r.app_card_subtitle });
 
-    // Batch-fetch keyword rankings: latest per (appSlug, keywordId) where position IS NOT NULL
+    // Batch-fetch keyword rankings: latest per (appId, keywordId) where position IS NOT NULL
     const kwRows: any[] = await db
       .execute(
         sql`
-      SELECT DISTINCT ON (app_slug, keyword_id) app_slug, keyword_id
+      SELECT DISTINCT ON (app_id, keyword_id) app_id, keyword_id
       FROM app_keyword_rankings
-      WHERE app_slug IN (${slugList})
+      WHERE app_id IN (${idList})
         AND position IS NOT NULL
-      ORDER BY app_slug, keyword_id, scraped_at DESC
+      ORDER BY app_id, keyword_id, scraped_at DESC
     `
       )
       .then((res: any) => (res as any).rows ?? res);
 
-    const keywordMap = new Map<string, Set<string>>();
+    const keywordMap = new Map<number, Set<string>>();
     for (const r of kwRows) {
-      if (!keywordMap.has(r.app_slug)) keywordMap.set(r.app_slug, new Set());
-      keywordMap.get(r.app_slug)!.add(String(r.keyword_id));
+      if (!keywordMap.has(r.app_id)) keywordMap.set(r.app_id, new Set());
+      keywordMap.get(r.app_id)!.add(String(r.keyword_id));
     }
 
     // Pre-compute per-app derived data
-    const categorySlugMap = new Map<string, Set<string>>();
-    const featureHandleMap = new Map<string, Set<string>>();
-    const tokenMap = new Map<string, Set<string>>();
+    const categorySlugMap = new Map<number, Set<string>>();
+    const featureHandleMap = new Map<number, Set<string>>();
+    const tokenMap = new Map<number, Set<string>>();
 
-    for (const slug of slugArray) {
-      const snap = snapshotMap.get(slug);
-      const info = appInfoMap.get(slug);
+    for (const appId of idArray) {
+      const snap = snapshotMap.get(appId);
+      const info = appInfoMap.get(appId);
       const cats = snap?.categories ?? [];
 
-      categorySlugMap.set(slug, extractCategorySlugs(cats));
-      featureHandleMap.set(slug, extractFeatureHandles(cats));
+      categorySlugMap.set(appId, extractCategorySlugs(cats));
+      featureHandleMap.set(appId, extractFeatureHandles(cats));
 
       const textParts = [info?.name ?? "", info?.subtitle ?? "", snap?.app_introduction ?? ""].join(" ");
-      tokenMap.set(slug, tokenize(textParts));
+      tokenMap.set(appId, tokenize(textParts));
     }
 
     // Compute similarity for each pair
@@ -133,26 +138,26 @@ export async function computeSimilarityScores(db: Database, triggeredBy: string,
     const seen = new Set<string>();
 
     for (const pair of pairRows) {
-      const slugA = pair.trackedAppSlug;
-      const slugB = pair.appSlug;
-      const [canonA, canonB] = slugA < slugB ? [slugA, slugB] : [slugB, slugA];
+      const idA = pair.trackedAppId;
+      const idB = pair.competitorAppId;
+      const [canonA, canonB] = idA < idB ? [idA, idB] : [idB, idA];
       const pairKey = `${canonA}:${canonB}`;
 
       if (seen.has(pairKey)) continue;
       seen.add(pairKey);
 
-      const catScore = jaccard(categorySlugMap.get(slugA) ?? new Set(), categorySlugMap.get(slugB) ?? new Set());
-      const featScore = jaccard(featureHandleMap.get(slugA) ?? new Set(), featureHandleMap.get(slugB) ?? new Set());
-      const kwScore = jaccard(keywordMap.get(slugA) ?? new Set(), keywordMap.get(slugB) ?? new Set());
-      const txtScore = jaccard(tokenMap.get(slugA) ?? new Set(), tokenMap.get(slugB) ?? new Set());
+      const catScore = jaccard(categorySlugMap.get(idA) ?? new Set(), categorySlugMap.get(idB) ?? new Set());
+      const featScore = jaccard(featureHandleMap.get(idA) ?? new Set(), featureHandleMap.get(idB) ?? new Set());
+      const kwScore = jaccard(keywordMap.get(idA) ?? new Set(), keywordMap.get(idB) ?? new Set());
+      const txtScore = jaccard(tokenMap.get(idA) ?? new Set(), tokenMap.get(idB) ?? new Set());
 
       const overall = SIMILARITY_WEIGHTS.category * catScore + SIMILARITY_WEIGHTS.feature * featScore + SIMILARITY_WEIGHTS.keyword * kwScore + SIMILARITY_WEIGHTS.text * txtScore;
 
       await db
         .insert(appSimilarityScores)
         .values({
-          appSlugA: canonA,
-          appSlugB: canonB,
+          appIdA: canonA,
+          appIdB: canonB,
           overallScore: overall.toFixed(4),
           categoryScore: catScore.toFixed(4),
           featureScore: featScore.toFixed(4),
@@ -161,7 +166,7 @@ export async function computeSimilarityScores(db: Database, triggeredBy: string,
           computedAt: today,
         })
         .onConflictDoUpdate({
-          target: [appSimilarityScores.appSlugA, appSimilarityScores.appSlugB],
+          target: [appSimilarityScores.appIdA, appSimilarityScores.appIdB],
           set: {
             overallScore: overall.toFixed(4),
             categoryScore: catScore.toFixed(4),
@@ -176,14 +181,14 @@ export async function computeSimilarityScores(db: Database, triggeredBy: string,
     }
 
     const durationMs = Date.now() - startTime;
-    log.info("similarity scores computed", { computed, durationMs });
+    log.info("similarity scores computed", { platform, computed, durationMs });
 
     await db
       .update(scrapeRuns)
       .set({
         status: "completed",
         completedAt: new Date(),
-        metadata: { pairs_computed: computed, duration_ms: durationMs },
+        metadata: { platform, pairs_computed: computed, duration_ms: durationMs },
       })
       .where(eq(scrapeRuns.id, run.id));
   } catch (error) {

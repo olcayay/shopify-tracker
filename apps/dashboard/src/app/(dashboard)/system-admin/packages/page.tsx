@@ -34,6 +34,7 @@ interface Package {
   maxTrackedFeatures: number;
   maxUsers: number;
   maxResearchProjects: number;
+  maxPlatforms: number;
   sortOrder: number;
 }
 
@@ -54,6 +55,7 @@ const EMPTY_FORM = {
   maxTrackedFeatures: 5,
   maxUsers: 2,
   maxResearchProjects: 1,
+  maxPlatforms: 1,
   sortOrder: 0,
 };
 
@@ -162,6 +164,7 @@ export default function PackagesPage() {
       maxTrackedFeatures: pkg.maxTrackedFeatures,
       maxUsers: pkg.maxUsers,
       maxResearchProjects: pkg.maxResearchProjects,
+      maxPlatforms: pkg.maxPlatforms,
       sortOrder: pkg.sortOrder,
     });
   }
@@ -326,6 +329,19 @@ export default function PackagesPage() {
                     }
                   />
                 </div>
+                <div>
+                  <label className="text-sm text-muted-foreground">Platforms</label>
+                  <Input
+                    type="number"
+                    value={createForm.maxPlatforms}
+                    onChange={(e) =>
+                      setCreateForm((f) => ({
+                        ...f,
+                        maxPlatforms: Number(e.target.value),
+                      }))
+                    }
+                  />
+                </div>
               </div>
               <div className="flex gap-2">
                 <Button type="submit" size="sm">
@@ -441,7 +457,7 @@ export default function PackagesPage() {
               </CardHeader>
               <CardContent className="space-y-4">
                 {/* Limits grid */}
-                <div className="grid grid-cols-6 gap-3 text-center">
+                <div className="grid grid-cols-7 gap-3 text-center">
                   {([
                     { key: "maxTrackedApps", label: "Apps" },
                     { key: "maxTrackedKeywords", label: "Keywords" },
@@ -449,6 +465,7 @@ export default function PackagesPage() {
                     { key: "maxTrackedFeatures", label: "Features" },
                     { key: "maxUsers", label: "Users" },
                     { key: "maxResearchProjects", label: "Research" },
+                    { key: "maxPlatforms", label: "Platforms" },
                   ] as const).map(({ key, label }) => (
                     <div key={key} className="bg-muted/50 rounded-md p-2">
                       {isEditing ? (

@@ -33,8 +33,8 @@ import {
   appVisibilityScores,
   appPowerScores,
   researchProjects,
-} from "@shopify-tracking/db";
-import { computeWeightedPowerScore } from "@shopify-tracking/shared";
+} from "@appranks/db";
+import { computeWeightedPowerScore } from "@appranks/shared";
 import { requireRole } from "../middleware/authorize.js";
 
 const INTERACTIVE_QUEUE_NAME = "scraper-jobs-interactive";
@@ -91,16 +91,16 @@ async function enqueueAppScrapeJobs(slug: string): Promise<boolean> {
 type Db = ReturnType<typeof createDb>;
 
 /** After adding/removing a tracked app, sync the global isTracked flag */
-async function syncAppTrackedFlag(db: Db, appSlug: string) {
+async function syncAppTrackedFlag(db: Db, appId: number) {
   const [{ count }] = await db
     .select({ count: sql<number>`count(*)::int` })
     .from(accountTrackedApps)
-    .where(eq(accountTrackedApps.appSlug, appSlug));
+    .where(eq(accountTrackedApps.appId, appId));
 
   const [{ countComp }] = await db
     .select({ countComp: sql<number>`count(*)::int` })
     .from(accountCompetitorApps)
-    .where(eq(accountCompetitorApps.appSlug, appSlug));
+    .where(eq(accountCompetitorApps.competitorAppId, appId));
 
   await db
     .update(apps)
@@ -108,7 +108,7 @@ async function syncAppTrackedFlag(db: Db, appSlug: string) {
       isTracked: count + countComp > 0,
       updatedAt: new Date(),
     })
-    .where(eq(apps.slug, appSlug));
+    .where(eq(apps.id, appId));
 }
 
 /** After adding/removing a tracked keyword, sync the global isActive flag */
@@ -150,7 +150,7 @@ export const accountRoutes: FastifyPluginAsync = async (app) => {
       .where(eq(accountTrackedKeywords.accountId, accountId));
 
     const [competitorAppsCount] = await db
-      .select({ count: sql<number>`count(distinct ${accountCompetitorApps.appSlug})::int` })
+      .select({ count: sql<number>`count(distinct ${accountCompetitorApps.competitorAppId})::int` })
       .from(accountCompetitorApps)
       .where(eq(accountCompetitorApps.accountId, accountId));
 
@@ -572,14 +572,14 @@ export const accountRoutes: FastifyPluginAsync = async (app) => {
 
     const rows = await db
       .select({
-        appSlug: accountTrackedApps.appSlug,
+        appSlug: apps.slug,
         createdAt: accountTrackedApps.createdAt,
         appName: apps.name,
         iconUrl: apps.iconUrl,
         isBuiltForShopify: apps.isBuiltForShopify,
       })
       .from(accountTrackedApps)
-      .innerJoin(apps, eq(apps.slug, accountTrackedApps.appSlug))
+      .innerJoin(apps, eq(apps.id, accountTrackedApps.appId))
       .where(eq(accountTrackedApps.accountId, accountId));
 
     return rows;
@@ -618,7 +618,7 @@ export const accountRoutes: FastifyPluginAsync = async (app) => {
 
       // Check app exists in global table
       const [existingApp] = await db
-        .select({ slug: apps.slug })
+        .select({ id: apps.id, slug: apps.slug })
         .from(apps)
         .where(eq(apps.slug, slug))
         .limit(1);
@@ -633,12 +633,12 @@ export const accountRoutes: FastifyPluginAsync = async (app) => {
       await db
         .update(apps)
         .set({ isTracked: true, updatedAt: new Date() })
-        .where(eq(apps.slug, slug));
+        .where(eq(apps.id, existingApp.id));
 
       // Add to account tracking
       const [result] = await db
         .insert(accountTrackedApps)
-        .values({ accountId, appSlug: slug })
+        .values({ accountId, appId: existingApp.id })
         .onConflictDoNothing()
         .returning();
 
@@ -660,6 +660,17 @@ export const accountRoutes: FastifyPluginAsync = async (app) => {
       const { accountId } = request.user;
       const slug = decodeURIComponent(request.params.slug);
 
+      // Look up app ID from slug
+      const [appRow] = await db
+        .select({ id: apps.id })
+        .from(apps)
+        .where(eq(apps.slug, slug))
+        .limit(1);
+
+      if (!appRow) {
+        return reply.code(404).send({ error: "Tracked app not found" });
+      }
+
       // Check if tracked app exists
       const [existing] = await db
         .select({ id: accountTrackedApps.id })
@@ -667,7 +678,7 @@ export const accountRoutes: FastifyPluginAsync = async (app) => {
         .where(
           and(
             eq(accountTrackedApps.accountId, accountId),
-            eq(accountTrackedApps.appSlug, slug)
+            eq(accountTrackedApps.appId, appRow.id)
           )
         );
 
@@ -677,12 +688,12 @@ export const accountRoutes: FastifyPluginAsync = async (app) => {
 
       // Cascade: collect affected competitors and keywords before deleting
       const affectedCompetitors = await db
-        .select({ appSlug: accountCompetitorApps.appSlug })
+        .select({ competitorAppId: accountCompetitorApps.competitorAppId })
         .from(accountCompetitorApps)
         .where(
           and(
             eq(accountCompetitorApps.accountId, accountId),
-            eq(accountCompetitorApps.trackedAppSlug, slug)
+            eq(accountCompetitorApps.trackedAppId, appRow.id)
           )
         );
 
@@ -692,7 +703,7 @@ export const accountRoutes: FastifyPluginAsync = async (app) => {
         .where(
           and(
             eq(accountTrackedKeywords.accountId, accountId),
-            eq(accountTrackedKeywords.trackedAppSlug, slug)
+            eq(accountTrackedKeywords.trackedAppId, appRow.id)
           )
         );
 
@@ -702,7 +713,7 @@ export const accountRoutes: FastifyPluginAsync = async (app) => {
         .where(
           and(
             eq(accountCompetitorApps.accountId, accountId),
-            eq(accountCompetitorApps.trackedAppSlug, slug)
+            eq(accountCompetitorApps.trackedAppId, appRow.id)
           )
         );
 
@@ -711,7 +722,7 @@ export const accountRoutes: FastifyPluginAsync = async (app) => {
         .where(
           and(
             eq(accountTrackedKeywords.accountId, accountId),
-            eq(accountTrackedKeywords.trackedAppSlug, slug)
+            eq(accountTrackedKeywords.trackedAppId, appRow.id)
           )
         );
 
@@ -721,14 +732,14 @@ export const accountRoutes: FastifyPluginAsync = async (app) => {
         .where(
           and(
             eq(accountTrackedApps.accountId, accountId),
-            eq(accountTrackedApps.appSlug, slug)
+            eq(accountTrackedApps.appId, appRow.id)
           )
         );
 
       // Sync flags for the tracked app and all removed competitors
-      await syncAppTrackedFlag(db, slug);
+      await syncAppTrackedFlag(db, appRow.id);
       for (const c of affectedCompetitors) {
-        await syncAppTrackedFlag(db, c.appSlug);
+        await syncAppTrackedFlag(db, c.competitorAppId);
       }
       for (const k of affectedKeywords) {
         await syncKeywordActiveFlag(db, k.keywordId);
@@ -747,7 +758,7 @@ export const accountRoutes: FastifyPluginAsync = async (app) => {
     const rows = await db
       .select({
         keywordId: accountTrackedKeywords.keywordId,
-        trackedAppSlug: accountTrackedKeywords.trackedAppSlug,
+        trackedAppSlug: apps.slug,
         createdAt: accountTrackedKeywords.createdAt,
         keyword: trackedKeywords.keyword,
       })
@@ -756,6 +767,7 @@ export const accountRoutes: FastifyPluginAsync = async (app) => {
         trackedKeywords,
         eq(trackedKeywords.id, accountTrackedKeywords.keywordId)
       )
+      .innerJoin(apps, eq(apps.id, accountTrackedKeywords.trackedAppId))
       .where(eq(accountTrackedKeywords.accountId, accountId));
 
     return rows;
@@ -779,6 +791,16 @@ export const accountRoutes: FastifyPluginAsync = async (app) => {
         return reply.code(400).send({ error: "trackedAppSlug is required" });
       }
 
+      // Look up app ID from slug
+      const [trackedAppRow] = await db
+        .select({ id: apps.id })
+        .from(apps)
+        .where(eq(apps.slug, trackedAppSlug))
+        .limit(1);
+      if (!trackedAppRow) {
+        return reply.code(404).send({ error: "App not found" });
+      }
+
       // Verify the tracked app belongs to this account
       const [trackedApp] = await db
         .select({ id: accountTrackedApps.id })
@@ -786,7 +808,7 @@ export const accountRoutes: FastifyPluginAsync = async (app) => {
         .where(
           and(
             eq(accountTrackedApps.accountId, accountId),
-            eq(accountTrackedApps.appSlug, trackedAppSlug)
+            eq(accountTrackedApps.appId, trackedAppRow.id)
           )
         );
       if (!trackedApp) {
@@ -825,10 +847,10 @@ export const accountRoutes: FastifyPluginAsync = async (app) => {
         })
         .returning();
 
-      // Add to account tracking with trackedAppSlug
+      // Add to account tracking with trackedAppId
       const [result] = await db
         .insert(accountTrackedKeywords)
-        .values({ accountId, trackedAppSlug, keywordId: kw.id })
+        .values({ accountId, trackedAppId: trackedAppRow.id, keywordId: kw.id })
         .onConflictDoNothing()
         .returning();
 
@@ -880,9 +902,16 @@ export const accountRoutes: FastifyPluginAsync = async (app) => {
         eq(accountTrackedKeywords.keywordId, keywordId),
       ];
       if (trackedAppSlug) {
-        whereConditions.push(
-          eq(accountTrackedKeywords.trackedAppSlug, trackedAppSlug)
-        );
+        const [appRow] = await db
+          .select({ id: apps.id })
+          .from(apps)
+          .where(eq(apps.slug, trackedAppSlug))
+          .limit(1);
+        if (appRow) {
+          whereConditions.push(
+            eq(accountTrackedKeywords.trackedAppId, appRow.id)
+          );
+        }
       }
 
       const deleted = await db
@@ -906,19 +935,24 @@ export const accountRoutes: FastifyPluginAsync = async (app) => {
   app.get("/competitors", async (request) => {
     const { accountId } = request.user;
 
+    // Need to join twice: once for competitor app, once for tracked app slug
+    const competitorAppsAlias = apps;
     const rows = await db
       .select({
-        appSlug: accountCompetitorApps.appSlug,
-        trackedAppSlug: accountCompetitorApps.trackedAppSlug,
+        appSlug: apps.slug,
+        trackedAppSlug: sql<string>`ta.slug`,
         sortOrder: accountCompetitorApps.sortOrder,
         createdAt: accountCompetitorApps.createdAt,
         appName: apps.name,
         isBuiltForShopify: apps.isBuiltForShopify,
         launchedDate: apps.launchedDate,
         iconUrl: apps.iconUrl,
+        _appId: apps.id,
+        _trackedAppId: accountCompetitorApps.trackedAppId,
       })
       .from(accountCompetitorApps)
-      .innerJoin(apps, eq(apps.slug, accountCompetitorApps.appSlug))
+      .innerJoin(apps, eq(apps.id, accountCompetitorApps.competitorAppId))
+      .innerJoin(sql`apps ta`, sql`ta.id = ${accountCompetitorApps.trackedAppId}`)
       .where(eq(accountCompetitorApps.accountId, accountId))
       .orderBy(asc(accountCompetitorApps.sortOrder));
 
@@ -933,21 +967,27 @@ export const accountRoutes: FastifyPluginAsync = async (app) => {
 
     // Count distinct keywords each competitor is ranked in (latest ranking per keyword, non-null position)
     const competitorSlugs = [...new Set(rows.map((r) => r.appSlug))];
+    const competitorAppIds = [...new Set(rows.map((r) => r._appId))];
+    // Build id->slug map for competitors
+    const compIdToSlug = new Map<number, string>();
+    for (const r of rows) compIdToSlug.set(r._appId, r.appSlug);
+
     let rankedKeywordMap = new Map<string, number>();
-    if (trackedKeywordIds.length > 0 && competitorSlugs.length > 0) {
-      const slugList = sql.join(competitorSlugs.map((s) => sql`${s}`), sql`, `);
+    if (trackedKeywordIds.length > 0 && competitorAppIds.length > 0) {
+      const appIdList = sql.join(competitorAppIds.map((id) => sql`${id}`), sql`, `);
       const idList = sql.join(trackedKeywordIds.map((id) => sql`${id}`), sql`, `);
       const rankedRows = await db.execute(sql`
-        SELECT app_slug, COUNT(DISTINCT keyword_id)::int AS ranked_keywords
+        SELECT a.slug AS app_slug, COUNT(DISTINCT keyword_id)::int AS ranked_keywords
         FROM (
-          SELECT DISTINCT ON (app_slug, keyword_id) app_slug, keyword_id, position
+          SELECT DISTINCT ON (app_id, keyword_id) app_id, keyword_id, position
           FROM app_keyword_rankings
-          WHERE app_slug IN (${slugList})
+          WHERE app_id IN (${appIdList})
             AND keyword_id IN (${idList})
-          ORDER BY app_slug, keyword_id, scraped_at DESC
+          ORDER BY app_id, keyword_id, scraped_at DESC
         ) latest
+        INNER JOIN apps a ON a.id = latest.app_id
         WHERE position IS NOT NULL
-        GROUP BY app_slug
+        GROUP BY a.slug
       `);
       const rankedData: any[] = (rankedRows as any).rows ?? rankedRows;
       for (const r of rankedData) {
@@ -958,20 +998,21 @@ export const accountRoutes: FastifyPluginAsync = async (app) => {
     // Ad keyword counts (last 30 days)
     const adKeywordMap = new Map<string, number>();
     const adSinceStr = new Date(Date.now() - 30 * 86400000).toISOString().slice(0, 10);
-    if (competitorSlugs.length > 0) {
+    if (competitorAppIds.length > 0) {
       const adCounts = await db
         .select({
-          appSlug: keywordAdSightings.appSlug,
+          appSlug: apps.slug,
           count: sql<number>`count(distinct ${keywordAdSightings.keywordId})`,
         })
         .from(keywordAdSightings)
+        .innerJoin(apps, eq(apps.id, keywordAdSightings.appId))
         .where(
           and(
-            inArray(keywordAdSightings.appSlug, competitorSlugs),
+            inArray(keywordAdSightings.appId, competitorAppIds),
             sql`${keywordAdSightings.seenDate} >= ${adSinceStr}`
           )
         )
-        .groupBy(keywordAdSightings.appSlug);
+        .groupBy(apps.slug);
       for (const ac of adCounts) {
         adKeywordMap.set(ac.appSlug, ac.count);
       }
@@ -979,21 +1020,22 @@ export const accountRoutes: FastifyPluginAsync = async (app) => {
 
     // Batch-fetch featured section counts (last 30 days)
     const featuredCountMap = new Map<string, number>();
-    if (competitorSlugs.length > 0) {
+    if (competitorAppIds.length > 0) {
       const featuredSinceStr = new Date(Date.now() - 30 * 86400000).toISOString().slice(0, 10);
       const featuredCounts = await db
         .select({
-          appSlug: featuredAppSightings.appSlug,
+          appSlug: apps.slug,
           sectionCount: sql<number>`count(distinct ${featuredAppSightings.surface} || ':' || ${featuredAppSightings.surfaceDetail} || ':' || ${featuredAppSightings.sectionHandle})`,
         })
         .from(featuredAppSightings)
+        .innerJoin(apps, eq(apps.id, featuredAppSightings.appId))
         .where(
           and(
-            inArray(featuredAppSightings.appSlug, competitorSlugs),
+            inArray(featuredAppSightings.appId, competitorAppIds),
             sql`${featuredAppSightings.seenDate} >= ${featuredSinceStr}`
           )
         )
-        .groupBy(featuredAppSightings.appSlug);
+        .groupBy(apps.slug);
       for (const fc of featuredCounts) {
         featuredCountMap.set(fc.appSlug, fc.sectionCount);
       }
@@ -1001,32 +1043,33 @@ export const accountRoutes: FastifyPluginAsync = async (app) => {
 
     // Latest category rankings for each competitor (with previous position + app count for percentile)
     const categoryRankingMap = new Map<string, { categorySlug: string; categoryTitle: string; position: number; prevPosition: number | null; appCount: number | null }[]>();
-    if (competitorSlugs.length > 0) {
+    if (competitorAppIds.length > 0) {
       const catRankRows: any[] = await db.execute(sql`
         SELECT
-          sub.app_slug, sub.category_slug, c.title AS category_title,
+          a.slug AS app_slug, sub.category_slug, c.title AS category_title,
           sub.position, sub.prev_position, cs.app_count
         FROM (
           SELECT
-            r.app_slug,
+            r.app_id,
             r.category_slug,
             r.position,
             LAG(r.position) OVER (
-              PARTITION BY r.app_slug, r.category_slug
+              PARTITION BY r.app_id, r.category_slug
               ORDER BY r.scraped_at DESC
             ) AS prev_position,
             ROW_NUMBER() OVER (
-              PARTITION BY r.app_slug, r.category_slug
+              PARTITION BY r.app_id, r.category_slug
               ORDER BY r.scraped_at DESC
             ) AS rn
           FROM app_category_rankings r
-          WHERE r.app_slug IN (${sql.join(competitorSlugs.map((s) => sql`${s}`), sql`, `)})
+          WHERE r.app_id IN (${sql.join(competitorAppIds.map((id) => sql`${id}`), sql`, `)})
         ) sub
+        INNER JOIN apps a ON a.id = sub.app_id
         JOIN categories c ON c.slug = sub.category_slug
         LEFT JOIN LATERAL (
           SELECT s.app_count
           FROM category_snapshots s
-          WHERE s.category_slug = sub.category_slug
+          WHERE s.category_id = c.id
           ORDER BY s.scraped_at DESC
           LIMIT 1
         ) cs ON true
@@ -1048,32 +1091,35 @@ export const accountRoutes: FastifyPluginAsync = async (app) => {
 
     // Batch-fetch reverse similar counts
     const reverseSimilarMap = new Map<string, number>();
-    if (competitorSlugs.length > 0) {
+    if (competitorAppIds.length > 0) {
       const rsCounts = await db
         .select({
-          similarAppSlug: similarAppSightings.similarAppSlug,
-          count: sql<number>`count(distinct ${similarAppSightings.appSlug})::int`,
+          appSlug: apps.slug,
+          count: sql<number>`count(distinct ${similarAppSightings.appId})::int`,
         })
         .from(similarAppSightings)
-        .where(inArray(similarAppSightings.similarAppSlug, competitorSlugs))
-        .groupBy(similarAppSightings.similarAppSlug);
+        .innerJoin(apps, eq(apps.id, similarAppSightings.similarAppId))
+        .where(inArray(similarAppSightings.similarAppId, competitorAppIds))
+        .groupBy(apps.slug);
       for (const r of rsCounts) {
-        reverseSimilarMap.set(r.similarAppSlug, r.count);
+        reverseSimilarMap.set(r.appSlug, r.count);
       }
     }
 
     // Batch-fetch similarity scores per (trackedApp, competitor) pair
     const similarityMap = new Map<string, Map<string, { overall: string; category: string; feature: string; keyword: string; text: string }>>();
-    if (competitorSlugs.length > 0) {
+    if (competitorAppIds.length > 0) {
       try {
-        const trackedSlugs = [...new Set(rows.map((r) => r.trackedAppSlug))];
-        const allPairSlugs = [...new Set([...trackedSlugs, ...competitorSlugs])];
-        const slugList = sql.join(allPairSlugs.map((s) => sql`${s}`), sql`, `);
+        const trackedAppIds = [...new Set(rows.map((r) => r._trackedAppId))];
+        const allPairIds = [...new Set([...trackedAppIds, ...competitorAppIds])];
+        const idList = sql.join(allPairIds.map((id) => sql`${id}`), sql`, `);
         const simRows: any[] = await db.execute(sql`
-          SELECT app_slug_a, app_slug_b,
-            overall_score, category_score, feature_score, keyword_score, text_score
-          FROM app_similarity_scores
-          WHERE app_slug_a IN (${slugList}) AND app_slug_b IN (${slugList})
+          SELECT a1.slug AS app_slug_a, a2.slug AS app_slug_b,
+            s.overall_score, s.category_score, s.feature_score, s.keyword_score, s.text_score
+          FROM app_similarity_scores s
+          INNER JOIN apps a1 ON a1.id = s.app_id_a
+          INNER JOIN apps a2 ON a2.id = s.app_id_b
+          WHERE s.app_id_a IN (${idList}) AND s.app_id_b IN (${idList})
         `).then((res: any) => (res as any).rows ?? res);
         for (const r of simRows) {
           // Store both directions for easy lookup
@@ -1093,14 +1139,15 @@ export const accountRoutes: FastifyPluginAsync = async (app) => {
 
     // Batch-fetch review velocity metrics (graceful if table not yet migrated)
     const velocityMap = new Map<string, { v7d: number | null; v30d: number | null; v90d: number | null; momentum: string | null }>();
-    if (competitorSlugs.length > 0) {
+    if (competitorAppIds.length > 0) {
       try {
         const velRows: any[] = await db.execute(sql`
-          SELECT DISTINCT ON (app_slug)
-            app_slug, v7d, v30d, v90d, momentum
-          FROM app_review_metrics
-          WHERE app_slug IN (${sql.join(competitorSlugs.map(s => sql`${s}`), sql`, `)})
-          ORDER BY app_slug, computed_at DESC
+          SELECT DISTINCT ON (m.app_id)
+            a.slug AS app_slug, m.v7d, m.v30d, m.v90d, m.momentum
+          FROM app_review_metrics m
+          INNER JOIN apps a ON a.id = m.app_id
+          WHERE m.app_id IN (${sql.join(competitorAppIds.map(id => sql`${id}`), sql`, `)})
+          ORDER BY m.app_id, m.computed_at DESC
         `).then((res: any) => (res as any).rows ?? res);
         for (const r of velRows) {
           velocityMap.set(r.app_slug, { v7d: r.v7d, v30d: r.v30d, v90d: r.v90d, momentum: r.momentum });
@@ -1108,28 +1155,30 @@ export const accountRoutes: FastifyPluginAsync = async (app) => {
       } catch { /* table may not exist yet */ }
     }
 
-    // Batch-fetch visibility scores per (trackedAppSlug, competitorSlug) for this account
-    const visibilityMap = new Map<string, { visibilityScore: number; keywordCount: number; visibilityRaw: number }>(); // key: "trackedApp:competitor"
-    if (competitorSlugs.length > 0) {
+    // Batch-fetch visibility scores per (trackedAppId, competitorId) for this account
+    const visibilityMap = new Map<string, { visibilityScore: number; keywordCount: number; visibilityRaw: number }>(); // key: "trackedAppSlug:competitorSlug"
+    if (competitorAppIds.length > 0) {
       try {
         const visRows = await db
           .select({
-            trackedAppSlug: appVisibilityScores.trackedAppSlug,
-            appSlug: appVisibilityScores.appSlug,
+            trackedAppSlug: sql<string>`ta.slug`,
+            appSlug: sql<string>`ca.slug`,
             visibilityScore: appVisibilityScores.visibilityScore,
             keywordCount: appVisibilityScores.keywordCount,
             visibilityRaw: appVisibilityScores.visibilityRaw,
           })
           .from(appVisibilityScores)
+          .innerJoin(sql`apps ta`, sql`ta.id = ${appVisibilityScores.trackedAppId}`)
+          .innerJoin(sql`apps ca`, sql`ca.id = ${appVisibilityScores.appId}`)
           .where(
             and(
               eq(appVisibilityScores.accountId, accountId),
-              inArray(appVisibilityScores.appSlug, competitorSlugs),
+              inArray(appVisibilityScores.appId, competitorAppIds),
               sql`${appVisibilityScores.computedAt} = (
                 SELECT MAX(v2.computed_at) FROM app_visibility_scores v2
                 WHERE v2.account_id = ${appVisibilityScores.accountId}
-                  AND v2.tracked_app_slug = ${appVisibilityScores.trackedAppSlug}
-                  AND v2.app_slug = ${appVisibilityScores.appSlug}
+                  AND v2.tracked_app_id = ${appVisibilityScores.trackedAppId}
+                  AND v2.app_id = ${appVisibilityScores.appId}
               )`,
             )
           );
@@ -1146,27 +1195,28 @@ export const accountRoutes: FastifyPluginAsync = async (app) => {
     // Batch-fetch weighted power scores per competitor
     const weightedPowerMap = new Map<string, number>();
     const powerCategoriesMap = new Map<string, { title: string; powerScore: number; appCount: number; position: number | null; ratingScore: number; reviewScore: number; categoryScore: number; momentumScore: number }[]>();
-    if (competitorSlugs.length > 0) {
+    if (competitorAppIds.length > 0) {
       try {
         const powRows: any[] = await db.execute(sql`
-          SELECT p.app_slug, p.power_score, p.rating_score, p.review_score, p.category_score, p.momentum_score,
+          SELECT a.slug AS app_slug, p.power_score, p.rating_score, p.review_score, p.category_score, p.momentum_score,
                  cs.app_count, rk.position AS rank_position, p.category_slug, c.title AS category_title
           FROM app_power_scores p
+          INNER JOIN apps a ON a.id = p.app_id
           INNER JOIN categories c ON c.slug = p.category_slug AND c.is_listing_page = true
           LEFT JOIN LATERAL (
             SELECT s.app_count FROM category_snapshots s
-            WHERE s.category_slug = p.category_slug
+            WHERE s.category_id = c.id
             ORDER BY s.scraped_at DESC LIMIT 1
           ) cs ON true
           LEFT JOIN LATERAL (
             SELECT r.position FROM app_category_rankings r
-            WHERE r.app_slug = p.app_slug AND r.category_slug = p.category_slug AND r.position IS NOT NULL
+            WHERE r.app_id = p.app_id AND r.category_slug = p.category_slug AND r.position IS NOT NULL
             ORDER BY r.scraped_at DESC LIMIT 1
           ) rk ON true
-          WHERE p.app_slug IN (${sql.join(competitorSlugs.map(s => sql`${s}`), sql`, `)})
+          WHERE p.app_id IN (${sql.join(competitorAppIds.map(id => sql`${id}`), sql`, `)})
             AND p.computed_at = (
               SELECT MAX(p2.computed_at) FROM app_power_scores p2
-              WHERE p2.app_slug = p.app_slug AND p2.category_slug = p.category_slug
+              WHERE p2.app_id = p.app_id AND p2.category_slug = p.category_slug
             )
         `).then((res: any) => (res as any).rows ?? res);
 
@@ -1208,14 +1258,14 @@ export const accountRoutes: FastifyPluginAsync = async (app) => {
             categories: appSnapshots.categories,
           })
           .from(appSnapshots)
-          .where(eq(appSnapshots.appSlug, row.appSlug))
+          .where(eq(appSnapshots.appId, row._appId))
           .orderBy(desc(appSnapshots.scrapedAt))
           .limit(1);
 
         const [change] = await db
           .select({ detectedAt: sql<string | null>`max(detected_at)` })
           .from(sql`app_field_changes`)
-          .where(sql`app_slug = ${row.appSlug}`);
+          .where(sql`app_id = ${row._appId}`);
 
         const minPaidPrice = getMinPaidPrice(snapshot?.pricingPlans);
         const { pricingPlans: _, categories: cats, ...snapshotRest } = snapshot || ({} as any);
@@ -1269,6 +1319,16 @@ export const accountRoutes: FastifyPluginAsync = async (app) => {
           .send({ error: "trackedAppSlug is required" });
       }
 
+      // Look up app IDs from slugs
+      const [trackedAppRow] = await db
+        .select({ id: apps.id })
+        .from(apps)
+        .where(eq(apps.slug, trackedAppSlug))
+        .limit(1);
+      if (!trackedAppRow) {
+        return reply.code(404).send({ error: "Tracked app not found" });
+      }
+
       // Verify the tracked app belongs to this account
       const [trackedApp] = await db
         .select({ id: accountTrackedApps.id })
@@ -1276,7 +1336,7 @@ export const accountRoutes: FastifyPluginAsync = async (app) => {
         .where(
           and(
             eq(accountTrackedApps.accountId, accountId),
-            eq(accountTrackedApps.appSlug, trackedAppSlug)
+            eq(accountTrackedApps.appId, trackedAppRow.id)
           )
         );
       if (!trackedApp) {
@@ -1291,7 +1351,7 @@ export const accountRoutes: FastifyPluginAsync = async (app) => {
 
       const [{ count }] = await db
         .select({
-          count: sql<number>`count(distinct ${accountCompetitorApps.appSlug})::int`,
+          count: sql<number>`count(distinct ${accountCompetitorApps.competitorAppId})::int`,
         })
         .from(accountCompetitorApps)
         .where(eq(accountCompetitorApps.accountId, accountId));
@@ -1306,7 +1366,7 @@ export const accountRoutes: FastifyPluginAsync = async (app) => {
 
       // Check app exists in global table
       const [existingApp] = await db
-        .select({ slug: apps.slug })
+        .select({ id: apps.id, slug: apps.slug })
         .from(apps)
         .where(eq(apps.slug, slug))
         .limit(1);
@@ -1322,7 +1382,7 @@ export const accountRoutes: FastifyPluginAsync = async (app) => {
       await db
         .update(apps)
         .set({ isTracked: true, updatedAt: new Date() })
-        .where(eq(apps.slug, slug));
+        .where(eq(apps.id, existingApp.id));
 
       // Determine next sortOrder for this (account, trackedApp) group
       const [{ maxOrder }] = await db
@@ -1331,14 +1391,14 @@ export const accountRoutes: FastifyPluginAsync = async (app) => {
         .where(
           and(
             eq(accountCompetitorApps.accountId, accountId),
-            eq(accountCompetitorApps.trackedAppSlug, trackedAppSlug)
+            eq(accountCompetitorApps.trackedAppId, trackedAppRow.id)
           )
         );
 
-      // Add to account competitors with trackedAppSlug
+      // Add to account competitors with trackedAppId
       const [result] = await db
         .insert(accountCompetitorApps)
-        .values({ accountId, trackedAppSlug, appSlug: slug, sortOrder: maxOrder + 1 })
+        .values({ accountId, trackedAppId: trackedAppRow.id, competitorAppId: existingApp.id, sortOrder: maxOrder + 1 })
         .onConflictDoNothing()
         .returning();
 
@@ -1365,14 +1425,31 @@ export const accountRoutes: FastifyPluginAsync = async (app) => {
         trackedAppSlug?: string;
       };
 
+      // Look up competitor app ID from slug
+      const [compAppRow] = await db
+        .select({ id: apps.id })
+        .from(apps)
+        .where(eq(apps.slug, slug))
+        .limit(1);
+      if (!compAppRow) {
+        return reply.code(404).send({ error: "Competitor not found" });
+      }
+
       const whereConditions = [
         eq(accountCompetitorApps.accountId, accountId),
-        eq(accountCompetitorApps.appSlug, slug),
+        eq(accountCompetitorApps.competitorAppId, compAppRow.id),
       ];
       if (trackedAppSlug) {
-        whereConditions.push(
-          eq(accountCompetitorApps.trackedAppSlug, trackedAppSlug)
-        );
+        const [trackedAppRow] = await db
+          .select({ id: apps.id })
+          .from(apps)
+          .where(eq(apps.slug, trackedAppSlug))
+          .limit(1);
+        if (trackedAppRow) {
+          whereConditions.push(
+            eq(accountCompetitorApps.trackedAppId, trackedAppRow.id)
+          );
+        }
       }
 
       const deleted = await db
@@ -1384,7 +1461,7 @@ export const accountRoutes: FastifyPluginAsync = async (app) => {
         return reply.code(404).send({ error: "Competitor not found" });
       }
 
-      await syncAppTrackedFlag(db, slug);
+      await syncAppTrackedFlag(db, compAppRow.id);
 
       return { message: "Competitor removed" };
     }
@@ -1399,6 +1476,16 @@ export const accountRoutes: FastifyPluginAsync = async (app) => {
       const { accountId } = request.user;
       const slug = decodeURIComponent(request.params.slug);
 
+      // Look up tracked app ID from slug
+      const [trackedAppRow] = await db
+        .select({ id: apps.id })
+        .from(apps)
+        .where(eq(apps.slug, slug))
+        .limit(1);
+      if (!trackedAppRow) {
+        return reply.code(404).send({ error: "App not in your apps" });
+      }
+
       // Verify tracked app belongs to this account
       const [trackedApp] = await db
         .select({ id: accountTrackedApps.id })
@@ -1406,7 +1493,7 @@ export const accountRoutes: FastifyPluginAsync = async (app) => {
         .where(
           and(
             eq(accountTrackedApps.accountId, accountId),
-            eq(accountTrackedApps.appSlug, slug)
+            eq(accountTrackedApps.appId, trackedAppRow.id)
           )
         );
       if (!trackedApp) {
@@ -1417,7 +1504,8 @@ export const accountRoutes: FastifyPluginAsync = async (app) => {
 
       const rows = await db
         .select({
-          appSlug: accountCompetitorApps.appSlug,
+          appSlug: apps.slug,
+          _appId: apps.id,
           sortOrder: accountCompetitorApps.sortOrder,
           createdAt: accountCompetitorApps.createdAt,
           appName: apps.name,
@@ -1426,11 +1514,11 @@ export const accountRoutes: FastifyPluginAsync = async (app) => {
           iconUrl: apps.iconUrl,
         })
         .from(accountCompetitorApps)
-        .innerJoin(apps, eq(apps.slug, accountCompetitorApps.appSlug))
+        .innerJoin(apps, eq(apps.id, accountCompetitorApps.competitorAppId))
         .where(
           and(
             eq(accountCompetitorApps.accountId, accountId),
-            eq(accountCompetitorApps.trackedAppSlug, slug)
+            eq(accountCompetitorApps.trackedAppId, trackedAppRow.id)
           )
         )
         .orderBy(asc(accountCompetitorApps.sortOrder));
@@ -1454,25 +1542,29 @@ export const accountRoutes: FastifyPluginAsync = async (app) => {
 
       // Batch-fetch featured section counts (last 30 days)
       const competitorSlugs = allRows.map((r) => r.appSlug);
+      const competitorAppIds = allRows.map((r) => (r as any)._appId as number);
+      const idToSlug = new Map<number, string>();
+      for (const r of allRows) idToSlug.set((r as any)._appId, r.appSlug);
       const featuredSince = new Date();
       featuredSince.setDate(featuredSince.getDate() - 30);
       const featuredSinceStr = featuredSince.toISOString().slice(0, 10);
 
       const featuredCountMap = new Map<string, number>();
-      if (competitorSlugs.length > 0) {
+      if (competitorAppIds.length > 0) {
         const featuredCounts = await db
           .select({
-            appSlug: featuredAppSightings.appSlug,
+            appSlug: apps.slug,
             sectionCount: sql<number>`count(distinct ${featuredAppSightings.surface} || ':' || ${featuredAppSightings.surfaceDetail} || ':' || ${featuredAppSightings.sectionHandle})`,
           })
           .from(featuredAppSightings)
+          .innerJoin(apps, eq(apps.id, featuredAppSightings.appId))
           .where(
             and(
-              inArray(featuredAppSightings.appSlug, competitorSlugs),
+              inArray(featuredAppSightings.appId, competitorAppIds),
               sql`${featuredAppSightings.seenDate} >= ${featuredSinceStr}`
             )
           )
-          .groupBy(featuredAppSightings.appSlug);
+          .groupBy(apps.slug);
 
         for (const fc of featuredCounts) {
           featuredCountMap.set(fc.appSlug, fc.sectionCount);
@@ -1481,20 +1573,21 @@ export const accountRoutes: FastifyPluginAsync = async (app) => {
 
       // Batch-fetch ad keyword counts (last 30 days)
       const adKeywordCountMap = new Map<string, number>();
-      if (competitorSlugs.length > 0) {
+      if (competitorAppIds.length > 0) {
         const adKeywordCounts = await db
           .select({
-            appSlug: keywordAdSightings.appSlug,
+            appSlug: apps.slug,
             keywordCount: sql<number>`count(distinct ${keywordAdSightings.keywordId})`,
           })
           .from(keywordAdSightings)
+          .innerJoin(apps, eq(apps.id, keywordAdSightings.appId))
           .where(
             and(
-              inArray(keywordAdSightings.appSlug, competitorSlugs),
+              inArray(keywordAdSightings.appId, competitorAppIds),
               sql`${keywordAdSightings.seenDate} >= ${featuredSinceStr}`
             )
           )
-          .groupBy(keywordAdSightings.appSlug);
+          .groupBy(apps.slug);
 
         for (const ac of adKeywordCounts) {
           adKeywordCountMap.set(ac.appSlug, ac.keywordCount);
@@ -1550,17 +1643,18 @@ export const accountRoutes: FastifyPluginAsync = async (app) => {
 
       // Batch-fetch reverse similar counts (how many apps list each competitor as similar)
       const reverseSimilarMap = new Map<string, number>();
-      if (competitorSlugs.length > 0) {
+      if (competitorAppIds.length > 0) {
         const rsCounts = await db
           .select({
-            similarAppSlug: similarAppSightings.similarAppSlug,
-            count: sql<number>`count(distinct ${similarAppSightings.appSlug})::int`,
+            appSlug: apps.slug,
+            count: sql<number>`count(distinct ${similarAppSightings.appId})::int`,
           })
           .from(similarAppSightings)
-          .where(inArray(similarAppSightings.similarAppSlug, competitorSlugs))
-          .groupBy(similarAppSightings.similarAppSlug);
+          .innerJoin(apps, eq(apps.id, similarAppSightings.similarAppId))
+          .where(inArray(similarAppSightings.similarAppId, competitorAppIds))
+          .groupBy(apps.slug);
         for (const r of rsCounts) {
-          reverseSimilarMap.set(r.similarAppSlug, r.count);
+          reverseSimilarMap.set(r.appSlug, r.count);
         }
       }
 
@@ -1608,15 +1702,21 @@ export const accountRoutes: FastifyPluginAsync = async (app) => {
       // Batch-fetch ranked keyword counts per competitor
       const rankedKeywordMap = new Map<string, number>();
       if (competitorSlugs.length > 0) {
-        const kwRows = await db
+        // Look up tracked app ID for this slug
+        const [kwTrackedAppRow] = await db
+          .select({ id: apps.id })
+          .from(apps)
+          .where(eq(apps.slug, slug))
+          .limit(1);
+        const kwRows = kwTrackedAppRow ? await db
           .select({ keywordId: accountTrackedKeywords.keywordId })
           .from(accountTrackedKeywords)
           .where(
             and(
               eq(accountTrackedKeywords.accountId, accountId),
-              eq(accountTrackedKeywords.trackedAppSlug, slug)
+              eq(accountTrackedKeywords.trackedAppId, kwTrackedAppRow.id)
             )
-          );
+          ) : [];
         if (kwRows.length > 0) {
           const kwIds = kwRows.map((r) => r.keywordId);
           const idList = sql.join(kwIds.map((id) => sql`${id}`), sql`,`);
@@ -1641,35 +1741,44 @@ export const accountRoutes: FastifyPluginAsync = async (app) => {
 
       // Batch-fetch visibility scores for this tracked-app context
       const visibilityMap2 = new Map<string, { visibilityScore: number; keywordCount: number; visibilityRaw: number }>();
-      if (competitorSlugs.length > 0) {
+      if (competitorAppIds.length > 0) {
         try {
-          const visRows = await db
-            .select({
-              appSlug: appVisibilityScores.appSlug,
-              visibilityScore: appVisibilityScores.visibilityScore,
-              keywordCount: appVisibilityScores.keywordCount,
-              visibilityRaw: appVisibilityScores.visibilityRaw,
-            })
-            .from(appVisibilityScores)
-            .where(
-              and(
-                eq(appVisibilityScores.accountId, accountId),
-                eq(appVisibilityScores.trackedAppSlug, slug),
-                inArray(appVisibilityScores.appSlug, competitorSlugs),
-                sql`${appVisibilityScores.computedAt} = (
-                  SELECT MAX(v2.computed_at) FROM app_visibility_scores v2
-                  WHERE v2.account_id = ${appVisibilityScores.accountId}
-                    AND v2.tracked_app_slug = ${appVisibilityScores.trackedAppSlug}
-                    AND v2.app_slug = ${appVisibilityScores.appSlug}
-                )`,
-              )
-            );
-          for (const r of visRows) {
-            visibilityMap2.set(r.appSlug, {
-              visibilityScore: r.visibilityScore,
-              keywordCount: r.keywordCount,
-              visibilityRaw: parseFloat(String(r.visibilityRaw)),
-            });
+          // Look up tracked app ID from slug
+          const [visTrackedAppRow] = await db
+            .select({ id: apps.id })
+            .from(apps)
+            .where(eq(apps.slug, slug))
+            .limit(1);
+          if (visTrackedAppRow) {
+            const visRows = await db
+              .select({
+                appSlug: sql<string>`ca.slug`,
+                visibilityScore: appVisibilityScores.visibilityScore,
+                keywordCount: appVisibilityScores.keywordCount,
+                visibilityRaw: appVisibilityScores.visibilityRaw,
+              })
+              .from(appVisibilityScores)
+              .innerJoin(sql`apps ca`, sql`ca.id = ${appVisibilityScores.appId}`)
+              .where(
+                and(
+                  eq(appVisibilityScores.accountId, accountId),
+                  eq(appVisibilityScores.trackedAppId, visTrackedAppRow.id),
+                  inArray(appVisibilityScores.appId, competitorAppIds),
+                  sql`${appVisibilityScores.computedAt} = (
+                    SELECT MAX(v2.computed_at) FROM app_visibility_scores v2
+                    WHERE v2.account_id = ${appVisibilityScores.accountId}
+                      AND v2.tracked_app_id = ${appVisibilityScores.trackedAppId}
+                      AND v2.app_id = ${appVisibilityScores.appId}
+                  )`,
+                )
+              );
+            for (const r of visRows) {
+              visibilityMap2.set(r.appSlug, {
+                visibilityScore: r.visibilityScore,
+                keywordCount: r.keywordCount,
+                visibilityRaw: parseFloat(String(r.visibilityRaw)),
+              });
+            }
           }
         } catch { /* table may not exist yet */ }
       }
@@ -1737,14 +1846,14 @@ export const accountRoutes: FastifyPluginAsync = async (app) => {
               categories: appSnapshots.categories,
             })
             .from(appSnapshots)
-            .where(eq(appSnapshots.appSlug, row.appSlug))
+            .where(eq(appSnapshots.appId, (row as any)._appId))
             .orderBy(desc(appSnapshots.scrapedAt))
             .limit(1);
 
           const [change] = await db
             .select({ detectedAt: sql<string | null>`max(detected_at)` })
             .from(sql`app_field_changes`)
-            .where(sql`app_slug = ${row.appSlug}`);
+            .where(sql`app_id = ${(row as any)._appId}`);
 
           const minPaidPrice = getMinPaidPrice(snapshot?.pricingPlans);
           const { pricingPlans: _, categories: cats, ...snapshotRest } = snapshot || ({} as any);
@@ -1793,6 +1902,16 @@ export const accountRoutes: FastifyPluginAsync = async (app) => {
         return reply.code(400).send({ error: "slug is required" });
       }
 
+      // Look up tracked app ID from slug
+      const [trackedAppRow2] = await db
+        .select({ id: apps.id })
+        .from(apps)
+        .where(eq(apps.slug, trackedAppSlug))
+        .limit(1);
+      if (!trackedAppRow2) {
+        return reply.code(404).send({ error: "Tracked app not found" });
+      }
+
       // Verify tracked app belongs to this account
       const [trackedApp] = await db
         .select({ id: accountTrackedApps.id })
@@ -1800,7 +1919,7 @@ export const accountRoutes: FastifyPluginAsync = async (app) => {
         .where(
           and(
             eq(accountTrackedApps.accountId, accountId),
-            eq(accountTrackedApps.appSlug, trackedAppSlug)
+            eq(accountTrackedApps.appId, trackedAppRow2.id)
           )
         );
       if (!trackedApp) {
@@ -1815,7 +1934,7 @@ export const accountRoutes: FastifyPluginAsync = async (app) => {
 
       const [{ count }] = await db
         .select({
-          count: sql<number>`count(distinct ${accountCompetitorApps.appSlug})::int`,
+          count: sql<number>`count(distinct ${accountCompetitorApps.competitorAppId})::int`,
         })
         .from(accountCompetitorApps)
         .where(eq(accountCompetitorApps.accountId, accountId));
@@ -1830,7 +1949,7 @@ export const accountRoutes: FastifyPluginAsync = async (app) => {
 
       // Check app exists
       const [existingApp] = await db
-        .select({ slug: apps.slug })
+        .select({ id: apps.id, slug: apps.slug })
         .from(apps)
         .where(eq(apps.slug, competitorSlug))
         .limit(1);
@@ -1846,7 +1965,7 @@ export const accountRoutes: FastifyPluginAsync = async (app) => {
       await db
         .update(apps)
         .set({ isTracked: true, updatedAt: new Date() })
-        .where(eq(apps.slug, competitorSlug));
+        .where(eq(apps.id, existingApp.id));
 
       // Determine next sortOrder for this (account, trackedApp) group
       const [{ maxOrder: maxOrd }] = await db
@@ -1855,7 +1974,7 @@ export const accountRoutes: FastifyPluginAsync = async (app) => {
         .where(
           and(
             eq(accountCompetitorApps.accountId, accountId),
-            eq(accountCompetitorApps.trackedAppSlug, trackedAppSlug)
+            eq(accountCompetitorApps.trackedAppId, trackedAppRow2.id)
           )
         );
 
@@ -1863,8 +1982,8 @@ export const accountRoutes: FastifyPluginAsync = async (app) => {
         .insert(accountCompetitorApps)
         .values({
           accountId,
-          trackedAppSlug,
-          appSlug: competitorSlug,
+          trackedAppId: trackedAppRow2.id,
+          competitorAppId: existingApp.id,
           sortOrder: maxOrd + 1,
         })
         .onConflictDoNothing()
@@ -1893,13 +2012,29 @@ export const accountRoutes: FastifyPluginAsync = async (app) => {
         request.params.competitorSlug
       );
 
+      // Look up app IDs from slugs
+      const [delTrackedAppRow] = await db
+        .select({ id: apps.id })
+        .from(apps)
+        .where(eq(apps.slug, trackedAppSlug))
+        .limit(1);
+      const [delCompAppRow] = await db
+        .select({ id: apps.id })
+        .from(apps)
+        .where(eq(apps.slug, competitorSlug))
+        .limit(1);
+
+      if (!delTrackedAppRow || !delCompAppRow) {
+        return reply.code(404).send({ error: "Competitor not found" });
+      }
+
       const deleted = await db
         .delete(accountCompetitorApps)
         .where(
           and(
             eq(accountCompetitorApps.accountId, accountId),
-            eq(accountCompetitorApps.trackedAppSlug, trackedAppSlug),
-            eq(accountCompetitorApps.appSlug, competitorSlug)
+            eq(accountCompetitorApps.trackedAppId, delTrackedAppRow.id),
+            eq(accountCompetitorApps.competitorAppId, delCompAppRow.id)
           )
         )
         .returning();
@@ -1908,7 +2043,7 @@ export const accountRoutes: FastifyPluginAsync = async (app) => {
         return reply.code(404).send({ error: "Competitor not found" });
       }
 
-      await syncAppTrackedFlag(db, competitorSlug);
+      await syncAppTrackedFlag(db, delCompAppRow.id);
 
       return { message: "Competitor removed" };
     }
@@ -1927,20 +2062,39 @@ export const accountRoutes: FastifyPluginAsync = async (app) => {
         return reply.code(400).send({ error: "slugs array is required" });
       }
 
+      // Look up tracked app ID from slug
+      const [reorderTrackedAppRow] = await db
+        .select({ id: apps.id })
+        .from(apps)
+        .where(eq(apps.slug, trackedAppSlug))
+        .limit(1);
+      if (!reorderTrackedAppRow) {
+        return reply.code(404).send({ error: "Tracked app not found" });
+      }
+
+      // Look up all competitor app IDs from slugs
+      const compAppRows = await db
+        .select({ id: apps.id, slug: apps.slug })
+        .from(apps)
+        .where(inArray(apps.slug, slugs));
+      const slugToId = new Map(compAppRows.map((r) => [r.slug, r.id]));
+
       // Update sort_order for each slug based on array index
       await Promise.all(
-        slugs.map((slug, index) =>
-          db
+        slugs.map((slug, index) => {
+          const compId = slugToId.get(slug);
+          if (!compId) return Promise.resolve();
+          return db
             .update(accountCompetitorApps)
             .set({ sortOrder: index + 1 })
             .where(
               and(
                 eq(accountCompetitorApps.accountId, accountId),
-                eq(accountCompetitorApps.trackedAppSlug, trackedAppSlug),
-                eq(accountCompetitorApps.appSlug, slug)
+                eq(accountCompetitorApps.trackedAppId, reorderTrackedAppRow.id),
+                eq(accountCompetitorApps.competitorAppId, compId)
               )
-            )
-        )
+            );
+        })
       );
 
       return { message: "Competitors reordered" };
@@ -1955,6 +2109,16 @@ export const accountRoutes: FastifyPluginAsync = async (app) => {
       const slug = decodeURIComponent(request.params.slug);
       const { appSlugs: appSlugsParam } = request.query;
 
+      // Look up tracked app ID from slug
+      const [kwAppRow] = await db
+        .select({ id: apps.id })
+        .from(apps)
+        .where(eq(apps.slug, slug))
+        .limit(1);
+      if (!kwAppRow) {
+        return reply.code(404).send({ error: "App not found" });
+      }
+
       // Verify tracked app belongs to this account
       const [trackedApp] = await db
         .select({ id: accountTrackedApps.id })
@@ -1962,7 +2126,7 @@ export const accountRoutes: FastifyPluginAsync = async (app) => {
         .where(
           and(
             eq(accountTrackedApps.accountId, accountId),
-            eq(accountTrackedApps.appSlug, slug)
+            eq(accountTrackedApps.appId, kwAppRow.id)
           )
         );
       if (!trackedApp) {
@@ -1984,7 +2148,7 @@ export const accountRoutes: FastifyPluginAsync = async (app) => {
         .where(
           and(
             eq(accountTrackedKeywords.accountId, accountId),
-            eq(accountTrackedKeywords.trackedAppSlug, slug)
+            eq(accountTrackedKeywords.trackedAppId, kwAppRow.id)
           )
         );
 
@@ -2111,6 +2275,16 @@ export const accountRoutes: FastifyPluginAsync = async (app) => {
         return reply.code(400).send({ error: "keyword is required" });
       }
 
+      // Look up tracked app ID from slug
+      const [postKwAppRow] = await db
+        .select({ id: apps.id })
+        .from(apps)
+        .where(eq(apps.slug, trackedAppSlug))
+        .limit(1);
+      if (!postKwAppRow) {
+        return reply.code(404).send({ error: "App not found" });
+      }
+
       // Verify tracked app belongs to this account
       const [trackedApp] = await db
         .select({ id: accountTrackedApps.id })
@@ -2118,7 +2292,7 @@ export const accountRoutes: FastifyPluginAsync = async (app) => {
         .where(
           and(
             eq(accountTrackedApps.accountId, accountId),
-            eq(accountTrackedApps.appSlug, trackedAppSlug)
+            eq(accountTrackedApps.appId, postKwAppRow.id)
           )
         );
       if (!trackedApp) {
@@ -2159,7 +2333,7 @@ export const accountRoutes: FastifyPluginAsync = async (app) => {
 
       const [result] = await db
         .insert(accountTrackedKeywords)
-        .values({ accountId, trackedAppSlug, keywordId: kw.id })
+        .values({ accountId, trackedAppId: postKwAppRow.id, keywordId: kw.id })
         .onConflictDoNothing()
         .returning();
 
@@ -2204,15 +2378,24 @@ export const accountRoutes: FastifyPluginAsync = async (app) => {
       const trackedAppSlug = decodeURIComponent(request.params.slug);
       const keywordId = parseInt(request.params.keywordId, 10);
 
+      // Look up tracked app ID from slug
+      const [delKwAppRow] = await db
+        .select({ id: apps.id })
+        .from(apps)
+        .where(eq(apps.slug, trackedAppSlug))
+        .limit(1);
+
+      const deleteWhereConditions = [
+        eq(accountTrackedKeywords.accountId, accountId),
+        eq(accountTrackedKeywords.keywordId, keywordId),
+      ];
+      if (delKwAppRow) {
+        deleteWhereConditions.push(eq(accountTrackedKeywords.trackedAppId, delKwAppRow.id));
+      }
+
       const deleted = await db
         .delete(accountTrackedKeywords)
-        .where(
-          and(
-            eq(accountTrackedKeywords.accountId, accountId),
-            eq(accountTrackedKeywords.trackedAppSlug, trackedAppSlug),
-            eq(accountTrackedKeywords.keywordId, keywordId)
-          )
-        )
+        .where(and(...deleteWhereConditions))
         .returning();
 
       if (deleted.length === 0) {
@@ -2238,25 +2421,10 @@ export const accountRoutes: FastifyPluginAsync = async (app) => {
       const isDebug = debug === "true";
       const maxResults = Math.min(parseInt(limitStr, 10) || 50, 200);
 
-      // Verify app is tracked by this account
-      const [tracked] = await db
-        .select({ appSlug: accountTrackedApps.appSlug })
-        .from(accountTrackedApps)
-        .where(
-          and(
-            eq(accountTrackedApps.accountId, accountId),
-            eq(accountTrackedApps.appSlug, slug)
-          )
-        )
-        .limit(1);
-
-      if (!tracked) {
-        return reply.code(404).send({ error: "App not tracked by this account" });
-      }
-
-      // Fetch app row + latest snapshot
+      // Look up app from slug
       const [appRow] = await db
         .select({
+          id: apps.id,
           name: apps.name,
           subtitle: apps.appCardSubtitle,
         })
@@ -2268,6 +2436,22 @@ export const accountRoutes: FastifyPluginAsync = async (app) => {
         return reply.code(404).send({ error: "App not found" });
       }
 
+      // Verify app is tracked by this account
+      const [tracked] = await db
+        .select({ id: accountTrackedApps.id })
+        .from(accountTrackedApps)
+        .where(
+          and(
+            eq(accountTrackedApps.accountId, accountId),
+            eq(accountTrackedApps.appId, appRow.id)
+          )
+        )
+        .limit(1);
+
+      if (!tracked) {
+        return reply.code(404).send({ error: "App not tracked by this account" });
+      }
+
       const [snapshot] = await db
         .select({
           appIntroduction: appSnapshots.appIntroduction,
@@ -2276,7 +2460,7 @@ export const accountRoutes: FastifyPluginAsync = async (app) => {
           categories: appSnapshots.categories,
         })
         .from(appSnapshots)
-        .where(eq(appSnapshots.appSlug, slug))
+        .where(eq(appSnapshots.appId, appRow.id))
         .orderBy(desc(appSnapshots.scrapedAt))
         .limit(1);
 
@@ -2291,7 +2475,7 @@ export const accountRoutes: FastifyPluginAsync = async (app) => {
         .where(
           and(
             eq(accountTrackedKeywords.accountId, accountId),
-            eq(accountTrackedKeywords.trackedAppSlug, slug)
+            eq(accountTrackedKeywords.trackedAppId, appRow.id)
           )
         );
 
@@ -2301,7 +2485,7 @@ export const accountRoutes: FastifyPluginAsync = async (app) => {
 
       // Extract keyword suggestions
       const { extractKeywordsFromAppMetadata } = await import(
-        "@shopify-tracking/shared"
+        "@appranks/shared"
       );
 
       const allSuggestions = extractKeywordsFromAppMetadata({
@@ -2329,7 +2513,7 @@ export const accountRoutes: FastifyPluginAsync = async (app) => {
       return {
         suggestions,
         ...(isDebug && {
-          weights: (await import("@shopify-tracking/shared")).FIELD_WEIGHTS,
+          weights: (await import("@appranks/shared")).FIELD_WEIGHTS,
           metadata: {
             appName: appRow.name,
             totalCandidates: allSuggestions.length,
@@ -2350,13 +2534,22 @@ export const accountRoutes: FastifyPluginAsync = async (app) => {
       const maxResults = Math.min(parseInt(limitStr, 10) || 20, 48);
 
       // 1. Verify tracked app belongs to account
+      const [compSugAppRow] = await db
+        .select({ id: apps.id })
+        .from(apps)
+        .where(eq(apps.slug, slug))
+        .limit(1);
+      if (!compSugAppRow) {
+        return reply.code(404).send({ error: "App not found" });
+      }
+
       const [tracked] = await db
-        .select({ appSlug: accountTrackedApps.appSlug })
+        .select({ id: accountTrackedApps.id })
         .from(accountTrackedApps)
         .where(
           and(
             eq(accountTrackedApps.accountId, accountId),
-            eq(accountTrackedApps.appSlug, slug)
+            eq(accountTrackedApps.appId, compSugAppRow.id)
           )
         )
         .limit(1);
@@ -2388,23 +2581,24 @@ export const accountRoutes: FastifyPluginAsync = async (app) => {
       const [trackedSnapshot] = await db
         .select({ categories: appSnapshots.categories, appIntroduction: appSnapshots.appIntroduction })
         .from(appSnapshots)
-        .where(eq(appSnapshots.appSlug, slug))
+        .where(eq(appSnapshots.appId, compSugAppRow.id))
         .orderBy(desc(appSnapshots.scrapedAt))
         .limit(1);
 
       const { extractCategorySlugs, extractFeatureHandles, tokenize, computeSimilarityBetween } =
-        await import("@shopify-tracking/shared");
+        await import("@appranks/shared");
 
       const trackedCategories = (trackedSnapshot?.categories as any[]) ?? [];
 
       // 3. Get existing competitors for this (account, trackedAppSlug) pair
       const existingComps = await db
-        .select({ appSlug: accountCompetitorApps.appSlug })
+        .select({ appSlug: apps.slug })
         .from(accountCompetitorApps)
+        .innerJoin(apps, eq(apps.id, accountCompetitorApps.competitorAppId))
         .where(
           and(
             eq(accountCompetitorApps.accountId, accountId),
-            eq(accountCompetitorApps.trackedAppSlug, slug)
+            eq(accountCompetitorApps.trackedAppId, compSugAppRow.id)
           )
         );
       const existingCompSlugs = new Set(existingComps.map((c) => c.appSlug));
@@ -2601,7 +2795,7 @@ export const accountRoutes: FastifyPluginAsync = async (app) => {
 
     const rows = await db
       .select({
-        categorySlug: accountStarredCategories.categorySlug,
+        categorySlug: categories.slug,
         createdAt: accountStarredCategories.createdAt,
         categoryTitle: categories.title,
         parentSlug: categories.parentSlug,
@@ -2609,41 +2803,49 @@ export const accountRoutes: FastifyPluginAsync = async (app) => {
       .from(accountStarredCategories)
       .innerJoin(
         categories,
-        eq(categories.slug, accountStarredCategories.categorySlug)
+        eq(categories.id, accountStarredCategories.categoryId)
       )
       .where(eq(accountStarredCategories.accountId, accountId));
 
     if (rows.length === 0) return rows;
 
     // Get tracked + competitor slugs for this account
-    const [trackedApps, competitorApps] = await Promise.all([
-      db.select({ appSlug: accountTrackedApps.appSlug }).from(accountTrackedApps).where(eq(accountTrackedApps.accountId, accountId)),
-      db.select({ appSlug: accountCompetitorApps.appSlug }).from(accountCompetitorApps).where(eq(accountCompetitorApps.accountId, accountId)),
+    const [trackedAppsRows2, competitorAppsRows2] = await Promise.all([
+      db.select({ appSlug: apps.slug }).from(accountTrackedApps).innerJoin(apps, eq(apps.id, accountTrackedApps.appId)).where(eq(accountTrackedApps.accountId, accountId)),
+      db.select({ appSlug: apps.slug }).from(accountCompetitorApps).innerJoin(apps, eq(apps.id, accountCompetitorApps.competitorAppId)).where(eq(accountCompetitorApps.accountId, accountId)),
     ]);
-    const trackedSet = new Set(trackedApps.map((a) => a.appSlug));
-    const competitorSet = new Set(competitorApps.map((a) => a.appSlug));
+    const trackedSet = new Set(trackedAppsRows2.map((a) => a.appSlug));
+    const competitorSet = new Set(competitorAppsRows2.map((a) => a.appSlug));
 
     // Get latest snapshot per starred category for firstPageApps + appCount
     const categorySlugs = rows.map((r) => r.categorySlug);
-    const snapshots = await db
+    const catRows = await db
+      .select({ id: categories.id, slug: categories.slug })
+      .from(categories)
+      .where(inArray(categories.slug, categorySlugs));
+    const catSlugToId = new Map(catRows.map((c) => [c.slug, c.id]));
+    const catIdToSlug = new Map(catRows.map((c) => [c.id, c.slug]));
+    const categoryIds = catRows.map((c) => c.id);
+
+    const snapshots = categoryIds.length > 0 ? await db
       .select({
-        categorySlug: categorySnapshots.categorySlug,
+        categoryId: categorySnapshots.categoryId,
         appCount: categorySnapshots.appCount,
         firstPageApps: categorySnapshots.firstPageApps,
       })
       .from(categorySnapshots)
       .where(
         and(
-          inArray(categorySnapshots.categorySlug, categorySlugs),
+          inArray(categorySnapshots.categoryId, categoryIds),
           sql`${categorySnapshots.id} = (
             SELECT s2.id FROM category_snapshots s2
-            WHERE s2.category_slug = ${categorySnapshots.categorySlug}
+            WHERE s2.category_id = ${categorySnapshots.categoryId}
             ORDER BY s2.scraped_at DESC LIMIT 1
           )`
         )
-      );
+      ) : [];
 
-    const snapshotMap = new Map(snapshots.map((s) => [s.categorySlug, s]));
+    const snapshotMap = new Map(snapshots.map((s) => [catIdToSlug.get(s.categoryId) ?? "", s]));
 
     function extractSlug(appUrl: string): string {
       return appUrl.replace(/^https?:\/\/apps\.shopify\.com\//, "").replace(/^\/apps\//, "").split("?")[0];
@@ -2681,9 +2883,19 @@ export const accountRoutes: FastifyPluginAsync = async (app) => {
         return reply.code(400).send({ error: "slug is required" });
       }
 
+      // Look up category ID from slug
+      const [catRow] = await db
+        .select({ id: categories.id })
+        .from(categories)
+        .where(eq(categories.slug, slug))
+        .limit(1);
+      if (!catRow) {
+        return reply.code(404).send({ error: "Category not found" });
+      }
+
       const [result] = await db
         .insert(accountStarredCategories)
-        .values({ accountId, categorySlug: slug })
+        .values({ accountId, categoryId: catRow.id })
         .onConflictDoNothing()
         .returning();
 
@@ -2703,10 +2915,24 @@ export const accountRoutes: FastifyPluginAsync = async (app) => {
       const { accountId } = request.user;
       const slug = decodeURIComponent(request.params.slug);
 
+      // Look up category ID from slug
+      const [delCatRow] = await db
+        .select({ id: categories.id })
+        .from(categories)
+        .where(eq(categories.slug, slug))
+        .limit(1);
+
+      if (!delCatRow) {
+        return reply.code(404).send({ error: "Category not found" });
+      }
+
       const deleted = await db
         .delete(accountStarredCategories)
         .where(
-          sql`${accountStarredCategories.accountId} = ${accountId} AND ${accountStarredCategories.categorySlug} = ${slug}`
+          and(
+            eq(accountStarredCategories.accountId, accountId),
+            eq(accountStarredCategories.categoryId, delCatRow.id)
+          )
         )
         .returning();
 
@@ -2771,8 +2997,8 @@ export const accountRoutes: FastifyPluginAsync = async (app) => {
 
     // Get tracked + competitor slugs for this account
     const [trackedAppsRows, competitorAppsRows] = await Promise.all([
-      db.select({ appSlug: accountTrackedApps.appSlug }).from(accountTrackedApps).where(eq(accountTrackedApps.accountId, accountId)),
-      db.select({ appSlug: accountCompetitorApps.appSlug }).from(accountCompetitorApps).where(eq(accountCompetitorApps.accountId, accountId)),
+      db.select({ appSlug: apps.slug }).from(accountTrackedApps).innerJoin(apps, eq(apps.id, accountTrackedApps.appId)).where(eq(accountTrackedApps.accountId, accountId)),
+      db.select({ appSlug: apps.slug }).from(accountCompetitorApps).innerJoin(apps, eq(apps.id, accountCompetitorApps.competitorAppId)).where(eq(accountCompetitorApps.accountId, accountId)),
     ]);
     const trackedSet = new Set(trackedAppsRows.map((a) => a.appSlug));
     const competitorSet = new Set(competitorAppsRows.map((a) => a.appSlug));

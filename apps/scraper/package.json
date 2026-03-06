@@ -1,5 +1,5 @@
 {
-  "name": "@shopify-tracking/scraper",
+  "name": "@appranks/scraper",
   "version": "0.0.1",
   "private": true,
   "type": "module",
@@ -17,8 +17,8 @@
     "scheduler": "tsx src/scheduler.ts"
   },
   "dependencies": {
-    "@shopify-tracking/db": "*",
-    "@shopify-tracking/shared": "*",
+    "@appranks/db": "*",
+    "@appranks/shared": "*",
     "@types/nodemailer": "^7.0.10",
     "bullmq": "^5.0.0",
     "cheerio": "^1.0.0",

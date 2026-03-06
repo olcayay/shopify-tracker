@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -126,9 +127,9 @@ export default function AcceptInvitePage() {
         <CardContent>
           <p className="text-muted-foreground">
             This invitation has already been accepted.{" "}
-            <a href="/login" className="text-primary hover:underline">
+            <Link href="/login" className="text-primary hover:underline">
               Sign in
-            </a>
+            </Link>
           </p>
         </CardContent>
       </Card>

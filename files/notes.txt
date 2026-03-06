@@ -1,3 +1,82 @@
+Multi-Platform Migration — Phase 2: API + Dashboard Platform Support
+=====================================================================
+
+API Changes:
+- New GET /api/platforms endpoint (list all platforms with capabilities)
+- New GET /api/platforms/:id endpoint (single platform details)
+- GET /api/auth/me now returns enabledPlatforms array and maxPlatforms in limits
+- All API routes (apps, categories, keywords, featured-apps, live-search, research) accept ?platform= query param
+- Platform validation utility (apps/api/src/utils/platform.ts) with getPlatformFromQuery() and requireCapability()
+- Live search returns 400 for non-Shopify platforms
+- account_platforms table + migration seeding existing accounts with Shopify
+
+Dashboard Changes:
+- [platform] dynamic route segment: all pages moved under (dashboard)/[platform]/
+- PlatformContext provider (apps/dashboard/src/contexts/platform-context.tsx)
+- Platform switcher in sidebar with conditional navigation based on capabilities
+- Platform URL builder utility (apps/dashboard/src/lib/platform-urls.ts)
+- Generic AppBadges component (apps/dashboard/src/components/app-badges.tsx)
+- All 16+ hardcoded apps.shopify.com URLs replaced with dynamic builders
+- Overview page: capability-gated Keywords and Features sections
+- Preview page: shows "not available" for non-Shopify platforms
+- System admin: maxPlatforms in packages, enabled platforms in account detail, platform filters in apps/scraper pages
+- Marketing pages: generalized from Shopify-specific to platform-agnostic text
+- SEO metadata: updated title/description to "App Marketplace Intelligence"
+- Middleware: redirects / → /shopify/overview, legacy paths → /shopify/* equivalents
+- Auth context: enabledPlatforms, maxPlatforms, platforms usage
+- All lib/api.ts functions accept optional platform parameter
+- 654 tests passing, all packages compile clean
+
+Key files created:
+- apps/dashboard/src/contexts/platform-context.tsx
+- apps/dashboard/src/lib/platform-urls.ts
+- apps/dashboard/src/components/app-badges.tsx
+- apps/dashboard/src/middleware.ts
+- apps/dashboard/src/app/(dashboard)/[platform]/layout.tsx
+- apps/api/src/routes/platforms.ts
+- apps/api/src/utils/platform.ts
+
+=====================================================================
+
+Multi-Platform Migration — Phase 3: Shared Types + Compute Jobs
+=====================================================================
+
+Shared Types:
+- New `packages/shared/src/types/common.ts` with CommonApp, CommonSearchResult, CommonCategory
+- Added CommonAppDetails to app.ts (platform-agnostic app detail type)
+- Added `badges?: string[]` to FirstPageApp, KeywordSearchApp (backward-compatible)
+- Added `certified_count?: number` to FirstPageMetrics (backward-compatible)
+- All existing Shopify-specific fields kept for backward compatibility
+
+Shared Utils — Platform-Aware:
+- keyword-extraction.ts: Platform-specific stop words (getStopWords(platform))
+  - COMMON_STOP_WORDS + SHOPIFY/SALESFORCE/CANVA_STOP_WORDS
+  - extractKeywordsFromAppMetadata accepts optional platform param
+- keyword-opportunity.ts: Generic badge-based scoring
+  - certifiedCount replaces bfsCount (uses badges array or isBuiltForShopify fallback)
+  - computeKeywordOpportunity accepts optional pageSize param (default 24)
+  - TopAppInfo now has optional badges field
+- similarity.ts: Platform-specific weights and extraction
+  - Per-platform similarity weights: Shopify (4x0.25), Salesforce (cat+kw+text), Canva (cat+text only)
+  - getSimilarityWeights(platform) and getSimilarityStopWords(platform)
+  - extractCategorySlugs/extractFeatureHandles accept optional platform param
+  - computeSimilarityBetween accepts optional platform param
+
+Compute Jobs — Platform-Aware:
+- compute-app-scores.ts: platform param, dynamic prerequisites, platform-filtered SQL
+- compute-review-metrics.ts: platform param, filtered by apps.platform
+- compute-similarity-scores.ts: platform param, filtered by apps.platform
+- backfill-categories.ts: platform param, platform-conditional URL matching
+- process-job.ts: extracts platform from job data, passes to all compute functions
+- queue.ts: ScraperJobData now has optional platform field
+
+Email Digest:
+- Fixed tr-TR locale → en-US in digest-builder.ts
+
+All changes backward-compatible (default to "shopify"). 654 tests pass, all packages compile clean.
+
+=====================================================================
+
 Research projects in system-admin area:
 - API: GET /stats now returns researchProjects count
 - API: GET /users returns researchProjectCount per user

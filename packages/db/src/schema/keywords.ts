@@ -12,18 +12,25 @@ import {
   uniqueIndex,
   date,
 } from "drizzle-orm/pg-core";
-import type { KeywordSearchApp } from "@shopify-tracking/shared";
+import type { KeywordSearchApp } from "@appranks/shared";
 import { scrapeRuns } from "./scrape-runs.js";
 import { apps } from "./apps.js";
 
-export const trackedKeywords = pgTable("tracked_keywords", {
-  id: serial("id").primaryKey(),
-  keyword: varchar("keyword", { length: 255 }).notNull().unique(),
-  slug: varchar("slug", { length: 255 }).notNull().unique(),
-  isActive: boolean("is_active").notNull().default(true),
-  createdAt: timestamp("created_at").notNull().defaultNow(),
-  updatedAt: timestamp("updated_at").notNull().defaultNow(),
-});
+export const trackedKeywords = pgTable(
+  "tracked_keywords",
+  {
+    id: serial("id").primaryKey(),
+    platform: varchar("platform", { length: 20 }).notNull().default("shopify"),
+    keyword: varchar("keyword", { length: 255 }).notNull(),
+    slug: varchar("slug", { length: 255 }).notNull().unique(),
+    isActive: boolean("is_active").notNull().default(true),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+    updatedAt: timestamp("updated_at").notNull().defaultNow(),
+  },
+  (table) => [
+    uniqueIndex("idx_tracked_keywords_platform_keyword").on(table.platform, table.keyword),
+  ]
+);
 
 /** Generate a URL-safe slug from a keyword text */
 export function keywordToSlug(keyword: string): string {
@@ -64,9 +71,9 @@ export const appKeywordRankings = pgTable(
   "app_keyword_rankings",
   {
     id: serial("id").primaryKey(),
-    appSlug: varchar("app_slug", { length: 255 })
+    appId: integer("app_id")
       .notNull()
-      .references(() => apps.slug),
+      .references(() => apps.id),
     keywordId: integer("keyword_id")
       .notNull()
       .references(() => trackedKeywords.id),
@@ -78,7 +85,7 @@ export const appKeywordRankings = pgTable(
   },
   (table) => [
     index("idx_app_kw_rank").on(
-      table.appSlug,
+      table.appId,
       table.keywordId,
       table.scrapedAt
     ),
@@ -108,9 +115,9 @@ export const keywordAdSightings = pgTable(
   "keyword_ad_sightings",
   {
     id: serial("id").primaryKey(),
-    appSlug: varchar("app_slug", { length: 255 })
+    appId: integer("app_id")
       .notNull()
-      .references(() => apps.slug),
+      .references(() => apps.id),
     keywordId: integer("keyword_id")
       .notNull()
       .references(() => trackedKeywords.id),
@@ -125,9 +132,9 @@ export const keywordAdSightings = pgTable(
   },
   (table) => [
     index("idx_kw_ad_sightings_kw_date").on(table.keywordId, table.seenDate),
-    index("idx_kw_ad_sightings_app_date").on(table.appSlug, table.seenDate),
+    index("idx_kw_ad_sightings_app_date").on(table.appId, table.seenDate),
     uniqueIndex("idx_kw_ad_sightings_unique").on(
-      table.appSlug,
+      table.appId,
       table.keywordId,
       table.seenDate
     ),

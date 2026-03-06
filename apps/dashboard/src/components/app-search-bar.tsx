@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect } from "react";
 import Link from "next/link";
+import { useParams } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -39,6 +40,7 @@ export function AppSearchBar({
   placeholder = "Search apps...",
   className,
 }: AppSearchBarProps) {
+  const { platform } = useParams();
   const { fetchWithAuth, user } = useAuth();
   const [query, setQuery] = useState("");
   const [suggestions, setSuggestions] = useState<SearchResult[]>([]);
@@ -143,7 +145,7 @@ export function AppSearchBar({
                 className="flex items-center justify-between px-3 py-2 hover:bg-accent text-sm gap-2"
               >
                 <Link
-                  href={`/apps/${s.slug}`}
+                  href={`/${platform}/apps/${s.slug}`}
                   className="flex items-center gap-2 min-w-0 flex-1 hover:underline"
                   onClick={() => setShowSuggestions(false)}
                 >

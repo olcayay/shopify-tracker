@@ -17,6 +17,7 @@ import * as appSimilarityScoresSchema from "./schema/app-similarity-scores.js";
 import * as impersonationAuditLogsSchema from "./schema/impersonation-audit-logs.js";
 import * as appScoresSchema from "./schema/app-scores.js";
 import * as researchProjectsSchema from "./schema/research-projects.js";
+import * as accountPlatformsSchema from "./schema/account-platforms.js";
 
 export const schema = {
   ...scrapeRunsSchema,
@@ -35,6 +36,7 @@ export const schema = {
   ...impersonationAuditLogsSchema,
   ...appScoresSchema,
   ...researchProjectsSchema,
+  ...accountPlatformsSchema,
 };
 
 export function createDb(databaseUrl: string) {
@@ -97,3 +99,4 @@ export {
   researchProjectKeywords,
   researchProjectCompetitors,
 } from "./schema/research-projects.js";
+export { accountPlatforms } from "./schema/account-platforms.js";

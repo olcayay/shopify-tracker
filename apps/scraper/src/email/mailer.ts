@@ -1,5 +1,5 @@
 import nodemailer from "nodemailer";
-import { createLogger } from "@shopify-tracking/shared";
+import { createLogger } from "@appranks/shared";
 
 const log = createLogger("mailer");
 

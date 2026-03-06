@@ -35,6 +35,7 @@ interface Package {
   maxTrackedFeatures: number;
   maxUsers: number;
   maxResearchProjects: number;
+  maxPlatforms: number;
   sortOrder: number;
 }
 
@@ -240,8 +241,31 @@ export default function AccountDetailPage() {
           </div>
           {pkg && (
             <p className="text-xs text-muted-foreground mt-3">
-              Package defaults: Apps {pkg.maxTrackedApps} · Keywords {pkg.maxTrackedKeywords} · Competitors {pkg.maxCompetitorApps} · Features {pkg.maxTrackedFeatures} · Users {pkg.maxUsers} · Research {pkg.maxResearchProjects}
+              Package defaults: Apps {pkg.maxTrackedApps} · Keywords {pkg.maxTrackedKeywords} · Competitors {pkg.maxCompetitorApps} · Features {pkg.maxTrackedFeatures} · Users {pkg.maxUsers} · Research {pkg.maxResearchProjects} · Platforms {pkg.maxPlatforms}
             </p>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Enabled Platforms */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Platforms</CardTitle>
+          <CardDescription>
+            Enabled platforms for this account (max: {account.maxPlatforms ?? "N/A"})
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          {account.enabledPlatforms && account.enabledPlatforms.length > 0 ? (
+            <div className="flex flex-wrap gap-2">
+              {account.enabledPlatforms.map((p: string) => (
+                <Badge key={p} variant="secondary" className="capitalize">
+                  {p}
+                </Badge>
+              ))}
+            </div>
+          ) : (
+            <p className="text-sm text-muted-foreground">No platforms enabled</p>
           )}
         </CardContent>
       </Card>

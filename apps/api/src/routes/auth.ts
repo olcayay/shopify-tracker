@@ -13,7 +13,8 @@ import {
   accountCompetitorApps,
   accountTrackedFeatures,
   researchProjects,
-} from "@shopify-tracking/db";
+  accountPlatforms,
+} from "@appranks/db";
 import { getJwtSecret, type JwtPayload } from "../middleware/auth.js";
 
 type Db = ReturnType<typeof createDb>;
@@ -356,6 +357,11 @@ export const authRoutes: FastifyPluginAsync = async (app) => {
       .from(researchProjects)
       .where(eq(researchProjects.accountId, user.accountId));
 
+    const enabledPlatformsResult = await db
+      .select({ platform: accountPlatforms.platform })
+      .from(accountPlatforms)
+      .where(eq(accountPlatforms.accountId, user.accountId));
+
     const response: Record<string, unknown> = {
       user: {
         id: user.id,
@@ -378,6 +384,7 @@ export const authRoutes: FastifyPluginAsync = async (app) => {
           maxTrackedFeatures: account.maxTrackedFeatures,
           maxUsers: account.maxUsers,
           maxResearchProjects: account.maxResearchProjects,
+          maxPlatforms: account.maxPlatforms,
         },
         usage: {
           trackedApps: trackedAppsCount.count,
@@ -386,8 +393,10 @@ export const authRoutes: FastifyPluginAsync = async (app) => {
           trackedFeatures: trackedFeaturesCount.count,
           users: usersCount.count,
           researchProjects: researchProjectsCount.count,
+          platforms: enabledPlatformsResult.length,
         },
       },
+      enabledPlatforms: enabledPlatformsResult.map((r) => r.platform),
     };
 
     // Include impersonation metadata if active

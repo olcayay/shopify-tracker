@@ -1,9 +1,9 @@
 import {
   pgTable,
   serial,
+  integer,
   varchar,
   date,
-  integer,
   decimal,
   timestamp,
   index,
@@ -15,9 +15,9 @@ export const appReviewMetrics = pgTable(
   "app_review_metrics",
   {
     id: serial("id").primaryKey(),
-    appSlug: varchar("app_slug", { length: 255 })
+    appId: integer("app_id")
       .notNull()
-      .references(() => apps.slug),
+      .references(() => apps.id),
     computedAt: date("computed_at").notNull(),
     ratingCount: integer("rating_count"),
     averageRating: decimal("average_rating", { precision: 3, scale: 2 }),
@@ -30,7 +30,7 @@ export const appReviewMetrics = pgTable(
     createdAt: timestamp("created_at").notNull().defaultNow(),
   },
   (table) => [
-    uniqueIndex("idx_app_review_metrics_unique").on(table.appSlug, table.computedAt),
+    uniqueIndex("idx_app_review_metrics_unique").on(table.appId, table.computedAt),
     index("idx_app_review_metrics_date").on(table.computedAt),
   ]
 );

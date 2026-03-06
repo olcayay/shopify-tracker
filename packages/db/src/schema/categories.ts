@@ -10,31 +10,39 @@ import {
   integer,
   jsonb,
   index,
+  uniqueIndex,
 } from "drizzle-orm/pg-core";
-import type { FirstPageMetrics, FirstPageApp } from "@shopify-tracking/shared";
+import type { FirstPageMetrics, FirstPageApp } from "@appranks/shared";
 import { scrapeRuns } from "./scrape-runs.js";
 
-export const categories = pgTable("categories", {
-  id: serial("id").primaryKey(),
-  slug: varchar("slug", { length: 255 }).notNull().unique(),
-  title: varchar("title", { length: 500 }).notNull(),
-  url: varchar("url", { length: 500 }).notNull(),
-  parentSlug: varchar("parent_slug", { length: 255 }),
-  categoryLevel: smallint("category_level").notNull(),
-  description: text("description").notNull().default(""),
-  isTracked: boolean("is_tracked").notNull().default(true),
-  isListingPage: boolean("is_listing_page").notNull().default(true),
-  createdAt: timestamp("created_at").notNull().defaultNow(),
-  updatedAt: timestamp("updated_at").notNull().defaultNow(),
-});
+export const categories = pgTable(
+  "categories",
+  {
+    id: serial("id").primaryKey(),
+    platform: varchar("platform", { length: 20 }).notNull().default("shopify"),
+    slug: varchar("slug", { length: 255 }).notNull(),
+    title: varchar("title", { length: 500 }).notNull(),
+    url: varchar("url", { length: 500 }).notNull(),
+    parentSlug: varchar("parent_slug", { length: 255 }),
+    categoryLevel: smallint("category_level").notNull(),
+    description: text("description").notNull().default(""),
+    isTracked: boolean("is_tracked").notNull().default(true),
+    isListingPage: boolean("is_listing_page").notNull().default(true),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+    updatedAt: timestamp("updated_at").notNull().defaultNow(),
+  },
+  (table) => [
+    uniqueIndex("idx_categories_platform_slug").on(table.platform, table.slug),
+  ]
+);
 
 export const categorySnapshots = pgTable(
   "category_snapshots",
   {
     id: serial("id").primaryKey(),
-    categorySlug: varchar("category_slug", { length: 255 })
+    categoryId: integer("category_id")
       .notNull()
-      .references(() => categories.slug),
+      .references(() => categories.id),
     scrapeRunId: uuid("scrape_run_id")
       .notNull()
       .references(() => scrapeRuns.id),
@@ -49,8 +57,8 @@ export const categorySnapshots = pgTable(
     breadcrumb: text("breadcrumb").notNull().default(""),
   },
   (table) => [
-    index("idx_category_snapshots_slug_date").on(
-      table.categorySlug,
+    index("idx_category_snapshots_id_date").on(
+      table.categoryId,
       table.scrapedAt
     ),
   ]

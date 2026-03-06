@@ -7,9 +7,9 @@ import { DifferentiatorsSection } from "@/components/landing/differentiators-sec
 import { CtaSection } from "@/components/landing/cta-section";
 
 export const metadata: Metadata = {
-  title: "AppRanks — Shopify App Store Intelligence Platform",
+  title: "AppRanks — App Marketplace Intelligence Platform",
   description:
-    "Track rankings, monitor competitors, optimize keywords. The all-in-one intelligence platform for Shopify app developers.",
+    "Track rankings, monitor competitors, and optimize your app store presence across multiple marketplaces.",
 };
 
 export default function LandingPage() {

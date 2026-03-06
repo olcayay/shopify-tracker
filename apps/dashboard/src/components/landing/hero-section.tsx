@@ -15,7 +15,7 @@ export function HeroSection() {
         <div className="mb-8 inline-flex items-center gap-2 rounded-full border bg-muted/60 px-4 py-1.5 text-sm">
           <Zap className="h-3.5 w-3.5 text-amber-500" />
           <span className="text-muted-foreground">
-            Trusted by Shopify app developers worldwide
+            Trusted by app developers worldwide
           </span>
         </div>
 
@@ -28,7 +28,7 @@ export function HeroSection() {
         </h1>
 
         <p className="mt-6 text-lg md:text-xl text-muted-foreground max-w-2xl mx-auto leading-relaxed">
-          The all-in-one intelligence platform for Shopify app developers.
+          The all-in-one intelligence platform for app marketplace developers.
           Track rankings, spy on competitors, dominate keywords.
         </p>
 

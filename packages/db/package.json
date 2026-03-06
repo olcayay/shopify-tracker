@@ -1,5 +1,5 @@
 {
-  "name": "@shopify-tracking/db",
+  "name": "@appranks/db",
   "version": "0.0.1",
   "private": true,
   "type": "module",
@@ -19,7 +19,7 @@
     "db:studio": "drizzle-kit studio"
   },
   "dependencies": {
-    "@shopify-tracking/shared": "*",
+    "@appranks/shared": "*",
     "drizzle-orm": "^0.38.0",
     "postgres": "^3.4.0"
   },

@@ -2,7 +2,7 @@ import { config } from "dotenv";
 import { resolve } from "path";
 config({ path: resolve(import.meta.dirname, "../../../.env") });
 import { Worker } from "bullmq";
-import { createLogger } from "@shopify-tracking/shared";
+import { createLogger } from "@appranks/shared";
 import { BACKGROUND_QUEUE_NAME, getRedisConnection, type ScraperJobData } from "./queue.js";
 import { initWorkerDeps, createProcessJob, runMigrations } from "./process-job.js";
 

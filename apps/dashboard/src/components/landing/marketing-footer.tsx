@@ -14,7 +14,7 @@ export function MarketingFooter() {
               <span className="font-bold text-lg">AppRanks</span>
             </div>
             <p className="text-sm text-muted-foreground">
-              Shopify App Store intelligence platform for app developers.
+              App marketplace intelligence platform for app developers.
             </p>
           </div>
 

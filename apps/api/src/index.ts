@@ -3,7 +3,7 @@ import { resolve } from "path";
 config({ path: resolve(import.meta.dirname, "../../../.env") });
 import Fastify from "fastify";
 import cors from "@fastify/cors";
-import { createDb, accounts, users } from "@shopify-tracking/db";
+import { createDb, accounts, users } from "@appranks/db";
 import { migrate } from "drizzle-orm/postgres-js/migrator";
 import { sql, eq } from "drizzle-orm";
 import bcrypt from "bcryptjs";
@@ -20,6 +20,7 @@ import { integrationRoutes } from "./routes/integrations.js";
 import { liveSearchRoutes } from "./routes/live-search.js";
 import { featuredAppRoutes } from "./routes/featured-apps.js";
 import { researchRoutes } from "./routes/research.js";
+import { platformRoutes } from "./routes/platforms.js";
 
 const databaseUrl = process.env.DATABASE_URL;
 if (!databaseUrl) {
@@ -103,6 +104,7 @@ await app.register(integrationRoutes, { prefix: "/api/integrations" });
 await app.register(liveSearchRoutes, { prefix: "/api/live-search" });
 await app.register(featuredAppRoutes, { prefix: "/api/featured-apps" });
 await app.register(researchRoutes, { prefix: "/api/research-projects" });
+await app.register(platformRoutes, { prefix: "/api/platforms" });
 
 // Error handler
 app.setErrorHandler((error: any, _request, reply) => {

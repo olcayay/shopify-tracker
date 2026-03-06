@@ -1,7 +1,7 @@
-import { eq, desc, sql } from "drizzle-orm";
-import type { Database } from "@shopify-tracking/db";
-import { scrapeRuns, apps, appSnapshots, appFieldChanges, similarAppSightings, categories } from "@shopify-tracking/db";
-import { urls, createLogger } from "@shopify-tracking/shared";
+import { eq, and, desc, sql } from "drizzle-orm";
+import type { Database } from "@appranks/db";
+import { scrapeRuns, apps, appSnapshots, appFieldChanges, similarAppSightings, categories } from "@appranks/db";
+import { urls, createLogger } from "@appranks/shared";
 
 const log = createLogger("app-details-scraper");
 import { HttpClient } from "../http-client.js";
@@ -19,7 +19,7 @@ export class AppDetailsScraper {
   /** Scrape details for all tracked apps */
   async scrapeTracked(triggeredBy?: string, queue?: string): Promise<void> {
     const trackedApps = await this.db
-      .select({ slug: apps.slug, name: apps.name })
+      .select({ id: apps.id, slug: apps.slug, name: apps.name })
       .from(apps)
       .where(eq(apps.isTracked, true));
 
@@ -48,7 +48,7 @@ export class AppDetailsScraper {
 
     for (const app of trackedApps) {
       try {
-        await this.scrapeApp(app.slug, run.id);
+        await this.scrapeApp(app.slug, run.id, triggeredBy);
         itemsScraped++;
       } catch (error) {
         log.error("failed to scrape app", { slug: app.slug, error: String(error) });
@@ -76,19 +76,28 @@ export class AppDetailsScraper {
   async scrapeApp(slug: string, runId?: string, triggeredBy?: string, queue?: string): Promise<void> {
     log.info("scraping app", { slug });
 
-    // Skip if already scraped within 6 hours
-    const [recentSnapshot] = await this.db
-      .select({ scrapedAt: appSnapshots.scrapedAt })
-      .from(appSnapshots)
-      .where(eq(appSnapshots.appSlug, slug))
-      .orderBy(desc(appSnapshots.scrapedAt))
+    // Look up the app's integer ID (or create if needed later)
+    const [existingApp] = await this.db
+      .select({ id: apps.id })
+      .from(apps)
+      .where(eq(apps.slug, slug))
       .limit(1);
 
-    if (recentSnapshot) {
-      const hoursSince = (Date.now() - recentSnapshot.scrapedAt.getTime()) / (1000 * 60 * 60);
-      if (hoursSince < 12) {
-        log.info("skipping recently scraped app", { slug, hoursSince: hoursSince.toFixed(1) });
-        return;
+    // Skip if already scraped within 12 hours
+    if (existingApp) {
+      const [recentSnapshot] = await this.db
+        .select({ scrapedAt: appSnapshots.scrapedAt })
+        .from(appSnapshots)
+        .where(eq(appSnapshots.appId, existingApp.id))
+        .orderBy(desc(appSnapshots.scrapedAt))
+        .limit(1);
+
+      if (recentSnapshot) {
+        const hoursSince = (Date.now() - recentSnapshot.scrapedAt.getTime()) / (1000 * 60 * 60);
+        if (hoursSince < 12) {
+          log.info("skipping recently scraped app", { slug, hoursSince: hoursSince.toFixed(1) });
+          return;
+        }
       }
     }
 
@@ -125,18 +134,31 @@ export class AppDetailsScraper {
         changes.push({ field: "name", oldValue: currentApp.name, newValue: details.app_name });
       }
 
-      const [prevSnapshot] = await this.db
-        .select({
-          appIntroduction: appSnapshots.appIntroduction,
-          appDetails: appSnapshots.appDetails,
-          features: appSnapshots.features,
-          seoTitle: appSnapshots.seoTitle,
-          seoMetaDescription: appSnapshots.seoMetaDescription,
-        })
-        .from(appSnapshots)
-        .where(eq(appSnapshots.appSlug, slug))
-        .orderBy(desc(appSnapshots.scrapedAt))
-        .limit(1);
+      // Get previous snapshot by app ID if we have one
+      let prevSnapshot: {
+        appIntroduction: string;
+        appDetails: string;
+        features: string[];
+        seoTitle: string;
+        seoMetaDescription: string;
+      } | undefined;
+
+      if (existingApp) {
+        const [snap] = await this.db
+          .select({
+            appIntroduction: appSnapshots.appIntroduction,
+            appDetails: appSnapshots.appDetails,
+            features: appSnapshots.features,
+            seoTitle: appSnapshots.seoTitle,
+            seoMetaDescription: appSnapshots.seoMetaDescription,
+          })
+          .from(appSnapshots)
+          .where(eq(appSnapshots.appId, existingApp.id))
+          .orderBy(desc(appSnapshots.scrapedAt))
+          .limit(1);
+
+        prevSnapshot = snap;
+      }
 
       if (prevSnapshot) {
         const fieldMap: Record<string, [string, string]> = {
@@ -157,10 +179,34 @@ export class AppDetailsScraper {
         }
       }
 
+      // Upsert app master record
+      const [upsertedApp] = await this.db
+        .insert(apps)
+        .values({
+          platform: "shopify",
+          slug,
+          name: details.app_name,
+          isTracked: true,
+          launchedDate: details.launched_date,
+          iconUrl: details.icon_url,
+        })
+        .onConflictDoUpdate({
+          target: [apps.platform, apps.slug],
+          set: {
+            name: details.app_name,
+            launchedDate: details.launched_date,
+            iconUrl: details.icon_url,
+            updatedAt: new Date(),
+          },
+        })
+        .returning({ id: apps.id });
+
+      const appId = upsertedApp.id;
+
       if (changes.length > 0) {
         await this.db.insert(appFieldChanges).values(
           changes.map((c) => ({
-            appSlug: slug,
+            appId,
             field: c.field,
             oldValue: c.oldValue,
             newValue: c.newValue,
@@ -170,29 +216,9 @@ export class AppDetailsScraper {
         log.info("detected field changes", { slug, fields: changes.map((c) => c.field) });
       }
 
-      // Upsert app master record
-      await this.db
-        .insert(apps)
-        .values({
-          slug,
-          name: details.app_name,
-          isTracked: true,
-          launchedDate: details.launched_date,
-          iconUrl: details.icon_url,
-        })
-        .onConflictDoUpdate({
-          target: apps.slug,
-          set: {
-            name: details.app_name,
-            launchedDate: details.launched_date,
-            iconUrl: details.icon_url,
-            updatedAt: new Date(),
-          },
-        });
-
       // Insert snapshot
       await this.db.insert(appSnapshots).values({
-        appSlug: slug,
+        appId,
         scrapeRunId: runId,
         scrapedAt: new Date(),
         appIntroduction: details.app_introduction,
@@ -221,6 +247,7 @@ export class AppDetailsScraper {
           await this.db
             .insert(categories)
             .values({
+              platform: "shopify",
               slug: catSlug,
               title: cat.title,
               url: cat.url,
@@ -229,7 +256,7 @@ export class AppDetailsScraper {
               isTracked: false,
               isListingPage: true,
             })
-            .onConflictDoNothing({ target: categories.slug });
+            .onConflictDoNothing({ target: [categories.platform, categories.slug] });
         }
       }
 
@@ -239,28 +266,30 @@ export class AppDetailsScraper {
         const todayStr = new Date().toISOString().slice(0, 10);
         for (const similar of similarApps) {
           // Ensure similar app exists in apps table
-          await this.db
+          const [upsertedSimilar] = await this.db
             .insert(apps)
             .values({
+              platform: "shopify",
               slug: similar.slug,
               name: similar.name,
               iconUrl: similar.icon_url || null,
             })
             .onConflictDoUpdate({
-              target: apps.slug,
+              target: [apps.platform, apps.slug],
               set: {
                 name: similar.name,
                 iconUrl: similar.icon_url || undefined,
                 updatedAt: new Date(),
               },
-            });
+            })
+            .returning({ id: apps.id });
 
-          // Upsert sighting (one per appSlug + similarAppSlug + date)
+          // Upsert sighting (one per appId + similarAppId + date)
           await this.db
             .insert(similarAppSightings)
             .values({
-              appSlug: slug,
-              similarAppSlug: similar.slug,
+              appId,
+              similarAppId: upsertedSimilar.id,
               position: similar.position ?? null,
               seenDate: todayStr,
               firstSeenRunId: runId!,
@@ -269,8 +298,8 @@ export class AppDetailsScraper {
             })
             .onConflictDoUpdate({
               target: [
-                similarAppSightings.appSlug,
-                similarAppSightings.similarAppSlug,
+                similarAppSightings.appId,
+                similarAppSightings.similarAppId,
                 similarAppSightings.seenDate,
               ],
               set: {

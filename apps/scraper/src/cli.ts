@@ -1,8 +1,8 @@
 import { config } from "dotenv";
 import { resolve } from "path";
 config({ path: resolve(import.meta.dirname, "../../../.env") });
-import { createDb } from "@shopify-tracking/db";
-import { trackedKeywords, keywordToSlug, apps } from "@shopify-tracking/db";
+import { createDb } from "@appranks/db";
+import { trackedKeywords, keywordToSlug, apps } from "@appranks/db";
 import { CategoryScraper } from "./scrapers/category-scraper.js";
 import { AppDetailsScraper } from "./scrapers/app-details-scraper.js";
 import { KeywordScraper } from "./scrapers/keyword-scraper.js";
@@ -84,7 +84,7 @@ async function main() {
         .insert(trackedKeywords)
         .values({ keyword, slug: keywordToSlug(keyword) })
         .onConflictDoUpdate({
-          target: trackedKeywords.keyword,
+          target: [trackedKeywords.platform, trackedKeywords.keyword],
           set: { isActive: true, updatedAt: new Date() },
         })
         .returning();
@@ -128,9 +128,9 @@ async function main() {
       }
       await db
         .insert(apps)
-        .values({ slug, name: slug, isTracked: true })
+        .values({ platform: "shopify", slug, name: slug, isTracked: true })
         .onConflictDoUpdate({
-          target: apps.slug,
+          target: [apps.platform, apps.slug],
           set: { isTracked: true, updatedAt: new Date() },
         });
       console.log(`App "${slug}" is now tracked.`);
@@ -147,7 +147,7 @@ async function main() {
         .insert(trackedKeywords)
         .values({ keyword, slug: keywordToSlug(keyword) })
         .onConflictDoUpdate({
-          target: trackedKeywords.keyword,
+          target: [trackedKeywords.platform, trackedKeywords.keyword],
           set: { isActive: true, updatedAt: new Date() },
         });
       console.log(`Keyword "${keyword}" is now tracked.`);
@@ -163,7 +163,7 @@ async function main() {
 }
 
 async function createRun(type: "category" | "app_details" | "keyword_search" | "reviews"): Promise<string> {
-  const { scrapeRuns } = await import("@shopify-tracking/db");
+  const { scrapeRuns } = await import("@appranks/db");
   const [run] = await db
     .insert(scrapeRuns)
     .values({ scraperType: type, status: "running", createdAt: new Date(), startedAt: new Date() })

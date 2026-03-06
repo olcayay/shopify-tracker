@@ -1,6 +1,7 @@
 import type { FastifyPluginAsync } from "fastify";
 import * as cheerio from "cheerio";
 import type { AnyNode } from "domhandler";
+import { getPlatformFromQuery } from "../utils/platform.js";
 
 const USER_AGENTS = [
   "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
@@ -97,6 +98,11 @@ function parseSearchResults(html: string) {
 export const liveSearchRoutes: FastifyPluginAsync = async (app) => {
   // GET /api/live-search?q=keyword — real-time Shopify search
   app.get("/", async (request, reply) => {
+    const platform = getPlatformFromQuery(request.query as Record<string, unknown>);
+    if (platform !== "shopify") {
+      return reply.code(400).send({ error: "Live search is only available for Shopify" });
+    }
+
     const { q = "" } = request.query as { q?: string };
     if (q.length < 1) {
       return reply.code(400).send({ error: "q parameter is required" });

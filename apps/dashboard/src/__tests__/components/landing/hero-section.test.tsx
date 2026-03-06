@@ -47,7 +47,7 @@ describe("HeroSection", () => {
   it("renders the intelligence badge", () => {
     render(<HeroSection />);
     expect(
-      screen.getByText(/Trusted by Shopify app developers/)
+      screen.getByText(/Trusted by app developers/)
     ).toBeInTheDocument();
   });
 });

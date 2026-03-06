@@ -2,8 +2,8 @@ import { describe, it, expect } from "vitest";
 import {
   computeKeywordOpportunity,
   OPPORTUNITY_WEIGHTS,
-} from "@shopify-tracking/shared";
-import type { KeywordSearchApp } from "@shopify-tracking/shared";
+} from "@appranks/shared";
+import type { KeywordSearchApp } from "@appranks/shared";
 
 function makeApp(overrides: Partial<KeywordSearchApp> = {}): KeywordSearchApp {
   return {

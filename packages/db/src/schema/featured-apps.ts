@@ -1,6 +1,7 @@
 import {
   pgTable,
   serial,
+  integer,
   varchar,
   smallint,
   date,
@@ -15,9 +16,9 @@ export const featuredAppSightings = pgTable(
   "featured_app_sightings",
   {
     id: serial("id").primaryKey(),
-    appSlug: varchar("app_slug", { length: 255 })
+    appId: integer("app_id")
       .notNull()
-      .references(() => apps.slug),
+      .references(() => apps.id),
     surface: varchar("surface", { length: 50 }).notNull(),
     surfaceDetail: varchar("surface_detail", { length: 255 }).notNull(),
     sectionHandle: varchar("section_handle", { length: 255 }).notNull(),
@@ -38,9 +39,9 @@ export const featuredAppSightings = pgTable(
       table.surfaceDetail,
       table.seenDate
     ),
-    index("idx_featured_app_date").on(table.appSlug, table.seenDate),
+    index("idx_featured_app_date").on(table.appId, table.seenDate),
     uniqueIndex("idx_featured_unique").on(
-      table.appSlug,
+      table.appId,
       table.sectionHandle,
       table.surfaceDetail,
       table.seenDate

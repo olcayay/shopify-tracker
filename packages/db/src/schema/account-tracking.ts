@@ -37,15 +37,15 @@ export const accountTrackedApps = pgTable(
     accountId: uuid("account_id")
       .notNull()
       .references(() => accounts.id, { onDelete: "cascade" }),
-    appSlug: varchar("app_slug", { length: 255 })
+    appId: integer("app_id")
       .notNull()
-      .references(() => apps.slug),
+      .references(() => apps.id),
     createdAt: timestamp("created_at").notNull().defaultNow(),
   },
   (table) => [
     uniqueIndex("idx_account_tracked_apps_unique").on(
       table.accountId,
-      table.appSlug
+      table.appId
     ),
   ]
 );
@@ -57,9 +57,9 @@ export const accountTrackedKeywords = pgTable(
     accountId: uuid("account_id")
       .notNull()
       .references(() => accounts.id, { onDelete: "cascade" }),
-    trackedAppSlug: varchar("tracked_app_slug", { length: 255 })
+    trackedAppId: integer("tracked_app_id")
       .notNull()
-      .references(() => apps.slug),
+      .references(() => apps.id),
     keywordId: integer("keyword_id")
       .notNull()
       .references(() => trackedKeywords.id),
@@ -68,7 +68,7 @@ export const accountTrackedKeywords = pgTable(
   (table) => [
     uniqueIndex("idx_account_tracked_keywords_unique").on(
       table.accountId,
-      table.trackedAppSlug,
+      table.trackedAppId,
       table.keywordId
     ),
   ]
@@ -81,15 +81,15 @@ export const accountStarredCategories = pgTable(
     accountId: uuid("account_id")
       .notNull()
       .references(() => accounts.id, { onDelete: "cascade" }),
-    categorySlug: varchar("category_slug", { length: 255 })
+    categoryId: integer("category_id")
       .notNull()
-      .references(() => categories.slug),
+      .references(() => categories.id),
     createdAt: timestamp("created_at").notNull().defaultNow(),
   },
   (table) => [
     uniqueIndex("idx_account_starred_categories_unique").on(
       table.accountId,
-      table.categorySlug
+      table.categoryId
     ),
   ]
 );
@@ -101,20 +101,20 @@ export const accountCompetitorApps = pgTable(
     accountId: uuid("account_id")
       .notNull()
       .references(() => accounts.id, { onDelete: "cascade" }),
-    trackedAppSlug: varchar("tracked_app_slug", { length: 255 })
+    trackedAppId: integer("tracked_app_id")
       .notNull()
-      .references(() => apps.slug),
-    appSlug: varchar("app_slug", { length: 255 })
+      .references(() => apps.id),
+    competitorAppId: integer("competitor_app_id")
       .notNull()
-      .references(() => apps.slug),
+      .references(() => apps.id),
     sortOrder: integer("sort_order").notNull().default(0),
     createdAt: timestamp("created_at").notNull().defaultNow(),
   },
   (table) => [
     uniqueIndex("idx_account_competitor_apps_unique").on(
       table.accountId,
-      table.trackedAppSlug,
-      table.appSlug
+      table.trackedAppId,
+      table.competitorAppId
     ),
   ]
 );

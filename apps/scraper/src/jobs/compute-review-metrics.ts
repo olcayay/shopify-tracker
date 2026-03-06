@@ -1,12 +1,12 @@
-import { eq, sql } from "drizzle-orm";
-import type { Database } from "@shopify-tracking/db";
-import { scrapeRuns, apps, appReviewMetrics } from "@shopify-tracking/db";
-import { createLogger } from "@shopify-tracking/shared";
+import { eq, and, sql } from "drizzle-orm";
+import type { Database } from "@appranks/db";
+import { scrapeRuns, apps, appReviewMetrics } from "@appranks/db";
+import { createLogger, type PlatformId } from "@appranks/shared";
 
 const log = createLogger("compute-review-metrics");
 
 interface ReviewCountRow {
-  app_slug: string;
+  app_id: number;
   rating_count: number | null;
   average_rating: string | null;
   v7d: number;
@@ -47,7 +47,7 @@ function computeMetrics(v7d: number, v30d: number, v90d: number): ReviewVelocity
   return { v7d, v30d, v90d, accMicro, accMacro, momentum };
 }
 
-export async function computeReviewMetrics(db: Database, triggeredBy: string, queue?: string): Promise<void> {
+export async function computeReviewMetrics(db: Database, triggeredBy: string, queue?: string, platform: PlatformId = "shopify"): Promise<void> {
   const startTime = Date.now();
 
   // Create scrape run record
@@ -64,11 +64,11 @@ export async function computeReviewMetrics(db: Database, triggeredBy: string, qu
     .returning();
 
   try {
-    // Get all tracked app slugs
+    // Get all tracked app IDs (filtered by platform)
     const trackedApps = await db
-      .select({ slug: apps.slug })
+      .select({ id: apps.id, slug: apps.slug })
       .from(apps)
-      .where(eq(apps.isTracked, true));
+      .where(and(eq(apps.isTracked, true), eq(apps.platform, platform)));
 
     if (trackedApps.length === 0) {
       log.info("no tracked apps found");
@@ -83,14 +83,14 @@ export async function computeReviewMetrics(db: Database, triggeredBy: string, qu
       return;
     }
 
-    const slugs = trackedApps.map((a) => a.slug);
-    const slugList = sql.join(slugs.map((s) => sql`${s}`), sql`, `);
+    const appIds = trackedApps.map((a) => a.id);
+    const idList = sql.join(appIds.map((id) => sql`${id}`), sql`, `);
 
     // Count reviews in 7d/30d/90d windows directly from reviews table
     // Also get current ratingCount + averageRating from latest snapshot
     const rows: ReviewCountRow[] = await db.execute(sql`
       SELECT
-        a.slug AS app_slug,
+        a.id AS app_id,
         snap.rating_count,
         snap.average_rating,
         COALESCE(rv.v7d, 0)::int AS v7d,
@@ -100,7 +100,7 @@ export async function computeReviewMetrics(db: Database, triggeredBy: string, qu
       LEFT JOIN LATERAL (
         SELECT rating_count, average_rating
         FROM app_snapshots
-        WHERE app_slug = a.slug
+        WHERE app_id = a.id
         ORDER BY scraped_at DESC
         LIMIT 1
       ) snap ON true
@@ -110,10 +110,10 @@ export async function computeReviewMetrics(db: Database, triggeredBy: string, qu
           COUNT(*) FILTER (WHERE review_date >= CURRENT_DATE - 30) AS v30d,
           COUNT(*) FILTER (WHERE review_date >= CURRENT_DATE - 90) AS v90d
         FROM reviews
-        WHERE app_slug = a.slug
+        WHERE app_id = a.id
           AND review_date >= CURRENT_DATE - 90
       ) rv ON true
-      WHERE a.slug IN (${slugList})
+      WHERE a.id IN (${idList})
     `).then((res: any) => (res as any).rows ?? res);
 
     const today = new Date().toISOString().slice(0, 10);
@@ -125,7 +125,7 @@ export async function computeReviewMetrics(db: Database, triggeredBy: string, qu
       await db
         .insert(appReviewMetrics)
         .values({
-          appSlug: row.app_slug,
+          appId: row.app_id,
           computedAt: today,
           ratingCount: row.rating_count,
           averageRating: row.average_rating,
@@ -137,7 +137,7 @@ export async function computeReviewMetrics(db: Database, triggeredBy: string, qu
           momentum: metrics.momentum,
         })
         .onConflictDoUpdate({
-          target: [appReviewMetrics.appSlug, appReviewMetrics.computedAt],
+          target: [appReviewMetrics.appId, appReviewMetrics.computedAt],
           set: {
             ratingCount: row.rating_count,
             averageRating: row.average_rating,
@@ -154,14 +154,14 @@ export async function computeReviewMetrics(db: Database, triggeredBy: string, qu
     }
 
     const durationMs = Date.now() - startTime;
-    log.info("review metrics computed", { computed, durationMs });
+    log.info("review metrics computed", { platform, computed, durationMs });
 
     await db
       .update(scrapeRuns)
       .set({
         status: "completed",
         completedAt: new Date(),
-        metadata: { apps_computed: computed, duration_ms: durationMs },
+        metadata: { platform, apps_computed: computed, duration_ms: durationMs },
       })
       .where(eq(scrapeRuns.id, run.id));
   } catch (error) {

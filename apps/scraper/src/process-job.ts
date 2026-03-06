@@ -1,8 +1,8 @@
 import type { Job } from "bullmq";
-import { createDb, scrapeRuns } from "@shopify-tracking/db";
+import { createDb, scrapeRuns } from "@appranks/db";
 import { eq } from "drizzle-orm";
 import { migrate } from "drizzle-orm/postgres-js/migrator";
-import { createLogger } from "@shopify-tracking/shared";
+import { createLogger, isPlatformId, type PlatformId } from "@appranks/shared";
 import { enqueueScraperJob, type ScraperJobData } from "./queue.js";
 import { CategoryScraper } from "./scrapers/category-scraper.js";
 import { AppDetailsScraper } from "./scrapers/app-details-scraper.js";
@@ -46,7 +46,8 @@ export function createProcessJob(db: ReturnType<typeof createDb>, httpClient: Ht
 
   return async function processJob(job: Job<ScraperJobData>): Promise<void> {
     const { type, triggeredBy } = job.data;
-    log.info("processing job", { jobId: job.id, type, triggeredBy });
+    const platform: PlatformId = (job.data.platform && isPlatformId(job.data.platform)) ? job.data.platform as PlatformId : "shopify";
+    log.info("processing job", { jobId: job.id, type, triggeredBy, platform });
 
     const opts = job.data.options;
     const pageOptions = opts?.pages !== undefined ? { pages: opts.pages } : undefined;
@@ -100,7 +101,7 @@ export function createProcessJob(db: ReturnType<typeof createDb>, httpClient: Ht
           // Cascade: enqueue review jobs for all tracked apps
           if (opts?.scrapeReviews) {
             const { eq: eqOp } = await import("drizzle-orm");
-            const { apps: appsTable } = await import("@shopify-tracking/db");
+            const { apps: appsTable } = await import("@appranks/db");
             const trackedApps = await db
               .select({ slug: appsTable.slug })
               .from(appsTable)
@@ -131,7 +132,7 @@ export function createProcessJob(db: ReturnType<typeof createDb>, httpClient: Ht
         if (job.data.keyword) {
           // Single keyword scrape — find the keyword row and scrape it
           const { eq } = await import("drizzle-orm");
-          const { trackedKeywords, scrapeRuns } = await import("@shopify-tracking/db");
+          const { trackedKeywords, scrapeRuns } = await import("@appranks/db");
           const [kw] = await db
             .select()
             .from(trackedKeywords)
@@ -198,7 +199,7 @@ export function createProcessJob(db: ReturnType<typeof createDb>, httpClient: Ht
         if (job.data.keyword) {
           // Single keyword suggestion scrape
           const { eq } = await import("drizzle-orm");
-          const { trackedKeywords, scrapeRuns } = await import("@shopify-tracking/db");
+          const { trackedKeywords, scrapeRuns } = await import("@appranks/db");
           const [kw] = await db
             .select()
             .from(trackedKeywords)
@@ -268,31 +269,31 @@ export function createProcessJob(db: ReturnType<typeof createDb>, httpClient: Ht
         }
         // Always recompute review metrics after reviews are scraped
         const { computeReviewMetrics } = await import("./jobs/compute-review-metrics.js");
-        await computeReviewMetrics(db, `${triggeredBy}:reviews`, queueName);
+        await computeReviewMetrics(db, `${triggeredBy}:reviews`, queueName, platform);
         break;
       }
 
       case "compute_review_metrics": {
         const { computeReviewMetrics } = await import("./jobs/compute-review-metrics.js");
-        await computeReviewMetrics(db, triggeredBy, queueName);
+        await computeReviewMetrics(db, triggeredBy, queueName, platform);
         break;
       }
 
       case "compute_similarity_scores": {
         const { computeSimilarityScores } = await import("./jobs/compute-similarity-scores.js");
-        await computeSimilarityScores(db, triggeredBy, queueName);
+        await computeSimilarityScores(db, triggeredBy, queueName, platform);
         break;
       }
 
       case "backfill_categories": {
         const { backfillCategories } = await import("./jobs/backfill-categories.js");
-        await backfillCategories(db, triggeredBy, queueName);
+        await backfillCategories(db, triggeredBy, queueName, platform);
         break;
       }
 
       case "compute_app_scores": {
         const { computeAppScores } = await import("./jobs/compute-app-scores.js");
-        await computeAppScores(db, triggeredBy, queueName);
+        await computeAppScores(db, triggeredBy, queueName, platform);
         break;
       }
 
@@ -301,7 +302,7 @@ export function createProcessJob(db: ReturnType<typeof createDb>, httpClient: Ht
         const { buildDigestHtml, buildDigestSubject } = await import("./email/digest-template.js");
         const { sendMail } = await import("./email/mailer.js");
         const { eq: eqOp } = await import("drizzle-orm");
-        const { users: usersTable } = await import("@shopify-tracking/db");
+        const { users: usersTable } = await import("@appranks/db");
 
         // Single-user digest (manual trigger from admin)
         if (job.data.userId) {

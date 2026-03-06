@@ -12,6 +12,8 @@ export interface KeywordSearchApp {
   is_sponsored?: boolean;
   is_built_in?: boolean;
   is_built_for_shopify?: boolean;
+  /** Generic badge array (replaces is_built_for_shopify / is_built_in for cross-platform use) */
+  badges?: string[];
 }
 
 /** Parsed data from a keyword search page */

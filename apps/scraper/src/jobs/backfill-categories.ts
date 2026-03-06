@@ -1,7 +1,7 @@
-import { eq, desc, inArray } from "drizzle-orm";
-import type { Database } from "@shopify-tracking/db";
-import { scrapeRuns, apps, appSnapshots, categories } from "@shopify-tracking/db";
-import { createLogger } from "@shopify-tracking/shared";
+import { eq, and, desc, inArray } from "drizzle-orm";
+import type { Database } from "@appranks/db";
+import { scrapeRuns, apps, appSnapshots, categories } from "@appranks/db";
+import { createLogger, type PlatformId } from "@appranks/shared";
 
 const log = createLogger("backfill-categories");
 
@@ -9,7 +9,7 @@ const log = createLogger("backfill-categories");
  * One-time backfill: read category data from existing app snapshots
  * and register any missing categories in the categories table.
  */
-export async function backfillCategories(db: Database, triggeredBy: string, queue?: string): Promise<void> {
+export async function backfillCategories(db: Database, triggeredBy: string, queue?: string, platform: PlatformId = "shopify"): Promise<void> {
   const startTime = Date.now();
 
   const [run] = await db
@@ -25,11 +25,11 @@ export async function backfillCategories(db: Database, triggeredBy: string, queu
     .returning();
 
   try {
-    // Get latest snapshot per tracked app
+    // Get latest snapshot per tracked app (filtered by platform)
     const trackedApps = await db
-      .select({ slug: apps.slug })
+      .select({ id: apps.id, slug: apps.slug })
       .from(apps)
-      .where(eq(apps.isTracked, true));
+      .where(and(eq(apps.isTracked, true), eq(apps.platform, platform)));
 
     // Collect all unique category slugs from snapshots
     const categoryMap = new Map<string, { title: string; url: string }>();
@@ -38,16 +38,26 @@ export async function backfillCategories(db: Database, triggeredBy: string, queu
       const [snapshot] = await db
         .select({ categories: appSnapshots.categories })
         .from(appSnapshots)
-        .where(eq(appSnapshots.appSlug, app.slug))
+        .where(eq(appSnapshots.appId, app.id))
         .orderBy(desc(appSnapshots.scrapedAt))
         .limit(1);
 
       if (!snapshot?.categories || !Array.isArray(snapshot.categories)) continue;
 
       for (const cat of snapshot.categories as { title: string; url: string }[]) {
-        const slugMatch = cat.url?.match(/\/categories\/([^/]+)/);
-        if (!slugMatch) continue;
-        const catSlug = slugMatch[1];
+        // Extract slug based on platform URL patterns
+        let catSlug: string | null = null;
+        if (platform === "shopify") {
+          const slugMatch = cat.url?.match(/\/categories\/([^/]+)/);
+          catSlug = slugMatch?.[1] ?? null;
+        } else if (platform === "salesforce") {
+          const slugMatch = cat.url?.match(/\/collection\/([^/]+)/);
+          catSlug = slugMatch?.[1] ?? null;
+        } else if (platform === "canva") {
+          const slugMatch = cat.url?.match(/\/apps\/collection\/([^/]+)/);
+          catSlug = slugMatch?.[1] ?? null;
+        }
+        if (!catSlug) continue;
         if (!categoryMap.has(catSlug)) {
           categoryMap.set(catSlug, { title: cat.title || catSlug, url: cat.url });
         }
@@ -76,6 +86,7 @@ export async function backfillCategories(db: Database, triggeredBy: string, queu
       await db
         .insert(categories)
         .values({
+          platform,
           slug: catSlug,
           title: data.title,
           url: data.url,
@@ -84,7 +95,7 @@ export async function backfillCategories(db: Database, triggeredBy: string, queu
           isTracked: false,
           isListingPage: true,
         })
-        .onConflictDoNothing({ target: categories.slug });
+        .onConflictDoNothing({ target: [categories.platform, categories.slug] });
       registered++;
     }
 
@@ -96,6 +107,7 @@ export async function backfillCategories(db: Database, triggeredBy: string, queu
         status: "completed",
         completedAt: new Date(),
         metadata: {
+          platform,
           apps_checked: trackedApps.length,
           categories_found: categoryMap.size,
           categories_registered: registered,
@@ -106,6 +118,7 @@ export async function backfillCategories(db: Database, triggeredBy: string, queu
       .where(eq(scrapeRuns.id, run.id));
 
     log.info("backfill complete", {
+      platform,
       appsChecked: trackedApps.length,
       found: categoryMap.size,
       registered,

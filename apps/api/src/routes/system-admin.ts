@@ -1,5 +1,5 @@
 import type { FastifyPluginAsync } from "fastify";
-import { eq, desc, sql, and } from "drizzle-orm";
+import { eq, desc, sql, and, inArray } from "drizzle-orm";
 import { Queue } from "bullmq";
 import {
   createDb,
@@ -25,7 +25,7 @@ import {
   researchProjects,
   researchProjectKeywords,
   researchProjectCompetitors,
-} from "@shopify-tracking/db";
+} from "@appranks/db";
 import { generateAccessToken } from "./auth.js";
 import type { JwtPayload } from "../middleware/auth.js";
 
@@ -178,15 +178,15 @@ export const systemAdminRoutes: FastifyPluginAsync = async (app) => {
 
     const trackedAppsList = await db
       .select({
-        appSlug: accountTrackedApps.appSlug,
+        appSlug: apps.slug,
         appName: apps.name,
         lastScrapedAt: sql<string | null>`(
           SELECT max(scraped_at) FROM app_snapshots
-          WHERE app_slug = "account_tracked_apps"."app_slug"
+          WHERE app_id = ${accountTrackedApps.appId}
         )`,
       })
       .from(accountTrackedApps)
-      .innerJoin(apps, eq(apps.slug, accountTrackedApps.appSlug))
+      .innerJoin(apps, eq(apps.id, accountTrackedApps.appId))
       .where(eq(accountTrackedApps.accountId, id));
 
     const trackedKeywordsList = await db
@@ -207,15 +207,15 @@ export const systemAdminRoutes: FastifyPluginAsync = async (app) => {
 
     const competitorAppsList = await db
       .select({
-        appSlug: accountCompetitorApps.appSlug,
+        appSlug: apps.slug,
         appName: apps.name,
         lastScrapedAt: sql<string | null>`(
           SELECT max(scraped_at) FROM app_snapshots
-          WHERE app_slug = "account_competitor_apps"."app_slug"
+          WHERE app_id = ${accountCompetitorApps.competitorAppId}
         )`,
       })
       .from(accountCompetitorApps)
-      .innerJoin(apps, eq(apps.slug, accountCompetitorApps.appSlug))
+      .innerJoin(apps, eq(apps.id, accountCompetitorApps.competitorAppId))
       .where(eq(accountCompetitorApps.accountId, id));
 
     const trackedFeaturesList = await db
@@ -459,16 +459,16 @@ export const systemAdminRoutes: FastifyPluginAsync = async (app) => {
     // Get user's account tracked items
     const trackedAppsList = await db
       .select({
-        appSlug: accountTrackedApps.appSlug,
+        appSlug: apps.slug,
         appName: apps.name,
         createdAt: accountTrackedApps.createdAt,
         lastScrapedAt: sql<string | null>`(
           SELECT max(scraped_at) FROM app_snapshots
-          WHERE app_slug = "account_tracked_apps"."app_slug"
+          WHERE app_id = "account_tracked_apps"."app_id"
         )`,
       })
       .from(accountTrackedApps)
-      .innerJoin(apps, eq(apps.slug, accountTrackedApps.appSlug))
+      .innerJoin(apps, eq(apps.id, accountTrackedApps.appId))
       .where(eq(accountTrackedApps.accountId, user.accountId));
 
     const trackedKeywordsList = await db
@@ -490,16 +490,16 @@ export const systemAdminRoutes: FastifyPluginAsync = async (app) => {
 
     const competitorAppsList = await db
       .select({
-        appSlug: accountCompetitorApps.appSlug,
+        appSlug: apps.slug,
         appName: apps.name,
         createdAt: accountCompetitorApps.createdAt,
         lastScrapedAt: sql<string | null>`(
           SELECT max(scraped_at) FROM app_snapshots
-          WHERE app_slug = "account_competitor_apps"."app_slug"
+          WHERE app_id = "account_competitor_apps"."competitor_app_id"
         )`,
       })
       .from(accountCompetitorApps)
-      .innerJoin(apps, eq(apps.slug, accountCompetitorApps.appSlug))
+      .innerJoin(apps, eq(apps.id, accountCompetitorApps.competitorAppId))
       .where(eq(accountCompetitorApps.accountId, user.accountId));
 
     const trackedFeaturesList = await db
@@ -612,24 +612,24 @@ export const systemAdminRoutes: FastifyPluginAsync = async (app) => {
         if (itemsScraped > 0 && itemsScraped <= 10) {
           if (run.scraperType === "app_details") {
             const snapshots = await db
-              .select({ appSlug: appSnapshots.appSlug })
+              .select({ appId: appSnapshots.appId })
               .from(appSnapshots)
               .where(eq(appSnapshots.scrapeRunId, run.id));
             if (snapshots.length > 0) {
               const appRows = await db
-                .select({ slug: apps.slug, name: apps.name })
+                .select({ id: apps.id, slug: apps.slug, name: apps.name })
                 .from(apps)
                 .where(
-                  sql`${apps.slug} IN (${sql.join(
-                    snapshots.map((s) => sql`${s.appSlug}`),
-                    sql`,`
-                  )})`
+                  inArray(apps.id, snapshots.map((s) => s.appId))
                 );
-              const nameMap = new Map(appRows.map((a) => [a.slug, a.name]));
-              assets = snapshots.map((s) => ({
-                name: nameMap.get(s.appSlug) || s.appSlug,
-                href: `/apps/${s.appSlug}`,
-              }));
+              const idToApp = new Map(appRows.map((a) => [a.id, a]));
+              assets = snapshots.map((s) => {
+                const appInfo = idToApp.get(s.appId);
+                return {
+                  name: appInfo?.name || `app#${s.appId}`,
+                  href: `/apps/${appInfo?.slug || s.appId}`,
+                };
+              });
             }
           } else if (run.scraperType === "keyword_search") {
             const snapshots = await db
@@ -662,16 +662,16 @@ export const systemAdminRoutes: FastifyPluginAsync = async (app) => {
           } else if (run.scraperType === "category") {
             const snapshots = await db
               .select({
-                categorySlug: categorySnapshots.categorySlug,
+                categorySlug: categories.slug,
                 title: categories.title,
               })
               .from(categorySnapshots)
-              .leftJoin(categories, eq(categories.slug, categorySnapshots.categorySlug))
+              .leftJoin(categories, eq(categories.id, categorySnapshots.categoryId))
               .where(eq(categorySnapshots.scrapeRunId, run.id))
               .limit(10);
             assets = snapshots.map((s) => ({
-              name: s.title || s.categorySlug,
-              href: `/categories/${s.categorySlug}`,
+              name: s.title || s.categorySlug || "unknown",
+              href: `/categories/${s.categorySlug || "unknown"}`,
             }));
           }
         }
@@ -949,6 +949,17 @@ export const systemAdminRoutes: FastifyPluginAsync = async (app) => {
     async (request) => {
       const { slug } = request.params;
 
+      // Look up app ID from slug
+      const [appRow] = await db
+        .select({ id: apps.id })
+        .from(apps)
+        .where(eq(apps.slug, slug))
+        .limit(1);
+
+      if (!appRow) {
+        return [];
+      }
+
       const trackedBy = await db
         .select({
           accountId: accountTrackedApps.accountId,
@@ -957,7 +968,7 @@ export const systemAdminRoutes: FastifyPluginAsync = async (app) => {
         })
         .from(accountTrackedApps)
         .innerJoin(accounts, eq(accounts.id, accountTrackedApps.accountId))
-        .where(eq(accountTrackedApps.appSlug, slug));
+        .where(eq(accountTrackedApps.appId, appRow.id));
 
       const competitorBy = await db
         .select({
@@ -967,7 +978,7 @@ export const systemAdminRoutes: FastifyPluginAsync = async (app) => {
         })
         .from(accountCompetitorApps)
         .innerJoin(accounts, eq(accounts.id, accountCompetitorApps.accountId))
-        .where(eq(accountCompetitorApps.appSlug, slug));
+        .where(eq(accountCompetitorApps.competitorAppId, appRow.id));
 
       return [...trackedBy, ...competitorBy];
     }

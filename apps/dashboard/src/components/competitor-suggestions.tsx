@@ -2,8 +2,11 @@
 
 import { useState, useCallback, useEffect } from "react";
 import Link from "next/link";
+import { useParams } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
 import { Sparkles, Plus, Check, ExternalLink, ChevronDown, ChevronUp } from "lucide-react";
+import { buildExternalAppUrl, getPlatformName } from "@/lib/platform-urls";
+import type { PlatformId } from "@appranks/shared";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
@@ -75,6 +78,7 @@ export function CompetitorSuggestions({
   onCompetitorAdded: (slug: string, name: string) => void;
   prominent?: boolean;
 }) {
+  const { platform } = useParams();
   const { fetchWithAuth } = useAuth();
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -231,7 +235,7 @@ export function CompetitorSuggestions({
 
                     <div className="min-w-0 flex-1">
                       <Link
-                        href={`/apps/${s.appSlug}`}
+                        href={`/${platform}/apps/${s.appSlug}`}
                         className="text-sm font-medium text-primary hover:underline truncate block"
                       >
                         {s.appName}
@@ -251,11 +255,11 @@ export function CompetitorSuggestions({
 
                     {/* Shopify link */}
                     <a
-                      href={`https://apps.shopify.com/${s.appSlug}`}
+                      href={buildExternalAppUrl(platform as PlatformId, s.appSlug)}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="p-1 rounded hover:bg-accent shrink-0"
-                      title="View on Shopify"
+                      title={`View on ${getPlatformName(platform as PlatformId)}`}
                     >
                       <ExternalLink className="h-3.5 w-3.5 text-muted-foreground" />
                     </a>

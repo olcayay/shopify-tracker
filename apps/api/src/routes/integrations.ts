@@ -1,6 +1,6 @@
 import type { FastifyPluginAsync } from "fastify";
 import { sql } from "drizzle-orm";
-import { createDb, apps } from "@shopify-tracking/db";
+import { createDb, apps } from "@appranks/db";
 
 type Db = ReturnType<typeof createDb>;
 

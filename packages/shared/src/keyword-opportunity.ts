@@ -10,12 +10,16 @@ export interface TopAppInfo {
   logoUrl: string;
   rating: number;
   reviews: number;
+  /** @deprecated Use badges instead. Kept for backward compatibility. */
   isBuiltForShopify: boolean;
+  badges?: string[];
 }
 
 export interface KeywordOpportunityStats {
   totalResults: number;
+  /** @deprecated Use certifiedCount instead. Kept for backward compatibility. */
   bfsCount: number;
+  certifiedCount: number;
   count1000: number;
   count100: number;
   top1Reviews: number;
@@ -59,7 +63,7 @@ export const OPPORTUNITY_WEIGHTS = {
 const ROOM_CAP = 20_000;
 const DEMAND_CAP = 1_000;
 const MATURITY_APP_CAP = 12;
-const PAGE_SIZE = 24;
+const DEFAULT_PAGE_SIZE = 24;
 const RATING_FLOOR = 3.5;
 const RATING_CEIL = 5.0;
 
@@ -74,13 +78,14 @@ function clamp01(v: number): number {
 export function computeKeywordOpportunity(
   results: KeywordSearchApp[],
   totalResults: number | null,
+  pageSize: number = DEFAULT_PAGE_SIZE,
 ): KeywordOpportunityMetrics {
   // Separate organic vs sponsored/built-in
   const organic = results.filter(
     (r) => !r.is_sponsored && !r.is_built_in,
   );
 
-  const firstPage = organic.slice(0, PAGE_SIZE);
+  const firstPage = organic.slice(0, pageSize);
   const top4 = organic.slice(0, 4);
   const top1 = organic[0] ?? null;
 
@@ -109,7 +114,10 @@ export function computeKeywordOpportunity(
         firstPageRatings.length
       : null;
 
-  const bfsCount = firstPage.filter((a) => a.is_built_for_shopify).length;
+  // certifiedCount: apps with any badge OR the legacy is_built_for_shopify flag
+  const certifiedCount = firstPage.filter(
+    (a) => (a.badges?.length ?? 0) > 0 || a.is_built_for_shopify,
+  ).length;
   const count1000 = firstPage.filter((a) => a.rating_count >= 1000).length;
   const count100 = firstPage.filter((a) => a.rating_count >= 100).length;
 
@@ -124,7 +132,8 @@ export function computeKeywordOpportunity(
 
   const stats: KeywordOpportunityStats = {
     totalResults: safeTotalResults,
-    bfsCount,
+    bfsCount: certifiedCount, // backward compat alias
+    certifiedCount,
     count1000,
     count100,
     top1Reviews,
@@ -141,12 +150,12 @@ export function computeKeywordOpportunity(
   const demand = clamp01(safeTotalResults / DEMAND_CAP);
   const maturity = 1 - clamp01(count1000 / MATURITY_APP_CAP);
 
-  const bfsFactor = clamp01(1 - bfsCount / PAGE_SIZE);
+  const certifiedFactor = clamp01(1 - certifiedCount / pageSize);
   const ratingFactor =
     top4AvgRating == null
       ? 0.5
       : clamp01(1 - (top4AvgRating - RATING_FLOOR) / (RATING_CEIL - RATING_FLOOR));
-  const quality = clamp01(bfsFactor * ratingFactor);
+  const quality = clamp01(certifiedFactor * ratingFactor);
 
   const scores: KeywordOpportunityScores = {
     room,
@@ -171,6 +180,7 @@ export function computeKeywordOpportunity(
     rating: a.average_rating,
     reviews: a.rating_count,
     isBuiltForShopify: !!a.is_built_for_shopify,
+    badges: a.badges,
   }));
 
   return { opportunityScore, scores, stats, topApps };

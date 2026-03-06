@@ -35,6 +35,7 @@ export interface Account {
     maxCompetitorApps: number;
     maxUsers: number;
     maxResearchProjects: number;
+    maxPlatforms: number;
   } | null;
   limits: {
     maxTrackedApps: number;
@@ -42,6 +43,7 @@ export interface Account {
     maxCompetitorApps: number;
     maxUsers: number;
     maxResearchProjects: number;
+    maxPlatforms: number;
   };
   usage: {
     trackedApps: number;
@@ -50,7 +52,9 @@ export interface Account {
     starredFeatures: number;
     users: number;
     researchProjects: number;
+    platforms: number;
   };
+  enabledPlatforms: string[];
 }
 
 export interface ImpersonationState {
@@ -187,7 +191,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (res.ok) {
         const data = await res.json();
         setUser(data.user);
-        setAccount(data.account);
+        setAccount({
+          ...data.account,
+          enabledPlatforms: data.enabledPlatforms ?? ["shopify"],
+        });
         if (data.impersonation) {
           setImpersonation(data.impersonation);
         } else {
@@ -226,7 +233,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setCookie("refresh_token", data.refreshToken, 7 * 86400);
     setUser(data.user);
     await refreshUser();
-    router.push("/overview");
+    router.push("/shopify/overview");
     router.refresh();
   };
 
@@ -253,7 +260,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setCookie("refresh_token", data.refreshToken, 7 * 86400);
     setUser(data.user);
     await refreshUser();
-    router.push("/overview");
+    router.push("/shopify/overview");
     router.refresh();
   };
 

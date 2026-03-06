@@ -17,11 +17,11 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: {
-    default: "AppRanks — Shopify App Store Intelligence",
+    default: "AppRanks — App Marketplace Intelligence",
     template: "%s | AppRanks",
   },
   description:
-    "Track rankings, monitor competitors, optimize keywords. The all-in-one intelligence platform for Shopify app developers.",
+    "Track rankings, monitor competitors, and optimize your app store presence across multiple marketplaces.",
 };
 
 export default function RootLayout({

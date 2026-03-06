@@ -1,11 +1,11 @@
 import { eq } from "drizzle-orm";
-import type { Database } from "@shopify-tracking/db";
+import type { Database } from "@appranks/db";
 import {
   scrapeRuns,
   trackedKeywords,
   keywordAutoSuggestions,
-} from "@shopify-tracking/db";
-import { urls, createLogger } from "@shopify-tracking/shared";
+} from "@appranks/db";
+import { urls, createLogger } from "@appranks/shared";
 import { HttpClient } from "../http-client.js";
 
 const log = createLogger("keyword-suggestion-scraper");

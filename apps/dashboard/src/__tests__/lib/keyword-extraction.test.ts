@@ -4,7 +4,7 @@ import {
   extractKeywordsFromAppMetadata,
   KEYWORD_STOP_WORDS,
   FIELD_WEIGHTS,
-} from "@shopify-tracking/shared";
+} from "@appranks/shared";
 
 describe("KEYWORD_STOP_WORDS", () => {
   it("includes common English stop words", () => {

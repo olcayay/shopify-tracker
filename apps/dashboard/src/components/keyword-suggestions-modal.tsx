@@ -1,7 +1,10 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import { useParams } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
+import { buildExternalSearchUrl, getPlatformName } from "@/lib/platform-urls";
+import type { PlatformId } from "@appranks/shared";
 import { Badge } from "@/components/ui/badge";
 import { Lightbulb, X, Plus, Check, ExternalLink } from "lucide-react";
 
@@ -30,6 +33,7 @@ export function KeywordSuggestionsModal({
   onClose: () => void;
   onKeywordAdded?: (keywordId?: number, scraperEnqueued?: boolean) => void;
 }) {
+  const { platform } = useParams();
   const { fetchWithAuth } = useAuth();
   const [suggestions, setSuggestions] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
@@ -164,11 +168,11 @@ export function KeywordSuggestionsModal({
               >
                 <span className="flex-1 text-sm">{s}</span>
                 <a
-                  href={`https://apps.shopify.com/search?q=${encodeURIComponent(s)}`}
+                  href={buildExternalSearchUrl((platform as PlatformId) || "shopify", s)}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="p-1 rounded hover:bg-accent shrink-0"
-                  title="Search on Shopify"
+                  title={`Search on ${getPlatformName((platform as PlatformId) || "shopify")}`}
                 >
                   <ExternalLink className="h-3.5 w-3.5 text-muted-foreground" />
                 </a>

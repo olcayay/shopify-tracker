@@ -2,11 +2,14 @@
 
 import { useState, useRef, useEffect, useCallback } from "react";
 import Link from "next/link";
+import { useParams } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Search, X, ExternalLink, Plus } from "lucide-react";
+import { buildExternalSearchUrl, getPlatformName } from "@/lib/platform-urls";
+import type { PlatformId } from "@appranks/shared";
 
 interface KeywordResult {
   id: number;
@@ -31,6 +34,7 @@ export function KeywordSearchModal({
 }: {
   trackedAppSlug?: string;
 } = {}) {
+  const { platform } = useParams();
   const { fetchWithAuth, refreshUser, user, account } = useAuth();
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
@@ -248,7 +252,7 @@ export function KeywordSearchModal({
                     className="flex items-center justify-between px-4 py-3 border-b last:border-0 hover:bg-accent/50 transition-colors"
                   >
                     <Link
-                      href={`/keywords/${kw.slug}`}
+                      href={`/${platform}/keywords/${kw.slug}`}
                       onClick={() => setOpen(false)}
                       className="flex-1 min-w-0"
                     >
@@ -276,11 +280,11 @@ export function KeywordSearchModal({
                         </Button>
                       ) : null}
                       <a
-                        href={`https://apps.shopify.com/search?q=${encodeURIComponent(kw.keyword)}`}
+                        href={buildExternalSearchUrl(platform as PlatformId, kw.keyword)}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="p-1 rounded hover:bg-accent"
-                        title="Search on Shopify"
+                        title={`Search on ${getPlatformName(platform as PlatformId)}`}
                       >
                         <ExternalLink className="h-3.5 w-3.5 text-muted-foreground" />
                       </a>

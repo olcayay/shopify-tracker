@@ -1,5 +1,5 @@
 {
-  "name": "@shopify-tracking/api",
+  "name": "@appranks/api",
   "version": "0.0.1",
   "private": true,
   "type": "module",
@@ -14,8 +14,8 @@
   "dependencies": {
     "@fastify/cookie": "^11.0.2",
     "@fastify/cors": "^11.0.0",
-    "@shopify-tracking/db": "*",
-    "@shopify-tracking/shared": "*",
+    "@appranks/db": "*",
+    "@appranks/shared": "*",
     "bcryptjs": "^3.0.3",
     "bullmq": "^5.0.0",
     "cheerio": "^1.2.0",

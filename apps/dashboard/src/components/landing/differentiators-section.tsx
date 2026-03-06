@@ -64,7 +64,7 @@ export function DifferentiatorsSection() {
             Why Teams Choose AppRanks
           </h2>
           <p className="mt-4 text-muted-foreground text-lg max-w-2xl mx-auto">
-            Built for developers who are serious about growing their Shopify app business.
+            Built for developers who are serious about growing their app business.
           </p>
         </div>
 

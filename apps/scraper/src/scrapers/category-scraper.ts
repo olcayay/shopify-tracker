@@ -1,5 +1,5 @@
 import { eq, sql } from "drizzle-orm";
-import type { Database } from "@shopify-tracking/db";
+import type { Database } from "@appranks/db";
 import {
   scrapeRuns,
   categories,
@@ -8,14 +8,14 @@ import {
   appCategoryRankings,
   featuredAppSightings,
   categoryAdSightings,
-} from "@shopify-tracking/db";
+} from "@appranks/db";
 import {
   SEED_CATEGORY_SLUGS,
   MAX_CATEGORY_DEPTH,
   urls,
   createLogger,
   type CategoryNode,
-} from "@shopify-tracking/shared";
+} from "@appranks/shared";
 import { HttpClient } from "../http-client.js";
 import {
   parseCategoryPage,
@@ -253,9 +253,10 @@ export class CategoryScraper {
     const isListingPage = pageData.app_count !== null;
 
     // Upsert category master record (store canonical URL without /all)
-    await this.db
+    const [upsertedCategory] = await this.db
       .insert(categories)
       .values({
+        platform: "shopify",
         slug,
         title: pageData.title,
         url: canonicalUrl,
@@ -265,7 +266,7 @@ export class CategoryScraper {
         isListingPage,
       })
       .onConflictDoUpdate({
-        target: categories.slug,
+        target: [categories.platform, categories.slug],
         set: {
           title: pageData.title,
           description: pageData.description,
@@ -274,7 +275,10 @@ export class CategoryScraper {
           isListingPage,
           updatedAt: new Date(),
         },
-      });
+      })
+      .returning({ id: categories.id });
+
+    const categoryId = upsertedCategory.id;
 
     // Track seen app slugs across all pages for deduplication
     const seenAppSlugs = new Set<string>();
@@ -282,7 +286,7 @@ export class CategoryScraper {
     // Insert snapshot (skip for root categories with no app data)
     if (depth > 0 || pageData.first_page_apps.length > 0) {
       await this.db.insert(categorySnapshots).values({
-        categorySlug: slug,
+        categoryId,
         scrapeRunId: runId,
         scrapedAt: new Date(),
         dataSourceUrl,
@@ -307,7 +311,7 @@ export class CategoryScraper {
       }
 
       // Record category ad sightings for sponsored apps (both listing and hub pages)
-      await this.recordCategoryAdSightings(pageData.first_page_apps, slug, runId);
+      await this.recordCategoryAdSightings(pageData.first_page_apps, categoryId, runId);
 
       // Collect discovered slugs from first page (always, regardless of page type)
       for (const app of pageData.first_page_apps) {
@@ -354,7 +358,7 @@ export class CategoryScraper {
 
           // Record additional page app rankings with global position offset
           await this.recordAppRankings(newApps, slug, runId, totalAppsRecorded);
-          await this.recordCategoryAdSightings(newApps, slug, runId);
+          await this.recordCategoryAdSightings(newApps, categoryId, runId);
           totalAppsRecorded += newApps.length;
           for (const app of newApps) {
             const appSlug = app.app_url.replace("https://apps.shopify.com/", "");
@@ -443,9 +447,10 @@ export class CategoryScraper {
       const hasCount = app.rating_count != null && app.rating_count > 0;
 
       // Upsert app master record with all listing data
-      await this.db
+      const [upsertedApp] = await this.db
         .insert(apps)
         .values({
+          platform: "shopify",
           slug: appSlug,
           name: app.name,
           isBuiltForShopify: !!app.is_built_for_shopify,
@@ -456,7 +461,7 @@ export class CategoryScraper {
           ...(app.pricing_hint && { pricingHint: app.pricing_hint }),
         })
         .onConflictDoUpdate({
-          target: apps.slug,
+          target: [apps.platform, apps.slug],
           set: {
             name: app.name,
             isBuiltForShopify: !!app.is_built_for_shopify,
@@ -467,11 +472,12 @@ export class CategoryScraper {
             ...(app.pricing_hint && { pricingHint: app.pricing_hint }),
             updatedAt: now,
           },
-        });
+        })
+        .returning({ id: apps.id });
 
       // Record ranking with global position across pages
       await this.db.insert(appCategoryRankings).values({
-        appSlug,
+        appId: upsertedApp.id,
         categorySlug,
         scrapeRunId: runId,
         scrapedAt: now,
@@ -485,12 +491,12 @@ export class CategoryScraper {
    */
   private async recordCategoryAdSightings(
     appList: { app_url: string; is_sponsored?: boolean }[],
-    categorySlug: string,
+    categoryId: number,
     runId: string
   ): Promise<void> {
     const sponsoredApps = appList.filter((a) => a.is_sponsored);
     log.info("recording category ad sightings", {
-      categorySlug,
+      categoryId,
       totalApps: appList.length,
       sponsoredCount: sponsoredApps.length,
       sponsoredSlugs: sponsoredApps.map((a) => a.app_url.replace("https://apps.shopify.com/", "")),
@@ -502,11 +508,20 @@ export class CategoryScraper {
       const appSlug = app.app_url.replace("https://apps.shopify.com/", "");
       if (!appSlug) continue;
 
+      // Look up the app ID
+      const [appRecord] = await this.db
+        .select({ id: apps.id })
+        .from(apps)
+        .where(eq(apps.slug, appSlug))
+        .limit(1);
+
+      if (!appRecord) continue;
+
       await this.db
         .insert(categoryAdSightings)
         .values({
-          appSlug,
-          categorySlug,
+          appId: appRecord.id,
+          categoryId,
           seenDate: todayStr,
           firstSeenRunId: runId,
           lastSeenRunId: runId,
@@ -514,8 +529,8 @@ export class CategoryScraper {
         })
         .onConflictDoUpdate({
           target: [
-            categoryAdSightings.appSlug,
-            categoryAdSightings.categorySlug,
+            categoryAdSightings.appId,
+            categoryAdSightings.categoryId,
             categoryAdSightings.seenDate,
           ],
           set: {
@@ -545,6 +560,7 @@ export class CategoryScraper {
       await this.db
         .insert(apps)
         .values({
+          platform: "shopify",
           slug: appSlug,
           name: app.name,
           isBuiltForShopify: !!app.is_built_for_shopify,
@@ -555,7 +571,7 @@ export class CategoryScraper {
           ...(app.pricing_hint && { pricingHint: app.pricing_hint }),
         })
         .onConflictDoUpdate({
-          target: apps.slug,
+          target: [apps.platform, apps.slug],
           set: {
             name: app.name,
             isBuiltForShopify: !!app.is_built_for_shopify,
@@ -604,27 +620,29 @@ export class CategoryScraper {
     for (const section of sections) {
       for (const app of section.apps) {
         // Upsert app master record
-        await this.db
+        const [upsertedApp] = await this.db
           .insert(apps)
           .values({
+            platform: "shopify",
             slug: app.slug,
             name: app.name,
             iconUrl: app.iconUrl || null,
           })
           .onConflictDoUpdate({
-            target: apps.slug,
+            target: [apps.platform, apps.slug],
             set: {
               name: app.name,
               ...(app.iconUrl ? { iconUrl: app.iconUrl } : {}),
               updatedAt: new Date(),
             },
-          });
+          })
+          .returning({ id: apps.id });
 
         // Upsert featured sighting
         await this.db
           .insert(featuredAppSightings)
           .values({
-            appSlug: app.slug,
+            appId: upsertedApp.id,
             surface: section.surface,
             surfaceDetail: section.surfaceDetail,
             sectionHandle: section.sectionHandle,
@@ -637,7 +655,7 @@ export class CategoryScraper {
           })
           .onConflictDoUpdate({
             target: [
-              featuredAppSightings.appSlug,
+              featuredAppSightings.appId,
               featuredAppSightings.sectionHandle,
               featuredAppSightings.surfaceDetail,
               featuredAppSightings.seenDate,

@@ -1,7 +1,7 @@
 import type { FastifyInstance, FastifyRequest, FastifyReply } from "fastify";
 import jwt from "jsonwebtoken";
 import { eq } from "drizzle-orm";
-import { accounts, users } from "@shopify-tracking/db";
+import { accounts, users } from "@appranks/db";
 
 export interface JwtPayload {
   userId: string;

@@ -1,12 +1,13 @@
 import type { FastifyPluginAsync } from "fastify";
 import { eq, desc, sql, and } from "drizzle-orm";
-import { createDb } from "@shopify-tracking/db";
+import { createDb } from "@appranks/db";
 import {
   featuredAppSightings,
   apps,
   accountTrackedApps,
   accountCompetitorApps,
-} from "@shopify-tracking/db";
+} from "@appranks/db";
+import { getPlatformFromQuery } from "../utils/platform.js";
 
 type Db = ReturnType<typeof createDb>;
 
@@ -21,12 +22,14 @@ export const featuredAppRoutes: FastifyPluginAsync = async (app) => {
       surfaceDetail?: string;
       surfaceDetailPrefix?: string;
     };
+    const platform = getPlatformFromQuery(request.query as Record<string, unknown>);
     const since = new Date();
     since.setDate(since.getDate() - parseInt(days, 10));
     const sinceStr = since.toISOString().slice(0, 10);
 
     const conditions = [
       sql`${featuredAppSightings.seenDate} >= ${sinceStr}`,
+      eq(apps.platform, platform),
     ];
     if (surface) {
       conditions.push(eq(featuredAppSightings.surface, surface));
@@ -42,7 +45,7 @@ export const featuredAppRoutes: FastifyPluginAsync = async (app) => {
 
     const rows = await db
       .select({
-        appSlug: featuredAppSightings.appSlug,
+        appSlug: apps.slug,
         appName: apps.name,
         iconUrl: apps.iconUrl,
         surface: featuredAppSightings.surface,
@@ -54,7 +57,7 @@ export const featuredAppRoutes: FastifyPluginAsync = async (app) => {
         timesSeenInDay: featuredAppSightings.timesSeenInDay,
       })
       .from(featuredAppSightings)
-      .innerJoin(apps, eq(apps.slug, featuredAppSightings.appSlug))
+      .innerJoin(apps, eq(apps.id, featuredAppSightings.appId))
       .where(and(...conditions))
       .orderBy(
         featuredAppSightings.surface,
@@ -67,12 +70,14 @@ export const featuredAppRoutes: FastifyPluginAsync = async (app) => {
     const { accountId } = request.user;
     const [trackedRows, competitorRows] = await Promise.all([
       db
-        .select({ appSlug: accountTrackedApps.appSlug })
+        .select({ appSlug: apps.slug })
         .from(accountTrackedApps)
+        .innerJoin(apps, eq(apps.id, accountTrackedApps.appId))
         .where(eq(accountTrackedApps.accountId, accountId)),
       db
-        .select({ appSlug: accountCompetitorApps.appSlug })
+        .select({ appSlug: apps.slug })
         .from(accountCompetitorApps)
+        .innerJoin(apps, eq(apps.id, accountCompetitorApps.competitorAppId))
         .where(eq(accountCompetitorApps.accountId, accountId)),
     ]);
 
@@ -96,7 +101,7 @@ export const featuredAppRoutes: FastifyPluginAsync = async (app) => {
         surfaceDetail: featuredAppSightings.surfaceDetail,
         sectionHandle: featuredAppSightings.sectionHandle,
         sectionTitle: featuredAppSightings.sectionTitle,
-        appCount: sql<number>`count(distinct ${featuredAppSightings.appSlug})`,
+        appCount: sql<number>`count(distinct ${featuredAppSightings.appId})`,
         daysActive: sql<number>`count(distinct ${featuredAppSightings.seenDate})`,
         lastSeen: sql<string>`max(${featuredAppSightings.seenDate})`,
       })

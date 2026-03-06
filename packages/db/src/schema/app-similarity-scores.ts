@@ -1,7 +1,7 @@
 import {
   pgTable,
   serial,
-  varchar,
+  integer,
   date,
   decimal,
   timestamp,
@@ -14,12 +14,12 @@ export const appSimilarityScores = pgTable(
   "app_similarity_scores",
   {
     id: serial("id").primaryKey(),
-    appSlugA: varchar("app_slug_a", { length: 255 })
+    appIdA: integer("app_id_a")
       .notNull()
-      .references(() => apps.slug),
-    appSlugB: varchar("app_slug_b", { length: 255 })
+      .references(() => apps.id),
+    appIdB: integer("app_id_b")
       .notNull()
-      .references(() => apps.slug),
+      .references(() => apps.id),
     overallScore: decimal("overall_score", { precision: 5, scale: 4 }).notNull(),
     categoryScore: decimal("category_score", { precision: 5, scale: 4 }).notNull(),
     featureScore: decimal("feature_score", { precision: 5, scale: 4 }).notNull(),
@@ -29,8 +29,8 @@ export const appSimilarityScores = pgTable(
     createdAt: timestamp("created_at").notNull().defaultNow(),
   },
   (table) => [
-    uniqueIndex("idx_app_similarity_scores_unique").on(table.appSlugA, table.appSlugB),
-    index("idx_app_similarity_scores_a").on(table.appSlugA),
-    index("idx_app_similarity_scores_b").on(table.appSlugB),
+    uniqueIndex("idx_app_similarity_scores_unique").on(table.appIdA, table.appIdB),
+    index("idx_app_similarity_scores_a").on(table.appIdA),
+    index("idx_app_similarity_scores_b").on(table.appIdB),
   ]
 );

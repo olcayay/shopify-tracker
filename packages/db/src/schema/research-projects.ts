@@ -18,6 +18,7 @@ export const researchProjects = pgTable(
     accountId: uuid("account_id")
       .notNull()
       .references(() => accounts.id, { onDelete: "cascade" }),
+    platform: varchar("platform", { length: 20 }).notNull().default("shopify"),
     name: varchar("name", { length: 255 }).notNull().default("Untitled Research"),
     createdBy: uuid("created_by").references(() => users.id, { onDelete: "set null" }),
     createdAt: timestamp("created_at").notNull().defaultNow(),
@@ -55,16 +56,16 @@ export const researchProjectCompetitors = pgTable(
     researchProjectId: uuid("research_project_id")
       .notNull()
       .references(() => researchProjects.id, { onDelete: "cascade" }),
-    appSlug: varchar("app_slug", { length: 255 })
+    appId: integer("app_id")
       .notNull()
-      .references(() => apps.slug),
+      .references(() => apps.id),
     sortOrder: integer("sort_order").notNull().default(0),
     createdAt: timestamp("created_at").notNull().defaultNow(),
   },
   (table) => [
     uniqueIndex("idx_research_project_competitors_unique").on(
       table.researchProjectId,
-      table.appSlug
+      table.appId
     ),
   ]
 );

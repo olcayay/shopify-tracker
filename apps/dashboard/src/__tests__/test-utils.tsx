@@ -39,12 +39,16 @@ export const mockAccount: Account = {
     maxTrackedKeywords: 50,
     maxCompetitorApps: 20,
     maxUsers: 5,
+    maxResearchProjects: 3,
+    maxPlatforms: 3,
   },
   limits: {
     maxTrackedApps: 10,
     maxTrackedKeywords: 50,
     maxCompetitorApps: 20,
     maxUsers: 5,
+    maxResearchProjects: 3,
+    maxPlatforms: 3,
   },
   usage: {
     trackedApps: 3,
@@ -52,7 +56,10 @@ export const mockAccount: Account = {
     competitorApps: 5,
     starredFeatures: 2,
     users: 2,
+    researchProjects: 1,
+    platforms: 1,
   },
+  enabledPlatforms: ["shopify"],
 };
 
 // Mock auth context value

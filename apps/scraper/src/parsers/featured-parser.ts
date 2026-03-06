@@ -1,6 +1,6 @@
 import * as cheerio from "cheerio";
 import type { AnyNode } from "domhandler";
-import { createLogger } from "@shopify-tracking/shared";
+import { createLogger } from "@appranks/shared";
 
 const log = createLogger("featured-parser");
 

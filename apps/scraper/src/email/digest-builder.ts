@@ -1,5 +1,5 @@
 import { eq, and, sql, gte, lt, desc } from "drizzle-orm";
-import type { Database } from "@shopify-tracking/db";
+import type { Database } from "@appranks/db";
 import {
   accounts,
   users,
@@ -10,7 +10,7 @@ import {
   appKeywordRankings,
   appSnapshots,
   apps,
-} from "@shopify-tracking/db";
+} from "@appranks/db";
 
 export interface RankingChange {
   keyword: string;
@@ -116,22 +116,22 @@ export async function buildDigestForAccount(
 
   if (trackedKws.length === 0) return null;
 
-  // Get tracked app slugs and competitor app slugs
+  // Get tracked app IDs and competitor app IDs
   const trackedAppRows = await db
-    .select({ appSlug: accountTrackedApps.appSlug })
+    .select({ appId: accountTrackedApps.appId })
     .from(accountTrackedApps)
     .where(eq(accountTrackedApps.accountId, accountId));
-  const trackedSlugs = new Set(trackedAppRows.map((r) => r.appSlug));
+  const trackedAppIds = new Set(trackedAppRows.map((r) => r.appId));
 
   const competitorAppRows = await db
-    .select({ appSlug: accountCompetitorApps.appSlug })
+    .select({ competitorAppId: accountCompetitorApps.competitorAppId })
     .from(accountCompetitorApps)
     .where(eq(accountCompetitorApps.accountId, accountId));
-  const competitorSlugs = new Set(competitorAppRows.map((r) => r.appSlug));
+  const competitorAppIds = new Set(competitorAppRows.map((r) => r.competitorAppId));
 
-  // Relevant app slugs (tracked + competitors)
-  const relevantSlugs = new Set([...trackedSlugs, ...competitorSlugs]);
-  if (relevantSlugs.size === 0) return null;
+  // Relevant app IDs (tracked + competitors)
+  const relevantAppIds = new Set([...trackedAppIds, ...competitorAppIds]);
+  if (relevantAppIds.size === 0) return null;
 
   // Date boundaries
   const now = new Date();
@@ -142,10 +142,10 @@ export async function buildDigestForAccount(
 
   const keywordIds = trackedKws.map((k) => k.keywordId);
 
-  // Get today's latest rankings for relevant apps × keywords
+  // Get today's latest rankings for relevant apps x keywords
   const todayRankings = await db
     .select({
-      appSlug: appKeywordRankings.appSlug,
+      appId: appKeywordRankings.appId,
       keywordId: appKeywordRankings.keywordId,
       position: appKeywordRankings.position,
       scrapedAt: appKeywordRankings.scrapedAt,
@@ -158,8 +158,8 @@ export async function buildDigestForAccount(
           sql`, `
         )})`,
         gte(appKeywordRankings.scrapedAt, todayStart),
-        sql`${appKeywordRankings.appSlug} IN (${sql.join(
-          [...relevantSlugs].map((s) => sql`${s}`),
+        sql`${appKeywordRankings.appId} IN (${sql.join(
+          [...relevantAppIds].map((id) => sql`${id}`),
           sql`, `
         )})`
       )
@@ -169,7 +169,7 @@ export async function buildDigestForAccount(
   // Get yesterday's rankings
   const yesterdayRankings = await db
     .select({
-      appSlug: appKeywordRankings.appSlug,
+      appId: appKeywordRankings.appId,
       keywordId: appKeywordRankings.keywordId,
       position: appKeywordRankings.position,
       scrapedAt: appKeywordRankings.scrapedAt,
@@ -183,40 +183,41 @@ export async function buildDigestForAccount(
         )})`,
         gte(appKeywordRankings.scrapedAt, yesterdayStart),
         lt(appKeywordRankings.scrapedAt, todayStart),
-        sql`${appKeywordRankings.appSlug} IN (${sql.join(
-          [...relevantSlugs].map((s) => sql`${s}`),
+        sql`${appKeywordRankings.appId} IN (${sql.join(
+          [...relevantAppIds].map((id) => sql`${id}`),
           sql`, `
         )})`
       )
     )
     .orderBy(desc(appKeywordRankings.scrapedAt));
 
-  // Build maps: (appSlug, keywordId) → latest position
+  // Build maps: (appId, keywordId) -> latest position
   // For today, take the latest (first due to desc order)
   const todayMap = new Map<string, number>();
   for (const r of todayRankings) {
-    const key = `${r.appSlug}::${r.keywordId}`;
+    const key = `${r.appId}::${r.keywordId}`;
     if (!todayMap.has(key) && r.position != null) todayMap.set(key, r.position);
   }
 
   const yesterdayMap = new Map<string, number>();
   for (const r of yesterdayRankings) {
-    const key = `${r.appSlug}::${r.keywordId}`;
+    const key = `${r.appId}::${r.keywordId}`;
     if (!yesterdayMap.has(key) && r.position != null) yesterdayMap.set(key, r.position);
   }
 
-  // Get app names
-  const allAppSlugs = [...relevantSlugs];
-  const appNameRows = await db
-    .select({ slug: apps.slug, name: apps.name })
+  // Get app names and slugs for all relevant app IDs
+  const allAppIds = [...relevantAppIds];
+  const appRows = await db
+    .select({ id: apps.id, slug: apps.slug, name: apps.name })
     .from(apps)
     .where(
-      sql`${apps.slug} IN (${sql.join(
-        allAppSlugs.map((s) => sql`${s}`),
+      sql`${apps.id} IN (${sql.join(
+        allAppIds.map((id) => sql`${id}`),
         sql`, `
       )})`
     );
-  const appNameMap = new Map(appNameRows.map((r) => [r.slug, r.name]));
+  const appNameMap = new Map(appRows.map((r) => [r.id, r.name]));
+  const appSlugMap = new Map(appRows.map((r) => [r.id, r.slug]));
 
   // Build keyword map
   const keywordMap = new Map(
@@ -228,11 +229,13 @@ export async function buildDigestForAccount(
   const allKeys = new Set([...todayMap.keys(), ...yesterdayMap.keys()]);
 
   for (const key of allKeys) {
-    const [appSlug, keywordIdStr] = key.split("::");
+    const [appIdStr, keywordIdStr] = key.split("::");
+    const appId = parseInt(appIdStr, 10);
     const keywordId = parseInt(keywordIdStr, 10);
     const kwInfo = keywordMap.get(keywordId);
     if (!kwInfo) continue;
 
+    const appSlug = appSlugMap.get(appId) || String(appId);
     const todayPos = todayMap.get(key) ?? null;
     const yesterdayPos = yesterdayMap.get(key) ?? null;
 
@@ -255,10 +258,10 @@ export async function buildDigestForAccount(
     rankingChanges.push({
       keyword: kwInfo.keyword,
       keywordSlug: kwInfo.slug,
-      appName: appNameMap.get(appSlug) || appSlug,
+      appName: appNameMap.get(appId) || appSlug,
       appSlug,
-      isTracked: trackedSlugs.has(appSlug),
-      isCompetitor: competitorSlugs.has(appSlug),
+      isTracked: trackedAppIds.has(appId),
+      isCompetitor: competitorAppIds.has(appId),
       yesterdayPosition: yesterdayPos,
       todayPosition: todayPos,
       change,
@@ -273,7 +276,7 @@ export async function buildDigestForAccount(
   // Build competitor summaries
   const competitorSummaries: CompetitorSummary[] = [];
 
-  for (const slug of competitorSlugs) {
+  for (const compAppId of competitorAppIds) {
     // Get latest app snapshots for today and yesterday
     const [todaySnap] = await db
       .select({
@@ -283,7 +286,7 @@ export async function buildDigestForAccount(
       .from(appSnapshots)
       .where(
         and(
-          eq(appSnapshots.appSlug, slug),
+          eq(appSnapshots.appId, compAppId),
           gte(appSnapshots.scrapedAt, todayStart)
         )
       )
@@ -298,7 +301,7 @@ export async function buildDigestForAccount(
       .from(appSnapshots)
       .where(
         and(
-          eq(appSnapshots.appSlug, slug),
+          eq(appSnapshots.appId, compAppId),
           gte(appSnapshots.scrapedAt, yesterdayStart),
           lt(appSnapshots.scrapedAt, todayStart)
         )
@@ -306,9 +309,11 @@ export async function buildDigestForAccount(
       .orderBy(desc(appSnapshots.scrapedAt))
       .limit(1);
 
+    const compSlug = appSlugMap.get(compAppId) || String(compAppId);
+
     // Keyword positions for this competitor
     const keywordPositions = trackedKws.map((kw) => {
-      const key = `${slug}::${kw.keywordId}`;
+      const key = `${compAppId}::${kw.keywordId}`;
       const todayPos = todayMap.get(key) ?? null;
       const yesterdayPos = yesterdayMap.get(key) ?? null;
       const change =
@@ -326,8 +331,8 @@ export async function buildDigestForAccount(
         : null;
 
     competitorSummaries.push({
-      appName: appNameMap.get(slug) || slug,
-      appSlug: slug,
+      appName: appNameMap.get(compAppId) || compSlug,
+      appSlug: compSlug,
       todayRating,
       yesterdayRating,
       ratingChange,
@@ -359,7 +364,7 @@ export async function buildDigestForAccount(
     return null;
   }
 
-  const dateStr = now.toLocaleDateString("tr-TR", {
+  const dateStr = now.toLocaleDateString("en-US", {
     day: "2-digit",
     month: "2-digit",
     year: "numeric",

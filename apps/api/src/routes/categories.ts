@@ -1,7 +1,8 @@
 import type { FastifyPluginAsync } from "fastify";
 import { eq, desc, sql, and, asc, inArray } from "drizzle-orm";
-import { createDb } from "@shopify-tracking/db";
-import { categories, categorySnapshots, appCategoryRankings, apps, categoryAdSightings, appPowerScores } from "@shopify-tracking/db";
+import { createDb } from "@appranks/db";
+import { categories, categorySnapshots, appCategoryRankings, apps, categoryAdSightings, appPowerScores } from "@appranks/db";
+import { getPlatformFromQuery } from "../utils/platform.js";
 
 type Db = ReturnType<typeof createDb>;
 
@@ -16,16 +17,22 @@ export const categoryRoutes: FastifyPluginAsync = async (app) => {
       format?: string;
       tracked?: string;
     };
+    const platform = getPlatformFromQuery(request.query as Record<string, unknown>);
 
     // Subquery for latest appCount per category
     const latestSnapshot = db
       .select({
-        categorySlug: categorySnapshots.categorySlug,
+        categoryId: categorySnapshots.categoryId,
         appCount: categorySnapshots.appCount,
-        rn: sql<number>`row_number() over (partition by ${categorySnapshots.categorySlug} order by ${categorySnapshots.scrapedAt} desc)`.as("rn"),
+        rn: sql<number>`row_number() over (partition by ${categorySnapshots.categoryId} order by ${categorySnapshots.scrapedAt} desc)`.as("rn"),
       })
       .from(categorySnapshots)
       .as("ls");
+
+    const conditions = [eq(categories.platform, platform)];
+    if (tracked === "true") {
+      conditions.push(eq(categories.isTracked, true));
+    }
 
     const rows = await db
       .select({
@@ -45,9 +52,9 @@ export const categoryRoutes: FastifyPluginAsync = async (app) => {
       .from(categories)
       .leftJoin(
         latestSnapshot,
-        sql`${latestSnapshot.categorySlug} = ${categories.slug} and ${latestSnapshot.rn} = 1`
+        sql`${latestSnapshot.categoryId} = ${categories.id} and ${latestSnapshot.rn} = 1`
       )
-      .where(tracked === "true" ? eq(categories.isTracked, true) : undefined)
+      .where(and(...conditions))
       .orderBy(categories.categoryLevel, categories.title);
 
     if (format === "flat") {
@@ -61,11 +68,12 @@ export const categoryRoutes: FastifyPluginAsync = async (app) => {
   // GET /api/categories/:slug — category detail + latest snapshot
   app.get<{ Params: { slug: string } }>("/:slug", async (request, reply) => {
     const { slug } = request.params;
+    const platform = getPlatformFromQuery(request.query as Record<string, unknown>);
 
     const [category] = await db
       .select()
       .from(categories)
-      .where(eq(categories.slug, slug))
+      .where(and(eq(categories.slug, slug), eq(categories.platform, platform)))
       .limit(1);
 
     if (!category) {
@@ -75,7 +83,7 @@ export const categoryRoutes: FastifyPluginAsync = async (app) => {
     const [latestSnapshot] = await db
       .select()
       .from(categorySnapshots)
-      .where(eq(categorySnapshots.categorySlug, slug))
+      .where(eq(categorySnapshots.categoryId, category.id))
       .orderBy(desc(categorySnapshots.scrapedAt))
       .limit(1);
 
@@ -110,7 +118,7 @@ export const categoryRoutes: FastifyPluginAsync = async (app) => {
         const rankings = await db
           .select({
             position: appCategoryRankings.position,
-            appSlug: appCategoryRankings.appSlug,
+            appSlug: apps.slug,
             name: apps.name,
             iconUrl: apps.iconUrl,
             isBuiltForShopify: apps.isBuiltForShopify,
@@ -120,7 +128,7 @@ export const categoryRoutes: FastifyPluginAsync = async (app) => {
             launchedDate: apps.launchedDate,
           })
           .from(appCategoryRankings)
-          .innerJoin(apps, eq(apps.slug, appCategoryRankings.appSlug))
+          .innerJoin(apps, eq(apps.id, appCategoryRankings.appId))
           .where(
             and(
               eq(appCategoryRankings.scrapeRunId, latestSnapshot.scrapeRunId),
@@ -173,10 +181,19 @@ export const categoryRoutes: FastifyPluginAsync = async (app) => {
           // Collect all categories per app (an app can appear in multiple listing categories)
           const appMap = new Map<string, any>();
           for (const descCat of descendantListingCats) {
+            // Look up category ID for descendant
+            const [descCatRow] = await db
+              .select({ id: categories.id })
+              .from(categories)
+              .where(eq(categories.slug, descCat.slug))
+              .limit(1);
+
+            if (!descCatRow) continue;
+
             const [descSnapshot] = await db
               .select({ scrapeRunId: categorySnapshots.scrapeRunId })
               .from(categorySnapshots)
-              .where(eq(categorySnapshots.categorySlug, descCat.slug))
+              .where(eq(categorySnapshots.categoryId, descCatRow.id))
               .orderBy(desc(categorySnapshots.scrapedAt))
               .limit(1);
 
@@ -185,7 +202,7 @@ export const categoryRoutes: FastifyPluginAsync = async (app) => {
             const descRanked = await db
               .select({
                 position: appCategoryRankings.position,
-                appSlug: appCategoryRankings.appSlug,
+                appSlug: apps.slug,
                 name: apps.name,
                 iconUrl: apps.iconUrl,
                 isBuiltForShopify: apps.isBuiltForShopify,
@@ -195,7 +212,7 @@ export const categoryRoutes: FastifyPluginAsync = async (app) => {
                 launchedDate: apps.launchedDate,
               })
               .from(appCategoryRankings)
-              .innerJoin(apps, eq(apps.slug, appCategoryRankings.appSlug))
+              .innerJoin(apps, eq(apps.id, appCategoryRankings.appId))
               .where(
                 and(
                   eq(appCategoryRankings.scrapeRunId, descSnapshot.scrapeRunId),
@@ -261,11 +278,12 @@ export const categoryRoutes: FastifyPluginAsync = async (app) => {
         limit?: string;
         offset?: string;
       };
+      const platform = getPlatformFromQuery(request.query as Record<string, unknown>);
 
       const [category] = await db
         .select()
         .from(categories)
-        .where(eq(categories.slug, slug))
+        .where(and(eq(categories.slug, slug), eq(categories.platform, platform)))
         .limit(1);
 
       if (!category) {
@@ -280,7 +298,7 @@ export const categoryRoutes: FastifyPluginAsync = async (app) => {
           appCount: categorySnapshots.appCount,
         })
         .from(categorySnapshots)
-        .where(eq(categorySnapshots.categorySlug, slug))
+        .where(eq(categorySnapshots.categoryId, category.id))
         .orderBy(desc(categorySnapshots.scrapedAt))
         .limit(parseInt(limit, 10))
         .offset(parseInt(offset, 10));
@@ -304,7 +322,7 @@ export const categoryRoutes: FastifyPluginAsync = async (app) => {
       const [{ count }] = await db
         .select({ count: sql<number>`count(*)::int` })
         .from(categorySnapshots)
-        .where(eq(categorySnapshots.categorySlug, slug));
+        .where(eq(categorySnapshots.categoryId, category.id));
 
       return { category, snapshots: enriched, total: count };
     }
@@ -321,19 +339,28 @@ export const categoryRoutes: FastifyPluginAsync = async (app) => {
       since.setDate(since.getDate() - parseInt(days, 10));
       const sinceStr = since.toISOString().slice(0, 10);
 
+      // Look up category ID
+      const [catRow] = await db
+        .select({ id: categories.id })
+        .from(categories)
+        .where(eq(categories.slug, slug))
+        .limit(1);
+
+      if (!catRow) return { adSightings: [] };
+
       const adSightings = await db
         .select({
-          appSlug: categoryAdSightings.appSlug,
+          appSlug: apps.slug,
           appName: apps.name,
           iconUrl: apps.iconUrl,
           seenDate: categoryAdSightings.seenDate,
           timesSeenInDay: categoryAdSightings.timesSeenInDay,
         })
         .from(categoryAdSightings)
-        .innerJoin(apps, eq(categoryAdSightings.appSlug, apps.slug))
+        .innerJoin(apps, eq(categoryAdSightings.appId, apps.id))
         .where(
           and(
-            eq(categoryAdSightings.categorySlug, slug),
+            eq(categoryAdSightings.categoryId, catRow.id),
             sql`${categoryAdSightings.seenDate} >= ${sinceStr}`
           )
         )
@@ -378,33 +405,42 @@ export const categoryRoutes: FastifyPluginAsync = async (app) => {
           )
         );
 
-      // Fetch app names
-      const slugArray = powRows.map((r) => r.appSlug);
-      const appRows = slugArray.length > 0
+      // Fetch app names by IDs
+      const appIdArray = powRows.map((r) => r.appId);
+      const appRows = appIdArray.length > 0
         ? await db
-            .select({ slug: apps.slug, name: apps.name, iconUrl: apps.iconUrl })
+            .select({ id: apps.id, slug: apps.slug, name: apps.name, iconUrl: apps.iconUrl })
             .from(apps)
-            .where(inArray(apps.slug, slugArray))
+            .where(inArray(apps.id, appIdArray))
         : [];
-      const appMap = new Map(appRows.map((r) => [r.slug, r]));
+      const appMap = new Map(appRows.map((r) => [r.id, r]));
 
       // Get totalApps from latest category snapshot
-      const [catSnap] = await db
-        .execute(
-          sql`
-          SELECT app_count FROM category_snapshots
-          WHERE category_slug = ${slug} AND app_count IS NOT NULL
-          ORDER BY scraped_at DESC LIMIT 1
-        `
-        )
-        .then((res: any) => (res as any).rows ?? res);
+      // Look up category ID for raw SQL
+      const [catForSnap] = await db
+        .select({ id: categories.id })
+        .from(categories)
+        .where(eq(categories.slug, slug))
+        .limit(1);
+
+      const [catSnap] = catForSnap
+        ? await db
+            .execute(
+              sql`
+              SELECT app_count FROM category_snapshots
+              WHERE category_id = ${catForSnap.id} AND app_count IS NOT NULL
+              ORDER BY scraped_at DESC LIMIT 1
+            `
+            )
+            .then((res: any) => (res as any).rows ?? res)
+        : [null];
       const totalApps: number | null = catSnap?.app_count ?? null;
 
       let scores = powRows.map((pow) => {
-        const appInfo = appMap.get(pow.appSlug);
+        const appInfo = appMap.get(pow.appId);
         return {
-          appSlug: pow.appSlug,
-          appName: appInfo?.name || pow.appSlug,
+          appSlug: appInfo?.slug || '',
+          appName: appInfo?.name || '',
           iconUrl: appInfo?.iconUrl || null,
           powerScore: pow.powerScore,
           powerRaw: pow.powerRaw,
@@ -447,7 +483,7 @@ export const categoryRoutes: FastifyPluginAsync = async (app) => {
   );
 };
 
-function buildTree(rows: (typeof categories.$inferSelect)[]) {
+function buildTree(rows: { slug: string; parentSlug: string | null; [key: string]: any }[]) {
   const map = new Map<string, any>();
   const roots: any[] = [];
 

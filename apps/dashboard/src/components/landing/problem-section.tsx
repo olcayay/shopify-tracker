@@ -35,7 +35,7 @@ const problems: { icon: LucideIcon; title: string; description: string; emoji: s
     emoji: "👻",
     title: "Invisible Featured Placements",
     description:
-      "Shopify featured your competitor and you didn't even notice.",
+      "The marketplace featured your competitor and you didn't even notice.",
   },
   {
     icon: Clock,
@@ -61,7 +61,7 @@ export function ProblemSection() {
           Sound Familiar?
         </h2>
         <p className="mt-4 text-center text-muted-foreground max-w-2xl mx-auto text-lg">
-          The Shopify App Store gives you zero analytics.
+          App marketplaces give you zero analytics.
           You&apos;re flying blind.
         </p>
 

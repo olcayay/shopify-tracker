@@ -1,3 +1,5 @@
+// Shopify-specific types — used by Shopify parser
+
 /** Developer info from an app detail page */
 export interface AppDeveloper {
   name: string;
@@ -65,4 +67,16 @@ export interface AppDetails {
   categories: AppCategory[];
   pricing_plans: PricingPlan[];
   support: AppSupport | null;
+}
+
+/** Platform-agnostic app detail type used by all platforms */
+export interface CommonAppDetails {
+  name: string;
+  slug: string;
+  iconUrl: string | null;
+  averageRating: number | null;
+  ratingCount: number | null;
+  pricingHint: string | null;
+  developer: { name: string; url?: string } | null;
+  badges: string[];
 }

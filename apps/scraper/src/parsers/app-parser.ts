@@ -8,7 +8,7 @@ import {
   type AppFeature,
   type PricingPlan,
   type AppSupport,
-} from "@shopify-tracking/shared";
+} from "@appranks/shared";
 
 const log = createLogger("app-parser");
 

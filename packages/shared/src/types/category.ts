@@ -10,12 +10,16 @@ export interface FirstPageApp {
   pricing_hint?: string;
   is_sponsored?: boolean;
   is_built_for_shopify?: boolean;
+  /** Generic badge array (replaces is_built_for_shopify for cross-platform use) */
+  badges?: string[];
 }
 
 /** Metrics computed from the first 24 app cards on a category page */
 export interface FirstPageMetrics {
   sponsored_count: number;
   built_for_shopify_count: number;
+  /** Platform-generic certified count (BFS on Shopify, ISA certified on Salesforce, etc.) */
+  certified_count?: number;
   count_100_plus_reviews: number;
   count_1000_plus_reviews: number;
   total_reviews: number;

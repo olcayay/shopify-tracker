@@ -93,16 +93,16 @@ describe("Sidebar", () => {
   it("navigation links have correct hrefs", () => {
     render(<Sidebar />);
     const overviewLink = screen.getByText("Overview").closest("a");
-    expect(overviewLink).toHaveAttribute("href", "/overview");
+    expect(overviewLink).toHaveAttribute("href", "/shopify/overview");
 
     const appsLink = screen.getByText("Apps").closest("a");
-    expect(appsLink).toHaveAttribute("href", "/apps");
+    expect(appsLink).toHaveAttribute("href", "/shopify/apps");
 
     const keywordsLink = screen.getByText("Keywords").closest("a");
-    expect(keywordsLink).toHaveAttribute("href", "/keywords");
+    expect(keywordsLink).toHaveAttribute("href", "/shopify/keywords");
 
     const categoriesLink = screen.getByText("Categories").closest("a");
-    expect(categoriesLink).toHaveAttribute("href", "/categories");
+    expect(categoriesLink).toHaveAttribute("href", "/shopify/categories");
 
     const settingsLink = screen.getByText("Settings").closest("a");
     expect(settingsLink).toHaveAttribute("href", "/settings");

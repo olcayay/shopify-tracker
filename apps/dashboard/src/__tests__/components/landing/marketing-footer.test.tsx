@@ -11,7 +11,7 @@ describe("MarketingFooter", () => {
   it("renders brand description", () => {
     render(<MarketingFooter />);
     expect(
-      screen.getByText(/Shopify App Store intelligence platform/)
+      screen.getByText(/App marketplace intelligence platform/)
     ).toBeInTheDocument();
   });
 

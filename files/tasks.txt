@@ -62,6 +62,16 @@ show research project limit on overview page (PLA-40) ✅
 
 research projects in system-admin area ✅
 
+multi-platform migration Phase 0a: package rename @shopify-tracking → @appranks ✅
+
+multi-platform migration Phase 0b: platform constants & PlatformModule interface ✅
+
+multi-platform migration Phase 1: database FK migration (app_slug → app_id) ✅
+
+multi-platform migration Phase 2: API + dashboard platform support ✅
+
+multi-platform migration Phase 3: shared types + compute jobs platform awareness ✅
+
 feedback sayfası
 
 kime hangi durumda nasıl emailler gönderilebilinir.

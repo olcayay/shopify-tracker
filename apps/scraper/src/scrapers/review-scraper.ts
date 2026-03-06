@@ -1,7 +1,7 @@
 import { eq } from "drizzle-orm";
-import type { Database } from "@shopify-tracking/db";
-import { scrapeRuns, apps, reviews } from "@shopify-tracking/db";
-import { urls, createLogger } from "@shopify-tracking/shared";
+import type { Database } from "@appranks/db";
+import { scrapeRuns, apps, reviews } from "@appranks/db";
+import { urls, createLogger } from "@appranks/shared";
 
 const log = createLogger("review-scraper");
 import { HttpClient } from "../http-client.js";
@@ -21,7 +21,7 @@ export class ReviewScraper {
   /** Scrape reviews for all tracked apps */
   async scrapeTracked(triggeredBy?: string, queue?: string): Promise<void> {
     const trackedApps = await this.db
-      .select({ slug: apps.slug })
+      .select({ id: apps.id, slug: apps.slug })
       .from(apps)
       .where(eq(apps.isTracked, true));
 
@@ -87,6 +87,20 @@ export class ReviewScraper {
   ): Promise<number> {
     log.info("scraping reviews", { slug });
 
+    // Look up the app's integer ID
+    const [appRecord] = await this.db
+      .select({ id: apps.id })
+      .from(apps)
+      .where(eq(apps.slug, slug))
+      .limit(1);
+
+    if (!appRecord) {
+      log.warn("app not found in database, skipping reviews", { slug });
+      return 0;
+    }
+
+    const appId = appRecord.id;
+
     const MAX_PAGES = 50;
     const CUTOFF_DAYS = 90;
     const cutoffDate = new Date();
@@ -118,7 +132,7 @@ export class ReviewScraper {
           await this.db
             .insert(reviews)
             .values({
-              appSlug: slug,
+              appId,
               reviewDate: parsedDate,
               content: review.content,
               reviewerName: review.reviewer_name,
@@ -132,7 +146,7 @@ export class ReviewScraper {
               firstSeenRunId: runId,
             })
             .onConflictDoUpdate({
-              target: [reviews.appSlug, reviews.reviewerName],
+              target: [reviews.appId, reviews.reviewerName],
               set: {
                 reviewDate: parsedDate,
                 content: review.content,

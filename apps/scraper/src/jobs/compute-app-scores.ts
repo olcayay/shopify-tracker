@@ -1,22 +1,35 @@
 import { eq, sql } from "drizzle-orm";
-import type { Database } from "@shopify-tracking/db";
-import { scrapeRuns, appVisibilityScores, appPowerScores } from "@shopify-tracking/db";
+import type { Database } from "@appranks/db";
+import { scrapeRuns, appVisibilityScores, appPowerScores } from "@appranks/db";
 import {
   createLogger,
   computeAppVisibility,
   computeAppPower,
   normalizeScore,
-} from "@shopify-tracking/shared";
+  PLATFORMS,
+  type PlatformId,
+} from "@appranks/shared";
 import { enqueueScraperJob } from "../queue.js";
 
 const log = createLogger("compute-app-scores");
 
-const PREREQUISITE_TYPES = ["app_details", "keyword_search", "reviews", "category"] as const;
+const BASE_PREREQUISITE_TYPES = ["app_details", "category"] as const;
 const CUTOFF_HOUR_UTC = 18;
 const RETRY_DELAY_MS = 30 * 60 * 1000; // 30 minutes
 
+/**
+ * Build the list of prerequisite scraper types based on platform capabilities.
+ */
+function getPrerequisiteTypes(platform: PlatformId): string[] {
+  const platformConfig = PLATFORMS[platform];
+  const types: string[] = [...BASE_PREREQUISITE_TYPES];
+  if (platformConfig.hasKeywordSearch) types.push("keyword_search");
+  if (platformConfig.hasReviews) types.push("reviews");
+  return types;
+}
+
 interface AppKeywordRow {
-  app_slug: string;
+  app_id: number;
   keyword_id: number;
   position: number;
 }
@@ -27,7 +40,7 @@ interface KeywordTotalRow {
 }
 
 interface AppCategoryRow {
-  app_slug: string;
+  app_id: number;
   category_slug: string;
   position: number;
 }
@@ -38,26 +51,27 @@ interface CategorySizeRow {
 }
 
 interface AppInfoRow {
-  slug: string;
+  id: number;
   average_rating: string | null;
   rating_count: number | null;
 }
 
 interface AppMomentumRow {
-  app_slug: string;
+  app_id: number;
   acc_macro: string | null;
 }
 
 interface TrackedContextRow {
   account_id: string;
-  tracked_app_slug: string;
+  tracked_app_id: number;
 }
 
 /**
  * Check if all prerequisite jobs have completed today.
  * Returns list of missing job types, or empty array if all present.
  */
-async function checkPrerequisites(db: Database): Promise<string[]> {
+async function checkPrerequisites(db: Database, prerequisiteTypes: string[]): Promise<string[]> {
+  const typeList = sql.join(prerequisiteTypes.map((t) => sql`${t}`), sql`, `);
   const rows: { scraper_type: string }[] = await db
     .execute(
       sql`
@@ -65,24 +79,26 @@ async function checkPrerequisites(db: Database): Promise<string[]> {
       FROM scrape_runs
       WHERE status = 'completed'
         AND started_at >= CURRENT_DATE
-        AND scraper_type IN ('app_details', 'keyword_search', 'reviews', 'category')
+        AND scraper_type IN (${typeList})
     `
     )
     .then((res: any) => (res as any).rows ?? res);
 
   const completed = new Set(rows.map((r) => r.scraper_type));
-  return PREREQUISITE_TYPES.filter((t) => !completed.has(t));
+  return prerequisiteTypes.filter((t) => !completed.has(t));
 }
 
 export async function computeAppScores(
   db: Database,
   triggeredBy: string,
   queue?: string,
+  platform: PlatformId = "shopify",
 ): Promise<void> {
   const startTime = Date.now();
 
   // --- Prerequisite check ---
-  const missing = await checkPrerequisites(db);
+  const prerequisiteTypes = getPrerequisiteTypes(platform);
+  const missing = await checkPrerequisites(db, prerequisiteTypes);
   if (missing.length > 0) {
     const nowUtc = new Date().getUTCHours();
     if (nowUtc < CUTOFF_HOUR_UTC) {
@@ -131,11 +147,11 @@ export async function computeAppScores(
     const appKeywordRows: AppKeywordRow[] = await db
       .execute(
         sql`
-        SELECT DISTINCT ON (app_slug, keyword_id)
-          app_slug, keyword_id, position
+        SELECT DISTINCT ON (app_id, keyword_id)
+          app_id, keyword_id, position
         FROM app_keyword_rankings
         WHERE position IS NOT NULL
-        ORDER BY app_slug, keyword_id, scraped_at DESC
+        ORDER BY app_id, keyword_id, scraped_at DESC
       `
       )
       .then((res: any) => (res as any).rows ?? res);
@@ -162,10 +178,10 @@ export async function computeAppScores(
     const appCategoryRows: AppCategoryRow[] = await db
       .execute(
         sql`
-        SELECT DISTINCT ON (app_slug, category_slug)
-          app_slug, category_slug, position
+        SELECT DISTINCT ON (app_id, category_slug)
+          app_id, category_slug, position
         FROM app_category_rankings
-        ORDER BY app_slug, category_slug, scraped_at DESC
+        ORDER BY app_id, category_slug, scraped_at DESC
       `
       )
       .then((res: any) => (res as any).rows ?? res);
@@ -174,11 +190,12 @@ export async function computeAppScores(
     const categorySizeRows: CategorySizeRow[] = await db
       .execute(
         sql`
-        SELECT DISTINCT ON (category_slug)
-          category_slug, app_count
-        FROM category_snapshots
-        WHERE app_count IS NOT NULL
-        ORDER BY category_slug, scraped_at DESC
+        SELECT DISTINCT ON (c.slug)
+          c.slug AS category_slug, cs.app_count
+        FROM category_snapshots cs
+        JOIN categories c ON c.id = cs.category_id
+        WHERE cs.app_count IS NOT NULL
+        ORDER BY c.slug, cs.scraped_at DESC
       `
       )
       .then((res: any) => (res as any).rows ?? res);
@@ -188,67 +205,68 @@ export async function computeAppScores(
       categorySizes.set(r.category_slug, r.app_count);
     }
 
-    // 1e. App rating + review count
+    // 1e. App rating + review count (filtered by platform)
     const appInfoRows: AppInfoRow[] = await db
       .execute(
         sql`
-        SELECT slug, average_rating, rating_count
+        SELECT id, average_rating, rating_count
         FROM apps
-        WHERE average_rating IS NOT NULL OR rating_count IS NOT NULL
+        WHERE platform = ${platform}
+          AND (average_rating IS NOT NULL OR rating_count IS NOT NULL)
       `
       )
       .then((res: any) => (res as any).rows ?? res);
 
-    const appInfoMap = new Map<string, AppInfoRow>();
+    const appInfoMap = new Map<number, AppInfoRow>();
     for (const r of appInfoRows) {
-      appInfoMap.set(r.slug, r);
+      appInfoMap.set(r.id, r);
     }
 
     // 1f. Latest momentum (accMacro) from appReviewMetrics
     const momentumRows: AppMomentumRow[] = await db
       .execute(
         sql`
-        SELECT DISTINCT ON (app_slug)
-          app_slug, acc_macro
+        SELECT DISTINCT ON (app_id)
+          app_id, acc_macro
         FROM app_review_metrics
-        ORDER BY app_slug, computed_at DESC
+        ORDER BY app_id, computed_at DESC
       `
       )
       .then((res: any) => (res as any).rows ?? res);
 
-    const momentumMap = new Map<string, number | null>();
+    const momentumMap = new Map<number, number | null>();
     for (const r of momentumRows) {
-      momentumMap.set(r.app_slug, r.acc_macro != null ? Number(r.acc_macro) : null);
+      momentumMap.set(r.app_id, r.acc_macro != null ? Number(r.acc_macro) : null);
     }
 
-    // Build global keyword rankings per app: Map<appSlug, { keywordId, totalResults, position }[]>
-    const globalAppKeywordRankings = new Map<string, { keywordId: number; totalResults: number; position: number }[]>();
+    // Build global keyword rankings per app: Map<appId, { keywordId, totalResults, position }[]>
+    const globalAppKeywordRankings = new Map<number, { keywordId: number; totalResults: number; position: number }[]>();
     for (const r of appKeywordRows) {
       const totalResults = keywordTotals.get(r.keyword_id);
       if (totalResults == null || totalResults <= 0) continue;
-      if (!globalAppKeywordRankings.has(r.app_slug)) globalAppKeywordRankings.set(r.app_slug, []);
-      globalAppKeywordRankings.get(r.app_slug)!.push({
+      if (!globalAppKeywordRankings.has(r.app_id)) globalAppKeywordRankings.set(r.app_id, []);
+      globalAppKeywordRankings.get(r.app_id)!.push({
         keywordId: r.keyword_id,
         totalResults,
         position: r.position,
       });
     }
 
-    // Build category rankings per app: Map<appSlug, { categorySlug, position }[]>
-    const appCatRankings = new Map<string, { categorySlug: string; position: number }[]>();
+    // Build category rankings per app: Map<appId, { categorySlug, position }[]>
+    const appCatRankings = new Map<number, { categorySlug: string; position: number }[]>();
     for (const r of appCategoryRows) {
-      if (!appCatRankings.has(r.app_slug)) appCatRankings.set(r.app_slug, []);
-      appCatRankings.get(r.app_slug)!.push({
+      if (!appCatRankings.has(r.app_id)) appCatRankings.set(r.app_id, []);
+      appCatRankings.get(r.app_id)!.push({
         categorySlug: r.category_slug,
         position: r.position,
       });
     }
 
     // Build category -> apps mapping
-    const categoryApps = new Map<string, Set<string>>();
+    const categoryApps = new Map<string, Set<number>>();
     for (const r of appCategoryRows) {
       if (!categoryApps.has(r.category_slug)) categoryApps.set(r.category_slug, new Set());
-      categoryApps.get(r.category_slug)!.add(r.app_slug);
+      categoryApps.get(r.category_slug)!.add(r.app_id);
     }
 
     const today = new Date().toISOString().slice(0, 10);
@@ -259,11 +277,11 @@ export async function computeAppScores(
     // PHASE A: Visibility (account-scoped, per tracked-app context)
     // ============================================================
 
-    // Get all distinct (accountId, trackedAppSlug) contexts
+    // Get all distinct (accountId, trackedAppId) contexts
     const trackedContexts: TrackedContextRow[] = await db
       .execute(
         sql`
-        SELECT DISTINCT account_id, tracked_app_slug
+        SELECT DISTINCT account_id, tracked_app_id
         FROM account_tracked_keywords
       `
       )
@@ -279,7 +297,7 @@ export async function computeAppScores(
           SELECT DISTINCT keyword_id
           FROM account_tracked_keywords
           WHERE account_id = ${ctx.account_id}
-            AND tracked_app_slug = ${ctx.tracked_app_slug}
+            AND tracked_app_id = ${ctx.tracked_app_id}
         `
         )
         .then((res: any) => (res as any).rows ?? res);
@@ -287,48 +305,48 @@ export async function computeAppScores(
       const contextKeywordIds = new Set(kwRows.map((r) => r.keyword_id));
       if (contextKeywordIds.size === 0) continue;
 
-      // Get competitor slugs for this context + the tracked app itself
-      const compRows: { app_slug: string }[] = await db
+      // Get competitor app IDs for this context + the tracked app itself
+      const compRows: { competitor_app_id: number }[] = await db
         .execute(
           sql`
-          SELECT DISTINCT app_slug
+          SELECT DISTINCT competitor_app_id
           FROM account_competitor_apps
           WHERE account_id = ${ctx.account_id}
-            AND tracked_app_slug = ${ctx.tracked_app_slug}
+            AND tracked_app_id = ${ctx.tracked_app_id}
         `
         )
         .then((res: any) => (res as any).rows ?? res);
 
-      const appSlugsInContext = new Set<string>([
-        ctx.tracked_app_slug,
-        ...compRows.map((r) => r.app_slug),
+      const appIdsInContext = new Set<number>([
+        ctx.tracked_app_id,
+        ...compRows.map((r) => r.competitor_app_id),
       ]);
 
       // Compute visibility for each app in this context using only context keywords
-      const contextVisRaw = new Map<string, { keywordCount: number; visibilityRaw: number }>();
+      const contextVisRaw = new Map<number, { keywordCount: number; visibilityRaw: number }>();
       let maxRaw = 0;
 
-      for (const appSlug of appSlugsInContext) {
-        const allRankings = globalAppKeywordRankings.get(appSlug) || [];
+      for (const appId of appIdsInContext) {
+        const allRankings = globalAppKeywordRankings.get(appId) || [];
         // Filter to only keywords in this context
         const filteredRankings = allRankings
           .filter((r) => contextKeywordIds.has(r.keywordId))
           .map((r) => ({ totalResults: r.totalResults, position: r.position }));
 
         const result = computeAppVisibility(filteredRankings);
-        contextVisRaw.set(appSlug, result);
+        contextVisRaw.set(appId, result);
         if (result.visibilityRaw > maxRaw) maxRaw = result.visibilityRaw;
       }
 
       // Normalize and upsert
-      for (const [appSlug, vis] of contextVisRaw) {
+      for (const [appId, vis] of contextVisRaw) {
         const visScore = normalizeScore(vis.visibilityRaw, maxRaw);
         await db
           .insert(appVisibilityScores)
           .values({
             accountId: ctx.account_id,
-            trackedAppSlug: ctx.tracked_app_slug,
-            appSlug,
+            trackedAppId: ctx.tracked_app_id,
+            appId,
             computedAt: today,
             scrapeRunId: run.id,
             keywordCount: vis.keywordCount,
@@ -338,8 +356,8 @@ export async function computeAppScores(
           .onConflictDoUpdate({
             target: [
               appVisibilityScores.accountId,
-              appVisibilityScores.trackedAppSlug,
-              appVisibilityScores.appSlug,
+              appVisibilityScores.trackedAppId,
+              appVisibilityScores.appId,
               appVisibilityScores.computedAt,
             ],
             set: {
@@ -357,11 +375,11 @@ export async function computeAppScores(
     // PHASE B: Power (leaf categories only)
     // ============================================================
 
-    // Get leaf category slugs
+    // Get leaf category slugs (filtered by platform)
     const leafCatRows: { slug: string }[] = await db
       .execute(
         sql`
-        SELECT slug FROM categories WHERE is_listing_page = true
+        SELECT slug FROM categories WHERE is_listing_page = true AND platform = ${platform}
       `
       )
       .then((res: any) => (res as any).rows ?? res);
@@ -371,10 +389,10 @@ export async function computeAppScores(
     log.info("phase B: computing power", { leafCategories: leafCategorySlugs.size });
 
     // Filter categoryApps to only leaf categories
-    const leafCategoryApps = new Map<string, Set<string>>();
-    for (const [catSlug, appSlugs] of categoryApps) {
+    const leafCategoryApps = new Map<string, Set<number>>();
+    for (const [catSlug, appIds] of categoryApps) {
       if (leafCategorySlugs.has(catSlug)) {
-        leafCategoryApps.set(catSlug, appSlugs);
+        leafCategoryApps.set(catSlug, appIds);
       }
     }
 
@@ -382,15 +400,15 @@ export async function computeAppScores(
     const categoryMaxReviews = new Map<string, number>();
     const categoryMaxAccMacro = new Map<string, number>();
 
-    for (const [catSlug, appSlugs] of leafCategoryApps) {
+    for (const [catSlug, appIds] of leafCategoryApps) {
       let maxReviews = 0;
       let maxAccMacro = 0;
-      for (const slug of appSlugs) {
-        const info = appInfoMap.get(slug);
+      for (const appId of appIds) {
+        const info = appInfoMap.get(appId);
         if (info?.rating_count != null) {
           maxReviews = Math.max(maxReviews, info.rating_count);
         }
-        const accMacro = momentumMap.get(slug);
+        const accMacro = momentumMap.get(appId);
         if (accMacro != null && accMacro > 0) {
           maxAccMacro = Math.max(maxAccMacro, accMacro);
         }
@@ -400,15 +418,15 @@ export async function computeAppScores(
     }
 
     // Compute raw power scores per (app, leafCategory)
-    const appPowerRawByCategory = new Map<string, Map<string, ReturnType<typeof computeAppPower>>>();
-    for (const [catSlug, appSlugs] of leafCategoryApps) {
-      const catPowerMap = new Map<string, ReturnType<typeof computeAppPower>>();
+    const appPowerRawByCategory = new Map<string, Map<number, ReturnType<typeof computeAppPower>>>();
+    for (const [catSlug, appIds] of leafCategoryApps) {
+      const catPowerMap = new Map<number, ReturnType<typeof computeAppPower>>();
       const maxReviews = categoryMaxReviews.get(catSlug) || 0;
       const maxAccMacro = categoryMaxAccMacro.get(catSlug) || 0;
 
-      for (const slug of appSlugs) {
-        const info = appInfoMap.get(slug);
-        const catRankings = appCatRankings.get(slug) || [];
+      for (const appId of appIds) {
+        const info = appInfoMap.get(appId);
+        const catRankings = appCatRankings.get(appId) || [];
 
         const thisCatRanking = catRankings.find((r) => r.categorySlug === catSlug);
         const categoryRankingsInput = thisCatRanking
@@ -420,13 +438,13 @@ export async function computeAppScores(
             averageRating: info?.average_rating != null ? Number(info.average_rating) : null,
             ratingCount: info?.rating_count ?? null,
             categoryRankings: categoryRankingsInput,
-            accMacro: momentumMap.get(slug) ?? null,
+            accMacro: momentumMap.get(appId) ?? null,
           },
           maxReviews,
           maxAccMacro,
         );
 
-        catPowerMap.set(slug, power);
+        catPowerMap.set(appId, power);
       }
       appPowerRawByCategory.set(catSlug, catPowerMap);
     }
@@ -445,12 +463,12 @@ export async function computeAppScores(
     for (const [catSlug, catPowerMap] of appPowerRawByCategory) {
       const maxPow = categoryMaxPower.get(catSlug) || 0;
 
-      for (const [slug, power] of catPowerMap) {
+      for (const [appId, power] of catPowerMap) {
         const powScore = normalizeScore(power.powerRaw, maxPow);
         await db
           .insert(appPowerScores)
           .values({
-            appSlug: slug,
+            appId,
             categorySlug: catSlug,
             computedAt: today,
             scrapeRunId: run.id,
@@ -463,7 +481,7 @@ export async function computeAppScores(
           })
           .onConflictDoUpdate({
             target: [
-              appPowerScores.appSlug,
+              appPowerScores.appId,
               appPowerScores.categorySlug,
               appPowerScores.computedAt,
             ],
@@ -483,6 +501,7 @@ export async function computeAppScores(
 
     const durationMs = Date.now() - startTime;
     log.info("app scores computed", {
+      platform,
       visibilityUpserts,
       powerUpserts,
       trackedContexts: trackedContexts.length,
@@ -496,6 +515,7 @@ export async function computeAppScores(
         status: "completed",
         completedAt: new Date(),
         metadata: {
+          platform,
           visibility_upserts: visibilityUpserts,
           power_upserts: powerUpserts,
           tracked_contexts: trackedContexts.length,

@@ -1,7 +1,7 @@
 import {
   pgTable,
   serial,
-  varchar,
+  integer,
   smallint,
   date,
   uuid,
@@ -15,12 +15,12 @@ export const similarAppSightings = pgTable(
   "similar_app_sightings",
   {
     id: serial("id").primaryKey(),
-    appSlug: varchar("app_slug", { length: 255 })
+    appId: integer("app_id")
       .notNull()
-      .references(() => apps.slug),
-    similarAppSlug: varchar("similar_app_slug", { length: 255 })
+      .references(() => apps.id),
+    similarAppId: integer("similar_app_id")
       .notNull()
-      .references(() => apps.slug),
+      .references(() => apps.id),
     position: smallint("position"),
     seenDate: date("seen_date", { mode: "string" }).notNull(),
     firstSeenRunId: uuid("first_seen_run_id")
@@ -32,14 +32,14 @@ export const similarAppSightings = pgTable(
     timesSeenInDay: smallint("times_seen_in_day").notNull().default(1),
   },
   (table) => [
-    index("idx_similar_sightings_app_date").on(table.appSlug, table.seenDate),
+    index("idx_similar_sightings_app_date").on(table.appId, table.seenDate),
     index("idx_similar_sightings_similar_date").on(
-      table.similarAppSlug,
+      table.similarAppId,
       table.seenDate
     ),
     uniqueIndex("idx_similar_sightings_unique").on(
-      table.appSlug,
-      table.similarAppSlug,
+      table.appId,
+      table.similarAppId,
       table.seenDate
     ),
   ]

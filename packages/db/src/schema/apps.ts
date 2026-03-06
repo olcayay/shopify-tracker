@@ -11,23 +11,26 @@ import {
   jsonb,
   smallint,
   index,
+  uniqueIndex,
 } from "drizzle-orm/pg-core";
 import type {
   AppDeveloper,
   AppCategory,
   PricingPlan,
   AppSupport,
-} from "@shopify-tracking/shared";
+} from "@appranks/shared";
 import { scrapeRuns } from "./scrape-runs.js";
 
 export const apps = pgTable(
   "apps",
   {
     id: serial("id").primaryKey(),
-    slug: varchar("slug", { length: 255 }).notNull().unique(),
+    platform: varchar("platform", { length: 20 }).notNull().default("shopify"),
+    slug: varchar("slug", { length: 255 }).notNull(),
     name: text("name").notNull(),
     isTracked: boolean("is_tracked").notNull().default(false),
     isBuiltForShopify: boolean("is_built_for_shopify").notNull().default(false),
+    badges: jsonb("badges").$type<string[]>().notNull().default([]),
     launchedDate: timestamp("launched_date"),
     iconUrl: text("icon_url"),
     appCardSubtitle: text("app_card_subtitle"),
@@ -38,6 +41,7 @@ export const apps = pgTable(
     updatedAt: timestamp("updated_at").notNull().defaultNow(),
   },
   (table) => [
+    uniqueIndex("idx_apps_platform_slug").on(table.platform, table.slug),
     index("idx_apps_is_tracked").on(table.isTracked),
   ]
 );
@@ -46,9 +50,9 @@ export const appSnapshots = pgTable(
   "app_snapshots",
   {
     id: serial("id").primaryKey(),
-    appSlug: varchar("app_slug", { length: 255 })
+    appId: integer("app_id")
       .notNull()
-      .references(() => apps.slug),
+      .references(() => apps.id),
     scrapeRunId: uuid("scrape_run_id")
       .notNull()
       .references(() => scrapeRuns.id),
@@ -74,9 +78,13 @@ export const appSnapshots = pgTable(
       .notNull()
       .default([]),
     support: jsonb("support").$type<AppSupport>(),
+    platformData: jsonb("platform_data")
+      .$type<Record<string, unknown>>()
+      .notNull()
+      .default({}),
   },
   (table) => [
-    index("idx_app_snapshots_slug_date").on(table.appSlug, table.scrapedAt),
+    index("idx_app_snapshots_app_id_date").on(table.appId, table.scrapedAt),
   ]
 );
 
@@ -84,9 +92,9 @@ export const appFieldChanges = pgTable(
   "app_field_changes",
   {
     id: serial("id").primaryKey(),
-    appSlug: varchar("app_slug", { length: 255 })
+    appId: integer("app_id")
       .notNull()
-      .references(() => apps.slug),
+      .references(() => apps.id),
     field: varchar("field", { length: 50 }).notNull(),
     oldValue: text("old_value"),
     newValue: text("new_value"),
@@ -96,7 +104,7 @@ export const appFieldChanges = pgTable(
       .references(() => scrapeRuns.id),
   },
   (table) => [
-    index("idx_app_field_changes_slug").on(table.appSlug, table.detectedAt),
+    index("idx_app_field_changes_app_id").on(table.appId, table.detectedAt),
   ]
 );
 
@@ -104,9 +112,9 @@ export const appCategoryRankings = pgTable(
   "app_category_rankings",
   {
     id: serial("id").primaryKey(),
-    appSlug: varchar("app_slug", { length: 255 })
+    appId: integer("app_id")
       .notNull()
-      .references(() => apps.slug),
+      .references(() => apps.id),
     categorySlug: varchar("category_slug", { length: 255 }).notNull(),
     scrapeRunId: uuid("scrape_run_id")
       .notNull()
@@ -115,8 +123,8 @@ export const appCategoryRankings = pgTable(
     position: smallint("position").notNull(),
   },
   (table) => [
-    index("idx_app_cat_rank").on(
-      table.appSlug,
+    index("idx_app_cat_rank_id").on(
+      table.appId,
       table.categorySlug,
       table.scrapedAt
     ),

@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useAuth } from "@/lib/auth-context";
+import { PLATFORMS, type PlatformId } from "@appranks/shared";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -175,6 +176,7 @@ export default function ScraperPage() {
   const [filterType, setFilterType] = useState<string>("");
   const [filterTrigger, setFilterTrigger] = useState<string>("");
   const [filterQueue, setFilterQueue] = useState<string>("");
+  const [filterPlatform, setFilterPlatform] = useState<string>("");
   const [page, setPage] = useState(0);
   const [expandedRunId, setExpandedRunId] = useState<string | null>(null);
   const [drainConfirm, setDrainConfirm] = useState(false);
@@ -182,13 +184,14 @@ export default function ScraperPage() {
 
   useEffect(() => {
     loadData();
-  }, [filterType, filterTrigger, filterQueue, page]);
+  }, [filterType, filterTrigger, filterQueue, filterPlatform, page]);
 
   async function loadData() {
     const params = new URLSearchParams();
     if (filterType) params.set("type", filterType);
     if (filterTrigger) params.set("triggeredBy", filterTrigger);
     if (filterQueue) params.set("queue", filterQueue);
+    if (filterPlatform) params.set("platform", filterPlatform);
     params.set("limit", String(PAGE_SIZE));
     params.set("offset", String(page * PAGE_SIZE));
 
@@ -622,6 +625,21 @@ export default function ScraperPage() {
                 <option value="interactive">Interactive</option>
                 <option value="background">Background</option>
               </select>
+              <select
+                value={filterPlatform}
+                onChange={(e) => {
+                  setFilterPlatform(e.target.value);
+                  setPage(0);
+                }}
+                className="border rounded-md px-3 py-1.5 text-sm bg-background"
+              >
+                <option value="">All platforms</option>
+                {(Object.keys(PLATFORMS) as PlatformId[]).map((pid) => (
+                  <option key={pid} value={pid}>
+                    {PLATFORMS[pid].name}
+                  </option>
+                ))}
+              </select>
               <Button variant="ghost" size="sm" onClick={loadData}>
                 <RefreshCw className="h-4 w-4" />
               </Button>
@@ -634,6 +652,7 @@ export default function ScraperPage() {
               <TableRow>
                 <TableHead className="w-8" />
                 <TableHead>Type</TableHead>
+                <TableHead>Platform</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead>Queue</TableHead>
                 <TableHead>Triggered By</TableHead>
@@ -676,6 +695,15 @@ export default function ScraperPage() {
                     </TableCell>
                     <TableCell className="font-mono text-sm">
                       {run.scraperType}
+                    </TableCell>
+                    <TableCell className="text-sm">
+                      {run.platform ? (
+                        <Badge variant="outline" className="capitalize text-xs">
+                          {run.platform}
+                        </Badge>
+                      ) : (
+                        <span className="text-muted-foreground">{"\u2014"}</span>
+                      )}
                     </TableCell>
                     <TableCell>
                       <Badge
@@ -766,7 +794,7 @@ export default function ScraperPage() {
                   </TableRow>
                   {expandedRunId === run.id && (
                     <TableRow key={`${run.id}-details`}>
-                      <TableCell colSpan={10} className="bg-muted/30 p-4">
+                      <TableCell colSpan={11} className="bg-muted/30 p-4">
                         {run.error && (
                           <div className="mb-3">
                             <div className="text-sm font-medium text-destructive mb-1">
@@ -812,7 +840,7 @@ export default function ScraperPage() {
               {runs.length === 0 && (
                 <TableRow>
                   <TableCell
-                    colSpan={10}
+                    colSpan={11}
                     className="text-center text-muted-foreground"
                   >
                     No scraper runs yet

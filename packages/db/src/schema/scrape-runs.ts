@@ -27,6 +27,7 @@ export const scrapeRuns = pgTable(
     id: uuid("id").primaryKey().defaultRandom(),
     scraperType: scraperTypeEnum("scraper_type").notNull(),
     status: scrapeRunStatusEnum("status").notNull().default("pending"),
+    platform: varchar("platform", { length: 20 }),
     createdAt: timestamp("created_at").notNull().defaultNow(),
     startedAt: timestamp("started_at"),
     completedAt: timestamp("completed_at"),
@@ -38,5 +39,6 @@ export const scrapeRuns = pgTable(
   (table) => [
     index("idx_scrape_runs_type_started").on(table.scraperType, table.startedAt),
     index("idx_scrape_runs_status").on(table.status),
+    index("idx_scrape_runs_platform_type_started").on(table.platform, table.scraperType, table.startedAt),
   ]
 );

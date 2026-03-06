@@ -1,6 +1,7 @@
 import type { FastifyPluginAsync } from "fastify";
 import { eq, desc, sql, and, inArray, ilike } from "drizzle-orm";
-import { createDb } from "@shopify-tracking/db";
+import { createDb } from "@appranks/db";
+import { getPlatformFromQuery } from "../utils/platform.js";
 import {
   trackedKeywords,
   keywordSnapshots,
@@ -17,9 +18,9 @@ import {
   keywordToSlug,
   researchProjects,
   researchProjectKeywords,
-} from "@shopify-tracking/db";
-import { computeKeywordOpportunity } from "@shopify-tracking/shared";
-import type { KeywordSearchApp } from "@shopify-tracking/shared";
+} from "@appranks/db";
+import { computeKeywordOpportunity } from "@appranks/shared";
+import type { KeywordSearchApp } from "@appranks/shared";
 import { Queue } from "bullmq";
 
 type Db = ReturnType<typeof createDb>;
@@ -53,13 +54,15 @@ export const keywordRoutes: FastifyPluginAsync = async (app) => {
   // GET /api/keywords — list account's tracked keywords
   app.get("/", async (request) => {
     const { accountId } = request.user;
+    const platform = getPlatformFromQuery(request.query as Record<string, unknown>);
 
     const trackedRows = await db
       .select({
         keywordId: accountTrackedKeywords.keywordId,
-        trackedAppSlug: accountTrackedKeywords.trackedAppSlug,
+        trackedAppSlug: apps.slug,
       })
       .from(accountTrackedKeywords)
+      .innerJoin(apps, eq(apps.id, accountTrackedKeywords.trackedAppId))
       .where(eq(accountTrackedKeywords.accountId, accountId));
 
     if (trackedRows.length === 0) {
@@ -79,12 +82,14 @@ export const keywordRoutes: FastifyPluginAsync = async (app) => {
     // Get account's tracked apps and competitors for matching
     const [trackedAppRows, competitorRows] = await Promise.all([
       db
-        .select({ appSlug: accountTrackedApps.appSlug })
+        .select({ appSlug: apps.slug })
         .from(accountTrackedApps)
+        .innerJoin(apps, eq(apps.id, accountTrackedApps.appId))
         .where(eq(accountTrackedApps.accountId, accountId)),
       db
-        .select({ appSlug: accountCompetitorApps.appSlug })
+        .select({ appSlug: apps.slug })
         .from(accountCompetitorApps)
+        .innerJoin(apps, eq(apps.id, accountCompetitorApps.competitorAppId))
         .where(eq(accountCompetitorApps.accountId, accountId)),
     ]);
     const trackedSlugs = trackedAppRows.map((r) => r.appSlug);
@@ -94,7 +99,7 @@ export const keywordRoutes: FastifyPluginAsync = async (app) => {
     const rows = await db
       .select()
       .from(trackedKeywords)
-      .where(inArray(trackedKeywords.id, ids))
+      .where(and(inArray(trackedKeywords.id, ids), eq(trackedKeywords.platform, platform)))
       .orderBy(trackedKeywords.keyword);
 
     // Batch-fetch ad app counts per keyword (last 30 days)
@@ -107,7 +112,7 @@ export const keywordRoutes: FastifyPluginAsync = async (app) => {
       const adAppCounts = await db
         .select({
           keywordId: keywordAdSightings.keywordId,
-          appCount: sql<number>`count(distinct ${keywordAdSightings.appSlug})`,
+          appCount: sql<number>`count(distinct ${keywordAdSightings.appId})`,
         })
         .from(keywordAdSightings)
         .where(
@@ -254,6 +259,7 @@ export const keywordRoutes: FastifyPluginAsync = async (app) => {
 
   app.get("/search", async (request) => {
     const { q = "" } = request.query as { q?: string };
+    const platform = getPlatformFromQuery(request.query as Record<string, unknown>);
     if (q.length < 1) return [];
 
     const rows = await db
@@ -263,7 +269,7 @@ export const keywordRoutes: FastifyPluginAsync = async (app) => {
         slug: trackedKeywords.slug,
       })
       .from(trackedKeywords)
-      .where(ilike(trackedKeywords.keyword, `${q}%`))
+      .where(and(ilike(trackedKeywords.keyword, `${q}%`), eq(trackedKeywords.platform, platform)))
       .orderBy(trackedKeywords.keyword)
       .limit(20);
 
@@ -274,11 +280,12 @@ export const keywordRoutes: FastifyPluginAsync = async (app) => {
   app.get<{ Params: { slug: string } }>("/:slug", async (request, reply) => {
     const { slug } = request.params;
     const { accountId } = request.user;
+    const platform = getPlatformFromQuery(request.query as Record<string, unknown>);
 
     const [kw] = await db
       .select()
       .from(trackedKeywords)
-      .where(eq(trackedKeywords.slug, slug))
+      .where(and(eq(trackedKeywords.slug, slug), eq(trackedKeywords.platform, platform)))
       .limit(1);
 
     if (!kw) {
@@ -295,9 +302,10 @@ export const keywordRoutes: FastifyPluginAsync = async (app) => {
     const trackedRows = await db
       .select({
         keywordId: accountTrackedKeywords.keywordId,
-        trackedAppSlug: accountTrackedKeywords.trackedAppSlug,
+        trackedAppSlug: apps.slug,
       })
       .from(accountTrackedKeywords)
+      .innerJoin(apps, eq(apps.id, accountTrackedKeywords.trackedAppId))
       .where(
         and(
           eq(accountTrackedKeywords.accountId, accountId),
@@ -368,11 +376,12 @@ export const keywordRoutes: FastifyPluginAsync = async (app) => {
         scope?: string;
       };
       const { accountId } = request.user;
+      const platform = getPlatformFromQuery(request.query as Record<string, unknown>);
 
       const [kw] = await db
         .select()
         .from(trackedKeywords)
-        .where(eq(trackedKeywords.slug, slug))
+        .where(and(eq(trackedKeywords.slug, slug), eq(trackedKeywords.platform, platform)))
         .limit(1);
 
       if (!kw) {
@@ -389,30 +398,38 @@ export const keywordRoutes: FastifyPluginAsync = async (app) => {
       ];
 
       if (appSlug) {
-        conditions.push(eq(appKeywordRankings.appSlug, appSlug));
+        // Look up app ID from slug
+        const [appRow] = await db
+          .select({ id: apps.id })
+          .from(apps)
+          .where(eq(apps.slug, appSlug))
+          .limit(1);
+        if (appRow) {
+          conditions.push(eq(appKeywordRankings.appId, appRow.id));
+        }
       }
 
       // If scope=account, filter to only tracked + competitor apps
       if (scope === "account" && !appSlug) {
         const trackedRows = await db
-          .select({ appSlug: accountTrackedApps.appSlug })
+          .select({ appId: accountTrackedApps.appId })
           .from(accountTrackedApps)
           .where(eq(accountTrackedApps.accountId, accountId));
 
         const competitorRows = await db
-          .select({ appSlug: accountCompetitorApps.appSlug })
+          .select({ appId: accountCompetitorApps.competitorAppId })
           .from(accountCompetitorApps)
           .where(eq(accountCompetitorApps.accountId, accountId));
 
-        const slugs = [
+        const appIds = [
           ...new Set([
-            ...trackedRows.map((r) => r.appSlug),
-            ...competitorRows.map((r) => r.appSlug),
+            ...trackedRows.map((r) => r.appId),
+            ...competitorRows.map((r) => r.appId),
           ]),
         ];
 
-        if (slugs.length > 0) {
-          conditions.push(inArray(appKeywordRankings.appSlug, slugs));
+        if (appIds.length > 0) {
+          conditions.push(inArray(appKeywordRankings.appId, appIds));
         } else {
           return { keyword: kw, rankings: [] };
         }
@@ -421,7 +438,7 @@ export const keywordRoutes: FastifyPluginAsync = async (app) => {
       const rankings = await db
         .select({
           id: appKeywordRankings.id,
-          appSlug: appKeywordRankings.appSlug,
+          appSlug: apps.slug,
           appName: apps.name,
           isBuiltForShopify: apps.isBuiltForShopify,
           iconUrl: apps.iconUrl,
@@ -431,7 +448,7 @@ export const keywordRoutes: FastifyPluginAsync = async (app) => {
           position: appKeywordRankings.position,
         })
         .from(appKeywordRankings)
-        .innerJoin(apps, eq(apps.slug, appKeywordRankings.appSlug))
+        .innerJoin(apps, eq(apps.id, appKeywordRankings.appId))
         .where(and(...conditions))
         .orderBy(appKeywordRankings.scrapedAt, appKeywordRankings.position);
 
@@ -445,11 +462,12 @@ export const keywordRoutes: FastifyPluginAsync = async (app) => {
     async (request, reply) => {
       const { slug } = request.params;
       const { days = "30" } = request.query as { days?: string };
+      const platform = getPlatformFromQuery(request.query as Record<string, unknown>);
 
       const [kw] = await db
         .select()
         .from(trackedKeywords)
-        .where(eq(trackedKeywords.slug, slug))
+        .where(and(eq(trackedKeywords.slug, slug), eq(trackedKeywords.platform, platform)))
         .limit(1);
 
       if (!kw) {
@@ -462,25 +480,25 @@ export const keywordRoutes: FastifyPluginAsync = async (app) => {
 
       const adSightings = await db
         .select({
-          appSlug: keywordAdSightings.appSlug,
+          appSlug: apps.slug,
           appName: apps.name,
           iconUrl: apps.iconUrl,
           isBuiltForShopify: apps.isBuiltForShopify,
           averageRating: sql<string>`(
             SELECT average_rating FROM app_snapshots
-            WHERE app_slug = ${keywordAdSightings.appSlug}
+            WHERE app_id = ${keywordAdSightings.appId}
             ORDER BY scraped_at DESC LIMIT 1
           )`,
           ratingCount: sql<number>`(
             SELECT rating_count FROM app_snapshots
-            WHERE app_slug = ${keywordAdSightings.appSlug}
+            WHERE app_id = ${keywordAdSightings.appId}
             ORDER BY scraped_at DESC LIMIT 1
           )`,
           seenDate: keywordAdSightings.seenDate,
           timesSeenInDay: keywordAdSightings.timesSeenInDay,
         })
         .from(keywordAdSightings)
-        .innerJoin(apps, eq(keywordAdSightings.appSlug, apps.slug))
+        .innerJoin(apps, eq(keywordAdSightings.appId, apps.id))
         .where(
           and(
             eq(keywordAdSightings.keywordId, kw.id),
@@ -502,11 +520,12 @@ export const keywordRoutes: FastifyPluginAsync = async (app) => {
         limit?: string;
         offset?: string;
       };
+      const platform = getPlatformFromQuery(request.query as Record<string, unknown>);
 
       const [kw] = await db
         .select()
         .from(trackedKeywords)
-        .where(eq(trackedKeywords.slug, slug))
+        .where(and(eq(trackedKeywords.slug, slug), eq(trackedKeywords.platform, platform)))
         .limit(1);
 
       if (!kw) {
@@ -535,11 +554,12 @@ export const keywordRoutes: FastifyPluginAsync = async (app) => {
     "/:slug/suggestions",
     async (request, reply) => {
       const { slug } = request.params;
+      const platform = getPlatformFromQuery(request.query as Record<string, unknown>);
 
       const [kw] = await db
         .select()
         .from(trackedKeywords)
-        .where(eq(trackedKeywords.slug, slug))
+        .where(and(eq(trackedKeywords.slug, slug), eq(trackedKeywords.platform, platform)))
         .limit(1);
 
       if (!kw) {
@@ -568,11 +588,12 @@ export const keywordRoutes: FastifyPluginAsync = async (app) => {
     async (request, reply) => {
       const { slug } = request.params;
       const { accountId } = request.user;
+      const platform = getPlatformFromQuery(request.query as Record<string, unknown>);
 
       const [kw] = await db
         .select({ id: trackedKeywords.id })
         .from(trackedKeywords)
-        .where(eq(trackedKeywords.slug, slug))
+        .where(and(eq(trackedKeywords.slug, slug), eq(trackedKeywords.platform, platform)))
         .limit(1);
 
       if (!kw) {
@@ -582,11 +603,11 @@ export const keywordRoutes: FastifyPluginAsync = async (app) => {
       const [trackedAppRows, projectRows] = await Promise.all([
         db
           .select({
-            trackedAppSlug: accountTrackedKeywords.trackedAppSlug,
+            trackedAppSlug: apps.slug,
             appName: apps.name,
           })
           .from(accountTrackedKeywords)
-          .innerJoin(apps, eq(apps.slug, accountTrackedKeywords.trackedAppSlug))
+          .innerJoin(apps, eq(apps.id, accountTrackedKeywords.trackedAppId))
           .where(
             and(
               eq(accountTrackedKeywords.accountId, accountId),

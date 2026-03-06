@@ -1,7 +1,7 @@
 import {
   pgTable,
   serial,
-  varchar,
+  integer,
   smallint,
   date,
   uuid,
@@ -16,12 +16,12 @@ export const categoryAdSightings = pgTable(
   "category_ad_sightings",
   {
     id: serial("id").primaryKey(),
-    appSlug: varchar("app_slug", { length: 255 })
+    appId: integer("app_id")
       .notNull()
-      .references(() => apps.slug),
-    categorySlug: varchar("category_slug", { length: 255 })
+      .references(() => apps.id),
+    categoryId: integer("category_id")
       .notNull()
-      .references(() => categories.slug),
+      .references(() => categories.id),
     seenDate: date("seen_date", { mode: "string" }).notNull(),
     firstSeenRunId: uuid("first_seen_run_id")
       .notNull()
@@ -33,13 +33,13 @@ export const categoryAdSightings = pgTable(
   },
   (table) => [
     index("idx_cat_ad_sightings_cat_date").on(
-      table.categorySlug,
+      table.categoryId,
       table.seenDate
     ),
-    index("idx_cat_ad_sightings_app_date").on(table.appSlug, table.seenDate),
+    index("idx_cat_ad_sightings_app_date").on(table.appId, table.seenDate),
     uniqueIndex("idx_cat_ad_sightings_unique").on(
-      table.appSlug,
-      table.categorySlug,
+      table.appId,
+      table.categoryId,
       table.seenDate
     ),
   ]

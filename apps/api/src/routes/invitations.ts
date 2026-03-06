@@ -5,7 +5,7 @@ import {
   createDb,
   users,
   invitations,
-} from "@shopify-tracking/db";
+} from "@appranks/db";
 
 type Db = ReturnType<typeof createDb>;
 

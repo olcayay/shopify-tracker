@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
@@ -25,23 +25,43 @@ import {
   PanelLeftClose,
   PanelLeftOpen,
   Menu,
+  ChevronsUpDown,
+  Check,
 } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
+import { PLATFORMS, type PlatformId } from "@appranks/shared";
 import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
 import { VisuallyHidden } from "radix-ui";
 
-const navItems: { href: string; label: string; icon: any; badge?: string }[] = [
-  { href: "/overview", label: "Overview", icon: LayoutDashboard },
-  { href: "/apps", label: "Apps", icon: AppWindow },
-  { href: "/competitors", label: "Competitors", icon: Star },
-  { href: "/keywords", label: "Keywords", icon: Search },
-  { href: "/categories", label: "Categories", icon: FolderTree },
-  { href: "/featured", label: "Featured", icon: Sparkles },
-  { href: "/features", label: "Features", icon: Puzzle },
-  { href: "/research", label: "Research", icon: FlaskConical, badge: "Beta" },
-  { href: "/settings", label: "Settings", icon: Settings },
-];
+const PLATFORM_LABELS: Record<PlatformId, string> = {
+  shopify: "Shopify",
+  salesforce: "Salesforce",
+  canva: "Canva",
+};
+
+function getNavItems(platformId: PlatformId) {
+  const p = `/${platformId}`;
+  const caps = PLATFORMS[platformId];
+  const items: { href: string; label: string; icon: any; badge?: string }[] = [
+    { href: `${p}/overview`, label: "Overview", icon: LayoutDashboard },
+    { href: `${p}/apps`, label: "Apps", icon: AppWindow },
+    { href: `${p}/competitors`, label: "Competitors", icon: Star },
+  ];
+  if (caps.hasKeywordSearch) {
+    items.push({ href: `${p}/keywords`, label: "Keywords", icon: Search });
+  }
+  items.push({ href: `${p}/categories`, label: "Categories", icon: FolderTree });
+  if (caps.hasFeaturedSections) {
+    items.push({ href: `${p}/featured`, label: "Featured", icon: Sparkles });
+  }
+  if (caps.hasFeatureTaxonomy) {
+    items.push({ href: `${p}/features`, label: "Features", icon: Puzzle });
+  }
+  items.push({ href: `${p}/research`, label: "Research", icon: FlaskConical, badge: "Beta" });
+  items.push({ href: "/settings", label: "Settings", icon: Settings });
+  return items;
+}
 
 const systemAdminItems = [
   { href: "/system-admin", label: "Overview", icon: Shield },
@@ -54,6 +74,93 @@ const systemAdminItems = [
   { href: "/system-admin/packages", label: "Packages", icon: Package },
   { href: "/system-admin/scraper", label: "Scraper", icon: Bot },
 ];
+
+/** Extract platform from current pathname */
+function extractPlatform(pathname: string): PlatformId {
+  const match = pathname.match(/^\/(shopify|salesforce|canva)(\/|$)/);
+  return (match?.[1] as PlatformId) ?? "shopify";
+}
+
+function PlatformSwitcher({
+  currentPlatform,
+  enabledPlatforms,
+  collapsed,
+  onNavigate,
+}: {
+  currentPlatform: PlatformId;
+  enabledPlatforms: string[];
+  collapsed: boolean;
+  onNavigate?: () => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const pathname = usePathname();
+
+  if (collapsed) {
+    return (
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <div className="flex justify-center py-1.5 mb-1 text-xs font-medium text-muted-foreground">
+            {PLATFORM_LABELS[currentPlatform]?.slice(0, 2).toUpperCase()}
+          </div>
+        </TooltipTrigger>
+        <TooltipContent side="right">{PLATFORM_LABELS[currentPlatform]}</TooltipContent>
+      </Tooltip>
+    );
+  }
+
+  return (
+    <div className="relative mb-1">
+      <button
+        onClick={() => setOpen(!open)}
+        className="flex items-center gap-2 w-full px-3 py-1.5 text-sm font-medium rounded-md hover:bg-muted transition-colors"
+      >
+        <span className="truncate">{PLATFORM_LABELS[currentPlatform]}</span>
+        <ChevronsUpDown className="h-3.5 w-3.5 ml-auto shrink-0 text-muted-foreground" />
+      </button>
+      {open && (
+        <div className="absolute left-0 right-0 top-full z-50 mt-1 rounded-md border bg-popover p-1 shadow-md">
+          {(Object.keys(PLATFORMS) as PlatformId[]).map((id) => {
+            const isEnabled = enabledPlatforms.includes(id);
+            const isActive = id === currentPlatform;
+            // Build the equivalent path on the new platform
+            const platformPrefix = `/${currentPlatform}`;
+            const subPath = pathname.startsWith(platformPrefix)
+              ? pathname.slice(platformPrefix.length)
+              : "/overview";
+            const targetPath = `/${id}${subPath || "/overview"}`;
+
+            return (
+              <Link
+                key={id}
+                href={isEnabled ? targetPath : "#"}
+                onClick={(e) => {
+                  if (!isEnabled) {
+                    e.preventDefault();
+                    return;
+                  }
+                  setOpen(false);
+                  onNavigate?.();
+                }}
+                className={`flex items-center gap-2 px-2 py-1.5 text-sm rounded-sm transition-colors ${
+                  isEnabled
+                    ? "hover:bg-accent hover:text-accent-foreground"
+                    : "opacity-50 cursor-not-allowed"
+                }`}
+              >
+                {isActive && <Check className="h-3.5 w-3.5" />}
+                {!isActive && <span className="w-3.5" />}
+                <span>{PLATFORM_LABELS[id]}</span>
+                {!isEnabled && (
+                  <span className="ml-auto text-[10px] text-muted-foreground">Upgrade</span>
+                )}
+              </Link>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
 
 function SidebarContent({
   collapsed = false,
@@ -70,6 +177,10 @@ function SidebarContent({
   const { user, account, logout, impersonation } = useAuth();
   const isSystemAdmin = user?.isSystemAdmin;
   const isAdminSection = pathname.startsWith("/system-admin");
+
+  const currentPlatform = extractPlatform(pathname);
+  const enabledPlatforms = account?.enabledPlatforms ?? ["shopify"];
+  const navItems = useMemo(() => getNavItems(currentPlatform), [currentPlatform]);
 
   function NavLink({ href, icon: Icon, label, isActive, iconSize = "h-4 w-4", className = "", badge }: {
     href: string; icon: any; label: string; isActive: boolean; iconSize?: string; className?: string; badge?: string;
@@ -109,7 +220,7 @@ function SidebarContent({
   return (
     <>
       {showCollapseToggle && (
-        <div className={`flex items-center mb-6 ${collapsed ? "justify-center" : "justify-between px-1"}`}>
+        <div className={`flex items-center mb-4 ${collapsed ? "justify-center" : "justify-between px-1"}`}>
           {!collapsed && <span className="font-semibold text-lg px-2">AppRanks</span>}
           <button
             onClick={onToggleCollapsed}
@@ -119,6 +230,12 @@ function SidebarContent({
           </button>
         </div>
       )}
+      <PlatformSwitcher
+        currentPlatform={currentPlatform}
+        enabledPlatforms={enabledPlatforms}
+        collapsed={collapsed}
+        onNavigate={onNavigate}
+      />
       <nav className="flex flex-col gap-1 flex-1">
         {navItems.map((item) => {
           const isActive =

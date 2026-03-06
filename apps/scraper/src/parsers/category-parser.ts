@@ -5,7 +5,7 @@ import {
   type CategoryPageData,
   type FirstPageApp,
   type FirstPageMetrics,
-} from "@shopify-tracking/shared";
+} from "@appranks/shared";
 
 const log = createLogger("category-parser");
 

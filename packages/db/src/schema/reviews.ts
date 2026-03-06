@@ -1,7 +1,7 @@
 import {
   pgTable,
   serial,
-  varchar,
+  integer,
   date,
   text,
   smallint,
@@ -9,6 +9,7 @@ import {
   timestamp,
   uniqueIndex,
   index,
+  varchar,
 } from "drizzle-orm/pg-core";
 import { apps } from "./apps.js";
 import { scrapeRuns } from "./scrape-runs.js";
@@ -17,9 +18,9 @@ export const reviews = pgTable(
   "reviews",
   {
     id: serial("id").primaryKey(),
-    appSlug: varchar("app_slug", { length: 255 })
+    appId: integer("app_id")
       .notNull()
-      .references(() => apps.slug),
+      .references(() => apps.id),
     reviewDate: date("review_date").notNull(),
     content: text("content").notNull().default(""),
     reviewerName: varchar("reviewer_name", { length: 500 }).notNull(),
@@ -33,9 +34,9 @@ export const reviews = pgTable(
   },
   (table) => [
     uniqueIndex("idx_reviews_dedup").on(
-      table.appSlug,
+      table.appId,
       table.reviewerName,
     ),
-    index("idx_reviews_app_date").on(table.appSlug, table.reviewDate),
+    index("idx_reviews_app_date").on(table.appId, table.reviewDate),
   ]
 );

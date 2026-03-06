@@ -1,5 +1,5 @@
 import { eq, sql, and } from "drizzle-orm";
-import type { Database } from "@shopify-tracking/db";
+import type { Database } from "@appranks/db";
 import {
   scrapeRuns,
   trackedKeywords,
@@ -8,8 +8,8 @@ import {
   appKeywordRankings,
   keywordAdSightings,
   appFieldChanges,
-} from "@shopify-tracking/db";
-import { urls, createLogger } from "@shopify-tracking/shared";
+} from "@appranks/db";
+import { urls, createLogger } from "@appranks/shared";
 
 const log = createLogger("keyword-scraper");
 import { HttpClient } from "../http-client.js";
@@ -96,7 +96,7 @@ export class KeywordScraper {
       : pageOptions?.pages === "all" ? 20
       : typeof pageOptions?.pages === "number" ? pageOptions.pages
       : 10;
-    const allApps: import("@shopify-tracking/shared").KeywordSearchApp[] = [];
+    const allApps: import("@appranks/shared").KeywordSearchApp[] = [];
     const seenSponsoredSlugs = new Set<string>();
     const seenOrganicSlugs = new Set<string>();
     let totalResults: number | null = null;
@@ -156,12 +156,12 @@ export class KeywordScraper {
       // Detect appCardSubtitle changes
       if (newSubtitle) {
         const [existing] = await this.db
-          .select({ appCardSubtitle: apps.appCardSubtitle })
+          .select({ id: apps.id, appCardSubtitle: apps.appCardSubtitle })
           .from(apps)
           .where(eq(apps.slug, app.app_slug));
         if (existing && existing.appCardSubtitle !== newSubtitle) {
           await this.db.insert(appFieldChanges).values({
-            appSlug: app.app_slug,
+            appId: existing.id,
             field: "appCardSubtitle",
             oldValue: existing.appCardSubtitle,
             newValue: newSubtitle,
@@ -174,9 +174,10 @@ export class KeywordScraper {
       const hasRating = app.average_rating != null && app.average_rating > 0;
       const hasCount = app.rating_count != null && app.rating_count > 0;
 
-      await this.db
+      const [upsertedApp] = await this.db
         .insert(apps)
         .values({
+          platform: "shopify",
           slug: app.app_slug,
           name: app.app_name,
           isBuiltForShopify: !!app.is_built_for_shopify,
@@ -187,7 +188,7 @@ export class KeywordScraper {
           ...(app.pricing_hint && { pricingHint: app.pricing_hint }),
         })
         .onConflictDoUpdate({
-          target: apps.slug,
+          target: [apps.platform, apps.slug],
           set: {
             isBuiltForShopify: !!app.is_built_for_shopify,
             appCardSubtitle: app.short_description || undefined,
@@ -196,10 +197,11 @@ export class KeywordScraper {
             ...(hasCount && { ratingCount: app.rating_count }),
             ...(app.pricing_hint && { pricingHint: app.pricing_hint }),
           },
-        });
+        })
+        .returning({ id: apps.id });
 
       await this.db.insert(appKeywordRankings).values({
-        appSlug: app.app_slug,
+        appId: upsertedApp.id,
         keywordId,
         scrapeRunId: runId,
         scrapedAt: now,
@@ -213,24 +215,24 @@ export class KeywordScraper {
     const currentOrganicSlugs = new Set(organicApps.map((a) => a.app_slug));
 
     const previouslyRanked = await this.db.execute(sql`
-      SELECT app_slug FROM (
-        SELECT DISTINCT ON (app_slug) app_slug, position
+      SELECT a.id AS app_id, a.slug AS app_slug FROM (
+        SELECT DISTINCT ON (app_id) app_id, position
         FROM app_keyword_rankings
         WHERE keyword_id = ${keywordId}
           AND scrape_run_id != ${runId}
-        ORDER BY app_slug, scraped_at DESC
+        ORDER BY app_id, scraped_at DESC
       ) latest
-      WHERE position IS NOT NULL
+      JOIN apps a ON a.id = latest.app_id
+      WHERE latest.position IS NOT NULL
     `);
-    const prevRows: { app_slug: string }[] = (previouslyRanked as any).rows ?? previouslyRanked;
+    const prevRows: { app_id: number; app_slug: string }[] = (previouslyRanked as any).rows ?? previouslyRanked;
 
-    const droppedSlugs = prevRows
-      .map((r) => r.app_slug)
-      .filter((slug) => !currentOrganicSlugs.has(slug));
+    const droppedApps = prevRows
+      .filter((r) => !currentOrganicSlugs.has(r.app_slug));
 
-    for (const slug of droppedSlugs) {
+    for (const dropped of droppedApps) {
       await this.db.insert(appKeywordRankings).values({
-        appSlug: slug,
+        appId: dropped.app_id,
         keywordId,
         scrapeRunId: runId,
         scrapedAt: now,
@@ -238,8 +240,8 @@ export class KeywordScraper {
       });
     }
 
-    if (droppedSlugs.length > 0) {
-      log.info("recorded dropped apps", { keyword, count: droppedSlugs.length, slugs: droppedSlugs });
+    if (droppedApps.length > 0) {
+      log.info("recorded dropped apps", { keyword, count: droppedApps.length, slugs: droppedApps.map((r) => r.app_slug) });
     }
 
     // Record ad sightings (upsert per app+keyword+day)
@@ -249,9 +251,10 @@ export class KeywordScraper {
       const hasAdRating = app.average_rating != null && app.average_rating > 0;
       const hasAdCount = app.rating_count != null && app.rating_count > 0;
 
-      await this.db
+      const [upsertedApp] = await this.db
         .insert(apps)
         .values({
+          platform: "shopify",
           slug: app.app_slug,
           name: app.app_name,
           isBuiltForShopify: !!app.is_built_for_shopify,
@@ -261,7 +264,7 @@ export class KeywordScraper {
           ...(app.pricing_hint && { pricingHint: app.pricing_hint }),
         })
         .onConflictDoUpdate({
-          target: apps.slug,
+          target: [apps.platform, apps.slug],
           set: {
             isBuiltForShopify: !!app.is_built_for_shopify,
             ...(app.logo_url && { iconUrl: sql`COALESCE(${apps.iconUrl}, ${app.logo_url})` }),
@@ -269,12 +272,13 @@ export class KeywordScraper {
             ...(hasAdCount && { ratingCount: app.rating_count }),
             ...(app.pricing_hint && { pricingHint: app.pricing_hint }),
           },
-        });
+        })
+        .returning({ id: apps.id });
 
       await this.db
         .insert(keywordAdSightings)
         .values({
-          appSlug: app.app_slug,
+          appId: upsertedApp.id,
           keywordId,
           seenDate: todayStr,
           firstSeenRunId: runId,
@@ -283,7 +287,7 @@ export class KeywordScraper {
         })
         .onConflictDoUpdate({
           target: [
-            keywordAdSightings.appSlug,
+            keywordAdSightings.appId,
             keywordAdSightings.keywordId,
             keywordAdSightings.seenDate,
           ],

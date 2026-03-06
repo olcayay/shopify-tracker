@@ -1,6 +1,7 @@
 import {
   pgTable,
   serial,
+  integer,
   varchar,
   date,
   smallint,
@@ -21,12 +22,12 @@ export const appVisibilityScores = pgTable(
     accountId: uuid("account_id")
       .notNull()
       .references(() => accounts.id, { onDelete: "cascade" }),
-    trackedAppSlug: varchar("tracked_app_slug", { length: 255 })
+    trackedAppId: integer("tracked_app_id")
       .notNull()
-      .references(() => apps.slug),
-    appSlug: varchar("app_slug", { length: 255 })
+      .references(() => apps.id),
+    appId: integer("app_id")
       .notNull()
-      .references(() => apps.slug),
+      .references(() => apps.id),
     computedAt: date("computed_at").notNull(),
     scrapeRunId: uuid("scrape_run_id")
       .notNull()
@@ -38,11 +39,11 @@ export const appVisibilityScores = pgTable(
   },
   (table) => [
     uniqueIndex("idx_app_visibility_unique").on(
-      table.accountId, table.trackedAppSlug, table.appSlug, table.computedAt,
+      table.accountId, table.trackedAppId, table.appId, table.computedAt,
     ),
-    index("idx_app_visibility_app_date").on(table.appSlug, table.computedAt),
+    index("idx_app_visibility_app_date").on(table.appId, table.computedAt),
     index("idx_app_visibility_account_tracked").on(
-      table.accountId, table.trackedAppSlug, table.computedAt,
+      table.accountId, table.trackedAppId, table.computedAt,
     ),
   ]
 );
@@ -51,9 +52,10 @@ export const appPowerScores = pgTable(
   "app_power_scores",
   {
     id: serial("id").primaryKey(),
-    appSlug: varchar("app_slug", { length: 255 })
+    appId: integer("app_id")
       .notNull()
-      .references(() => apps.slug),
+      .references(() => apps.id),
+    platform: varchar("platform", { length: 20 }).notNull().default("shopify"),
     categorySlug: varchar("category_slug", { length: 255 }).notNull(),
     computedAt: date("computed_at").notNull(),
     scrapeRunId: uuid("scrape_run_id")
@@ -69,9 +71,9 @@ export const appPowerScores = pgTable(
   },
   (table) => [
     uniqueIndex("idx_app_power_unique").on(
-      table.appSlug, table.categorySlug, table.computedAt,
+      table.appId, table.categorySlug, table.computedAt,
     ),
-    index("idx_app_power_app_date").on(table.appSlug, table.computedAt),
+    index("idx_app_power_app_date").on(table.appId, table.computedAt),
     index("idx_app_power_cat_date_score").on(
       table.categorySlug, table.computedAt, table.powerScore,
     ),

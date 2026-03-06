@@ -3,6 +3,7 @@
 import { Fragment, useEffect, useState, useMemo } from "react";
 import Link from "next/link";
 import { useAuth } from "@/lib/auth-context";
+import { PLATFORMS, type PlatformId } from "@appranks/shared";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import {
@@ -47,20 +48,20 @@ export default function AppsListPage() {
   const [sortKey, setSortKey] = useState<SortKey>("name");
   const [sortDir, setSortDir] = useState<SortDir>("asc");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("tracked");
+  const [platformFilter, setPlatformFilter] = useState<string>("");
   const [page, setPage] = useState(1);
   const [scrapeStatus, setScrapeStatus] = useState<Record<string, "idle" | "loading" | "done">>({});
 
   useEffect(() => {
     loadApps();
-  }, [statusFilter]);
+  }, [statusFilter, platformFilter]);
 
   async function loadApps() {
-    const url =
-      statusFilter === "untracked"
-        ? "/api/system-admin/apps"
-        : statusFilter === "tracked"
-          ? "/api/system-admin/apps?tracked=true"
-          : "/api/system-admin/apps";
+    const params = new URLSearchParams();
+    if (statusFilter === "tracked") params.set("tracked", "true");
+    if (platformFilter) params.set("platform", platformFilter);
+    const qs = params.toString();
+    const url = `/api/system-admin/apps${qs ? `?${qs}` : ""}`;
     const res = await fetchWithAuth(url);
     if (res.ok) setApps(await res.json());
   }
@@ -193,17 +194,34 @@ export default function AppsListPage() {
       </div>
 
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div className="relative w-full sm:w-64">
-          <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder="Search name or slug..."
-            value={search}
+        <div className="flex items-center gap-3">
+          <div className="relative w-full sm:w-64">
+            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Search name or slug..."
+              value={search}
+              onChange={(e) => {
+                setSearch(e.target.value);
+                setPage(1);
+              }}
+              className="pl-9 h-9"
+            />
+          </div>
+          <select
+            value={platformFilter}
             onChange={(e) => {
-              setSearch(e.target.value);
+              setPlatformFilter(e.target.value);
               setPage(1);
             }}
-            className="pl-9 h-9"
-          />
+            className="border rounded-md px-3 py-1.5 text-sm bg-background h-9"
+          >
+            <option value="">All Platforms</option>
+            {(Object.keys(PLATFORMS) as PlatformId[]).map((pid) => (
+              <option key={pid} value={pid}>
+                {PLATFORMS[pid].name}
+              </option>
+            ))}
+          </select>
         </div>
         <div className="flex gap-1.5">
           {(

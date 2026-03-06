@@ -2,11 +2,14 @@
 
 import { useState, useRef, useEffect, useCallback } from "react";
 import Link from "next/link";
+import { useParams } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Search, X, ExternalLink } from "lucide-react";
 import { StarAppButton } from "@/components/star-app-button";
+import { buildExternalSearchUrl, getPlatformName } from "@/lib/platform-urls";
+import { PLATFORMS, type PlatformId } from "@appranks/shared";
 
 interface SearchApp {
   position: number;
@@ -49,6 +52,7 @@ export function LiveSearchModal({
   open: boolean;
   onClose: () => void;
 }) {
+  const { platform } = useParams();
   const { fetchWithAuth } = useAuth();
   const [result, setResult] = useState<LiveSearchResult | null>(null);
   const [loading, setLoading] = useState(false);
@@ -143,11 +147,11 @@ export function LiveSearchModal({
               Refresh
             </Button>
             <a
-              href={`https://apps.shopify.com/search?q=${encodeURIComponent(keyword)}`}
+              href={buildExternalSearchUrl(platform as PlatformId, keyword)}
               target="_blank"
               rel="noopener noreferrer"
               className="p-1 rounded hover:bg-accent"
-              title="Open on Shopify"
+              title={`Open on ${getPlatformName(platform as PlatformId)}`}
             >
               <ExternalLink className="h-4 w-4 text-muted-foreground" />
             </a>
@@ -193,7 +197,7 @@ export function LiveSearchModal({
                       </Badge>
                       <div className="flex-1 min-w-0">
                         <a
-                          href={`https://apps.shopify.com/built-in-features/${app.app_slug.replace("bif:", "")}`}
+                          href={`${PLATFORMS[platform as PlatformId].baseUrl}/built-in-features/${app.app_slug.replace("bif:", "")}`}
                           target="_blank"
                           rel="noopener noreferrer"
                           className="font-medium text-sm text-primary hover:underline truncate block"
@@ -237,7 +241,7 @@ export function LiveSearchModal({
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-1.5">
                             <Link
-                              href={`/apps/${app.app_slug}`}
+                              href={`/${platform}/apps/${app.app_slug}`}
                               onClick={onClose}
                               className="font-medium text-sm text-primary hover:underline truncate"
                             >
@@ -315,7 +319,7 @@ export function LiveSearchModal({
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-1.5">
                             <Link
-                              href={`/apps/${app.app_slug}`}
+                              href={`/${platform}/apps/${app.app_slug}`}
                               onClick={onClose}
                               className="font-medium text-sm text-primary hover:underline truncate"
                             >
@@ -378,7 +382,7 @@ export function LiveSearchModal({
 
         {/* Footer */}
         <div className="px-4 py-2 border-t bg-muted/50 text-xs text-muted-foreground flex items-center justify-between">
-          <span>Real-time results from Shopify App Store</span>
+          <span>Real-time results from {getPlatformName(platform as PlatformId)}</span>
           <span>
             <kbd className="rounded border bg-background px-1">Esc</kbd> to
             close

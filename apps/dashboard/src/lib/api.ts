@@ -1,5 +1,6 @@
 import { cache } from "react";
 import { cookies } from "next/headers";
+import type { PlatformId } from "@appranks/shared";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
 
@@ -10,6 +11,13 @@ async function getAuthToken(): Promise<string | undefined> {
   } catch {
     return undefined;
   }
+}
+
+/** Append ?platform= query param to a path */
+function withPlatform(path: string, platform?: PlatformId): string {
+  if (!platform) return path;
+  const sep = path.includes("?") ? "&" : "?";
+  return `${path}${sep}platform=${platform}`;
 }
 
 async function fetchApi<T>(path: string, options?: RequestInit): Promise<T> {
@@ -34,68 +42,69 @@ async function fetchApi<T>(path: string, options?: RequestInit): Promise<T> {
 }
 
 // --- Categories ---
-export function getCategories(format: "tree" | "flat" = "tree") {
-  return fetchApi<any[]>(`/api/categories?format=${format}`);
+export function getCategories(format: "tree" | "flat" = "tree", platform?: PlatformId) {
+  return fetchApi<any[]>(withPlatform(`/api/categories?format=${format}`, platform));
 }
 
-export function getCategory(slug: string) {
-  return fetchApi<any>(`/api/categories/${slug}`);
+export function getCategory(slug: string, platform?: PlatformId) {
+  return fetchApi<any>(withPlatform(`/api/categories/${slug}`, platform));
 }
 
-export function getCategoryHistory(slug: string, limit = 20) {
-  return fetchApi<any>(`/api/categories/${slug}/history?limit=${limit}`);
+export function getCategoryHistory(slug: string, limit = 20, platform?: PlatformId) {
+  return fetchApi<any>(withPlatform(`/api/categories/${slug}/history?limit=${limit}`, platform));
 }
 
 // --- Apps ---
-export function getApps() {
-  return fetchApi<any[]>(`/api/apps`);
+export function getApps(platform?: PlatformId) {
+  return fetchApi<any[]>(withPlatform(`/api/apps`, platform));
 }
 
-export const getApp = cache((slug: string) => {
-  return fetchApi<any>(`/api/apps/${slug}`);
+export const getApp = cache((slug: string, platform?: PlatformId) => {
+  return fetchApi<any>(withPlatform(`/api/apps/${slug}`, platform));
 });
 
-export const getAppHistory = cache((slug: string, limit = 20) => {
-  return fetchApi<any>(`/api/apps/${slug}/history?limit=${limit}`);
+export const getAppHistory = cache((slug: string, limit = 20, platform?: PlatformId) => {
+  return fetchApi<any>(withPlatform(`/api/apps/${slug}/history?limit=${limit}`, platform));
 });
 
 export const getAppReviews = cache((
   slug: string,
   limit = 20,
   offset = 0,
-  sort = "newest"
+  sort = "newest",
+  platform?: PlatformId,
 ) => {
   return fetchApi<any>(
-    `/api/apps/${slug}/reviews?limit=${limit}&offset=${offset}&sort=${sort}`
+    withPlatform(`/api/apps/${slug}/reviews?limit=${limit}&offset=${offset}&sort=${sort}`, platform)
   );
 });
 
-export const getAppRankings = cache((slug: string, days = 30) => {
-  return fetchApi<any>(`/api/apps/${slug}/rankings?days=${days}`);
+export const getAppRankings = cache((slug: string, days = 30, platform?: PlatformId) => {
+  return fetchApi<any>(withPlatform(`/api/apps/${slug}/rankings?days=${days}`, platform));
 });
 
-export const getAppChanges = cache((slug: string, limit = 50) => {
-  return fetchApi<any[]>(`/api/apps/${slug}/changes?limit=${limit}`);
+export const getAppChanges = cache((slug: string, limit = 50, platform?: PlatformId) => {
+  return fetchApi<any[]>(withPlatform(`/api/apps/${slug}/changes?limit=${limit}`, platform));
 });
 
-export const getAppSimilarApps = cache((slug: string, days = 30) => {
-  return fetchApi<any>(`/api/apps/${slug}/similar-apps?days=${days}`);
+export const getAppSimilarApps = cache((slug: string, days = 30, platform?: PlatformId) => {
+  return fetchApi<any>(withPlatform(`/api/apps/${slug}/similar-apps?days=${days}`, platform));
 });
 
-export const getAppFeaturedPlacements = cache((slug: string, days = 30) => {
-  return fetchApi<any>(`/api/apps/${slug}/featured-placements?days=${days}`);
+export const getAppFeaturedPlacements = cache((slug: string, days = 30, platform?: PlatformId) => {
+  return fetchApi<any>(withPlatform(`/api/apps/${slug}/featured-placements?days=${days}`, platform));
 });
 
-export const getAppAdSightings = cache((slug: string, days = 30) => {
-  return fetchApi<any>(`/api/apps/${slug}/ad-sightings?days=${days}`);
+export const getAppAdSightings = cache((slug: string, days = 30, platform?: PlatformId) => {
+  return fetchApi<any>(withPlatform(`/api/apps/${slug}/ad-sightings?days=${days}`, platform));
 });
 
-export const getAppCategoryAdSightings = cache((slug: string, days = 30) => {
-  return fetchApi<any>(`/api/apps/${slug}/category-ad-sightings?days=${days}`);
+export const getAppCategoryAdSightings = cache((slug: string, days = 30, platform?: PlatformId) => {
+  return fetchApi<any>(withPlatform(`/api/apps/${slug}/category-ad-sightings?days=${days}`, platform));
 });
 
-export const getCategoryAds = cache((slug: string, days = 30) => {
-  return fetchApi<any>(`/api/categories/${slug}/ads?days=${days}`);
+export const getCategoryAds = cache((slug: string, days = 30, platform?: PlatformId) => {
+  return fetchApi<any>(withPlatform(`/api/categories/${slug}/ads?days=${days}`, platform));
 });
 
 // --- Featured Apps ---
@@ -104,69 +113,70 @@ export function getFeaturedApps(
   surface?: string,
   surfaceDetail?: string,
   surfaceDetailPrefix?: string,
+  platform?: PlatformId,
 ) {
   const params = new URLSearchParams({ days: String(days) });
   if (surface) params.set("surface", surface);
   if (surfaceDetail) params.set("surfaceDetail", surfaceDetail);
   if (surfaceDetailPrefix) params.set("surfaceDetailPrefix", surfaceDetailPrefix);
-  return fetchApi<any>(`/api/featured-apps?${params}`);
+  return fetchApi<any>(withPlatform(`/api/featured-apps?${params}`, platform));
 }
 
-export function getFeaturedSections(days = 30) {
-  return fetchApi<any[]>(`/api/featured-apps/sections?days=${days}`);
+export function getFeaturedSections(days = 30, platform?: PlatformId) {
+  return fetchApi<any[]>(withPlatform(`/api/featured-apps/sections?days=${days}`, platform));
 }
 
-export function getAppsLastChanges(slugs: string[]) {
+export function getAppsLastChanges(slugs: string[], platform?: PlatformId) {
   if (slugs.length === 0) return Promise.resolve({} as Record<string, string>);
-  return fetchApi<Record<string, string>>(`/api/apps/last-changes`, {
+  return fetchApi<Record<string, string>>(withPlatform(`/api/apps/last-changes`, platform), {
     method: "POST",
     body: JSON.stringify({ slugs }),
   });
 }
 
-export function getAppsMinPaidPrices(slugs: string[]) {
+export function getAppsMinPaidPrices(slugs: string[], platform?: PlatformId) {
   if (slugs.length === 0) return Promise.resolve({} as Record<string, number | null>);
-  return fetchApi<Record<string, number | null>>(`/api/apps/min-paid-prices`, {
+  return fetchApi<Record<string, number | null>>(withPlatform(`/api/apps/min-paid-prices`, platform), {
     method: "POST",
     body: JSON.stringify({ slugs }),
   });
 }
 
-export function getAppsReverseSimilarCounts(slugs: string[]) {
+export function getAppsReverseSimilarCounts(slugs: string[], platform?: PlatformId) {
   if (slugs.length === 0) return Promise.resolve({} as Record<string, number>);
-  return fetchApi<Record<string, number>>(`/api/apps/reverse-similar-counts`, {
+  return fetchApi<Record<string, number>>(withPlatform(`/api/apps/reverse-similar-counts`, platform), {
     method: "POST",
     body: JSON.stringify({ slugs }),
   });
 }
 
-export function getAppsCategories(slugs: string[]) {
+export function getAppsCategories(slugs: string[], platform?: PlatformId) {
   if (slugs.length === 0) return Promise.resolve({} as Record<string, { title: string; slug: string; position: number | null }[]>);
-  return fetchApi<Record<string, { title: string; slug: string; position: number | null }[]>>(`/api/apps/categories`, {
+  return fetchApi<Record<string, { title: string; slug: string; position: number | null }[]>>(withPlatform(`/api/apps/categories`, platform), {
     method: "POST",
     body: JSON.stringify({ slugs }),
   });
 }
 
-export function getAppsLaunchedDates(slugs: string[]) {
+export function getAppsLaunchedDates(slugs: string[], platform?: PlatformId) {
   if (slugs.length === 0) return Promise.resolve({} as Record<string, string | null>);
-  return fetchApi<Record<string, string | null>>(`/api/apps/launched-dates`, {
+  return fetchApi<Record<string, string | null>>(withPlatform(`/api/apps/launched-dates`, platform), {
     method: "POST",
     body: JSON.stringify({ slugs }),
   });
 }
 
-export function getAppsFeaturedSectionCounts(slugs: string[]) {
+export function getAppsFeaturedSectionCounts(slugs: string[], platform?: PlatformId) {
   if (slugs.length === 0) return Promise.resolve({} as Record<string, number>);
-  return fetchApi<Record<string, number>>(`/api/apps/featured-section-counts`, {
+  return fetchApi<Record<string, number>>(withPlatform(`/api/apps/featured-section-counts`, platform), {
     method: "POST",
     body: JSON.stringify({ slugs }),
   });
 }
 
-export function getAppsAdKeywordCounts(slugs: string[]) {
+export function getAppsAdKeywordCounts(slugs: string[], platform?: PlatformId) {
   if (slugs.length === 0) return Promise.resolve({} as Record<string, number>);
-  return fetchApi<Record<string, number>>(`/api/apps/ad-keyword-counts`, {
+  return fetchApi<Record<string, number>>(withPlatform(`/api/apps/ad-keyword-counts`, platform), {
     method: "POST",
     body: JSON.stringify({ slugs }),
   });
@@ -179,78 +189,79 @@ export interface ReviewVelocityMetrics {
   momentum: string | null;
 }
 
-export function getAppsReviewVelocity(slugs: string[]) {
+export function getAppsReviewVelocity(slugs: string[], platform?: PlatformId) {
   if (slugs.length === 0) return Promise.resolve({} as Record<string, ReviewVelocityMetrics>);
-  return fetchApi<Record<string, ReviewVelocityMetrics>>(`/api/apps/review-velocity`, {
+  return fetchApi<Record<string, ReviewVelocityMetrics>>(withPlatform(`/api/apps/review-velocity`, platform), {
     method: "POST",
     body: JSON.stringify({ slugs }),
   });
 }
 
-export async function getAppReviewMetrics(slug: string): Promise<ReviewVelocityMetrics | null> {
-  const result = await getAppsReviewVelocity([slug]);
+export async function getAppReviewMetrics(slug: string, platform?: PlatformId): Promise<ReviewVelocityMetrics | null> {
+  const result = await getAppsReviewVelocity([slug], platform);
   return result[slug] ?? null;
 }
 
 // --- Apps (search) ---
-export function searchApps(q: string) {
-  return fetchApi<any[]>(`/api/apps/search?q=${encodeURIComponent(q)}`);
+export function searchApps(q: string, platform?: PlatformId) {
+  return fetchApi<any[]>(withPlatform(`/api/apps/search?q=${encodeURIComponent(q)}`, platform));
 }
 
-export function getAppsByDeveloper(name: string) {
-  return fetchApi<any[]>(`/api/apps/by-developer?name=${encodeURIComponent(name)}`);
+export function getAppsByDeveloper(name: string, platform?: PlatformId) {
+  return fetchApi<any[]>(withPlatform(`/api/apps/by-developer?name=${encodeURIComponent(name)}`, platform));
 }
 
 // --- Keywords ---
-export function getKeywords() {
-  return fetchApi<any[]>(`/api/keywords`);
+export function getKeywords(platform?: PlatformId) {
+  return fetchApi<any[]>(withPlatform(`/api/keywords`, platform));
 }
 
-export function getKeyword(slug: string) {
-  return fetchApi<any>(`/api/keywords/${slug}`);
+export function getKeyword(slug: string, platform?: PlatformId) {
+  return fetchApi<any>(withPlatform(`/api/keywords/${slug}`, platform));
 }
 
 export function getKeywordRankings(
   slug: string,
   days = 30,
-  scope?: "account"
+  scope?: "account",
+  platform?: PlatformId,
 ) {
   const params = new URLSearchParams({ days: String(days) });
   if (scope) params.set("scope", scope);
-  return fetchApi<any>(`/api/keywords/${slug}/rankings?${params}`);
+  return fetchApi<any>(withPlatform(`/api/keywords/${slug}/rankings?${params}`, platform));
 }
 
-export function getKeywordAds(slug: string, days = 30) {
-  return fetchApi<any>(`/api/keywords/${slug}/ads?days=${days}`);
+export function getKeywordAds(slug: string, days = 30, platform?: PlatformId) {
+  return fetchApi<any>(withPlatform(`/api/keywords/${slug}/ads?days=${days}`, platform));
 }
 
-export function getKeywordSuggestions(slug: string) {
-  return fetchApi<{ suggestions: string[]; scrapedAt: string | null }>(`/api/keywords/${slug}/suggestions`);
+export function getKeywordSuggestions(slug: string, platform?: PlatformId) {
+  return fetchApi<{ suggestions: string[]; scrapedAt: string | null }>(withPlatform(`/api/keywords/${slug}/suggestions`, platform));
 }
 
-export function searchKeywords(q: string) {
-  return fetchApi<any[]>(`/api/keywords/search?q=${encodeURIComponent(q)}`);
+export function searchKeywords(q: string, platform?: PlatformId) {
+  return fetchApi<any[]>(withPlatform(`/api/keywords/search?q=${encodeURIComponent(q)}`, platform));
 }
 
 // --- Features ---
-export function getFeature(handle: string) {
-  return fetchApi<any>(`/api/features/${encodeURIComponent(handle)}`);
+export function getFeature(handle: string, platform?: PlatformId) {
+  return fetchApi<any>(withPlatform(`/api/features/${encodeURIComponent(handle)}`, platform));
 }
 
-export function searchFeatures(q: string) {
-  return fetchApi<any[]>(`/api/features/search?q=${encodeURIComponent(q)}`);
+export function searchFeatures(q: string, platform?: PlatformId) {
+  return fetchApi<any[]>(withPlatform(`/api/features/search?q=${encodeURIComponent(q)}`, platform));
 }
 
-export function getFeaturesByCategory(category?: string, subcategory?: string) {
+export function getFeaturesByCategory(category?: string, subcategory?: string, platform?: PlatformId) {
   const params = new URLSearchParams();
   if (category) params.set("category", category);
   if (subcategory) params.set("subcategory", subcategory);
-  return fetchApi<any[]>(`/api/features/by-category?${params.toString()}`);
+  return fetchApi<any[]>(withPlatform(`/api/features/by-category?${params.toString()}`, platform));
 }
 
 // --- Integrations ---
-export function getIntegration(name: string) {
-  return fetchApi<any>(`/api/integrations/${encodeURIComponent(name)}`);
+export function getIntegration(name: string, platform?: PlatformId) {
+  return fetchApi<any>(withPlatform(`/api/integrations/${encodeURIComponent(name)}`, platform));
 }
 
 // --- Auth ---
@@ -267,65 +278,70 @@ export function getAccountMembers() {
   return fetchApi<any[]>(`/api/account/members`);
 }
 
-export function getAccountTrackedApps() {
-  return fetchApi<any[]>(`/api/account/tracked-apps`);
+export function getAccountTrackedApps(platform?: PlatformId) {
+  return fetchApi<any[]>(withPlatform(`/api/account/tracked-apps`, platform));
 }
 
-export function getAccountTrackedKeywords() {
-  return fetchApi<any[]>(`/api/account/tracked-keywords`);
+export function getAccountTrackedKeywords(platform?: PlatformId) {
+  return fetchApi<any[]>(withPlatform(`/api/account/tracked-keywords`, platform));
 }
 
-export function getAccountCompetitors() {
-  return fetchApi<any[]>(`/api/account/competitors`);
+export function getAccountCompetitors(platform?: PlatformId) {
+  return fetchApi<any[]>(withPlatform(`/api/account/competitors`, platform));
 }
 
-export function getAppCompetitors(slug: string) {
-  return fetchApi<any[]>(`/api/account/tracked-apps/${encodeURIComponent(slug)}/competitors`);
+export function getAppCompetitors(slug: string, platform?: PlatformId) {
+  return fetchApi<any[]>(withPlatform(`/api/account/tracked-apps/${encodeURIComponent(slug)}/competitors`, platform));
 }
 
-export function getAppKeywords(slug: string) {
-  return fetchApi<any[]>(`/api/account/tracked-apps/${encodeURIComponent(slug)}/keywords`);
+export function getAppKeywords(slug: string, platform?: PlatformId) {
+  return fetchApi<any[]>(withPlatform(`/api/account/tracked-apps/${encodeURIComponent(slug)}/keywords`, platform));
 }
 
-export function getAccountStarredFeatures() {
-  return fetchApi<any[]>(`/api/account/starred-features`);
+export function getAccountStarredFeatures(platform?: PlatformId) {
+  return fetchApi<any[]>(withPlatform(`/api/account/starred-features`, platform));
 }
 
-export function getAccountStarredCategories() {
-  return fetchApi<any[]>(`/api/account/starred-categories`);
+export function getAccountStarredCategories(platform?: PlatformId) {
+  return fetchApi<any[]>(withPlatform(`/api/account/starred-categories`, platform));
 }
 
 // --- App Scores ---
-export const getAppScores = cache((slug: string) => {
-  return fetchApi<any>(`/api/apps/${slug}/scores`);
+export const getAppScores = cache((slug: string, platform?: PlatformId) => {
+  return fetchApi<any>(withPlatform(`/api/apps/${slug}/scores`, platform));
 });
 
-export const getAppScoresHistory = cache((slug: string, days = 30, category?: string) => {
+export const getAppScoresHistory = cache((slug: string, days = 30, category?: string, platform?: PlatformId) => {
   const params = new URLSearchParams({ days: String(days) });
   if (category) params.set("category", category);
-  return fetchApi<any>(`/api/apps/${slug}/scores/history?${params}`);
+  return fetchApi<any>(withPlatform(`/api/apps/${slug}/scores/history?${params}`, platform));
 });
 
-export const getCategoryScores = cache((slug: string, limit = 50) => {
-  return fetchApi<any>(`/api/categories/${slug}/scores?limit=${limit}`);
+export const getCategoryScores = cache((slug: string, limit = 50, platform?: PlatformId) => {
+  return fetchApi<any>(withPlatform(`/api/categories/${slug}/scores?limit=${limit}`, platform));
 });
 
 // --- Membership ---
-export function getKeywordMembership(slug: string) {
+export function getKeywordMembership(slug: string, platform?: PlatformId) {
   return fetchApi<{ trackedAppSlugs: string[]; researchProjectIds: string[] }>(
-    `/api/keywords/${encodeURIComponent(slug)}/membership`
+    withPlatform(`/api/keywords/${encodeURIComponent(slug)}/membership`, platform)
   );
 }
 
-export function getAppMembership(slug: string) {
+export function getAppMembership(slug: string, platform?: PlatformId) {
   return fetchApi<{ competitorForApps: string[]; researchProjectIds: string[] }>(
-    `/api/apps/${encodeURIComponent(slug)}/membership`
+    withPlatform(`/api/apps/${encodeURIComponent(slug)}/membership`, platform)
   );
+}
+
+// --- Platforms ---
+export function getPlatforms() {
+  return fetchApi<any[]>(`/api/platforms`);
 }
 
 // --- Research Projects ---
-export function getResearchProjects() {
-  return fetchApi<any[]>(`/api/research-projects`);
+export function getResearchProjects(platform?: PlatformId) {
+  return fetchApi<any[]>(withPlatform(`/api/research-projects`, platform));
 }
 
 export function getResearchProjectData(id: string) {

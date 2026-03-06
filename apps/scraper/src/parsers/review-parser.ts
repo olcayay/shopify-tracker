@@ -1,5 +1,5 @@
 import * as cheerio from "cheerio";
-import { createLogger, type ReviewPageData, type Review } from "@shopify-tracking/shared";
+import { createLogger, type ReviewPageData, type Review } from "@appranks/shared";
 
 const log = createLogger("review-parser");
 

@@ -2,7 +2,8 @@ import type { AppCategory } from "./types/app.js";
 
 // --- Stop Words ---
 
-export const KEYWORD_STOP_WORDS = new Set([
+/** Common English stop words (not platform-specific) */
+export const COMMON_STOP_WORDS = new Set([
   // Common English
   "the", "a", "an", "is", "are", "am", "was", "were", "be", "been", "being",
   "in", "on", "at", "to", "for", "of", "and", "or", "but", "not", "with",
@@ -13,15 +14,38 @@ export const KEYWORD_STOP_WORDS = new Set([
   "so", "if", "then", "than", "no", "all", "any", "each", "every", "some",
   "such", "very", "just", "about", "up", "out", "how", "what", "which", "who",
   "when", "where", "also", "more", "other", "into", "over", "after", "before",
-  // Shopify-specific
-  "app", "apps", "shopify", "store", "stores", "shop", "shops",
-  "online", "plugin", "plugins", "tool", "tools", "solution", "solutions",
+  // Generic marketplace terms
+  "app", "apps", "online", "plugin", "plugins", "tool", "tools", "solution", "solutions",
   "feature", "features", "powerful", "easy", "easily", "best", "free",
   "new", "help", "helps", "get", "gets", "use", "using", "used",
   "make", "makes", "made", "one", "way", "like", "need", "needs",
   "based", "built", "create", "increase", "improve", "manage",
   "right", "top", "first", "most", "great", "good",
 ]);
+
+/** Platform-specific stop words */
+const SHOPIFY_STOP_WORDS = new Set(["shopify", "store", "stores", "shop", "shops"]);
+const SALESFORCE_STOP_WORDS = new Set(["salesforce", "appexchange", "crm", "lightning"]);
+const CANVA_STOP_WORDS = new Set(["canva", "design", "template", "templates"]);
+
+const PLATFORM_STOP_WORDS: Record<string, Set<string>> = {
+  shopify: SHOPIFY_STOP_WORDS,
+  salesforce: SALESFORCE_STOP_WORDS,
+  canva: CANVA_STOP_WORDS,
+};
+
+/** Get merged stop words for a given platform (common + platform-specific) */
+export function getStopWords(platform?: string): Set<string> {
+  const merged = new Set(COMMON_STOP_WORDS);
+  const platformSet = platform ? PLATFORM_STOP_WORDS[platform] : undefined;
+  if (platformSet) {
+    for (const w of platformSet) merged.add(w);
+  }
+  return merged;
+}
+
+/** @deprecated Use getStopWords('shopify') instead. Kept for backward compatibility. */
+export const KEYWORD_STOP_WORDS = getStopWords("shopify");
 
 // --- Field Weights ---
 
@@ -68,24 +92,25 @@ function cleanText(text: string): string[] {
     .filter((w) => w.length >= 2);
 }
 
-function isStopWord(word: string): boolean {
-  return KEYWORD_STOP_WORDS.has(word);
+function isStopWord(word: string, stopWords: Set<string> = KEYWORD_STOP_WORDS): boolean {
+  return stopWords.has(word);
 }
 
-export function generateNgrams(text: string, maxN: number = 3): string[] {
+export function generateNgrams(text: string, maxN: number = 3, stopWords?: Set<string>): string[] {
+  const sw = stopWords ?? KEYWORD_STOP_WORDS;
   const words = cleanText(text);
   const candidates: string[] = [];
 
   // Unigrams (4+ chars, not stop word)
   for (const w of words) {
-    if (w.length >= 4 && !isStopWord(w)) {
+    if (w.length >= 4 && !isStopWord(w, sw)) {
       candidates.push(w);
     }
   }
 
   // Bigrams (at least one non-stop word)
   for (let i = 0; i < words.length - 1; i++) {
-    if (!isStopWord(words[i]) || !isStopWord(words[i + 1])) {
+    if (!isStopWord(words[i], sw) || !isStopWord(words[i + 1], sw)) {
       candidates.push(`${words[i]} ${words[i + 1]}`);
     }
   }
@@ -94,7 +119,7 @@ export function generateNgrams(text: string, maxN: number = 3): string[] {
   if (maxN >= 3) {
     for (let i = 0; i < words.length - 2; i++) {
       const nonStop = [words[i], words[i + 1], words[i + 2]].filter(
-        (w) => !isStopWord(w)
+        (w) => !isStopWord(w, sw)
       ).length;
       if (nonStop >= 2) {
         candidates.push(`${words[i]} ${words[i + 1]} ${words[i + 2]}`);
@@ -171,8 +196,10 @@ function extractCategoryFeatureTitles(categories: AppCategory[]): string[] {
 }
 
 export function extractKeywordsFromAppMetadata(
-  data: AppMetadataInput
+  data: AppMetadataInput,
+  platform?: string
 ): ScoredKeyword[] {
+  const sw = platform ? getStopWords(platform) : KEYWORD_STOP_WORDS;
   const map = new Map<string, ScoredKeyword>();
 
   // 1. App name — full name + ngrams
@@ -182,21 +209,21 @@ export function extractKeywordsFromAppMetadata(
       .replace(/\s+/g, " ")
       .trim();
     // Add the full cleaned name as a candidate (minus stop words only)
-    const nameWords = cleanText(nameCleaned).filter((w) => !isStopWord(w));
+    const nameWords = cleanText(nameCleaned).filter((w) => !isStopWord(w, sw));
     if (nameWords.length > 1) {
       addCandidates(map, [nameWords.join(" ")], "name");
     }
-    addCandidates(map, generateNgrams(nameCleaned), "name");
+    addCandidates(map, generateNgrams(nameCleaned, 3, sw), "name");
   }
 
   // 2. Subtitle — ngrams
   if (data.subtitle) {
-    addCandidates(map, generateNgrams(data.subtitle), "subtitle");
+    addCandidates(map, generateNgrams(data.subtitle, 3, sw), "subtitle");
   }
 
   // 3. Introduction — ngrams
   if (data.introduction) {
-    addCandidates(map, generateNgrams(data.introduction), "introduction");
+    addCandidates(map, generateNgrams(data.introduction, 3, sw), "introduction");
   }
 
   // 4. Categories — use titles directly + ngrams
@@ -206,21 +233,21 @@ export function extractKeywordsFromAppMetadata(
     addCandidates(map, catTitles, "categories");
     // Also generate ngrams from titles
     for (const title of catTitles) {
-      addCandidates(map, generateNgrams(title), "categories");
+      addCandidates(map, generateNgrams(title, 3, sw), "categories");
     }
   }
 
   // 5. Description — ngrams (cap at 500 words to limit noise)
   if (data.description) {
     const descWords = data.description.split(/\s+/).slice(0, 500).join(" ");
-    addCandidates(map, generateNgrams(descWords), "description");
+    addCandidates(map, generateNgrams(descWords, 3, sw), "description");
   }
 
   // 6. Features — use directly + ngrams from longer ones
   if (data.features.length > 0) {
     addCandidates(map, data.features, "features");
     for (const feat of data.features) {
-      addCandidates(map, generateNgrams(feat), "features");
+      addCandidates(map, generateNgrams(feat, 3, sw), "features");
     }
   }
 
@@ -229,7 +256,7 @@ export function extractKeywordsFromAppMetadata(
     const featureTitles = extractCategoryFeatureTitles(data.categories);
     addCandidates(map, featureTitles, "categoryFeatures");
     for (const title of featureTitles) {
-      addCandidates(map, generateNgrams(title), "categoryFeatures");
+      addCandidates(map, generateNgrams(title, 3, sw), "categoryFeatures");
     }
   }
 

@@ -14,7 +14,14 @@ export type {
   PricingPlan,
   AppSupport,
   AppDetails,
+  CommonAppDetails,
 } from "./types/app.js";
+
+export type {
+  CommonApp,
+  CommonSearchResult,
+  CommonCategory,
+} from "./types/common.js";
 
 export type { Review, ReviewPageData } from "./types/review.js";
 
@@ -32,9 +39,24 @@ export type {
 // Constants
 export { SEED_CATEGORY_SLUGS, MAX_CATEGORY_DEPTH } from "./constants/seed-categories.js";
 export { urls } from "./constants/urls.js";
+export {
+  PLATFORMS,
+  PLATFORM_IDS,
+  isPlatformId,
+  getPlatform,
+  buildExternalAppUrl,
+  buildExternalCategoryUrl,
+} from "./constants/platforms.js";
+export type {
+  PlatformId,
+  PlatformConfig,
+  PlatformCapabilities,
+} from "./constants/platforms.js";
 
 // Keyword extraction
 export {
+  COMMON_STOP_WORDS,
+  getStopWords,
   KEYWORD_STOP_WORDS,
   FIELD_WEIGHTS,
   generateNgrams,
@@ -48,8 +70,11 @@ export type {
 
 // Similarity
 export {
+  COMMON_SIMILARITY_STOP_WORDS,
+  getSimilarityStopWords,
   STOP_WORDS,
   SIMILARITY_WEIGHTS,
+  getSimilarityWeights,
   jaccard,
   tokenize,
   extractCategorySlugs,

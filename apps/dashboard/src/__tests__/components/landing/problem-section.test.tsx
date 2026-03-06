@@ -11,7 +11,7 @@ describe("ProblemSection", () => {
   it("renders the subtitle", () => {
     render(<ProblemSection />);
     expect(
-      screen.getByText(/The Shopify App Store gives you zero analytics/)
+      screen.getByText(/App marketplaces give you zero analytics/)
     ).toBeInTheDocument();
   });
 

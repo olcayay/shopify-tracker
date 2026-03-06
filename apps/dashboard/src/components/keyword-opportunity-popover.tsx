@@ -3,7 +3,7 @@
 import * as React from "react";
 import { Popover } from "radix-ui";
 import { Star, Shield, TrendingUp } from "lucide-react";
-import type { KeywordOpportunityMetrics } from "@shopify-tracking/shared";
+import type { KeywordOpportunityMetrics } from "@appranks/shared";
 
 function ScoreBar({ label, value, weight }: { label: string; value: number; weight: number }) {
   const pct = Math.round(value * 100);

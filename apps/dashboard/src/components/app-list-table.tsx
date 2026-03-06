@@ -2,6 +2,7 @@
 
 import { useState, useMemo } from "react";
 import Link from "next/link";
+import { useParams } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -83,6 +84,7 @@ export function AppListTable({
   adKeywordCounts: Record<string, number>;
   reviewVelocity?: Record<string, ReviewVelocityMetrics>;
 }) {
+  const { platform } = useParams();
   const { formatDateOnly } = useFormatDate();
   const [sortKey, setSortKey] = useState<SortKey>("rating_count");
   const [sortDir, setSortDir] = useState<SortDir>("desc");
@@ -406,7 +408,7 @@ export function AppListTable({
                         )}
                         <div className="flex items-center gap-1.5">
                           <Link
-                            href={`/apps/${app.slug}`}
+                            href={`/${platform}/apps/${app.slug}`}
                             className="text-primary hover:underline font-medium"
                           >
                             {app.name}
@@ -435,7 +437,7 @@ export function AppListTable({
                     <TableCell>
                       {app.rating_count != null ? (
                         <Link
-                          href={`/apps/${app.slug}#reviews`}
+                          href={`/${platform}/apps/${app.slug}#reviews`}
                           className="text-primary hover:underline"
                         >
                           {Number(app.rating_count).toLocaleString()}
@@ -470,7 +472,7 @@ export function AppListTable({
                     <TableCell className="text-sm">
                       {minPaidPrices[app.slug] != null ? (
                         <Link
-                          href={`/apps/${app.slug}/details#pricing-plans`}
+                          href={`/${platform}/apps/${app.slug}/details#pricing-plans`}
                           className="text-primary hover:underline"
                         >
                           {minPaidPrices[app.slug] === 0
@@ -492,7 +494,7 @@ export function AppListTable({
                                 </span>
                               )}
                               <Link
-                                href={`/categories/${cat.slug}`}
+                                href={`/${platform}/categories/${cat.slug}`}
                                 className="text-primary hover:underline"
                               >
                                 {cat.title}
@@ -507,7 +509,7 @@ export function AppListTable({
                     <TableCell className="text-sm">
                       {similarCount > 0 ? (
                         <Link
-                          href={`/apps/${app.slug}/similar`}
+                          href={`/${platform}/apps/${app.slug}/similar`}
                           className="text-primary hover:underline"
                         >
                           {similarCount}
@@ -519,7 +521,7 @@ export function AppListTable({
                     <TableCell className="text-sm">
                       {featuredCount > 0 ? (
                         <Link
-                          href={`/apps/${app.slug}/featured`}
+                          href={`/${platform}/apps/${app.slug}/featured`}
                           className="text-primary hover:underline"
                         >
                           {featuredCount}
@@ -531,7 +533,7 @@ export function AppListTable({
                     <TableCell className="text-sm">
                       {adsCount > 0 ? (
                         <Link
-                          href={`/apps/${app.slug}/rankings`}
+                          href={`/${platform}/apps/${app.slug}/rankings`}
                           className="text-primary hover:underline"
                         >
                           {adsCount}
@@ -548,7 +550,7 @@ export function AppListTable({
                     <TableCell className="text-sm">
                       {lastChanges[app.slug] ? (
                         <Link
-                          href={`/apps/${app.slug}/details`}
+                          href={`/${platform}/apps/${app.slug}/details`}
                           className="text-primary hover:underline"
                         >
                           {formatDateOnly(lastChanges[app.slug])}

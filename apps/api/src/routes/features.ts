@@ -5,7 +5,7 @@ import {
   appSnapshots,
   apps,
   accountTrackedFeatures,
-} from "@shopify-tracking/db";
+} from "@appranks/db";
 
 type Db = ReturnType<typeof createDb>;
 
