@@ -19,7 +19,7 @@ import {
 } from "@/components/ui/table";
 import { X, Plus, Search, Check, ArrowDown, ExternalLink, Lightbulb, Loader2, TrendingUp, Columns3 } from "lucide-react";
 import { buildExternalSearchUrl, getPlatformName } from "@/lib/platform-urls";
-import type { PlatformId } from "@appranks/shared";
+import { type PlatformId, PLATFORMS, isPlatformId } from "@appranks/shared";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ConfirmModal } from "@/components/confirm-modal";
 import { LiveSearchTrigger } from "@/components/live-search-trigger";
@@ -133,6 +133,7 @@ function detailCellClass(key: string, value: number | null): string {
 
 export function KeywordsSection({ appSlug }: { appSlug: string }) {
   const { platform } = useParams();
+  const caps = isPlatformId(platform as string) ? PLATFORMS[platform as PlatformId] : PLATFORMS.shopify;
   const { fetchWithAuth, user, account, refreshUser } = useAuth();
   const [keywords, setKeywords] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -770,7 +771,7 @@ export function KeywordsSection({ appSlug }: { appSlug: string }) {
         </div>
       )}
 
-      {canEdit && !loading && (
+      {caps.hasAutoSuggestions && canEdit && !loading && (
         <MetadataKeywordSuggestions
           appSlug={appSlug}
           trackedKeywords={new Set(keywords.map((k: any) => k.keyword.toLowerCase()))}
@@ -1058,7 +1059,7 @@ export function KeywordsSection({ appSlug }: { appSlug: string }) {
                 })}
                 <TableCell>
                   <div className="flex items-center gap-0.5">
-                    {kw.hasSuggestions ? (
+                    {caps.hasAutoSuggestions && (kw.hasSuggestions ? (
                       <button
                         onClick={() =>
                           setSuggestionsKeyword({
@@ -1073,7 +1074,7 @@ export function KeywordsSection({ appSlug }: { appSlug: string }) {
                       </button>
                     ) : (
                       <span className="inline-flex h-8 w-8" />
-                    )}
+                    ))}
                     <LiveSearchTrigger keyword={kw.keyword} variant="icon" />
                     <a
                       href={buildExternalSearchUrl(platform as PlatformId, kw.keyword)}

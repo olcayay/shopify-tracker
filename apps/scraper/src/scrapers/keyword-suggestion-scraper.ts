@@ -1,4 +1,4 @@
-import { eq } from "drizzle-orm";
+import { eq, and } from "drizzle-orm";
 import type { Database } from "@appranks/db";
 import {
   scrapeRuns,
@@ -19,12 +19,15 @@ export class KeywordSuggestionScraper {
     this.httpClient = httpClient || new HttpClient();
   }
 
-  /** Scrape autocomplete suggestions for all active keywords */
+  /** Scrape autocomplete suggestions for all active Shopify keywords */
   async scrapeAll(triggeredBy?: string, queue?: string): Promise<void> {
     const keywords = await this.db
       .select()
       .from(trackedKeywords)
-      .where(eq(trackedKeywords.isActive, true));
+      .where(and(
+        eq(trackedKeywords.isActive, true),
+        eq(trackedKeywords.platform, "shopify")
+      ));
 
     if (keywords.length === 0) {
       log.info("no active keywords found");

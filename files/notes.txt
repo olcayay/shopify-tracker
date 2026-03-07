@@ -1,3 +1,15 @@
+Remove auto suggestions for Salesforce (PLA-57)
+================================================
+
+- Salesforce doesn't have autocomplete/auto-suggestion API, but Shopify suggestions were being shown for Salesforce keywords
+- Scraper fix: `keyword-suggestion-scraper.ts` now filters `scrapeAll` to only process `platform = "shopify"` keywords (was scraping all active keywords)
+- Dashboard fixes using `caps.hasAutoSuggestions` flag:
+  - `keywords-section.tsx`: hide lightbulb suggestion icon per keyword row, hide `MetadataKeywordSuggestions` component
+  - `competitors-section.tsx`: hide `CompetitorSuggestions` component
+- Platform config already had `hasAutoSuggestions: false` for Salesforce; now the UI and scraper respect it
+
+---
+
 Fix Salesforce keyword URLs (PLA-56)
 =====================================
 

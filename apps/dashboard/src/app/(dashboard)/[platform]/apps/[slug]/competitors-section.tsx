@@ -482,17 +482,19 @@ export function CompetitorsSection({ appSlug }: { appSlug: string }) {
         </DropdownMenuPrimitive.Root>
       </div>
 
-      <CompetitorSuggestions
-        appSlug={appSlug}
-        competitorSlugs={competitorSlugs}
-        onCompetitorAdded={(slug, name) => {
-          setPendingCompetitorSlugs((prev) => new Map(prev).set(slug, Date.now()));
-          setMessage(`"${name}" added as competitor`);
-          loadCompetitors(true);
-          refreshUser();
-        }}
-        prominent={competitors.filter((c) => !c.isSelf).length === 0 && !loading}
-      />
+      {caps.hasAutoSuggestions && (
+        <CompetitorSuggestions
+          appSlug={appSlug}
+          competitorSlugs={competitorSlugs}
+          onCompetitorAdded={(slug, name) => {
+            setPendingCompetitorSlugs((prev) => new Map(prev).set(slug, Date.now()));
+            setMessage(`"${name}" added as competitor`);
+            loadCompetitors(true);
+            refreshUser();
+          }}
+          prominent={competitors.filter((c) => !c.isSelf).length === 0 && !loading}
+        />
+      )}
 
       {loading ? (
         <TableSkeleton rows={5} cols={6} />
