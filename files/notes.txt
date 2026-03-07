@@ -1,3 +1,13 @@
+Fix Salesforce keyword URLs (PLA-56)
+=====================================
+
+- Salesforce keyword URLs were using wrong format: `appxSearchKeyword/{keyword}` (path-based)
+- Fixed to correct format: `appxSearchKeywordResults?keywords={keyword}` (query param-based)
+- Changed `buildExternalSearchUrl` in `platform-urls.ts` and updated corresponding test
+- Only the dashboard had the wrong URL; scraper and API were unaffected
+
+---
+
 Salesforce AppExchange Preview Page (PLA-55)
 =============================================
 

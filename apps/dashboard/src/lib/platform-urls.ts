@@ -27,7 +27,7 @@ export function buildExternalSearchUrl(platform: PlatformId, query: string): str
     case "shopify":
       return `https://apps.shopify.com/search?q=${encodeURIComponent(query)}`;
     case "salesforce":
-      return `https://appexchange.salesforce.com/appxSearchKeyword/${encodeURIComponent(query)}`;
+      return `https://appexchange.salesforce.com/appxSearchKeywordResults?keywords=${encodeURIComponent(query)}`;
     case "canva":
       return `https://www.canva.com/apps/search?q=${encodeURIComponent(query)}`;
   }

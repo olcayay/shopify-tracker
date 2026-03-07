@@ -54,9 +54,9 @@ describe("buildExternalSearchUrl", () => {
     );
   });
 
-  it("salesforce → appxSearchKeyword/{query}", () => {
+  it("salesforce → appxSearchKeywordResults?keywords={query}", () => {
     expect(buildExternalSearchUrl("salesforce", "forms")).toBe(
-      "https://appexchange.salesforce.com/appxSearchKeyword/forms"
+      "https://appexchange.salesforce.com/appxSearchKeywordResults?keywords=forms"
     );
   });
 

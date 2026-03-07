@@ -104,6 +104,8 @@ hide Featured & Similar for Salesforce (PLA-54) ✅
 
 Salesforce AppExchange preview page (PLA-55) ✅
 
+fix Salesforce keyword URLs (PLA-56) ✅
+
 feedback sayfası
 
 kime hangi durumda nasıl emailler gönderilebilinir.
