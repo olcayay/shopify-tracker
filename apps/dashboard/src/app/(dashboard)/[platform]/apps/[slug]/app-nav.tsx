@@ -40,6 +40,7 @@ export function AppNav({
 
   const tabs = [
     { href: base, label: "Overview", exact: true },
+    { href: `${base}/details`, label: "Details" },
     ...(isTracked
       ? [
           { href: `${base}/competitors`, label: "Competitors" },
@@ -50,7 +51,6 @@ export function AppNav({
       : []),
     { href: `${base}/rankings`, label: "Rankings" },
     { href: `${base}/reviews`, label: "Reviews" },
-    { href: `${base}/details`, label: "Details" },
     { href: `${base}/changes`, label: "Changes" },
     { href: `${base}/similar`, label: "Similar" },
     { href: `${base}/featured`, label: "Featured" },

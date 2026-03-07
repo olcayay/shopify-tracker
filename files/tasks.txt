@@ -98,6 +98,8 @@ details page card layout improvements (PLA-51) ✅
 
 consistent column widths on compare page (PLA-52) ✅
 
+move Details tab to 2nd position in app nav (PLA-53) ✅
+
 feedback sayfası
 
 kime hangi durumda nasıl emailler gönderilebilinir.

@@ -1,3 +1,12 @@
+Move Details Tab to 2nd Position (PLA-53)
+==========================================
+
+- Moved "Details" tab from 8th position to 2nd (right after "Overview") in the app navigation
+- Change applies to all platforms (not Salesforce-specific)
+- File changed: `apps/dashboard/src/app/(dashboard)/[platform]/apps/[slug]/app-nav.tsx`
+
+---
+
 Consistent Column Widths on Compare Page (PLA-52)
 ===================================================
 
