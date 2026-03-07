@@ -8,10 +8,11 @@ export const integrationRoutes: FastifyPluginAsync = async (app) => {
   const db: Db = (app as any).db;
 
   // GET /api/integrations/:name — apps that have this integration
-  app.get<{ Params: { name: string } }>(
+  app.get<{ Params: { name: string }; Querystring: { platform?: string } }>(
     "/:name",
     async (request, reply) => {
       const { name } = request.params;
+      const platform = (request.query as any).platform;
 
       // Find all apps that have this integration (from latest snapshot)
       const appsResult = await db.execute(sql`
@@ -20,6 +21,7 @@ export const integrationRoutes: FastifyPluginAsync = async (app) => {
           a.name,
           a.is_built_for_shopify,
           a.icon_url,
+          a.badges,
           s.average_rating,
           s.rating_count,
           s.pricing
@@ -35,6 +37,7 @@ export const integrationRoutes: FastifyPluginAsync = async (app) => {
           FROM jsonb_array_elements_text(s.integrations) AS elem
           WHERE elem = ${name}
         )
+        ${platform ? sql`AND a.platform = ${platform}` : sql``}
         ORDER BY a.name
       `);
 

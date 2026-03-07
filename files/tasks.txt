@@ -90,6 +90,8 @@ cross-platform overview page (/overview) with platform-branded cards ✅
 
 usage/limits card icons + Canva sidebar cleanup ✅
 
+Salesforce detail & compare: Industries, Requires, Compatible With (PLA-48) ✅
+
 feedback sayfası
 
 kime hangi durumda nasıl emailler gönderilebilinir.

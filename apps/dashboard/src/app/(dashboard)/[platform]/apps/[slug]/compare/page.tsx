@@ -28,6 +28,7 @@ interface AppData {
     seoMetaDescription: string;
     averageRating: string | null;
     ratingCount: number | null;
+    platformData?: Record<string, any>;
   } | null;
 }
 
@@ -378,21 +379,34 @@ export default function ComparePage() {
     }
   }, [selectedSlugs, slug, competitors.length]);
 
+  const isSalesforce = platform === "salesforce";
+
   // Section navigation
-  const SECTIONS = useMemo(() => [
-    { id: "sec-name", key: "appName", label: "Name" },
-    { id: "sec-subtitle", key: "appCardSubtitle", label: "Subtitle" },
-    { id: "sec-intro", key: "appIntroduction", label: "Introduction" },
-    { id: "sec-details", key: "appDetails", label: "Details" },
-    { id: "sec-features", key: "features", label: "Features" },
-    { id: "sec-languages", key: "languages", label: "Languages" },
-    { id: "sec-integrations", key: "integrations", label: "Integrations" },
-    { id: "sec-rankings", key: "categoryRanking", label: "Rankings" },
-    { id: "sec-reviews", key: "reviewsRatings", label: "Reviews" },
-    { id: "sec-catfeatures", key: "categoriesFeatures", label: "Category Features" },
-    { id: "sec-pricing", key: "pricingPlans", label: "Pricing" },
-    { id: "sec-seo", key: "webSearchContent", label: "Web Search" },
-  ], []);
+  const SECTIONS = useMemo(() => {
+    const sections = [
+      { id: "sec-name", key: "appName", label: "Name" },
+      { id: "sec-subtitle", key: "appCardSubtitle", label: "Subtitle" },
+      { id: "sec-intro", key: "appIntroduction", label: "Introduction" },
+      { id: "sec-details", key: "appDetails", label: "Details" },
+      { id: "sec-features", key: "features", label: "Features" },
+      { id: "sec-languages", key: "languages", label: "Languages" },
+      { id: "sec-integrations", key: "integrations", label: isSalesforce ? "Compatible With" : "Integrations" },
+    ];
+    if (isSalesforce) {
+      sections.push(
+        { id: "sec-industries", key: "industries", label: "Industries" },
+        { id: "sec-requires", key: "requires", label: "Requires" },
+      );
+    }
+    sections.push(
+      { id: "sec-rankings", key: "categoryRanking", label: "Rankings" },
+      { id: "sec-reviews", key: "reviewsRatings", label: "Reviews" },
+      { id: "sec-catfeatures", key: "categoriesFeatures", label: "Category Features" },
+      { id: "sec-pricing", key: "pricingPlans", label: "Pricing" },
+      { id: "sec-seo", key: "webSearchContent", label: "Web Search" },
+    );
+    return sections;
+  }, [isSalesforce]);
 
   const [activeSection, setActiveSection] = useState<string>("sec-name");
   const navRef = useRef<HTMLDivElement>(null);
@@ -1011,10 +1025,10 @@ export default function ComparePage() {
             getItems={(app) => app.latestSnapshot?.languages || []}
           />
 
-          {/* Integrations */}
+          {/* Integrations / Compatible With */}
           <BadgeComparisonSection
             id="sec-integrations"
-            title="Integrations"
+            title={isSalesforce ? "Compatible With" : "Integrations"}
             sectionKey="integrations"
             collapsed={isCollapsed("integrations")}
             onToggle={toggleSection}
@@ -1022,6 +1036,32 @@ export default function ComparePage() {
             getItems={(app) => app.latestSnapshot?.integrations || []}
             linkPrefix={`/${platform}/integrations`}
           />
+
+          {/* Salesforce: Industries & Requires */}
+          {isSalesforce && (
+            <>
+              <BadgeComparisonSection
+                id="sec-industries"
+                title="Industries"
+                sectionKey="industries"
+                collapsed={isCollapsed("industries")}
+                onToggle={toggleSection}
+                apps={selectedApps}
+                getItems={(app) => app.latestSnapshot?.platformData?.supportedIndustries || []}
+                linkPrefix={`/${platform}/discover/industry`}
+              />
+              <BadgeComparisonSection
+                id="sec-requires"
+                title="Requires"
+                sectionKey="requires"
+                collapsed={isCollapsed("requires")}
+                onToggle={toggleSection}
+                apps={selectedApps}
+                getItems={(app) => app.latestSnapshot?.platformData?.productsRequired || []}
+                linkPrefix={`/${platform}/discover/product-required`}
+              />
+            </>
+          )}
 
           {/* Category Ranking */}
           <CategoryRankingSection

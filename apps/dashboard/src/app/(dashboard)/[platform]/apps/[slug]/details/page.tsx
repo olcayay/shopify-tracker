@@ -23,6 +23,14 @@ export default async function DetailsPage({
     return <p className="text-muted-foreground">No details available.</p>;
   }
 
+  const pd = snapshot.platformData as Record<string, any> | undefined;
+  const isSalesforce = platform === "salesforce";
+
+  // Salesforce-specific arrays from platformData
+  const industries: string[] = isSalesforce ? pd?.supportedIndustries || [] : [];
+  const businessNeeds: string[] = isSalesforce ? (Array.isArray(pd?.businessNeeds) ? pd.businessNeeds : []) : [];
+  const productsRequired: string[] = isSalesforce ? pd?.productsRequired || [] : [];
+
   return (
     <div className="space-y-4">
       {snapshot.appIntroduction && (
@@ -65,6 +73,66 @@ export default async function DetailsPage({
         </Card>
       )}
 
+      {/* Salesforce: Industries, Business Need, Requires */}
+      {isSalesforce && (industries.length > 0 || businessNeeds.length > 0 || productsRequired.length > 0) && (
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {industries.length > 0 && (
+            <Card>
+              <CardHeader>
+                <CardTitle>Industries</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="flex flex-wrap gap-1.5">
+                  {industries.map((item: string, i: number) => (
+                    <Link key={i} href={`/${platform}/discover/industry/${encodeURIComponent(item)}`}>
+                      <Badge variant="secondary" className="text-xs hover:bg-primary hover:text-primary-foreground cursor-pointer transition-colors">
+                        {item}
+                      </Badge>
+                    </Link>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+          {businessNeeds.length > 0 && (
+            <Card>
+              <CardHeader>
+                <CardTitle>Business Need</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="flex flex-wrap gap-1.5">
+                  {businessNeeds.map((item: string, i: number) => (
+                    <Link key={i} href={`/${platform}/discover/business-need/${encodeURIComponent(item)}`}>
+                      <Badge variant="secondary" className="text-xs hover:bg-primary hover:text-primary-foreground cursor-pointer transition-colors">
+                        {item}
+                      </Badge>
+                    </Link>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+          {productsRequired.length > 0 && (
+            <Card>
+              <CardHeader>
+                <CardTitle>Requires</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="flex flex-wrap gap-1.5">
+                  {productsRequired.map((item: string, i: number) => (
+                    <Link key={i} href={`/${platform}/discover/product-required/${encodeURIComponent(item)}`}>
+                      <Badge variant="secondary" className="text-xs hover:bg-primary hover:text-primary-foreground cursor-pointer transition-colors">
+                        {item}
+                      </Badge>
+                    </Link>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+        </div>
+      )}
+
       {(snapshot.languages?.length > 0 || snapshot.integrations?.length > 0) && (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {snapshot.languages?.length > 0 && (
@@ -86,14 +154,16 @@ export default async function DetailsPage({
           {snapshot.integrations?.length > 0 && (
             <Card>
               <CardHeader>
-                <CardTitle>Integrations</CardTitle>
+                <CardTitle>{isSalesforce ? "Compatible With" : "Integrations"}</CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="flex flex-wrap gap-1.5">
                   {snapshot.integrations.map((item: string, i: number) => (
-                    <Badge key={i} variant="secondary" className="text-xs">
-                      {item}
-                    </Badge>
+                    <Link key={i} href={`/${platform}/integrations/${encodeURIComponent(item)}`}>
+                      <Badge variant="secondary" className="text-xs hover:bg-primary hover:text-primary-foreground cursor-pointer transition-colors">
+                        {item}
+                      </Badge>
+                    </Link>
                   ))}
                 </div>
               </CardContent>

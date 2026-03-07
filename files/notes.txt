@@ -1,3 +1,30 @@
+Salesforce App Detail & Compare: Industries, Requires, Compatible With (PLA-48)
+================================================================================
+
+Detail page (details/page.tsx):
+- Added Industries, Business Need, Requires cards (Salesforce only, from platformData)
+- Renamed "Integrations" → "Compatible With" for Salesforce
+- All badges are clickable → discover page listing apps with that attribute
+- Integrations badges also made clickable → integration detail page
+- Shopify detail page unchanged (no platformData fields, "Integrations" title preserved)
+
+Compare page (compare/page.tsx):
+- Added Industries and Requires comparison sections (Salesforce only)
+- Renamed "Integrations" → "Compatible With" in section nav and title for Salesforce
+- Uses BadgeComparisonSection with linkPrefix for clickable badges
+- Shopify compare page unchanged
+
+API:
+- New route: GET /api/platform-attributes/:type/:value — queries platformData JSONB
+  Supports types: industry, business-need, product-required
+- Updated GET /api/integrations/:name — added ?platform= filter and badges field
+
+Dashboard:
+- New page: /[platform]/discover/[type]/[value] — lists apps matching a platform attribute
+- New API helper: getPlatformAttribute() in api.ts
+
+---
+
 Usage/Limits Card Icons & Canva Sidebar Cleanup
 =================================================
 

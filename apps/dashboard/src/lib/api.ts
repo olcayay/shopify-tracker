@@ -264,6 +264,11 @@ export function getIntegration(name: string, platform?: PlatformId) {
   return fetchApi<any>(withPlatform(`/api/integrations/${encodeURIComponent(name)}`, platform));
 }
 
+// --- Platform Attributes ---
+export function getPlatformAttribute(type: string, value: string, platform?: PlatformId) {
+  return fetchApi<any>(withPlatform(`/api/platform-attributes/${encodeURIComponent(type)}/${encodeURIComponent(value)}`, platform));
+}
+
 // --- Auth ---
 export function getUserProfile() {
   return fetchApi<any>(`/api/auth/me`);

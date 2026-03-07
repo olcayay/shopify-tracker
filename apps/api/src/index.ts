@@ -21,6 +21,7 @@ import { liveSearchRoutes } from "./routes/live-search.js";
 import { featuredAppRoutes } from "./routes/featured-apps.js";
 import { researchRoutes } from "./routes/research.js";
 import { platformRoutes } from "./routes/platforms.js";
+import { platformAttributeRoutes } from "./routes/platform-attributes.js";
 
 const databaseUrl = process.env.DATABASE_URL;
 if (!databaseUrl) {
@@ -105,6 +106,7 @@ await app.register(liveSearchRoutes, { prefix: "/api/live-search" });
 await app.register(featuredAppRoutes, { prefix: "/api/featured-apps" });
 await app.register(researchRoutes, { prefix: "/api/research-projects" });
 await app.register(platformRoutes, { prefix: "/api/platforms" });
+await app.register(platformAttributeRoutes, { prefix: "/api/platform-attributes" });
 
 // Error handler
 app.setErrorHandler((error: any, _request, reply) => {
