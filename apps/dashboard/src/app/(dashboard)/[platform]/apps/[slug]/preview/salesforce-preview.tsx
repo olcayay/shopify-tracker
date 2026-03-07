@@ -89,6 +89,97 @@ function SalesforceStars({ rating }: { rating: number }) {
   return <div className="flex items-center gap-0.5">{stars}</div>;
 }
 
+// Salesforce search/category result card
+function SalesforceSearchCard({
+  icon,
+  name,
+  developerName,
+  description,
+  rating,
+  reviewCount,
+  categoryNames,
+  nameChanged,
+  descChanged,
+}: {
+  icon: string | null;
+  name: string;
+  developerName: string;
+  description: string;
+  rating: number | null;
+  reviewCount: number | null;
+  categoryNames: string[];
+  nameChanged: boolean;
+  descChanged: boolean;
+}) {
+  return (
+    <div className="border border-[#E5E5E5] rounded-2xl p-5 bg-white text-[#181818] hover:shadow-md transition-shadow min-w-[320px] max-w-[420px]">
+      {/* Icon + Name + Developer + Rating */}
+      <div className="flex gap-3.5 mb-3">
+        {icon ? (
+          <img src={icon} alt="" className="h-14 w-14 rounded-xl shrink-0" />
+        ) : (
+          <div className="h-14 w-14 rounded-xl bg-[#032D60] flex items-center justify-center text-xl font-bold text-white shrink-0">
+            {name.charAt(0) || "?"}
+          </div>
+        )}
+        <div className="min-w-0 flex-1">
+          <p className={cn("text-[16px] font-bold leading-tight truncate", nameChanged && mod)}>
+            {name || "App Name"}
+          </p>
+          {developerName && (
+            <p className="text-[13px] text-[#666] mt-0.5">{developerName}</p>
+          )}
+          {rating != null && (
+            <div className="flex items-center gap-1.5 mt-1">
+              <div className="flex items-center gap-0.5">
+                {Array.from({ length: 5 }).map((_, i) => {
+                  const fill = Math.min(1, Math.max(0, rating - i));
+                  return (
+                    <svg key={i} viewBox="0 0 24 24" className="h-4 w-4">
+                      <defs>
+                        <linearGradient id={`sf-card-star-${i}-${rating}`}>
+                          <stop offset={`${fill * 100}%`} stopColor="#F59E0B" />
+                          <stop offset={`${fill * 100}%`} stopColor="#D1D5DB" />
+                        </linearGradient>
+                      </defs>
+                      <path
+                        d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"
+                        fill={`url(#sf-card-star-${i}-${rating})`}
+                      />
+                    </svg>
+                  );
+                })}
+              </div>
+              <span className="text-[13px] text-[#444] font-medium">
+                {rating.toFixed(2)} ({reviewCount?.toLocaleString() ?? 0})
+              </span>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Description */}
+      <p className={cn("text-[13px] text-[#444] leading-relaxed line-clamp-3 mb-3", descChanged && mod)}>
+        {description || "App description"}
+      </p>
+
+      {/* Category badges */}
+      {categoryNames.length > 0 && (
+        <div className="flex flex-wrap gap-1.5">
+          {categoryNames.map((cat, i) => (
+            <span
+              key={i}
+              className="inline-block bg-[#EEF4FF] text-[#032D60] rounded-md px-3 py-1 text-[12px] font-medium"
+            >
+              {cat}
+            </span>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // Metadata badge pill (used in sidebar and More Details tab)
 const metaBadge = "inline-block bg-[#F4F6F9] border border-[#d8dde6] rounded px-2.5 py-1 text-[12px] text-[#444]";
 
@@ -272,10 +363,37 @@ export function SalesforcePreview({
     pricingDescription = "This listing requires payment.";
   }
 
+  // Category names for card badges
+  const categoryNames = categories
+    .map((c: any) => c.title || c.name || c.categoryTitle)
+    .filter(Boolean)
+    .slice(0, 3);
+
   return {
     resetToOriginal,
     preview: (
-      <div className="max-w-[1400px] mx-auto">
+      <div className="max-w-[1400px] mx-auto space-y-6">
+        {/* ── Search / Category Card Preview ── */}
+        <div>
+          <p className="text-xs text-muted-foreground font-medium mb-3 uppercase tracking-wide">
+            Search / Category Results
+          </p>
+          <div className="flex gap-4 flex-wrap">
+            <SalesforceSearchCard
+              icon={icon}
+              name={name}
+              developerName={developerName}
+              description={description}
+              rating={rating}
+              reviewCount={reviewCount}
+              categoryNames={categoryNames}
+              nameChanged={nameChanged}
+              descChanged={descChanged}
+            />
+          </div>
+        </div>
+
+        {/* ── Detail Page Preview ── */}
         <div className="border rounded-2xl overflow-hidden bg-white text-[#181818]">
           {/* ── Header: Icon + Title + Publisher + Description + Badge + Rating ── */}
           <div className="px-8 pt-7 pb-0">

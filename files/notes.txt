@@ -1,3 +1,14 @@
+Add card preview to Salesforce preview page (PLA-61)
+====================================================
+
+- Added `SalesforceSearchCard` component matching real AppExchange card design
+- Card shows: icon (56px rounded-xl), app name (truncated), developer name, fractional gold stars + rating + review count, description (3-line clamp), category badges (blue bg)
+- Card placed above detail page preview under "Search / Category Results" label
+- Editable fields (name, description) reflect changes in real-time on the card too
+- Modified field highlights (amber) applied to card as well
+
+---
+
 Right-align char count badges on compare page (PLA-58)
 ======================================================
 
