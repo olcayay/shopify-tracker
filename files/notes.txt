@@ -1,3 +1,15 @@
+Right-align char count badges on compare page (PLA-58)
+======================================================
+
+- All CharBadge (count/limit) indicators on compare page now right-aligned
+- App Name, Subtitle: added `flex-1 min-w-0` to text spans so CharBadge pushes right
+- SEO Title/Meta Description: wrapped label + CharBadge in flex row
+- App Details, Features: changed CharBadge container to `flex justify-end`
+- DraftInput: moved CharBadge from before input to after (end of row)
+- Draft Details textarea: changed `flex items-center` to `flex justify-end`
+
+---
+
 Remove auto suggestions for Salesforce (PLA-57)
 ================================================
 

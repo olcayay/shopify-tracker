@@ -108,6 +108,8 @@ fix Salesforce keyword URLs (PLA-56) ✅
 
 remove auto suggestions for Salesforce (PLA-57) ✅
 
+right-align char count badges on compare page (PLA-58) ✅
+
 feedback sayfası
 
 kime hangi durumda nasıl emailler gönderilebilinir.
