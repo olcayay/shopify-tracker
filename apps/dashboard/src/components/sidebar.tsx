@@ -25,8 +25,6 @@ import {
   PanelLeftClose,
   PanelLeftOpen,
   Menu,
-  ChevronsUpDown,
-  Check,
 } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
 import { PLATFORMS, type PlatformId } from "@appranks/shared";
@@ -38,6 +36,12 @@ const PLATFORM_LABELS: Record<PlatformId, string> = {
   shopify: "Shopify",
   salesforce: "Salesforce",
   canva: "Canva",
+};
+
+const PLATFORM_COLORS: Record<PlatformId, string> = {
+  shopify: "#95BF47",
+  salesforce: "#00A1E0",
+  canva: "#00C4CC",
 };
 
 function getNavItems(platformId: PlatformId) {
@@ -59,7 +63,6 @@ function getNavItems(platformId: PlatformId) {
     items.push({ href: `${p}/features`, label: "Features", icon: Puzzle });
   }
   items.push({ href: `${p}/research`, label: "Research", icon: FlaskConical, badge: "Beta" });
-  items.push({ href: "/settings", label: "Settings", icon: Settings });
   return items;
 }
 
@@ -81,87 +84,6 @@ function extractPlatform(pathname: string): PlatformId {
   return (match?.[1] as PlatformId) ?? "shopify";
 }
 
-function PlatformSwitcher({
-  currentPlatform,
-  enabledPlatforms,
-  collapsed,
-  onNavigate,
-}: {
-  currentPlatform: PlatformId;
-  enabledPlatforms: string[];
-  collapsed: boolean;
-  onNavigate?: () => void;
-}) {
-  const [open, setOpen] = useState(false);
-  const pathname = usePathname();
-
-  if (collapsed) {
-    return (
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <div className="flex justify-center py-1.5 mb-1 text-xs font-medium text-muted-foreground">
-            {PLATFORM_LABELS[currentPlatform]?.slice(0, 2).toUpperCase()}
-          </div>
-        </TooltipTrigger>
-        <TooltipContent side="right">{PLATFORM_LABELS[currentPlatform]}</TooltipContent>
-      </Tooltip>
-    );
-  }
-
-  return (
-    <div className="relative mb-1">
-      <button
-        onClick={() => setOpen(!open)}
-        className="flex items-center gap-2 w-full px-3 py-1.5 text-sm font-medium rounded-md hover:bg-muted transition-colors"
-      >
-        <span className="truncate">{PLATFORM_LABELS[currentPlatform]}</span>
-        <ChevronsUpDown className="h-3.5 w-3.5 ml-auto shrink-0 text-muted-foreground" />
-      </button>
-      {open && (
-        <div className="absolute left-0 right-0 top-full z-50 mt-1 rounded-md border bg-popover p-1 shadow-md">
-          {(Object.keys(PLATFORMS) as PlatformId[]).map((id) => {
-            const isEnabled = enabledPlatforms.includes(id);
-            const isActive = id === currentPlatform;
-            // Build the equivalent path on the new platform
-            const platformPrefix = `/${currentPlatform}`;
-            const subPath = pathname.startsWith(platformPrefix)
-              ? pathname.slice(platformPrefix.length)
-              : "/overview";
-            const targetPath = `/${id}${subPath || "/overview"}`;
-
-            return (
-              <Link
-                key={id}
-                href={isEnabled ? targetPath : "#"}
-                onClick={(e) => {
-                  if (!isEnabled) {
-                    e.preventDefault();
-                    return;
-                  }
-                  setOpen(false);
-                  onNavigate?.();
-                }}
-                className={`flex items-center gap-2 px-2 py-1.5 text-sm rounded-sm transition-colors ${
-                  isEnabled
-                    ? "hover:bg-accent hover:text-accent-foreground"
-                    : "opacity-50 cursor-not-allowed"
-                }`}
-              >
-                {isActive && <Check className="h-3.5 w-3.5" />}
-                {!isActive && <span className="w-3.5" />}
-                <span>{PLATFORM_LABELS[id]}</span>
-                {!isEnabled && (
-                  <span className="ml-auto text-[10px] text-muted-foreground">Upgrade</span>
-                )}
-              </Link>
-            );
-          })}
-        </div>
-      )}
-    </div>
-  );
-}
-
 function SidebarContent({
   collapsed = false,
   onNavigate,
@@ -180,7 +102,13 @@ function SidebarContent({
 
   const currentPlatform = extractPlatform(pathname);
   const enabledPlatforms = account?.enabledPlatforms ?? ["shopify"];
-  const navItems = useMemo(() => getNavItems(currentPlatform), [currentPlatform]);
+
+  const [expandedPlatform, setExpandedPlatform] = useState<PlatformId | null>(currentPlatform);
+
+  // Sync expanded platform when URL changes
+  useEffect(() => {
+    setExpandedPlatform(currentPlatform);
+  }, [currentPlatform]);
 
   function NavLink({ href, icon: Icon, label, isActive, iconSize = "h-4 w-4", className = "", badge }: {
     href: string; icon: any; label: string; isActive: boolean; iconSize?: string; className?: string; badge?: string;
@@ -217,6 +145,9 @@ function SidebarContent({
     return content;
   }
 
+  // In collapsed mode, just show the active platform's nav icons
+  const activePlatformItems = useMemo(() => getNavItems(currentPlatform), [currentPlatform]);
+
   return (
     <>
       {showCollapseToggle && (
@@ -234,20 +165,88 @@ function SidebarContent({
           </button>
         </div>
       )}
-      <PlatformSwitcher
-        currentPlatform={currentPlatform}
-        enabledPlatforms={enabledPlatforms}
-        collapsed={collapsed}
-        onNavigate={onNavigate}
-      />
+
       <nav className="flex flex-col gap-1 flex-1">
-        {navItems.map((item) => {
-          const isActive =
-            pathname === item.href || pathname.startsWith(item.href + "/");
-          return (
-            <NavLink key={item.href} href={item.href} icon={item.icon} label={item.label} isActive={isActive} badge={item.badge} />
-          );
-        })}
+        {collapsed ? (
+          /* Collapsed: show active platform's nav icons only */
+          activePlatformItems.map((item) => {
+            const isActive = pathname === item.href || pathname.startsWith(item.href + "/");
+            return (
+              <NavLink key={item.href} href={item.href} icon={item.icon} label={item.label} isActive={isActive} badge={item.badge} />
+            );
+          })
+        ) : (
+          /* Expanded: platform accordion */
+          (Object.keys(PLATFORMS) as PlatformId[]).map((platformId) => {
+            const isEnabled = enabledPlatforms.includes(platformId);
+            const isExpanded = expandedPlatform === platformId;
+            const items = getNavItems(platformId);
+            const accentColor = PLATFORM_COLORS[platformId];
+
+            return (
+              <div key={platformId}>
+                {isEnabled ? (
+                  <>
+                    <Link
+                      href={`/${platformId}/overview`}
+                      onClick={(e) => {
+                        if (expandedPlatform === platformId) {
+                          // Already on this platform — just toggle expand/collapse
+                          if (currentPlatform === platformId) {
+                            e.preventDefault();
+                            setExpandedPlatform(isExpanded ? null : platformId);
+                            return;
+                          }
+                        }
+                        setExpandedPlatform(platformId);
+                        onNavigate?.();
+                      }}
+                      className={`flex items-center gap-2 w-full px-3 py-2 text-sm font-medium rounded-md transition-colors ${
+                        currentPlatform === platformId
+                          ? "text-foreground"
+                          : "text-muted-foreground hover:text-foreground hover:bg-muted"
+                      }`}
+                      style={{ borderLeft: `3px solid ${accentColor}` }}
+                    >
+                      <span className="truncate">{PLATFORM_LABELS[platformId]}</span>
+                      {isExpanded ? (
+                        <ChevronDown className="h-3.5 w-3.5 ml-auto shrink-0" />
+                      ) : (
+                        <ChevronRight className="h-3.5 w-3.5 ml-auto shrink-0" />
+                      )}
+                    </Link>
+                    {isExpanded && items.map((item) => {
+                      const isActive = pathname === item.href || pathname.startsWith(item.href + "/");
+                      return (
+                        <NavLink key={item.href} href={item.href} icon={item.icon} label={item.label} isActive={isActive} badge={item.badge} className="pl-6" />
+                      );
+                    })}
+                  </>
+                ) : (
+                  /* Disabled platform */
+                  <div
+                    className="flex items-center gap-2 w-full px-3 py-2 text-sm font-medium rounded-md text-muted-foreground/50 cursor-not-allowed"
+                    style={{ borderLeft: `3px solid ${accentColor}40` }}
+                  >
+                    <span className="truncate">{PLATFORM_LABELS[platformId]}</span>
+                    <span className="ml-auto text-[10px]">Upgrade</span>
+                  </div>
+                )}
+              </div>
+            );
+          })
+        )}
+
+        {/* Settings — always visible, below platforms */}
+        <div className="border-t my-2" />
+        <NavLink
+          href="/settings"
+          icon={Settings}
+          label="Settings"
+          isActive={pathname === "/settings" || pathname.startsWith("/settings/")}
+        />
+
+        {/* System Admin */}
         {isSystemAdmin && (
           <>
             <div className="border-t my-2" />
