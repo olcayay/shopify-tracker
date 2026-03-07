@@ -88,6 +88,8 @@ Salesforce live search support — API + dashboard modal with logos ✅
 
 cross-platform overview page (/overview) with platform-branded cards ✅
 
+usage/limits card icons + Canva sidebar cleanup ✅
+
 feedback sayfası
 
 kime hangi durumda nasıl emailler gönderilebilinir.

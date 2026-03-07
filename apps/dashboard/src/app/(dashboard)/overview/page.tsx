@@ -6,7 +6,7 @@ import { useAuth } from "@/lib/auth-context";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Package, ArrowRight } from "lucide-react";
+import { Package, ArrowRight, AppWindow, Search, Star, FlaskConical, Users } from "lucide-react";
 import { PLATFORMS, type PlatformId } from "@appranks/shared";
 
 const PLATFORM_BRANDS: Record<
@@ -152,24 +152,25 @@ export default function CrossPlatformOverviewPage() {
 
           if (!isEnabled) {
             return (
-              <Card
-                key={platformId}
-                className="rounded-xl border-dashed border-t-4 opacity-60"
-                style={{ borderTopColor: brand.primary }}
-              >
-                <CardHeader
-                  className={`bg-gradient-to-r ${brand.gradient} rounded-t-xl`}
+              <Link key={platformId} href={`/${platformId}/overview`}>
+                <Card
+                  className="rounded-xl border-dashed border-t-4 opacity-60 hover:opacity-80 transition-opacity cursor-pointer h-full"
+                  style={{ borderTopColor: brand.primary }}
                 >
-                  <CardTitle className="text-lg text-muted-foreground">
-                    {config.name}
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="flex flex-col items-center justify-center py-8 text-muted-foreground">
-                  <Package className="h-8 w-8 mb-2" />
-                  <p className="text-sm font-medium">Coming soon.</p>
-                  <p className="text-xs">Not yet active.</p>
-                </CardContent>
-              </Card>
+                  <CardHeader
+                    className={`bg-gradient-to-r ${brand.gradient} rounded-t-xl`}
+                  >
+                    <CardTitle className="text-lg text-muted-foreground">
+                      {config.name}
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="flex flex-col items-center justify-center py-8 text-muted-foreground">
+                    <Package className="h-8 w-8 mb-2" />
+                    <p className="text-sm font-medium">Coming soon.</p>
+                    <p className="text-xs">Not yet active.</p>
+                  </CardContent>
+                </Card>
+              </Link>
             );
           }
 
@@ -257,39 +258,21 @@ export default function CrossPlatformOverviewPage() {
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4">
-              <div className="text-center">
-                <div className="text-2xl font-bold">
-                  {account.usage.trackedApps}/{account.limits.maxTrackedApps}
+              {[
+                { icon: AppWindow, usage: account.usage.trackedApps, limit: account.limits.maxTrackedApps, label: "Apps" },
+                { icon: Search, usage: account.usage.trackedKeywords, limit: account.limits.maxTrackedKeywords, label: "Keywords" },
+                { icon: Star, usage: account.usage.competitorApps, limit: account.limits.maxCompetitorApps, label: "Competitors" },
+                { icon: FlaskConical, usage: account.usage.researchProjects, limit: account.limits.maxResearchProjects, label: "Research" },
+                { icon: Users, usage: account.usage.users, limit: account.limits.maxUsers, label: "Users" },
+              ].map(({ icon: Icon, usage, limit, label }) => (
+                <div key={label} className="text-center">
+                  <div className="mx-auto mb-1.5 flex h-8 w-8 items-center justify-center rounded-full bg-muted">
+                    <Icon className="h-4 w-4 text-muted-foreground" />
+                  </div>
+                  <div className="text-2xl font-bold">{usage}/{limit}</div>
+                  <div className="text-xs text-muted-foreground">{label}</div>
                 </div>
-                <div className="text-xs text-muted-foreground">Apps</div>
-              </div>
-              <div className="text-center">
-                <div className="text-2xl font-bold">
-                  {account.usage.trackedKeywords}/
-                  {account.limits.maxTrackedKeywords}
-                </div>
-                <div className="text-xs text-muted-foreground">Keywords</div>
-              </div>
-              <div className="text-center">
-                <div className="text-2xl font-bold">
-                  {account.usage.competitorApps}/
-                  {account.limits.maxCompetitorApps}
-                </div>
-                <div className="text-xs text-muted-foreground">Competitors</div>
-              </div>
-              <div className="text-center">
-                <div className="text-2xl font-bold">
-                  {account.usage.researchProjects}/
-                  {account.limits.maxResearchProjects}
-                </div>
-                <div className="text-xs text-muted-foreground">Research</div>
-              </div>
-              <div className="text-center">
-                <div className="text-2xl font-bold">
-                  {account.usage.users}/{account.limits.maxUsers}
-                </div>
-                <div className="text-xs text-muted-foreground">Users</div>
-              </div>
+              ))}
             </div>
           </CardContent>
         </Card>

@@ -46,6 +46,9 @@ const PLATFORM_COLORS: Record<PlatformId, string> = {
 
 function getNavItems(platformId: PlatformId) {
   const p = `/${platformId}`;
+  if (platformId === "canva") {
+    return [{ href: `${p}/overview`, label: "Overview", icon: LayoutDashboard }];
+  }
   const caps = PLATFORMS[platformId];
   const items: { href: string; label: string; icon: any; badge?: string }[] = [
     { href: `${p}/overview`, label: "Overview", icon: LayoutDashboard },
@@ -101,8 +104,6 @@ function SidebarContent({
   const isAdminSection = pathname.startsWith("/system-admin");
 
   const currentPlatform = extractPlatform(pathname);
-  const enabledPlatforms = account?.enabledPlatforms ?? ["shopify"];
-
   const [expandedPlatform, setExpandedPlatform] = useState<PlatformId | null>(currentPlatform);
 
   // Sync expanded platform when URL changes
@@ -178,60 +179,46 @@ function SidebarContent({
         ) : (
           /* Expanded: platform accordion */
           (Object.keys(PLATFORMS) as PlatformId[]).map((platformId) => {
-            const isEnabled = enabledPlatforms.includes(platformId);
             const isExpanded = expandedPlatform === platformId;
             const items = getNavItems(platformId);
             const accentColor = PLATFORM_COLORS[platformId];
 
             return (
               <div key={platformId}>
-                {isEnabled ? (
-                  <>
-                    <Link
-                      href={`/${platformId}/overview`}
-                      onClick={(e) => {
-                        if (expandedPlatform === platformId) {
-                          // Already on this platform — just toggle expand/collapse
-                          if (currentPlatform === platformId) {
-                            e.preventDefault();
-                            setExpandedPlatform(isExpanded ? null : platformId);
-                            return;
-                          }
-                        }
-                        setExpandedPlatform(platformId);
-                        onNavigate?.();
-                      }}
-                      className={`flex items-center gap-2 w-full px-3 py-2 text-sm font-medium rounded-md transition-colors ${
-                        currentPlatform === platformId
-                          ? "text-foreground"
-                          : "text-muted-foreground hover:text-foreground hover:bg-muted"
-                      }`}
-                      style={{ borderLeft: `3px solid ${accentColor}` }}
-                    >
-                      <span className="truncate">{PLATFORM_LABELS[platformId]}</span>
-                      {isExpanded ? (
-                        <ChevronDown className="h-3.5 w-3.5 ml-auto shrink-0" />
-                      ) : (
-                        <ChevronRight className="h-3.5 w-3.5 ml-auto shrink-0" />
-                      )}
-                    </Link>
-                    {isExpanded && items.map((item) => {
-                      const isActive = pathname === item.href || pathname.startsWith(item.href + "/");
-                      return (
-                        <NavLink key={item.href} href={item.href} icon={item.icon} label={item.label} isActive={isActive} badge={item.badge} className="pl-6" />
-                      );
-                    })}
-                  </>
-                ) : (
-                  /* Disabled platform */
-                  <div
-                    className="flex items-center gap-2 w-full px-3 py-2 text-sm font-medium rounded-md text-muted-foreground/50 cursor-not-allowed"
-                    style={{ borderLeft: `3px solid ${accentColor}40` }}
-                  >
-                    <span className="truncate">{PLATFORM_LABELS[platformId]}</span>
-                    <span className="ml-auto text-[10px]">Upgrade</span>
-                  </div>
-                )}
+                <Link
+                  href={`/${platformId}/overview`}
+                  onClick={(e) => {
+                    if (expandedPlatform === platformId) {
+                      // Already on this platform — just toggle expand/collapse
+                      if (currentPlatform === platformId) {
+                        e.preventDefault();
+                        setExpandedPlatform(isExpanded ? null : platformId);
+                        return;
+                      }
+                    }
+                    setExpandedPlatform(platformId);
+                    onNavigate?.();
+                  }}
+                  className={`flex items-center gap-2 w-full px-3 py-2 text-sm font-medium rounded-md transition-colors ${
+                    currentPlatform === platformId
+                      ? "text-foreground"
+                      : "text-muted-foreground hover:text-foreground hover:bg-muted"
+                  }`}
+                  style={{ borderLeft: `3px solid ${accentColor}` }}
+                >
+                  <span className="truncate">{PLATFORM_LABELS[platformId]}</span>
+                  {isExpanded ? (
+                    <ChevronDown className="h-3.5 w-3.5 ml-auto shrink-0" />
+                  ) : (
+                    <ChevronRight className="h-3.5 w-3.5 ml-auto shrink-0" />
+                  )}
+                </Link>
+                {isExpanded && items.map((item) => {
+                  const isActive = pathname === item.href || pathname.startsWith(item.href + "/");
+                  return (
+                    <NavLink key={item.href} href={item.href} icon={item.icon} label={item.label} isActive={isActive} badge={item.badge} className="pl-6" />
+                  );
+                })}
               </div>
             );
           })

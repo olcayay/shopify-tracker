@@ -20,7 +20,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Trash2, UserPlus, Mail } from "lucide-react";
+import { Trash2, UserPlus, Mail, AppWindow, Search, Star, FlaskConical, Users } from "lucide-react";
 import Link from "next/link";
 
 export default function SettingsPage() {
@@ -219,16 +219,19 @@ export default function SettingsPage() {
               </Button>
             </form>
           )}
-          <div className="grid grid-cols-2 md:grid-cols-6 gap-4 text-center">
-            {([
-              { href: "/apps", usage: account?.usage.trackedApps, limit: account?.limits.maxTrackedApps, pkgLimit: account?.packageLimits?.maxTrackedApps, label: "My Apps" },
-              { href: "/keywords", usage: account?.usage.trackedKeywords, limit: account?.limits.maxTrackedKeywords, pkgLimit: account?.packageLimits?.maxTrackedKeywords, label: "Keywords" },
-              { href: "/competitors", usage: account?.usage.competitorApps, limit: account?.limits.maxCompetitorApps, pkgLimit: account?.packageLimits?.maxCompetitorApps, label: "Competitors" },
-              { href: "/research", usage: account?.usage.researchProjects, limit: account?.limits.maxResearchProjects, pkgLimit: account?.packageLimits?.maxResearchProjects, label: "Research" },
-            ] as const).map(({ href, usage, limit, pkgLimit, label }) => {
+          <div className="grid grid-cols-2 md:grid-cols-5 gap-4 text-center">
+            {[
+              { href: "/apps", icon: AppWindow, usage: account?.usage.trackedApps, limit: account?.limits.maxTrackedApps, pkgLimit: account?.packageLimits?.maxTrackedApps, label: "My Apps" },
+              { href: "/keywords", icon: Search, usage: account?.usage.trackedKeywords, limit: account?.limits.maxTrackedKeywords, pkgLimit: account?.packageLimits?.maxTrackedKeywords, label: "Keywords" },
+              { href: "/competitors", icon: Star, usage: account?.usage.competitorApps, limit: account?.limits.maxCompetitorApps, pkgLimit: account?.packageLimits?.maxCompetitorApps, label: "Competitors" },
+              { href: "/research", icon: FlaskConical, usage: account?.usage.researchProjects, limit: account?.limits.maxResearchProjects, pkgLimit: account?.packageLimits?.maxResearchProjects, label: "Research" },
+            ].map(({ href, icon: Icon, usage, limit, pkgLimit, label }) => {
               const isOverridden = pkgLimit != null && limit !== pkgLimit;
               return (
                 <Link key={label} href={href} className="block hover:bg-accent/50 rounded-lg p-3 -m-1 transition-colors">
+                  <div className="mx-auto mb-1.5 flex h-8 w-8 items-center justify-center rounded-full bg-muted">
+                    <Icon className="h-4 w-4 text-muted-foreground" />
+                  </div>
                   <p className="text-2xl font-bold">
                     {usage}/{limit}
                     {isOverridden && <span className="text-amber-500 text-sm ml-0.5" title={`Package default: ${pkgLimit}`}>*</span>}
@@ -238,6 +241,9 @@ export default function SettingsPage() {
               );
             })}
             <div className="rounded-lg p-3 -m-1">
+              <div className="mx-auto mb-1.5 flex h-8 w-8 items-center justify-center rounded-full bg-muted">
+                <Users className="h-4 w-4 text-muted-foreground" />
+              </div>
               <p className="text-2xl font-bold">
                 {account?.usage.users}/{account?.limits.maxUsers}
                 {account?.packageLimits && account?.limits.maxUsers !== account?.packageLimits.maxUsers && (

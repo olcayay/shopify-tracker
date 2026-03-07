@@ -1,3 +1,18 @@
+Usage/Limits Card Icons & Canva Sidebar Cleanup
+=================================================
+
+Dashboard usage cards:
+- Added unique icons (AppWindow, Search, Star, FlaskConical, Users) to all usage/limit items
+- /overview: Account Usage card — icons in muted circular backgrounds above numbers
+- /[platform]/overview: Stat cards — small icons inline with CardDescription labels
+- /settings: Account section — icons in muted circular backgrounds above numbers
+
+Canva sidebar:
+- Canva only shows Overview in the sidebar navigation (no Apps, Competitors, etc.)
+- Removed "Planned Capabilities" section from the coming-soon page for non-enabled platforms
+
+---
+
 Cross-Platform Overview Page (/overview)
 =========================================
 

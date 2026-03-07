@@ -23,7 +23,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Target, Eye, ChevronLeft, ChevronRight } from "lucide-react";
+import { Target, Eye, ChevronLeft, ChevronRight, Clock, ArrowLeft, Search, Star, Users, AppWindow, FlaskConical } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { StatCardSkeleton, TableSkeleton } from "@/components/skeletons";
 import { AppBadgeIcon } from "@/components/app-badges";
@@ -35,6 +35,13 @@ const SCRAPER_LABELS: Record<string, string> = {
   keyword_search: "Keywords",
   reviews: "Reviews",
 };
+
+const PLATFORM_COLORS: Record<string, string> = {
+  shopify: "#95BF47",
+  salesforce: "#00A1E0",
+  canva: "#00C4CC",
+};
+
 
 const PAGE_SIZE = 10;
 
@@ -113,6 +120,9 @@ export default function OverviewPage() {
 
   const canEdit = user?.role === "owner" || user?.role === "editor";
   const caps = PLATFORMS[platform as PlatformId] || PLATFORMS.shopify;
+  const enabledPlatforms = (account?.enabledPlatforms ?? []) as PlatformId[];
+  const isPlatformEnabled = enabledPlatforms.includes(platform as PlatformId);
+
   const trackedSlugs = useMemo(() => new Set(apps.map((a: any) => a.slug)), [apps]);
   const competitorSlugs = useMemo(() => new Set(competitors.map((c: any) => c.appSlug)), [competitors]);
 
@@ -124,8 +134,37 @@ export default function OverviewPage() {
   const [categoriesPage, setCategoriesPage] = useState(0);
 
   useEffect(() => {
-    loadData();
-  }, []);
+    if (isPlatformEnabled) loadData();
+  }, [isPlatformEnabled]);
+
+  // Coming-soon page for non-enabled platforms
+  if (!isPlatformEnabled) {
+    const platformId = platform as PlatformId;
+    const accentColor = PLATFORM_COLORS[platformId] || "#888";
+    return (
+      <div className="space-y-6">
+        <Card className="rounded-xl border-t-4" style={{ borderTopColor: accentColor }}>
+          <CardHeader className="text-center pb-2">
+            <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-muted">
+              <Clock className="h-8 w-8 text-muted-foreground" />
+            </div>
+            <CardTitle className="text-2xl">Coming Soon</CardTitle>
+            <CardDescription className="text-base">
+              {caps.name} tracking is not yet available on your account. Stay tuned — we are working on it.
+            </CardDescription>
+          </CardHeader>
+        </Card>
+
+        <Link
+          href="/overview"
+          className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
+        >
+          <ArrowLeft className="h-4 w-4" />
+          Back to Platforms
+        </Link>
+      </div>
+    );
+  }
 
   async function loadData() {
     setLoading(true);
@@ -234,7 +273,10 @@ export default function OverviewPage() {
         <Link href={`/${platform}/apps`}>
           <Card className="hover:border-primary/50 transition-colors cursor-pointer">
             <CardHeader className="pb-2">
-              <CardDescription>My Apps</CardDescription>
+              <CardDescription className="flex items-center gap-1.5">
+                <AppWindow className="h-4 w-4" />
+                My Apps
+              </CardDescription>
               <CardTitle className="text-3xl">
                 {account?.usage.trackedApps ?? apps.length}
                 <span className="text-lg text-muted-foreground font-normal">
@@ -249,7 +291,10 @@ export default function OverviewPage() {
           <Link href={`/${platform}/keywords`}>
             <Card className="hover:border-primary/50 transition-colors cursor-pointer">
               <CardHeader className="pb-2">
-                <CardDescription>Tracked Keywords</CardDescription>
+                <CardDescription className="flex items-center gap-1.5">
+                <Search className="h-4 w-4" />
+                Tracked Keywords
+              </CardDescription>
                 <CardTitle className="text-3xl">
                   {account?.usage.trackedKeywords ?? keywords.length}
                   <span className="text-lg text-muted-foreground font-normal">
@@ -264,7 +309,10 @@ export default function OverviewPage() {
         <Link href={`/${platform}/competitors`}>
           <Card className="hover:border-primary/50 transition-colors cursor-pointer">
             <CardHeader className="pb-2">
-              <CardDescription>Competitor Apps</CardDescription>
+              <CardDescription className="flex items-center gap-1.5">
+                <Star className="h-4 w-4" />
+                Competitor Apps
+              </CardDescription>
               <CardTitle className="text-3xl">
                 {account?.usage.competitorApps ?? competitors.length}
                 <span className="text-lg text-muted-foreground font-normal">
@@ -278,7 +326,10 @@ export default function OverviewPage() {
         <Link href={`/${platform}/research`}>
           <Card className="hover:border-primary/50 transition-colors cursor-pointer">
             <CardHeader className="pb-2">
-              <CardDescription>Research Projects</CardDescription>
+              <CardDescription className="flex items-center gap-1.5">
+                <FlaskConical className="h-4 w-4" />
+                Research Projects
+              </CardDescription>
               <CardTitle className="text-3xl">
                 {account?.usage.researchProjects ?? 0}
                 <span className="text-lg text-muted-foreground font-normal">
@@ -292,7 +343,10 @@ export default function OverviewPage() {
         <Link href="/settings">
           <Card className="hover:border-primary/50 transition-colors cursor-pointer">
             <CardHeader className="pb-2">
-              <CardDescription>Users</CardDescription>
+              <CardDescription className="flex items-center gap-1.5">
+                <Users className="h-4 w-4" />
+                Users
+              </CardDescription>
               <CardTitle className="text-3xl">
                 {account?.usage.users ?? 1}
                 <span className="text-lg text-muted-foreground font-normal">
