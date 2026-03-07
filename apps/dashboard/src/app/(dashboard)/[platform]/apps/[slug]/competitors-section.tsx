@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import { useAuth } from "@/lib/auth-context";
@@ -17,7 +17,7 @@ import {
 } from "@/components/ui/table";
 import { X, ArrowUpDown, ArrowUp, ArrowDown, ChevronUp, ChevronDown, Pin, PinOff, ExternalLink, Settings2, Check, Loader2 } from "lucide-react";
 import { buildExternalAppUrl, getPlatformName } from "@/lib/platform-urls";
-import type { PlatformId } from "@appranks/shared";
+import { PLATFORMS, isPlatformId, type PlatformId } from "@appranks/shared";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 import { DropdownMenu as DropdownMenuPrimitive } from "radix-ui";
@@ -56,6 +56,7 @@ const TOGGLEABLE_COLUMNS: { key: string; label: string; tip?: string }[] = [
 
 export function CompetitorsSection({ appSlug }: { appSlug: string }) {
   const { platform } = useParams();
+  const caps = isPlatformId(platform as string) ? PLATFORMS[platform as PlatformId] : PLATFORMS.shopify;
   const { fetchWithAuth, user, account, refreshUser } = useAuth();
   const { formatDateOnly } = useFormatDate();
   const [competitors, setCompetitors] = useState<any[]>([]);
@@ -102,7 +103,11 @@ export function CompetitorsSection({ appSlug }: { appSlug: string }) {
     });
   }
 
-  const isCol = (key: string) => !hiddenColumns.has(key);
+  const isCol = (key: string) => {
+    if (key === "featured" && !caps.hasFeaturedSections) return false;
+    if (key === "similar" && !caps.hasSimilarApps) return false;
+    return !hiddenColumns.has(key);
+  };
 
   function toggleSelfPinned() {
     const next = !selfPinned;
@@ -111,6 +116,14 @@ export function CompetitorsSection({ appSlug }: { appSlug: string }) {
   }
 
   const canEdit = user?.role === "owner" || user?.role === "editor";
+
+  const visibleToggleableColumns = useMemo(() => {
+    return TOGGLEABLE_COLUMNS.filter((col) => {
+      if (col.key === "featured" && !caps.hasFeaturedSections) return false;
+      if (col.key === "similar" && !caps.hasSimilarApps) return false;
+      return true;
+    });
+  }, [caps]);
 
   useEffect(() => {
     loadCompetitors();
@@ -426,7 +439,7 @@ export function CompetitorsSection({ appSlug }: { appSlug: string }) {
                 <button
                   className="text-xs text-primary hover:underline"
                   onClick={() => {
-                    const allKeys = new Set(TOGGLEABLE_COLUMNS.map((c) => c.key));
+                    const allKeys = new Set(visibleToggleableColumns.map((c) => c.key));
                     setHiddenColumns(allKeys);
                     localStorage.setItem(`competitors-columns-${appSlug}`, JSON.stringify([...allKeys]));
                     if (allKeys.has(sortKey)) {
@@ -440,7 +453,7 @@ export function CompetitorsSection({ appSlug }: { appSlug: string }) {
               </div>
               <DropdownMenuPrimitive.Separator className="h-px bg-border my-1" />
               <div className="max-h-[300px] overflow-y-auto">
-                {TOGGLEABLE_COLUMNS.map((col) => (
+                {visibleToggleableColumns.map((col) => (
                   <DropdownMenuPrimitive.CheckboxItem
                     key={col.key}
                     checked={isCol(col.key)}

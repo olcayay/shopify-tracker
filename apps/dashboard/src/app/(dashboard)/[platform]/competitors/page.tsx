@@ -128,7 +128,11 @@ export default function CompetitorsPage() {
     });
   }
 
-  const isCol = (key: string) => !hiddenColumns.has(key);
+  const isCol = (key: string) => {
+    if (key === "featured" && !caps.hasFeaturedSections) return false;
+    if (key === "similar" && !caps.hasSimilarApps) return false;
+    return !hiddenColumns.has(key);
+  };
 
   useEffect(() => {
     loadData();
