@@ -1,3 +1,29 @@
+Salesforce AppExchange Preview Page (PLA-55)
+=============================================
+
+- Refactored monolithic `preview/page.tsx` into thin router + platform-specific components
+- Extracted shared utilities (`CharBadge`, `EditorField`, `mod`) into `preview/shared.tsx`
+- Moved all Shopify-specific rendering into `preview/shopify-preview.tsx`
+- Created `preview/salesforce-preview.tsx` matching real AppExchange layout:
+  - Header: round icon + title + publisher line + description + "Salesforce App" badge + gold stars + rating
+  - Action buttons: [Get It Now] (blue filled) + [Try It] (blue outline) + heart icon
+  - 3-column hero: left sidebar (Freemium/Industries/Business Need/Requires/Compatible With badges) | center (description + video placeholder) | right (screenshot placeholder)
+  - Tab bar (Overview/Reviews/More Details) with blue bottom border
+  - Highlights: 3-column grid with alternating blue/orange gradient top bars
+  - Provider Details + Pricing Details side-by-side: publisher info with logo/location/founded/website/email/description | pricing model + plan cards (plan name in blue, price on right)
+  - Additional Details: full description section
+  - Salesforce colors: #0176D3 primary, #032D60 icon fallback, #F59E0B stars
+- Reviews tab: full AppExchange-styled layout with star distribution sidebar (5→1 filter checkboxes + Badge filters), large rating display (48px font + gold stars), horizontal star distribution bars (approximated from avg/count), "Write Review" button, review count + sort dropdown, sample review cards (avatar + name + badge + stars + date + title + body + Comment/Like/Report Abuse), developer response sections (blue left border + Publisher badge), pagination indicator
+- Editable fields: App Name (80), Description (500), Full Description (2000), Highlight titles (80 each), Highlight descriptions (200 each)
+- Platform router now supports both "shopify" and "salesforce" (was shopify-only)
+- Files changed:
+  1. `preview/shared.tsx` — NEW (CharBadge, EditorField, mod)
+  2. `preview/shopify-preview.tsx` — NEW (moved from page.tsx)
+  3. `preview/salesforce-preview.tsx` — NEW (AppExchange preview)
+  4. `preview/page.tsx` — refactored to thin router
+
+---
+
 Hide Featured & Similar for Salesforce (PLA-54)
 =================================================
 
