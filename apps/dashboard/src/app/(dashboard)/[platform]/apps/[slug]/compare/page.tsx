@@ -962,7 +962,7 @@ export default function ComparePage() {
             onToggle={toggleSection}
           >
             <div className="overflow-auto max-h-[60vh]">
-              <table className="w-full text-sm">
+              <table className="w-full text-sm table-fixed">
                 <thead>
                   <tr>
                     <th className="text-left py-2 pr-4 text-muted-foreground font-medium w-[160px] min-w-[160px] sticky top-0 bg-card z-10 border-b border-border shadow-[0_1px_0_0_hsl(var(--border))]">
@@ -1282,7 +1282,7 @@ function BadgeComparisonSection({
       onToggle={onToggle}
     >
       <div className="overflow-auto max-h-[60vh]">
-        <table className="w-full text-sm">
+        <table className="w-full text-sm table-fixed">
           <thead>
             <tr>
               <th className="text-left py-2 pr-4 text-muted-foreground font-medium w-[160px] min-w-[160px] sticky top-0 bg-card z-10 border-b border-border shadow-[0_1px_0_0_hsl(var(--border))]">
@@ -1369,7 +1369,7 @@ function PricingComparison({
       onToggle={onToggle}
     >
       <div className="overflow-auto max-h-[60vh]">
-        <table className="w-full text-sm">
+        <table className="w-full text-sm table-fixed">
           <thead>
             <tr>
               <th className="text-left py-2 pr-4 text-muted-foreground font-medium w-[160px] min-w-[160px] sticky top-0 bg-card z-10 border-b border-border shadow-[0_1px_0_0_hsl(var(--border))]">
@@ -1528,7 +1528,7 @@ function CategoryRankingSection({
       onToggle={onToggle}
     >
       <div className="overflow-auto max-h-[60vh]">
-        <table className="w-full text-sm">
+        <table className="w-full text-sm table-fixed">
           <thead>
             <tr>
               <th className="text-left py-2 pr-4 text-muted-foreground font-medium w-[160px] min-w-[160px] sticky top-0 bg-card z-10 border-b border-border shadow-[0_1px_0_0_hsl(var(--border))]" />
@@ -1642,13 +1642,13 @@ function ReviewsRatingsSection({
       collapsed={collapsed}
       onToggle={onToggle}
     >
-      <div className="overflow-x-auto">
-        <table className="w-full text-sm">
+      <div className="overflow-auto max-h-[60vh]">
+        <table className="w-full text-sm table-fixed">
           <thead>
-            <tr className="border-b">
-              <th className="text-left py-2 pr-4 text-muted-foreground font-medium w-[160px] min-w-[160px]" />
+            <tr>
+              <th className="text-left py-2 pr-4 text-muted-foreground font-medium w-[160px] min-w-[160px] sticky top-0 bg-card z-10 border-b border-border shadow-[0_1px_0_0_hsl(var(--border))]" />
               {apps.map((app) => (
-                <th key={app.slug} className="py-2 px-2 pb-6 text-center min-w-[130px]">
+                <th key={app.slug} className="py-2 px-2 pb-6 text-center min-w-[130px] sticky top-0 bg-card z-10 border-b border-border shadow-[0_1px_0_0_hsl(var(--border))]">
                   <div className="flex justify-center">
                     <LinkedAppIcon app={app} />
                   </div>
@@ -1815,7 +1815,7 @@ function CategoriesComparison({
       onToggle={onToggle}
     >
       <div className="overflow-auto max-h-[60vh]">
-        <table className="w-full text-sm">
+        <table className="w-full text-sm table-fixed">
           <thead>
             <tr>
               <th className="text-left py-2 pr-4 text-muted-foreground font-medium w-[160px] min-w-[160px] sticky top-0 bg-card z-10 border-b border-border shadow-[0_1px_0_0_hsl(var(--border))]">

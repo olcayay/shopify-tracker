@@ -1,3 +1,15 @@
+Consistent Column Widths on Compare Page (PLA-52)
+===================================================
+
+- Added `table-fixed` to all 6 comparison tables on the compare page
+- Tables affected: Features/Highlights, BadgeComparisonSection (Languages/Compatible With/Industries/Requires), PricingComparison, CategoryRankingSection, ReviewsRatingsSection, CategoriesComparison
+- With `table-layout: fixed`, columns respect explicit widths from `<th>` elements, ensuring all sections have identical column widths when scrolling
+- Standardized ReviewsRatingsSection overflow wrapper from `overflow-x-auto` to `overflow-auto max-h-[60vh]` to match other sections
+- Added sticky header styling to ReviewsRatingsSection `<th>` elements (was missing compared to all other sections)
+- File changed: `apps/dashboard/src/app/(dashboard)/[platform]/apps/[slug]/compare/page.tsx`
+
+---
+
 Details Page Card Layout Improvements (PLA-51)
 ================================================
 
