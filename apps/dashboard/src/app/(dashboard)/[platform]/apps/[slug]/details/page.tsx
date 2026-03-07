@@ -87,9 +87,9 @@ export default async function DetailsPage({
         </Card>
       )}
 
-      {/* Salesforce: Industries, Business Need, Requires */}
-      {isSalesforce && (industries.length > 0 || businessNeeds.length > 0 || productsRequired.length > 0) && (
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      {/* Salesforce: all badge cards in a single unified grid */}
+      {isSalesforce && (industries.length > 0 || businessNeeds.length > 0 || productsRequired.length > 0 || snapshot.languages?.length > 0 || snapshot.integrations?.length > 0) && (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {industries.length > 0 && (
             <Card>
               <CardHeader>
@@ -144,10 +144,45 @@ export default async function DetailsPage({
               </CardContent>
             </Card>
           )}
+          {snapshot.languages?.length > 0 && (
+            <Card>
+              <CardHeader>
+                <CardTitle>Languages</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="flex flex-wrap gap-1.5">
+                  {snapshot.languages.map((lang: string, i: number) => (
+                    <Badge key={i} variant="outline" className="text-xs">
+                      {lang}
+                    </Badge>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+          {snapshot.integrations?.length > 0 && (
+            <Card>
+              <CardHeader>
+                <CardTitle>Compatible With</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="flex flex-wrap gap-1.5">
+                  {snapshot.integrations.map((item: string, i: number) => (
+                    <Link key={i} href={`/${platform}/integrations/${encodeURIComponent(item)}`}>
+                      <Badge variant="secondary" className="text-xs hover:bg-primary hover:text-primary-foreground cursor-pointer transition-colors">
+                        {item}
+                      </Badge>
+                    </Link>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          )}
         </div>
       )}
 
-      {(snapshot.languages?.length > 0 || snapshot.integrations?.length > 0) && (
+      {/* Non-Salesforce: Languages + Integrations */}
+      {!isSalesforce && (snapshot.languages?.length > 0 || snapshot.integrations?.length > 0) && (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {snapshot.languages?.length > 0 && (
             <Card>
@@ -168,7 +203,7 @@ export default async function DetailsPage({
           {snapshot.integrations?.length > 0 && (
             <Card>
               <CardHeader>
-                <CardTitle>{isSalesforce ? "Compatible With" : "Integrations"}</CardTitle>
+                <CardTitle>Integrations</CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="flex flex-wrap gap-1.5">

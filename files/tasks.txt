@@ -94,7 +94,7 @@ Salesforce detail & compare: Industries, Requires, Compatible With (PLA-48) ✅
 
 Salesforce features/highlights display improvements (PLA-50) ✅
 
-details page card layout improvements (PLA-51)
+details page card layout improvements (PLA-51) ✅
 
 feedback sayfası
 

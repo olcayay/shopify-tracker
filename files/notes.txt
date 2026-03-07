@@ -1,3 +1,13 @@
+Details Page Card Layout Improvements (PLA-51)
+================================================
+
+- Merged all Salesforce badge cards (Industries, Business Need, Requires, Languages, Compatible With) into a single `grid-cols-1 md:grid-cols-2` grid
+- Previously split across two grids: 3-col (Industries/Business Need/Requires) + 2-col (Languages/Compatible With), causing visual gaps when cards were absent
+- Non-Salesforce (Shopify) layout unchanged — Languages + Integrations in their own 2-col grid with `!isSalesforce` condition
+- File changed: `apps/dashboard/src/app/(dashboard)/[platform]/apps/[slug]/details/page.tsx`
+
+---
+
 Salesforce Features/Highlights Display (PLA-50)
 =================================================
 
