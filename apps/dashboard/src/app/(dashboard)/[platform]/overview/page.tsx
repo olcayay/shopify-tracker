@@ -270,15 +270,15 @@ export default function OverviewPage() {
 
       {/* Account Usage Cards - clickable */}
       <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-        <Link href={`/${platform}/apps`}>
-          <Card className="hover:border-primary/50 transition-colors cursor-pointer">
+        <Link href={`/${platform}/apps`} className="h-full">
+          <Card className="hover:border-primary/50 transition-colors cursor-pointer h-full">
             <CardHeader className="pb-2">
               <CardDescription className="flex items-center gap-1.5">
                 <AppWindow className="h-4 w-4" />
                 My Apps
               </CardDescription>
               <CardTitle className="text-3xl">
-                {account?.usage.trackedApps ?? apps.length}
+                {apps.length}
                 <span className="text-lg text-muted-foreground font-normal">
                   /{account?.limits.maxTrackedApps}
                 </span>
@@ -288,15 +288,15 @@ export default function OverviewPage() {
         </Link>
 
         {caps.hasKeywordSearch && (
-          <Link href={`/${platform}/keywords`}>
-            <Card className="hover:border-primary/50 transition-colors cursor-pointer">
+          <Link href={`/${platform}/keywords`} className="h-full">
+            <Card className="hover:border-primary/50 transition-colors cursor-pointer h-full">
               <CardHeader className="pb-2">
                 <CardDescription className="flex items-center gap-1.5">
-                <Search className="h-4 w-4" />
-                Tracked Keywords
-              </CardDescription>
+                  <Search className="h-4 w-4" />
+                  Tracked Keywords
+                </CardDescription>
                 <CardTitle className="text-3xl">
-                  {account?.usage.trackedKeywords ?? keywords.length}
+                  {keywords.length}
                   <span className="text-lg text-muted-foreground font-normal">
                     /{account?.limits.maxTrackedKeywords}
                   </span>
@@ -306,15 +306,15 @@ export default function OverviewPage() {
           </Link>
         )}
 
-        <Link href={`/${platform}/competitors`}>
-          <Card className="hover:border-primary/50 transition-colors cursor-pointer">
+        <Link href={`/${platform}/competitors`} className="h-full">
+          <Card className="hover:border-primary/50 transition-colors cursor-pointer h-full">
             <CardHeader className="pb-2">
               <CardDescription className="flex items-center gap-1.5">
                 <Star className="h-4 w-4" />
                 Competitor Apps
               </CardDescription>
               <CardTitle className="text-3xl">
-                {account?.usage.competitorApps ?? competitors.length}
+                {competitors.length}
                 <span className="text-lg text-muted-foreground font-normal">
                   /{account?.limits.maxCompetitorApps}
                 </span>
@@ -323,8 +323,8 @@ export default function OverviewPage() {
           </Card>
         </Link>
 
-        <Link href={`/${platform}/research`}>
-          <Card className="hover:border-primary/50 transition-colors cursor-pointer">
+        <Link href={`/${platform}/research`} className="h-full">
+          <Card className="hover:border-primary/50 transition-colors cursor-pointer h-full">
             <CardHeader className="pb-2">
               <CardDescription className="flex items-center gap-1.5">
                 <FlaskConical className="h-4 w-4" />
@@ -340,8 +340,8 @@ export default function OverviewPage() {
           </Card>
         </Link>
 
-        <Link href="/settings">
-          <Card className="hover:border-primary/50 transition-colors cursor-pointer">
+        <Link href="/settings" className="h-full">
+          <Card className="hover:border-primary/50 transition-colors cursor-pointer h-full">
             <CardHeader className="pb-2">
               <CardDescription className="flex items-center gap-1.5">
                 <Users className="h-4 w-4" />
