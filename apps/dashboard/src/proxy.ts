@@ -8,7 +8,6 @@ const VALID_PLATFORMS = ["shopify", "salesforce", "canva"];
 
 /** Dashboard pages that should be nested under a [platform] segment. */
 const PLATFORM_PAGES = [
-  "/overview",
   "/apps",
   "/competitors",
   "/keywords",
@@ -28,7 +27,7 @@ export async function proxy(request: NextRequest) {
     const token = request.cookies.get("access_token")?.value;
     // Authenticated users: redirect landing/login/register → dashboard
     if (token && (pathname === "/" || pathname === "/login" || pathname === "/register")) {
-      return NextResponse.redirect(new URL("/shopify/overview", request.url));
+      return NextResponse.redirect(new URL("/overview", request.url));
     }
     return NextResponse.next();
   }

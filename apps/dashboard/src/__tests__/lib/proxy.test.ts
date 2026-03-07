@@ -81,31 +81,31 @@ describe("proxy routing", () => {
     expect(mockNext).toHaveBeenCalled();
   });
 
-  it("redirects authenticated user from / to /shopify/overview", async () => {
+  it("redirects authenticated user from / to /overview", async () => {
     const { proxy } = await import("@/proxy");
     const req = createMockRequest("/", { access_token: "valid-token" }) as any;
     await proxy(req);
     expect(mockRedirect).toHaveBeenCalled();
     const redirectUrl = mockRedirect.mock.calls[0][0];
-    expect(redirectUrl.pathname).toBe("/shopify/overview");
+    expect(redirectUrl.pathname).toBe("/overview");
   });
 
-  it("redirects authenticated user from /login to /shopify/overview", async () => {
+  it("redirects authenticated user from /login to /overview", async () => {
     const { proxy } = await import("@/proxy");
     const req = createMockRequest("/login", { access_token: "valid-token" }) as any;
     await proxy(req);
     expect(mockRedirect).toHaveBeenCalled();
     const redirectUrl = mockRedirect.mock.calls[0][0];
-    expect(redirectUrl.pathname).toBe("/shopify/overview");
+    expect(redirectUrl.pathname).toBe("/overview");
   });
 
-  it("redirects authenticated user from /register to /shopify/overview", async () => {
+  it("redirects authenticated user from /register to /overview", async () => {
     const { proxy } = await import("@/proxy");
     const req = createMockRequest("/register", { access_token: "valid-token" }) as any;
     await proxy(req);
     expect(mockRedirect).toHaveBeenCalled();
     const redirectUrl = mockRedirect.mock.calls[0][0];
-    expect(redirectUrl.pathname).toBe("/shopify/overview");
+    expect(redirectUrl.pathname).toBe("/overview");
   });
 
   it("does not redirect authenticated user from /terms", async () => {
@@ -122,13 +122,13 @@ describe("proxy routing", () => {
     expect(mockNext).toHaveBeenCalled();
   });
 
-  it("redirects legacy /overview to /shopify/overview", async () => {
+  it("does not redirect /overview (cross-platform page)", async () => {
     const { proxy } = await import("@/proxy");
-    const req = createMockRequest("/overview") as any;
+    const payload = { exp: Math.floor(Date.now() / 1000) + 3600, isSystemAdmin: false };
+    const token = `header.${btoa(JSON.stringify(payload))}.signature`;
+    const req = createMockRequest("/overview", { access_token: token }) as any;
     await proxy(req);
-    expect(mockRedirect).toHaveBeenCalled();
-    const redirectUrl = mockRedirect.mock.calls[0][0];
-    expect(redirectUrl.pathname).toBe("/shopify/overview");
+    expect(mockNext).toHaveBeenCalled();
   });
 
   it("redirects legacy /apps to /shopify/apps", async () => {

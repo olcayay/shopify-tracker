@@ -86,6 +86,8 @@ truncate long app names in all dashboard tables (max-w-[260px]) ✅
 
 Salesforce live search support — API + dashboard modal with logos ✅
 
+cross-platform overview page (/overview) with platform-branded cards ✅
+
 feedback sayfası
 
 kime hangi durumda nasıl emailler gönderilebilinir.

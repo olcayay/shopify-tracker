@@ -1,3 +1,22 @@
+Cross-Platform Overview Page (/overview)
+=========================================
+
+New page: apps/dashboard/src/app/(dashboard)/overview/page.tsx
+- Shows all platforms (shopify, salesforce, canva) as branded cards with platform colors
+- Active platforms: stats (apps/keywords/competitors), capability badges, "View Dashboard →" link
+- Inactive platforms: dashed border, "Coming soon" empty state
+- Account Usage section at bottom showing all limits (apps, keywords, competitors, research, users)
+- Fetches data via fetchWithAuth with explicit ?platform=X params (no auto-platform injection)
+
+Proxy fix (proxy.ts):
+- Removed "/overview" from PLATFORM_PAGES legacy redirect list (was redirecting /overview → /shopify/overview)
+- Updated authenticated user landing page: / → /overview (was /shopify/overview)
+
+Sidebar (sidebar.tsx):
+- "AppRanks" brand text is now a clickable Link to /overview
+
+---
+
 App Name Truncation & Salesforce Live Search
 ==============================================
 

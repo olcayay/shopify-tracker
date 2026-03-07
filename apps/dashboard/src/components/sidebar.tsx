@@ -221,7 +221,11 @@ function SidebarContent({
     <>
       {showCollapseToggle && (
         <div className={`flex items-center mb-4 ${collapsed ? "justify-center" : "justify-between px-1"}`}>
-          {!collapsed && <span className="font-semibold text-lg px-2">AppRanks</span>}
+          {!collapsed && (
+            <Link href="/overview" className="font-semibold text-lg px-2 hover:text-primary transition-colors">
+              AppRanks
+            </Link>
+          )}
           <button
             onClick={onToggleCollapsed}
             className="h-8 w-8 flex items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground transition-colors shrink-0"
