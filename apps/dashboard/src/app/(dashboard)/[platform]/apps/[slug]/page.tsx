@@ -37,7 +37,7 @@ import {
 } from "lucide-react";
 import { VisibilityScorePopover } from "@/components/visibility-score-popover";
 import { PowerScorePopover } from "@/components/power-score-popover";
-import type { PlatformId } from "@appranks/shared";
+import { PLATFORMS, isPlatformId, type PlatformId } from "@appranks/shared";
 
 // --- Helper functions ---
 
@@ -118,6 +118,7 @@ export default async function AppOverviewPage({
   params: Promise<{ platform: string; slug: string }>;
 }) {
   const { platform, slug } = await params;
+  const caps = isPlatformId(platform) ? PLATFORMS[platform as PlatformId] : PLATFORMS.shopify;
 
   // Round 1: parallel fetches (all apps)
   let app: any;
@@ -139,9 +140,13 @@ export default async function AppOverviewPage({
         getAppRankings(slug, 30, platform as PlatformId).catch(() => ({})),
         getAppChanges(slug, 10, platform as PlatformId).catch(() => []),
         getAppReviewMetrics(slug, platform as PlatformId).catch(() => null),
-        getAppFeaturedPlacements(slug, 30, platform as PlatformId).catch(() => ({ sightings: [] })),
+        caps.hasFeaturedSections
+          ? getAppFeaturedPlacements(slug, 30, platform as PlatformId).catch(() => ({ sightings: [] }))
+          : Promise.resolve({ sightings: [] }),
         getAppAdSightings(slug, 30, platform as PlatformId).catch(() => ({ sightings: [] })),
-        getAppSimilarApps(slug, 30, platform as PlatformId).catch(() => ({ direct: [], reverse: [], secondDegree: [] })),
+        caps.hasSimilarApps
+          ? getAppSimilarApps(slug, 30, platform as PlatformId).catch(() => ({ direct: [], reverse: [], secondDegree: [] }))
+          : Promise.resolve({ direct: [], reverse: [], secondDegree: [] }),
         getAppsMinPaidPrices([slug], platform as PlatformId).catch(() => ({})),
         getAppScores(slug, platform as PlatformId).catch(() => ({ visibility: [], power: [], weightedPowerScore: 0 })),
       ]);
@@ -320,7 +325,10 @@ export default async function AppOverviewPage({
   const v90d = reviewMetrics?.v90d ?? null;
   const momentum = reviewMetrics?.momentum ?? null;
 
-  const totalVisibility = featuredSections.length + adKeywords.length + reverseSimilarSlugs.length;
+  const totalVisibility =
+    (caps.hasFeaturedSections ? featuredSections.length : 0) +
+    adKeywords.length +
+    (caps.hasSimilarApps ? reverseSimilarSlugs.length : 0);
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
@@ -841,25 +849,27 @@ export default async function AppOverviewPage({
           {totalVisibility > 0 ? (
             <div className="space-y-3">
               {/* Featured */}
-              <Link
-                href={`/${platform}/apps/${slug}/featured`}
-                className="block rounded-md p-2 -mx-2 hover:bg-muted/50 transition-colors"
-              >
-                <div className="flex items-center gap-2 text-sm">
-                  <Star className="h-4 w-4 text-amber-500 shrink-0" />
-                  <span>
-                    Seen in{" "}
-                    <span className="font-semibold">{featuredSections.length}</span>{" "}
-                    editorial section{featuredSections.length !== 1 ? "s" : ""}
-                  </span>
-                </div>
-                {featuredSections.length > 0 && (
-                  <p className="text-xs text-muted-foreground mt-0.5 ml-6 truncate">
-                    {featuredSections.slice(0, 3).join(", ")}
-                    {featuredSections.length > 3 ? ` +${featuredSections.length - 3} more` : ""}
-                  </p>
-                )}
-              </Link>
+              {caps.hasFeaturedSections && (
+                <Link
+                  href={`/${platform}/apps/${slug}/featured`}
+                  className="block rounded-md p-2 -mx-2 hover:bg-muted/50 transition-colors"
+                >
+                  <div className="flex items-center gap-2 text-sm">
+                    <Star className="h-4 w-4 text-amber-500 shrink-0" />
+                    <span>
+                      Seen in{" "}
+                      <span className="font-semibold">{featuredSections.length}</span>{" "}
+                      editorial section{featuredSections.length !== 1 ? "s" : ""}
+                    </span>
+                  </div>
+                  {featuredSections.length > 0 && (
+                    <p className="text-xs text-muted-foreground mt-0.5 ml-6 truncate">
+                      {featuredSections.slice(0, 3).join(", ")}
+                      {featuredSections.length > 3 ? ` +${featuredSections.length - 3} more` : ""}
+                    </p>
+                  )}
+                </Link>
+              )}
 
               {/* Search Ads */}
               <Link
@@ -884,19 +894,21 @@ export default async function AppOverviewPage({
               </Link>
 
               {/* Similar Apps */}
-              <Link
-                href={`/${platform}/apps/${slug}/similar`}
-                className="block rounded-md p-2 -mx-2 hover:bg-muted/50 transition-colors"
-              >
-                <div className="flex items-center gap-2 text-sm">
-                  <Users className="h-4 w-4 text-purple-500 shrink-0" />
-                  <span>
-                    Listed as similar by{" "}
-                    <span className="font-semibold">{reverseSimilarSlugs.length}</span>{" "}
-                    app{reverseSimilarSlugs.length !== 1 ? "s" : ""}
-                  </span>
-                </div>
-              </Link>
+              {caps.hasSimilarApps && (
+                <Link
+                  href={`/${platform}/apps/${slug}/similar`}
+                  className="block rounded-md p-2 -mx-2 hover:bg-muted/50 transition-colors"
+                >
+                  <div className="flex items-center gap-2 text-sm">
+                    <Users className="h-4 w-4 text-purple-500 shrink-0" />
+                    <span>
+                      Listed as similar by{" "}
+                      <span className="font-semibold">{reverseSimilarSlugs.length}</span>{" "}
+                      app{reverseSimilarSlugs.length !== 1 ? "s" : ""}
+                    </span>
+                  </div>
+                </Link>
+              )}
             </div>
           ) : (
             <div className="flex flex-col items-center justify-center py-6 text-center">

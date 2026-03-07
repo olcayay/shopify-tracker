@@ -41,7 +41,7 @@ import {
 import Link from "next/link";
 import { LiveSearchTrigger } from "@/components/live-search-trigger";
 import { buildExternalAppUrl, buildExternalSearchUrl, getPlatformName } from "@/lib/platform-urls";
-import type { PlatformId } from "@appranks/shared";
+import { PLATFORMS, isPlatformId, type PlatformId } from "@appranks/shared";
 
 // ─── Types ───────────────────────────────────────────────────
 
@@ -1099,6 +1099,7 @@ function CompetitorTable({
   onRemove: (slug: string) => Promise<void>;
 }) {
   const { platform } = useParams();
+  const caps = isPlatformId(platform as string) ? PLATFORMS[platform as PlatformId] : PLATFORMS.shopify;
   type CompSortKey = "name" | "rating" | "reviews" | "pricing" | "power" | "rankings" | "featured" | "similar" | "launched";
   const [sortKey, setSortKey] = useState<CompSortKey>("reviews");
   const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
@@ -1158,8 +1159,8 @@ function CompetitorTable({
             <TableHead className="text-right cursor-pointer select-none" onClick={() => toggleSort("pricing")}>Pricing <SortIcon col="pricing" /></TableHead>
             <TableHead className="text-right cursor-pointer select-none" onClick={() => toggleSort("power")}>Power <SortIcon col="power" /></TableHead>
             {keywords.length > 0 && <TableHead className="text-center cursor-pointer select-none" onClick={() => toggleSort("rankings")}>Rankings <SortIcon col="rankings" /></TableHead>}
-            <TableHead className="text-right cursor-pointer select-none" onClick={() => toggleSort("featured")}>Featured <SortIcon col="featured" /></TableHead>
-            <TableHead className="text-right cursor-pointer select-none" onClick={() => toggleSort("similar")}>Similar <SortIcon col="similar" /></TableHead>
+            {caps.hasFeaturedSections && <TableHead className="text-right cursor-pointer select-none" onClick={() => toggleSort("featured")}>Featured <SortIcon col="featured" /></TableHead>}
+            {caps.hasSimilarApps && <TableHead className="text-right cursor-pointer select-none" onClick={() => toggleSort("similar")}>Similar <SortIcon col="similar" /></TableHead>}
             <TableHead>Categories</TableHead>
             <TableHead className="text-right cursor-pointer select-none" onClick={() => toggleSort("launched")}>Launched <SortIcon col="launched" /></TableHead>
             {canEdit && <TableHead className="w-10" />}
@@ -1239,24 +1240,28 @@ function CompetitorTable({
                     )}
                   </TableCell>
                 )}
-                <TableCell className="text-right text-sm">
-                  {isPending ? (
-                    <Skeleton className="h-4 w-6 ml-auto" />
-                  ) : comp.featuredSections > 0 ? (
-                    <Link href={`/${platform}/apps/${comp.slug}/featured`} className={`text-primary hover:underline ${animate}`}>{comp.featuredSections}</Link>
-                  ) : (
-                    <span className="text-muted-foreground">{"\u2014"}</span>
-                  )}
-                </TableCell>
-                <TableCell className="text-right text-sm">
-                  {isPending ? (
-                    <Skeleton className="h-4 w-6 ml-auto" />
-                  ) : comp.reverseSimilarCount > 0 ? (
-                    <Link href={`/${platform}/apps/${comp.slug}/similar`} className={`text-primary hover:underline ${animate}`}>{comp.reverseSimilarCount}</Link>
-                  ) : (
-                    <span className="text-muted-foreground">{"\u2014"}</span>
-                  )}
-                </TableCell>
+                {caps.hasFeaturedSections && (
+                  <TableCell className="text-right text-sm">
+                    {isPending ? (
+                      <Skeleton className="h-4 w-6 ml-auto" />
+                    ) : comp.featuredSections > 0 ? (
+                      <Link href={`/${platform}/apps/${comp.slug}/featured`} className={`text-primary hover:underline ${animate}`}>{comp.featuredSections}</Link>
+                    ) : (
+                      <span className="text-muted-foreground">{"\u2014"}</span>
+                    )}
+                  </TableCell>
+                )}
+                {caps.hasSimilarApps && (
+                  <TableCell className="text-right text-sm">
+                    {isPending ? (
+                      <Skeleton className="h-4 w-6 ml-auto" />
+                    ) : comp.reverseSimilarCount > 0 ? (
+                      <Link href={`/${platform}/apps/${comp.slug}/similar`} className={`text-primary hover:underline ${animate}`}>{comp.reverseSimilarCount}</Link>
+                    ) : (
+                      <span className="text-muted-foreground">{"\u2014"}</span>
+                    )}
+                  </TableCell>
+                )}
                 <TableCell>
                   {isPending ? (
                     <div className="space-y-1">

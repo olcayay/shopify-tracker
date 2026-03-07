@@ -1,3 +1,22 @@
+Hide Featured & Similar for Salesforce (PLA-54)
+=================================================
+
+- Set `hasFeaturedSections: false` and `hasSimilarApps: false` in Salesforce platform config
+- Used platform capabilities (`caps`) pattern across all dashboard pages to conditionally hide UI elements
+- Changes across 9 files:
+  1. `packages/shared/src/constants/platforms.ts` — set Salesforce caps to false
+  2. `app-nav.tsx` — conditionally include Similar/Featured tabs
+  3. `app-list-table.tsx` — wrap Similar/Featured column headers + cells
+  4. `categories/[slug]/app-results.tsx` — wrap Similar column header + cell
+  5. `keywords/[slug]/app-results.tsx` — wrap Similar column header + cell
+  6. `apps/[slug]/page.tsx` — skip API fetches, hide Featured/Similar in Visibility card, adjust totalVisibility calc
+  7. `competitors/page.tsx` — filter TOGGLEABLE_COLUMNS to exclude featured/similar
+  8. `research/[id]/page.tsx` — hide Featured/Similar headers + cells in CompetitorTable
+  9. `research/[id]/competitors/page.tsx` — hide Featured/Similar headers + cells
+- Shopify remains unchanged (both caps are `true`)
+
+---
+
 Move Details Tab to 2nd Position (PLA-53)
 ==========================================
 

@@ -31,7 +31,7 @@ import {
   ArrowDown,
 } from "lucide-react";
 import { buildExternalAppUrl, getPlatformName } from "@/lib/platform-urls";
-import type { PlatformId } from "@appranks/shared";
+import { PLATFORMS, isPlatformId, type PlatformId } from "@appranks/shared";
 
 interface Competitor {
   slug: string; name: string; iconUrl: string | null;
@@ -56,6 +56,7 @@ export default function ResearchCompetitorsPage() {
   const { fetchWithAuth, user } = useAuth();
   const id = params.id as string;
   const platform = params.platform as PlatformId;
+  const caps = isPlatformId(platform) ? PLATFORMS[platform] : PLATFORMS.shopify;
   const canEdit = user?.role === "owner" || user?.role === "editor";
 
   const [data, setData] = useState<ResearchData | null>(null);
@@ -341,8 +342,8 @@ export default function ResearchCompetitorsPage() {
                     <TableHead className="text-right cursor-pointer select-none" onClick={() => toggleSort("pricing")}>Pricing <SortIcon col="pricing" /></TableHead>
                     <TableHead className="text-right cursor-pointer select-none" onClick={() => toggleSort("power")}>Power <SortIcon col="power" /></TableHead>
                     <TableHead className="text-center cursor-pointer select-none" onClick={() => toggleSort("rankings")}>Keywords Ranked <SortIcon col="rankings" /></TableHead>
-                    <TableHead className="text-right cursor-pointer select-none" onClick={() => toggleSort("featured")}>Featured <SortIcon col="featured" /></TableHead>
-                    <TableHead className="text-right cursor-pointer select-none" onClick={() => toggleSort("similar")}>Similar <SortIcon col="similar" /></TableHead>
+                    {caps.hasFeaturedSections && <TableHead className="text-right cursor-pointer select-none" onClick={() => toggleSort("featured")}>Featured <SortIcon col="featured" /></TableHead>}
+                    {caps.hasSimilarApps && <TableHead className="text-right cursor-pointer select-none" onClick={() => toggleSort("similar")}>Similar <SortIcon col="similar" /></TableHead>}
                     <TableHead>Categories</TableHead>
                     <TableHead className="text-right cursor-pointer select-none" onClick={() => toggleSort("launched")}>Launched <SortIcon col="launched" /></TableHead>
                     {canEdit && <TableHead className="w-10" />}
@@ -428,28 +429,32 @@ export default function ResearchCompetitorsPage() {
                             </span>
                           )}
                         </TableCell>
-                        <TableCell className="text-right text-sm">
-                          {isPending ? (
-                            <Skeleton className="h-4 w-6 ml-auto" />
-                          ) : comp.featuredSections > 0 ? (
-                            <Link href={`/apps/${comp.slug}/featured`} className={`text-primary hover:underline ${animate}`}>
-                              {comp.featuredSections}
-                            </Link>
-                          ) : (
-                            <span className="text-muted-foreground">{"\u2014"}</span>
-                          )}
-                        </TableCell>
-                        <TableCell className="text-right text-sm">
-                          {isPending ? (
-                            <Skeleton className="h-4 w-6 ml-auto" />
-                          ) : comp.reverseSimilarCount > 0 ? (
-                            <Link href={`/apps/${comp.slug}/similar`} className={`text-primary hover:underline ${animate}`}>
-                              {comp.reverseSimilarCount}
-                            </Link>
-                          ) : (
-                            <span className="text-muted-foreground">{"\u2014"}</span>
-                          )}
-                        </TableCell>
+                        {caps.hasFeaturedSections && (
+                          <TableCell className="text-right text-sm">
+                            {isPending ? (
+                              <Skeleton className="h-4 w-6 ml-auto" />
+                            ) : comp.featuredSections > 0 ? (
+                              <Link href={`/apps/${comp.slug}/featured`} className={`text-primary hover:underline ${animate}`}>
+                                {comp.featuredSections}
+                              </Link>
+                            ) : (
+                              <span className="text-muted-foreground">{"\u2014"}</span>
+                            )}
+                          </TableCell>
+                        )}
+                        {caps.hasSimilarApps && (
+                          <TableCell className="text-right text-sm">
+                            {isPending ? (
+                              <Skeleton className="h-4 w-6 ml-auto" />
+                            ) : comp.reverseSimilarCount > 0 ? (
+                              <Link href={`/apps/${comp.slug}/similar`} className={`text-primary hover:underline ${animate}`}>
+                                {comp.reverseSimilarCount}
+                              </Link>
+                            ) : (
+                              <span className="text-muted-foreground">{"\u2014"}</span>
+                            )}
+                          </TableCell>
+                        )}
                         <TableCell>
                           {isPending ? (
                             <div className="space-y-1">

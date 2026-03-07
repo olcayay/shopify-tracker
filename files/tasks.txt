@@ -100,6 +100,8 @@ consistent column widths on compare page (PLA-52) ✅
 
 move Details tab to 2nd position in app nav (PLA-53) ✅
 
+hide Featured & Similar for Salesforce (PLA-54) ✅
+
 feedback sayfası
 
 kime hangi durumda nasıl emailler gönderilebilinir.

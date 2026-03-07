@@ -19,7 +19,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { X, ArrowUpDown, ArrowUp, ArrowDown, ExternalLink, Settings2, Check } from "lucide-react";
 import { buildExternalAppUrl, getPlatformName } from "@/lib/platform-urls";
-import type { PlatformId } from "@appranks/shared";
+import { PLATFORMS, isPlatformId, type PlatformId } from "@appranks/shared";
 import { DropdownMenu as DropdownMenuPrimitive } from "radix-ui";
 import { ConfirmModal } from "@/components/confirm-modal";
 import { AdminScraperTrigger } from "@/components/admin-scraper-trigger";
@@ -77,6 +77,7 @@ const STORAGE_KEY = "global-competitors-columns";
 
 export default function CompetitorsPage() {
   const { platform } = useParams();
+  const caps = isPlatformId(platform as string) ? PLATFORMS[platform as PlatformId] : PLATFORMS.shopify;
   const { fetchWithAuth, user, account, refreshUser } = useAuth();
   const { formatDateOnly } = useFormatDate();
   const [competitors, setCompetitors] = useState<any[]>([]);
@@ -94,6 +95,14 @@ export default function CompetitorsPage() {
   const [hiddenColumns, setHiddenColumns] = useState<Set<string>>(new Set());
 
   const canEdit = user?.role === "owner" || user?.role === "editor";
+
+  const visibleToggleableColumns = useMemo(() => {
+    return TOGGLEABLE_COLUMNS.filter((col) => {
+      if (col.key === "featured" && !caps.hasFeaturedSections) return false;
+      if (col.key === "similar" && !caps.hasSimilarApps) return false;
+      return true;
+    });
+  }, [caps]);
 
   useEffect(() => {
     try {
@@ -740,7 +749,7 @@ export default function CompetitorsPage() {
                   <button
                     className="text-xs text-primary hover:underline"
                     onClick={() => {
-                      const allKeys = new Set(TOGGLEABLE_COLUMNS.map((c) => c.key));
+                      const allKeys = new Set(visibleToggleableColumns.map((c) => c.key));
                       setHiddenColumns(allKeys);
                       localStorage.setItem(STORAGE_KEY, JSON.stringify([...allKeys]));
                       if (allKeys.has(sortKey)) {
@@ -754,7 +763,7 @@ export default function CompetitorsPage() {
                 </div>
                 <DropdownMenuPrimitive.Separator className="h-px bg-border my-1" />
                 <div className="max-h-[300px] overflow-y-auto">
-                  {TOGGLEABLE_COLUMNS.map((col) => (
+                  {visibleToggleableColumns.map((col) => (
                     <DropdownMenuPrimitive.CheckboxItem
                       key={col.key}
                       checked={isCol(col.key)}

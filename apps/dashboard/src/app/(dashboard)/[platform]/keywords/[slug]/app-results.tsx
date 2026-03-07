@@ -24,6 +24,7 @@ import {
   Search,
 } from "lucide-react";
 import { TablePagination } from "@/components/pagination";
+import { PLATFORMS, isPlatformId, type PlatformId } from "@appranks/shared";
 
 interface App {
   position: number;
@@ -67,6 +68,7 @@ export function KeywordAppResults({
   appCategories?: Record<string, { title: string; slug: string; position: number | null }[]>;
 }) {
   const { platform } = useParams();
+  const caps = isPlatformId(platform as string) ? PLATFORMS[platform as PlatformId] : PLATFORMS.shopify;
   const { formatDateOnly } = useFormatDate();
   const [search, setSearch] = useState("");
   const [sortKey, setSortKey] = useState<SortKey>("position");
@@ -257,13 +259,15 @@ export function KeywordAppResults({
               >
                 Min. Paid <SortIcon col="min_paid" />
               </TableHead>
-              <TableHead
-                className="cursor-pointer select-none"
-                onClick={() => toggleSort("reverse_similar")}
-                title="Number of apps that list this app as similar"
-              >
-                Similar <SortIcon col="reverse_similar" />
-              </TableHead>
+              {caps.hasSimilarApps && (
+                <TableHead
+                  className="cursor-pointer select-none"
+                  onClick={() => toggleSort("reverse_similar")}
+                  title="Number of apps that list this app as similar"
+                >
+                  Similar <SortIcon col="reverse_similar" />
+                </TableHead>
+              )}
               <TableHead>Category</TableHead>
               <TableHead
                 className="cursor-pointer select-none"
@@ -358,13 +362,15 @@ export function KeywordAppResults({
                         </Link>
                       ) : "\u2014"}
                     </TableCell>
-                    <TableCell className="text-sm">
-                      {reverseSimilarCounts?.[app.app_slug] ? (
-                        <Link href={`/${platform}/apps/${app.app_slug}/similar`} className="text-primary hover:underline">
-                          {reverseSimilarCounts[app.app_slug]}
-                        </Link>
-                      ) : "\u2014"}
-                    </TableCell>
+                    {caps.hasSimilarApps && (
+                      <TableCell className="text-sm">
+                        {reverseSimilarCounts?.[app.app_slug] ? (
+                          <Link href={`/${platform}/apps/${app.app_slug}/similar`} className="text-primary hover:underline">
+                            {reverseSimilarCounts[app.app_slug]}
+                          </Link>
+                        ) : "\u2014"}
+                      </TableCell>
+                    )}
                     <TableCell className="text-sm">
                       {appCategories?.[app.app_slug]?.length ? (
                         <div className="flex flex-col gap-0.5">

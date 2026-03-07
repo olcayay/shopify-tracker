@@ -26,6 +26,7 @@ import { VelocityCell } from "@/components/velocity-cell";
 import { MomentumBadge } from "@/components/momentum-badge";
 import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 import type { ReviewVelocityMetrics } from "@/lib/api";
+import { PLATFORMS, isPlatformId, type PlatformId } from "@appranks/shared";
 
 interface AppItem {
   slug: string;
@@ -85,6 +86,7 @@ export function AppListTable({
   reviewVelocity?: Record<string, ReviewVelocityMetrics>;
 }) {
   const { platform } = useParams();
+  const caps = isPlatformId(platform as string) ? PLATFORMS[platform as PlatformId] : PLATFORMS.shopify;
   const { formatDateOnly } = useFormatDate();
   const [sortKey, setSortKey] = useState<SortKey>("rating_count");
   const [sortDir, setSortDir] = useState<SortDir>("desc");
@@ -335,18 +337,22 @@ export function AppListTable({
               >
                 Cat. Rank <SortIcon col="cat_rank" />
               </TableHead>
-              <TableHead
-                className="cursor-pointer select-none"
-                onClick={() => toggleSort("similar")}
-              >
-                <Tooltip><TooltipTrigger asChild><span>Similar <SortIcon col="similar" /></span></TooltipTrigger><TooltipContent>Number of other apps that list this app as similar</TooltipContent></Tooltip>
-              </TableHead>
-              <TableHead
-                className="cursor-pointer select-none"
-                onClick={() => toggleSort("featured")}
-              >
-                <Tooltip><TooltipTrigger asChild><span>Featured <SortIcon col="featured" /></span></TooltipTrigger><TooltipContent>Number of featured sections this app appears in</TooltipContent></Tooltip>
-              </TableHead>
+              {caps.hasSimilarApps && (
+                <TableHead
+                  className="cursor-pointer select-none"
+                  onClick={() => toggleSort("similar")}
+                >
+                  <Tooltip><TooltipTrigger asChild><span>Similar <SortIcon col="similar" /></span></TooltipTrigger><TooltipContent>Number of other apps that list this app as similar</TooltipContent></Tooltip>
+                </TableHead>
+              )}
+              {caps.hasFeaturedSections && (
+                <TableHead
+                  className="cursor-pointer select-none"
+                  onClick={() => toggleSort("featured")}
+                >
+                  <Tooltip><TooltipTrigger asChild><span>Featured <SortIcon col="featured" /></span></TooltipTrigger><TooltipContent>Number of featured sections this app appears in</TooltipContent></Tooltip>
+                </TableHead>
+              )}
               <TableHead
                 className="cursor-pointer select-none"
                 onClick={() => toggleSort("ads")}
@@ -506,30 +512,34 @@ export function AppListTable({
                         "\u2014"
                       )}
                     </TableCell>
-                    <TableCell className="text-sm">
-                      {similarCount > 0 ? (
-                        <Link
-                          href={`/${platform}/apps/${app.slug}/similar`}
-                          className="text-primary hover:underline"
-                        >
-                          {similarCount}
-                        </Link>
-                      ) : (
-                        "\u2014"
-                      )}
-                    </TableCell>
-                    <TableCell className="text-sm">
-                      {featuredCount > 0 ? (
-                        <Link
-                          href={`/${platform}/apps/${app.slug}/featured`}
-                          className="text-primary hover:underline"
-                        >
-                          {featuredCount}
-                        </Link>
-                      ) : (
-                        "\u2014"
-                      )}
-                    </TableCell>
+                    {caps.hasSimilarApps && (
+                      <TableCell className="text-sm">
+                        {similarCount > 0 ? (
+                          <Link
+                            href={`/${platform}/apps/${app.slug}/similar`}
+                            className="text-primary hover:underline"
+                          >
+                            {similarCount}
+                          </Link>
+                        ) : (
+                          "\u2014"
+                        )}
+                      </TableCell>
+                    )}
+                    {caps.hasFeaturedSections && (
+                      <TableCell className="text-sm">
+                        {featuredCount > 0 ? (
+                          <Link
+                            href={`/${platform}/apps/${app.slug}/featured`}
+                            className="text-primary hover:underline"
+                          >
+                            {featuredCount}
+                          </Link>
+                        ) : (
+                          "\u2014"
+                        )}
+                      </TableCell>
+                    )}
                     <TableCell className="text-sm">
                       {adsCount > 0 ? (
                         <Link

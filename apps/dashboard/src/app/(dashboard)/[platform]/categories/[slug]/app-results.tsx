@@ -25,6 +25,7 @@ import {
 } from "lucide-react";
 import { TablePagination } from "@/components/pagination";
 import { PowerScorePopover } from "@/components/power-score-popover";
+import { PLATFORMS, isPlatformId, type PlatformId } from "@appranks/shared";
 
 interface App {
   position: number;
@@ -74,6 +75,7 @@ export function CategoryAppResults({
   };
 }) {
   const { platform } = useParams();
+  const caps = isPlatformId(platform as string) ? PLATFORMS[platform as PlatformId] : PLATFORMS.shopify;
   const { formatDateOnly } = useFormatDate();
   const [search, setSearch] = useState("");
   const [sortKey, setSortKey] = useState<SortKey>(isHubPage ? "rating_count" : "position");
@@ -250,13 +252,15 @@ export function CategoryAppResults({
               >
                 Min. Paid <SortIcon col="min_paid" />
               </TableHead>
-              <TableHead
-                className="cursor-pointer select-none"
-                onClick={() => toggleSort("reverse_similar")}
-                title="Number of apps that list this app as similar"
-              >
-                Similar <SortIcon col="reverse_similar" />
-              </TableHead>
+              {caps.hasSimilarApps && (
+                <TableHead
+                  className="cursor-pointer select-none"
+                  onClick={() => toggleSort("reverse_similar")}
+                  title="Number of apps that list this app as similar"
+                >
+                  Similar <SortIcon col="reverse_similar" />
+                </TableHead>
+              )}
               {isHubPage && <TableHead>Category</TableHead>}
               <TableHead
                 className="cursor-pointer select-none"
@@ -350,9 +354,11 @@ export function CategoryAppResults({
                         </Link>
                       ) : "\u2014"}
                     </TableCell>
-                    <TableCell className="text-sm">
-                      {reverseSimilarCounts?.[app.slug] ?? "\u2014"}
-                    </TableCell>
+                    {caps.hasSimilarApps && (
+                      <TableCell className="text-sm">
+                        {reverseSimilarCounts?.[app.slug] ?? "\u2014"}
+                      </TableCell>
+                    )}
                     {isHubPage && (
                       <TableCell className="text-sm">
                         {app.source_categories?.length ? (
