@@ -58,16 +58,30 @@ export default async function DetailsPage({
       {snapshot.features?.length > 0 && (
         <Card>
           <CardHeader>
-            <CardTitle>Features</CardTitle>
+            <CardTitle>{isSalesforce ? "Highlights" : "Features"}</CardTitle>
           </CardHeader>
           <CardContent>
             <ul className="space-y-2">
-              {snapshot.features.map((f: string, i: number) => (
-                <li key={i} className="text-sm flex gap-2">
-                  <span className="text-muted-foreground shrink-0">{i + 1}.</span>
-                  {f}
-                </li>
-              ))}
+              {snapshot.features.map((f: string, i: number) => {
+                if (isSalesforce) {
+                  const [title, ...rest] = f.split("\n");
+                  const description = rest.join("\n").trim();
+                  return (
+                    <li key={i} className="text-sm">
+                      <span className="font-semibold">{title}</span>
+                      {description && (
+                        <p className="text-muted-foreground mt-0.5">{description}</p>
+                      )}
+                    </li>
+                  );
+                }
+                return (
+                  <li key={i} className="text-sm flex gap-2">
+                    <span className="text-muted-foreground shrink-0">{i + 1}.</span>
+                    {f}
+                  </li>
+                );
+              })}
             </ul>
           </CardContent>
         </Card>
@@ -179,28 +193,35 @@ export default async function DetailsPage({
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              {snapshot.pricingPlans.map((plan: any, i: number) => (
-                <div key={i} className="border rounded-lg p-4">
-                  <h4 className="font-semibold">{plan.name}</h4>
-                  <p className="text-lg font-bold mt-1">
-                    {plan.price
-                      ? `$${plan.price}/${plan.period}`
-                      : "Free"}
-                  </p>
-                  {plan.features?.length > 0 && (
-                    <ul className="mt-2 space-y-1">
-                      {plan.features.map((f: string, j: number) => (
-                        <li
-                          key={j}
-                          className="text-sm text-muted-foreground"
-                        >
-                          • {f}
-                        </li>
-                      ))}
-                    </ul>
-                  )}
-                </div>
-              ))}
+              {snapshot.pricingPlans.map((plan: any, i: number) => {
+                const planName = plan.name || plan.plan_name;
+                let priceLabel = "Free";
+                if (plan.price) {
+                  const suffix = [plan.currency_code, plan.units, plan.period].filter(Boolean).join("/");
+                  priceLabel = suffix ? `$${plan.price} ${suffix}` : `$${plan.price}`;
+                }
+                return (
+                  <div key={i} className="border rounded-lg p-4">
+                    <h4 className="font-semibold">{planName}</h4>
+                    <p className="text-lg font-bold mt-1">{priceLabel}</p>
+                    {plan.trial_text && (
+                      <p className="text-xs text-muted-foreground mt-1">{plan.trial_text}</p>
+                    )}
+                    {plan.features?.length > 0 && (
+                      <ul className="mt-2 space-y-1">
+                        {plan.features.map((f: string, j: number) => (
+                          <li
+                            key={j}
+                            className="text-sm text-muted-foreground"
+                          >
+                            • {f}
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </div>
+                );
+              })}
             </div>
           </CardContent>
         </Card>

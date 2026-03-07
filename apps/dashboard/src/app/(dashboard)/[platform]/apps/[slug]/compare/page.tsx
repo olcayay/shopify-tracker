@@ -953,10 +953,10 @@ export default function ComparePage() {
             })()}
           </CompareSection>
 
-          {/* Features */}
+          {/* Features / Highlights */}
           <CompareSection
             id="sec-features"
-            title="Features"
+            title={isSalesforce ? "Highlights" : "Features"}
             sectionKey="features"
             collapsed={isCollapsed("features")}
             onToggle={toggleSection}
@@ -991,19 +991,35 @@ export default function ComparePage() {
                       </td>
                       {selectedApps.map((app) => {
                         const feat = app.latestSnapshot?.features?.[i];
+                        if (!feat) return <td key={app.slug} className="py-2 px-2 align-top" />;
+                        if (isSalesforce) {
+                          const [title, ...rest] = feat.split("\n");
+                          const description = rest.join("\n").trim();
+                          return (
+                            <td key={app.slug} className="py-2 px-2 align-top">
+                              <div>
+                                <span className="font-semibold">{title}</span>
+                                {description && (
+                                  <p className="text-muted-foreground mt-0.5">{description}</p>
+                                )}
+                                <div className="mt-1">
+                                  <CharBadge count={feat.length} max={80} />
+                                </div>
+                              </div>
+                            </td>
+                          );
+                        }
                         return (
                           <td
                             key={app.slug}
                             className="py-2 px-2 align-top"
                           >
-                            {feat ? (
-                              <div>
-                                <span>{feat}</span>
-                                <div className="mt-1">
-                                  <CharBadge count={feat.length} max={80} />
-                                </div>
+                            <div>
+                              <span>{feat}</span>
+                              <div className="mt-1">
+                                <CharBadge count={feat.length} max={80} />
                               </div>
-                            ) : ""}
+                            </div>
                           </td>
                         );
                       })}
@@ -1409,12 +1425,16 @@ function PricingComparison({
 }
 
 function PlanCard({ plan }: { plan: any }) {
+  const planName = plan.name || plan.plan_name;
+  let priceLabel = "Free";
+  if (plan.price) {
+    const suffix = [plan.currency_code, plan.units, plan.period].filter(Boolean).join("/");
+    priceLabel = suffix ? `$${plan.price} ${suffix}` : `$${plan.price}`;
+  }
   return (
     <div className="border rounded-lg p-3">
-      <div className="font-semibold">{plan.name}</div>
-      <div className="text-lg font-bold mt-1">
-        {plan.price ? `$${plan.price}/${plan.period || "mo"}` : "Free"}
-      </div>
+      <div className="font-semibold">{planName}</div>
+      <div className="text-lg font-bold mt-1">{priceLabel}</div>
       {plan.trial_text && (
         <p className="text-xs text-muted-foreground mt-1">
           {plan.trial_text}

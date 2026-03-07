@@ -1,3 +1,18 @@
+Salesforce Features/Highlights Display (PLA-50)
+=================================================
+
+Details page (details/page.tsx):
+- Section title: "Highlights" for Salesforce, "Features" for Shopify
+- Salesforce: split each feature string at \n — first line bold title, rest is description
+- Shopify: unchanged numbered list
+
+Compare page (compare/page.tsx):
+- CompareSection title: "Highlights" for Salesforce, "Features" for Shopify
+- Salesforce: split at \n, bold title + muted description in table cells
+- Shopify: unchanged rendering
+
+---
+
 Salesforce App Detail & Compare: Industries, Requires, Compatible With (PLA-48)
 ================================================================================
 
