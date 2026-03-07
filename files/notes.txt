@@ -1,3 +1,14 @@
+Fix Salesforce category mapping with camelCase slug fallback (PLA-62)
+=====================================================================
+
+- Problem: category matching relied solely on title-to-title lookup (case-insensitive). If category titles from the AppExchange API didn't exactly match DB titles (e.g., "IT & Administration" vs "It And Administration"), mapping silently failed.
+- Fix: added `titleToCamelCase()` utility that converts titles to camelCase slugs (e.g., "Customer Service" → "customerService", "IT & Administration" → "itAndAdministration")
+- Enhanced `app-details-scraper.ts` category resolution: tries title match first, falls back to camelCase slug match
+- Added `log.warn("unresolved category", ...)` when neither match succeeds — previously silent failure
+- Tested: Customer Service, Agent Productivity, Data Management, IT & Administration, Human Resources, Case Management, Field Service all map correctly
+
+---
+
 Add card preview to Salesforce preview page (PLA-61)
 ====================================================
 

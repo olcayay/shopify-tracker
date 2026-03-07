@@ -166,7 +166,17 @@ export class AppDetailsScraper {
               categories: ((pd.listingCategories as string[]) || []).map(
                 (cat) => ({ title: cat, url: "" })
               ) as import("@appranks/shared").AppCategory[],
-              pricing_plans: (pd.pricingPlans as import("@appranks/shared").PricingPlan[]) || [],
+              pricing_plans: ((pd.pricingPlans as any[]) || []).map((p: any) => ({
+                name: p.plan_name || p.name || "",
+                price: p.price != null ? String(p.price) : null,
+                period: p.frequency === "monthly" ? "month" : p.frequency === "yearly" ? "year" : p.frequency || null,
+                yearly_price: null,
+                discount_text: null,
+                trial_text: p.trial_days > 0 ? `${p.trial_days}-day free trial` : null,
+                features: [],
+                currency_code: p.currency_code || null,
+                units: p.units || null,
+              })) as import("@appranks/shared").PricingPlan[],
               support: normalized.developer?.website
                 ? { email: (pd.publisher as any)?.email || null, portal_url: normalized.developer.website, phone: null } as import("@appranks/shared").AppSupport
                 : null as import("@appranks/shared").AppSupport | null,
@@ -271,6 +281,40 @@ export class AppDetailsScraper {
         log.info("detected field changes", { slug, fields: changes.map((c) => c.field) });
       }
 
+      // Resolve category slugs before saving snapshot
+      // For non-Shopify: look up correct slugs from DB (e.g. camelCase Salesforce slugs)
+      // Uses title match first, then falls back to camelCase slug match
+      const resolvedCategories = details.categories;
+      const catSlugMap = new Map<string, string>();
+      if (resolvedCategories.length > 0 && !this.isShopify) {
+        const existingCats = await this.db
+          .select({ slug: categories.slug, title: categories.title })
+          .from(categories)
+          .where(eq(categories.platform, this.platform));
+        const titleToSlug = new Map(existingCats.map(c => [c.title.toLowerCase(), c.slug]));
+        const slugSet = new Set(existingCats.map(c => c.slug));
+
+        for (const cat of resolvedCategories) {
+          // Primary: match by title (case-insensitive)
+          let resolved = titleToSlug.get(cat.title.toLowerCase());
+
+          // Fallback: convert title to camelCase slug and match by slug
+          if (!resolved) {
+            const camelSlug = titleToCamelCase(cat.title);
+            if (slugSet.has(camelSlug)) {
+              resolved = camelSlug;
+            }
+          }
+
+          if (resolved) {
+            cat.url = `/categories/${resolved}`;
+            catSlugMap.set(cat.title, resolved);
+          } else {
+            log.warn("unresolved category", { slug, category: cat.title, platform: this.platform });
+          }
+        }
+      }
+
       // Insert snapshot
       await this.db.insert(appSnapshots).values({
         appId,
@@ -288,46 +332,43 @@ export class AppDetailsScraper {
         demoStoreUrl: details.demo_store_url,
         languages: details.languages,
         integrations: details.integrations,
-        categories: details.categories,
+        categories: resolvedCategories,
         pricingPlans: details.pricing_plans,
         support: details.support,
         platformData: (("_platformData" in details ? details._platformData : undefined) ?? {}) as Record<string, unknown>,
       });
 
-      // Register missing categories from snapshot data
-      if (details.categories.length > 0) {
-        for (const cat of details.categories) {
+      // Register category rankings from snapshot data
+      if (resolvedCategories.length > 0) {
+        for (const cat of resolvedCategories) {
           let catSlug: string;
           if (this.isShopify) {
             const slugMatch = cat.url.match(/\/categories\/([^/]+)/);
             if (!slugMatch) continue;
             catSlug = slugMatch[1];
+
+            // Shopify: ensure category exists in DB
+            await this.db
+              .insert(categories)
+              .values({
+                platform: this.platform,
+                slug: catSlug,
+                title: cat.title,
+                url: cat.url || "",
+                parentSlug: null,
+                categoryLevel: 0,
+                isTracked: false,
+                isListingPage: true,
+              })
+              .onConflictDoNothing({ target: [categories.platform, categories.slug] });
           } else {
-            // Generate slug from title for non-Shopify platforms
-            catSlug = cat.title
-              .toLowerCase()
-              .replace(/[^a-z0-9\s-]/g, "")
-              .replace(/\s+/g, "-")
-              .replace(/-+/g, "-")
-              .replace(/^-|-$/g, "");
-            if (!catSlug) continue;
+            // Non-Shopify: only match existing DB categories, never create new ones
+            const resolved = catSlugMap.get(cat.title);
+            if (!resolved) continue;
+            catSlug = resolved;
           }
 
-          await this.db
-            .insert(categories)
-            .values({
-              platform: this.platform,
-              slug: catSlug,
-              title: cat.title,
-              url: cat.url || "",
-              parentSlug: null,
-              categoryLevel: 0,
-              isTracked: false,
-              isListingPage: true,
-            })
-            .onConflictDoNothing({ target: [categories.platform, categories.slug] });
-
-          // For non-Shopify: also link the app to this category via rankings
+          // Link the app to this category via rankings
           if (!this.isShopify) {
             await this.db
               .insert(appCategoryRankings)
@@ -424,4 +465,27 @@ export class AppDetailsScraper {
       throw error;
     }
   }
+}
+
+/**
+ * Convert a human-readable category title to a camelCase slug.
+ * Examples:
+ *   "Customer Service" → "customerService"
+ *   "Agent Productivity" → "agentProductivity"
+ *   "IT & Administration" → "itAndAdministration"
+ *   "Data Management" → "dataManagement"
+ */
+function titleToCamelCase(title: string): string {
+  return title
+    .replace(/&/g, "And")
+    .replace(/[^a-zA-Z0-9\s]/g, "")
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean)
+    .map((w, i) =>
+      i === 0
+        ? w.toLowerCase()
+        : w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()
+    )
+    .join("");
 }

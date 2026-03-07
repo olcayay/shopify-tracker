@@ -112,6 +112,8 @@ right-align char count badges on compare page (PLA-58) ✅
 
 add card preview to Salesforce preview page (PLA-61) ✅
 
+fix Salesforce category mapping with camelCase slug fallback (PLA-62) ✅
+
 feedback sayfası
 
 kime hangi durumda nasıl emailler gönderilebilinir.
