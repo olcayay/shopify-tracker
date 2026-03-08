@@ -120,6 +120,8 @@ enable Salesforce AppExchange review scraping — API-based (PLA-64) ✅
 
 fix Salesforce category slug format — kebab-case → camelCase cleanup + admin endpoints (PLA-65) ✅
 
+platform-aware scraper management cards (PLA-66) ✅
+
 feedback sayfası
 
 kime hangi durumda nasıl emailler gönderilebilinir.

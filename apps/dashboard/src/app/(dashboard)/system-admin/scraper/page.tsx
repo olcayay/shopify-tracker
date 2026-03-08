@@ -181,10 +181,16 @@ export default function ScraperPage() {
   const [expandedRunId, setExpandedRunId] = useState<string | null>(null);
   const [drainConfirm, setDrainConfirm] = useState(false);
   const [clearFailedConfirm, setClearFailedConfirm] = useState(false);
+  const [triggerPlatform, setTriggerPlatform] = useState<string>(() => {
+    if (typeof window !== "undefined") {
+      return localStorage.getItem("scraper-platform") || "shopify";
+    }
+    return "shopify";
+  });
 
   useEffect(() => {
     loadData();
-  }, [filterType, filterTrigger, filterQueue, filterPlatform, page]);
+  }, [filterType, filterTrigger, filterQueue, filterPlatform, page, triggerPlatform]);
 
   async function loadData() {
     const params = new URLSearchParams();
@@ -196,7 +202,7 @@ export default function ScraperPage() {
     params.set("offset", String(page * PAGE_SIZE));
 
     const [statsRes, runsRes, queueRes] = await Promise.all([
-      fetchWithAuth("/api/system-admin/stats"),
+      fetchWithAuth(`/api/system-admin/stats?platform=${triggerPlatform}`),
       fetchWithAuth(`/api/system-admin/scraper/runs?${params.toString()}`),
       fetchWithAuth("/api/system-admin/scraper/queue"),
     ]);
@@ -209,8 +215,6 @@ export default function ScraperPage() {
     }
     if (queueRes.ok) setQueueStatus(await queueRes.json());
   }
-
-  const [triggerPlatform, setTriggerPlatform] = useState<string>("shopify");
 
   async function triggerScraper(type: string) {
     setTriggering(type);
@@ -519,7 +523,10 @@ export default function ScraperPage() {
         <span className="text-sm font-medium text-muted-foreground">Platform:</span>
         <select
           value={triggerPlatform}
-          onChange={(e) => setTriggerPlatform(e.target.value)}
+          onChange={(e) => {
+            setTriggerPlatform(e.target.value);
+            localStorage.setItem("scraper-platform", e.target.value);
+          }}
           className="border rounded-md px-3 py-1.5 text-sm bg-background"
         >
           {(Object.keys(PLATFORMS) as PlatformId[]).map((pid) => (

@@ -1130,8 +1130,10 @@ export const systemAdminRoutes: FastifyPluginAsync = async (app) => {
     }
   );
 
-  // GET /api/system-admin/stats — global system stats
-  app.get("/stats", async () => {
+  // GET /api/system-admin/stats — global system stats (optionally filtered by platform)
+  app.get<{ Querystring: { platform?: string } }>("/stats", async (request) => {
+    const platform = request.query.platform;
+
     const [accountCount] = await db
       .select({ count: sql<number>`count(*)::int` })
       .from(accounts);
@@ -1143,12 +1145,16 @@ export const systemAdminRoutes: FastifyPluginAsync = async (app) => {
     const [appCount] = await db
       .select({ count: sql<number>`count(*)::int` })
       .from(apps)
-      .where(eq(apps.isTracked, true));
+      .where(platform
+        ? and(eq(apps.isTracked, true), eq(apps.platform, platform))
+        : eq(apps.isTracked, true));
 
     const [kwCount] = await db
       .select({ count: sql<number>`count(*)::int` })
       .from(trackedKeywords)
-      .where(eq(trackedKeywords.isActive, true));
+      .where(platform
+        ? and(eq(trackedKeywords.isActive, true), eq(trackedKeywords.platform, platform))
+        : eq(trackedKeywords.isActive, true));
 
     const [totalApps] = await db
       .select({ count: sql<number>`count(*)::int` })
@@ -1170,7 +1176,9 @@ export const systemAdminRoutes: FastifyPluginAsync = async (app) => {
         lastCompletedAt: sql<string>`max(${scrapeRuns.completedAt})`,
       })
       .from(scrapeRuns)
-      .where(eq(scrapeRuns.status, "completed" as any))
+      .where(platform
+        ? and(eq(scrapeRuns.status, "completed" as any), eq(scrapeRuns.platform, platform))
+        : eq(scrapeRuns.status, "completed" as any))
       .groupBy(scrapeRuns.scraperType);
 
     // Avg duration & items from last 3 completed runs per type
@@ -1184,6 +1192,7 @@ export const systemAdminRoutes: FastifyPluginAsync = async (app) => {
         FROM scrape_runs
         WHERE status = 'completed'
           AND metadata->>'duration_ms' IS NOT NULL
+          ${platform ? sql`AND platform = ${platform}` : sql``}
       ) sub
       WHERE rn <= 3
       GROUP BY scraper_type
@@ -1191,7 +1200,8 @@ export const systemAdminRoutes: FastifyPluginAsync = async (app) => {
 
     const [categoryCount] = await db
       .select({ count: sql<number>`count(*)::int` })
-      .from(categories);
+      .from(categories)
+      .where(platform ? eq(categories.platform, platform) : undefined);
 
     const [researchCount] = await db
       .select({ count: sql<number>`count(*)::int` })

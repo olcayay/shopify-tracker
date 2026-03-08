@@ -59,6 +59,7 @@ const mockQueueStatus = {
 describe("ScraperPage", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    localStorage.clear();
     mockFetchWithAuth.mockImplementation((url: string) => {
       if (url.includes("/stats")) return Promise.resolve({ ok: true, json: () => Promise.resolve(mockStats) });
       if (url.includes("/runs")) return Promise.resolve({ ok: true, json: () => Promise.resolve(mockRuns) });
@@ -239,7 +240,7 @@ describe("ScraperPage", () => {
   it("shows scraper descriptions", async () => {
     render(<ScraperPage />);
     await waitFor(() => {
-      expect(screen.getByText("Scrape Shopify app categories tree")).toBeInTheDocument();
+      expect(screen.getByText("Scrape app categories tree")).toBeInTheDocument();
     });
     expect(screen.getByText(/Scrape tracked app details/)).toBeInTheDocument();
   });

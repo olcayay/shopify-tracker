@@ -1,3 +1,15 @@
+Platform-aware scraper management cards (PLA-66)
+=================================================
+
+- Problem: Scraper Management page showed global/aggregate data in scraper type cards (Last run, Assets, Avg duration). When platform dropdown changed, only the trigger target changed — card content stayed the same.
+- API: Added optional `?platform=` query param to `GET /api/system-admin/stats` — filters trackedApps, trackedKeywords, totalCategories, freshness, and workerStats by platform. Global counts (accounts, users, totalApps, researchProjects, featuresCount) remain unfiltered.
+- Dashboard: `triggerPlatform` state now initializes from `localStorage.getItem("scraper-platform")` and saves on change. Stats endpoint receives `?platform=${triggerPlatform}`. Added `triggerPlatform` to useEffect deps so cards reload on platform switch.
+- Moved `triggerPlatform` state declaration above the useEffect that references it (was below, causing initialization error).
+- Fixed stale test assertion: "Scrape Shopify app categories tree" → "Scrape app categories tree" to match actual component text.
+- Files changed: `apps/api/src/routes/system-admin.ts`, `apps/dashboard/src/app/(dashboard)/system-admin/scraper/page.tsx`, `apps/dashboard/src/__tests__/app/system-admin/scraper-page.test.tsx`
+
+---
+
 Fix Salesforce category slug format — kebab-case → camelCase (PLA-65)
 =====================================================================
 
