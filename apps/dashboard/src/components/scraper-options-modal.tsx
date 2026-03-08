@@ -13,6 +13,7 @@ interface ScraperOptionsModalProps {
   open: boolean;
   scraperType: string;
   label: string;
+  hasReviews?: boolean;
   onConfirm: (options: ScraperOptions) => void;
   onCancel: () => void;
 }
@@ -21,6 +22,7 @@ export function ScraperOptionsModal({
   open,
   scraperType,
   label,
+  hasReviews = true,
   onConfirm,
   onCancel,
 }: ScraperOptionsModalProps) {
@@ -127,7 +129,7 @@ export function ScraperOptionsModal({
                 />
                 Also scrape app details for found apps
               </label>
-              {scrapeAppDetails && (
+              {scrapeAppDetails && hasReviews && (
                 <label className="flex items-center gap-2 text-sm cursor-pointer ml-6">
                   <input
                     type="checkbox"
@@ -142,7 +144,7 @@ export function ScraperOptionsModal({
           )}
 
           {/* Cascade: scrape reviews for detail scraper */}
-          {isDetailScraper && (
+          {isDetailScraper && hasReviews && (
             <label className="flex items-center gap-2 text-sm cursor-pointer">
               <input
                 type="checkbox"

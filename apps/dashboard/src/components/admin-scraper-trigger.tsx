@@ -6,6 +6,7 @@ import { useAuth } from "@/lib/auth-context";
 import { Button } from "@/components/ui/button";
 import { Zap, Loader2, Check } from "lucide-react";
 import { ScraperOptionsModal, type ScraperOptions } from "./scraper-options-modal";
+import { PLATFORMS } from "@appranks/shared";
 
 const VALID_PLATFORMS = new Set(["shopify", "salesforce", "canva"]);
 
@@ -32,6 +33,7 @@ export function AdminScraperTrigger({
   // Extract platform from URL path (e.g. /shopify/keywords/... → "shopify")
   const seg = pathname.split("/").filter(Boolean)[0];
   const platform = seg && VALID_PLATFORMS.has(seg) ? seg : undefined;
+  const platformConfig = platform ? PLATFORMS[platform as keyof typeof PLATFORMS] : undefined;
 
   async function trigger(options: ScraperOptions) {
     setModalOpen(false);
@@ -77,6 +79,7 @@ export function AdminScraperTrigger({
         open={modalOpen}
         scraperType={scraperType}
         label={label}
+        hasReviews={platformConfig?.hasReviews ?? true}
         onConfirm={trigger}
         onCancel={() => setModalOpen(false)}
       />

@@ -2,7 +2,7 @@ import type { Job } from "bullmq";
 import { createDb, scrapeRuns } from "@appranks/db";
 import { eq } from "drizzle-orm";
 import { migrate } from "drizzle-orm/postgres-js/migrator";
-import { createLogger, isPlatformId, type PlatformId } from "@appranks/shared";
+import { createLogger, isPlatformId, getPlatform, type PlatformId } from "@appranks/shared";
 import { enqueueScraperJob, type ScraperJobData } from "./queue.js";
 import { CategoryScraper } from "./scrapers/category-scraper.js";
 import { AppDetailsScraper } from "./scrapers/app-details-scraper.js";
@@ -85,6 +85,7 @@ export function createProcessJob(db: ReturnType<typeof createDb>, httpClient: Ht
 
         // Cascade: enqueue app_details jobs for discovered apps
         if (opts?.scrapeAppDetails && discoveredSlugs.length > 0) {
+          const cascadeReviews = opts.scrapeReviews && getPlatform(platform).hasReviews;
           const uniqueSlugs = [...new Set(discoveredSlugs)];
           for (const slug of uniqueSlugs) {
             await enqueueScraperJob({
@@ -92,7 +93,7 @@ export function createProcessJob(db: ReturnType<typeof createDb>, httpClient: Ht
               slug,
               platform,
               triggeredBy: `${triggeredBy}:cascade`,
-              options: opts.scrapeReviews ? { scrapeReviews: true } : undefined,
+              options: cascadeReviews ? { scrapeReviews: true } : undefined,
             }, cascadeOpts);
           }
           log.info("cascaded app_details jobs", { count: uniqueSlugs.length });
@@ -106,8 +107,8 @@ export function createProcessJob(db: ReturnType<typeof createDb>, httpClient: Ht
           await scraper.scrapeApp(job.data.slug, undefined, triggeredBy, queueName, opts?.force);
           log.info("single app scrape completed", { slug: job.data.slug });
 
-          // Cascade: enqueue review job
-          if (opts?.scrapeReviews) {
+          // Cascade: enqueue review job (only for platforms with review support)
+          if (opts?.scrapeReviews && getPlatform(platform).hasReviews) {
             await enqueueScraperJob({
               type: "reviews",
               slug: job.data.slug,
@@ -119,8 +120,8 @@ export function createProcessJob(db: ReturnType<typeof createDb>, httpClient: Ht
         } else {
           await scraper.scrapeTracked(triggeredBy, queueName);
 
-          // Cascade: enqueue review jobs for all tracked apps
-          if (opts?.scrapeReviews) {
+          // Cascade: enqueue review jobs for all tracked apps (only for platforms with review support)
+          if (opts?.scrapeReviews && getPlatform(platform).hasReviews) {
             const { eq: eqOp, and: andOp } = await import("drizzle-orm");
             const { apps: appsTable } = await import("@appranks/db");
             const trackedApps = await db
@@ -190,6 +191,7 @@ export function createProcessJob(db: ReturnType<typeof createDb>, httpClient: Ht
 
         // Cascade: enqueue app_details jobs for discovered apps
         if (opts?.scrapeAppDetails && discoveredSlugs.length > 0) {
+          const cascadeReviews = opts.scrapeReviews && getPlatform(platform).hasReviews;
           const uniqueSlugs = [...new Set(discoveredSlugs)];
           for (const slug of uniqueSlugs) {
             await enqueueScraperJob({
@@ -197,7 +199,7 @@ export function createProcessJob(db: ReturnType<typeof createDb>, httpClient: Ht
               slug,
               platform,
               triggeredBy: `${triggeredBy}:cascade`,
-              options: opts.scrapeReviews ? { scrapeReviews: true } : undefined,
+              options: cascadeReviews ? { scrapeReviews: true } : undefined,
             }, cascadeOpts);
           }
           log.info("cascaded app_details jobs", { count: uniqueSlugs.length });
@@ -262,6 +264,10 @@ export function createProcessJob(db: ReturnType<typeof createDb>, httpClient: Ht
       }
 
       case "reviews": {
+        if (!getPlatform(platform).hasReviews) {
+          log.info("skipping reviews job — platform has no review support", { platform });
+          break;
+        }
         const scraper = new ReviewScraper(db, httpClient, platform, platformModule);
         if (job.data.slug) {
           const startTime = Date.now();
