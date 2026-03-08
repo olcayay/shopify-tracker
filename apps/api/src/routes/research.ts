@@ -333,7 +333,7 @@ export const researchRoutes: FastifyPluginAsync = async (app) => {
 
       // Verify app exists
       const [existingApp] = await db
-        .select({ id: apps.id, slug: apps.slug })
+        .select({ id: apps.id, slug: apps.slug, platform: apps.platform })
         .from(apps)
         .where(eq(apps.slug, slug.trim()));
 
@@ -388,11 +388,13 @@ export const researchRoutes: FastifyPluginAsync = async (app) => {
           await queue.add("scrape:app_details", {
             type: "app_details",
             slug: slug.trim(),
+            platform: existingApp.platform,
             triggeredBy: "api:research",
           });
           await queue.add("scrape:reviews", {
             type: "reviews",
             slug: slug.trim(),
+            platform: existingApp.platform,
             triggeredBy: "api:research",
           });
           scraperEnqueued = true;

@@ -70,17 +70,19 @@ function getScraperQueue(): Queue {
 }
 
 /** Enqueue app_details + reviews jobs for a single app after it's tracked */
-async function enqueueAppScrapeJobs(slug: string): Promise<boolean> {
+async function enqueueAppScrapeJobs(slug: string, platform: string): Promise<boolean> {
   try {
     const queue = getScraperQueue();
     await queue.add("scrape:app_details", {
       type: "app_details",
       slug,
+      platform,
       triggeredBy: "api:track",
     });
     await queue.add("scrape:reviews", {
       type: "reviews",
       slug,
+      platform,
       triggeredBy: "api:track",
     });
     return true;
@@ -620,7 +622,7 @@ export const accountRoutes: FastifyPluginAsync = async (app) => {
 
       // Check app exists in global table
       const [existingApp] = await db
-        .select({ id: apps.id, slug: apps.slug })
+        .select({ id: apps.id, slug: apps.slug, platform: apps.platform })
         .from(apps)
         .where(eq(apps.slug, slug))
         .limit(1);
@@ -648,7 +650,7 @@ export const accountRoutes: FastifyPluginAsync = async (app) => {
         return reply.code(409).send({ error: "App already tracked" });
       }
 
-      const scraperEnqueued = await enqueueAppScrapeJobs(slug);
+      const scraperEnqueued = await enqueueAppScrapeJobs(slug, existingApp.platform);
 
       return { ...result, scraperEnqueued };
     }
@@ -1372,7 +1374,7 @@ export const accountRoutes: FastifyPluginAsync = async (app) => {
 
       // Check app exists in global table
       const [existingApp] = await db
-        .select({ id: apps.id, slug: apps.slug })
+        .select({ id: apps.id, slug: apps.slug, platform: apps.platform })
         .from(apps)
         .where(eq(apps.slug, slug))
         .limit(1);
@@ -1414,7 +1416,7 @@ export const accountRoutes: FastifyPluginAsync = async (app) => {
           .send({ error: "Competitor already added for this app" });
       }
 
-      const scraperEnqueued = await enqueueAppScrapeJobs(slug);
+      const scraperEnqueued = await enqueueAppScrapeJobs(slug, existingApp.platform);
 
       return { ...result, scraperEnqueued };
     }
@@ -1958,7 +1960,7 @@ export const accountRoutes: FastifyPluginAsync = async (app) => {
 
       // Check app exists
       const [existingApp] = await db
-        .select({ id: apps.id, slug: apps.slug })
+        .select({ id: apps.id, slug: apps.slug, platform: apps.platform })
         .from(apps)
         .where(eq(apps.slug, competitorSlug))
         .limit(1);
@@ -2004,7 +2006,7 @@ export const accountRoutes: FastifyPluginAsync = async (app) => {
           .send({ error: "Competitor already added for this app" });
       }
 
-      const scraperEnqueued = await enqueueAppScrapeJobs(competitorSlug);
+      const scraperEnqueued = await enqueueAppScrapeJobs(competitorSlug, existingApp.platform);
 
       return { ...result, scraperEnqueued };
     }
