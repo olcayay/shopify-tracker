@@ -8,12 +8,12 @@ import { parseCanvaCategoryPage, CATEGORY_TOPIC_MAP } from "../category-parser.j
  * that extractCanvaApps() parses.
  */
 function buildCanvaHtml(
-  apps: { id: string; name: string; topics: string[]; urlSlug?: string }[]
+  apps: { id: string; name: string; topics: string[]; urlSlug?: string; type?: string }[]
 ): string {
   const entries = apps.map((app) => {
     const obj = {
       A: app.id,
-      B: "SDK_APP",
+      B: app.type || "SDK_APP",
       C: app.name,
       D: `${app.name} short desc`,
       E: `${app.name} tagline`,
@@ -31,7 +31,7 @@ function buildCanvaHtml(
   return `<html><body>${entries.join("")}</body></html>`;
 }
 
-// Sample apps for testing
+// Sample apps for testing — mix of SDK_APP and EXTENSION types, various ID prefixes
 const sampleApps = [
   { id: "AAF_forms1", name: "Jotform", topics: ["marketplace_topic.forms"], urlSlug: "jotform" },
   { id: "AAF_forms2", name: "Typeform", topics: ["marketplace_topic.forms"], urlSlug: "typeform" },
@@ -40,6 +40,8 @@ const sampleApps = [
   { id: "AAF_inter1", name: "Mentimeter", topics: ["marketplace_topic.interactivity"], urlSlug: "mentimeter" },
   { id: "AAF_aiimg1", name: "DALL-E", topics: ["marketplace_topic.ai_images"], urlSlug: "dall-e" },
   { id: "AAF_music1", name: "Soundful", topics: ["marketplace_topic.music"], urlSlug: "soundful" },
+  { id: "AAD_ext1", name: "Slack", topics: ["marketplace_topic.social_networking"], urlSlug: "slack", type: "EXTENSION" },
+  { id: "AAH_new1", name: "NewApp", topics: ["marketplace_topic.forms"], urlSlug: "new-app" },
 ];
 
 const testHtml = buildCanvaHtml(sampleApps);
@@ -108,16 +110,17 @@ describe("parseCanvaCategoryPage", () => {
   describe("listing page (compound slug sub-category)", () => {
     it("returns non-null appCount for a compound slug", () => {
       const result = parseCanvaCategoryPage(testHtml, "project-management--forms", 1, 0);
-      assert.equal(result.appCount, 3); // Jotform, Typeform, Google Docs
+      assert.equal(result.appCount, 4); // Jotform, Typeform, Google Docs, NewApp
     });
 
     it("returns ranked apps for a compound slug", () => {
       const result = parseCanvaCategoryPage(testHtml, "project-management--forms", 1, 0);
-      assert.equal(result.apps.length, 3);
+      assert.equal(result.apps.length, 4);
       const names = result.apps.map((a) => a.name);
       assert.ok(names.includes("Jotform"));
       assert.ok(names.includes("Typeform"));
       assert.ok(names.includes("Google Docs"));
+      assert.ok(names.includes("NewApp"));
     });
 
     it("returns empty subcategoryLinks for listing page", () => {
@@ -128,13 +131,13 @@ describe("parseCanvaCategoryPage", () => {
     it("assigns correct positions starting from 1", () => {
       const result = parseCanvaCategoryPage(testHtml, "project-management--forms", 1, 0);
       const positions = result.apps.map((a) => a.position);
-      assert.deepEqual(positions, [1, 2, 3]);
+      assert.deepEqual(positions, [1, 2, 3, 4]);
     });
 
     it("applies organicOffset to positions", () => {
       const result = parseCanvaCategoryPage(testHtml, "project-management--forms", 1, 10);
       const positions = result.apps.map((a) => a.position);
-      assert.deepEqual(positions, [11, 12, 13]);
+      assert.deepEqual(positions, [11, 12, 13, 14]);
     });
 
     it("uses subcategory label as title (from topic part)", () => {
@@ -164,6 +167,20 @@ describe("parseCanvaCategoryPage", () => {
       const result = parseCanvaCategoryPage(testHtml, "project-management--forms", 1, 0);
       assert.equal(result.hasNextPage, false);
     });
+
+    it("assigns canva_extension badge to EXTENSION type apps", () => {
+      const result = parseCanvaCategoryPage(testHtml, "communication--social-networking", 1, 0);
+      assert.equal(result.apps.length, 1);
+      assert.equal(result.apps[0].name, "Slack");
+      assert.deepEqual(result.apps[0].badges, ["canva_extension"]);
+    });
+
+    it("assigns empty badges to SDK_APP type apps", () => {
+      const result = parseCanvaCategoryPage(testHtml, "ai-generation--ai-images", 1, 0);
+      assert.equal(result.apps.length, 1);
+      assert.equal(result.apps[0].name, "DALL-E");
+      assert.deepEqual(result.apps[0].badges, []);
+    });
   });
 
   describe("shared topics (same topic under multiple parents)", () => {
@@ -182,6 +199,7 @@ describe("parseCanvaCategoryPage", () => {
       const pmForms = parseCanvaCategoryPage(testHtml, "project-management--forms", 1, 0);
       const tsForms = parseCanvaCategoryPage(testHtml, "text-styling--forms", 1, 0);
 
+      assert.equal(pmForms.appCount, 4);
       assert.equal(pmForms.appCount, tsForms.appCount);
       assert.equal(pmForms.apps.length, tsForms.apps.length);
 

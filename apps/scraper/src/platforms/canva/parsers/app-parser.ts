@@ -4,7 +4,7 @@ import type { NormalizedAppDetails } from "../../platform-module.js";
 const log = createLogger("canva-app-parser");
 
 /**
- * Canva embedded app data structure.
+ * Canva embedded app data structure (from /apps bulk page).
  *
  * The /apps page embeds all app data in inline JSON with this minified schema:
  *   "A": app ID (e.g. "AAF_8lkU9VE")
@@ -19,6 +19,7 @@ const log = createLogger("canva-app-parser");
  */
 export interface CanvaEmbeddedApp {
   id: string;
+  appType: string;
   name: string;
   shortDescription: string;
   tagline: string;
@@ -27,6 +28,54 @@ export interface CanvaEmbeddedApp {
   fullDescription: string;
   topics: string[];
   urlSlug: string;
+}
+
+/**
+ * Canva app detail page data structure (from individual app pages).
+ *
+ * Detail pages embed a richer JSON with this schema:
+ *   "A": app ID
+ *   "C": display name
+ *   "E": developer name
+ *   "F": short description (meta)
+ *   "G": tagline (H1 heading)
+ *   "H": full description
+ *   "I"/"J": promo card image URL
+ *   "K": thumbnail URL (128x128)
+ *   "L": terms URL
+ *   "M": privacy policy URL
+ *   "N": developer website URL
+ *   "O": screenshots array (URLs)
+ *   "R": number (version/count)
+ *   "V": permissions array [{A: scope, B: "MANDATORY"|"OPTIONAL"}]
+ *   "W": boolean (published)
+ *   "X": developer info {A: name, B: email, C: phone, D: address, E: devId}
+ *   "Y": languages array (locale codes)
+ */
+export interface CanvaDetailApp {
+  id: string;
+  name: string;
+  shortDescription: string;
+  tagline: string;
+  fullDescription: string;
+  developer: string;
+  developerWebsite: string;
+  developerEmail: string;
+  developerPhone: string;
+  developerAddress: {
+    street: string;
+    city: string;
+    country: string;
+    state: string;
+    zip: string;
+  } | null;
+  iconUrl: string;
+  promoCardUrl: string;
+  screenshots: string[];
+  termsUrl: string;
+  privacyUrl: string;
+  permissions: { scope: string; type: string }[];
+  languages: string[];
 }
 
 /**
@@ -39,8 +88,8 @@ export function extractCanvaApps(html: string): CanvaEmbeddedApp[] {
   const apps: CanvaEmbeddedApp[] = [];
   const seen = new Set<string>();
 
-  // Find each SDK_APP entry by locating the start pattern, then extracting the full JSON object
-  const startPattern = /\{"A":"(AA[FG][^"]+)","B":"SDK_APP"/g;
+  // Match both SDK_APP and EXTENSION entries, with any AA-prefix ID
+  const startPattern = /\{"A":"(AA[A-Za-z][^"]+)","B":"(?:SDK_APP|EXTENSION)"/g;
 
   let match;
   while ((match = startPattern.exec(html)) !== null) {
@@ -62,7 +111,12 @@ export function extractCanvaApps(html: string): CanvaEmbeddedApp[] {
     if (objEnd <= objStart) continue;
 
     try {
-      const obj = JSON.parse(html.substring(objStart, objEnd));
+      // Fix non-standard hex escapes (\x3c → \u003c) before parsing
+      const rawJson = html.substring(objStart, objEnd).replace(
+        /\\x([0-9a-fA-F]{2})/g,
+        (_, hex) => `\\u00${hex}`,
+      );
+      const obj = JSON.parse(rawJson);
       seen.add(id);
 
       const topics = (obj.I || []).filter((t: string) => t.startsWith("marketplace_topic."));
@@ -74,6 +128,7 @@ export function extractCanvaApps(html: string): CanvaEmbeddedApp[] {
 
       apps.push({
         id,
+        appType: obj.B || "SDK_APP",
         name,
         shortDescription: obj.D || "",
         tagline: obj.E || "",
@@ -94,7 +149,84 @@ export function extractCanvaApps(html: string): CanvaEmbeddedApp[] {
 }
 
 /**
- * Convert a CanvaEmbeddedApp into NormalizedAppDetails.
+ * Extract app detail data from a rendered Canva app detail page.
+ *
+ * Detail pages embed a JSON object with schema different from the /apps page.
+ * We find it by matching the app ID pattern without the "SDK_APP" marker.
+ */
+export function extractCanvaDetailApp(html: string, appId: string): CanvaDetailApp | null {
+  // The detail page JSON starts with {"A":"<appId>","C":"<name>",...}
+  // It does NOT have "B":"SDK_APP" like the /apps page
+  // We look for a JSON object containing the app ID that has the detail schema fields
+  const pattern = new RegExp(`\\{"A":"${escapeRegex(appId)}","C":"[^"]+","E":"`);
+  const match = pattern.exec(html);
+
+  if (!match) {
+    log.warn("detail JSON not found in page", { appId });
+    return null;
+  }
+
+  // Extract the full JSON object by tracking brace depth
+  const objStart = match.index;
+  let depth = 0;
+  let objEnd = objStart;
+  for (let i = objStart; i < html.length && i < objStart + 20000; i++) {
+    if (html[i] === "{") depth++;
+    if (html[i] === "}") {
+      depth--;
+      if (depth === 0) { objEnd = i + 1; break; }
+    }
+  }
+
+  if (objEnd <= objStart) {
+    log.warn("failed to extract detail JSON bounds", { appId });
+    return null;
+  }
+
+  try {
+    const obj = JSON.parse(html.substring(objStart, objEnd));
+
+    const devInfo = obj.X || {};
+    const address = devInfo.D
+      ? {
+          street: devInfo.D.A || "",
+          city: devInfo.D.C || "",
+          country: devInfo.D.D || "",
+          state: devInfo.D.E || "",
+          zip: devInfo.D.F || "",
+        }
+      : null;
+
+    return {
+      id: obj.A || appId,
+      name: obj.C || "",
+      shortDescription: obj.F || "",
+      tagline: obj.G || "",
+      fullDescription: obj.H || "",
+      developer: obj.E || devInfo.A || "",
+      developerWebsite: obj.N || "",
+      developerEmail: devInfo.B || "",
+      developerPhone: devInfo.C || "",
+      developerAddress: address,
+      iconUrl: obj.K || "",
+      promoCardUrl: obj.I || "",
+      screenshots: obj.O || [],
+      termsUrl: obj.L || "",
+      privacyUrl: obj.M || "",
+      permissions: (obj.V || []).map((p: any) => ({
+        scope: p.A || "",
+        type: p.B || "",
+      })),
+      languages: obj.Y || [],
+    };
+  } catch (e) {
+    log.warn("failed to parse detail JSON", { appId, error: String(e) });
+    return null;
+  }
+}
+
+/**
+ * Convert a CanvaEmbeddedApp into NormalizedAppDetails (from /apps bulk page).
  */
 export function normalizeCanvaApp(app: CanvaEmbeddedApp): NormalizedAppDetails {
   // Build the slug: "AAF_8lkU9VE--ai-music" (using -- instead of / for URL safety)
@@ -110,9 +242,10 @@ export function normalizeCanvaApp(app: CanvaEmbeddedApp): NormalizedAppDetails {
     developer: app.developer
       ? { name: app.developer }
       : null,
-    badges: [],
+    badges: app.appType === "EXTENSION" ? ["canva_extension"] : [],
     platformData: {
       canvaAppId: app.id,
+      canvaAppType: app.appType,
       shortDescription: app.shortDescription,
       tagline: app.tagline,
       fullDescription: app.fullDescription,
@@ -123,13 +256,60 @@ export function normalizeCanvaApp(app: CanvaEmbeddedApp): NormalizedAppDetails {
 }
 
 /**
- * Parse a single app from HTML (used when we have the full page HTML).
- * For Canva, we extract from the embedded JSON, not from a separate app page.
+ * Convert a CanvaDetailApp into NormalizedAppDetails (from detail page).
+ */
+function normalizeCanvaDetailApp(app: CanvaDetailApp, slug: string): NormalizedAppDetails {
+  return {
+    name: app.name,
+    slug,
+    averageRating: null,
+    ratingCount: null,
+    pricingHint: null,
+    iconUrl: app.iconUrl || null,
+    developer: app.developer
+      ? {
+          name: app.developer,
+          website: app.developerWebsite || undefined,
+          url: app.developerWebsite || undefined,
+        }
+      : null,
+    badges: [],
+    platformData: {
+      canvaAppId: app.id,
+      description: app.shortDescription,
+      tagline: app.tagline,
+      fullDescription: app.fullDescription,
+      screenshots: app.screenshots,
+      promoCardUrl: app.promoCardUrl,
+      developerEmail: app.developerEmail,
+      developerPhone: app.developerPhone,
+      developerAddress: app.developerAddress,
+      termsUrl: app.termsUrl,
+      privacyUrl: app.privacyUrl,
+      permissions: app.permissions,
+      languages: app.languages,
+    },
+  };
+}
+
+/**
+ * Parse a single app from HTML.
+ *
+ * First tries to parse as a detail page (richer data).
+ * Falls back to extracting from /apps bulk page embedded JSON.
  */
 export function parseCanvaAppPage(html: string, slug: string): NormalizedAppDetails {
   // The slug might be "AAF_8lkU9VE--ai-music" or just "AAF_8lkU9VE"
   const appId = slug.split("--")[0];
 
+  // Try detail page format first (richer data)
+  const detailApp = extractCanvaDetailApp(html, appId);
+  if (detailApp) {
+    log.info("parsed app from detail page", { appId, name: detailApp.name });
+    return normalizeCanvaDetailApp(detailApp, slug);
+  }
+
+  // Fall back to bulk /apps page format
   const apps = extractCanvaApps(html);
   const app = apps.find((a) => a.id === appId);
 
@@ -155,4 +335,8 @@ function fallback(slug: string): NormalizedAppDetails {
     badges: [],
     platformData: { canvaAppId: appId },
   };
+}
+
+function escapeRegex(s: string): string {
+  return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }

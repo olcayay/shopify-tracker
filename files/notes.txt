@@ -1,3 +1,20 @@
+Canva app type badges (PLA-74)
+===============================
+
+Canva has two app types: SDK_APP (~1042 apps) and EXTENSION (~49 apps).
+- Scraper now extracts `obj.B` (app type) from embedded JSON and stores it as `appType` on CanvaEmbeddedApp
+- `canvaAppType` saved in platformData JSONB for each app snapshot
+- EXTENSION apps get `canva_extension` badge automatically (SDK_APP is the default, no badge)
+- Badge displays as "🧩 Extension" (indigo) in all dashboard tables via existing badge infrastructure
+- Category parser also passes app type through to badges on NormalizedCategoryApp
+
+Files changed:
+1. app-parser.ts: added appType to interface, extract obj.B, include in platformData + badges
+2. category-parser.ts: pass appType to badges in listing page apps
+3. app-badges.tsx: added canva_extension badge config
+4. category-parser.test.ts: 2 new tests for EXTENSION/SDK_APP badge assignment
+
+
 Canva compound slugs for sub-categories
 =========================================
 

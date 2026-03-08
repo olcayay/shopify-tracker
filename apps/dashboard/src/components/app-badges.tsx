@@ -28,6 +28,11 @@ const BADGE_CONFIG: Record<string, Record<string, { icon: string; label: string;
       label: "Premium",
       className: "text-amber-600",
     },
+    canva_extension: {
+      icon: "🧩",
+      label: "Extension",
+      className: "text-indigo-600",
+    },
   },
 };
 

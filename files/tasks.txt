@@ -136,6 +136,8 @@ restructure Canva categories to two-level hierarchy (PLA-70) ✅
 
 Canva compound slugs for sub-categories + shared topics + external URL fix ✅
 
+Canva app type badges — EXTENSION vs SDK_APP (PLA-74) ✅
+
 feedback sayfası
 
 kime hangi durumda nasıl emailler gönderilebilinir.

@@ -162,7 +162,7 @@ export function parseCanvaCategoryPage(
     logoUrl: app.iconUrl || "",
     position: organicOffset + i + 1,
     isSponsored: false,
-    badges: [],
+    badges: app.appType === "EXTENSION" ? ["canva_extension"] : [],
   }));
 
   const title = CANVA_SUBCATEGORY_LABELS[topicSlug] || topicSlug
