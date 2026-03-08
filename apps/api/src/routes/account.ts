@@ -793,11 +793,13 @@ export const accountRoutes: FastifyPluginAsync = async (app) => {
         return reply.code(400).send({ error: "trackedAppSlug is required" });
       }
 
+      const platform = getPlatformFromQuery(request.query as Record<string, unknown>);
+
       // Look up app ID from slug
       const [trackedAppRow] = await db
         .select({ id: apps.id })
         .from(apps)
-        .where(eq(apps.slug, trackedAppSlug))
+        .where(and(eq(apps.slug, trackedAppSlug), eq(apps.platform, platform)))
         .limit(1);
       if (!trackedAppRow) {
         return reply.code(404).send({ error: "App not found" });
@@ -842,9 +844,9 @@ export const accountRoutes: FastifyPluginAsync = async (app) => {
       const slug = keywordToSlug(keyword);
       const [kw] = await db
         .insert(trackedKeywords)
-        .values({ keyword, slug })
+        .values({ keyword, slug, platform })
         .onConflictDoUpdate({
-          target: trackedKeywords.keyword,
+          target: [trackedKeywords.platform, trackedKeywords.keyword],
           set: { isActive: true, updatedAt: new Date() },
         })
         .returning();
@@ -876,6 +878,7 @@ export const accountRoutes: FastifyPluginAsync = async (app) => {
           await queue.add("scrape:keyword_search", {
             type: "keyword_search",
             keyword: kw.keyword,
+            platform,
             triggeredBy: "api",
           });
           scraperEnqueued = true;
