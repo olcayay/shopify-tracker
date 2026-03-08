@@ -129,8 +129,8 @@ function unescapeJson(s: string): string {
  * Convert a CanvaEmbeddedApp into NormalizedAppDetails.
  */
 export function normalizeCanvaApp(app: CanvaEmbeddedApp): NormalizedAppDetails {
-  // Build the slug: "AAF_8lkU9VE/ai-music"
-  const slug = app.urlSlug ? `${app.id}/${app.urlSlug}` : app.id;
+  // Build the slug: "AAF_8lkU9VE--ai-music" (using -- instead of / for URL safety)
+  const slug = app.urlSlug ? `${app.id}--${app.urlSlug}` : app.id;
 
   return {
     name: app.name,
@@ -159,8 +159,8 @@ export function normalizeCanvaApp(app: CanvaEmbeddedApp): NormalizedAppDetails {
  * For Canva, we extract from the embedded JSON, not from a separate app page.
  */
 export function parseCanvaAppPage(html: string, slug: string): NormalizedAppDetails {
-  // The slug might be "AAF_8lkU9VE/ai-music" or just "AAF_8lkU9VE"
-  const appId = slug.split("/")[0];
+  // The slug might be "AAF_8lkU9VE--ai-music" or just "AAF_8lkU9VE"
+  const appId = slug.split("--")[0];
 
   const apps = extractCanvaApps(html);
   const app = apps.find((a) => a.id === appId);
@@ -174,10 +174,10 @@ export function parseCanvaAppPage(html: string, slug: string): NormalizedAppDeta
 }
 
 function fallback(slug: string): NormalizedAppDetails {
-  const appId = slug.split("/")[0];
+  const appId = slug.split("--")[0];
   log.info("app parsed with minimal data (fallback)", { slug });
   return {
-    name: slug.split("/")[1]?.replace(/-/g, " ") || appId,
+    name: slug.split("--")[1]?.replace(/-/g, " ") || appId,
     slug,
     averageRating: null,
     ratingCount: null,

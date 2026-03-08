@@ -6,8 +6,8 @@ export const canvaUrls = {
   /** Main apps marketplace page (all apps are embedded here) */
   apps: () => `${BASE_URL}/apps`,
 
-  /** App detail page */
-  app: (slug: string) => `${BASE_URL}/apps/${slug}`,
+  /** App detail page (slug uses -- separator, convert to / for real URL) */
+  app: (slug: string) => `${BASE_URL}/apps/${slug.replace("--", "/")}`,
 
   /** External category URL (Canva doesn't have real category pages — this maps to the filter tab) */
   category: (slug: string) => `${BASE_URL}/apps?category=${slug}`,

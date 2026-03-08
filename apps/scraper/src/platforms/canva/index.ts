@@ -105,9 +105,9 @@ export class CanvaModule implements PlatformModule {
   // --- Slug extraction ---
 
   extractSlugFromUrl(url: string): string {
-    // URL format: /apps/AAF_8lkU9VE/ai-music
-    const match = url.match(/\/apps\/(AA[FG][A-Za-z0-9_-]+(?:\/[a-z0-9-]+)?)/);
-    if (match) return match[1];
+    // URL format: /apps/AAF_8lkU9VE/ai-music → slug: AAF_8lkU9VE--ai-music
+    const match = url.match(/\/apps\/(AA[FG][A-Za-z0-9_-]+)(?:\/([a-z0-9-]+))?/);
+    if (match) return match[2] ? `${match[1]}--${match[2]}` : match[1];
     return url.split("/").pop()?.split("?")[0] || url;
   }
 

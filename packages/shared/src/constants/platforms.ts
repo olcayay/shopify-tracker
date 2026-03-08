@@ -65,7 +65,7 @@ export function buildExternalAppUrl(platform: PlatformId, slug: string): string 
     case "salesforce":
       return `https://appexchange.salesforce.com/appxListingDetail?listingId=${slug}`;
     case "canva":
-      return `https://www.canva.com/apps/${slug}`;
+      return `https://www.canva.com/apps/${slug.replace("--", "/")}`;
   }
 }
 
