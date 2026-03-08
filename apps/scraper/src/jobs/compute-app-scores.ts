@@ -114,6 +114,7 @@ export async function computeAppScores(
       .insert(scrapeRuns)
       .values({
         scraperType: "compute_app_scores",
+        platform,
         status: "failed",
         createdAt: new Date(),
         startedAt: new Date(),
@@ -132,6 +133,7 @@ export async function computeAppScores(
     .insert(scrapeRuns)
     .values({
       scraperType: "compute_app_scores",
+      platform,
       status: "running",
       createdAt: new Date(),
       startedAt: new Date(),

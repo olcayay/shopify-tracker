@@ -43,6 +43,7 @@ export class AppDetailsScraper {
       .insert(scrapeRuns)
       .values({
         scraperType: "app_details",
+        platform: this.platform,
         status: "running",
         createdAt: new Date(),
         startedAt: new Date(),
@@ -118,6 +119,7 @@ export class AppDetailsScraper {
         .insert(scrapeRuns)
         .values({
           scraperType: "app_details",
+          platform: this.platform,
           status: "running",
           startedAt: new Date(),
           triggeredBy,

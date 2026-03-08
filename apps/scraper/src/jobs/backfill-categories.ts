@@ -16,6 +16,7 @@ export async function backfillCategories(db: Database, triggeredBy: string, queu
     .insert(scrapeRuns)
     .values({
       scraperType: "backfill_categories",
+      platform,
       status: "running",
       createdAt: new Date(),
       startedAt: new Date(),

@@ -40,6 +40,7 @@ export class KeywordSuggestionScraper {
       .insert(scrapeRuns)
       .values({
         scraperType: "keyword_suggestions",
+        platform: "shopify",
         status: "running",
         createdAt: new Date(),
         startedAt: new Date(),

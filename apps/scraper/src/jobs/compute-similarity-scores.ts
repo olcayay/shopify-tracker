@@ -20,6 +20,7 @@ export async function computeSimilarityScores(db: Database, triggeredBy: string,
     .insert(scrapeRuns)
     .values({
       scraperType: "compute_similarity_scores",
+      platform,
       status: "running",
       createdAt: new Date(),
       startedAt: new Date(),

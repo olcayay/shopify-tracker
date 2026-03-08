@@ -52,6 +52,7 @@ export class KeywordScraper {
       .insert(scrapeRuns)
       .values({
         scraperType: "keyword_search",
+        platform: this.platform,
         status: "running",
         createdAt: new Date(),
         startedAt: new Date(),

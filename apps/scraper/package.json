@@ -13,6 +13,7 @@
     "scrape:keyword": "tsx src/cli.ts keyword",
     "scrape:reviews": "tsx src/cli.ts reviews",
     "worker": "tsx src/worker.ts",
+    "worker:restart": "pkill -f 'apps/scraper/src/worker.ts' 2>/dev/null; sleep 1; tsx src/worker.ts",
     "worker:interactive": "tsx src/interactive-worker.ts",
     "scheduler": "tsx src/scheduler.ts"
   },

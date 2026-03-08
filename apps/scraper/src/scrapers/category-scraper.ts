@@ -76,6 +76,7 @@ export class CategoryScraper {
       .insert(scrapeRuns)
       .values({
         scraperType: "category",
+        platform: this.platform,
         status: "running",
         createdAt: new Date(),
         startedAt: new Date(),
@@ -172,6 +173,7 @@ export class CategoryScraper {
       .insert(scrapeRuns)
       .values({
         scraperType: "category",
+        platform: this.platform,
         status: "running",
         createdAt: new Date(),
         startedAt: new Date(),

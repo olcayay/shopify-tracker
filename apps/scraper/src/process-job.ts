@@ -235,6 +235,7 @@ export function createProcessJob(db: ReturnType<typeof createDb>, httpClient: Ht
               .insert(scrapeRuns)
               .values({
                 scraperType: "keyword_suggestions",
+                platform,
                 status: "running",
                 createdAt: new Date(),
                 startedAt: new Date(),

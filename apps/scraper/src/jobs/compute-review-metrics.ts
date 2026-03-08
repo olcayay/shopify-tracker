@@ -55,6 +55,7 @@ export async function computeReviewMetrics(db: Database, triggeredBy: string, qu
     .insert(scrapeRuns)
     .values({
       scraperType: "compute_review_metrics",
+      platform,
       status: "running",
       createdAt: new Date(),
       startedAt: new Date(),

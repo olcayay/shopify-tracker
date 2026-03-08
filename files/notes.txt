@@ -1,3 +1,21 @@
+Fix missing `platform` field in scrape_runs records (PLA-66 follow-up)
+======================================================================
+
+- Problem: Run History table on Scraper Management page showed "—" for Platform column on most scrape runs. Root cause: 12 out of 16 `db.insert(scrapeRuns)` calls were missing the `platform` field.
+- Fixed 12 inserts across 10 files:
+  - `category-scraper.ts` (2): added `platform: this.platform`
+  - `app-details-scraper.ts` (2): added `platform: this.platform`
+  - `keyword-scraper.ts` (1): added `platform: this.platform`
+  - `keyword-suggestion-scraper.ts` (1): added `platform: "shopify"` (Shopify-only scraper)
+  - `process-job.ts` (1): added `platform` (local var from job data)
+  - `compute-review-metrics.ts` (1): added `platform` (function param)
+  - `compute-similarity-scores.ts` (1): added `platform` (function param)
+  - `backfill-categories.ts` (1): added `platform` (function param)
+  - `compute-app-scores.ts` (2): added `platform` (function param)
+- Backfill SQL needed: `UPDATE scrape_runs SET platform = 'shopify' WHERE platform IS NULL;`
+
+---
+
 Platform-aware scraper management cards (PLA-66)
 =================================================
 

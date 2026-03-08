@@ -122,6 +122,8 @@ fix Salesforce category slug format — kebab-case → camelCase cleanup + admin
 
 platform-aware scraper management cards (PLA-66) ✅
 
+fix missing platform field in scrape_runs records (PLA-66 follow-up) ✅
+
 feedback sayfası
 
 kime hangi durumda nasıl emailler gönderilebilinir.
