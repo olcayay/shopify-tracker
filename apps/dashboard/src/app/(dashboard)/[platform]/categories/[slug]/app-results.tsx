@@ -233,25 +233,31 @@ export function CategoryAppResults({
               >
                 App <SortIcon col="name" />
               </TableHead>
-              <TableHead
-                className="cursor-pointer select-none"
-                onClick={() => toggleSort("average_rating")}
-              >
-                Rating <SortIcon col="average_rating" />
-              </TableHead>
-              <TableHead
-                className="cursor-pointer select-none"
-                onClick={() => toggleSort("rating_count")}
-              >
-                Reviews <SortIcon col="rating_count" />
-              </TableHead>
-              <TableHead>Pricing</TableHead>
-              <TableHead
-                className="cursor-pointer select-none"
-                onClick={() => toggleSort("min_paid")}
-              >
-                Min. Paid <SortIcon col="min_paid" />
-              </TableHead>
+              {caps.hasReviews && (
+                <TableHead
+                  className="cursor-pointer select-none"
+                  onClick={() => toggleSort("average_rating")}
+                >
+                  Rating <SortIcon col="average_rating" />
+                </TableHead>
+              )}
+              {caps.hasReviews && (
+                <TableHead
+                  className="cursor-pointer select-none"
+                  onClick={() => toggleSort("rating_count")}
+                >
+                  Reviews <SortIcon col="rating_count" />
+                </TableHead>
+              )}
+              {caps.hasPricing && <TableHead>Pricing</TableHead>}
+              {caps.hasPricing && (
+                <TableHead
+                  className="cursor-pointer select-none"
+                  onClick={() => toggleSort("min_paid")}
+                >
+                  Min. Paid <SortIcon col="min_paid" />
+                </TableHead>
+              )}
               {caps.hasSimilarApps && (
                 <TableHead
                   className="cursor-pointer select-none"
@@ -262,12 +268,14 @@ export function CategoryAppResults({
                 </TableHead>
               )}
               {isHubPage && <TableHead>Category</TableHead>}
-              <TableHead
-                className="cursor-pointer select-none"
-                onClick={() => toggleSort("launched_date")}
-              >
-                Launched <SortIcon col="launched_date" />
-              </TableHead>
+              {caps.hasLaunchedDate && (
+                <TableHead
+                  className="cursor-pointer select-none"
+                  onClick={() => toggleSort("launched_date")}
+                >
+                  Launched <SortIcon col="launched_date" />
+                </TableHead>
+              )}
               <TableHead>Last Change</TableHead>
               {categoryScores && (
                 <TableHead
@@ -285,7 +293,7 @@ export function CategoryAppResults({
             {paged.length === 0 ? (
               <TableRow>
                 <TableCell
-                  colSpan={categoryScores ? 11 : 10}
+                  colSpan={99}
                   className="text-center text-muted-foreground py-8"
                 >
                   No apps found.
@@ -321,7 +329,7 @@ export function CategoryAppResults({
                           >
                             {app.name}
                           </Link>
-                          {app.is_sponsored && (
+                          {caps.hasAdTracking && app.is_sponsored && (
                             <Badge variant="secondary" className="ml-1 shrink-0">
                               Ad
                             </Badge>
@@ -340,20 +348,28 @@ export function CategoryAppResults({
                         </div>
                       </div>
                     </TableCell>
-                    <TableCell>{app.average_rating?.toFixed(1) ?? "\u2014"}</TableCell>
-                    <TableCell>{app.rating_count?.toLocaleString() ?? "\u2014"}</TableCell>
-                    <TableCell className="text-sm text-muted-foreground">
-                      {app.pricing_hint || "\u2014"}
-                    </TableCell>
-                    <TableCell className="text-sm">
-                      {minPaidPrices?.[app.slug] != null ? (
-                        <Link href={`/${platform}/apps/${app.slug}/details#pricing-plans`} className="text-primary hover:underline">
-                          {minPaidPrices[app.slug] === 0
-                            ? "Free"
-                            : `$${minPaidPrices[app.slug]}/mo`}
-                        </Link>
-                      ) : "\u2014"}
-                    </TableCell>
+                    {caps.hasReviews && (
+                      <TableCell>{app.average_rating?.toFixed(1) ?? "\u2014"}</TableCell>
+                    )}
+                    {caps.hasReviews && (
+                      <TableCell>{app.rating_count?.toLocaleString() ?? "\u2014"}</TableCell>
+                    )}
+                    {caps.hasPricing && (
+                      <TableCell className="text-sm text-muted-foreground">
+                        {app.pricing_hint || "\u2014"}
+                      </TableCell>
+                    )}
+                    {caps.hasPricing && (
+                      <TableCell className="text-sm">
+                        {minPaidPrices?.[app.slug] != null ? (
+                          <Link href={`/${platform}/apps/${app.slug}/details#pricing-plans`} className="text-primary hover:underline">
+                            {minPaidPrices[app.slug] === 0
+                              ? "Free"
+                              : `$${minPaidPrices[app.slug]}/mo`}
+                          </Link>
+                        ) : "\u2014"}
+                      </TableCell>
+                    )}
                     {caps.hasSimilarApps && (
                       <TableCell className="text-sm">
                         {reverseSimilarCounts?.[app.slug] ?? "\u2014"}
@@ -376,11 +392,13 @@ export function CategoryAppResults({
                         ) : "\u2014"}
                       </TableCell>
                     )}
-                    <TableCell className="text-sm text-muted-foreground">
-                      {app.launched_date
-                        ? formatDateOnly(app.launched_date)
-                        : "\u2014"}
-                    </TableCell>
+                    {caps.hasLaunchedDate && (
+                      <TableCell className="text-sm text-muted-foreground">
+                        {app.launched_date
+                          ? formatDateOnly(app.launched_date)
+                          : "\u2014"}
+                      </TableCell>
+                    )}
                     <TableCell className="text-sm text-muted-foreground">
                       {lastChanges?.[app.slug]
                         ? formatDateOnly(lastChanges[app.slug])

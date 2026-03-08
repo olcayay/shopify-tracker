@@ -1,3 +1,23 @@
+Pre-Deployment Fixes (Production Deploy)
+=========================================
+
+Fixed 3 blockers before merging feature/multi-platform to main:
+
+1. Added hasPricing + hasLaunchedDate to PlatformCapabilities in all 3 platform modules
+   (shopify, salesforce, canva) — was blocking worker Docker build (TS errors)
+
+2. Added migrations 0051-0054 to drizzle journal (_journal.json) — SQL files existed
+   but weren't registered in the journal
+
+3. Synced drizzle.__drizzle_migrations table with journal — inserted missing hashes
+   for 0010-0019 and 0051-0054, fixed corrupt 0021 entry. Now 55/55 match.
+
+Files changed:
+- apps/scraper/src/platforms/shopify/index.ts
+- apps/scraper/src/platforms/salesforce/index.ts
+- apps/scraper/src/platforms/canva/index.ts
+- packages/db/src/migrations/meta/_journal.json
+
 Platform Visibility Controls (PLA-77)
 ======================================
 

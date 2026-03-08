@@ -21,6 +21,7 @@ import { AdminScraperTrigger } from "@/components/admin-scraper-trigger";
 import { AppSearchBar } from "@/components/app-search-bar";
 import { TableSkeleton } from "@/components/skeletons";
 import { PLATFORMS, isPlatformId, type PlatformId } from "@appranks/shared";
+import { formatCategoryTitle } from "@/lib/platform-urls";
 
 type SortKey = "name" | "rating" | "reviews" | "minPaidPrice" | "lastChangeAt" | "launchedDate" | "competitorCount" | "keywordCount";
 type SortDir = "asc" | "desc";
@@ -284,7 +285,7 @@ export default function AppsPage() {
                                 <span className="font-medium text-muted-foreground">#{cat.position}</span>
                               )}
                               <Link href={`/${platform}/categories/${cat.slug}`} className="text-primary hover:underline">
-                                {cat.title}
+                                {formatCategoryTitle(platform as PlatformId, cat.slug, cat.title)}
                               </Link>
                             </div>
                           ))}

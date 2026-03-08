@@ -18,7 +18,7 @@ import {
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { X, ArrowUpDown, ArrowUp, ArrowDown, ExternalLink, Settings2, Check } from "lucide-react";
-import { buildExternalAppUrl, getPlatformName } from "@/lib/platform-urls";
+import { buildExternalAppUrl, getPlatformName, formatCategoryTitle } from "@/lib/platform-urls";
 import { PLATFORMS, isPlatformId, type PlatformId } from "@appranks/shared";
 import { DropdownMenu as DropdownMenuPrimitive } from "radix-ui";
 import { ConfirmModal } from "@/components/confirm-modal";
@@ -644,7 +644,7 @@ export default function CompetitorsPage() {
                               {change > 0 ? "\u2191" : "\u2193"}{Math.abs(change)}
                             </span>
                           )}
-                          <Link href={`/${platform}/categories/${cr.categorySlug}`} className="hover:underline truncate text-primary">{cr.categoryTitle}</Link>
+                          <Link href={`/${platform}/categories/${cr.categorySlug}`} className="hover:underline truncate text-primary">{formatCategoryTitle(platform as PlatformId, cr.categorySlug, cr.categoryTitle)}</Link>
                           {topPercent != null && (
                             <Tooltip>
                               <TooltipTrigger asChild>
@@ -685,7 +685,7 @@ export default function CompetitorsPage() {
                         {change > 0 ? "\u2191" : "\u2193"}{Math.abs(change)}
                       </span>
                     )}
-                    {cat.slug ? <Link href={`/${platform}/categories/${cat.slug}`} className={`hover:underline truncate ${isPrimary ? "text-primary" : "text-muted-foreground"}`}>{cat.title}</Link> : <span className={isPrimary ? "" : "text-muted-foreground"}>{cat.title}</span>}
+                    {cat.slug ? <Link href={`/${platform}/categories/${cat.slug}`} className={`hover:underline truncate ${isPrimary ? "text-primary" : "text-muted-foreground"}`}>{formatCategoryTitle(platform as PlatformId, cat.slug, cat.title)}</Link> : <span className={isPrimary ? "" : "text-muted-foreground"}>{cat.title}</span>}
                     {topPercent != null && (
                       <Tooltip>
                         <TooltipTrigger asChild>

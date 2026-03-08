@@ -144,6 +144,8 @@ fix timezone discrepancy in scraper Run History (PLA-76) ✅
 
 platform visibility controls — hide/show platforms for regular users (PLA-77) ✅
 
+pre-deployment fixes — hasPricing/hasLaunchedDate capabilities, drizzle journal sync ✅
+
 feedback sayfası
 
 kime hangi durumda nasıl emailler gönderilebilinir.

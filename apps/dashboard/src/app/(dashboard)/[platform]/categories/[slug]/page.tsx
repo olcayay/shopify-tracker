@@ -17,7 +17,7 @@ import { AdminScraperTrigger } from "@/components/admin-scraper-trigger";
 import { AdHeatmap } from "@/components/ad-heatmap";
 import { CategoryAppResults } from "./app-results";
 import { buildExternalCategoryUrl, getPlatformName } from "@/lib/platform-urls";
-import type { PlatformId } from "@appranks/shared";
+import { PLATFORMS, isPlatformId, type PlatformId } from "@appranks/shared";
 
 export default async function CategoryDetailPage({
   params,
@@ -56,6 +56,7 @@ export default async function CategoryDetailPage({
     );
   }
 
+  const caps = isPlatformId(platform) ? PLATFORMS[platform as PlatformId] : PLATFORMS.shopify;
   const competitorSlugs = new Set(competitors.map((c: any) => c.appSlug));
   const trackedSlugs = new Set(trackedApps.map((a: any) => a.appSlug));
   const isStarred = starredCategories.some((sc: any) => sc.categorySlug === slug);
@@ -71,7 +72,7 @@ export default async function CategoryDetailPage({
       trackedSlugs: [],
       competitorSlugs: [],
     })),
-    getCategoryAds(slug, 30, platform as PlatformId).catch(() => ({ adSightings: [] })),
+    caps.hasAdTracking ? getCategoryAds(slug, 30, platform as PlatformId).catch(() => ({ adSightings: [] })) : Promise.resolve({ adSightings: [] }),
     getCategoryScores(slug, 50, platform as PlatformId).catch(() => ({ scores: [], computedAt: null })),
   ]);
 
@@ -220,6 +221,7 @@ export default async function CategoryDetailPage({
       )}
 
       {/* Sponsored Apps */}
+      {caps.hasAdTracking && (
       <Card>
         <CardHeader>
           <CardTitle>
@@ -253,6 +255,7 @@ export default async function CategoryDetailPage({
           )}
         </CardContent>
       </Card>
+      )}
 
       {/* Ranked Apps (listing pages) or Aggregated Apps (hub pages) */}
       {!category.isListingPage && rankedApps.length > 0 && (

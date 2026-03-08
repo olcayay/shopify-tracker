@@ -471,6 +471,9 @@ export class CategoryScraper {
 
     const normalized = mod.parseCategoryPage(json, canonicalUrl);
 
+    // Hub pages have appCount === null (no direct rankings)
+    const isListingPage = normalized.appCount !== null;
+
     // Upsert category master record
     const [upsertedCategory] = await this.db
       .insert(categories)
@@ -482,7 +485,7 @@ export class CategoryScraper {
         parentSlug,
         categoryLevel: depth,
         description: normalized.description,
-        isListingPage: true,
+        isListingPage,
       })
       .onConflictDoUpdate({
         target: [categories.platform, categories.slug],
@@ -491,7 +494,7 @@ export class CategoryScraper {
           description: normalized.description,
           parentSlug,
           categoryLevel: depth,
-          isListingPage: true,
+          isListingPage,
           updatedAt: new Date(),
         },
       })
@@ -512,9 +515,11 @@ export class CategoryScraper {
       breadcrumb: "",
     });
 
-    // Record app rankings from first page
-    await this.recordNormalizedAppRankings(normalized.apps, slug, runId, 0);
-    await this.recordNormalizedCategoryAdSightings(normalized.apps, categoryId, runId);
+    // Only record rankings and ads for listing pages (not hub pages)
+    if (isListingPage) {
+      await this.recordNormalizedAppRankings(normalized.apps, slug, runId, 0);
+      await this.recordNormalizedCategoryAdSightings(normalized.apps, categoryId, runId);
+    }
 
     for (const app of normalized.apps) {
       if (app.slug && !seenAppSlugs.has(app.slug)) {
@@ -523,8 +528,8 @@ export class CategoryScraper {
       }
     }
 
-    // Multi-page support
-    if (pageOptions?.pages !== "first") {
+    // Multi-page support (listing pages only)
+    if (isListingPage && pageOptions?.pages !== "first") {
       const maxPages = pageOptions?.pages === "all" ? 50
         : typeof pageOptions?.pages === "number" ? pageOptions.pages
         : mod.constants.defaultPagesPerCategory;

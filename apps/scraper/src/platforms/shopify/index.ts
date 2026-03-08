@@ -37,6 +37,8 @@ export class ShopifyModule implements PlatformModule {
     hasSimilarApps: true,
     hasAutoSuggestions: true,
     hasFeatureTaxonomy: true,
+    hasPricing: true,
+    hasLaunchedDate: true,
   };
 
   private httpClient: HttpClient;

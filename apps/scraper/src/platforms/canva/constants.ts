@@ -50,15 +50,75 @@ export const CANVA_FEATURED_SECTIONS = [
   "Supercharge your workflow",
 ] as const;
 
+/**
+ * Mapping from topic slug (used as sub-category slug) to its display label.
+ * These are the actual ranking-level categories within each filter category.
+ */
+export const CANVA_SUBCATEGORY_LABELS: Record<string, string> = {
+  // AI generation
+  "ai-images": "AI Images",
+  "ai-audio": "AI Audio",
+  "ai-videos": "AI Videos",
+  "ai-text": "AI Text",
+  "ai-documents": "AI Documents",
+  // Audio and voiceover
+  "music": "Music",
+  "voiceovers": "Voiceovers",
+  "sound-effects": "Sound Effects",
+  // Communication
+  "social-networking": "Social Networking",
+  "email": "Email",
+  "display": "Display",
+  // File and data management
+  "file-import-and-export": "File Import and Export",
+  "file-converters": "File Converters",
+  "data-connectors": "Data Connectors",
+  "data-visualization": "Data Visualization",
+  // Graphic design
+  "icons-and-illustrations": "Icons and Illustrations",
+  "shapes": "Shapes",
+  "frames": "Frames",
+  "patterns": "Patterns",
+  "mockups": "Mockups",
+  "logos": "Logos",
+  // Marketing
+  "content-schedulers": "Content Schedulers",
+  "analytics": "Analytics",
+  "ads": "Ads",
+  // Photo editing
+  "photo-effects": "Photo Effects",
+  "images": "Images",
+  "styles": "Styles",
+  "color": "Color",
+  // Project management
+  "tasks-and-workflows": "Tasks and Workflows",
+  "documents": "Documents",
+  "forms": "Forms",
+  "interactivity": "Interactivity",
+  // Text styling
+  "text-effects": "Text Effects",
+  "text-generators": "Text Generators",
+  // Video and animation
+  "videos": "Videos",
+  "video-effects": "Video Effects",
+  "animation": "Animation",
+  "subtitles": "Subtitles",
+  "flipbooks": "Flipbooks",
+};
+
 export const CANVA_CONSTANTS: PlatformConstants = {
   seedCategories: [...CANVA_FILTER_CATEGORIES],
-  maxCategoryDepth: 0, // Flat structure, no subcategories
+  maxCategoryDepth: 1, // Two-level: filter categories (hub) → topic sub-categories (listing)
   defaultPagesPerCategory: 1, // All apps are on a single page
   trackedFields: [
     "description",
     "tagline",
+    "fullDescription",
     "developer",
     "topics",
+    "screenshots",
+    "permissions",
+    "languages",
   ],
   rateLimit: { minDelayMs: 2000, maxDelayMs: 4000 }, // Conservative — Cloudflare protected
 };

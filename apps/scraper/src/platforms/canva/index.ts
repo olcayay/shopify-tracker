@@ -47,6 +47,8 @@ export class CanvaModule implements PlatformModule {
     hasSimilarApps: false,
     hasAutoSuggestions: true,
     hasFeatureTaxonomy: false,
+    hasPricing: false,
+    hasLaunchedDate: false,
   };
 
   private httpClient: HttpClient;
@@ -80,8 +82,25 @@ export class CanvaModule implements PlatformModule {
 
   // --- Fetch ---
 
-  async fetchAppPage(_slug: string): Promise<string> {
-    return this.fetchAppsPage();
+  async fetchAppPage(slug: string): Promise<string> {
+    const page = await this.ensureBrowserPage();
+    const url = this.buildAppUrl(slug);
+    log.info("fetching app detail page", { slug, url });
+
+    await page.goto(url, { waitUntil: "domcontentloaded", timeout: 30_000 });
+    await page.waitForTimeout(3000); // SPA hydration
+
+    const html = await page.content();
+    log.info("app detail page fetched", { slug, htmlLength: html.length });
+
+    // Navigate back to /apps to reset state for search/other operations
+    await page.goto("https://www.canva.com/apps", {
+      waitUntil: "domcontentloaded",
+      timeout: 30_000,
+    });
+    await page.waitForTimeout(2000);
+
+    return html;
   }
 
   async fetchCategoryPage(_slug: string, _page?: number): Promise<string> {
@@ -106,7 +125,7 @@ export class CanvaModule implements PlatformModule {
   // --- Slug extraction ---
 
   extractSlugFromUrl(url: string): string {
-    const match = url.match(/\/apps\/(AA[FG][A-Za-z0-9_-]+)(?:\/([a-z0-9-]+))?/);
+    const match = url.match(/\/apps\/(AA[A-Za-z][A-Za-z0-9_-]+)(?:\/([a-z0-9-]+))?/);
     if (match) return match[2] ? `${match[1]}--${match[2]}` : match[1];
     return url.split("/").pop()?.split("?")[0] || url;
   }
@@ -382,8 +401,21 @@ export class CanvaModule implements PlatformModule {
     // Cache the page HTML while we're here
     if (!this.cachedAppsPageHtml) {
       this.cachedAppsPageHtml = await this.browserPage.content();
-      const appCount = (this.cachedAppsPageHtml.match(/"B":"SDK_APP"/g) || []).length;
+      let appCount = (this.cachedAppsPageHtml.match(/"B":"SDK_APP"/g) || []).length;
       log.info("cached /apps page", { htmlLength: this.cachedAppsPageHtml.length, embeddedApps: appCount });
+
+      // Retry if no apps found (page may not have fully hydrated)
+      if (appCount === 0) {
+        log.warn("no embedded apps found, waiting longer for SPA hydration...");
+        await this.browserPage.waitForTimeout(10000);
+        this.cachedAppsPageHtml = await this.browserPage.content();
+        appCount = (this.cachedAppsPageHtml.match(/"B":"SDK_APP"/g) || []).length;
+        log.info("retry cached /apps page", { htmlLength: this.cachedAppsPageHtml.length, embeddedApps: appCount });
+
+        if (appCount === 0) {
+          log.error("still no embedded apps after retry — Canva page may be blocked or changed");
+        }
+      }
     }
 
     return this.browserPage;

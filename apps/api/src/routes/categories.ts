@@ -207,8 +207,9 @@ export const categoryRoutes: FastifyPluginAsync = async (app) => {
           .from(categories)
           .where(
             and(
-              sql`${categories.slug} LIKE ${slug + '-%'}`,
-              eq(categories.isListingPage, true)
+              sql`(${categories.slug} LIKE ${slug + '-%'} OR ${categories.parentSlug} = ${slug})`,
+              eq(categories.isListingPage, true),
+              eq(categories.platform, platform)
             )
           );
 

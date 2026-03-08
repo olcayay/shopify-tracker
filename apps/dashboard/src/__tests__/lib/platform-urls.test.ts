@@ -5,6 +5,7 @@ import {
   buildExternalSearchUrl,
   buildExternalKeywordUrl,
   getPlatformName,
+  formatCategoryTitle,
 } from "@/lib/platform-urls";
 
 describe("buildExternalAppUrl", () => {
@@ -84,6 +85,24 @@ describe("buildExternalKeywordUrl", () => {
     expect(buildExternalKeywordUrl("shopify", "seo")).toBe(
       buildExternalSearchUrl("shopify", "seo")
     );
+  });
+});
+
+describe("formatCategoryTitle", () => {
+  it("returns title as-is for non-Canva platforms", () => {
+    expect(formatCategoryTitle("shopify", "marketing", "Marketing")).toBe("Marketing");
+  });
+
+  it("returns title as-is for Canva simple slugs", () => {
+    expect(formatCategoryTitle("canva", "project-management", "Project management")).toBe("Project management");
+  });
+
+  it("prepends parent for Canva compound slugs", () => {
+    expect(formatCategoryTitle("canva", "project-management--forms", "Forms")).toBe("Project management › Forms");
+  });
+
+  it("handles multi-word parent slugs", () => {
+    expect(formatCategoryTitle("canva", "video-and-animation--flipbooks", "Flipbooks")).toBe("Video and animation › Flipbooks");
   });
 });
 

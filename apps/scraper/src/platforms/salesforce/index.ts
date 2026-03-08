@@ -30,6 +30,8 @@ export class SalesforceModule implements PlatformModule {
     hasSimilarApps: true,
     hasAutoSuggestions: false,
     hasFeatureTaxonomy: false,
+    hasPricing: false,
+    hasLaunchedDate: false,
   };
 
   private httpClient: HttpClient;

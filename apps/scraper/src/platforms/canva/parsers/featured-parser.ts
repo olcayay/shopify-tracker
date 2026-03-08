@@ -91,7 +91,7 @@ function extractSectionApps(
 
   // Extract app IDs from the next ~5000 chars after the heading
   const section = html.substring(headingIndex, headingIndex + 5000);
-  const appIdPattern = /\/apps\/(AA[FG][A-Za-z0-9_-]+)/g;
+  const appIdPattern = /\/apps\/(AA[A-Za-z][A-Za-z0-9_-]+)/g;
   const sectionAppIds = new Set<string>();
 
   let match;

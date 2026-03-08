@@ -52,11 +52,11 @@ export function AppNav({
         ]
       : []),
     { href: `${base}/rankings`, label: "Rankings" },
-    { href: `${base}/reviews`, label: "Reviews" },
+    ...(caps.hasReviews ? [{ href: `${base}/reviews`, label: "Reviews" }] : []),
     { href: `${base}/changes`, label: "Changes" },
     ...(caps.hasSimilarApps ? [{ href: `${base}/similar`, label: "Similar" }] : []),
     ...(caps.hasFeaturedSections ? [{ href: `${base}/featured`, label: "Featured" }] : []),
-    { href: `${base}/ads`, label: "Ads" },
+    ...(caps.hasAdTracking ? [{ href: `${base}/ads`, label: "Ads" }] : []),
   ];
 
   return (

@@ -40,7 +40,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { LiveSearchTrigger } from "@/components/live-search-trigger";
-import { buildExternalAppUrl, buildExternalSearchUrl, getPlatformName } from "@/lib/platform-urls";
+import { buildExternalAppUrl, buildExternalSearchUrl, getPlatformName, formatCategoryTitle } from "@/lib/platform-urls";
 import { PLATFORMS, isPlatformId, type PlatformId } from "@appranks/shared";
 
 // ─── Types ───────────────────────────────────────────────────
@@ -1645,7 +1645,7 @@ function CategoryLandscape({
         <div key={cat.slug}>
           <div className="flex items-center justify-between mb-2">
             <Link href={`/${platform}/categories/${cat.slug}`} className="font-medium text-sm hover:underline">
-              {cat.title}
+              {formatCategoryTitle(platform as PlatformId, cat.slug, cat.title)}
             </Link>
             <span className="text-xs text-muted-foreground">
               {cat.competitorCount}/{cat.total} apps

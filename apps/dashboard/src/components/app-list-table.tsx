@@ -27,6 +27,7 @@ import { MomentumBadge } from "@/components/momentum-badge";
 import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 import type { ReviewVelocityMetrics } from "@/lib/api";
 import { PLATFORMS, isPlatformId, type PlatformId } from "@appranks/shared";
+import { formatCategoryTitle } from "@/lib/platform-urls";
 
 interface AppItem {
   slug: string;
@@ -521,7 +522,7 @@ export function AppListTable({
                                 href={`/${platform}/categories/${cat.slug}`}
                                 className="text-primary hover:underline"
                               >
-                                {cat.title}
+                                {formatCategoryTitle(platform as PlatformId, cat.slug, cat.title)}
                               </Link>
                             </div>
                           ))}

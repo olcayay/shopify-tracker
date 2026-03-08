@@ -2,6 +2,7 @@ import Link from "next/link";
 import { formatDateOnly } from "@/lib/format-date";
 import { getAppRankings } from "@/lib/api";
 import type { PlatformId } from "@appranks/shared";
+import { formatCategoryTitle } from "@/lib/platform-urls";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Table,
@@ -62,7 +63,7 @@ export default async function RankingsPage({
               data={rankings.categoryRankings.map((r: any) => ({
                 date: formatDateOnly(r.scrapedAt),
                 position: r.position,
-                label: r.categoryTitle || r.categorySlug,
+                label: formatCategoryTitle(platform as PlatformId, r.categorySlug, r.categoryTitle || r.categorySlug),
                 slug: r.categorySlug,
                 linkPrefix: `/${platform}/categories/`,
               }))}

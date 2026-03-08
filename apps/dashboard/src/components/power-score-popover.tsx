@@ -47,6 +47,7 @@ export function PowerScorePopover({
   momentumScore,
   position,
   totalApps,
+  hasReviews = true,
   children,
 }: {
   powerScore: number;
@@ -56,6 +57,7 @@ export function PowerScorePopover({
   momentumScore: number;
   position?: number | null;
   totalApps?: number | null;
+  hasReviews?: boolean;
   children: React.ReactNode;
 }) {
   return (
@@ -94,10 +96,10 @@ export function PowerScorePopover({
 
           {/* Score breakdown */}
           <div className="space-y-1.5 mb-3">
-            <ScoreBar label="Rating" value={ratingScore} weight={0.35} />
-            <ScoreBar label="Review Auth." value={reviewScore} weight={0.25} />
+            {hasReviews && <ScoreBar label="Rating" value={ratingScore} weight={0.35} />}
+            {hasReviews && <ScoreBar label="Review Auth." value={reviewScore} weight={0.25} />}
             <ScoreBar label="Category Rank" value={categoryScore} weight={0.25} />
-            <ScoreBar label="Momentum" value={momentumScore} weight={0.15} />
+            {hasReviews && <ScoreBar label="Momentum" value={momentumScore} weight={0.15} />}
           </div>
 
           {/* Footer */}
@@ -126,10 +128,12 @@ interface PowerCategory {
 export function WeightedPowerPopover({
   weightedPowerScore,
   powerCategories,
+  hasReviews = true,
   children,
 }: {
   weightedPowerScore: number;
   powerCategories: PowerCategory[];
+  hasReviews?: boolean;
   children: React.ReactNode;
 }) {
   const totalAppCount = powerCategories.reduce((sum, c) => sum + c.appCount, 0);
@@ -191,10 +195,10 @@ export function WeightedPowerPopover({
                   </div>
                   {/* Score bars */}
                   <div className="space-y-1 pl-1">
-                    <ScoreBar label="Rating" value={cat.ratingScore} weight={0.35} />
-                    <ScoreBar label="Review Auth." value={cat.reviewScore} weight={0.25} />
+                    {hasReviews && <ScoreBar label="Rating" value={cat.ratingScore} weight={0.35} />}
+                    {hasReviews && <ScoreBar label="Review Auth." value={cat.reviewScore} weight={0.25} />}
                     <ScoreBar label="Category Rank" value={cat.categoryScore} weight={0.25} />
-                    <ScoreBar label="Momentum" value={cat.momentumScore} weight={0.15} />
+                    {hasReviews && <ScoreBar label="Momentum" value={cat.momentumScore} weight={0.15} />}
                   </div>
                 </div>
               );
