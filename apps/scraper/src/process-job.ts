@@ -32,7 +32,7 @@ export function initWorkerDeps() {
 }
 
 export async function runMigrations(db: ReturnType<typeof createDb>, label?: string) {
-  const migrationsFolder = "packages/db/src/migrations";
+  const migrationsFolder = new URL("../../../packages/db/src/migrations", import.meta.url).pathname;
   const ctx = label || "worker";
   log.info(`[${ctx}] running database migrations`, { migrationsFolder });
   try {
