@@ -109,7 +109,7 @@ export function parseCanvaCategoryPage(
 
   // Convert to NormalizedCategoryApp with positions
   const apps: NormalizedCategoryApp[] = filteredApps.map((app, i) => ({
-    slug: app.urlSlug ? `${app.id}/${app.urlSlug}` : app.id,
+    slug: app.urlSlug ? `${app.id}--${app.urlSlug}` : app.id,
     name: app.name,
     shortDescription: app.shortDescription,
     averageRating: 0,

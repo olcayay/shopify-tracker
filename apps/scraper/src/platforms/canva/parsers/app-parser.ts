@@ -13,8 +13,8 @@ const log = createLogger("canva-app-parser");
  *   "D": short description
  *   "E": tagline
  *   "F": developer name
- *   "G": { "A": icon URL }
- *   "H": full description
+ *   "G": { "A": icon URL, "B": width, "C": height }
+ *   "H": full description (may be empty)
  *   "I": topic tags array (e.g. ["marketplace_topic.ai_audio", ...])
  */
 export interface CanvaEmbeddedApp {
@@ -32,97 +32,65 @@ export interface CanvaEmbeddedApp {
 /**
  * Extract all apps from the Canva /apps page HTML.
  *
- * Uses regex to find the minified JSON entries embedded in the page.
+ * Finds each JSON object starting with {"A":"AA...","B":"SDK_APP",...}
+ * and parses it as JSON for reliable field extraction.
  */
 export function extractCanvaApps(html: string): CanvaEmbeddedApp[] {
   const apps: CanvaEmbeddedApp[] = [];
   const seen = new Set<string>();
 
-  // Pattern: "A":"AAxxxx","B":"SDK_APP","C":"Name","D":"Desc","E":"Tagline","F":"Dev","G":{"A":"iconUrl"},"H":"FullDesc","I":[topics]
-  // The full pattern with all fields
-  const fullPattern =
-    /"A":"(AA[FG][^"]+)","B":"SDK_APP","C":"([^"]+)","D":"([^"]*)","E":"([^"]*)","F":"([^"]*)","G":\{"A":"([^"]*)"\},"H":"([^"]*)","I":\[([^\]]*)\]/g;
+  // Find each SDK_APP entry by locating the start pattern, then extracting the full JSON object
+  const startPattern = /\{"A":"(AA[FG][^"]+)","B":"SDK_APP"/g;
 
   let match;
-  while ((match = fullPattern.exec(html)) !== null) {
-    const [, id, name, shortDesc, tagline, developer, iconUrl, fullDesc, topicsRaw] = match;
+  while ((match = startPattern.exec(html)) !== null) {
+    const id = match[1];
     if (seen.has(id)) continue;
-    seen.add(id);
 
-    const topics = topicsRaw
-      ? topicsRaw
-          .replace(/"/g, "")
-          .split(",")
-          .map((t) => t.trim())
-          .filter((t) => t.startsWith("marketplace_topic."))
-      : [];
+    // Extract the full JSON object by tracking brace depth
+    const objStart = match.index;
+    let depth = 0;
+    let objEnd = objStart;
+    for (let i = objStart; i < html.length && i < objStart + 3000; i++) {
+      if (html[i] === "{") depth++;
+      if (html[i] === "}") {
+        depth--;
+        if (depth === 0) { objEnd = i + 1; break; }
+      }
+    }
 
-    // Derive URL slug from app links in the page
-    const slugMatch = html.match(new RegExp(`/apps/${id}/([a-z0-9-]+)`));
-    const urlSlug = slugMatch ? slugMatch[1] : name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+    if (objEnd <= objStart) continue;
 
-    apps.push({
-      id,
-      name: unescapeJson(name),
-      shortDescription: unescapeJson(shortDesc),
-      tagline: unescapeJson(tagline),
-      developer: unescapeJson(developer),
-      iconUrl,
-      fullDescription: unescapeJson(fullDesc),
-      topics,
-      urlSlug,
-    });
-  }
+    try {
+      const obj = JSON.parse(html.substring(objStart, objEnd));
+      seen.add(id);
 
-  // Fallback: simpler pattern for apps that may have different field ordering
-  const simplePattern =
-    /"A":"(AA[FG][^"]+)","B":"SDK_APP","C":"([^"]+)","D":"([^"]*)","E":"([^"]*)","F":"([^"]*)"/g;
+      const topics = (obj.I || []).filter((t: string) => t.startsWith("marketplace_topic."));
 
-  while ((match = simplePattern.exec(html)) !== null) {
-    const [, id, name, shortDesc, tagline, developer] = match;
-    if (seen.has(id)) continue;
-    seen.add(id);
+      // Derive URL slug from app links in the page
+      const slugMatch = html.match(new RegExp(`/apps/${id}/([a-z0-9-]+)`));
+      const name = obj.C || "";
+      const urlSlug = slugMatch ? slugMatch[1] : name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
 
-    // Try to extract icon and topics nearby in the HTML
-    const iconMatch = html.substring(match.index, match.index + 2000).match(/"G":\{"A":"([^"]*)"\}/);
-    const topicsMatch = html.substring(match.index, match.index + 2000).match(/"I":\[([^\]]*)\]/);
-    const descMatch = html.substring(match.index, match.index + 2000).match(/"H":"([^"]*)"/);
-
-    const topics = topicsMatch
-      ? topicsMatch[1]
-          .replace(/"/g, "")
-          .split(",")
-          .map((t) => t.trim())
-          .filter((t) => t.startsWith("marketplace_topic."))
-      : [];
-
-    const slugMatch = html.match(new RegExp(`/apps/${id}/([a-z0-9-]+)`));
-    const urlSlug = slugMatch ? slugMatch[1] : name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
-
-    apps.push({
-      id,
-      name: unescapeJson(name),
-      shortDescription: unescapeJson(shortDesc),
-      tagline: unescapeJson(tagline),
-      developer: unescapeJson(developer),
-      iconUrl: iconMatch ? iconMatch[1] : "",
-      fullDescription: descMatch ? unescapeJson(descMatch[1]) : "",
-      topics,
-      urlSlug,
-    });
+      apps.push({
+        id,
+        name,
+        shortDescription: obj.D || "",
+        tagline: obj.E || "",
+        developer: obj.F || "",
+        iconUrl: obj.G?.A || "",
+        fullDescription: obj.H || "",
+        topics,
+        urlSlug,
+      });
+    } catch {
+      // JSON parse failed — skip this entry
+      log.warn("failed to parse canva app entry", { id });
+    }
   }
 
   log.info("extracted canva apps from embedded JSON", { count: apps.length });
   return apps;
-}
-
-/** Unescape JSON string escape sequences */
-function unescapeJson(s: string): string {
-  return s
-    .replace(/\\'/g, "'")
-    .replace(/\\"/g, '"')
-    .replace(/\\n/g, "\n")
-    .replace(/\\\\/g, "\\");
 }
 
 /**
