@@ -88,7 +88,7 @@ export function AppListTable({
   const { platform } = useParams();
   const caps = isPlatformId(platform as string) ? PLATFORMS[platform as PlatformId] : PLATFORMS.shopify;
   const { formatDateOnly } = useFormatDate();
-  const [sortKey, setSortKey] = useState<SortKey>("rating_count");
+  const [sortKey, setSortKey] = useState<SortKey>(caps.hasReviews ? "rating_count" : "name");
   const [sortDir, setSortDir] = useState<SortDir>("desc");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
   const [page, setPage] = useState(1);
@@ -280,18 +280,22 @@ export function AppListTable({
               >
                 App <SortIcon col="name" />
               </TableHead>
-              <TableHead
-                className="cursor-pointer select-none"
-                onClick={() => toggleSort("average_rating")}
-              >
-                Rating <SortIcon col="average_rating" />
-              </TableHead>
-              <TableHead
-                className="cursor-pointer select-none"
-                onClick={() => toggleSort("rating_count")}
-              >
-                Reviews <SortIcon col="rating_count" />
-              </TableHead>
+              {caps.hasReviews && (
+                <TableHead
+                  className="cursor-pointer select-none"
+                  onClick={() => toggleSort("average_rating")}
+                >
+                  Rating <SortIcon col="average_rating" />
+                </TableHead>
+              )}
+              {caps.hasReviews && (
+                <TableHead
+                  className="cursor-pointer select-none"
+                  onClick={() => toggleSort("rating_count")}
+                >
+                  Reviews <SortIcon col="rating_count" />
+                </TableHead>
+              )}
               {reviewVelocity && (
                 <TableHead
                   className="cursor-pointer select-none"
@@ -324,13 +328,15 @@ export function AppListTable({
                   <Tooltip><TooltipTrigger asChild><span>Momentum <SortIcon col="momentum" /></span></TooltipTrigger><TooltipContent>Review growth trend: compares recent pace (7d) vs longer-term pace (30d/90d)</TooltipContent></Tooltip>
                 </TableHead>
               )}
-              <TableHead>Pricing</TableHead>
-              <TableHead
-                className="cursor-pointer select-none"
-                onClick={() => toggleSort("min_paid")}
-              >
-                <Tooltip><TooltipTrigger asChild><span>Min. Paid <SortIcon col="min_paid" /></span></TooltipTrigger><TooltipContent>Lowest paid plan price per month</TooltipContent></Tooltip>
-              </TableHead>
+              {caps.hasPricing && <TableHead>Pricing</TableHead>}
+              {caps.hasPricing && (
+                <TableHead
+                  className="cursor-pointer select-none"
+                  onClick={() => toggleSort("min_paid")}
+                >
+                  <Tooltip><TooltipTrigger asChild><span>Min. Paid <SortIcon col="min_paid" /></span></TooltipTrigger><TooltipContent>Lowest paid plan price per month</TooltipContent></Tooltip>
+                </TableHead>
+              )}
               <TableHead
                 className="cursor-pointer select-none"
                 onClick={() => toggleSort("cat_rank")}
@@ -353,18 +359,22 @@ export function AppListTable({
                   <Tooltip><TooltipTrigger asChild><span>Featured <SortIcon col="featured" /></span></TooltipTrigger><TooltipContent>Number of featured sections this app appears in</TooltipContent></Tooltip>
                 </TableHead>
               )}
-              <TableHead
-                className="cursor-pointer select-none"
-                onClick={() => toggleSort("ads")}
-              >
-                <Tooltip><TooltipTrigger asChild><span>Ads <SortIcon col="ads" /></span></TooltipTrigger><TooltipContent>Number of keywords this app is running ads for</TooltipContent></Tooltip>
-              </TableHead>
-              <TableHead
-                className="cursor-pointer select-none"
-                onClick={() => toggleSort("launched_date")}
-              >
-                Launched <SortIcon col="launched_date" />
-              </TableHead>
+              {caps.hasAdTracking && (
+                <TableHead
+                  className="cursor-pointer select-none"
+                  onClick={() => toggleSort("ads")}
+                >
+                  <Tooltip><TooltipTrigger asChild><span>Ads <SortIcon col="ads" /></span></TooltipTrigger><TooltipContent>Number of keywords this app is running ads for</TooltipContent></Tooltip>
+                </TableHead>
+              )}
+              {caps.hasLaunchedDate && (
+                <TableHead
+                  className="cursor-pointer select-none"
+                  onClick={() => toggleSort("launched_date")}
+                >
+                  Launched <SortIcon col="launched_date" />
+                </TableHead>
+              )}
               <TableHead
                 className="cursor-pointer select-none"
                 onClick={() => toggleSort("last_change")}
@@ -435,23 +445,27 @@ export function AppListTable({
                         </div>
                       </div>
                     </TableCell>
-                    <TableCell>
-                      {app.average_rating != null
-                        ? Number(app.average_rating).toFixed(1)
-                        : "\u2014"}
-                    </TableCell>
-                    <TableCell>
-                      {app.rating_count != null ? (
-                        <Link
-                          href={`/${platform}/apps/${app.slug}#reviews`}
-                          className="text-primary hover:underline"
-                        >
-                          {Number(app.rating_count).toLocaleString()}
-                        </Link>
-                      ) : (
-                        "\u2014"
-                      )}
-                    </TableCell>
+                    {caps.hasReviews && (
+                      <TableCell>
+                        {app.average_rating != null
+                          ? Number(app.average_rating).toFixed(1)
+                          : "\u2014"}
+                      </TableCell>
+                    )}
+                    {caps.hasReviews && (
+                      <TableCell>
+                        {app.rating_count != null ? (
+                          <Link
+                            href={`/${platform}/apps/${app.slug}#reviews`}
+                            className="text-primary hover:underline"
+                          >
+                            {Number(app.rating_count).toLocaleString()}
+                          </Link>
+                        ) : (
+                          "\u2014"
+                        )}
+                      </TableCell>
+                    )}
                     {reviewVelocity && (
                       <TableCell className="text-sm">
                         <VelocityCell value={reviewVelocity[app.slug]?.v7d} />
@@ -472,23 +486,27 @@ export function AppListTable({
                         <MomentumBadge momentum={reviewVelocity[app.slug]?.momentum} />
                       </TableCell>
                     )}
-                    <TableCell className="text-sm">
-                      {app.pricing ?? "\u2014"}
-                    </TableCell>
-                    <TableCell className="text-sm">
-                      {minPaidPrices[app.slug] != null ? (
-                        <Link
-                          href={`/${platform}/apps/${app.slug}/details#pricing-plans`}
-                          className="text-primary hover:underline"
-                        >
-                          {minPaidPrices[app.slug] === 0
-                            ? "Free"
-                            : `$${minPaidPrices[app.slug]}/mo`}
-                        </Link>
-                      ) : (
-                        "\u2014"
-                      )}
-                    </TableCell>
+                    {caps.hasPricing && (
+                      <TableCell className="text-sm">
+                        {app.pricing ?? "\u2014"}
+                      </TableCell>
+                    )}
+                    {caps.hasPricing && (
+                      <TableCell className="text-sm">
+                        {minPaidPrices[app.slug] != null ? (
+                          <Link
+                            href={`/${platform}/apps/${app.slug}/details#pricing-plans`}
+                            className="text-primary hover:underline"
+                          >
+                            {minPaidPrices[app.slug] === 0
+                              ? "Free"
+                              : `$${minPaidPrices[app.slug]}/mo`}
+                          </Link>
+                        ) : (
+                          "\u2014"
+                        )}
+                      </TableCell>
+                    )}
                     <TableCell className="text-sm">
                       {cats?.length ? (
                         <div className="flex flex-col gap-0.5">
@@ -540,23 +558,27 @@ export function AppListTable({
                         )}
                       </TableCell>
                     )}
-                    <TableCell className="text-sm">
-                      {adsCount > 0 ? (
-                        <Link
-                          href={`/${platform}/apps/${app.slug}/rankings`}
-                          className="text-primary hover:underline"
-                        >
-                          {adsCount}
-                        </Link>
-                      ) : (
-                        "\u2014"
-                      )}
-                    </TableCell>
-                    <TableCell className="text-sm text-muted-foreground">
-                      {launchedDates[app.slug]
-                        ? formatDateOnly(launchedDates[app.slug]!)
-                        : "\u2014"}
-                    </TableCell>
+                    {caps.hasAdTracking && (
+                      <TableCell className="text-sm">
+                        {adsCount > 0 ? (
+                          <Link
+                            href={`/${platform}/apps/${app.slug}/rankings`}
+                            className="text-primary hover:underline"
+                          >
+                            {adsCount}
+                          </Link>
+                        ) : (
+                          "\u2014"
+                        )}
+                      </TableCell>
+                    )}
+                    {caps.hasLaunchedDate && (
+                      <TableCell className="text-sm text-muted-foreground">
+                        {launchedDates[app.slug]
+                          ? formatDateOnly(launchedDates[app.slug]!)
+                          : "\u2014"}
+                      </TableCell>
+                    )}
                     <TableCell className="text-sm">
                       {lastChanges[app.slug] ? (
                         <Link

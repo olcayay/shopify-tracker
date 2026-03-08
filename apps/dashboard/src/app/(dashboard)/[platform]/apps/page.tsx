@@ -20,6 +20,7 @@ import { ConfirmModal } from "@/components/confirm-modal";
 import { AdminScraperTrigger } from "@/components/admin-scraper-trigger";
 import { AppSearchBar } from "@/components/app-search-bar";
 import { TableSkeleton } from "@/components/skeletons";
+import { PLATFORMS, isPlatformId, type PlatformId } from "@appranks/shared";
 
 type SortKey = "name" | "rating" | "reviews" | "minPaidPrice" | "lastChangeAt" | "launchedDate" | "competitorCount" | "keywordCount";
 type SortDir = "asc" | "desc";
@@ -40,6 +41,7 @@ export default function AppsPage() {
   const [sortKey, setSortKey] = useState<SortKey>("name");
   const [sortDir, setSortDir] = useState<SortDir>("asc");
 
+  const caps = isPlatformId(platform as string) ? PLATFORMS[platform as PlatformId] : PLATFORMS.shopify;
   const canEdit = user?.role === "owner" || user?.role === "editor";
 
   const trackedSlugs = useMemo(() => new Set(apps.map((a) => a.slug)), [apps]);
@@ -190,12 +192,16 @@ export default function AppsPage() {
                   <TableHead className="cursor-pointer select-none max-w-[260px]" onClick={() => toggleSort("name")}>
                     App <SortIcon col="name" />
                   </TableHead>
-                  <TableHead className="cursor-pointer select-none" onClick={() => toggleSort("rating")}>
-                    Rating <SortIcon col="rating" />
-                  </TableHead>
-                  <TableHead className="cursor-pointer select-none" onClick={() => toggleSort("reviews")}>
-                    Reviews <SortIcon col="reviews" />
-                  </TableHead>
+                  {caps.hasReviews && (
+                    <TableHead className="cursor-pointer select-none" onClick={() => toggleSort("rating")}>
+                      Rating <SortIcon col="rating" />
+                    </TableHead>
+                  )}
+                  {caps.hasReviews && (
+                    <TableHead className="cursor-pointer select-none" onClick={() => toggleSort("reviews")}>
+                      Reviews <SortIcon col="reviews" />
+                    </TableHead>
+                  )}
                   <TableHead className="cursor-pointer select-none" onClick={() => toggleSort("competitorCount")}>
                     Competitors <SortIcon col="competitorCount" />
                   </TableHead>
@@ -203,16 +209,20 @@ export default function AppsPage() {
                     Keywords <SortIcon col="keywordCount" />
                   </TableHead>
                   <TableHead>Categories</TableHead>
-                  <TableHead>Pricing</TableHead>
-                  <TableHead className="cursor-pointer select-none" onClick={() => toggleSort("minPaidPrice")}>
-                    Min. Paid <SortIcon col="minPaidPrice" />
-                  </TableHead>
+                  {caps.hasPricing && <TableHead>Pricing</TableHead>}
+                  {caps.hasPricing && (
+                    <TableHead className="cursor-pointer select-none" onClick={() => toggleSort("minPaidPrice")}>
+                      Min. Paid <SortIcon col="minPaidPrice" />
+                    </TableHead>
+                  )}
                   <TableHead className="cursor-pointer select-none" onClick={() => toggleSort("lastChangeAt")}>
                     Last Change <SortIcon col="lastChangeAt" />
                   </TableHead>
-                  <TableHead className="cursor-pointer select-none" onClick={() => toggleSort("launchedDate")}>
-                    Launched <SortIcon col="launchedDate" />
-                  </TableHead>
+                  {caps.hasLaunchedDate && (
+                    <TableHead className="cursor-pointer select-none" onClick={() => toggleSort("launchedDate")}>
+                      Launched <SortIcon col="launchedDate" />
+                    </TableHead>
+                  )}
                   {canEdit && <TableHead className="w-12" />}
                 </TableRow>
               </TableHeader>
@@ -237,16 +247,20 @@ export default function AppsPage() {
                         </div>
                       </div>
                     </TableCell>
-                    <TableCell>
-                      {app.latestSnapshot?.averageRating ?? "\u2014"}
-                    </TableCell>
-                    <TableCell>
-                      {app.latestSnapshot?.ratingCount != null ? (
-                        <Link href={`/${platform}/apps/${app.slug}/reviews`} className="text-primary hover:underline">
-                          {app.latestSnapshot.ratingCount}
-                        </Link>
-                      ) : "\u2014"}
-                    </TableCell>
+                    {caps.hasReviews && (
+                      <TableCell>
+                        {app.latestSnapshot?.averageRating ?? "\u2014"}
+                      </TableCell>
+                    )}
+                    {caps.hasReviews && (
+                      <TableCell>
+                        {app.latestSnapshot?.ratingCount != null ? (
+                          <Link href={`/${platform}/apps/${app.slug}/reviews`} className="text-primary hover:underline">
+                            {app.latestSnapshot.ratingCount}
+                          </Link>
+                        ) : "\u2014"}
+                      </TableCell>
+                    )}
                     <TableCell className="text-sm">
                       {app.competitorCount ? (
                         <Link href={`/${platform}/apps/${app.slug}/competitors`} className="text-primary hover:underline">
@@ -277,16 +291,20 @@ export default function AppsPage() {
                         </div>
                       ) : "\u2014"}
                     </TableCell>
-                    <TableCell className="text-sm">
-                      {app.latestSnapshot?.pricing ?? "\u2014"}
-                    </TableCell>
-                    <TableCell className="text-sm">
-                      {app.minPaidPrice != null ? (
-                        <Link href={`/${platform}/apps/${app.slug}/details#pricing-plans`} className="text-primary hover:underline">
-                          ${app.minPaidPrice}/mo
-                        </Link>
-                      ) : "\u2014"}
-                    </TableCell>
+                    {caps.hasPricing && (
+                      <TableCell className="text-sm">
+                        {app.latestSnapshot?.pricing ?? "\u2014"}
+                      </TableCell>
+                    )}
+                    {caps.hasPricing && (
+                      <TableCell className="text-sm">
+                        {app.minPaidPrice != null ? (
+                          <Link href={`/${platform}/apps/${app.slug}/details#pricing-plans`} className="text-primary hover:underline">
+                            ${app.minPaidPrice}/mo
+                          </Link>
+                        ) : "\u2014"}
+                      </TableCell>
+                    )}
                     <TableCell className="text-sm">
                       {app.lastChangeAt ? (
                         <Link href={`/${platform}/apps/${app.slug}/changes`} className="text-primary hover:underline">
@@ -294,11 +312,13 @@ export default function AppsPage() {
                         </Link>
                       ) : "\u2014"}
                     </TableCell>
-                    <TableCell className="text-sm text-muted-foreground">
-                      {app.launchedDate
-                        ? formatDateOnly(app.launchedDate)
-                        : "\u2014"}
-                    </TableCell>
+                    {caps.hasLaunchedDate && (
+                      <TableCell className="text-sm text-muted-foreground">
+                        {app.launchedDate
+                          ? formatDateOnly(app.launchedDate)
+                          : "\u2014"}
+                      </TableCell>
+                    )}
                     {canEdit && (
                       <TableCell>
                         <Button

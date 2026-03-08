@@ -241,24 +241,30 @@ export function KeywordAppResults({
               >
                 App <SortIcon col="app_name" />
               </TableHead>
-              <TableHead
-                className="cursor-pointer select-none"
-                onClick={() => toggleSort("average_rating")}
-              >
-                Rating <SortIcon col="average_rating" />
-              </TableHead>
-              <TableHead
-                className="cursor-pointer select-none"
-                onClick={() => toggleSort("rating_count")}
-              >
-                Reviews <SortIcon col="rating_count" />
-              </TableHead>
-              <TableHead
-                className="cursor-pointer select-none"
-                onClick={() => toggleSort("min_paid")}
-              >
-                Min. Paid <SortIcon col="min_paid" />
-              </TableHead>
+              {caps.hasReviews && (
+                <TableHead
+                  className="cursor-pointer select-none"
+                  onClick={() => toggleSort("average_rating")}
+                >
+                  Rating <SortIcon col="average_rating" />
+                </TableHead>
+              )}
+              {caps.hasReviews && (
+                <TableHead
+                  className="cursor-pointer select-none"
+                  onClick={() => toggleSort("rating_count")}
+                >
+                  Reviews <SortIcon col="rating_count" />
+                </TableHead>
+              )}
+              {caps.hasPricing && (
+                <TableHead
+                  className="cursor-pointer select-none"
+                  onClick={() => toggleSort("min_paid")}
+                >
+                  Min. Paid <SortIcon col="min_paid" />
+                </TableHead>
+              )}
               {caps.hasSimilarApps && (
                 <TableHead
                   className="cursor-pointer select-none"
@@ -269,12 +275,14 @@ export function KeywordAppResults({
                 </TableHead>
               )}
               <TableHead>Category</TableHead>
-              <TableHead
-                className="cursor-pointer select-none"
-                onClick={() => toggleSort("launched_date")}
-              >
-                Launched <SortIcon col="launched_date" />
-              </TableHead>
+              {caps.hasLaunchedDate && (
+                <TableHead
+                  className="cursor-pointer select-none"
+                  onClick={() => toggleSort("launched_date")}
+                >
+                  Launched <SortIcon col="launched_date" />
+                </TableHead>
+              )}
               <TableHead>Last Change</TableHead>
               <TableHead className="w-16">Change</TableHead>
               <TableHead className="w-10" />
@@ -343,25 +351,31 @@ export function KeywordAppResults({
                         </div>
                       </div>
                     </TableCell>
-                    <TableCell>
-                      {app.average_rating?.toFixed(1) ?? "\u2014"}
-                    </TableCell>
-                    <TableCell>
-                      {app.rating_count != null ? (
-                        <Link href={`/${platform}/apps/${app.app_slug}/reviews`} className="text-primary hover:underline">
-                          {app.rating_count.toLocaleString()}
-                        </Link>
-                      ) : "\u2014"}
-                    </TableCell>
-                    <TableCell className="text-sm">
-                      {minPaidPrices?.[app.app_slug] != null ? (
-                        <Link href={`/${platform}/apps/${app.app_slug}/details#pricing-plans`} className="text-primary hover:underline">
-                          {minPaidPrices[app.app_slug] === 0
-                            ? "Free"
-                            : `$${minPaidPrices[app.app_slug]}/mo`}
-                        </Link>
-                      ) : "\u2014"}
-                    </TableCell>
+                    {caps.hasReviews && (
+                      <TableCell>
+                        {app.average_rating?.toFixed(1) ?? "\u2014"}
+                      </TableCell>
+                    )}
+                    {caps.hasReviews && (
+                      <TableCell>
+                        {app.rating_count != null ? (
+                          <Link href={`/${platform}/apps/${app.app_slug}/reviews`} className="text-primary hover:underline">
+                            {app.rating_count.toLocaleString()}
+                          </Link>
+                        ) : "\u2014"}
+                      </TableCell>
+                    )}
+                    {caps.hasPricing && (
+                      <TableCell className="text-sm">
+                        {minPaidPrices?.[app.app_slug] != null ? (
+                          <Link href={`/${platform}/apps/${app.app_slug}/details#pricing-plans`} className="text-primary hover:underline">
+                            {minPaidPrices[app.app_slug] === 0
+                              ? "Free"
+                              : `$${minPaidPrices[app.app_slug]}/mo`}
+                          </Link>
+                        ) : "\u2014"}
+                      </TableCell>
+                    )}
                     {caps.hasSimilarApps && (
                       <TableCell className="text-sm">
                         {reverseSimilarCounts?.[app.app_slug] ? (
@@ -390,11 +404,13 @@ export function KeywordAppResults({
                         </div>
                       ) : "\u2014"}
                     </TableCell>
-                    <TableCell className="text-sm text-muted-foreground">
-                      {launchedDates?.[app.app_slug]
-                        ? formatDateOnly(launchedDates[app.app_slug]!)
-                        : "\u2014"}
-                    </TableCell>
+                    {caps.hasLaunchedDate && (
+                      <TableCell className="text-sm text-muted-foreground">
+                        {launchedDates?.[app.app_slug]
+                          ? formatDateOnly(launchedDates[app.app_slug]!)
+                          : "\u2014"}
+                      </TableCell>
+                    )}
                     <TableCell className="text-sm">
                       {lastChanges?.[app.app_slug] ? (
                         <Link href={`/${platform}/apps/${app.app_slug}/changes`} className="text-primary hover:underline">

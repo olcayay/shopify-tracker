@@ -396,8 +396,8 @@ export default function OverviewPage() {
                 <TableHeader>
                   <TableRow>
                     <TableHead>App</TableHead>
-                    <TableHead>Rating</TableHead>
-                    <TableHead>Reviews</TableHead>
+                    {caps.hasReviews && <TableHead>Rating</TableHead>}
+                    {caps.hasReviews && <TableHead>Reviews</TableHead>}
                     <TableHead>Competitors</TableHead>
                     <TableHead>Keywords</TableHead>
                     <TableHead>Ranked</TableHead>
@@ -424,16 +424,20 @@ export default function OverviewPage() {
                             <AppBadgeIcon platform={platform as PlatformId} isBuiltForShopify={app.isBuiltForShopify} badges={app.badges} />
                           </div>
                         </TableCell>
-                        <TableCell>
-                          {app.latestSnapshot?.averageRating ?? "\u2014"}
-                        </TableCell>
-                        <TableCell>
-                          {app.latestSnapshot?.ratingCount != null ? (
-                            <Link href={`/${platform}/apps/${app.slug}/reviews`} className="text-primary hover:underline">
-                              {app.latestSnapshot.ratingCount}
-                            </Link>
-                          ) : "\u2014"}
-                        </TableCell>
+                        {caps.hasReviews && (
+                          <TableCell>
+                            {app.latestSnapshot?.averageRating ?? "\u2014"}
+                          </TableCell>
+                        )}
+                        {caps.hasReviews && (
+                          <TableCell>
+                            {app.latestSnapshot?.ratingCount != null ? (
+                              <Link href={`/${platform}/apps/${app.slug}/reviews`} className="text-primary hover:underline">
+                                {app.latestSnapshot.ratingCount}
+                              </Link>
+                            ) : "\u2014"}
+                          </TableCell>
+                        )}
                         <TableCell>
                           {app.competitorCount ? (
                             <Link href={`/${platform}/apps/${app.slug}/competitors`} className="text-primary hover:underline">
@@ -594,8 +598,8 @@ export default function OverviewPage() {
                 <TableHeader>
                   <TableRow>
                     <TableHead>App</TableHead>
-                    <TableHead>Rating</TableHead>
-                    <TableHead>Reviews</TableHead>
+                    {caps.hasReviews && <TableHead>Rating</TableHead>}
+                    {caps.hasReviews && <TableHead>Reviews</TableHead>}
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -617,12 +621,16 @@ export default function OverviewPage() {
                             <AppBadgeIcon platform={platform as PlatformId} isBuiltForShopify={c.isBuiltForShopify} badges={c.badges} />
                           </div>
                         </TableCell>
-                        <TableCell>
-                          {c.latestSnapshot?.averageRating ?? "\u2014"}
-                        </TableCell>
-                        <TableCell>
-                          {c.latestSnapshot?.ratingCount ?? "\u2014"}
-                        </TableCell>
+                        {caps.hasReviews && (
+                          <TableCell>
+                            {c.latestSnapshot?.averageRating ?? "\u2014"}
+                          </TableCell>
+                        )}
+                        {caps.hasReviews && (
+                          <TableCell>
+                            {c.latestSnapshot?.ratingCount ?? "\u2014"}
+                          </TableCell>
+                        )}
                       </TableRow>
                     ))}
                 </TableBody>

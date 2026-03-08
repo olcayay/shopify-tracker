@@ -10,6 +10,8 @@ export const PLATFORMS = {
     hasSimilarApps: true,
     hasAutoSuggestions: true,
     hasFeatureTaxonomy: true,
+    hasPricing: true,
+    hasLaunchedDate: true,
     pageSize: 24,
   },
   salesforce: {
@@ -23,6 +25,8 @@ export const PLATFORMS = {
     hasSimilarApps: false,
     hasAutoSuggestions: false,
     hasFeatureTaxonomy: false,
+    hasPricing: true,
+    hasLaunchedDate: true,
     pageSize: 12,
   },
   canva: {
@@ -31,11 +35,13 @@ export const PLATFORMS = {
     baseUrl: "https://www.canva.com/apps",
     hasKeywordSearch: true,
     hasReviews: false,
-    hasFeaturedSections: true,
+    hasFeaturedSections: false,
     hasAdTracking: false,
     hasSimilarApps: false,
     hasAutoSuggestions: true,
     hasFeatureTaxonomy: false,
+    hasPricing: false,
+    hasLaunchedDate: false,
     pageSize: 30,
   },
 } as const;
@@ -44,7 +50,7 @@ export type PlatformId = keyof typeof PLATFORMS;
 export type PlatformConfig = (typeof PLATFORMS)[PlatformId];
 export type PlatformCapabilities = Pick<PlatformConfig,
   "hasKeywordSearch" | "hasReviews" | "hasFeaturedSections" |
-  "hasAdTracking" | "hasSimilarApps" | "hasAutoSuggestions" | "hasFeatureTaxonomy"
+  "hasAdTracking" | "hasSimilarApps" | "hasAutoSuggestions" | "hasFeatureTaxonomy" | "hasPricing" | "hasLaunchedDate"
 >;
 
 export const PLATFORM_IDS = Object.keys(PLATFORMS) as PlatformId[];

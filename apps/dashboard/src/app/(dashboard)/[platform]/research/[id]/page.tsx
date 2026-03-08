@@ -538,6 +538,8 @@ function StatCard({ emoji, title, gradient, children }: {
 }
 
 function SummaryCards({ data }: { data: ResearchData }) {
+  const { platform } = useParams();
+  const caps = isPlatformId(platform as string) ? PLATFORMS[platform as PlatformId] : PLATFORMS.shopify;
   const hasCompetitors = data.competitors.length >= 2;
   const hasOpportunities = data.opportunities.length > 0;
   const hasKeywords = data.keywords.length > 0;
@@ -570,7 +572,7 @@ function SummaryCards({ data }: { data: ResearchData }) {
       {/* Card 1: Market Overview */}
       {hasCompetitors && (
         <StatCard emoji="📊" title="Market Overview" gradient="bg-gradient-to-r from-blue-500 to-cyan-400">
-          {avgRating != null && (
+          {caps.hasReviews && avgRating != null && (
             <SummaryLink href="section-competitors">
               <span className="text-muted-foreground flex items-center gap-1">
                 <Star className="h-3 w-3 fill-yellow-400 text-yellow-400" />{avgRating.toFixed(1)} avg rating
@@ -811,6 +813,7 @@ function CompetitorSuggestions({
   onAdd: (slug: string) => Promise<void>;
 }) {
   const { platform } = useParams();
+  const caps = isPlatformId(platform as string) ? PLATFORMS[platform as PlatformId] : PLATFORMS.shopify;
   const [addingSlug, setAddingSlug] = useState<string | null>(null);
   const [expanded, setExpanded] = useState(false);
   const INITIAL_COUNT = 10;
@@ -840,13 +843,13 @@ function CompetitorSuggestions({
             <div className="min-w-0">
               <Link href={`/${platform}/apps/${s.slug}`} className="font-medium text-sm truncate hover:underline block">{s.name}</Link>
               <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                {s.averageRating != null && (
+                {caps.hasReviews && s.averageRating != null && (
                   <span className="flex items-center gap-0.5">
                     <Star className="h-3 w-3 fill-yellow-500 text-yellow-500" />
                     {s.averageRating.toFixed(1)}
                   </span>
                 )}
-                {s.ratingCount != null && <span>({s.ratingCount.toLocaleString()})</span>}
+                {caps.hasReviews && s.ratingCount != null && <span>({s.ratingCount.toLocaleString()})</span>}
                 <span className="text-muted-foreground/60">|</span>
                 <span>Matches: {s.matchedKeywords.join(", ")}</span>
               </div>
@@ -888,6 +891,8 @@ function InlineAppSearch({
   fetchWithAuth: (path: string, options?: any) => Promise<Response>;
   existingSlugs: Set<string>; onAdd: (slug: string) => Promise<void>;
 }) {
+  const { platform } = useParams();
+  const caps = isPlatformId(platform as string) ? PLATFORMS[platform as PlatformId] : PLATFORMS.shopify;
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<any[]>([]);
@@ -967,7 +972,7 @@ function InlineAppSearch({
                   <div className="h-6 w-6 rounded bg-muted" />
                 )}
                 <span className="text-sm truncate">{app.name}</span>
-                {app.averageRating != null && (
+                {caps.hasReviews && app.averageRating != null && (
                   <span className="text-xs text-muted-foreground shrink-0">
                     <Star className="h-3 w-3 inline fill-yellow-500 text-yellow-500" /> {parseFloat(app.averageRating).toFixed(1)}
                     {app.ratingCount != null && <span className="ml-1">({Number(app.ratingCount).toLocaleString()})</span>}
@@ -1000,6 +1005,8 @@ function ManualAppSearch({
   fetchWithAuth: (path: string, options?: any) => Promise<Response>;
   existingSlugs: Set<string>; onAdd: (slug: string) => Promise<void>;
 }) {
+  const { platform } = useParams();
+  const caps = isPlatformId(platform as string) ? PLATFORMS[platform as PlatformId] : PLATFORMS.shopify;
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<any[]>([]);
   const [searching, setSearching] = useState(false);
@@ -1061,7 +1068,7 @@ function ManualAppSearch({
                       <div className="h-6 w-6 rounded bg-muted" />
                     )}
                     <span className="text-sm truncate">{app.name}</span>
-                    {app.averageRating != null && (
+                    {caps.hasReviews && app.averageRating != null && (
                       <span className="text-xs text-muted-foreground">
                         <Star className="h-3 w-3 inline fill-yellow-500 text-yellow-500" /> {parseFloat(app.averageRating).toFixed(1)}
                         {app.ratingCount != null && <span className="ml-1">({Number(app.ratingCount).toLocaleString()})</span>}
@@ -1101,8 +1108,8 @@ function CompetitorTable({
   const { platform } = useParams();
   const caps = isPlatformId(platform as string) ? PLATFORMS[platform as PlatformId] : PLATFORMS.shopify;
   type CompSortKey = "name" | "rating" | "reviews" | "pricing" | "power" | "rankings" | "featured" | "similar" | "launched";
-  const [sortKey, setSortKey] = useState<CompSortKey>("reviews");
-  const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
+  const [sortKey, setSortKey] = useState<CompSortKey>(caps.hasReviews ? "reviews" : "name");
+  const [sortDir, setSortDir] = useState<"asc" | "desc">(caps.hasReviews ? "desc" : "asc");
 
   function toggleSort(key: CompSortKey) {
     if (sortKey === key) {
@@ -1154,15 +1161,15 @@ function CompetitorTable({
         <TableHeader>
           <TableRow>
             <TableHead className="cursor-pointer select-none" onClick={() => toggleSort("name")}>App <SortIcon col="name" /></TableHead>
-            <TableHead className="text-right cursor-pointer select-none" onClick={() => toggleSort("rating")}>Rating <SortIcon col="rating" /></TableHead>
-            <TableHead className="text-right cursor-pointer select-none" onClick={() => toggleSort("reviews")}>Reviews <SortIcon col="reviews" /></TableHead>
-            <TableHead className="text-right cursor-pointer select-none" onClick={() => toggleSort("pricing")}>Pricing <SortIcon col="pricing" /></TableHead>
+            {caps.hasReviews && <TableHead className="text-right cursor-pointer select-none" onClick={() => toggleSort("rating")}>Rating <SortIcon col="rating" /></TableHead>}
+            {caps.hasReviews && <TableHead className="text-right cursor-pointer select-none" onClick={() => toggleSort("reviews")}>Reviews <SortIcon col="reviews" /></TableHead>}
+            {caps.hasPricing && <TableHead className="text-right cursor-pointer select-none" onClick={() => toggleSort("pricing")}>Pricing <SortIcon col="pricing" /></TableHead>}
             <TableHead className="text-right cursor-pointer select-none" onClick={() => toggleSort("power")}>Power <SortIcon col="power" /></TableHead>
             {keywords.length > 0 && <TableHead className="text-center cursor-pointer select-none" onClick={() => toggleSort("rankings")}>Rankings <SortIcon col="rankings" /></TableHead>}
             {caps.hasFeaturedSections && <TableHead className="text-right cursor-pointer select-none" onClick={() => toggleSort("featured")}>Featured <SortIcon col="featured" /></TableHead>}
             {caps.hasSimilarApps && <TableHead className="text-right cursor-pointer select-none" onClick={() => toggleSort("similar")}>Similar <SortIcon col="similar" /></TableHead>}
             <TableHead>Categories</TableHead>
-            <TableHead className="text-right cursor-pointer select-none" onClick={() => toggleSort("launched")}>Launched <SortIcon col="launched" /></TableHead>
+            {caps.hasLaunchedDate && <TableHead className="text-right cursor-pointer select-none" onClick={() => toggleSort("launched")}>Launched <SortIcon col="launched" /></TableHead>}
             {canEdit && <TableHead className="w-10" />}
           </TableRow>
         </TableHeader>
@@ -1188,36 +1195,42 @@ function CompetitorTable({
                     {isPending && <Loader2 className="h-3 w-3 animate-spin text-muted-foreground shrink-0" />}
                   </div>
                 </TableCell>
-                <TableCell className="text-right">
-                  {isPending ? (
-                    <Skeleton className="h-4 w-10 ml-auto" />
-                  ) : comp.averageRating != null ? (
-                    <span className={`flex items-center justify-end gap-1 ${animate}`}>
-                      <Star className="h-3.5 w-3.5 fill-yellow-500 text-yellow-500" />
-                      {comp.averageRating.toFixed(1)}
-                    </span>
-                  ) : (
-                    <span className="text-muted-foreground">{"\u2014"}</span>
-                  )}
-                </TableCell>
-                <TableCell className="text-right">
-                  {isPending ? (
-                    <Skeleton className="h-4 w-12 ml-auto" />
-                  ) : (
-                    <span className={animate}>{comp.ratingCount?.toLocaleString() ?? "\u2014"}</span>
-                  )}
-                </TableCell>
-                <TableCell className="text-right text-sm">
-                  {isPending ? (
-                    <Skeleton className="h-4 w-14 ml-auto" />
-                  ) : (
-                    <span className={animate}>
-                      {comp.minPaidPrice != null
-                        ? `$${comp.minPaidPrice}/mo`
-                        : comp.pricingHint || "\u2014"}
-                    </span>
-                  )}
-                </TableCell>
+                {caps.hasReviews && (
+                  <TableCell className="text-right">
+                    {isPending ? (
+                      <Skeleton className="h-4 w-10 ml-auto" />
+                    ) : comp.averageRating != null ? (
+                      <span className={`flex items-center justify-end gap-1 ${animate}`}>
+                        <Star className="h-3.5 w-3.5 fill-yellow-500 text-yellow-500" />
+                        {comp.averageRating.toFixed(1)}
+                      </span>
+                    ) : (
+                      <span className="text-muted-foreground">{"\u2014"}</span>
+                    )}
+                  </TableCell>
+                )}
+                {caps.hasReviews && (
+                  <TableCell className="text-right">
+                    {isPending ? (
+                      <Skeleton className="h-4 w-12 ml-auto" />
+                    ) : (
+                      <span className={animate}>{comp.ratingCount?.toLocaleString() ?? "\u2014"}</span>
+                    )}
+                  </TableCell>
+                )}
+                {caps.hasPricing && (
+                  <TableCell className="text-right text-sm">
+                    {isPending ? (
+                      <Skeleton className="h-4 w-14 ml-auto" />
+                    ) : (
+                      <span className={animate}>
+                        {comp.minPaidPrice != null
+                          ? `$${comp.minPaidPrice}/mo`
+                          : comp.pricingHint || "\u2014"}
+                      </span>
+                    )}
+                  </TableCell>
+                )}
                 <TableCell className="text-right">
                   {isPending ? (
                     <Skeleton className="h-5 w-8 ml-auto rounded-full" />
@@ -1298,17 +1311,19 @@ function CompetitorTable({
                     <span className="text-muted-foreground">{"\u2014"}</span>
                   )}
                 </TableCell>
-                <TableCell className="text-right text-sm text-muted-foreground whitespace-nowrap">
-                  {isPending ? (
-                    <Skeleton className="h-4 w-16 ml-auto" />
-                  ) : (
-                    <span className={animate}>
-                      {comp.launchedAt
-                        ? new Date(comp.launchedAt).toLocaleDateString("en-US", { month: "short", year: "numeric" })
-                        : "\u2014"}
-                    </span>
-                  )}
-                </TableCell>
+                {caps.hasLaunchedDate && (
+                  <TableCell className="text-right text-sm text-muted-foreground whitespace-nowrap">
+                    {isPending ? (
+                      <Skeleton className="h-4 w-16 ml-auto" />
+                    ) : (
+                      <span className={animate}>
+                        {comp.launchedAt
+                          ? new Date(comp.launchedAt).toLocaleDateString("en-US", { month: "short", year: "numeric" })
+                          : "\u2014"}
+                      </span>
+                    )}
+                  </TableCell>
+                )}
                 {canEdit && (
                   <TableCell>
                     <div className="flex items-center gap-0.5">

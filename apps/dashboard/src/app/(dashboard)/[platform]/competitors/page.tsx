@@ -100,6 +100,10 @@ export default function CompetitorsPage() {
     return TOGGLEABLE_COLUMNS.filter((col) => {
       if (col.key === "featured" && !caps.hasFeaturedSections) return false;
       if (col.key === "similar" && !caps.hasSimilarApps) return false;
+      if ((col.key === "rating" || col.key === "reviews" || col.key === "v7d" || col.key === "v30d" || col.key === "v90d" || col.key === "momentum") && !caps.hasReviews) return false;
+      if ((col.key === "pricing" || col.key === "minPaidPrice") && !caps.hasPricing) return false;
+      if (col.key === "adKeywords" && !caps.hasAdTracking) return false;
+      if (col.key === "launchedDate" && !caps.hasLaunchedDate) return false;
       return true;
     });
   }, [caps]);
@@ -131,6 +135,10 @@ export default function CompetitorsPage() {
   const isCol = (key: string) => {
     if (key === "featured" && !caps.hasFeaturedSections) return false;
     if (key === "similar" && !caps.hasSimilarApps) return false;
+    if ((key === "rating" || key === "reviews" || key === "v7d" || key === "v30d" || key === "v90d" || key === "momentum") && !caps.hasReviews) return false;
+    if ((key === "pricing" || key === "minPaidPrice") && !caps.hasPricing) return false;
+    if (key === "adKeywords" && !caps.hasAdTracking) return false;
+    if (key === "launchedDate" && !caps.hasLaunchedDate) return false;
     return !hiddenColumns.has(key);
   };
 

@@ -9,7 +9,7 @@ import { StarAppButton } from "@/components/star-app-button";
 import { AdminScraperTrigger } from "@/components/admin-scraper-trigger";
 import { AppNav } from "./app-nav";
 import { buildExternalAppUrl, getPlatformName } from "@/lib/platform-urls";
-import type { PlatformId } from "@appranks/shared";
+import { PLATFORMS, isPlatformId, type PlatformId } from "@appranks/shared";
 
 export default async function AppDetailLayout({
   params,
@@ -19,6 +19,7 @@ export default async function AppDetailLayout({
   children: React.ReactNode;
 }) {
   const { platform, slug } = await params;
+  const caps = isPlatformId(platform) ? PLATFORMS[platform as PlatformId] : PLATFORMS.shopify;
 
   let app: any;
   let membership: any = {};
@@ -99,74 +100,83 @@ export default async function AppDetailLayout({
         </div>
       </div>
 
-      {snapshot && (
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
-          <Card className="min-w-0 py-3 gap-1">
-            <CardHeader>
-              <CardTitle className="text-sm text-muted-foreground">Rating</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <span className="text-2xl font-bold">
-                {snapshot.averageRating ?? "—"}
-              </span>
-              {snapshot.averageRating != null && (
-                <div className="flex gap-0.5 mt-1">
-                  {[1, 2, 3, 4, 5].map((star) => {
-                    const rating = Number(snapshot.averageRating);
-                    const fill = Math.min(1, Math.max(0, rating - (star - 1)));
-                    return (
-                      <div key={star} className="relative h-4 w-4">
-                        <svg viewBox="0 0 24 24" className="h-4 w-4 text-muted-foreground/30" fill="currentColor">
-                          <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
-                        </svg>
-                        <div className="absolute inset-0 overflow-hidden" style={{ width: `${fill * 100}%` }}>
-                          <svg viewBox="0 0 24 24" className="h-4 w-4 text-yellow-500" fill="currentColor">
+      {snapshot && (() => {
+        const cardCount = 2 + (caps.hasReviews ? 2 : 0) + (caps.hasPricing ? 1 : 0) + (caps.hasLaunchedDate ? 1 : 0);
+        const lgCols = cardCount <= 3 ? "lg:grid-cols-3" : cardCount <= 4 ? "lg:grid-cols-4" : cardCount <= 5 ? "lg:grid-cols-5" : "lg:grid-cols-6";
+        return (
+        <div className={`grid grid-cols-2 sm:grid-cols-3 ${lgCols} gap-4`}>
+          {caps.hasReviews && (
+            <Card className="min-w-0 py-3 gap-1">
+              <CardHeader>
+                <CardTitle className="text-sm text-muted-foreground">Rating</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <span className="text-2xl font-bold">
+                  {snapshot.averageRating ?? "—"}
+                </span>
+                {snapshot.averageRating != null && (
+                  <div className="flex gap-0.5 mt-1">
+                    {[1, 2, 3, 4, 5].map((star) => {
+                      const rating = Number(snapshot.averageRating);
+                      const fill = Math.min(1, Math.max(0, rating - (star - 1)));
+                      return (
+                        <div key={star} className="relative h-4 w-4">
+                          <svg viewBox="0 0 24 24" className="h-4 w-4 text-muted-foreground/30" fill="currentColor">
                             <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
                           </svg>
+                          <div className="absolute inset-0 overflow-hidden" style={{ width: `${fill * 100}%` }}>
+                            <svg viewBox="0 0 24 24" className="h-4 w-4 text-yellow-500" fill="currentColor">
+                              <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" />
+                            </svg>
+                          </div>
                         </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-            </CardContent>
-          </Card>
-          <Card className="min-w-0 py-3 gap-1">
-            <CardHeader>
-              <CardTitle className="text-sm text-muted-foreground">Reviews</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <span className="text-2xl font-bold">
-                {snapshot.ratingCount ?? "—"}
-              </span>
-            </CardContent>
-          </Card>
-          <Card className="min-w-0 py-3 gap-1">
-            <CardHeader>
-              <CardTitle className="text-sm text-muted-foreground">Pricing</CardTitle>
-            </CardHeader>
-            <CardContent>
-              {snapshot.pricingPlans && snapshot.pricingPlans.length > 0 ? (
-                <div className="flex flex-wrap gap-1.5">
-                  {snapshot.pricingPlans.map((plan: any) => (
-                    <span
-                      key={plan.name}
-                      className="inline-flex items-baseline gap-1 rounded-md bg-muted px-2 py-0.5 text-xs"
-                    >
-                      <span className="font-medium">{plan.name}</span>
-                      <span className="text-muted-foreground">
-                        {plan.price == null
-                          ? "Free"
-                          : `$${plan.price}/${plan.period || "mo"}`}
+                      );
+                    })}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          )}
+          {caps.hasReviews && (
+            <Card className="min-w-0 py-3 gap-1">
+              <CardHeader>
+                <CardTitle className="text-sm text-muted-foreground">Reviews</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <span className="text-2xl font-bold">
+                  {snapshot.ratingCount ?? "—"}
+                </span>
+              </CardContent>
+            </Card>
+          )}
+          {caps.hasPricing && (
+            <Card className="min-w-0 py-3 gap-1">
+              <CardHeader>
+                <CardTitle className="text-sm text-muted-foreground">Pricing</CardTitle>
+              </CardHeader>
+              <CardContent>
+                {snapshot.pricingPlans && snapshot.pricingPlans.length > 0 ? (
+                  <div className="flex flex-wrap gap-1.5">
+                    {snapshot.pricingPlans.map((plan: any) => (
+                      <span
+                        key={plan.name}
+                        className="inline-flex items-baseline gap-1 rounded-md bg-muted px-2 py-0.5 text-xs"
+                      >
+                        <span className="font-medium">{plan.name}</span>
+                        <span className="text-muted-foreground">
+                          {plan.price == null
+                            ? "Free"
+                            : `$${plan.price}/${plan.period || "mo"}`}
+                        </span>
                       </span>
-                    </span>
-                  ))}
-                </div>
-              ) : (
-                <span className="text-sm">{snapshot.pricing || "—"}</span>
-              )}
-            </CardContent>
-          </Card>
+                    ))}
+                  </div>
+                ) : (
+                  <span className="text-sm">{snapshot.pricing || "—"}</span>
+                )}
+              </CardContent>
+            </Card>
+          )}
           <Card className="min-w-0 py-3 gap-1">
             <CardHeader>
               <CardTitle className="text-sm text-muted-foreground">Developer</CardTitle>
@@ -184,16 +194,18 @@ export default async function AppDetailLayout({
               )}
             </CardContent>
           </Card>
-          <Card className="min-w-0 py-3 gap-1">
-            <CardHeader>
-              <CardTitle className="text-sm text-muted-foreground">Launched</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <span className="text-sm">
-                {app.launchedDate ? formatDateOnly(app.launchedDate) : "—"}
-              </span>
-            </CardContent>
-          </Card>
+          {caps.hasLaunchedDate && (
+            <Card className="min-w-0 py-3 gap-1">
+              <CardHeader>
+                <CardTitle className="text-sm text-muted-foreground">Launched</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <span className="text-sm">
+                  {app.launchedDate ? formatDateOnly(app.launchedDate) : "—"}
+                </span>
+              </CardContent>
+            </Card>
+          )}
           <Card className="min-w-0 py-3 gap-1">
             <CardHeader>
               <CardTitle className="text-sm text-muted-foreground">Last Updated</CardTitle>
@@ -205,7 +217,8 @@ export default async function AppDetailLayout({
             </CardContent>
           </Card>
         </div>
-      )}
+        );
+      })()}
 
       <AppNav slug={slug} isTracked={app.isTrackedByAccount} />
 

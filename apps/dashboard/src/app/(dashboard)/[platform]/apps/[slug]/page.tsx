@@ -136,18 +136,26 @@ export default async function AppOverviewPage({
     [app, reviewData, rankings, changes, reviewMetrics, featuredData, adData, similarData, selfMinPaidPriceMap, scoresData] =
       await Promise.all([
         getApp(slug, platform as PlatformId),
-        getAppReviews(slug, 3, 0, "newest", platform as PlatformId).catch(() => ({ reviews: [], total: 0, distribution: [] })),
+        caps.hasReviews
+          ? getAppReviews(slug, 3, 0, "newest", platform as PlatformId).catch(() => ({ reviews: [], total: 0, distribution: [] }))
+          : Promise.resolve({ reviews: [], total: 0, distribution: [] }),
         getAppRankings(slug, 30, platform as PlatformId).catch(() => ({})),
         getAppChanges(slug, 10, platform as PlatformId).catch(() => []),
-        getAppReviewMetrics(slug, platform as PlatformId).catch(() => null),
+        caps.hasReviews
+          ? getAppReviewMetrics(slug, platform as PlatformId).catch(() => null)
+          : Promise.resolve(null),
         caps.hasFeaturedSections
           ? getAppFeaturedPlacements(slug, 30, platform as PlatformId).catch(() => ({ sightings: [] }))
           : Promise.resolve({ sightings: [] }),
-        getAppAdSightings(slug, 30, platform as PlatformId).catch(() => ({ sightings: [] })),
+        caps.hasAdTracking
+          ? getAppAdSightings(slug, 30, platform as PlatformId).catch(() => ({ sightings: [] }))
+          : Promise.resolve({ sightings: [] }),
         caps.hasSimilarApps
           ? getAppSimilarApps(slug, 30, platform as PlatformId).catch(() => ({ direct: [], reverse: [], secondDegree: [] }))
           : Promise.resolve({ direct: [], reverse: [], secondDegree: [] }),
-        getAppsMinPaidPrices([slug], platform as PlatformId).catch(() => ({})),
+        caps.hasPricing
+          ? getAppsMinPaidPrices([slug], platform as PlatformId).catch(() => ({}))
+          : Promise.resolve({}),
         getAppScores(slug, platform as PlatformId).catch(() => ({ visibility: [], power: [], weightedPowerScore: 0 })),
       ]);
   } catch {
@@ -327,13 +335,13 @@ export default async function AppOverviewPage({
 
   const totalVisibility =
     (caps.hasFeaturedSections ? featuredSections.length : 0) +
-    adKeywords.length +
+    (caps.hasAdTracking ? adKeywords.length : 0) +
     (caps.hasSimilarApps ? reverseSimilarSlugs.length : 0);
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
       {/* Card 1: Review Pulse */}
-      <Link href={`/${platform}/apps/${slug}/reviews`} className="group">
+      {caps.hasReviews && <Link href={`/${platform}/apps/${slug}/reviews`} className="group">
         <Card className="h-full transition-colors group-hover:border-primary/50">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-sm font-medium flex items-center gap-2">
@@ -422,7 +430,7 @@ export default async function AppOverviewPage({
             )}
           </CardContent>
         </Card>
-      </Link>
+      </Link>}
 
       {/* Card 2: Keyword Performance (tracked only) */}
       {isTracked && (
@@ -598,22 +606,31 @@ export default async function AppOverviewPage({
                   </p>
 
                   {/* Your position — multi-metric */}
-                  <div className={`grid gap-2 ${selfPricePos > 0 ? "grid-cols-3" : "grid-cols-2"}`}>
-                    <div className="rounded-md bg-muted/50 px-2 py-1.5 text-center">
-                      <div className="text-sm font-semibold">{ordinal(selfRatingPos)}</div>
-                      <div className="text-[10px] text-muted-foreground">by rating</div>
-                    </div>
-                    <div className="rounded-md bg-muted/50 px-2 py-1.5 text-center">
-                      <div className="text-sm font-semibold">{ordinal(selfReviewsPos)}</div>
-                      <div className="text-[10px] text-muted-foreground">by reviews</div>
-                    </div>
-                    {selfPricePos > 0 && (
-                      <div className="rounded-md bg-muted/50 px-2 py-1.5 text-center">
-                        <div className="text-sm font-semibold">{ordinal(selfPricePos)}</div>
-                        <div className="text-[10px] text-muted-foreground">cheapest</div>
+                  {(caps.hasReviews || (caps.hasPricing && selfPricePos > 0)) && (() => {
+                    const metricCount = (caps.hasReviews ? 2 : 0) + (caps.hasPricing && selfPricePos > 0 ? 1 : 0);
+                    return (
+                      <div className={`grid gap-2 ${metricCount >= 3 ? "grid-cols-3" : metricCount === 2 ? "grid-cols-2" : "grid-cols-1"}`}>
+                        {caps.hasReviews && (
+                          <div className="rounded-md bg-muted/50 px-2 py-1.5 text-center">
+                            <div className="text-sm font-semibold">{ordinal(selfRatingPos)}</div>
+                            <div className="text-[10px] text-muted-foreground">by rating</div>
+                          </div>
+                        )}
+                        {caps.hasReviews && (
+                          <div className="rounded-md bg-muted/50 px-2 py-1.5 text-center">
+                            <div className="text-sm font-semibold">{ordinal(selfReviewsPos)}</div>
+                            <div className="text-[10px] text-muted-foreground">by reviews</div>
+                          </div>
+                        )}
+                        {caps.hasPricing && selfPricePos > 0 && (
+                          <div className="rounded-md bg-muted/50 px-2 py-1.5 text-center">
+                            <div className="text-sm font-semibold">{ordinal(selfPricePos)}</div>
+                            <div className="text-[10px] text-muted-foreground">cheapest</div>
+                          </div>
+                        )}
                       </div>
-                    )}
-                  </div>
+                    );
+                  })()}
 
                   {/* Competitor list */}
                   <div className="space-y-1.5">
@@ -625,10 +642,12 @@ export default async function AppOverviewPage({
                           <div className="h-5 w-5 rounded bg-muted shrink-0" />
                         )}
                         <span className="truncate flex-1">{c.name}</span>
-                        <span className="text-xs text-muted-foreground shrink-0">
-                          <Star className="h-3 w-3 text-yellow-500 fill-yellow-500 inline align-text-bottom" />{" "}
-                          {c.rating.toFixed(1)} {"\u00B7"} {c.reviews}
-                        </span>
+                        {caps.hasReviews && (
+                          <span className="text-xs text-muted-foreground shrink-0">
+                            <Star className="h-3 w-3 text-yellow-500 fill-yellow-500 inline align-text-bottom" />{" "}
+                            {c.rating.toFixed(1)} {"\u00B7"} {c.reviews}
+                          </span>
+                        )}
                       </div>
                     ))}
                   </div>
@@ -806,6 +825,7 @@ export default async function AppOverviewPage({
                       momentumScore={Number(p.momentumScore) || 0}
                       position={p.position}
                       totalApps={p.totalApps}
+                      hasReviews={caps.hasReviews}
                     >
                       <div className="rounded-lg bg-purple-50 dark:bg-purple-950/30 p-2.5 flex items-center justify-between cursor-help">
                         <div>
@@ -815,9 +835,11 @@ export default async function AppOverviewPage({
                               <span className="ml-1 text-purple-500/70">(#{p.position}/{p.totalApps})</span>
                             )}
                           </p>
-                          <p className="text-[10px] text-muted-foreground">
-                            rating {((Number(p.ratingScore) || 0) * 100).toFixed(0)}% &middot; reviews {((Number(p.reviewScore) || 0) * 100).toFixed(0)}%
-                          </p>
+                          {caps.hasReviews && (
+                            <p className="text-[10px] text-muted-foreground">
+                              rating {((Number(p.ratingScore) || 0) * 100).toFixed(0)}% &middot; reviews {((Number(p.reviewScore) || 0) * 100).toFixed(0)}%
+                            </p>
+                          )}
                         </div>
                         <p className="text-2xl font-bold text-purple-600 dark:text-purple-400">{p.powerScore}</p>
                       </div>
@@ -872,26 +894,28 @@ export default async function AppOverviewPage({
               )}
 
               {/* Search Ads */}
-              <Link
-                href={`/${platform}/apps/${slug}/ads`}
-                className="block rounded-md p-2 -mx-2 hover:bg-muted/50 transition-colors"
-              >
-                <div className="flex items-center gap-2 text-sm">
-                  <Megaphone className="h-4 w-4 text-blue-500 shrink-0" />
-                  <span>
-                    Advertising on{" "}
-                    <span className="font-semibold">{adKeywords.length}</span>{" "}
-                    keyword{adKeywords.length !== 1 ? "s" : ""}
-                  </span>
-                  <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-4 shrink-0">Ad</Badge>
-                </div>
-                {adKeywords.length > 0 && (
-                  <p className="text-xs text-muted-foreground mt-0.5 ml-6 truncate">
-                    {adKeywords.slice(0, 3).join(", ")}
-                    {adKeywords.length > 3 ? ` +${adKeywords.length - 3} more` : ""}
-                  </p>
-                )}
-              </Link>
+              {caps.hasAdTracking && (
+                <Link
+                  href={`/${platform}/apps/${slug}/ads`}
+                  className="block rounded-md p-2 -mx-2 hover:bg-muted/50 transition-colors"
+                >
+                  <div className="flex items-center gap-2 text-sm">
+                    <Megaphone className="h-4 w-4 text-blue-500 shrink-0" />
+                    <span>
+                      Advertising on{" "}
+                      <span className="font-semibold">{adKeywords.length}</span>{" "}
+                      keyword{adKeywords.length !== 1 ? "s" : ""}
+                    </span>
+                    <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-4 shrink-0">Ad</Badge>
+                  </div>
+                  {adKeywords.length > 0 && (
+                    <p className="text-xs text-muted-foreground mt-0.5 ml-6 truncate">
+                      {adKeywords.slice(0, 3).join(", ")}
+                      {adKeywords.length > 3 ? ` +${adKeywords.length - 3} more` : ""}
+                    </p>
+                  )}
+                </Link>
+              )}
 
               {/* Similar Apps */}
               {caps.hasSimilarApps && (
