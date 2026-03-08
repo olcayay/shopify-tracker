@@ -1,3 +1,18 @@
+Fix timezone discrepancy in Run History table (PLA-76)
+=====================================================
+
+Queued (createdAt) and Started (startedAt) showed a 3-hour offset because:
+- `createdAt` used PostgreSQL's `DEFAULT NOW()` which returns Istanbul local time for `timestamp without timezone`
+- `startedAt` used JavaScript's `new Date()` which is always UTC
+- postgres.js treats `timestamp without timezone` values as UTC when reading back
+
+Fix: Set `connection: { timezone: "UTC" }` on the postgres.js client in `packages/db/src/index.ts`.
+This forces PG's `NOW()` to return UTC, making it consistent with JS `new Date()`.
+
+Files changed:
+1. packages/db/src/index.ts — added `connection: { timezone: "UTC" }` to postgres client config
+
+
 Canva permissions comparison on compare page (PLA-75)
 =====================================================
 

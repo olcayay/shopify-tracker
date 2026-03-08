@@ -140,6 +140,8 @@ Canva app type badges — EXTENSION vs SDK_APP (PLA-74) ✅
 
 Canva permissions comparison on compare page (PLA-75) ✅
 
+fix timezone discrepancy in scraper Run History (PLA-76) ✅
+
 feedback sayfası
 
 kime hangi durumda nasıl emailler gönderilebilinir.

@@ -40,7 +40,9 @@ export const schema = {
 };
 
 export function createDb(databaseUrl: string) {
-  const client = postgres(databaseUrl);
+  const client = postgres(databaseUrl, {
+    connection: { timezone: "UTC" },
+  });
   return drizzle(client, { schema });
 }
 
