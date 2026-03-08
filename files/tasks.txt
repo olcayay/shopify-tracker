@@ -130,6 +130,8 @@ Canva full-stack integration — auth, sidebar, scheduler, CLI, scraper fix ✅
 
 Canva keyword search & auto-suggestions ✅
 
+Canva real search API integration — exact rankings via /_ajax/appsearch/search ✅
+
 feedback sayfası
 
 kime hangi durumda nasıl emailler gönderilebilinir.

@@ -90,6 +90,11 @@ export class KeywordScraper {
       })
       .where(eq(scrapeRuns.id, run.id));
 
+    // Clean up browser if the platform module has one (e.g. Canva)
+    if (this.platformModule && "closeBrowser" in this.platformModule && typeof (this.platformModule as any).closeBrowser === "function") {
+      await (this.platformModule as any).closeBrowser();
+    }
+
     log.info("scraping complete", { itemsScraped, itemsFailed, discoveredApps: allDiscoveredSlugs.size, durationMs: Date.now() - startTime });
     return [...allDiscoveredSlugs];
   }

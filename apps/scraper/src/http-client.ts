@@ -41,6 +41,21 @@ export class HttpClient {
     }
   }
 
+  /**
+   * Fetch with custom request options (method, headers, body).
+   * Useful for POST API calls (e.g. Canva search API).
+   */
+  async fetchRaw(url: string, init: RequestInit): Promise<string> {
+    await this.waitForSlot();
+
+    this.activeRequests++;
+    try {
+      return await this.fetchRawWithRetry(url, init);
+    } finally {
+      this.activeRequests--;
+    }
+  }
+
   private async waitForSlot(): Promise<void> {
     // Wait for concurrency slot
     while (this.activeRequests >= this.options.maxConcurrency) {
@@ -106,6 +121,52 @@ export class HttpClient {
       attempts: this.options.maxRetries + 1,
       error: lastError?.message,
     });
+
+    throw new Error(
+      `All ${this.options.maxRetries + 1} attempts failed for ${url}: ${lastError?.message}`
+    );
+  }
+
+  private async fetchRawWithRetry(url: string, init: RequestInit): Promise<string> {
+    let lastError: Error | null = null;
+
+    for (let attempt = 0; attempt <= this.options.maxRetries; attempt++) {
+      try {
+        const ua = USER_AGENTS[Math.floor(Math.random() * USER_AGENTS.length)];
+        const response = await fetch(url, {
+          ...init,
+          headers: {
+            "User-Agent": ua,
+            ...init.headers,
+          },
+        });
+
+        if (!response.ok) {
+          const err = new Error(`HTTP ${response.status}: ${response.statusText}`);
+          if (response.status >= 400 && response.status < 500) {
+            log.warn("non-retryable client error", { url, status: response.status });
+            lastError = err;
+            break;
+          }
+          throw err;
+        }
+
+        return await response.text();
+      } catch (error) {
+        lastError = error as Error;
+        log.warn("fetch attempt failed", {
+          url,
+          attempt: attempt + 1,
+          maxAttempts: this.options.maxRetries + 1,
+          error: lastError.message,
+        });
+
+        if (attempt < this.options.maxRetries) {
+          const backoff = Math.pow(2, attempt) * 1000;
+          await this.sleep(backoff);
+        }
+      }
+    }
 
     throw new Error(
       `All ${this.options.maxRetries + 1} attempts failed for ${url}: ${lastError?.message}`
