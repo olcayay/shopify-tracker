@@ -15,7 +15,7 @@ vi.mock("@/lib/auth-context", () => ({
       emailDigestEnabled: true,
       timezone: "UTC",
     },
-    account: { id: "a1", name: "Test Account", isSuspended: false },
+    account: { id: "a1", name: "Test Account", isSuspended: false, enabledPlatforms: ["shopify", "salesforce", "canva"] },
     logout: mockLogout,
   }),
 }));
@@ -133,7 +133,7 @@ describe("Sidebar with admin user", () => {
           emailDigestEnabled: true,
           timezone: "UTC",
         },
-        account: { id: "a1", name: "Test Account", isSuspended: false },
+        account: { id: "a1", name: "Test Account", isSuspended: false, enabledPlatforms: ["shopify", "salesforce", "canva"] },
         logout: mockLogout,
       }),
     }));

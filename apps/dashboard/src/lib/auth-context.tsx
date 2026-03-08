@@ -68,6 +68,7 @@ interface AuthState {
   account: Account | null;
   isLoading: boolean;
   impersonation: ImpersonationState | null;
+  globalPlatformVisibility: Record<string, boolean> | null;
   login: (email: string, password: string) => Promise<void>;
   register: (
     email: string,
@@ -144,6 +145,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [isLoading, setIsLoading] = useState(true);
   const [impersonation, setImpersonation] =
     useState<ImpersonationState | null>(null);
+  const [globalPlatformVisibility, setGlobalPlatformVisibility] =
+    useState<Record<string, boolean> | null>(null);
   const [pendingConfirm, setPendingConfirm] = useState<{
     resolve: () => void;
     reject: () => void;
@@ -231,15 +234,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         } else {
           setImpersonation(null);
         }
+        setGlobalPlatformVisibility(data.globalPlatformVisibility ?? null);
       } else {
         setUser(null);
         setAccount(null);
         setImpersonation(null);
+        setGlobalPlatformVisibility(null);
       }
     } catch {
       setUser(null);
       setAccount(null);
       setImpersonation(null);
+      setGlobalPlatformVisibility(null);
     }
   }, []);
 
@@ -354,6 +360,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         account,
         isLoading,
         impersonation,
+        globalPlatformVisibility,
         login,
         register,
         logout,

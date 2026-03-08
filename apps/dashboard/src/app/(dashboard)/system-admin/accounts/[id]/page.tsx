@@ -24,6 +24,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { useFormatDate } from "@/lib/format-date";
+import { PLATFORMS, type PlatformId } from "@appranks/shared";
 
 interface Package {
   id: number;
@@ -56,6 +57,9 @@ export default function AccountDetailPage() {
   const [allPackages, setAllPackages] = useState<Package[]>([]);
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState("");
+  const [platformVis, setPlatformVis] = useState<Record<string, boolean>>({});
+  const [platformOverrides, setPlatformOverrides] = useState<Record<string, boolean>>({});
+  const [togglingOverride, setTogglingOverride] = useState<string | null>(null);
   const [editLimits, setEditLimits] = useState(false);
   const [limits, setLimits] = useState({
     maxTrackedApps: 0,
@@ -72,9 +76,10 @@ export default function AccountDetailPage() {
 
   async function loadData() {
     setLoading(true);
-    const [accRes, pkgRes] = await Promise.all([
+    const [accRes, pkgRes, visRes] = await Promise.all([
       fetchWithAuth(`/api/system-admin/accounts/${id}`),
       fetchWithAuth("/api/system-admin/packages"),
+      fetchWithAuth("/api/system-admin/platform-visibility"),
     ]);
     if (accRes.ok) {
       const data = await accRes.json();
@@ -87,11 +92,31 @@ export default function AccountDetailPage() {
         maxUsers: data.maxUsers,
         maxResearchProjects: data.maxResearchProjects,
       });
+      setPlatformOverrides(data.platformOverrides ?? {});
     }
     if (pkgRes.ok) {
       setAllPackages(await pkgRes.json());
     }
+    if (visRes.ok) {
+      setPlatformVis(await visRes.json());
+    }
     setLoading(false);
+  }
+
+  async function toggleOverride(platform: string) {
+    setTogglingOverride(platform);
+    const newValue = !platformOverrides[platform];
+    const res = await fetchWithAuth(
+      `/api/system-admin/accounts/${id}/platforms/${platform}/override`,
+      { method: "PATCH", body: JSON.stringify({ override: newValue }) }
+    );
+    if (res.ok) {
+      setPlatformOverrides((prev) => ({ ...prev, [platform]: newValue }));
+      setMessage(`Override ${newValue ? "enabled" : "disabled"} for ${platform}`);
+    } else {
+      setMessage("Failed to toggle override");
+    }
+    setTogglingOverride(null);
   }
 
   async function saveLimits() {
@@ -257,12 +282,34 @@ export default function AccountDetailPage() {
         </CardHeader>
         <CardContent>
           {account.enabledPlatforms && account.enabledPlatforms.length > 0 ? (
-            <div className="flex flex-wrap gap-2">
-              {account.enabledPlatforms.map((p: string) => (
-                <Badge key={p} variant="secondary" className="capitalize">
-                  {p}
-                </Badge>
-              ))}
+            <div className="space-y-3">
+              {account.enabledPlatforms.map((p: string) => {
+                const isHidden = platformVis[p] === false;
+                const hasOverride = platformOverrides[p] === true;
+                return (
+                  <div key={p} className="flex items-center gap-2">
+                    <Badge variant="secondary" className="capitalize">
+                      {p}
+                    </Badge>
+                    {isHidden && (
+                      <>
+                        <Badge variant="outline" className="text-amber-600 border-amber-300">
+                          Globally Hidden
+                        </Badge>
+                        <Button
+                          size="sm"
+                          variant={hasOverride ? "default" : "outline"}
+                          disabled={togglingOverride !== null}
+                          onClick={() => toggleOverride(p)}
+                          className="h-7 text-xs"
+                        >
+                          {hasOverride ? "Override: ON" : "Override: OFF"}
+                        </Button>
+                      </>
+                    )}
+                  </div>
+                );
+              })}
             </div>
           ) : (
             <p className="text-sm text-muted-foreground">No platforms enabled</p>

@@ -14,7 +14,9 @@ import {
   accountTrackedFeatures,
   researchProjects,
   accountPlatforms,
+  platformVisibility,
 } from "@appranks/db";
+import { PLATFORM_IDS } from "@appranks/shared";
 import { getJwtSecret, type JwtPayload } from "../middleware/auth.js";
 
 type Db = ReturnType<typeof createDb>;
@@ -365,9 +367,31 @@ export const authRoutes: FastifyPluginAsync = async (app) => {
       .where(eq(researchProjects.accountId, user.accountId));
 
     const enabledPlatformsResult = await db
-      .select({ platform: accountPlatforms.platform })
+      .select({
+        platform: accountPlatforms.platform,
+        overrideGlobalVisibility: accountPlatforms.overrideGlobalVisibility,
+      })
       .from(accountPlatforms)
       .where(eq(accountPlatforms.accountId, user.accountId));
+
+    // Get global platform visibility
+    const visibilityRows = await db.select().from(platformVisibility);
+    const globalVisibility: Record<string, boolean> = {};
+    for (const row of visibilityRows) {
+      globalVisibility[row.platform] = row.isVisible;
+    }
+
+    // Determine effective enabled platforms
+    let effectivePlatforms: string[];
+    if (user.isSystemAdmin) {
+      // System admin sees all platforms
+      effectivePlatforms = PLATFORM_IDS as unknown as string[];
+    } else {
+      // Regular user: account platforms filtered by visibility
+      effectivePlatforms = enabledPlatformsResult
+        .filter((p) => globalVisibility[p.platform] === true || p.overrideGlobalVisibility === true)
+        .map((p) => p.platform);
+    }
 
     const response: Record<string, unknown> = {
       user: {
@@ -403,8 +427,13 @@ export const authRoutes: FastifyPluginAsync = async (app) => {
           platforms: enabledPlatformsResult.length,
         },
       },
-      enabledPlatforms: enabledPlatformsResult.map((r) => r.platform),
+      enabledPlatforms: effectivePlatforms,
     };
+
+    // Include global visibility map for system admin
+    if (user.isSystemAdmin) {
+      response.globalPlatformVisibility = globalVisibility;
+    }
 
     // Include impersonation metadata if active
     if (request.user.realAdmin) {

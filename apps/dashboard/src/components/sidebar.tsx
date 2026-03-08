@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import {
   LayoutDashboard,
   FolderTree,
@@ -62,7 +62,9 @@ function getNavItems(platformId: PlatformId) {
   if (caps.hasFeatureTaxonomy) {
     items.push({ href: `${p}/features`, label: "Features", icon: Puzzle });
   }
-  items.push({ href: `${p}/research`, label: "Research", icon: FlaskConical, badge: "Beta" });
+  if (platformId !== "canva" && platformId !== "salesforce") {
+    items.push({ href: `${p}/research`, label: "Research", icon: FlaskConical, badge: "Beta" });
+  }
   return items;
 }
 
@@ -96,8 +98,10 @@ function SidebarContent({
   onToggleCollapsed?: () => void;
 }) {
   const pathname = usePathname();
-  const { user, account, logout, impersonation } = useAuth();
+  const router = useRouter();
+  const { user, account, logout, impersonation, globalPlatformVisibility } = useAuth();
   const isSystemAdmin = user?.isSystemAdmin;
+  const enabledPlatforms = account?.enabledPlatforms ?? [];
   const isAdminSection = pathname.startsWith("/system-admin");
 
   const currentPlatform = extractPlatform(pathname);
@@ -107,6 +111,18 @@ function SidebarContent({
   useEffect(() => {
     setExpandedPlatform(currentPlatform);
   }, [currentPlatform]);
+
+  // Route protection: redirect to /overview if user navigates to a platform they don't have access to
+  useEffect(() => {
+    if (!user || !account || isSystemAdmin) return;
+    const platformMatch = pathname.match(/^\/(shopify|salesforce|canva)(\/|$)/);
+    if (platformMatch) {
+      const urlPlatform = platformMatch[1];
+      if (!enabledPlatforms.includes(urlPlatform)) {
+        router.replace("/overview");
+      }
+    }
+  }, [pathname, user, account, isSystemAdmin, enabledPlatforms, router]);
 
   function NavLink({ href, icon: Icon, label, isActive, iconSize = "h-4 w-4", className = "", badge }: {
     href: string; icon: any; label: string; isActive: boolean; iconSize?: string; className?: string; badge?: string;
@@ -175,10 +191,13 @@ function SidebarContent({
           })
         ) : (
           /* Expanded: platform accordion */
-          (Object.keys(PLATFORMS) as PlatformId[]).map((platformId) => {
+          ((isSystemAdmin ? Object.keys(PLATFORMS) : enabledPlatforms) as PlatformId[])
+            .filter((pid) => pid in PLATFORMS)
+            .map((platformId) => {
             const isExpanded = expandedPlatform === platformId;
             const items = getNavItems(platformId);
             const accentColor = PLATFORM_COLORS[platformId];
+            const isGloballyHidden = isSystemAdmin && globalPlatformVisibility && globalPlatformVisibility[platformId] === false;
 
             return (
               <div key={platformId}>
@@ -204,6 +223,16 @@ function SidebarContent({
                   style={{ borderLeft: `3px solid ${accentColor}` }}
                 >
                   <span className="truncate">{PLATFORM_LABELS[platformId]}</span>
+                  {(platformId === "salesforce" || platformId === "canva") && (
+                    <span className="text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-primary/10 text-primary">
+                      Beta
+                    </span>
+                  )}
+                  {isGloballyHidden && (
+                    <span className="text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-amber-100 text-amber-700">
+                      Hidden
+                    </span>
+                  )}
                   {isExpanded ? (
                     <ChevronDown className="h-3.5 w-3.5 ml-auto shrink-0" />
                   ) : (

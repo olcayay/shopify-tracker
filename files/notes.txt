@@ -1,3 +1,36 @@
+Platform Visibility Controls (PLA-77)
+======================================
+
+System admin can hide/show platforms globally. Regular users only see visible platforms
+(or those with an account-level override). System admin always sees all platforms.
+
+New DB table: `platform_visibility` (platform PK, is_visible, updated_at)
+New column: `account_platforms.override_global_visibility` (boolean, default false)
+
+API: 3 new system-admin endpoints (GET/PATCH visibility, PATCH override per account)
+API: `/api/auth/me` now filters enabledPlatforms by visibility (admin sees all)
+API: Account detail endpoint now returns enabledPlatforms + platformOverrides
+
+Dashboard: auth-context exposes `globalPlatformVisibility` for admin
+Dashboard: sidebar filters platforms for regular users, shows "Hidden" badge for admin
+Dashboard: overview page only shows enabled platforms for regular users
+Dashboard: system-admin page has visibility toggle card
+Dashboard: account detail page has override toggles for globally-hidden platforms
+Dashboard: route protection redirects non-admin users from hidden platform URLs
+
+Files changed:
+- packages/db/src/schema/platform-visibility.ts (new)
+- packages/db/src/schema/account-platforms.ts (add column)
+- packages/db/src/migrations/0054_platform_visibility.sql (new)
+- packages/db/src/index.ts (export)
+- apps/api/src/routes/system-admin.ts (3 endpoints + account detail fix)
+- apps/api/src/routes/auth.ts (visibility filtering)
+- apps/dashboard/src/lib/auth-context.tsx (globalPlatformVisibility)
+- apps/dashboard/src/components/sidebar.tsx (filter + badge + route protection)
+- apps/dashboard/src/app/(dashboard)/system-admin/page.tsx (visibility card)
+- apps/dashboard/src/app/(dashboard)/system-admin/accounts/[id]/page.tsx (override toggles)
+- apps/dashboard/src/app/(dashboard)/overview/page.tsx (filter platforms)
+
 Fix timezone discrepancy in Run History table (PLA-76)
 =====================================================
 

@@ -51,7 +51,7 @@ interface PlatformStats {
 }
 
 export default function CrossPlatformOverviewPage() {
-  const { fetchWithAuth, account } = useAuth();
+  const { fetchWithAuth, account, user } = useAuth();
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState<Record<string, PlatformStats>>({});
 
@@ -144,7 +144,7 @@ export default function CrossPlatformOverviewPage() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {ALL_PLATFORMS.map((platformId) => {
+        {(user?.isSystemAdmin ? ALL_PLATFORMS : enabledPlatforms).map((platformId) => {
           const isEnabled = enabledPlatforms.includes(platformId);
           const config = PLATFORMS[platformId];
           const brand = PLATFORM_BRANDS[platformId];

@@ -1,4 +1,4 @@
-import { pgTable, uuid, varchar, timestamp, uniqueIndex } from "drizzle-orm/pg-core";
+import { pgTable, uuid, varchar, timestamp, uniqueIndex, boolean } from "drizzle-orm/pg-core";
 import { accounts } from "./auth.js";
 
 export const accountPlatforms = pgTable(
@@ -10,6 +10,7 @@ export const accountPlatforms = pgTable(
       .references(() => accounts.id, { onDelete: "cascade" }),
     platform: varchar("platform", { length: 20 }).notNull(),
     enabledAt: timestamp("enabled_at").notNull().defaultNow(),
+    overrideGlobalVisibility: boolean("override_global_visibility").notNull().default(false),
   },
   (table) => [
     uniqueIndex("idx_account_platforms_unique").on(table.accountId, table.platform),

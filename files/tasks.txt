@@ -142,6 +142,8 @@ Canva permissions comparison on compare page (PLA-75) ✅
 
 fix timezone discrepancy in scraper Run History (PLA-76) ✅
 
+platform visibility controls — hide/show platforms for regular users (PLA-77) ✅
+
 feedback sayfası
 
 kime hangi durumda nasıl emailler gönderilebilinir.

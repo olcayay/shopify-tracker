@@ -30,8 +30,9 @@ import {
   researchProjectKeywords,
   researchProjectCompetitors,
   accountPlatforms,
+  platformVisibility,
 } from "@appranks/db";
-import { isPlatformId } from "@appranks/shared";
+import { isPlatformId, PLATFORM_IDS } from "@appranks/shared";
 import { generateAccessToken } from "./auth.js";
 import type { JwtPayload } from "../middleware/auth.js";
 
@@ -244,6 +245,15 @@ export const systemAdminRoutes: FastifyPluginAsync = async (app) => {
       pkg = found ?? null;
     }
 
+    // Enabled platforms with override info
+    const enabledPlatformsList = await db
+      .select({
+        platform: accountPlatforms.platform,
+        overrideGlobalVisibility: accountPlatforms.overrideGlobalVisibility,
+      })
+      .from(accountPlatforms)
+      .where(eq(accountPlatforms.accountId, id));
+
     return {
       ...account,
       package: pkg,
@@ -253,6 +263,11 @@ export const systemAdminRoutes: FastifyPluginAsync = async (app) => {
       competitorApps: competitorAppsList,
       trackedFeatures: trackedFeaturesList,
       researchProjects: researchProjectsCount.count,
+      enabledPlatforms: enabledPlatformsList.map((p) => p.platform),
+      platformOverrides: enabledPlatformsList.reduce((acc, p) => {
+        acc[p.platform] = p.overrideGlobalVisibility;
+        return acc;
+      }, {} as Record<string, boolean>),
     };
   });
 
@@ -1656,6 +1671,78 @@ export const systemAdminRoutes: FastifyPluginAsync = async (app) => {
       }
 
       return { ok: true, fixed: results };
+    }
+  );
+
+  // ── Platform Visibility ─────────────────────────────────────────────
+
+  // GET /api/system-admin/platform-visibility — get global visibility for all platforms
+  app.get("/platform-visibility", async () => {
+    const rows = await db.select().from(platformVisibility);
+    const result: Record<string, boolean> = {};
+    for (const pid of PLATFORM_IDS) {
+      const row = rows.find((r) => r.platform === pid);
+      result[pid] = row?.isVisible ?? false;
+    }
+    return result;
+  });
+
+  // PATCH /api/system-admin/platform-visibility/:platform — toggle global visibility
+  app.patch<{ Params: { platform: string } }>(
+    "/platform-visibility/:platform",
+    async (request, reply) => {
+      const { platform } = request.params;
+      if (!isPlatformId(platform)) {
+        return reply.code(400).send({ error: "Invalid platform" });
+      }
+      const { isVisible } = request.body as { isVisible?: boolean };
+      if (typeof isVisible !== "boolean") {
+        return reply.code(400).send({ error: "isVisible boolean is required" });
+      }
+
+      await db
+        .insert(platformVisibility)
+        .values({ platform, isVisible, updatedAt: new Date() })
+        .onConflictDoUpdate({
+          target: platformVisibility.platform,
+          set: { isVisible, updatedAt: new Date() },
+        });
+
+      return { platform, isVisible };
+    }
+  );
+
+  // PATCH /api/system-admin/accounts/:id/platforms/:platform/override — toggle per-account override
+  app.patch<{ Params: { id: string; platform: string } }>(
+    "/accounts/:id/platforms/:platform/override",
+    async (request, reply) => {
+      const { id, platform } = request.params;
+      if (!isPlatformId(platform)) {
+        return reply.code(400).send({ error: "Invalid platform" });
+      }
+      const { override } = request.body as { override?: boolean };
+      if (typeof override !== "boolean") {
+        return reply.code(400).send({ error: "override boolean is required" });
+      }
+
+      const result = await db
+        .update(accountPlatforms)
+        .set({ overrideGlobalVisibility: override })
+        .where(
+          and(
+            eq(accountPlatforms.accountId, id),
+            eq(accountPlatforms.platform, platform)
+          )
+        )
+        .returning();
+
+      if (result.length === 0) {
+        return reply
+          .code(404)
+          .send({ error: "Platform not enabled for this account" });
+      }
+
+      return { platform, override };
     }
   );
 };
