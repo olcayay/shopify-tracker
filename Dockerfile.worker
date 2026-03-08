@@ -22,7 +22,8 @@ RUN ./node_modules/.bin/tsc -p packages/shared && \
     ./node_modules/.bin/tsc -p apps/scraper
 
 # ---- Production ----
-FROM base AS runner
+FROM node:20-bookworm-slim AS runner
+WORKDIR /app
 ENV NODE_ENV=production
 
 COPY package.json package-lock.json ./
@@ -30,11 +31,13 @@ COPY packages/shared/package.json ./packages/shared/
 COPY packages/db/package.json ./packages/db/
 COPY apps/scraper/package.json ./apps/scraper/
 RUN npm ci --omit=dev
+RUN npx playwright install chromium --with-deps
 
 COPY --from=build /app/packages/shared/dist ./packages/shared/dist
 COPY --from=build /app/packages/db/dist ./packages/db/dist
 COPY --from=build /app/packages/db/src/migrations ./packages/db/src/migrations
 COPY --from=build /app/apps/scraper/dist ./apps/scraper/dist
+COPY apps/scraper/canva-auth-state.json ./apps/scraper/canva-auth-state.json
 
 # WORKER_MODE: "background" (default) runs worker + scheduler
 #               "interactive" runs only the interactive worker

@@ -16,7 +16,10 @@ export class BrowserClient {
   async fetchPage(url: string): Promise<string> {
     if (!this.browser) {
       log.info("launching browser");
-      this.browser = await chromium.launch({ headless: true });
+      this.browser = await chromium.launch({
+        headless: true,
+        args: ["--no-sandbox"],
+      });
     }
 
     const context = await this.browser.newContext({ userAgent: USER_AGENT });
@@ -40,7 +43,10 @@ export class BrowserClient {
   async withPage<T>(url: string, callback: (page: Page) => Promise<T>): Promise<T> {
     if (!this.browser) {
       log.info("launching browser");
-      this.browser = await chromium.launch({ headless: true });
+      this.browser = await chromium.launch({
+        headless: true,
+        args: ["--no-sandbox"],
+      });
     }
 
     const context = await this.browser.newContext({ userAgent: USER_AGENT });

@@ -358,9 +358,9 @@ export class CanvaModule implements PlatformModule {
     // Use real Chrome binary with anti-detection flags for Cloudflare bypass
     this.browser = await chromium.launch({
       headless: true,
-      channel: "chrome",
       args: [
         "--disable-blink-features=AutomationControlled",
+        "--no-sandbox",
       ],
       ignoreDefaultArgs: ["--enable-automation"],
     });
