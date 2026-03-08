@@ -31,6 +31,16 @@ export default async function DetailsPage({
   const businessNeeds: string[] = isSalesforce ? (Array.isArray(pd?.businessNeeds) ? pd.businessNeeds : []) : [];
   const productsRequired: string[] = isSalesforce ? pd?.productsRequired || [] : [];
 
+  // Canva-specific fields from platformData
+  const isCanva = platform === "canva";
+  const canvaPermissions: { scope: string; type: string }[] = isCanva ? pd?.permissions || [] : [];
+  const canvaDevEmail: string = isCanva ? pd?.developerEmail || "" : "";
+  const canvaDevPhone: string = isCanva ? pd?.developerPhone || "" : "";
+  const canvaDevAddress = isCanva ? pd?.developerAddress : null;
+  const canvaTermsUrl: string = isCanva ? pd?.termsUrl || "" : "";
+  const canvaPrivacyUrl: string = isCanva ? pd?.privacyUrl || "" : "";
+  const canvaLanguages: string[] = isCanva ? pd?.languages || [] : [];
+
   return (
     <div className="space-y-4">
       {snapshot.appIntroduction && (
@@ -213,6 +223,90 @@ export default async function DetailsPage({
                         {item}
                       </Badge>
                     </Link>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+        </div>
+      )}
+
+      {/* Canva: Permissions, Developer Info, Languages */}
+      {isCanva && (canvaPermissions.length > 0 || canvaDevEmail || canvaDevPhone || canvaDevAddress || canvaLanguages.length > 0) && (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {canvaPermissions.length > 0 && (
+            <Card>
+              <CardHeader>
+                <CardTitle>Permissions</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <ul className="space-y-1.5">
+                  {canvaPermissions.map((p, i) => (
+                    <li key={i} className="flex items-center justify-between text-sm">
+                      <span>
+                        <span className="text-green-600 mr-1.5">✓</span>
+                        {p.scope.replace(/^canva:/, "").replace(/:/g, " › ")}
+                      </span>
+                      <Badge variant={p.type === "MANDATORY" ? "default" : "outline"} className="text-xs ml-2 shrink-0">
+                        {p.type === "MANDATORY" ? "Mandatory" : "Optional"}
+                      </Badge>
+                    </li>
+                  ))}
+                </ul>
+              </CardContent>
+            </Card>
+          )}
+
+          {(canvaDevEmail || canvaDevPhone || canvaDevAddress) && (
+            <Card>
+              <CardHeader>
+                <CardTitle>Developer Information</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-1 text-sm">
+                  {canvaDevEmail && (
+                    <p>
+                      <span className="text-muted-foreground">Email:</span>{" "}
+                      <a href={`mailto:${canvaDevEmail}`} className="text-primary hover:underline">{canvaDevEmail}</a>
+                    </p>
+                  )}
+                  {canvaDevPhone && (
+                    <p>
+                      <span className="text-muted-foreground">Phone:</span> {canvaDevPhone}
+                    </p>
+                  )}
+                  {canvaDevAddress && (
+                    <p>
+                      <span className="text-muted-foreground">Address:</span>{" "}
+                      {[canvaDevAddress.street, canvaDevAddress.city, canvaDevAddress.state ? `${canvaDevAddress.state} ${canvaDevAddress.zip || ""}`.trim() : canvaDevAddress.zip, canvaDevAddress.country].filter(Boolean).join(", ")}
+                    </p>
+                  )}
+                  {canvaTermsUrl && (
+                    <p>
+                      <span className="text-muted-foreground">Terms of Service:</span>{" "}
+                      <a href={canvaTermsUrl} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">{canvaTermsUrl}</a>
+                    </p>
+                  )}
+                  {canvaPrivacyUrl && (
+                    <p>
+                      <span className="text-muted-foreground">Privacy Policy:</span>{" "}
+                      <a href={canvaPrivacyUrl} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">{canvaPrivacyUrl}</a>
+                    </p>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {canvaLanguages.length > 0 && (
+            <Card>
+              <CardHeader>
+                <CardTitle>Languages</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="flex flex-wrap gap-1.5">
+                  {canvaLanguages.map((lang, i) => (
+                    <Badge key={i} variant="outline" className="text-xs">{lang}</Badge>
                   ))}
                 </div>
               </CardContent>

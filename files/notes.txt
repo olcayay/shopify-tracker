@@ -1,3 +1,20 @@
+Canva permissions comparison on compare page (PLA-75)
+=====================================================
+
+Added a Permissions comparison section to the Canva app compare page.
+- New `PermissionsComparisonSection` component shows permission scopes as rows, apps as columns
+- Each cell shows "Required" (filled badge) or "Optional" (outline badge) per app
+- Scopes displayed in human-readable format: strips `canva:` prefix, replaces `:` with ` › `
+- Sorted with primary app's permissions first, then alphabetically
+- Count badge shows how many apps use each permission
+- Added "Permissions" to the sticky section nav (only for Canva platform)
+- Also includes the details page changes from earlier: Permissions card, Developer Information card, Languages card
+
+Files changed:
+1. apps/dashboard/.../compare/page.tsx: added `isCanva`, SECTIONS entry, PermissionsComparisonSection component
+2. apps/dashboard/.../details/page.tsx: added Canva permissions, developer info, and languages cards
+
+
 Canva app type badges (PLA-74)
 ===============================
 

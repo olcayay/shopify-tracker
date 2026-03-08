@@ -380,6 +380,7 @@ export default function ComparePage() {
   }, [selectedSlugs, slug, competitors.length]);
 
   const isSalesforce = platform === "salesforce";
+  const isCanva = platform === "canva";
 
   // Section navigation
   const SECTIONS = useMemo(() => {
@@ -398,6 +399,11 @@ export default function ComparePage() {
         { id: "sec-requires", key: "requires", label: "Requires" },
       );
     }
+    if (isCanva) {
+      sections.push(
+        { id: "sec-permissions", key: "permissions", label: "Permissions" },
+      );
+    }
     sections.push(
       { id: "sec-rankings", key: "categoryRanking", label: "Rankings" },
       { id: "sec-reviews", key: "reviewsRatings", label: "Reviews" },
@@ -406,7 +412,7 @@ export default function ComparePage() {
       { id: "sec-seo", key: "webSearchContent", label: "Web Search" },
     );
     return sections;
-  }, [isSalesforce]);
+  }, [isSalesforce, isCanva]);
 
   const [activeSection, setActiveSection] = useState<string>("sec-name");
   const navRef = useRef<HTMLDivElement>(null);
@@ -1081,6 +1087,17 @@ export default function ComparePage() {
             </>
           )}
 
+          {/* Canva: Permissions */}
+          {isCanva && (
+            <PermissionsComparisonSection
+              id="sec-permissions"
+              sectionKey="permissions"
+              collapsed={isCollapsed("permissions")}
+              onToggle={toggleSection}
+              apps={selectedApps}
+            />
+          )}
+
           {/* Category Ranking */}
           <CategoryRankingSection
             id="sec-rankings"
@@ -1328,6 +1345,107 @@ function BadgeComparisonSection({
                 ))}
               </tr>
             ))}
+          </tbody>
+        </table>
+      </div>
+    </CompareSection>
+  );
+}
+
+function PermissionsComparisonSection({
+  id,
+  sectionKey,
+  collapsed,
+  onToggle,
+  apps,
+}: {
+  id?: string;
+  sectionKey: string;
+  collapsed: boolean;
+  onToggle: (key: string) => void;
+  apps: AppData[];
+}) {
+  // Build map: scope → { appSlug → type }
+  const permissionMap = useMemo(() => {
+    const map = new Map<string, Map<string, string>>();
+    for (const app of apps) {
+      const perms: { scope: string; type: string }[] =
+        app.latestSnapshot?.platformData?.permissions || [];
+      for (const p of perms) {
+        if (!map.has(p.scope)) map.set(p.scope, new Map());
+        map.get(p.scope)!.set(app.slug, p.type);
+      }
+    }
+    return map;
+  }, [apps]);
+
+  // Sort: primary app scopes first, then alphabetically
+  const allScopes = useMemo(() => {
+    const primarySlug = apps[0]?.slug;
+    return [...permissionMap.keys()].sort((a, b) => {
+      const aIn = primarySlug ? (permissionMap.get(a)?.has(primarySlug) || false) : false;
+      const bIn = primarySlug ? (permissionMap.get(b)?.has(primarySlug) || false) : false;
+      if (aIn !== bIn) return aIn ? -1 : 1;
+      return a.localeCompare(b);
+    });
+  }, [permissionMap, apps]);
+
+  if (allScopes.length === 0) return null;
+
+  const formatScope = (scope: string) =>
+    scope.replace(/^canva:/, "").replace(/:/g, " › ");
+
+  return (
+    <CompareSection
+      id={id}
+      title="Permissions"
+      sectionKey={sectionKey}
+      collapsed={collapsed}
+      onToggle={onToggle}
+    >
+      <div className="overflow-auto max-h-[60vh]">
+        <table className="w-full text-sm table-fixed">
+          <thead>
+            <tr>
+              <th className="text-left py-2 pr-4 text-muted-foreground font-medium w-[200px] min-w-[200px] sticky top-0 bg-card z-10 border-b border-border shadow-[0_1px_0_0_hsl(var(--border))]">
+                Permission
+              </th>
+              {apps.map((app) => (
+                <th key={app.slug} className="py-2 px-2 pb-6 text-center min-w-[130px] sticky top-0 bg-card z-10 border-b border-border shadow-[0_1px_0_0_hsl(var(--border))]">
+                  <div className="flex justify-center">
+                    <LinkedAppIcon app={app} />
+                  </div>
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {allScopes.map((scope) => {
+              const appMap = permissionMap.get(scope)!;
+              return (
+                <tr key={scope} className="border-b last:border-0">
+                  <td className="py-1.5 pr-4 w-[200px] min-w-[200px]">
+                    <Badge variant="outline" className="text-xs">
+                      {formatScope(scope)} ({appMap.size})
+                    </Badge>
+                  </td>
+                  {apps.map((app) => {
+                    const type = appMap.get(app.slug);
+                    if (!type) return <td key={app.slug} className="py-1.5 px-2 text-center" />;
+                    return (
+                      <td key={app.slug} className="py-1.5 px-2 text-center">
+                        <Badge
+                          variant={type === "MANDATORY" ? "default" : "outline"}
+                          className="text-[10px]"
+                        >
+                          {type === "MANDATORY" ? "Required" : "Optional"}
+                        </Badge>
+                      </td>
+                    );
+                  })}
+                </tr>
+              );
+            })}
           </tbody>
         </table>
       </div>
