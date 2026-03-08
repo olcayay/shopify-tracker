@@ -15,6 +15,7 @@
     "api:start": "turbo --filter=api start",
     "test": "turbo --filter=@appranks/dashboard test",
     "dashboard:dev": "turbo --filter=dashboard dev",
+    "worker:restart": "npm run worker:restart -w @appranks/scraper",
     "prepare": "husky || true"
   },
   "devDependencies": {
