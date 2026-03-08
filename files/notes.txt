@@ -1,3 +1,33 @@
+Canva keyword search & auto-suggestions
+=========================================
+
+- Created search-parser.ts: client-side filtering of embedded app data (~1000+ apps)
+  - Uses HTML order (Canva's popularity ranking) instead of custom relevance scoring
+  - Caches extracted apps to avoid re-parsing same HTML across pages
+  - Hardened against non-string fields (fullDescription can be object/null)
+- Created suggest-parser.ts: generates auto-suggestions from app names, words, topic labels
+- Updated CanvaModule: added buildSearchUrl, fetchSearchPage, parseSearchPage, generateSuggestions
+- Enabled hasKeywordSearch + hasAutoSuggestions in platform config
+- Updated scoring weights: category 0.40, keyword 0.20, text 0.40
+- Made KeywordSuggestionScraper platform-aware (accepts PlatformModule, queries by platform)
+- Updated process-job.ts to pass platformModule to KeywordSuggestionScraper
+- Added canva_keyword_search scheduler job (every 12h at 03:00, 15:00)
+- Fixed buildExternalSearchUrl for Canva: canva.com/your-apps?q= (was /apps/search?q=)
+- Fixed app-parser.ts: typeof check for obj.H (fullDescription) to handle non-string values
+
+Files changed:
+  - apps/scraper/src/platforms/canva/parsers/search-parser.ts (new)
+  - apps/scraper/src/platforms/canva/parsers/suggest-parser.ts (new)
+  - apps/scraper/src/platforms/canva/index.ts
+  - apps/scraper/src/platforms/canva/constants.ts
+  - apps/scraper/src/platforms/canva/parsers/app-parser.ts
+  - apps/scraper/src/scrapers/keyword-suggestion-scraper.ts
+  - apps/scraper/src/process-job.ts
+  - apps/scraper/src/scheduler.ts
+  - packages/shared/src/constants/platforms.ts
+  - apps/dashboard/src/lib/platform-urls.ts
+  - apps/dashboard/src/__tests__/lib/platform-urls.test.ts
+
 Canva full-stack integration — auth, sidebar, scheduler, scraper trigger
 =========================================================================
 

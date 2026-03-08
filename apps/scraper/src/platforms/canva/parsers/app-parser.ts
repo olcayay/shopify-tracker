@@ -79,7 +79,7 @@ export function extractCanvaApps(html: string): CanvaEmbeddedApp[] {
         tagline: obj.E || "",
         developer: obj.F || "",
         iconUrl: obj.G?.A || "",
-        fullDescription: obj.H || "",
+        fullDescription: typeof obj.H === "string" ? obj.H : "",
         topics,
         urlSlug,
       });

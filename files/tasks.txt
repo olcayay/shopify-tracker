@@ -128,6 +128,8 @@ Canva Apps Marketplace integration — platform module, parsers, registry, migra
 
 Canva full-stack integration — auth, sidebar, scheduler, CLI, scraper fix ✅
 
+Canva keyword search & auto-suggestions ✅
+
 feedback sayfası
 
 kime hangi durumda nasıl emailler gönderilebilinir.

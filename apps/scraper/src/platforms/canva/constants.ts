@@ -67,10 +67,10 @@ export const CANVA_SCORING: PlatformScoringConfig = {
   pageSize: 30,
   pageDecay: 0.85,
   similarityWeights: {
-    category: 0.50, // Categories are the main signal (no keywords/features)
+    category: 0.40, // Categories are a strong signal
     feature: 0.0,   // No feature taxonomy
-    keyword: 0.0,   // No keyword search
-    text: 0.50,
+    keyword: 0.20,  // Keyword search now supported
+    text: 0.40,
   },
   stopWords: new Set([
     "canva", "app", "apps", "the", "and", "for",

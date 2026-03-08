@@ -60,9 +60,9 @@ describe("buildExternalSearchUrl", () => {
     );
   });
 
-  it("canva → apps/search?q={query}", () => {
+  it("canva → your-apps?q={query}", () => {
     expect(buildExternalSearchUrl("canva", "photo")).toBe(
-      "https://www.canva.com/apps/search?q=photo"
+      "https://www.canva.com/your-apps?q=photo"
     );
   });
 

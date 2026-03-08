@@ -4,6 +4,7 @@ import type {
   NormalizedAppDetails,
   NormalizedCategoryPage,
   NormalizedFeaturedSection,
+  NormalizedSearchPage,
   PlatformConstants,
   PlatformScoringConfig,
 } from "../platform-module.js";
@@ -15,6 +16,8 @@ import { CANVA_CONSTANTS, CANVA_SCORING } from "./constants.js";
 import { parseCanvaAppPage, extractCanvaApps, normalizeCanvaApp } from "./parsers/app-parser.js";
 import { parseCanvaCategoryPage } from "./parsers/category-parser.js";
 import { parseCanvaFeaturedSections } from "./parsers/featured-parser.js";
+import { parseCanvaSearchPage } from "./parsers/search-parser.js";
+import { generateCanvaSuggestions } from "./parsers/suggest-parser.js";
 import { createLogger } from "@appranks/shared";
 
 const log = createLogger("canva-module");
@@ -37,12 +40,12 @@ export class CanvaModule implements PlatformModule {
   readonly scoringConfig: PlatformScoringConfig = CANVA_SCORING;
 
   readonly capabilities: PlatformCapabilities = {
-    hasKeywordSearch: false,
+    hasKeywordSearch: true,
     hasReviews: false,
     hasFeaturedSections: true,
     hasAdTracking: false,
     hasSimilarApps: false,
-    hasAutoSuggestions: false,
+    hasAutoSuggestions: true,
     hasFeatureTaxonomy: false,
   };
 
@@ -109,6 +112,41 @@ export class CanvaModule implements PlatformModule {
     const match = url.match(/\/apps\/(AA[FG][A-Za-z0-9_-]+)(?:\/([a-z0-9-]+))?/);
     if (match) return match[2] ? `${match[1]}--${match[2]}` : match[1];
     return url.split("/").pop()?.split("?")[0] || url;
+  }
+
+  // --- Search ---
+
+  buildSearchUrl(keyword: string, _page?: number): string {
+    return `${canvaUrls.base}/your-apps?q=${encodeURIComponent(keyword)}`;
+  }
+
+  async fetchSearchPage(_keyword: string, _page?: number): Promise<string> {
+    // All apps are in the cached /apps page — no separate search endpoint
+    return this.fetchAppsPage();
+  }
+
+  parseSearchPage(
+    html: string,
+    keyword: string,
+    page: number,
+    offset: number,
+  ): NormalizedSearchPage {
+    return parseCanvaSearchPage(html, keyword, page, offset);
+  }
+
+  // --- Auto-suggest ---
+
+  buildAutoSuggestUrl(keyword: string): string {
+    return `${canvaUrls.base}/your-apps?q=${encodeURIComponent(keyword)}`;
+  }
+
+  /**
+   * Generate auto-suggestions from embedded app data.
+   * Called by KeywordSuggestionScraper for Canva platform.
+   */
+  async generateSuggestions(keyword: string): Promise<string[]> {
+    const html = await this.fetchAppsPage();
+    return generateCanvaSuggestions(html, keyword);
   }
 
   // --- Similarity helpers ---

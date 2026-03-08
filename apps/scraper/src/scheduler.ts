@@ -79,6 +79,12 @@ const SCHEDULES = [
     platform: "canva" as const,
   },
   {
+    name: "canva_keyword_search",
+    cron: "0 3,15 * * *", // Every 12 hours (03:00, 15:00)
+    type: "keyword_search" as const,
+    platform: "canva" as const,
+  },
+  {
     name: "canva_compute_app_scores",
     cron: "30 10 * * *", // Daily at 10:30 UTC
     type: "compute_app_scores" as const,

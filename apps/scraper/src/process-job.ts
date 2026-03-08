@@ -223,7 +223,7 @@ export function createProcessJob(db: ReturnType<typeof createDb>, httpClient: Ht
       }
 
       case "keyword_suggestions": {
-        const suggestionScraper = new KeywordSuggestionScraper(db, httpClient);
+        const suggestionScraper = new KeywordSuggestionScraper(db, httpClient, platformModule);
         if (job.data.keyword) {
           // Single keyword suggestion scrape
           const { eq, and: andOp2 } = await import("drizzle-orm");

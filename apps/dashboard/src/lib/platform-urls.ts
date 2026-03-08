@@ -29,7 +29,7 @@ export function buildExternalSearchUrl(platform: PlatformId, query: string): str
     case "salesforce":
       return `https://appexchange.salesforce.com/appxSearchKeywordResults?keywords=${encodeURIComponent(query)}`;
     case "canva":
-      return `https://www.canva.com/apps/search?q=${encodeURIComponent(query)}`;
+      return `https://www.canva.com/your-apps?q=${encodeURIComponent(query)}`;
   }
 }
 

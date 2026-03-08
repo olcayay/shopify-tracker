@@ -5,42 +5,48 @@ import {
   trackedKeywords,
   keywordAutoSuggestions,
 } from "@appranks/db";
-import { urls, createLogger } from "@appranks/shared";
+import { urls, createLogger, type PlatformId } from "@appranks/shared";
 import { HttpClient } from "../http-client.js";
+import type { PlatformModule } from "../platforms/platform-module.js";
+import type { CanvaModule } from "../platforms/canva/index.js";
 
 const log = createLogger("keyword-suggestion-scraper");
 
 export class KeywordSuggestionScraper {
   private db: Database;
   private httpClient: HttpClient;
+  private platform: PlatformId;
+  private platformModule?: PlatformModule;
 
-  constructor(db: Database, httpClient?: HttpClient) {
+  constructor(db: Database, httpClient?: HttpClient, platformModule?: PlatformModule) {
     this.db = db;
     this.httpClient = httpClient || new HttpClient();
+    this.platformModule = platformModule;
+    this.platform = platformModule?.platformId ?? "shopify";
   }
 
-  /** Scrape autocomplete suggestions for all active Shopify keywords */
+  /** Scrape autocomplete suggestions for all active keywords on this platform */
   async scrapeAll(triggeredBy?: string, queue?: string): Promise<void> {
     const keywords = await this.db
       .select()
       .from(trackedKeywords)
       .where(and(
         eq(trackedKeywords.isActive, true),
-        eq(trackedKeywords.platform, "shopify")
+        eq(trackedKeywords.platform, this.platform)
       ));
 
     if (keywords.length === 0) {
-      log.info("no active keywords found");
+      log.info("no active keywords found", { platform: this.platform });
       return;
     }
 
-    log.info("scraping keyword suggestions", { count: keywords.length });
+    log.info("scraping keyword suggestions", { count: keywords.length, platform: this.platform });
 
     const [run] = await this.db
       .insert(scrapeRuns)
       .values({
         scraperType: "keyword_suggestions",
-        platform: "shopify",
+        platform: this.platform,
         status: "running",
         createdAt: new Date(),
         startedAt: new Date(),
@@ -60,6 +66,7 @@ export class KeywordSuggestionScraper {
       } catch (error) {
         log.error("failed to scrape suggestions", {
           keyword: kw.keyword,
+          platform: this.platform,
           error: String(error),
         });
         itemsFailed++;
@@ -80,6 +87,7 @@ export class KeywordSuggestionScraper {
       .where(eq(scrapeRuns.id, run.id));
 
     log.info("suggestions scrape complete", {
+      platform: this.platform,
       itemsScraped,
       itemsFailed,
       durationMs: Date.now() - startTime,
@@ -92,17 +100,25 @@ export class KeywordSuggestionScraper {
     keyword: string,
     runId: string
   ): Promise<string[]> {
-    const acUrl = urls.autocomplete(keyword);
-    const json = await this.httpClient.fetchPage(acUrl, {
-      Accept: "application/json",
-    });
-    const data = JSON.parse(json);
+    let suggestions: string[];
 
-    const suggestions: string[] = (data.searches || [])
-      .map((s: { name: string }) => s.name)
-      .filter(
-        (name: string) => name.toLowerCase() !== keyword.toLowerCase()
-      );
+    if (this.platform === "canva" && this.platformModule) {
+      // Canva: generate suggestions from embedded app data (no API)
+      suggestions = await (this.platformModule as CanvaModule).generateSuggestions(keyword);
+    } else {
+      // Shopify: use autocomplete API
+      const acUrl = urls.autocomplete(keyword);
+      const json = await this.httpClient.fetchPage(acUrl, {
+        Accept: "application/json",
+      });
+      const data = JSON.parse(json);
+
+      suggestions = (data.searches || [])
+        .map((s: { name: string }) => s.name)
+        .filter(
+          (name: string) => name.toLowerCase() !== keyword.toLowerCase()
+        );
+    }
 
     const now = new Date();
     await this.db
@@ -120,6 +136,7 @@ export class KeywordSuggestionScraper {
 
     log.info("saved suggestions", {
       keyword,
+      platform: this.platform,
       count: suggestions.length,
       suggestions,
     });
