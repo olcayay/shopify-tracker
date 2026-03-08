@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Zap, Loader2, Check } from "lucide-react";
 import { ScraperOptionsModal, type ScraperOptions } from "./scraper-options-modal";
 
-const VALID_PLATFORMS = new Set(["shopify", "salesforce"]);
+const VALID_PLATFORMS = new Set(["shopify", "salesforce", "canva"]);
 
 interface AdminScraperTriggerProps {
   scraperType: string;

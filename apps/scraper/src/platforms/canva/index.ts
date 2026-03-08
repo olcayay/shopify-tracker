@@ -9,6 +9,7 @@ import type {
 } from "../platform-module.js";
 import { HttpClient } from "../../http-client.js";
 import type { BrowserClient } from "../../browser-client.js";
+import { chromium, type Browser } from "playwright";
 import { canvaUrls } from "./urls.js";
 import { CANVA_CONSTANTS, CANVA_SCORING } from "./constants.js";
 import { parseCanvaAppPage, extractCanvaApps, normalizeCanvaApp } from "./parsers/app-parser.js";
@@ -125,7 +126,8 @@ export class CanvaModule implements PlatformModule {
 
   /**
    * Fetch the /apps page HTML, with caching to avoid redundant requests.
-   * BrowserClient is required because Canva uses Cloudflare protection.
+   * Uses domcontentloaded + wait instead of networkidle because Canva's
+   * long-polling connections prevent networkidle from ever resolving.
    */
   private async fetchAppsPage(): Promise<string> {
     if (this.cachedAppsPageHtml) {
@@ -134,13 +136,24 @@ export class CanvaModule implements PlatformModule {
     }
 
     const url = canvaUrls.apps();
+    log.info("fetching /apps page via browser", { url });
 
-    if (this.browserClient) {
-      log.info("fetching /apps page via browser", { url });
-      this.cachedAppsPageHtml = await this.browserClient.fetchPage(url);
-    } else {
-      log.warn("no browser client — HTTP fetch will likely be blocked by Cloudflare");
-      this.cachedAppsPageHtml = await this.httpClient.fetchPage(url);
+    // Use our own browser context with domcontentloaded instead of networkidle
+    // to avoid Canva's long-polling timeout issues
+    let browser: Browser | undefined;
+    try {
+      browser = await chromium.launch({ headless: true });
+      const context = await browser.newContext({
+        userAgent: "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
+      });
+      const page = await context.newPage();
+      await page.goto(url, { waitUntil: "domcontentloaded", timeout: 30_000 });
+      // Wait for SPA hydration and embedded JSON to be present
+      await page.waitForTimeout(8000);
+      this.cachedAppsPageHtml = await page.content();
+      await context.close();
+    } finally {
+      if (browser) await browser.close();
     }
 
     // Verify we got actual app data

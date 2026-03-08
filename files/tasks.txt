@@ -126,6 +126,8 @@ fix missing platform field in scrape_runs records (PLA-66 follow-up) ✅
 
 Canva Apps Marketplace integration — platform module, parsers, registry, migration ✅
 
+Canva full-stack integration — auth, sidebar, scheduler, CLI, scraper fix ✅
+
 feedback sayfası
 
 kime hangi durumda nasıl emailler gönderilebilinir.

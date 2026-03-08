@@ -1,3 +1,18 @@
+Canva full-stack integration — auth, sidebar, scheduler, scraper trigger
+=========================================================================
+
+- Fixed new account registration to include canva in default platforms (auth.ts)
+- Expanded Canva sidebar navigation — removed early return, uses capability-based nav items like other platforms
+  (shows: Overview, Apps, Competitors, Categories, Featured, Research)
+- Added canva to admin scraper trigger VALID_PLATFORMS
+- Added platform-aware scheduler jobs for Salesforce and Canva (previously all jobs defaulted to shopify):
+  - Canva: category (04:30), app_details (02:30/14:30), compute_app_scores (10:30)
+  - Salesforce: category (04:00), app_details (02:00/14:00), reviews (07:00), compute_app_scores (10:00)
+  - Jobs now pass platform field to enqueueScraperJob
+- Preview page for canva shows "not available" with external link (correct — no editable listing page)
+
+---
+
 Canva Apps Marketplace integration
 ====================================
 

@@ -9,6 +9,7 @@ const log = createLogger("scheduler");
 
 // Schedule definitions
 const SCHEDULES = [
+  // ── Shopify (default platform) ──
   {
     name: "category",
     cron: "0 3 * * *", // Daily at 03:00
@@ -39,6 +40,50 @@ const SCHEDULES = [
     cron: "0 9 * * *", // Daily at 09:00 UTC
     type: "compute_app_scores" as const,
   },
+  // ── Salesforce ──
+  {
+    name: "salesforce_category",
+    cron: "0 4 * * *", // Daily at 04:00
+    type: "category" as const,
+    platform: "salesforce" as const,
+  },
+  {
+    name: "salesforce_app_details",
+    cron: "0 2,14 * * *", // Every 12 hours (02:00, 14:00)
+    type: "app_details" as const,
+    platform: "salesforce" as const,
+  },
+  {
+    name: "salesforce_reviews",
+    cron: "0 7 * * *", // Daily at 07:00 UTC
+    type: "reviews" as const,
+    platform: "salesforce" as const,
+  },
+  {
+    name: "salesforce_compute_app_scores",
+    cron: "0 10 * * *", // Daily at 10:00 UTC
+    type: "compute_app_scores" as const,
+    platform: "salesforce" as const,
+  },
+  // ── Canva ──
+  {
+    name: "canva_category",
+    cron: "30 4 * * *", // Daily at 04:30
+    type: "category" as const,
+    platform: "canva" as const,
+  },
+  {
+    name: "canva_app_details",
+    cron: "30 2,14 * * *", // Every 12 hours (02:30, 14:30)
+    type: "app_details" as const,
+    platform: "canva" as const,
+  },
+  {
+    name: "canva_compute_app_scores",
+    cron: "30 10 * * *", // Daily at 10:30 UTC
+    type: "compute_app_scores" as const,
+    platform: "canva" as const,
+  },
 ];
 
 log.info("starting scheduler", {
@@ -52,6 +97,7 @@ for (const schedule of SCHEDULES) {
       const jobId = await enqueueScraperJob({
         type: schedule.type,
         triggeredBy: "scheduler",
+        ...("platform" in schedule ? { platform: schedule.platform } : {}),
       });
       log.info("job enqueued", { name: schedule.name, jobId });
     } catch (err) {

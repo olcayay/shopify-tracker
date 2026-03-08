@@ -86,6 +86,7 @@ export const authRoutes: FastifyPluginAsync = async (app) => {
     await db.insert(accountPlatforms).values([
       { accountId: account.id, platform: "shopify" },
       { accountId: account.id, platform: "salesforce" },
+      { accountId: account.id, platform: "canva" },
     ]);
 
     // Create owner user

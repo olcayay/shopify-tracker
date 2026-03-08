@@ -46,9 +46,6 @@ const PLATFORM_COLORS: Record<PlatformId, string> = {
 
 function getNavItems(platformId: PlatformId) {
   const p = `/${platformId}`;
-  if (platformId === "canva") {
-    return [{ href: `${p}/overview`, label: "Overview", icon: LayoutDashboard }];
-  }
   const caps = PLATFORMS[platformId];
   const items: { href: string; label: string; icon: any; badge?: string }[] = [
     { href: `${p}/overview`, label: "Overview", icon: LayoutDashboard },
