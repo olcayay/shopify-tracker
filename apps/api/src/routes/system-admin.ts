@@ -911,12 +911,11 @@ export const systemAdminRoutes: FastifyPluginAsync = async (app) => {
   // DELETE /api/system-admin/scraper/queue/failed — remove all failed jobs from both queues
   app.delete("/scraper/queue/failed", async (_request, reply) => {
     try {
-      const [bgFailed, intFailed] = await Promise.all([
-        getBackgroundQueue().getFailed(0, 1000),
-        getInteractiveQueue().getFailed(0, 1000),
+      const [bgRemoved, intRemoved] = await Promise.all([
+        getBackgroundQueue().clean(0, 1000, "failed"),
+        getInteractiveQueue().clean(0, 1000, "failed"),
       ]);
-      await Promise.all([...bgFailed, ...intFailed].map((j) => j.remove()));
-      return { ok: true, removed: bgFailed.length + intFailed.length };
+      return { ok: true, removed: bgRemoved.length + intRemoved.length };
     } catch {
       return reply.code(500).send({ error: "Failed to clear failed jobs" });
     }
