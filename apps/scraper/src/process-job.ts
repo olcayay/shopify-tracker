@@ -59,8 +59,11 @@ export function createProcessJob(db: ReturnType<typeof createDb>, httpClient: Ht
     if (platform === "salesforce" && type === "app_details") {
       browserClient = new BrowserClient();
     }
+    if (platform === "canva") {
+      browserClient = new BrowserClient();
+    }
 
-    // Get platform module (may throw for unimplemented platforms like canva)
+    // Get platform module
     let platformModule;
     try {
       platformModule = getModule(platform, httpClient, browserClient);

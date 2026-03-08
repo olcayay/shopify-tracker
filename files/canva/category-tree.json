@@ -1,0 +1,101 @@
+[
+  {
+    "name": "AI Generation",
+    "slug": "ai-generation",
+    "children": [
+      { "name": "AI Images", "slug": "ai_images" },
+      { "name": "AI Audio", "slug": "ai_audio" },
+      { "name": "AI Videos", "slug": "ai_videos" },
+      { "name": "AI Text", "slug": "ai_text" },
+      { "name": "AI Documents", "slug": "ai_documents" }
+    ]
+  },
+  {
+    "name": "Audio and Voiceover",
+    "slug": "audio-and-voiceover",
+    "children": [
+      { "name": "Music", "slug": "music" },
+      { "name": "Voiceovers", "slug": "voiceovers" },
+      { "name": "Sound Effects", "slug": "sound_effects" }
+    ]
+  },
+  {
+    "name": "Communication",
+    "slug": "communication",
+    "children": [
+      { "name": "Social Networking", "slug": "social_networking" },
+      { "name": "Email", "slug": "email" },
+      { "name": "Display", "slug": "display" }
+    ]
+  },
+  {
+    "name": "File and Data Management",
+    "slug": "file-and-data-management",
+    "children": [
+      { "name": "File Import and Export", "slug": "file_import_and_export" },
+      { "name": "File Converters", "slug": "file_converters" },
+      { "name": "Data Connectors", "slug": "data_connectors" },
+      { "name": "Data Visualization", "slug": "data_visualization" }
+    ]
+  },
+  {
+    "name": "Graphic Design",
+    "slug": "graphic-design",
+    "children": [
+      { "name": "Icons and Illustrations", "slug": "icons_and_illustrations" },
+      { "name": "Shapes", "slug": "shapes" },
+      { "name": "Frames", "slug": "frames" },
+      { "name": "Patterns", "slug": "patterns" },
+      { "name": "Mockups", "slug": "mockups" },
+      { "name": "Logos", "slug": "logos" }
+    ]
+  },
+  {
+    "name": "Marketing",
+    "slug": "marketing",
+    "children": [
+      { "name": "Content Schedulers", "slug": "content_schedulers" },
+      { "name": "Analytics", "slug": "analytics" },
+      { "name": "Ads", "slug": "ads" }
+    ]
+  },
+  {
+    "name": "Photo Editing",
+    "slug": "photo-editing",
+    "children": [
+      { "name": "Photo Effects", "slug": "photo_effects" },
+      { "name": "Images", "slug": "images" },
+      { "name": "Styles", "slug": "styles" },
+      { "name": "Color", "slug": "color" }
+    ]
+  },
+  {
+    "name": "Project Management",
+    "slug": "project-management",
+    "children": [
+      { "name": "Tasks and Workflows", "slug": "tasks_and_workflows" },
+      { "name": "Documents", "slug": "documents" },
+      { "name": "Forms", "slug": "forms" },
+      { "name": "Interactivity", "slug": "interactivity" }
+    ]
+  },
+  {
+    "name": "Text Styling",
+    "slug": "text-styling",
+    "children": [
+      { "name": "Text Effects", "slug": "text_effects" },
+      { "name": "Text Generators", "slug": "text_generators" }
+    ]
+  },
+  {
+    "name": "Video and Animation",
+    "slug": "video-and-animation",
+    "children": [
+      { "name": "Videos", "slug": "videos" },
+      { "name": "Video Effects", "slug": "video_effects" },
+      { "name": "Animation", "slug": "animation" },
+      { "name": "Subtitles", "slug": "subtitles" },
+      { "name": "Flipbooks", "slug": "flipbooks" }
+    ]
+  }
+]

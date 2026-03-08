@@ -2,6 +2,7 @@ import type { PlatformId } from "@appranks/shared";
 import type { PlatformModule } from "./platform-module.js";
 import { ShopifyModule } from "./shopify/index.js";
 import { SalesforceModule } from "./salesforce/index.js";
+import { CanvaModule } from "./canva/index.js";
 import type { HttpClient } from "../http-client.js";
 import type { BrowserClient } from "../browser-client.js";
 
@@ -24,7 +25,8 @@ export function getModule(platformId: PlatformId, httpClient?: HttpClient, brows
       module = new SalesforceModule(httpClient, browserClient);
       break;
     case "canva":
-      throw new Error(`Platform module "${platformId}" not yet implemented`);
+      module = new CanvaModule(httpClient, browserClient);
+      break;
     default:
       throw new Error(`Unknown platform: ${platformId}`);
   }

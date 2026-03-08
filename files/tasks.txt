@@ -124,6 +124,8 @@ platform-aware scraper management cards (PLA-66) ✅
 
 fix missing platform field in scrape_runs records (PLA-66 follow-up) ✅
 
+Canva Apps Marketplace integration — platform module, parsers, registry, migration ✅
+
 feedback sayfası
 
 kime hangi durumda nasıl emailler gönderilebilinir.

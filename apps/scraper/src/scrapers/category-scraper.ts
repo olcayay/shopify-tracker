@@ -538,8 +538,14 @@ export class CategoryScraper {
         try {
           const pageJson = await mod.fetchCategoryPage(slug, currentPage);
           // Parse with organic offset for continuous positioning
-          const { parseSalesforceCategoryPage } = await import("../platforms/salesforce/parsers/category-parser.js");
-          const pageNormalized = parseSalesforceCategoryPage(pageJson, slug, currentPage, totalOrganicRecorded);
+          // Use platform-specific parser if available, otherwise generic
+          let pageNormalized;
+          if (this.platform === "salesforce") {
+            const { parseSalesforceCategoryPage } = await import("../platforms/salesforce/parsers/category-parser.js");
+            pageNormalized = parseSalesforceCategoryPage(pageJson, slug, currentPage, totalOrganicRecorded);
+          } else {
+            pageNormalized = mod.parseCategoryPage(pageJson, mod.buildCategoryUrl(slug));
+          }
 
           // Deduplicate across pages
           const newApps = pageNormalized.apps.filter(app => {

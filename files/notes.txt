@@ -1,3 +1,31 @@
+Canva Apps Marketplace integration
+====================================
+
+- Added Canva as the third supported platform (after Shopify and Salesforce)
+- Key discovery: Canva embeds ALL app data (~1031 apps) as minified JSON in the main /apps page HTML
+  - Minified JSON schema: "A"=id, "B"=type, "C"=name, "D"=description, "E"=tagline, "F"=developer, "G"=icon, "H"=fullDesc, "I"=topic tags
+  - No separate app detail pages needed (they're blocked by Cloudflare anyway)
+  - Categories are filter tabs mapped to marketplace_topic.* tags (42 unique topics)
+- BrowserClient required (Cloudflare protection blocks HTTP requests to canva.com)
+- Page caching: CanvaModule caches the /apps page HTML to avoid redundant fetches within a job
+- No reviews, no ratings, no keyword search, no ads — focus on category rankings and featured sections
+- Created files:
+  - `apps/scraper/src/platforms/canva/index.ts` — CanvaModule implements PlatformModule
+  - `apps/scraper/src/platforms/canva/urls.ts` — URL builders
+  - `apps/scraper/src/platforms/canva/constants.ts` — 10 seed categories, rate limits, scoring config
+  - `apps/scraper/src/platforms/canva/parsers/app-parser.ts` — extracts apps from embedded JSON via regex
+  - `apps/scraper/src/platforms/canva/parsers/category-parser.ts` — filters apps by topic tags per category
+  - `apps/scraper/src/platforms/canva/parsers/featured-parser.ts` — extracts featured sections (all-apps + 3 named sections)
+  - `files/canva/category-tree.json` — 10 top-level categories with subcategory topics
+  - `packages/db/src/migrations/0053_seed_canva_platform.sql` — seeds account_platforms for existing accounts
+- Modified files:
+  - `apps/scraper/src/platforms/registry.ts` — replaced "not yet implemented" throw with CanvaModule instantiation
+  - `apps/scraper/src/process-job.ts` — added BrowserClient creation for canva platform
+  - `apps/scraper/src/scrapers/category-scraper.ts` — fixed hardcoded Salesforce parser in pagination loop to use generic mod.parseCategoryPage() for non-Salesforce platforms
+- Exploration scripts in `scripts/` (explore-canva*.ts) used to reverse-engineer the marketplace structure
+
+---
+
 Fix missing `platform` field in scrape_runs records (PLA-66 follow-up)
 ======================================================================
 
