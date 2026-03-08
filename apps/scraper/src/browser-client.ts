@@ -1,4 +1,4 @@
-import { chromium, type Browser } from "playwright";
+import { chromium, type Browser, type Page } from "playwright";
 import { createLogger } from "@appranks/shared";
 
 const log = createLogger("browser-client");
@@ -28,6 +28,29 @@ export class BrowserClient {
       // Extra wait for SPA hydration (matches Python script pattern)
       await page.waitForTimeout(2000);
       return await page.content();
+    } finally {
+      await context.close();
+    }
+  }
+
+  /**
+   * Opens a page, then hands the live Playwright Page to a callback
+   * for custom interactions (clicking, evaluating JS, etc.).
+   */
+  async withPage<T>(url: string, callback: (page: Page) => Promise<T>): Promise<T> {
+    if (!this.browser) {
+      log.info("launching browser");
+      this.browser = await chromium.launch({ headless: true });
+    }
+
+    const context = await this.browser.newContext({ userAgent: USER_AGENT });
+    const page = await context.newPage();
+
+    try {
+      log.info("opening page for interaction", { url });
+      await page.goto(url, { waitUntil: "networkidle", timeout: 45_000 });
+      await page.waitForTimeout(3000);
+      return await callback(page);
     } finally {
       await context.close();
     }

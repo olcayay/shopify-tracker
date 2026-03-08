@@ -37,6 +37,8 @@ export interface PricingPlan {
   discount_text: string | null;
   trial_text: string | null;
   features: string[];
+  currency_code?: string | null;
+  units?: string | null;
 }
 
 /** Support contact info from the app detail page */

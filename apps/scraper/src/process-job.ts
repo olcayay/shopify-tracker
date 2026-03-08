@@ -118,12 +118,12 @@ export function createProcessJob(db: ReturnType<typeof createDb>, httpClient: Ht
 
           // Cascade: enqueue review jobs for all tracked apps
           if (opts?.scrapeReviews) {
-            const { eq: eqOp } = await import("drizzle-orm");
+            const { eq: eqOp, and: andOp } = await import("drizzle-orm");
             const { apps: appsTable } = await import("@appranks/db");
             const trackedApps = await db
               .select({ slug: appsTable.slug })
               .from(appsTable)
-              .where(eqOp(appsTable.isTracked, true));
+              .where(andOp(eqOp(appsTable.isTracked, true), eqOp(appsTable.platform, platform)));
             for (const app of trackedApps) {
               await enqueueScraperJob({
                 type: "reviews",
@@ -258,7 +258,7 @@ export function createProcessJob(db: ReturnType<typeof createDb>, httpClient: Ht
       }
 
       case "reviews": {
-        const scraper = new ReviewScraper(db, httpClient);
+        const scraper = new ReviewScraper(db, httpClient, platform, platformModule);
         if (job.data.slug) {
           const startTime = Date.now();
           const [run] = await db
@@ -266,6 +266,7 @@ export function createProcessJob(db: ReturnType<typeof createDb>, httpClient: Ht
             .values({
               scraperType: "reviews",
               status: "running",
+              platform,
               createdAt: new Date(),
               startedAt: new Date(),
               triggeredBy,

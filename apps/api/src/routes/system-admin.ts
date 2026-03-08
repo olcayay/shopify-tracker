@@ -1,5 +1,5 @@
 import type { FastifyPluginAsync } from "fastify";
-import { eq, desc, sql, and, inArray } from "drizzle-orm";
+import { eq, desc, sql, and, inArray, like } from "drizzle-orm";
 import { Queue } from "bullmq";
 import {
   createDb,
@@ -16,9 +16,13 @@ import {
   accountCompetitorApps,
   accountTrackedFeatures,
   appKeywordRankings,
+  appCategoryRankings,
   keywordAdSightings,
   categories,
   categorySnapshots,
+  categoryAdSightings,
+  accountStarredCategories,
+  appPowerScores,
   reviews,
   refreshTokens,
   impersonationAuditLogs,
@@ -620,10 +624,11 @@ export const systemAdminRoutes: FastifyPluginAsync = async (app) => {
 
   // GET /api/system-admin/scraper/runs
   app.get("/scraper/runs", async (request) => {
-    const { type, triggeredBy: triggerFilter, queue: queueFilter, limit = "20", offset = "0" } = request.query as {
+    const { type, triggeredBy: triggerFilter, queue: queueFilter, platform: platformFilter, limit = "20", offset = "0" } = request.query as {
       type?: string;
       triggeredBy?: string;
       queue?: string;
+      platform?: string;
       limit?: string;
       offset?: string;
     };
@@ -639,6 +644,9 @@ export const systemAdminRoutes: FastifyPluginAsync = async (app) => {
     }
     if (queueFilter && ["interactive", "background"].includes(queueFilter)) {
       conditions.push(eq(scrapeRuns.queue, queueFilter));
+    }
+    if (platformFilter) {
+      conditions.push(eq(scrapeRuns.platform, platformFilter));
     }
 
     let query = db.select().from(scrapeRuns);
@@ -1512,4 +1520,141 @@ export const systemAdminRoutes: FastifyPluginAsync = async (app) => {
       },
     };
   });
+
+  // DELETE /api/system-admin/categories/:slug — delete a category and all related data
+  app.delete<{ Params: { slug: string }; Querystring: { platform?: string } }>(
+    "/categories/:slug",
+    async (request, reply) => {
+      const { slug } = request.params;
+      const platform = request.query.platform || "shopify";
+
+      const [cat] = await db
+        .select({ id: categories.id })
+        .from(categories)
+        .where(and(eq(categories.platform, platform), eq(categories.slug, slug)));
+
+      if (!cat) return reply.code(404).send({ error: "Category not found" });
+
+      const categoryId = cat.id;
+
+      // Delete related data in FK order
+      const starred = await db.delete(accountStarredCategories).where(eq(accountStarredCategories.categoryId, categoryId));
+      const adSightings = await db.delete(categoryAdSightings).where(eq(categoryAdSightings.categoryId, categoryId));
+      const snapshots = await db.delete(categorySnapshots).where(eq(categorySnapshots.categoryId, categoryId));
+
+      // appCategoryRankings uses string categorySlug — filter by slug + platform via joined apps
+      const rankings = await db.execute(sql`
+        DELETE FROM app_category_rankings
+        WHERE category_slug = ${slug}
+          AND app_id IN (SELECT id FROM apps WHERE platform = ${platform})
+      `);
+
+      // appPowerScores uses string categorySlug + platform column
+      const powerScores = await db.delete(appPowerScores).where(
+        and(eq(appPowerScores.categorySlug, slug), eq(appPowerScores.platform, platform))
+      );
+
+      // Delete the category itself
+      await db.delete(categories).where(eq(categories.id, categoryId));
+
+      return {
+        ok: true,
+        deleted: {
+          category: slug,
+          accountStarredCategories: (starred as any).rowCount ?? 0,
+          categoryAdSightings: (adSightings as any).rowCount ?? 0,
+          categorySnapshots: (snapshots as any).rowCount ?? 0,
+          appCategoryRankings: (rankings as any).rowCount ?? 0,
+          appPowerScores: (powerScores as any).rowCount ?? 0,
+        },
+      };
+    }
+  );
+
+  // POST /api/system-admin/categories/fix-slugs — convert kebab-case slugs to camelCase
+  app.post<{ Querystring: { platform?: string } }>(
+    "/categories/fix-slugs",
+    async (request) => {
+      const platform = request.query.platform || "salesforce";
+
+      // Find categories with kebab-case slugs (contain a hyphen)
+      const kebabCategories = await db
+        .select()
+        .from(categories)
+        .where(and(eq(categories.platform, platform), like(categories.slug, "%-%")));
+
+      if (kebabCategories.length === 0) {
+        return { ok: true, message: "No kebab-case slugs found", fixed: [] };
+      }
+
+      const results: Array<{
+        oldSlug: string;
+        newSlug: string;
+        action: "merged" | "renamed";
+      }> = [];
+
+      for (const cat of kebabCategories) {
+        const camelSlug = kebabToCamelCase(cat.slug);
+
+        // Check if a camelCase version already exists
+        const [existing] = await db
+          .select({ id: categories.id })
+          .from(categories)
+          .where(and(eq(categories.platform, platform), eq(categories.slug, camelSlug)));
+
+        if (existing) {
+          // Merge: update FK references to point to existing camelCase category, then delete kebab row
+          await db.update(accountStarredCategories)
+            .set({ categoryId: existing.id })
+            .where(eq(accountStarredCategories.categoryId, cat.id));
+          await db.update(categoryAdSightings)
+            .set({ categoryId: existing.id })
+            .where(eq(categoryAdSightings.categoryId, cat.id));
+          await db.update(categorySnapshots)
+            .set({ categoryId: existing.id })
+            .where(eq(categorySnapshots.categoryId, cat.id));
+
+          // String-based references: update categorySlug
+          await db.execute(sql`
+            UPDATE app_category_rankings SET category_slug = ${camelSlug}
+            WHERE category_slug = ${cat.slug}
+              AND app_id IN (SELECT id FROM apps WHERE platform = ${platform})
+          `);
+          await db.update(appPowerScores)
+            .set({ categorySlug: camelSlug })
+            .where(and(eq(appPowerScores.categorySlug, cat.slug), eq(appPowerScores.platform, platform)));
+
+          // Delete the kebab-case category row
+          await db.delete(categories).where(eq(categories.id, cat.id));
+
+          results.push({ oldSlug: cat.slug, newSlug: camelSlug, action: "merged" });
+        } else {
+          // Rename in-place: update the slug on categories + all string references
+          await db.update(categories).set({ slug: camelSlug }).where(eq(categories.id, cat.id));
+
+          await db.execute(sql`
+            UPDATE app_category_rankings SET category_slug = ${camelSlug}
+            WHERE category_slug = ${cat.slug}
+              AND app_id IN (SELECT id FROM apps WHERE platform = ${platform})
+          `);
+          await db.update(appPowerScores)
+            .set({ categorySlug: camelSlug })
+            .where(and(eq(appPowerScores.categorySlug, cat.slug), eq(appPowerScores.platform, platform)));
+
+          results.push({ oldSlug: cat.slug, newSlug: camelSlug, action: "renamed" });
+        }
+      }
+
+      return { ok: true, fixed: results };
+    }
+  );
 };
+
+/**
+ * Convert a kebab-case slug to camelCase.
+ * "data-management" → "dataManagement"
+ * "customer-service" → "customerService"
+ */
+function kebabToCamelCase(slug: string): string {
+  return slug.replace(/-([a-z])/g, (_, c) => c.toUpperCase());
+}

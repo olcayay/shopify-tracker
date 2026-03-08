@@ -114,6 +114,12 @@ add card preview to Salesforce preview page (PLA-61) ✅
 
 fix Salesforce category mapping with camelCase slug fallback (PLA-62) ✅
 
+fix reviews scraper multi-platform support (PLA-63) ✅
+
+enable Salesforce AppExchange review scraping — API-based (PLA-64) ✅
+
+fix Salesforce category slug format — kebab-case → camelCase cleanup + admin endpoints (PLA-65) ✅
+
 feedback sayfası
 
 kime hangi durumda nasıl emailler gönderilebilinir.

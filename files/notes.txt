@@ -1,3 +1,43 @@
+Fix Salesforce category slug format — kebab-case → camelCase (PLA-65)
+=====================================================================
+
+- Problem: Salesforce categories may have been stored with kebab-case slugs (e.g. `data-management`) before PLA-62 fixed the format to camelCase (`dataManagement`). This causes data fragmentation across rankings, scores, and snapshots.
+- Added `DELETE /system-admin/categories/:slug?platform=` endpoint — deletes a category and all related data (account_starred_categories, category_ad_sightings, category_snapshots, app_category_rankings, app_power_scores) in FK order, returns deleted counts
+- Added `POST /system-admin/categories/fix-slugs?platform=` endpoint — finds all categories with kebab-case slugs, converts to camelCase. If camelCase version exists: merges FK references + string references then deletes kebab row. If not: renames slug in-place across all tables.
+- `kebabToCamelCase()` helper: converts `data-management` → `dataManagement` via regex
+- Both endpoints handle FK-referenced tables (categoryId) and string-referenced tables (categorySlug) separately
+
+---
+
+Enable Salesforce AppExchange review scraping — API-based (PLA-64)
+==================================================================
+
+- Discovered Salesforce AppExchange has a **public JSON API** for reviews — no browser/Playwright needed
+- API: `GET https://api.appexchange.salesforce.com/services/apexrest/reviews?listingId={ID}&pageNumber={page}` — 10 reviews per page, `hasNext` boolean, no auth needed
+- Replaced browser-based `scrapeReviews()` approach with standard `fetchReviewPage()` + `parseReviewPage()` pattern
+- `salesforceUrls.reviewApi()` replaces `reviewPage()` — builds API URL instead of browser URL
+- `review-parser.ts` rewritten from DOM-based Playwright parser to JSON parser: extracts rating, reviewer name, title+comments from `questionResponses`, developer reply from `comments[0]`, ISO date → YYYY-MM-DD
+- `SalesforceModule`: removed `scrapeReviews()`, added `buildReviewUrl()`, `fetchReviewPage()`, `parseReviewPage()` — all HTTP-based, no browser needed
+- `PlatformModule` interface: removed `scrapeReviews?()` method
+- `ReviewScraper`: removed `scrapeViaModule()`, added `scrapePlatformReviews()` — generic page-by-page loop using platform module's `fetchReviewPage`/`parseReviewPage`, same structure as Shopify flow with 90-day cutoff
+- `process-job.ts`: reverted browser creation to `app_details` only (reviews no longer need browser)
+
+---
+
+Fix reviews scraper multi-platform support (PLA-63)
+====================================================
+
+- Problem: ReviewScraper was entirely Shopify-only — queried ALL tracked apps without platform filtering, used hardcoded Shopify review URLs, and didn't record platform in scrape_runs
+- Fix: added `platform: PlatformId` param to ReviewScraper constructor (default "shopify")
+- `scrapeTracked()` now filters apps by `eq(apps.platform, this.platform)` and records platform in scrape_run insert
+- `scrapeAppReviews()` early-returns 0 for non-Shopify platforms (no Salesforce review parser exists yet)
+- `process-job.ts`: passes platform to `new ReviewScraper(db, httpClient, platform)`, adds platform to single-slug scrapeRun insert, adds platform filter to cascade reviews query
+- Dashboard: changed "Scrape Shopify app categories tree" → "Scrape app categories tree" (platform-neutral)
+- Dashboard: added Platform column to Queue Status jobs table (shows `job.data.platform`)
+- API: added `platform` query param handling to GET `/scraper/runs` endpoint — Run History platform filter dropdown now works
+
+---
+
 Fix Salesforce category mapping with camelCase slug fallback (PLA-62)
 =====================================================================
 

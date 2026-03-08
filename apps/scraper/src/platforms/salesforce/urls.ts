@@ -41,4 +41,7 @@ export const salesforceUrls = {
   /** External category URL (for display purposes) */
   category: (slug: string) =>
     `${BASE_URL}/explore/business-needs?category=${slug}`,
+  /** Reviews API (10 per page, 1-based) */
+  reviewApi: (listingId: string, page = 1) =>
+    `${API_BASE.replace('/recommendations/v3/listings', '/services/apexrest')}/reviews?listingId=${listingId}&pageNumber=${page}`,
 } as const;

@@ -4,6 +4,7 @@ import type {
   NormalizedAppDetails,
   NormalizedCategoryPage,
   NormalizedSearchPage,
+  NormalizedReviewPage,
   PlatformConstants,
   PlatformScoringConfig,
 } from "../platform-module.js";
@@ -14,6 +15,7 @@ import { SALESFORCE_CONSTANTS, SALESFORCE_SCORING } from "./constants.js";
 import { parseSalesforceSearchPage } from "./parsers/search-parser.js";
 import { parseSalesforceCategoryPage } from "./parsers/category-parser.js";
 import { parseSalesforceAppPage } from "./parsers/app-parser.js";
+import { parseSalesforceReviewPage } from "./parsers/review-parser.js";
 
 export class SalesforceModule implements PlatformModule {
   readonly platformId = "salesforce" as const;
@@ -101,6 +103,23 @@ export class SalesforceModule implements PlatformModule {
     offset: number
   ): NormalizedSearchPage {
     return parseSalesforceSearchPage(json, keyword, page, offset);
+  }
+
+  // --- Reviews (API-based) ---
+
+  buildReviewUrl(slug: string, page?: number): string {
+    return salesforceUrls.reviewApi(slug, page);
+  }
+
+  async fetchReviewPage(slug: string, page?: number): Promise<string | null> {
+    return this.httpClient.fetchPage(
+      salesforceUrls.reviewApi(slug, page ?? 1),
+      { Accept: "application/json" }
+    );
+  }
+
+  parseReviewPage(json: string, page: number): NormalizedReviewPage {
+    return parseSalesforceReviewPage(json, page);
   }
 
   // --- Slug extraction ---

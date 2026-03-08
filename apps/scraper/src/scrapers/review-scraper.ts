@@ -1,21 +1,28 @@
-import { eq } from "drizzle-orm";
+import { eq, and } from "drizzle-orm";
 import type { Database } from "@appranks/db";
 import { scrapeRuns, apps, reviews } from "@appranks/db";
-import { urls, createLogger } from "@appranks/shared";
+import { urls, createLogger, type PlatformId } from "@appranks/shared";
 
 const log = createLogger("review-scraper");
 import { HttpClient } from "../http-client.js";
 import { parseReviewPage } from "../parsers/review-parser.js";
+import type { PlatformModule } from "../platforms/platform-module.js";
 
 export class ReviewScraper {
   private db: Database;
   private httpClient: HttpClient;
+  private platform: PlatformId;
+  private platformModule?: PlatformModule;
   constructor(
     db: Database,
     httpClient?: HttpClient,
+    platform: PlatformId = "shopify",
+    platformModule?: PlatformModule,
   ) {
     this.db = db;
     this.httpClient = httpClient || new HttpClient();
+    this.platform = platform;
+    this.platformModule = platformModule;
   }
 
   /** Scrape reviews for all tracked apps */
@@ -23,7 +30,7 @@ export class ReviewScraper {
     const trackedApps = await this.db
       .select({ id: apps.id, slug: apps.slug })
       .from(apps)
-      .where(eq(apps.isTracked, true));
+      .where(and(eq(apps.isTracked, true), eq(apps.platform, this.platform)));
 
     if (trackedApps.length === 0) {
       log.info("no tracked apps found");
@@ -37,6 +44,7 @@ export class ReviewScraper {
       .values({
         scraperType: "reviews",
         status: "running",
+        platform: this.platform,
         createdAt: new Date(),
         startedAt: new Date(),
         triggeredBy,
@@ -85,7 +93,7 @@ export class ReviewScraper {
     slug: string,
     runId: string
   ): Promise<number> {
-    log.info("scraping reviews", { slug });
+    log.info("scraping reviews", { slug, platform: this.platform });
 
     // Look up the app's integer ID
     const [appRecord] = await this.db
@@ -101,12 +109,106 @@ export class ReviewScraper {
 
     const appId = appRecord.id;
 
-    const MAX_PAGES = 50;
     const CUTOFF_DAYS = 90;
     const cutoffDate = new Date();
     cutoffDate.setDate(cutoffDate.getDate() - CUTOFF_DAYS);
     const cutoffStr = cutoffDate.toISOString().slice(0, 10); // "YYYY-MM-DD"
 
+    // Platform module with fetch+parse → use generic page-by-page flow
+    if (this.platformModule?.fetchReviewPage && this.platformModule?.parseReviewPage) {
+      return this.scrapePlatformReviews(slug, appId, runId, cutoffStr);
+    }
+
+    // Default: Shopify page-by-page flow
+    return this.scrapeShopifyReviews(slug, appId, runId, cutoffStr);
+  }
+
+  /** Generic page-by-page review scraping via platform module */
+  private async scrapePlatformReviews(
+    slug: string,
+    appId: number,
+    runId: string,
+    cutoffStr: string
+  ): Promise<number> {
+    const MAX_PAGES = 50;
+    let newReviews = 0;
+    let page = 1;
+    let hitCutoff = false;
+
+    while (page <= MAX_PAGES) {
+      const json = await this.platformModule!.fetchReviewPage!(slug, page);
+      if (!json) break;
+
+      const data = this.platformModule!.parseReviewPage!(json, page);
+      if (data.reviews.length === 0) break;
+
+      for (const review of data.reviews) {
+        try {
+          // Stop if we've gone past the 90-day window (reviews sorted newest first)
+          if (review.reviewDate < cutoffStr) {
+            hitCutoff = true;
+            break;
+          }
+
+          await this.db
+            .insert(reviews)
+            .values({
+              appId,
+              reviewDate: review.reviewDate,
+              content: review.content,
+              reviewerName: review.reviewerName,
+              reviewerCountry: review.reviewerCountry || null,
+              durationUsingApp: review.durationUsingApp || null,
+              rating: review.rating,
+              developerReplyDate: review.developerReplyDate,
+              developerReplyText: review.developerReplyText,
+              firstSeenRunId: runId,
+            })
+            .onConflictDoUpdate({
+              target: [reviews.appId, reviews.reviewerName],
+              set: {
+                reviewDate: review.reviewDate,
+                content: review.content,
+                reviewerCountry: review.reviewerCountry || null,
+                durationUsingApp: review.durationUsingApp || null,
+                rating: review.rating,
+                developerReplyDate: review.developerReplyDate,
+                developerReplyText: review.developerReplyText,
+              },
+            });
+
+          newReviews++;
+        } catch (err) {
+          log.debug("review insert skipped (likely duplicate)", {
+            slug,
+            reviewer: review.reviewerName,
+            error: String(err),
+          });
+        }
+      }
+
+      if (hitCutoff || !data.hasNextPage) break;
+      page++;
+    }
+
+    log.info("reviews scraped via platform module", {
+      slug,
+      platform: this.platform,
+      newReviews,
+      pages: page,
+      hitCutoff,
+    });
+    return newReviews;
+  }
+
+  /** Shopify page-by-page review scraping (original flow) */
+  private async scrapeShopifyReviews(
+    slug: string,
+    appId: number,
+    runId: string,
+    cutoffStr: string
+  ): Promise<number> {
+    const MAX_PAGES = 50;
     let newReviews = 0;
     let page = 1;
     let hitCutoff = false;

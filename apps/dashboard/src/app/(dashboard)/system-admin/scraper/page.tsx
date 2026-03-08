@@ -51,7 +51,7 @@ const SCRAPER_TYPES = [
   {
     type: "category",
     label: "Categories",
-    description: "Scrape Shopify app categories tree",
+    description: "Scrape app categories tree",
     cronHours: [3],
   },
   {
@@ -427,6 +427,7 @@ export default function ScraperPage() {
                   <TableRow>
                     <TableHead>Job ID</TableHead>
                     <TableHead>Type</TableHead>
+                    <TableHead>Platform</TableHead>
                     <TableHead>Queue</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead>Queued At</TableHead>
@@ -442,6 +443,15 @@ export default function ScraperPage() {
                       </TableCell>
                       <TableCell className="font-mono text-sm">
                         {job.type}
+                      </TableCell>
+                      <TableCell className="text-sm">
+                        {job.data?.platform ? (
+                          <Badge variant="outline" className="capitalize text-xs">
+                            {job.data.platform}
+                          </Badge>
+                        ) : (
+                          <span className="text-muted-foreground">{"\u2014"}</span>
+                        )}
                       </TableCell>
                       <TableCell>
                         <Badge variant="outline" className="text-[10px]">
