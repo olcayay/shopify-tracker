@@ -82,7 +82,10 @@ export function buildExternalCategoryUrl(platform: PlatformId, slug: string): st
       return `https://apps.shopify.com/categories/${slug}`;
     case "salesforce":
       return `https://appexchange.salesforce.com/explore/business-needs?category=${slug}`;
-    case "canva":
-      return `https://www.canva.com/apps/collection/${slug}`;
+    case "canva": {
+      // Compound slugs (sub-categories): use parent's URL
+      const parentSlug = slug.includes("--") ? slug.split("--")[0] : slug;
+      return `https://www.canva.com/your-apps/${parentSlug}`;
+    }
   }
 }

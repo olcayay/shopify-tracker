@@ -132,6 +132,10 @@ Canva keyword search & auto-suggestions ✅
 
 Canva real search API integration — exact rankings via /_ajax/appsearch/search ✅
 
+restructure Canva categories to two-level hierarchy (PLA-70) ✅
+
+Canva compound slugs for sub-categories + shared topics + external URL fix ✅
+
 feedback sayfası
 
 kime hangi durumda nasıl emailler gönderilebilinir.

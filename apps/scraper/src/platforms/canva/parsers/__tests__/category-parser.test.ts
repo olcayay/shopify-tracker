@@ -1,0 +1,205 @@
+import { describe, it } from "node:test";
+import assert from "node:assert/strict";
+import { parseCanvaCategoryPage, CATEGORY_TOPIC_MAP } from "../category-parser.js";
+
+/**
+ * Build a minimal Canva /apps page HTML with embedded app JSON.
+ * Each app entry follows the {"A":"<id>","B":"SDK_APP",...} pattern
+ * that extractCanvaApps() parses.
+ */
+function buildCanvaHtml(
+  apps: { id: string; name: string; topics: string[]; urlSlug?: string }[]
+): string {
+  const entries = apps.map((app) => {
+    const obj = {
+      A: app.id,
+      B: "SDK_APP",
+      C: app.name,
+      D: `${app.name} short desc`,
+      E: `${app.name} tagline`,
+      F: `${app.name} Dev`,
+      G: { A: `https://cdn.canva.com/${app.id}/icon.png`, B: 128, C: 128 },
+      H: "",
+      I: app.topics,
+    };
+    const json = JSON.stringify(obj);
+    const slug = app.urlSlug || app.name.toLowerCase().replace(/[^a-z0-9]+/g, "-");
+    // Include the URL pattern that extractCanvaApps uses to derive urlSlug
+    return `<a href="/apps/${app.id}/${slug}">${json}</a>`;
+  });
+
+  return `<html><body>${entries.join("")}</body></html>`;
+}
+
+// Sample apps for testing
+const sampleApps = [
+  { id: "AAF_forms1", name: "Jotform", topics: ["marketplace_topic.forms"], urlSlug: "jotform" },
+  { id: "AAF_forms2", name: "Typeform", topics: ["marketplace_topic.forms"], urlSlug: "typeform" },
+  { id: "AAF_tasks1", name: "Asana", topics: ["marketplace_topic.tasks_and_workflows"], urlSlug: "asana" },
+  { id: "AAF_docs1", name: "Google Docs", topics: ["marketplace_topic.documents", "marketplace_topic.forms"], urlSlug: "google-docs" },
+  { id: "AAF_inter1", name: "Mentimeter", topics: ["marketplace_topic.interactivity"], urlSlug: "mentimeter" },
+  { id: "AAF_aiimg1", name: "DALL-E", topics: ["marketplace_topic.ai_images"], urlSlug: "dall-e" },
+  { id: "AAF_music1", name: "Soundful", topics: ["marketplace_topic.music"], urlSlug: "soundful" },
+];
+
+const testHtml = buildCanvaHtml(sampleApps);
+
+describe("parseCanvaCategoryPage", () => {
+  describe("hub page (filter category)", () => {
+    it("returns null appCount for a filter category", () => {
+      const result = parseCanvaCategoryPage(testHtml, "project-management", 1, 0);
+      assert.equal(result.appCount, null);
+    });
+
+    it("returns empty apps array for a hub page", () => {
+      const result = parseCanvaCategoryPage(testHtml, "project-management", 1, 0);
+      assert.equal(result.apps.length, 0);
+    });
+
+    it("populates subcategoryLinks with compound slugs", () => {
+      const result = parseCanvaCategoryPage(testHtml, "project-management", 1, 0);
+      assert.equal(result.subcategoryLinks.length, 4);
+      const slugs = result.subcategoryLinks.map((s) => s.slug);
+      assert.deepEqual(slugs, [
+        "project-management--tasks-and-workflows",
+        "project-management--documents",
+        "project-management--forms",
+        "project-management--interactivity",
+      ]);
+    });
+
+    it("generates correct titles for subcategories", () => {
+      const result = parseCanvaCategoryPage(testHtml, "project-management", 1, 0);
+      const titles = result.subcategoryLinks.map((s) => s.title);
+      assert.deepEqual(titles, [
+        "Tasks and Workflows",
+        "Documents",
+        "Forms",
+        "Interactivity",
+      ]);
+    });
+
+    it("uses filter label as hub page title", () => {
+      const result = parseCanvaCategoryPage(testHtml, "project-management", 1, 0);
+      assert.equal(result.title, "Project management");
+    });
+
+    it("sets hasNextPage to false", () => {
+      const result = parseCanvaCategoryPage(testHtml, "project-management", 1, 0);
+      assert.equal(result.hasNextPage, false);
+    });
+
+    it("works for all 10 filter categories", () => {
+      for (const filterSlug of Object.keys(CATEGORY_TOPIC_MAP)) {
+        const result = parseCanvaCategoryPage(testHtml, filterSlug, 1, 0);
+        assert.equal(result.appCount, null, `${filterSlug} should be hub page`);
+        assert.ok(result.subcategoryLinks.length > 0, `${filterSlug} should have subcategories`);
+        // Verify all subcategory slugs are compound slugs
+        for (const link of result.subcategoryLinks) {
+          assert.ok(
+            link.slug.startsWith(`${filterSlug}--`),
+            `${link.slug} should start with ${filterSlug}--`
+          );
+        }
+      }
+    });
+  });
+
+  describe("listing page (compound slug sub-category)", () => {
+    it("returns non-null appCount for a compound slug", () => {
+      const result = parseCanvaCategoryPage(testHtml, "project-management--forms", 1, 0);
+      assert.equal(result.appCount, 3); // Jotform, Typeform, Google Docs
+    });
+
+    it("returns ranked apps for a compound slug", () => {
+      const result = parseCanvaCategoryPage(testHtml, "project-management--forms", 1, 0);
+      assert.equal(result.apps.length, 3);
+      const names = result.apps.map((a) => a.name);
+      assert.ok(names.includes("Jotform"));
+      assert.ok(names.includes("Typeform"));
+      assert.ok(names.includes("Google Docs"));
+    });
+
+    it("returns empty subcategoryLinks for listing page", () => {
+      const result = parseCanvaCategoryPage(testHtml, "project-management--forms", 1, 0);
+      assert.equal(result.subcategoryLinks.length, 0);
+    });
+
+    it("assigns correct positions starting from 1", () => {
+      const result = parseCanvaCategoryPage(testHtml, "project-management--forms", 1, 0);
+      const positions = result.apps.map((a) => a.position);
+      assert.deepEqual(positions, [1, 2, 3]);
+    });
+
+    it("applies organicOffset to positions", () => {
+      const result = parseCanvaCategoryPage(testHtml, "project-management--forms", 1, 10);
+      const positions = result.apps.map((a) => a.position);
+      assert.deepEqual(positions, [11, 12, 13]);
+    });
+
+    it("uses subcategory label as title (from topic part)", () => {
+      const result = parseCanvaCategoryPage(testHtml, "project-management--forms", 1, 0);
+      assert.equal(result.title, "Forms");
+    });
+
+    it("constructs correct app slugs", () => {
+      const result = parseCanvaCategoryPage(testHtml, "project-management--forms", 1, 0);
+      assert.equal(result.apps[0].slug, "AAF_forms1--jotform");
+      assert.equal(result.apps[1].slug, "AAF_forms2--typeform");
+    });
+
+    it("filters by exact single topic tag", () => {
+      const result = parseCanvaCategoryPage(testHtml, "ai-generation--ai-images", 1, 0);
+      assert.equal(result.apps.length, 1);
+      assert.equal(result.apps[0].name, "DALL-E");
+    });
+
+    it("returns 0 apps for a topic with no matching apps", () => {
+      const result = parseCanvaCategoryPage(testHtml, "video-and-animation--flipbooks", 1, 0);
+      assert.equal(result.apps.length, 0);
+      assert.equal(result.appCount, 0);
+    });
+
+    it("sets hasNextPage to false", () => {
+      const result = parseCanvaCategoryPage(testHtml, "project-management--forms", 1, 0);
+      assert.equal(result.hasNextPage, false);
+    });
+  });
+
+  describe("shared topics (same topic under multiple parents)", () => {
+    it("forms appears under both project-management and text-styling", () => {
+      const pmResult = parseCanvaCategoryPage(testHtml, "project-management", 1, 0);
+      const tsResult = parseCanvaCategoryPage(testHtml, "text-styling", 1, 0);
+
+      const pmSlugs = pmResult.subcategoryLinks.map((s) => s.slug);
+      const tsSlugs = tsResult.subcategoryLinks.map((s) => s.slug);
+
+      assert.ok(pmSlugs.includes("project-management--forms"));
+      assert.ok(tsSlugs.includes("text-styling--forms"));
+    });
+
+    it("shared topic compound slugs produce the same app results", () => {
+      const pmForms = parseCanvaCategoryPage(testHtml, "project-management--forms", 1, 0);
+      const tsForms = parseCanvaCategoryPage(testHtml, "text-styling--forms", 1, 0);
+
+      assert.equal(pmForms.appCount, tsForms.appCount);
+      assert.equal(pmForms.apps.length, tsForms.apps.length);
+
+      const pmNames = pmForms.apps.map((a) => a.name).sort();
+      const tsNames = tsForms.apps.map((a) => a.name).sort();
+      assert.deepEqual(pmNames, tsNames);
+    });
+
+    it("compound slugs are unique across parents", () => {
+      const pmResult = parseCanvaCategoryPage(testHtml, "project-management", 1, 0);
+      const tsResult = parseCanvaCategoryPage(testHtml, "text-styling", 1, 0);
+
+      const pmFormSlug = pmResult.subcategoryLinks.find((s) => s.slug.endsWith("--forms"))?.slug;
+      const tsFormSlug = tsResult.subcategoryLinks.find((s) => s.slug.endsWith("--forms"))?.slug;
+
+      assert.notEqual(pmFormSlug, tsFormSlug);
+      assert.equal(pmFormSlug, "project-management--forms");
+      assert.equal(tsFormSlug, "text-styling--forms");
+    });
+  });
+});

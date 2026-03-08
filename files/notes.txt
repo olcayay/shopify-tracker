@@ -1,3 +1,39 @@
+Canva compound slugs for sub-categories
+=========================================
+
+Sub-categories now use compound slugs: {parent}--{topic} format.
+- e.g., "project-management--forms", "text-styling--forms", "ai-generation--ai-images"
+- Allows shared topics (e.g., "forms") to appear under multiple parents as separate DB records
+- Each compound slug is unique per (platform, slug) constraint — no DB migration needed
+- External "View on Canva" URLs extract parent from compound slug for correct linking
+- Cleanup script deleted 39 old simple-slug sub-category records
+
+Key changes:
+1. category-parser.ts: hub pages generate compound slugs in subcategoryLinks, listing pages extract topic from compound slug
+2. Added marketplace_topic.forms to text-styling in CATEGORY_TOPIC_MAP (shared topic)
+3. platforms.ts + platform-urls.ts: buildExternalCategoryUrl extracts parent from compound slug
+4. Tests updated for compound slug format + shared topic coverage
+
+
+Canva categories restructured to two-level hierarchy (PLA-70)
+==============================================================
+
+Previously, Canva used 10 flat "filter categories" (e.g., "Project Management") that grouped
+all apps by their marketplace_topic.* tags. Apps were ranked directly under these broad filters.
+
+Now restructured to a two-level hierarchy:
+- 10 hub categories (filter categories) — isListingPage: false, no rankings
+- ~35 listing sub-categories (topic-level) — isListingPage: true, with rankings
+
+Key changes:
+1. constants.ts: maxCategoryDepth 0→1, added CANVA_SUBCATEGORY_LABELS (35 topic display names)
+2. category-parser.ts: hub pages return appCount: null, subcategoryLinks; listing pages filter by exact topic tag
+3. category-scraper.ts: crawlCategoryGeneric now computes isListingPage from appCount, skips rankings/ads/pagination for hubs
+4. categories.ts API: descendant query uses (slug LIKE 'parent-%' OR parentSlug = 'parent') + platform filter
+
+No migration needed — upsert logic naturally updates existing filter categories and creates new sub-categories.
+
+
 Canva keyword search — real API integration
 =============================================
 

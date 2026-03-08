@@ -40,9 +40,15 @@ describe("buildExternalCategoryUrl", () => {
     );
   });
 
-  it("canva → canva.com/apps/collections/{slug}", () => {
+  it("canva → canva.com/your-apps/{slug}", () => {
     expect(buildExternalCategoryUrl("canva", "design")).toBe(
-      "https://www.canva.com/apps/collections/design"
+      "https://www.canva.com/your-apps/design"
+    );
+  });
+
+  it("canva compound slug → uses parent slug in URL", () => {
+    expect(buildExternalCategoryUrl("canva", "project-management--forms")).toBe(
+      "https://www.canva.com/your-apps/project-management"
     );
   });
 });

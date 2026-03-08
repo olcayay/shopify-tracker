@@ -1,15 +1,15 @@
 import { createLogger } from "@appranks/shared";
 import type { NormalizedCategoryPage, NormalizedCategoryApp } from "../../platform-module.js";
 import { extractCanvaApps, type CanvaEmbeddedApp } from "./app-parser.js";
-import { CANVA_FILTER_LABELS } from "../constants.js";
+import { CANVA_FILTER_LABELS, CANVA_SUBCATEGORY_LABELS } from "../constants.js";
 
 const log = createLogger("canva-category-parser");
 
 /**
- * Mapping from our category slugs to the marketplace_topic.* tags
+ * Mapping from filter category slugs to the marketplace_topic.* tags
  * that belong to each filter category.
  */
-const CATEGORY_TOPIC_MAP: Record<string, string[]> = {
+export const CATEGORY_TOPIC_MAP: Record<string, string[]> = {
   "ai-generation": [
     "marketplace_topic.ai_images",
     "marketplace_topic.ai_audio",
@@ -61,6 +61,7 @@ const CATEGORY_TOPIC_MAP: Record<string, string[]> = {
   "text-styling": [
     "marketplace_topic.text_effects",
     "marketplace_topic.text_generators",
+    "marketplace_topic.forms",
   ],
   "video-and-animation": [
     "marketplace_topic.videos",
@@ -72,10 +73,23 @@ const CATEGORY_TOPIC_MAP: Record<string, string[]> = {
 };
 
 /**
- * Parse the Canva /apps page HTML to extract apps for a specific category.
+ * Convert a marketplace_topic tag to a sub-category slug.
+ * e.g. "marketplace_topic.ai_images" → "ai-images"
+ */
+function topicTagToSlug(tag: string): string {
+  return tag.replace("marketplace_topic.", "").replace(/_/g, "-");
+}
+
+/**
+ * Parse the Canva /apps page HTML to extract category data.
  *
- * Since Canva embeds all apps in the main page, we filter by topic tags
- * matching the category slug.
+ * Two modes based on the slug:
+ *
+ * 1. **Hub page** (slug is a filter category like "project-management"):
+ *    Returns `appCount: null`, empty `apps`, populated `subcategoryLinks`.
+ *
+ * 2. **Listing page** (slug is a topic sub-category like "forms"):
+ *    Filters apps by exact single topic tag, returns ranked apps.
  */
 export function parseCanvaCategoryPage(
   html: string,
@@ -83,26 +97,57 @@ export function parseCanvaCategoryPage(
   page: number,
   organicOffset: number
 ): NormalizedCategoryPage {
-  const allApps = extractCanvaApps(html);
-
-  // Filter apps by topic tags matching this category
   const topicFilters = CATEGORY_TOPIC_MAP[categorySlug];
-  let filteredApps: CanvaEmbeddedApp[];
 
+  // --- Hub page: filter category with sub-topics ---
   if (topicFilters) {
-    filteredApps = allApps.filter((app) =>
-      app.topics.some((t) => topicFilters.includes(t))
-    );
-  } else {
-    // Unknown category — try matching by slug prefix
-    const topicSlug = `marketplace_topic.${categorySlug.replace(/-/g, "_")}`;
-    filteredApps = allApps.filter((app) =>
-      app.topics.some((t) => t === topicSlug)
-    );
+    const subcategoryLinks = topicFilters.map((tag) => {
+      const topicSlug = topicTagToSlug(tag);
+      const compoundSlug = `${categorySlug}--${topicSlug}`;
+      return {
+        slug: compoundSlug,
+        url: `https://www.canva.com/apps?category=${categorySlug}&topic=${topicSlug}`,
+        title: CANVA_SUBCATEGORY_LABELS[topicSlug] || topicSlug
+          .split("-")
+          .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+          .join(" "),
+      };
+    });
+
+    const title = CANVA_FILTER_LABELS[categorySlug] || categorySlug
+      .split("-")
+      .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+      .join(" ");
+
+    log.info("hub category page", { categorySlug, subcategories: subcategoryLinks.length });
+
+    return {
+      slug: categorySlug,
+      url: `https://www.canva.com/apps?category=${categorySlug}`,
+      title,
+      description: "",
+      appCount: null,         // Hub page — no direct rankings
+      apps: [],               // Hub page — no apps
+      subcategoryLinks,
+      hasNextPage: false,
+    };
   }
 
-  log.info("filtered canva apps for category", {
+  // --- Listing page: topic sub-category ---
+  // Compound slug: "project-management--forms" → topic "forms"
+  const topicSlug = categorySlug.includes("--")
+    ? categorySlug.split("--")[1]
+    : categorySlug;
+  const allApps = extractCanvaApps(html);
+  const topicTag = `marketplace_topic.${topicSlug.replace(/-/g, "_")}`;
+  const filteredApps = allApps.filter((app) =>
+    app.topics.some((t) => t === topicTag)
+  );
+
+  log.info("listing category page", {
     categorySlug,
+    topicSlug,
+    topicTag,
     total: allApps.length,
     matched: filteredApps.length,
   });
@@ -120,7 +165,7 @@ export function parseCanvaCategoryPage(
     badges: [],
   }));
 
-  const title = CANVA_FILTER_LABELS[categorySlug] || categorySlug
+  const title = CANVA_SUBCATEGORY_LABELS[topicSlug] || topicSlug
     .split("-")
     .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
     .join(" ");
@@ -132,7 +177,7 @@ export function parseCanvaCategoryPage(
     description: "",
     appCount: filteredApps.length,
     apps,
-    subcategoryLinks: [], // Flat structure
+    subcategoryLinks: [],
     hasNextPage: false,   // All apps are on a single page
   };
 }
