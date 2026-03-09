@@ -281,14 +281,31 @@ export class CanvaModule implements PlatformModule {
       // Type keyword and press Enter to trigger search
       await this.typeInSearchBox(page, keyword, true);
 
-      // Wait for search results — Canva auto-paginates all pages
-      // The search typically completes in 5-10 seconds (4 pages)
-      await page.waitForTimeout(12000);
+      // Wait for search results with early exit — poll every 1s, stop after 2s of no new responses
+      // Canva auto-paginates all pages; typically completes in 3-8 seconds
+      const MAX_WAIT_MS = 20_000;
+      const IDLE_THRESHOLD_MS = 2_000;
+      const POLL_INTERVAL_MS = 1_000;
+      let lastResponseCount = 0;
+      let idleStart = Date.now();
+      const waitStart = Date.now();
+
+      while (Date.now() - waitStart < MAX_WAIT_MS) {
+        await page.waitForTimeout(POLL_INTERVAL_MS);
+        if (searchResponses.length > lastResponseCount) {
+          lastResponseCount = searchResponses.length;
+          idleStart = Date.now();
+        } else if (searchResponses.length > 0 && Date.now() - idleStart >= IDLE_THRESHOLD_MS) {
+          // Got responses and no new ones for 2 seconds — done
+          break;
+        }
+      }
 
       log.info("search responses captured", {
         keyword,
         responseCount: searchResponses.length,
         totalResults,
+        waitMs: Date.now() - waitStart,
       });
 
       // Merge all pages into a single result
@@ -396,7 +413,7 @@ export class CanvaModule implements PlatformModule {
       waitUntil: "domcontentloaded",
       timeout: 30_000,
     });
-    await this.browserPage.waitForTimeout(8000);
+    await this.browserPage.waitForTimeout(5000);
 
     // Cache the page HTML while we're here
     if (!this.cachedAppsPageHtml) {
@@ -407,7 +424,7 @@ export class CanvaModule implements PlatformModule {
       // Retry if no apps found (page may not have fully hydrated)
       if (appCount === 0) {
         log.warn("no embedded apps found, waiting longer for SPA hydration...");
-        await this.browserPage.waitForTimeout(10000);
+        await this.browserPage.waitForTimeout(5000);
         this.cachedAppsPageHtml = await this.browserPage.content();
         appCount = (this.cachedAppsPageHtml.match(/"B":"SDK_APP"/g) || []).length;
         log.info("retry cached /apps page", { htmlLength: this.cachedAppsPageHtml.length, embeddedApps: appCount });

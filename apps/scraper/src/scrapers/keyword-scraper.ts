@@ -66,9 +66,16 @@ export class KeywordScraper {
     let itemsScraped = 0;
     let itemsFailed = 0;
 
+    const KEYWORD_TIMEOUT_MS = 90_000; // 90 seconds per keyword
+
     for (const kw of keywords) {
       try {
-        const slugs = await this.scrapeKeyword(kw.id, kw.keyword, run.id, pageOptions);
+        const slugs = await Promise.race([
+          this.scrapeKeyword(kw.id, kw.keyword, run.id, pageOptions),
+          new Promise<never>((_, reject) =>
+            setTimeout(() => reject(new Error(`keyword scrape timed out after ${KEYWORD_TIMEOUT_MS / 1000}s`)), KEYWORD_TIMEOUT_MS)
+          ),
+        ]);
         for (const s of slugs) allDiscoveredSlugs.add(s);
         itemsScraped++;
       } catch (error) {

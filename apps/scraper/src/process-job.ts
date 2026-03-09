@@ -43,6 +43,8 @@ export async function runMigrations(db: ReturnType<typeof createDb>, label?: str
   }
 }
 
+const JOB_TIMEOUT_MS = 20 * 60 * 1000; // 20 minutes — hard limit per job
+
 export function createProcessJob(db: ReturnType<typeof createDb>, httpClient: HttpClient, queueName?: string) {
   const cascadeOpts = queueName ? { queue: queueName as "interactive" | "background" } : undefined;
 
@@ -71,6 +73,13 @@ export function createProcessJob(db: ReturnType<typeof createDb>, httpClient: Ht
       // Fall back to no module (Shopify default behavior)
     }
 
+    // Job-level timeout to prevent hanging indefinitely
+    const timeoutPromise = new Promise<never>((_, reject) => {
+      setTimeout(() => reject(new Error(`job timed out after ${JOB_TIMEOUT_MS / 1000}s`)), JOB_TIMEOUT_MS);
+    });
+
+    try {
+    await Promise.race([timeoutPromise, (async () => {
     switch (type) {
       case "category": {
         const scraper = new CategoryScraper(db, { httpClient, platformModule });
@@ -440,9 +449,14 @@ export function createProcessJob(db: ReturnType<typeof createDb>, httpClient: Ht
         throw new Error(`Unknown scraper type: ${type}`);
     }
 
-    // Close browser if used
-    if (browserClient) await browserClient.close();
-
     log.info("job completed", { jobId: job.id, type });
+    })()]);
+    } finally {
+      // Always close browsers — even on error/timeout — to prevent resource leaks
+      if (browserClient) await browserClient.close().catch(() => {});
+      if (platformModule && "closeBrowser" in platformModule && typeof (platformModule as any).closeBrowser === "function") {
+        await (platformModule as any).closeBrowser().catch(() => {});
+      }
+    }
   };
 }
