@@ -96,7 +96,9 @@ export function StarAppButton({
         })),
       ];
 
-      if (items.filter((i) => i.id !== appSlug).length === 0) {
+      const availableItems = items.filter((i) => i.id !== appSlug);
+
+      if (availableItems.length === 0) {
         setErrorMsg("Follow an app or create a research project first");
         setShowLimitModal(true);
         setLoading(false);
@@ -107,6 +109,18 @@ export function StarAppButton({
         ...membership.competitorForApps,
         ...membership.researchProjectIds,
       ]);
+
+      // Single item: toggle directly without showing picker
+      if (availableItems.length === 1) {
+        const item = availableItems[0];
+        const isChecked = checked.has(item.id);
+        await handleSave(
+          isChecked ? [] : [item],
+          isChecked ? [item] : []
+        );
+        setLoading(false);
+        return;
+      }
 
       setPickerTitle(`Assign "${displayName}"`);
       setPickerItems(items);

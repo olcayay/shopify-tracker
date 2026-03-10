@@ -97,6 +97,18 @@ export function TrackKeywordButton({
         ...membership.researchProjectIds,
       ]);
 
+      // Single item: toggle directly without showing picker
+      if (items.length === 1) {
+        const item = items[0];
+        const isChecked = checked.has(item.id);
+        await handleSave(
+          isChecked ? [] : [item],
+          isChecked ? [item] : []
+        );
+        setLoading(false);
+        return;
+      }
+
       setPickerItems(items);
       setInitialChecked(checked);
       setShowPicker(true);
