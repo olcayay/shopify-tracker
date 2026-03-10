@@ -67,7 +67,7 @@ export default async function RankingsPage({
                 slug: r.categorySlug,
                 linkPrefix: `/${platform}/categories/`,
               }))}
-              pageSize={platform === "salesforce" ? 2000 : PLATFORMS[platform as PlatformId]?.pageSize ?? 24}
+              pageSize={PLATFORMS[platform as PlatformId]?.pageSize ?? 24}
             />
           </CardContent>
         </Card>
