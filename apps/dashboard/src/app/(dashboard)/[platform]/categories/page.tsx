@@ -389,69 +389,47 @@ export default function CategoriesPage() {
                   {isExpanded && (
                     <TableRow>
                       <TableCell colSpan={canEdit ? 5 : 4} className="bg-muted/30 p-4">
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                          {s.trackedAppsInResults?.length > 0 && (
-                            <div>
-                              <h4 className="text-sm font-medium mb-2 flex items-center gap-1.5">
-                                <Target className="h-3.5 w-3.5 text-primary" />
-                                My Apps
-                              </h4>
-                              <div className="space-y-1">
-                                {s.trackedAppsInResults.map((app: any) => (
-                                  <div key={app.app_slug} className="flex items-center justify-between text-sm py-1 px-2 rounded bg-emerald-500/10 border-l-2 border-l-emerald-500">
-                                    <div className="flex items-center gap-2">
-                                      {app.logo_url && (
-                                        <img src={app.logo_url} alt="" className="h-5 w-5 rounded shrink-0" />
-                                      )}
-                                      <Link
-                                        href={`/${platform}/apps/${app.app_slug}`}
-                                        className="text-primary hover:underline font-medium"
-                                        onClick={(e) => e.stopPropagation()}
-                                      >
-                                        {app.name}
-                                      </Link>
-                                    </div>
-                                    {app.position != null && (
-                                      <span className="font-mono text-muted-foreground text-xs">
-                                        #{app.position}
-                                      </span>
+                        <div className="space-y-1">
+                          {[
+                            ...(s.trackedAppsInResults ?? []).map((app: any) => ({ ...app, _type: "tracked" as const })),
+                            ...(s.competitorAppsInResults ?? []).map((app: any) => ({ ...app, _type: "competitor" as const })),
+                          ]
+                            .sort((a, b) => (a.position ?? Infinity) - (b.position ?? Infinity))
+                            .map((app: any) => {
+                              const isTracked = app._type === "tracked";
+                              return (
+                                <div
+                                  key={app.app_slug}
+                                  className={`flex items-center justify-between text-sm py-1 px-2 rounded border-l-2 ${
+                                    isTracked
+                                      ? "bg-emerald-500/10 border-l-emerald-500"
+                                      : "bg-amber-500/10 border-l-amber-500"
+                                  }`}
+                                >
+                                  <div className="flex items-center gap-2">
+                                    {isTracked
+                                      ? <Target className="h-3.5 w-3.5 text-emerald-600 shrink-0" />
+                                      : <Eye className="h-3.5 w-3.5 text-amber-500 shrink-0" />
+                                    }
+                                    {app.logo_url && (
+                                      <img src={app.logo_url} alt="" className="h-5 w-5 rounded shrink-0" />
                                     )}
+                                    <Link
+                                      href={`/${platform}/apps/${app.app_slug}`}
+                                      className="text-primary hover:underline font-medium"
+                                      onClick={(e) => e.stopPropagation()}
+                                    >
+                                      {app.name}
+                                    </Link>
                                   </div>
-                                ))}
-                              </div>
-                            </div>
-                          )}
-                          {s.competitorAppsInResults?.length > 0 && (
-                            <div>
-                              <h4 className="text-sm font-medium mb-2 flex items-center gap-1.5">
-                                <Eye className="h-3.5 w-3.5 text-yellow-500" />
-                                Competitor Apps
-                              </h4>
-                              <div className="space-y-1">
-                                {s.competitorAppsInResults.map((app: any) => (
-                                  <div key={app.app_slug} className="flex items-center justify-between text-sm py-1 px-2 rounded bg-amber-500/10 border-l-2 border-l-amber-500">
-                                    <div className="flex items-center gap-2">
-                                      {app.logo_url && (
-                                        <img src={app.logo_url} alt="" className="h-5 w-5 rounded shrink-0" />
-                                      )}
-                                      <Link
-                                        href={`/${platform}/apps/${app.app_slug}`}
-                                        className="text-primary hover:underline font-medium"
-                                        onClick={(e) => e.stopPropagation()}
-                                      >
-                                        {app.name}
-                                      </Link>
-                                    </div>
-                                    {app.position != null && (
-                                      <span className="font-mono text-muted-foreground text-xs">
-                                        #{app.position}
-                                      </span>
-                                    )}
-                                  </div>
-                                ))}
-                              </div>
-                            </div>
-                          )}
+                                  {app.position != null && (
+                                    <span className="font-mono text-muted-foreground text-xs">
+                                      #{app.position}
+                                    </span>
+                                  )}
+                                </div>
+                              );
+                            })}
                         </div>
                       </TableCell>
                     </TableRow>
