@@ -3,6 +3,7 @@
 import { Fragment, useEffect, useState, useMemo } from "react";
 import Link from "next/link";
 import { useAuth } from "@/lib/auth-context";
+import { PLATFORMS, type PlatformId } from "@appranks/shared";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import {
@@ -18,8 +19,9 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Search, ArrowUpDown, ArrowUp, ArrowDown, Trash2, Zap, Loader2, Check } from "lucide-react";
+import { Search, ArrowUpDown, ArrowUp, ArrowDown, Trash2, Zap, Loader2, Check, Eraser } from "lucide-react";
 import { ConfirmModal } from "@/components/confirm-modal";
+import { ConfirmModalWithInput } from "@/components/confirm-modal-with-input";
 import { useFormatDate } from "@/lib/format-date";
 
 type SortKey = "keyword" | "trackedBy" | "createdAt" | "lastScraped";
@@ -36,16 +38,21 @@ export default function KeywordsListPage() {
   const [sortKey, setSortKey] = useState<SortKey>("keyword");
   const [sortDir, setSortDir] = useState<SortDir>("asc");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
+  const [platformFilter, setPlatformFilter] = useState<string>("");
   const [deleteTarget, setDeleteTarget] = useState<{ id: number; keyword: string } | null>(null);
+  const [purgeTarget, setPurgeTarget] = useState<{ id: number; keyword: string } | null>(null);
   const [scrapeStatus, setScrapeStatus] = useState<Record<string, "idle" | "loading" | "done">>({});
 
   useEffect(() => {
     loadKeywords();
-  }, []);
+  }, [platformFilter]);
 
   async function loadKeywords() {
     try {
-      const res = await fetchWithAuth("/api/system-admin/keywords");
+      const params = new URLSearchParams();
+      if (platformFilter) params.set("platform", platformFilter);
+      const qs = params.toString();
+      const res = await fetchWithAuth(`/api/system-admin/keywords${qs ? `?${qs}` : ""}`);
       if (res.ok) setKeywords(await res.json());
     } catch (err) {
       console.error("Failed to load keywords:", err);
@@ -71,6 +78,16 @@ export default function KeywordsListPage() {
     });
     if (res.ok) {
       setDeleteTarget(null);
+      loadKeywords();
+    }
+  }
+
+  async function purgeKeywordData(id: number) {
+    const res = await fetchWithAuth(`/api/system-admin/keywords/${id}/data`, {
+      method: "DELETE",
+    });
+    if (res.ok) {
+      setPurgeTarget(null);
       loadKeywords();
     }
   }
@@ -178,14 +195,28 @@ export default function KeywordsListPage() {
       </div>
 
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div className="relative w-full sm:w-64">
-          <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder="Search keywords..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="pl-9 h-9"
-          />
+        <div className="flex items-center gap-3">
+          <div className="relative w-full sm:w-64">
+            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Search keywords..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="pl-9 h-9"
+            />
+          </div>
+          <select
+            value={platformFilter}
+            onChange={(e) => setPlatformFilter(e.target.value)}
+            className="border rounded-md px-3 py-1.5 text-sm bg-background h-9"
+          >
+            <option value="">All Platforms</option>
+            {(Object.keys(PLATFORMS) as PlatformId[]).map((pid) => (
+              <option key={pid} value={pid}>
+                {PLATFORMS[pid].name}
+              </option>
+            ))}
+          </select>
         </div>
         <div className="flex gap-1.5">
           {(
@@ -222,6 +253,7 @@ export default function KeywordsListPage() {
                 >
                   Keyword <SortIcon col="keyword" />
                 </TableHead>
+                <TableHead>Platform</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead
                   className="cursor-pointer select-none"
@@ -250,11 +282,18 @@ export default function KeywordsListPage() {
                   <TableRow>
                     <TableCell>
                       <Link
-                        href={`/keywords/${kw.slug}`}
+                        href={`/${kw.platform || "shopify"}/keywords/${kw.slug}`}
                         className="text-primary hover:underline font-medium"
                       >
                         {kw.keyword}
                       </Link>
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant="outline">
+                        {kw.platform && PLATFORMS[kw.platform as PlatformId]
+                          ? PLATFORMS[kw.platform as PlatformId].name
+                          : kw.platform ?? "—"}
+                      </Badge>
                     </TableCell>
                     <TableCell>
                       {kw.isActive ? (
@@ -309,6 +348,15 @@ export default function KeywordsListPage() {
                         <Button
                           variant="ghost"
                           size="sm"
+                          className="h-7 w-7 p-0 text-orange-500 hover:text-orange-600 hover:bg-orange-50"
+                          onClick={() => setPurgeTarget({ id: kw.id, keyword: kw.keyword })}
+                          title="Purge keyword data"
+                        >
+                          <Eraser className="h-3.5 w-3.5" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
                           className="h-7 w-7 p-0 text-muted-foreground hover:text-destructive"
                           onClick={() => setDeleteTarget({ id: kw.id, keyword: kw.keyword })}
                         >
@@ -319,7 +367,7 @@ export default function KeywordsListPage() {
                   </TableRow>
                   {expandedId === kw.id && (
                     <TableRow>
-                      <TableCell colSpan={6} className="bg-muted/30 p-4">
+                      <TableCell colSpan={7} className="bg-muted/30 p-4">
                         <div className="text-sm font-medium mb-2">
                           Accounts tracking &quot;{kw.keyword}&quot;
                         </div>
@@ -348,7 +396,7 @@ export default function KeywordsListPage() {
               {filtered.length === 0 && (
                 <TableRow>
                   <TableCell
-                    colSpan={6}
+                    colSpan={7}
                     className="text-center text-muted-foreground"
                   >
                     No keywords found
@@ -367,6 +415,16 @@ export default function KeywordsListPage() {
         confirmLabel="Delete"
         onConfirm={() => deleteTarget && deleteKeyword(deleteTarget.id)}
         onCancel={() => setDeleteTarget(null)}
+      />
+
+      <ConfirmModalWithInput
+        open={!!purgeTarget}
+        title="Purge Keyword Data"
+        description={`All scraped data for "${purgeTarget?.keyword}" will be deleted: snapshots, rankings, ad sightings, and auto-suggestions. The keyword itself and account trackings will be preserved.`}
+        confirmPhrase={purgeTarget?.keyword ?? ""}
+        confirmLabel="Purge Data"
+        onConfirm={() => purgeTarget && purgeKeywordData(purgeTarget.id)}
+        onCancel={() => setPurgeTarget(null)}
       />
     </div>
   );

@@ -261,6 +261,7 @@ export default function AppsListPage() {
                 >
                   Name <SortIcon col="name" />
                 </TableHead>
+                <TableHead>Platform</TableHead>
                 <TableHead
                   className="cursor-pointer select-none"
                   onClick={() => toggleSort("slug")}
@@ -301,11 +302,18 @@ export default function AppsListPage() {
                   <TableRow>
                     <TableCell className="max-w-[260px]">
                       <Link
-                        href={`/apps/${app.slug}`}
+                        href={`/${app.platform || "shopify"}/apps/${app.slug}`}
                         className="text-primary hover:underline font-medium truncate block"
                       >
                         {app.name}
                       </Link>
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant="outline">
+                        {app.platform && PLATFORMS[app.platform as PlatformId]
+                          ? PLATFORMS[app.platform as PlatformId].name
+                          : app.platform ?? "—"}
+                      </Badge>
                     </TableCell>
                     <TableCell className="text-sm text-muted-foreground font-mono">
                       {app.slug}
@@ -374,7 +382,7 @@ export default function AppsListPage() {
                   </TableRow>
                   {expandedSlug === app.slug && (
                     <TableRow>
-                      <TableCell colSpan={8} className="bg-muted/30 p-4">
+                      <TableCell colSpan={9} className="bg-muted/30 p-4">
                         <div className="text-sm font-medium mb-2">
                           Accounts using &quot;{app.name}&quot;
                         </div>
@@ -413,7 +421,7 @@ export default function AppsListPage() {
               {paged.length === 0 && (
                 <TableRow>
                   <TableCell
-                    colSpan={8}
+                    colSpan={9}
                     className="text-center text-muted-foreground"
                   >
                     No apps found

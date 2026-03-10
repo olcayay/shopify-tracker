@@ -162,7 +162,7 @@ export default function UserDetailPage() {
                 <TableRow key={a.appSlug}>
                   <TableCell>
                     <Link
-                      href={`/apps/${a.appSlug}`}
+                      href={`/${a.platform || "shopify"}/apps/${a.appSlug}`}
                       className="text-primary hover:underline font-medium"
                     >
                       {a.appName}
@@ -212,7 +212,7 @@ export default function UserDetailPage() {
                 <TableRow key={k.keywordId}>
                   <TableCell>
                     <Link
-                      href={`/keywords/${k.keyword}`}
+                      href={`/${k.platform || "shopify"}/keywords/${k.slug || k.keyword}`}
                       className="text-primary hover:underline font-medium"
                     >
                       {k.keyword}
@@ -259,7 +259,7 @@ export default function UserDetailPage() {
                 <TableRow key={c.appSlug}>
                   <TableCell>
                     <Link
-                      href={`/apps/${c.appSlug}`}
+                      href={`/${c.platform || "shopify"}/apps/${c.appSlug}`}
                       className="text-primary hover:underline font-medium"
                     >
                       {c.appName}

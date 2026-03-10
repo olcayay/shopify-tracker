@@ -31,6 +31,7 @@ import {
   researchProjectCompetitors,
   accountPlatforms,
   platformVisibility,
+  keywordAutoSuggestions,
 } from "@appranks/db";
 import { isPlatformId, PLATFORM_IDS } from "@appranks/shared";
 import { generateAccessToken } from "./auth.js";
@@ -187,6 +188,7 @@ export const systemAdminRoutes: FastifyPluginAsync = async (app) => {
       .select({
         appSlug: apps.slug,
         appName: apps.name,
+        platform: apps.platform,
         lastScrapedAt: sql<string | null>`(
           SELECT max(scraped_at) FROM app_snapshots
           WHERE app_id = ${accountTrackedApps.appId}
@@ -200,6 +202,8 @@ export const systemAdminRoutes: FastifyPluginAsync = async (app) => {
       .select({
         keywordId: accountTrackedKeywords.keywordId,
         keyword: trackedKeywords.keyword,
+        slug: trackedKeywords.slug,
+        platform: trackedKeywords.platform,
         lastScrapedAt: sql<string | null>`(
           SELECT max(scraped_at) FROM keyword_snapshots
           WHERE keyword_id = "account_tracked_keywords"."keyword_id"
@@ -216,6 +220,7 @@ export const systemAdminRoutes: FastifyPluginAsync = async (app) => {
       .select({
         appSlug: apps.slug,
         appName: apps.name,
+        platform: apps.platform,
         lastScrapedAt: sql<string | null>`(
           SELECT max(scraped_at) FROM app_snapshots
           WHERE app_id = ${accountCompetitorApps.competitorAppId}
@@ -541,6 +546,7 @@ export const systemAdminRoutes: FastifyPluginAsync = async (app) => {
       .select({
         appSlug: apps.slug,
         appName: apps.name,
+        platform: apps.platform,
         createdAt: accountTrackedApps.createdAt,
         lastScrapedAt: sql<string | null>`(
           SELECT max(scraped_at) FROM app_snapshots
@@ -555,6 +561,8 @@ export const systemAdminRoutes: FastifyPluginAsync = async (app) => {
       .select({
         keywordId: accountTrackedKeywords.keywordId,
         keyword: trackedKeywords.keyword,
+        slug: trackedKeywords.slug,
+        platform: trackedKeywords.platform,
         createdAt: accountTrackedKeywords.createdAt,
         lastScrapedAt: sql<string | null>`(
           SELECT max(scraped_at) FROM keyword_snapshots
@@ -572,6 +580,7 @@ export const systemAdminRoutes: FastifyPluginAsync = async (app) => {
       .select({
         appSlug: apps.slug,
         appName: apps.name,
+        platform: apps.platform,
         createdAt: accountCompetitorApps.createdAt,
         lastScrapedAt: sql<string | null>`(
           SELECT max(scraped_at) FROM app_snapshots
@@ -694,6 +703,7 @@ export const systemAdminRoutes: FastifyPluginAsync = async (app) => {
         // Only fetch asset names for small runs (≤ 10 items)
         let assets: { name: string; href: string }[] = [];
         if (itemsScraped > 0 && itemsScraped <= 10) {
+          const runPlatform = run.platform || "shopify";
           if (run.scraperType === "app_details") {
             const snapshots = await db
               .select({ appId: appSnapshots.appId })
@@ -701,7 +711,7 @@ export const systemAdminRoutes: FastifyPluginAsync = async (app) => {
               .where(eq(appSnapshots.scrapeRunId, run.id));
             if (snapshots.length > 0) {
               const appRows = await db
-                .select({ id: apps.id, slug: apps.slug, name: apps.name })
+                .select({ id: apps.id, slug: apps.slug, name: apps.name, platform: apps.platform })
                 .from(apps)
                 .where(
                   inArray(apps.id, snapshots.map((s) => s.appId))
@@ -709,9 +719,10 @@ export const systemAdminRoutes: FastifyPluginAsync = async (app) => {
               const idToApp = new Map(appRows.map((a) => [a.id, a]));
               assets = snapshots.map((s) => {
                 const appInfo = idToApp.get(s.appId);
+                const p = appInfo?.platform || runPlatform;
                 return {
                   name: appInfo?.name || `app#${s.appId}`,
-                  href: `/apps/${appInfo?.slug || s.appId}`,
+                  href: `/${p}/apps/${appInfo?.slug || s.appId}`,
                 };
               });
             }
@@ -726,6 +737,7 @@ export const systemAdminRoutes: FastifyPluginAsync = async (app) => {
                   id: trackedKeywords.id,
                   keyword: trackedKeywords.keyword,
                   slug: trackedKeywords.slug,
+                  platform: trackedKeywords.platform,
                 })
                 .from(trackedKeywords)
                 .where(
@@ -737,9 +749,10 @@ export const systemAdminRoutes: FastifyPluginAsync = async (app) => {
               const infoMap = new Map(kwRows.map((k) => [k.id, k]));
               assets = snapshots.map((s) => {
                 const kw = infoMap.get(s.keywordId);
+                const p = kw?.platform || runPlatform;
                 return {
                   name: kw?.keyword || `keyword#${s.keywordId}`,
-                  href: `/keywords/${kw?.slug || s.keywordId}`,
+                  href: `/${p}/keywords/${kw?.slug || s.keywordId}`,
                 };
               });
             }
@@ -748,15 +761,19 @@ export const systemAdminRoutes: FastifyPluginAsync = async (app) => {
               .select({
                 categorySlug: categories.slug,
                 title: categories.title,
+                platform: categories.platform,
               })
               .from(categorySnapshots)
               .leftJoin(categories, eq(categories.id, categorySnapshots.categoryId))
               .where(eq(categorySnapshots.scrapeRunId, run.id))
               .limit(10);
-            assets = snapshots.map((s) => ({
-              name: s.title || s.categorySlug || "unknown",
-              href: `/categories/${s.categorySlug || "unknown"}`,
-            }));
+            assets = snapshots.map((s) => {
+              const p = s.platform || runPlatform;
+              return {
+                name: s.title || s.categorySlug || "unknown",
+                href: `/${p}/categories/${s.categorySlug || "unknown"}`,
+              };
+            });
           }
         }
 
@@ -998,12 +1015,13 @@ export const systemAdminRoutes: FastifyPluginAsync = async (app) => {
 
   // GET /api/system-admin/apps — all apps with last scraped info + account counts
   app.get("/apps", async (request) => {
-    const { tracked } = request.query as { tracked?: string };
+    const { tracked, platform } = request.query as { tracked?: string; platform?: string };
 
     let query = db
       .select({
         slug: apps.slug,
         name: apps.name,
+        platform: apps.platform,
         isTracked: apps.isTracked,
         createdAt: apps.createdAt,
         lastScrapedAt: sql<string | null>`(
@@ -1027,6 +1045,9 @@ export const systemAdminRoutes: FastifyPluginAsync = async (app) => {
 
     if (tracked === "true") {
       query = query.where(eq(apps.isTracked, true)) as typeof query;
+    }
+    if (platform) {
+      query = query.where(eq(apps.platform, platform)) as typeof query;
     }
 
     const rows = await query.orderBy(apps.name);
@@ -1075,12 +1096,15 @@ export const systemAdminRoutes: FastifyPluginAsync = async (app) => {
   );
 
   // GET /api/system-admin/keywords — all tracked keywords with last scraped info + account counts
-  app.get("/keywords", async () => {
-    const rows = await db
+  app.get("/keywords", async (request) => {
+    const { platform } = request.query as { platform?: string };
+
+    let query = db
       .select({
         id: trackedKeywords.id,
         keyword: trackedKeywords.keyword,
         slug: trackedKeywords.slug,
+        platform: trackedKeywords.platform,
         isActive: trackedKeywords.isActive,
         createdAt: trackedKeywords.createdAt,
         lastScrapedAt: sql<string | null>`(
@@ -1092,8 +1116,13 @@ export const systemAdminRoutes: FastifyPluginAsync = async (app) => {
           WHERE keyword_id = "tracked_keywords"."id"
         )`,
       })
-      .from(trackedKeywords)
-      .orderBy(trackedKeywords.keyword);
+      .from(trackedKeywords);
+
+    if (platform) {
+      query = query.where(eq(trackedKeywords.platform, platform)) as typeof query;
+    }
+
+    const rows = await query.orderBy(trackedKeywords.keyword);
 
     return rows;
   });
@@ -1141,6 +1170,51 @@ export const systemAdminRoutes: FastifyPluginAsync = async (app) => {
       await db.delete(trackedKeywords).where(eq(trackedKeywords.id, keywordId));
 
       return { ok: true };
+    }
+  );
+
+  // DELETE /api/system-admin/keywords/:id/data — purge scraped data but keep keyword + account trackings
+  app.delete<{ Params: { id: string } }>(
+    "/keywords/:id/data",
+    async (request, reply) => {
+      const keywordId = parseInt(request.params.id, 10);
+
+      const [kw] = await db
+        .select({ id: trackedKeywords.id })
+        .from(trackedKeywords)
+        .where(eq(trackedKeywords.id, keywordId));
+
+      if (!kw) return reply.code(404).send({ error: "Keyword not found" });
+
+      const deletedAutoSuggestions = await db
+        .delete(keywordAutoSuggestions)
+        .where(eq(keywordAutoSuggestions.keywordId, keywordId))
+        .returning({ id: keywordAutoSuggestions.id });
+
+      const deletedAdSightings = await db
+        .delete(keywordAdSightings)
+        .where(eq(keywordAdSightings.keywordId, keywordId))
+        .returning({ id: keywordAdSightings.id });
+
+      const deletedRankings = await db
+        .delete(appKeywordRankings)
+        .where(eq(appKeywordRankings.keywordId, keywordId))
+        .returning({ id: appKeywordRankings.id });
+
+      const deletedSnapshots = await db
+        .delete(keywordSnapshots)
+        .where(eq(keywordSnapshots.keywordId, keywordId))
+        .returning({ id: keywordSnapshots.id });
+
+      return {
+        ok: true,
+        deleted: {
+          snapshots: deletedSnapshots.length,
+          rankings: deletedRankings.length,
+          adSightings: deletedAdSightings.length,
+          autoSuggestions: deletedAutoSuggestions.length,
+        },
+      };
     }
   );
 
