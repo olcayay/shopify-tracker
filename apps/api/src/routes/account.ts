@@ -2902,12 +2902,15 @@ export const accountRoutes: FastifyPluginAsync = async (app) => {
       })
       .map((r) => r.categorySlug);
 
-    const rankingsMap = new Map<string, string[]>();
+    const rankingsMap = new Map<string, { app_slug: string; name: string; logo_url: string | null; position: number }[]>();
     if (slugsNeedingRankings.length > 0) {
       const rankingRows = await db
         .select({
           categorySlug: appCategoryRankings.categorySlug,
           appSlug: apps.slug,
+          name: apps.name,
+          iconUrl: apps.iconUrl,
+          position: appCategoryRankings.position,
         })
         .from(appCategoryRankings)
         .innerJoin(apps, eq(apps.id, appCategoryRankings.appId))
@@ -2925,7 +2928,7 @@ export const accountRoutes: FastifyPluginAsync = async (app) => {
         );
       for (const r of rankingRows) {
         const list = rankingsMap.get(r.categorySlug) ?? [];
-        list.push(r.appSlug);
+        list.push({ app_slug: r.appSlug, name: r.name, logo_url: r.iconUrl, position: r.position });
         rankingsMap.set(r.categorySlug, list);
       }
     }
@@ -2947,13 +2950,9 @@ export const accountRoutes: FastifyPluginAsync = async (app) => {
           .map((a) => ({ ...a, app_slug: extractSlug(a.app_url) }));
       } else {
         // Non-Shopify path: use appCategoryRankings
-        const rankedSlugs = rankingsMap.get(row.categorySlug) ?? [];
-        trackedAppsInResults = rankedSlugs
-          .filter((s) => trackedSet.has(s))
-          .map((s) => ({ app_slug: s }));
-        competitorAppsInResults = rankedSlugs
-          .filter((s) => competitorSet.has(s))
-          .map((s) => ({ app_slug: s }));
+        const rankedApps = rankingsMap.get(row.categorySlug) ?? [];
+        trackedAppsInResults = rankedApps.filter((a) => trackedSet.has(a.app_slug));
+        competitorAppsInResults = rankedApps.filter((a) => competitorSet.has(a.app_slug));
       }
 
       return {
