@@ -1073,7 +1073,7 @@ export const accountRoutes: FastifyPluginAsync = async (app) => {
           WHERE r.app_id IN (${sql.join(competitorAppIds.map((id) => sql`${id}`), sql`, `)})
         ) sub
         INNER JOIN apps a ON a.id = sub.app_id
-        JOIN categories c ON c.slug = sub.category_slug
+        JOIN categories c ON c.slug = sub.category_slug AND c.platform = ${platform}
         LEFT JOIN LATERAL (
           SELECT s.app_count
           FROM category_snapshots s
@@ -1485,15 +1485,16 @@ export const accountRoutes: FastifyPluginAsync = async (app) => {
       const { accountId } = request.user;
       const slug = decodeURIComponent(request.params.slug);
 
-      // Look up tracked app ID from slug
+      // Look up tracked app ID + platform from slug
       const [trackedAppRow] = await db
-        .select({ id: apps.id })
+        .select({ id: apps.id, platform: apps.platform })
         .from(apps)
         .where(eq(apps.slug, slug))
         .limit(1);
       if (!trackedAppRow) {
         return reply.code(404).send({ error: "App not in your apps" });
       }
+      const platform = trackedAppRow.platform;
 
       // Verify tracked app belongs to this account
       const [trackedApp] = await db
@@ -1628,7 +1629,7 @@ export const accountRoutes: FastifyPluginAsync = async (app) => {
             WHERE r.app_id IN (${sql.join(competitorAppIds.map((id) => sql`${id}`), sql`, `)})
           ) sub
           INNER JOIN apps a ON a.id = sub.app_id
-          JOIN categories c ON c.slug = sub.category_slug
+          JOIN categories c ON c.slug = sub.category_slug AND c.platform = ${platform}
           LEFT JOIN LATERAL (
             SELECT s.app_count
             FROM category_snapshots s

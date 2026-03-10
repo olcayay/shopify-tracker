@@ -256,6 +256,7 @@ export const appRoutes: FastifyPluginAsync = async (app) => {
       .from(appCategoryRankings)
       .innerJoin(categories, and(
         eq(categories.slug, appCategoryRankings.categorySlug),
+        eq(categories.platform, platform),
         eq(categories.isListingPage, true),
       ))
       .where(inArray(appCategoryRankings.appId, appIdList))
@@ -762,7 +763,7 @@ export const appRoutes: FastifyPluginAsync = async (app) => {
         .from(appCategoryRankings)
         .innerJoin(
           categories,
-          eq(categories.slug, appCategoryRankings.categorySlug)
+          and(eq(categories.slug, appCategoryRankings.categorySlug), eq(categories.platform, platform))
         )
         .where(
           and(
@@ -1203,7 +1204,7 @@ export const appRoutes: FastifyPluginAsync = async (app) => {
         categoryTitle: categories.title,
       })
       .from(appPowerScores)
-      .innerJoin(categories, eq(categories.slug, appPowerScores.categorySlug))
+      .innerJoin(categories, and(eq(categories.slug, appPowerScores.categorySlug), eq(categories.platform, platform)))
       .where(and(eq(appPowerScores.appId, scoreApp.id), eq(categories.isListingPage, true)))
       .orderBy(desc(appPowerScores.computedAt))
       .limit(50);
