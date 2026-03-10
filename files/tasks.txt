@@ -146,6 +146,8 @@ platform visibility controls — hide/show platforms for regular users (PLA-77) 
 
 pre-deployment fixes — hasPricing/hasLaunchedDate capabilities, drizzle journal sync ✅
 
+fix Salesforce category tree — flat list → hierarchical two-level tree ✅
+
 feedback sayfası
 
 kime hangi durumda nasıl emailler gönderilebilinir.

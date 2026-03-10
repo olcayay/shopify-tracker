@@ -1,3 +1,23 @@
+Fix Salesforce category tree — flat → hierarchical
+====================================================
+
+Salesforce categories were all stored with parentSlug=null and depth=0 in DB,
+causing the dashboard to display them as a flat list instead of a tree.
+
+Root cause: seedCategories was a flat list of all slugs (parents + children mixed)
+and maxCategoryDepth was 0, so the crawler never recursed into subcategories.
+
+Fix:
+- Added SALESFORCE_CATEGORY_CHILDREN map defining parent→children relationships
+- Changed seedCategories to only root categories (Object.keys of the map)
+- Changed maxCategoryDepth from 0 to 1 (two-level tree)
+- Updated parseCategoryPage() to inject subcategoryLinks from the child map
+- After deploy, a category re-scrape is needed to populate correct parentSlug values
+
+Files changed:
+- apps/scraper/src/platforms/salesforce/constants.ts
+- apps/scraper/src/platforms/salesforce/index.ts
+
 Pre-Deployment Fixes (Production Deploy)
 =========================================
 

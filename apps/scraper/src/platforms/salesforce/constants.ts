@@ -1,25 +1,25 @@
 import type { PlatformConstants, PlatformScoringConfig } from "../platform-module.js";
 
+/**
+ * Salesforce category tree: parent slug → array of child slugs.
+ * Source: files/salesforce/category-tree.json
+ */
+export const SALESFORCE_CATEGORY_CHILDREN: Record<string, string[]> = {
+  sales: ["contractManagement", "forecasting", "geolocation", "leadAndOpportunityManagement", "partnerManagement", "quotesAndOrders", "salesIntelligence"],
+  marketing: ["campaignManagement", "eventManagement", "feeds", "loyalty", "marketingAutomation"],
+  itAndAdministration: ["adminAndDeveloperTools", "auditAndCompliance"],
+  customerService: ["agentProductivity", "caseManagement", "fieldService"],
+  finance: ["accounting", "compensationManagement", "grantManagement"],
+  analytics: ["analyticsAndSiteMonitoring", "dashboardsAndReports", "dataCleansing", "dataVisualization"],
+  productivity: ["alerts", "documentGeneration", "documentManagement", "emailAndCalendarSync", "processManagement", "projectManagement", "timeAndDate"],
+  commerce: ["eCommerce", "liveCommerce", "marketplace", "paymentsProcessing", "ratingsAndReviews", "subscriptions", "warrantyAndReturnsManagement"],
+  collaboration: ["chatAndWebConferencing", "conversationalCommerce"],
+  enterpriseResourcePlanning: ["humanResources", "orderAndInventoryManagement", "peopleManagement", "punchoutSystem"],
+};
+
 export const SALESFORCE_CONSTANTS: PlatformConstants = {
-  seedCategories: [
-    "marketing",
-    "customerService",
-    "fieldService",
-    "sales",
-    "productivity",
-    "humanResources",
-    "commerce",
-    "caseManagement",
-    "campaignManagement",
-    "contractManagement",
-    "documentGeneration",
-    "processManagement",
-    "dataManagement",
-    "collaboration",
-    "websites",
-    "telephony",
-  ],
-  maxCategoryDepth: 0, // Flat structure, no subcategories
+  seedCategories: Object.keys(SALESFORCE_CATEGORY_CHILDREN),
+  maxCategoryDepth: 1, // Two-level tree (parent → children)
   defaultPagesPerCategory: 10,
   trackedFields: [
     "averageRating",

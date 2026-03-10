@@ -11,7 +11,7 @@ import type {
 import { HttpClient } from "../../http-client.js";
 import type { BrowserClient } from "../../browser-client.js";
 import { salesforceUrls } from "./urls.js";
-import { SALESFORCE_CONSTANTS, SALESFORCE_SCORING, SALESFORCE_API_HEADERS } from "./constants.js";
+import { SALESFORCE_CONSTANTS, SALESFORCE_SCORING, SALESFORCE_API_HEADERS, SALESFORCE_CATEGORY_CHILDREN } from "./constants.js";
 import { parseSalesforceSearchPage } from "./parsers/search-parser.js";
 import { parseSalesforceCategoryPage } from "./parsers/category-parser.js";
 import { parseSalesforceAppPage } from "./parsers/app-parser.js";
@@ -95,7 +95,19 @@ export class SalesforceModule implements PlatformModule {
   parseCategoryPage(json: string, url: string): NormalizedCategoryPage {
     // Extract category slug from URL or use the url as-is
     const categorySlug = this.extractCategorySlugFromUrl(url);
-    return parseSalesforceCategoryPage(json, categorySlug, 1, 0);
+    const result = parseSalesforceCategoryPage(json, categorySlug, 1, 0);
+
+    // Inject known children as subcategoryLinks so the crawler recurses into them
+    const children = SALESFORCE_CATEGORY_CHILDREN[categorySlug];
+    if (children) {
+      result.subcategoryLinks = children.map((slug) => ({
+        slug,
+        url: salesforceUrls.category(slug),
+        title: slug.replace(/([A-Z])/g, " $1").replace(/^./, (s) => s.toUpperCase()).trim(),
+      }));
+    }
+
+    return result;
   }
 
   parseSearchPage(
