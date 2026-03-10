@@ -32,6 +32,14 @@ export const SALESFORCE_CONSTANTS: PlatformConstants = {
   rateLimit: { minDelayMs: 500, maxDelayMs: 1500 },
 };
 
+/** Headers required for Salesforce AppExchange API to return correct search rankings */
+export const SALESFORCE_API_HEADERS: Record<string, string> = {
+  Accept: "application/json",
+  "x-use-new-search": "true",
+  Origin: "https://appexchange.salesforce.com",
+  Referer: "https://appexchange.salesforce.com/",
+};
+
 export const SALESFORCE_SCORING: PlatformScoringConfig = {
   pageSize: 12,
   pageDecay: 0.85,

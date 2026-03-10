@@ -11,7 +11,7 @@ import type {
 import { HttpClient } from "../../http-client.js";
 import type { BrowserClient } from "../../browser-client.js";
 import { salesforceUrls } from "./urls.js";
-import { SALESFORCE_CONSTANTS, SALESFORCE_SCORING } from "./constants.js";
+import { SALESFORCE_CONSTANTS, SALESFORCE_SCORING, SALESFORCE_API_HEADERS } from "./constants.js";
 import { parseSalesforceSearchPage } from "./parsers/search-parser.js";
 import { parseSalesforceCategoryPage } from "./parsers/category-parser.js";
 import { parseSalesforceAppPage } from "./parsers/app-parser.js";
@@ -73,7 +73,7 @@ export class SalesforceModule implements PlatformModule {
     const sponsoredCount = p === 1 ? 4 : undefined;
     return this.httpClient.fetchPage(
       salesforceUrls.categoryApi(slug, p, sponsoredCount),
-      { Accept: "application/json" }
+      { ...SALESFORCE_API_HEADERS }
     );
   }
 
@@ -82,7 +82,7 @@ export class SalesforceModule implements PlatformModule {
     const sponsoredCount = p === 1 ? 4 : undefined;
     return this.httpClient.fetchPage(
       salesforceUrls.searchApi(keyword, p, sponsoredCount),
-      { Accept: "application/json" }
+      { ...SALESFORCE_API_HEADERS }
     );
   }
 

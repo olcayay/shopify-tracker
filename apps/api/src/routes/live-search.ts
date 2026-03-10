@@ -100,7 +100,7 @@ async function salesforceLiveSearch(keyword: string) {
   const API_BASE = "https://api.appexchange.salesforce.com/recommendations/v3/listings";
   const params = new URLSearchParams({
     type: "apps",
-    page: "1",
+    page: "0",
     pageSize: "12",
     language: "en",
     keyword,
@@ -111,6 +111,9 @@ async function salesforceLiveSearch(keyword: string) {
   const response = await fetch(url, {
     headers: {
       Accept: "application/json",
+      "x-use-new-search": "true",
+      Origin: "https://appexchange.salesforce.com",
+      Referer: "https://appexchange.salesforce.com/",
       "User-Agent": USER_AGENTS[Math.floor(Math.random() * USER_AGENTS.length)],
     },
   });

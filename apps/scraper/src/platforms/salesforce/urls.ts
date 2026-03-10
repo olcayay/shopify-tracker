@@ -8,11 +8,11 @@ export const salesforceUrls = {
   app: (listingId: string) =>
     `${BASE_URL}/appxListingDetail?listingId=${listingId}`,
 
-  /** Category listing via JSON API (1-based pages) */
+  /** Category listing via JSON API (1-based pages internally, 0-based for API) */
   categoryApi: (slug: string, page = 1, sponsoredCount?: number) => {
     const params = new URLSearchParams({
       type: "apps",
-      page: String(page),
+      page: String(page - 1),
       pageSize: "12",
       language: "en",
       category: slug,
@@ -23,11 +23,11 @@ export const salesforceUrls = {
     return `${API_BASE}?${params.toString()}`;
   },
 
-  /** Keyword search via JSON API (1-based pages) */
+  /** Keyword search via JSON API (1-based pages internally, 0-based for API) */
   searchApi: (keyword: string, page = 1, sponsoredCount?: number) => {
     const params = new URLSearchParams({
       type: "apps",
-      page: String(page),
+      page: String(page - 1),
       pageSize: "12",
       language: "en",
       keyword,
