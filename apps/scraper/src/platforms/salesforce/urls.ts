@@ -14,7 +14,7 @@ export const salesforceUrls = {
     const params = new URLSearchParams({
       type: "apps",
       page: "0",
-      pageSize: "500",
+      pageSize: "2000",
       language: "en",
       category: slug,
     });
