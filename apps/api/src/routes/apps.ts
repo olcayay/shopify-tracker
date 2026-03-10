@@ -261,9 +261,10 @@ export const appRoutes: FastifyPluginAsync = async (app) => {
       .where(inArray(appCategoryRankings.appId, appIdList))
       .orderBy(appCategoryRankings.appId, appCategoryRankings.categorySlug, desc(appCategoryRankings.scrapedAt));
 
-    // Group by app slug
+    // Group by app slug (skip position <= 0 — invalid/sponsored artifacts)
     const result: Record<string, { title: string; slug: string; position: number | null }[]> = {};
     for (const r of rows) {
+      if (r.position != null && r.position <= 0) continue;
       const appSlug = appIdsBySlug.get(r.appId) || '';
       if (!result[appSlug]) result[appSlug] = [];
       result[appSlug].push({ title: r.categoryTitle, slug: r.categorySlug, position: r.position });
@@ -767,7 +768,8 @@ export const appRoutes: FastifyPluginAsync = async (app) => {
           and(
             eq(appCategoryRankings.appId, appRow.id),
             sql`${appCategoryRankings.scrapedAt} >= ${sinceStr}`,
-            eq(categories.isListingPage, true)
+            eq(categories.isListingPage, true),
+            sql`${appCategoryRankings.position} > 0`
           )
         )
         .orderBy(appCategoryRankings.scrapedAt);

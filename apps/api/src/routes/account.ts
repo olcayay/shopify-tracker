@@ -1083,6 +1083,7 @@ export const accountRoutes: FastifyPluginAsync = async (app) => {
         ) cs ON true
         WHERE sub.rn = 1
           AND c.is_listing_page = true
+          AND sub.position > 0
       `).then((res: any) => (res as any).rows ?? res);
       for (const r of catRankRows) {
         const arr = categoryRankingMap.get(r.app_slug) ?? [];
@@ -1637,6 +1638,7 @@ export const accountRoutes: FastifyPluginAsync = async (app) => {
           ) cs ON true
           WHERE sub.rn = 1
             AND c.is_listing_page = true
+            AND sub.position > 0
         `).then((res: any) => (res as any).rows ?? res);
         for (const r of catRankRows) {
           const arr = categoryRankingMap.get(r.app_slug) ?? [];
