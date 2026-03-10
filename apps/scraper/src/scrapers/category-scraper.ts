@@ -795,7 +795,9 @@ export class CategoryScraper {
 
     for (let i = 0; i < appList.length; i++) {
       const app = appList[i];
-      const subtitle = app.isSponsored ? undefined : (app.shortDescription || undefined);
+      // Skip sponsored apps — they go to categoryAdSightings only
+      if (app.isSponsored) continue;
+      const subtitle = app.shortDescription || undefined;
       const hasRating = app.averageRating > 0;
       const hasCount = app.ratingCount > 0;
 
