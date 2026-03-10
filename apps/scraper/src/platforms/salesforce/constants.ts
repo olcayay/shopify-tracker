@@ -5,16 +5,16 @@ import type { PlatformConstants, PlatformScoringConfig } from "../platform-modul
  * Source: files/salesforce/category-tree.json
  */
 export const SALESFORCE_CATEGORY_CHILDREN: Record<string, string[]> = {
-  sales: ["contractManagement", "forecasting", "geolocation", "leadAndOpportunityManagement", "partnerManagement", "quotesAndOrders", "salesIntelligence"],
-  marketing: ["campaignManagement", "eventManagement", "feeds", "loyalty", "marketingAutomation"],
-  itAndAdministration: ["adminAndDeveloperTools", "auditAndCompliance"],
-  customerService: ["agentProductivity", "caseManagement", "fieldService"],
-  finance: ["accounting", "compensationManagement", "grantManagement"],
+  sales: ["contractManagement", "forecasting", "geolocation", "leadAndOpportunityManagement", "partnerManagement", "quotesAndOrders", "salesIntelligence", "salesMethodologies", "salesProductivity"],
+  marketing: ["accountBasedMarketing", "campaignManagement", "eventManagement", "feeds", "loyalty", "marketingAndIntelligence", "marketingAutomation", "massEmailsAndMessaging", "personalization", "socialChannels", "surveys", "testingAndSegmentation", "websites"],
+  itAndAdministration: ["adminAndDeveloperTools", "auditAndCompliance", "dataManagement", "dataMigration", "developerTools", "informationManagement", "integration", "itManagement", "searchAndRecommendation", "security", "translation"],
+  customerService: ["agentProductivity", "caseManagement", "fieldService", "routePlanning", "telephony"],
+  finance: ["accounting", "compensationManagement", "grantManagement", "timeAndExpense"],
   analytics: ["analyticsAndSiteMonitoring", "dashboardsAndReports", "dataCleansing", "dataVisualization"],
   productivity: ["alerts", "documentGeneration", "documentManagement", "emailAndCalendarSync", "processManagement", "projectManagement", "timeAndDate"],
-  commerce: ["eCommerce", "liveCommerce", "marketplace", "paymentsProcessing", "ratingsAndReviews", "subscriptions", "warrantyAndReturnsManagement"],
+  commerce: ["eCommerce", "liveCommerce", "marketplace", "paymentsProcessing", "pointOfSaleAndInStore", "productInformationManagement", "ratingsAndReviews", "shippingFulfillmentAndLogistics", "subscriptions", "warrantyAndReturnsManagement"],
   collaboration: ["chatAndWebConferencing", "conversationalCommerce"],
-  enterpriseResourcePlanning: ["humanResources", "orderAndInventoryManagement", "peopleManagement", "punchoutSystem"],
+  enterpriseResourcePlanning: ["humanResources", "orderAndInventoryManagement", "peopleManagement", "punchoutSystem", "warehouseManagementSystem"],
 };
 
 export const SALESFORCE_CONSTANTS: PlatformConstants = {

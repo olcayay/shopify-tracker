@@ -1,0 +1,132 @@
+[
+  {
+    "name": "Sales",
+    "slug": "sales",
+    "children": [
+      { "name": "Contract Management", "slug": "contractManagement" },
+      { "name": "Forecasting", "slug": "forecasting" },
+      { "name": "Geolocation", "slug": "geolocation" },
+      { "name": "Lead & Opportunity Management", "slug": "leadAndOpportunityManagement" },
+      { "name": "Partner Management", "slug": "partnerManagement" },
+      { "name": "Quotes & Orders", "slug": "quotesAndOrders" },
+      { "name": "Sales Intelligence", "slug": "salesIntelligence" },
+      { "name": "Sales Methodologies", "slug": "salesMethodologies" },
+      { "name": "Sales Productivity", "slug": "salesProductivity" }
+    ]
+  },
+  {
+    "name": "Marketing",
+    "slug": "marketing",
+    "children": [
+      { "name": "Account-Based Marketing", "slug": "accountBasedMarketing" },
+      { "name": "Campaign Management", "slug": "campaignManagement" },
+      { "name": "Event Management", "slug": "eventManagement" },
+      { "name": "Feeds", "slug": "feeds" },
+      { "name": "Loyalty", "slug": "loyalty" },
+      { "name": "Marketing & Intelligence", "slug": "marketingAndIntelligence" },
+      { "name": "Marketing Automation", "slug": "marketingAutomation" },
+      { "name": "Mass Emails & Messaging", "slug": "massEmailsAndMessaging" },
+      { "name": "Personalization", "slug": "personalization" },
+      { "name": "Social Channels", "slug": "socialChannels" },
+      { "name": "Surveys", "slug": "surveys" },
+      { "name": "Testing & Segmentation", "slug": "testingAndSegmentation" },
+      { "name": "Websites", "slug": "websites" }
+    ]
+  },
+  {
+    "name": "IT & Administration",
+    "slug": "itAndAdministration",
+    "children": [
+      { "name": "Admin & Developer Tools", "slug": "adminAndDeveloperTools" },
+      { "name": "Audit & Compliance", "slug": "auditAndCompliance" },
+      { "name": "Data Management", "slug": "dataManagement" },
+      { "name": "Data Migration", "slug": "dataMigration" },
+      { "name": "Developer Tools", "slug": "developerTools" },
+      { "name": "Information Management", "slug": "informationManagement" },
+      { "name": "Integration", "slug": "integration" },
+      { "name": "IT Management", "slug": "itManagement" },
+      { "name": "Search & Recommendation", "slug": "searchAndRecommendation" },
+      { "name": "Security", "slug": "security" },
+      { "name": "Translation", "slug": "translation" }
+    ]
+  },
+  {
+    "name": "Customer Service",
+    "slug": "customerService",
+    "children": [
+      { "name": "Agent Productivity", "slug": "agentProductivity" },
+      { "name": "Case Management", "slug": "caseManagement" },
+      { "name": "Field Service", "slug": "fieldService" },
+      { "name": "Route Planning", "slug": "routePlanning" },
+      { "name": "Telephony", "slug": "telephony" }
+    ]
+  },
+  {
+    "name": "Finance",
+    "slug": "finance",
+    "children": [
+      { "name": "Accounting", "slug": "accounting" },
+      { "name": "Compensation Management", "slug": "compensationManagement" },
+      { "name": "Grant Management", "slug": "grantManagement" },
+      { "name": "Time & Expense", "slug": "timeAndExpense" }
+    ]
+  },
+  {
+    "name": "Analytics",
+    "slug": "analytics",
+    "children": [
+      { "name": "Analytics & Site Monitoring", "slug": "analyticsAndSiteMonitoring" },
+      { "name": "Dashboards & Reports", "slug": "dashboardsAndReports" },
+      { "name": "Data Cleansing", "slug": "dataCleansing" },
+      { "name": "Data Visualization", "slug": "dataVisualization" }
+    ]
+  },
+  {
+    "name": "Productivity",
+    "slug": "productivity",
+    "children": [
+      { "name": "Alerts", "slug": "alerts" },
+      { "name": "Document Generation", "slug": "documentGeneration" },
+      { "name": "Document Management", "slug": "documentManagement" },
+      { "name": "Email & Calendar Sync", "slug": "emailAndCalendarSync" },
+      { "name": "Process Management", "slug": "processManagement" },
+      { "name": "Project Management", "slug": "projectManagement" },
+      { "name": "Time & Date", "slug": "timeAndDate" }
+    ]
+  },
+  {
+    "name": "Commerce",
+    "slug": "commerce",
+    "children": [
+      { "name": "Ecommerce", "slug": "eCommerce" },
+      { "name": "Live Commerce", "slug": "liveCommerce" },
+      { "name": "Marketplace", "slug": "marketplace" },
+      { "name": "Payments Processing", "slug": "paymentsProcessing" },
+      { "name": "Point of Sale (POS) & In-Store", "slug": "pointOfSaleAndInStore" },
+      { "name": "Product Information Management (PIM)", "slug": "productInformationManagement" },
+      { "name": "Ratings & Reviews", "slug": "ratingsAndReviews" },
+      { "name": "Shipping, Fulfillment & Logistics", "slug": "shippingFulfillmentAndLogistics" },
+      { "name": "Subscriptions", "slug": "subscriptions" },
+      { "name": "Warranty & Returns Management", "slug": "warrantyAndReturnsManagement" }
+    ]
+  },
+  {
+    "name": "Collaboration",
+    "slug": "collaboration",
+    "children": [
+      { "name": "Chat & Web Conferencing", "slug": "chatAndWebConferencing" },
+      { "name": "Conversational Commerce", "slug": "conversationalCommerce" }
+    ]
+  },
+  {
+    "name": "Enterprise Resource Planning",
+    "slug": "enterpriseResourcePlanning",
+    "children": [
+      { "name": "Human Resources", "slug": "humanResources" },
+      { "name": "Order & Inventory Management System", "slug": "orderAndInventoryManagement" },
+      { "name": "People Management", "slug": "peopleManagement" },
+      { "name": "Punchout System", "slug": "punchoutSystem" },
+      { "name": "Warehouse Management System (WMS)", "slug": "warehouseManagementSystem" }
+    ]
+  }
+]
