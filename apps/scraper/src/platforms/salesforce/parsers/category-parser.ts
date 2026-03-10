@@ -69,9 +69,10 @@ export function parseSalesforceCategoryPage(
     });
   }
 
-  const pageSize = 12;
   const totalResults = data.totalCount;
-  const hasNextPage = data.listings.length >= pageSize && (organicOffset + data.listings.length) < totalResults;
+  // Salesforce category API ignores `page` param, so we use large pageSize (500)
+  // to get all results in one request. No pagination needed.
+  const hasNextPage = false;
 
   // Format the display title
   const title = categorySlug

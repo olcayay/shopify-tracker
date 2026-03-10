@@ -8,12 +8,13 @@ export const salesforceUrls = {
   app: (listingId: string) =>
     `${BASE_URL}/appxListingDetail?listingId=${listingId}`,
 
-  /** Category listing via JSON API (1-based pages internally, 0-based for API) */
-  categoryApi: (slug: string, page = 1, sponsoredCount?: number) => {
+  /** Category listing via JSON API — Salesforce ignores `page` param for categories,
+   *  so we use a large pageSize to get all results in one request. */
+  categoryApi: (slug: string, _page = 1, sponsoredCount?: number) => {
     const params = new URLSearchParams({
       type: "apps",
-      page: String(page - 1),
-      pageSize: "12",
+      page: "0",
+      pageSize: "500",
       language: "en",
       category: slug,
     });
