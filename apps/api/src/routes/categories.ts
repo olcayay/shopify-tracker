@@ -87,10 +87,23 @@ export const categoryRoutes: FastifyPluginAsync = async (app) => {
       .orderBy(desc(categorySnapshots.scrapedAt))
       .limit(1);
 
-    const children = await db
+    const childrenRaw = await db
       .select()
       .from(categories)
       .where(eq(categories.parentSlug, slug));
+
+    // Attach latest appCount to each child from snapshots
+    const children = await Promise.all(
+      childrenRaw.map(async (child) => {
+        const [snap] = await db
+          .select({ appCount: categorySnapshots.appCount })
+          .from(categorySnapshots)
+          .where(eq(categorySnapshots.categoryId, child.id))
+          .orderBy(desc(categorySnapshots.scrapedAt))
+          .limit(1);
+        return { ...child, appCount: snap?.appCount ?? null };
+      })
+    );
 
     // Build breadcrumb by walking up the parent chain
     const breadcrumb: { slug: string; title: string }[] = [];

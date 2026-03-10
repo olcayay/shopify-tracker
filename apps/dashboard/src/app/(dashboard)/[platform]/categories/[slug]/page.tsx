@@ -186,7 +186,7 @@ export default async function CategoryDetailPage({
               {category.children.map((child: any) => (
                 <Link key={child.slug} href={`/${platform}/categories/${child.slug}`}>
                   <Badge variant="outline" className="cursor-pointer">
-                    {child.title}
+                    {child.title}{child.appCount != null ? ` (${child.appCount})` : ""}
                   </Badge>
                 </Link>
               ))}
