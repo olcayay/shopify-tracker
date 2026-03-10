@@ -2906,32 +2906,33 @@ export const accountRoutes: FastifyPluginAsync = async (app) => {
 
     const rankingsMap = new Map<string, { app_slug: string; name: string; logo_url: string | null; position: number }[]>();
     if (slugsNeedingRankings.length > 0) {
-      const rankingRows = await db
-        .select({
-          categorySlug: appCategoryRankings.categorySlug,
-          appSlug: apps.slug,
-          name: apps.name,
-          iconUrl: apps.iconUrl,
-          position: appCategoryRankings.position,
-        })
-        .from(appCategoryRankings)
-        .innerJoin(apps, eq(apps.id, appCategoryRankings.appId))
-        .where(
-          and(
-            inArray(appCategoryRankings.categorySlug, slugsNeedingRankings),
-            sql`${appCategoryRankings.scrapeRunId} IN (
-              SELECT cs.scrape_run_id FROM category_snapshots cs
-              WHERE cs.category_id IN (
-                SELECT c.id FROM categories c WHERE c.slug = ${appCategoryRankings.categorySlug}
-              )
-              ORDER BY cs.scraped_at DESC LIMIT 1
-            )`
-          )
-        );
-      for (const r of rankingRows) {
-        const list = rankingsMap.get(r.categorySlug) ?? [];
-        list.push({ app_slug: r.appSlug, name: r.name, logo_url: r.iconUrl, position: r.position });
-        rankingsMap.set(r.categorySlug, list);
+      // Get scrape_run_ids from already-fetched snapshots (no correlated subquery needed)
+      const scrapeRunIds = slugsNeedingRankings
+        .map((slug) => snapshotMap.get(slug)?.scrapeRunId)
+        .filter((id): id is string => id != null);
+
+      if (scrapeRunIds.length > 0) {
+        const rankingRows = await db
+          .select({
+            categorySlug: appCategoryRankings.categorySlug,
+            appSlug: apps.slug,
+            name: apps.name,
+            iconUrl: apps.iconUrl,
+            position: appCategoryRankings.position,
+          })
+          .from(appCategoryRankings)
+          .innerJoin(apps, eq(apps.id, appCategoryRankings.appId))
+          .where(
+            and(
+              inArray(appCategoryRankings.categorySlug, slugsNeedingRankings),
+              inArray(appCategoryRankings.scrapeRunId, scrapeRunIds)
+            )
+          );
+        for (const r of rankingRows) {
+          const list = rankingsMap.get(r.categorySlug) ?? [];
+          list.push({ app_slug: r.appSlug, name: r.name, logo_url: r.iconUrl, position: r.position });
+          rankingsMap.set(r.categorySlug, list);
+        }
       }
     }
 
