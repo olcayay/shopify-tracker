@@ -302,7 +302,7 @@ export default async function KeywordDetailPage({
             <CardTitle>Organic Ranking History</CardTitle>
           </CardHeader>
           <CardContent>
-            <RankingChart data={rankingChartData} />
+            <RankingChart data={rankingChartData} pageSize={PLATFORMS[platform as PlatformId]?.pageSize ?? 24} />
           </CardContent>
         </Card>
       )}

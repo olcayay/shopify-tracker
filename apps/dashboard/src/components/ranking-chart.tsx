@@ -33,7 +33,7 @@ interface RankingData {
   iconUrl?: string;
 }
 
-export function RankingChart({ data }: { data: RankingData[] }) {
+export function RankingChart({ data, pageSize = 24 }: { data: RankingData[]; pageSize?: number }) {
   const [hidden, setHidden] = useState<Set<string>>(new Set());
 
   if (data.length === 0) {
@@ -188,7 +188,7 @@ export function RankingChart({ data }: { data: RankingData[] }) {
                   </td>
                   <td className="text-right px-3 py-2 text-muted-foreground">
                     {stat.position != null && !stat.dropped
-                      ? `p${Math.ceil(stat.position / 24)}`
+                      ? `p${Math.ceil(stat.position / pageSize)}`
                       : "\u2014"}
                   </td>
                   <td className="text-right px-3 py-2">

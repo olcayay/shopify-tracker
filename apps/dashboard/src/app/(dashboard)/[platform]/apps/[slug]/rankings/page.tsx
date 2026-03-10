@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { formatDateOnly } from "@/lib/format-date";
 import { getAppRankings } from "@/lib/api";
-import type { PlatformId } from "@appranks/shared";
+import { PLATFORMS, type PlatformId } from "@appranks/shared";
 import { formatCategoryTitle } from "@/lib/platform-urls";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -67,6 +67,7 @@ export default async function RankingsPage({
                 slug: r.categorySlug,
                 linkPrefix: `/${platform}/categories/`,
               }))}
+              pageSize={platform === "salesforce" ? 2000 : PLATFORMS[platform as PlatformId]?.pageSize ?? 24}
             />
           </CardContent>
         </Card>
@@ -86,6 +87,7 @@ export default async function RankingsPage({
                 slug: r.keywordSlug,
                 linkPrefix: `/${platform}/keywords/`,
               }))}
+              pageSize={PLATFORMS[platform as PlatformId]?.pageSize ?? 24}
             />
           </CardContent>
         </Card>
