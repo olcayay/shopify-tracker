@@ -68,9 +68,9 @@ export function LiveSearchModal({
     setResult(null);
     try {
       const [searchRes, compRes, trackedRes] = await Promise.all([
-        fetchWithAuth(`/api/live-search?q=${encodeURIComponent(keyword)}`),
-        fetchWithAuth("/api/account/competitors").catch(() => null),
-        fetchWithAuth("/api/account/tracked-apps").catch(() => null),
+        fetchWithAuth(`/api/live-search?q=${encodeURIComponent(keyword)}&platform=${platform}`),
+        fetchWithAuth(`/api/account/competitors?platform=${platform}`).catch(() => null),
+        fetchWithAuth(`/api/account/tracked-apps?platform=${platform}`).catch(() => null),
       ]);
 
       if (searchRes.ok) {
