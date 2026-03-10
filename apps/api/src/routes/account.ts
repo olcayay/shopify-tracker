@@ -2874,6 +2874,7 @@ export const accountRoutes: FastifyPluginAsync = async (app) => {
         categoryId: categorySnapshots.categoryId,
         appCount: categorySnapshots.appCount,
         firstPageApps: categorySnapshots.firstPageApps,
+        scrapeRunId: categorySnapshots.scrapeRunId,
       })
       .from(categorySnapshots)
       .where(
@@ -2893,15 +2894,68 @@ export const accountRoutes: FastifyPluginAsync = async (app) => {
       return appUrl.replace(/^https?:\/\/apps\.shopify\.com\//, "").replace(/^\/apps\//, "").split("?")[0];
     }
 
+    // For categories without firstPageApps (e.g. Salesforce), load ranked app slugs from appCategoryRankings
+    const slugsNeedingRankings = rows
+      .filter((r) => {
+        const snap = snapshotMap.get(r.categorySlug);
+        return !snap?.firstPageApps || (snap.firstPageApps as any[]).length === 0;
+      })
+      .map((r) => r.categorySlug);
+
+    const rankingsMap = new Map<string, string[]>();
+    if (slugsNeedingRankings.length > 0) {
+      const rankingRows = await db
+        .select({
+          categorySlug: appCategoryRankings.categorySlug,
+          appSlug: apps.slug,
+        })
+        .from(appCategoryRankings)
+        .innerJoin(apps, eq(apps.id, appCategoryRankings.appId))
+        .where(
+          and(
+            inArray(appCategoryRankings.categorySlug, slugsNeedingRankings),
+            sql`${appCategoryRankings.scrapeRunId} IN (
+              SELECT cs.scrape_run_id FROM category_snapshots cs
+              WHERE cs.category_id IN (
+                SELECT c.id FROM categories c WHERE c.slug = ${appCategoryRankings.categorySlug}
+              )
+              ORDER BY cs.scraped_at DESC LIMIT 1
+            )`
+          )
+        );
+      for (const r of rankingRows) {
+        const list = rankingsMap.get(r.categorySlug) ?? [];
+        list.push(r.appSlug);
+        rankingsMap.set(r.categorySlug, list);
+      }
+    }
+
     return rows.map((row) => {
       const snap = snapshotMap.get(row.categorySlug);
       const fpApps = (snap?.firstPageApps ?? []) as any[];
-      const trackedAppsInResults = fpApps
-        .filter((a) => trackedSet.has(extractSlug(a.app_url)))
-        .map((a) => ({ ...a, app_slug: extractSlug(a.app_url) }));
-      const competitorAppsInResults = fpApps
-        .filter((a) => competitorSet.has(extractSlug(a.app_url)))
-        .map((a) => ({ ...a, app_slug: extractSlug(a.app_url) }));
+
+      let trackedAppsInResults: any[];
+      let competitorAppsInResults: any[];
+
+      if (fpApps.length > 0) {
+        // Shopify path: use firstPageApps from snapshot
+        trackedAppsInResults = fpApps
+          .filter((a) => trackedSet.has(extractSlug(a.app_url)))
+          .map((a) => ({ ...a, app_slug: extractSlug(a.app_url) }));
+        competitorAppsInResults = fpApps
+          .filter((a) => competitorSet.has(extractSlug(a.app_url)))
+          .map((a) => ({ ...a, app_slug: extractSlug(a.app_url) }));
+      } else {
+        // Non-Shopify path: use appCategoryRankings
+        const rankedSlugs = rankingsMap.get(row.categorySlug) ?? [];
+        trackedAppsInResults = rankedSlugs
+          .filter((s) => trackedSet.has(s))
+          .map((s) => ({ app_slug: s }));
+        competitorAppsInResults = rankedSlugs
+          .filter((s) => competitorSet.has(s))
+          .map((s) => ({ app_slug: s }));
+      }
+
       return {
         ...row,
         appCount: snap?.appCount ?? null,
