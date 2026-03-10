@@ -285,7 +285,9 @@ export default function CategoriesPage() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            {starred.length === 0 ? (
+            {loading ? (
+              <TableSkeleton rows={3} cols={4} />
+            ) : starred.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-10 text-center">
                 <Folder className="h-10 w-10 text-muted-foreground/20 mb-3" />
                 <p className="text-sm font-medium text-muted-foreground mb-1">
