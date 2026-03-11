@@ -820,89 +820,38 @@ export function CompetitorsSection({ appSlug }: { appSlug: string }) {
                 {isCol("catRank") && <TableCell className="text-sm">
                   {(() => {
                     const rankings: any[] = comp.categoryRankings ?? [];
-                    const primary = comp.categories?.find((cat: any) => cat.type === "primary");
-                    const secondary = comp.categories?.find((cat: any) => cat.type === "secondary");
-
-                    // If no primary/secondary categories, fall back to showing rankings directly
-                    if (!primary && !secondary) {
-                      if (!rankings.length) return "\u2014";
-                      return (
-                        <div>
-                          {rankings.map((cr: any) => {
-                            const change = cr.prevPosition != null ? cr.prevPosition - cr.position : null;
-                            const topPercent = cr.appCount != null && cr.appCount > 0
-                              ? Math.max(1, Math.ceil((cr.position / cr.appCount) * 100))
-                              : null;
-                            return (
-                              <div key={cr.categorySlug} className="flex items-center gap-1.5">
-                                <span className="font-semibold tabular-nums shrink-0">#{cr.position}</span>
-                                {change != null && change !== 0 && (
-                                  <span className={`text-xs font-medium shrink-0 ${change > 0 ? "text-green-600" : "text-red-500"}`}>
-                                    {change > 0 ? "\u2191" : "\u2193"}{Math.abs(change)}
-                                  </span>
-                                )}
-                                <Link href={`/${platform}/categories/${cr.categorySlug}`} className="hover:underline truncate text-primary">{formatCategoryTitle(platform as PlatformId, cr.categorySlug, cr.categoryTitle)}</Link>
-                                {topPercent != null && (
-                                  <Tooltip>
-                                    <TooltipTrigger asChild>
-                                      <span className={`text-xs px-1 py-0.5 rounded shrink-0 ${topPercent <= 5 ? "bg-emerald-500/10 text-emerald-600" : topPercent <= 20 ? "bg-blue-500/10 text-blue-600" : "bg-muted text-muted-foreground"}`}>
-                                        Top {topPercent}%
-                                      </span>
-                                    </TooltipTrigger>
-                                    <TooltipContent>
-                                      Rank {cr.position} of {cr.appCount} apps
-                                    </TooltipContent>
-                                  </Tooltip>
-                                )}
-                              </div>
-                            );
-                          })}
-                        </div>
-                      );
-                    }
-
-                    const rankMap = new Map<string, { position: number; prevPosition: number | null; appCount: number | null }>(
-                      rankings.map((cr: any) => [
-                        cr.categorySlug,
-                        { position: cr.position, prevPosition: cr.prevPosition ?? null, appCount: cr.appCount ?? null },
-                      ])
-                    );
-
-                    function renderCategory(cat: { slug: string; title: string }, isPrimary: boolean) {
-                      const rank = rankMap.get(cat.slug);
-                      const change = rank && rank.prevPosition != null ? rank.prevPosition - rank.position : null;
-                      const topPercent = rank && rank.appCount != null && rank.appCount > 0
-                        ? Math.max(1, Math.ceil((rank.position / rank.appCount) * 100))
-                        : null;
-                      return (
-                        <div className={`flex items-center gap-1.5 ${isPrimary ? "" : "mt-1"}`}>
-                          {rank && <span className={`font-semibold tabular-nums shrink-0 ${isPrimary ? "" : "text-muted-foreground"}`}>#{rank.position}</span>}
-                          {change != null && change !== 0 && (
-                            <span className={`text-xs font-medium shrink-0 ${change > 0 ? "text-green-600" : "text-red-500"}`}>
-                              {change > 0 ? "\u2191" : "\u2193"}{Math.abs(change)}
-                            </span>
-                          )}
-                          {cat.slug ? <Link href={`/${platform}/categories/${cat.slug}`} className={`hover:underline truncate ${isPrimary ? "text-primary" : "text-muted-foreground"}`}>{formatCategoryTitle(platform as PlatformId, cat.slug, cat.title)}</Link> : <span className={isPrimary ? "" : "text-muted-foreground"}>{cat.title}</span>}
-                          {topPercent != null && (
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <span className={`text-xs px-1 py-0.5 rounded shrink-0 ${topPercent <= 5 ? "bg-emerald-500/10 text-emerald-600" : topPercent <= 20 ? "bg-blue-500/10 text-blue-600" : "bg-muted text-muted-foreground"}`}>
-                                  Top {topPercent}%
-                                </span>
-                              </TooltipTrigger>
-                              <TooltipContent>
-                                Rank {rank!.position} of {rank!.appCount} apps
-                              </TooltipContent>
-                            </Tooltip>
-                          )}
-                        </div>
-                      );
-                    }
-
+                    if (!rankings.length) return "\u2014";
                     return (
                       <div>
-                        {primary && renderCategory(primary, true)}
-                        {secondary && renderCategory(secondary, false)}
+                        {rankings.map((cr: any) => {
+                          const change = cr.prevPosition != null ? cr.prevPosition - cr.position : null;
+                          const topPercent = cr.appCount != null && cr.appCount > 0
+                            ? Math.max(1, Math.ceil((cr.position / cr.appCount) * 100))
+                            : null;
+                          return (
+                            <div key={cr.categorySlug} className="flex items-center gap-1.5">
+                              <span className="font-semibold tabular-nums shrink-0">#{cr.position}</span>
+                              {change != null && change !== 0 && (
+                                <span className={`text-xs font-medium shrink-0 ${change > 0 ? "text-green-600" : "text-red-500"}`}>
+                                  {change > 0 ? "\u2191" : "\u2193"}{Math.abs(change)}
+                                </span>
+                              )}
+                              <Link href={`/${platform}/categories/${cr.categorySlug}`} className="hover:underline truncate text-primary">{formatCategoryTitle(platform as PlatformId, cr.categorySlug, cr.categoryTitle)}</Link>
+                              {topPercent != null && (
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <span className={`text-xs px-1 py-0.5 rounded shrink-0 ${topPercent <= 5 ? "bg-emerald-500/10 text-emerald-600" : topPercent <= 20 ? "bg-blue-500/10 text-blue-600" : "bg-muted text-muted-foreground"}`}>
+                                      Top {topPercent}%
+                                    </span>
+                                  </TooltipTrigger>
+                                  <TooltipContent>
+                                    Rank {cr.position} of {cr.appCount} apps
+                                  </TooltipContent>
+                                </Tooltip>
+                              )}
+                            </div>
+                          );
+                        })}
                       </div>
                     );
                   })()}
