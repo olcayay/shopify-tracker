@@ -36,7 +36,7 @@ type SortDir = "asc" | "desc";
 const TOGGLEABLE_COLUMNS: { key: string; label: string; tip?: string }[] = [
   { key: "visibility", label: "Visibility", tip: "How discoverable this app is for your tracked keywords (0-100)" },
   { key: "power", label: "Power", tip: "Weighted aggregate market authority score (0-100)" },
-  { key: "similarity", label: "Similarity", tip: "Similarity score based on categories, features, keywords, and text" },
+  { key: "similarity", label: "Similarity", tip: "Similarity score based on categories, keywords, and text" },
   { key: "rating", label: "Rating" },
   { key: "reviews", label: "Reviews" },
   { key: "v7d", label: "R7d", tip: "Reviews received in the last 7 days" },
@@ -722,7 +722,7 @@ export function CompetitorsSection({ appSlug }: { appSlug: string }) {
                       <TooltipContent>
                         <div className="text-xs space-y-1">
                           <div>Category: {(parseFloat(comp.similarityScore.category) * 100).toFixed(0)}%</div>
-                          <div>Features: {(parseFloat(comp.similarityScore.feature) * 100).toFixed(0)}%</div>
+                          {caps.hasFeatureTaxonomy && <div>Features: {(parseFloat(comp.similarityScore.feature) * 100).toFixed(0)}%</div>}
                           <div>Keywords: {(parseFloat(comp.similarityScore.keyword) * 100).toFixed(0)}%</div>
                           <div>Text: {(parseFloat(comp.similarityScore.text) * 100).toFixed(0)}%</div>
                         </div>

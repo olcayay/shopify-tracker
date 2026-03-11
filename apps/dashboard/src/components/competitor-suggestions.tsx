@@ -6,7 +6,7 @@ import { useParams } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
 import { Sparkles, Plus, Check, ExternalLink, ChevronDown, ChevronUp } from "lucide-react";
 import { buildExternalAppUrl, getPlatformName } from "@/lib/platform-urls";
-import type { PlatformId } from "@appranks/shared";
+import { PLATFORMS, isPlatformId, type PlatformId } from "@appranks/shared";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
@@ -79,6 +79,7 @@ export function CompetitorSuggestions({
   prominent?: boolean;
 }) {
   const { platform } = useParams();
+  const caps = isPlatformId(platform as string) ? PLATFORMS[platform as PlatformId] : PLATFORMS.shopify;
   const { fetchWithAuth } = useAuth();
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -319,7 +320,7 @@ export function CompetitorSuggestions({
                       <TooltipContent>
                         <div className="text-xs space-y-1">
                           <div>Category: {(s.similarity.category * 100).toFixed(0)}%</div>
-                          <div>Features: {(s.similarity.feature * 100).toFixed(0)}%</div>
+                          {caps.hasFeatureTaxonomy && <div>Features: {(s.similarity.feature * 100).toFixed(0)}%</div>}
                           <div>Keywords: {(s.similarity.keyword * 100).toFixed(0)}%</div>
                           <div>Text: {(s.similarity.text * 100).toFixed(0)}%</div>
                         </div>

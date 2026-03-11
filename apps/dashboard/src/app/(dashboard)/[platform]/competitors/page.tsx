@@ -503,7 +503,7 @@ export default function CompetitorsPage() {
                 <TooltipContent>
                   <div className="text-xs space-y-1">
                     <div>Category: {(parseFloat(c.similarityScore.category) * 100).toFixed(0)}%</div>
-                    <div>Features: {(parseFloat(c.similarityScore.feature) * 100).toFixed(0)}%</div>
+                    {caps.hasFeatureTaxonomy && <div>Features: {(parseFloat(c.similarityScore.feature) * 100).toFixed(0)}%</div>}
                     <div>Keywords: {(parseFloat(c.similarityScore.keyword) * 100).toFixed(0)}%</div>
                     <div>Text: {(parseFloat(c.similarityScore.text) * 100).toFixed(0)}%</div>
                   </div>
