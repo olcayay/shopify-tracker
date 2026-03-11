@@ -223,7 +223,7 @@ function SidebarContent({
                   style={{ borderLeft: `3px solid ${accentColor}` }}
                 >
                   <span className="truncate">{PLATFORM_LABELS[platformId]}</span>
-                  {(platformId === "salesforce" || platformId === "canva") && (
+                  {platformId === "canva" && (
                     <span className="text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-primary/10 text-primary">
                       Beta
                     </span>
