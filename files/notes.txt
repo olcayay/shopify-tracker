@@ -1,3 +1,59 @@
+Virtual Apps for Research Projects
+====================================
+
+Added virtual app creation/editing to research projects for product ideation.
+Users can create multiple virtual apps per research project, pick features/
+integrations/category features from the competitor pool, and compare them
+side-by-side with real competitors.
+
+Database:
+- New table: research_virtual_apps (migration 0055)
+- UUID PK, FK to research_projects with cascade delete
+- JSONB columns: features, integrations, languages, categories, pricingPlans
+- Text fields: name, subtitle, introduction, details, seoTitle, seoMetaDescription
+- Icon (varchar 10) and color (varchar 7) columns (migration 0056)
+- Random emoji icon + hex color assigned on creation from preset sets
+
+API (apps/api/src/routes/research.ts):
+- CRUD: GET/POST/PATCH/DELETE for virtual apps
+- Feature helpers: add/remove category-feature, feature, integration
+- Modified GET /:id/data to include virtualApps + competitor integrations/languages
+- POST accepts full body data for deferred creation pattern
+- 16 emoji icons + 10 color presets, random on creation
+
+Dashboard:
+- Research detail page: Virtual Apps section with cards (create/list/delete)
+  - Virtual Apps overview card in SummaryCards (pink-to-rose gradient)
+  - Per-app emoji icon + color on cards and feature coverage
+- Research listing page: Virtual Apps overview card in ProjectSummaryCards
+- Editor page: [platform]/research/[id]/virtual-apps/[vaId]/page.tsx
+  - Sidebar navigation + scrollable sections
+  - CategoryFeaturePicker, FeaturePicker, IntegrationPicker components
+  - Icon picker: 16 emoji grid + 10 color swatches + custom URL input
+  - Deferred creation: vaId="new" keeps state local until first save
+  - Unsaved changes guard: isDirty tracking + beforeunload + custom ConfirmModal
+- Compare page: Virtual apps as selectable columns with per-app color highlight
+  - Synthetic AppData with slug: __virtual__{id}
+  - AppIcon component: per-app emoji+color for virtual, img for real, letter fallback
+  - All 6 section headers use AppIcon, names always visible (no hover-only)
+- Feature Coverage: Virtual app columns with per-app color tint
+- Custom ConfirmModal: animations, AlertTriangle icon, ESC key, auto-focus cancel
+
+Files changed:
+- packages/db/src/schema/research-virtual-apps.ts (new — with icon/color columns)
+- packages/db/src/migrations/0055_research_virtual_apps.sql (new)
+- packages/db/src/migrations/0056_virtual_app_icon_color.sql (new)
+- packages/db/src/index.ts (export)
+- apps/api/src/routes/research.ts (CRUD + helpers + data + deferred creation)
+- apps/dashboard/src/app/(dashboard)/[platform]/research/[id]/page.tsx (cards + coverage + overview)
+- apps/dashboard/src/app/(dashboard)/[platform]/research/page.tsx (overview card)
+- apps/dashboard/src/app/(dashboard)/[platform]/research/[id]/virtual-apps/[vaId]/page.tsx (new — icon picker, deferred, unsaved guard)
+- apps/dashboard/src/app/(dashboard)/[platform]/research/[id]/compare/page.tsx (AppIcon, per-app colors)
+- apps/dashboard/src/components/confirm-modal.tsx (custom modal with animations)
+- apps/dashboard/src/components/virtual-app/category-feature-picker.tsx (new)
+- apps/dashboard/src/components/virtual-app/feature-picker.tsx (new)
+- apps/dashboard/src/components/virtual-app/integration-picker.tsx (new)
+
 Fix Salesforce category tree — flat → hierarchical
 ====================================================
 

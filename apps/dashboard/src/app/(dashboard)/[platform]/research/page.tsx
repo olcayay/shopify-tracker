@@ -60,6 +60,10 @@ interface ResearchData {
     keyword: string; slug: string; opportunityScore: number;
     room: number; demand: number; competitorCount: number; totalResults: number | null;
   }[];
+  virtualApps: {
+    id: string; name: string; icon: string; color: string;
+    features: string[]; integrations: string[]; categories: any[];
+  }[];
 }
 
 // ─── Main Page ──────────────────────────────────────────────
@@ -321,8 +325,9 @@ function ProjectSummaryCards({ data }: { data: ResearchData }) {
   const hasCompetitors = data.competitors.length >= 2;
   const hasOpportunities = data.opportunities.length > 0;
   const hasKeywords = data.keywords.length > 0;
+  const hasVirtualApps = (data.virtualApps?.length ?? 0) > 0;
 
-  if (!hasCompetitors && !hasKeywords) {
+  if (!hasCompetitors && !hasKeywords && !hasVirtualApps) {
     return (
       <div className="text-sm text-muted-foreground py-4 text-center">
         No keywords or competitors added yet.
@@ -348,8 +353,8 @@ function ProjectSummaryCards({ data }: { data: ResearchData }) {
   const hasDiscovery = hasKeywords && (data.competitorSuggestions.length > 0 || data.keywordSuggestions.length > 0 || data.wordAnalysis.length > 0);
   const hasPowers = hasCompetitors && powers.length > 0;
 
-  const cardCount = [hasCompetitors, hasPowers, hasOpportunities, hasDiscovery].filter(Boolean).length;
-  const gridClass = cardCount <= 2 ? "grid-cols-1 md:grid-cols-2" : cardCount === 3 ? "grid-cols-2 md:grid-cols-3" : "grid-cols-2 md:grid-cols-4";
+  const cardCount = [hasCompetitors, hasPowers, hasOpportunities, hasDiscovery, hasVirtualApps].filter(Boolean).length;
+  const gridClass = cardCount <= 2 ? "grid-cols-1 md:grid-cols-2" : cardCount <= 4 ? "grid-cols-2 md:grid-cols-4" : "grid-cols-2 md:grid-cols-5";
 
   return (
     <div className={`grid ${gridClass} gap-4`}>
@@ -434,6 +439,33 @@ function ProjectSummaryCards({ data }: { data: ResearchData }) {
               <span className="text-muted-foreground">{data.wordAnalysis.length} market terms</span>
             </StatRow>
           )}
+        </StatCard>
+      )}
+
+      {/* Card 5: Virtual Apps */}
+      {hasVirtualApps && (
+        <StatCard emoji="✨" title="Virtual Apps" gradient="bg-gradient-to-r from-pink-500 to-rose-400">
+          {(data.virtualApps || []).map((va) => {
+            const featCount = (va.features?.length || 0) + (va.categories || []).reduce(
+              (acc: number, cat: any) => acc + (cat.subcategories || []).reduce(
+                (a2: number, sub: any) => a2 + (sub.features?.length || 0), 0
+              ), 0
+            );
+            return (
+              <StatRow key={va.id}>
+                <span className="flex items-center gap-1.5 text-muted-foreground min-w-0">
+                  <span
+                    className="h-4 w-4 rounded flex items-center justify-center shrink-0 text-[10px]"
+                    style={{ backgroundColor: `${va.color || "#3B82F6"}20` }}
+                  >
+                    {va.icon || "🚀"}
+                  </span>
+                  <span className="truncate">{va.name}</span>
+                </span>
+                <span className="font-medium text-xs shrink-0">{featCount}f / {va.integrations?.length || 0}i</span>
+              </StatRow>
+            );
+          })}
         </StatCard>
       )}
     </div>

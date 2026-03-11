@@ -37,6 +37,8 @@ import {
   ArrowUpDown,
   ArrowUp,
   ArrowDown,
+  Sparkles,
+  Trash2,
 } from "lucide-react";
 import Link from "next/link";
 import { LiveSearchTrigger } from "@/components/live-search-trigger";
@@ -81,6 +83,15 @@ interface ResearchData {
   opportunities: {
     keyword: string; slug: string; opportunityScore: number;
     room: number; demand: number; competitorCount: number; totalResults: number | null;
+  }[];
+  virtualApps: {
+    id: string; researchProjectId: string; name: string;
+    icon: string; color: string; iconUrl: string | null;
+    appCardSubtitle: string; appIntroduction: string; appDetails: string;
+    seoTitle: string; seoMetaDescription: string;
+    features: string[]; integrations: string[]; languages: string[];
+    categories: any[]; pricingPlans: any[];
+    createdAt: string; updatedAt: string;
   }[];
 }
 
@@ -297,6 +308,28 @@ export default function ResearchProjectPage() {
       {/* Summary Cards */}
       <SummaryCards data={data} />
 
+      {/* Virtual Apps */}
+      {hasCompetitors && (
+        <SectionWrapper
+          id="section-virtual-apps"
+          title="Virtual Apps"
+          icon={Sparkles}
+          count={data.virtualApps?.length ?? 0}
+          subtitle="Design your app by picking features from competitors"
+          headerAction={canEdit ? (
+            <CreateVirtualAppButton projectId={id} />
+          ) : undefined}
+        >
+          <VirtualAppsGrid
+            virtualApps={data.virtualApps || []}
+            projectId={id}
+            canEdit={canEdit}
+            fetchWithAuth={fetchWithAuth}
+            onDelete={fetchData}
+          />
+        </SectionWrapper>
+      )}
+
       {/* Layer 0/1: Keywords Section */}
       <KeywordsSection
         projectId={id}
@@ -460,7 +493,7 @@ export default function ResearchProjectPage() {
       {/* Layer 3: Feature Coverage */}
       {hasRichData && data.featureCoverage.length > 0 && (
         <SectionWrapper id="section-features" title="Feature Coverage" icon={Puzzle} subtitle="Which features competitors have">
-          <FeatureCoverage features={data.featureCoverage} competitors={data.competitors} />
+          <FeatureCoverage features={data.featureCoverage} competitors={data.competitors} virtualApps={data.virtualApps || []} />
         </SectionWrapper>
       )}
 
@@ -543,8 +576,9 @@ function SummaryCards({ data }: { data: ResearchData }) {
   const hasCompetitors = data.competitors.length >= 2;
   const hasOpportunities = data.opportunities.length > 0;
   const hasKeywords = data.keywords.length > 0;
+  const hasVirtualAppsEarly = (data.virtualApps?.length ?? 0) > 0;
 
-  if (!hasCompetitors && !hasKeywords) return null;
+  if (!hasCompetitors && !hasKeywords && !hasVirtualAppsEarly) return null;
 
   const comps = data.competitors;
   const ratings = comps.filter(c => c.averageRating != null);
@@ -563,9 +597,10 @@ function SummaryCards({ data }: { data: ResearchData }) {
   const gapCount = data.featureCoverage.filter(f => f.isGap).length;
   const hasDiscovery = hasKeywords && (data.competitorSuggestions.length > 0 || data.keywordSuggestions.length > 0 || data.wordAnalysis.length > 0);
   const hasPowers = hasCompetitors && powers.length > 0;
+  const hasVirtualApps = (data.virtualApps?.length ?? 0) > 0;
 
-  const cardCount = [hasCompetitors, hasPowers, hasOpportunities, hasDiscovery].filter(Boolean).length;
-  const gridClass = cardCount <= 2 ? "grid-cols-1 md:grid-cols-2" : cardCount === 3 ? "grid-cols-2 md:grid-cols-3" : "grid-cols-2 md:grid-cols-4";
+  const cardCount = [hasCompetitors, hasPowers, hasOpportunities, hasDiscovery, hasVirtualApps].filter(Boolean).length;
+  const gridClass = cardCount <= 2 ? "grid-cols-1 md:grid-cols-2" : cardCount <= 4 ? "grid-cols-2 md:grid-cols-4" : "grid-cols-2 md:grid-cols-5";
 
   return (
     <div className={`grid ${gridClass} gap-4`}>
@@ -656,6 +691,33 @@ function SummaryCards({ data }: { data: ResearchData }) {
               <span className="text-xs text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity">View →</span>
             </SummaryLink>
           )}
+        </StatCard>
+      )}
+
+      {/* Card 5: Virtual Apps */}
+      {hasVirtualApps && (
+        <StatCard emoji="✨" title="Virtual Apps" gradient="bg-gradient-to-r from-pink-500 to-rose-400">
+          {(data.virtualApps || []).map((va) => {
+            const featCount = (va.features?.length || 0) + (va.categories || []).reduce(
+              (acc: number, cat: any) => acc + (cat.subcategories || []).reduce(
+                (a2: number, sub: any) => a2 + (sub.features?.length || 0), 0
+              ), 0
+            );
+            return (
+              <SummaryLink key={va.id} href="section-virtual-apps">
+                <span className="flex items-center gap-1.5 text-muted-foreground min-w-0">
+                  <span
+                    className="h-4 w-4 rounded flex items-center justify-center shrink-0 text-[10px]"
+                    style={{ backgroundColor: `${va.color || "#3B82F6"}20` }}
+                  >
+                    {va.icon || "🚀"}
+                  </span>
+                  <span className="truncate">{va.name}</span>
+                </span>
+                <span className="font-medium text-xs shrink-0">{featCount}f / {va.integrations?.length || 0}i</span>
+              </SummaryLink>
+            );
+          })}
         </StatCard>
       )}
     </div>
@@ -1693,10 +1755,11 @@ function CategoryLandscape({
 // ─── Feature Coverage ────────────────────────────────────────
 
 function FeatureCoverage({
-  features, competitors,
+  features, competitors, virtualApps,
 }: {
   features: ResearchData["featureCoverage"];
   competitors: ResearchData["competitors"];
+  virtualApps?: ResearchData["virtualApps"];
 }) {
   const { platform } = useParams();
   const competitorSet = useMemo(
@@ -1707,6 +1770,23 @@ function FeatureCoverage({
     () => competitors.filter((c) => competitorSet.has(c.slug)),
     [competitors, competitorSet]
   );
+
+  // Build virtual app feature handle sets
+  const vaFeatureHandles = useMemo(() => {
+    const map = new Map<string, Set<string>>();
+    for (const va of virtualApps || []) {
+      const handles = new Set<string>();
+      for (const cat of va.categories || []) {
+        for (const sub of cat.subcategories || []) {
+          for (const feat of sub.features || []) {
+            handles.add(feat.feature_handle);
+          }
+        }
+      }
+      map.set(va.id, handles);
+    }
+    return map;
+  }, [virtualApps]);
 
   // Group features by subcategory, sorted by total checks
   const grouped = useMemo(() => {
@@ -1727,12 +1807,27 @@ function FeatureCoverage({
       .sort((a, b) => b.totalChecks - a.totalChecks);
   }, [features]);
 
+  const totalColumns = relevantCompetitors.length + (virtualApps?.length || 0) + 1;
+
   return (
     <div className="overflow-x-auto">
       <Table>
         <TableHeader>
           <TableRow>
             <TableHead className="w-[220px] min-w-[160px]">Feature</TableHead>
+            {(virtualApps || []).map((va) => (
+              <TableHead key={va.id} className="text-center px-2 min-w-[72px]" style={{ backgroundColor: `${va.color || "#3B82F6"}08` }}>
+                <Link href={`/${platform}/research/${va.researchProjectId}/virtual-apps/${va.id}`} className="inline-flex flex-col items-center gap-0.5 group" title={va.name}>
+                  <div
+                    className="h-7 w-7 rounded flex items-center justify-center group-hover:ring-2 transition-all"
+                    style={{ backgroundColor: `${va.color || "#3B82F6"}20`, ["--tw-ring-color" as any]: `${va.color || "#3B82F6"}50` }}
+                  >
+                    <span className="text-sm">{va.icon || "🚀"}</span>
+                  </div>
+                  <span className="text-[10px] font-medium leading-tight max-w-[68px] truncate" style={{ color: va.color || "#3B82F6" }}>{va.name}</span>
+                </Link>
+              </TableHead>
+            ))}
             {relevantCompetitors.map((comp) => (
               <TableHead key={comp.slug} className="text-center px-2 min-w-[72px]">
                 <Link href={`/${platform}/apps/${comp.slug}`} className="inline-flex flex-col items-center gap-0.5 group" title={comp.name}>
@@ -1764,7 +1859,7 @@ function FeatureCoverage({
           {grouped.map((sub) => (
             <React.Fragment key={sub.title}>
               <TableRow className="bg-muted/40 hover:bg-muted/40">
-                <TableCell colSpan={relevantCompetitors.length + 1} className="py-1.5">
+                <TableCell colSpan={totalColumns} className="py-1.5">
                   <span className="text-xs font-semibold text-foreground">{sub.title}</span>
                   <span className="text-[10px] text-muted-foreground ml-1.5">({sub.totalChecks})</span>
                 </TableCell>
@@ -1777,6 +1872,15 @@ function FeatureCoverage({
                     </Link>
                     <span className="ml-1 text-xs text-muted-foreground">({f.count}/{f.total})</span>
                   </TableCell>
+                  {(virtualApps || []).map((va) => (
+                    <TableCell key={va.id} className="text-center px-2" style={{ backgroundColor: `${va.color || "#3B82F6"}08` }}>
+                      {vaFeatureHandles.get(va.id)?.has(f.feature) ? (
+                        <Check className="h-4 w-4 mx-auto" style={{ color: va.color || "#3B82F6" }} />
+                      ) : (
+                        <span className="text-muted-foreground/30">{"\u2014"}</span>
+                      )}
+                    </TableCell>
+                  ))}
                   {relevantCompetitors.map((comp) => (
                     <TableCell key={comp.slug} className="text-center px-2">
                       {f.competitors.includes(comp.slug) ? (
@@ -1792,6 +1896,116 @@ function FeatureCoverage({
           ))}
         </TableBody>
       </Table>
+    </div>
+  );
+}
+
+// ─── Virtual Apps ────────────────────────────────────────────
+
+function CreateVirtualAppButton({ projectId }: { projectId: string }) {
+  const { platform } = useParams();
+  const router = useRouter();
+
+  return (
+    <Button size="sm" variant="outline" onClick={() => router.push(`/${platform}/research/${projectId}/virtual-apps/new`)}>
+      <Plus className="h-3.5 w-3.5 mr-1.5" />
+      New App
+    </Button>
+  );
+}
+
+function VirtualAppsGrid({
+  virtualApps, projectId, canEdit, fetchWithAuth, onDelete,
+}: {
+  virtualApps: ResearchData["virtualApps"]; projectId: string; canEdit: boolean;
+  fetchWithAuth: any; onDelete: () => void;
+}) {
+  const { platform } = useParams();
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+
+  async function handleDelete(vaId: string) {
+    if (!confirm("Delete this virtual app?")) return;
+    setDeletingId(vaId);
+    try {
+      const res = await fetchWithAuth(`/api/research-projects/${projectId}/virtual-apps/${vaId}`, {
+        method: "DELETE",
+      });
+      if (res.ok) onDelete();
+    } finally {
+      setDeletingId(null);
+    }
+  }
+
+  if (virtualApps.length === 0) {
+    return (
+      <p className="text-sm text-muted-foreground text-center py-6">
+        No virtual apps yet. Create one to start designing your app.
+      </p>
+    );
+  }
+
+  function timeAgo(dateStr: string) {
+    const diff = Date.now() - new Date(dateStr).getTime();
+    const mins = Math.floor(diff / 60000);
+    if (mins < 60) return `${mins}m ago`;
+    const hours = Math.floor(mins / 60);
+    if (hours < 24) return `${hours}h ago`;
+    const days = Math.floor(hours / 24);
+    return `${days}d ago`;
+  }
+
+  return (
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+      {virtualApps.map((va) => {
+        const featureCount = (va.features?.length || 0) + (va.categories || []).reduce(
+          (acc: number, cat: any) => acc + (cat.subcategories || []).reduce(
+            (a2: number, sub: any) => a2 + (sub.features?.length || 0), 0
+          ), 0
+        );
+        const integrationCount = va.integrations?.length || 0;
+
+        return (
+          <Link
+            key={va.id}
+            href={`/${platform}/research/${projectId}/virtual-apps/${va.id}`}
+            className="block"
+          >
+            <Card className="hover:shadow-md transition-shadow cursor-pointer h-full">
+              <CardContent className="pt-4 pb-3 px-4">
+                <div className="flex items-start justify-between gap-2">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <div
+                      className="h-7 w-7 rounded flex items-center justify-center shrink-0"
+                      style={{ backgroundColor: `${va.color || "#3B82F6"}20` }}
+                    >
+                      <span className="text-sm">{va.icon || "🚀"}</span>
+                    </div>
+                    <span className="font-medium text-sm truncate">{va.name}</span>
+                  </div>
+                  {canEdit && (
+                    <button
+                      onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleDelete(va.id); }}
+                      className="text-muted-foreground hover:text-destructive transition-colors shrink-0 p-1"
+                      disabled={deletingId === va.id}
+                    >
+                      {deletingId === va.id ? (
+                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                      ) : (
+                        <Trash2 className="h-3.5 w-3.5" />
+                      )}
+                    </button>
+                  )}
+                </div>
+                <div className="mt-2 space-y-0.5 text-xs text-muted-foreground">
+                  <div>{featureCount} features</div>
+                  <div>{integrationCount} integrations</div>
+                  <div>Updated: {timeAgo(va.updatedAt)}</div>
+                </div>
+              </CardContent>
+            </Card>
+          </Link>
+        );
+      })}
     </div>
   );
 }

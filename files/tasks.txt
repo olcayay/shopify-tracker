@@ -159,3 +159,7 @@ email servis hizmeti alınması
 keywordler için ekstra bilgiler (ilk sayfadaki app'lere dair
     bilgiler
 )
+
+virtual apps for research projects (DB + API + Editor + Compare + Feature Coverage) ✅
+
+virtual app UX improvements (icon/color picker, deferred creation, unsaved changes guard, overview cards, custom confirm modal) ✅

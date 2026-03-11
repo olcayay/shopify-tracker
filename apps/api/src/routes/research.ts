@@ -13,6 +13,7 @@ import {
   researchProjects,
   researchProjectKeywords,
   researchProjectCompetitors,
+  researchVirtualApps,
   appPowerScores,
   users,
   accounts,
@@ -587,6 +588,8 @@ export const researchRoutes: FastifyPluginAsync = async (app) => {
             categories: appSnapshots.categories,
             pricingPlans: appSnapshots.pricingPlans,
             features: appSnapshots.features,
+            integrations: appSnapshots.integrations,
+            languages: appSnapshots.languages,
             appIntroduction: appSnapshots.appIntroduction,
             appDetails: appSnapshots.appDetails,
           })
@@ -761,6 +764,8 @@ export const researchRoutes: FastifyPluginAsync = async (app) => {
           categories: snap?.categories ?? [],
           categoryRankings: catRanks,
           features: snap?.features ?? [],
+          integrations: snap?.integrations ?? [],
+          languages: snap?.languages ?? [],
           launchedAt: appInfo?.launchedDate?.toISOString() ?? null,
           featuredSections: featuredMap.get(c.appSlug) ?? 0,
           reverseSimilarCount: similarMap.get(c.appSlug) ?? 0,
@@ -1229,6 +1234,13 @@ export const researchRoutes: FastifyPluginAsync = async (app) => {
       opportunities.sort((a, b) => b.opportunityScore - a.opportunityScore);
     }
 
+    // 13. Virtual apps
+    const virtualApps = await db
+      .select()
+      .from(researchVirtualApps)
+      .where(eq(researchVirtualApps.researchProjectId, id))
+      .orderBy(desc(researchVirtualApps.updatedAt));
+
     return {
       project,
       keywords: keywordData,
@@ -1240,6 +1252,420 @@ export const researchRoutes: FastifyPluginAsync = async (app) => {
       categories,
       featureCoverage,
       opportunities,
+      virtualApps,
     };
   });
+
+  // ─── Virtual Apps CRUD ─────────────────────────────────────
+
+  // GET /:id/virtual-apps — list all virtual apps
+  app.get<{ Params: { id: string } }>("/:id/virtual-apps", async (request, reply) => {
+    const { accountId } = request.user;
+    const { id } = request.params;
+
+    const [project] = await db
+      .select({ id: researchProjects.id })
+      .from(researchProjects)
+      .where(and(eq(researchProjects.id, id), eq(researchProjects.accountId, accountId)));
+
+    if (!project) return reply.code(404).send({ error: "Project not found" });
+
+    const rows = await db
+      .select()
+      .from(researchVirtualApps)
+      .where(eq(researchVirtualApps.researchProjectId, id))
+      .orderBy(desc(researchVirtualApps.updatedAt));
+
+    return rows;
+  });
+
+  // GET /:id/virtual-apps/:vaId — get single virtual app
+  app.get<{ Params: { id: string; vaId: string } }>("/:id/virtual-apps/:vaId", async (request, reply) => {
+    const { accountId } = request.user;
+    const { id, vaId } = request.params;
+
+    const [project] = await db
+      .select({ id: researchProjects.id })
+      .from(researchProjects)
+      .where(and(eq(researchProjects.id, id), eq(researchProjects.accountId, accountId)));
+
+    if (!project) return reply.code(404).send({ error: "Project not found" });
+
+    const [va] = await db
+      .select()
+      .from(researchVirtualApps)
+      .where(and(eq(researchVirtualApps.id, vaId), eq(researchVirtualApps.researchProjectId, id)));
+
+    if (!va) return reply.code(404).send({ error: "Virtual app not found" });
+    return va;
+  });
+
+  // POST /:id/virtual-apps — create virtual app
+  app.post<{ Params: { id: string }; Body: Record<string, any> }>(
+    "/:id/virtual-apps",
+    { preHandler: [requireRole("owner", "editor")] },
+    async (request, reply) => {
+      const { accountId } = request.user;
+      const { id } = request.params;
+      const body = request.body || {};
+
+      const [project] = await db
+        .select({ id: researchProjects.id })
+        .from(researchProjects)
+        .where(and(eq(researchProjects.id, id), eq(researchProjects.accountId, accountId)));
+
+      if (!project) return reply.code(404).send({ error: "Project not found" });
+
+      const VA_ICONS = ["🚀", "💡", "⚡", "🎯", "🔮", "🌟", "💎", "🎨", "🔥", "🌊", "🦋", "🍀", "🎲", "🪐", "🎸", "🦄"];
+      const VA_COLORS = ["#3B82F6", "#8B5CF6", "#EC4899", "#EF4444", "#F97316", "#EAB308", "#22C55E", "#06B6D4", "#6366F1", "#D946EF"];
+
+      const values: Record<string, any> = {
+        researchProjectId: id,
+        name: body.name || "My App",
+        icon: body.icon || VA_ICONS[Math.floor(Math.random() * VA_ICONS.length)],
+        color: body.color || VA_COLORS[Math.floor(Math.random() * VA_COLORS.length)],
+      };
+
+      // Accept optional fields for full-data creation
+      const optionalFields = [
+        "iconUrl", "appCardSubtitle", "appIntroduction", "appDetails",
+        "seoTitle", "seoMetaDescription", "features", "integrations",
+        "languages", "categories", "pricingPlans",
+      ];
+      for (const key of optionalFields) {
+        if (body[key] !== undefined) values[key] = body[key];
+      }
+
+      const [va] = await db
+        .insert(researchVirtualApps)
+        .values(values)
+        .returning();
+
+      return reply.code(201).send(va);
+    }
+  );
+
+  // PATCH /:id/virtual-apps/:vaId — update virtual app
+  app.patch<{ Params: { id: string; vaId: string }; Body: Record<string, any> }>(
+    "/:id/virtual-apps/:vaId",
+    { preHandler: [requireRole("owner", "editor")] },
+    async (request, reply) => {
+      const { accountId } = request.user;
+      const { id, vaId } = request.params;
+      const body = request.body || {};
+
+      const [project] = await db
+        .select({ id: researchProjects.id })
+        .from(researchProjects)
+        .where(and(eq(researchProjects.id, id), eq(researchProjects.accountId, accountId)));
+
+      if (!project) return reply.code(404).send({ error: "Project not found" });
+
+      const allowedFields: Record<string, any> = {};
+      const fieldMap: Record<string, keyof typeof researchVirtualApps> = {
+        name: "name",
+        icon: "icon",
+        color: "color",
+        iconUrl: "iconUrl",
+        appCardSubtitle: "appCardSubtitle",
+        appIntroduction: "appIntroduction",
+        appDetails: "appDetails",
+        seoTitle: "seoTitle",
+        seoMetaDescription: "seoMetaDescription",
+        features: "features",
+        integrations: "integrations",
+        languages: "languages",
+        categories: "categories",
+        pricingPlans: "pricingPlans",
+      };
+
+      for (const [key, col] of Object.entries(fieldMap)) {
+        if (body[key] !== undefined) {
+          allowedFields[col] = body[key];
+        }
+      }
+
+      if (Object.keys(allowedFields).length === 0) {
+        return reply.code(400).send({ error: "No valid fields to update" });
+      }
+
+      allowedFields.updatedAt = new Date();
+
+      const [updated] = await db
+        .update(researchVirtualApps)
+        .set(allowedFields)
+        .where(and(eq(researchVirtualApps.id, vaId), eq(researchVirtualApps.researchProjectId, id)))
+        .returning();
+
+      if (!updated) return reply.code(404).send({ error: "Virtual app not found" });
+      return updated;
+    }
+  );
+
+  // DELETE /:id/virtual-apps/:vaId — delete virtual app
+  app.delete<{ Params: { id: string; vaId: string } }>(
+    "/:id/virtual-apps/:vaId",
+    { preHandler: [requireRole("owner", "editor")] },
+    async (request, reply) => {
+      const { accountId } = request.user;
+      const { id, vaId } = request.params;
+
+      const [project] = await db
+        .select({ id: researchProjects.id })
+        .from(researchProjects)
+        .where(and(eq(researchProjects.id, id), eq(researchProjects.accountId, accountId)));
+
+      if (!project) return reply.code(404).send({ error: "Project not found" });
+
+      const [deleted] = await db
+        .delete(researchVirtualApps)
+        .where(and(eq(researchVirtualApps.id, vaId), eq(researchVirtualApps.researchProjectId, id)))
+        .returning({ id: researchVirtualApps.id });
+
+      if (!deleted) return reply.code(404).send({ error: "Virtual app not found" });
+      return { success: true };
+    }
+  );
+
+  // ─── Virtual App Feature Helpers ───────────────────────────
+
+  // POST /:id/virtual-apps/:vaId/add-category-feature
+  app.post<{
+    Params: { id: string; vaId: string };
+    Body: { categoryTitle: string; subcategoryTitle: string; featureTitle: string; featureHandle: string; featureUrl?: string };
+  }>(
+    "/:id/virtual-apps/:vaId/add-category-feature",
+    { preHandler: [requireRole("owner", "editor")] },
+    async (request, reply) => {
+      const { accountId } = request.user;
+      const { id, vaId } = request.params;
+      const { categoryTitle, subcategoryTitle, featureTitle, featureHandle, featureUrl } = request.body;
+
+      const [project] = await db
+        .select({ id: researchProjects.id })
+        .from(researchProjects)
+        .where(and(eq(researchProjects.id, id), eq(researchProjects.accountId, accountId)));
+      if (!project) return reply.code(404).send({ error: "Project not found" });
+
+      const [va] = await db
+        .select({ categories: researchVirtualApps.categories })
+        .from(researchVirtualApps)
+        .where(and(eq(researchVirtualApps.id, vaId), eq(researchVirtualApps.researchProjectId, id)));
+      if (!va) return reply.code(404).send({ error: "Virtual app not found" });
+
+      const cats: any[] = (va.categories as any[]) || [];
+      let cat = cats.find((c: any) => c.title === categoryTitle);
+      if (!cat) {
+        cat = { title: categoryTitle, url: "", subcategories: [] };
+        cats.push(cat);
+      }
+      let sub = cat.subcategories.find((s: any) => s.title === subcategoryTitle);
+      if (!sub) {
+        sub = { title: subcategoryTitle, features: [] };
+        cat.subcategories.push(sub);
+      }
+      const exists = sub.features.some((f: any) => f.feature_handle === featureHandle);
+      if (!exists) {
+        sub.features.push({ title: featureTitle, feature_handle: featureHandle, url: featureUrl || "" });
+      }
+
+      const [updated] = await db
+        .update(researchVirtualApps)
+        .set({ categories: cats, updatedAt: new Date() })
+        .where(eq(researchVirtualApps.id, vaId))
+        .returning();
+
+      return updated;
+    }
+  );
+
+  // DELETE /:id/virtual-apps/:vaId/remove-category-feature
+  app.delete<{
+    Params: { id: string; vaId: string };
+    Body: { categoryTitle: string; subcategoryTitle: string; featureHandle: string };
+  }>(
+    "/:id/virtual-apps/:vaId/remove-category-feature",
+    { preHandler: [requireRole("owner", "editor")] },
+    async (request, reply) => {
+      const { accountId } = request.user;
+      const { id, vaId } = request.params;
+      const { categoryTitle, subcategoryTitle, featureHandle } = request.body;
+
+      const [project] = await db
+        .select({ id: researchProjects.id })
+        .from(researchProjects)
+        .where(and(eq(researchProjects.id, id), eq(researchProjects.accountId, accountId)));
+      if (!project) return reply.code(404).send({ error: "Project not found" });
+
+      const [va] = await db
+        .select({ categories: researchVirtualApps.categories })
+        .from(researchVirtualApps)
+        .where(and(eq(researchVirtualApps.id, vaId), eq(researchVirtualApps.researchProjectId, id)));
+      if (!va) return reply.code(404).send({ error: "Virtual app not found" });
+
+      const cats: any[] = (va.categories as any[]) || [];
+      const cat = cats.find((c: any) => c.title === categoryTitle);
+      if (cat) {
+        const sub = cat.subcategories.find((s: any) => s.title === subcategoryTitle);
+        if (sub) {
+          sub.features = sub.features.filter((f: any) => f.feature_handle !== featureHandle);
+          if (sub.features.length === 0) {
+            cat.subcategories = cat.subcategories.filter((s: any) => s.title !== subcategoryTitle);
+          }
+        }
+        if (cat.subcategories.length === 0) {
+          const idx = cats.indexOf(cat);
+          if (idx >= 0) cats.splice(idx, 1);
+        }
+      }
+
+      const [updated] = await db
+        .update(researchVirtualApps)
+        .set({ categories: cats, updatedAt: new Date() })
+        .where(eq(researchVirtualApps.id, vaId))
+        .returning();
+
+      return updated;
+    }
+  );
+
+  // POST /:id/virtual-apps/:vaId/add-feature
+  app.post<{ Params: { id: string; vaId: string }; Body: { feature: string } }>(
+    "/:id/virtual-apps/:vaId/add-feature",
+    { preHandler: [requireRole("owner", "editor")] },
+    async (request, reply) => {
+      const { accountId } = request.user;
+      const { id, vaId } = request.params;
+      const { feature } = request.body;
+
+      const [project] = await db
+        .select({ id: researchProjects.id })
+        .from(researchProjects)
+        .where(and(eq(researchProjects.id, id), eq(researchProjects.accountId, accountId)));
+      if (!project) return reply.code(404).send({ error: "Project not found" });
+
+      const [va] = await db
+        .select({ features: researchVirtualApps.features })
+        .from(researchVirtualApps)
+        .where(and(eq(researchVirtualApps.id, vaId), eq(researchVirtualApps.researchProjectId, id)));
+      if (!va) return reply.code(404).send({ error: "Virtual app not found" });
+
+      const features: string[] = (va.features as string[]) || [];
+      if (!features.includes(feature)) {
+        features.push(feature);
+      }
+
+      const [updated] = await db
+        .update(researchVirtualApps)
+        .set({ features, updatedAt: new Date() })
+        .where(eq(researchVirtualApps.id, vaId))
+        .returning();
+
+      return updated;
+    }
+  );
+
+  // DELETE /:id/virtual-apps/:vaId/remove-feature
+  app.delete<{ Params: { id: string; vaId: string }; Body: { feature: string } }>(
+    "/:id/virtual-apps/:vaId/remove-feature",
+    { preHandler: [requireRole("owner", "editor")] },
+    async (request, reply) => {
+      const { accountId } = request.user;
+      const { id, vaId } = request.params;
+      const { feature } = request.body;
+
+      const [project] = await db
+        .select({ id: researchProjects.id })
+        .from(researchProjects)
+        .where(and(eq(researchProjects.id, id), eq(researchProjects.accountId, accountId)));
+      if (!project) return reply.code(404).send({ error: "Project not found" });
+
+      const [va] = await db
+        .select({ features: researchVirtualApps.features })
+        .from(researchVirtualApps)
+        .where(and(eq(researchVirtualApps.id, vaId), eq(researchVirtualApps.researchProjectId, id)));
+      if (!va) return reply.code(404).send({ error: "Virtual app not found" });
+
+      const features: string[] = (va.features as string[]) || [];
+      const filtered = features.filter((f) => f !== feature);
+
+      const [updated] = await db
+        .update(researchVirtualApps)
+        .set({ features: filtered, updatedAt: new Date() })
+        .where(eq(researchVirtualApps.id, vaId))
+        .returning();
+
+      return updated;
+    }
+  );
+
+  // POST /:id/virtual-apps/:vaId/add-integration
+  app.post<{ Params: { id: string; vaId: string }; Body: { integration: string } }>(
+    "/:id/virtual-apps/:vaId/add-integration",
+    { preHandler: [requireRole("owner", "editor")] },
+    async (request, reply) => {
+      const { accountId } = request.user;
+      const { id, vaId } = request.params;
+      const { integration } = request.body;
+
+      const [project] = await db
+        .select({ id: researchProjects.id })
+        .from(researchProjects)
+        .where(and(eq(researchProjects.id, id), eq(researchProjects.accountId, accountId)));
+      if (!project) return reply.code(404).send({ error: "Project not found" });
+
+      const [va] = await db
+        .select({ integrations: researchVirtualApps.integrations })
+        .from(researchVirtualApps)
+        .where(and(eq(researchVirtualApps.id, vaId), eq(researchVirtualApps.researchProjectId, id)));
+      if (!va) return reply.code(404).send({ error: "Virtual app not found" });
+
+      const integrations: string[] = (va.integrations as string[]) || [];
+      if (!integrations.includes(integration)) {
+        integrations.push(integration);
+      }
+
+      const [updated] = await db
+        .update(researchVirtualApps)
+        .set({ integrations, updatedAt: new Date() })
+        .where(eq(researchVirtualApps.id, vaId))
+        .returning();
+
+      return updated;
+    }
+  );
+
+  // DELETE /:id/virtual-apps/:vaId/remove-integration
+  app.delete<{ Params: { id: string; vaId: string }; Body: { integration: string } }>(
+    "/:id/virtual-apps/:vaId/remove-integration",
+    { preHandler: [requireRole("owner", "editor")] },
+    async (request, reply) => {
+      const { accountId } = request.user;
+      const { id, vaId } = request.params;
+      const { integration } = request.body;
+
+      const [project] = await db
+        .select({ id: researchProjects.id })
+        .from(researchProjects)
+        .where(and(eq(researchProjects.id, id), eq(researchProjects.accountId, accountId)));
+      if (!project) return reply.code(404).send({ error: "Project not found" });
+
+      const [va] = await db
+        .select({ integrations: researchVirtualApps.integrations })
+        .from(researchVirtualApps)
+        .where(and(eq(researchVirtualApps.id, vaId), eq(researchVirtualApps.researchProjectId, id)));
+      if (!va) return reply.code(404).send({ error: "Virtual app not found" });
+
+      const integrations: string[] = (va.integrations as string[]) || [];
+      const filtered = integrations.filter((i) => i !== integration);
+
+      const [updated] = await db
+        .update(researchVirtualApps)
+        .set({ integrations: filtered, updatedAt: new Date() })
+        .where(eq(researchVirtualApps.id, vaId))
+        .returning();
+
+      return updated;
+    }
+  );
 };

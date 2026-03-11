@@ -18,6 +18,10 @@ interface AppData {
   name: string;
   iconUrl: string | null;
   appCardSubtitle: string | null;
+  /** Emoji icon for virtual apps */
+  icon?: string;
+  /** Hex color for virtual apps */
+  color?: string;
   latestSnapshot: {
     appIntroduction: string;
     appDetails: string;
@@ -157,8 +161,10 @@ export default function ResearchComparePage() {
   const { fetchWithAuth } = useAuth();
   const id = params.id as string;
 
+  const platform = params.platform as string;
   const [projectName, setProjectName] = useState("");
   const [competitorSlugs, setCompetitorSlugs] = useState<string[]>([]);
+  const [virtualAppSlugs, setVirtualAppSlugs] = useState<string[]>([]);
   const [appDataMap, setAppDataMap] = useState<Map<string, AppData>>(new Map());
   const [selectedSlugs, setSelectedSlugs] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
@@ -176,7 +182,7 @@ export default function ResearchComparePage() {
     });
   }, []);
 
-  // 1. Load research project to get competitor list
+  // 1. Load research project to get competitor list + virtual apps
   useEffect(() => {
     (async () => {
       try {
@@ -186,7 +192,37 @@ export default function ResearchComparePage() {
         setProjectName(data.project.name);
         const slugs = data.competitors.map((c: any) => c.slug);
         setCompetitorSlugs(slugs);
-        setSelectedSlugs(new Set(slugs));
+
+        // Convert virtual apps to AppData format with __virtual__ prefix
+        const vaSlugs: string[] = [];
+        const vaEntries: [string, AppData][] = [];
+        for (const va of data.virtualApps || []) {
+          const vaSlug = `__virtual__${va.id}`;
+          vaSlugs.push(vaSlug);
+          vaEntries.push([vaSlug, {
+            slug: vaSlug,
+            name: va.name,
+            iconUrl: va.iconUrl,
+            icon: va.icon || "🚀",
+            color: va.color || "#3B82F6",
+            appCardSubtitle: va.appCardSubtitle || null,
+            latestSnapshot: {
+              appIntroduction: va.appIntroduction || "",
+              appDetails: va.appDetails || "",
+              features: va.features || [],
+              languages: va.languages || [],
+              integrations: va.integrations || [],
+              pricingPlans: va.pricingPlans || [],
+              categories: va.categories || [],
+              seoTitle: va.seoTitle || "",
+              seoMetaDescription: va.seoMetaDescription || "",
+              averageRating: null,
+              ratingCount: null,
+            },
+          }]);
+        }
+        setVirtualAppSlugs(vaSlugs);
+        setSelectedSlugs(new Set([...vaSlugs, ...slugs]));
 
         // 2. Fetch individual app data for each competitor
         const entries = await Promise.all(
@@ -202,6 +238,9 @@ export default function ResearchComparePage() {
           })
         );
         const map = new Map<string, AppData>();
+        for (const entry of vaEntries) {
+          map.set(entry[0], entry[1]);
+        }
         for (const entry of entries) {
           if (entry) map.set(entry[0], entry[1]);
         }
@@ -212,10 +251,14 @@ export default function ResearchComparePage() {
     })();
   }, [id, fetchWithAuth]);
 
+  const allSlugs = useMemo(() => [...virtualAppSlugs, ...competitorSlugs], [virtualAppSlugs, competitorSlugs]);
+
   const selectedApps = useMemo(
-    () => competitorSlugs.filter((s) => selectedSlugs.has(s)).map((s) => appDataMap.get(s)).filter(Boolean) as AppData[],
-    [competitorSlugs, selectedSlugs, appDataMap]
+    () => allSlugs.filter((s) => selectedSlugs.has(s)).map((s) => appDataMap.get(s)).filter(Boolean) as AppData[],
+    [allSlugs, selectedSlugs, appDataMap]
   );
+
+  const isVirtualApp = useCallback((slug: string) => slug.startsWith("__virtual__"), []);
 
   // Section navigation
   const SECTIONS = [
@@ -291,19 +334,69 @@ export default function ResearchComparePage() {
           <h1 className="text-2xl font-bold truncate">{projectName}</h1>
           <p className="text-sm text-muted-foreground">Compare Competitors</p>
         </div>
-        <Badge variant="secondary">{selectedApps.length} of {competitorSlugs.length} selected</Badge>
+        <Badge variant="secondary">{selectedApps.length} of {allSlugs.length} selected</Badge>
       </div>
 
       {/* App Selector */}
       <Card>
         <CardContent className="pt-4 pb-4">
           <div className="flex items-center gap-3 flex-wrap">
+            {/* Virtual apps first */}
+            {virtualAppSlugs.map((slug) => {
+              const app = appDataMap.get(slug);
+              if (!app) return null;
+              const isSelected = selectedSlugs.has(slug);
+              const color = app.color || "#3B82F6";
+              return (
+                <div key={slug} className="flex flex-col items-center gap-1">
+                  <button
+                    onClick={() => {
+                      setSelectedSlugs((prev) => {
+                        const next = new Set(prev);
+                        if (next.has(slug)) next.delete(slug);
+                        else next.add(slug);
+                        return next;
+                      });
+                    }}
+                    className={cn(
+                      "relative rounded-lg transition-all shrink-0 h-10 w-10",
+                      isSelected
+                        ? "ring-2 ring-offset-2 ring-offset-background"
+                        : "opacity-35 hover:opacity-60"
+                    )}
+                    style={isSelected ? { ["--tw-ring-color" as any]: color } : undefined}
+                  >
+                    <div
+                      className="h-10 w-10 rounded-lg flex items-center justify-center"
+                      style={{ backgroundColor: `${color}20` }}
+                    >
+                      <span className="text-lg">{app.icon || "🚀"}</span>
+                    </div>
+                    {isSelected && (
+                      <div
+                        className="absolute -top-1 -right-1 h-4 w-4 rounded-full flex items-center justify-center"
+                        style={{ backgroundColor: color }}
+                      >
+                        <Check className="h-2.5 w-2.5 text-white" />
+                      </div>
+                    )}
+                  </button>
+                  <span className="text-[10px] font-medium whitespace-nowrap" style={{ color }}>
+                    {app.name}
+                  </span>
+                </div>
+              );
+            })}
+            {virtualAppSlugs.length > 0 && competitorSlugs.length > 0 && (
+              <div className="border-l h-8 mx-1" />
+            )}
+            {/* Competitors */}
             {competitorSlugs.map((slug) => {
               const app = appDataMap.get(slug);
               if (!app) return null;
               const isSelected = selectedSlugs.has(slug);
               return (
-                <div key={slug} className="group relative flex flex-col items-center">
+                <div key={slug} className="flex flex-col items-center gap-1">
                   <button
                     onClick={() => {
                       setSelectedSlugs((prev) => {
@@ -333,8 +426,8 @@ export default function ResearchComparePage() {
                       </div>
                     )}
                   </button>
-                  <span className="absolute -bottom-5 left-1/2 -translate-x-1/2 text-[10px] text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none">
-                    {app.name}
+                  <span className="text-[10px] text-muted-foreground whitespace-nowrap max-w-[60px] truncate">
+                    {app.name.split(/\s/)[0]}
                   </span>
                 </div>
               );
@@ -344,12 +437,12 @@ export default function ResearchComparePage() {
               variant="ghost"
               size="sm"
               onClick={() => {
-                if (selectedSlugs.size === competitorSlugs.length) setSelectedSlugs(new Set());
-                else setSelectedSlugs(new Set(competitorSlugs));
+                if (selectedSlugs.size === allSlugs.length) setSelectedSlugs(new Set());
+                else setSelectedSlugs(new Set(allSlugs));
               }}
               className="text-xs"
             >
-              {selectedSlugs.size === competitorSlugs.length ? "Deselect all" : "Select all"}
+              {selectedSlugs.size === allSlugs.length ? "Deselect all" : "Select all"}
             </Button>
           </div>
         </CardContent>
@@ -449,27 +542,54 @@ export default function ResearchComparePage() {
 
 // ─── Vertical List (Name / Subtitle / Intro) ────────────────
 
+function getAppLink(slug: string, id: string) {
+  if (slug.startsWith("__virtual__")) {
+    const vaId = slug.replace("__virtual__", "");
+    return `/research/${id}/virtual-apps/${vaId}`;
+  }
+  return `/apps/${slug}`;
+}
+
+function AppIcon({ app, size = "sm" }: { app: AppData; size?: "sm" | "md" }) {
+  const isVirtual = app.slug.startsWith("__virtual__");
+  const dim = size === "sm" ? "h-6 w-6" : "h-7 w-7";
+  const emojiSize = size === "sm" ? "text-sm" : "text-base";
+  if (isVirtual) {
+    const color = app.color || "#3B82F6";
+    return (
+      <div
+        className={cn(dim, "rounded flex items-center justify-center")}
+        style={{ backgroundColor: `${color}20` }}
+      >
+        <span className={emojiSize}>{app.icon || "🚀"}</span>
+      </div>
+    );
+  }
+  if (app.iconUrl) {
+    return <img src={app.iconUrl} alt="" className={cn(dim, "rounded")} />;
+  }
+  return <div className={cn(dim, "rounded bg-muted flex items-center justify-center text-xs font-bold")}>{app.name.charAt(0)}</div>;
+}
+
 function VerticalListSection({
   apps, field, max,
 }: {
   apps: AppData[]; field: "name" | "subtitle" | "introduction"; max: number;
 }) {
+  const { id } = useParams();
   return (
     <div className="space-y-2">
       {apps.map((app) => {
+        const isVirtual = app.slug.startsWith("__virtual__");
         const text = field === "name"
           ? app.name
           : field === "subtitle"
             ? app.appCardSubtitle || ""
             : app.latestSnapshot?.appIntroduction || "";
         return (
-          <div key={app.slug} className="flex items-start gap-3 py-2 px-3 rounded-md bg-muted/30">
-            <Link href={`/apps/${app.slug}`} className="shrink-0">
-              {app.iconUrl ? (
-                <img src={app.iconUrl} alt="" className="h-6 w-6 rounded" />
-              ) : (
-                <div className="h-6 w-6 rounded bg-muted flex items-center justify-center text-xs font-bold">{app.name.charAt(0)}</div>
-              )}
+          <div key={app.slug} className={cn("flex items-start gap-3 py-2 px-3 rounded-md", isVirtual ? "bg-blue-50/50 dark:bg-blue-950/20" : "bg-muted/30")}>
+            <Link href={getAppLink(app.slug, id as string)} className="shrink-0">
+              <AppIcon app={app} />
             </Link>
             <span className="text-sm flex-1 min-w-0">{text || <span className="text-muted-foreground italic">Empty</span>}</span>
             <CharBadge count={text.length} max={max} />
@@ -483,6 +603,7 @@ function VerticalListSection({
 // ─── App Details ─────────────────────────────────────────────
 
 function AppDetailsSection({ apps }: { apps: AppData[] }) {
+  const { id } = useParams();
   const [activeTab, setActiveTab] = useState(0);
   const activeApp = apps[activeTab] || apps[0];
   const text = activeApp?.latestSnapshot?.appDetails || "";
@@ -500,11 +621,7 @@ function AppDetailsSection({ apps }: { apps: AppData[] }) {
               i === activeTab ? "bg-primary text-primary-foreground" : "bg-muted hover:bg-muted/80"
             )}
           >
-            {app.iconUrl ? (
-              <img src={app.iconUrl} alt="" className="h-4 w-4 rounded" />
-            ) : (
-              <span className="font-bold">{app.name.charAt(0)}</span>
-            )}
+            <AppIcon app={app} size="sm" />
             {app.name.split(/\s/)[0]}
           </button>
         ))}
@@ -571,6 +688,7 @@ function KeywordDensityTable({ text }: { text: string }) {
 // ─── Features Comparison ─────────────────────────────────────
 
 function FeaturesSection({ apps }: { apps: AppData[] }) {
+  const { id } = useParams();
   const maxFeatures = Math.max(...apps.map((a) => a.latestSnapshot?.features?.length || 0), 0);
 
   if (maxFeatures === 0) {
@@ -586,16 +704,12 @@ function FeaturesSection({ apps }: { apps: AppData[] }) {
               #
             </th>
             {apps.map((app) => (
-              <th key={app.slug} className="py-2 px-2 pb-6 min-w-[130px] sticky top-0 bg-card z-10 border-b">
+              <th key={app.slug} className="py-2 px-2 pb-2 min-w-[130px] sticky top-0 bg-card z-10 border-b">
                 <div className="flex justify-center">
-                  <Link href={`/apps/${app.slug}`} className="group relative inline-flex flex-col items-center" title={app.name}>
-                    {app.iconUrl ? (
-                      <img src={app.iconUrl} alt={app.name} className="h-6 w-6 rounded" />
-                    ) : (
-                      <span className="text-xs font-bold">{app.name.charAt(0)}</span>
-                    )}
-                    <span className="absolute -bottom-4 left-1/2 -translate-x-1/2 text-[10px] text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none">
-                      {app.name}
+                  <Link href={getAppLink(app.slug, id as string)} className="inline-flex flex-col items-center gap-1" title={app.name}>
+                    <AppIcon app={app} />
+                    <span className="text-[10px] text-muted-foreground whitespace-nowrap max-w-[100px] truncate">
+                      {app.name.split(/\s/)[0]}
                     </span>
                   </Link>
                 </div>
@@ -637,6 +751,7 @@ function SetComparisonSection({
 }: {
   apps: AppData[]; field: "languages" | "integrations"; linkPrefix?: string;
 }) {
+  const { id } = useParams();
   const allItems = useMemo(() => {
     const itemSet = new Map<string, Set<string>>();
     for (const app of apps) {
@@ -662,12 +777,11 @@ function SetComparisonSection({
             <th className="text-center py-2 px-1 font-medium text-xs w-10">#</th>
             {apps.map((app) => (
               <th key={app.slug} className="text-center py-2 px-1">
-                <Link href={`/apps/${app.slug}`} className="inline-flex flex-col items-center" title={app.name}>
-                  {app.iconUrl ? (
-                    <img src={app.iconUrl} alt="" className="h-5 w-5 rounded" />
-                  ) : (
-                    <span className="text-xs font-bold">{app.name.charAt(0)}</span>
-                  )}
+                <Link href={getAppLink(app.slug, id as string)} className="inline-flex flex-col items-center gap-0.5" title={app.name}>
+                  <AppIcon app={app} size="sm" />
+                  <span className="text-[9px] text-muted-foreground whitespace-nowrap max-w-[60px] truncate">
+                    {app.name.split(/\s/)[0]}
+                  </span>
                 </Link>
               </th>
             ))}
@@ -704,6 +818,7 @@ function SetComparisonSection({
 // ─── Reviews and Ratings ─────────────────────────────────────
 
 function ReviewsSection({ apps }: { apps: AppData[] }) {
+  const { id } = useParams();
   return (
     <div className="overflow-x-auto">
       <table className="w-full text-sm">
@@ -712,13 +827,9 @@ function ReviewsSection({ apps }: { apps: AppData[] }) {
             <th className="text-left py-2 px-3 font-medium w-32">Metric</th>
             {apps.map((app) => (
               <th key={app.slug} className="text-center py-2 px-3">
-                <Link href={`/apps/${app.slug}`} className="inline-flex flex-col items-center gap-1" title={app.name}>
-                  {app.iconUrl ? (
-                    <img src={app.iconUrl} alt="" className="h-5 w-5 rounded" />
-                  ) : (
-                    <span className="text-xs font-bold">{app.name.charAt(0)}</span>
-                  )}
-                  <span className="text-[10px] truncate max-w-[80px]">{app.name.split(/\s/)[0]}</span>
+                <Link href={getAppLink(app.slug, id as string)} className="inline-flex flex-col items-center gap-1" title={app.name}>
+                  <AppIcon app={app} size="sm" />
+                  <span className="text-[10px] text-muted-foreground truncate max-w-[80px]">{app.name.split(/\s/)[0]}</span>
                 </Link>
               </th>
             ))}
@@ -748,7 +859,7 @@ function ReviewsSection({ apps }: { apps: AppData[] }) {
             {apps.map((app) => (
               <td key={app.slug} className="py-2 px-3 text-center font-medium">
                 {app.latestSnapshot?.ratingCount != null ? (
-                  <Link href={`/apps/${app.slug}/reviews`} className="hover:underline">
+                  <Link href={app.slug.startsWith("__virtual__") ? getAppLink(app.slug, id as string) : `/apps/${app.slug}/reviews`} className="hover:underline">
                     {app.latestSnapshot.ratingCount.toLocaleString()}
                   </Link>
                 ) : (
@@ -766,6 +877,7 @@ function ReviewsSection({ apps }: { apps: AppData[] }) {
 // ─── Category Features ───────────────────────────────────────
 
 function CategoryFeaturesSection({ apps }: { apps: AppData[] }) {
+  const { id } = useParams();
   const { categories } = useMemo(() => {
     const catMap = new Map<string, { title: string; subcategories: Map<string, { title: string; features: Map<string, { handle: string; slugs: Set<string> }> }> }>();
 
@@ -808,12 +920,11 @@ function CategoryFeaturesSection({ apps }: { apps: AppData[] }) {
             <th className="text-center py-2 px-1 font-medium text-xs w-10">#</th>
             {apps.map((app) => (
               <th key={app.slug} className="text-center py-2 px-1">
-                <Link href={`/apps/${app.slug}`} className="inline-flex flex-col items-center" title={app.name}>
-                  {app.iconUrl ? (
-                    <img src={app.iconUrl} alt="" className="h-5 w-5 rounded" />
-                  ) : (
-                    <span className="text-xs font-bold">{app.name.charAt(0)}</span>
-                  )}
+                <Link href={getAppLink(app.slug, id as string)} className="inline-flex flex-col items-center gap-0.5" title={app.name}>
+                  <AppIcon app={app} size="sm" />
+                  <span className="text-[9px] text-muted-foreground whitespace-nowrap max-w-[60px] truncate">
+                    {app.name.split(/\s/)[0]}
+                  </span>
                 </Link>
               </th>
             ))}
@@ -866,6 +977,7 @@ function CategoryFeaturesSection({ apps }: { apps: AppData[] }) {
 // ─── Pricing Plans ───────────────────────────────────────────
 
 function PricingSection({ apps }: { apps: AppData[] }) {
+  const { id } = useParams();
   const maxPlans = Math.max(...apps.map((a) => a.latestSnapshot?.pricingPlans?.length || 0), 0);
 
   if (maxPlans === 0) {
@@ -882,13 +994,9 @@ function PricingSection({ apps }: { apps: AppData[] }) {
             <th className="text-left py-2 px-3 font-medium w-16">Tier</th>
             {apps.map((app) => (
               <th key={app.slug} className="text-center py-2 px-3">
-                <Link href={`/apps/${app.slug}`} className="inline-flex flex-col items-center gap-1" title={app.name}>
-                  {app.iconUrl ? (
-                    <img src={app.iconUrl} alt="" className="h-5 w-5 rounded" />
-                  ) : (
-                    <span className="text-xs font-bold">{app.name.charAt(0)}</span>
-                  )}
-                  <span className="text-[10px] truncate max-w-[80px]">{app.name.split(/\s/)[0]}</span>
+                <Link href={getAppLink(app.slug, id as string)} className="inline-flex flex-col items-center gap-1" title={app.name}>
+                  <AppIcon app={app} size="sm" />
+                  <span className="text-[10px] text-muted-foreground truncate max-w-[80px]">{app.name.split(/\s/)[0]}</span>
                 </Link>
               </th>
             ))}
@@ -947,6 +1055,7 @@ function PricingSection({ apps }: { apps: AppData[] }) {
 // ─── SEO Section ─────────────────────────────────────────────
 
 function SeoSection({ apps }: { apps: AppData[] }) {
+  const { id } = useParams();
   return (
     <div className="space-y-4">
       <div>
@@ -954,14 +1063,11 @@ function SeoSection({ apps }: { apps: AppData[] }) {
         <div className="space-y-2">
           {apps.map((app) => {
             const title = app.latestSnapshot?.seoTitle || "";
+            const isVirtual = app.slug.startsWith("__virtual__");
             return (
-              <div key={app.slug} className="flex items-start gap-3 py-2 px-3 rounded-md bg-muted/30">
-                <Link href={`/apps/${app.slug}`} className="shrink-0">
-                  {app.iconUrl ? (
-                    <img src={app.iconUrl} alt="" className="h-6 w-6 rounded" />
-                  ) : (
-                    <div className="h-6 w-6 rounded bg-muted flex items-center justify-center text-xs font-bold">{app.name.charAt(0)}</div>
-                  )}
+              <div key={app.slug} className={cn("flex items-start gap-3 py-2 px-3 rounded-md", isVirtual ? "bg-blue-50/50 dark:bg-blue-950/20" : "bg-muted/30")}>
+                <Link href={getAppLink(app.slug, id as string)} className="shrink-0">
+                  <AppIcon app={app} />
                 </Link>
                 <span className="text-sm flex-1 min-w-0">{title || <span className="text-muted-foreground italic">Empty</span>}</span>
                 <CharBadge count={title.length} max={60} />
@@ -975,14 +1081,11 @@ function SeoSection({ apps }: { apps: AppData[] }) {
         <div className="space-y-2">
           {apps.map((app) => {
             const desc = app.latestSnapshot?.seoMetaDescription || "";
+            const isVirtual = app.slug.startsWith("__virtual__");
             return (
-              <div key={app.slug} className="flex items-start gap-3 py-2 px-3 rounded-md bg-muted/30">
-                <Link href={`/apps/${app.slug}`} className="shrink-0">
-                  {app.iconUrl ? (
-                    <img src={app.iconUrl} alt="" className="h-6 w-6 rounded" />
-                  ) : (
-                    <div className="h-6 w-6 rounded bg-muted flex items-center justify-center text-xs font-bold">{app.name.charAt(0)}</div>
-                  )}
+              <div key={app.slug} className={cn("flex items-start gap-3 py-2 px-3 rounded-md", isVirtual ? "bg-blue-50/50 dark:bg-blue-950/20" : "bg-muted/30")}>
+                <Link href={getAppLink(app.slug, id as string)} className="shrink-0">
+                  <AppIcon app={app} />
                 </Link>
                 <span className="text-sm flex-1 min-w-0">{desc || <span className="text-muted-foreground italic">Empty</span>}</span>
                 <CharBadge count={desc.length} max={160} />
