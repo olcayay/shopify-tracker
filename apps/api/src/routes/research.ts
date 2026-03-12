@@ -1749,9 +1749,6 @@ Generate differentiated app concepts. Consider:
           .catch((logErr: any) => request.log.error(logErr, "Failed to insert AI log"));
       }
 
-      // Post-validate: filter features to known values
-      const allowedFeatures = new Set(summary.availableFeatures);
-
       // Build lookup for valid categories from full structure (with URLs/handles)
       const validCatMap = new Map<string, any>();
       for (const cat of summary.availableCategoriesFull) {
@@ -1814,7 +1811,7 @@ Generate differentiated app concepts. Consider:
           appDetails: appConcept.appDetails || "",
           seoTitle: "",
           seoMetaDescription: "",
-          features: (appConcept.features || []).filter((f: string) => allowedFeatures.has(f)),
+          features: appConcept.features || [],
           integrations: [],
           languages: [],
           categories: validatedCategories,
