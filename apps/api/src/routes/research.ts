@@ -87,6 +87,12 @@ function buildResearchSummary(data: any, projectName: string) {
       isGap: f.isGap,
     }));
 
+  // Coverage lookup for enriching categories
+  const coverageByTitle = new Map<string, { count: number; isGap: boolean }>();
+  for (const f of data.featureCoverage || []) {
+    coverageByTitle.set(f.title, { count: f.count, isGap: f.isGap });
+  }
+
   // Union of all competitor features
   const availableFeatures = Array.from(
     new Set((data.competitors || []).flatMap((c: any) => c.features || []))
@@ -145,6 +151,18 @@ function buildResearchSummary(data: any, projectName: string) {
     subcategories: cat.subcategories.map((sub) => ({
       title: sub.title,
       features: sub.features.map((f) => f.title),
+    })),
+  }));
+
+  // Enriched version with coverage counts for AI prompt
+  const availableCategoriesEnriched = availableCategoriesFull.map((cat) => ({
+    title: cat.title,
+    subcategories: cat.subcategories.map((sub) => ({
+      title: sub.title,
+      features: sub.features.map((f) => {
+        const cov = coverageByTitle.get(f.title);
+        return { title: f.title, count: cov?.count ?? 0, isGap: cov?.isGap ?? true };
+      }),
     })),
   }));
 
@@ -209,6 +227,7 @@ function buildResearchSummary(data: any, projectName: string) {
 
   return {
     projectName,
+    totalCompetitors: (data.competitors || []).length,
     keywords: (data.keywords || []).map((k: any) => ({
       keyword: k.keyword,
       totalResults: k.totalResults,
@@ -220,6 +239,7 @@ function buildResearchSummary(data: any, projectName: string) {
     availableLanguages,
     availableCategories,
     availableCategoriesFull,
+    availableCategoriesEnriched,
     pricingSummary: {
       competitorsWithFreePlan,
       priceRange,
@@ -1532,39 +1552,50 @@ export const researchRoutes: FastifyPluginAsync = async (app) => {
 Each app MUST target a DIFFERENT market positioning or niche — e.g., budget/simple, enterprise/comprehensive, niche-specific, all-in-one.
 
 RULES:
-1. features[] — ONLY use feature strings that appear in "featureCoverage" or inside "availableCategories". Never invent features. Each app MUST have at least 5 features.
-2. integrations[] — ONLY use strings from "availableIntegrations". Never invent integrations.
-3. languages[] — ONLY use strings from "availableLanguages".
-4. categories[] — Pick 1-2 categories from "availableCategories". Copy the EXACT category title, subcategory titles, and feature titles. Do NOT invent values. Select the subcategories and features relevant to the app's positioning.
-5. pricingPlans[] — Each app MUST have at least 3 pricing plans (e.g., Free, Basic, Pro). Plans should be competitive based on market data.
-6. icon must be a SINGLE standard emoji character (e.g., 🚀, 💡, ⚡, 🎯, 💎, 🛒, 📦, 🔄, 📊). Do NOT use text or special unicode symbols.
-7. color must be a hex color code like #3B82F6.
-8. All text must be in English. App names should be catchy and marketable.
+1. features[] — ONLY use feature title strings from "availableCategories". Never invent features. Each app MUST have at least 5 features.
+2. categories[] — Pick 1-2 categories from "availableCategories". Copy the EXACT category title, subcategory titles, and feature titles. Do NOT invent values.
+3. pricingPlans[] — Each app MUST have at least 3 pricing plans (e.g., Free, Basic, Pro). Plans should be competitive based on market data.
+4. icon must be a SINGLE standard emoji character (e.g., 🚀, 💡, ⚡, 🎯, 💎, 🛒, 📦, 🔄, 📊). Do NOT use text or special unicode symbols.
+5. color must be a hex color code like #3B82F6.
+6. All text must be in English. App names should be catchy and marketable.
 
-KEYWORD & SEO STRATEGY:
-- Naturally weave the most valuable keywords (from "keywords" and "opportunities" data) into ALL text fields: name, subtitle, introduction, details, seoTitle, seoMetaDescription.
-- Keywords must flow naturally — NEVER sacrifice readability or grammar for keyword stuffing.
-- Prioritize high opportunity-score keywords and high search-volume keywords.
+FEATURE GROUP STRATEGY:
+- "availableCategories" contains features grouped by category and subcategory. Each feature has "count" (how many competitors offer it) and "isGap" (true = underserved, fewer than half of "totalCompetitors" offer it).
+- Build each app around DIFFERENT feature groups (subcategories). Each app should emphasize different subcategory clusters for clear differentiation.
+- Leverage feature gaps (isGap=true) — these represent underserved areas where a new app can stand out.
+- A niche app should go deep into 1-2 subcategories; an all-in-one app can span more but still prioritize.
 
-TEXT LENGTH GUIDELINES — use the available space efficiently, aim for the UPPER end of each range:
-- name: Use as close to 30 characters as possible. Include 1-2 top keywords naturally (e.g., "FormFlow ‑ Survey & Quiz App", "InvenSync Order Manager").
+KEYWORD STRATEGY:
+- Naturally weave the most valuable keywords (from "keywords" and "opportunities") into name, subtitle, introduction, and details.
+- Keywords must flow naturally — NEVER sacrifice readability for keyword stuffing.
+- Prioritize high opportunity-score and high search-volume keywords.
+
+TEXT LENGTH GUIDELINES:
+- name: STRICT MAXIMUM 30 characters — MUST NOT exceed 30 characters including spaces and punctuation. Aim for 20-28 characters. Count carefully. (e.g., "FormFlow ‑ Survey & Quiz", "InvenSync Order Manager").
 - appCardSubtitle: 50-62 characters. Describe the key value prop with relevant keywords.
-- appIntroduction: 80-100 characters. One compelling sentence with primary keyword naturally included.
-- appDetails: 3-4 paragraphs, up to 500 characters of plain text (not HTML). Be thorough — describe features, benefits, use cases. Weave in keywords throughout.
-- seoTitle: 40-60 characters. Include primary keyword and brand name.
-- seoMetaDescription: 120-160 characters. Compelling description with keywords and call to action.
-- Each app should pick features/integrations that support its unique positioning — not just copy everything.`;
+- appIntroduction: 80-100 characters. One compelling sentence with primary keyword.
+- appDetails: 3-4 paragraphs, up to 500 characters of plain text (not HTML). Describe features, benefits, use cases.
+- Each app should pick features that support its unique positioning — not just copy everything.`;
 
       // Strip fields that are only needed for post-processing, not the AI prompt
-      const { availableFeatures: _af, availableCategoriesFull: _acf, ...promptSummary } = summary;
+      const {
+        availableFeatures: _af, availableCategoriesFull: _acf,
+        availableLanguages: _al, availableIntegrations: _ai,
+        featureCoverage: _fc, availableCategories: _ac,
+        availableCategoriesEnriched: _ace, ...promptSummary
+      } = summary;
+      const promptPayload = {
+        ...promptSummary,
+        availableCategories: summary.availableCategoriesEnriched,
+      };
       const userPrompt = `Research data for "${project.name}":
-${JSON.stringify(promptSummary)}
+${JSON.stringify(promptPayload)}
 
 Generate differentiated app concepts. Consider:
-- Feature gaps (isGap=true) as opportunities
+- Feature groups and gaps (isGap=true) in availableCategories as opportunities
 - High-scoring keyword opportunities
 - Market language patterns
-- How to position each app distinctly`;
+- How to position each app around different feature clusters`;
 
       const responseSchema = {
         name: "virtual_app_suggestions",
@@ -1583,12 +1614,8 @@ Generate differentiated app concepts. Consider:
                   appCardSubtitle: { type: "string" as const },
                   appIntroduction: { type: "string" as const },
                   appDetails: { type: "string" as const },
-                  seoTitle: { type: "string" as const },
-                  seoMetaDescription: { type: "string" as const },
                   positioning: { type: "string" as const },
                   features: { type: "array" as const, items: { type: "string" as const } },
-                  integrations: { type: "array" as const, items: { type: "string" as const } },
-                  languages: { type: "array" as const, items: { type: "string" as const } },
                   categories: {
                     type: "array" as const,
                     items: {
@@ -1633,8 +1660,8 @@ Generate differentiated app concepts. Consider:
                 },
                 required: [
                   "name", "icon", "color", "appCardSubtitle", "appIntroduction",
-                  "appDetails", "seoTitle", "seoMetaDescription", "positioning",
-                  "features", "integrations", "languages", "categories", "pricingPlans",
+                  "appDetails", "positioning",
+                  "features", "categories", "pricingPlans",
                 ] as const,
                 additionalProperties: false as const,
               },
@@ -1722,10 +1749,8 @@ Generate differentiated app concepts. Consider:
           .catch((logErr: any) => request.log.error(logErr, "Failed to insert AI log"));
       }
 
-      // Post-validate: filter features/integrations/languages to known values
+      // Post-validate: filter features to known values
       const allowedFeatures = new Set(summary.availableFeatures);
-      const allowedIntegrations = new Set(summary.availableIntegrations);
-      const allowedLanguages = new Set(summary.availableLanguages);
 
       // Build lookup for valid categories from full structure (with URLs/handles)
       const validCatMap = new Map<string, any>();
@@ -1769,8 +1794,6 @@ Generate differentiated app concepts. Consider:
         const name = (appConcept.name || "My App").slice(0, 30);
         const appCardSubtitle = (appConcept.appCardSubtitle || "").slice(0, 62);
         const appIntroduction = (appConcept.appIntroduction || "").slice(0, 100);
-        const seoTitle = (appConcept.seoTitle || "").slice(0, 60);
-        const seoMetaDescription = (appConcept.seoMetaDescription || "").slice(0, 160);
         // Icon is varchar(10) — validate it's a real emoji, fallback to random
         const VA_ICONS = ["🚀", "💡", "⚡", "🎯", "🔮", "🌟", "💎", "🎨", "🔥", "🌊", "🦋", "🍀", "🎲", "🪐", "🎸", "🦄"];
         const iconRaw = appConcept.icon || "";
@@ -1789,11 +1812,11 @@ Generate differentiated app concepts. Consider:
           appCardSubtitle,
           appIntroduction,
           appDetails: appConcept.appDetails || "",
-          seoTitle,
-          seoMetaDescription,
+          seoTitle: "",
+          seoMetaDescription: "",
           features: (appConcept.features || []).filter((f: string) => allowedFeatures.has(f)),
-          integrations: (appConcept.integrations || []).filter((i: string) => allowedIntegrations.has(i)),
-          languages: (appConcept.languages || []).filter((l: string) => allowedLanguages.has(l)),
+          integrations: [],
+          languages: [],
           categories: validatedCategories,
           pricingPlans: appConcept.pricingPlans || [],
           generatedByAi: true,
