@@ -15,6 +15,7 @@ import {
   researchProjectKeywords,
   researchProjectCompetitors,
   researchVirtualApps,
+  aiLogs,
   appPowerScores,
   users,
   accounts,
@@ -1531,13 +1532,18 @@ RULES:
 7. color must be a hex color code like #3B82F6.
 8. All text must be in English. App names should be catchy and marketable.
 
-TEXT LENGTH GUIDELINES — use the available space efficiently:
-- name: MAXIMUM 30 characters. Keep it short, catchy and brandable (e.g., "OrderFlow Pro", "InvenSync", "ShipMaster").
-- appCardSubtitle: 40-62 characters. Describe the key value prop concisely.
-- appIntroduction: 70-100 characters. One compelling sentence about what the app does.
-- appDetails: 3-4 paragraphs of plain text (not HTML). Be thorough — describe features, benefits, and use cases.
+KEYWORD & SEO STRATEGY:
+- Naturally weave the most valuable keywords (from "keywords" and "opportunities" data) into ALL text fields: name, subtitle, introduction, details, seoTitle, seoMetaDescription.
+- Keywords must flow naturally — NEVER sacrifice readability or grammar for keyword stuffing.
+- Prioritize high opportunity-score keywords and high search-volume keywords.
+
+TEXT LENGTH GUIDELINES — use the available space efficiently, aim for the UPPER end of each range:
+- name: Use as close to 30 characters as possible. Include 1-2 top keywords naturally (e.g., "FormFlow ‑ Survey & Quiz App", "InvenSync Order Manager").
+- appCardSubtitle: 50-62 characters. Describe the key value prop with relevant keywords.
+- appIntroduction: 80-100 characters. One compelling sentence with primary keyword naturally included.
+- appDetails: 3-4 paragraphs, up to 500 characters of plain text (not HTML). Be thorough — describe features, benefits, use cases. Weave in keywords throughout.
 - seoTitle: 40-60 characters. Include primary keyword and brand name.
-- seoMetaDescription: 120-160 characters. Compelling description with call to action.
+- seoMetaDescription: 120-160 characters. Compelling description with keywords and call to action.
 - Each app should pick features/integrations that support its unique positioning — not just copy everything.`;
 
       const userPrompt = `Research data for "${project.name}":
@@ -1639,6 +1645,13 @@ Generate differentiated app concepts. Consider:
       };
 
       let aiResponse: any;
+      const aiStartTime = Date.now();
+      let aiStatus: "success" | "error" | "timeout" = "success";
+      let aiErrorMessage: string | undefined;
+      let aiResponseContent: string | undefined;
+      let aiPromptTokens = 0;
+      let aiCompletionTokens = 0;
+      let aiTotalTokens = 0;
       try {
         const completion = await openai.chat.completions.create({
           model: "gpt-4o",
@@ -1655,8 +1668,15 @@ Generate differentiated app concepts. Consider:
 
         const content = completion.choices[0]?.message?.content;
         if (!content) throw new Error("Empty response from AI");
+        aiResponseContent = content;
         aiResponse = JSON.parse(content);
+
+        aiPromptTokens = completion.usage?.prompt_tokens ?? 0;
+        aiCompletionTokens = completion.usage?.completion_tokens ?? 0;
+        aiTotalTokens = completion.usage?.total_tokens ?? 0;
       } catch (err: any) {
+        aiStatus = err?.code === "ETIMEDOUT" || err?.message?.includes("timeout") ? "timeout" : "error";
+        aiErrorMessage = err?.message || String(err);
         if (err?.status === 429 || err?.code === "insufficient_quota") {
           const isQuota = err?.code === "insufficient_quota" || err?.error?.code === "insufficient_quota";
           return reply.code(429).send({
@@ -1667,6 +1687,37 @@ Generate differentiated app concepts. Consider:
         }
         request.log.error(err, "OpenAI error");
         return reply.code(502).send({ error: "AI service error, try again" });
+      } finally {
+        const durationMs = Date.now() - aiStartTime;
+        const costUsd = ((aiPromptTokens * 2.5 + aiCompletionTokens * 10) / 1_000_000).toFixed(6);
+        db.insert(aiLogs)
+          .values({
+            accountId,
+            userId: request.user.userId,
+            platform,
+            productType: "research_virtual_app",
+            triggerType: "manual",
+            productId: id,
+            model: "gpt-4o",
+            systemPrompt,
+            userPrompt,
+            responseContent: aiResponseContent ?? null,
+            promptTokens: aiPromptTokens,
+            completionTokens: aiCompletionTokens,
+            totalTokens: aiTotalTokens,
+            costUsd,
+            durationMs,
+            status: aiStatus,
+            errorMessage: aiErrorMessage ?? null,
+            metadata: {
+              temperature: 0.8,
+              responseFormat: "json_schema",
+              outputCount: aiResponse?.apps?.length ?? 0,
+            },
+            ipAddress: request.ip,
+            userAgent: request.headers["user-agent"] ?? null,
+          })
+          .catch((logErr: any) => request.log.error(logErr, "Failed to insert AI log"));
       }
 
       // Post-validate: filter features/integrations/languages to known values

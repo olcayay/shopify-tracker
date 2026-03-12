@@ -1,5 +1,5 @@
 import type { FastifyPluginAsync } from "fastify";
-import { eq, desc, sql, and, inArray, like } from "drizzle-orm";
+import { eq, desc, sql, and, inArray, like, gte, lte } from "drizzle-orm";
 import { Queue } from "bullmq";
 import {
   createDb,
@@ -32,6 +32,7 @@ import {
   accountPlatforms,
   platformVisibility,
   keywordAutoSuggestions,
+  aiLogs,
 } from "@appranks/db";
 import { isPlatformId, PLATFORM_IDS } from "@appranks/shared";
 import { generateAccessToken } from "./auth.js";
@@ -1295,6 +1296,10 @@ export const systemAdminRoutes: FastifyPluginAsync = async (app) => {
       .select({ count: sql<number>`count(*)::int` })
       .from(researchProjects);
 
+    const [aiLogsCount] = await db
+      .select({ count: sql<number>`count(*)::int` })
+      .from(aiLogs);
+
     return {
       accounts: accountCount.count,
       users: userCount.count,
@@ -1304,6 +1309,7 @@ export const systemAdminRoutes: FastifyPluginAsync = async (app) => {
       totalApps: totalApps.count,
       totalCategories: categoryCount.count,
       researchProjects: researchCount.count,
+      aiLogs: aiLogsCount.count,
       latestRuns,
       freshness,
       workerStats,
@@ -1816,6 +1822,191 @@ export const systemAdminRoutes: FastifyPluginAsync = async (app) => {
       }
 
       return { platform, override };
+    }
+  );
+
+  // ─── AI Logs ───────────────────────────────────────────────
+
+  // GET /ai-logs — list AI logs with filters + summary stats
+  app.get<{
+    Querystring: {
+      limit?: string;
+      offset?: string;
+      accountId?: string;
+      userId?: string;
+      productType?: string;
+      status?: string;
+      platform?: string;
+      tag?: string;
+    };
+  }>("/ai-logs", async (request) => {
+    const db: Db = (app as any).db;
+    const {
+      limit: limitStr = "50",
+      offset: offsetStr = "0",
+      accountId: filterAccountId,
+      userId: filterUserId,
+      productType,
+      status,
+      platform,
+      tag,
+    } = request.query;
+
+    const limit = Math.min(parseInt(limitStr, 10) || 50, 250);
+    const offset = parseInt(offsetStr, 10) || 0;
+
+    const conditions = [];
+    if (filterAccountId) conditions.push(eq(aiLogs.accountId, filterAccountId));
+    if (filterUserId) conditions.push(eq(aiLogs.userId, filterUserId));
+    if (productType) conditions.push(eq(aiLogs.productType, productType));
+    if (status) conditions.push(eq(aiLogs.status, status));
+    if (platform) conditions.push(eq(aiLogs.platform, platform));
+    if (tag) conditions.push(sql`${aiLogs.tags} @> ${JSON.stringify([tag])}::jsonb`);
+
+    const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
+
+    const [logs, statsResult] = await Promise.all([
+      db
+        .select({
+          id: aiLogs.id,
+          accountId: aiLogs.accountId,
+          accountName: accounts.name,
+          userId: aiLogs.userId,
+          userName: users.name,
+          platform: aiLogs.platform,
+          productType: aiLogs.productType,
+          productId: aiLogs.productId,
+          model: aiLogs.model,
+          systemPrompt: aiLogs.systemPrompt,
+          userPrompt: aiLogs.userPrompt,
+          responseContent: aiLogs.responseContent,
+          promptTokens: aiLogs.promptTokens,
+          completionTokens: aiLogs.completionTokens,
+          totalTokens: aiLogs.totalTokens,
+          costUsd: aiLogs.costUsd,
+          durationMs: aiLogs.durationMs,
+          status: aiLogs.status,
+          errorMessage: aiLogs.errorMessage,
+          tags: aiLogs.tags,
+          notes: aiLogs.notes,
+          triggerType: aiLogs.triggerType,
+          metadata: aiLogs.metadata,
+          ipAddress: aiLogs.ipAddress,
+          userAgent: aiLogs.userAgent,
+          createdAt: aiLogs.createdAt,
+        })
+        .from(aiLogs)
+        .leftJoin(users, eq(aiLogs.userId, users.id))
+        .leftJoin(accounts, eq(aiLogs.accountId, accounts.id))
+        .where(whereClause)
+        .orderBy(desc(aiLogs.createdAt))
+        .limit(limit)
+        .offset(offset),
+      db
+        .select({
+          totalCalls: sql<number>`count(*)::int`,
+          totalCost: sql<string>`coalesce(sum(${aiLogs.costUsd}), 0)`,
+          totalTokens: sql<number>`coalesce(sum(${aiLogs.totalTokens}), 0)::int`,
+          avgDuration: sql<number>`coalesce(avg(${aiLogs.durationMs}), 0)::int`,
+        })
+        .from(aiLogs)
+        .where(whereClause),
+    ]);
+
+    return {
+      logs,
+      stats: statsResult[0] ?? { totalCalls: 0, totalCost: "0", totalTokens: 0, avgDuration: 0 },
+    };
+  });
+
+  // GET /ai-logs/analytics/timeseries — cost, calls, tokens over time
+  app.get<{
+    Querystring: { period?: string; days?: string };
+  }>("/ai-logs/analytics/timeseries", async (request) => {
+    const db: Db = (app as any).db;
+    const { period: rawPeriod = "day", days: daysStr = "30" } = request.query;
+
+    const allowedPeriods: Record<string, string> = { daily: "day", weekly: "week", monthly: "month", day: "day", week: "week", month: "month" };
+    const period = allowedPeriods[rawPeriod];
+    if (!period) {
+      return { error: "Invalid period. Use daily, weekly, or monthly." };
+    }
+
+    const days = Math.min(parseInt(daysStr, 10) || 30, 365);
+    const since = new Date();
+    since.setDate(since.getDate() - days);
+
+    const data = await db
+      .select({
+        date: sql<string>`date_trunc(${sql.raw(`'${period}'`)}, ${aiLogs.createdAt})::date::text`.as("date"),
+        calls: sql<number>`count(*)::int`,
+        cost: sql<string>`coalesce(sum(${aiLogs.costUsd}), 0)`,
+        promptTokens: sql<number>`coalesce(sum(${aiLogs.promptTokens}), 0)::int`,
+        completionTokens: sql<number>`coalesce(sum(${aiLogs.completionTokens}), 0)::int`,
+        totalTokens: sql<number>`coalesce(sum(${aiLogs.totalTokens}), 0)::int`,
+        avgDurationMs: sql<number>`coalesce(avg(${aiLogs.durationMs}), 0)::int`,
+      })
+      .from(aiLogs)
+      .where(gte(aiLogs.createdAt, since))
+      .groupBy(sql`date_trunc(${sql.raw(`'${period}'`)}, ${aiLogs.createdAt})`)
+      .orderBy(sql`date_trunc(${sql.raw(`'${period}'`)}, ${aiLogs.createdAt}) asc`);
+
+    return { period, days, data };
+  });
+
+  // GET /ai-logs/analytics/per-account — usage per account
+  app.get<{
+    Querystring: { days?: string };
+  }>("/ai-logs/analytics/per-account", async (request) => {
+    const db: Db = (app as any).db;
+    const days = Math.min(parseInt(request.query.days || "30", 10) || 30, 365);
+    const since = new Date();
+    since.setDate(since.getDate() - days);
+
+    const data = await db
+      .select({
+        accountId: aiLogs.accountId,
+        accountName: accounts.name,
+        calls: sql<number>`count(*)::int`,
+        cost: sql<string>`coalesce(sum(${aiLogs.costUsd}), 0)`,
+        totalTokens: sql<number>`coalesce(sum(${aiLogs.totalTokens}), 0)::int`,
+        avgDuration: sql<number>`coalesce(avg(${aiLogs.durationMs}), 0)::int`,
+        errorCount: sql<number>`count(*) filter (where ${aiLogs.status} != 'success')::int`,
+        lastUsed: sql<string>`max(${aiLogs.createdAt})::text`,
+      })
+      .from(aiLogs)
+      .leftJoin(accounts, eq(aiLogs.accountId, accounts.id))
+      .where(gte(aiLogs.createdAt, since))
+      .groupBy(aiLogs.accountId, accounts.name)
+      .orderBy(sql`coalesce(sum(${aiLogs.costUsd}), 0) desc`);
+
+    return { days, data };
+  });
+
+  // PATCH /ai-logs/:id — update tags and/or notes
+  app.patch<{ Params: { id: string }; Body: { tags?: string[]; notes?: string } }>(
+    "/ai-logs/:id",
+    async (request, reply) => {
+      const db: Db = (app as any).db;
+      const { id } = request.params;
+      const { tags, notes } = request.body || {};
+
+      const updates: Record<string, any> = {};
+      if (tags !== undefined) updates.tags = tags;
+      if (notes !== undefined) updates.notes = notes;
+
+      if (Object.keys(updates).length === 0) {
+        return reply.code(400).send({ error: "No fields to update" });
+      }
+
+      const [updated] = await db
+        .update(aiLogs)
+        .set(updates)
+        .where(eq(aiLogs.id, id))
+        .returning({ id: aiLogs.id });
+
+      if (!updated) return reply.code(404).send({ error: "AI log not found" });
+      return updated;
     }
   );
 };

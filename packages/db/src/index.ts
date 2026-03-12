@@ -20,6 +20,7 @@ import * as researchProjectsSchema from "./schema/research-projects.js";
 import * as accountPlatformsSchema from "./schema/account-platforms.js";
 import * as platformVisibilitySchema from "./schema/platform-visibility.js";
 import * as researchVirtualAppsSchema from "./schema/research-virtual-apps.js";
+import * as aiLogsSchema from "./schema/ai-logs.js";
 
 export const schema = {
   ...scrapeRunsSchema,
@@ -41,6 +42,7 @@ export const schema = {
   ...accountPlatformsSchema,
   ...platformVisibilitySchema,
   ...researchVirtualAppsSchema,
+  ...aiLogsSchema,
 };
 
 export function createDb(databaseUrl: string) {
@@ -108,3 +110,4 @@ export {
 export { accountPlatforms } from "./schema/account-platforms.js";
 export { platformVisibility } from "./schema/platform-visibility.js";
 export { researchVirtualApps } from "./schema/research-virtual-apps.js";
+export { aiLogs } from "./schema/ai-logs.js";

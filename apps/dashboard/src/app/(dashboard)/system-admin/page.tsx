@@ -125,7 +125,7 @@ export default function SystemAdminPage() {
 
       {/* Global Stats */}
       {stats && (
-        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-4">
+        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-4">
           <Link href="/system-admin/accounts">
             <Card className="cursor-pointer hover:border-primary/50 transition-colors">
               <CardHeader className="pb-2">
@@ -184,6 +184,16 @@ export default function SystemAdminPage() {
                 <CardDescription>Research</CardDescription>
                 <CardTitle className="text-2xl">
                   {stats.researchProjects ?? 0}
+                </CardTitle>
+              </CardHeader>
+            </Card>
+          </Link>
+          <Link href="/system-admin/ai-logs">
+            <Card className="cursor-pointer hover:border-primary/50 transition-colors">
+              <CardHeader className="pb-2">
+                <CardDescription>AI Logs</CardDescription>
+                <CardTitle className="text-2xl">
+                  {stats.aiLogs ?? 0}
                 </CardTitle>
               </CardHeader>
             </Card>

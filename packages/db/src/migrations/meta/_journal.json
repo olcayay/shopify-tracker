@@ -414,6 +414,27 @@
       "when": 1773705900000,
       "tag": "0058_virtual_app_created_by",
       "breakpoints": true
+    },
+    {
+      "idx": 59,
+      "version": "7",
+      "when": 1773792000000,
+      "tag": "0059_ai_logs",
+      "breakpoints": true
+    },
+    {
+      "idx": 60,
+      "version": "7",
+      "when": 1773878400000,
+      "tag": "0060_ai_logs_enhancements",
+      "breakpoints": true
+    },
+    {
+      "idx": 61,
+      "version": "7",
+      "when": 1773964800000,
+      "tag": "0061_ai_logs_trigger_type",
+      "breakpoints": true
     }
   ]
 }

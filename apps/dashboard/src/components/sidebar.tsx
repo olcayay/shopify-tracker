@@ -25,6 +25,7 @@ import {
   PanelLeftClose,
   PanelLeftOpen,
   Menu,
+  BrainCircuit,
 } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
 import { PLATFORMS, type PlatformId } from "@appranks/shared";
@@ -78,6 +79,7 @@ const systemAdminItems = [
   { href: "/system-admin/researches", label: "Research", icon: FlaskConical },
   { href: "/system-admin/packages", label: "Packages", icon: Package },
   { href: "/system-admin/scraper", label: "Scraper", icon: Bot },
+  { href: "/system-admin/ai-logs", label: "AI Logs", icon: BrainCircuit },
 ];
 
 /** Extract platform from current pathname */

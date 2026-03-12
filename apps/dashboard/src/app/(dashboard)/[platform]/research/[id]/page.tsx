@@ -2216,14 +2216,17 @@ function VirtualAppsGrid({
                       </div>
                     </div>
                     <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
-                      <Link
-                        href={`/${platform}/research/${projectId}/virtual-apps/${va.id}/preview`}
-                        onClick={(e) => e.stopPropagation()}
+                      <button
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          window.location.href = `/${platform}/research/${projectId}/virtual-apps/${va.id}/preview`;
+                        }}
                         className="p-1 rounded text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
                         title="Preview"
                       >
                         <Eye className="h-3.5 w-3.5" />
-                      </Link>
+                      </button>
                       {canEdit && (
                         <button
                           onClick={(e) => {
