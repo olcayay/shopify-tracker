@@ -1552,7 +1552,7 @@ export const researchRoutes: FastifyPluginAsync = async (app) => {
 Each app MUST target a DIFFERENT market positioning or niche — e.g., budget/simple, enterprise/comprehensive, niche-specific, all-in-one.
 
 RULES:
-1. features[] — ONLY use feature title strings from "availableCategories". Never invent features. Each app MUST have at least 5 features.
+1. features[] — Write descriptive feature strings (up to 80 characters each) that highlight the app's capabilities. Each app MUST have at least 5 features. Use competitor features from "competitors" data and "availableCategories" as inspiration but write original, compelling descriptions.
 2. categories[] — Pick 1-2 categories from "availableCategories". Copy the EXACT category title, subcategory titles, and feature titles. Do NOT invent values.
 3. pricingPlans[] — Each app MUST have at least 3 pricing plans (e.g., Free, Basic, Pro). Plans should be competitive based on market data.
 4. icon must be a SINGLE standard emoji character (e.g., 🚀, 💡, ⚡, 🎯, 💎, 🛒, 📦, 🔄, 📊). Do NOT use text or special unicode symbols.
