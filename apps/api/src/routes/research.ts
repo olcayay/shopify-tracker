@@ -77,13 +77,11 @@ function buildResearchSummary(data: any, projectName: string) {
     categories: (c.categories || []).map((cat: any) => cat.title).filter(Boolean),
   }));
 
-  // Top 50 features by count
+  // Top 50 features by count (titles only for AI, no redundant category context)
   const featureCoverage = (data.featureCoverage || [])
     .slice(0, 50)
     .map((f: any) => ({
       title: f.title,
-      categoryTitle: f.categoryTitle,
-      subcategoryTitle: f.subcategoryTitle,
       count: f.count,
       total: f.total,
       isGap: f.isGap,
@@ -131,12 +129,22 @@ function buildResearchSummary(data: any, projectName: string) {
       }
     }
   }
-  const availableCategories = Array.from(catMap.values()).map((cat) => ({
+  // Full version for post-processing lookup (URLs, feature_handles)
+  const availableCategoriesFull = Array.from(catMap.values()).map((cat) => ({
     title: cat.title,
     url: cat.url,
     subcategories: Array.from(cat.subcategories.values()).map((sub) => ({
       title: sub.title,
       features: Array.from(sub.features.values()),
+    })),
+  }));
+
+  // Lightweight version for AI prompt (titles only, no URLs/handles)
+  const availableCategories = availableCategoriesFull.map((cat) => ({
+    title: cat.title,
+    subcategories: cat.subcategories.map((sub) => ({
+      title: sub.title,
+      features: sub.features.map((f) => f.title),
     })),
   }));
 
@@ -211,6 +219,7 @@ function buildResearchSummary(data: any, projectName: string) {
     availableIntegrations,
     availableLanguages,
     availableCategories,
+    availableCategoriesFull,
     pricingSummary: {
       competitorsWithFreePlan,
       priceRange,
@@ -1523,10 +1532,10 @@ export const researchRoutes: FastifyPluginAsync = async (app) => {
 Each app MUST target a DIFFERENT market positioning or niche — e.g., budget/simple, enterprise/comprehensive, niche-specific, all-in-one.
 
 RULES:
-1. features[] — ONLY use strings from "availableFeatures". Never invent features. Each app MUST have at least 5 features.
+1. features[] — ONLY use feature strings that appear in "featureCoverage" or inside "availableCategories". Never invent features. Each app MUST have at least 5 features.
 2. integrations[] — ONLY use strings from "availableIntegrations". Never invent integrations.
 3. languages[] — ONLY use strings from "availableLanguages".
-4. categories[] — Pick 1-2 categories from "availableCategories". You MUST copy the EXACT title, url, subcategory titles, and feature objects (title, feature_handle, url) from availableCategories. Do NOT invent or modify any category/subcategory/feature values. Select the subcategories and features relevant to the app's positioning.
+4. categories[] — Pick 1-2 categories from "availableCategories". Copy the EXACT category title, subcategory titles, and feature titles. Do NOT invent values. Select the subcategories and features relevant to the app's positioning.
 5. pricingPlans[] — Each app MUST have at least 3 pricing plans (e.g., Free, Basic, Pro). Plans should be competitive based on market data.
 6. icon must be a SINGLE standard emoji character (e.g., 🚀, 💡, ⚡, 🎯, 💎, 🛒, 📦, 🔄, 📊). Do NOT use text or special unicode symbols.
 7. color must be a hex color code like #3B82F6.
@@ -1546,8 +1555,10 @@ TEXT LENGTH GUIDELINES — use the available space efficiently, aim for the UPPE
 - seoMetaDescription: 120-160 characters. Compelling description with keywords and call to action.
 - Each app should pick features/integrations that support its unique positioning — not just copy everything.`;
 
+      // Strip fields that are only needed for post-processing, not the AI prompt
+      const { availableFeatures: _af, availableCategoriesFull: _acf, ...promptSummary } = summary;
       const userPrompt = `Research data for "${project.name}":
-${JSON.stringify(summary)}
+${JSON.stringify(promptSummary)}
 
 Generate differentiated app concepts. Consider:
 - Feature gaps (isGap=true) as opportunities
@@ -1584,7 +1595,6 @@ Generate differentiated app concepts. Consider:
                       type: "object" as const,
                       properties: {
                         title: { type: "string" as const },
-                        url: { type: "string" as const },
                         subcategories: {
                           type: "array" as const,
                           items: {
@@ -1593,16 +1603,7 @@ Generate differentiated app concepts. Consider:
                               title: { type: "string" as const },
                               features: {
                                 type: "array" as const,
-                                items: {
-                                  type: "object" as const,
-                                  properties: {
-                                    title: { type: "string" as const },
-                                    feature_handle: { type: "string" as const },
-                                    url: { type: "string" as const },
-                                  },
-                                  required: ["title", "feature_handle", "url"] as const,
-                                  additionalProperties: false as const,
-                                },
+                                items: { type: "string" as const },
                               },
                             },
                             required: ["title", "features"] as const,
@@ -1610,7 +1611,7 @@ Generate differentiated app concepts. Consider:
                           },
                         },
                       },
-                      required: ["title", "url", "subcategories"] as const,
+                      required: ["title", "subcategories"] as const,
                       additionalProperties: false as const,
                     },
                   },
@@ -1713,6 +1714,7 @@ Generate differentiated app concepts. Consider:
               temperature: 0.8,
               responseFormat: "json_schema",
               outputCount: aiResponse?.apps?.length ?? 0,
+              promptChars: systemPrompt.length + userPrompt.length,
             },
             ipAddress: request.ip,
             userAgent: request.headers["user-agent"] ?? null,
@@ -1725,20 +1727,19 @@ Generate differentiated app concepts. Consider:
       const allowedIntegrations = new Set(summary.availableIntegrations);
       const allowedLanguages = new Set(summary.availableLanguages);
 
-      // Build lookup for valid categories
+      // Build lookup for valid categories from full structure (with URLs/handles)
       const validCatMap = new Map<string, any>();
-      for (const cat of summary.availableCategories) {
+      for (const cat of summary.availableCategoriesFull) {
         validCatMap.set(cat.title, cat);
       }
 
       const createdVAs: any[] = [];
       for (const appConcept of aiResponse.apps) {
-        // Validate categories against known structure
+        // Validate categories against known structure, reconstruct full objects from titles
         const validatedCategories: any[] = [];
         for (const cat of (appConcept.categories || []).slice(0, 2)) {
           const knownCat = validCatMap.get(cat.title);
           if (!knownCat) continue;
-          // Use the known category's url, filter subcategories/features to known values
           const knownSubMap = new Map<string, any>();
           for (const sub of knownCat.subcategories || []) {
             knownSubMap.set(sub.title, sub);
@@ -1747,16 +1748,15 @@ Generate differentiated app concepts. Consider:
           for (const sub of cat.subcategories || []) {
             const knownSub = knownSubMap.get(sub.title);
             if (!knownSub) continue;
-            const knownFeatureHandles = new Set((knownSub.features || []).map((f: any) => f.feature_handle));
-            const validFeatures = (sub.features || []).filter((f: any) => knownFeatureHandles.has(f.feature_handle));
+            // AI now outputs feature titles as strings; look up full objects from known source
+            const knownFeatureTitles = new Set((knownSub.features || []).map((f: any) => f.title));
+            const validFeatures = (sub.features || [])
+              .filter((featureTitle: string) => knownFeatureTitles.has(featureTitle))
+              .map((featureTitle: string) => (knownSub.features || []).find((kf: any) => kf.title === featureTitle));
             if (validFeatures.length > 0) {
-              // Use feature data from the known source
               validSubs.push({
                 title: knownSub.title,
-                features: validFeatures.map((f: any) => {
-                  const knownF = (knownSub.features || []).find((kf: any) => kf.feature_handle === f.feature_handle);
-                  return knownF || f;
-                }),
+                features: validFeatures,
               });
             }
           }
