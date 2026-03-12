@@ -163,3 +163,5 @@ keywordler için ekstra bilgiler (ilk sayfadaki app'lere dair
 virtual apps for research projects (DB + API + Editor + Compare + Feature Coverage) ✅
 
 virtual app UX improvements (icon/color picker, deferred creation, unsaved changes guard, overview cards, custom confirm modal) ✅
+
+AI-powered virtual app generation (OpenAI gpt-4o + structured output, generation overlay, creator tracking, preview page, migrations) ✅

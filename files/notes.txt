@@ -1501,3 +1501,39 @@ Research Projects — Loading Shimmers, Detail Pages, Compare Page:
     - table-fixed layout with constrained label column width for proper app icon spacing
 - Files created: packages/db/src/migrations/0042_research_created_by.sql, apps/dashboard/src/app/(dashboard)/research/[id]/keywords/page.tsx, apps/dashboard/src/app/(dashboard)/research/[id]/competitors/page.tsx, apps/dashboard/src/app/(dashboard)/research/[id]/compare/page.tsx
 - Files modified: apps/api/src/routes/research.ts, apps/dashboard/src/app/(dashboard)/research/[id]/page.tsx, apps/dashboard/src/app/(dashboard)/research/page.tsx, packages/db/src/schema/research-projects.ts, packages/db/src/migrations/meta/_journal.json, files/tasks.txt, files/notes.txt
+
+AI-Powered Virtual App Generation
+===================================
+
+Generate 2-4 differentiated virtual app concepts from research competitor data using OpenAI gpt-4o structured output.
+
+Backend (apps/api/src/routes/research.ts):
+- POST /:id/virtual-apps/generate — AI generation endpoint
+- buildResearchSummary() compresses research data to ~5-8K tokens for the prompt
+- OpenAI gpt-4o with structured JSON schema output, temperature 0.8, 120s timeout
+- Post-validation: filters features/integrations/languages against known competitor values
+- Category validation: matches against known category tree by title/URL slug
+- Icon validation: ensures single emoji character with codepoint > 0xFF, fallback to predefined set
+- Field truncation: name (30), appCardSubtitle (62), seoTitle (60), seoMetaDescription (160)
+- Error handling: 503 (no API key), 400 (< 2 competitors), 429 (rate limit/quota), 502 (AI error)
+- createdBy tracking: stores user who triggered generation
+
+Frontend (apps/dashboard):
+- "Generate with AI" button with animated purple gradient + shimmer CSS effect
+- Full-screen AiGenerationOverlay with 8-step progress animation, floating particles, progress bar
+- Redesigned VA cards: icon + name prominent, subtitle, stats row, AI/Manual badge, creator name, hover actions
+- Preview page: mock Shopify App Store detail page rendering
+- CompetitorCountBadge: reusable component showing how many competitors have each feature/integration
+- Feature/Integration/Language pickers: selected items sort to top
+- Category slug matching fixed: extracts slugs from VA category URLs for proper tree matching
+
+Database:
+- Migration 0055: research_virtual_apps table (CREATE TABLE IF NOT EXISTS)
+- Migration 0056: icon + color columns (ADD COLUMN IF NOT EXISTS)
+- Migration 0057: generated_by_ai boolean column
+- Migration 0058: created_by UUID FK to users table (ON DELETE SET NULL)
+- All migrations registered in journal and idempotent for safe production deployment
+
+Dependencies:
+- Added openai ^6.27.0 to apps/api
+- Requires OPENAI_API_KEY environment variable

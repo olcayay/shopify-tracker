@@ -65,6 +65,66 @@ export const categoryRoutes: FastifyPluginAsync = async (app) => {
     return buildTree(rows);
   });
 
+  // GET /api/categories/features-by-slugs?slugs=slug1,slug2
+  // Returns the Shopify category feature taxonomy for the given category slugs.
+  // Aggregates from all app snapshots that have those categories.
+  app.get("/features-by-slugs", async (request, reply) => {
+    const { slugs: slugsParam } = request.query as { slugs?: string };
+    if (!slugsParam) return [];
+
+    const slugs = slugsParam.split(",").map((s) => s.trim()).filter(Boolean);
+    if (slugs.length === 0) return [];
+    // Validate slugs contain only safe characters
+    if (slugs.some((s) => !/^[a-z0-9-]+$/.test(s))) return [];
+
+    try {
+      const queryText = `
+        SELECT DISTINCT
+          regexp_replace(cat->>'url', '.*\\/categories\\/([^/?#]+).*', '\\1') as cat_slug,
+          cat->>'title' as cat_title,
+          sub->>'title' as sub_title,
+          feat->>'title' as feat_title,
+          feat->>'feature_handle' as feat_handle,
+          COALESCE(feat->>'url', '') as feat_url
+        FROM app_snapshots s,
+        jsonb_array_elements(s.categories) as cat,
+        jsonb_array_elements(cat->'subcategories') as sub,
+        jsonb_array_elements(sub->'features') as feat
+        WHERE regexp_replace(cat->>'url', '.*\\/categories\\/([^/?#]+).*', '\\1') = ANY(ARRAY[${slugs.map((s) => `'${s.replace(/'/g, "''")}'`).join(",")}])
+        ORDER BY cat_title, sub_title, feat_title
+      `;
+      const result = await db.execute(sql.raw(queryText));
+      const rows = (Array.isArray(result) ? result : (result as any).rows ?? []) as { cat_slug: string; cat_title: string; sub_title: string; feat_title: string; feat_handle: string; feat_url: string }[];
+
+    // Group by category → subcategory → features
+    const catMap = new Map<string, { title: string; slug: string; subcategories: Map<string, { title: string; features: { title: string; feature_handle: string; url: string }[] }> }>();
+
+    for (const row of rows) {
+      if (!catMap.has(row.cat_slug)) {
+        catMap.set(row.cat_slug, { title: row.cat_title, slug: row.cat_slug, subcategories: new Map() });
+      }
+      const cat = catMap.get(row.cat_slug)!;
+      if (!cat.subcategories.has(row.sub_title)) {
+        cat.subcategories.set(row.sub_title, { title: row.sub_title, features: [] });
+      }
+      const sub = cat.subcategories.get(row.sub_title)!;
+      if (!sub.features.some((f) => f.feature_handle === row.feat_handle)) {
+        sub.features.push({ title: row.feat_title, feature_handle: row.feat_handle, url: row.feat_url });
+      }
+    }
+
+    return Array.from(catMap.values()).map((cat) => ({
+      title: cat.title,
+      slug: cat.slug,
+      subcategories: Array.from(cat.subcategories.values()),
+    }));
+    } catch (err) {
+      console.error("[features-by-slugs] Error:", err);
+      reply.code(500);
+      return { error: "Internal server error", details: String(err) };
+    }
+  });
+
   // GET /api/categories/:slug — category detail + latest snapshot
   app.get<{ Params: { slug: string } }>("/:slug", async (request, reply) => {
     const { slug } = request.params;

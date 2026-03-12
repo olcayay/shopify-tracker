@@ -5,9 +5,11 @@ import {
   text,
   jsonb,
   timestamp,
+  boolean,
   index,
 } from "drizzle-orm/pg-core";
 import { researchProjects } from "./research-projects.js";
+import { users } from "./auth.js";
 
 export const researchVirtualApps = pgTable(
   "research_virtual_apps",
@@ -30,6 +32,8 @@ export const researchVirtualApps = pgTable(
     languages: jsonb("languages").notNull().default([]),
     categories: jsonb("categories").notNull().default([]),
     pricingPlans: jsonb("pricing_plans").notNull().default([]),
+    generatedByAi: boolean("generated_by_ai").notNull().default(false),
+    createdBy: uuid("created_by").references(() => users.id, { onDelete: "set null" }),
     createdAt: timestamp("created_at").notNull().defaultNow(),
     updatedAt: timestamp("updated_at").notNull().defaultNow(),
   },

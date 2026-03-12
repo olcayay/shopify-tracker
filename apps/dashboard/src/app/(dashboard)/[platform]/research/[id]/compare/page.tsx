@@ -381,8 +381,8 @@ export default function ResearchComparePage() {
                       </div>
                     )}
                   </button>
-                  <span className="text-[10px] font-medium whitespace-nowrap" style={{ color }}>
-                    {app.name}
+                  <span className="text-[10px] font-medium whitespace-nowrap max-w-[60px] truncate" style={{ color }}>
+                    {app.name.split(/[\s\-–—]/)[0]}
                   </span>
                 </div>
               );

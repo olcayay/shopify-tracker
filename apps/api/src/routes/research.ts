@@ -1,6 +1,7 @@
 import type { FastifyPluginAsync } from "fastify";
 import { eq, sql, and, inArray, desc, asc, isNotNull } from "drizzle-orm";
 import { Queue } from "bullmq";
+import OpenAI from "openai";
 import {
   createDb,
   apps,
@@ -61,6 +62,165 @@ function getMinPaidPrice(plans: any[] | null | undefined): number | null {
 }
 
 type Db = ReturnType<typeof createDb>;
+
+function buildResearchSummary(data: any, projectName: string) {
+  const competitors = (data.competitors || []).map((c: any) => ({
+    name: c.name,
+    averageRating: c.averageRating,
+    pricingHint: c.pricingHint,
+    minPaidPrice: c.minPaidPrice,
+    powerScore: c.powerScore,
+    featureCount: (c.features || []).length,
+    integrationCount: (c.integrations || []).length,
+    languageCount: (c.languages || []).length,
+    categories: (c.categories || []).map((cat: any) => cat.title).filter(Boolean),
+  }));
+
+  // Top 50 features by count
+  const featureCoverage = (data.featureCoverage || [])
+    .slice(0, 50)
+    .map((f: any) => ({
+      title: f.title,
+      categoryTitle: f.categoryTitle,
+      subcategoryTitle: f.subcategoryTitle,
+      count: f.count,
+      total: f.total,
+      isGap: f.isGap,
+    }));
+
+  // Union of all competitor features
+  const availableFeatures = Array.from(
+    new Set((data.competitors || []).flatMap((c: any) => c.features || []))
+  );
+
+  // Union of all competitor integrations
+  const availableIntegrations = Array.from(
+    new Set((data.competitors || []).flatMap((c: any) => c.integrations || []))
+  );
+
+  // Union of all competitor languages
+  const availableLanguages = Array.from(
+    new Set((data.competitors || []).flatMap((c: any) => c.languages || []))
+  );
+
+  // Available categories from competitor data, deduplicated and merged
+  const catMap = new Map<string, { title: string; url: string; subcategories: Map<string, { title: string; features: Map<string, { title: string; feature_handle: string; url: string }> }> }>();
+  for (const comp of data.competitors || []) {
+    for (const cat of comp.categories || []) {
+      if (!cat.title || !cat.url) continue;
+      if (!catMap.has(cat.url)) {
+        catMap.set(cat.url, { title: cat.title, url: cat.url, subcategories: new Map() });
+      }
+      const catEntry = catMap.get(cat.url)!;
+      for (const sub of cat.subcategories || []) {
+        if (!sub.title) continue;
+        if (!catEntry.subcategories.has(sub.title)) {
+          catEntry.subcategories.set(sub.title, { title: sub.title, features: new Map() });
+        }
+        const subEntry = catEntry.subcategories.get(sub.title)!;
+        for (const f of sub.features || []) {
+          if (f.feature_handle && !subEntry.features.has(f.feature_handle)) {
+            subEntry.features.set(f.feature_handle, {
+              title: f.title,
+              feature_handle: f.feature_handle,
+              url: f.url || "",
+            });
+          }
+        }
+      }
+    }
+  }
+  const availableCategories = Array.from(catMap.values()).map((cat) => ({
+    title: cat.title,
+    url: cat.url,
+    subcategories: Array.from(cat.subcategories.values()).map((sub) => ({
+      title: sub.title,
+      features: Array.from(sub.features.values()),
+    })),
+  }));
+
+  // Pricing summary
+  let competitorsWithFreePlan = 0;
+  const allPrices: number[] = [];
+  const trialTexts: string[] = [];
+  const sampleStructures: any[] = [];
+
+  for (const comp of data.competitors || []) {
+    const plans = comp.pricingPlans || [];
+    const hasFree = plans.some((p: any) => !p.price || parseFloat(p.price) === 0);
+    if (hasFree) competitorsWithFreePlan++;
+
+    for (const p of plans) {
+      if (p.price && parseFloat(p.price) > 0) allPrices.push(parseFloat(p.price));
+      if (p.trial_text) trialTexts.push(p.trial_text);
+    }
+
+    if (sampleStructures.length < 3 && plans.length > 0) {
+      sampleStructures.push({
+        name: comp.name,
+        plans: plans.map((p: any) => ({
+          name: p.name,
+          price: p.price,
+          period: p.period,
+          featureCount: (p.features || []).length,
+        })),
+      });
+    }
+  }
+
+  const commonTrialTexts = Array.from(new Set(trialTexts)).slice(0, 5);
+  const priceRange = allPrices.length > 0
+    ? { min: Math.min(...allPrices), max: Math.max(...allPrices) }
+    : null;
+
+  // Top 15 opportunities
+  const opportunities = (data.opportunities || [])
+    .slice(0, 15)
+    .map((o: any) => ({
+      keyword: o.keyword,
+      opportunityScore: o.opportunityScore,
+      room: o.room,
+      demand: o.demand,
+    }));
+
+  // Top 30 market language
+  const marketLanguage = (data.wordAnalysis || [])
+    .slice(0, 30)
+    .map((w: any) => ({
+      word: w.word,
+      totalScore: w.totalScore,
+      appCount: w.appCount,
+    }));
+
+  // Category landscape
+  const categoryLandscape = (data.categories || []).map((c: any) => ({
+    title: c.title,
+    competitorCount: c.competitorCount,
+  }));
+
+  return {
+    projectName,
+    keywords: (data.keywords || []).map((k: any) => ({
+      keyword: k.keyword,
+      totalResults: k.totalResults,
+    })),
+    competitors,
+    featureCoverage,
+    availableFeatures,
+    availableIntegrations,
+    availableLanguages,
+    availableCategories,
+    pricingSummary: {
+      competitorsWithFreePlan,
+      priceRange,
+      commonTrialTexts,
+      sampleStructures,
+    },
+    opportunities,
+    marketLanguage,
+    categoryLandscape,
+  };
+}
 
 export const researchRoutes: FastifyPluginAsync = async (app) => {
   const db: Db = (app as any).db;
@@ -760,6 +920,7 @@ export const researchRoutes: FastifyPluginAsync = async (app) => {
           ratingCount: appInfo?.ratingCount ?? null,
           pricingHint: appInfo?.pricingHint ?? null,
           minPaidPrice: getMinPaidPrice(snap?.pricingPlans),
+          pricingPlans: snap?.pricingPlans ?? [],
           powerScore: powerMap.get(c.appSlug) ?? null,
           categories: snap?.categories ?? [],
           categoryRankings: catRanks,
@@ -1271,13 +1432,338 @@ export const researchRoutes: FastifyPluginAsync = async (app) => {
     if (!project) return reply.code(404).send({ error: "Project not found" });
 
     const rows = await db
-      .select()
+      .select({
+        id: researchVirtualApps.id,
+        researchProjectId: researchVirtualApps.researchProjectId,
+        name: researchVirtualApps.name,
+        icon: researchVirtualApps.icon,
+        color: researchVirtualApps.color,
+        iconUrl: researchVirtualApps.iconUrl,
+        appCardSubtitle: researchVirtualApps.appCardSubtitle,
+        appIntroduction: researchVirtualApps.appIntroduction,
+        appDetails: researchVirtualApps.appDetails,
+        seoTitle: researchVirtualApps.seoTitle,
+        seoMetaDescription: researchVirtualApps.seoMetaDescription,
+        features: researchVirtualApps.features,
+        integrations: researchVirtualApps.integrations,
+        languages: researchVirtualApps.languages,
+        categories: researchVirtualApps.categories,
+        pricingPlans: researchVirtualApps.pricingPlans,
+        generatedByAi: researchVirtualApps.generatedByAi,
+        createdBy: researchVirtualApps.createdBy,
+        creatorName: users.name,
+        createdAt: researchVirtualApps.createdAt,
+        updatedAt: researchVirtualApps.updatedAt,
+      })
       .from(researchVirtualApps)
+      .leftJoin(users, eq(researchVirtualApps.createdBy, users.id))
       .where(eq(researchVirtualApps.researchProjectId, id))
       .orderBy(desc(researchVirtualApps.updatedAt));
 
     return rows;
   });
+
+  // POST /:id/virtual-apps/generate — AI-powered virtual app generation
+  app.post<{ Params: { id: string } }>(
+    "/:id/virtual-apps/generate",
+    { preHandler: [requireRole("owner", "editor")] },
+    async (request, reply) => {
+      try {
+      const apiKey = process.env.OPENAI_API_KEY;
+      if (!apiKey) {
+        return reply.code(503).send({ error: "AI generation is not configured" });
+      }
+
+      const { accountId } = request.user;
+      const { id } = request.params;
+      const platform = getPlatformFromQuery(request.query as Record<string, unknown>);
+
+      // Verify project ownership
+      const [project] = await db
+        .select({ id: researchProjects.id, name: researchProjects.name })
+        .from(researchProjects)
+        .where(and(eq(researchProjects.id, id), eq(researchProjects.accountId, accountId)));
+
+      if (!project) return reply.code(404).send({ error: "Project not found" });
+
+      // Fetch research data via internal inject
+      const token = request.headers.authorization;
+      const dataRes = await request.server.inject({
+        method: "GET",
+        url: `/api/research-projects/${id}/data?platform=${platform}`,
+        headers: { authorization: token || "" },
+      });
+
+      if (dataRes.statusCode !== 200) {
+        request.log.error({ statusCode: dataRes.statusCode, body: dataRes.body }, "inject /data failed");
+        return reply.code(500).send({ error: "Failed to fetch research data" });
+      }
+
+      let data: any;
+      try {
+        data = JSON.parse(dataRes.body);
+      } catch (e) {
+        request.log.error({ body: dataRes.body?.slice(0, 500) }, "Failed to parse research data");
+        return reply.code(500).send({ error: "Failed to parse research data" });
+      }
+
+      if (!data.competitors || data.competitors.length < 2) {
+        return reply.code(400).send({ error: "At least 2 competitors needed for AI generation" });
+      }
+
+      // Build compressed summary
+      const summary = buildResearchSummary(data, project.name);
+
+      // Call OpenAI
+      const openai = new OpenAI({ apiKey });
+
+      const systemPrompt = `You are a Shopify app market analyst and product strategist. Given competitive research data, generate 2-4 distinct virtual app concepts for the Shopify App Store.
+
+Each app MUST target a DIFFERENT market positioning or niche — e.g., budget/simple, enterprise/comprehensive, niche-specific, all-in-one.
+
+RULES:
+1. features[] — ONLY use strings from "availableFeatures". Never invent features. Each app MUST have at least 5 features.
+2. integrations[] — ONLY use strings from "availableIntegrations". Never invent integrations.
+3. languages[] — ONLY use strings from "availableLanguages".
+4. categories[] — Pick 1-2 categories from "availableCategories". You MUST copy the EXACT title, url, subcategory titles, and feature objects (title, feature_handle, url) from availableCategories. Do NOT invent or modify any category/subcategory/feature values. Select the subcategories and features relevant to the app's positioning.
+5. pricingPlans[] — Each app MUST have at least 3 pricing plans (e.g., Free, Basic, Pro). Plans should be competitive based on market data.
+6. icon must be a SINGLE standard emoji character (e.g., 🚀, 💡, ⚡, 🎯, 💎, 🛒, 📦, 🔄, 📊). Do NOT use text or special unicode symbols.
+7. color must be a hex color code like #3B82F6.
+8. All text must be in English. App names should be catchy and marketable.
+
+TEXT LENGTH GUIDELINES — use the available space efficiently:
+- name: MAXIMUM 30 characters. Keep it short, catchy and brandable (e.g., "OrderFlow Pro", "InvenSync", "ShipMaster").
+- appCardSubtitle: 40-62 characters. Describe the key value prop concisely.
+- appIntroduction: 70-100 characters. One compelling sentence about what the app does.
+- appDetails: 3-4 paragraphs of plain text (not HTML). Be thorough — describe features, benefits, and use cases.
+- seoTitle: 40-60 characters. Include primary keyword and brand name.
+- seoMetaDescription: 120-160 characters. Compelling description with call to action.
+- Each app should pick features/integrations that support its unique positioning — not just copy everything.`;
+
+      const userPrompt = `Research data for "${project.name}":
+${JSON.stringify(summary)}
+
+Generate differentiated app concepts. Consider:
+- Feature gaps (isGap=true) as opportunities
+- High-scoring keyword opportunities
+- Market language patterns
+- How to position each app distinctly`;
+
+      const responseSchema = {
+        name: "virtual_app_suggestions",
+        strict: true,
+        schema: {
+          type: "object" as const,
+          properties: {
+            apps: {
+              type: "array" as const,
+              items: {
+                type: "object" as const,
+                properties: {
+                  name: { type: "string" as const },
+                  icon: { type: "string" as const },
+                  color: { type: "string" as const },
+                  appCardSubtitle: { type: "string" as const },
+                  appIntroduction: { type: "string" as const },
+                  appDetails: { type: "string" as const },
+                  seoTitle: { type: "string" as const },
+                  seoMetaDescription: { type: "string" as const },
+                  positioning: { type: "string" as const },
+                  features: { type: "array" as const, items: { type: "string" as const } },
+                  integrations: { type: "array" as const, items: { type: "string" as const } },
+                  languages: { type: "array" as const, items: { type: "string" as const } },
+                  categories: {
+                    type: "array" as const,
+                    items: {
+                      type: "object" as const,
+                      properties: {
+                        title: { type: "string" as const },
+                        url: { type: "string" as const },
+                        subcategories: {
+                          type: "array" as const,
+                          items: {
+                            type: "object" as const,
+                            properties: {
+                              title: { type: "string" as const },
+                              features: {
+                                type: "array" as const,
+                                items: {
+                                  type: "object" as const,
+                                  properties: {
+                                    title: { type: "string" as const },
+                                    feature_handle: { type: "string" as const },
+                                    url: { type: "string" as const },
+                                  },
+                                  required: ["title", "feature_handle", "url"] as const,
+                                  additionalProperties: false as const,
+                                },
+                              },
+                            },
+                            required: ["title", "features"] as const,
+                            additionalProperties: false as const,
+                          },
+                        },
+                      },
+                      required: ["title", "url", "subcategories"] as const,
+                      additionalProperties: false as const,
+                    },
+                  },
+                  pricingPlans: {
+                    type: "array" as const,
+                    items: {
+                      type: "object" as const,
+                      properties: {
+                        name: { type: "string" as const },
+                        price: { type: ["string", "null"] as const },
+                        period: { type: ["string", "null"] as const },
+                        trial_text: { type: ["string", "null"] as const },
+                        features: { type: "array" as const, items: { type: "string" as const } },
+                      },
+                      required: ["name", "price", "period", "trial_text", "features"] as const,
+                      additionalProperties: false as const,
+                    },
+                  },
+                },
+                required: [
+                  "name", "icon", "color", "appCardSubtitle", "appIntroduction",
+                  "appDetails", "seoTitle", "seoMetaDescription", "positioning",
+                  "features", "integrations", "languages", "categories", "pricingPlans",
+                ] as const,
+                additionalProperties: false as const,
+              },
+            },
+          },
+          required: ["apps"] as const,
+          additionalProperties: false as const,
+        },
+      };
+
+      let aiResponse: any;
+      try {
+        const completion = await openai.chat.completions.create({
+          model: "gpt-4o",
+          temperature: 0.8,
+          messages: [
+            { role: "system", content: systemPrompt },
+            { role: "user", content: userPrompt },
+          ],
+          response_format: {
+            type: "json_schema",
+            json_schema: responseSchema,
+          },
+        }, { timeout: 120000 });
+
+        const content = completion.choices[0]?.message?.content;
+        if (!content) throw new Error("Empty response from AI");
+        aiResponse = JSON.parse(content);
+      } catch (err: any) {
+        if (err?.status === 429 || err?.code === "insufficient_quota") {
+          const isQuota = err?.code === "insufficient_quota" || err?.error?.code === "insufficient_quota";
+          return reply.code(429).send({
+            error: isQuota
+              ? "OpenAI quota exceeded — check your plan and billing at platform.openai.com"
+              : "AI service busy, try again",
+          });
+        }
+        request.log.error(err, "OpenAI error");
+        return reply.code(502).send({ error: "AI service error, try again" });
+      }
+
+      // Post-validate: filter features/integrations/languages to known values
+      const allowedFeatures = new Set(summary.availableFeatures);
+      const allowedIntegrations = new Set(summary.availableIntegrations);
+      const allowedLanguages = new Set(summary.availableLanguages);
+
+      // Build lookup for valid categories
+      const validCatMap = new Map<string, any>();
+      for (const cat of summary.availableCategories) {
+        validCatMap.set(cat.title, cat);
+      }
+
+      const createdVAs: any[] = [];
+      for (const appConcept of aiResponse.apps) {
+        // Validate categories against known structure
+        const validatedCategories: any[] = [];
+        for (const cat of (appConcept.categories || []).slice(0, 2)) {
+          const knownCat = validCatMap.get(cat.title);
+          if (!knownCat) continue;
+          // Use the known category's url, filter subcategories/features to known values
+          const knownSubMap = new Map<string, any>();
+          for (const sub of knownCat.subcategories || []) {
+            knownSubMap.set(sub.title, sub);
+          }
+          const validSubs: any[] = [];
+          for (const sub of cat.subcategories || []) {
+            const knownSub = knownSubMap.get(sub.title);
+            if (!knownSub) continue;
+            const knownFeatureHandles = new Set((knownSub.features || []).map((f: any) => f.feature_handle));
+            const validFeatures = (sub.features || []).filter((f: any) => knownFeatureHandles.has(f.feature_handle));
+            if (validFeatures.length > 0) {
+              // Use feature data from the known source
+              validSubs.push({
+                title: knownSub.title,
+                features: validFeatures.map((f: any) => {
+                  const knownF = (knownSub.features || []).find((kf: any) => kf.feature_handle === f.feature_handle);
+                  return knownF || f;
+                }),
+              });
+            }
+          }
+          if (validSubs.length > 0) {
+            validatedCategories.push({ title: knownCat.title, url: knownCat.url, subcategories: validSubs });
+          }
+        }
+
+        // Truncate fields to respect limits
+        const name = (appConcept.name || "My App").slice(0, 30);
+        const appCardSubtitle = (appConcept.appCardSubtitle || "").slice(0, 62);
+        const appIntroduction = (appConcept.appIntroduction || "").slice(0, 100);
+        const seoTitle = (appConcept.seoTitle || "").slice(0, 60);
+        const seoMetaDescription = (appConcept.seoMetaDescription || "").slice(0, 160);
+        // Icon is varchar(10) — validate it's a real emoji, fallback to random
+        const VA_ICONS = ["🚀", "💡", "⚡", "🎯", "🔮", "🌟", "💎", "🎨", "🔥", "🌊", "🦋", "🍀", "🎲", "🪐", "🎸", "🦄"];
+        const iconRaw = appConcept.icon || "";
+        const firstChar = [...iconRaw][0] || "";
+        // Check if it's an actual emoji (Unicode > 0xFF) and fits in varchar(10)
+        const isEmoji = firstChar && firstChar.codePointAt(0)! > 0xFF && Buffer.byteLength(firstChar, "utf8") <= 10;
+        const icon = isEmoji ? firstChar : VA_ICONS[Math.floor(Math.random() * VA_ICONS.length)];
+        // Color is varchar(7) — e.g. #3B82F6
+        const color = (appConcept.color || "#3B82F6").slice(0, 7);
+
+        const values: Record<string, any> = {
+          researchProjectId: id,
+          name,
+          icon,
+          color,
+          appCardSubtitle,
+          appIntroduction,
+          appDetails: appConcept.appDetails || "",
+          seoTitle,
+          seoMetaDescription,
+          features: (appConcept.features || []).filter((f: string) => allowedFeatures.has(f)),
+          integrations: (appConcept.integrations || []).filter((i: string) => allowedIntegrations.has(i)),
+          languages: (appConcept.languages || []).filter((l: string) => allowedLanguages.has(l)),
+          categories: validatedCategories,
+          pricingPlans: appConcept.pricingPlans || [],
+          generatedByAi: true,
+          createdBy: request.user.userId,
+        };
+
+        const [va] = await db
+          .insert(researchVirtualApps)
+          .values(values as any)
+          .returning();
+
+        createdVAs.push(va);
+      }
+
+      return { virtualApps: createdVAs };
+      } catch (outerErr: any) {
+        request.log.error(outerErr, "Virtual app generation failed");
+        return reply.code(502).send({ error: "AI generation failed unexpectedly" });
+      }
+    }
+  );
 
   // GET /:id/virtual-apps/:vaId — get single virtual app
   app.get<{ Params: { id: string; vaId: string } }>("/:id/virtual-apps/:vaId", async (request, reply) => {
@@ -1324,6 +1810,7 @@ export const researchRoutes: FastifyPluginAsync = async (app) => {
         name: body.name || "My App",
         icon: body.icon || VA_ICONS[Math.floor(Math.random() * VA_ICONS.length)],
         color: body.color || VA_COLORS[Math.floor(Math.random() * VA_COLORS.length)],
+        createdBy: request.user.userId,
       };
 
       // Accept optional fields for full-data creation
@@ -1338,7 +1825,7 @@ export const researchRoutes: FastifyPluginAsync = async (app) => {
 
       const [va] = await db
         .insert(researchVirtualApps)
-        .values(values)
+        .values(values as any)
         .returning();
 
       return reply.code(201).send(va);

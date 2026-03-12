@@ -5,11 +5,10 @@ import { Check, Plus, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
+import { CompetitorCountBadge } from "./competitor-count-badge";
 
 interface Props {
-  /** All integrations across competitors */
-  competitorIntegrations: string[];
-  /** Currently selected integrations */
+  competitors: { name: string; integrations: string[] }[];
   selectedIntegrations: string[];
   onAdd: (integration: string) => void;
   onRemove: (integration: string) => void;
@@ -17,24 +16,56 @@ interface Props {
 }
 
 export function IntegrationPicker({
-  competitorIntegrations, selectedIntegrations, onAdd, onRemove, disabled,
+  competitors, selectedIntegrations, onAdd, onRemove, disabled,
 }: Props) {
   const [customIntegration, setCustomIntegration] = useState("");
   const [search, setSearch] = useState("");
 
   const selectedSet = useMemo(() => new Set(selectedIntegrations), [selectedIntegrations]);
+  const totalCompetitors = competitors.length;
 
-  const competitorSet = useMemo(() => new Set(competitorIntegrations), [competitorIntegrations]);
-  const customIntegrations = useMemo(
-    () => selectedIntegrations.filter((i) => !competitorSet.has(i)),
-    [selectedIntegrations, competitorSet]
+  // Build integration list with counts and competitor names, sorted by count desc
+  const integrationsWithCounts = useMemo(() => {
+    const map = new Map<string, { count: number; names: string[] }>();
+    for (const comp of competitors) {
+      for (const i of comp.integrations || []) {
+        if (!map.has(i)) map.set(i, { count: 0, names: [] });
+        const entry = map.get(i)!;
+        if (!entry.names.includes(comp.name)) {
+          entry.count++;
+          entry.names.push(comp.name);
+        }
+      }
+    }
+    return Array.from(map.entries())
+      .map(([integration, { count, names }]) => ({ integration, count, names }))
+      .sort((a, b) => b.count - a.count || a.integration.localeCompare(b.integration));
+  }, [competitors]);
+
+  const competitorIntegrationSet = useMemo(
+    () => new Set(integrationsWithCounts.map((i) => i.integration)),
+    [integrationsWithCounts]
   );
 
-  const filteredCompetitor = useMemo(() => {
-    if (!search.trim()) return competitorIntegrations;
-    const q = search.toLowerCase();
-    return competitorIntegrations.filter((i) => i.toLowerCase().includes(q));
-  }, [competitorIntegrations, search]);
+  const customIntegrations = useMemo(
+    () => selectedIntegrations.filter((i) => !competitorIntegrationSet.has(i)),
+    [selectedIntegrations, competitorIntegrationSet]
+  );
+
+  const filtered = useMemo(() => {
+    let list = integrationsWithCounts;
+    if (search.trim()) {
+      const q = search.toLowerCase();
+      list = list.filter((i) => i.integration.toLowerCase().includes(q));
+    }
+    // Selected items first
+    return [...list].sort((a, b) => {
+      const aSelected = selectedSet.has(a.integration) ? 0 : 1;
+      const bSelected = selectedSet.has(b.integration) ? 0 : 1;
+      if (aSelected !== bSelected) return aSelected - bSelected;
+      return b.count - a.count || a.integration.localeCompare(b.integration);
+    });
+  }, [integrationsWithCounts, search, selectedSet]);
 
   function handleAddCustom() {
     const i = customIntegration.trim();
@@ -53,8 +84,10 @@ export function IntegrationPicker({
       />
 
       <div className="space-y-0.5 max-h-[300px] overflow-y-auto">
-        <p className="text-xs text-muted-foreground font-medium px-1 mb-1">From competitors:</p>
-        {filteredCompetitor.map((integ) => {
+        <p className="text-xs text-muted-foreground font-medium px-1 mb-1">
+          From competitors ({totalCompetitors}):
+        </p>
+        {filtered.map(({ integration: integ, count, names }) => {
           const isSelected = selectedSet.has(integ);
           return (
             <button
@@ -77,10 +110,11 @@ export function IntegrationPicker({
                 {isSelected && <Check className="h-3 w-3 text-white" />}
               </div>
               <span className="truncate">{integ}</span>
+              <CompetitorCountBadge count={count} total={totalCompetitors} names={names} className="ml-auto" />
             </button>
           );
         })}
-        {filteredCompetitor.length === 0 && (
+        {filtered.length === 0 && (
           <p className="text-xs text-muted-foreground italic px-2 py-1">No matching integrations</p>
         )}
       </div>

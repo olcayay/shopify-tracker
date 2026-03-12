@@ -21,12 +21,22 @@ import {
   Globe,
   Search as SearchIcon,
   Link as LinkIcon,
+  FolderOpen,
+  Folder,
+  Eye,
+  Check,
+  Plus,
+  X,
+  ChevronDown,
+  ChevronRight,
+  Pencil,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ConfirmModal } from "@/components/confirm-modal";
 import { CategoryFeaturePicker } from "@/components/virtual-app/category-feature-picker";
 import { FeaturePicker } from "@/components/virtual-app/feature-picker";
 import { IntegrationPicker } from "@/components/virtual-app/integration-picker";
+import { CompetitorCountBadge } from "@/components/virtual-app/competitor-count-badge";
 
 // ─── Types ───────────────────────────────────────────────────
 
@@ -60,7 +70,26 @@ interface ResearchData {
     features: string[];
     integrations: string[];
     languages: string[];
+    pricingPlans: any[];
   }[];
+}
+
+interface PricingPlan {
+  name: string;
+  price: string | null;
+  period: string | null;
+  trial_text: string | null;
+  features: string[];
+}
+
+interface CategoryTreeNode {
+  slug: string;
+  title: string;
+  parentSlug: string | null;
+  categoryLevel: number;
+  isListingPage: boolean;
+  appCount: number | null;
+  children: CategoryTreeNode[];
 }
 
 // ─── Constants ──────────────────────────────────────────────
@@ -70,6 +99,7 @@ const COLOR_SET = ["#3B82F6", "#8B5CF6", "#EC4899", "#EF4444", "#F97316", "#EAB3
 
 const SECTIONS = [
   { id: "sec-basic", key: "basic", label: "Basic Info", icon: Sparkles },
+  { id: "sec-categories", key: "categories", label: "Categories", icon: FolderOpen },
   { id: "sec-catfeatures", key: "catfeatures", label: "Category Features", icon: LayoutGrid },
   { id: "sec-features", key: "features", label: "Features", icon: List },
   { id: "sec-integrations", key: "integrations", label: "Integrations", icon: Puzzle },
@@ -78,6 +108,32 @@ const SECTIONS = [
   { id: "sec-languages", key: "languages", label: "Languages", icon: Globe },
   { id: "sec-seo", key: "seo", label: "SEO", icon: SearchIcon },
 ] as const;
+
+// ─── Helpers ─────────────────────────────────────────────────
+
+/** Build slug→node map from category tree */
+function buildSlugMap(nodes: CategoryTreeNode[]): Map<string, CategoryTreeNode> {
+  const map = new Map<string, CategoryTreeNode>();
+  function walk(list: CategoryTreeNode[]) {
+    for (const n of list) {
+      map.set(n.slug, n);
+      walk(n.children);
+    }
+  }
+  walk(nodes);
+  return map;
+}
+
+/** Get breadcrumb path for a category slug */
+function getBreadcrumb(slug: string, slugMap: Map<string, CategoryTreeNode>): string {
+  const parts: string[] = [];
+  let node = slugMap.get(slug);
+  while (node) {
+    parts.unshift(node.title);
+    node = node.parentSlug ? slugMap.get(node.parentSlug) : undefined;
+  }
+  return parts.join(" > ");
+}
 
 // ─── Main Page ───────────────────────────────────────────────
 
@@ -95,6 +151,7 @@ export default function VirtualAppEditorPage() {
 
   const [va, setVa] = useState<VirtualApp | null>(null);
   const [research, setResearch] = useState<ResearchData | null>(null);
+  const [categoryTree, setCategoryTree] = useState<CategoryTreeNode[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [isDirty, setIsDirty] = useState(false);
@@ -116,18 +173,35 @@ export default function VirtualAppEditorPage() {
   const [details, setDetails] = useState("");
   const [seoTitle, setSeoTitle] = useState("");
   const [seoMetaDesc, setSeoMetaDesc] = useState("");
-  const [languagesStr, setLanguagesStr] = useState("");
+
+  // Selected category slugs (max 2, leaf nodes only)
+  const [selectedCategorySlugs, setSelectedCategorySlugs] = useState<string[]>([]);
+
+  // Pricing plans local state
+  const [pricingPlans, setPricingPlans] = useState<PricingPlan[]>([]);
+  const [editingPlanIndex, setEditingPlanIndex] = useState<number | null>(null);
+  const [deletePlanConfirm, setDeletePlanConfirm] = useState<number | null>(null);
 
   // Active section
   const [activeSection, setActiveSection] = useState<string>(SECTIONS[0].id);
+
+  // Slug map for breadcrumbs
+  const catSlugMap = useMemo(() => buildSlugMap(categoryTree), [categoryTree]);
+
 
   // ── Load data ─────────────────────────────────────────────
 
   const fetchAll = useCallback(async () => {
     try {
+      const catTreeRes = fetchWithAuth(`/api/categories?format=tree&platform=${platform}`);
+
       if (isNew) {
-        const resRes = await fetchWithAuth(`/api/research-projects/${id}/data`);
+        const [resRes, treeRes] = await Promise.all([
+          fetchWithAuth(`/api/research-projects/${id}/data`),
+          catTreeRes,
+        ]);
         if (resRes.ok) setResearch(await resRes.json());
+        if (treeRes.ok) setCategoryTree(await treeRes.json());
 
         const defaultVa: VirtualApp = {
           id: "new",
@@ -153,16 +227,20 @@ export default function VirtualAppEditorPage() {
         setName(defaultVa.name);
         setIcon(defaultVa.icon);
         setColor(defaultVa.color);
+        setPricingPlans([]);
       } else {
-        const [vaRes, resRes] = await Promise.all([
+        const [vaRes, resRes, treeRes] = await Promise.all([
           fetchWithAuth(`/api/research-projects/${id}/virtual-apps/${vaId}`),
           fetchWithAuth(`/api/research-projects/${id}/data`),
+          catTreeRes,
         ]);
 
         if (!vaRes.ok) {
           router.push(`/${platform}/research/${id}`);
           return;
         }
+
+        if (treeRes.ok) setCategoryTree(await treeRes.json());
 
         const vaData: VirtualApp = await vaRes.json();
         setVa(vaData);
@@ -175,7 +253,15 @@ export default function VirtualAppEditorPage() {
         setDetails(vaData.appDetails);
         setSeoTitle(vaData.seoTitle);
         setSeoMetaDesc(vaData.seoMetaDescription);
-        setLanguagesStr((vaData.languages || []).join(", "));
+        setPricingPlans(
+          (vaData.pricingPlans || []).map((p: any) => ({
+            name: p.name || "",
+            price: p.price ?? null,
+            period: p.period ?? null,
+            trial_text: p.trial_text ?? null,
+            features: p.features || [],
+          }))
+        );
 
         if (resRes.ok) setResearch(await resRes.json());
       }
@@ -183,6 +269,32 @@ export default function VirtualAppEditorPage() {
       setLoading(false);
     }
   }, [id, vaId, platform, isNew, newDefaults, fetchWithAuth, router]);
+
+  // After category tree loads, derive selected slugs from VA categories
+  useEffect(() => {
+    if (categoryTree.length === 0 || !va) return;
+    const slugMap = buildSlugMap(categoryTree);
+    const vaCats = va.categories || [];
+    // Extract slugs from VA category urls and titles
+    const vaCatSlugs = new Set<string>();
+    const vaCatTitles = new Set<string>();
+    for (const cat of vaCats) {
+      if (cat.url) {
+        const slug = cat.url.replace(/.*\/categories\//, "").replace(/\?.*/, "");
+        if (slug) vaCatSlugs.add(slug);
+      }
+      if (cat.title) vaCatTitles.add(cat.title);
+    }
+    const matchedSlugs: string[] = [];
+    for (const [slug, node] of slugMap) {
+      // Match by slug from URL, or by title (leaf nodes only for title match)
+      if (vaCatSlugs.has(slug) || (vaCatTitles.has(node.title) && node.children.length === 0)) {
+        matchedSlugs.push(slug);
+      }
+    }
+    setSelectedCategorySlugs(matchedSlugs.slice(0, 2));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [categoryTree]);
 
   useEffect(() => {
     fetchAll();
@@ -224,11 +336,41 @@ export default function VirtualAppEditorPage() {
 
   // ── Save ───────────────────────────────────────────────────
 
+  /** Build categories array for saving: merge feature data + ensure entries for selected slugs */
+  function buildCategoriesForSave(): any[] {
+    const existingCats = va?.categories || [];
+    // Map of title (lowercase) → category object with features
+    const catByTitle = new Map<string, any>();
+    for (const cat of existingCats) {
+      catByTitle.set(cat.title.toLowerCase(), cat);
+    }
+    // Ensure each selected category slug has an entry
+    for (const slug of selectedCategorySlugs) {
+      const node = catSlugMap.get(slug);
+      if (node && !catByTitle.has(node.title.toLowerCase())) {
+        catByTitle.set(node.title.toLowerCase(), { title: node.title, url: "", subcategories: [] });
+      }
+    }
+    // Only keep categories that are in selectedCategorySlugs (by title match)
+    const selectedTitlesLower = new Set(
+      selectedCategorySlugs.map((s) => catSlugMap.get(s)?.title?.toLowerCase()).filter(Boolean)
+    );
+    return Array.from(catByTitle.values()).filter(
+      (cat) => selectedTitlesLower.has(cat.title.toLowerCase())
+    );
+  }
+
   async function saveTextFields() {
     if (!canEdit || !va) return;
     setSaving(true);
     try {
-      const langs = languagesStr.split(",").map((s) => s.trim()).filter(Boolean);
+      const sortedPlans = [...pricingPlans].sort((a, b) => {
+        const aPrice = parseFloat(a.price || "0") || 0;
+        const bPrice = parseFloat(b.price || "0") || 0;
+        return aPrice - bPrice;
+      });
+
+      const categoriesToSave = buildCategoriesForSave();
 
       if (isNew) {
         const res = await fetchWithAuth(`/api/research-projects/${id}/virtual-apps`, {
@@ -244,10 +386,11 @@ export default function VirtualAppEditorPage() {
             appDetails: details,
             seoTitle,
             seoMetaDescription: seoMetaDesc,
-            languages: langs,
+            languages: va.languages || [],
             features: va.features || [],
             integrations: va.integrations || [],
-            categories: va.categories || [],
+            categories: categoriesToSave,
+            pricingPlans: sortedPlans,
           }),
         });
         if (res.ok) {
@@ -269,12 +412,23 @@ export default function VirtualAppEditorPage() {
             appDetails: details,
             seoTitle,
             seoMetaDescription: seoMetaDesc,
-            languages: langs,
+            languages: va.languages || [],
+            categories: categoriesToSave,
+            pricingPlans: sortedPlans,
           }),
         });
         if (res.ok) {
           const updated = await res.json();
           setVa(updated);
+          setPricingPlans(
+            (updated.pricingPlans || []).map((p: any) => ({
+              name: p.name || "",
+              price: p.price ?? null,
+              period: p.period ?? null,
+              trial_text: p.trial_text ?? null,
+              features: p.features || [],
+            }))
+          );
           setIsDirty(false);
         }
       }
@@ -429,30 +583,147 @@ export default function VirtualAppEditorPage() {
     }
   }
 
+  // ── Language handlers ───────────────────────────────────────
+
+  function handleToggleLanguage(lang: string) {
+    if (!va) return;
+    const langs = va.languages || [];
+    if (langs.includes(lang)) {
+      setVa({ ...va, languages: langs.filter((l) => l !== lang) });
+    } else {
+      setVa({ ...va, languages: [...langs, lang] });
+    }
+    setIsDirty(true);
+  }
+
+  function handleAddCustomLanguage(lang: string) {
+    if (!va || !lang.trim()) return;
+    const trimmed = lang.trim();
+    if ((va.languages || []).includes(trimmed)) return;
+    setVa({ ...va, languages: [...(va.languages || []), trimmed] });
+    setIsDirty(true);
+  }
+
+  // ── Category selection handlers ────────────────────────────
+
+  function handleToggleCategorySlug(slug: string) {
+    setSelectedCategorySlugs((prev) => {
+      if (prev.includes(slug)) {
+        return prev.filter((s) => s !== slug);
+      }
+      if (prev.length >= 2) return prev; // max 2
+      return [...prev, slug];
+    });
+    setIsDirty(true);
+  }
+
+  // ── Pricing plan handlers ──────────────────────────────────
+
+  function addPricingPlan() {
+    setPricingPlans((prev) => [
+      ...prev,
+      { name: "", price: null, period: "month", trial_text: null, features: [] },
+    ]);
+    const newIdx = pricingPlans.length;
+    setEditingPlanIndex(newIdx);
+    setIsDirty(true);
+  }
+
+  function updatePricingPlan(index: number, updates: Partial<PricingPlan>) {
+    setPricingPlans((prev) => {
+      const next = [...prev];
+      next[index] = { ...next[index], ...updates };
+      return next;
+    });
+    setIsDirty(true);
+  }
+
+  function removePricingPlan(index: number) {
+    setPricingPlans((prev) => prev.filter((_, i) => i !== index));
+    setEditingPlanIndex(null);
+    setDeletePlanConfirm(null);
+    setIsDirty(true);
+  }
+
+  function addPlanFeature(planIndex: number) {
+    setPricingPlans((prev) => {
+      const next = [...prev];
+      next[planIndex] = { ...next[planIndex], features: [...next[planIndex].features, ""] };
+      return next;
+    });
+    setIsDirty(true);
+  }
+
+  function updatePlanFeature(planIndex: number, featIndex: number, value: string) {
+    setPricingPlans((prev) => {
+      const next = [...prev];
+      const features = [...next[planIndex].features];
+      features[featIndex] = value;
+      next[planIndex] = { ...next[planIndex], features };
+      return next;
+    });
+    setIsDirty(true);
+  }
+
+  function removePlanFeature(planIndex: number, featIndex: number) {
+    setPricingPlans((prev) => {
+      const next = [...prev];
+      next[planIndex] = {
+        ...next[planIndex],
+        features: next[planIndex].features.filter((_, i) => i !== featIndex),
+      };
+      return next;
+    });
+    setIsDirty(true);
+  }
+
   // ── Competitor data aggregation ────────────────────────────
 
-  const competitorCategories = useMemo(() => {
+  const competitorLanguages = useMemo(() => {
     if (!research) return [];
-    return research.competitors.flatMap((c) => c.categories || []);
+    const map = new Map<string, { count: number; names: string[] }>();
+    for (const comp of research.competitors) {
+      for (const lang of comp.languages || []) {
+        if (!map.has(lang)) map.set(lang, { count: 0, names: [] });
+        const entry = map.get(lang)!;
+        if (!entry.names.includes(comp.name)) {
+          entry.count++;
+          entry.names.push(comp.name);
+        }
+      }
+    }
+    return Array.from(map.entries())
+      .map(([lang, { count, names }]) => ({ lang, count, names }))
+      .sort((a, b) => b.count - a.count || a.lang.localeCompare(b.lang));
   }, [research]);
 
-  const competitorFeatures = useMemo(() => {
-    if (!research) return [];
-    const set = new Set<string>();
-    for (const c of research.competitors) {
-      for (const f of c.features || []) set.add(f);
+  // Competitor category counts: map of slug (from URL) → { count, names }
+  const competitorCategoryCounts = useMemo(() => {
+    if (!research) return new Map<string, { count: number; names: string[] }>();
+    const map = new Map<string, { count: number; names: string[] }>();
+    for (const comp of research.competitors) {
+      for (const cat of comp.categories || []) {
+        const m = cat.url?.match(/\/categories\/([^/?#]+)/);
+        const slug = m ? m[1] : cat.title.toLowerCase();
+        if (!map.has(slug)) map.set(slug, { count: 0, names: [] });
+        const entry = map.get(slug)!;
+        if (!entry.names.includes(comp.name)) {
+          entry.count++;
+          entry.names.push(comp.name);
+        }
+      }
     }
-    return Array.from(set).sort();
+    return map;
   }, [research]);
 
-  const competitorIntegrations = useMemo(() => {
-    if (!research) return [];
-    const set = new Set<string>();
-    for (const c of research.competitors) {
-      for (const i of c.integrations || []) set.add(i);
-    }
-    return Array.from(set).sort();
-  }, [research]);
+  // Sorted pricing plans for display (free first, then ascending)
+  const sortedPricingPlans = useMemo(() => {
+    return pricingPlans.map((plan, idx) => ({ plan, originalIdx: idx })).sort((a, b) => {
+      const aPrice = parseFloat(a.plan.price || "0") || 0;
+      const bPrice = parseFloat(b.plan.price || "0") || 0;
+      return aPrice - bPrice;
+    });
+  }, [pricingPlans]);
 
   // ── Intersection observer ──────────────────────────────────
 
@@ -505,6 +776,8 @@ export default function VirtualAppEditorPage() {
     );
   }
 
+  const totalCompetitors = research?.competitors?.length || 0;
+
   return (
     <div className="flex gap-6">
       {/* Sidebar Navigation */}
@@ -545,11 +818,35 @@ export default function VirtualAppEditorPage() {
             );
           })}
 
+          {/* Preview button */}
+          {!isNew ? (
+            <Button
+              variant="outline"
+              size="sm"
+              className="w-full mt-3"
+              onClick={() => router.push(`/${platform}/research/${id}/virtual-apps/${vaId}/preview`)}
+            >
+              <Eye className="h-3.5 w-3.5 mr-1.5" />
+              Preview
+            </Button>
+          ) : (
+            <Button
+              variant="outline"
+              size="sm"
+              className="w-full mt-3 opacity-50 cursor-not-allowed"
+              disabled
+              title="Save first to preview"
+            >
+              <Eye className="h-3.5 w-3.5 mr-1.5" />
+              Preview
+            </Button>
+          )}
+
           {canEdit && (
             <Button
               onClick={saveTextFields}
               disabled={saving}
-              className="w-full mt-4"
+              className="w-full mt-2"
               size="sm"
             >
               {saving ? (
@@ -693,6 +990,57 @@ export default function VirtualAppEditorPage() {
           </CardContent>
         </Card>
 
+        {/* Categories */}
+        <Card id="sec-categories" className="scroll-mt-6">
+          <CardHeader className="pb-3">
+            <CardTitle className="flex items-center gap-2 text-base">
+              <FolderOpen className="h-4 w-4" /> Categories
+              <Badge variant="secondary" className="text-xs">{selectedCategorySlugs.length}/2</Badge>
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {/* Selected categories with breadcrumb */}
+            {selectedCategorySlugs.length > 0 && (
+              <div className="space-y-1 mb-3 pb-3 border-b">
+                {selectedCategorySlugs.map((slug) => (
+                  <div key={slug} className="flex items-center gap-2 py-1 px-2 rounded bg-blue-50 dark:bg-blue-950/30">
+                    <Check className="h-3.5 w-3.5 text-blue-600 shrink-0" />
+                    <span className="text-sm text-blue-700 dark:text-blue-300">
+                      {getBreadcrumb(slug, catSlugMap)}
+                    </span>
+                    {canEdit && (
+                      <button
+                        onClick={() => handleToggleCategorySlug(slug)}
+                        className="ml-auto text-blue-400 hover:text-red-500 shrink-0"
+                      >
+                        <X className="h-3.5 w-3.5" />
+                      </button>
+                    )}
+                  </div>
+                ))}
+                {selectedCategorySlugs.length >= 2 && (
+                  <p className="text-xs text-muted-foreground mt-1">Maximum 2 categories selected.</p>
+                )}
+              </div>
+            )}
+
+            {/* Category tree */}
+            {categoryTree.length === 0 ? (
+              <p className="text-sm text-muted-foreground italic">No categories available.</p>
+            ) : (
+              <CategoryTreePicker
+                tree={categoryTree}
+                selectedSlugs={selectedCategorySlugs}
+                onToggle={handleToggleCategorySlug}
+                disabled={!canEdit}
+                maxSelected={2}
+                competitorCategoryCounts={competitorCategoryCounts}
+                totalCompetitors={totalCompetitors}
+              />
+            )}
+          </CardContent>
+        </Card>
+
         {/* Category Features */}
         <Card id="sec-catfeatures" className="scroll-mt-6">
           <CardHeader className="pb-3">
@@ -713,11 +1061,13 @@ export default function VirtualAppEditorPage() {
           </CardHeader>
           <CardContent>
             <CategoryFeaturePicker
-              competitorCategories={competitorCategories}
-              selectedCategories={va.categories || []}
+              selectedCategorySlugs={selectedCategorySlugs}
+              competitors={research?.competitors || []}
+              selectedFeatures={va.categories || []}
               onAdd={handleAddCategoryFeature}
               onRemove={handleRemoveCategoryFeature}
               disabled={!canEdit}
+              fetchWithAuth={fetchWithAuth}
             />
           </CardContent>
         </Card>
@@ -732,7 +1082,7 @@ export default function VirtualAppEditorPage() {
           </CardHeader>
           <CardContent>
             <FeaturePicker
-              competitorFeatures={competitorFeatures}
+              competitors={research?.competitors || []}
               selectedFeatures={va.features || []}
               onAdd={handleAddFeature}
               onRemove={handleRemoveFeature}
@@ -751,7 +1101,7 @@ export default function VirtualAppEditorPage() {
           </CardHeader>
           <CardContent>
             <IntegrationPicker
-              competitorIntegrations={competitorIntegrations}
+              competitors={research?.competitors || []}
               selectedIntegrations={va.integrations || []}
               onAdd={handleAddIntegration}
               onRemove={handleRemoveIntegration}
@@ -804,13 +1154,179 @@ export default function VirtualAppEditorPage() {
           <CardHeader className="pb-3">
             <CardTitle className="flex items-center gap-2 text-base">
               <DollarSign className="h-4 w-4" /> Pricing Plans
-              <Badge variant="secondary" className="text-xs">{(va.pricingPlans || []).length}</Badge>
+              <Badge variant="secondary" className="text-xs">{pricingPlans.length}</Badge>
             </CardTitle>
           </CardHeader>
-          <CardContent>
-            <p className="text-sm text-muted-foreground">
-              Pricing plan editor will be available in a future update.
-            </p>
+          <CardContent className="space-y-4">
+            {/* Competitor Pricing Reference */}
+            {research && research.competitors.some((c) => (c.pricingPlans || []).length > 0) && (
+              <CompetitorPricingReference competitors={research.competitors} />
+            )}
+
+            {/* Plan cards row */}
+            {sortedPricingPlans.length > 0 ? (
+              <div className="flex gap-3 overflow-x-auto pb-2">
+                {sortedPricingPlans.map(({ plan, originalIdx }) => {
+                  const isEditing = editingPlanIndex === originalIdx;
+                  return (
+                    <div
+                      key={originalIdx}
+                      className="border rounded-lg p-4 min-w-[240px] max-w-[280px] shrink-0 space-y-3 relative"
+                    >
+                      {isEditing ? (
+                        /* ── Edit mode ── */
+                        <>
+                          {canEdit && (
+                            <button
+                              onClick={() => setDeletePlanConfirm(originalIdx)}
+                              className="absolute top-2 right-2 text-muted-foreground hover:text-destructive"
+                              title="Delete plan"
+                            >
+                              <X className="h-4 w-4" />
+                            </button>
+                          )}
+                          <Input
+                            value={plan.name}
+                            onChange={(e) => updatePricingPlan(originalIdx, { name: e.target.value })}
+                            disabled={!canEdit}
+                            placeholder="Plan name"
+                            className="h-8 text-sm font-medium"
+                          />
+                          <div className="flex gap-2">
+                            <Input
+                              value={plan.price || ""}
+                              onChange={(e) => updatePricingPlan(originalIdx, { price: e.target.value || null })}
+                              disabled={!canEdit}
+                              placeholder="0 = Free"
+                              className="h-8 text-sm flex-1"
+                              type="number"
+                              min="0"
+                              step="0.01"
+                            />
+                            <select
+                              value={plan.period || "month"}
+                              onChange={(e) => updatePricingPlan(originalIdx, { period: e.target.value })}
+                              disabled={!canEdit}
+                              className="h-8 rounded-md border border-input bg-background px-2 text-sm"
+                            >
+                              <option value="month">/ month</option>
+                              <option value="year">/ year</option>
+                            </select>
+                          </div>
+                          <Input
+                            value={plan.trial_text || ""}
+                            onChange={(e) => updatePricingPlan(originalIdx, { trial_text: e.target.value || null })}
+                            disabled={!canEdit}
+                            placeholder="Trial text (optional)"
+                            className="h-8 text-sm"
+                          />
+                          <div>
+                            <p className="text-xs text-muted-foreground font-medium mb-1">Features</p>
+                            <div className="space-y-1">
+                              {plan.features.map((feat, fi) => (
+                                <div key={fi} className="flex gap-1">
+                                  <Input
+                                    value={feat}
+                                    onChange={(e) => updatePlanFeature(originalIdx, fi, e.target.value)}
+                                    disabled={!canEdit}
+                                    placeholder={`Feature ${fi + 1}`}
+                                    className="h-7 text-xs flex-1"
+                                  />
+                                  {canEdit && (
+                                    <button
+                                      onClick={() => removePlanFeature(originalIdx, fi)}
+                                      className="text-muted-foreground hover:text-destructive shrink-0"
+                                    >
+                                      <X className="h-3.5 w-3.5" />
+                                    </button>
+                                  )}
+                                </div>
+                              ))}
+                            </div>
+                            {canEdit && (
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                onClick={() => addPlanFeature(originalIdx)}
+                                className="text-xs mt-1 h-6 px-2"
+                              >
+                                <Plus className="h-3 w-3 mr-1" /> Add feature
+                              </Button>
+                            )}
+                          </div>
+                          <Button
+                            size="sm"
+                            variant="secondary"
+                            className="w-full mt-1"
+                            onClick={() => setEditingPlanIndex(null)}
+                          >
+                            Done
+                          </Button>
+                        </>
+                      ) : (
+                        /* ── View mode ── */
+                        <>
+                          {canEdit && (
+                            <div className="absolute top-2 right-2 flex gap-1">
+                              <button
+                                onClick={() => setEditingPlanIndex(originalIdx)}
+                                className="text-muted-foreground hover:text-foreground"
+                                title="Edit plan"
+                              >
+                                <Pencil className="h-3.5 w-3.5" />
+                              </button>
+                              <button
+                                onClick={() => setDeletePlanConfirm(originalIdx)}
+                                className="text-muted-foreground hover:text-destructive"
+                                title="Delete plan"
+                              >
+                                <X className="h-3.5 w-3.5" />
+                              </button>
+                            </div>
+                          )}
+                          <p className="text-sm font-medium pr-12">{plan.name || "Unnamed Plan"}</p>
+                          <p className="text-xl font-bold">
+                            {plan.price && parseFloat(plan.price) > 0 ? `$${plan.price}` : "Free"}
+                            {plan.price && parseFloat(plan.price) > 0 && plan.period && (
+                              <span className="text-xs font-normal text-muted-foreground"> / {plan.period}</span>
+                            )}
+                          </p>
+                          {plan.trial_text && (
+                            <p className="text-xs text-emerald-600">{plan.trial_text}</p>
+                          )}
+                          {plan.features.length > 0 && (
+                            <div className="border-t pt-2 space-y-1">
+                              {plan.features.filter(Boolean).map((feat, fi) => (
+                                <p key={fi} className="text-xs text-muted-foreground">{feat}</p>
+                              ))}
+                            </div>
+                          )}
+                        </>
+                      )}
+                    </div>
+                  );
+                })}
+                {/* Add plan button */}
+                {canEdit && (
+                  <button
+                    onClick={addPricingPlan}
+                    className="border-2 border-dashed rounded-lg min-w-[120px] flex flex-col items-center justify-center gap-2 text-muted-foreground hover:text-foreground hover:border-foreground/30 transition-colors"
+                  >
+                    <Plus className="h-5 w-5" />
+                    <span className="text-xs">Add Plan</span>
+                  </button>
+                )}
+              </div>
+            ) : (
+              <div className="text-center py-6">
+                <p className="text-sm text-muted-foreground mb-3">No pricing plans yet.</p>
+                {canEdit && (
+                  <Button size="sm" variant="outline" onClick={addPricingPlan}>
+                    <Plus className="h-3.5 w-3.5 mr-1.5" /> Add Pricing Plan
+                  </Button>
+                )}
+              </div>
+            )}
           </CardContent>
         </Card>
 
@@ -819,22 +1335,18 @@ export default function VirtualAppEditorPage() {
           <CardHeader className="pb-3">
             <CardTitle className="flex items-center gap-2 text-base">
               <Globe className="h-4 w-4" /> Languages
+              <Badge variant="secondary" className="text-xs">{(va.languages || []).length}</Badge>
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div>
-              <label className="text-sm font-medium mb-1 block">Languages (comma-separated)</label>
-              <Input
-                value={languagesStr}
-                onChange={(e) => dirty(setLanguagesStr)(e.target.value)}
-                disabled={!canEdit}
-                placeholder="English, Spanish, French..."
-                className="max-w-lg"
-              />
-              <p className="text-xs text-muted-foreground mt-1">
-                {languagesStr.split(",").map((s) => s.trim()).filter(Boolean).length} languages
-              </p>
-            </div>
+            <LanguagePicker
+              competitorLanguages={competitorLanguages}
+              totalCompetitors={totalCompetitors}
+              selectedLanguages={va.languages || []}
+              onToggle={handleToggleLanguage}
+              onAddCustom={handleAddCustomLanguage}
+              disabled={!canEdit}
+            />
           </CardContent>
         </Card>
 
@@ -887,6 +1399,361 @@ export default function VirtualAppEditorPage() {
         onCancel={() => setShowLeaveModal(false)}
         destructive
       />
+
+      <ConfirmModal
+        open={deletePlanConfirm !== null}
+        title="Delete Pricing Plan"
+        description={`Are you sure you want to delete the "${deletePlanConfirm !== null ? pricingPlans[deletePlanConfirm]?.name || "Unnamed Plan" : ""}" plan? This cannot be undone.`}
+        confirmLabel="Delete"
+        cancelLabel="Cancel"
+        onConfirm={() => {
+          if (deletePlanConfirm !== null) removePricingPlan(deletePlanConfirm);
+        }}
+        onCancel={() => setDeletePlanConfirm(null)}
+        destructive
+      />
+    </div>
+  );
+}
+
+// ─── Category Tree Picker ────────────────────────────────────
+
+function CategoryTreePicker({
+  tree,
+  selectedSlugs,
+  onToggle,
+  disabled,
+  maxSelected,
+  competitorCategoryCounts,
+  totalCompetitors,
+}: {
+  tree: CategoryTreeNode[];
+  selectedSlugs: string[];
+  onToggle: (slug: string) => void;
+  disabled?: boolean;
+  maxSelected: number;
+  competitorCategoryCounts: Map<string, { count: number; names: string[] }>;
+  totalCompetitors: number;
+}) {
+  const [expanded, setExpanded] = useState<Set<string>>(new Set());
+  const [search, setSearch] = useState("");
+
+  const selectedSet = new Set(selectedSlugs);
+
+  // Filter tree by search query
+  const filteredTree = useMemo(() => {
+    if (!search.trim()) return tree;
+    const q = search.toLowerCase();
+
+    function filterNodes(nodes: CategoryTreeNode[]): CategoryTreeNode[] {
+      const result: CategoryTreeNode[] = [];
+      for (const node of nodes) {
+        const matchesSelf = node.title.toLowerCase().includes(q);
+        const filteredChildren = filterNodes(node.children);
+        if (matchesSelf || filteredChildren.length > 0) {
+          result.push({
+            ...node,
+            children: matchesSelf ? node.children : filteredChildren,
+          });
+        }
+      }
+      return result;
+    }
+    return filterNodes(tree);
+  }, [tree, search]);
+
+  // Auto-expand when searching
+  useEffect(() => {
+    if (search.trim()) {
+      const slugsToExpand = new Set<string>();
+      function collectParents(nodes: CategoryTreeNode[]) {
+        for (const n of nodes) {
+          if (n.children.length > 0) {
+            slugsToExpand.add(n.slug);
+            collectParents(n.children);
+          }
+        }
+      }
+      collectParents(filteredTree);
+      setExpanded(slugsToExpand);
+    }
+  }, [filteredTree, search]);
+
+  function toggle(slug: string) {
+    setExpanded((prev) => {
+      const next = new Set(prev);
+      if (next.has(slug)) next.delete(slug);
+      else next.add(slug);
+      return next;
+    });
+  }
+
+  function renderNode(node: CategoryTreeNode, depth: number) {
+    const hasChildren = node.children.length > 0;
+    const isOpen = expanded.has(node.slug);
+    const isLeaf = !hasChildren;
+    const isSelected = selectedSet.has(node.slug);
+    const isMaxReached = selectedSlugs.length >= maxSelected && !isSelected;
+
+    return (
+      <div key={node.slug}>
+        <div
+          className="flex items-center gap-1 py-1 px-2 rounded-md hover:bg-muted/50 group"
+          style={{ paddingLeft: `${depth * 20 + 8}px` }}
+        >
+          {hasChildren ? (
+            <button
+              onClick={() => toggle(node.slug)}
+              className="flex items-center justify-center w-5 h-5 shrink-0 text-muted-foreground hover:text-foreground"
+            >
+              {isOpen ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronRight className="h-3.5 w-3.5" />}
+            </button>
+          ) : (
+            <span className="w-5 shrink-0" />
+          )}
+
+          {hasChildren ? (
+            isOpen ? <FolderOpen className="h-3.5 w-3.5 text-muted-foreground shrink-0" /> : <Folder className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+          ) : null}
+
+          {isLeaf ? (
+            <>
+              <button
+                onClick={() => {
+                  if (disabled || (isMaxReached && !isSelected)) return;
+                  onToggle(node.slug);
+                }}
+                disabled={disabled || (isMaxReached && !isSelected)}
+                className={cn(
+                  "flex items-center gap-2 text-sm ml-0.5 py-0.5 px-1 rounded transition-colors flex-1 min-w-0 text-left",
+                  isSelected ? "text-blue-700 dark:text-blue-300" : "",
+                  isMaxReached && !isSelected ? "opacity-40 cursor-not-allowed" : ""
+                )}
+              >
+                <div className={cn(
+                  "h-4 w-4 rounded border flex items-center justify-center shrink-0",
+                  isSelected ? "bg-blue-600 border-blue-600" : "border-muted-foreground/30"
+                )}>
+                  {isSelected && <Check className="h-3 w-3 text-white" />}
+                </div>
+                <span className="truncate">{node.title}</span>
+              </button>
+              {(() => {
+                const catData = competitorCategoryCounts.get(node.slug);
+                if (!catData || catData.count === 0) return null;
+                return (
+                  <CompetitorCountBadge
+                    count={catData.count}
+                    total={totalCompetitors}
+                    names={catData.names}
+                  />
+                );
+              })()}
+            </>
+          ) : (
+            <span className="text-sm ml-1 text-muted-foreground truncate">{node.title}</span>
+          )}
+
+          {hasChildren && (
+            <span className="text-[10px] text-muted-foreground shrink-0">({node.children.length})</span>
+          )}
+
+          {!node.isListingPage && (
+            <Badge variant="secondary" className="text-[9px] px-1 py-0 shrink-0">Hub</Badge>
+          )}
+        </div>
+
+        {isOpen && hasChildren && node.children.map((child) => renderNode(child, depth + 1))}
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-2">
+      <Input
+        value={search}
+        onChange={(e) => setSearch(e.target.value)}
+        placeholder="Search categories..."
+        className="h-8 text-sm"
+      />
+      <div className="max-h-[400px] overflow-y-auto space-y-0">
+        {filteredTree.map((node) => renderNode(node, 0))}
+        {filteredTree.length === 0 && (
+          <p className="text-xs text-muted-foreground italic px-2 py-4 text-center">
+            {search ? `No categories matching "${search}"` : "No categories available"}
+          </p>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ─── Language Picker (inline) ────────────────────────────────
+
+function LanguagePicker({
+  competitorLanguages,
+  totalCompetitors,
+  selectedLanguages,
+  onToggle,
+  onAddCustom,
+  disabled,
+}: {
+  competitorLanguages: { lang: string; count: number; names: string[] }[];
+  totalCompetitors: number;
+  selectedLanguages: string[];
+  onToggle: (lang: string) => void;
+  onAddCustom: (lang: string) => void;
+  disabled?: boolean;
+}) {
+  const [customLang, setCustomLang] = useState("");
+  const [search, setSearch] = useState("");
+
+  const selectedSet = new Set(selectedLanguages);
+  const competitorLangSet = new Set(competitorLanguages.map((l) => l.lang));
+  const customLanguages = selectedLanguages.filter((l) => !competitorLangSet.has(l));
+
+  const filtered = (() => {
+    let list = competitorLanguages;
+    if (search.trim()) {
+      const q = search.toLowerCase();
+      list = list.filter((l) => l.lang.toLowerCase().includes(q));
+    }
+    // Selected items first
+    return [...list].sort((a, b) => {
+      const aSelected = selectedSet.has(a.lang) ? 0 : 1;
+      const bSelected = selectedSet.has(b.lang) ? 0 : 1;
+      if (aSelected !== bSelected) return aSelected - bSelected;
+      return b.count - a.count || a.lang.localeCompare(b.lang);
+    });
+  })();
+
+  function handleAddCustom() {
+    const l = customLang.trim();
+    if (!l || selectedSet.has(l)) return;
+    onAddCustom(l);
+    setCustomLang("");
+  }
+
+  return (
+    <div className="space-y-3">
+      <Input
+        value={search}
+        onChange={(e) => setSearch(e.target.value)}
+        placeholder="Filter languages..."
+        className="h-8 text-sm"
+      />
+
+      <div className="space-y-0.5 max-h-[300px] overflow-y-auto">
+        <p className="text-xs text-muted-foreground font-medium px-1 mb-1">
+          From competitors ({totalCompetitors}):
+        </p>
+        {filtered.map(({ lang, count, names }) => {
+          const isSelected = selectedSet.has(lang);
+          return (
+            <button
+              key={lang}
+              onClick={() => { if (!disabled) onToggle(lang); }}
+              disabled={disabled}
+              className={cn(
+                "flex items-center gap-2 w-full text-left py-1 px-2 rounded text-sm transition-colors",
+                isSelected ? "bg-blue-50 dark:bg-blue-950/30 text-blue-700 dark:text-blue-300" : "hover:bg-muted/50"
+              )}
+            >
+              <div className={cn(
+                "h-4 w-4 rounded border flex items-center justify-center shrink-0",
+                isSelected ? "bg-blue-600 border-blue-600" : "border-muted-foreground/30"
+              )}>
+                {isSelected && <Check className="h-3 w-3 text-white" />}
+              </div>
+              <span className="truncate">{lang}</span>
+              <CompetitorCountBadge count={count} total={totalCompetitors} names={names} className="ml-auto" />
+            </button>
+          );
+        })}
+        {filtered.length === 0 && (
+          <p className="text-xs text-muted-foreground italic px-2 py-1">No matching languages</p>
+        )}
+      </div>
+
+      {customLanguages.length > 0 && (
+        <div>
+          <p className="text-xs text-muted-foreground font-medium px-1 mb-1">Custom:</p>
+          <div className="flex flex-wrap gap-1.5">
+            {customLanguages.map((l) => (
+              <span
+                key={l}
+                className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 text-xs"
+              >
+                {l}
+                <button onClick={() => onToggle(l)} disabled={disabled} className="hover:text-red-600">
+                  <X className="h-3 w-3" />
+                </button>
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
+
+      <div className="flex gap-2">
+        <Input
+          value={customLang}
+          onChange={(e) => setCustomLang(e.target.value)}
+          placeholder="Add custom language..."
+          className="h-8 text-sm flex-1"
+          onKeyDown={(e) => e.key === "Enter" && handleAddCustom()}
+        />
+        <Button size="sm" variant="secondary" onClick={handleAddCustom} disabled={disabled || !customLang.trim()}>
+          <Plus className="h-3.5 w-3.5" />
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+// ─── Competitor Pricing Reference ────────────────────────────
+
+function CompetitorPricingReference({
+  competitors,
+}: {
+  competitors: { slug: string; name: string; pricingPlans: any[] }[];
+}) {
+  const [expanded, setExpanded] = useState(false);
+
+  const compsWithPlans = competitors.filter((c) => (c.pricingPlans || []).length > 0);
+  if (compsWithPlans.length === 0) return null;
+
+  return (
+    <div className="border rounded-lg">
+      <button
+        onClick={() => setExpanded(!expanded)}
+        className="flex items-center gap-2 w-full text-left px-3 py-2 text-sm font-medium hover:bg-muted/50 rounded-lg transition-colors"
+      >
+        {expanded ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronRight className="h-3.5 w-3.5" />}
+        Competitor Pricing
+        <span className="text-xs text-muted-foreground">({compsWithPlans.length} competitors)</span>
+      </button>
+      {expanded && (
+        <div className="px-3 pb-3 space-y-3">
+          {compsWithPlans.map((comp) => (
+            <div key={comp.slug}>
+              <p className="text-xs font-medium mb-1">{comp.name}</p>
+              <div className="flex gap-2 flex-wrap">
+                {(comp.pricingPlans || []).map((plan: any, i: number) => (
+                  <div key={i} className="text-xs bg-muted/50 rounded px-2 py-1">
+                    <span className="font-medium">{plan.name}</span>
+                    <span className="text-muted-foreground ml-1">
+                      {plan.price ? `$${plan.price}/${plan.period || "mo"}` : "Free"}
+                    </span>
+                    {plan.features?.length > 0 && (
+                      <span className="text-muted-foreground ml-1">({plan.features.length} features)</span>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

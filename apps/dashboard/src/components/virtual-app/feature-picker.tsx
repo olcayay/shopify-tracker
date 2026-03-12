@@ -5,11 +5,10 @@ import { Check, Plus, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
+import { CompetitorCountBadge } from "./competitor-count-badge";
 
 interface Props {
-  /** All features across competitors */
-  competitorFeatures: string[];
-  /** Currently selected features */
+  competitors: { name: string; features: string[] }[];
   selectedFeatures: string[];
   onAdd: (feature: string) => void;
   onRemove: (feature: string) => void;
@@ -17,25 +16,57 @@ interface Props {
 }
 
 export function FeaturePicker({
-  competitorFeatures, selectedFeatures, onAdd, onRemove, disabled,
+  competitors, selectedFeatures, onAdd, onRemove, disabled,
 }: Props) {
   const [customFeature, setCustomFeature] = useState("");
   const [search, setSearch] = useState("");
 
   const selectedSet = useMemo(() => new Set(selectedFeatures), [selectedFeatures]);
+  const totalCompetitors = competitors.length;
 
-  // Custom features = selected features not in competitor pool
-  const competitorSet = useMemo(() => new Set(competitorFeatures), [competitorFeatures]);
-  const customFeatures = useMemo(
-    () => selectedFeatures.filter((f) => !competitorSet.has(f)),
-    [selectedFeatures, competitorSet]
+  // Build feature list with counts and competitor names, sorted by count desc
+  const featuresWithCounts = useMemo(() => {
+    const map = new Map<string, { count: number; names: string[] }>();
+    for (const comp of competitors) {
+      for (const f of comp.features || []) {
+        if (!map.has(f)) map.set(f, { count: 0, names: [] });
+        const entry = map.get(f)!;
+        if (!entry.names.includes(comp.name)) {
+          entry.count++;
+          entry.names.push(comp.name);
+        }
+      }
+    }
+    return Array.from(map.entries())
+      .map(([feature, { count, names }]) => ({ feature, count, names }))
+      .sort((a, b) => b.count - a.count || a.feature.localeCompare(b.feature));
+  }, [competitors]);
+
+  const competitorFeatureSet = useMemo(
+    () => new Set(featuresWithCounts.map((f) => f.feature)),
+    [featuresWithCounts]
   );
 
-  const filteredCompetitor = useMemo(() => {
-    if (!search.trim()) return competitorFeatures;
-    const q = search.toLowerCase();
-    return competitorFeatures.filter((f) => f.toLowerCase().includes(q));
-  }, [competitorFeatures, search]);
+  // Custom features = selected features not in competitor pool
+  const customFeatures = useMemo(
+    () => selectedFeatures.filter((f) => !competitorFeatureSet.has(f)),
+    [selectedFeatures, competitorFeatureSet]
+  );
+
+  const filtered = useMemo(() => {
+    let list = featuresWithCounts;
+    if (search.trim()) {
+      const q = search.toLowerCase();
+      list = list.filter((f) => f.feature.toLowerCase().includes(q));
+    }
+    // Selected items first
+    return [...list].sort((a, b) => {
+      const aSelected = selectedSet.has(a.feature) ? 0 : 1;
+      const bSelected = selectedSet.has(b.feature) ? 0 : 1;
+      if (aSelected !== bSelected) return aSelected - bSelected;
+      return b.count - a.count || a.feature.localeCompare(b.feature);
+    });
+  }, [featuresWithCounts, search, selectedSet]);
 
   function handleAddCustom() {
     const f = customFeature.trim();
@@ -46,7 +77,6 @@ export function FeaturePicker({
 
   return (
     <div className="space-y-3">
-      {/* Search */}
       <Input
         value={search}
         onChange={(e) => setSearch(e.target.value)}
@@ -54,10 +84,11 @@ export function FeaturePicker({
         className="h-8 text-sm"
       />
 
-      {/* Competitor features */}
       <div className="space-y-0.5 max-h-[300px] overflow-y-auto">
-        <p className="text-xs text-muted-foreground font-medium px-1 mb-1">From competitors:</p>
-        {filteredCompetitor.map((feat) => {
+        <p className="text-xs text-muted-foreground font-medium px-1 mb-1">
+          From competitors ({totalCompetitors}):
+        </p>
+        {filtered.map(({ feature: feat, count, names }) => {
           const isSelected = selectedSet.has(feat);
           return (
             <button
@@ -80,15 +111,15 @@ export function FeaturePicker({
                 {isSelected && <Check className="h-3 w-3 text-white" />}
               </div>
               <span className="truncate">{feat}</span>
+              <CompetitorCountBadge count={count} total={totalCompetitors} names={names} className="ml-auto" />
             </button>
           );
         })}
-        {filteredCompetitor.length === 0 && (
+        {filtered.length === 0 && (
           <p className="text-xs text-muted-foreground italic px-2 py-1">No matching features</p>
         )}
       </div>
 
-      {/* Custom features */}
       {customFeatures.length > 0 && (
         <div>
           <p className="text-xs text-muted-foreground font-medium px-1 mb-1">Custom:</p>
@@ -108,7 +139,6 @@ export function FeaturePicker({
         </div>
       )}
 
-      {/* Add custom */}
       <div className="flex gap-2">
         <Input
           value={customFeature}

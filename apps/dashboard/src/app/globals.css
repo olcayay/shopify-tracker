@@ -126,3 +126,23 @@
     @apply bg-background text-foreground;
   }
 }
+
+/* AI Generate Button */
+@keyframes ai-btn-gradient {
+  0%, 100% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+}
+@keyframes ai-btn-shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+.ai-btn-bg {
+  background: linear-gradient(135deg, #8B5CF6, #6366F1, #a855f7, #8B5CF6);
+  background-size: 300% 300%;
+  animation: ai-btn-gradient 4s ease infinite;
+}
+.ai-btn-shimmer {
+  background: linear-gradient(105deg, transparent 40%, rgba(255,255,255,0.3) 50%, transparent 60%);
+  background-size: 200% 100%;
+  animation: ai-btn-shimmer 2.5s ease-in-out infinite;
+}
