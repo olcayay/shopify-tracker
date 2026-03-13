@@ -391,13 +391,15 @@ export const researchRoutes: FastifyPluginAsync = async (app) => {
         return reply.code(404).send({ error: "Project not found" });
       }
 
+      const platform = getPlatformFromQuery(request.query as Record<string, unknown>);
+
       // Ensure keyword exists globally (insert or reactivate)
       const slug = keywordToSlug(keyword.trim());
       const [kw] = await db
         .insert(trackedKeywords)
-        .values({ keyword: keyword.trim().toLowerCase(), slug })
+        .values({ keyword: keyword.trim().toLowerCase(), slug, platform })
         .onConflictDoUpdate({
-          target: trackedKeywords.keyword,
+          target: [trackedKeywords.platform, trackedKeywords.keyword],
           set: { isActive: true, updatedAt: new Date() },
         })
         .returning();
@@ -433,6 +435,7 @@ export const researchRoutes: FastifyPluginAsync = async (app) => {
           await queue.add("scrape:keyword_search", {
             type: "keyword_search",
             keyword: kw.keyword,
+            platform,
             triggeredBy: "api:research",
           });
           scraperEnqueued = true;

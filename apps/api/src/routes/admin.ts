@@ -151,7 +151,7 @@ export const adminRoutes: FastifyPluginAsync = async (app) => {
   // POST /api/admin/scraper/trigger — manually trigger a scraper
   // Body: { type: "category" | "app_details" | "keyword_search" | "reviews" }
   app.post("/scraper/trigger", async (request, reply) => {
-    const { type } = request.body as { type?: string };
+    const { type, platform: platformParam } = request.body as { type?: string; platform?: string };
     const validTypes = [
       "category",
       "app_details",
@@ -166,10 +166,12 @@ export const adminRoutes: FastifyPluginAsync = async (app) => {
 
     try {
       const queue = getScraperQueue();
-      const job = await queue.add(`scrape:${type}`, {
+      const jobData: Record<string, any> = {
         type,
         triggeredBy: "api",
-      });
+      };
+      if (platformParam) jobData.platform = platformParam;
+      const job = await queue.add(`scrape:${type}`, jobData);
 
       app.log.info(`Scraper triggered: ${type}, jobId=${job.id}`);
 
