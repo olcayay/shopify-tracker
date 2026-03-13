@@ -217,7 +217,7 @@ export default function AiLogsPage() {
   const formatCost = (cost: string | null) => {
     if (!cost) return "$0.00";
     const n = parseFloat(cost);
-    return n < 0.01 ? `$${n.toFixed(4)}` : `$${n.toFixed(2)}`;
+    return `$${n.toFixed(4)}`;
   };
 
   const formatDuration = (ms: number) => {
