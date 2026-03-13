@@ -77,14 +77,14 @@ export default function AppsListPage() {
     if (res.ok) setAccountsList(await res.json());
   }
 
-  async function triggerScrape(slug: string) {
+  async function triggerScrape(slug: string, platform?: string) {
     const status = scrapeStatus[slug];
     if (status === "loading" || status === "done") return;
     setScrapeStatus((s) => ({ ...s, [slug]: "loading" }));
     try {
       await fetchWithAuth("/api/system-admin/scraper/trigger", {
         method: "POST",
-        body: JSON.stringify({ type: "app_details", slug }),
+        body: JSON.stringify({ type: "app_details", slug, platform }),
       });
       setScrapeStatus((s) => ({ ...s, [slug]: "done" }));
       setTimeout(() => setScrapeStatus((s) => ({ ...s, [slug]: "idle" })), 3000);
@@ -366,7 +366,7 @@ export default function AppsListPage() {
                         variant="ghost"
                         size="sm"
                         className="h-7 w-7 p-0 text-amber-600 hover:text-amber-700 hover:bg-amber-50"
-                        onClick={() => triggerScrape(app.slug)}
+                        onClick={() => triggerScrape(app.slug, app.platform)}
                         disabled={scrapeStatus[app.slug] === "loading"}
                         title="Scrape app"
                       >

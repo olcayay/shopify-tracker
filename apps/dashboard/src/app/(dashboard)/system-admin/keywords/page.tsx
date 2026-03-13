@@ -92,14 +92,14 @@ export default function KeywordsListPage() {
     }
   }
 
-  async function triggerScrape(keyword: string) {
+  async function triggerScrape(keyword: string, platform?: string) {
     const status = scrapeStatus[keyword];
     if (status === "loading" || status === "done") return;
     setScrapeStatus((s) => ({ ...s, [keyword]: "loading" }));
     try {
       await fetchWithAuth("/api/system-admin/scraper/trigger", {
         method: "POST",
-        body: JSON.stringify({ type: "keyword_search", keyword }),
+        body: JSON.stringify({ type: "keyword_search", keyword, platform }),
       });
       setScrapeStatus((s) => ({ ...s, [keyword]: "done" }));
       setTimeout(() => setScrapeStatus((s) => ({ ...s, [keyword]: "idle" })), 3000);
@@ -333,7 +333,7 @@ export default function KeywordsListPage() {
                           variant="ghost"
                           size="sm"
                           className="h-7 w-7 p-0 text-amber-600 hover:text-amber-700 hover:bg-amber-50"
-                          onClick={() => triggerScrape(kw.keyword)}
+                          onClick={() => triggerScrape(kw.keyword, kw.platform)}
                           disabled={scrapeStatus[kw.keyword] === "loading"}
                           title="Scrape keyword"
                         >
