@@ -89,46 +89,35 @@ export class CanvaModule implements PlatformModule {
     const detailUrl = `https://www.canva.com/apps/${appId}/${urlSlug}`;
     log.info("fetching app detail page", { slug, detailUrl });
 
-    // Strategy: use in-page fetch() to get the detail page HTML.
-    // The browser already has valid Cloudflare cookies from loading /apps,
-    // so fetch() from within the page context bypasses Cloudflare challenges
-    // that would block page.goto() for a full page navigation.
-    let html = "";
-    let hasDetailJson = false;
+    // Navigate to the detail page directly.
+    // Cloudflare may show a "Just a moment..." challenge page first,
+    // which auto-resolves in ~3-5 seconds via JS — we poll the title
+    // to detect when the real page has loaded.
+    await page.goto(detailUrl, { waitUntil: "domcontentloaded", timeout: 30_000 });
 
-    try {
-      html = await page.evaluate(async (url: string) => {
-        const res = await fetch(url, { credentials: "include" });
-        return res.text();
-      }, detailUrl);
-
-      hasDetailJson = html.includes(`"A":"${appId}"`) && !html.includes(`"A":"${appId}","B":"SDK_APP"`);
-      log.info("app detail via in-page fetch", { slug, htmlLength: html.length, hasDetailJson });
-    } catch (e) {
-      log.warn("in-page fetch failed", { slug, error: String(e) });
-    }
-
-    // Fallback: direct navigation if in-page fetch didn't work
-    if (!hasDetailJson) {
-      log.info("falling back to direct navigation", { slug, detailUrl });
-      await page.goto(detailUrl, { waitUntil: "domcontentloaded", timeout: 30_000 });
-      await page.waitForTimeout(5000);
-
-      html = await page.content();
-      hasDetailJson = html.includes(`"A":"${appId}"`) && !html.includes(`"A":"${appId}","B":"SDK_APP"`);
-      log.info("app detail via direct nav", { slug, htmlLength: html.length, hasDetailJson });
-
-      // Navigate back to /apps so subsequent in-page fetches work
+    // Wait for Cloudflare challenge to auto-resolve (if present)
+    const title = await page.title();
+    if (title === "Just a moment...") {
+      log.info("Cloudflare challenge detected, waiting for auto-resolve", { slug });
       try {
-        await page.goBack({ waitUntil: "domcontentloaded", timeout: 15_000 });
+        await page.waitForFunction(
+          () => document.title !== "Just a moment...",
+          { timeout: 15_000 },
+        );
+        // Extra settle time for SPA hydration after Cloudflare resolves
+        await page.waitForTimeout(3000);
+        log.info("Cloudflare challenge resolved", { slug, newTitle: await page.title() });
       } catch {
-        await page.goto("https://www.canva.com/apps", {
-          waitUntil: "domcontentloaded",
-          timeout: 30_000,
-        });
+        log.warn("Cloudflare challenge did not resolve in time", { slug });
       }
-      await page.waitForTimeout(2000);
+    } else {
+      // No challenge — just wait for SPA hydration
+      await page.waitForTimeout(3000);
     }
+
+    const html = await page.content();
+    const hasDetailJson = html.includes(`"A":"${appId}"`) && !html.includes(`"A":"${appId}","B":"SDK_APP"`);
+    log.info("app detail page fetched", { slug, htmlLength: html.length, hasDetailJson });
 
     return html;
   }
@@ -588,6 +577,23 @@ export class CanvaModule implements PlatformModule {
       waitUntil: "load",
       timeout: 30_000,
     });
+
+    // Wait for Cloudflare challenge to auto-resolve if present
+    const initTitle = await this.browserPage.title();
+    if (initTitle === "Just a moment...") {
+      log.info("Cloudflare challenge on /apps, waiting for auto-resolve");
+      try {
+        await this.browserPage.waitForFunction(
+          () => document.title !== "Just a moment...",
+          { timeout: 15_000 },
+        );
+        log.info("Cloudflare challenge resolved on /apps", { newTitle: await this.browserPage.title() });
+        // Wait for SPA hydration after challenge resolves
+        await this.browserPage.waitForTimeout(3000);
+      } catch {
+        log.warn("Cloudflare challenge on /apps did not resolve in time");
+      }
+    }
 
     // Wait for search input to appear (SPA hydration)
     try {
