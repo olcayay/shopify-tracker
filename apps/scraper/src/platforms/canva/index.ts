@@ -92,35 +92,34 @@ export class CanvaModule implements PlatformModule {
     await page.goto(detailUrl, { waitUntil: "load", timeout: 30_000 });
 
     const title = await page.title();
-    log.info("detail page loaded", { slug, title, url: page.url() });
+    const isBulkPage = title === "Apps Marketplace | Canva";
+    log.info("detail page loaded", { slug, title, isBulkPage });
 
-    // Poll for detail JSON to appear — handles Cloudflare challenge auto-resolve
-    // and SPA hydration regardless of page title
-    const MAX_POLL_MS = 15_000;
-    const POLL_INTERVAL_MS = 2_000;
-    const start = Date.now();
-    let html = await page.content();
-    let hasDetailJson = html.includes(`"A":"${appId}"`);
-
-    if (!hasDetailJson) {
-      const isCloudflare = html.includes("challenges.cloudflare.com") || html.includes("cf-browser-verification") || html.includes("_cf_chl");
-      log.info("detail JSON not found initially, polling", { slug, isCloudflare, htmlLength: html.length, title });
-
-      while (!hasDetailJson && Date.now() - start < MAX_POLL_MS) {
-        await page.waitForTimeout(POLL_INTERVAL_MS);
-        const newTitle = await page.title();
-        html = await page.content();
-        hasDetailJson = html.includes(`"A":"${appId}"`);
-        if (hasDetailJson) {
-          log.info("detail JSON appeared after polling", { slug, ms: Date.now() - start, newTitle });
-        }
+    if (isBulkPage) {
+      // Server returned the bulk /apps page instead of the SSR detail page.
+      // Wait for SPA to hydrate, route to the detail view, and render data.
+      log.info("waiting for SPA to render detail view", { slug });
+      try {
+        // Wait until the title changes to "AppName - Canva Apps" (detail page title)
+        await page.waitForFunction(
+          () => document.title !== "Apps Marketplace | Canva",
+          { timeout: 15_000 },
+        );
+        // Extra time for the detail data to be fetched and rendered
+        await page.waitForTimeout(3000);
+        log.info("SPA rendered detail view", { slug, newTitle: await page.title() });
+      } catch {
+        log.warn("SPA did not render detail view in time", { slug });
+        // Try waiting for networkidle as last resort
+        await page.waitForTimeout(5000);
       }
     } else {
-      // Already have detail JSON, just wait for hydration
+      // SSR detail page loaded directly — just wait for hydration
       await page.waitForTimeout(2000);
-      html = await page.content();
     }
 
+    const html = await page.content();
+    const hasDetailJson = html.includes(`"A":"${appId}"`) && !html.includes(`"A":"${appId}","B":"SDK_APP"`);
     log.info("app detail page fetched", { slug, htmlLength: html.length, hasDetailJson });
 
     return html;
