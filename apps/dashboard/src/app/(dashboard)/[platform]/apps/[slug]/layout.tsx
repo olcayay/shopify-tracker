@@ -43,24 +43,12 @@ export default async function AppDetailLayout({
         <div className="flex items-start gap-3">
           <AppIcon src={app.iconUrl} className="h-16 w-16 rounded-lg" />
           <div>
-            <h1 className="text-2xl font-bold flex items-center gap-2">
+            <h1 className="text-2xl font-bold">
               {app.name}
               {app.isBuiltForShopify && <span title="Built for Shopify" className="ml-1.5">💎</span>}
-              {platform === "canva" && (
-                <Badge variant={app.name.length > 18 ? "destructive" : "outline"} className="text-xs font-normal">
-                  {app.name.length}/18
-                </Badge>
-              )}
             </h1>
             {app.appCardSubtitle && (
-              <p className="text-sm text-muted-foreground italic mt-1 flex items-center gap-2">
-                {app.appCardSubtitle}
-                {platform === "canva" && (
-                  <Badge variant={app.appCardSubtitle.length > 50 ? "destructive" : "outline"} className="text-xs font-normal">
-                    {app.appCardSubtitle.length}/50
-                  </Badge>
-                )}
-              </p>
+              <p className="text-sm text-muted-foreground italic mt-1">{app.appCardSubtitle}</p>
             )}
             {(memberApps.length > 0 || memberProjects.length > 0) && (
               <div className="flex flex-wrap gap-1.5 mt-1.5">

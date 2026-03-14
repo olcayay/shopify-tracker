@@ -768,7 +768,7 @@ export default function ComparePage() {
               <DraftInput
                 value={draftName}
                 onChange={setDraftName}
-                max={30}
+                max={isCanva ? 18 : 30}
                 placeholder="Test a new App Name!"
               />
             }
@@ -1657,25 +1657,16 @@ function CategoryRankingSection({
             <tr>
               <th className="text-left py-2 pr-4 text-muted-foreground font-medium w-[160px] min-w-[160px] sticky top-0 bg-card z-10 border-b border-border shadow-[0_1px_0_0_hsl(var(--border))]" />
               {apps.map((app) => (
-                <th key={app.slug} className="py-2 px-2 pb-6 text-center min-w-[130px] sticky top-0 bg-card z-10 border-b border-border shadow-[0_1px_0_0_hsl(var(--border))]">
-                  <div className="flex justify-center">
+                <th key={app.slug} className="py-2 px-2 pb-2 text-center min-w-[130px] sticky top-0 bg-card z-10 border-b border-border shadow-[0_1px_0_0_hsl(var(--border))]">
+                  <div className="flex flex-col items-center gap-1">
                     <LinkedAppIcon app={app} />
+                    <span className="text-[10px] font-medium text-muted-foreground">{appPrimaryCategory.get(app.slug) || ""}</span>
                   </div>
                 </th>
               ))}
             </tr>
           </thead>
           <tbody>
-            <tr className="border-b">
-              <td className="py-2 pr-4 text-muted-foreground font-medium w-[160px] min-w-[160px]">
-                App category
-              </td>
-              {apps.map((app) => (
-                <td key={app.slug} className="py-2 px-2 text-center font-medium">
-                  {appPrimaryCategory.get(app.slug) || "—"}
-                </td>
-              ))}
-            </tr>
             {allCategories.map(([catSlug, catTitle]) => (
               <tr key={catSlug} className="border-b last:border-0">
                 <td className="py-2 pr-4">
