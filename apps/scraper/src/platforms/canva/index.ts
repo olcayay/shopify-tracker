@@ -89,34 +89,38 @@ export class CanvaModule implements PlatformModule {
     const detailUrl = `https://www.canva.com/apps/${appId}/${urlSlug}`;
     log.info("fetching app detail page", { slug, detailUrl });
 
-    // Navigate to the detail page directly.
-    // Cloudflare may show a "Just a moment..." challenge page first,
-    // which auto-resolves in ~3-5 seconds via JS — we poll the title
-    // to detect when the real page has loaded.
-    await page.goto(detailUrl, { waitUntil: "domcontentloaded", timeout: 30_000 });
+    await page.goto(detailUrl, { waitUntil: "load", timeout: 30_000 });
 
-    // Wait for Cloudflare challenge to auto-resolve (if present)
     const title = await page.title();
-    if (title === "Just a moment...") {
-      log.info("Cloudflare challenge detected, waiting for auto-resolve", { slug });
-      try {
-        await page.waitForFunction(
-          () => document.title !== "Just a moment...",
-          { timeout: 15_000 },
-        );
-        // Extra settle time for SPA hydration after Cloudflare resolves
-        await page.waitForTimeout(3000);
-        log.info("Cloudflare challenge resolved", { slug, newTitle: await page.title() });
-      } catch {
-        log.warn("Cloudflare challenge did not resolve in time", { slug });
+    log.info("detail page loaded", { slug, title, url: page.url() });
+
+    // Poll for detail JSON to appear — handles Cloudflare challenge auto-resolve
+    // and SPA hydration regardless of page title
+    const MAX_POLL_MS = 15_000;
+    const POLL_INTERVAL_MS = 2_000;
+    const start = Date.now();
+    let html = await page.content();
+    let hasDetailJson = html.includes(`"A":"${appId}"`);
+
+    if (!hasDetailJson) {
+      const isCloudflare = html.includes("challenges.cloudflare.com") || html.includes("cf-browser-verification") || html.includes("_cf_chl");
+      log.info("detail JSON not found initially, polling", { slug, isCloudflare, htmlLength: html.length, title });
+
+      while (!hasDetailJson && Date.now() - start < MAX_POLL_MS) {
+        await page.waitForTimeout(POLL_INTERVAL_MS);
+        const newTitle = await page.title();
+        html = await page.content();
+        hasDetailJson = html.includes(`"A":"${appId}"`);
+        if (hasDetailJson) {
+          log.info("detail JSON appeared after polling", { slug, ms: Date.now() - start, newTitle });
+        }
       }
     } else {
-      // No challenge — just wait for SPA hydration
-      await page.waitForTimeout(3000);
+      // Already have detail JSON, just wait for hydration
+      await page.waitForTimeout(2000);
+      html = await page.content();
     }
 
-    const html = await page.content();
-    const hasDetailJson = html.includes(`"A":"${appId}"`) && !html.includes(`"A":"${appId}","B":"SDK_APP"`);
     log.info("app detail page fetched", { slug, htmlLength: html.length, hasDetailJson });
 
     return html;
