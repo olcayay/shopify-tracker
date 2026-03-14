@@ -1022,24 +1022,25 @@ export const systemAdminRoutes: FastifyPluginAsync = async (app) => {
       .select({
         slug: apps.slug,
         name: apps.name,
+        iconUrl: apps.iconUrl,
         platform: apps.platform,
         isTracked: apps.isTracked,
         createdAt: apps.createdAt,
         lastScrapedAt: sql<string | null>`(
           SELECT max(scraped_at) FROM app_snapshots
-          WHERE app_slug = "apps"."slug"
+          WHERE app_id = "apps"."id"
         )`,
         trackedByCount: sql<number>`(
           SELECT count(*)::int FROM account_tracked_apps
-          WHERE app_slug = "apps"."slug"
+          WHERE app_id = "apps"."id"
         )`,
         competitorByCount: sql<number>`(
           SELECT count(*)::int FROM account_competitor_apps
-          WHERE app_slug = "apps"."slug"
+          WHERE competitor_app_id = "apps"."id"
         )`,
         lastChangeAt: sql<string | null>`(
           SELECT max(detected_at) FROM app_field_changes
-          WHERE app_slug = "apps"."slug"
+          WHERE app_id = "apps"."id"
         )`,
       })
       .from(apps);

@@ -2,6 +2,7 @@
 
 import { Fragment, useEffect, useState, useMemo } from "react";
 import Link from "next/link";
+import { AppIcon } from "@/components/app-icon";
 import { useAuth } from "@/lib/auth-context";
 import { PLATFORMS, type PlatformId } from "@appranks/shared";
 import { Input } from "@/components/ui/input";
@@ -301,12 +302,15 @@ export default function AppsListPage() {
                 <Fragment key={app.slug}>
                   <TableRow>
                     <TableCell className="max-w-[260px]">
-                      <Link
-                        href={`/${app.platform || "shopify"}/apps/${app.slug}`}
-                        className="text-primary hover:underline font-medium truncate block"
-                      >
-                        {app.name}
-                      </Link>
+                      <div className="flex items-center gap-2">
+                        <AppIcon src={app.iconUrl} className="h-6 w-6 rounded" />
+                        <Link
+                          href={`/${app.platform || "shopify"}/apps/${app.slug}`}
+                          className="text-primary hover:underline font-medium truncate"
+                        >
+                          {app.name}
+                        </Link>
+                      </div>
                     </TableCell>
                     <TableCell>
                       <Badge variant="outline">
