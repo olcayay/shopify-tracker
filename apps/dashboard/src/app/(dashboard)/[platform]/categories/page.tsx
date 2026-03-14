@@ -220,25 +220,10 @@ export default function CategoriesPage() {
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <h1 className="text-2xl font-bold">Categories ({totalCount})</h1>
-        <div className="flex items-center gap-2 flex-wrap">
-          <AdminScraperTrigger
-            scraperType="category"
-            label="Scrape All Categories"
-          />
-          <button
-            onClick={expandAll}
-            className="text-sm text-muted-foreground hover:text-foreground"
-          >
-            Expand All
-          </button>
-          <span className="text-muted-foreground">|</span>
-          <button
-            onClick={collapseAll}
-            className="text-sm text-muted-foreground hover:text-foreground"
-          >
-            Collapse All
-          </button>
-        </div>
+        <AdminScraperTrigger
+          scraperType="category"
+          label="Scrape All Categories"
+        />
       </div>
 
       {/* Search */}
@@ -432,7 +417,27 @@ export default function CategoriesPage() {
 
       {/* All Categories Tree */}
       <Card>
-        <CardContent className="pt-6">
+        <CardHeader className="pb-3">
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-base">All Categories</CardTitle>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={expandAll}
+                className="text-sm text-muted-foreground hover:text-foreground"
+              >
+                Expand All
+              </button>
+              <span className="text-muted-foreground">|</span>
+              <button
+                onClick={collapseAll}
+                className="text-sm text-muted-foreground hover:text-foreground"
+              >
+                Collapse All
+              </button>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent>
           {loading ? (
             <TableSkeleton rows={8} cols={5} />
           ) : filteredTree.length === 0 ? (
