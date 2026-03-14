@@ -89,6 +89,21 @@ export class CanvaModule implements PlatformModule {
     const detailUrl = `https://www.canva.com/apps/${appId}/${urlSlug}`;
     log.info("fetching app detail page", { slug, detailUrl });
 
+    // Set up response interceptor to catch API calls
+    const apiResponses: { url: string; status: number; size: number }[] = [];
+    const responseHandler = async (response: Response) => {
+      const url = response.url();
+      // Skip static assets
+      if (url.endsWith(".js") || url.endsWith(".css") || url.endsWith(".png") || url.endsWith(".svg") || url.endsWith(".woff2")) return;
+      if (url.includes("/_ajax/") || url.includes("/api/") || url.includes("/graphql")) {
+        try {
+          const body = await response.text();
+          apiResponses.push({ url, status: response.status(), size: body.length });
+        } catch {}
+      }
+    };
+    page.on("response", responseHandler);
+
     await page.goto(detailUrl, { waitUntil: "load", timeout: 30_000 });
 
     const title = await page.title();
@@ -96,27 +111,31 @@ export class CanvaModule implements PlatformModule {
     log.info("detail page loaded", { slug, title, isBulkPage });
 
     if (isBulkPage) {
-      // Server returned the bulk /apps page instead of the SSR detail page.
-      // Wait for SPA to hydrate, route to the detail view, and render data.
-      log.info("waiting for SPA to render detail view", { slug });
-      try {
-        // Wait until the title changes to "AppName - Canva Apps" (detail page title)
-        await page.waitForFunction(
-          () => document.title !== "Apps Marketplace | Canva",
-          { timeout: 15_000 },
-        );
-        // Extra time for the detail data to be fetched and rendered
-        await page.waitForTimeout(3000);
-        log.info("SPA rendered detail view", { slug, newTitle: await page.title() });
-      } catch {
-        log.warn("SPA did not render detail view in time", { slug });
-        // Try waiting for networkidle as last resort
-        await page.waitForTimeout(5000);
+      // Server returned the bulk /apps page. Wait for SPA + network idle.
+      await page.waitForTimeout(8000);
+
+      // Log intercepted API calls for debugging
+      if (apiResponses.length > 0) {
+        log.info("intercepted API calls", { slug, calls: apiResponses });
+      } else {
+        log.info("no API calls intercepted", { slug });
       }
+
+      // Check if any detail-specific DOM elements appeared
+      const domInfo = await page.evaluate((id: string) => {
+        const h1 = document.querySelector("h1")?.textContent?.trim() || "";
+        const h2s = Array.from(document.querySelectorAll("h2")).map(el => el.textContent?.trim()).filter(Boolean).slice(0, 5);
+        // Check for elements that contain the app name or description
+        const bodyText = document.body?.innerText?.substring(0, 500) || "";
+        return { h1, h2s, bodyTextPreview: bodyText, url: window.location.href, title: document.title };
+      }, appId);
+      log.info("DOM inspection for bulk page", { slug, domInfo });
     } else {
-      // SSR detail page loaded directly — just wait for hydration
+      // SSR detail page loaded directly
       await page.waitForTimeout(2000);
     }
+
+    page.off("response", responseHandler);
 
     const html = await page.content();
     const hasDetailJson = html.includes(`"A":"${appId}"`) && !html.includes(`"A":"${appId}","B":"SDK_APP"`);
