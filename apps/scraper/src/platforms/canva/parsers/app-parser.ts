@@ -35,8 +35,8 @@ export interface CanvaEmbeddedApp {
  *
  * Detail pages embed a richer JSON with this schema:
  *   "A": app ID
- *   "C": display name
- *   "E": developer name
+ *   "C": developer name
+ *   "E": display name (app name)
  *   "F": short description (meta)
  *   "G": tagline (H1 heading)
  *   "H": full description
@@ -199,11 +199,11 @@ export function extractCanvaDetailApp(html: string, appId: string): CanvaDetailA
 
     return {
       id: obj.A || appId,
-      name: obj.C || "",
+      name: obj.E || "",
       shortDescription: obj.F || "",
       tagline: obj.G || "",
       fullDescription: obj.H || "",
-      developer: obj.E || devInfo.A || "",
+      developer: obj.C || devInfo.A || "",
       developerWebsite: obj.N || "",
       developerEmail: devInfo.B || "",
       developerPhone: devInfo.C || "",
