@@ -67,6 +67,7 @@ export default function KeywordsPage() {
   } | null>(null);
   const [expandedId, setExpandedId] = useState<number | null>(null);
   const [selectedApp, setSelectedApp] = useState<string>("");
+  const hasAds = platform === "shopify";
   const searchRef = useRef<HTMLDivElement>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout>>(undefined);
 
@@ -438,9 +439,11 @@ export default function KeywordsPage() {
                   <TableHead className="cursor-pointer select-none" onClick={() => toggleSort("competitor")}>
                     Competitor <SortIcon col="competitor" />
                   </TableHead>
+                  {hasAds && (
                   <TableHead className="cursor-pointer select-none" onClick={() => toggleSort("ads")}>
                     Ads <SortIcon col="ads" />
                   </TableHead>
+                  )}
                   <TableHead className="cursor-pointer select-none" onClick={() => toggleSort("lastUpdated")}>
                     Last Updated <SortIcon col="lastUpdated" />
                   </TableHead>
@@ -552,6 +555,7 @@ export default function KeywordsPage() {
                             </span>
                           )}
                         </TableCell>
+                        {hasAds && (
                         <TableCell className="text-sm">
                           {kw.adApps > 0 ? (
                             <Link
@@ -567,6 +571,7 @@ export default function KeywordsPage() {
                             </span>
                           )}
                         </TableCell>
+                        )}
                         <TableCell className="text-sm text-muted-foreground">
                           {kw.latestSnapshot?.scrapedAt
                             ? formatDateOnly(kw.latestSnapshot.scrapedAt)
