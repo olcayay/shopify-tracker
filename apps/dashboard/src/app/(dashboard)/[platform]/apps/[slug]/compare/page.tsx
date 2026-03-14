@@ -389,10 +389,14 @@ export default function ComparePage() {
       { id: "sec-subtitle", key: "appCardSubtitle", label: isCanva ? "Tagline" : "Subtitle" },
       { id: "sec-intro", key: "appIntroduction", label: isCanva ? "Short Description" : "Introduction" },
       { id: "sec-details", key: "appDetails", label: isCanva ? "Description" : "Details" },
-      { id: "sec-features", key: "features", label: "Features" },
+    ];
+    if (!isCanva) {
+      sections.push({ id: "sec-features", key: "features", label: "Features" });
+    }
+    sections.push(
       { id: "sec-languages", key: "languages", label: "Languages" },
       { id: "sec-integrations", key: "integrations", label: isSalesforce ? "Compatible With" : "Integrations" },
-    ];
+    );
     if (isSalesforce) {
       sections.push(
         { id: "sec-industries", key: "industries", label: "Industries" },
@@ -406,11 +410,15 @@ export default function ComparePage() {
     }
     sections.push(
       { id: "sec-rankings", key: "categoryRanking", label: "Rankings" },
-      { id: "sec-reviews", key: "reviewsRatings", label: "Reviews" },
-      { id: "sec-catfeatures", key: "categoriesFeatures", label: "Category Features" },
-      { id: "sec-pricing", key: "pricingPlans", label: "Pricing" },
-      { id: "sec-seo", key: "webSearchContent", label: "Web Search" },
     );
+    if (!isCanva) {
+      sections.push(
+        { id: "sec-reviews", key: "reviewsRatings", label: "Reviews" },
+        { id: "sec-catfeatures", key: "categoriesFeatures", label: "Category Features" },
+        { id: "sec-pricing", key: "pricingPlans", label: "Pricing" },
+        { id: "sec-seo", key: "webSearchContent", label: "Web Search" },
+      );
+    }
     return sections;
   }, [isSalesforce, isCanva]);
 
