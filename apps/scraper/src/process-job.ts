@@ -127,7 +127,8 @@ export function createProcessJob(db: ReturnType<typeof createDb>, httpClient: Ht
             log.info("cascaded reviews job", { slug: job.data.slug });
           }
         } else {
-          await scraper.scrapeTracked(triggeredBy, queueName);
+          const isManual = triggeredBy && triggeredBy !== "scheduler";
+          await scraper.scrapeTracked(triggeredBy, queueName, isManual || opts?.force);
 
           // Cascade: enqueue review jobs for all tracked apps (only for platforms with review support)
           if (opts?.scrapeReviews && getPlatform(platform).hasReviews) {

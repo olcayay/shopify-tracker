@@ -26,7 +26,7 @@ export class AppDetailsScraper {
   }
 
   /** Scrape details for all tracked apps */
-  async scrapeTracked(triggeredBy?: string, queue?: string): Promise<void> {
+  async scrapeTracked(triggeredBy?: string, queue?: string, force?: boolean): Promise<void> {
     const trackedApps = await this.db
       .select({ id: apps.id, slug: apps.slug, name: apps.name })
       .from(apps)
@@ -58,7 +58,7 @@ export class AppDetailsScraper {
 
     for (const app of trackedApps) {
       try {
-        await this.scrapeApp(app.slug, run.id, triggeredBy);
+        await this.scrapeApp(app.slug, run.id, triggeredBy, undefined, force);
         itemsScraped++;
       } catch (error) {
         log.error("failed to scrape app", { slug: app.slug, error: String(error) });
