@@ -143,6 +143,34 @@ export default function CrossPlatformOverviewPage() {
         </p>
       </div>
 
+      {/* Account Usage */}
+      {account && (
+        <Card className="rounded-xl">
+          <CardHeader>
+            <CardTitle className="text-lg">Account Usage</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4">
+              {[
+                { icon: AppWindow, usage: account.usage.trackedApps, limit: account.limits.maxTrackedApps, label: "Apps" },
+                { icon: Search, usage: account.usage.trackedKeywords, limit: account.limits.maxTrackedKeywords, label: "Keywords" },
+                { icon: Star, usage: account.usage.competitorApps, limit: account.limits.maxCompetitorApps, label: "Competitors" },
+                { icon: FlaskConical, usage: account.usage.researchProjects, limit: account.limits.maxResearchProjects, label: "Research" },
+                { icon: Users, usage: account.usage.users, limit: account.limits.maxUsers, label: "Users" },
+              ].map(({ icon: Icon, usage, limit, label }) => (
+                <div key={label} className="text-center">
+                  <div className="mx-auto mb-1.5 flex h-8 w-8 items-center justify-center rounded-full bg-muted">
+                    <Icon className="h-4 w-4 text-muted-foreground" />
+                  </div>
+                  <div className="text-2xl font-bold">{usage}/{limit}</div>
+                  <div className="text-xs text-muted-foreground">{label}</div>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {(user?.isSystemAdmin ? ALL_PLATFORMS : enabledPlatforms).map((platformId) => {
           const isEnabled = enabledPlatforms.includes(platformId);
@@ -250,33 +278,6 @@ export default function CrossPlatformOverviewPage() {
         })}
       </div>
 
-      {/* Account Usage */}
-      {account && (
-        <Card className="rounded-xl">
-          <CardHeader>
-            <CardTitle className="text-lg">Account Usage</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4">
-              {[
-                { icon: AppWindow, usage: account.usage.trackedApps, limit: account.limits.maxTrackedApps, label: "Apps" },
-                { icon: Search, usage: account.usage.trackedKeywords, limit: account.limits.maxTrackedKeywords, label: "Keywords" },
-                { icon: Star, usage: account.usage.competitorApps, limit: account.limits.maxCompetitorApps, label: "Competitors" },
-                { icon: FlaskConical, usage: account.usage.researchProjects, limit: account.limits.maxResearchProjects, label: "Research" },
-                { icon: Users, usage: account.usage.users, limit: account.limits.maxUsers, label: "Users" },
-              ].map(({ icon: Icon, usage, limit, label }) => (
-                <div key={label} className="text-center">
-                  <div className="mx-auto mb-1.5 flex h-8 w-8 items-center justify-center rounded-full bg-muted">
-                    <Icon className="h-4 w-4 text-muted-foreground" />
-                  </div>
-                  <div className="text-2xl font-bold">{usage}/{limit}</div>
-                  <div className="text-xs text-muted-foreground">{label}</div>
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-      )}
     </div>
   );
 }
