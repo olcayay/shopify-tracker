@@ -89,16 +89,13 @@ export class CanvaModule implements PlatformModule {
     const detailUrl = `https://www.canva.com/apps/${appId}/${urlSlug}`;
     log.info("fetching app detail page", { slug, detailUrl });
 
-    // Set up response interceptor to catch API calls
-    const apiResponses: { url: string; status: number; size: number }[] = [];
+    // Intercept the appListing API response (used by SPA for non-SSR detail pages)
+    let appListingJson: string | null = null;
     const responseHandler = async (response: Response) => {
-      const url = response.url();
-      // Skip static assets
-      if (url.endsWith(".js") || url.endsWith(".css") || url.endsWith(".png") || url.endsWith(".svg") || url.endsWith(".woff2")) return;
-      if (url.includes("/_ajax/") || url.includes("/api/") || url.includes("/graphql")) {
+      if (response.url().includes(`/_ajax/appsearch/appListing/${appId}`) && response.status() === 200) {
         try {
-          const body = await response.text();
-          apiResponses.push({ url, status: response.status(), size: body.length });
+          appListingJson = await response.text();
+          log.info("intercepted appListing API", { slug, size: appListingJson.length, preview: appListingJson.substring(0, 500) });
         } catch {}
       }
     };
@@ -108,28 +105,15 @@ export class CanvaModule implements PlatformModule {
 
     const title = await page.title();
     const isBulkPage = title === "Apps Marketplace | Canva";
-    log.info("detail page loaded", { slug, title, isBulkPage });
 
     if (isBulkPage) {
-      // Server returned the bulk /apps page. Wait for SPA + network idle.
-      await page.waitForTimeout(8000);
-
-      // Log intercepted API calls for debugging
-      if (apiResponses.length > 0) {
-        log.info("intercepted API calls", { slug, calls: apiResponses });
-      } else {
-        log.info("no API calls intercepted", { slug });
+      // Server returned the bulk /apps page. SPA will fetch detail via API.
+      // Wait for the appListing API call to complete.
+      log.info("bulk page detected, waiting for appListing API", { slug });
+      const start = Date.now();
+      while (!appListingJson && Date.now() - start < 10_000) {
+        await page.waitForTimeout(1000);
       }
-
-      // Check if any detail-specific DOM elements appeared
-      const domInfo = await page.evaluate((id: string) => {
-        const h1 = document.querySelector("h1")?.textContent?.trim() || "";
-        const h2s = Array.from(document.querySelectorAll("h2")).map(el => el.textContent?.trim()).filter(Boolean).slice(0, 5);
-        // Check for elements that contain the app name or description
-        const bodyText = document.body?.innerText?.substring(0, 500) || "";
-        return { h1, h2s, bodyTextPreview: bodyText, url: window.location.href, title: document.title };
-      }, appId);
-      log.info("DOM inspection for bulk page", { slug, domInfo });
     } else {
       // SSR detail page loaded directly
       await page.waitForTimeout(2000);
@@ -137,9 +121,15 @@ export class CanvaModule implements PlatformModule {
 
     page.off("response", responseHandler);
 
-    const html = await page.content();
+    // If we got the appListing API response, inject it as a marker for the parser
+    let html = await page.content();
+    if (appListingJson && isBulkPage) {
+      log.info("injecting appListing data into HTML", { slug });
+      html = `<!-- CANVA_APP_LISTING_API:${appListingJson}:END_CANVA_APP_LISTING_API -->\n${html}`;
+    }
+
     const hasDetailJson = html.includes(`"A":"${appId}"`) && !html.includes(`"A":"${appId}","B":"SDK_APP"`);
-    log.info("app detail page fetched", { slug, htmlLength: html.length, hasDetailJson });
+    log.info("app detail page fetched", { slug, htmlLength: html.length, hasDetailJson, hasAppListingApi: !!appListingJson });
 
     return html;
   }
