@@ -33,6 +33,7 @@ import {
   platformVisibility,
   keywordAutoSuggestions,
   aiLogs,
+  categoryParents,
 } from "@appranks/db";
 import { isPlatformId, PLATFORM_IDS } from "@appranks/shared";
 import { generateAccessToken } from "./auth.js";
@@ -1125,11 +1126,15 @@ export const systemAdminRoutes: FastifyPluginAsync = async (app) => {
           SELECT count(*)::int FROM account_starred_categories
           WHERE category_id = "categories"."id"
         )`,
-        parentTitle: sql<string | null>`(
-          SELECT title FROM categories AS p
-          WHERE p.slug = "categories"."parent_slug"
-            AND p.platform = "categories"."platform"
-          LIMIT 1
+        parentTitle: sql<string | null>`COALESCE(
+          (SELECT string_agg(p.title, ', ' ORDER BY p.title)
+           FROM category_parents cp
+           JOIN categories p ON p.id = cp.parent_category_id
+           WHERE cp.category_id = "categories"."id"),
+          (SELECT p.title FROM categories p
+           WHERE p.slug = "categories"."parent_slug"
+             AND p.platform = "categories"."platform"
+           LIMIT 1)
         )`,
       })
       .from(categories);

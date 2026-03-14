@@ -335,13 +335,17 @@ export default function CategoriesListPage() {
                     <TableCell className="text-sm text-muted-foreground">
                       {cat.categoryLevel}
                     </TableCell>
-                    <TableCell className="text-sm max-w-[200px] truncate">
-                      {cat.parentSlug ? (
+                    <TableCell className="text-sm max-w-[200px]">
+                      {cat.parentTitle ? (
+                        <span className="truncate block">
+                          {cat.parentTitle}
+                        </span>
+                      ) : cat.parentSlug ? (
                         <Link
                           href={`/${cat.platform || "shopify"}/categories/${cat.parentSlug}`}
                           className="text-primary hover:underline"
                         >
-                          {cat.parentTitle ?? cat.parentSlug}
+                          {cat.parentSlug}
                         </Link>
                       ) : (
                         <span className="text-muted-foreground">{"\u2014"}</span>

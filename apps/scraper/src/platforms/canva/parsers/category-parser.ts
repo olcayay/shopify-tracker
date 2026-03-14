@@ -103,14 +103,14 @@ export function parseCanvaCategoryPage(
   if (topicFilters) {
     const subcategoryLinks = topicFilters.map((tag) => {
       const topicSlug = topicTagToSlug(tag);
-      const compoundSlug = `${categorySlug}--${topicSlug}`;
       return {
-        slug: compoundSlug,
+        slug: topicSlug,
         url: `https://www.canva.com/apps?category=${categorySlug}&topic=${topicSlug}`,
         title: CANVA_SUBCATEGORY_LABELS[topicSlug] || topicSlug
           .split("-")
           .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
           .join(" "),
+        parentSlug: categorySlug,
       };
     });
 
@@ -134,10 +134,8 @@ export function parseCanvaCategoryPage(
   }
 
   // --- Listing page: topic sub-category ---
-  // Compound slug: "project-management--forms" → topic "forms"
-  const topicSlug = categorySlug.includes("--")
-    ? categorySlug.split("--")[1]
-    : categorySlug;
+  // Slug is the simple topic slug (e.g., "forms")
+  const topicSlug = categorySlug;
   const allApps = extractCanvaApps(html);
   const topicTag = `marketplace_topic.${topicSlug.replace(/-/g, "_")}`;
   const filteredApps = allApps.filter((app) =>

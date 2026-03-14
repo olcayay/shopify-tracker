@@ -1,4 +1,4 @@
-import { eq, sql } from "drizzle-orm";
+import { eq, and, sql } from "drizzle-orm";
 import type { Database } from "@appranks/db";
 import {
   scrapeRuns,
@@ -8,6 +8,7 @@ import {
   appCategoryRankings,
   featuredAppSightings,
   categoryAdSightings,
+  categoryParents,
 } from "@appranks/db";
 import {
   SEED_CATEGORY_SLUGS,
@@ -503,6 +504,21 @@ export class CategoryScraper {
     const categoryId = upsertedCategory.id;
     const seenAppSlugs = new Set<string>();
 
+    // Upsert into category_parents junction table if parent is known
+    if (parentSlug) {
+      const [parentRow] = await this.db
+        .select({ id: categories.id })
+        .from(categories)
+        .where(and(eq(categories.slug, parentSlug), eq(categories.platform, this.platform)))
+        .limit(1);
+      if (parentRow) {
+        await this.db
+          .insert(categoryParents)
+          .values({ categoryId, parentCategoryId: parentRow.id })
+          .onConflictDoNothing();
+      }
+    }
+
     // Insert snapshot
     await this.db.insert(categorySnapshots).values({
       categoryId,
@@ -589,8 +605,14 @@ export class CategoryScraper {
     const children: CategoryNode[] = [];
     if (!this.singleMode && depth < this.maxDepth) {
       for (const sub of normalized.subcategoryLinks) {
+        // For multi-parent subcategories (e.g., Canva shared topics): if already visited,
+        // just add the junction row for this additional parent without re-scraping.
+        if (this.visited.has(sub.slug) && sub.parentSlug) {
+          await this.upsertCategoryParent(sub.slug, sub.parentSlug);
+          continue;
+        }
         const { node: childNode, appSlugs: childSlugs } = await this.crawlCategory(
-          sub.slug, slug, depth + 1, runId, pageOptions
+          sub.slug, sub.parentSlug || slug, depth + 1, runId, pageOptions
         );
         if (childNode) children.push(childNode);
         for (const s of childSlugs) discoveredSlugs.push(s);
@@ -975,6 +997,30 @@ export class CategoryScraper {
       sections: sections.length,
       sightings: sections.reduce((sum, s) => sum + s.apps.length, 0),
     });
+  }
+
+  /**
+   * Upsert a category_parents junction row for a child→parent relationship.
+   * Used when a subcategory has already been visited but needs an additional parent link.
+   */
+  private async upsertCategoryParent(childSlug: string, parentSlug: string): Promise<void> {
+    const [childRow] = await this.db
+      .select({ id: categories.id })
+      .from(categories)
+      .where(and(eq(categories.slug, childSlug), eq(categories.platform, this.platform)))
+      .limit(1);
+    const [parentRow] = await this.db
+      .select({ id: categories.id })
+      .from(categories)
+      .where(and(eq(categories.slug, parentSlug), eq(categories.platform, this.platform)))
+      .limit(1);
+    if (childRow && parentRow) {
+      await this.db
+        .insert(categoryParents)
+        .values({ categoryId: childRow.id, parentCategoryId: parentRow.id })
+        .onConflictDoNothing();
+      log.info("added additional parent link", { child: childSlug, parent: parentSlug });
+    }
   }
 
   private countNodes(node: CategoryNode): number {

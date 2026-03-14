@@ -165,3 +165,5 @@ virtual apps for research projects (DB + API + Editor + Compare + Feature Covera
 virtual app UX improvements (icon/color picker, deferred creation, unsaved changes guard, overview cards, custom confirm modal) ✅
 
 AI-powered virtual app generation (OpenAI gpt-4o + structured output, generation overlay, creator tracking, preview page, migrations) ✅
+
+fix Canva category parent-child relationships (1-to-N junction table, compound slug migration, multi-parent support) ✅

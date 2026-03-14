@@ -17,11 +17,8 @@ export function buildExternalCategoryUrl(platform: PlatformId, slug: string): st
       return `https://apps.shopify.com/categories/${slug}`;
     case "salesforce":
       return `https://appexchange.salesforce.com/explore/business-needs?category=${slug}`;
-    case "canva": {
-      // Compound slugs (sub-categories): use parent's URL
-      const parentSlug = slug.includes("--") ? slug.split("--")[0] : slug;
-      return `https://www.canva.com/your-apps/${parentSlug}`;
-    }
+    case "canva":
+      return `https://www.canva.com/your-apps/${slug}`;
   }
 }
 
@@ -46,15 +43,9 @@ export function getPlatformName(platform: PlatformId): string {
 
 /**
  * Format a category title for display.
- * For Canva compound slugs (e.g., "project-management--forms"),
- * returns "Project management › Forms" instead of just "Forms".
+ * After the compound-slug migration, Canva categories use simple slugs
+ * so no special formatting is needed.
  */
 export function formatCategoryTitle(platform: PlatformId, slug: string, title: string): string {
-  if (platform !== "canva" || !slug.includes("--")) return title;
-  const parentSlug = slug.split("--")[0];
-  const parentLabel = parentSlug
-    .split("-")
-    .map((w, i) => i === 0 ? w.charAt(0).toUpperCase() + w.slice(1) : w)
-    .join(" ");
-  return `${parentLabel} › ${title}`;
+  return title;
 }

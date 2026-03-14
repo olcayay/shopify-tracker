@@ -21,6 +21,7 @@ import * as accountPlatformsSchema from "./schema/account-platforms.js";
 import * as platformVisibilitySchema from "./schema/platform-visibility.js";
 import * as researchVirtualAppsSchema from "./schema/research-virtual-apps.js";
 import * as aiLogsSchema from "./schema/ai-logs.js";
+import * as categoryParentsSchema from "./schema/category-parents.js";
 
 export const schema = {
   ...scrapeRunsSchema,
@@ -43,6 +44,7 @@ export const schema = {
   ...platformVisibilitySchema,
   ...researchVirtualAppsSchema,
   ...aiLogsSchema,
+  ...categoryParentsSchema,
 };
 
 export function createDb(databaseUrl: string) {
@@ -111,3 +113,4 @@ export { accountPlatforms } from "./schema/account-platforms.js";
 export { platformVisibility } from "./schema/platform-visibility.js";
 export { researchVirtualApps } from "./schema/research-virtual-apps.js";
 export { aiLogs } from "./schema/ai-logs.js";
+export { categoryParents } from "./schema/category-parents.js";

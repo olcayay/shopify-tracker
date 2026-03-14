@@ -47,9 +47,9 @@ describe("buildExternalCategoryUrl", () => {
     );
   });
 
-  it("canva compound slug → uses parent slug in URL", () => {
-    expect(buildExternalCategoryUrl("canva", "project-management--forms")).toBe(
-      "https://www.canva.com/your-apps/project-management"
+  it("canva simple slug → direct URL", () => {
+    expect(buildExternalCategoryUrl("canva", "forms")).toBe(
+      "https://www.canva.com/your-apps/forms"
     );
   });
 });
@@ -93,16 +93,12 @@ describe("formatCategoryTitle", () => {
     expect(formatCategoryTitle("shopify", "marketing", "Marketing")).toBe("Marketing");
   });
 
-  it("returns title as-is for Canva simple slugs", () => {
+  it("returns title as-is for Canva slugs", () => {
     expect(formatCategoryTitle("canva", "project-management", "Project management")).toBe("Project management");
   });
 
-  it("prepends parent for Canva compound slugs", () => {
-    expect(formatCategoryTitle("canva", "project-management--forms", "Forms")).toBe("Project management › Forms");
-  });
-
-  it("handles multi-word parent slugs", () => {
-    expect(formatCategoryTitle("canva", "video-and-animation--flipbooks", "Flipbooks")).toBe("Video and animation › Flipbooks");
+  it("returns title as-is for Canva simple topic slugs", () => {
+    expect(formatCategoryTitle("canva", "forms", "Forms")).toBe("Forms");
   });
 });
 

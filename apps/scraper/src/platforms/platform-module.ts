@@ -35,7 +35,7 @@ export interface NormalizedCategoryPage {
   description: string;
   appCount: number | null;
   apps: NormalizedCategoryApp[];
-  subcategoryLinks: { slug: string; url: string; title: string }[];
+  subcategoryLinks: { slug: string; url: string; title: string; parentSlug?: string }[];
   hasNextPage: boolean;
 }
 

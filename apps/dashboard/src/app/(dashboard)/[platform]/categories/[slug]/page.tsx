@@ -133,7 +133,21 @@ export default async function CategoryDetailPage({
     <div className="space-y-6">
       <div className="flex items-start justify-between">
         <div>
-          {category.breadcrumb?.length > 0 && (
+          {category.allParentPaths?.length > 1 ? (
+            <nav className="flex flex-col gap-0.5 text-sm text-muted-foreground mb-1">
+              {category.allParentPaths.map((parent: any) => (
+                <span key={parent.slug} className="flex items-center gap-1">
+                  <Link
+                    href={`/${platform}/categories/${parent.slug}`}
+                    className="hover:underline hover:text-foreground"
+                  >
+                    {parent.title}
+                  </Link>
+                  <span>&rsaquo;</span>
+                </span>
+              ))}
+            </nav>
+          ) : category.breadcrumb?.length > 0 ? (
             <nav className="flex items-center gap-1 text-sm text-muted-foreground mb-1">
               {category.breadcrumb.map((item: any, i: number) => (
                 <span key={item.slug} className="flex items-center gap-1">
@@ -147,7 +161,7 @@ export default async function CategoryDetailPage({
                 </span>
               ))}
             </nav>
-          )}
+          ) : null}
           <h1 className="text-2xl font-bold">{category.title}</h1>
           {category.description && (
             <p className="text-muted-foreground mt-1">{category.description}</p>

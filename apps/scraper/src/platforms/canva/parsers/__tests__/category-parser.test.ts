@@ -58,16 +58,20 @@ describe("parseCanvaCategoryPage", () => {
       assert.equal(result.apps.length, 0);
     });
 
-    it("populates subcategoryLinks with compound slugs", () => {
+    it("populates subcategoryLinks with simple slugs and parentSlug", () => {
       const result = parseCanvaCategoryPage(testHtml, "project-management", 1, 0);
       assert.equal(result.subcategoryLinks.length, 4);
       const slugs = result.subcategoryLinks.map((s) => s.slug);
       assert.deepEqual(slugs, [
-        "project-management--tasks-and-workflows",
-        "project-management--documents",
-        "project-management--forms",
-        "project-management--interactivity",
+        "tasks-and-workflows",
+        "documents",
+        "forms",
+        "interactivity",
       ]);
+      // Each subcategory link includes the parent slug
+      for (const link of result.subcategoryLinks) {
+        assert.equal(link.parentSlug, "project-management");
+      }
     });
 
     it("generates correct titles for subcategories", () => {
@@ -96,25 +100,26 @@ describe("parseCanvaCategoryPage", () => {
         const result = parseCanvaCategoryPage(testHtml, filterSlug, 1, 0);
         assert.equal(result.appCount, null, `${filterSlug} should be hub page`);
         assert.ok(result.subcategoryLinks.length > 0, `${filterSlug} should have subcategories`);
-        // Verify all subcategory slugs are compound slugs
+        // Verify all subcategory slugs are simple slugs with parentSlug
         for (const link of result.subcategoryLinks) {
           assert.ok(
-            link.slug.startsWith(`${filterSlug}--`),
-            `${link.slug} should start with ${filterSlug}--`
+            !link.slug.includes("--"),
+            `${link.slug} should be a simple slug (no --)`,
           );
+          assert.equal(link.parentSlug, filterSlug);
         }
       }
     });
   });
 
-  describe("listing page (compound slug sub-category)", () => {
-    it("returns non-null appCount for a compound slug", () => {
-      const result = parseCanvaCategoryPage(testHtml, "project-management--forms", 1, 0);
+  describe("listing page (simple slug sub-category)", () => {
+    it("returns non-null appCount for a simple topic slug", () => {
+      const result = parseCanvaCategoryPage(testHtml, "forms", 1, 0);
       assert.equal(result.appCount, 4); // Jotform, Typeform, Google Docs, NewApp
     });
 
-    it("returns ranked apps for a compound slug", () => {
-      const result = parseCanvaCategoryPage(testHtml, "project-management--forms", 1, 0);
+    it("returns ranked apps for a simple topic slug", () => {
+      const result = parseCanvaCategoryPage(testHtml, "forms", 1, 0);
       assert.equal(result.apps.length, 4);
       const names = result.apps.map((a) => a.name);
       assert.ok(names.includes("Jotform"));
@@ -124,59 +129,59 @@ describe("parseCanvaCategoryPage", () => {
     });
 
     it("returns empty subcategoryLinks for listing page", () => {
-      const result = parseCanvaCategoryPage(testHtml, "project-management--forms", 1, 0);
+      const result = parseCanvaCategoryPage(testHtml, "forms", 1, 0);
       assert.equal(result.subcategoryLinks.length, 0);
     });
 
     it("assigns correct positions starting from 1", () => {
-      const result = parseCanvaCategoryPage(testHtml, "project-management--forms", 1, 0);
+      const result = parseCanvaCategoryPage(testHtml, "forms", 1, 0);
       const positions = result.apps.map((a) => a.position);
       assert.deepEqual(positions, [1, 2, 3, 4]);
     });
 
     it("applies organicOffset to positions", () => {
-      const result = parseCanvaCategoryPage(testHtml, "project-management--forms", 1, 10);
+      const result = parseCanvaCategoryPage(testHtml, "forms", 1, 10);
       const positions = result.apps.map((a) => a.position);
       assert.deepEqual(positions, [11, 12, 13, 14]);
     });
 
-    it("uses subcategory label as title (from topic part)", () => {
-      const result = parseCanvaCategoryPage(testHtml, "project-management--forms", 1, 0);
+    it("uses subcategory label as title", () => {
+      const result = parseCanvaCategoryPage(testHtml, "forms", 1, 0);
       assert.equal(result.title, "Forms");
     });
 
     it("constructs correct app slugs", () => {
-      const result = parseCanvaCategoryPage(testHtml, "project-management--forms", 1, 0);
+      const result = parseCanvaCategoryPage(testHtml, "forms", 1, 0);
       assert.equal(result.apps[0].slug, "AAF_forms1--jotform");
       assert.equal(result.apps[1].slug, "AAF_forms2--typeform");
     });
 
     it("filters by exact single topic tag", () => {
-      const result = parseCanvaCategoryPage(testHtml, "ai-generation--ai-images", 1, 0);
+      const result = parseCanvaCategoryPage(testHtml, "ai-images", 1, 0);
       assert.equal(result.apps.length, 1);
       assert.equal(result.apps[0].name, "DALL-E");
     });
 
     it("returns 0 apps for a topic with no matching apps", () => {
-      const result = parseCanvaCategoryPage(testHtml, "video-and-animation--flipbooks", 1, 0);
+      const result = parseCanvaCategoryPage(testHtml, "flipbooks", 1, 0);
       assert.equal(result.apps.length, 0);
       assert.equal(result.appCount, 0);
     });
 
     it("sets hasNextPage to false", () => {
-      const result = parseCanvaCategoryPage(testHtml, "project-management--forms", 1, 0);
+      const result = parseCanvaCategoryPage(testHtml, "forms", 1, 0);
       assert.equal(result.hasNextPage, false);
     });
 
     it("assigns canva_extension badge to EXTENSION type apps", () => {
-      const result = parseCanvaCategoryPage(testHtml, "communication--social-networking", 1, 0);
+      const result = parseCanvaCategoryPage(testHtml, "social-networking", 1, 0);
       assert.equal(result.apps.length, 1);
       assert.equal(result.apps[0].name, "Slack");
       assert.deepEqual(result.apps[0].badges, ["canva_extension"]);
     });
 
     it("assigns empty badges to SDK_APP type apps", () => {
-      const result = parseCanvaCategoryPage(testHtml, "ai-generation--ai-images", 1, 0);
+      const result = parseCanvaCategoryPage(testHtml, "ai-images", 1, 0);
       assert.equal(result.apps.length, 1);
       assert.equal(result.apps[0].name, "DALL-E");
       assert.deepEqual(result.apps[0].badges, []);
@@ -184,40 +189,36 @@ describe("parseCanvaCategoryPage", () => {
   });
 
   describe("shared topics (same topic under multiple parents)", () => {
-    it("forms appears under both project-management and text-styling", () => {
+    it("forms appears under both project-management and text-styling with same slug", () => {
       const pmResult = parseCanvaCategoryPage(testHtml, "project-management", 1, 0);
       const tsResult = parseCanvaCategoryPage(testHtml, "text-styling", 1, 0);
 
       const pmSlugs = pmResult.subcategoryLinks.map((s) => s.slug);
       const tsSlugs = tsResult.subcategoryLinks.map((s) => s.slug);
 
-      assert.ok(pmSlugs.includes("project-management--forms"));
-      assert.ok(tsSlugs.includes("text-styling--forms"));
+      // Both parents reference the same simple slug "forms"
+      assert.ok(pmSlugs.includes("forms"));
+      assert.ok(tsSlugs.includes("forms"));
     });
 
-    it("shared topic compound slugs produce the same app results", () => {
-      const pmForms = parseCanvaCategoryPage(testHtml, "project-management--forms", 1, 0);
-      const tsForms = parseCanvaCategoryPage(testHtml, "text-styling--forms", 1, 0);
-
-      assert.equal(pmForms.appCount, 4);
-      assert.equal(pmForms.appCount, tsForms.appCount);
-      assert.equal(pmForms.apps.length, tsForms.apps.length);
-
-      const pmNames = pmForms.apps.map((a) => a.name).sort();
-      const tsNames = tsForms.apps.map((a) => a.name).sort();
-      assert.deepEqual(pmNames, tsNames);
+    it("shared topic simple slugs produce the same app results", () => {
+      // With simple slugs, "forms" is the same slug regardless of parent
+      const forms = parseCanvaCategoryPage(testHtml, "forms", 1, 0);
+      assert.equal(forms.appCount, 4);
+      assert.equal(forms.apps.length, 4);
     });
 
-    it("compound slugs are unique across parents", () => {
+    it("subcategory links carry different parentSlug per hub page", () => {
       const pmResult = parseCanvaCategoryPage(testHtml, "project-management", 1, 0);
       const tsResult = parseCanvaCategoryPage(testHtml, "text-styling", 1, 0);
 
-      const pmFormSlug = pmResult.subcategoryLinks.find((s) => s.slug.endsWith("--forms"))?.slug;
-      const tsFormSlug = tsResult.subcategoryLinks.find((s) => s.slug.endsWith("--forms"))?.slug;
+      const pmFormsLink = pmResult.subcategoryLinks.find((s) => s.slug === "forms");
+      const tsFormsLink = tsResult.subcategoryLinks.find((s) => s.slug === "forms");
 
-      assert.notEqual(pmFormSlug, tsFormSlug);
-      assert.equal(pmFormSlug, "project-management--forms");
-      assert.equal(tsFormSlug, "text-styling--forms");
+      // Same slug, different parentSlug
+      assert.equal(pmFormsLink?.slug, tsFormsLink?.slug);
+      assert.equal(pmFormsLink?.parentSlug, "project-management");
+      assert.equal(tsFormsLink?.parentSlug, "text-styling");
     });
   });
 });

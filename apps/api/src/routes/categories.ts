@@ -1,7 +1,7 @@
 import type { FastifyPluginAsync } from "fastify";
 import { eq, desc, sql, and, asc, inArray } from "drizzle-orm";
 import { createDb } from "@appranks/db";
-import { categories, categorySnapshots, appCategoryRankings, apps, categoryAdSightings, appPowerScores } from "@appranks/db";
+import { categories, categorySnapshots, appCategoryRankings, apps, categoryAdSightings, appPowerScores, categoryParents } from "@appranks/db";
 import { getPlatformFromQuery } from "../utils/platform.js";
 
 type Db = ReturnType<typeof createDb>;
@@ -61,8 +61,20 @@ export const categoryRoutes: FastifyPluginAsync = async (app) => {
       return rows;
     }
 
+    // Query junction table for multi-parent relationships
+    const categoryIds = rows.map((r) => r.id);
+    const junctionRows = categoryIds.length > 0
+      ? await db
+          .select({
+            categoryId: categoryParents.categoryId,
+            parentCategoryId: categoryParents.parentCategoryId,
+          })
+          .from(categoryParents)
+          .where(inArray(categoryParents.categoryId, categoryIds))
+      : [];
+
     // Build tree: roots are those with null parentSlug
-    return buildTree(rows);
+    return buildTree(rows, junctionRows);
   });
 
   // GET /api/categories/features-by-slugs?slugs=slug1,slug2
@@ -147,10 +159,30 @@ export const categoryRoutes: FastifyPluginAsync = async (app) => {
       .orderBy(desc(categorySnapshots.scrapedAt))
       .limit(1);
 
-    const childrenRaw = await db
-      .select()
-      .from(categories)
-      .where(eq(categories.parentSlug, slug));
+    // Get children via junction table first, fall back to parentSlug
+    const junctionChildren = await db
+      .select({
+        id: categories.id,
+        slug: categories.slug,
+        title: categories.title,
+        url: categories.url,
+        parentSlug: categories.parentSlug,
+        categoryLevel: categories.categoryLevel,
+        description: categories.description,
+        isTracked: categories.isTracked,
+        isListingPage: categories.isListingPage,
+        createdAt: categories.createdAt,
+        updatedAt: categories.updatedAt,
+        platform: categories.platform,
+      })
+      .from(categoryParents)
+      .innerJoin(categories, eq(categories.id, categoryParents.categoryId))
+      .where(eq(categoryParents.parentCategoryId, category.id));
+
+    // Fall back to parentSlug if junction table has no results
+    const childrenRaw = junctionChildren.length > 0
+      ? junctionChildren
+      : await db.select().from(categories).where(eq(categories.parentSlug, slug));
 
     // Attach latest appCount to each child from snapshots
     const children = await Promise.all(
@@ -166,20 +198,67 @@ export const categoryRoutes: FastifyPluginAsync = async (app) => {
     );
 
     // Build breadcrumb by walking up the parent chain
+    // Use junction table for parent lookups, falling back to parentSlug
     const breadcrumb: { slug: string; title: string }[] = [];
-    let currentParent = category.parentSlug;
-    const visited = new Set<string>();
-    while (currentParent && !visited.has(currentParent)) {
-      visited.add(currentParent);
-      const [parent] = await db
-        .select({ slug: categories.slug, title: categories.title, parentSlug: categories.parentSlug })
-        .from(categories)
-        .where(eq(categories.slug, currentParent))
-        .limit(1);
-      if (!parent) break;
-      breadcrumb.unshift({ slug: parent.slug, title: parent.title });
-      currentParent = parent.parentSlug;
+
+    // Get parents from junction table
+    const junctionParentRows = await db
+      .select({
+        parentId: categoryParents.parentCategoryId,
+        parentSlug: categories.slug,
+        parentTitle: categories.title,
+      })
+      .from(categoryParents)
+      .innerJoin(categories, eq(categories.id, categoryParents.parentCategoryId))
+      .where(eq(categoryParents.categoryId, category.id));
+
+    if (junctionParentRows.length > 0) {
+      // Use first parent for breadcrumb (pick any for single-path display)
+      const firstParent = junctionParentRows[0];
+      // Walk up from this parent
+      const visited = new Set<number>();
+      let currentId = firstParent.parentId;
+      const parentChain: { slug: string; title: string }[] = [
+        { slug: firstParent.parentSlug, title: firstParent.parentTitle },
+      ];
+      while (currentId && !visited.has(currentId)) {
+        visited.add(currentId);
+        const [grandparent] = await db
+          .select({
+            parentId: categoryParents.parentCategoryId,
+            parentSlug: categories.slug,
+            parentTitle: categories.title,
+          })
+          .from(categoryParents)
+          .innerJoin(categories, eq(categories.id, categoryParents.parentCategoryId))
+          .where(eq(categoryParents.categoryId, currentId))
+          .limit(1);
+        if (!grandparent) break;
+        parentChain.unshift({ slug: grandparent.parentSlug, title: grandparent.parentTitle });
+        currentId = grandparent.parentId;
+      }
+      breadcrumb.push(...parentChain);
+    } else {
+      // Fall back to parentSlug chain
+      let currentParent = category.parentSlug;
+      const visited = new Set<string>();
+      while (currentParent && !visited.has(currentParent)) {
+        visited.add(currentParent);
+        const [parent] = await db
+          .select({ slug: categories.slug, title: categories.title, parentSlug: categories.parentSlug })
+          .from(categories)
+          .where(eq(categories.slug, currentParent))
+          .limit(1);
+        if (!parent) break;
+        breadcrumb.unshift({ slug: parent.slug, title: parent.title });
+        currentParent = parent.parentSlug;
+      }
     }
+
+    // Include all parent paths for multi-parent categories
+    const allParentPaths = junctionParentRows.length > 1
+      ? junctionParentRows.map((p) => ({ slug: p.parentSlug, title: p.parentTitle }))
+      : undefined;
 
     // Fetch ranked apps
     let rankedApps: any[] = [];
@@ -275,16 +354,30 @@ export const categoryRoutes: FastifyPluginAsync = async (app) => {
 
       // Get apps from descendant listing categories
       try {
-        const descendantListingCats = await db
+        // Get descendant listing categories via junction table first, fall back to slug-based
+        const junctionDescendants = await db
           .select({ slug: categories.slug, title: categories.title })
-          .from(categories)
+          .from(categoryParents)
+          .innerJoin(categories, eq(categories.id, categoryParents.categoryId))
           .where(
             and(
-              sql`(${categories.slug} LIKE ${slug + '-%'} OR ${categories.parentSlug} = ${slug})`,
-              eq(categories.isListingPage, true),
-              eq(categories.platform, platform)
+              eq(categoryParents.parentCategoryId, category.id),
+              eq(categories.isListingPage, true)
             )
           );
+
+        const descendantListingCats = junctionDescendants.length > 0
+          ? junctionDescendants
+          : await db
+              .select({ slug: categories.slug, title: categories.title })
+              .from(categories)
+              .where(
+                and(
+                  sql`(${categories.slug} LIKE ${slug + '-%'} OR ${categories.parentSlug} = ${slug})`,
+                  eq(categories.isListingPage, true),
+                  eq(categories.platform, platform)
+                )
+              );
 
         if (descendantListingCats.length > 0) {
           // Collect all categories per app (an app can appear in multiple listing categories)
@@ -372,6 +465,7 @@ export const categoryRoutes: FastifyPluginAsync = async (app) => {
         : null,
       children,
       breadcrumb,
+      allParentPaths,
       rankedApps,
       hubPageApps,
     };
@@ -592,7 +686,10 @@ export const categoryRoutes: FastifyPluginAsync = async (app) => {
   );
 };
 
-function buildTree(rows: { slug: string; parentSlug: string | null; [key: string]: any }[]) {
+function buildTree(
+  rows: { id: number; slug: string; parentSlug: string | null; [key: string]: any }[],
+  junctionRows?: { categoryId: number; parentCategoryId: number }[]
+) {
   const map = new Map<string, any>();
   const roots: any[] = [];
 
@@ -600,12 +697,53 @@ function buildTree(rows: { slug: string; parentSlug: string | null; [key: string
     map.set(row.slug, { ...row, children: [] });
   }
 
-  for (const row of rows) {
-    const node = map.get(row.slug);
-    if (row.parentSlug && map.has(row.parentSlug)) {
-      map.get(row.parentSlug).children.push(node);
-    } else {
-      roots.push(node);
+  if (junctionRows && junctionRows.length > 0) {
+    // Build id→slug lookup
+    const idToSlug = new Map<number, string>();
+    for (const row of rows) {
+      idToSlug.set(row.id, row.slug);
+    }
+
+    // Track which categories have junction-table parents
+    const hasJunctionParent = new Set<string>();
+    for (const jr of junctionRows) {
+      const childSlug = idToSlug.get(jr.categoryId);
+      const parentSlug = idToSlug.get(jr.parentCategoryId);
+      if (childSlug && parentSlug && map.has(childSlug) && map.has(parentSlug)) {
+        // Clone node for multi-parent display (same category appears under each parent)
+        const child = map.get(childSlug);
+        map.get(parentSlug).children.push(child);
+        hasJunctionParent.add(childSlug);
+      }
+    }
+
+    // Fall back to parentSlug for categories not in junction table
+    for (const row of rows) {
+      if (!hasJunctionParent.has(row.slug)) {
+        const node = map.get(row.slug);
+        if (row.parentSlug && map.has(row.parentSlug)) {
+          map.get(row.parentSlug).children.push(node);
+        } else {
+          roots.push(node);
+        }
+      } else {
+        // Check if it also has no junction parent match (shouldn't happen, but safety)
+        const node = map.get(row.slug);
+        const isChild = Array.from(map.values()).some(
+          (n) => n.children.includes(node)
+        );
+        if (!isChild) roots.push(node);
+      }
+    }
+  } else {
+    // No junction data — use parentSlug only
+    for (const row of rows) {
+      const node = map.get(row.slug);
+      if (row.parentSlug && map.has(row.parentSlug)) {
+        map.get(row.parentSlug).children.push(node);
+      } else {
+        roots.push(node);
+      }
     }
   }
 

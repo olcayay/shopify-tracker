@@ -1537,3 +1537,34 @@ Database:
 Dependencies:
 - Added openai ^6.27.0 to apps/api
 - Requires OPENAI_API_KEY environment variable
+
+## Fix Canva Category Parent-Child Relationships (1-to-N)
+
+Problem:
+- Canva subcategories could belong to multiple parent categories (e.g., "forms" is under both "project-management" and "text-styling")
+- The old approach created separate rows with compound slugs ("project-management--forms", "text-styling--forms"), causing duplicate data and confusing UX
+
+Solution:
+- Created `category_parents` junction table for 1-to-N parent-child relationships
+- Migration 0062 backfills junction table from existing parentSlug, merges compound-slug categories into simple slugs, migrates all references (snapshots, rankings, scores, starred, ad sightings), deduplicates, and cleans up orphaned rows
+- Canva parser now returns simple slugs (e.g., "forms") with `parentSlug` field instead of compound slugs
+- Category scraper upserts junction rows; handles multi-parent by adding additional parent links even when category was already visited
+- API routes use junction table for: tree building, children lookup, breadcrumb walking, hub page descendants
+- System-admin parentTitle shows comma-separated parent names via junction table
+- Dashboard shows multiple parent breadcrumbs for multi-parent categories
+- Removed compound-slug formatting logic from platform-urls.ts
+
+Files changed:
+- packages/db/src/schema/category-parents.ts (NEW)
+- packages/db/src/index.ts
+- packages/db/src/migrations/0062_category_parents.sql (NEW)
+- apps/scraper/src/platforms/canva/parsers/category-parser.ts
+- apps/scraper/src/platforms/platform-module.ts
+- apps/scraper/src/scrapers/category-scraper.ts
+- apps/api/src/routes/categories.ts
+- apps/api/src/routes/system-admin.ts
+- apps/dashboard/src/app/(dashboard)/[platform]/categories/[slug]/page.tsx
+- apps/dashboard/src/app/(dashboard)/system-admin/categories/page.tsx
+- apps/dashboard/src/lib/platform-urls.ts
+- apps/dashboard/src/__tests__/lib/platform-urls.test.ts
+- apps/scraper/src/platforms/canva/parsers/__tests__/category-parser.test.ts
