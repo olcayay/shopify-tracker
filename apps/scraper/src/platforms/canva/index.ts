@@ -95,7 +95,7 @@ export class CanvaModule implements PlatformModule {
       if (response.url().includes(`/_ajax/appsearch/appListing/${appId}`) && response.status() === 200) {
         try {
           appListingJson = await response.text();
-          log.info("intercepted appListing API", { slug, size: appListingJson.length, preview: appListingJson.substring(0, 500) });
+          log.info("intercepted appListing API", { slug, size: appListingJson.length, data: appListingJson });
         } catch {}
       }
     };
