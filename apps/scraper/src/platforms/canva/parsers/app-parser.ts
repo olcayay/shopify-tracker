@@ -307,20 +307,112 @@ function normalizeCanvaDetailApp(app: CanvaDetailApp, slug: string): NormalizedA
 }
 
 /**
+ * Extract app data from the appListing API response injected by fetchAppPage().
+ *
+ * The API response format (from /_ajax/appsearch/appListing/{appId}):
+ *   {"A": { inner object }} where the inner object has:
+ *   "A": app ID
+ *   "C": "SDK_APP" (type)
+ *   "D": name
+ *   "E": short description
+ *   "F": full description
+ *   "G": tagline
+ *   "H": icon { "A": url }
+ *   "T": developer name
+ *   "I": promo card URL
+ *   "K": screenshots array
+ *   "L": terms URL
+ *   "M": privacy URL
+ *   "N": developer website
+ *   "O": permissions array [{A: scope, B: type}]
+ *   "P": developer info {A: name, B: email, C: phone, D: address}
+ *   "Q": languages array
+ */
+export function extractCanvaAppListingApi(html: string, appId: string): CanvaDetailApp | null {
+  const marker = "<!-- CANVA_APP_LISTING_API:";
+  const endMarker = ":END_CANVA_APP_LISTING_API -->";
+  const start = html.indexOf(marker);
+  if (start === -1) return null;
+
+  const jsonStart = start + marker.length;
+  const jsonEnd = html.indexOf(endMarker, jsonStart);
+  if (jsonEnd === -1) return null;
+
+  try {
+    const raw = JSON.parse(html.substring(jsonStart, jsonEnd));
+    // The API wraps the app object in {"A": {...}}
+    const obj = raw.A || raw;
+
+    if (!obj.A || obj.A !== appId) {
+      log.warn("appListing API data doesn't match appId", { expected: appId, got: obj.A });
+      return null;
+    }
+
+    const devInfo = obj.P || {};
+    const address = devInfo.D
+      ? {
+          street: devInfo.D.A || "",
+          city: devInfo.D.C || "",
+          country: devInfo.D.D || "",
+          state: devInfo.D.E || "",
+          zip: devInfo.D.F || "",
+        }
+      : null;
+
+    log.info("parsed app from appListing API", { appId, name: obj.D, keys: Object.keys(obj).join(",") });
+
+    return {
+      id: obj.A,
+      name: obj.D || "",
+      shortDescription: obj.E || "",
+      tagline: obj.G || "",
+      fullDescription: obj.F || "",
+      developer: obj.T || devInfo.A || "",
+      developerWebsite: obj.N || "",
+      developerEmail: devInfo.B || "",
+      developerPhone: devInfo.C || "",
+      developerAddress: address,
+      iconUrl: obj.H?.A || "",
+      promoCardUrl: obj.I || "",
+      screenshots: Array.isArray(obj.K) ? obj.K : [],
+      termsUrl: obj.L || "",
+      privacyUrl: obj.M || "",
+      permissions: Array.isArray(obj.O) ? obj.O.map((p: any) => ({
+        scope: p.A || "",
+        type: p.B || "",
+      })) : [],
+      languages: Array.isArray(obj.Q) ? obj.Q : [],
+    };
+  } catch (e) {
+    log.warn("failed to parse appListing API data", { appId, error: String(e) });
+    return null;
+  }
+}
+
+/**
  * Parse a single app from HTML.
  *
- * First tries to parse as a detail page (richer data).
- * Falls back to extracting from /apps bulk page embedded JSON.
+ * Priority order:
+ * 1. SSR detail page JSON (richest data)
+ * 2. appListing API response (injected by fetchAppPage for non-SSR pages)
+ * 3. Bulk /apps page embedded JSON (basic data only)
  */
 export function parseCanvaAppPage(html: string, slug: string): NormalizedAppDetails {
   // The slug might be "AAF_8lkU9VE--ai-music" or just "AAF_8lkU9VE"
   const appId = slug.split("--")[0];
 
-  // Try detail page format first (richer data)
+  // Try SSR detail page format first (richest data)
   const detailApp = extractCanvaDetailApp(html, appId);
   if (detailApp) {
     log.info("parsed app from detail page", { appId, name: detailApp.name });
     return normalizeCanvaDetailApp(detailApp, slug);
+  }
+
+  // Try appListing API data (injected by fetchAppPage for non-SSR pages)
+  const apiApp = extractCanvaAppListingApi(html, appId);
+  if (apiApp) {
+    log.info("parsed app from appListing API", { appId, name: apiApp.name });
+    return normalizeCanvaDetailApp(apiApp, slug);
   }
 
   // Fall back to bulk /apps page format

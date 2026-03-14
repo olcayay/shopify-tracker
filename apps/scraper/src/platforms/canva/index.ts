@@ -95,7 +95,7 @@ export class CanvaModule implements PlatformModule {
       if (response.url().includes(`/_ajax/appsearch/appListing/${appId}`) && response.status() === 200) {
         try {
           appListingJson = await response.text();
-          log.info("intercepted appListing API", { slug, size: appListingJson.length, data: appListingJson });
+          log.info("intercepted appListing API", { slug, size: appListingJson.length });
         } catch {}
       }
     };
@@ -103,7 +103,23 @@ export class CanvaModule implements PlatformModule {
 
     await page.goto(detailUrl, { waitUntil: "load", timeout: 30_000 });
 
-    const title = await page.title();
+    // Handle Cloudflare challenge if present
+    let title = await page.title();
+    if (title === "Just a moment...") {
+      log.info("Cloudflare challenge on detail page, waiting for auto-resolve", { slug });
+      try {
+        await page.waitForFunction(
+          () => document.title !== "Just a moment...",
+          { timeout: 15_000 },
+        );
+        await page.waitForTimeout(3000);
+        title = await page.title();
+        log.info("Cloudflare challenge resolved", { slug, newTitle: title });
+      } catch {
+        log.warn("Cloudflare challenge did not resolve in time", { slug });
+      }
+    }
+
     const isBulkPage = title === "Apps Marketplace | Canva";
 
     if (isBulkPage) {
@@ -111,8 +127,8 @@ export class CanvaModule implements PlatformModule {
       // Wait for the appListing API call to complete.
       log.info("bulk page detected, waiting for appListing API", { slug });
       const start = Date.now();
-      while (!appListingJson && Date.now() - start < 10_000) {
-        await page.waitForTimeout(1000);
+      while (!appListingJson && Date.now() - start < 15_000) {
+        await page.waitForTimeout(500);
       }
     } else {
       // SSR detail page loaded directly
