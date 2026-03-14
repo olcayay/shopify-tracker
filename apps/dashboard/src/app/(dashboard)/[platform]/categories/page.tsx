@@ -48,6 +48,7 @@ interface StarredCategory {
   categorySlug: string;
   categoryTitle: string;
   parentSlug: string | null;
+  parents: { slug: string; title: string }[];
   createdAt: string;
   appCount: number | null;
   trackedInResults: number;
@@ -215,31 +216,6 @@ export default function CategoriesPage() {
   const totalCount = countAll(tree);
   const starredSlugs = new Set(starred.map((s) => s.categorySlug));
 
-  // Build flat slug→node map for ancestor lookups
-  const slugMap = useMemo(() => {
-    const map = new Map<string, CategoryNode>();
-    function collect(nodes: CategoryNode[]) {
-      for (const n of nodes) {
-        map.set(n.slug, n);
-        collect(n.children);
-      }
-    }
-    collect(tree);
-    return map;
-  }, [tree]);
-
-  function getAncestors(slug: string): CategoryNode[] {
-    const ancestors: CategoryNode[] = [];
-    let node = slugMap.get(slug);
-    while (node?.parentSlug) {
-      const parent = slugMap.get(node.parentSlug);
-      if (!parent) break;
-      ancestors.unshift(parent);
-      node = parent;
-    }
-    return ancestors;
-  }
-
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
@@ -303,6 +279,7 @@ export default function CategoriesPage() {
               <TableHeader>
                 <TableRow>
                   <TableHead>Category</TableHead>
+                  <TableHead>Parents</TableHead>
                   <TableHead>Total Apps</TableHead>
                   <TableHead>Tracked</TableHead>
                   <TableHead>Competitor</TableHead>
@@ -311,9 +288,9 @@ export default function CategoriesPage() {
               </TableHeader>
               <TableBody>
                 {starred.map((s) => {
-                  const ancestors = getAncestors(s.categorySlug);
                   const hasApps = s.trackedInResults > 0 || s.competitorInResults > 0;
                   const isExpanded = expandedStarred === s.categorySlug;
+                  const parents = s.parents ?? [];
                   return (
                   <Fragment key={s.categorySlug}>
                   <TableRow
@@ -327,18 +304,6 @@ export default function CategoriesPage() {
                         ) : (
                           <span className="w-4 shrink-0" />
                         )}
-                        {ancestors.map((a) => (
-                          <span key={a.slug} className="flex items-center gap-1">
-                            <Link
-                              href={`/${platform}/categories/${a.slug}`}
-                              className="text-muted-foreground hover:underline hover:text-foreground"
-                              onClick={(e) => e.stopPropagation()}
-                            >
-                              {a.title}
-                            </Link>
-                            <ChevronRight className="h-3 w-3 text-muted-foreground shrink-0" />
-                          </span>
-                        ))}
                         <Link
                           href={`/${platform}/categories/${s.categorySlug}`}
                           className="text-primary hover:underline font-medium"
@@ -347,6 +312,26 @@ export default function CategoriesPage() {
                           {s.categoryTitle}
                         </Link>
                       </div>
+                    </TableCell>
+                    <TableCell>
+                      {parents.length > 0 ? (
+                        <div className="flex flex-wrap gap-1">
+                          {parents.map((p, i) => (
+                            <span key={p.slug} className="flex items-center text-sm">
+                              <Link
+                                href={`/${platform}/categories/${p.slug}`}
+                                className="text-muted-foreground hover:underline hover:text-foreground"
+                                onClick={(e) => e.stopPropagation()}
+                              >
+                                {p.title}
+                              </Link>
+                              {i < parents.length - 1 && <span className="text-muted-foreground mx-1">,</span>}
+                            </span>
+                          ))}
+                        </div>
+                      ) : (
+                        <span className="text-muted-foreground">{"\u2014"}</span>
+                      )}
                     </TableCell>
                     <TableCell>
                       {s.appCount != null ? s.appCount.toLocaleString() : "\u2014"}
@@ -391,7 +376,7 @@ export default function CategoriesPage() {
                   </TableRow>
                   {isExpanded && (
                     <TableRow>
-                      <TableCell colSpan={canEdit ? 5 : 4} className="bg-muted/30 p-4">
+                      <TableCell colSpan={canEdit ? 6 : 5} className="bg-muted/30 p-4">
                         <div className="space-y-1">
                           {[
                             ...(s.trackedAppsInResults ?? []).map((app: any) => ({ ...app, _type: "tracked" as const })),

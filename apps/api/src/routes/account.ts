@@ -33,6 +33,7 @@ import {
   appVisibilityScores,
   appPowerScores,
   researchProjects,
+  categoryParents,
 } from "@appranks/db";
 import { computeWeightedPowerScore } from "@appranks/shared";
 import { requireRole } from "../middleware/authorize.js";
@@ -2937,6 +2938,29 @@ export const accountRoutes: FastifyPluginAsync = async (app) => {
       }
     }
 
+    // Enrich with all parent titles from junction table
+    const parentTitlesMap = new Map<string, { slug: string; title: string }[]>();
+    try {
+      const catIds = [...catSlugToId.values()];
+      if (catIds.length > 0) {
+        const parentRows = await db
+          .select({
+            categoryId: categoryParents.categoryId,
+            parentSlug: categories.slug,
+            parentTitle: categories.title,
+          })
+          .from(categoryParents)
+          .innerJoin(categories, eq(categories.id, categoryParents.parentCategoryId))
+          .where(inArray(categoryParents.categoryId, catIds));
+        for (const pr of parentRows) {
+          const slug = catIdToSlug.get(pr.categoryId) ?? "";
+          const list = parentTitlesMap.get(slug) ?? [];
+          list.push({ slug: pr.parentSlug, title: pr.parentTitle });
+          parentTitlesMap.set(slug, list);
+        }
+      }
+    } catch { /* category_parents table may not exist yet */ }
+
     return rows.map((row) => {
       const snap = snapshotMap.get(row.categorySlug);
       const fpApps = (snap?.firstPageApps ?? []) as any[];
@@ -2959,8 +2983,12 @@ export const accountRoutes: FastifyPluginAsync = async (app) => {
         competitorAppsInResults = rankedApps.filter((a) => competitorSet.has(a.app_slug));
       }
 
+      // Use junction table parents if available, fall back to single parentSlug
+      const parents = parentTitlesMap.get(row.categorySlug) ?? (row.parentSlug ? [{ slug: row.parentSlug, title: row.parentSlug }] : []);
+
       return {
         ...row,
+        parents,
         appCount: snap?.appCount ?? null,
         trackedInResults: trackedAppsInResults.length,
         competitorInResults: competitorAppsInResults.length,
