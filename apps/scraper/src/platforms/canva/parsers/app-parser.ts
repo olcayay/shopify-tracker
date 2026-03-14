@@ -155,11 +155,19 @@ export function extractCanvaApps(html: string): CanvaEmbeddedApp[] {
  * We find it by matching the app ID pattern without the "SDK_APP" marker.
  */
 export function extractCanvaDetailApp(html: string, appId: string): CanvaDetailApp | null {
-  // The detail page JSON starts with {"A":"<appId>","C":"<name>",...}
-  // It does NOT have "B":"SDK_APP" like the /apps page
-  // We look for a JSON object containing the app ID that has the detail schema fields
-  const pattern = new RegExp(`\\{"A":"${escapeRegex(appId)}","C":"[^"]+","E":"`);
-  const match = pattern.exec(html);
+  // The detail page JSON contains the app ID as "A":"<appId>" plus detail-specific keys.
+  // Try multiple patterns: keys may appear in different orders across Canva versions.
+  // The bulk page format has "B":"SDK_APP" which we must NOT match here.
+  const eid = escapeRegex(appId);
+  const patterns = [
+    new RegExp(`\\{"A":"${eid}","C":"[^"]+","E":"`),    // original: A,C,E order
+    new RegExp(`\\{"A":"${eid}","(?!B":"(?:SDK_APP|EXTENSION))[A-Z]":"`), // A + any key except B:SDK_APP
+  ];
+  let match: RegExpExecArray | null = null;
+  for (const p of patterns) {
+    match = p.exec(html);
+    if (match) break;
+  }
 
   if (!match) {
     log.warn("detail JSON not found in page", { appId });
@@ -185,6 +193,12 @@ export function extractCanvaDetailApp(html: string, appId: string): CanvaDetailA
 
   try {
     const obj = JSON.parse(html.substring(objStart, objEnd));
+
+    // Validate this is actually a detail object (must have E=name, not just a URL reference)
+    if (!obj.E || typeof obj.E !== "string") {
+      log.warn("matched JSON lacks expected detail fields", { appId });
+      return null;
+    }
 
     const devInfo = obj.X || {};
     const address = devInfo.D
@@ -246,7 +260,7 @@ export function normalizeCanvaApp(app: CanvaEmbeddedApp): NormalizedAppDetails {
     platformData: {
       canvaAppId: app.id,
       canvaAppType: app.appType,
-      shortDescription: app.shortDescription,
+      description: app.shortDescription,
       tagline: app.tagline,
       fullDescription: app.fullDescription,
       topics: app.topics,
