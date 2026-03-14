@@ -85,39 +85,68 @@ export class CanvaModule implements PlatformModule {
   async fetchAppPage(slug: string): Promise<string> {
     const page = await this.ensureBrowserPage();
     const appId = slug.split("--")[0];
-    const url = this.buildAppUrl(slug);
-    log.info("fetching app detail page", { slug, url });
+    const urlSlug = slug.split("--")[1] || "";
+    const appPath = `/apps/${appId}/${urlSlug}`;
+    log.info("fetching app detail page", { slug, appPath });
 
-    // Try up to 2 attempts with increasing wait times
-    let html = "";
-    for (let attempt = 1; attempt <= 2; attempt++) {
-      await page.goto(url, { waitUntil: "domcontentloaded", timeout: 30_000 });
-      // Wait for SPA hydration — longer on retry
-      await page.waitForTimeout(attempt === 1 ? 3000 : 6000);
+    // Strategy: use SPA client-side navigation to avoid Cloudflare challenge.
+    // Clicking a link within the already-loaded Canva SPA triggers a React Router
+    // navigation that doesn't hit Cloudflare, unlike page.goto() which does a
+    // full page load that Cloudflare may block.
 
-      html = await page.content();
-      // Check if the detail JSON is present (not just a Cloudflare challenge page)
-      const hasDetailJson = html.includes(`"A":"${appId}"`) && !html.includes(`"A":"${appId}","B":"SDK_APP"`);
-      log.info("app detail page fetched", { slug, htmlLength: html.length, hasDetailJson, attempt });
-
-      if (hasDetailJson) break;
-
-      if (attempt < 2) {
-        log.warn("detail JSON not found, retrying with longer wait", { slug, attempt });
-        // Reload the /apps page first to reset Cloudflare state
-        await page.goto("https://www.canva.com/apps", {
-          waitUntil: "load",
-          timeout: 30_000,
-        });
-        await page.waitForTimeout(3000);
-      }
+    // First ensure we're on /apps page
+    const currentUrl = page.url();
+    if (!currentUrl.includes("canva.com/apps")) {
+      await page.goto("https://www.canva.com/apps", {
+        waitUntil: "load",
+        timeout: 30_000,
+      });
+      await page.waitForTimeout(3000);
     }
 
-    // Navigate back to /apps to reset state for search/other operations
-    await page.goto("https://www.canva.com/apps", {
-      waitUntil: "domcontentloaded",
-      timeout: 30_000,
-    });
+    // Try clicking the app link on the page (SPA navigation)
+    let html = "";
+    let hasDetailJson = false;
+
+    try {
+      // Click a link to this app on the /apps page to trigger SPA navigation
+      const linkSelector = `a[href*="/apps/${appId}/"]`;
+      const link = await page.$(linkSelector);
+
+      if (link) {
+        await link.click();
+        // Wait for SPA content to update
+        await page.waitForTimeout(4000);
+
+        html = await page.content();
+        hasDetailJson = html.includes(`"A":"${appId}"`) && !html.includes(`"A":"${appId}","B":"SDK_APP"`);
+        log.info("app detail via SPA click", { slug, htmlLength: html.length, hasDetailJson });
+      }
+    } catch (e) {
+      log.warn("SPA click navigation failed", { slug, error: String(e) });
+    }
+
+    // Fallback: direct navigation if SPA click didn't work
+    if (!hasDetailJson) {
+      const url = this.buildAppUrl(slug);
+      log.info("falling back to direct navigation", { slug, url });
+      await page.goto(url, { waitUntil: "domcontentloaded", timeout: 30_000 });
+      await page.waitForTimeout(5000);
+
+      html = await page.content();
+      hasDetailJson = html.includes(`"A":"${appId}"`) && !html.includes(`"A":"${appId}","B":"SDK_APP"`);
+      log.info("app detail via direct nav", { slug, htmlLength: html.length, hasDetailJson });
+    }
+
+    // Navigate back to /apps — prefer browser back (no Cloudflare re-check)
+    try {
+      await page.goBack({ waitUntil: "domcontentloaded", timeout: 15_000 });
+    } catch {
+      await page.goto("https://www.canva.com/apps", {
+        waitUntil: "domcontentloaded",
+        timeout: 30_000,
+      });
+    }
     await page.waitForTimeout(2000);
 
     return html;
