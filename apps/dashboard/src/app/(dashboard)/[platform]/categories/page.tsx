@@ -3,6 +3,7 @@
 import { Fragment, useEffect, useState, useCallback, useMemo } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
+import { AppIcon } from "@/components/app-icon";
 import { useAuth } from "@/lib/auth-context";
 import { useFormatDate } from "@/lib/format-date";
 import { TableSkeleton } from "@/components/skeletons";
@@ -413,9 +414,7 @@ export default function CategoriesPage() {
                                       ? <Target className="h-3.5 w-3.5 text-emerald-600 shrink-0" />
                                       : <Eye className="h-3.5 w-3.5 text-amber-500 shrink-0" />
                                     }
-                                    {app.logo_url && (
-                                      <img src={app.logo_url} alt="" className="h-5 w-5 rounded shrink-0" />
-                                    )}
+                                    <AppIcon src={app.logo_url} className="h-5 w-5 rounded" />
                                     <Link
                                       href={`/${platform}/apps/${app.app_slug}`}
                                       className="text-primary hover:underline font-medium"

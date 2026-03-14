@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { AppIcon } from "@/components/app-icon";
 import { formatDateOnly } from "@/lib/format-date";
 import { getKeyword, getKeywordRankings, getKeywordAds, getKeywordSuggestions, getKeywordMembership, getAccountCompetitors, getAccountTrackedApps, getAppsLastChanges, getAppsMinPaidPrices, getAppsReverseSimilarCounts, getAppsLaunchedDates, getAppsCategories } from "@/lib/api";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -183,9 +184,7 @@ export default async function KeywordDetailPage({
                   <TableRow key={app.app_slug} className="bg-blue-50/50 border-l-2 border-l-blue-400">
                     <TableCell>
                       <div className="flex items-center gap-2">
-                        {app.logo_url && (
-                          <img src={app.logo_url} alt="" className="h-6 w-6 rounded shrink-0" />
-                        )}
+                        <AppIcon src={app.logo_url} className="h-6 w-6 rounded" />
                         <div className="flex items-center gap-1.5">
                           <a
                             href={app.app_url || `${PLATFORMS[platform as PlatformId].baseUrl}/built-in-features/${app.app_slug.replace("bif:", "")}`}
@@ -252,9 +251,7 @@ export default async function KeywordDetailPage({
                   <TableRow key={app.app_slug} className={isTracked ? "border-l-2 border-l-emerald-500 bg-emerald-500/10" : isCompetitor ? "border-l-2 border-l-amber-500 bg-amber-500/10" : ""}>
                     <TableCell className="max-w-[300px]">
                       <div className="flex items-center gap-2">
-                        {app.logo_url && (
-                          <img src={app.logo_url} alt="" className="h-6 w-6 rounded shrink-0" />
-                        )}
+                        <AppIcon src={app.logo_url} className="h-6 w-6 rounded" />
                         <div className="flex items-center gap-1.5 min-w-0">
                           <Link
                             href={`/${platform}/apps/${app.app_slug}`}
@@ -369,9 +366,7 @@ export default async function KeywordDetailPage({
                   <TableRow key={ad.appSlug} className={isTracked ? "border-l-2 border-l-emerald-500 bg-emerald-500/10" : isCompetitor ? "border-l-2 border-l-amber-500 bg-amber-500/10" : ""}>
                     <TableCell className="max-w-[300px]">
                       <div className="flex items-center gap-2">
-                        {ad.iconUrl && (
-                          <img src={ad.iconUrl} alt="" className="h-6 w-6 rounded shrink-0" />
-                        )}
+                        <AppIcon src={ad.iconUrl} className="h-6 w-6 rounded" />
                         <div className="flex items-center gap-1.5 min-w-0">
                           <Link
                             href={`/${platform}/apps/${ad.appSlug}`}

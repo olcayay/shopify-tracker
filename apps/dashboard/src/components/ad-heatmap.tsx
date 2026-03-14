@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useMemo, useState } from "react";
+import { AppIcon } from "@/components/app-icon";
 import { Badge } from "@/components/ui/badge";
 
 interface HeatmapSighting {
@@ -142,9 +143,7 @@ export function AdHeatmap({
             >
               {/* Label */}
               <div className="w-[200px] shrink-0 pr-2 flex items-center gap-1.5 min-w-0">
-                {item.iconUrl && (
-                  <img src={item.iconUrl} alt="" className="h-4 w-4 rounded shrink-0" />
-                )}
+                <AppIcon src={item.iconUrl} className="h-4 w-4 rounded" />
                 <Link
                   href={`${linkPrefix}${item.slug}`}
                   className="text-xs text-primary hover:underline truncate"

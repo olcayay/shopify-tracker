@@ -3,6 +3,7 @@
 import { useEffect, useState, useMemo } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
+import { AppIcon } from "@/components/app-icon";
 import { useAuth } from "@/lib/auth-context";
 import { useFormatDate } from "@/lib/format-date";
 import { Button } from "@/components/ui/button";
@@ -232,9 +233,7 @@ export default function AppsPage() {
                   <TableRow key={app.slug}>
                     <TableCell className="max-w-[260px]">
                       <div className="flex items-center gap-2">
-                        {app.iconUrl && (
-                          <img src={app.iconUrl} alt="" className="h-6 w-6 rounded shrink-0" />
-                        )}
+                        <AppIcon src={app.iconUrl} className="h-6 w-6 rounded" />
                         <div className="min-w-0">
                           <div className="flex items-center gap-1.5">
                             <Link

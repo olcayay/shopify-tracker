@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { AppIcon } from "@/components/app-icon";
 import { formatDateOnly } from "@/lib/format-date";
 import { getApp, getAppMembership } from "@/lib/api";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -40,9 +41,7 @@ export default async function AppDetailLayout({
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div className="flex items-start gap-3">
-          {app.iconUrl && (
-            <img src={app.iconUrl} alt="" className="h-16 w-16 rounded-lg shrink-0" />
-          )}
+          <AppIcon src={app.iconUrl} className="h-16 w-16 rounded-lg" />
           <div>
             <h1 className="text-2xl font-bold">
               {app.name}

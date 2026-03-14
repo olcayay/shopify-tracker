@@ -3,6 +3,7 @@
 import { Fragment, useEffect, useState, useRef, useMemo } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
+import { AppIcon } from "@/components/app-icon";
 import { useAuth } from "@/lib/auth-context";
 import { useFormatDate } from "@/lib/format-date";
 import { TableSkeleton } from "@/components/skeletons";
@@ -617,13 +618,7 @@ export default function KeywordsPage() {
                                           className="flex items-center justify-between text-sm py-1 px-2 rounded bg-emerald-500/10 border-l-2 border-l-emerald-500"
                                         >
                                           <div className="flex items-center gap-2">
-                                            {app.logo_url && (
-                                              <img
-                                                src={app.logo_url}
-                                                alt=""
-                                                className="h-5 w-5 rounded shrink-0"
-                                              />
-                                            )}
+                                            <AppIcon src={app.logo_url} className="h-5 w-5 rounded" />
                                             <Link
                                               href={`/${platform}/apps/${app.app_slug}`}
                                               className="text-primary hover:underline font-medium"
@@ -657,13 +652,7 @@ export default function KeywordsPage() {
                                           className="flex items-center justify-between text-sm py-1 px-2 rounded bg-amber-500/10 border-l-2 border-l-amber-500"
                                         >
                                           <div className="flex items-center gap-2">
-                                            {app.logo_url && (
-                                              <img
-                                                src={app.logo_url}
-                                                alt=""
-                                                className="h-5 w-5 rounded shrink-0"
-                                              />
-                                            )}
+                                            <AppIcon src={app.logo_url} className="h-5 w-5 rounded" />
                                             <Link
                                               href={`/${platform}/apps/${app.app_slug}`}
                                               className="text-primary hover:underline font-medium"

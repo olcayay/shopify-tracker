@@ -3,6 +3,7 @@
 import { useState, useMemo } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
+import { AppIcon } from "@/components/app-icon";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -319,9 +320,7 @@ export function CategoryAppResults({
                     )}
                     <TableCell className="max-w-[260px]">
                       <div className="flex items-center gap-2">
-                        {app.logo_url && (
-                          <img src={app.logo_url} alt="" className="h-6 w-6 rounded shrink-0" />
-                        )}
+                        <AppIcon src={app.logo_url} className="h-6 w-6 rounded" />
                         <div className="flex items-center gap-1.5 min-w-0">
                           <Link
                             href={`/${platform}/apps/${app.slug}`}
