@@ -63,10 +63,10 @@ describe("parseCanvaCategoryPage", () => {
       assert.equal(result.subcategoryLinks.length, 4);
       const slugs = result.subcategoryLinks.map((s) => s.slug);
       assert.deepEqual(slugs, [
-        "tasks-and-workflows",
-        "documents",
+        "content-schedulers",
         "forms",
-        "interactivity",
+        "social-networking",
+        "tasks-and-workflows",
       ]);
       // Each subcategory link includes the parent slug
       for (const link of result.subcategoryLinks) {
@@ -78,10 +78,10 @@ describe("parseCanvaCategoryPage", () => {
       const result = parseCanvaCategoryPage(testHtml, "project-management", 1, 0);
       const titles = result.subcategoryLinks.map((s) => s.title);
       assert.deepEqual(titles, [
-        "Tasks and Workflows",
-        "Documents",
+        "Content Schedulers",
         "Forms",
-        "Interactivity",
+        "Social Networking",
+        "Tasks and Workflows",
       ]);
     });
 

@@ -4,17 +4,17 @@ import type { PlatformConstants, PlatformScoringConfig } from "../platform-modul
  * Canva marketplace_topic.* slugs that map to the 10 top-level filter categories
  * on the /apps page. These are used as seed categories for scraping.
  *
- * The mapping to UI categories:
+ * The mapping to UI categories (updated 2026-03-14):
  *   AI generation       → ai_images, ai_audio, ai_videos, ai_text, ai_documents
  *   Audio and voiceover → music, voiceovers, sound_effects
- *   Communication       → social_networking, email, ads, display
- *   File and data mgmt  → file_import_and_export, file_converters, data_connectors, data_visualization
- *   Graphic design      → icons_and_illustrations, shapes, frames, patterns, mockups, logos
- *   Marketing           → content_schedulers, analytics, ads, email
- *   Photo editing       → photo_effects, images, styles, color
- *   Project management  → tasks_and_workflows, documents, forms, interactivity
- *   Text styling        → text_effects, text_generators
- *   Video and animation → videos, video_effects, animation, subtitles, flipbooks
+ *   Communication       → cards_and_invitations, content_schedulers, email, social_networking
+ *   File and data mgmt  → analytics, data_connectors, data_visualization, file_converters, file_import_and_export
+ *   Graphic design      → color, data_visualization, documents, flipbooks, frames, icons_and_illustrations, images, interactivity, logos, mockups, patterns, print_products, qr_and_barcodes, shapes, videos
+ *   Marketing           → ads, content_schedulers, display, email, flipbooks, forms, logos, mockups, print_products, qr_and_barcodes, social_networking
+ *   Photo editing       → photo_effects, images, styles
+ *   Project management  → content_schedulers, forms, social_networking, tasks_and_workflows
+ *   Text styling        → text_effects, text_generators, forms
+ *   Video and animation → animation, avatars, subtitles, video_effects, videos
  */
 export const CANVA_FILTER_CATEGORIES = [
   "ai-generation",
@@ -66,44 +66,48 @@ export const CANVA_SUBCATEGORY_LABELS: Record<string, string> = {
   "voiceovers": "Voiceovers",
   "sound-effects": "Sound Effects",
   // Communication
-  "social-networking": "Social Networking",
+  "cards-and-invitations": "Cards and Invitations",
+  "content-schedulers": "Content Schedulers",
   "email": "Email",
-  "display": "Display",
+  "social-networking": "Social Networking",
   // File and data management
-  "file-import-and-export": "File Import and Export",
-  "file-converters": "File Converters",
+  "analytics": "Analytics",
   "data-connectors": "Data Connectors",
   "data-visualization": "Data Visualization",
+  "file-converters": "File Converters",
+  "file-import-and-export": "File Import and Export",
   // Graphic design
-  "icons-and-illustrations": "Icons and Illustrations",
-  "shapes": "Shapes",
+  "color": "Color",
+  "documents": "Documents",
+  "flipbooks": "Flipbooks",
   "frames": "Frames",
-  "patterns": "Patterns",
-  "mockups": "Mockups",
+  "icons-and-illustrations": "Icons and Illustrations",
+  "images": "Images",
+  "interactivity": "Interactivity",
   "logos": "Logos",
+  "mockups": "Mockups",
+  "patterns": "Patterns",
+  "print-products": "Print Products",
+  "qr-and-barcodes": "QR and Barcodes",
+  "shapes": "Shapes",
   // Marketing
-  "content-schedulers": "Content Schedulers",
-  "analytics": "Analytics",
   "ads": "Ads",
+  "display": "Display",
   // Photo editing
   "photo-effects": "Photo Effects",
-  "images": "Images",
   "styles": "Styles",
-  "color": "Color",
   // Project management
   "tasks-and-workflows": "Tasks and Workflows",
-  "documents": "Documents",
   "forms": "Forms",
-  "interactivity": "Interactivity",
   // Text styling
   "text-effects": "Text Effects",
   "text-generators": "Text Generators",
   // Video and animation
-  "videos": "Videos",
-  "video-effects": "Video Effects",
   "animation": "Animation",
+  "avatars": "Avatars",
   "subtitles": "Subtitles",
-  "flipbooks": "Flipbooks",
+  "video-effects": "Video Effects",
+  "videos": "Videos",
 };
 
 export const CANVA_CONSTANTS: PlatformConstants = {
