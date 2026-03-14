@@ -554,7 +554,7 @@ function CategoryRow({
         {toggleStar && (
           <button
             onClick={() => toggleStar(node.slug)}
-            className="opacity-0 group-hover:opacity-100 transition-opacity ml-1 shrink-0"
+            className={`${isStarred ? "opacity-100" : "opacity-0 group-hover:opacity-100"} transition-opacity ml-1 shrink-0`}
           >
             <Star
               className={`h-3.5 w-3.5 ${isStarred ? "fill-yellow-400 text-yellow-400" : "text-muted-foreground hover:text-yellow-400"}`}
