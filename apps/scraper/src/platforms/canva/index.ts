@@ -509,17 +509,23 @@ export class CanvaModule implements PlatformModule {
 
     log.info("launching Chrome for Canva API access");
 
-    // Use installed Chrome (not Playwright's Chromium) for proper TLS fingerprint
-    // that Cloudflare won't block on API calls
-    this.browser = await chromium.launch({
-      channel: "chrome",
+    // Prefer installed Chrome for proper TLS fingerprint (Cloudflare bypass),
+    // fall back to Playwright's bundled Chromium if Chrome is not available
+    const launchOptions = {
       headless: true,
       args: [
         "--disable-blink-features=AutomationControlled",
         "--no-sandbox",
       ],
       ignoreDefaultArgs: ["--enable-automation"],
-    });
+    };
+    try {
+      this.browser = await chromium.launch({ ...launchOptions, channel: "chrome" });
+      log.info("launched real Chrome");
+    } catch {
+      log.warn("Chrome not found, falling back to Playwright Chromium");
+      this.browser = await chromium.launch(launchOptions);
+    }
 
     // Load saved auth state if available (contains cf_clearance cookies)
     let storageState: any;
