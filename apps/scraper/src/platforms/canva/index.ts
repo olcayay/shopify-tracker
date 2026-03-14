@@ -86,68 +86,49 @@ export class CanvaModule implements PlatformModule {
     const page = await this.ensureBrowserPage();
     const appId = slug.split("--")[0];
     const urlSlug = slug.split("--")[1] || "";
-    const appPath = `/apps/${appId}/${urlSlug}`;
-    log.info("fetching app detail page", { slug, appPath });
+    const detailUrl = `https://www.canva.com/apps/${appId}/${urlSlug}`;
+    log.info("fetching app detail page", { slug, detailUrl });
 
-    // Strategy: use SPA client-side navigation to avoid Cloudflare challenge.
-    // Clicking a link within the already-loaded Canva SPA triggers a React Router
-    // navigation that doesn't hit Cloudflare, unlike page.goto() which does a
-    // full page load that Cloudflare may block.
-
-    // First ensure we're on /apps page
-    const currentUrl = page.url();
-    if (!currentUrl.includes("canva.com/apps")) {
-      await page.goto("https://www.canva.com/apps", {
-        waitUntil: "load",
-        timeout: 30_000,
-      });
-      await page.waitForTimeout(3000);
-    }
-
-    // Try clicking the app link on the page (SPA navigation)
+    // Strategy: use in-page fetch() to get the detail page HTML.
+    // The browser already has valid Cloudflare cookies from loading /apps,
+    // so fetch() from within the page context bypasses Cloudflare challenges
+    // that would block page.goto() for a full page navigation.
     let html = "";
     let hasDetailJson = false;
 
     try {
-      // Click a link to this app on the /apps page to trigger SPA navigation
-      const linkSelector = `a[href*="/apps/${appId}/"]`;
-      const link = await page.$(linkSelector);
+      html = await page.evaluate(async (url: string) => {
+        const res = await fetch(url, { credentials: "include" });
+        return res.text();
+      }, detailUrl);
 
-      if (link) {
-        await link.click();
-        // Wait for SPA content to update
-        await page.waitForTimeout(4000);
-
-        html = await page.content();
-        hasDetailJson = html.includes(`"A":"${appId}"`) && !html.includes(`"A":"${appId}","B":"SDK_APP"`);
-        log.info("app detail via SPA click", { slug, htmlLength: html.length, hasDetailJson });
-      }
+      hasDetailJson = html.includes(`"A":"${appId}"`) && !html.includes(`"A":"${appId}","B":"SDK_APP"`);
+      log.info("app detail via in-page fetch", { slug, htmlLength: html.length, hasDetailJson });
     } catch (e) {
-      log.warn("SPA click navigation failed", { slug, error: String(e) });
+      log.warn("in-page fetch failed", { slug, error: String(e) });
     }
 
-    // Fallback: direct navigation if SPA click didn't work
+    // Fallback: direct navigation if in-page fetch didn't work
     if (!hasDetailJson) {
-      const url = this.buildAppUrl(slug);
-      log.info("falling back to direct navigation", { slug, url });
-      await page.goto(url, { waitUntil: "domcontentloaded", timeout: 30_000 });
+      log.info("falling back to direct navigation", { slug, detailUrl });
+      await page.goto(detailUrl, { waitUntil: "domcontentloaded", timeout: 30_000 });
       await page.waitForTimeout(5000);
 
       html = await page.content();
       hasDetailJson = html.includes(`"A":"${appId}"`) && !html.includes(`"A":"${appId}","B":"SDK_APP"`);
       log.info("app detail via direct nav", { slug, htmlLength: html.length, hasDetailJson });
-    }
 
-    // Navigate back to /apps — prefer browser back (no Cloudflare re-check)
-    try {
-      await page.goBack({ waitUntil: "domcontentloaded", timeout: 15_000 });
-    } catch {
-      await page.goto("https://www.canva.com/apps", {
-        waitUntil: "domcontentloaded",
-        timeout: 30_000,
-      });
+      // Navigate back to /apps so subsequent in-page fetches work
+      try {
+        await page.goBack({ waitUntil: "domcontentloaded", timeout: 15_000 });
+      } catch {
+        await page.goto("https://www.canva.com/apps", {
+          waitUntil: "domcontentloaded",
+          timeout: 30_000,
+        });
+      }
+      await page.waitForTimeout(2000);
     }
-    await page.waitForTimeout(2000);
 
     return html;
   }
