@@ -61,17 +61,22 @@ export const categoryRoutes: FastifyPluginAsync = async (app) => {
       return rows;
     }
 
-    // Query junction table for multi-parent relationships
-    const categoryIds = rows.map((r) => r.id);
-    const junctionRows = categoryIds.length > 0
-      ? await db
+    // Query junction table for multi-parent relationships (graceful fallback if table doesn't exist yet)
+    let junctionRows: { categoryId: number; parentCategoryId: number }[] = [];
+    try {
+      const categoryIds = rows.map((r) => r.id);
+      if (categoryIds.length > 0) {
+        junctionRows = await db
           .select({
             categoryId: categoryParents.categoryId,
             parentCategoryId: categoryParents.parentCategoryId,
           })
           .from(categoryParents)
-          .where(inArray(categoryParents.categoryId, categoryIds))
-      : [];
+          .where(inArray(categoryParents.categoryId, categoryIds));
+      }
+    } catch {
+      // category_parents table may not exist yet (pre-migration)
+    }
 
     // Build tree: roots are those with null parentSlug
     return buildTree(rows, junctionRows);
@@ -160,24 +165,29 @@ export const categoryRoutes: FastifyPluginAsync = async (app) => {
       .limit(1);
 
     // Get children via junction table first, fall back to parentSlug
-    const junctionChildren = await db
-      .select({
-        id: categories.id,
-        slug: categories.slug,
-        title: categories.title,
-        url: categories.url,
-        parentSlug: categories.parentSlug,
-        categoryLevel: categories.categoryLevel,
-        description: categories.description,
-        isTracked: categories.isTracked,
-        isListingPage: categories.isListingPage,
-        createdAt: categories.createdAt,
-        updatedAt: categories.updatedAt,
-        platform: categories.platform,
-      })
-      .from(categoryParents)
-      .innerJoin(categories, eq(categories.id, categoryParents.categoryId))
-      .where(eq(categoryParents.parentCategoryId, category.id));
+    let junctionChildren: any[] = [];
+    try {
+      junctionChildren = await db
+        .select({
+          id: categories.id,
+          slug: categories.slug,
+          title: categories.title,
+          url: categories.url,
+          parentSlug: categories.parentSlug,
+          categoryLevel: categories.categoryLevel,
+          description: categories.description,
+          isTracked: categories.isTracked,
+          isListingPage: categories.isListingPage,
+          createdAt: categories.createdAt,
+          updatedAt: categories.updatedAt,
+          platform: categories.platform,
+        })
+        .from(categoryParents)
+        .innerJoin(categories, eq(categories.id, categoryParents.categoryId))
+        .where(eq(categoryParents.parentCategoryId, category.id));
+    } catch {
+      // category_parents table may not exist yet (pre-migration)
+    }
 
     // Fall back to parentSlug if junction table has no results
     const childrenRaw = junctionChildren.length > 0
@@ -186,7 +196,7 @@ export const categoryRoutes: FastifyPluginAsync = async (app) => {
 
     // Attach latest appCount to each child from snapshots
     const children = await Promise.all(
-      childrenRaw.map(async (child) => {
+      childrenRaw.map(async (child: any) => {
         const [snap] = await db
           .select({ appCount: categorySnapshots.appCount })
           .from(categorySnapshots)
@@ -202,15 +212,20 @@ export const categoryRoutes: FastifyPluginAsync = async (app) => {
     const breadcrumb: { slug: string; title: string }[] = [];
 
     // Get parents from junction table
-    const junctionParentRows = await db
-      .select({
-        parentId: categoryParents.parentCategoryId,
-        parentSlug: categories.slug,
-        parentTitle: categories.title,
-      })
-      .from(categoryParents)
-      .innerJoin(categories, eq(categories.id, categoryParents.parentCategoryId))
-      .where(eq(categoryParents.categoryId, category.id));
+    let junctionParentRows: { parentId: number; parentSlug: string; parentTitle: string }[] = [];
+    try {
+      junctionParentRows = await db
+        .select({
+          parentId: categoryParents.parentCategoryId,
+          parentSlug: categories.slug,
+          parentTitle: categories.title,
+        })
+        .from(categoryParents)
+        .innerJoin(categories, eq(categories.id, categoryParents.parentCategoryId))
+        .where(eq(categoryParents.categoryId, category.id));
+    } catch {
+      // category_parents table may not exist yet (pre-migration)
+    }
 
     if (junctionParentRows.length > 0) {
       // Use first parent for breadcrumb (pick any for single-path display)
@@ -223,19 +238,23 @@ export const categoryRoutes: FastifyPluginAsync = async (app) => {
       ];
       while (currentId && !visited.has(currentId)) {
         visited.add(currentId);
-        const [grandparent] = await db
-          .select({
-            parentId: categoryParents.parentCategoryId,
-            parentSlug: categories.slug,
-            parentTitle: categories.title,
-          })
-          .from(categoryParents)
-          .innerJoin(categories, eq(categories.id, categoryParents.parentCategoryId))
-          .where(eq(categoryParents.categoryId, currentId))
-          .limit(1);
-        if (!grandparent) break;
-        parentChain.unshift({ slug: grandparent.parentSlug, title: grandparent.parentTitle });
-        currentId = grandparent.parentId;
+        try {
+          const [grandparent] = await db
+            .select({
+              parentId: categoryParents.parentCategoryId,
+              parentSlug: categories.slug,
+              parentTitle: categories.title,
+            })
+            .from(categoryParents)
+            .innerJoin(categories, eq(categories.id, categoryParents.parentCategoryId))
+            .where(eq(categoryParents.categoryId, currentId))
+            .limit(1);
+          if (!grandparent) break;
+          parentChain.unshift({ slug: grandparent.parentSlug, title: grandparent.parentTitle });
+          currentId = grandparent.parentId;
+        } catch {
+          break;
+        }
       }
       breadcrumb.push(...parentChain);
     } else {
@@ -355,16 +374,21 @@ export const categoryRoutes: FastifyPluginAsync = async (app) => {
       // Get apps from descendant listing categories
       try {
         // Get descendant listing categories via junction table first, fall back to slug-based
-        const junctionDescendants = await db
-          .select({ slug: categories.slug, title: categories.title })
-          .from(categoryParents)
-          .innerJoin(categories, eq(categories.id, categoryParents.categoryId))
-          .where(
-            and(
-              eq(categoryParents.parentCategoryId, category.id),
-              eq(categories.isListingPage, true)
-            )
-          );
+        let junctionDescendants: { slug: string; title: string }[] = [];
+        try {
+          junctionDescendants = await db
+            .select({ slug: categories.slug, title: categories.title })
+            .from(categoryParents)
+            .innerJoin(categories, eq(categories.id, categoryParents.categoryId))
+            .where(
+              and(
+                eq(categoryParents.parentCategoryId, category.id),
+                eq(categories.isListingPage, true)
+              )
+            );
+        } catch {
+          // category_parents table may not exist yet (pre-migration)
+        }
 
         const descendantListingCats = junctionDescendants.length > 0
           ? junctionDescendants

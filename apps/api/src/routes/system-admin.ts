@@ -1126,15 +1126,11 @@ export const systemAdminRoutes: FastifyPluginAsync = async (app) => {
           SELECT count(*)::int FROM account_starred_categories
           WHERE category_id = "categories"."id"
         )`,
-        parentTitle: sql<string | null>`COALESCE(
-          (SELECT string_agg(p.title, ', ' ORDER BY p.title)
-           FROM category_parents cp
-           JOIN categories p ON p.id = cp.parent_category_id
-           WHERE cp.category_id = "categories"."id"),
-          (SELECT p.title FROM categories p
-           WHERE p.slug = "categories"."parent_slug"
-             AND p.platform = "categories"."platform"
-           LIMIT 1)
+        parentTitle: sql<string | null>`(
+          SELECT p.title FROM categories p
+          WHERE p.slug = "categories"."parent_slug"
+            AND p.platform = "categories"."platform"
+          LIMIT 1
         )`,
       })
       .from(categories);
@@ -1147,6 +1143,34 @@ export const systemAdminRoutes: FastifyPluginAsync = async (app) => {
     }
 
     const rows = await query.orderBy(categories.title);
+
+    // Enrich parentTitle from junction table for multi-parent categories
+    try {
+      const allJunction = await db
+        .select({
+          categoryId: categoryParents.categoryId,
+          parentTitle: categories.title,
+        })
+        .from(categoryParents)
+        .innerJoin(categories, eq(categories.id, categoryParents.parentCategoryId));
+
+      if (allJunction.length > 0) {
+        const parentTitleMap = new Map<number, string[]>();
+        for (const jr of allJunction) {
+          if (!parentTitleMap.has(jr.categoryId)) parentTitleMap.set(jr.categoryId, []);
+          parentTitleMap.get(jr.categoryId)!.push(jr.parentTitle);
+        }
+        for (const row of rows as any[]) {
+          const titles = parentTitleMap.get(row.id);
+          if (titles && titles.length > 0) {
+            row.parentTitle = titles.sort().join(", ");
+          }
+        }
+      }
+    } catch {
+      // category_parents table may not exist yet (pre-migration)
+    }
+
     return rows;
   });
 
