@@ -181,6 +181,7 @@ export default function ScraperPage() {
   const [expandedRunId, setExpandedRunId] = useState<string | null>(null);
   const [drainConfirm, setDrainConfirm] = useState(false);
   const [clearFailedConfirm, setClearFailedConfirm] = useState(false);
+  const [killJobConfirm, setKillJobConfirm] = useState<{ id: string; type: string } | null>(null);
   const [triggerPlatform, setTriggerPlatform] = useState<string>(() => {
     if (typeof window !== "undefined") {
       return localStorage.getItem("scraper-platform") || "shopify";
@@ -498,7 +499,17 @@ export default function ScraperPage() {
                         )}
                       </TableCell>
                       <TableCell>
-                        {job.status !== "active" && (
+                        {job.status === "active" ? (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-7 w-7 p-0 text-muted-foreground hover:text-destructive"
+                            onClick={() => setKillJobConfirm({ id: job.id, type: job.type })}
+                            title="Kill job"
+                          >
+                            <X className="h-3.5 w-3.5" />
+                          </Button>
+                        ) : (
                           <Button
                             variant="ghost"
                             size="sm"
@@ -933,6 +944,20 @@ export default function ScraperPage() {
         confirmLabel="Clear All"
         onConfirm={clearFailedJobs}
         onCancel={() => setClearFailedConfirm(false)}
+      />
+
+      <ConfirmModal
+        open={killJobConfirm !== null}
+        title="Kill Active Job"
+        description={`This will forcefully remove the active "${killJobConfirm?.type}" job (${killJobConfirm?.id}). The job will be terminated and cannot be recovered.`}
+        confirmLabel="Kill Job"
+        onConfirm={() => {
+          if (killJobConfirm) {
+            removeJob(killJobConfirm.id);
+            setKillJobConfirm(null);
+          }
+        }}
+        onCancel={() => setKillJobConfirm(null)}
       />
     </div>
   );
