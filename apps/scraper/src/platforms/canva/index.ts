@@ -233,6 +233,143 @@ export class CanvaModule implements PlatformModule {
       .map((t) => t.replace("marketplace_topic.", "").replace(/_/g, "-"));
   }
 
+  // --- Live search (fast, for search micro-server) ---
+
+  /**
+   * Fast live search — waits for first search API response + 1.5s buffer
+   * instead of waiting for all auto-paginated pages.
+   * Typically completes in 3-5 sec (warm browser) or 8-10 sec (cold).
+   */
+  async liveSearch(keyword: string): Promise<{ A: number; C: any[] }> {
+    const MAX_ATTEMPTS = 2;
+
+    for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+      const page = await this.ensureBrowserPage();
+      const result = await this.doSingleSearch(page, keyword, attempt);
+
+      if (result.gotBlocked && attempt < MAX_ATTEMPTS) {
+        log.warn("search got 403, reloading page for retry", { keyword, attempt });
+        // Full page reload with extra wait for Cloudflare challenge to settle
+        await page.goto("https://www.canva.com/apps", {
+          waitUntil: "load",
+          timeout: 30_000,
+        });
+        await page.waitForTimeout(5000);
+        continue;
+      }
+
+      // Navigate back to /apps to reset page state for next search call
+      await page.goto("https://www.canva.com/apps", {
+        waitUntil: "domcontentloaded",
+        timeout: 30_000,
+      }).catch(() => {});
+      try {
+        await page.waitForSelector(
+          'input[type="search"], input[aria-label*="search" i]',
+          { timeout: 15_000 },
+        );
+      } catch {
+        log.warn("search input not found after reset navigation");
+      }
+
+      return { A: result.totalResults, C: result.apps };
+    }
+
+    return { A: 0, C: [] };
+  }
+
+  /**
+   * Execute a single search attempt. Returns results + whether Cloudflare blocked us.
+   */
+  private async doSingleSearch(
+    page: Page,
+    keyword: string,
+    attempt: number,
+  ): Promise<{ totalResults: number; apps: any[]; gotBlocked: boolean }> {
+    const searchResponses: string[] = [];
+    let totalResults = 0;
+    let gotBlocked = false;
+
+    const responseHandler = async (response: Response) => {
+      const url = response.url();
+      if (url.includes("/_ajax/appsearch/")) {
+        try {
+          const body = await response.text();
+          const isSearch = url.includes("/search");
+          const status = response.status();
+          if (status !== 200) {
+            log.warn("API response blocked", { endpoint: isSearch ? "search" : "suggest", status, attempt });
+          }
+          if (status === 403) gotBlocked = true;
+          if (isSearch && status === 200) {
+            searchResponses.push(body);
+            try {
+              const data = JSON.parse(body);
+              if (data.A) totalResults = data.A;
+            } catch {}
+          }
+        } catch (e) {
+          log.warn("failed to read intercepted response", { url, error: String(e) });
+        }
+      }
+    };
+
+    page.on("response", responseHandler);
+
+    try {
+      await this.typeInSearchBox(page, keyword, true);
+
+      // Wait for first 200 response, then 1.5s buffer for follow-ups
+      const MAX_WAIT_MS = 15_000;
+      const BUFFER_AFTER_FIRST_MS = 1_500;
+      const POLL_MS = 300;
+      const start = Date.now();
+      let firstResponseAt = 0;
+
+      while (Date.now() - start < MAX_WAIT_MS) {
+        await page.waitForTimeout(POLL_MS);
+        // If blocked, abort early — no point waiting
+        if (gotBlocked) break;
+        if (searchResponses.length > 0 && firstResponseAt === 0) {
+          firstResponseAt = Date.now();
+        }
+        if (firstResponseAt > 0 && Date.now() - firstResponseAt >= BUFFER_AFTER_FIRST_MS) {
+          break;
+        }
+      }
+
+      // Merge results
+      const allApps: any[] = [];
+      const seenIds = new Set<string>();
+
+      for (const respJson of searchResponses) {
+        try {
+          const data = JSON.parse(respJson);
+          for (const app of (data.C || [])) {
+            if (!seenIds.has(app.A)) {
+              seenIds.add(app.A);
+              allApps.push(app);
+            }
+          }
+        } catch {}
+      }
+
+      log.info("doSingleSearch done", {
+        keyword,
+        attempt,
+        totalResults,
+        uniqueApps: allApps.length,
+        responses: searchResponses.length,
+        gotBlocked,
+        ms: Date.now() - start,
+      });
+
+      return { totalResults, apps: allApps, gotBlocked };
+    } finally {
+      page.off("response", responseHandler);
+    }
+  }
+
   // --- Browser lifecycle ---
 
   /**
@@ -372,8 +509,10 @@ export class CanvaModule implements PlatformModule {
 
     log.info("launching Chrome for Canva API access");
 
-    // Use real Chrome binary with anti-detection flags for Cloudflare bypass
+    // Use installed Chrome (not Playwright's Chromium) for proper TLS fingerprint
+    // that Cloudflare won't block on API calls
     this.browser = await chromium.launch({
+      channel: "chrome",
       headless: true,
       args: [
         "--disable-blink-features=AutomationControlled",
@@ -408,31 +547,31 @@ export class CanvaModule implements PlatformModule {
     });
     this.browserPage = await this.browserContext.newPage();
 
-    // Navigate to /apps to pass Cloudflare and load the search UI
+    // Navigate to /apps — use "load" to wait for full page load including Cloudflare JS
     await this.browserPage.goto("https://www.canva.com/apps", {
-      waitUntil: "domcontentloaded",
+      waitUntil: "load",
       timeout: 30_000,
     });
-    await this.browserPage.waitForTimeout(5000);
+
+    // Wait for search input to appear (SPA hydration)
+    try {
+      await this.browserPage.waitForSelector(
+        'input[type="search"], input[aria-label*="search" i]',
+        { timeout: 20_000 },
+      );
+      log.info("search input found, page hydrated");
+    } catch {
+      log.warn("search input not found after 20s, continuing anyway");
+    }
+
+    // Extra settle time for Cloudflare background JS
+    await this.browserPage.waitForTimeout(2000);
 
     // Cache the page HTML while we're here
     if (!this.cachedAppsPageHtml) {
       this.cachedAppsPageHtml = await this.browserPage.content();
-      let appCount = (this.cachedAppsPageHtml.match(/"B":"SDK_APP"/g) || []).length;
+      const appCount = (this.cachedAppsPageHtml.match(/"B":"SDK_APP"/g) || []).length;
       log.info("cached /apps page", { htmlLength: this.cachedAppsPageHtml.length, embeddedApps: appCount });
-
-      // Retry if no apps found (page may not have fully hydrated)
-      if (appCount === 0) {
-        log.warn("no embedded apps found, waiting longer for SPA hydration...");
-        await this.browserPage.waitForTimeout(5000);
-        this.cachedAppsPageHtml = await this.browserPage.content();
-        appCount = (this.cachedAppsPageHtml.match(/"B":"SDK_APP"/g) || []).length;
-        log.info("retry cached /apps page", { htmlLength: this.cachedAppsPageHtml.length, embeddedApps: appCount });
-
-        if (appCount === 0) {
-          log.error("still no embedded apps after retry — Canva page may be blocked or changed");
-        }
-      }
     }
 
     return this.browserPage;

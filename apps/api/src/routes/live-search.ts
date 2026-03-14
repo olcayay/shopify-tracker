@@ -1,6 +1,8 @@
 import type { FastifyPluginAsync } from "fastify";
 import * as cheerio from "cheerio";
 import type { AnyNode } from "domhandler";
+import { sql } from "drizzle-orm";
+import { createDb } from "@appranks/db";
 import { getPlatformFromQuery } from "../utils/platform.js";
 
 const USER_AGENTS = [
@@ -171,7 +173,58 @@ async function salesforceLiveSearch(keyword: string) {
   return { totalResults: data.totalCount, apps };
 }
 
+const CANVA_SEARCH_SERVER = process.env.CANVA_SEARCH_URL || "http://localhost:3002";
+
+/**
+ * Live search Canva via the browser-based search micro-server.
+ * Falls back to DB search if the server is unavailable.
+ */
+async function canvaLiveSearch(keyword: string): Promise<{ totalResults: number; apps: SearchApp[]; source: string }> {
+  const url = `${CANVA_SEARCH_SERVER}/canva-search?q=${encodeURIComponent(keyword)}`;
+  const response = await fetch(url, {
+    signal: AbortSignal.timeout(30_000),
+  });
+  if (!response.ok) {
+    throw new Error(`Search server returned ${response.status}`);
+  }
+  return response.json() as any;
+}
+
+/**
+ * Search Canva apps from our database (fallback when search server is unavailable).
+ */
+async function canvaDbSearch(db: ReturnType<typeof createDb>, keyword: string): Promise<{ totalResults: number; apps: SearchApp[] }> {
+  const pattern = `%${keyword}%`;
+  const rows = await db.execute(sql`
+    SELECT slug, name, icon_url, app_card_subtitle
+    FROM apps
+    WHERE platform = 'canva'
+      AND (name ILIKE ${pattern} OR slug ILIKE ${pattern} OR app_card_subtitle ILIKE ${pattern})
+    ORDER BY
+      CASE WHEN name ILIKE ${keyword} THEN 0
+           WHEN name ILIKE ${keyword + '%'} THEN 1
+           ELSE 2 END,
+      name
+    LIMIT 50
+  `);
+  const results: SearchApp[] = (rows as any[]).map((r: any, idx: number) => ({
+    position: idx + 1,
+    app_slug: r.slug,
+    app_name: r.name,
+    short_description: r.app_card_subtitle || "",
+    average_rating: 0,
+    rating_count: 0,
+    logo_url: r.icon_url || undefined,
+    is_sponsored: false,
+    is_built_in: false,
+    is_built_for_shopify: false,
+  }));
+  return { totalResults: results.length, apps: results };
+}
+
 export const liveSearchRoutes: FastifyPluginAsync = async (app) => {
+  const db: ReturnType<typeof createDb> = (app as any).db;
+
   // GET /api/live-search?q=keyword — real-time search
   app.get("/", async (request, reply) => {
     const platform = getPlatformFromQuery(request.query as Record<string, unknown>);
@@ -180,12 +233,37 @@ export const liveSearchRoutes: FastifyPluginAsync = async (app) => {
       return reply.code(400).send({ error: "q parameter is required" });
     }
 
+    const start = Date.now();
+    request.log.info({ platform, keyword: q }, "live-search started");
+
     if (platform === "salesforce") {
       try {
         const result = await salesforceLiveSearch(q);
+        request.log.info({ platform, keyword: q, source: "api", apps: result.apps.length, ms: Date.now() - start }, "live-search completed via Salesforce API");
         return { keyword: q, totalResults: result.totalResults, apps: result.apps };
       } catch (err: any) {
+        request.log.error({ platform, keyword: q, error: err.message, ms: Date.now() - start }, "live-search failed");
         return reply.code(502).send({ error: `Failed to fetch from Salesforce: ${err.message}` });
+      }
+    }
+
+    if (platform === "canva") {
+      // Try live search via browser-based search server, fall back to DB
+      try {
+        request.log.info({ platform, keyword: q, server: CANVA_SEARCH_SERVER }, "live-search trying Canva search server");
+        const result = await canvaLiveSearch(q);
+        request.log.info({ platform, keyword: q, source: "live", apps: result.apps.length, totalResults: result.totalResults, ms: Date.now() - start }, "live-search completed via Canva search server (Playwright browser)");
+        return { keyword: q, totalResults: result.totalResults, apps: result.apps, source: result.source || "live" };
+      } catch (liveErr: any) {
+        request.log.warn({ platform, keyword: q, error: liveErr.message, ms: Date.now() - start }, "live-search Canva search server unavailable, falling back to database");
+        try {
+          const result = await canvaDbSearch(db, q);
+          request.log.info({ platform, keyword: q, source: "database", apps: result.apps.length, ms: Date.now() - start }, "live-search completed via database fallback");
+          return { keyword: q, totalResults: result.totalResults, apps: result.apps, source: "database" };
+        } catch (err: any) {
+          request.log.error({ platform, keyword: q, error: err.message, ms: Date.now() - start }, "live-search database fallback also failed");
+          return reply.code(502).send({ error: `Failed to search Canva apps: ${err.message}` });
+        }
       }
     }
 
@@ -194,6 +272,7 @@ export const liveSearchRoutes: FastifyPluginAsync = async (app) => {
     const ua = USER_AGENTS[Math.floor(Math.random() * USER_AGENTS.length)];
 
     try {
+      request.log.info({ platform, keyword: q, source: "shopify-html" }, "live-search fetching Shopify search page");
       const response = await fetch(url, {
         headers: {
           "User-Agent": ua,
@@ -206,6 +285,7 @@ export const liveSearchRoutes: FastifyPluginAsync = async (app) => {
       });
 
       if (!response.ok) {
+        request.log.error({ platform, keyword: q, status: response.status, ms: Date.now() - start }, "live-search Shopify returned error");
         return reply
           .code(502)
           .send({ error: `Shopify returned ${response.status}` });
@@ -214,12 +294,14 @@ export const liveSearchRoutes: FastifyPluginAsync = async (app) => {
       const html = await response.text();
       const result = parseSearchResults(html);
 
+      request.log.info({ platform, keyword: q, source: "shopify-html", apps: result.apps.length, totalResults: result.totalResults, ms: Date.now() - start }, "live-search completed via Shopify HTML scrape");
       return {
         keyword: q,
         totalResults: result.totalResults,
         apps: result.apps,
       };
     } catch (err: any) {
+      request.log.error({ platform, keyword: q, error: err.message, ms: Date.now() - start }, "live-search failed");
       return reply
         .code(502)
         .send({ error: `Failed to fetch from Shopify: ${err.message}` });

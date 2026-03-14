@@ -28,6 +28,7 @@ interface LiveSearchResult {
   keyword: string;
   totalResults: number | null;
   apps: SearchApp[];
+  source?: "api" | "database";
 }
 
 function ShimmerRow() {
@@ -389,7 +390,11 @@ export function LiveSearchModal({
 
         {/* Footer */}
         <div className="px-4 py-2 border-t bg-muted/50 text-xs text-muted-foreground flex items-center justify-between">
-          <span>Real-time results from {getPlatformName(platform as PlatformId)}</span>
+          <span>
+            {result?.source === "database"
+              ? "Results from database (search server unavailable)"
+              : `Real-time results from ${getPlatformName(platform as PlatformId)}`}
+          </span>
           <span>
             <kbd className="rounded border bg-background px-1">Esc</kbd> to
             close
