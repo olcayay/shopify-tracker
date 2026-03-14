@@ -75,6 +75,7 @@ const systemAdminItems = [
   { href: "/system-admin/users", label: "Users", icon: User },
   { href: "/system-admin/apps", label: "Apps", icon: AppWindow },
   { href: "/system-admin/keywords", label: "Keywords", icon: KeyRound },
+  { href: "/system-admin/categories", label: "Categories", icon: FolderTree },
   { href: "/system-admin/features", label: "Features", icon: Puzzle },
   { href: "/system-admin/researches", label: "Research", icon: FlaskConical },
   { href: "/system-admin/packages", label: "Packages", icon: Package },

@@ -1097,6 +1097,75 @@ export const systemAdminRoutes: FastifyPluginAsync = async (app) => {
     }
   );
 
+  // GET /api/system-admin/categories — all categories with stats
+  app.get("/categories", async (request) => {
+    const { tracked, platform } = request.query as { tracked?: string; platform?: string };
+
+    let query = db
+      .select({
+        id: categories.id,
+        slug: categories.slug,
+        title: categories.title,
+        platform: categories.platform,
+        isTracked: categories.isTracked,
+        isListingPage: categories.isListingPage,
+        parentSlug: categories.parentSlug,
+        categoryLevel: categories.categoryLevel,
+        createdAt: categories.createdAt,
+        appCount: sql<number | null>`(
+          SELECT app_count FROM category_snapshots
+          WHERE category_id = "categories"."id"
+          ORDER BY scraped_at DESC LIMIT 1
+        )`,
+        lastScrapedAt: sql<string | null>`(
+          SELECT max(scraped_at) FROM category_snapshots
+          WHERE category_id = "categories"."id"
+        )`,
+        starredByCount: sql<number>`(
+          SELECT count(*)::int FROM account_starred_categories
+          WHERE category_id = "categories"."id"
+        )`,
+        parentTitle: sql<string | null>`(
+          SELECT title FROM categories AS p
+          WHERE p.slug = "categories"."parent_slug"
+            AND p.platform = "categories"."platform"
+          LIMIT 1
+        )`,
+      })
+      .from(categories);
+
+    if (tracked === "true") {
+      query = query.where(eq(categories.isTracked, true)) as typeof query;
+    }
+    if (platform) {
+      query = query.where(eq(categories.platform, platform)) as typeof query;
+    }
+
+    const rows = await query.orderBy(categories.title);
+    return rows;
+  });
+
+  // GET /api/system-admin/categories/:id/accounts — accounts that starred this category
+  app.get<{ Params: { id: string } }>(
+    "/categories/:id/accounts",
+    async (request) => {
+      const categoryId = parseInt(request.params.id, 10);
+      if (isNaN(categoryId)) return [];
+
+      const starredBy = await db
+        .select({
+          accountId: accountStarredCategories.accountId,
+          accountName: accounts.name,
+          type: sql<string>`'starred'`,
+        })
+        .from(accountStarredCategories)
+        .innerJoin(accounts, eq(accounts.id, accountStarredCategories.accountId))
+        .where(eq(accountStarredCategories.categoryId, categoryId));
+
+      return starredBy;
+    }
+  );
+
   // GET /api/system-admin/keywords — all tracked keywords with last scraped info + account counts
   app.get("/keywords", async (request) => {
     const { platform } = request.query as { platform?: string };
