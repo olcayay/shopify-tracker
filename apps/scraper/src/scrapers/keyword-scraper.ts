@@ -220,7 +220,7 @@ export class KeywordScraper {
           set: {
             isBuiltForShopify: !!app.is_built_for_shopify,
             appCardSubtitle: app.short_description || undefined,
-            ...(app.logo_url && { iconUrl: sql`COALESCE(${apps.iconUrl}, ${app.logo_url})` }),
+            ...(app.logo_url && { iconUrl: app.logo_url }),
             ...(hasRating && { averageRating: String(app.average_rating) }),
             ...(hasCount && { ratingCount: app.rating_count }),
             ...(app.pricing_hint && { pricingHint: app.pricing_hint }),
@@ -295,7 +295,7 @@ export class KeywordScraper {
           target: [apps.platform, apps.slug],
           set: {
             isBuiltForShopify: !!app.is_built_for_shopify,
-            ...(app.logo_url && { iconUrl: sql`COALESCE(${apps.iconUrl}, ${app.logo_url})` }),
+            ...(app.logo_url && { iconUrl: app.logo_url }),
             ...(hasAdRating && { averageRating: String(app.average_rating) }),
             ...(hasAdCount && { ratingCount: app.rating_count }),
             ...(app.pricing_hint && { pricingHint: app.pricing_hint }),
@@ -433,7 +433,7 @@ export class KeywordScraper {
           target: [apps.platform, apps.slug],
           set: {
             appCardSubtitle: app.shortDescription || undefined,
-            ...(app.logoUrl && { iconUrl: sql`COALESCE(${apps.iconUrl}, ${app.logoUrl})` }),
+            ...(app.logoUrl && { iconUrl: app.logoUrl }),
             ...(hasRating && { averageRating: String(app.averageRating) }),
             ...(hasCount && { ratingCount: app.ratingCount }),
             ...(app.pricingHint && { pricingHint: app.pricingHint }),
@@ -530,7 +530,7 @@ export class KeywordScraper {
         .onConflictDoUpdate({
           target: [apps.platform, apps.slug],
           set: {
-            ...(app.logoUrl && { iconUrl: sql`COALESCE(${apps.iconUrl}, ${app.logoUrl})` }),
+            ...(app.logoUrl && { iconUrl: app.logoUrl }),
             ...(hasRating && { averageRating: String(app.averageRating) }),
             ...(hasCount && { ratingCount: app.ratingCount }),
             ...(app.pricingHint && { pricingHint: app.pricingHint }),
