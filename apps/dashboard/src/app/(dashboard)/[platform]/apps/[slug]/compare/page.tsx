@@ -872,12 +872,12 @@ export default function ComparePage() {
                 <div className="px-3 pb-3 space-y-3">
                   <div>
                     <div className="flex justify-end mb-1">
-                      <CharBadge count={draftDetails.length} max={500} />
+                      <CharBadge count={draftDetails.length} max={isCanva ? 200 : 500} />
                     </div>
                     <textarea
                       value={draftDetails}
-                      onChange={(e) => setDraftDetails(e.target.value.slice(0, 500))}
-                      maxLength={500}
+                      onChange={(e) => setDraftDetails(e.target.value.slice(0, isCanva ? 200 : 500))}
+                      maxLength={isCanva ? 200 : 500}
                       placeholder="Test a new Description for your app!"
                       className="w-full bg-muted/30 text-sm rounded-md border p-3 outline-none resize-none placeholder:text-muted-foreground/50 min-h-[120px]"
                       rows={6}
@@ -948,6 +948,7 @@ export default function ComparePage() {
                   <div className="flex justify-end">
                     <CharBadge
                       count={active.latestSnapshot.appDetails.length}
+                      max={isCanva ? 200 : undefined}
                     />
                   </div>
                   <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mt-2">
