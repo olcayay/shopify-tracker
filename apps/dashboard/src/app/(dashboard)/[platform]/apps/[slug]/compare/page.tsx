@@ -963,7 +963,7 @@ export default function ComparePage() {
           </CompareSection>
 
           {/* Features / Highlights */}
-          <CompareSection
+          {!isCanva && <CompareSection
             id="sec-features"
             title={isSalesforce ? "Highlights" : "Features"}
             sectionKey="features"
@@ -1037,7 +1037,7 @@ export default function ComparePage() {
                 </tbody>
               </table>
             </div>
-          </CompareSection>
+          </CompareSection>}
 
           {/* Languages */}
           <BadgeComparisonSection
