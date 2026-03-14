@@ -531,9 +531,11 @@ export default function ResearchComparePage() {
           </CompareSection>
 
           {/* SEO */}
-          <CompareSection id="sec-seo" title="Web Search Content" sectionKey="seo" collapsed={!!collapsed["seo"]} onToggle={toggleCollapse}>
-            <SeoSection apps={selectedApps} />
-          </CompareSection>
+          {platform !== "canva" && (
+            <CompareSection id="sec-seo" title="Web Search Content" sectionKey="seo" collapsed={!!collapsed["seo"]} onToggle={toggleCollapse}>
+              <SeoSection apps={selectedApps} />
+            </CompareSection>
+          )}
         </>
       )}
     </div>

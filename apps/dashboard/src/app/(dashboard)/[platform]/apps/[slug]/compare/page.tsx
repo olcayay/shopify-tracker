@@ -1136,7 +1136,7 @@ export default function ComparePage() {
           />
 
           {/* Web Search Content */}
-          <VerticalListSection
+          {!isCanva && <VerticalListSection
             id="sec-seo"
             title="Web Search Content"
             sectionKey="webSearchContent"
@@ -1177,7 +1177,7 @@ export default function ComparePage() {
                 </div>
               );
             }}
-          </VerticalListSection>
+          </VerticalListSection>}
         </>
       )}
     </div>

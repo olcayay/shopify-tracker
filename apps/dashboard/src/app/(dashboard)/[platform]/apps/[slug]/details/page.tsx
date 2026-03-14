@@ -389,7 +389,7 @@ export default async function DetailsPage({
         </Card>
       )}
 
-      {(snapshot.seoTitle || snapshot.seoMetaDescription) && (
+      {!isCanva && (snapshot.seoTitle || snapshot.seoMetaDescription) && (
         <Card>
           <CardHeader>
             <CardTitle>Web Search Content</CardTitle>
