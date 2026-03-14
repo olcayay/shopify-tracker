@@ -311,22 +311,22 @@ function normalizeCanvaDetailApp(app: CanvaDetailApp, slug: string): NormalizedA
  *
  * The API response format (from /_ajax/appsearch/appListing/{appId}):
  *   {"A": { inner object }} where the inner object has:
- *   "A": app ID
- *   "C": "SDK_APP" (type)
- *   "D": name
- *   "E": short description
- *   "F": full description
- *   "G": tagline
- *   "H": icon { "A": url }
- *   "T": developer name
- *   "I": promo card URL
- *   "K": screenshots array
- *   "L": terms URL
- *   "M": privacy URL
- *   "N": developer website
- *   "O": permissions array [{A: scope, B: type}]
- *   "P": developer info {A: name, B: email, C: phone, D: address}
- *   "Q": languages array
+ *   "A": app ID              "B": version number
+ *   "C": "SDK_APP" (type)    "D": name
+ *   "E": short description   "F": full description
+ *   "G": tagline             "T": developer name (display)
+ *   "H": icon {A: url, B: w, C: h}
+ *   "I": promo card {A: url, B: w, C: h}
+ *   "J": screenshots array   "K": terms URL
+ *   "L": privacy URL         "M": developer website
+ *   "N": support URL
+ *   "S": permissions [{A: scope, B: type}] (abbreviated format)
+ *   "Y": developer info {A: name, B: email, C: phone, D: {A: street, C: city, D: country, F: zip}}
+ *   "e": languages array (locale codes)
+ *   "g": topics array (marketplace_topic.*)
+ *   "P": platforms ["DESKTOP","MOBILE"]
+ *   "W": feature types       "Z": created timestamp
+ *   "a": updated timestamp
  */
 export function extractCanvaAppListingApi(html: string, appId: string): CanvaDetailApp | null {
   const marker = "<!-- CANVA_APP_LISTING_API:";
@@ -348,7 +348,7 @@ export function extractCanvaAppListingApi(html: string, appId: string): CanvaDet
       return null;
     }
 
-    const devInfo = obj.P || {};
+    const devInfo = obj.Y || {};
     const address = devInfo.D
       ? {
           street: devInfo.D.A || "",
@@ -359,8 +359,6 @@ export function extractCanvaAppListingApi(html: string, appId: string): CanvaDet
         }
       : null;
 
-    log.info("parsed app from appListing API", { appId, name: obj.D, keys: Object.keys(obj).join(",") });
-
     return {
       id: obj.A,
       name: obj.D || "",
@@ -368,20 +366,20 @@ export function extractCanvaAppListingApi(html: string, appId: string): CanvaDet
       tagline: obj.G || "",
       fullDescription: obj.F || "",
       developer: obj.T || devInfo.A || "",
-      developerWebsite: obj.N || "",
+      developerWebsite: obj.M || "",
       developerEmail: devInfo.B || "",
       developerPhone: devInfo.C || "",
       developerAddress: address,
       iconUrl: obj.H?.A || "",
-      promoCardUrl: obj.I || "",
-      screenshots: Array.isArray(obj.K) ? obj.K : [],
-      termsUrl: obj.L || "",
-      privacyUrl: obj.M || "",
-      permissions: Array.isArray(obj.O) ? obj.O.map((p: any) => ({
+      promoCardUrl: obj.I?.A || "",
+      screenshots: Array.isArray(obj.J) ? obj.J : [],
+      termsUrl: obj.K || "",
+      privacyUrl: obj.L || "",
+      permissions: Array.isArray(obj.S) ? obj.S.map((p: any) => ({
         scope: p.A || "",
         type: p.B || "",
       })) : [],
-      languages: Array.isArray(obj.Q) ? obj.Q : [],
+      languages: Array.isArray(obj.e) ? obj.e : [],
     };
   } catch (e) {
     log.warn("failed to parse appListing API data", { appId, error: String(e) });
