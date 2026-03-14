@@ -37,6 +37,7 @@ function DeveloperAppsContent() {
   const { fetchWithAuth } = useAuth();
   const { formatDateOnly } = useFormatDate();
   const [apps, setApps] = useState<any[]>([]);
+  const [developerInfo, setDeveloperInfo] = useState<Record<string, any> | null>(null);
   const [loading, setLoading] = useState(true);
   const [appCategories, setAppCategories] = useState<Record<string, { title: string; slug: string; position: number | null }[]>>({});
   const [lastChanges, setLastChanges] = useState<Record<string, string>>({});
@@ -58,8 +59,10 @@ function DeveloperAppsContent() {
       `/api/apps/by-developer?name=${encodeURIComponent(developerName)}`
     );
     if (res.ok) {
-      const loadedApps = await res.json();
+      const data = await res.json();
+      const loadedApps = data.apps || [];
       setApps(loadedApps);
+      setDeveloperInfo(data.developerInfo || null);
 
       const slugs = loadedApps.map((a: any) => a.slug).filter(Boolean);
       if (slugs.length > 0) {
@@ -133,6 +136,67 @@ function DeveloperAppsContent() {
   return (
     <div className="space-y-6">
       <h1 className="text-2xl font-bold">Apps by {developerName}</h1>
+
+      {developerInfo && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Developer Information</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-1 text-sm">
+              {developerInfo.email && (
+                <p>
+                  <span className="text-muted-foreground">Email:</span>{" "}
+                  <a href={`mailto:${developerInfo.email}`} className="text-primary hover:underline">{developerInfo.email}</a>
+                </p>
+              )}
+              {developerInfo.phone && (
+                <p>
+                  <span className="text-muted-foreground">Phone:</span> {developerInfo.phone}
+                </p>
+              )}
+              {developerInfo.address && (
+                <p>
+                  <span className="text-muted-foreground">Address:</span>{" "}
+                  {[developerInfo.address.street, developerInfo.address.city, developerInfo.address.state ? `${developerInfo.address.state} ${developerInfo.address.zip || ""}`.trim() : developerInfo.address.zip, developerInfo.address.country].filter(Boolean).join(", ")}
+                </p>
+              )}
+              {developerInfo.employees != null && (
+                <p>
+                  <span className="text-muted-foreground">Employees:</span> {developerInfo.employees}
+                </p>
+              )}
+              {developerInfo.yearFounded != null && (
+                <p>
+                  <span className="text-muted-foreground">Year Founded:</span> {developerInfo.yearFounded}
+                </p>
+              )}
+              {developerInfo.location && (
+                <p>
+                  <span className="text-muted-foreground">Location:</span> {developerInfo.location}
+                </p>
+              )}
+              {developerInfo.country && (
+                <p>
+                  <span className="text-muted-foreground">Country:</span> {developerInfo.country}
+                </p>
+              )}
+              {developerInfo.termsUrl && (
+                <p>
+                  <span className="text-muted-foreground">Terms of Service:</span>{" "}
+                  <a href={developerInfo.termsUrl} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">{developerInfo.termsUrl}</a>
+                </p>
+              )}
+              {developerInfo.privacyUrl && (
+                <p>
+                  <span className="text-muted-foreground">Privacy Policy:</span>{" "}
+                  <a href={developerInfo.privacyUrl} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">{developerInfo.privacyUrl}</a>
+                </p>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       <Card>
         <CardHeader>

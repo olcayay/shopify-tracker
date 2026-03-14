@@ -483,6 +483,7 @@ export const appRoutes: FastifyPluginAsync = async (app) => {
         pricing: appSnapshots.pricing,
         pricingPlans: appSnapshots.pricingPlans,
         developer: appSnapshots.developer,
+        platformData: appSnapshots.platformData,
       })
       .from(apps)
       .innerJoin(appSnapshots, eq(appSnapshots.appId, apps.id))
@@ -499,11 +500,39 @@ export const appRoutes: FastifyPluginAsync = async (app) => {
       )
       .orderBy(apps.name);
 
-    return rows.map((r) => {
+    // Extract developer contact info from the first app's platformData
+    let developerInfo: Record<string, unknown> | null = null;
+    if (rows.length > 0) {
+      const pd = rows[0].platformData as Record<string, any> | undefined;
+      if (pd) {
+        if (platform === "canva") {
+          const info: Record<string, unknown> = {};
+          if (pd.developerEmail) info.email = pd.developerEmail;
+          if (pd.developerPhone) info.phone = pd.developerPhone;
+          if (pd.developerAddress) info.address = pd.developerAddress;
+          if (pd.termsUrl) info.termsUrl = pd.termsUrl;
+          if (pd.privacyUrl) info.privacyUrl = pd.privacyUrl;
+          if (Object.keys(info).length > 0) developerInfo = info;
+        } else if (platform === "salesforce" && pd.publisher) {
+          const pub = pd.publisher as Record<string, any>;
+          const info: Record<string, unknown> = {};
+          if (pub.email) info.email = pub.email;
+          if (pub.employees != null) info.employees = pub.employees;
+          if (pub.yearFounded != null) info.yearFounded = pub.yearFounded;
+          if (pub.location) info.location = pub.location;
+          if (pub.country) info.country = pub.country;
+          if (Object.keys(info).length > 0) developerInfo = info;
+        }
+      }
+    }
+
+    const appRows = rows.map((r) => {
       const minPaidPrice = getMinPaidPrice(r.pricingPlans);
-      const { pricingPlans: _, ...rest } = r;
+      const { pricingPlans: _, platformData: _pd, ...rest } = r;
       return { ...rest, minPaidPrice };
     });
+
+    return { apps: appRows, developerInfo };
   });
 
   // GET /api/apps/:slug/membership — which tracked apps and research projects contain this app as competitor

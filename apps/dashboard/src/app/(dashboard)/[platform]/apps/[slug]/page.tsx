@@ -92,15 +92,18 @@ function computeRankingChanges(
   return results;
 }
 
-const FIELD_LABELS: Record<string, string> = {
-  name: "App Name",
-  appIntroduction: "Introduction",
-  appDetails: "Details",
-  features: "Features",
-  seoTitle: "SEO Title",
-  seoMetaDescription: "SEO Description",
-  appCardSubtitle: "Subtitle",
-};
+function getFieldLabels(platform: string): Record<string, string> {
+  const isCanva = platform === "canva";
+  return {
+    name: "App Name",
+    appIntroduction: isCanva ? "Short Description" : "Introduction",
+    appDetails: isCanva ? "Description" : "Details",
+    features: "Features",
+    seoTitle: "SEO Title",
+    seoMetaDescription: "SEO Description",
+    appCardSubtitle: isCanva ? "Tagline" : "Subtitle",
+  };
+}
 
 const FIELD_COLORS: Record<string, string> = {
   name: "bg-blue-100 text-blue-800 dark:bg-blue-900/50 dark:text-blue-300",
@@ -704,7 +707,7 @@ export default async function AppOverviewPage({
                             FIELD_COLORS[f] || "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300"
                           }`}
                         >
-                          {FIELD_LABELS[f] || f}
+                          {getFieldLabels(platform)[f] || f}
                         </span>
                       ))}
                     </div>
@@ -743,13 +746,13 @@ export default async function AppOverviewPage({
               {changes.length > 0 ? (
                 <div className="space-y-3">
                   {todayChanges.length > 0 && (
-                    <ChangeGroup label="Today" items={todayChanges} />
+                    <ChangeGroup label="Today" items={todayChanges} platform={platform} />
                   )}
                   {weekChanges.length > 0 && (
-                    <ChangeGroup label="This Week" items={weekChanges} />
+                    <ChangeGroup label="This Week" items={weekChanges} platform={platform} />
                   )}
                   {earlierChanges.length > 0 && (
-                    <ChangeGroup label="Earlier" items={earlierChanges} />
+                    <ChangeGroup label="Earlier" items={earlierChanges} platform={platform} />
                   )}
                   <p className="text-xs text-muted-foreground pt-1">View all changes {"\u2192"}</p>
                 </div>
@@ -950,7 +953,7 @@ export default async function AppOverviewPage({
 
 // --- Sub-components ---
 
-function ChangeGroup({ label, items }: { label: string; items: any[] }) {
+function ChangeGroup({ label, items, platform }: { label: string; items: any[]; platform: string }) {
   return (
     <div>
       <p className="text-xs font-medium text-muted-foreground mb-1.5">{label}</p>
@@ -962,7 +965,7 @@ function ChangeGroup({ label, items }: { label: string; items: any[] }) {
                 FIELD_COLORS[c.field] || "bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300"
               }`}
             >
-              {FIELD_LABELS[c.field] || c.field}
+              {getFieldLabels(platform)[c.field] || c.field}
             </span>
             <span className="text-xs text-muted-foreground shrink-0">{relativeDate(c.detectedAt)}</span>
           </div>

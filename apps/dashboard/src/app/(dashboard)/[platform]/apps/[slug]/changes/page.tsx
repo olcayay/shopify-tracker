@@ -24,14 +24,15 @@ export default async function ChangesPage({
     );
   }
 
+  const isCanva = platform === "canva";
   const fieldLabels: Record<string, string> = {
     name: "App Name",
-    appIntroduction: "App Introduction",
-    appDetails: "App Details",
+    appIntroduction: isCanva ? "Short Description" : "App Introduction",
+    appDetails: isCanva ? "Description" : "App Details",
     features: "Features",
     seoTitle: "SEO Title",
     seoMetaDescription: "SEO Meta Description",
-    appCardSubtitle: "App Card Subtitle",
+    appCardSubtitle: isCanva ? "Tagline" : "App Card Subtitle",
   };
 
   return (

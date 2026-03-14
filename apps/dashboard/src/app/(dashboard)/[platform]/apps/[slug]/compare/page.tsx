@@ -386,9 +386,9 @@ export default function ComparePage() {
   const SECTIONS = useMemo(() => {
     const sections = [
       { id: "sec-name", key: "appName", label: "Name" },
-      { id: "sec-subtitle", key: "appCardSubtitle", label: "Subtitle" },
-      { id: "sec-intro", key: "appIntroduction", label: "Introduction" },
-      { id: "sec-details", key: "appDetails", label: "Details" },
+      { id: "sec-subtitle", key: "appCardSubtitle", label: isCanva ? "Tagline" : "Subtitle" },
+      { id: "sec-intro", key: "appIntroduction", label: isCanva ? "Short Description" : "Introduction" },
+      { id: "sec-details", key: "appDetails", label: isCanva ? "Description" : "Details" },
       { id: "sec-features", key: "features", label: "Features" },
       { id: "sec-languages", key: "languages", label: "Languages" },
       { id: "sec-integrations", key: "integrations", label: isSalesforce ? "Compatible With" : "Integrations" },
@@ -776,15 +776,15 @@ export default function ComparePage() {
             {(app) => (
               <div className="flex items-center">
                 <span className="text-sm font-medium flex-1 min-w-0">{app.name}</span>
-                <CharBadge count={app.name.length} max={30} />
+                <CharBadge count={app.name.length} max={isCanva ? 18 : 30} />
               </div>
             )}
           </VerticalListSection>
 
-          {/* App Card Subtitle */}
+          {/* App Card Subtitle / Tagline */}
           <VerticalListSection
             id="sec-subtitle"
-            title="App Card Subtitle"
+            title={isCanva ? "Tagline" : "App Card Subtitle"}
             sectionKey="appCardSubtitle"
             collapsed={isCollapsed("appCardSubtitle")}
             onToggle={toggleSection}
@@ -794,8 +794,8 @@ export default function ComparePage() {
               <DraftInput
                 value={draftSubtitle}
                 onChange={setDraftSubtitle}
-                max={62}
-                placeholder="Test a new Subtitle!"
+                max={isCanva ? 50 : 62}
+                placeholder={isCanva ? "Test a new Tagline!" : "Test a new Subtitle!"}
               />
             }
           >
@@ -805,16 +805,16 @@ export default function ComparePage() {
                   {app.appCardSubtitle || "—"}
                 </span>
                 {app.appCardSubtitle && (
-                  <CharBadge count={app.appCardSubtitle.length} max={62} />
+                  <CharBadge count={app.appCardSubtitle.length} max={isCanva ? 50 : 62} />
                 )}
               </div>
             )}
           </VerticalListSection>
 
-          {/* App Introduction */}
+          {/* App Introduction / Short Description */}
           <VerticalListSection
             id="sec-intro"
-            title="App Introduction"
+            title={isCanva ? "Short Description" : "App Introduction"}
             sectionKey="appIntroduction"
             collapsed={isCollapsed("appIntroduction")}
             onToggle={toggleSection}
@@ -824,8 +824,8 @@ export default function ComparePage() {
               <DraftInput
                 value={draftIntro}
                 onChange={setDraftIntro}
-                max={100}
-                placeholder="Test a new Introduction!"
+                max={isCanva ? 50 : 100}
+                placeholder={isCanva ? "Test a new Short Description!" : "Test a new Introduction!"}
               />
             }
           >
@@ -838,7 +838,7 @@ export default function ComparePage() {
                   {app.latestSnapshot?.appIntroduction && (
                     <CharBadge
                       count={app.latestSnapshot.appIntroduction.length}
-                      max={100}
+                      max={isCanva ? 50 : 100}
                     />
                   )}
                 </div>
@@ -846,10 +846,10 @@ export default function ComparePage() {
             )}
           </VerticalListSection>
 
-          {/* App Details — icon-tab mode with keyword density */}
+          {/* App Details / Description — icon-tab mode with keyword density */}
           <CompareSection
             id="sec-details"
-            title="App Details"
+            title={isCanva ? "Description" : "App Details"}
             sectionKey="appDetails"
             collapsed={isCollapsed("appDetails")}
             onToggle={toggleSection}
