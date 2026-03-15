@@ -26,6 +26,7 @@ import {
   PanelLeftOpen,
   Menu,
   BrainCircuit,
+  Code,
 } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
 import { PLATFORMS, type PlatformId } from "@appranks/shared";
@@ -45,7 +46,7 @@ const PLATFORM_COLORS: Record<PlatformId, string> = {
   canva: "#00C4CC",
 };
 
-function getNavItems(platformId: PlatformId) {
+function getNavItems(platformId: PlatformId, isAdmin?: boolean) {
   const p = `/${platformId}`;
   const caps = PLATFORMS[platformId];
   const items: { href: string; label: string; icon: any; badge?: string }[] = [
@@ -65,6 +66,9 @@ function getNavItems(platformId: PlatformId) {
   }
   if (platformId !== "canva" && platformId !== "salesforce") {
     items.push({ href: `${p}/research`, label: "Research", icon: FlaskConical, badge: "Beta" });
+  }
+  if (isAdmin) {
+    items.push({ href: `${p}/developers`, label: "Developers", icon: Code });
   }
   return items;
 }
@@ -163,7 +167,7 @@ function SidebarContent({
   }
 
   // In collapsed mode, just show the active platform's nav icons
-  const activePlatformItems = useMemo(() => getNavItems(currentPlatform), [currentPlatform]);
+  const activePlatformItems = useMemo(() => getNavItems(currentPlatform, isSystemAdmin), [currentPlatform, isSystemAdmin]);
 
   return (
     <>
@@ -198,7 +202,7 @@ function SidebarContent({
             .filter((pid) => pid in PLATFORMS)
             .map((platformId) => {
             const isExpanded = expandedPlatform === platformId;
-            const items = getNavItems(platformId);
+            const items = getNavItems(platformId, isSystemAdmin);
             const accentColor = PLATFORM_COLORS[platformId];
             const isGloballyHidden = isSystemAdmin && globalPlatformVisibility && globalPlatformVisibility[platformId] === false;
 
