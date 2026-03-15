@@ -1387,16 +1387,15 @@ function PermissionsComparisonSection({
     return map;
   }, [apps]);
 
-  // Sort: primary app scopes first, then alphabetically
+  // Sort: most common scopes first, then alphabetically
   const allScopes = useMemo(() => {
-    const primarySlug = apps[0]?.slug;
     return [...permissionMap.keys()].sort((a, b) => {
-      const aIn = primarySlug ? (permissionMap.get(a)?.has(primarySlug) || false) : false;
-      const bIn = primarySlug ? (permissionMap.get(b)?.has(primarySlug) || false) : false;
-      if (aIn !== bIn) return aIn ? -1 : 1;
+      const aCount = permissionMap.get(a)?.size || 0;
+      const bCount = permissionMap.get(b)?.size || 0;
+      if (aCount !== bCount) return bCount - aCount;
       return a.localeCompare(b);
     });
-  }, [permissionMap, apps]);
+  }, [permissionMap]);
 
   if (allScopes.length === 0) return null;
 
