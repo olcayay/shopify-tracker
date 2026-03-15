@@ -23,6 +23,7 @@ import { Search, ArrowUpDown, ArrowUp, ArrowDown, Trash2, Zap, Loader2, Check, E
 import { ConfirmModal } from "@/components/confirm-modal";
 import { ConfirmModalWithInput } from "@/components/confirm-modal-with-input";
 import { useFormatDate } from "@/lib/format-date";
+import { PlatformOverviewCards } from "@/components/platform-overview-cards";
 
 type SortKey = "keyword" | "trackedBy" | "createdAt" | "lastScraped";
 type SortDir = "asc" | "desc";
@@ -193,6 +194,8 @@ export default function KeywordsListPage() {
           Keywords ({filtered.length})
         </h1>
       </div>
+
+      <PlatformOverviewCards type="keywords" activePlatform={platformFilter} onSelect={(p) => { setPlatformFilter(p); }} />
 
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-3">

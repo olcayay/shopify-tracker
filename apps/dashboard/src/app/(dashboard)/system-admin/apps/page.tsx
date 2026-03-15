@@ -32,6 +32,7 @@ import {
   Check,
 } from "lucide-react";
 import { useFormatDate } from "@/lib/format-date";
+import { PlatformOverviewCards } from "@/components/platform-overview-cards";
 
 type SortKey = "name" | "slug" | "trackedBy" | "competitorBy" | "lastScraped" | "lastChange";
 type SortDir = "asc" | "desc";
@@ -193,6 +194,8 @@ export default function AppsListPage() {
         </p>
         <h1 className="text-2xl font-bold">Apps ({filtered.length})</h1>
       </div>
+
+      <PlatformOverviewCards type="apps" activePlatform={platformFilter} onSelect={(p) => { setPlatformFilter(p); setPage(1); }} />
 
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-3">

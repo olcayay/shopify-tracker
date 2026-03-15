@@ -1415,6 +1415,30 @@ export const systemAdminRoutes: FastifyPluginAsync = async (app) => {
     };
   });
 
+  // GET /api/system-admin/platform-counts — per-platform counts for apps, keywords, categories
+  app.get("/platform-counts", async () => {
+    const [appCounts, kwCounts, catCounts] = await Promise.all([
+      db.execute<{ platform: string; total: number; tracked: number }>(sql`
+        SELECT platform,
+          COUNT(*)::int AS total,
+          COUNT(*) FILTER (WHERE is_tracked = true)::int AS tracked
+        FROM apps GROUP BY platform
+      `),
+      db.execute<{ platform: string; total: number; active: number }>(sql`
+        SELECT platform,
+          COUNT(*)::int AS total,
+          COUNT(*) FILTER (WHERE is_active = true)::int AS active
+        FROM tracked_keywords GROUP BY platform
+      `),
+      db.execute<{ platform: string; total: number }>(sql`
+        SELECT platform, COUNT(*)::int AS total
+        FROM categories GROUP BY platform
+      `),
+    ]);
+
+    return { apps: appCounts, keywords: kwCounts, categories: catCounts };
+  });
+
   // GET /api/system-admin/features — all tracked features with account counts
   app.get("/features", async () => {
     // Get unique features with their tracking counts
