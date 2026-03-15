@@ -1292,16 +1292,15 @@ function BadgeComparisonSection({
     return map;
   }, [apps, getItems]);
 
-  // Sort: primary app items first (alphabetically), then rest (alphabetically)
+  // Sort: most common items first, then alphabetically
   const allItems = useMemo(() => {
-    const primarySlug = apps[0]?.slug;
     return [...presenceMap.keys()].sort((a, b) => {
-      const aInPrimary = primarySlug ? (presenceMap.get(a)?.has(primarySlug) || false) : false;
-      const bInPrimary = primarySlug ? (presenceMap.get(b)?.has(primarySlug) || false) : false;
-      if (aInPrimary !== bInPrimary) return aInPrimary ? -1 : 1;
+      const aCount = presenceMap.get(a)?.size || 0;
+      const bCount = presenceMap.get(b)?.size || 0;
+      if (aCount !== bCount) return bCount - aCount;
       return a.localeCompare(b);
     });
-  }, [presenceMap, apps]);
+  }, [presenceMap]);
 
   if (allItems.length === 0) return null;
 
