@@ -375,10 +375,9 @@ export function extractCanvaAppListingApi(html: string, appId: string): CanvaDet
       screenshots: Array.isArray(obj.J) ? obj.J : [],
       termsUrl: obj.K || "",
       privacyUrl: obj.L || "",
-      permissions: Array.isArray(obj.S) ? obj.S.map((p: any) => ({
-        scope: p.A || "",
-        type: p.B || "",
-      })) : [],
+      // appListing API returns permissions as abbreviated single-letter codes
+      // (e.g. {A:"D",B:"B"}) which are not human-readable. Skip them.
+      permissions: [],
       languages: Array.isArray(obj.e) ? obj.e : [],
     };
   } catch (e) {
