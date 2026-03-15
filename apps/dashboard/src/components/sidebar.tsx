@@ -49,7 +49,7 @@ const PLATFORM_COLORS: Record<PlatformId, string> = {
 function getNavItems(platformId: PlatformId, isAdmin?: boolean) {
   const p = `/${platformId}`;
   const caps = PLATFORMS[platformId];
-  const items: { href: string; label: string; icon: any; badge?: string }[] = [
+  const items: { href: string; label: string; icon: any; badge?: string; adminOnly?: boolean }[] = [
     { href: `${p}/overview`, label: "Overview", icon: LayoutDashboard },
     { href: `${p}/apps`, label: "Apps", icon: AppWindow },
     { href: `${p}/competitors`, label: "Competitors", icon: Star },
@@ -68,7 +68,7 @@ function getNavItems(platformId: PlatformId, isAdmin?: boolean) {
     items.push({ href: `${p}/research`, label: "Research", icon: FlaskConical, badge: "Beta" });
   }
   if (isAdmin) {
-    items.push({ href: `${p}/developers`, label: "Developers", icon: Code });
+    items.push({ href: `${p}/developers`, label: "Developers", icon: Code, adminOnly: true });
   }
   return items;
 }
@@ -131,8 +131,8 @@ function SidebarContent({
     }
   }, [pathname, user, account, isSystemAdmin, enabledPlatforms, router]);
 
-  function NavLink({ href, icon: Icon, label, isActive, iconSize = "h-4 w-4", className = "", badge }: {
-    href: string; icon: any; label: string; isActive: boolean; iconSize?: string; className?: string; badge?: string;
+  function NavLink({ href, icon: Icon, label, isActive, iconSize = "h-4 w-4", className = "", badge, adminOnly }: {
+    href: string; icon: any; label: string; isActive: boolean; iconSize?: string; className?: string; badge?: string; adminOnly?: boolean;
   }) {
     const content = (
       <Link
@@ -146,6 +146,9 @@ function SidebarContent({
       >
         <Icon className={`${iconSize} shrink-0`} />
         {!collapsed && label}
+        {!collapsed && adminOnly && (
+          <Shield className={`h-3 w-3 shrink-0 ${isActive ? "text-primary-foreground/60" : "text-amber-500"}`} />
+        )}
         {!collapsed && badge && (
           <span className={`ml-auto text-[10px] font-medium px-1.5 py-0.5 rounded-full ${
             isActive ? "bg-primary-foreground/20 text-primary-foreground" : "bg-primary/10 text-primary"
@@ -159,7 +162,7 @@ function SidebarContent({
       return (
         <Tooltip>
           <TooltipTrigger asChild>{content}</TooltipTrigger>
-          <TooltipContent side="right">{label}</TooltipContent>
+          <TooltipContent side="right">{label}{adminOnly && " (Admin)"}</TooltipContent>
         </Tooltip>
       );
     }
@@ -193,7 +196,7 @@ function SidebarContent({
           activePlatformItems.map((item) => {
             const isActive = pathname === item.href || pathname.startsWith(item.href + "/");
             return (
-              <NavLink key={item.href} href={item.href} icon={item.icon} label={item.label} isActive={isActive} badge={item.badge} />
+              <NavLink key={item.href} href={item.href} icon={item.icon} label={item.label} isActive={isActive} badge={item.badge} adminOnly={item.adminOnly} />
             );
           })
         ) : (
@@ -249,7 +252,7 @@ function SidebarContent({
                 {isExpanded && items.map((item) => {
                   const isActive = pathname === item.href || pathname.startsWith(item.href + "/");
                   return (
-                    <NavLink key={item.href} href={item.href} icon={item.icon} label={item.label} isActive={isActive} badge={item.badge} className="pl-6" />
+                    <NavLink key={item.href} href={item.href} icon={item.icon} label={item.label} isActive={isActive} badge={item.badge} adminOnly={item.adminOnly} className="pl-6" />
                   );
                 })}
               </div>
