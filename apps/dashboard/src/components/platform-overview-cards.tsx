@@ -19,7 +19,7 @@ const PLATFORM_COLORS: Record<PlatformId, string> = {
 };
 
 interface PlatformCounts {
-  apps: { platform: string; total: number; tracked: number }[];
+  apps: { platform: string; total: number; tracked: number; scraped: number }[];
   keywords: { platform: string; total: number; active: number }[];
   categories: { platform: string; total: number }[];
 }
@@ -32,12 +32,12 @@ interface PlatformOverviewCardsProps {
   onSelect: (platform: string) => void;
 }
 
-function getLabel(type: AssetType, data: PlatformCounts, platform: string): { primary: string; secondary?: string } {
+function getLabel(type: AssetType, data: PlatformCounts, platform: string): { primary: string; secondary?: string; extra?: string } {
   switch (type) {
     case "apps": {
       const row = data.apps.find((r) => r.platform === platform);
       if (!row) return { primary: "0" };
-      return { primary: `${row.tracked} tracked`, secondary: `${row.total} total` };
+      return { primary: `${row.tracked} tracked`, secondary: `${row.total} total`, extra: `${row.scraped} scraped` };
     }
     case "keywords": {
       const row = data.keywords.find((r) => r.platform === platform);
@@ -91,7 +91,7 @@ export function PlatformOverviewCards({ type, activePlatform, onSelect }: Platfo
     <div className="grid grid-cols-3 gap-3 mb-4">
       {platforms.map((pid) => {
         const isActive = activePlatform === pid;
-        const { primary, secondary } = getLabel(type, data, pid);
+        const { primary, secondary, extra } = getLabel(type, data, pid);
         const color = PLATFORM_COLORS[pid];
 
         return (
@@ -112,6 +112,9 @@ export function PlatformOverviewCards({ type, activePlatform, onSelect }: Platfo
                 <span className="text-lg font-semibold">{primary}</span>
                 {secondary && (
                   <span className="text-xs text-muted-foreground ml-2">{secondary}</span>
+                )}
+                {extra && (
+                  <span className="text-xs text-muted-foreground ml-2">{extra}</span>
                 )}
               </div>
             </CardContent>

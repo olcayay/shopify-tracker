@@ -1418,11 +1418,14 @@ export const systemAdminRoutes: FastifyPluginAsync = async (app) => {
   // GET /api/system-admin/platform-counts — per-platform counts for apps, keywords, categories
   app.get("/platform-counts", async () => {
     const [appCounts, kwCounts, catCounts] = await Promise.all([
-      db.execute<{ platform: string; total: number; tracked: number }>(sql`
-        SELECT platform,
+      db.execute<{ platform: string; total: number; tracked: number; scraped: number }>(sql`
+        SELECT a.platform,
           COUNT(*)::int AS total,
-          COUNT(*) FILTER (WHERE is_tracked = true)::int AS tracked
-        FROM apps GROUP BY platform
+          COUNT(*) FILTER (WHERE a.is_tracked = true)::int AS tracked,
+          COUNT(*) FILTER (WHERE EXISTS (
+            SELECT 1 FROM app_snapshots s WHERE s.app_id = a.id
+          ))::int AS scraped
+        FROM apps a GROUP BY a.platform
       `),
       db.execute<{ platform: string; total: number; active: number }>(sql`
         SELECT platform,
