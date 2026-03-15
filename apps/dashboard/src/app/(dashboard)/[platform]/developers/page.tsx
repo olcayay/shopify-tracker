@@ -130,7 +130,7 @@ function DeveloperAppsContent() {
   }
 
   if (!developerName) {
-    return <p className="text-muted-foreground">No developer specified.</p>;
+    return <DeveloperListView />;
   }
 
   return (
@@ -307,6 +307,127 @@ function DeveloperAppsContent() {
                       {app.launchedDate
                         ? formatDateOnly(app.launchedDate)
                         : "\u2014"}
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          )}
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
+type DevSortKey = "name" | "apps" | "email" | "country";
+
+function DeveloperListView() {
+  const { platform } = useParams();
+  const { fetchWithAuth } = useAuth();
+  const [developers, setDevelopers] = useState<{ developer_name: string; app_count: number; email: string | null; country: string | null }[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [sortKey, setSortKey] = useState<DevSortKey>("apps");
+  const [sortDir, setSortDir] = useState<SortDir>("desc");
+
+  useEffect(() => {
+    (async () => {
+      const res = await fetchWithAuth(`/api/apps/developers`);
+      if (res.ok) setDevelopers(await res.json());
+      setLoading(false);
+    })();
+  }, []);
+
+  const sorted = useMemo(() => {
+    return [...developers].sort((a, b) => {
+      let cmp = 0;
+      switch (sortKey) {
+        case "name":
+          cmp = a.developer_name.localeCompare(b.developer_name);
+          break;
+        case "apps":
+          cmp = a.app_count - b.app_count;
+          break;
+        case "email":
+          cmp = (a.email || "").localeCompare(b.email || "");
+          break;
+        case "country":
+          cmp = (a.country || "").localeCompare(b.country || "");
+          break;
+      }
+      return sortDir === "asc" ? cmp : -cmp;
+    });
+  }, [developers, sortKey, sortDir]);
+
+  function toggleSort(key: DevSortKey) {
+    if (sortKey === key) {
+      setSortDir((d) => (d === "asc" ? "desc" : "asc"));
+    } else {
+      setSortKey(key);
+      setSortDir(key === "name" ? "asc" : "desc");
+    }
+  }
+
+  function SortIcon({ col }: { col: DevSortKey }) {
+    if (sortKey !== col)
+      return <ArrowUpDown className="inline h-3.5 w-3.5 ml-1 opacity-40" />;
+    return sortDir === "asc" ? (
+      <ArrowUp className="inline h-3.5 w-3.5 ml-1" />
+    ) : (
+      <ArrowDown className="inline h-3.5 w-3.5 ml-1" />
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      <h1 className="text-2xl font-bold">Developers</h1>
+      <Card>
+        <CardHeader>
+          <CardTitle>{loading ? "Loading..." : `${developers.length} Developers`}</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {loading ? (
+            <TableSkeleton rows={10} cols={4} />
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="cursor-pointer select-none" onClick={() => toggleSort("name")}>
+                    Developer <SortIcon col="name" />
+                  </TableHead>
+                  <TableHead className="cursor-pointer select-none" onClick={() => toggleSort("apps")}>
+                    Apps <SortIcon col="apps" />
+                  </TableHead>
+                  <TableHead className="cursor-pointer select-none" onClick={() => toggleSort("email")}>
+                    Email <SortIcon col="email" />
+                  </TableHead>
+                  <TableHead className="cursor-pointer select-none" onClick={() => toggleSort("country")}>
+                    Country <SortIcon col="country" />
+                  </TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {sorted.map((dev) => (
+                  <TableRow key={dev.developer_name}>
+                    <TableCell>
+                      <Link
+                        href={`/${platform}/developers?name=${encodeURIComponent(dev.developer_name)}`}
+                        className="text-primary hover:underline font-medium"
+                      >
+                        {dev.developer_name}
+                      </Link>
+                    </TableCell>
+                    <TableCell>{dev.app_count}</TableCell>
+                    <TableCell className="text-sm">
+                      {dev.email ? (
+                        <a href={`mailto:${dev.email}`} className="text-primary hover:underline">
+                          {dev.email}
+                        </a>
+                      ) : (
+                        <span className="text-muted-foreground">{"\u2014"}</span>
+                      )}
+                    </TableCell>
+                    <TableCell className="text-sm">
+                      {dev.country || <span className="text-muted-foreground">{"\u2014"}</span>}
                     </TableCell>
                   </TableRow>
                 ))}

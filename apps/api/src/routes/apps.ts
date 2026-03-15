@@ -464,6 +464,51 @@ export const appRoutes: FastifyPluginAsync = async (app) => {
     return rows;
   });
 
+  // GET /api/apps/developers — list all developers with app counts and contact info
+  app.get("/developers", async (request) => {
+    const platform = getPlatformFromQuery(request.query as Record<string, unknown>);
+
+    // Platform-specific JSON paths for email/country
+    const emailPath: Record<string, string> = {
+      canva: "platform_data->>'developerEmail'",
+      salesforce: "platform_data->'publisher'->>'email'",
+    };
+    const countryPath: Record<string, string> = {
+      canva: "platform_data->'developerAddress'->>'country'",
+      salesforce: "platform_data->'publisher'->>'country'",
+    };
+
+    const emailExpr = emailPath[platform] ? sql.raw(`s.${emailPath[platform]}`) : sql.raw("NULL");
+    const countryExpr = countryPath[platform] ? sql.raw(`s.${countryPath[platform]}`) : sql.raw("NULL");
+
+    const rows = await db.execute<{
+      developer_name: string;
+      app_count: number;
+      email: string | null;
+      country: string | null;
+    }>(sql`
+      SELECT
+        s.developer->>'name' AS developer_name,
+        COUNT(DISTINCT a.id)::int AS app_count,
+        (ARRAY_AGG(${emailExpr}) FILTER (WHERE ${emailExpr} IS NOT NULL))[1] AS email,
+        (ARRAY_AGG(${countryExpr}) FILTER (WHERE ${countryExpr} IS NOT NULL))[1] AS country
+      FROM apps a
+      INNER JOIN app_snapshots s ON s.app_id = a.id
+      WHERE a.platform = ${platform}
+        AND s.developer->>'name' IS NOT NULL
+        AND s.developer->>'name' != ''
+        AND s.id = (
+          SELECT s2.id FROM app_snapshots s2
+          WHERE s2.app_id = a.id
+          ORDER BY s2.scraped_at DESC LIMIT 1
+        )
+      GROUP BY s.developer->>'name'
+      ORDER BY app_count DESC, developer_name ASC
+    `);
+
+    return rows;
+  });
+
   // GET /api/apps/by-developer?name= — list apps by developer name
   app.get("/by-developer", async (request) => {
     const { name = "" } = request.query as { name?: string };
