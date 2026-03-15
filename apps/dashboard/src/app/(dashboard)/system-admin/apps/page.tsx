@@ -363,10 +363,12 @@ export default function AppsListPage() {
                         ? formatDateTime(app.lastScrapedAt)
                         : "\u2014"}
                     </TableCell>
-                    <TableCell className="text-sm text-muted-foreground">
-                      {app.lastChangeAt
-                        ? formatDateTime(app.lastChangeAt)
-                        : "\u2014"}
+                    <TableCell className="text-sm">
+                      {app.lastChangeAt ? (
+                        <Link href={`/${app.platform}/apps/${app.slug}/changes`} className="text-primary hover:underline">
+                          {formatDateTime(app.lastChangeAt)}
+                        </Link>
+                      ) : "\u2014"}
                     </TableCell>
                     <TableCell>
                       <Button
