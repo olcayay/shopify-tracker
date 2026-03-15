@@ -15,7 +15,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
-import { TableSkeleton } from "@/components/skeletons";
+import { TableSkeleton, CardSkeleton } from "@/components/skeletons";
 
 type SortKey = "name" | "rating" | "reviews" | "minPaidPrice" | "lastChangeAt" | "launchedDate";
 type SortDir = "asc" | "desc";
@@ -34,7 +34,7 @@ function DeveloperAppsContent() {
   const { platform } = useParams();
   const searchParams = useSearchParams();
   const developerName = searchParams.get("name") || "";
-  const { fetchWithAuth } = useAuth();
+  const { fetchWithAuth, user } = useAuth();
   const { formatDateOnly } = useFormatDate();
   const [apps, setApps] = useState<any[]>([]);
   const [developerInfo, setDeveloperInfo] = useState<Record<string, any> | null>(null);
@@ -130,6 +130,13 @@ function DeveloperAppsContent() {
   }
 
   if (!developerName) {
+    if (!user?.isSystemAdmin) {
+      return (
+        <div className="text-center py-12 text-muted-foreground">
+          No developer specified.
+        </div>
+      );
+    }
     return <DeveloperListView />;
   }
 
@@ -137,7 +144,11 @@ function DeveloperAppsContent() {
     <div className="space-y-6">
       <h1 className="text-2xl font-bold">Apps by {developerName}</h1>
 
-      {developerInfo && (
+      {loading && (
+        <CardSkeleton lines={4} />
+      )}
+
+      {!loading && developerInfo && (
         <Card>
           <CardHeader>
             <CardTitle>Developer Information</CardTitle>
@@ -200,7 +211,7 @@ function DeveloperAppsContent() {
 
       <Card>
         <CardHeader>
-          <CardTitle>{apps.length} Apps</CardTitle>
+          <CardTitle>{loading ? "Loading..." : `${apps.length} Apps`}</CardTitle>
         </CardHeader>
         <CardContent>
           {loading ? (

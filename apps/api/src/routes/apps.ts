@@ -3,6 +3,7 @@ import { eq, desc, sql, and, inArray, ilike } from "drizzle-orm";
 import { createDb } from "@appranks/db";
 import { computeWeightedPowerScore } from "@appranks/shared";
 import { getPlatformFromQuery } from "../utils/platform.js";
+import { requireSystemAdmin } from "../middleware/authorize.js";
 import {
   apps,
   appSnapshots,
@@ -464,8 +465,8 @@ export const appRoutes: FastifyPluginAsync = async (app) => {
     return rows;
   });
 
-  // GET /api/apps/developers — list all developers with app counts and contact info
-  app.get("/developers", async (request) => {
+  // GET /api/apps/developers — list all developers with app counts and contact info (system admin only)
+  app.get("/developers", { preHandler: [requireSystemAdmin()] }, async (request) => {
     const platform = getPlatformFromQuery(request.query as Record<string, unknown>);
 
     // Platform-specific JSON paths for email/country
