@@ -14,7 +14,8 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
+import { ArrowUpDown, ArrowUp, ArrowDown, Search as SearchIcon } from "lucide-react";
+import { Input } from "@/components/ui/input";
 import { TableSkeleton, CardSkeleton } from "@/components/skeletons";
 
 type SortKey = "name" | "rating" | "reviews" | "minPaidPrice" | "lastChangeAt" | "launchedDate";
@@ -339,6 +340,8 @@ function DeveloperListView() {
   const [loading, setLoading] = useState(true);
   const [sortKey, setSortKey] = useState<DevSortKey>("apps");
   const [sortDir, setSortDir] = useState<SortDir>("desc");
+  const [search, setSearch] = useState("");
+  const [countryFilter, setCountryFilter] = useState("");
 
   useEffect(() => {
     (async () => {
@@ -348,8 +351,25 @@ function DeveloperListView() {
     })();
   }, []);
 
+  const countries = useMemo(() => {
+    const set = new Set<string>();
+    for (const d of developers) {
+      if (d.country) set.add(d.country);
+    }
+    return [...set].sort();
+  }, [developers]);
+
+  const filtered = useMemo(() => {
+    const q = search.toLowerCase();
+    return developers.filter((d) => {
+      if (q && !d.developer_name.toLowerCase().includes(q) && !(d.email || "").toLowerCase().includes(q)) return false;
+      if (countryFilter && d.country !== countryFilter) return false;
+      return true;
+    });
+  }, [developers, search, countryFilter]);
+
   const sorted = useMemo(() => {
-    return [...developers].sort((a, b) => {
+    return [...filtered].sort((a, b) => {
       let cmp = 0;
       switch (sortKey) {
         case "name":
@@ -367,7 +387,7 @@ function DeveloperListView() {
       }
       return sortDir === "asc" ? cmp : -cmp;
     });
-  }, [developers, sortKey, sortDir]);
+  }, [filtered, sortKey, sortDir]);
 
   function toggleSort(key: DevSortKey) {
     if (sortKey === key) {
@@ -393,7 +413,34 @@ function DeveloperListView() {
       <h1 className="text-2xl font-bold">Developers</h1>
       <Card>
         <CardHeader>
-          <CardTitle>{loading ? "Loading..." : `${developers.length} Developers`}</CardTitle>
+          <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+            <CardTitle className="shrink-0">
+              {loading ? "Loading..." : filtered.length === developers.length ? `${developers.length} Developers` : `${filtered.length} / ${developers.length} Developers`}
+            </CardTitle>
+            {!loading && (
+              <div className="flex items-center gap-2 ml-auto">
+                <div className="relative">
+                  <SearchIcon className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+                  <Input
+                    placeholder="Search name or email..."
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
+                    className="pl-8 h-9 w-56 text-sm"
+                  />
+                </div>
+                <select
+                  value={countryFilter}
+                  onChange={(e) => setCountryFilter(e.target.value)}
+                  className="border rounded-md px-3 py-1.5 text-sm bg-background h-9"
+                >
+                  <option value="">All Countries</option>
+                  {countries.map((c) => (
+                    <option key={c} value={c}>{c}</option>
+                  ))}
+                </select>
+              </div>
+            )}
+          </div>
         </CardHeader>
         <CardContent>
           {loading ? (
