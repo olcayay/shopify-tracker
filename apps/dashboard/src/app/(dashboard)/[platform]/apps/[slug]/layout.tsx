@@ -105,7 +105,8 @@ export default async function AppDetailLayout({
         return (
         <div className={`grid grid-cols-2 sm:grid-cols-3 ${lgCols} gap-4`}>
           {caps.hasReviews && (
-            <Card className="min-w-0 py-3 gap-1">
+            <Link href={`/${platform}/apps/${slug}/reviews`} className="block">
+            <Card className="min-w-0 py-3 gap-1 hover:ring-1 hover:ring-muted-foreground/20 transition-all">
               <CardHeader>
                 <CardTitle className="text-sm text-muted-foreground">Rating</CardTitle>
               </CardHeader>
@@ -135,9 +136,11 @@ export default async function AppDetailLayout({
                 )}
               </CardContent>
             </Card>
+            </Link>
           )}
           {caps.hasReviews && (
-            <Card className="min-w-0 py-3 gap-1">
+            <Link href={`/${platform}/apps/${slug}/reviews`} className="block">
+            <Card className="min-w-0 py-3 gap-1 hover:ring-1 hover:ring-muted-foreground/20 transition-all">
               <CardHeader>
                 <CardTitle className="text-sm text-muted-foreground">Reviews</CardTitle>
               </CardHeader>
@@ -147,9 +150,11 @@ export default async function AppDetailLayout({
                 </span>
               </CardContent>
             </Card>
+            </Link>
           )}
           {caps.hasPricing && (
-            <Card className="min-w-0 py-3 gap-1">
+            <Link href={`/${platform}/apps/${slug}/details#pricing-plans`} className="block">
+            <Card className="min-w-0 py-3 gap-1 hover:ring-1 hover:ring-muted-foreground/20 transition-all">
               <CardHeader>
                 <CardTitle className="text-sm text-muted-foreground">Pricing</CardTitle>
               </CardHeader>
@@ -175,6 +180,7 @@ export default async function AppDetailLayout({
                 )}
               </CardContent>
             </Card>
+            </Link>
           )}
           <Card className="min-w-0 py-3 gap-1">
             <CardHeader>
