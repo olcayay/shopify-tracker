@@ -10,6 +10,7 @@ import { buildExternalAppUrl, getPlatformName } from "@/lib/platform-urls";
 import type { PlatformId } from "@appranks/shared";
 import { ShopifyPreview } from "./shopify-preview";
 import { SalesforcePreview } from "./salesforce-preview";
+import { CanvaPreview } from "./canva-preview";
 
 export default function PreviewPage() {
   const params = useParams<{ platform: string; slug: string }>();
@@ -21,7 +22,7 @@ export default function PreviewPage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (platform !== "shopify" && platform !== "salesforce") return;
+    if (platform !== "shopify" && platform !== "salesforce" && platform !== "canva") return;
     async function loadData() {
       setLoading(true);
       const res = await fetchWithAuth(
@@ -40,12 +41,12 @@ export default function PreviewPage() {
     };
   }, [slug, platform]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  if (platform !== "shopify" && platform !== "salesforce") {
+  if (platform !== "shopify" && platform !== "salesforce" && platform !== "canva") {
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4">
         <h2 className="text-xl font-semibold">Preview not available</h2>
         <p className="text-muted-foreground text-center max-w-md">
-          The listing preview is only available for Shopify and Salesforce apps.
+          The listing preview is only available for Shopify, Salesforce, and Canva apps.
         </p>
         <a
           href={buildExternalAppUrl(platform as PlatformId, slug)}
@@ -96,13 +97,20 @@ function PreviewShell({
   onClose: () => void;
 }) {
   const platformPreview =
-    platform === "salesforce"
-      ? SalesforcePreview({ appData })
-      : ShopifyPreview({ appData });
+    platform === "canva"
+      ? CanvaPreview({ appData })
+      : platform === "salesforce"
+        ? SalesforcePreview({ appData })
+        : ShopifyPreview({ appData });
 
   const { preview, editor, resetToOriginal } = platformPreview;
   const icon = appData.iconUrl;
-  const platformLabel = platform === "salesforce" ? "AppExchange Preview" : "App Store Preview";
+  const platformLabel =
+    platform === "canva"
+      ? "Canva Apps Preview"
+      : platform === "salesforce"
+        ? "AppExchange Preview"
+        : "App Store Preview";
 
   return (
     <div className="fixed inset-0 z-50 bg-background flex flex-col">
