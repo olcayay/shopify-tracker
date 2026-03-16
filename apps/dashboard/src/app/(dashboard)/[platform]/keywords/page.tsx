@@ -38,6 +38,8 @@ import { AdminScraperTrigger } from "@/components/admin-scraper-trigger";
 import { KeywordTagBadge } from "@/components/keyword-tag-badge";
 import { KeywordTagManager } from "@/components/keyword-tag-manager";
 import { KeywordTagFilter } from "@/components/keyword-tag-filter";
+import { KeywordWordGroupFilter } from "@/components/keyword-word-group-filter";
+import { extractWordGroups, filterKeywordsByWord } from "@/lib/keyword-word-groups";
 
 type SortKey = "keyword" | "totalResults" | "tracked" | "competitor" | "ads" | "lastUpdated";
 type SortDir = "asc" | "desc";
@@ -52,6 +54,7 @@ export default function KeywordsPage() {
   const [activeTagFilter, setActiveTagFilter] = useState<Set<string>>(
     new Set()
   );
+  const [activeWordFilter, setActiveWordFilter] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [sortKey, setSortKey] = useState<SortKey>("keyword");
   const [sortDir, setSortDir] = useState<SortDir>("asc");
@@ -73,6 +76,10 @@ export default function KeywordsPage() {
 
   const canEdit = user?.role === "owner" || user?.role === "editor";
 
+  const wordGroups = useMemo(() => {
+    return extractWordGroups(keywords.map((kw) => kw.keyword));
+  }, [keywords]);
+
   // Filter and sort keywords
   const filteredKeywords = useMemo(() => {
     let result = activeTagFilter.size === 0
@@ -80,6 +87,10 @@ export default function KeywordsPage() {
       : keywords.filter((kw) =>
           kw.tags?.some((t: any) => activeTagFilter.has(t.id))
         );
+
+    if (activeWordFilter) {
+      result = filterKeywordsByWord(result, activeWordFilter);
+    }
 
     result = [...result].sort((a, b) => {
       let cmp = 0;
@@ -107,7 +118,7 @@ export default function KeywordsPage() {
     });
 
     return result;
-  }, [keywords, activeTagFilter, sortKey, sortDir]);
+  }, [keywords, activeTagFilter, activeWordFilter, sortKey, sortDir]);
 
   function toggleSort(key: SortKey) {
     if (sortKey === key) {
@@ -416,6 +427,14 @@ export default function KeywordsPage() {
           activeTags={activeTagFilter}
           onToggle={toggleTagFilter}
           onClearAll={() => setActiveTagFilter(new Set())}
+        />
+      )}
+
+      {wordGroups.length > 0 && (
+        <KeywordWordGroupFilter
+          wordGroups={wordGroups}
+          activeWord={activeWordFilter}
+          onSelect={setActiveWordFilter}
         />
       )}
 
