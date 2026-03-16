@@ -206,6 +206,7 @@ export class AppDetailsScraper {
         features: string[];
         seoTitle: string;
         seoMetaDescription: string;
+        pricingPlans: any[];
       } | undefined;
 
       if (existingApp) {
@@ -216,6 +217,7 @@ export class AppDetailsScraper {
             features: appSnapshots.features,
             seoTitle: appSnapshots.seoTitle,
             seoMetaDescription: appSnapshots.seoMetaDescription,
+            pricingPlans: appSnapshots.pricingPlans,
           })
           .from(appSnapshots)
           .where(eq(appSnapshots.appId, existingApp.id))
@@ -243,6 +245,12 @@ export class AppDetailsScraper {
         // Skip when features were empty (first-time population)
         if (oldFeatures !== newFeatures && oldFeatures !== "[]") {
           changes.push({ field: "features", oldValue: oldFeatures, newValue: newFeatures });
+        }
+
+        const oldPlans = JSON.stringify(prevSnapshot.pricingPlans || []);
+        const newPlans = JSON.stringify(details.pricing_plans || []);
+        if (oldPlans !== newPlans && oldPlans !== "[]") {
+          changes.push({ field: "pricingPlans", oldValue: oldPlans, newValue: newPlans });
         }
       }
 
