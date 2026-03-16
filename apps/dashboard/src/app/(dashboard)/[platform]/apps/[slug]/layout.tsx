@@ -105,8 +105,8 @@ export default async function AppDetailLayout({
         return (
         <div className={`grid grid-cols-2 sm:grid-cols-3 ${lgCols} gap-4`}>
           {caps.hasReviews && (
-            <Link href={`/${platform}/apps/${slug}/reviews`} className="block">
-            <Card className="min-w-0 py-3 gap-1 hover:ring-1 hover:ring-muted-foreground/20 transition-all">
+            <Link href={`/${platform}/apps/${slug}/reviews`} className="block h-full">
+            <Card className="min-w-0 py-3 gap-1 h-full hover:ring-1 hover:ring-muted-foreground/20 transition-all">
               <CardHeader>
                 <CardTitle className="text-sm text-muted-foreground">Rating</CardTitle>
               </CardHeader>
@@ -139,8 +139,8 @@ export default async function AppDetailLayout({
             </Link>
           )}
           {caps.hasReviews && (
-            <Link href={`/${platform}/apps/${slug}/reviews`} className="block">
-            <Card className="min-w-0 py-3 gap-1 hover:ring-1 hover:ring-muted-foreground/20 transition-all">
+            <Link href={`/${platform}/apps/${slug}/reviews`} className="block h-full">
+            <Card className="min-w-0 py-3 gap-1 h-full hover:ring-1 hover:ring-muted-foreground/20 transition-all">
               <CardHeader>
                 <CardTitle className="text-sm text-muted-foreground">Reviews</CardTitle>
               </CardHeader>
@@ -153,20 +153,20 @@ export default async function AppDetailLayout({
             </Link>
           )}
           {caps.hasPricing && (
-            <Link href={`/${platform}/apps/${slug}/details#pricing-plans`} className="block">
-            <Card className="min-w-0 py-3 gap-1 hover:ring-1 hover:ring-muted-foreground/20 transition-all">
+            <Link href={`/${platform}/apps/${slug}/details#pricing-plans`} className="block h-full">
+            <Card className="min-w-0 py-3 gap-1 h-full hover:ring-1 hover:ring-muted-foreground/20 transition-all">
               <CardHeader>
                 <CardTitle className="text-sm text-muted-foreground">Pricing</CardTitle>
               </CardHeader>
               <CardContent>
                 {snapshot.pricingPlans && snapshot.pricingPlans.length > 0 ? (
-                  <div className="flex flex-wrap gap-1.5">
+                  <div className="flex flex-col gap-0.5">
                     {snapshot.pricingPlans.map((plan: any) => (
                       <span
                         key={plan.name}
-                        className="inline-flex items-baseline gap-1 rounded-md bg-muted px-2 py-0.5 text-xs"
+                        className="text-xs"
                       >
-                        <span className="font-medium">{plan.name}</span>
+                        <span className="font-medium">{plan.name}</span>{" "}
                         <span className="text-muted-foreground">
                           {plan.price == null
                             ? "Free"
