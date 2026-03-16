@@ -28,12 +28,24 @@ Use this as a high-level task tracker. Each item links to a detailed section bel
 - [ ] Add platform config to `packages/shared/src/constants/platforms.ts`
 - [ ] Add external URL builders to `packages/shared/src/constants/platforms.ts`
 - [ ] Add dashboard URL builders to `apps/dashboard/src/lib/platform-urls.ts`
+- [ ] Add similarity weights and stop words to `packages/shared/src/similarity.ts`
+- [ ] Add metadata character limits to `apps/dashboard/src/lib/metadata-limits.ts`
 - [ ] Create scraper module directory under `apps/scraper/src/platforms/<name>/`
 - [ ] Register module in `apps/scraper/src/platforms/registry.ts`
 - [ ] Add scheduler cron jobs in `apps/scraper/src/scheduler.ts`
 - [ ] Update browser client init in `apps/scraper/src/process-job.ts` (if needed)
 - [ ] Add `VALID_PLATFORMS` entry in `apps/dashboard/src/lib/auth-context.tsx`
+- [ ] Add `VALID_PLATFORMS` entry in `apps/dashboard/src/proxy.ts`
+- [ ] Add `VALID_PLATFORMS` entry in `apps/dashboard/src/components/admin-scraper-trigger.tsx`
 - [ ] Add sidebar navigation in `apps/dashboard/src/components/sidebar.tsx`
+- [ ] Update sidebar platform regex patterns (2 locations)
+- [ ] Add `BADGE_CONFIG` entry in `apps/dashboard/src/components/app-badges.tsx`
+- [ ] Add `PLATFORM_LABELS` and `PLATFORM_COLORS` entries in 3 files: `sidebar.tsx`, `platform-overview-cards.tsx`, `overview/page.tsx`
+- [ ] Create preview component (`<platform>-preview.tsx`) and wire into `preview/page.tsx`
+- [ ] Update field labels in `details/page.tsx`, `changes/page.tsx`, app overview `page.tsx`
+- [ ] Add platform-specific sections to `compare/page.tsx` and `research/[id]/compare/page.tsx`
+- [ ] Update scraper platform checks in `keyword-scraper.ts`, `category-scraper.ts`, `app-details-scraper.ts`, `keyword-suggestion-scraper.ts`
+- [ ] Add URL pattern to `apps/scraper/src/jobs/backfill-categories.ts`
 - [ ] Gate all dashboard tables/cards behind capability flags
 - [ ] Seed `account_platforms` for existing accounts (migration)
 - [ ] Verify all pages work for the new platform
@@ -134,6 +146,69 @@ export function buildExternalKeywordUrl(platform: PlatformId, keyword: string): 
 ```
 
 **Note:** `platform-urls.ts` and `platforms.ts` both have URL builder functions. The shared package has `buildExternalAppUrl` and `buildExternalCategoryUrl`. The dashboard adds `buildExternalSearchUrl` and `buildExternalKeywordUrl`. Both must be updated.
+
+### 2.5 Similarity Weights & Stop Words
+
+**File:** `packages/shared/src/similarity.ts`
+
+Has platform-keyed similarity weights and stop word sets. Add an entry for the new platform:
+
+```typescript
+const PLATFORM_SIMILARITY_WEIGHTS: Record<string, SimilarityWeights> = {
+  // ... existing ...
+  newplatform: { category: 0.25, feature: 0.25, keyword: 0.25, text: 0.25 },
+};
+
+const PLATFORM_SIMILARITY_STOP_WORDS: Record<string, Set<string>> = {
+  // ... existing ...
+  newplatform: new Set(["platform-specific", "stop", "words"]),
+};
+```
+
+Also has `platform !== "shopify"` checks in `extractCategorySlugs()` and `extractFeatureHandles()` — non-Shopify platforms use different category slug extraction logic and skip feature taxonomy. Review if the new platform has a feature taxonomy (`hasFeatureTaxonomy`).
+
+### 2.6 Metadata Character Limits
+
+**File:** `apps/dashboard/src/lib/metadata-limits.ts`
+
+This is the single source of truth for all listing field character limits. Used by preview editors AND compare pages.
+
+```typescript
+import type { MetadataLimits } from "@/lib/metadata-limits";
+
+const newplatformLimits: MetadataLimits = {
+  appName: 30,           // Max characters for app name
+  subtitle: 60,          // Tagline / subtitle
+  introduction: 100,     // Short description / app introduction
+  details: 500,          // Full description / app details
+  feature: 80,           // Per-feature character limit
+  seoTitle: 60,          // SEO title tag
+  seoMetaDescription: 160, // SEO meta description
+};
+```
+
+Add to the `limitsByPlatform` record:
+
+```typescript
+const limitsByPlatform: Record<string, MetadataLimits> = {
+  // ... existing ...
+  newplatform: newplatformLimits,
+};
+```
+
+**Current limits by platform:**
+
+| Field | Shopify | Salesforce | Canva |
+|-------|---------|------------|-------|
+| appName | 30 | 80 | 18 |
+| subtitle | 62 | 62 | 50 |
+| introduction | 100 | 500 | 50 |
+| details | 500 | 2000 | 200 |
+| feature | 80 | 80 | 80 |
+| seoTitle | 60 | 60 | 60 |
+| seoMetaDescription | 160 | 160 | 160 |
+
+**Important:** Research your platform's actual limits before setting values. These control CharBadge color thresholds — wrong limits create misleading UI.
 
 ---
 
@@ -398,6 +473,51 @@ if (platform === "newplatform") {
 }
 ```
 
+### 4.10 Scraper Platform Checks (Hardcoded Logic in Scrapers)
+
+The base scraper classes have hardcoded `isShopify` branching and platform-specific checks. These use a **Shopify-first pattern** — Shopify has its own code path, and all other platforms go through a generic `platformModule` path. Review each file carefully when adding a new platform:
+
+#### `apps/scraper/src/scrapers/app-details-scraper.ts`
+
+- **`isShopify` getter** (line ~39): Branches between Shopify-specific and generic parsing
+- **Category resolution** (line ~314): Non-Shopify platforms match existing DB categories; Shopify creates new categories on the fly
+- **Category ranking** (line ~397): Non-Shopify platforms insert `appCategoryRankings`; Shopify doesn't (categories come from category scraper)
+- **Similar apps** (line ~412): Only Shopify parses similar apps from HTML
+
+Most new platforms will automatically work via the generic `platformModule` path. Only review if your platform has unique category or similar app handling.
+
+#### `apps/scraper/src/scrapers/category-scraper.ts`
+
+- **`isShopify` getter** (line ~64): Branches between Shopify's featured app recording and generic category crawling
+- **Featured apps** (line ~99): Only Shopify records featured app sightings (requires `hasFeaturedSections`)
+- **Salesforce parser import** (line ~564): Hardcoded `if (platform === "salesforce")` to import the Salesforce-specific category parser
+- **Hardcoded `"shopify"` strings** (lines ~671, 781, 829, 946): Several methods have `platform: "shopify"` literals in record-writing calls — these are inside Shopify-only code paths so won't affect new platforms, but review for correctness
+
+New platforms use the generic `crawlCategoryGeneric()` path via `platformModule`.
+
+#### `apps/scraper/src/scrapers/keyword-scraper.ts`
+
+- **`isShopify` getter** (line ~33): Branches between Shopify HTML scraping and generic module path
+- **`is_built_for_shopify` field** (lines ~211, 394): Set during keyword ranking snapshots — irrelevant for non-Shopify
+- **Rating validation** (line ~453): `if (this.platform !== "shopify" && (hasRating || hasCount))` — special validation for non-Shopify platforms
+
+New platforms use the generic `scrapeKeywordGeneric()` path.
+
+#### `apps/scraper/src/scrapers/keyword-suggestion-scraper.ts`
+
+- **Canva hardcheck** (line ~105): `if (this.platform === "canva" && this.platformModule)` — calls `(this.platformModule as CanvaModule).generateSuggestions()` with a hardcoded type cast
+- If the new platform has a custom suggestion API, add a similar branch here, or better: implement `generateSuggestions()` on the PlatformModule interface
+
+#### `apps/scraper/src/jobs/backfill-categories.ts`
+
+- **URL pattern extraction** (lines ~51-60): Each platform has a different category URL pattern:
+  ```typescript
+  if (platform === "shopify") slug = url.match(/\/categories\/([\w-]+)/)?.[1];
+  else if (platform === "salesforce") slug = url.match(/\/collection\/([\w-]+)/)?.[1];
+  else if (platform === "canva") slug = url.match(/\/apps\/collection\/([\w-]+)/)?.[1];
+  ```
+  **MUST add** a new `else if` for the new platform's category URL pattern.
+
 ---
 
 ## 5. Phase 4: API Routes
@@ -415,16 +535,14 @@ app.get("/", async (request) => {
 });
 ```
 
-The dashboard auto-injects `?platform=` from the current URL path, so API routes automatically receive the correct platform. No changes needed to API routes for a new platform — they're already platform-aware.
+The dashboard auto-injects `?platform=` from the current URL path, so API routes automatically receive the correct platform. Most routes are already platform-aware — but some have hardcoded platform logic.
 
-### 5.2 Routes That Filter by Platform
+### 5.2 Routes That Auto-Handle (no changes needed)
 
-These route files use `eq(table.platform, platform)`:
+These route files use `eq(table.platform, platform)` and auto-work for any platform:
 
 | File | What it filters |
 |------|----------------|
-| `apps/api/src/routes/apps.ts` | Apps, app snapshots, rankings, search, membership |
-| `apps/api/src/routes/categories.ts` | Categories, category snapshots, tree building |
 | `apps/api/src/routes/keywords.ts` | Keywords, keyword snapshots, rankings |
 | `apps/api/src/routes/competitors.ts` | Competitor apps, rankings, similarity scores |
 | `apps/api/src/routes/featured.ts` | Featured sections (gated by `requireCapability`) |
@@ -432,10 +550,63 @@ These route files use `eq(table.platform, platform)`:
 | `apps/api/src/routes/ads.ts` | Ad sightings (gated by `requireCapability`) |
 | `apps/api/src/routes/research.ts` | Research projects, competitor suggestions |
 | `apps/api/src/routes/overview.ts` | Overview stats, freshness, recent changes |
-| `apps/api/src/routes/account.ts` | Tracked apps/keywords CRUD (platform-scoped) |
-| `apps/api/src/routes/system-admin.ts` | Scraper trigger, stats |
+| `apps/api/src/routes/system-admin.ts` | Scraper trigger, stats (uses `PLATFORM_IDS` iteration) |
 
-### 5.3 Capability Gating in API
+### 5.3 Routes With Hardcoded Platform Logic (MUST UPDATE)
+
+#### Live Search Route (CRITICAL)
+
+**File:** `apps/api/src/routes/live-search.ts`
+
+This is the most platform-coupled API route. Each platform has a completely different live-search implementation:
+
+```typescript
+if (platform === "salesforce") {
+  return salesforceLiveSearch(q);   // Calls AppExchange API directly
+}
+if (platform === "canva") {
+  return canvaLiveSearch(q);        // Uses Playwright browser server or DB fallback
+}
+// Default: Shopify — HTML scrapes apps.shopify.com/search
+```
+
+**You MUST add** a new `if (platform === "newplatform")` branch with a dedicated search function before the Shopify fallback.
+
+#### Apps Route — Developer Info Extraction
+
+**File:** `apps/api/src/routes/apps.ts`
+
+Has platform-keyed maps for extracting developer contact info from JSONB `platform_data`:
+
+```typescript
+const emailPath: Record<string, string> = {
+  canva: "platform_data->>'developerEmail'",
+  salesforce: "platform_data->'publisher'->>'email'",
+};
+```
+
+And the `by-developer` endpoint has explicit `if (platform === "canva") { ... } else if (platform === "salesforce") { ... }` branches.
+
+**Update if** the new platform stores developer info in `platform_data` with a custom JSON structure.
+
+#### Account Route — Similarity Suggestions
+
+**File:** `apps/api/src/routes/account.ts`
+
+The competitor suggestions endpoint has Shopify-specific logic:
+- Queries `similar_app_sightings` table (Shopify-only data)
+- Applies +5% score bonus for apps in Shopify's "similar apps" sidebar
+- Returns `isBuiltForShopify` and `isShopifySimilar` flags
+
+These signals silently zero out for non-Shopify platforms — no breakage, but no benefit either.
+
+#### Categories Route — Hub Page Apps
+
+**File:** `apps/api/src/routes/categories.ts`
+
+Hub page `firstPageApps` parsing assumes `apps.shopify.com` URLs and `is_built_for_shopify` field. Only triggers on Shopify data, so no breakage for other platforms.
+
+### 5.4 Capability Gating in API
 
 Some API routes check platform capabilities before executing:
 
@@ -455,23 +626,41 @@ app.get("/reviews", async (request) => {
 
 This is the most labor-intensive phase. The dashboard has 50+ files with platform-aware logic.
 
-### 6.1 Auth Context — VALID_PLATFORMS
+### 6.1 VALID_PLATFORMS (3 files!)
 
-**File:** `apps/dashboard/src/lib/auth-context.tsx`
+There are **3 separate `VALID_PLATFORMS` definitions** that must ALL be updated:
 
-Add to the `VALID_PLATFORMS` set:
+**a) Auth Context — `apps/dashboard/src/lib/auth-context.tsx`**
 
 ```typescript
 const VALID_PLATFORMS = new Set(["shopify", "salesforce", "canva", "newplatform"]);
 ```
 
-This controls the auto-injection of `?platform=` in API calls. If your platform isn't in this set, no API calls from dashboard pages under `/<platform>/` will work.
+Controls the auto-injection of `?platform=` in API calls. If your platform isn't in this set, no API calls from dashboard pages under `/<platform>/` will work.
+
+**b) Proxy — `apps/dashboard/src/proxy.ts`**
+
+```typescript
+const VALID_PLATFORMS = ["shopify", "salesforce", "canva", "newplatform"];
+```
+
+Controls which platforms the Next.js proxy accepts. Missing this causes API proxy 404s.
+
+**c) Admin Scraper Trigger — `apps/dashboard/src/components/admin-scraper-trigger.tsx`**
+
+```typescript
+const VALID_PLATFORMS = new Set(["shopify", "salesforce", "canva", "newplatform"]);
+```
+
+Controls which platforms appear in the system admin scraper trigger UI.
 
 ### 6.2 Sidebar Navigation
 
 **File:** `apps/dashboard/src/components/sidebar.tsx`
 
-Add label and color:
+**4 things to update:**
+
+**a) Label and color:**
 
 ```typescript
 const PLATFORM_LABELS: Record<PlatformId, string> = {
@@ -485,29 +674,91 @@ const PLATFORM_COLORS: Record<PlatformId, string> = {
 };
 ```
 
-The sidebar auto-generates navigation items from `PLATFORMS` config using `getNavItems()`:
+**b) Platform regex patterns (2 locations):**
+
+The sidebar uses regex to extract the current platform from the URL path. Both occurrences must include the new platform:
 
 ```typescript
-function getNavItems(platformId: PlatformId) {
-  const p = `/${platformId}`;
-  const caps = PLATFORMS[platformId];
-  const items = [
-    { href: `${p}/overview`, label: "Overview", icon: LayoutDashboard },
-    { href: `${p}/apps`, label: "Apps", icon: AppWindow },
-    { href: `${p}/competitors`, label: "Competitors", icon: Star },
-  ];
-  if (caps.hasKeywordSearch) items.push({ href: `${p}/keywords`, label: "Keywords", icon: Search });
-  items.push({ href: `${p}/categories`, label: "Categories", icon: FolderTree });
-  if (caps.hasFeaturedSections) items.push({ href: `${p}/featured`, label: "Featured", icon: Sparkles });
-  if (caps.hasFeatureTaxonomy) items.push({ href: `${p}/features`, label: "Features", icon: Puzzle });
-  items.push({ href: `${p}/research`, label: "Research", icon: FlaskConical });
-  return items;
+// ~line 92
+const match = pathname.match(/^\/(shopify|salesforce|canva|newplatform)(\/|$)/);
+
+// ~line 125
+const platformMatch = pathname.match(/^\/(shopify|salesforce|canva|newplatform)(\/|$)/);
+```
+
+**Missing this causes:** The sidebar won't highlight the correct platform or render nav items for the new platform's routes.
+
+**c) Research exclusion (hardcoded):**
+
+Research is currently excluded for Canva and Salesforce via a hardcoded check:
+
+```typescript
+if (platformId !== "canva" && platformId !== "salesforce") {
+  items.push({ href: `${p}/research`, label: "Research", icon: FlaskConical, badge: "Beta" });
 }
 ```
 
-This automatically adapts based on capability flags — no additional changes needed.
+Decide whether the new platform should have Research. If not, add it to this exclusion list.
 
-### 6.3 Capability Flag Usage in Dashboard
+**d) Beta badge (optional):**
+
+Canva has a hardcoded "Beta" badge in the sidebar. If the new platform should show a badge:
+
+```typescript
+{platformId === "newplatform" && (
+  <span className="text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-primary/10 text-primary">
+    Beta
+  </span>
+)}
+```
+
+**Nav items** are auto-generated from capability flags via `getNavItems()` — no additional changes needed for that part.
+
+### 6.3 App Badges
+
+**File:** `apps/dashboard/src/components/app-badges.tsx`
+
+Has a `BADGE_CONFIG` record keyed by platform. Add an entry for the new platform:
+
+```typescript
+const BADGE_CONFIG: Record<string, Record<string, { label: string; color: string }>> = {
+  // ... existing ...
+  newplatform: {
+    // Add platform-specific badges if any
+    verified: { label: "Verified", color: "bg-green-100 text-green-800" },
+  },
+};
+```
+
+Also has a hardcoded `platform === "shopify"` check for the "Built for Shopify" badge (line 53). If the new platform has a similar "built for" badge concept, add it here.
+
+### 6.4 Platform Labels & Colors (3 files!)
+
+There are **3 files** with `PLATFORM_LABELS` and/or `PLATFORM_COLORS` records. All must be updated:
+
+**a) Sidebar — `apps/dashboard/src/components/sidebar.tsx`**
+
+```typescript
+const PLATFORM_LABELS: Record<PlatformId, string> = { ..., newplatform: "New Platform" };
+const PLATFORM_COLORS: Record<PlatformId, string> = { ..., newplatform: "#FF5733" };
+```
+
+**b) Platform Overview Cards — `apps/dashboard/src/components/platform-overview-cards.tsx`**
+
+```typescript
+const PLATFORM_LABELS: Record<PlatformId, string> = { ..., newplatform: "New Platform" };
+const PLATFORM_COLORS: Record<PlatformId, string> = { ..., newplatform: "#FF5733" };
+```
+
+**c) Overview Page — `apps/dashboard/src/app/(dashboard)/[platform]/overview/page.tsx`**
+
+```typescript
+const PLATFORM_COLORS: Record<string, string> = { ..., newplatform: "#FF5733" };
+```
+
+This controls the accent color on the overview page header card.
+
+### 6.5 Capability Flag Usage in Dashboard
 
 The `caps` pattern is used across all dashboard pages:
 
@@ -533,7 +784,117 @@ Then capability flags gate UI elements:
 )}
 ```
 
-### 6.4 Pages That Need Capability Gating
+### 6.6 Platform-Specific Pages (Hardcoded Logic)
+
+These pages have hardcoded platform checks (`isCanva`, `isSalesforce`, etc.) that **must** be updated when adding a new platform. They are NOT driven by capability flags.
+
+#### Preview Page & Component
+
+**Files:**
+- `[platform]/apps/[slug]/preview/page.tsx` — routing & guard
+- `[platform]/apps/[slug]/preview/<platform>-preview.tsx` — NEW file per platform
+
+The preview page has a hardcoded guard, component selector, and label:
+
+```typescript
+// Guard — must add new platform
+if (platform !== "shopify" && platform !== "salesforce" && platform !== "canva") return;
+
+// Component selector — must add new branch
+const platformPreview =
+  platform === "canva" ? CanvaPreview({ appData })
+  : platform === "salesforce" ? SalesforcePreview({ appData })
+  : ShopifyPreview({ appData });
+
+// Label — must add new case
+const platformLabel =
+  platform === "canva" ? "Canva Apps Preview"
+  : platform === "salesforce" ? "AppExchange Preview"
+  : "App Store Preview";
+```
+
+You must create a `<platform>-preview.tsx` file following the same pattern (returns `{ preview, editor, resetToOriginal }`). Use `getMetadataLimits(platform)` for character limits.
+
+#### Details Page — Field Labels & Platform-Specific Sections
+
+**File:** `[platform]/apps/[slug]/details/page.tsx`
+
+Has hardcoded `isCanva` and `isSalesforce` checks for:
+- **Field labels**: "App Introduction" vs "Short Description" (Canva) vs "Description"
+- **CharBadge limits**: Canva shows character count badges on intro/details using `getMetadataLimits()`
+- **Feature labels**: "Features" vs "Highlights" (Salesforce)
+- **Salesforce-only sections**: Industries, Business Needs, Products Required
+- **Canva-only sections**: Permissions list
+- **SEO section**: Hidden for Canva (`!isCanva && ...`)
+
+For a new platform, decide: Does it have unique sections? Does it use different field labels?
+
+#### Changes Page — Field Labels
+
+**File:** `[platform]/apps/[slug]/changes/page.tsx`
+
+Has a `getFieldLabels()` function with platform-specific labels:
+
+```typescript
+const isCanva = platform === "canva";
+const fieldLabels: Record<string, string> = {
+  appIntroduction: isCanva ? "Short Description" : "App Introduction",
+  appDetails: isCanva ? "Description" : "App Details",
+  appCardSubtitle: isCanva ? "Tagline" : "App Card Subtitle",
+};
+```
+
+Must add a branch for the new platform if it uses different terminology.
+
+#### App Overview Page — Field Labels
+
+**File:** `[platform]/apps/[slug]/page.tsx`
+
+Has a `getFieldLabels()` function:
+
+```typescript
+function getFieldLabels(platform: string): Record<string, string> {
+  const isCanva = platform === "canva";
+  return {
+    appIntroduction: isCanva ? "Short Description" : "Introduction",
+    appDetails: isCanva ? "Description" : "Details",
+    appCardSubtitle: isCanva ? "Tagline" : "Subtitle",
+  };
+}
+```
+
+#### Compare Page — Section Configuration (~25+ locations)
+
+**File:** `[platform]/apps/[slug]/compare/page.tsx`
+
+This is the most complex page for platform-specific logic. It uses `isCanva` and `isSalesforce` booleans to:
+
+1. **Section labels**: Tagline vs Subtitle, Short Description vs Introduction, Description vs Details
+2. **Section visibility**: Features excluded for Canva, Industries/Requires only for Salesforce, Permissions only for Canva, Reviews/Pricing excluded for platforms without those capabilities
+3. **Field rendering**: Different label strings throughout (~15 locations)
+4. **Metadata limits**: Uses `getMetadataLimits(platform)` for CharBadge and input maxLength
+
+When adding a new platform, update the `SECTIONS` array builder and all conditional renders.
+
+#### Keywords Page — Ads Column
+
+**File:** `[platform]/keywords/page.tsx`
+
+Has a hardcoded Shopify-specific ads check:
+
+```typescript
+const hasAds = platform === "shopify";
+```
+
+If the new platform has ad tracking, this needs updating (or should use `caps.hasAdTracking`).
+
+#### Research Compare Page
+
+**File:** `[platform]/research/[id]/compare/page.tsx`
+
+Has a hardcoded `platform !== "canva"` check (line ~536) that excludes the ratings/reviews comparison section for Canva. If the new platform doesn't have reviews, add it to this exclusion. Also uses `getMetadataLimits(platform)` for character limits — already handled via `metadata-limits.ts`.
+
+### 6.7 Pages That Need Capability Gating
 
 **CRITICAL:** This is where Canva integration taught us the most. Every table, card, and column that shows platform-specific data must be wrapped with the appropriate `caps.hasX` check.
 
@@ -581,7 +942,7 @@ Here's every file that needs capability checks:
 | `components/app-list-table.tsx` | Ads column, Launched column (both header + cell) |
 | `components/power-score-popover.tsx` | Review-related score breakdown items |
 
-### 6.5 The `isCol()` and `visibleToggleableColumns` Pattern
+### 6.8 The `isCol()` and `visibleToggleableColumns` Pattern
 
 For tables with toggleable columns (competitors, app-list-table), columns are hidden in TWO places:
 
@@ -611,7 +972,7 @@ const visibleToggleableColumns = allToggleableColumns.filter((col) => {
 
 **Both must be updated.** If you only update `isCol()`, the column disappears but the toggle dropdown still shows it.
 
-### 6.6 Default Sort Key
+### 6.9 Default Sort Key
 
 When a page sorts by a column that doesn't exist for the new platform, it breaks:
 
@@ -628,7 +989,7 @@ This affects:
 - `research/[id]/competitors/page.tsx` — main table
 - Any other table with review/rating as default sort
 
-### 6.7 Sub-Component Gotcha
+### 6.10 Sub-Component Gotcha
 
 In `research/[id]/page.tsx`, there are multiple sub-components (`SummaryCards`, `CompetitorSuggestions`, `InlineAppSearch`, `ManualAppSearch`). Each one needs its OWN `caps` computation because they're separate React components:
 
@@ -868,6 +1229,57 @@ grep -r "Launched" apps/dashboard/src --include="*.tsx" -l
 
 **Solution:** This is a data issue, not a UI bug. Ensure the category scraper has been run first: `npx tsx apps/scraper/src/cli.ts category --platform=newplatform`.
 
+### Pitfall 11: Sidebar regex patterns not updated
+
+**Problem:** New platform's URL path doesn't match the sidebar's platform extraction regex, causing no nav items to render.
+
+**Solution:** Update BOTH regex patterns in `sidebar.tsx`:
+```typescript
+const match = pathname.match(/^\/(shopify|salesforce|canva|newplatform)(\/|$)/);
+```
+
+### Pitfall 12: Missing metadata-limits entry
+
+**Problem:** Preview editor and compare page show wrong character limits (falls back to Shopify defaults).
+
+**Solution:** Always add the new platform to `metadata-limits.ts` with researched limits.
+
+### Pitfall 13: Hardcoded field labels in multiple files
+
+**Problem:** App overview, details, changes, and compare pages all have `isCanva ? "X" : "Y"` patterns for field labels. Missing one causes inconsistent terminology.
+
+**Solution:** Search for all `isCanva` and `isSalesforce` references and add the new platform's labels. Files: `page.tsx` (overview), `details/page.tsx`, `changes/page.tsx`, `compare/page.tsx`.
+
+### Pitfall 14: Login/legacy redirects hardcoded to Shopify
+
+**Problem:** After login/register, users are redirected to `/shopify/overview` regardless of their enabled platforms. Also, legacy non-platform paths (e.g., `/apps/slug`, `/overview`) redirect to `/shopify/*`.
+
+**Solution:** Currently hardcoded in both `auth-context.tsx` and `proxy.ts`:
+- `auth-context.tsx` — `router.push("/shopify/overview")`
+- `proxy.ts` — `NextResponse.redirect(new URL("/shopify/overview", ...))` and legacy path redirects to `/shopify/*`
+Consider making these dynamic based on `enabledPlatforms[0]`.
+
+### Pitfall 15: Forgetting proxy.ts VALID_PLATFORMS
+
+**Problem:** Dashboard API calls fail with 404 even though `auth-context.tsx` VALID_PLATFORMS is updated.
+
+**Solution:** There are **3 separate VALID_PLATFORMS** definitions. Missing any one causes subtle failures:
+- `auth-context.tsx` — controls `?platform=` injection in client-side API calls
+- `proxy.ts` — controls which platforms the Next.js API proxy accepts
+- `admin-scraper-trigger.tsx` — controls system admin scraper trigger UI
+
+### Pitfall 16: Missing BADGE_CONFIG entry
+
+**Problem:** App badges don't render for the new platform, or worse, crash with undefined key access.
+
+**Solution:** Add an entry (even empty) to `BADGE_CONFIG` in `app-badges.tsx`.
+
+### Pitfall 17: Scraper backfill-categories URL pattern
+
+**Problem:** Category backfill job silently skips the new platform because URL pattern doesn't match.
+
+**Solution:** Add an `else if (platform === "newplatform")` branch in `backfill-categories.ts` with the correct category URL regex pattern.
+
 ---
 
 ## 11. Testing & Verification Checklist
@@ -883,8 +1295,11 @@ After implementation, verify every page for the new platform AND confirm existin
 - [ ] `/<platform>/apps/<slug>/competitors` — Correct columns in competitor table
 - [ ] `/<platform>/apps/<slug>/keywords` — Keywords page works
 - [ ] `/<platform>/apps/<slug>/reviews` — 404 or hidden if no reviews
-- [ ] `/<platform>/apps/<slug>/details` — Detail page renders
-- [ ] `/<platform>/apps/<slug>/changes` — Change history renders
+- [ ] `/<platform>/apps/<slug>/details` — Detail page renders with correct field labels
+- [ ] `/<platform>/apps/<slug>/changes` — Change history renders with correct field labels
+- [ ] `/<platform>/apps/<slug>/preview` — Preview page renders (not "Preview not available")
+- [ ] `/<platform>/apps/<slug>/preview` — Editor fields have correct character limits
+- [ ] `/<platform>/apps/<slug>/compare` — Compare page shows correct sections for platform
 - [ ] `/<platform>/competitors` — Global competitors table: correct columns
 - [ ] `/<platform>/keywords` — Keyword list (if hasKeywordSearch)
 - [ ] `/<platform>/keywords/<slug>` — Keyword detail: app results table has correct columns
@@ -899,12 +1314,15 @@ After implementation, verify every page for the new platform AND confirm existin
 - [ ] Track/untrack — Can follow/unfollow apps
 - [ ] External links — "View on Platform" opens correct URL
 
-### Regression Verification (Shopify + Salesforce)
+### Regression Verification (Shopify + Salesforce + Canva)
 
 - [ ] `/shopify/apps` — All columns still visible
 - [ ] `/shopify/apps/<slug>` — All tabs, all cards present
 - [ ] `/salesforce/apps` — All columns still visible
 - [ ] `/salesforce/apps/<slug>` — Correct tabs/cards for Salesforce capabilities
+- [ ] `/canva/apps` — Correct columns (no reviews/pricing/launched)
+- [ ] `/canva/apps/<slug>` — Correct tabs/cards for Canva capabilities
+- [ ] All three platform previews still work with correct character limits
 
 ### Scraper Verification
 
@@ -922,6 +1340,7 @@ After implementation, verify every page for the new platform AND confirm existin
 | File | Change |
 |------|--------|
 | `packages/shared/src/constants/platforms.ts` | Add platform config + capability flags + URL builders |
+| `packages/shared/src/similarity.ts` | Add similarity weights + stop words |
 
 ### Scraper (must change)
 
@@ -934,21 +1353,40 @@ After implementation, verify every page for the new platform AND confirm existin
 | `apps/scraper/src/platforms/registry.ts` | Register module in switch statement |
 | `apps/scraper/src/scheduler.ts` | Add cron schedules |
 | `apps/scraper/src/process-job.ts` | Add browser client init (if needed) |
+| `apps/scraper/src/jobs/backfill-categories.ts` | Add category URL pattern extraction |
+| `apps/scraper/src/scrapers/keyword-suggestion-scraper.ts` | Add branch if custom suggestion API |
 
-### API (usually no changes needed)
+### API (review required)
 
 | File | Change |
 |------|--------|
-| (none) | Routes are already platform-aware via `getPlatformFromQuery()` |
+| `apps/api/src/routes/live-search.ts` | **CRITICAL** — Add platform-specific live search function |
+| `apps/api/src/routes/apps.ts` | Add developer info extraction from `platformData` (if custom JSON structure) |
+| `apps/api/src/routes/account.ts` | Review Shopify-specific similarity signals (no breakage, but no benefit) |
+| `apps/api/src/routes/categories.ts` | Review hub page parsing (Shopify-specific, no breakage) |
+| Other routes | Auto-handle via `getPlatformFromQuery()` — no changes needed |
 
 ### Dashboard (must change)
 
 | File | Change |
 |------|--------|
 | `apps/dashboard/src/lib/auth-context.tsx` | Add to `VALID_PLATFORMS` |
-| `apps/dashboard/src/lib/platform-urls.ts` | Add URL builder cases |
-| `apps/dashboard/src/components/sidebar.tsx` | Add label + color |
-| All table pages (see Section 6.4) | Gate columns with capability flags |
+| `apps/dashboard/src/proxy.ts` | Add to `VALID_PLATFORMS` array |
+| `apps/dashboard/src/lib/platform-urls.ts` | Add URL builder cases (3 switch statements) |
+| `apps/dashboard/src/lib/metadata-limits.ts` | Add platform character limits |
+| `apps/dashboard/src/components/sidebar.tsx` | Add label, color, update 2 regex patterns |
+| `apps/dashboard/src/components/admin-scraper-trigger.tsx` | Add to `VALID_PLATFORMS` set |
+| `apps/dashboard/src/components/app-badges.tsx` | Add `BADGE_CONFIG` entry |
+| `apps/dashboard/src/components/platform-overview-cards.tsx` | Add `PLATFORM_LABELS` and `PLATFORM_COLORS` entries |
+| `[platform]/overview/page.tsx` | Add to `PLATFORM_COLORS` record |
+| `[platform]/apps/[slug]/preview/page.tsx` | Add guard, component selector, label |
+| `[platform]/apps/[slug]/preview/<name>-preview.tsx` | **NEW** — Platform preview component |
+| `[platform]/apps/[slug]/details/page.tsx` | Add field labels, platform-specific sections |
+| `[platform]/apps/[slug]/changes/page.tsx` | Add field labels |
+| `[platform]/apps/[slug]/page.tsx` | Add field labels in `getFieldLabels()` |
+| `[platform]/apps/[slug]/compare/page.tsx` | Add sections config, field labels (~25 locations) |
+| `[platform]/research/[id]/compare/page.tsx` | Add platform exclusion checks if no reviews |
+| All table pages (see Section 6.7-6.10) | Gate columns with capability flags |
 
 ### Database (conditional)
 
@@ -962,9 +1400,21 @@ After implementation, verify every page for the new platform AND confirm existin
 
 Adding a new platform follows this order:
 
-1. **Config first** — Get capability flags right in `platforms.ts`
-2. **Scraper second** — Build module, parsers, register, schedule
-3. **Dashboard last** — Gate ALL UI behind capability flags
-4. **Test everything** — New platform pages AND regression on existing platforms
+1. **Config first** — Get capability flags right in `platforms.ts`, add URL builders, metadata limits
+2. **Scraper second** — Build module, parsers, register, schedule, update `backfill-categories.ts` URL pattern
+3. **API third** — Add live-search function, review `apps.ts` developer info extraction
+4. **Dashboard last** — Update ALL 3 `VALID_PLATFORMS`, sidebar (labels, colors, 2 regex patterns), `app-badges.tsx`, `platform-overview-cards.tsx`, preview component, field labels (details, changes, overview, compare pages), research compare page, capability-gate all tables
+5. **Test everything** — New platform pages AND regression on existing platforms
 
-The biggest time sink is the dashboard — systematically finding and gating every table column, card, tab, and inline display that shows platform-specific data. Use grep to find all references before declaring the task complete.
+The biggest time sinks are:
+- **Compare pages** — `[slug]/compare/page.tsx` (~25 locations) + `research/[id]/compare/page.tsx` with hardcoded platform checks
+- **Details/changes pages** — Field label mappings per platform
+- **Preview** — Creating a new platform-specific preview component
+- **Tables** — Systematically finding and gating every column, card, tab, and inline display
+- **VALID_PLATFORMS** — 3 separate definitions that must ALL be updated
+
+Use grep to find all `isCanva` / `isSalesforce` references before declaring the task complete:
+
+```bash
+grep -rn "isCanva\|isSalesforce\|isShopify\|platform === \"shopify\"\|platform === \"canva\"\|platform === \"salesforce\"" apps/ packages/ --include="*.ts" --include="*.tsx" | grep -v node_modules | grep -v .next
+```
