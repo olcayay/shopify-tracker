@@ -16,11 +16,16 @@ describe("platform registry", () => {
     assert.equal(mod.platformId, "salesforce");
   });
 
-  it("getModule('canva') throws error", () => {
+  it("getModule('canva') returns module with platformId 'canva'", () => {
     clearModuleCache();
-    assert.throws(() => getModule("canva"), {
-      message: /not yet implemented/,
-    });
+    const mod = getModule("canva");
+    assert.equal(mod.platformId, "canva");
+  });
+
+  it("getModule('wix') returns module with platformId 'wix'", () => {
+    clearModuleCache();
+    const mod = getModule("wix");
+    assert.equal(mod.platformId, "wix");
   });
 
   it("returns cached module on second call (same reference)", () => {
