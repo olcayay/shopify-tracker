@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Check, ChevronDown, ChevronUp, Pencil } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { getMetadataLimits } from "@/lib/metadata-limits";
 import { CardSkeleton } from "@/components/skeletons";
 
 interface AppData {
@@ -381,6 +382,7 @@ export default function ComparePage() {
 
   const isSalesforce = platform === "salesforce";
   const isCanva = platform === "canva";
+  const limits = getMetadataLimits(platform);
 
   // Section navigation
   const SECTIONS = useMemo(() => {
@@ -776,7 +778,7 @@ export default function ComparePage() {
               <DraftInput
                 value={draftName}
                 onChange={setDraftName}
-                max={isCanva ? 18 : 30}
+                max={limits.appName}
                 placeholder="Test a new App Name!"
               />
             }
@@ -784,7 +786,7 @@ export default function ComparePage() {
             {(app) => (
               <div className="flex items-center">
                 <span className="text-sm font-medium flex-1 min-w-0">{app.name}</span>
-                <CharBadge count={app.name.length} max={isCanva ? 18 : 30} />
+                <CharBadge count={app.name.length} max={limits.appName} />
               </div>
             )}
           </VerticalListSection>
@@ -802,7 +804,7 @@ export default function ComparePage() {
               <DraftInput
                 value={draftSubtitle}
                 onChange={setDraftSubtitle}
-                max={isCanva ? 50 : 62}
+                max={limits.subtitle}
                 placeholder={isCanva ? "Test a new Tagline!" : "Test a new Subtitle!"}
               />
             }
@@ -813,7 +815,7 @@ export default function ComparePage() {
                   {app.appCardSubtitle || "—"}
                 </span>
                 {app.appCardSubtitle && (
-                  <CharBadge count={app.appCardSubtitle.length} max={isCanva ? 50 : 62} />
+                  <CharBadge count={app.appCardSubtitle.length} max={limits.subtitle} />
                 )}
               </div>
             )}
@@ -832,7 +834,7 @@ export default function ComparePage() {
               <DraftInput
                 value={draftIntro}
                 onChange={setDraftIntro}
-                max={isCanva ? 50 : 100}
+                max={limits.introduction}
                 placeholder={isCanva ? "Test a new Short Description!" : "Test a new Introduction!"}
               />
             }
@@ -846,7 +848,7 @@ export default function ComparePage() {
                   {app.latestSnapshot?.appIntroduction && (
                     <CharBadge
                       count={app.latestSnapshot.appIntroduction.length}
-                      max={isCanva ? 50 : 100}
+                      max={limits.introduction}
                     />
                   )}
                 </div>
@@ -880,12 +882,12 @@ export default function ComparePage() {
                 <div className="px-3 pb-3 space-y-3">
                   <div>
                     <div className="flex justify-end mb-1">
-                      <CharBadge count={draftDetails.length} max={isCanva ? 200 : 500} />
+                      <CharBadge count={draftDetails.length} max={limits.details} />
                     </div>
                     <textarea
                       value={draftDetails}
-                      onChange={(e) => setDraftDetails(e.target.value.slice(0, isCanva ? 200 : 500))}
-                      maxLength={isCanva ? 200 : 500}
+                      onChange={(e) => setDraftDetails(e.target.value.slice(0, limits.details))}
+                      maxLength={limits.details}
                       placeholder="Test a new Description for your app!"
                       className="w-full bg-muted/30 text-sm rounded-md border p-3 outline-none resize-none placeholder:text-muted-foreground/50 min-h-[120px]"
                       rows={6}
@@ -956,7 +958,7 @@ export default function ComparePage() {
                   <div className="flex justify-end">
                     <CharBadge
                       count={active.latestSnapshot.appDetails.length}
-                      max={isCanva ? 200 : undefined}
+                      max={limits.details}
                     />
                   </div>
                   <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mt-2">
@@ -1020,7 +1022,7 @@ export default function ComparePage() {
                                   <p className="text-muted-foreground mt-0.5">{description}</p>
                                 )}
                                 <div className="mt-1 flex justify-end">
-                                  <CharBadge count={feat.length} max={80} />
+                                  <CharBadge count={feat.length} max={limits.feature} />
                                 </div>
                               </div>
                             </td>
@@ -1034,7 +1036,7 @@ export default function ComparePage() {
                             <div>
                               <span>{feat}</span>
                               <div className="mt-1 flex justify-end">
-                                <CharBadge count={feat.length} max={80} />
+                                <CharBadge count={feat.length} max={limits.feature} />
                               </div>
                             </div>
                           </td>
@@ -1167,7 +1169,7 @@ export default function ComparePage() {
                         <span className="text-xs text-muted-foreground flex-1">
                           Title Tag
                         </span>
-                        <CharBadge count={s.seoTitle.length} max={60} />
+                        <CharBadge count={s.seoTitle.length} max={limits.seoTitle} />
                       </div>
                       <p className="text-sm mt-0.5">{s.seoTitle}</p>
                     </div>
@@ -1178,7 +1180,7 @@ export default function ComparePage() {
                         <span className="text-xs text-muted-foreground flex-1">
                           Meta Description
                         </span>
-                        <CharBadge count={s.seoMetaDescription.length} max={160} />
+                        <CharBadge count={s.seoMetaDescription.length} max={limits.seoMetaDescription} />
                       </div>
                       <p className="text-sm mt-0.5">{s.seoMetaDescription}</p>
                     </div>

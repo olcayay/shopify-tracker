@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { Plus, X as XIcon } from "lucide-react";
+import { getMetadataLimits } from "@/lib/metadata-limits";
 import { CharBadge, EditorField, mod } from "./shared";
 
 export interface ShopifyAppData {
@@ -118,6 +119,7 @@ export function ShopifyPreview({
 }: {
   appData: ShopifyAppData;
 }) {
+  const limits = getMetadataLimits("shopify");
   const snapshot = appData.latestSnapshot;
 
   const [name, setName] = useState(appData.name || "");
@@ -417,31 +419,31 @@ export function ShopifyPreview({
       <div className="space-y-5">
         <h3 className="font-semibold text-sm">Edit Listing Content</h3>
 
-        <EditorField label="App Name" count={name.length} max={30} changed={nameChanged}>
+        <EditorField label="App Name" count={name.length} max={limits.appName} changed={nameChanged}>
           <Input
             value={name}
             onChange={(e) => setName(e.target.value)}
             placeholder="App name"
             className={cn(
               nameChanged && "border-amber-500",
-              name.length > 30 && "border-red-500 focus-visible:ring-red-500/50"
+              name.length > limits.appName && "border-red-500 focus-visible:ring-red-500/50"
             )}
           />
         </EditorField>
 
-        <EditorField label="App Card Subtitle" count={subtitle.length} max={62} changed={subtitleChanged}>
+        <EditorField label="App Card Subtitle" count={subtitle.length} max={limits.subtitle} changed={subtitleChanged}>
           <Input
             value={subtitle}
             onChange={(e) => setSubtitle(e.target.value)}
             placeholder="Brief subtitle shown in search results"
             className={cn(
               subtitleChanged && "border-amber-500",
-              subtitle.length > 62 && "border-red-500 focus-visible:ring-red-500/50"
+              subtitle.length > limits.subtitle && "border-red-500 focus-visible:ring-red-500/50"
             )}
           />
         </EditorField>
 
-        <EditorField label="App Introduction" count={introduction.length} max={100} changed={introChanged}>
+        <EditorField label="App Introduction" count={introduction.length} max={limits.introduction} changed={introChanged}>
           <textarea
             value={introduction}
             onChange={(e) => setIntroduction(e.target.value)}
@@ -452,12 +454,12 @@ export function ShopifyPreview({
               "placeholder:text-muted-foreground",
               "focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px]",
               introChanged ? "border-amber-500" : "border-input",
-              introduction.length > 100 && "border-red-500 focus-visible:ring-red-500/50"
+              introduction.length > limits.introduction && "border-red-500 focus-visible:ring-red-500/50"
             )}
           />
         </EditorField>
 
-        <EditorField label="App Details" count={details.length} max={500} changed={detailsChanged}>
+        <EditorField label="App Details" count={details.length} max={limits.details} changed={detailsChanged}>
           <textarea
             value={details}
             onChange={(e) => setDetails(e.target.value)}
@@ -468,7 +470,7 @@ export function ShopifyPreview({
               "placeholder:text-muted-foreground",
               "focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px]",
               detailsChanged ? "border-amber-500" : "border-input",
-              details.length > 500 && "border-red-500 focus-visible:ring-red-500/50"
+              details.length > limits.details && "border-red-500 focus-visible:ring-red-500/50"
             )}
           />
         </EditorField>
@@ -476,7 +478,7 @@ export function ShopifyPreview({
         <div className="space-y-2">
           <div className="flex items-center justify-between">
             <span className="text-sm font-medium">
-              Features <span className="text-muted-foreground">(max 80)</span>
+              Features <span className="text-muted-foreground">(max {limits.feature})</span>
             </span>
             <Button variant="outline" size="sm" onClick={addFeature}>
               <Plus className="h-3.5 w-3.5 mr-1" />
@@ -496,10 +498,10 @@ export function ShopifyPreview({
                   className={cn(
                     "flex-1",
                     feat !== (origFeatures[i] ?? "") && "border-amber-500",
-                    feat.length > 80 && "border-red-500 focus-visible:ring-red-500/50"
+                    feat.length > limits.feature && "border-red-500 focus-visible:ring-red-500/50"
                   )}
                 />
-                <CharBadge count={feat.length} max={80} />
+                <CharBadge count={feat.length} max={limits.feature} />
                 <Button
                   variant="ghost"
                   size="icon"
@@ -511,7 +513,7 @@ export function ShopifyPreview({
               </div>
               {feat.length > 80 && (
                 <p className="text-xs text-red-600 ml-7">
-                  Exceeds 80 character limit by {feat.length - 80}
+                  Exceeds {limits.feature} character limit by {feat.length - limits.feature}
                 </p>
               )}
             </div>

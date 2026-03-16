@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
+import { getMetadataLimits } from "@/lib/metadata-limits";
 import { CharBadge, EditorField, mod } from "./shared";
 
 export interface SalesforceAppData {
@@ -281,6 +282,7 @@ export function SalesforcePreview({
 }: {
   appData: SalesforceAppData;
 }) {
+  const limits = getMetadataLimits("salesforce");
   const snapshot = appData.latestSnapshot;
   const pd = snapshot?.platformData;
 
@@ -1149,19 +1151,19 @@ export function SalesforcePreview({
       <div className="space-y-5">
         <h3 className="font-semibold text-sm">Edit Listing Content</h3>
 
-        <EditorField label="App Name" count={name.length} max={80} changed={nameChanged}>
+        <EditorField label="App Name" count={name.length} max={limits.appName} changed={nameChanged}>
           <Input
             value={name}
             onChange={(e) => setName(e.target.value)}
             placeholder="App name"
             className={cn(
               nameChanged && "border-amber-500",
-              name.length > 80 && "border-red-500 focus-visible:ring-red-500/50"
+              name.length > limits.appName && "border-red-500 focus-visible:ring-red-500/50"
             )}
           />
         </EditorField>
 
-        <EditorField label="Description" count={description.length} max={500} changed={descChanged}>
+        <EditorField label="Description" count={description.length} max={limits.introduction} changed={descChanged}>
           <textarea
             value={description}
             onChange={(e) => setDescription(e.target.value)}
@@ -1172,12 +1174,12 @@ export function SalesforcePreview({
               "placeholder:text-muted-foreground",
               "focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px]",
               descChanged ? "border-amber-500" : "border-input",
-              description.length > 500 && "border-red-500 focus-visible:ring-red-500/50"
+              description.length > limits.introduction && "border-red-500 focus-visible:ring-red-500/50"
             )}
           />
         </EditorField>
 
-        <EditorField label="Full Description" count={fullDescription.length} max={2000} changed={fullDescChanged}>
+        <EditorField label="Full Description" count={fullDescription.length} max={limits.details} changed={fullDescChanged}>
           <textarea
             value={fullDescription}
             onChange={(e) => setFullDescription(e.target.value)}
@@ -1188,7 +1190,7 @@ export function SalesforcePreview({
               "placeholder:text-muted-foreground",
               "focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px]",
               fullDescChanged ? "border-amber-500" : "border-input",
-              fullDescription.length > 2000 && "border-red-500 focus-visible:ring-red-500/50"
+              fullDescription.length > limits.details && "border-red-500 focus-visible:ring-red-500/50"
             )}
           />
         </EditorField>
@@ -1220,10 +1222,10 @@ export function SalesforcePreview({
                     className={cn(
                       "flex-1",
                       titleChanged && "border-amber-500",
-                      title.length > 80 && "border-red-500 focus-visible:ring-red-500/50"
+                      title.length > limits.feature && "border-red-500 focus-visible:ring-red-500/50"
                     )}
                   />
-                  <CharBadge count={title.length} max={80} />
+                  <CharBadge count={title.length} max={limits.feature} />
                 </div>
                 <div className="flex items-center gap-2 mt-1">
                   <span className="text-xs text-muted-foreground w-5 shrink-0" />

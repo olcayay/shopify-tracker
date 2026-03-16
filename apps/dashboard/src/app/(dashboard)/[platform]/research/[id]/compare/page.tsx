@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Check, ChevronDown, ChevronUp, ArrowLeft, Star } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { getMetadataLimits } from "@/lib/metadata-limits";
 
 // ─── Types ───────────────────────────────────────────────────
 
@@ -162,6 +163,7 @@ export default function ResearchComparePage() {
   const id = params.id as string;
 
   const platform = params.platform as string;
+  const limits = getMetadataLimits(platform);
   const [projectName, setProjectName] = useState("");
   const [competitorSlugs, setCompetitorSlugs] = useState<string[]>([]);
   const [virtualAppSlugs, setVirtualAppSlugs] = useState<string[]>([]);
@@ -482,27 +484,27 @@ export default function ResearchComparePage() {
 
           {/* App Name */}
           <CompareSection id="sec-name" title="App Name" sectionKey="name" collapsed={!!collapsed["name"]} onToggle={toggleCollapse}>
-            <VerticalListSection apps={selectedApps} field="name" max={30} />
+            <VerticalListSection apps={selectedApps} field="name" max={limits.appName} />
           </CompareSection>
 
           {/* Subtitle */}
           <CompareSection id="sec-subtitle" title="App Card Subtitle" sectionKey="subtitle" collapsed={!!collapsed["subtitle"]} onToggle={toggleCollapse}>
-            <VerticalListSection apps={selectedApps} field="subtitle" max={62} />
+            <VerticalListSection apps={selectedApps} field="subtitle" max={limits.subtitle} />
           </CompareSection>
 
           {/* Introduction */}
           <CompareSection id="sec-intro" title="App Introduction" sectionKey="intro" collapsed={!!collapsed["intro"]} onToggle={toggleCollapse}>
-            <VerticalListSection apps={selectedApps} field="introduction" max={100} />
+            <VerticalListSection apps={selectedApps} field="introduction" max={limits.introduction} />
           </CompareSection>
 
           {/* App Details */}
           <CompareSection id="sec-details" title="App Details" sectionKey="details" collapsed={!!collapsed["details"]} onToggle={toggleCollapse}>
-            <AppDetailsSection apps={selectedApps} />
+            <AppDetailsSection apps={selectedApps} detailsMax={limits.details} />
           </CompareSection>
 
           {/* Features */}
           <CompareSection id="sec-features" title="Features" sectionKey="features" collapsed={!!collapsed["features"]} onToggle={toggleCollapse}>
-            <FeaturesSection apps={selectedApps} />
+            <FeaturesSection apps={selectedApps} featureMax={limits.feature} />
           </CompareSection>
 
           {/* Languages */}
@@ -533,7 +535,7 @@ export default function ResearchComparePage() {
           {/* SEO */}
           {platform !== "canva" && (
             <CompareSection id="sec-seo" title="Web Search Content" sectionKey="seo" collapsed={!!collapsed["seo"]} onToggle={toggleCollapse}>
-              <SeoSection apps={selectedApps} />
+              <SeoSection apps={selectedApps} seoTitleMax={limits.seoTitle} seoDescMax={limits.seoMetaDescription} />
             </CompareSection>
           )}
         </>
@@ -604,7 +606,7 @@ function VerticalListSection({
 
 // ─── App Details ─────────────────────────────────────────────
 
-function AppDetailsSection({ apps }: { apps: AppData[] }) {
+function AppDetailsSection({ apps, detailsMax }: { apps: AppData[]; detailsMax: number }) {
   const { id } = useParams();
   const [activeTab, setActiveTab] = useState(0);
   const activeApp = apps[activeTab] || apps[0];
@@ -634,7 +636,7 @@ function AppDetailsSection({ apps }: { apps: AppData[] }) {
         <div>
           <div className="flex items-center gap-2 mb-1">
             <span className="text-xs font-medium text-muted-foreground">Description</span>
-            <CharBadge count={text.length} max={500} />
+            <CharBadge count={text.length} max={detailsMax} />
           </div>
           <div className="text-sm whitespace-pre-wrap bg-muted/30 rounded-md p-3 max-h-60 overflow-y-auto">
             {text || <span className="text-muted-foreground italic">No description</span>}
@@ -689,7 +691,7 @@ function KeywordDensityTable({ text }: { text: string }) {
 
 // ─── Features Comparison ─────────────────────────────────────
 
-function FeaturesSection({ apps }: { apps: AppData[] }) {
+function FeaturesSection({ apps, featureMax }: { apps: AppData[]; featureMax: number }) {
   const { id } = useParams();
   const maxFeatures = Math.max(...apps.map((a) => a.latestSnapshot?.features?.length || 0), 0);
 
@@ -731,7 +733,7 @@ function FeaturesSection({ apps }: { apps: AppData[] }) {
                       <div>
                         <span>{feat}</span>
                         <div className="mt-1">
-                          <CharBadge count={feat.length} max={80} />
+                          <CharBadge count={feat.length} max={featureMax} />
                         </div>
                       </div>
                     ) : ""}
@@ -1056,7 +1058,7 @@ function PricingSection({ apps }: { apps: AppData[] }) {
 
 // ─── SEO Section ─────────────────────────────────────────────
 
-function SeoSection({ apps }: { apps: AppData[] }) {
+function SeoSection({ apps, seoTitleMax, seoDescMax }: { apps: AppData[]; seoTitleMax: number; seoDescMax: number }) {
   const { id } = useParams();
   return (
     <div className="space-y-4">
@@ -1072,7 +1074,7 @@ function SeoSection({ apps }: { apps: AppData[] }) {
                   <AppIcon app={app} />
                 </Link>
                 <span className="text-sm flex-1 min-w-0">{title || <span className="text-muted-foreground italic">Empty</span>}</span>
-                <CharBadge count={title.length} max={60} />
+                <CharBadge count={title.length} max={seoTitleMax} />
               </div>
             );
           })}
@@ -1090,7 +1092,7 @@ function SeoSection({ apps }: { apps: AppData[] }) {
                   <AppIcon app={app} />
                 </Link>
                 <span className="text-sm flex-1 min-w-0">{desc || <span className="text-muted-foreground italic">Empty</span>}</span>
-                <CharBadge count={desc.length} max={160} />
+                <CharBadge count={desc.length} max={seoDescMax} />
               </div>
             );
           })}

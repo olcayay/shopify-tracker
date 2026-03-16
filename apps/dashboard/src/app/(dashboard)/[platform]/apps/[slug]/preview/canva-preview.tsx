@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
+import { getMetadataLimits } from "@/lib/metadata-limits";
 import { CharBadge, EditorField, mod } from "./shared";
 
 export interface CanvaAppData {
@@ -75,6 +76,7 @@ function PermissionItem({ scope }: { scope: string }) {
 }
 
 export function CanvaPreview({ appData }: { appData: CanvaAppData }) {
+  const limits = getMetadataLimits("canva");
   const snapshot = appData.latestSnapshot;
   const pd = snapshot?.platformData;
 
@@ -281,19 +283,19 @@ export function CanvaPreview({ appData }: { appData: CanvaAppData }) {
       <div className="space-y-5">
         <h3 className="font-semibold text-sm">Edit Listing Content</h3>
 
-        <EditorField label="App Name" count={name.length} max={50} changed={nameChanged}>
+        <EditorField label="App Name" count={name.length} max={limits.appName} changed={nameChanged}>
           <Input
             value={name}
             onChange={(e) => setName(e.target.value)}
             placeholder="App name"
             className={cn(
               nameChanged && "border-amber-500",
-              name.length > 50 && "border-red-500 focus-visible:ring-red-500/50"
+              name.length > limits.appName && "border-red-500 focus-visible:ring-red-500/50"
             )}
           />
         </EditorField>
 
-        <EditorField label="Tagline / App Introduction" count={tagline.length} max={100} changed={taglineChanged}>
+        <EditorField label="Tagline" count={tagline.length} max={limits.subtitle} changed={taglineChanged}>
           <textarea
             value={tagline}
             onChange={(e) => setTagline(e.target.value)}
@@ -304,12 +306,12 @@ export function CanvaPreview({ appData }: { appData: CanvaAppData }) {
               "placeholder:text-muted-foreground",
               "focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px]",
               taglineChanged ? "border-amber-500" : "border-input",
-              tagline.length > 100 && "border-red-500 focus-visible:ring-red-500/50"
+              tagline.length > limits.subtitle && "border-red-500 focus-visible:ring-red-500/50"
             )}
           />
         </EditorField>
 
-        <EditorField label="Short Description" count={shortDesc.length} max={200} changed={shortDescChanged}>
+        <EditorField label="Short Description" count={shortDesc.length} max={limits.introduction} changed={shortDescChanged}>
           <textarea
             value={shortDesc}
             onChange={(e) => setShortDesc(e.target.value)}
@@ -320,12 +322,12 @@ export function CanvaPreview({ appData }: { appData: CanvaAppData }) {
               "placeholder:text-muted-foreground",
               "focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px]",
               shortDescChanged ? "border-amber-500" : "border-input",
-              shortDesc.length > 200 && "border-red-500 focus-visible:ring-red-500/50"
+              shortDesc.length > limits.introduction && "border-red-500 focus-visible:ring-red-500/50"
             )}
           />
         </EditorField>
 
-        <EditorField label="Full Description" count={details.length} max={2000} changed={detailsChanged}>
+        <EditorField label="Description" count={details.length} max={limits.details} changed={detailsChanged}>
           <textarea
             value={details}
             onChange={(e) => setDetails(e.target.value)}
@@ -336,7 +338,7 @@ export function CanvaPreview({ appData }: { appData: CanvaAppData }) {
               "placeholder:text-muted-foreground",
               "focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px]",
               detailsChanged ? "border-amber-500" : "border-input",
-              details.length > 2000 && "border-red-500 focus-visible:ring-red-500/50"
+              details.length > limits.details && "border-red-500 focus-visible:ring-red-500/50"
             )}
           />
         </EditorField>
