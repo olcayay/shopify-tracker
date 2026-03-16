@@ -35,6 +35,7 @@ if (!command) {
   console.log("  categories              Crawl full category tree");
   console.log("  app <slug>              Scrape single app details");
   console.log("  app-tracked             Scrape all tracked apps");
+  console.log("  app-all                 Scrape all discovered apps");
   console.log("  keyword <keyword>       Scrape search results for keyword");
   console.log("  keyword-tracked         Scrape all tracked keywords");
   console.log("  reviews <slug>          Scrape reviews for an app");
@@ -108,6 +109,13 @@ async function main() {
     case "app-tracked": {
       const scraper = new AppDetailsScraper(db, httpClient, platformModule);
       await scraper.scrapeTracked();
+      break;
+    }
+
+    case "app-all": {
+      const forceAll = process.argv.includes("--force");
+      const scraper = new AppDetailsScraper(db, httpClient, platformModule);
+      await scraper.scrapeAll("cli", undefined, forceAll);
       break;
     }
 

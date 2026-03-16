@@ -222,6 +222,79 @@ async function canvaDbSearch(db: ReturnType<typeof createDb>, keyword: string): 
   return { totalResults: results.length, apps: results };
 }
 
+/**
+ * Live search Wix App Market by scraping the search results page.
+ * Wix embeds all data as base64-encoded JSON in __REACT_QUERY_STATE__.
+ */
+async function wixLiveSearch(keyword: string): Promise<{ totalResults: number; apps: SearchApp[] }> {
+  const url = `https://www.wix.com/app-market/search-result?query=${encodeURIComponent(keyword)}`;
+  const ua = USER_AGENTS[Math.floor(Math.random() * USER_AGENTS.length)];
+
+  const response = await fetch(url, {
+    headers: {
+      "User-Agent": ua,
+      Accept: "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+      "Accept-Language": "en-US,en;q=0.9",
+    },
+  });
+
+  if (!response.ok) {
+    throw new Error(`Wix returned ${response.status}`);
+  }
+
+  const html = await response.text();
+
+  // Extract base64-encoded __REACT_QUERY_STATE__
+  const match = html.match(
+    /window\.__REACT_QUERY_STATE__\s*=\s*JSON\.parse\(__decodeBase64\('([^']+)'\)\)/
+  );
+  if (!match) {
+    throw new Error("Could not find __REACT_QUERY_STATE__ in Wix HTML");
+  }
+
+  const decoded = Buffer.from(match[1], "base64").toString("utf-8");
+  const state = JSON.parse(decoded);
+
+  // Find search query data
+  let data: any = null;
+  for (const q of state.queries ?? []) {
+    const key = Array.isArray(q.queryKey) ? q.queryKey[0] : q.queryKey;
+    if (typeof key === "string" && key.startsWith("initial-apps-fetch-")) {
+      data = q.state?.data;
+      break;
+    }
+  }
+
+  if (!data) {
+    return { totalResults: 0, apps: [] };
+  }
+
+  const rawApps = data.appGroup?.apps ?? [];
+  const totalResults = data.paging?.total ?? rawApps.length;
+
+  const apps: SearchApp[] = rawApps.map((app: any, index: number) => {
+    let pricingHint = "";
+    const pricingType = app.pricing?.label?.type;
+    if (pricingType === "FREE") pricingHint = "Free";
+    else if (pricingType === "FREE_PLAN_AVAILABLE") pricingHint = "Free plan available";
+
+    return {
+      position: index + 1,
+      app_slug: app.slug || "",
+      app_name: app.name || "",
+      short_description: app.shortDescription || "",
+      average_rating: app.reviews?.averageRating ?? 0,
+      rating_count: app.reviews?.totalCount ?? 0,
+      logo_url: app.icon || undefined,
+      is_sponsored: false,
+      is_built_in: false,
+      is_built_for_shopify: false,
+    };
+  });
+
+  return { totalResults, apps };
+}
+
 export const liveSearchRoutes: FastifyPluginAsync = async (app) => {
   const db: ReturnType<typeof createDb> = (app as any).db;
 
@@ -244,6 +317,17 @@ export const liveSearchRoutes: FastifyPluginAsync = async (app) => {
       } catch (err: any) {
         request.log.error({ platform, keyword: q, error: err.message, ms: Date.now() - start }, "live-search failed");
         return reply.code(502).send({ error: `Failed to fetch from Salesforce: ${err.message}` });
+      }
+    }
+
+    if (platform === "wix") {
+      try {
+        const result = await wixLiveSearch(q);
+        request.log.info({ platform, keyword: q, source: "html", apps: result.apps.length, ms: Date.now() - start }, "live-search completed via Wix HTML scrape");
+        return { keyword: q, totalResults: result.totalResults, apps: result.apps };
+      } catch (err: any) {
+        request.log.error({ platform, keyword: q, error: err.message, ms: Date.now() - start }, "live-search failed");
+        return reply.code(502).send({ error: `Failed to fetch from Wix: ${err.message}` });
       }
     }
 

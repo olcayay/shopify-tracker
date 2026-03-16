@@ -1,3 +1,51 @@
+Wix App Market Integration (4th Platform)
+==========================================
+
+Full Wix App Market platform integration — the 4th platform after Shopify, Salesforce, Canva.
+
+Data Strategy: HTTP + Cheerio scraping. Wix SSR pages embed data as base64-encoded JSON
+in window.__REACT_QUERY_STATE__. No browser/Cloudflare needed.
+
+Scraper Module (apps/scraper/src/platforms/wix/):
+- index.ts: WixModule implementing PlatformModule (HTTP-only)
+- urls.ts: URL builders for app detail, category, search, autocomplete
+- constants.ts: 6 seed categories, rate limits, scoring weights
+- parsers/app-parser.ts: Detail page parser (JSON + DOM fallback), review parser
+- parsers/category-parser.ts: L1 (grouped sections) + L2 (flat list) + virtual categories
+- parsers/search-parser.ts: Search results page parser
+- parsers/review-parser.ts: Review extraction from app detail page
+
+Capabilities: keyword search, reviews, featured sections, auto-suggestions, pricing
+No: ad tracking, similar apps, feature taxonomy, launched date
+
+Database Migrations:
+- 0063: Seed account_platforms for Wix (all accounts get access)
+- 0064: Seed 62 categories (6 L1 + 56 L2) from full Wix category tree
+- 0065: Seed platform_visibility for Wix (hidden by default)
+
+Dashboard Changes:
+- sidebar, auth-context, proxy, admin-scraper-trigger: Added "wix" to valid platforms
+- PLATFORM_LABELS.wix = "Wix", PLATFORM_COLORS.wix = "#0C6EFC"
+- app-badges.tsx: wix: {} (no known badge types yet)
+- platform-urls.ts: Wix external URLs for app, category, search
+- metadata-limits.ts: Wix character limits
+- details/page.tsx: Wix-specific labels (Short Description, Description, Benefits, Featured In)
+- compare/page.tsx: Wix benefits + Featured In comparison sections
+- changes/page.tsx: Wix field labels
+
+API Changes:
+- live-search.ts: wixLiveSearch() scraping search results page
+- apps.ts: Wix developer email extraction, developer info in by-developer endpoint
+
+Field Mapping:
+- Wix tagline → app_introduction, description → app_details, benefits → features
+- Wix collections → platformData.collections (shown as "Featured In" with links)
+- Pricing: monthly/yearly prices, benefits per plan, currency, trial days
+
+Scheduler: 5 Wix cron jobs (category, app_details, keyword_search, reviews, app_scores)
+
+New CLI command: `app-all` to scrape ALL discovered apps (not just tracked)
+
 Virtual Apps for Research Projects
 ====================================
 

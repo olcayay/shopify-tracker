@@ -40,6 +40,7 @@ const PLATFORM_COLORS: Record<string, string> = {
   shopify: "#95BF47",
   salesforce: "#00A1E0",
   canva: "#00C4CC",
+  wix: "#0C6EFC",
 };
 
 

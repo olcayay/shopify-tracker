@@ -8,6 +8,8 @@ export function buildExternalAppUrl(platform: PlatformId, slug: string): string 
       return `https://appexchange.salesforce.com/appxListingDetail?listingId=${slug}`;
     case "canva":
       return `https://www.canva.com/apps/${slug.replace("--", "/")}`;
+    case "wix":
+      return `https://www.wix.com/app-market/web-solution/${slug}`;
   }
 }
 
@@ -19,6 +21,8 @@ export function buildExternalCategoryUrl(platform: PlatformId, slug: string): st
       return `https://appexchange.salesforce.com/explore/business-needs?category=${slug}`;
     case "canva":
       return `https://www.canva.com/your-apps/${slug}`;
+    case "wix":
+      return `https://www.wix.com/app-market/category/${slug.replace("--", "/")}`;
   }
 }
 
@@ -30,6 +34,8 @@ export function buildExternalSearchUrl(platform: PlatformId, query: string): str
       return `https://appexchange.salesforce.com/appxSearchKeywordResults?keywords=${encodeURIComponent(query)}`;
     case "canva":
       return `https://www.canva.com/your-apps?q=${encodeURIComponent(query)}`;
+    case "wix":
+      return `https://www.wix.com/app-market/search-result?query=${encodeURIComponent(query)}`;
   }
 }
 

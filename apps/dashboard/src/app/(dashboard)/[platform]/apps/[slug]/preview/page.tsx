@@ -22,7 +22,7 @@ export default function PreviewPage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (platform !== "shopify" && platform !== "salesforce" && platform !== "canva") return;
+    if (platform !== "shopify" && platform !== "salesforce" && platform !== "canva" && platform !== "wix") return;
     async function loadData() {
       setLoading(true);
       const res = await fetchWithAuth(
@@ -41,12 +41,12 @@ export default function PreviewPage() {
     };
   }, [slug, platform]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  if (platform !== "shopify" && platform !== "salesforce" && platform !== "canva") {
+  if (platform !== "shopify" && platform !== "salesforce" && platform !== "canva" && platform !== "wix") {
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4">
         <h2 className="text-xl font-semibold">Preview not available</h2>
         <p className="text-muted-foreground text-center max-w-md">
-          The listing preview is only available for Shopify, Salesforce, and Canva apps.
+          The listing preview is not available for this platform.
         </p>
         <a
           href={buildExternalAppUrl(platform as PlatformId, slug)}
@@ -106,11 +106,13 @@ function PreviewShell({
   const { preview, editor, resetToOriginal } = platformPreview;
   const icon = appData.iconUrl;
   const platformLabel =
-    platform === "canva"
-      ? "Canva Apps Preview"
-      : platform === "salesforce"
-        ? "AppExchange Preview"
-        : "App Store Preview";
+    platform === "wix"
+      ? "Wix App Market Preview"
+      : platform === "canva"
+        ? "Canva Apps Preview"
+        : platform === "salesforce"
+          ? "AppExchange Preview"
+          : "App Store Preview";
 
   return (
     <div className="fixed inset-0 z-50 bg-background flex flex-col">

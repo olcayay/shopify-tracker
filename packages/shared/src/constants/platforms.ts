@@ -44,6 +44,21 @@ export const PLATFORMS = {
     hasLaunchedDate: false,
     pageSize: 30,
   },
+  wix: {
+    id: "wix" as const,
+    name: "Wix App Market",
+    baseUrl: "https://www.wix.com/app-market",
+    hasKeywordSearch: true,
+    hasReviews: true,
+    hasFeaturedSections: true,
+    hasAdTracking: false,
+    hasSimilarApps: false,
+    hasAutoSuggestions: true,
+    hasFeatureTaxonomy: false,
+    hasPricing: true,
+    hasLaunchedDate: false,
+    pageSize: 50,
+  },
 } as const;
 
 export type PlatformId = keyof typeof PLATFORMS;
@@ -72,6 +87,8 @@ export function buildExternalAppUrl(platform: PlatformId, slug: string): string 
       return `https://appexchange.salesforce.com/appxListingDetail?listingId=${slug}`;
     case "canva":
       return `https://www.canva.com/apps/${slug.replace("--", "/")}`;
+    case "wix":
+      return `https://www.wix.com/app-market/web-solution/${slug}`;
   }
 }
 
@@ -87,5 +104,7 @@ export function buildExternalCategoryUrl(platform: PlatformId, slug: string): st
       const parentSlug = slug.includes("--") ? slug.split("--")[0] : slug;
       return `https://www.canva.com/your-apps/${parentSlug}`;
     }
+    case "wix":
+      return `https://www.wix.com/app-market/category/${slug.replace("--", "/")}`;
   }
 }

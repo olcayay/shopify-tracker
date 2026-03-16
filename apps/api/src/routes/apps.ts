@@ -473,6 +473,7 @@ export const appRoutes: FastifyPluginAsync = async (app) => {
     const emailPath: Record<string, string> = {
       canva: "platform_data->>'developerEmail'",
       salesforce: "platform_data->'publisher'->>'email'",
+      wix: "platform_data->>'developerEmail'",
     };
     const countryPath: Record<string, string> = {
       canva: "platform_data->'developerAddress'->>'country'",
@@ -567,6 +568,11 @@ export const appRoutes: FastifyPluginAsync = async (app) => {
           if (pub.yearFounded != null) info.yearFounded = pub.yearFounded;
           if (pub.location) info.location = pub.location;
           if (pub.country) info.country = pub.country;
+          if (Object.keys(info).length > 0) developerInfo = info;
+        } else if (platform === "wix") {
+          const info: Record<string, unknown> = {};
+          if (pd.developerEmail) info.email = pd.developerEmail;
+          if (pd.developerPrivacyUrl) info.privacyUrl = pd.developerPrivacyUrl;
           if (Object.keys(info).length > 0) developerInfo = info;
         }
       }

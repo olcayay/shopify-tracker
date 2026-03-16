@@ -382,15 +382,16 @@ export default function ComparePage() {
 
   const isSalesforce = platform === "salesforce";
   const isCanva = platform === "canva";
+  const isWix = platform === "wix";
   const limits = getMetadataLimits(platform);
 
   // Section navigation
   const SECTIONS = useMemo(() => {
     const sections = [
       { id: "sec-name", key: "appName", label: "Name" },
-      { id: "sec-subtitle", key: "appCardSubtitle", label: isCanva ? "Tagline" : "Subtitle" },
-      { id: "sec-intro", key: "appIntroduction", label: isCanva ? "Short Description" : "Introduction" },
-      { id: "sec-details", key: "appDetails", label: isCanva ? "Description" : "Details" },
+      { id: "sec-subtitle", key: "appCardSubtitle", label: isCanva || isWix ? "Tagline" : "Subtitle" },
+      { id: "sec-intro", key: "appIntroduction", label: isCanva || isWix ? "Short Description" : "Introduction" },
+      { id: "sec-details", key: "appDetails", label: isCanva || isWix ? "Description" : "Details" },
     ];
     if (!isCanva) {
       sections.push({ id: "sec-features", key: "features", label: "Features" });
@@ -422,7 +423,7 @@ export default function ComparePage() {
       );
     }
     return sections;
-  }, [isSalesforce, isCanva]);
+  }, [isSalesforce, isCanva, isWix]);
 
   const [activeSection, setActiveSection] = useState<string>("sec-name");
   const navRef = useRef<HTMLDivElement>(null);
@@ -794,7 +795,7 @@ export default function ComparePage() {
           {/* App Card Subtitle / Tagline */}
           <VerticalListSection
             id="sec-subtitle"
-            title={isCanva ? "Tagline" : "App Card Subtitle"}
+            title={isCanva || isWix ? "Tagline" : "App Card Subtitle"}
             sectionKey="appCardSubtitle"
             collapsed={isCollapsed("appCardSubtitle")}
             onToggle={toggleSection}
@@ -805,7 +806,7 @@ export default function ComparePage() {
                 value={draftSubtitle}
                 onChange={setDraftSubtitle}
                 max={limits.subtitle}
-                placeholder={isCanva ? "Test a new Tagline!" : "Test a new Subtitle!"}
+                placeholder={isCanva || isWix ? "Test a new Tagline!" : "Test a new Subtitle!"}
               />
             }
           >
@@ -824,7 +825,7 @@ export default function ComparePage() {
           {/* App Introduction / Short Description */}
           <VerticalListSection
             id="sec-intro"
-            title={isCanva ? "Short Description" : "App Introduction"}
+            title={isCanva || isWix ? "Short Description" : "App Introduction"}
             sectionKey="appIntroduction"
             collapsed={isCollapsed("appIntroduction")}
             onToggle={toggleSection}
@@ -835,7 +836,7 @@ export default function ComparePage() {
                 value={draftIntro}
                 onChange={setDraftIntro}
                 max={limits.introduction}
-                placeholder={isCanva ? "Test a new Short Description!" : "Test a new Introduction!"}
+                placeholder={isCanva || isWix ? "Test a new Short Description!" : "Test a new Introduction!"}
               />
             }
           >
@@ -859,7 +860,7 @@ export default function ComparePage() {
           {/* App Details / Description — icon-tab mode with keyword density */}
           <CompareSection
             id="sec-details"
-            title={isCanva ? "Description" : "App Details"}
+            title={isCanva || isWix ? "Description" : "App Details"}
             sectionKey="appDetails"
             collapsed={isCollapsed("appDetails")}
             onToggle={toggleSection}
@@ -975,7 +976,7 @@ export default function ComparePage() {
           {/* Features / Highlights */}
           {!isCanva && <CompareSection
             id="sec-features"
-            title={isSalesforce ? "Highlights" : "Features"}
+            title={isSalesforce ? "Highlights" : isWix ? "Benefits" : "Features"}
             sectionKey="features"
             collapsed={isCollapsed("features")}
             onToggle={toggleSection}
@@ -1136,6 +1137,64 @@ export default function ComparePage() {
             onToggle={toggleSection}
             apps={selectedApps}
           />
+
+          {/* Wix Featured In (Collections) */}
+          {isWix && (
+            <CompareSection
+              id="sec-featured-in"
+              title="Featured In"
+              sectionKey="featuredIn"
+              collapsed={isCollapsed("featuredIn")}
+              onToggle={toggleSection}
+            >
+              <table className="w-full text-sm table-fixed">
+                <thead>
+                  <tr className="border-b">
+                    <th className="text-left py-2 px-2 font-medium text-muted-foreground w-8">#</th>
+                    {selectedApps.map((app) => (
+                      <th key={app.slug} className="text-left py-2 px-2 font-medium">
+                        {app.name}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {(() => {
+                    const allCollections = new Set<string>();
+                    for (const app of selectedApps) {
+                      const cols = (app.latestSnapshot?.platformData as any)?.collections ?? [];
+                      for (const c of cols) allCollections.add(c.name);
+                    }
+                    return Array.from(allCollections).map((name, i) => (
+                      <tr key={name} className="border-b last:border-0">
+                        <td className="py-2 px-2 text-muted-foreground">{i + 1}</td>
+                        {selectedApps.map((app) => {
+                          const cols: { slug: string; name: string }[] = (app.latestSnapshot?.platformData as any)?.collections ?? [];
+                          const found = cols.find((c) => c.name === name);
+                          return (
+                            <td key={app.slug} className="py-2 px-2 align-top">
+                              {found ? (
+                                <a
+                                  href={`https://www.wix.com/app-market/collection/${found.slug}`}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="text-primary hover:underline"
+                                >
+                                  {found.name}
+                                </a>
+                              ) : (
+                                <span className="text-muted-foreground">—</span>
+                              )}
+                            </td>
+                          );
+                        })}
+                      </tr>
+                    ));
+                  })()}
+                </tbody>
+              </table>
+            </CompareSection>
+          )}
 
           {/* Pricing Plans */}
           <PricingComparison

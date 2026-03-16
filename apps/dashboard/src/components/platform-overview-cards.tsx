@@ -10,12 +10,14 @@ const PLATFORM_LABELS: Record<PlatformId, string> = {
   shopify: "Shopify",
   salesforce: "Salesforce",
   canva: "Canva",
+  wix: "Wix",
 };
 
 const PLATFORM_COLORS: Record<PlatformId, string> = {
   shopify: "#95BF47",
   salesforce: "#00A1E0",
   canva: "#00C4CC",
+  wix: "#0C6EFC",
 };
 
 interface PlatformCounts {

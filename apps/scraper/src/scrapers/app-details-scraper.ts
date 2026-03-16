@@ -97,6 +97,66 @@ export class AppDetailsScraper {
     log.info("scraping complete", { itemsScraped, itemsFailed, durationMs: Date.now() - startTime });
   }
 
+  /** Scrape details for ALL discovered apps (not just tracked) */
+  async scrapeAll(triggeredBy?: string, queue?: string, force?: boolean): Promise<void> {
+    const allApps = await this.db
+      .select({ id: apps.id, slug: apps.slug, name: apps.name })
+      .from(apps)
+      .where(eq(apps.platform, this.platform));
+
+    if (allApps.length === 0) {
+      log.info("no apps found");
+      return;
+    }
+
+    log.info("scraping all discovered apps", { count: allApps.length });
+
+    const [run] = await this.db
+      .insert(scrapeRuns)
+      .values({
+        scraperType: "app_details",
+        platform: this.platform,
+        status: "running",
+        createdAt: new Date(),
+        startedAt: new Date(),
+        triggeredBy,
+        queue,
+      })
+      .returning();
+
+    const startTime = Date.now();
+    let itemsScraped = 0;
+    let itemsFailed = 0;
+
+    for (const app of allApps) {
+      try {
+        await this.scrapeApp(app.slug, run.id, triggeredBy, undefined, force);
+        itemsScraped++;
+        if (itemsScraped % 50 === 0) {
+          log.info("progress", { scraped: itemsScraped, failed: itemsFailed, total: allApps.length });
+        }
+      } catch (error) {
+        log.error("failed to scrape app", { slug: app.slug, error: String(error) });
+        itemsFailed++;
+      }
+    }
+
+    await this.db
+      .update(scrapeRuns)
+      .set({
+        status: "completed",
+        completedAt: new Date(),
+        metadata: {
+          items_scraped: itemsScraped,
+          items_failed: itemsFailed,
+          duration_ms: Date.now() - startTime,
+        },
+      })
+      .where(eq(scrapeRuns.id, run.id));
+
+    log.info("scraping all complete", { itemsScraped, itemsFailed, durationMs: Date.now() - startTime });
+  }
+
   /** Scrape a single app by slug */
   async scrapeApp(slug: string, runId?: string, triggeredBy?: string, queue?: string, force?: boolean): Promise<void> {
     log.info("scraping app", { slug, force });
@@ -159,11 +219,17 @@ export class AppDetailsScraper {
             return {
               app_slug: normalized.slug,
               app_name: normalized.name,
-              app_introduction: (pd.description as string) || "",
-              app_details: (pd.fullDescription as string) || "",
+              app_introduction: this.platform === "wix"
+                ? (pd.tagline as string) || ""
+                : (pd.description as string) || "",
+              app_details: this.platform === "wix"
+                ? (pd.description as string) || ""
+                : (pd.fullDescription as string) || "",
               seo_title: normalized.name,
-              seo_meta_description: (pd.description as string) || "",
-              features: (pd.highlights as string[]) || [],
+              seo_meta_description: (pd.tagline as string) || (pd.description as string) || "",
+              features: this.platform === "wix"
+                ? (pd.benefits as string[]) || []
+                : (pd.highlights as string[]) || [],
               pricing: normalized.pricingHint || "",
               average_rating: normalized.averageRating,
               rating_count: normalized.ratingCount,

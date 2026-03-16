@@ -442,6 +442,27 @@
       "when": 1774051200000,
       "tag": "0062_category_parents",
       "breakpoints": true
+    },
+    {
+      "idx": 63,
+      "version": "7",
+      "when": 1774137600000,
+      "tag": "0063_seed_wix_platform",
+      "breakpoints": true
+    },
+    {
+      "idx": 64,
+      "version": "7",
+      "when": 1774224000000,
+      "tag": "0064_seed_wix_categories",
+      "breakpoints": true
+    },
+    {
+      "idx": 65,
+      "version": "7",
+      "when": 1774310400000,
+      "tag": "0065_seed_wix_visibility",
+      "breakpoints": true
     }
   ]
 }

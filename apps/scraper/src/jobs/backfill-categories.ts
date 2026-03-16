@@ -57,6 +57,9 @@ export async function backfillCategories(db: Database, triggeredBy: string, queu
         } else if (platform === "canva") {
           const slugMatch = cat.url?.match(/\/apps\/collection\/([^/]+)/);
           catSlug = slugMatch?.[1] ?? null;
+        } else if (platform === "wix") {
+          const slugMatch = cat.url?.match(/\/category\/([^/?]+)(?:\/([^/?]+))?/);
+          catSlug = slugMatch?.[2] ? `${slugMatch[1]}--${slugMatch[2]}` : slugMatch?.[1] ?? null;
         }
         if (!catSlug) continue;
         if (!categoryMap.has(catSlug)) {

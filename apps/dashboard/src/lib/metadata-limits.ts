@@ -43,12 +43,23 @@ const canvaLimits: MetadataLimits = {
   seoMetaDescription: 160,
 };
 
+const wixLimits: MetadataLimits = {
+  appName: 50,
+  subtitle: 80,       // Tagline
+  introduction: 200,  // Short Description
+  details: 2000,      // Description
+  feature: 80,
+  seoTitle: 60,
+  seoMetaDescription: 160,
+};
+
 const defaultLimits = shopifyLimits;
 
 const limitsByPlatform: Record<string, MetadataLimits> = {
   shopify: shopifyLimits,
   salesforce: salesforceLimits,
   canva: canvaLimits,
+  wix: wixLimits,
 };
 
 export function getMetadataLimits(platform: string): MetadataLimits {

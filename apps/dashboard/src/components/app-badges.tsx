@@ -34,6 +34,7 @@ const BADGE_CONFIG: Record<string, Record<string, { icon: string; label: string;
       className: "text-indigo-600",
     },
   },
+  wix: {},
 };
 
 interface AppBadgesProps {

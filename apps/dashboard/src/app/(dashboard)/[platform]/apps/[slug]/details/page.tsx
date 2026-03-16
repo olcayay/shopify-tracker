@@ -33,7 +33,13 @@ export default async function DetailsPage({
 
   // Canva-specific fields from platformData
   const isCanva = platform === "canva";
+  const isWix = platform === "wix";
   const canvaPermissions: { scope: string; type: string }[] = isCanva ? pd?.permissions || [] : [];
+
+  // Wix-specific fields from platformData
+  const wixCollections: { slug: string; name: string }[] = isWix ? pd?.collections || [] : [];
+  const wixLanguages: string[] = isWix ? pd?.languages || [] : [];
+  const wixAvailability: boolean | null = isWix ? pd?.isAvailableWorldwide ?? null : null;
 
   return (
     <div className="space-y-4">
@@ -41,7 +47,7 @@ export default async function DetailsPage({
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              {isCanva ? "Short Description" : "App Introduction"}
+              {isCanva || isWix ? "Short Description" : "App Introduction"}
               {isCanva && (
                 <Badge variant={snapshot.appIntroduction.length > 50 ? "destructive" : "outline"} className="text-xs font-normal">
                   {snapshot.appIntroduction.length}/50
@@ -59,7 +65,7 @@ export default async function DetailsPage({
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              {isCanva ? "Description" : "App Details"}
+              {isCanva || isWix ? "Description" : "App Details"}
               {isCanva && (
                 <Badge variant={snapshot.appDetails.length > 200 ? "destructive" : "outline"} className="text-xs font-normal">
                   {snapshot.appDetails.length}/200
@@ -68,7 +74,7 @@ export default async function DetailsPage({
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-sm">{snapshot.appDetails}</p>
+            <p className="text-sm whitespace-pre-line">{snapshot.appDetails}</p>
           </CardContent>
         </Card>
       )}
@@ -76,7 +82,7 @@ export default async function DetailsPage({
       {snapshot.features?.length > 0 && (
         <Card>
           <CardHeader>
-            <CardTitle>{isSalesforce ? "Highlights" : "Features"}</CardTitle>
+            <CardTitle>{isSalesforce ? "Highlights" : isWix ? "Benefits" : "Features"}</CardTitle>
           </CardHeader>
           <CardContent>
             <ul className="space-y-2">
@@ -199,8 +205,8 @@ export default async function DetailsPage({
         </div>
       )}
 
-      {/* Non-Salesforce: Languages + Integrations + Canva Permissions */}
-      {!isSalesforce && (snapshot.languages?.length > 0 || snapshot.integrations?.length > 0 || canvaPermissions.length > 0) && (
+      {/* Non-Salesforce: Languages + Integrations + Canva Permissions + Wix Collections */}
+      {!isSalesforce && (snapshot.languages?.length > 0 || snapshot.integrations?.length > 0 || canvaPermissions.length > 0 || wixCollections.length > 0) && (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {canvaPermissions.length > 0 && (
             <Card>
@@ -221,6 +227,29 @@ export default async function DetailsPage({
                     </li>
                   ))}
                 </ul>
+              </CardContent>
+            </Card>
+          )}
+          {wixCollections.length > 0 && (
+            <Card>
+              <CardHeader>
+                <CardTitle>Featured In</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="flex flex-wrap gap-1.5">
+                  {wixCollections.map((c, i) => (
+                    <a
+                      key={i}
+                      href={`https://www.wix.com/app-market/collection/${c.slug}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      <Badge variant="secondary" className="text-xs hover:bg-primary/10 cursor-pointer">
+                        {c.name}
+                      </Badge>
+                    </a>
+                  ))}
+                </div>
               </CardContent>
             </Card>
           )}

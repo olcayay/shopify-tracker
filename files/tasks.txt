@@ -167,3 +167,5 @@ virtual app UX improvements (icon/color picker, deferred creation, unsaved chang
 AI-powered virtual app generation (OpenAI gpt-4o + structured output, generation overlay, creator tracking, preview page, migrations) ✅
 
 fix Canva category parent-child relationships (1-to-N junction table, compound slug migration, multi-parent support) ✅
+
+Wix App Market integration — full platform module, parsers, scraper, dashboard, API, migrations ✅

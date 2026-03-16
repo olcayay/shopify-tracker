@@ -90,6 +90,37 @@ const SCHEDULES = [
     type: "compute_app_scores" as const,
     platform: "canva" as const,
   },
+  // ── Wix ──
+  {
+    name: "wix_category",
+    cron: "0 5 * * *", // Daily at 05:00
+    type: "category" as const,
+    platform: "wix" as const,
+  },
+  {
+    name: "wix_app_details",
+    cron: "0 3,15 * * *", // Every 12 hours (03:00, 15:00)
+    type: "app_details" as const,
+    platform: "wix" as const,
+  },
+  {
+    name: "wix_keyword_search",
+    cron: "30 3,15 * * *", // Every 12 hours (03:30, 15:30)
+    type: "keyword_search" as const,
+    platform: "wix" as const,
+  },
+  {
+    name: "wix_reviews",
+    cron: "0 8 * * *", // Daily at 08:00
+    type: "reviews" as const,
+    platform: "wix" as const,
+  },
+  {
+    name: "wix_compute_app_scores",
+    cron: "0 11 * * *", // Daily at 11:00 UTC
+    type: "compute_app_scores" as const,
+    platform: "wix" as const,
+  },
 ];
 
 log.info("starting scheduler", {

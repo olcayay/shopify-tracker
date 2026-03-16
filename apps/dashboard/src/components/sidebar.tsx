@@ -38,12 +38,14 @@ const PLATFORM_LABELS: Record<PlatformId, string> = {
   shopify: "Shopify",
   salesforce: "Salesforce",
   canva: "Canva",
+  wix: "Wix",
 };
 
 const PLATFORM_COLORS: Record<PlatformId, string> = {
   shopify: "#95BF47",
   salesforce: "#00A1E0",
   canva: "#00C4CC",
+  wix: "#0C6EFC",
 };
 
 function getNavItems(platformId: PlatformId, isAdmin?: boolean) {
@@ -64,7 +66,7 @@ function getNavItems(platformId: PlatformId, isAdmin?: boolean) {
   if (caps.hasFeatureTaxonomy) {
     items.push({ href: `${p}/features`, label: "Features", icon: Puzzle });
   }
-  if (platformId !== "canva" && platformId !== "salesforce") {
+  if (platformId !== "canva" && platformId !== "salesforce" && platformId !== "wix") {
     items.push({ href: `${p}/research`, label: "Research", icon: FlaskConical, badge: "Beta" });
   }
   if (isAdmin) {
@@ -89,7 +91,7 @@ const systemAdminItems = [
 
 /** Extract platform from current pathname */
 function extractPlatform(pathname: string): PlatformId {
-  const match = pathname.match(/^\/(shopify|salesforce|canva)(\/|$)/);
+  const match = pathname.match(/^\/(shopify|salesforce|canva|wix)(\/|$)/);
   return (match?.[1] as PlatformId) ?? "shopify";
 }
 
@@ -122,7 +124,7 @@ function SidebarContent({
   // Route protection: redirect to /overview if user navigates to a platform they don't have access to
   useEffect(() => {
     if (!user || !account || isSystemAdmin) return;
-    const platformMatch = pathname.match(/^\/(shopify|salesforce|canva)(\/|$)/);
+    const platformMatch = pathname.match(/^\/(shopify|salesforce|canva|wix)(\/|$)/);
     if (platformMatch) {
       const urlPlatform = platformMatch[1];
       if (!enabledPlatforms.includes(urlPlatform)) {
