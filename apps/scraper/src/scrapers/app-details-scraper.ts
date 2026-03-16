@@ -247,8 +247,19 @@ export class AppDetailsScraper {
           changes.push({ field: "features", oldValue: oldFeatures, newValue: newFeatures });
         }
 
-        const oldPlans = JSON.stringify(prevSnapshot.pricingPlans || []);
-        const newPlans = JSON.stringify(details.pricing_plans || []);
+        const normalizePlan = (p: any) => ({
+          name: p.name ?? p.plan_name ?? null,
+          price: p.price != null ? String(p.price) : null,
+          period: p.period ?? null,
+          yearly_price: p.yearly_price != null ? String(p.yearly_price) : null,
+          discount_text: p.discount_text ?? null,
+          trial_text: p.trial_text ?? null,
+          features: p.features ?? [],
+          currency_code: p.currency_code ?? null,
+          units: p.units ?? null,
+        });
+        const oldPlans = JSON.stringify((prevSnapshot.pricingPlans || []).map(normalizePlan));
+        const newPlans = JSON.stringify((details.pricing_plans || []).map(normalizePlan));
         if (oldPlans !== newPlans && oldPlans !== "[]") {
           changes.push({ field: "pricingPlans", oldValue: oldPlans, newValue: newPlans });
         }
