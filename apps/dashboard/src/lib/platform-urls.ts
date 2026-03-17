@@ -10,6 +10,8 @@ export function buildExternalAppUrl(platform: PlatformId, slug: string): string 
       return `https://www.canva.com/apps/${slug.replace("--", "/")}`;
     case "wix":
       return `https://www.wix.com/app-market/web-solution/${slug}`;
+    case "wordpress":
+      return `https://wordpress.org/plugins/${slug}/`;
   }
 }
 
@@ -23,6 +25,12 @@ export function buildExternalCategoryUrl(platform: PlatformId, slug: string): st
       return `https://www.canva.com/your-apps/${slug}`;
     case "wix":
       return `https://www.wix.com/app-market/category/${slug.replace("--", "/")}`;
+    case "wordpress":
+      if (slug.startsWith("_browse_")) {
+        const browseType = slug.slice("_browse_".length);
+        return `https://wordpress.org/plugins/browse/${browseType}/`;
+      }
+      return `https://wordpress.org/plugins/tags/${slug}/`;
   }
 }
 
@@ -36,6 +44,8 @@ export function buildExternalSearchUrl(platform: PlatformId, query: string): str
       return `https://www.canva.com/your-apps?q=${encodeURIComponent(query)}`;
     case "wix":
       return `https://www.wix.com/app-market/search-result?query=${encodeURIComponent(query)}`;
+    case "wordpress":
+      return `https://wordpress.org/plugins/search/${encodeURIComponent(query)}/`;
   }
 }
 

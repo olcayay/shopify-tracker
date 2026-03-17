@@ -30,6 +30,7 @@ const PLATFORM_SIMILARITY_WEIGHTS: Record<string, SimilarityWeights> = {
   salesforce: { category: 0.35, feature: 0.0, keyword: 0.30, text: 0.35 },
   canva: { category: 0.50, feature: 0.0, keyword: 0.0, text: 0.50 },
   wix: { category: 0.35, feature: 0.0, keyword: 0.30, text: 0.35 },
+  wordpress: { category: 0.35, feature: 0.0, keyword: 0.30, text: 0.35 },
 };
 
 /** Get similarity weights for a given platform (defaults to Shopify weights) */
@@ -60,12 +61,14 @@ const SHOPIFY_SIMILARITY_STOP_WORDS = new Set(["shopify", "store", "stores", "sh
 const SALESFORCE_SIMILARITY_STOP_WORDS = new Set(["salesforce", "appexchange", "crm", "lightning"]);
 const CANVA_SIMILARITY_STOP_WORDS = new Set(["canva", "design", "template", "templates"]);
 const WIX_SIMILARITY_STOP_WORDS = new Set(["wix", "website", "site", "sites", "web"]);
+const WORDPRESS_SIMILARITY_STOP_WORDS = new Set(["wordpress", "wp", "plugin", "plugins", "widget"]);
 
 const PLATFORM_SIMILARITY_STOP_WORDS: Record<string, Set<string>> = {
   shopify: SHOPIFY_SIMILARITY_STOP_WORDS,
   salesforce: SALESFORCE_SIMILARITY_STOP_WORDS,
   canva: CANVA_SIMILARITY_STOP_WORDS,
   wix: WIX_SIMILARITY_STOP_WORDS,
+  wordpress: WORDPRESS_SIMILARITY_STOP_WORDS,
 };
 
 /** Get merged similarity stop words for a given platform */

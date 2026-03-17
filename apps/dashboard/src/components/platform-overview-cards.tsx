@@ -11,6 +11,7 @@ const PLATFORM_LABELS: Record<PlatformId, string> = {
   salesforce: "Salesforce",
   canva: "Canva",
   wix: "Wix",
+  wordpress: "WordPress",
 };
 
 const PLATFORM_COLORS: Record<PlatformId, string> = {
@@ -18,6 +19,7 @@ const PLATFORM_COLORS: Record<PlatformId, string> = {
   salesforce: "#00A1E0",
   canva: "#00C4CC",
   wix: "#0C6EFC",
+  wordpress: "#21759B",
 };
 
 interface PlatformCounts {

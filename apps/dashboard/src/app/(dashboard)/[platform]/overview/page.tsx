@@ -41,6 +41,7 @@ const PLATFORM_COLORS: Record<string, string> = {
   salesforce: "#00A1E0",
   canva: "#00C4CC",
   wix: "#0C6EFC",
+  wordpress: "#21759B",
 };
 
 

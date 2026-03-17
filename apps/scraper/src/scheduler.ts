@@ -121,6 +121,37 @@ const SCHEDULES = [
     type: "compute_app_scores" as const,
     platform: "wix" as const,
   },
+  // ── WordPress ──
+  {
+    name: "wordpress_category",
+    cron: "30 5 * * *", // Daily at 05:30
+    type: "category" as const,
+    platform: "wordpress" as const,
+  },
+  {
+    name: "wordpress_app_details",
+    cron: "0 4,16 * * *", // Every 12 hours (04:00, 16:00)
+    type: "app_details" as const,
+    platform: "wordpress" as const,
+  },
+  {
+    name: "wordpress_keyword_search",
+    cron: "30 4,16 * * *", // Every 12 hours (04:30, 16:30)
+    type: "keyword_search" as const,
+    platform: "wordpress" as const,
+  },
+  {
+    name: "wordpress_reviews",
+    cron: "30 8 * * *", // Daily at 08:30
+    type: "reviews" as const,
+    platform: "wordpress" as const,
+  },
+  {
+    name: "wordpress_compute_app_scores",
+    cron: "30 11 * * *", // Daily at 11:30 UTC
+    type: "compute_app_scores" as const,
+    platform: "wordpress" as const,
+  },
 ];
 
 log.info("starting scheduler", {

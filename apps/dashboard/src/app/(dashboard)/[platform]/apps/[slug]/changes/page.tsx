@@ -27,15 +27,16 @@ export default async function ChangesPage({
 
   const isCanva = platform === "canva";
   const isWix = platform === "wix";
+  const isWordPress = platform === "wordpress";
   const fieldLabels: Record<string, string> = {
     name: "App Name",
-    appIntroduction: isCanva || isWix ? "Short Description" : "App Introduction",
-    appDetails: isCanva || isWix ? "Description" : "App Details",
+    appIntroduction: isCanva || isWix || isWordPress ? "Short Description" : "App Introduction",
+    appDetails: isCanva || isWix || isWordPress ? "Description" : "App Details",
     features: "Features",
     pricingPlans: "Pricing Plans",
     seoTitle: "SEO Title",
     seoMetaDescription: "SEO Meta Description",
-    appCardSubtitle: isCanva || isWix ? "Tagline" : "App Card Subtitle",
+    appCardSubtitle: isCanva || isWix ? "Tagline" : isWordPress ? "Short Description" : "App Card Subtitle",
   };
 
   return (

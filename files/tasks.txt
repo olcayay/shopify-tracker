@@ -169,3 +169,5 @@ AI-powered virtual app generation (OpenAI gpt-4o + structured output, generation
 fix Canva category parent-child relationships (1-to-N junction table, compound slug migration, multi-parent support) ✅
 
 Wix App Market integration — full platform module, parsers, scraper, dashboard, API, migrations ✅
+
+WordPress entry point testing & tag strategy expansion (40 tags + 3 browse sections) ✅

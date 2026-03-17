@@ -34,6 +34,7 @@ export default async function DetailsPage({
   // Canva-specific fields from platformData
   const isCanva = platform === "canva";
   const isWix = platform === "wix";
+  const isWordPress = platform === "wordpress";
   const canvaPermissions: { scope: string; type: string }[] = isCanva ? pd?.permissions || [] : [];
 
   // Wix-specific fields from platformData
@@ -47,7 +48,7 @@ export default async function DetailsPage({
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              {isCanva || isWix ? "Short Description" : "App Introduction"}
+              {isCanva || isWix || isWordPress ? "Short Description" : "App Introduction"}
               {isCanva && (
                 <Badge variant={snapshot.appIntroduction.length > 50 ? "destructive" : "outline"} className="text-xs font-normal">
                   {snapshot.appIntroduction.length}/50
@@ -65,7 +66,7 @@ export default async function DetailsPage({
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              {isCanva || isWix ? "Description" : "App Details"}
+              {isCanva || isWix || isWordPress ? "Description" : "App Details"}
               {isCanva && (
                 <Badge variant={snapshot.appDetails.length > 200 ? "destructive" : "outline"} className="text-xs font-normal">
                   {snapshot.appDetails.length}/200

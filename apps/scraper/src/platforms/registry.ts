@@ -4,6 +4,7 @@ import { ShopifyModule } from "./shopify/index.js";
 import { SalesforceModule } from "./salesforce/index.js";
 import { CanvaModule } from "./canva/index.js";
 import { WixModule } from "./wix/index.js";
+import { WordPressModule } from "./wordpress/index.js";
 import type { HttpClient } from "../http-client.js";
 import type { BrowserClient } from "../browser-client.js";
 
@@ -30,6 +31,9 @@ export function getModule(platformId: PlatformId, httpClient?: HttpClient, brows
       break;
     case "wix":
       module = new WixModule(httpClient);
+      break;
+    case "wordpress":
+      module = new WordPressModule(httpClient);
       break;
     default:
       throw new Error(`Unknown platform: ${platformId}`);

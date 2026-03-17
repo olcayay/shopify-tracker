@@ -95,14 +95,15 @@ function computeRankingChanges(
 function getFieldLabels(platform: string): Record<string, string> {
   const isCanva = platform === "canva";
   const isWix = platform === "wix";
+  const isWordPress = platform === "wordpress";
   return {
     name: "App Name",
-    appIntroduction: isCanva ? "Short Description" : isWix ? "Short Description" : "Introduction",
-    appDetails: isCanva ? "Description" : isWix ? "Description" : "Details",
+    appIntroduction: isCanva || isWix || isWordPress ? "Short Description" : "Introduction",
+    appDetails: isCanva || isWix || isWordPress ? "Description" : "Details",
     features: "Features",
     seoTitle: "SEO Title",
     seoMetaDescription: "SEO Description",
-    appCardSubtitle: isCanva ? "Tagline" : isWix ? "Tagline" : "Subtitle",
+    appCardSubtitle: isCanva || isWix ? "Tagline" : isWordPress ? "Short Description" : "Subtitle",
   };
 }
 

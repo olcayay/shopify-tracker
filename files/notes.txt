@@ -1,3 +1,44 @@
+WordPress Entry Point Testing & Tag Strategy Expansion
+======================================================
+
+Tested all 3 WordPress scraper flows (categories, app details, reviews) and expanded
+the tag strategy from 12 to 43 seed categories (40 tags + 3 browse sections).
+
+Testing Results:
+- Category scrape (seo tag): 250 plugins discovered, DB rankings stored correctly
+- App detail scrape (wordpress-seo): Yoast SEO parsed via WP.org REST API (10M installs, 4.8 rating)
+- Review scrape: FIXED — review parser rewritten to match actual BBPress forum markup
+
+Bugs Fixed:
+1. cli.ts reviews/reviews-tracked: Missing platform + platformModule args → defaulted to Shopify
+2. review-parser.ts: Selectors didn't match actual WordPress.org HTML structure:
+   - Reviews are <ul id="bbp-topic-*"> inside <li class="bbp-body">, not <li> items
+   - Rating in div.wporg-ratings[title="X out of 5 stars"]
+   - Author in span.bbp-topic-started-by .bbp-author-name
+   - Date in li.bbp-topic-freshness a[title] (format: "March 16, 2026 at 9:40 am")
+   - Next page: a.next.page-numbers
+3. cli.ts line 23: Stale error message now includes wix and wordpress
+
+Tag Strategy Expansion:
+- 28 new tags from hot_tags API (ai, payment, gutenberg, cache, etc.)
+- 3 browse sections: _browse_popular, _browse_featured, _browse_blocks
+- _browse_* prefix routes to browse=<type> API param instead of tag=<slug>
+- defaultPagesPerCategory: 1 → 2 (500 plugins/tag max)
+- All external URL builders handle _browse_* prefix → /browse/<type>/ URLs
+
+Files Changed:
+- apps/scraper/src/cli.ts (error msg fix, ReviewScraper args)
+- apps/scraper/src/platforms/wordpress/constants.ts (43 categories, 2 pages)
+- apps/scraper/src/platforms/wordpress/urls.ts (apiCategory, categoryPage helpers)
+- apps/scraper/src/platforms/wordpress/index.ts (_browse_* routing)
+- apps/scraper/src/platforms/wordpress/parsers/review-parser.ts (full rewrite)
+- packages/shared/src/constants/platforms.ts (_browse_* external URLs)
+- apps/dashboard/src/lib/platform-urls.ts (_browse_* external URLs)
+- packages/db/src/migrations/0067_seed_wordpress_categories.sql (43 categories)
+
+Tests: 82 pass (9 new review parser tests + updated constants/index tests)
+
+
 Wix App Market Integration (4th Platform)
 ==========================================
 

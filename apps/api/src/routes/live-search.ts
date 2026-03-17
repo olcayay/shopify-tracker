@@ -351,6 +351,36 @@ export const liveSearchRoutes: FastifyPluginAsync = async (app) => {
       }
     }
 
+    if (platform === "wordpress") {
+      try {
+        const apiUrl = `https://api.wordpress.org/plugins/info/1.2/?action=query_plugins&search=${encodeURIComponent(q)}&per_page=10`;
+        const response = await fetch(apiUrl, {
+          headers: { "User-Agent": USER_AGENTS[Math.floor(Math.random() * USER_AGENTS.length)] },
+        });
+        if (!response.ok) {
+          throw new Error(`WordPress API returned ${response.status}`);
+        }
+        const data = await response.json() as { info: { results: number }; plugins: any[] };
+        const wpApps: SearchApp[] = (data.plugins || []).map((p: any, idx: number) => ({
+          position: idx + 1,
+          app_slug: p.slug || "",
+          app_name: (p.name || "").replace(/<[^>]*>/g, ""),
+          short_description: (p.short_description || "").replace(/<[^>]*>/g, ""),
+          average_rating: typeof p.rating === "number" ? p.rating / 20 : 0,
+          rating_count: p.num_ratings ?? 0,
+          logo_url: p.icons?.["2x"] || p.icons?.["1x"] || undefined,
+          is_sponsored: false,
+          is_built_in: false,
+          is_built_for_shopify: false,
+        }));
+        request.log.info({ platform, keyword: q, source: "api", apps: wpApps.length, ms: Date.now() - start }, "live-search completed via WordPress API");
+        return { keyword: q, totalResults: data.info?.results ?? wpApps.length, apps: wpApps };
+      } catch (err: any) {
+        request.log.error({ platform, keyword: q, error: err.message, ms: Date.now() - start }, "live-search failed");
+        return reply.code(502).send({ error: `Failed to fetch from WordPress: ${err.message}` });
+      }
+    }
+
     // Default: Shopify
     const url = `https://apps.shopify.com/search?q=${encodeURIComponent(q)}&st_source=autocomplete&page=1`;
     const ua = USER_AGENTS[Math.floor(Math.random() * USER_AGENTS.length)];

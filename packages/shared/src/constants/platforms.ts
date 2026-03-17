@@ -59,6 +59,21 @@ export const PLATFORMS = {
     hasLaunchedDate: false,
     pageSize: 50,
   },
+  wordpress: {
+    id: "wordpress" as const,
+    name: "WordPress Plugin Directory",
+    baseUrl: "https://wordpress.org/plugins",
+    hasKeywordSearch: true,
+    hasReviews: true,
+    hasFeaturedSections: true,
+    hasAdTracking: false,
+    hasSimilarApps: false,
+    hasAutoSuggestions: false,
+    hasFeatureTaxonomy: false,
+    hasPricing: false,
+    hasLaunchedDate: true,
+    pageSize: 250,
+  },
 } as const;
 
 export type PlatformId = keyof typeof PLATFORMS;
@@ -89,6 +104,8 @@ export function buildExternalAppUrl(platform: PlatformId, slug: string): string 
       return `https://www.canva.com/apps/${slug.replace("--", "/")}`;
     case "wix":
       return `https://www.wix.com/app-market/web-solution/${slug}`;
+    case "wordpress":
+      return `https://wordpress.org/plugins/${slug}/`;
   }
 }
 
@@ -106,5 +123,11 @@ export function buildExternalCategoryUrl(platform: PlatformId, slug: string): st
     }
     case "wix":
       return `https://www.wix.com/app-market/category/${slug.replace("--", "/")}`;
+    case "wordpress":
+      if (slug.startsWith("_browse_")) {
+        const browseType = slug.slice("_browse_".length);
+        return `https://wordpress.org/plugins/browse/${browseType}/`;
+      }
+      return `https://wordpress.org/plugins/tags/${slug}/`;
   }
 }

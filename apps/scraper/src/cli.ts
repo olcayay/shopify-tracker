@@ -20,7 +20,7 @@ if (platformArgIdx !== -1 && process.argv[platformArgIdx + 1]) {
   if (isPlatformId(val)) {
     platformArg = val;
   } else {
-    console.error(`Unknown platform: ${val}. Valid: shopify, salesforce, canva`);
+    console.error(`Unknown platform: ${val}. Valid: shopify, salesforce, canva, wix, wordpress`);
     process.exit(1);
   }
   // Remove --platform and its value from argv so they don't interfere with positional args
@@ -160,7 +160,7 @@ async function main() {
         console.error("Usage: tsx src/cli.ts reviews <app-slug>");
         process.exit(1);
       }
-      const scraper = new ReviewScraper(db, httpClient);
+      const scraper = new ReviewScraper(db, httpClient, platformArg, platformModule);
       const runId = await createRun("reviews");
       try {
         const count = await scraper.scrapeAppReviews(slug, runId);
@@ -174,7 +174,7 @@ async function main() {
     }
 
     case "reviews-tracked": {
-      const scraper = new ReviewScraper(db, httpClient);
+      const scraper = new ReviewScraper(db, httpClient, platformArg, platformModule);
       await scraper.scrapeTracked();
       break;
     }

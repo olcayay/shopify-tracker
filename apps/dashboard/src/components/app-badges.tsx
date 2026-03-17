@@ -35,6 +35,18 @@ const BADGE_CONFIG: Record<string, Record<string, { icon: string; label: string;
     },
   },
   wix: {},
+  wordpress: {
+    community: {
+      icon: "🌐",
+      label: "Open Source",
+      className: "text-green-600",
+    },
+    commercial: {
+      icon: "💼",
+      label: "Commercial",
+      className: "text-blue-600",
+    },
+  },
 };
 
 interface AppBadgesProps {
