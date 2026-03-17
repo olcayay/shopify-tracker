@@ -463,6 +463,27 @@
       "when": 1774310400000,
       "tag": "0065_seed_wix_visibility",
       "breakpoints": true
+    },
+    {
+      "idx": 66,
+      "version": "7",
+      "when": 1774396800000,
+      "tag": "0066_seed_wordpress_platform",
+      "breakpoints": true
+    },
+    {
+      "idx": 67,
+      "version": "7",
+      "when": 1774483200000,
+      "tag": "0067_seed_wordpress_categories",
+      "breakpoints": true
+    },
+    {
+      "idx": 68,
+      "version": "7",
+      "when": 1774569600000,
+      "tag": "0068_add_app_metadata_columns",
+      "breakpoints": true
     }
   ]
 }
