@@ -182,12 +182,14 @@ export function RankingChart({ data, pageSize = 24 }: { data: RankingData[]; pag
                   <td className="text-right px-3 py-2 font-semibold">
                     {stat.dropped ? (
                       <span className="text-red-500 font-normal text-xs">Dropped</span>
+                    ) : stat.position === 0 ? (
+                      <span className="text-muted-foreground font-normal text-xs">Linked</span>
                     ) : (
                       `#${stat.position}`
                     )}
                   </td>
                   <td className="text-right px-3 py-2 text-muted-foreground">
-                    {stat.position != null && !stat.dropped
+                    {stat.position != null && stat.position > 0 && !stat.dropped
                       ? `p${Math.ceil(stat.position / pageSize)}`
                       : "\u2014"}
                   </td>

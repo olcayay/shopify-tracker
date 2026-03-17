@@ -857,7 +857,8 @@ export const appRoutes: FastifyPluginAsync = async (app) => {
             eq(appCategoryRankings.appId, appRow.id),
             sql`${appCategoryRankings.scrapedAt} >= ${sinceStr}`,
             eq(categories.isListingPage, true),
-            sql`${appCategoryRankings.position} > 0`
+            // Position 0 = linked but unranked (WordPress tags); include them
+            sql`${appCategoryRankings.position} >= 0`
           )
         )
         .orderBy(appCategoryRankings.scrapedAt);

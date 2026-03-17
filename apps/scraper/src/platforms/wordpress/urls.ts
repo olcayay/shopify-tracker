@@ -37,7 +37,7 @@ export const wordpressUrls = {
 
   /** Full plugin details via API */
   apiPlugin: (slug: string) =>
-    `${API_BASE}?action=plugin_information&slug=${encodeURIComponent(slug)}`,
+    `${API_BASE}?action=plugin_information&slug=${encodeURIComponent(slug)}&fields=icons`,
 
   /** Resolve a category slug to the correct API URL.
    *  `_browse_popular` → apiBrowse("popular"), regular slugs → apiTag(slug) */

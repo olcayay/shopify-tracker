@@ -70,7 +70,7 @@ function computeRankingChanges(
 ): { slug: string; label: string; position: number; prevPosition: number | null; delta: number }[] {
   const grouped = new Map<string, any[]>();
   for (const r of rankings) {
-    if (r.position == null || r.position <= 0) continue;
+    if (r.position == null || r.position < 0) continue;
     const key = r[slugKey];
     if (!grouped.has(key)) grouped.set(key, []);
     grouped.get(key)!.push(r);
@@ -545,7 +545,7 @@ export default async function AppOverviewPage({
                           )}
                         </span>
                         <div className="flex items-center gap-1.5 shrink-0 ml-2">
-                          <Badge variant="secondary">#{cat.position}</Badge>
+                          <Badge variant="secondary">{cat.position > 0 ? `#${cat.position}` : "Linked"}</Badge>
                           {cat.delta > 0 ? (
                             <ArrowUpRight className="h-3.5 w-3.5 text-green-600 dark:text-green-400" />
                           ) : cat.delta < 0 ? (

@@ -173,3 +173,5 @@ Wix App Market integration — full platform module, parsers, scraper, dashboard
 WordPress entry point testing & tag strategy expansion (40 tags + 3 browse sections) ✅
 
 WordPress first-class metadata columns (version, activeInstalls, lastUpdated) + Plugin Info card + formatted description ✅
+
+WordPress tag rankings visibility + icon fix (position >= 0 filter, "Linked" label, &fields=icons for API) ✅

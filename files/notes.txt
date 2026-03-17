@@ -1,3 +1,16 @@
+WordPress Tag Rankings & Icon Fix
+====================================
+
+Fixed WordPress tag rankings not showing on dashboard:
+- API filter changed position > 0 → position >= 0 (WordPress tags use position 0 = linked)
+- Dashboard ranking-chart and overview badge show "Linked" label for position 0
+- computeRankingChanges filter changed position <= 0 → position < 0
+
+Fixed WordPress app icons not loading:
+- WordPress Plugin API doesn't return `icons` by default for plugin_information endpoint
+- Added &fields=icons to apiPlugin URL in urls.ts
+- Parser already handled icon extraction (pickIconUrl) — just needed the data
+
 WordPress First-Class Metadata Columns & Plugin Info Card
 ==========================================================
 
