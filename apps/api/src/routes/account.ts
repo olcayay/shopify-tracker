@@ -597,6 +597,7 @@ export const accountRoutes: FastifyPluginAsync = async (app) => {
     async (request, reply) => {
       const { accountId } = request.user;
       const { slug } = request.body as { slug?: string };
+      const platform = getPlatformFromQuery(request.query as Record<string, unknown>);
 
       if (!slug) {
         return reply.code(400).send({ error: "slug is required" });
@@ -625,7 +626,7 @@ export const accountRoutes: FastifyPluginAsync = async (app) => {
       const [existingApp] = await db
         .select({ id: apps.id, slug: apps.slug, platform: apps.platform })
         .from(apps)
-        .where(eq(apps.slug, slug))
+        .where(and(eq(apps.slug, slug), eq(apps.platform, platform)))
         .limit(1);
 
       if (!existingApp) {
@@ -664,12 +665,13 @@ export const accountRoutes: FastifyPluginAsync = async (app) => {
     async (request, reply) => {
       const { accountId } = request.user;
       const slug = decodeURIComponent(request.params.slug);
+      const platform = getPlatformFromQuery(request.query as Record<string, unknown>);
 
       // Look up app ID from slug
       const [appRow] = await db
         .select({ id: apps.id })
         .from(apps)
-        .where(eq(apps.slug, slug))
+        .where(and(eq(apps.slug, slug), eq(apps.platform, platform)))
         .limit(1);
 
       if (!appRow) {

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useParams } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
 import { Button } from "@/components/ui/button";
 import { Plus, Check } from "lucide-react";
@@ -15,6 +16,7 @@ export function TrackAppButton({
   appName: string;
   initialTracked: boolean;
 }) {
+  const { platform } = useParams();
   const { fetchWithAuth, user, refreshUser } = useAuth();
   const [tracked, setTracked] = useState(initialTracked);
   const [loading, setLoading] = useState(false);
@@ -25,7 +27,7 @@ export function TrackAppButton({
 
   async function doTrack() {
     setLoading(true);
-    const res = await fetchWithAuth("/api/account/tracked-apps", {
+    const res = await fetchWithAuth(`/api/account/tracked-apps?platform=${platform}`, {
       method: "POST",
       body: JSON.stringify({ slug: appSlug }),
     });
@@ -39,7 +41,7 @@ export function TrackAppButton({
   async function doUntrack() {
     setLoading(true);
     const res = await fetchWithAuth(
-      `/api/account/tracked-apps/${encodeURIComponent(appSlug)}`,
+      `/api/account/tracked-apps/${encodeURIComponent(appSlug)}?platform=${platform}`,
       { method: "DELETE" }
     );
     if (res.ok) {

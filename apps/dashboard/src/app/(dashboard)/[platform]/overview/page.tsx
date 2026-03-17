@@ -221,7 +221,7 @@ export default function OverviewPage() {
 
   async function trackApp(slug: string, name: string) {
     setMessage("");
-    const res = await fetchWithAuth("/api/account/tracked-apps", {
+    const res = await fetchWithAuth(`/api/account/tracked-apps?platform=${platform}`, {
       method: "POST",
       body: JSON.stringify({ slug }),
     });

@@ -125,7 +125,7 @@ export default function AppsPage() {
 
   async function trackApp(slug: string, name: string) {
     setMessage("");
-    const res = await fetchWithAuth("/api/account/tracked-apps", {
+    const res = await fetchWithAuth(`/api/account/tracked-apps?platform=${platform}`, {
       method: "POST",
       body: JSON.stringify({ slug }),
     });
@@ -145,7 +145,7 @@ export default function AppsPage() {
 
   async function untrackApp(slug: string, name: string) {
     setMessage("");
-    const res = await fetchWithAuth(`/api/account/tracked-apps/${slug}`, {
+    const res = await fetchWithAuth(`/api/account/tracked-apps/${slug}?platform=${platform}`, {
       method: "DELETE",
     });
     if (res.ok) {
