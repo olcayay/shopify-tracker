@@ -78,6 +78,7 @@ export {
   jaccard,
   tokenize,
   extractCategorySlugs,
+  extractCategorySlugsFromPlatformData,
   extractFeatureHandles,
   computeSimilarityBetween,
 } from "./similarity.js";

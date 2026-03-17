@@ -130,8 +130,13 @@ export function CompetitorsSection({ appSlug }: { appSlug: string }) {
       if (col.key === "ads" && !caps.hasAdTracking) return false;
       if (col.key === "launchedDate" && !caps.hasLaunchedDate) return false;
       return true;
+    }).map((col) => {
+      if (col.key === "catRank" && platform === "wordpress") {
+        return { ...col, label: "Tag Rank", tip: "Average tag ranking across all tags" };
+      }
+      return col;
     });
-  }, [caps]);
+  }, [caps, platform]);
 
   useEffect(() => {
     loadCompetitors();
@@ -575,7 +580,7 @@ export function CompetitorsSection({ appSlug }: { appSlug: string }) {
                 <Tooltip><TooltipTrigger asChild><span>Similar <SortIcon col="similar" /></span></TooltipTrigger><TooltipContent>Number of other apps that list this app as similar</TooltipContent></Tooltip>
               </TableHead>}
               {isCol("catRank") && <TableHead className="cursor-pointer select-none" onClick={() => toggleSort("catRank")}>
-                Category Rank <SortIcon col="catRank" />
+                {platform === "wordpress" ? "Tag" : "Category"} Rank <SortIcon col="catRank" />
               </TableHead>}
               {isCol("lastChange") && <TableHead className="cursor-pointer select-none" onClick={() => toggleSort("lastChange")}>
                 <Tooltip><TooltipTrigger asChild><span>Last Change <SortIcon col="lastChange" /></span></TooltipTrigger><TooltipContent>Date of the most recent detected change in app listing</TooltipContent></Tooltip>
@@ -721,7 +726,7 @@ export function CompetitorsSection({ appSlug }: { appSlug: string }) {
                       </TooltipTrigger>
                       <TooltipContent>
                         <div className="text-xs space-y-1">
-                          <div>Category: {(parseFloat(comp.similarityScore.category) * 100).toFixed(0)}%</div>
+                          <div>{platform === "wordpress" ? "Tags" : "Category"}: {(parseFloat(comp.similarityScore.category) * 100).toFixed(0)}%</div>
                           {caps.hasFeatureTaxonomy && <div>Features: {(parseFloat(comp.similarityScore.feature) * 100).toFixed(0)}%</div>}
                           <div>Keywords: {(parseFloat(comp.similarityScore.keyword) * 100).toFixed(0)}%</div>
                           <div>Text: {(parseFloat(comp.similarityScore.text) * 100).toFixed(0)}%</div>

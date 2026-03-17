@@ -2621,16 +2621,17 @@ export const accountRoutes: FastifyPluginAsync = async (app) => {
 
       // Also get latest snapshot for similarity computation
       const [trackedSnapshot] = await db
-        .select({ categories: appSnapshots.categories, appIntroduction: appSnapshots.appIntroduction })
+        .select({ categories: appSnapshots.categories, platformData: appSnapshots.platformData, appIntroduction: appSnapshots.appIntroduction })
         .from(appSnapshots)
         .where(eq(appSnapshots.appId, compSugAppRow.id))
         .orderBy(desc(appSnapshots.scrapedAt))
         .limit(1);
 
-      const { extractCategorySlugs, extractFeatureHandles, tokenize, computeSimilarityBetween } =
+      const { extractCategorySlugs, extractCategorySlugsFromPlatformData, extractFeatureHandles, tokenize, computeSimilarityBetween, getSimilarityStopWords } =
         await import("@appranks/shared");
 
       const trackedCategories = (trackedSnapshot?.categories as any[]) ?? [];
+      const trackedPlatformData = (trackedSnapshot?.platformData ?? {}) as Record<string, unknown>;
 
       // 3. Get existing competitors for this (account, trackedAppSlug) pair
       const existingComps = await db
@@ -2693,7 +2694,7 @@ export const accountRoutes: FastifyPluginAsync = async (app) => {
           .execute(
             sql`
             SELECT DISTINCT ON (s.app_id)
-              a.slug AS app_slug, s.categories, s.app_introduction
+              a.slug AS app_slug, s.categories, s.platform_data, s.app_introduction
             FROM app_snapshots s
             INNER JOIN apps a ON a.id = s.app_id
             WHERE a.slug IN (${slugList})
@@ -2709,6 +2710,7 @@ export const accountRoutes: FastifyPluginAsync = async (app) => {
                    pricing_hint, is_built_for_shopify
             FROM apps
             WHERE slug IN (${slugList})
+              AND platform = ${platform}
           `
           )
           .then((res: any) => (res as any).rows ?? res) as Promise<any[]>,
@@ -2742,6 +2744,7 @@ export const accountRoutes: FastifyPluginAsync = async (app) => {
 
       // 6. Prepare tracked app's similarity data
       const trackedAppInfo = appInfoMap.get(slug);
+      const stopWords = getSimilarityStopWords(platform);
       const trackedTextParts = [
         trackedAppInfo?.name ?? "",
         trackedAppInfo?.app_card_subtitle ?? "",
@@ -2749,10 +2752,12 @@ export const accountRoutes: FastifyPluginAsync = async (app) => {
       ].join(" ");
 
       const trackedData = {
-        categorySlugs: trackedCatSlugs,
-        featureHandles: extractFeatureHandles(trackedCategories),
+        categorySlugs: platform !== "shopify"
+          ? extractCategorySlugsFromPlatformData(trackedPlatformData, platform)
+          : trackedCatSlugs,
+        featureHandles: extractFeatureHandles(trackedCategories, platform),
         keywordIds: keywordMap.get(slug) ?? new Set<string>(),
-        textTokens: tokenize(trackedTextParts),
+        textTokens: tokenize(trackedTextParts, stopWords),
       };
 
       // 7. Check similarAppSightings for bonus signal
@@ -2793,9 +2798,15 @@ export const accountRoutes: FastifyPluginAsync = async (app) => {
         if (!info) continue;
 
         const cats = snap?.categories ?? [];
-        const candidateCatSlugsSet = cats.length > 0
-          ? extractCategorySlugs(cats)
-          : new Set(candidateCatRanks.get(candidateSlug)?.map((cr) => cr.categorySlug) ?? []);
+        const candidatePd = (snap?.platform_data ?? {}) as Record<string, unknown>;
+        let candidateCatSlugsSet: Set<string>;
+        if (platform !== "shopify" && snap) {
+          candidateCatSlugsSet = extractCategorySlugsFromPlatformData(candidatePd, platform);
+        } else if (cats.length > 0) {
+          candidateCatSlugsSet = extractCategorySlugs(cats);
+        } else {
+          candidateCatSlugsSet = new Set(candidateCatRanks.get(candidateSlug)?.map((cr) => cr.categorySlug) ?? []);
+        }
 
         const candidateTextParts = [
           info.name ?? "",
@@ -2805,12 +2816,12 @@ export const accountRoutes: FastifyPluginAsync = async (app) => {
 
         const candidateData = {
           categorySlugs: candidateCatSlugsSet,
-          featureHandles: snap ? extractFeatureHandles(cats) : new Set<string>(),
+          featureHandles: snap ? extractFeatureHandles(cats, platform) : new Set<string>(),
           keywordIds: keywordMap.get(candidateSlug) ?? new Set<string>(),
-          textTokens: tokenize(candidateTextParts),
+          textTokens: tokenize(candidateTextParts, stopWords),
         };
 
-        const similarity = computeSimilarityBetween(trackedData, candidateData);
+        const similarity = computeSimilarityBetween(trackedData, candidateData, platform);
 
         // Bonus for Shopify-listed similar apps (add 5% to overall, capped at 1)
         if (shopifySimilarSlugs.has(candidateSlug)) {

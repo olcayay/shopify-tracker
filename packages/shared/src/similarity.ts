@@ -144,6 +144,44 @@ export function extractFeatureHandles(categories: any[], platform?: string): Set
   return handles;
 }
 
+/**
+ * Extract category/tag slugs from platform_data JSONB.
+ * For non-Shopify platforms, tags/categories are stored in platform_data
+ * rather than in the snapshot categories array.
+ */
+export function extractCategorySlugsFromPlatformData(
+  platformData: Record<string, unknown>,
+  platform: string
+): Set<string> {
+  switch (platform) {
+    case "wordpress": {
+      const tags = platformData.tags as Record<string, string> | undefined;
+      if (!tags || typeof tags !== "object") return new Set();
+      return new Set(Object.keys(tags));
+    }
+    case "wix": {
+      const cats = platformData.categories as Array<{ slug?: string }> | undefined;
+      if (!Array.isArray(cats)) return new Set();
+      return new Set(cats.map((c) => c.slug).filter((s): s is string => !!s));
+    }
+    case "canva": {
+      const topics = platformData.topics as string[] | undefined;
+      if (!Array.isArray(topics)) return new Set();
+      return new Set(
+        topics
+          .filter((t) => t.startsWith("marketplace_topic."))
+          .map((t) => t.replace("marketplace_topic.", "").replace(/_/g, "-"))
+      );
+    }
+    case "salesforce": {
+      const cats = platformData.listingCategories as string[] | undefined;
+      return new Set(cats || []);
+    }
+    default:
+      return new Set();
+  }
+}
+
 /** Compute similarity between two apps given their pre-processed data */
 export function computeSimilarityBetween(
   appA: AppSimilarityData,

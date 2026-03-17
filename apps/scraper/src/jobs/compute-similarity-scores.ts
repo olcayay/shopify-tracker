@@ -3,11 +3,13 @@ import type { Database } from "@appranks/db";
 import { scrapeRuns, appSimilarityScores, accountCompetitorApps, apps } from "@appranks/db";
 import {
   createLogger,
-  SIMILARITY_WEIGHTS,
   jaccard,
   tokenize,
   extractCategorySlugs,
+  extractCategorySlugsFromPlatformData,
   extractFeatureHandles,
+  getSimilarityWeights,
+  getSimilarityStopWords,
   type PlatformId,
 } from "@appranks/shared";
 
@@ -63,12 +65,12 @@ export async function computeSimilarityScores(db: Database, triggeredBy: string,
     const idArray = [...allAppIds];
     const idList = sql.join(idArray.map((id) => sql`${id}`), sql`, `);
 
-    // Batch-fetch latest snapshots (categories + appIntroduction)
+    // Batch-fetch latest snapshots (categories + platformData + appIntroduction)
     const snapshotRows: any[] = await db
       .execute(
         sql`
       SELECT DISTINCT ON (app_id)
-        app_id, categories, app_introduction
+        app_id, categories, platform_data, app_introduction
       FROM app_snapshots
       WHERE app_id IN (${idList})
       ORDER BY app_id, scraped_at DESC
@@ -118,17 +120,24 @@ export async function computeSimilarityScores(db: Database, triggeredBy: string,
     const categorySlugMap = new Map<number, Set<string>>();
     const featureHandleMap = new Map<number, Set<string>>();
     const tokenMap = new Map<number, Set<string>>();
+    const stopWords = getSimilarityStopWords(platform);
 
     for (const appId of idArray) {
       const snap = snapshotMap.get(appId);
       const info = appInfoMap.get(appId);
       const cats = snap?.categories ?? [];
+      const pd = (snap?.platform_data ?? {}) as Record<string, unknown>;
 
-      categorySlugMap.set(appId, extractCategorySlugs(cats));
-      featureHandleMap.set(appId, extractFeatureHandles(cats));
+      // For non-Shopify platforms, extract category/tag slugs from platform_data
+      if (platform !== "shopify") {
+        categorySlugMap.set(appId, extractCategorySlugsFromPlatformData(pd, platform));
+      } else {
+        categorySlugMap.set(appId, extractCategorySlugs(cats));
+      }
+      featureHandleMap.set(appId, extractFeatureHandles(cats, platform));
 
       const textParts = [info?.name ?? "", info?.subtitle ?? "", snap?.app_introduction ?? ""].join(" ");
-      tokenMap.set(appId, tokenize(textParts));
+      tokenMap.set(appId, tokenize(textParts, stopWords));
     }
 
     // Compute similarity for each pair
@@ -152,7 +161,8 @@ export async function computeSimilarityScores(db: Database, triggeredBy: string,
       const kwScore = jaccard(keywordMap.get(idA) ?? new Set(), keywordMap.get(idB) ?? new Set());
       const txtScore = jaccard(tokenMap.get(idA) ?? new Set(), tokenMap.get(idB) ?? new Set());
 
-      const overall = SIMILARITY_WEIGHTS.category * catScore + SIMILARITY_WEIGHTS.feature * featScore + SIMILARITY_WEIGHTS.keyword * kwScore + SIMILARITY_WEIGHTS.text * txtScore;
+      const weights = getSimilarityWeights(platform);
+      const overall = weights.category * catScore + weights.feature * featScore + weights.keyword * kwScore + weights.text * txtScore;
 
       await db
         .insert(appSimilarityScores)

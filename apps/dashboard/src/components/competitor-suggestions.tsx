@@ -319,7 +319,7 @@ export function CompetitorSuggestions({
                       </TooltipTrigger>
                       <TooltipContent>
                         <div className="text-xs space-y-1">
-                          <div>Category: {(s.similarity.category * 100).toFixed(0)}%</div>
+                          <div>{platform === "wordpress" ? "Tags" : "Category"}: {(s.similarity.category * 100).toFixed(0)}%</div>
                           {caps.hasFeatureTaxonomy && <div>Features: {(s.similarity.feature * 100).toFixed(0)}%</div>}
                           <div>Keywords: {(s.similarity.keyword * 100).toFixed(0)}%</div>
                           <div>Text: {(s.similarity.text * 100).toFixed(0)}%</div>
@@ -357,10 +357,25 @@ export function CompetitorSuggestions({
           {data && data.suggestions.length > 0 && (
             <div className="px-3 py-1.5 border-t bg-muted/30 text-[10px] text-muted-foreground flex items-center gap-2 flex-wrap">
               <span className="font-medium">Similarity weights:</span>
-              <span>Category(25%)</span>
-              <span>Features(25%)</span>
-              <span>Keywords(25%)</span>
-              <span>Text(25%)</span>
+              {platform === "shopify" ? (
+                <>
+                  <span>Category(25%)</span>
+                  <span>Features(25%)</span>
+                  <span>Keywords(25%)</span>
+                  <span>Text(25%)</span>
+                </>
+              ) : platform === "canva" ? (
+                <>
+                  <span>Category(50%)</span>
+                  <span>Text(50%)</span>
+                </>
+              ) : (
+                <>
+                  <span>{platform === "wordpress" ? "Tags" : "Category"}(35%)</span>
+                  <span>Keywords(30%)</span>
+                  <span>Text(35%)</span>
+                </>
+              )}
             </div>
           )}
         </div>
