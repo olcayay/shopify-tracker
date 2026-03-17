@@ -546,7 +546,7 @@ export class AppDetailsScraper {
         }
       }
 
-      // WordPress: discover new tags from plugin metadata and upsert as categories
+      // WordPress: discover new tags from plugin metadata, upsert as categories, and link app to each tag
       if (this.platform === "wordpress" && this.platformModule?.extractCategorySlugs) {
         const pd = (("_platformData" in details ? (details as any)._platformData : undefined) ?? {}) as Record<string, unknown>;
         const tagSlugs = this.platformModule.extractCategorySlugs(pd);
@@ -569,6 +569,17 @@ export class AppDetailsScraper {
               })
               .onConflictDoNothing({ target: [categories.platform, categories.slug] });
             if ((result as any).rowCount > 0) newTags++;
+
+            // Link app to this tag via category rankings
+            await this.db
+              .insert(appCategoryRankings)
+              .values({
+                appId,
+                categorySlug: tagSlug,
+                scrapeRunId: runId!,
+                scrapedAt: new Date(),
+                position: 0,
+              });
           }
           if (newTags > 0) {
             log.info("discovered new WordPress tags", { slug, newTags, totalTags: tagSlugs.length });
