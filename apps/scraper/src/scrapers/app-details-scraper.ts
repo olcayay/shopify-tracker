@@ -474,6 +474,36 @@ export class AppDetailsScraper {
         }
       }
 
+      // WordPress: discover new tags from plugin metadata and upsert as categories
+      if (this.platform === "wordpress" && this.platformModule?.extractCategorySlugs) {
+        const pd = (("_platformData" in details ? (details as any)._platformData : undefined) ?? {}) as Record<string, unknown>;
+        const tagSlugs = this.platformModule.extractCategorySlugs(pd);
+        const tags = (pd.tags || {}) as Record<string, string>;
+        if (tagSlugs.length > 0) {
+          let newTags = 0;
+          for (const tagSlug of tagSlugs) {
+            const tagTitle = tags[tagSlug] || tagSlug.replace(/-/g, " ");
+            const result = await this.db
+              .insert(categories)
+              .values({
+                platform: "wordpress",
+                slug: tagSlug,
+                title: tagTitle.charAt(0).toUpperCase() + tagTitle.slice(1),
+                url: `https://wordpress.org/plugins/tags/${tagSlug}/`,
+                parentSlug: null,
+                categoryLevel: 0,
+                isTracked: false,
+                isListingPage: true,
+              })
+              .onConflictDoNothing({ target: [categories.platform, categories.slug] });
+            if ((result as any).rowCount > 0) newTags++;
+          }
+          if (newTags > 0) {
+            log.info("discovered new WordPress tags", { slug, newTags, totalTags: tagSlugs.length });
+          }
+        }
+      }
+
       // Record similar apps ("More apps like this") - Shopify only
       const similarApps = this.isShopify ? parseSimilarApps(html) : [];
       if (similarApps.length > 0) {
