@@ -1,3 +1,15 @@
+WordPress First-Class Metadata Columns & Plugin Info Card
+==========================================================
+
+Added 3 new columns to apps table: current_version, active_installs, last_updated_at.
+These are platform-agnostic nullable columns populated during app detail scraping.
+
+Migration 0068: DDL + backfill from platform_data JSONB for existing WordPress apps.
+Scraper: extracts version/installs/lastUpdated from WordPress API, detects version changes.
+Dashboard: Plugin Info card on details tab (full-width grid with colored icons),
+formatted HTML description from platformData, removed Web Search Content for WordPress.
+Also removed shortDescription references (WordPress API returns empty short_description).
+
 WordPress Entry Point Testing & Tag Strategy Expansion
 ======================================================
 

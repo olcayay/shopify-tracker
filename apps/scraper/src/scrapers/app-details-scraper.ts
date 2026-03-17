@@ -43,6 +43,29 @@ function stripHtmlTags(html: string): string {
     .trim();
 }
 
+/**
+ * Parse WordPress "last updated" date strings like "2024-11-03 3:14pm GMT"
+ * into a proper Date object. Returns null if parsing fails.
+ */
+function parseWordPressDate(dateStr: string): Date | null {
+  try {
+    // WordPress format: "2024-11-03 3:14pm GMT" or "2025-01-15 10:00am GMT"
+    const match = dateStr.match(/^(\d{4}-\d{2}-\d{2})\s+(\d{1,2}):(\d{2})(am|pm)\s+(\w+)$/i);
+    if (match) {
+      const [, datePart, hourStr, minStr, ampm] = match;
+      let hour = parseInt(hourStr, 10);
+      if (ampm.toLowerCase() === "pm" && hour !== 12) hour += 12;
+      if (ampm.toLowerCase() === "am" && hour === 12) hour = 0;
+      return new Date(`${datePart}T${String(hour).padStart(2, "0")}:${minStr}:00Z`);
+    }
+    // Fallback: try native Date parsing
+    const d = new Date(dateStr);
+    return isNaN(d.getTime()) ? null : d;
+  } catch {
+    return null;
+  }
+}
+
 export class AppDetailsScraper {
   private db: Database;
   private httpClient: HttpClient;
@@ -242,16 +265,16 @@ export class AppDetailsScraper {
               app_introduction: this.platform === "wix"
                 ? (pd.tagline as string) || ""
                 : this.platform === "wordpress"
-                  ? (pd.shortDescription as string) || stripHtmlTags((pd.description as string) || "").slice(0, 500)
+                  ? ""
                   : (pd.description as string) || "",
               app_details: this.platform === "wix"
                 ? (pd.description as string) || ""
                 : this.platform === "wordpress"
                   ? stripHtmlTags((pd.description as string) || "")
                   : (pd.fullDescription as string) || "",
-              seo_title: normalized.name,
+              seo_title: this.platform === "wordpress" ? "" : normalized.name,
               seo_meta_description: this.platform === "wordpress"
-                ? (pd.shortDescription as string) || stripHtmlTags((pd.description as string) || "").slice(0, 160)
+                ? ""
                 : (pd.tagline as string) || (pd.description as string) || "",
               features: this.platform === "wix"
                 ? (pd.benefits as string[]) || []
@@ -290,6 +313,12 @@ export class AppDetailsScraper {
                 ? { email: (pd.publisher as any)?.email || null, portal_url: normalized.developer.website, phone: null } as import("@appranks/shared").AppSupport
                 : null as import("@appranks/shared").AppSupport | null,
               _platformData: pd,
+              // First-class metadata columns (WordPress)
+              _currentVersion: this.platform === "wordpress" ? (pd.version as string) || null : null,
+              _activeInstalls: this.platform === "wordpress" ? (pd.activeInstalls as number) || null : null,
+              _lastUpdatedAt: this.platform === "wordpress" && pd.lastUpdated
+                ? parseWordPressDate(pd.lastUpdated as string)
+                : null,
             };
           })()
         : parseAppPage(html, slug);
@@ -298,12 +327,18 @@ export class AppDetailsScraper {
       const changes: { field: string; oldValue: string | null; newValue: string | null }[] = [];
 
       const [currentApp] = await this.db
-        .select({ name: apps.name })
+        .select({ name: apps.name, currentVersion: apps.currentVersion })
         .from(apps)
         .where(and(eq(apps.slug, slug), eq(apps.platform, this.platform)));
 
       if (currentApp && currentApp.name !== details.app_name) {
         changes.push({ field: "name", oldValue: currentApp.name, newValue: details.app_name });
+      }
+
+      // Version change detection (WordPress and other platforms with _currentVersion)
+      const newVersion = ("_currentVersion" in details ? (details as any)._currentVersion : null) as string | null;
+      if (currentApp && newVersion && currentApp.currentVersion && currentApp.currentVersion !== newVersion) {
+        changes.push({ field: "currentVersion", oldValue: currentApp.currentVersion, newValue: newVersion });
       }
 
       // Get previous snapshot by app ID if we have one
@@ -361,6 +396,11 @@ export class AppDetailsScraper {
         }
       }
 
+      // Extract first-class metadata columns if present
+      const metaVersion = ("_currentVersion" in details ? (details as any)._currentVersion : null) as string | null;
+      const metaInstalls = ("_activeInstalls" in details ? (details as any)._activeInstalls : null) as number | null;
+      const metaLastUpdated = ("_lastUpdatedAt" in details ? (details as any)._lastUpdatedAt : null) as Date | null;
+
       // Upsert app master record
       const [upsertedApp] = await this.db
         .insert(apps)
@@ -371,6 +411,9 @@ export class AppDetailsScraper {
           isTracked: true,
           launchedDate: details.launched_date,
           iconUrl: details.icon_url,
+          ...(metaVersion != null && { currentVersion: metaVersion }),
+          ...(metaInstalls != null && { activeInstalls: metaInstalls }),
+          ...(metaLastUpdated != null && { lastUpdatedAt: metaLastUpdated }),
         })
         .onConflictDoUpdate({
           target: [apps.platform, apps.slug],
@@ -379,6 +422,9 @@ export class AppDetailsScraper {
             launchedDate: details.launched_date,
             iconUrl: details.icon_url,
             updatedAt: new Date(),
+            ...(metaVersion != null && { currentVersion: metaVersion }),
+            ...(metaInstalls != null && { activeInstalls: metaInstalls }),
+            ...(metaLastUpdated != null && { lastUpdatedAt: metaLastUpdated }),
           },
         })
         .returning({ id: apps.id });

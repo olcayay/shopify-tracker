@@ -39,6 +39,9 @@ export const apps = pgTable(
     pricingHint: text("pricing_hint"),
     createdAt: timestamp("created_at").notNull().defaultNow(),
     updatedAt: timestamp("updated_at").notNull().defaultNow(),
+    currentVersion: varchar("current_version", { length: 50 }),
+    activeInstalls: integer("active_installs"),
+    lastUpdatedAt: timestamp("last_updated_at"),
   },
   (table) => [
     uniqueIndex("idx_apps_platform_slug").on(table.platform, table.slug),

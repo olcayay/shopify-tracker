@@ -864,7 +864,7 @@ export default async function AppOverviewPage({
         </CardContent>
       </Card>
 
-      {/* Card 7: Visibility & Discovery */}
+      {/* Card 8: Visibility & Discovery */}
       <Card className="h-full">
         <CardHeader className="flex flex-row items-center justify-between pb-2">
           <CardTitle className="text-sm font-medium flex items-center gap-2">

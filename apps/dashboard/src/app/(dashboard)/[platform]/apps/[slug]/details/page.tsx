@@ -3,6 +3,7 @@ import { getApp } from "@/lib/api";
 import type { PlatformId } from "@appranks/shared";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Package, Download, Clock, Code, Globe, FileCode } from "lucide-react";
 
 export default async function DetailsPage({
   params,
@@ -25,16 +26,19 @@ export default async function DetailsPage({
 
   const pd = snapshot.platformData as Record<string, any> | undefined;
   const isSalesforce = platform === "salesforce";
+  const isCanva = platform === "canva";
+  const isWix = platform === "wix";
+  const isWordPress = platform === "wordpress";
+
+  // WordPress: use raw HTML description from platformData for formatted rendering
+  const wpDescriptionHtml = isWordPress && pd?.description
+    ? (pd.description as string)
+    : null;
 
   // Salesforce-specific arrays from platformData
   const industries: string[] = isSalesforce ? pd?.supportedIndustries || [] : [];
   const businessNeeds: string[] = isSalesforce ? (Array.isArray(pd?.businessNeeds) ? pd.businessNeeds : []) : [];
   const productsRequired: string[] = isSalesforce ? pd?.productsRequired || [] : [];
-
-  // Canva-specific fields from platformData
-  const isCanva = platform === "canva";
-  const isWix = platform === "wix";
-  const isWordPress = platform === "wordpress";
   const canvaPermissions: { scope: string; type: string }[] = isCanva ? pd?.permissions || [] : [];
 
   // Wix-specific fields from platformData
@@ -42,13 +46,94 @@ export default async function DetailsPage({
   const wixLanguages: string[] = isWix ? pd?.languages || [] : [];
   const wixAvailability: boolean | null = isWix ? pd?.isAvailableWorldwide ?? null : null;
 
+  const formatInstalls = (n: number) => {
+    if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(n % 1_000_000 === 0 ? 0 : 1)}M+`;
+    if (n >= 1_000) return `${(n / 1_000).toFixed(n % 1_000 === 0 ? 0 : 1)}K+`;
+    return `${n}+`;
+  };
+
+  const hasPluginInfo = app.currentVersion || app.activeInstalls != null || app.lastUpdatedAt;
+  const wpRequires = isWordPress && (pd?.requiresWP || pd?.requiresPHP || pd?.testedUpTo);
+
   return (
     <div className="space-y-4">
-      {snapshot.appIntroduction && (
+      {/* Plugin Info — full-width stats grid */}
+      {hasPluginInfo && (() => {
+        const stats: { icon: React.ReactNode; label: string; value: React.ReactNode; bg: string }[] = [];
+        if (app.currentVersion) stats.push({
+          icon: <Code className="h-5 w-5 text-blue-600 dark:text-blue-400" />,
+          bg: "bg-blue-50 dark:bg-blue-950/40",
+          label: "Version",
+          value: app.currentVersion,
+        });
+        if (app.activeInstalls != null) stats.push({
+          icon: <Download className="h-5 w-5 text-green-600 dark:text-green-400" />,
+          bg: "bg-green-50 dark:bg-green-950/40",
+          label: "Active Installs",
+          value: formatInstalls(app.activeInstalls),
+        });
+        if (app.lastUpdatedAt) stats.push({
+          icon: <Clock className="h-5 w-5 text-amber-600 dark:text-amber-400" />,
+          bg: "bg-amber-50 dark:bg-amber-950/40",
+          label: "Last Updated",
+          value: new Date(app.lastUpdatedAt).toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" }),
+        });
+        if (isWordPress && pd?.requiresWP) stats.push({
+          icon: <Globe className="h-5 w-5 text-indigo-600 dark:text-indigo-400" />,
+          bg: "bg-indigo-50 dark:bg-indigo-950/40",
+          label: "WordPress",
+          value: <>{pd.requiresWP}+{pd?.testedUpTo && <span className="text-xs font-normal text-muted-foreground ml-1">(tested {pd.testedUpTo})</span>}</>,
+        });
+        if (isWordPress && pd?.requiresPHP) stats.push({
+          icon: <FileCode className="h-5 w-5 text-purple-600 dark:text-purple-400" />,
+          bg: "bg-purple-50 dark:bg-purple-950/40",
+          label: "PHP",
+          value: `${pd.requiresPHP}+`,
+        });
+        return (
+          <Card>
+            <CardContent className="py-5">
+              <div className="grid gap-4" style={{ gridTemplateColumns: `repeat(${stats.length}, minmax(0, 1fr))` }}>
+                {stats.map((s, i) => (
+                  <div key={i} className="flex flex-col items-center text-center gap-1.5">
+                    <div className={`flex items-center justify-center h-10 w-10 rounded-xl ${s.bg}`}>
+                      {s.icon}
+                    </div>
+                    <p className="text-[11px] text-muted-foreground leading-tight">{s.label}</p>
+                    <p className="text-sm font-semibold leading-tight">{s.value}</p>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        );
+      })()}
+
+      {/* WordPress: single Description card with formatted HTML */}
+      {isWordPress && (wpDescriptionHtml || snapshot.appDetails) && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Description</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {wpDescriptionHtml ? (
+              <div
+                className="wp-description text-sm"
+                dangerouslySetInnerHTML={{ __html: wpDescriptionHtml }}
+              />
+            ) : (
+              <p className="text-sm whitespace-pre-line">{snapshot.appDetails}</p>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Non-WordPress: App Introduction / Short Description */}
+      {!isWordPress && snapshot.appIntroduction && (
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              {isCanva || isWix || isWordPress ? "Short Description" : "App Introduction"}
+              {isCanva || isWix ? "Short Description" : "App Introduction"}
               {isCanva && (
                 <Badge variant={snapshot.appIntroduction.length > 50 ? "destructive" : "outline"} className="text-xs font-normal">
                   {snapshot.appIntroduction.length}/50
@@ -62,11 +147,12 @@ export default async function DetailsPage({
         </Card>
       )}
 
-      {snapshot.appDetails && (
+      {/* Non-WordPress: App Details / Description */}
+      {!isWordPress && snapshot.appDetails && (
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              {isCanva || isWix || isWordPress ? "Description" : "App Details"}
+              {isCanva || isWix ? "Description" : "App Details"}
               {isCanva && (
                 <Badge variant={snapshot.appDetails.length > 200 ? "destructive" : "outline"} className="text-xs font-normal">
                   {snapshot.appDetails.length}/200
@@ -419,7 +505,7 @@ export default async function DetailsPage({
         </Card>
       )}
 
-      {!isCanva && (snapshot.seoTitle || snapshot.seoMetaDescription) && (
+      {!isCanva && !isWordPress && (snapshot.seoTitle || snapshot.seoMetaDescription) && (
         <Card>
           <CardHeader>
             <CardTitle>Web Search Content</CardTitle>
