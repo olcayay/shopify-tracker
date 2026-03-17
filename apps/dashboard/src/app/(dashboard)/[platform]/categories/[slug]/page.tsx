@@ -41,17 +41,40 @@ export default async function CategoryDetailPage({
     ]);
   } catch {
     return (
-      <div className="flex flex-col items-center justify-center py-16 text-center">
-        <h2 className="text-lg font-semibold mb-2">Category not indexed yet</h2>
-        <p className="text-muted-foreground mb-4">
-          This category hasn&apos;t been discovered by the crawler yet. It may appear after the next scrape cycle.
-        </p>
-        <Link
-          href={`/${platform}/categories`}
-          className="text-sm text-primary hover:underline"
-        >
-          Browse all categories
-        </Link>
+      <div className="space-y-6">
+        <div className="flex items-start justify-between">
+          <div>
+            <h1 className="text-2xl font-bold">{slug}</h1>
+          </div>
+          <div className="flex items-center gap-2 shrink-0">
+            <AdminScraperTrigger
+              scraperType="category"
+              slug={slug}
+              label="Scrape Category"
+            />
+            <a
+              href={buildExternalCategoryUrl(platform as PlatformId, slug)}
+              target="_blank"
+              rel="noopener noreferrer"
+              title={`View on ${getPlatformName(platform as PlatformId)}`}
+              className="inline-flex items-center justify-center h-9 w-9 rounded-md hover:bg-accent transition-colors"
+            >
+              <ExternalLink className="h-5 w-5 text-muted-foreground" />
+            </a>
+          </div>
+        </div>
+        <div className="flex flex-col items-center justify-center py-16 text-center">
+          <h2 className="text-lg font-semibold mb-2">Category not indexed yet</h2>
+          <p className="text-muted-foreground mb-4">
+            This category hasn&apos;t been discovered by the crawler yet. It may appear after the next scrape cycle.
+          </p>
+          <Link
+            href={`/${platform}/categories`}
+            className="text-sm text-primary hover:underline"
+          >
+            Browse all categories
+          </Link>
+        </div>
       </div>
     );
   }
