@@ -531,17 +531,34 @@ export class AppDetailsScraper {
             catSlug = resolved;
           }
 
-          // Link the app to this category via rankings
+          // Link the app to this category via rankings (position 0 = linked but unranked).
+          // Skip if the category scraper already recorded a real position today.
           if (!this.isShopify) {
-            await this.db
-              .insert(appCategoryRankings)
-              .values({
-                appId,
-                categorySlug: catSlug,
-                scrapeRunId: runId!,
-                scrapedAt: new Date(),
-                position: 0,
-              });
+            const todayStart = new Date();
+            todayStart.setHours(0, 0, 0, 0);
+            const [existing] = await this.db
+              .select({ position: appCategoryRankings.position })
+              .from(appCategoryRankings)
+              .where(
+                and(
+                  eq(appCategoryRankings.appId, appId),
+                  eq(appCategoryRankings.categorySlug, catSlug),
+                  sql`${appCategoryRankings.scrapedAt} >= ${todayStart.toISOString()}`,
+                  sql`${appCategoryRankings.position} > 0`
+                )
+              )
+              .limit(1);
+            if (!existing) {
+              await this.db
+                .insert(appCategoryRankings)
+                .values({
+                  appId,
+                  categorySlug: catSlug,
+                  scrapeRunId: runId!,
+                  scrapedAt: new Date(),
+                  position: 0,
+                });
+            }
           }
         }
       }
@@ -570,16 +587,33 @@ export class AppDetailsScraper {
               .onConflictDoNothing({ target: [categories.platform, categories.slug] });
             if ((result as any).rowCount > 0) newTags++;
 
-            // Link app to this tag via category rankings
-            await this.db
-              .insert(appCategoryRankings)
-              .values({
-                appId,
-                categorySlug: tagSlug,
-                scrapeRunId: runId!,
-                scrapedAt: new Date(),
-                position: 0,
-              });
+            // Link app to this tag via category rankings (position 0 = linked but unranked).
+            // Skip if the category scraper already recorded a real position today.
+            const todayStart = new Date();
+            todayStart.setHours(0, 0, 0, 0);
+            const [existingTagRanking] = await this.db
+              .select({ position: appCategoryRankings.position })
+              .from(appCategoryRankings)
+              .where(
+                and(
+                  eq(appCategoryRankings.appId, appId),
+                  eq(appCategoryRankings.categorySlug, tagSlug),
+                  sql`${appCategoryRankings.scrapedAt} >= ${todayStart.toISOString()}`,
+                  sql`${appCategoryRankings.position} > 0`
+                )
+              )
+              .limit(1);
+            if (!existingTagRanking) {
+              await this.db
+                .insert(appCategoryRankings)
+                .values({
+                  appId,
+                  categorySlug: tagSlug,
+                  scrapeRunId: runId!,
+                  scrapedAt: new Date(),
+                  position: 0,
+                });
+            }
           }
           if (newTags > 0) {
             log.info("discovered new WordPress tags", { slug, newTags, totalTags: tagSlugs.length });

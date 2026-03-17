@@ -11,7 +11,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { ExternalLink, Info } from "lucide-react";
+import { ExternalLink, Info, AppWindow as AppWindowIcon } from "lucide-react";
 import { StarCategoryButton } from "@/components/star-category-button";
 import { AdminScraperTrigger } from "@/components/admin-scraper-trigger";
 import { AdHeatmap } from "@/components/ad-heatmap";
@@ -279,6 +279,22 @@ export default async function CategoryDetailPage({
             This is not a listing category. The apps below are aggregated from child listing categories and their order does not represent Shopify rankings. By default, they are sorted by review count.
           </span>
         </div>
+      )}
+
+      {rankedApps.length === 0 && category.isListingPage && (
+        <Card>
+          <CardContent className="py-16">
+            <div className="flex flex-col items-center justify-center text-center">
+              <div className="rounded-full bg-muted p-4 mb-4">
+                <AppWindowIcon className="h-8 w-8 text-muted-foreground/40" />
+              </div>
+              <h3 className="text-sm font-medium mb-1">No plugins found yet</h3>
+              <p className="text-sm text-muted-foreground max-w-sm">
+                This {platform === "wordpress" ? "tag" : "category"} hasn&apos;t been scraped yet. Plugins will appear here after the next scrape cycle.
+              </p>
+            </div>
+          </CardContent>
+        </Card>
       )}
 
       {rankedApps.length > 0 && (

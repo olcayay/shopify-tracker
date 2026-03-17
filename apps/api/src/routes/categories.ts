@@ -192,7 +192,7 @@ export const categoryRoutes: FastifyPluginAsync = async (app) => {
     // Fall back to parentSlug if junction table has no results
     const childrenRaw = junctionChildren.length > 0
       ? junctionChildren
-      : await db.select().from(categories).where(eq(categories.parentSlug, slug));
+      : await db.select().from(categories).where(and(eq(categories.parentSlug, slug), eq(categories.platform, platform)));
 
     // Attach latest appCount to each child from snapshots
     const children = await Promise.all(
@@ -303,7 +303,8 @@ export const categoryRoutes: FastifyPluginAsync = async (app) => {
           .where(
             and(
               eq(appCategoryRankings.scrapeRunId, latestSnapshot.scrapeRunId),
-              eq(appCategoryRankings.categorySlug, slug)
+              eq(appCategoryRankings.categorySlug, slug),
+              eq(apps.platform, platform)
             )
           )
           .orderBy(asc(appCategoryRankings.position));
@@ -340,7 +341,7 @@ export const categoryRoutes: FastifyPluginAsync = async (app) => {
           })
           .from(appCategoryRankings)
           .innerJoin(apps, eq(apps.id, appCategoryRankings.appId))
-          .where(eq(appCategoryRankings.categorySlug, slug))
+          .where(and(eq(appCategoryRankings.categorySlug, slug), eq(apps.platform, platform)))
           .orderBy(appCategoryRankings.appId, desc(appCategoryRankings.scrapedAt));
 
         rankedApps = rankings.map((r) => ({
@@ -411,7 +412,7 @@ export const categoryRoutes: FastifyPluginAsync = async (app) => {
             const [descCatRow] = await db
               .select({ id: categories.id })
               .from(categories)
-              .where(eq(categories.slug, descCat.slug))
+              .where(and(eq(categories.slug, descCat.slug), eq(categories.platform, platform)))
               .limit(1);
 
             if (!descCatRow) continue;

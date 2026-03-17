@@ -163,11 +163,11 @@ export class CategoryScraper {
   async scrapeSingle(slug: string, triggeredBy?: string, pageOptions?: ScrapePageOptions, queue?: string): Promise<string[]> {
     log.info("scraping single category", { slug });
 
-    // Look up existing category info
+    // Look up existing category info (filter by platform to avoid cross-platform slug collisions)
     const [existing] = await this.db
       .select({ parentSlug: categories.parentSlug, categoryLevel: categories.categoryLevel })
       .from(categories)
-      .where(eq(categories.slug, slug))
+      .where(and(eq(categories.slug, slug), eq(categories.platform, this.platform)))
       .limit(1);
 
     const [run] = await this.db
