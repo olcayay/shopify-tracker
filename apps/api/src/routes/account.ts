@@ -912,10 +912,11 @@ export const accountRoutes: FastifyPluginAsync = async (app) => {
         eq(accountTrackedKeywords.keywordId, keywordId),
       ];
       if (trackedAppSlug) {
+        const platform = getPlatformFromQuery(request.query as Record<string, unknown>);
         const [appRow] = await db
           .select({ id: apps.id })
           .from(apps)
-          .where(eq(apps.slug, trackedAppSlug))
+          .where(and(eq(apps.slug, trackedAppSlug), eq(apps.platform, platform)))
           .limit(1);
         if (appRow) {
           whereConditions.push(
@@ -1331,11 +1332,13 @@ export const accountRoutes: FastifyPluginAsync = async (app) => {
           .send({ error: "trackedAppSlug is required" });
       }
 
+      const platform = getPlatformFromQuery(request.query as Record<string, unknown>);
+
       // Look up app IDs from slugs
       const [trackedAppRow] = await db
         .select({ id: apps.id })
         .from(apps)
-        .where(eq(apps.slug, trackedAppSlug))
+        .where(and(eq(apps.slug, trackedAppSlug), eq(apps.platform, platform)))
         .limit(1);
       if (!trackedAppRow) {
         return reply.code(404).send({ error: "Tracked app not found" });
@@ -1380,7 +1383,7 @@ export const accountRoutes: FastifyPluginAsync = async (app) => {
       const [existingApp] = await db
         .select({ id: apps.id, slug: apps.slug, platform: apps.platform })
         .from(apps)
-        .where(eq(apps.slug, slug))
+        .where(and(eq(apps.slug, slug), eq(apps.platform, platform)))
         .limit(1);
 
       if (!existingApp) {
@@ -1436,12 +1439,13 @@ export const accountRoutes: FastifyPluginAsync = async (app) => {
       const { trackedAppSlug } = request.query as {
         trackedAppSlug?: string;
       };
+      const platform = getPlatformFromQuery(request.query as Record<string, unknown>);
 
       // Look up competitor app ID from slug
       const [compAppRow] = await db
         .select({ id: apps.id })
         .from(apps)
-        .where(eq(apps.slug, slug))
+        .where(and(eq(apps.slug, slug), eq(apps.platform, platform)))
         .limit(1);
       if (!compAppRow) {
         return reply.code(404).send({ error: "Competitor not found" });
@@ -1455,7 +1459,7 @@ export const accountRoutes: FastifyPluginAsync = async (app) => {
         const [trackedAppRow] = await db
           .select({ id: apps.id })
           .from(apps)
-          .where(eq(apps.slug, trackedAppSlug))
+          .where(and(eq(apps.slug, trackedAppSlug), eq(apps.platform, platform)))
           .limit(1);
         if (trackedAppRow) {
           whereConditions.push(
@@ -1487,17 +1491,17 @@ export const accountRoutes: FastifyPluginAsync = async (app) => {
     async (request, reply) => {
       const { accountId } = request.user;
       const slug = decodeURIComponent(request.params.slug);
+      const platform = getPlatformFromQuery(request.query as Record<string, unknown>);
 
-      // Look up tracked app ID + platform from slug
+      // Look up tracked app ID from slug
       const [trackedAppRow] = await db
         .select({ id: apps.id, platform: apps.platform })
         .from(apps)
-        .where(eq(apps.slug, slug))
+        .where(and(eq(apps.slug, slug), eq(apps.platform, platform)))
         .limit(1);
       if (!trackedAppRow) {
         return reply.code(404).send({ error: "App not in your apps" });
       }
-      const platform = trackedAppRow.platform;
 
       // Verify tracked app belongs to this account
       const [trackedApp] = await db
@@ -1763,7 +1767,7 @@ export const accountRoutes: FastifyPluginAsync = async (app) => {
           const [visTrackedAppRow] = await db
             .select({ id: apps.id })
             .from(apps)
-            .where(eq(apps.slug, slug))
+            .where(and(eq(apps.slug, slug), eq(apps.platform, platform)))
             .limit(1);
           if (visTrackedAppRow) {
             const visRows = await db
@@ -1919,11 +1923,13 @@ export const accountRoutes: FastifyPluginAsync = async (app) => {
         return reply.code(400).send({ error: "slug is required" });
       }
 
+      const platform = getPlatformFromQuery(request.query as Record<string, unknown>);
+
       // Look up tracked app ID from slug
       const [trackedAppRow2] = await db
         .select({ id: apps.id })
         .from(apps)
-        .where(eq(apps.slug, trackedAppSlug))
+        .where(and(eq(apps.slug, trackedAppSlug), eq(apps.platform, platform)))
         .limit(1);
       if (!trackedAppRow2) {
         return reply.code(404).send({ error: "Tracked app not found" });
@@ -1968,7 +1974,7 @@ export const accountRoutes: FastifyPluginAsync = async (app) => {
       const [existingApp] = await db
         .select({ id: apps.id, slug: apps.slug, platform: apps.platform })
         .from(apps)
-        .where(eq(apps.slug, competitorSlug))
+        .where(and(eq(apps.slug, competitorSlug), eq(apps.platform, platform)))
         .limit(1);
 
       if (!existingApp) {
@@ -2028,17 +2034,18 @@ export const accountRoutes: FastifyPluginAsync = async (app) => {
       const competitorSlug = decodeURIComponent(
         request.params.competitorSlug
       );
+      const platform = getPlatformFromQuery(request.query as Record<string, unknown>);
 
       // Look up app IDs from slugs
       const [delTrackedAppRow] = await db
         .select({ id: apps.id })
         .from(apps)
-        .where(eq(apps.slug, trackedAppSlug))
+        .where(and(eq(apps.slug, trackedAppSlug), eq(apps.platform, platform)))
         .limit(1);
       const [delCompAppRow] = await db
         .select({ id: apps.id })
         .from(apps)
-        .where(eq(apps.slug, competitorSlug))
+        .where(and(eq(apps.slug, competitorSlug), eq(apps.platform, platform)))
         .limit(1);
 
       if (!delTrackedAppRow || !delCompAppRow) {
@@ -2079,11 +2086,13 @@ export const accountRoutes: FastifyPluginAsync = async (app) => {
         return reply.code(400).send({ error: "slugs array is required" });
       }
 
+      const platform = getPlatformFromQuery(request.query as Record<string, unknown>);
+
       // Look up tracked app ID from slug
       const [reorderTrackedAppRow] = await db
         .select({ id: apps.id })
         .from(apps)
-        .where(eq(apps.slug, trackedAppSlug))
+        .where(and(eq(apps.slug, trackedAppSlug), eq(apps.platform, platform)))
         .limit(1);
       if (!reorderTrackedAppRow) {
         return reply.code(404).send({ error: "Tracked app not found" });
@@ -2125,12 +2134,13 @@ export const accountRoutes: FastifyPluginAsync = async (app) => {
       const { accountId } = request.user;
       const slug = decodeURIComponent(request.params.slug);
       const { appSlugs: appSlugsParam } = request.query;
+      const platform = getPlatformFromQuery(request.query as Record<string, unknown>);
 
       // Look up tracked app ID from slug
       const [kwAppRow] = await db
         .select({ id: apps.id })
         .from(apps)
-        .where(eq(apps.slug, slug))
+        .where(and(eq(apps.slug, slug), eq(apps.platform, platform)))
         .limit(1);
       if (!kwAppRow) {
         return reply.code(404).send({ error: "App not found" });
@@ -2297,6 +2307,7 @@ export const accountRoutes: FastifyPluginAsync = async (app) => {
       const { accountId } = request.user;
       const trackedAppSlug = decodeURIComponent(request.params.slug);
       const { keyword } = request.body as { keyword?: string };
+      const platform = getPlatformFromQuery(request.query as Record<string, unknown>);
 
       if (!keyword) {
         return reply.code(400).send({ error: "keyword is required" });
@@ -2306,7 +2317,7 @@ export const accountRoutes: FastifyPluginAsync = async (app) => {
       const [postKwAppRow] = await db
         .select({ id: apps.id })
         .from(apps)
-        .where(eq(apps.slug, trackedAppSlug))
+        .where(and(eq(apps.slug, trackedAppSlug), eq(apps.platform, platform)))
         .limit(1);
       if (!postKwAppRow) {
         return reply.code(404).send({ error: "App not found" });
@@ -2348,7 +2359,6 @@ export const accountRoutes: FastifyPluginAsync = async (app) => {
       }
 
       // Ensure keyword exists in global table
-      const platform = getPlatformFromQuery(request.query as Record<string, unknown>);
       const kwSlug = keywordToSlug(keyword);
       const [kw] = await db
         .insert(trackedKeywords)
@@ -2406,12 +2416,13 @@ export const accountRoutes: FastifyPluginAsync = async (app) => {
       const { accountId } = request.user;
       const trackedAppSlug = decodeURIComponent(request.params.slug);
       const keywordId = parseInt(request.params.keywordId, 10);
+      const platform = getPlatformFromQuery(request.query as Record<string, unknown>);
 
       // Look up tracked app ID from slug
       const [delKwAppRow] = await db
         .select({ id: apps.id })
         .from(apps)
-        .where(eq(apps.slug, trackedAppSlug))
+        .where(and(eq(apps.slug, trackedAppSlug), eq(apps.platform, platform)))
         .limit(1);
 
       const deleteWhereConditions = [
@@ -2449,6 +2460,7 @@ export const accountRoutes: FastifyPluginAsync = async (app) => {
       };
       const isDebug = debug === "true";
       const maxResults = Math.min(parseInt(limitStr, 10) || 50, 200);
+      const platform = getPlatformFromQuery(request.query as Record<string, unknown>);
 
       // Look up app from slug
       const [appRow] = await db
@@ -2458,7 +2470,7 @@ export const accountRoutes: FastifyPluginAsync = async (app) => {
           subtitle: apps.appCardSubtitle,
         })
         .from(apps)
-        .where(eq(apps.slug, slug))
+        .where(and(eq(apps.slug, slug), eq(apps.platform, platform)))
         .limit(1);
 
       if (!appRow) {
@@ -2561,12 +2573,13 @@ export const accountRoutes: FastifyPluginAsync = async (app) => {
       const slug = decodeURIComponent(request.params.slug);
       const { limit: limitStr = "20" } = request.query as { limit?: string };
       const maxResults = Math.min(parseInt(limitStr, 10) || 20, 48);
+      const platform = getPlatformFromQuery(request.query as Record<string, unknown>);
 
       // 1. Verify tracked app belongs to account
       const [compSugAppRow] = await db
         .select({ id: apps.id })
         .from(apps)
-        .where(eq(apps.slug, slug))
+        .where(and(eq(apps.slug, slug), eq(apps.platform, platform)))
         .limit(1);
       if (!compSugAppRow) {
         return reply.code(404).send({ error: "App not found" });
