@@ -23,6 +23,26 @@ import { HttpClient } from "../http-client.js";
 import { parseAppPage, parseSimilarApps } from "../parsers/app-parser.js";
 import type { PlatformModule } from "../platforms/platform-module.js";
 
+/** Strip HTML tags and decode common entities, collapse whitespace */
+function stripHtmlTags(html: string): string {
+  return html
+    .replace(/<br\s*\/?>/gi, "\n")
+    .replace(/<\/p>/gi, "\n\n")
+    .replace(/<\/li>/gi, "\n")
+    .replace(/<[^>]*>/g, "")
+    .replace(/&#(\d+);/g, (_, code) => String.fromCharCode(Number(code)))
+    .replace(/&#x([0-9a-fA-F]+);/g, (_, hex) => String.fromCharCode(parseInt(hex, 16)))
+    .replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">")
+    .replace(/&quot;/g, '"').replace(/&apos;/g, "'").replace(/&nbsp;/g, " ")
+    .replace(/&ndash;/g, "\u2013").replace(/&mdash;/g, "\u2014")
+    .replace(/&lsquo;/g, "\u2018").replace(/&rsquo;/g, "\u2019")
+    .replace(/&ldquo;/g, "\u201C").replace(/&rdquo;/g, "\u201D")
+    .replace(/&hellip;/g, "\u2026")
+    .replace(/[ \t]+/g, " ")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+}
+
 export class AppDetailsScraper {
   private db: Database;
   private httpClient: HttpClient;
@@ -221,12 +241,18 @@ export class AppDetailsScraper {
               app_name: normalized.name,
               app_introduction: this.platform === "wix"
                 ? (pd.tagline as string) || ""
-                : (pd.description as string) || "",
+                : this.platform === "wordpress"
+                  ? (pd.shortDescription as string) || stripHtmlTags((pd.description as string) || "").slice(0, 500)
+                  : (pd.description as string) || "",
               app_details: this.platform === "wix"
                 ? (pd.description as string) || ""
-                : (pd.fullDescription as string) || "",
+                : this.platform === "wordpress"
+                  ? stripHtmlTags((pd.description as string) || "")
+                  : (pd.fullDescription as string) || "",
               seo_title: normalized.name,
-              seo_meta_description: (pd.tagline as string) || (pd.description as string) || "",
+              seo_meta_description: this.platform === "wordpress"
+                ? (pd.shortDescription as string) || stripHtmlTags((pd.description as string) || "").slice(0, 160)
+                : (pd.tagline as string) || (pd.description as string) || "",
               features: this.platform === "wix"
                 ? (pd.benefits as string[]) || []
                 : (pd.highlights as string[]) || [],
