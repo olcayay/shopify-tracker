@@ -27,6 +27,7 @@ import {
   Menu,
   BrainCircuit,
   Code,
+  Tag,
 } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
 import { PLATFORMS, type PlatformId } from "@appranks/shared";
@@ -61,7 +62,11 @@ function getNavItems(platformId: PlatformId, isAdmin?: boolean) {
   if (caps.hasKeywordSearch) {
     items.push({ href: `${p}/keywords`, label: "Keywords", icon: Search });
   }
-  items.push({ href: `${p}/categories`, label: "Categories", icon: FolderTree });
+  items.push({
+    href: `${p}/categories`,
+    label: platformId === "wordpress" ? "Tags" : "Categories",
+    icon: platformId === "wordpress" ? Tag : FolderTree,
+  });
   if (caps.hasFeaturedSections) {
     items.push({ href: `${p}/featured`, label: "Featured", icon: Sparkles });
   }

@@ -575,7 +575,7 @@ export class CategoryScraper {
             return true;
           });
 
-          await this.recordNormalizedAppRankings(newApps, slug, runId, 0);
+          await this.recordNormalizedAppRankings(newApps, slug, runId, totalOrganicRecorded);
           await this.recordNormalizedCategoryAdSightings(newApps, categoryId, runId);
           totalOrganicRecorded += newApps.filter(a => !a.isSponsored).length;
 

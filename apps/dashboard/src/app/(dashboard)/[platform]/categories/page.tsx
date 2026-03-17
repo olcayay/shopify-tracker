@@ -29,6 +29,9 @@ import {
   Search,
   Target,
   Eye,
+  ArrowUpDown,
+  ArrowUp,
+  ArrowDown,
 } from "lucide-react";
 import { ConfirmModal } from "@/components/confirm-modal";
 import { AdminScraperTrigger } from "@/components/admin-scraper-trigger";
@@ -44,6 +47,15 @@ interface CategoryNode {
   children: CategoryNode[];
 }
 
+interface FlatCategory {
+  id: number;
+  slug: string;
+  title: string;
+  appCount: number | null;
+  isTracked: boolean;
+  isListingPage: boolean;
+}
+
 interface StarredCategory {
   categorySlug: string;
   categoryTitle: string;
@@ -57,11 +69,15 @@ interface StarredCategory {
   competitorAppsInResults: any[];
 }
 
+type FlatSortKey = "title" | "appCount";
+type SortDir = "asc" | "desc";
+
 export default function CategoriesPage() {
   const { platform } = useParams();
   const { fetchWithAuth, user } = useAuth();
   const { formatDateOnly } = useFormatDate();
   const [tree, setTree] = useState<CategoryNode[]>([]);
+  const [flatCategories, setFlatCategories] = useState<FlatCategory[]>([]);
   const [starred, setStarred] = useState<StarredCategory[]>([]);
   const [loading, setLoading] = useState(true);
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
@@ -71,7 +87,10 @@ export default function CategoriesPage() {
     slug: string;
     title: string;
   } | null>(null);
+  const [sortKey, setSortKey] = useState<FlatSortKey>("title");
+  const [sortDir, setSortDir] = useState<SortDir>("asc");
 
+  const isFlat = platform === "wordpress";
   const canEdit = user?.role === "owner" || user?.role === "editor";
 
   useEffect(() => {
@@ -80,11 +99,19 @@ export default function CategoriesPage() {
 
   async function loadData() {
     setLoading(true);
-    const [treeRes, starredRes] = await Promise.all([
-      fetchWithAuth("/api/categories?format=tree"),
+    const format = isFlat ? "flat" : "tree";
+    const [catRes, starredRes] = await Promise.all([
+      fetchWithAuth(`/api/categories?format=${format}`),
       fetchWithAuth("/api/account/starred-categories"),
     ]);
-    if (treeRes.ok) setTree(await treeRes.json());
+    if (catRes.ok) {
+      const data = await catRes.json();
+      if (isFlat) {
+        setFlatCategories(data);
+      } else {
+        setTree(data);
+      }
+    }
     if (starredRes.ok) setStarred(await starredRes.json());
     setLoading(false);
   }
@@ -102,11 +129,15 @@ export default function CategoriesPage() {
   async function toggleStar(slug: string) {
     const isStarred = starredSlugs.has(slug);
     if (isStarred) {
-      const cat = findCategoryBySlug(tree, slug);
-      setConfirmUnstar({
-        slug,
-        title: cat?.title || slug,
-      });
+      let title = slug;
+      if (isFlat) {
+        const cat = flatCategories.find((c) => c.slug === slug);
+        if (cat) title = cat.title;
+      } else {
+        const cat = findCategoryBySlug(tree, slug);
+        if (cat) title = cat.title;
+      }
+      setConfirmUnstar({ slug, title });
     } else {
       const res = await fetchWithAuth("/api/account/starred-categories", {
         method: "POST",
@@ -196,6 +227,39 @@ export default function CategoriesPage() {
     return filterNodes(tree);
   }, [tree, searchQuery]);
 
+  // Flat: filter & sort
+  const filteredFlatTags = useMemo(() => {
+    let items = flatCategories;
+    if (searchQuery.trim()) {
+      const q = searchQuery.toLowerCase();
+      items = items.filter((c) => c.title.toLowerCase().includes(q));
+    }
+    items = [...items].sort((a, b) => {
+      let cmp = 0;
+      if (sortKey === "title") {
+        cmp = a.title.localeCompare(b.title);
+      } else {
+        cmp = (a.appCount ?? 0) - (b.appCount ?? 0);
+      }
+      return sortDir === "asc" ? cmp : -cmp;
+    });
+    return items;
+  }, [flatCategories, searchQuery, sortKey, sortDir]);
+
+  // Split browse tags from regular tags
+  const { browseTags, regularTags } = useMemo(() => {
+    const browse: FlatCategory[] = [];
+    const regular: FlatCategory[] = [];
+    for (const tag of filteredFlatTags) {
+      if (tag.slug.startsWith("_browse_")) {
+        browse.push(tag);
+      } else {
+        regular.push(tag);
+      }
+    }
+    return { browseTags: browse, regularTags: regular };
+  }, [filteredFlatTags]);
+
   // Auto-expand when searching
   useEffect(() => {
     if (searchQuery.trim()) {
@@ -213,16 +277,38 @@ export default function CategoriesPage() {
     }
   }, [filteredTree, searchQuery]);
 
-  const totalCount = countAll(tree);
+  const totalCount = isFlat ? flatCategories.length : countAll(tree);
   const starredSlugs = new Set(starred.map((s) => s.categorySlug));
+
+  function toggleFlatSort(key: FlatSortKey) {
+    if (sortKey === key) {
+      setSortDir((d) => (d === "asc" ? "desc" : "asc"));
+    } else {
+      setSortKey(key);
+      setSortDir(key === "title" ? "asc" : "desc");
+    }
+  }
+
+  function FlatSortIcon({ col }: { col: FlatSortKey }) {
+    if (sortKey !== col)
+      return <ArrowUpDown className="inline h-3.5 w-3.5 ml-1 opacity-40" />;
+    return sortDir === "asc" ? (
+      <ArrowUp className="inline h-3.5 w-3.5 ml-1" />
+    ) : (
+      <ArrowDown className="inline h-3.5 w-3.5 ml-1" />
+    );
+  }
+
+  const entityLabel = isFlat ? "Tags" : "Categories";
+  const entityLabelLower = isFlat ? "tags" : "categories";
 
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-        <h1 className="text-2xl font-bold">Categories ({totalCount})</h1>
+        <h1 className="text-2xl font-bold">{entityLabel} ({totalCount})</h1>
         <AdminScraperTrigger
           scraperType="category"
-          label="Scrape All Categories"
+          label={`Scrape All ${entityLabel}`}
         />
       </div>
 
@@ -230,7 +316,7 @@ export default function CategoriesPage() {
       <div className="relative max-w-md">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
         <Input
-          placeholder="Filter categories..."
+          placeholder={`Filter ${entityLabelLower}...`}
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
           className="pl-9"
@@ -243,7 +329,7 @@ export default function CategoriesPage() {
           <CardHeader className="pb-3">
             <CardTitle className="text-base flex items-center gap-2">
               <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
-              Starred Categories
+              Starred {entityLabel}
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -253,19 +339,19 @@ export default function CategoriesPage() {
               <div className="flex flex-col items-center justify-center py-10 text-center">
                 <Folder className="h-10 w-10 text-muted-foreground/20 mb-3" />
                 <p className="text-sm font-medium text-muted-foreground mb-1">
-                  No starred categories yet
+                  No starred {entityLabelLower} yet
                 </p>
                 <p className="text-xs text-muted-foreground/70 max-w-xs">
-                  Star categories from the tree below or from category detail pages to track them here.
+                  Star {entityLabelLower} from the {isFlat ? "table" : "tree"} below or from detail pages to track them here.
                 </p>
               </div>
             ) : (
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Category</TableHead>
-                  <TableHead>Parents</TableHead>
-                  <TableHead>Total Apps</TableHead>
+                  <TableHead>{isFlat ? "Tag" : "Category"}</TableHead>
+                  {!isFlat && <TableHead>Parents</TableHead>}
+                  <TableHead>Total {isFlat ? "Plugins" : "Apps"}</TableHead>
                   <TableHead>Tracked</TableHead>
                   <TableHead>Competitor</TableHead>
                   {canEdit && <TableHead className="w-12" />}
@@ -276,6 +362,7 @@ export default function CategoriesPage() {
                   const hasApps = s.trackedInResults > 0 || s.competitorInResults > 0;
                   const isExpanded = expandedStarred === s.categorySlug;
                   const parents = s.parents ?? [];
+                  const colSpan = isFlat ? (canEdit ? 5 : 4) : (canEdit ? 6 : 5);
                   return (
                   <Fragment key={s.categorySlug}>
                   <TableRow
@@ -298,6 +385,7 @@ export default function CategoriesPage() {
                         </Link>
                       </div>
                     </TableCell>
+                    {!isFlat && (
                     <TableCell>
                       {parents.length > 0 ? (
                         <div className="flex flex-wrap gap-1">
@@ -318,6 +406,7 @@ export default function CategoriesPage() {
                         <span className="text-muted-foreground">{"\u2014"}</span>
                       )}
                     </TableCell>
+                    )}
                     <TableCell>
                       {s.appCount != null ? s.appCount.toLocaleString() : "\u2014"}
                     </TableCell>
@@ -361,7 +450,7 @@ export default function CategoriesPage() {
                   </TableRow>
                   {isExpanded && (
                     <TableRow>
-                      <TableCell colSpan={canEdit ? 6 : 5} className="bg-muted/30 p-4">
+                      <TableCell colSpan={colSpan} className="bg-muted/30 p-4">
                         <div className="space-y-1">
                           {[
                             ...(s.trackedAppsInResults ?? []).map((app: any) => ({ ...app, _type: "tracked" as const })),
@@ -415,59 +504,188 @@ export default function CategoriesPage() {
         </Card>
       )}
 
-      {/* All Categories Tree */}
-      <Card>
-        <CardHeader className="pb-3">
-          <div className="flex items-center justify-between">
-            <CardTitle className="text-base">All Categories</CardTitle>
-            <div className="flex items-center gap-2">
-              <button
-                onClick={expandAll}
-                className="text-sm text-muted-foreground hover:text-foreground"
-              >
-                Expand All
-              </button>
-              <span className="text-muted-foreground">|</span>
-              <button
-                onClick={collapseAll}
-                className="text-sm text-muted-foreground hover:text-foreground"
-              >
-                Collapse All
-              </button>
-            </div>
-          </div>
-        </CardHeader>
-        <CardContent>
-          {loading ? (
-            <TableSkeleton rows={8} cols={5} />
-          ) : filteredTree.length === 0 ? (
-            <p className="text-muted-foreground text-center py-8">
-              {searchQuery
-                ? `No categories matching "${searchQuery}"`
-                : "No categories found."}
-            </p>
-          ) : (
-            <div className="space-y-0.5">
-              {filteredTree.map((node) => (
-                <CategoryRow
-                  key={node.slug}
-                  node={node}
-                  expanded={expanded}
-                  toggle={toggle}
-                  toggleStar={canEdit ? toggleStar : undefined}
-                  starredSlugs={starredSlugs}
-                  depth={0}
-                />
-              ))}
-            </div>
+      {/* Flat tags view for WordPress */}
+      {isFlat ? (
+        <>
+          {/* Browse sections */}
+          {!searchQuery && browseTags.length > 0 && (
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-base">Browse Sections</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="flex flex-wrap gap-2">
+                  {browseTags.map((tag) => {
+                    const label = tag.title.replace(/^Browse:\s*/i, "");
+                    return (
+                      <Link
+                        key={tag.slug}
+                        href={`/${platform}/categories/${tag.slug}`}
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium bg-primary/10 text-primary hover:bg-primary/20 transition-colors"
+                      >
+                        {label}
+                        {tag.appCount != null && (
+                          <span className="text-xs opacity-70">
+                            ({tag.appCount.toLocaleString()})
+                          </span>
+                        )}
+                      </Link>
+                    );
+                  })}
+                </div>
+              </CardContent>
+            </Card>
           )}
-        </CardContent>
-      </Card>
+
+          {/* Regular tags table */}
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base">All Tags</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {loading ? (
+                <TableSkeleton rows={8} cols={4} />
+              ) : regularTags.length === 0 ? (
+                <p className="text-muted-foreground text-center py-8">
+                  {searchQuery
+                    ? `No tags matching "${searchQuery}"`
+                    : "No tags found."}
+                </p>
+              ) : (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>
+                        <button
+                          onClick={() => toggleFlatSort("title")}
+                          className="flex items-center font-medium hover:text-foreground transition-colors"
+                        >
+                          Tag
+                          <FlatSortIcon col="title" />
+                        </button>
+                      </TableHead>
+                      <TableHead>
+                        <button
+                          onClick={() => toggleFlatSort("appCount")}
+                          className="flex items-center font-medium hover:text-foreground transition-colors"
+                        >
+                          Plugins
+                          <FlatSortIcon col="appCount" />
+                        </button>
+                      </TableHead>
+                      <TableHead>Status</TableHead>
+                      {canEdit && <TableHead className="w-12" />}
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {regularTags.map((tag) => {
+                      const isStarred = starredSlugs.has(tag.slug);
+                      return (
+                        <TableRow key={tag.slug} className="group">
+                          <TableCell>
+                            <Link
+                              href={`/${platform}/categories/${tag.slug}`}
+                              className="text-sm text-primary hover:underline font-medium"
+                            >
+                              {tag.title}
+                            </Link>
+                          </TableCell>
+                          <TableCell className="tabular-nums">
+                            {tag.appCount != null
+                              ? tag.appCount.toLocaleString()
+                              : "\u2014"}
+                          </TableCell>
+                          <TableCell>
+                            {tag.isTracked && (
+                              <Badge variant="secondary" className="text-xs">
+                                Tracked
+                              </Badge>
+                            )}
+                          </TableCell>
+                          {canEdit && (
+                            <TableCell>
+                              <button
+                                onClick={() => toggleStar(tag.slug)}
+                                className={`${
+                                  isStarred
+                                    ? "opacity-100"
+                                    : "opacity-0 group-hover:opacity-100"
+                                } transition-opacity`}
+                              >
+                                <Star
+                                  className={`h-3.5 w-3.5 ${
+                                    isStarred
+                                      ? "fill-yellow-400 text-yellow-400"
+                                      : "text-muted-foreground hover:text-yellow-400"
+                                  }`}
+                                />
+                              </button>
+                            </TableCell>
+                          )}
+                        </TableRow>
+                      );
+                    })}
+                  </TableBody>
+                </Table>
+              )}
+            </CardContent>
+          </Card>
+        </>
+      ) : (
+        /* All Categories Tree */
+        <Card>
+          <CardHeader className="pb-3">
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-base">All Categories</CardTitle>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={expandAll}
+                  className="text-sm text-muted-foreground hover:text-foreground"
+                >
+                  Expand All
+                </button>
+                <span className="text-muted-foreground">|</span>
+                <button
+                  onClick={collapseAll}
+                  className="text-sm text-muted-foreground hover:text-foreground"
+                >
+                  Collapse All
+                </button>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent>
+            {loading ? (
+              <TableSkeleton rows={8} cols={5} />
+            ) : filteredTree.length === 0 ? (
+              <p className="text-muted-foreground text-center py-8">
+                {searchQuery
+                  ? `No categories matching "${searchQuery}"`
+                  : "No categories found."}
+              </p>
+            ) : (
+              <div className="space-y-0.5">
+                {filteredTree.map((node) => (
+                  <CategoryRow
+                    key={node.slug}
+                    node={node}
+                    expanded={expanded}
+                    toggle={toggle}
+                    toggleStar={canEdit ? toggleStar : undefined}
+                    starredSlugs={starredSlugs}
+                    depth={0}
+                  />
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
 
       <ConfirmModal
         open={!!confirmUnstar}
-        title="Remove Starred Category"
-        description={`Are you sure you want to remove "${confirmUnstar?.title}" from starred categories?`}
+        title={`Remove Starred ${isFlat ? "Tag" : "Category"}`}
+        description={`Are you sure you want to remove "${confirmUnstar?.title}" from starred ${entityLabelLower}?`}
         confirmLabel="Remove"
         onConfirm={() => {
           if (confirmUnstar) {
