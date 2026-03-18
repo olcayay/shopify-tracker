@@ -12,7 +12,9 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { AdHeatmap } from "@/components/ad-heatmap";
-import { ExternalLink, Loader2 } from "lucide-react";
+import { AppIcon } from "@/components/app-icon";
+import { Badge } from "@/components/ui/badge";
+import { ExternalLink, Loader2, Star } from "lucide-react";
 import { buildExternalCategoryUrl, getPlatformName } from "@/lib/platform-urls";
 import { PLATFORMS } from "@appranks/shared";
 import type { PlatformId } from "@appranks/shared";
@@ -179,6 +181,138 @@ function SectionNav({ groups }: { groups: SightingGroup[] }) {
               </span>
             );
           })}
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+interface MyFeaturedApp {
+  slug: string;
+  name: string;
+  iconUrl?: string;
+  type: "tracked" | "competitor";
+  sections: { sectionHandle: string; sectionTitle: string; lastSeen: string; daysCount: number }[];
+}
+
+function MyFeaturedApps({
+  sightings,
+  trackedSlugs,
+  competitorSlugs,
+}: {
+  sightings: any[];
+  trackedSlugs: string[];
+  competitorSlugs: string[];
+}) {
+  const { platform } = useParams();
+  const trackedSet = useMemo(() => new Set(trackedSlugs), [trackedSlugs]);
+  const competitorSet = useMemo(() => new Set(competitorSlugs), [competitorSlugs]);
+
+  const myApps = useMemo((): MyFeaturedApp[] => {
+    const appMap = new Map<string, MyFeaturedApp>();
+
+    for (const s of sightings) {
+      const slug = s.appSlug;
+      const isTracked = trackedSet.has(slug);
+      const isCompetitor = competitorSet.has(slug);
+      if (!isTracked && !isCompetitor) continue;
+
+      if (!appMap.has(slug)) {
+        appMap.set(slug, {
+          slug,
+          name: s.appName,
+          iconUrl: s.iconUrl,
+          type: isTracked ? "tracked" : "competitor",
+          sections: [],
+        });
+      }
+
+      const app = appMap.get(slug)!;
+      const sectionKey = s.sectionHandle;
+      let section = app.sections.find((sec) => sec.sectionHandle === sectionKey);
+      if (!section) {
+        section = {
+          sectionHandle: s.sectionHandle,
+          sectionTitle: s.sectionTitle || s.sectionHandle,
+          lastSeen: s.seenDate,
+          daysCount: 1,
+        };
+        app.sections.push(section);
+      } else {
+        if (s.seenDate > section.lastSeen) section.lastSeen = s.seenDate;
+        section.daysCount++;
+      }
+    }
+
+    return [...appMap.values()].sort((a, b) => {
+      if (a.type !== b.type) return a.type === "tracked" ? -1 : 1;
+      return b.sections.length - a.sections.length;
+    });
+  }, [sightings, trackedSet, competitorSet]);
+
+  if (myApps.length === 0) return null;
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <Star className="h-5 w-5 text-amber-500" />
+          My Featured Apps
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
+        <div className="space-y-3">
+          {myApps.map((app) => (
+            <div
+              key={app.slug}
+              className={cn(
+                "flex items-start gap-3 rounded-lg border p-3",
+                app.type === "tracked"
+                  ? "border-l-2 border-l-emerald-500 bg-emerald-500/5"
+                  : "border-l-2 border-l-amber-500 bg-amber-500/5"
+              )}
+            >
+              <AppIcon src={app.iconUrl} alt={app.name} className="h-8 w-8 rounded shrink-0" />
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <Link
+                    href={`/${platform}/apps/${app.slug}`}
+                    className="font-medium text-sm text-primary hover:underline truncate"
+                  >
+                    {app.name}
+                  </Link>
+                  <Badge
+                    variant="outline"
+                    className={cn(
+                      "text-[10px] px-1.5 py-0 h-4",
+                      app.type === "tracked"
+                        ? "bg-emerald-500/20 text-emerald-700 dark:text-emerald-400 border-emerald-500/50"
+                        : "bg-amber-500/20 text-amber-700 dark:text-amber-400 border-amber-500/50"
+                    )}
+                  >
+                    {app.type === "tracked" ? "Tracked" : "Competitor"}
+                  </Badge>
+                </div>
+                <div className="flex flex-wrap gap-1.5 mt-1.5">
+                  {app.sections.map((sec) => (
+                    <button
+                      key={sec.sectionHandle}
+                      onClick={() => {
+                        const el = document.getElementById(`section-${sec.sectionHandle}`);
+                        if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
+                      }}
+                      className="inline-flex items-center gap-1 rounded-full bg-muted px-2 py-0.5 text-xs text-muted-foreground hover:bg-accent hover:text-foreground transition-colors cursor-pointer"
+                    >
+                      {sec.sectionTitle}
+                      <span className="text-[10px] opacity-70">
+                        ({sec.daysCount}d)
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+          ))}
         </div>
       </CardContent>
     </Card>
@@ -389,6 +523,22 @@ export function FeaturedTabs({
             </CardContent>
           </Card>
         </div>
+      )}
+
+      {/* My featured apps summary */}
+      {!loading && isHomepage && (
+        <MyFeaturedApps
+          sightings={homeSightings}
+          trackedSlugs={currentTracked}
+          competitorSlugs={currentCompetitors}
+        />
+      )}
+      {!loading && !isHomepage && categoryData && (
+        <MyFeaturedApps
+          sightings={categoryData.sightings}
+          trackedSlugs={currentTracked}
+          competitorSlugs={currentCompetitors}
+        />
       )}
 
       {/* Homepage content */}
