@@ -193,6 +193,9 @@ interface MyFeaturedApp {
   iconUrl?: string;
   type: "tracked" | "competitor";
   sections: {
+    key: string;
+    surface: string;
+    surfaceDetail: string;
     sectionHandle: string;
     sectionTitle: string;
     lastSeen: string;
@@ -272,10 +275,13 @@ function MyFeaturedApps({
       }
 
       const app = appMap.get(slug)!;
-      const sectionKey = s.sectionHandle;
-      let section = app.sections.find((sec) => sec.sectionHandle === sectionKey);
+      const sectionKey = `${s.surface}:${s.surfaceDetail}:${s.sectionHandle}`;
+      let section = app.sections.find((sec) => sec.key === sectionKey);
       if (!section) {
         section = {
+          key: sectionKey,
+          surface: s.surface,
+          surfaceDetail: s.surfaceDetail,
           sectionHandle: s.sectionHandle,
           sectionTitle: s.sectionTitle || s.sectionHandle,
           lastSeen: s.seenDate,
@@ -349,10 +355,15 @@ function MyFeaturedApps({
                     <div className="flex flex-wrap gap-1.5 mt-1.5">
                       {app.sections.map((sec) => (
                         <span
-                          key={sec.sectionHandle}
+                          key={sec.key}
                           className="inline-flex items-center gap-1 rounded-full bg-muted px-2 py-0.5 text-xs text-muted-foreground"
                         >
                           {sec.sectionTitle}
+                          {sec.surface === "category" && (
+                            <span className="text-[10px] opacity-50">
+                              [{sec.surfaceDetail}]
+                            </span>
+                          )}
                           <span className="text-[10px] opacity-70">
                             ({sec.dates.size}d)
                           </span>
@@ -370,17 +381,24 @@ function MyFeaturedApps({
                 {isExpanded && (
                   <div className="border-t px-3 pb-3 pt-2 space-y-2">
                     {app.sections.map((sec) => (
-                      <div key={sec.sectionHandle} className="flex items-center gap-3">
-                        <button
-                          onClick={() => {
-                            const el = document.getElementById(`section-${sec.sectionHandle}`);
-                            if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
-                          }}
-                          className="text-xs font-medium text-primary hover:underline cursor-pointer w-[140px] shrink-0 truncate text-left"
-                          title={sec.sectionTitle}
-                        >
-                          {sec.sectionTitle}
-                        </button>
+                      <div key={sec.key} className="flex items-center gap-3">
+                        <div className="w-[160px] shrink-0 truncate text-left">
+                          <button
+                            onClick={() => {
+                              const el = document.getElementById(`section-${sec.sectionHandle}`);
+                              if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
+                            }}
+                            className="text-xs font-medium text-primary hover:underline cursor-pointer"
+                            title={sec.sectionTitle}
+                          >
+                            {sec.sectionTitle}
+                          </button>
+                          {sec.surface === "category" && (
+                            <span className="text-[10px] text-muted-foreground ml-1">
+                              [{sec.surfaceDetail}]
+                            </span>
+                          )}
+                        </div>
                         <MiniHeatmap dates={sec.dates} dateRange={dateRange} />
                         <span className="text-[10px] text-muted-foreground shrink-0">
                           {sec.dates.size}/30d
@@ -388,7 +406,7 @@ function MyFeaturedApps({
                       </div>
                     ))}
                     <div className="flex items-center gap-3 mt-1">
-                      <span className="w-[140px] shrink-0" />
+                      <span className="w-[160px] shrink-0" />
                       <div className="flex justify-between text-[10px] text-muted-foreground" style={{ width: `${30 * 12}px` }}>
                         <span>{dateRange[0]}</span>
                         <span>{dateRange[dateRange.length - 1]}</span>
@@ -433,6 +451,14 @@ export function FeaturedTabs({
   const [loading, setLoading] = useState(false);
   const [loadedSlug, setLoadedSlug] = useState<string | null>(null);
   const initialLoadDone = useRef(false);
+
+  // My featured apps — independent fetch across all surfaces
+  const [myAppsData, setMyAppsData] = useState<{
+    sightings: any[];
+    trackedSlugs: string[];
+    competitorSlugs: string[];
+  } | null>(null);
+  const [myAppsLoading, setMyAppsLoading] = useState(true);
 
   const isHomepage = selected === HOMEPAGE_VALUE;
 
@@ -525,6 +551,20 @@ export function FeaturedTabs({
     [fetchWithAuth, loadedSlug]
   );
 
+  // Load my featured apps (all surfaces) on mount
+  useEffect(() => {
+    (async () => {
+      try {
+        const res = await fetchWithAuth(`/api/featured-apps/my-apps?days=30`);
+        if (res.ok) {
+          setMyAppsData(await res.json());
+        }
+      } finally {
+        setMyAppsLoading(false);
+      }
+    })();
+  }, [fetchWithAuth]);
+
   // Load category data on mount if restored from localStorage
   useEffect(() => {
     if (initialLoadDone.current) return;
@@ -611,19 +651,19 @@ export function FeaturedTabs({
         </div>
       )}
 
-      {/* My featured apps summary */}
-      {!loading && isHomepage && (
-        <MyFeaturedApps
-          sightings={homeSightings}
-          trackedSlugs={currentTracked}
-          competitorSlugs={currentCompetitors}
-        />
+      {/* My featured apps & competitors — independent of tab */}
+      {myAppsLoading && (
+        <Card>
+          <CardContent className="flex items-center justify-center py-6">
+            <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+          </CardContent>
+        </Card>
       )}
-      {!loading && !isHomepage && categoryData && (
+      {!myAppsLoading && myAppsData && (
         <MyFeaturedApps
-          sightings={categoryData.sightings}
-          trackedSlugs={currentTracked}
-          competitorSlugs={currentCompetitors}
+          sightings={myAppsData.sightings}
+          trackedSlugs={myAppsData.trackedSlugs}
+          competitorSlugs={myAppsData.competitorSlugs}
         />
       )}
 

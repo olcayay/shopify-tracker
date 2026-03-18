@@ -1,5 +1,5 @@
 import type { FastifyPluginAsync } from "fastify";
-import { eq, desc, sql, and } from "drizzle-orm";
+import { eq, desc, sql, and, inArray } from "drizzle-orm";
 import { createDb } from "@appranks/db";
 import {
   featuredAppSightings,
@@ -80,6 +80,74 @@ export const featuredAppRoutes: FastifyPluginAsync = async (app) => {
         .innerJoin(apps, eq(apps.id, accountCompetitorApps.competitorAppId))
         .where(eq(accountCompetitorApps.accountId, accountId)),
     ]);
+
+    return {
+      sightings: rows,
+      trackedSlugs: trackedRows.map((r) => r.appSlug),
+      competitorSlugs: competitorRows.map((r) => r.appSlug),
+    };
+  });
+
+  // GET /api/featured-apps/my-apps?days=30&platform=shopify
+  // Returns featured sightings only for tracked & competitor apps (all surfaces)
+  app.get("/my-apps", async (request) => {
+    const { days = "30" } = request.query as { days?: string };
+    const platform = getPlatformFromQuery(request.query as Record<string, unknown>);
+    const since = new Date();
+    since.setDate(since.getDate() - parseInt(days, 10));
+    const sinceStr = since.toISOString().slice(0, 10);
+
+    const { accountId } = request.user;
+
+    // Get tracked & competitor app IDs
+    const [trackedRows, competitorRows] = await Promise.all([
+      db
+        .select({ appId: accountTrackedApps.appId, appSlug: apps.slug })
+        .from(accountTrackedApps)
+        .innerJoin(apps, eq(apps.id, accountTrackedApps.appId))
+        .where(and(eq(accountTrackedApps.accountId, accountId), eq(apps.platform, platform))),
+      db
+        .select({ appId: accountCompetitorApps.competitorAppId, appSlug: apps.slug })
+        .from(accountCompetitorApps)
+        .innerJoin(apps, eq(apps.id, accountCompetitorApps.competitorAppId))
+        .where(and(eq(accountCompetitorApps.accountId, accountId), eq(apps.platform, platform))),
+    ]);
+
+    const allAppIds = [
+      ...trackedRows.map((r) => r.appId),
+      ...competitorRows.map((r) => r.appId),
+    ];
+
+    if (allAppIds.length === 0) {
+      return { sightings: [], trackedSlugs: [], competitorSlugs: [] };
+    }
+
+    const rows = await db
+      .select({
+        appSlug: apps.slug,
+        appName: apps.name,
+        iconUrl: apps.iconUrl,
+        surface: featuredAppSightings.surface,
+        surfaceDetail: featuredAppSightings.surfaceDetail,
+        sectionHandle: featuredAppSightings.sectionHandle,
+        sectionTitle: featuredAppSightings.sectionTitle,
+        position: featuredAppSightings.position,
+        seenDate: featuredAppSightings.seenDate,
+        timesSeenInDay: featuredAppSightings.timesSeenInDay,
+      })
+      .from(featuredAppSightings)
+      .innerJoin(apps, eq(apps.id, featuredAppSightings.appId))
+      .where(and(
+        sql`${featuredAppSightings.seenDate} >= ${sinceStr}`,
+        eq(apps.platform, platform),
+        inArray(featuredAppSightings.appId, allAppIds),
+      ))
+      .orderBy(
+        featuredAppSightings.surface,
+        featuredAppSightings.surfaceDetail,
+        featuredAppSightings.sectionHandle,
+        desc(featuredAppSightings.seenDate)
+      );
 
     return {
       sightings: rows,
