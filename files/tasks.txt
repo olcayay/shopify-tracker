@@ -189,3 +189,5 @@ Atlassian extended metadata — version/vendor/pricing API endpoints, App Info +
 Atlassian listing metadata extraction — save rating, installs, developer, badges from category/search listings to apps table + minimal snapshots ✅
 
 Atlassian featured sections — connect API-based featured (Spotlight/Bestseller/Rising Star) to category scraper pipeline ✅
+
+Atlassian category pagination — switch from HTML scraping (18 apps) to REST API with offset/limit pagination (500 apps/category) ✅

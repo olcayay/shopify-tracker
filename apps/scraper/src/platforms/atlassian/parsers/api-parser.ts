@@ -3,6 +3,8 @@ import type {
   NormalizedAppDetails,
   NormalizedSearchPage,
   NormalizedSearchApp,
+  NormalizedCategoryPage,
+  NormalizedCategoryApp,
 } from "../../platform-module.js";
 
 const log = createLogger("atlassian:api-parser");
@@ -284,5 +286,70 @@ export function parseSearchResults(
     apps,
     hasNextPage: apps.length > 0 && (offset + apps.length) < (totalResults || 0),
     currentPage: page,
+  };
+}
+
+/** Parse category listing JSON into NormalizedCategoryPage.
+ *  Source: GET /rest/2/addons?categories={slug}&hosting=cloud&offset=N&limit=50
+ *  Same response format as search results.
+ */
+export function parseCategoryResults(
+  json: Record<string, any>,
+  categorySlug: string,
+): NormalizedCategoryPage {
+  const embedded = json._embedded || {};
+  const addons = embedded.addons || [];
+  const totalCount = json.count ?? null;
+
+  const apps: NormalizedCategoryApp[] = addons.map(
+    (addon: Record<string, any>, idx: number) => {
+      const addonEmbedded = addon._embedded || {};
+      const iconUrl = addonEmbedded.logo?._links?.image?.href || "";
+
+      const badges: string[] = [];
+      if (addon.programs?.cloudFortified?.status === "approved") {
+        badges.push("cloud_fortified");
+      }
+      if (addonEmbedded.vendor?.programs?.topVendor?.status === "approved" || addon.programs?.topVendor?.status === "approved") {
+        badges.push("top_vendor");
+      }
+
+      const vendorName = addonEmbedded.vendor?.name || null;
+
+      return {
+        slug: addon.key || "",
+        name: addon.name || "",
+        shortDescription: addon.summary ? stripHtml(addon.summary) : "",
+        averageRating: addonEmbedded.reviews?.averageStars ?? 0,
+        ratingCount: addonEmbedded.reviews?.count ?? 0,
+        logoUrl: iconUrl,
+        pricingHint: undefined,
+        position: idx + 1,
+        isSponsored: false,
+        badges,
+        externalId: addon.id ? String(addon.id) : undefined,
+        extra: {
+          totalInstalls: addonEmbedded.distribution?.totalInstalls,
+          ...(vendorName && { vendorName }),
+        },
+      };
+    },
+  );
+
+  log.info("parsed category results", {
+    categorySlug,
+    totalCount,
+    appCount: apps.length,
+  });
+
+  return {
+    slug: categorySlug,
+    url: `https://marketplace.atlassian.com/categories/${categorySlug}`,
+    title: categorySlug.replace(/-/g, " ").replace(/\b\w/g, c => c.toUpperCase()),
+    description: "",
+    appCount: totalCount,
+    apps,
+    subcategoryLinks: [],
+    hasNextPage: addons.length > 0 && addons.length >= 50,
   };
 }

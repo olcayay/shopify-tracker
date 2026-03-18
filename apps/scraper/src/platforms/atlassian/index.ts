@@ -12,8 +12,7 @@ import type {
 import { HttpClient } from "../../http-client.js";
 import { atlassianUrls } from "./urls.js";
 import { ATLASSIAN_CONSTANTS, ATLASSIAN_SCORING, ATLASSIAN_FEATURED_SECTIONS } from "./constants.js";
-import { parseAddonDetails, parseSearchResults } from "./parsers/api-parser.js";
-import { parseAtlassianCategoryPage } from "./parsers/category-parser.js";
+import { parseAddonDetails, parseSearchResults, parseCategoryResults } from "./parsers/api-parser.js";
 import { parseAtlassianReviewPage } from "./parsers/review-parser.js";
 import { parseAtlassianFeaturedSections } from "./parsers/featured-parser.js";
 import { createLogger } from "@appranks/shared";
@@ -59,7 +58,7 @@ export class AtlassianModule implements PlatformModule {
     return atlassianUrls.app(slug);
   }
 
-  buildCategoryUrl(slug: string, _page?: number): string {
+  buildCategoryUrl(slug: string): string {
     return atlassianUrls.category(slug);
   }
 
@@ -104,9 +103,11 @@ export class AtlassianModule implements PlatformModule {
     });
   }
 
-  async fetchCategoryPage(slug: string, _page?: number): Promise<string> {
-    const url = atlassianUrls.category(slug);
-    log.info("fetching category page (HTML)", { slug, url });
+  async fetchCategoryPage(slug: string, page?: number): Promise<string> {
+    const pageSize = 50;
+    const offset = ((page ?? 1) - 1) * pageSize;
+    const url = atlassianUrls.apiCategory(slug, offset, pageSize);
+    log.info("fetching category page via API", { slug, page, offset, url });
     return this.httpClient.fetchPage(url);
   }
 
@@ -157,9 +158,10 @@ export class AtlassianModule implements PlatformModule {
     return parseAddonDetails(envelope.addon, envelope.version, envelope.vendor, envelope.pricing);
   }
 
-  parseCategoryPage(html: string, url: string): NormalizedCategoryPage {
+  parseCategoryPage(json: string, url: string): NormalizedCategoryPage {
     const slug = this.extractCategorySlugFromUrl(url);
-    return parseAtlassianCategoryPage(html, slug);
+    const data = JSON.parse(json);
+    return parseCategoryResults(data, slug);
   }
 
   parseSearchPage(

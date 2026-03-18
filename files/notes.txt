@@ -1,3 +1,24 @@
+Atlassian Category Pagination Fix
+==================================
+
+Switched Atlassian category scraping from HTML (Apollo cache) to REST API.
+The HTML approach only captured ~18 apps from __INITIAL_STATE__, ignoring pagination.
+
+The REST API endpoint GET /rest/2/addons?categories={slug}&hosting=cloud&offset=N&limit=50
+returns the same _embedded.addons[] format as search, with proper count and pagination.
+
+Added parseCategoryResults() to api-parser.ts (reuses same addon structure as search).
+Updated fetchCategoryPage() to use API with offset/limit instead of HTML scraping.
+Updated parseCategoryPage() to parse API JSON instead of HTML.
+Bumped defaultPagesPerCategory from 2 to 10 (500 apps/category).
+
+Files changed:
+- apps/scraper/src/platforms/atlassian/urls.ts — added apiCategory URL builder
+- apps/scraper/src/platforms/atlassian/parsers/api-parser.ts — added parseCategoryResults()
+- apps/scraper/src/platforms/atlassian/index.ts — fetchCategoryPage uses API, parseCategoryPage uses JSON
+- apps/scraper/src/platforms/atlassian/constants.ts — defaultPagesPerCategory 2 → 10
+
+
 Atlassian Featured Sections Integration
 ========================================
 

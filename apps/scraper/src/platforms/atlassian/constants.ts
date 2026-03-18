@@ -27,7 +27,7 @@ export const ATLASSIAN_SEED_CATEGORIES = [
 export const ATLASSIAN_CONSTANTS: PlatformConstants = {
   seedCategories: [...ATLASSIAN_SEED_CATEGORIES],
   maxCategoryDepth: 0,               // Flat categories
-  defaultPagesPerCategory: 2,        // API max 50 per page → 100 apps/category
+  defaultPagesPerCategory: 10,       // API 50 per page → 500 apps/category
   trackedFields: [
     "tagLine",
     "summary",
