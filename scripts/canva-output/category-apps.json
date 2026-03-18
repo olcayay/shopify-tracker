@@ -1,0 +1,562 @@
+{
+  "AI generation": [
+    {
+      "id": "AAF_8lkU9VE",
+      "name": "AI MusicCustom music for your designs",
+      "position": 1,
+      "urlSlug": "ai-music"
+    },
+    {
+      "id": "AAF5vGyV5TY",
+      "name": "FontFrameCreate vibrant text with image backgrounds",
+      "position": 2,
+      "urlSlug": "fontframe"
+    },
+    {
+      "id": "AAFj-rTO9p4",
+      "name": "Google DriveAccess your Google Drive files in Canva",
+      "position": 3,
+      "urlSlug": "google-drive"
+    },
+    {
+      "id": "AAGLHfr5ZM0",
+      "name": "FontStudioAdvanced text effect studio",
+      "position": 4,
+      "urlSlug": "fontstudio"
+    },
+    {
+      "id": "AAGVtcZw2Jk",
+      "name": "Image BlenderEffortlessly merge or blend images in Canva",
+      "position": 5,
+      "urlSlug": "image-blender"
+    },
+    {
+      "id": "AAGB3pmX7hc",
+      "name": "TypeExtrudeAdd depth and dimension to your text",
+      "position": 6,
+      "urlSlug": "typeextrude"
+    },
+    {
+      "id": "AAF-xrdmb-Q",
+      "name": "Meta Design CheckGet personalized tips for better social campaigns",
+      "position": 7,
+      "urlSlug": "meta-design-check"
+    },
+    {
+      "id": "AAFsTOSHvqA",
+      "name": "Shopify ConnectAdd your Shopify products and files to any design",
+      "position": 8,
+      "urlSlug": "shopify-connect"
+    },
+    {
+      "id": "AAGQBxGhNlQ",
+      "name": "Activities MakerMake fun puzzles",
+      "position": 9,
+      "urlSlug": "activities-maker"
+    }
+  ],
+  "Audio and voiceover": [
+    {
+      "id": "AAF_8lkU9VE",
+      "name": "AI MusicCustom music for your designs",
+      "position": 1,
+      "urlSlug": "ai-music"
+    },
+    {
+      "id": "AAF5vGyV5TY",
+      "name": "FontFrameCreate vibrant text with image backgrounds",
+      "position": 2,
+      "urlSlug": "fontframe"
+    },
+    {
+      "id": "AAFj-rTO9p4",
+      "name": "Google DriveAccess your Google Drive files in Canva",
+      "position": 3,
+      "urlSlug": "google-drive"
+    },
+    {
+      "id": "AAGLHfr5ZM0",
+      "name": "FontStudioAdvanced text effect studio",
+      "position": 4,
+      "urlSlug": "fontstudio"
+    },
+    {
+      "id": "AAGVtcZw2Jk",
+      "name": "Image BlenderEffortlessly merge or blend images in Canva",
+      "position": 5,
+      "urlSlug": "image-blender"
+    },
+    {
+      "id": "AAGB3pmX7hc",
+      "name": "TypeExtrudeAdd depth and dimension to your text",
+      "position": 6,
+      "urlSlug": "typeextrude"
+    },
+    {
+      "id": "AAF-xrdmb-Q",
+      "name": "Meta Design CheckGet personalized tips for better social campaigns",
+      "position": 7,
+      "urlSlug": "meta-design-check"
+    },
+    {
+      "id": "AAFsTOSHvqA",
+      "name": "Shopify ConnectAdd your Shopify products and files to any design",
+      "position": 8,
+      "urlSlug": "shopify-connect"
+    },
+    {
+      "id": "AAGQBxGhNlQ",
+      "name": "Activities MakerMake fun puzzles",
+      "position": 9,
+      "urlSlug": "activities-maker"
+    }
+  ],
+  "Communication": [
+    {
+      "id": "AAF_8lkU9VE",
+      "name": "AI MusicCustom music for your designs",
+      "position": 1,
+      "urlSlug": "ai-music"
+    },
+    {
+      "id": "AAF5vGyV5TY",
+      "name": "FontFrameCreate vibrant text with image backgrounds",
+      "position": 2,
+      "urlSlug": "fontframe"
+    },
+    {
+      "id": "AAFj-rTO9p4",
+      "name": "Google DriveAccess your Google Drive files in Canva",
+      "position": 3,
+      "urlSlug": "google-drive"
+    },
+    {
+      "id": "AAGLHfr5ZM0",
+      "name": "FontStudioAdvanced text effect studio",
+      "position": 4,
+      "urlSlug": "fontstudio"
+    },
+    {
+      "id": "AAGVtcZw2Jk",
+      "name": "Image BlenderEffortlessly merge or blend images in Canva",
+      "position": 5,
+      "urlSlug": "image-blender"
+    },
+    {
+      "id": "AAGB3pmX7hc",
+      "name": "TypeExtrudeAdd depth and dimension to your text",
+      "position": 6,
+      "urlSlug": "typeextrude"
+    },
+    {
+      "id": "AAF-xrdmb-Q",
+      "name": "Meta Design CheckGet personalized tips for better social campaigns",
+      "position": 7,
+      "urlSlug": "meta-design-check"
+    },
+    {
+      "id": "AAFsTOSHvqA",
+      "name": "Shopify ConnectAdd your Shopify products and files to any design",
+      "position": 8,
+      "urlSlug": "shopify-connect"
+    },
+    {
+      "id": "AAGQBxGhNlQ",
+      "name": "Activities MakerMake fun puzzles",
+      "position": 9,
+      "urlSlug": "activities-maker"
+    }
+  ],
+  "File and data management": [
+    {
+      "id": "AAF_8lkU9VE",
+      "name": "AI MusicCustom music for your designs",
+      "position": 1,
+      "urlSlug": "ai-music"
+    },
+    {
+      "id": "AAF5vGyV5TY",
+      "name": "FontFrameCreate vibrant text with image backgrounds",
+      "position": 2,
+      "urlSlug": "fontframe"
+    },
+    {
+      "id": "AAFj-rTO9p4",
+      "name": "Google DriveAccess your Google Drive files in Canva",
+      "position": 3,
+      "urlSlug": "google-drive"
+    },
+    {
+      "id": "AAGLHfr5ZM0",
+      "name": "FontStudioAdvanced text effect studio",
+      "position": 4,
+      "urlSlug": "fontstudio"
+    },
+    {
+      "id": "AAGVtcZw2Jk",
+      "name": "Image BlenderEffortlessly merge or blend images in Canva",
+      "position": 5,
+      "urlSlug": "image-blender"
+    },
+    {
+      "id": "AAGB3pmX7hc",
+      "name": "TypeExtrudeAdd depth and dimension to your text",
+      "position": 6,
+      "urlSlug": "typeextrude"
+    },
+    {
+      "id": "AAF-xrdmb-Q",
+      "name": "Meta Design CheckGet personalized tips for better social campaigns",
+      "position": 7,
+      "urlSlug": "meta-design-check"
+    },
+    {
+      "id": "AAFsTOSHvqA",
+      "name": "Shopify ConnectAdd your Shopify products and files to any design",
+      "position": 8,
+      "urlSlug": "shopify-connect"
+    },
+    {
+      "id": "AAGQBxGhNlQ",
+      "name": "Activities MakerMake fun puzzles",
+      "position": 9,
+      "urlSlug": "activities-maker"
+    }
+  ],
+  "Graphic design": [
+    {
+      "id": "AAF_8lkU9VE",
+      "name": "AI MusicCustom music for your designs",
+      "position": 1,
+      "urlSlug": "ai-music"
+    },
+    {
+      "id": "AAF5vGyV5TY",
+      "name": "FontFrameCreate vibrant text with image backgrounds",
+      "position": 2,
+      "urlSlug": "fontframe"
+    },
+    {
+      "id": "AAFj-rTO9p4",
+      "name": "Google DriveAccess your Google Drive files in Canva",
+      "position": 3,
+      "urlSlug": "google-drive"
+    },
+    {
+      "id": "AAGLHfr5ZM0",
+      "name": "FontStudioAdvanced text effect studio",
+      "position": 4,
+      "urlSlug": "fontstudio"
+    },
+    {
+      "id": "AAGVtcZw2Jk",
+      "name": "Image BlenderEffortlessly merge or blend images in Canva",
+      "position": 5,
+      "urlSlug": "image-blender"
+    },
+    {
+      "id": "AAGB3pmX7hc",
+      "name": "TypeExtrudeAdd depth and dimension to your text",
+      "position": 6,
+      "urlSlug": "typeextrude"
+    },
+    {
+      "id": "AAF-xrdmb-Q",
+      "name": "Meta Design CheckGet personalized tips for better social campaigns",
+      "position": 7,
+      "urlSlug": "meta-design-check"
+    },
+    {
+      "id": "AAFsTOSHvqA",
+      "name": "Shopify ConnectAdd your Shopify products and files to any design",
+      "position": 8,
+      "urlSlug": "shopify-connect"
+    },
+    {
+      "id": "AAGQBxGhNlQ",
+      "name": "Activities MakerMake fun puzzles",
+      "position": 9,
+      "urlSlug": "activities-maker"
+    }
+  ],
+  "Marketing": [
+    {
+      "id": "AAF_8lkU9VE",
+      "name": "AI MusicCustom music for your designs",
+      "position": 1,
+      "urlSlug": "ai-music"
+    },
+    {
+      "id": "AAF5vGyV5TY",
+      "name": "FontFrameCreate vibrant text with image backgrounds",
+      "position": 2,
+      "urlSlug": "fontframe"
+    },
+    {
+      "id": "AAFj-rTO9p4",
+      "name": "Google DriveAccess your Google Drive files in Canva",
+      "position": 3,
+      "urlSlug": "google-drive"
+    },
+    {
+      "id": "AAGLHfr5ZM0",
+      "name": "FontStudioAdvanced text effect studio",
+      "position": 4,
+      "urlSlug": "fontstudio"
+    },
+    {
+      "id": "AAGVtcZw2Jk",
+      "name": "Image BlenderEffortlessly merge or blend images in Canva",
+      "position": 5,
+      "urlSlug": "image-blender"
+    },
+    {
+      "id": "AAGB3pmX7hc",
+      "name": "TypeExtrudeAdd depth and dimension to your text",
+      "position": 6,
+      "urlSlug": "typeextrude"
+    },
+    {
+      "id": "AAF-xrdmb-Q",
+      "name": "Meta Design CheckGet personalized tips for better social campaigns",
+      "position": 7,
+      "urlSlug": "meta-design-check"
+    },
+    {
+      "id": "AAFsTOSHvqA",
+      "name": "Shopify ConnectAdd your Shopify products and files to any design",
+      "position": 8,
+      "urlSlug": "shopify-connect"
+    },
+    {
+      "id": "AAGQBxGhNlQ",
+      "name": "Activities MakerMake fun puzzles",
+      "position": 9,
+      "urlSlug": "activities-maker"
+    }
+  ],
+  "Photo editing": [
+    {
+      "id": "AAF_8lkU9VE",
+      "name": "AI MusicCustom music for your designs",
+      "position": 1,
+      "urlSlug": "ai-music"
+    },
+    {
+      "id": "AAF5vGyV5TY",
+      "name": "FontFrameCreate vibrant text with image backgrounds",
+      "position": 2,
+      "urlSlug": "fontframe"
+    },
+    {
+      "id": "AAFj-rTO9p4",
+      "name": "Google DriveAccess your Google Drive files in Canva",
+      "position": 3,
+      "urlSlug": "google-drive"
+    },
+    {
+      "id": "AAGLHfr5ZM0",
+      "name": "FontStudioAdvanced text effect studio",
+      "position": 4,
+      "urlSlug": "fontstudio"
+    },
+    {
+      "id": "AAGVtcZw2Jk",
+      "name": "Image BlenderEffortlessly merge or blend images in Canva",
+      "position": 5,
+      "urlSlug": "image-blender"
+    },
+    {
+      "id": "AAGB3pmX7hc",
+      "name": "TypeExtrudeAdd depth and dimension to your text",
+      "position": 6,
+      "urlSlug": "typeextrude"
+    },
+    {
+      "id": "AAF-xrdmb-Q",
+      "name": "Meta Design CheckGet personalized tips for better social campaigns",
+      "position": 7,
+      "urlSlug": "meta-design-check"
+    },
+    {
+      "id": "AAFsTOSHvqA",
+      "name": "Shopify ConnectAdd your Shopify products and files to any design",
+      "position": 8,
+      "urlSlug": "shopify-connect"
+    },
+    {
+      "id": "AAGQBxGhNlQ",
+      "name": "Activities MakerMake fun puzzles",
+      "position": 9,
+      "urlSlug": "activities-maker"
+    }
+  ],
+  "Project management": [
+    {
+      "id": "AAF_8lkU9VE",
+      "name": "AI MusicCustom music for your designs",
+      "position": 1,
+      "urlSlug": "ai-music"
+    },
+    {
+      "id": "AAF5vGyV5TY",
+      "name": "FontFrameCreate vibrant text with image backgrounds",
+      "position": 2,
+      "urlSlug": "fontframe"
+    },
+    {
+      "id": "AAFj-rTO9p4",
+      "name": "Google DriveAccess your Google Drive files in Canva",
+      "position": 3,
+      "urlSlug": "google-drive"
+    },
+    {
+      "id": "AAGLHfr5ZM0",
+      "name": "FontStudioAdvanced text effect studio",
+      "position": 4,
+      "urlSlug": "fontstudio"
+    },
+    {
+      "id": "AAGVtcZw2Jk",
+      "name": "Image BlenderEffortlessly merge or blend images in Canva",
+      "position": 5,
+      "urlSlug": "image-blender"
+    },
+    {
+      "id": "AAGB3pmX7hc",
+      "name": "TypeExtrudeAdd depth and dimension to your text",
+      "position": 6,
+      "urlSlug": "typeextrude"
+    },
+    {
+      "id": "AAF-xrdmb-Q",
+      "name": "Meta Design CheckGet personalized tips for better social campaigns",
+      "position": 7,
+      "urlSlug": "meta-design-check"
+    },
+    {
+      "id": "AAFsTOSHvqA",
+      "name": "Shopify ConnectAdd your Shopify products and files to any design",
+      "position": 8,
+      "urlSlug": "shopify-connect"
+    },
+    {
+      "id": "AAGQBxGhNlQ",
+      "name": "Activities MakerMake fun puzzles",
+      "position": 9,
+      "urlSlug": "activities-maker"
+    }
+  ],
+  "Text styling": [
+    {
+      "id": "AAF_8lkU9VE",
+      "name": "AI MusicCustom music for your designs",
+      "position": 1,
+      "urlSlug": "ai-music"
+    },
+    {
+      "id": "AAF5vGyV5TY",
+      "name": "FontFrameCreate vibrant text with image backgrounds",
+      "position": 2,
+      "urlSlug": "fontframe"
+    },
+    {
+      "id": "AAFj-rTO9p4",
+      "name": "Google DriveAccess your Google Drive files in Canva",
+      "position": 3,
+      "urlSlug": "google-drive"
+    },
+    {
+      "id": "AAGLHfr5ZM0",
+      "name": "FontStudioAdvanced text effect studio",
+      "position": 4,
+      "urlSlug": "fontstudio"
+    },
+    {
+      "id": "AAGVtcZw2Jk",
+      "name": "Image BlenderEffortlessly merge or blend images in Canva",
+      "position": 5,
+      "urlSlug": "image-blender"
+    },
+    {
+      "id": "AAGB3pmX7hc",
+      "name": "TypeExtrudeAdd depth and dimension to your text",
+      "position": 6,
+      "urlSlug": "typeextrude"
+    },
+    {
+      "id": "AAF-xrdmb-Q",
+      "name": "Meta Design CheckGet personalized tips for better social campaigns",
+      "position": 7,
+      "urlSlug": "meta-design-check"
+    },
+    {
+      "id": "AAFsTOSHvqA",
+      "name": "Shopify ConnectAdd your Shopify products and files to any design",
+      "position": 8,
+      "urlSlug": "shopify-connect"
+    },
+    {
+      "id": "AAGQBxGhNlQ",
+      "name": "Activities MakerMake fun puzzles",
+      "position": 9,
+      "urlSlug": "activities-maker"
+    }
+  ],
+  "Video and animation": [
+    {
+      "id": "AAF_8lkU9VE",
+      "name": "AI MusicCustom music for your designs",
+      "position": 1,
+      "urlSlug": "ai-music"
+    },
+    {
+      "id": "AAF5vGyV5TY",
+      "name": "FontFrameCreate vibrant text with image backgrounds",
+      "position": 2,
+      "urlSlug": "fontframe"
+    },
+    {
+      "id": "AAFj-rTO9p4",
+      "name": "Google DriveAccess your Google Drive files in Canva",
+      "position": 3,
+      "urlSlug": "google-drive"
+    },
+    {
+      "id": "AAGLHfr5ZM0",
+      "name": "FontStudioAdvanced text effect studio",
+      "position": 4,
+      "urlSlug": "fontstudio"
+    },
+    {
+      "id": "AAGVtcZw2Jk",
+      "name": "Image BlenderEffortlessly merge or blend images in Canva",
+      "position": 5,
+      "urlSlug": "image-blender"
+    },
+    {
+      "id": "AAGB3pmX7hc",
+      "name": "TypeExtrudeAdd depth and dimension to your text",
+      "position": 6,
+      "urlSlug": "typeextrude"
+    },
+    {
+      "id": "AAF-xrdmb-Q",
+      "name": "Meta Design CheckGet personalized tips for better social campaigns",
+      "position": 7,
+      "urlSlug": "meta-design-check"
+    },
+    {
+      "id": "AAFsTOSHvqA",
+      "name": "Shopify ConnectAdd your Shopify products and files to any design",
+      "position": 8,
+      "urlSlug": "shopify-connect"
+    },
+    {
+      "id": "AAGQBxGhNlQ",
+      "name": "Activities MakerMake fun puzzles",
+      "position": 9,
+      "urlSlug": "activities-maker"
+    }
+  ]
+}

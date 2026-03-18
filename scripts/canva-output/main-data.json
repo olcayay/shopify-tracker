@@ -1,0 +1,618 @@
+{
+  "appLinks": [
+    {
+      "href": "https://www.canva.com/apps/AAF_8lkU9VE/ai-music",
+      "text": "AI MusicCustom music for your designs",
+      "section": "Design with your favorite media"
+    },
+    {
+      "href": "https://www.canva.com/apps/AAF5vGyV5TY/fontframe",
+      "text": "FontFrameCreate vibrant text with image backgrounds",
+      "section": "Design with your favorite media"
+    },
+    {
+      "href": "https://www.canva.com/apps/AAFj-rTO9p4/google-drive",
+      "text": "Google DriveAccess your Google Drive files in Canva",
+      "section": "Design with your favorite media"
+    },
+    {
+      "href": "https://www.canva.com/apps/AAF8xDuFUNg/image-upscaler",
+      "text": "Image UpscalerSeamlessly upscale images",
+      "section": "Design with your favorite media"
+    },
+    {
+      "href": "https://www.canva.com/apps/AAFkBgdvQVY/brandfetch",
+      "text": "BrandfetchSearch and add brand logos to your design",
+      "section": "Design with your favorite media"
+    },
+    {
+      "href": "https://www.canva.com/apps/AAFptY-lIiI/canborder",
+      "text": "CanBorderCreate borders for your designs",
+      "section": "Design with your favorite media"
+    },
+    {
+      "href": "https://www.canva.com/apps/AAFslIGJGKc/pixelify",
+      "text": "PixelifyMake your images look pixelated",
+      "section": "Enhance your images"
+    },
+    {
+      "href": "https://www.canva.com/apps/AAFxv8Y4eSw/typegradient",
+      "text": "TypeGradientAdd gradients to texts",
+      "section": "Enhance your images"
+    },
+    {
+      "href": "https://www.canva.com/apps/AAFSSHKlyhU/lottie-animations",
+      "text": "Lottie AnimationsWorld’s largest customizable animation library",
+      "section": "Enhance your images"
+    },
+    {
+      "href": "https://www.canva.com/apps/AAF5fef9W4E/animeify",
+      "text": "AnimeifyTransform your photos into stunning anime art",
+      "section": "Enhance your images"
+    },
+    {
+      "href": "https://www.canva.com/apps/AAF5y4fBR-w/sketchify",
+      "text": "SketchifyTurns your photos into hand-drawn sketches",
+      "section": "Enhance your images"
+    },
+    {
+      "href": "https://www.canva.com/apps/AAFuDWhzgN8/equations",
+      "text": "EquationsBuild equations easily, insert them into designs",
+      "section": "Enhance your images"
+    },
+    {
+      "href": "https://www.canva.com/apps/AAF-xrdmb-Q/meta-design-check",
+      "text": "Meta Design CheckGet personalized tips for better social campaigns",
+      "section": "Supercharge your workflow"
+    },
+    {
+      "href": "https://www.canva.com/apps/AAFsTOSHvqA/shopify-connect",
+      "text": "Shopify ConnectAdd your Shopify products and files to any design",
+      "section": "Supercharge your workflow"
+    },
+    {
+      "href": "https://www.canva.com/apps/AAFTO50Dytk/bingo-cards",
+      "text": "Bingo CardsGenerate bingo cards from a list of words",
+      "section": "Supercharge your workflow"
+    }
+  ],
+  "collLinks": [
+    {
+      "href": "https://www.canva.com/apps/#_R_rH1_",
+      "text": "Skip to main content"
+    },
+    {
+      "href": "https://www.canva.com/apps/",
+      "text": "Apps Marketplace"
+    },
+    {
+      "href": "https://www.canva.com/apps/AAGFLua4Ymc/choppy-crop",
+      "text": "Choppy CropCrop your images in custom shapes"
+    },
+    {
+      "href": "https://www.canva.com/apps/AAGi4-8W3NY/google-photos",
+      "text": "Google PhotosAdd media from Google Photos to your designs"
+    },
+    {
+      "href": "https://www.canva.com/apps/AAGB3po4Nwg/typecutout",
+      "text": "TypeCutOutTransform your text with background images"
+    },
+    {
+      "href": "https://www.canva.com/apps/AAGB4-AUqkc/gen-qr",
+      "text": "Gen QRDesign vibrant QR codes"
+    },
+    {
+      "href": "https://www.canva.com/apps/AAGWQGvPKfo/reface",
+      "text": "RefaceAI-powered face swap app for unique portraits"
+    },
+    {
+      "href": "https://www.canva.com/apps/AAGLHfr5ZM0/fontstudio",
+      "text": "FontStudioAdvanced text effect studio"
+    },
+    {
+      "href": "https://www.canva.com/apps/AAGVtcZw2Jk/image-blender",
+      "text": "Image BlenderEffortlessly merge or blend images in Canva"
+    },
+    {
+      "href": "https://www.canva.com/apps/AAGB3pmX7hc/typeextrude",
+      "text": "TypeExtrudeAdd depth and dimension to your text"
+    },
+    {
+      "href": "https://www.canva.com/apps/AAGRBT0C7xk/image-splitter",
+      "text": "Image SplitterCreate seamless carousels and grids"
+    },
+    {
+      "href": "https://www.canva.com/apps/AAGD_ndUrso/typelettering",
+      "text": "TypeLetteringCustomizable text effects for captivating designs."
+    },
+    {
+      "href": "https://www.canva.com/apps/AAGQBxGhNlQ/activities-maker",
+      "text": "Activities MakerMake fun puzzles"
+    },
+    {
+      "href": "https://www.canva.com/apps/AAGW-6SZRGI/instagram",
+      "text": "InstagramPreview and publish Carousels, Reels and Stories"
+    },
+    {
+      "href": "https://www.canva.com/apps/AAGcYWbtT08/google-maps",
+      "text": "Google MapsSeamlessly add Google maps to your Canva designs"
+    },
+    {
+      "href": "https://www.canva.com/apps/AAGUTAhXAV4/flourish",
+      "text": "FlourishAdd Flourish charts, maps, and interactive content"
+    },
+    {
+      "href": "https://www.canva.com/apps/AAGHIzAIN4E/calendar-maker",
+      "text": "Calendar MakerCreate custom, monthly, or weekly calendars easily"
+    },
+    {
+      "href": "https://www.canva.com/apps/AAGD2fo_DqM/createcards",
+      "text": "CreatEcardsCreate & send invites, track RSVPs for any event"
+    },
+    {
+      "href": "https://www.canva.com/apps/AAGOptJ-N6g/heyzine-flipbooks",
+      "text": "Heyzine FlipbooksPage turn effects and slideshows for your design"
+    },
+    {
+      "href": "https://www.canva.com/apps/AAGV1BRQVmA/amazon-creators",
+      "text": "Amazon CreatorsPost your design to Amazon Storefront"
+    },
+    {
+      "href": "https://www.canva.com/apps/#_r_t_",
+      "text": "Skip to end of footer"
+    },
+    {
+      "href": "https://www.canva.com/apps/",
+      "text": "Apps Marketplace"
+    },
+    {
+      "href": "https://www.canva.com/apps/",
+      "text": "Apps Marketplace"
+    },
+    {
+      "href": "https://www.canva.com/af_za/apps/",
+      "text": "Afrikaans"
+    },
+    {
+      "href": "https://www.canva.com/sq_al/apps/",
+      "text": "Shqip"
+    },
+    {
+      "href": "https://www.canva.com/am_et/apps/",
+      "text": "አማርኛ"
+    },
+    {
+      "href": "https://www.canva.com/ar/apps/",
+      "text": "عربي (اللغة المعاصرة)"
+    },
+    {
+      "href": "https://www.canva.com/ar_eg/apps/",
+      "text": "عربي (مصر)"
+    },
+    {
+      "href": "https://www.canva.com/ar_sa/apps/",
+      "text": "عربي (السعودية)"
+    },
+    {
+      "href": "https://www.canva.com/ar_ae/apps/",
+      "text": "عربي (الإمارات)"
+    },
+    {
+      "href": "https://www.canva.com/hy_am/apps/",
+      "text": "Հայերեն"
+    },
+    {
+      "href": "https://www.canva.com/as_in/apps/",
+      "text": "অসমীয়া"
+    },
+    {
+      "href": "https://www.canva.com/az_az/apps/",
+      "text": "Azərbaycanca"
+    },
+    {
+      "href": "https://www.canva.com/bn_bd/apps/",
+      "text": "বাংলা"
+    },
+    {
+      "href": "https://www.canva.com/eu_es/apps/",
+      "text": "Euskara"
+    },
+    {
+      "href": "https://www.canva.com/bg_bg/apps/",
+      "text": "Български"
+    },
+    {
+      "href": "https://www.canva.com/my_mm/apps/",
+      "text": "မြန်မာ"
+    },
+    {
+      "href": "https://www.canva.com/ca_es/apps/",
+      "text": "Català"
+    },
+    {
+      "href": "https://www.canva.com/ceb_ph/apps/",
+      "text": "Cebuano"
+    },
+    {
+      "href": "https://www.canva.com/zh_cn/apps/",
+      "text": "简体中文（中国大陆）"
+    },
+    {
+      "href": "https://www.canva.com/zh_hk/apps/",
+      "text": "繁體中文（香港）"
+    },
+    {
+      "href": "https://www.canva.com/zh_tw/apps/",
+      "text": "繁體中文（台灣）"
+    },
+    {
+      "href": "https://www.canva.com/hr_hr/apps/",
+      "text": "Hrvatski"
+    },
+    {
+      "href": "https://www.canva.com/cs_cz/apps/",
+      "text": "Čeština"
+    },
+    {
+      "href": "https://www.canva.com/da_dk/apps/",
+      "text": "Dansk"
+    },
+    {
+      "href": "https://www.canva.com/nl_be/apps/",
+      "text": "Nederlands (België)"
+    },
+    {
+      "href": "https://www.canva.com/nl_nl/apps/",
+      "text": "Nederlands (Nederland)"
+    },
+    {
+      "href": "https://www.canva.com/en/apps/",
+      "text": "English (US)"
+    },
+    {
+      "href": "https://www.canva.com/en_au/apps/",
+      "text": "English (Australia)"
+    },
+    {
+      "href": "https://www.canva.com/en_in/apps/",
+      "text": "English (India)"
+    },
+    {
+      "href": "https://www.canva.com/en_ph/apps/",
+      "text": "English (Philippines)"
+    },
+    {
+      "href": "https://www.canva.com/en_gb/apps/",
+      "text": "English (United Kingdom)"
+    },
+    {
+      "href": "https://www.canva.com/et_ee/apps/",
+      "text": "Eesti"
+    },
+    {
+      "href": "https://www.canva.com/fi_fi/apps/",
+      "text": "Suomi"
+    },
+    {
+      "href": "https://www.canva.com/fr_be/apps/",
+      "text": "Français (Belgique)"
+    },
+    {
+      "href": "https://www.canva.com/fr_ca/apps/",
+      "text": "Français (Canada)"
+    },
+    {
+      "href": "https://www.canva.com/fr_fr/apps/",
+      "text": "Français (France)"
+    },
+    {
+      "href": "https://www.canva.com/ff_sn/apps/",
+      "text": "Fulani"
+    },
+    {
+      "href": "https://www.canva.com/gl_es/apps/",
+      "text": "Galego"
+    },
+    {
+      "href": "https://www.canva.com/ka_ge/apps/",
+      "text": "ქართული"
+    },
+    {
+      "href": "https://www.canva.com/de_de/apps/",
+      "text": "Deutsch"
+    },
+    {
+      "href": "https://www.canva.com/el_gr/apps/",
+      "text": "Ελληνικά"
+    },
+    {
+      "href": "https://www.canva.com/gu_in/apps/",
+      "text": "ગુજરાતી"
+    },
+    {
+      "href": "https://www.canva.com/ha_ng/apps/",
+      "text": "Harshen Hausa"
+    },
+    {
+      "href": "https://www.canva.com/he_il/apps/",
+      "text": "עברית"
+    },
+    {
+      "href": "https://www.canva.com/hi_in/apps/",
+      "text": "हिन्दी"
+    },
+    {
+      "href": "https://www.canva.com/hu_hu/apps/",
+      "text": "Magyar"
+    },
+    {
+      "href": "https://www.canva.com/ig_ng/apps/",
+      "text": "Ị̀gbò"
+    },
+    {
+      "href": "https://www.canva.com/id_id/apps/",
+      "text": "Bahasa Indonesia"
+    },
+    {
+      "href": "https://www.canva.com/it_it/apps/",
+      "text": "Italiano"
+    },
+    {
+      "href": "https://www.canva.com/ja_jp/apps/",
+      "text": "日本語"
+    },
+    {
+      "href": "https://www.canva.com/jv_id/apps/",
+      "text": "Basa Jawa"
+    },
+    {
+      "href": "https://www.canva.com/kn_in/apps/",
+      "text": "ಕನ್ನಡ"
+    },
+    {
+      "href": "https://www.canva.com/kk_kz/apps/",
+      "text": "Қазақша"
+    },
+    {
+      "href": "https://www.canva.com/km_kh/apps/",
+      "text": "ខ្មែរ"
+    },
+    {
+      "href": "https://www.canva.com/ko_kr/apps/",
+      "text": "한국어"
+    },
+    {
+      "href": "https://www.canva.com/ku_tr/apps/",
+      "text": "Kurdî"
+    },
+    {
+      "href": "https://www.canva.com/ky_kg/apps/",
+      "text": "Кыргызча"
+    },
+    {
+      "href": "https://www.canva.com/lv_lv/apps/",
+      "text": "Latviešu"
+    },
+    {
+      "href": "https://www.canva.com/lt_lt/apps/",
+      "text": "Lietuvių"
+    },
+    {
+      "href": "https://www.canva.com/ma_in/apps/",
+      "text": "मैथिली"
+    },
+    {
+      "href": "https://www.canva.com/mk_mk/apps/",
+      "text": "Македонски"
+    },
+    {
+      "href": "https://www.canva.com/mg_mg/apps/",
+      "text": "Malagasy"
+    },
+    {
+      "href": "https://www.canva.com/ms_my/apps/",
+      "text": "Melayu"
+    },
+    {
+      "href": "https://www.canva.com/ml_in/apps/",
+      "text": "മലയാളം"
+    },
+    {
+      "href": "https://www.canva.com/mr_in/apps/",
+      "text": "मराठी"
+    },
+    {
+      "href": "https://www.canva.com/mn_mn/apps/",
+      "text": "Монгол"
+    },
+    {
+      "href": "https://www.canva.com/ne_np/apps/",
+      "text": "नेपाली"
+    },
+    {
+      "href": "https://www.canva.com/nb_no/apps/",
+      "text": "Norsk bokmål"
+    },
+    {
+      "href": "https://www.canva.com/ny_mw/apps/",
+      "text": "Chewa"
+    },
+    {
+      "href": "https://www.canva.com/om_et/apps/",
+      "text": "Afaan Oromoo"
+    },
+    {
+      "href": "https://www.canva.com/fa_ir/apps/",
+      "text": "فارسي"
+    },
+    {
+      "href": "https://www.canva.com/pl_pl/apps/",
+      "text": "Polski"
+    },
+    {
+      "href": "https://www.canva.com/pt_br/apps/",
+      "text": "Português (Brasil)"
+    },
+    {
+      "href": "https://www.canva.com/pt_pt/apps/",
+      "text": "Português (Portugal)"
+    },
+    {
+      "href": "https://www.canva.com/pa_in/apps/",
+      "text": "ਪੰਜਾਬੀ (ਭਾਰਤ)"
+    },
+    {
+      "href": "https://www.canva.com/pa_pk/apps/",
+      "text": "پن٘جابی (پاکستان)"
+    },
+    {
+      "href": "https://www.canva.com/ro_ro/apps/",
+      "text": "Română"
+    },
+    {
+      "href": "https://www.canva.com/ru_ru/apps/",
+      "text": "Русский"
+    },
+    {
+      "href": "https://www.canva.com/sr_rs/apps/",
+      "text": "Srpski"
+    },
+    {
+      "href": "https://www.canva.com/sn_zw/apps/",
+      "text": "Shona"
+    },
+    {
+      "href": "https://www.canva.com/sd_in/apps/",
+      "text": "सिन्धी"
+    },
+    {
+      "href": "https://www.canva.com/si_lk/apps/",
+      "text": "සිංහල"
+    },
+    {
+      "href": "https://www.canva.com/sk_sk/apps/",
+      "text": "Slovenčina"
+    },
+    {
+      "href": "https://www.canva.com/sl_si/apps/",
+      "text": "Slovenščina"
+    },
+    {
+      "href": "https://www.canva.com/so_so/apps/",
+      "text": "Soomaali"
+    },
+    {
+      "href": "https://www.canva.com/nr_za/apps/",
+      "text": "Ndebele"
+    },
+    {
+      "href": "https://www.canva.com/st_za/apps/",
+      "text": "Sesotho"
+    },
+    {
+      "href": "https://www.canva.com/es_ar/apps/",
+      "text": "Español (Argentina)"
+    },
+    {
+      "href": "https://www.canva.com/es_co/apps/",
+      "text": "Español (Colombia)"
+    },
+    {
+      "href": "https://www.canva.com/es_419/apps/",
+      "text": "Español (Latinoamérica)"
+    },
+    {
+      "href": "https://www.canva.com/es_mx/apps/",
+      "text": "Español (México)"
+    },
+    {
+      "href": "https://www.canva.com/es_es/apps/",
+      "text": "Español (España)"
+    },
+    {
+      "href": "https://www.canva.com/es_us/apps/",
+      "text": "Español (Estados Unidos)"
+    },
+    {
+      "href": "https://www.canva.com/su_id/apps/",
+      "text": "Basa Sunda"
+    },
+    {
+      "href": "https://www.canva.com/sw_ke/apps/",
+      "text": "Kiswahili"
+    },
+    {
+      "href": "https://www.canva.com/ss_za/apps/",
+      "text": "Swati"
+    },
+    {
+      "href": "https://www.canva.com/sv_se/apps/",
+      "text": "Svenska"
+    },
+    {
+      "href": "https://www.canva.com/tl_ph/apps/",
+      "text": "Tagalog"
+    },
+    {
+      "href": "https://www.canva.com/ta_in/apps/",
+      "text": "தமிழ்"
+    },
+    {
+      "href": "https://www.canva.com/te_in/apps/",
+      "text": "తెలుగు"
+    },
+    {
+      "href": "https://www.canva.com/th_th/apps/",
+      "text": "ภาษาไทย"
+    },
+    {
+      "href": "https://www.canva.com/tr_tr/apps/",
+      "text": "Türkçe"
+    },
+    {
+      "href": "https://www.canva.com/tw_gh/apps/",
+      "text": "Twi"
+    },
+    {
+      "href": "https://www.canva.com/uk_ua/apps/",
+      "text": "Українська"
+    },
+    {
+      "href": "https://www.canva.com/ur_pk/apps/",
+      "text": "اردو"
+    },
+    {
+      "href": "https://www.canva.com/uz_uz/apps/",
+      "text": "Oʻzbekcha"
+    },
+    {
+      "href": "https://www.canva.com/vi_vn/apps/",
+      "text": "Tiếng Việt"
+    },
+    {
+      "href": "https://www.canva.com/cy_gb/apps/",
+      "text": "Cymraeg"
+    },
+    {
+      "href": "https://www.canva.com/wo_sn/apps/",
+      "text": "Wolof"
+    },
+    {
+      "href": "https://www.canva.com/xh_za/apps/",
+      "text": "IsiXhosa"
+    },
+    {
+      "href": "https://www.canva.com/yo_ng/apps/",
+      "text": "Èdè Yorùbá"
+    },
+    {
+      "href": "https://www.canva.com/zu_za/apps/",
+      "text": "IsiZulu"
+    },
+    {
+      "href": "https://www.canva.com/apps/#_r_s_",
+      "text": "Skip to start of footer"
+    }
+  ],
+  "sections": []
+}

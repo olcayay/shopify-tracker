@@ -1,0 +1,545 @@
+{
+  "timestamp": "2026-03-08T11:02:28.497Z",
+  "mainPage": {
+    "title": "Apps Marketplace | Canva",
+    "hasNextData": false,
+    "hasInitialState": false,
+    "embeddedDataKeys": [
+      "__sentry_config__",
+      "__SENTRY__",
+      "__G_ID_CLIENT__"
+    ],
+    "sections": [
+      {
+        "title": "Digital design",
+        "appCount": 0
+      },
+      {
+        "title": "Canva Visual Suite",
+        "appCount": 0
+      },
+      {
+        "title": "Popular in digital design",
+        "appCount": 0
+      },
+      {
+        "title": "All templates",
+        "appCount": 0
+      },
+      {
+        "title": "Print design",
+        "appCount": 0
+      },
+      {
+        "title": "Popular print designs",
+        "appCount": 0
+      },
+      {
+        "title": "All print products",
+        "appCount": 0
+      },
+      {
+        "title": "Images and photos",
+        "appCount": 0
+      },
+      {
+        "title": "Popular in images",
+        "appCount": 0
+      },
+      {
+        "title": "Videos and audio",
+        "appCount": 0
+      },
+      {
+        "title": "Popular in video",
+        "appCount": 0
+      },
+      {
+        "title": "Popular in audio",
+        "appCount": 0
+      },
+      {
+        "title": "Visual Suite",
+        "appCount": 0
+      },
+      {
+        "title": "Canva AI",
+        "appCount": 0
+      },
+      {
+        "title": "Popular in Magic Studio",
+        "appCount": 0
+      },
+      {
+        "title": "All Magic Studio",
+        "appCount": 0
+      },
+      {
+        "title": "Brand management",
+        "appCount": 0
+      },
+      {
+        "title": "Product features",
+        "appCount": 0
+      },
+      {
+        "title": "Apps Marketplace",
+        "appCount": 0
+      },
+      {
+        "title": "Compare pricing",
+        "appCount": 0
+      },
+      {
+        "title": "Pro",
+        "appCount": 0
+      },
+      {
+        "title": "Business",
+        "appCount": 0
+      },
+      {
+        "title": "Enterprise",
+        "appCount": 0
+      },
+      {
+        "title": "Nonprofit",
+        "appCount": 0
+      },
+      {
+        "title": "Education",
+        "appCount": 0
+      },
+      {
+        "title": "Higher education",
+        "appCount": 0
+      },
+      {
+        "title": "Canva for business",
+        "appCount": 0
+      },
+      {
+        "title": "Plans and services",
+        "appCount": 0
+      },
+      {
+        "title": "Plans",
+        "appCount": 0
+      },
+      {
+        "title": "Demos and tools",
+        "appCount": 0
+      },
+      {
+        "title": "Services",
+        "appCount": 0
+      },
+      {
+        "title": "All Canva for business",
+        "appCount": 0
+      },
+      {
+        "title": "Use cases",
+        "appCount": 0
+      },
+      {
+        "title": "Functions",
+        "appCount": 0
+      },
+      {
+        "title": "Use cases",
+        "appCount": 0
+      },
+      {
+        "title": "Solutions",
+        "appCount": 0
+      },
+      {
+        "title": "Business types",
+        "appCount": 0
+      },
+      {
+        "title": "Industries and sectors",
+        "appCount": 0
+      },
+      {
+        "title": "All solutions",
+        "appCount": 0
+      },
+      {
+        "title": "Features",
+        "appCount": 0
+      },
+      {
+        "title": "Key features",
+        "appCount": 0
+      },
+      {
+        "title": "All key features",
+        "appCount": 0
+      },
+      {
+        "title": "Resources",
+        "appCount": 0
+      },
+      {
+        "title": "Reports and insights",
+        "appCount": 0
+      },
+      {
+        "title": "Webinars",
+        "appCount": 0
+      },
+      {
+        "title": "All business resources",
+        "appCount": 0
+      },
+      {
+        "title": "Case studies",
+        "appCount": 0
+      },
+      {
+        "title": "Contact Sales",
+        "appCount": 0
+      },
+      {
+        "title": "Canva for education",
+        "appCount": 0
+      },
+      {
+        "title": "K-12 education",
+        "appCount": 0
+      },
+      {
+        "title": "Teachers",
+        "appCount": 0
+      },
+      {
+        "title": "Educator communities",
+        "appCount": 0
+      },
+      {
+        "title": "Features",
+        "appCount": 0
+      },
+      {
+        "title": "Schools and districts",
+        "appCount": 0
+      },
+      {
+        "title": "Higher education",
+        "appCount": 0
+      },
+      {
+        "title": "Higher education",
+        "appCount": 0
+      },
+      {
+        "title": "Campus solutions",
+        "appCount": 0
+      },
+      {
+        "title": "Reports and insights",
+        "appCount": 0
+      },
+      {
+        "title": "Students",
+        "appCount": 0
+      },
+      {
+        "title": "Education plans",
+        "appCount": 0
+      },
+      {
+        "title": "Case studies",
+        "appCount": 0
+      },
+      {
+        "title": "Education newsroom",
+        "appCount": 0
+      },
+      {
+        "title": "Help Center",
+        "appCount": 0
+      },
+      {
+        "title": "Design School",
+        "appCount": 0
+      },
+      {
+        "title": "Create guides",
+        "appCount": 0
+      },
+      {
+        "title": "Marketing guides",
+        "appCount": 0
+      },
+      {
+        "title": "Graphics guides",
+        "appCount": 0
+      },
+      {
+        "title": "All create guides",
+        "appCount": 0
+      },
+      {
+        "title": "Work Kits",
+        "appCount": 0
+      },
+      {
+        "title": "Try Canva with your favorite apps",
+        "appCount": 0
+      },
+      {
+        "title": "Design with your favorite media",
+        "appCount": 0
+      },
+      {
+        "title": "Enhance your images",
+        "appCount": 0
+      },
+      {
+        "title": "Supercharge your workflow",
+        "appCount": 0
+      },
+      {
+        "title": "Build Canva’s next app",
+        "appCount": 0
+      },
+      {
+        "title": "Download Canva for free",
+        "appCount": 0
+      },
+      {
+        "title": "Product",
+        "appCount": 0
+      },
+      {
+        "title": "Plans",
+        "appCount": 0
+      },
+      {
+        "title": "About",
+        "appCount": 0
+      },
+      {
+        "title": "Community",
+        "appCount": 0
+      },
+      {
+        "title": "Inspiration",
+        "appCount": 0
+      },
+      {
+        "title": "Help",
+        "appCount": 0
+      },
+      {
+        "title": "Tools",
+        "appCount": 0
+      }
+    ]
+  },
+  "categories": [],
+  "sampleApps": [
+    {
+      "name": "AI MusicCustom music for your designs",
+      "slug": "AAF_8lkU9VE",
+      "url": "https://www.canva.com/apps/AAF_8lkU9VE/ai-music",
+      "iconUrl": "https://thirdparty-public-apps-media.canva-apps.com/v2/BAEmCoIq65M/UAEmCglx_b4/AAF_8lkU9VE/2/promocard/22b58367-07d5-41b8-bc41-2dce6af76f87_500x375.jpg?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=AKIAQYCGKMUHQLLZM4VH%2F20260308%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Date=20260308T084512Z&X-Amz-Expires=354924&X-Amz-Signature=5c21b372337571a4e801321124402039865165cdb3efe96079109d4faed4590e&X-Amz-SignedHeaders=host&response-expires=Thu%2C%2012%20Mar%202026%2011%3A20%3A36%20GMT",
+      "developer": "",
+      "shortDescription": "AI MusicCustom music for your designs"
+    },
+    {
+      "name": "FontFrameCreate vibrant text with image backgrounds",
+      "slug": "AAF5vGyV5TY",
+      "url": "https://www.canva.com/apps/AAF5vGyV5TY/fontframe",
+      "iconUrl": "https://thirdparty-public-apps-media.canva-apps.com/v2/BAFm7ZeNUNQ/UAFm7TWHVo8/AAF5vGyV5TY/11/promocard/56a512fa-b4b3-4e8e-9181-5a28a4ad96e9_500x375.png?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=AKIAQYCGKMUHQLLZM4VH%2F20260307%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Date=20260307T141726Z&X-Amz-Expires=421335&X-Amz-Signature=50c1886cd46cf86c233cf4ecbe73c5060ab32298414688f7d9cfe43b825f11cd&X-Amz-SignedHeaders=host&response-expires=Thu%2C%2012%20Mar%202026%2011%3A19%3A41%20GMT",
+      "developer": "",
+      "shortDescription": "FontFrameCreate vibrant text with image backgrounds"
+    },
+    {
+      "name": "Google DriveAccess your Google Drive files in Canva",
+      "slug": "AAFj-rTO9p4",
+      "url": "https://www.canva.com/apps/AAFj-rTO9p4/google-drive",
+      "iconUrl": "https://thirdparty-public-apps-media.canva-apps.com/v2/BAC79ScfyGA/UAFOpxaxaRQ/AAFj-rTO9p4/16/promocard/d7551264-0d18-4637-bcf3-0582c3ad67a2_500x375.png?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=AKIAQYCGKMUHQLLZM4VH%2F20260307%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Date=20260307T163314Z&X-Amz-Expires=415708&X-Amz-Signature=6918a67e5e9ec5cd9fb6cd7c52757b63e2cb7d7db93cf6ca80aaed67ce772530&X-Amz-SignedHeaders=host&response-expires=Thu%2C%2012%20Mar%202026%2012%3A01%3A42%20GMT",
+      "developer": "",
+      "shortDescription": "Google DriveAccess your Google Drive files in Canva"
+    },
+    {
+      "name": "Image UpscalerSeamlessly upscale images",
+      "slug": "AAF8xDuFUNg",
+      "url": "https://www.canva.com/apps/AAF8xDuFUNg/image-upscaler",
+      "iconUrl": "https://thirdparty-public-apps-media.canva-apps.com/v2/BAFrf9Won7c/UAFrf58vQCc/AAF8xDuFUNg/10/promocard/4ee8bdc7-2a6c-43a4-9c28-1de2789a4ac9_500x375.png?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=AKIAQYCGKMUHQLLZM4VH%2F20260307%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Date=20260307T205506Z&X-Amz-Expires=396807&X-Amz-Signature=049d0dbe0f528b5cf75a5e8974507ae8269f10b9f6f41075e70601e9464efef3&X-Amz-SignedHeaders=host&response-expires=Thu%2C%2012%20Mar%202026%2011%3A08%3A33%20GMT",
+      "developer": "",
+      "shortDescription": "Image UpscalerSeamlessly upscale images"
+    },
+    {
+      "name": "BrandfetchSearch and add brand logos to your design",
+      "slug": "AAFkBgdvQVY",
+      "url": "https://www.canva.com/apps/AAFkBgdvQVY/brandfetch",
+      "iconUrl": "https://thirdparty-public-apps-media.canva-apps.com/v2/BAD2Vno3_ws/UADtAHShSYs/AAFkBgdvQVY/7/promocard/c8a4c95f-fd98-4ebc-b5c3-cc86c98ef713_500x375.png?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=AKIAQYCGKMUHQLLZM4VH%2F20260307%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Date=20260307T113112Z&X-Amz-Expires=431086&X-Amz-Signature=3f789b649d024a99175177600a231178f93b405a6bb66c7021fdb639ed8230e8&X-Amz-SignedHeaders=host&response-expires=Thu%2C%2012%20Mar%202026%2011%3A15%3A58%20GMT",
+      "developer": "",
+      "shortDescription": "BrandfetchSearch and add brand logos to your design"
+    },
+    {
+      "name": "CanBorderCreate borders for your designs",
+      "slug": "AAFptY-lIiI",
+      "url": "https://www.canva.com/apps/AAFptY-lIiI/canborder",
+      "iconUrl": "https://thirdparty-public-apps-media.canva-apps.com/BAFo1_4dsNE/UAFo10eEQtQ/AAFptY-lIiI/1/promocard_max/55a3e83d-93df-422c-abe3-9250788af691_500x375.jpg?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=AKIAQYCGKMUHQLLZM4VH%2F20260307%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Date=20260307T193137Z&X-Amz-Expires=401910&X-Amz-Signature=d10ff1b0500eaf126a4dcc8148b75cd26c985cc6fb38f43db2508f4020c5ea8a&X-Amz-SignedHeaders=host&response-expires=Thu%2C%2012%20Mar%202026%2011%3A10%3A07%20GMT",
+      "developer": "",
+      "shortDescription": "CanBorderCreate borders for your designs"
+    },
+    {
+      "name": "PixelifyMake your images look pixelated",
+      "slug": "AAFslIGJGKc",
+      "url": "https://www.canva.com/apps/AAFslIGJGKc/pixelify",
+      "iconUrl": "https://thirdparty-public-apps-media.canva-apps.com/v2/BAFmF839xhI/UAFmFwNnBjc/AAFslIGJGKc/2/promocard/2e7edf0f-00c8-440c-b78f-d93c80a81a5a_500x375.png?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=AKIAQYCGKMUHQLLZM4VH%2F20260308%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Date=20260308T103649Z&X-Amz-Expires=348372&X-Amz-Signature=b921c2987624a57aefc56b55536a9b28f993e3a42c1d323119ea29ef981fe7c2&X-Amz-SignedHeaders=host&response-expires=Thu%2C%2012%20Mar%202026%2011%3A23%3A01%20GMT",
+      "developer": "",
+      "shortDescription": "PixelifyMake your images look pixelated"
+    },
+    {
+      "name": "TypeGradientAdd gradients to texts",
+      "slug": "AAFxv8Y4eSw",
+      "url": "https://www.canva.com/apps/AAFxv8Y4eSw/typegradient",
+      "iconUrl": "https://thirdparty-public-apps-media.canva-apps.com/v2/BAFxvyX5Rx4/UAFxv8_zf_w/AAFxv8Y4eSw/15/promocard/b4f7b162-afc9-4355-a107-f844578535ab_500x375.png?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=AKIAQYCGKMUHQLLZM4VH%2F20260308%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Date=20260308T000148Z&X-Amz-Expires=387246&X-Amz-Signature=446d8b0cebf6e6c4996f8e2bcec207f7a4c974972ed3484bdda498b6f7c15c78&X-Amz-SignedHeaders=host&response-expires=Thu%2C%2012%20Mar%202026%2011%3A35%3A54%20GMT",
+      "developer": "",
+      "shortDescription": "TypeGradientAdd gradients to texts"
+    },
+    {
+      "name": "Lottie AnimationsWorld’s largest customizable animation library",
+      "slug": "AAFSSHKlyhU",
+      "url": "https://www.canva.com/apps/AAFSSHKlyhU/lottie-animations",
+      "iconUrl": "https://thirdparty-public-apps-media.canva-apps.com/v2/BAEbYMA8at4/UAE4ZImkSHM/AAFSSHKlyhU/19/promocard/b55d51b2-fe07-4813-85ce-3c5b6b03830b_500x375.png?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=AKIAQYCGKMUHQLLZM4VH%2F20260307%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Date=20260307T111324Z&X-Amz-Expires=434137&X-Amz-Signature=bbeb5408ac399463be8200ad3fbf1f7eaf832cf9493bc77f95f8eafca15b5446&X-Amz-SignedHeaders=host&response-expires=Thu%2C%2012%20Mar%202026%2011%3A49%3A01%20GMT",
+      "developer": "",
+      "shortDescription": "Lottie AnimationsWorld’s largest customizable animation library"
+    },
+    {
+      "name": "AnimeifyTransform your photos into stunning anime art",
+      "slug": "AAF5fef9W4E",
+      "url": "https://www.canva.com/apps/AAF5fef9W4E/animeify",
+      "iconUrl": "https://thirdparty-public-apps-media.canva-apps.com/v2/BAFx5K2zahA/UAFx5GP7P_A/AAF5fef9W4E/13/promocard/a1efdff0-3675-46f5-95b9-961e1eaa35ba_500x375.png?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=AKIAQYCGKMUHQLLZM4VH%2F20260307%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Date=20260307T225732Z&X-Amz-Expires=391629&X-Amz-Signature=cd99c998936eef98363c375b4e8901ddbb1d91587e5ed5e3673deda8b1bdf61a&X-Amz-SignedHeaders=host&response-expires=Thu%2C%2012%20Mar%202026%2011%3A44%3A41%20GMT",
+      "developer": "",
+      "shortDescription": "AnimeifyTransform your photos into stunning anime art"
+    },
+    {
+      "name": "SketchifyTurns your photos into hand-drawn sketches",
+      "slug": "AAF5y4fBR-w",
+      "url": "https://www.canva.com/apps/AAF5y4fBR-w/sketchify",
+      "iconUrl": "https://thirdparty-public-apps-media.canva-apps.com/v2/BAFx5K2zahA/UAFx5GP7P_A/AAF5y4fBR-w/13/promocard/92878f4a-7d57-45c0-9df8-d92bbb36cea4_500x375.png?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=AKIAQYCGKMUHQLLZM4VH%2F20260308%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Date=20260308T060331Z&X-Amz-Expires=364201&X-Amz-Signature=8fd6441452af66a3faecbba62c6910a6cf72b60973b00975aed2dea1af470c01&X-Amz-SignedHeaders=host&response-expires=Thu%2C%2012%20Mar%202026%2011%3A13%3A32%20GMT",
+      "developer": "",
+      "shortDescription": "SketchifyTurns your photos into hand-drawn sketches"
+    },
+    {
+      "name": "EquationsBuild equations easily, insert them into designs",
+      "slug": "AAFuDWhzgN8",
+      "url": "https://www.canva.com/apps/AAFuDWhzgN8/equations",
+      "iconUrl": "https://thirdparty-public-apps-media.canva-apps.com/v2/BAEc2Ssp1a8/UAEc2a79VQE/AAFuDWhzgN8/2/promocard/a9705401-8a94-4729-abed-36f08462bf85_500x375.png?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=AKIAQYCGKMUHQLLZM4VH%2F20260307%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Date=20260307T182652Z&X-Amz-Expires=406888&X-Amz-Signature=48960869bb688de14a21bf13f9505770014270ab6f19558f580396218375f02e&X-Amz-SignedHeaders=host&response-expires=Thu%2C%2012%20Mar%202026%2011%3A28%3A20%20GMT",
+      "developer": "",
+      "shortDescription": "EquationsBuild equations easily, insert them into designs"
+    },
+    {
+      "name": "Meta Design CheckGet personalized tips for better social campaigns",
+      "slug": "AAF-xrdmb-Q",
+      "url": "https://www.canva.com/apps/AAF-xrdmb-Q/meta-design-check",
+      "iconUrl": "https://thirdparty-public-apps-media.canva-apps.com/v2/BAF0FhRdblg/UAF258qbhR4/AAF-xrdmb-Q/11/promocard/3815da31-bb92-4cb5-a076-fa3346c52762_500x375.png?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=AKIAQYCGKMUHQLLZM4VH%2F20260308%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Date=20260308T100637Z&X-Amz-Expires=352015&X-Amz-Signature=77a4826fe8db1d612eab9cb840936eaef97b8f346777cf652552128864807574&X-Amz-SignedHeaders=host&response-expires=Thu%2C%2012%20Mar%202026%2011%3A53%3A32%20GMT",
+      "developer": "",
+      "shortDescription": "Meta Design CheckGet personalized tips for better social campaigns"
+    },
+    {
+      "name": "Shopify ConnectAdd your Shopify products and files to any design",
+      "slug": "AAFsTOSHvqA",
+      "url": "https://www.canva.com/apps/AAFsTOSHvqA/shopify-connect",
+      "iconUrl": "https://thirdparty-public-apps-media.canva-apps.com/v2/BAEQN-mvn1c/UACRwc-4IWo/AAFsTOSHvqA/10/promocard/ea9ab999-75b1-475f-8cc7-3e23c1137d81_500x375.png?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=AKIAQYCGKMUHQLLZM4VH%2F20260308%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Date=20260308T083539Z&X-Amz-Expires=357695&X-Amz-Signature=4e81cfbe294e80597c76995b488b0115d083e4ed4daf20627760b410ebc2846c&X-Amz-SignedHeaders=host&response-expires=Thu%2C%2012%20Mar%202026%2011%3A57%3A14%20GMT",
+      "developer": "",
+      "shortDescription": "Shopify ConnectAdd your Shopify products and files to any design"
+    },
+    {
+      "name": "Bingo CardsGenerate bingo cards from a list of words",
+      "slug": "AAFTO50Dytk",
+      "url": "https://www.canva.com/apps/AAFTO50Dytk/bingo-cards",
+      "iconUrl": "https://thirdparty-public-apps-media.canva-apps.com/v2/BAFRpsEHaBY/UAFRphKw-eQ/AAFTO50Dytk/10/promocard/c0aef229-7534-4743-a93e-5c9aaebc1879_500x375.png?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=AKIAQYCGKMUHQLLZM4VH%2F20260307%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Date=20260307T135111Z&X-Amz-Expires=418615&X-Amz-Signature=1ed1af724cdadb0193c77a8e533ae6089e7db48b1201b031ecb8e6269f64e5df&X-Amz-SignedHeaders=host&response-expires=Thu%2C%2012%20Mar%202026%2010%3A08%3A06%20GMT",
+      "developer": "",
+      "shortDescription": "Bingo CardsGenerate bingo cards from a list of words"
+    }
+  ],
+  "apiEndpoints": [
+    {
+      "url": "https://telemetry.canva.com/v1/traces",
+      "method": "POST",
+      "resourceType": "fetch"
+    },
+    {
+      "url": "https://www.canva.com/_ajax/authnflow/auth-dialog-content",
+      "method": "POST",
+      "resourceType": "xhr"
+    },
+    {
+      "url": "https://www.canva.com/_ajax/ae/createBatch",
+      "method": "POST",
+      "resourceType": "xhr"
+    },
+    {
+      "url": "https://www.canva.com/cdn-cgi/challenge-platform/h/g/jsd/oneshot/ea2d291c0fdc/0.7337571360146697:1772965276:ncpozVtO5Xj_0KQ5AbWXEIAQcQoxo4xnYEQOnMcD0_I/9d91590daa84ffed",
+      "method": "POST",
+      "resourceType": "xhr"
+    },
+    {
+      "url": "https://accounts.google.com/gsi/log?client_id=779010036194-lf6spugv22vvj41pqjdj4d8k2tq7o5fd.apps.googleusercontent.com&as=0kVee9Gq0FiBAUmqkpXxGY%2FBDs73XwTPj%2FHdbFspgXo&bs=xD7dKQ03VkT%2FYbSwIUhotiB3a...",
+      "method": "POST",
+      "resourceType": "xhr"
+    },
+    {
+      "url": "https://www.canva.com/cdn-cgi/rum?",
+      "method": "POST",
+      "resourceType": "xhr"
+    },
+    {
+      "url": "https://www.canva.com/cdn-cgi/challenge-platform/h/g/flow/ov1/120635253:1772965276:Ucbf-lfy9kZzFsFe5ObgnPx91sDP1rqA4wqZkxr4UWk/9d91594e3c7bffed/zaqLkDq4ywqHVD.1xPGKMl7NTYE1eh4mzEP0VmPEyb0-1772967759-1...",
+      "method": "POST",
+      "resourceType": "xhr"
+    },
+    {
+      "url": "https://challenges.cloudflare.com/cdn-cgi/challenge-platform/h/g/flow/ov1/1292946306:1772965276:HkAkJQL9BXeBnFaeKtUKG90236HJS2UPnCMocVRf6Uo/9d9159520c67363b/MsmFLbMFD5JSKoJtHCCT7kbmQZUFWK40KC1yfd9ATk4...",
+      "method": "POST",
+      "resourceType": "xhr"
+    },
+    {
+      "url": "https://challenges.cloudflare.com/cdn-cgi/challenge-platform/h/g/pat/9d9159520c67363b/1772967760287/4a5193448fa3876a7b17aa05857068c4e87b97fb9562e8226ffbb30040238f8b/WEvGT-ZSdNglZgS",
+      "method": "GET",
+      "resourceType": "fetch"
+    },
+    {
+      "url": "https://www.canva.com/cdn-cgi/challenge-platform/h/g/flow/ov1/120635253:1772965276:Ucbf-lfy9kZzFsFe5ObgnPx91sDP1rqA4wqZkxr4UWk/9d915981ebd7ffed/pTqdmbmxKoex47mSq5nqeLJVAh30zWZ8C6GiVP_ymw8-1772967767-1...",
+      "method": "POST",
+      "resourceType": "xhr"
+    },
+    {
+      "url": "https://challenges.cloudflare.com/cdn-cgi/challenge-platform/h/g/flow/ov1/1292946306:1772965276:HkAkJQL9BXeBnFaeKtUKG90236HJS2UPnCMocVRf6Uo/9d915985bf66363b/bz6vrfvHHtBlh1GfmUm8snKD6ngUKACqz01gkCg0k4k...",
+      "method": "POST",
+      "resourceType": "xhr"
+    },
+    {
+      "url": "https://challenges.cloudflare.com/cdn-cgi/challenge-platform/h/g/pat/9d915985bf66363b/1772967768424/6d557b8dd9cb7d145a2ed5561d5855f50b8e9917c66e8b68a44ae36096fe3547/9GmFWBuk9O1nLz2",
+      "method": "GET",
+      "resourceType": "fetch"
+    }
+  ],
+  "appDetailPage": {
+    "url": "https://www.canva.com/apps/AAF_8lkU9VE/ai-music",
+    "metadata": {
+      "pageLength": 217
+    },
+    "hasEmbeddedJson": false,
+    "embeddedDataKeys": []
+  },
+  "collectionPage": null,
+  "domSelectors": {
+    "appCardContainer": "A._3BZabA",
+    "appLink": "a[href*=\"/apps/AAF\"]"
+  },
+  "recommendations": [
+    "Internal API endpoints detected — consider using HttpClient for category/listing data",
+    "Found 0 categories and 15 apps on main page"
+  ]
+}

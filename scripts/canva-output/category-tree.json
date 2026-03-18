@@ -1,0 +1,413 @@
+{
+  "timestamp": "2026-03-14T14:00:01.822Z",
+  "uniqueTopicTags": [
+    "marketplace_topic.ads",
+    "marketplace_topic.ai_audio",
+    "marketplace_topic.ai_documents",
+    "marketplace_topic.ai_images",
+    "marketplace_topic.ai_text",
+    "marketplace_topic.ai_videos",
+    "marketplace_topic.analytics",
+    "marketplace_topic.animation",
+    "marketplace_topic.avatars",
+    "marketplace_topic.cards_and_invitations",
+    "marketplace_topic.color",
+    "marketplace_topic.content_schedulers",
+    "marketplace_topic.data_connectors",
+    "marketplace_topic.data_visualization",
+    "marketplace_topic.display",
+    "marketplace_topic.documents",
+    "marketplace_topic.email",
+    "marketplace_topic.file_converters",
+    "marketplace_topic.file_import_and_export",
+    "marketplace_topic.flipbooks",
+    "marketplace_topic.forms",
+    "marketplace_topic.frames",
+    "marketplace_topic.icons_and_illustrations",
+    "marketplace_topic.images",
+    "marketplace_topic.interactivity",
+    "marketplace_topic.logos",
+    "marketplace_topic.mockups",
+    "marketplace_topic.music",
+    "marketplace_topic.patterns",
+    "marketplace_topic.photo_effects",
+    "marketplace_topic.print_products",
+    "marketplace_topic.qr_and_barcodes",
+    "marketplace_topic.shapes",
+    "marketplace_topic.social_networking",
+    "marketplace_topic.sound_effects",
+    "marketplace_topic.styles",
+    "marketplace_topic.subtitles",
+    "marketplace_topic.tasks_and_workflows",
+    "marketplace_topic.text_effects",
+    "marketplace_topic.text_generators",
+    "marketplace_topic.video_effects",
+    "marketplace_topic.videos",
+    "marketplace_topic.voiceovers"
+  ],
+  "topicTagCount": 43,
+  "categoryTabCount": 11,
+  "categoryTree": {
+    "all-apps": {
+      "label": "All apps",
+      "tabId": "_r_0_-tab-all-apps",
+      "description": "AI Music",
+      "subcategories": [
+        {
+          "label": "Design with your favorite media",
+          "slug": "design-with-your-favorite-media"
+        },
+        {
+          "label": "Enhance your images",
+          "slug": "enhance-your-images"
+        },
+        {
+          "label": "Supercharge your workflow",
+          "slug": "supercharge-your-workflow"
+        }
+      ]
+    },
+    "ai-generation": {
+      "label": "AI generation",
+      "tabId": "_r_0_-tab-ai-generation",
+      "description": "Generate or enhance images, videos, text, music, and more with a little help from AI.",
+      "subcategories": [
+        {
+          "label": "AI generation",
+          "slug": "ai-generation"
+        },
+        {
+          "label": "AI audio",
+          "slug": "ai-audio"
+        },
+        {
+          "label": "AI documents",
+          "slug": "ai-documents"
+        },
+        {
+          "label": "AI images",
+          "slug": "ai-images"
+        },
+        {
+          "label": "AI text",
+          "slug": "ai-text"
+        },
+        {
+          "label": "AI videos",
+          "slug": "ai-videos"
+        }
+      ]
+    },
+    "audio-and-voiceover": {
+      "label": "Audio and voiceover",
+      "tabId": "_r_0_-tab-audio-and-voiceover",
+      "description": "Easily add royalty-free music, realistic voiceovers, and top-quality sound effects to designs.",
+      "subcategories": [
+        {
+          "label": "Audio and voiceover",
+          "slug": "audio-and-voiceover"
+        },
+        {
+          "label": "Music",
+          "slug": "music"
+        },
+        {
+          "label": "Sound effects",
+          "slug": "sound-effects"
+        },
+        {
+          "label": "Voiceovers",
+          "slug": "voiceovers"
+        }
+      ]
+    },
+    "communication": {
+      "label": "Communication",
+      "tabId": "_r_0_-tab-communication",
+      "description": "Connect with your network over email, instant message, and social media.",
+      "subcategories": [
+        {
+          "label": "Communication",
+          "slug": "communication"
+        },
+        {
+          "label": "Cards and invitations",
+          "slug": "cards-and-invitations"
+        },
+        {
+          "label": "Content schedulers",
+          "slug": "content-schedulers"
+        },
+        {
+          "label": "Email",
+          "slug": "email"
+        },
+        {
+          "label": "Social networking",
+          "slug": "social-networking"
+        }
+      ]
+    },
+    "file-and-data": {
+      "label": "File and data management",
+      "tabId": "_r_0_-tab-file-and-data",
+      "description": "Access, sync, and share assets, no matter where they’re stored.",
+      "subcategories": [
+        {
+          "label": "File and data management",
+          "slug": "file-and-data-management"
+        },
+        {
+          "label": "Analytics",
+          "slug": "analytics"
+        },
+        {
+          "label": "Data connectors",
+          "slug": "data-connectors"
+        },
+        {
+          "label": "Data visualization",
+          "slug": "data-visualization"
+        },
+        {
+          "label": "File converters",
+          "slug": "file-converters"
+        },
+        {
+          "label": "File import and export",
+          "slug": "file-import-and-export"
+        }
+      ]
+    },
+    "graphic-design": {
+      "label": "Graphic design",
+      "tabId": "_r_0_-tab-graphic-design",
+      "description": "Make designs shine with ready-made icons, illustrations, patterns, and more.",
+      "subcategories": [
+        {
+          "label": "Graphic design",
+          "slug": "graphic-design"
+        },
+        {
+          "label": "Color",
+          "slug": "color"
+        },
+        {
+          "label": "Data visualization",
+          "slug": "data-visualization"
+        },
+        {
+          "label": "Documents",
+          "slug": "documents"
+        },
+        {
+          "label": "Flipbooks",
+          "slug": "flipbooks"
+        },
+        {
+          "label": "Frames",
+          "slug": "frames"
+        },
+        {
+          "label": "Icons and illustrations",
+          "slug": "icons-and-illustrations"
+        },
+        {
+          "label": "Images",
+          "slug": "images"
+        },
+        {
+          "label": "Interactivity",
+          "slug": "interactivity"
+        },
+        {
+          "label": "Logos",
+          "slug": "logos"
+        },
+        {
+          "label": "Mockups",
+          "slug": "mockups"
+        },
+        {
+          "label": "Patterns",
+          "slug": "patterns"
+        },
+        {
+          "label": "Print products",
+          "slug": "print-products"
+        },
+        {
+          "label": "QR and barcodes",
+          "slug": "qr-and-barcodes"
+        },
+        {
+          "label": "Shapes",
+          "slug": "shapes"
+        },
+        {
+          "label": "Videos",
+          "slug": "videos"
+        }
+      ]
+    },
+    "marketing": {
+      "label": "Marketing",
+      "tabId": "_r_0_-tab-marketing",
+      "description": "Build your brand identity, create campaign assets, and launch them to any channel.",
+      "subcategories": [
+        {
+          "label": "Marketing",
+          "slug": "marketing"
+        },
+        {
+          "label": "Ads",
+          "slug": "ads"
+        },
+        {
+          "label": "Content schedulers",
+          "slug": "content-schedulers"
+        },
+        {
+          "label": "Display",
+          "slug": "display"
+        },
+        {
+          "label": "Email",
+          "slug": "email"
+        },
+        {
+          "label": "Flipbooks",
+          "slug": "flipbooks"
+        },
+        {
+          "label": "Forms",
+          "slug": "forms"
+        },
+        {
+          "label": "Logos",
+          "slug": "logos"
+        },
+        {
+          "label": "Mockups",
+          "slug": "mockups"
+        },
+        {
+          "label": "Print products",
+          "slug": "print-products"
+        },
+        {
+          "label": "QR and barcodes",
+          "slug": "qr-and-barcodes"
+        },
+        {
+          "label": "Social networking",
+          "slug": "social-networking"
+        }
+      ]
+    },
+    "photo-editing": {
+      "label": "Photo editing",
+      "tabId": "_r_0_-tab-photo-editing",
+      "description": "Resize, retouch, and reimagine images until they’re pixel-perfect.",
+      "subcategories": [
+        {
+          "label": "Photo editing",
+          "slug": "photo-editing"
+        },
+        {
+          "label": "Images",
+          "slug": "images"
+        },
+        {
+          "label": "Photo effects",
+          "slug": "photo-effects"
+        },
+        {
+          "label": "Styles",
+          "slug": "styles"
+        }
+      ]
+    },
+    "project-management": {
+      "label": "Project management",
+      "tabId": "_r_0_-tab-project-management",
+      "description": "Stay on top of tasks, track progress, and optimize every part of your workflow.",
+      "subcategories": [
+        {
+          "label": "Project management",
+          "slug": "project-management"
+        },
+        {
+          "label": "Content schedulers",
+          "slug": "content-schedulers"
+        },
+        {
+          "label": "Forms",
+          "slug": "forms"
+        },
+        {
+          "label": "Social networking",
+          "slug": "social-networking"
+        },
+        {
+          "label": "Tasks and workflows",
+          "slug": "tasks-and-workflows"
+        }
+      ]
+    },
+    "text-styling": {
+      "label": "Text styling",
+      "tabId": "_r_0_-tab-text-styling",
+      "description": "Craft the right words, then transform them with eye-catching effects, colors, and fonts.",
+      "subcategories": [
+        {
+          "label": "Text styling",
+          "slug": "text-styling"
+        },
+        {
+          "label": "Forms",
+          "slug": "forms"
+        },
+        {
+          "label": "Text effects",
+          "slug": "text-effects"
+        },
+        {
+          "label": "Text generators",
+          "slug": "text-generators"
+        }
+      ]
+    },
+    "video-and-animation": {
+      "label": "Video and animation",
+      "tabId": "_r_0_-tab-video-and-animation",
+      "description": "Edit footage like a pro with motion effects, subtitles, and quality enhancing tools.",
+      "subcategories": [
+        {
+          "label": "Video and animation",
+          "slug": "video-and-animation"
+        },
+        {
+          "label": "Animation",
+          "slug": "animation"
+        },
+        {
+          "label": "Avatars",
+          "slug": "avatars"
+        },
+        {
+          "label": "Subtitles",
+          "slug": "subtitles"
+        },
+        {
+          "label": "Video effects",
+          "slug": "video-effects"
+        },
+        {
+          "label": "Videos",
+          "slug": "videos"
+        }
+      ]
+    }
+  }
+}

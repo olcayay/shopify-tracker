@@ -1,0 +1,44 @@
+[
+  {
+    "url": "https://www.canva.com/_ajax/authnflow/auth-dialog-content",
+    "status": 200,
+    "contentType": "application/json;charset=utf-8",
+    "body": "{\"A\":{\"A\":\"https://content-management-files.canva.com/eb1a4b23-54b1-486b-a88a-9430a7666f2e/auth_dialog_en.jpg\"}}"
+  },
+  {
+    "url": "https://www.canva.com/_ajax/ae/createBatch",
+    "status": 200,
+    "contentType": "application/json;charset=utf-8",
+    "body": "{}"
+  },
+  {
+    "url": "https://telemetry.canva.com/v1/traces",
+    "status": 200,
+    "contentType": "application/json",
+    "body": "{\"partialSuccess\":{}}"
+  },
+  {
+    "url": "https://google.com/.well-known/web-identity",
+    "status": 200,
+    "contentType": "application/json",
+    "body": "{\n  \"provider_urls\": [\n    \"https://accounts.google.com/gsi/fedcm.json\"\n  ],\n  \"accounts_endpoint\": \"https://accounts.google.com/gsi/fedcm/listaccounts\",\n  \"login_url\": \"https://accounts.google.com/gsi/fedcm/signin\"\n}\n"
+  },
+  {
+    "url": "https://accounts.google.com/gsi/fedcm.json",
+    "status": 200,
+    "contentType": "application/json; charset=utf-8",
+    "body": "{\n\"idtoken_endpoint\": \"https://accounts.google.com/gsi/fedcm/issue\",\n\"id_token_endpoint\": \"https://accounts.google.com/gsi/fedcm/issue\",\n\"id_assertion_endpoint\": \"https://accounts.google.com/o/fedcm/authorization\",\n\"metrics_endpoint\": \"https://accounts.google.com/gsi/fedcm/metrics\",\n\"accounts_endpoint\": \"https://accounts.google.com/gsi/fedcm/listaccounts\",\n\"client_metadata_endpoint\": \"https://accounts.google.com/gsi/fedcm/clientmetadata\",\n\"client_id_metadata_endpoint\": \"https://accounts.google.com/gsi/fedcm/clientmetadata\",\n\"signin_url\": \"https://accounts.google.com/gsi/fedcm/signin\",\n\"login_url\": \"https://accounts.google.com/gsi/fedcm/signin\",\n\"revocation_endpoint\": \"https://accounts.google.com/gsi/fedcm/revoke\",\n\"disconnect_endpoint\": \"https://accounts.google.com/gsi/fedcm/revoke\",\n\"supports_add_account\": true,\n\"supports_use_other_account\": true,\n\"modes\": {\n  \"button\": {\n    \"supports_use_other_account\": true\n  },\n  \"widget\": {\n    \"supports_use_other_account\": false\n  },\n  \"active\": {\n    \"supports_use_other_account\": true\n  },\n  \"passive\": {\n    \"supports_use_other_account\": false\n  }\n},\n\"branding\": {\n   \"background_color\": \"#1a73e8\",\n   \"color\": \"#fff\",\n   \"icons\": [{\n     \"url\": \"https://accounts.google.com/gsi-static/google-logo.png\",\n     \"size\": 32\n   }, {\n     \"url\": \"https://accounts.google.com/gsi-static/google-logo_40.png\",\n     \"size\": 40\n   }]\n  }\n}"
+  },
+  {
+    "url": "https://accounts.google.com/gsi/fedcm/listaccounts",
+    "status": 200,
+    "contentType": "application/json; charset=utf-8",
+    "body": "{\"accounts\":[]}"
+  },
+  {
+    "url": "https://www.canva.com/_ajax/authnflow/auth-dialog-content",
+    "status": 200,
+    "contentType": "application/json;charset=utf-8",
+    "body": "{\"A\":{\"A\":\"https://content-management-files.canva.com/eb1a4b23-54b1-486b-a88a-9430a7666f2e/auth_dialog_en.jpg\"}}"
+  }
+]

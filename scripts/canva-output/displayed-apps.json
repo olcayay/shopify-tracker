@@ -1,0 +1,200 @@
+[
+  {
+    "id": "AAF_8lkU9VE",
+    "name": "AI MusicCustom music for your designs",
+    "position": 1,
+    "urlSlug": "ai-music"
+  },
+  {
+    "id": "AAF5vGyV5TY",
+    "name": "FontFrameCreate vibrant text with image backgrounds",
+    "position": 2,
+    "urlSlug": "fontframe"
+  },
+  {
+    "id": "AAFj-rTO9p4",
+    "name": "Google DriveAccess your Google Drive files in Canva",
+    "position": 3,
+    "urlSlug": "google-drive"
+  },
+  {
+    "id": "AAGFLua4Ymc",
+    "name": "Choppy CropCrop your images in custom shapes",
+    "position": 4,
+    "urlSlug": "choppy-crop"
+  },
+  {
+    "id": "AAGi4-8W3NY",
+    "name": "Google PhotosAdd media from Google Photos to your designs",
+    "position": 5,
+    "urlSlug": "google-photos"
+  },
+  {
+    "id": "AAF8xDuFUNg",
+    "name": "Image UpscalerSeamlessly upscale images",
+    "position": 6,
+    "urlSlug": "image-upscaler"
+  },
+  {
+    "id": "AAGB3po4Nwg",
+    "name": "TypeCutOutTransform your text with background images",
+    "position": 7,
+    "urlSlug": "typecutout"
+  },
+  {
+    "id": "AAGB4-AUqkc",
+    "name": "Gen QRDesign vibrant QR codes",
+    "position": 8,
+    "urlSlug": "gen-qr"
+  },
+  {
+    "id": "AAGWQGvPKfo",
+    "name": "RefaceAI-powered face swap app for unique portraits",
+    "position": 9,
+    "urlSlug": "reface"
+  },
+  {
+    "id": "AAFkBgdvQVY",
+    "name": "BrandfetchSearch and add brand logos to your design",
+    "position": 10,
+    "urlSlug": "brandfetch"
+  },
+  {
+    "id": "AAFptY-lIiI",
+    "name": "CanBorderCreate borders for your designs",
+    "position": 11,
+    "urlSlug": "canborder"
+  },
+  {
+    "id": "AAGLHfr5ZM0",
+    "name": "FontStudioAdvanced text effect studio",
+    "position": 12,
+    "urlSlug": "fontstudio"
+  },
+  {
+    "id": "AAGVtcZw2Jk",
+    "name": "Image BlenderEffortlessly merge or blend images in Canva",
+    "position": 13,
+    "urlSlug": "image-blender"
+  },
+  {
+    "id": "AAGB3pmX7hc",
+    "name": "TypeExtrudeAdd depth and dimension to your text",
+    "position": 14,
+    "urlSlug": "typeextrude"
+  },
+  {
+    "id": "AAFslIGJGKc",
+    "name": "PixelifyMake your images look pixelated",
+    "position": 15,
+    "urlSlug": "pixelify"
+  },
+  {
+    "id": "AAFxv8Y4eSw",
+    "name": "TypeGradientAdd gradients to texts",
+    "position": 16,
+    "urlSlug": "typegradient"
+  },
+  {
+    "id": "AAFSSHKlyhU",
+    "name": "Lottie AnimationsWorld’s largest customizable animation library",
+    "position": 17,
+    "urlSlug": "lottie-animations"
+  },
+  {
+    "id": "AAF5fef9W4E",
+    "name": "AnimeifyTransform your photos into stunning anime art",
+    "position": 18,
+    "urlSlug": "animeify"
+  },
+  {
+    "id": "AAF5y4fBR-w",
+    "name": "SketchifyTurns your photos into hand-drawn sketches",
+    "position": 19,
+    "urlSlug": "sketchify"
+  },
+  {
+    "id": "AAGRBT0C7xk",
+    "name": "Image SplitterCreate seamless carousels and grids",
+    "position": 20,
+    "urlSlug": "image-splitter"
+  },
+  {
+    "id": "AAGD_ndUrso",
+    "name": "TypeLetteringCustomizable text effects for captivating designs.",
+    "position": 21,
+    "urlSlug": "typelettering"
+  },
+  {
+    "id": "AAFuDWhzgN8",
+    "name": "EquationsBuild equations easily, insert them into designs",
+    "position": 22,
+    "urlSlug": "equations"
+  },
+  {
+    "id": "AAF-xrdmb-Q",
+    "name": "Meta Design CheckGet personalized tips for better social campaigns",
+    "position": 23,
+    "urlSlug": "meta-design-check"
+  },
+  {
+    "id": "AAFsTOSHvqA",
+    "name": "Shopify ConnectAdd your Shopify products and files to any design",
+    "position": 24,
+    "urlSlug": "shopify-connect"
+  },
+  {
+    "id": "AAGQBxGhNlQ",
+    "name": "Activities MakerMake fun puzzles",
+    "position": 25,
+    "urlSlug": "activities-maker"
+  },
+  {
+    "id": "AAGW-6SZRGI",
+    "name": "InstagramPreview and publish Carousels, Reels and Stories",
+    "position": 26,
+    "urlSlug": "instagram"
+  },
+  {
+    "id": "AAGcYWbtT08",
+    "name": "Google MapsSeamlessly add Google maps to your Canva designs",
+    "position": 27,
+    "urlSlug": "google-maps"
+  },
+  {
+    "id": "AAGUTAhXAV4",
+    "name": "FlourishAdd Flourish charts, maps, and interactive content",
+    "position": 28,
+    "urlSlug": "flourish"
+  },
+  {
+    "id": "AAFTO50Dytk",
+    "name": "Bingo CardsGenerate bingo cards from a list of words",
+    "position": 29,
+    "urlSlug": "bingo-cards"
+  },
+  {
+    "id": "AAGHIzAIN4E",
+    "name": "Calendar MakerCreate custom, monthly, or weekly calendars easily",
+    "position": 30,
+    "urlSlug": "calendar-maker"
+  },
+  {
+    "id": "AAGD2fo_DqM",
+    "name": "CreatEcardsCreate & send invites, track RSVPs for any event",
+    "position": 31,
+    "urlSlug": "createcards"
+  },
+  {
+    "id": "AAGOptJ-N6g",
+    "name": "Heyzine FlipbooksPage turn effects and slideshows for your design",
+    "position": 32,
+    "urlSlug": "heyzine-flipbooks"
+  },
+  {
+    "id": "AAGV1BRQVmA",
+    "name": "Amazon CreatorsPost your design to Amazon Storefront",
+    "position": 33,
+    "urlSlug": "amazon-creators"
+  }
+]

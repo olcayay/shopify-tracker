@@ -1,0 +1,20 @@
+{
+  "headings": [
+    "[H2] "
+  ],
+  "images": [
+    {
+      "src": "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI4MCIgaGVpZ2h0PSIzMCIgdmlld0JveD0iMCAwIDgwIDMwIj48ZGVmcz48cmFkaWFsR3JhZGllbnQgaWQ9ImIiIGN4PSIwIiBjeT0iMCIgcj0iMS",
+      "alt": ""
+    }
+  ],
+  "bodyText": "Ray ID: 9d915c469bab5c8d\nYour IP address: 176.234.10.205\nDetected location: TR\n\nWe’re currently checking your connection. This shouldn’t take long.\nIf you keep getting this page, check if there’s a problem with Canva.",
+  "jsonLd": [],
+  "inlineScripts": [
+    "(function(){window._cf_chl_opt = {cvId: '3',cZone: 'www.canva.com',cType: 'managed',cRay: '9d915c469bab5c8d',cH: 'p_8deYjKlFjOmcQzBSZ1xTr5rVQO.BQ0aJ1ht129r70-1772967880-1.2.1.1-F38ESKTYFMNecte9v7n4KZnlki6NlPY1FZ5jRjQGrTnQkVAq6j4nVSB3mP.z4eQ6',cUPMDTk:\"\\/apps\\/AAF_8lkU9VE\\/ai-music?__cf_chl_tk=Kh8gSZFHFGHHjKesDFJ2ZYCLDlNyaq2iIbLCS3NQ4Ls-1772967880-1.0.1.1-E5tb0lgqaVtVoc_PyVFr2YTe6.lRBZ3pHkUlrgBihlY\",cFPWv: 'g',cITimeS: '1772967880',cTplC:1,cTplV:5,cTplB: '0',fa:\"\\/apps\\/AAF_8lkU9VE\\/ai-music?__cf"
+  ],
+  "metaTags": {
+    "viewport": "maximum-scale=1.0, width=500",
+    "apple-mobile-web-app-capable": "yes"
+  }
+}

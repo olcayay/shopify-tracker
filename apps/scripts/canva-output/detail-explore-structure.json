@@ -1,0 +1,1535 @@
+{
+  "title": "Jotform - Canva Apps",
+  "meta": {
+    "app-name": "apps_directory",
+    "viewport": "width=device-width, initial-scale=1",
+    "referrer": "strict-origin-when-cross-origin",
+    "fb:app_id": "525265914179580",
+    "og:site_name": "Canva",
+    "og:title": "Jotform - Canva Apps",
+    "og:image": "https://static.canva.com/domain-assets/canva/static/images/fb_cover-1.jpg",
+    "og:type": "website",
+    "twitter:card": "summary_large_image",
+    "twitter:site": "@canva",
+    "twitter:creator": "@canva",
+    "twitter:title": "Jotform - Canva Apps",
+    "description": "Embed custom forms in your Canva website",
+    "og:description": "Embed custom forms in your Canva website",
+    "twitter:description": "Embed custom forms in your Canva website"
+  },
+  "headings": [
+    {
+      "tag": "H2",
+      "text": "Digital design"
+    },
+    {
+      "tag": "H3",
+      "text": "Canva Visual Suite"
+    },
+    {
+      "tag": "H3",
+      "text": "Popular in digital design"
+    },
+    {
+      "tag": "H2",
+      "text": "All templates"
+    },
+    {
+      "tag": "H2",
+      "text": "Print design"
+    },
+    {
+      "tag": "H3",
+      "text": "Popular print designs"
+    },
+    {
+      "tag": "H2",
+      "text": "All print products"
+    },
+    {
+      "tag": "H2",
+      "text": "Images and photos"
+    },
+    {
+      "tag": "H3",
+      "text": "Popular in images"
+    },
+    {
+      "tag": "H2",
+      "text": "Videos and audio"
+    },
+    {
+      "tag": "H3",
+      "text": "Popular in video"
+    },
+    {
+      "tag": "H3",
+      "text": "Popular in audio"
+    },
+    {
+      "tag": "H2",
+      "text": "Visual Suite"
+    },
+    {
+      "tag": "H2",
+      "text": "Canva AI"
+    },
+    {
+      "tag": "H3",
+      "text": "Popular in Magic Studio"
+    },
+    {
+      "tag": "H2",
+      "text": "All Magic Studio"
+    },
+    {
+      "tag": "H2",
+      "text": "Brand management"
+    },
+    {
+      "tag": "H2",
+      "text": "Product features"
+    },
+    {
+      "tag": "H2",
+      "text": "Apps Marketplace"
+    },
+    {
+      "tag": "H2",
+      "text": "Compare pricing"
+    },
+    {
+      "tag": "H2",
+      "text": "Pro"
+    },
+    {
+      "tag": "H2",
+      "text": "Business"
+    },
+    {
+      "tag": "H2",
+      "text": "Enterprise"
+    },
+    {
+      "tag": "H2",
+      "text": "Nonprofit"
+    },
+    {
+      "tag": "H2",
+      "text": "Education"
+    },
+    {
+      "tag": "H2",
+      "text": "Higher education"
+    },
+    {
+      "tag": "H2",
+      "text": "Canva for business"
+    },
+    {
+      "tag": "H2",
+      "text": "Plans and services"
+    },
+    {
+      "tag": "H3",
+      "text": "Plans"
+    },
+    {
+      "tag": "H3",
+      "text": "Demos and tools"
+    },
+    {
+      "tag": "H3",
+      "text": "Services"
+    },
+    {
+      "tag": "H2",
+      "text": "All Canva for business"
+    },
+    {
+      "tag": "H2",
+      "text": "Use cases"
+    },
+    {
+      "tag": "H3",
+      "text": "Functions"
+    },
+    {
+      "tag": "H3",
+      "text": "Use cases"
+    },
+    {
+      "tag": "H2",
+      "text": "Solutions"
+    },
+    {
+      "tag": "H3",
+      "text": "Business types"
+    },
+    {
+      "tag": "H3",
+      "text": "Industries and sectors"
+    },
+    {
+      "tag": "H2",
+      "text": "All solutions"
+    },
+    {
+      "tag": "H2",
+      "text": "Features"
+    },
+    {
+      "tag": "H3",
+      "text": "Key features"
+    },
+    {
+      "tag": "H2",
+      "text": "All key features"
+    },
+    {
+      "tag": "H2",
+      "text": "Resources"
+    },
+    {
+      "tag": "H3",
+      "text": "Reports and insights"
+    },
+    {
+      "tag": "H3",
+      "text": "Webinars"
+    },
+    {
+      "tag": "H2",
+      "text": "All business resources"
+    },
+    {
+      "tag": "H2",
+      "text": "Case studies"
+    },
+    {
+      "tag": "H2",
+      "text": "Contact Sales"
+    },
+    {
+      "tag": "H2",
+      "text": "Canva for education"
+    },
+    {
+      "tag": "H2",
+      "text": "K-12 education"
+    },
+    {
+      "tag": "H3",
+      "text": "Teachers"
+    },
+    {
+      "tag": "H3",
+      "text": "Educator communities"
+    },
+    {
+      "tag": "H3",
+      "text": "Features"
+    },
+    {
+      "tag": "H3",
+      "text": "Schools and districts"
+    },
+    {
+      "tag": "H2",
+      "text": "Higher education"
+    },
+    {
+      "tag": "H3",
+      "text": "Higher education"
+    },
+    {
+      "tag": "H3",
+      "text": "Campus solutions"
+    },
+    {
+      "tag": "H3",
+      "text": "Reports and insights"
+    },
+    {
+      "tag": "H2",
+      "text": "Students"
+    },
+    {
+      "tag": "H2",
+      "text": "Education plans"
+    },
+    {
+      "tag": "H2",
+      "text": "Case studies"
+    },
+    {
+      "tag": "H2",
+      "text": "Education newsroom"
+    },
+    {
+      "tag": "H2",
+      "text": "Help Center"
+    },
+    {
+      "tag": "H2",
+      "text": "Design School"
+    },
+    {
+      "tag": "H2",
+      "text": "Create guides"
+    },
+    {
+      "tag": "H3",
+      "text": "Marketing guides"
+    },
+    {
+      "tag": "H3",
+      "text": "Graphics guides"
+    },
+    {
+      "tag": "H2",
+      "text": "All create guides"
+    },
+    {
+      "tag": "H2",
+      "text": "Work Kits"
+    },
+    {
+      "tag": "H1",
+      "text": "Create powerful forms for Canva"
+    },
+    {
+      "tag": "H2",
+      "text": "Download Canva for free"
+    },
+    {
+      "tag": "H2",
+      "text": "Product"
+    },
+    {
+      "tag": "H2",
+      "text": "Plans"
+    },
+    {
+      "tag": "H2",
+      "text": "About"
+    },
+    {
+      "tag": "H2",
+      "text": "Community"
+    },
+    {
+      "tag": "H2",
+      "text": "Inspiration"
+    },
+    {
+      "tag": "H2",
+      "text": "Help"
+    },
+    {
+      "tag": "H2",
+      "text": "Tools"
+    }
+  ],
+  "sections": [],
+  "images": [
+    {
+      "src": "https://static.canva.com/web/images/8439b51bb7a19f6e65ce1064bc37c197.svg",
+      "alt": "",
+      "width": 90,
+      "height": 34
+    },
+    {
+      "src": "https://thirdparty-public-apps-media.canva-apps.com/v2/BAGX27Uy59Q/UAGX25sXa_Y/AAGX23MX5S8/1/promocard/4115cf4a-9569-4b54-a132-a06a8729ae77.png?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=AKIAQY",
+      "alt": "",
+      "width": 640,
+      "height": 480
+    },
+    {
+      "src": "https://thirdparty-public-apps-media.canva-apps.com/v2/BAGX27Uy59Q/UAGX25sXa_Y/AAGX23MX5S8/1/screenshot/65968f4c-ca33-46d9-b42a-c2666626c53f.png?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=AKIAQ",
+      "alt": "",
+      "width": 640,
+      "height": 480
+    },
+    {
+      "src": "https://thirdparty-public-apps-media.canva-apps.com/v2/BAGX27Uy59Q/UAGX25sXa_Y/AAGX23MX5S8/2/screenshot/3e4d4256-5de7-4a49-854a-75c9493ec4b6.png?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=AKIAQ",
+      "alt": "",
+      "width": 640,
+      "height": 480
+    },
+    {
+      "src": "https://thirdparty-public-apps-media.canva-apps.com/v2/BAGX27Uy59Q/UAGX25sXa_Y/AAGX23MX5S8/1/thumbnail/03f1c280-37fd-4292-ab5f-4b1717420745_128x128.png?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credentia",
+      "alt": "",
+      "width": 56,
+      "height": 56
+    },
+    {
+      "src": "https://static.canva.com/web/images/8439b51bb7a19f6e65ce1064bc37c197.svg",
+      "alt": "",
+      "width": 90,
+      "height": 34
+    },
+    {
+      "src": "https://content-management-files.canva.com/6122da46-4357-4423-a18e-35bee4a9a33e/GetItOnGooglePlay_Badge_Web_color.svg",
+      "alt": "",
+      "width": 300,
+      "height": 89
+    },
+    {
+      "src": "https://content-management-files.canva.com/38c1cf77-57db-46b6-8d00-82a93ecf99ac/Download_on_the_App_Store_Badge.svg",
+      "alt": "",
+      "width": 120,
+      "height": 40
+    }
+  ],
+  "links": [
+    {
+      "href": "#_R_rH1_",
+      "text": "Skip to main content"
+    },
+    {
+      "href": "https://www.canva.com/emails/",
+      "text": "Email"
+    },
+    {
+      "href": "https://www.canva.com/sheets/",
+      "text": "Sheets"
+    },
+    {
+      "href": "https://www.canva.com/docs/",
+      "text": "Docs"
+    },
+    {
+      "href": "https://www.canva.com/online-whiteboard/",
+      "text": "Whiteboards"
+    },
+    {
+      "href": "https://www.canva.com/presentations/",
+      "text": "Presentations"
+    },
+    {
+      "href": "https://www.canva.com/social-media/",
+      "text": "Social"
+    },
+    {
+      "href": "https://www.canva.com/photo-editor/",
+      "text": "Photo Editor"
+    },
+    {
+      "href": "https://www.canva.com/video-editor/",
+      "text": "Videos"
+    },
+    {
+      "href": "https://www.canva.com/print/",
+      "text": "Print"
+    },
+    {
+      "href": "https://www.canva.com/website-builder/",
+      "text": "Websites"
+    },
+    {
+      "href": "https://www.canva.com/forms/",
+      "text": "Forms"
+    },
+    {
+      "href": "https://www.canva.com/resumes/",
+      "text": "Resumes"
+    },
+    {
+      "href": "https://www.canva.com/logos/",
+      "text": "Logos"
+    },
+    {
+      "href": "https://www.canva.com/infographics/",
+      "text": "Infographics"
+    },
+    {
+      "href": "https://www.canva.com/graphs/",
+      "text": "Graphs and charts"
+    },
+    {
+      "href": "https://www.canva.com/draw/",
+      "text": "Draw"
+    },
+    {
+      "href": "https://www.canva.com/pdf-editor/",
+      "text": "PDF editor"
+    },
+    {
+      "href": "https://www.canva.com/templates/",
+      "text": "All templates"
+    },
+    {
+      "href": "https://www.canva.com/business-cards/",
+      "text": "Business cards"
+    },
+    {
+      "href": "https://www.canva.com/invitations/",
+      "text": "Invitations"
+    },
+    {
+      "href": "https://www.canva.com/flyers/",
+      "text": "Flyers"
+    },
+    {
+      "href": "https://www.canva.com/brochures/",
+      "text": "Brochures"
+    },
+    {
+      "href": "https://www.canva.com/t-shirts/",
+      "text": "T-shirts"
+    },
+    {
+      "href": "https://www.canva.com/custom-mugs/",
+      "text": "Mugs"
+    },
+    {
+      "href": "https://www.canva.com/stickers/",
+      "text": "Stickers"
+    },
+    {
+      "href": "https://www.canva.com/hoodies-sweatshirts/",
+      "text": "Hoodies"
+    },
+    {
+      "href": "https://www.canva.com/labels/",
+      "text": "Labels"
+    },
+    {
+      "href": "https://www.canva.com/posters/",
+      "text": "Posters"
+    },
+    {
+      "href": "https://www.canva.com/calendars/",
+      "text": "Calendars"
+    },
+    {
+      "href": "https://www.canva.com/photo-books/",
+      "text": "Photobooks"
+    },
+    {
+      "href": "https://www.canva.com/cards/",
+      "text": "Greeting cards"
+    },
+    {
+      "href": "https://www.canva.com/print/",
+      "text": "All print products"
+    },
+    {
+      "href": "https://www.canva.com/photo-editor/",
+      "text": "Photo editor"
+    },
+    {
+      "href": "https://www.canva.com/features/background-remover/",
+      "text": "Background remover"
+    },
+    {
+      "href": "https://www.canva.com/photo-collages/",
+      "text": "Photo collages"
+    },
+    {
+      "href": "https://www.canva.com/mockups/",
+      "text": "Mockups"
+    },
+    {
+      "href": "https://www.canva.com/features/image-enhancer/",
+      "text": "Image enhancer"
+    },
+    {
+      "href": "https://www.canva.com/ai-image-generator/",
+      "text": "AI image generator"
+    },
+    {
+      "href": "https://www.canva.com/features/ai-photo-editing/",
+      "text": "AI photo editor"
+    },
+    {
+      "href": "https://www.canva.com/ai-art-generator/",
+      "text": "AI art generator"
+    },
+    {
+      "href": "https://www.canva.com/video-editor/",
+      "text": "Video editor"
+    },
+    {
+      "href": "https://www.canva.com/video-editor/youtube/",
+      "text": "YouTube video editor"
+    },
+    {
+      "href": "https://www.canva.com/features/video-trimmer/",
+      "text": "Video trimmer"
+    },
+    {
+      "href": "https://www.canva.com/features/online-video-recorder/",
+      "text": "Online video recorder"
+    },
+    {
+      "href": "https://www.canva.com/features/mp4-converter/",
+      "text": "Convert videos to MP4"
+    },
+    {
+      "href": "https://www.canva.com/features/ai-video-generator/",
+      "text": "AI video generator"
+    },
+    {
+      "href": "https://www.canva.com/features/text-to-speech/",
+      "text": "Text to speech voiceover"
+    },
+    {
+      "href": "https://www.canva.com/features/ai-music-generator/",
+      "text": "AI music generator"
+    },
+    {
+      "href": "https://www.canva.com/features/ai-voice-generator/",
+      "text": "AI voice generator"
+    },
+    {
+      "href": "https://www.canva.com/visual-suite/",
+      "text": "Visual Suite"
+    },
+    {
+      "href": "https://www.canva.com/ai-assistant/",
+      "text": "Canva AI assistant"
+    },
+    {
+      "href": "https://www.canva.com/ai-code-generator/",
+      "text": "Canva Code"
+    },
+    {
+      "href": "https://www.canva.com/pro/magic-resize/",
+      "text": "Magic Resize"
+    },
+    {
+      "href": "https://www.canva.com/pro/animator/",
+      "text": "Magic Animate"
+    },
+    {
+      "href": "https://www.canva.com/magic-write/",
+      "text": "Magic Write"
+    },
+    {
+      "href": "https://www.canva.com/translate/",
+      "text": "Translate"
+    },
+    {
+      "href": "https://www.canva.com/features/ai-data-analysis/",
+      "text": "Magic Insights"
+    },
+    {
+      "href": "https://www.canva.com/features/ai-formula-generator/",
+      "text": "Magic Formulas"
+    },
+    {
+      "href": "https://www.canva.com/magic/",
+      "text": "All Magic Studio"
+    },
+    {
+      "href": "https://www.canva.com/business/features/brand/",
+      "text": "Brand management"
+    },
+    {
+      "href": "https://www.canva.com/features/",
+      "text": "Product features"
+    },
+    {
+      "href": "https://www.canva.com/apps/",
+      "text": "Apps Marketplace"
+    },
+    {
+      "href": "https://www.canva.com/pricing/",
+      "text": "Compare pricing"
+    },
+    {
+      "href": "https://www.canva.com/pro/",
+      "text": "Pro"
+    },
+    {
+      "href": "https://www.canva.com/canva-business/",
+      "text": "Business"
+    },
+    {
+      "href": "https://www.canva.com/enterprise/",
+      "text": "Enterprise"
+    },
+    {
+      "href": "https://www.canva.com/canva-for-nonprofits/",
+      "text": "Nonprofit"
+    },
+    {
+      "href": "https://www.canva.com/education/",
+      "text": "Education"
+    },
+    {
+      "href": "https://www.canva.com/for-campus/",
+      "text": "Higher education"
+    },
+    {
+      "href": "https://www.canva.com/solutions/",
+      "text": "Canva for business"
+    },
+    {
+      "href": "https://www.canva.com/enterprise/",
+      "text": "Canva Enterprise plan"
+    },
+    {
+      "href": "https://www.canva.com/canva-business/",
+      "text": "Canva Business plan"
+    },
+    {
+      "href": "https://www.canva.com/enterprise/product-demo/",
+      "text": "On-demand Enterprise demo"
+    },
+    {
+      "href": "https://www.canva.com/roi-calculator/",
+      "text": "ROI calculator"
+    },
+    {
+      "href": "https://www.canva.com/request-demo/",
+      "text": "Book a live demo"
+    },
+    {
+      "href": "https://www.canva.com/enterprise/professional-services/",
+      "text": "Enterprise onboarding"
+    },
+    {
+      "href": "https://partners.canva.com/directory/",
+      "text": "Partners directory"
+    },
+    {
+      "href": "https://www.canva.com/solutions/",
+      "text": "All Canva for business"
+    },
+    {
+      "href": "https://www.canva.com/solutions/marketing/",
+      "text": "Marketing"
+    },
+    {
+      "href": "https://www.canva.com/solutions/sales/",
+      "text": "Sales"
+    },
+    {
+      "href": "https://www.canva.com/solutions/it/",
+      "text": "IT"
+    },
+    {
+      "href": "https://www.canva.com/solutions/creatives/",
+      "text": "Creatives"
+    },
+    {
+      "href": "https://www.canva.com/solutions/internal-comms/",
+      "text": "Communications"
+    },
+    {
+      "href": "https://www.canva.com/solutions/content-creation-tools/",
+      "text": "Content creation"
+    },
+    {
+      "href": "https://www.canva.com/solutions/visual-communication-tools/",
+      "text": "Visual communication"
+    },
+    {
+      "href": "https://www.canva.com/solutions/brand-management-tools/",
+      "text": "Brand management"
+    },
+    {
+      "href": "https://www.canva.com/solutions/content-planning-scheduling/",
+      "text": "Content planning"
+    },
+    {
+      "href": "https://www.canva.com/solutions/team-collaboration-tools/",
+      "text": "Team collaboration"
+    },
+    {
+      "href": "https://www.canva.com/solutions/digital-asset-management-tools/",
+      "text": "Asset management"
+    },
+    {
+      "href": "https://www.canva.com/solutions/brainstorming-tools/",
+      "text": "Brainstorms"
+    },
+    {
+      "href": "https://www.canva.com/enterprise/",
+      "text": "Enterprise"
+    },
+    {
+      "href": "https://www.canva.com/solutions/small-business/",
+      "text": "Small business"
+    },
+    {
+      "href": "https://www.canva.com/solutions/agencies/",
+      "text": "Agencies"
+    },
+    {
+      "href": "https://www.canva.com/solutions/startups/",
+      "text": "Startups"
+    },
+    {
+      "href": "https://www.canva.com/solutions/franchise/",
+      "text": "Franchises"
+    },
+    {
+      "href": "https://www.canva.com/solutions/real-estate/",
+      "text": "Real estate"
+    },
+    {
+      "href": "https://www.canva.com/for-campus/",
+      "text": "Higher education"
+    },
+    {
+      "href": "https://www.canva.com/solutions/government/",
+      "text": "Government"
+    },
+    {
+      "href": "https://www.canva.com/solutions/technology/",
+      "text": "Technology"
+    },
+    {
+      "href": "https://www.canva.com/solutions/media-and-publishing/",
+      "text": "Media and entertainment"
+    },
+    {
+      "href": "https://www.canva.com/solutions/retail-marketing/",
+      "text": "Retail and eCommerce"
+    },
+    {
+      "href": "https://www.canva.com/solutions/",
+      "text": "All solutions"
+    },
+    {
+      "href": "https://www.canva.com/business/features/team-templates/",
+      "text": "Brand templates"
+    },
+    {
+      "href": "https://www.canva.com/business/features/invite-your-team/",
+      "text": "Team management"
+    },
+    {
+      "href": "https://www.canva.com/solutions/content-management/",
+      "text": "Content management"
+    },
+    {
+      "href": "https://www.canva.com/business/features/productivity/",
+      "text": "Productivity"
+    },
+    {
+      "href": "https://www.canva.com/business/features/apps-integrations/",
+      "text": "Integration apps"
+    },
+    {
+      "href": "https://www.canva.com/business/features/security-sso/",
+      "text": "Security and SSO"
+    },
+    {
+      "href": "https://www.canva.com/business/features/",
+      "text": "All key features"
+    },
+    {
+      "href": "https://www.canva.com/marketing-ai-report/",
+      "text": "Marketing and AI report"
+    },
+    {
+      "href": "https://www.canva.com/visual-communications-report/",
+      "text": "Visual Communications report"
+    },
+    {
+      "href": "https://www.canva.com/resources/forrester-tei/",
+      "text": "TEI of Canva Enterprise report"
+    },
+    {
+      "href": "https://www.canva.com/resources/ai-prompts-marketing/",
+      "text": "CMO's guide to AI prompts"
+    },
+    {
+      "href": "https://www.canva.com/resources/sales-insights-webinar/",
+      "text": "Watch Canva for Sales"
+    },
+    {
+      "href": "https://www.canva.com/resources/marketing-insights-webinar/",
+      "text": "Watch Canva for Marketing"
+    },
+    {
+      "href": "https://www.canva.com/resources/",
+      "text": "All business resources"
+    },
+    {
+      "href": "https://www.canva.com/business/case-studies/",
+      "text": "Case studies"
+    },
+    {
+      "href": "https://www.canva.com/contact-sales/",
+      "text": "Contact Sales"
+    },
+    {
+      "href": "https://www.canva.com/education/",
+      "text": "Canva for education"
+    },
+    {
+      "href": "https://www.canva.com/education/teachers/",
+      "text": "Canva for teachers"
+    },
+    {
+      "href": "https://www.canva.com/education/eligibility-guidelines/",
+      "text": "Eligibility guidelines"
+    },
+    {
+      "href": "https://www.canva.com/education/teaching-resources/",
+      "text": "Teaching resources"
+    },
+    {
+      "href": "https://www.canva.com/education/education-creator/",
+      "text": "Become a Creator"
+    },
+    {
+      "href": "https://www.canva.com/community/teachers/",
+      "text": "Teacher communities"
+    },
+    {
+      "href": "https://www.canva.com/education/features/",
+      "text": "Product features"
+    },
+    {
+      "href": "https://www.canva.com/education/lms-integrations/",
+      "text": "LMS integrations"
+    },
+    {
+      "href": "https://www.canva.com/education/schools/",
+      "text": "Canva for schools"
+    },
+    {
+      "href": "https://www.canva.com/education/contact-sales/",
+      "text": "Contact us"
+    },
+    {
+      "href": "https://www.canva.com/for-campus/",
+      "text": "Canva Campus plan"
+    },
+    {
+      "href": "https://www.canva.com/education/contact-sales/",
+      "text": "Higher Education Sales"
+    },
+    {
+      "href": "https://www.canva.com/case-studies/?solution=HigherEducation",
+      "text": "Case studies"
+    },
+    {
+      "href": "https://www.canva.com/education/students/",
+      "text": "Canva for students"
+    },
+    {
+      "href": "https://www.canva.com/for-campus/academic-success/",
+      "text": "Academic success"
+    },
+    {
+      "href": "https://www.canva.com/for-campus/accessibility-inclusion/",
+      "text": "Accessibility and inclusion"
+    },
+    {
+      "href": "https://www.canva.com/for-campus/brand-management/",
+      "text": "Brand management"
+    },
+    {
+      "href": "https://www.canva.com/for-campus/security-sso/",
+      "text": "Security and SSO"
+    },
+    {
+      "href": "https://www.canva.com/education/creativity-in-education-report/",
+      "text": "Creativity in education"
+    },
+    {
+      "href": "https://www.canva.com/for-campus/higher-education-trends/",
+      "text": "Higher education trends"
+    },
+    {
+      "href": "https://www.canva.com/education/students/",
+      "text": "Students"
+    },
+    {
+      "href": "https://www.canva.com/pricing/#education",
+      "text": "Education plans"
+    },
+    {
+      "href": "https://www.canva.com/education/case-studies/",
+      "text": "Case studies"
+    },
+    {
+      "href": "https://www.canva.com/newsroom/news/?category=education",
+      "text": "Education newsroom"
+    },
+    {
+      "href": "https://www.canva.com/help/",
+      "text": "Help Center"
+    },
+    {
+      "href": "https://www.canva.com/design-school/",
+      "text": "Design School"
+    },
+    {
+      "href": "https://www.canva.com/create/logos/",
+      "text": "Logos"
+    },
+    {
+      "href": "https://www.canva.com/create/flyers/",
+      "text": "Flyers"
+    },
+    {
+      "href": "https://www.canva.com/create/banners/",
+      "text": "Banners"
+    },
+    {
+      "href": "https://www.canva.com/create/posters/",
+      "text": "Posters"
+    },
+    {
+      "href": "https://www.canva.com/create/resumes/",
+      "text": "Resumes"
+    },
+    {
+      "href": "https://www.canva.com/create/cv/",
+      "text": "CV"
+    },
+    {
+      "href": "https://www.canva.com/create/photo-collages/",
+      "text": "Photo collages"
+    },
+    {
+      "href": "https://www.canva.com/create/youtube-thumbnails/",
+      "text": "YouTube thumbnails"
+    },
+    {
+      "href": "https://www.canva.com/create/gif-maker/",
+      "text": "GIFs"
+    },
+    {
+      "href": "https://www.canva.com/create/memes/",
+      "text": "Memes"
+    },
+    {
+      "href": "https://www.canva.com/create/",
+      "text": "All create guides"
+    },
+    {
+      "href": "https://www.canva.com/work-kits/home/",
+      "text": "Work Kits"
+    },
+    {
+      "href": "https://www.canva.com/",
+      "text": "Canva home"
+    },
+    {
+      "href": "/",
+      "text": "Home"
+    },
+    {
+      "href": "/apps/",
+      "text": "Apps"
+    },
+    {
+      "href": "https://www.jotform.com/",
+      "text": "Jotform"
+    },
+    {
+      "href": "https://www.jotform.com/terms/",
+      "text": "Terms & Conditions⁠(opens in a new tab or window)"
+    },
+    {
+      "href": "https://www.jotform.com/privacy/",
+      "text": "Privacy policy⁠(opens in a new tab or window)"
+    },
+    {
+      "href": "#_R_5erH1_",
+      "text": "Skip to end of footer"
+    },
+    {
+      "href": "https://www.canva.com/download/windows/",
+      "text": "Windows"
+    },
+    {
+      "href": "https://www.canva.com/download/mac/",
+      "text": "Mac"
+    },
+    {
+      "href": "https://www.canva.com/launches/",
+      "text": "Latest launches"
+    },
+    {
+      "href": "https://www.canva.com/visual-suite/",
+      "text": "Visual Suite"
+    },
+    {
+      "href": "https://www.canva.com/magic/",
+      "text": "Magic Studio"
+    },
+    {
+      "href": "https://www.canva.com/business/features/brand/",
+      "text": "Brand management"
+    },
+    {
+      "href": "https://www.canva.com/social-media/",
+      "text": "Social media"
+    },
+    {
+      "href": "https://www.canva.com/features/",
+      "text": "Features"
+    },
+    {
+      "href": "https://www.canva.com/print/",
+      "text": "Print"
+    },
+    {
+      "href": "https://www.canva.com/apps/",
+      "text": "Apps Marketplace"
+    },
+    {
+      "href": "https://www.affinity.studio/",
+      "text": "Affinity"
+    },
+    {
+      "href": "https://www.canva.com/pricing/",
+      "text": "Pricing"
+    },
+    {
+      "href": "https://www.canva.com/pro/",
+      "text": "Pro"
+    },
+    {
+      "href": "https://www.canva.com/canva-business/",
+      "text": "Business"
+    },
+    {
+      "href": "https://www.canva.com/enterprise/",
+      "text": "Enterprise"
+    },
+    {
+      "href": "https://www.canva.com/education/",
+      "text": "Education"
+    },
+    {
+      "href": "https://www.canva.com/for-campus/",
+      "text": "Higher education"
+    },
+    {
+      "href": "https://www.canva.com/canva-for-nonprofits/",
+      "text": "Nonprofits"
+    },
+    {
+      "href": "https://www.canva.com/contact-sales/",
+      "text": "Contact Sales"
+    },
+    {
+      "href": "https://www.canva.com/about/",
+      "text": "About Canva"
+    },
+    {
+      "href": "https://www.canva.com/newsroom/news/",
+      "text": "Newsroom"
+    },
+    {
+      "href": "https://www.canva.com/events/",
+      "text": "Events"
+    },
+    {
+      "href": "https://www.lifeatcanva.com/en",
+      "text": "Careers"
+    },
+    {
+      "href": "https://www.canva.com/step-two/",
+      "text": "Social impact"
+    },
+    {
+      "href": "https://www.canva.com/sustainability/",
+      "text": "Sustainability"
+    },
+    {
+      "href": "https://www.canva.com/case-studies/",
+      "text": "Case studies"
+    },
+    {
+      "href": "https://www.canva.com/community/",
+      "text": "Canva Communities"
+    },
+    {
+      "href": "https://www.canva.com/creators/",
+      "text": "Creators"
+    },
+    {
+      "href": "https://www.canva.com/help/canva-affiliate-marketing-program/",
+      "text": "Affiliates"
+    },
+    {
+      "href": "https://www.canva.com/canva-represents/",
+      "text": "Canva Represents Fund"
+    },
+    {
+      "href": "https://www.canva.com/partners/content/",
+      "text": "Content partners"
+    },
+    {
+      "href": "https://partners.canva.com/directory/",
+      "text": "Business partner directory"
+    },
+    {
+      "href": "https://www.canva.com/developers/",
+      "text": "Canva Developers"
+    },
+    {
+      "href": "https://www.canva.com/design-trends/",
+      "text": "Design Trends"
+    },
+    {
+      "href": "https://www.canva.com/work-kits/home/",
+      "text": "Work Kits"
+    },
+    {
+      "href": "https://promptedpodcast.com/",
+      "text": "AI creativity podcast"
+    },
+    {
+      "href": "https://www.canva.com/learn/",
+      "text": "Learn blog"
+    },
+    {
+      "href": "https://www.canva.com/templates/",
+      "text": "Template library"
+    },
+    {
+      "href": "https://www.canva.com/learn/the-ultimate-guide-to-font-pairing/",
+      "text": "Font pairing"
+    },
+    {
+      "href": "https://www.canva.com/colors/color-wheel/",
+      "text": "Color wheel"
+    },
+    {
+      "href": "https://www.canva.com/colors/",
+      "text": "Colors"
+    },
+    {
+      "href": "https://www.canva.com/colors/color-palette-generator/",
+      "text": "Color palette generator"
+    },
+    {
+      "href": "https://www.canva.com/help/",
+      "text": "Help Center"
+    },
+    {
+      "href": "https://www.canva.com/security/",
+      "text": "Security"
+    },
+    {
+      "href": "https://www.canva.com/trust/",
+      "text": "Trust Centre"
+    },
+    {
+      "href": "https://www.canva.com/safe-ai-canva-shield/",
+      "text": "Canva Safe AI"
+    },
+    {
+      "href": "https://www.canva.com/accessibility/",
+      "text": "Accessibility"
+    },
+    {
+      "href": "https://www.canva.com/enterprise/professional-services/",
+      "text": "Enterprise services"
+    },
+    {
+      "href": "https://www.canva.com/design-school/",
+      "text": "Design School"
+    },
+    {
+      "href": "https://www.canva.com/sitemap/",
+      "text": "Sitemap"
+    },
+    {
+      "href": "https://www.canva.com/qr-code-generator/",
+      "text": "QR code generator"
+    },
+    {
+      "href": "https://www.canva.com/ai-logo-generator/",
+      "text": "AI logo generator"
+    },
+    {
+      "href": "https://www.canva.com/signature-generator/",
+      "text": "Signature generator"
+    },
+    {
+      "href": "https://www.canva.com/business-name-generator/",
+      "text": "Business name generator"
+    },
+    {
+      "href": "https://www.canva.com/features/pdf-converter/",
+      "text": "PDF converter"
+    },
+    {
+      "href": "https://www.canva.com/features/pdf-to-jpg-converter/",
+      "text": "PDF to JPG converter"
+    },
+    {
+      "href": "https://www.canva.com/features/jpg-to-pdf-converter/",
+      "text": "JPG to PDF converter"
+    },
+    {
+      "href": "https://www.canva.com/launches/",
+      "text": "Latest launches"
+    },
+    {
+      "href": "https://www.canva.com/visual-suite/",
+      "text": "Visual Suite"
+    },
+    {
+      "href": "https://www.canva.com/magic/",
+      "text": "Magic Studio"
+    },
+    {
+      "href": "https://www.canva.com/business/features/brand/",
+      "text": "Brand management"
+    },
+    {
+      "href": "https://www.canva.com/social-media/",
+      "text": "Social media"
+    },
+    {
+      "href": "https://www.canva.com/features/",
+      "text": "Features"
+    },
+    {
+      "href": "https://www.canva.com/print/",
+      "text": "Print"
+    },
+    {
+      "href": "https://www.canva.com/apps/",
+      "text": "Apps Marketplace"
+    },
+    {
+      "href": "https://www.affinity.studio/",
+      "text": "Affinity"
+    },
+    {
+      "href": "https://www.canva.com/pricing/",
+      "text": "Pricing"
+    },
+    {
+      "href": "https://www.canva.com/pro/",
+      "text": "Pro"
+    },
+    {
+      "href": "https://www.canva.com/canva-business/",
+      "text": "Business"
+    },
+    {
+      "href": "https://www.canva.com/enterprise/",
+      "text": "Enterprise"
+    },
+    {
+      "href": "https://www.canva.com/education/",
+      "text": "Education"
+    },
+    {
+      "href": "https://www.canva.com/for-campus/",
+      "text": "Higher education"
+    },
+    {
+      "href": "https://www.canva.com/canva-for-nonprofits/",
+      "text": "Nonprofits"
+    },
+    {
+      "href": "https://www.canva.com/contact-sales/",
+      "text": "Contact Sales"
+    },
+    {
+      "href": "https://www.canva.com/about/",
+      "text": "About Canva"
+    },
+    {
+      "href": "https://www.canva.com/newsroom/news/",
+      "text": "Newsroom"
+    },
+    {
+      "href": "https://www.canva.com/events/",
+      "text": "Events"
+    },
+    {
+      "href": "https://www.lifeatcanva.com/en",
+      "text": "Careers"
+    },
+    {
+      "href": "https://www.canva.com/step-two/",
+      "text": "Social impact"
+    },
+    {
+      "href": "https://www.canva.com/sustainability/",
+      "text": "Sustainability"
+    },
+    {
+      "href": "https://www.canva.com/case-studies/",
+      "text": "Case studies"
+    },
+    {
+      "href": "https://www.canva.com/community/",
+      "text": "Canva Communities"
+    },
+    {
+      "href": "https://www.canva.com/creators/",
+      "text": "Creators"
+    },
+    {
+      "href": "https://www.canva.com/help/canva-affiliate-marketing-program/",
+      "text": "Affiliates"
+    },
+    {
+      "href": "https://www.canva.com/canva-represents/",
+      "text": "Canva Represents Fund"
+    },
+    {
+      "href": "https://www.canva.com/partners/content/",
+      "text": "Content partners"
+    },
+    {
+      "href": "https://partners.canva.com/directory/",
+      "text": "Business partner directory"
+    },
+    {
+      "href": "https://www.canva.com/developers/",
+      "text": "Canva Developers"
+    },
+    {
+      "href": "https://www.canva.com/design-trends/",
+      "text": "Design Trends"
+    },
+    {
+      "href": "https://www.canva.com/work-kits/home/",
+      "text": "Work Kits"
+    },
+    {
+      "href": "https://promptedpodcast.com/",
+      "text": "AI creativity podcast"
+    },
+    {
+      "href": "https://www.canva.com/learn/",
+      "text": "Learn blog"
+    },
+    {
+      "href": "https://www.canva.com/templates/",
+      "text": "Template library"
+    },
+    {
+      "href": "https://www.canva.com/learn/the-ultimate-guide-to-font-pairing/",
+      "text": "Font pairing"
+    },
+    {
+      "href": "https://www.canva.com/colors/color-wheel/",
+      "text": "Color wheel"
+    },
+    {
+      "href": "https://www.canva.com/colors/",
+      "text": "Colors"
+    },
+    {
+      "href": "https://www.canva.com/colors/color-palette-generator/",
+      "text": "Color palette generator"
+    },
+    {
+      "href": "https://www.canva.com/help/",
+      "text": "Help Center"
+    },
+    {
+      "href": "https://www.canva.com/security/",
+      "text": "Security"
+    },
+    {
+      "href": "https://www.canva.com/trust/",
+      "text": "Trust Centre"
+    },
+    {
+      "href": "https://www.canva.com/safe-ai-canva-shield/",
+      "text": "Canva Safe AI"
+    },
+    {
+      "href": "https://www.canva.com/accessibility/",
+      "text": "Accessibility"
+    },
+    {
+      "href": "https://www.canva.com/enterprise/professional-services/",
+      "text": "Enterprise services"
+    },
+    {
+      "href": "https://www.canva.com/design-school/",
+      "text": "Design School"
+    },
+    {
+      "href": "https://www.canva.com/sitemap/",
+      "text": "Sitemap"
+    },
+    {
+      "href": "https://www.canva.com/qr-code-generator/",
+      "text": "QR code generator"
+    },
+    {
+      "href": "https://www.canva.com/ai-logo-generator/",
+      "text": "AI logo generator"
+    },
+    {
+      "href": "https://www.canva.com/signature-generator/",
+      "text": "Signature generator"
+    },
+    {
+      "href": "https://www.canva.com/business-name-generator/",
+      "text": "Business name generator"
+    },
+    {
+      "href": "https://www.canva.com/features/pdf-converter/",
+      "text": "PDF converter"
+    },
+    {
+      "href": "https://www.canva.com/features/pdf-to-jpg-converter/",
+      "text": "PDF to JPG converter"
+    },
+    {
+      "href": "https://www.canva.com/features/jpg-to-pdf-converter/",
+      "text": "JPG to PDF converter"
+    },
+    {
+      "href": "https://www.linkedin.com/company/canva",
+      "text": "(opens in a new tab or window)"
+    },
+    {
+      "href": "https://www.instagram.com/canva/",
+      "text": "(opens in a new tab or window)"
+    },
+    {
+      "href": "https://www.facebook.com/canva",
+      "text": "(opens in a new tab or window)"
+    },
+    {
+      "href": "https://www.tiktok.com/@canva",
+      "text": "(opens in a new tab or window)"
+    },
+    {
+      "href": "https://au.pinterest.com/canva/",
+      "text": "(opens in a new tab or window)"
+    },
+    {
+      "href": "https://x.com/canva",
+      "text": "(opens in a new tab or window)"
+    },
+    {
+      "href": "https://www.youtube.com/@canva",
+      "text": "(opens in a new tab or window)"
+    },
+    {
+      "href": "https://www.canva.com/policies/privacy-policy/",
+      "text": "Privacy"
+    },
+    {
+      "href": "https://www.canva.com/policies/terms-of-use/",
+      "text": "Terms"
+    },
+    {
+      "href": "#_R_5er_",
+      "text": "Skip to start of footer"
+    }
+  ],
+  "appDetailElements": {
+    "galleryImages": []
+  },
+  "bodyTextLength": 40582
+}
