@@ -152,6 +152,37 @@ const SCHEDULES = [
     type: "compute_app_scores" as const,
     platform: "wordpress" as const,
   },
+  // ── Google Workspace ──
+  {
+    name: "google_workspace_category",
+    cron: "0 6 * * *", // Daily at 06:00
+    type: "category" as const,
+    platform: "google_workspace" as const,
+  },
+  {
+    name: "google_workspace_app_details",
+    cron: "30 5,17 * * *", // Every 12 hours (05:30, 17:30)
+    type: "app_details" as const,
+    platform: "google_workspace" as const,
+  },
+  {
+    name: "google_workspace_keyword_search",
+    cron: "0 6,18 * * *", // Every 12 hours (06:00, 18:00)
+    type: "keyword_search" as const,
+    platform: "google_workspace" as const,
+  },
+  {
+    name: "google_workspace_reviews",
+    cron: "30 9 * * *", // Daily at 09:30
+    type: "reviews" as const,
+    platform: "google_workspace" as const,
+  },
+  {
+    name: "google_workspace_compute_app_scores",
+    cron: "0 12 * * *", // Daily at 12:00 UTC
+    type: "compute_app_scores" as const,
+    platform: "google_workspace" as const,
+  },
 ];
 
 log.info("starting scheduler", {

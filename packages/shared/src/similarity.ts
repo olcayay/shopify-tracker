@@ -31,6 +31,7 @@ const PLATFORM_SIMILARITY_WEIGHTS: Record<string, SimilarityWeights> = {
   canva: { category: 0.50, feature: 0.0, keyword: 0.0, text: 0.50 },
   wix: { category: 0.35, feature: 0.0, keyword: 0.30, text: 0.35 },
   wordpress: { category: 0.35, feature: 0.0, keyword: 0.30, text: 0.35 },
+  google_workspace: { category: 0.35, feature: 0.0, keyword: 0.30, text: 0.35 },
 };
 
 /** Get similarity weights for a given platform (defaults to Shopify weights) */
@@ -62,6 +63,7 @@ const SALESFORCE_SIMILARITY_STOP_WORDS = new Set(["salesforce", "appexchange", "
 const CANVA_SIMILARITY_STOP_WORDS = new Set(["canva", "design", "template", "templates"]);
 const WIX_SIMILARITY_STOP_WORDS = new Set(["wix", "website", "site", "sites", "web"]);
 const WORDPRESS_SIMILARITY_STOP_WORDS = new Set(["wordpress", "wp", "plugin", "plugins", "widget"]);
+const GOOGLE_WORKSPACE_SIMILARITY_STOP_WORDS = new Set(["google", "workspace", "marketplace", "sheets", "docs", "drive", "gmail", "addon", "add-on"]);
 
 const PLATFORM_SIMILARITY_STOP_WORDS: Record<string, Set<string>> = {
   shopify: SHOPIFY_SIMILARITY_STOP_WORDS,
@@ -69,6 +71,7 @@ const PLATFORM_SIMILARITY_STOP_WORDS: Record<string, Set<string>> = {
   canva: CANVA_SIMILARITY_STOP_WORDS,
   wix: WIX_SIMILARITY_STOP_WORDS,
   wordpress: WORDPRESS_SIMILARITY_STOP_WORDS,
+  google_workspace: GOOGLE_WORKSPACE_SIMILARITY_STOP_WORDS,
 };
 
 /** Get merged similarity stop words for a given platform */
@@ -176,6 +179,11 @@ export function extractCategorySlugsFromPlatformData(
     case "salesforce": {
       const cats = platformData.listingCategories as string[] | undefined;
       return new Set(cats || []);
+    }
+    case "google_workspace": {
+      const cat = platformData.category as string | undefined;
+      if (!cat) return new Set();
+      return new Set([cat]);
     }
     default:
       return new Set();

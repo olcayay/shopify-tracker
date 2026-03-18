@@ -5,6 +5,7 @@ import { SalesforceModule } from "./salesforce/index.js";
 import { CanvaModule } from "./canva/index.js";
 import { WixModule } from "./wix/index.js";
 import { WordPressModule } from "./wordpress/index.js";
+import { GoogleWorkspaceModule } from "./google-workspace/index.js";
 import type { HttpClient } from "../http-client.js";
 import type { BrowserClient } from "../browser-client.js";
 
@@ -34,6 +35,9 @@ export function getModule(platformId: PlatformId, httpClient?: HttpClient, brows
       break;
     case "wordpress":
       module = new WordPressModule(httpClient);
+      break;
+    case "google_workspace":
+      module = new GoogleWorkspaceModule(httpClient, browserClient);
       break;
     default:
       throw new Error(`Unknown platform: ${platformId}`);

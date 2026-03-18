@@ -8,7 +8,7 @@ import { Zap, Loader2, Check } from "lucide-react";
 import { ScraperOptionsModal, type ScraperOptions } from "./scraper-options-modal";
 import { PLATFORMS } from "@appranks/shared";
 
-const VALID_PLATFORMS = new Set(["shopify", "salesforce", "canva", "wix", "wordpress"]);
+const VALID_PLATFORMS = new Set(["shopify", "salesforce", "canva", "wix", "wordpress", "google_workspace"]);
 
 interface AdminScraperTriggerProps {
   scraperType: string;

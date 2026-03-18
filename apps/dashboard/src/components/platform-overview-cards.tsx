@@ -12,6 +12,7 @@ const PLATFORM_LABELS: Record<PlatformId, string> = {
   canva: "Canva",
   wix: "Wix",
   wordpress: "WordPress",
+  google_workspace: "Google Workspace",
 };
 
 const PLATFORM_COLORS: Record<PlatformId, string> = {
@@ -20,6 +21,7 @@ const PLATFORM_COLORS: Record<PlatformId, string> = {
   canva: "#00C4CC",
   wix: "#0C6EFC",
   wordpress: "#21759B",
+  google_workspace: "#4285F4",
 };
 
 interface PlatformCounts {

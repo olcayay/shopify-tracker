@@ -223,6 +223,38 @@ async function canvaDbSearch(db: ReturnType<typeof createDb>, keyword: string): 
 }
 
 /**
+ * Search Google Workspace apps from our database (no public API available).
+ */
+async function googleWorkspaceDbSearch(db: ReturnType<typeof createDb>, keyword: string): Promise<{ totalResults: number; apps: SearchApp[] }> {
+  const pattern = `%${keyword}%`;
+  const rows = await db.execute(sql`
+    SELECT slug, name, icon_url, app_card_subtitle
+    FROM apps
+    WHERE platform = 'google_workspace'
+      AND (name ILIKE ${pattern} OR slug ILIKE ${pattern} OR app_card_subtitle ILIKE ${pattern})
+    ORDER BY
+      CASE WHEN name ILIKE ${keyword} THEN 0
+           WHEN name ILIKE ${keyword + '%'} THEN 1
+           ELSE 2 END,
+      name
+    LIMIT 50
+  `);
+  const results: SearchApp[] = (rows as any[]).map((r: any, idx: number) => ({
+    position: idx + 1,
+    app_slug: r.slug,
+    app_name: r.name,
+    short_description: r.app_card_subtitle || "",
+    average_rating: 0,
+    rating_count: 0,
+    logo_url: r.icon_url || undefined,
+    is_sponsored: false,
+    is_built_in: false,
+    is_built_for_shopify: false,
+  }));
+  return { totalResults: results.length, apps: results };
+}
+
+/**
  * Live search Wix App Market by scraping the search results page.
  * Wix embeds all data as base64-encoded JSON in __REACT_QUERY_STATE__.
  */
@@ -348,6 +380,18 @@ export const liveSearchRoutes: FastifyPluginAsync = async (app) => {
           request.log.error({ platform, keyword: q, error: err.message, ms: Date.now() - start }, "live-search database fallback also failed");
           return reply.code(502).send({ error: `Failed to search Canva apps: ${err.message}` });
         }
+      }
+    }
+
+    if (platform === "google_workspace") {
+      // Database fallback search (no public API available, Angular SPA)
+      try {
+        const result = await googleWorkspaceDbSearch(db, q);
+        request.log.info({ platform, keyword: q, source: "database", apps: result.apps.length, ms: Date.now() - start }, "live-search completed via database");
+        return { keyword: q, totalResults: result.totalResults, apps: result.apps, source: "database" };
+      } catch (err: any) {
+        request.log.error({ platform, keyword: q, error: err.message, ms: Date.now() - start }, "live-search failed");
+        return reply.code(502).send({ error: `Failed to search Google Workspace apps: ${err.message}` });
       }
     }
 

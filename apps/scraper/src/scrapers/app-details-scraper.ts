@@ -266,14 +266,18 @@ export class AppDetailsScraper {
                 ? (pd.tagline as string) || ""
                 : this.platform === "wordpress"
                   ? ""
-                  : (pd.description as string) || "",
+                  : this.platform === "google_workspace"
+                    ? (pd.shortDescription as string) || ""
+                    : (pd.description as string) || "",
               app_details: this.platform === "wix"
                 ? (pd.description as string) || ""
                 : this.platform === "wordpress"
                   ? stripHtmlTags((pd.description as string) || "")
-                  : (pd.fullDescription as string) || "",
-              seo_title: this.platform === "wordpress" ? "" : normalized.name,
-              seo_meta_description: this.platform === "wordpress"
+                  : this.platform === "google_workspace"
+                    ? (pd.detailedDescription as string) || ""
+                    : (pd.fullDescription as string) || "",
+              seo_title: this.platform === "wordpress" || this.platform === "google_workspace" ? "" : normalized.name,
+              seo_meta_description: this.platform === "wordpress" || this.platform === "google_workspace"
                 ? ""
                 : (pd.tagline as string) || (pd.description as string) || "",
               features: this.platform === "wix"
@@ -313,12 +317,18 @@ export class AppDetailsScraper {
                 ? { email: (pd.publisher as any)?.email || null, portal_url: normalized.developer.website, phone: null } as import("@appranks/shared").AppSupport
                 : null as import("@appranks/shared").AppSupport | null,
               _platformData: pd,
-              // First-class metadata columns (WordPress)
+              // First-class metadata columns
               _currentVersion: this.platform === "wordpress" ? (pd.version as string) || null : null,
-              _activeInstalls: this.platform === "wordpress" ? (pd.activeInstalls as number) || null : null,
+              _activeInstalls: this.platform === "wordpress"
+                ? (pd.activeInstalls as number) || null
+                : this.platform === "google_workspace"
+                  ? (pd.installCount as number) || null
+                  : null,
               _lastUpdatedAt: this.platform === "wordpress" && pd.lastUpdated
                 ? parseWordPressDate(pd.lastUpdated as string)
-                : null,
+                : this.platform === "google_workspace" && pd.listingUpdated
+                  ? new Date(pd.listingUpdated as string)
+                  : null,
             };
           })()
         : parseAppPage(html, slug);
@@ -411,6 +421,7 @@ export class AppDetailsScraper {
           isTracked: true,
           launchedDate: details.launched_date,
           iconUrl: details.icon_url,
+          pricingHint: details.pricing || undefined,
           ...(metaVersion != null && { currentVersion: metaVersion }),
           ...(metaInstalls != null && { activeInstalls: metaInstalls }),
           ...(metaLastUpdated != null && { lastUpdatedAt: metaLastUpdated }),
@@ -421,6 +432,7 @@ export class AppDetailsScraper {
             name: details.app_name,
             launchedDate: details.launched_date,
             iconUrl: details.icon_url,
+            pricingHint: details.pricing || undefined,
             updatedAt: new Date(),
             ...(metaVersion != null && { currentVersion: metaVersion }),
             ...(metaInstalls != null && { activeInstalls: metaInstalls }),

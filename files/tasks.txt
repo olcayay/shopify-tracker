@@ -175,3 +175,5 @@ WordPress entry point testing & tag strategy expansion (40 tags + 3 browse secti
 WordPress first-class metadata columns (version, activeInstalls, lastUpdated) + Plugin Info card + formatted description ✅
 
 WordPress tag rankings visibility + icon fix (position >= 0 filter, "Linked" label, &fields=icons for API) ✅
+
+Google Workspace Marketplace integration — full platform module, parsers, scraper, dashboard, API, migrations ✅

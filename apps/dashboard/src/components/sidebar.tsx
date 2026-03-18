@@ -41,6 +41,7 @@ const PLATFORM_LABELS: Record<PlatformId, string> = {
   canva: "Canva",
   wix: "Wix",
   wordpress: "WordPress",
+  google_workspace: "Google Workspace",
 };
 
 const PLATFORM_COLORS: Record<PlatformId, string> = {
@@ -49,6 +50,7 @@ const PLATFORM_COLORS: Record<PlatformId, string> = {
   canva: "#00C4CC",
   wix: "#0C6EFC",
   wordpress: "#21759B",
+  google_workspace: "#4285F4",
 };
 
 function getNavItems(platformId: PlatformId, isAdmin?: boolean) {
@@ -73,7 +75,7 @@ function getNavItems(platformId: PlatformId, isAdmin?: boolean) {
   if (caps.hasFeatureTaxonomy) {
     items.push({ href: `${p}/features`, label: "Features", icon: Puzzle });
   }
-  if (platformId !== "canva" && platformId !== "salesforce" && platformId !== "wix" && platformId !== "wordpress") {
+  if (platformId !== "canva" && platformId !== "salesforce" && platformId !== "wix" && platformId !== "wordpress" && platformId !== "google_workspace") {
     items.push({ href: `${p}/research`, label: "Research", icon: FlaskConical, badge: "Beta" });
   }
   if (isAdmin) {
@@ -98,7 +100,7 @@ const systemAdminItems = [
 
 /** Extract platform from current pathname */
 function extractPlatform(pathname: string): PlatformId {
-  const match = pathname.match(/^\/(shopify|salesforce|canva|wix|wordpress)(\/|$)/);
+  const match = pathname.match(/^\/(shopify|salesforce|canva|wix|wordpress|google_workspace)(\/|$)/);
   return (match?.[1] as PlatformId) ?? "shopify";
 }
 
@@ -131,7 +133,7 @@ function SidebarContent({
   // Route protection: redirect to /overview if user navigates to a platform they don't have access to
   useEffect(() => {
     if (!user || !account || isSystemAdmin) return;
-    const platformMatch = pathname.match(/^\/(shopify|salesforce|canva|wix|wordpress)(\/|$)/);
+    const platformMatch = pathname.match(/^\/(shopify|salesforce|canva|wix|wordpress|google_workspace)(\/|$)/);
     if (platformMatch) {
       const urlPlatform = platformMatch[1];
       if (!enabledPlatforms.includes(urlPlatform)) {
@@ -242,7 +244,7 @@ function SidebarContent({
                   style={{ borderLeft: `3px solid ${accentColor}` }}
                 >
                   <span className="truncate">{PLATFORM_LABELS[platformId]}</span>
-                  {platformId === "canva" && (
+                  {(platformId === "canva" || platformId === "google_workspace") && (
                     <span className="text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-primary/10 text-primary">
                       Beta
                     </span>

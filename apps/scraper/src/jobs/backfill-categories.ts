@@ -63,6 +63,9 @@ export async function backfillCategories(db: Database, triggeredBy: string, queu
         } else if (platform === "wordpress") {
           const tagMatch = cat.url?.match(/\/tags\/([^/?]+)/);
           catSlug = tagMatch?.[1] ?? null;
+        } else if (platform === "google_workspace") {
+          const gwMatch = cat.url?.match(/\/marketplace\/category\/([^/?]+)(?:\/([^/?]+))?/);
+          catSlug = gwMatch?.[2] ? `${gwMatch[1]}--${gwMatch[2]}` : gwMatch?.[1] ?? null;
         }
         if (!catSlug) continue;
         if (!categoryMap.has(catSlug)) {

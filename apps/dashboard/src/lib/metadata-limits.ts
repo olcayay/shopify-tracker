@@ -63,6 +63,16 @@ const wordpressLimits: MetadataLimits = {
   seoMetaDescription: 0,
 };
 
+const googleWorkspaceLimits: MetadataLimits = {
+  appName: 50,
+  subtitle: 200,
+  introduction: 200,
+  details: 16000,
+  feature: 0,
+  seoTitle: 0,
+  seoMetaDescription: 0,
+};
+
 const defaultLimits = shopifyLimits;
 
 const limitsByPlatform: Record<string, MetadataLimits> = {
@@ -71,6 +81,7 @@ const limitsByPlatform: Record<string, MetadataLimits> = {
   canva: canvaLimits,
   wix: wixLimits,
   wordpress: wordpressLimits,
+  google_workspace: googleWorkspaceLimits,
 };
 
 export function getMetadataLimits(platform: string): MetadataLimits {

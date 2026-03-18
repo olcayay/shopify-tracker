@@ -96,14 +96,15 @@ function getFieldLabels(platform: string): Record<string, string> {
   const isCanva = platform === "canva";
   const isWix = platform === "wix";
   const isWordPress = platform === "wordpress";
+  const isGoogleWorkspace = platform === "google_workspace";
   return {
     name: "App Name",
-    appIntroduction: isCanva || isWix || isWordPress ? "Short Description" : "Introduction",
-    appDetails: isCanva || isWix || isWordPress ? "Description" : "Details",
+    appIntroduction: isCanva || isWix || isWordPress || isGoogleWorkspace ? "Short Description" : "Introduction",
+    appDetails: isCanva || isWix || isWordPress || isGoogleWorkspace ? "Description" : "Details",
     features: "Features",
     seoTitle: "SEO Title",
     seoMetaDescription: "SEO Description",
-    appCardSubtitle: isCanva || isWix ? "Tagline" : isWordPress ? "Short Description" : "Subtitle",
+    appCardSubtitle: isCanva || isWix ? "Tagline" : isWordPress || isGoogleWorkspace ? "Short Description" : "Subtitle",
   };
 }
 

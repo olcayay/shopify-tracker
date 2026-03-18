@@ -35,6 +35,18 @@ const BADGE_CONFIG: Record<string, Record<string, { icon: string; label: string;
     },
   },
   wix: {},
+  google_workspace: {
+    editors_choice: {
+      icon: "⭐",
+      label: "Editor's Choice",
+      className: "text-amber-600",
+    },
+    casa_certified: {
+      icon: "🔒",
+      label: "CASA Certified",
+      className: "text-green-600",
+    },
+  },
   wordpress: {
     community: {
       icon: "🌐",

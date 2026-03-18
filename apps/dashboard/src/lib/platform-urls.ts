@@ -12,6 +12,8 @@ export function buildExternalAppUrl(platform: PlatformId, slug: string): string 
       return `https://www.wix.com/app-market/web-solution/${slug}`;
     case "wordpress":
       return `https://wordpress.org/plugins/${slug}/`;
+    case "google_workspace":
+      return `https://workspace.google.com/marketplace/app/${slug.replace("--", "/")}`;
   }
 }
 
@@ -31,6 +33,8 @@ export function buildExternalCategoryUrl(platform: PlatformId, slug: string): st
         return `https://wordpress.org/plugins/browse/${browseType}/`;
       }
       return `https://wordpress.org/plugins/tags/${slug}/`;
+    case "google_workspace":
+      return `https://workspace.google.com/marketplace/category/${slug.replace("--", "/")}`;
   }
 }
 
@@ -46,6 +50,8 @@ export function buildExternalSearchUrl(platform: PlatformId, query: string): str
       return `https://www.wix.com/app-market/search-result?query=${encodeURIComponent(query)}`;
     case "wordpress":
       return `https://wordpress.org/plugins/search/${encodeURIComponent(query)}/`;
+    case "google_workspace":
+      return `https://workspace.google.com/marketplace/search/${encodeURIComponent(query)}?flow_type=2`;
   }
 }
 

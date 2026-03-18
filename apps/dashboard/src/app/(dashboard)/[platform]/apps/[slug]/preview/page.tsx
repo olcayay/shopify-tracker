@@ -22,7 +22,7 @@ export default function PreviewPage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (platform !== "shopify" && platform !== "salesforce" && platform !== "canva" && platform !== "wix") return;
+    if (platform !== "shopify" && platform !== "salesforce" && platform !== "canva" && platform !== "wix" && platform !== "google_workspace") return;
     async function loadData() {
       setLoading(true);
       const res = await fetchWithAuth(

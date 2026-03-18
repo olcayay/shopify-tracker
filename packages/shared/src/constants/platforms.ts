@@ -74,6 +74,21 @@ export const PLATFORMS = {
     hasLaunchedDate: true,
     pageSize: 250,
   },
+  google_workspace: {
+    id: "google_workspace" as const,
+    name: "Google Workspace Marketplace",
+    baseUrl: "https://workspace.google.com/marketplace",
+    hasKeywordSearch: true,
+    hasReviews: true,
+    hasFeaturedSections: false,
+    hasAdTracking: false,
+    hasSimilarApps: false,
+    hasAutoSuggestions: false,
+    hasFeatureTaxonomy: false,
+    hasPricing: true,
+    hasLaunchedDate: false,
+    pageSize: 20,
+  },
 } as const;
 
 export type PlatformId = keyof typeof PLATFORMS;
@@ -106,6 +121,8 @@ export function buildExternalAppUrl(platform: PlatformId, slug: string): string 
       return `https://www.wix.com/app-market/web-solution/${slug}`;
     case "wordpress":
       return `https://wordpress.org/plugins/${slug}/`;
+    case "google_workspace":
+      return `https://workspace.google.com/marketplace/app/${slug.replace("--", "/")}`;
   }
 }
 
@@ -129,5 +146,7 @@ export function buildExternalCategoryUrl(platform: PlatformId, slug: string): st
         return `https://wordpress.org/plugins/browse/${browseType}/`;
       }
       return `https://wordpress.org/plugins/tags/${slug}/`;
+    case "google_workspace":
+      return `https://workspace.google.com/marketplace/category/${slug.replace("--", "/")}`;
   }
 }

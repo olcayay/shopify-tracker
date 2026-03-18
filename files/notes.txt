@@ -1,3 +1,55 @@
+Google Workspace Marketplace Integration
+==========================================
+
+Added Google Workspace Marketplace as the 6th platform (after Shopify, Salesforce, Canva, Wix, WordPress).
+Platform ID: google_workspace, brand color: #4285F4.
+
+Angular SPA — requires Playwright/BrowserClient for all scraping (like Canva).
+URL patterns: /app/{name}/{id}, /category/{parent}/{child}, /search/{query}
+Slug format: {name}--{id} (same -- separator as Canva).
+
+Phase 1 — Platform config:
+- PLATFORMS entry with capability flags (hasKeywordSearch, hasReviews, hasPricing = true)
+- URL builders in shared + dashboard (app, category, search)
+- Similarity weights (0.35/0.0/0.30/0.35) + stop words
+- Metadata limits (appName: 50, subtitle: 200, intro: 200, details: 16000)
+
+Phase 2 — DB migrations:
+- 0069: seed account_platforms + platform_visibility (hidden by default)
+- 0070: seed categories (14 parents + 12 children = 26 categories from live sidebar, hierarchical with -- slugs)
+
+Phase 3 — Scraper module (apps/scraper/src/platforms/google-workspace/):
+- index.ts: GoogleWorkspaceModule with Playwright browser, anti-bot measures
+- urls.ts, constants.ts (rate limit 3-5s, 14 seed categories from live sidebar)
+- 4 parsers (app, category, search, review) + extract-embedded-data.ts utility
+- PRIMARY DATA SOURCE: AF_initDataCallback embedded JSON (ds:1 for app/category/search, ds:6 for reviews)
+  Each app entry is a 35-field array: [0]=appId, [3]=[name,shortDesc,detailedDesc,iconUrl,bannerUrl,slug],
+  [4]=[developerName,website], [5]=[reviewCount,rating,installDisplay,exactInstalls], [8]=[email,terms,privacy,support,homepage]
+- DOM FALLBACK selectors: span.BfHp9b (name), div.kmwdk (shortDesc), pre.nGA4ed (detailedDesc),
+  img.TS9dEf (icon), img.ec1OGc (screenshots), div.ftijEf (reviews), span.P0vMD (pricing),
+  a.G3sBi.Qh16y (active category), div[data-card-index] (card containers on list pages)
+- waitForAngularRender: waits for div.oPwrAb or div[data-card-index] or app links (not app-root)
+- Registered in registry.ts, BrowserClient in process-job.ts + cli.ts
+- Backfill categories regex added
+
+Phase 4 — API routes:
+- live-search: database fallback search (no public API)
+- apps: developerWebsite path for developer extraction
+
+Phase 5 — Dashboard UI:
+- VALID_PLATFORMS in auth-context, proxy, admin-scraper-trigger
+- Sidebar: labels, colors, regex, Beta badge, research exclusion
+- Overview cards + page colors
+- App badges: editors_choice, casa_certified
+- Field labels in page.tsx, details, changes, compare (Short Description pattern)
+- Preview page guard updated
+
+Phase 6 — Scheduler:
+- 5 cron jobs staggered from other platforms
+
+Phase 0 — Exploration script:
+- gworkspace-explore.ts for Playwright DOM exploration before refining parsers
+
 WordPress Tag Rankings & Icon Fix
 ====================================
 

@@ -42,6 +42,7 @@ const PLATFORM_COLORS: Record<string, string> = {
   canva: "#00C4CC",
   wix: "#0C6EFC",
   wordpress: "#21759B",
+  google_workspace: "#4285F4",
 };
 
 

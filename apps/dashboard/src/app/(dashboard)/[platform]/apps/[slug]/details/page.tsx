@@ -29,6 +29,7 @@ export default async function DetailsPage({
   const isCanva = platform === "canva";
   const isWix = platform === "wix";
   const isWordPress = platform === "wordpress";
+  const isGoogleWorkspace = platform === "google_workspace";
 
   // WordPress: use raw HTML description from platformData for formatted rendering
   const wpDescriptionHtml = isWordPress && pd?.description
@@ -45,6 +46,9 @@ export default async function DetailsPage({
   const wixCollections: { slug: string; name: string }[] = isWix ? pd?.collections || [] : [];
   const wixLanguages: string[] = isWix ? pd?.languages || [] : [];
   const wixAvailability: boolean | null = isWix ? pd?.isAvailableWorldwide ?? null : null;
+
+  // Google Workspace-specific fields from platformData
+  const gworkspaceWorksWithApps: string[] = isGoogleWorkspace ? pd?.worksWithApps || [] : [];
 
   const formatInstalls = (n: number) => {
     if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(n % 1_000_000 === 0 ? 0 : 1)}M+`;
@@ -133,7 +137,7 @@ export default async function DetailsPage({
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              {isCanva || isWix ? "Short Description" : "App Introduction"}
+              {isCanva || isWix || isGoogleWorkspace ? "Short Description" : "App Introduction"}
               {isCanva && (
                 <Badge variant={snapshot.appIntroduction.length > 50 ? "destructive" : "outline"} className="text-xs font-normal">
                   {snapshot.appIntroduction.length}/50
@@ -152,7 +156,7 @@ export default async function DetailsPage({
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              {isCanva || isWix ? "Description" : "App Details"}
+              {isCanva || isWix || isGoogleWorkspace ? "Description" : "App Details"}
               {isCanva && (
                 <Badge variant={snapshot.appDetails.length > 200 ? "destructive" : "outline"} className="text-xs font-normal">
                   {snapshot.appDetails.length}/200
@@ -292,9 +296,25 @@ export default async function DetailsPage({
         </div>
       )}
 
-      {/* Non-Salesforce: Languages + Integrations + Canva Permissions + Wix Collections */}
-      {!isSalesforce && (snapshot.languages?.length > 0 || snapshot.integrations?.length > 0 || canvaPermissions.length > 0 || wixCollections.length > 0) && (
+      {/* Non-Salesforce: Languages + Integrations + Canva Permissions + Wix Collections + GWorkspace Works With */}
+      {!isSalesforce && (snapshot.languages?.length > 0 || snapshot.integrations?.length > 0 || canvaPermissions.length > 0 || wixCollections.length > 0 || gworkspaceWorksWithApps.length > 0) && (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {gworkspaceWorksWithApps.length > 0 && (
+            <Card>
+              <CardHeader>
+                <CardTitle>Works With</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="flex flex-wrap gap-1.5">
+                  {gworkspaceWorksWithApps.map((app: string, i: number) => (
+                    <Badge key={i} variant="secondary" className="text-xs">
+                      {app}
+                    </Badge>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          )}
           {canvaPermissions.length > 0 && (
             <Card>
               <CardHeader>
@@ -444,6 +464,51 @@ export default async function DetailsPage({
               {snapshot.support.phone && (
                 <p>
                   <span className="text-muted-foreground">Phone:</span> {snapshot.support.phone}
+                </p>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Google Workspace: Support & Legal Links */}
+      {isGoogleWorkspace && (pd?.supportUrl || pd?.privacyPolicyUrl || pd?.termsOfServiceUrl || pd?.developerWebsite) && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Links</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-1 text-sm">
+              {pd?.supportUrl && (
+                <p>
+                  <span className="text-muted-foreground">Support:</span>{" "}
+                  <a href={pd.supportUrl} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
+                    {pd.supportUrl}
+                  </a>
+                </p>
+              )}
+              {pd?.developerWebsite && (
+                <p>
+                  <span className="text-muted-foreground">Developer Website:</span>{" "}
+                  <a href={pd.developerWebsite} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
+                    {pd.developerWebsite}
+                  </a>
+                </p>
+              )}
+              {pd?.privacyPolicyUrl && (
+                <p>
+                  <span className="text-muted-foreground">Privacy Policy:</span>{" "}
+                  <a href={pd.privacyPolicyUrl} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
+                    {pd.privacyPolicyUrl}
+                  </a>
+                </p>
+              )}
+              {pd?.termsOfServiceUrl && (
+                <p>
+                  <span className="text-muted-foreground">Terms of Service:</span>{" "}
+                  <a href={pd.termsOfServiceUrl} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
+                    {pd.termsOfServiceUrl}
+                  </a>
                 </p>
               )}
             </div>

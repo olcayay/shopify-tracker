@@ -384,15 +384,16 @@ export default function ComparePage() {
   const isCanva = platform === "canva";
   const isWix = platform === "wix";
   const isWordPress = platform === "wordpress";
+  const isGoogleWorkspace = platform === "google_workspace";
   const limits = getMetadataLimits(platform);
 
   // Section navigation
   const SECTIONS = useMemo(() => {
     const sections = [
       { id: "sec-name", key: "appName", label: "Name" },
-      { id: "sec-subtitle", key: "appCardSubtitle", label: isCanva || isWix ? "Tagline" : isWordPress ? "Short Description" : "Subtitle" },
-      { id: "sec-intro", key: "appIntroduction", label: isCanva || isWix || isWordPress ? "Short Description" : "Introduction" },
-      { id: "sec-details", key: "appDetails", label: isCanva || isWix || isWordPress ? "Description" : "Details" },
+      { id: "sec-subtitle", key: "appCardSubtitle", label: isCanva || isWix ? "Tagline" : isWordPress || isGoogleWorkspace ? "Short Description" : "Subtitle" },
+      { id: "sec-intro", key: "appIntroduction", label: isCanva || isWix || isWordPress || isGoogleWorkspace ? "Short Description" : "Introduction" },
+      { id: "sec-details", key: "appDetails", label: isCanva || isWix || isWordPress || isGoogleWorkspace ? "Description" : "Details" },
     ];
     if (!isCanva) {
       sections.push({ id: "sec-features", key: "features", label: "Features" });
@@ -424,7 +425,7 @@ export default function ComparePage() {
       );
     }
     return sections;
-  }, [isSalesforce, isCanva, isWix, isWordPress]);
+  }, [isSalesforce, isCanva, isWix, isWordPress, isGoogleWorkspace]);
 
   const [activeSection, setActiveSection] = useState<string>("sec-name");
   const navRef = useRef<HTMLDivElement>(null);
@@ -796,7 +797,7 @@ export default function ComparePage() {
           {/* App Card Subtitle / Tagline */}
           <VerticalListSection
             id="sec-subtitle"
-            title={isCanva || isWix ? "Tagline" : isWordPress ? "Short Description" : "App Card Subtitle"}
+            title={isCanva || isWix ? "Tagline" : isWordPress || isGoogleWorkspace ? "Short Description" : "App Card Subtitle"}
             sectionKey="appCardSubtitle"
             collapsed={isCollapsed("appCardSubtitle")}
             onToggle={toggleSection}
@@ -807,7 +808,7 @@ export default function ComparePage() {
                 value={draftSubtitle}
                 onChange={setDraftSubtitle}
                 max={limits.subtitle}
-                placeholder={isCanva || isWix ? "Test a new Tagline!" : isWordPress ? "Test a new Short Description!" : "Test a new Subtitle!"}
+                placeholder={isCanva || isWix ? "Test a new Tagline!" : isWordPress || isGoogleWorkspace ? "Test a new Short Description!" : "Test a new Subtitle!"}
               />
             }
           >
@@ -826,7 +827,7 @@ export default function ComparePage() {
           {/* App Introduction / Short Description */}
           <VerticalListSection
             id="sec-intro"
-            title={isCanva || isWix || isWordPress ? "Short Description" : "App Introduction"}
+            title={isCanva || isWix || isWordPress || isGoogleWorkspace ? "Short Description" : "App Introduction"}
             sectionKey="appIntroduction"
             collapsed={isCollapsed("appIntroduction")}
             onToggle={toggleSection}
@@ -837,7 +838,7 @@ export default function ComparePage() {
                 value={draftIntro}
                 onChange={setDraftIntro}
                 max={limits.introduction}
-                placeholder={isCanva || isWix || isWordPress ? "Test a new Short Description!" : "Test a new Introduction!"}
+                placeholder={isCanva || isWix || isWordPress || isGoogleWorkspace ? "Test a new Short Description!" : "Test a new Introduction!"}
               />
             }
           >
@@ -861,7 +862,7 @@ export default function ComparePage() {
           {/* App Details / Description — icon-tab mode with keyword density */}
           <CompareSection
             id="sec-details"
-            title={isCanva || isWix || isWordPress ? "Description" : "App Details"}
+            title={isCanva || isWix || isWordPress || isGoogleWorkspace ? "Description" : "App Details"}
             sectionKey="appDetails"
             collapsed={isCollapsed("appDetails")}
             onToggle={toggleSection}
