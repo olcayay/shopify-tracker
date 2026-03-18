@@ -12,7 +12,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { AdHeatmap } from "@/components/ad-heatmap";
-import { Loader2 } from "lucide-react";
+import { ExternalLink, Loader2 } from "lucide-react";
 import { buildExternalCategoryUrl, getPlatformName } from "@/lib/platform-urls";
 import { PLATFORMS } from "@appranks/shared";
 import type { PlatformId } from "@appranks/shared";
@@ -99,10 +99,12 @@ function SectionCard({
   group,
   trackedSlugs,
   competitorSlugs,
+  id,
 }: {
   group: SightingGroup;
   trackedSlugs: string[];
   competitorSlugs: string[];
+  id?: string;
 }) {
   const { platform } = useParams();
   const externalUrl =
@@ -113,7 +115,7 @@ function SectionCard({
         : PLATFORMS[platform as PlatformId].baseUrl;
 
   return (
-    <Card>
+    <Card id={id} className="scroll-mt-4">
       <CardHeader>
         <CardTitle>
           <a
@@ -134,6 +136,50 @@ function SectionCard({
           competitorSlugs={competitorSlugs}
           initialVisible={12}
         />
+      </CardContent>
+    </Card>
+  );
+}
+
+function SectionNav({ groups }: { groups: SightingGroup[] }) {
+  const { platform } = useParams();
+
+  const scrollTo = (handle: string) => {
+    const el = document.getElementById(`section-${handle}`);
+    if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
+  };
+
+  return (
+    <Card>
+      <CardContent className="py-3 px-4">
+        <div className="flex flex-wrap gap-x-4 gap-y-2">
+          {groups.map((g) => {
+            const uniqueApps = new Set(g.sightings.map((s) => s.slug)).size;
+            const externalUrl =
+              g.surfaceDetail && g.surfaceDetail !== "home"
+                ? buildExternalCategoryUrl(platform as PlatformId, g.surfaceDetail)
+                : PLATFORMS[platform as PlatformId].baseUrl;
+            return (
+              <span key={g.sectionHandle} className="inline-flex items-center gap-1.5 text-sm">
+                <button
+                  onClick={() => scrollTo(g.sectionHandle)}
+                  className="font-medium text-primary hover:underline cursor-pointer"
+                >
+                  {g.sectionTitle}
+                </button>
+                <span className="text-muted-foreground text-xs">({uniqueApps})</span>
+                <a
+                  href={externalUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-muted-foreground hover:text-foreground"
+                >
+                  <ExternalLink className="h-3 w-3" />
+                </a>
+              </span>
+            );
+          })}
+        </div>
       </CardContent>
     </Card>
   );
@@ -315,6 +361,11 @@ export function FeaturedTabs({
         </div>
       )}
 
+      {/* Section quick-nav for homepage groups */}
+      {!loading && isHomepage && homeGroups.length > 1 && (
+        <SectionNav groups={homeGroups} />
+      )}
+
       {!loading && stats && (
         <div className="grid grid-cols-2 gap-4">
           <Card>
@@ -352,6 +403,7 @@ export function FeaturedTabs({
           {homeGroups.map((group) => (
             <SectionCard
               key={`${group.surface}:${group.surfaceDetail}:${group.sectionHandle}`}
+              id={`section-${group.sectionHandle}`}
               group={group}
               trackedSlugs={currentTracked}
               competitorSlugs={currentCompetitors}
