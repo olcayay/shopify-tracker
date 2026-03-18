@@ -74,5 +74,5 @@ export const ATLASSIAN_SCORING: PlatformScoringConfig = {
 export const ATLASSIAN_FEATURED_SECTIONS = [
   { marketingLabel: "Spotlight", sectionHandle: "_collection_spotlight", sectionTitle: "Spotlight" },
   { marketingLabel: "Bestseller", sectionHandle: "_collection_bestseller", sectionTitle: "Bestseller" },
-  { marketingLabel: "Rising+Star", sectionHandle: "_collection_risingstar", sectionTitle: "Rising Star" },
+  { marketingLabel: "Rising Star", sectionHandle: "_collection_risingstar", sectionTitle: "Rising Star" },
 ] as const;
