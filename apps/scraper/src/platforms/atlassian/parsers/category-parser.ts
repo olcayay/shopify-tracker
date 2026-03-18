@@ -71,14 +71,16 @@ function buildLogoUrl(logo: any): string {
 /**
  * Parse category page HTML to extract app listings from the Apollo cache.
  *
- * The Atlassian Marketplace uses a React + Apollo Client app.
- * The state lives in `window.__INITIAL_STATE__.apolloInitialState`.
- * App tiles are stored as `AppTile:{id}` entries with fields:
- * - addonKey, name, tagLine, ratings.avgStars, ratings.numRatings
- * - distribution.activeInstalls, logo.highRes, programs.cloudFortified
- * - vendor: {__ref: "Vendor:{id}"} → resolve from cache
+ * The Atlassian Marketplace uses React + Apollo Client.
+ * State lives in `window.__INITIAL_STATE__.apolloInitialState`.
  *
- * Category metadata is in `MarketplaceStoreCategoryResponse:{slug}`.
+ * Category query is at ROOT_QUERY.marketplaceCategory:{slug,filters,sort,pageNumber}
+ * which contains:
+ * - category.__ref → MarketplaceStoreCategoryResponse:{slug} (name, description)
+ * - apps.edges[] → ordered array of {node.__ref: "AppTile:{id}"}
+ * - apps.pageInfo → {totalCount, hasNextPage, totalPages}
+ *
+ * AppTile entries are resolved from the cache by __ref.
  */
 export function parseAtlassianCategoryPage(
   html: string,
@@ -87,11 +89,14 @@ export function parseAtlassianCategoryPage(
   const apps: NormalizedCategoryApp[] = [];
   let categoryTitle = categorySlug.replace(/-/g, " ");
   let categoryDescription = "";
+  let totalCount: number | null = null;
+  let hasNextPage = false;
 
   const state = extractInitialState(html);
 
   if (state) {
     const apollo = state.apolloInitialState || state;
+    const rootQuery = apollo.ROOT_QUERY || {};
 
     // Extract category metadata
     for (const [key, value] of Object.entries(apollo)) {
@@ -104,56 +109,116 @@ export function parseAtlassianCategoryPage(
       }
     }
 
-    // Extract AppTile entries
-    for (const [key, value] of Object.entries(apollo)) {
-      if (!key.startsWith("AppTile:")) continue;
-      const tile = value as Record<string, any>;
-      if (!tile.addonKey && !tile.name) continue;
+    // Find the marketplaceCategory query for this slug
+    let categoryQuery: Record<string, any> | null = null;
+    for (const [key, value] of Object.entries(rootQuery)) {
+      if (key.startsWith("marketplaceCategory") && key.includes(`"slug":"${categorySlug}"`)) {
+        categoryQuery = value as Record<string, any>;
+        break;
+      }
+    }
 
-      // Resolve vendor name from ref
-      let vendorName = "";
-      if (tile.vendor?.__ref && apollo[tile.vendor.__ref]) {
-        vendorName = (apollo[tile.vendor.__ref] as any).name || "";
+    if (categoryQuery?.apps) {
+      const pageInfo = categoryQuery.apps.pageInfo;
+      if (pageInfo) {
+        totalCount = pageInfo.totalCount ?? null;
+        hasNextPage = pageInfo.hasNextPage ?? false;
       }
 
-      // Badges
-      const badges: string[] = [];
-      if (tile.programs?.cloudFortified?.status === "approved") {
-        badges.push("cloud_fortified");
+      // Extract apps in order from edges
+      const edges = categoryQuery.apps.edges || [];
+      for (let i = 0; i < edges.length; i++) {
+        const ref = edges[i]?.node?.__ref;
+        if (!ref) continue;
+
+        const tile = apollo[ref] as Record<string, any> | undefined;
+        if (!tile || (!tile.addonKey && !tile.name)) continue;
+
+        // Resolve vendor name from ref
+        let vendorName = "";
+        if (tile.vendor?.__ref && apollo[tile.vendor.__ref]) {
+          vendorName = (apollo[tile.vendor.__ref] as any).name || "";
+        }
+
+        // Badges
+        const badges: string[] = [];
+        if (tile.programs?.cloudFortified?.status === "approved") {
+          badges.push("cloud_fortified");
+        }
+        const marketingTags = tile.tags?.marketingLabels || [];
+        if (marketingTags.includes("Top Vendor")) {
+          badges.push("top_vendor");
+        }
+
+        const totalInstalls = tile.distribution?.activeInstalls ?? tile.distribution?.totalInstalls ?? null;
+
+        apps.push({
+          slug: tile.addonKey || "",
+          name: tile.name || "",
+          shortDescription: tile.tagLine || "",
+          averageRating: tile.ratings?.avgStars ?? 0,
+          ratingCount: tile.ratings?.numRatings ?? 0,
+          logoUrl: buildLogoUrl(tile.logo),
+          pricingHint: undefined,
+          position: i + 1,
+          isSponsored: false,
+          badges,
+          externalId: tile.addonId ? String(tile.addonId) : undefined,
+          extra: {
+            ...(vendorName && { vendorName }),
+            ...(totalInstalls != null && { totalInstalls }),
+          },
+        });
       }
+    } else {
+      // Fallback: unordered AppTile scan (e.g. if ROOT_QUERY structure changes)
+      for (const [key, value] of Object.entries(apollo)) {
+        if (!key.startsWith("AppTile:")) continue;
+        const tile = value as Record<string, any>;
+        if (!tile.addonKey && !tile.name) continue;
 
-      // Check marketing labels for top vendor or other badges
-      const marketingTags = tile.tags?.marketingLabels || [];
-      if (marketingTags.includes("Top Vendor")) {
-        badges.push("top_vendor");
+        let vendorName = "";
+        if (tile.vendor?.__ref && apollo[tile.vendor.__ref]) {
+          vendorName = (apollo[tile.vendor.__ref] as any).name || "";
+        }
+
+        const badges: string[] = [];
+        if (tile.programs?.cloudFortified?.status === "approved") {
+          badges.push("cloud_fortified");
+        }
+        const marketingTags = tile.tags?.marketingLabels || [];
+        if (marketingTags.includes("Top Vendor")) {
+          badges.push("top_vendor");
+        }
+
+        const totalInstalls = tile.distribution?.activeInstalls ?? tile.distribution?.totalInstalls ?? null;
+
+        apps.push({
+          slug: tile.addonKey || "",
+          name: tile.name || "",
+          shortDescription: tile.tagLine || "",
+          averageRating: tile.ratings?.avgStars ?? 0,
+          ratingCount: tile.ratings?.numRatings ?? 0,
+          logoUrl: buildLogoUrl(tile.logo),
+          pricingHint: undefined,
+          position: apps.length + 1,
+          isSponsored: false,
+          badges,
+          externalId: tile.addonId ? String(tile.addonId) : undefined,
+          extra: {
+            ...(vendorName && { vendorName }),
+            ...(totalInstalls != null && { totalInstalls }),
+          },
+        });
       }
-
-      // Extract install count from distribution
-      const totalInstalls = tile.distribution?.activeInstalls ?? tile.distribution?.totalInstalls ?? null;
-
-      apps.push({
-        slug: tile.addonKey || "",
-        name: tile.name || "",
-        shortDescription: tile.tagLine || "",
-        averageRating: tile.ratings?.avgStars ?? 0,
-        ratingCount: tile.ratings?.numRatings ?? 0,
-        logoUrl: buildLogoUrl(tile.logo),
-        pricingHint: undefined,
-        position: apps.length + 1,
-        isSponsored: false,
-        badges,
-        externalId: tile.addonId ? String(tile.addonId) : undefined,
-        extra: {
-          ...(vendorName && { vendorName }),
-          ...(totalInstalls != null && { totalInstalls }),
-        },
-      });
     }
   }
 
   log.info("parsed category page", {
     categorySlug,
     appCount: apps.length,
+    totalCount,
+    hasNextPage,
   });
 
   return {
@@ -161,9 +226,9 @@ export function parseAtlassianCategoryPage(
     url: `https://marketplace.atlassian.com/categories/${categorySlug}`,
     title: categoryTitle,
     description: categoryDescription,
-    appCount: apps.length || null,
+    appCount: totalCount ?? (apps.length || null),
     apps,
     subcategoryLinks: [],
-    hasNextPage: false,
+    hasNextPage,
   };
 }

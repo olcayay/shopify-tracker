@@ -1,33 +1,24 @@
 import type { PlatformConstants, PlatformScoringConfig } from "../platform-module.js";
 
 /** Seed categories for the Atlassian Marketplace.
- *  Derived from the marketplace categories page. */
+ *  These are the 10 official categories shown on marketplace.atlassian.com/categories */
 export const ATLASSIAN_SEED_CATEGORIES = [
-  "admin-tools",
-  "charts-diagramming",
-  "cloud-security",
-  "code-quality",
-  "code-review",
-  "continuous-integration",
-  "design-tools",
-  "documentation",
-  "integrations",
-  "it-service-management",
-  "macros",
-  "migration",
-  "monitoring",
   "project-management",
-  "reports",
-  "security",
-  "testing-qa",
-  "time-tracking",
-  "workflow",
+  "admin-tools",
+  "content-communication",
+  "data-analytics",
+  "software-development",
+  "it-support-service",
+  "design-diagramming",
+  "security-compliance",
+  "hr-team-building",
+  "sales-customer-relations",
 ] as const;
 
 export const ATLASSIAN_CONSTANTS: PlatformConstants = {
   seedCategories: [...ATLASSIAN_SEED_CATEGORIES],
   maxCategoryDepth: 0,               // Flat categories
-  defaultPagesPerCategory: 50,       // API 50 per page → 2500 apps/category
+  defaultPagesPerCategory: 1,        // HTML SSR: only page 1 available (~18 apps), SPA pagination via internal GraphQL
   trackedFields: [
     "tagLine",
     "summary",

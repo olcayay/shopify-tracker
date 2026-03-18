@@ -190,4 +190,4 @@ Atlassian listing metadata extraction — save rating, installs, developer, badg
 
 Atlassian featured sections — connect API-based featured (Spotlight/Bestseller/Rising Star) to category scraper pipeline ✅
 
-Atlassian category pagination — switch from HTML scraping (18 apps) to REST API with offset/limit pagination (500 apps/category) ✅
+Atlassian category fix — correct 10 seed categories, ordered edge parsing, proper names, migration 0075 ✅

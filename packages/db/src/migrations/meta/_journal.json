@@ -526,6 +526,13 @@
       "when": 1775088000000,
       "tag": "0074_add_app_external_id",
       "breakpoints": true
+    },
+    {
+      "idx": 75,
+      "version": "7",
+      "when": 1775174400000,
+      "tag": "0075_fix_atlassian_categories",
+      "breakpoints": true
     }
   ]
 }

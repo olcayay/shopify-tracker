@@ -30,10 +30,6 @@ export const atlassianUrls = {
   apiFeatured: (marketingLabel: string, offset = 0, limit = 50) =>
     `${API_BASE}/addons?marketingLabel=${encodeURIComponent(marketingLabel)}&offset=${offset}&limit=${limit}`,
 
-  /** Category listing via REST API (supports offset/limit pagination) */
-  apiCategory: (categorySlug: string, offset = 0, limit = 50) =>
-    `${API_BASE}/addons?categories=${encodeURIComponent(categorySlug)}&hosting=cloud&offset=${offset}&limit=${limit}`,
-
   /** Latest version info via REST API */
   apiVersionLatest: (addonKey: string) => `${API_BASE}/addons/${addonKey}/versions/latest`,
 

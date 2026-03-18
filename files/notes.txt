@@ -1,22 +1,33 @@
-Atlassian Category Pagination Fix
-==================================
+Atlassian Category Fix — Correct Slugs, Names, Ordered Parsing
+================================================================
 
-Switched Atlassian category scraping from HTML (Apollo cache) to REST API.
-The HTML approach only captured ~18 apps from __INITIAL_STATE__, ignoring pagination.
+Fixed Atlassian categories: replaced 19 incorrect seed categories with the 10 official
+ones from marketplace.atlassian.com/categories. The old slugs (charts-diagramming,
+cloud-security, code-quality, etc.) were API v1 categories, not the current website ones.
 
-The REST API endpoint GET /rest/2/addons?categories={slug}&hosting=cloud&offset=N&limit=50
-returns the same _embedded.addons[] format as search, with proper count and pagination.
+Correct categories: project-management, admin-tools, content-communication, data-analytics,
+software-development, it-support-service, design-diagramming, security-compliance,
+hr-team-building, sales-customer-relations.
 
-Added parseCategoryResults() to api-parser.ts (reuses same addon structure as search).
-Updated fetchCategoryPage() to use API with offset/limit instead of HTML scraping.
-Updated parseCategoryPage() to parse API JSON instead of HTML.
-Bumped defaultPagesPerCategory from 2 to 10 (500 apps/category).
+REST API v2 does NOT support category filtering (category/categories/tag params all ignored,
+always returns all 5276+ cloud apps regardless). HTML pagination is SPA-only (client-side
+GraphQL, ?page=N doesn't change server-rendered data). So category scraping uses HTML
+page 1 only (~18 apps per category).
+
+Category parser rewritten to use ordered edges from ROOT_QUERY.marketplaceCategory query
+instead of unordered AppTile scan. Now extracts pageInfo (totalCount, hasNextPage, totalPages)
+and proper category name from MarketplaceStoreCategoryResponse.
+
+Migration 0075 deletes 17 old wrong categories and upserts the 10 correct ones with proper
+names (e.g. "Design and diagramming" not "Design Tools").
 
 Files changed:
-- apps/scraper/src/platforms/atlassian/urls.ts — added apiCategory URL builder
-- apps/scraper/src/platforms/atlassian/parsers/api-parser.ts — added parseCategoryResults()
-- apps/scraper/src/platforms/atlassian/index.ts — fetchCategoryPage uses API, parseCategoryPage uses JSON
-- apps/scraper/src/platforms/atlassian/constants.ts — defaultPagesPerCategory 2 → 10
+- apps/scraper/src/platforms/atlassian/constants.ts — 10 correct seed categories
+- apps/scraper/src/platforms/atlassian/parsers/category-parser.ts — ordered edges + pageInfo
+- apps/scraper/src/platforms/atlassian/index.ts — HTML fetch with proper page param
+- apps/scraper/src/platforms/atlassian/urls.ts — removed unused apiCategory URL
+- apps/scraper/src/platforms/atlassian/parsers/api-parser.ts — removed unused parseCategoryResults
+- packages/db/src/migrations/0075_fix_atlassian_categories.sql — replace wrong categories
 
 
 Atlassian Featured Sections Integration
