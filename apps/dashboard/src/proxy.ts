@@ -4,7 +4,7 @@ const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
 
 const PUBLIC_PATHS = ["/", "/login", "/register", "/invite", "/terms", "/privacy"];
 
-const VALID_PLATFORMS = ["shopify", "salesforce", "canva", "wix", "wordpress", "google_workspace"];
+const VALID_PLATFORMS = ["shopify", "salesforce", "canva", "wix", "wordpress", "google_workspace", "atlassian"];
 
 /** Dashboard pages that should be nested under a [platform] segment. */
 const PLATFORM_PAGES = [

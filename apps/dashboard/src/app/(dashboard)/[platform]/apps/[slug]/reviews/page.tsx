@@ -1,5 +1,5 @@
 import { getApp, getAppReviews, getAppHistory } from "@/lib/api";
-import type { PlatformId } from "@appranks/shared";
+import { PLATFORMS, isPlatformId, type PlatformId } from "@appranks/shared";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { RatingReviewChart } from "@/components/rating-review-chart";
 import { ReviewList } from "../review-list";
@@ -10,6 +10,7 @@ export default async function ReviewsPage({
   params: Promise<{ platform: string; slug: string }>;
 }) {
   const { platform, slug } = await params;
+  const maxStars = isPlatformId(platform) ? PLATFORMS[platform as PlatformId].maxRatingStars : 5;
 
   let reviewData: any;
   let history: any = { snapshots: [] };
@@ -35,7 +36,7 @@ export default async function ReviewsPage({
           </CardHeader>
           <CardContent>
             <div className="space-y-2">
-              {[5, 4, 3, 2, 1].map((star) => {
+              {Array.from({ length: maxStars }, (_, i) => maxStars - i).map((star) => {
                 const item = reviewData.distribution.find(
                   (d: any) => d.rating === star
                 );

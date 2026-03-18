@@ -872,7 +872,7 @@ export function CompetitorsSection({ appSlug }: { appSlug: string }) {
                   <TableCell>
                     <div className="flex items-center gap-0.5">
                       <a
-                        href={buildExternalAppUrl(platform as PlatformId, comp.appSlug)}
+                        href={buildExternalAppUrl(platform as PlatformId, comp.appSlug, comp.externalId)}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="h-8 w-8 inline-flex items-center justify-center rounded-md text-muted-foreground hover:text-foreground hover:bg-accent transition-colors"

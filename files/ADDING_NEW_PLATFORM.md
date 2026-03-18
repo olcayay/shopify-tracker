@@ -92,6 +92,7 @@ export const PLATFORMS = {
     hasFeatureTaxonomy: false,  // Does the marketplace have a structured feature taxonomy?
     hasPricing: true,           // Do apps have visible pricing plans?
     hasLaunchedDate: true,      // Do apps have a visible launch/published date?
+    maxRatingStars: 5,          // Maximum rating stars (5 for most, 4 for Atlassian)
     pageSize: 20,               // Apps per page in search/category results
   },
 } as const;
@@ -112,6 +113,7 @@ export const PLATFORMS = {
 | hasFeatureTaxonomy | true | false | false | false | false | false |
 | hasPricing | true | true | false | true | false | true |
 | hasLaunchedDate | true | false | false | false | true | false |
+| maxRatingStars | 5 | 5 | 5 | 5 | 5 | 5 |
 
 ### 2.2 PlatformCapabilities Type
 
@@ -137,7 +139,7 @@ If you add a NEW capability flag (e.g., `hasAppBundles`), you must:
 Add cases to `buildExternalAppUrl()` and `buildExternalCategoryUrl()`:
 
 ```typescript
-export function buildExternalAppUrl(platform: PlatformId, slug: string): string {
+export function buildExternalAppUrl(platform: PlatformId, slug: string, externalId?: string | null): string {
   switch (platform) {
     // ... existing cases ...
     case "newplatform":
@@ -154,6 +156,13 @@ export function buildExternalCategoryUrl(platform: PlatformId, slug: string): st
 }
 ```
 
+**Important — `externalId` parameter:** Some platforms use a different identifier in their human-readable URL than the API slug. For example, Atlassian uses `addonKey` (e.g., `com.xpandit.plugins.xray`) as the slug for API calls, but the human URL requires a numeric `addonId` (e.g., `https://marketplace.atlassian.com/apps/1211769`). When this is the case:
+
+1. Store the external ID in the `apps.external_id` column during scraping (both category parser and app detail scraper)
+2. Use the `externalId` parameter in `buildExternalAppUrl()` to construct the correct URL
+3. Pass `app.externalId` from dashboard components that have the full app object
+4. API endpoints that return app data should include `externalId` in the response (already part of the `apps` table via `...appRow`)
+
 ### 2.4 Dashboard URL Builders
 
 **File:** `apps/dashboard/src/lib/platform-urls.ts`
@@ -161,10 +170,12 @@ export function buildExternalCategoryUrl(platform: PlatformId, slug: string): st
 Add cases to all URL builder functions:
 
 ```typescript
-export function buildExternalAppUrl(platform: PlatformId, slug: string): string {
+export function buildExternalAppUrl(platform: PlatformId, slug: string, externalId?: string | null): string {
   switch (platform) {
     // ... existing ...
     case "newplatform":
+      // If the platform needs externalId for human URLs:
+      if (externalId) return `https://marketplace.example.com/apps/${externalId}`;
       return `https://marketplace.example.com/apps/${slug}`;
   }
 }
@@ -1289,6 +1300,16 @@ ON CONFLICT DO NOTHING;
 | `hasFeatureTaxonomy` | Feature parsing | Features endpoint | Features nav item |
 | `hasPricing` | Pricing plan parsing | Pricing in snapshots | Pricing column/card, Min. Paid column |
 | `hasLaunchedDate` | Launch date parsing | Launch date in app response | Launched column/card |
+| `maxRatingStars` | N/A (data field) | N/A | Controls star count in Rating card, Review Pulse card, Rating Distribution, and inline review stars |
+
+### Platform-Specific Rating Scale
+
+Most platforms use a 5-star rating scale, but some differ (e.g., Atlassian uses 4 stars). The `maxRatingStars` property in the platform config controls:
+
+- **Rating stat card** (`layout.tsx`): Number of star icons displayed (`Array.from({ length: caps.maxRatingStars }, ...)`)
+- **Rating Distribution** (`reviews/page.tsx`): Number of rows in the distribution breakdown (no 5-star row for Atlassian)
+- **Review Pulse mini distribution** (`page.tsx`): Same as Rating Distribution
+- **Inline review stars** (`page.tsx`): Empty star count uses `caps.maxRatingStars - r.rating` instead of `5 - r.rating`
 
 ### Adding a New Capability Flag
 
@@ -1362,6 +1383,17 @@ grep -r "Launched" apps/dashboard/src --include="*.tsx" -l
 **Problem:** Slugs with special characters break URLs.
 
 **Solution:** Design URL-safe slug format from the start. If the platform uses `/` in identifiers, replace with `--` or similar. Canva, Wix, and Google Workspace all use this pattern.
+
+### Pitfall 8b: External URL needs a different ID than the slug
+
+**Problem:** The platform uses one identifier (e.g., `addonKey`) for API calls but a different identifier (e.g., numeric `addonId`) for human-readable URLs. Example: Atlassian uses `com.xpandit.plugins.xray` as the slug for `/rest/2/addons/{key}`, but the marketplace URL is `https://marketplace.atlassian.com/apps/1211769`.
+
+**Solution:**
+1. Add migration: `ALTER TABLE apps ADD COLUMN IF NOT EXISTS external_id varchar(100);`
+2. Store the external identifier during scraping (in both category parser via `NormalizedCategoryApp.externalId` and app detail scraper via `_externalId` field)
+3. Use the optional `externalId` parameter in `buildExternalAppUrl(platform, slug, externalId?)`
+4. Pass `app.externalId` in dashboard components where the full app object is available
+5. Add `externalId: apps.externalId` to API endpoint `select()` queries that return competitor/app data
 
 ### Pitfall 9: Scraper rate limiting and OOM
 

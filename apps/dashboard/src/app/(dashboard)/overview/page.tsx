@@ -49,9 +49,15 @@ const PLATFORM_BRANDS: Record<
     borderTop: "border-t-[#4285F4]",
     textAccent: "text-[#4285F4]",
   },
+  atlassian: {
+    primary: "#0052CC",
+    gradient: "from-[#0052CC]/10 to-transparent",
+    borderTop: "border-t-[#0052CC]",
+    textAccent: "text-[#0052CC]",
+  },
 };
 
-const ALL_PLATFORMS: PlatformId[] = ["shopify", "salesforce", "canva", "wix", "wordpress", "google_workspace"];
+const ALL_PLATFORMS: PlatformId[] = ["shopify", "salesforce", "canva", "wix", "wordpress", "google_workspace", "atlassian"];
 
 const CAPABILITY_LABELS: { key: string; label: string }[] = [
   { key: "hasReviews", label: "Reviews" },

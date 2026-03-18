@@ -395,6 +395,40 @@ export const liveSearchRoutes: FastifyPluginAsync = async (app) => {
       }
     }
 
+    if (platform === "atlassian") {
+      try {
+        const apiUrl = `https://marketplace.atlassian.com/rest/2/addons?text=${encodeURIComponent(q)}&limit=10`;
+        const response = await fetch(apiUrl, {
+          headers: {
+            Accept: "application/json",
+            "User-Agent": USER_AGENTS[Math.floor(Math.random() * USER_AGENTS.length)],
+          },
+        });
+        if (!response.ok) {
+          throw new Error(`Atlassian API returned ${response.status}`);
+        }
+        const data = await response.json() as { count?: number; _embedded?: { addons?: any[] } };
+        const addons = data._embedded?.addons || [];
+        const atlassianApps: SearchApp[] = addons.map((addon: any, idx: number) => ({
+          position: idx + 1,
+          app_slug: addon.key || "",
+          app_name: addon.name || "",
+          short_description: addon.summary ? addon.summary.replace(/<[^>]*>/g, "") : "",
+          average_rating: addon._embedded?.reviews?.averageStars ?? 0,
+          rating_count: addon._embedded?.reviews?.count ?? 0,
+          logo_url: addon._embedded?.logo?._links?.image?.href || undefined,
+          is_sponsored: false,
+          is_built_in: false,
+          is_built_for_shopify: false,
+        }));
+        request.log.info({ platform, keyword: q, source: "api", apps: atlassianApps.length, ms: Date.now() - start }, "live-search completed via Atlassian API");
+        return { keyword: q, totalResults: data.count ?? atlassianApps.length, apps: atlassianApps };
+      } catch (err: any) {
+        request.log.error({ platform, keyword: q, error: err.message, ms: Date.now() - start }, "live-search failed");
+        return reply.code(502).send({ error: `Failed to fetch from Atlassian: ${err.message}` });
+      }
+    }
+
     if (platform === "wordpress") {
       try {
         const apiUrl = `https://api.wordpress.org/plugins/info/1.2/?action=query_plugins&search=${encodeURIComponent(q)}&per_page=10`;

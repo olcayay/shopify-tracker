@@ -32,6 +32,7 @@ interface CompetitorSuggestion {
   ratingCount: number | null;
   pricingHint: string | null;
   isBuiltForShopify: boolean;
+  externalId?: string | null;
   isAlreadyCompetitor: boolean;
   similarity: SimilarityScores;
   categoryRanks: CategoryRank[];
@@ -256,7 +257,7 @@ export function CompetitorSuggestions({
 
                     {/* Shopify link */}
                     <a
-                      href={buildExternalAppUrl(platform as PlatformId, s.appSlug)}
+                      href={buildExternalAppUrl(platform as PlatformId, s.appSlug, s.externalId)}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="p-1 rounded hover:bg-accent shrink-0"

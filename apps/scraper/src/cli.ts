@@ -20,7 +20,7 @@ if (platformArgIdx !== -1 && process.argv[platformArgIdx + 1]) {
   if (isPlatformId(val)) {
     platformArg = val;
   } else {
-    console.error(`Unknown platform: ${val}. Valid: shopify, salesforce, canva, wix, wordpress`);
+    console.error(`Unknown platform: ${val}. Valid: shopify, salesforce, canva, wix, wordpress, google_workspace, atlassian`);
     process.exit(1);
   }
   // Remove --platform and its value from argv so they don't interfere with positional args

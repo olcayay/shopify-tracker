@@ -72,7 +72,7 @@ export default async function AppDetailLayout({
         </div>
         <div className="flex items-center gap-2">
           <a
-            href={buildExternalAppUrl(platform as PlatformId, app.slug)}
+            href={buildExternalAppUrl(platform as PlatformId, app.slug, app.externalId)}
             target="_blank"
             rel="noopener noreferrer"
             title={`View on ${getPlatformName(platform as PlatformId)}`}
@@ -116,7 +116,7 @@ export default async function AppDetailLayout({
                 </span>
                 {snapshot.averageRating != null && (
                   <div className="flex gap-0.5 mt-1">
-                    {[1, 2, 3, 4, 5].map((star) => {
+                    {Array.from({ length: caps.maxRatingStars }, (_, i) => i + 1).map((star) => {
                       const rating = Number(snapshot.averageRating);
                       const fill = Math.min(1, Math.max(0, rating - (star - 1)));
                       return (

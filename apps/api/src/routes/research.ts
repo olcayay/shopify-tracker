@@ -767,6 +767,7 @@ export const researchRoutes: FastifyPluginAsync = async (app) => {
           ratingCount: apps.ratingCount,
           pricingHint: apps.pricingHint,
           launchedDate: apps.launchedDate,
+          externalId: apps.externalId,
         })
         .from(apps)
         .where(inArray(apps.slug, competitorSlugs));
@@ -1040,6 +1041,7 @@ export const researchRoutes: FastifyPluginAsync = async (app) => {
             iconUrl: apps.iconUrl,
             averageRating: apps.averageRating,
             ratingCount: apps.ratingCount,
+            externalId: apps.externalId,
           })
           .from(apps)
           .where(inArray(apps.id, idsToEnrich));

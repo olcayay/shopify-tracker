@@ -722,7 +722,7 @@ export default function CompetitorsPage() {
         )}
         <TableCell>
           <a
-            href={buildExternalAppUrl(platform as PlatformId, c.appSlug)}
+            href={buildExternalAppUrl(platform as PlatformId, c.appSlug, c.externalId)}
             target="_blank"
             rel="noopener noreferrer"
             title={`View on ${getPlatformName(platform as PlatformId)}`}

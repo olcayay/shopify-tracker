@@ -1,6 +1,6 @@
 import { PLATFORMS, type PlatformId } from "@appranks/shared";
 
-export function buildExternalAppUrl(platform: PlatformId, slug: string): string {
+export function buildExternalAppUrl(platform: PlatformId, slug: string, externalId?: string | null): string {
   switch (platform) {
     case "shopify":
       return `https://apps.shopify.com/${slug}`;
@@ -14,6 +14,9 @@ export function buildExternalAppUrl(platform: PlatformId, slug: string): string 
       return `https://wordpress.org/plugins/${slug}/`;
     case "google_workspace":
       return `https://workspace.google.com/marketplace/app/${slug.replace("--", "/")}`;
+    case "atlassian":
+      if (externalId) return `https://marketplace.atlassian.com/apps/${externalId}`;
+      return `https://marketplace.atlassian.com/apps/${slug}`;
   }
 }
 
@@ -35,6 +38,8 @@ export function buildExternalCategoryUrl(platform: PlatformId, slug: string): st
       return `https://wordpress.org/plugins/tags/${slug}/`;
     case "google_workspace":
       return `https://workspace.google.com/marketplace/category/${slug.replace("--", "/")}`;
+    case "atlassian":
+      return `https://marketplace.atlassian.com/categories/${slug}`;
   }
 }
 
@@ -52,6 +57,8 @@ export function buildExternalSearchUrl(platform: PlatformId, query: string): str
       return `https://wordpress.org/plugins/search/${encodeURIComponent(query)}/`;
     case "google_workspace":
       return `https://workspace.google.com/marketplace/search/${encodeURIComponent(query)}?flow_type=2`;
+    case "atlassian":
+      return `https://marketplace.atlassian.com/search?query=${encodeURIComponent(query)}`;
   }
 }
 

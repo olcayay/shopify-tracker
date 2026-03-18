@@ -43,6 +43,7 @@ const PLATFORM_COLORS: Record<string, string> = {
   wix: "#0C6EFC",
   wordpress: "#21759B",
   google_workspace: "#4285F4",
+  atlassian: "#0052CC",
 };
 
 

@@ -183,6 +183,37 @@ const SCHEDULES = [
     type: "compute_app_scores" as const,
     platform: "google_workspace" as const,
   },
+  // ── Atlassian ──
+  {
+    name: "atlassian_category",
+    cron: "30 6 * * *", // Daily at 06:30
+    type: "category" as const,
+    platform: "atlassian" as const,
+  },
+  {
+    name: "atlassian_app_details",
+    cron: "0 7,19 * * *", // Every 12 hours (07:00, 19:00)
+    type: "app_details" as const,
+    platform: "atlassian" as const,
+  },
+  {
+    name: "atlassian_keyword_search",
+    cron: "30 7,19 * * *", // Every 12 hours (07:30, 19:30)
+    type: "keyword_search" as const,
+    platform: "atlassian" as const,
+  },
+  {
+    name: "atlassian_reviews",
+    cron: "0 10 * * *", // Daily at 10:00
+    type: "reviews" as const,
+    platform: "atlassian" as const,
+  },
+  {
+    name: "atlassian_compute_app_scores",
+    cron: "30 12 * * *", // Daily at 12:30 UTC
+    type: "compute_app_scores" as const,
+    platform: "atlassian" as const,
+  },
 ];
 
 log.info("starting scheduler", {

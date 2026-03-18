@@ -32,6 +32,7 @@ const PLATFORM_SIMILARITY_WEIGHTS: Record<string, SimilarityWeights> = {
   wix: { category: 0.35, feature: 0.0, keyword: 0.30, text: 0.35 },
   wordpress: { category: 0.35, feature: 0.0, keyword: 0.30, text: 0.35 },
   google_workspace: { category: 0.35, feature: 0.0, keyword: 0.30, text: 0.35 },
+  atlassian: { category: 0.35, feature: 0.0, keyword: 0.30, text: 0.35 },
 };
 
 /** Get similarity weights for a given platform (defaults to Shopify weights) */
@@ -64,6 +65,7 @@ const CANVA_SIMILARITY_STOP_WORDS = new Set(["canva", "design", "template", "tem
 const WIX_SIMILARITY_STOP_WORDS = new Set(["wix", "website", "site", "sites", "web"]);
 const WORDPRESS_SIMILARITY_STOP_WORDS = new Set(["wordpress", "wp", "plugin", "plugins", "widget"]);
 const GOOGLE_WORKSPACE_SIMILARITY_STOP_WORDS = new Set(["google", "workspace", "marketplace", "sheets", "docs", "drive", "gmail", "addon", "add-on"]);
+const ATLASSIAN_SIMILARITY_STOP_WORDS = new Set(["atlassian", "jira", "confluence", "bitbucket", "marketplace", "plugin", "addon", "app", "cloud", "server", "datacenter"]);
 
 const PLATFORM_SIMILARITY_STOP_WORDS: Record<string, Set<string>> = {
   shopify: SHOPIFY_SIMILARITY_STOP_WORDS,
@@ -72,6 +74,7 @@ const PLATFORM_SIMILARITY_STOP_WORDS: Record<string, Set<string>> = {
   wix: WIX_SIMILARITY_STOP_WORDS,
   wordpress: WORDPRESS_SIMILARITY_STOP_WORDS,
   google_workspace: GOOGLE_WORKSPACE_SIMILARITY_STOP_WORDS,
+  atlassian: ATLASSIAN_SIMILARITY_STOP_WORDS,
 };
 
 /** Get merged similarity stop words for a given platform */
@@ -184,6 +187,11 @@ export function extractCategorySlugsFromPlatformData(
       const cat = platformData.category as string | undefined;
       if (!cat) return new Set();
       return new Set([cat]);
+    }
+    case "atlassian": {
+      const cats = platformData.categories as Array<{ slug?: string; key?: string }> | undefined;
+      if (!Array.isArray(cats)) return new Set();
+      return new Set(cats.map((c) => c.slug || c.key).filter((s): s is string => !!s));
     }
     default:
       return new Set();

@@ -12,6 +12,7 @@ export const PLATFORMS = {
     hasFeatureTaxonomy: true,
     hasPricing: true,
     hasLaunchedDate: true,
+    maxRatingStars: 5,
     pageSize: 24,
   },
   salesforce: {
@@ -27,6 +28,7 @@ export const PLATFORMS = {
     hasFeatureTaxonomy: false,
     hasPricing: true,
     hasLaunchedDate: true,
+    maxRatingStars: 5,
     pageSize: 12,
   },
   canva: {
@@ -42,6 +44,7 @@ export const PLATFORMS = {
     hasFeatureTaxonomy: false,
     hasPricing: false,
     hasLaunchedDate: false,
+    maxRatingStars: 5,
     pageSize: 30,
   },
   wix: {
@@ -57,6 +60,7 @@ export const PLATFORMS = {
     hasFeatureTaxonomy: false,
     hasPricing: true,
     hasLaunchedDate: false,
+    maxRatingStars: 5,
     pageSize: 50,
   },
   wordpress: {
@@ -72,6 +76,7 @@ export const PLATFORMS = {
     hasFeatureTaxonomy: false,
     hasPricing: false,
     hasLaunchedDate: true,
+    maxRatingStars: 5,
     pageSize: 250,
   },
   google_workspace: {
@@ -87,7 +92,24 @@ export const PLATFORMS = {
     hasFeatureTaxonomy: false,
     hasPricing: true,
     hasLaunchedDate: false,
+    maxRatingStars: 5,
     pageSize: 20,
+  },
+  atlassian: {
+    id: "atlassian" as const,
+    name: "Atlassian Marketplace",
+    baseUrl: "https://marketplace.atlassian.com",
+    hasKeywordSearch: true,
+    hasReviews: true,
+    hasFeaturedSections: true,
+    hasAdTracking: false,
+    hasSimilarApps: false,
+    hasAutoSuggestions: false,
+    hasFeatureTaxonomy: false,
+    hasPricing: false,
+    hasLaunchedDate: false,
+    maxRatingStars: 4,
+    pageSize: 50,
   },
 } as const;
 
@@ -109,7 +131,7 @@ export function getPlatform(id: PlatformId): PlatformConfig {
 }
 
 /** Build the external URL for an app on its marketplace */
-export function buildExternalAppUrl(platform: PlatformId, slug: string): string {
+export function buildExternalAppUrl(platform: PlatformId, slug: string, externalId?: string | null): string {
   switch (platform) {
     case "shopify":
       return `https://apps.shopify.com/${slug}`;
@@ -123,6 +145,9 @@ export function buildExternalAppUrl(platform: PlatformId, slug: string): string 
       return `https://wordpress.org/plugins/${slug}/`;
     case "google_workspace":
       return `https://workspace.google.com/marketplace/app/${slug.replace("--", "/")}`;
+    case "atlassian":
+      if (externalId) return `https://marketplace.atlassian.com/apps/${externalId}`;
+      return `https://marketplace.atlassian.com/apps/${slug}`;
   }
 }
 
@@ -148,5 +173,7 @@ export function buildExternalCategoryUrl(platform: PlatformId, slug: string): st
       return `https://wordpress.org/plugins/tags/${slug}/`;
     case "google_workspace":
       return `https://workspace.google.com/marketplace/category/${slug.replace("--", "/")}`;
+    case "atlassian":
+      return `https://marketplace.atlassian.com/categories/${slug}`;
   }
 }

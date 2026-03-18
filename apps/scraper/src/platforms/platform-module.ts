@@ -26,6 +26,8 @@ export interface NormalizedCategoryApp {
   position?: number;
   isSponsored: boolean;
   badges: string[];
+  /** Platform-specific external ID (e.g., Atlassian numeric addonId) */
+  externalId?: string;
 }
 
 export interface NormalizedCategoryPage {

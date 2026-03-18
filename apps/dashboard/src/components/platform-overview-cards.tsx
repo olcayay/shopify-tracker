@@ -13,6 +13,7 @@ const PLATFORM_LABELS: Record<PlatformId, string> = {
   wix: "Wix",
   wordpress: "WordPress",
   google_workspace: "Google Workspace",
+  atlassian: "Atlassian",
 };
 
 const PLATFORM_COLORS: Record<PlatformId, string> = {
@@ -22,6 +23,7 @@ const PLATFORM_COLORS: Record<PlatformId, string> = {
   wix: "#0C6EFC",
   wordpress: "#21759B",
   google_workspace: "#4285F4",
+  atlassian: "#0052CC",
 };
 
 interface PlatformCounts {

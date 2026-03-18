@@ -866,6 +866,7 @@ export class CategoryScraper {
           ...(hasRating && { averageRating: String(app.averageRating) }),
           ...(hasCount && { ratingCount: app.ratingCount }),
           ...(app.pricingHint && { pricingHint: app.pricingHint }),
+          ...(app.externalId && { externalId: app.externalId }),
         })
         .onConflictDoUpdate({
           target: [apps.platform, apps.slug],
@@ -876,6 +877,7 @@ export class CategoryScraper {
             ...(hasRating && { averageRating: String(app.averageRating) }),
             ...(hasCount && { ratingCount: app.ratingCount }),
             ...(app.pricingHint && { pricingHint: app.pricingHint }),
+            ...(app.externalId && { externalId: app.externalId }),
             updatedAt: now,
           },
         })

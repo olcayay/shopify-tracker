@@ -329,6 +329,9 @@ export class AppDetailsScraper {
                 : this.platform === "google_workspace" && pd.listingUpdated
                   ? new Date(pd.listingUpdated as string)
                   : null,
+              _externalId: this.platform === "atlassian" && pd.appId
+                ? String(pd.appId)
+                : null,
             };
           })()
         : parseAppPage(html, slug);
@@ -410,6 +413,7 @@ export class AppDetailsScraper {
       const metaVersion = ("_currentVersion" in details ? (details as any)._currentVersion : null) as string | null;
       const metaInstalls = ("_activeInstalls" in details ? (details as any)._activeInstalls : null) as number | null;
       const metaLastUpdated = ("_lastUpdatedAt" in details ? (details as any)._lastUpdatedAt : null) as Date | null;
+      const metaExternalId = ("_externalId" in details ? (details as any)._externalId : null) as string | null;
 
       // Upsert app master record
       const [upsertedApp] = await this.db
@@ -425,6 +429,7 @@ export class AppDetailsScraper {
           ...(metaVersion != null && { currentVersion: metaVersion }),
           ...(metaInstalls != null && { activeInstalls: metaInstalls }),
           ...(metaLastUpdated != null && { lastUpdatedAt: metaLastUpdated }),
+          ...(metaExternalId != null && { externalId: metaExternalId }),
         })
         .onConflictDoUpdate({
           target: [apps.platform, apps.slug],
@@ -437,6 +442,7 @@ export class AppDetailsScraper {
             ...(metaVersion != null && { currentVersion: metaVersion }),
             ...(metaInstalls != null && { activeInstalls: metaInstalls }),
             ...(metaLastUpdated != null && { lastUpdatedAt: metaLastUpdated }),
+            ...(metaExternalId != null && { externalId: metaExternalId }),
           },
         })
         .returning({ id: apps.id });

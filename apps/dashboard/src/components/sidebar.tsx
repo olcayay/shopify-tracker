@@ -42,6 +42,7 @@ const PLATFORM_LABELS: Record<PlatformId, string> = {
   wix: "Wix",
   wordpress: "WordPress",
   google_workspace: "Google Workspace",
+  atlassian: "Atlassian",
 };
 
 const PLATFORM_COLORS: Record<PlatformId, string> = {
@@ -51,6 +52,7 @@ const PLATFORM_COLORS: Record<PlatformId, string> = {
   wix: "#0C6EFC",
   wordpress: "#21759B",
   google_workspace: "#4285F4",
+  atlassian: "#0052CC",
 };
 
 function getNavItems(platformId: PlatformId, isAdmin?: boolean) {
@@ -75,7 +77,7 @@ function getNavItems(platformId: PlatformId, isAdmin?: boolean) {
   if (caps.hasFeatureTaxonomy) {
     items.push({ href: `${p}/features`, label: "Features", icon: Puzzle });
   }
-  if (platformId !== "canva" && platformId !== "salesforce" && platformId !== "wix" && platformId !== "wordpress" && platformId !== "google_workspace") {
+  if (platformId !== "canva" && platformId !== "salesforce" && platformId !== "wix" && platformId !== "wordpress" && platformId !== "google_workspace" && platformId !== "atlassian") {
     items.push({ href: `${p}/research`, label: "Research", icon: FlaskConical, badge: "Beta" });
   }
   if (isAdmin) {
@@ -100,7 +102,7 @@ const systemAdminItems = [
 
 /** Extract platform from current pathname */
 function extractPlatform(pathname: string): PlatformId {
-  const match = pathname.match(/^\/(shopify|salesforce|canva|wix|wordpress|google_workspace)(\/|$)/);
+  const match = pathname.match(/^\/(shopify|salesforce|canva|wix|wordpress|google_workspace|atlassian)(\/|$)/);
   return (match?.[1] as PlatformId) ?? "shopify";
 }
 
@@ -133,7 +135,7 @@ function SidebarContent({
   // Route protection: redirect to /overview if user navigates to a platform they don't have access to
   useEffect(() => {
     if (!user || !account || isSystemAdmin) return;
-    const platformMatch = pathname.match(/^\/(shopify|salesforce|canva|wix|wordpress|google_workspace)(\/|$)/);
+    const platformMatch = pathname.match(/^\/(shopify|salesforce|canva|wix|wordpress|google_workspace|atlassian)(\/|$)/);
     if (platformMatch) {
       const urlPlatform = platformMatch[1];
       if (!enabledPlatforms.includes(urlPlatform)) {

@@ -42,6 +42,7 @@ interface Competitor {
   launchedAt: string | null;
   featuredSections: number;
   reverseSimilarCount: number;
+  externalId?: string | null;
 }
 
 interface ResearchData {
@@ -509,7 +510,7 @@ export default function ResearchCompetitorsPage() {
                           <TableCell>
                             <div className="flex items-center gap-0.5">
                               <a
-                                href={buildExternalAppUrl(platform, comp.slug)}
+                                href={buildExternalAppUrl(platform, comp.slug, comp.externalId)}
                                 target="_blank"
                                 rel="noopener noreferrer"
                                 className="p-1 rounded hover:bg-accent text-muted-foreground hover:text-foreground transition-colors"

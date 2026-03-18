@@ -97,14 +97,15 @@ function getFieldLabels(platform: string): Record<string, string> {
   const isWix = platform === "wix";
   const isWordPress = platform === "wordpress";
   const isGoogleWorkspace = platform === "google_workspace";
+  const isAtlassian = platform === "atlassian";
   return {
     name: "App Name",
-    appIntroduction: isCanva || isWix || isWordPress || isGoogleWorkspace ? "Short Description" : "Introduction",
-    appDetails: isCanva || isWix || isWordPress || isGoogleWorkspace ? "Description" : "Details",
+    appIntroduction: isAtlassian ? "Summary" : isCanva || isWix || isWordPress || isGoogleWorkspace ? "Short Description" : "Introduction",
+    appDetails: isCanva || isWix || isWordPress || isGoogleWorkspace || isAtlassian ? "Description" : "Details",
     features: "Features",
     seoTitle: "SEO Title",
     seoMetaDescription: "SEO Description",
-    appCardSubtitle: isCanva || isWix ? "Tagline" : isWordPress || isGoogleWorkspace ? "Short Description" : "Subtitle",
+    appCardSubtitle: isAtlassian ? "Tag Line" : isCanva || isWix ? "Tagline" : isWordPress || isGoogleWorkspace ? "Short Description" : "Subtitle",
   };
 }
 
@@ -381,7 +382,7 @@ export default async function AppOverviewPage({
                 {/* Mini rating distribution */}
                 {distribution.length > 0 && (
                   <div className="space-y-1">
-                    {[5, 4, 3, 2, 1].map((star) => {
+                    {Array.from({ length: caps.maxRatingStars }, (_, i) => caps.maxRatingStars - i).map((star) => {
                       const d = distribution.find((x) => x.rating === star);
                       const count = d?.count || 0;
                       const pct = (count / maxDistCount) * 100;
@@ -409,7 +410,7 @@ export default async function AppOverviewPage({
                       <div key={i} className="text-sm">
                         <div className="flex items-center gap-1.5">
                           <span className="text-yellow-500 text-xs">
-                            {"\u2605".repeat(r.rating)}{"\u2606".repeat(5 - r.rating)}
+                            {"\u2605".repeat(r.rating)}{"\u2606".repeat(Math.max(0, caps.maxRatingStars - r.rating))}
                           </span>
                           <span className="text-muted-foreground text-xs font-medium">{r.reviewerName}</span>
                           <span className="text-muted-foreground/60 text-xs">{"\u00B7"}</span>

@@ -42,6 +42,7 @@ export const apps = pgTable(
     currentVersion: varchar("current_version", { length: 50 }),
     activeInstalls: integer("active_installs"),
     lastUpdatedAt: timestamp("last_updated_at"),
+    externalId: varchar("external_id", { length: 100 }),
   },
   (table) => [
     uniqueIndex("idx_apps_platform_slug").on(table.platform, table.slug),

@@ -1,3 +1,73 @@
+Atlassian Marketplace Integration
+===================================
+
+Added Atlassian Marketplace as the 7th platform.
+Platform ID: atlassian, brand color: #0052CC.
+
+Hybrid approach: REST API v2 for app details/search/reviews/featured + HTML scraping
+(window.__INITIAL_STATE__ Apollo cache) for category pages. No browser/Playwright needed.
+
+App identifier: addonKey (e.g. com.onresolve.jira.groovy.groovyrunner) stored as slug.
+
+Post-integration fixes:
+- External app URL fix: Atlassian URLs need numeric addonId (not addonKey slug).
+  Added `external_id` column to apps table (migration 0074), stored numeric ID from
+  both category parser (Apollo cache AppTile.addonId) and app-details scraper
+  (REST API json.id). Updated buildExternalAppUrl() with optional 3rd param `externalId`.
+  All dashboard components pass app.externalId to external link buttons.
+- 4-star rating system: Atlassian uses 4-star ratings (not 5). Added `maxRatingStars`
+  to all platform configs (4 for atlassian, 5 for all others). Updated layout.tsx
+  rating card, reviews page distribution, Review Pulse card, and inline review stars
+  to use dynamic star count from platform config.
+- Documented both patterns in files/ADDING_NEW_PLATFORM.md (externalId pitfall,
+  maxRatingStars capability).
+
+Phase 0 — Discovery script:
+- apps/scraper/scripts/atlassian-explore.ts — enumerate categories, test API, validate featured
+
+Phase 1 — Platform config:
+- PLATFORMS entry: hasKeywordSearch, hasReviews, hasFeaturedSections = true; pageSize = 50
+- Similarity weights: category 0.35, feature 0.0, keyword 0.30, text 0.35
+- Stop words: atlassian, jira, confluence, bitbucket, marketplace, plugin, addon, cloud, server, datacenter
+- Metadata limits: appName 50, subtitle 80 (tagLine), introduction 150 (summary), details 5000
+- URL builders for app, category, search in shared + dashboard
+- Field labels: "Tag Line" (subtitle), "Summary" (introduction), "Description" (details)
+
+Phase 2 — Database:
+- Migration 0072: seed account_platforms + platform_visibility (hidden by default)
+- Migration 0073: seed 19 flat categories (admin-tools, charts-diagramming, cloud-security, etc.)
+
+Phase 3 — Scraper module (apps/scraper/src/platforms/atlassian/):
+- constants.ts: 19 seed categories, scoring config, featured section definitions
+- urls.ts: human URLs + REST API v2 endpoints
+- parsers/api-parser.ts: parseAddonDetails() + parseSearchResults() from JSON
+- parsers/category-parser.ts: extract apps from window.__INITIAL_STATE__ Apollo cache
+- parsers/review-parser.ts: parse reviews from REST API JSON
+- parsers/featured-parser.ts: parse Spotlight/Bestseller/Rising Star collections
+- index.ts: AtlassianModule (HttpClient only, no BrowserClient)
+- Registry updated with case "atlassian"
+
+Phase 4 — API:
+- Live search via GET /rest/2/addons?text={keyword}&limit=10
+
+Phase 5 — Dashboard:
+- VALID_PLATFORMS updated in auth-context, proxy, admin-scraper-trigger
+- Sidebar: label "Atlassian", color #0052CC, regex patterns updated
+- Badges: "Cloud Fortified" (shield), "Top Vendor" (star)
+- Overview cards, platform colors, brand config all updated
+- Field labels: Tag Line, Summary, Description
+
+Phase 6 — Scheduler:
+- category: daily 06:30
+- app_details: 07:00/19:00
+- keyword_search: 07:30/19:30
+- reviews: daily 10:00
+- compute_app_scores: daily 12:30
+
+Risk: REST API v2 deprecated Jan 2026, removal after June 2026.
+Mitigation: modular parser architecture, category already uses HTML scraping,
+Algolia keys embedded in HTML as potential search fallback.
+
 Google Workspace — Curated Sections as Featured
 ==================================================
 

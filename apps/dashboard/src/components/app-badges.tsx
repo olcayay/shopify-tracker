@@ -59,6 +59,18 @@ const BADGE_CONFIG: Record<string, Record<string, { icon: string; label: string;
       className: "text-blue-600",
     },
   },
+  atlassian: {
+    cloud_fortified: {
+      icon: "🛡️",
+      label: "Cloud Fortified",
+      className: "text-blue-600",
+    },
+    top_vendor: {
+      icon: "⭐",
+      label: "Top Vendor",
+      className: "text-amber-600",
+    },
+  },
 };
 
 interface AppBadgesProps {

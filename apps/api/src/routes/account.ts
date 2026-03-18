@@ -1529,6 +1529,7 @@ export const accountRoutes: FastifyPluginAsync = async (app) => {
           isBuiltForShopify: apps.isBuiltForShopify,
           launchedDate: apps.launchedDate,
           iconUrl: apps.iconUrl,
+          externalId: apps.externalId,
         })
         .from(accountCompetitorApps)
         .innerJoin(apps, eq(apps.id, accountCompetitorApps.competitorAppId))
@@ -2707,7 +2708,7 @@ export const accountRoutes: FastifyPluginAsync = async (app) => {
           .execute(
             sql`
             SELECT slug, name, app_card_subtitle, icon_url, average_rating, rating_count,
-                   pricing_hint, is_built_for_shopify
+                   pricing_hint, is_built_for_shopify, external_id
             FROM apps
             WHERE slug IN (${slugList})
               AND platform = ${platform}
@@ -2838,6 +2839,7 @@ export const accountRoutes: FastifyPluginAsync = async (app) => {
           ratingCount: info.rating_count != null ? Number(info.rating_count) : null,
           pricingHint: info.pricing_hint ?? null,
           isBuiltForShopify: info.is_built_for_shopify ?? false,
+          externalId: info.external_id ?? null,
           isAlreadyCompetitor,
           similarity: {
             overall: Math.round(similarity.overall * 10000) / 10000,

@@ -505,6 +505,27 @@
       "when": 1774828800000,
       "tag": "0071_cleanup_gworkspace_featured",
       "breakpoints": true
+    },
+    {
+      "idx": 72,
+      "version": "7",
+      "when": 1774915200000,
+      "tag": "0072_seed_atlassian_platform",
+      "breakpoints": true
+    },
+    {
+      "idx": 73,
+      "version": "7",
+      "when": 1775001600000,
+      "tag": "0073_seed_atlassian_categories",
+      "breakpoints": true
+    },
+    {
+      "idx": 74,
+      "version": "7",
+      "when": 1775088000000,
+      "tag": "0074_add_app_external_id",
+      "breakpoints": true
     }
   ]
 }

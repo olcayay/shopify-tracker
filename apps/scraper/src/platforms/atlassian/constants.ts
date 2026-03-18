@@ -1,0 +1,68 @@
+import type { PlatformConstants, PlatformScoringConfig } from "../platform-module.js";
+
+/** Seed categories for the Atlassian Marketplace.
+ *  Derived from the marketplace categories page. */
+export const ATLASSIAN_SEED_CATEGORIES = [
+  "admin-tools",
+  "charts-diagramming",
+  "cloud-security",
+  "code-quality",
+  "code-review",
+  "continuous-integration",
+  "design-tools",
+  "documentation",
+  "integrations",
+  "it-service-management",
+  "macros",
+  "migration",
+  "monitoring",
+  "project-management",
+  "reports",
+  "security",
+  "testing-qa",
+  "time-tracking",
+  "workflow",
+] as const;
+
+export const ATLASSIAN_CONSTANTS: PlatformConstants = {
+  seedCategories: [...ATLASSIAN_SEED_CATEGORIES],
+  maxCategoryDepth: 0,               // Flat categories
+  defaultPagesPerCategory: 2,        // API max 50 per page → 100 apps/category
+  trackedFields: [
+    "tagLine",
+    "summary",
+    "description",
+    "hostingVisibility",
+    "totalInstalls",
+    "downloads",
+    "categories",
+    "cloudFortified",
+    "topVendor",
+    "vendorName",
+    "appId",
+  ],
+  rateLimit: { minDelayMs: 300, maxDelayMs: 800 },
+};
+
+export const ATLASSIAN_SCORING: PlatformScoringConfig = {
+  pageSize: 50,
+  pageDecay: 0.85,
+  similarityWeights: {
+    category: 0.35,
+    feature: 0.0,
+    keyword: 0.30,
+    text: 0.35,
+  },
+  stopWords: new Set([
+    "atlassian", "jira", "confluence", "bitbucket", "marketplace",
+    "plugin", "addon", "app", "apps", "cloud", "server", "datacenter",
+    "the", "and", "for", "your", "our",
+  ]),
+};
+
+/** Featured collection section handles */
+export const ATLASSIAN_FEATURED_SECTIONS = [
+  { marketingLabel: "Spotlight", sectionHandle: "_collection_spotlight", sectionTitle: "Spotlight" },
+  { marketingLabel: "Bestseller", sectionHandle: "_collection_bestseller", sectionTitle: "Bestseller" },
+  { marketingLabel: "Rising+Star", sectionHandle: "_collection_risingstar", sectionTitle: "Rising Star" },
+] as const;

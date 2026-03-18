@@ -61,6 +61,7 @@ interface ResearchData {
     launchedAt: string | null;
     featuredSections: number;
     reverseSimilarCount: number;
+    externalId?: string | null;
   }[];
   keywordRankings: Record<string, Record<string, number>>;
   competitorSuggestions: {
@@ -1397,7 +1398,7 @@ function CompetitorTable({
                   <TableCell>
                     <div className="flex items-center gap-0.5">
                       <a
-                        href={buildExternalAppUrl(platform as PlatformId, comp.slug)}
+                        href={buildExternalAppUrl(platform as PlatformId, comp.slug, comp.externalId)}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="p-1 rounded hover:bg-accent text-muted-foreground hover:text-foreground transition-colors"

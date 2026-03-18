@@ -73,6 +73,16 @@ const googleWorkspaceLimits: MetadataLimits = {
   seoMetaDescription: 0,
 };
 
+const atlassianLimits: MetadataLimits = {
+  appName: 50,
+  subtitle: 80,       // Tag Line
+  introduction: 150,  // Summary
+  details: 5000,      // Full Description
+  feature: 0,
+  seoTitle: 0,
+  seoMetaDescription: 0,
+};
+
 const defaultLimits = shopifyLimits;
 
 const limitsByPlatform: Record<string, MetadataLimits> = {
@@ -82,6 +92,7 @@ const limitsByPlatform: Record<string, MetadataLimits> = {
   wix: wixLimits,
   wordpress: wordpressLimits,
   google_workspace: googleWorkspaceLimits,
+  atlassian: atlassianLimits,
 };
 
 export function getMetadataLimits(platform: string): MetadataLimits {
