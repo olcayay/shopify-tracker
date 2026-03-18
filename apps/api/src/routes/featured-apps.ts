@@ -88,9 +88,10 @@ export const featuredAppRoutes: FastifyPluginAsync = async (app) => {
     };
   });
 
-  // GET /api/featured-apps/sections?days=30
+  // GET /api/featured-apps/sections?days=30&platform=shopify
   app.get("/sections", async (request) => {
     const { days = "30" } = request.query as { days?: string };
+    const platform = getPlatformFromQuery(request.query as Record<string, unknown>);
     const since = new Date();
     since.setDate(since.getDate() - parseInt(days, 10));
     const sinceStr = since.toISOString().slice(0, 10);
@@ -106,7 +107,11 @@ export const featuredAppRoutes: FastifyPluginAsync = async (app) => {
         lastSeen: sql<string>`max(${featuredAppSightings.seenDate})`,
       })
       .from(featuredAppSightings)
-      .where(sql`${featuredAppSightings.seenDate} >= ${sinceStr}`)
+      .innerJoin(apps, eq(apps.id, featuredAppSightings.appId))
+      .where(and(
+        sql`${featuredAppSightings.seenDate} >= ${sinceStr}`,
+        eq(apps.platform, platform),
+      ))
       .groupBy(
         featuredAppSightings.surface,
         featuredAppSightings.surfaceDetail,
