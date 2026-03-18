@@ -187,3 +187,5 @@ Atlassian post-integration fixes — external_id for app URLs, 4-star rating sys
 Atlassian extended metadata — version/vendor/pricing API endpoints, App Info + Trust Signals + Links cards, highlights, pricing tiers ✅
 
 Atlassian listing metadata extraction — save rating, installs, developer, badges from category/search listings to apps table + minimal snapshots ✅
+
+Atlassian featured sections — connect API-based featured (Spotlight/Bestseller/Rising Star) to category scraper pipeline ✅

@@ -151,6 +151,7 @@ export interface PlatformModule {
   ): NormalizedSearchPage;
   parseReviewPage?(html: string, page: number): NormalizedReviewPage;
   parseFeaturedSections?(html: string): NormalizedFeaturedSection[];
+  fetchFeaturedSections?(): Promise<NormalizedFeaturedSection[]>;
 
   // Slug extraction from URLs
   extractSlugFromUrl(url: string): string;

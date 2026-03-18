@@ -36,7 +36,7 @@ export function parseAtlassianFeaturedSections(
       sections.push({
         sectionHandle: config.sectionHandle,
         sectionTitle: config.sectionTitle,
-        surface: "marketplace",
+        surface: "home",
         surfaceDetail: `marketing_label_${config.marketingLabel.toLowerCase().replace(/\+/g, "_")}`,
         apps,
       });

@@ -1,3 +1,19 @@
+Atlassian Featured Sections Integration
+========================================
+
+Connected Atlassian's API-based featured sections (Spotlight, Bestseller, Rising Star)
+to the category scraper pipeline. The fetchFeaturedSections() method existed but was
+never called — now integrated into crawl() via a new recordNormalizedFeaturedSections()
+method. Changed surface from "marketplace" to "home" so sections appear in the
+Homepage tab of the dashboard featured page. Added fetchFeaturedSections?() to the
+PlatformModule interface for future API-based featured platforms.
+
+Files changed:
+- apps/scraper/src/platforms/platform-module.ts — added fetchFeaturedSections to interface
+- apps/scraper/src/scrapers/category-scraper.ts — call fetchFeaturedSections in crawl(), new recordNormalizedFeaturedSections()
+- apps/scraper/src/platforms/atlassian/parsers/featured-parser.ts — surface "marketplace" → "home"
+
+
 Atlassian Listing Metadata Extraction
 =======================================
 

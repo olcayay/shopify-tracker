@@ -106,6 +106,16 @@ export class CategoryScraper {
         }
       }
 
+      // Scrape API-based featured sections (Atlassian: Spotlight, Bestseller, Rising Star)
+      if (this.platformModule?.fetchFeaturedSections) {
+        try {
+          const sections = await this.platformModule.fetchFeaturedSections();
+          await this.recordNormalizedFeaturedSections(sections, run.id);
+        } catch (error) {
+          log.error("failed to scrape API-based featured sections", { platform: this.platform, error: String(error) });
+        }
+      }
+
       for (const slug of this.seedCategories) {
         try {
           const { node, appSlugs } = await this.crawlCategory(slug, null, 0, run.id, pageOptions);
@@ -1149,6 +1159,79 @@ export class CategoryScraper {
 
     log.info("recorded featured sightings from curated section", {
       sectionSlug, sectionTitle, apps: appList.length, platform: this.platform,
+    });
+  }
+
+  /**
+   * Record featured sightings from pre-fetched NormalizedFeaturedSection[].
+   * Used for API-based platforms (e.g., Atlassian) where featured sections
+   * are fetched via dedicated API endpoints, not parsed from HTML.
+   */
+  private async recordNormalizedFeaturedSections(
+    sections: import("../platforms/platform-module.js").NormalizedFeaturedSection[],
+    runId: string,
+  ): Promise<void> {
+    const todayStr = new Date().toISOString().slice(0, 10);
+
+    for (const section of sections) {
+      for (const app of section.apps) {
+        // Upsert app master record
+        const [upsertedApp] = await this.db
+          .insert(apps)
+          .values({
+            platform: this.platform,
+            slug: app.slug,
+            name: app.name,
+            ...(app.iconUrl && { iconUrl: app.iconUrl }),
+          })
+          .onConflictDoUpdate({
+            target: [apps.platform, apps.slug],
+            set: {
+              name: app.name,
+              ...(app.iconUrl ? { iconUrl: app.iconUrl } : {}),
+              updatedAt: new Date(),
+            },
+          })
+          .returning({ id: apps.id });
+
+        // Upsert featured sighting
+        await this.db
+          .insert(featuredAppSightings)
+          .values({
+            appId: upsertedApp.id,
+            surface: section.surface,
+            surfaceDetail: section.surfaceDetail,
+            sectionHandle: section.sectionHandle,
+            sectionTitle: section.sectionTitle,
+            position: app.position,
+            seenDate: todayStr,
+            firstSeenRunId: runId,
+            lastSeenRunId: runId,
+            timesSeenInDay: 1,
+          })
+          .onConflictDoUpdate({
+            target: [
+              featuredAppSightings.appId,
+              featuredAppSightings.sectionHandle,
+              featuredAppSightings.surfaceDetail,
+              featuredAppSightings.seenDate,
+            ],
+            set: {
+              lastSeenRunId: runId,
+              position: app.position,
+              sectionTitle: section.sectionTitle,
+              timesSeenInDay: sql`${featuredAppSightings.timesSeenInDay} + 1`,
+            },
+          });
+
+        this.featuredSightingsCount++;
+      }
+    }
+
+    log.info("recorded API-based featured sightings", {
+      platform: this.platform,
+      sections: sections.length,
+      totalApps: sections.reduce((sum, s) => sum + s.apps.length, 0),
     });
   }
 
