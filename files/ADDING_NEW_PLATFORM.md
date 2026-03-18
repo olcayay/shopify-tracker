@@ -1,6 +1,6 @@
 # Adding a New Platform — Comprehensive Guide
 
-This document covers everything needed to add a new marketplace platform to the AppRanks tracking system. It draws from lessons learned integrating Shopify, Salesforce, and Canva.
+This document covers everything needed to add a new marketplace platform to the AppRanks tracking system. It draws from lessons learned integrating Shopify, Salesforce, Canva, Wix, WordPress, and Google Workspace.
 
 ---
 
@@ -25,15 +25,32 @@ This document covers everything needed to add a new marketplace platform to the 
 
 Use this as a high-level task tracker. Each item links to a detailed section below.
 
+### Phase 1: Platform Configuration
 - [ ] Add platform config to `packages/shared/src/constants/platforms.ts`
 - [ ] Add external URL builders to `packages/shared/src/constants/platforms.ts`
 - [ ] Add dashboard URL builders to `apps/dashboard/src/lib/platform-urls.ts`
 - [ ] Add similarity weights and stop words to `packages/shared/src/similarity.ts`
 - [ ] Add metadata character limits to `apps/dashboard/src/lib/metadata-limits.ts`
+
+### Phase 2: Database
+- [ ] Create migration to seed `account_platforms` for existing accounts
+- [ ] Create migration to seed `platform_visibility` (hidden by default until tested)
+- [ ] Create migration to seed categories
+- [ ] Update `packages/db/src/migrations/meta/_journal.json` with new migration entries
+
+### Phase 3: Scraper
 - [ ] Create scraper module directory under `apps/scraper/src/platforms/<name>/`
 - [ ] Register module in `apps/scraper/src/platforms/registry.ts`
 - [ ] Add scheduler cron jobs in `apps/scraper/src/scheduler.ts`
-- [ ] Update browser client init in `apps/scraper/src/process-job.ts` (if needed)
+- [ ] Update browser client init in `apps/scraper/src/process-job.ts` (if SPA/JS-rendered)
+- [ ] Add URL pattern to `apps/scraper/src/jobs/backfill-categories.ts`
+- [ ] Add branch in `keyword-suggestion-scraper.ts` (if custom suggestion API)
+
+### Phase 4: API
+- [ ] Add live-search branch in `apps/api/src/routes/live-search.ts`
+- [ ] Review `apps/api/src/routes/apps.ts` developer info extraction (if custom platformData)
+
+### Phase 5: Dashboard UI
 - [ ] Add `VALID_PLATFORMS` entry in `apps/dashboard/src/lib/auth-context.tsx`
 - [ ] Add `VALID_PLATFORMS` entry in `apps/dashboard/src/proxy.ts`
 - [ ] Add `VALID_PLATFORMS` entry in `apps/dashboard/src/components/admin-scraper-trigger.tsx`
@@ -41,13 +58,11 @@ Use this as a high-level task tracker. Each item links to a detailed section bel
 - [ ] Update sidebar platform regex patterns (2 locations)
 - [ ] Add `BADGE_CONFIG` entry in `apps/dashboard/src/components/app-badges.tsx`
 - [ ] Add `PLATFORM_LABELS` and `PLATFORM_COLORS` entries in 3 files: `sidebar.tsx`, `platform-overview-cards.tsx`, `overview/page.tsx`
+- [ ] Add `PLATFORM_BRANDS` entry in `apps/dashboard/src/components/platform-overview-cards.tsx` (overview page crashes without this!)
 - [ ] Create preview component (`<platform>-preview.tsx`) and wire into `preview/page.tsx`
 - [ ] Update field labels in `details/page.tsx`, `changes/page.tsx`, app overview `page.tsx`
 - [ ] Add platform-specific sections to `compare/page.tsx` and `research/[id]/compare/page.tsx`
-- [ ] Update scraper platform checks in `keyword-scraper.ts`, `category-scraper.ts`, `app-details-scraper.ts`, `keyword-suggestion-scraper.ts`
-- [ ] Add URL pattern to `apps/scraper/src/jobs/backfill-categories.ts`
 - [ ] Gate all dashboard tables/cards behind capability flags
-- [ ] Seed `account_platforms` for existing accounts (migration)
 - [ ] Verify all pages work for the new platform
 - [ ] Verify existing platforms still work (regression check)
 
@@ -83,6 +98,20 @@ export const PLATFORMS = {
 ```
 
 **Critical:** Get capability flags right from the start. Setting a flag to `true` when the platform doesn't support that feature causes empty columns, broken API calls, and confusing UI. Setting `false` is always safe — you can enable later.
+
+**Current platforms and their flags:**
+
+| Flag | Shopify | Salesforce | Canva | Wix | WordPress | Google WS |
+|------|---------|------------|-------|-----|-----------|-----------|
+| hasKeywordSearch | true | true | true | true | true | true |
+| hasReviews | true | true | false | true | true | true |
+| hasFeaturedSections | true | false | false | true | true | true |
+| hasAdTracking | true | false | false | false | false | false |
+| hasSimilarApps | true | false | false | false | false | false |
+| hasAutoSuggestions | true | false | true | false | false | false |
+| hasFeatureTaxonomy | true | false | false | false | false | false |
+| hasPricing | true | true | false | true | false | true |
+| hasLaunchedDate | true | false | false | false | true | false |
 
 ### 2.2 PlatformCapabilities Type
 
@@ -198,17 +227,17 @@ const limitsByPlatform: Record<string, MetadataLimits> = {
 
 **Current limits by platform:**
 
-| Field | Shopify | Salesforce | Canva |
-|-------|---------|------------|-------|
-| appName | 30 | 80 | 18 |
-| subtitle | 62 | 62 | 50 |
-| introduction | 100 | 500 | 50 |
-| details | 500 | 2000 | 200 |
-| feature | 80 | 80 | 80 |
-| seoTitle | 60 | 60 | 60 |
-| seoMetaDescription | 160 | 160 | 160 |
+| Field | Shopify | Salesforce | Canva | Wix | WordPress | Google WS |
+|-------|---------|------------|-------|-----|-----------|-----------|
+| appName | 30 | 80 | 18 | 50 | 70 | 50 |
+| subtitle | 62 | 62 | 50 | 80 | 150 | 200 |
+| introduction | 100 | 500 | 50 | 200 | 150 | 200 |
+| details | 500 | 2000 | 200 | 2000 | 5000 | 16000 |
+| feature | 80 | 80 | 80 | 80 | 0 | 0 |
+| seoTitle | 60 | 60 | 60 | 60 | 0 | 0 |
+| seoMetaDescription | 160 | 160 | 160 | 160 | 0 | 0 |
 
-**Important:** Research your platform's actual limits before setting values. These control CharBadge color thresholds — wrong limits create misleading UI.
+**Important:** Research your platform's actual limits before setting values. These control CharBadge color thresholds — wrong limits create misleading UI. Use `0` for fields the platform doesn't have.
 
 ---
 
@@ -229,9 +258,11 @@ No schema changes needed if you're following the existing multi-platform pattern
 
 All tables default to `'shopify'`, so existing data is safe.
 
-### 3.2 Migration for Account Platform Access
+### 3.2 Migrations (3 migrations needed)
 
-Create a migration to seed platform access for existing accounts (if desired):
+Each new platform requires 3 migrations, following the established naming convention:
+
+**Migration 1: Platform access (`XXXX_seed_<name>_platform.sql`)**
 
 ```sql
 -- Allow all existing accounts to access the new platform
@@ -240,7 +271,65 @@ SELECT id, 'newplatform' FROM accounts
 ON CONFLICT (account_id, platform) DO NOTHING;
 ```
 
-### 3.3 Schema Files Reference
+**Migration 2: Category seeding (`XXXX_seed_<name>_categories.sql`)**
+
+```sql
+-- Seed top-level categories
+INSERT INTO categories (platform, slug, title, category_level)
+VALUES
+  ('newplatform', 'category-one', 'Category One', 0),
+  ('newplatform', 'category-two', 'Category Two', 0)
+ON CONFLICT (platform, slug) DO NOTHING;
+
+-- Seed sub-categories
+INSERT INTO categories (platform, slug, title, category_level)
+VALUES
+  ('newplatform', 'category-one--sub-cat', 'Sub Category', 1)
+ON CONFLICT (platform, slug) DO NOTHING;
+
+-- Seed parent-child relationships
+INSERT INTO category_parents (category_id, parent_category_id)
+SELECT c.id, p.id
+FROM categories c
+JOIN categories p ON p.platform = 'newplatform' AND p.slug = 'category-one'
+WHERE c.platform = 'newplatform' AND c.slug = 'category-one--sub-cat'
+ON CONFLICT DO NOTHING;
+```
+
+**Migration 3: Platform visibility (`XXXX_seed_<name>_visibility.sql`)**
+
+```sql
+-- Hide by default until scraper is tested and data is populated
+INSERT INTO platform_visibility (platform, is_visible)
+VALUES ('newplatform', false)
+ON CONFLICT (platform) DO UPDATE SET is_visible = false;
+```
+
+Set `is_visible = true` once the platform is ready for users.
+
+### 3.3 Drizzle Migration Journal
+
+After creating migration SQL files, you MUST update the journal:
+
+**File:** `packages/db/src/migrations/meta/_journal.json`
+
+Add an entry for each new migration:
+
+```json
+{
+  "idx": 72,
+  "version": "7",
+  "when": 1774915200000,
+  "tag": "0072_seed_newplatform_platform",
+  "breakpoints": true
+}
+```
+
+**Pattern for `when` timestamp:** Use a timestamp that's after the last entry. Convention: increment by 86400000 (1 day) per migration.
+
+**Pattern for `tag`:** Must match the SQL filename without `.sql` extension.
+
+### 3.4 Schema Files Reference
 
 These files define the DB schema with platform columns:
 
@@ -253,12 +342,14 @@ These files define the DB schema with platform columns:
 | `packages/db/src/schema/reviews.ts` | `reviews` |
 | `packages/db/src/schema/account-platforms.ts` | `accountPlatforms` |
 | `packages/db/src/schema/account-tracking.ts` | `accountTrackedApps`, `accountTrackedKeywords`, `accountCompetitorApps` |
+| `packages/db/src/schema/platform-visibility.ts` | `platformVisibility` |
 
-### 3.4 Drizzle ORM Gotchas
+### 3.5 Drizzle ORM Gotchas
 
 - Schema file inter-imports must NOT use `.js` extensions (drizzle-kit uses CJS resolver)
 - Run migrations from repo root: `npx drizzle-kit generate` then `npx drizzle-kit migrate`
 - Date objects in drizzle `sql``...`` templates throw errors — convert to ISO string first
+- When creating migrations manually (SQL files), you must also add entries to `_journal.json` — drizzle-kit won't discover bare SQL files without a journal entry
 
 ---
 
@@ -347,6 +438,9 @@ import type { PlatformConstants, PlatformScoringConfig } from "../platform-modul
 
 export const NEWPLATFORM_CONSTANTS: PlatformConstants = {
   seedCategories: ["category-1", "category-2", "category-3"],  // Top-level category slugs to start crawling
+  // Optional: if the platform has curated/editorial sections that look like categories
+  // but should be tracked as featured_app_sightings instead:
+  featuredSectionSlugs: ["editors-choice", "popular-apps"],
   maxCategoryDepth: 3,              // How many levels of subcategories to follow
   defaultPagesPerCategory: 5,       // Max pages to scrape per category
   trackedFields: [                  // Fields tracked for change detection
@@ -369,6 +463,35 @@ export const NEWPLATFORM_SCORING: PlatformScoringConfig = {
   ]),
 };
 ```
+
+#### `featuredSectionSlugs` — Curated Sections as Featured Data
+
+Some platforms have curated/editorial sections (e.g., "Editor's Choice", "Popular Apps", "Recommended") that use the same URL structure as regular categories but shouldn't create category records. Instead, their apps should be recorded as `featured_app_sightings`.
+
+**Pattern (Google Workspace example):**
+
+```typescript
+export const GOOGLE_WORKSPACE_SEED_CATEGORIES = [
+  "business-tools", "communication", "productivity",  // Real categories
+] as const;
+
+export const GOOGLE_WORKSPACE_FEATURED_SECTIONS = [
+  "apps-to-discover", "popular-apps", "recommended", "top-rated",  // Curated sections
+] as const;
+
+export const GOOGLE_WORKSPACE_CONSTANTS: PlatformConstants = {
+  seedCategories: [...GOOGLE_WORKSPACE_SEED_CATEGORIES, ...GOOGLE_WORKSPACE_FEATURED_SECTIONS],
+  featuredSectionSlugs: [...GOOGLE_WORKSPACE_FEATURED_SECTIONS],
+  // ...
+};
+```
+
+When `featuredSectionSlugs` is set, the category scraper's `crawlCategoryGeneric()` method automatically:
+1. Checks if the current slug is in `featuredSectionSlugs`
+2. If yes: records apps as `featured_app_sightings` (surface="home", surfaceDetail=slug) instead of category rankings
+3. Skips category record creation/updates for these slugs
+
+**Important:** Also set `hasFeaturedSections: true` in the platform config when using this pattern.
 
 ### 4.5 URL Builder
 
@@ -419,7 +542,25 @@ async fetchAppPage(slug: string): Promise<string> {
 }
 ```
 
-**When to use browser:** If the marketplace uses client-side rendering (React/Next.js SPA), is behind Cloudflare challenge, or requires JavaScript execution for search APIs.
+**When to use browser:** If the marketplace uses client-side rendering (React/Angular SPA), is behind Cloudflare challenge, or requires JavaScript execution for search APIs.
+
+**Current browser usage:**
+| Platform | BrowserClient? | Reason |
+|----------|---------------|--------|
+| Shopify | No | Static HTML |
+| Salesforce | app_details only | JS-rendered detail pages |
+| Canva | All jobs | Angular SPA |
+| Wix | No | Static HTML |
+| WordPress | No | Static HTML |
+| Google Workspace | All jobs | Angular SPA |
+
+**Browser auth state:** For Cloudflare-protected or session-dependent sites, persist auth cookies:
+```typescript
+const AUTH_STATE_FILE = "canva-auth-state.json";
+await browserContext.storageState({ path: AUTH_STATE_FILE });
+// On next launch:
+const context = await browser.newContext({ storageState: AUTH_STATE_FILE });
+```
 
 ### 4.7 Slug Format
 
@@ -429,9 +570,14 @@ Choose a slug format that is URL-safe and can uniquely identify apps:
 |----------|-------------|-------|
 | Shopify | `oberlo` | Direct URL path segment |
 | Salesforce | `a0N3u00000PXabc` | Salesforce listingId |
-| Canva | `AAFxxx--my-app` | Canva app ID + name, `--` separator (replaces `/`) |
+| Canva | `AAFxxx--my-app` | `--` separator (replaces `/` in URL path) |
+| Wix | `plugin-name` | Direct slug |
+| WordPress | `plugin-name` | Direct slug |
+| Google Workspace | `vendor--app-name` | `--` separator (replaces `/` in URL path) |
 
-**Canva gotcha:** Canva uses `/apps/AAFxxx/my-app-name` URLs, but `/` is not safe in URL path segments. We use `--` as separator: `AAFxxx--my-app-name`. Convert back with `slug.replace("--", "/")` for external URLs.
+**`--` separator pattern:** Canva and Google Workspace use hierarchical URL paths (`/apps/AAFxxx/my-app`, `/marketplace/app/vendor/app-name`) but `/` is not safe in URL path segments. We use `--` as separator: `AAFxxx--my-app-name`. Convert back with `slug.replace("--", "/")` for external URLs.
+
+**Same `--` pattern for category slugs:** Wix and Google Workspace also use `--` for hierarchical category slugs (e.g., `business-tools--accounting`).
 
 ### 4.8 Register in Platform Registry
 
@@ -464,7 +610,7 @@ let browserClient: BrowserClient | undefined;
 if (platform === "salesforce" && type === "app_details") {
   browserClient = new BrowserClient();
 }
-if (platform === "canva") {
+if (platform === "canva" || platform === "google_workspace") {
   browserClient = new BrowserClient();
 }
 // Add your platform:
@@ -489,9 +635,9 @@ Most new platforms will automatically work via the generic `platformModule` path
 #### `apps/scraper/src/scrapers/category-scraper.ts`
 
 - **`isShopify` getter** (line ~64): Branches between Shopify's featured app recording and generic category crawling
-- **Featured apps** (line ~99): Only Shopify records featured app sightings (requires `hasFeaturedSections`)
-- **Salesforce parser import** (line ~564): Hardcoded `if (platform === "salesforce")` to import the Salesforce-specific category parser
-- **Hardcoded `"shopify"` strings** (lines ~671, 781, 829, 946): Several methods have `platform: "shopify"` literals in record-writing calls — these are inside Shopify-only code paths so won't affect new platforms, but review for correctness
+- **Featured section detection**: Checks `mod.constants.featuredSectionSlugs` to route curated sections to `recordFeaturedSightingsFromApps()` instead of normal category flow
+- **`recordFeaturedSightingsFromApps()`**: Upserts apps and creates `featured_app_sightings` rows (surface="home", surfaceDetail=slug)
+- **Hardcoded `"shopify"` strings**: Several methods have `platform: "shopify"` literals in record-writing calls — these are inside Shopify-only code paths so won't affect new platforms, but review for correctness
 
 New platforms use the generic `crawlCategoryGeneric()` path via `platformModule`.
 
@@ -510,13 +656,33 @@ New platforms use the generic `scrapeKeywordGeneric()` path.
 
 #### `apps/scraper/src/jobs/backfill-categories.ts`
 
-- **URL pattern extraction** (lines ~51-60): Each platform has a different category URL pattern:
+- **URL pattern extraction** (lines ~51-69): Each platform has a different category URL pattern:
   ```typescript
   if (platform === "shopify") slug = url.match(/\/categories\/([\w-]+)/)?.[1];
   else if (platform === "salesforce") slug = url.match(/\/collection\/([\w-]+)/)?.[1];
   else if (platform === "canva") slug = url.match(/\/apps\/collection\/([\w-]+)/)?.[1];
+  else if (platform === "wix") {
+    const m = url.match(/\/category\/([^/?]+)(?:\/([^/?]+))?/);
+    slug = m ? (m[2] ? `${m[1]}--${m[2]}` : m[1]) : undefined;
+  }
+  else if (platform === "wordpress") slug = url.match(/\/tags\/([\w-]+)/)?.[1];
+  else if (platform === "google_workspace") {
+    const m = url.match(/\/marketplace\/category\/([^/?]+)(?:\/([^/?]+))?/);
+    slug = m ? (m[2] ? `${m[1]}--${m[2]}` : m[1]) : undefined;
+  }
   ```
   **MUST add** a new `else if` for the new platform's category URL pattern.
+
+### 4.11 Parser Best Practices
+
+**Category title parsing:** Be careful with selectors that pick up extra text from tooltips, adjacent elements, or hidden content. Always strip unwanted suffixes:
+```typescript
+const rawTitle = $("h1").first().text().trim();
+// Strip tooltip/junk text that gets concatenated
+const title = rawTitle.replace(/info\s*More details about user reviews$/i, "").trim();
+```
+
+**Rating parsing:** Some platforms show ratings as text ("4.5 out of 5"), some as data attributes, some in structured JSON. Always validate parsed values are in the expected range (0-5 for ratings, >= 0 for counts).
 
 ---
 
@@ -545,12 +711,14 @@ These route files use `eq(table.platform, platform)` and auto-work for any platf
 |------|----------------|
 | `apps/api/src/routes/keywords.ts` | Keywords, keyword snapshots, rankings |
 | `apps/api/src/routes/competitors.ts` | Competitor apps, rankings, similarity scores |
-| `apps/api/src/routes/featured.ts` | Featured sections (gated by `requireCapability`) |
+| `apps/api/src/routes/featured-apps.ts` | Featured sections, sightings, my-apps (gated by `requireCapability`) |
 | `apps/api/src/routes/reviews.ts` | Reviews (gated by `requireCapability`) |
 | `apps/api/src/routes/ads.ts` | Ad sightings (gated by `requireCapability`) |
 | `apps/api/src/routes/research.ts` | Research projects, competitor suggestions |
 | `apps/api/src/routes/overview.ts` | Overview stats, freshness, recent changes |
 | `apps/api/src/routes/system-admin.ts` | Scraper trigger, stats (uses `PLATFORM_IDS` iteration) |
+
+**Important:** The featured-apps `/sections` endpoint uses `innerJoin(apps, ...)` with `eq(apps.platform, platform)` to filter by platform. Without this join, sections from all platforms would be mixed together.
 
 ### 5.3 Routes With Hardcoded Platform Logic (MUST UPDATE)
 
@@ -570,7 +738,13 @@ if (platform === "canva") {
 // Default: Shopify — HTML scrapes apps.shopify.com/search
 ```
 
-**You MUST add** a new `if (platform === "newplatform")` branch with a dedicated search function before the Shopify fallback.
+**You MUST add** a new `if (platform === "newplatform")` branch with a dedicated search function before the Shopify fallback. For platforms without a live search API, use a database fallback:
+
+```typescript
+if (platform === "newplatform") {
+  return dbFallbackSearch(db, platform, q);  // Search apps table by name ILIKE
+}
+```
 
 #### Apps Route — Developer Info Extraction
 
@@ -633,7 +807,7 @@ There are **3 separate `VALID_PLATFORMS` definitions** that must ALL be updated:
 **a) Auth Context — `apps/dashboard/src/lib/auth-context.tsx`**
 
 ```typescript
-const VALID_PLATFORMS = new Set(["shopify", "salesforce", "canva", "newplatform"]);
+const VALID_PLATFORMS = new Set(["shopify", "salesforce", "canva", "wix", "wordpress", "google_workspace", "newplatform"]);
 ```
 
 Controls the auto-injection of `?platform=` in API calls. If your platform isn't in this set, no API calls from dashboard pages under `/<platform>/` will work.
@@ -641,7 +815,7 @@ Controls the auto-injection of `?platform=` in API calls. If your platform isn't
 **b) Proxy — `apps/dashboard/src/proxy.ts`**
 
 ```typescript
-const VALID_PLATFORMS = ["shopify", "salesforce", "canva", "newplatform"];
+const VALID_PLATFORMS = ["shopify", "salesforce", "canva", "wix", "wordpress", "google_workspace", "newplatform"];
 ```
 
 Controls which platforms the Next.js proxy accepts. Missing this causes API proxy 404s.
@@ -649,7 +823,7 @@ Controls which platforms the Next.js proxy accepts. Missing this causes API prox
 **c) Admin Scraper Trigger — `apps/dashboard/src/components/admin-scraper-trigger.tsx`**
 
 ```typescript
-const VALID_PLATFORMS = new Set(["shopify", "salesforce", "canva", "newplatform"]);
+const VALID_PLATFORMS = new Set(["shopify", "salesforce", "canva", "wix", "wordpress", "google_workspace", "newplatform"]);
 ```
 
 Controls which platforms appear in the system admin scraper trigger UI.
@@ -679,30 +853,22 @@ const PLATFORM_COLORS: Record<PlatformId, string> = {
 The sidebar uses regex to extract the current platform from the URL path. Both occurrences must include the new platform:
 
 ```typescript
-// ~line 92
-const match = pathname.match(/^\/(shopify|salesforce|canva|newplatform)(\/|$)/);
+// ~line 103
+const match = pathname.match(/^\/(shopify|salesforce|canva|wix|wordpress|google_workspace|newplatform)(\/|$)/);
 
-// ~line 125
-const platformMatch = pathname.match(/^\/(shopify|salesforce|canva|newplatform)(\/|$)/);
+// ~line 136
+const platformMatch = pathname.match(/^\/(shopify|salesforce|canva|wix|wordpress|google_workspace|newplatform)(\/|$)/);
 ```
 
 **Missing this causes:** The sidebar won't highlight the correct platform or render nav items for the new platform's routes.
 
 **c) Research exclusion (hardcoded):**
 
-Research is currently excluded for Canva and Salesforce via a hardcoded check:
-
-```typescript
-if (platformId !== "canva" && platformId !== "salesforce") {
-  items.push({ href: `${p}/research`, label: "Research", icon: FlaskConical, badge: "Beta" });
-}
-```
-
-Decide whether the new platform should have Research. If not, add it to this exclusion list.
+Research is currently excluded for some platforms via a hardcoded check. Decide whether the new platform should have Research. If not, add it to the exclusion list.
 
 **d) Beta badge (optional):**
 
-Canva has a hardcoded "Beta" badge in the sidebar. If the new platform should show a badge:
+If the new platform should show a badge in the sidebar:
 
 ```typescript
 {platformId === "newplatform" && (
@@ -732,7 +898,7 @@ const BADGE_CONFIG: Record<string, Record<string, { label: string; color: string
 
 Also has a hardcoded `platform === "shopify"` check for the "Built for Shopify" badge (line 53). If the new platform has a similar "built for" badge concept, add it here.
 
-### 6.4 Platform Labels & Colors (3 files!)
+### 6.4 Platform Labels, Colors & Brands (3 files!)
 
 There are **3 files** with `PLATFORM_LABELS` and/or `PLATFORM_COLORS` records. All must be updated:
 
@@ -748,6 +914,15 @@ const PLATFORM_COLORS: Record<PlatformId, string> = { ..., newplatform: "#FF5733
 ```typescript
 const PLATFORM_LABELS: Record<PlatformId, string> = { ..., newplatform: "New Platform" };
 const PLATFORM_COLORS: Record<PlatformId, string> = { ..., newplatform: "#FF5733" };
+```
+
+**CRITICAL: `PLATFORM_BRANDS` record** — This file also has a `PLATFORM_BRANDS` record used on the `/overview` page. **If the new platform is missing from this record, the overview page will crash.** Add:
+
+```typescript
+const PLATFORM_BRANDS: Record<string, { label: string; color: string; textColor?: string }> = {
+  // ... existing ...
+  newplatform: { label: "New Platform", color: "#FF5733" },
+};
 ```
 
 **c) Overview Page — `apps/dashboard/src/app/(dashboard)/[platform]/overview/page.tsx`**
@@ -794,26 +969,7 @@ These pages have hardcoded platform checks (`isCanva`, `isSalesforce`, etc.) tha
 - `[platform]/apps/[slug]/preview/page.tsx` — routing & guard
 - `[platform]/apps/[slug]/preview/<platform>-preview.tsx` — NEW file per platform
 
-The preview page has a hardcoded guard, component selector, and label:
-
-```typescript
-// Guard — must add new platform
-if (platform !== "shopify" && platform !== "salesforce" && platform !== "canva") return;
-
-// Component selector — must add new branch
-const platformPreview =
-  platform === "canva" ? CanvaPreview({ appData })
-  : platform === "salesforce" ? SalesforcePreview({ appData })
-  : ShopifyPreview({ appData });
-
-// Label — must add new case
-const platformLabel =
-  platform === "canva" ? "Canva Apps Preview"
-  : platform === "salesforce" ? "AppExchange Preview"
-  : "App Store Preview";
-```
-
-You must create a `<platform>-preview.tsx` file following the same pattern (returns `{ preview, editor, resetToOriginal }`). Use `getMetadataLimits(platform)` for character limits.
+The preview page has a hardcoded guard, component selector, and label. You must create a `<platform>-preview.tsx` file following the same pattern (returns `{ preview, editor, resetToOriginal }`). Use `getMetadataLimits(platform)` for character limits.
 
 #### Details Page — Field Labels & Platform-Specific Sections
 
@@ -821,11 +977,10 @@ You must create a `<platform>-preview.tsx` file following the same pattern (retu
 
 Has hardcoded `isCanva` and `isSalesforce` checks for:
 - **Field labels**: "App Introduction" vs "Short Description" (Canva) vs "Description"
-- **CharBadge limits**: Canva shows character count badges on intro/details using `getMetadataLimits()`
+- **CharBadge limits**: Using `getMetadataLimits()` for character count badges
 - **Feature labels**: "Features" vs "Highlights" (Salesforce)
-- **Salesforce-only sections**: Industries, Business Needs, Products Required
-- **Canva-only sections**: Permissions list
-- **SEO section**: Hidden for Canva (`!isCanva && ...`)
+- **Platform-only sections**: Industries/Business Needs (Salesforce), Permissions (Canva)
+- **SEO section**: Hidden for platforms without SEO metadata
 
 For a new platform, decide: Does it have unique sections? Does it use different field labels?
 
@@ -833,70 +988,47 @@ For a new platform, decide: Does it have unique sections? Does it use different 
 
 **File:** `[platform]/apps/[slug]/changes/page.tsx`
 
-Has a `getFieldLabels()` function with platform-specific labels:
-
-```typescript
-const isCanva = platform === "canva";
-const fieldLabels: Record<string, string> = {
-  appIntroduction: isCanva ? "Short Description" : "App Introduction",
-  appDetails: isCanva ? "Description" : "App Details",
-  appCardSubtitle: isCanva ? "Tagline" : "App Card Subtitle",
-};
-```
-
-Must add a branch for the new platform if it uses different terminology.
+Has a `getFieldLabels()` function with platform-specific labels. Must add a branch for the new platform if it uses different terminology.
 
 #### App Overview Page — Field Labels
 
 **File:** `[platform]/apps/[slug]/page.tsx`
 
-Has a `getFieldLabels()` function:
-
-```typescript
-function getFieldLabels(platform: string): Record<string, string> {
-  const isCanva = platform === "canva";
-  return {
-    appIntroduction: isCanva ? "Short Description" : "Introduction",
-    appDetails: isCanva ? "Description" : "Details",
-    appCardSubtitle: isCanva ? "Tagline" : "Subtitle",
-  };
-}
-```
+Has a `getFieldLabels()` function. Update with the new platform's terminology.
 
 #### Compare Page — Section Configuration (~25+ locations)
 
 **File:** `[platform]/apps/[slug]/compare/page.tsx`
 
-This is the most complex page for platform-specific logic. It uses `isCanva` and `isSalesforce` booleans to:
+This is the most complex page for platform-specific logic. It uses `isCanva` and `isSalesforce` booleans to control section labels, visibility, and field rendering (~15 locations). When adding a new platform, update the `SECTIONS` array builder and all conditional renders.
 
-1. **Section labels**: Tagline vs Subtitle, Short Description vs Introduction, Description vs Details
-2. **Section visibility**: Features excluded for Canva, Industries/Requires only for Salesforce, Permissions only for Canva, Reviews/Pricing excluded for platforms without those capabilities
-3. **Field rendering**: Different label strings throughout (~15 locations)
-4. **Metadata limits**: Uses `getMetadataLimits(platform)` for CharBadge and input maxLength
+#### Featured Page — Platform-Aware Description
 
-When adding a new platform, update the `SECTIONS` array builder and all conditional renders.
+**File:** `[platform]/featured/page.tsx`
+
+The featured page description references the platform name. Uses `PLATFORMS[platform].name`.
+
+#### Featured Tabs — External URL Handling
+
+**File:** `[platform]/featured/featured-tabs.tsx`
+
+The `SectionCard` component builds external URLs differently depending on the `surface` and `surfaceDetail`. For curated sections (surface="home", surfaceDetail=slug), it links to the platform's base URL or builds a category-style external URL.
 
 #### Keywords Page — Ads Column
 
 **File:** `[platform]/keywords/page.tsx`
 
-Has a hardcoded Shopify-specific ads check:
-
-```typescript
-const hasAds = platform === "shopify";
-```
-
-If the new platform has ad tracking, this needs updating (or should use `caps.hasAdTracking`).
+Has a hardcoded Shopify-specific ads check. If the new platform has ad tracking, update this (or use `caps.hasAdTracking`).
 
 #### Research Compare Page
 
 **File:** `[platform]/research/[id]/compare/page.tsx`
 
-Has a hardcoded `platform !== "canva"` check (line ~536) that excludes the ratings/reviews comparison section for Canva. If the new platform doesn't have reviews, add it to this exclusion. Also uses `getMetadataLimits(platform)` for character limits — already handled via `metadata-limits.ts`.
+Has platform exclusion checks for ratings/reviews section. If the new platform doesn't have reviews, add it to this exclusion.
 
 ### 6.7 Pages That Need Capability Gating
 
-**CRITICAL:** This is where Canva integration taught us the most. Every table, card, and column that shows platform-specific data must be wrapped with the appropriate `caps.hasX` check.
+**CRITICAL:** Every table, card, and column that shows platform-specific data must be wrapped with the appropriate `caps.hasX` check.
 
 Here's every file that needs capability checks:
 
@@ -1015,7 +1147,7 @@ Add cron jobs for the new platform. Stagger timing to avoid resource conflicts:
 
 ```typescript
 const SCHEDULES = [
-  // ... existing Shopify, Salesforce, Canva schedules ...
+  // ... existing Shopify, Salesforce, Canva, Wix, WordPress, Google Workspace schedules ...
 
   // ── New Platform ──
   {
@@ -1093,7 +1225,21 @@ CREATE TABLE account_platforms (
 );
 ```
 
-### 8.2 Package Limits
+### 8.2 Platform Visibility Table
+
+`platform_visibility` controls whether a platform is visible to regular users. Even if an account has platform access, the platform won't appear in the sidebar or overview page if `is_visible = false`.
+
+```sql
+CREATE TABLE platform_visibility (
+  platform varchar(20) PRIMARY KEY,
+  is_visible boolean NOT NULL DEFAULT false,
+  updated_at timestamp NOT NULL DEFAULT NOW()
+);
+```
+
+**Strategy:** Set `is_visible = false` initially while testing the scraper and populating data. Set to `true` once the platform is ready for production use. System admins can toggle this via the admin panel.
+
+### 8.3 Package Limits
 
 Packages (subscription tiers) have a `max_platforms` limit:
 
@@ -1104,7 +1250,7 @@ Packages (subscription tiers) have a `max_platforms` limit:
 | pro | 3 |
 | enterprise | 3 |
 
-### 8.3 Enabling Platform Access
+### 8.4 Enabling Platform Access
 
 When a new platform is launched, you need a migration to seed access:
 
@@ -1136,7 +1282,7 @@ ON CONFLICT DO NOTHING;
 |------|---------|-----|-----------|
 | `hasKeywordSearch` | Search scraper enabled | Keyword endpoints active | Keywords nav item, keyword pages |
 | `hasReviews` | Review scraper enabled | Reviews endpoint active, `requireCapability` | Rating/Reviews columns, Review Pulse card, Reviews tab, inline ratings |
-| `hasFeaturedSections` | Featured scraper enabled | Featured endpoint active | Featured nav item, Featured tab, featured columns |
+| `hasFeaturedSections` | Featured scraper enabled | Featured endpoint active | Featured nav item, Featured tab, featured columns, My Featured Apps section |
 | `hasAdTracking` | Ad detection in search | Ads endpoint active | Ads tab, Ads columns, Visibility card ads section |
 | `hasSimilarApps` | Similar apps parser | Similar endpoint | Similar tab |
 | `hasAutoSuggestions` | Suggestion scraper enabled | Suggest endpoint | Auto-suggest in search bars |
@@ -1161,13 +1307,13 @@ ON CONFLICT DO NOTHING;
 
 ### Pitfall 1: Setting capability flags to `true` prematurely
 
-**Problem:** Setting `hasFeaturedSections: true` for Canva caused empty featured sections to render.
+**Problem:** Setting `hasFeaturedSections: true` before having featured data causes empty featured sections to render.
 
 **Solution:** Start with `false` for everything you're not 100% sure about. Enable flags only after confirming the platform supports that feature and your scraper collects the data.
 
 ### Pitfall 2: Missing capability gates in tables
 
-**Problem:** After adding Canva, we found Rating/Reviews/Pricing/Launched columns still showing in 5+ pages that weren't in the original plan.
+**Problem:** After adding a new platform, Rating/Reviews/Pricing/Launched columns still show in 5+ pages that weren't in the original plan.
 
 **Solution:** Do a project-wide search for every table column before marking the task complete:
 
@@ -1201,7 +1347,7 @@ grep -r "Launched" apps/dashboard/src --include="*.tsx" -l
 
 **Problem:** Dashboard API calls don't include `?platform=` for the new platform.
 
-**Solution:** Add platform to `VALID_PLATFORMS` set in `auth-context.tsx`.
+**Solution:** Add platform to `VALID_PLATFORMS` set in ALL 3 files: `auth-context.tsx`, `proxy.ts`, `admin-scraper-trigger.tsx`.
 
 ### Pitfall 7: Forgetting URL builders
 
@@ -1215,13 +1361,17 @@ grep -r "Launched" apps/dashboard/src --include="*.tsx" -l
 
 **Problem:** Slugs with special characters break URLs.
 
-**Solution:** Design URL-safe slug format from the start. If the platform uses `/` in identifiers, replace with `--` or similar.
+**Solution:** Design URL-safe slug format from the start. If the platform uses `/` in identifiers, replace with `--` or similar. Canva, Wix, and Google Workspace all use this pattern.
 
-### Pitfall 9: Scraper rate limiting
+### Pitfall 9: Scraper rate limiting and OOM
 
-**Problem:** Getting blocked by Cloudflare or rate limiters.
+**Problem:** Getting blocked by rate limiters, or OOM kills when running full category scrape on production.
 
-**Solution:** Use conservative rate limits, browser client for SPAs, and save auth state (cookies) for Cloudflare-protected sites.
+**Solution:**
+- Use conservative rate limits and browser client for SPAs
+- Save auth state (cookies) for Cloudflare-protected sites
+- On production, run scrapers one section at a time via the interactive worker container, not all at once
+- For browser-based platforms, memory usage is significantly higher — monitor container memory
 
 ### Pitfall 10: Empty data columns (category rankings)
 
@@ -1233,10 +1383,7 @@ grep -r "Launched" apps/dashboard/src --include="*.tsx" -l
 
 **Problem:** New platform's URL path doesn't match the sidebar's platform extraction regex, causing no nav items to render.
 
-**Solution:** Update BOTH regex patterns in `sidebar.tsx`:
-```typescript
-const match = pathname.match(/^\/(shopify|salesforce|canva|newplatform)(\/|$)/);
-```
+**Solution:** Update BOTH regex patterns in `sidebar.tsx`.
 
 ### Pitfall 12: Missing metadata-limits entry
 
@@ -1252,21 +1399,15 @@ const match = pathname.match(/^\/(shopify|salesforce|canva|newplatform)(\/|$)/);
 
 ### Pitfall 14: Login/legacy redirects hardcoded to Shopify
 
-**Problem:** After login/register, users are redirected to `/shopify/overview` regardless of their enabled platforms. Also, legacy non-platform paths (e.g., `/apps/slug`, `/overview`) redirect to `/shopify/*`.
+**Problem:** After login/register, users are redirected to `/shopify/overview` regardless of their enabled platforms.
 
-**Solution:** Currently hardcoded in both `auth-context.tsx` and `proxy.ts`:
-- `auth-context.tsx` — `router.push("/shopify/overview")`
-- `proxy.ts` — `NextResponse.redirect(new URL("/shopify/overview", ...))` and legacy path redirects to `/shopify/*`
-Consider making these dynamic based on `enabledPlatforms[0]`.
+**Solution:** Currently hardcoded in `auth-context.tsx` and `proxy.ts`. Consider making dynamic based on `enabledPlatforms[0]`.
 
 ### Pitfall 15: Forgetting proxy.ts VALID_PLATFORMS
 
 **Problem:** Dashboard API calls fail with 404 even though `auth-context.tsx` VALID_PLATFORMS is updated.
 
-**Solution:** There are **3 separate VALID_PLATFORMS** definitions. Missing any one causes subtle failures:
-- `auth-context.tsx` — controls `?platform=` injection in client-side API calls
-- `proxy.ts` — controls which platforms the Next.js API proxy accepts
-- `admin-scraper-trigger.tsx` — controls system admin scraper trigger UI
+**Solution:** There are **3 separate VALID_PLATFORMS** definitions. Missing any one causes subtle failures.
 
 ### Pitfall 16: Missing BADGE_CONFIG entry
 
@@ -1279,6 +1420,45 @@ Consider making these dynamic based on `enabledPlatforms[0]`.
 **Problem:** Category backfill job silently skips the new platform because URL pattern doesn't match.
 
 **Solution:** Add an `else if (platform === "newplatform")` branch in `backfill-categories.ts` with the correct category URL regex pattern.
+
+### Pitfall 18: Missing PLATFORM_BRANDS in overview cards (CRASH)
+
+**Problem:** The `/overview` page crashes with a runtime error if the new platform is missing from the `PLATFORM_BRANDS` record in `platform-overview-cards.tsx`.
+
+**Solution:** Always add the new platform to `PLATFORM_BRANDS` in `platform-overview-cards.tsx`. This is different from `PLATFORM_LABELS`/`PLATFORM_COLORS` — it's a separate record used specifically for the cross-platform overview page cards.
+
+### Pitfall 19: Curated categories vs real categories
+
+**Problem:** Some platforms (e.g., Google Workspace) have curated/editorial sections ("Editor's Choice", "Popular Apps") that use the same URL structure as regular categories. If you scrape these as regular categories, they pollute the category tree with non-hierarchical entries.
+
+**Solution:** Use `featuredSectionSlugs` in `PlatformConstants` to mark these slugs. The category scraper will automatically route them to `featured_app_sightings` instead of creating category records. Also set `hasFeaturedSections: true`.
+
+### Pitfall 20: Featured apps API missing platform filter
+
+**Problem:** The `/api/featured-apps/sections` endpoint returned sections from ALL platforms mixed together because it only filtered `featured_app_sightings` by date, not by platform.
+
+**Solution:** The sections endpoint MUST use `innerJoin(apps, eq(apps.id, featuredAppSightings.appId))` and filter with `eq(apps.platform, platform)`. This was a real bug discovered during Google Workspace integration.
+
+### Pitfall 21: Category title parser picks up junk text
+
+**Problem:** HTML parsers may pick up tooltip text, hidden elements, or adjacent content when extracting category/section titles. Example: Google Workspace's `h1` tag included "infoMore details about user reviews" tooltip text.
+
+**Solution:** Always strip known junk patterns from parsed titles. Validate titles look reasonable before storing.
+
+### Pitfall 22: Container replacement during long scrape operations
+
+**Problem:** Running a long scrape operation (e.g., category scraper for all sections) on production, the container gets replaced mid-scrape when Coolify auto-deploys a new commit.
+
+**Solution:** Be aware that pushes to main trigger auto-deploy. Either:
+- Pause auto-deploy during long scrape operations
+- Run scrapes one section at a time so each completes quickly
+- Use the interactive worker container (which has a different lifecycle)
+
+### Pitfall 23: Drizzle migration journal not updated
+
+**Problem:** Created SQL migration files but forgot to add entries to `_journal.json`. Drizzle-kit doesn't discover them automatically.
+
+**Solution:** Always update `packages/db/src/migrations/meta/_journal.json` with an entry for each new migration file. Use sequential `idx` and `when` timestamps.
 
 ---
 
@@ -1308,13 +1488,14 @@ After implementation, verify every page for the new platform AND confirm existin
 - [ ] `/<platform>/research` — Research projects page
 - [ ] `/<platform>/research/<id>` — Research detail: tables have correct columns, no inline ratings if disabled
 - [ ] `/<platform>/research/<id>/competitors` — Correct columns, correct default sort
-- [ ] `/<platform>/featured` — Hidden from nav if `hasFeaturedSections: false`
+- [ ] `/<platform>/featured` — Hidden from nav if `hasFeaturedSections: false`, shows "My Featured Apps and Competitors" section with data if enabled
 - [ ] `/<platform>/features` — Hidden from nav if `hasFeatureTaxonomy: false`
+- [ ] `/overview` — Cross-platform overview page shows the new platform card (no crash!)
 - [ ] Search bar — App search works for new platform
 - [ ] Track/untrack — Can follow/unfollow apps
 - [ ] External links — "View on Platform" opens correct URL
 
-### Regression Verification (Shopify + Salesforce + Canva)
+### Regression Verification (All Existing Platforms)
 
 - [ ] `/shopify/apps` — All columns still visible
 - [ ] `/shopify/apps/<slug>` — All tabs, all cards present
@@ -1322,7 +1503,11 @@ After implementation, verify every page for the new platform AND confirm existin
 - [ ] `/salesforce/apps/<slug>` — Correct tabs/cards for Salesforce capabilities
 - [ ] `/canva/apps` — Correct columns (no reviews/pricing/launched)
 - [ ] `/canva/apps/<slug>` — Correct tabs/cards for Canva capabilities
-- [ ] All three platform previews still work with correct character limits
+- [ ] `/wix/apps` — Correct columns for Wix capabilities
+- [ ] `/wordpress/apps` — Correct columns for WordPress capabilities
+- [ ] `/google_workspace/apps` — Correct columns for Google Workspace capabilities
+- [ ] All platform previews still work with correct character limits
+- [ ] `/overview` — Cross-platform overview page shows all platforms
 
 ### Scraper Verification
 
@@ -1330,6 +1515,7 @@ After implementation, verify every page for the new platform AND confirm existin
 - [ ] CLI app scrape: `npx tsx apps/scraper/src/cli.ts app <slug> --platform=newplatform`
 - [ ] Data appears in database: `SELECT * FROM apps WHERE platform = 'newplatform' LIMIT 5;`
 - [ ] CLI keyword scrape (if applicable): `npx tsx apps/scraper/src/cli.ts keyword <keyword> --platform=newplatform`
+- [ ] Featured sections appear (if applicable): `SELECT * FROM featured_app_sightings fas JOIN apps a ON a.id = fas.app_id WHERE a.platform = 'newplatform' LIMIT 5;`
 
 ---
 
@@ -1347,7 +1533,7 @@ After implementation, verify every page for the new platform AND confirm existin
 | File | Change |
 |------|--------|
 | `apps/scraper/src/platforms/<name>/index.ts` | PlatformModule implementation |
-| `apps/scraper/src/platforms/<name>/constants.ts` | Seed categories, rate limits, scoring config |
+| `apps/scraper/src/platforms/<name>/constants.ts` | Seed categories, rate limits, scoring config, `featuredSectionSlugs` |
 | `apps/scraper/src/platforms/<name>/urls.ts` | URL builders |
 | `apps/scraper/src/platforms/<name>/parsers/*.ts` | HTML/JSON parsers |
 | `apps/scraper/src/platforms/registry.ts` | Register module in switch statement |
@@ -1364,6 +1550,7 @@ After implementation, verify every page for the new platform AND confirm existin
 | `apps/api/src/routes/apps.ts` | Add developer info extraction from `platformData` (if custom JSON structure) |
 | `apps/api/src/routes/account.ts` | Review Shopify-specific similarity signals (no breakage, but no benefit) |
 | `apps/api/src/routes/categories.ts` | Review hub page parsing (Shopify-specific, no breakage) |
+| `apps/api/src/routes/featured-apps.ts` | Auto-handles — verify platform filter on `/sections` uses innerJoin |
 | Other routes | Auto-handle via `getPlatformFromQuery()` — no changes needed |
 
 ### Dashboard (must change)
@@ -1372,12 +1559,12 @@ After implementation, verify every page for the new platform AND confirm existin
 |------|--------|
 | `apps/dashboard/src/lib/auth-context.tsx` | Add to `VALID_PLATFORMS` |
 | `apps/dashboard/src/proxy.ts` | Add to `VALID_PLATFORMS` array |
-| `apps/dashboard/src/lib/platform-urls.ts` | Add URL builder cases (3 switch statements) |
+| `apps/dashboard/src/lib/platform-urls.ts` | Add URL builder cases (4 switch statements) |
 | `apps/dashboard/src/lib/metadata-limits.ts` | Add platform character limits |
 | `apps/dashboard/src/components/sidebar.tsx` | Add label, color, update 2 regex patterns |
 | `apps/dashboard/src/components/admin-scraper-trigger.tsx` | Add to `VALID_PLATFORMS` set |
 | `apps/dashboard/src/components/app-badges.tsx` | Add `BADGE_CONFIG` entry |
-| `apps/dashboard/src/components/platform-overview-cards.tsx` | Add `PLATFORM_LABELS` and `PLATFORM_COLORS` entries |
+| `apps/dashboard/src/components/platform-overview-cards.tsx` | Add `PLATFORM_LABELS`, `PLATFORM_COLORS`, and **`PLATFORM_BRANDS`** entries |
 | `[platform]/overview/page.tsx` | Add to `PLATFORM_COLORS` record |
 | `[platform]/apps/[slug]/preview/page.tsx` | Add guard, component selector, label |
 | `[platform]/apps/[slug]/preview/<name>-preview.tsx` | **NEW** — Platform preview component |
@@ -1392,7 +1579,10 @@ After implementation, verify every page for the new platform AND confirm existin
 
 | File | Change |
 |------|--------|
-| `packages/db/src/migrations/XXXX_*.sql` | Seed `account_platforms` for new platform |
+| `packages/db/src/migrations/XXXX_seed_<name>_platform.sql` | Seed `account_platforms` for new platform |
+| `packages/db/src/migrations/XXXX_seed_<name>_categories.sql` | Seed categories and parent-child relationships |
+| `packages/db/src/migrations/XXXX_seed_<name>_visibility.sql` | Seed `platform_visibility` (hidden by default) |
+| `packages/db/src/migrations/meta/_journal.json` | Add entries for all new migrations |
 
 ---
 
@@ -1400,11 +1590,12 @@ After implementation, verify every page for the new platform AND confirm existin
 
 Adding a new platform follows this order:
 
-1. **Config first** — Get capability flags right in `platforms.ts`, add URL builders, metadata limits
-2. **Scraper second** — Build module, parsers, register, schedule, update `backfill-categories.ts` URL pattern
-3. **API third** — Add live-search function, review `apps.ts` developer info extraction
-4. **Dashboard last** — Update ALL 3 `VALID_PLATFORMS`, sidebar (labels, colors, 2 regex patterns), `app-badges.tsx`, `platform-overview-cards.tsx`, preview component, field labels (details, changes, overview, compare pages), research compare page, capability-gate all tables
-5. **Test everything** — New platform pages AND regression on existing platforms
+1. **Config first** — Get capability flags right in `platforms.ts`, add URL builders, similarity weights, metadata limits
+2. **Database second** — Create 3 migrations: platform access, categories, visibility
+3. **Scraper third** — Build module, parsers, register, schedule, update `backfill-categories.ts` URL pattern
+4. **API fourth** — Add live-search function, review `apps.ts` developer info extraction
+5. **Dashboard last** — Update ALL 3 `VALID_PLATFORMS`, sidebar (labels, colors, 2 regex patterns), `app-badges.tsx`, `platform-overview-cards.tsx` (LABELS + COLORS + **BRANDS**), preview component, field labels (details, changes, overview, compare pages), research compare page, capability-gate all tables
+6. **Test everything** — New platform pages AND regression on ALL existing platforms
 
 The biggest time sinks are:
 - **Compare pages** — `[slug]/compare/page.tsx` (~25 locations) + `research/[id]/compare/page.tsx` with hardcoded platform checks
@@ -1412,9 +1603,10 @@ The biggest time sinks are:
 - **Preview** — Creating a new platform-specific preview component
 - **Tables** — Systematically finding and gating every column, card, tab, and inline display
 - **VALID_PLATFORMS** — 3 separate definitions that must ALL be updated
+- **PLATFORM_BRANDS** — Separate from labels/colors, missing it crashes the overview page
 
-Use grep to find all `isCanva` / `isSalesforce` references before declaring the task complete:
+Use grep to find all platform-specific references before declaring the task complete:
 
 ```bash
-grep -rn "isCanva\|isSalesforce\|isShopify\|platform === \"shopify\"\|platform === \"canva\"\|platform === \"salesforce\"" apps/ packages/ --include="*.ts" --include="*.tsx" | grep -v node_modules | grep -v .next
+grep -rn "isCanva\|isSalesforce\|isShopify\|platform === \"shopify\"\|platform === \"canva\"\|platform === \"salesforce\"\|platform === \"wix\"\|platform === \"wordpress\"\|platform === \"google_workspace\"" apps/ packages/ --include="*.ts" --include="*.tsx" | grep -v node_modules | grep -v .next
 ```
