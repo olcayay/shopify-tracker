@@ -112,6 +112,9 @@ export class GoogleWorkspaceModule implements PlatformModule {
     }
     await page.waitForTimeout(2000);
 
+    // Scroll to bottom repeatedly to trigger lazy loading of more apps
+    await this.scrollToLoadAll(page);
+
     const html = await page.content();
     log.info("category page fetched", { slug, htmlLength: html.length });
     return html;
@@ -132,6 +135,9 @@ export class GoogleWorkspaceModule implements PlatformModule {
       log.warn("no search results found", { keyword });
     }
     await page.waitForTimeout(2000);
+
+    // Scroll to bottom repeatedly to trigger lazy loading of more results
+    await this.scrollToLoadAll(page);
 
     const html = await page.content();
     log.info("search page fetched", { keyword, htmlLength: html.length });
@@ -197,6 +203,38 @@ export class GoogleWorkspaceModule implements PlatformModule {
     const match = url.match(/\/marketplace\/category\/([^/?]+)(?:\/([^/?]+))?/);
     if (match) return match[2] ? `${match[1]}--${match[2]}` : match[1];
     return url.split("/").pop()?.split("?")[0] || url;
+  }
+
+  /**
+   * Scroll page to bottom repeatedly to trigger lazy loading.
+   * Google Workspace Marketplace loads ~100 apps initially and may load more on scroll.
+   * Stops when no new app cards appear after scrolling.
+   */
+  private async scrollToLoadAll(page: Page): Promise<void> {
+    let previousCount = 0;
+    let stableRounds = 0;
+    const maxScrolls = 20;
+
+    for (let i = 0; i < maxScrolls; i++) {
+      const currentCount = await page.evaluate(() =>
+        document.querySelectorAll('a[href*="/marketplace/app/"]').length
+      );
+
+      if (currentCount === previousCount) {
+        stableRounds++;
+        if (stableRounds >= 2) {
+          log.info("scroll complete, no more apps loading", { totalApps: currentCount, scrolls: i });
+          break;
+        }
+      } else {
+        stableRounds = 0;
+        log.info("scroll loaded more apps", { before: previousCount, after: currentCount, scroll: i });
+      }
+      previousCount = currentCount;
+
+      await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
+      await page.waitForTimeout(2000);
+    }
   }
 
   /**

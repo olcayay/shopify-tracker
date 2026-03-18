@@ -142,18 +142,25 @@ function parseSubcategoryLinks(
 ): { slug: string; url: string; title: string; parentSlug?: string }[] {
   const links: { slug: string; url: string; title: string; parentSlug?: string }[] = [];
 
+  // The sidebar lists ALL categories (not just children of current category).
+  // Only return actual child subcategories — two-part paths where the parent
+  // matches the current category slug (e.g., /category/business-tools/sales-and-crm
+  // is a child of business-tools, but /category/communication is NOT).
+  const baseSlug = categorySlug.split("--")[0]; // top-level parent slug
+
   $('a[href*="/marketplace/category/"]').each((_, el) => {
     const href = $(el).attr("href") || "";
     const linkTitle = $(el).text().trim();
-    const match = href.match(/\/marketplace\/category\/([^/?]+)(?:\/([^/?]+))?/);
-    if (match && linkTitle) {
-      const slug = match[2] ? `${match[1]}--${match[2]}` : match[1];
+    const match = href.match(/\/marketplace\/category\/([^/?]+)\/([^/?]+)/);
+    // Only match two-part paths (parent/child) where parent matches current category
+    if (match && linkTitle && match[1] === baseSlug) {
+      const slug = `${match[1]}--${match[2]}`;
       if (slug !== categorySlug && !links.some(l => l.slug === slug)) {
         links.push({
           slug,
           url: href.startsWith("./") ? `https://workspace.google.com${href.slice(1)}` : href,
           title: linkTitle,
-          parentSlug: match[2] ? match[1] : undefined,
+          parentSlug: match[1],
         });
       }
     }
