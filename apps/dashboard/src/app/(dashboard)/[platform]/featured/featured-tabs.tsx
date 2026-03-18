@@ -14,7 +14,7 @@ import {
 import { AdHeatmap } from "@/components/ad-heatmap";
 import { AppIcon } from "@/components/app-icon";
 import { Badge } from "@/components/ui/badge";
-import { ExternalLink, Loader2, Star } from "lucide-react";
+import { ChevronDown, ChevronRight, ExternalLink, Loader2, Star } from "lucide-react";
 import { buildExternalCategoryUrl, getPlatformName } from "@/lib/platform-urls";
 import { PLATFORMS } from "@appranks/shared";
 import type { PlatformId } from "@appranks/shared";
@@ -192,7 +192,40 @@ interface MyFeaturedApp {
   name: string;
   iconUrl?: string;
   type: "tracked" | "competitor";
-  sections: { sectionHandle: string; sectionTitle: string; lastSeen: string; daysCount: number }[];
+  sections: {
+    sectionHandle: string;
+    sectionTitle: string;
+    lastSeen: string;
+    dates: Set<string>;
+  }[];
+}
+
+function buildDateRange(days: number): string[] {
+  const result: string[] = [];
+  const now = new Date();
+  for (let i = days - 1; i >= 0; i--) {
+    const d = new Date(now);
+    d.setDate(d.getDate() - i);
+    result.push(d.toISOString().slice(0, 10));
+  }
+  return result;
+}
+
+function MiniHeatmap({ dates, dateRange }: { dates: Set<string>; dateRange: string[] }) {
+  return (
+    <div className="flex gap-[2px]">
+      {dateRange.map((d) => (
+        <div
+          key={d}
+          title={d}
+          className={cn(
+            "w-[10px] h-[10px] rounded-[2px]",
+            dates.has(d) ? "bg-primary/70" : "bg-muted/50"
+          )}
+        />
+      ))}
+    </div>
+  );
 }
 
 function MyFeaturedApps({
@@ -207,6 +240,17 @@ function MyFeaturedApps({
   const { platform } = useParams();
   const trackedSet = useMemo(() => new Set(trackedSlugs), [trackedSlugs]);
   const competitorSet = useMemo(() => new Set(competitorSlugs), [competitorSlugs]);
+  const [expandedApps, setExpandedApps] = useState<Set<string>>(new Set());
+  const dateRange = useMemo(() => buildDateRange(30), []);
+
+  const toggleExpanded = (slug: string) => {
+    setExpandedApps((prev) => {
+      const next = new Set(prev);
+      if (next.has(slug)) next.delete(slug);
+      else next.add(slug);
+      return next;
+    });
+  };
 
   const myApps = useMemo((): MyFeaturedApp[] => {
     const appMap = new Map<string, MyFeaturedApp>();
@@ -235,13 +279,12 @@ function MyFeaturedApps({
           sectionHandle: s.sectionHandle,
           sectionTitle: s.sectionTitle || s.sectionHandle,
           lastSeen: s.seenDate,
-          daysCount: 1,
+          dates: new Set<string>(),
         };
         app.sections.push(section);
-      } else {
-        if (s.seenDate > section.lastSeen) section.lastSeen = s.seenDate;
-        section.daysCount++;
       }
+      section.dates.add(s.seenDate);
+      if (s.seenDate > section.lastSeen) section.lastSeen = s.seenDate;
     }
 
     return [...appMap.values()].sort((a, b) => {
@@ -257,62 +300,105 @@ function MyFeaturedApps({
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <Star className="h-5 w-5 text-amber-500" />
-          My Featured Apps
+          My Featured Apps and Competitors
         </CardTitle>
       </CardHeader>
       <CardContent>
         <div className="space-y-3">
-          {myApps.map((app) => (
-            <div
-              key={app.slug}
-              className={cn(
-                "flex items-start gap-3 rounded-lg border p-3",
-                app.type === "tracked"
-                  ? "border-l-2 border-l-emerald-500 bg-emerald-500/5"
-                  : "border-l-2 border-l-amber-500 bg-amber-500/5"
-              )}
-            >
-              <AppIcon src={app.iconUrl} alt={app.name} className="h-8 w-8 rounded shrink-0" />
-              <div className="min-w-0 flex-1">
-                <div className="flex items-center gap-2 flex-wrap">
-                  <Link
-                    href={`/${platform}/apps/${app.slug}`}
-                    className="font-medium text-sm text-primary hover:underline truncate"
-                  >
-                    {app.name}
-                  </Link>
-                  <Badge
-                    variant="outline"
-                    className={cn(
-                      "text-[10px] px-1.5 py-0 h-4",
-                      app.type === "tracked"
-                        ? "bg-emerald-500/20 text-emerald-700 dark:text-emerald-400 border-emerald-500/50"
-                        : "bg-amber-500/20 text-amber-700 dark:text-amber-400 border-amber-500/50"
-                    )}
-                  >
-                    {app.type === "tracked" ? "Tracked" : "Competitor"}
-                  </Badge>
-                </div>
-                <div className="flex flex-wrap gap-1.5 mt-1.5">
-                  {app.sections.map((sec) => (
-                    <button
-                      key={sec.sectionHandle}
-                      onClick={() => {
-                        const el = document.getElementById(`section-${sec.sectionHandle}`);
-                        if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
-                      }}
-                      className="inline-flex items-center gap-1 rounded-full bg-muted px-2 py-0.5 text-xs text-muted-foreground hover:bg-accent hover:text-foreground transition-colors cursor-pointer"
-                    >
-                      {sec.sectionTitle}
-                      <span className="text-[10px] opacity-70">
-                        ({sec.daysCount}d)
+          {myApps.map((app) => {
+            const isExpanded = expandedApps.has(app.slug);
+            return (
+              <div
+                key={app.slug}
+                className={cn(
+                  "rounded-lg border",
+                  app.type === "tracked"
+                    ? "border-l-2 border-l-emerald-500 bg-emerald-500/5"
+                    : "border-l-2 border-l-amber-500 bg-amber-500/5"
+                )}
+              >
+                <button
+                  onClick={() => toggleExpanded(app.slug)}
+                  className="flex items-center gap-3 w-full p-3 text-left cursor-pointer hover:bg-accent/30 transition-colors rounded-lg"
+                >
+                  <AppIcon src={app.iconUrl} alt={app.name} className="h-8 w-8 rounded shrink-0" />
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <Link
+                        href={`/${platform}/apps/${app.slug}`}
+                        onClick={(e) => e.stopPropagation()}
+                        className="font-medium text-sm text-primary hover:underline truncate"
+                      >
+                        {app.name}
+                      </Link>
+                      <Badge
+                        variant="outline"
+                        className={cn(
+                          "text-[10px] px-1.5 py-0 h-4",
+                          app.type === "tracked"
+                            ? "bg-emerald-500/20 text-emerald-700 dark:text-emerald-400 border-emerald-500/50"
+                            : "bg-amber-500/20 text-amber-700 dark:text-amber-400 border-amber-500/50"
+                        )}
+                      >
+                        {app.type === "tracked" ? "Tracked" : "Competitor"}
+                      </Badge>
+                      <span className="text-xs text-muted-foreground">
+                        {app.sections.length} {app.sections.length === 1 ? "section" : "sections"}
                       </span>
-                    </button>
-                  ))}
-                </div>
+                    </div>
+                    <div className="flex flex-wrap gap-1.5 mt-1.5">
+                      {app.sections.map((sec) => (
+                        <span
+                          key={sec.sectionHandle}
+                          className="inline-flex items-center gap-1 rounded-full bg-muted px-2 py-0.5 text-xs text-muted-foreground"
+                        >
+                          {sec.sectionTitle}
+                          <span className="text-[10px] opacity-70">
+                            ({sec.dates.size}d)
+                          </span>
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                  {isExpanded ? (
+                    <ChevronDown className="h-4 w-4 text-muted-foreground shrink-0" />
+                  ) : (
+                    <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" />
+                  )}
+                </button>
+
+                {isExpanded && (
+                  <div className="border-t px-3 pb-3 pt-2 space-y-2">
+                    {app.sections.map((sec) => (
+                      <div key={sec.sectionHandle} className="flex items-center gap-3">
+                        <button
+                          onClick={() => {
+                            const el = document.getElementById(`section-${sec.sectionHandle}`);
+                            if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
+                          }}
+                          className="text-xs font-medium text-primary hover:underline cursor-pointer w-[140px] shrink-0 truncate text-left"
+                          title={sec.sectionTitle}
+                        >
+                          {sec.sectionTitle}
+                        </button>
+                        <MiniHeatmap dates={sec.dates} dateRange={dateRange} />
+                        <span className="text-[10px] text-muted-foreground shrink-0">
+                          {sec.dates.size}/30d
+                        </span>
+                      </div>
+                    ))}
+                    <div className="flex items-center gap-3 mt-1">
+                      <span className="w-[140px] shrink-0" />
+                      <div className="flex justify-between text-[10px] text-muted-foreground" style={{ width: `${30 * 12}px` }}>
+                        <span>{dateRange[0]}</span>
+                        <span>{dateRange[dateRange.length - 1]}</span>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       </CardContent>
     </Card>
