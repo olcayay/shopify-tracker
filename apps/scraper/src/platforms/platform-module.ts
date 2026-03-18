@@ -28,6 +28,8 @@ export interface NormalizedCategoryApp {
   badges: string[];
   /** Platform-specific external ID (e.g., Atlassian numeric addonId) */
   externalId?: string;
+  /** Platform-specific extra fields */
+  extra?: Record<string, unknown>;
 }
 
 export interface NormalizedCategoryPage {

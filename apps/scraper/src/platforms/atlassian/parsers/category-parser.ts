@@ -128,6 +128,9 @@ export function parseAtlassianCategoryPage(
         badges.push("top_vendor");
       }
 
+      // Extract install count from distribution
+      const totalInstalls = tile.distribution?.activeInstalls ?? tile.distribution?.totalInstalls ?? null;
+
       apps.push({
         slug: tile.addonKey || "",
         name: tile.name || "",
@@ -140,6 +143,10 @@ export function parseAtlassianCategoryPage(
         isSponsored: false,
         badges,
         externalId: tile.addonId ? String(tile.addonId) : undefined,
+        extra: {
+          ...(vendorName && { vendorName }),
+          ...(totalInstalls != null && { totalInstalls }),
+        },
       });
     }
   }

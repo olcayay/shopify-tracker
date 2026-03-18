@@ -417,6 +417,12 @@ export class KeywordScraper {
       const hasRating = app.averageRating > 0;
       const hasCount = app.ratingCount > 0;
 
+      // Extract extra metadata from listing (Atlassian: vendorName, totalInstalls, externalId)
+      const extra = app.extra || {};
+      const totalInstalls = extra.totalInstalls as number | undefined;
+      const vendorName = extra.vendorName as string | undefined;
+      const externalId = extra.externalId as string | undefined;
+
       const [upsertedApp] = await this.db
         .insert(apps)
         .values({
@@ -428,6 +434,9 @@ export class KeywordScraper {
           ...(hasRating && { averageRating: String(app.averageRating) }),
           ...(hasCount && { ratingCount: app.ratingCount }),
           ...(app.pricingHint && { pricingHint: app.pricingHint }),
+          ...(externalId && { externalId }),
+          ...(totalInstalls != null && { activeInstalls: totalInstalls }),
+          ...(app.badges.length > 0 && { badges: app.badges }),
         })
         .onConflictDoUpdate({
           target: [apps.platform, apps.slug],
@@ -437,6 +446,9 @@ export class KeywordScraper {
             ...(hasRating && { averageRating: String(app.averageRating) }),
             ...(hasCount && { ratingCount: app.ratingCount }),
             ...(app.pricingHint && { pricingHint: app.pricingHint }),
+            ...(externalId && { externalId }),
+            ...(totalInstalls != null && { activeInstalls: totalInstalls }),
+            ...(app.badges.length > 0 && { badges: app.badges }),
           },
         })
         .returning({ id: apps.id });
@@ -449,8 +461,8 @@ export class KeywordScraper {
         position: i + 1,
       });
 
-      // For non-Shopify platforms: ensure a minimal snapshot exists so dashboard can show rating/pricing
-      if (this.platform !== "shopify" && (hasRating || hasCount)) {
+      // For non-Shopify platforms: ensure a minimal snapshot exists so dashboard can show rating/pricing/developer
+      if (this.platform !== "shopify" && (hasRating || hasCount || vendorName)) {
         const [existingSnap] = await this.db
           .select({ id: appSnapshots.id })
           .from(appSnapshots)
@@ -469,7 +481,7 @@ export class KeywordScraper {
             seoTitle: "",
             seoMetaDescription: "",
             features: [],
-            developer: null,
+            developer: vendorName ? { name: vendorName, url: "" } : null,
             demoStoreUrl: null,
             languages: [],
             integrations: [],
@@ -515,6 +527,9 @@ export class KeywordScraper {
     for (const app of sponsoredApps) {
       const hasRating = app.averageRating > 0;
       const hasCount = app.ratingCount > 0;
+      const extra = app.extra || {};
+      const totalInstalls = extra.totalInstalls as number | undefined;
+      const externalId = extra.externalId as string | undefined;
 
       const [upsertedApp] = await this.db
         .insert(apps)
@@ -526,6 +541,9 @@ export class KeywordScraper {
           ...(hasRating && { averageRating: String(app.averageRating) }),
           ...(hasCount && { ratingCount: app.ratingCount }),
           ...(app.pricingHint && { pricingHint: app.pricingHint }),
+          ...(externalId && { externalId }),
+          ...(totalInstalls != null && { activeInstalls: totalInstalls }),
+          ...(app.badges.length > 0 && { badges: app.badges }),
         })
         .onConflictDoUpdate({
           target: [apps.platform, apps.slug],
@@ -534,6 +552,9 @@ export class KeywordScraper {
             ...(hasRating && { averageRating: String(app.averageRating) }),
             ...(hasCount && { ratingCount: app.ratingCount }),
             ...(app.pricingHint && { pricingHint: app.pricingHint }),
+            ...(externalId && { externalId }),
+            ...(totalInstalls != null && { activeInstalls: totalInstalls }),
+            ...(app.badges.length > 0 && { badges: app.badges }),
           },
         })
         .returning({ id: apps.id });

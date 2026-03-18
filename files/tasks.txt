@@ -183,3 +183,7 @@ Google Workspace — convert 8 curated sections to featured_app_sightings, fix c
 Atlassian Marketplace integration — full platform module, parsers (API + HTML), scraper, dashboard, API live search, migrations ✅
 
 Atlassian post-integration fixes — external_id for app URLs, 4-star rating system (maxRatingStars), documentation ✅
+
+Atlassian extended metadata — version/vendor/pricing API endpoints, App Info + Trust Signals + Links cards, highlights, pricing tiers ✅
+
+Atlassian listing metadata extraction — save rating, installs, developer, badges from category/search listings to apps table + minimal snapshots ✅

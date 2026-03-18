@@ -106,7 +106,7 @@ export const PLATFORMS = {
     hasSimilarApps: false,
     hasAutoSuggestions: false,
     hasFeatureTaxonomy: false,
-    hasPricing: false,
+    hasPricing: true,
     hasLaunchedDate: false,
     maxRatingStars: 4,
     pageSize: 50,

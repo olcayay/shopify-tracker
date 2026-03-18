@@ -1,3 +1,71 @@
+Atlassian Listing Metadata Extraction
+=======================================
+
+Enhanced category and keyword search scrapers to extract and save more metadata
+from Atlassian listing pages, enabling app detail page display without a dedicated
+detail scrape.
+
+Category parser (Apollo cache):
+- Now extracts vendorName (resolved from Vendor ref) and totalInstalls (distribution)
+- Both stored in new NormalizedCategoryApp.extra field
+
+Search parser (REST API):
+- Now extracts vendorName, externalId (addonId), top_vendor badge
+- totalInstalls already extracted, now also vendorName/externalId in extra
+
+Category scraper (recordNormalizedAppRankings):
+- Now writes activeInstalls, badges to apps table from listing data
+- Creates minimal appSnapshot with developer name for non-Shopify platforms
+  when no snapshot exists yet (enables dashboard to show developer/rating)
+
+Keyword scraper (scrapeKeywordGeneric):
+- Now writes externalId, activeInstalls, badges to apps table
+- Enriches minimal snapshot with developer name (vendorName from extra)
+
+Platform module:
+- Added extra?: Record<string, unknown> to NormalizedCategoryApp interface
+  (mirrors NormalizedSearchApp pattern)
+
+Files changed:
+- apps/scraper/src/platforms/platform-module.ts — added extra to NormalizedCategoryApp
+- apps/scraper/src/platforms/atlassian/parsers/category-parser.ts — extract vendorName, totalInstalls
+- apps/scraper/src/platforms/atlassian/parsers/api-parser.ts — extract vendorName, externalId, top_vendor in search
+- apps/scraper/src/scrapers/category-scraper.ts — write activeInstalls, badges, create minimal snapshot
+- apps/scraper/src/scrapers/keyword-scraper.ts — write externalId, activeInstalls, badges, enrich snapshot
+
+
+Atlassian App Details — Extended Metadata
+==========================================
+
+Enhanced Atlassian scraper to fetch data from 4 API endpoints in parallel:
+1. App details (existing) — now extracts lastModified, vendorLinks, bugBounty, tags
+2. Latest version (NEW) — version string, paymentModel, releaseDate, licenseType, compatibilities, highlights, fullDescription
+3. Vendor info (NEW) — supportEmail, supportUrl, supportPhone, address, homePage, SLA, trustCenter
+4. Pricing (NEW) — annual tiers grouped by user count (10/25/100/500/2000)
+
+fetchAppPage() now returns a JSON envelope {addon, version, vendor, pricing} with parallel fetching.
+parseAddonDetails() accepts optional version/vendor/pricing data and merges into platformData.
+
+Dashboard details page adds:
+- App Info card (payment model, license type, release date, compatible products)
+- Trust Signals card (Cloud Fortified, Top Vendor, Bug Bounty)
+- Highlights (title+description format like Salesforce)
+- Links card (documentation, EULA, privacy, status page, SLA, trust center)
+- Labels: Summary (not "App Introduction"), Description (not "App Details"), Highlights (not "Features")
+
+hasPricing enabled for Atlassian in both module capabilities and shared constants.
+trackedFields expanded with 10 new fields.
+
+Files changed:
+- apps/scraper/src/platforms/atlassian/urls.ts — +3 URL builders
+- apps/scraper/src/platforms/atlassian/parsers/api-parser.ts — +3 new parse functions, enhanced parseAddonDetails
+- apps/scraper/src/platforms/atlassian/index.ts — multi-API fetchAppPage, envelope-based parseAppDetails, hasPricing
+- apps/scraper/src/platforms/atlassian/constants.ts — expanded trackedFields
+- apps/scraper/src/scrapers/app-details-scraper.ts — Atlassian field mapping (version, installs, lastUpdated, highlights, pricing, support)
+- packages/shared/src/constants/platforms.ts — hasPricing: true
+- apps/dashboard/src/app/(dashboard)/[platform]/apps/[slug]/details/page.tsx — Atlassian info/trust/links cards, label overrides
+
+
 Atlassian Marketplace Integration
 ===================================
 

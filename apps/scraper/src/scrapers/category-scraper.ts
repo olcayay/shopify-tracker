@@ -5,6 +5,7 @@ import {
   categories,
   categorySnapshots,
   apps,
+  appSnapshots,
   appCategoryRankings,
   featuredAppSightings,
   categoryAdSightings,
@@ -855,6 +856,11 @@ export class CategoryScraper {
       const hasRating = app.averageRating > 0;
       const hasCount = app.ratingCount > 0;
 
+      // Extract extra metadata from listing (Atlassian: vendorName, totalInstalls)
+      const extra = app.extra || {};
+      const totalInstalls = extra.totalInstalls as number | undefined;
+      const vendorName = extra.vendorName as string | undefined;
+
       const [upsertedApp] = await this.db
         .insert(apps)
         .values({
@@ -867,6 +873,8 @@ export class CategoryScraper {
           ...(hasCount && { ratingCount: app.ratingCount }),
           ...(app.pricingHint && { pricingHint: app.pricingHint }),
           ...(app.externalId && { externalId: app.externalId }),
+          ...(totalInstalls != null && { activeInstalls: totalInstalls }),
+          ...(app.badges.length > 0 && { badges: app.badges }),
         })
         .onConflictDoUpdate({
           target: [apps.platform, apps.slug],
@@ -878,6 +886,8 @@ export class CategoryScraper {
             ...(hasCount && { ratingCount: app.ratingCount }),
             ...(app.pricingHint && { pricingHint: app.pricingHint }),
             ...(app.externalId && { externalId: app.externalId }),
+            ...(totalInstalls != null && { activeInstalls: totalInstalls }),
+            ...(app.badges.length > 0 && { badges: app.badges }),
             updatedAt: now,
           },
         })
@@ -890,6 +900,38 @@ export class CategoryScraper {
         scrapedAt: now,
         position: positionOffset + (app.position || i + 1),
       });
+
+      // For non-Shopify platforms: ensure a minimal snapshot exists with listing data
+      // so dashboard can show developer/rating/pricing even without a detail scrape
+      if (this.platform !== "shopify" && (hasRating || hasCount || vendorName)) {
+        const [existingSnap] = await this.db
+          .select({ id: appSnapshots.id })
+          .from(appSnapshots)
+          .where(eq(appSnapshots.appId, upsertedApp.id))
+          .limit(1);
+        if (!existingSnap) {
+          await this.db.insert(appSnapshots).values({
+            appId: upsertedApp.id,
+            scrapeRunId: runId,
+            scrapedAt: now,
+            averageRating: hasRating ? String(app.averageRating) : null,
+            ratingCount: hasCount ? app.ratingCount : null,
+            pricing: app.pricingHint || "",
+            appIntroduction: app.shortDescription || "",
+            appDetails: "",
+            seoTitle: "",
+            seoMetaDescription: "",
+            features: [],
+            developer: vendorName ? { name: vendorName, url: "" } : null,
+            demoStoreUrl: null,
+            languages: [],
+            integrations: [],
+            categories: [],
+            pricingPlans: [],
+            support: null,
+          });
+        }
+      }
     }
   }
 

@@ -43,7 +43,7 @@ export class AtlassianModule implements PlatformModule {
     hasSimilarApps: false,
     hasAutoSuggestions: false,
     hasFeatureTaxonomy: false,
-    hasPricing: false,
+    hasPricing: true,
     hasLaunchedDate: false,
   };
 
@@ -74,9 +74,34 @@ export class AtlassianModule implements PlatformModule {
   // --- Fetch ---
 
   async fetchAppPage(slug: string): Promise<string> {
-    const url = atlassianUrls.apiAddon(slug);
-    log.info("fetching addon via API", { slug, url });
-    return this.httpClient.fetchPage(url);
+    const addonUrl = atlassianUrls.apiAddon(slug);
+    const versionUrl = atlassianUrls.apiVersionLatest(slug);
+    log.info("fetching addon via API (multi-endpoint)", { slug });
+
+    // Fetch addon + version in parallel
+    const [addonJson, versionJson] = await Promise.all([
+      this.httpClient.fetchPage(addonUrl),
+      this.httpClient.fetchPage(versionUrl).catch(() => null),
+    ]);
+
+    // Extract vendorId from addon JSON to fetch vendor details
+    const addon = JSON.parse(addonJson);
+    const vendorHref = addon._embedded?.vendor?._links?.self?.href;
+    const vendorId = vendorHref?.match(/\/vendors\/(\d+)/)?.[1];
+
+    // Fetch vendor + pricing in parallel
+    const [vendorJson, pricingJson] = await Promise.all([
+      vendorId ? this.httpClient.fetchPage(atlassianUrls.apiVendor(vendorId)).catch(() => null) : null,
+      this.httpClient.fetchPage(atlassianUrls.apiPricing(slug)).catch(() => null),
+    ]);
+
+    // Return combined JSON envelope
+    return JSON.stringify({
+      addon,
+      version: versionJson ? JSON.parse(versionJson) : null,
+      vendor: vendorJson ? JSON.parse(vendorJson) : null,
+      pricing: pricingJson ? JSON.parse(pricingJson) : null,
+    });
   }
 
   async fetchCategoryPage(slug: string, _page?: number): Promise<string> {
@@ -128,8 +153,8 @@ export class AtlassianModule implements PlatformModule {
   // --- Parse ---
 
   parseAppDetails(json: string, _slug: string): NormalizedAppDetails {
-    const data = JSON.parse(json);
-    return parseAddonDetails(data);
+    const envelope = JSON.parse(json);
+    return parseAddonDetails(envelope.addon, envelope.version, envelope.vendor, envelope.pricing);
   }
 
   parseCategoryPage(html: string, url: string): NormalizedCategoryPage {

@@ -268,21 +268,29 @@ export class AppDetailsScraper {
                   ? ""
                   : this.platform === "google_workspace"
                     ? (pd.shortDescription as string) || ""
-                    : (pd.description as string) || "",
+                    : this.platform === "atlassian"
+                      ? (pd.summary as string) || ""
+                      : (pd.description as string) || "",
               app_details: this.platform === "wix"
                 ? (pd.description as string) || ""
                 : this.platform === "wordpress"
                   ? stripHtmlTags((pd.description as string) || "")
                   : this.platform === "google_workspace"
                     ? (pd.detailedDescription as string) || ""
-                    : (pd.fullDescription as string) || "",
+                    : this.platform === "atlassian"
+                      ? (pd.fullDescription as string) || ""
+                      : (pd.fullDescription as string) || "",
               seo_title: this.platform === "wordpress" || this.platform === "google_workspace" ? "" : normalized.name,
               seo_meta_description: this.platform === "wordpress" || this.platform === "google_workspace"
                 ? ""
                 : (pd.tagline as string) || (pd.description as string) || "",
               features: this.platform === "wix"
                 ? (pd.benefits as string[]) || []
-                : (pd.highlights as string[]) || [],
+                : this.platform === "atlassian"
+                  ? ((pd.highlights as Array<{ title: string; body: string }>) || []).map(
+                      (h) => h.body ? `${h.title}\n${h.body}` : h.title
+                    )
+                  : (pd.highlights as string[]) || [],
               pricing: normalized.pricingHint || "",
               average_rating: normalized.averageRating,
               rating_count: normalized.ratingCount,
@@ -313,22 +321,34 @@ export class AppDetailsScraper {
                 currency_code: p.currency_code || null,
                 units: p.units || null,
               })) as import("@appranks/shared").PricingPlan[],
-              support: normalized.developer?.website
-                ? { email: (pd.publisher as any)?.email || null, portal_url: normalized.developer.website, phone: null } as import("@appranks/shared").AppSupport
-                : null as import("@appranks/shared").AppSupport | null,
+              support: this.platform === "atlassian"
+                ? ((pd.supportEmail || pd.supportUrl || pd.supportPhone)
+                  ? { email: (pd.supportEmail as string) || null, portal_url: (pd.supportUrl as string) || null, phone: (pd.supportPhone as string) || null } as import("@appranks/shared").AppSupport
+                  : null)
+                : normalized.developer?.website
+                  ? { email: (pd.publisher as any)?.email || null, portal_url: normalized.developer.website, phone: null } as import("@appranks/shared").AppSupport
+                  : null as import("@appranks/shared").AppSupport | null,
               _platformData: pd,
               // First-class metadata columns
-              _currentVersion: this.platform === "wordpress" ? (pd.version as string) || null : null,
+              _currentVersion: this.platform === "wordpress"
+                ? (pd.version as string) || null
+                : this.platform === "atlassian"
+                  ? (pd.version as string) || null
+                  : null,
               _activeInstalls: this.platform === "wordpress"
                 ? (pd.activeInstalls as number) || null
                 : this.platform === "google_workspace"
                   ? (pd.installCount as number) || null
-                  : null,
+                  : this.platform === "atlassian"
+                    ? (pd.totalInstalls as number) || null
+                    : null,
               _lastUpdatedAt: this.platform === "wordpress" && pd.lastUpdated
                 ? parseWordPressDate(pd.lastUpdated as string)
                 : this.platform === "google_workspace" && pd.listingUpdated
                   ? new Date(pd.listingUpdated as string)
-                  : null,
+                  : this.platform === "atlassian" && pd.lastModified
+                    ? new Date(pd.lastModified as string)
+                    : null,
               _externalId: this.platform === "atlassian" && pd.appId
                 ? String(pd.appId)
                 : null,

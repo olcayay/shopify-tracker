@@ -3,7 +3,7 @@ import { getApp } from "@/lib/api";
 import type { PlatformId } from "@appranks/shared";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Package, Download, Clock, Code, Globe, FileCode } from "lucide-react";
+import { Package, Download, Clock, Code, Globe, FileCode, Shield, Award, Bug } from "lucide-react";
 
 export default async function DetailsPage({
   params,
@@ -30,6 +30,7 @@ export default async function DetailsPage({
   const isWix = platform === "wix";
   const isWordPress = platform === "wordpress";
   const isGoogleWorkspace = platform === "google_workspace";
+  const isAtlassian = platform === "atlassian";
 
   // WordPress: use raw HTML description from platformData for formatted rendering
   const wpDescriptionHtml = isWordPress && pd?.description
@@ -49,6 +50,10 @@ export default async function DetailsPage({
 
   // Google Workspace-specific fields from platformData
   const gworkspaceWorksWithApps: string[] = isGoogleWorkspace ? pd?.worksWithApps || [] : [];
+
+  // Atlassian-specific fields from platformData
+  const atlassianCompatibilities: Array<{ application: string; cloud: boolean; server: boolean; dataCenter: boolean }> = isAtlassian ? pd?.compatibilities || [] : [];
+  const atlassianVendorLinks = isAtlassian ? pd?.vendorLinks as Record<string, string> | null : null;
 
   const formatInstalls = (n: number) => {
     if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(n % 1_000_000 === 0 ? 0 : 1)}M+`;
@@ -113,6 +118,79 @@ export default async function DetailsPage({
         );
       })()}
 
+      {/* Atlassian: App Info card */}
+      {isAtlassian && (pd?.paymentModel || pd?.licenseType || pd?.releaseDate || atlassianCompatibilities.length > 0) && (
+        <Card>
+          <CardHeader>
+            <CardTitle>App Info</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-2 gap-4 text-sm">
+              {pd?.paymentModel && (
+                <div>
+                  <p className="text-muted-foreground text-xs mb-1">Payment Model</p>
+                  <p className="font-medium">
+                    {pd.paymentModel === "free" ? "Free" : pd.paymentModel === "atlassian" ? "Paid via Atlassian" : "Paid via Vendor"}
+                  </p>
+                </div>
+              )}
+              {pd?.licenseType && (
+                <div>
+                  <p className="text-muted-foreground text-xs mb-1">License Type</p>
+                  <p className="font-medium">{pd.licenseType}</p>
+                </div>
+              )}
+              {pd?.releaseDate && (
+                <div>
+                  <p className="text-muted-foreground text-xs mb-1">Release Date</p>
+                  <p className="font-medium">{new Date(pd.releaseDate).toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" })}</p>
+                </div>
+              )}
+              {atlassianCompatibilities.length > 0 && (
+                <div>
+                  <p className="text-muted-foreground text-xs mb-1">Compatible With</p>
+                  <div className="flex flex-wrap gap-1">
+                    {atlassianCompatibilities.map((c, i) => (
+                      <Badge key={i} variant="secondary" className="text-xs">
+                        {c.application} {c.cloud ? "Cloud" : c.server ? "Server" : c.dataCenter ? "Data Center" : ""}
+                      </Badge>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Atlassian: Trust Signals */}
+      {isAtlassian && (pd?.cloudFortified || pd?.bugBountyParticipant || pd?.topVendor) && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Trust Signals</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="flex flex-wrap gap-2">
+              {pd?.cloudFortified && (
+                <Badge variant="default" className="text-xs gap-1">
+                  <Shield className="h-3 w-3" /> Cloud Fortified
+                </Badge>
+              )}
+              {pd?.topVendor && (
+                <Badge variant="default" className="text-xs gap-1">
+                  <Award className="h-3 w-3" /> Top Vendor
+                </Badge>
+              )}
+              {pd?.bugBountyParticipant && (
+                <Badge variant="secondary" className="text-xs gap-1">
+                  <Bug className="h-3 w-3" /> Bug Bounty Participant
+                </Badge>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {/* WordPress: single Description card with formatted HTML */}
       {isWordPress && (wpDescriptionHtml || snapshot.appDetails) && (
         <Card>
@@ -137,7 +215,7 @@ export default async function DetailsPage({
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              {isCanva || isWix || isGoogleWorkspace ? "Short Description" : "App Introduction"}
+              {isCanva || isWix || isGoogleWorkspace ? "Short Description" : isAtlassian ? "Summary" : "App Introduction"}
               {isCanva && (
                 <Badge variant={snapshot.appIntroduction.length > 50 ? "destructive" : "outline"} className="text-xs font-normal">
                   {snapshot.appIntroduction.length}/50
@@ -156,7 +234,7 @@ export default async function DetailsPage({
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              {isCanva || isWix || isGoogleWorkspace ? "Description" : "App Details"}
+              {isCanva || isWix || isGoogleWorkspace || isAtlassian ? "Description" : "App Details"}
               {isCanva && (
                 <Badge variant={snapshot.appDetails.length > 200 ? "destructive" : "outline"} className="text-xs font-normal">
                   {snapshot.appDetails.length}/200
@@ -173,12 +251,12 @@ export default async function DetailsPage({
       {snapshot.features?.length > 0 && (
         <Card>
           <CardHeader>
-            <CardTitle>{isSalesforce ? "Highlights" : isWix ? "Benefits" : "Features"}</CardTitle>
+            <CardTitle>{isSalesforce || isAtlassian ? "Highlights" : isWix ? "Benefits" : "Features"}</CardTitle>
           </CardHeader>
           <CardContent>
             <ul className="space-y-2">
               {snapshot.features.map((f: string, i: number) => {
-                if (isSalesforce) {
+                if (isSalesforce || isAtlassian) {
                   const [title, ...rest] = f.split("\n");
                   const description = rest.join("\n").trim();
                   return (
@@ -508,6 +586,83 @@ export default async function DetailsPage({
                   <span className="text-muted-foreground">Terms of Service:</span>{" "}
                   <a href={pd.termsOfServiceUrl} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
                     {pd.termsOfServiceUrl}
+                  </a>
+                </p>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Atlassian: Links card */}
+      {isAtlassian && (pd?.documentationUrl || pd?.eulaUrl || atlassianVendorLinks?.privacy || atlassianVendorLinks?.appStatusPage || pd?.slaUrl || pd?.trustCenterUrl || pd?.vendorHomePage || pd?.contactEmail) && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Links</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-1 text-sm">
+              {pd?.vendorHomePage && (
+                <p>
+                  <span className="text-muted-foreground">Developer Website:</span>{" "}
+                  <a href={pd.vendorHomePage} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
+                    {pd.vendorHomePage}
+                  </a>
+                </p>
+              )}
+              {pd?.documentationUrl && (
+                <p>
+                  <span className="text-muted-foreground">Documentation:</span>{" "}
+                  <a href={pd.documentationUrl} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
+                    {pd.documentationUrl}
+                  </a>
+                </p>
+              )}
+              {pd?.eulaUrl && (
+                <p>
+                  <span className="text-muted-foreground">EULA:</span>{" "}
+                  <a href={pd.eulaUrl} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
+                    {pd.eulaUrl}
+                  </a>
+                </p>
+              )}
+              {atlassianVendorLinks?.privacy && (
+                <p>
+                  <span className="text-muted-foreground">Privacy Policy:</span>{" "}
+                  <a href={atlassianVendorLinks.privacy} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
+                    {atlassianVendorLinks.privacy}
+                  </a>
+                </p>
+              )}
+              {atlassianVendorLinks?.appStatusPage && (
+                <p>
+                  <span className="text-muted-foreground">Status Page:</span>{" "}
+                  <a href={atlassianVendorLinks.appStatusPage} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
+                    {atlassianVendorLinks.appStatusPage}
+                  </a>
+                </p>
+              )}
+              {pd?.slaUrl && (
+                <p>
+                  <span className="text-muted-foreground">SLA:</span>{" "}
+                  <a href={pd.slaUrl} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
+                    {pd.slaUrl}
+                  </a>
+                </p>
+              )}
+              {pd?.trustCenterUrl && (
+                <p>
+                  <span className="text-muted-foreground">Trust Center:</span>{" "}
+                  <a href={pd.trustCenterUrl} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
+                    {pd.trustCenterUrl}
+                  </a>
+                </p>
+              )}
+              {pd?.contactEmail && (
+                <p>
+                  <span className="text-muted-foreground">Contact Email:</span>{" "}
+                  <a href={`mailto:${pd.contactEmail}`} className="text-primary hover:underline">
+                    {pd.contactEmail}
                   </a>
                 </p>
               )}

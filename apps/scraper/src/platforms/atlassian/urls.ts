@@ -29,4 +29,14 @@ export const atlassianUrls = {
   /** Featured collections via REST API */
   apiFeatured: (marketingLabel: string, offset = 0, limit = 50) =>
     `${API_BASE}/addons?marketingLabel=${encodeURIComponent(marketingLabel)}&offset=${offset}&limit=${limit}`,
+
+  /** Latest version info via REST API */
+  apiVersionLatest: (addonKey: string) => `${API_BASE}/addons/${addonKey}/versions/latest`,
+
+  /** Vendor details via REST API */
+  apiVendor: (vendorId: number | string) => `${API_BASE}/vendors/${vendorId}`,
+
+  /** Pricing tiers via REST API */
+  apiPricing: (addonKey: string, hosting = "cloud") =>
+    `${API_BASE}/addons/${addonKey}/pricing/${hosting}/live`,
 } as const;
