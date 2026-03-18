@@ -39,7 +39,7 @@ export class GoogleWorkspaceModule implements PlatformModule {
   readonly capabilities: PlatformCapabilities = {
     hasKeywordSearch: true,
     hasReviews: true,
-    hasFeaturedSections: false,
+    hasFeaturedSections: true,
     hasAdTracking: false,
     hasSimilarApps: false,
     hasAutoSuggestions: false,

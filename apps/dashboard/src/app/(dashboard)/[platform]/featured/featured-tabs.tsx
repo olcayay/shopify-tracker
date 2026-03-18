@@ -108,7 +108,9 @@ function SectionCard({
   const externalUrl =
     group.surface === "category"
       ? buildExternalCategoryUrl(platform as PlatformId, group.surfaceDetail)
-      : PLATFORMS[platform as PlatformId].baseUrl;
+      : group.surfaceDetail && group.surfaceDetail !== "home"
+        ? buildExternalCategoryUrl(platform as PlatformId, group.surfaceDetail)
+        : PLATFORMS[platform as PlatformId].baseUrl;
 
   return (
     <Card>

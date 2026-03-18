@@ -498,6 +498,13 @@
       "when": 1774742400000,
       "tag": "0070_seed_google_workspace_categories",
       "breakpoints": true
+    },
+    {
+      "idx": 71,
+      "version": "7",
+      "when": 1774828800000,
+      "tag": "0071_cleanup_gworkspace_featured",
+      "breakpoints": true
     }
   ]
 }

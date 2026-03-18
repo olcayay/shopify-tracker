@@ -472,6 +472,38 @@ export class CategoryScraper {
 
     const normalized = mod.parseCategoryPage(json, canonicalUrl);
 
+    // Check if this slug is a curated featured section (not a real category)
+    const isFeaturedSection = mod.constants.featuredSectionSlugs?.includes(slug) ?? false;
+
+    if (isFeaturedSection) {
+      // Record apps as featured_app_sightings instead of category rankings
+      await this.recordFeaturedSightingsFromApps(normalized.apps, slug, normalized.title, runId);
+      // Collect discovered slugs for detail scraping
+      for (const app of normalized.apps) {
+        if (app.slug) discoveredSlugs.push(app.slug);
+      }
+      log.info("featured section scraped", {
+        slug, platform: this.platform, apps: normalized.apps.length,
+      });
+      return {
+        node: {
+          slug,
+          url: canonicalUrl,
+          data_source_url: canonicalUrl,
+          title: normalized.title,
+          breadcrumb: "",
+          description: normalized.description,
+          app_count: normalized.apps.length,
+          first_page_metrics: null,
+          first_page_apps: [],
+          parent_slug: null,
+          category_level: 0,
+          children: [],
+        },
+        appSlugs: discoveredSlugs,
+      };
+    }
+
     // Hub pages have appCount === null (no direct rankings)
     const isListingPage = normalized.appCount !== null;
 
@@ -996,6 +1028,83 @@ export class CategoryScraper {
       url: pageUrl,
       sections: sections.length,
       sightings: sections.reduce((sum, s) => sum + s.apps.length, 0),
+    });
+  }
+
+  /**
+   * Record apps from a curated/featured section page as featured_app_sightings.
+   * Used for non-Shopify platforms where entire pages are curated lists
+   * (e.g., Google Workspace "Popular Apps", "Top Rated").
+   */
+  private async recordFeaturedSightingsFromApps(
+    appList: NormalizedCategoryApp[],
+    sectionSlug: string,
+    sectionTitle: string,
+    runId: string,
+  ): Promise<void> {
+    const todayStr = new Date().toISOString().slice(0, 10);
+
+    for (let i = 0; i < appList.length; i++) {
+      const app = appList[i];
+
+      // Upsert app master record
+      const [upsertedApp] = await this.db
+        .insert(apps)
+        .values({
+          platform: this.platform,
+          slug: app.slug,
+          name: app.name,
+          ...(app.logoUrl && { iconUrl: app.logoUrl }),
+          ...(app.averageRating > 0 && { averageRating: String(app.averageRating) }),
+          ...(app.ratingCount > 0 && { ratingCount: app.ratingCount }),
+        })
+        .onConflictDoUpdate({
+          target: [apps.platform, apps.slug],
+          set: {
+            name: app.name,
+            ...(app.logoUrl && { iconUrl: app.logoUrl }),
+            ...(app.averageRating > 0 && { averageRating: String(app.averageRating) }),
+            ...(app.ratingCount > 0 && { ratingCount: app.ratingCount }),
+            updatedAt: new Date(),
+          },
+        })
+        .returning({ id: apps.id });
+
+      // Upsert featured sighting
+      await this.db
+        .insert(featuredAppSightings)
+        .values({
+          appId: upsertedApp.id,
+          surface: "home",
+          surfaceDetail: sectionSlug,
+          sectionHandle: sectionSlug,
+          sectionTitle,
+          position: app.position || i + 1,
+          seenDate: todayStr,
+          firstSeenRunId: runId,
+          lastSeenRunId: runId,
+          timesSeenInDay: 1,
+        })
+        .onConflictDoUpdate({
+          target: [
+            featuredAppSightings.appId,
+            featuredAppSightings.sectionHandle,
+            featuredAppSightings.surfaceDetail,
+            featuredAppSightings.seenDate,
+          ],
+          set: {
+            lastSeenRunId: runId,
+            position: app.position || i + 1,
+            sectionTitle,
+            timesSeenInDay: sql`${featuredAppSightings.timesSeenInDay} + 1`,
+          },
+        });
+
+      this.featuredSightingsCount++;
+    }
+
+    log.info("recorded featured sightings from curated section", {
+      sectionSlug, sectionTitle, apps: appList.length, platform: this.platform,
     });
   }
 

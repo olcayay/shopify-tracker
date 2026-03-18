@@ -1,27 +1,18 @@
 -- Seed: Google Workspace Marketplace categories
--- Discovered from live sidebar navigation (26 paths total)
+-- Discovered from live sidebar navigation
 -- Hierarchical: parent (hub, level 0) → child (listing, level 1)
 -- Slug uses '--' separator for parent--child paths
+-- NOTE: Curated/editorial sections (popular-apps, top-rated, etc.) are NOT categories.
+-- They are handled as featured_app_sightings by the scraper.
 
 INSERT INTO categories (platform, slug, title, url, parent_slug, category_level, is_tracked, is_listing_page) VALUES
   -- Parent categories (hub pages, level 0)
-  -- These are the main navigation categories that contain app listings
   ('google_workspace', 'business-tools', 'Business Tools', 'https://workspace.google.com/marketplace/category/business-tools', NULL, 0, true, true),
   ('google_workspace', 'communication', 'Communication', 'https://workspace.google.com/marketplace/category/communication', NULL, 0, true, true),
   ('google_workspace', 'productivity', 'Productivity', 'https://workspace.google.com/marketplace/category/productivity', NULL, 0, true, true),
   ('google_workspace', 'education', 'Education', 'https://workspace.google.com/marketplace/category/education', NULL, 0, true, true),
   ('google_workspace', 'utilities', 'Utilities', 'https://workspace.google.com/marketplace/category/utilities', NULL, 0, true, true),
   ('google_workspace', 'enterprise-apps', 'Enterprise Apps', 'https://workspace.google.com/marketplace/category/enterprise-apps', NULL, 0, true, true),
-
-  -- Curated/editorial categories (hub pages, level 0) — also have app listings
-  ('google_workspace', 'featured-partner-apps', 'Featured Partner Apps', 'https://workspace.google.com/marketplace/category/featured-partner-apps', NULL, 0, true, true),
-  ('google_workspace', 'google-apps', 'Google Apps', 'https://workspace.google.com/marketplace/category/google-apps', NULL, 0, true, true),
-  ('google_workspace', 'popular-apps', 'Popular Apps', 'https://workspace.google.com/marketplace/category/popular-apps', NULL, 0, true, true),
-  ('google_workspace', 'top-rated', 'Top Rated', 'https://workspace.google.com/marketplace/category/top-rated', NULL, 0, true, true),
-  ('google_workspace', 'recommended', 'Recommended', 'https://workspace.google.com/marketplace/category/recommended', NULL, 0, true, true),
-  ('google_workspace', 'apps-to-discover', 'Apps to Discover', 'https://workspace.google.com/marketplace/category/apps-to-discover', NULL, 0, true, true),
-  ('google_workspace', 'business-essentials', 'Business Essentials', 'https://workspace.google.com/marketplace/category/business-essentials', NULL, 0, true, true),
-  ('google_workspace', 'work-from-everywhere', 'Work From Everywhere', 'https://workspace.google.com/marketplace/category/work-from-everywhere', NULL, 0, true, true),
 
   -- Business Tools children (level 1)
   ('google_workspace', 'business-tools--accounting-and-finance', 'Accounting and Finance', 'https://workspace.google.com/marketplace/category/business-tools/accounting-and-finance', 'business-tools', 1, true, true),

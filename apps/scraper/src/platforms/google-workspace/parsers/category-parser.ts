@@ -21,12 +21,13 @@ export function parseGoogleWorkspaceCategoryPage(
 ): NormalizedCategoryPage {
   const $ = cheerio.load(html);
 
-  // Page title
-  const title =
+  // Page title — strip appended tooltip text ("infoMore details about user reviews")
+  const rawTitle =
     $("h1.UL2LKb").first().text().trim() ||
     $("h1").first().text().trim() ||
     $("title").text().replace(/\s*[-|].*$/, "").trim() ||
     categorySlug;
+  const title = rawTitle.replace(/info\s*More details about user reviews$/i, "").trim();
 
   const description = $('meta[name="description"]').attr("content") || "";
 

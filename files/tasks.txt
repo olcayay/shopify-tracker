@@ -177,3 +177,5 @@ WordPress first-class metadata columns (version, activeInstalls, lastUpdated) + 
 WordPress tag rankings visibility + icon fix (position >= 0 filter, "Linked" label, &fields=icons for API) ✅
 
 Google Workspace Marketplace integration — full platform module, parsers, scraper, dashboard, API, migrations ✅
+
+Google Workspace — convert 8 curated sections to featured_app_sightings, fix category title parser, cleanup migration ✅

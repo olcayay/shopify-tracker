@@ -1,6 +1,6 @@
 import { getFeaturedApps, getFeaturedSections, getCategories } from "@/lib/api";
 import { FeaturedTabs } from "./featured-tabs";
-import type { PlatformId } from "@appranks/shared";
+import { PLATFORMS, type PlatformId } from "@appranks/shared";
 
 export default async function FeaturedPage({
   params,
@@ -8,6 +8,7 @@ export default async function FeaturedPage({
   params: Promise<{ platform: string }>;
 }) {
   const { platform } = await params;
+  const platformName = PLATFORMS[platform as PlatformId]?.name ?? platform;
 
   const [homeData, sections, allCategories] = await Promise.all([
     getFeaturedApps(30, "home", undefined, undefined, platform as PlatformId).catch(() => ({
@@ -53,8 +54,8 @@ export default async function FeaturedPage({
       <div>
         <h1 className="text-2xl font-bold">Featured Apps</h1>
         <p className="text-sm text-muted-foreground mt-1">
-          Track which apps appear in featured/recommended sections on the
-          Shopify App Store.
+          Track which apps appear in featured/recommended sections on the{" "}
+          {platformName}.
         </p>
       </div>
 

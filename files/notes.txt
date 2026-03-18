@@ -1,3 +1,21 @@
+Google Workspace — Curated Sections as Featured
+==================================================
+
+8 curated/editorial sections (apps-to-discover, business-essentials, featured-partner-apps,
+google-apps, popular-apps, recommended, top-rated, work-from-everywhere) were incorrectly
+treated as real taxonomy categories. Converted them to featured_app_sightings:
+
+- Added `featuredSectionSlugs` to PlatformConstants interface
+- Split GOOGLE_WORKSPACE_SEED_CATEGORIES into real categories (6) + featured sections (8)
+- Category scraper crawlCategoryGeneric() now checks featuredSectionSlugs, records apps as
+  featured_app_sightings (surface="home", surfaceDetail=slug) instead of category rankings
+- New recordFeaturedSightingsFromApps() method in category-scraper.ts
+- Enabled hasFeaturedSections: true for google_workspace
+- Fixed title parser to strip "infoMore details about user reviews" suffix from h1
+- Migration 0071: cleanup curated entries from categories table + fix corrupted titles
+- Updated featured page description to be platform-aware
+- Updated SectionCard external URL to handle curated sections (surfaceDetail ≠ "home")
+
 Google Workspace Marketplace Integration
 ==========================================
 
@@ -9,14 +27,15 @@ URL patterns: /app/{name}/{id}, /category/{parent}/{child}, /search/{query}
 Slug format: {name}--{id} (same -- separator as Canva).
 
 Phase 1 — Platform config:
-- PLATFORMS entry with capability flags (hasKeywordSearch, hasReviews, hasPricing = true)
+- PLATFORMS entry with capability flags (hasKeywordSearch, hasReviews, hasFeaturedSections, hasPricing = true)
 - URL builders in shared + dashboard (app, category, search)
 - Similarity weights (0.35/0.0/0.30/0.35) + stop words
 - Metadata limits (appName: 50, subtitle: 200, intro: 200, details: 16000)
 
 Phase 2 — DB migrations:
 - 0069: seed account_platforms + platform_visibility (hidden by default)
-- 0070: seed categories (14 parents + 12 children = 26 categories from live sidebar, hierarchical with -- slugs)
+- 0070: seed categories (6 parents + 12 children = 18 real taxonomy categories)
+- 0071: cleanup curated sections from categories + fix corrupted titles
 
 Phase 3 — Scraper module (apps/scraper/src/platforms/google-workspace/):
 - index.ts: GoogleWorkspaceModule with Playwright browser, anti-bot measures

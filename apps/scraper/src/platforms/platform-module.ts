@@ -91,6 +91,10 @@ export interface NormalizedFeaturedSection {
 
 export interface PlatformConstants {
   seedCategories: string[];
+  /** Slugs that look like categories but are curated/editorial featured sections.
+   *  These are scraped via the category flow but recorded as featured_app_sightings
+   *  instead of category rankings. */
+  featuredSectionSlugs?: string[];
   maxCategoryDepth: number;
   defaultPagesPerCategory: number;
   trackedFields: string[];

@@ -80,7 +80,7 @@ export const PLATFORMS = {
     baseUrl: "https://workspace.google.com/marketplace",
     hasKeywordSearch: true,
     hasReviews: true,
-    hasFeaturedSections: false,
+    hasFeaturedSections: true,
     hasAdTracking: false,
     hasSimilarApps: false,
     hasAutoSuggestions: false,

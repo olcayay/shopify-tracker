@@ -1,7 +1,6 @@
 import type { PlatformConstants, PlatformScoringConfig } from "../platform-module.js";
 
-/** Top-level category slugs used as seeds for category scraping.
- * Discovered from live sidebar navigation. */
+/** Real taxonomy category slugs used as seeds for category scraping. */
 export const GOOGLE_WORKSPACE_SEED_CATEGORIES = [
   "business-tools",
   "communication",
@@ -9,18 +8,24 @@ export const GOOGLE_WORKSPACE_SEED_CATEGORIES = [
   "education",
   "utilities",
   "enterprise-apps",
+] as const;
+
+/** Curated/editorial sections that look like categories but are featured app lists.
+ * These are scraped via the category flow but recorded as featured_app_sightings. */
+export const GOOGLE_WORKSPACE_FEATURED_SECTIONS = [
+  "apps-to-discover",
+  "business-essentials",
   "featured-partner-apps",
   "google-apps",
   "popular-apps",
-  "top-rated",
   "recommended",
-  "apps-to-discover",
-  "business-essentials",
+  "top-rated",
   "work-from-everywhere",
 ] as const;
 
 export const GOOGLE_WORKSPACE_CONSTANTS: PlatformConstants = {
-  seedCategories: [...GOOGLE_WORKSPACE_SEED_CATEGORIES],
+  seedCategories: [...GOOGLE_WORKSPACE_SEED_CATEGORIES, ...GOOGLE_WORKSPACE_FEATURED_SECTIONS],
+  featuredSectionSlugs: [...GOOGLE_WORKSPACE_FEATURED_SECTIONS],
   maxCategoryDepth: 1, // Two-level: parent categories → child sub-categories
   defaultPagesPerCategory: 1,
   trackedFields: [
