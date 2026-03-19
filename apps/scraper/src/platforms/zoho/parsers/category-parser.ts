@@ -39,24 +39,34 @@ export function parseZohoCategoryPage(
     seen.add(appSlug);
 
     // Walk up to find the card container for this link
-    const card = $(el).closest("[class*='card'], [class*='extension'], [class*='app-item'], [class*='listing'], li, article") || $(el);
+    // Featured cards: .featured-extnBanner → name in .fextn-tit
+    // Regular cards: .extension_banner (per-card) → name in .extnTitle-firstOff or img[alt]
+    // Note: .default-extension wraps ALL regular cards — do NOT use as card selector
+    const featuredCard = $(el).closest(".featured-extnBanner");
+    const regularCard = $(el).closest(".extension_banner");
+    const card = featuredCard.length ? featuredCard : regularCard.length ? regularCard : $(el).parent().parent();
 
     const name =
-      card.find("h3, h4, .extension-name, .app-name, .name").first().text().trim() ||
-      $(el).text().trim() ||
+      card.find(".fextn-tit").first().text().trim() ||
+      card.find(".extnTitle-firstOff").first().text().trim() ||
+      card.find(".extnTitle-secOff").first().text().trim() ||
+      card.find("img").first().attr("alt")?.trim() ||
       namespace;
 
     const shortDescription =
-      card.find(".description, .tagline, .short-desc, p").first().text().trim() || "";
+      card.find(".fextn-desc").first().text().trim() ||
+      card.find(".extension_secondOff .extnTitle-pricing + div").first().text().trim() ||
+      "";
 
-    const ratingText = card.find(".rating, .avg-rating, [class*='rating']").first().text().trim();
-    const ratingMatch = ratingText.match(/(\d+\.?\d*)/);
-    const rawRating = ratingMatch ? parseFloat(ratingMatch[1]) : 0;
-    const averageRating = rawRating > 0 && rawRating <= 5 ? rawRating : 0;
-
-    const ratingCountText = card.find(".rating-count, .review-count, [class*='count']").first().text().trim();
-    const ratingCountMatch = ratingCountText.match(/(\d+)/);
+    // Rating count from (.avgRating-count) e.g. "(36)" or star count
+    const ratingCountEl = card.find(".avgRating-count").first().text().trim();
+    const ratingCountMatch = ratingCountEl.match(/(\d+)/);
     const ratingCount = ratingCountMatch ? parseInt(ratingCountMatch[1], 10) : 0;
+
+    // Count filled stars for average rating
+    const starCount = card.find(".avgRating .rated.selectorIcon, .fRatingUser .rated.selectorIcon").length;
+    const halfStar = card.find(".avgRating .floatedIcon, .fRatingUser .floatedIcon").length;
+    const averageRating = starCount > 0 ? Math.min(starCount + halfStar * 0.5, 5) : 0;
 
     const logoUrl =
       card.find("img").first().attr("src") ||

@@ -32,24 +32,39 @@ export function parseZohoSearchPage(
     if (seen.has(appSlug)) return;
     seen.add(appSlug);
 
-    const card = $(el).closest("[class*='card'], [class*='extension'], [class*='app-item'], [class*='listing'], li, article") || $(el);
+    // Search cards: .default-card-wrapper → name in .f15.singleLineEllips or .secondComp title
+    // Category featured cards: .featured-extnBanner → name in .fextn-tit
+    // Category regular cards: .default-extension → name in .extnTitle-firstOff
+    const searchCard = $(el).closest(".default-card-wrapper");
+    const featuredCard = $(el).closest(".featured-extnBanner");
+    const regularCard = $(el).closest(".default-extension");
+    const card = searchCard.length ? searchCard
+      : featuredCard.length ? featuredCard
+      : regularCard.length ? regularCard
+      : $(el).parent().parent().parent();
 
     const name =
-      card.find("h3, h4, .extension-name, .app-name, .name").first().text().trim() ||
-      $(el).text().trim() ||
+      card.find(".f15.singleLineEllips").first().text().trim() ||
+      card.find(".fextn-tit").first().text().trim() ||
+      card.find(".extnTitle-firstOff").first().text().trim() ||
+      card.find(".extnTitle-secOff").first().text().trim() ||
+      card.find("img").first().attr("alt")?.trim() ||
       namespace;
 
     const shortDescription =
-      card.find(".description, .tagline, .short-desc, p").first().text().trim() || "";
+      card.find(".fextn-desc").first().text().trim() ||
+      card.find(".secondComp .f14").first().text().trim() ||
+      "";
 
-    const ratingText = card.find(".rating, .avg-rating, [class*='rating']").first().text().trim();
-    const ratingMatch = ratingText.match(/(\d+\.?\d*)/);
-    const rawRating = ratingMatch ? parseFloat(ratingMatch[1]) : 0;
-    const averageRating = rawRating > 0 && rawRating <= 5 ? rawRating : 0;
-
-    const ratingCountText = card.find(".rating-count, .review-count, [class*='count']").first().text().trim();
-    const ratingCountMatch = ratingCountText.match(/(\d+)/);
+    // Rating count from (N) pattern
+    const ratingCountEl = card.find(".no-rating, .avgRating-count").first().text().trim();
+    const ratingCountMatch = ratingCountEl.match(/(\d+)/);
     const ratingCount = ratingCountMatch ? parseInt(ratingCountMatch[1], 10) : 0;
+
+    // Count filled stars
+    const starCount = card.find("a.colorF5A623, .rated.selectorIcon").length;
+    const halfStar = card.find("span.colorF5A623, .floatedIcon").length;
+    const averageRating = starCount > 0 ? Math.min(starCount + halfStar * 0.5, 5) : 0;
 
     const logoUrl =
       card.find("img").first().attr("src") ||
