@@ -19,6 +19,8 @@ export function buildExternalAppUrl(platform: PlatformId, slug: string, external
       return `https://marketplace.atlassian.com/apps/${slug}`;
     case "zoom":
       return `https://marketplace.zoom.us/apps/${slug}`;
+    case "zoho":
+      return `https://marketplace.zoho.com/app/${slug.replace("--", "/")}`;
   }
 }
 
@@ -44,6 +46,8 @@ export function buildExternalCategoryUrl(platform: PlatformId, slug: string): st
       return `https://marketplace.atlassian.com/categories/${slug}`;
     case "zoom":
       return `https://marketplace.zoom.us/apps?category=${slug}`;
+    case "zoho":
+      return `https://marketplace.zoho.com/app/${slug}`;
   }
 }
 
@@ -65,6 +69,8 @@ export function buildExternalSearchUrl(platform: PlatformId, query: string): str
       return `https://marketplace.atlassian.com/search?query=${encodeURIComponent(query)}`;
     case "zoom":
       return `https://marketplace.zoom.us/apps?q=${encodeURIComponent(query)}`;
+    case "zoho":
+      return `https://marketplace.zoho.com/search?searchTerm=${encodeURIComponent(query)}`;
   }
 }
 

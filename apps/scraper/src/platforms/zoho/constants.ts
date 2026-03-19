@@ -1,0 +1,106 @@
+import type { PlatformConstants, PlatformScoringConfig } from "../platform-module.js";
+
+/** Seed categories for the Zoho Marketplace — one per Zoho product. */
+export const ZOHO_SEED_CATEGORIES = [
+  "crm",
+  "salesiq",
+  "desk",
+  "assist",
+  "meeting",
+  "cliq",
+  "connect",
+  "recruit",
+  "people",
+  "commerce",
+  "campaigns",
+  "sites",
+  "landingpage",
+  "invoice",
+  "books",
+  "inventory",
+  "billing",
+  "expense",
+  "checkout",
+  "workdrive",
+  "zeptomail",
+  "teaminbox",
+  "writer",
+  "show",
+  "mail",
+  "analytics",
+  "sprints",
+  "bugtracker",
+  "projects",
+  "orchestly",
+  "creator",
+] as const;
+
+/** Display names for Zoho categories (slug → human-readable title). */
+export const ZOHO_CATEGORY_NAMES: Record<string, string> = {
+  crm: "Zoho CRM",
+  salesiq: "Zoho SalesIQ",
+  desk: "Zoho Desk",
+  assist: "Zoho Assist",
+  meeting: "Zoho Meeting",
+  cliq: "Zoho Cliq",
+  connect: "Zoho Connect",
+  recruit: "Zoho Recruit",
+  people: "Zoho People",
+  commerce: "Zoho Commerce",
+  campaigns: "Zoho Campaigns",
+  sites: "Zoho Sites",
+  landingpage: "Zoho LandingPage",
+  invoice: "Zoho Invoice",
+  books: "Zoho Books",
+  inventory: "Zoho Inventory",
+  billing: "Zoho Billing",
+  expense: "Zoho Expense",
+  checkout: "Zoho Checkout",
+  workdrive: "Zoho WorkDrive",
+  zeptomail: "Zoho ZeptoMail",
+  teaminbox: "Zoho TeamInbox",
+  writer: "Zoho Writer",
+  show: "Zoho Show",
+  mail: "Zoho Mail",
+  analytics: "Zoho Analytics",
+  sprints: "Zoho Sprints",
+  bugtracker: "Zoho BugTracker",
+  projects: "Zoho Projects",
+  orchestly: "Zoho Orchestly",
+  creator: "Zoho Creator",
+};
+
+export const ZOHO_CONSTANTS: PlatformConstants = {
+  seedCategories: [...ZOHO_SEED_CATEGORIES],
+  maxCategoryDepth: 0, // Flat: each Zoho product is a top-level category
+  defaultPagesPerCategory: 1, // SPA loads all extensions on one page
+  trackedFields: [
+    "tagline",
+    "about",
+    "pricing",
+    "publishedDate",
+    "version",
+    "deploymentType",
+    "categories",
+    "cEdition",
+    "partnerDetails",
+    "versionhistory",
+  ],
+  rateLimit: { minDelayMs: 1000, maxDelayMs: 3000 },
+};
+
+export const ZOHO_SCORING: PlatformScoringConfig = {
+  pageSize: 50,
+  pageDecay: 0.85,
+  similarityWeights: {
+    category: 0.35,
+    feature: 0.0,
+    keyword: 0.30,
+    text: 0.35,
+  },
+  stopWords: new Set([
+    "zoho", "marketplace", "extension", "integration",
+    "app", "apps", "crm", "desk", "books", "projects",
+    "the", "and", "for", "your", "our",
+  ]),
+};

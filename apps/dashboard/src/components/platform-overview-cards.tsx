@@ -15,6 +15,7 @@ const PLATFORM_LABELS: Record<PlatformId, string> = {
   google_workspace: "Google Workspace",
   atlassian: "Atlassian",
   zoom: "Zoom",
+  zoho: "Zoho",
 };
 
 const PLATFORM_COLORS: Record<PlatformId, string> = {
@@ -26,6 +27,7 @@ const PLATFORM_COLORS: Record<PlatformId, string> = {
   google_workspace: "#4285F4",
   atlassian: "#0052CC",
   zoom: "#0B5CFF",
+  zoho: "#D4382C",
 };
 
 interface PlatformCounts {

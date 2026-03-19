@@ -245,6 +245,31 @@ const SCHEDULES = [
     type: "compute_app_scores" as const,
     platform: "zoom" as const,
   },
+  // ── Zoho ──
+  {
+    name: "zoho_category",
+    cron: "30 9 * * *", // Daily at 09:30
+    type: "category" as const,
+    platform: "zoho" as const,
+  },
+  {
+    name: "zoho_app_details",
+    cron: "0 10,22 * * *", // Every 12 hours (10:00, 22:00)
+    type: "app_details" as const,
+    platform: "zoho" as const,
+  },
+  {
+    name: "zoho_keyword_search",
+    cron: "30 10,22 * * *", // Every 12 hours (10:30, 22:30)
+    type: "keyword_search" as const,
+    platform: "zoho" as const,
+  },
+  {
+    name: "zoho_compute_app_scores",
+    cron: "30 13 * * *", // Daily at 13:30 UTC
+    type: "compute_app_scores" as const,
+    platform: "zoho" as const,
+  },
 ];
 
 log.info("starting scheduler", {

@@ -93,6 +93,16 @@ const zoomLimits: MetadataLimits = {
   seoMetaDescription: 0,
 };
 
+const zohoLimits: MetadataLimits = {
+  appName: 50,
+  subtitle: 80,
+  introduction: 200,
+  details: 2000,
+  feature: 0,
+  seoTitle: 0,
+  seoMetaDescription: 0,
+};
+
 const defaultLimits = shopifyLimits;
 
 const limitsByPlatform: Record<string, MetadataLimits> = {
@@ -104,6 +114,7 @@ const limitsByPlatform: Record<string, MetadataLimits> = {
   google_workspace: googleWorkspaceLimits,
   atlassian: atlassianLimits,
   zoom: zoomLimits,
+  zoho: zohoLimits,
 };
 
 export function getMetadataLimits(platform: string): MetadataLimits {

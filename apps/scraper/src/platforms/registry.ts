@@ -8,6 +8,7 @@ import { WordPressModule } from "./wordpress/index.js";
 import { GoogleWorkspaceModule } from "./google-workspace/index.js";
 import { AtlassianModule } from "./atlassian/index.js";
 import { ZoomModule } from "./zoom/index.js";
+import { ZohoModule } from "./zoho/index.js";
 import type { HttpClient } from "../http-client.js";
 import type { BrowserClient } from "../browser-client.js";
 
@@ -46,6 +47,9 @@ export function getModule(platformId: PlatformId, httpClient?: HttpClient, brows
       break;
     case "zoom":
       module = new ZoomModule(httpClient);
+      break;
+    case "zoho":
+      module = new ZohoModule(httpClient, browserClient);
       break;
     default:
       throw new Error(`Unknown platform: ${platformId}`);

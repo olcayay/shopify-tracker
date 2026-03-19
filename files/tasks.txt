@@ -195,3 +195,5 @@ Atlassian category fix — correct 10 seed categories, ordered edge parsing, pro
 Zoom App Marketplace — 8th platform integration, public JSON API, 48 categories, 9 featured sections, HttpClient only ✅
 
 auto-include app categories in "My Categories" section (auto-detect from tracked/competitor apps) ✅
+
+Zoho Marketplace — 9th platform integration, HttpClient for app details (detailsObject), BrowserClient for SPA categories/search, 31 product categories, slug format {service}--{namespace} ✅

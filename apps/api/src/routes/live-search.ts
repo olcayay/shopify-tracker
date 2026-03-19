@@ -255,6 +255,38 @@ async function googleWorkspaceDbSearch(db: ReturnType<typeof createDb>, keyword:
 }
 
 /**
+ * Search Zoho Marketplace apps from our database (SPA, no public search API).
+ */
+async function zohoDbSearch(db: ReturnType<typeof createDb>, keyword: string): Promise<{ totalResults: number; apps: SearchApp[] }> {
+  const pattern = `%${keyword}%`;
+  const rows = await db.execute(sql`
+    SELECT slug, name, icon_url, app_card_subtitle
+    FROM apps
+    WHERE platform = 'zoho'
+      AND (name ILIKE ${pattern} OR slug ILIKE ${pattern} OR app_card_subtitle ILIKE ${pattern})
+    ORDER BY
+      CASE WHEN name ILIKE ${keyword} THEN 0
+           WHEN name ILIKE ${keyword + '%'} THEN 1
+           ELSE 2 END,
+      name
+    LIMIT 50
+  `);
+  const results: SearchApp[] = (rows as any[]).map((r: any, idx: number) => ({
+    position: idx + 1,
+    app_slug: r.slug,
+    app_name: r.name,
+    short_description: r.app_card_subtitle || "",
+    average_rating: 0,
+    rating_count: 0,
+    logo_url: r.icon_url || undefined,
+    is_sponsored: false,
+    is_built_in: false,
+    is_built_for_shopify: false,
+  }));
+  return { totalResults: results.length, apps: results };
+}
+
+/**
  * Live search Wix App Market by scraping the search results page.
  * Wix embeds all data as base64-encoded JSON in __REACT_QUERY_STATE__.
  */
@@ -459,6 +491,18 @@ export const liveSearchRoutes: FastifyPluginAsync = async (app) => {
       } catch (err: any) {
         request.log.error({ platform, keyword: q, error: err.message, ms: Date.now() - start }, "live-search failed");
         return reply.code(502).send({ error: `Failed to fetch from Zoom: ${err.message}` });
+      }
+    }
+
+    if (platform === "zoho") {
+      // Database fallback search (SPA, no public API)
+      try {
+        const result = await zohoDbSearch(db, q);
+        request.log.info({ platform, keyword: q, source: "database", apps: result.apps.length, ms: Date.now() - start }, "live-search completed via database");
+        return { keyword: q, totalResults: result.totalResults, apps: result.apps, source: "database" };
+      } catch (err: any) {
+        request.log.error({ platform, keyword: q, error: err.message, ms: Date.now() - start }, "live-search failed");
+        return reply.code(502).send({ error: `Failed to search Zoho apps: ${err.message}` });
       }
     }
 

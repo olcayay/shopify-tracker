@@ -127,6 +127,22 @@ export const PLATFORMS = {
     maxRatingStars: 5,
     pageSize: 100,
   },
+  zoho: {
+    id: "zoho" as const,
+    name: "Zoho Marketplace",
+    baseUrl: "https://marketplace.zoho.com",
+    hasKeywordSearch: true,
+    hasReviews: false,
+    hasFeaturedSections: false,
+    hasAdTracking: false,
+    hasSimilarApps: false,
+    hasAutoSuggestions: false,
+    hasFeatureTaxonomy: false,
+    hasPricing: false,
+    hasLaunchedDate: true,
+    maxRatingStars: 5,
+    pageSize: 50,
+  },
 } as const;
 
 export type PlatformId = keyof typeof PLATFORMS;
@@ -166,6 +182,8 @@ export function buildExternalAppUrl(platform: PlatformId, slug: string, external
       return `https://marketplace.atlassian.com/apps/${slug}`;
     case "zoom":
       return `https://marketplace.zoom.us/apps/${slug}`;
+    case "zoho":
+      return `https://marketplace.zoho.com/app/${slug.replace("--", "/")}`;
   }
 }
 
@@ -195,5 +213,7 @@ export function buildExternalCategoryUrl(platform: PlatformId, slug: string): st
       return `https://marketplace.atlassian.com/categories/${slug}`;
     case "zoom":
       return `https://marketplace.zoom.us/apps?category=${slug}`;
+    case "zoho":
+      return `https://marketplace.zoho.com/app/${slug}`;
   }
 }

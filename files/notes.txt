@@ -1,3 +1,58 @@
+Zoho Marketplace — 9th Platform Integration
+=============================================
+
+Platform ID: "zoho", Color: #D4382C (Zoho brand red)
+URL: https://marketplace.zoho.com
+
+Architecture:
+- App detail pages: HttpClient + Cheerio (data in `var detailsObject = {...}` script tag)
+- Category/search pages: BrowserClient/Playwright (SPAs, no data in initial HTML)
+- Slug format: {service}--{namespace} (e.g., crm--jotform)
+- 31 flat categories (one per Zoho product: CRM, Desk, Books, etc.)
+- hasReviews: false, hasFeaturedSections: false, hasLaunchedDate: true
+
+Files created:
+- apps/scraper/src/platforms/zoho/ (urls.ts, constants.ts, index.ts, parsers/)
+- packages/db/src/migrations/0081_seed_zoho_platform.sql
+- packages/db/src/migrations/0082_seed_zoho_categories.sql
+
+Files modified:
+- packages/shared/src/constants/platforms.ts (PLATFORMS, buildExternalAppUrl, buildExternalCategoryUrl)
+- packages/shared/src/similarity.ts (weights, stop words, extractCategorySlugsFromPlatformData)
+- apps/scraper/src/platforms/registry.ts (ZohoModule import + case)
+- apps/scraper/src/scheduler.ts (4 cron jobs: category, app_details, keyword_search, compute_app_scores)
+- apps/scraper/src/cli.ts (error message + browserClient creation)
+- apps/scraper/src/process-job.ts (browserClient creation for zoho)
+- apps/scraper/src/jobs/backfill-categories.ts (zoho URL pattern)
+- apps/api/src/routes/live-search.ts (zohoDbSearch + handler)
+- apps/api/src/routes/apps.ts (developer email path)
+- apps/dashboard/src/lib/auth-context.tsx (VALID_PLATFORMS)
+- apps/dashboard/src/proxy.ts (VALID_PLATFORMS)
+- apps/dashboard/src/components/admin-scraper-trigger.tsx (VALID_PLATFORMS)
+- apps/dashboard/src/components/sidebar.tsx (labels, colors, regex, research exclusion)
+- apps/dashboard/src/app/(dashboard)/overview/page.tsx (PLATFORM_BRANDS, ALL_PLATFORMS)
+- apps/dashboard/src/components/platform-overview-cards.tsx (labels, colors)
+- apps/dashboard/src/lib/platform-urls.ts (3 URL builders)
+- apps/dashboard/src/lib/metadata-limits.ts (zohoLimits)
+- apps/dashboard/src/app/(dashboard)/[platform]/categories/page.tsx (isFlat)
+- packages/db/src/migrations/meta/_journal.json (idx 81, 82)
+
+Scheduler cron (staggered after Zoom):
+- zoho_category: 30 9 * * * (daily 09:30 UTC)
+- zoho_app_details: 0 10,22 * * * (every 12h)
+- zoho_keyword_search: 30 10,22 * * * (every 12h)
+- zoho_compute_app_scores: 30 13 * * * (daily 13:30 UTC)
+
+Bugs fixed during testing:
+1. detailsObject regex parsing → rewritten to brace-counting extraction (extractJsonObject)
+2. Search/category parser numeric overflow → rating value clamped to 0-5 range
+3. App-details-scraper missing averageRating/ratingCount in apps table upsert (all platforms)
+
+Tested flows:
+- Category scrape: crm → 25 apps via BrowserClient ✓
+- App detail: crm--jotform → JSON.parse 15KB, rating=2.44, count=9, pricing="Free" ✓
+- Keyword search: "email marketing" → 20 apps via BrowserClient ✓
+
 Auto-Include App Categories in "My Categories"
 ================================================
 

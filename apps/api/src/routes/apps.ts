@@ -476,6 +476,7 @@ export const appRoutes: FastifyPluginAsync = async (app) => {
       wix: "platform_data->>'developerEmail'",
       wordpress: "platform_data->>'homepage'",
       google_workspace: "platform_data->>'developerWebsite'",
+      zoho: "platform_data->'partnerDetails'->0->>'supportEmail'",
     };
     const countryPath: Record<string, string> = {
       canva: "platform_data->'developerAddress'->>'country'",

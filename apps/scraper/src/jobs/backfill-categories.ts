@@ -70,6 +70,9 @@ export async function backfillCategories(db: Database, triggeredBy: string, queu
         } else if (platform === "zoom") {
           const zoomMatch = cat.url?.match(/[?&]category=([^&]+)/);
           catSlug = zoomMatch?.[1] ? decodeURIComponent(zoomMatch[1]) : null;
+        } else if (platform === "zoho") {
+          const zohoMatch = cat.url?.match(/\/app\/([^/?#]+)$/);
+          catSlug = zohoMatch?.[1] ?? null;
         }
         if (!catSlug) continue;
         if (!categoryMap.has(catSlug)) {

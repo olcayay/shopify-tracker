@@ -568,6 +568,20 @@
       "when": 1775606400000,
       "tag": "0080_add_scrape_runs_job_id",
       "breakpoints": true
+    },
+    {
+      "idx": 81,
+      "version": "7",
+      "when": 1775692800000,
+      "tag": "0081_seed_zoho_platform",
+      "breakpoints": true
+    },
+    {
+      "idx": 82,
+      "version": "7",
+      "when": 1775779200000,
+      "tag": "0082_seed_zoho_categories",
+      "breakpoints": true
     }
   ]
 }
