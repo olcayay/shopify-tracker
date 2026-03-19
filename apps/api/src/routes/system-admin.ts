@@ -940,6 +940,53 @@ export const systemAdminRoutes: FastifyPluginAsync = async (app) => {
     }
   });
 
+  // POST /api/system-admin/scraper/runs/:runId/retry — re-enqueue a completed/failed run
+  app.post<{ Params: { runId: string } }>(
+    "/scraper/runs/:runId/retry",
+    async (request, reply) => {
+      try {
+        const { runId } = request.params;
+        const [run] = await db
+          .select()
+          .from(scrapeRuns)
+          .where(eq(scrapeRuns.id, runId));
+
+        if (!run) {
+          return reply.code(404).send({ error: "Run not found" });
+        }
+        if (!["failed", "completed"].includes(run.status)) {
+          return reply.code(400).send({ error: `Cannot retry a run with status "${run.status}"` });
+        }
+
+        const userEmail = (request as any).user?.email || "api";
+        const metadata = (run.metadata || {}) as Record<string, any>;
+        const queue = getInteractiveQueue();
+
+        const jobData: Record<string, any> = {
+          type: run.scraperType,
+          triggeredBy: `retry:${userEmail}`,
+        };
+        if (run.platform) jobData.platform = run.platform;
+        if (metadata.slug) jobData.slug = metadata.slug;
+        if (metadata.keyword) jobData.keyword = metadata.keyword;
+        if (metadata.options) jobData.options = metadata.options;
+
+        const job = await queue.add(`scrape:${run.scraperType}`, jobData);
+        app.log.info(`Retry enqueued: runId=${runId}, newJobId=${job.id}, by=${userEmail}`);
+
+        return {
+          message: `Run #${runId} retried`,
+          jobId: job.id,
+          queue: "interactive",
+          status: "queued",
+        };
+      } catch (err: any) {
+        app.log.error(`Failed to retry run: ${err.message}`);
+        return reply.code(500).send({ error: "Failed to retry run" });
+      }
+    }
+  );
+
   // POST /api/system-admin/scraper/trigger
   app.post("/scraper/trigger", async (request, reply) => {
     const { type, slug, keyword, options, queue: targetQueue, platform: platformParam } = request.body as {

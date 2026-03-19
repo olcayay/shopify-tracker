@@ -14,6 +14,7 @@ const PLATFORM_LABELS: Record<PlatformId, string> = {
   wordpress: "WordPress",
   google_workspace: "Google Workspace",
   atlassian: "Atlassian",
+  zoom: "Zoom",
 };
 
 const PLATFORM_COLORS: Record<PlatformId, string> = {
@@ -24,6 +25,7 @@ const PLATFORM_COLORS: Record<PlatformId, string> = {
   wordpress: "#21759B",
   google_workspace: "#4285F4",
   atlassian: "#0052CC",
+  zoom: "#0B5CFF",
 };
 
 interface PlatformCounts {

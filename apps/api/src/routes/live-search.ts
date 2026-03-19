@@ -429,6 +429,39 @@ export const liveSearchRoutes: FastifyPluginAsync = async (app) => {
       }
     }
 
+    if (platform === "zoom") {
+      try {
+        const apiUrl = `https://marketplace.zoom.us/api/v1/apps/search?q=${encodeURIComponent(q)}&pageNum=1&pageSize=10`;
+        const response = await fetch(apiUrl, {
+          headers: {
+            Accept: "application/json",
+            "User-Agent": USER_AGENTS[Math.floor(Math.random() * USER_AGENTS.length)],
+          },
+        });
+        if (!response.ok) {
+          throw new Error(`Zoom API returned ${response.status}`);
+        }
+        const data = await response.json() as { total?: number; apps?: any[] };
+        const zoomApps: SearchApp[] = (data.apps || []).map((app: any, idx: number) => ({
+          position: idx + 1,
+          app_slug: app.id || "",
+          app_name: app.displayName || app.name || "",
+          short_description: app.description || "",
+          average_rating: app.ratingStatistics?.averageRating ?? 0,
+          rating_count: app.ratingStatistics?.totalRatings ?? 0,
+          logo_url: app.icon ? (app.icon.startsWith("http") ? app.icon : `https://marketplacecontent-cf.zoom.us/${encodeURIComponent(app.icon)}`) : undefined,
+          is_sponsored: false,
+          is_built_in: false,
+          is_built_for_shopify: false,
+        }));
+        request.log.info({ platform, keyword: q, source: "api", apps: zoomApps.length, ms: Date.now() - start }, "live-search completed via Zoom API");
+        return { keyword: q, totalResults: data.total ?? zoomApps.length, apps: zoomApps };
+      } catch (err: any) {
+        request.log.error({ platform, keyword: q, error: err.message, ms: Date.now() - start }, "live-search failed");
+        return reply.code(502).send({ error: `Failed to fetch from Zoom: ${err.message}` });
+      }
+    }
+
     if (platform === "wordpress") {
       try {
         const apiUrl = `https://api.wordpress.org/plugins/info/1.2/?action=query_plugins&search=${encodeURIComponent(q)}&per_page=10`;

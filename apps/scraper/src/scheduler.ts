@@ -214,6 +214,31 @@ const SCHEDULES = [
     type: "compute_app_scores" as const,
     platform: "atlassian" as const,
   },
+  // ── Zoom ──
+  {
+    name: "zoom_category",
+    cron: "0 8 * * *", // Daily at 08:00
+    type: "category" as const,
+    platform: "zoom" as const,
+  },
+  {
+    name: "zoom_app_details",
+    cron: "30 8,20 * * *", // Every 12 hours (08:30, 20:30)
+    type: "app_details" as const,
+    platform: "zoom" as const,
+  },
+  {
+    name: "zoom_keyword_search",
+    cron: "0 9,21 * * *", // Every 12 hours (09:00, 21:00)
+    type: "keyword_search" as const,
+    platform: "zoom" as const,
+  },
+  {
+    name: "zoom_compute_app_scores",
+    cron: "0 13 * * *", // Daily at 13:00 UTC
+    type: "compute_app_scores" as const,
+    platform: "zoom" as const,
+  },
 ];
 
 log.info("starting scheduler", {

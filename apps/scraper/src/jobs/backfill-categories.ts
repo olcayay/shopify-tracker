@@ -66,6 +66,9 @@ export async function backfillCategories(db: Database, triggeredBy: string, queu
         } else if (platform === "google_workspace") {
           const gwMatch = cat.url?.match(/\/marketplace\/category\/([^/?]+)(?:\/([^/?]+))?/);
           catSlug = gwMatch?.[2] ? `${gwMatch[1]}--${gwMatch[2]}` : gwMatch?.[1] ?? null;
+        } else if (platform === "zoom") {
+          const zoomMatch = cat.url?.match(/[?&]category=([^&]+)/);
+          catSlug = zoomMatch?.[1] ? decodeURIComponent(zoomMatch[1]) : null;
         }
         if (!catSlug) continue;
         if (!categoryMap.has(catSlug)) {

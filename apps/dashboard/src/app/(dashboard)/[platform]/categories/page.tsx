@@ -90,7 +90,7 @@ export default function CategoriesPage() {
   const [sortKey, setSortKey] = useState<FlatSortKey>("title");
   const [sortDir, setSortDir] = useState<SortDir>("asc");
 
-  const isFlat = platform === "wordpress";
+  const isFlat = platform === "wordpress" || platform === "zoom" || platform === "atlassian";
   const canEdit = user?.role === "owner" || user?.role === "editor";
 
   useEffect(() => {
@@ -299,8 +299,11 @@ export default function CategoriesPage() {
     );
   }
 
-  const entityLabel = isFlat ? "Tags" : "Categories";
-  const entityLabelLower = isFlat ? "tags" : "categories";
+  const isTagPlatform = platform === "wordpress";
+  const entityLabel = isTagPlatform ? "Tags" : "Categories";
+  const entityLabelLower = isTagPlatform ? "tags" : "categories";
+  const entitySingular = isTagPlatform ? "Tag" : "Category";
+  const appNoun = isTagPlatform ? "Plugins" : "Apps";
 
   return (
     <div className="space-y-6">
@@ -349,9 +352,9 @@ export default function CategoriesPage() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>{isFlat ? "Tag" : "Category"}</TableHead>
+                  <TableHead>{entitySingular}</TableHead>
                   {!isFlat && <TableHead>Parents</TableHead>}
-                  <TableHead>Total {isFlat ? "Plugins" : "Apps"}</TableHead>
+                  <TableHead>Total {appNoun}</TableHead>
                   <TableHead>Tracked</TableHead>
                   <TableHead>Competitor</TableHead>
                   {canEdit && <TableHead className="w-12" />}
@@ -504,11 +507,11 @@ export default function CategoriesPage() {
         </Card>
       )}
 
-      {/* Flat tags view for WordPress */}
+      {/* Flat view for WordPress / Zoom / Atlassian */}
       {isFlat ? (
         <>
-          {/* Browse sections */}
-          {!searchQuery && browseTags.length > 0 && (
+          {/* Browse sections (WordPress only) */}
+          {isTagPlatform && !searchQuery && browseTags.length > 0 && (
             <Card>
               <CardHeader className="pb-3">
                 <CardTitle className="text-base">Browse Sections</CardTitle>
@@ -537,10 +540,10 @@ export default function CategoriesPage() {
             </Card>
           )}
 
-          {/* Regular tags table */}
+          {/* Regular flat categories/tags table */}
           <Card>
             <CardHeader className="pb-3">
-              <CardTitle className="text-base">All Tags</CardTitle>
+              <CardTitle className="text-base">All {entityLabel}</CardTitle>
             </CardHeader>
             <CardContent>
               {loading ? (
@@ -548,8 +551,8 @@ export default function CategoriesPage() {
               ) : regularTags.length === 0 ? (
                 <p className="text-muted-foreground text-center py-8">
                   {searchQuery
-                    ? `No tags matching "${searchQuery}"`
-                    : "No tags found."}
+                    ? `No ${entityLabelLower} matching "${searchQuery}"`
+                    : `No ${entityLabelLower} found.`}
                 </p>
               ) : (
                 <Table>
@@ -560,7 +563,7 @@ export default function CategoriesPage() {
                           onClick={() => toggleFlatSort("title")}
                           className="flex items-center font-medium hover:text-foreground transition-colors"
                         >
-                          Tag
+                          {entitySingular}
                           <FlatSortIcon col="title" />
                         </button>
                       </TableHead>
@@ -569,11 +572,10 @@ export default function CategoriesPage() {
                           onClick={() => toggleFlatSort("appCount")}
                           className="flex items-center font-medium hover:text-foreground transition-colors"
                         >
-                          Plugins
+                          {appNoun}
                           <FlatSortIcon col="appCount" />
                         </button>
                       </TableHead>
-                      <TableHead>Status</TableHead>
                       {canEdit && <TableHead className="w-12" />}
                     </TableRow>
                   </TableHeader>
@@ -594,13 +596,6 @@ export default function CategoriesPage() {
                             {tag.appCount != null
                               ? tag.appCount.toLocaleString()
                               : "\u2014"}
-                          </TableCell>
-                          <TableCell>
-                            {tag.isTracked && (
-                              <Badge variant="secondary" className="text-xs">
-                                Tracked
-                              </Badge>
-                            )}
                           </TableCell>
                           {canEdit && (
                             <TableCell>
@@ -684,7 +679,7 @@ export default function CategoriesPage() {
 
       <ConfirmModal
         open={!!confirmUnstar}
-        title={`Remove Starred ${isFlat ? "Tag" : "Category"}`}
+        title={`Remove Starred ${entitySingular}`}
         description={`Are you sure you want to remove "${confirmUnstar?.title}" from starred ${entityLabelLower}?`}
         confirmLabel="Remove"
         onConfirm={() => {

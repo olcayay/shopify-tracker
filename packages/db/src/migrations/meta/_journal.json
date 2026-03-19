@@ -533,6 +533,34 @@
       "when": 1775174400000,
       "tag": "0075_fix_atlassian_categories",
       "breakpoints": true
+    },
+    {
+      "idx": 76,
+      "version": "7",
+      "when": 1775260800000,
+      "tag": "0076_seed_zoom_platform",
+      "breakpoints": true
+    },
+    {
+      "idx": 77,
+      "version": "7",
+      "when": 1775347200000,
+      "tag": "0077_seed_zoom_categories",
+      "breakpoints": true
+    },
+    {
+      "idx": 78,
+      "version": "7",
+      "when": 1775433600000,
+      "tag": "0078_fix_zoom_icon_urls",
+      "breakpoints": true
+    },
+    {
+      "idx": 79,
+      "version": "7",
+      "when": 1775520000000,
+      "tag": "0079_zoom_icon_url_trigger",
+      "breakpoints": true
     }
   ]
 }

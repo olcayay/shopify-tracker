@@ -3038,11 +3038,13 @@ export const accountRoutes: FastifyPluginAsync = async (app) => {
         return reply.code(400).send({ error: "slug is required" });
       }
 
-      // Look up category ID from slug
+      const platform = getPlatformFromQuery(request.query as Record<string, unknown>);
+
+      // Look up category ID from slug + platform
       const [catRow] = await db
         .select({ id: categories.id })
         .from(categories)
-        .where(eq(categories.slug, slug))
+        .where(and(eq(categories.slug, slug), eq(categories.platform, platform)))
         .limit(1);
       if (!catRow) {
         return reply.code(404).send({ error: "Category not found" });
@@ -3069,12 +3071,13 @@ export const accountRoutes: FastifyPluginAsync = async (app) => {
     async (request, reply) => {
       const { accountId } = request.user;
       const slug = decodeURIComponent(request.params.slug);
+      const platform = getPlatformFromQuery(request.query as Record<string, unknown>);
 
-      // Look up category ID from slug
+      // Look up category ID from slug + platform
       const [delCatRow] = await db
         .select({ id: categories.id })
         .from(categories)
-        .where(eq(categories.slug, slug))
+        .where(and(eq(categories.slug, slug), eq(categories.platform, platform)))
         .limit(1);
 
       if (!delCatRow) {

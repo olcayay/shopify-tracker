@@ -1,3 +1,50 @@
+Zoom App Marketplace — 8th Platform Integration
+================================================
+
+Added Zoom App Marketplace (marketplace.zoom.us) as the 8th platform. Uses public JSON API
+exclusively — no HTML scraping or Playwright needed, HttpClient only.
+
+Key characteristics:
+- App IDs are base64-like strings (e.g. VG_p3Bb_TwWe_bgZmPUaXw), used as slugs
+- App detail API (/api/v1/apps/{id}) requires auth → use filter/search endpoint data
+- Individual reviews require auth → hasReviews: false
+- Pricing requires auth → hasPricing: false
+- 48 selectable categories (flat, no hierarchy)
+- 9 curated/featured collections via /api/v1/curatedCategory/preview/excludeBanner
+- 5-star rating system, ratings available from filter/search endpoints
+- Badges: fedramp_authorized (FedRAMP), essential_app (Essential App)
+
+API endpoints:
+- GET /api/v1/apps/filter?category={slug}&pageNum=N&pageSize=100 — category scraping
+- GET /api/v1/apps/search?q={keyword}&pageNum=N&pageSize=100 — keyword search
+- GET /api/v1/curatedCategory/preview/excludeBanner — all featured sections (single call)
+- GET /api/v1/app_categories — category list
+
+Files created (11):
+- apps/scraper/src/platforms/zoom/ (index.ts, constants.ts, urls.ts)
+- apps/scraper/src/platforms/zoom/parsers/ (app-parser.ts, category-parser.ts, search-parser.ts, featured-parser.ts)
+- apps/scraper/src/platforms/zoom/parsers/__tests__/ (3 test files, 17 tests)
+- packages/db/src/migrations/ (0076_seed_zoom_platform.sql, 0077_seed_zoom_categories.sql)
+
+Files modified (17):
+- packages/shared/src/constants/platforms.ts — added zoom platform config + URL builders
+- packages/shared/src/similarity.ts — weights, stop words, extractCategorySlugsFromPlatformData
+- packages/db/src/migrations/meta/_journal.json — entries 76-77
+- apps/scraper/src/platforms/registry.ts — ZoomModule registration
+- apps/scraper/src/scheduler.ts — 4 cron jobs (category, app_details, keyword_search, compute_app_scores)
+- apps/scraper/src/cli.ts — zoom in valid platforms
+- apps/scraper/src/jobs/backfill-categories.ts — zoom URL slug extraction
+- apps/api/src/routes/live-search.ts — Zoom API live search
+- apps/dashboard/src/lib/platform-urls.ts — app, category, search URL builders
+- apps/dashboard/src/lib/metadata-limits.ts — zoom character limits
+- apps/dashboard/src/lib/auth-context.tsx — VALID_PLATFORMS
+- apps/dashboard/src/proxy.ts — VALID_PLATFORMS
+- apps/dashboard/src/components/sidebar.tsx — labels, colors, regexes, research exclusion
+- apps/dashboard/src/components/platform-overview-cards.tsx — labels, colors
+- apps/dashboard/src/components/admin-scraper-trigger.tsx — VALID_PLATFORMS
+- apps/dashboard/src/components/app-badges.tsx — fedramp_authorized, essential_app badges
+- apps/dashboard/src/app/(dashboard)/overview/page.tsx — PLATFORM_BRANDS, ALL_PLATFORMS
+
 Atlassian Category Fix — Correct Slugs, Names, Ordered Parsing
 ================================================================
 

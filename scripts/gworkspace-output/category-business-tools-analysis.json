@@ -1,0 +1,174 @@
+{
+  "title": "Business tools - Google Workspace Marketplace",
+  "url": "https://workspace.google.com/marketplace/category/business-tools",
+  "htmlLength": 1324314,
+  "analysis": {
+    "hasAppRoot": false,
+    "appLinkCount": 100,
+    "sampleAppLinks": [
+      {
+        "href": "./marketplace/app/microsoft_365_migration/888375727339?flow_type=4",
+        "text": "Microsoft 365 migrationMicrosoft CorporationUse the Microsoft 365 migration app for Google Workspace"
+      },
+      {
+        "href": "./marketplace/app/bettercloud/800521135851?flow_type=4",
+        "text": "BetterCloudbettercloud.comSaaS Operations Management Platform for Google Workspace™4.622M+"
+      },
+      {
+        "href": "./marketplace/app/ok_goldy/939946549872?flow_type=4",
+        "text": "Ok GoldyGoldy AroraPerform G Suite Bulk Operations easily right from Google sheets4.415M+"
+      },
+      {
+        "href": "./marketplace/app/gopher_for_drive/598519870496?flow_type=4",
+        "text": "Gopher for DriveAmplified ITGopher for Drive gives you insights into your Drive and Storage Usage.3."
+      },
+      {
+        "href": "./marketplace/app/certifyem/295230426839?flow_type=4",
+        "text": "Certify'emGleeda Software LLCSend certificates online for free with Certify'em! Set up your exam, as"
+      }
+    ],
+    "categoryLinkCount": 27,
+    "sampleCategoryLinks": [
+      {
+        "href": "https://accounts.google.com/ServiceLogin?passive=1209600&continue=https://workspace.google.com/marketplace/category/business-tools&followup=https://workspace.google.com/marketplace/category/business-tools&ec=GAZArwI",
+        "text": "Sign in"
+      },
+      {
+        "href": "./marketplace/category/featured-partner-apps",
+        "text": "stack_starFeatured partner apps"
+      },
+      {
+        "href": "./marketplace/category/recommended",
+        "text": "workspacesRecommended for Google Workspace"
+      },
+      {
+        "href": "./marketplace/category/work-from-everywhere",
+        "text": "Work from everywhere"
+      },
+      {
+        "href": "./marketplace/category/business-essentials",
+        "text": "Business essentials"
+      },
+      {
+        "href": "./marketplace/category/apps-to-discover",
+        "text": "Apps to discover"
+      },
+      {
+        "href": "./marketplace/category/google-apps",
+        "text": "googleBuilt by Google"
+      },
+      {
+        "href": "./marketplace/category/popular-apps",
+        "text": "Most popular"
+      },
+      {
+        "href": "./marketplace/category/top-rated",
+        "text": "Top rated"
+      },
+      {
+        "href": "./marketplace/category/business-tools",
+        "text": "Business tools"
+      }
+    ],
+    "googleImageCount": 98,
+    "schemaTypes": [],
+    "itemprops": [],
+    "headings": [
+      {
+        "tag": "H1",
+        "text": "Business tools"
+      }
+    ],
+    "dataAttributes": [
+      "data-id",
+      "data-href",
+      "data-font-stylesheet",
+      "data-late-css",
+      "data-atf",
+      "data-iml",
+      "data-close-on-blur",
+      "data-renderer",
+      "data-placeholder",
+      "data-expanded",
+      "data-childcount",
+      "data-disable-idom",
+      "data-is-menu-dynamic",
+      "data-is-tooltip-wrapper",
+      "data-tooltip-enabled",
+      "data-tooltip-id",
+      "data-ogsr-up",
+      "data-ogsr-fb",
+      "data-ogsr-alt",
+      "data-p",
+      "data-node-index",
+      "data-tooltip",
+      "data-collapsed",
+      "data-ogpc",
+      "data-is-touch-wrapper",
+      "data-idom-class",
+      "data-is-hoisted",
+      "data-should-flip-corner-horizontally",
+      "data-stay-in-viewport",
+      "data-skip-fixed-positioned-viewport-fix"
+    ],
+    "ratingElementCount": 0,
+    "hasPricingInfo": true,
+    "hasInstallCount": true
+  },
+  "networkRequests": [
+    {
+      "url": "https://ogads-pa.clients6.google.com/$rpc/google.internal.onegoogle.asyncdata.v1.AsyncDataService/GetAsyncData",
+      "method": "POST",
+      "type": "xhr",
+      "status": 200
+    },
+    {
+      "url": "https://www.google-analytics.com/g/collect?v=2&tid=G-CSB4WHV8KR&gtm=45je63g1v9126893745za200zd9126893745&_p=1773798350346&gcd=13l3l3l3l1l1&npa=0&dma=0&cid=1680617147.1773798351&ul=en-us&sr=1280x720&uaa=x86&uab=64&uafvl=Not%253AA-Brand%3B99.0.0.0%7CGoogle%2520Chrome%3B145.0.7632.160%7CChromium%3B145.0.7632.160&uamb=0&uam=&uap=macOS&uapv=10_15_7&uaw=0&are=1&frm=0&pscdl=noapi&_s=1&tag_exp=103116026~103200004~115616985~115938465~115938469~116024733~117484252&sid=1773798350&sct=1&seg=0&dl=https%3A%2F%2Fworkspace.google.com%2Fmarketplace%2Fcategory%2Fbusiness-tools&dt=Business%20tools%20-%20Google%20Workspace%20Marketplace&en=page_view&_fv=1&_nsi=1&_ss=1&_ee=1&tfd=1587",
+      "method": "POST",
+      "type": "fetch",
+      "status": 204
+    },
+    {
+      "url": "https://workspace.google.com/_/AdditnowStoreUi/data/batchexecute?rpcids=hxvC7e&source-path=%2Fmarketplace%2Fcategory%2Fbusiness-tools&f.sid=305900100128676161&bl=boq_additnowstoreuiserver_20260309.04_p0&hl=en-US&soc-app=1&soc-platform=1&soc-device=1&_reqid=17152&rt=c",
+      "method": "POST",
+      "type": "xhr",
+      "status": 200
+    },
+    {
+      "url": "https://play.google.com/log?format=json&hasfast=true&authuser=0",
+      "method": "POST",
+      "type": "fetch",
+      "status": 200
+    },
+    {
+      "url": "https://play.google.com/log?format=json&hasfast=true",
+      "method": "POST",
+      "type": "xhr",
+      "status": 200
+    },
+    {
+      "url": "https://feedback-pa.clients6.google.com/v1/survey/startup_config?key=AIzaSyCB6OnnfuitFnaYWu4BvtGKaoLFk4cm-GE",
+      "method": "POST",
+      "type": "xhr",
+      "status": 200
+    },
+    {
+      "url": "https://feedback-pa.clients6.google.com/v1/survey/trigger/trigger_anonymous?key=AIzaSyC3jTgdtbH8Z09ra306nwi4bmjfuuwCsW8",
+      "method": "POST",
+      "type": "xhr",
+      "status": 200
+    },
+    {
+      "url": "https://workspace.google.com/_/AdditnowStoreUi/browserinfo?f.sid=305900100128676161&bl=boq_additnowstoreuiserver_20260309.04_p0&hl=en-US&soc-app=1&soc-platform=1&soc-device=1&_reqid=117152&rt=j",
+      "method": "POST",
+      "type": "xhr",
+      "status": 200
+    },
+    {
+      "url": "https://www.google-analytics.com/g/collect?v=2&tid=G-CSB4WHV8KR&gtm=45je63g1v9126893745za200zd9126893745&_p=1773798350346&gcd=13l3l3l3l1l1&npa=0&dma=0&cid=1680617147.1773798351&ul=en-us&sr=1280x720&uaa=x86&uab=64&uafvl=Not%253AA-Brand%3B99.0.0.0%7CGoogle%2520Chrome%3B145.0.7632.160%7CChromium%3B145.0.7632.160&uamb=0&uam=&uap=macOS&uapv=10_15_7&uaw=0&are=1&frm=0&pscdl=noapi&_eu=AEAAAAQ&_s=2&tag_exp=103116026~103200004~115616985~115938465~115938469~116024733~117484252&sid=1773798350&sct=1&seg=0&dl=https%3A%2F%2Fworkspace.google.com%2Fmarketplace%2Fcategory%2Fbusiness-tools&dt=Business%20tools%20-%20Google%20Workspace%20Marketplace&en=scroll&epn.percent_scrolled=90&_et=13&tfd=6601",
+      "method": "POST",
+      "type": "fetch",
+      "status": 204
+    }
+  ]
+}

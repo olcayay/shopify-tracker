@@ -1,6 +1,19 @@
 -- Fix Atlassian categories: replace 19 old/incorrect slugs with the 10 official ones
 -- from marketplace.atlassian.com/categories
 
+-- Delete snapshots referencing old categories first (FK constraint)
+DELETE FROM category_snapshots
+WHERE category_id IN (
+  SELECT id FROM categories
+  WHERE platform = 'atlassian'
+    AND slug IN (
+      'charts-diagramming', 'cloud-security', 'code-quality', 'code-review',
+      'continuous-integration', 'design-tools', 'documentation', 'integrations',
+      'it-service-management', 'macros', 'migration', 'monitoring',
+      'reports', 'security', 'testing-qa', 'time-tracking', 'workflow'
+    )
+);
+
 -- Delete old categories that no longer exist on the marketplace
 -- (keeping project-management and admin-tools which have correct slugs)
 DELETE FROM categories

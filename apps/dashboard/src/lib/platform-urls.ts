@@ -17,6 +17,8 @@ export function buildExternalAppUrl(platform: PlatformId, slug: string, external
     case "atlassian":
       if (externalId) return `https://marketplace.atlassian.com/apps/${externalId}`;
       return `https://marketplace.atlassian.com/apps/${slug}`;
+    case "zoom":
+      return `https://marketplace.zoom.us/apps/${slug}`;
   }
 }
 
@@ -40,6 +42,8 @@ export function buildExternalCategoryUrl(platform: PlatformId, slug: string): st
       return `https://workspace.google.com/marketplace/category/${slug.replace("--", "/")}`;
     case "atlassian":
       return `https://marketplace.atlassian.com/categories/${slug}`;
+    case "zoom":
+      return `https://marketplace.zoom.us/apps?category=${slug}`;
   }
 }
 
@@ -59,6 +63,8 @@ export function buildExternalSearchUrl(platform: PlatformId, query: string): str
       return `https://workspace.google.com/marketplace/search/${encodeURIComponent(query)}?flow_type=2`;
     case "atlassian":
       return `https://marketplace.atlassian.com/search?query=${encodeURIComponent(query)}`;
+    case "zoom":
+      return `https://marketplace.zoom.us/apps?q=${encodeURIComponent(query)}`;
   }
 }
 
@@ -77,4 +83,18 @@ export function getPlatformName(platform: PlatformId): string {
  */
 export function formatCategoryTitle(platform: PlatformId, slug: string, title: string): string {
   return title;
+}
+
+const ZOOM_CDN = "https://marketplacecontent-cf.zoom.us";
+
+/**
+ * Fix Zoom CDN icon URLs: the S3 key must be URL-encoded (slashes → %2F).
+ * Handles both already-encoded and raw URLs. Returns other URLs unchanged.
+ */
+export function fixIconUrl(url: string | null | undefined): string | null | undefined {
+  if (!url || !url.startsWith(ZOOM_CDN)) return url;
+  // Already encoded
+  if (url.startsWith(`${ZOOM_CDN}/%2F`)) return url;
+  const path = url.slice(ZOOM_CDN.length);
+  return `${ZOOM_CDN}/${encodeURIComponent(path)}`;
 }

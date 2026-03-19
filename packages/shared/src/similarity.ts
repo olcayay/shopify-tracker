@@ -33,6 +33,7 @@ const PLATFORM_SIMILARITY_WEIGHTS: Record<string, SimilarityWeights> = {
   wordpress: { category: 0.35, feature: 0.0, keyword: 0.30, text: 0.35 },
   google_workspace: { category: 0.35, feature: 0.0, keyword: 0.30, text: 0.35 },
   atlassian: { category: 0.35, feature: 0.0, keyword: 0.30, text: 0.35 },
+  zoom: { category: 0.35, feature: 0.0, keyword: 0.30, text: 0.35 },
 };
 
 /** Get similarity weights for a given platform (defaults to Shopify weights) */
@@ -66,6 +67,7 @@ const WIX_SIMILARITY_STOP_WORDS = new Set(["wix", "website", "site", "sites", "w
 const WORDPRESS_SIMILARITY_STOP_WORDS = new Set(["wordpress", "wp", "plugin", "plugins", "widget"]);
 const GOOGLE_WORKSPACE_SIMILARITY_STOP_WORDS = new Set(["google", "workspace", "marketplace", "sheets", "docs", "drive", "gmail", "addon", "add-on"]);
 const ATLASSIAN_SIMILARITY_STOP_WORDS = new Set(["atlassian", "jira", "confluence", "bitbucket", "marketplace", "plugin", "addon", "app", "cloud", "server", "datacenter"]);
+const ZOOM_SIMILARITY_STOP_WORDS = new Set(["zoom", "meeting", "meetings", "webinar", "video", "marketplace", "app", "apps", "cloud"]);
 
 const PLATFORM_SIMILARITY_STOP_WORDS: Record<string, Set<string>> = {
   shopify: SHOPIFY_SIMILARITY_STOP_WORDS,
@@ -75,6 +77,7 @@ const PLATFORM_SIMILARITY_STOP_WORDS: Record<string, Set<string>> = {
   wordpress: WORDPRESS_SIMILARITY_STOP_WORDS,
   google_workspace: GOOGLE_WORKSPACE_SIMILARITY_STOP_WORDS,
   atlassian: ATLASSIAN_SIMILARITY_STOP_WORDS,
+  zoom: ZOOM_SIMILARITY_STOP_WORDS,
 };
 
 /** Get merged similarity stop words for a given platform */
@@ -192,6 +195,11 @@ export function extractCategorySlugsFromPlatformData(
       const cats = platformData.categories as Array<{ slug?: string; key?: string }> | undefined;
       if (!Array.isArray(cats)) return new Set();
       return new Set(cats.map((c) => c.slug || c.key).filter((s): s is string => !!s));
+    }
+    case "zoom": {
+      const cats = platformData.categories as Array<{ slug?: string }> | undefined;
+      if (!Array.isArray(cats)) return new Set();
+      return new Set(cats.map((c) => c.slug).filter((s): s is string => !!s));
     }
     default:
       return new Set();

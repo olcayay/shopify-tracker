@@ -25,6 +25,7 @@ import {
   Play,
   Pause,
   RefreshCw,
+  RotateCw,
   ChevronDown,
   ChevronRight,
   ChevronLeft,
@@ -182,6 +183,7 @@ export default function ScraperPage() {
   const [drainConfirm, setDrainConfirm] = useState(false);
   const [clearFailedConfirm, setClearFailedConfirm] = useState(false);
   const [killJobConfirm, setKillJobConfirm] = useState<{ id: string; type: string } | null>(null);
+  const [retryingRunId, setRetryingRunId] = useState<string | null>(null);
   const [triggerPlatform, setTriggerPlatform] = useState<string>(() => {
     if (typeof window !== "undefined") {
       return localStorage.getItem("scraper-platform") || "shopify";
@@ -279,6 +281,24 @@ export default function ScraperPage() {
       setClearFailedConfirm(false);
       loadData();
     }
+  }
+
+  async function retryRun(runId: string) {
+    setRetryingRunId(runId);
+    setMessage("");
+    const res = await fetchWithAuth(
+      `/api/system-admin/scraper/runs/${runId}/retry`,
+      { method: "POST" }
+    );
+    if (res.ok) {
+      const data = await res.json();
+      setMessage(data.message || "Run retried");
+      setTimeout(loadData, 2000);
+    } else {
+      const data = await res.json().catch(() => ({}));
+      setMessage(data.error || "Failed to retry run");
+    }
+    setRetryingRunId(null);
   }
 
   // Build freshness map
@@ -707,6 +727,7 @@ export default function ScraperPage() {
                 <TableHead>Duration</TableHead>
                 <TableHead>Items</TableHead>
                 <TableHead>Assets</TableHead>
+                <TableHead className="w-10" />
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -837,10 +858,29 @@ export default function ScraperPage() {
                             </>
                         : "\u2014"}
                     </TableCell>
+                    <TableCell>
+                      {(run.status === "failed" || run.status === "completed") && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-7 w-7 p-0"
+                          disabled={retryingRunId === String(run.id)}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            retryRun(String(run.id));
+                          }}
+                          title="Retry this run"
+                        >
+                          <RotateCw
+                            className={`h-3.5 w-3.5 ${retryingRunId === String(run.id) ? "animate-spin" : ""}`}
+                          />
+                        </Button>
+                      )}
+                    </TableCell>
                   </TableRow>
                   {expandedRunId === run.id && (
                     <TableRow key={`${run.id}-details`}>
-                      <TableCell colSpan={11} className="bg-muted/30 p-4">
+                      <TableCell colSpan={12} className="bg-muted/30 p-4">
                         {run.error && (
                           <div className="mb-3">
                             <div className="text-sm font-medium text-destructive mb-1">
@@ -886,7 +926,7 @@ export default function ScraperPage() {
               {runs.length === 0 && (
                 <TableRow>
                   <TableCell
-                    colSpan={11}
+                    colSpan={12}
                     className="text-center text-muted-foreground"
                   >
                     No scraper runs yet

@@ -71,6 +71,18 @@ const BADGE_CONFIG: Record<string, Record<string, { icon: string; label: string;
       className: "text-amber-600",
     },
   },
+  zoom: {
+    fedramp_authorized: {
+      icon: "🏛️",
+      label: "FedRAMP",
+      className: "text-blue-700",
+    },
+    essential_app: {
+      icon: "⭐",
+      label: "Essential App",
+      className: "text-amber-600",
+    },
+  },
 };
 
 interface AppBadgesProps {

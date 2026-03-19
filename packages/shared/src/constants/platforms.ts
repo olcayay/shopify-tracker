@@ -111,6 +111,22 @@ export const PLATFORMS = {
     maxRatingStars: 4,
     pageSize: 50,
   },
+  zoom: {
+    id: "zoom" as const,
+    name: "Zoom App Marketplace",
+    baseUrl: "https://marketplace.zoom.us",
+    hasKeywordSearch: true,
+    hasReviews: false,
+    hasFeaturedSections: true,
+    hasAdTracking: false,
+    hasSimilarApps: false,
+    hasAutoSuggestions: false,
+    hasFeatureTaxonomy: false,
+    hasPricing: false,
+    hasLaunchedDate: false,
+    maxRatingStars: 5,
+    pageSize: 100,
+  },
 } as const;
 
 export type PlatformId = keyof typeof PLATFORMS;
@@ -148,6 +164,8 @@ export function buildExternalAppUrl(platform: PlatformId, slug: string, external
     case "atlassian":
       if (externalId) return `https://marketplace.atlassian.com/apps/${externalId}`;
       return `https://marketplace.atlassian.com/apps/${slug}`;
+    case "zoom":
+      return `https://marketplace.zoom.us/apps/${slug}`;
   }
 }
 
@@ -175,5 +193,7 @@ export function buildExternalCategoryUrl(platform: PlatformId, slug: string): st
       return `https://workspace.google.com/marketplace/category/${slug.replace("--", "/")}`;
     case "atlassian":
       return `https://marketplace.atlassian.com/categories/${slug}`;
+    case "zoom":
+      return `https://marketplace.zoom.us/apps?category=${slug}`;
   }
 }

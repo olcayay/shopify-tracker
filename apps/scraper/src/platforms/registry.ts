@@ -7,6 +7,7 @@ import { WixModule } from "./wix/index.js";
 import { WordPressModule } from "./wordpress/index.js";
 import { GoogleWorkspaceModule } from "./google-workspace/index.js";
 import { AtlassianModule } from "./atlassian/index.js";
+import { ZoomModule } from "./zoom/index.js";
 import type { HttpClient } from "../http-client.js";
 import type { BrowserClient } from "../browser-client.js";
 
@@ -42,6 +43,9 @@ export function getModule(platformId: PlatformId, httpClient?: HttpClient, brows
       break;
     case "atlassian":
       module = new AtlassianModule(httpClient);
+      break;
+    case "zoom":
+      module = new ZoomModule(httpClient);
       break;
     default:
       throw new Error(`Unknown platform: ${platformId}`);
