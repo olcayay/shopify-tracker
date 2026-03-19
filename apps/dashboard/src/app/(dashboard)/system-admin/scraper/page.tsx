@@ -717,6 +717,7 @@ export default function ScraperPage() {
             <TableHeader>
               <TableRow>
                 <TableHead className="w-8" />
+                <TableHead>Run ID</TableHead>
                 <TableHead>Type</TableHead>
                 <TableHead>Platform</TableHead>
                 <TableHead>Status</TableHead>
@@ -759,6 +760,9 @@ export default function ScraperPage() {
                         ) : (
                           <ChevronRight className="h-4 w-4 text-muted-foreground" />
                         ))}
+                    </TableCell>
+                    <TableCell className="font-mono text-xs text-muted-foreground" title={run.id}>
+                      {run.id?.slice(0, 8)}
                     </TableCell>
                     <TableCell className="font-mono text-sm">
                       {run.scraperType}
@@ -880,7 +884,7 @@ export default function ScraperPage() {
                   </TableRow>
                   {expandedRunId === run.id && (
                     <TableRow key={`${run.id}-details`}>
-                      <TableCell colSpan={12} className="bg-muted/30 p-4">
+                      <TableCell colSpan={13} className="bg-muted/30 p-4">
                         {run.error && (
                           <div className="mb-3">
                             <div className="text-sm font-medium text-destructive mb-1">
@@ -926,7 +930,7 @@ export default function ScraperPage() {
               {runs.length === 0 && (
                 <TableRow>
                   <TableCell
-                    colSpan={12}
+                    colSpan={13}
                     className="text-center text-muted-foreground"
                   >
                     No scraper runs yet
