@@ -1,6 +1,6 @@
 # Adding a New Platform — Comprehensive Guide
 
-This document covers everything needed to add a new marketplace platform to the AppRanks tracking system. It draws from lessons learned integrating Shopify, Salesforce, Canva, Wix, WordPress, and Google Workspace.
+This document covers everything needed to add a new marketplace platform to the AppRanks tracking system. It draws from lessons learned integrating Shopify, Salesforce, Canva, Wix, WordPress, Google Workspace, Atlassian, and Zoom.
 
 ---
 
@@ -102,18 +102,19 @@ export const PLATFORMS = {
 
 **Current platforms and their flags:**
 
-| Flag | Shopify | Salesforce | Canva | Wix | WordPress | Google WS |
-|------|---------|------------|-------|-----|-----------|-----------|
-| hasKeywordSearch | true | true | true | true | true | true |
-| hasReviews | true | true | false | true | true | true |
-| hasFeaturedSections | true | false | false | true | true | true |
-| hasAdTracking | true | false | false | false | false | false |
-| hasSimilarApps | true | false | false | false | false | false |
-| hasAutoSuggestions | true | false | true | false | false | false |
-| hasFeatureTaxonomy | true | false | false | false | false | false |
-| hasPricing | true | true | false | true | false | true |
-| hasLaunchedDate | true | false | false | false | true | false |
-| maxRatingStars | 5 | 5 | 5 | 5 | 5 | 5 |
+| Flag | Shopify | Salesforce | Canva | Wix | WordPress | Google WS | Atlassian | Zoom |
+|------|---------|------------|-------|-----|-----------|-----------|-----------|------|
+| hasKeywordSearch | true | true | true | true | true | true | true | true |
+| hasReviews | true | true | false | true | true | true | true | false |
+| hasFeaturedSections | true | false | false | true | true | true | true | true |
+| hasAdTracking | true | false | false | false | false | false | false | false |
+| hasSimilarApps | true | false | false | false | false | false | false | false |
+| hasAutoSuggestions | true | false | true | false | false | false | false | false |
+| hasFeatureTaxonomy | true | false | false | false | false | false | false | false |
+| hasPricing | true | true | false | true | false | true | true | false |
+| hasLaunchedDate | true | false | false | false | true | false | false | false |
+| maxRatingStars | 5 | 5 | 5 | 5 | 5 | 5 | 4 | 5 |
+| pageSize | 20 | 12 | 20 | 20 | 20 | 20 | 50 | 100 |
 
 ### 2.2 PlatformCapabilities Type
 
@@ -238,15 +239,15 @@ const limitsByPlatform: Record<string, MetadataLimits> = {
 
 **Current limits by platform:**
 
-| Field | Shopify | Salesforce | Canva | Wix | WordPress | Google WS |
-|-------|---------|------------|-------|-----|-----------|-----------|
-| appName | 30 | 80 | 18 | 50 | 70 | 50 |
-| subtitle | 62 | 62 | 50 | 80 | 150 | 200 |
-| introduction | 100 | 500 | 50 | 200 | 150 | 200 |
-| details | 500 | 2000 | 200 | 2000 | 5000 | 16000 |
-| feature | 80 | 80 | 80 | 80 | 0 | 0 |
-| seoTitle | 60 | 60 | 60 | 60 | 0 | 0 |
-| seoMetaDescription | 160 | 160 | 160 | 160 | 0 | 0 |
+| Field | Shopify | Salesforce | Canva | Wix | WordPress | Google WS | Atlassian | Zoom |
+|-------|---------|------------|-------|-----|-----------|-----------|-----------|------|
+| appName | 30 | 80 | 18 | 50 | 70 | 50 | 50 | 50 |
+| subtitle | 62 | 62 | 50 | 80 | 150 | 200 | 80 | 80 |
+| introduction | 100 | 500 | 50 | 200 | 150 | 200 | 150 | 200 |
+| details | 500 | 2000 | 200 | 2000 | 5000 | 16000 | 5000 | 2000 |
+| feature | 80 | 80 | 80 | 80 | 0 | 0 | 0 | 0 |
+| seoTitle | 60 | 60 | 60 | 60 | 0 | 0 | 0 | 0 |
+| seoMetaDescription | 160 | 160 | 160 | 160 | 0 | 0 | 0 | 0 |
 
 **Important:** Research your platform's actual limits before setting values. These control CharBadge color thresholds — wrong limits create misleading UI. Use `0` for fields the platform doesn't have.
 
@@ -564,6 +565,8 @@ async fetchAppPage(slug: string): Promise<string> {
 | Wix | No | Static HTML |
 | WordPress | No | Static HTML |
 | Google Workspace | All jobs | Angular SPA |
+| Atlassian | No | REST API + HTML scraping (no JS rendering needed) |
+| Zoom | No | Public JSON API exclusively |
 
 **Browser auth state:** For Cloudflare-protected or session-dependent sites, persist auth cookies:
 ```typescript
@@ -585,6 +588,8 @@ Choose a slug format that is URL-safe and can uniquely identify apps:
 | Wix | `plugin-name` | Direct slug |
 | WordPress | `plugin-name` | Direct slug |
 | Google Workspace | `vendor--app-name` | `--` separator (replaces `/` in URL path) |
+| Atlassian | `com.vendor.plugin-key` | addonKey (reverse domain notation); uses `external_id` for human URLs |
+| Zoom | `base64-like-id` | App ID from Zoom JSON API |
 
 **`--` separator pattern:** Canva and Google Workspace use hierarchical URL paths (`/apps/AAFxxx/my-app`, `/marketplace/app/vendor/app-name`) but `/` is not safe in URL path segments. We use `--` as separator: `AAFxxx--my-app-name`. Convert back with `slug.replace("--", "/")` for external URLs.
 
@@ -680,6 +685,11 @@ New platforms use the generic `scrapeKeywordGeneric()` path.
   else if (platform === "google_workspace") {
     const m = url.match(/\/marketplace\/category\/([^/?]+)(?:\/([^/?]+))?/);
     slug = m ? (m[2] ? `${m[1]}--${m[2]}` : m[1]) : undefined;
+  }
+  else if (platform === "atlassian") slug = url.match(/\/categories\/([^/?]+)/)?.[1];
+  else if (platform === "zoom") {
+    const zoomMatch = url.match(/[?&]category=([^&]+)/);
+    slug = zoomMatch?.[1] ? decodeURIComponent(zoomMatch[1]) : undefined;
   }
   ```
   **MUST add** a new `else if` for the new platform's category URL pattern.
@@ -818,7 +828,7 @@ There are **3 separate `VALID_PLATFORMS` definitions** that must ALL be updated:
 **a) Auth Context — `apps/dashboard/src/lib/auth-context.tsx`**
 
 ```typescript
-const VALID_PLATFORMS = new Set(["shopify", "salesforce", "canva", "wix", "wordpress", "google_workspace", "newplatform"]);
+const VALID_PLATFORMS = new Set(["shopify", "salesforce", "canva", "wix", "wordpress", "google_workspace", "atlassian", "zoom", "newplatform"]);
 ```
 
 Controls the auto-injection of `?platform=` in API calls. If your platform isn't in this set, no API calls from dashboard pages under `/<platform>/` will work.
@@ -826,7 +836,7 @@ Controls the auto-injection of `?platform=` in API calls. If your platform isn't
 **b) Proxy — `apps/dashboard/src/proxy.ts`**
 
 ```typescript
-const VALID_PLATFORMS = ["shopify", "salesforce", "canva", "wix", "wordpress", "google_workspace", "newplatform"];
+const VALID_PLATFORMS = ["shopify", "salesforce", "canva", "wix", "wordpress", "google_workspace", "atlassian", "zoom", "newplatform"];
 ```
 
 Controls which platforms the Next.js proxy accepts. Missing this causes API proxy 404s.
@@ -834,7 +844,7 @@ Controls which platforms the Next.js proxy accepts. Missing this causes API prox
 **c) Admin Scraper Trigger — `apps/dashboard/src/components/admin-scraper-trigger.tsx`**
 
 ```typescript
-const VALID_PLATFORMS = new Set(["shopify", "salesforce", "canva", "wix", "wordpress", "google_workspace", "newplatform"]);
+const VALID_PLATFORMS = new Set(["shopify", "salesforce", "canva", "wix", "wordpress", "google_workspace", "atlassian", "zoom", "newplatform"]);
 ```
 
 Controls which platforms appear in the system admin scraper trigger UI.
@@ -865,10 +875,10 @@ The sidebar uses regex to extract the current platform from the URL path. Both o
 
 ```typescript
 // ~line 103
-const match = pathname.match(/^\/(shopify|salesforce|canva|wix|wordpress|google_workspace|newplatform)(\/|$)/);
+const match = pathname.match(/^\/(shopify|salesforce|canva|wix|wordpress|google_workspace|atlassian|zoom|newplatform)(\/|$)/);
 
 // ~line 136
-const platformMatch = pathname.match(/^\/(shopify|salesforce|canva|wix|wordpress|google_workspace|newplatform)(\/|$)/);
+const platformMatch = pathname.match(/^\/(shopify|salesforce|canva|wix|wordpress|google_workspace|atlassian|zoom|newplatform)(\/|$)/);
 ```
 
 **Missing this causes:** The sidebar won't highlight the correct platform or render nav items for the new platform's routes.
@@ -1492,6 +1502,30 @@ grep -r "Launched" apps/dashboard/src --include="*.tsx" -l
 
 **Solution:** Always update `packages/db/src/migrations/meta/_journal.json` with an entry for each new migration file. Use sequential `idx` and `when` timestamps.
 
+### Pitfall 24: Flat vs tree category display not updated
+
+**Problem:** Categories page renders as a tree by default. Platforms with flat (non-hierarchical) categories need to be added to the `isFlat` check.
+
+**Solution:** In `apps/dashboard/src/app/(dashboard)/[platform]/categories/page.tsx`, update the `isFlat` constant:
+
+```typescript
+const isFlat = platform === "wordpress" || platform === "zoom" || platform === "atlassian";
+```
+
+If your new platform uses flat categories (no parent-child hierarchy), add it here. Tree view is default for hierarchical platforms (Shopify, Salesforce, Canva, Wix, Google Workspace).
+
+### Pitfall 25: API-only platforms (no HTML scraping)
+
+**Problem:** Some platforms expose public REST/JSON APIs that return structured data, making HTML scraping unnecessary.
+
+**Solution:** For API-only platforms (like Atlassian REST API, Zoom JSON API), the `fetchAppPage` / `fetchCategoryPage` methods still return a string — but it's JSON, not HTML. Parsers use `JSON.parse()` instead of Cheerio. The PlatformModule interface works the same way; only the parser implementation differs.
+
+**Current API-only platforms:**
+| Platform | API Type | Notes |
+|----------|----------|-------|
+| Atlassian | REST API v2 (`/rest/2/addons`) + HTML (`window.__INITIAL_STATE__`) | REST for apps/search/reviews/featured, HTML for categories |
+| Zoom | Public JSON API (`/api/v1/apps`) | Pure JSON for everything, no HTML at all |
+
 ---
 
 ## 11. Testing & Verification Checklist
@@ -1538,6 +1572,10 @@ After implementation, verify every page for the new platform AND confirm existin
 - [ ] `/wix/apps` — Correct columns for Wix capabilities
 - [ ] `/wordpress/apps` — Correct columns for WordPress capabilities
 - [ ] `/google_workspace/apps` — Correct columns for Google Workspace capabilities
+- [ ] `/atlassian/apps` — Correct columns (4-star ratings, no launched date)
+- [ ] `/atlassian/apps/<slug>` — Correct tabs/cards for Atlassian capabilities
+- [ ] `/zoom/apps` — Correct columns (no reviews, no pricing, no launched)
+- [ ] `/zoom/apps/<slug>` — Correct tabs/cards for Zoom capabilities
 - [ ] All platform previews still work with correct character limits
 - [ ] `/overview` — Cross-platform overview page shows all platforms
 
@@ -1620,14 +1658,14 @@ After implementation, verify every page for the new platform AND confirm existin
 
 ## Summary
 
-Adding a new platform follows this order:
+Adding a new platform follows this order (9th platform and beyond):
 
 1. **Config first** — Get capability flags right in `platforms.ts`, add URL builders, similarity weights, metadata limits
 2. **Database second** — Create 3 migrations: platform access, categories, visibility
 3. **Scraper third** — Build module, parsers, register, schedule, update `backfill-categories.ts` URL pattern
 4. **API fourth** — Add live-search function, review `apps.ts` developer info extraction
 5. **Dashboard last** — Update ALL 3 `VALID_PLATFORMS`, sidebar (labels, colors, 2 regex patterns), `app-badges.tsx`, `platform-overview-cards.tsx` (LABELS + COLORS + **BRANDS**), preview component, field labels (details, changes, overview, compare pages), research compare page, capability-gate all tables
-6. **Test everything** — New platform pages AND regression on ALL existing platforms
+6. **Test everything** — New platform pages AND regression on ALL 8 existing platforms
 
 The biggest time sinks are:
 - **Compare pages** — `[slug]/compare/page.tsx` (~25 locations) + `research/[id]/compare/page.tsx` with hardcoded platform checks
@@ -1640,5 +1678,5 @@ The biggest time sinks are:
 Use grep to find all platform-specific references before declaring the task complete:
 
 ```bash
-grep -rn "isCanva\|isSalesforce\|isShopify\|platform === \"shopify\"\|platform === \"canva\"\|platform === \"salesforce\"\|platform === \"wix\"\|platform === \"wordpress\"\|platform === \"google_workspace\"" apps/ packages/ --include="*.ts" --include="*.tsx" | grep -v node_modules | grep -v .next
+grep -rn "isCanva\|isSalesforce\|isShopify\|isAtlassian\|isZoom\|platform === \"shopify\"\|platform === \"canva\"\|platform === \"salesforce\"\|platform === \"wix\"\|platform === \"wordpress\"\|platform === \"google_workspace\"\|platform === \"atlassian\"\|platform === \"zoom\"" apps/ packages/ --include="*.ts" --include="*.tsx" | grep -v node_modules | grep -v .next
 ```
