@@ -57,14 +57,20 @@ export const categoryRoutes: FastifyPluginAsync = async (app) => {
       .where(and(...conditions))
       .orderBy(categories.categoryLevel, categories.title);
 
+    // Hide empty categories (appCount 0 or null) from non-system-admin users
+    const isAdmin = request.user?.isSystemAdmin === true;
+    const filtered = isAdmin
+      ? rows
+      : rows.filter((r) => r.appCount != null && r.appCount > 0);
+
     if (format === "flat") {
-      return rows;
+      return filtered;
     }
 
     // Query junction table for multi-parent relationships (graceful fallback if table doesn't exist yet)
     let junctionRows: { categoryId: number; parentCategoryId: number }[] = [];
     try {
-      const categoryIds = rows.map((r) => r.id);
+      const categoryIds = filtered.map((r) => r.id);
       if (categoryIds.length > 0) {
         junctionRows = await db
           .select({
@@ -79,7 +85,7 @@ export const categoryRoutes: FastifyPluginAsync = async (app) => {
     }
 
     // Build tree: roots are those with null parentSlug
-    return buildTree(rows, junctionRows);
+    return buildTree(filtered, junctionRows);
   });
 
   // GET /api/categories/features-by-slugs?slugs=slug1,slug2
