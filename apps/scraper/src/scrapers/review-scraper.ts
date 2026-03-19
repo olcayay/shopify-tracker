@@ -13,6 +13,7 @@ export class ReviewScraper {
   private httpClient: HttpClient;
   private platform: PlatformId;
   private platformModule?: PlatformModule;
+  public jobId?: string;
   constructor(
     db: Database,
     httpClient?: HttpClient,
@@ -49,6 +50,7 @@ export class ReviewScraper {
         startedAt: new Date(),
         triggeredBy,
         queue,
+        jobId: this.jobId ?? null,
       })
       .returning();
 

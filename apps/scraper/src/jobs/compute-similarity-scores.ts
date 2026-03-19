@@ -15,7 +15,7 @@ import {
 
 const log = createLogger("compute-similarity-scores");
 
-export async function computeSimilarityScores(db: Database, triggeredBy: string, queue?: string, platform: PlatformId = "shopify"): Promise<void> {
+export async function computeSimilarityScores(db: Database, triggeredBy: string, queue?: string, platform: PlatformId = "shopify", jobId?: string): Promise<void> {
   const startTime = Date.now();
 
   const [run] = await db
@@ -28,6 +28,7 @@ export async function computeSimilarityScores(db: Database, triggeredBy: string,
       startedAt: new Date(),
       triggeredBy,
       queue,
+      jobId: jobId ?? null,
     })
     .returning();
 

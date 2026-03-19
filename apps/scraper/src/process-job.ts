@@ -83,6 +83,7 @@ export function createProcessJob(db: ReturnType<typeof createDb>, httpClient: Ht
     switch (type) {
       case "category": {
         const scraper = new CategoryScraper(db, { httpClient, platformModule });
+        scraper.jobId = job.id;
         let discoveredSlugs: string[] = [];
         if (job.data.slug) {
           discoveredSlugs = await scraper.scrapeSingle(job.data.slug, triggeredBy, pageOptions, queueName);
@@ -112,6 +113,7 @@ export function createProcessJob(db: ReturnType<typeof createDb>, httpClient: Ht
 
       case "app_details": {
         const scraper = new AppDetailsScraper(db, httpClient, platformModule);
+        scraper.jobId = job.id;
         if (job.data.slug) {
           await scraper.scrapeApp(job.data.slug, undefined, triggeredBy, queueName, opts?.force);
           log.info("single app scrape completed", { slug: job.data.slug });
@@ -162,6 +164,7 @@ export function createProcessJob(db: ReturnType<typeof createDb>, httpClient: Ht
 
       case "keyword_search": {
         const scraper = new KeywordScraper(db, httpClient, platformModule);
+        scraper.jobId = job.id;
         let discoveredSlugs: string[] = [];
         if (job.data.keyword) {
           // Single keyword scrape — find the keyword row and scrape it
@@ -184,6 +187,7 @@ export function createProcessJob(db: ReturnType<typeof createDb>, httpClient: Ht
                 startedAt: new Date(),
                 triggeredBy,
                 queue: queueName,
+                jobId: job.id,
               })
               .returning();
             discoveredSlugs = await scraper.scrapeKeyword(kw.id, kw.keyword, run.id, pageOptions);
@@ -236,6 +240,7 @@ export function createProcessJob(db: ReturnType<typeof createDb>, httpClient: Ht
 
       case "keyword_suggestions": {
         const suggestionScraper = new KeywordSuggestionScraper(db, httpClient, platformModule);
+        suggestionScraper.jobId = job.id;
         if (job.data.keyword) {
           // Single keyword suggestion scrape
           const { eq, and: andOp2 } = await import("drizzle-orm");
@@ -256,6 +261,7 @@ export function createProcessJob(db: ReturnType<typeof createDb>, httpClient: Ht
                 startedAt: new Date(),
                 triggeredBy,
                 queue: queueName,
+                jobId: job.id,
               })
               .returning();
             await suggestionScraper.scrapeSuggestions(kw.id, kw.keyword, run.id);
@@ -279,6 +285,7 @@ export function createProcessJob(db: ReturnType<typeof createDb>, httpClient: Ht
           break;
         }
         const scraper = new ReviewScraper(db, httpClient, platform, platformModule);
+        scraper.jobId = job.id;
         if (job.data.slug) {
           const startTime = Date.now();
           const [run] = await db
@@ -291,6 +298,7 @@ export function createProcessJob(db: ReturnType<typeof createDb>, httpClient: Ht
               startedAt: new Date(),
               triggeredBy,
               queue: queueName,
+              jobId: job.id,
             })
             .returning();
           try {
@@ -315,31 +323,31 @@ export function createProcessJob(db: ReturnType<typeof createDb>, httpClient: Ht
         }
         // Always recompute review metrics after reviews are scraped
         const { computeReviewMetrics } = await import("./jobs/compute-review-metrics.js");
-        await computeReviewMetrics(db, `${triggeredBy}:reviews`, queueName, platform);
+        await computeReviewMetrics(db, `${triggeredBy}:reviews`, queueName, platform, job.id);
         break;
       }
 
       case "compute_review_metrics": {
         const { computeReviewMetrics } = await import("./jobs/compute-review-metrics.js");
-        await computeReviewMetrics(db, triggeredBy, queueName, platform);
+        await computeReviewMetrics(db, triggeredBy, queueName, platform, job.id);
         break;
       }
 
       case "compute_similarity_scores": {
         const { computeSimilarityScores } = await import("./jobs/compute-similarity-scores.js");
-        await computeSimilarityScores(db, triggeredBy, queueName, platform);
+        await computeSimilarityScores(db, triggeredBy, queueName, platform, job.id);
         break;
       }
 
       case "backfill_categories": {
         const { backfillCategories } = await import("./jobs/backfill-categories.js");
-        await backfillCategories(db, triggeredBy, queueName, platform);
+        await backfillCategories(db, triggeredBy, queueName, platform, job.id);
         break;
       }
 
       case "compute_app_scores": {
         const { computeAppScores } = await import("./jobs/compute-app-scores.js");
-        await computeAppScores(db, triggeredBy, queueName, platform);
+        await computeAppScores(db, triggeredBy, queueName, platform, job.id);
         break;
       }
 

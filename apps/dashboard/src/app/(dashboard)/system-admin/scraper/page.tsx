@@ -717,7 +717,7 @@ export default function ScraperPage() {
             <TableHeader>
               <TableRow>
                 <TableHead className="w-8" />
-                <TableHead>Run ID</TableHead>
+                <TableHead>Job ID</TableHead>
                 <TableHead>Type</TableHead>
                 <TableHead>Platform</TableHead>
                 <TableHead>Status</TableHead>
@@ -761,8 +761,8 @@ export default function ScraperPage() {
                           <ChevronRight className="h-4 w-4 text-muted-foreground" />
                         ))}
                     </TableCell>
-                    <TableCell className="font-mono text-xs text-muted-foreground" title={run.id}>
-                      {run.id?.slice(0, 8)}
+                    <TableCell className="font-mono text-xs">
+                      {run.jobId || <span className="text-muted-foreground">{"\u2014"}</span>}
                     </TableCell>
                     <TableCell className="font-mono text-sm">
                       {run.scraperType}

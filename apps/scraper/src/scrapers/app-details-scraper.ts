@@ -71,6 +71,7 @@ export class AppDetailsScraper {
   private httpClient: HttpClient;
   private platform: PlatformId;
   private platformModule?: PlatformModule;
+  public jobId?: string;
 
   constructor(db: Database, httpClient?: HttpClient, platformModule?: PlatformModule) {
     this.db = db;
@@ -107,6 +108,7 @@ export class AppDetailsScraper {
         startedAt: new Date(),
         triggeredBy,
         queue,
+        jobId: this.jobId ?? null,
       })
       .returning();
 
@@ -164,6 +166,7 @@ export class AppDetailsScraper {
         startedAt: new Date(),
         triggeredBy,
         queue,
+        jobId: this.jobId ?? null,
       })
       .returning();
 
@@ -242,6 +245,7 @@ export class AppDetailsScraper {
           startedAt: new Date(),
           triggeredBy,
           queue,
+          jobId: this.jobId ?? null,
         })
         .returning();
       runId = run.id;

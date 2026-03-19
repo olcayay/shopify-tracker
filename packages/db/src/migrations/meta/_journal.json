@@ -561,6 +561,13 @@
       "when": 1775520000000,
       "tag": "0079_zoom_icon_url_trigger",
       "breakpoints": true
+    },
+    {
+      "idx": 80,
+      "version": "7",
+      "when": 1775606400000,
+      "tag": "0080_add_scrape_runs_job_id",
+      "breakpoints": true
     }
   ]
 }

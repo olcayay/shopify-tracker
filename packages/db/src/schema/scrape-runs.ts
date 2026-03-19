@@ -28,6 +28,7 @@ export const scrapeRuns = pgTable(
     scraperType: scraperTypeEnum("scraper_type").notNull(),
     status: scrapeRunStatusEnum("status").notNull().default("pending"),
     platform: varchar("platform", { length: 20 }),
+    jobId: varchar("job_id", { length: 50 }),
     createdAt: timestamp("created_at").notNull().defaultNow(),
     startedAt: timestamp("started_at"),
     completedAt: timestamp("completed_at"),

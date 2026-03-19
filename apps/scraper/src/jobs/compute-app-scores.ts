@@ -93,6 +93,7 @@ export async function computeAppScores(
   triggeredBy: string,
   queue?: string,
   platform: PlatformId = "shopify",
+  jobId?: string,
 ): Promise<void> {
   const startTime = Date.now();
 
@@ -121,6 +122,7 @@ export async function computeAppScores(
         completedAt: new Date(),
         triggeredBy,
         queue,
+        jobId: jobId ?? null,
         error: `Prerequisites not met: ${missing.join(", ")}`,
       })
       .returning();
@@ -139,6 +141,7 @@ export async function computeAppScores(
       startedAt: new Date(),
       triggeredBy,
       queue,
+      jobId: jobId ?? null,
     })
     .returning();
 

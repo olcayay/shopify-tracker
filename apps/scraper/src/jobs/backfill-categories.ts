@@ -9,7 +9,7 @@ const log = createLogger("backfill-categories");
  * One-time backfill: read category data from existing app snapshots
  * and register any missing categories in the categories table.
  */
-export async function backfillCategories(db: Database, triggeredBy: string, queue?: string, platform: PlatformId = "shopify"): Promise<void> {
+export async function backfillCategories(db: Database, triggeredBy: string, queue?: string, platform: PlatformId = "shopify", jobId?: string): Promise<void> {
   const startTime = Date.now();
 
   const [run] = await db
@@ -22,6 +22,7 @@ export async function backfillCategories(db: Database, triggeredBy: string, queu
       startedAt: new Date(),
       triggeredBy,
       queue,
+      jobId: jobId ?? null,
     })
     .returning();
 

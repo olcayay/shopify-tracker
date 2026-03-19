@@ -49,6 +49,7 @@ export class CategoryScraper {
   private categoryAdSightingsCount = 0;
   private platform: PlatformId;
   private platformModule?: PlatformModule;
+  public jobId?: string;
 
   constructor(db: Database, options: CategoryScraperOptions = {}) {
     this.db = db;
@@ -84,6 +85,7 @@ export class CategoryScraper {
         startedAt: new Date(),
         triggeredBy,
         queue,
+        jobId: this.jobId ?? null,
       })
       .returning();
 
@@ -191,6 +193,7 @@ export class CategoryScraper {
         startedAt: new Date(),
         triggeredBy,
         queue,
+        jobId: this.jobId ?? null,
       })
       .returning();
 
