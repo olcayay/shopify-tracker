@@ -61,12 +61,13 @@ interface StarredCategory {
   categoryTitle: string;
   parentSlug: string | null;
   parents: { slug: string; title: string }[];
-  createdAt: string;
+  createdAt: string | null;
   appCount: number | null;
   trackedInResults: number;
   competitorInResults: number;
   trackedAppsInResults: any[];
   competitorAppsInResults: any[];
+  source: "starred" | "auto" | "both";
 }
 
 type FlatSortKey = "title" | "appCount";
@@ -122,7 +123,9 @@ export default function CategoriesPage() {
       { method: "DELETE" }
     );
     if (res.ok) {
-      setStarred((prev) => prev.filter((s) => s.categorySlug !== slug));
+      // Re-fetch to get updated source fields (unstarred "both" becomes "auto")
+      const starredRes = await fetchWithAuth("/api/account/starred-categories");
+      if (starredRes.ok) setStarred(await starredRes.json());
     }
   }
 
@@ -278,7 +281,7 @@ export default function CategoriesPage() {
   }, [filteredTree, searchQuery]);
 
   const totalCount = isFlat ? flatCategories.length : countAll(tree);
-  const starredSlugs = new Set(starred.map((s) => s.categorySlug));
+  const starredSlugs = new Set(starred.filter((s) => s.source === "starred" || s.source === "both").map((s) => s.categorySlug));
 
   function toggleFlatSort(key: FlatSortKey) {
     if (sortKey === key) {
@@ -331,8 +334,8 @@ export default function CategoriesPage() {
         <Card>
           <CardHeader className="pb-3">
             <CardTitle className="text-base flex items-center gap-2">
-              <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
-              Starred {entityLabel}
+              <Folder className="h-4 w-4 text-muted-foreground" />
+              My {entityLabel}
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -342,10 +345,10 @@ export default function CategoriesPage() {
               <div className="flex flex-col items-center justify-center py-10 text-center">
                 <Folder className="h-10 w-10 text-muted-foreground/20 mb-3" />
                 <p className="text-sm font-medium text-muted-foreground mb-1">
-                  No starred {entityLabelLower} yet
+                  No {entityLabelLower} to show
                 </p>
                 <p className="text-xs text-muted-foreground/70 max-w-xs">
-                  Star {entityLabelLower} from the {isFlat ? "table" : "tree"} below or from detail pages to track them here.
+                  Star {entityLabelLower} or start tracking apps to auto-detect their {entityLabelLower}.
                 </p>
               </div>
             ) : (
@@ -386,6 +389,12 @@ export default function CategoriesPage() {
                         >
                           {s.categoryTitle}
                         </Link>
+                        {(s.source === "starred" || s.source === "both") && (
+                          <Star className="h-3 w-3 fill-yellow-400 text-yellow-400 shrink-0" />
+                        )}
+                        {(s.source === "auto" || s.source === "both") && (
+                          <Badge variant="secondary" className="text-[10px] px-1 py-0 shrink-0">Auto</Badge>
+                        )}
                       </div>
                     </TableCell>
                     {!isFlat && (
@@ -435,6 +444,7 @@ export default function CategoriesPage() {
                     </TableCell>
                     {canEdit && (
                       <TableCell onClick={(e) => e.stopPropagation()}>
+                        {s.source !== "auto" && (
                         <Button
                           variant="ghost"
                           size="icon"
@@ -448,6 +458,7 @@ export default function CategoriesPage() {
                         >
                           <X className="h-4 w-4" />
                         </Button>
+                        )}
                       </TableCell>
                     )}
                   </TableRow>
@@ -679,8 +690,8 @@ export default function CategoriesPage() {
 
       <ConfirmModal
         open={!!confirmUnstar}
-        title={`Remove Starred ${entitySingular}`}
-        description={`Are you sure you want to remove "${confirmUnstar?.title}" from starred ${entityLabelLower}?`}
+        title={`Remove Star`}
+        description={`Are you sure you want to remove the star from "${confirmUnstar?.title}"? If the ${entitySingular.toLowerCase()} is auto-detected from your tracked apps, it will remain visible.`}
         confirmLabel="Remove"
         onConfirm={() => {
           if (confirmUnstar) {

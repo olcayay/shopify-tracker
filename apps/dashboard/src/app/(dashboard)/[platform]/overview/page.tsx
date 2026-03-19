@@ -725,7 +725,7 @@ export default function OverviewPage() {
       <Card>
         <CardHeader className="pb-3">
           <div className="flex items-center justify-between">
-            <CardTitle className="text-base">Starred Categories ({categories.length})</CardTitle>
+            <CardTitle className="text-base">My Categories ({categories.length})</CardTitle>
             <Link href={`/${platform}/categories`} className="text-sm text-primary hover:underline">
               View all
             </Link>
@@ -734,9 +734,9 @@ export default function OverviewPage() {
         <CardContent>
           {categories.length === 0 ? (
             <p className="text-sm text-muted-foreground">
-              No starred categories yet.{" "}
+              No categories to show.{" "}
               <Link href={`/${platform}/categories`} className="text-primary hover:underline">
-                Star categories
+                Manage categories
               </Link>
             </p>
           ) : (

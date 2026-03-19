@@ -2867,7 +2867,7 @@ export const accountRoutes: FastifyPluginAsync = async (app) => {
     const { accountId } = request.user;
     const platform = getPlatformFromQuery(request.query as Record<string, unknown>);
 
-    const rows = await db
+    const starredRows = await db
       .select({
         categorySlug: categories.slug,
         createdAt: accountStarredCategories.createdAt,
@@ -2881,17 +2881,63 @@ export const accountRoutes: FastifyPluginAsync = async (app) => {
       )
       .where(and(eq(accountStarredCategories.accountId, accountId), eq(categories.platform, platform)));
 
-    if (rows.length === 0) return rows;
-
-    // Get tracked + competitor slugs for this account
+    // Get tracked + competitor app IDs & slugs for this account (filtered by platform)
     const [trackedAppsRows2, competitorAppsRows2] = await Promise.all([
-      db.select({ appSlug: apps.slug }).from(accountTrackedApps).innerJoin(apps, eq(apps.id, accountTrackedApps.appId)).where(eq(accountTrackedApps.accountId, accountId)),
-      db.select({ appSlug: apps.slug }).from(accountCompetitorApps).innerJoin(apps, eq(apps.id, accountCompetitorApps.competitorAppId)).where(eq(accountCompetitorApps.accountId, accountId)),
+      db.select({ appId: apps.id, appSlug: apps.slug }).from(accountTrackedApps).innerJoin(apps, eq(apps.id, accountTrackedApps.appId)).where(and(eq(accountTrackedApps.accountId, accountId), eq(apps.platform, platform))),
+      db.select({ appId: apps.id, appSlug: apps.slug }).from(accountCompetitorApps).innerJoin(apps, eq(apps.id, accountCompetitorApps.competitorAppId)).where(and(eq(accountCompetitorApps.accountId, accountId), eq(apps.platform, platform))),
     ]);
     const trackedSet = new Set(trackedAppsRows2.map((a) => a.appSlug));
     const competitorSet = new Set(competitorAppsRows2.map((a) => a.appSlug));
 
-    // Get latest snapshot per starred category for firstPageApps + appCount
+    // Auto-detect categories from tracked/competitor apps via appCategoryRankings
+    const allAppIds = [...new Set([...trackedAppsRows2.map((a) => a.appId), ...competitorAppsRows2.map((a) => a.appId)])];
+    const autoCategories = new Map<string, { categorySlug: string; categoryTitle: string; parentSlug: string | null }>();
+    if (allAppIds.length > 0) {
+      const autoRows = await db
+        .selectDistinctOn([appCategoryRankings.appId, appCategoryRankings.categorySlug], {
+          appId: appCategoryRankings.appId,
+          categorySlug: appCategoryRankings.categorySlug,
+          categoryTitle: categories.title,
+          parentSlug: categories.parentSlug,
+        })
+        .from(appCategoryRankings)
+        .innerJoin(categories, and(
+          eq(categories.slug, appCategoryRankings.categorySlug),
+          eq(categories.platform, platform),
+          eq(categories.isListingPage, true),
+        ))
+        .where(inArray(appCategoryRankings.appId, allAppIds))
+        .orderBy(appCategoryRankings.appId, appCategoryRankings.categorySlug, desc(appCategoryRankings.scrapedAt));
+
+      for (const r of autoRows) {
+        if (!autoCategories.has(r.categorySlug)) {
+          autoCategories.set(r.categorySlug, { categorySlug: r.categorySlug, categoryTitle: r.categoryTitle, parentSlug: r.parentSlug });
+        }
+      }
+    }
+
+    // Merge starred + auto-detected, compute source
+    const starredSlugSet = new Set(starredRows.map((r) => r.categorySlug));
+    const autoSlugSet = new Set(autoCategories.keys());
+
+    type MergedRow = { categorySlug: string; categoryTitle: string; parentSlug: string | null; createdAt: Date | null; source: "starred" | "auto" | "both" };
+    const rows: MergedRow[] = [];
+
+    // Add all starred
+    for (const r of starredRows) {
+      const source = autoSlugSet.has(r.categorySlug) ? "both" : "starred";
+      rows.push({ ...r, source });
+    }
+    // Add auto-only
+    for (const [slug, info] of autoCategories) {
+      if (!starredSlugSet.has(slug)) {
+        rows.push({ categorySlug: info.categorySlug, categoryTitle: info.categoryTitle, parentSlug: info.parentSlug, createdAt: null, source: "auto" });
+      }
+    }
+
+    if (rows.length === 0) return rows;
+
+    // Get latest snapshot per category for firstPageApps + appCount
     const categorySlugs = rows.map((r) => r.categorySlug);
     const catRows = await db
       .select({ id: categories.id, slug: categories.slug })

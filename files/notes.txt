@@ -1,3 +1,25 @@
+Auto-Include App Categories in "My Categories"
+================================================
+
+The starred-categories API endpoint now auto-detects categories from tracked/competitor apps
+via appCategoryRankings. Categories are merged with manually starred ones, each tagged with
+a `source` field: "starred" (manual only), "auto" (detected only), or "both".
+
+API changes:
+- Removed early return when no starred categories exist
+- Added platform filter to tracked/competitor app queries
+- Query appCategoryRankings with selectDistinctOn to find categories where tracked apps appear
+- Merge starred + auto-detected with deduplication, return `source` field
+
+Dashboard changes:
+- Section renamed "Starred Categories" → "My Categories" (Folder icon instead of Star)
+- Source indicators: Star icon for starred, "Auto" badge for auto-detected
+- X (unstar) button hidden for auto-only categories
+- Unstarring a "both" category re-fetches to show it as "auto"
+- starredSlugs filters to "starred"/"both" only (controls star icon in tree/flat table)
+- Updated empty states and confirm modal text
+- Overview page: title and empty state updated
+
 Zoom App Marketplace — 8th Platform Integration
 ================================================
 
