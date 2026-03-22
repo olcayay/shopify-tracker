@@ -21,6 +21,12 @@ export function buildExternalAppUrl(platform: PlatformId, slug: string, external
       return `https://marketplace.zoom.us/apps/${slug}`;
     case "zoho":
       return `https://marketplace.zoho.com/app/${slug.replace("--", "/")}`;
+    case "zendesk": {
+      const product = externalId || "support";
+      const [id, ...rest] = slug.split("--");
+      const textSlug = rest.join("-");
+      return `https://www.zendesk.com/marketplace/apps/${product}/${id}/${textSlug}/`;
+    }
   }
 }
 
@@ -48,6 +54,8 @@ export function buildExternalCategoryUrl(platform: PlatformId, slug: string): st
       return `https://marketplace.zoom.us/apps?category=${slug}`;
     case "zoho":
       return `https://marketplace.zoho.com/app/${slug}`;
+    case "zendesk":
+      return `https://www.zendesk.com/marketplace/apps/?category=${slug}`;
   }
 }
 
@@ -71,6 +79,8 @@ export function buildExternalSearchUrl(platform: PlatformId, query: string): str
       return `https://marketplace.zoom.us/apps?q=${encodeURIComponent(query)}`;
     case "zoho":
       return `https://marketplace.zoho.com/search?searchTerm=${encodeURIComponent(query)}`;
+    case "zendesk":
+      return `https://www.zendesk.com/marketplace/apps/?query=${encodeURIComponent(query)}`;
   }
 }
 

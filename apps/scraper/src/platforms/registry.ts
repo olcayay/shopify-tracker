@@ -9,6 +9,7 @@ import { GoogleWorkspaceModule } from "./google-workspace/index.js";
 import { AtlassianModule } from "./atlassian/index.js";
 import { ZoomModule } from "./zoom/index.js";
 import { ZohoModule } from "./zoho/index.js";
+import { ZendeskModule } from "./zendesk/index.js";
 import type { HttpClient } from "../http-client.js";
 import type { BrowserClient } from "../browser-client.js";
 
@@ -50,6 +51,9 @@ export function getModule(platformId: PlatformId, httpClient?: HttpClient, brows
       break;
     case "zoho":
       module = new ZohoModule(httpClient, browserClient);
+      break;
+    case "zendesk":
+      module = new ZendeskModule(httpClient, browserClient);
       break;
     default:
       throw new Error(`Unknown platform: ${platformId}`);

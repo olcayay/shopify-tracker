@@ -1,3 +1,58 @@
+Zendesk Marketplace — 10th Platform Integration
+=================================================
+
+Platform ID: "zendesk", Color: #03363D (Zendesk dark teal)
+URL: https://www.zendesk.com/marketplace
+
+Architecture:
+- ALL pages: BrowserClient/Playwright (Cloudflare blocks HTTP requests)
+- Slug format: {numericId}--{text-slug} (e.g., 972305--slack)
+- Product type (support/chat/sell) stored in externalId for URL reconstruction
+- App URL: /marketplace/apps/{product}/{numericId}/{text-slug}/
+- Category URL: /marketplace/apps/?category={slug}
+- 15 flat categories, no hierarchy
+- hasReviews: true, hasFeaturedSections: true, hasPricing: true, hasLaunchedDate: true
+
+Files created:
+- apps/scraper/src/platforms/zendesk/ (urls.ts, constants.ts, index.ts, parsers/)
+  - parsers: app-parser.ts, category-parser.ts, search-parser.ts, review-parser.ts, featured-parser.ts
+- packages/db/src/migrations/0083_seed_zendesk_platform.sql
+- packages/db/src/migrations/0084_seed_zendesk_categories.sql
+
+Files modified:
+- packages/shared/src/constants/platforms.ts (PLATFORMS, buildExternalAppUrl, buildExternalCategoryUrl)
+- apps/dashboard/src/lib/platform-urls.ts (3 URL builder functions)
+- packages/shared/src/similarity.ts (weights, stop words, extractCategorySlugsFromPlatformData)
+- apps/dashboard/src/lib/metadata-limits.ts (zendeskLimits)
+- apps/scraper/src/platforms/registry.ts (ZendeskModule import + switch case)
+- apps/scraper/src/scheduler.ts (5 cron jobs for zendesk)
+- apps/scraper/src/process-job.ts (BrowserClient creation condition)
+- apps/scraper/src/jobs/backfill-categories.ts (URL pattern extraction)
+- apps/api/src/routes/live-search.ts (zendeskDbSearch + handler)
+- apps/api/src/routes/apps.ts (emailPath, developer info)
+- apps/dashboard/src/lib/auth-context.tsx (VALID_PLATFORMS)
+- apps/dashboard/src/proxy.ts (VALID_PLATFORMS)
+- apps/dashboard/src/components/admin-scraper-trigger.tsx (VALID_PLATFORMS)
+- apps/dashboard/src/components/sidebar.tsx (labels, colors, regex patterns, research exclusion)
+- apps/dashboard/src/components/platform-overview-cards.tsx (labels, colors)
+- apps/dashboard/src/app/(dashboard)/overview/page.tsx (PLATFORM_BRANDS, ALL_PLATFORMS)
+- apps/dashboard/src/components/app-badges.tsx (empty zendesk entry)
+- packages/db/src/migrations/meta/_journal.json (entries 83, 84)
+
+15 Zendesk categories:
+  agent-productivity, collaboration, ecommerce-and-payments, reporting-and-analytics,
+  it-and-hr, crm-and-marketing, workflows, messaging, product-and-project-management,
+  surveys-and-reviews, video, security-risk-and-compliance, wem, translations,
+  knowledge-and-content-management
+
+Risks & Notes:
+- Cloudflare may block Playwright — use realistic user agents, stealth settings, conservative delays (2-5s)
+- Category slugs are best-guess — verify via Playwright and update migration if needed
+- Parser CSS selectors are scaffolded with generic patterns — refine after first Playwright run
+- Search powered by Algolia on Zendesk's end (queryID parameter)
+
+---
+
 Zoho Marketplace — 9th Platform Integration
 =============================================
 

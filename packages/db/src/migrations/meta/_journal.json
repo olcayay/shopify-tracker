@@ -582,6 +582,20 @@
       "when": 1775779200000,
       "tag": "0082_seed_zoho_categories",
       "breakpoints": true
+    },
+    {
+      "idx": 83,
+      "version": "7",
+      "when": 1775865600000,
+      "tag": "0083_seed_zendesk_platform",
+      "breakpoints": true
+    },
+    {
+      "idx": 84,
+      "version": "7",
+      "when": 1775952000000,
+      "tag": "0084_seed_zendesk_categories",
+      "breakpoints": true
     }
   ]
 }

@@ -35,6 +35,7 @@ const PLATFORM_SIMILARITY_WEIGHTS: Record<string, SimilarityWeights> = {
   atlassian: { category: 0.35, feature: 0.0, keyword: 0.30, text: 0.35 },
   zoom: { category: 0.35, feature: 0.0, keyword: 0.30, text: 0.35 },
   zoho: { category: 0.35, feature: 0.0, keyword: 0.30, text: 0.35 },
+  zendesk: { category: 0.35, feature: 0.0, keyword: 0.30, text: 0.35 },
 };
 
 /** Get similarity weights for a given platform (defaults to Shopify weights) */
@@ -70,6 +71,7 @@ const GOOGLE_WORKSPACE_SIMILARITY_STOP_WORDS = new Set(["google", "workspace", "
 const ATLASSIAN_SIMILARITY_STOP_WORDS = new Set(["atlassian", "jira", "confluence", "bitbucket", "marketplace", "plugin", "addon", "app", "cloud", "server", "datacenter"]);
 const ZOOM_SIMILARITY_STOP_WORDS = new Set(["zoom", "meeting", "meetings", "webinar", "video", "marketplace", "app", "apps", "cloud"]);
 const ZOHO_SIMILARITY_STOP_WORDS = new Set(["zoho", "marketplace", "extension", "integration", "app", "apps", "crm", "desk", "books", "projects"]);
+const ZENDESK_SIMILARITY_STOP_WORDS = new Set(["zendesk", "support", "ticket", "tickets", "agent", "agents", "customer", "customers", "marketplace", "app", "apps", "helpdesk"]);
 
 const PLATFORM_SIMILARITY_STOP_WORDS: Record<string, Set<string>> = {
   shopify: SHOPIFY_SIMILARITY_STOP_WORDS,
@@ -81,6 +83,7 @@ const PLATFORM_SIMILARITY_STOP_WORDS: Record<string, Set<string>> = {
   atlassian: ATLASSIAN_SIMILARITY_STOP_WORDS,
   zoom: ZOOM_SIMILARITY_STOP_WORDS,
   zoho: ZOHO_SIMILARITY_STOP_WORDS,
+  zendesk: ZENDESK_SIMILARITY_STOP_WORDS,
 };
 
 /** Get merged similarity stop words for a given platform */
@@ -205,6 +208,11 @@ export function extractCategorySlugsFromPlatformData(
       return new Set(cats.map((c) => c.slug).filter((s): s is string => !!s));
     }
     case "zoho": {
+      const cats = platformData.categories as Array<{ slug?: string }> | undefined;
+      if (!Array.isArray(cats)) return new Set();
+      return new Set(cats.map((c) => c.slug).filter((s): s is string => !!s));
+    }
+    case "zendesk": {
       const cats = platformData.categories as Array<{ slug?: string }> | undefined;
       if (!Array.isArray(cats)) return new Set();
       return new Set(cats.map((c) => c.slug).filter((s): s is string => !!s));

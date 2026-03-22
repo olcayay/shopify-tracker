@@ -143,6 +143,22 @@ export const PLATFORMS = {
     maxRatingStars: 5,
     pageSize: 50,
   },
+  zendesk: {
+    id: "zendesk" as const,
+    name: "Zendesk Marketplace",
+    baseUrl: "https://www.zendesk.com/marketplace",
+    hasKeywordSearch: true,
+    hasReviews: true,
+    hasFeaturedSections: true,
+    hasAdTracking: false,
+    hasSimilarApps: false,
+    hasAutoSuggestions: false,
+    hasFeatureTaxonomy: false,
+    hasPricing: true,
+    hasLaunchedDate: true,
+    maxRatingStars: 5,
+    pageSize: 24,
+  },
 } as const;
 
 export type PlatformId = keyof typeof PLATFORMS;
@@ -184,6 +200,13 @@ export function buildExternalAppUrl(platform: PlatformId, slug: string, external
       return `https://marketplace.zoom.us/apps/${slug}`;
     case "zoho":
       return `https://marketplace.zoho.com/app/${slug.replace("--", "/")}`;
+    case "zendesk": {
+      // slug format: {numericId}--{text-slug}, product type in externalId
+      const product = externalId || "support";
+      const [id, ...rest] = slug.split("--");
+      const textSlug = rest.join("-");
+      return `https://www.zendesk.com/marketplace/apps/${product}/${id}/${textSlug}/`;
+    }
   }
 }
 
@@ -215,5 +238,7 @@ export function buildExternalCategoryUrl(platform: PlatformId, slug: string): st
       return `https://marketplace.zoom.us/apps?category=${slug}`;
     case "zoho":
       return `https://marketplace.zoho.com/app/${slug}`;
+    case "zendesk":
+      return `https://www.zendesk.com/marketplace/apps/?category=${slug}`;
   }
 }

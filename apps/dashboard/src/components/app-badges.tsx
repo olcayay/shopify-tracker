@@ -83,6 +83,8 @@ const BADGE_CONFIG: Record<string, Record<string, { icon: string; label: string;
       className: "text-amber-600",
     },
   },
+  zoho: {},
+  zendesk: {},
 };
 
 interface AppBadgesProps {

@@ -16,6 +16,7 @@ const PLATFORM_LABELS: Record<PlatformId, string> = {
   atlassian: "Atlassian",
   zoom: "Zoom",
   zoho: "Zoho",
+  zendesk: "Zendesk",
 };
 
 const PLATFORM_COLORS: Record<PlatformId, string> = {
@@ -28,6 +29,7 @@ const PLATFORM_COLORS: Record<PlatformId, string> = {
   atlassian: "#0052CC",
   zoom: "#0B5CFF",
   zoho: "#D4382C",
+  zendesk: "#03363D",
 };
 
 interface PlatformCounts {

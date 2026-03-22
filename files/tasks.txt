@@ -197,3 +197,5 @@ Zoom App Marketplace — 8th platform integration, public JSON API, 48 categorie
 auto-include app categories in "My Categories" section (auto-detect from tracked/competitor apps) ✅
 
 Zoho Marketplace — 9th platform integration, HttpClient for app details (detailsObject), BrowserClient for SPA categories/search, 31 product categories, slug format {service}--{namespace} ✅
+
+Zendesk Marketplace — 10th platform integration, BrowserClient for all fetches (Cloudflare), 15 flat categories, slug format {numericId}--{text-slug}, product type in externalId ✅

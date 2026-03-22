@@ -477,6 +477,7 @@ export const appRoutes: FastifyPluginAsync = async (app) => {
       wordpress: "platform_data->>'homepage'",
       google_workspace: "platform_data->>'developerWebsite'",
       zoho: "platform_data->'partnerDetails'->0->>'supportEmail'",
+      zendesk: "platform_data->>'authorUrl'",
     };
     const countryPath: Record<string, string> = {
       canva: "platform_data->'developerAddress'->>'country'",
@@ -581,6 +582,10 @@ export const appRoutes: FastifyPluginAsync = async (app) => {
           const info: Record<string, unknown> = {};
           if (pd.homepage) info.website = pd.homepage;
           if (pd.donateLink) info.donateLink = pd.donateLink;
+          if (Object.keys(info).length > 0) developerInfo = info;
+        } else if (platform === "zendesk") {
+          const info: Record<string, unknown> = {};
+          if (pd.authorUrl) info.website = pd.authorUrl;
           if (Object.keys(info).length > 0) developerInfo = info;
         }
       }

@@ -270,6 +270,37 @@ const SCHEDULES = [
     type: "compute_app_scores" as const,
     platform: "zoho" as const,
   },
+  // ── Zendesk ──
+  {
+    name: "zendesk_category",
+    cron: "0 11 * * *", // Daily at 11:00
+    type: "category" as const,
+    platform: "zendesk" as const,
+  },
+  {
+    name: "zendesk_app_details",
+    cron: "30 11,23 * * *", // Every 12 hours (11:30, 23:30)
+    type: "app_details" as const,
+    platform: "zendesk" as const,
+  },
+  {
+    name: "zendesk_keyword_search",
+    cron: "0 12,0 * * *", // Every 12 hours (12:00, 00:00)
+    type: "keyword_search" as const,
+    platform: "zendesk" as const,
+  },
+  {
+    name: "zendesk_reviews",
+    cron: "30 10 * * *", // Daily at 10:30
+    type: "reviews" as const,
+    platform: "zendesk" as const,
+  },
+  {
+    name: "zendesk_compute_app_scores",
+    cron: "0 14 * * *", // Daily at 14:00 UTC
+    type: "compute_app_scores" as const,
+    platform: "zendesk" as const,
+  },
 ];
 
 log.info("starting scheduler", {
