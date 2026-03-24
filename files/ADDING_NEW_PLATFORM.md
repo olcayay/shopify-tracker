@@ -1,6 +1,6 @@
 # Adding a New Platform — Comprehensive Guide
 
-This document covers everything needed to add a new marketplace platform to the AppRanks tracking system. It draws from lessons learned integrating Shopify, Salesforce, Canva, Wix, WordPress, Google Workspace, Atlassian, and Zoom.
+This document covers everything needed to add a new marketplace platform to the AppRanks tracking system. It draws from lessons learned integrating Shopify, Salesforce, Canva, Wix, WordPress, Google Workspace, Atlassian, Zoom, Zoho, and Zendesk.
 
 ---
 
@@ -102,19 +102,19 @@ export const PLATFORMS = {
 
 **Current platforms and their flags:**
 
-| Flag | Shopify | Salesforce | Canva | Wix | WordPress | Google WS | Atlassian | Zoom |
-|------|---------|------------|-------|-----|-----------|-----------|-----------|------|
-| hasKeywordSearch | true | true | true | true | true | true | true | true |
-| hasReviews | true | true | false | true | true | true | true | false |
-| hasFeaturedSections | true | false | false | true | true | true | true | true |
-| hasAdTracking | true | false | false | false | false | false | false | false |
-| hasSimilarApps | true | false | false | false | false | false | false | false |
-| hasAutoSuggestions | true | false | true | false | false | false | false | false |
-| hasFeatureTaxonomy | true | false | false | false | false | false | false | false |
-| hasPricing | true | true | false | true | false | true | true | false |
-| hasLaunchedDate | true | false | false | false | true | false | false | false |
-| maxRatingStars | 5 | 5 | 5 | 5 | 5 | 5 | 4 | 5 |
-| pageSize | 20 | 12 | 20 | 20 | 20 | 20 | 50 | 100 |
+| Flag | Shopify | Salesforce | Canva | Wix | WordPress | Google WS | Atlassian | Zoom | Zoho | Zendesk |
+|------|---------|------------|-------|-----|-----------|-----------|-----------|------|------|---------|
+| hasKeywordSearch | true | true | true | true | true | true | true | true | true | true |
+| hasReviews | true | true | false | true | true | true | true | false | false | true |
+| hasFeaturedSections | true | false | false | true | true | true | true | true | false | true |
+| hasAdTracking | true | false | false | false | false | false | false | false | false | false |
+| hasSimilarApps | true | false | false | false | false | false | false | false | false | false |
+| hasAutoSuggestions | true | false | true | false | false | false | false | false | false | false |
+| hasFeatureTaxonomy | true | false | false | false | false | false | false | false | false | false |
+| hasPricing | true | true | false | true | false | true | true | false | false | true |
+| hasLaunchedDate | true | false | false | false | true | false | false | false | true | true |
+| maxRatingStars | 5 | 5 | 5 | 5 | 5 | 5 | 4 | 5 | 5 | 5 |
+| pageSize | 20 | 12 | 20 | 20 | 20 | 20 | 50 | 100 | 50 | 24 |
 
 ### 2.2 PlatformCapabilities Type
 
@@ -239,15 +239,15 @@ const limitsByPlatform: Record<string, MetadataLimits> = {
 
 **Current limits by platform:**
 
-| Field | Shopify | Salesforce | Canva | Wix | WordPress | Google WS | Atlassian | Zoom |
-|-------|---------|------------|-------|-----|-----------|-----------|-----------|------|
-| appName | 30 | 80 | 18 | 50 | 70 | 50 | 50 | 50 |
-| subtitle | 62 | 62 | 50 | 80 | 150 | 200 | 80 | 80 |
-| introduction | 100 | 500 | 50 | 200 | 150 | 200 | 150 | 200 |
-| details | 500 | 2000 | 200 | 2000 | 5000 | 16000 | 5000 | 2000 |
-| feature | 80 | 80 | 80 | 80 | 0 | 0 | 0 | 0 |
-| seoTitle | 60 | 60 | 60 | 60 | 0 | 0 | 0 | 0 |
-| seoMetaDescription | 160 | 160 | 160 | 160 | 0 | 0 | 0 | 0 |
+| Field | Shopify | Salesforce | Canva | Wix | WordPress | Google WS | Atlassian | Zoom | Zoho | Zendesk |
+|-------|---------|------------|-------|-----|-----------|-----------|-----------|------|------|---------|
+| appName | 30 | 80 | 18 | 50 | 70 | 50 | 50 | 50 | 50 | 50 |
+| subtitle | 62 | 62 | 50 | 80 | 150 | 200 | 80 | 80 | 80 | 80 |
+| introduction | 100 | 500 | 50 | 200 | 150 | 200 | 150 | 200 | 200 | 200 |
+| details | 500 | 2000 | 200 | 2000 | 5000 | 16000 | 5000 | 2000 | 2000 | 5000 |
+| feature | 80 | 80 | 80 | 80 | 0 | 0 | 0 | 0 | 0 | 0 |
+| seoTitle | 60 | 60 | 60 | 60 | 0 | 0 | 0 | 0 | 0 | 0 |
+| seoMetaDescription | 160 | 160 | 160 | 160 | 0 | 0 | 0 | 0 | 0 | 0 |
 
 **Important:** Research your platform's actual limits before setting values. These control CharBadge color thresholds — wrong limits create misleading UI. Use `0` for fields the platform doesn't have.
 
@@ -567,6 +567,8 @@ async fetchAppPage(slug: string): Promise<string> {
 | Google Workspace | All jobs | Angular SPA |
 | Atlassian | No | REST API + HTML scraping (no JS rendering needed) |
 | Zoom | No | Public JSON API exclusively |
+| Zoho | Categories/search only | SPA for category/search pages; app details use HttpClient (`var detailsObject`) |
+| Zendesk | app_details/featured only | Categories & search use Algolia API directly; app detail pages behind Cloudflare |
 
 **Browser auth state:** For Cloudflare-protected or session-dependent sites, persist auth cookies:
 ```typescript
@@ -590,8 +592,10 @@ Choose a slug format that is URL-safe and can uniquely identify apps:
 | Google Workspace | `vendor--app-name` | `--` separator (replaces `/` in URL path) |
 | Atlassian | `com.vendor.plugin-key` | addonKey (reverse domain notation); uses `external_id` for human URLs |
 | Zoom | `base64-like-id` | App ID from Zoom JSON API |
+| Zoho | `crm--jotform` | `{service}--{namespace}` format; service is the Zoho product (crm, desk, books, etc.) |
+| Zendesk | `972305--slack` | `{numericId}--{textSlug}`; product type (support/sell/chat) in `externalId` for URL reconstruction |
 
-**`--` separator pattern:** Canva and Google Workspace use hierarchical URL paths (`/apps/AAFxxx/my-app`, `/marketplace/app/vendor/app-name`) but `/` is not safe in URL path segments. We use `--` as separator: `AAFxxx--my-app-name`. Convert back with `slug.replace("--", "/")` for external URLs.
+**`--` separator pattern:** Canva, Google Workspace, Zoho, and Zendesk use hierarchical URL paths but `/` is not safe in URL path segments. We use `--` as separator: `AAFxxx--my-app-name`. Convert back with `slug.replace("--", "/")` for external URLs. Zoho uses `{service}--{namespace}`, Zendesk uses `{numericId}--{textSlug}`.
 
 **Same `--` pattern for category slugs:** Wix and Google Workspace also use `--` for hierarchical category slugs (e.g., `business-tools--accounting`).
 
@@ -691,6 +695,14 @@ New platforms use the generic `scrapeKeywordGeneric()` path.
     const zoomMatch = url.match(/[?&]category=([^&]+)/);
     slug = zoomMatch?.[1] ? decodeURIComponent(zoomMatch[1]) : undefined;
   }
+  else if (platform === "zoho") {
+    const zohoMatch = url.match(/\/app\/([^/?#]+)$/);
+    slug = zohoMatch?.[1] ?? undefined;
+  }
+  else if (platform === "zendesk") {
+    const zendeskMatch = url.match(/[?&]categories\.name=([^&]+)/);
+    slug = zendeskMatch?.[1] ? decodeURIComponent(zendeskMatch[1]) : undefined;
+  }
   ```
   **MUST add** a new `else if` for the new platform's category URL pattern.
 
@@ -755,6 +767,12 @@ if (platform === "salesforce") {
 }
 if (platform === "canva") {
   return canvaLiveSearch(q);        // Uses Playwright browser server or DB fallback
+}
+if (platform === "zoho") {
+  return zohoDbSearch(db, q);       // Database fallback (no live search API)
+}
+if (platform === "zendesk") {
+  return zendeskDbSearch(db, q);    // Database fallback (Algolia used only in scraper)
 }
 // Default: Shopify — HTML scrapes apps.shopify.com/search
 ```
@@ -828,7 +846,7 @@ There are **3 separate `VALID_PLATFORMS` definitions** that must ALL be updated:
 **a) Auth Context — `apps/dashboard/src/lib/auth-context.tsx`**
 
 ```typescript
-const VALID_PLATFORMS = new Set(["shopify", "salesforce", "canva", "wix", "wordpress", "google_workspace", "atlassian", "zoom", "newplatform"]);
+const VALID_PLATFORMS = new Set(["shopify", "salesforce", "canva", "wix", "wordpress", "google_workspace", "atlassian", "zoom", "zoho", "zendesk", "newplatform"]);
 ```
 
 Controls the auto-injection of `?platform=` in API calls. If your platform isn't in this set, no API calls from dashboard pages under `/<platform>/` will work.
@@ -836,7 +854,7 @@ Controls the auto-injection of `?platform=` in API calls. If your platform isn't
 **b) Proxy — `apps/dashboard/src/proxy.ts`**
 
 ```typescript
-const VALID_PLATFORMS = ["shopify", "salesforce", "canva", "wix", "wordpress", "google_workspace", "atlassian", "zoom", "newplatform"];
+const VALID_PLATFORMS = ["shopify", "salesforce", "canva", "wix", "wordpress", "google_workspace", "atlassian", "zoom", "zoho", "zendesk", "newplatform"];
 ```
 
 Controls which platforms the Next.js proxy accepts. Missing this causes API proxy 404s.
@@ -844,7 +862,7 @@ Controls which platforms the Next.js proxy accepts. Missing this causes API prox
 **c) Admin Scraper Trigger — `apps/dashboard/src/components/admin-scraper-trigger.tsx`**
 
 ```typescript
-const VALID_PLATFORMS = new Set(["shopify", "salesforce", "canva", "wix", "wordpress", "google_workspace", "atlassian", "zoom", "newplatform"]);
+const VALID_PLATFORMS = new Set(["shopify", "salesforce", "canva", "wix", "wordpress", "google_workspace", "atlassian", "zoom", "zoho", "zendesk", "newplatform"]);
 ```
 
 Controls which platforms appear in the system admin scraper trigger UI.
@@ -875,10 +893,10 @@ The sidebar uses regex to extract the current platform from the URL path. Both o
 
 ```typescript
 // ~line 103
-const match = pathname.match(/^\/(shopify|salesforce|canva|wix|wordpress|google_workspace|atlassian|zoom|newplatform)(\/|$)/);
+const match = pathname.match(/^\/(shopify|salesforce|canva|wix|wordpress|google_workspace|atlassian|zoom|zoho|zendesk|newplatform)(\/|$)/);
 
 // ~line 136
-const platformMatch = pathname.match(/^\/(shopify|salesforce|canva|wix|wordpress|google_workspace|atlassian|zoom|newplatform)(\/|$)/);
+const platformMatch = pathname.match(/^\/(shopify|salesforce|canva|wix|wordpress|google_workspace|atlassian|zoom|zoho|zendesk|newplatform)(\/|$)/);
 ```
 
 **Missing this causes:** The sidebar won't highlight the correct platform or render nav items for the new platform's routes.
@@ -1509,7 +1527,7 @@ grep -r "Launched" apps/dashboard/src --include="*.tsx" -l
 **Solution:** In `apps/dashboard/src/app/(dashboard)/[platform]/categories/page.tsx`, update the `isFlat` constant:
 
 ```typescript
-const isFlat = platform === "wordpress" || platform === "zoom" || platform === "atlassian";
+const isFlat = platform === "wordpress" || platform === "zoom" || platform === "atlassian" || platform === "zoho" || platform === "zendesk";
 ```
 
 If your new platform uses flat categories (no parent-child hierarchy), add it here. Tree view is default for hierarchical platforms (Shopify, Salesforce, Canva, Wix, Google Workspace).
@@ -1520,11 +1538,13 @@ If your new platform uses flat categories (no parent-child hierarchy), add it he
 
 **Solution:** For API-only platforms (like Atlassian REST API, Zoom JSON API), the `fetchAppPage` / `fetchCategoryPage` methods still return a string — but it's JSON, not HTML. Parsers use `JSON.parse()` instead of Cheerio. The PlatformModule interface works the same way; only the parser implementation differs.
 
-**Current API-only platforms:**
+**Current API-only or hybrid-API platforms:**
 | Platform | API Type | Notes |
 |----------|----------|-------|
 | Atlassian | REST API v2 (`/rest/2/addons`) + HTML (`window.__INITIAL_STATE__`) | REST for apps/search/reviews/featured, HTML for categories |
 | Zoom | Public JSON API (`/api/v1/apps`) | Pure JSON for everything, no HTML at all |
+| Zoho | HttpClient (`var detailsObject`) + BrowserClient (SPA) | App details from inline JS; categories/search need Playwright |
+| Zendesk | Algolia API + BrowserClient (Cloudflare) | Categories/search via Algolia JSON API; app details need Playwright (Cloudflare) |
 
 ---
 
