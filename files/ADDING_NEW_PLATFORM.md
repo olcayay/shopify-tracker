@@ -526,51 +526,177 @@ export const newplatformUrls = {
 } as const;
 ```
 
-### 4.6 HTTP vs Browser Fetching
+### 4.6 Fetching Strategies
 
-Two fetching strategies:
+There are multiple fetching patterns used across platforms. Choose the right one based on how the marketplace serves its data.
 
-**HTTP Client (Cheerio)** — for static HTML pages:
+#### Strategy 1: HTTP Client — Static HTML (Shopify, Wix)
+
+Simplest approach. Use when pages return server-rendered HTML:
+
 ```typescript
-constructor(httpClient?: HttpClient) {
-  this.httpClient = httpClient || new HttpClient();
-}
-
 async fetchAppPage(slug: string): Promise<string> {
   return this.httpClient.fetchPage(this.buildAppUrl(slug));
 }
 ```
 
-**Browser Client (Playwright)** — for JS-rendered SPAs or Cloudflare-protected sites:
+#### Strategy 2: HTTP Client with Custom Headers (Shopify, Salesforce, Zoom)
+
+Some endpoints require specific headers to return the right format:
+
 ```typescript
-constructor(httpClient?: HttpClient, browserClient?: BrowserClient) {
-  this.httpClient = httpClient || new HttpClient();
-  this.browserClient = browserClient;
+// Shopify search — Turbo Frame partial response
+async fetchSearchPage(keyword: string): Promise<string | null> {
+  return this.httpClient.fetchPage(url, { headers: { "Turbo-Frame": "search-results" } });
 }
 
-async fetchAppPage(slug: string): Promise<string> {
-  const page = await this.ensureBrowserPage();
-  await page.goto(this.buildAppUrl(slug), { waitUntil: "domcontentloaded" });
-  await page.waitForTimeout(3000); // Wait for SPA hydration
-  return page.content();
+// Zoom — JSON API requires Accept header
+async fetchCategoryPage(slug: string): Promise<string> {
+  return this.httpClient.fetchPage(url, { headers: { Accept: "application/json" } });
 }
 ```
 
-**When to use browser:** If the marketplace uses client-side rendering (React/Angular SPA), is behind Cloudflare challenge, or requires JavaScript execution for search APIs.
+#### Strategy 3: REST/JSON API (WordPress, Atlassian, Zoom)
 
-**Current browser usage:**
-| Platform | BrowserClient? | Reason |
-|----------|---------------|--------|
-| Shopify | No | Static HTML |
-| Salesforce | app_details only | JS-rendered detail pages |
-| Canva | All jobs | Angular SPA |
-| Wix | No | Static HTML |
-| WordPress | No | Static HTML |
-| Google Workspace | All jobs | Angular SPA |
-| Atlassian | No | REST API + HTML scraping (no JS rendering needed) |
-| Zoom | No | Public JSON API exclusively |
-| Zoho | Categories/search only | SPA for category/search pages; app details use HttpClient (`var detailsObject`) |
-| Zendesk | app_details/featured only | Categories & search use Algolia API directly; app detail pages behind Cloudflare |
+When the marketplace has a public REST API, fetch JSON directly. Parsers use `JSON.parse()` instead of Cheerio:
+
+```typescript
+// WordPress — REST API for plugins
+async fetchAppPage(slug: string): Promise<string> {
+  return this.httpClient.fetchPage(`https://wordpress.org/wp-json/wp/v2/plugins/${slug}`);
+}
+
+// Atlassian — parallel API calls to multiple endpoints
+async fetchAppPage(slug: string): Promise<string> {
+  const [addon, version, vendor, pricing] = await Promise.all([
+    this.httpClient.fetchPage(`/rest/2/addons/${slug}`),
+    this.httpClient.fetchPage(`/rest/2/addons/${slug}/versions/latest`),
+    this.httpClient.fetchPage(`/rest/2/addons/${slug}/vendor`),
+    this.httpClient.fetchPage(`/rest/2/addons/${slug}/pricing`),
+  ]);
+  return JSON.stringify({ addon, version, vendor, pricing });
+}
+```
+
+#### Strategy 4: Direct `fetch()` — Third-Party API (Zendesk/Algolia)
+
+When the marketplace uses a third-party service (e.g., Algolia) with its own API. Bypasses both httpClient and browserClient:
+
+```typescript
+// Zendesk — Algolia API for categories & search
+private async algoliaQuery(params: { query?: string; facetFilters?: string[][] }): Promise<string> {
+  const body = JSON.stringify({
+    requests: [{ indexName: "appsIndex", params: urlParams.toString() }],
+  });
+  const url = `${ALGOLIA_BASE}?x-algolia-api-key=${API_KEY}&x-algolia-application-id=${APP_ID}`;
+  const resp = await fetch(url, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Referer: "https://www.zendesk.com/" },
+    body,
+  });
+  return resp.text();
+}
+```
+
+#### Strategy 5: Browser Client — SPA / Cloudflare (Canva, Google Workspace, Zendesk)
+
+For JavaScript-rendered SPAs or Cloudflare-protected pages:
+
+```typescript
+async fetchAppPage(slug: string): Promise<string> {
+  return this.browserClient.fetchPage(url, {
+    waitUntil: "domcontentloaded",
+    extraWaitMs: 3000,  // Wait for SPA hydration
+  });
+}
+```
+
+**When to use browser:** Client-side rendering (React/Angular SPA), Cloudflare challenge, or JavaScript execution required.
+
+#### Strategy 6: Browser with Response Interception (Canva)
+
+For SPAs where the real data comes from XHR/fetch calls that the browser makes. Intercept API responses instead of parsing rendered HTML:
+
+```typescript
+// Canva — intercept search API response triggered by typing in search box
+async fetchSearchPage(keyword: string): Promise<string | null> {
+  const page = await this.ensureBrowserPage();
+  let apiResponse: string | null = null;
+  page.on("response", async (resp) => {
+    if (resp.url().includes("/_ajax/appsearch/search")) {
+      apiResponse = await resp.text();
+    }
+  });
+  await page.fill("input[type=search]", keyword);
+  // ... wait for response
+  return apiResponse;
+}
+```
+
+#### Strategy 7: Script Tag Extraction (Atlassian, Wix, Zoho)
+
+When data is embedded in HTML as a JavaScript variable or JSON blob. Fetch HTML via HTTP, then extract embedded data in the parser:
+
+```typescript
+// Zoho — app details embedded as `var detailsObject = {...}` in script tag
+async fetchAppPage(slug: string): Promise<string> {
+  return this.httpClient.fetchPage(url);  // Standard HTTP GET
+}
+// Parser extracts: html.match(/var detailsObject\s*=\s*({[\s\S]*?});/)?.[1]
+
+// Atlassian — Apollo cache in __INITIAL_STATE__ script tag
+// Parser extracts: html.match(/__INITIAL_STATE__\s*=\s*({.*});/)?.[1]
+
+// Wix — React Query state (base64-encoded)
+// Parser extracts: html.match(/__REACT_QUERY_STATE__\s*=\s*"([^"]+)"/)?.[1]
+```
+
+#### Strategy 8: Browser with Scroll/Lazy Loading (Google Workspace)
+
+For infinite-scroll pages that load more content as you scroll:
+
+```typescript
+// Google Workspace — scroll to load all results
+private async scrollToLoadAll(page: Page): Promise<void> {
+  let previousHeight = 0;
+  while (true) {
+    await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
+    await page.waitForTimeout(2000);
+    const currentHeight = await page.evaluate(() => document.body.scrollHeight);
+    if (currentHeight === previousHeight) break;
+    previousHeight = currentHeight;
+  }
+}
+```
+
+#### Strategy 9: Mixed Strategies Per Content Type (Salesforce, Zoho, Zendesk)
+
+Many platforms use different strategies for different content types. This is the most common real-world pattern:
+
+| Platform | App Details | Categories | Search | Reviews | Featured |
+|----------|------------|------------|--------|---------|----------|
+| Salesforce | Browser (fallback: HTTP) | HTTP + API headers | HTTP + API headers | HTTP + JSON header | N/A |
+| Zoho | HTTP (script tag) | Browser (SPA) | Browser (SPA) | N/A | N/A |
+| Zendesk | Browser (Cloudflare) | Algolia API (`fetch()`) | Algolia API (`fetch()`) | Browser (same as app) | Browser |
+
+**Tip:** Always prefer HTTP/API over browser when possible — it's faster, more reliable, and doesn't need Playwright.
+
+---
+
+**Current fetching strategy by platform:**
+
+| Platform | Primary Strategy | Special Patterns |
+|----------|-----------------|------------------|
+| Shopify | HTTP | Custom `Turbo-Frame` header for search |
+| Salesforce | HTTP + API headers | Browser fallback for app details; parallel not used |
+| Canva | Persistent browser | Response interception for search/app APIs; Cloudflare handling |
+| Wix | HTTP | `__REACT_QUERY_STATE__` (base64) script tag extraction |
+| WordPress | REST API (JSON) | HTML only for review pages |
+| Google Workspace | Persistent browser | `scrollToLoadAll()` for lazy-loaded content; auth state |
+| Atlassian | REST API + HTML | Parallel API calls for app details; `__INITIAL_STATE__` for categories |
+| Zoom | JSON API | `Accept: application/json` header; public endpoints only |
+| Zoho | Mixed HTTP/Browser | HTTP for app details (`var detailsObject`); Browser for SPA categories/search |
+| Zendesk | Mixed Algolia/Browser | Direct `fetch()` POST to Algolia API; Browser for app details (Cloudflare) |
 
 **Browser auth state:** For Cloudflare-protected or session-dependent sites, persist auth cookies:
 ```typescript
