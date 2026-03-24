@@ -47,6 +47,7 @@ Use this as a high-level task tracker. Each item links to a detailed section bel
 - [ ] Add URL pattern to `apps/scraper/src/jobs/backfill-categories.ts`
 - [ ] Add branch in `keyword-suggestion-scraper.ts` (if custom suggestion API)
 - [ ] Add smoke test checks in `scripts/smoke-test.sh` (see [Smoke Test](#smoke-test) below)
+- [ ] Bootstrap first data: seed categories → run category scraper → run app detail scraper (see [First Data Bootstrap](#first-data-bootstrap--testing-a-new-platform-end-to-end))
 
 ### Phase 4: API
 - [ ] Add live-search branch in `apps/api/src/routes/live-search.ts`
@@ -1737,12 +1738,93 @@ After implementation, verify every page for the new platform AND confirm existin
 - [ ] All platform previews still work with correct character limits
 - [ ] `/overview` — Cross-platform overview page shows all platforms
 
+### First Data Bootstrap — Testing a New Platform End-to-End
+
+A newly implemented platform has an empty database — no categories, no apps, no keywords. You need data before you can test anything. **Categories are the entry point** for populating all other data. Follow this order:
+
+#### Step 1: Seed categories in the database
+
+Categories must exist in the DB before the category scraper can crawl them. This is done via the migration created in Phase 2 (see [Section 3.2](#32-migrations-3-migrations-needed)):
+
+```sql
+-- Verify categories were seeded
+SELECT slug, title FROM categories WHERE platform = 'newplatform' ORDER BY title;
+```
+
+If the migration hasn't been run yet, run it manually or use the CLI to insert a test category.
+
+#### Step 2: Run the category scraper — discovers apps
+
+The category scraper crawls seeded categories and discovers apps listed in each category. This is the first real test of your scraper module:
+
+```bash
+# Scrape a single category (fast, good for initial testing)
+cd apps/scraper
+npx tsx src/cli.ts --platform newplatform categories <category-slug>
+
+# Or trigger via System Admin UI: Admin → Scraper → newplatform → Categories
+```
+
+After this step, the `apps` table will have rows for the new platform (with basic info: slug, name, position in category). Verify:
+
+```sql
+SELECT slug, name FROM apps WHERE platform = 'newplatform' LIMIT 10;
+```
+
+#### Step 3: Run the app detail scraper — fills in app details
+
+Now that apps exist in the DB, scrape full details for them:
+
+```bash
+# Scrape a single app
+npx tsx src/cli.ts --platform newplatform app <app-slug>
+
+# Scrape all discovered apps
+npx tsx src/cli.ts --platform newplatform app-all
+```
+
+After this, apps will have full details (description, rating, developer, pricing, etc.). This is when you can meaningfully test dashboard pages like `/<platform>/apps/<slug>`.
+
+#### Step 4: Test keyword search
+
+Keywords don't depend on existing DB data — they hit the marketplace search API directly:
+
+```bash
+npx tsx src/cli.ts --platform newplatform keyword "some search term"
+```
+
+This both tracks the keyword and scrapes results. After this, the `/<platform>/keywords` page will have data.
+
+#### Step 5: Test remaining features
+
+With apps and keywords in the DB, you can now test the rest:
+
+```bash
+# Reviews (if hasReviews: true) — requires app to exist in DB
+npx tsx src/cli.ts --platform newplatform reviews <app-slug>
+
+# Featured sections (if fetchFeaturedSections is implemented)
+npx tsx src/cli.ts --platform newplatform featured
+```
+
+#### Summary: Data dependency chain
+
+```
+categories (DB seed)
+  → category scraper (discovers apps)
+    → app detail scraper (fills app details)
+      → reviews scraper (needs app in DB)
+      → competitor analysis (needs app details)
+keyword search (independent — no DB prerequisite)
+featured sections (independent — no DB prerequisite)
+```
+
 ### Scraper Verification
 
-- [ ] CLI category scrape: `npx tsx apps/scraper/src/cli.ts category --platform=newplatform`
-- [ ] CLI app scrape: `npx tsx apps/scraper/src/cli.ts app <slug> --platform=newplatform`
+- [ ] CLI category scrape: `npx tsx src/cli.ts --platform newplatform categories <slug>`
+- [ ] CLI app scrape: `npx tsx src/cli.ts --platform newplatform app <slug>`
 - [ ] Data appears in database: `SELECT * FROM apps WHERE platform = 'newplatform' LIMIT 5;`
-- [ ] CLI keyword scrape (if applicable): `npx tsx apps/scraper/src/cli.ts keyword <keyword> --platform=newplatform`
+- [ ] CLI keyword scrape (if applicable): `npx tsx src/cli.ts --platform newplatform keyword <keyword>`
 - [ ] Featured sections appear (if applicable): `SELECT * FROM featured_app_sightings fas JOIN apps a ON a.id = fas.app_id WHERE a.platform = 'newplatform' LIMIT 5;`
 
 ### Smoke Test
