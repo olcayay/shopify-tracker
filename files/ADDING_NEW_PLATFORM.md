@@ -46,6 +46,7 @@ Use this as a high-level task tracker. Each item links to a detailed section bel
 - [ ] Update browser client init in `apps/scraper/src/cli.ts` (if SPA/JS-rendered)
 - [ ] Add URL pattern to `apps/scraper/src/jobs/backfill-categories.ts`
 - [ ] Add branch in `keyword-suggestion-scraper.ts` (if custom suggestion API)
+- [ ] Add smoke test checks in `scripts/smoke-test.sh` (see [Smoke Test](#smoke-test) below)
 
 ### Phase 4: API
 - [ ] Add live-search branch in `apps/api/src/routes/live-search.ts`
@@ -1744,6 +1745,46 @@ After implementation, verify every page for the new platform AND confirm existin
 - [ ] CLI keyword scrape (if applicable): `npx tsx apps/scraper/src/cli.ts keyword <keyword> --platform=newplatform`
 - [ ] Featured sections appear (if applicable): `SELECT * FROM featured_app_sightings fas JOIN apps a ON a.id = fas.app_id WHERE a.platform = 'newplatform' LIMIT 5;`
 
+### Smoke Test
+
+**File:** `scripts/smoke-test.sh`
+
+The smoke test script runs live CLI checks against every platform. When adding a new platform, you **must** add a `test_<platform>()` function to this script. The goal is **0 SKIPs** — only list checks the platform actually supports.
+
+- [ ] Add a `test_<platform>()` function with the appropriate checks
+- [ ] Add the platform name to the `ALL_PLATFORMS` array
+- [ ] Add `--skip-browser` guard if the platform requires Playwright
+- [ ] Run `./scripts/smoke-test.sh --platform <name>` and verify all checks pass
+- [ ] Run `./scripts/smoke-test.sh` (full) and confirm 0 SKIPs in summary
+
+**Which checks to include** — only add a line for checks the platform supports:
+
+| Check | When to include | Example CLI command |
+|-------|----------------|---------------------|
+| `categories` | Always | `$CLI --platform <name> categories <slug>` |
+| `app` | If app detail scraping works without auth | `$CLI --platform <name> app <slug>` |
+| `keyword` | If `hasKeywordSearch: true` | `$CLI --platform <name> keyword "<term>"` |
+| `reviews` | If `hasReviews: true` | `$CLI --platform <name> reviews <slug>` |
+| `featured` | If `fetchFeaturedSections()` is implemented | `$CLI --platform <name> featured` |
+
+**Do NOT** add checks that will always fail (e.g., reviews for a platform with `hasReviews: false`, or app detail for a platform requiring auth). Omit the line entirely instead of adding a skip.
+
+**Template:**
+
+```bash
+test_newplatform() {
+  local t=$TIMEOUT_HTTP  # or $TIMEOUT_BROWSER for Playwright platforms
+  # Add this guard for browser-dependent platforms:
+  # if $SKIP_BROWSER; then skip_check newplatform all "browser skipped"; return; fi
+  echo -e "\n${BLUE}${BOLD}▸ newplatform${RESET} (HTTP only)"
+  run_check newplatform categories "$t" $CLI --platform newplatform categories <category-slug>
+  run_check newplatform app        "$t" $CLI --platform newplatform app <app-slug>
+  run_check newplatform keyword    "$t" $CLI --platform newplatform keyword "<search-term>"
+  run_check newplatform reviews    "$t" $CLI --platform newplatform reviews <app-slug>
+  run_check newplatform featured   "$t" $CLI --platform newplatform featured
+}
+```
+
 ---
 
 ## 12. File Reference
@@ -1769,6 +1810,7 @@ After implementation, verify every page for the new platform AND confirm existin
 | `apps/scraper/src/cli.ts` | Add browser client init (if needed) — mirrors `process-job.ts` logic |
 | `apps/scraper/src/jobs/backfill-categories.ts` | Add category URL pattern extraction |
 | `apps/scraper/src/scrapers/keyword-suggestion-scraper.ts` | Add branch if custom suggestion API |
+| `scripts/smoke-test.sh` | Add `test_<name>()` function and add to `ALL_PLATFORMS` array |
 
 ### API (review required)
 
