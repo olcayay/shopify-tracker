@@ -91,7 +91,7 @@ export default function CategoriesPage() {
   const [sortKey, setSortKey] = useState<FlatSortKey>("title");
   const [sortDir, setSortDir] = useState<SortDir>("asc");
 
-  const isFlat = platform === "wordpress" || platform === "zoom" || platform === "atlassian" || platform === "zoho";
+  const isFlat = platform === "wordpress" || platform === "zoom" || platform === "atlassian" || platform === "zoho" || platform === "zendesk";
   const canEdit = user?.role === "owner" || user?.role === "editor";
 
   useEffect(() => {

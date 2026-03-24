@@ -65,7 +65,7 @@ async function main() {
 
   // Create browser client for platforms that need SPA rendering
   let browserClient: BrowserClient | undefined;
-  if (platformArg === "salesforce" || platformArg === "canva" || platformArg === "google_workspace" || platformArg === "zoho") {
+  if (platformArg === "salesforce" || platformArg === "canva" || platformArg === "google_workspace" || platformArg === "zoho" || platformArg === "zendesk") {
     browserClient = new BrowserClient();
   }
 

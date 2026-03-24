@@ -43,6 +43,7 @@ Use this as a high-level task tracker. Each item links to a detailed section bel
 - [ ] Register module in `apps/scraper/src/platforms/registry.ts`
 - [ ] Add scheduler cron jobs in `apps/scraper/src/scheduler.ts`
 - [ ] Update browser client init in `apps/scraper/src/process-job.ts` (if SPA/JS-rendered)
+- [ ] Update browser client init in `apps/scraper/src/cli.ts` (if SPA/JS-rendered)
 - [ ] Add URL pattern to `apps/scraper/src/jobs/backfill-categories.ts`
 - [ ] Add branch in `keyword-suggestion-scraper.ts` (if custom suggestion API)
 
@@ -62,6 +63,7 @@ Use this as a high-level task tracker. Each item links to a detailed section bel
 - [ ] Create preview component (`<platform>-preview.tsx`) and wire into `preview/page.tsx`
 - [ ] Update field labels in `details/page.tsx`, `changes/page.tsx`, app overview `page.tsx`
 - [ ] Add platform-specific sections to `compare/page.tsx` and `research/[id]/compare/page.tsx`
+- [ ] Add to `isFlat` check in `categories/page.tsx` (if flat categories)
 - [ ] Gate all dashboard tables/cards behind capability flags
 - [ ] Verify all pages work for the new platform
 - [ ] Verify existing platforms still work (regression check)
@@ -630,11 +632,19 @@ let browserClient: BrowserClient | undefined;
 if (platform === "salesforce" && type === "app_details") {
   browserClient = new BrowserClient();
 }
-if (platform === "canva" || platform === "google_workspace") {
+if (platform === "canva" || platform === "google_workspace" || platform === "zoho" || platform === "zendesk") {
   browserClient = new BrowserClient();
 }
 // Add your platform:
 if (platform === "newplatform") {
+  browserClient = new BrowserClient();
+}
+```
+
+**Also update `apps/scraper/src/cli.ts`** — the CLI tool has its own browser client init:
+
+```typescript
+if (platformArg === "salesforce" || platformArg === "canva" || platformArg === "google_workspace" || platformArg === "zoho" || platformArg === "zendesk") {
   browserClient = new BrowserClient();
 }
 ```
@@ -1527,7 +1537,8 @@ grep -r "Launched" apps/dashboard/src --include="*.tsx" -l
 **Solution:** In `apps/dashboard/src/app/(dashboard)/[platform]/categories/page.tsx`, update the `isFlat` constant:
 
 ```typescript
-const isFlat = platform === "wordpress" || platform === "zoom" || platform === "atlassian" || platform === "zoho" || platform === "zendesk";
+const isFlat = platform === "wordpress" || platform === "zoom" || platform === "atlassian"
+  || platform === "zoho" || platform === "zendesk";
 ```
 
 If your new platform uses flat categories (no parent-child hierarchy), add it here. Tree view is default for hierarchical platforms (Shopify, Salesforce, Canva, Wix, Google Workspace).
@@ -1629,6 +1640,7 @@ After implementation, verify every page for the new platform AND confirm existin
 | `apps/scraper/src/platforms/registry.ts` | Register module in switch statement |
 | `apps/scraper/src/scheduler.ts` | Add cron schedules |
 | `apps/scraper/src/process-job.ts` | Add browser client init (if needed) |
+| `apps/scraper/src/cli.ts` | Add browser client init (if needed) — mirrors `process-job.ts` logic |
 | `apps/scraper/src/jobs/backfill-categories.ts` | Add category URL pattern extraction |
 | `apps/scraper/src/scrapers/keyword-suggestion-scraper.ts` | Add branch if custom suggestion API |
 
@@ -1662,6 +1674,7 @@ After implementation, verify every page for the new platform AND confirm existin
 | `[platform]/apps/[slug]/changes/page.tsx` | Add field labels |
 | `[platform]/apps/[slug]/page.tsx` | Add field labels in `getFieldLabels()` |
 | `[platform]/apps/[slug]/compare/page.tsx` | Add sections config, field labels (~25 locations) |
+| `[platform]/categories/page.tsx` | Add to `isFlat` check if flat categories (no parent-child hierarchy) |
 | `[platform]/research/[id]/compare/page.tsx` | Add platform exclusion checks if no reviews |
 | All table pages (see Section 6.7-6.10) | Gate columns with capability flags |
 
