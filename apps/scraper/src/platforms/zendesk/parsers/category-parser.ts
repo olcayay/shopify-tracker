@@ -1,103 +1,106 @@
-import * as cheerio from "cheerio";
 import { createLogger } from "@appranks/shared";
 import type { NormalizedCategoryPage, NormalizedCategoryApp } from "../../platform-module.js";
 import { ZENDESK_CATEGORY_NAMES } from "../constants.js";
 
 const log = createLogger("zendesk:category-parser");
 
+/** Shape of a single Algolia hit from Zendesk's appsIndex. */
+export interface ZendeskAlgoliaHit {
+  id: number;
+  name: string;
+  url: string; // e.g. "/apps/support/849231/stylo-assist/"
+  icon_url: string;
+  short_description: string;
+  author_name: string;
+  author_url: string;
+  products: string[]; // ["support", "sell", ...]
+  categories: Array<{ id: number; name: string }>;
+  rating: { total_count: number; average: number };
+  display_price: string;
+  tile_display_price: string;
+  date_published: string;
+  version: string;
+  objectID: string;
+}
+
+/** Algolia query response (single index result). */
+export interface ZendeskAlgoliaResult {
+  hits: ZendeskAlgoliaHit[];
+  nbHits: number;
+  page: number;
+  nbPages: number;
+  hitsPerPage: number;
+}
+
 /**
- * Parse a Zendesk Marketplace category page (rendered HTML via BrowserClient).
- *
- * Category URL: /marketplace/apps/?category={slug}
- * App links follow: /marketplace/apps/{product}/{numericId}/{text-slug}/
- * Slug format: {numericId}--{text-slug}
+ * Parse Zendesk category data from Algolia API JSON response.
+ * Input is the raw JSON string from the Algolia multi-index endpoint.
  */
 export function parseZendeskCategoryPage(
-  html: string,
+  json: string,
   categorySlug: string,
-  url: string,
+  _url: string,
 ): NormalizedCategoryPage {
-  const $ = cheerio.load(html);
-  const apps: NormalizedCategoryApp[] = [];
+  let result: ZendeskAlgoliaResult;
+  try {
+    const parsed = JSON.parse(json);
+    // Algolia returns { results: [...] } — we use the first result
+    result = parsed.results?.[0] ?? parsed;
+  } catch (e) {
+    log.error("failed to parse Algolia JSON", { categorySlug, error: String(e) });
+    return {
+      slug: categorySlug,
+      url: _url,
+      title: ZENDESK_CATEGORY_NAMES[categorySlug] || categorySlug,
+      description: "",
+      appCount: null,
+      apps: [],
+      subcategoryLinks: [],
+      hasNextPage: false,
+    };
+  }
 
-  // App link pattern: /marketplace/apps/{product}/{numericId}/{text-slug}/
-  const appPattern = /\/marketplace\/apps\/([^/]+)\/(\d+)\/([^/?#]+)/;
-  const seen = new Set<string>();
+  const apps: NormalizedCategoryApp[] = result.hits.map((hit, idx) => {
+    // Slug: {numericId}--{text-slug} from URL "/apps/support/849231/stylo-assist/"
+    const urlMatch = hit.url.match(/\/apps\/([^/]+)\/(\d+)\/([^/?#]+)/);
+    const numericId = urlMatch?.[2] ?? String(hit.id);
+    const textSlug = urlMatch?.[3] ?? hit.name.toLowerCase().replace(/[^a-z0-9]+/g, "-");
+    const product = urlMatch?.[1] ?? hit.products?.[0] ?? "support";
 
-  $("a[href*='/marketplace/apps/']").each((_i, el) => {
-    const href = $(el).attr("href") || "";
-    const match = href.match(appPattern);
-    if (!match) return;
-
-    const [, product, numericId, textSlug] = match;
-    // Skip non-app links (category links, generic pages)
-    if (!numericId) return;
-
-    const appSlug = `${numericId}--${textSlug}`;
-
-    // Deduplicate
-    if (seen.has(appSlug)) return;
-    seen.add(appSlug);
-
-    // Walk up to find card container
-    const card = $(el).closest("[class*='card'], [class*='Card'], [class*='app-item'], [class*='AppItem'], [class*='listing'], li, article")
-      .first();
-    const container = card.length ? card : $(el).parent().parent();
-
-    const name = container.find("h2, h3, h4, [class*='title'], [class*='Title'], [class*='name'], [class*='Name']").first().text().trim()
-      || textSlug.replace(/-/g, " ");
-
-    const shortDescription = container.find("[class*='description'], [class*='subtitle'], [class*='Description']").first().text().trim() || "";
-
-    // Rating
-    const ratingEl = container.find("[class*='rating'], [class*='stars'], [class*='Rating']").first();
-    const ratingText = ratingEl.attr("data-rating") || ratingEl.text().trim();
-    const ratingMatch = ratingText?.match(/([\d.]+)/);
-    const averageRating = ratingMatch ? parseFloat(ratingMatch[1]) : 0;
-
-    // Rating count
-    const countText = container.find("[class*='review-count'], [class*='reviewCount'], [class*='count']").first().text().trim();
-    const countMatch = countText?.match(/(\d[\d,]*)/);
-    const ratingCount = countMatch ? parseInt(countMatch[1].replace(/,/g, ""), 10) : 0;
-
-    // Logo
-    const logoUrl = container.find("img").first().attr("src") || container.find("img").first().attr("data-src") || "";
-
-    // Pricing
-    const pricingHint = container.find("[class*='price'], [class*='Price'], [class*='pricing']").first().text().trim() || undefined;
-
-    apps.push({
-      slug: appSlug,
-      name,
-      shortDescription,
-      averageRating,
-      ratingCount,
-      logoUrl,
-      pricingHint,
-      position: apps.length + 1,
+    return {
+      slug: `${numericId}--${textSlug}`,
+      name: hit.name,
+      shortDescription: hit.short_description || "",
+      averageRating: hit.rating?.average ?? 0,
+      ratingCount: hit.rating?.total_count ?? 0,
+      logoUrl: hit.icon_url || "",
+      pricingHint: hit.tile_display_price || hit.display_price || undefined,
+      position: idx + 1,
       isSponsored: false,
       badges: [],
-      externalId: product, // Store product type (support/chat/sell) for URL reconstruction
-    });
+      externalId: product,
+    };
   });
 
-  const title = ZENDESK_CATEGORY_NAMES[categorySlug]
-    || $("h1").first().text().trim()
-    || categorySlug;
+  const hasNextPage = result.page < result.nbPages - 1;
 
-  log.info("parsed category page", {
+  log.info("parsed category page (Algolia)", {
     category: categorySlug,
     appsFound: apps.length,
+    totalHits: result.nbHits,
+    page: result.page + 1,
+    totalPages: result.nbPages,
+    hasNextPage,
   });
 
   return {
     slug: categorySlug,
-    url,
-    title,
+    url: _url,
+    title: ZENDESK_CATEGORY_NAMES[categorySlug] || categorySlug,
     description: "",
-    appCount: apps.length || null,
+    appCount: result.nbHits || apps.length || null,
     apps,
-    subcategoryLinks: [], // Flat structure
-    hasNextPage: false, // Initial implementation — pagination TBD
+    subcategoryLinks: [],
+    hasNextPage,
   };
 }

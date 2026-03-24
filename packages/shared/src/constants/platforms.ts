@@ -239,6 +239,8 @@ export function buildExternalCategoryUrl(platform: PlatformId, slug: string): st
     case "zoho":
       return `https://marketplace.zoho.com/app/${slug}`;
     case "zendesk":
-      return `https://www.zendesk.com/marketplace/apps/?category=${slug}`;
+      // Category title is stored in the DB; slug is kebab-case, title is the URL param
+      // Fallback: convert slug to title-case for URL
+      return `https://www.zendesk.com/marketplace/apps/?categories.name=${encodeURIComponent(slug)}`;
   }
 }

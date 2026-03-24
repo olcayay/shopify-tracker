@@ -74,7 +74,7 @@ export async function backfillCategories(db: Database, triggeredBy: string, queu
           const zohoMatch = cat.url?.match(/\/app\/([^/?#]+)$/);
           catSlug = zohoMatch?.[1] ?? null;
         } else if (platform === "zendesk") {
-          const zendeskMatch = cat.url?.match(/[?&]category=([^&]+)/);
+          const zendeskMatch = cat.url?.match(/[?&]categories\.name=([^&]+)/);
           catSlug = zendeskMatch?.[1] ? decodeURIComponent(zendeskMatch[1]) : null;
         }
         if (!catSlug) continue;

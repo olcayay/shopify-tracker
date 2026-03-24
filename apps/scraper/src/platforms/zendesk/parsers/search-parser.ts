@@ -1,82 +1,51 @@
-import * as cheerio from "cheerio";
 import { createLogger } from "@appranks/shared";
 import type { NormalizedSearchPage, NormalizedSearchApp } from "../../platform-module.js";
+import type { ZendeskAlgoliaHit, ZendeskAlgoliaResult } from "./category-parser.js";
 
 const log = createLogger("zendesk:search-parser");
 
 /**
- * Parse a Zendesk Marketplace search results page (rendered HTML via BrowserClient).
- *
- * Search URL: /marketplace/apps/?query={keyword}
- * App links follow: /marketplace/apps/{product}/{numericId}/{text-slug}/
- * Slug format: {numericId}--{text-slug}
+ * Parse Zendesk search results from Algolia API JSON response.
  */
 export function parseZendeskSearchPage(
-  html: string,
+  json: string,
   keyword: string,
   page: number,
 ): NormalizedSearchPage {
-  const $ = cheerio.load(html);
-  const apps: NormalizedSearchApp[] = [];
-  const appPattern = /\/marketplace\/apps\/([^/]+)\/(\d+)\/([^/?#]+)/;
-  const seen = new Set<string>();
+  let result: ZendeskAlgoliaResult;
+  try {
+    const parsed = JSON.parse(json);
+    result = parsed.results?.[0] ?? parsed;
+  } catch (e) {
+    log.error("failed to parse Algolia search JSON", { keyword, error: String(e) });
+    return { keyword, totalResults: null, apps: [], hasNextPage: false, currentPage: page };
+  }
 
-  $("a[href*='/marketplace/apps/']").each((_i, el) => {
-    const href = $(el).attr("href") || "";
-    const match = href.match(appPattern);
-    if (!match) return;
+  const apps: NormalizedSearchApp[] = result.hits.map((hit: ZendeskAlgoliaHit, idx: number) => {
+    const urlMatch = hit.url.match(/\/apps\/([^/]+)\/(\d+)\/([^/?#]+)/);
+    const numericId = urlMatch?.[2] ?? String(hit.id);
+    const textSlug = urlMatch?.[3] ?? hit.name.toLowerCase().replace(/[^a-z0-9]+/g, "-");
 
-    const [, _product, numericId, textSlug] = match;
-    if (!numericId) return;
-
-    const appSlug = `${numericId}--${textSlug}`;
-
-    if (seen.has(appSlug)) return;
-    seen.add(appSlug);
-
-    const card = $(el).closest("[class*='card'], [class*='Card'], [class*='app-item'], [class*='AppItem'], [class*='listing'], li, article")
-      .first();
-    const container = card.length ? card : $(el).parent().parent();
-
-    const name = container.find("h2, h3, h4, [class*='title'], [class*='Title'], [class*='name'], [class*='Name']").first().text().trim()
-      || textSlug.replace(/-/g, " ");
-
-    const shortDescription = container.find("[class*='description'], [class*='subtitle'], [class*='Description']").first().text().trim() || "";
-
-    // Rating
-    const ratingEl = container.find("[class*='rating'], [class*='stars'], [class*='Rating']").first();
-    const ratingText = ratingEl.attr("data-rating") || ratingEl.text().trim();
-    const ratingMatch = ratingText?.match(/([\d.]+)/);
-    const averageRating = ratingMatch ? parseFloat(ratingMatch[1]) : 0;
-
-    // Rating count
-    const countText = container.find("[class*='review-count'], [class*='reviewCount'], [class*='count']").first().text().trim();
-    const countMatch = countText?.match(/(\d[\d,]*)/);
-    const ratingCount = countMatch ? parseInt(countMatch[1].replace(/,/g, ""), 10) : 0;
-
-    // Logo
-    const logoUrl = container.find("img").first().attr("src") || container.find("img").first().attr("data-src") || "";
-
-    apps.push({
-      position: apps.length + 1,
-      appSlug,
-      appName: name,
-      shortDescription,
-      averageRating,
-      ratingCount,
-      logoUrl,
+    return {
+      position: idx + 1,
+      appSlug: `${numericId}--${textSlug}`,
+      appName: hit.name,
+      shortDescription: hit.short_description || "",
+      averageRating: hit.rating?.average ?? 0,
+      ratingCount: hit.rating?.total_count ?? 0,
+      logoUrl: hit.icon_url || "",
       isSponsored: false,
       badges: [],
-    });
+    };
   });
 
-  log.info("parsed search page", { keyword, appsFound: apps.length });
+  log.info("parsed search results (Algolia)", { keyword, appsFound: apps.length, totalHits: result.nbHits });
 
   return {
     keyword,
-    totalResults: apps.length || null,
+    totalResults: result.nbHits || apps.length || null,
     apps,
-    hasNextPage: false,
+    hasNextPage: result.page < result.nbPages - 1,
     currentPage: page,
   };
 }

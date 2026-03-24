@@ -1,5 +1,13 @@
 import type { PlatformConstants, PlatformScoringConfig } from "../platform-module.js";
 
+/** Zendesk uses Algolia for search/categories — public search-only credentials. */
+export const ZENDESK_ALGOLIA = {
+  appId: "7Z3RM3E33J",
+  apiKey: "03399518dc627db5c562c1ad425d145c",
+  indexName: "appsIndex",
+  baseUrl: "https://7z3rm3e33j-dsn.algolia.net/1/indexes/*/queries",
+} as const;
+
 /** Seed categories for the Zendesk Marketplace — 16 flat categories. */
 export const ZENDESK_SEED_CATEGORIES = [
   "ai-and-bots",
@@ -26,7 +34,7 @@ export const ZENDESK_CATEGORY_NAMES: Record<string, string> = {
   "agent-productivity": "Agent Productivity",
   "contact-center": "Contact Center",
   "crm-and-marketing": "CRM and Marketing",
-  "ecommerce-and-payments": "E-Commerce and Payments",
+  "ecommerce-and-payments": "eComm and Payments",
   "it-and-hr": "IT and HR",
   "knowledge-and-content-management": "Knowledge and Content Management",
   "messaging": "Messaging",
@@ -36,14 +44,14 @@ export const ZENDESK_CATEGORY_NAMES: Record<string, string> = {
   "surveys-and-reviews": "Surveys and Reviews",
   "translations": "Translations",
   "video": "Video",
-  "wem": "Workforce Engagement Management",
+  "wem": "WEM",
   "workflows": "Workflows",
 };
 
 export const ZENDESK_CONSTANTS: PlatformConstants = {
   seedCategories: [...ZENDESK_SEED_CATEGORIES],
   maxCategoryDepth: 0, // Flat: no subcategories
-  defaultPagesPerCategory: 1, // Pagination via scroll; initial page
+  defaultPagesPerCategory: 15, // 24 apps/page, up to ~360 apps per category
   trackedFields: [
     "shortDescription",
     "longDescription",

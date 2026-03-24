@@ -13,7 +13,7 @@ const USER_AGENT =
 export class BrowserClient {
   private browser: Browser | null = null;
 
-  async fetchPage(url: string): Promise<string> {
+  async fetchPage(url: string, opts?: { waitUntil?: "networkidle" | "domcontentloaded" | "load"; waitForSelector?: string; extraWaitMs?: number }): Promise<string> {
     if (!this.browser) {
       log.info("launching browser");
       this.browser = await chromium.launch({
@@ -26,10 +26,16 @@ export class BrowserClient {
     const page = await context.newPage();
 
     try {
-      log.info("fetching page", { url });
-      await page.goto(url, { waitUntil: "networkidle", timeout: 30_000 });
+      const waitUntil = opts?.waitUntil ?? "networkidle";
+      log.info("fetching page", { url, waitUntil });
+      await page.goto(url, { waitUntil, timeout: 30_000 });
+      if (opts?.waitForSelector) {
+        await page.waitForSelector(opts.waitForSelector, { timeout: 15_000 }).catch(() => {
+          log.warn("waitForSelector timed out, continuing", { selector: opts.waitForSelector });
+        });
+      }
       // Extra wait for SPA hydration (matches Python script pattern)
-      await page.waitForTimeout(2000);
+      await page.waitForTimeout(opts?.extraWaitMs ?? 2000);
       return await page.content();
     } finally {
       await context.close();
@@ -40,7 +46,7 @@ export class BrowserClient {
    * Opens a page, then hands the live Playwright Page to a callback
    * for custom interactions (clicking, evaluating JS, etc.).
    */
-  async withPage<T>(url: string, callback: (page: Page) => Promise<T>): Promise<T> {
+  async withPage<T>(url: string, callback: (page: Page) => Promise<T>, opts?: { waitUntil?: "networkidle" | "domcontentloaded" | "load"; extraWaitMs?: number }): Promise<T> {
     if (!this.browser) {
       log.info("launching browser");
       this.browser = await chromium.launch({
@@ -53,9 +59,10 @@ export class BrowserClient {
     const page = await context.newPage();
 
     try {
-      log.info("opening page for interaction", { url });
-      await page.goto(url, { waitUntil: "networkidle", timeout: 45_000 });
-      await page.waitForTimeout(3000);
+      const waitUntil = opts?.waitUntil ?? "networkidle";
+      log.info("opening page for interaction", { url, waitUntil });
+      await page.goto(url, { waitUntil, timeout: 45_000 });
+      await page.waitForTimeout(opts?.extraWaitMs ?? 3000);
       return await callback(page);
     } finally {
       await context.close();

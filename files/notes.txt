@@ -5,12 +5,15 @@ Platform ID: "zendesk", Color: #03363D (Zendesk dark teal)
 URL: https://www.zendesk.com/marketplace
 
 Architecture:
-- ALL pages: BrowserClient/Playwright (Cloudflare blocks HTTP requests)
+- Categories & search: Algolia API (direct HTTP, no browser needed)
+  - Algolia App ID: 7Z3RM3E33J, Index: appsIndex
+  - Requires Referer: https://www.zendesk.com/ header
+- App detail pages & featured sections: BrowserClient/Playwright (Cloudflare blocks HTTP)
 - Slug format: {numericId}--{text-slug} (e.g., 972305--slack)
 - Product type (support/chat/sell) stored in externalId for URL reconstruction
 - App URL: /marketplace/apps/{product}/{numericId}/{text-slug}/
-- Category URL: /marketplace/apps/?category={slug}
-- 15 flat categories, no hierarchy
+- Category URL: /marketplace/apps/?categories.name={Display+Name}
+- 16 flat categories, no hierarchy
 - hasReviews: true, hasFeaturedSections: true, hasPricing: true, hasLaunchedDate: true
 
 Files created:
@@ -39,17 +42,18 @@ Files modified:
 - apps/dashboard/src/components/app-badges.tsx (empty zendesk entry)
 - packages/db/src/migrations/meta/_journal.json (entries 83, 84)
 
-15 Zendesk categories:
-  agent-productivity, collaboration, ecommerce-and-payments, reporting-and-analytics,
-  it-and-hr, crm-and-marketing, workflows, messaging, product-and-project-management,
-  surveys-and-reviews, video, security-risk-and-compliance, wem, translations,
-  knowledge-and-content-management
+16 Zendesk categories:
+  ai-and-bots, agent-productivity, contact-center, crm-and-marketing,
+  ecommerce-and-payments, it-and-hr, knowledge-and-content-management,
+  messaging, product-and-project-management, reporting-and-analytics,
+  security-risk-and-compliance, surveys-and-reviews, translations,
+  video, wem, workflows
 
-Risks & Notes:
-- Cloudflare may block Playwright — use realistic user agents, stealth settings, conservative delays (2-5s)
-- Category slugs are best-guess — verify via Playwright and update migration if needed
-- Parser CSS selectors are scaffolded with generic patterns — refine after first Playwright run
-- Search powered by Algolia on Zendesk's end (queryID parameter)
+Notes:
+- Categories & search use Algolia API directly — reliable, fast (~200ms/page), returns all results
+- App detail pages still need BrowserClient (Cloudflare blocks direct HTTP)
+- Algolia returns rich data: name, icon_url, rating, categories, products, pricing
+- Category names: "eComm and Payments" (not "E-Commerce"), "WEM" (not "Workforce Engagement")
 
 ---
 

@@ -9,9 +9,10 @@ import type {
   NormalizedReviewPage,
   NormalizedFeaturedSection,
 } from "../platform-module.js";
+import type { HttpClient } from "../../http-client.js";
 import type { BrowserClient } from "../../browser-client.js";
 import { zendeskUrls } from "./urls.js";
-import { ZENDESK_CONSTANTS, ZENDESK_SCORING } from "./constants.js";
+import { ZENDESK_CONSTANTS, ZENDESK_SCORING, ZENDESK_CATEGORY_NAMES, ZENDESK_ALGOLIA } from "./constants.js";
 import { parseZendeskAppDetails } from "./parsers/app-parser.js";
 import { parseZendeskCategoryPage } from "./parsers/category-parser.js";
 import { parseZendeskSearchPage } from "./parsers/search-parser.js";
@@ -25,11 +26,12 @@ const log = createLogger("zendesk");
  * Zendesk Marketplace platform module.
  *
  * Key architectural notes:
- * - ALL pages use BrowserClient (Cloudflare blocks HTTP requests)
+ * - Categories & search use Algolia API directly (no browser needed)
+ * - App detail pages still use BrowserClient (Cloudflare blocks HTTP)
  * - App URL: /marketplace/apps/{product}/{numericId}/{text-slug}/
  * - Slug format: {numericId}--{text-slug}
  * - Product type (support/sell/chat) stored in externalId for URL reconstruction
- * - 15 flat categories, no hierarchy
+ * - 16 flat categories, no hierarchy
  * - Reviews are on the app detail page
  * - Featured sections on homepage
  */
@@ -50,9 +52,11 @@ export class ZendeskModule implements PlatformModule {
     hasLaunchedDate: true,
   };
 
+  private httpClient?: HttpClient;
   private browserClient?: BrowserClient;
 
-  constructor(_httpClient?: unknown, browserClient?: BrowserClient) {
+  constructor(httpClient?: HttpClient, browserClient?: BrowserClient) {
+    this.httpClient = httpClient;
     this.browserClient = browserClient;
   }
 
@@ -74,33 +78,49 @@ export class ZendeskModule implements PlatformModule {
     return zendeskUrls.reviews(slug);
   }
 
-  // --- Fetch (all via BrowserClient due to Cloudflare) ---
+  // --- Fetch ---
 
+  /** App detail pages still need BrowserClient (Cloudflare blocks HTTP). */
   async fetchAppPage(slug: string): Promise<string> {
     const url = zendeskUrls.app(slug);
     log.info("fetching app page via browser", { slug, url });
     if (!this.browserClient) {
-      throw new Error("BrowserClient required for Zendesk (Cloudflare protection)");
+      throw new Error("BrowserClient required for Zendesk app pages (Cloudflare protection)");
     }
-    return this.browserClient.fetchPage(url);
+    return this.browserClient.fetchPage(url, {
+      waitUntil: "domcontentloaded",
+      extraWaitMs: 3000,
+    });
   }
 
-  async fetchCategoryPage(slug: string): Promise<string> {
-    const url = zendeskUrls.category(slug);
-    log.info("fetching category page via browser", { slug, url });
-    if (!this.browserClient) {
-      throw new Error("BrowserClient required for Zendesk (Cloudflare protection)");
-    }
-    return this.browserClient.fetchPage(url);
+  /**
+   * Fetch category listing via Algolia API — no browser needed.
+   * Returns raw Algolia JSON response string.
+   * Page is 1-indexed (converted to 0-indexed for Algolia).
+   */
+  async fetchCategoryPage(slug: string, page?: number): Promise<string> {
+    const displayName = ZENDESK_CATEGORY_NAMES[slug] || slug;
+    const algoliaPage = (page ?? 1) - 1; // Algolia uses 0-indexed pages
+    log.info("fetching category via Algolia", { slug, displayName, page: page ?? 1, algoliaPage });
+
+    return this.algoliaQuery({
+      facetFilters: [[`categories.name:${displayName}`]],
+      hitsPerPage: 24,
+      page: algoliaPage,
+    });
   }
 
+  /**
+   * Fetch keyword search via Algolia API — no browser needed.
+   * Returns raw Algolia JSON response string.
+   */
   async fetchSearchPage(keyword: string): Promise<string | null> {
-    const url = zendeskUrls.search(keyword);
-    log.info("fetching search page via browser", { keyword, url });
-    if (!this.browserClient) {
-      throw new Error("BrowserClient required for Zendesk (Cloudflare protection)");
-    }
-    return this.browserClient.fetchPage(url);
+    log.info("fetching search via Algolia", { keyword });
+    return this.algoliaQuery({
+      query: keyword,
+      hitsPerPage: 24,
+      page: 0,
+    });
   }
 
   async fetchReviewPage(slug: string): Promise<string | null> {
@@ -114,17 +134,17 @@ export class ZendeskModule implements PlatformModule {
     return parseZendeskAppDetails(html, slug);
   }
 
-  parseCategoryPage(html: string, url: string): NormalizedCategoryPage {
+  parseCategoryPage(json: string, url: string): NormalizedCategoryPage {
     const slug = this.extractCategorySlugFromUrl(url);
-    return parseZendeskCategoryPage(html, slug, url);
+    return parseZendeskCategoryPage(json, slug, url);
   }
 
   parseSearchPage(
-    html: string,
+    json: string,
     keyword: string,
     page: number,
   ): NormalizedSearchPage {
-    return parseZendeskSearchPage(html, keyword, page);
+    return parseZendeskSearchPage(json, keyword, page);
   }
 
   parseReviewPage(html: string, page: number): NormalizedReviewPage {
@@ -135,25 +155,22 @@ export class ZendeskModule implements PlatformModule {
     const url = zendeskUrls.homepage();
     log.info("fetching featured sections from homepage", { url });
     if (!this.browserClient) {
-      throw new Error("BrowserClient required for Zendesk (Cloudflare protection)");
+      throw new Error("BrowserClient required for Zendesk featured sections");
     }
-    const html = await this.browserClient.fetchPage(url);
+    const html = await this.browserClient.fetchPage(url, {
+      waitUntil: "domcontentloaded",
+      extraWaitMs: 5000,
+    });
     return parseZendeskFeaturedSections(html);
   }
 
   // --- Slug extraction ---
 
-  /**
-   * Extract app slug from a Zendesk Marketplace URL.
-   * URL: /marketplace/apps/{product}/{numericId}/{text-slug}/
-   * Slug: {numericId}--{text-slug}
-   */
   extractSlugFromUrl(url: string): string {
     const match = url.match(/\/marketplace\/apps\/[^/]+\/(\d+)\/([^/?#]+)/);
     if (match) {
       return `${match[1]}--${match[2]}`;
     }
-    // Fallback: last path segment
     return url.split("/").filter(Boolean).pop()?.split("?")[0] || url;
   }
 
@@ -167,11 +184,61 @@ export class ZendeskModule implements PlatformModule {
 
   // --- Private helpers ---
 
-  private extractCategorySlugFromUrl(url: string): string {
-    const match = url.match(/[?&]category=([^&]+)/);
-    if (match) {
-      return decodeURIComponent(match[1]);
+  /**
+   * Make a direct Algolia API query (no browser, no Cloudflare issues).
+   * Returns the raw JSON string.
+   */
+  private async algoliaQuery(params: {
+    query?: string;
+    facetFilters?: string[][];
+    hitsPerPage?: number;
+    page?: number;
+  }): Promise<string> {
+    const urlParams = new URLSearchParams();
+    if (params.query) urlParams.set("query", params.query);
+    if (params.facetFilters) urlParams.set("facetFilters", JSON.stringify(params.facetFilters));
+    if (params.hitsPerPage) urlParams.set("hitsPerPage", String(params.hitsPerPage));
+    if (params.page != null) urlParams.set("page", String(params.page));
+    urlParams.set("clickAnalytics", "true");
+    urlParams.set("facets", JSON.stringify(["categories.name", "collections.name", "products", "searchable_plan_pricings", "searchable_rating"]));
+
+    const body = JSON.stringify({
+      requests: [{
+        indexName: ZENDESK_ALGOLIA.indexName,
+        params: urlParams.toString(),
+      }],
+    });
+
+    const url = `${ZENDESK_ALGOLIA.baseUrl}?x-algolia-api-key=${ZENDESK_ALGOLIA.apiKey}&x-algolia-application-id=${ZENDESK_ALGOLIA.appId}`;
+
+    const resp = await fetch(url, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Referer": "https://www.zendesk.com/",
+      },
+      body,
+    });
+
+    if (!resp.ok) {
+      throw new Error(`Algolia API error: ${resp.status} ${resp.statusText}`);
     }
+
+    return resp.text();
+  }
+
+  private extractCategorySlugFromUrl(url: string): string {
+    // URL format: ?categories.name=AI+and+Bots → reverse-map to slug
+    const match = url.match(/[?&]categories\.name=([^&]+)/);
+    if (match) {
+      const displayName = decodeURIComponent(match[1].replace(/\+/g, " "));
+      const reverseMap = Object.entries(ZENDESK_CATEGORY_NAMES);
+      const entry = reverseMap.find(([, name]) => name === displayName);
+      if (entry) return entry[0];
+      return displayName.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+    }
+    const legacyMatch = url.match(/[?&]category=([^&]+)/);
+    if (legacyMatch) return decodeURIComponent(legacyMatch[1]);
     return url;
   }
 }

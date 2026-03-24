@@ -55,7 +55,7 @@ export function buildExternalCategoryUrl(platform: PlatformId, slug: string): st
     case "zoho":
       return `https://marketplace.zoho.com/app/${slug}`;
     case "zendesk":
-      return `https://www.zendesk.com/marketplace/apps/?category=${slug}`;
+      return `https://www.zendesk.com/marketplace/apps/?categories.name=${encodeURIComponent(slug)}`;
   }
 }
 
