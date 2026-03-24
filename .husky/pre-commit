@@ -1,9 +1,9 @@
-cd apps/dashboard
-
 echo "Running lint..."
+cd apps/dashboard
 npx eslint src/ || exit 1
+cd ../..
 
 echo "Running tests..."
-npx vitest run || exit 1
+npx turbo test || exit 1
 
 echo "All checks passed!"

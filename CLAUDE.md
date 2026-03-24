@@ -11,3 +11,7 @@
   - Learn a new pitfall or lesson from platform work
 
   You MUST update `files/ADDING_NEW_PLATFORM.md` accordingly — add the new file/check to the Quick Checklist, update code snippets, add rows to reference tables, or add a new Pitfall entry. Never leave the guide stale.
+- **Always add unit tests:**
+  - When implementing a new feature, add unit tests covering the new functionality.
+  - When fixing a bug, add a unit test that reproduces the bug to prevent regression.
+- **All tests must pass before committing.** Run `npm test` (which runs all 4 packages via turbo) and verify 0 failures before every commit. Pre-commit and pre-push hooks enforce this automatically.
