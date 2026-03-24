@@ -1,5 +1,4 @@
-import { describe, it } from "node:test";
-import assert from "node:assert/strict";
+import { describe, it, expect } from "vitest";
 import { parseCanvaCategoryPage, CATEGORY_TOPIC_MAP } from "../category-parser.js";
 
 /**
@@ -50,19 +49,19 @@ describe("parseCanvaCategoryPage", () => {
   describe("hub page (filter category)", () => {
     it("returns null appCount for a filter category", () => {
       const result = parseCanvaCategoryPage(testHtml, "project-management", 1, 0);
-      assert.equal(result.appCount, null);
+      expect(result.appCount).toBe(null);
     });
 
     it("returns empty apps array for a hub page", () => {
       const result = parseCanvaCategoryPage(testHtml, "project-management", 1, 0);
-      assert.equal(result.apps.length, 0);
+      expect(result.apps.length).toBe(0);
     });
 
     it("populates subcategoryLinks with simple slugs and parentSlug", () => {
       const result = parseCanvaCategoryPage(testHtml, "project-management", 1, 0);
-      assert.equal(result.subcategoryLinks.length, 4);
+      expect(result.subcategoryLinks.length).toBe(4);
       const slugs = result.subcategoryLinks.map((s) => s.slug);
-      assert.deepEqual(slugs, [
+      expect(slugs).toEqual([
         "content-schedulers",
         "forms",
         "social-networking",
@@ -70,14 +69,14 @@ describe("parseCanvaCategoryPage", () => {
       ]);
       // Each subcategory link includes the parent slug
       for (const link of result.subcategoryLinks) {
-        assert.equal(link.parentSlug, "project-management");
+        expect(link.parentSlug).toBe("project-management");
       }
     });
 
     it("generates correct titles for subcategories", () => {
       const result = parseCanvaCategoryPage(testHtml, "project-management", 1, 0);
       const titles = result.subcategoryLinks.map((s) => s.title);
-      assert.deepEqual(titles, [
+      expect(titles).toEqual([
         "Content Schedulers",
         "Forms",
         "Social Networking",
@@ -87,26 +86,24 @@ describe("parseCanvaCategoryPage", () => {
 
     it("uses filter label as hub page title", () => {
       const result = parseCanvaCategoryPage(testHtml, "project-management", 1, 0);
-      assert.equal(result.title, "Project management");
+      expect(result.title).toBe("Project management");
     });
 
     it("sets hasNextPage to false", () => {
       const result = parseCanvaCategoryPage(testHtml, "project-management", 1, 0);
-      assert.equal(result.hasNextPage, false);
+      expect(result.hasNextPage).toBe(false);
     });
 
     it("works for all 10 filter categories", () => {
       for (const filterSlug of Object.keys(CATEGORY_TOPIC_MAP)) {
         const result = parseCanvaCategoryPage(testHtml, filterSlug, 1, 0);
-        assert.equal(result.appCount, null, `${filterSlug} should be hub page`);
-        assert.ok(result.subcategoryLinks.length > 0, `${filterSlug} should have subcategories`);
+        expect(result.appCount).toBe(null, `${filterSlug} should be hub page`);
+        expect(result.subcategoryLinks.length > 0, `${filterSlug} should have subcategories`).toBeTruthy();
         // Verify all subcategory slugs are simple slugs with parentSlug
         for (const link of result.subcategoryLinks) {
-          assert.ok(
-            !link.slug.includes("--"),
-            `${link.slug} should be a simple slug (no --)`,
-          );
-          assert.equal(link.parentSlug, filterSlug);
+          expect(!link.slug.includes("--"),
+            `${link.slug} should be a simple slug (no --)`,).toBeTruthy();
+          expect(link.parentSlug).toBe(filterSlug);
         }
       }
     });
@@ -115,76 +112,76 @@ describe("parseCanvaCategoryPage", () => {
   describe("listing page (simple slug sub-category)", () => {
     it("returns non-null appCount for a simple topic slug", () => {
       const result = parseCanvaCategoryPage(testHtml, "forms", 1, 0);
-      assert.equal(result.appCount, 4); // Jotform, Typeform, Google Docs, NewApp
+      expect(result.appCount).toBe(4); // Jotform, Typeform, Google Docs, NewApp
     });
 
     it("returns ranked apps for a simple topic slug", () => {
       const result = parseCanvaCategoryPage(testHtml, "forms", 1, 0);
-      assert.equal(result.apps.length, 4);
+      expect(result.apps.length).toBe(4);
       const names = result.apps.map((a) => a.name);
-      assert.ok(names.includes("Jotform"));
-      assert.ok(names.includes("Typeform"));
-      assert.ok(names.includes("Google Docs"));
-      assert.ok(names.includes("NewApp"));
+      expect(names.includes("Jotform")).toBeTruthy();
+      expect(names.includes("Typeform")).toBeTruthy();
+      expect(names.includes("Google Docs")).toBeTruthy();
+      expect(names.includes("NewApp")).toBeTruthy();
     });
 
     it("returns empty subcategoryLinks for listing page", () => {
       const result = parseCanvaCategoryPage(testHtml, "forms", 1, 0);
-      assert.equal(result.subcategoryLinks.length, 0);
+      expect(result.subcategoryLinks.length).toBe(0);
     });
 
     it("assigns correct positions starting from 1", () => {
       const result = parseCanvaCategoryPage(testHtml, "forms", 1, 0);
       const positions = result.apps.map((a) => a.position);
-      assert.deepEqual(positions, [1, 2, 3, 4]);
+      expect(positions).toEqual([1, 2, 3, 4]);
     });
 
     it("applies organicOffset to positions", () => {
       const result = parseCanvaCategoryPage(testHtml, "forms", 1, 10);
       const positions = result.apps.map((a) => a.position);
-      assert.deepEqual(positions, [11, 12, 13, 14]);
+      expect(positions).toEqual([11, 12, 13, 14]);
     });
 
     it("uses subcategory label as title", () => {
       const result = parseCanvaCategoryPage(testHtml, "forms", 1, 0);
-      assert.equal(result.title, "Forms");
+      expect(result.title).toBe("Forms");
     });
 
     it("constructs correct app slugs", () => {
       const result = parseCanvaCategoryPage(testHtml, "forms", 1, 0);
-      assert.equal(result.apps[0].slug, "AAF_forms1--jotform");
-      assert.equal(result.apps[1].slug, "AAF_forms2--typeform");
+      expect(result.apps[0].slug).toBe("AAF_forms1--jotform");
+      expect(result.apps[1].slug).toBe("AAF_forms2--typeform");
     });
 
     it("filters by exact single topic tag", () => {
       const result = parseCanvaCategoryPage(testHtml, "ai-images", 1, 0);
-      assert.equal(result.apps.length, 1);
-      assert.equal(result.apps[0].name, "DALL-E");
+      expect(result.apps.length).toBe(1);
+      expect(result.apps[0].name).toBe("DALL-E");
     });
 
     it("returns 0 apps for a topic with no matching apps", () => {
       const result = parseCanvaCategoryPage(testHtml, "flipbooks", 1, 0);
-      assert.equal(result.apps.length, 0);
-      assert.equal(result.appCount, 0);
+      expect(result.apps.length).toBe(0);
+      expect(result.appCount).toBe(0);
     });
 
     it("sets hasNextPage to false", () => {
       const result = parseCanvaCategoryPage(testHtml, "forms", 1, 0);
-      assert.equal(result.hasNextPage, false);
+      expect(result.hasNextPage).toBe(false);
     });
 
     it("assigns canva_extension badge to EXTENSION type apps", () => {
       const result = parseCanvaCategoryPage(testHtml, "social-networking", 1, 0);
-      assert.equal(result.apps.length, 1);
-      assert.equal(result.apps[0].name, "Slack");
-      assert.deepEqual(result.apps[0].badges, ["canva_extension"]);
+      expect(result.apps.length).toBe(1);
+      expect(result.apps[0].name).toBe("Slack");
+      expect(result.apps[0].badges).toEqual(["canva_extension"]);
     });
 
     it("assigns empty badges to SDK_APP type apps", () => {
       const result = parseCanvaCategoryPage(testHtml, "ai-images", 1, 0);
-      assert.equal(result.apps.length, 1);
-      assert.equal(result.apps[0].name, "DALL-E");
-      assert.deepEqual(result.apps[0].badges, []);
+      expect(result.apps.length).toBe(1);
+      expect(result.apps[0].name).toBe("DALL-E");
+      expect(result.apps[0].badges).toEqual([]);
     });
   });
 
@@ -197,15 +194,15 @@ describe("parseCanvaCategoryPage", () => {
       const tsSlugs = tsResult.subcategoryLinks.map((s) => s.slug);
 
       // Both parents reference the same simple slug "forms"
-      assert.ok(pmSlugs.includes("forms"));
-      assert.ok(tsSlugs.includes("forms"));
+      expect(pmSlugs.includes("forms")).toBeTruthy();
+      expect(tsSlugs.includes("forms")).toBeTruthy();
     });
 
     it("shared topic simple slugs produce the same app results", () => {
       // With simple slugs, "forms" is the same slug regardless of parent
       const forms = parseCanvaCategoryPage(testHtml, "forms", 1, 0);
-      assert.equal(forms.appCount, 4);
-      assert.equal(forms.apps.length, 4);
+      expect(forms.appCount).toBe(4);
+      expect(forms.apps.length).toBe(4);
     });
 
     it("subcategory links carry different parentSlug per hub page", () => {
@@ -216,9 +213,9 @@ describe("parseCanvaCategoryPage", () => {
       const tsFormsLink = tsResult.subcategoryLinks.find((s) => s.slug === "forms");
 
       // Same slug, different parentSlug
-      assert.equal(pmFormsLink?.slug, tsFormsLink?.slug);
-      assert.equal(pmFormsLink?.parentSlug, "project-management");
-      assert.equal(tsFormsLink?.parentSlug, "text-styling");
+      expect(pmFormsLink?.slug).toBe(tsFormsLink?.slug);
+      expect(pmFormsLink?.parentSlug).toBe("project-management");
+      expect(tsFormsLink?.parentSlug).toBe("text-styling");
     });
   });
 });

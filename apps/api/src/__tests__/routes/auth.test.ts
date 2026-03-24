@@ -1,0 +1,1023 @@
+/**
+ * Tests for auth routes: register, login, refresh, logout, GET /me, PATCH /me.
+ *
+ * Uses buildTestApp with a mocked DB to test HTTP-level behavior via Fastify .inject().
+ * Since the mock DB is simple (single selectResult/insertResult for all queries),
+ * tests focus on input validation, auth headers, and response structure.
+ */
+import { describe, it, expect, beforeAll, afterAll } from "vitest";
+import bcrypt from "bcryptjs";
+import {
+  buildTestApp,
+  adminToken,
+  userToken,
+  impersonationToken,
+  authHeaders,
+} from "../helpers/test-app.js";
+import { authRoutes } from "../../routes/auth.js";
+import type { FastifyInstance } from "fastify";
+
+// ---------------------------------------------------------------------------
+// POST /api/auth/register
+// ---------------------------------------------------------------------------
+
+describe("POST /api/auth/register — validation", () => {
+  let app: FastifyInstance;
+
+  beforeAll(async () => {
+    app = await buildTestApp({
+      routes: authRoutes,
+      prefix: "/api/auth",
+      db: {
+        selectResult: [],
+        insertResult: [
+          {
+            id: "new-item-001",
+            name: "Test Co",
+            email: "new@example.com",
+            accountId: "new-item-001",
+            role: "owner",
+            isSystemAdmin: false,
+            company: null,
+          },
+        ],
+      },
+    });
+  });
+
+  afterAll(async () => {
+    await app.close();
+  });
+
+  it("returns 400 when email is missing", async () => {
+    const res = await app.inject({
+      method: "POST",
+      url: "/api/auth/register",
+      payload: { password: "password123", name: "Test", accountName: "Co" },
+    });
+    expect(res.statusCode).toBe(400);
+    expect(res.json().error).toMatch(/email/i);
+  });
+
+  it("returns 400 when password is missing", async () => {
+    const res = await app.inject({
+      method: "POST",
+      url: "/api/auth/register",
+      payload: { email: "a@b.com", name: "Test", accountName: "Co" },
+    });
+    expect(res.statusCode).toBe(400);
+    expect(res.json().error).toMatch(/password/i);
+  });
+
+  it("returns 400 when name is missing", async () => {
+    const res = await app.inject({
+      method: "POST",
+      url: "/api/auth/register",
+      payload: { email: "a@b.com", password: "password123", accountName: "Co" },
+    });
+    expect(res.statusCode).toBe(400);
+    expect(res.json().error).toMatch(/name/i);
+  });
+
+  it("returns 400 when accountName is missing", async () => {
+    const res = await app.inject({
+      method: "POST",
+      url: "/api/auth/register",
+      payload: { email: "a@b.com", password: "password123", name: "Test" },
+    });
+    expect(res.statusCode).toBe(400);
+    expect(res.json().error).toMatch(/accountName/i);
+  });
+
+  it("returns 400 when all required fields are missing", async () => {
+    const res = await app.inject({
+      method: "POST",
+      url: "/api/auth/register",
+      payload: {},
+    });
+    expect(res.statusCode).toBe(400);
+  });
+
+  it("returns 400 when password is shorter than 8 characters", async () => {
+    const res = await app.inject({
+      method: "POST",
+      url: "/api/auth/register",
+      payload: { email: "a@b.com", password: "short", name: "Test", accountName: "Co" },
+    });
+    expect(res.statusCode).toBe(400);
+    expect(res.json().error).toMatch(/8 characters/i);
+  });
+
+  it("accepts exactly 8 character password (boundary)", async () => {
+    const res = await app.inject({
+      method: "POST",
+      url: "/api/auth/register",
+      payload: { email: "a@b.com", password: "12345678", name: "Test", accountName: "Co" },
+    });
+    // Should not be a 400 for password length
+    expect(res.statusCode).not.toBe(400);
+  });
+});
+
+describe("POST /api/auth/register — email uniqueness", () => {
+  let app: FastifyInstance;
+
+  beforeAll(async () => {
+    app = await buildTestApp({
+      routes: authRoutes,
+      prefix: "/api/auth",
+      db: {
+        // select returns an existing user -> 409
+        selectResult: [{ id: "existing-user-001" }],
+        insertResult: [],
+      },
+    });
+  });
+
+  afterAll(async () => {
+    await app.close();
+  });
+
+  it("returns 409 when email already exists", async () => {
+    const res = await app.inject({
+      method: "POST",
+      url: "/api/auth/register",
+      payload: {
+        email: "taken@example.com",
+        password: "password123",
+        name: "Test",
+        accountName: "Co",
+      },
+    });
+    expect(res.statusCode).toBe(409);
+    expect(res.json().error).toMatch(/already/i);
+  });
+});
+
+describe("POST /api/auth/register — successful registration", () => {
+  let app: FastifyInstance;
+
+  beforeAll(async () => {
+    app = await buildTestApp({
+      routes: authRoutes,
+      prefix: "/api/auth",
+      db: {
+        selectResult: [],
+        insertResult: [
+          {
+            id: "new-user-001",
+            email: "new@example.com",
+            name: "New User",
+            accountId: "new-user-001",
+            role: "owner",
+            isSystemAdmin: false,
+            company: null,
+          },
+        ],
+      },
+    });
+  });
+
+  afterAll(async () => {
+    await app.close();
+  });
+
+  it("returns accessToken and refreshToken on success", async () => {
+    const res = await app.inject({
+      method: "POST",
+      url: "/api/auth/register",
+      payload: {
+        email: "new@example.com",
+        password: "password123",
+        name: "New User",
+        accountName: "New Co",
+      },
+    });
+    expect(res.statusCode).toBe(200);
+    const body = res.json();
+    expect(body.accessToken).toBeDefined();
+    expect(typeof body.accessToken).toBe("string");
+    expect(body.refreshToken).toBeDefined();
+    expect(typeof body.refreshToken).toBe("string");
+  });
+
+  it("returns user object with expected fields", async () => {
+    const res = await app.inject({
+      method: "POST",
+      url: "/api/auth/register",
+      payload: {
+        email: "another@example.com",
+        password: "password123",
+        name: "Another User",
+        accountName: "Another Co",
+      },
+    });
+    const body = res.json();
+    expect(body.user).toBeDefined();
+    expect(body.user.id).toBeDefined();
+    expect(body.user.email).toBeDefined();
+    expect(body.user.name).toBeDefined();
+    expect(body.user.role).toBeDefined();
+    expect(body.user.account).toBeDefined();
+    expect(body.user.account.id).toBeDefined();
+    expect(body.user.account.name).toBeDefined();
+  });
+
+  it("returns the user role as 'owner' for new registration", async () => {
+    const res = await app.inject({
+      method: "POST",
+      url: "/api/auth/register",
+      payload: {
+        email: "owner@example.com",
+        password: "password123",
+        name: "Owner User",
+        accountName: "Owner Co",
+      },
+    });
+    const body = res.json();
+    expect(body.user.role).toBe("owner");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// POST /api/auth/login
+// ---------------------------------------------------------------------------
+
+describe("POST /api/auth/login — validation", () => {
+  let app: FastifyInstance;
+
+  beforeAll(async () => {
+    app = await buildTestApp({
+      routes: authRoutes,
+      prefix: "/api/auth",
+      db: {
+        selectResult: [],
+        insertResult: [],
+      },
+    });
+  });
+
+  afterAll(async () => {
+    await app.close();
+  });
+
+  it("returns 400 when email is missing", async () => {
+    const res = await app.inject({
+      method: "POST",
+      url: "/api/auth/login",
+      payload: { password: "password123" },
+    });
+    expect(res.statusCode).toBe(400);
+    expect(res.json().error).toMatch(/email/i);
+  });
+
+  it("returns 400 when password is missing", async () => {
+    const res = await app.inject({
+      method: "POST",
+      url: "/api/auth/login",
+      payload: { email: "a@b.com" },
+    });
+    expect(res.statusCode).toBe(400);
+    expect(res.json().error).toMatch(/password/i);
+  });
+
+  it("returns 400 when both fields are missing", async () => {
+    const res = await app.inject({
+      method: "POST",
+      url: "/api/auth/login",
+      payload: {},
+    });
+    expect(res.statusCode).toBe(400);
+  });
+
+  it("returns 401 when user is not found (empty select)", async () => {
+    const res = await app.inject({
+      method: "POST",
+      url: "/api/auth/login",
+      payload: { email: "missing@example.com", password: "password123" },
+    });
+    expect(res.statusCode).toBe(401);
+    expect(res.json().error).toMatch(/invalid/i);
+  });
+});
+
+describe("POST /api/auth/login — suspended account", () => {
+  let app: FastifyInstance;
+  const passwordHash = bcrypt.hashSync("password123", 4);
+
+  beforeAll(async () => {
+    app = await buildTestApp({
+      routes: authRoutes,
+      prefix: "/api/auth",
+      db: {
+        // The mock returns the same row for user lookup and account lookup.
+        // Include fields needed by both.
+        selectResult: [
+          {
+            id: "user-suspended-001",
+            email: "user@suspended.com",
+            passwordHash,
+            name: "Suspended User",
+            role: "editor",
+            isSystemAdmin: false,
+            accountId: "account-suspended",
+            isSuspended: true,
+          },
+        ],
+        insertResult: [],
+      },
+    });
+  });
+
+  afterAll(async () => {
+    await app.close();
+  });
+
+  it("returns 403 for non-admin user on suspended account", async () => {
+    const res = await app.inject({
+      method: "POST",
+      url: "/api/auth/login",
+      payload: { email: "user@suspended.com", password: "password123" },
+    });
+    expect(res.statusCode).toBe(403);
+    expect(res.json().error).toMatch(/suspended/i);
+  });
+});
+
+describe("POST /api/auth/login — successful login", () => {
+  let app: FastifyInstance;
+  const passwordHash = bcrypt.hashSync("correctpassword", 4);
+
+  beforeAll(async () => {
+    app = await buildTestApp({
+      routes: authRoutes,
+      prefix: "/api/auth",
+      db: {
+        selectResult: [
+          {
+            id: "user-001",
+            email: "user@example.com",
+            passwordHash,
+            name: "Test User",
+            role: "owner",
+            isSystemAdmin: false,
+            accountId: "account-001",
+            isSuspended: false,
+            company: "Test Corp",
+          },
+        ],
+        insertResult: [],
+      },
+    });
+  });
+
+  afterAll(async () => {
+    await app.close();
+  });
+
+  it("returns tokens and user data on valid credentials", async () => {
+    const res = await app.inject({
+      method: "POST",
+      url: "/api/auth/login",
+      payload: { email: "user@example.com", password: "correctpassword" },
+    });
+    expect(res.statusCode).toBe(200);
+    const body = res.json();
+    expect(body.accessToken).toBeDefined();
+    expect(typeof body.accessToken).toBe("string");
+    expect(body.refreshToken).toBeDefined();
+    expect(typeof body.refreshToken).toBe("string");
+    expect(body.user).toBeDefined();
+    expect(body.user.id).toBe("user-001");
+    expect(body.user.email).toBe("user@example.com");
+    expect(body.user.role).toBe("owner");
+  });
+
+  it("returns user account info in the response", async () => {
+    const res = await app.inject({
+      method: "POST",
+      url: "/api/auth/login",
+      payload: { email: "user@example.com", password: "correctpassword" },
+    });
+    const body = res.json();
+    expect(body.user.account).toBeDefined();
+    expect(body.user.account.id).toBeDefined();
+  });
+
+  it("returns 401 with wrong password", async () => {
+    const res = await app.inject({
+      method: "POST",
+      url: "/api/auth/login",
+      payload: { email: "user@example.com", password: "wrongpassword" },
+    });
+    expect(res.statusCode).toBe(401);
+    expect(res.json().error).toMatch(/invalid/i);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// POST /api/auth/refresh
+// ---------------------------------------------------------------------------
+
+describe("POST /api/auth/refresh — validation", () => {
+  let app: FastifyInstance;
+
+  beforeAll(async () => {
+    app = await buildTestApp({
+      routes: authRoutes,
+      prefix: "/api/auth",
+      db: {
+        selectResult: [],
+        insertResult: [],
+      },
+    });
+  });
+
+  afterAll(async () => {
+    await app.close();
+  });
+
+  it("returns 400 when refreshToken is missing", async () => {
+    const res = await app.inject({
+      method: "POST",
+      url: "/api/auth/refresh",
+      payload: {},
+    });
+    expect(res.statusCode).toBe(400);
+    expect(res.json().error).toMatch(/refreshToken/i);
+  });
+
+  it("returns 401 when refresh token is not found in DB", async () => {
+    const res = await app.inject({
+      method: "POST",
+      url: "/api/auth/refresh",
+      payload: { refreshToken: "nonexistent-token-hex-string" },
+    });
+    expect(res.statusCode).toBe(401);
+    expect(res.json().error).toMatch(/invalid/i);
+  });
+});
+
+describe("POST /api/auth/refresh — expired token", () => {
+  let app: FastifyInstance;
+
+  beforeAll(async () => {
+    app = await buildTestApp({
+      routes: authRoutes,
+      prefix: "/api/auth",
+      db: {
+        selectResult: [
+          {
+            id: "rt-001",
+            userId: "user-001",
+            tokenHash: "some-hash",
+            expiresAt: new Date(Date.now() - 86400000), // expired yesterday
+          },
+        ],
+        insertResult: [],
+      },
+    });
+  });
+
+  afterAll(async () => {
+    await app.close();
+  });
+
+  it("returns 401 when refresh token is expired", async () => {
+    const res = await app.inject({
+      method: "POST",
+      url: "/api/auth/refresh",
+      payload: { refreshToken: "expired-token-string" },
+    });
+    expect(res.statusCode).toBe(401);
+    expect(res.json().error).toMatch(/expired/i);
+  });
+});
+
+describe("POST /api/auth/refresh — successful refresh", () => {
+  let app: FastifyInstance;
+
+  beforeAll(async () => {
+    app = await buildTestApp({
+      routes: authRoutes,
+      prefix: "/api/auth",
+      db: {
+        // First select: stored token (valid). Second select: user record.
+        // Mock returns same row for both, so include all needed fields.
+        selectResult: [
+          {
+            id: "rt-001",
+            userId: "user-001",
+            tokenHash: "some-hash",
+            expiresAt: new Date(Date.now() + 86400000), // valid for 1 more day
+            email: "user@example.com",
+            name: "Test User",
+            accountId: "account-001",
+            role: "owner",
+            isSystemAdmin: false,
+          },
+        ],
+        insertResult: [],
+      },
+    });
+  });
+
+  afterAll(async () => {
+    await app.close();
+  });
+
+  it("returns new accessToken and refreshToken on success", async () => {
+    const res = await app.inject({
+      method: "POST",
+      url: "/api/auth/refresh",
+      payload: { refreshToken: "valid-refresh-token" },
+    });
+    expect(res.statusCode).toBe(200);
+    const body = res.json();
+    expect(body.accessToken).toBeDefined();
+    expect(typeof body.accessToken).toBe("string");
+    expect(body.refreshToken).toBeDefined();
+    expect(typeof body.refreshToken).toBe("string");
+    // New refresh token should differ from input
+    expect(body.refreshToken).not.toBe("valid-refresh-token");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// POST /api/auth/logout
+// ---------------------------------------------------------------------------
+
+describe("POST /api/auth/logout", () => {
+  let app: FastifyInstance;
+
+  beforeAll(async () => {
+    app = await buildTestApp({
+      routes: authRoutes,
+      prefix: "/api/auth",
+      db: {},
+    });
+  });
+
+  afterAll(async () => {
+    await app.close();
+  });
+
+  it("returns 401 without a valid auth token (logout is a protected route)", async () => {
+    const res = await app.inject({
+      method: "POST",
+      url: "/api/auth/logout",
+      payload: { refreshToken: "some-token" },
+    });
+    expect(res.statusCode).toBe(401);
+  });
+
+  it("returns success with a valid auth token and refresh token", async () => {
+    const res = await app.inject({
+      method: "POST",
+      url: "/api/auth/logout",
+      headers: authHeaders(userToken()),
+      payload: { refreshToken: "some-token" },
+    });
+    expect(res.statusCode).toBe(200);
+    expect(res.json().message).toMatch(/logged out/i);
+  });
+
+  it("returns success even without a refresh token in the body", async () => {
+    const res = await app.inject({
+      method: "POST",
+      url: "/api/auth/logout",
+      headers: authHeaders(userToken()),
+      payload: {},
+    });
+    expect(res.statusCode).toBe(200);
+    expect(res.json().message).toMatch(/logged out/i);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// GET /api/auth/me
+// ---------------------------------------------------------------------------
+
+describe("GET /api/auth/me — auth checks", () => {
+  let app: FastifyInstance;
+
+  beforeAll(async () => {
+    app = await buildTestApp({
+      routes: authRoutes,
+      prefix: "/api/auth",
+      db: {
+        selectResult: [
+          {
+            id: "user-001",
+            email: "user@example.com",
+            name: "Test User",
+            role: "editor",
+            isSystemAdmin: false,
+            emailDigestEnabled: true,
+            timezone: "Europe/Istanbul",
+            accountId: "account-001",
+            lastSeenAt: null,
+            company: "Test Corp",
+            isSuspended: false,
+            maxTrackedApps: 10,
+            maxTrackedKeywords: 50,
+            maxCompetitorApps: 5,
+            maxTrackedFeatures: 20,
+            maxUsers: 5,
+            maxResearchProjects: 3,
+            maxPlatforms: 5,
+            count: 3,
+            platform: "shopify",
+            overrideGlobalVisibility: false,
+            isVisible: true,
+          },
+        ],
+        insertResult: [],
+      },
+    });
+  });
+
+  afterAll(async () => {
+    await app.close();
+  });
+
+  it("returns 401 without auth header", async () => {
+    const res = await app.inject({
+      method: "GET",
+      url: "/api/auth/me",
+    });
+    expect(res.statusCode).toBe(401);
+    expect(res.json().error).toMatch(/unauthorized/i);
+  });
+
+  it("returns 401 with malformed auth header", async () => {
+    const res = await app.inject({
+      method: "GET",
+      url: "/api/auth/me",
+      headers: { authorization: "NotBearer sometoken" },
+    });
+    expect(res.statusCode).toBe(401);
+  });
+
+  it("returns 401 with invalid JWT", async () => {
+    const res = await app.inject({
+      method: "GET",
+      url: "/api/auth/me",
+      headers: authHeaders("invalid.jwt.token"),
+    });
+    expect(res.statusCode).toBe(401);
+  });
+});
+
+describe("GET /api/auth/me — response structure", () => {
+  let app: FastifyInstance;
+
+  beforeAll(async () => {
+    app = await buildTestApp({
+      routes: authRoutes,
+      prefix: "/api/auth",
+      db: {
+        selectResult: [
+          {
+            id: "user-001",
+            email: "user@example.com",
+            name: "Test User",
+            role: "editor",
+            isSystemAdmin: false,
+            emailDigestEnabled: true,
+            timezone: "Europe/Istanbul",
+            accountId: "account-001",
+            lastSeenAt: null,
+            company: "Test Corp",
+            isSuspended: false,
+            maxTrackedApps: 10,
+            maxTrackedKeywords: 50,
+            maxCompetitorApps: 5,
+            maxTrackedFeatures: 20,
+            maxUsers: 5,
+            maxResearchProjects: 3,
+            maxPlatforms: 5,
+            count: 3,
+            platform: "shopify",
+            overrideGlobalVisibility: false,
+            isVisible: true,
+          },
+        ],
+        insertResult: [],
+      },
+    });
+  });
+
+  afterAll(async () => {
+    await app.close();
+  });
+
+  it("returns user and account data with valid token", async () => {
+    const res = await app.inject({
+      method: "GET",
+      url: "/api/auth/me",
+      headers: authHeaders(userToken()),
+    });
+    expect(res.statusCode).toBe(200);
+    const body = res.json();
+    expect(body.user).toBeDefined();
+    expect(body.user.id).toBe("user-001");
+    expect(body.user.email).toBeDefined();
+    expect(body.user.name).toBeDefined();
+    expect(body.account).toBeDefined();
+    expect(body.account.id).toBeDefined();
+  });
+
+  it("returns usage counts in account object", async () => {
+    const res = await app.inject({
+      method: "GET",
+      url: "/api/auth/me",
+      headers: authHeaders(userToken()),
+    });
+    const body = res.json();
+    expect(body.account.usage).toBeDefined();
+    expect(body.account.limits).toBeDefined();
+  });
+
+  it("returns enabledPlatforms array", async () => {
+    const res = await app.inject({
+      method: "GET",
+      url: "/api/auth/me",
+      headers: authHeaders(userToken()),
+    });
+    const body = res.json();
+    expect(body.enabledPlatforms).toBeDefined();
+    expect(Array.isArray(body.enabledPlatforms)).toBe(true);
+  });
+
+  it("returns user preferences (emailDigestEnabled, timezone)", async () => {
+    const res = await app.inject({
+      method: "GET",
+      url: "/api/auth/me",
+      headers: authHeaders(userToken()),
+    });
+    const body = res.json();
+    expect(body.user.emailDigestEnabled).toBeDefined();
+    expect(body.user.timezone).toBeDefined();
+  });
+});
+
+describe("GET /api/auth/me — impersonation metadata", () => {
+  let app: FastifyInstance;
+
+  beforeAll(async () => {
+    app = await buildTestApp({
+      routes: authRoutes,
+      prefix: "/api/auth",
+      db: {
+        selectResult: [
+          {
+            id: "user-001",
+            email: "user@example.com",
+            name: "Test User",
+            role: "editor",
+            isSystemAdmin: false,
+            emailDigestEnabled: true,
+            timezone: "UTC",
+            accountId: "account-001",
+            lastSeenAt: null,
+            company: "Corp",
+            isSuspended: false,
+            maxTrackedApps: 10,
+            maxTrackedKeywords: 50,
+            maxCompetitorApps: 5,
+            maxTrackedFeatures: 20,
+            maxUsers: 5,
+            maxResearchProjects: 3,
+            maxPlatforms: 5,
+            count: 0,
+            platform: "shopify",
+            overrideGlobalVisibility: false,
+            isVisible: true,
+          },
+        ],
+        insertResult: [],
+      },
+    });
+  });
+
+  afterAll(async () => {
+    await app.close();
+  });
+
+  it("includes impersonation metadata when using impersonation token", async () => {
+    const res = await app.inject({
+      method: "GET",
+      url: "/api/auth/me",
+      headers: authHeaders(impersonationToken()),
+    });
+    expect(res.statusCode).toBe(200);
+    const body = res.json();
+    expect(body.impersonation).toBeDefined();
+    expect(body.impersonation.isImpersonating).toBe(true);
+    expect(body.impersonation.realAdmin).toBeDefined();
+    expect(body.impersonation.realAdmin.userId).toBe("admin-001");
+  });
+
+  it("does not include impersonation metadata for normal token", async () => {
+    const res = await app.inject({
+      method: "GET",
+      url: "/api/auth/me",
+      headers: authHeaders(userToken()),
+    });
+    const body = res.json();
+    expect(body.impersonation).toBeUndefined();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// PATCH /api/auth/me
+// ---------------------------------------------------------------------------
+
+describe("PATCH /api/auth/me — auth and validation", () => {
+  let app: FastifyInstance;
+
+  beforeAll(async () => {
+    app = await buildTestApp({
+      routes: authRoutes,
+      prefix: "/api/auth",
+      db: {
+        selectResult: [
+          {
+            id: "user-001",
+            email: "user@example.com",
+            name: "Test User",
+            emailDigestEnabled: true,
+            timezone: "Europe/Istanbul",
+            passwordHash: bcrypt.hashSync("oldpassword", 4),
+          },
+        ],
+        insertResult: [],
+      },
+    });
+  });
+
+  afterAll(async () => {
+    await app.close();
+  });
+
+  it("returns 401 without auth header", async () => {
+    const res = await app.inject({
+      method: "PATCH",
+      url: "/api/auth/me",
+      payload: { name: "Updated" },
+    });
+    expect(res.statusCode).toBe(401);
+  });
+
+  it("returns 400 when no valid fields are provided", async () => {
+    const res = await app.inject({
+      method: "PATCH",
+      url: "/api/auth/me",
+      headers: authHeaders(userToken()),
+      payload: {},
+    });
+    expect(res.statusCode).toBe(400);
+    expect(res.json().error).toMatch(/no valid fields/i);
+  });
+
+  it("returns 400 when newPassword provided without currentPassword", async () => {
+    const res = await app.inject({
+      method: "PATCH",
+      url: "/api/auth/me",
+      headers: authHeaders(userToken()),
+      payload: { newPassword: "newpass123" },
+    });
+    expect(res.statusCode).toBe(400);
+    expect(res.json().error).toMatch(/current password/i);
+  });
+
+  it("returns 400 when newPassword is shorter than 8 characters", async () => {
+    const res = await app.inject({
+      method: "PATCH",
+      url: "/api/auth/me",
+      headers: authHeaders(userToken()),
+      payload: { newPassword: "short", currentPassword: "oldpassword" },
+    });
+    expect(res.statusCode).toBe(400);
+    expect(res.json().error).toMatch(/8 characters/i);
+  });
+});
+
+describe("PATCH /api/auth/me — impersonation restrictions", () => {
+  let app: FastifyInstance;
+
+  beforeAll(async () => {
+    app = await buildTestApp({
+      routes: authRoutes,
+      prefix: "/api/auth",
+      db: {
+        selectResult: [
+          {
+            id: "user-001",
+            email: "user@example.com",
+            name: "Test User",
+            emailDigestEnabled: true,
+            timezone: "Europe/Istanbul",
+            passwordHash: bcrypt.hashSync("oldpassword", 4),
+          },
+        ],
+        insertResult: [],
+      },
+    });
+  });
+
+  afterAll(async () => {
+    await app.close();
+  });
+
+  it("blocks password change during impersonation", async () => {
+    const res = await app.inject({
+      method: "PATCH",
+      url: "/api/auth/me",
+      headers: authHeaders(impersonationToken()),
+      payload: { newPassword: "newpass123", currentPassword: "oldpass123" },
+    });
+    expect(res.statusCode).toBe(403);
+    expect(res.json().error).toMatch(/impersonat/i);
+  });
+
+  it("blocks email change during impersonation", async () => {
+    const res = await app.inject({
+      method: "PATCH",
+      url: "/api/auth/me",
+      headers: authHeaders(impersonationToken()),
+      payload: { email: "newemail@example.com" },
+    });
+    expect(res.statusCode).toBe(403);
+    expect(res.json().error).toMatch(/impersonat/i);
+  });
+
+  it("allows non-sensitive updates during impersonation", async () => {
+    const res = await app.inject({
+      method: "PATCH",
+      url: "/api/auth/me",
+      headers: authHeaders(impersonationToken()),
+      payload: { name: "New Name" },
+    });
+    expect(res.statusCode).toBe(200);
+  });
+});
+
+describe("PATCH /api/auth/me — successful updates", () => {
+  let app: FastifyInstance;
+
+  beforeAll(async () => {
+    app = await buildTestApp({
+      routes: authRoutes,
+      prefix: "/api/auth",
+      db: {
+        selectResult: [
+          {
+            id: "user-001",
+            email: "user@example.com",
+            name: "Test User",
+            emailDigestEnabled: true,
+            timezone: "Europe/Istanbul",
+            passwordHash: bcrypt.hashSync("oldpassword", 4),
+          },
+        ],
+        insertResult: [],
+      },
+    });
+  });
+
+  afterAll(async () => {
+    await app.close();
+  });
+
+  it("allows name update with valid token", async () => {
+    const res = await app.inject({
+      method: "PATCH",
+      url: "/api/auth/me",
+      headers: authHeaders(userToken()),
+      payload: { name: "Updated Name" },
+    });
+    expect(res.statusCode).toBe(200);
+  });
+
+  it("allows timezone update with valid token", async () => {
+    const res = await app.inject({
+      method: "PATCH",
+      url: "/api/auth/me",
+      headers: authHeaders(userToken()),
+      payload: { timezone: "America/New_York" },
+    });
+    expect(res.statusCode).toBe(200);
+  });
+
+  it("allows emailDigestEnabled update with valid token", async () => {
+    const res = await app.inject({
+      method: "PATCH",
+      url: "/api/auth/me",
+      headers: authHeaders(userToken()),
+      payload: { emailDigestEnabled: false },
+    });
+    expect(res.statusCode).toBe(200);
+  });
+});

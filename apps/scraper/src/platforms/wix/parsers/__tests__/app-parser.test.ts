@@ -1,5 +1,4 @@
-import { describe, it } from "node:test";
-import assert from "node:assert/strict";
+import { describe, it, expect } from "vitest";
 import { extractReactQueryState, parseWixAppPage, parseWixReviewPage } from "../app-parser.js";
 import { buildWixHtml, buildAppDetailHtml } from "./fixtures.js";
 
@@ -10,18 +9,18 @@ describe("extractReactQueryState", () => {
     const state = { queries: [{ queryKey: ["test"], state: { data: "hello" } }] };
     const html = buildWixHtml(state);
     const result = extractReactQueryState(html);
-    assert.deepEqual(result, state);
+    expect(result).toEqual(state);
   });
 
   it("returns null when no __REACT_QUERY_STATE__ is found", () => {
     const result = extractReactQueryState("<html><body>No state here</body></html>");
-    assert.equal(result, null);
+    expect(result).toBe(null);
   });
 
   it("returns null for invalid base64 content", () => {
     const html = `<html><script>window.__REACT_QUERY_STATE__ = JSON.parse(__decodeBase64('not-valid-base64!!!'))</script></html>`;
     const result = extractReactQueryState(html);
-    assert.equal(result, null);
+    expect(result).toBe(null);
   });
 
   it("handles complex nested JSON structures", () => {
@@ -40,7 +39,7 @@ describe("extractReactQueryState", () => {
     };
     const html = buildWixHtml(state);
     const result = extractReactQueryState(html);
-    assert.equal(result?.queries[0].state.data.app.name, "Test");
+    expect(result?.queries[0].state.data.app.name).toBe("Test");
   });
 });
 
@@ -54,34 +53,34 @@ describe("parseWixAppPage", () => {
       icon: "https://cdn.wix.com/my-icon.png",
     });
     const result = parseWixAppPage(html, "my-app");
-    assert.equal(result.name, "My App");
-    assert.equal(result.slug, "my-app");
-    assert.equal(result.iconUrl, "https://cdn.wix.com/my-icon.png");
+    expect(result.name).toBe("My App");
+    expect(result.slug).toBe("my-app");
+    expect(result.iconUrl).toBe("https://cdn.wix.com/my-icon.png");
   });
 
   it("parses rating and review count", () => {
     const html = buildAppDetailHtml({ rating: 4.3, reviewCount: 958 });
     const result = parseWixAppPage(html, "test-app");
-    assert.equal(result.averageRating, 4.3);
-    assert.equal(result.ratingCount, 958);
+    expect(result.averageRating).toBe(4.3);
+    expect(result.ratingCount).toBe(958);
   });
 
   it("parses pricing hint: FREE", () => {
     const html = buildAppDetailHtml({ pricingType: "FREE" });
     const result = parseWixAppPage(html, "test-app");
-    assert.equal(result.pricingHint, "Free");
+    expect(result.pricingHint).toBe("Free");
   });
 
   it("parses pricing hint: FREE_PLAN_AVAILABLE", () => {
     const html = buildAppDetailHtml({ pricingType: "FREE_PLAN_AVAILABLE" });
     const result = parseWixAppPage(html, "test-app");
-    assert.equal(result.pricingHint, "Free plan available");
+    expect(result.pricingHint).toBe("Free plan available");
   });
 
   it("parses pricing hint: PAID", () => {
     const html = buildAppDetailHtml({ pricingType: "PAID" });
     const result = parseWixAppPage(html, "test-app");
-    assert.equal(result.pricingHint, "Paid");
+    expect(result.pricingHint).toBe("Paid");
   });
 
   it("parses developer info", () => {
@@ -91,9 +90,9 @@ describe("parseWixAppPage", () => {
       developerWebsite: "https://acme.com",
     });
     const result = parseWixAppPage(html, "test-app");
-    assert.equal(result.developer?.name, "ACME Corp");
-    assert.equal(result.developer?.url, "https://www.wix.com/app-market/developer/acme-corp");
-    assert.equal(result.developer?.website, "https://acme.com");
+    expect(result.developer?.name).toBe("ACME Corp");
+    expect(result.developer?.url).toBe("https://www.wix.com/app-market/developer/acme-corp");
+    expect(result.developer?.website).toBe("https://acme.com");
   });
 
   it("returns null developer when companyInfo is missing", () => {
@@ -103,32 +102,32 @@ describe("parseWixAppPage", () => {
     state.queries[0].state.data.companyInfo = null;
     const html2 = buildWixHtml(state);
     const result = parseWixAppPage(html2, "test-app");
-    assert.equal(result.developer, null);
+    expect(result.developer).toBe(null);
   });
 
   it("parses platformData.tagline", () => {
     const html = buildAppDetailHtml({ shortDescription: undefined });
     const result = parseWixAppPage(html, "test-app");
-    assert.equal(result.platformData.tagline, "A test app");
+    expect(result.platformData.tagline).toBe("A test app");
   });
 
   it("parses platformData.description (multi-line)", () => {
     const html = buildAppDetailHtml({ description: "Line 1\nLine 2\nLine 3" });
     const result = parseWixAppPage(html, "test-app");
-    assert.equal(result.platformData.description, "Line 1\nLine 2\nLine 3");
+    expect(result.platformData.description).toBe("Line 1\nLine 2\nLine 3");
   });
 
   it("parses platformData.benefits", () => {
     const html = buildAppDetailHtml({ benefits: ["Fast setup", "No code", "Analytics"] });
     const result = parseWixAppPage(html, "test-app");
     const pd = result.platformData as any;
-    assert.deepEqual(pd.benefits, ["Fast setup", "No code", "Analytics"]);
+    expect(pd.benefits).toEqual(["Fast setup", "No code", "Analytics"]);
   });
 
   it("parses platformData.demoUrl", () => {
     const html = buildAppDetailHtml({ demoUrl: "https://demo.test.com" });
     const result = parseWixAppPage(html, "test-app");
-    assert.equal((result.platformData as any).demoUrl, "https://demo.test.com");
+    expect((result.platformData as any).demoUrl).toBe("https://demo.test.com");
   });
 
   it("parses platformData.categories with compound slug", () => {
@@ -140,10 +139,10 @@ describe("parseWixAppPage", () => {
     });
     const result = parseWixAppPage(html, "test-app");
     const pd = result.platformData as any;
-    assert.equal(pd.categories.length, 2);
-    assert.equal(pd.categories[0].slug, "communication--forms");
-    assert.equal(pd.categories[0].parentSlug, "communication");
-    assert.equal(pd.categories[1].slug, "marketing--email");
+    expect(pd.categories.length).toBe(2);
+    expect(pd.categories[0].slug).toBe("communication--forms");
+    expect(pd.categories[0].parentSlug).toBe("communication");
+    expect(pd.categories[1].slug).toBe("marketing--email");
   });
 
   it("parses platformData.collections", () => {
@@ -155,9 +154,9 @@ describe("parseWixAppPage", () => {
     });
     const result = parseWixAppPage(html, "test-app");
     const pd = result.platformData as any;
-    assert.equal(pd.collections.length, 2);
-    assert.equal(pd.collections[0].slug, "collect-leads");
-    assert.equal(pd.collections[1].name, "Grow Your Business");
+    expect(pd.collections.length).toBe(2);
+    expect(pd.collections[0].slug).toBe("collect-leads");
+    expect(pd.collections[1].name).toBe("Grow Your Business");
   });
 
   it("parses screenshots (only IMAGE type, excludes VIDEO)", () => {
@@ -170,9 +169,9 @@ describe("parseWixAppPage", () => {
     });
     const result = parseWixAppPage(html, "test-app");
     const pd = result.platformData as any;
-    assert.equal(pd.screenshots.length, 2);
-    assert.equal(pd.screenshots[0], "https://cdn.wix.com/ss1.png");
-    assert.equal(pd.screenshots[1], "https://cdn.wix.com/ss2.png");
+    expect(pd.screenshots.length).toBe(2);
+    expect(pd.screenshots[0]).toBe("https://cdn.wix.com/ss1.png");
+    expect(pd.screenshots[1]).toBe("https://cdn.wix.com/ss2.png");
   });
 
   it("parses pricing plans with monthly/yearly prices", () => {
@@ -191,12 +190,12 @@ describe("parseWixAppPage", () => {
     });
     const result = parseWixAppPage(html, "test-app");
     const pd = result.platformData as any;
-    assert.equal(pd.pricingPlans.length, 1);
-    assert.equal(pd.pricingPlans[0].name, "Basic");
-    assert.equal(pd.pricingPlans[0].monthlyPrice, 9.99);
-    assert.equal(pd.pricingPlans[0].yearlyPrice, 7.99);
-    assert.equal(pd.pricingPlans[0].isFree, false);
-    assert.deepEqual(pd.pricingPlans[0].benefits, ["Feature A"]);
+    expect(pd.pricingPlans.length).toBe(1);
+    expect(pd.pricingPlans[0].name).toBe("Basic");
+    expect(pd.pricingPlans[0].monthlyPrice).toBe(9.99);
+    expect(pd.pricingPlans[0].yearlyPrice).toBe(7.99);
+    expect(pd.pricingPlans[0].isFree).toBe(false);
+    expect(pd.pricingPlans[0].benefits).toEqual(["Feature A"]);
   });
 
   it("parses free pricing plan", () => {
@@ -215,30 +214,30 @@ describe("parseWixAppPage", () => {
     });
     const result = parseWixAppPage(html, "test-app");
     const pd = result.platformData as any;
-    assert.equal(pd.pricingPlans[0].isFree, true);
-    assert.equal(pd.pricingPlans[0].monthlyPrice, null);
+    expect(pd.pricingPlans[0].isFree).toBe(true);
+    expect(pd.pricingPlans[0].monthlyPrice).toBe(null);
   });
 
   it("parses currency and trial days", () => {
     const html = buildAppDetailHtml({ currency: "EUR", trialDays: 30 });
     const result = parseWixAppPage(html, "test-app");
     const pd = result.platformData as any;
-    assert.equal(pd.currency, "EUR");
-    assert.equal(pd.trialDays, 30);
+    expect(pd.currency).toBe("EUR");
+    expect(pd.trialDays).toBe(30);
   });
 
   it("parses languages", () => {
     const html = buildAppDetailHtml({ languages: ["English", "German", "Japanese"] });
     const result = parseWixAppPage(html, "test-app");
     const pd = result.platformData as any;
-    assert.deepEqual(pd.languages, ["English", "German", "Japanese"]);
+    expect(pd.languages).toEqual(["English", "German", "Japanese"]);
   });
 
   it("parses isAvailableWorldwide", () => {
     const html = buildAppDetailHtml({ isAvailableWorldwide: false });
     const result = parseWixAppPage(html, "test-app");
     const pd = result.platformData as any;
-    assert.equal(pd.isAvailableWorldwide, false);
+    expect(pd.isAvailableWorldwide).toBe(false);
   });
 
   it("parses rating histogram", () => {
@@ -247,14 +246,14 @@ describe("parseWixAppPage", () => {
     });
     const result = parseWixAppPage(html, "test-app");
     const pd = result.platformData as any;
-    assert.equal(pd.ratingHistogram.rating5, 80);
-    assert.equal(pd.ratingHistogram.rating1, 2);
+    expect(pd.ratingHistogram.rating5).toBe(80);
+    expect(pd.ratingHistogram.rating1).toBe(2);
   });
 
   it("parses badges", () => {
     const html = buildAppDetailHtml({ badges: ["POPULAR", "NEW"] });
     const result = parseWixAppPage(html, "test-app");
-    assert.deepEqual(result.badges, ["POPULAR", "NEW"]);
+    expect(result.badges).toEqual(["POPULAR", "NEW"]);
   });
 
   it("parses developer email into platformData", () => {
@@ -264,7 +263,7 @@ describe("parseWixAppPage", () => {
     });
     const result = parseWixAppPage(html, "test-app");
     const pd = result.platformData as any;
-    assert.equal(pd.developerEmail, "support@dev.co");
+    expect(pd.developerEmail).toBe("support@dev.co");
   });
 
   it("handles missing optional fields gracefully", () => {
@@ -288,16 +287,16 @@ describe("parseWixAppPage", () => {
     };
     const html = buildWixHtml(state);
     const result = parseWixAppPage(html, "minimal");
-    assert.equal(result.name, "Minimal");
-    assert.equal(result.averageRating, null);
-    assert.equal(result.ratingCount, null);
-    assert.equal(result.developer, null);
+    expect(result.name).toBe("Minimal");
+    expect(result.averageRating).toBe(null);
+    expect(result.ratingCount).toBe(null);
+    expect(result.developer).toBe(null);
     const pd = result.platformData as any;
-    assert.deepEqual(pd.benefits, []);
-    assert.deepEqual(pd.screenshots, []);
-    assert.deepEqual(pd.collections, []);
-    assert.deepEqual(pd.pricingPlans, []);
-    assert.deepEqual(pd.languages, []);
+    expect(pd.benefits).toEqual([]);
+    expect(pd.screenshots).toEqual([]);
+    expect(pd.collections).toEqual([]);
+    expect(pd.pricingPlans).toEqual([]);
+    expect(pd.languages).toEqual([]);
   });
 
   it("falls back to DOM parsing when no JSON data", () => {
@@ -309,11 +308,11 @@ describe("parseWixAppPage", () => {
       <p data-hook="app-overview-description">A DOM parsed tagline</p>
     </body></html>`;
     const result = parseWixAppPage(html, "dom-app");
-    assert.equal(result.name, "DOM App");
-    assert.equal(result.averageRating, 4.2);
-    assert.equal(result.ratingCount, 123);
-    assert.equal(result.developer?.name, "DOM Developer");
-    assert.equal((result.platformData as any).tagline, "A DOM parsed tagline");
+    expect(result.name).toBe("DOM App");
+    expect(result.averageRating).toBe(4.2);
+    expect(result.ratingCount).toBe(123);
+    expect(result.developer?.name).toBe("DOM Developer");
+    expect((result.platformData as any).tagline).toBe("A DOM parsed tagline");
   });
 });
 
@@ -329,12 +328,12 @@ describe("parseWixReviewPage", () => {
       ],
     });
     const result = parseWixReviewPage(html, 1);
-    assert.equal(result.reviews.length, 2);
-    assert.equal(result.reviews[0].rating, 5);
-    assert.equal(result.reviews[0].reviewerName, "User1");
-    assert.equal(result.reviews[0].content, "Excellent!");
-    assert.equal(result.reviews[1].rating, 4);
-    assert.equal(result.currentPage, 1);
+    expect(result.reviews.length).toBe(2);
+    expect(result.reviews[0].rating).toBe(5);
+    expect(result.reviews[0].reviewerName).toBe("User1");
+    expect(result.reviews[0].content).toBe("Excellent!");
+    expect(result.reviews[1].rating).toBe(4);
+    expect(result.currentPage).toBe(1);
   });
 
   it("extracts developer reply", () => {
@@ -350,8 +349,8 @@ describe("parseWixReviewPage", () => {
       ],
     });
     const result = parseWixReviewPage(html, 1);
-    assert.equal(result.reviews[0].developerReplyText, "Thank you!");
-    assert.equal(result.reviews[0].developerReplyDate, "2026-03-02");
+    expect(result.reviews[0].developerReplyText).toBe("Thank you!");
+    expect(result.reviews[0].developerReplyDate).toBe("2026-03-02");
   });
 
   it("handles reviews with no replies", () => {
@@ -361,8 +360,8 @@ describe("parseWixReviewPage", () => {
       ],
     });
     const result = parseWixReviewPage(html, 1);
-    assert.equal(result.reviews[0].developerReplyText, null);
-    assert.equal(result.reviews[0].developerReplyDate, null);
+    expect(result.reviews[0].developerReplyText).toBe(null);
+    expect(result.reviews[0].developerReplyDate).toBe(null);
   });
 
   it("uses title as content fallback when description is empty", () => {
@@ -372,7 +371,7 @@ describe("parseWixReviewPage", () => {
       ],
     });
     const result = parseWixReviewPage(html, 1);
-    assert.equal(result.reviews[0].content, "Great!");
+    expect(result.reviews[0].content).toBe("Great!");
   });
 
   it("handles Anonymous reviewer", () => {
@@ -382,7 +381,7 @@ describe("parseWixReviewPage", () => {
       ],
     });
     const result = parseWixReviewPage(html, 1);
-    assert.equal(result.reviews[0].reviewerName, "Anonymous");
+    expect(result.reviews[0].reviewerName).toBe("Anonymous");
   });
 
   it("returns empty reviews when no review data exists", () => {
@@ -391,13 +390,13 @@ describe("parseWixReviewPage", () => {
     };
     const html = buildWixHtml(state);
     const result = parseWixReviewPage(html, 1);
-    assert.equal(result.reviews.length, 0);
-    assert.equal(result.hasNextPage, false);
+    expect(result.reviews.length).toBe(0);
+    expect(result.hasNextPage).toBe(false);
   });
 
   it("returns empty reviews for pages without __REACT_QUERY_STATE__", () => {
     const result = parseWixReviewPage("<html><body>No data</body></html>", 1);
-    assert.equal(result.reviews.length, 0);
-    assert.equal(result.hasNextPage, false);
+    expect(result.reviews.length).toBe(0);
+    expect(result.hasNextPage).toBe(false);
   });
 });

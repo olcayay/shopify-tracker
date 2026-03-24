@@ -1,3 +1,38 @@
+Comprehensive Test Coverage Expansion (740 → 2,362 tests)
+==========================================================
+
+Before: 740 tests (Shared 0, API 31, Scraper 17, Dashboard 692)
+After:  2,362 tests (Shared 239, API 405, Scraper 726, Dashboard 992)
+Delta:  +1,622 new tests, 0 failures
+
+Phase 1 — Shared package (0 → 239 tests):
+- 6 new test files: similarity, app-visibility, app-power, keyword-extraction, keyword-opportunity, platforms
+- New vitest.config.ts for packages/shared
+
+Phase 2 — API routes (31 → 405 tests):
+- Test infrastructure: apps/api/src/__tests__/helpers/test-app.ts (mock DB, JWT generators, Fastify .inject())
+- 13 new route test files: auth, middleware-auth, apps, keywords, categories, account, system-admin, research, platforms, features, invitations, live-search, featured-apps
+
+Phase 3 — Scraper parsers (17 → 726 tests):
+- Converted 17 pre-existing node:test files to vitest format
+- New vitest.config.ts for apps/scraper
+- New tests for untested platforms: Shopify, Atlassian, Google Workspace, Zendesk, Zoom
+- index.test.ts + urls.test.ts for each platform module
+
+Phase 4 — Scraper jobs:
+- compute-review-metrics, compute-app-scores, app-details-scraper tests
+
+Phase 5 — Dashboard pages (692 → 992 tests):
+- 18 new page test files: app-detail, app-details-tab, app-keywords, app-changes, app-compare, app-similar, app-featured, app-ads, keywords-list, keyword-detail, category-detail, platform-overview, featured, competitors, overview, research-list, research-detail, etc.
+
+Phase 6 — Dashboard components:
+- 14 new component test files: app-badges, app-search-bar, app-list-table, competitor-suggestions, keyword-search-modal, keyword-tag-manager, platform-overview-cards, power-score-popover, visibility-score-popover, ad-heatmap, admin-scraper-trigger, ranking-chart, rating-review-chart, keyword-opportunity-popover
+
+Key fixes during implementation:
+- Added pool: "forks" to dashboard vitest.config.ts to prevent mock contamination
+- Fixed root package.json test script to run all 4 packages (was filtering only dashboard)
+- Converted node:test → vitest for all scraper tests (assert → expect migration)
+
 Zendesk Marketplace — 10th Platform Integration
 =================================================
 

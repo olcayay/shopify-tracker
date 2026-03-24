@@ -1,5 +1,4 @@
-import { describe, it } from "node:test";
-import assert from "node:assert/strict";
+import { describe, it, expect } from "vitest";
 import { parseWixCategoryPage } from "../category-parser.js";
 import {
   buildL1CategoryHtml,
@@ -18,9 +17,9 @@ describe("parseWixCategoryPage — L1 (grouped sections)", () => {
       description: "Grow your business",
     });
     const result = parseWixCategoryPage(html, "marketing", 1, 0);
-    assert.equal(result.title, "Marketing");
-    assert.equal(result.description, "Grow your business");
-    assert.equal(result.slug, "marketing");
+    expect(result.title).toBe("Marketing");
+    expect(result.description).toBe("Grow your business");
+    expect(result.slug).toBe("marketing");
   });
 
   it("flattens apps from all sections with sequential positions", () => {
@@ -45,10 +44,10 @@ describe("parseWixCategoryPage — L1 (grouped sections)", () => {
       ],
     });
     const result = parseWixCategoryPage(html, "marketing", 1, 0);
-    assert.equal(result.apps.length, 3);
-    assert.equal(result.apps[0].position, 1);
-    assert.equal(result.apps[1].position, 2);
-    assert.equal(result.apps[2].position, 3);
+    expect(result.apps.length).toBe(3);
+    expect(result.apps[0].position).toBe(1);
+    expect(result.apps[1].position).toBe(2);
+    expect(result.apps[2].position).toBe(3);
   });
 
   it("generates compound subcategory slugs from sections", () => {
@@ -62,7 +61,7 @@ describe("parseWixCategoryPage — L1 (grouped sections)", () => {
     });
     const result = parseWixCategoryPage(html, "marketing", 1, 0);
     const slugs = result.subcategoryLinks.map((s) => s.slug);
-    assert.deepEqual(slugs, ["marketing--seo", "marketing--analytics", "marketing--email"]);
+    expect(slugs).toEqual(["marketing--seo", "marketing--analytics", "marketing--email"]);
   });
 
   it("subcategory links include correct parentSlug", () => {
@@ -71,8 +70,8 @@ describe("parseWixCategoryPage — L1 (grouped sections)", () => {
       sections: [{ tagSlug: "forms", title: "Forms", apps: [] }],
     });
     const result = parseWixCategoryPage(html, "communication", 1, 0);
-    assert.equal(result.subcategoryLinks[0].parentSlug, "communication");
-    assert.equal(result.subcategoryLinks[0].title, "Forms");
+    expect(result.subcategoryLinks[0].parentSlug).toBe("communication");
+    expect(result.subcategoryLinks[0].title).toBe("Forms");
   });
 
   it("builds correct subcategory URLs", () => {
@@ -81,10 +80,7 @@ describe("parseWixCategoryPage — L1 (grouped sections)", () => {
       sections: [{ tagSlug: "seo", title: "SEO", apps: [] }],
     });
     const result = parseWixCategoryPage(html, "marketing", 1, 0);
-    assert.equal(
-      result.subcategoryLinks[0].url,
-      "https://www.wix.com/app-market/category/marketing/seo",
-    );
+    expect(result.subcategoryLinks[0].url).toBe("https://www.wix.com/app-market/category/marketing/seo",);
   });
 
   it("parses app card fields", () => {
@@ -108,12 +104,12 @@ describe("parseWixCategoryPage — L1 (grouped sections)", () => {
     });
     const result = parseWixCategoryPage(html, "marketing", 1, 0);
     const app = result.apps[0];
-    assert.equal(app.slug, "my-seo-app");
-    assert.equal(app.name, "My SEO App");
-    assert.equal(app.averageRating, 4.7);
-    assert.equal(app.ratingCount, 250);
-    assert.equal(app.pricingHint, "Free plan available");
-    assert.equal(app.isSponsored, false);
+    expect(app.slug).toBe("my-seo-app");
+    expect(app.name).toBe("My SEO App");
+    expect(app.averageRating).toBe(4.7);
+    expect(app.ratingCount).toBe(250);
+    expect(app.pricingHint).toBe("Free plan available");
+    expect(app.isSponsored).toBe(false);
   });
 
   it("applies offset to positions", () => {
@@ -127,20 +123,20 @@ describe("parseWixCategoryPage — L1 (grouped sections)", () => {
       ],
     });
     const result = parseWixCategoryPage(html, "marketing", 1, 10);
-    assert.equal(result.apps[0].position, 11);
-    assert.equal(result.apps[1].position, 12);
+    expect(result.apps[0].position).toBe(11);
+    expect(result.apps[1].position).toBe(12);
   });
 
   it("sets hasNextPage to false (all apps on one page)", () => {
     const html = buildL1CategoryHtml();
     const result = parseWixCategoryPage(html, "marketing", 1, 0);
-    assert.equal(result.hasNextPage, false);
+    expect(result.hasNextPage).toBe(false);
   });
 
   it("builds correct page URL for simple slug", () => {
     const html = buildL1CategoryHtml({ slug: "marketing" });
     const result = parseWixCategoryPage(html, "marketing", 1, 0);
-    assert.equal(result.url, "https://www.wix.com/app-market/category/marketing");
+    expect(result.url).toBe("https://www.wix.com/app-market/category/marketing");
   });
 
   it("parses badges from app cards", () => {
@@ -154,7 +150,7 @@ describe("parseWixCategoryPage — L1 (grouped sections)", () => {
       ],
     });
     const result = parseWixCategoryPage(html, "marketing", 1, 0);
-    assert.deepEqual(result.apps[0].badges, ["POPULAR"]);
+    expect(result.apps[0].badges).toEqual(["POPULAR"]);
   });
 });
 
@@ -164,7 +160,7 @@ describe("parseWixCategoryPage — L2 (flat list)", () => {
   it("parses subcategory title from header data", () => {
     const html = buildL2CategoryHtml({ title: "Search Engine Optimization" });
     const result = parseWixCategoryPage(html, "marketing--seo", 1, 0);
-    assert.equal(result.title, "Search Engine Optimization");
+    expect(result.title).toBe("Search Engine Optimization");
   });
 
   it("parses flat list of apps", () => {
@@ -176,9 +172,9 @@ describe("parseWixCategoryPage — L2 (flat list)", () => {
       ],
     });
     const result = parseWixCategoryPage(html, "marketing--seo", 1, 0);
-    assert.equal(result.apps.length, 3);
-    assert.equal(result.apps[0].slug, "tool-1");
-    assert.equal(result.apps[2].slug, "tool-3");
+    expect(result.apps.length).toBe(3);
+    expect(result.apps[0].slug).toBe("tool-1");
+    expect(result.apps[2].slug).toBe("tool-3");
   });
 
   it("sequential positions starting from 1", () => {
@@ -189,8 +185,8 @@ describe("parseWixCategoryPage — L2 (flat list)", () => {
       ],
     });
     const result = parseWixCategoryPage(html, "marketing--seo", 1, 0);
-    assert.equal(result.apps[0].position, 1);
-    assert.equal(result.apps[1].position, 2);
+    expect(result.apps[0].position).toBe(1);
+    expect(result.apps[1].position).toBe(2);
   });
 
   it("applies offset to positions", () => {
@@ -198,25 +194,25 @@ describe("parseWixCategoryPage — L2 (flat list)", () => {
       apps: [{ slug: "a", name: "A" }],
     });
     const result = parseWixCategoryPage(html, "marketing--seo", 1, 20);
-    assert.equal(result.apps[0].position, 21);
+    expect(result.apps[0].position).toBe(21);
   });
 
   it("parses paging total", () => {
     const html = buildL2CategoryHtml({ total: 42, apps: [{ slug: "a", name: "A" }] });
     const result = parseWixCategoryPage(html, "marketing--seo", 1, 0);
-    assert.equal(result.appCount, 42);
+    expect(result.appCount).toBe(42);
   });
 
   it("respects hasNext from paging", () => {
     const html = buildL2CategoryHtml({ hasNext: true });
     const result = parseWixCategoryPage(html, "marketing--seo", 1, 0);
-    assert.equal(result.hasNextPage, true);
+    expect(result.hasNextPage).toBe(true);
   });
 
   it("converts compound slug to URL with /", () => {
     const html = buildL2CategoryHtml();
     const result = parseWixCategoryPage(html, "marketing--seo", 1, 0);
-    assert.equal(result.url, "https://www.wix.com/app-market/category/marketing/seo");
+    expect(result.url).toBe("https://www.wix.com/app-market/category/marketing/seo");
   });
 
   it("pricing hint parsing: FREE", () => {
@@ -224,7 +220,7 @@ describe("parseWixCategoryPage — L2 (flat list)", () => {
       apps: [{ slug: "free-app", name: "Free App", pricingType: "FREE" }],
     });
     const result = parseWixCategoryPage(html, "marketing--seo", 1, 0);
-    assert.equal(result.apps[0].pricingHint, "Free");
+    expect(result.apps[0].pricingHint).toBe("Free");
   });
 
   it("pricing hint parsing: Paid", () => {
@@ -232,7 +228,7 @@ describe("parseWixCategoryPage — L2 (flat list)", () => {
       apps: [{ slug: "paid-app", name: "Paid App", pricingType: "SUBSCRIPTION" }],
     });
     const result = parseWixCategoryPage(html, "marketing--seo", 1, 0);
-    assert.equal(result.apps[0].pricingHint, "Paid");
+    expect(result.apps[0].pricingHint).toBe("Paid");
   });
 
   it("merges sidebar subcategory links when category is also a parent", () => {
@@ -250,7 +246,7 @@ describe("parseWixCategoryPage — L2 (flat list)", () => {
     // This L2 page is for marketing--seo, but the sidebar shows marketing's subcategories
     const result = parseWixCategoryPage(html, "marketing", 1, 0);
     // Since the slug is "marketing" and the sidebar has "marketing" entry, subcategories merge
-    assert.ok(result.subcategoryLinks.length > 0);
+    expect(result.subcategoryLinks.length > 0).toBeTruthy();
   });
 });
 
@@ -282,12 +278,12 @@ describe("parseWixCategoryPage — Virtual category", () => {
     const html = buildWixHtml(state);
     const result = parseWixCategoryPage(html, "media", 1, 0);
 
-    assert.equal(result.apps.length, 0);
-    assert.equal(result.appCount, 0);
-    assert.equal(result.subcategoryLinks.length, 3);
-    assert.equal(result.subcategoryLinks[0].slug, "media--gallery");
-    assert.equal(result.subcategoryLinks[1].slug, "media--music");
-    assert.equal(result.subcategoryLinks[2].slug, "media--video");
+    expect(result.apps.length).toBe(0);
+    expect(result.appCount).toBe(0);
+    expect(result.subcategoryLinks.length).toBe(3);
+    expect(result.subcategoryLinks[0].slug).toBe("media--gallery");
+    expect(result.subcategoryLinks[1].slug).toBe("media--music");
+    expect(result.subcategoryLinks[2].slug).toBe("media--video");
   });
 
   it("uses sidebar label as title for virtual category", () => {
@@ -303,16 +299,16 @@ describe("parseWixCategoryPage — Virtual category", () => {
     };
     const html = buildWixHtml(state);
     const result = parseWixCategoryPage(html, "media", 1, 0);
-    assert.equal(result.title, "Media & Content");
+    expect(result.title).toBe("Media & Content");
   });
 
   it("returns fallback when no data and no sidebar", () => {
     const html = buildWixHtml({ queries: [] });
     const result = parseWixCategoryPage(html, "unknown-cat", 1, 0);
-    assert.equal(result.apps.length, 0);
-    assert.equal(result.subcategoryLinks.length, 0);
-    assert.equal(result.slug, "unknown-cat");
-    assert.equal(result.title, "unknown-cat");
+    expect(result.apps.length).toBe(0);
+    expect(result.subcategoryLinks.length).toBe(0);
+    expect(result.slug).toBe("unknown-cat");
+    expect(result.title).toBe("unknown-cat");
   });
 
   it("generates correct URLs for sidebar subcategory links", () => {
@@ -328,10 +324,7 @@ describe("parseWixCategoryPage — Virtual category", () => {
     };
     const html = buildWixHtml(state);
     const result = parseWixCategoryPage(html, "design-elements", 1, 0);
-    assert.equal(
-      result.subcategoryLinks[0].url,
-      "https://www.wix.com/app-market/category/design-elements/maps--navigation",
-    );
+    expect(result.subcategoryLinks[0].url).toBe("https://www.wix.com/app-market/category/design-elements/maps--navigation",);
   });
 });
 
@@ -341,22 +334,19 @@ describe("parseWixCategoryPage — compound slug handling", () => {
   it("converts -- to / in URL for compound slug", () => {
     const html = buildL2CategoryHtml({ parentSlug: "booking", childSlug: "events" });
     const result = parseWixCategoryPage(html, "booking--events", 1, 0);
-    assert.equal(result.url, "https://www.wix.com/app-market/category/booking/events");
+    expect(result.url).toBe("https://www.wix.com/app-market/category/booking/events");
   });
 
   it("does not convert -- in slug for the result slug field", () => {
     const html = buildL2CategoryHtml({ parentSlug: "booking", childSlug: "events" });
     const result = parseWixCategoryPage(html, "booking--events", 1, 0);
-    assert.equal(result.slug, "booking--events");
+    expect(result.slug).toBe("booking--events");
   });
 
   it("handles triple compound slug correctly (only first -- converted)", () => {
     const html = buildL2CategoryHtml({ childSlug: "shipping--delivery" });
     // The URL builder only replaces the first -- with /
     const result = parseWixCategoryPage(html, "ecommerce--shipping--delivery", 1, 0);
-    assert.equal(
-      result.url,
-      "https://www.wix.com/app-market/category/ecommerce/shipping--delivery",
-    );
+    expect(result.url).toBe("https://www.wix.com/app-market/category/ecommerce/shipping--delivery",);
   });
 });

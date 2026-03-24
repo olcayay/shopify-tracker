@@ -16,7 +16,9 @@
     "worker:restart": "pkill -f 'apps/scraper/src/worker.ts' 2>/dev/null; sleep 1; tsx src/worker.ts",
     "worker:interactive": "tsx src/interactive-worker.ts",
     "scheduler": "tsx src/scheduler.ts",
-    "canva-search": "tsx src/canva-search-server.ts"
+    "canva-search": "tsx src/canva-search-server.ts",
+    "test": "vitest run",
+    "test:watch": "vitest"
   },
   "dependencies": {
     "@appranks/db": "*",
@@ -25,14 +27,15 @@
     "bullmq": "^5.0.0",
     "cheerio": "^1.0.0",
     "dotenv": "^16.4.0",
+    "fastify": "^5.2.0",
     "node-cron": "^3.0.0",
     "nodemailer": "^8.0.1",
-    "fastify": "^5.2.0",
     "playwright": "^1.58.2"
   },
   "devDependencies": {
     "@types/node-cron": "^3.0.0",
     "tsx": "^4.19.0",
-    "typescript": "^5.7.0"
+    "typescript": "^5.7.0",
+    "vitest": "^4.1.1"
   }
 }

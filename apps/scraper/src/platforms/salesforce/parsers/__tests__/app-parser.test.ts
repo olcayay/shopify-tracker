@@ -1,5 +1,4 @@
-import { describe, it } from "node:test";
-import assert from "node:assert/strict";
+import { describe, it, expect } from "vitest";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { parseSalesforceAppPage } from "../app-parser.js";
@@ -104,70 +103,66 @@ const html = wrapHtml(rawListing);
 describe("parseSalesforceAppPage", () => {
   it("parses name from listing.title", () => {
     const result = parseSalesforceAppPage(html, slug);
-    assert.equal(result.name, "Jotform - Powerful forms get it done.");
+    expect(result.name).toBe("Jotform - Powerful forms get it done.");
   });
 
   it("preserves slug as passed", () => {
     const result = parseSalesforceAppPage(html, slug);
-    assert.equal(result.slug, slug);
+    expect(result.slug).toBe(slug);
   });
 
   it("parses averageRating from reviewsSummary", () => {
     const result = parseSalesforceAppPage(html, slug);
-    assert.equal(result.averageRating, 4.58);
+    expect(result.averageRating).toBe(4.58);
   });
 
   it("parses ratingCount from reviewsSummary", () => {
     const result = parseSalesforceAppPage(html, slug);
-    assert.equal(result.ratingCount, 130);
+    expect(result.ratingCount).toBe(130);
   });
 
   it("parses pricingHint from pricing.price_model_type", () => {
     const result = parseSalesforceAppPage(html, slug);
-    assert.equal(result.pricingHint, "freemium");
+    expect(result.pricingHint).toBe("freemium");
   });
 
   it("extracts icon URL from plugins logos (Logo type)", () => {
     const result = parseSalesforceAppPage(html, slug);
-    assert.ok(result.iconUrl, "should have iconUrl");
-    assert.ok(result.iconUrl!.includes("ec365892"), "should be the Logo-type image");
+    expect(result.iconUrl, "should have iconUrl").toBeTruthy();
+    expect(result.iconUrl!.includes("ec365892"), "should be the Logo-type image").toBeTruthy();
   });
 
   it("extracts developer name and website", () => {
     const result = parseSalesforceAppPage(html, slug);
-    assert.equal(result.developer?.name, "Jotform Inc.");
-    assert.equal(result.developer?.website, "https://www.jotform.com/");
+    expect(result.developer?.name).toBe("Jotform Inc.");
+    expect(result.developer?.website).toBe("https://www.jotform.com/");
   });
 
   it("platformData.description is non-empty", () => {
     const result = parseSalesforceAppPage(html, slug);
-    assert.ok(
-      (result.platformData as any).description.length > 0,
-      "description should be non-empty"
-    );
+    expect((result.platformData as any).description.length > 0,
+      "description should be non-empty").toBeTruthy();
   });
 
   it("platformData.fullDescription is non-empty", () => {
     const result = parseSalesforceAppPage(html, slug);
-    assert.ok(
-      (result.platformData as any).fullDescription.length > 0,
-      "fullDescription should be non-empty"
-    );
+    expect((result.platformData as any).fullDescription.length > 0,
+      "fullDescription should be non-empty").toBeTruthy();
   });
 
   it("platformData.highlights has 6 items", () => {
     const result = parseSalesforceAppPage(html, slug);
-    assert.equal((result.platformData as any).highlights.length, 6);
+    expect((result.platformData as any).highlights.length).toBe(6);
   });
 
   it('platformData.languages = ["en"]', () => {
     const result = parseSalesforceAppPage(html, slug);
-    assert.deepEqual((result.platformData as any).languages, ["en"]);
+    expect((result.platformData as any).languages).toEqual(["en"]);
   });
 
   it("platformData.listingCategories", () => {
     const result = parseSalesforceAppPage(html, slug);
-    assert.deepEqual((result.platformData as any).listingCategories, [
+    expect((result.platformData as any).listingCategories).toEqual([
       "Data Management",
       "Sales",
       "Surveys",
@@ -176,7 +171,7 @@ describe("parseSalesforceAppPage", () => {
 
   it("platformData.productsSupported", () => {
     const result = parseSalesforceAppPage(html, slug);
-    assert.deepEqual((result.platformData as any).productsSupported, [
+    expect((result.platformData as any).productsSupported).toEqual([
       "Service Cloud",
       "Experience Cloud",
       "Health Cloud",
@@ -185,44 +180,44 @@ describe("parseSalesforceAppPage", () => {
 
   it("platformData.productsRequired", () => {
     const result = parseSalesforceAppPage(html, slug);
-    assert.deepEqual((result.platformData as any).productsRequired, ["Sales Cloud"]);
+    expect((result.platformData as any).productsRequired).toEqual(["Sales Cloud"]);
   });
 
   it("platformData.pricingPlans has 3 plans (Bronze $39, Silver $49, Gold $129)", () => {
     const result = parseSalesforceAppPage(html, slug);
     const plans = (result.platformData as any).pricingPlans;
-    assert.equal(plans.length, 3);
-    assert.equal(plans[0].plan_name, "Bronze");
-    assert.equal(plans[0].price, 39);
-    assert.equal(plans[1].plan_name, "Silver");
-    assert.equal(plans[1].price, 49);
-    assert.equal(plans[2].plan_name, "Gold");
-    assert.equal(plans[2].price, 129);
+    expect(plans.length).toBe(3);
+    expect(plans[0].plan_name).toBe("Bronze");
+    expect(plans[0].price).toBe(39);
+    expect(plans[1].plan_name).toBe("Silver");
+    expect(plans[1].price).toBe(49);
+    expect(plans[2].plan_name).toBe("Gold");
+    expect(plans[2].price).toBe(129);
   });
 
   it("platformData.pricingPlans include currency_code, units, frequency", () => {
     const result = parseSalesforceAppPage(html, slug);
     const plans = (result.platformData as any).pricingPlans;
     for (const plan of plans) {
-      assert.equal(plan.currency_code, "USD");
-      assert.equal(plan.units, "user");
-      assert.equal(plan.frequency, "monthly");
-      assert.equal(plan.trial_days, 0);
+      expect(plan.currency_code).toBe("USD");
+      expect(plan.units).toBe("user");
+      expect(plan.frequency).toBe("monthly");
+      expect(plan.trial_days).toBe(0);
     }
   });
 
   it("platformData.publisher has name, email, employees, yearFounded", () => {
     const result = parseSalesforceAppPage(html, slug);
     const pub = (result.platformData as any).publisher;
-    assert.equal(pub.name, "Jotform Inc.");
-    assert.equal(pub.email, "salesforce-support@jotform.com");
-    assert.equal(pub.employees, 489);
-    assert.equal(pub.yearFounded, 2006);
+    expect(pub.name).toBe("Jotform Inc.");
+    expect(pub.email).toBe("salesforce-support@jotform.com");
+    expect(pub.employees).toBe(489);
+    expect(pub.yearFounded).toBe(2006);
   });
 
   it("platformData.editions", () => {
     const result = parseSalesforceAppPage(html, slug);
-    assert.deepEqual((result.platformData as any).editions, [
+    expect((result.platformData as any).editions).toEqual([
       "PE",
       "EE",
       "UE",
@@ -234,37 +229,37 @@ describe("parseSalesforceAppPage", () => {
   it("platformData.plugins has videos, resources, carousel, logos", () => {
     const result = parseSalesforceAppPage(html, slug);
     const plugins = (result.platformData as any).plugins;
-    assert.ok(plugins, "plugins should exist");
-    assert.ok(plugins.videos?.length > 0, "should have videos");
-    assert.ok(plugins.resources?.length > 0, "should have resources");
-    assert.ok(plugins.carousel?.length > 0, "should have carousel");
-    assert.ok(plugins.logos?.length > 0, "should have logos");
+    expect(plugins, "plugins should exist").toBeTruthy();
+    expect(plugins.videos?.length > 0, "should have videos").toBeTruthy();
+    expect(plugins.resources?.length > 0, "should have resources").toBeTruthy();
+    expect(plugins.carousel?.length > 0, "should have carousel").toBeTruthy();
+    expect(plugins.logos?.length > 0, "should have logos").toBeTruthy();
   });
 
   it("platformData.solution has manifest and namespacePrefix", () => {
     const result = parseSalesforceAppPage(html, slug);
     const sol = (result.platformData as any).solution;
-    assert.ok(sol, "solution should exist");
-    assert.equal(sol.manifest.hasLWC, true);
-    assert.equal(sol.packageId, "0338e000000Gt7CAAS");
-    assert.equal(sol.namespacePrefix, "jotform");
+    expect(sol, "solution should exist").toBeTruthy();
+    expect(sol.manifest.hasLWC).toBe(true);
+    expect(sol.packageId).toBe("0338e000000Gt7CAAS");
+    expect(sol.namespacePrefix).toBe("jotform");
   });
 
   it("fallback: no window.stores → slug as name, null ratings, empty platformData", () => {
     const result = parseSalesforceAppPage("<html><body>no stores</body></html>", slug);
-    assert.equal(result.name, slug);
-    assert.equal(result.averageRating, null);
-    assert.equal(result.ratingCount, null);
-    assert.deepEqual(result.platformData, {});
+    expect(result.name).toBe(slug);
+    expect(result.averageRating).toBe(null);
+    expect(result.ratingCount).toBe(null);
+    expect(result.platformData).toEqual({});
   });
 
   it("fallback: empty LISTING object → same behavior", () => {
     const emptyHtml =
       '<html><body><script>window.stores = {"LISTING":{}};</script></body></html>';
     const result = parseSalesforceAppPage(emptyHtml, slug);
-    assert.equal(result.name, slug);
-    assert.equal(result.averageRating, null);
-    assert.equal(result.ratingCount, null);
-    assert.deepEqual(result.platformData, {});
+    expect(result.name).toBe(slug);
+    expect(result.averageRating).toBe(null);
+    expect(result.ratingCount).toBe(null);
+    expect(result.platformData).toEqual({});
   });
 });

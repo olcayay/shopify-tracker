@@ -1,5 +1,4 @@
-import { describe, it } from "node:test";
-import assert from "node:assert/strict";
+import { describe, it, expect } from "vitest";
 import { WordPressModule } from "../index.js";
 
 describe("WordPressModule", () => {
@@ -7,151 +6,121 @@ describe("WordPressModule", () => {
 
   describe("platformId", () => {
     it("returns 'wordpress'", () => {
-      assert.equal(mod.platformId, "wordpress");
+      expect(mod.platformId).toBe("wordpress");
     });
   });
 
   describe("capabilities", () => {
     it("has keyword search", () => {
-      assert.equal(mod.capabilities.hasKeywordSearch, true);
+      expect(mod.capabilities.hasKeywordSearch).toBe(true);
     });
 
     it("has reviews", () => {
-      assert.equal(mod.capabilities.hasReviews, true);
+      expect(mod.capabilities.hasReviews).toBe(true);
     });
 
     it("has featured sections", () => {
-      assert.equal(mod.capabilities.hasFeaturedSections, true);
+      expect(mod.capabilities.hasFeaturedSections).toBe(true);
     });
 
     it("has no ad tracking", () => {
-      assert.equal(mod.capabilities.hasAdTracking, false);
+      expect(mod.capabilities.hasAdTracking).toBe(false);
     });
 
     it("has no similar apps", () => {
-      assert.equal(mod.capabilities.hasSimilarApps, false);
+      expect(mod.capabilities.hasSimilarApps).toBe(false);
     });
 
     it("has no auto suggestions", () => {
-      assert.equal(mod.capabilities.hasAutoSuggestions, false);
+      expect(mod.capabilities.hasAutoSuggestions).toBe(false);
     });
 
     it("has no feature taxonomy", () => {
-      assert.equal(mod.capabilities.hasFeatureTaxonomy, false);
+      expect(mod.capabilities.hasFeatureTaxonomy).toBe(false);
     });
 
     it("has no pricing", () => {
-      assert.equal(mod.capabilities.hasPricing, false);
+      expect(mod.capabilities.hasPricing).toBe(false);
     });
 
     it("has launched date", () => {
-      assert.equal(mod.capabilities.hasLaunchedDate, true);
+      expect(mod.capabilities.hasLaunchedDate).toBe(true);
     });
   });
 
   describe("constants", () => {
     it("has 43 seed categories (40 tags + 3 browse)", () => {
-      assert.equal(mod.constants.seedCategories.length, 43);
+      expect(mod.constants.seedCategories.length).toBe(43);
     });
 
     it("seed categories include seo and security", () => {
-      assert.ok(mod.constants.seedCategories.includes("seo"));
-      assert.ok(mod.constants.seedCategories.includes("security"));
+      expect(mod.constants.seedCategories.includes("seo")).toBeTruthy();
+      expect(mod.constants.seedCategories.includes("security")).toBeTruthy();
     });
 
     it("maxCategoryDepth is 0 (flat tags)", () => {
-      assert.equal(mod.constants.maxCategoryDepth, 0);
+      expect(mod.constants.maxCategoryDepth).toBe(0);
     });
 
     it("defaultPagesPerCategory is 2", () => {
-      assert.equal(mod.constants.defaultPagesPerCategory, 2);
+      expect(mod.constants.defaultPagesPerCategory).toBe(2);
     });
   });
 
   describe("scoringConfig", () => {
     it("pageSize is 250", () => {
-      assert.equal(mod.scoringConfig.pageSize, 250);
+      expect(mod.scoringConfig.pageSize).toBe(250);
     });
 
     it("feature weight is 0 (no feature taxonomy)", () => {
-      assert.equal(mod.scoringConfig.similarityWeights.feature, 0.0);
+      expect(mod.scoringConfig.similarityWeights.feature).toBe(0.0);
     });
 
     it("weights sum to 1.0", () => {
       const w = mod.scoringConfig.similarityWeights;
       const sum = w.category + w.feature + w.keyword + w.text;
-      assert.ok(Math.abs(sum - 1.0) < 0.001, `weights sum to ${sum}, expected 1.0`);
+      expect(Math.abs(sum - 1.0) < 0.001, `weights sum to ${sum}, expected 1.0`).toBeTruthy();
     });
   });
 
   describe("URL builders", () => {
     it("buildAppUrl returns correct URL", () => {
-      assert.equal(
-        mod.buildAppUrl("contact-form-7"),
-        "https://wordpress.org/plugins/contact-form-7/",
-      );
+      expect(mod.buildAppUrl("contact-form-7")).toBe("https://wordpress.org/plugins/contact-form-7/",);
     });
 
     it("buildCategoryUrl returns tag URL", () => {
-      assert.equal(
-        mod.buildCategoryUrl("seo"),
-        "https://wordpress.org/plugins/tags/seo/",
-      );
+      expect(mod.buildCategoryUrl("seo")).toBe("https://wordpress.org/plugins/tags/seo/",);
     });
 
     it("buildCategoryUrl returns browse URL for _browse_ slugs", () => {
-      assert.equal(
-        mod.buildCategoryUrl("_browse_popular"),
-        "https://wordpress.org/plugins/browse/popular/",
-      );
-      assert.equal(
-        mod.buildCategoryUrl("_browse_featured"),
-        "https://wordpress.org/plugins/browse/featured/",
-      );
+      expect(mod.buildCategoryUrl("_browse_popular")).toBe("https://wordpress.org/plugins/browse/popular/",);
+      expect(mod.buildCategoryUrl("_browse_featured")).toBe("https://wordpress.org/plugins/browse/featured/",);
     });
 
     it("buildSearchUrl encodes keyword", () => {
-      assert.equal(
-        mod.buildSearchUrl("contact form"),
-        "https://wordpress.org/plugins/search/contact%20form/",
-      );
+      expect(mod.buildSearchUrl("contact form")).toBe("https://wordpress.org/plugins/search/contact%20form/",);
     });
 
     it("buildReviewUrl returns reviews page URL", () => {
-      assert.equal(
-        mod.buildReviewUrl("forminator"),
-        "https://wordpress.org/support/plugin/forminator/reviews/",
-      );
+      expect(mod.buildReviewUrl("forminator")).toBe("https://wordpress.org/support/plugin/forminator/reviews/",);
     });
 
     it("buildReviewUrl with page number", () => {
-      assert.equal(
-        mod.buildReviewUrl("forminator", 3),
-        "https://wordpress.org/support/plugin/forminator/reviews/page/3/",
-      );
+      expect(mod.buildReviewUrl("forminator", 3)).toBe("https://wordpress.org/support/plugin/forminator/reviews/page/3/",);
     });
   });
 
   describe("extractSlugFromUrl", () => {
     it("extracts slug from standard plugin URL", () => {
-      assert.equal(
-        mod.extractSlugFromUrl("https://wordpress.org/plugins/contact-form-7/"),
-        "contact-form-7",
-      );
+      expect(mod.extractSlugFromUrl("https://wordpress.org/plugins/contact-form-7/")).toBe("contact-form-7",);
     });
 
     it("extracts slug from URL with query params", () => {
-      assert.equal(
-        mod.extractSlugFromUrl("https://wordpress.org/plugins/akismet/?ref=search"),
-        "akismet",
-      );
+      expect(mod.extractSlugFromUrl("https://wordpress.org/plugins/akismet/?ref=search")).toBe("akismet",);
     });
 
     it("falls back to last path segment for non-standard URLs", () => {
-      assert.equal(
-        mod.extractSlugFromUrl("https://example.com/some-path/my-plugin"),
-        "my-plugin",
-      );
+      expect(mod.extractSlugFromUrl("https://example.com/some-path/my-plugin")).toBe("my-plugin",);
     });
   });
 
@@ -165,17 +134,17 @@ describe("WordPressModule", () => {
         },
       };
       const slugs = mod.extractCategorySlugs(pd);
-      assert.deepEqual(slugs, ["contact-form", "email", "form"]);
+      expect(slugs).toEqual(["contact-form", "email", "form"]);
     });
 
     it("returns empty array when no tags", () => {
       const slugs = mod.extractCategorySlugs({});
-      assert.deepEqual(slugs, []);
+      expect(slugs).toEqual([]);
     });
 
     it("returns empty array when tags is null", () => {
       const slugs = mod.extractCategorySlugs({ tags: null });
-      assert.deepEqual(slugs, []);
+      expect(slugs).toEqual([]);
     });
   });
 
@@ -211,26 +180,26 @@ describe("WordPressModule", () => {
 
       const result = mod.parseAppDetails(json, "forminator");
 
-      assert.equal(result.name, "Forminator \u2013 Contact Form");
-      assert.equal(result.slug, "forminator");
-      assert.equal(result.averageRating, 4.9);
-      assert.equal(result.ratingCount, 5230);
-      assert.equal(result.pricingHint, null);
-      assert.equal(result.iconUrl, "https://example.com/icon-256.png");
-      assert.equal(result.developer?.name, "WPMU DEV");
-      assert.equal(result.developer?.url, "https://profiles.wordpress.org/wpmudev/");
-      assert.deepEqual(result.badges, ["community"]);
+      expect(result.name).toBe("Forminator \u2013 Contact Form");
+      expect(result.slug).toBe("forminator");
+      expect(result.averageRating).toBe(4.9);
+      expect(result.ratingCount).toBe(5230);
+      expect(result.pricingHint).toBe(null);
+      expect(result.iconUrl).toBe("https://example.com/icon-256.png");
+      expect(result.developer?.name).toBe("WPMU DEV");
+      expect(result.developer?.url).toBe("https://profiles.wordpress.org/wpmudev/");
+      expect(result.badges).toEqual(["community"]);
 
       const pd = result.platformData;
-      assert.equal(pd.shortDescription, "The easy-to-use WordPress form builder plugin.");
-      assert.equal(pd.version, "1.30.0");
-      assert.equal(pd.testedUpTo, "6.5");
-      assert.equal(pd.requiresWP, "5.2");
-      assert.equal(pd.requiresPHP, "7.4");
-      assert.equal(pd.activeInstalls, 500000);
-      assert.equal(pd.downloaded, 18000000);
-      assert.equal(pd.added, "2018-04-01");
-      assert.equal(pd.businessModel, "community");
+      expect(pd.shortDescription).toBe("The easy-to-use WordPress form builder plugin.");
+      expect(pd.version).toBe("1.30.0");
+      expect(pd.testedUpTo).toBe("6.5");
+      expect(pd.requiresWP).toBe("5.2");
+      expect(pd.requiresPHP).toBe("7.4");
+      expect(pd.activeInstalls).toBe(500000);
+      expect(pd.downloaded).toBe(18000000);
+      expect(pd.added).toBe("2018-04-01");
+      expect(pd.businessModel).toBe("community");
     });
 
     it("handles missing optional fields gracefully", () => {
@@ -242,13 +211,13 @@ describe("WordPressModule", () => {
       });
 
       const result = mod.parseAppDetails(json, "simple-plugin");
-      assert.equal(result.name, "Simple Plugin");
-      assert.equal(result.slug, "simple-plugin");
-      assert.equal(result.averageRating, 0);
-      assert.equal(result.ratingCount, 0);
-      assert.equal(result.iconUrl, null);
-      assert.equal(result.developer, null);
-      assert.deepEqual(result.badges, []);
+      expect(result.name).toBe("Simple Plugin");
+      expect(result.slug).toBe("simple-plugin");
+      expect(result.averageRating).toBe(0);
+      expect(result.ratingCount).toBe(0);
+      expect(result.iconUrl).toBe(null);
+      expect(result.developer).toBe(null);
+      expect(result.badges).toEqual([]);
     });
   });
 
@@ -279,22 +248,22 @@ describe("WordPressModule", () => {
 
       const result = mod.parseSearchPage(json, "test", 1, 0);
 
-      assert.equal(result.keyword, "test");
-      assert.equal(result.totalResults, 1200);
-      assert.equal(result.currentPage, 1);
-      assert.equal(result.hasNextPage, true);
-      assert.equal(result.apps.length, 2);
+      expect(result.keyword).toBe("test");
+      expect(result.totalResults).toBe(1200);
+      expect(result.currentPage).toBe(1);
+      expect(result.hasNextPage).toBe(true);
+      expect(result.apps.length).toBe(2);
 
-      assert.equal(result.apps[0].appSlug, "plugin-a");
-      assert.equal(result.apps[0].appName, "Plugin A");
-      assert.equal(result.apps[0].averageRating, 4.5);
-      assert.equal(result.apps[0].position, 1);
-      assert.equal(result.apps[0].isSponsored, false);
-      assert.deepEqual(result.apps[0].badges, ["community"]);
+      expect(result.apps[0].appSlug).toBe("plugin-a");
+      expect(result.apps[0].appName).toBe("Plugin A");
+      expect(result.apps[0].averageRating).toBe(4.5);
+      expect(result.apps[0].position).toBe(1);
+      expect(result.apps[0].isSponsored).toBe(false);
+      expect(result.apps[0].badges).toEqual(["community"]);
 
-      assert.equal(result.apps[1].appSlug, "plugin-b");
-      assert.equal(result.apps[1].position, 2);
-      assert.equal(result.apps[1].averageRating, 4);
+      expect(result.apps[1].appSlug).toBe("plugin-b");
+      expect(result.apps[1].position).toBe(2);
+      expect(result.apps[1].averageRating).toBe(4);
     });
 
     it("sets hasNextPage false on last page", () => {
@@ -304,8 +273,8 @@ describe("WordPressModule", () => {
       });
 
       const result = mod.parseSearchPage(json, "test", 3, 0);
-      assert.equal(result.hasNextPage, false);
-      assert.equal(result.currentPage, 3);
+      expect(result.hasNextPage).toBe(false);
+      expect(result.currentPage).toBe(3);
     });
   });
 
@@ -327,15 +296,15 @@ describe("WordPressModule", () => {
 
       const result = mod.parseCategoryPage(json, "https://wordpress.org/plugins/tags/contact-form/");
 
-      assert.equal(result.slug, "contact-form");
-      assert.equal(result.appCount, 300);
-      assert.equal(result.hasNextPage, true);
-      assert.equal(result.apps.length, 1);
-      assert.equal(result.apps[0].slug, "contact-form-7");
-      assert.equal(result.apps[0].name, "Contact Form 7");
-      assert.equal(result.apps[0].averageRating, 4.3);
-      assert.equal(result.apps[0].position, 1);
-      assert.deepEqual(result.subcategoryLinks, []);
+      expect(result.slug).toBe("contact-form");
+      expect(result.appCount).toBe(300);
+      expect(result.hasNextPage).toBe(true);
+      expect(result.apps.length).toBe(1);
+      expect(result.apps[0].slug).toBe("contact-form-7");
+      expect(result.apps[0].name).toBe("Contact Form 7");
+      expect(result.apps[0].averageRating).toBe(4.3);
+      expect(result.apps[0].position).toBe(1);
+      expect(result.subcategoryLinks).toEqual([]);
     });
 
     it("parses browse section URL and prefixes slug", () => {
@@ -347,8 +316,8 @@ describe("WordPressModule", () => {
       });
 
       const result = mod.parseCategoryPage(json, "https://wordpress.org/plugins/browse/featured/");
-      assert.equal(result.slug, "_browse_featured");
-      assert.equal(result.appCount, 8);
+      expect(result.slug).toBe("_browse_featured");
+      expect(result.appCount).toBe(8);
     });
   });
 });

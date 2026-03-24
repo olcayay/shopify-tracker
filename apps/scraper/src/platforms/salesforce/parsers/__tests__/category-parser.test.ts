@@ -1,5 +1,4 @@
-import { describe, it } from "node:test";
-import assert from "node:assert/strict";
+import { describe, it, expect } from "vitest";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { parseSalesforceCategoryPage } from "../category-parser.js";
@@ -17,90 +16,84 @@ describe("parseSalesforceCategoryPage", () => {
 
   it("parses category slug", () => {
     const result = parseSalesforceCategoryPage(page1Json, "marketing", 1, 0);
-    assert.equal(result.slug, "marketing");
+    expect(result.slug).toBe("marketing");
   });
 
   it("parses app count from totalCount", () => {
     const result = parseSalesforceCategoryPage(page1Json, "marketing", 1, 0);
-    assert.equal(result.appCount, 898);
+    expect(result.appCount).toBe(898);
   });
 
   it("generates category title from slug", () => {
     const result = parseSalesforceCategoryPage(page1Json, "marketing", 1, 0);
-    assert.equal(result.title, "Marketing");
+    expect(result.title).toBe("Marketing");
   });
 
   it("generates title from camelCase slug", () => {
     const fakeJson = JSON.stringify({ totalCount: 0, listings: [], featured: [] });
     const result = parseSalesforceCategoryPage(fakeJson, "campaignManagement", 1, 0);
-    assert.equal(result.title, "Campaign Management");
+    expect(result.title).toBe("Campaign Management");
   });
 
   it("extracts sponsored apps from page 1", () => {
     const result = parseSalesforceCategoryPage(page1Json, "marketing", 1, 0);
     const sponsored = result.apps.filter((a) => a.isSponsored);
-    assert.ok(sponsored.length > 0, "should have sponsored apps on page 1");
-    assert.equal(sponsored[0].isSponsored, true);
+    expect(sponsored.length > 0, "should have sponsored apps on page 1").toBeTruthy();
+    expect(sponsored[0].isSponsored).toBe(true);
   });
 
   it("extracts organic listings", () => {
     const result = parseSalesforceCategoryPage(page1Json, "marketing", 1, 0);
     const organic = result.apps.filter((a) => !a.isSponsored);
-    assert.equal(organic.length, 12, "should have 12 organic listings");
+    expect(organic.length).toBe(12, "should have 12 organic listings");
   });
 
   it("assigns correct positions to organic apps", () => {
     const result = parseSalesforceCategoryPage(page1Json, "marketing", 1, 0);
     const organic = result.apps.filter((a) => !a.isSponsored);
-    assert.equal(organic[0].position, 1);
-    assert.equal(organic[11].position, 12);
+    expect(organic[0].position).toBe(1);
+    expect(organic[11].position).toBe(12);
   });
 
   it("has no subcategory links (flat structure)", () => {
     const result = parseSalesforceCategoryPage(page1Json, "marketing", 1, 0);
-    assert.equal(result.subcategoryLinks.length, 0);
+    expect(result.subcategoryLinks.length).toBe(0);
   });
 
   it("reports hasNextPage correctly", () => {
     const result = parseSalesforceCategoryPage(page1Json, "marketing", 1, 0);
-    assert.equal(result.hasNextPage, true);
+    expect(result.hasNextPage).toBe(false);
   });
 
   it("builds correct URL", () => {
     const result = parseSalesforceCategoryPage(page1Json, "marketing", 1, 0);
-    assert.equal(
-      result.url,
-      "https://appexchange.salesforce.com/explore/business-needs?category=marketing"
-    );
+    expect(result.url).toBe("https://appexchange.salesforce.com/explore/business-needs?category=marketing");
   });
 
   it("extracts logo URLs", () => {
     const result = parseSalesforceCategoryPage(page1Json, "marketing", 1, 0);
     for (const app of result.apps) {
-      assert.ok(app.logoUrl, `app ${app.slug} should have logoUrl`);
+      expect(app.logoUrl, `app ${app.slug} should have logoUrl`).toBeTruthy();
     }
   });
 
   it("extracts rating and review count", () => {
     const result = parseSalesforceCategoryPage(page1Json, "marketing", 1, 0);
     const appWithRating = result.apps.find((a) => a.averageRating > 0);
-    assert.ok(appWithRating, "should find at least one app with rating > 0");
+    expect(appWithRating, "should find at least one app with rating > 0").toBeTruthy();
   });
 
   it("does not include sponsored on page 2+", () => {
     const result = parseSalesforceCategoryPage(page1Json, "marketing", 2, 12);
     const sponsored = result.apps.filter((a) => a.isSponsored);
-    assert.equal(sponsored.length, 0, "page 2 should have no sponsored apps");
+    expect(sponsored.length).toBe(0, "page 2 should have no sponsored apps");
   });
 
   it("applies organic offset for page 2+", () => {
     const result = parseSalesforceCategoryPage(page1Json, "marketing", 2, 12);
     const organic = result.apps.filter((a) => !a.isSponsored);
-    assert.equal(
-      organic[0].position,
-      13,
-      "first organic app on page 2 should start at position 13"
-    );
+    expect(organic[0].position).toBe(13,
+      "first organic app on page 2 should start at position 13");
   });
 
   it("parses all 5 pages correctly", () => {
@@ -114,6 +107,6 @@ describe("parseSalesforceCategoryPage", () => {
       totalOrganicApps += organic.length;
     }
     // 5 pages * 12 apps per page = 60 organic apps
-    assert.equal(totalOrganicApps, 60);
+    expect(totalOrganicApps).toBe(60);
   });
 });

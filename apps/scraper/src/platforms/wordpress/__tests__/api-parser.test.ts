@@ -1,5 +1,4 @@
-import { describe, it } from "node:test";
-import assert from "node:assert/strict";
+import { describe, it, expect } from "vitest";
 import { parsePluginInfo, parseSearchResults, parseTagResults } from "../parsers/api-parser.js";
 
 describe("WordPress API Parser", () => {
@@ -44,26 +43,26 @@ describe("WordPress API Parser", () => {
 
       const result = parsePluginInfo(data);
 
-      assert.equal(result.name, "Yoast SEO");
-      assert.equal(result.slug, "wordpress-seo");
-      assert.equal(result.averageRating, 4.8);
-      assert.equal(result.ratingCount, 27500);
-      assert.equal(result.pricingHint, null);
-      assert.equal(result.iconUrl, "https://ps.w.org/wordpress-seo/assets/icon-256x256.png");
-      assert.equal(result.developer?.name, "Team Yoast");
-      assert.equal(result.developer?.url, "https://profiles.wordpress.org/joostdevalk/");
-      assert.deepEqual(result.badges, ["commercial"]);
+      expect(result.name).toBe("Yoast SEO");
+      expect(result.slug).toBe("wordpress-seo");
+      expect(result.averageRating).toBe(4.8);
+      expect(result.ratingCount).toBe(27500);
+      expect(result.pricingHint).toBe(null);
+      expect(result.iconUrl).toBe("https://ps.w.org/wordpress-seo/assets/icon-256x256.png");
+      expect(result.developer?.name).toBe("Team Yoast");
+      expect(result.developer?.url).toBe("https://profiles.wordpress.org/joostdevalk/");
+      expect(result.badges).toEqual(["commercial"]);
 
       const pd = result.platformData;
-      assert.equal(pd.version, "22.3");
-      assert.equal(pd.testedUpTo, "6.5");
-      assert.equal(pd.requiresWP, "6.0");
-      assert.equal(pd.requiresPHP, "7.2");
-      assert.equal(pd.activeInstalls, 5000000);
-      assert.equal(pd.downloaded, 500000000);
-      assert.equal(pd.added, "2010-09-01");
-      assert.equal(pd.businessModel, "commercial");
-      assert.equal(pd.homepage, "https://yoast.com/wordpress/plugins/seo/");
+      expect(pd.version).toBe("22.3");
+      expect(pd.testedUpTo).toBe("6.5");
+      expect(pd.requiresWP).toBe("6.0");
+      expect(pd.requiresPHP).toBe("7.2");
+      expect(pd.activeInstalls).toBe(5000000);
+      expect(pd.downloaded).toBe(500000000);
+      expect(pd.added).toBe("2010-09-01");
+      expect(pd.businessModel).toBe("commercial");
+      expect(pd.homepage).toBe("https://yoast.com/wordpress/plugins/seo/");
     });
 
     it("decodes HTML entities in name", () => {
@@ -74,7 +73,7 @@ describe("WordPress API Parser", () => {
         num_ratings: 0,
       };
       const result = parsePluginInfo(data);
-      assert.equal(result.name, "Forminator \u2013 Contact Form, Payment Form & Custom Form Builder");
+      expect(result.name).toBe("Forminator \u2013 Contact Form, Payment Form & Custom Form Builder");
     });
 
     it("strips HTML from author field", () => {
@@ -87,36 +86,36 @@ describe("WordPress API Parser", () => {
         num_ratings: 0,
       };
       const result = parsePluginInfo(data);
-      assert.equal(result.developer?.name, "Some Developer");
+      expect(result.developer?.name).toBe("Some Developer");
     });
 
     it("converts rating from 0-100 to 0-5 scale", () => {
       const data = { name: "T", slug: "t", rating: 80, num_ratings: 10 };
       const result = parsePluginInfo(data);
-      assert.equal(result.averageRating, 4.0);
+      expect(result.averageRating).toBe(4.0);
     });
 
     it("handles zero rating", () => {
       const data = { name: "T", slug: "t", rating: 0, num_ratings: 0 };
       const result = parsePluginInfo(data);
-      assert.equal(result.averageRating, 0);
+      expect(result.averageRating).toBe(0);
     });
 
     it("prefers 2x icon, falls back to 1x", () => {
       const with2x = parsePluginInfo({ name: "T", slug: "t", rating: 0, num_ratings: 0, icons: { "2x": "big.png", "1x": "small.png" } });
-      assert.equal(with2x.iconUrl, "big.png");
+      expect(with2x.iconUrl).toBe("big.png");
 
       const only1x = parsePluginInfo({ name: "T", slug: "t", rating: 0, num_ratings: 0, icons: { "1x": "small.png" } });
-      assert.equal(only1x.iconUrl, "small.png");
+      expect(only1x.iconUrl).toBe("small.png");
 
       const noIcons = parsePluginInfo({ name: "T", slug: "t", rating: 0, num_ratings: 0 });
-      assert.equal(noIcons.iconUrl, null);
+      expect(noIcons.iconUrl).toBe(null);
     });
 
     it("handles missing author gracefully", () => {
       const data = { name: "T", slug: "t", rating: 0, num_ratings: 0 };
       const result = parsePluginInfo(data);
-      assert.equal(result.developer, null);
+      expect(result.developer).toBe(null);
     });
   });
 
@@ -132,24 +131,24 @@ describe("WordPress API Parser", () => {
 
       const result = parseSearchResults(data, "contact form", 1);
 
-      assert.equal(result.keyword, "contact form");
-      assert.equal(result.totalResults, 2500);
-      assert.equal(result.currentPage, 1);
-      assert.equal(result.hasNextPage, true);
-      assert.equal(result.apps.length, 2);
+      expect(result.keyword).toBe("contact form");
+      expect(result.totalResults).toBe(2500);
+      expect(result.currentPage).toBe(1);
+      expect(result.hasNextPage).toBe(true);
+      expect(result.apps.length).toBe(2);
 
       // First app
-      assert.equal(result.apps[0].position, 1);
-      assert.equal(result.apps[0].appSlug, "cf7");
-      assert.equal(result.apps[0].appName, "Contact Form 7");
-      assert.equal(result.apps[0].averageRating, 4.3);
-      assert.equal(result.apps[0].isSponsored, false);
-      assert.deepEqual(result.apps[0].badges, []);
+      expect(result.apps[0].position).toBe(1);
+      expect(result.apps[0].appSlug).toBe("cf7");
+      expect(result.apps[0].appName).toBe("Contact Form 7");
+      expect(result.apps[0].averageRating).toBe(4.3);
+      expect(result.apps[0].isSponsored).toBe(false);
+      expect(result.apps[0].badges).toEqual([]);
 
       // Second app
-      assert.equal(result.apps[1].position, 2);
-      assert.equal(result.apps[1].appSlug, "wpf");
-      assert.deepEqual(result.apps[1].badges, ["commercial"]);
+      expect(result.apps[1].position).toBe(2);
+      expect(result.apps[1].appSlug).toBe("wpf");
+      expect(result.apps[1].badges).toEqual(["commercial"]);
     });
 
     it("handles last page correctly", () => {
@@ -159,8 +158,8 @@ describe("WordPress API Parser", () => {
       };
 
       const result = parseSearchResults(data, "test", 5);
-      assert.equal(result.hasNextPage, false);
-      assert.equal(result.currentPage, 5);
+      expect(result.hasNextPage).toBe(false);
+      expect(result.currentPage).toBe(5);
     });
 
     it("handles page 2+ position offset", () => {
@@ -172,7 +171,7 @@ describe("WordPress API Parser", () => {
       };
 
       const result = parseSearchResults(data, "test", 2);
-      assert.equal(result.apps[0].position, 251);
+      expect(result.apps[0].position).toBe(251);
     });
 
     it("handles empty plugins array", () => {
@@ -182,9 +181,9 @@ describe("WordPress API Parser", () => {
       };
 
       const result = parseSearchResults(data, "nonexistent", 1);
-      assert.equal(result.totalResults, 0);
-      assert.equal(result.apps.length, 0);
-      assert.equal(result.hasNextPage, false);
+      expect(result.totalResults).toBe(0);
+      expect(result.apps.length).toBe(0);
+      expect(result.hasNextPage).toBe(false);
     });
   });
 
@@ -200,19 +199,19 @@ describe("WordPress API Parser", () => {
 
       const result = parseTagResults(data, "seo");
 
-      assert.equal(result.slug, "seo");
-      assert.equal(result.url, "https://wordpress.org/plugins/tags/seo/");
-      assert.equal(result.appCount, 700);
-      assert.equal(result.hasNextPage, true);
-      assert.deepEqual(result.subcategoryLinks, []);
-      assert.equal(result.apps.length, 2);
+      expect(result.slug).toBe("seo");
+      expect(result.url).toBe("https://wordpress.org/plugins/tags/seo/");
+      expect(result.appCount).toBe(700);
+      expect(result.hasNextPage).toBe(true);
+      expect(result.subcategoryLinks).toEqual([]);
+      expect(result.apps.length).toBe(2);
 
-      assert.equal(result.apps[0].slug, "yoast");
-      assert.equal(result.apps[0].position, 1);
-      assert.equal(result.apps[0].averageRating, 4.8);
+      expect(result.apps[0].slug).toBe("yoast");
+      expect(result.apps[0].position).toBe(1);
+      expect(result.apps[0].averageRating).toBe(4.8);
 
-      assert.equal(result.apps[1].slug, "aioseo");
-      assert.equal(result.apps[1].position, 2);
+      expect(result.apps[1].slug).toBe("aioseo");
+      expect(result.apps[1].position).toBe(2);
     });
 
     it("converts hyphenated slug to title", () => {
@@ -222,7 +221,7 @@ describe("WordPress API Parser", () => {
       };
 
       const result = parseTagResults(data, "contact-form");
-      assert.equal(result.title, "contact form");
+      expect(result.title).toBe("contact form");
     });
   });
 });

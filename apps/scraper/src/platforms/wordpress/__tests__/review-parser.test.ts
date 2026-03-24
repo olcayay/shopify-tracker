@@ -1,5 +1,4 @@
-import { describe, it } from "node:test";
-import assert from "node:assert/strict";
+import { describe, it, expect } from "vitest";
 import { parseWordPressReviewPage } from "../parsers/review-parser.js";
 
 const SAMPLE_HTML = `
@@ -71,38 +70,38 @@ const SAMPLE_HTML = `
 describe("parseWordPressReviewPage", () => {
   it("parses reviews from BBPress forum markup", () => {
     const result = parseWordPressReviewPage(SAMPLE_HTML, 1);
-    assert.equal(result.reviews.length, 2);
-    assert.equal(result.currentPage, 1);
-    assert.equal(result.hasNextPage, true);
+    expect(result.reviews.length).toBe(2);
+    expect(result.currentPage).toBe(1);
+    expect(result.hasNextPage).toBe(true);
   });
 
   it("extracts rating from wporg-ratings title attribute", () => {
     const result = parseWordPressReviewPage(SAMPLE_HTML, 1);
-    assert.equal(result.reviews[0].rating, 5);
-    assert.equal(result.reviews[1].rating, 2);
+    expect(result.reviews[0].rating).toBe(5);
+    expect(result.reviews[1].rating).toBe(2);
   });
 
   it("extracts review title as content", () => {
     const result = parseWordPressReviewPage(SAMPLE_HTML, 1);
-    assert.equal(result.reviews[0].content, "Great plugin");
-    assert.equal(result.reviews[1].content, "Needs work");
+    expect(result.reviews[0].content).toBe("Great plugin");
+    expect(result.reviews[1].content).toBe("Needs work");
   });
 
   it("extracts reviewer name from bbp-author-name", () => {
     const result = parseWordPressReviewPage(SAMPLE_HTML, 1);
-    assert.equal(result.reviews[0].reviewerName, "alice");
-    assert.equal(result.reviews[1].reviewerName, "bob");
+    expect(result.reviews[0].reviewerName).toBe("alice");
+    expect(result.reviews[1].reviewerName).toBe("bob");
   });
 
   it("parses date from freshness link title attribute", () => {
     const result = parseWordPressReviewPage(SAMPLE_HTML, 1);
-    assert.equal(result.reviews[0].reviewDate, "2026-01-15");
-    assert.equal(result.reviews[1].reviewDate, "2025-12-05");
+    expect(result.reviews[0].reviewDate).toBe("2026-01-15");
+    expect(result.reviews[1].reviewDate).toBe("2025-12-05");
   });
 
   it("detects next page link", () => {
     const result = parseWordPressReviewPage(SAMPLE_HTML, 1);
-    assert.equal(result.hasNextPage, true);
+    expect(result.hasNextPage).toBe(true);
   });
 
   it("detects no next page when link is absent", () => {
@@ -111,14 +110,14 @@ describe("parseWordPressReviewPage", () => {
       ""
     );
     const result = parseWordPressReviewPage(noNextHtml, 3);
-    assert.equal(result.hasNextPage, false);
-    assert.equal(result.currentPage, 3);
+    expect(result.hasNextPage).toBe(false);
+    expect(result.currentPage).toBe(3);
   });
 
   it("returns empty reviews for empty HTML", () => {
     const result = parseWordPressReviewPage("<html><body></body></html>", 1);
-    assert.equal(result.reviews.length, 0);
-    assert.equal(result.hasNextPage, false);
+    expect(result.reviews.length).toBe(0);
+    expect(result.hasNextPage).toBe(false);
   });
 
   it("falls back to star counting when title attribute is missing", () => {
@@ -126,7 +125,7 @@ describe("parseWordPressReviewPage", () => {
       .replace("title='5 out of 5 stars'", "")
       .replace("title='2 out of 5 stars'", "");
     const result = parseWordPressReviewPage(noTitleHtml, 1);
-    assert.equal(result.reviews[0].rating, 5);
-    assert.equal(result.reviews[1].rating, 2);
+    expect(result.reviews[0].rating).toBe(5);
+    expect(result.reviews[1].rating).toBe(2);
   });
 });
