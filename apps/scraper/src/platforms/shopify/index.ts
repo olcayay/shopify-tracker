@@ -202,6 +202,11 @@ export class ShopifyModule implements PlatformModule {
     };
   }
 
+  async fetchFeaturedSections(): Promise<NormalizedFeaturedSection[]> {
+    const html = await this.httpClient.fetchPage(shopifyUrls.home());
+    return this.parseFeaturedSections(html);
+  }
+
   parseFeaturedSections(html: string): NormalizedFeaturedSection[] {
     const parsed = parseShopifyFeaturedSections(html);
 

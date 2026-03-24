@@ -165,6 +165,11 @@ export class CanvaModule implements PlatformModule {
     return parseCanvaCategoryPage(html, categorySlug, 1, 0);
   }
 
+  async fetchFeaturedSections(): Promise<NormalizedFeaturedSection[]> {
+    const html = await this.fetchAppsPage();
+    return this.parseFeaturedSections(html);
+  }
+
   parseFeaturedSections(html: string): NormalizedFeaturedSection[] {
     return parseCanvaFeaturedSections(html);
   }

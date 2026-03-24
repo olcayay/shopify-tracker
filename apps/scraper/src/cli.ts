@@ -179,6 +179,20 @@ async function main() {
       break;
     }
 
+    case "featured": {
+      if (!platformModule?.fetchFeaturedSections) {
+        console.log(`Platform "${platformArg}" has no featured sections support.`);
+        break;
+      }
+      const sections = await platformModule.fetchFeaturedSections();
+      const totalApps = sections.reduce((sum, s) => sum + s.apps.length, 0);
+      console.log(`\nFound ${sections.length} featured sections with ${totalApps} apps.`);
+      for (const s of sections) {
+        console.log(`  ${s.sectionTitle}: ${s.apps.length} apps`);
+      }
+      break;
+    }
+
     case "track-app": {
       const slug = process.argv[3];
       if (!slug) {
