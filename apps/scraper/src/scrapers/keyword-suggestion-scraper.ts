@@ -9,6 +9,7 @@ import { urls, createLogger, type PlatformId } from "@appranks/shared";
 import { HttpClient } from "../http-client.js";
 import type { PlatformModule } from "../platforms/platform-module.js";
 import type { CanvaModule } from "../platforms/canva/index.js";
+import { runConcurrent } from "../utils/run-concurrent.js";
 
 const log = createLogger("keyword-suggestion-scraper");
 
@@ -61,32 +62,49 @@ export class KeywordSuggestionScraper {
     let itemsScraped = 0;
     let itemsFailed = 0;
 
-    for (const kw of keywords) {
-      try {
-        await this.scrapeSuggestions(kw.id, kw.keyword, run.id);
-        itemsScraped++;
-      } catch (error) {
-        log.error("failed to scrape suggestions", {
-          keyword: kw.keyword,
-          platform: this.platform,
-          error: String(error),
-        });
-        itemsFailed++;
-      }
-    }
+    try {
+      await runConcurrent(keywords, async (kw) => {
+        try {
+          await this.scrapeSuggestions(kw.id, kw.keyword, run.id);
+          itemsScraped++;
+        } catch (error) {
+          log.error("failed to scrape suggestions", {
+            keyword: kw.keyword,
+            platform: this.platform,
+            error: String(error),
+          });
+          itemsFailed++;
+        }
+      }, 3);
 
-    await this.db
-      .update(scrapeRuns)
-      .set({
-        status: "completed",
-        completedAt: new Date(),
-        metadata: {
-          items_scraped: itemsScraped,
-          items_failed: itemsFailed,
-          duration_ms: Date.now() - startTime,
-        },
-      })
-      .where(eq(scrapeRuns.id, run.id));
+      await this.db
+        .update(scrapeRuns)
+        .set({
+          status: "completed",
+          completedAt: new Date(),
+          metadata: {
+            items_scraped: itemsScraped,
+            items_failed: itemsFailed,
+            duration_ms: Date.now() - startTime,
+          },
+        })
+        .where(eq(scrapeRuns.id, run.id));
+    } catch (error) {
+      await this.db
+        .update(scrapeRuns)
+        .set({
+          status: "failed",
+          completedAt: new Date(),
+          error: String(error),
+          metadata: {
+            items_scraped: itemsScraped,
+            items_failed: itemsFailed,
+            duration_ms: Date.now() - startTime,
+          },
+        })
+        .where(eq(scrapeRuns.id, run.id));
+      throw error;
+    }
 
     log.info("suggestions scrape complete", {
       platform: this.platform,

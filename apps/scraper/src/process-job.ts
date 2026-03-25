@@ -1,9 +1,9 @@
 import type { Job } from "bullmq";
 import { createDb, scrapeRuns } from "@appranks/db";
-import { eq } from "drizzle-orm";
+import { eq, and } from "drizzle-orm";
 import { migrate } from "drizzle-orm/postgres-js/migrator";
 import { createLogger, isPlatformId, getPlatform, type PlatformId } from "@appranks/shared";
-import { enqueueScraperJob, type ScraperJobData } from "./queue.js";
+import { enqueueScraperJob, type ScraperJobData, type ScraperJobType } from "./queue.js";
 import { CategoryScraper } from "./scrapers/category-scraper.js";
 import { AppDetailsScraper } from "./scrapers/app-details-scraper.js";
 import { KeywordScraper } from "./scrapers/keyword-scraper.js";
@@ -23,12 +23,7 @@ export function initWorkerDeps() {
   }
 
   const db = createDb(databaseUrl);
-  const httpClient = new HttpClient({
-    delayMs: parseInt(process.env.SCRAPER_DELAY_MS || "2000", 10),
-    maxConcurrency: parseInt(process.env.SCRAPER_MAX_CONCURRENCY || "2", 10),
-  });
-
-  return { db, httpClient };
+  return { db };
 }
 
 export async function runMigrations(db: ReturnType<typeof createDb>, label?: string) {
@@ -43,9 +38,22 @@ export async function runMigrations(db: ReturnType<typeof createDb>, label?: str
   }
 }
 
-const JOB_TIMEOUT_MS = 20 * 60 * 1000; // 20 minutes — hard limit per job
+/** Per-type timeout map (milliseconds) */
+const JOB_TIMEOUT_MAP: Partial<Record<ScraperJobType, number>> & { default: number } = {
+  category: 45 * 60 * 1000,
+  keyword_search: 45 * 60 * 1000,
+  reviews: 45 * 60 * 1000,
+  app_details: 30 * 60 * 1000,
+  keyword_suggestions: 20 * 60 * 1000,
+  compute_review_metrics: 15 * 60 * 1000,
+  compute_similarity_scores: 15 * 60 * 1000,
+  compute_app_scores: 15 * 60 * 1000,
+  backfill_categories: 15 * 60 * 1000,
+  daily_digest: 10 * 60 * 1000,
+  default: 30 * 60 * 1000,
+};
 
-export function createProcessJob(db: ReturnType<typeof createDb>, httpClient: HttpClient, queueName?: string) {
+export function createProcessJob(db: ReturnType<typeof createDb>, queueName?: string) {
   const cascadeOpts = queueName ? { queue: queueName as "interactive" | "background" } : undefined;
 
   return async function processJob(job: Job<ScraperJobData>): Promise<void> {
@@ -55,6 +63,12 @@ export function createProcessJob(db: ReturnType<typeof createDb>, httpClient: Ht
 
     const opts = job.data.options;
     const pageOptions = opts?.pages !== undefined ? { pages: opts.pages } : undefined;
+
+    // Per-job HttpClient so parallel platforms have independent rate limits
+    const httpClient = new HttpClient({
+      delayMs: parseInt(process.env.SCRAPER_DELAY_MS || "2000", 10),
+      maxConcurrency: parseInt(process.env.SCRAPER_MAX_CONCURRENCY || "2", 10),
+    });
 
     // Create browser client for platforms that need SPA rendering
     let browserClient: BrowserClient | undefined;
@@ -74,8 +88,9 @@ export function createProcessJob(db: ReturnType<typeof createDb>, httpClient: Ht
     }
 
     // Job-level timeout to prevent hanging indefinitely
+    const timeoutMs = JOB_TIMEOUT_MAP[type] ?? JOB_TIMEOUT_MAP.default;
     const timeoutPromise = new Promise<never>((_, reject) => {
-      setTimeout(() => reject(new Error(`job timed out after ${JOB_TIMEOUT_MS / 1000}s`)), JOB_TIMEOUT_MS);
+      setTimeout(() => reject(new Error(`job timed out after ${timeoutMs / 1000}s`)), timeoutMs);
     });
 
     try {
@@ -460,6 +475,20 @@ export function createProcessJob(db: ReturnType<typeof createDb>, httpClient: Ht
 
     log.info("job completed", { jobId: job.id, type });
     })()]);
+    } catch (error) {
+      // Failsafe: mark any still-running scrape_runs for this job as failed
+      if (job.id) {
+        try {
+          await db.update(scrapeRuns).set({
+            status: "failed",
+            completedAt: new Date(),
+            error: `job-level failure: ${String(error)}`,
+          }).where(and(eq(scrapeRuns.jobId, job.id), eq(scrapeRuns.status, "running")));
+        } catch (dbErr) {
+          log.error("failed to mark scrape_runs as failed", { jobId: job.id, error: String(dbErr) });
+        }
+      }
+      throw error;
     } finally {
       // Always close browsers — even on error/timeout — to prevent resource leaks
       if (browserClient) await browserClient.close().catch(() => {});

@@ -22,6 +22,7 @@ export function normalizePlan(p: any) {
 import { HttpClient } from "../http-client.js";
 import { parseAppPage, parseSimilarApps } from "../parsers/app-parser.js";
 import type { PlatformModule } from "../platforms/platform-module.js";
+import { runConcurrent } from "../utils/run-concurrent.js";
 
 /** Strip HTML tags and decode common entities, collapse whitespace */
 function stripHtmlTags(html: string): string {
@@ -116,28 +117,45 @@ export class AppDetailsScraper {
     let itemsScraped = 0;
     let itemsFailed = 0;
 
-    for (const app of trackedApps) {
-      try {
-        await this.scrapeApp(app.slug, run.id, triggeredBy, undefined, force);
-        itemsScraped++;
-      } catch (error) {
-        log.error("failed to scrape app", { slug: app.slug, error: String(error) });
-        itemsFailed++;
-      }
-    }
+    try {
+      await runConcurrent(trackedApps, async (app) => {
+        try {
+          await this.scrapeApp(app.slug, run.id, triggeredBy, undefined, force);
+          itemsScraped++;
+        } catch (error) {
+          log.error("failed to scrape app", { slug: app.slug, error: String(error) });
+          itemsFailed++;
+        }
+      }, 3);
 
-    await this.db
-      .update(scrapeRuns)
-      .set({
-        status: "completed",
-        completedAt: new Date(),
-        metadata: {
-          items_scraped: itemsScraped,
-          items_failed: itemsFailed,
-          duration_ms: Date.now() - startTime,
-        },
-      })
-      .where(eq(scrapeRuns.id, run.id));
+      await this.db
+        .update(scrapeRuns)
+        .set({
+          status: "completed",
+          completedAt: new Date(),
+          metadata: {
+            items_scraped: itemsScraped,
+            items_failed: itemsFailed,
+            duration_ms: Date.now() - startTime,
+          },
+        })
+        .where(eq(scrapeRuns.id, run.id));
+    } catch (error) {
+      await this.db
+        .update(scrapeRuns)
+        .set({
+          status: "failed",
+          completedAt: new Date(),
+          error: String(error),
+          metadata: {
+            items_scraped: itemsScraped,
+            items_failed: itemsFailed,
+            duration_ms: Date.now() - startTime,
+          },
+        })
+        .where(eq(scrapeRuns.id, run.id));
+      throw error;
+    }
 
     log.info("scraping complete", { itemsScraped, itemsFailed, durationMs: Date.now() - startTime });
   }
@@ -174,31 +192,48 @@ export class AppDetailsScraper {
     let itemsScraped = 0;
     let itemsFailed = 0;
 
-    for (const app of allApps) {
-      try {
-        await this.scrapeApp(app.slug, run.id, triggeredBy, undefined, force);
-        itemsScraped++;
-        if (itemsScraped % 50 === 0) {
-          log.info("progress", { scraped: itemsScraped, failed: itemsFailed, total: allApps.length });
+    try {
+      await runConcurrent(allApps, async (app) => {
+        try {
+          await this.scrapeApp(app.slug, run.id, triggeredBy, undefined, force);
+          itemsScraped++;
+          if (itemsScraped % 50 === 0) {
+            log.info("progress", { scraped: itemsScraped, failed: itemsFailed, total: allApps.length });
+          }
+        } catch (error) {
+          log.error("failed to scrape app", { slug: app.slug, error: String(error) });
+          itemsFailed++;
         }
-      } catch (error) {
-        log.error("failed to scrape app", { slug: app.slug, error: String(error) });
-        itemsFailed++;
-      }
-    }
+      }, 3);
 
-    await this.db
-      .update(scrapeRuns)
-      .set({
-        status: "completed",
-        completedAt: new Date(),
-        metadata: {
-          items_scraped: itemsScraped,
-          items_failed: itemsFailed,
-          duration_ms: Date.now() - startTime,
-        },
-      })
-      .where(eq(scrapeRuns.id, run.id));
+      await this.db
+        .update(scrapeRuns)
+        .set({
+          status: "completed",
+          completedAt: new Date(),
+          metadata: {
+            items_scraped: itemsScraped,
+            items_failed: itemsFailed,
+            duration_ms: Date.now() - startTime,
+          },
+        })
+        .where(eq(scrapeRuns.id, run.id));
+    } catch (error) {
+      await this.db
+        .update(scrapeRuns)
+        .set({
+          status: "failed",
+          completedAt: new Date(),
+          error: String(error),
+          metadata: {
+            items_scraped: itemsScraped,
+            items_failed: itemsFailed,
+            duration_ms: Date.now() - startTime,
+          },
+        })
+        .where(eq(scrapeRuns.id, run.id));
+      throw error;
+    }
 
     log.info("scraping all complete", { itemsScraped, itemsFailed, durationMs: Date.now() - startTime });
   }

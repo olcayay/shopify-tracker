@@ -80,6 +80,15 @@ export function getQueue(): Queue<ScraperJobData> {
   return getBackgroundQueue();
 }
 
+/** Long-running job types that should not retry — the scheduler will re-enqueue on the next cycle */
+const NO_RETRY_TYPES: Set<ScraperJobType> = new Set([
+  "category",
+  "keyword_search",
+  "reviews",
+  "app_details",
+  "keyword_suggestions",
+]);
+
 export async function enqueueScraperJob(
   data: ScraperJobData,
   options?: { priority?: number; delay?: number; queue?: "interactive" | "background" }
@@ -88,6 +97,7 @@ export async function enqueueScraperJob(
   const job = await queue.add(`scrape:${data.type}`, data, {
     priority: options?.priority,
     delay: options?.delay,
+    ...(NO_RETRY_TYPES.has(data.type) ? { attempts: 1 } : {}),
   });
   return job.id!;
 }

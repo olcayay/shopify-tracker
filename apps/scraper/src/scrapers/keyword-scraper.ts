@@ -16,6 +16,7 @@ const log = createLogger("keyword-scraper");
 import { HttpClient } from "../http-client.js";
 import { parseSearchPage } from "../parsers/search-parser.js";
 import type { PlatformModule, NormalizedSearchApp } from "../platforms/platform-module.js";
+import { runConcurrent } from "../utils/run-concurrent.js";
 
 export class KeywordScraper {
   private db: Database;
@@ -70,34 +71,51 @@ export class KeywordScraper {
 
     const KEYWORD_TIMEOUT_MS = 90_000; // 90 seconds per keyword
 
-    for (const kw of keywords) {
-      try {
-        const slugs = await Promise.race([
-          this.scrapeKeyword(kw.id, kw.keyword, run.id, pageOptions),
-          new Promise<never>((_, reject) =>
-            setTimeout(() => reject(new Error(`keyword scrape timed out after ${KEYWORD_TIMEOUT_MS / 1000}s`)), KEYWORD_TIMEOUT_MS)
-          ),
-        ]);
-        for (const s of slugs) allDiscoveredSlugs.add(s);
-        itemsScraped++;
-      } catch (error) {
-        log.error("failed to scrape keyword", { keyword: kw.keyword, error: String(error) });
-        itemsFailed++;
-      }
-    }
+    try {
+      await runConcurrent(keywords, async (kw) => {
+        try {
+          const slugs = await Promise.race([
+            this.scrapeKeyword(kw.id, kw.keyword, run.id, pageOptions),
+            new Promise<never>((_, reject) =>
+              setTimeout(() => reject(new Error(`keyword scrape timed out after ${KEYWORD_TIMEOUT_MS / 1000}s`)), KEYWORD_TIMEOUT_MS)
+            ),
+          ]);
+          for (const s of slugs) allDiscoveredSlugs.add(s);
+          itemsScraped++;
+        } catch (error) {
+          log.error("failed to scrape keyword", { keyword: kw.keyword, error: String(error) });
+          itemsFailed++;
+        }
+      }, 3);
 
-    await this.db
-      .update(scrapeRuns)
-      .set({
-        status: "completed",
-        completedAt: new Date(),
-        metadata: {
-          items_scraped: itemsScraped,
-          items_failed: itemsFailed,
-          duration_ms: Date.now() - startTime,
-        },
-      })
-      .where(eq(scrapeRuns.id, run.id));
+      await this.db
+        .update(scrapeRuns)
+        .set({
+          status: "completed",
+          completedAt: new Date(),
+          metadata: {
+            items_scraped: itemsScraped,
+            items_failed: itemsFailed,
+            duration_ms: Date.now() - startTime,
+          },
+        })
+        .where(eq(scrapeRuns.id, run.id));
+    } catch (error) {
+      await this.db
+        .update(scrapeRuns)
+        .set({
+          status: "failed",
+          completedAt: new Date(),
+          error: String(error),
+          metadata: {
+            items_scraped: itemsScraped,
+            items_failed: itemsFailed,
+            duration_ms: Date.now() - startTime,
+          },
+        })
+        .where(eq(scrapeRuns.id, run.id));
+      throw error;
+    }
 
     // Clean up browser if the platform module has one (e.g. Canva)
     if (this.platformModule && "closeBrowser" in this.platformModule && typeof (this.platformModule as any).closeBrowser === "function") {

@@ -5,25 +5,56 @@ import { Worker } from "bullmq";
 import { createLogger } from "@appranks/shared";
 import { BACKGROUND_QUEUE_NAME, INTERACTIVE_QUEUE_NAME, getRedisConnection, type ScraperJobData } from "./queue.js";
 import { initWorkerDeps, createProcessJob, runMigrations } from "./process-job.js";
+import { cleanupStaleRuns } from "./jobs/cleanup-stale-runs.js";
 
 const log = createLogger("worker");
 
-const { db, httpClient } = initWorkerDeps();
+/**
+ * Per-platform mutex: ensures only one job per platform runs at a time,
+ * while different platforms run in parallel.
+ */
+class PlatformLock {
+  private locks = new Map<string, Promise<void>>();
+
+  async acquire(platform: string): Promise<() => void> {
+    while (this.locks.has(platform)) {
+      await this.locks.get(platform)!;
+    }
+    let release!: () => void;
+    this.locks.set(platform, new Promise<void>((r) => { release = r; }));
+    return () => {
+      this.locks.delete(platform);
+      release();
+    };
+  }
+}
+
+const { db } = initWorkerDeps();
 await runMigrations(db, "worker");
 
-const bgProcessJob = createProcessJob(db, httpClient, "background");
-const intProcessJob = createProcessJob(db, httpClient, "interactive");
+// Clean up orphaned scrape_runs from previous crashes
+await cleanupStaleRuns(db);
+
+const platformLock = new PlatformLock();
+
+const bgProcessJobFn = createProcessJob(db, "background");
+const intProcessJob = createProcessJob(db, "interactive");
 
 const bgWorker = new Worker<ScraperJobData>(
   BACKGROUND_QUEUE_NAME,
-  bgProcessJob,
+  async (job) => {
+    const platform = job.data.platform || "shopify";
+    const release = await platformLock.acquire(platform);
+    try {
+      await bgProcessJobFn(job);
+    } finally {
+      release();
+    }
+  },
   {
     connection: getRedisConnection(),
-    concurrency: 1,
-    limiter: {
-      max: 1,
-      duration: 5000,
-    },
+    concurrency: 11,
+    // No rate limiter — per-platform lock handles serialization
   }
 );
 
@@ -51,7 +82,7 @@ for (const [name, w] of [["background", bgWorker], ["interactive", intWorker]] a
   });
 }
 
-log.info("worker started, listening on background + interactive queues");
+log.info("worker started, listening on background + interactive queues", { concurrency: 11 });
 
 // Graceful shutdown
 const shutdown = async () => {

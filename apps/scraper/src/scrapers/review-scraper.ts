@@ -7,6 +7,7 @@ const log = createLogger("review-scraper");
 import { HttpClient } from "../http-client.js";
 import { parseReviewPage } from "../parsers/review-parser.js";
 import type { PlatformModule } from "../platforms/platform-module.js";
+import { runConcurrent } from "../utils/run-concurrent.js";
 
 export class ReviewScraper {
   private db: Database;
@@ -59,33 +60,51 @@ export class ReviewScraper {
     let itemsFailed = 0;
     let totalNewReviews = 0;
 
-    for (const app of trackedApps) {
-      try {
-        const newReviews = await this.scrapeAppReviews(
-          app.slug,
-          run.id
-        );
-        totalNewReviews += newReviews;
-        itemsScraped++;
-      } catch (error) {
-        log.error("failed to scrape reviews", { slug: app.slug, error: String(error) });
-        itemsFailed++;
-      }
-    }
+    try {
+      await runConcurrent(trackedApps, async (app) => {
+        try {
+          const newReviews = await this.scrapeAppReviews(
+            app.slug,
+            run.id
+          );
+          totalNewReviews += newReviews;
+          itemsScraped++;
+        } catch (error) {
+          log.error("failed to scrape reviews", { slug: app.slug, error: String(error) });
+          itemsFailed++;
+        }
+      }, 3);
 
-    await this.db
-      .update(scrapeRuns)
-      .set({
-        status: "completed",
-        completedAt: new Date(),
-        metadata: {
-          items_scraped: itemsScraped,
-          items_failed: itemsFailed,
-          new_reviews: totalNewReviews,
-          duration_ms: Date.now() - startTime,
-        },
-      })
-      .where(eq(scrapeRuns.id, run.id));
+      await this.db
+        .update(scrapeRuns)
+        .set({
+          status: "completed",
+          completedAt: new Date(),
+          metadata: {
+            items_scraped: itemsScraped,
+            items_failed: itemsFailed,
+            new_reviews: totalNewReviews,
+            duration_ms: Date.now() - startTime,
+          },
+        })
+        .where(eq(scrapeRuns.id, run.id));
+    } catch (error) {
+      await this.db
+        .update(scrapeRuns)
+        .set({
+          status: "failed",
+          completedAt: new Date(),
+          error: String(error),
+          metadata: {
+            items_scraped: itemsScraped,
+            items_failed: itemsFailed,
+            new_reviews: totalNewReviews,
+            duration_ms: Date.now() - startTime,
+          },
+        })
+        .where(eq(scrapeRuns.id, run.id));
+      throw error;
+    }
 
     log.info("scraping complete", { itemsScraped, itemsFailed, totalNewReviews, durationMs: Date.now() - startTime });
   }

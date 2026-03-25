@@ -5,12 +5,17 @@ import { Worker } from "bullmq";
 import { createLogger } from "@appranks/shared";
 import { INTERACTIVE_QUEUE_NAME, getRedisConnection, type ScraperJobData } from "./queue.js";
 import { initWorkerDeps, createProcessJob, runMigrations } from "./process-job.js";
+import { cleanupStaleRuns } from "./jobs/cleanup-stale-runs.js";
 
 const log = createLogger("interactive-worker");
 
-const { db, httpClient } = initWorkerDeps();
+const { db } = initWorkerDeps();
 await runMigrations(db, "interactive-worker");
-const processJob = createProcessJob(db, httpClient, "interactive");
+
+// Clean up orphaned scrape_runs from previous crashes
+await cleanupStaleRuns(db);
+
+const processJob = createProcessJob(db, "interactive");
 
 const worker = new Worker<ScraperJobData>(
   INTERACTIVE_QUEUE_NAME,
