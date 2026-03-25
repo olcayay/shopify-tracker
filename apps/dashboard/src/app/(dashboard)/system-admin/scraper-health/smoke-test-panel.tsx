@@ -1,0 +1,488 @@
+"use client";
+
+import { useState, useEffect, useRef } from "react";
+import {
+  SMOKE_PLATFORMS,
+  SMOKE_CHECKS,
+  getSmokeCheck,
+  type SmokeCheckName,
+  type PlatformId,
+} from "@appranks/shared";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import {
+  Tooltip,
+  TooltipTrigger,
+  TooltipContent,
+} from "@/components/ui/tooltip";
+import {
+  Play,
+  Square,
+  ChevronDown,
+  ChevronRight,
+  Check,
+  X,
+  Minus,
+  RotateCcw,
+  Loader2,
+  FlaskConical,
+} from "lucide-react";
+import {
+  useSmokeTest,
+  type CellResult,
+  type CellStatus,
+} from "./use-smoke-test";
+
+const PLATFORM_LABELS: Record<PlatformId, string> = {
+  shopify: "Shopify",
+  salesforce: "Salesforce",
+  canva: "Canva",
+  wix: "Wix",
+  wordpress: "WordPress",
+  google_workspace: "Google WS",
+  atlassian: "Atlassian",
+  zoom: "Zoom",
+  zoho: "Zoho",
+  zendesk: "Zendesk",
+  hubspot: "HubSpot",
+};
+
+const PLATFORM_COLORS: Record<PlatformId, string> = {
+  shopify: "#95BF47",
+  salesforce: "#00A1E0",
+  canva: "#00C4CC",
+  wix: "#0C6EFC",
+  wordpress: "#21759B",
+  google_workspace: "#4285F4",
+  atlassian: "#0052CC",
+  zoom: "#0B5CFF",
+  zoho: "#D4382C",
+  zendesk: "#03363D",
+  hubspot: "#FF7A59",
+};
+
+const CHECK_LABELS: Record<SmokeCheckName, string> = {
+  categories: "Categories",
+  app: "App",
+  keyword: "Keyword",
+  reviews: "Reviews",
+  featured: "Featured",
+};
+
+function formatDuration(ms: number): string {
+  if (ms < 1000) return `${ms}ms`;
+  const secs = Math.round(ms / 100) / 10;
+  if (secs < 60) return `${secs}s`;
+  const mins = Math.floor(secs / 60);
+  const remSecs = Math.round(secs % 60);
+  return remSecs > 0 ? `${mins}m ${remSecs}s` : `${mins}m`;
+}
+
+function formatTotalDuration(ms: number): string {
+  const secs = Math.round(ms / 1000);
+  if (secs < 60) return `${secs}s`;
+  const mins = Math.floor(secs / 60);
+  const remSecs = secs % 60;
+  return remSecs > 0 ? `${mins}m ${remSecs}s` : `${mins}m`;
+}
+
+function ElapsedTimer({ startedAt }: { startedAt: number }) {
+  const [elapsed, setElapsed] = useState(0);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setElapsed(Math.floor((Date.now() - startedAt) / 1000));
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [startedAt]);
+
+  return <span className="text-sm text-blue-500 font-medium">{elapsed}s</span>;
+}
+
+function StatusCell({
+  platform,
+  check,
+  result,
+  isNA,
+  onRetry,
+  isExpanded,
+  onToggleExpand,
+}: {
+  platform: string;
+  check: SmokeCheckName;
+  result: CellResult | undefined;
+  isNA: boolean;
+  onRetry: () => void;
+  isExpanded: boolean;
+  onToggleExpand: () => void;
+}) {
+  if (isNA) {
+    return (
+      <div className="flex items-center justify-center py-2">
+        <Minus className="w-4 h-4 text-gray-300" />
+      </div>
+    );
+  }
+
+  const status = result?.status || "pending";
+
+  return (
+    <div
+      className={`rounded-md px-2 py-2 transition-colors cursor-default ${
+        status === "fail"
+          ? "bg-red-50 cursor-pointer"
+          : status === "running"
+            ? "bg-blue-50"
+            : ""
+      }`}
+      onClick={status === "fail" ? onToggleExpand : undefined}
+    >
+      <div className="flex items-center justify-center gap-1.5">
+        {status === "pending" && (
+          <div className="w-2.5 h-2.5 rounded-full bg-gray-300" />
+        )}
+        {status === "running" && (
+          <>
+            <div className="w-2.5 h-2.5 rounded-full bg-blue-500 animate-pulse" />
+            {result?.startedAt && <ElapsedTimer startedAt={result.startedAt} />}
+          </>
+        )}
+        {status === "pass" && (
+          <>
+            <Check className="w-4 h-4 text-green-600" />
+            {result?.durationMs != null && (
+              <span className="text-sm text-green-600">
+                {formatDuration(result.durationMs)}
+              </span>
+            )}
+          </>
+        )}
+        {status === "fail" && (
+          <>
+            <X className="w-4 h-4 text-red-600" />
+            {result?.durationMs != null && (
+              <span className="text-sm text-red-600">
+                {formatDuration(result.durationMs)}
+              </span>
+            )}
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function FailureDetails({
+  result,
+  onRetry,
+}: {
+  result: CellResult;
+  onRetry: () => void;
+}) {
+  return (
+    <div className="bg-red-50 border border-red-200 rounded-md p-3 mt-1 mb-2">
+      <div className="flex items-center justify-between mb-2">
+        <div className="flex items-center gap-2">
+          <X className="w-4 h-4 text-red-600" />
+          <span className="text-base font-medium text-red-800">
+            {PLATFORM_LABELS[result.platform as PlatformId]} / {CHECK_LABELS[result.check]}
+          </span>
+          {result.error && (
+            <Badge variant="outline" className="text-xs text-red-600 border-red-300">
+              {result.error}
+            </Badge>
+          )}
+        </div>
+        <Button
+          size="sm"
+          variant="outline"
+          className="h-7 text-sm px-3"
+          onClick={(e) => {
+            e.stopPropagation();
+            onRetry();
+          }}
+          disabled={result.status === "running"}
+        >
+          {result.status === "running" ? (
+            <Loader2 className="w-3 h-3 animate-spin" />
+          ) : (
+            <>
+              <RotateCcw className="w-3 h-3 mr-1" /> Retry
+            </>
+          )}
+        </Button>
+      </div>
+      {result.output && (
+        <pre className="text-xs text-red-700 bg-red-100 rounded p-3 max-h-48 overflow-auto font-mono whitespace-pre-wrap break-words">
+          {result.output.slice(-2000)}
+        </pre>
+      )}
+    </div>
+  );
+}
+
+export function SmokeTestPanel() {
+  const { isRunning, results, progress, summary, start, stop, retryCheck } =
+    useSmokeTest();
+  const [isOpen, setIsOpen] = useState(false);
+  const [expandedCells, setExpandedCells] = useState<Set<string>>(new Set());
+  const hasResults = results.size > 0;
+
+  // Auto-expand when test starts
+  useEffect(() => {
+    if (isRunning) setIsOpen(true);
+  }, [isRunning]);
+
+  const toggleCellExpand = (key: string) => {
+    setExpandedCells((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
+  };
+
+  const progressPercent =
+    progress.total > 0
+      ? Math.round((progress.completed / progress.total) * 100)
+      : 0;
+
+  // Calculate live summary from results when retrying changes individual cells
+  const liveCounts = {
+    passed: 0,
+    failed: 0,
+    running: 0,
+  };
+  results.forEach((r) => {
+    if (r.status === "pass") liveCounts.passed++;
+    else if (r.status === "fail") liveCounts.failed++;
+    else if (r.status === "running") liveCounts.running++;
+  });
+
+  return (
+    <Card>
+      <CardHeader
+        className="pb-3 cursor-pointer select-none"
+        onClick={() => setIsOpen(!isOpen)}
+      >
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            {isOpen ? (
+              <ChevronDown className="h-4 w-4 text-muted-foreground" />
+            ) : (
+              <ChevronRight className="h-4 w-4 text-muted-foreground" />
+            )}
+            <FlaskConical className="h-5 w-5" />
+            <CardTitle className="text-lg">Smoke Test</CardTitle>
+            {hasResults && !isRunning && summary && (
+              <div className="flex items-center gap-2 ml-2">
+                <Badge
+                  variant="outline"
+                  className="text-xs bg-green-50 text-green-700 border-green-200"
+                >
+                  {summary.passed} passed
+                </Badge>
+                {summary.failed > 0 && (
+                  <Badge
+                    variant="outline"
+                    className="text-xs bg-red-50 text-red-700 border-red-200"
+                  >
+                    {summary.failed} failed
+                  </Badge>
+                )}
+              </div>
+            )}
+          </div>
+          <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
+            {isRunning ? (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={stop}
+                className="text-red-600 border-red-200 hover:bg-red-50"
+              >
+                <Square className="h-3 w-3 mr-1" /> Stop
+              </Button>
+            ) : (
+              <Button variant="outline" size="sm" onClick={start}>
+                <Play className="h-3 w-3 mr-1" /> {hasResults ? "Run Again" : "Run Smoke Test"}
+              </Button>
+            )}
+          </div>
+        </div>
+
+        {/* Progress bar */}
+        {(isRunning || hasResults) && isOpen && (
+          <div className="mt-3">
+            <div className="flex items-center justify-between text-sm text-muted-foreground mb-1.5">
+              <span>
+                {isRunning
+                  ? `${progress.completed}/${progress.total} checks (${progress.running} running)`
+                  : summary
+                    ? `${progress.total}/${progress.total} — ${summary.passed} passed, ${summary.failed} failed (${formatTotalDuration(summary.totalDurationMs)})`
+                    : `${progress.completed}/${progress.total} checks`}
+              </span>
+              <span>{progressPercent}%</span>
+            </div>
+            <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
+              <div
+                className={`h-full rounded-full transition-all duration-300 ${
+                  liveCounts.failed > 0
+                    ? "bg-gradient-to-r from-green-500 to-red-500"
+                    : "bg-green-500"
+                }`}
+                style={{ width: `${progressPercent}%` }}
+              />
+            </div>
+          </div>
+        )}
+      </CardHeader>
+
+      {isOpen && (
+        <CardContent className="pt-0">
+          {/* Matrix table */}
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="w-[140px] sticky left-0 bg-background z-10 text-sm">
+                    Platform
+                  </TableHead>
+                  {SMOKE_CHECKS.map((check) => (
+                    <TableHead key={check} className="text-center min-w-[110px] text-sm">
+                      {CHECK_LABELS[check]}
+                    </TableHead>
+                  ))}
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {SMOKE_PLATFORMS.map((sp) => {
+                  // Check if any cell in this row is expanded with failure
+                  const rowExpandedFailures: { key: string; result: CellResult }[] = [];
+                  for (const check of SMOKE_CHECKS) {
+                    const key = `${sp.platform}:${check}`;
+                    const result = results.get(key);
+                    if (expandedCells.has(key) && result?.status === "fail") {
+                      rowExpandedFailures.push({ key, result });
+                    }
+                  }
+
+                  return (
+                    <TableRow key={sp.platform} className="group">
+                      <TableCell className="font-medium sticky left-0 bg-background z-10">
+                        <div className="flex items-center gap-2">
+                          <div
+                            className="w-3 h-3 rounded-full shrink-0"
+                            style={{
+                              backgroundColor:
+                                PLATFORM_COLORS[sp.platform],
+                            }}
+                          />
+                          <span className="text-sm font-medium">
+                            {PLATFORM_LABELS[sp.platform]}
+                          </span>
+                        </div>
+                      </TableCell>
+                      {SMOKE_CHECKS.map((check) => {
+                        const isNA = !getSmokeCheck(sp.platform, check);
+                        const key = `${sp.platform}:${check}`;
+                        const result = results.get(key);
+
+                        return (
+                          <TableCell key={check} className="text-center p-2">
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <div>
+                                  <StatusCell
+                                    platform={sp.platform}
+                                    check={check}
+                                    result={result}
+                                    isNA={isNA}
+                                    onRetry={() => retryCheck(sp.platform, check)}
+                                    isExpanded={expandedCells.has(key)}
+                                    onToggleExpand={() => toggleCellExpand(key)}
+                                  />
+                                </div>
+                              </TooltipTrigger>
+                              {result?.status === "fail" && result.error && (
+                                <TooltipContent side="bottom">
+                                  <span className="text-sm text-red-600">
+                                    {result.error} — click for details
+                                  </span>
+                                </TooltipContent>
+                              )}
+                            </Tooltip>
+                          </TableCell>
+                        );
+                      })}
+                    </TableRow>
+                  );
+                })}
+              </TableBody>
+            </Table>
+          </div>
+
+          {/* Expanded failure details (shown below the table) */}
+          {Array.from(expandedCells).map((key) => {
+            const result = results.get(key);
+            if (!result || result.status !== "fail") return null;
+            return (
+              <FailureDetails
+                key={key}
+                result={result}
+                onRetry={() => retryCheck(result.platform, result.check)}
+              />
+            );
+          })}
+
+          {/* Summary footer */}
+          {summary && !isRunning && (
+            <div className="flex items-center justify-between mt-4 pt-4 border-t">
+              <div className="flex items-center gap-3">
+                <Badge
+                  variant="outline"
+                  className="text-sm bg-green-50 text-green-700 border-green-200 px-3 py-1"
+                >
+                  {liveCounts.passed || summary.passed} Passed
+                </Badge>
+                {(liveCounts.failed || summary.failed) > 0 && (
+                  <Badge
+                    variant="outline"
+                    className="text-sm bg-red-50 text-red-700 border-red-200 px-3 py-1"
+                  >
+                    {liveCounts.failed || summary.failed} Failed
+                  </Badge>
+                )}
+                {summary.na > 0 && (
+                  <Badge variant="outline" className="text-sm text-gray-500 px-3 py-1">
+                    {summary.na} N/A
+                  </Badge>
+                )}
+                <span className="text-sm text-muted-foreground">
+                  {formatTotalDuration(summary.totalDurationMs)}
+                </span>
+              </div>
+              <Button variant="outline" size="sm" onClick={start}>
+                <RotateCcw className="h-3 w-3 mr-1" /> Run Again
+              </Button>
+            </div>
+          )}
+        </CardContent>
+      )}
+    </Card>
+  );
+}

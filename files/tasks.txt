@@ -205,3 +205,5 @@ Zendesk Algolia API migration — categories & search use Algolia API directly (
 comprehensive test coverage expansion — 740 → 2,362 tests (+1,622) across all 4 packages (shared, api, scraper, dashboard) ✅
 
 HubSpot App Marketplace — 11th platform integration, BrowserClient (pure SPA), 6 hierarchical categories, slug format {slug}, reviews, featured, pricing ✅
+
+live smoke test runner in scraper health dashboard — SSE endpoint, real-time 11×5 matrix, retry individual checks, shared config ✅

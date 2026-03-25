@@ -31,6 +31,8 @@ import {
   ChevronLeft,
   Trash2,
   X,
+  Copy,
+  Check,
 } from "lucide-react";
 import { ConfirmModal } from "@/components/confirm-modal";
 import { useFormatDate } from "@/lib/format-date";
@@ -521,9 +523,7 @@ export default function ScraperPage() {
                           </span>
                         )}
                         {job.failedReason && (
-                          <span className="text-destructive text-xs">
-                            {job.failedReason}
-                          </span>
+                          <CopyableError error={job.failedReason} />
                         )}
                       </TableCell>
                       <TableCell>
@@ -898,9 +898,7 @@ export default function ScraperPage() {
                             <div className="text-sm font-medium text-destructive mb-1">
                               Error
                             </div>
-                            <pre className="text-xs bg-destructive/10 text-destructive p-3 rounded-md overflow-x-auto whitespace-pre-wrap">
-                              {run.error}
-                            </pre>
+                            <CopyableError error={run.error} />
                           </div>
                         )}
                         {run.assets && run.assets.length > 0 && (
@@ -1011,6 +1009,35 @@ export default function ScraperPage() {
         }}
         onCancel={() => setKillJobConfirm(null)}
       />
+    </div>
+  );
+}
+
+function CopyableError({ error }: { error: string }) {
+  const [copied, setCopied] = useState(false);
+
+  const handleCopy = async () => {
+    await navigator.clipboard.writeText(error);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  return (
+    <div className="relative group">
+      <pre className="text-xs bg-destructive/10 text-destructive p-3 rounded-md whitespace-pre-wrap break-words max-h-[7.5rem] overflow-y-auto">
+        {error}
+      </pre>
+      <button
+        onClick={(e) => { e.stopPropagation(); handleCopy(); }}
+        className="absolute top-1.5 right-1.5 p-1 rounded bg-destructive/10 hover:bg-destructive/20 text-destructive opacity-0 group-hover:opacity-100 transition-opacity"
+        title="Copy error"
+      >
+        {copied ? (
+          <Check className="w-3.5 h-3.5" />
+        ) : (
+          <Copy className="w-3.5 h-3.5" />
+        )}
+      </button>
     </div>
   );
 }

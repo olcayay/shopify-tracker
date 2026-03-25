@@ -2216,3 +2216,42 @@ Modified files (~25):
 - apps/dashboard/src/app/(dashboard)/[platform]/apps/[slug]/compare/page.tsx (isHubSpot sections)
 - scripts/smoke-test.sh (test_hubspot + ALL_PLATFORMS)
 - files/ADDING_NEW_PLATFORM.md (HubSpot notes, Pitfall 26, regression checks)
+
+Live Smoke Test Runner in Scraper Health Dashboard
+===================================================
+
+Added an integrated live smoke test feature to the scraper health dashboard
+(/system-admin/scraper-health). Replaces manual SSH + smoke-test.sh.
+
+Architecture: SSE (Server-Sent Events)
+- GET /api/system-admin/scraper/smoke-test → streams init/start/complete/summary/done events
+- POST /api/system-admin/scraper/smoke-test/check → retry a single check (JSON response)
+- Uses fetch() + ReadableStream + TextDecoder for SSE with JWT auth headers
+- Max 6 concurrent checks, max 2 browser-platform checks at a time
+
+Shared Config (packages/shared/src/constants/smoke-test.ts):
+- SmokePlatform, SmokeCheck types
+- SMOKE_PLATFORMS array — all 11 platforms with checks/args (mirrors smoke-test.sh)
+- SMOKE_CHECKS, BROWSER_PLATFORMS constants
+- getSmokeCheck(), getSmokePlatform(), countTotalSmokeChecks() helpers
+
+Frontend:
+- useSmokeTest() hook — manages SSE stream, results Map, progress, start/stop/retryCheck
+- SmokeTestPanel component — collapsible Card below health matrix:
+  - 11×5 matrix (platforms × checks) with animated status cells
+  - PENDING (gray dot) → RUNNING (blue pulse + elapsed timer) → PASS (green check) / FAIL (red X)
+  - Progress bar with percentage
+  - Click failed cell to expand error details + retry button
+  - Summary footer with pass/fail/N/A counts + total duration
+
+Files created:
+- packages/shared/src/constants/smoke-test.ts
+- apps/dashboard/src/app/(dashboard)/system-admin/scraper-health/use-smoke-test.ts
+- apps/dashboard/src/app/(dashboard)/system-admin/scraper-health/smoke-test-panel.tsx
+- packages/shared/src/__tests__/smoke-test.test.ts (17 tests)
+- apps/api/src/__tests__/routes/smoke-test.test.ts (10 tests)
+
+Files modified:
+- packages/shared/src/index.ts (export smoke test types/constants)
+- apps/api/src/routes/system-admin.ts (SSE + retry endpoints)
+- apps/dashboard/src/app/(dashboard)/system-admin/scraper-health/page.tsx (import SmokeTestPanel)

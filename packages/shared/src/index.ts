@@ -134,6 +134,21 @@ export {
 } from "./constants/scraper-schedules.js";
 export type { ScraperSchedule } from "./constants/scraper-schedules.js";
 
+// Smoke Test
+export {
+  SMOKE_CHECKS,
+  SMOKE_PLATFORMS,
+  BROWSER_PLATFORMS,
+  getSmokeCheck,
+  getSmokePlatform,
+  countTotalSmokeChecks,
+} from "./constants/smoke-test.js";
+export type {
+  SmokeCheckName,
+  SmokeCheck,
+  SmokePlatform,
+} from "./constants/smoke-test.js";
+
 // Logger
 export { Logger, createLogger } from "./logger.js";
 export type { LogLevel, LogContext } from "./logger.js";

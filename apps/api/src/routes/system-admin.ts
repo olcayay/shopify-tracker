@@ -35,7 +35,10 @@ import {
   aiLogs,
   categoryParents,
 } from "@appranks/db";
-import { isPlatformId, PLATFORM_IDS, SCRAPER_SCHEDULES, getNextRunFromCron, getScheduleIntervalMs, findSchedule } from "@appranks/shared";
+import { isPlatformId, PLATFORM_IDS, SCRAPER_SCHEDULES, getNextRunFromCron, getScheduleIntervalMs, findSchedule, SMOKE_PLATFORMS, SMOKE_CHECKS, BROWSER_PLATFORMS, getSmokeCheck, getSmokePlatform, countTotalSmokeChecks } from "@appranks/shared";
+import type { SmokeCheckName } from "@appranks/shared";
+import { spawn, type ChildProcess } from "node:child_process";
+import path from "node:path";
 import { generateAccessToken } from "./auth.js";
 import type { JwtPayload } from "../middleware/auth.js";
 
@@ -807,6 +810,292 @@ export const systemAdminRoutes: FastifyPluginAsync = async (app) => {
     };
   });
 
+  // GET /api/system-admin/scraper/smoke-test — SSE endpoint that runs all smoke test checks
+  app.get("/scraper/smoke-test", async (request, reply) => {
+    const scraperDir = path.resolve(import.meta.dirname, "../../../scraper");
+
+    // SSE headers — must include CORS manually since reply.raw bypasses Fastify pipeline
+    const origin = request.headers.origin || "*";
+    reply.raw.writeHead(200, {
+      "Content-Type": "text/event-stream",
+      "Cache-Control": "no-cache",
+      Connection: "keep-alive",
+      "X-Accel-Buffering": "no",
+      "Access-Control-Allow-Origin": origin,
+      "Access-Control-Allow-Credentials": "true",
+    });
+
+    let aborted = false;
+    const activeProcesses: ChildProcess[] = [];
+
+    request.raw.on("close", () => {
+      aborted = true;
+      for (const proc of activeProcesses) {
+        try { proc.kill("SIGTERM"); } catch {}
+      }
+    });
+
+    function sendEvent(event: string, data: unknown) {
+      if (aborted) return;
+      reply.raw.write(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`);
+    }
+
+    // Build check list
+    interface CheckJob {
+      platform: string;
+      check: SmokeCheckName;
+      arg?: string;
+      timeoutSec: number;
+      isBrowser: boolean;
+    }
+    const jobs: CheckJob[] = [];
+    for (const sp of SMOKE_PLATFORMS) {
+      for (const c of sp.checks) {
+        jobs.push({
+          platform: sp.platform,
+          check: c.check,
+          arg: c.arg,
+          timeoutSec: sp.timeoutSec,
+          isBrowser: sp.clientType === "browser",
+        });
+      }
+    }
+
+    sendEvent("init", {
+      totalChecks: jobs.length,
+      platforms: SMOKE_PLATFORMS.map((p) => p.platform),
+      checks: SMOKE_CHECKS,
+    });
+
+    // Concurrency control: max 6 total, max 2 browser
+    const MAX_CONCURRENT = 6;
+    const MAX_BROWSER = 2;
+    let runningTotal = 0;
+    let runningBrowser = 0;
+    let completed = 0;
+    let passed = 0;
+    let failed = 0;
+    const startTime = Date.now();
+
+    function runCheck(job: CheckJob): Promise<void> {
+      return new Promise((resolve) => {
+        if (aborted) {
+          resolve();
+          return;
+        }
+
+        sendEvent("start", { platform: job.platform, check: job.check });
+
+        const args = ["tsx", "src/cli.ts", "--platform", job.platform, job.check];
+        if (job.arg) {
+          // Split arg by spaces for CLI (e.g. "email marketing" → ["email", "marketing"])
+          // But some args have special flags like "sales --pages 3"
+          args.push(...job.arg.split(" "));
+        }
+
+        const checkStart = Date.now();
+        const proc = spawn("npx", args, {
+          cwd: scraperDir,
+          timeout: job.timeoutSec * 1000,
+          stdio: ["ignore", "pipe", "pipe"],
+          env: { ...process.env, SMOKE_TEST: "1" },
+        });
+        activeProcesses.push(proc);
+
+        let stdout = "";
+        let stderr = "";
+
+        proc.stdout?.on("data", (data: Buffer) => {
+          stdout += data.toString();
+          // Limit captured output
+          if (stdout.length > 10_000) stdout = stdout.slice(-10_000);
+        });
+
+        proc.stderr?.on("data", (data: Buffer) => {
+          stderr += data.toString();
+          if (stderr.length > 10_000) stderr = stderr.slice(-10_000);
+        });
+
+        proc.on("close", (code) => {
+          const idx = activeProcesses.indexOf(proc);
+          if (idx >= 0) activeProcesses.splice(idx, 1);
+
+          const durationMs = Date.now() - checkStart;
+          const status = code === 0 ? "pass" : "fail";
+          const output = (stdout + "\n" + stderr).trim().slice(-5000);
+
+          completed++;
+          if (status === "pass") passed++;
+          else failed++;
+
+          sendEvent("complete", {
+            platform: job.platform,
+            check: job.check,
+            status,
+            durationMs,
+            output,
+            ...(status === "fail" ? { error: code === null ? "timeout" : `exit code ${code}` } : {}),
+          });
+
+          resolve();
+        });
+
+        proc.on("error", (err) => {
+          const idx = activeProcesses.indexOf(proc);
+          if (idx >= 0) activeProcesses.splice(idx, 1);
+
+          const durationMs = Date.now() - checkStart;
+          completed++;
+          failed++;
+
+          sendEvent("complete", {
+            platform: job.platform,
+            check: job.check,
+            status: "fail",
+            durationMs,
+            output: "",
+            error: err.message,
+          });
+
+          resolve();
+        });
+      });
+    }
+
+    // Process jobs with concurrency limits
+    let jobIndex = 0;
+
+    async function scheduleNext(): Promise<void> {
+      while (jobIndex < jobs.length && !aborted) {
+        if (runningTotal >= MAX_CONCURRENT) break;
+        const job = jobs[jobIndex];
+        if (job.isBrowser && runningBrowser >= MAX_BROWSER) {
+          // Find a non-browser job to run instead
+          let foundNonBrowser = false;
+          for (let i = jobIndex + 1; i < jobs.length; i++) {
+            if (!jobs[i].isBrowser && runningTotal < MAX_CONCURRENT) {
+              const swappedJob = jobs[i];
+              jobs.splice(i, 1);
+              jobs.splice(jobIndex, 0, swappedJob);
+              foundNonBrowser = true;
+              break;
+            }
+          }
+          if (!foundNonBrowser) break;
+          continue;
+        }
+
+        const currentJob = jobs[jobIndex++];
+        runningTotal++;
+        if (currentJob.isBrowser) runningBrowser++;
+
+        runCheck(currentJob).then(() => {
+          runningTotal--;
+          if (currentJob.isBrowser) runningBrowser--;
+          scheduleNext();
+        });
+      }
+    }
+
+    await scheduleNext();
+
+    // Wait for all jobs to complete
+    await new Promise<void>((resolve) => {
+      const interval = setInterval(() => {
+        if (completed >= jobs.length || aborted) {
+          clearInterval(interval);
+          resolve();
+        }
+      }, 200);
+    });
+
+    const totalDurationMs = Date.now() - startTime;
+    const na = (SMOKE_PLATFORMS.length * SMOKE_CHECKS.length) - jobs.length;
+
+    sendEvent("summary", { passed, failed, na, totalDurationMs });
+    sendEvent("done", {});
+
+    reply.raw.end();
+  });
+
+  // POST /api/system-admin/scraper/smoke-test/check — retry a single check
+  app.post("/scraper/smoke-test/check", async (request, reply) => {
+    const { platform, check } = request.body as { platform: string; check: SmokeCheckName };
+    if (!platform || !check) {
+      return reply.code(400).send({ error: "platform and check are required" });
+    }
+
+    const smokePlatform = getSmokePlatform(platform as any);
+    if (!smokePlatform) {
+      return reply.code(400).send({ error: `Unknown platform: ${platform}` });
+    }
+
+    const smokeCheck = getSmokeCheck(platform as any, check);
+    if (!smokeCheck) {
+      return reply.code(400).send({ error: `Check ${check} is N/A for ${platform}` });
+    }
+
+    const scraperDir = path.resolve(import.meta.dirname, "../../../scraper");
+    const args = ["tsx", "src/cli.ts", "--platform", platform, check];
+    if (smokeCheck.arg) {
+      args.push(...smokeCheck.arg.split(" "));
+    }
+
+    const checkStart = Date.now();
+    const result = await new Promise<{
+      status: "pass" | "fail";
+      durationMs: number;
+      output: string;
+      error?: string;
+    }>((resolve) => {
+      const proc = spawn("npx", args, {
+        cwd: scraperDir,
+        timeout: smokePlatform.timeoutSec * 1000,
+        stdio: ["ignore", "pipe", "pipe"],
+        env: { ...process.env },
+      });
+
+      let stdout = "";
+      let stderr = "";
+
+      proc.stdout?.on("data", (data: Buffer) => {
+        stdout += data.toString();
+        if (stdout.length > 10_000) stdout = stdout.slice(-10_000);
+      });
+
+      proc.stderr?.on("data", (data: Buffer) => {
+        stderr += data.toString();
+        if (stderr.length > 10_000) stderr = stderr.slice(-10_000);
+      });
+
+      proc.on("close", (code) => {
+        const durationMs = Date.now() - checkStart;
+        const output = (stdout + "\n" + stderr).trim().slice(-5000);
+        if (code === 0) {
+          resolve({ status: "pass", durationMs, output });
+        } else {
+          resolve({
+            status: "fail",
+            durationMs,
+            output,
+            error: code === null ? "timeout" : `exit code ${code}`,
+          });
+        }
+      });
+
+      proc.on("error", (err) => {
+        resolve({
+          status: "fail",
+          durationMs: Date.now() - checkStart,
+          output: "",
+          error: err.message,
+        });
+      });
+    });
+
+    return result;
+  });
+
   // GET /api/system-admin/scraper/runs
   app.get("/scraper/runs", async (request) => {
     const { type, triggeredBy: triggerFilter, queue: queueFilter, platform: platformFilter, limit = "20", offset = "0" } = request.query as {
@@ -819,6 +1108,8 @@ export const systemAdminRoutes: FastifyPluginAsync = async (app) => {
     };
 
     const conditions = [];
+    // Always exclude smoke-test runs from the dashboard
+    conditions.push(sql`(${scrapeRuns.triggeredBy} IS NULL OR ${scrapeRuns.triggeredBy} != 'smoke-test')`);
     if (type) {
       conditions.push(eq(scrapeRuns.scraperType, type as any));
     }

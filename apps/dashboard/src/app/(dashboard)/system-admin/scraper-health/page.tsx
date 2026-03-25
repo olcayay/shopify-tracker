@@ -31,7 +31,10 @@ import {
   TrendingUp,
   TrendingDown,
   AlertTriangle,
+  Copy,
+  Check,
 } from "lucide-react";
+import { SmokeTestPanel } from "./smoke-test-panel";
 
 const PLATFORM_LABELS: Record<PlatformId, string> = {
   shopify: "Shopify",
@@ -251,33 +254,33 @@ export default function ScraperHealthPage() {
       {data && (
         <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
           <Card>
-            <CardContent className="pt-4 pb-3 px-4">
-              <div className="text-2xl font-bold text-green-600">{data.summary.healthy}</div>
-              <div className="text-xs text-muted-foreground">Healthy</div>
+            <CardContent className="pt-5 pb-4 px-5">
+              <div className="text-3xl font-bold text-green-600">{data.summary.healthy}</div>
+              <div className="text-sm text-muted-foreground mt-1">Healthy</div>
             </CardContent>
           </Card>
           <Card>
-            <CardContent className="pt-4 pb-3 px-4">
-              <div className="text-2xl font-bold text-red-600">{data.summary.failed}</div>
-              <div className="text-xs text-muted-foreground">Failed</div>
+            <CardContent className="pt-5 pb-4 px-5">
+              <div className="text-3xl font-bold text-red-600">{data.summary.failed}</div>
+              <div className="text-sm text-muted-foreground mt-1">Failed</div>
             </CardContent>
           </Card>
           <Card>
-            <CardContent className="pt-4 pb-3 px-4">
-              <div className="text-2xl font-bold text-yellow-600">{data.summary.stale}</div>
-              <div className="text-xs text-muted-foreground">Stale</div>
+            <CardContent className="pt-5 pb-4 px-5">
+              <div className="text-3xl font-bold text-yellow-600">{data.summary.stale}</div>
+              <div className="text-sm text-muted-foreground mt-1">Stale</div>
             </CardContent>
           </Card>
           <Card>
-            <CardContent className="pt-4 pb-3 px-4">
-              <div className="text-2xl font-bold text-blue-600">{data.summary.running}</div>
-              <div className="text-xs text-muted-foreground">Running</div>
+            <CardContent className="pt-5 pb-4 px-5">
+              <div className="text-3xl font-bold text-blue-600">{data.summary.running}</div>
+              <div className="text-sm text-muted-foreground mt-1">Running</div>
             </CardContent>
           </Card>
           <Card>
-            <CardContent className="pt-4 pb-3 px-4">
-              <div className="text-2xl font-bold">{data.summary.totalScheduled}</div>
-              <div className="text-xs text-muted-foreground">Total Scheduled</div>
+            <CardContent className="pt-5 pb-4 px-5">
+              <div className="text-3xl font-bold">{data.summary.totalScheduled}</div>
+              <div className="text-sm text-muted-foreground mt-1">Total Scheduled</div>
             </CardContent>
           </Card>
         </div>
@@ -287,16 +290,16 @@ export default function ScraperHealthPage() {
       {data && (
         <Card>
           <CardHeader className="pb-3">
-            <CardTitle className="text-base">Health Matrix</CardTitle>
+            <CardTitle className="text-lg">Health Matrix</CardTitle>
           </CardHeader>
           <CardContent className="p-0">
             <div className="overflow-x-auto">
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead className="w-[130px] sticky left-0 bg-background z-10">Platform</TableHead>
+                    <TableHead className="w-[140px] sticky left-0 bg-background z-10 text-sm">Platform</TableHead>
                     {HEALTH_SCRAPER_TYPES.map((type) => (
-                      <TableHead key={type} className="text-center min-w-[120px]">
+                      <TableHead key={type} className="text-center min-w-[130px] text-sm">
                         {SCRAPER_TYPE_LABELS[type]}
                       </TableHead>
                     ))}
@@ -308,10 +311,10 @@ export default function ScraperHealthPage() {
                       <TableCell className="font-medium sticky left-0 bg-background z-10">
                         <div className="flex items-center gap-2">
                           <div
-                            className="w-2.5 h-2.5 rounded-full shrink-0"
+                            className="w-3 h-3 rounded-full shrink-0"
                             style={{ backgroundColor: PLATFORM_COLORS[platformId] }}
                           />
-                          <span className="text-sm">{PLATFORM_LABELS[platformId]}</span>
+                          <span className="text-sm font-medium">{PLATFORM_LABELS[platformId]}</span>
                         </div>
                       </TableCell>
                       {HEALTH_SCRAPER_TYPES.map((scraperType) => {
@@ -321,40 +324,40 @@ export default function ScraperHealthPage() {
                         const trend = getDurationTrend(cell);
 
                         return (
-                          <TableCell key={scraperType} className="text-center p-1.5">
+                          <TableCell key={scraperType} className="text-center p-2">
                             <Tooltip>
                               <TooltipTrigger asChild>
-                                <div className={`rounded-md px-2 py-1.5 cursor-default transition-colors ${
+                                <div className={`rounded-md px-2 py-2 cursor-default transition-colors ${
                                   status === "red" ? "bg-red-50" :
                                   status === "yellow" ? "bg-yellow-50" :
                                   status === "blue" ? "bg-blue-50" :
                                   status === "gray" ? "bg-gray-50" : ""
                                 }`}>
                                   <div className="flex items-center justify-center gap-1.5 mb-0.5">
-                                    <div className={`w-2 h-2 rounded-full ${STATUS_COLORS[status]} ring-2 ${STATUS_RING[status]}`} />
+                                    <div className={`w-2.5 h-2.5 rounded-full ${STATUS_COLORS[status]} ring-2 ${STATUS_RING[status]}`} />
                                     {cell.lastRun?.completedAt && status !== "gray" && (
-                                      <span className="text-[11px] text-muted-foreground">
+                                      <span className="text-xs text-muted-foreground">
                                         {timeAgo(cell.lastRun.completedAt)}
                                       </span>
                                     )}
                                     {cell.currentlyRunning && cell.runningStartedAt && (
-                                      <span className="text-[11px] text-blue-600">
+                                      <span className="text-xs text-blue-600">
                                         {timeAgo(cell.runningStartedAt)}
                                       </span>
                                     )}
                                     {status === "gray" && (
-                                      <span className="text-[11px] text-muted-foreground">N/A</span>
+                                      <span className="text-xs text-muted-foreground">N/A</span>
                                     )}
                                   </div>
                                   {status !== "gray" && (
                                     <div className="flex items-center justify-center gap-1">
                                       {trend.text && (
-                                        <span className="text-[10px] text-muted-foreground">{trend.text}</span>
+                                        <span className="text-xs text-muted-foreground">{trend.text}</span>
                                       )}
-                                      {trend.direction === "up" && <TrendingUp className="w-2.5 h-2.5 text-red-400" />}
-                                      {trend.direction === "down" && <TrendingDown className="w-2.5 h-2.5 text-green-400" />}
+                                      {trend.direction === "up" && <TrendingUp className="w-3 h-3 text-red-400" />}
+                                      {trend.direction === "down" && <TrendingDown className="w-3 h-3 text-green-400" />}
                                       {cell.lastRun?.itemsScraped != null && (
-                                        <span className="text-[10px] text-muted-foreground ml-1">
+                                        <span className="text-xs text-muted-foreground ml-1">
                                           {cell.lastRun.itemsScraped}
                                         </span>
                                       )}
@@ -378,38 +381,41 @@ export default function ScraperHealthPage() {
         </Card>
       )}
 
+      {/* Smoke Test Panel */}
+      <SmokeTestPanel />
+
       {/* Bottom panels: Recent Failures, Duration Anomalies, Active Jobs */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         {/* Recent Failures */}
         {data && data.recentFailures.length > 0 && (
           <Card>
             <CardHeader className="pb-2">
-              <CardTitle className="text-base text-red-600 flex items-center gap-2">
+              <CardTitle className="text-lg text-red-600 flex items-center gap-2">
                 <AlertTriangle className="h-4 w-4" /> Recent Failures (24h)
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-2">
               {data.recentFailures.map((f) => (
-                <div key={f.id} className="border rounded-md p-2.5 text-sm space-y-1">
+                <div key={f.id} className="border rounded-md p-3 text-sm space-y-1.5">
                   <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-1.5">
+                    <div className="flex items-center gap-2">
                       <div
-                        className="w-2 h-2 rounded-full shrink-0"
+                        className="w-2.5 h-2.5 rounded-full shrink-0"
                         style={{ backgroundColor: PLATFORM_COLORS[f.platform as PlatformId] || "#888" }}
                       />
                       <span className="font-medium">{PLATFORM_LABELS[f.platform as PlatformId] || f.platform}</span>
-                      <Badge variant="outline" className="text-[10px] px-1 py-0">
+                      <Badge variant="outline" className="text-xs px-1.5 py-0">
                         {SCRAPER_TYPE_LABELS[f.scraperType] || f.scraperType}
                       </Badge>
                     </div>
                     <div className="flex items-center gap-2">
-                      <span className="text-xs text-muted-foreground">
+                      <span className="text-sm text-muted-foreground">
                         {f.completedAt && timeAgo(f.completedAt)}
                       </span>
                       <Button
                         size="sm"
                         variant="outline"
-                        className="h-6 text-xs px-2"
+                        className="h-7 text-sm px-3"
                         disabled={retrying === f.id}
                         onClick={() => handleRetry(f.id)}
                       >
@@ -418,9 +424,7 @@ export default function ScraperHealthPage() {
                     </div>
                   </div>
                   {f.error && (
-                    <div className="text-xs text-red-600 bg-red-50 rounded px-2 py-1 line-clamp-2 font-mono">
-                      {f.error}
-                    </div>
+                    <ErrorBlock error={f.error} />
                   )}
                 </div>
               ))}
@@ -432,24 +436,24 @@ export default function ScraperHealthPage() {
         {data && data.anomalies.length > 0 && (
           <Card>
             <CardHeader className="pb-2">
-              <CardTitle className="text-base text-yellow-600 flex items-center gap-2">
+              <CardTitle className="text-lg text-yellow-600 flex items-center gap-2">
                 <TrendingUp className="h-4 w-4" /> Duration Anomalies
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-2">
               {data.anomalies.map((a) => (
-                <div key={`${a.platform}:${a.scraperType}`} className="flex items-center justify-between border rounded-md p-2.5 text-sm">
-                  <div className="flex items-center gap-1.5">
+                <div key={`${a.platform}:${a.scraperType}`} className="flex items-center justify-between border rounded-md p-3 text-sm">
+                  <div className="flex items-center gap-2">
                     <div
-                      className="w-2 h-2 rounded-full shrink-0"
+                      className="w-2.5 h-2.5 rounded-full shrink-0"
                       style={{ backgroundColor: PLATFORM_COLORS[a.platform as PlatformId] || "#888" }}
                     />
                     <span className="font-medium">{PLATFORM_LABELS[a.platform as PlatformId] || a.platform}</span>
-                    <Badge variant="outline" className="text-[10px] px-1 py-0">
+                    <Badge variant="outline" className="text-xs px-1.5 py-0">
                       {SCRAPER_TYPE_LABELS[a.scraperType] || a.scraperType}
                     </Badge>
                   </div>
-                  <div className="flex items-center gap-2 text-xs">
+                  <div className="flex items-center gap-2 text-sm">
                     <span className="text-muted-foreground">
                       {formatDuration(a.lastDurationMs)} vs avg {formatDuration(a.avgDurationMs)}
                     </span>
@@ -467,22 +471,22 @@ export default function ScraperHealthPage() {
         {data && data.matrix.some((c) => c.currentlyRunning) && (
           <Card>
             <CardHeader className="pb-2">
-              <CardTitle className="text-base text-blue-600">Active Jobs</CardTitle>
+              <CardTitle className="text-lg text-blue-600">Active Jobs</CardTitle>
             </CardHeader>
             <CardContent className="space-y-2">
               {data.matrix
                 .filter((c) => c.currentlyRunning)
                 .map((c) => (
-                  <div key={`${c.platform}:${c.scraperType}`} className="flex items-center justify-between border rounded-md p-2.5 text-sm">
-                    <div className="flex items-center gap-1.5">
-                      <div className="w-2 h-2 rounded-full bg-blue-500 animate-pulse" />
+                  <div key={`${c.platform}:${c.scraperType}`} className="flex items-center justify-between border rounded-md p-3 text-sm">
+                    <div className="flex items-center gap-2">
+                      <div className="w-2.5 h-2.5 rounded-full bg-blue-500 animate-pulse" />
                       <span className="font-medium">{PLATFORM_LABELS[c.platform as PlatformId] || c.platform}</span>
-                      <Badge variant="outline" className="text-[10px] px-1 py-0">
+                      <Badge variant="outline" className="text-xs px-1.5 py-0">
                         {SCRAPER_TYPE_LABELS[c.scraperType] || c.scraperType}
                       </Badge>
                     </div>
                     {c.runningStartedAt && (
-                      <span className="text-xs text-muted-foreground">
+                      <span className="text-sm text-muted-foreground">
                         Started {timeAgo(c.runningStartedAt)}
                       </span>
                     )}
@@ -501,13 +505,42 @@ export default function ScraperHealthPage() {
   );
 }
 
+function ErrorBlock({ error }: { error: string }) {
+  const [copied, setCopied] = useState(false);
+
+  const handleCopy = async () => {
+    await navigator.clipboard.writeText(error);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  return (
+    <div className="relative group">
+      <pre className="text-xs text-red-600 bg-red-50 rounded px-3 py-2 font-mono whitespace-pre-wrap break-words max-h-[7.5rem] overflow-y-auto">
+        {error}
+      </pre>
+      <button
+        onClick={handleCopy}
+        className="absolute top-1.5 right-1.5 p-1 rounded bg-red-100 hover:bg-red-200 text-red-600 opacity-0 group-hover:opacity-100 transition-opacity"
+        title="Copy error"
+      >
+        {copied ? (
+          <Check className="w-3.5 h-3.5" />
+        ) : (
+          <Copy className="w-3.5 h-3.5" />
+        )}
+      </button>
+    </div>
+  );
+}
+
 function CellTooltip({ cell, status }: { cell: HealthCell; status: CellStatus }) {
   if (status === "gray") {
-    return <div className="text-xs">Not scheduled for this platform</div>;
+    return <div className="text-sm">Not scheduled for this platform</div>;
   }
 
   return (
-    <div className="space-y-1.5 text-xs">
+    <div className="space-y-1.5 text-sm">
       <div className="font-medium">
         {PLATFORM_LABELS[cell.platform as PlatformId]} &middot; {SCRAPER_TYPE_LABELS[cell.scraperType]}
       </div>
