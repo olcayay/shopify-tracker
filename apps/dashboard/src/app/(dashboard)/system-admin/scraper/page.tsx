@@ -342,14 +342,22 @@ export default function ScraperPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <p className="text-sm text-muted-foreground mb-1">
-          <Link href="/system-admin" className="hover:underline">
-            System Admin
-          </Link>
-          {" > Scraper"}
-        </p>
-        <h1 className="text-2xl font-bold">Scraper Management</h1>
+      <div className="flex items-center justify-between">
+        <div>
+          <p className="text-sm text-muted-foreground mb-1">
+            <Link href="/system-admin" className="hover:underline">
+              System Admin
+            </Link>
+            {" > Scraper"}
+          </p>
+          <h1 className="text-2xl font-bold">Scraper Management</h1>
+        </div>
+        <Link
+          href="/system-admin/scraper-health"
+          className="text-sm text-primary hover:underline"
+        >
+          View Health Dashboard &rarr;
+        </Link>
       </div>
 
       {message && (

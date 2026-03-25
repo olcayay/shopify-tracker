@@ -648,6 +648,167 @@ export const systemAdminRoutes: FastifyPluginAsync = async (app) => {
 
   // --- Scraper Control (moved from admin.ts) ---
 
+  // GET /api/system-admin/scraper/health
+  app.get("/scraper/health", async () => {
+    const { SCRAPER_SCHEDULES, getNextRunFromCron, getScheduleIntervalMs, findSchedule } = await import("@appranks/shared");
+
+    // 1. Latest run per (platform, scraperType) — completed or failed
+    const latestRuns = await db.execute(sql`
+      SELECT DISTINCT ON (platform, scraper_type)
+        id, platform, scraper_type, status, completed_at, started_at,
+        metadata, error
+      FROM scrape_runs
+      WHERE status IN ('completed', 'failed')
+        AND platform IS NOT NULL
+      ORDER BY platform, scraper_type, completed_at DESC NULLS LAST
+    `);
+
+    // 2. Avg + prev duration of last 5 completed runs per (platform, scraperType)
+    const durationStats = await db.execute(sql`
+      SELECT platform, scraper_type,
+        avg(duration_ms)::int AS avg_duration_ms,
+        (array_agg(duration_ms ORDER BY completed_at DESC))[2] AS prev_duration_ms
+      FROM (
+        SELECT platform, scraper_type,
+          EXTRACT(EPOCH FROM (completed_at - started_at))::int * 1000 AS duration_ms,
+          completed_at,
+          ROW_NUMBER() OVER (PARTITION BY platform, scraper_type ORDER BY completed_at DESC) AS rn
+        FROM scrape_runs
+        WHERE status = 'completed' AND platform IS NOT NULL
+          AND completed_at IS NOT NULL AND started_at IS NOT NULL
+      ) sub
+      WHERE rn <= 5
+      GROUP BY platform, scraper_type
+    `);
+
+    // 3. Currently running
+    const runningRuns = await db.execute(sql`
+      SELECT id, platform, scraper_type, started_at
+      FROM scrape_runs
+      WHERE status = 'running' AND platform IS NOT NULL
+    `);
+
+    // 4. Recent failures (last 24h, max 10)
+    const recentFailures = await db.execute(sql`
+      SELECT id, platform, scraper_type, completed_at, error,
+        EXTRACT(EPOCH FROM (completed_at - started_at))::int * 1000 AS duration_ms
+      FROM scrape_runs
+      WHERE status = 'failed'
+        AND platform IS NOT NULL
+        AND completed_at > NOW() - INTERVAL '24 hours'
+      ORDER BY completed_at DESC
+      LIMIT 10
+    `);
+
+    // Build lookup maps
+    const latestMap = new Map<string, any>();
+    for (const r of latestRuns as any[]) {
+      latestMap.set(`${r.platform}:${r.scraper_type}`, r);
+    }
+
+    const durationMap = new Map<string, any>();
+    for (const r of durationStats as any[]) {
+      durationMap.set(`${r.platform}:${r.scraper_type}`, r);
+    }
+
+    const runningMap = new Map<string, any>();
+    for (const r of runningRuns as any[]) {
+      const key = `${r.platform}:${r.scraper_type}`;
+      runningMap.set(key, r);
+    }
+
+    // The 5 main columns for the health matrix
+    const HEALTH_SCRAPER_TYPES = ["category", "app_details", "keyword_search", "reviews", "compute_app_scores"];
+
+    // Build matrix
+    const matrix: any[] = [];
+    for (const platformId of PLATFORM_IDS) {
+      for (const scraperType of HEALTH_SCRAPER_TYPES) {
+        const key = `${platformId}:${scraperType}`;
+        const latest = latestMap.get(key);
+        const durations = durationMap.get(key);
+        const running = runningMap.get(key);
+        const schedule = findSchedule(platformId, scraperType);
+
+        let lastRun = null;
+        if (latest) {
+          const startedAt = latest.started_at ? new Date(latest.started_at).getTime() : null;
+          const completedAt = latest.completed_at ? new Date(latest.completed_at).getTime() : null;
+          const durationMs = startedAt && completedAt ? completedAt - startedAt : null;
+          const meta = latest.metadata as Record<string, unknown> | null;
+          lastRun = {
+            status: latest.status as string,
+            completedAt: latest.completed_at ? new Date(latest.completed_at).toISOString() : null,
+            durationMs,
+            itemsScraped: (meta?.items_scraped as number) ?? null,
+            itemsFailed: (meta?.items_failed as number) ?? null,
+            error: latest.error as string | null,
+          };
+        }
+
+        matrix.push({
+          platform: platformId,
+          scraperType,
+          lastRun,
+          avgDurationMs: durations?.avg_duration_ms ?? null,
+          prevDurationMs: durations?.prev_duration_ms ?? null,
+          currentlyRunning: !!running,
+          runningStartedAt: running?.started_at ? new Date(running.started_at).toISOString() : null,
+          schedule: schedule
+            ? { cron: schedule.cron, nextRunAt: getNextRunFromCron(schedule.cron).toISOString() }
+            : null,
+        });
+      }
+    }
+
+    // Compute summary
+    let healthy = 0, failed = 0, stale = 0, running = 0, totalScheduled = 0;
+    for (const cell of matrix) {
+      if (!cell.schedule) continue; // N/A
+      totalScheduled++;
+      if (cell.currentlyRunning) { running++; continue; }
+      if (cell.lastRun?.status === "failed") { failed++; continue; }
+      if (cell.lastRun?.completedAt) {
+        const age = Date.now() - new Date(cell.lastRun.completedAt).getTime();
+        const interval = getScheduleIntervalMs(cell.schedule.cron);
+        if (age > interval * 2) { stale++; }
+        else { healthy++; }
+      } else {
+        stale++; // never ran
+      }
+    }
+
+    // Duration anomalies (>50% deviation)
+    const anomalies: any[] = [];
+    for (const cell of matrix) {
+      if (!cell.lastRun?.durationMs || !cell.avgDurationMs) continue;
+      const changePercent = Math.round(((cell.lastRun.durationMs - cell.avgDurationMs) / cell.avgDurationMs) * 100);
+      if (Math.abs(changePercent) > 50) {
+        anomalies.push({
+          platform: cell.platform,
+          scraperType: cell.scraperType,
+          lastDurationMs: cell.lastRun.durationMs,
+          avgDurationMs: cell.avgDurationMs,
+          changePercent,
+        });
+      }
+    }
+
+    return {
+      matrix,
+      summary: { healthy, failed, stale, running, totalScheduled },
+      recentFailures: (recentFailures as any[]).map((r: any) => ({
+        id: r.id,
+        platform: r.platform,
+        scraperType: r.scraper_type,
+        completedAt: r.completed_at ? new Date(r.completed_at).toISOString() : null,
+        error: r.error,
+        durationMs: r.duration_ms ? Number(r.duration_ms) : null,
+      })),
+      anomalies,
+    };
+  });
+
   // GET /api/system-admin/scraper/runs
   app.get("/scraper/runs", async (request) => {
     const { type, triggeredBy: triggerFilter, queue: queueFilter, platform: platformFilter, limit = "20", offset = "0" } = request.query as {
