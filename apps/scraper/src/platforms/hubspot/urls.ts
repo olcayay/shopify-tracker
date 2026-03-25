@@ -1,5 +1,6 @@
 const BASE_URL = "https://ecosystem.hubspot.com/marketplace";
 const CHIRP_BASE = "https://app.hubspot.com/api/chirp-frontend-external/v1/gateway";
+const ECOSYSTEM_BASE = "https://app.hubspot.com/api/ecosystem/public/v1";
 
 export const hubspotUrls = {
   base: BASE_URL,
@@ -48,6 +49,14 @@ export const hubspotUrls = {
     /** Homepage suggestion sections */
     suggestions: () =>
       `${CHIRP_BASE}/com.hubspot.marketplace.personalization.rpc.PersonalizationPublicRpc/getSuggestionSections`,
+  },
+  // --- Ecosystem public API endpoints (reviews) ---
+  ecosystem: {
+    /** POST: Search reviews for an app by offeringId */
+    reviewSearch: () => `${ECOSYSTEM_BASE}/reviews/search`,
+
+    /** POST: Aggregate review stats (count, average, distribution) */
+    reviewStats: () => `${ECOSYSTEM_BASE}/reviews/stats`,
   },
 } as const;
 

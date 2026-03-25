@@ -15,8 +15,8 @@ describe("HubSpotModule", () => {
       expect(mod.capabilities.hasKeywordSearch).toBe(true);
     });
 
-    it("does not have reviews (not in CHIRP API)", () => {
-      expect(mod.capabilities.hasReviews).toBe(false);
+    it("has reviews (via ecosystem public API)", () => {
+      expect(mod.capabilities.hasReviews).toBe(true);
     });
 
     it("has featured sections", () => {
@@ -145,10 +145,10 @@ describe("HubSpotModule", () => {
     });
   });
 
-  describe("fetchReviewPage returns empty JSON", () => {
-    it("returns empty reviews JSON without any client", async () => {
-      const result = await mod.fetchReviewPage("any-slug");
-      expect(result).toBe(JSON.stringify({ reviews: [] }));
+  describe("fetchReviewPage requires HttpClient", () => {
+    it("throws without HttpClient (needs to resolve offeringId via CHIRP)", async () => {
+      await expect(mod.fetchReviewPage("gmail"))
+        .rejects.toThrow("HttpClient required");
     });
   });
 

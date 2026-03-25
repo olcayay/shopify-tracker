@@ -79,7 +79,10 @@ export function parseHubSpotAppDetails(json: string, slug: string): NormalizedAp
     ? new Date(firstPublishedAt).toISOString().split("T")[0]
     : null;
 
-  log.info("parsed app from CHIRP API", { slug, name });
+  // offeringId — needed for ecosystem review API
+  const offeringId = listing.offeringId ? Number(listing.offeringId) : null;
+
+  log.info("parsed app from CHIRP API", { slug, name, offeringId });
 
   return {
     name,
@@ -98,6 +101,7 @@ export function parseHubSpotAppDetails(json: string, slug: string): NormalizedAp
       categories,
       installCount,
       launchedDate,
+      offeringId,
       productType: listing.productType || null,
       connectionType: listing.connectionType || null,
       certified: !!listing.certifiedAt,
@@ -105,6 +109,25 @@ export function parseHubSpotAppDetails(json: string, slug: string): NormalizedAp
       source: "chirp-api",
     },
   };
+}
+
+/**
+ * Extract offeringId from a raw CHIRP app detail JSON response.
+ * Used by the module to resolve offering IDs for the ecosystem review API.
+ */
+export function extractOfferingId(json: string): number | null {
+  try {
+    const data = JSON.parse(json);
+    const rawListing =
+      (data as any)?.data?.listing?.value ??
+      (data as any)?.data?.listing ??
+      data;
+    if (!rawListing || typeof rawListing !== "object") return null;
+    const listing = unwrapChirp(rawListing) as Record<string, any>;
+    return listing.offeringId ? Number(listing.offeringId) : null;
+  } catch {
+    return null;
+  }
 }
 
 function minimalAppDetails(slug: string): NormalizedAppDetails {

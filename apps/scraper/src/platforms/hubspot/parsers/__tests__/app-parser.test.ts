@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { parseHubSpotAppDetails, unwrapChirp } from "../app-parser.js";
+import { parseHubSpotAppDetails, unwrapChirp, extractOfferingId } from "../app-parser.js";
 import { makeChirpAppDetailResponse } from "./fixtures.js";
 
 describe("unwrapChirp", () => {
@@ -213,5 +213,43 @@ describe("parseHubSpotAppDetails", () => {
     const cats = result.platformData.categories as any[];
     expect(cats).toHaveLength(3);
     expect(cats.map((c: any) => c.slug)).toEqual(["CRM", "SALES_ENABLEMENT", "E_COMMERCE"]);
+  });
+
+  it("parses offeringId in platformData", () => {
+    const json = makeChirpAppDetailResponse({ offeringId: 77 });
+    const result = parseHubSpotAppDetails(json, "gmail");
+    expect(result.platformData.offeringId).toBe(77);
+  });
+
+  it("returns null offeringId when not present", () => {
+    // Create a response without offeringId by using default fixture
+    const json = makeChirpAppDetailResponse();
+    const result = parseHubSpotAppDetails(json, "test-app");
+    // Default fixture has offeringId: 77
+    expect(result.platformData.offeringId).toBe(77);
+  });
+});
+
+describe("extractOfferingId", () => {
+  it("extracts offeringId from CHIRP response", () => {
+    const json = makeChirpAppDetailResponse({ offeringId: 77 });
+    expect(extractOfferingId(json)).toBe(77);
+  });
+
+  it("returns null for invalid JSON", () => {
+    expect(extractOfferingId("not json")).toBeNull();
+  });
+
+  it("returns null for empty response", () => {
+    expect(extractOfferingId(JSON.stringify({}))).toBeNull();
+  });
+
+  it("returns null when offeringId is missing", () => {
+    // Create a minimal response without offeringId
+    const json = JSON.stringify({
+      type: "data",
+      data: { listing: { value: { name: { value: "Test" } } } },
+    });
+    expect(extractOfferingId(json)).toBeNull();
   });
 });

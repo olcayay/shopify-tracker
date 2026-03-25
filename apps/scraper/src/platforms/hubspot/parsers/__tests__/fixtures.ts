@@ -18,6 +18,7 @@ interface ChirpAppOverrides {
   iconUrl?: string;
   urlSlug?: string;
   installCount?: number;
+  offeringId?: number;
   category?: string[];
   productType?: string;
   connectionType?: string;
@@ -81,6 +82,7 @@ export function makeChirpAppDetailResponse(overrides: ChirpAppOverrides = {}): s
       altText: chirpStr(""),
     }),
     listingId: chirpInt(30050903),
+    offeringId: chirpInt(overrides.offeringId ?? 77),
   };
 
   if (overrides.certifiedAt !== null) {
@@ -251,5 +253,106 @@ export function makeChirpFeaturedResponse(overrides: FeaturedOverrides = {}): st
         installCount: 0,
       })),
     })),
+  });
+}
+
+// ---------------------------------------------------------------------------
+// Review fixtures (Ecosystem public API: /reviews/search)
+// ---------------------------------------------------------------------------
+
+interface ReviewFixture {
+  id?: number;
+  createdAt?: number;
+  reviewerDisplayName?: string;
+  companyName?: string;
+  overallRating?: number;
+  title?: string;
+  review?: string;
+  pros?: string;
+  cons?: string;
+  reply?: { repliedAt: number; reply: string } | null;
+}
+
+interface ReviewResponseOverrides {
+  total?: number;
+  reviews?: ReviewFixture[];
+}
+
+export function makeEcosystemReviewResponse(overrides: ReviewResponseOverrides = {}): string {
+  const reviews = overrides.reviews ?? [
+    {
+      id: 713725,
+      createdAt: 1706705331353,
+      reviewerDisplayName: "Mueller, S.",
+      companyName: "Acme Corp",
+      overallRating: 5,
+      title: "Great integration",
+      review: "Works perfectly with our workflow",
+      pros: "Easy to set up",
+      cons: "None so far",
+      reply: { repliedAt: 1707000000000, reply: "Thank you for your feedback!" },
+    },
+    {
+      id: 705133,
+      createdAt: 1704067200000,
+      reviewerDisplayName: "Smith, J.",
+      companyName: "Tech Inc",
+      overallRating: 4,
+      title: "Solid app",
+      review: "Does what it says on the tin",
+      pros: "Reliable",
+      cons: "Could use more features",
+      reply: null,
+    },
+    {
+      id: 698001,
+      createdAt: 1701388800000,
+      reviewerDisplayName: "Garcia, M.",
+      companyName: "StartupXYZ",
+      overallRating: 3,
+      title: "",
+      review: "Average experience",
+    },
+  ];
+  const total = overrides.total ?? reviews.length;
+
+  return JSON.stringify({
+    reviews: reviews.map((r) => ({
+      id: r.id ?? Math.floor(Math.random() * 1000000),
+      createdAt: r.createdAt ?? Date.now(),
+      reviewerData: {
+        userId: Math.floor(Math.random() * 100000),
+        portalId: Math.floor(Math.random() * 100000),
+        companyName: r.companyName ?? "Unknown",
+        employees: null,
+        industry: null,
+        showAvatar: true,
+      },
+      ratings: { OVERALL: r.overallRating ?? 5 },
+      answers: {
+        ...(r.title != null ? { TITLE: r.title } : {}),
+        ...(r.review != null ? { REVIEW: r.review } : {}),
+        ...(r.pros != null ? { PROS: r.pros } : {}),
+        ...(r.cons != null ? { CONS: r.cons } : {}),
+      },
+      tags: {},
+      attributes: [],
+      reply: r.reply ?? null,
+      replies: [],
+      reviewerDisplayName: r.reviewerDisplayName ?? "Anonymous",
+      avatarUrl: null,
+      entityVersion: null,
+      original: null,
+      untranslated: { answers: {}, reply: null, replies: [], translated: false },
+      lastEditedAt: null,
+      translated: false,
+      originalLanguage: "en",
+      employees: null,
+      companyName: r.companyName ?? "Unknown",
+      showAvatar: true,
+      content: null,
+      offeringVersion: null,
+    })),
+    total,
   });
 }

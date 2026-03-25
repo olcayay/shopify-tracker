@@ -13,7 +13,7 @@ import type { HttpClient } from "../../http-client.js";
 import type { BrowserClient } from "../../browser-client.js";
 import { hubspotUrls, CHIRP_HEADERS } from "./urls.js";
 import { HUBSPOT_CONSTANTS, HUBSPOT_SCORING, HUBSPOT_PAGE_SIZE } from "./constants.js";
-import { parseHubSpotAppDetails } from "./parsers/app-parser.js";
+import { parseHubSpotAppDetails, extractOfferingId } from "./parsers/app-parser.js";
 import { parseHubSpotCategoryPage } from "./parsers/category-parser.js";
 import { parseHubSpotSearchPage } from "./parsers/search-parser.js";
 import { parseHubSpotReviewPage } from "./parsers/review-parser.js";
@@ -37,7 +37,10 @@ const log = createLogger("hubspot");
  *
  * Limitations:
  * - No server-side keyword/category filtering (client-side text matching)
- * - No review data exposed via API
+ *
+ * Reviews use the Ecosystem public API (not CHIRP):
+ * - POST /api/ecosystem/public/v1/reviews/search (individual reviews)
+ * - Requires offeringId (resolved from CHIRP appDetail, cached per slug)
  */
 export class HubSpotModule implements PlatformModule {
   readonly platformId = "hubspot" as const;
@@ -46,7 +49,7 @@ export class HubSpotModule implements PlatformModule {
 
   readonly capabilities: PlatformCapabilities = {
     hasKeywordSearch: true,
-    hasReviews: false, // Not available via CHIRP API
+    hasReviews: true, // Via Ecosystem public API
     hasFeaturedSections: true,
     hasAdTracking: false,
     hasSimilarApps: false,
@@ -58,6 +61,7 @@ export class HubSpotModule implements PlatformModule {
 
   private httpClient?: HttpClient;
   private browserClient?: BrowserClient;
+  private offeringIdCache = new Map<string, number>();
 
   constructor(httpClient?: HttpClient, browserClient?: BrowserClient) {
     this.httpClient = httpClient;
@@ -126,9 +130,60 @@ export class HubSpotModule implements PlatformModule {
     });
   }
 
-  async fetchReviewPage(_slug: string): Promise<string | null> {
-    // Reviews not available via CHIRP API
-    return JSON.stringify({ reviews: [] });
+  async fetchReviewPage(slug: string, page?: number): Promise<string | null> {
+    const pageNum = page ?? 1;
+    const offeringId = await this.resolveOfferingId(slug);
+    if (offeringId === null) {
+      log.warn("could not resolve offeringId, returning empty reviews", { slug });
+      return JSON.stringify({ reviews: [], total: 0 });
+    }
+
+    const offset = (pageNum - 1) * HUBSPOT_PAGE_SIZE;
+    log.info("fetching reviews via ecosystem API", { slug, offeringId, page: pageNum, offset });
+
+    return this.ecosystemPost(hubspotUrls.ecosystem.reviewSearch(), {
+      entityId: offeringId,
+      reviewTypes: ["APP"],
+      limit: HUBSPOT_PAGE_SIZE,
+      offset,
+      sortFields: ["NEWEST"],
+    });
+  }
+
+  // --- Ecosystem API helper ---
+
+  private async ecosystemPost(url: string, body: Record<string, unknown>): Promise<string> {
+    if (!this.httpClient) {
+      throw new Error("HttpClient required for HubSpot ecosystem API calls");
+    }
+    return this.httpClient.fetchRaw(url, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json",
+        Referer: "https://ecosystem.hubspot.com/",
+      },
+      body: JSON.stringify(body),
+    });
+  }
+
+  // --- Offering ID resolution ---
+
+  private async resolveOfferingId(slug: string): Promise<number | null> {
+    const cached = this.offeringIdCache.get(slug);
+    if (cached !== undefined) return cached;
+
+    log.info("resolving offeringId via CHIRP appDetail", { slug });
+    const json = await this.chirpPost(hubspotUrls.chirp.appDetail(), {
+      language: "EN",
+      slug,
+    });
+
+    const offeringId = extractOfferingId(json);
+    if (offeringId !== null) {
+      this.offeringIdCache.set(slug, offeringId);
+    }
+    return offeringId;
   }
 
   // --- Parse ---
