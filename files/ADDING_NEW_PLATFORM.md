@@ -1684,7 +1684,7 @@ If your new platform uses flat categories (no parent-child hierarchy), add it he
 | Zoom | Public JSON API (`/api/v1/apps`) | Pure JSON for everything, no HTML at all |
 | Zoho | HttpClient (`var detailsObject`) + BrowserClient (SPA) | App details from inline JS; categories/search need Playwright |
 | Zendesk | Algolia API + BrowserClient (Cloudflare) | Categories/search via Algolia JSON API; app details need Playwright (Cloudflare) |
-| HubSpot | BrowserClient only (pure SPA) | All pages need Playwright — React SPA with CHIRP RPC, no SSR/embedded JSON |
+| HubSpot | HttpClient (CHIRP RPC API) | Pure SPA (CDN blocks JS in Playwright). Uses CHIRP gateway at `app.hubspot.com/api/chirp-frontend-external/`. 5 endpoints: search (100/page), appDetail, filterConfig, collections, suggestions. No server-side filtering — client-side text matching for keywords. |
 
 ### Pitfall 26: Hardcoded platform counts in test files
 
@@ -1752,7 +1752,7 @@ After implementation, verify every page for the new platform AND confirm existin
 - [ ] `/atlassian/apps/<slug>` — Correct tabs/cards for Atlassian capabilities
 - [ ] `/zoom/apps` — Correct columns (no reviews, no pricing, no launched)
 - [ ] `/zoom/apps/<slug>` — Correct tabs/cards for Zoom capabilities
-- [ ] `/hubspot/apps` — Correct columns (reviews, pricing, no launched date)
+- [ ] `/hubspot/apps` — Correct columns (no reviews, pricing, launched date)
 - [ ] `/hubspot/apps/<slug>` — Correct tabs/cards for HubSpot capabilities
 - [ ] All platform previews still work with correct character limits
 - [ ] `/overview` — Cross-platform overview page shows all platforms

@@ -304,7 +304,9 @@ export class AppDetailsScraper {
                 : { name: "", url: "" }) as import("@appranks/shared").AppDeveloper,
               launched_date: pd.publishedDate
                 ? new Date(pd.publishedDate as string)
-                : null as Date | null,
+                : pd.launchedDate
+                  ? new Date(pd.launchedDate as string)
+                  : null as Date | null,
               demo_store_url: null as string | null,
               languages: (pd.languages as string[]) || [],
               integrations: [
@@ -341,7 +343,7 @@ export class AppDetailsScraper {
                   : null,
               _activeInstalls: this.platform === "wordpress"
                 ? (pd.activeInstalls as number) || null
-                : this.platform === "google_workspace"
+                : this.platform === "google_workspace" || this.platform === "hubspot"
                   ? (pd.installCount as number) || null
                   : this.platform === "atlassian"
                     ? (pd.totalInstalls as number) || null
