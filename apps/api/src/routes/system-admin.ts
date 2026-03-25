@@ -35,7 +35,7 @@ import {
   aiLogs,
   categoryParents,
 } from "@appranks/db";
-import { isPlatformId, PLATFORM_IDS } from "@appranks/shared";
+import { isPlatformId, PLATFORM_IDS, SCRAPER_SCHEDULES, getNextRunFromCron, getScheduleIntervalMs, findSchedule } from "@appranks/shared";
 import { generateAccessToken } from "./auth.js";
 import type { JwtPayload } from "../middleware/auth.js";
 
@@ -650,8 +650,6 @@ export const systemAdminRoutes: FastifyPluginAsync = async (app) => {
 
   // GET /api/system-admin/scraper/health
   app.get("/scraper/health", async () => {
-    const { SCRAPER_SCHEDULES, getNextRunFromCron, getScheduleIntervalMs, findSchedule } = await import("@appranks/shared");
-
     // 1. Latest run per (platform, scraperType) — completed or failed
     const latestRuns = await db.execute(sql`
       SELECT DISTINCT ON (platform, scraper_type)
