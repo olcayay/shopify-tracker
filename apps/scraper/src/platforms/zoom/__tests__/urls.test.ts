@@ -58,6 +58,20 @@ describe("zoomUrls", () => {
     });
   });
 
+  describe("apiFilterAll", () => {
+    it("builds filter-all API URL with defaults", () => {
+      expect(zoomUrls.apiFilterAll()).toBe(
+        "https://marketplace.zoom.us/api/v1/apps/filter?pageNum=1&pageSize=100",
+      );
+    });
+
+    it("builds filter-all API URL with custom page and pageSize", () => {
+      expect(zoomUrls.apiFilterAll(3, 50)).toBe(
+        "https://marketplace.zoom.us/api/v1/apps/filter?pageNum=3&pageSize=50",
+      );
+    });
+  });
+
   describe("apiSearch", () => {
     it("builds search API URL with defaults", () => {
       expect(zoomUrls.apiSearch("calendar")).toBe(

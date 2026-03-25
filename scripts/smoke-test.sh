@@ -103,7 +103,7 @@ PLATFORM_CHECKS=(
   "categories:contact-form app:contact-form-7 keyword:contact+form reviews:contact-form-7"
   "categories:business-tools app:able_poll--921058472860 keyword:project+management reviews:able_poll--921058472860"
   "categories:project-management app:com.onresolve.jira.groovy.groovyrunner keyword:time+tracking reviews:com.onresolve.jira.groovy.groovyrunner featured:"
-  "categories:crm keyword:calendar featured:"
+  "categories:crm app:VG_p3Bb_TwWe_bgZmPUaXw keyword:calendar featured:"
   "categories:desk app:crm--360-sms-for-zoho-crm keyword:inventory"
   "categories:ai-and-bots app:972305--slack keyword:automation reviews:972305--slack featured:"
   "categories:sales+--pages+3 app:gmail keyword:email+marketing reviews:gmail featured:"

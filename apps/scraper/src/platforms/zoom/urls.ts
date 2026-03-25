@@ -20,6 +20,10 @@ export const zoomUrls = {
   apiFilter: (category: string, pageNum = 1, pageSize = 100) =>
     `${API_BASE}/apps/filter?category=${encodeURIComponent(category)}&pageNum=${pageNum}&pageSize=${pageSize}`,
 
+  /** Filter ALL apps (no category) via API — returns every app with pagination */
+  apiFilterAll: (pageNum = 1, pageSize = 100) =>
+    `${API_BASE}/apps/filter?pageNum=${pageNum}&pageSize=${pageSize}`,
+
   /** Search apps via API */
   apiSearch: (keyword: string, pageNum = 1, pageSize = 100) =>
     `${API_BASE}/apps/search?q=${encodeURIComponent(keyword)}&pageNum=${pageNum}&pageSize=${pageSize}`,

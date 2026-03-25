@@ -73,27 +73,28 @@ export class ZoomModule implements PlatformModule {
   // --- Fetch ---
 
   async fetchAppPage(slug: string): Promise<string> {
-    // Individual app API requires auth. Search for the app by ID via filter.
-    // The app data is typically already collected during category/keyword scraping.
-    // As a fallback, search all categories for this app ID.
-    log.info("fetching app via search API (app detail API requires auth)", { slug });
-    const searchUrl = zoomUrls.apiSearch(slug, 1, 10);
-    const json = await this.httpClient.fetchPage(searchUrl, JSON_HEADERS);
-    const data = JSON.parse(json);
-    const apps = data.apps || [];
+    // Individual app API requires auth. The filter API without a category
+    // returns ALL apps with pagination — paginate until we find the target.
+    log.info("fetching app via filter API pagination (app detail API requires auth)", { slug });
 
-    // Try to find exact match by ID
-    const match = apps.find((a: any) => a.id === slug);
-    if (match) {
-      return JSON.stringify(match);
+    const maxPages = 35; // safety limit (~3500 apps at 100/page)
+    for (let page = 1; page <= maxPages; page++) {
+      const url = zoomUrls.apiFilterAll(page, 100);
+      const json = await this.httpClient.fetchPage(url, JSON_HEADERS);
+      const data = JSON.parse(json);
+      const apps: any[] = data.apps || [];
+
+      const match = apps.find((a: any) => a.id === slug);
+      if (match) {
+        log.info("found app via filter API", { slug, page });
+        return JSON.stringify(match);
+      }
+
+      // No more pages — stop early
+      if (apps.length < 100) break;
     }
 
-    // Return first result or empty object
-    if (apps.length > 0) {
-      return JSON.stringify(apps[0]);
-    }
-
-    throw new Error(`Zoom app not found: ${slug}`);
+    throw new Error(`Zoom app not found after paginating filter API: ${slug}`);
   }
 
   async fetchCategoryPage(slug: string, page?: number): Promise<string> {

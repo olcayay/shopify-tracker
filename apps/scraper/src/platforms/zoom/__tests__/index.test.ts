@@ -1,5 +1,6 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 import { ZoomModule } from "../index.js";
+import { HttpClient } from "../../../http-client.js";
 
 describe("ZoomModule", () => {
   const mod = new ZoomModule();
@@ -85,6 +86,55 @@ describe("ZoomModule", () => {
       expect(
         mod.extractSlugFromUrl("https://example.com/some-path/my-app"),
       ).toBe("my-app");
+    });
+  });
+
+  describe("fetchAppPage", () => {
+    function makePage(apps: { id: string; name: string }[]) {
+      return JSON.stringify({ apps, total: 200 });
+    }
+
+    it("finds app on first page", async () => {
+      const httpClient = new HttpClient();
+      vi.spyOn(httpClient, "fetchPage").mockResolvedValueOnce(
+        makePage([
+          { id: "abc", name: "App A" },
+          { id: "target-id", name: "Target App" },
+        ]),
+      );
+      const mod2 = new ZoomModule(httpClient);
+      const result = await mod2.fetchAppPage("target-id");
+      expect(JSON.parse(result)).toEqual({ id: "target-id", name: "Target App" });
+      expect(httpClient.fetchPage).toHaveBeenCalledTimes(1);
+    });
+
+    it("finds app on second page (pagination)", async () => {
+      const httpClient = new HttpClient();
+      const page1Apps = Array.from({ length: 100 }, (_, i) => ({
+        id: `app-${i}`,
+        name: `App ${i}`,
+      }));
+      vi.spyOn(httpClient, "fetchPage")
+        .mockResolvedValueOnce(makePage(page1Apps))
+        .mockResolvedValueOnce(
+          makePage([{ id: "deep-app", name: "Deep App" }]),
+        );
+      const mod2 = new ZoomModule(httpClient);
+      const result = await mod2.fetchAppPage("deep-app");
+      expect(JSON.parse(result)).toEqual({ id: "deep-app", name: "Deep App" });
+      expect(httpClient.fetchPage).toHaveBeenCalledTimes(2);
+    });
+
+    it("throws when app not found after all pages", async () => {
+      const httpClient = new HttpClient();
+      // Return a page with fewer than 100 apps → signals last page
+      vi.spyOn(httpClient, "fetchPage").mockResolvedValueOnce(
+        makePage([{ id: "other", name: "Other App" }]),
+      );
+      const mod2 = new ZoomModule(httpClient);
+      await expect(mod2.fetchAppPage("nonexistent")).rejects.toThrow(
+        "Zoom app not found after paginating filter API: nonexistent",
+      );
     });
   });
 
