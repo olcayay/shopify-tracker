@@ -15,8 +15,8 @@ describe("HubSpotModule", () => {
       expect(mod.capabilities.hasKeywordSearch).toBe(true);
     });
 
-    it("has reviews", () => {
-      expect(mod.capabilities.hasReviews).toBe(true);
+    it("does not have reviews (not in CHIRP API)", () => {
+      expect(mod.capabilities.hasReviews).toBe(false);
     });
 
     it("has featured sections", () => {
@@ -27,8 +27,8 @@ describe("HubSpotModule", () => {
       expect(mod.capabilities.hasPricing).toBe(true);
     });
 
-    it("does not have launched date", () => {
-      expect(mod.capabilities.hasLaunchedDate).toBe(false);
+    it("has launched date (from firstPublishedAt)", () => {
+      expect(mod.capabilities.hasLaunchedDate).toBe(true);
     });
 
     it("does not have ad tracking", () => {
@@ -96,11 +96,11 @@ describe("HubSpotModule", () => {
     it("extracts category slugs from platformData", () => {
       const slugs = mod.extractCategorySlugs({
         categories: [
-          { slug: "sales", name: "Sales" },
-          { slug: "marketing--email", name: "Email" },
+          { slug: "EMAIL", name: "Email" },
+          { slug: "MARKETING_AUTOMATION", name: "Marketing Automation" },
         ],
       });
-      expect(slugs).toEqual(["sales", "marketing--email"]);
+      expect(slugs).toEqual(["EMAIL", "MARKETING_AUTOMATION"]);
     });
 
     it("returns empty array when no categories", () => {
@@ -123,53 +123,59 @@ describe("HubSpotModule", () => {
     });
   });
 
-  describe("fetch methods require BrowserClient", () => {
-    it("fetchAppPage throws without BrowserClient", async () => {
+  describe("fetch methods require HttpClient", () => {
+    it("fetchAppPage throws without HttpClient", async () => {
       await expect(mod.fetchAppPage("mailchimp"))
-        .rejects.toThrow("BrowserClient required");
+        .rejects.toThrow("HttpClient required");
     });
 
-    it("fetchCategoryPage throws without BrowserClient", async () => {
+    it("fetchCategoryPage throws without HttpClient", async () => {
       await expect(mod.fetchCategoryPage("sales"))
-        .rejects.toThrow("BrowserClient required");
+        .rejects.toThrow("HttpClient required");
     });
 
-    it("fetchSearchPage throws without BrowserClient", async () => {
+    it("fetchSearchPage throws without HttpClient", async () => {
       await expect(mod.fetchSearchPage("email"))
-        .rejects.toThrow("BrowserClient required");
+        .rejects.toThrow("HttpClient required");
     });
 
-    it("fetchFeaturedSections throws without BrowserClient", async () => {
+    it("fetchFeaturedSections throws without HttpClient", async () => {
       await expect(mod.fetchFeaturedSections())
-        .rejects.toThrow("BrowserClient required");
+        .rejects.toThrow("HttpClient required");
+    });
+  });
+
+  describe("fetchReviewPage returns empty JSON", () => {
+    it("returns empty reviews JSON without any client", async () => {
+      const result = await mod.fetchReviewPage("any-slug");
+      expect(result).toBe(JSON.stringify({ reviews: [] }));
     });
   });
 
   describe("parse methods", () => {
     it("parseAppDetails delegates to parser", () => {
-      const html = `<html><body><h1>Test App</h1></body></html>`;
-      const result = mod.parseAppDetails(html, "test-app");
+      const json = JSON.stringify({});
+      const result = mod.parseAppDetails(json, "test-app");
       expect(result.slug).toBe("test-app");
-      expect(result.name).toBe("Test App");
+      expect(result.name).toBe("test-app");
     });
 
     it("parseCategoryPage delegates to parser", () => {
-      const html = `<html><body><h1>Sales</h1></body></html>`;
+      const json = JSON.stringify({ data: { total: 0, cards: [] } });
       const url = "https://ecosystem.hubspot.com/marketplace/apps/sales";
-      const result = mod.parseCategoryPage(html, url);
+      const result = mod.parseCategoryPage(json, url);
       expect(result.slug).toBe("sales");
     });
 
     it("parseSearchPage delegates to parser", () => {
-      const html = `<html><body></body></html>`;
-      const result = mod.parseSearchPage(html, "test", 1);
+      const json = JSON.stringify({ data: { total: 0, cards: [] } });
+      const result = mod.parseSearchPage(json, "test", 1);
       expect(result.keyword).toBe("test");
       expect(result.currentPage).toBe(1);
     });
 
     it("parseReviewPage delegates to parser", () => {
-      const html = `<html><body></body></html>`;
-      const result = mod.parseReviewPage(html, 1);
+      const result = mod.parseReviewPage("{}", 1);
       expect(result.reviews).toEqual([]);
       expect(result.hasNextPage).toBe(false);
     });
@@ -177,20 +183,20 @@ describe("HubSpotModule", () => {
 
   describe("parseCategoryPage slug extraction from URL", () => {
     it("extracts simple category slug", () => {
-      const html = `<html><body><h1>Sales</h1></body></html>`;
-      const result = mod.parseCategoryPage(html, "https://ecosystem.hubspot.com/marketplace/apps/sales");
+      const json = JSON.stringify({ data: { total: 0, cards: [] } });
+      const result = mod.parseCategoryPage(json, "https://ecosystem.hubspot.com/marketplace/apps/sales");
       expect(result.slug).toBe("sales");
     });
 
     it("converts nested path to compound slug", () => {
-      const html = `<html><body><h1>Email Marketing</h1></body></html>`;
-      const result = mod.parseCategoryPage(html, "https://ecosystem.hubspot.com/marketplace/apps/marketing/email");
+      const json = JSON.stringify({ data: { total: 0, cards: [] } });
+      const result = mod.parseCategoryPage(json, "https://ecosystem.hubspot.com/marketplace/apps/marketing/email");
       expect(result.slug).toBe("marketing--email");
     });
 
     it("strips trailing slash from category URL", () => {
-      const html = `<html><body><h1>Service</h1></body></html>`;
-      const result = mod.parseCategoryPage(html, "https://ecosystem.hubspot.com/marketplace/apps/service/");
+      const json = JSON.stringify({ data: { total: 0, cards: [] } });
+      const result = mod.parseCategoryPage(json, "https://ecosystem.hubspot.com/marketplace/apps/service/");
       expect(result.slug).toBe("service");
     });
   });

@@ -10,7 +10,7 @@ export const HUBSPOT_SEED_CATEGORIES = [
   "content",
 ] as const;
 
-/** Display names for HubSpot categories (slug → human-readable title). */
+/** Display names for HubSpot categories (slug -> human-readable title). */
 export const HUBSPOT_CATEGORY_NAMES: Record<string, string> = {
   sales: "Sales",
   marketing: "Marketing",
@@ -20,10 +20,13 @@ export const HUBSPOT_CATEGORY_NAMES: Record<string, string> = {
   content: "Content",
 };
 
+/** CHIRP API page size for search results. */
+export const HUBSPOT_PAGE_SIZE = 50;
+
 export const HUBSPOT_CONSTANTS: PlatformConstants = {
   seedCategories: [...HUBSPOT_SEED_CATEGORIES],
   maxCategoryDepth: 1, // Hierarchical: 2 levels
-  defaultPagesPerCategory: 15, // 24 apps/page, up to ~360 apps per category
+  defaultPagesPerCategory: 44, // 50 apps/page via CHIRP API, ~2200 total apps
   trackedFields: [
     "shortDescription",
     "longDescription",
@@ -33,11 +36,11 @@ export const HUBSPOT_CONSTANTS: PlatformConstants = {
     "authorUrl",
     "version",
   ],
-  rateLimit: { minDelayMs: 2000, maxDelayMs: 5000 },
+  rateLimit: { minDelayMs: 1000, maxDelayMs: 3000 },
 };
 
 export const HUBSPOT_SCORING: PlatformScoringConfig = {
-  pageSize: 24,
+  pageSize: HUBSPOT_PAGE_SIZE,
   pageDecay: 0.85,
   similarityWeights: {
     category: 0.35,

@@ -61,7 +61,7 @@ export function createProcessJob(db: ReturnType<typeof createDb>, httpClient: Ht
     if (platform === "salesforce" && type === "app_details") {
       browserClient = new BrowserClient();
     }
-    if (platform === "canva" || platform === "google_workspace" || platform === "zoho" || platform === "zendesk" || platform === "hubspot") {
+    if (platform === "canva" || platform === "google_workspace" || platform === "zoho" || platform === "zendesk") {
       browserClient = new BrowserClient();
     }
 

@@ -1,77 +1,72 @@
-import * as cheerio from "cheerio";
 import { createLogger } from "@appranks/shared";
 import type { NormalizedFeaturedSection } from "../../platform-module.js";
 
 const log = createLogger("hubspot:featured-parser");
 
 /**
- * Parse featured sections from the HubSpot App Marketplace homepage.
+ * Parse featured sections from CHIRP API responses.
  *
- * The homepage displays curated collections/featured sections.
- * URL: /marketplace or /marketplace/featured/{collectionSlug}
+ * Input: JSON string with `{ collections, suggestions }` envelope,
+ * where `collections` comes from CollectionsPublicRpc/getCollections
+ * and `suggestions` comes from PersonalizationPublicRpc/getSuggestionSections.
  */
-export function parseHubSpotFeaturedSections(html: string): NormalizedFeaturedSection[] {
-  const $ = cheerio.load(html);
+export function parseHubSpotFeaturedSections(json: string): NormalizedFeaturedSection[] {
+  let data: any;
+  try {
+    data = JSON.parse(json);
+  } catch {
+    log.warn("failed to parse featured JSON");
+    return [];
+  }
+
   const sections: NormalizedFeaturedSection[] = [];
-  const appPattern = /\/marketplace\/listing\/([^/?#]+)/;
 
-  // Look for section headings followed by app cards
-  $("h2, h3, [class*='section-title'], [class*='SectionTitle'], [class*='collection-title'], [class*='CollectionTitle']").each((_i, el) => {
-    const heading = $(el);
-    const sectionTitle = heading.text().trim();
-    if (!sectionTitle) return;
+  // Parse collections
+  const collections: any[] = data?.collections ?? [];
+  for (const col of collections) {
+    const items: any[] = col.previewItems || [];
+    if (!items.length) continue;
 
-    // Skip generic/navigation headings
-    const lower = sectionTitle.toLowerCase();
-    if (lower.includes("category") || lower.includes("filter") || lower.includes("browse")) return;
-
-    // Find sibling/nearby container with app cards
-    const container = heading.next("[class*='grid'], [class*='list'], [class*='carousel'], ul, [class*='Grid'], [class*='List']").first()
-      || heading.parent().find("[class*='grid'], [class*='list'], [class*='carousel'], ul").first();
-
-    if (!container.length) return;
-
-    const sectionApps: NormalizedFeaturedSection["apps"] = [];
-    const seen = new Set<string>();
-
-    container.find("a[href*='/marketplace/listing/']").each((_j, linkEl) => {
-      const href = $(linkEl).attr("href") || "";
-      const match = href.match(appPattern);
-      if (!match) return;
-
-      const appSlug = match[1];
-      if (seen.has(appSlug)) return;
-      seen.add(appSlug);
-
-      const card = $(linkEl).closest("[class*='card'], [class*='Card'], li, article").first();
-      const appContainer = card.length ? card : $(linkEl);
-
-      const name = appContainer.find("h3, h4, [class*='title'], [class*='name'], [class*='Title'], [class*='Name']").first().text().trim()
-        || appSlug.replace(/-/g, " ");
-
-      const iconUrl = appContainer.find("img").first().attr("src") || "";
-
-      sectionApps.push({
-        slug: appSlug,
-        name,
-        iconUrl,
-        position: sectionApps.length + 1,
-      });
+    const sectionHandle = col.slug || String(col.id);
+    sections.push({
+      sectionHandle,
+      sectionTitle: col.title || col.name || sectionHandle,
+      surface: "collection",
+      surfaceDetail: `hubspot-collection-${sectionHandle}`,
+      apps: items.map((item: any, idx: number) => ({
+        slug: item.slug || "",
+        name: item.name || item.slug || "",
+        iconUrl: item.iconUrl || "",
+        position: idx + 1,
+      })),
     });
+  }
 
-    if (sectionApps.length > 0) {
-      const sectionHandle = sectionTitle.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
-      sections.push({
-        sectionHandle,
-        sectionTitle,
-        surface: "homepage",
-        surfaceDetail: "hubspot-marketplace-homepage",
-        apps: sectionApps,
-      });
-    }
-  });
+  // Parse suggestion sections
+  const suggestions: any[] = data?.suggestions ?? [];
+  for (const sec of suggestions) {
+    const cards: any[] = sec.cards || [];
+    if (!cards.length) continue;
 
-  log.info("parsed featured sections", { sectionsFound: sections.length });
+    const sectionHandle = (sec.title || "")
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-|-$/g, "");
+    sections.push({
+      sectionHandle,
+      sectionTitle: sec.title || sectionHandle,
+      surface: "homepage",
+      surfaceDetail: "hubspot-marketplace-homepage",
+      apps: cards.map((card: any, idx: number) => ({
+        slug: card.slug || "",
+        name: card.listingName || card.slug || "",
+        iconUrl: card.iconUrl || "",
+        position: idx + 1,
+      })),
+    });
+  }
+
+  log.info("parsed featured sections from CHIRP", { sectionsFound: sections.length });
 
   return sections;
 }

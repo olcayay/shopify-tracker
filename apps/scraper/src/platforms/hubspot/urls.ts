@@ -1,4 +1,5 @@
 const BASE_URL = "https://ecosystem.hubspot.com/marketplace";
+const CHIRP_BASE = "https://app.hubspot.com/api/chirp-frontend-external/v1/gateway";
 
 export const hubspotUrls = {
   base: BASE_URL,
@@ -25,4 +26,34 @@ export const hubspotUrls = {
 
   /** Featured collection: /marketplace/featured/{collectionSlug} */
   featured: (collectionSlug: string) => `${BASE_URL}/featured/${collectionSlug}`,
+
+  // --- CHIRP API endpoints ---
+  chirp: {
+    /** List all apps (paginated by offset/limit, sorted by install count) */
+    search: () =>
+      `${CHIRP_BASE}/com.hubspot.marketplace.personalization.rpc.PersonalizationPublicRpc/search`,
+
+    /** Full app listing details by slug */
+    appDetail: () =>
+      `${CHIRP_BASE}/com.hubspot.marketplace.listing.details.rpc.MarketplaceListingDetailsRpc/getListingDetailsV3`,
+
+    /** Filter config with all categories */
+    filterConfig: () =>
+      `${CHIRP_BASE}/com.hubspot.marketplace.storefront.service.rpc.MarketplaceStorefrontPublicRpc/getSearchFilterConfig`,
+
+    /** Featured collections (curated) */
+    collections: () =>
+      `${CHIRP_BASE}/com.hubspot.marketplace.quality.rpc.CollectionsPublicRpc/getCollections`,
+
+    /** Homepage suggestion sections */
+    suggestions: () =>
+      `${CHIRP_BASE}/com.hubspot.marketplace.personalization.rpc.PersonalizationPublicRpc/getSuggestionSections`,
+  },
 } as const;
+
+/** Standard headers for CHIRP API requests. */
+export const CHIRP_HEADERS: Record<string, string> = {
+  "Content-Type": "application/json",
+  Referer: "https://ecosystem.hubspot.com/",
+  Accept: "application/json",
+};

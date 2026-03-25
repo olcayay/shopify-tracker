@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { hubspotUrls } from "../urls.js";
+import { hubspotUrls, CHIRP_HEADERS } from "../urls.js";
 
 describe("hubspotUrls", () => {
   describe("base", () => {
@@ -68,5 +68,59 @@ describe("hubspotUrls", () => {
       expect(hubspotUrls.featured("top-rated"))
         .toBe("https://ecosystem.hubspot.com/marketplace/featured/top-rated");
     });
+  });
+
+  describe("chirp", () => {
+    it("builds search API URL", () => {
+      expect(hubspotUrls.chirp.search())
+        .toContain("PersonalizationPublicRpc/search");
+    });
+
+    it("builds appDetail API URL", () => {
+      expect(hubspotUrls.chirp.appDetail())
+        .toContain("MarketplaceListingDetailsRpc/getListingDetailsV3");
+    });
+
+    it("builds filterConfig API URL", () => {
+      expect(hubspotUrls.chirp.filterConfig())
+        .toContain("MarketplaceStorefrontPublicRpc/getSearchFilterConfig");
+    });
+
+    it("builds collections API URL", () => {
+      expect(hubspotUrls.chirp.collections())
+        .toContain("CollectionsPublicRpc/getCollections");
+    });
+
+    it("builds suggestions API URL", () => {
+      expect(hubspotUrls.chirp.suggestions())
+        .toContain("PersonalizationPublicRpc/getSuggestionSections");
+    });
+
+    it("all CHIRP URLs use app.hubspot.com gateway", () => {
+      const urls = [
+        hubspotUrls.chirp.search(),
+        hubspotUrls.chirp.appDetail(),
+        hubspotUrls.chirp.filterConfig(),
+        hubspotUrls.chirp.collections(),
+        hubspotUrls.chirp.suggestions(),
+      ];
+      for (const url of urls) {
+        expect(url).toMatch(/^https:\/\/app\.hubspot\.com\/api\/chirp-frontend-external/);
+      }
+    });
+  });
+});
+
+describe("CHIRP_HEADERS", () => {
+  it("includes Content-Type", () => {
+    expect(CHIRP_HEADERS["Content-Type"]).toBe("application/json");
+  });
+
+  it("includes Referer", () => {
+    expect(CHIRP_HEADERS.Referer).toBe("https://ecosystem.hubspot.com/");
+  });
+
+  it("includes Accept", () => {
+    expect(CHIRP_HEADERS.Accept).toBe("application/json");
   });
 });

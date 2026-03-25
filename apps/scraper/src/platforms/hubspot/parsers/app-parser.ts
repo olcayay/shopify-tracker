@@ -1,169 +1,172 @@
-import * as cheerio from "cheerio";
 import { createLogger } from "@appranks/shared";
 import type { NormalizedAppDetails } from "../../platform-module.js";
 
 const log = createLogger("hubspot:app-parser");
 
 /**
- * Parse a HubSpot App Marketplace app detail page (rendered HTML via BrowserClient).
- *
- * HubSpot is a pure SPA — no SSR, no embedded JSON — so we parse the fully-rendered
- * React DOM using CSS selectors. The page is rendered by Playwright.
- *
- * URL format: /marketplace/listing/{slug}
+ * Recursively unwrap CHIRP field values.
+ * CHIRP wraps values as: { value: <actual>, __typename: "com.hubspot.chirp.ext.models.*FieldValue" }
  */
-export function parseHubSpotAppDetails(html: string, slug: string): NormalizedAppDetails {
-  const $ = cheerio.load(html);
+export function unwrapChirp(v: unknown): unknown {
+  if (v === null || v === undefined) return v;
+  if (Array.isArray(v)) return v.map(unwrapChirp);
+  if (typeof v === "object") {
+    const obj = v as Record<string, unknown>;
+    if ("__typename" in obj && "value" in obj) {
+      return unwrapChirp(obj.value);
+    }
+    const result: Record<string, unknown> = {};
+    for (const [key, val] of Object.entries(obj)) {
+      if (key === "__typename") continue;
+      result[key] = unwrapChirp(val);
+    }
+    return result;
+  }
+  return v;
+}
 
-  // Try JSON-LD structured data first
-  const jsonLd = extractJsonLd($);
-  if (jsonLd) {
-    log.info("parsed app from JSON-LD", { slug });
-    return buildFromJsonLd(jsonLd, $, slug);
+/**
+ * Parse a HubSpot app detail from CHIRP API JSON response.
+ * Input: JSON string from MarketplaceListingDetailsRpc/getListingDetailsV3
+ */
+export function parseHubSpotAppDetails(json: string, slug: string): NormalizedAppDetails {
+  let data: Record<string, unknown>;
+  try {
+    data = JSON.parse(json);
+  } catch {
+    log.warn("failed to parse app detail JSON, returning minimal", { slug });
+    return minimalAppDetails(slug);
   }
 
-  // Fallback: DOM parsing
-  log.info("parsing app from DOM selectors", { slug });
-  return parseFromDom($, slug);
-}
-
-function extractJsonLd($: cheerio.CheerioAPI): any {
-  let result: any = null;
-  $('script[type="application/ld+json"]').each((_i, el) => {
-    if (result) return;
-    try {
-      const data = JSON.parse($(el).html() || "");
-      if (data["@type"] === "SoftwareApplication" || data["@type"] === "WebApplication") {
-        result = data;
-      }
-    } catch { /* ignore */ }
-  });
-  return result;
-}
-
-function buildFromJsonLd(data: any, $: cheerio.CheerioAPI, slug: string): NormalizedAppDetails {
-  const rating = data.aggregateRating;
-  return {
-    name: data.name || slug,
-    slug,
-    averageRating: rating?.ratingValue ? Number(rating.ratingValue) : null,
-    ratingCount: rating?.ratingCount ? Number(rating.ratingCount) : null,
-    pricingHint: extractPricing($),
-    iconUrl: data.image || extractIconUrl($),
-    developer: data.author ? {
-      name: typeof data.author === "string" ? data.author : data.author.name || "",
-      url: typeof data.author === "object" ? data.author.url : undefined,
-    } : extractDeveloper($),
-    badges: [],
-    platformData: {
-      shortDescription: data.description || extractShortDescription($),
-      longDescription: extractLongDescription($),
-      pricing: extractPricing($),
-      version: data.softwareVersion || null,
-      categories: extractCategories($),
-      source: "json-ld",
-    },
-  };
-}
-
-function parseFromDom($: cheerio.CheerioAPI, slug: string): NormalizedAppDetails {
-  // App name — typically in an h1
-  const name = $("h1").first().text().trim() || slug;
-
-  // Rating
-  const ratingText = $(
-    "[class*='rating'] [class*='average'], [class*='stars'] [class*='value'], " +
-    "[data-rating], [class*='Rating']"
-  ).first().text().trim()
-    || $("[class*='rating']").first().attr("data-rating");
-  const avgRating = ratingText ? parseFloat(ratingText) : null;
-
-  // Rating count
-  let ratingCount: number | null = null;
-  const reviewCountText = $(
-    "[class*='review-count'], [class*='rating-count'], [class*='reviewCount'], " +
-    "[class*='ReviewCount'], [class*='reviews']"
-  ).first().text().trim();
-  if (reviewCountText) {
-    const m = reviewCountText.match(/(\d[\d,]*)/);
-    if (m) ratingCount = parseInt(m[1].replace(/,/g, ""), 10);
+  const rawListing =
+    (data as any)?.data?.listing?.value ??
+    (data as any)?.data?.listing ??
+    data;
+  if (!rawListing || typeof rawListing !== "object") {
+    log.warn("no listing found in response", { slug });
+    return minimalAppDetails(slug);
   }
+
+  const listing = unwrapChirp(rawListing) as Record<string, any>;
+
+  const name = listing.name || listing.listingName || slug;
+  const tagline = listing.tagline || "";
+  const overview = listing.overview || "";
+  const companyName = listing.companyName || "";
+  const companyUrl = listing.companyUrl || "";
+  const installCount = listing.installCount ? Number(listing.installCount) : null;
+
+  // Icon URL — after unwrap, listingIcon is { value: "url", altText: "..." } or a string
+  const iconRaw = listing.listingIcon;
+  const iconUrl =
+    typeof iconRaw === "string"
+      ? iconRaw
+      : iconRaw?.value || listing.iconUrl || null;
+
+  // Categories
+  const rawCategories: unknown[] = Array.isArray(listing.category) ? listing.category : [];
+  const categories = rawCategories
+    .filter((c): c is string => typeof c === "string" && c.length > 0)
+    .map((c) => ({ slug: c, name: formatCategoryName(c) }));
+
+  // Pricing
+  const pricingPlans: any[] = Array.isArray(listing.pricingPlans) ? listing.pricingPlans : [];
+  const pricingHint = buildPricingHint(pricingPlans);
+
+  // Published dates
+  const firstPublishedAt = listing.firstPublishedAt ? Number(listing.firstPublishedAt) : null;
+  const launchedDate = firstPublishedAt
+    ? new Date(firstPublishedAt).toISOString().split("T")[0]
+    : null;
+
+  log.info("parsed app from CHIRP API", { slug, name });
 
   return {
     name,
     slug,
-    averageRating: avgRating && !isNaN(avgRating) ? avgRating : null,
-    ratingCount,
-    pricingHint: extractPricing($),
-    iconUrl: extractIconUrl($),
-    developer: extractDeveloper($),
-    badges: [],
+    averageRating: null, // Not available in CHIRP API
+    ratingCount: null,
+    pricingHint,
+    iconUrl,
+    developer: companyName ? { name: companyName, url: companyUrl || undefined } : null,
+    badges: buildBadges(listing),
     platformData: {
-      shortDescription: extractShortDescription($),
-      longDescription: extractLongDescription($),
-      pricing: extractPricing($),
-      categories: extractCategories($),
-      source: "dom-fallback",
+      shortDescription: tagline,
+      longDescription: typeof overview === "string" ? stripHtml(overview) : null,
+      pricing: pricingHint,
+      pricingPlans: pricingPlans.map(formatPricingPlan),
+      categories,
+      installCount,
+      launchedDate,
+      productType: listing.productType || null,
+      connectionType: listing.connectionType || null,
+      certified: !!listing.certifiedAt,
+      builtByHubSpot: listing.builtByHubSpot || false,
+      source: "chirp-api",
     },
   };
 }
 
-// --- Helper extractors ---
-
-function extractIconUrl($: cheerio.CheerioAPI): string | null {
-  return $(
-    "[class*='app-icon'] img, [class*='app-logo'] img, " +
-    "[class*='AppIcon'] img, [class*='listing-icon'] img, " +
-    "[class*='ListingIcon'] img"
-  ).first().attr("src")
-    || $("img[alt*='logo']").first().attr("src")
-    || null;
+function minimalAppDetails(slug: string): NormalizedAppDetails {
+  return {
+    name: slug,
+    slug,
+    averageRating: null,
+    ratingCount: null,
+    pricingHint: null,
+    iconUrl: null,
+    developer: null,
+    badges: [],
+    platformData: { source: "chirp-api-empty" },
+  };
 }
 
-function extractDeveloper($: cheerio.CheerioAPI): { name: string; url?: string } | null {
-  const devEl = $(
-    "[class*='developer'], [class*='author'], [class*='partner'], " +
-    "[class*='Developer'], [class*='Author'], [class*='Partner']"
-  ).first();
-  const name = devEl.find("a").first().text().trim() || devEl.text().trim();
-  if (!name) return null;
-  const url = devEl.find("a").first().attr("href") || undefined;
-  return { name, url };
+function formatCategoryName(slug: string): string {
+  return slug
+    .replace(/_/g, " ")
+    .toLowerCase()
+    .replace(/\b\w/g, (c) => c.toUpperCase());
 }
 
-function extractPricing($: cheerio.CheerioAPI): string | null {
-  return $(
-    "[class*='price'], [class*='pricing'], [class*='Price'], [class*='Pricing']"
-  ).first().text().trim() || null;
+function buildPricingHint(plans: any[]): string | null {
+  if (!plans.length) return null;
+
+  const freePlan = plans.find(
+    (p) => p.pricingModel?.includes?.("FREE") || p.pricingName?.toLowerCase?.() === "free",
+  );
+  if (freePlan) return "Free plan available";
+
+  const cheapest = plans.reduce((min: any, p: any) => {
+    const price = p.pricingMonthlyCenticents || Infinity;
+    return price < (min?.pricingMonthlyCenticents || Infinity) ? p : min;
+  }, null);
+
+  if (cheapest?.pricingMonthlyCenticents) {
+    const dollars = cheapest.pricingMonthlyCenticents / 10000;
+    return `From $${dollars}/mo`;
+  }
+
+  return plans[0]?.pricingName || null;
 }
 
-function extractShortDescription($: cheerio.CheerioAPI): string | null {
-  return $(
-    "[class*='subtitle'], [class*='tagline'], [class*='short-description'], " +
-    "[class*='ShortDescription'], [class*='Tagline']"
-  ).first().text().trim() || null;
+function formatPricingPlan(plan: any): Record<string, unknown> {
+  return {
+    name: plan.pricingName || null,
+    model: plan.pricingModel || [],
+    monthlyPrice: plan.pricingMonthlyCenticents
+      ? plan.pricingMonthlyCenticents / 10000
+      : null,
+    features: plan.pricingFeatures || [],
+  };
 }
 
-function extractLongDescription($: cheerio.CheerioAPI): string | null {
-  return $(
-    "[class*='description'], [class*='long-description'], " +
-    "[class*='LongDescription'], [class*='app-details'], [class*='AppDetails']"
-  ).first().text().trim() || null;
+function buildBadges(listing: Record<string, any>): string[] {
+  const badges: string[] = [];
+  if (listing.certifiedAt) badges.push("Certified");
+  if (listing.builtByHubSpot) badges.push("Built by HubSpot");
+  return badges;
 }
 
-function extractCategories($: cheerio.CheerioAPI): Array<{ slug: string; name?: string }> {
-  const cats: Array<{ slug: string; name?: string }> = [];
-  // Look for category links matching HubSpot's URL pattern
-  $("a[href*='/marketplace/apps/']").each((_i, el) => {
-    const href = $(el).attr("href") || "";
-    const m = href.match(/\/marketplace\/apps\/([a-z0-9-]+(?:\/[a-z0-9-]+)?)/);
-    if (m) {
-      const slug = m[1].replace("/", "--");
-      const name = $(el).text().trim() || undefined;
-      if (slug && !slug.includes("?")) {
-        cats.push({ slug, name });
-      }
-    }
-  });
-  return cats;
+function stripHtml(html: string): string {
+  return html.replace(/<[^>]*>/g, "").replace(/\s+/g, " ").trim();
 }

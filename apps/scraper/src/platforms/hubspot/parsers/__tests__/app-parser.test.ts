@@ -1,230 +1,217 @@
 import { describe, it, expect } from "vitest";
-import { parseHubSpotAppDetails } from "../app-parser.js";
-import { makeJsonLdAppHtml, makeDomAppHtml } from "./fixtures.js";
+import { parseHubSpotAppDetails, unwrapChirp } from "../app-parser.js";
+import { makeChirpAppDetailResponse } from "./fixtures.js";
 
-// ---------------------------------------------------------------------------
-// JSON-LD parsing
-// ---------------------------------------------------------------------------
-describe("parseHubSpotAppDetails — JSON-LD", () => {
-  it("parses basic fields from JSON-LD", () => {
-    const html = makeJsonLdAppHtml();
-    const result = parseHubSpotAppDetails(html, "mailchimp");
-
-    expect(result.slug).toBe("mailchimp");
-    expect(result.name).toBe("Mailchimp");
-    expect(result.averageRating).toBe(4.3);
-    expect(result.ratingCount).toBe(187);
-    expect(result.iconUrl).toBe("https://cdn.hubspot.com/mailchimp-icon.png");
-    expect(result.badges).toEqual([]);
-    expect(result.platformData.source).toBe("json-ld");
+describe("unwrapChirp", () => {
+  it("unwraps string field value", () => {
+    const input = { value: "hello", __typename: "com.hubspot.chirp.ext.models.StringFieldValue" };
+    expect(unwrapChirp(input)).toBe("hello");
   });
 
-  it("parses author info from JSON-LD object", () => {
-    const html = makeJsonLdAppHtml({
-      author: { name: "Acme Corp", url: "https://acme.com" },
-    });
-    const result = parseHubSpotAppDetails(html, "acme-app");
-
-    expect(result.developer).toEqual({ name: "Acme Corp", url: "https://acme.com" });
+  it("unwraps int field value", () => {
+    const input = { value: 42, __typename: "com.hubspot.chirp.ext.models.IntFieldValue" };
+    expect(unwrapChirp(input)).toBe(42);
   });
 
-  it("parses author from string value", () => {
-    const html = makeJsonLdAppHtml({ author: "Simple Author" });
-    const result = parseHubSpotAppDetails(html, "simple-app");
-
-    expect(result.developer).toEqual({ name: "Simple Author", url: undefined });
+  it("unwraps nested map field value", () => {
+    const input = {
+      value: {
+        name: { value: "Test", __typename: "com.hubspot.chirp.ext.models.StringFieldValue" },
+        count: { value: 5, __typename: "com.hubspot.chirp.ext.models.IntFieldValue" },
+      },
+      __typename: "com.hubspot.chirp.ext.models.MapFieldValue",
+    };
+    expect(unwrapChirp(input)).toEqual({ name: "Test", count: 5 });
   });
 
-  it("parses softwareVersion from JSON-LD", () => {
-    const html = makeJsonLdAppHtml({ softwareVersion: "3.1.0" });
-    const result = parseHubSpotAppDetails(html, "versioned-app");
-
-    expect(result.platformData.version).toBe("3.1.0");
+  it("unwraps list field value", () => {
+    const input = {
+      value: [
+        { value: "a", __typename: "com.hubspot.chirp.ext.models.StringFieldValue" },
+        { value: "b", __typename: "com.hubspot.chirp.ext.models.StringFieldValue" },
+      ],
+      __typename: "com.hubspot.chirp.ext.models.ListFieldValue",
+    };
+    expect(unwrapChirp(input)).toEqual(["a", "b"]);
   });
 
-  it("handles missing aggregateRating", () => {
-    const html = makeJsonLdAppHtml({ aggregateRating: null });
-    const result = parseHubSpotAppDetails(html, "no-rating-app");
-
-    expect(result.averageRating).toBeNull();
-    expect(result.ratingCount).toBeNull();
+  it("passes through primitives", () => {
+    expect(unwrapChirp("hello")).toBe("hello");
+    expect(unwrapChirp(42)).toBe(42);
+    expect(unwrapChirp(null)).toBe(null);
+    expect(unwrapChirp(undefined)).toBe(undefined);
+    expect(unwrapChirp(true)).toBe(true);
   });
 
-  it("extracts pricing from DOM even with JSON-LD", () => {
-    const html = makeJsonLdAppHtml();
-    const result = parseHubSpotAppDetails(html, "mailchimp");
-
-    expect(result.pricingHint).toBe("Free plan available");
-    expect(result.platformData.pricing).toBe("Free plan available");
-  });
-
-  it("extracts categories from page links", () => {
-    const html = makeJsonLdAppHtml();
-    const result = parseHubSpotAppDetails(html, "mailchimp");
-
-    const cats = result.platformData.categories as Array<{ slug: string; name?: string }>;
-    expect(cats).toHaveLength(2);
-    expect(cats[0].slug).toBe("marketing");
-    expect(cats[0].name).toBe("Marketing");
-    expect(cats[1].slug).toBe("marketing--email");
-    expect(cats[1].name).toBe("Email Marketing");
-  });
-
-  it("ignores non-SoftwareApplication JSON-LD types", () => {
-    const html = makeJsonLdAppHtml({ "@type": "Organization" });
-    const result = parseHubSpotAppDetails(html, "org-type-app");
-
-    // Should fall back to DOM parsing
-    expect(result.platformData.source).toBe("dom-fallback");
-  });
-
-  it("uses slug as fallback name when JSON-LD name is empty", () => {
-    const html = makeJsonLdAppHtml({ name: "" });
-    const result = parseHubSpotAppDetails(html, "fallback-slug");
-
-    // JSON-LD with empty name uses slug
-    expect(result.name).toBe("fallback-slug");
-  });
-
-  it("accepts WebApplication @type", () => {
-    const html = makeJsonLdAppHtml({ "@type": "WebApplication" });
-    const result = parseHubSpotAppDetails(html, "web-app");
-
-    expect(result.platformData.source).toBe("json-ld");
-    expect(result.name).toBe("Mailchimp");
+  it("strips __typename from plain objects", () => {
+    const input = { name: "test", __typename: "SomeType" };
+    expect(unwrapChirp(input)).toEqual({ name: "test" });
   });
 });
 
-// ---------------------------------------------------------------------------
-// DOM fallback parsing
-// ---------------------------------------------------------------------------
-describe("parseHubSpotAppDetails — DOM fallback", () => {
-  it("parses app name from h1", () => {
-    const html = makeDomAppHtml({ name: "My Cool Extension" });
-    const result = parseHubSpotAppDetails(html, "my-cool-extension");
-
-    expect(result.name).toBe("My Cool Extension");
-    expect(result.slug).toBe("my-cool-extension");
-    expect(result.platformData.source).toBe("dom-fallback");
+describe("parseHubSpotAppDetails", () => {
+  it("parses app name from CHIRP response", () => {
+    const json = makeChirpAppDetailResponse({ name: "Slack" });
+    const result = parseHubSpotAppDetails(json, "slack");
+    expect(result.name).toBe("Slack");
   });
 
-  it("parses rating from DOM selectors", () => {
-    const html = makeDomAppHtml({ ratingValue: "4.7", ratingCount: "1,234" });
-    const result = parseHubSpotAppDetails(html, "rated-app");
-
-    expect(result.averageRating).toBe(4.7);
-    expect(result.ratingCount).toBe(1234);
-  });
-
-  it("returns null rating when no rating elements present", () => {
-    const html = makeDomAppHtml({ ratingValue: "", ratingCount: "" });
-    const result = parseHubSpotAppDetails(html, "no-rating");
-
-    expect(result.averageRating).toBeNull();
-    expect(result.ratingCount).toBeNull();
-  });
-
-  it("parses icon URL from app-icon class", () => {
-    const html = makeDomAppHtml({ iconUrl: "https://example.com/icon.png" });
-    const result = parseHubSpotAppDetails(html, "icon-app");
-
-    expect(result.iconUrl).toBe("https://example.com/icon.png");
+  it("parses slug pass-through", () => {
+    const json = makeChirpAppDetailResponse();
+    const result = parseHubSpotAppDetails(json, "my-app");
+    expect(result.slug).toBe("my-app");
   });
 
   it("parses developer info", () => {
-    const html = makeDomAppHtml({ developerName: "DevCorp", developerUrl: "https://devcorp.com" });
-    const result = parseHubSpotAppDetails(html, "dev-app");
-
-    expect(result.developer).toEqual({ name: "DevCorp", url: "https://devcorp.com" });
+    const json = makeChirpAppDetailResponse({ companyName: "Acme Corp", companyUrl: "https://acme.com" });
+    const result = parseHubSpotAppDetails(json, "acme-app");
+    expect(result.developer).toEqual({ name: "Acme Corp", url: "https://acme.com" });
   });
 
-  it("parses short description from tagline class", () => {
-    const html = makeDomAppHtml({ shortDescription: "Quick CRM sync" });
-    const result = parseHubSpotAppDetails(html, "tagline-app");
+  it("parses icon URL from listingIcon", () => {
+    const json = makeChirpAppDetailResponse({ iconUrl: "https://example.com/icon.png" });
+    const result = parseHubSpotAppDetails(json, "test-app");
+    expect(result.iconUrl).toBe("https://example.com/icon.png");
+  });
 
+  it("parses categories", () => {
+    const json = makeChirpAppDetailResponse({ category: ["EMAIL", "MARKETING_AUTOMATION"] });
+    const result = parseHubSpotAppDetails(json, "test-app");
+    const cats = result.platformData.categories as Array<{ slug: string; name: string }>;
+    expect(cats).toHaveLength(2);
+    expect(cats[0].slug).toBe("EMAIL");
+    expect(cats[1].slug).toBe("MARKETING_AUTOMATION");
+  });
+
+  it("formats category names from slugs", () => {
+    const json = makeChirpAppDetailResponse({ category: ["SALES_ENABLEMENT"] });
+    const result = parseHubSpotAppDetails(json, "test-app");
+    const cats = result.platformData.categories as Array<{ slug: string; name: string }>;
+    expect(cats[0].name).toBe("Sales Enablement");
+  });
+
+  it("parses pricing hint with free plan", () => {
+    const json = makeChirpAppDetailResponse({
+      pricingPlans: [{ pricingName: "Free", pricingModel: ["FREE"] }],
+    });
+    const result = parseHubSpotAppDetails(json, "test-app");
+    expect(result.pricingHint).toBe("Free plan available");
+  });
+
+  it("parses pricing hint with monthly price", () => {
+    const json = makeChirpAppDetailResponse({
+      pricingPlans: [
+        { pricingName: "Pro", pricingModel: ["MONTHLY"], pricingMonthlyCenticents: 200000 },
+      ],
+    });
+    const result = parseHubSpotAppDetails(json, "test-app");
+    expect(result.pricingHint).toBe("From $20/mo");
+  });
+
+  it("returns null pricing hint when no plans", () => {
+    const json = makeChirpAppDetailResponse({ pricingPlans: [] });
+    const result = parseHubSpotAppDetails(json, "test-app");
+    expect(result.pricingHint).toBeNull();
+  });
+
+  it("parses install count in platformData", () => {
+    const json = makeChirpAppDetailResponse({ installCount: 50000 });
+    const result = parseHubSpotAppDetails(json, "test-app");
+    expect(result.platformData.installCount).toBe(50000);
+  });
+
+  it("parses launched date from firstPublishedAt", () => {
+    const json = makeChirpAppDetailResponse({ firstPublishedAt: 1473676354857 });
+    const result = parseHubSpotAppDetails(json, "test-app");
+    expect(result.platformData.launchedDate).toBe("2016-09-12");
+  });
+
+  it("returns null launched date when not present", () => {
+    const json = makeChirpAppDetailResponse({ firstPublishedAt: null });
+    const result = parseHubSpotAppDetails(json, "test-app");
+    expect(result.platformData.launchedDate).toBeNull();
+  });
+
+  it("parses Certified badge", () => {
+    const json = makeChirpAppDetailResponse({ certifiedAt: 1713539903755 });
+    const result = parseHubSpotAppDetails(json, "test-app");
+    expect(result.badges).toContain("Certified");
+  });
+
+  it("parses Built by HubSpot badge", () => {
+    const json = makeChirpAppDetailResponse({ builtByHubSpot: true });
+    const result = parseHubSpotAppDetails(json, "test-app");
+    expect(result.badges).toContain("Built by HubSpot");
+  });
+
+  it("returns empty badges when not certified or HubSpot-built", () => {
+    const json = makeChirpAppDetailResponse({ certifiedAt: null, builtByHubSpot: false });
+    const result = parseHubSpotAppDetails(json, "test-app");
+    expect(result.badges).toEqual([]);
+  });
+
+  it("strips HTML from overview for longDescription", () => {
+    const json = makeChirpAppDetailResponse({ overview: "<p>This is <strong>bold</strong> text.</p>" });
+    const result = parseHubSpotAppDetails(json, "test-app");
+    expect(result.platformData.longDescription).toBe("This is bold text.");
+  });
+
+  it("parses short description from tagline", () => {
+    const json = makeChirpAppDetailResponse({ tagline: "Quick CRM sync" });
+    const result = parseHubSpotAppDetails(json, "test-app");
     expect(result.platformData.shortDescription).toBe("Quick CRM sync");
   });
 
-  it("parses long description", () => {
-    const html = makeDomAppHtml({ longDescription: "A very long and detailed description." });
-    const result = parseHubSpotAppDetails(html, "desc-app");
-
-    expect(result.platformData.longDescription).toBe("A very long and detailed description.");
-  });
-
-  it("parses pricing from DOM", () => {
-    const html = makeDomAppHtml({ pricing: "$99/month" });
-    const result = parseHubSpotAppDetails(html, "paid-app");
-
-    expect(result.pricingHint).toBe("$99/month");
-    expect(result.platformData.pricing).toBe("$99/month");
-  });
-
-  it("parses categories from links", () => {
-    const html = makeDomAppHtml({
-      categories: [
-        { slug: "operations", name: "Operations" },
-        { slug: "operations/data-sync", name: "Data Sync" },
-      ],
-    });
-    const result = parseHubSpotAppDetails(html, "ops-app");
-
-    const cats = result.platformData.categories as Array<{ slug: string; name?: string }>;
-    expect(cats).toHaveLength(2);
-    expect(cats[0].slug).toBe("operations");
-    expect(cats[1].slug).toBe("operations--data-sync");
-  });
-
-  it("uses slug as name when h1 is empty", () => {
-    const html = `<html><body><h1></h1></body></html>`;
-    const result = parseHubSpotAppDetails(html, "empty-h1-app");
-
-    expect(result.name).toBe("empty-h1-app");
-  });
-});
-
-// ---------------------------------------------------------------------------
-// Edge cases
-// ---------------------------------------------------------------------------
-describe("parseHubSpotAppDetails — edge cases", () => {
-  it("handles completely empty HTML", () => {
-    const html = "<html><body></body></html>";
-    const result = parseHubSpotAppDetails(html, "empty-page");
-
-    expect(result.slug).toBe("empty-page");
-    expect(result.name).toBe("empty-page");
+  it("always returns null rating (not in API)", () => {
+    const json = makeChirpAppDetailResponse();
+    const result = parseHubSpotAppDetails(json, "test-app");
     expect(result.averageRating).toBeNull();
     expect(result.ratingCount).toBeNull();
-    expect(result.iconUrl).toBeNull();
+  });
+
+  it("sets source to chirp-api", () => {
+    const json = makeChirpAppDetailResponse();
+    const result = parseHubSpotAppDetails(json, "test-app");
+    expect(result.platformData.source).toBe("chirp-api");
+  });
+
+  it("returns minimal details for invalid JSON", () => {
+    const result = parseHubSpotAppDetails("not json", "broken-app");
+    expect(result.name).toBe("broken-app");
+    expect(result.slug).toBe("broken-app");
+    expect(result.platformData.source).toBe("chirp-api-empty");
+  });
+
+  it("returns minimal details for empty response", () => {
+    const result = parseHubSpotAppDetails(JSON.stringify({}), "empty-app");
+    expect(result.name).toBe("empty-app");
+  });
+
+  it("returns developer null when no company name", () => {
+    const json = makeChirpAppDetailResponse({ companyName: "" });
+    const result = parseHubSpotAppDetails(json, "test-app");
     expect(result.developer).toBeNull();
-    expect(result.platformData.source).toBe("dom-fallback");
   });
 
-  it("handles malformed JSON-LD gracefully", () => {
-    const html = `
-      <html><head>
-        <script type="application/ld+json">{ invalid json }</script>
-      </head><body>
-        <h1>Fallback Name</h1>
-      </body></html>
-    `;
-    const result = parseHubSpotAppDetails(html, "bad-json");
-
-    expect(result.name).toBe("Fallback Name");
-    expect(result.platformData.source).toBe("dom-fallback");
+  it("formats pricing plans in platformData", () => {
+    const json = makeChirpAppDetailResponse({
+      pricingPlans: [
+        { pricingName: "Basic", pricingModel: ["MONTHLY"], pricingMonthlyCenticents: 130000, pricingFeatures: ["Feature A"] },
+      ],
+    });
+    const result = parseHubSpotAppDetails(json, "test-app");
+    const plans = result.platformData.pricingPlans as any[];
+    expect(plans).toHaveLength(1);
+    expect(plans[0].name).toBe("Basic");
+    expect(plans[0].monthlyPrice).toBe(13);
+    expect(plans[0].features).toEqual(["Feature A"]);
   });
 
-  it("handles multiple JSON-LD scripts, uses first SoftwareApplication", () => {
-    const html = `
-      <html><head>
-        <script type="application/ld+json">${JSON.stringify({ "@type": "Organization", name: "Org" })}</script>
-        <script type="application/ld+json">${JSON.stringify({ "@type": "SoftwareApplication", name: "The App", aggregateRating: { ratingValue: 4.0, ratingCount: 50 } })}</script>
-      </head><body><h1>Page Title</h1></body></html>
-    `;
-    const result = parseHubSpotAppDetails(html, "multi-ld");
-
-    expect(result.name).toBe("The App");
-    expect(result.averageRating).toBe(4.0);
-    expect(result.platformData.source).toBe("json-ld");
+  it("handles multiple categories", () => {
+    const json = makeChirpAppDetailResponse({ category: ["CRM", "SALES_ENABLEMENT", "E_COMMERCE"] });
+    const result = parseHubSpotAppDetails(json, "multi-cat");
+    const cats = result.platformData.categories as any[];
+    expect(cats).toHaveLength(3);
+    expect(cats.map((c: any) => c.slug)).toEqual(["CRM", "SALES_ENABLEMENT", "E_COMMERCE"]);
   });
 });

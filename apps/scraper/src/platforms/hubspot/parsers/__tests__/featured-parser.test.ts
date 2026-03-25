@@ -1,138 +1,182 @@
 import { describe, it, expect } from "vitest";
 import { parseHubSpotFeaturedSections } from "../featured-parser.js";
-import { makeFeaturedPageHtml } from "./fixtures.js";
+import { makeChirpFeaturedResponse } from "./fixtures.js";
 
 describe("parseHubSpotFeaturedSections", () => {
-  it("parses featured sections from homepage", () => {
-    const html = makeFeaturedPageHtml();
-    const result = parseHubSpotFeaturedSections(html);
-
-    expect(result).toHaveLength(2);
-  });
-
-  it("parses section titles and handles", () => {
-    const html = makeFeaturedPageHtml();
-    const result = parseHubSpotFeaturedSections(html);
-
-    expect(result[0].sectionTitle).toBe("Top Rated Apps");
-    expect(result[0].sectionHandle).toBe("top-rated-apps");
-    expect(result[1].sectionTitle).toBe("New & Noteworthy");
-    expect(result[1].sectionHandle).toBe("new-noteworthy");
-  });
-
-  it("parses apps within each section", () => {
-    const html = makeFeaturedPageHtml();
-    const result = parseHubSpotFeaturedSections(html);
-
+  it("parses collections with preview items", () => {
+    const json = makeChirpFeaturedResponse({
+      collections: [
+        {
+          title: "Top Apps",
+          slug: "top-apps",
+          previewItems: [
+            { slug: "gmail", name: "Gmail" },
+            { slug: "slack", name: "Slack" },
+          ],
+        },
+      ],
+      suggestions: [],
+    });
+    const result = parseHubSpotFeaturedSections(json);
+    expect(result).toHaveLength(1);
+    expect(result[0].sectionTitle).toBe("Top Apps");
+    expect(result[0].sectionHandle).toBe("top-apps");
+    expect(result[0].surface).toBe("collection");
     expect(result[0].apps).toHaveLength(2);
-    expect(result[0].apps[0]).toMatchObject({
-      slug: "mailchimp",
-      name: "Mailchimp",
-      iconUrl: "https://cdn.hubspot.com/mc.png",
-      position: 1,
-    });
-    expect(result[0].apps[1]).toMatchObject({
-      slug: "zapier",
-      name: "Zapier",
-      position: 2,
-    });
-
-    expect(result[1].apps).toHaveLength(3);
-    expect(result[1].apps[0].slug).toBe("drift");
-    expect(result[1].apps[2].slug).toBe("databox");
   });
 
-  it("sets correct surface metadata", () => {
-    const html = makeFeaturedPageHtml();
-    const result = parseHubSpotFeaturedSections(html);
-
-    for (const section of result) {
-      expect(section.surface).toBe("homepage");
-      expect(section.surfaceDetail).toBe("hubspot-marketplace-homepage");
-    }
-  });
-
-  it("assigns sequential positions within each section", () => {
-    const html = makeFeaturedPageHtml();
-    const result = parseHubSpotFeaturedSections(html);
-
-    expect(result[1].apps.map((a) => a.position)).toEqual([1, 2, 3]);
-  });
-
-  it("skips category/browse/filter headings", () => {
-    const html = makeFeaturedPageHtml({
-      sections: [
-        { title: "Browse Categories", apps: [{ slug: "should-skip", name: "Skip" }] },
-        { title: "Filter by Type", apps: [{ slug: "also-skip", name: "Skip" }] },
-        { title: "Popular Integrations", apps: [{ slug: "real-app", name: "Real" }] },
+  it("parses suggestion sections with cards", () => {
+    const json = makeChirpFeaturedResponse({
+      collections: [],
+      suggestions: [
+        {
+          title: "Most popular",
+          cards: [
+            { slug: "gmail", listingName: "Gmail" },
+            { slug: "slack", listingName: "Slack" },
+          ],
+        },
       ],
     });
-    const result = parseHubSpotFeaturedSections(html);
-
+    const result = parseHubSpotFeaturedSections(json);
     expect(result).toHaveLength(1);
-    expect(result[0].sectionTitle).toBe("Popular Integrations");
-  });
-
-  it("skips sections with no apps", () => {
-    const html = `<html><body>
-      <h2>Empty Section</h2>
-      <div class="grid"></div>
-      <h2>Has Apps</h2>
-      <div class="grid">
-        <div class="card"><a href="/marketplace/listing/real"><h4 class="title">Real App</h4></a></div>
-      </div>
-    </body></html>`;
-    const result = parseHubSpotFeaturedSections(html);
-
-    expect(result).toHaveLength(1);
-    expect(result[0].sectionTitle).toBe("Has Apps");
-  });
-
-  it("deduplicates apps within a section", () => {
-    const html = `<html><body>
-      <h2>Duplicated</h2>
-      <div class="grid">
-        <div class="card"><a href="/marketplace/listing/dup"><h4 class="title">App</h4></a></div>
-        <div class="card"><a href="/marketplace/listing/dup"><h4 class="title">App</h4></a></div>
-        <div class="card"><a href="/marketplace/listing/other"><h4 class="title">Other</h4></a></div>
-      </div>
-    </body></html>`;
-    const result = parseHubSpotFeaturedSections(html);
-
+    expect(result[0].sectionTitle).toBe("Most popular");
+    expect(result[0].sectionHandle).toBe("most-popular");
+    expect(result[0].surface).toBe("homepage");
     expect(result[0].apps).toHaveLength(2);
-    expect(result[0].apps[0].slug).toBe("dup");
-    expect(result[0].apps[1].slug).toBe("other");
   });
 
-  it("uses slug-derived name when title element not found", () => {
-    const html = `<html><body>
-      <h2>Section</h2>
-      <div class="grid">
-        <div class="card"><a href="/marketplace/listing/my-cool-app"></a></div>
-      </div>
-    </body></html>`;
-    const result = parseHubSpotFeaturedSections(html);
-
-    expect(result[0].apps[0].name).toBe("my cool app");
+  it("combines collections and suggestions", () => {
+    const json = makeChirpFeaturedResponse();
+    const result = parseHubSpotFeaturedSections(json);
+    // Default: 2 collections + 2 suggestions = 4 sections
+    expect(result.length).toBeGreaterThanOrEqual(4);
   });
 
-  it("handles empty page", () => {
-    const html = "<html><body></body></html>";
-    const result = parseHubSpotFeaturedSections(html);
+  it("assigns sequential positions within sections", () => {
+    const json = makeChirpFeaturedResponse({
+      collections: [
+        {
+          title: "Test",
+          slug: "test",
+          previewItems: [
+            { slug: "a", name: "A" },
+            { slug: "b", name: "B" },
+            { slug: "c", name: "C" },
+          ],
+        },
+      ],
+      suggestions: [],
+    });
+    const result = parseHubSpotFeaturedSections(json);
+    expect(result[0].apps[0].position).toBe(1);
+    expect(result[0].apps[1].position).toBe(2);
+    expect(result[0].apps[2].position).toBe(3);
+  });
 
+  it("extracts app slug and name from collections", () => {
+    const json = makeChirpFeaturedResponse({
+      collections: [
+        {
+          title: "Featured",
+          slug: "featured",
+          previewItems: [{ slug: "zapier", name: "Zapier", iconUrl: "https://example.com/zap.png" }],
+        },
+      ],
+      suggestions: [],
+    });
+    const result = parseHubSpotFeaturedSections(json);
+    expect(result[0].apps[0].slug).toBe("zapier");
+    expect(result[0].apps[0].name).toBe("Zapier");
+    expect(result[0].apps[0].iconUrl).toBe("https://example.com/zap.png");
+  });
+
+  it("extracts app slug and name from suggestions", () => {
+    const json = makeChirpFeaturedResponse({
+      collections: [],
+      suggestions: [
+        {
+          title: "New",
+          cards: [{ slug: "new-app", listingName: "New App", iconUrl: "https://example.com/new.png" }],
+        },
+      ],
+    });
+    const result = parseHubSpotFeaturedSections(json);
+    expect(result[0].apps[0].slug).toBe("new-app");
+    expect(result[0].apps[0].name).toBe("New App");
+    expect(result[0].apps[0].iconUrl).toBe("https://example.com/new.png");
+  });
+
+  it("skips collections with no preview items", () => {
+    const json = makeChirpFeaturedResponse({
+      collections: [
+        { title: "Empty", slug: "empty", previewItems: [] },
+        {
+          title: "Has Items",
+          slug: "has-items",
+          previewItems: [{ slug: "app", name: "App" }],
+        },
+      ],
+      suggestions: [],
+    });
+    const result = parseHubSpotFeaturedSections(json);
+    expect(result).toHaveLength(1);
+    expect(result[0].sectionHandle).toBe("has-items");
+  });
+
+  it("skips suggestion sections with no cards", () => {
+    const json = makeChirpFeaturedResponse({
+      collections: [],
+      suggestions: [
+        { title: "Empty", cards: [] },
+        { title: "Has Cards", cards: [{ slug: "app", listingName: "App" }] },
+      ],
+    });
+    const result = parseHubSpotFeaturedSections(json);
+    expect(result).toHaveLength(1);
+    expect(result[0].sectionTitle).toBe("Has Cards");
+  });
+
+  it("sets surfaceDetail for collections", () => {
+    const json = makeChirpFeaturedResponse({
+      collections: [
+        { title: "Test", slug: "my-collection", previewItems: [{ slug: "a", name: "A" }] },
+      ],
+      suggestions: [],
+    });
+    const result = parseHubSpotFeaturedSections(json);
+    expect(result[0].surfaceDetail).toBe("hubspot-collection-my-collection");
+  });
+
+  it("sets surfaceDetail for suggestions", () => {
+    const json = makeChirpFeaturedResponse({
+      collections: [],
+      suggestions: [
+        { title: "Popular", cards: [{ slug: "a", listingName: "A" }] },
+      ],
+    });
+    const result = parseHubSpotFeaturedSections(json);
+    expect(result[0].surfaceDetail).toBe("hubspot-marketplace-homepage");
+  });
+
+  it("returns empty array for invalid JSON", () => {
+    const result = parseHubSpotFeaturedSections("bad json");
     expect(result).toEqual([]);
   });
 
-  it("handles h3 headings as section titles", () => {
-    const html = `<html><body>
-      <h3>Editor's Picks</h3>
-      <div class="list">
-        <div class="card"><a href="/marketplace/listing/picked"><h4 class="title">Picked</h4></a></div>
-      </div>
-    </body></html>`;
-    const result = parseHubSpotFeaturedSections(html);
+  it("returns empty array for empty data", () => {
+    const result = parseHubSpotFeaturedSections(JSON.stringify({}));
+    expect(result).toEqual([]);
+  });
 
-    expect(result).toHaveLength(1);
-    expect(result[0].sectionTitle).toBe("Editor's Picks");
+  it("uses collection id as fallback handle", () => {
+    const json = makeChirpFeaturedResponse({
+      collections: [
+        { id: 12345, title: "Test", previewItems: [{ slug: "a", name: "A" }] },
+      ],
+      suggestions: [],
+    });
+    const result = parseHubSpotFeaturedSections(json);
+    expect(result[0].sectionHandle).toBe("12345");
   });
 });

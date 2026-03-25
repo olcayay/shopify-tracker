@@ -1,163 +1,123 @@
 import { describe, it, expect } from "vitest";
 import { parseHubSpotCategoryPage } from "../category-parser.js";
-import { makeCategoryPageHtml } from "./fixtures.js";
+import { makeChirpSearchResponse } from "./fixtures.js";
 
 describe("parseHubSpotCategoryPage", () => {
-  const URL = "https://ecosystem.hubspot.com/marketplace/apps/sales";
+  const url = "https://ecosystem.hubspot.com/marketplace/apps/sales";
 
-  it("parses apps from card layout", () => {
-    const html = makeCategoryPageHtml();
-    const result = parseHubSpotCategoryPage(html, "sales", URL);
-
-    expect(result.slug).toBe("sales");
-    expect(result.url).toBe(URL);
+  it("parses apps from CHIRP search response", () => {
+    const json = makeChirpSearchResponse();
+    const result = parseHubSpotCategoryPage(json, "sales", url);
     expect(result.apps).toHaveLength(3);
-    expect(result.apps[0]).toMatchObject({
-      position: 1,
-      slug: "mailchimp",
-      name: "Mailchimp",
-      averageRating: 4.3,
-      ratingCount: 187,
-      isSponsored: false,
-      badges: [],
-    });
-    expect(result.apps[1].slug).toBe("salesforce-hubspot");
-    expect(result.apps[2].slug).toBe("zapier");
   });
 
   it("assigns sequential positions", () => {
-    const html = makeCategoryPageHtml();
-    const result = parseHubSpotCategoryPage(html, "sales", URL);
-
-    expect(result.apps.map((a) => a.position)).toEqual([1, 2, 3]);
+    const json = makeChirpSearchResponse();
+    const result = parseHubSpotCategoryPage(json, "sales", url);
+    expect(result.apps[0].position).toBe(1);
+    expect(result.apps[1].position).toBe(2);
+    expect(result.apps[2].position).toBe(3);
   });
 
-  it("parses rating and rating count", () => {
-    const html = makeCategoryPageHtml({
-      apps: [
-        { slug: "rated-app", name: "Rated", rating: "4.8", ratingCount: "1,543" },
-      ],
+  it("extracts app slug", () => {
+    const json = makeChirpSearchResponse({
+      cards: [{ slug: "my-app", listingName: "My App" }],
     });
-    const result = parseHubSpotCategoryPage(html, "sales", URL);
-
-    expect(result.apps[0].averageRating).toBe(4.8);
-    expect(result.apps[0].ratingCount).toBe(1543);
+    const result = parseHubSpotCategoryPage(json, "sales", url);
+    expect(result.apps[0].slug).toBe("my-app");
   });
 
-  it("defaults rating to 0 when missing", () => {
-    const html = makeCategoryPageHtml({
-      apps: [{ slug: "no-rating", name: "No Rating App" }],
+  it("extracts app name", () => {
+    const json = makeChirpSearchResponse({
+      cards: [{ slug: "slack", listingName: "Slack" }],
     });
-    const result = parseHubSpotCategoryPage(html, "sales", URL);
-
-    expect(result.apps[0].averageRating).toBe(0);
-    expect(result.apps[0].ratingCount).toBe(0);
+    const result = parseHubSpotCategoryPage(json, "sales", url);
+    expect(result.apps[0].name).toBe("Slack");
   });
 
-  it("parses icon URL from img", () => {
-    const html = makeCategoryPageHtml({
-      apps: [{ slug: "icon-app", name: "Icon App", iconUrl: "https://cdn.example.com/icon.png" }],
+  it("extracts short description", () => {
+    const json = makeChirpSearchResponse({
+      cards: [{ slug: "app", listingName: "App", description: "A great app" }],
     });
-    const result = parseHubSpotCategoryPage(html, "sales", URL);
-
-    expect(result.apps[0].logoUrl).toBe("https://cdn.example.com/icon.png");
+    const result = parseHubSpotCategoryPage(json, "sales", url);
+    expect(result.apps[0].shortDescription).toBe("A great app");
   });
 
-  it("parses short description", () => {
-    const html = makeCategoryPageHtml({
-      apps: [{ slug: "desc-app", name: "Desc App", description: "A useful description" }],
+  it("extracts icon URL", () => {
+    const json = makeChirpSearchResponse({
+      cards: [{ slug: "app", listingName: "App", iconUrl: "https://example.com/icon.png" }],
     });
-    const result = parseHubSpotCategoryPage(html, "sales", URL);
-
-    expect(result.apps[0].shortDescription).toBe("A useful description");
+    const result = parseHubSpotCategoryPage(json, "sales", url);
+    expect(result.apps[0].logoUrl).toBe("https://example.com/icon.png");
   });
 
-  it("extracts total count from total-results element", () => {
-    const html = makeCategoryPageHtml({ totalCount: 142 });
-    const result = parseHubSpotCategoryPage(html, "sales", URL);
-
-    expect(result.appCount).toBe(142);
+  it("extracts total app count", () => {
+    const json = makeChirpSearchResponse({ total: 2158 });
+    const result = parseHubSpotCategoryPage(json, "sales", url);
+    expect(result.appCount).toBe(2158);
   });
 
-  it("extracts category title from h1", () => {
-    const html = makeCategoryPageHtml({ categoryTitle: "Marketing Tools" });
-    const result = parseHubSpotCategoryPage(html, "marketing", URL);
-
-    expect(result.title).toBe("Marketing Tools");
-  });
-
-  it("falls back to slug-based title when h1 is missing", () => {
-    const html = `<html><body>
-      <div class="app-card">
-        <a href="/marketplace/listing/test-app"><h3>Test</h3></a>
-      </div>
-    </body></html>`;
-    const result = parseHubSpotCategoryPage(html, "sales--automation", URL);
-
-    expect(result.title).toBe("Sales > Automation");
-  });
-
-  it("returns empty description and subcategoryLinks", () => {
-    const html = makeCategoryPageHtml();
-    const result = parseHubSpotCategoryPage(html, "sales", URL);
-
-    expect(result.description).toBe("");
-    expect(result.subcategoryLinks).toEqual([]);
-  });
-
-  // -- Fallback (link-based) parsing --
-
-  it("falls back to link-based parsing when no card classes", () => {
-    const html = makeCategoryPageHtml({ useCardLayout: false });
-    const result = parseHubSpotCategoryPage(html, "operations", URL);
-
-    expect(result.apps).toHaveLength(3);
-    expect(result.apps[0].slug).toBe("mailchimp");
-    expect(result.apps[1].slug).toBe("salesforce-hubspot");
-    expect(result.apps[2].slug).toBe("zapier");
-  });
-
-  it("deduplicates slugs in fallback mode", () => {
-    const html = `<html><body>
-      <a href="/marketplace/listing/dup-app">First link</a>
-      <a href="/marketplace/listing/dup-app">Duplicate link</a>
-      <a href="/marketplace/listing/other-app">Other</a>
-    </body></html>`;
-    const result = parseHubSpotCategoryPage(html, "sales", URL);
-
-    expect(result.apps).toHaveLength(2);
-    expect(result.apps[0].slug).toBe("dup-app");
-    expect(result.apps[1].slug).toBe("other-app");
-  });
-
-  // -- hasNextPage --
-
-  it("detects hasNextPage when pagination link and >= 20 apps", () => {
-    const apps = Array.from({ length: 24 }, (_, i) => ({
+  it("sets hasNextPage true when full page received", () => {
+    const cards = Array.from({ length: 50 }, (_, i) => ({
       slug: `app-${i}`,
-      name: `App ${i}`,
+      listingName: `App ${i}`,
     }));
-    const html = makeCategoryPageHtml({ apps, hasNextPage: true });
-    const result = parseHubSpotCategoryPage(html, "sales", URL);
-
+    const json = makeChirpSearchResponse({ cards, total: 2158 });
+    const result = parseHubSpotCategoryPage(json, "sales", url);
     expect(result.hasNextPage).toBe(true);
   });
 
-  it("returns hasNextPage false when fewer than 20 apps", () => {
-    const html = makeCategoryPageHtml({ apps: [{ slug: "single", name: "Single" }], hasNextPage: true });
-    const result = parseHubSpotCategoryPage(html, "sales", URL);
-
+  it("sets hasNextPage false when partial page", () => {
+    const json = makeChirpSearchResponse({ total: 3 });
+    const result = parseHubSpotCategoryPage(json, "sales", url);
     expect(result.hasNextPage).toBe(false);
   });
 
-  // -- Empty page --
+  it("builds title from category slug", () => {
+    const json = makeChirpSearchResponse({ cards: [] });
+    const result = parseHubSpotCategoryPage(json, "sales", url);
+    expect(result.title).toBe("Sales");
+  });
 
-  it("handles empty page with no apps", () => {
-    const html = "<html><body><h1>Empty Category</h1></body></html>";
-    const result = parseHubSpotCategoryPage(html, "empty", URL);
+  it("builds compound title from compound slug", () => {
+    const json = makeChirpSearchResponse({ cards: [] });
+    const result = parseHubSpotCategoryPage(json, "marketing--email", "https://ecosystem.hubspot.com/marketplace/apps/marketing/email");
+    expect(result.title).toBe("Marketing > Email");
+  });
 
+  it("returns empty page for invalid JSON", () => {
+    const result = parseHubSpotCategoryPage("not json", "sales", url);
     expect(result.apps).toEqual([]);
-    expect(result.appCount).toBeNull();
-    expect(result.title).toBe("Empty Category");
+    expect(result.appCount).toBe(0);
+  });
+
+  it("extracts badges from card products", () => {
+    const json = makeChirpSearchResponse({
+      cards: [{ slug: "app", listingName: "App", certified: true, builtByHubSpot: true }],
+    });
+    const result = parseHubSpotCategoryPage(json, "sales", url);
+    expect(result.apps[0].badges).toContain("Certified");
+    expect(result.apps[0].badges).toContain("Built by HubSpot");
+  });
+
+  it("stores install count in extra", () => {
+    const json = makeChirpSearchResponse({
+      cards: [{ slug: "app", listingName: "App", installCount: 100000 }],
+    });
+    const result = parseHubSpotCategoryPage(json, "sales", url);
+    expect(result.apps[0].extra?.installCount).toBe(100000);
+  });
+
+  it("sets category slug and URL pass-through", () => {
+    const json = makeChirpSearchResponse({ cards: [] });
+    const result = parseHubSpotCategoryPage(json, "marketing", "https://example.com/marketplace/apps/marketing");
+    expect(result.slug).toBe("marketing");
+    expect(result.url).toBe("https://example.com/marketplace/apps/marketing");
+  });
+
+  it("returns empty subcategoryLinks", () => {
+    const json = makeChirpSearchResponse();
+    const result = parseHubSpotCategoryPage(json, "sales", url);
+    expect(result.subcategoryLinks).toEqual([]);
   });
 });
