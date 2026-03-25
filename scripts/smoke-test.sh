@@ -43,11 +43,11 @@ while [[ $# -gt 0 ]]; do
     -h|--help)
       echo "Usage: $0 [--platform <name>] [--skip-browser] [--timeout <seconds>]"
       echo ""
-      echo "Platforms: shopify salesforce canva wix wordpress google_workspace atlassian zoom zoho zendesk"
+      echo "Platforms: shopify salesforce canva wix wordpress google_workspace atlassian zoom zoho zendesk hubspot"
       echo ""
       echo "Options:"
       echo "  --platform <name>   Test a single platform"
-      echo "  --skip-browser      Skip platforms that need Playwright (salesforce, canva, google_workspace, zoho, zendesk)"
+      echo "  --skip-browser      Skip platforms that need Playwright (salesforce, canva, google_workspace, zoho, zendesk, hubspot)"
       echo "  --timeout <secs>    Override base timeout (default: 60s HTTP, 120s browser)"
       exit 0 ;;
     *)
@@ -224,9 +224,20 @@ test_zendesk() {
   run_check zendesk featured   "$t" $CLI --platform zendesk featured
 }
 
+test_hubspot() {
+  local t=$TIMEOUT_BROWSER
+  if $SKIP_BROWSER; then skip_check hubspot all "browser skipped"; return; fi
+  echo -e "\n${BLUE}${BOLD}▸ hubspot${RESET} (browser)"
+  run_check hubspot categories "$t" $CLI --platform hubspot categories sales
+  run_check hubspot app        "$t" $CLI --platform hubspot app mailchimp
+  run_check hubspot keyword    "$t" $CLI --platform hubspot keyword "email marketing"
+  run_check hubspot reviews    "$t" $CLI --platform hubspot reviews mailchimp
+  run_check hubspot featured   "$t" $CLI --platform hubspot featured
+}
+
 # ── Main ─────────────────────────────────────────────────────────────────────
 
-ALL_PLATFORMS=(shopify salesforce canva wix wordpress google_workspace atlassian zoom zoho zendesk)
+ALL_PLATFORMS=(shopify salesforce canva wix wordpress google_workspace atlassian zoom zoho zendesk hubspot)
 
 echo ""
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"

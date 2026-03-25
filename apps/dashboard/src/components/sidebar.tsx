@@ -46,6 +46,7 @@ const PLATFORM_LABELS: Record<PlatformId, string> = {
   zoom: "Zoom",
   zoho: "Zoho",
   zendesk: "Zendesk",
+  hubspot: "HubSpot",
 };
 
 const PLATFORM_COLORS: Record<PlatformId, string> = {
@@ -59,6 +60,7 @@ const PLATFORM_COLORS: Record<PlatformId, string> = {
   zoom: "#0B5CFF",
   zoho: "#D4382C",
   zendesk: "#03363D",
+  hubspot: "#FF7A59",
 };
 
 function getNavItems(platformId: PlatformId, isAdmin?: boolean) {
@@ -83,7 +85,7 @@ function getNavItems(platformId: PlatformId, isAdmin?: boolean) {
   if (caps.hasFeatureTaxonomy) {
     items.push({ href: `${p}/features`, label: "Features", icon: Puzzle });
   }
-  if (platformId !== "canva" && platformId !== "salesforce" && platformId !== "wix" && platformId !== "wordpress" && platformId !== "google_workspace" && platformId !== "atlassian" && platformId !== "zoom" && platformId !== "zoho" && platformId !== "zendesk") {
+  if (platformId !== "canva" && platformId !== "salesforce" && platformId !== "wix" && platformId !== "wordpress" && platformId !== "google_workspace" && platformId !== "atlassian" && platformId !== "zoom" && platformId !== "zoho" && platformId !== "zendesk" && platformId !== "hubspot") {
     items.push({ href: `${p}/research`, label: "Research", icon: FlaskConical, badge: "Beta" });
   }
   if (isAdmin) {
@@ -108,7 +110,7 @@ const systemAdminItems = [
 
 /** Extract platform from current pathname */
 function extractPlatform(pathname: string): PlatformId {
-  const match = pathname.match(/^\/(shopify|salesforce|canva|wix|wordpress|google_workspace|atlassian|zoom|zoho|zendesk)(\/|$)/);
+  const match = pathname.match(/^\/(shopify|salesforce|canva|wix|wordpress|google_workspace|atlassian|zoom|zoho|zendesk|hubspot)(\/|$)/);
   return (match?.[1] as PlatformId) ?? "shopify";
 }
 
@@ -141,7 +143,7 @@ function SidebarContent({
   // Route protection: redirect to /overview if user navigates to a platform they don't have access to
   useEffect(() => {
     if (!user || !account || isSystemAdmin) return;
-    const platformMatch = pathname.match(/^\/(shopify|salesforce|canva|wix|wordpress|google_workspace|atlassian|zoom|zoho|zendesk)(\/|$)/);
+    const platformMatch = pathname.match(/^\/(shopify|salesforce|canva|wix|wordpress|google_workspace|atlassian|zoom|zoho|zendesk|hubspot)(\/|$)/);
     if (platformMatch) {
       const urlPlatform = platformMatch[1];
       if (!enabledPlatforms.includes(urlPlatform)) {

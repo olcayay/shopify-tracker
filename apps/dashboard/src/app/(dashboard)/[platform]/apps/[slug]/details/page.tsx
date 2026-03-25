@@ -31,6 +31,7 @@ export default async function DetailsPage({
   const isWordPress = platform === "wordpress";
   const isGoogleWorkspace = platform === "google_workspace";
   const isAtlassian = platform === "atlassian";
+  const isHubSpot = platform === "hubspot";
 
   // WordPress: use raw HTML description from platformData for formatted rendering
   const wpDescriptionHtml = isWordPress && pd?.description
@@ -215,7 +216,7 @@ export default async function DetailsPage({
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              {isCanva || isWix || isGoogleWorkspace ? "Short Description" : isAtlassian ? "Summary" : "App Introduction"}
+              {isCanva || isWix || isGoogleWorkspace || isHubSpot ? "Short Description" : isAtlassian ? "Summary" : "App Introduction"}
               {isCanva && (
                 <Badge variant={snapshot.appIntroduction.length > 50 ? "destructive" : "outline"} className="text-xs font-normal">
                   {snapshot.appIntroduction.length}/50
@@ -234,7 +235,7 @@ export default async function DetailsPage({
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              {isCanva || isWix || isGoogleWorkspace || isAtlassian ? "Description" : "App Details"}
+              {isCanva || isWix || isGoogleWorkspace || isAtlassian || isHubSpot ? "Description" : "App Details"}
               {isCanva && (
                 <Badge variant={snapshot.appDetails.length > 200 ? "destructive" : "outline"} className="text-xs font-normal">
                   {snapshot.appDetails.length}/200

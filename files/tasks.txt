@@ -203,3 +203,5 @@ Zendesk Marketplace — 10th platform integration, BrowserClient for all fetches
 Zendesk Algolia API migration — categories & search use Algolia API directly (no browser), 16 categories verified, all 325 AI&Bots apps scraped reliably ✅
 
 comprehensive test coverage expansion — 740 → 2,362 tests (+1,622) across all 4 packages (shared, api, scraper, dashboard) ✅
+
+HubSpot App Marketplace — 11th platform integration, BrowserClient (pure SPA), 6 hierarchical categories, slug format {slug}, reviews, featured, pricing ✅

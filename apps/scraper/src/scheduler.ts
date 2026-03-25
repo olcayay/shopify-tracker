@@ -301,6 +301,37 @@ const SCHEDULES = [
     type: "compute_app_scores" as const,
     platform: "zendesk" as const,
   },
+  // ── HubSpot ──
+  {
+    name: "hubspot_category",
+    cron: "30 11 * * *", // Daily at 11:30
+    type: "category" as const,
+    platform: "hubspot" as const,
+  },
+  {
+    name: "hubspot_app_details",
+    cron: "0 13,1 * * *", // Every 12 hours (13:00, 01:00)
+    type: "app_details" as const,
+    platform: "hubspot" as const,
+  },
+  {
+    name: "hubspot_keyword_search",
+    cron: "30 13,1 * * *", // Every 12 hours (13:30, 01:30)
+    type: "keyword_search" as const,
+    platform: "hubspot" as const,
+  },
+  {
+    name: "hubspot_reviews",
+    cron: "0 11 * * *", // Daily at 11:00
+    type: "reviews" as const,
+    platform: "hubspot" as const,
+  },
+  {
+    name: "hubspot_compute_app_scores",
+    cron: "30 14 * * *", // Daily at 14:30 UTC
+    type: "compute_app_scores" as const,
+    platform: "hubspot" as const,
+  },
 ];
 
 log.info("starting scheduler", {

@@ -34,7 +34,7 @@ describe("Platform routes", () => {
       expect(res.statusCode).toBe(401);
     });
 
-    it("returns all 10 platforms", async () => {
+    it("returns all 11 platforms", async () => {
       const res = await app.inject({
         method: "GET",
         url: "/api/platforms",
@@ -44,7 +44,7 @@ describe("Platform routes", () => {
       expect(res.statusCode).toBe(200);
       const body = res.json();
       expect(body).toHaveLength(PLATFORM_IDS.length);
-      expect(body).toHaveLength(10);
+      expect(body).toHaveLength(11);
     });
 
     it("each platform has the expected shape", async () => {

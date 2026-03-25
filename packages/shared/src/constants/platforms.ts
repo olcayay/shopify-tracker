@@ -159,6 +159,22 @@ export const PLATFORMS = {
     maxRatingStars: 5,
     pageSize: 24,
   },
+  hubspot: {
+    id: "hubspot" as const,
+    name: "HubSpot App Marketplace",
+    baseUrl: "https://ecosystem.hubspot.com/marketplace",
+    hasKeywordSearch: true,
+    hasReviews: true,
+    hasFeaturedSections: true,
+    hasAdTracking: false,
+    hasSimilarApps: false,
+    hasAutoSuggestions: false,
+    hasFeatureTaxonomy: false,
+    hasPricing: true,
+    hasLaunchedDate: false,
+    maxRatingStars: 5,
+    pageSize: 24,
+  },
 } as const;
 
 export type PlatformId = keyof typeof PLATFORMS;
@@ -207,6 +223,8 @@ export function buildExternalAppUrl(platform: PlatformId, slug: string, external
       const textSlug = rest.join("-");
       return `https://www.zendesk.com/marketplace/apps/${product}/${id}/${textSlug}/`;
     }
+    case "hubspot":
+      return `https://ecosystem.hubspot.com/marketplace/listing/${slug}`;
   }
 }
 
@@ -242,5 +260,7 @@ export function buildExternalCategoryUrl(platform: PlatformId, slug: string): st
       // Category title is stored in the DB; slug is kebab-case, title is the URL param
       // Fallback: convert slug to title-case for URL
       return `https://www.zendesk.com/marketplace/apps/?categories.name=${encodeURIComponent(slug)}`;
+    case "hubspot":
+      return `https://ecosystem.hubspot.com/marketplace/apps/${slug.replace(/--/g, "/")}`;
   }
 }

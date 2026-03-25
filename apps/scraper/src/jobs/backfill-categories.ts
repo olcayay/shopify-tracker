@@ -76,6 +76,9 @@ export async function backfillCategories(db: Database, triggeredBy: string, queu
         } else if (platform === "zendesk") {
           const zendeskMatch = cat.url?.match(/[?&]categories\.name=([^&]+)/);
           catSlug = zendeskMatch?.[1] ? decodeURIComponent(zendeskMatch[1]) : null;
+        } else if (platform === "hubspot") {
+          const hubspotMatch = cat.url?.match(/\/marketplace\/apps\/([^?#]+)/);
+          catSlug = hubspotMatch?.[1]?.replace(/\/$/, "").replace("/", "--") ?? null;
         }
         if (!catSlug) continue;
         if (!categoryMap.has(catSlug)) {

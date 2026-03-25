@@ -27,6 +27,8 @@ export function buildExternalAppUrl(platform: PlatformId, slug: string, external
       const textSlug = rest.join("-");
       return `https://www.zendesk.com/marketplace/apps/${product}/${id}/${textSlug}/`;
     }
+    case "hubspot":
+      return `https://ecosystem.hubspot.com/marketplace/listing/${slug}`;
   }
 }
 
@@ -56,6 +58,8 @@ export function buildExternalCategoryUrl(platform: PlatformId, slug: string): st
       return `https://marketplace.zoho.com/app/${slug}`;
     case "zendesk":
       return `https://www.zendesk.com/marketplace/apps/?categories.name=${encodeURIComponent(slug)}`;
+    case "hubspot":
+      return `https://ecosystem.hubspot.com/marketplace/apps/${slug}`;
   }
 }
 
@@ -81,6 +85,8 @@ export function buildExternalSearchUrl(platform: PlatformId, query: string): str
       return `https://marketplace.zoho.com/search?searchTerm=${encodeURIComponent(query)}`;
     case "zendesk":
       return `https://www.zendesk.com/marketplace/apps/?query=${encodeURIComponent(query)}`;
+    case "hubspot":
+      return `https://ecosystem.hubspot.com/marketplace/explore?query=${encodeURIComponent(query)}`;
   }
 }
 

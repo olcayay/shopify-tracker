@@ -2157,3 +2157,62 @@ Files changed:
 - apps/dashboard/src/lib/platform-urls.ts
 - apps/dashboard/src/__tests__/lib/platform-urls.test.ts
 - apps/scraper/src/platforms/canva/parsers/__tests__/category-parser.test.ts
+
+HubSpot App Marketplace — 11th Platform Integration
+=====================================================
+
+Platform: hubspot, Color: #FF7A59
+Base URL: https://ecosystem.hubspot.com/marketplace
+Client: BrowserClient (Playwright) — pure SPA, no SSR/embedded JSON
+Capabilities: hasKeywordSearch, hasReviews, hasFeaturedSections, hasPricing = true
+            hasLaunchedDate, hasAdTracking, hasSimilarApps, hasAutoSuggestions, hasFeatureTaxonomy = false
+Categories: 6 top-level hierarchical (sales, marketing, service, commerce, operations, content)
+
+URL patterns:
+- App: /marketplace/listing/{slug}
+- Category: /marketplace/apps/{slug} or /marketplace/apps/{parent}/{child}
+- Search: /marketplace/explore?query={keyword}
+- Featured: /marketplace/featured/{collectionSlug}
+
+Architecture: BrowserClient renders pages → parse rendered DOM with Cheerio.
+App parser tries JSON-LD first, then falls back to DOM selectors.
+Category/search parsers look for app cards by class patterns, fallback to /marketplace/listing/ links.
+
+New files (7):
+- apps/scraper/src/platforms/hubspot/index.ts (PlatformModule)
+- apps/scraper/src/platforms/hubspot/constants.ts (seed categories, rate limits, scoring)
+- apps/scraper/src/platforms/hubspot/urls.ts (URL builders)
+- apps/scraper/src/platforms/hubspot/parsers/app-parser.ts
+- apps/scraper/src/platforms/hubspot/parsers/category-parser.ts
+- apps/scraper/src/platforms/hubspot/parsers/search-parser.ts
+- apps/scraper/src/platforms/hubspot/parsers/review-parser.ts
+- apps/scraper/src/platforms/hubspot/parsers/featured-parser.ts
+- packages/db/src/migrations/0085_seed_hubspot.sql
+
+Modified files (~25):
+- packages/shared/src/constants/platforms.ts (config + URL builders)
+- packages/shared/src/similarity.ts (weights + stop words)
+- packages/shared/src/__tests__/platforms.test.ts (count 10→11 + HubSpot URL tests)
+- apps/dashboard/src/lib/platform-urls.ts (3 URL builder cases)
+- apps/dashboard/src/lib/metadata-limits.ts (hubspotLimits)
+- packages/db/src/migrations/meta/_journal.json (idx=85)
+- apps/scraper/src/platforms/registry.ts (HubSpotModule)
+- apps/scraper/src/cli.ts (browser init)
+- apps/scraper/src/process-job.ts (browser init)
+- apps/scraper/src/scheduler.ts (5 cron jobs)
+- apps/scraper/src/jobs/backfill-categories.ts (URL pattern)
+- apps/api/src/routes/live-search.ts (DB fallback search)
+- apps/api/src/__tests__/routes/platforms.test.ts (count 10→11)
+- apps/dashboard/src/lib/auth-context.tsx (VALID_PLATFORMS)
+- apps/dashboard/src/proxy.ts (VALID_PLATFORMS)
+- apps/dashboard/src/components/admin-scraper-trigger.tsx (VALID_PLATFORMS)
+- apps/dashboard/src/components/sidebar.tsx (label, color, regex, research exclusion)
+- apps/dashboard/src/components/platform-overview-cards.tsx (labels + colors)
+- apps/dashboard/src/components/app-badges.tsx (empty hubspot entry)
+- apps/dashboard/src/app/(dashboard)/[platform]/overview/page.tsx (PLATFORM_COLORS)
+- apps/dashboard/src/app/(dashboard)/[platform]/apps/[slug]/details/page.tsx (isHubSpot labels)
+- apps/dashboard/src/app/(dashboard)/[platform]/apps/[slug]/changes/page.tsx (isHubSpot labels)
+- apps/dashboard/src/app/(dashboard)/[platform]/apps/[slug]/page.tsx (isHubSpot labels)
+- apps/dashboard/src/app/(dashboard)/[platform]/apps/[slug]/compare/page.tsx (isHubSpot sections)
+- scripts/smoke-test.sh (test_hubspot + ALL_PLATFORMS)
+- files/ADDING_NEW_PLATFORM.md (HubSpot notes, Pitfall 26, regression checks)

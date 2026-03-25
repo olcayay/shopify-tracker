@@ -20,7 +20,7 @@ if (platformArgIdx !== -1 && process.argv[platformArgIdx + 1]) {
   if (isPlatformId(val)) {
     platformArg = val;
   } else {
-    console.error(`Unknown platform: ${val}. Valid: shopify, salesforce, canva, wix, wordpress, google_workspace, atlassian, zoom, zoho`);
+    console.error(`Unknown platform: ${val}. Valid: shopify, salesforce, canva, wix, wordpress, google_workspace, atlassian, zoom, zoho, zendesk, hubspot`);
     process.exit(1);
   }
   // Remove --platform and its value from argv so they don't interfere with positional args
@@ -65,7 +65,7 @@ async function main() {
 
   // Create browser client for platforms that need SPA rendering
   let browserClient: BrowserClient | undefined;
-  if (platformArg === "salesforce" || platformArg === "canva" || platformArg === "google_workspace" || platformArg === "zoho" || platformArg === "zendesk") {
+  if (platformArg === "salesforce" || platformArg === "canva" || platformArg === "google_workspace" || platformArg === "zoho" || platformArg === "zendesk" || platformArg === "hubspot") {
     browserClient = new BrowserClient();
   }
 

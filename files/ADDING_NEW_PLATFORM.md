@@ -1,6 +1,6 @@
 # Adding a New Platform — Comprehensive Guide
 
-This document covers everything needed to add a new marketplace platform to the AppRanks tracking system. It draws from lessons learned integrating Shopify, Salesforce, Canva, Wix, WordPress, Google Workspace, Atlassian, Zoom, Zoho, and Zendesk.
+This document covers everything needed to add a new marketplace platform to the AppRanks tracking system. It draws from lessons learned integrating Shopify, Salesforce, Canva, Wix, WordPress, Google Workspace, Atlassian, Zoom, Zoho, Zendesk, and HubSpot.
 
 ---
 
@@ -1684,6 +1684,23 @@ If your new platform uses flat categories (no parent-child hierarchy), add it he
 | Zoom | Public JSON API (`/api/v1/apps`) | Pure JSON for everything, no HTML at all |
 | Zoho | HttpClient (`var detailsObject`) + BrowserClient (SPA) | App details from inline JS; categories/search need Playwright |
 | Zendesk | Algolia API + BrowserClient (Cloudflare) | Categories/search via Algolia JSON API; app details need Playwright (Cloudflare) |
+| HubSpot | BrowserClient only (pure SPA) | All pages need Playwright — React SPA with CHIRP RPC, no SSR/embedded JSON |
+
+### Pitfall 26: Hardcoded platform counts in test files
+
+**Problem:** Test files have hardcoded platform counts like `expect(body).toHaveLength(10)` and `expect(Object.keys(PLATFORMS)).toHaveLength(10)`. These break when adding a new platform.
+
+**Solution:** After adding a new platform, search for hardcoded counts and update them:
+
+```bash
+grep -rn "toHaveLength(10\|toHaveLength(11\|exactly 10\|exactly 11\|all 10\|all 11" --include="*.ts" --include="*.tsx"
+```
+
+Files with hardcoded counts:
+- `packages/shared/src/__tests__/platforms.test.ts` — `has exactly N platforms`
+- `apps/api/src/__tests__/routes/platforms.test.ts` — `returns all N platforms`
+
+Prefer using `PLATFORM_IDS.length` instead of hardcoded numbers, but some tests intentionally use both as a safeguard.
 
 ---
 
@@ -1735,6 +1752,8 @@ After implementation, verify every page for the new platform AND confirm existin
 - [ ] `/atlassian/apps/<slug>` — Correct tabs/cards for Atlassian capabilities
 - [ ] `/zoom/apps` — Correct columns (no reviews, no pricing, no launched)
 - [ ] `/zoom/apps/<slug>` — Correct tabs/cards for Zoom capabilities
+- [ ] `/hubspot/apps` — Correct columns (reviews, pricing, no launched date)
+- [ ] `/hubspot/apps/<slug>` — Correct tabs/cards for HubSpot capabilities
 - [ ] All platform previews still work with correct character limits
 - [ ] `/overview` — Cross-platform overview page shows all platforms
 

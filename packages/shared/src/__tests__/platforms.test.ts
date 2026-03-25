@@ -12,8 +12,8 @@ import {
 // PLATFORMS
 // ---------------------------------------------------------------------------
 describe("PLATFORMS", () => {
-  it("has exactly 10 platforms", () => {
-    expect(Object.keys(PLATFORMS)).toHaveLength(10);
+  it("has exactly 11 platforms", () => {
+    expect(Object.keys(PLATFORMS)).toHaveLength(11);
   });
 
   it("each platform has required properties", () => {
@@ -157,6 +157,11 @@ describe("buildExternalAppUrl", () => {
     expect(buildExternalAppUrl("zendesk", "972305--slack"))
       .toBe("https://www.zendesk.com/marketplace/apps/support/972305/slack/");
   });
+
+  it("builds HubSpot app URL", () => {
+    expect(buildExternalAppUrl("hubspot", "mailchimp"))
+      .toBe("https://ecosystem.hubspot.com/marketplace/listing/mailchimp");
+  });
 });
 
 // ---------------------------------------------------------------------------
@@ -218,5 +223,12 @@ describe("buildExternalCategoryUrl", () => {
   it("builds Zendesk category URL", () => {
     expect(buildExternalCategoryUrl("zendesk", "Communication"))
       .toBe("https://www.zendesk.com/marketplace/apps/?categories.name=Communication");
+  });
+
+  it("builds HubSpot category URL (replaces -- with /)", () => {
+    expect(buildExternalCategoryUrl("hubspot", "sales"))
+      .toBe("https://ecosystem.hubspot.com/marketplace/apps/sales");
+    expect(buildExternalCategoryUrl("hubspot", "marketing--email"))
+      .toBe("https://ecosystem.hubspot.com/marketplace/apps/marketing/email");
   });
 });

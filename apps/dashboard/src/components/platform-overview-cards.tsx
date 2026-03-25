@@ -17,6 +17,7 @@ const PLATFORM_LABELS: Record<PlatformId, string> = {
   zoom: "Zoom",
   zoho: "Zoho",
   zendesk: "Zendesk",
+  hubspot: "HubSpot",
 };
 
 const PLATFORM_COLORS: Record<PlatformId, string> = {
@@ -30,6 +31,7 @@ const PLATFORM_COLORS: Record<PlatformId, string> = {
   zoom: "#0B5CFF",
   zoho: "#D4382C",
   zendesk: "#03363D",
+  hubspot: "#FF7A59",
 };
 
 interface PlatformCounts {

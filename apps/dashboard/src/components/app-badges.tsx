@@ -85,6 +85,7 @@ const BADGE_CONFIG: Record<string, Record<string, { icon: string; label: string;
   },
   zoho: {},
   zendesk: {},
+  hubspot: {},
 };
 
 interface AppBadgesProps {

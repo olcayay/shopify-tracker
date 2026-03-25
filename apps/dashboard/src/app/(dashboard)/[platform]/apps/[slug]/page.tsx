@@ -98,14 +98,15 @@ function getFieldLabels(platform: string): Record<string, string> {
   const isWordPress = platform === "wordpress";
   const isGoogleWorkspace = platform === "google_workspace";
   const isAtlassian = platform === "atlassian";
+  const isHubSpot = platform === "hubspot";
   return {
     name: "App Name",
-    appIntroduction: isAtlassian ? "Summary" : isCanva || isWix || isWordPress || isGoogleWorkspace ? "Short Description" : "Introduction",
-    appDetails: isCanva || isWix || isWordPress || isGoogleWorkspace || isAtlassian ? "Description" : "Details",
+    appIntroduction: isAtlassian ? "Summary" : isCanva || isWix || isWordPress || isGoogleWorkspace || isHubSpot ? "Short Description" : "Introduction",
+    appDetails: isCanva || isWix || isWordPress || isGoogleWorkspace || isAtlassian || isHubSpot ? "Description" : "Details",
     features: "Features",
     seoTitle: "SEO Title",
     seoMetaDescription: "SEO Description",
-    appCardSubtitle: isAtlassian ? "Tag Line" : isCanva || isWix ? "Tagline" : isWordPress || isGoogleWorkspace ? "Short Description" : "Subtitle",
+    appCardSubtitle: isAtlassian ? "Tag Line" : isCanva || isWix ? "Tagline" : isWordPress || isGoogleWorkspace || isHubSpot ? "Short Description" : "Subtitle",
   };
 }
 

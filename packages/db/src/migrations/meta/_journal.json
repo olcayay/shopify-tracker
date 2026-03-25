@@ -596,6 +596,13 @@
       "when": 1775952000000,
       "tag": "0084_seed_zendesk_categories",
       "breakpoints": true
+    },
+    {
+      "idx": 85,
+      "version": "7",
+      "when": 1776038400000,
+      "tag": "0085_seed_hubspot",
+      "breakpoints": true
     }
   ]
 }

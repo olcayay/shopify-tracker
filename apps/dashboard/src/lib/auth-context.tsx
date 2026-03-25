@@ -102,7 +102,7 @@ function getCookie(name: string): string | undefined {
 }
 
 // Valid platform slugs for auto-injection
-const VALID_PLATFORMS = new Set(["shopify", "salesforce", "canva", "wix", "wordpress", "google_workspace", "atlassian", "zoom", "zoho", "zendesk"]);
+const VALID_PLATFORMS = new Set(["shopify", "salesforce", "canva", "wix", "wordpress", "google_workspace", "atlassian", "zoom", "zoho", "zendesk", "hubspot"]);
 
 /** Extract platform from the current browser URL path (e.g. /salesforce/keywords → salesforce) */
 function getPlatformFromPath(): string | undefined {

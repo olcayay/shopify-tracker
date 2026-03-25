@@ -29,15 +29,16 @@ export default async function ChangesPage({
   const isWix = platform === "wix";
   const isWordPress = platform === "wordpress";
   const isGoogleWorkspace = platform === "google_workspace";
+  const isHubSpot = platform === "hubspot";
   const fieldLabels: Record<string, string> = {
     name: "App Name",
-    appIntroduction: isCanva || isWix || isWordPress || isGoogleWorkspace ? "Short Description" : "App Introduction",
-    appDetails: isCanva || isWix || isWordPress || isGoogleWorkspace ? "Description" : "App Details",
+    appIntroduction: isCanva || isWix || isWordPress || isGoogleWorkspace || isHubSpot ? "Short Description" : "App Introduction",
+    appDetails: isCanva || isWix || isWordPress || isGoogleWorkspace || isHubSpot ? "Description" : "App Details",
     features: "Features",
     pricingPlans: "Pricing Plans",
     seoTitle: "SEO Title",
     seoMetaDescription: "SEO Meta Description",
-    appCardSubtitle: isCanva || isWix ? "Tagline" : isWordPress || isGoogleWorkspace ? "Short Description" : "App Card Subtitle",
+    appCardSubtitle: isCanva || isWix ? "Tagline" : isWordPress || isGoogleWorkspace || isHubSpot ? "Short Description" : "App Card Subtitle",
   };
 
   return (
