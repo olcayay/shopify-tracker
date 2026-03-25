@@ -1,35 +1,34 @@
 #!/usr/bin/env bash
 #
-# Live Smoke Test for all platform scrapers
+# Parallel Live Smoke Test for all platform scrapers
 # Usage:
-#   ./scripts/smoke-test.sh                        # test all platforms
+#   ./scripts/smoke-test.sh                        # test all platforms (parallel + live table)
 #   ./scripts/smoke-test.sh --platform shopify      # test one platform
 #   ./scripts/smoke-test.sh --skip-browser          # skip browser-dependent platforms
 #   ./scripts/smoke-test.sh --timeout 90            # override default timeout (seconds)
+#   ./scripts/smoke-test.sh --jobs 4                # limit concurrent checks
+#   ./scripts/smoke-test.sh --no-live               # CI-friendly plain output (no ANSI refresh)
 #
-set -euo pipefail
+set -uo pipefail
 
 # ── Defaults ─────────────────────────────────────────────────────────────────
 SELECTED_PLATFORM=""
 SKIP_BROWSER=false
 TIMEOUT_HTTP=60
 TIMEOUT_BROWSER=120
+MAX_JOBS=0  # 0 = unlimited
+NO_LIVE=false
 SCRAPER_DIR="apps/scraper"
 CLI="npx tsx src/cli.ts"
 
-# ── Colors ───────────────────────────────────────────────────────────────────
+# ── ANSI Colors ──────────────────────────────────────────────────────────────
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[0;33m'
-BLUE='\033[0;34m'
+CYAN='\033[0;36m'
+DIM='\033[2m'
 BOLD='\033[1m'
 RESET='\033[0m'
-
-# ── Counters ─────────────────────────────────────────────────────────────────
-PASS=0
-FAIL=0
-SKIP=0
-RESULTS=()
 
 # ── Parse flags ──────────────────────────────────────────────────────────────
 while [[ $# -gt 0 ]]; do
@@ -40,8 +39,12 @@ while [[ $# -gt 0 ]]; do
       SKIP_BROWSER=true; shift ;;
     --timeout)
       TIMEOUT_HTTP="$2"; TIMEOUT_BROWSER=$(( $2 * 2 )); shift 2 ;;
+    --jobs)
+      MAX_JOBS="$2"; shift 2 ;;
+    --no-live)
+      NO_LIVE=true; shift ;;
     -h|--help)
-      echo "Usage: $0 [--platform <name>] [--skip-browser] [--timeout <seconds>]"
+      echo "Usage: $0 [--platform <name>] [--skip-browser] [--timeout <seconds>] [--jobs N] [--no-live]"
       echo ""
       echo "Platforms: shopify salesforce canva wix wordpress google_workspace atlassian zoom zoho zendesk hubspot"
       echo ""
@@ -49,210 +52,65 @@ while [[ $# -gt 0 ]]; do
       echo "  --platform <name>   Test a single platform"
       echo "  --skip-browser      Skip platforms that need Playwright (salesforce, canva, google_workspace, zoho, zendesk)"
       echo "  --timeout <secs>    Override base timeout (default: 60s HTTP, 120s browser)"
+      echo "  --jobs N            Limit concurrent checks (default: unlimited)"
+      echo "  --no-live           CI-friendly plain output (no ANSI table refresh)"
       exit 0 ;;
     *)
       echo "Unknown option: $1"; exit 1 ;;
   esac
 done
 
-# ── Helpers ──────────────────────────────────────────────────────────────────
+# Auto-detect: if not a terminal, disable live mode
+if [[ ! -t 1 ]]; then
+  NO_LIVE=true
+fi
 
-run_check() {
-  local platform="$1"
-  local check_name="$2"
-  local timeout="$3"
-  shift 3
-  local cmd="$*"
+# ── Temp directory ───────────────────────────────────────────────────────────
+WORK_DIR=$(mktemp -d "${TMPDIR:-/tmp}/smoke-XXXXX")
 
-  printf "  %-12s %-14s ... " "$platform" "$check_name"
+CURSOR_HIDDEN=false
 
-  local start_time=$SECONDS
-  local output
-  local exit_code
-
-  # Run from scraper directory with timeout
-  output=$(cd "$SCRAPER_DIR" && timeout "$timeout" $cmd 2>&1) && exit_code=0 || exit_code=$?
-  local elapsed=$(( SECONDS - start_time ))
-
-  if [[ $exit_code -eq 0 ]]; then
-    printf "${GREEN}PASS${RESET} (%ds)\n" "$elapsed"
-    PASS=$((PASS + 1))
-    RESULTS+=("PASS|$platform|$check_name|${elapsed}s")
-  elif [[ $exit_code -eq 124 ]]; then
-    printf "${RED}TIMEOUT${RESET} (>${timeout}s)\n"
-    FAIL=$((FAIL + 1))
-    RESULTS+=("TIMEOUT|$platform|$check_name|>${timeout}s")
-  else
-    printf "${RED}FAIL${RESET} (exit=$exit_code, %ds)\n" "$elapsed"
-    # Show last 3 lines of output for debugging
-    if [[ -n "$output" ]]; then
-      echo "$output" | tail -3 | sed 's/^/    /'
-    fi
-    FAIL=$((FAIL + 1))
-    RESULTS+=("FAIL|$platform|$check_name|${elapsed}s")
+cleanup() {
+  local pids
+  pids=$(jobs -p 2>/dev/null) || true
+  if [[ -n "$pids" ]]; then
+    kill $pids 2>/dev/null || true
+    wait $pids 2>/dev/null || true
   fi
+  if $CURSOR_HIDDEN; then
+    printf "\033[?25h" 2>/dev/null || true
+    CURSOR_HIDDEN=false
+  fi
+  rm -rf "$WORK_DIR"
 }
+trap 'cleanup' EXIT
+trap 'cleanup; exit 130' INT TERM
 
-skip_check() {
-  local platform="$1"
-  local check_name="$2"
-  local reason="$3"
-
-  printf "  %-12s %-14s ... ${YELLOW}SKIP${RESET} (%s)\n" "$platform" "$check_name" "$reason"
-  SKIP=$((SKIP + 1))
-  RESULTS+=("SKIP|$platform|$check_name|$reason")
-}
-
-print_summary() {
-  local total=$((PASS + FAIL + SKIP))
-  echo ""
-  echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-  printf "${BOLD}SUMMARY${RESET}\n"
-  echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-  printf "  %-10s %-16s %-10s %s\n" "STATUS" "PLATFORM" "CHECK" "TIME"
-  echo "  ──────────────────────────────────────────────────────────────"
-  for result in "${RESULTS[@]}"; do
-    IFS='|' read -r status platform check time <<< "$result"
-    local color="$RESET"
-    case "$status" in
-      PASS)    color="$GREEN" ;;
-      FAIL|TIMEOUT) color="$RED" ;;
-      SKIP)    color="$YELLOW" ;;
-    esac
-    printf "  ${color}%-10s${RESET} %-16s %-10s %s\n" "$status" "$platform" "$check" "$time"
-  done
-  echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-  printf "  ${GREEN}PASS: $PASS${RESET}  ${RED}FAIL: $FAIL${RESET}  ${YELLOW}SKIP: $SKIP${RESET}  TOTAL: $total\n"
-  echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-}
-
-# ── Platform Test Functions ──────────────────────────────────────────────────
-
-test_shopify() {
-  local t=$TIMEOUT_HTTP
-  echo -e "\n${BLUE}${BOLD}▸ shopify${RESET} (HTTP only)"
-  run_check shopify categories  "$t" $CLI --platform shopify categories finding-products
-  run_check shopify app         "$t" $CLI --platform shopify app trendsi
-  run_check shopify keyword     "$t" $CLI --platform shopify keyword "email marketing"
-  run_check shopify reviews     "$t" $CLI --platform shopify reviews trendsi
-  run_check shopify featured    "$t" $CLI --platform shopify featured
-}
-
-test_salesforce() {
-  local t=$TIMEOUT_BROWSER
-  if $SKIP_BROWSER; then skip_check salesforce all "browser skipped"; return; fi
-  echo -e "\n${BLUE}${BOLD}▸ salesforce${RESET} (browser)"
-  run_check salesforce categories "$t" $CLI --platform salesforce categories sales
-  run_check salesforce app        "$t" $CLI --platform salesforce app a0N4V00000JTeWyUAL
-  run_check salesforce keyword    "$t" $CLI --platform salesforce keyword "document generation"
-  run_check salesforce reviews    "$t" $CLI --platform salesforce reviews a0N4V00000JTeWyUAL
-}
-
-test_canva() {
-  local t=$TIMEOUT_BROWSER
-  if $SKIP_BROWSER; then skip_check canva all "browser skipped"; return; fi
-  echo -e "\n${BLUE}${BOLD}▸ canva${RESET} (browser)"
-  run_check canva categories "$t" $CLI --platform canva categories ai-images
-  run_check canva app        "$t" $CLI --platform canva app "AAE0b3zmS48--blur"
-  run_check canva keyword    "$t" $CLI --platform canva keyword "image generator"
-  run_check canva featured   "$t" $CLI --platform canva featured
-}
-
-test_wix() {
-  local t=$TIMEOUT_HTTP
-  echo -e "\n${BLUE}${BOLD}▸ wix${RESET} (HTTP only)"
-  run_check wix categories "$t" $CLI --platform wix categories marketing
-  run_check wix app        "$t" $CLI --platform wix app wix-forms
-  run_check wix keyword    "$t" $CLI --platform wix keyword "form builder"
-  run_check wix reviews    "$t" $CLI --platform wix reviews wix-forms
-}
-
-test_wordpress() {
-  local t=$TIMEOUT_HTTP
-  echo -e "\n${BLUE}${BOLD}▸ wordpress${RESET} (HTTP only)"
-  run_check wordpress categories "$t" $CLI --platform wordpress categories contact-form
-  run_check wordpress app        "$t" $CLI --platform wordpress app contact-form-7
-  run_check wordpress keyword    "$t" $CLI --platform wordpress keyword "contact form"
-  run_check wordpress reviews    "$t" $CLI --platform wordpress reviews contact-form-7
-}
-
-test_google_workspace() {
-  local t=$TIMEOUT_BROWSER
-  if $SKIP_BROWSER; then skip_check google_workspace all "browser skipped"; return; fi
-  echo -e "\n${BLUE}${BOLD}▸ google_workspace${RESET} (browser)"
-  run_check google_workspace categories "$t" $CLI --platform google_workspace categories business-tools
-  run_check google_workspace app        "$t" $CLI --platform google_workspace app "able_poll--921058472860"
-  run_check google_workspace keyword    "$t" $CLI --platform google_workspace keyword "project management"
-  run_check google_workspace reviews    "$t" $CLI --platform google_workspace reviews "able_poll--921058472860"
-}
-
-test_atlassian() {
-  local t=$TIMEOUT_HTTP
-  echo -e "\n${BLUE}${BOLD}▸ atlassian${RESET} (HTTP only)"
-  run_check atlassian categories "$t" $CLI --platform atlassian categories project-management
-  run_check atlassian app        "$t" $CLI --platform atlassian app com.onresolve.jira.groovy.groovyrunner
-  run_check atlassian keyword    "$t" $CLI --platform atlassian keyword "time tracking"
-  run_check atlassian reviews    "$t" $CLI --platform atlassian reviews com.onresolve.jira.groovy.groovyrunner
-  run_check atlassian featured   "$t" $CLI --platform atlassian featured
-}
-
-test_zoom() {
-  local t=$TIMEOUT_HTTP
-  echo -e "\n${BLUE}${BOLD}▸ zoom${RESET} (HTTP only)"
-  run_check zoom categories "$t" $CLI --platform zoom categories crm
-  run_check zoom keyword    "$t" $CLI --platform zoom keyword "calendar"
-  run_check zoom featured   "$t" $CLI --platform zoom featured
-}
-
-test_zoho() {
-  local t=$TIMEOUT_BROWSER
-  if $SKIP_BROWSER; then skip_check zoho all "browser skipped"; return; fi
-  echo -e "\n${BLUE}${BOLD}▸ zoho${RESET} (browser)"
-  run_check zoho categories "$t" $CLI --platform zoho categories desk
-  run_check zoho app        "$t" $CLI --platform zoho app "crm--360-sms-for-zoho-crm"
-  run_check zoho keyword    "$t" $CLI --platform zoho keyword "inventory"
-}
-
-test_zendesk() {
-  local t=$TIMEOUT_BROWSER
-  if $SKIP_BROWSER; then skip_check zendesk all "browser skipped"; return; fi
-  echo -e "\n${BLUE}${BOLD}▸ zendesk${RESET} (browser)"
-  run_check zendesk categories "$t" $CLI --platform zendesk categories ai-and-bots
-  run_check zendesk app        "$t" $CLI --platform zendesk app "972305--slack"
-  run_check zendesk keyword    "$t" $CLI --platform zendesk keyword "automation"
-  run_check zendesk reviews    "$t" $CLI --platform zendesk reviews "972305--slack"
-  run_check zendesk featured   "$t" $CLI --platform zendesk featured
-}
-
-test_hubspot() {
-  local t=$TIMEOUT_HTTP
-  echo -e "\n${BLUE}${BOLD}▸ hubspot${RESET} (http/chirp)"
-  run_check hubspot categories "$t" $CLI --platform hubspot categories sales
-  run_check hubspot app        "$t" $CLI --platform hubspot app gmail
-  run_check hubspot keyword    "$t" $CLI --platform hubspot keyword "email marketing"
-  run_check hubspot reviews    "$t" $CLI --platform hubspot reviews gmail
-  run_check hubspot featured   "$t" $CLI --platform hubspot featured
-}
-
-# ── Main ─────────────────────────────────────────────────────────────────────
-
+# ── Platform check matrix ────────────────────────────────────────────────────
+# Each platform defined as: platform|timeout_type|check1:arg check2:arg ...
+# timeout_type: http or browser. Args use + for spaces.
+# Checks not listed = N/A for that platform.
 ALL_PLATFORMS=(shopify salesforce canva wix wordpress google_workspace atlassian zoom zoho zendesk hubspot)
+ALL_CHECKS=(categories app keyword reviews featured)
 
-echo ""
-echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-echo -e "${BOLD}  LIVE SCRAPER SMOKE TEST${RESET}"
-echo "  $(date '+%Y-%m-%d %H:%M:%S')"
-echo "  Timeouts: HTTP=${TIMEOUT_HTTP}s  Browser=${TIMEOUT_BROWSER}s"
-if [[ -n "$SELECTED_PLATFORM" ]]; then
-  echo "  Platform: $SELECTED_PLATFORM"
-fi
-if $SKIP_BROWSER; then
-  echo "  Skipping browser platforms"
-fi
-echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+# Platform definitions — index matches ALL_PLATFORMS
+PLATFORM_TYPE=(http browser browser http http browser http http browser browser http)
+PLATFORM_CHECKS=(
+  "categories:finding-products app:trendsi keyword:email+marketing reviews:trendsi featured:"
+  "categories:sales app:a0N4V00000JTeWyUAL keyword:document+generation reviews:a0N4V00000JTeWyUAL"
+  "categories:ai-images app:AAE0b3zmS48--blur keyword:image+generator featured:"
+  "categories:marketing app:wix-forms keyword:form+builder reviews:wix-forms"
+  "categories:contact-form app:contact-form-7 keyword:contact+form reviews:contact-form-7"
+  "categories:business-tools app:able_poll--921058472860 keyword:project+management reviews:able_poll--921058472860"
+  "categories:project-management app:com.onresolve.jira.groovy.groovyrunner keyword:time+tracking reviews:com.onresolve.jira.groovy.groovyrunner featured:"
+  "categories:crm keyword:calendar featured:"
+  "categories:desk app:crm--360-sms-for-zoho-crm keyword:inventory"
+  "categories:ai-and-bots app:972305--slack keyword:automation reviews:972305--slack featured:"
+  "categories:sales app:gmail keyword:email+marketing reviews:gmail featured:"
+)
 
+# ── Validate selected platform ───────────────────────────────────────────────
 if [[ -n "$SELECTED_PLATFORM" ]]; then
-  # Validate platform name
   valid=false
   for p in "${ALL_PLATFORMS[@]}"; do
     if [[ "$p" == "$SELECTED_PLATFORM" ]]; then valid=true; break; fi
@@ -262,16 +120,446 @@ if [[ -n "$SELECTED_PLATFORM" ]]; then
     echo "Valid platforms: ${ALL_PLATFORMS[*]}"
     exit 1
   fi
-  "test_$SELECTED_PLATFORM"
-else
-  for p in "${ALL_PLATFORMS[@]}"; do
-    "test_$p"
-  done
 fi
 
-print_summary
+# ── Helpers: get platform index ──────────────────────────────────────────────
+platform_index() {
+  local target="$1" i=0
+  for p in "${ALL_PLATFORMS[@]}"; do
+    if [[ "$p" == "$target" ]]; then echo "$i"; return; fi
+    i=$((i + 1))
+  done
+  echo "-1"
+}
 
-# Exit with code 1 if any failures
-if [[ $FAIL -gt 0 ]]; then
-  exit 1
+# Get CLI arg for a platform+check (empty string if no arg, "__NA__" if check doesn't exist)
+get_check_arg() {
+  local platform="$1" check="$2"
+  local idx
+  idx=$(platform_index "$platform")
+  local checks_str="${PLATFORM_CHECKS[$idx]}"
+
+  for entry in $checks_str; do
+    local c="${entry%%:*}"
+    local a="${entry#*:}"
+    if [[ "$c" == "$check" ]]; then
+      if [[ "$c" == "$a" ]]; then
+        echo ""
+      else
+        echo "$a"
+      fi
+      return
+    fi
+  done
+  echo "__NA__"
+}
+
+get_timeout() {
+  local platform="$1"
+  local idx
+  idx=$(platform_index "$platform")
+  if [[ "${PLATFORM_TYPE[$idx]}" == "browser" ]]; then
+    echo "$TIMEOUT_BROWSER"
+  else
+    echo "$TIMEOUT_HTTP"
+  fi
+}
+
+is_browser_platform() {
+  local platform="$1"
+  local idx
+  idx=$(platform_index "$platform")
+  [[ "${PLATFORM_TYPE[$idx]}" == "browser" ]]
+}
+
+# ── Determine active platforms ───────────────────────────────────────────────
+ACTIVE_PLATFORMS=()
+for p in "${ALL_PLATFORMS[@]}"; do
+  if [[ -n "$SELECTED_PLATFORM" && "$p" != "$SELECTED_PLATFORM" ]]; then
+    continue
+  fi
+  ACTIVE_PLATFORMS+=("$p")
+done
+
+# ── Initialize status files + build job list ─────────────────────────────────
+# Status stored in files: $WORK_DIR/<platform>-<check>.status
+# Values: PENDING, RUNNING, PASS, FAIL, TIMEOUT, SKIP, NA
+JOB_LIST=()
+
+for platform in "${ACTIVE_PLATFORMS[@]}"; do
+  for check in "${ALL_CHECKS[@]}"; do
+    local_arg=$(get_check_arg "$platform" "$check")
+    if [[ "$local_arg" == "__NA__" ]]; then
+      echo "NA" > "$WORK_DIR/${platform}-${check}.status"
+    elif $SKIP_BROWSER && is_browser_platform "$platform"; then
+      echo "SKIP" > "$WORK_DIR/${platform}-${check}.status"
+    else
+      echo "PENDING" > "$WORK_DIR/${platform}-${check}.status"
+      JOB_LIST+=("${platform}|${check}")
+    fi
+  done
+done
+
+# ── Start time ───────────────────────────────────────────────────────────────
+START_EPOCH=$(date +%s)
+
+# ── Get status for a cell ────────────────────────────────────────────────────
+get_status() {
+  cat "$WORK_DIR/${1}-${2}.status" 2>/dev/null || echo "PENDING"
+}
+
+get_duration() {
+  cat "$WORK_DIR/${1}-${2}.duration" 2>/dev/null || echo "0"
+}
+
+# ── Background check runner ─────────────────────────────────────────────────
+run_check_bg() {
+  local platform="$1" check="$2"
+  local arg
+  arg=$(get_check_arg "$platform" "$check")
+  local tout
+  tout=$(get_timeout "$platform")
+  local cli_arg="${arg//+/ }"
+
+  # .start is written by launch_all_jobs before backgrounding
+
+  local cmd
+  if [[ -n "$cli_arg" ]]; then
+    cmd="$CLI --platform $platform $check $cli_arg"
+  else
+    cmd="$CLI --platform $platform $check"
+  fi
+
+  local output exit_code
+  output=$(cd "$SCRAPER_DIR" && timeout "$tout" $cmd 2>&1) && exit_code=0 || exit_code=$?
+
+  local end_epoch start_epoch elapsed
+  end_epoch=$(date +%s)
+  start_epoch=$(cat "$WORK_DIR/${platform}-${check}.start")
+  elapsed=$((end_epoch - start_epoch))
+
+  echo "$output" > "$WORK_DIR/${platform}-${check}.output"
+  echo "$elapsed" > "$WORK_DIR/${platform}-${check}.duration"
+  echo "$exit_code" > "$WORK_DIR/${platform}-${check}.exitcode"
+
+  if [[ $exit_code -eq 0 ]]; then
+    echo "PASS" > "$WORK_DIR/${platform}-${check}.status"
+  elif [[ $exit_code -eq 124 ]]; then
+    echo "TIMEOUT" > "$WORK_DIR/${platform}-${check}.status"
+  else
+    echo "FAIL" > "$WORK_DIR/${platform}-${check}.status"
+  fi
+}
+
+# ── Count helpers ────────────────────────────────────────────────────────────
+count_by_status() {
+  local target="$1" count=0
+  for platform in "${ACTIVE_PLATFORMS[@]}"; do
+    for check in "${ALL_CHECKS[@]}"; do
+      if [[ "$(get_status "$platform" "$check")" == "$target" ]]; then
+        count=$((count + 1))
+      fi
+    done
+  done
+  echo "$count"
+}
+
+count_failures() {
+  local count=0
+  for platform in "${ACTIVE_PLATFORMS[@]}"; do
+    for check in "${ALL_CHECKS[@]}"; do
+      local s
+      s=$(get_status "$platform" "$check")
+      if [[ "$s" == "FAIL" || "$s" == "TIMEOUT" ]]; then
+        count=$((count + 1))
+      fi
+    done
+  done
+  echo "$count"
+}
+
+all_done() {
+  for platform in "${ACTIVE_PLATFORMS[@]}"; do
+    for check in "${ALL_CHECKS[@]}"; do
+      local s
+      s=$(get_status "$platform" "$check")
+      if [[ "$s" == "RUNNING" || "$s" == "PENDING" ]]; then
+        return 1
+      fi
+    done
+  done
+  return 0
+}
+
+count_running() {
+  local count=0
+  for platform in "${ACTIVE_PLATFORMS[@]}"; do
+    for check in "${ALL_CHECKS[@]}"; do
+      if [[ "$(get_status "$platform" "$check")" == "RUNNING" ]]; then
+        count=$((count + 1))
+      fi
+    done
+  done
+  echo "$count"
+}
+
+# ── Render helpers ───────────────────────────────────────────────────────────
+COL_PLATFORM=18
+COL_CHECK=12
+TABLE_WIDTH=78
+TABLE_LINES=0
+
+render_cell() {
+  local status="$1" platform="$2" check="$3"
+
+  case "$status" in
+    PASS)
+      local dur
+      dur=$(get_duration "$platform" "$check")
+      printf "${GREEN}✓ %-$((COL_CHECK - 3))s${RESET}" "${dur}s"
+      ;;
+    FAIL|TIMEOUT)
+      local dur
+      dur=$(get_duration "$platform" "$check")
+      printf "${RED}✗ %-$((COL_CHECK - 3))s${RESET}" "${dur}s"
+      ;;
+    RUNNING)
+      local now elapsed=0
+      now=$(date +%s)
+      local start_file="$WORK_DIR/${platform}-${check}.start"
+      if [[ -f "$start_file" ]]; then
+        local start_ts
+        start_ts=$(cat "$start_file" 2>/dev/null || echo "$now")
+        elapsed=$((now - start_ts))
+      fi
+      printf "${CYAN}⟳ %-$((COL_CHECK - 3))s${RESET}" "${elapsed}s"
+      ;;
+    PENDING)
+      printf "${DIM}· · ·%-$((COL_CHECK - 6))s${RESET}" ""
+      ;;
+    NA)
+      printf "${DIM}─ %-$((COL_CHECK - 3))s${RESET}" ""
+      ;;
+    SKIP)
+      printf "${YELLOW}⊘ %-$((COL_CHECK - 3))s${RESET}" ""
+      ;;
+  esac
+}
+
+render_table() {
+  local now elapsed pass_n fail_n skip_n pending_n running_n na_n
+  now=$(date +%s)
+  elapsed=$((now - START_EPOCH))
+  pass_n=$(count_by_status PASS)
+  fail_n=$(count_failures)
+  skip_n=$(count_by_status SKIP)
+  pending_n=$(count_by_status PENDING)
+  running_n=$(count_running)
+  na_n=$(count_by_status NA)
+
+  local lines=0
+  local ruler
+  ruler=$(printf '━%.0s' $(seq 1 $TABLE_WIDTH))
+
+  echo "$ruler"; lines=$((lines + 1))
+
+  printf "  ${BOLD}LIVE SCRAPER SMOKE TEST${RESET}%*s%s\n" \
+    $((TABLE_WIDTH - 40)) "" "$(date '+%Y-%m-%d %H:%M:%S')"
+  lines=$((lines + 1))
+
+  printf "  Timeouts: HTTP=${TIMEOUT_HTTP}s  Browser=${TIMEOUT_BROWSER}s"
+  printf "%*s" $((TABLE_WIDTH - 55)) ""
+  printf "${CYAN}⟳ %-3d${RESET} ${DIM}· %-3d${RESET} ${GREEN}✓ %-3d${RESET} ${RED}✗ %-3d${RESET} ${DIM}─ %-3d${RESET} ${YELLOW}⊘ %-3d${RESET}\n" \
+    "$running_n" "$pending_n" "$pass_n" "$fail_n" "$na_n" "$skip_n"
+  lines=$((lines + 1))
+
+  echo "$ruler"; lines=$((lines + 1))
+
+  printf "  ${BOLD}%-${COL_PLATFORM}s${RESET}" "PLATFORM"
+  for check in "${ALL_CHECKS[@]}"; do
+    printf "${BOLD}%-${COL_CHECK}s${RESET}" "$check"
+  done
+  echo ""; lines=$((lines + 1))
+
+  printf "  "
+  printf '─%.0s' $(seq 1 $((TABLE_WIDTH - 4)))
+  echo ""; lines=$((lines + 1))
+
+  for platform in "${ACTIVE_PLATFORMS[@]}"; do
+    printf "  %-${COL_PLATFORM}s" "$platform"
+    for check in "${ALL_CHECKS[@]}"; do
+      local s
+      s=$(get_status "$platform" "$check")
+      render_cell "$s" "$platform" "$check"
+    done
+    echo ""; lines=$((lines + 1))
+  done
+
+  echo ""; lines=$((lines + 1))
+  echo "$ruler"; lines=$((lines + 1))
+  printf "  ${GREEN}✓ PASS: %-4d${RESET}${RED}✗ FAIL: %-4d${RESET}${YELLOW}⊘ SKIP: %-4d${RESET}Elapsed: %ds\n" \
+    "$pass_n" "$fail_n" "$skip_n" "$elapsed"
+  lines=$((lines + 1))
+  echo "$ruler"; lines=$((lines + 1))
+
+  TABLE_LINES=$lines
+}
+
+# ── Print failure details ────────────────────────────────────────────────────
+print_failures() {
+  local has_failures=false
+  for platform in "${ACTIVE_PLATFORMS[@]}"; do
+    for check in "${ALL_CHECKS[@]}"; do
+      local s
+      s=$(get_status "$platform" "$check")
+      if [[ "$s" == "FAIL" || "$s" == "TIMEOUT" ]]; then
+        has_failures=true
+        break 2
+      fi
+    done
+  done
+
+  if ! $has_failures; then return; fi
+
+  echo ""
+  echo -e "  ${RED}${BOLD}FAILURES:${RESET}"
+  printf "  "; printf '─%.0s' $(seq 1 74); echo ""
+
+  for platform in "${ACTIVE_PLATFORMS[@]}"; do
+    for check in "${ALL_CHECKS[@]}"; do
+      local s
+      s=$(get_status "$platform" "$check")
+      if [[ "$s" == "FAIL" || "$s" == "TIMEOUT" ]]; then
+        local dur exit_code
+        dur=$(get_duration "$platform" "$check")
+        exit_code=$(cat "$WORK_DIR/${platform}-${check}.exitcode" 2>/dev/null || echo "?")
+        echo -e "  ${RED}✗${RESET} ${BOLD}${platform} / ${check}${RESET} (exit=${exit_code}, ${dur}s):"
+        local output_file="$WORK_DIR/${platform}-${check}.output"
+        if [[ -f "$output_file" ]]; then
+          tail -5 "$output_file" | sed 's/^/    /'
+        fi
+        echo ""
+      fi
+    done
+  done
+}
+
+# ── Launch jobs ──────────────────────────────────────────────────────────────
+launch_all_jobs() {
+  for job in "${JOB_LIST[@]}"; do
+    IFS='|' read -r platform check <<< "$job"
+
+    # Concurrency throttle
+    if [[ $MAX_JOBS -gt 0 ]]; then
+      while true; do
+        local running
+        running=$(count_running)
+        if [[ $running -lt $MAX_JOBS ]]; then
+          break
+        fi
+        sleep 0.2
+      done
+    fi
+
+    echo "RUNNING" > "$WORK_DIR/${platform}-${check}.status"
+    date +%s > "$WORK_DIR/${platform}-${check}.start"
+    run_check_bg "$platform" "$check" &
+  done
+}
+
+# ── No-live mode (CI) ───────────────────────────────────────────────────────
+run_no_live() {
+  local ruler
+  ruler=$(printf '━%.0s' $(seq 1 $TABLE_WIDTH))
+  echo ""
+  echo "$ruler"
+  echo -e "  ${BOLD}LIVE SCRAPER SMOKE TEST${RESET}  $(date '+%Y-%m-%d %H:%M:%S')"
+  echo "  Timeouts: HTTP=${TIMEOUT_HTTP}s  Browser=${TIMEOUT_BROWSER}s"
+  if [[ -n "$SELECTED_PLATFORM" ]]; then echo "  Platform: $SELECTED_PLATFORM"; fi
+  if $SKIP_BROWSER; then echo "  Skipping browser platforms"; fi
+  echo "$ruler"
+  echo ""
+
+  launch_all_jobs
+
+  while ! all_done; do
+    sleep 0.3
+  done
+  wait 2>/dev/null || true
+
+  local pass_n=0 fail_n=0 skip_n=0
+  for platform in "${ACTIVE_PLATFORMS[@]}"; do
+    for check in "${ALL_CHECKS[@]}"; do
+      local s
+      s=$(get_status "$platform" "$check")
+      case "$s" in
+        PASS)
+          printf "  ${GREEN}PASS${RESET}    %-18s %-14s %ss\n" "$platform" "$check" "$(get_duration "$platform" "$check")"
+          pass_n=$((pass_n + 1)) ;;
+        FAIL|TIMEOUT)
+          printf "  ${RED}%-7s${RESET} %-18s %-14s %ss\n" "$s" "$platform" "$check" "$(get_duration "$platform" "$check")"
+          fail_n=$((fail_n + 1)) ;;
+        SKIP)
+          printf "  ${YELLOW}SKIP${RESET}    %-18s %-14s browser skipped\n" "$platform" "$check"
+          skip_n=$((skip_n + 1)) ;;
+      esac
+    done
+  done
+
+  echo ""
+  echo "$ruler"
+  local total_elapsed=$(( $(date +%s) - START_EPOCH ))
+  printf "  ${GREEN}PASS: $pass_n${RESET}  ${RED}FAIL: $fail_n${RESET}  ${YELLOW}SKIP: $skip_n${RESET}  Elapsed: ${total_elapsed}s\n"
+  echo "$ruler"
+
+  print_failures
+  [[ $fail_n -gt 0 ]] && return 1 || return 0
+}
+
+# ── Live mode (interactive terminal) ────────────────────────────────────────
+run_live() {
+  printf "\033[?25l"  # Hide cursor
+  CURSOR_HIDDEN=true
+
+  echo ""
+  launch_all_jobs
+
+  render_table
+
+  while true; do
+    if all_done; then
+      printf "\033[${TABLE_LINES}A"
+      render_table
+      break
+    fi
+
+    sleep 0.5
+    printf "\033[${TABLE_LINES}A"
+    render_table
+  done
+
+  wait 2>/dev/null || true
+  printf "\033[?25h"  # Show cursor
+  CURSOR_HIDDEN=false
+
+  print_failures
+
+  local fail_n
+  fail_n=$(count_failures)
+  [[ $fail_n -gt 0 ]] && return 1 || return 0
+}
+
+# ── Main ─────────────────────────────────────────────────────────────────────
+if [[ ${#JOB_LIST[@]} -eq 0 ]]; then
+  echo "No checks to run."
+  if $SKIP_BROWSER; then
+    echo "(All selected platforms require a browser; use without --skip-browser)"
+  fi
+  exit 0
+fi
+
+if $NO_LIVE; then
+  run_no_live
+else
+  run_live
 fi
