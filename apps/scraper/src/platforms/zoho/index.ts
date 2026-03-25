@@ -86,7 +86,10 @@ export class ZohoModule implements PlatformModule {
     const url = zohoUrls.category(slug);
     log.info("fetching category page via browser", { slug, url });
     if (this.browserClient) {
-      return this.browserClient.fetchPage(url);
+      return this.browserClient.fetchPage(url, {
+        waitUntil: "domcontentloaded",
+        extraWaitMs: 3000,
+      });
     }
     // Fallback to HTTP (may not have full data for SPA pages)
     log.warn("no browser client available, falling back to HTTP for category page", { slug });
@@ -100,7 +103,10 @@ export class ZohoModule implements PlatformModule {
     const url = zohoUrls.search(keyword);
     log.info("fetching search page via browser", { keyword, url });
     if (this.browserClient) {
-      return this.browserClient.fetchPage(url);
+      return this.browserClient.fetchPage(url, {
+        waitUntil: "domcontentloaded",
+        extraWaitMs: 3000,
+      });
     }
     log.warn("no browser client available, falling back to HTTP for search page", { keyword });
     return this.httpClient.fetchPage(url);

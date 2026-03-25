@@ -80,12 +80,17 @@ async function main() {
   switch (command) {
     case "categories": {
       const slug = process.argv[3];
+      const pagesIdx = process.argv.indexOf("--pages");
+      const pagesArg = pagesIdx !== -1 ? process.argv[pagesIdx + 1] : undefined;
+      const pageOptions = pagesArg
+        ? { pages: pagesArg === "all" ? "all" as const : pagesArg === "first" ? "first" as const : parseInt(pagesArg, 10) }
+        : undefined;
       const scraper = new CategoryScraper(db, { httpClient, platformModule });
       if (slug) {
-        const discovered = await scraper.scrapeSingle(slug, "cli");
+        const discovered = await scraper.scrapeSingle(slug, "cli", pageOptions);
         console.log(`\nSingle category scrape complete. Discovered ${discovered.length} apps.`);
       } else {
-        const result = await scraper.crawl();
+        const result = await scraper.crawl("cli", pageOptions);
         console.log(
           `\nCategory tree crawl complete. ${JSON.stringify(result.tree.map((n) => n.title))}`
         );
