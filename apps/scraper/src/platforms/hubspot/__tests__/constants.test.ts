@@ -52,8 +52,8 @@ describe("HUBSPOT_CONSTANTS", () => {
 });
 
 describe("HUBSPOT_SCORING", () => {
-  it("has pageSize of 50", () => {
-    expect(HUBSPOT_SCORING.pageSize).toBe(50);
+  it("has pageSize of 100", () => {
+    expect(HUBSPOT_SCORING.pageSize).toBe(100);
   });
 
   it("has pageDecay between 0 and 1", () => {

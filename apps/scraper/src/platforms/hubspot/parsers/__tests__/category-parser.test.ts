@@ -58,7 +58,7 @@ describe("parseHubSpotCategoryPage", () => {
   });
 
   it("sets hasNextPage true when full page received", () => {
-    const cards = Array.from({ length: 50 }, (_, i) => ({
+    const cards = Array.from({ length: 100 }, (_, i) => ({
       slug: `app-${i}`,
       listingName: `App ${i}`,
     }));

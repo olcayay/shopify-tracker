@@ -20,13 +20,13 @@ export const HUBSPOT_CATEGORY_NAMES: Record<string, string> = {
   content: "Content",
 };
 
-/** CHIRP API page size for search results. */
-export const HUBSPOT_PAGE_SIZE = 50;
+/** CHIRP API page size — always returns 100 cards per request regardless of limit param. */
+export const HUBSPOT_PAGE_SIZE = 100;
 
 export const HUBSPOT_CONSTANTS: PlatformConstants = {
   seedCategories: [...HUBSPOT_SEED_CATEGORIES],
   maxCategoryDepth: 1, // Hierarchical: 2 levels
-  defaultPagesPerCategory: 44, // 50 apps/page via CHIRP API, ~2200 total apps
+  defaultPagesPerCategory: 22, // 100 apps/page via CHIRP API, ~2200 total apps
   trackedFields: [
     "shortDescription",
     "longDescription",
