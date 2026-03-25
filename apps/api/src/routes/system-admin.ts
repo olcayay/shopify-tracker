@@ -664,11 +664,11 @@ export const systemAdminRoutes: FastifyPluginAsync = async (app) => {
     // 2. Avg + prev duration of last 5 completed runs per (platform, scraperType)
     const durationStats = await db.execute(sql`
       SELECT platform, scraper_type,
-        avg(duration_ms)::int AS avg_duration_ms,
+        avg(duration_ms)::bigint AS avg_duration_ms,
         (array_agg(duration_ms ORDER BY completed_at DESC))[2] AS prev_duration_ms
       FROM (
         SELECT platform, scraper_type,
-          EXTRACT(EPOCH FROM (completed_at - started_at))::int * 1000 AS duration_ms,
+          (EXTRACT(EPOCH FROM (completed_at - started_at)) * 1000)::bigint AS duration_ms,
           completed_at,
           ROW_NUMBER() OVER (PARTITION BY platform, scraper_type ORDER BY completed_at DESC) AS rn
         FROM scrape_runs
@@ -689,7 +689,7 @@ export const systemAdminRoutes: FastifyPluginAsync = async (app) => {
     // 4. Recent failures (last 24h, max 10)
     const recentFailures = await db.execute(sql`
       SELECT id, platform, scraper_type, completed_at, error,
-        EXTRACT(EPOCH FROM (completed_at - started_at))::int * 1000 AS duration_ms
+        (EXTRACT(EPOCH FROM (completed_at - started_at)) * 1000)::bigint AS duration_ms
       FROM scrape_runs
       WHERE status = 'failed'
         AND platform IS NOT NULL
