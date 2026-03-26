@@ -8,6 +8,7 @@ function makeCell(overrides: Partial<HealthCell> = {}): HealthCell {
     lastRun: {
       status: "completed",
       completedAt: new Date().toISOString(),
+      startedAt: new Date(Date.now() - 5000).toISOString(),
       durationMs: 5000,
       itemsScraped: 50,
       itemsFailed: 0,
@@ -23,62 +24,36 @@ function makeCell(overrides: Partial<HealthCell> = {}): HealthCell {
   };
 }
 
+function makeLastRun(overrides: Partial<NonNullable<HealthCell["lastRun"]>> = {}): HealthCell["lastRun"] {
+  return {
+    status: "completed",
+    completedAt: new Date().toISOString(),
+    startedAt: new Date(Date.now() - 5000).toISOString(),
+    durationMs: 5000,
+    itemsScraped: 50,
+    itemsFailed: 0,
+    error: null,
+    fallbackUsed: false,
+    ...overrides,
+  };
+}
+
 describe("getCellStatus", () => {
   it("returns green for healthy completed run", () => {
     expect(getCellStatus(makeCell())).toBe("green");
   });
 
   it("returns amber when completed with failed items", () => {
-    expect(
-      getCellStatus(
-        makeCell({
-          lastRun: {
-            status: "completed",
-            completedAt: new Date().toISOString(),
-            durationMs: 5000,
-            itemsScraped: 50,
-            itemsFailed: 3,
-            error: null,
-            fallbackUsed: false,
-          },
-        })
-      )
-    ).toBe("amber");
+    expect(getCellStatus(makeCell({ lastRun: makeLastRun({ itemsFailed: 3 }) }))).toBe("amber");
   });
 
   it("returns green when completed with zero failed items", () => {
-    expect(
-      getCellStatus(
-        makeCell({
-          lastRun: {
-            status: "completed",
-            completedAt: new Date().toISOString(),
-            durationMs: 5000,
-            itemsScraped: 50,
-            itemsFailed: 0,
-            error: null,
-            fallbackUsed: false,
-          },
-        })
-      )
-    ).toBe("green");
+    expect(getCellStatus(makeCell({ lastRun: makeLastRun({ itemsFailed: 0 }) }))).toBe("green");
   });
 
   it("returns red for failed run (takes priority over amber)", () => {
     expect(
-      getCellStatus(
-        makeCell({
-          lastRun: {
-            status: "failed",
-            completedAt: new Date().toISOString(),
-            durationMs: 5000,
-            itemsScraped: 10,
-            itemsFailed: 5,
-            error: "Fatal error",
-            fallbackUsed: false,
-          },
-        })
-      )
+      getCellStatus(makeCell({ lastRun: makeLastRun({ status: "failed", itemsFailed: 5, error: "Fatal error" }) }))
     ).toBe("red");
   });
 
@@ -91,21 +66,9 @@ describe("getCellStatus", () => {
   });
 
   it("returns yellow when stale (even with failed items)", () => {
-    const staleDate = new Date(Date.now() - 48 * 60 * 60 * 1000).toISOString(); // 48h ago
+    const staleDate = new Date(Date.now() - 48 * 60 * 60 * 1000).toISOString();
     expect(
-      getCellStatus(
-        makeCell({
-          lastRun: {
-            status: "completed",
-            completedAt: staleDate,
-            durationMs: 5000,
-            itemsScraped: 50,
-            itemsFailed: 3,
-            error: null,
-            fallbackUsed: false,
-          },
-        })
-      )
+      getCellStatus(makeCell({ lastRun: makeLastRun({ completedAt: staleDate, itemsFailed: 3 }) }))
     ).toBe("yellow");
   });
 

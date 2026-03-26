@@ -759,8 +759,10 @@ export const systemAdminRoutes: FastifyPluginAsync = async (app) => {
           const durationMs = startedAt && completedAt ? completedAt - startedAt : null;
           const meta = latest.metadata as Record<string, unknown> | null;
           lastRun = {
+            runId: latest.id as string,
             status: latest.status as string,
             completedAt: latest.completed_at ? new Date(latest.completed_at).toISOString() : null,
+            startedAt: latest.started_at ? new Date(latest.started_at).toISOString() : null,
             durationMs,
             itemsScraped: (meta?.items_scraped as number) ?? null,
             itemsFailed: (meta?.items_failed as number) ?? null,
