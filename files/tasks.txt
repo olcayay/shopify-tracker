@@ -207,3 +207,9 @@ comprehensive test coverage expansion — 740 → 2,362 tests (+1,622) across al
 HubSpot App Marketplace — 11th platform integration, BrowserClient (pure SPA), 6 hierarchical categories, slug format {slug}, reviews, featured, pricing ✅
 
 live smoke test runner in scraper health dashboard — SSE endpoint, real-time 11×5 matrix, retry individual checks, shared config ✅
+
+fallback/secondary scraping methods for all 11 platforms — withFallback() utility, browser fallback for HTTP-primary platforms, API fallback for browser-primary platforms, HTML parsers for Atlassian/WordPress/Zoom, Algolia app parser for Zendesk, search API parser for Salesforce, --force-fallback CLI flag, --fallback smoke test mode ✅
+
+fallback unit tests for all 11 platforms — 15 test files, 69 total test files, 1062 tests passing. Covers primary success, fallback trigger, both-fail propagation, parser format handling ✅
+
+smoke test --compare mode — runs primary then fallback sequentially, shows phase headers and side-by-side summary with pass/fail for each mode ✅

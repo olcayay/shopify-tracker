@@ -10,7 +10,8 @@ import type {
 } from "../platform-module.js";
 import { HttpClient } from "../../http-client.js";
 import type { BrowserClient } from "../../browser-client.js";
-import { chromium, type Browser, type BrowserContext, type Page, type Response } from "playwright";
+import { withFallback } from "../../utils/with-fallback.js";
+import type { Browser, BrowserContext, Page, Response } from "playwright";
 import { canvaUrls } from "./urls.js";
 import { CANVA_CONSTANTS, CANVA_SCORING } from "./constants.js";
 import { parseCanvaAppPage, extractCanvaApps, normalizeCanvaApp } from "./parsers/app-parser.js";
@@ -18,6 +19,7 @@ import { parseCanvaCategoryPage } from "./parsers/category-parser.js";
 import { parseCanvaFeaturedSections } from "./parsers/featured-parser.js";
 import { parseCanvaSearchPage } from "./parsers/search-parser.js";
 import { parseCanvaSuggestions } from "./parsers/suggest-parser.js";
+import { searchBulkApps } from "./parsers/bulk-search.js";
 import { createLogger } from "@appranks/shared";
 
 const log = createLogger("canva-module");
@@ -83,6 +85,22 @@ export class CanvaModule implements PlatformModule {
   // --- Fetch ---
 
   async fetchAppPage(slug: string): Promise<string> {
+    return withFallback(
+      () => this.fetchAppPageViaBrowser(slug),
+      async () => {
+        // Fallback: fetch /apps bulk page via HTTP and extract app data
+        const html = await this.httpClient.fetchPage("https://www.canva.com/apps");
+        const appId = slug.split("--")[0];
+        if (!html.includes(`"A":"${appId}"`)) {
+          throw new Error(`App ${slug} not found in bulk page`);
+        }
+        return html;
+      },
+      `canva/fetchAppPage/${slug}`,
+    );
+  }
+
+  private async fetchAppPageViaBrowser(slug: string): Promise<string> {
     const page = await this.ensureBrowserPage();
     const appId = slug.split("--")[0];
     const urlSlug = slug.split("--")[1] || "";
@@ -151,7 +169,11 @@ export class CanvaModule implements PlatformModule {
   }
 
   async fetchCategoryPage(_slug: string, _page?: number): Promise<string> {
-    return this.fetchAppsPage();
+    return withFallback(
+      () => this.fetchAppsPage(),
+      () => this.httpClient.fetchPage("https://www.canva.com/apps"),
+      "canva/fetchCategoryPage",
+    );
   }
 
   // --- Parse ---
@@ -213,10 +235,21 @@ export class CanvaModule implements PlatformModule {
       return JSON.stringify({ A: 0, C: [] });
     }
 
-    const allResults = await this.fetchAllSearchResults(keyword);
-    const combinedJson = JSON.stringify(allResults);
-    this.searchCache.set(keyword, combinedJson);
+    const combinedJson = await withFallback(
+      async () => {
+        const allResults = await this.fetchAllSearchResults(keyword);
+        return JSON.stringify(allResults);
+      },
+      async () => {
+        // Fallback: fetch /apps bulk page via HTTP and do client-side text search
+        log.info("using bulk search fallback", { keyword });
+        const html = await this.httpClient.fetchPage("https://www.canva.com/apps");
+        return searchBulkApps(html, keyword);
+      },
+      `canva/fetchSearchPage/${keyword}`,
+    );
 
+    this.searchCache.set(keyword, combinedJson);
     return combinedJson;
   }
 
@@ -571,6 +604,7 @@ export class CanvaModule implements PlatformModule {
       ],
       ignoreDefaultArgs: ["--enable-automation"],
     };
+    const { chromium } = await import("playwright");
     try {
       this.browser = await chromium.launch({ ...launchOptions, channel: "chrome" });
       log.info("launched real Chrome");

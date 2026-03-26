@@ -1,3 +1,54 @@
+Fallback/Secondary Scraping Methods for All 11 Platforms
+==========================================================
+
+Every platform module now has transparent fallback scraping via withFallback() utility.
+Primary method fails → fallback kicks in automatically. Zero overhead on success path.
+
+Architecture:
+- withFallback<T>(primary, fallback, context) — try/catch with logging
+- FORCE_FALLBACK=true env var to skip primary and test fallback path directly
+- --force-fallback CLI flag, --fallback smoke test mode
+- BrowserClient always created (lazy — browser only launches if fallback triggers)
+- registry.ts passes both httpClient and browserClient to all 11 modules
+
+Per-Platform Fallback Strategies:
+- Shopify, Wix: HTTP → Browser (same parsers)
+- Zoho: HTTP↔Browser (direction depends on page type)
+- Google Workspace: Browser re-launch with fresh context
+- Canva: Browser → HTTP bulk page (/apps embedded JSON + text search)
+- HubSpot: CHIRP HTTP → Browser page.evaluate() calling CHIRP from browser context
+- WordPress, Atlassian, Zoom: REST API → Browser + new HTML parsers
+- Zendesk: Browser (Cloudflare) → Algolia search by numeric ID
+- Salesforce: Browser SPA → Search API card data
+
+New Files:
+- apps/scraper/src/utils/with-fallback.ts (+ tests)
+- apps/scraper/src/platforms/atlassian/parsers/html-parser.ts
+- apps/scraper/src/platforms/wordpress/parsers/html-parser.ts
+- apps/scraper/src/platforms/zoom/parsers/html-parser.ts
+- apps/scraper/src/platforms/zendesk/parsers/algolia-app-parser.ts
+- apps/scraper/src/platforms/salesforce/parsers/search-app-parser.ts
+- apps/scraper/src/platforms/canva/parsers/bulk-search.ts
+
+Fallback Unit Tests (15 test files, 1062 total tests):
+- Every platform has __tests__/fallback.test.ts covering primary success, fallback trigger, both-fail propagation
+- Google Workspace: mock browser internals injected, closeBrowser spy for reset behavior
+- Canva: tests fallback components directly (searchBulkApps, cached paths, HTTP fallback logic) — cannot mock private methods through module due to vitest ESM isolation
+- Zendesk HTML parser tests: parseCategoryHtml, parseSearchHtml with Cheerio extraction
+- Test files: shopify, salesforce, canva, wix, wordpress, google-workspace, atlassian, zoom, zoho, zendesk, hubspot fallback.test.ts + parser-specific tests
+
+Smoke Test --compare Mode:
+- ./scripts/smoke-test.sh --compare runs primary THEN fallback sequentially
+- Shows "PHASE 1: PRIMARY" and "PHASE 2: FALLBACK" headers
+- Displays "COMPARE SUMMARY" with pass/fail for each mode
+- Can combine with --platform: ./scripts/smoke-test.sh --platform shopify --compare
+
+Production smoke test fix:
+- Dockerfile.api now includes scraper build (smoke tests spawn CLI from API container)
+- resolveScraperCommand() detects dev (tsx) vs production (node dist/cli.js)
+- browser-client.ts uses dynamic import("playwright") so HTTP-only platforms work without Playwright
+- Fixed double-counting bug in SSE smoke test endpoint (error+close both firing)
+
 Comprehensive Test Coverage Expansion (740 → 2,362 tests)
 ==========================================================
 

@@ -11,6 +11,7 @@ import type {
 } from "../platform-module.js";
 import type { HttpClient } from "../../http-client.js";
 import type { BrowserClient } from "../../browser-client.js";
+import { withFallback } from "../../utils/with-fallback.js";
 import { hubspotUrls, CHIRP_HEADERS } from "./urls.js";
 import { HUBSPOT_CONSTANTS, HUBSPOT_SCORING, HUBSPOT_PAGE_SIZE } from "./constants.js";
 import { parseHubSpotAppDetails, extractOfferingId } from "./parsers/app-parser.js";
@@ -103,31 +104,37 @@ export class HubSpotModule implements PlatformModule {
 
   async fetchAppPage(slug: string): Promise<string> {
     log.info("fetching app via CHIRP API", { slug });
-    return this.chirpPost(hubspotUrls.chirp.appDetail(), {
-      language: "EN",
-      slug,
-    });
+    const url = hubspotUrls.chirp.appDetail();
+    const body = { language: "EN", slug };
+    return withFallback(
+      () => this.chirpPost(url, body),
+      () => this.chirpViaBrowser(url, body),
+      `hubspot/fetchAppPage/${slug}`,
+    );
   }
 
   async fetchCategoryPage(slug: string, page?: number): Promise<string> {
     const pageNum = page ?? 1;
     const offset = (pageNum - 1) * HUBSPOT_PAGE_SIZE;
     log.info("fetching category via CHIRP search API", { slug, page: pageNum, offset });
-    return this.chirpPost(hubspotUrls.chirp.search(), {
-      language: "EN",
-      offset,
-      limit: HUBSPOT_PAGE_SIZE,
-    });
+    const url = hubspotUrls.chirp.search();
+    const body = { language: "EN", offset, limit: HUBSPOT_PAGE_SIZE };
+    return withFallback(
+      () => this.chirpPost(url, body),
+      () => this.chirpViaBrowser(url, body),
+      `hubspot/fetchCategoryPage/${slug}`,
+    );
   }
 
   async fetchSearchPage(keyword: string): Promise<string | null> {
     log.info("fetching search via CHIRP search API", { keyword });
-    // Fetch a large batch for client-side text filtering
-    return this.chirpPost(hubspotUrls.chirp.search(), {
-      language: "EN",
-      offset: 0,
-      limit: 500,
-    });
+    const url = hubspotUrls.chirp.search();
+    const body = { language: "EN", offset: 0, limit: 500 };
+    return withFallback(
+      () => this.chirpPost(url, body),
+      () => this.chirpViaBrowser(url, body),
+      `hubspot/fetchSearchPage/${keyword}`,
+    );
   }
 
   async fetchReviewPage(slug: string, page?: number): Promise<string | null> {
@@ -141,13 +148,19 @@ export class HubSpotModule implements PlatformModule {
     const offset = (pageNum - 1) * HUBSPOT_PAGE_SIZE;
     log.info("fetching reviews via ecosystem API", { slug, offeringId, page: pageNum, offset });
 
-    return this.ecosystemPost(hubspotUrls.ecosystem.reviewSearch(), {
+    const url = hubspotUrls.ecosystem.reviewSearch();
+    const body = {
       entityId: offeringId,
       reviewTypes: ["APP"],
       limit: HUBSPOT_PAGE_SIZE,
       offset,
       sortFields: ["NEWEST"],
-    });
+    };
+    return withFallback(
+      () => this.ecosystemPost(url, body),
+      () => this.chirpViaBrowser(url, body),
+      `hubspot/fetchReviewPage/${slug}`,
+    );
   }
 
   // --- Ecosystem API helper ---
@@ -250,6 +263,37 @@ export class HubSpotModule implements PlatformModule {
     const cats = platformData.categories as Array<{ slug?: string }> | undefined;
     if (!Array.isArray(cats)) return [];
     return cats.map((c) => c.slug).filter((s): s is string => !!s);
+  }
+
+  // --- Browser fallback ---
+
+  /**
+   * Call CHIRP API from browser context via page.evaluate().
+   * Bypasses IP/UA blocks since the request originates from a real browser.
+   */
+  private async chirpViaBrowser(url: string, body: Record<string, unknown>): Promise<string> {
+    if (!this.browserClient) {
+      throw new Error("BrowserClient required for HubSpot CHIRP browser fallback");
+    }
+    log.info("calling CHIRP via browser context (fallback)", { url });
+    return this.browserClient.withPage(
+      "https://app.hubspot.com/marketplace",
+      async (page) => {
+        const result = await page.evaluate(
+          async ({ url, body, headers }) => {
+            const res = await fetch(url, {
+              method: "POST",
+              headers,
+              body: JSON.stringify(body),
+            });
+            return res.text();
+          },
+          { url, body, headers: CHIRP_HEADERS },
+        );
+        return result;
+      },
+      { waitUntil: "domcontentloaded", extraWaitMs: 3000 },
+    );
   }
 
   // --- Private helpers ---

@@ -8,12 +8,15 @@
 #   ./scripts/smoke-test.sh --timeout 90            # override default timeout (seconds)
 #   ./scripts/smoke-test.sh --jobs 4                # limit concurrent checks
 #   ./scripts/smoke-test.sh --no-live               # CI-friendly plain output (no ANSI refresh)
+#   ./scripts/smoke-test.sh --compare               # run both primary AND fallback, show side-by-side
 #
 set -uo pipefail
 
 # ── Defaults ─────────────────────────────────────────────────────────────────
 SELECTED_PLATFORM=""
 SKIP_BROWSER=false
+FORCE_FALLBACK=false
+COMPARE_MODE=false
 TIMEOUT_HTTP=60
 TIMEOUT_BROWSER=120
 MAX_JOBS=0  # 0 = unlimited
@@ -43,14 +46,20 @@ while [[ $# -gt 0 ]]; do
       MAX_JOBS="$2"; shift 2 ;;
     --no-live)
       NO_LIVE=true; shift ;;
+    --fallback)
+      FORCE_FALLBACK=true; shift ;;
+    --compare)
+      COMPARE_MODE=true; shift ;;
     -h|--help)
-      echo "Usage: $0 [--platform <name>] [--skip-browser] [--timeout <seconds>] [--jobs N] [--no-live]"
+      echo "Usage: $0 [--platform <name>] [--skip-browser] [--fallback] [--compare] [--timeout <seconds>] [--jobs N] [--no-live]"
       echo ""
       echo "Platforms: shopify salesforce canva wix wordpress google_workspace atlassian zoom zoho zendesk hubspot"
       echo ""
       echo "Options:"
       echo "  --platform <name>   Test a single platform"
       echo "  --skip-browser      Skip platforms that need Playwright (salesforce, canva, google_workspace, zoho, zendesk)"
+      echo "  --fallback          Force fallback/secondary scraping methods (sets FORCE_FALLBACK=true)"
+      echo "  --compare           Run both PRIMARY and FALLBACK, show results side by side"
       echo "  --timeout <secs>    Override base timeout (default: 60s HTTP, 120s browser)"
       echo "  --jobs N            Limit concurrent checks (default: unlimited)"
       echo "  --no-live           CI-friendly plain output (no ANSI table refresh)"
@@ -231,7 +240,11 @@ run_check_bg() {
   fi
 
   local output exit_code
-  output=$(cd "$SCRAPER_DIR" && timeout "$tout" $cmd 2>&1) && exit_code=0 || exit_code=$?
+  local env_prefix=""
+  if $FORCE_FALLBACK; then
+    env_prefix="FORCE_FALLBACK=true "
+  fi
+  output=$(cd "$SCRAPER_DIR" && timeout "$tout" env ${env_prefix} $cmd 2>&1) && exit_code=0 || exit_code=$?
 
   local end_epoch start_epoch elapsed
   end_epoch=$(date +%s)
@@ -363,8 +376,10 @@ render_table() {
 
   echo "$ruler"; lines=$((lines + 1))
 
-  printf "  ${BOLD}LIVE SCRAPER SMOKE TEST${RESET}%*s%s\n" \
-    $((TABLE_WIDTH - 40)) "" "$(date '+%Y-%m-%d %H:%M:%S')"
+  local title="LIVE SCRAPER SMOKE TEST"
+  if $FORCE_FALLBACK; then title="LIVE SCRAPER SMOKE TEST (FALLBACK MODE)"; fi
+  printf "  ${BOLD}${title}${RESET}%*s%s\n" \
+    $((TABLE_WIDTH - ${#title} - 18)) "" "$(date '+%Y-%m-%d %H:%M:%S')"
   lines=$((lines + 1))
 
   printf "  Timeouts: HTTP=${TIMEOUT_HTTP}s  Browser=${TIMEOUT_BROWSER}s"
@@ -473,10 +488,13 @@ run_no_live() {
   ruler=$(printf '━%.0s' $(seq 1 $TABLE_WIDTH))
   echo ""
   echo "$ruler"
-  echo -e "  ${BOLD}LIVE SCRAPER SMOKE TEST${RESET}  $(date '+%Y-%m-%d %H:%M:%S')"
+  local ci_title="LIVE SCRAPER SMOKE TEST"
+  if $FORCE_FALLBACK; then ci_title="LIVE SCRAPER SMOKE TEST (FALLBACK MODE)"; fi
+  echo -e "  ${BOLD}${ci_title}${RESET}  $(date '+%Y-%m-%d %H:%M:%S')"
   echo "  Timeouts: HTTP=${TIMEOUT_HTTP}s  Browser=${TIMEOUT_BROWSER}s"
   if [[ -n "$SELECTED_PLATFORM" ]]; then echo "  Platform: $SELECTED_PLATFORM"; fi
   if $SKIP_BROWSER; then echo "  Skipping browser platforms"; fi
+  if $FORCE_FALLBACK; then echo "  Fallback mode: ENABLED (testing secondary scraping methods)"; fi
   echo "$ruler"
   echo ""
 
@@ -549,7 +567,67 @@ run_live() {
   [[ $fail_n -gt 0 ]] && return 1 || return 0
 }
 
+# ── Compare mode: run both primary and fallback ─────────────────────────
+run_compare() {
+  local script_path
+  script_path="$(cd "$(dirname "$0")" && pwd)/$(basename "$0")"
+  local extra_args=""
+  if [[ -n "$SELECTED_PLATFORM" ]]; then extra_args="$extra_args --platform $SELECTED_PLATFORM"; fi
+  if $SKIP_BROWSER; then extra_args="$extra_args --skip-browser"; fi
+  extra_args="$extra_args --timeout $TIMEOUT_HTTP"
+  if [[ $MAX_JOBS -gt 0 ]]; then extra_args="$extra_args --jobs $MAX_JOBS"; fi
+
+  local ruler
+  ruler=$(printf '━%.0s' $(seq 1 80))
+  echo ""
+  echo "$ruler"
+  echo -e "  ${BOLD}COMPARE MODE: PRIMARY vs FALLBACK${RESET}  $(date '+%Y-%m-%d %H:%M:%S')"
+  echo "$ruler"
+
+  echo ""
+  echo -e "  ${BOLD}${CYAN}▶ PHASE 1: PRIMARY (normal scraping)${RESET}"
+  echo ""
+  bash "$script_path" --no-live $extra_args
+  local primary_exit=$?
+
+  echo ""
+  echo -e "  ${BOLD}${YELLOW}▶ PHASE 2: FALLBACK (secondary scraping)${RESET}"
+  echo ""
+  bash "$script_path" --no-live --fallback $extra_args
+  local fallback_exit=$?
+
+  echo ""
+  echo "$ruler"
+  echo -e "  ${BOLD}COMPARE SUMMARY${RESET}"
+  echo "$ruler"
+
+  if [[ $primary_exit -eq 0 ]]; then
+    echo -e "  PRIMARY:  ${GREEN}ALL PASS${RESET}"
+  else
+    echo -e "  PRIMARY:  ${RED}HAS FAILURES${RESET} (exit $primary_exit)"
+  fi
+
+  if [[ $fallback_exit -eq 0 ]]; then
+    echo -e "  FALLBACK: ${GREEN}ALL PASS${RESET}"
+  else
+    echo -e "  FALLBACK: ${RED}HAS FAILURES${RESET} (exit $fallback_exit)"
+  fi
+
+  echo "$ruler"
+  echo ""
+
+  if [[ $primary_exit -ne 0 || $fallback_exit -ne 0 ]]; then
+    return 1
+  fi
+  return 0
+}
+
 # ── Main ─────────────────────────────────────────────────────────────────────
+if $COMPARE_MODE; then
+  run_compare
+  exit $?
+fi
+
 if [[ ${#JOB_LIST[@]} -eq 0 ]]; then
   echo "No checks to run."
   if $SKIP_BROWSER; then

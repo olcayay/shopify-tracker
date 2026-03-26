@@ -27,6 +27,13 @@ if (platformArgIdx !== -1 && process.argv[platformArgIdx + 1]) {
   process.argv.splice(platformArgIdx, 2);
 }
 
+// Parse --force-fallback flag
+const forceFallbackIdx = process.argv.indexOf("--force-fallback");
+if (forceFallbackIdx !== -1) {
+  process.env.FORCE_FALLBACK = "true";
+  process.argv.splice(forceFallbackIdx, 1);
+}
+
 const command = process.argv[2];
 
 if (!command) {
@@ -45,6 +52,7 @@ if (!command) {
   console.log("  track-keyword <keyword> Add a keyword to tracking");
   console.log("\nOptions:");
   console.log("  --platform <id>         Platform to scrape (default: shopify)");
+  console.log("  --force-fallback        Force fallback scraping methods (for testing)");
   process.exit(1);
 }
 
@@ -62,12 +70,13 @@ const httpClient = new HttpClient({
 
 async function main() {
   console.log(`Platform: ${platformArg}`);
-
-  // Create browser client for platforms that need SPA rendering
-  let browserClient: BrowserClient | undefined;
-  if (platformArg === "salesforce" || platformArg === "canva" || platformArg === "google_workspace" || platformArg === "zoho" || platformArg === "zendesk") {
-    browserClient = new BrowserClient();
+  if (process.env.FORCE_FALLBACK === "true") {
+    console.log("Mode: FORCE_FALLBACK (using secondary scraping methods)");
   }
+
+  // Lazy browser client: created for all platforms but only launches browser on first use.
+  // This enables fallback scraping for HTTP-primary platforms at zero startup cost.
+  const browserClient = new BrowserClient();
 
   // Get platform module
   let platformModule;
@@ -237,7 +246,7 @@ async function main() {
       process.exit(1);
   }
 
-  if (browserClient) await browserClient.close();
+  await browserClient.close();
   process.exit(0);
 }
 

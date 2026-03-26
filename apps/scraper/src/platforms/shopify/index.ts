@@ -10,6 +10,8 @@ import type {
   PlatformScoringConfig,
 } from "../platform-module.js";
 import { HttpClient } from "../../http-client.js";
+import type { BrowserClient } from "../../browser-client.js";
+import { withFallback } from "../../utils/with-fallback.js";
 import { parseAppPage, parseSimilarApps } from "../../parsers/app-parser.js";
 import {
   parseCategoryPage as parseShopifyCategoryPage,
@@ -42,9 +44,11 @@ export class ShopifyModule implements PlatformModule {
   };
 
   private httpClient: HttpClient;
+  private browserClient?: BrowserClient;
 
-  constructor(httpClient?: HttpClient) {
+  constructor(httpClient?: HttpClient, browserClient?: BrowserClient) {
     this.httpClient = httpClient || new HttpClient();
+    this.browserClient = browserClient;
   }
 
   // --- URL builders ---
@@ -72,21 +76,39 @@ export class ShopifyModule implements PlatformModule {
   // --- Fetch ---
 
   async fetchAppPage(slug: string): Promise<string> {
-    return this.httpClient.fetchPage(shopifyUrls.app(slug));
+    const url = shopifyUrls.app(slug);
+    return withFallback(
+      () => this.httpClient.fetchPage(url),
+      () => this.browserClient!.fetchPage(url, { waitUntil: "domcontentloaded", extraWaitMs: 2000 }),
+      `shopify/fetchAppPage/${slug}`,
+    );
   }
 
   async fetchCategoryPage(slug: string, page?: number): Promise<string> {
-    return this.httpClient.fetchPage(shopifyUrls.categoryPage(slug, page));
+    const url = shopifyUrls.categoryPage(slug, page);
+    return withFallback(
+      () => this.httpClient.fetchPage(url),
+      () => this.browserClient!.fetchPage(url, { waitUntil: "domcontentloaded", extraWaitMs: 2000 }),
+      `shopify/fetchCategoryPage/${slug}`,
+    );
   }
 
   async fetchSearchPage(keyword: string, page?: number): Promise<string | null> {
-    return this.httpClient.fetchPage(shopifyUrls.search(keyword, page), {
-      "Turbo-Frame": "search-results",
-    });
+    const url = shopifyUrls.search(keyword, page);
+    return withFallback(
+      () => this.httpClient.fetchPage(url, { "Turbo-Frame": "search-results" }),
+      () => this.browserClient!.fetchPage(url, { waitUntil: "domcontentloaded", extraWaitMs: 2000 }),
+      `shopify/fetchSearchPage/${keyword}`,
+    );
   }
 
   async fetchReviewPage(slug: string, page?: number): Promise<string | null> {
-    return this.httpClient.fetchPage(shopifyUrls.appReviews(slug, page));
+    const url = shopifyUrls.appReviews(slug, page);
+    return withFallback(
+      () => this.httpClient.fetchPage(url),
+      () => this.browserClient!.fetchPage(url, { waitUntil: "domcontentloaded", extraWaitMs: 2000 }),
+      `shopify/fetchReviewPage/${slug}`,
+    );
   }
 
   // --- Parse ---
@@ -203,7 +225,12 @@ export class ShopifyModule implements PlatformModule {
   }
 
   async fetchFeaturedSections(): Promise<NormalizedFeaturedSection[]> {
-    const html = await this.httpClient.fetchPage(shopifyUrls.home());
+    const url = shopifyUrls.home();
+    const html = await withFallback(
+      () => this.httpClient.fetchPage(url),
+      () => this.browserClient!.fetchPage(url, { waitUntil: "domcontentloaded", extraWaitMs: 2000 }),
+      "shopify/fetchFeaturedSections",
+    );
     return this.parseFeaturedSections(html);
   }
 

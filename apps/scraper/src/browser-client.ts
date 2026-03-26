@@ -1,4 +1,3 @@
-import { chromium, type Browser, type Page } from "playwright";
 import { createLogger } from "@appranks/shared";
 
 const log = createLogger("browser-client");
@@ -6,16 +5,29 @@ const log = createLogger("browser-client");
 const USER_AGENT =
   "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36";
 
+/** Lazily resolve playwright's chromium. Throws a clear error if not installed. */
+async function getChromium() {
+  try {
+    const pw = await import("playwright");
+    return pw.chromium;
+  } catch {
+    throw new Error(
+      "Playwright is not installed. Browser-based scraping is unavailable in this environment.",
+    );
+  }
+}
+
 /**
  * Lazy Playwright wrapper — browser is launched on first use,
  * reused across calls, and closed on shutdown.
  */
 export class BrowserClient {
-  private browser: Browser | null = null;
+  private browser: import("playwright").Browser | null = null;
 
   async fetchPage(url: string, opts?: { waitUntil?: "networkidle" | "domcontentloaded" | "load"; waitForSelector?: string; extraWaitMs?: number }): Promise<string> {
     if (!this.browser) {
       log.info("launching browser");
+      const chromium = await getChromium();
       this.browser = await chromium.launch({
         headless: true,
         args: ["--no-sandbox"],
@@ -46,9 +58,10 @@ export class BrowserClient {
    * Opens a page, then hands the live Playwright Page to a callback
    * for custom interactions (clicking, evaluating JS, etc.).
    */
-  async withPage<T>(url: string, callback: (page: Page) => Promise<T>, opts?: { waitUntil?: "networkidle" | "domcontentloaded" | "load"; extraWaitMs?: number }): Promise<T> {
+  async withPage<T>(url: string, callback: (page: import("playwright").Page) => Promise<T>, opts?: { waitUntil?: "networkidle" | "domcontentloaded" | "load"; extraWaitMs?: number }): Promise<T> {
     if (!this.browser) {
       log.info("launching browser");
+      const chromium = await getChromium();
       this.browser = await chromium.launch({
         headless: true,
         args: ["--no-sandbox"],

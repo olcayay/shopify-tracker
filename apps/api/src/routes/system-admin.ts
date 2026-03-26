@@ -39,12 +39,27 @@ import { isPlatformId, PLATFORM_IDS, SCRAPER_SCHEDULES, getNextRunFromCron, getS
 import type { SmokeCheckName } from "@appranks/shared";
 import { spawn, type ChildProcess } from "node:child_process";
 import path from "node:path";
+import fs from "node:fs";
 import { generateAccessToken } from "./auth.js";
 import type { JwtPayload } from "../middleware/auth.js";
 
 type Db = ReturnType<typeof createDb>;
 
 const BACKGROUND_QUEUE_NAME = "scraper-jobs-background";
+
+/**
+ * Resolve the correct command and entry file for spawning the scraper CLI.
+ * In development (tsx available + src exists): npx tsx src/cli.ts
+ * In production (compiled dist): node dist/cli.js
+ */
+function resolveScraperCommand(scraperDir: string): { cmd: string; entryArgs: string[] } {
+  const distCli = path.join(scraperDir, "dist", "cli.js");
+  if (fs.existsSync(distCli)) {
+    return { cmd: "node", entryArgs: [distCli] };
+  }
+  // Fallback to tsx for development
+  return { cmd: "npx", entryArgs: ["tsx", "src/cli.ts"] };
+}
 const INTERACTIVE_QUEUE_NAME = "scraper-jobs-interactive";
 
 function getRedisConnection() {
@@ -886,7 +901,8 @@ export const systemAdminRoutes: FastifyPluginAsync = async (app) => {
 
         sendEvent("start", { platform: job.platform, check: job.check });
 
-        const args = ["tsx", "src/cli.ts", "--platform", job.platform, job.check];
+        const { cmd, entryArgs } = resolveScraperCommand(scraperDir);
+        const args = [...entryArgs, "--platform", job.platform, job.check];
         if (job.arg) {
           // Split arg by spaces for CLI (e.g. "email marketing" → ["email", "marketing"])
           // But some args have special flags like "sales --pages 3"
@@ -894,7 +910,7 @@ export const systemAdminRoutes: FastifyPluginAsync = async (app) => {
         }
 
         const checkStart = Date.now();
-        const proc = spawn("npx", args, {
+        const proc = spawn(cmd, args, {
           cwd: scraperDir,
           timeout: job.timeoutSec * 1000,
           stdio: ["ignore", "pipe", "pipe"],
@@ -904,6 +920,10 @@ export const systemAdminRoutes: FastifyPluginAsync = async (app) => {
 
         let stdout = "";
         let stderr = "";
+        // Guard: Node.js may fire both "error" and "close" (e.g. ENOENT).
+        // Only handle the first event to avoid double-counting.
+        let settled = false;
+        let spawnError: Error | null = null;
 
         proc.stdout?.on("data", (data: Buffer) => {
           stdout += data.toString();
@@ -916,7 +936,10 @@ export const systemAdminRoutes: FastifyPluginAsync = async (app) => {
           if (stderr.length > 10_000) stderr = stderr.slice(-10_000);
         });
 
-        proc.on("close", (code) => {
+        function finish(code: number | null, err?: Error) {
+          if (settled) return;
+          settled = true;
+
           const idx = activeProcesses.indexOf(proc);
           if (idx >= 0) activeProcesses.splice(idx, 1);
 
@@ -928,36 +951,35 @@ export const systemAdminRoutes: FastifyPluginAsync = async (app) => {
           if (status === "pass") passed++;
           else failed++;
 
+          let error: string | undefined;
+          if (status === "fail") {
+            if (err) error = err.message;
+            else if (spawnError) error = spawnError.message;
+            else if (code === null) error = "timeout";
+            else error = `exit code ${code}`;
+          }
+
           sendEvent("complete", {
             platform: job.platform,
             check: job.check,
             status,
             durationMs,
             output,
-            ...(status === "fail" ? { error: code === null ? "timeout" : `exit code ${code}` } : {}),
+            ...(error ? { error } : {}),
           });
 
           resolve();
+        }
+
+        // Capture spawn error — "close" usually follows, but add a safety fallback
+        proc.on("error", (err) => {
+          spawnError = err;
+          // If "close" doesn't fire within 1s after "error", settle here
+          setTimeout(() => finish(null, err), 1000);
         });
 
-        proc.on("error", (err) => {
-          const idx = activeProcesses.indexOf(proc);
-          if (idx >= 0) activeProcesses.splice(idx, 1);
-
-          const durationMs = Date.now() - checkStart;
-          completed++;
-          failed++;
-
-          sendEvent("complete", {
-            platform: job.platform,
-            check: job.check,
-            status: "fail",
-            durationMs,
-            output: "",
-            error: err.message,
-          });
-
-          resolve();
+        proc.on("close", (code) => {
+          finish(code);
         });
       });
     }
@@ -1036,7 +1058,8 @@ export const systemAdminRoutes: FastifyPluginAsync = async (app) => {
     }
 
     const scraperDir = path.resolve(import.meta.dirname, "../../../scraper");
-    const args = ["tsx", "src/cli.ts", "--platform", platform, check];
+    const { cmd, entryArgs } = resolveScraperCommand(scraperDir);
+    const args = [...entryArgs, "--platform", platform, check];
     if (smokeCheck.arg) {
       args.push(...smokeCheck.arg.split(" "));
     }
@@ -1048,15 +1071,17 @@ export const systemAdminRoutes: FastifyPluginAsync = async (app) => {
       output: string;
       error?: string;
     }>((resolve) => {
-      const proc = spawn("npx", args, {
+      const proc = spawn(cmd, args, {
         cwd: scraperDir,
         timeout: smokePlatform.timeoutSec * 1000,
         stdio: ["ignore", "pipe", "pipe"],
-        env: { ...process.env },
+        env: { ...process.env, SMOKE_TEST: "1" },
       });
 
       let stdout = "";
       let stderr = "";
+      let settled = false;
+      let spawnError: Error | null = null;
 
       proc.stdout?.on("data", (data: Buffer) => {
         stdout += data.toString();
@@ -1068,28 +1093,30 @@ export const systemAdminRoutes: FastifyPluginAsync = async (app) => {
         if (stderr.length > 10_000) stderr = stderr.slice(-10_000);
       });
 
-      proc.on("close", (code) => {
+      function finish(code: number | null, err?: Error) {
+        if (settled) return;
+        settled = true;
         const durationMs = Date.now() - checkStart;
         const output = (stdout + "\n" + stderr).trim().slice(-5000);
         if (code === 0) {
           resolve({ status: "pass", durationMs, output });
         } else {
-          resolve({
-            status: "fail",
-            durationMs,
-            output,
-            error: code === null ? "timeout" : `exit code ${code}`,
-          });
+          let error: string;
+          if (err) error = err.message;
+          else if (spawnError) error = spawnError.message;
+          else if (code === null) error = "timeout";
+          else error = `exit code ${code}`;
+          resolve({ status: "fail", durationMs, output, error });
         }
-      });
+      }
 
       proc.on("error", (err) => {
-        resolve({
-          status: "fail",
-          durationMs: Date.now() - checkStart,
-          output: "",
-          error: err.message,
-        });
+        spawnError = err;
+        setTimeout(() => finish(null, err), 1000);
+      });
+
+      proc.on("close", (code) => {
+        finish(code);
       });
     });
 

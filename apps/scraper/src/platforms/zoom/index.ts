@@ -9,12 +9,15 @@ import type {
   NormalizedFeaturedSection,
 } from "../platform-module.js";
 import { HttpClient } from "../../http-client.js";
+import type { BrowserClient } from "../../browser-client.js";
+import { withFallback } from "../../utils/with-fallback.js";
 import { zoomUrls } from "./urls.js";
 import { ZOOM_CONSTANTS, ZOOM_SCORING } from "./constants.js";
 import { parseZoomApp } from "./parsers/app-parser.js";
 import { parseZoomCategoryPage } from "./parsers/category-parser.js";
 import { parseZoomSearchPage } from "./parsers/search-parser.js";
 import { parseZoomFeaturedSections } from "./parsers/featured-parser.js";
+import { parseAppHtml, parseCategoryHtml, parseSearchHtml } from "./parsers/html-parser.js";
 import { createLogger } from "@appranks/shared";
 
 const log = createLogger("zoom");
@@ -51,9 +54,11 @@ export class ZoomModule implements PlatformModule {
   };
 
   private httpClient: HttpClient;
+  private browserClient?: BrowserClient;
 
-  constructor(httpClient?: HttpClient) {
+  constructor(httpClient?: HttpClient, browserClient?: BrowserClient) {
     this.httpClient = httpClient || new HttpClient();
+    this.browserClient = browserClient;
   }
 
   // --- URL builders ---
@@ -73,6 +78,14 @@ export class ZoomModule implements PlatformModule {
   // --- Fetch ---
 
   async fetchAppPage(slug: string): Promise<string> {
+    return withFallback(
+      () => this.fetchAppPageViaApi(slug),
+      () => this.fetchAppPageViaBrowser(slug),
+      `zoom/fetchAppPage/${slug}`,
+    );
+  }
+
+  private async fetchAppPageViaApi(slug: string): Promise<string> {
     // Individual app API requires auth. The filter API without a category
     // returns ALL apps with pagination — paginate until we find the target.
     log.info("fetching app via filter API pagination (app detail API requires auth)", { slug });
@@ -97,18 +110,53 @@ export class ZoomModule implements PlatformModule {
     throw new Error(`Zoom app not found after paginating filter API: ${slug}`);
   }
 
+  private async fetchAppPageViaBrowser(slug: string): Promise<string> {
+    if (!this.browserClient) throw new Error("no browserClient for zoom fallback");
+    const url = zoomUrls.app(slug);
+    log.info("fetching app page via browser (fallback)", { slug, url });
+    const html = await this.browserClient.fetchPage(url, { waitUntil: "networkidle" });
+    const parsed = parseAppHtml(html, slug);
+    return JSON.stringify({ _fromHtml: true, _parsed: parsed });
+  }
+
   async fetchCategoryPage(slug: string, page?: number): Promise<string> {
-    const p = page ?? 1;
-    const url = zoomUrls.apiFilter(slug, p, 100);
-    log.info("fetching category page via API", { slug, page: p, url });
-    return this.httpClient.fetchPage(url, JSON_HEADERS);
+    return withFallback(
+      () => {
+        const p = page ?? 1;
+        const url = zoomUrls.apiFilter(slug, p, 100);
+        log.info("fetching category page via API", { slug, page: p, url });
+        return this.httpClient.fetchPage(url, JSON_HEADERS);
+      },
+      async () => {
+        if (!this.browserClient) throw new Error("no browserClient for zoom fallback");
+        const url = zoomUrls.category(slug);
+        log.info("fetching category page via browser (fallback)", { slug, url });
+        const html = await this.browserClient.fetchPage(url, { waitUntil: "networkidle" });
+        const parsed = parseCategoryHtml(html, slug, page ?? 1);
+        return JSON.stringify({ _fromHtml: true, _parsed: parsed });
+      },
+      `zoom/fetchCategoryPage/${slug}`,
+    );
   }
 
   async fetchSearchPage(keyword: string, page?: number): Promise<string | null> {
-    const p = page ?? 1;
-    const url = zoomUrls.apiSearch(keyword, p, 100);
-    log.info("fetching search results via API", { keyword, page: p, url });
-    return this.httpClient.fetchPage(url, JSON_HEADERS);
+    return withFallback(
+      () => {
+        const p = page ?? 1;
+        const url = zoomUrls.apiSearch(keyword, p, 100);
+        log.info("fetching search results via API", { keyword, page: p, url });
+        return this.httpClient.fetchPage(url, JSON_HEADERS);
+      },
+      async () => {
+        if (!this.browserClient) throw new Error("no browserClient for zoom fallback");
+        const url = zoomUrls.search(keyword);
+        log.info("fetching search page via browser (fallback)", { keyword, url });
+        const html = await this.browserClient.fetchPage(url, { waitUntil: "networkidle" });
+        const parsed = parseSearchHtml(html, keyword, page ?? 1, 0);
+        return JSON.stringify({ _fromHtml: true, _parsed: parsed });
+      },
+      `zoom/fetchSearchPage/${keyword}`,
+    );
   }
 
   /**
@@ -131,13 +179,15 @@ export class ZoomModule implements PlatformModule {
   // --- Parse ---
 
   parseAppDetails(json: string, _slug: string): NormalizedAppDetails {
-    const app = JSON.parse(json);
-    return parseZoomApp(app);
+    const data = JSON.parse(json);
+    if (data._fromHtml && data._parsed) return data._parsed;
+    return parseZoomApp(data);
   }
 
   parseCategoryPage(json: string, url: string): NormalizedCategoryPage {
-    const slug = this.extractCategorySlugFromUrl(url);
     const data = JSON.parse(json);
+    if (data._fromHtml && data._parsed) return data._parsed;
+    const slug = this.extractCategorySlugFromUrl(url);
     const page = data.pageNum || 1;
     return parseZoomCategoryPage(data, slug, page);
   }
@@ -149,6 +199,7 @@ export class ZoomModule implements PlatformModule {
     _offset: number,
   ): NormalizedSearchPage {
     const data = JSON.parse(json);
+    if (data._fromHtml && data._parsed) return data._parsed;
     return parseZoomSearchPage(data, keyword, page);
   }
 

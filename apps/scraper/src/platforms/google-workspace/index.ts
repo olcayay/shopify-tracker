@@ -10,7 +10,8 @@ import type {
 } from "../platform-module.js";
 import type { HttpClient } from "../../http-client.js";
 import type { BrowserClient } from "../../browser-client.js";
-import { chromium, type Browser, type BrowserContext, type Page } from "playwright";
+import { withFallback } from "../../utils/with-fallback.js";
+import type { Browser, BrowserContext, Page } from "playwright";
 import { googleWorkspaceUrls } from "./urls.js";
 import { GOOGLE_WORKSPACE_CONSTANTS, GOOGLE_WORKSPACE_SCORING } from "./constants.js";
 import { parseGoogleWorkspaceAppPage } from "./parsers/app-parser.js";
@@ -83,8 +84,19 @@ export class GoogleWorkspaceModule implements PlatformModule {
   // --- Fetch (all via browser) ---
 
   async fetchAppPage(slug: string): Promise<string> {
-    const page = await this.ensureBrowserPage();
     const url = this.buildAppUrl(slug);
+    return withFallback(
+      () => this.fetchAppPagePrimary(slug, url),
+      async () => {
+        await this.resetBrowser();
+        return this.fetchAppPagePrimary(slug, url);
+      },
+      `google_workspace/fetchAppPage/${slug}`,
+    );
+  }
+
+  private async fetchAppPagePrimary(slug: string, url: string): Promise<string> {
+    const page = await this.ensureBrowserPage();
     log.info("fetching app detail page", { slug, url });
 
     await page.goto(url, { waitUntil: "load", timeout: 30_000 });
@@ -97,8 +109,19 @@ export class GoogleWorkspaceModule implements PlatformModule {
   }
 
   async fetchCategoryPage(slug: string, _page?: number): Promise<string> {
-    const page = await this.ensureBrowserPage();
     const url = this.buildCategoryUrl(slug);
+    return withFallback(
+      () => this.fetchCategoryPagePrimary(slug, url),
+      async () => {
+        await this.resetBrowser();
+        return this.fetchCategoryPagePrimary(slug, url);
+      },
+      `google_workspace/fetchCategoryPage/${slug}`,
+    );
+  }
+
+  private async fetchCategoryPagePrimary(slug: string, url: string): Promise<string> {
+    const page = await this.ensureBrowserPage();
     log.info("fetching category page", { slug, url });
 
     await page.goto(url, { waitUntil: "load", timeout: 30_000 });
@@ -121,8 +144,19 @@ export class GoogleWorkspaceModule implements PlatformModule {
   }
 
   async fetchSearchPage(keyword: string, _page?: number): Promise<string | null> {
-    const page = await this.ensureBrowserPage();
     const url = this.buildSearchUrl(keyword);
+    return withFallback(
+      () => this.fetchSearchPagePrimary(keyword, url),
+      async () => {
+        await this.resetBrowser();
+        return this.fetchSearchPagePrimary(keyword, url);
+      },
+      `google_workspace/fetchSearchPage/${keyword}`,
+    );
+  }
+
+  private async fetchSearchPagePrimary(keyword: string, url: string): Promise<string> {
+    const page = await this.ensureBrowserPage();
     log.info("fetching search page", { keyword, url });
 
     await page.goto(url, { waitUntil: "load", timeout: 30_000 });
@@ -195,6 +229,15 @@ export class GoogleWorkspaceModule implements PlatformModule {
       this.browserContext = null;
       this.browserPage = null;
     }
+  }
+
+  /**
+   * Close and re-launch browser with fresh context.
+   * Used as fallback when stale cookies/session/bot detection cause failures.
+   */
+  private async resetBrowser(): Promise<void> {
+    log.info("resetting browser with fresh context (fallback)");
+    await this.closeBrowser();
   }
 
   // --- Private helpers ---
@@ -277,6 +320,7 @@ export class GoogleWorkspaceModule implements PlatformModule {
       ],
       ignoreDefaultArgs: ["--enable-automation"],
     };
+    const { chromium } = await import("playwright");
     try {
       this.browser = await chromium.launch({ ...launchOptions, channel: "chrome" });
       log.info("launched real Chrome");

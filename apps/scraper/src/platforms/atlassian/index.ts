@@ -10,12 +10,15 @@ import type {
   NormalizedFeaturedSection,
 } from "../platform-module.js";
 import { HttpClient } from "../../http-client.js";
+import type { BrowserClient } from "../../browser-client.js";
+import { withFallback } from "../../utils/with-fallback.js";
 import { atlassianUrls } from "./urls.js";
 import { ATLASSIAN_CONSTANTS, ATLASSIAN_SCORING, ATLASSIAN_FEATURED_SECTIONS } from "./constants.js";
 import { parseAddonDetails, parseSearchResults } from "./parsers/api-parser.js";
 import { parseAtlassianCategoryPage } from "./parsers/category-parser.js";
 import { parseAtlassianReviewPage } from "./parsers/review-parser.js";
 import { parseAtlassianFeaturedSections } from "./parsers/featured-parser.js";
+import { parseAppHtml, parseSearchHtml } from "./parsers/html-parser.js";
 import { createLogger } from "@appranks/shared";
 
 const log = createLogger("atlassian");
@@ -48,9 +51,11 @@ export class AtlassianModule implements PlatformModule {
   };
 
   private httpClient: HttpClient;
+  private browserClient?: BrowserClient;
 
-  constructor(httpClient?: HttpClient) {
+  constructor(httpClient?: HttpClient, browserClient?: BrowserClient) {
     this.httpClient = httpClient || new HttpClient();
+    this.browserClient = browserClient;
   }
 
   // --- URL builders ---
@@ -74,6 +79,14 @@ export class AtlassianModule implements PlatformModule {
   // --- Fetch ---
 
   async fetchAppPage(slug: string): Promise<string> {
+    return withFallback(
+      () => this.fetchAppPageViaApi(slug),
+      () => this.fetchAppPageViaBrowser(slug),
+      `atlassian/fetchAppPage/${slug}`,
+    );
+  }
+
+  private async fetchAppPageViaApi(slug: string): Promise<string> {
     const addonUrl = atlassianUrls.apiAddon(slug);
     const versionUrl = atlassianUrls.apiVersionLatest(slug);
     log.info("fetching addon via API (multi-endpoint)", { slug });
@@ -104,29 +117,84 @@ export class AtlassianModule implements PlatformModule {
     });
   }
 
+  private async fetchAppPageViaBrowser(slug: string): Promise<string> {
+    if (!this.browserClient) throw new Error("no browserClient for atlassian fallback");
+    const url = atlassianUrls.app(slug);
+    log.info("fetching app page via browser (fallback)", { slug, url });
+    const html = await this.browserClient.fetchPage(url, { waitUntil: "networkidle" });
+    // Wrap in envelope so parseAppDetails can detect HTML vs JSON
+    const parsed = parseAppHtml(html, slug);
+    return JSON.stringify({
+      addon: parsed.platformData,
+      version: null,
+      vendor: null,
+      pricing: null,
+      _fromHtml: true,
+      _parsed: parsed,
+    });
+  }
+
   async fetchCategoryPage(slug: string, page?: number): Promise<string> {
-    const p = page ?? 1;
-    const url = p > 1
-      ? `${atlassianUrls.category(slug)}?page=${p}`
-      : atlassianUrls.category(slug);
-    log.info("fetching category page (HTML)", { slug, page: p, url });
-    return this.httpClient.fetchPage(url);
+    return withFallback(
+      () => {
+        const p = page ?? 1;
+        const url = p > 1
+          ? `${atlassianUrls.category(slug)}?page=${p}`
+          : atlassianUrls.category(slug);
+        log.info("fetching category page (HTML)", { slug, page: p, url });
+        return this.httpClient.fetchPage(url);
+      },
+      async () => {
+        if (!this.browserClient) throw new Error("no browserClient for atlassian fallback");
+        const p = page ?? 1;
+        const url = p > 1
+          ? `${atlassianUrls.category(slug)}?page=${p}`
+          : atlassianUrls.category(slug);
+        log.info("fetching category page via browser (fallback)", { slug, page: p, url });
+        return this.browserClient.fetchPage(url, { waitUntil: "networkidle" });
+      },
+      `atlassian/fetchCategoryPage/${slug}`,
+    );
   }
 
   async fetchSearchPage(keyword: string, page?: number): Promise<string | null> {
-    const pageSize = 50;
-    const offset = ((page ?? 1) - 1) * pageSize;
-    const url = atlassianUrls.apiSearch(keyword, offset, pageSize);
-    log.info("fetching search results via API", { keyword, page, offset, url });
-    return this.httpClient.fetchPage(url);
+    return withFallback(
+      () => {
+        const pageSize = 50;
+        const offset = ((page ?? 1) - 1) * pageSize;
+        const url = atlassianUrls.apiSearch(keyword, offset, pageSize);
+        log.info("fetching search results via API", { keyword, page, offset, url });
+        return this.httpClient.fetchPage(url);
+      },
+      async () => {
+        if (!this.browserClient) throw new Error("no browserClient for atlassian fallback");
+        const url = atlassianUrls.search(keyword);
+        log.info("fetching search page via browser (fallback)", { keyword, url });
+        const html = await this.browserClient.fetchPage(url, { waitUntil: "networkidle" });
+        const parsed = parseSearchHtml(html, keyword, page ?? 1, 0);
+        return JSON.stringify({ _fromHtml: true, _parsed: parsed });
+      },
+      `atlassian/fetchSearchPage/${keyword}`,
+    );
   }
 
   async fetchReviewPage(slug: string, page?: number): Promise<string | null> {
-    const pageSize = 50;
-    const offset = ((page ?? 1) - 1) * pageSize;
-    const url = atlassianUrls.apiReviews(slug, offset, pageSize);
-    log.info("fetching reviews via API", { slug, page, offset, url });
-    return this.httpClient.fetchPage(url);
+    return withFallback(
+      () => {
+        const pageSize = 50;
+        const offset = ((page ?? 1) - 1) * pageSize;
+        const url = atlassianUrls.apiReviews(slug, offset, pageSize);
+        log.info("fetching reviews via API", { slug, page, offset, url });
+        return this.httpClient.fetchPage(url);
+      },
+      async () => {
+        if (!this.browserClient) throw new Error("no browserClient for atlassian fallback");
+        const url = atlassianUrls.app(slug);
+        log.info("fetching app page for reviews via browser (fallback)", { slug, url });
+        return this.browserClient.fetchPage(url, { waitUntil: "networkidle" });
+      },
+      `atlassian/fetchReviewPage/${slug}`,
+    );
   }
 
   /**
@@ -155,8 +223,9 @@ export class AtlassianModule implements PlatformModule {
 
   // --- Parse ---
 
-  parseAppDetails(json: string, _slug: string): NormalizedAppDetails {
+  parseAppDetails(json: string, slug: string): NormalizedAppDetails {
     const envelope = JSON.parse(json);
+    if (envelope._fromHtml && envelope._parsed) return envelope._parsed;
     return parseAddonDetails(envelope.addon, envelope.version, envelope.vendor, envelope.pricing);
   }
 
@@ -172,6 +241,7 @@ export class AtlassianModule implements PlatformModule {
     offset: number,
   ): NormalizedSearchPage {
     const data = JSON.parse(json);
+    if (data._fromHtml && data._parsed) return data._parsed;
     return parseSearchResults(data, keyword, page, offset);
   }
 

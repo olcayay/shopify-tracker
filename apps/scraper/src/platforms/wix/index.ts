@@ -10,6 +10,8 @@ import type {
   PlatformScoringConfig,
 } from "../platform-module.js";
 import { HttpClient } from "../../http-client.js";
+import type { BrowserClient } from "../../browser-client.js";
+import { withFallback } from "../../utils/with-fallback.js";
 import { wixUrls } from "./urls.js";
 import { WIX_CONSTANTS, WIX_SCORING } from "./constants.js";
 import { parseWixAppPage, parseWixReviewPage } from "./parsers/app-parser.js";
@@ -46,9 +48,11 @@ export class WixModule implements PlatformModule {
   };
 
   private httpClient: HttpClient;
+  private browserClient?: BrowserClient;
 
-  constructor(httpClient?: HttpClient) {
+  constructor(httpClient?: HttpClient, browserClient?: BrowserClient) {
     this.httpClient = httpClient || new HttpClient();
+    this.browserClient = browserClient;
   }
 
   // --- URL builders ---
@@ -79,19 +83,31 @@ export class WixModule implements PlatformModule {
   async fetchAppPage(slug: string): Promise<string> {
     const url = wixUrls.app(slug);
     log.info("fetching app detail page", { slug, url });
-    return this.httpClient.fetchPage(url);
+    return withFallback(
+      () => this.httpClient.fetchPage(url),
+      () => this.browserClient!.fetchPage(url, { waitUntil: "domcontentloaded", extraWaitMs: 3000 }),
+      `wix/fetchAppPage/${slug}`,
+    );
   }
 
   async fetchCategoryPage(slug: string, _page?: number): Promise<string> {
     const url = wixUrls.category(slug);
     log.info("fetching category page", { slug, url });
-    return this.httpClient.fetchPage(url);
+    return withFallback(
+      () => this.httpClient.fetchPage(url),
+      () => this.browserClient!.fetchPage(url, { waitUntil: "domcontentloaded", extraWaitMs: 3000 }),
+      `wix/fetchCategoryPage/${slug}`,
+    );
   }
 
   async fetchSearchPage(keyword: string, _page?: number): Promise<string | null> {
     const url = wixUrls.search(keyword);
     log.info("fetching search page", { keyword, url });
-    return this.httpClient.fetchPage(url);
+    return withFallback(
+      () => this.httpClient.fetchPage(url),
+      () => this.browserClient!.fetchPage(url, { waitUntil: "domcontentloaded", extraWaitMs: 3000 }),
+      `wix/fetchSearchPage/${keyword}`,
+    );
   }
 
   async fetchReviewPage(slug: string, _page?: number): Promise<string | null> {

@@ -11,6 +11,7 @@ import type {
 } from "../platform-module.js";
 import type { HttpClient } from "../../http-client.js";
 import type { BrowserClient } from "../../browser-client.js";
+import { withFallback } from "../../utils/with-fallback.js";
 import { zendeskUrls } from "./urls.js";
 import { ZENDESK_CONSTANTS, ZENDESK_SCORING, ZENDESK_CATEGORY_NAMES, ZENDESK_ALGOLIA } from "./constants.js";
 import { parseZendeskAppDetails } from "./parsers/app-parser.js";
@@ -18,6 +19,8 @@ import { parseZendeskCategoryPage } from "./parsers/category-parser.js";
 import { parseZendeskSearchPage } from "./parsers/search-parser.js";
 import { parseZendeskReviewPage } from "./parsers/review-parser.js";
 import { parseZendeskFeaturedSections } from "./parsers/featured-parser.js";
+import { parseAppFromAlgolia } from "./parsers/algolia-app-parser.js";
+import { parseCategoryHtml, parseSearchHtml } from "./parsers/html-parser.js";
 import { createLogger } from "@appranks/shared";
 
 const log = createLogger("zendesk");
@@ -80,47 +83,100 @@ export class ZendeskModule implements PlatformModule {
 
   // --- Fetch ---
 
-  /** App detail pages still need BrowserClient (Cloudflare blocks HTTP). */
+  /** App detail pages: primary = browser (Cloudflare), fallback = Algolia search by ID */
   async fetchAppPage(slug: string): Promise<string> {
-    const url = zendeskUrls.app(slug);
-    log.info("fetching app page via browser", { slug, url });
-    if (!this.browserClient) {
-      throw new Error("BrowserClient required for Zendesk app pages (Cloudflare protection)");
-    }
-    return this.browserClient.fetchPage(url, {
-      waitUntil: "domcontentloaded",
-      extraWaitMs: 3000,
-    });
+    return withFallback(
+      async () => {
+        const url = zendeskUrls.app(slug);
+        log.info("fetching app page via browser", { slug, url });
+        if (!this.browserClient) {
+          throw new Error("BrowserClient required for Zendesk app pages (Cloudflare protection)");
+        }
+        return this.browserClient.fetchPage(url, {
+          waitUntil: "domcontentloaded",
+          extraWaitMs: 3000,
+        });
+      },
+      async () => {
+        // Fallback: search Algolia by app name/ID to get basic data
+        const numericId = slug.split("--")[0];
+        log.info("fetching app via Algolia search (fallback)", { slug, numericId });
+        const json = await this.algoliaQuery({
+          query: numericId,
+          hitsPerPage: 10,
+          page: 0,
+        });
+        const data = JSON.parse(json);
+        const hits = data.results?.[0]?.hits || [];
+        const hit = hits.find((h: any) => String(h.id) === numericId) || hits[0];
+        if (!hit) throw new Error(`Zendesk app not found via Algolia: ${slug}`);
+        const parsed = parseAppFromAlgolia(hit, slug);
+        return JSON.stringify({ _fromAlgolia: true, _parsed: parsed });
+      },
+      `zendesk/fetchAppPage/${slug}`,
+    );
   }
 
   /**
    * Fetch category listing via Algolia API — no browser needed.
-   * Returns raw Algolia JSON response string.
-   * Page is 1-indexed (converted to 0-indexed for Algolia).
+   * Fallback: browser render.
    */
   async fetchCategoryPage(slug: string, page?: number): Promise<string> {
-    const displayName = ZENDESK_CATEGORY_NAMES[slug] || slug;
-    const algoliaPage = (page ?? 1) - 1; // Algolia uses 0-indexed pages
-    log.info("fetching category via Algolia", { slug, displayName, page: page ?? 1, algoliaPage });
-
-    return this.algoliaQuery({
-      facetFilters: [[`categories.name:${displayName}`]],
-      hitsPerPage: 24,
-      page: algoliaPage,
-    });
+    return withFallback(
+      () => {
+        const displayName = ZENDESK_CATEGORY_NAMES[slug] || slug;
+        const algoliaPage = (page ?? 1) - 1;
+        log.info("fetching category via Algolia", { slug, displayName, page: page ?? 1, algoliaPage });
+        return this.algoliaQuery({
+          facetFilters: [[`categories.name:${displayName}`]],
+          hitsPerPage: 24,
+          page: algoliaPage,
+        });
+      },
+      async () => {
+        if (!this.browserClient) throw new Error("no browserClient for zendesk fallback");
+        const url = zendeskUrls.category(slug, page);
+        log.info("fetching category page via browser (fallback)", { slug, url });
+        const html = await this.browserClient.fetchPage(url, {
+          waitUntil: "domcontentloaded",
+          extraWaitMs: 5000,
+        });
+        // Pre-parse HTML and wrap in envelope (parseCategoryPage expects JSON)
+        const parsed = parseCategoryHtml(html, slug);
+        return JSON.stringify({ _fromHtml: true, _parsed: parsed });
+      },
+      `zendesk/fetchCategoryPage/${slug}`,
+    );
   }
 
   /**
    * Fetch keyword search via Algolia API — no browser needed.
-   * Returns raw Algolia JSON response string.
+   * Fallback: browser render.
    */
   async fetchSearchPage(keyword: string): Promise<string | null> {
-    log.info("fetching search via Algolia", { keyword });
-    return this.algoliaQuery({
-      query: keyword,
-      hitsPerPage: 24,
-      page: 0,
-    });
+    return withFallback(
+      () => {
+        log.info("fetching search via Algolia", { keyword });
+        return this.algoliaQuery({
+          query: keyword,
+          hitsPerPage: 24,
+          page: 0,
+        });
+      },
+      async () => {
+        if (!this.browserClient) throw new Error("no browserClient for zendesk fallback");
+        const url = zendeskUrls.search(keyword);
+        log.info("fetching search page via browser (fallback)", { keyword, url });
+        const html = await this.browserClient.fetchPage(url, {
+          waitUntil: "domcontentloaded",
+          extraWaitMs: 5000,
+        });
+        // Pre-parse HTML and wrap in envelope (parseSearchPage expects JSON)
+        const parsed = parseSearchHtml(html, keyword, 1);
+        return JSON.stringify({ _fromHtml: true, _parsed: parsed });
+      },
+      `zendesk/fetchSearchPage/${keyword}`,
+    );
   }
 
   async fetchReviewPage(slug: string): Promise<string | null> {
@@ -131,10 +187,21 @@ export class ZendeskModule implements PlatformModule {
   // --- Parse ---
 
   parseAppDetails(html: string, slug: string): NormalizedAppDetails {
+    // Check if this is a pre-parsed Algolia fallback envelope
+    try {
+      const envelope = JSON.parse(html);
+      if (envelope._fromAlgolia && envelope._parsed) return envelope._parsed;
+    } catch {
+      // Not JSON — it's HTML, proceed with normal parsing
+    }
     return parseZendeskAppDetails(html, slug);
   }
 
   parseCategoryPage(json: string, url: string): NormalizedCategoryPage {
+    try {
+      const envelope = JSON.parse(json);
+      if (envelope._fromHtml && envelope._parsed) return envelope._parsed;
+    } catch { /* not an envelope, continue with normal parsing */ }
     const slug = this.extractCategorySlugFromUrl(url);
     return parseZendeskCategoryPage(json, slug, url);
   }
@@ -144,6 +211,10 @@ export class ZendeskModule implements PlatformModule {
     keyword: string,
     page: number,
   ): NormalizedSearchPage {
+    try {
+      const envelope = JSON.parse(json);
+      if (envelope._fromHtml && envelope._parsed) return envelope._parsed;
+    } catch { /* not an envelope, continue with normal parsing */ }
     return parseZendeskSearchPage(json, keyword, page);
   }
 

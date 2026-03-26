@@ -8,6 +8,7 @@ COPY package.json package-lock.json turbo.json tsconfig.base.json ./
 COPY packages/shared/package.json packages/shared/tsconfig.json ./packages/shared/
 COPY packages/db/package.json packages/db/tsconfig.json packages/db/tsconfig.build.json packages/db/drizzle.config.ts ./packages/db/
 COPY apps/api/package.json apps/api/tsconfig.json ./apps/api/
+COPY apps/scraper/package.json apps/scraper/tsconfig.json ./apps/scraper/
 RUN npm ci --include=dev
 
 # ---- Build ----
@@ -15,11 +16,13 @@ FROM deps AS build
 COPY packages/shared/src ./packages/shared/src
 COPY packages/db/src ./packages/db/src
 COPY apps/api/src ./apps/api/src
+COPY apps/scraper/src ./apps/scraper/src
 
-# Build shared packages then API (tsc from root node_modules)
+# Build shared packages, then API and scraper (tsc from root node_modules)
 RUN ./node_modules/.bin/tsc -p packages/shared && \
     ./node_modules/.bin/tsc -p packages/db/tsconfig.build.json && \
-    ./node_modules/.bin/tsc -p apps/api
+    ./node_modules/.bin/tsc -p apps/api && \
+    ./node_modules/.bin/tsc -p apps/scraper
 
 # ---- Production ----
 FROM base AS runner
@@ -29,6 +32,7 @@ COPY package.json package-lock.json ./
 COPY packages/shared/package.json ./packages/shared/
 COPY packages/db/package.json ./packages/db/
 COPY apps/api/package.json ./apps/api/
+COPY apps/scraper/package.json ./apps/scraper/
 RUN npm ci --omit=dev
 
 COPY --from=build /app/packages/shared/dist ./packages/shared/dist
@@ -36,6 +40,7 @@ COPY --from=build /app/packages/db/dist ./packages/db/dist
 COPY --from=build /app/packages/db/src/migrations ./packages/db/src/migrations
 COPY --from=build /app/packages/db/drizzle.config.ts ./packages/db/drizzle.config.ts
 COPY --from=build /app/apps/api/dist ./apps/api/dist
+COPY --from=build /app/apps/scraper/dist ./apps/scraper/dist
 
 EXPOSE 3001
 CMD ["node", "apps/api/dist/index.js"]

@@ -9,6 +9,7 @@ import type {
 } from "../platform-module.js";
 import { HttpClient } from "../../http-client.js";
 import type { BrowserClient } from "../../browser-client.js";
+import { withFallback } from "../../utils/with-fallback.js";
 import { zohoUrls } from "./urls.js";
 import { ZOHO_CONSTANTS, ZOHO_SCORING } from "./constants.js";
 import { parseZohoAppDetails } from "./parsers/app-parser.js";
@@ -72,44 +73,44 @@ export class ZohoModule implements PlatformModule {
 
   /**
    * Fetch app detail page via HttpClient (data is embedded in script tags).
+   * Fallback: browser rendering.
    */
   async fetchAppPage(slug: string): Promise<string> {
     const url = zohoUrls.app(slug);
-    log.info("fetching app page via HTTP", { slug, url });
-    return this.httpClient.fetchPage(url);
+    log.info("fetching app page", { slug, url });
+    return withFallback(
+      () => this.httpClient.fetchPage(url),
+      () => this.browserClient!.fetchPage(url, { waitUntil: "domcontentloaded", extraWaitMs: 3000 }),
+      `zoho/fetchAppPage/${slug}`,
+    );
   }
 
   /**
    * Fetch category page via BrowserClient (SPA rendering required).
+   * Fallback: HTTP (partial data).
    */
   async fetchCategoryPage(slug: string, _page?: number): Promise<string> {
     const url = zohoUrls.category(slug);
-    log.info("fetching category page via browser", { slug, url });
-    if (this.browserClient) {
-      return this.browserClient.fetchPage(url, {
-        waitUntil: "domcontentloaded",
-        extraWaitMs: 3000,
-      });
-    }
-    // Fallback to HTTP (may not have full data for SPA pages)
-    log.warn("no browser client available, falling back to HTTP for category page", { slug });
-    return this.httpClient.fetchPage(url);
+    log.info("fetching category page", { slug, url });
+    return withFallback(
+      () => this.browserClient!.fetchPage(url, { waitUntil: "domcontentloaded", extraWaitMs: 3000 }),
+      () => this.httpClient.fetchPage(url),
+      `zoho/fetchCategoryPage/${slug}`,
+    );
   }
 
   /**
    * Fetch search page via BrowserClient (SPA rendering required).
+   * Fallback: HTTP (partial data).
    */
   async fetchSearchPage(keyword: string, _page?: number): Promise<string | null> {
     const url = zohoUrls.search(keyword);
-    log.info("fetching search page via browser", { keyword, url });
-    if (this.browserClient) {
-      return this.browserClient.fetchPage(url, {
-        waitUntil: "domcontentloaded",
-        extraWaitMs: 3000,
-      });
-    }
-    log.warn("no browser client available, falling back to HTTP for search page", { keyword });
-    return this.httpClient.fetchPage(url);
+    log.info("fetching search page", { keyword, url });
+    return withFallback(
+      () => this.browserClient!.fetchPage(url, { waitUntil: "domcontentloaded", extraWaitMs: 3000 }),
+      () => this.httpClient.fetchPage(url),
+      `zoho/fetchSearchPage/${keyword}`,
+    );
   }
 
   // --- Parse ---

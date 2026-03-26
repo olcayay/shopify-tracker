@@ -27,7 +27,7 @@ export function getModule(platformId: PlatformId, httpClient?: HttpClient, brows
 
   switch (platformId) {
     case "shopify":
-      module = new ShopifyModule(httpClient);
+      module = new ShopifyModule(httpClient, browserClient);
       break;
     case "salesforce":
       module = new SalesforceModule(httpClient, browserClient);
@@ -36,19 +36,19 @@ export function getModule(platformId: PlatformId, httpClient?: HttpClient, brows
       module = new CanvaModule(httpClient, browserClient);
       break;
     case "wix":
-      module = new WixModule(httpClient);
+      module = new WixModule(httpClient, browserClient);
       break;
     case "wordpress":
-      module = new WordPressModule(httpClient);
+      module = new WordPressModule(httpClient, browserClient);
       break;
     case "google_workspace":
       module = new GoogleWorkspaceModule(httpClient, browserClient);
       break;
     case "atlassian":
-      module = new AtlassianModule(httpClient);
+      module = new AtlassianModule(httpClient, browserClient);
       break;
     case "zoom":
-      module = new ZoomModule(httpClient);
+      module = new ZoomModule(httpClient, browserClient);
       break;
     case "zoho":
       module = new ZohoModule(httpClient, browserClient);

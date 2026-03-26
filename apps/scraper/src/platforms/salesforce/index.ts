@@ -10,12 +10,17 @@ import type {
 } from "../platform-module.js";
 import { HttpClient } from "../../http-client.js";
 import type { BrowserClient } from "../../browser-client.js";
+import { withFallback } from "../../utils/with-fallback.js";
 import { salesforceUrls } from "./urls.js";
 import { SALESFORCE_CONSTANTS, SALESFORCE_SCORING, SALESFORCE_API_HEADERS, SALESFORCE_CATEGORY_CHILDREN } from "./constants.js";
 import { parseSalesforceSearchPage } from "./parsers/search-parser.js";
 import { parseSalesforceCategoryPage } from "./parsers/category-parser.js";
 import { parseSalesforceAppPage } from "./parsers/app-parser.js";
 import { parseSalesforceReviewPage } from "./parsers/review-parser.js";
+import { parseAppFromSearchResult } from "./parsers/search-app-parser.js";
+import { createLogger } from "@appranks/shared";
+
+const log = createLogger("salesforce");
 
 export class SalesforceModule implements PlatformModule {
   readonly platformId = "salesforce" as const;
@@ -61,34 +66,82 @@ export class SalesforceModule implements PlatformModule {
   // --- Fetch ---
 
   async fetchAppPage(slug: string): Promise<string> {
-    if (this.browserClient) {
-      return this.browserClient.fetchPage(salesforceUrls.app(slug));
-    }
-    // Fallback to HTTP (will likely return empty SPA shell)
-    return this.httpClient.fetchPage(salesforceUrls.app(slug));
+    return withFallback(
+      async () => {
+        if (!this.browserClient) throw new Error("BrowserClient required for Salesforce app pages (SPA)");
+        log.info("fetching app page via browser", { slug });
+        return this.browserClient.fetchPage(salesforceUrls.app(slug));
+      },
+      async () => {
+        // Fallback: search API with the slug as keyword to find the card
+        log.info("fetching app via search API (fallback)", { slug });
+        const json = await this.httpClient.fetchPage(
+          salesforceUrls.searchApi(slug, 1),
+          { ...SALESFORCE_API_HEADERS },
+        );
+        const data = JSON.parse(json);
+        const items = data.items || data.results || [];
+        const card = items.find((item: any) => item.oafId === slug) || items[0];
+        if (!card) throw new Error(`Salesforce app not found via search API: ${slug}`);
+        const parsed = parseAppFromSearchResult(card, slug);
+        return JSON.stringify({ _fromSearch: true, _parsed: parsed });
+      },
+      `salesforce/fetchAppPage/${slug}`,
+    );
   }
 
   async fetchCategoryPage(slug: string, page?: number): Promise<string> {
-    const p = page ?? 1;
-    const sponsoredCount = p === 1 ? 4 : undefined;
-    return this.httpClient.fetchPage(
-      salesforceUrls.categoryApi(slug, p, sponsoredCount),
-      { ...SALESFORCE_API_HEADERS }
+    return withFallback(
+      () => {
+        const p = page ?? 1;
+        const sponsoredCount = p === 1 ? 4 : undefined;
+        log.info("fetching category page via API", { slug, page: p });
+        return this.httpClient.fetchPage(
+          salesforceUrls.categoryApi(slug, p, sponsoredCount),
+          { ...SALESFORCE_API_HEADERS },
+        );
+      },
+      async () => {
+        if (!this.browserClient) throw new Error("no browserClient for salesforce fallback");
+        const url = salesforceUrls.category(slug);
+        log.info("fetching category page via browser (fallback)", { slug, url });
+        return this.browserClient.fetchPage(url);
+      },
+      `salesforce/fetchCategoryPage/${slug}`,
     );
   }
 
   async fetchSearchPage(keyword: string, page?: number): Promise<string | null> {
-    const p = page ?? 1;
-    const sponsoredCount = p === 1 ? 4 : undefined;
-    return this.httpClient.fetchPage(
-      salesforceUrls.searchApi(keyword, p, sponsoredCount),
-      { ...SALESFORCE_API_HEADERS }
+    return withFallback(
+      () => {
+        const p = page ?? 1;
+        const sponsoredCount = p === 1 ? 4 : undefined;
+        log.info("fetching search results via API", { keyword, page: p });
+        return this.httpClient.fetchPage(
+          salesforceUrls.searchApi(keyword, p, sponsoredCount),
+          { ...SALESFORCE_API_HEADERS },
+        );
+      },
+      async () => {
+        if (!this.browserClient) throw new Error("no browserClient for salesforce fallback");
+        const url = `${salesforceUrls.base}/results?keywords=${encodeURIComponent(keyword)}`;
+        log.info("fetching search page via browser (fallback)", { keyword, url });
+        return this.browserClient!.fetchPage(url);
+      },
+      `salesforce/fetchSearchPage/${keyword}`,
     );
   }
 
   // --- Parse ---
 
   parseAppDetails(html: string, slug: string): NormalizedAppDetails {
+    // Check if this is a pre-parsed search API fallback envelope
+    try {
+      const envelope = JSON.parse(html);
+      if (envelope._fromSearch && envelope._parsed) return envelope._parsed;
+    } catch {
+      // Not JSON — it's HTML, proceed with normal parsing
+    }
     return parseSalesforceAppPage(html, slug);
   }
 
@@ -126,9 +179,21 @@ export class SalesforceModule implements PlatformModule {
   }
 
   async fetchReviewPage(slug: string, page?: number): Promise<string | null> {
-    return this.httpClient.fetchPage(
-      salesforceUrls.reviewApi(slug, page ?? 1),
-      { Accept: "application/json" }
+    return withFallback(
+      () => {
+        log.info("fetching reviews via API", { slug, page });
+        return this.httpClient.fetchPage(
+          salesforceUrls.reviewApi(slug, page ?? 1),
+          { Accept: "application/json" },
+        );
+      },
+      async () => {
+        // Fallback: fetch app page via browser (reviews are embedded in SPA)
+        if (!this.browserClient) throw new Error("no browserClient for salesforce review fallback");
+        log.info("fetching app page for reviews via browser (fallback)", { slug });
+        return this.browserClient.fetchPage(salesforceUrls.app(slug));
+      },
+      `salesforce/fetchReviewPage/${slug}`,
     );
   }
 

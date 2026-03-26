@@ -40,13 +40,14 @@ Use this as a high-level task tracker. Each item links to a detailed section bel
 
 ### Phase 3: Scraper
 - [ ] Create scraper module directory under `apps/scraper/src/platforms/<name>/`
-- [ ] Register module in `apps/scraper/src/platforms/registry.ts`
+- [ ] Register module in `apps/scraper/src/platforms/registry.ts` (pass both `httpClient` and `browserClient`)
 - [ ] Add scheduler cron jobs in `apps/scraper/src/scheduler.ts`
 - [ ] Update browser client init in `apps/scraper/src/process-job.ts` (if SPA/JS-rendered)
-- [ ] Update browser client init in `apps/scraper/src/cli.ts` (if SPA/JS-rendered)
 - [ ] Add URL pattern to `apps/scraper/src/jobs/backfill-categories.ts`
 - [ ] Add branch in `keyword-suggestion-scraper.ts` (if custom suggestion API)
+- [ ] **Add fallback scraping methods** using `withFallback()` in each fetch method (see [Fallback Scraping](#fallback-scraping) below)
 - [ ] Add smoke test checks in `scripts/smoke-test.sh` (see [Smoke Test](#smoke-test) below)
+- [ ] Test fallback path: `./scripts/smoke-test.sh --platform <name> --fallback`
 - [ ] Bootstrap first data: seed categories → run category scraper → run app detail scraper (see [First Data Bootstrap](#first-data-bootstrap--testing-a-new-platform-end-to-end))
 
 ### Phase 4: API
@@ -1846,6 +1847,46 @@ featured sections (independent — no DB prerequisite)
 - [ ] CLI keyword scrape (if applicable): `npx tsx src/cli.ts --platform newplatform keyword <keyword>`
 - [ ] Featured sections appear (if applicable): `SELECT * FROM featured_app_sightings fas JOIN apps a ON a.id = fas.app_id WHERE a.platform = 'newplatform' LIMIT 5;`
 
+### Fallback Scraping
+
+Every platform module must implement a secondary (fallback) scraping method for each fetch function. This ensures scraping continues when the primary method fails (API deprecation, Cloudflare blocks, rate limiting, SPA rendering issues).
+
+**Utility:** `apps/scraper/src/utils/with-fallback.ts`
+
+```typescript
+import { withFallback } from "../../utils/with-fallback.js";
+
+// In each fetch method:
+async fetchAppPage(slug: string): Promise<string> {
+  return withFallback(
+    () => this.fetchAppPagePrimary(slug),   // primary method
+    () => this.fetchAppPageFallback(slug),  // fallback method
+    `platform_name/fetchAppPage/${slug}`,   // context for logging
+  );
+}
+```
+
+**Common fallback patterns:**
+
+| Primary | Fallback | Examples |
+|---------|----------|---------|
+| HTTP API (JSON) | Browser render (HTML) | WordPress, Atlassian, Zoom |
+| Browser SPA | HTTP search API card | Salesforce, Canva |
+| Browser (Cloudflare) | Algolia/search API | Zendesk |
+| HTTP HTML | Browser HTML | Shopify, Wix |
+| Browser SPA | Browser re-launch (fresh context) | Google Workspace |
+| CHIRP HTTP API | Browser `page.evaluate()` | HubSpot |
+
+**Key rules:**
+- Constructor must accept both `httpClient` and `browserClient` (even if primary doesn't use one)
+- `registry.ts` already passes both clients to all modules
+- Use `BrowserClient` lazily — browser only launches on first use
+- For fallback data that returns a different format, wrap in `{ _fromHtml: true, _parsed: result }` envelope and check in the parse method
+- Test with: `./scripts/smoke-test.sh --platform <name> --fallback`
+- Compare both paths: `./scripts/smoke-test.sh --platform <name> --compare` (runs primary then fallback, shows side-by-side summary)
+- CLI flag: `--force-fallback` (sets `FORCE_FALLBACK=true` env, skips primary)
+- Add fallback unit tests in `<platform>/__tests__/fallback.test.ts` covering: primary success, fallback trigger on primary failure, both-fail error propagation
+
 ### Smoke Test
 
 **File:** `scripts/smoke-test.sh`
@@ -1856,6 +1897,8 @@ The smoke test script runs live CLI checks against every platform. When adding a
 - [ ] Add the platform name to the `ALL_PLATFORMS` array
 - [ ] Add `--skip-browser` guard if the platform requires Playwright
 - [ ] Run `./scripts/smoke-test.sh --platform <name>` and verify all checks pass
+- [ ] Run `./scripts/smoke-test.sh --platform <name> --fallback` and verify fallback path works
+- [ ] Run `./scripts/smoke-test.sh --platform <name> --compare` to compare primary vs fallback
 - [ ] Run `./scripts/smoke-test.sh` (full) and confirm 0 SKIPs in summary
 
 **Which checks to include** — only add a line for checks the platform supports:
