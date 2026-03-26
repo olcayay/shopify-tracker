@@ -31,7 +31,10 @@ COPY packages/shared/package.json ./packages/shared/
 COPY packages/db/package.json ./packages/db/
 COPY apps/scraper/package.json ./apps/scraper/
 RUN npm ci --omit=dev
-RUN npx playwright install --with-deps
+
+# Install Playwright browsers inside the image (not in /root/.cache which may be ephemeral)
+ENV PLAYWRIGHT_BROWSERS_PATH=/app/.playwright-browsers
+RUN npx playwright install chromium --with-deps
 
 COPY --from=build /app/packages/shared/dist ./packages/shared/dist
 COPY --from=build /app/packages/db/dist ./packages/db/dist
