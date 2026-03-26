@@ -711,7 +711,8 @@ export const systemAdminRoutes: FastifyPluginAsync = async (app) => {
 
     // 4. Recent failures (last 24h, max 10)
     const recentFailures = await db.execute(sql`
-      SELECT id, platform, scraper_type, completed_at, error,
+      SELECT id, platform, scraper_type, completed_at, started_at, error, metadata,
+        triggered_by, queue, job_id,
         (EXTRACT(EPOCH FROM (completed_at - started_at)) * 1000)::bigint AS duration_ms
       FROM scrape_runs
       WHERE status = 'failed'
@@ -823,14 +824,23 @@ export const systemAdminRoutes: FastifyPluginAsync = async (app) => {
     return {
       matrix,
       summary: { healthy, failed, stale, running, partial, totalScheduled },
-      recentFailures: (recentFailures as any[]).map((r: any) => ({
-        id: r.id,
-        platform: r.platform,
-        scraperType: r.scraper_type,
-        completedAt: r.completed_at ? new Date(r.completed_at).toISOString() : null,
-        error: r.error,
-        durationMs: r.duration_ms ? Number(r.duration_ms) : null,
-      })),
+      recentFailures: (recentFailures as any[]).map((r: any) => {
+        const meta = r.metadata as Record<string, unknown> | null;
+        return {
+          id: r.id,
+          platform: r.platform,
+          scraperType: r.scraper_type,
+          completedAt: r.completed_at ? new Date(r.completed_at).toISOString() : null,
+          startedAt: r.started_at ? new Date(r.started_at).toISOString() : null,
+          error: r.error,
+          durationMs: r.duration_ms ? Number(r.duration_ms) : null,
+          itemsScraped: (meta?.items_scraped as number) ?? null,
+          itemsFailed: (meta?.items_failed as number) ?? null,
+          triggeredBy: r.triggered_by,
+          queue: r.queue,
+          jobId: r.job_id,
+        };
+      }),
       anomalies,
     };
   });

@@ -33,7 +33,11 @@ import {
   AlertTriangle,
   Copy,
   Check,
+  ChevronDown,
+  ChevronRight,
+  Loader2,
 } from "lucide-react";
+import { useFormatDate } from "@/lib/format-date";
 import { SmokeTestPanel } from "./smoke-test-panel";
 import { SmokeTestHistory, type SmokeHistoryEntry } from "../scraper/components/smoke-test-history";
 import { PLATFORM_LABELS, PLATFORM_COLORS, SCRAPER_TYPE_LABELS, HEALTH_SCRAPER_TYPES } from "@/lib/platform-display";
@@ -70,8 +74,14 @@ interface HealthData {
     platform: string;
     scraperType: string;
     completedAt: string;
+    startedAt: string | null;
     error: string;
     durationMs: number | null;
+    itemsScraped: number | null;
+    itemsFailed: number | null;
+    triggeredBy: string | null;
+    queue: string | null;
+    jobId: string | null;
   }[];
   anomalies: {
     platform: string;
@@ -115,6 +125,14 @@ const STATUS_RING: Record<CellStatus, string> = {
   yellow: "ring-yellow-200",
   blue: "ring-blue-200 animate-pulse",
   gray: "ring-gray-100",
+};
+
+const STATUS_LABEL_MAP: Record<CellStatus, string> = {
+  green: "Healthy",
+  red: "Failed",
+  yellow: "Stale",
+  blue: "Running",
+  gray: "Not Scheduled",
 };
 
 function getDurationTrend(cell: HealthCell): { direction: "up" | "down" | null; text: string } {
@@ -354,37 +372,12 @@ export default function ScraperHealthPage() {
             </CardHeader>
             <CardContent className="space-y-2">
               {data.recentFailures.map((f) => (
-                <div key={f.id} className="border rounded-md p-3 text-sm space-y-1.5">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <div
-                        className="w-2.5 h-2.5 rounded-full shrink-0"
-                        style={{ backgroundColor: PLATFORM_COLORS[f.platform as PlatformId] || "#888" }}
-                      />
-                      <span className="font-medium">{PLATFORM_LABELS[f.platform as PlatformId] || f.platform}</span>
-                      <Badge variant="outline" className="text-xs px-1.5 py-0">
-                        {SCRAPER_TYPE_LABELS[f.scraperType] || f.scraperType}
-                      </Badge>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <span className="text-sm text-muted-foreground">
-                        {f.completedAt && timeAgo(f.completedAt)}
-                      </span>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="h-7 text-sm px-3"
-                        disabled={retrying === f.id}
-                        onClick={() => handleRetry(f.id)}
-                      >
-                        {retrying === f.id ? "..." : "Retry"}
-                      </Button>
-                    </div>
-                  </div>
-                  {f.error && (
-                    <ErrorBlock error={f.error} />
-                  )}
-                </div>
+                <RecentFailureCard
+                  key={f.id}
+                  failure={f}
+                  retrying={retrying === f.id}
+                  onRetry={() => handleRetry(f.id)}
+                />
               ))}
             </CardContent>
           </Card>
@@ -463,6 +456,198 @@ export default function ScraperHealthPage() {
   );
 }
 
+const SCRAPER_TYPE_FILE_MAP: Record<string, string> = {
+  app_details: "app-details-scraper.ts",
+  keyword_search: "keyword-scraper.ts",
+  reviews: "review-scraper.ts",
+  category: "category-scraper.ts",
+};
+
+function buildFailureReport(f: HealthData["recentFailures"][0], itemErrors?: any[]): string {
+  const lines = [
+    "=== SCRAPER ERROR REPORT ===",
+    "",
+    "--- Run ---",
+    `Run ID:       ${f.id}`,
+    `Platform:     ${f.platform}`,
+    `Scraper Type: ${f.scraperType}`,
+    `Status:       failed`,
+    `Triggered By: ${f.triggeredBy || "N/A"}`,
+    `Queue:        ${f.queue || "N/A"}`,
+    `Job ID:       ${f.jobId || "N/A"}`,
+    `Started:      ${f.startedAt || "N/A"}`,
+    `Completed:    ${f.completedAt || "N/A"}`,
+    `Duration:     ${f.durationMs ? `${f.durationMs}ms` : "N/A"}`,
+    `Items:        ${f.itemsScraped ?? 0} scraped, ${f.itemsFailed ?? 0} failed`,
+  ];
+  const file = SCRAPER_TYPE_FILE_MAP[f.scraperType];
+  if (file) lines.push(`Scraper File: apps/scraper/src/scrapers/${file}`);
+  if (f.error) lines.push("", "--- Error ---", f.error);
+  if (itemErrors && itemErrors.length > 0) {
+    lines.push("");
+    for (let i = 0; i < itemErrors.length; i++) {
+      const err = itemErrors[i];
+      lines.push(
+        `--- Failed Item ${i + 1}/${itemErrors.length} ---`,
+        `Identifier:   ${err.itemIdentifier}`,
+        `Type:         ${err.itemType}`,
+        `URL:          ${err.url || "N/A"}`,
+        `Error:        ${err.errorMessage}`,
+      );
+      if (err.stackTrace) lines.push("Stack Trace:", err.stackTrace);
+      lines.push("");
+    }
+  }
+  return lines.join("\n");
+}
+
+function RecentFailureCard({
+  failure: f,
+  retrying,
+  onRetry,
+}: {
+  failure: HealthData["recentFailures"][0];
+  retrying: boolean;
+  onRetry: () => void;
+}) {
+  const { fetchWithAuth } = useAuth();
+  const { formatDateTime } = useFormatDate();
+  const [expanded, setExpanded] = useState(false);
+  const [itemErrors, setItemErrors] = useState<any[] | null>(null);
+  const [loadingErrors, setLoadingErrors] = useState(false);
+  const [copied, setCopied] = useState(false);
+  const hasItemErrors = (f.itemsFailed ?? 0) > 0;
+
+  const handleExpand = async () => {
+    const next = !expanded;
+    setExpanded(next);
+    if (next && hasItemErrors && itemErrors === null && !loadingErrors) {
+      setLoadingErrors(true);
+      try {
+        const res = await fetchWithAuth(`/api/system-admin/scraper/runs/${f.id}/item-errors`);
+        if (res.ok) {
+          const data = await res.json();
+          setItemErrors(data.errors);
+        }
+      } catch { /* ignore */ }
+      setLoadingErrors(false);
+    }
+  };
+
+  const handleCopy = async () => {
+    const report = buildFailureReport(f, itemErrors || undefined);
+    await navigator.clipboard.writeText(report);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  return (
+    <div className="border rounded-md text-sm">
+      <div
+        className="flex items-center justify-between p-3 cursor-pointer hover:bg-muted/30 transition-colors"
+        onClick={handleExpand}
+      >
+        <div className="flex items-center gap-2">
+          {expanded ? (
+            <ChevronDown className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+          ) : (
+            <ChevronRight className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+          )}
+          <div
+            className="w-2.5 h-2.5 rounded-full shrink-0"
+            style={{ backgroundColor: PLATFORM_COLORS[f.platform as PlatformId] || "#888" }}
+          />
+          <span className="font-medium">{PLATFORM_LABELS[f.platform as PlatformId] || f.platform}</span>
+          <Badge variant="outline" className="text-xs px-1.5 py-0">
+            {SCRAPER_TYPE_LABELS[f.scraperType] || f.scraperType}
+          </Badge>
+          {hasItemErrors && (
+            <span className="text-xs text-orange-600">
+              ({f.itemsFailed} items failed)
+            </span>
+          )}
+        </div>
+        <div className="flex items-center gap-2">
+          <span className="text-sm text-muted-foreground">
+            {f.completedAt && timeAgo(f.completedAt)}
+          </span>
+          <Button
+            size="sm"
+            variant="outline"
+            className="h-7 text-sm px-2"
+            onClick={(e) => { e.stopPropagation(); handleCopy(); }}
+            title="Copy debug report"
+          >
+            {copied ? <Check className="h-3 w-3" /> : <Copy className="h-3 w-3" />}
+          </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            className="h-7 text-sm px-3"
+            disabled={retrying}
+            onClick={(e) => { e.stopPropagation(); onRetry(); }}
+          >
+            {retrying ? "..." : "Retry"}
+          </Button>
+        </div>
+      </div>
+
+      {expanded && (
+        <div className="px-3 pb-3 space-y-2">
+          {/* Run info grid */}
+          <div className="grid grid-cols-2 gap-x-4 gap-y-0.5 text-xs px-5">
+            <span className="text-muted-foreground">Run ID</span>
+            <span className="font-mono">{f.id}</span>
+            <span className="text-muted-foreground">Completed</span>
+            <span>{f.completedAt ? formatDateTime(f.completedAt) : "N/A"}</span>
+            <span className="text-muted-foreground">Duration</span>
+            <span>{f.durationMs ? formatDuration(f.durationMs) : "N/A"}</span>
+            {f.itemsScraped != null && (
+              <>
+                <span className="text-muted-foreground">Items</span>
+                <span>
+                  {f.itemsScraped} scraped
+                  {(f.itemsFailed ?? 0) > 0 && <span className="text-destructive ml-1">({f.itemsFailed} failed)</span>}
+                </span>
+              </>
+            )}
+          </div>
+
+          {/* Run error */}
+          {f.error && <ErrorBlock error={f.error} />}
+
+          {/* Item errors */}
+          {hasItemErrors && (
+            <div className="px-5">
+              <div className="text-xs font-medium text-orange-600 mb-1">Failed Items</div>
+              {loadingErrors ? (
+                <div className="flex items-center gap-2 text-xs text-muted-foreground py-1">
+                  <Loader2 className="h-3 w-3 animate-spin" /> Loading...
+                </div>
+              ) : itemErrors && itemErrors.length > 0 ? (
+                <div className="space-y-1.5">
+                  {itemErrors.map((err: any) => (
+                    <div key={err.id} className="border border-orange-200 bg-orange-50/50 rounded p-2 text-xs">
+                      <div className="flex items-center gap-2 mb-0.5">
+                        <span className="font-mono font-medium text-orange-700">{err.itemIdentifier}</span>
+                        <Badge variant="outline" className="text-[9px] px-1 py-0 h-4">{err.itemType}</Badge>
+                      </div>
+                      {err.url && <div className="text-muted-foreground truncate" title={err.url}>{err.url}</div>}
+                      <div className="text-destructive mt-0.5">{err.errorMessage}</div>
+                    </div>
+                  ))}
+                </div>
+              ) : itemErrors && itemErrors.length === 0 ? (
+                <div className="text-xs text-muted-foreground">No detailed error records</div>
+              ) : null}
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function ErrorBlock({ error }: { error: string }) {
   const [copied, setCopied] = useState(false);
 
@@ -508,7 +693,7 @@ function CellTooltip({ cell, status }: { cell: HealthCell; status: CellStatus })
           <div className="flex justify-between gap-4">
             <span className="text-muted-foreground">Status</span>
             <span className={cell.lastRun.status === "failed" ? "text-red-600" : "text-green-600"}>
-              {cell.lastRun.status}
+              {STATUS_LABEL_MAP[status] || cell.lastRun.status}
             </span>
           </div>
           {cell.lastRun.completedAt && (

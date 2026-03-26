@@ -71,6 +71,15 @@ export const STATUS_RING: Record<CellStatus, string> = {
   amber: "ring-orange-200",
 };
 
+export const STATUS_LABELS: Record<CellStatus, string> = {
+  green: "Healthy",
+  red: "Failed",
+  yellow: "Stale",
+  blue: "Running",
+  gray: "Not Scheduled",
+  amber: "Partial",
+};
+
 const SCRAPER_TYPE_FILE_MAP: Record<string, string> = {
   app_details: "app-details-scraper.ts",
   keyword_search: "keyword-scraper.ts",
@@ -198,7 +207,7 @@ export function MatrixCell({ cell, onTrigger, triggering }: MatrixCellProps) {
             {PLATFORM_LABELS[cell.platform as PlatformId] || cell.platform} &mdash; {SCRAPER_TYPE_LABELS[cell.scraperType] || cell.scraperType}
           </div>
           <div>
-            Status: <span className="capitalize">{status}</span>
+            Status: <span className="capitalize">{STATUS_LABELS[status]}</span>
             {cell.currentlyRunning && cell.runningStartedAt && (
               <span className="text-muted-foreground"> (started {timeAgo(cell.runningStartedAt)})</span>
             )}
