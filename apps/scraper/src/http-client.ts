@@ -90,10 +90,13 @@ export class HttpClient {
 
         if (!response.ok) {
           const err = new Error(`HTTP ${response.status}: ${response.statusText}`);
-          // 429 Too Many Requests — always retry with longer backoff
+          // 429 Too Many Requests — retry with aggressive backoff
           if (response.status === 429) {
             const retryAfter = response.headers.get("Retry-After");
-            const waitMs = retryAfter ? parseInt(retryAfter, 10) * 1000 : Math.pow(2, attempt + 2) * 1000;
+            // Use Retry-After header, or 15s * 2^attempt (15s, 30s, 60s)
+            const waitMs = retryAfter
+              ? parseInt(retryAfter, 10) * 1000
+              : 15_000 * Math.pow(2, attempt);
             log.warn("rate limited (429), backing off", { url, attempt: attempt + 1, waitMs });
             lastError = err;
             if (attempt < this.options.maxRetries) {
@@ -156,7 +159,9 @@ export class HttpClient {
           const err = new Error(`HTTP ${response.status}: ${response.statusText}`);
           if (response.status === 429) {
             const retryAfter = response.headers.get("Retry-After");
-            const waitMs = retryAfter ? parseInt(retryAfter, 10) * 1000 : Math.pow(2, attempt + 2) * 1000;
+            const waitMs = retryAfter
+              ? parseInt(retryAfter, 10) * 1000
+              : 15_000 * Math.pow(2, attempt);
             log.warn("rate limited (429), backing off", { url, attempt: attempt + 1, waitMs });
             lastError = err;
             if (attempt < this.options.maxRetries) {
