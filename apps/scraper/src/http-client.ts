@@ -199,7 +199,8 @@ export class HttpClient {
     );
   }
 
-  private sleep(ms: number): Promise<void> {
+  /** @internal — visible for testing */
+  sleep(ms: number): Promise<void> {
     return new Promise((resolve) => setTimeout(resolve, ms));
   }
 }
