@@ -17,6 +17,7 @@ import { HttpClient } from "../http-client.js";
 import { parseSearchPage } from "../parsers/search-parser.js";
 import type { PlatformModule, NormalizedSearchApp } from "../platforms/platform-module.js";
 import { runConcurrent } from "../utils/run-concurrent.js";
+import { recordItemError } from "../utils/record-item-error.js";
 
 export class KeywordScraper {
   private db: Database;
@@ -85,6 +86,13 @@ export class KeywordScraper {
         } catch (error) {
           log.error("failed to scrape keyword", { keyword: kw.keyword, error: String(error) });
           itemsFailed++;
+          await recordItemError(this.db, {
+            scrapeRunId: run.id,
+            itemIdentifier: kw.keyword,
+            itemType: "keyword",
+            url: this.platformModule ? undefined : urls.search(kw.keyword),
+            error,
+          });
         }
       }, 3);
 

@@ -228,6 +228,9 @@ export default function ScraperPage() {
           <Badge variant="outline" className="text-sm px-3 py-1 border-green-200 text-green-700 bg-green-50">
             {healthData.summary.healthy} Healthy
           </Badge>
+          <Badge variant="outline" className="text-sm px-3 py-1 border-orange-200 text-orange-700 bg-orange-50">
+            {healthData.summary.partial} Partial
+          </Badge>
           <Badge variant="outline" className="text-sm px-3 py-1 border-red-200 text-red-700 bg-red-50">
             {healthData.summary.failed} Failed
           </Badge>

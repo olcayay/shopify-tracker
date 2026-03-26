@@ -8,6 +8,7 @@ import { HttpClient } from "../http-client.js";
 import { parseReviewPage } from "../parsers/review-parser.js";
 import type { PlatformModule } from "../platforms/platform-module.js";
 import { runConcurrent } from "../utils/run-concurrent.js";
+import { recordItemError } from "../utils/record-item-error.js";
 
 export class ReviewScraper {
   private db: Database;
@@ -72,6 +73,13 @@ export class ReviewScraper {
         } catch (error) {
           log.error("failed to scrape reviews", { slug: app.slug, error: String(error) });
           itemsFailed++;
+          await recordItemError(this.db, {
+            scrapeRunId: run.id,
+            itemIdentifier: app.slug,
+            itemType: "review_app",
+            url: this.platformModule ? undefined : urls.appReviews(app.slug),
+            error,
+          });
         }
       }, 3);
 

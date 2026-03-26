@@ -43,7 +43,7 @@ const mockHealthData = {
       schedule: { cron: "0 3 * * *", nextRunAt: new Date(Date.now() + 3600000).toISOString() },
     },
   ],
-  summary: { healthy: 30, failed: 5, stale: 3, running: 2, totalScheduled: 55 },
+  summary: { healthy: 30, failed: 5, stale: 3, running: 2, partial: 0, totalScheduled: 55 },
   recentFailures: [],
   anomalies: [],
 };

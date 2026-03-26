@@ -32,7 +32,7 @@ export interface HealthCell {
   schedule: { cron: string; nextRunAt: string } | null;
 }
 
-export type CellStatus = "green" | "red" | "yellow" | "blue" | "gray";
+export type CellStatus = "green" | "red" | "yellow" | "blue" | "gray" | "amber";
 
 export function getCellStatus(cell: HealthCell): CellStatus {
   if (!cell.schedule) return "gray";
@@ -45,6 +45,7 @@ export function getCellStatus(cell: HealthCell): CellStatus {
   const cronHours = hourPart.split(",").length;
   const intervalMs = cronHours === 1 ? 24 * 60 * 60 * 1000 : (24 / cronHours) * 60 * 60 * 1000;
   if (age > intervalMs * 2) return "yellow";
+  if (cell.lastRun?.status === "completed" && (cell.lastRun.itemsFailed ?? 0) > 0) return "amber";
   return "green";
 }
 
@@ -54,6 +55,7 @@ export const STATUS_COLORS: Record<CellStatus, string> = {
   yellow: "bg-yellow-500",
   blue: "bg-blue-500",
   gray: "bg-gray-300",
+  amber: "bg-orange-500",
 };
 
 export const STATUS_RING: Record<CellStatus, string> = {
@@ -62,6 +64,7 @@ export const STATUS_RING: Record<CellStatus, string> = {
   yellow: "ring-yellow-200",
   blue: "ring-blue-200 animate-pulse",
   gray: "ring-gray-100",
+  amber: "ring-orange-200",
 };
 
 interface MatrixCellProps {

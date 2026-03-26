@@ -26,6 +26,7 @@ import {
 } from "../parsers/category-parser.js";
 import { parseFeaturedSections } from "../parsers/featured-parser.js";
 import type { PlatformModule, NormalizedCategoryApp } from "../platforms/platform-module.js";
+import { recordItemError } from "../utils/record-item-error.js";
 
 export interface ScrapePageOptions {
   pages?: "first" | "all" | number;
@@ -129,6 +130,13 @@ export class CategoryScraper {
         } catch (error) {
           log.error("failed to crawl root category", { slug, error: String(error) });
           itemsFailed++;
+          await recordItemError(this.db, {
+            scrapeRunId: run.id,
+            itemIdentifier: slug,
+            itemType: "category",
+            url: this.platformModule ? undefined : urls.category(slug),
+            error,
+          });
         }
       }
 

@@ -35,6 +35,7 @@ import {
   aiLogs,
   categoryParents,
   smokeTestResults,
+  scrapeItemErrors,
 } from "@appranks/db";
 import { isPlatformId, PLATFORM_IDS, SCRAPER_SCHEDULES, getNextRunFromCron, getScheduleIntervalMs, findSchedule, SMOKE_PLATFORMS, SMOKE_CHECKS, BROWSER_PLATFORMS, getSmokeCheck, getSmokePlatform, countTotalSmokeChecks } from "@appranks/shared";
 import type { SmokeCheckName } from "@appranks/shared";
@@ -784,7 +785,7 @@ export const systemAdminRoutes: FastifyPluginAsync = async (app) => {
     }
 
     // Compute summary
-    let healthy = 0, failed = 0, stale = 0, running = 0, totalScheduled = 0;
+    let healthy = 0, failed = 0, stale = 0, running = 0, partial = 0, totalScheduled = 0;
     for (const cell of matrix) {
       if (!cell.schedule) continue; // N/A
       totalScheduled++;
@@ -794,6 +795,7 @@ export const systemAdminRoutes: FastifyPluginAsync = async (app) => {
         const age = Date.now() - new Date(cell.lastRun.completedAt).getTime();
         const interval = getScheduleIntervalMs(cell.schedule.cron);
         if (age > interval * 2) { stale++; }
+        else if (cell.lastRun.status === "completed" && (cell.lastRun.itemsFailed ?? 0) > 0) { partial++; }
         else { healthy++; }
       } else {
         stale++; // never ran
@@ -818,7 +820,7 @@ export const systemAdminRoutes: FastifyPluginAsync = async (app) => {
 
     return {
       matrix,
-      summary: { healthy, failed, stale, running, totalScheduled },
+      summary: { healthy, failed, stale, running, partial, totalScheduled },
       recentFailures: (recentFailures as any[]).map((r: any) => ({
         id: r.id,
         platform: r.platform,
@@ -1354,7 +1356,8 @@ export const systemAdminRoutes: FastifyPluginAsync = async (app) => {
           }
         }
 
-        return { ...run, assets };
+        const itemsFailed = (run.metadata as any)?.items_failed ?? 0;
+        return { ...run, assets, hasItemErrors: itemsFailed > 0 };
       })
     );
 
@@ -1558,6 +1561,26 @@ export const systemAdminRoutes: FastifyPluginAsync = async (app) => {
       } catch (err: any) {
         app.log.error(`Failed to retry run: ${err.message}`);
         return reply.code(500).send({ error: "Failed to retry run" });
+      }
+    }
+  );
+
+  // GET /api/system-admin/scraper/runs/:runId/item-errors — per-item error details
+  app.get<{ Params: { runId: string } }>(
+    "/scraper/runs/:runId/item-errors",
+    async (request, reply) => {
+      try {
+        const { runId } = request.params;
+        const errors = await db
+          .select()
+          .from(scrapeItemErrors)
+          .where(eq(scrapeItemErrors.scrapeRunId, runId))
+          .orderBy(scrapeItemErrors.createdAt)
+          .limit(100);
+        return { errors };
+      } catch (err: any) {
+        app.log.error(`Failed to fetch item errors: ${err.message}`);
+        return reply.code(500).send({ error: "Failed to fetch item errors" });
       }
     }
   );

@@ -23,6 +23,7 @@ import * as researchVirtualAppsSchema from "./schema/research-virtual-apps.js";
 import * as aiLogsSchema from "./schema/ai-logs.js";
 import * as categoryParentsSchema from "./schema/category-parents.js";
 import * as smokeTestResultsSchema from "./schema/smoke-test-results.js";
+import * as scrapeItemErrorsSchema from "./schema/scrape-item-errors.js";
 
 export const schema = {
   ...scrapeRunsSchema,
@@ -47,6 +48,7 @@ export const schema = {
   ...aiLogsSchema,
   ...categoryParentsSchema,
   ...smokeTestResultsSchema,
+  ...scrapeItemErrorsSchema,
 };
 
 export function createDb(databaseUrl: string) {
@@ -117,3 +119,4 @@ export { researchVirtualApps } from "./schema/research-virtual-apps.js";
 export { aiLogs } from "./schema/ai-logs.js";
 export { categoryParents } from "./schema/category-parents.js";
 export { smokeTestResults } from "./schema/smoke-test-results.js";
+export { scrapeItemErrors } from "./schema/scrape-item-errors.js";

@@ -27,8 +27,11 @@ import {
   ChevronLeft,
   Copy,
   Check,
+  AlertTriangle,
+  Loader2,
 } from "lucide-react";
 import { useFormatDate } from "@/lib/format-date";
+import { useAuth } from "@/lib/auth-context";
 import { PLATFORM_LABELS, PLATFORM_COLORS } from "@/lib/platform-display";
 
 const PAGE_SIZE = 20;
@@ -85,8 +88,41 @@ export function RunHistoryTable({
   retryingRunId,
 }: RunHistoryTableProps) {
   const { formatDateTime } = useFormatDate();
+  const { fetchWithAuth } = useAuth();
   const [expandedRunId, setExpandedRunId] = useState<string | null>(null);
+  const [itemErrors, setItemErrors] = useState<Record<string, any[]>>({});
+  const [loadingErrors, setLoadingErrors] = useState<string | null>(null);
   const totalPages = Math.ceil(total / PAGE_SIZE);
+
+  const isExpandable = (run: any) =>
+    run.error || (run.assets && run.assets.length > 0) || run.hasItemErrors;
+
+  const loadItemErrors = async (runId: string) => {
+    if (itemErrors[runId]) return;
+    setLoadingErrors(runId);
+    try {
+      const res = await fetchWithAuth(`/api/system-admin/scraper/runs/${runId}/item-errors`);
+      if (res.ok) {
+        const data = await res.json();
+        setItemErrors((prev) => ({ ...prev, [runId]: data.errors }));
+      }
+    } catch {
+      // ignore
+    }
+    setLoadingErrors(null);
+  };
+
+  const handleRowClick = (run: any) => {
+    if (!isExpandable(run)) return;
+    if (expandedRunId === run.id) {
+      setExpandedRunId(null);
+    } else {
+      setExpandedRunId(run.id);
+      if (run.hasItemErrors && !itemErrors[run.id]) {
+        loadItemErrors(run.id);
+      }
+    }
+  };
 
   return (
     <Card>
@@ -192,19 +228,11 @@ export function RunHistoryTable({
               <>
                 <TableRow
                   key={run.id}
-                  className={
-                    run.error || (run.assets && run.assets.length > 0)
-                      ? "cursor-pointer"
-                      : ""
-                  }
-                  onClick={() => {
-                    if (run.error || (run.assets && run.assets.length > 0)) {
-                      setExpandedRunId(expandedRunId === run.id ? null : run.id);
-                    }
-                  }}
+                  className={isExpandable(run) ? "cursor-pointer" : ""}
+                  onClick={() => handleRowClick(run)}
                 >
                   <TableCell className="w-8 pr-0">
-                    {(run.error || (run.assets && run.assets.length > 0)) &&
+                    {isExpandable(run) &&
                       (expandedRunId === run.id ? (
                         <ChevronDown className="h-4 w-4 text-muted-foreground" />
                       ) : (
@@ -235,17 +263,26 @@ export function RunHistoryTable({
                     )}
                   </TableCell>
                   <TableCell>
-                    <Badge
-                      variant={
-                        run.status === "completed"
-                          ? "default"
-                          : run.status === "running"
-                            ? "secondary"
-                            : "destructive"
-                      }
-                    >
-                      {run.status}
-                    </Badge>
+                    {run.status === "completed" && run.metadata?.items_failed > 0 ? (
+                      <Badge
+                        variant="outline"
+                        className="bg-orange-50 text-orange-600 border-orange-200"
+                      >
+                        partial
+                      </Badge>
+                    ) : (
+                      <Badge
+                        variant={
+                          run.status === "completed"
+                            ? "default"
+                            : run.status === "running"
+                              ? "secondary"
+                              : "destructive"
+                        }
+                      >
+                        {run.status}
+                      </Badge>
+                    )}
                   </TableCell>
                   <TableCell>
                     {run.metadata?.fallback_used ? (
@@ -393,7 +430,7 @@ export function RunHistoryTable({
                         </div>
                       )}
                       {run.assets && run.assets.length > 0 && (
-                        <div>
+                        <div className="mb-3">
                           <div className="text-sm font-medium mb-1">
                             Scraped Assets ({run.assets.length})
                           </div>
@@ -413,9 +450,35 @@ export function RunHistoryTable({
                           </div>
                         </div>
                       )}
+                      {/* Per-item errors */}
+                      {run.hasItemErrors && (
+                        <div className="mb-3">
+                          <div className="flex items-center gap-2 mb-2">
+                            <AlertTriangle className="h-4 w-4 text-orange-500" />
+                            <span className="text-sm font-medium text-orange-600">
+                              Failed Items ({run.metadata?.items_failed ?? 0})
+                            </span>
+                            {itemErrors[run.id] && itemErrors[run.id].length > 0 && (
+                              <CopyAllErrorsButton run={run} errors={itemErrors[run.id]} />
+                            )}
+                          </div>
+                          {loadingErrors === run.id ? (
+                            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                              <Loader2 className="h-3 w-3 animate-spin" /> Loading error details...
+                            </div>
+                          ) : itemErrors[run.id] ? (
+                            <div className="space-y-2">
+                              {itemErrors[run.id].map((err: any) => (
+                                <ItemErrorCard key={err.id} run={run} error={err} />
+                              ))}
+                            </div>
+                          ) : null}
+                        </div>
+                      )}
                       {!run.error &&
                         !run.metadata?.fallback_used &&
-                        (!run.assets || run.assets.length === 0) && (
+                        (!run.assets || run.assets.length === 0) &&
+                        !run.hasItemErrors && (
                           <p className="text-sm text-muted-foreground">
                             No additional details
                           </p>
@@ -498,5 +561,171 @@ function CopyableError({ error }: { error: string }) {
         )}
       </button>
     </div>
+  );
+}
+
+const SCRAPER_TYPE_FILE_MAP: Record<string, string> = {
+  app_details: "app-details-scraper.ts",
+  keyword_search: "keyword-scraper.ts",
+  reviews: "review-scraper.ts",
+  category: "category-scraper.ts",
+};
+
+function buildDebugReport(run: any, error: any): string {
+  const lines = [
+    "=== SCRAPE ITEM ERROR REPORT ===",
+    "",
+    "--- Run ---",
+    `Run ID:       ${run.id}`,
+    `Platform:     ${run.platform || "unknown"}`,
+    `Scraper Type: ${run.scraperType}`,
+    `Triggered By: ${run.triggeredBy || "unknown"}`,
+    `Queue:        ${run.queue || "N/A"}`,
+    `Job ID:       ${run.jobId || "N/A"}`,
+    `Started:      ${run.startedAt || "N/A"}`,
+    `Completed:    ${run.completedAt || "N/A"}`,
+    `Duration:     ${run.metadata?.duration_ms ? `${run.metadata.duration_ms}ms` : "N/A"}`,
+    `Items:        ${run.metadata?.items_scraped ?? 0} scraped, ${run.metadata?.items_failed ?? 0} failed`,
+    "",
+    "--- Failed Item ---",
+    `Identifier:   ${error.itemIdentifier}`,
+    `Type:         ${error.itemType}`,
+    `URL:          ${error.url || "N/A"}`,
+    `Error Time:   ${error.createdAt}`,
+    "",
+    "--- Error ---",
+    error.errorMessage,
+  ];
+  if (error.stackTrace) {
+    lines.push("", "--- Stack Trace ---", error.stackTrace);
+  }
+  const file = SCRAPER_TYPE_FILE_MAP[run.scraperType];
+  if (file) {
+    lines.push("", "--- Source ---", `Scraper File: apps/scraper/src/scrapers/${file}`);
+  }
+  return lines.join("\n");
+}
+
+function buildAllErrorsReport(run: any, errors: any[]): string {
+  const header = [
+    "=== SCRAPE RUN ERROR REPORT ===",
+    "",
+    "--- Run ---",
+    `Run ID:       ${run.id}`,
+    `Platform:     ${run.platform || "unknown"}`,
+    `Scraper Type: ${run.scraperType}`,
+    `Triggered By: ${run.triggeredBy || "unknown"}`,
+    `Queue:        ${run.queue || "N/A"}`,
+    `Job ID:       ${run.jobId || "N/A"}`,
+    `Started:      ${run.startedAt || "N/A"}`,
+    `Completed:    ${run.completedAt || "N/A"}`,
+    `Duration:     ${run.metadata?.duration_ms ? `${run.metadata.duration_ms}ms` : "N/A"}`,
+    `Items:        ${run.metadata?.items_scraped ?? 0} scraped, ${run.metadata?.items_failed ?? 0} failed`,
+  ];
+  const file = SCRAPER_TYPE_FILE_MAP[run.scraperType];
+  if (file) {
+    header.push(`Scraper File: apps/scraper/src/scrapers/${file}`);
+  }
+  if (run.error) {
+    header.push("", "--- Run Error ---", run.error);
+  }
+  header.push("");
+
+  const itemSections = errors.map((err, i) => {
+    const lines = [
+      `--- Failed Item ${i + 1}/${errors.length} ---`,
+      `Identifier:   ${err.itemIdentifier}`,
+      `Type:         ${err.itemType}`,
+      `URL:          ${err.url || "N/A"}`,
+      `Error Time:   ${err.createdAt}`,
+      `Error:        ${err.errorMessage}`,
+    ];
+    if (err.stackTrace) {
+      lines.push("Stack Trace:", err.stackTrace);
+    }
+    return lines.join("\n");
+  });
+
+  return [...header, ...itemSections].join("\n");
+}
+
+function ItemErrorCard({ run, error }: { run: any; error: any }) {
+  const [copied, setCopied] = useState(false);
+  const [showStack, setShowStack] = useState(false);
+
+  const handleCopy = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    const report = buildDebugReport(run, error);
+    await navigator.clipboard.writeText(report);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  return (
+    <div className="border border-orange-200 bg-orange-50/50 rounded-md p-3 text-xs">
+      <div className="flex items-start justify-between gap-2">
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2 mb-1">
+            <span className="font-mono font-medium text-orange-700">
+              {error.itemIdentifier}
+            </span>
+            <Badge variant="outline" className="text-[9px] px-1 py-0 h-4">
+              {error.itemType}
+            </Badge>
+          </div>
+          {error.url && (
+            <div className="text-muted-foreground truncate mb-1" title={error.url}>
+              {error.url}
+            </div>
+          )}
+          <div className="text-destructive mt-1">{error.errorMessage}</div>
+          {error.stackTrace && (
+            <div className="mt-1">
+              <button
+                onClick={(e) => { e.stopPropagation(); setShowStack(!showStack); }}
+                className="text-muted-foreground hover:text-foreground underline"
+              >
+                {showStack ? "Hide stack trace" : "Show stack trace"}
+              </button>
+              {showStack && (
+                <pre className="mt-1 p-2 bg-muted rounded text-[10px] whitespace-pre-wrap break-words max-h-32 overflow-y-auto">
+                  {error.stackTrace}
+                </pre>
+              )}
+            </div>
+          )}
+        </div>
+        <button
+          onClick={handleCopy}
+          className="shrink-0 p-1.5 rounded hover:bg-orange-100 text-orange-600 transition-colors"
+          title="Copy debug report"
+        >
+          {copied ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function CopyAllErrorsButton({ run, errors }: { run: any; errors: any[] }) {
+  const [copied, setCopied] = useState(false);
+
+  const handleCopy = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    const report = buildAllErrorsReport(run, errors);
+    await navigator.clipboard.writeText(report);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  return (
+    <button
+      onClick={handleCopy}
+      className="flex items-center gap-1 text-xs text-orange-600 hover:text-orange-800 transition-colors ml-auto"
+      title="Copy all errors as debug report"
+    >
+      {copied ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
+      {copied ? "Copied!" : "Copy All"}
+    </button>
   );
 }

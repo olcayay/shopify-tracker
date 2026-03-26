@@ -23,6 +23,7 @@ import { HttpClient } from "../http-client.js";
 import { parseAppPage, parseSimilarApps } from "../parsers/app-parser.js";
 import type { PlatformModule } from "../platforms/platform-module.js";
 import { runConcurrent } from "../utils/run-concurrent.js";
+import { recordItemError } from "../utils/record-item-error.js";
 
 /** Strip HTML tags and decode common entities, collapse whitespace */
 function stripHtmlTags(html: string): string {
@@ -125,6 +126,13 @@ export class AppDetailsScraper {
         } catch (error) {
           log.error("failed to scrape app", { slug: app.slug, error: String(error) });
           itemsFailed++;
+          await recordItemError(this.db, {
+            scrapeRunId: run.id,
+            itemIdentifier: app.slug,
+            itemType: "app",
+            url: this.platformModule ? undefined : urls.app(app.slug),
+            error,
+          });
         }
       }, 3);
 
@@ -203,6 +211,13 @@ export class AppDetailsScraper {
         } catch (error) {
           log.error("failed to scrape app", { slug: app.slug, error: String(error) });
           itemsFailed++;
+          await recordItemError(this.db, {
+            scrapeRunId: run.id,
+            itemIdentifier: app.slug,
+            itemType: "app",
+            url: this.platformModule ? undefined : urls.app(app.slug),
+            error,
+          });
         }
       }, 3);
 

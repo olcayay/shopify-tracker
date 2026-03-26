@@ -22,7 +22,7 @@ import { PLATFORM_LABELS, PLATFORM_COLORS, SCRAPER_TYPE_LABELS, HEALTH_SCRAPER_T
 import { MatrixCell, getCellStatus, STATUS_COLORS, STATUS_RING, type HealthCell } from "./matrix-cell";
 
 interface OperationalMatrixProps {
-  healthData: { matrix: HealthCell[]; summary: { healthy: number; failed: number; stale: number; running: number; totalScheduled: number } } | null;
+  healthData: { matrix: HealthCell[]; summary: { healthy: number; failed: number; stale: number; running: number; partial: number; totalScheduled: number } } | null;
   onTrigger: (platform: string, type: string) => void;
   onTriggerAll: (platform: string) => void;
   triggering: string | null;
@@ -45,6 +45,9 @@ export function OperationalMatrix({ healthData, onTrigger, onTriggerAll, trigger
           <div className="flex gap-3 text-xs text-muted-foreground">
             <span className="flex items-center gap-1">
               <span className={`inline-block w-2 h-2 rounded-full ${STATUS_COLORS.green}`} /> Healthy
+            </span>
+            <span className="flex items-center gap-1">
+              <span className={`inline-block w-2 h-2 rounded-full ${STATUS_COLORS.amber}`} /> Partial
             </span>
             <span className="flex items-center gap-1">
               <span className={`inline-block w-2 h-2 rounded-full ${STATUS_COLORS.red}`} /> Failed
