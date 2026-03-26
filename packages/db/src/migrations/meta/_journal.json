@@ -603,6 +603,20 @@
       "when": 1776038400000,
       "tag": "0085_seed_hubspot",
       "breakpoints": true
+    },
+    {
+      "idx": 86,
+      "version": "7",
+      "when": 1776124800000,
+      "tag": "0086_smoke_test_results",
+      "breakpoints": true
+    },
+    {
+      "idx": 87,
+      "version": "7",
+      "when": 1776211200000,
+      "tag": "0087_scrape_item_errors",
+      "breakpoints": true
     }
   ]
 }
