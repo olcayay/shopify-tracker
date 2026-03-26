@@ -3,7 +3,7 @@ import { resolve } from "path";
 config({ path: resolve(import.meta.dirname, "../../../.env") });
 import cron from "node-cron";
 import { createLogger, SCRAPER_SCHEDULES } from "@appranks/shared";
-import { enqueueScraperJob, closeQueue } from "./queue.js";
+import { enqueueScraperJob, closeQueue, type ScraperJobType } from "./queue.js";
 
 const log = createLogger("scheduler");
 
@@ -16,7 +16,7 @@ for (const schedule of SCRAPER_SCHEDULES) {
     log.info("cron triggered", { name: schedule.name, type: schedule.type });
     try {
       const jobId = await enqueueScraperJob({
-        type: schedule.type,
+        type: schedule.type as ScraperJobType,
         triggeredBy: "scheduler",
         ...("platform" in schedule ? { platform: schedule.platform } : {}),
       });

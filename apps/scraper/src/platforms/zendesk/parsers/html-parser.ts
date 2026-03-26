@@ -55,13 +55,20 @@ export function parseSearchHtml(
 
   return {
     keyword,
-    page,
+    currentPage: page,
     apps: apps.map((a, idx) => ({
-      ...a,
+      appSlug: a.slug,
+      appName: a.name,
+      shortDescription: a.shortDescription,
+      averageRating: a.averageRating,
+      ratingCount: a.ratingCount,
+      logoUrl: a.logoUrl,
+      pricingHint: a.pricingHint,
+      badges: a.badges,
       position: idx + 1,
       isSponsored: false,
     }) as NormalizedSearchApp),
-    totalCount: apps.length || null,
+    totalResults: apps.length || null,
     hasNextPage: false,
   };
 }

@@ -82,9 +82,9 @@ describe("parseSearchHtml", () => {
     const result = parseSearchHtml(html, "collaboration", 1);
 
     expect(result.keyword).toBe("collaboration");
-    expect(result.page).toBe(1);
+    expect(result.currentPage).toBe(1);
     expect(result.apps).toHaveLength(2);
-    expect(result.apps[0].slug).toBe("100--slack");
+    expect(result.apps[0].appSlug).toBe("100--slack");
     expect(result.apps[0].position).toBe(1);
     expect(result.apps[1].position).toBe(2);
   });
@@ -92,6 +92,6 @@ describe("parseSearchHtml", () => {
   it("returns empty results for no matches", () => {
     const result = parseSearchHtml("<html><body>No results</body></html>", "nonexistent", 1);
     expect(result.apps).toEqual([]);
-    expect(result.totalCount).toBeNull();
+    expect(result.totalResults).toBeNull();
   });
 });
