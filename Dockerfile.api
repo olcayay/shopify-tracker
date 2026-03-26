@@ -25,7 +25,9 @@ RUN ./node_modules/.bin/tsc -p packages/shared && \
     ./node_modules/.bin/tsc -p apps/scraper
 
 # ---- Production ----
-FROM base AS runner
+# Use bookworm-slim (not alpine) because Playwright requires glibc
+FROM node:20-bookworm-slim AS runner
+WORKDIR /app
 ENV NODE_ENV=production
 
 COPY package.json package-lock.json ./
@@ -34,6 +36,10 @@ COPY packages/db/package.json ./packages/db/
 COPY apps/api/package.json ./apps/api/
 COPY apps/scraper/package.json ./apps/scraper/
 RUN npm ci --omit=dev
+
+# Smoke tests spawn scraper CLI processes that need Playwright browsers
+ENV PLAYWRIGHT_BROWSERS_PATH=/app/.playwright-browsers
+RUN npx playwright install chromium --with-deps
 
 COPY --from=build /app/packages/shared/dist ./packages/shared/dist
 COPY --from=build /app/packages/db/dist ./packages/db/dist
