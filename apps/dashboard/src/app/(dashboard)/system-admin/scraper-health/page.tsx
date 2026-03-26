@@ -41,6 +41,8 @@ import { useFormatDate } from "@/lib/format-date";
 import { SmokeTestPanel } from "./smoke-test-panel";
 import { SmokeTestHistory, type SmokeHistoryEntry } from "../scraper/components/smoke-test-history";
 import { PLATFORM_LABELS, PLATFORM_COLORS, SCRAPER_TYPE_LABELS, HEALTH_SCRAPER_TYPES } from "@/lib/platform-display";
+import { buildRunReport, type RunInfo } from "@/lib/scraper-report";
+import { CopyReportButton } from "@/components/copy-report-button";
 
 interface HealthCell {
   platform: string;
@@ -456,49 +458,24 @@ export default function ScraperHealthPage() {
   );
 }
 
-const SCRAPER_TYPE_FILE_MAP: Record<string, string> = {
-  app_details: "app-details-scraper.ts",
-  keyword_search: "keyword-scraper.ts",
-  reviews: "review-scraper.ts",
-  category: "category-scraper.ts",
-};
-
-function buildFailureReport(f: HealthData["recentFailures"][0], itemErrors?: any[]): string {
-  const lines = [
-    "=== SCRAPER ERROR REPORT ===",
-    "",
-    "--- Run ---",
-    `Run ID:       ${f.id}`,
-    `Platform:     ${f.platform}`,
-    `Scraper Type: ${f.scraperType}`,
-    `Status:       failed`,
-    `Triggered By: ${f.triggeredBy || "N/A"}`,
-    `Queue:        ${f.queue || "N/A"}`,
-    `Job ID:       ${f.jobId || "N/A"}`,
-    `Started:      ${f.startedAt || "N/A"}`,
-    `Completed:    ${f.completedAt || "N/A"}`,
-    `Duration:     ${f.durationMs ? `${f.durationMs}ms` : "N/A"}`,
-    `Items:        ${f.itemsScraped ?? 0} scraped, ${f.itemsFailed ?? 0} failed`,
-  ];
-  const file = SCRAPER_TYPE_FILE_MAP[f.scraperType];
-  if (file) lines.push(`Scraper File: apps/scraper/src/scrapers/${file}`);
-  if (f.error) lines.push("", "--- Error ---", f.error);
-  if (itemErrors && itemErrors.length > 0) {
-    lines.push("");
-    for (let i = 0; i < itemErrors.length; i++) {
-      const err = itemErrors[i];
-      lines.push(
-        `--- Failed Item ${i + 1}/${itemErrors.length} ---`,
-        `Identifier:   ${err.itemIdentifier}`,
-        `Type:         ${err.itemType}`,
-        `URL:          ${err.url || "N/A"}`,
-        `Error:        ${err.errorMessage}`,
-      );
-      if (err.stackTrace) lines.push("Stack Trace:", err.stackTrace);
-      lines.push("");
-    }
-  }
-  return lines.join("\n");
+function failureToRunInfo(f: HealthData["recentFailures"][0]): RunInfo {
+  return {
+    id: f.id,
+    platform: f.platform,
+    scraperType: f.scraperType,
+    status: "failed",
+    triggeredBy: f.triggeredBy ?? undefined,
+    queue: f.queue ?? undefined,
+    jobId: f.jobId ?? undefined,
+    startedAt: f.startedAt,
+    completedAt: f.completedAt,
+    error: f.error,
+    metadata: {
+      duration_ms: f.durationMs ?? undefined,
+      items_scraped: f.itemsScraped ?? undefined,
+      items_failed: f.itemsFailed ?? undefined,
+    },
+  };
 }
 
 function RecentFailureCard({
@@ -515,7 +492,6 @@ function RecentFailureCard({
   const [expanded, setExpanded] = useState(false);
   const [itemErrors, setItemErrors] = useState<any[] | null>(null);
   const [loadingErrors, setLoadingErrors] = useState(false);
-  const [copied, setCopied] = useState(false);
   const hasItemErrors = (f.itemsFailed ?? 0) > 0;
 
   const handleExpand = async () => {
@@ -532,13 +508,6 @@ function RecentFailureCard({
       } catch { /* ignore */ }
       setLoadingErrors(false);
     }
-  };
-
-  const handleCopy = async () => {
-    const report = buildFailureReport(f, itemErrors || undefined);
-    await navigator.clipboard.writeText(report);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
   };
 
   return (
@@ -571,15 +540,11 @@ function RecentFailureCard({
           <span className="text-sm text-muted-foreground">
             {f.completedAt && timeAgo(f.completedAt)}
           </span>
-          <Button
-            size="sm"
-            variant="outline"
-            className="h-7 text-sm px-2"
-            onClick={(e) => { e.stopPropagation(); handleCopy(); }}
+          <CopyReportButton
+            getReport={() => buildRunReport(failureToRunInfo(f), itemErrors || undefined)}
+            className="flex items-center h-7 px-2 border rounded-md text-sm text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
             title="Copy debug report"
-          >
-            {copied ? <Check className="h-3 w-3" /> : <Copy className="h-3 w-3" />}
-          </Button>
+          />
           <Button
             size="sm"
             variant="outline"

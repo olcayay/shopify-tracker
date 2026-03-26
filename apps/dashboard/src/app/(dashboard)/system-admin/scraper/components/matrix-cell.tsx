@@ -14,6 +14,8 @@ import { useFormatDate } from "@/lib/format-date";
 import { useAuth } from "@/lib/auth-context";
 import { PLATFORM_LABELS, SCRAPER_TYPE_LABELS } from "@/lib/platform-display";
 import type { PlatformId } from "@appranks/shared";
+import { buildRunReport, type RunInfo } from "@/lib/scraper-report";
+import { CopyReportButton } from "@/components/copy-report-button";
 
 export interface HealthCell {
   platform: string;
@@ -80,56 +82,23 @@ export const STATUS_LABELS: Record<CellStatus, string> = {
   amber: "Partial",
 };
 
-const SCRAPER_TYPE_FILE_MAP: Record<string, string> = {
-  app_details: "app-details-scraper.ts",
-  keyword_search: "keyword-scraper.ts",
-  reviews: "review-scraper.ts",
-  category: "category-scraper.ts",
-};
-
-function buildCellDebugReport(cell: HealthCell, itemErrors?: any[]): string {
-  const lines = [
-    "=== SCRAPER ERROR REPORT ===",
-    "",
-    "--- Run ---",
-    `Run ID:       ${cell.lastRun?.runId || "N/A"}`,
-    `Platform:     ${cell.platform}`,
-    `Scraper Type: ${cell.scraperType}`,
-    `Status:       ${cell.lastRun?.status || "unknown"}`,
-    `Started:      ${cell.lastRun?.startedAt || "N/A"}`,
-    `Completed:    ${cell.lastRun?.completedAt || "N/A"}`,
-    `Duration:     ${cell.lastRun?.durationMs ? `${cell.lastRun.durationMs}ms` : "N/A"}`,
-    `Items:        ${cell.lastRun?.itemsScraped ?? 0} scraped, ${cell.lastRun?.itemsFailed ?? 0} failed`,
-    `Schedule:     ${cell.schedule?.cron || "N/A"}`,
-  ];
-  if (cell.lastRun?.fallbackUsed) {
-    lines.push("Fallback:     Yes");
-  }
-  const file = SCRAPER_TYPE_FILE_MAP[cell.scraperType];
-  if (file) {
-    lines.push(`Scraper File: apps/scraper/src/scrapers/${file}`);
-  }
-  if (cell.lastRun?.error) {
-    lines.push("", "--- Run Error ---", cell.lastRun.error);
-  }
-  if (itemErrors && itemErrors.length > 0) {
-    lines.push("");
-    for (let i = 0; i < itemErrors.length; i++) {
-      const err = itemErrors[i];
-      lines.push(
-        `--- Failed Item ${i + 1}/${itemErrors.length} ---`,
-        `Identifier:   ${err.itemIdentifier}`,
-        `Type:         ${err.itemType}`,
-        `URL:          ${err.url || "N/A"}`,
-        `Error:        ${err.errorMessage}`,
-      );
-      if (err.stackTrace) {
-        lines.push("Stack Trace:", err.stackTrace);
-      }
-      lines.push("");
-    }
-  }
-  return lines.join("\n");
+function cellToRunInfo(cell: HealthCell): RunInfo {
+  return {
+    id: cell.lastRun?.runId,
+    platform: cell.platform,
+    scraperType: cell.scraperType,
+    status: cell.lastRun?.status,
+    startedAt: cell.lastRun?.startedAt,
+    completedAt: cell.lastRun?.completedAt,
+    error: cell.lastRun?.error,
+    metadata: {
+      duration_ms: cell.lastRun?.durationMs ?? undefined,
+      items_scraped: cell.lastRun?.itemsScraped ?? undefined,
+      items_failed: cell.lastRun?.itemsFailed ?? undefined,
+      fallback_used: cell.lastRun?.fallbackUsed,
+    },
+    schedule: cell.schedule?.cron,
+  };
 }
 
 interface MatrixCellProps {
@@ -261,7 +230,6 @@ function ErrorDetailModal({ cell, onClose }: { cell: HealthCell; onClose: () => 
   const { formatDateTime } = useFormatDate();
   const [itemErrors, setItemErrors] = useState<any[] | null>(null);
   const [loading, setLoading] = useState(false);
-  const [copied, setCopied] = useState(false);
   const hasItemErrors = (cell.lastRun?.itemsFailed ?? 0) > 0 && cell.lastRun?.runId;
 
   const loadItemErrors = async () => {
@@ -284,13 +252,6 @@ function ErrorDetailModal({ cell, onClose }: { cell: HealthCell; onClose: () => 
     loadItemErrors();
   }
 
-  const handleCopy = async () => {
-    const report = buildCellDebugReport(cell, itemErrors || undefined);
-    await navigator.clipboard.writeText(report);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-  };
-
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50" onClick={onClose}>
       <div
@@ -311,10 +272,11 @@ function ErrorDetailModal({ cell, onClose }: { cell: HealthCell; onClose: () => 
             </Badge>
           </div>
           <div className="flex items-center gap-1">
-            <Button variant="ghost" size="sm" className="h-7 px-2 text-xs" onClick={handleCopy}>
-              {copied ? <Check className="h-3 w-3 mr-1" /> : <Copy className="h-3 w-3 mr-1" />}
-              {copied ? "Copied!" : "Copy Report"}
-            </Button>
+            <CopyReportButton
+              getReport={() => buildRunReport(cellToRunInfo(cell), itemErrors || undefined)}
+              label="Copy Report"
+              className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors h-7 px-2"
+            />
             <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={onClose}>
               <X className="h-4 w-4" />
             </Button>
