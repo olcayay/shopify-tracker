@@ -16,6 +16,7 @@ describe("GoogleWorkspaceModule fallback", () => {
       waitForTimeout: vi.fn().mockResolvedValue(undefined),
       waitForFunction: vi.fn().mockResolvedValue(undefined),
       waitForSelector: vi.fn().mockResolvedValue(undefined),
+      close: vi.fn().mockResolvedValue(undefined),
     };
     mockContext = {
       newPage: vi.fn().mockResolvedValue(mockPage),
@@ -29,7 +30,6 @@ describe("GoogleWorkspaceModule fallback", () => {
     // Inject mock browser internals to bypass playwright launch
     (mod as any).browser = mockBrowser;
     (mod as any).browserContext = mockContext;
-    (mod as any).browserPage = mockPage;
 
     vi.spyOn(console, "warn").mockImplementation(() => {});
   });
@@ -45,6 +45,7 @@ describe("GoogleWorkspaceModule fallback", () => {
 
       const result = await mod.fetchAppPage("test-app--123");
       expect(result).toBe("<html>app detail content</html>");
+      expect(mockPage.close).toHaveBeenCalled();
       // Browser was NOT reset (close not called)
       expect(mockBrowser.close).not.toHaveBeenCalled();
     });
@@ -57,33 +58,27 @@ describe("GoogleWorkspaceModule fallback", () => {
       });
       mockPage.content.mockResolvedValue("<html>recovered</html>");
 
-      // After resetBrowser (closeBrowser), ensureBrowserPage will use dynamic import
-      // We need to re-inject the mocks after the reset clears them
+      // After resetBrowser (closeBrowser), re-inject mocks
       const origCloseBrowser = mod.closeBrowser.bind(mod);
       vi.spyOn(mod, "closeBrowser").mockImplementation(async () => {
         await origCloseBrowser();
-        // Re-inject mocks after browser was closed
         (mod as any).browser = mockBrowser;
         (mod as any).browserContext = mockContext;
-        (mod as any).browserPage = mockPage;
       });
 
       const result = await mod.fetchAppPage("test-app--123");
       expect(result).toBe("<html>recovered</html>");
-      // Browser was closed (reset) and re-injected
       expect(mod.closeBrowser).toHaveBeenCalled();
     });
 
     it("throws when both attempts fail", async () => {
       mockPage.goto.mockRejectedValue(new Error("bot detected"));
 
-      // Re-inject mocks after reset
       const origCloseBrowser = mod.closeBrowser.bind(mod);
       vi.spyOn(mod, "closeBrowser").mockImplementation(async () => {
         await origCloseBrowser();
         (mod as any).browser = mockBrowser;
         (mod as any).browserContext = mockContext;
-        (mod as any).browserPage = mockPage;
       });
 
       await expect(mod.fetchAppPage("test-app--123")).rejects.toThrow("bot detected");
@@ -96,6 +91,7 @@ describe("GoogleWorkspaceModule fallback", () => {
 
       const result = await mod.fetchCategoryPage("productivity");
       expect(result).toBe("<html>category apps</html>");
+      expect(mockPage.close).toHaveBeenCalled();
       expect(mockBrowser.close).not.toHaveBeenCalled();
     });
 
@@ -112,7 +108,6 @@ describe("GoogleWorkspaceModule fallback", () => {
         await origCloseBrowser();
         (mod as any).browser = mockBrowser;
         (mod as any).browserContext = mockContext;
-        (mod as any).browserPage = mockPage;
       });
 
       const result = await mod.fetchCategoryPage("productivity");
@@ -127,6 +122,7 @@ describe("GoogleWorkspaceModule fallback", () => {
 
       const result = await mod.fetchSearchPage("calendar");
       expect(result).toBe("<html>search results</html>");
+      expect(mockPage.close).toHaveBeenCalled();
     });
 
     it("resets browser and retries when primary fails", async () => {
@@ -142,7 +138,6 @@ describe("GoogleWorkspaceModule fallback", () => {
         await origCloseBrowser();
         (mod as any).browser = mockBrowser;
         (mod as any).browserContext = mockContext;
-        (mod as any).browserPage = mockPage;
       });
 
       const result = await mod.fetchSearchPage("calendar");
@@ -158,7 +153,6 @@ describe("GoogleWorkspaceModule fallback", () => {
         await origCloseBrowser();
         (mod as any).browser = mockBrowser;
         (mod as any).browserContext = mockContext;
-        (mod as any).browserPage = mockPage;
       });
 
       await expect(mod.fetchSearchPage("calendar")).rejects.toThrow("permanent failure");
@@ -171,6 +165,7 @@ describe("GoogleWorkspaceModule fallback", () => {
 
       const result = await mod.fetchReviewPage("test-app--123");
       expect(result).toBe("<html>app with reviews</html>");
+      expect(mockPage.close).toHaveBeenCalled();
     });
   });
 });

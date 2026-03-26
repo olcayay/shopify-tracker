@@ -57,7 +57,6 @@ export class GoogleWorkspaceModule implements PlatformModule {
   /** Persistent browser for scraping */
   private browser: Browser | null = null;
   private browserContext: BrowserContext | null = null;
-  private browserPage: Page | null = null;
 
   constructor(httpClient?: HttpClient, browserClient?: BrowserClient, tracker?: FallbackTracker) {
     this.httpClient = httpClient || ({} as HttpClient);
@@ -100,16 +99,21 @@ export class GoogleWorkspaceModule implements PlatformModule {
   }
 
   private async fetchAppPagePrimary(slug: string, url: string): Promise<string> {
-    const page = await this.ensureBrowserPage();
-    log.info("fetching app detail page", { slug, url });
+    const context = await this.ensureBrowserContext();
+    const page = await context.newPage();
+    try {
+      log.info("fetching app detail page", { slug, url });
 
-    await page.goto(url, { waitUntil: "load", timeout: 30_000 });
-    await this.waitForAngularRender(page);
-    await page.waitForTimeout(2000);
+      await page.goto(url, { waitUntil: "load", timeout: 30_000 });
+      await this.waitForAngularRender(page);
+      await page.waitForTimeout(2000);
 
-    const html = await page.content();
-    log.info("app detail page fetched", { slug, htmlLength: html.length });
-    return html;
+      const html = await page.content();
+      log.info("app detail page fetched", { slug, htmlLength: html.length });
+      return html;
+    } finally {
+      await page.close();
+    }
   }
 
   async fetchCategoryPage(slug: string, _page?: number): Promise<string> {
@@ -126,26 +130,31 @@ export class GoogleWorkspaceModule implements PlatformModule {
   }
 
   private async fetchCategoryPagePrimary(slug: string, url: string): Promise<string> {
-    const page = await this.ensureBrowserPage();
-    log.info("fetching category page", { slug, url });
-
-    await page.goto(url, { waitUntil: "load", timeout: 30_000 });
-    await this.waitForAngularRender(page);
-
-    // Wait for app cards to load
+    const context = await this.ensureBrowserContext();
+    const page = await context.newPage();
     try {
-      await page.waitForSelector('a[href*="/marketplace/app/"]', { timeout: 15_000 });
-    } catch {
-      log.warn("no app cards found on category page", { slug });
+      log.info("fetching category page", { slug, url });
+
+      await page.goto(url, { waitUntil: "load", timeout: 30_000 });
+      await this.waitForAngularRender(page);
+
+      // Wait for app cards to load
+      try {
+        await page.waitForSelector('a[href*="/marketplace/app/"]', { timeout: 15_000 });
+      } catch {
+        log.warn("no app cards found on category page", { slug });
+      }
+      await page.waitForTimeout(2000);
+
+      // Scroll to bottom repeatedly to trigger lazy loading of more apps
+      await this.scrollToLoadAll(page);
+
+      const html = await page.content();
+      log.info("category page fetched", { slug, htmlLength: html.length });
+      return html;
+    } finally {
+      await page.close();
     }
-    await page.waitForTimeout(2000);
-
-    // Scroll to bottom repeatedly to trigger lazy loading of more apps
-    await this.scrollToLoadAll(page);
-
-    const html = await page.content();
-    log.info("category page fetched", { slug, htmlLength: html.length });
-    return html;
   }
 
   async fetchSearchPage(keyword: string, _page?: number): Promise<string | null> {
@@ -162,26 +171,32 @@ export class GoogleWorkspaceModule implements PlatformModule {
   }
 
   private async fetchSearchPagePrimary(keyword: string, url: string): Promise<string> {
-    const page = await this.ensureBrowserPage();
-    log.info("fetching search page", { keyword, url });
-
-    await page.goto(url, { waitUntil: "load", timeout: 30_000 });
-    await this.waitForAngularRender(page);
-
-    // Wait for search results
+    // Use a dedicated page per search to avoid concurrent navigation conflicts
+    const context = await this.ensureBrowserContext();
+    const page = await context.newPage();
     try {
-      await page.waitForSelector('a[href*="/marketplace/app/"]', { timeout: 15_000 });
-    } catch {
-      log.warn("no search results found", { keyword });
+      log.info("fetching search page", { keyword, url });
+
+      await page.goto(url, { waitUntil: "load", timeout: 30_000 });
+      await this.waitForAngularRender(page);
+
+      // Wait for search results
+      try {
+        await page.waitForSelector('a[href*="/marketplace/app/"]', { timeout: 15_000 });
+      } catch {
+        log.warn("no search results found", { keyword });
+      }
+      await page.waitForTimeout(2000);
+
+      // Scroll to bottom repeatedly to trigger lazy loading of more results
+      await this.scrollToLoadAll(page);
+
+      const html = await page.content();
+      log.info("search page fetched", { keyword, htmlLength: html.length });
+      return html;
+    } finally {
+      await page.close();
     }
-    await page.waitForTimeout(2000);
-
-    // Scroll to bottom repeatedly to trigger lazy loading of more results
-    await this.scrollToLoadAll(page);
-
-    const html = await page.content();
-    log.info("search page fetched", { keyword, htmlLength: html.length });
-    return html;
   }
 
   async fetchReviewPage(slug: string, _page?: number): Promise<string | null> {
@@ -233,7 +248,6 @@ export class GoogleWorkspaceModule implements PlatformModule {
       await this.browser.close();
       this.browser = null;
       this.browserContext = null;
-      this.browserPage = null;
     }
   }
 
@@ -310,11 +324,20 @@ export class GoogleWorkspaceModule implements PlatformModule {
   }
 
   /**
-   * Ensure a browser page is available.
-   * Launches Chrome with anti-detection flags for Google.
+   * Ensure a browser context is available (shared across concurrent pages).
+   * Each caller creates its own page from this context.
    */
-  private async ensureBrowserPage(): Promise<Page> {
-    if (this.browserPage) return this.browserPage;
+  private async ensureBrowserContext(): Promise<BrowserContext> {
+    if (this.browserContext) return this.browserContext;
+    await this.launchBrowser();
+    return this.browserContext!;
+  }
+
+  /**
+   * Launch Chrome with anti-detection flags for Google.
+   */
+  private async launchBrowser(): Promise<void> {
+    if (this.browser) return;
 
     log.info("launching Chrome for Google Workspace scraping");
 
@@ -358,18 +381,5 @@ export class GoogleWorkspaceModule implements PlatformModule {
       userAgent: "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
       ...(storageState && { storageState }),
     });
-    this.browserPage = await this.browserContext.newPage();
-
-    // Navigate to marketplace home first to establish cookies
-    await this.browserPage.goto("https://workspace.google.com/marketplace", {
-      waitUntil: "load",
-      timeout: 30_000,
-    });
-
-    // Wait for page to render
-    await this.browserPage.waitForTimeout(3000);
-
-    log.info("browser page ready");
-    return this.browserPage;
   }
 }
