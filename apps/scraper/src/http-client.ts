@@ -90,7 +90,18 @@ export class HttpClient {
 
         if (!response.ok) {
           const err = new Error(`HTTP ${response.status}: ${response.statusText}`);
-          // Don't retry on 4xx client errors (404, 403, etc.) — they won't change
+          // 429 Too Many Requests — always retry with longer backoff
+          if (response.status === 429) {
+            const retryAfter = response.headers.get("Retry-After");
+            const waitMs = retryAfter ? parseInt(retryAfter, 10) * 1000 : Math.pow(2, attempt + 2) * 1000;
+            log.warn("rate limited (429), backing off", { url, attempt: attempt + 1, waitMs });
+            lastError = err;
+            if (attempt < this.options.maxRetries) {
+              await this.sleep(waitMs);
+            }
+            continue;
+          }
+          // Don't retry on other 4xx client errors (404, 403, etc.) — they won't change
           if (response.status >= 400 && response.status < 500) {
             log.warn("non-retryable client error", { url, status: response.status });
             lastError = err;
@@ -143,6 +154,16 @@ export class HttpClient {
 
         if (!response.ok) {
           const err = new Error(`HTTP ${response.status}: ${response.statusText}`);
+          if (response.status === 429) {
+            const retryAfter = response.headers.get("Retry-After");
+            const waitMs = retryAfter ? parseInt(retryAfter, 10) * 1000 : Math.pow(2, attempt + 2) * 1000;
+            log.warn("rate limited (429), backing off", { url, attempt: attempt + 1, waitMs });
+            lastError = err;
+            if (attempt < this.options.maxRetries) {
+              await this.sleep(waitMs);
+            }
+            continue;
+          }
           if (response.status >= 400 && response.status < 500) {
             log.warn("non-retryable client error", { url, status: response.status });
             lastError = err;
