@@ -3,6 +3,9 @@ cd apps/dashboard
 npx eslint src/ || exit 1
 cd ../..
 
+echo "Running type check..."
+npx turbo typecheck || exit 1
+
 echo "Running tests..."
 npx turbo test || exit 1
 

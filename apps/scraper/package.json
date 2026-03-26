@@ -17,6 +17,7 @@
     "worker:interactive": "tsx src/interactive-worker.ts",
     "scheduler": "tsx src/scheduler.ts",
     "canva-search": "tsx src/canva-search-server.ts",
+    "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest"
   },
