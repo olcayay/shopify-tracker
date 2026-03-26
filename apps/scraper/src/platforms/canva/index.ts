@@ -123,53 +123,55 @@ export class CanvaModule implements PlatformModule {
     };
     page.on("response", responseHandler);
 
-    await page.goto(detailUrl, { waitUntil: "load", timeout: 30_000 });
+    try {
+      await page.goto(detailUrl, { waitUntil: "load", timeout: 30_000 });
 
-    // Handle Cloudflare challenge if present
-    let title = await page.title();
-    if (title === "Just a moment...") {
-      log.info("Cloudflare challenge on detail page, waiting for auto-resolve", { slug });
-      try {
-        await page.waitForFunction(
-          () => document.title !== "Just a moment...",
-          { timeout: 15_000 },
-        );
-        await page.waitForTimeout(3000);
-        title = await page.title();
-        log.info("Cloudflare challenge resolved", { slug, newTitle: title });
-      } catch {
-        log.warn("Cloudflare challenge did not resolve in time", { slug });
+      // Handle Cloudflare challenge if present
+      let title = await page.title();
+      if (title === "Just a moment...") {
+        log.info("Cloudflare challenge on detail page, waiting for auto-resolve", { slug });
+        try {
+          await page.waitForFunction(
+            () => document.title !== "Just a moment...",
+            { timeout: 15_000 },
+          );
+          await page.waitForTimeout(3000);
+          title = await page.title();
+          log.info("Cloudflare challenge resolved", { slug, newTitle: title });
+        } catch {
+          log.warn("Cloudflare challenge did not resolve in time", { slug });
+        }
       }
-    }
 
-    const isBulkPage = title === "Apps Marketplace | Canva";
+      const isBulkPage = title === "Apps Marketplace | Canva";
 
-    if (isBulkPage) {
-      // Server returned the bulk /apps page. SPA will fetch detail via API.
-      // Wait for the appListing API call to complete.
-      log.info("bulk page detected, waiting for appListing API", { slug });
-      const start = Date.now();
-      while (!appListingJson && Date.now() - start < 15_000) {
-        await page.waitForTimeout(500);
+      if (isBulkPage) {
+        // Server returned the bulk /apps page. SPA will fetch detail via API.
+        // Wait for the appListing API call to complete.
+        log.info("bulk page detected, waiting for appListing API", { slug });
+        const start = Date.now();
+        while (!appListingJson && Date.now() - start < 15_000) {
+          await page.waitForTimeout(500);
+        }
+      } else {
+        // SSR detail page loaded directly
+        await page.waitForTimeout(2000);
       }
-    } else {
-      // SSR detail page loaded directly
-      await page.waitForTimeout(2000);
+
+      // If we got the appListing API response, inject it as a marker for the parser
+      let html = await page.content();
+      if (appListingJson && isBulkPage) {
+        log.info("injecting appListing data into HTML", { slug });
+        html = `<!-- CANVA_APP_LISTING_API:${appListingJson}:END_CANVA_APP_LISTING_API -->\n${html}`;
+      }
+
+      const hasDetailJson = html.includes(`"A":"${appId}"`) && !html.includes(`"A":"${appId}","B":"SDK_APP"`);
+      log.info("app detail page fetched", { slug, htmlLength: html.length, hasDetailJson, hasAppListingApi: !!appListingJson });
+
+      return html;
+    } finally {
+      page.off("response", responseHandler);
     }
-
-    page.off("response", responseHandler);
-
-    // If we got the appListing API response, inject it as a marker for the parser
-    let html = await page.content();
-    if (appListingJson && isBulkPage) {
-      log.info("injecting appListing data into HTML", { slug });
-      html = `<!-- CANVA_APP_LISTING_API:${appListingJson}:END_CANVA_APP_LISTING_API -->\n${html}`;
-    }
-
-    const hasDetailJson = html.includes(`"A":"${appId}"`) && !html.includes(`"A":"${appId}","B":"SDK_APP"`);
-    log.info("app detail page fetched", { slug, htmlLength: html.length, hasDetailJson, hasAppListingApi: !!appListingJson });
-
-    return html;
   }
 
   async fetchCategoryPage(_slug: string, _page?: number): Promise<string> {
@@ -288,14 +290,14 @@ export class CanvaModule implements PlatformModule {
       const page = await this.ensureBrowserPage();
 
       // Set up response interceptor for suggest API
+      let handler: ((response: Response) => Promise<void>) | null = null;
       const suggestPromise = new Promise<string>((resolve) => {
         const timeout = setTimeout(() => resolve("{}"), 10000);
-        const handler = async (response: Response) => {
+        handler = async (response: Response) => {
           if (response.url().includes("/_ajax/appsearch/suggest")) {
             try {
               const body = await response.text();
               clearTimeout(timeout);
-              page.off("response", handler);
               resolve(body);
             } catch {}
           }
@@ -303,11 +305,15 @@ export class CanvaModule implements PlatformModule {
         page.on("response", handler);
       });
 
-      // Type keyword in search box to trigger suggest API
-      await this.typeInSearchBox(page, keyword, false);
+      try {
+        // Type keyword in search box to trigger suggest API
+        await this.typeInSearchBox(page, keyword, false);
 
-      const json = await suggestPromise;
-      return parseCanvaSuggestions(json);
+        const json = await suggestPromise;
+        return parseCanvaSuggestions(json);
+      } finally {
+        if (handler) page.off("response", handler);
+      }
     } catch (e) {
       log.error("suggest failed", { keyword, error: String(e) });
       return [];

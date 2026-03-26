@@ -86,6 +86,7 @@ async function main() {
     // Fall back to no module for unimplemented platforms
   }
 
+  try {
   switch (command) {
     case "categories": {
       const slug = process.argv[3];
@@ -245,8 +246,14 @@ async function main() {
       console.error(`Unknown command: ${command}`);
       process.exit(1);
   }
+  } finally {
+    // Always close browsers to prevent zombie Chromium processes
+    await browserClient.close().catch(() => {});
+    if (platformModule && "closeBrowser" in platformModule && typeof (platformModule as any).closeBrowser === "function") {
+      await (platformModule as any).closeBrowser().catch(() => {});
+    }
+  }
 
-  await browserClient.close();
   process.exit(0);
 }
 
