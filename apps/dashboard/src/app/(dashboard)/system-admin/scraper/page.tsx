@@ -13,6 +13,7 @@ import { UtilityScrapers } from "./components/utility-scrapers";
 import { QueueStatusCard } from "./components/queue-status-card";
 import { RunHistoryTable } from "./components/run-history-table";
 import { SmokeTestHistory, type SmokeHistoryEntry } from "./components/smoke-test-history";
+import { ScheduleTimeline } from "./components/schedule-timeline";
 
 const PAGE_SIZE = 20;
 
@@ -253,6 +254,9 @@ export default function ScraperPage() {
         onTriggerAll={triggerAllForPlatform}
         triggering={triggering}
       />
+
+      {/* Schedule Timeline */}
+      <ScheduleTimeline healthData={healthData} />
 
       {/* Smoke Test History */}
       <SmokeTestHistory history={smokeHistory} />
