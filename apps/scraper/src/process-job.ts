@@ -1,6 +1,6 @@
 import type { Job } from "bullmq";
 import { createDb, scrapeRuns } from "@appranks/db";
-import { eq, and } from "drizzle-orm";
+import { eq, and, sql } from "drizzle-orm";
 import { migrate } from "drizzle-orm/postgres-js/migrator";
 import { createLogger, isPlatformId, getPlatform, type PlatformId } from "@appranks/shared";
 import { enqueueScraperJob, type ScraperJobData, type ScraperJobType } from "./queue.js";
@@ -12,6 +12,7 @@ import { ReviewScraper } from "./scrapers/review-scraper.js";
 import { HttpClient } from "./http-client.js";
 import { BrowserClient } from "./browser-client.js";
 import { getModule } from "./platforms/registry.js";
+import { FallbackTracker } from "./utils/fallback-tracker.js";
 
 const log = createLogger("worker");
 
@@ -79,10 +80,13 @@ export function createProcessJob(db: ReturnType<typeof createDb>, queueName?: st
       browserClient = new BrowserClient();
     }
 
+    // Per-job fallback tracker
+    const tracker = new FallbackTracker();
+
     // Get platform module
     let platformModule;
     try {
-      platformModule = getModule(platform, httpClient, browserClient);
+      platformModule = getModule(platform, httpClient, browserClient, tracker);
     } catch {
       // Fall back to no module (Shopify default behavior)
     }
@@ -471,6 +475,17 @@ export function createProcessJob(db: ReturnType<typeof createDb>, queueName?: st
 
       default:
         throw new Error(`Unknown scraper type: ${type}`);
+    }
+
+    // Merge fallback metadata into the job's scrape_runs
+    if (tracker.fallbackUsed && job.id) {
+      try {
+        await db.update(scrapeRuns)
+          .set({ metadata: sql`COALESCE(metadata, '{}'::jsonb) || ${JSON.stringify(tracker.toMetadata())}::jsonb` })
+          .where(eq(scrapeRuns.jobId, job.id));
+      } catch (fbErr) {
+        log.warn("failed to merge fallback metadata", { jobId: job.id, error: String(fbErr) });
+      }
     }
 
     log.info("job completed", { jobId: job.id, type });

@@ -11,6 +11,7 @@ import type {
 import type { HttpClient } from "../../http-client.js";
 import type { BrowserClient } from "../../browser-client.js";
 import { withFallback } from "../../utils/with-fallback.js";
+import type { FallbackTracker } from "../../utils/fallback-tracker.js";
 import type { Browser, BrowserContext, Page } from "playwright";
 import { googleWorkspaceUrls } from "./urls.js";
 import { GOOGLE_WORKSPACE_CONSTANTS, GOOGLE_WORKSPACE_SCORING } from "./constants.js";
@@ -51,15 +52,17 @@ export class GoogleWorkspaceModule implements PlatformModule {
 
   private httpClient: HttpClient;
   private browserClient?: BrowserClient;
+  tracker?: FallbackTracker;
 
   /** Persistent browser for scraping */
   private browser: Browser | null = null;
   private browserContext: BrowserContext | null = null;
   private browserPage: Page | null = null;
 
-  constructor(httpClient?: HttpClient, browserClient?: BrowserClient) {
+  constructor(httpClient?: HttpClient, browserClient?: BrowserClient, tracker?: FallbackTracker) {
     this.httpClient = httpClient || ({} as HttpClient);
     this.browserClient = browserClient;
+    this.tracker = tracker;
   }
 
   // --- URL builders ---
@@ -92,6 +95,7 @@ export class GoogleWorkspaceModule implements PlatformModule {
         return this.fetchAppPagePrimary(slug, url);
       },
       `google_workspace/fetchAppPage/${slug}`,
+      this.tracker,
     );
   }
 
@@ -117,6 +121,7 @@ export class GoogleWorkspaceModule implements PlatformModule {
         return this.fetchCategoryPagePrimary(slug, url);
       },
       `google_workspace/fetchCategoryPage/${slug}`,
+      this.tracker,
     );
   }
 
@@ -152,6 +157,7 @@ export class GoogleWorkspaceModule implements PlatformModule {
         return this.fetchSearchPagePrimary(keyword, url);
       },
       `google_workspace/fetchSearchPage/${keyword}`,
+      this.tracker,
     );
   }
 

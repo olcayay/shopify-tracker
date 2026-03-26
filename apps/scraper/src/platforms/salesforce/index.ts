@@ -11,6 +11,7 @@ import type {
 import { HttpClient } from "../../http-client.js";
 import type { BrowserClient } from "../../browser-client.js";
 import { withFallback } from "../../utils/with-fallback.js";
+import type { FallbackTracker } from "../../utils/fallback-tracker.js";
 import { salesforceUrls } from "./urls.js";
 import { SALESFORCE_CONSTANTS, SALESFORCE_SCORING, SALESFORCE_API_HEADERS, SALESFORCE_CATEGORY_CHILDREN } from "./constants.js";
 import { parseSalesforceSearchPage } from "./parsers/search-parser.js";
@@ -41,10 +42,12 @@ export class SalesforceModule implements PlatformModule {
 
   private httpClient: HttpClient;
   private browserClient?: BrowserClient;
+  tracker?: FallbackTracker;
 
-  constructor(httpClient?: HttpClient, browserClient?: BrowserClient) {
+  constructor(httpClient?: HttpClient, browserClient?: BrowserClient, tracker?: FallbackTracker) {
     this.httpClient = httpClient || new HttpClient();
     this.browserClient = browserClient;
+    this.tracker = tracker;
   }
 
   // --- URL builders ---
@@ -87,6 +90,7 @@ export class SalesforceModule implements PlatformModule {
         return JSON.stringify({ _fromSearch: true, _parsed: parsed });
       },
       `salesforce/fetchAppPage/${slug}`,
+      this.tracker,
     );
   }
 
@@ -108,6 +112,7 @@ export class SalesforceModule implements PlatformModule {
         return this.browserClient.fetchPage(url);
       },
       `salesforce/fetchCategoryPage/${slug}`,
+      this.tracker,
     );
   }
 
@@ -129,6 +134,7 @@ export class SalesforceModule implements PlatformModule {
         return this.browserClient!.fetchPage(url);
       },
       `salesforce/fetchSearchPage/${keyword}`,
+      this.tracker,
     );
   }
 
@@ -194,6 +200,7 @@ export class SalesforceModule implements PlatformModule {
         return this.browserClient.fetchPage(salesforceUrls.app(slug));
       },
       `salesforce/fetchReviewPage/${slug}`,
+      this.tracker,
     );
   }
 

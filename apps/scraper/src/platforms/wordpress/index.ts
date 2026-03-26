@@ -11,6 +11,7 @@ import type {
 import { HttpClient } from "../../http-client.js";
 import type { BrowserClient } from "../../browser-client.js";
 import { withFallback } from "../../utils/with-fallback.js";
+import type { FallbackTracker } from "../../utils/fallback-tracker.js";
 import { wordpressUrls } from "./urls.js";
 import { WORDPRESS_CONSTANTS, WORDPRESS_SCORING, BROWSE_PREFIX } from "./constants.js";
 import { parsePluginInfo, parseSearchResults, parseTagResults } from "./parsers/api-parser.js";
@@ -39,10 +40,12 @@ export class WordPressModule implements PlatformModule {
 
   private httpClient: HttpClient;
   private browserClient?: BrowserClient;
+  tracker?: FallbackTracker;
 
-  constructor(httpClient?: HttpClient, browserClient?: BrowserClient) {
+  constructor(httpClient?: HttpClient, browserClient?: BrowserClient, tracker?: FallbackTracker) {
     this.httpClient = httpClient || new HttpClient();
     this.browserClient = browserClient;
+    this.tracker = tracker;
   }
 
   // --- URL builders ---
@@ -81,6 +84,7 @@ export class WordPressModule implements PlatformModule {
         return JSON.stringify({ _fromHtml: true, _parsed: parsed });
       },
       `wordpress/fetchAppPage/${slug}`,
+      this.tracker,
     );
   }
 
@@ -101,6 +105,7 @@ export class WordPressModule implements PlatformModule {
         return JSON.stringify({ _fromHtml: true, _parsed: parsed });
       },
       `wordpress/fetchCategoryPage/${slug}`,
+      this.tracker,
     );
   }
 
@@ -120,6 +125,7 @@ export class WordPressModule implements PlatformModule {
         return JSON.stringify({ _fromHtml: true, _parsed: parsed });
       },
       `wordpress/fetchSearchPage/${keyword}`,
+      this.tracker,
     );
   }
 
@@ -137,6 +143,7 @@ export class WordPressModule implements PlatformModule {
         return this.browserClient.fetchPage(url, { waitUntil: "domcontentloaded" });
       },
       `wordpress/fetchReviewPage/${slug}`,
+      this.tracker,
     );
   }
 

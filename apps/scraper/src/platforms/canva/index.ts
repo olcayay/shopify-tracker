@@ -11,6 +11,7 @@ import type {
 import { HttpClient } from "../../http-client.js";
 import type { BrowserClient } from "../../browser-client.js";
 import { withFallback } from "../../utils/with-fallback.js";
+import type { FallbackTracker } from "../../utils/fallback-tracker.js";
 import type { Browser, BrowserContext, Page, Response } from "playwright";
 import { canvaUrls } from "./urls.js";
 import { CANVA_CONSTANTS, CANVA_SCORING } from "./constants.js";
@@ -55,6 +56,7 @@ export class CanvaModule implements PlatformModule {
 
   private httpClient: HttpClient;
   private browserClient?: BrowserClient;
+  tracker?: FallbackTracker;
 
   /** Cached HTML of the /apps page to avoid re-fetching */
   private cachedAppsPageHtml: string | null = null;
@@ -67,9 +69,10 @@ export class CanvaModule implements PlatformModule {
   /** Cache search results per keyword (all pages fetched at once) */
   private searchCache = new Map<string, string>();
 
-  constructor(httpClient?: HttpClient, browserClient?: BrowserClient) {
+  constructor(httpClient?: HttpClient, browserClient?: BrowserClient, tracker?: FallbackTracker) {
     this.httpClient = httpClient || new HttpClient();
     this.browserClient = browserClient;
+    this.tracker = tracker;
   }
 
   // --- URL builders ---
@@ -97,6 +100,7 @@ export class CanvaModule implements PlatformModule {
         return html;
       },
       `canva/fetchAppPage/${slug}`,
+      this.tracker,
     );
   }
 
@@ -173,6 +177,7 @@ export class CanvaModule implements PlatformModule {
       () => this.fetchAppsPage(),
       () => this.httpClient.fetchPage("https://www.canva.com/apps"),
       "canva/fetchCategoryPage",
+      this.tracker,
     );
   }
 
@@ -247,6 +252,7 @@ export class CanvaModule implements PlatformModule {
         return searchBulkApps(html, keyword);
       },
       `canva/fetchSearchPage/${keyword}`,
+      this.tracker,
     );
 
     this.searchCache.set(keyword, combinedJson);

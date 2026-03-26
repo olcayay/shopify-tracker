@@ -12,6 +12,7 @@ import type {
 import { HttpClient } from "../../http-client.js";
 import type { BrowserClient } from "../../browser-client.js";
 import { withFallback } from "../../utils/with-fallback.js";
+import type { FallbackTracker } from "../../utils/fallback-tracker.js";
 import { wixUrls } from "./urls.js";
 import { WIX_CONSTANTS, WIX_SCORING } from "./constants.js";
 import { parseWixAppPage, parseWixReviewPage } from "./parsers/app-parser.js";
@@ -49,10 +50,12 @@ export class WixModule implements PlatformModule {
 
   private httpClient: HttpClient;
   private browserClient?: BrowserClient;
+  tracker?: FallbackTracker;
 
-  constructor(httpClient?: HttpClient, browserClient?: BrowserClient) {
+  constructor(httpClient?: HttpClient, browserClient?: BrowserClient, tracker?: FallbackTracker) {
     this.httpClient = httpClient || new HttpClient();
     this.browserClient = browserClient;
+    this.tracker = tracker;
   }
 
   // --- URL builders ---
@@ -87,6 +90,7 @@ export class WixModule implements PlatformModule {
       () => this.httpClient.fetchPage(url),
       () => this.browserClient!.fetchPage(url, { waitUntil: "domcontentloaded", extraWaitMs: 3000 }),
       `wix/fetchAppPage/${slug}`,
+      this.tracker,
     );
   }
 
@@ -97,6 +101,7 @@ export class WixModule implements PlatformModule {
       () => this.httpClient.fetchPage(url),
       () => this.browserClient!.fetchPage(url, { waitUntil: "domcontentloaded", extraWaitMs: 3000 }),
       `wix/fetchCategoryPage/${slug}`,
+      this.tracker,
     );
   }
 
@@ -107,6 +112,7 @@ export class WixModule implements PlatformModule {
       () => this.httpClient.fetchPage(url),
       () => this.browserClient!.fetchPage(url, { waitUntil: "domcontentloaded", extraWaitMs: 3000 }),
       `wix/fetchSearchPage/${keyword}`,
+      this.tracker,
     );
   }
 

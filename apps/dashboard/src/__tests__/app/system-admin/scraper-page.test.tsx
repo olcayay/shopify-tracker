@@ -23,22 +23,45 @@ vi.mock("@/lib/format-date", () => ({
 
 import ScraperPage from "@/app/(dashboard)/system-admin/scraper/page";
 
+const mockHealthData = {
+  matrix: [
+    {
+      platform: "shopify", scraperType: "category",
+      lastRun: { status: "completed", completedAt: new Date().toISOString(), durationMs: 5000, itemsScraped: 20, itemsFailed: 0, error: null, fallbackUsed: false },
+      avgDurationMs: 4500, prevDurationMs: 4000, currentlyRunning: false, runningStartedAt: null,
+      schedule: { cron: "0 3 * * *", nextRunAt: new Date(Date.now() + 3600000).toISOString() },
+    },
+    {
+      platform: "shopify", scraperType: "app_details",
+      lastRun: { status: "failed", completedAt: new Date().toISOString(), durationMs: 2000, itemsScraped: 5, itemsFailed: 2, error: "Timeout", fallbackUsed: true },
+      avgDurationMs: 3000, prevDurationMs: 2500, currentlyRunning: false, runningStartedAt: null,
+      schedule: { cron: "0 1,13 * * *", nextRunAt: new Date(Date.now() + 7200000).toISOString() },
+    },
+    {
+      platform: "salesforce", scraperType: "category",
+      lastRun: null, avgDurationMs: null, prevDurationMs: null, currentlyRunning: true, runningStartedAt: new Date().toISOString(),
+      schedule: { cron: "0 3 * * *", nextRunAt: new Date(Date.now() + 3600000).toISOString() },
+    },
+  ],
+  summary: { healthy: 30, failed: 5, stale: 3, running: 2, totalScheduled: 55 },
+  recentFailures: [],
+  anomalies: [],
+};
+
 const mockStats = {
   accounts: 5, users: 10, totalApps: 100, totalCategories: 20,
   trackedApps: 25, trackedKeywords: 40, trackedFeatures: 8,
   freshness: [
-    { scraperType: "category", lastCompletedAt: new Date().toISOString() },
-    { scraperType: "app_details", lastCompletedAt: new Date(Date.now() - 48 * 60 * 60 * 1000).toISOString() },
+    { scraperType: "daily_digest", lastCompletedAt: new Date().toISOString() },
+    { scraperType: "compute_review_metrics", lastCompletedAt: new Date(Date.now() - 48 * 60 * 60 * 1000).toISOString() },
   ],
-  workerStats: [
-    { scraper_type: "category", avg_duration_ms: 5000, avg_items: 20 },
-  ],
+  workerStats: [],
 };
 
 const mockRuns = {
   runs: [
-    { id: "r1", scraperType: "category", status: "completed", triggeredBy: "scheduler", queue: "background", createdAt: "2026-02-27T03:00:00Z", startedAt: "2026-02-27T03:00:01Z", metadata: { duration_ms: 5000, items_scraped: 20, items_failed: 0 }, error: null, assets: [] },
-    { id: "r2", scraperType: "app_details", status: "failed", triggeredBy: "manual", queue: "interactive", createdAt: "2026-02-27T10:00:00Z", startedAt: "2026-02-27T10:00:01Z", metadata: { duration_ms: 2000, items_scraped: 5, items_failed: 2 }, error: "Timeout error", assets: [{ name: "my-app", href: "/apps/my-app" }] },
+    { id: "r1", scraperType: "category", platform: "shopify", status: "completed", triggeredBy: "scheduler", queue: "background", createdAt: "2026-02-27T03:00:00Z", startedAt: "2026-02-27T03:00:01Z", metadata: { duration_ms: 5000, items_scraped: 20, items_failed: 0 }, error: null, assets: [] },
+    { id: "r2", scraperType: "app_details", platform: "salesforce", status: "failed", triggeredBy: "manual", queue: "interactive", createdAt: "2026-02-27T10:00:00Z", startedAt: "2026-02-27T10:00:01Z", metadata: { duration_ms: 2000, items_scraped: 5, items_failed: 2, fallback_used: true, fallback_count: 1, fallback_contexts: ["salesforce/fetchAppPage/some-app"] }, error: "Timeout error", assets: [{ name: "my-app", href: "/apps/my-app" }] },
   ],
   total: 2,
 };
@@ -61,6 +84,7 @@ describe("ScraperPage", () => {
     vi.clearAllMocks();
     localStorage.clear();
     mockFetchWithAuth.mockImplementation((url: string) => {
+      if (url.includes("/scraper/health")) return Promise.resolve({ ok: true, json: () => Promise.resolve(mockHealthData) });
       if (url.includes("/stats")) return Promise.resolve({ ok: true, json: () => Promise.resolve(mockStats) });
       if (url.includes("/runs")) return Promise.resolve({ ok: true, json: () => Promise.resolve(mockRuns) });
       if (url.includes("/queue")) return Promise.resolve({ ok: true, json: () => Promise.resolve(mockQueueStatus) });
@@ -68,30 +92,68 @@ describe("ScraperPage", () => {
     });
   });
 
-  it("renders the page title", () => {
+  it("renders the page title and breadcrumb", () => {
     render(<ScraperPage />);
     expect(screen.getByText("Scraper Management")).toBeInTheDocument();
+    expect(screen.getByText("System Admin")).toBeInTheDocument();
   });
 
-  it("renders breadcrumb", () => {
+  it("renders summary stats pills", async () => {
     render(<ScraperPage />);
-    expect(screen.getByText("System Admin")).toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.getByText(/30 Healthy/)).toBeInTheDocument();
+    });
+    expect(screen.getByText(/5 Failed/)).toBeInTheDocument();
+    expect(screen.getByText(/3 Stale/)).toBeInTheDocument();
+    expect(screen.getByText(/2 Running/)).toBeInTheDocument();
+  });
+
+  it("renders operational matrix with platform rows", async () => {
+    render(<ScraperPage />);
+    await waitFor(() => {
+      expect(screen.getByText("Operational Matrix")).toBeInTheDocument();
+    });
+    // Platform labels should appear (may appear in matrix + run history)
+    expect(screen.getAllByText("Shopify").length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText("Salesforce").length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText("Canva").length).toBeGreaterThanOrEqual(1);
+  });
+
+  it("renders matrix column headers", async () => {
+    render(<ScraperPage />);
+    await waitFor(() => {
+      // The matrix has 5 scraper type columns
+      expect(screen.getAllByText("Categories").length).toBeGreaterThanOrEqual(1);
+    });
+    expect(screen.getAllByText("App Details").length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText("Keywords").length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText("Reviews").length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText("Scores").length).toBeGreaterThanOrEqual(1);
+  });
+
+  it("renders fallback badge on cells with fallbackUsed", async () => {
+    render(<ScraperPage />);
+    await waitFor(() => {
+      // The shopify/app_details cell has fallbackUsed: true, which shows "F" badge
+      expect(screen.getAllByText("F").length).toBeGreaterThanOrEqual(1);
+    });
+  });
+
+  it("renders utility scraper cards", async () => {
+    render(<ScraperPage />);
+    await waitFor(() => {
+      expect(screen.getByText("Utility Scrapers")).toBeInTheDocument();
+    });
+    expect(screen.getAllByText("Daily Digest").length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText("Review Metrics").length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText("Similarity Scores").length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText("Backfill Categories").length).toBeGreaterThanOrEqual(1);
   });
 
   it("renders queue status card", async () => {
     render(<ScraperPage />);
     await waitFor(() => {
       expect(screen.getByText("Queue Status")).toBeInTheDocument();
-    });
-  });
-
-  it("shows queue job counts in per-queue breakdown", async () => {
-    render(<ScraperPage />);
-    await waitFor(() => {
-      // Per-queue breakdown labels (CSS uppercase but text content is lowercase)
-      expect(screen.getByText("Queue Status")).toBeInTheDocument();
-      // Queue column badges in the jobs table
-      expect(screen.getByText("Pause")).toBeInTheDocument();
     });
   });
 
@@ -114,103 +176,6 @@ describe("ScraperPage", () => {
     await waitFor(() => {
       expect(screen.getByText("Clear Failed")).toBeInTheDocument();
     });
-  });
-
-  it("renders scraper type cards", async () => {
-    render(<ScraperPage />);
-    await waitFor(() => {
-      expect(screen.getAllByText("Categories").length).toBeGreaterThanOrEqual(1);
-    });
-    expect(screen.getAllByText("App Details").length).toBeGreaterThanOrEqual(1);
-    expect(screen.getAllByText("Reviews").length).toBeGreaterThanOrEqual(1);
-    expect(screen.getAllByText("Daily Digest").length).toBeGreaterThanOrEqual(1);
-    expect(screen.getAllByText("Review Metrics").length).toBeGreaterThanOrEqual(1);
-    expect(screen.getAllByText("Similarity Scores").length).toBeGreaterThanOrEqual(1);
-  });
-
-  it("renders Run buttons for each scraper type", async () => {
-    render(<ScraperPage />);
-    await waitFor(() => {
-      const runButtons = screen.getAllByText("Run");
-      expect(runButtons.length).toBe(9);
-    });
-  });
-
-  it("triggers scraper when Run button is clicked", async () => {
-    const user = userEvent.setup();
-    render(<ScraperPage />);
-    await waitFor(() => {
-      expect(screen.getAllByText("Run").length).toBe(9);
-    });
-    mockFetchWithAuth.mockResolvedValueOnce({ ok: true, json: () => Promise.resolve({}) });
-    const runButtons = screen.getAllByText("Run");
-    await act(async () => {
-      await user.click(runButtons[0]);
-    });
-    expect(mockFetchWithAuth).toHaveBeenCalledWith(
-      "/api/system-admin/scraper/trigger",
-      expect.objectContaining({ method: "POST" })
-    );
-  });
-
-  it("renders Run History section", () => {
-    render(<ScraperPage />);
-    expect(screen.getByText("Run History")).toBeInTheDocument();
-  });
-
-  it("renders run history rows", async () => {
-    render(<ScraperPage />);
-    await waitFor(() => {
-      expect(screen.getAllByText("category").length).toBeGreaterThanOrEqual(1);
-    });
-    expect(screen.getAllByText("app_details").length).toBeGreaterThanOrEqual(1);
-    expect(screen.getAllByText("completed").length).toBeGreaterThanOrEqual(1);
-    expect(screen.getAllByText("failed").length).toBeGreaterThanOrEqual(1);
-  });
-
-  it("shows scheduler/manual trigger badges", async () => {
-    render(<ScraperPage />);
-    await waitFor(() => {
-      expect(screen.getByText("scheduler")).toBeInTheDocument();
-    });
-    expect(screen.getByText("manual")).toBeInTheDocument();
-  });
-
-  it("shows items scraped count", async () => {
-    render(<ScraperPage />);
-    await waitFor(() => {
-      expect(screen.getByText(/20 scraped/)).toBeInTheDocument();
-    });
-  });
-
-  it("shows failed items count", async () => {
-    render(<ScraperPage />);
-    await waitFor(() => {
-      expect(screen.getByText(/2 failed/)).toBeInTheDocument();
-    });
-  });
-
-  it("shows empty state for runs", async () => {
-    mockFetchWithAuth.mockImplementation((url: string) => {
-      if (url.includes("/stats")) return Promise.resolve({ ok: true, json: () => Promise.resolve(mockStats) });
-      if (url.includes("/runs")) return Promise.resolve({ ok: true, json: () => Promise.resolve({ runs: [], total: 0 }) });
-      if (url.includes("/queue")) return Promise.resolve({ ok: true, json: () => Promise.resolve(mockQueueStatus) });
-      return Promise.resolve({ ok: true, json: () => Promise.resolve({}) });
-    });
-    render(<ScraperPage />);
-    await waitFor(() => {
-      expect(screen.getByText("No scraper runs yet")).toBeInTheDocument();
-    });
-  });
-
-  it("renders queue jobs table with queue labels", async () => {
-    render(<ScraperPage />);
-    await waitFor(() => {
-      expect(screen.getByText("j1")).toBeInTheDocument();
-    });
-    expect(screen.getByText("j2")).toBeInTheDocument();
-    expect(screen.getByText(/app: my-app/)).toBeInTheDocument();
-    expect(screen.getByText(/keyword: shopify seo/)).toBeInTheDocument();
   });
 
   it("opens drain confirmation modal", async () => {
@@ -237,20 +202,93 @@ describe("ScraperPage", () => {
     expect(screen.getByText("Clear Failed Jobs")).toBeInTheDocument();
   });
 
-  it("shows scraper descriptions", async () => {
+  it("renders queue jobs table with details", async () => {
     render(<ScraperPage />);
     await waitFor(() => {
-      expect(screen.getByText("Scrape app categories tree")).toBeInTheDocument();
+      expect(screen.getByText("j1")).toBeInTheDocument();
     });
-    expect(screen.getByText(/Scrape tracked app details/)).toBeInTheDocument();
+    expect(screen.getByText("j2")).toBeInTheDocument();
+    expect(screen.getByText(/app: my-app/)).toBeInTheDocument();
+    expect(screen.getByText(/keyword: shopify seo/)).toBeInTheDocument();
   });
 
-  it("shows asset counts", async () => {
+  it("renders Run History section", () => {
+    render(<ScraperPage />);
+    expect(screen.getByText("Run History")).toBeInTheDocument();
+  });
+
+  it("renders run history rows with platform badges", async () => {
     render(<ScraperPage />);
     await waitFor(() => {
-      expect(screen.getAllByText(/20 categories/).length).toBeGreaterThanOrEqual(1);
+      expect(screen.getAllByText("category").length).toBeGreaterThanOrEqual(1);
     });
-    expect(screen.getAllByText(/25 apps/).length).toBeGreaterThanOrEqual(1);
-    expect(screen.getAllByText(/40 keywords/).length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText("app_details").length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText("completed").length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText("failed").length).toBeGreaterThanOrEqual(1);
+  });
+
+  it("shows scheduler/manual trigger badges in run history", async () => {
+    render(<ScraperPage />);
+    await waitFor(() => {
+      expect(screen.getByText("scheduler")).toBeInTheDocument();
+    });
+    expect(screen.getByText("manual")).toBeInTheDocument();
+  });
+
+  it("shows fallback badge in run history", async () => {
+    render(<ScraperPage />);
+    await waitFor(() => {
+      expect(screen.getByText("Fallback")).toBeInTheDocument();
+    });
+  });
+
+  it("shows items scraped count", async () => {
+    render(<ScraperPage />);
+    await waitFor(() => {
+      expect(screen.getByText(/20 scraped/)).toBeInTheDocument();
+    });
+  });
+
+  it("shows failed items count", async () => {
+    render(<ScraperPage />);
+    await waitFor(() => {
+      expect(screen.getByText(/2 failed/)).toBeInTheDocument();
+    });
+  });
+
+  it("shows empty state for runs", async () => {
+    mockFetchWithAuth.mockImplementation((url: string) => {
+      if (url.includes("/scraper/health")) return Promise.resolve({ ok: true, json: () => Promise.resolve(mockHealthData) });
+      if (url.includes("/stats")) return Promise.resolve({ ok: true, json: () => Promise.resolve(mockStats) });
+      if (url.includes("/runs")) return Promise.resolve({ ok: true, json: () => Promise.resolve({ runs: [], total: 0 }) });
+      if (url.includes("/queue")) return Promise.resolve({ ok: true, json: () => Promise.resolve(mockQueueStatus) });
+      return Promise.resolve({ ok: true, json: () => Promise.resolve({}) });
+    });
+    render(<ScraperPage />);
+    await waitFor(() => {
+      expect(screen.getByText("No scraper runs yet")).toBeInTheDocument();
+    });
+  });
+
+  it("fetches health data on mount", async () => {
+    render(<ScraperPage />);
+    await waitFor(() => {
+      expect(mockFetchWithAuth).toHaveBeenCalledWith(
+        expect.stringContaining("/scraper/health")
+      );
+    });
+  });
+
+  it("renders Health Dashboard link", () => {
+    render(<ScraperPage />);
+    expect(screen.getByText(/View Health Dashboard/)).toBeInTheDocument();
+  });
+
+  it("renders Trigger All buttons per platform row", async () => {
+    render(<ScraperPage />);
+    await waitFor(() => {
+      // There should be 11 "All" buttons (one per platform)
+      expect(screen.getAllByText("All").length).toBe(11);
+    });
   });
 });

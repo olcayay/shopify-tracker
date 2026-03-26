@@ -759,6 +759,7 @@ export const systemAdminRoutes: FastifyPluginAsync = async (app) => {
             itemsScraped: (meta?.items_scraped as number) ?? null,
             itemsFailed: (meta?.items_failed as number) ?? null,
             error: latest.error as string | null,
+            fallbackUsed: !!(meta?.fallback_used),
           };
         }
 

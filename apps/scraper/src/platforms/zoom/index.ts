@@ -11,6 +11,7 @@ import type {
 import { HttpClient } from "../../http-client.js";
 import type { BrowserClient } from "../../browser-client.js";
 import { withFallback } from "../../utils/with-fallback.js";
+import type { FallbackTracker } from "../../utils/fallback-tracker.js";
 import { zoomUrls } from "./urls.js";
 import { ZOOM_CONSTANTS, ZOOM_SCORING } from "./constants.js";
 import { parseZoomApp } from "./parsers/app-parser.js";
@@ -55,10 +56,12 @@ export class ZoomModule implements PlatformModule {
 
   private httpClient: HttpClient;
   private browserClient?: BrowserClient;
+  tracker?: FallbackTracker;
 
-  constructor(httpClient?: HttpClient, browserClient?: BrowserClient) {
+  constructor(httpClient?: HttpClient, browserClient?: BrowserClient, tracker?: FallbackTracker) {
     this.httpClient = httpClient || new HttpClient();
     this.browserClient = browserClient;
+    this.tracker = tracker;
   }
 
   // --- URL builders ---
@@ -82,6 +85,7 @@ export class ZoomModule implements PlatformModule {
       () => this.fetchAppPageViaApi(slug),
       () => this.fetchAppPageViaBrowser(slug),
       `zoom/fetchAppPage/${slug}`,
+      this.tracker,
     );
   }
 
@@ -136,6 +140,7 @@ export class ZoomModule implements PlatformModule {
         return JSON.stringify({ _fromHtml: true, _parsed: parsed });
       },
       `zoom/fetchCategoryPage/${slug}`,
+      this.tracker,
     );
   }
 
@@ -156,6 +161,7 @@ export class ZoomModule implements PlatformModule {
         return JSON.stringify({ _fromHtml: true, _parsed: parsed });
       },
       `zoom/fetchSearchPage/${keyword}`,
+      this.tracker,
     );
   }
 

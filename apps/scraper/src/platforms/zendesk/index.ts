@@ -12,6 +12,7 @@ import type {
 import type { HttpClient } from "../../http-client.js";
 import type { BrowserClient } from "../../browser-client.js";
 import { withFallback } from "../../utils/with-fallback.js";
+import type { FallbackTracker } from "../../utils/fallback-tracker.js";
 import { zendeskUrls } from "./urls.js";
 import { ZENDESK_CONSTANTS, ZENDESK_SCORING, ZENDESK_CATEGORY_NAMES, ZENDESK_ALGOLIA } from "./constants.js";
 import { parseZendeskAppDetails } from "./parsers/app-parser.js";
@@ -57,10 +58,12 @@ export class ZendeskModule implements PlatformModule {
 
   private httpClient?: HttpClient;
   private browserClient?: BrowserClient;
+  tracker?: FallbackTracker;
 
-  constructor(httpClient?: HttpClient, browserClient?: BrowserClient) {
+  constructor(httpClient?: HttpClient, browserClient?: BrowserClient, tracker?: FallbackTracker) {
     this.httpClient = httpClient;
     this.browserClient = browserClient;
+    this.tracker = tracker;
   }
 
   // --- URL builders ---
@@ -114,6 +117,7 @@ export class ZendeskModule implements PlatformModule {
         return JSON.stringify({ _fromAlgolia: true, _parsed: parsed });
       },
       `zendesk/fetchAppPage/${slug}`,
+      this.tracker,
     );
   }
 
@@ -146,6 +150,7 @@ export class ZendeskModule implements PlatformModule {
         return JSON.stringify({ _fromHtml: true, _parsed: parsed });
       },
       `zendesk/fetchCategoryPage/${slug}`,
+      this.tracker,
     );
   }
 
@@ -176,6 +181,7 @@ export class ZendeskModule implements PlatformModule {
         return JSON.stringify({ _fromHtml: true, _parsed: parsed });
       },
       `zendesk/fetchSearchPage/${keyword}`,
+      this.tracker,
     );
   }
 

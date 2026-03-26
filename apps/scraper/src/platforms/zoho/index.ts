@@ -10,6 +10,7 @@ import type {
 import { HttpClient } from "../../http-client.js";
 import type { BrowserClient } from "../../browser-client.js";
 import { withFallback } from "../../utils/with-fallback.js";
+import type { FallbackTracker } from "../../utils/fallback-tracker.js";
 import { zohoUrls } from "./urls.js";
 import { ZOHO_CONSTANTS, ZOHO_SCORING } from "./constants.js";
 import { parseZohoAppDetails } from "./parsers/app-parser.js";
@@ -49,10 +50,12 @@ export class ZohoModule implements PlatformModule {
 
   private httpClient: HttpClient;
   private browserClient?: BrowserClient;
+  tracker?: FallbackTracker;
 
-  constructor(httpClient?: HttpClient, browserClient?: BrowserClient) {
+  constructor(httpClient?: HttpClient, browserClient?: BrowserClient, tracker?: FallbackTracker) {
     this.httpClient = httpClient || new HttpClient();
     this.browserClient = browserClient;
+    this.tracker = tracker;
   }
 
   // --- URL builders ---
@@ -82,6 +85,7 @@ export class ZohoModule implements PlatformModule {
       () => this.httpClient.fetchPage(url),
       () => this.browserClient!.fetchPage(url, { waitUntil: "domcontentloaded", extraWaitMs: 3000 }),
       `zoho/fetchAppPage/${slug}`,
+      this.tracker,
     );
   }
 
@@ -96,6 +100,7 @@ export class ZohoModule implements PlatformModule {
       () => this.browserClient!.fetchPage(url, { waitUntil: "domcontentloaded", extraWaitMs: 3000 }),
       () => this.httpClient.fetchPage(url),
       `zoho/fetchCategoryPage/${slug}`,
+      this.tracker,
     );
   }
 
@@ -110,6 +115,7 @@ export class ZohoModule implements PlatformModule {
       () => this.browserClient!.fetchPage(url, { waitUntil: "domcontentloaded", extraWaitMs: 3000 }),
       () => this.httpClient.fetchPage(url),
       `zoho/fetchSearchPage/${keyword}`,
+      this.tracker,
     );
   }
 

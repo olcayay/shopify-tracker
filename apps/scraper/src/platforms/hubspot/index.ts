@@ -12,6 +12,7 @@ import type {
 import type { HttpClient } from "../../http-client.js";
 import type { BrowserClient } from "../../browser-client.js";
 import { withFallback } from "../../utils/with-fallback.js";
+import type { FallbackTracker } from "../../utils/fallback-tracker.js";
 import { hubspotUrls, CHIRP_HEADERS } from "./urls.js";
 import { HUBSPOT_CONSTANTS, HUBSPOT_SCORING, HUBSPOT_PAGE_SIZE } from "./constants.js";
 import { parseHubSpotAppDetails, extractOfferingId } from "./parsers/app-parser.js";
@@ -62,11 +63,13 @@ export class HubSpotModule implements PlatformModule {
 
   private httpClient?: HttpClient;
   private browserClient?: BrowserClient;
+  tracker?: FallbackTracker;
   private offeringIdCache = new Map<string, number>();
 
-  constructor(httpClient?: HttpClient, browserClient?: BrowserClient) {
+  constructor(httpClient?: HttpClient, browserClient?: BrowserClient, tracker?: FallbackTracker) {
     this.httpClient = httpClient;
     this.browserClient = browserClient;
+    this.tracker = tracker;
   }
 
   // --- URL builders ---
@@ -110,6 +113,7 @@ export class HubSpotModule implements PlatformModule {
       () => this.chirpPost(url, body),
       () => this.chirpViaBrowser(url, body),
       `hubspot/fetchAppPage/${slug}`,
+      this.tracker,
     );
   }
 
@@ -123,6 +127,7 @@ export class HubSpotModule implements PlatformModule {
       () => this.chirpPost(url, body),
       () => this.chirpViaBrowser(url, body),
       `hubspot/fetchCategoryPage/${slug}`,
+      this.tracker,
     );
   }
 
@@ -134,6 +139,7 @@ export class HubSpotModule implements PlatformModule {
       () => this.chirpPost(url, body),
       () => this.chirpViaBrowser(url, body),
       `hubspot/fetchSearchPage/${keyword}`,
+      this.tracker,
     );
   }
 
@@ -160,6 +166,7 @@ export class HubSpotModule implements PlatformModule {
       () => this.ecosystemPost(url, body),
       () => this.chirpViaBrowser(url, body),
       `hubspot/fetchReviewPage/${slug}`,
+      this.tracker,
     );
   }
 

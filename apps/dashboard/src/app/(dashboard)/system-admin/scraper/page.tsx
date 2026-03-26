@@ -1,203 +1,38 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
 import { useAuth } from "@/lib/auth-context";
-import { PLATFORMS, type PlatformId } from "@appranks/shared";
-import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import {
-  Play,
-  Pause,
-  RefreshCw,
-  RotateCw,
-  ChevronDown,
-  ChevronRight,
-  ChevronLeft,
-  Trash2,
-  X,
-  Copy,
-  Check,
-} from "lucide-react";
-import { ConfirmModal } from "@/components/confirm-modal";
-import { useFormatDate } from "@/lib/format-date";
-
-function utcToLocal(utcHour: number): string {
-  const d = new Date();
-  d.setUTCHours(utcHour, 0, 0, 0);
-  return d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
-}
-
-function formatSchedule(cronHours: number[] | null, prefix?: string): string {
-  if (!cronHours) return prefix ?? "";
-  const localTimes = cronHours.map(utcToLocal);
-  if (cronHours.length === 1) return `Daily at ${localTimes[0]}`;
-  return `Every ${Math.round(24 / cronHours.length)}h (${localTimes.join(", ")})`;
-}
-
-const SCRAPER_TYPES = [
-  {
-    type: "category",
-    label: "Categories",
-    description: "Scrape app categories tree",
-    cronHours: [3],
-  },
-  {
-    type: "app_details",
-    label: "App Details",
-    description: "Scrape tracked app details and snapshots",
-    cronHours: [1, 13],
-  },
-  {
-    type: "keyword_search",
-    label: "Keywords",
-    description: "Search tracked keywords and record rankings",
-    cronHours: [0, 12],
-  },
-  {
-    type: "reviews",
-    label: "Reviews",
-    description: "Scrape reviews for tracked apps (+ computes review metrics)",
-    cronHours: [6],
-  },
-  {
-    type: "daily_digest",
-    label: "Daily Digest",
-    description: "Send ranking report emails to users",
-    cronHours: [5],
-  },
-  {
-    type: "compute_review_metrics",
-    label: "Review Metrics",
-    description: "Compute review velocity & acceleration for tracked apps",
-    cronHours: null,
-    scheduleLabel: "Auto (after reviews scraper)",
-  },
-  {
-    type: "compute_similarity_scores",
-    label: "Similarity Scores",
-    description: "Compute similarity scores between tracked apps and their competitors",
-    cronHours: null,
-    scheduleLabel: "Manual trigger",
-  },
-  {
-    type: "backfill_categories",
-    label: "Backfill Categories",
-    description: "Register missing categories from existing app snapshot data",
-    cronHours: null,
-    scheduleLabel: "Manual trigger",
-  },
-  {
-    type: "compute_app_scores",
-    label: "App Scores",
-    description: "Compute App Visibility & App Power scores for all tracked apps",
-    cronHours: [9],
-  },
-];
-
-function getNextRun(cronHours: number[] | null): string | null {
-  if (!cronHours) return null;
-  const now = new Date();
-  const h = now.getUTCHours();
-  const m = now.getUTCMinutes();
-
-  // Find next matching hour today
-  for (const ch of cronHours) {
-    if (ch > h || (ch === h && m === 0)) {
-      const next = new Date(now);
-      next.setUTCHours(ch, 0, 0, 0);
-      return formatRelativeTime(next.getTime() - now.getTime());
-    }
-  }
-
-  // Tomorrow at first hour
-  const next = new Date(now);
-  next.setUTCDate(next.getUTCDate() + 1);
-  next.setUTCHours(cronHours[0], 0, 0, 0);
-  return formatRelativeTime(next.getTime() - now.getTime());
-}
-
-function formatRelativeTime(ms: number): string {
-  const totalMins = Math.round(ms / 60000);
-  if (totalMins < 1) return "now";
-  if (totalMins < 60) return `in ${totalMins}m`;
-  const hours = Math.floor(totalMins / 60);
-  const mins = totalMins % 60;
-  if (mins === 0) return `in ${hours}h`;
-  return `in ${hours}h ${mins}m`;
-}
-
-function formatDuration(ms: number): string {
-  if (ms < 1000) return `${ms}ms`;
-  const secs = Math.round(ms / 1000);
-  if (secs < 60) return `${secs}s`;
-  const mins = Math.floor(secs / 60);
-  const remSecs = secs % 60;
-  if (mins < 60) return remSecs > 0 ? `${mins}m ${remSecs}s` : `${mins}m`;
-  const hours = Math.floor(mins / 60);
-  const remMins = mins % 60;
-  return remMins > 0 ? `${hours}h ${remMins}m` : `${hours}h`;
-}
+import { Button } from "@/components/ui/button";
+import { RefreshCw } from "lucide-react";
+import { timeAgo } from "@/lib/format-utils";
+import { HEALTH_SCRAPER_TYPES } from "@/lib/platform-display";
+import { OperationalMatrix } from "./components/operational-matrix";
+import { UtilityScrapers } from "./components/utility-scrapers";
+import { QueueStatusCard } from "./components/queue-status-card";
+import { RunHistoryTable } from "./components/run-history-table";
 
 const PAGE_SIZE = 20;
 
-function timeAgo(dateStr: string): string {
-  const diff = Date.now() - new Date(dateStr).getTime();
-  const mins = Math.floor(diff / (1000 * 60));
-  if (mins < 1) return "just now";
-  if (mins < 60) return `${mins}m ago`;
-  const hours = Math.floor(mins / 60);
-  if (hours < 24) return `${hours}h ago`;
-  const days = Math.floor(hours / 24);
-  return `${days}d ago`;
-}
-
 export default function ScraperPage() {
   const { fetchWithAuth } = useAuth();
-  const { formatDateTime } = useFormatDate();
+  const [healthData, setHealthData] = useState<any>(null);
   const [stats, setStats] = useState<any>(null);
   const [runs, setRuns] = useState<any[]>([]);
   const [total, setTotal] = useState(0);
   const [queueStatus, setQueueStatus] = useState<any>(null);
   const [triggering, setTriggering] = useState<string | null>(null);
   const [message, setMessage] = useState("");
-  const [filterType, setFilterType] = useState<string>("");
-  const [filterTrigger, setFilterTrigger] = useState<string>("");
-  const [filterQueue, setFilterQueue] = useState<string>("");
-  const [filterPlatform, setFilterPlatform] = useState<string>("");
+  const [filterType, setFilterType] = useState("");
+  const [filterTrigger, setFilterTrigger] = useState("");
+  const [filterQueue, setFilterQueue] = useState("");
+  const [filterPlatform, setFilterPlatform] = useState("");
   const [page, setPage] = useState(0);
-  const [expandedRunId, setExpandedRunId] = useState<string | null>(null);
-  const [drainConfirm, setDrainConfirm] = useState(false);
-  const [clearFailedConfirm, setClearFailedConfirm] = useState(false);
-  const [killJobConfirm, setKillJobConfirm] = useState<{ id: string; type: string } | null>(null);
   const [retryingRunId, setRetryingRunId] = useState<string | null>(null);
-  const [triggerPlatform, setTriggerPlatform] = useState<string>(() => {
-    if (typeof window !== "undefined") {
-      return localStorage.getItem("scraper-platform") || "shopify";
-    }
-    return "shopify";
-  });
+  const [lastRefresh, setLastRefresh] = useState<Date | null>(null);
 
-  useEffect(() => {
-    loadData();
-  }, [filterType, filterTrigger, filterQueue, filterPlatform, page, triggerPlatform]);
-
-  async function loadData() {
+  const loadData = useCallback(async () => {
     const params = new URLSearchParams();
     if (filterType) params.set("type", filterType);
     if (filterTrigger) params.set("triggeredBy", filterTrigger);
@@ -206,12 +41,14 @@ export default function ScraperPage() {
     params.set("limit", String(PAGE_SIZE));
     params.set("offset", String(page * PAGE_SIZE));
 
-    const [statsRes, runsRes, queueRes] = await Promise.all([
-      fetchWithAuth(`/api/system-admin/stats?platform=${triggerPlatform}`),
+    const [healthRes, statsRes, runsRes, queueRes] = await Promise.all([
+      fetchWithAuth("/api/system-admin/scraper/health"),
+      fetchWithAuth("/api/system-admin/stats?platform=all"),
       fetchWithAuth(`/api/system-admin/scraper/runs?${params.toString()}`),
       fetchWithAuth("/api/system-admin/scraper/queue"),
     ]);
 
+    if (healthRes.ok) setHealthData(await healthRes.json());
     if (statsRes.ok) setStats(await statsRes.json());
     if (runsRes.ok) {
       const data = await runsRes.json();
@@ -219,17 +56,61 @@ export default function ScraperPage() {
       setTotal(data.total);
     }
     if (queueRes.ok) setQueueStatus(await queueRes.json());
+    setLastRefresh(new Date());
+  }, [fetchWithAuth, filterType, filterTrigger, filterQueue, filterPlatform, page]);
+
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
+
+  // Auto-refresh every 30s
+  useEffect(() => {
+    const interval = setInterval(loadData, 30_000);
+    return () => clearInterval(interval);
+  }, [loadData]);
+
+  // Auto-dismiss message
+  useEffect(() => {
+    if (!message) return;
+    const timer = setTimeout(() => setMessage(""), 5000);
+    return () => clearTimeout(timer);
+  }, [message]);
+
+  async function triggerScraper(platform: string, type: string) {
+    const key = `${platform}:${type}`;
+    setTriggering(key);
+    setMessage("");
+    const res = await fetchWithAuth("/api/system-admin/scraper/trigger", {
+      method: "POST",
+      body: JSON.stringify({ type, platform }),
+    });
+    if (res.ok) {
+      setMessage(`Triggered "${type}" for ${platform}`);
+      setTimeout(loadData, 2000);
+    } else {
+      const data = await res.json().catch(() => ({}));
+      setMessage(data.error || "Failed to trigger scraper");
+    }
+    setTriggering(null);
   }
 
-  async function triggerScraper(type: string) {
+  async function triggerAllForPlatform(platform: string) {
+    setMessage("");
+    for (const type of HEALTH_SCRAPER_TYPES) {
+      await triggerScraper(platform, type);
+    }
+    setMessage(`Triggered all scrapers for ${platform}`);
+  }
+
+  async function triggerUtility(type: string) {
     setTriggering(type);
     setMessage("");
     const res = await fetchWithAuth("/api/system-admin/scraper/trigger", {
       method: "POST",
-      body: JSON.stringify({ type, platform: triggerPlatform }),
+      body: JSON.stringify({ type, platform: "shopify" }),
     });
     if (res.ok) {
-      setMessage(`Scraper "${type}" triggered`);
+      setMessage(`Triggered "${type}"`);
       setTimeout(loadData, 2000);
     } else {
       const data = await res.json().catch(() => ({}));
@@ -249,38 +130,27 @@ export default function ScraperPage() {
     }
   }
 
-  async function removeJob(jobId: string) {
-    const res = await fetchWithAuth(
-      `/api/system-admin/scraper/queue/jobs/${jobId}`,
-      { method: "DELETE" }
-    );
-    if (res.ok) {
-      setMessage(`Job ${jobId} removed`);
-      loadData();
-    }
-  }
-
   async function drainQueue() {
-    const res = await fetchWithAuth(
-      "/api/system-admin/scraper/queue/jobs",
-      { method: "DELETE" }
-    );
+    const res = await fetchWithAuth("/api/system-admin/scraper/queue/jobs", { method: "DELETE" });
     if (res.ok) {
       setMessage("All waiting jobs removed");
-      setDrainConfirm(false);
       loadData();
     }
   }
 
   async function clearFailedJobs() {
-    const res = await fetchWithAuth(
-      "/api/system-admin/scraper/queue/failed",
-      { method: "DELETE" }
-    );
+    const res = await fetchWithAuth("/api/system-admin/scraper/queue/failed", { method: "DELETE" });
     if (res.ok) {
       const data = await res.json();
       setMessage(`${data.removed} failed job(s) removed`);
-      setClearFailedConfirm(false);
+      loadData();
+    }
+  }
+
+  async function removeJob(jobId: string) {
+    const res = await fetchWithAuth(`/api/system-admin/scraper/queue/jobs/${jobId}`, { method: "DELETE" });
+    if (res.ok) {
+      setMessage(`Job ${jobId} removed`);
       loadData();
     }
   }
@@ -288,10 +158,7 @@ export default function ScraperPage() {
   async function retryRun(runId: string) {
     setRetryingRunId(runId);
     setMessage("");
-    const res = await fetchWithAuth(
-      `/api/system-admin/scraper/runs/${runId}/retry`,
-      { method: "POST" }
-    );
+    const res = await fetchWithAuth(`/api/system-admin/scraper/runs/${runId}/retry`, { method: "POST" });
     if (res.ok) {
       const data = await res.json();
       setMessage(data.message || "Run retried");
@@ -303,47 +170,17 @@ export default function ScraperPage() {
     setRetryingRunId(null);
   }
 
-  // Build freshness map
-  const freshnessMap = new Map<string, any>();
+  // Build utility freshness map
+  const utilityFreshness = new Map<string, { lastCompletedAt: string | null }>();
   if (stats?.freshness) {
     for (const f of stats.freshness) {
-      freshnessMap.set(f.scraperType, f);
+      utilityFreshness.set(f.scraperType, f);
     }
   }
-
-  // Build worker stats map (avg duration & items from last 3 scheduler runs)
-  const workerStatsMap = new Map<string, { avg_duration_ms: number; avg_items: number }>();
-  if (stats?.workerStats) {
-    for (const w of stats.workerStats) {
-      workerStatsMap.set(w.scraper_type, w);
-    }
-  }
-
-  // Asset count per scraper type (what it will process next)
-  const assetCountMap: Record<string, { count: number; label: string }> = stats
-    ? {
-        category: { count: stats.totalCategories ?? 0, label: "categories" },
-        app_details: { count: stats.trackedApps ?? 0, label: "apps" },
-        keyword_search: { count: stats.trackedKeywords ?? 0, label: "keywords" },
-        reviews: { count: stats.trackedApps ?? 0, label: "apps" },
-        daily_digest: { count: stats.users ?? 0, label: "users" },
-        compute_review_metrics: { count: stats.trackedApps ?? 0, label: "apps" },
-        compute_similarity_scores: { count: stats.trackedApps ?? 0, label: "apps" },
-        backfill_categories: { count: stats.trackedApps ?? 0, label: "apps" },
-      }
-    : {};
-
-  const totalPages = Math.ceil(total / PAGE_SIZE);
-
-  const hasQueueJobs =
-    queueStatus &&
-    (queueStatus.counts.waiting > 0 ||
-      queueStatus.counts.active > 0 ||
-      queueStatus.counts.delayed > 0 ||
-      queueStatus.counts.failed > 0);
 
   return (
     <div className="space-y-6">
+      {/* Header */}
       <div className="flex items-center justify-between">
         <div>
           <p className="text-sm text-muted-foreground mb-1">
@@ -353,691 +190,96 @@ export default function ScraperPage() {
             {" > Scraper"}
           </p>
           <h1 className="text-2xl font-bold">Scraper Management</h1>
+          {lastRefresh && (
+            <p className="text-xs text-muted-foreground mt-0.5">
+              Updated {timeAgo(lastRefresh.toISOString())} &middot; Auto-refresh 30s
+            </p>
+          )}
         </div>
-        <Link
-          href="/system-admin/scraper-health"
-          className="text-sm text-primary hover:underline"
-        >
-          View Health Dashboard &rarr;
-        </Link>
+        <div className="flex items-center gap-2">
+          <Link href="/system-admin/scraper-health">
+            <Button variant="outline" size="sm">
+              View Health Dashboard &rarr;
+            </Button>
+          </Link>
+          <Button variant="outline" size="sm" onClick={loadData}>
+            <RefreshCw className="h-3 w-3 mr-1" />
+            Refresh
+          </Button>
+        </div>
       </div>
 
+      {/* Message banner */}
       {message && (
-        <div className="text-sm px-3 py-2 rounded-md bg-muted">{message}</div>
+        <div className="text-sm px-3 py-2 rounded-md bg-muted animate-in fade-in-0 slide-in-from-top-1">
+          {message}
+        </div>
       )}
+
+      {/* Summary Stats */}
+      {healthData && (
+        <div className="flex items-center gap-3">
+          <Badge variant="outline" className="text-sm px-3 py-1 border-green-200 text-green-700 bg-green-50">
+            {healthData.summary.healthy} Healthy
+          </Badge>
+          <Badge variant="outline" className="text-sm px-3 py-1 border-red-200 text-red-700 bg-red-50">
+            {healthData.summary.failed} Failed
+          </Badge>
+          <Badge variant="outline" className="text-sm px-3 py-1 border-yellow-200 text-yellow-700 bg-yellow-50">
+            {healthData.summary.stale} Stale
+          </Badge>
+          <Badge variant="outline" className="text-sm px-3 py-1 border-blue-200 text-blue-700 bg-blue-50">
+            {healthData.summary.running} Running
+          </Badge>
+          <span className="text-sm text-muted-foreground">
+            / {healthData.summary.totalScheduled} scheduled
+          </span>
+        </div>
+      )}
+
+      {/* Operational Matrix */}
+      <OperationalMatrix
+        healthData={healthData}
+        onTrigger={triggerScraper}
+        onTriggerAll={triggerAllForPlatform}
+        triggering={triggering}
+      />
+
+      {/* Utility Scrapers */}
+      <UtilityScrapers
+        freshness={utilityFreshness}
+        onTrigger={triggerUtility}
+        triggering={triggering}
+      />
 
       {/* Queue Status */}
-      {queueStatus && (
-        <Card className={queueStatus.isPaused ? "border-yellow-300 bg-yellow-50/50" : hasQueueJobs ? "border-blue-200 bg-blue-50/50" : ""}>
-          <CardHeader className="pb-2">
-            <div className="flex items-center justify-between">
-              <CardTitle className="text-base">
-                Queue Status
-                {queueStatus.isPaused && (
-                  <Badge variant="secondary" className="ml-2">Paused</Badge>
-                )}
-              </CardTitle>
-              <div className="flex items-center gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="h-7 text-xs"
-                  onClick={togglePause}
-                >
-                  {queueStatus.isPaused ? (
-                    <>
-                      <Play className="h-3 w-3 mr-1" />
-                      Resume
-                    </>
-                  ) : (
-                    <>
-                      <Pause className="h-3 w-3 mr-1" />
-                      Pause
-                    </>
-                  )}
-                </Button>
-                {queueStatus.counts.waiting > 0 && (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="h-7 text-xs text-destructive hover:text-destructive"
-                    onClick={() => setDrainConfirm(true)}
-                  >
-                    <Trash2 className="h-3 w-3 mr-1" />
-                    Clear Waiting
-                  </Button>
-                )}
-                {queueStatus.counts.failed > 0 && (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="h-7 text-xs text-destructive hover:text-destructive"
-                    onClick={() => setClearFailedConfirm(true)}
-                  >
-                    <Trash2 className="h-3 w-3 mr-1" />
-                    Clear Failed
-                  </Button>
-                )}
-              </div>
-            </div>
-          </CardHeader>
-          <CardContent>
-            {hasQueueJobs ? (
-            <>
-              {/* Per-queue breakdown */}
-              {queueStatus.queues && (
-                <div className="grid grid-cols-2 gap-4 mb-3">
-                  {(["interactive", "background"] as const).map((qName) => {
-                    const q = queueStatus.queues[qName];
-                    if (!q) return null;
-                    const hasJobs = q.counts.waiting > 0 || q.counts.active > 0 || q.counts.delayed > 0 || q.counts.failed > 0;
-                    return (
-                      <div key={qName} className="flex flex-col gap-1 p-2 rounded-md border bg-background">
-                        <div className="flex items-center gap-2">
-                          <span className="text-xs font-medium uppercase tracking-wider text-muted-foreground">{qName}</span>
-                          {q.isPaused && <Badge variant="secondary" className="text-[10px] py-0">Paused</Badge>}
-                        </div>
-                        {hasJobs ? (
-                          <div className="flex gap-3 text-xs">
-                            <span><span className="text-muted-foreground">Active:</span> {q.counts.active}</span>
-                            <span><span className="text-muted-foreground">Waiting:</span> {q.counts.waiting}</span>
-                            {q.counts.delayed > 0 && <span><span className="text-muted-foreground">Delayed:</span> {q.counts.delayed}</span>}
-                            {q.counts.failed > 0 && <span className="text-destructive">Failed: {q.counts.failed}</span>}
-                          </div>
-                        ) : (
-                          <span className="text-xs text-muted-foreground">Empty</span>
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-            </>
-            ) : (
-              <p className="text-sm text-muted-foreground mb-3">Queues are empty — no jobs waiting or running.</p>
-            )}
-            {queueStatus.jobs.length > 0 && (
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Job ID</TableHead>
-                    <TableHead>Type</TableHead>
-                    <TableHead>Platform</TableHead>
-                    <TableHead>Queue</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Queued At</TableHead>
-                    <TableHead>Details</TableHead>
-                    <TableHead />
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {queueStatus.jobs.map((job: any) => (
-                    <TableRow key={`${job.queue}-${job.id}`}>
-                      <TableCell className="font-mono text-xs">
-                        {job.id}
-                      </TableCell>
-                      <TableCell className="font-mono text-sm">
-                        {job.type}
-                      </TableCell>
-                      <TableCell className="text-sm">
-                        {job.data?.platform ? (
-                          <Badge variant="outline" className="capitalize text-xs">
-                            {job.data.platform}
-                          </Badge>
-                        ) : (
-                          <span className="text-muted-foreground">{"\u2014"}</span>
-                        )}
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant="outline" className="text-[10px]">
-                          {job.queue || "background"}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        <Badge
-                          variant={
-                            job.status === "active"
-                              ? "secondary"
-                              : job.status === "failed"
-                                ? "destructive"
-                                : "outline"
-                          }
-                        >
-                          {job.status}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="text-sm text-muted-foreground">
-                        {job.createdAt
-                          ? formatDateTime(job.createdAt)
-                          : "\u2014"}
-                      </TableCell>
-                      <TableCell className="text-sm">
-                        {job.data?.slug && (
-                          <span className="text-muted-foreground">
-                            app: {job.data.slug}
-                          </span>
-                        )}
-                        {job.data?.keyword && (
-                          <span className="text-muted-foreground">
-                            keyword: {job.data.keyword}
-                          </span>
-                        )}
-                        {job.failedReason && (
-                          <CopyableError error={job.failedReason} />
-                        )}
-                      </TableCell>
-                      <TableCell>
-                        {job.status === "active" ? (
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="h-7 w-7 p-0 text-muted-foreground hover:text-destructive"
-                            onClick={() => setKillJobConfirm({ id: job.id, type: job.type })}
-                            title="Kill job"
-                          >
-                            <X className="h-3.5 w-3.5" />
-                          </Button>
-                        ) : (
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="h-7 w-7 p-0 text-muted-foreground hover:text-destructive"
-                            onClick={() => removeJob(job.id)}
-                          >
-                            <X className="h-3.5 w-3.5" />
-                          </Button>
-                        )}
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            )}
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Platform selector for triggering */}
-      <div className="flex items-center gap-2">
-        <span className="text-sm font-medium text-muted-foreground">Platform:</span>
-        <select
-          value={triggerPlatform}
-          onChange={(e) => {
-            setTriggerPlatform(e.target.value);
-            localStorage.setItem("scraper-platform", e.target.value);
-          }}
-          className="border rounded-md px-3 py-1.5 text-sm bg-background"
-        >
-          {(Object.keys(PLATFORMS) as PlatformId[]).map((pid) => (
-            <option key={pid} value={pid}>
-              {PLATFORMS[pid].name}
-            </option>
-          ))}
-        </select>
-      </div>
-
-      {/* Scraper Types with Trigger + Freshness */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {SCRAPER_TYPES.map((s) => {
-          const freshness = freshnessMap.get(s.type);
-          const wStats = workerStatsMap.get(s.type);
-          const asset = assetCountMap[s.type];
-          return (
-            <Card key={s.type}>
-              <CardHeader className="pb-2">
-                <div className="flex items-center justify-between">
-                  <CardTitle className="text-base">{s.label}</CardTitle>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => triggerScraper(s.type)}
-                    disabled={triggering !== null}
-                  >
-                    <Play className="h-3 w-3 mr-1" />
-                    {triggering === s.type ? "Triggering..." : "Run"}
-                  </Button>
-                </div>
-                <CardDescription>{s.description}</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-1.5">
-                  <div className="flex items-center gap-2 text-sm">
-                    <span className="text-muted-foreground">Schedule:</span>
-                    <span>{formatSchedule(s.cronHours, (s as any).scheduleLabel)}</span>
-                  </div>
-                  {s.cronHours && (
-                    <div className="flex items-center gap-2 text-sm">
-                      <span className="text-muted-foreground">Next run:</span>
-                      <span>{getNextRun(s.cronHours)}</span>
-                    </div>
-                  )}
-                  <div className="flex items-center gap-2 text-sm">
-                    <span className="text-muted-foreground">Last run:</span>
-                    {freshness?.lastCompletedAt ? (
-                      <Badge
-                        variant={
-                          Date.now() -
-                            new Date(freshness.lastCompletedAt).getTime() <
-                          24 * 60 * 60 * 1000
-                            ? "default"
-                            : Date.now() -
-                                  new Date(
-                                    freshness.lastCompletedAt
-                                  ).getTime() <
-                                72 * 60 * 60 * 1000
-                              ? "secondary"
-                              : "destructive"
-                        }
-                      >
-                        {timeAgo(freshness.lastCompletedAt)}
-                      </Badge>
-                    ) : (
-                      <span className="text-muted-foreground">Never</span>
-                    )}
-                  </div>
-                  {asset && asset.count > 0 && (
-                    <div className="flex items-center gap-2 text-sm">
-                      <span className="text-muted-foreground">Assets:</span>
-                      <span>{asset.count} {asset.label}</span>
-                    </div>
-                  )}
-                  {wStats?.avg_duration_ms != null && (
-                    <div className="flex items-center gap-2 text-sm">
-                      <span className="text-muted-foreground">Avg duration:</span>
-                      <span>{formatDuration(wStats.avg_duration_ms)}</span>
-                    </div>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-          );
-        })}
-      </div>
+      <QueueStatusCard
+        queueStatus={queueStatus}
+        onTogglePause={togglePause}
+        onDrainQueue={drainQueue}
+        onClearFailed={clearFailedJobs}
+        onRemoveJob={removeJob}
+        onKillJob={removeJob}
+      />
 
       {/* Run History */}
-      <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <CardTitle>Run History</CardTitle>
-            <div className="flex items-center gap-2">
-              <select
-                value={filterType}
-                onChange={(e) => {
-                  setFilterType(e.target.value);
-                  setPage(0);
-                }}
-                className="border rounded-md px-3 py-1.5 text-sm bg-background"
-              >
-                <option value="">All types</option>
-                {SCRAPER_TYPES.map((s) => (
-                  <option key={s.type} value={s.type}>
-                    {s.label}
-                  </option>
-                ))}
-              </select>
-              <select
-                value={filterTrigger}
-                onChange={(e) => {
-                  setFilterTrigger(e.target.value);
-                  setPage(0);
-                }}
-                className="border rounded-md px-3 py-1.5 text-sm bg-background"
-              >
-                <option value="">All triggers</option>
-                <option value="scheduler">Scheduler</option>
-                <option value="manual">Manual</option>
-              </select>
-              <select
-                value={filterQueue}
-                onChange={(e) => {
-                  setFilterQueue(e.target.value);
-                  setPage(0);
-                }}
-                className="border rounded-md px-3 py-1.5 text-sm bg-background"
-              >
-                <option value="">All queues</option>
-                <option value="interactive">Interactive</option>
-                <option value="background">Background</option>
-              </select>
-              <select
-                value={filterPlatform}
-                onChange={(e) => {
-                  setFilterPlatform(e.target.value);
-                  setPage(0);
-                }}
-                className="border rounded-md px-3 py-1.5 text-sm bg-background"
-              >
-                <option value="">All platforms</option>
-                {(Object.keys(PLATFORMS) as PlatformId[]).map((pid) => (
-                  <option key={pid} value={pid}>
-                    {PLATFORMS[pid].name}
-                  </option>
-                ))}
-              </select>
-              <Button variant="ghost" size="sm" onClick={loadData}>
-                <RefreshCw className="h-4 w-4" />
-              </Button>
-            </div>
-          </div>
-        </CardHeader>
-        <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead className="w-8" />
-                <TableHead>Job ID</TableHead>
-                <TableHead>Type</TableHead>
-                <TableHead>Platform</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Queue</TableHead>
-                <TableHead>Triggered By</TableHead>
-                <TableHead>Queued</TableHead>
-                <TableHead>Started</TableHead>
-                <TableHead>Duration</TableHead>
-                <TableHead>Items</TableHead>
-                <TableHead>Assets</TableHead>
-                <TableHead className="w-10" />
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {runs.map((run: any) => (
-                <>
-                  <TableRow
-                    key={run.id}
-                    className={
-                      run.error || (run.assets && run.assets.length > 0)
-                        ? "cursor-pointer"
-                        : ""
-                    }
-                    onClick={() => {
-                      if (
-                        run.error ||
-                        (run.assets && run.assets.length > 0)
-                      ) {
-                        setExpandedRunId(
-                          expandedRunId === run.id ? null : run.id
-                        );
-                      }
-                    }}
-                  >
-                    <TableCell className="w-8 pr-0">
-                      {(run.error ||
-                        (run.assets && run.assets.length > 0)) &&
-                        (expandedRunId === run.id ? (
-                          <ChevronDown className="h-4 w-4 text-muted-foreground" />
-                        ) : (
-                          <ChevronRight className="h-4 w-4 text-muted-foreground" />
-                        ))}
-                    </TableCell>
-                    <TableCell className="font-mono text-xs">
-                      {run.jobId || <span className="text-muted-foreground">{"\u2014"}</span>}
-                    </TableCell>
-                    <TableCell className="font-mono text-sm">
-                      {run.scraperType}
-                    </TableCell>
-                    <TableCell className="text-sm">
-                      {run.platform ? (
-                        <Badge variant="outline" className="capitalize text-xs">
-                          {run.platform}
-                        </Badge>
-                      ) : (
-                        <span className="text-muted-foreground">{"\u2014"}</span>
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      <Badge
-                        variant={
-                          run.status === "completed"
-                            ? "default"
-                            : run.status === "running"
-                              ? "secondary"
-                              : "destructive"
-                        }
-                      >
-                        {run.status}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      {run.queue ? (
-                        <Badge variant="outline" className="text-[10px]">
-                          {run.queue}
-                        </Badge>
-                      ) : (
-                        <span className="text-muted-foreground">{"\u2014"}</span>
-                      )}
-                    </TableCell>
-                    <TableCell className="text-sm">
-                      {run.triggeredBy ? (
-                        run.triggeredBy === "scheduler" ? (
-                          <Badge variant="outline" className="text-xs">
-                            scheduler
-                          </Badge>
-                        ) : (
-                          <span className="text-muted-foreground">
-                            {run.triggeredBy}
-                          </span>
-                        )
-                      ) : (
-                        <span className="text-muted-foreground">{"\u2014"}</span>
-                      )}
-                    </TableCell>
-                    <TableCell className="text-sm text-muted-foreground">
-                      {run.createdAt ? formatDateTime(run.createdAt) : "\u2014"}
-                    </TableCell>
-                    <TableCell className="text-sm text-muted-foreground">
-                      {run.startedAt ? formatDateTime(run.startedAt) : "\u2014"}
-                    </TableCell>
-                    <TableCell className="text-sm">
-                      {run.metadata?.duration_ms
-                        ? `${(run.metadata.duration_ms / 1000).toFixed(1)}s`
-                        : "\u2014"}
-                    </TableCell>
-                    <TableCell className="text-sm">
-                      {run.metadata?.items_scraped != null ? (
-                        <span>
-                          {run.metadata.items_scraped} scraped
-                          {run.metadata.items_failed > 0 && (
-                            <span className="text-destructive ml-1">
-                              ({run.metadata.items_failed} failed)
-                            </span>
-                          )}
-                        </span>
-                      ) : (
-                        "\u2014"
-                      )}
-                    </TableCell>
-                    <TableCell className="text-sm text-muted-foreground">
-                      {run.assets && run.assets.length > 0
-                        ? run.assets.length <= 3
-                          ? run.assets.map((a: any, i: number) => (
-                              <span key={i}>
-                                {i > 0 && ", "}
-                                <Link href={a.href} className="text-primary hover:underline" onClick={(e) => e.stopPropagation()}>
-                                  {a.name}
-                                </Link>
-                              </span>
-                            ))
-                          : <>
-                              {run.assets.slice(0, 2).map((a: any, i: number) => (
-                                <span key={i}>
-                                  {i > 0 && ", "}
-                                  <Link href={a.href} className="text-primary hover:underline" onClick={(e) => e.stopPropagation()}>
-                                    {a.name}
-                                  </Link>
-                                </span>
-                              ))}
-                              {` +${run.assets.length - 2}`}
-                            </>
-                        : "\u2014"}
-                    </TableCell>
-                    <TableCell>
-                      {(run.status === "failed" || run.status === "completed") && (
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="h-7 w-7 p-0"
-                          disabled={retryingRunId === String(run.id)}
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            retryRun(String(run.id));
-                          }}
-                          title="Retry this run"
-                        >
-                          <RotateCw
-                            className={`h-3.5 w-3.5 ${retryingRunId === String(run.id) ? "animate-spin" : ""}`}
-                          />
-                        </Button>
-                      )}
-                    </TableCell>
-                  </TableRow>
-                  {expandedRunId === run.id && (
-                    <TableRow key={`${run.id}-details`}>
-                      <TableCell colSpan={13} className="bg-muted/30 p-4">
-                        {run.error && (
-                          <div className="mb-3">
-                            <div className="text-sm font-medium text-destructive mb-1">
-                              Error
-                            </div>
-                            <CopyableError error={run.error} />
-                          </div>
-                        )}
-                        {run.assets && run.assets.length > 0 && (
-                          <div>
-                            <div className="text-sm font-medium mb-1">
-                              Scraped Assets ({run.assets.length})
-                            </div>
-                            <div className="flex flex-wrap gap-1">
-                              {run.assets.map(
-                                (asset: any, i: number) => (
-                                  <Link key={i} href={asset.href}>
-                                    <Badge
-                                      variant="outline"
-                                      className="text-xs cursor-pointer hover:bg-primary hover:text-primary-foreground transition-colors"
-                                    >
-                                      {asset.name}
-                                    </Badge>
-                                  </Link>
-                                )
-                              )}
-                            </div>
-                          </div>
-                        )}
-                        {!run.error &&
-                          (!run.assets || run.assets.length === 0) && (
-                            <p className="text-sm text-muted-foreground">
-                              No additional details
-                            </p>
-                          )}
-                      </TableCell>
-                    </TableRow>
-                  )}
-                </>
-              ))}
-              {runs.length === 0 && (
-                <TableRow>
-                  <TableCell
-                    colSpan={13}
-                    className="text-center text-muted-foreground"
-                  >
-                    No scraper runs yet
-                  </TableCell>
-                </TableRow>
-              )}
-            </TableBody>
-          </Table>
-
-          {/* Pagination */}
-          {totalPages > 1 && (
-            <div className="flex items-center justify-between mt-4">
-              <span className="text-sm text-muted-foreground">
-                {total} total runs
-              </span>
-              <div className="flex items-center gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  disabled={page === 0}
-                  onClick={() => setPage((p) => p - 1)}
-                >
-                  <ChevronLeft className="h-4 w-4" />
-                </Button>
-                <span className="text-sm">
-                  {page + 1} / {totalPages}
-                </span>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  disabled={page >= totalPages - 1}
-                  onClick={() => setPage((p) => p + 1)}
-                >
-                  <ChevronRight className="h-4 w-4" />
-                </Button>
-              </div>
-            </div>
-          )}
-        </CardContent>
-      </Card>
-
-      <ConfirmModal
-        open={drainConfirm}
-        title="Clear Waiting Jobs"
-        description={`All ${queueStatus?.counts.waiting ?? 0} waiting jobs will be removed from both queues. Active jobs will not be affected. This action cannot be undone.`}
-        confirmLabel="Clear All"
-        onConfirm={drainQueue}
-        onCancel={() => setDrainConfirm(false)}
+      <RunHistoryTable
+        runs={runs}
+        total={total}
+        page={page}
+        filterType={filterType}
+        filterTrigger={filterTrigger}
+        filterQueue={filterQueue}
+        filterPlatform={filterPlatform}
+        onPageChange={(p) => setPage(p)}
+        onFilterTypeChange={(v) => { setFilterType(v); setPage(0); }}
+        onFilterTriggerChange={(v) => { setFilterTrigger(v); setPage(0); }}
+        onFilterQueueChange={(v) => { setFilterQueue(v); setPage(0); }}
+        onFilterPlatformChange={(v) => { setFilterPlatform(v); setPage(0); }}
+        onRetry={retryRun}
+        onRefresh={loadData}
+        retryingRunId={retryingRunId}
       />
-
-      <ConfirmModal
-        open={clearFailedConfirm}
-        title="Clear Failed Jobs"
-        description={`All ${queueStatus?.counts.failed ?? 0} failed jobs will be removed from both queues. This action cannot be undone.`}
-        confirmLabel="Clear All"
-        onConfirm={clearFailedJobs}
-        onCancel={() => setClearFailedConfirm(false)}
-      />
-
-      <ConfirmModal
-        open={killJobConfirm !== null}
-        title="Kill Active Job"
-        description={`This will forcefully remove the active "${killJobConfirm?.type}" job (${killJobConfirm?.id}). The job will be terminated and cannot be recovered.`}
-        confirmLabel="Kill Job"
-        onConfirm={() => {
-          if (killJobConfirm) {
-            removeJob(killJobConfirm.id);
-            setKillJobConfirm(null);
-          }
-        }}
-        onCancel={() => setKillJobConfirm(null)}
-      />
-    </div>
-  );
-}
-
-function CopyableError({ error }: { error: string }) {
-  const [copied, setCopied] = useState(false);
-
-  const handleCopy = async () => {
-    await navigator.clipboard.writeText(error);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-  };
-
-  return (
-    <div className="relative group">
-      <pre className="text-xs bg-destructive/10 text-destructive p-3 rounded-md whitespace-pre-wrap break-words max-h-[7.5rem] overflow-y-auto">
-        {error}
-      </pre>
-      <button
-        onClick={(e) => { e.stopPropagation(); handleCopy(); }}
-        className="absolute top-1.5 right-1.5 p-1 rounded bg-destructive/10 hover:bg-destructive/20 text-destructive opacity-0 group-hover:opacity-100 transition-opacity"
-        title="Copy error"
-      >
-        {copied ? (
-          <Check className="w-3.5 h-3.5" />
-        ) : (
-          <Copy className="w-3.5 h-3.5" />
-        )}
-      </button>
     </div>
   );
 }
