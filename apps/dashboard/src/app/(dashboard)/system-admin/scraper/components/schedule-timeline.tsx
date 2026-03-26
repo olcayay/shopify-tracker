@@ -58,6 +58,7 @@ interface TimelineBlock {
   avgDurationMs: number | null;
   lastDurationMs: number | null;
   lastStatus: string | null;
+  lastJobId: string | null;
   itemsFailed: number | null;
   currentlyRunning: boolean;
   runningStartedAt: string | null;
@@ -122,6 +123,7 @@ export function ScheduleTimeline({ healthData }: ScheduleTimelineProps) {
           avgDurationMs: cell?.avgDurationMs ?? null,
           lastDurationMs: cell?.lastRun?.durationMs ?? null,
           lastStatus: cell?.lastRun?.status ?? null,
+          lastJobId: cell?.lastRun?.jobId ?? null,
           itemsFailed: cell?.lastRun?.itemsFailed ?? null,
           currentlyRunning: cell?.currentlyRunning ?? false,
           runningStartedAt: cell?.runningStartedAt ?? null,
@@ -327,12 +329,16 @@ export function ScheduleTimeline({ healthData }: ScheduleTimelineProps) {
                         )}
 
                         {/* Schedule blocks */}
-                        {platformBlocks.map((block, i) => {
-                          const blockHour = block.scheduledHour + block.scheduledMinute / 60;
-                          const startFrac = (blockHour - startHour) / VISIBLE_HOURS;
-
-                          // Skip blocks outside visible range
-                          if (startFrac < -0.1 || startFrac > 1.05) return null;
+                        {platformBlocks.flatMap((block, i) => {
+                          const baseHour = block.scheduledHour + block.scheduledMinute / 60;
+                          // Show block at all 24h repeats that fall in the visible range
+                          const instances: number[] = [];
+                          for (let n = -2; n <= 2; n++) {
+                            const h = baseHour + 24 * n;
+                            const frac = (h - startHour) / VISIBLE_HOURS;
+                            if (frac >= -0.1 && frac <= 1.05) instances.push(h);
+                          }
+                          if (instances.length === 0) return [];
 
                           const durationMs = block.avgDurationMs || block.lastDurationMs || 600_000;
                           const durationHours = durationMs / 3_600_000;
@@ -349,8 +355,10 @@ export function ScheduleTimeline({ healthData }: ScheduleTimelineProps) {
                           const isRunning = block.currentlyRunning;
                           const timeUntil = formatTimeUntil(block.nextRunAt);
 
-                          return (
-                            <Tooltip key={`${block.scraperType}-${block.scheduledHour}-${i}`}>
+                          return instances.map((instHour) => {
+                            const startFrac = (instHour - startHour) / VISIBLE_HOURS;
+                            return (
+                            <Tooltip key={`${block.scraperType}-${instHour}-${i}`}>
                               <TooltipTrigger asChild>
                                 <div
                                   className={`absolute top-1 bottom-1 rounded-sm cursor-default transition-all hover:brightness-110 flex items-center justify-center overflow-visible ${
@@ -379,6 +387,9 @@ export function ScheduleTimeline({ healthData }: ScheduleTimelineProps) {
                                   <div className="font-medium">
                                     {PLATFORM_LABELS[block.platform]} — {SCRAPER_TYPE_LABELS[block.scraperType] || block.scraperType}
                                   </div>
+                                  {block.lastJobId && (
+                                    <div>Job ID: <span className="font-mono">{block.lastJobId}</span></div>
+                                  )}
                                   <div>
                                     Scheduled: {formatHour(block.scheduledHour)}
                                     {block.scheduledMinute > 0 ? `:${String(block.scheduledMinute).padStart(2, "0")}` : ""} UTC
@@ -417,6 +428,7 @@ export function ScheduleTimeline({ healthData }: ScheduleTimelineProps) {
                               </TooltipContent>
                             </Tooltip>
                           );
+                          });
                         })}
                       </div>
                     )}

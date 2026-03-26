@@ -48,6 +48,8 @@ interface HealthCell {
   platform: string;
   scraperType: string;
   lastRun: {
+    runId?: string;
+    jobId?: string | null;
     status: string;
     completedAt: string | null;
     durationMs: number | null;
@@ -667,6 +669,12 @@ function CellTooltip({ cell, status }: { cell: HealthCell; status: CellStatus })
               {STATUS_LABEL_MAP[status] || cell.lastRun.status}
             </span>
           </div>
+          {cell.lastRun.jobId && (
+            <div className="flex justify-between gap-4">
+              <span className="text-muted-foreground">Job ID</span>
+              <span className="font-mono">{cell.lastRun.jobId}</span>
+            </div>
+          )}
           {cell.lastRun.completedAt && (
             <div className="flex justify-between gap-4">
               <span className="text-muted-foreground">Completed</span>
