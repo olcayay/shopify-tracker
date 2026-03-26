@@ -674,7 +674,7 @@ export const systemAdminRoutes: FastifyPluginAsync = async (app) => {
     const latestRuns = await db.execute(sql`
       SELECT DISTINCT ON (platform, scraper_type)
         id, platform, scraper_type, status, completed_at, started_at,
-        metadata, error
+        metadata, error, job_id
       FROM scrape_runs
       WHERE status IN ('completed', 'failed')
         AND platform IS NOT NULL
@@ -762,6 +762,7 @@ export const systemAdminRoutes: FastifyPluginAsync = async (app) => {
           const meta = latest.metadata as Record<string, unknown> | null;
           lastRun = {
             runId: latest.id as string,
+            jobId: (latest.job_id as string) ?? null,
             status: latest.status as string,
             completedAt: latest.completed_at ? new Date(latest.completed_at).toISOString() : null,
             startedAt: latest.started_at ? new Date(latest.started_at).toISOString() : null,

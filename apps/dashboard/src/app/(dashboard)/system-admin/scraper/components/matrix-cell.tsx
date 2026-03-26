@@ -22,6 +22,7 @@ export interface HealthCell {
   scraperType: string;
   lastRun: {
     runId?: string;
+    jobId?: string | null;
     status: string;
     completedAt: string | null;
     startedAt: string | null;
@@ -183,8 +184,8 @@ export function MatrixCell({ cell, onTrigger, triggering }: MatrixCellProps) {
               <span className="text-muted-foreground"> (started {timeAgo(cell.runningStartedAt)})</span>
             )}
           </div>
-          {cell.currentlyRunning && cell.runningJobId && (
-            <div>Job ID: <span className="font-mono">{cell.runningJobId}</span></div>
+          {(cell.currentlyRunning ? cell.runningJobId : cell.lastRun?.jobId) && (
+            <div>Job ID: <span className="font-mono">{cell.currentlyRunning ? cell.runningJobId : cell.lastRun?.jobId}</span></div>
           )}
           {cell.lastRun?.completedAt && (
             <div>Completed: {timeAgo(cell.lastRun.completedAt)}</div>
