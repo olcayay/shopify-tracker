@@ -34,6 +34,7 @@ import {
   keywordAutoSuggestions,
   aiLogs,
   categoryParents,
+  smokeTestResults,
 } from "@appranks/db";
 import { isPlatformId, PLATFORM_IDS, SCRAPER_SCHEDULES, getNextRunFromCron, getScheduleIntervalMs, findSchedule, SMOKE_PLATFORMS, SMOKE_CHECKS, BROWSER_PLATFORMS, getSmokeCheck, getSmokePlatform, countTotalSmokeChecks } from "@appranks/shared";
 import type { SmokeCheckName } from "@appranks/shared";
@@ -973,6 +974,18 @@ export const systemAdminRoutes: FastifyPluginAsync = async (app) => {
             ...(error ? { error } : {}),
           });
 
+          // Persist result to DB (fire-and-forget)
+          db.insert(smokeTestResults)
+            .values({
+              platform: job.platform,
+              checkName: job.check,
+              status,
+              durationMs,
+              error: error ?? null,
+              output: output.slice(-5000),
+            })
+            .then(() => {}, () => {});
+
           resolve();
         }
 
@@ -1125,7 +1138,83 @@ export const systemAdminRoutes: FastifyPluginAsync = async (app) => {
       });
     });
 
+    // Persist result to DB (fire-and-forget)
+    db.insert(smokeTestResults)
+      .values({
+        platform,
+        checkName: check,
+        status: result.status,
+        durationMs: result.durationMs,
+        error: result.error ?? null,
+        output: result.output.slice(-5000),
+      })
+      .then(() => {}, () => {});
+
     return result;
+  });
+
+  // GET /api/system-admin/scraper/smoke-test/history
+  app.get("/scraper/smoke-test/history", async (_request, reply) => {
+    // Get the last 10 results per platform+check using window function
+    const rows = await db.execute(sql`
+      SELECT platform, check_name, status, error, duration_ms, created_at
+      FROM (
+        SELECT *, ROW_NUMBER() OVER (
+          PARTITION BY platform, check_name
+          ORDER BY created_at DESC
+        ) AS rn
+        FROM smoke_test_results
+      ) sub
+      WHERE rn <= 10
+      ORDER BY platform, check_name, created_at DESC
+    `);
+
+    // Aggregate in JS
+    const map = new Map<string, {
+      platform: string;
+      checkName: string;
+      passCount: number;
+      totalCount: number;
+      lastRunAt: string | null;
+      lastStatus: string | null;
+      recentErrors: { error: string; createdAt: string; durationMs: number | null }[];
+    }>();
+
+    for (const row of rows as any[]) {
+      const key = `${row.platform}:${row.check_name}`;
+      let entry = map.get(key);
+      if (!entry) {
+        entry = {
+          platform: row.platform,
+          checkName: row.check_name,
+          passCount: 0,
+          totalCount: 0,
+          lastRunAt: null,
+          lastStatus: null,
+          recentErrors: [],
+        };
+        map.set(key, entry);
+      }
+      entry.totalCount++;
+      if (row.status === "pass") entry.passCount++;
+      if (!entry.lastRunAt) {
+        entry.lastRunAt = row.created_at instanceof Date
+          ? row.created_at.toISOString()
+          : String(row.created_at);
+        entry.lastStatus = row.status;
+      }
+      if (row.status === "fail" && row.error) {
+        entry.recentErrors.push({
+          error: row.error,
+          createdAt: row.created_at instanceof Date
+            ? row.created_at.toISOString()
+            : String(row.created_at),
+          durationMs: row.duration_ms,
+        });
+      }
+    }
+
+    return reply.send(Array.from(map.values()));
   });
 
   // GET /api/system-admin/scraper/runs

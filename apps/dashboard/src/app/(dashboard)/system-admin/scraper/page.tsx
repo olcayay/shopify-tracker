@@ -12,6 +12,7 @@ import { OperationalMatrix } from "./components/operational-matrix";
 import { UtilityScrapers } from "./components/utility-scrapers";
 import { QueueStatusCard } from "./components/queue-status-card";
 import { RunHistoryTable } from "./components/run-history-table";
+import { SmokeTestHistory, type SmokeHistoryEntry } from "./components/smoke-test-history";
 
 const PAGE_SIZE = 20;
 
@@ -32,6 +33,7 @@ export default function ScraperPage() {
   const [page, setPage] = useState(0);
   const [retryingRunId, setRetryingRunId] = useState<string | null>(null);
   const [lastRefresh, setLastRefresh] = useState<Date | null>(null);
+  const [smokeHistory, setSmokeHistory] = useState<SmokeHistoryEntry[] | null>(null);
 
   const loadData = useCallback(async () => {
     const params = new URLSearchParams();
@@ -43,11 +45,12 @@ export default function ScraperPage() {
     params.set("limit", String(PAGE_SIZE));
     params.set("offset", String(page * PAGE_SIZE));
 
-    const [healthRes, statsRes, runsRes, queueRes] = await Promise.all([
+    const [healthRes, statsRes, runsRes, queueRes, smokeRes] = await Promise.all([
       fetchWithAuth("/api/system-admin/scraper/health"),
       fetchWithAuth("/api/system-admin/stats?platform=all"),
       fetchWithAuth(`/api/system-admin/scraper/runs?${params.toString()}`),
       fetchWithAuth("/api/system-admin/scraper/queue"),
+      fetchWithAuth("/api/system-admin/scraper/smoke-test/history"),
     ]);
 
     if (healthRes.ok) setHealthData(await healthRes.json());
@@ -58,6 +61,7 @@ export default function ScraperPage() {
       setTotal(data.total);
     }
     if (queueRes.ok) setQueueStatus(await queueRes.json());
+    if (smokeRes.ok) setSmokeHistory(await smokeRes.json());
     setLastRefresh(new Date());
   }, [fetchWithAuth, filterType, filterTrigger, filterQueue, filterPlatform, filterStatus, page]);
 
@@ -246,6 +250,9 @@ export default function ScraperPage() {
         onTriggerAll={triggerAllForPlatform}
         triggering={triggering}
       />
+
+      {/* Smoke Test History */}
+      <SmokeTestHistory history={smokeHistory} />
 
       {/* Utility Scrapers */}
       <UtilityScrapers

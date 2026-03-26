@@ -86,6 +86,7 @@ describe("ScraperPage", () => {
     mockFetchWithAuth.mockImplementation((url: string) => {
       if (url.includes("/scraper/health")) return Promise.resolve({ ok: true, json: () => Promise.resolve(mockHealthData) });
       if (url.includes("/stats")) return Promise.resolve({ ok: true, json: () => Promise.resolve(mockStats) });
+      if (url.includes("/smoke-test/history")) return Promise.resolve({ ok: true, json: () => Promise.resolve([]) });
       if (url.includes("/runs")) return Promise.resolve({ ok: true, json: () => Promise.resolve(mockRuns) });
       if (url.includes("/queue")) return Promise.resolve({ ok: true, json: () => Promise.resolve(mockQueueStatus) });
       return Promise.resolve({ ok: true, json: () => Promise.resolve({}) });
@@ -290,5 +291,39 @@ describe("ScraperPage", () => {
       // There should be 11 "All" buttons (one per platform)
       expect(screen.getAllByText("All").length).toBe(11);
     });
+  });
+
+  it("renders smoke test history section with empty state", async () => {
+    render(<ScraperPage />);
+    await waitFor(() => {
+      expect(screen.getByText("Smoke Test History")).toBeInTheDocument();
+    });
+    expect(screen.getByText(/No smoke test results yet/)).toBeInTheDocument();
+  });
+
+  it("renders smoke test history with data", async () => {
+    const mockSmokeHistory = [
+      { platform: "shopify", checkName: "categories", passCount: 8, totalCount: 10, lastRunAt: new Date().toISOString(), lastStatus: "pass", recentErrors: [] },
+      { platform: "shopify", checkName: "app", passCount: 3, totalCount: 10, lastRunAt: new Date().toISOString(), lastStatus: "fail", recentErrors: [{ error: "timeout", createdAt: new Date().toISOString(), durationMs: 60000 }] },
+    ];
+    mockFetchWithAuth.mockImplementation((url: string) => {
+      if (url.includes("/scraper/health")) return Promise.resolve({ ok: true, json: () => Promise.resolve(mockHealthData) });
+      if (url.includes("/stats")) return Promise.resolve({ ok: true, json: () => Promise.resolve(mockStats) });
+      if (url.includes("/smoke-test/history")) return Promise.resolve({ ok: true, json: () => Promise.resolve(mockSmokeHistory) });
+      if (url.includes("/runs")) return Promise.resolve({ ok: true, json: () => Promise.resolve(mockRuns) });
+      if (url.includes("/queue")) return Promise.resolve({ ok: true, json: () => Promise.resolve(mockQueueStatus) });
+      return Promise.resolve({ ok: true, json: () => Promise.resolve({}) });
+    });
+    render(<ScraperPage />);
+    await waitFor(() => {
+      expect(screen.getByText("Smoke Test History")).toBeInTheDocument();
+    });
+    // Should show rate badges
+    await waitFor(() => {
+      expect(screen.getByText("8/10")).toBeInTheDocument();
+    });
+    expect(screen.getByText("3/10")).toBeInTheDocument();
+    // Should show overall rate
+    expect(screen.getByText(/55% overall/)).toBeInTheDocument();
   });
 });

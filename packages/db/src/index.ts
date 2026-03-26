@@ -22,6 +22,7 @@ import * as platformVisibilitySchema from "./schema/platform-visibility.js";
 import * as researchVirtualAppsSchema from "./schema/research-virtual-apps.js";
 import * as aiLogsSchema from "./schema/ai-logs.js";
 import * as categoryParentsSchema from "./schema/category-parents.js";
+import * as smokeTestResultsSchema from "./schema/smoke-test-results.js";
 
 export const schema = {
   ...scrapeRunsSchema,
@@ -45,6 +46,7 @@ export const schema = {
   ...researchVirtualAppsSchema,
   ...aiLogsSchema,
   ...categoryParentsSchema,
+  ...smokeTestResultsSchema,
 };
 
 export function createDb(databaseUrl: string) {
@@ -114,3 +116,4 @@ export { platformVisibility } from "./schema/platform-visibility.js";
 export { researchVirtualApps } from "./schema/research-virtual-apps.js";
 export { aiLogs } from "./schema/ai-logs.js";
 export { categoryParents } from "./schema/category-parents.js";
+export { smokeTestResults } from "./schema/smoke-test-results.js";

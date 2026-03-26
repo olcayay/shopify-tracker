@@ -106,6 +106,100 @@ describe("Smoke Test API — auth & validation", () => {
   });
 });
 
+describe("Smoke Test API — history endpoint", () => {
+  it("GET smoke-test/history returns 401 without token", async () => {
+    const { systemAdminRoutes } = await import("../../routes/system-admin.js");
+    const app = await buildTestApp({
+      routes: systemAdminRoutes,
+      prefix: "/api/system-admin",
+      db: { executeResult: [] },
+    });
+    const res = await app.inject({
+      method: "GET",
+      url: "/api/system-admin/scraper/smoke-test/history",
+    });
+    expect(res.statusCode).toBe(401);
+    await app.close();
+  });
+
+  it("GET smoke-test/history returns 403 for non-admin", async () => {
+    const { systemAdminRoutes } = await import("../../routes/system-admin.js");
+    const app = await buildTestApp({
+      routes: systemAdminRoutes,
+      prefix: "/api/system-admin",
+      db: { executeResult: [] },
+    });
+    const res = await app.inject({
+      method: "GET",
+      url: "/api/system-admin/scraper/smoke-test/history",
+      headers: authHeaders(userToken()),
+    });
+    expect(res.statusCode).toBe(403);
+    await app.close();
+  });
+
+  it("GET smoke-test/history returns empty array when no data", async () => {
+    const { systemAdminRoutes } = await import("../../routes/system-admin.js");
+    const app = await buildTestApp({
+      routes: systemAdminRoutes,
+      prefix: "/api/system-admin",
+      db: { executeResult: [] },
+    });
+    const res = await app.inject({
+      method: "GET",
+      url: "/api/system-admin/scraper/smoke-test/history",
+      headers: authHeaders(adminToken()),
+    });
+    expect(res.statusCode).toBe(200);
+    const body = res.json();
+    expect(Array.isArray(body)).toBe(true);
+    expect(body).toHaveLength(0);
+    await app.close();
+  });
+
+  it("GET smoke-test/history aggregates results correctly", async () => {
+    const now = new Date();
+    const mockRows = [
+      { platform: "shopify", check_name: "categories", status: "pass", error: null, duration_ms: 1200, created_at: now },
+      { platform: "shopify", check_name: "categories", status: "pass", error: null, duration_ms: 1100, created_at: new Date(now.getTime() - 60000) },
+      { platform: "shopify", check_name: "categories", status: "fail", error: "timeout", duration_ms: 60000, created_at: new Date(now.getTime() - 120000) },
+      { platform: "shopify", check_name: "app", status: "fail", error: "exit code 1", duration_ms: 5000, created_at: now },
+    ];
+    const { systemAdminRoutes } = await import("../../routes/system-admin.js");
+    const app = await buildTestApp({
+      routes: systemAdminRoutes,
+      prefix: "/api/system-admin",
+      db: { executeResult: mockRows },
+    });
+    const res = await app.inject({
+      method: "GET",
+      url: "/api/system-admin/scraper/smoke-test/history",
+      headers: authHeaders(adminToken()),
+    });
+    expect(res.statusCode).toBe(200);
+    const body = res.json();
+    expect(body).toHaveLength(2);
+
+    const catEntry = body.find((e: any) => e.checkName === "categories");
+    expect(catEntry).toBeDefined();
+    expect(catEntry.platform).toBe("shopify");
+    expect(catEntry.passCount).toBe(2);
+    expect(catEntry.totalCount).toBe(3);
+    expect(catEntry.lastStatus).toBe("pass");
+    expect(catEntry.recentErrors).toHaveLength(1);
+    expect(catEntry.recentErrors[0].error).toBe("timeout");
+
+    const appEntry = body.find((e: any) => e.checkName === "app");
+    expect(appEntry).toBeDefined();
+    expect(appEntry.passCount).toBe(0);
+    expect(appEntry.totalCount).toBe(1);
+    expect(appEntry.lastStatus).toBe("fail");
+    expect(appEntry.recentErrors).toHaveLength(1);
+
+    await app.close();
+  });
+});
+
 describe("Smoke Test API — SSE streaming", () => {
   it("streams SSE events with init event for admin", async () => {
     const { systemAdminRoutes } = await import("../../routes/system-admin.js");
