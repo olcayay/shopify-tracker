@@ -35,6 +35,8 @@ export interface HealthCell {
   prevDurationMs: number | null;
   currentlyRunning: boolean;
   runningStartedAt: string | null;
+  runningRunId?: string | null;
+  runningJobId?: string | null;
   schedule: { cron: string; nextRunAt: string } | null;
 }
 
@@ -181,6 +183,9 @@ export function MatrixCell({ cell, onTrigger, triggering }: MatrixCellProps) {
               <span className="text-muted-foreground"> (started {timeAgo(cell.runningStartedAt)})</span>
             )}
           </div>
+          {cell.currentlyRunning && cell.runningJobId && (
+            <div>Job ID: <span className="font-mono">{cell.runningJobId}</span></div>
+          )}
           {cell.lastRun?.completedAt && (
             <div>Completed: {timeAgo(cell.lastRun.completedAt)}</div>
           )}

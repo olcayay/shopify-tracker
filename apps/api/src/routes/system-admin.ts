@@ -701,12 +701,13 @@ export const systemAdminRoutes: FastifyPluginAsync = async (app) => {
       GROUP BY platform, scraper_type
     `);
 
-    // 3. Currently running
+    // 3. Currently running (exclude runs older than 2h — likely stuck/orphaned)
     const runningRuns = await db.execute(sql`
-      SELECT id, platform, scraper_type, started_at
+      SELECT id, platform, scraper_type, started_at, job_id
       FROM scrape_runs
       WHERE status = 'running' AND platform IS NOT NULL
         AND (triggered_by IS NULL OR triggered_by != 'smoke-test')
+        AND started_at > NOW() - INTERVAL '2 hours'
     `);
 
     // 4. Recent failures (last 24h, max 10)
@@ -780,6 +781,8 @@ export const systemAdminRoutes: FastifyPluginAsync = async (app) => {
           prevDurationMs: durations?.prev_duration_ms ?? null,
           currentlyRunning: !!running,
           runningStartedAt: running?.started_at ? new Date(running.started_at).toISOString() : null,
+          runningRunId: running?.id ?? null,
+          runningJobId: running?.job_id ?? null,
           schedule: schedule
             ? { cron: schedule.cron, nextRunAt: getNextRunFromCron(schedule.cron).toISOString() }
             : null,
