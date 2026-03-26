@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import {
   SMOKE_PLATFORMS,
   SMOKE_CHECKS,
@@ -208,17 +208,24 @@ function FailureDetails({
   );
 }
 
-export function SmokeTestPanel() {
+export function SmokeTestPanel({ onComplete }: { onComplete?: () => void }) {
   const { isRunning, results, progress, summary, start, stop, retryCheck } =
     useSmokeTest();
   const [isOpen, setIsOpen] = useState(false);
   const [expandedCells, setExpandedCells] = useState<Set<string>>(new Set());
   const hasResults = results.size > 0;
+  const wasRunningRef = useRef(false);
 
-  // Auto-expand when test starts
+  // Auto-expand when test starts, call onComplete when test finishes
   useEffect(() => {
-    if (isRunning) setIsOpen(true);
-  }, [isRunning]);
+    if (isRunning) {
+      setIsOpen(true);
+      wasRunningRef.current = true;
+    } else if (wasRunningRef.current) {
+      wasRunningRef.current = false;
+      onComplete?.();
+    }
+  }, [isRunning, onComplete]);
 
   const toggleCellExpand = (key: string) => {
     setExpandedCells((prev) => {

@@ -35,6 +35,7 @@ import {
   Check,
 } from "lucide-react";
 import { SmokeTestPanel } from "./smoke-test-panel";
+import { SmokeTestHistory, type SmokeHistoryEntry } from "../scraper/components/smoke-test-history";
 import { PLATFORM_LABELS, PLATFORM_COLORS, SCRAPER_TYPE_LABELS, HEALTH_SCRAPER_TYPES } from "@/lib/platform-display";
 
 interface HealthCell {
@@ -132,17 +133,29 @@ export default function ScraperHealthPage() {
   const [loading, setLoading] = useState(true);
   const [lastRefresh, setLastRefresh] = useState<Date | null>(null);
   const [retrying, setRetrying] = useState<string | null>(null);
+  const [smokeHistory, setSmokeHistory] = useState<SmokeHistoryEntry[] | null>(null);
 
   const fetchHealth = useCallback(async () => {
     try {
-      const res = await fetchWithAuth("/api/system-admin/scraper/health");
+      const [res, smokeRes] = await Promise.all([
+        fetchWithAuth("/api/system-admin/scraper/health"),
+        fetchWithAuth("/api/system-admin/scraper/smoke-test/history"),
+      ]);
       if (res.ok) {
         setData(await res.json());
         setLastRefresh(new Date());
       }
+      if (smokeRes.ok) {
+        setSmokeHistory(await smokeRes.json());
+      }
     } finally {
       setLoading(false);
     }
+  }, [fetchWithAuth]);
+
+  const refreshSmokeHistory = useCallback(async () => {
+    const res = await fetchWithAuth("/api/system-admin/scraper/smoke-test/history");
+    if (res.ok) setSmokeHistory(await res.json());
   }, [fetchWithAuth]);
 
   useEffect(() => {
@@ -324,7 +337,10 @@ export default function ScraperHealthPage() {
       )}
 
       {/* Smoke Test Panel */}
-      <SmokeTestPanel />
+      <SmokeTestPanel onComplete={refreshSmokeHistory} />
+
+      {/* Smoke Test History — last 10 runs success ratio */}
+      <SmokeTestHistory history={smokeHistory} />
 
       {/* Bottom panels: Recent Failures, Duration Anomalies, Active Jobs */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
