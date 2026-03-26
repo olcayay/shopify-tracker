@@ -295,6 +295,12 @@ function ErrorDetailModal({ cell, onClose }: { cell: HealthCell; onClose: () => 
           <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs">
             <div className="text-muted-foreground">Run ID</div>
             <div className="font-mono">{cell.lastRun?.runId || "N/A"}</div>
+            {cell.lastRun?.jobId && (
+              <>
+                <div className="text-muted-foreground">Job ID</div>
+                <div className="font-mono">{cell.lastRun.jobId}</div>
+              </>
+            )}
             <div className="text-muted-foreground">Completed</div>
             <div>{cell.lastRun?.completedAt ? formatDateTime(cell.lastRun.completedAt) : "N/A"}</div>
             <div className="text-muted-foreground">Duration</div>

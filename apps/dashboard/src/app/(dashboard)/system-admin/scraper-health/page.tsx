@@ -563,6 +563,12 @@ function RecentFailureCard({
           <div className="grid grid-cols-2 gap-x-4 gap-y-0.5 text-xs px-5">
             <span className="text-muted-foreground">Run ID</span>
             <span className="font-mono">{f.id}</span>
+            {f.jobId && (
+              <>
+                <span className="text-muted-foreground">Job ID</span>
+                <span className="font-mono">{f.jobId}</span>
+              </>
+            )}
             <span className="text-muted-foreground">Completed</span>
             <span>{f.completedAt ? formatDateTime(f.completedAt) : "N/A"}</span>
             <span className="text-muted-foreground">Duration</span>
