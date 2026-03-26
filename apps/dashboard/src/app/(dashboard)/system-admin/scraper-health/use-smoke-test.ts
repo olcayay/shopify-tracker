@@ -53,9 +53,27 @@ export function useSmokeTest() {
   const abortControllerRef = useRef<AbortController | null>(null);
   const runningCountRef = useRef(0);
 
-  const start = useCallback(async () => {
-    // Reset state
-    setResults(new Map());
+  const start = useCallback(async (filter?: { platform?: string; check?: SmokeCheckName }) => {
+    const isPartialRun = !!(filter?.platform || filter?.check);
+
+    if (isPartialRun) {
+      // Partial run: reset only targeted cells, keep the rest
+      setResults((prev) => {
+        const next = new Map(prev);
+        for (const [key] of next) {
+          const [p, c] = key.split(":");
+          const matchesPlatform = !filter.platform || p === filter.platform;
+          const matchesCheck = !filter.check || c === filter.check;
+          if (matchesPlatform && matchesCheck) {
+            next.set(key, { platform: p, check: c as SmokeCheckName, status: "pending" });
+          }
+        }
+        return next;
+      });
+    } else {
+      // Full run: reset everything
+      setResults(new Map());
+    }
     setProgress({ completed: 0, total: 0, running: 0 });
     setSummary(null);
     setIsRunning(true);
@@ -66,8 +84,13 @@ export function useSmokeTest() {
 
     const token = getAccessToken();
     try {
+      const params = new URLSearchParams();
+      if (filter?.platform) params.set("platform", filter.platform);
+      if (filter?.check) params.set("check", filter.check);
+      const qs = params.toString();
+
       const response = await fetch(
-        `${API_BASE}/api/system-admin/scraper/smoke-test`,
+        `${API_BASE}/api/system-admin/scraper/smoke-test${qs ? `?${qs}` : ""}`,
         {
           headers: {
             ...(token ? { Authorization: `Bearer ${token}` } : {}),

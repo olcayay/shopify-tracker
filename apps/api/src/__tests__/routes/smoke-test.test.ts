@@ -246,4 +246,194 @@ describe("Smoke Test API — SSE streaming", () => {
       await app.close();
     }
   }, 15_000);
+
+  it("filters by platform query param (row filter)", async () => {
+    const { systemAdminRoutes } = await import("../../routes/system-admin.js");
+    const { SMOKE_PLATFORMS } = await import("@appranks/shared");
+    const app = await buildTestApp({
+      routes: systemAdminRoutes,
+      prefix: "/api/system-admin",
+      db: { executeResult: [] },
+    });
+
+    const address = await app.listen({ port: 0, host: "127.0.0.1" });
+    try {
+      const controller = new AbortController();
+      const token = adminToken();
+
+      const response = await fetch(
+        `${address}/api/system-admin/scraper/smoke-test?platform=shopify`,
+        {
+          headers: { Authorization: `Bearer ${token}` },
+          signal: controller.signal,
+        }
+      );
+
+      const reader = response.body!.getReader();
+      const decoder = new TextDecoder();
+      let buffer = "";
+
+      for (let i = 0; i < 10; i++) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+        if (buffer.includes("event: init")) break;
+      }
+
+      controller.abort();
+
+      // Extract init event data
+      const initMatch = buffer.match(/event: init\ndata: (.+)\n/);
+      expect(initMatch).toBeTruthy();
+      const initData = JSON.parse(initMatch![1]);
+
+      // Should only include shopify checks
+      const shopifyPlatform = SMOKE_PLATFORMS.find((p) => p.platform === "shopify");
+      expect(initData.totalChecks).toBe(shopifyPlatform!.checks.length);
+      expect(initData.filterPlatform).toBe("shopify");
+    } finally {
+      await app.close();
+    }
+  }, 15_000);
+
+  it("filters by check query param (column filter)", async () => {
+    const { systemAdminRoutes } = await import("../../routes/system-admin.js");
+    const { SMOKE_PLATFORMS } = await import("@appranks/shared");
+    const app = await buildTestApp({
+      routes: systemAdminRoutes,
+      prefix: "/api/system-admin",
+      db: { executeResult: [] },
+    });
+
+    const address = await app.listen({ port: 0, host: "127.0.0.1" });
+    try {
+      const controller = new AbortController();
+      const token = adminToken();
+
+      const response = await fetch(
+        `${address}/api/system-admin/scraper/smoke-test?check=categories`,
+        {
+          headers: { Authorization: `Bearer ${token}` },
+          signal: controller.signal,
+        }
+      );
+
+      const reader = response.body!.getReader();
+      const decoder = new TextDecoder();
+      let buffer = "";
+
+      for (let i = 0; i < 10; i++) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+        if (buffer.includes("event: init")) break;
+      }
+
+      controller.abort();
+
+      const initMatch = buffer.match(/event: init\ndata: (.+)\n/);
+      expect(initMatch).toBeTruthy();
+      const initData = JSON.parse(initMatch![1]);
+
+      // All platforms have categories, so count should match platform count
+      const platformsWithCategories = SMOKE_PLATFORMS.filter((p) =>
+        p.checks.some((c) => c.check === "categories")
+      );
+      expect(initData.totalChecks).toBe(platformsWithCategories.length);
+      expect(initData.filterCheck).toBe("categories");
+    } finally {
+      await app.close();
+    }
+  }, 15_000);
+
+  it("filters by both platform and check (cell filter)", async () => {
+    const { systemAdminRoutes } = await import("../../routes/system-admin.js");
+    const app = await buildTestApp({
+      routes: systemAdminRoutes,
+      prefix: "/api/system-admin",
+      db: { executeResult: [] },
+    });
+
+    const address = await app.listen({ port: 0, host: "127.0.0.1" });
+    try {
+      const controller = new AbortController();
+      const token = adminToken();
+
+      const response = await fetch(
+        `${address}/api/system-admin/scraper/smoke-test?platform=shopify&check=categories`,
+        {
+          headers: { Authorization: `Bearer ${token}` },
+          signal: controller.signal,
+        }
+      );
+
+      const reader = response.body!.getReader();
+      const decoder = new TextDecoder();
+      let buffer = "";
+
+      for (let i = 0; i < 10; i++) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+        if (buffer.includes("event: init")) break;
+      }
+
+      controller.abort();
+
+      const initMatch = buffer.match(/event: init\ndata: (.+)\n/);
+      expect(initMatch).toBeTruthy();
+      const initData = JSON.parse(initMatch![1]);
+
+      // Single cell: exactly 1 check
+      expect(initData.totalChecks).toBe(1);
+      expect(initData.filterPlatform).toBe("shopify");
+      expect(initData.filterCheck).toBe("categories");
+    } finally {
+      await app.close();
+    }
+  }, 15_000);
+
+  it("returns 0 checks for N/A cell filter", async () => {
+    const { systemAdminRoutes } = await import("../../routes/system-admin.js");
+    const app = await buildTestApp({
+      routes: systemAdminRoutes,
+      prefix: "/api/system-admin",
+      db: { executeResult: [] },
+    });
+
+    const address = await app.listen({ port: 0, host: "127.0.0.1" });
+    try {
+      const controller = new AbortController();
+      const token = adminToken();
+
+      // salesforce has no "featured" check
+      const response = await fetch(
+        `${address}/api/system-admin/scraper/smoke-test?platform=salesforce&check=featured`,
+        {
+          headers: { Authorization: `Bearer ${token}` },
+          signal: controller.signal,
+        }
+      );
+
+      const reader = response.body!.getReader();
+      const decoder = new TextDecoder();
+      let buffer = "";
+
+      for (let i = 0; i < 10; i++) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+        if (buffer.includes("event: init")) break;
+      }
+
+      controller.abort();
+
+      const initMatch = buffer.match(/event: init\ndata: (.+)\n/);
+      expect(initMatch).toBeTruthy();
+      const initData = JSON.parse(initMatch![1]);
+      expect(initData.totalChecks).toBe(0);
+    } finally {
+      await app.close();
+    }
+  }, 15_000);
 });

@@ -845,9 +845,16 @@ export const systemAdminRoutes: FastifyPluginAsync = async (app) => {
     };
   });
 
-  // GET /api/system-admin/scraper/smoke-test — SSE endpoint that runs all smoke test checks
+  // GET /api/system-admin/scraper/smoke-test — SSE endpoint that runs smoke test checks
+  // Optional query params for partial runs:
+  //   ?platform=canva         → row: all checks for one platform
+  //   ?check=categories       → column: one check across all platforms
+  //   ?platform=canva&check=categories → cell: single check
   app.get("/scraper/smoke-test", async (request, reply) => {
     const scraperDir = path.resolve(import.meta.dirname, "../../../scraper");
+    const query = request.query as { platform?: string; check?: string };
+    const filterPlatform = query.platform || null;
+    const filterCheck = (query.check as SmokeCheckName) || null;
 
     // SSE headers — must include CORS manually since reply.raw bypasses Fastify pipeline
     const origin = request.headers.origin || "*";
@@ -875,7 +882,7 @@ export const systemAdminRoutes: FastifyPluginAsync = async (app) => {
       reply.raw.write(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`);
     }
 
-    // Build check list
+    // Build check list, applying optional filters
     interface CheckJob {
       platform: string;
       check: SmokeCheckName;
@@ -885,7 +892,9 @@ export const systemAdminRoutes: FastifyPluginAsync = async (app) => {
     }
     const jobs: CheckJob[] = [];
     for (const sp of SMOKE_PLATFORMS) {
+      if (filterPlatform && sp.platform !== filterPlatform) continue;
       for (const c of sp.checks) {
+        if (filterCheck && c.check !== filterCheck) continue;
         jobs.push({
           platform: sp.platform,
           check: c.check,
@@ -900,6 +909,8 @@ export const systemAdminRoutes: FastifyPluginAsync = async (app) => {
       totalChecks: jobs.length,
       platforms: SMOKE_PLATFORMS.map((p) => p.platform),
       checks: SMOKE_CHECKS,
+      ...(filterPlatform ? { filterPlatform } : {}),
+      ...(filterCheck ? { filterCheck } : {}),
     });
 
     // Concurrency control: max 6 total, max 2 browser

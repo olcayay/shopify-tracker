@@ -93,16 +93,20 @@ function StatusCell({
   result,
   isNA,
   onRetry,
+  onRun,
   isExpanded,
   onToggleExpand,
+  isRunning,
 }: {
   platform: string;
   check: SmokeCheckName;
   result: CellResult | undefined;
   isNA: boolean;
   onRetry: () => void;
+  onRun: () => void;
   isExpanded: boolean;
   onToggleExpand: () => void;
+  isRunning: boolean;
 }) {
   if (isNA) {
     return (
@@ -116,7 +120,7 @@ function StatusCell({
 
   return (
     <div
-      className={`rounded-md px-2 py-2 transition-colors cursor-default ${
+      className={`group/cell relative rounded-md px-2 py-2 transition-colors cursor-default ${
         status === "fail"
           ? "bg-red-50 cursor-pointer"
           : status === "running"
@@ -156,6 +160,19 @@ function StatusCell({
           </>
         )}
       </div>
+      {/* Cell-level run button — visible on hover when not running */}
+      {!isRunning && status !== "running" && (
+        <button
+          className="absolute inset-0 flex items-center justify-center bg-white/80 opacity-0 group-hover/cell:opacity-100 transition-opacity rounded-md"
+          onClick={(e) => {
+            e.stopPropagation();
+            onRun();
+          }}
+          title={`Run ${CHECK_LABELS[check]} for ${platform}`}
+        >
+          <Play className="w-3.5 h-3.5 text-blue-600" />
+        </button>
+      )}
     </div>
   );
 }
@@ -331,7 +348,7 @@ export function SmokeTestPanel({ onComplete, history }: SmokeTestPanelProps) {
                 <Square className="h-3 w-3 mr-1" /> Stop
               </Button>
             ) : (
-              <Button variant="outline" size="sm" onClick={start}>
+              <Button variant="outline" size="sm" onClick={() => start()}>
                 <Play className="h-3 w-3 mr-1" /> {hasResults ? "Run Again" : "Run Smoke Test"}
               </Button>
             )}
@@ -377,7 +394,18 @@ export function SmokeTestPanel({ onComplete, history }: SmokeTestPanelProps) {
                   </TableHead>
                   {SMOKE_CHECKS.map((check) => (
                     <TableHead key={check} className="text-center min-w-[110px] text-sm">
-                      {CHECK_LABELS[check]}
+                      <div className="flex items-center justify-center gap-1 group/col">
+                        {CHECK_LABELS[check]}
+                        {!isRunning && (
+                          <button
+                            className="opacity-0 group-hover/col:opacity-100 transition-opacity p-0.5 rounded hover:bg-blue-100"
+                            onClick={() => start({ check })}
+                            title={`Run ${CHECK_LABELS[check]} for all platforms`}
+                          >
+                            <Play className="w-3 h-3 text-blue-600" />
+                          </button>
+                        )}
+                      </div>
                     </TableHead>
                   ))}
                 </TableRow>
@@ -397,7 +425,7 @@ export function SmokeTestPanel({ onComplete, history }: SmokeTestPanelProps) {
                   return (
                     <TableRow key={sp.platform} className="group">
                       <TableCell className="font-medium sticky left-0 bg-background z-10">
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-2 group/row">
                           <div
                             className="w-3 h-3 rounded-full shrink-0"
                             style={{
@@ -408,6 +436,15 @@ export function SmokeTestPanel({ onComplete, history }: SmokeTestPanelProps) {
                           <span className="text-sm font-medium">
                             {PLATFORM_LABELS[sp.platform]}
                           </span>
+                          {!isRunning && (
+                            <button
+                              className="opacity-0 group-hover/row:opacity-100 transition-opacity p-0.5 rounded hover:bg-blue-100"
+                              onClick={() => start({ platform: sp.platform })}
+                              title={`Run all checks for ${PLATFORM_LABELS[sp.platform]}`}
+                            >
+                              <Play className="w-3 h-3 text-blue-600" />
+                            </button>
+                          )}
                         </div>
                       </TableCell>
                       {SMOKE_CHECKS.map((check) => {
@@ -426,8 +463,10 @@ export function SmokeTestPanel({ onComplete, history }: SmokeTestPanelProps) {
                                     result={result}
                                     isNA={isNA}
                                     onRetry={() => retryCheck(sp.platform, check)}
+                                    onRun={() => start({ platform: sp.platform, check })}
                                     isExpanded={expandedCells.has(key)}
                                     onToggleExpand={() => toggleCellExpand(key)}
+                                    isRunning={isRunning}
                                   />
                                 </div>
                               </TooltipTrigger>
@@ -496,7 +535,7 @@ export function SmokeTestPanel({ onComplete, history }: SmokeTestPanelProps) {
                   </span>
                 )}
               </div>
-              <Button variant="outline" size="sm" onClick={start}>
+              <Button variant="outline" size="sm" onClick={() => start()}>
                 <RotateCcw className="h-3 w-3 mr-1" /> Run Again
               </Button>
             </div>
