@@ -1689,6 +1689,7 @@ Generate differentiated app concepts. Consider:
         const completion = await openai.chat.completions.create({
           model: "gpt-4o",
           temperature: 0.8,
+          max_tokens: 4000,
           messages: [
             { role: "system", content: systemPrompt },
             { role: "user", content: userPrompt },

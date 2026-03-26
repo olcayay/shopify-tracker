@@ -2,9 +2,9 @@
 
 **Date:** 2026-03-27
 **Prepared by:** Engineering Team
-**Version:** 2.0
+**Version:** 2.1
 **Status:** Active
-**Last Updated:** 2026-03-27 — Expanded from 38 to 62 risks
+**Last Updated:** 2026-03-27 — 5 quick fixes implemented, status tracking added
 
 ---
 
@@ -1481,11 +1481,11 @@ export function keywordToSlug(keyword: string): string {
 
 | ID | Risk | Impact | Likelihood | Score | Status |
 |----|------|--------|------------|-------|--------|
-| R-01 | Platform rate limiting/IP blocking | 5 | 5 | 25 | Open |
+| R-01 | Platform rate limiting/IP blocking | 5 | 5 | 25 | **Partial** — 429 retry with backoff added (commit `138bc4d`) |
 | R-02 | Scraper breakage (HTML/API changes) | 4 | 5 | 20 | Open |
-| R-03 | Browser scraping failures | 4 | 5 | 20 | Partial (GWS fixed) |
+| R-03 | Browser scraping failures | 4 | 5 | 20 | **Partial** — GWS per-page fix + zombie process fix |
 | R-04 | Incomplete pagination data | 3 | 5 | 15 | Open |
-| R-05 | Concurrent page navigation | 5 | 5 | 25 | Fixed (GWS) |
+| R-05 | Concurrent page navigation | 5 | 5 | 25 | **Fixed** (commit `64f62ad`) |
 | R-06 | Terms of Service violations | 4 | 5 | 20 | Open |
 | R-07 | GDPR/privacy compliance | 5 | 4 | 20 | Open |
 | R-08 | Intellectual property claims | 3 | 4 | 15 | Open |
@@ -1497,20 +1497,20 @@ export function keywordToSlug(keyword: string): string {
 | R-14 | Single server failure | 5 | 5 | 25 | Open |
 | R-15 | No database backup | 5 | 4 | 20 | Open |
 | R-16 | Redis failure | 3 | 4 | 15 | Open |
-| R-17 | Server resource exhaustion | 5 | 3 | 15 | Open |
+| R-17 | Server resource exhaustion | 5 | 3 | 15 | **Mitigated** — Docker memory limits added |
 | R-18 | Docker volume corruption | 4 | 3 | 12 | Open |
-| R-19 | CORS misconfiguration | 5 | 2 | 10 | Open |
+| R-19 | CORS misconfiguration | 5 | 2 | 10 | **Fixed** — restricted to known origins |
 | R-20 | Weak authentication | 5 | 4 | 20 | Open |
 | R-21 | JWT security weaknesses | 3 | 4 | 15 | Open |
 | R-22 | Secrets management | 5 | 3 | 15 | Open |
 | R-23 | Input validation gaps | 5 | 2 | 10 | Open |
 | R-24 | No zero-downtime deploy | 3 | 4 | 12 | Open |
 | R-25 | Migration failures | 4 | 2 | 8 | Open |
-| R-26 | No DB connection pooling | 2 | 5 | 10 | Open |
+| R-26 | No DB connection pooling | 2 | 5 | 10 | **Fixed** — pool max=20, idle=30s |
 | R-27 | Key person dependency | 4 | 3 | 12 | Open |
 | R-28 | Platform deprecation | 4 | 3 | 12 | Open |
 | R-29 | Competitor detection | 5 | 1 | 5 | Open |
-| R-30 | No external monitoring | 5 | 3 | 15 | Open |
+| R-30 | No external monitoring | 5 | 3 | 15 | **Partial** — /health endpoint added |
 | R-31 | No centralized logging | 3 | 4 | 12 | Open |
 | R-32 | No error tracking | 4 | 2 | 8 | Open |
 | R-33 | No performance metrics | 2 | 5 | 10 | Open |
@@ -1526,7 +1526,7 @@ export function keywordToSlug(keyword: string): string {
 | R-43 | Silent daily digest failures | 3 | 4 | 15 | Open |
 | R-44 | Email sender spoofing | 4 | 2 | 8 | Open |
 | R-45 | Invitation email abuse | 3 | 3 | 12 | Open |
-| R-46 | Uncontrolled OpenAI API costs | 5 | 4 | 20 | Open |
+| R-46 | Uncontrolled OpenAI API costs | 5 | 4 | 20 | **Mitigated** — max_tokens=4000 added |
 | R-47 | Prompt injection via app names | 5 | 1 | 5 | Open |
 | R-48 | AI feature availability dependency | 3 | 3 | 12 | Open |
 | R-49 | Unicode keyword slug destruction | 3 | 4 | 15 | Open |

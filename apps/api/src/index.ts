@@ -81,8 +81,15 @@ if (adminEmail && adminPassword) {
 
 const app = Fastify({ logger: true });
 
+const allowedOrigins = [
+  process.env.DASHBOARD_URL,
+  process.env.NEXT_PUBLIC_API_URL,
+  "http://localhost:3000",
+  "http://localhost:3001",
+].filter(Boolean) as string[];
+
 await app.register(cors, {
-  origin: true,
+  origin: allowedOrigins.length > 0 ? allowedOrigins : true,
   credentials: true,
   methods: ["GET", "HEAD", "PUT", "POST", "PATCH", "DELETE", "OPTIONS"],
 });
@@ -107,6 +114,11 @@ await app.register(featuredAppRoutes, { prefix: "/api/featured-apps" });
 await app.register(researchRoutes, { prefix: "/api/research-projects" });
 await app.register(platformRoutes, { prefix: "/api/platforms" });
 await app.register(platformAttributeRoutes, { prefix: "/api/platform-attributes" });
+
+// Health check endpoint (no auth required)
+app.get("/health", async () => {
+  return { status: "ok", timestamp: new Date().toISOString() };
+});
 
 // Error handler
 app.setErrorHandler((error: any, _request, reply) => {

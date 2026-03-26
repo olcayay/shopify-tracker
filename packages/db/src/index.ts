@@ -53,6 +53,9 @@ export const schema = {
 
 export function createDb(databaseUrl: string) {
   const client = postgres(databaseUrl, {
+    max: 20,
+    idle_timeout: 30,
+    max_lifetime: 60 * 30,
     connection: { timezone: "UTC" },
   });
   return drizzle(client, { schema });
