@@ -337,7 +337,7 @@ export default function ScraperHealthPage() {
       )}
 
       {/* Smoke Test Panel */}
-      <SmokeTestPanel onComplete={refreshSmokeHistory} />
+      <SmokeTestPanel onComplete={refreshSmokeHistory} history={smokeHistory} />
 
       {/* Smoke Test History — last 10 runs success ratio */}
       <SmokeTestHistory history={smokeHistory} />

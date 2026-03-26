@@ -976,7 +976,7 @@ export const systemAdminRoutes: FastifyPluginAsync = async (app) => {
             ...(error ? { error } : {}),
           });
 
-          // Persist result to DB (fire-and-forget)
+          // Persist result to DB
           db.insert(smokeTestResults)
             .values({
               platform: job.platform,
@@ -986,7 +986,10 @@ export const systemAdminRoutes: FastifyPluginAsync = async (app) => {
               error: error ?? null,
               output: output.slice(-5000),
             })
-            .then(() => {}, () => {});
+            .then(
+              () => {},
+              (err) => app.log.error(`Failed to persist smoke test result: ${err.message}`)
+            );
 
           resolve();
         }
@@ -1140,7 +1143,7 @@ export const systemAdminRoutes: FastifyPluginAsync = async (app) => {
       });
     });
 
-    // Persist result to DB (fire-and-forget)
+    // Persist result to DB
     db.insert(smokeTestResults)
       .values({
         platform,
@@ -1150,7 +1153,10 @@ export const systemAdminRoutes: FastifyPluginAsync = async (app) => {
         error: result.error ?? null,
         output: result.output.slice(-5000),
       })
-      .then(() => {}, () => {});
+      .then(
+        () => {},
+        (err) => app.log.error(`Failed to persist smoke test result: ${err.message}`)
+      );
 
     return result;
   });

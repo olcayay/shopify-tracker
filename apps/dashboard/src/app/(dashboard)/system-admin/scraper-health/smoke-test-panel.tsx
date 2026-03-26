@@ -208,12 +208,33 @@ function FailureDetails({
   );
 }
 
-export function SmokeTestPanel({ onComplete }: { onComplete?: () => void }) {
+interface SmokeTestPanelProps {
+  onComplete?: () => void;
+  history?: { platform: string; checkName: string; passCount: number; totalCount: number; lastRunAt: string | null; lastStatus: string | null }[] | null;
+}
+
+export function SmokeTestPanel({ onComplete, history }: SmokeTestPanelProps) {
   const { isRunning, results, progress, summary, start, stop, retryCheck } =
     useSmokeTest();
   const [isOpen, setIsOpen] = useState(false);
   const [expandedCells, setExpandedCells] = useState<Set<string>>(new Set());
-  const hasResults = results.size > 0;
+
+  // Build effective results: use live results when available, fall back to history
+  const effectiveResults = results.size > 0 ? results : (() => {
+    if (!history || history.length === 0) return new Map<string, CellResult>();
+    const map = new Map<string, CellResult>();
+    for (const entry of history) {
+      map.set(`${entry.platform}:${entry.checkName}`, {
+        platform: entry.platform,
+        check: entry.checkName as SmokeCheckName,
+        status: entry.lastStatus === "pass" ? "pass" : entry.lastStatus === "fail" ? "fail" : "pending",
+        ...(entry.lastRunAt ? {} : {}),
+      });
+    }
+    return map;
+  })();
+  const hasResults = effectiveResults.size > 0;
+  const isHistorical = results.size === 0 && hasResults;
   const wasRunningRef = useRef(false);
 
   // Auto-expand when test starts, call onComplete when test finishes
@@ -247,7 +268,7 @@ export function SmokeTestPanel({ onComplete }: { onComplete?: () => void }) {
     failed: 0,
     running: 0,
   };
-  results.forEach((r) => {
+  effectiveResults.forEach((r) => {
     if (r.status === "pass") liveCounts.passed++;
     else if (r.status === "fail") liveCounts.failed++;
     else if (r.status === "running") liveCounts.running++;
@@ -268,21 +289,24 @@ export function SmokeTestPanel({ onComplete }: { onComplete?: () => void }) {
             )}
             <FlaskConical className="h-5 w-5" />
             <CardTitle className="text-lg">Smoke Test</CardTitle>
-            {hasResults && !isRunning && summary && (
+            {hasResults && !isRunning && (summary || isHistorical) && (
               <div className="flex items-center gap-2 ml-2">
                 <Badge
                   variant="outline"
                   className="text-xs bg-green-50 text-green-700 border-green-200"
                 >
-                  {summary.passed} passed
+                  {summary?.passed ?? liveCounts.passed} passed
                 </Badge>
-                {summary.failed > 0 && (
+                {(summary?.failed ?? liveCounts.failed) > 0 && (
                   <Badge
                     variant="outline"
                     className="text-xs bg-red-50 text-red-700 border-red-200"
                   >
-                    {summary.failed} failed
+                    {summary?.failed ?? liveCounts.failed} failed
                   </Badge>
+                )}
+                {isHistorical && (
+                  <span className="text-xs text-muted-foreground">(last run)</span>
                 )}
               </div>
             )}
@@ -355,7 +379,7 @@ export function SmokeTestPanel({ onComplete }: { onComplete?: () => void }) {
                   const rowExpandedFailures: { key: string; result: CellResult }[] = [];
                   for (const check of SMOKE_CHECKS) {
                     const key = `${sp.platform}:${check}`;
-                    const result = results.get(key);
+                    const result = effectiveResults.get(key);
                     if (expandedCells.has(key) && result?.status === "fail") {
                       rowExpandedFailures.push({ key, result });
                     }
@@ -380,7 +404,7 @@ export function SmokeTestPanel({ onComplete }: { onComplete?: () => void }) {
                       {SMOKE_CHECKS.map((check) => {
                         const isNA = !getSmokeCheck(sp.platform, check);
                         const key = `${sp.platform}:${check}`;
-                        const result = results.get(key);
+                        const result = effectiveResults.get(key);
 
                         return (
                           <TableCell key={check} className="text-center p-2">
@@ -418,7 +442,7 @@ export function SmokeTestPanel({ onComplete }: { onComplete?: () => void }) {
 
           {/* Expanded failure details (shown below the table) */}
           {Array.from(expandedCells).map((key) => {
-            const result = results.get(key);
+            const result = effectiveResults.get(key);
             if (!result || result.status !== "fail") return null;
             return (
               <FailureDetails
@@ -430,31 +454,38 @@ export function SmokeTestPanel({ onComplete }: { onComplete?: () => void }) {
           })}
 
           {/* Summary footer */}
-          {summary && !isRunning && (
+          {(summary || isHistorical) && !isRunning && (
             <div className="flex items-center justify-between mt-4 pt-4 border-t">
               <div className="flex items-center gap-3">
                 <Badge
                   variant="outline"
                   className="text-sm bg-green-50 text-green-700 border-green-200 px-3 py-1"
                 >
-                  {liveCounts.passed || summary.passed} Passed
+                  {liveCounts.passed || summary?.passed || 0} Passed
                 </Badge>
-                {(liveCounts.failed || summary.failed) > 0 && (
+                {(liveCounts.failed || summary?.failed || 0) > 0 && (
                   <Badge
                     variant="outline"
                     className="text-sm bg-red-50 text-red-700 border-red-200 px-3 py-1"
                   >
-                    {liveCounts.failed || summary.failed} Failed
+                    {liveCounts.failed || summary?.failed || 0} Failed
                   </Badge>
                 )}
-                {summary.na > 0 && (
+                {(summary?.na ?? 0) > 0 && (
                   <Badge variant="outline" className="text-sm text-gray-500 px-3 py-1">
-                    {summary.na} N/A
+                    {summary?.na} N/A
                   </Badge>
                 )}
-                <span className="text-sm text-muted-foreground">
-                  {formatTotalDuration(summary.totalDurationMs)}
-                </span>
+                {summary?.totalDurationMs && (
+                  <span className="text-sm text-muted-foreground">
+                    {formatTotalDuration(summary.totalDurationMs)}
+                  </span>
+                )}
+                {isHistorical && (
+                  <span className="text-xs text-muted-foreground italic">
+                    Last run results
+                  </span>
+                )}
               </div>
               <Button variant="outline" size="sm" onClick={start}>
                 <RotateCcw className="h-3 w-3 mr-1" /> Run Again
