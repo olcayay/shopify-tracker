@@ -30,6 +30,7 @@ import {
 } from "@/components/ui/tooltip";
 import { Check, X, Minus, History, ChevronDown, ChevronRight } from "lucide-react";
 import { PLATFORM_LABELS, PLATFORM_COLORS } from "@/lib/platform-display";
+import { useFormatDate } from "@/lib/format-date";
 import { timeAgo, formatDuration } from "@/lib/format-utils";
 
 const CHECK_LABELS: Record<SmokeCheckName, string> = {
@@ -52,12 +53,6 @@ export interface SmokeHistoryEntry {
 
 interface SmokeTestHistoryProps {
   history: SmokeHistoryEntry[] | null;
-}
-
-function formatTimestamp(dateStr: string): string {
-  const d = new Date(dateStr);
-  const pad = (n: number) => String(n).padStart(2, "0");
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
 }
 
 type RateLevel = "perfect" | "good" | "warning" | "danger" | "nodata";
@@ -107,6 +102,7 @@ const RATE_STYLES: Record<RateLevel, { badge: string; bg: string; bar: string; d
 export function SmokeTestHistory({ history }: SmokeTestHistoryProps) {
   const [expandedCell, setExpandedCell] = useState<string | null>(null);
   const [isCollapsed, setIsCollapsed] = useState(false);
+  const { formatDateTime } = useFormatDate();
 
   if (!history || !Array.isArray(history)) return null;
 
@@ -303,7 +299,7 @@ export function SmokeTestHistory({ history }: SmokeTestHistoryProps) {
                           <div className="flex items-center gap-3 mb-2">
                             <X className="w-3.5 h-3.5 text-red-500 shrink-0" />
                             <span className="text-xs font-medium text-foreground">
-                              {formatTimestamp(err.createdAt)}
+                              {formatDateTime(err.createdAt)}
                             </span>
                             <span className="text-xs text-muted-foreground">
                               ({timeAgo(err.createdAt)})
@@ -340,6 +336,8 @@ function SmokeCell({
   isExpanded: boolean;
   onToggle: () => void;
 }) {
+  const { formatDateTime } = useFormatDate();
+
   // No data yet for this check
   if (!entry) {
     return (
@@ -404,7 +402,7 @@ function SmokeCell({
           </div>
           {entry.lastRunAt && (
             <div>
-              Last run: {formatTimestamp(entry.lastRunAt)} ({entry.lastStatus})
+              Last run: {formatDateTime(entry.lastRunAt)} ({entry.lastStatus})
             </div>
           )}
           {hasErrors && (

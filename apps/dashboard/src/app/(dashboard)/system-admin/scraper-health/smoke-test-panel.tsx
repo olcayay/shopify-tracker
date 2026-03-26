@@ -47,6 +47,7 @@ import {
   type CellStatus,
 } from "./use-smoke-test";
 import { PLATFORM_LABELS, PLATFORM_COLORS } from "@/lib/platform-display";
+import { timeAgo } from "@/lib/format-utils";
 
 const CHECK_LABELS: Record<SmokeCheckName, string> = {
   categories: "Categories",
@@ -305,9 +306,17 @@ export function SmokeTestPanel({ onComplete, history }: SmokeTestPanelProps) {
                     {summary?.failed ?? liveCounts.failed} failed
                   </Badge>
                 )}
-                {isHistorical && (
-                  <span className="text-xs text-muted-foreground">(last run)</span>
-                )}
+                {isHistorical && (() => {
+                  const lastRunAt = history?.reduce((latest, e) => {
+                    if (!e.lastRunAt) return latest;
+                    return !latest || e.lastRunAt > latest ? e.lastRunAt : latest;
+                  }, null as string | null);
+                  return (
+                    <span className="text-xs text-muted-foreground">
+                      (last run{lastRunAt ? ` ${timeAgo(lastRunAt)}` : ""})
+                    </span>
+                  );
+                })()}
               </div>
             )}
           </div>
