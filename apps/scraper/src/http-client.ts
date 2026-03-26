@@ -17,7 +17,7 @@ export interface HttpClientOptions {
 
 const DEFAULT_OPTIONS: Required<HttpClientOptions> = {
   delayMs: 2000,
-  maxRetries: 3,
+  maxRetries: 4,
   maxConcurrency: 2,
 };
 
@@ -93,10 +93,10 @@ export class HttpClient {
           // 429 Too Many Requests — retry with aggressive backoff
           if (response.status === 429) {
             const retryAfter = response.headers.get("Retry-After");
-            // Use Retry-After header, or 15s * 2^attempt (15s, 30s, 60s)
+            // Use Retry-After header, or 4s * 2^attempt (4s, 8s, 16s, 32s, 64s)
             const waitMs = retryAfter
               ? parseInt(retryAfter, 10) * 1000
-              : 15_000 * Math.pow(2, attempt);
+              : 4_000 * Math.pow(2, attempt);
             log.warn("rate limited (429), backing off", { url, attempt: attempt + 1, waitMs });
             lastError = err;
             if (attempt < this.options.maxRetries) {
