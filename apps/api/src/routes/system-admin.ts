@@ -676,6 +676,7 @@ export const systemAdminRoutes: FastifyPluginAsync = async (app) => {
       FROM scrape_runs
       WHERE status IN ('completed', 'failed')
         AND platform IS NOT NULL
+        AND (triggered_by IS NULL OR triggered_by != 'smoke-test')
       ORDER BY platform, scraper_type, completed_at DESC NULLS LAST
     `);
 
@@ -692,6 +693,7 @@ export const systemAdminRoutes: FastifyPluginAsync = async (app) => {
         FROM scrape_runs
         WHERE status = 'completed' AND platform IS NOT NULL
           AND completed_at IS NOT NULL AND started_at IS NOT NULL
+          AND (triggered_by IS NULL OR triggered_by != 'smoke-test')
       ) sub
       WHERE rn <= 5
       GROUP BY platform, scraper_type
@@ -702,6 +704,7 @@ export const systemAdminRoutes: FastifyPluginAsync = async (app) => {
       SELECT id, platform, scraper_type, started_at
       FROM scrape_runs
       WHERE status = 'running' AND platform IS NOT NULL
+        AND (triggered_by IS NULL OR triggered_by != 'smoke-test')
     `);
 
     // 4. Recent failures (last 24h, max 10)
@@ -712,6 +715,7 @@ export const systemAdminRoutes: FastifyPluginAsync = async (app) => {
       WHERE status = 'failed'
         AND platform IS NOT NULL
         AND completed_at > NOW() - INTERVAL '24 hours'
+        AND (triggered_by IS NULL OR triggered_by != 'smoke-test')
       ORDER BY completed_at DESC
       LIMIT 10
     `);
@@ -1126,11 +1130,12 @@ export const systemAdminRoutes: FastifyPluginAsync = async (app) => {
 
   // GET /api/system-admin/scraper/runs
   app.get("/scraper/runs", async (request) => {
-    const { type, triggeredBy: triggerFilter, queue: queueFilter, platform: platformFilter, limit = "20", offset = "0" } = request.query as {
+    const { type, triggeredBy: triggerFilter, queue: queueFilter, platform: platformFilter, status: statusFilter, limit = "20", offset = "0" } = request.query as {
       type?: string;
       triggeredBy?: string;
       queue?: string;
       platform?: string;
+      status?: string;
       limit?: string;
       offset?: string;
     };
@@ -1140,6 +1145,9 @@ export const systemAdminRoutes: FastifyPluginAsync = async (app) => {
     conditions.push(sql`(${scrapeRuns.triggeredBy} IS NULL OR ${scrapeRuns.triggeredBy} != 'smoke-test')`);
     if (type) {
       conditions.push(eq(scrapeRuns.scraperType, type as any));
+    }
+    if (statusFilter && ["completed", "failed", "running"].includes(statusFilter)) {
+      conditions.push(eq(scrapeRuns.status, statusFilter as "completed" | "failed" | "running"));
     }
     if (triggerFilter === "scheduler") {
       conditions.push(eq(scrapeRuns.triggeredBy, "scheduler"));

@@ -1901,6 +1901,17 @@ The smoke test script runs live CLI checks against every platform. When adding a
 - [ ] Run `./scripts/smoke-test.sh --platform <name> --compare` to compare primary vs fallback
 - [ ] Run `./scripts/smoke-test.sh` (full) and confirm 0 SKIPs in summary
 
+**Filtering options** — you can filter by platform (row), check type (column), or both (single cell):
+
+```bash
+./scripts/smoke-test.sh --platform <name>                  # one platform, all checks
+./scripts/smoke-test.sh --check categories                 # all platforms, one check
+./scripts/smoke-test.sh --platform <name> --check app      # single cell
+./scripts/smoke-test.sh --check categories,app             # all platforms, two checks
+./scripts/smoke-test.sh --platform <name> --check app --fallback   # single cell, fallback
+./scripts/smoke-test.sh --platform <name> --check app --compare    # single cell, compare
+```
+
 **Which checks to include** — only add a line for checks the platform supports:
 
 | Check | When to include | Example CLI command |

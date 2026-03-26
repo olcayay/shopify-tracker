@@ -31,7 +31,7 @@ COPY packages/shared/package.json ./packages/shared/
 COPY packages/db/package.json ./packages/db/
 COPY apps/scraper/package.json ./apps/scraper/
 RUN npm ci --omit=dev
-RUN npx playwright install chrome chromium --with-deps
+RUN npx playwright install --with-deps
 
 COPY --from=build /app/packages/shared/dist ./packages/shared/dist
 COPY --from=build /app/packages/db/dist ./packages/db/dist

@@ -2,18 +2,22 @@
 #
 # Parallel Live Smoke Test for all platform scrapers
 # Usage:
-#   ./scripts/smoke-test.sh                        # test all platforms (parallel + live table)
-#   ./scripts/smoke-test.sh --platform shopify      # test one platform
-#   ./scripts/smoke-test.sh --skip-browser          # skip browser-dependent platforms
-#   ./scripts/smoke-test.sh --timeout 90            # override default timeout (seconds)
-#   ./scripts/smoke-test.sh --jobs 4                # limit concurrent checks
-#   ./scripts/smoke-test.sh --no-live               # CI-friendly plain output (no ANSI refresh)
-#   ./scripts/smoke-test.sh --compare               # run both primary AND fallback, show side-by-side
+#   ./scripts/smoke-test.sh                                  # test all platforms (parallel + live table)
+#   ./scripts/smoke-test.sh --platform shopify                # test one platform, all checks
+#   ./scripts/smoke-test.sh --check categories                # all platforms, one check
+#   ./scripts/smoke-test.sh --platform shopify --check app    # single cell
+#   ./scripts/smoke-test.sh --check categories,app            # all platforms, two checks
+#   ./scripts/smoke-test.sh --skip-browser                    # skip browser-dependent platforms
+#   ./scripts/smoke-test.sh --timeout 90                      # override default timeout (seconds)
+#   ./scripts/smoke-test.sh --jobs 4                          # limit concurrent checks
+#   ./scripts/smoke-test.sh --no-live                         # CI-friendly plain output (no ANSI refresh)
+#   ./scripts/smoke-test.sh --compare                         # run both primary AND fallback, show side-by-side
 #
 set -uo pipefail
 
 # ── Defaults ─────────────────────────────────────────────────────────────────
 SELECTED_PLATFORM=""
+SELECTED_CHECKS=""
 SKIP_BROWSER=false
 FORCE_FALLBACK=false
 COMPARE_MODE=false
@@ -38,6 +42,8 @@ while [[ $# -gt 0 ]]; do
   case "$1" in
     --platform)
       SELECTED_PLATFORM="$2"; shift 2 ;;
+    --check)
+      SELECTED_CHECKS="$2"; shift 2 ;;
     --skip-browser)
       SKIP_BROWSER=true; shift ;;
     --timeout)
@@ -51,18 +57,27 @@ while [[ $# -gt 0 ]]; do
     --compare)
       COMPARE_MODE=true; shift ;;
     -h|--help)
-      echo "Usage: $0 [--platform <name>] [--skip-browser] [--fallback] [--compare] [--timeout <seconds>] [--jobs N] [--no-live]"
+      echo "Usage: $0 [--platform <name>] [--check <checks>] [--skip-browser] [--fallback] [--compare] [--timeout <seconds>] [--jobs N] [--no-live]"
       echo ""
       echo "Platforms: shopify salesforce canva wix wordpress google_workspace atlassian zoom zoho zendesk hubspot"
+      echo "Checks:    categories app keyword reviews featured"
       echo ""
       echo "Options:"
-      echo "  --platform <name>   Test a single platform"
+      echo "  --platform <name>   Test a single platform (row filter)"
+      echo "  --check <checks>    Test specific check types, comma-separated (column filter)"
+      echo "                      Examples: --check categories  --check categories,app"
       echo "  --skip-browser      Skip platforms that need Playwright (salesforce, canva, google_workspace, zoho, zendesk)"
       echo "  --fallback          Force fallback/secondary scraping methods (sets FORCE_FALLBACK=true)"
       echo "  --compare           Run both PRIMARY and FALLBACK, show results side by side"
       echo "  --timeout <secs>    Override base timeout (default: 60s HTTP, 120s browser)"
       echo "  --jobs N            Limit concurrent checks (default: unlimited)"
       echo "  --no-live           CI-friendly plain output (no ANSI table refresh)"
+      echo ""
+      echo "Examples:"
+      echo "  $0 --platform shopify                  # one platform, all checks"
+      echo "  $0 --check categories                  # all platforms, one check"
+      echo "  $0 --platform shopify --check categories  # single cell"
+      echo "  $0 --check categories,app              # all platforms, two checks"
       exit 0 ;;
     *)
       echo "Unknown option: $1"; exit 1 ;;
@@ -131,6 +146,26 @@ if [[ -n "$SELECTED_PLATFORM" ]]; then
   fi
 fi
 
+# ── Validate selected checks & build ACTIVE_CHECKS ─────────────────────────
+ACTIVE_CHECKS=()
+if [[ -n "$SELECTED_CHECKS" ]]; then
+  IFS=',' read -ra _sel_checks <<< "$SELECTED_CHECKS"
+  for sc in "${_sel_checks[@]}"; do
+    valid=false
+    for c in "${ALL_CHECKS[@]}"; do
+      if [[ "$c" == "$sc" ]]; then valid=true; break; fi
+    done
+    if ! $valid; then
+      echo -e "${RED}Unknown check: $sc${RESET}"
+      echo "Valid checks: ${ALL_CHECKS[*]}"
+      exit 1
+    fi
+    ACTIVE_CHECKS+=("$sc")
+  done
+else
+  ACTIVE_CHECKS=("${ALL_CHECKS[@]}")
+fi
+
 # ── Helpers: get platform index ──────────────────────────────────────────────
 platform_index() {
   local target="$1" i=0
@@ -196,7 +231,7 @@ done
 JOB_LIST=()
 
 for platform in "${ACTIVE_PLATFORMS[@]}"; do
-  for check in "${ALL_CHECKS[@]}"; do
+  for check in "${ACTIVE_CHECKS[@]}"; do
     local_arg=$(get_check_arg "$platform" "$check")
     if [[ "$local_arg" == "__NA__" ]]; then
       echo "NA" > "$WORK_DIR/${platform}-${check}.status"
@@ -268,7 +303,7 @@ run_check_bg() {
 count_by_status() {
   local target="$1" count=0
   for platform in "${ACTIVE_PLATFORMS[@]}"; do
-    for check in "${ALL_CHECKS[@]}"; do
+    for check in "${ACTIVE_CHECKS[@]}"; do
       if [[ "$(get_status "$platform" "$check")" == "$target" ]]; then
         count=$((count + 1))
       fi
@@ -280,7 +315,7 @@ count_by_status() {
 count_failures() {
   local count=0
   for platform in "${ACTIVE_PLATFORMS[@]}"; do
-    for check in "${ALL_CHECKS[@]}"; do
+    for check in "${ACTIVE_CHECKS[@]}"; do
       local s
       s=$(get_status "$platform" "$check")
       if [[ "$s" == "FAIL" || "$s" == "TIMEOUT" ]]; then
@@ -293,7 +328,7 @@ count_failures() {
 
 all_done() {
   for platform in "${ACTIVE_PLATFORMS[@]}"; do
-    for check in "${ALL_CHECKS[@]}"; do
+    for check in "${ACTIVE_CHECKS[@]}"; do
       local s
       s=$(get_status "$platform" "$check")
       if [[ "$s" == "RUNNING" || "$s" == "PENDING" ]]; then
@@ -307,7 +342,7 @@ all_done() {
 count_running() {
   local count=0
   for platform in "${ACTIVE_PLATFORMS[@]}"; do
-    for check in "${ALL_CHECKS[@]}"; do
+    for check in "${ACTIVE_CHECKS[@]}"; do
       if [[ "$(get_status "$platform" "$check")" == "RUNNING" ]]; then
         count=$((count + 1))
       fi
@@ -319,7 +354,7 @@ count_running() {
 # ── Render helpers ───────────────────────────────────────────────────────────
 COL_PLATFORM=18
 COL_CHECK=12
-TABLE_WIDTH=78
+TABLE_WIDTH=$(( 2 + COL_PLATFORM + ${#ACTIVE_CHECKS[@]} * COL_CHECK ))
 TABLE_LINES=0
 
 render_cell() {
@@ -378,12 +413,17 @@ render_table() {
 
   local title="LIVE SCRAPER SMOKE TEST"
   if $FORCE_FALLBACK; then title="LIVE SCRAPER SMOKE TEST (FALLBACK MODE)"; fi
+  local title_pad=$((TABLE_WIDTH - ${#title} - 18))
+  if [[ $title_pad -lt 1 ]]; then title_pad=1; fi
   printf "  ${BOLD}${title}${RESET}%*s%s\n" \
-    $((TABLE_WIDTH - ${#title} - 18)) "" "$(date '+%Y-%m-%d %H:%M:%S')"
+    "$title_pad" "" "$(date '+%Y-%m-%d %H:%M:%S')"
   lines=$((lines + 1))
 
-  printf "  Timeouts: HTTP=${TIMEOUT_HTTP}s  Browser=${TIMEOUT_BROWSER}s"
-  printf "%*s" $((TABLE_WIDTH - 55)) ""
+  local stats_line="  Timeouts: HTTP=${TIMEOUT_HTTP}s  Browser=${TIMEOUT_BROWSER}s"
+  printf "%s" "$stats_line"
+  local stats_pad=$((TABLE_WIDTH - ${#stats_line} - 42))
+  if [[ $stats_pad -lt 1 ]]; then stats_pad=1; fi
+  printf "%*s" "$stats_pad" ""
   printf "${CYAN}⟳ %-3d${RESET} ${DIM}· %-3d${RESET} ${GREEN}✓ %-3d${RESET} ${RED}✗ %-3d${RESET} ${DIM}─ %-3d${RESET} ${YELLOW}⊘ %-3d${RESET}\n" \
     "$running_n" "$pending_n" "$pass_n" "$fail_n" "$na_n" "$skip_n"
   lines=$((lines + 1))
@@ -391,7 +431,7 @@ render_table() {
   echo "$ruler"; lines=$((lines + 1))
 
   printf "  ${BOLD}%-${COL_PLATFORM}s${RESET}" "PLATFORM"
-  for check in "${ALL_CHECKS[@]}"; do
+  for check in "${ACTIVE_CHECKS[@]}"; do
     printf "${BOLD}%-${COL_CHECK}s${RESET}" "$check"
   done
   echo ""; lines=$((lines + 1))
@@ -402,7 +442,7 @@ render_table() {
 
   for platform in "${ACTIVE_PLATFORMS[@]}"; do
     printf "  %-${COL_PLATFORM}s" "$platform"
-    for check in "${ALL_CHECKS[@]}"; do
+    for check in "${ACTIVE_CHECKS[@]}"; do
       local s
       s=$(get_status "$platform" "$check")
       render_cell "$s" "$platform" "$check"
@@ -424,7 +464,7 @@ render_table() {
 print_failures() {
   local has_failures=false
   for platform in "${ACTIVE_PLATFORMS[@]}"; do
-    for check in "${ALL_CHECKS[@]}"; do
+    for check in "${ACTIVE_CHECKS[@]}"; do
       local s
       s=$(get_status "$platform" "$check")
       if [[ "$s" == "FAIL" || "$s" == "TIMEOUT" ]]; then
@@ -441,7 +481,7 @@ print_failures() {
   printf "  "; printf '─%.0s' $(seq 1 74); echo ""
 
   for platform in "${ACTIVE_PLATFORMS[@]}"; do
-    for check in "${ALL_CHECKS[@]}"; do
+    for check in "${ACTIVE_CHECKS[@]}"; do
       local s
       s=$(get_status "$platform" "$check")
       if [[ "$s" == "FAIL" || "$s" == "TIMEOUT" ]]; then
@@ -493,6 +533,7 @@ run_no_live() {
   echo -e "  ${BOLD}${ci_title}${RESET}  $(date '+%Y-%m-%d %H:%M:%S')"
   echo "  Timeouts: HTTP=${TIMEOUT_HTTP}s  Browser=${TIMEOUT_BROWSER}s"
   if [[ -n "$SELECTED_PLATFORM" ]]; then echo "  Platform: $SELECTED_PLATFORM"; fi
+  if [[ -n "$SELECTED_CHECKS" ]]; then echo "  Checks: $SELECTED_CHECKS"; fi
   if $SKIP_BROWSER; then echo "  Skipping browser platforms"; fi
   if $FORCE_FALLBACK; then echo "  Fallback mode: ENABLED (testing secondary scraping methods)"; fi
   echo "$ruler"
@@ -507,7 +548,7 @@ run_no_live() {
 
   local pass_n=0 fail_n=0 skip_n=0
   for platform in "${ACTIVE_PLATFORMS[@]}"; do
-    for check in "${ALL_CHECKS[@]}"; do
+    for check in "${ACTIVE_CHECKS[@]}"; do
       local s
       s=$(get_status "$platform" "$check")
       case "$s" in
@@ -573,6 +614,7 @@ run_compare() {
   script_path="$(cd "$(dirname "$0")" && pwd)/$(basename "$0")"
   local extra_args=""
   if [[ -n "$SELECTED_PLATFORM" ]]; then extra_args="$extra_args --platform $SELECTED_PLATFORM"; fi
+  if [[ -n "$SELECTED_CHECKS" ]]; then extra_args="$extra_args --check $SELECTED_CHECKS"; fi
   if $SKIP_BROWSER; then extra_args="$extra_args --skip-browser"; fi
   extra_args="$extra_args --timeout $TIMEOUT_HTTP"
   if [[ $MAX_JOBS -gt 0 ]]; then extra_args="$extra_args --jobs $MAX_JOBS"; fi

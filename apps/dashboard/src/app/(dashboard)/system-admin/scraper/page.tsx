@@ -28,6 +28,7 @@ export default function ScraperPage() {
   const [filterTrigger, setFilterTrigger] = useState("");
   const [filterQueue, setFilterQueue] = useState("");
   const [filterPlatform, setFilterPlatform] = useState("");
+  const [filterStatus, setFilterStatus] = useState("");
   const [page, setPage] = useState(0);
   const [retryingRunId, setRetryingRunId] = useState<string | null>(null);
   const [lastRefresh, setLastRefresh] = useState<Date | null>(null);
@@ -38,6 +39,7 @@ export default function ScraperPage() {
     if (filterTrigger) params.set("triggeredBy", filterTrigger);
     if (filterQueue) params.set("queue", filterQueue);
     if (filterPlatform) params.set("platform", filterPlatform);
+    if (filterStatus) params.set("status", filterStatus);
     params.set("limit", String(PAGE_SIZE));
     params.set("offset", String(page * PAGE_SIZE));
 
@@ -57,7 +59,7 @@ export default function ScraperPage() {
     }
     if (queueRes.ok) setQueueStatus(await queueRes.json());
     setLastRefresh(new Date());
-  }, [fetchWithAuth, filterType, filterTrigger, filterQueue, filterPlatform, page]);
+  }, [fetchWithAuth, filterType, filterTrigger, filterQueue, filterPlatform, filterStatus, page]);
 
   useEffect(() => {
     loadData();
@@ -276,6 +278,8 @@ export default function ScraperPage() {
         onFilterTriggerChange={(v) => { setFilterTrigger(v); setPage(0); }}
         onFilterQueueChange={(v) => { setFilterQueue(v); setPage(0); }}
         onFilterPlatformChange={(v) => { setFilterPlatform(v); setPage(0); }}
+        filterStatus={filterStatus}
+        onFilterStatusChange={(v) => { setFilterStatus(v); setPage(0); }}
         onRetry={retryRun}
         onRefresh={loadData}
         retryingRunId={retryingRunId}

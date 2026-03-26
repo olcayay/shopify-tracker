@@ -126,6 +126,10 @@ export class KeywordScraper {
     return [...allDiscoveredSlugs];
   }
 
+  private get isSmokeTest(): boolean {
+    return process.env.SMOKE_TEST === "1";
+  }
+
   /** Scrape search results for a single keyword */
   async scrapeKeyword(
     keywordId: number,
@@ -179,6 +183,12 @@ export class KeywordScraper {
     }
 
     log.info("keyword pages scraped", { keyword, totalApps: allApps.length, organicCount });
+
+    // In smoke test mode, skip DB writes (runId is not a valid UUID)
+    if (this.isSmokeTest) {
+      log.info("smoke test mode — skipping DB writes", { keyword, totalApps: allApps.length });
+      return [...new Set(allApps.filter((a) => !a.is_sponsored && !a.is_built_in).map((a) => a.app_slug))];
+    }
 
     // Insert keyword snapshot (keeps all results including sponsored)
     await this.db.insert(keywordSnapshots).values({
@@ -399,6 +409,12 @@ export class KeywordScraper {
     }
 
     log.info("keyword pages scraped", { keyword, platform: this.platform, totalApps: allNormalizedApps.length, organicCount });
+
+    // In smoke test mode, skip DB writes (runId is not a valid UUID)
+    if (this.isSmokeTest) {
+      log.info("smoke test mode — skipping DB writes", { keyword, platform: this.platform, totalApps: allNormalizedApps.length });
+      return [...new Set(allNormalizedApps.filter((a) => !a.isSponsored).map((a) => a.appSlug))];
+    }
 
     // Convert to snapshot format (KeywordSearchApp)
     const snapshotResults = allNormalizedApps.map((app) => ({

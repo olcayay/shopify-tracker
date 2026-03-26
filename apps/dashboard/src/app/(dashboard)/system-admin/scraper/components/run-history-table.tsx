@@ -53,11 +53,13 @@ interface RunHistoryTableProps {
   filterTrigger: string;
   filterQueue: string;
   filterPlatform: string;
+  filterStatus: string;
   onPageChange: (page: number) => void;
   onFilterTypeChange: (type: string) => void;
   onFilterTriggerChange: (trigger: string) => void;
   onFilterQueueChange: (queue: string) => void;
   onFilterPlatformChange: (platform: string) => void;
+  onFilterStatusChange: (status: string) => void;
   onRetry: (runId: string) => void;
   onRefresh: () => void;
   retryingRunId: string | null;
@@ -71,11 +73,13 @@ export function RunHistoryTable({
   filterTrigger,
   filterQueue,
   filterPlatform,
+  filterStatus,
   onPageChange,
   onFilterTypeChange,
   onFilterTriggerChange,
   onFilterQueueChange,
   onFilterPlatformChange,
+  onFilterStatusChange,
   onRetry,
   onRefresh,
   retryingRunId,
@@ -101,6 +105,16 @@ export function RunHistoryTable({
                   {s.label}
                 </option>
               ))}
+            </select>
+            <select
+              value={filterStatus}
+              onChange={(e) => onFilterStatusChange(e.target.value)}
+              className="border rounded-md px-3 py-1.5 text-sm bg-background"
+            >
+              <option value="">All statuses</option>
+              <option value="completed">Completed</option>
+              <option value="failed">Failed</option>
+              <option value="running">Running</option>
             </select>
             <select
               value={filterTrigger}
@@ -168,6 +182,7 @@ export function RunHistoryTable({
               <TableHead>Started</TableHead>
               <TableHead>Duration</TableHead>
               <TableHead>Items</TableHead>
+              <TableHead>Error</TableHead>
               <TableHead>Assets</TableHead>
               <TableHead className="w-10" />
             </TableRow>
@@ -293,6 +308,18 @@ export function RunHistoryTable({
                       "\u2014"
                     )}
                   </TableCell>
+                  <TableCell className="text-sm max-w-[200px]">
+                    {run.error ? (
+                      <span
+                        className="text-destructive text-xs truncate block cursor-help"
+                        title={run.error}
+                      >
+                        {run.error.length > 60 ? run.error.slice(0, 60) + "..." : run.error}
+                      </span>
+                    ) : (
+                      <span className="text-muted-foreground">{"\u2014"}</span>
+                    )}
+                  </TableCell>
                   <TableCell className="text-sm text-muted-foreground">
                     {run.assets && run.assets.length > 0
                       ? run.assets.length <= 3
@@ -339,7 +366,7 @@ export function RunHistoryTable({
                 </TableRow>
                 {expandedRunId === run.id && (
                   <TableRow key={`${run.id}-details`}>
-                    <TableCell colSpan={14} className="bg-muted/30 p-4">
+                    <TableCell colSpan={15} className="bg-muted/30 p-4">
                       {run.error && (
                         <div className="mb-3">
                           <div className="text-sm font-medium text-destructive mb-1">
@@ -401,7 +428,7 @@ export function RunHistoryTable({
             {runs.length === 0 && (
               <TableRow>
                 <TableCell
-                  colSpan={14}
+                  colSpan={15}
                   className="text-center text-muted-foreground"
                 >
                   No scraper runs yet
