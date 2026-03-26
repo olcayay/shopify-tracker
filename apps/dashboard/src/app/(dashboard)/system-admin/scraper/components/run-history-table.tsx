@@ -151,6 +151,7 @@ export function RunHistoryTable({
             >
               <option value="">All statuses</option>
               <option value="completed">Completed</option>
+              <option value="partial">Partial</option>
               <option value="failed">Failed</option>
               <option value="running">Running</option>
             </select>

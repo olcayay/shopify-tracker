@@ -1269,7 +1269,10 @@ export const systemAdminRoutes: FastifyPluginAsync = async (app) => {
     if (type) {
       conditions.push(eq(scrapeRuns.scraperType, type as any));
     }
-    if (statusFilter && ["completed", "failed", "running"].includes(statusFilter)) {
+    if (statusFilter === "partial") {
+      conditions.push(eq(scrapeRuns.status, "completed"));
+      conditions.push(sql`(${scrapeRuns.metadata}->>'items_failed')::int > 0`);
+    } else if (statusFilter && ["completed", "failed", "running"].includes(statusFilter)) {
       conditions.push(eq(scrapeRuns.status, statusFilter as "completed" | "failed" | "running"));
     }
     if (triggerFilter === "scheduler") {
