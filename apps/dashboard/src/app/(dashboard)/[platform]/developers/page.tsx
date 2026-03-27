@@ -1,7 +1,7 @@
 "use client";
 
 import { Suspense, useEffect, useState, useMemo } from "react";
-import { useSearchParams, useParams } from "next/navigation";
+import { useSearchParams, useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { useAuth } from "@/lib/auth-context";
 import { useFormatDate } from "@/lib/format-date";
@@ -35,8 +35,17 @@ export default function DeveloperAppsPage() {
 function DeveloperAppsContent() {
   const { platform } = useParams();
   const searchParams = useSearchParams();
+  const router = useRouter();
   const developerName = searchParams.get("name") || "";
   const { fetchWithAuth, user } = useAuth();
+
+  // Redirect ?name=X to slug-based URL
+  useEffect(() => {
+    if (developerName) {
+      const slug = developerNameToSlug(developerName);
+      router.replace(`/${platform}/developers/${slug}`);
+    }
+  }, [developerName, platform, router]);
   const { formatDateOnly } = useFormatDate();
   const [apps, setApps] = useState<any[]>([]);
   const [developerInfo, setDeveloperInfo] = useState<Record<string, any> | null>(null);
@@ -470,7 +479,7 @@ function DeveloperListView() {
                   <TableRow key={dev.developer_name}>
                     <TableCell>
                       <Link
-                        href={`/${platform}/developers?name=${encodeURIComponent(dev.developer_name)}`}
+                        href={`/${platform}/developers/${developerNameToSlug(dev.developer_name)}`}
                         className="text-primary hover:underline font-medium"
                       >
                         {dev.developer_name}

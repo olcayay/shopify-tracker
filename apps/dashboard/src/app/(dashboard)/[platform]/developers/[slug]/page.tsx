@@ -14,9 +14,10 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Globe, Star } from "lucide-react";
+import { Globe, Star, ArrowRight } from "lucide-react";
 import { TableSkeleton } from "@/components/skeletons";
 import { getPlatformLabel, getPlatformColor } from "@/lib/platform-display";
+import type { PlatformId } from "@appranks/shared";
 
 interface DeveloperProfile {
   developer: {
@@ -46,8 +47,8 @@ interface DeveloperProfile {
   totalApps: number;
 }
 
-export default function DeveloperProfilePage() {
-  const { slug } = useParams();
+export default function PlatformDeveloperPage() {
+  const { platform, slug } = useParams();
   const { fetchWithAuth } = useAuth();
   const [data, setData] = useState<DeveloperProfile | null>(null);
   const [loading, setLoading] = useState(true);
@@ -72,10 +73,14 @@ export default function DeveloperProfilePage() {
     load();
   }, [slug]);
 
-  // Determine which optional columns have data across ANY platform
+  const platformApps = useMemo(
+    () => data?.apps.filter((a) => a.platform === platform) ?? [],
+    [data, platform]
+  );
+
   const hasInstalls = useMemo(
-    () => data?.apps.some((a) => a.activeInstalls != null) ?? false,
-    [data]
+    () => platformApps.some((a) => a.activeInstalls != null),
+    [platformApps]
   );
 
   if (loading) {
@@ -96,96 +101,97 @@ export default function DeveloperProfilePage() {
     );
   }
 
-  const { developer, platforms, apps } = data;
-
-  // Group apps by platform
-  const appsByPlatform = new Map<string, typeof apps>();
-  for (const app of apps) {
-    const list = appsByPlatform.get(app.platform) || [];
-    list.push(app);
-    appsByPlatform.set(app.platform, list);
-  }
+  const { developer, platforms } = data;
+  const otherPlatforms = platforms.filter((p) => p.platform !== platform);
 
   return (
     <div className="space-y-6">
+      {/* Breadcrumb */}
+      <p className="text-sm text-muted-foreground">
+        <Link href={`/${platform}/developers`} className="hover:underline">
+          Developers
+        </Link>
+        {" > "}
+        {developer.name}
+      </p>
+
       {/* Header */}
-      <div>
-        <p className="text-sm text-muted-foreground mb-1">
-          <Link href="/system-admin/developers" className="hover:underline">
-            Developers
-          </Link>
-          {" > "}
-          {developer.name}
-        </p>
-        <div className="flex items-center gap-3">
-          <h1 className="text-2xl font-bold">{developer.name}</h1>
-          {developer.website && (
-            <a
-              href={developer.website}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-muted-foreground hover:text-foreground transition-colors"
-            >
-              <Globe className="h-4 w-4" />
-            </a>
-          )}
-        </div>
-        <div className="flex items-center gap-2 mt-2">
-          <span className="text-sm text-muted-foreground">
-            {data.totalApps} apps across {platforms.length} platform{platforms.length !== 1 ? "s" : ""}
-          </span>
-        </div>
-      </div>
-
-      {/* Platform badges */}
-      <div className="flex flex-wrap gap-2">
-        {platforms.map((p) => (
-          <Link
-            key={p.id}
-            href={`/${p.platform}/developers/${developer.slug}`}
+      <div className="flex items-center gap-3">
+        <h1 className="text-2xl font-bold">{developer.name}</h1>
+        {developer.website && (
+          <a
+            href={developer.website}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-muted-foreground hover:text-foreground transition-colors"
           >
-            <Badge
-              variant="outline"
-              className="text-xs cursor-pointer hover:bg-muted transition-colors"
-              style={{ borderColor: getPlatformColor(p.platform) }}
-            >
-              <span
-                className="w-2 h-2 rounded-full mr-1.5 inline-block"
-                style={{ backgroundColor: getPlatformColor(p.platform) }}
-              />
-              {getPlatformLabel(p.platform)}
-              <span className="text-muted-foreground ml-1">
-                ({p.appCount} {p.appCount === 1 ? "app" : "apps"})
-              </span>
-              {p.name !== developer.name && (
-                <span className="text-muted-foreground ml-1">as &ldquo;{p.name}&rdquo;</span>
-              )}
-            </Badge>
-          </Link>
-        ))}
+            <Globe className="h-4 w-4" />
+          </a>
+        )}
       </div>
 
-      {/* Apps tables — unified column layout across all platforms */}
-      {Array.from(appsByPlatform.entries()).map(([platform, platformApps]) => (
-        <Card key={platform}>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-base flex items-center gap-2">
+      {/* Cross-platform banner */}
+      {data.totalApps > platformApps.length && (
+        <Card className="bg-muted/30 border-dashed">
+          <CardContent className="py-4">
+            <div className="flex items-center justify-between flex-wrap gap-3">
+              <div className="flex items-center gap-2 text-sm">
+                <span className="text-muted-foreground">
+                  {developer.name} has <strong className="text-foreground">{data.totalApps} apps</strong> across{" "}
+                  <strong className="text-foreground">{platforms.length} platforms</strong>
+                </span>
+                {otherPlatforms.length > 0 && (
+                  <div className="flex gap-1.5 ml-2">
+                    {otherPlatforms.map((p) => (
+                      <Link key={p.id} href={`/${p.platform}/developers/${slug}`}>
+                        <Badge
+                          variant="outline"
+                          className="text-[10px] cursor-pointer hover:bg-muted"
+                          style={{ borderColor: getPlatformColor(p.platform) }}
+                        >
+                          <span
+                            className="w-1.5 h-1.5 rounded-full mr-1 inline-block"
+                            style={{ backgroundColor: getPlatformColor(p.platform) }}
+                          />
+                          {getPlatformLabel(p.platform)} ({p.appCount})
+                        </Badge>
+                      </Link>
+                    ))}
+                  </div>
+                )}
+              </div>
               <Link
-                href={`/${platform}/developers?name=${encodeURIComponent(platforms.find((p) => p.platform === platform)?.name || "")}`}
-                className="flex items-center gap-2 hover:underline"
+                href={`/developers/${developer.slug}`}
+                className="text-sm text-primary hover:underline flex items-center gap-1"
               >
-                <span
-                  className="w-2.5 h-2.5 rounded-full"
-                  style={{ backgroundColor: getPlatformColor(platform) }}
-                />
-                {getPlatformLabel(platform)}
+                View cross-platform profile
+                <ArrowRight className="h-3.5 w-3.5" />
               </Link>
-              <span className="text-muted-foreground font-normal text-sm">
-                ({platformApps.length})
-              </span>
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Platform apps */}
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base flex items-center gap-2">
+            <span
+              className="w-2.5 h-2.5 rounded-full"
+              style={{ backgroundColor: getPlatformColor(platform as string) }}
+            />
+            {getPlatformLabel(platform as string)}
+            <span className="text-muted-foreground font-normal text-sm">
+              ({platformApps.length} {platformApps.length === 1 ? "app" : "apps"})
+            </span>
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          {platformApps.length === 0 ? (
+            <p className="text-sm text-muted-foreground py-4">
+              No apps found for this developer on {getPlatformLabel(platform as string)}.
+            </p>
+          ) : (
             <Table>
               <TableHeader>
                 <TableRow>
@@ -200,10 +206,10 @@ export default function DeveloperProfilePage() {
               </TableHeader>
               <TableBody>
                 {platformApps.map((app) => (
-                  <TableRow key={`${app.platform}-${app.slug}`}>
+                  <TableRow key={app.slug}>
                     <TableCell className="min-w-[200px]">
                       <Link
-                        href={`/${app.platform}/apps/${app.slug}`}
+                        href={`/${platform}/apps/${app.slug}`}
                         className="flex items-center gap-2 hover:underline"
                       >
                         {app.iconUrl && (
@@ -245,9 +251,9 @@ export default function DeveloperProfilePage() {
                 ))}
               </TableBody>
             </Table>
-          </CardContent>
-        </Card>
-      ))}
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 }

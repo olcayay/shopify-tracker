@@ -10,7 +10,7 @@ import { StarAppButton } from "@/components/star-app-button";
 import { AdminScraperTrigger } from "@/components/admin-scraper-trigger";
 import { AppNav } from "./app-nav";
 import { buildExternalAppUrl, getPlatformName } from "@/lib/platform-urls";
-import { PLATFORMS, isPlatformId, type PlatformId } from "@appranks/shared";
+import { PLATFORMS, isPlatformId, developerNameToSlug, type PlatformId } from "@appranks/shared";
 
 export default async function AppDetailLayout({
   params,
@@ -189,7 +189,7 @@ export default async function AppDetailLayout({
             <CardContent>
               {snapshot.developer?.name ? (
                 <Link
-                  href={`/${platform}/developers?name=${encodeURIComponent(snapshot.developer.name)}`}
+                  href={`/${platform}/developers/${developerNameToSlug(snapshot.developer.name)}`}
                   className="text-sm text-primary hover:underline truncate block"
                 >
                   {snapshot.developer.name}
