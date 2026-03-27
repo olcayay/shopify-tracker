@@ -211,8 +211,8 @@ export default function CrossPlatformOverviewPage() {
             />
           ))}
 
-          {/* Show disabled platforms for discovery (not sysadmin, who sees all) */}
-          {!isSystemAdmin &&
+          {/* System admin: also show disabled platforms */}
+          {isSystemAdmin &&
             PLATFORM_IDS.filter((pid) => !enabledPlatforms.includes(pid)).map((pid) => (
               <PlatformCard
                 key={pid}

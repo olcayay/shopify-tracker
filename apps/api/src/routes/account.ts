@@ -34,10 +34,9 @@ import {
   appPowerScores,
   researchProjects,
   categoryParents,
-  accountPlatforms,
   platformRequests,
 } from "@appranks/db";
-import { computeWeightedPowerScore, PLATFORM_IDS, type PlatformId } from "@appranks/shared";
+import { computeWeightedPowerScore } from "@appranks/shared";
 import { requireRole } from "../middleware/authorize.js";
 import { getPlatformFromQuery } from "../utils/platform.js";
 
@@ -3504,88 +3503,8 @@ export const accountRoutes: FastifyPluginAsync = async (app) => {
     }
   );
 
-  // POST /api/account/platforms — self-service enable a platform
-  app.post<{ Body: { platform: string } }>(
-    "/platforms",
-    { preHandler: [requireRole("owner", "editor")] },
-    async (request, reply) => {
-      const { accountId } = request.user;
-      const { platform } = request.body as { platform: string };
-
-      if (!platform || !PLATFORM_IDS.includes(platform as PlatformId)) {
-        return reply.code(400).send({ error: "Invalid platform" });
-      }
-
-      // Check maxPlatforms limit
-      const [account] = await db
-        .select({ maxPlatforms: accounts.maxPlatforms })
-        .from(accounts)
-        .where(eq(accounts.id, accountId));
-
-      const [currentCount] = await db
-        .select({ count: sql<number>`count(*)::int` })
-        .from(accountPlatforms)
-        .where(eq(accountPlatforms.accountId, accountId));
-
-      if (currentCount.count >= account.maxPlatforms) {
-        return reply.code(403).send({
-          error: `Platform limit reached (${account.maxPlatforms}). Upgrade your plan to add more platforms.`,
-        });
-      }
-
-      // Check if already enabled
-      const [existing] = await db
-        .select({ id: accountPlatforms.id })
-        .from(accountPlatforms)
-        .where(
-          and(
-            eq(accountPlatforms.accountId, accountId),
-            eq(accountPlatforms.platform, platform)
-          )
-        );
-
-      if (existing) {
-        return reply.code(409).send({ error: "Platform already enabled" });
-      }
-
-      const [row] = await db
-        .insert(accountPlatforms)
-        .values({ accountId, platform })
-        .returning();
-
-      return { message: "Platform enabled", platform: row.platform };
-    }
-  );
-
-  // DELETE /api/account/platforms/:platform — self-service disable a platform
-  app.delete<{ Params: { platform: string } }>(
-    "/platforms/:platform",
-    { preHandler: [requireRole("owner", "editor")] },
-    async (request, reply) => {
-      const { accountId } = request.user;
-      const { platform } = request.params;
-
-      if (!platform || !PLATFORM_IDS.includes(platform as PlatformId)) {
-        return reply.code(400).send({ error: "Invalid platform" });
-      }
-
-      const deleted = await db
-        .delete(accountPlatforms)
-        .where(
-          and(
-            eq(accountPlatforms.accountId, accountId),
-            eq(accountPlatforms.platform, platform)
-          )
-        )
-        .returning();
-
-      if (deleted.length === 0) {
-        return reply.code(404).send({ error: "Platform not enabled" });
-      }
-
-      return { message: "Platform disabled", platform };
-    }
-  );
+  // NOTE: Platform enable/disable is system-admin only (via /api/system-admin/accounts/:id/platforms).
+  // Regular users cannot enable or disable platforms for their account.
 
   // POST /api/account/platform-requests — submit a platform request
   app.post<{ Body: { platformName: string; marketplaceUrl?: string; notes?: string } }>(

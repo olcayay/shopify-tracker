@@ -1,13 +1,14 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useAuth } from "@/lib/auth-context";
 import { PLATFORM_DISPLAY } from "@/lib/platform-display";
 import { PLATFORMS, PLATFORM_IDS, type PlatformId } from "@appranks/shared";
-import { Check, Search, MessageSquarePlus } from "lucide-react";
+import { Check, Search, MessageSquarePlus, ArrowRight } from "lucide-react";
 import { PlatformRequestDialog } from "@/components/platform-request-dialog";
 
 const CAPABILITY_LABELS: { key: string; label: string }[] = [
@@ -28,70 +29,45 @@ export function PlatformDiscoverySheet({
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }) {
-  const { account, fetchWithAuth, refreshUser } = useAuth();
+  const { user, account } = useAuth();
   const enabledPlatforms = (account?.enabledPlatforms ?? []) as PlatformId[];
+  const isSystemAdmin = user?.isSystemAdmin;
   const [search, setSearch] = useState("");
-  const [enabling, setEnabling] = useState<string | null>(null);
-  const [disabling, setDisabling] = useState<string | null>(null);
   const [requestOpen, setRequestOpen] = useState(false);
 
-  const filtered = PLATFORM_IDS.filter((pid) => {
+  // Regular users only see their enabled platforms; system admin sees all
+  const visiblePlatforms = isSystemAdmin ? PLATFORM_IDS : enabledPlatforms;
+
+  const filtered = visiblePlatforms.filter((pid) => {
     if (!search.trim()) return true;
     const d = PLATFORM_DISPLAY[pid];
     return d.label.toLowerCase().includes(search.toLowerCase());
   });
-
-  async function enablePlatform(pid: PlatformId) {
-    setEnabling(pid);
-    try {
-      const res = await fetchWithAuth("/api/account/platforms", {
-        method: "POST",
-        body: JSON.stringify({ platform: pid }),
-      });
-      if (res.ok) {
-        await refreshUser();
-      }
-    } finally {
-      setEnabling(null);
-    }
-  }
-
-  async function disablePlatform(pid: PlatformId) {
-    setDisabling(pid);
-    try {
-      const res = await fetchWithAuth(`/api/account/platforms/${pid}`, {
-        method: "DELETE",
-      });
-      if (res.ok) {
-        await refreshUser();
-      }
-    } finally {
-      setDisabling(null);
-    }
-  }
 
   return (
     <>
       <Sheet open={open} onOpenChange={onOpenChange}>
         <SheetContent side="right" className="w-full sm:w-[420px] overflow-y-auto">
           <SheetTitle className="text-lg font-semibold mb-1">
-            Platform Catalog
+            {isSystemAdmin ? "All Platforms" : "Your Platforms"}
           </SheetTitle>
           <p className="text-sm text-muted-foreground mb-4">
-            {PLATFORM_IDS.length} platforms available &middot;{" "}
-            {enabledPlatforms.length} enabled
+            {enabledPlatforms.length} platform{enabledPlatforms.length !== 1 ? "s" : ""} enabled
+            {isSystemAdmin && ` (${PLATFORM_IDS.length} total)`}
           </p>
 
           {/* Search */}
-          <div className="relative mb-4">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Search platforms..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="pl-9"
-            />
-          </div>
+          {visiblePlatforms.length > 3 && (
+            <div className="relative mb-4">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Search platforms..."
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="pl-9"
+              />
+            </div>
+          )}
 
           {/* Platform list */}
           <div className="space-y-3">
@@ -107,7 +83,7 @@ export function PlatformDiscoverySheet({
                 <div
                   key={pid}
                   className={`border rounded-lg p-3 transition-colors ${
-                    isEnabled ? "border-l-4" : "border-dashed opacity-80"
+                    isEnabled ? "border-l-4" : "border-dashed opacity-60"
                   }`}
                   style={isEnabled ? { borderLeftColor: d.color } : undefined}
                 >
@@ -134,32 +110,23 @@ export function PlatformDiscoverySheet({
                     ))}
                   </div>
 
-                  {/* Action */}
+                  {/* Status */}
                   {isEnabled ? (
                     <div className="flex items-center justify-between">
                       <span className="text-xs text-green-600 flex items-center gap-1">
                         <Check className="h-3 w-3" /> Active
                       </span>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="text-xs h-7 text-muted-foreground hover:text-destructive"
-                        onClick={() => disablePlatform(pid)}
-                        disabled={disabling === pid}
-                      >
-                        {disabling === pid ? "Disabling..." : "Disable"}
-                      </Button>
+                      <Link href={`/${pid}/overview`} onClick={() => onOpenChange(false)}>
+                        <Button variant="ghost" size="sm" className="text-xs h-7">
+                          Dashboard <ArrowRight className="h-3 w-3 ml-1" />
+                        </Button>
+                      </Link>
                     </div>
                   ) : (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="w-full text-xs h-7"
-                      onClick={() => enablePlatform(pid)}
-                      disabled={enabling === pid}
-                    >
-                      {enabling === pid ? "Enabling..." : "Enable Platform"}
-                    </Button>
+                    // Only system admin sees disabled platforms — show label only
+                    <span className="text-xs text-muted-foreground">
+                      Not enabled for this account
+                    </span>
                   )}
                 </div>
               );

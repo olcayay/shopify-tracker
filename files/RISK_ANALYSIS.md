@@ -599,6 +599,30 @@ This document identifies **62 risks** across 15 categories, rates them by likeli
 
 ---
 
+### R-95: Self-Service Platform Enable/Disable Bypasses Admin Control (Critical / High Likelihood)
+**Risk Score: 25**
+
+**Description:** Self-service API endpoints (`POST /api/account/platforms`, `DELETE /api/account/platforms/:platform`) allowed regular users (owner/editor roles) to enable or disable platforms for their own account, bypassing system-admin-only controls. The PlatformDiscoverySheet UI also displayed all 11 platforms to regular users — including globally hidden ones — with "Enable Platform" buttons.
+
+**Impact:**
+- Regular users could enable platforms the admin explicitly disabled for them
+- Disabled/hidden platforms were visible in the UI, leaking platform catalog information
+- Users could self-service around plan limits by toggling platforms
+- Undermines the system-admin platform management model
+
+**Root Cause:** PLA-94 (multi-platform UX overhaul) introduced self-service platform endpoints and discovery UI without considering that platform management is system-admin-only.
+
+**Resolution (FIXED):**
+- [x] Removed `POST /api/account/platforms` and `DELETE /api/account/platforms/:platform` endpoints
+- [x] PlatformDiscoverySheet now only shows enabled platforms to regular users (system admin sees all)
+- [x] Removed enable/disable buttons from discovery sheet for regular users
+- [x] Overview page no longer shows disabled platform cards to regular users
+- [x] Platform enable/disable remains system-admin only via `/api/system-admin/accounts/:id/platforms`
+
+**Lesson:** Platform visibility and management must always be system-admin controlled. Never expose admin-only operations as self-service features without explicit product decision.
+
+---
+
 ### R-22: Secrets Management (Critical / Low Likelihood)
 **Risk Score: 15**
 

@@ -184,12 +184,13 @@ describe("CrossPlatformOverviewPage", () => {
     });
   });
 
-  it("shows disabled platforms for discovery", async () => {
+  it("does not show disabled platforms to regular users", async () => {
     setupDefaultMocks();
     render(<OverviewPage />);
     await waitFor(() => {
-      // Non-enabled platforms should appear as disabled cards
-      expect(screen.getByText("Canva Apps")).toBeInTheDocument();
+      // Regular users should NOT see non-enabled platforms
+      expect(screen.queryByText("Canva Apps")).not.toBeInTheDocument();
+      expect(screen.queryByText("Not enabled")).not.toBeInTheDocument();
     });
   });
 });
