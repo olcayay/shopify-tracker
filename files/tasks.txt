@@ -225,3 +225,7 @@ risk analysis mitigations — 10 tasks from RISK_ANALYSIS.md ✅
   - R-09: data sanity checks (clampRating, clampCount, clampPosition) in app-details & category scrapers
   - R-12: DataFreshness component on app detail, rankings, category pages
   - R-20: login error messages already generic (verified)
+
+dashboard /health endpoint for UptimeRobot monitoring (PLA-90) ✅
+
+show start time in job detail modals and tooltips (PLA-89) ✅

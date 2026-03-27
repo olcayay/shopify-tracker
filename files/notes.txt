@@ -1,3 +1,16 @@
+Dashboard /health endpoint + Job modal start times (2026-03-27)
+================================================================
+
+PLA-90: Added /health endpoint to Next.js dashboard so UptimeRobot can monitor it.
+- New route: apps/dashboard/src/app/health/route.ts (returns {status:"ok", timestamp})
+- Added "/health" to PUBLIC_PATHS in proxy.ts (bypasses auth)
+- Added proxy test for /health
+
+PLA-89: Added "Started" timestamp to job detail modals and tooltips.
+- ErrorDetailModal: shows "Started" row before "Completed" in info grid
+- Matrix cell tooltip: shows "Started: X ago" before "Completed"
+- Data was already available in HealthCell.lastRun.startedAt, just not displayed
+
 Risk Analysis Mitigations (2026-03-27)
 =======================================
 

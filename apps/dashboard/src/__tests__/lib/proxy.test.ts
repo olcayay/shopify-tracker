@@ -122,6 +122,13 @@ describe("proxy routing", () => {
     expect(mockNext).toHaveBeenCalled();
   });
 
+  it("allows unauthenticated access to /health", async () => {
+    const { proxy } = await import("@/proxy");
+    const req = createMockRequest("/health") as any;
+    await proxy(req);
+    expect(mockNext).toHaveBeenCalled();
+  });
+
   it("does not redirect /overview (cross-platform page)", async () => {
     const { proxy } = await import("@/proxy");
     const payload = { exp: Math.floor(Date.now() / 1000) + 3600, isSystemAdmin: false };

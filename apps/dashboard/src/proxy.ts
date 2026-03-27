@@ -2,7 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
 
-const PUBLIC_PATHS = ["/", "/login", "/register", "/invite", "/terms", "/privacy"];
+const PUBLIC_PATHS = ["/", "/login", "/register", "/invite", "/terms", "/privacy", "/health"];
 
 const VALID_PLATFORMS = ["shopify", "salesforce", "canva", "wix", "wordpress", "google_workspace", "atlassian", "zoom", "zoho", "zendesk", "hubspot"];
 
