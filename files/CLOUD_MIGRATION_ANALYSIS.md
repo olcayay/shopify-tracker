@@ -4,7 +4,7 @@
 **Prepared by:** Engineering Team
 **Status:** Decision Pending
 **Current Hosting:** Hetzner VPS via Coolify
-**Budget Constraint:** $10-20/month
+**Budget Constraint:** $20-25/month (startup) → $40-50/month (scale-up)
 
 ---
 
@@ -503,7 +503,7 @@ Sadece GCP değil, bütçeye uygun tüm alternatiflerin değerlendirmesi:
 +----------------------------------------------------------+
 ```
 
-**Cost:** $20/month instance + $3.50 snapshots = **$23.50** (slightly over budget)
+**Cost:** $20/month instance + $3.50 snapshots = **$23.50** (within budget)
 **Without snapshots:** $20/month flat
 
 **Detailed breakdown:**
@@ -526,7 +526,7 @@ Sadece GCP değil, bütçeye uygun tüm alternatiflerin değerlendirmesi:
 | Price | €9.29 ($10) | $20 |
 | SLA | 99.9% | 99.99% |
 
-**Verdict:** 2x the price of Hetzner for half the specs. BUT: AWS infrastructure, automatic snapshots, 99.99% SLA. At budget ceiling.
+**Verdict:** 2x the price of Hetzner for half the specs. BUT: AWS infrastructure, automatic snapshots, 99.99% SLA. Within budget. Good option for reliability.
 
 ---
 
@@ -616,7 +616,7 @@ Sadece GCP değil, bütçeye uygun tüm alternatiflerin değerlendirmesi:
 | EBS 30GB | $2.40 |
 | **Total** | **$23-30/month** ❌ OVER BUDGET |
 
-**Verdict:** Good first year with free RDS. But budget doubles after free tier expires. Not sustainable long-term at $10-20/mo.
+**Verdict:** Great first year with free RDS. After yr1, $23-30/mo fits within scale-up budget ($40-50). Sustainable path.
 
 ---
 
@@ -645,9 +645,9 @@ Sadece GCP değil, bütçeye uygun tüm alternatiflerin değerlendirmesi:
 +----------------------------------------------------------+
 ```
 
-**Cost:** $15-20 (spot) + $2.40 (disk) = **$17-22/month** (at/over budget)
+**Cost:** $15-20 (spot) + $2.40 (disk) = **$17-22/month** (within budget)
 
-**Verdict:** Best GCP option for this workload IF budget allows. 8GB RAM is ideal.
+**Verdict:** Best GCP option — 8GB RAM is ideal for Playwright. Well within $20-25 budget.
 
 ---
 
@@ -703,7 +703,7 @@ Sadece GCP değil, bütçeye uygun tüm alternatiflerin değerlendirmesi:
 ```
 
 **Cost:** $12-24/month depending on tier
-**Verdict:** $18/month option is borderline — 2GB RAM too tight for Playwright. $24 option is good but over budget.
+**Verdict:** $24/month option (2 vCPU, 4GB) within budget. Good alternative to AWS Lightsail with similar specs.
 
 ---
 
@@ -736,7 +736,7 @@ Sadece GCP değil, bütçeye uygun tüm alternatiflerin değerlendirmesi:
 ```
 
 **Cost:** $25-40/month estimated (unpredictable)
-**Verdict:** Over budget. Playwright won't work. Good for API/dashboard but not scrapers.
+**Verdict:** Within scale-up budget but unpredictable. Playwright won't work. Good for API/dashboard but not scrapers.
 
 ---
 
@@ -768,7 +768,7 @@ Sadece GCP değil, bütçeye uygun tüm alternatiflerin değerlendirmesi:
 ```
 
 **Cost:** $30-45/month for usable setup
-**Verdict:** Way over budget. Great platform but expensive for scraper workloads.
+**Verdict:** At/above scale-up budget ceiling. Great platform but expensive for scraper workloads.
 
 ---
 
@@ -858,8 +858,8 @@ The definitive comparison. GCP and AWS variants detailed, others summarized.
 | **Spot Warning** | — | 30s | 30s | **24h forced kill** | 30s | — |
 | **Uptime SLA** | 99.9% | 0% | 0% | 0% | 0% | 99.5% |
 | **Playwright** | ✅ | ⚠️ Tight | ✅ Good | ⚠️ Tight | ❌ No | ❌ No |
-| **Budget Fit** | ✅ | ✅ | ⚠️ Ceiling | ✅ | ⚠️ | ✅ |
-| **Verdict** | Baseline | **Best GCP @budget** | Best GCP overall | Daily restarts | RAM too low | Impossible |
+| **Budget Fit** | ✅ | ✅ | ✅ | ✅ | ⚠️ | ✅ |
+| **Verdict** | Baseline | Good GCP option | **Best GCP @budget** | Daily restarts | RAM too low | Impossible |
 
 ### Infrastructure Specs — AWS Options
 
@@ -874,8 +874,8 @@ The definitive comparison. GCP and AWS variants detailed, others summarized.
 | **Uptime SLA** | **99.99%** | 0% (spot) | Mixed |
 | **Managed DB** | ❌ | ❌ | ✅ (12mo free) |
 | **Playwright** | ✅ | ✅ | ✅ |
-| **Budget Fit** | ⚠️ Ceiling | ✅ | ✅ yr1 / ❌ yr2+ |
-| **Verdict** | Over budget, safe | **Best AWS @budget** | Free DB expires |
+| **Budget Fit** | ✅ | ✅ | ✅ (yr2+ fits scale-up) |
+| **Verdict** | ✅ Safe, within budget | **Best AWS @budget** | Great with RDS free yr1 |
 
 ### Infrastructure Specs — Hybrid & Other Options
 
@@ -934,7 +934,7 @@ The definitive comparison. GCP and AWS variants detailed, others summarized.
 
 | | Current | A | B | C | D | E | F | G | H | I | J | K |
 |--|:-------:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|
-| **Within $10-20?** | ✅ | ✅ | ⚠️ | ✅ | ✅ | ✅ | ⚠️ | ⚠️ | ❌ | ❌ | ✅ | ✅ |
+| **Within $20-25?** | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ⚠️ | ⚠️ | ✅ | ✅ |
 | **Predictable Cost?** | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ❌ | ❌ | ✅ | ✅ |
 
 ---
@@ -1066,7 +1066,7 @@ The definitive comparison. GCP and AWS variants detailed, others summarized.
 | e2-medium Spot (app) | 1 vCPU, 4GB | $8-12/mo |
 | Cloud SQL db-f1-micro | Shared, 0.6GB, 10GB | $7-9/mo |
 | 30GB PD SSD | | $2.40/mo |
-| **Total** | | **$17-23/mo** ⚠️ Over budget |
+| **Total** | | **$17-23/mo** ✅ Within budget |
 
 **AWS Implementation:**
 | Config | Spec | Cost |
@@ -1075,7 +1075,7 @@ The definitive comparison. GCP and AWS variants detailed, others summarized.
 | RDS db.t3.micro (yr1 free!) | 2 vCPU, 1GB | $0 (yr1) / $12 (yr2+) |
 | 30GB EBS | | $2.40/mo |
 | **Total yr1** | | **$6-9/mo** ✅ |
-| **Total yr2+** | | **$18-21/mo** ⚠️ At ceiling |
+| **Total yr2+** | | **$18-21/mo** ✅ Within budget |
 
 ---
 
@@ -1122,7 +1122,7 @@ The definitive comparison. GCP and AWS variants detailed, others summarized.
 | VM2: e2-medium Spot (Workers) | 1 vCPU, 4GB | $8-12/mo |
 | DB: Container on VM2 | — | $0 |
 | 2× 20GB PD SSD | | $3.20/mo |
-| **Total** | | **$15-21/mo** ⚠️ At ceiling |
+| **Total** | | **$15-21/mo** ✅ Within budget |
 
 **AWS Implementation:**
 | Config | Spec | Cost |
@@ -1166,7 +1166,7 @@ The definitive comparison. GCP and AWS variants detailed, others summarized.
 | VM2: e2-medium Spot (Workers) | 1 vCPU, 4GB | $8-12/mo |
 | Cloud SQL db-f1-micro | Shared, 0.6GB | $7-9/mo |
 | 2× 20GB PD SSD | | $3.20/mo |
-| **Total** | | **$22-30/mo** ❌ Over budget |
+| **Total** | | **$22-30/mo** ⚠️ Scale-up budget |
 
 **AWS Implementation:**
 | Config | Spec | Cost |
@@ -1228,7 +1228,7 @@ Scale trigger: queue depth > 20
 | ALB | | $16/mo (min) |
 | **Total** | | **$27-43/mo** ❌ |
 
-**Verdict:** Over budget at current scale. Makes sense when:
+**Verdict:** Within scale-up budget ($40-50). Makes sense when:
 - Platform count > 20
 - Scrape frequency increases (4x/day)
 - Multiple customers need isolated scraping
@@ -1253,7 +1253,8 @@ Scale trigger: queue depth > 20
 |--|--------|--------|--------|--------|--------|
 | **GCP** | $10-22 | $17-23 | $15-21 | $22-30 | $28-46 |
 | **AWS** | $11-26 | $6-9 yr1 | $14-18 | $14-18 yr1 | $27-43 |
-| **Budget?** | ✅ | ⚠️ | ⚠️ | ❌ | ❌ |
+| **$20-25 startup?** | ✅ | ✅ | ✅ | ⚠️ | ❌ |
+| **$40-50 scale-up?** | ✅ | ✅ | ✅ | ✅ | ✅ |
 
 **Capability comparison:**
 
@@ -1269,16 +1270,17 @@ Scale trigger: queue depth > 20
 ### Recommended Tier per Growth Stage
 
 ```
-Stage 1: NOW (1 user, 11 platforms, $10-20/mo)
-  +-> Tier 1 Monolith + Backup (Scenario D)
+Stage 1: STARTUP ($20-25/mo, 1 user, 11 platforms)
+  +-> Tier 2: DB Outside (AWS EC2 Spot + RDS Free)
+      OR Tier 1 Monolith + Backup (Scenario D)
 
-Stage 2: TRACTION (5-10 users, $20-30/mo budget)
+Stage 2: TRACTION ($25-40/mo, 5-10 users)
   +-> Tier 3: Split VMs (API + Workers separate)
 
-Stage 3: GROWTH (50+ users, $50-100/mo budget)
+Stage 3: GROWTH ($40-50/mo, 20+ users)
   +-> Tier 4: Full Split + Managed DB
 
-Stage 4: SCALE (100+ users, 20+ platforms, $100+/mo)
+Stage 4: SCALE ($50-100+/mo, 100+ users, 20+ platforms)
   +-> Tier 5: Auto-scaling Workers + Read Replica
 ```
 
@@ -1429,7 +1431,7 @@ NOW                    MONTH 1              MONTH 2
 | **Explore** | K: Oracle Free | Test ARM compatibility | $0 | 2 hours |
 | **Future ($50+)** | GCP Full | Full migration when budget allows | $50+/mo | 1 day |
 
-**Bottom line:** $10-20/ay bütçeyle GCP'ye tam geçiş, mevcut Hetzner'dan daha kötü. En akıllı hamle: Hetzner'da kal, GCP'yi sadece backup/DR için kullan, performans lazımsa Hetzner CPX31'e yükselt.
+**Bottom line:** $20-25/ay startup bütçeyle GCP veya AWS'e tam geçiş artık mümkün. En iyi seçenekler: **AWS EC2 Spot + RDS Free (Tier 2, $12-15/mo)** veya **GCP e2-standard-2 Spot ($17-22/mo)**. Scale-up gerektiğinde $40-50 bütçeyle Tier 3-4'e geçiş yapılabilir.
 
 ---
 
