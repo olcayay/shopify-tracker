@@ -17,6 +17,7 @@
 4. [Architecture Tiers](#3-architecture-tiers)
 5. [Tier Comparison](#4-tier-comparison)
 6. [Growth Roadmap & Migration Checklist](#5-growth-roadmap--migration-checklist)
+7. [Glossary](#glossary)
 
 ---
 
@@ -290,7 +291,7 @@ BOTTLENECK                        AWS SOLUTION              GCP SOLUTION
 ============                      ============              ============
 
 1. Single server failure    -->   EC2 + Auto Recovery  -->  GCE + Instance Schedule
-                                  EBS persists data         Persistent Disk survives
+                                  EBS (disk) persists data  Persistent Disk survives
 
 2. No database backup       -->   RDS (auto backup)   -->  Cloud SQL (auto backup)
                                   S3 for manual dumps       GCS for manual dumps
@@ -301,8 +302,8 @@ BOTTLENECK                        AWS SOLUTION              GCP SOLUTION
 4. Playwright RAM spikes    -->   Dedicated worker     -->  Dedicated worker VM
                                   instance (4-8GB)          (4-8GB)
 
-5. No disaster recovery    -->   Multi-AZ deploy      -->  Regional MIG
-                                  AMI snapshots              VM snapshots
+5. No disaster recovery    -->   Multi-AZ deploy      -->  Regional Instance Group
+                                  VM snapshots               VM snapshots
                                   Route 53 failover          Cloud DNS failover
 
 6. Workers can't scale     -->   Auto Scaling Group   -->  Managed Instance Group
@@ -671,7 +672,7 @@ Scale trigger: queue depth > 20 OR job time > 2x normal
 | **Tier 2** | Simpler console | **RDS free 12 months** | **AWS** (free DB!) |
 | **Tier 3** | Simpler setup | **Cheaper Spot + better recovery** | **AWS** |
 | **Tier 4** | Simpler console | **RDS free yr1 = Tier 3 price** | **AWS** |
-| **Tier 5** | MIG simpler than ASG | Mature Spot Fleet | Tie |
+| **Tier 5** | Instance Group simpler | Spot Fleet more mature | Tie |
 
 ---
 
@@ -800,9 +801,9 @@ Do you need automatic backups?
 **Tier 5 (Auto-scaling Workers):**
 
 - [ ] All Tier 4 steps
-- [ ] Setup Load Balancer (AWS ALB / GCP LB)
-- [ ] Create worker VM image (AMI / GCE Image) with Docker pre-installed
-- [ ] Configure Auto Scaling Group (AWS) / Managed Instance Group (GCP)
+- [ ] Setup Load Balancer (AWS ALB / GCP Load Balancer)
+- [ ] Create worker VM image (AWS AMI / GCP Image) with Docker pre-installed
+- [ ] Configure auto-scaling (AWS Auto Scaling Group / GCP Managed Instance Group)
   - Min: 1 worker, Max: 3 workers
   - Scale trigger: BullMQ queue depth > 20 or CPU > 80%
 - [ ] Split platform assignments across workers (e.g., Worker 1: platforms 1-6, Worker 2: 7-11)
@@ -811,6 +812,34 @@ Do you need automatic backups?
 - [ ] Setup monitoring: CloudWatch (AWS) / Cloud Monitoring (GCP)
 - [ ] Test: kill a worker VM, verify auto-relaunch and job recovery
 - [ ] Load test: simulate 100 users + all 11 platforms at full capacity
+
+---
+
+---
+
+## Glossary
+
+| Abbreviation | Full Name | What It Does |
+|-------------|-----------|-------------|
+| **EC2** | Elastic Compute Cloud | AWS virtual machine service |
+| **GCE** | Google Compute Engine | GCP virtual machine service |
+| **RDS** | Relational Database Service | AWS managed PostgreSQL/MySQL |
+| **Cloud SQL** | — | GCP managed PostgreSQL/MySQL |
+| **S3** | Simple Storage Service | AWS object storage (backups, files) |
+| **GCS** | Google Cloud Storage | GCP object storage (backups, files) |
+| **EBS** | Elastic Block Store | AWS persistent disk for VMs |
+| **PD** | Persistent Disk | GCP persistent disk for VMs |
+| **ALB** | Application Load Balancer | AWS load balancer for HTTP traffic |
+| **ASG** | Auto Scaling Group | AWS auto VM scaling (add/remove VMs by rules) |
+| **MIG** | Managed Instance Group | GCP auto VM scaling (add/remove VMs by rules) |
+| **AMI** | Amazon Machine Image | AWS VM snapshot/template |
+| **VPC** | Virtual Private Cloud | Private network between cloud resources |
+| **Spot VM** | — | Discounted VM that can be interrupted anytime |
+| **On-demand** | — | Regular-priced VM with uptime guarantee |
+| **SLA** | Service Level Agreement | Uptime guarantee (e.g. 99.9%) |
+| **DR** | Disaster Recovery | Plan for recovering from server failure |
+| **HA** | High Availability | Architecture that minimizes downtime |
+| **IOPS** | I/O Operations Per Second | Disk read/write speed metric |
 
 ---
 
