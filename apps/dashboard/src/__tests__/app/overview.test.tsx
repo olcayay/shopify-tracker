@@ -225,6 +225,8 @@ describe("CrossPlatformOverviewPage", () => {
     // Both platforms have apps so they're in "Your Platforms"
     expect(screen.getByText("Shopify App Store")).toBeInTheDocument();
     expect(screen.getByText("Salesforce AppExchange")).toBeInTheDocument();
+    // Active count badge
+    expect(screen.getByText("2 active")).toBeInTheDocument();
   });
 
   it("shows available platforms section when some multi-platform platforms have zero stats", async () => {
@@ -242,6 +244,6 @@ describe("CrossPlatformOverviewPage", () => {
       // new_user persona shows Available Platforms
       expect(screen.getByText("Available Platforms")).toBeInTheDocument();
     });
-    expect(screen.getByText("Start tracking to see stats")).toBeInTheDocument();
+    expect(screen.getByText("Start tracking on any of these to see stats and rankings.")).toBeInTheDocument();
   });
 });

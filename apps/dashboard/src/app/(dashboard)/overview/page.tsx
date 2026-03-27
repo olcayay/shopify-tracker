@@ -229,10 +229,15 @@ export default function CrossPlatformOverviewPage() {
 
         return (
           <>
-            {/* Your Platforms — full cards */}
+            {/* Your Platforms — full cards, prominent section */}
             {tracked.length > 0 && (
-              <div className="space-y-3">
-                <h2 className="text-lg font-semibold">Your Platforms</h2>
+              <div className="space-y-4">
+                <div className="flex items-center gap-3">
+                  <h2 className="text-xl font-bold">Your Platforms</h2>
+                  <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-primary/10 text-primary">
+                    {tracked.length} active
+                  </span>
+                </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                   {tracked.map((platformId) => (
                     <PlatformCard
@@ -246,13 +251,15 @@ export default function CrossPlatformOverviewPage() {
               </div>
             )}
 
-            {/* Available Platforms — compact list */}
+            {/* Available Platforms — subdued container, smaller scale */}
             {available.length > 0 && (
-              <div className="space-y-3">
-                <div>
-                  <h2 className="text-lg font-semibold">Available Platforms</h2>
-                  <p className="text-sm text-muted-foreground">Start tracking to see stats</p>
+              <div className="rounded-xl border border-dashed bg-muted/20 p-5 space-y-3">
+                <div className="flex items-center gap-3">
+                  <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">Available Platforms</h3>
+                  <div className="flex-1 border-t border-dashed" />
+                  <span className="text-xs text-muted-foreground">{available.length} platforms</span>
                 </div>
+                <p className="text-xs text-muted-foreground">Start tracking on any of these to see stats and rankings.</p>
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
                   {available.map((pid) => (
                     <AvailablePlatformRow key={pid} platformId={pid} />
@@ -263,8 +270,8 @@ export default function CrossPlatformOverviewPage() {
 
             {/* System admin: disabled platforms */}
             {disabledPlatforms.length > 0 && (
-              <div className="space-y-3">
-                <h2 className="text-lg font-semibold text-muted-foreground">Disabled Platforms</h2>
+              <div className="rounded-xl border border-dashed bg-muted/10 p-5 space-y-3 opacity-60">
+                <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">Disabled Platforms</h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                   {disabledPlatforms.map((pid) => (
                     <PlatformCard
@@ -396,24 +403,24 @@ function AvailablePlatformRow({ platformId }: { platformId: PlatformId }) {
   return (
     <Link
       href={`/${platformId}`}
-      className="flex items-center gap-3 px-4 py-3 rounded-lg border border-dashed bg-muted/20 hover:bg-muted/50 transition-colors group"
+      className="flex items-center gap-2.5 px-3 py-2.5 rounded-lg bg-background/60 hover:bg-background transition-colors group border border-transparent hover:border-border"
     >
       <span
-        className="w-2.5 h-2.5 rounded-full shrink-0"
+        className="w-2 h-2 rounded-full shrink-0 opacity-80"
         style={{ backgroundColor: brand.color }}
       />
-      <span className="text-sm font-medium">{config.name}</span>
-      <div className="hidden sm:flex flex-wrap gap-1.5 ml-auto">
+      <span className="text-[13px] font-medium text-muted-foreground group-hover:text-foreground transition-colors">{config.name}</span>
+      <div className="hidden sm:flex flex-wrap gap-1 ml-auto">
         {capabilities.slice(0, 4).map((cap) => (
           <span
             key={cap.key}
-            className="text-[10px] px-1.5 py-0.5 rounded bg-muted text-muted-foreground"
+            className="text-[10px] px-1.5 py-0.5 rounded bg-muted/60 text-muted-foreground/70"
           >
             {cap.label}
           </span>
         ))}
       </div>
-      <ArrowRight className="h-3.5 w-3.5 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity shrink-0 ml-auto sm:ml-0" />
+      <ArrowRight className="h-3 w-3 text-muted-foreground/50 opacity-0 group-hover:opacity-100 transition-opacity shrink-0 ml-auto sm:ml-0" />
     </Link>
   );
 }
