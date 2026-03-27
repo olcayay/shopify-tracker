@@ -7,75 +7,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Package, ArrowRight, AppWindow, Search, Star, FlaskConical, Users } from "lucide-react";
-import { PLATFORMS, type PlatformId } from "@appranks/shared";
-
-const PLATFORM_BRANDS: Record<
-  string,
-  { primary: string; gradient: string; borderTop: string; textAccent: string }
-> = {
-  shopify: {
-    primary: "#95BF47",
-    gradient: "from-[#95BF47]/10 to-transparent",
-    borderTop: "border-t-[#95BF47]",
-    textAccent: "text-[#5E8E3E]",
-  },
-  salesforce: {
-    primary: "#00A1E0",
-    gradient: "from-[#00A1E0]/10 to-transparent",
-    borderTop: "border-t-[#00A1E0]",
-    textAccent: "text-[#0B5CAB]",
-  },
-  canva: {
-    primary: "#00C4CC",
-    gradient: "from-[#00C4CC]/10 to-transparent",
-    borderTop: "border-t-[#00C4CC]",
-    textAccent: "text-[#00848A]",
-  },
-  wix: {
-    primary: "#0C6EFC",
-    gradient: "from-[#0C6EFC]/10 to-transparent",
-    borderTop: "border-t-[#0C6EFC]",
-    textAccent: "text-[#0C6EFC]",
-  },
-  wordpress: {
-    primary: "#21759B",
-    gradient: "from-[#21759B]/10 to-transparent",
-    borderTop: "border-t-[#21759B]",
-    textAccent: "text-[#21759B]",
-  },
-  google_workspace: {
-    primary: "#4285F4",
-    gradient: "from-[#4285F4]/10 to-transparent",
-    borderTop: "border-t-[#4285F4]",
-    textAccent: "text-[#4285F4]",
-  },
-  atlassian: {
-    primary: "#0052CC",
-    gradient: "from-[#0052CC]/10 to-transparent",
-    borderTop: "border-t-[#0052CC]",
-    textAccent: "text-[#0052CC]",
-  },
-  zoom: {
-    primary: "#0B5CFF",
-    gradient: "from-[#0B5CFF]/10 to-transparent",
-    borderTop: "border-t-[#0B5CFF]",
-    textAccent: "text-[#0B5CFF]",
-  },
-  zoho: {
-    primary: "#D4382C",
-    gradient: "from-[#D4382C]/10 to-transparent",
-    borderTop: "border-t-[#D4382C]",
-    textAccent: "text-[#D4382C]",
-  },
-  zendesk: {
-    primary: "#03363D",
-    gradient: "from-[#03363D]/10 to-transparent",
-    borderTop: "border-t-[#03363D]",
-    textAccent: "text-[#03363D]",
-  },
-};
-
-const ALL_PLATFORMS: PlatformId[] = ["shopify", "salesforce", "canva", "wix", "wordpress", "google_workspace", "atlassian", "zoom", "zoho", "zendesk"];
+import { PLATFORMS, PLATFORM_IDS, type PlatformId } from "@appranks/shared";
+import { PLATFORM_DISPLAY } from "@/lib/platform-display";
 
 const CAPABILITY_LABELS: { key: string; label: string }[] = [
   { key: "hasReviews", label: "Reviews" },
@@ -214,10 +147,10 @@ export default function CrossPlatformOverviewPage() {
       )}
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {(user?.isSystemAdmin ? ALL_PLATFORMS : enabledPlatforms).map((platformId) => {
+        {(user?.isSystemAdmin ? PLATFORM_IDS : enabledPlatforms).map((platformId) => {
           const isEnabled = enabledPlatforms.includes(platformId);
           const config = PLATFORMS[platformId];
-          const brand = PLATFORM_BRANDS[platformId];
+          const brand = PLATFORM_DISPLAY[platformId];
           const platformStat = stats[platformId];
 
           if (!isEnabled) {
@@ -225,7 +158,7 @@ export default function CrossPlatformOverviewPage() {
               <Link key={platformId} href={`/${platformId}/overview`}>
                 <Card
                   className="rounded-xl border-dashed border-t-4 opacity-60 hover:opacity-80 transition-opacity cursor-pointer h-full"
-                  style={{ borderTopColor: brand.primary }}
+                  style={{ borderTopColor: brand.color }}
                 >
                   <CardHeader
                     className={`bg-gradient-to-r ${brand.gradient} rounded-t-xl`}
@@ -252,7 +185,7 @@ export default function CrossPlatformOverviewPage() {
             <Card
               key={platformId}
               className="rounded-xl border-t-4 hover:shadow-md transition-shadow"
-              style={{ borderTopColor: brand.primary }}
+              style={{ borderTopColor: brand.color }}
             >
               <CardHeader
                 className={`bg-gradient-to-r ${brand.gradient} rounded-t-xl`}
@@ -297,7 +230,7 @@ export default function CrossPlatformOverviewPage() {
                     >
                       <span
                         className="inline-block w-2 h-2 rounded-full"
-                        style={{ backgroundColor: brand.primary }}
+                        style={{ backgroundColor: brand.color }}
                       />
                       {cap.label}
                     </span>

@@ -28,24 +28,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { StatCardSkeleton, TableSkeleton } from "@/components/skeletons";
 import { AppBadgeIcon } from "@/components/app-badges";
 import { PLATFORMS, type PlatformId } from "@appranks/shared";
-
-const SCRAPER_LABELS: Record<string, string> = {
-  category: "Categories",
-  app_details: "App Details",
-  keyword_search: "Keywords",
-  reviews: "Reviews",
-};
-
-const PLATFORM_COLORS: Record<string, string> = {
-  shopify: "#95BF47",
-  salesforce: "#00A1E0",
-  canva: "#00C4CC",
-  wix: "#0C6EFC",
-  wordpress: "#21759B",
-  google_workspace: "#4285F4",
-  atlassian: "#0052CC",
-  hubspot: "#FF7A59",
-};
+import { PLATFORM_COLORS, SCRAPER_TYPE_LABELS } from "@/lib/platform-display";
 
 
 const PAGE_SIZE = 10;
@@ -837,7 +820,7 @@ export default function OverviewPage() {
                   {systemStats.freshness.map((f: any) => (
                     <div key={f.scraperType} className="space-y-1">
                       <p className="text-sm font-medium">
-                        {SCRAPER_LABELS[f.scraperType] || f.scraperType}
+                        {SCRAPER_TYPE_LABELS[f.scraperType] || f.scraperType}
                       </p>
                       {f.lastCompletedAt ? (
                         <>

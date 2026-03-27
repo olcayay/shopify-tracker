@@ -26,34 +26,7 @@ import {
   ExternalLink,
 } from "lucide-react";
 import { TableSkeleton } from "@/components/skeletons";
-
-const PLATFORM_COLORS: Record<string, string> = {
-  shopify: "#95BF47",
-  salesforce: "#00A1E0",
-  canva: "#00C4CC",
-  wix: "#0C6EFC",
-  wordpress: "#21759B",
-  google_workspace: "#4285F4",
-  atlassian: "#0052CC",
-  zoom: "#0B5CFF",
-  zoho: "#D4382C",
-  zendesk: "#03363D",
-  hubspot: "#FF7A59",
-};
-
-const PLATFORM_LABELS: Record<string, string> = {
-  shopify: "Shopify",
-  salesforce: "Salesforce",
-  canva: "Canva",
-  wix: "Wix",
-  wordpress: "WordPress",
-  google_workspace: "Google Workspace",
-  atlassian: "Atlassian",
-  zoom: "Zoom",
-  zoho: "Zoho",
-  zendesk: "Zendesk",
-  hubspot: "HubSpot",
-};
+import { getPlatformLabel, getPlatformColor } from "@/lib/platform-display";
 
 interface PlatformDev {
   id: number;
@@ -529,18 +502,16 @@ export default function SystemAdminDevelopersPage() {
                                 variant="outline"
                                 className="text-[10px] py-0"
                                 style={{
-                                  borderColor:
-                                    PLATFORM_COLORS[pd.platform] || "#666",
+                                  borderColor: getPlatformColor(pd.platform),
                                 }}
                               >
                                 <span
                                   className="w-1.5 h-1.5 rounded-full mr-1"
                                   style={{
-                                    backgroundColor:
-                                      PLATFORM_COLORS[pd.platform] || "#666",
+                                    backgroundColor: getPlatformColor(pd.platform),
                                   }}
                                 />
-                                {PLATFORM_LABELS[pd.platform] || pd.platform}
+                                {getPlatformLabel(pd.platform)}
                                 {pd.name !== dev.name && (
                                   <span className="text-muted-foreground ml-0.5">
                                     : {pd.name}

@@ -2,37 +2,10 @@
 
 import { useEffect, useState } from "react";
 import { useAuth } from "@/lib/auth-context";
+import { PLATFORM_LABELS, PLATFORM_COLORS } from "@/lib/platform-display";
 import { PLATFORMS, type PlatformId } from "@appranks/shared";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-
-const PLATFORM_LABELS: Record<PlatformId, string> = {
-  shopify: "Shopify",
-  salesforce: "Salesforce",
-  canva: "Canva",
-  wix: "Wix",
-  wordpress: "WordPress",
-  google_workspace: "Google Workspace",
-  atlassian: "Atlassian",
-  zoom: "Zoom",
-  zoho: "Zoho",
-  zendesk: "Zendesk",
-  hubspot: "HubSpot",
-};
-
-const PLATFORM_COLORS: Record<PlatformId, string> = {
-  shopify: "#95BF47",
-  salesforce: "#00A1E0",
-  canva: "#00C4CC",
-  wix: "#0C6EFC",
-  wordpress: "#21759B",
-  google_workspace: "#4285F4",
-  atlassian: "#0052CC",
-  zoom: "#0B5CFF",
-  zoho: "#D4382C",
-  zendesk: "#03363D",
-  hubspot: "#FF7A59",
-};
 
 interface PlatformCounts {
   apps: { platform: string; total: number; tracked: number; scraped: number; competitor: number; last_scraped_at: string | null }[];

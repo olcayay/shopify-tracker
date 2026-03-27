@@ -1,3 +1,20 @@
+multi-platform UX overhaul Phase 1: Foundation (PLA-94) ✅
+  - Consolidated PLATFORM_LABELS/PLATFORM_COLORS/PLATFORM_BRANDS into single PLATFORM_DISPLAY in platform-display.ts
+  - Fixed HubSpot missing from ALL_PLATFORMS (replaced with PLATFORM_IDS)
+  - Changed post-login/register redirect from /shopify/overview → /overview
+  - Added self-service platform enable/disable API endpoints (POST/DELETE /api/account/platforms)
+  - Added unit tests for all changes (9 platform-display tests + 10 API endpoint tests)
+
+multi-platform UX overhaul Phase 2: Navigation Overhaul (PLA-94)
+
+multi-platform UX overhaul Phase 3: Overview Hub (PLA-94)
+
+multi-platform UX overhaul Phase 4: Discovery & Request (PLA-94)
+
+multi-platform UX overhaul Phase 5: Power User Nav (PLA-94)
+
+multi-platform UX overhaul Phase 6: Polish (PLA-94)
+
 app için keyword suggestions ✅
 
 keyword loading states & polling ✅

@@ -1,5 +1,14 @@
 # Shopify Tracking Project
 
+## Production Server
+- **SSH:** `ssh root@5.78.101.102`
+- **Hosting:** Coolify (self-hosted PaaS) on Hetzner VPS
+- **Proxy:** Cloudflare → Traefik (Coolify) → Docker containers
+- **Domains:** `appranks.io` (dashboard), `api.appranks.io` (API)
+- **Containers:** API (port 3001), Dashboard (port 3000), Worker, Worker-Interactive, PostgreSQL, Redis
+- **Container names:** Random Coolify IDs (use `docker ps` to find them)
+- **DB container:** PostgreSQL with default `postgres` database (not `shopify_tracking`)
+
 ## Rules
 - All user-facing text in the dashboard must be in English. Never use Turkish or any other language for UI text, labels, warnings, descriptions, or placeholder text.
 - Commits should include both `files/tasks.txt` and `files/notes.txt`

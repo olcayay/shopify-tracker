@@ -16,34 +16,7 @@ import {
 } from "@/components/ui/table";
 import { Globe, Star } from "lucide-react";
 import { TableSkeleton } from "@/components/skeletons";
-
-const PLATFORM_COLORS: Record<string, string> = {
-  shopify: "#95BF47",
-  salesforce: "#00A1E0",
-  canva: "#00C4CC",
-  wix: "#0C6EFC",
-  wordpress: "#21759B",
-  google_workspace: "#4285F4",
-  atlassian: "#0052CC",
-  zoom: "#0B5CFF",
-  zoho: "#D4382C",
-  zendesk: "#03363D",
-  hubspot: "#FF7A59",
-};
-
-const PLATFORM_LABELS: Record<string, string> = {
-  shopify: "Shopify",
-  salesforce: "Salesforce",
-  canva: "Canva",
-  wix: "Wix",
-  wordpress: "WordPress",
-  google_workspace: "Google Workspace",
-  atlassian: "Atlassian",
-  zoom: "Zoom",
-  zoho: "Zoho",
-  zendesk: "Zendesk",
-  hubspot: "HubSpot",
-};
+import { getPlatformLabel, getPlatformColor } from "@/lib/platform-display";
 
 interface DeveloperProfile {
   developer: {
@@ -174,13 +147,13 @@ export default function DeveloperProfilePage() {
             <Badge
               variant="outline"
               className="text-xs cursor-pointer hover:bg-muted transition-colors"
-              style={{ borderColor: PLATFORM_COLORS[p.platform] || "#666" }}
+              style={{ borderColor: getPlatformColor(p.platform) }}
             >
               <span
                 className="w-2 h-2 rounded-full mr-1.5 inline-block"
-                style={{ backgroundColor: PLATFORM_COLORS[p.platform] || "#666" }}
+                style={{ backgroundColor: getPlatformColor(p.platform) }}
               />
-              {PLATFORM_LABELS[p.platform] || p.platform}
+              {getPlatformLabel(p.platform)}
               <span className="text-muted-foreground ml-1">
                 ({p.appCount} {p.appCount === 1 ? "app" : "apps"})
               </span>
@@ -203,9 +176,9 @@ export default function DeveloperProfilePage() {
               >
                 <span
                   className="w-2.5 h-2.5 rounded-full"
-                  style={{ backgroundColor: PLATFORM_COLORS[platform] || "#666" }}
+                  style={{ backgroundColor: getPlatformColor(platform) }}
                 />
-                {PLATFORM_LABELS[platform] || platform}
+                {getPlatformLabel(platform)}
               </Link>
               <span className="text-muted-foreground font-normal text-sm">
                 ({platformApps.length})

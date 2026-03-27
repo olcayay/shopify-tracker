@@ -2387,3 +2387,41 @@ Files modified:
 - packages/shared/src/index.ts (export smoke test types/constants)
 - apps/api/src/routes/system-admin.ts (SSE + retry endpoints)
 - apps/dashboard/src/app/(dashboard)/system-admin/scraper-health/page.tsx (import SmokeTestPanel)
+
+---
+
+## Multi-Platform UX Overhaul — Phase 1: Foundation (PLA-94)
+
+### Consolidated platform display constants
+- Created unified `PLATFORM_DISPLAY` record in `platform-display.ts` with label, shortLabel, color, gradient, borderTop, textAccent per platform
+- Derived convenience exports: `PLATFORM_LABELS`, `PLATFORM_SHORT_LABELS`, `PLATFORM_COLORS`
+- Added string-safe helpers: `getPlatformLabel()`, `getPlatformColor()`, `getPlatformDisplay()`
+- Removed 6 duplicated constant definitions from: sidebar.tsx, overview/page.tsx, developers/[slug]/page.tsx, system-admin/developers/page.tsx, platform-overview-cards.tsx, [platform]/overview/page.tsx
+
+### Fixed HubSpot missing from ALL_PLATFORMS
+- Replaced hardcoded `ALL_PLATFORMS` array with `PLATFORM_IDS` from @appranks/shared (includes all 11 platforms)
+
+### Post-login redirect
+- Changed `router.push("/shopify/overview")` → `router.push("/overview")` in both login and register flows (auth-context.tsx)
+
+### Self-service platform enable/disable API
+- `POST /api/account/platforms` — enable a platform (checks maxPlatforms limit, requires owner/editor)
+- `DELETE /api/account/platforms/:platform` — disable a platform (requires owner/editor)
+- Both validate platform ID against PLATFORM_IDS
+
+### Tests added
+- 9 unit tests for platform-display.ts (coverage, label/color accessors, fallbacks)
+- 10 tests for new API endpoints (auth, role-based access, validation)
+
+Files changed:
+- apps/dashboard/src/lib/platform-display.ts (expanded with PLATFORM_DISPLAY, helpers)
+- apps/dashboard/src/components/sidebar.tsx (import from platform-display)
+- apps/dashboard/src/components/platform-overview-cards.tsx (import from platform-display)
+- apps/dashboard/src/app/(dashboard)/overview/page.tsx (use PLATFORM_DISPLAY + PLATFORM_IDS)
+- apps/dashboard/src/app/(dashboard)/[platform]/overview/page.tsx (import PLATFORM_COLORS, SCRAPER_TYPE_LABELS)
+- apps/dashboard/src/app/(dashboard)/developers/[slug]/page.tsx (use getPlatformLabel/Color)
+- apps/dashboard/src/app/(dashboard)/system-admin/developers/page.tsx (use getPlatformLabel/Color)
+- apps/dashboard/src/lib/auth-context.tsx (redirect → /overview)
+- apps/api/src/routes/account.ts (new platform enable/disable endpoints)
+- apps/dashboard/src/__tests__/lib/platform-display.test.ts (new, 9 tests)
+- apps/api/src/__tests__/routes/account.test.ts (10 new tests)
