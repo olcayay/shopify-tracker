@@ -87,7 +87,7 @@ export async function developerRoutes(app: FastifyInstance) {
       request: FastifyRequest<{ Params: { slug: string } }>,
       reply
     ) => {
-      const { slug } = request.params;
+      const slug = request.params.slug.toLowerCase();
 
       // Get global developer
       const [developer] = await db
