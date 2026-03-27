@@ -392,6 +392,23 @@ export const accountRoutes: FastifyPluginAsync = async (app) => {
         });
       }
 
+      // Rate limit: max 10 invitations per account per day
+      const [{ todayCount }] = await db
+        .select({ todayCount: sql<number>`count(*)::int` })
+        .from(invitations)
+        .where(
+          and(
+            eq(invitations.accountId, accountId),
+            sql`${invitations.createdAt} >= NOW() - INTERVAL '24 hours'`
+          )
+        );
+
+      if (todayCount >= 10) {
+        return reply.code(429).send({
+          error: "Invitation limit reached. Maximum 10 invitations per day.",
+        });
+      }
+
       // Check if email is already a member
       const [existingUser] = await db
         .select({ id: users.id })

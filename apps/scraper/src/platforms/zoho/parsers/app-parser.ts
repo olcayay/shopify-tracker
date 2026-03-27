@@ -1,5 +1,5 @@
 import * as cheerio from "cheerio";
-import { createLogger } from "@appranks/shared";
+import { createLogger, safeParseFloat } from "@appranks/shared";
 import type { NormalizedAppDetails } from "../../platform-module.js";
 
 const log = createLogger("zoho:app-parser");
@@ -172,7 +172,7 @@ function parseFromDom($: cheerio.CheerioAPI, slug: string): NormalizedAppDetails
   const tagline = $(".tagline, .short-description").first().text().trim() || null;
 
   const ratingText = $(".rating-value, .avg-rating").first().text().trim();
-  const avgRating = ratingText ? parseFloat(ratingText) : null;
+  const avgRating = safeParseFloat(ratingText);
 
   const ratingCountText = $(".rating-count, .total-ratings").first().text().trim();
   const ratingCount = ratingCountText ? parseInt(ratingCountText.replace(/[^0-9]/g, ""), 10) : null;

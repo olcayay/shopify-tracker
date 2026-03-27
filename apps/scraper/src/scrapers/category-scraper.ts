@@ -16,6 +16,9 @@ import {
   MAX_CATEGORY_DEPTH,
   urls,
   createLogger,
+  clampRating,
+  clampCount,
+  clampPosition,
   type CategoryNode,
   type PlatformId,
 } from "@appranks/shared";
@@ -714,9 +717,11 @@ export class CategoryScraper {
       // Sponsored listings show ad boilerplate instead of real subtitle — skip subtitle update
       const subtitle = app.is_sponsored ? undefined : (app.short_description || undefined);
 
-      // Only write rating/count if genuinely > 0 (0 means parser extraction failed, don't overwrite valid data)
-      const hasRating = app.average_rating != null && app.average_rating > 0;
-      const hasCount = app.rating_count != null && app.rating_count > 0;
+      // Only write rating/count if genuinely > 0 and within valid range
+      const validRating = clampRating(app.average_rating);
+      const hasRating = validRating != null && validRating > 0;
+      const validCount = clampCount(app.rating_count);
+      const hasCount = validCount != null && validCount > 0;
 
       // Upsert app master record with all listing data
       const [upsertedApp] = await this.db
@@ -728,8 +733,8 @@ export class CategoryScraper {
           isBuiltForShopify: !!app.is_built_for_shopify,
           appCardSubtitle: subtitle,
           ...(app.logo_url && { iconUrl: app.logo_url }),
-          ...(hasRating && { averageRating: String(app.average_rating) }),
-          ...(hasCount && { ratingCount: app.rating_count }),
+          ...(hasRating && { averageRating: String(validRating) }),
+          ...(hasCount && { ratingCount: validCount }),
           ...(app.pricing_hint && { pricingHint: app.pricing_hint }),
         })
         .onConflictDoUpdate({
@@ -749,13 +754,16 @@ export class CategoryScraper {
 
       // Record ranking with global position across pages
       // onConflictDoNothing prevents duplicates from concurrent scrapes (R-40)
-      await this.db.insert(appCategoryRankings).values({
-        appId: upsertedApp.id,
-        categorySlug,
-        scrapeRunId: runId,
-        scrapedAt: now,
-        position: positionOffset + (app.position || i + 1),
-      }).onConflictDoNothing();
+      const position = clampPosition(positionOffset + (app.position || i + 1));
+      if (position != null) {
+        await this.db.insert(appCategoryRankings).values({
+          appId: upsertedApp.id,
+          categorySlug,
+          scrapeRunId: runId,
+          scrapedAt: now,
+          position,
+        }).onConflictDoNothing();
+      }
     }
   }
 
@@ -827,8 +835,10 @@ export class CategoryScraper {
     for (const app of appList) {
       const appSlug = app.app_url.replace("https://apps.shopify.com/", "");
       const subtitle = app.is_sponsored ? undefined : (app.short_description || undefined);
-      const hasRating = app.average_rating != null && app.average_rating > 0;
-      const hasCount = app.rating_count != null && app.rating_count > 0;
+      const validRating2 = clampRating(app.average_rating);
+      const hasRating = validRating2 != null && validRating2 > 0;
+      const validCount2 = clampCount(app.rating_count);
+      const hasCount = validCount2 != null && validCount2 > 0;
 
       await this.db
         .insert(apps)
@@ -839,8 +849,8 @@ export class CategoryScraper {
           isBuiltForShopify: !!app.is_built_for_shopify,
           appCardSubtitle: subtitle,
           ...(app.logo_url && { iconUrl: app.logo_url }),
-          ...(hasRating && { averageRating: String(app.average_rating) }),
-          ...(hasCount && { ratingCount: app.rating_count }),
+          ...(hasRating && { averageRating: String(validRating2) }),
+          ...(hasCount && { ratingCount: validCount2 }),
           ...(app.pricing_hint && { pricingHint: app.pricing_hint }),
         })
         .onConflictDoUpdate({
@@ -850,8 +860,8 @@ export class CategoryScraper {
             isBuiltForShopify: !!app.is_built_for_shopify,
             ...(subtitle !== undefined && { appCardSubtitle: subtitle }),
             ...(app.logo_url && { iconUrl: app.logo_url }),
-            ...(hasRating && { averageRating: String(app.average_rating) }),
-            ...(hasCount && { ratingCount: app.rating_count }),
+            ...(hasRating && { averageRating: String(validRating2) }),
+            ...(hasCount && { ratingCount: validCount2 }),
             ...(app.pricing_hint && { pricingHint: app.pricing_hint }),
             updatedAt: now,
           },
@@ -875,8 +885,10 @@ export class CategoryScraper {
       // Skip sponsored apps — they go to categoryAdSightings only
       if (app.isSponsored) continue;
       const subtitle = app.shortDescription || undefined;
-      const hasRating = app.averageRating > 0;
-      const hasCount = app.ratingCount > 0;
+      const validRating = clampRating(app.averageRating);
+      const hasRating = validRating != null && validRating > 0;
+      const validCount = clampCount(app.ratingCount);
+      const hasCount = validCount != null && validCount > 0;
 
       // Extract extra metadata from listing (Atlassian: vendorName, totalInstalls)
       const extra = app.extra || {};
@@ -891,8 +903,8 @@ export class CategoryScraper {
           name: app.name,
           appCardSubtitle: subtitle,
           ...(app.logoUrl && { iconUrl: app.logoUrl }),
-          ...(hasRating && { averageRating: String(app.averageRating) }),
-          ...(hasCount && { ratingCount: app.ratingCount }),
+          ...(hasRating && { averageRating: String(validRating) }),
+          ...(hasCount && { ratingCount: validCount }),
           ...(app.pricingHint && { pricingHint: app.pricingHint }),
           ...(app.externalId && { externalId: app.externalId }),
           ...(totalInstalls != null && { activeInstalls: totalInstalls }),
@@ -904,8 +916,8 @@ export class CategoryScraper {
             name: app.name,
             ...(subtitle !== undefined && { appCardSubtitle: subtitle }),
             ...(app.logoUrl && { iconUrl: app.logoUrl }),
-            ...(hasRating && { averageRating: String(app.averageRating) }),
-            ...(hasCount && { ratingCount: app.ratingCount }),
+            ...(hasRating && { averageRating: String(validRating) }),
+            ...(hasCount && { ratingCount: validCount }),
             ...(app.pricingHint && { pricingHint: app.pricingHint }),
             ...(app.externalId && { externalId: app.externalId }),
             ...(totalInstalls != null && { activeInstalls: totalInstalls }),
@@ -915,13 +927,16 @@ export class CategoryScraper {
         })
         .returning({ id: apps.id });
 
-      await this.db.insert(appCategoryRankings).values({
-        appId: upsertedApp.id,
-        categorySlug,
-        scrapeRunId: runId,
-        scrapedAt: now,
-        position: positionOffset + (app.position || i + 1),
-      });
+      const position = clampPosition(positionOffset + (app.position || i + 1));
+      if (position != null) {
+        await this.db.insert(appCategoryRankings).values({
+          appId: upsertedApp.id,
+          categorySlug,
+          scrapeRunId: runId,
+          scrapedAt: now,
+          position,
+        });
+      }
 
       // For non-Shopify platforms: ensure a minimal snapshot exists with listing data
       // so dashboard can show developer/rating/pricing even without a detail scrape

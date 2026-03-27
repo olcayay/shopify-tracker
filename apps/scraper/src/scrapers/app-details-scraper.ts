@@ -1,7 +1,7 @@
 import { eq, and, desc, sql } from "drizzle-orm";
 import type { Database } from "@appranks/db";
 import { scrapeRuns, apps, appSnapshots, appFieldChanges, similarAppSightings, categories, appCategoryRankings } from "@appranks/db";
-import { urls, createLogger, type PlatformId } from "@appranks/shared";
+import { urls, createLogger, clampRating, clampCount, type PlatformId } from "@appranks/shared";
 
 const log = createLogger("app-details-scraper");
 
@@ -491,6 +491,16 @@ export class AppDetailsScraper {
       const metaLastUpdated = ("_lastUpdatedAt" in details ? (details as any)._lastUpdatedAt : null) as Date | null;
       const metaExternalId = ("_externalId" in details ? (details as any)._externalId : null) as string | null;
 
+      // Sanity-check parsed data before DB insert
+      const validRating = clampRating(details.average_rating);
+      const validRatingCount = clampCount(details.rating_count);
+      if (details.average_rating != null && validRating == null) {
+        log.warn("invalid rating value, skipping", { slug, rating: details.average_rating });
+      }
+      if (details.rating_count != null && validRatingCount == null) {
+        log.warn("invalid rating count, skipping", { slug, ratingCount: details.rating_count });
+      }
+
       // Upsert app master record
       const [upsertedApp] = await this.db
         .insert(apps)
@@ -502,8 +512,8 @@ export class AppDetailsScraper {
           launchedDate: details.launched_date,
           iconUrl: details.icon_url,
           pricingHint: details.pricing || undefined,
-          ...(details.average_rating != null && { averageRating: String(details.average_rating) }),
-          ...(details.rating_count != null && { ratingCount: details.rating_count }),
+          ...(validRating != null && { averageRating: String(validRating) }),
+          ...(validRatingCount != null && { ratingCount: validRatingCount }),
           ...(metaVersion != null && { currentVersion: metaVersion }),
           ...(metaInstalls != null && { activeInstalls: metaInstalls }),
           ...(metaLastUpdated != null && { lastUpdatedAt: metaLastUpdated }),
@@ -517,8 +527,8 @@ export class AppDetailsScraper {
             iconUrl: details.icon_url,
             pricingHint: details.pricing || undefined,
             updatedAt: new Date(),
-            ...(details.average_rating != null && { averageRating: String(details.average_rating) }),
-            ...(details.rating_count != null && { ratingCount: details.rating_count }),
+            ...(validRating != null && { averageRating: String(validRating) }),
+            ...(validRatingCount != null && { ratingCount: validRatingCount }),
             ...(metaVersion != null && { currentVersion: metaVersion }),
             ...(metaInstalls != null && { activeInstalls: metaInstalls }),
             ...(metaLastUpdated != null && { lastUpdatedAt: metaLastUpdated }),
@@ -587,8 +597,8 @@ export class AppDetailsScraper {
         seoMetaDescription: details.seo_meta_description,
         features: details.features,
         pricing: details.pricing,
-        averageRating: details.average_rating?.toString() ?? null,
-        ratingCount: details.rating_count,
+        averageRating: validRating?.toString() ?? null,
+        ratingCount: validRatingCount,
         developer: details.developer,
         demoStoreUrl: details.demo_store_url,
         languages: details.languages,

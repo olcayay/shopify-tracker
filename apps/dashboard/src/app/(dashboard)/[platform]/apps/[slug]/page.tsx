@@ -18,6 +18,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { buttonVariants } from "@/components/ui/button";
 import { MomentumBadge } from "@/components/momentum-badge";
+import { DataFreshness } from "@/components/data-freshness";
 import {
   MessageSquare,
   Search,
@@ -348,6 +349,9 @@ export default async function AppOverviewPage({
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+      <div className="lg:col-span-2">
+        <DataFreshness dateStr={app.latestSnapshot?.scrapedAt} />
+      </div>
       {/* Card 1: Review Pulse */}
       {caps.hasReviews && <Link href={`/${platform}/apps/${slug}/reviews`} className="group">
         <Card className="h-full transition-colors group-hover:border-primary/50">

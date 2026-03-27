@@ -1,5 +1,5 @@
 import { load } from "cheerio";
-import { createLogger } from "@appranks/shared";
+import { createLogger, safeParseFloat } from "@appranks/shared";
 import type {
   NormalizedAppDetails,
   NormalizedSearchPage,
@@ -136,7 +136,7 @@ function parseFromDom(html: string, slug: string): NormalizedAppDetails {
   return {
     name,
     slug,
-    averageRating: ratingMatch ? parseFloat(ratingMatch[1]) : null,
+    averageRating: safeParseFloat(ratingMatch?.[1]),
     ratingCount: ratingCountMatch ? parseInt(ratingCountMatch[1]) : null,
     pricingHint: pricing || null,
     iconUrl,

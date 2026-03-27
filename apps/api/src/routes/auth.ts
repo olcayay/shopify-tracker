@@ -18,11 +18,16 @@ import {
 } from "@appranks/db";
 import { PLATFORM_IDS } from "@appranks/shared";
 import { getJwtSecret, type JwtPayload } from "../middleware/auth.js";
+import { RateLimiter } from "../utils/rate-limiter.js";
 
 type Db = ReturnType<typeof createDb>;
 
 const ACCESS_TOKEN_EXPIRY = "15m";
 const REFRESH_TOKEN_EXPIRY_DAYS = 7;
+
+// Rate limiters for auth endpoints (exported for test reset)
+export const loginLimiter = new RateLimiter({ maxAttempts: 5, windowMs: 15 * 60 * 1000 }); // 5 per 15min
+export const registerLimiter = new RateLimiter({ maxAttempts: 3, windowMs: 60 * 60 * 1000 }); // 3 per hour
 
 export function generateAccessToken(
   payload: JwtPayload,
@@ -46,6 +51,13 @@ export const authRoutes: FastifyPluginAsync = async (app) => {
 
   // POST /api/auth/register — create account + owner user
   app.post("/register", async (request, reply) => {
+    const ip = request.ip;
+    const regLimit = registerLimiter.check(ip);
+    if (!regLimit.allowed) {
+      reply.header("Retry-After", Math.ceil(regLimit.retryAfterMs / 1000).toString());
+      return reply.code(429).send({ error: "Too many registration attempts. Please try again later." });
+    }
+
     const { email, password, name, accountName, company } = request.body as {
       email?: string;
       password?: string;
@@ -149,6 +161,13 @@ export const authRoutes: FastifyPluginAsync = async (app) => {
 
   // POST /api/auth/login — email + password login
   app.post("/login", async (request, reply) => {
+    const ip = request.ip;
+    const loginLimit = loginLimiter.check(ip);
+    if (!loginLimit.allowed) {
+      reply.header("Retry-After", Math.ceil(loginLimit.retryAfterMs / 1000).toString());
+      return reply.code(429).send({ error: "Too many login attempts. Please try again later." });
+    }
+
     const { email, password } = request.body as {
       email?: string;
       password?: string;

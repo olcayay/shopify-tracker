@@ -1,5 +1,5 @@
 import * as cheerio from "cheerio";
-import { createLogger } from "@appranks/shared";
+import { createLogger, safeParseFloat } from "@appranks/shared";
 import type { NormalizedCategoryPage, NormalizedCategoryApp, NormalizedSearchPage, NormalizedSearchApp } from "../../platform-module.js";
 import { ZENDESK_CATEGORY_NAMES } from "../constants.js";
 
@@ -134,7 +134,7 @@ function extractAppCards($: cheerio.CheerioAPI): Array<{
     // Extract rating
     const ratingText = card.find("[class*='rating'], [class*='Rating'], [class*='star'], [class*='Star']").text();
     const ratingMatch = ratingText.match(/([\d.]+)/);
-    const averageRating = ratingMatch ? parseFloat(ratingMatch[1]) : 0;
+    const averageRating = safeParseFloat(ratingMatch?.[1], 0)!;
 
     // Extract review count
     const countMatch = ratingText.match(/\((\d+)\)/);

@@ -1,5 +1,5 @@
 import { load } from "cheerio";
-import { createLogger } from "@appranks/shared";
+import { createLogger, safeParseFloat } from "@appranks/shared";
 import type {
   NormalizedAppDetails,
   NormalizedCategoryPage,
@@ -25,7 +25,7 @@ export function parsePluginHtml(html: string, slug: string): NormalizedAppDetail
   const ratingEl = $(".plugin-rating .wporg-ratings");
   const ratingTitle = ratingEl.attr("data-title-template") || ratingEl.attr("title") || "";
   const ratingMatch = ratingTitle.match(/([\d.]+)\s*out\s*of\s*5/i);
-  const averageRating = ratingMatch ? parseFloat(ratingMatch[1]) : null;
+  const averageRating = safeParseFloat(ratingMatch?.[1]);
 
   const ratingCountText = $(".rating-count a").text();
   const ratingCountMatch = ratingCountText.match(/([\d,]+)/);
@@ -119,7 +119,7 @@ export function parseTagHtml(html: string, slug: string): NormalizedCategoryPage
       slug: appSlug,
       name: appName,
       shortDescription: desc,
-      averageRating: ratingMatch ? parseFloat(ratingMatch[1]) : 0,
+      averageRating: safeParseFloat(ratingMatch?.[1], 0)!,
       ratingCount: ratingCountMatch ? parseInt(ratingCountMatch[1].replace(/,/g, "")) : 0,
       logoUrl: logo,
       isSponsored: false,
@@ -172,7 +172,7 @@ export function parseSearchHtml(html: string, keyword: string, page: number, off
       appSlug,
       appName,
       shortDescription: desc,
-      averageRating: ratingMatch ? parseFloat(ratingMatch[1]) : 0,
+      averageRating: safeParseFloat(ratingMatch?.[1], 0)!,
       ratingCount: ratingCountMatch ? parseInt(ratingCountMatch[1].replace(/,/g, "")) : 0,
       logoUrl: logo,
       isSponsored: false,

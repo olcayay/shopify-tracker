@@ -149,6 +149,9 @@ export type {
   SmokePlatform,
 } from "./constants/smoke-test.js";
 
+// Parse Utilities
+export { safeParseFloat, clampRating, clampCount, clampPosition } from "./parse-utils.js";
+
 // Logger
 export { Logger, createLogger } from "./logger.js";
 export type { LogLevel, LogContext } from "./logger.js";

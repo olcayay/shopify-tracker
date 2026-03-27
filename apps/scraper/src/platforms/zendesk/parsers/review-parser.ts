@@ -1,5 +1,5 @@
 import * as cheerio from "cheerio";
-import { createLogger } from "@appranks/shared";
+import { createLogger, safeParseFloat } from "@appranks/shared";
 import type { NormalizedReviewPage, NormalizedReview } from "../../platform-module.js";
 
 const log = createLogger("zendesk:review-parser");
@@ -32,7 +32,7 @@ export function parseZendeskReviewPage(
     const ratingText = reviewEl.find("[class*='rating'], [class*='stars'], [class*='Rating']").first().attr("data-rating")
       || reviewEl.find("[class*='rating'], [class*='stars']").first().text().trim();
     const ratingMatch = ratingText?.match(/([\d.]+)/);
-    const rating = ratingMatch ? parseFloat(ratingMatch[1]) : 0;
+    const rating = safeParseFloat(ratingMatch?.[1], 0)!;
     if (rating === 0) return; // Skip if no rating found (likely not a review element)
 
     // Review content

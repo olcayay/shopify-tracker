@@ -1,5 +1,5 @@
 import { load } from "cheerio";
-import { createLogger } from "@appranks/shared";
+import { createLogger, safeParseFloat } from "@appranks/shared";
 import type {
   NormalizedAppDetails,
   NormalizedCategoryPage,
@@ -50,7 +50,7 @@ export function parseAppHtml(html: string, slug: string): NormalizedAppDetails {
   return {
     name,
     slug,
-    averageRating: ratingMatch ? parseFloat(ratingMatch[1]) : null,
+    averageRating: safeParseFloat(ratingMatch?.[1]),
     ratingCount: ratingCountMatch ? parseInt(ratingCountMatch[1]) : null,
     pricingHint: null,
     iconUrl,
@@ -95,7 +95,7 @@ export function parseCategoryHtml(html: string, slug: string, page: number): Nor
       slug: appSlug,
       name: appName,
       shortDescription: desc,
-      averageRating: ratingMatch ? parseFloat(ratingMatch[1]) : 0,
+      averageRating: safeParseFloat(ratingMatch?.[1], 0)!,
       ratingCount: 0,
       logoUrl: logo,
       isSponsored: false,

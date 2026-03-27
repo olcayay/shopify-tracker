@@ -1,5 +1,5 @@
 import * as cheerio from "cheerio";
-import { createLogger } from "@appranks/shared";
+import { createLogger, safeParseFloat } from "@appranks/shared";
 import type { NormalizedAppDetails, NormalizedReviewPage, NormalizedReview } from "../../platform-module.js";
 
 const log = createLogger("wix-app-parser");
@@ -159,7 +159,7 @@ function parseFromDom(html: string, slug: string): NormalizedAppDetails {
   const name = $('[data-hook="app-name-heading"]').text().trim() || slug;
   const ratingText = $('[data-hook="average-rating-heading"]').text().trim();
   const ratingMatch = ratingText.match(/([\d.]+)/);
-  const averageRating = ratingMatch ? parseFloat(ratingMatch[1]) : null;
+  const averageRating = safeParseFloat(ratingMatch?.[1]);
   const reviewCountText = $('[data-hook="reviews-number-subtitle"]').text().trim();
   const ratingCount = reviewCountText ? parseInt(reviewCountText.replace(/[^0-9]/g, ""), 10) || null : null;
   const developerName = $('[data-hook="company-info-name"]').text().trim();

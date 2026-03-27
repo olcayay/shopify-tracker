@@ -5,7 +5,7 @@
  * Since the mock DB is simple (single selectResult/insertResult for all queries),
  * tests focus on input validation, auth headers, and response structure.
  */
-import { describe, it, expect, beforeAll, afterAll } from "vitest";
+import { describe, it, expect, beforeAll, afterAll, beforeEach } from "vitest";
 import bcrypt from "bcryptjs";
 import {
   buildTestApp,
@@ -14,8 +14,14 @@ import {
   impersonationToken,
   authHeaders,
 } from "../helpers/test-app.js";
-import { authRoutes } from "../../routes/auth.js";
+import { authRoutes, loginLimiter, registerLimiter } from "../../routes/auth.js";
 import type { FastifyInstance } from "fastify";
+
+// Reset rate limiters before each test suite to avoid cross-test contamination
+beforeEach(() => {
+  loginLimiter.reset();
+  registerLimiter.reset();
+});
 
 // ---------------------------------------------------------------------------
 // POST /api/auth/register
@@ -1039,5 +1045,109 @@ describe("PATCH /api/auth/me — successful updates", () => {
       payload: { emailDigestEnabled: false },
     });
     expect(res.statusCode).toBe(200);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Rate Limiting
+// ---------------------------------------------------------------------------
+
+describe("POST /api/auth/login — rate limiting", () => {
+  let app: FastifyInstance;
+
+  beforeAll(async () => {
+    app = await buildTestApp({
+      routes: authRoutes,
+      prefix: "/api/auth",
+      db: { selectResult: [], insertResult: [] },
+    });
+  });
+
+  afterAll(async () => {
+    await app.close();
+  });
+
+  it("returns 429 after too many login attempts from same IP", async () => {
+    // The rate limiter is shared across the module, so we use unique IPs
+    // by relying on Fastify inject which defaults to 127.0.0.1
+    // Fire 5 allowed requests (they'll all fail with 400/401 but that's ok)
+    for (let i = 0; i < 5; i++) {
+      await app.inject({
+        method: "POST",
+        url: "/api/auth/login",
+        payload: { email: `user${i}@test.com`, password: "Password123" },
+        remoteAddress: "10.0.0.99",
+      });
+    }
+
+    // 6th request should be rate limited
+    const res = await app.inject({
+      method: "POST",
+      url: "/api/auth/login",
+      payload: { email: "another@test.com", password: "Password123" },
+      remoteAddress: "10.0.0.99",
+    });
+    expect(res.statusCode).toBe(429);
+    expect(res.json().error).toMatch(/too many/i);
+    expect(res.headers["retry-after"]).toBeDefined();
+  });
+
+  it("does not rate limit different IPs", async () => {
+    const res = await app.inject({
+      method: "POST",
+      url: "/api/auth/login",
+      payload: { email: "fresh@test.com", password: "Password123" },
+      remoteAddress: "10.0.0.200",
+    });
+    // Should NOT be 429 — different IP
+    expect(res.statusCode).not.toBe(429);
+  });
+});
+
+describe("POST /api/auth/register — rate limiting", () => {
+  let app: FastifyInstance;
+
+  beforeAll(async () => {
+    app = await buildTestApp({
+      routes: authRoutes,
+      prefix: "/api/auth",
+      db: { selectResult: [], insertResult: [{ id: "acc-1", name: "Test" }] },
+    });
+  });
+
+  afterAll(async () => {
+    await app.close();
+  });
+
+  it("returns 429 after too many registration attempts from same IP", async () => {
+    // Fire 3 allowed requests
+    for (let i = 0; i < 3; i++) {
+      await app.inject({
+        method: "POST",
+        url: "/api/auth/register",
+        payload: {
+          email: `reg${i}@test.com`,
+          password: "Password123",
+          name: "Test",
+          accountName: "Test Acc",
+        },
+        remoteAddress: "10.0.0.50",
+      });
+    }
+
+    // 4th request should be rate limited
+    const res = await app.inject({
+      method: "POST",
+      url: "/api/auth/register",
+      payload: {
+        email: "another@test.com",
+        password: "Password123",
+        name: "Test",
+        accountName: "Test Acc",
+      },
+      remoteAddress: "10.0.0.50",
+    });
+    expect(res.statusCode).toBe(429);
+    expect(res.json().error).toMatch(/too many/i);
   });
 });

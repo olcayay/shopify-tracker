@@ -4,6 +4,7 @@ import type { PlatformId } from "@appranks/shared";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Package, Download, Clock, Code, Globe, FileCode, Shield, Award, Bug } from "lucide-react";
+import { DataFreshness } from "@/components/data-freshness";
 
 export default async function DetailsPage({
   params,
@@ -67,6 +68,7 @@ export default async function DetailsPage({
 
   return (
     <div className="space-y-4">
+      <DataFreshness dateStr={snapshot.scrapedAt} />
       {/* Plugin Info — full-width stats grid */}
       {hasPluginInfo && (() => {
         const stats: { icon: React.ReactNode; label: string; value: React.ReactNode; bg: string }[] = [];

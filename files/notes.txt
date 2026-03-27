@@ -1,3 +1,32 @@
+Risk Analysis Mitigations (2026-03-27)
+=======================================
+
+10 tasks from RISK_ANALYSIS.md implemented:
+
+1. Node.js 22 LTS (R-35): All 4 Dockerfiles updated from node:20 → node:22
+2. safeParseFloat (R-52): New utility in @appranks/shared, replaces raw parseFloat
+   in 13 parser files across all platforms. Returns null instead of NaN.
+3. Cascade tracking (R-41): try/catch per enqueue with success/fail counters + warn logs
+   in process-job.ts (3 cascade loops: category→app_details, keyword→app_details, app→reviews)
+4. Cron stagger (R-62): Schedules spread with :00/:15/:30/:45 offsets. Browser platforms
+   (GWS, Zendesk, Canva, Zoho) separated from each other.
+5. Invitation rate limit (R-45): 10 invitations/account/day via DB count check
+6. Login rate limit (R-20): 5 attempts/IP/15min via in-memory RateLimiter
+7. Registration rate limit (R-55): 3 attempts/IP/hour via same RateLimiter
+8. Data sanity checks (R-09): clampRating(0-5), clampCount(>=0), clampPosition(>=1)
+   applied in app-details-scraper and category-scraper before DB insert
+9. DataFreshness component (R-12): Color-coded "Data from Xh ago" on app detail,
+   rankings, and category pages. Green <24h, amber 24-72h, red >72h.
+10. Generic login errors (R-20): Already implemented — both "not found" and "wrong password"
+    return identical "Invalid email or password" message.
+
+New files:
+- packages/shared/src/parse-utils.ts (safeParseFloat, clampRating, clampCount, clampPosition)
+- apps/api/src/utils/rate-limiter.ts (RateLimiter class)
+- apps/dashboard/src/components/data-freshness.tsx (DataFreshness component)
+
+Test count: 2849 (286 shared + 440 api + 1092 scraper + 1031 dashboard)
+
 Fallback/Secondary Scraping Methods for All 11 Platforms
 ==========================================================
 

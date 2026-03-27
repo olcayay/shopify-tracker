@@ -15,6 +15,7 @@ import { ExternalLink, Info, AppWindow as AppWindowIcon } from "lucide-react";
 import { StarCategoryButton } from "@/components/star-category-button";
 import { AdminScraperTrigger } from "@/components/admin-scraper-trigger";
 import { AdHeatmap } from "@/components/ad-heatmap";
+import { DataFreshness } from "@/components/data-freshness";
 import { CategoryAppResults } from "./app-results";
 import { buildExternalCategoryUrl, getPlatformName } from "@/lib/platform-urls";
 import { PLATFORMS, isPlatformId, type PlatformId } from "@appranks/shared";
@@ -189,6 +190,7 @@ export default async function CategoryDetailPage({
           {category.description && (
             <p className="text-muted-foreground mt-1">{category.description}</p>
           )}
+          <DataFreshness dateStr={history?.snapshots?.[0]?.scrapedAt} />
         </div>
         <div className="flex items-center gap-2 shrink-0">
           <StarCategoryButton

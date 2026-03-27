@@ -1,6 +1,6 @@
 import * as cheerio from "cheerio";
 import type { AnyNode } from "domhandler";
-import { createLogger, type SearchPageData, type KeywordSearchApp } from "@appranks/shared";
+import { createLogger, safeParseFloat, type SearchPageData, type KeywordSearchApp } from "@appranks/shared";
 
 const log = createLogger("search-parser");
 
@@ -115,7 +115,7 @@ function parseSearchAppCards($: cheerio.CheerioAPI, positionOffset = 0): Keyword
 
 function extractRating(text: string): { rating: number; count: number } {
   const ratingMatch = text.match(/(\d\.\d)\s*out of 5 stars/);
-  const rating = ratingMatch ? parseFloat(ratingMatch[1]) : 0;
+  const rating = safeParseFloat(ratingMatch?.[1], 0)!;
 
   const countMatch = text.match(/\(([\d,]+)\)\s*[\d,]*\s*total reviews/);
   const fallbackMatch = text.match(/([\d,]+)\s*total reviews/);

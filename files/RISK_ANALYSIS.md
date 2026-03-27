@@ -4,7 +4,7 @@
 **Prepared by:** Engineering Team
 **Version:** 2.1
 **Status:** Active
-**Last Updated:** 2026-03-27 — 9 risks fixed/mitigated, status tracking added
+**Last Updated:** 2026-03-27 — 17 risks fixed/mitigated (+8: R-09, R-12, R-20, R-35, R-41, R-45, R-52, R-55, R-62)
 
 ---
 
@@ -1489,10 +1489,10 @@ export function keywordToSlug(keyword: string): string {
 | R-06 | Terms of Service violations | 4 | 5 | 20 | Open |
 | R-07 | GDPR/privacy compliance | 5 | 4 | 20 | Open |
 | R-08 | Intellectual property claims | 3 | 4 | 15 | Open |
-| R-09 | Silent ranking data corruption | 5 | 3 | 15 | Open |
+| R-09 | Silent ranking data corruption | 5 | 3 | 15 | **Partial** — clampRating/clampCount/clampPosition validation on DB insert |
 | R-10 | Missing ranking days | 5 | 3 | 15 | Open |
 | R-11 | Review data inconsistency | 2 | 3 | 10 | Open |
-| R-12 | Stale data served to customers | 4 | 3 | 12 | Open |
+| R-12 | Stale data served to customers | 4 | 3 | 12 | **Partial** — DataFreshness component on app detail, rankings, category pages |
 | R-13 | App slug changes break tracking | 4 | 3 | 12 | Open |
 | R-14 | Single server failure | 5 | 5 | 25 | Open |
 | R-15 | No database backup | 5 | 4 | 20 | Open |
@@ -1500,7 +1500,7 @@ export function keywordToSlug(keyword: string): string {
 | R-17 | Server resource exhaustion | 5 | 3 | 15 | **Mitigated** — Docker memory limits added |
 | R-18 | Docker volume corruption | 4 | 3 | 12 | Open |
 | R-19 | CORS misconfiguration | 5 | 2 | 10 | **Fixed** — restricted to known origins |
-| R-20 | Weak authentication | 5 | 4 | 20 | **Partial** — password complexity added (upper+lower+number) |
+| R-20 | Weak authentication | 5 | 4 | 20 | **Partial** — password complexity, login rate limiting (5/IP/15min), generic error messages |
 | R-21 | JWT security weaknesses | 3 | 4 | 15 | Open |
 | R-22 | Secrets management | 5 | 3 | 15 | Open |
 | R-23 | Input validation gaps | 5 | 2 | 10 | Open |
@@ -1515,34 +1515,34 @@ export function keywordToSlug(keyword: string): string {
 | R-32 | No error tracking | 4 | 2 | 8 | Open |
 | R-33 | No performance metrics | 2 | 5 | 10 | Open |
 | R-34 | Dependency vulnerabilities | 4 | 3 | 12 | Open |
-| R-35 | Node.js EOL | 5 | 1 | 5 | Open |
+| R-35 | Node.js EOL | 5 | 1 | 5 | **Fixed** — migrated to Node 22 LTS |
 | R-36 | Platform count growth | 3 | 4 | 12 | Open |
 | R-37 | Customer count growth | 3 | 4 | 12 | Open |
 | R-38 | Data volume growth | 2 | 5 | 10 | Open |
 | R-39 | Concurrent app upsert race condition | 5 | 4 | 20 | Open |
 | R-40 | Category ranking TOCTOU race | 3 | 4 | 15 | **Fixed** — unique index + onConflictDoNothing |
-| R-41 | Cascade job partial enqueue failure | 3 | 4 | 15 | Open |
+| R-41 | Cascade job partial enqueue failure | 3 | 4 | 15 | **Mitigated** — try/catch per enqueue + success/fail counters + warn logs |
 | R-42 | Platform lock bypass (multi-instance) | 4 | 3 | 12 | Open |
 | R-43 | Silent daily digest failures | 3 | 4 | 15 | Open |
 | R-44 | Email sender spoofing | 4 | 2 | 8 | Open |
-| R-45 | Invitation email abuse | 3 | 3 | 12 | Open |
+| R-45 | Invitation email abuse | 3 | 3 | 12 | **Mitigated** — 10 invitations/account/day rate limit |
 | R-46 | Uncontrolled OpenAI API costs | 5 | 4 | 20 | **Mitigated** — max_tokens=4000 added |
 | R-47 | Prompt injection via app names | 5 | 1 | 5 | Open |
 | R-48 | AI feature availability dependency | 3 | 3 | 12 | Open |
 | R-49 | Unicode keyword slug destruction | 3 | 4 | 15 | Open |
 | R-50 | Timezone mismatch (dashboard/DB/cron) | 3 | 5 | 15 | Open |
 | R-51 | Special characters break search URLs | 3 | 3 | 12 | Open |
-| R-52 | Numeric edge cases (pricing/ratings) | 2 | 3 | 8 | Open |
+| R-52 | Numeric edge cases (pricing/ratings) | 2 | 3 | 8 | **Fixed** — safeParseFloat() replaces raw parseFloat in all parsers |
 | R-53 | DST impact on schedule display | 2 | 3 | 6 | Open |
 | R-54 | Large HTML response memory spikes | 2 | 5 | 10 | **Mitigated** — 20MB response size limit |
-| R-55 | Free tier abuse — unlimited registration | 3 | 4 | 15 | Open |
+| R-55 | Free tier abuse — unlimited registration | 3 | 4 | 15 | **Partial** — IP-based rate limiting (3/hour) |
 | R-56 | Package limits not enforced at DB level | 3 | 5 | 15 | Open |
 | R-57 | No payment integration — manual billing | 3 | 3 | 12 | Open |
 | R-58 | Account deletion data orphaning | 2 | 3 | 8 | Open |
 | R-59 | Impersonation feature abuse | 4 | 2 | 8 | Open |
 | R-60 | Competitor tracking cross-account leak | 4 | 2 | 8 | Open |
 | R-61 | Session hijacking on shared computer | 4 | 2 | 8 | Open |
-| R-62 | Cron schedule resource contention | 3 | 5 | 15 | Open |
+| R-62 | Cron schedule resource contention | 3 | 5 | 15 | **Mitigated** — schedules staggered with :00/:15/:30/:45 offsets |
 
 ---
 

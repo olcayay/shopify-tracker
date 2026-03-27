@@ -1,5 +1,5 @@
 import * as cheerio from "cheerio";
-import { createLogger } from "@appranks/shared";
+import { createLogger, safeParseFloat } from "@appranks/shared";
 import type { NormalizedAppDetails } from "../../platform-module.js";
 
 const log = createLogger("zendesk:app-parser");
@@ -126,7 +126,7 @@ function parseFromDom($: cheerio.CheerioAPI, slug: string): NormalizedAppDetails
   // Rating
   const ratingText = $("[class*='rating'] [class*='average'], [class*='stars'] [class*='value'], [data-rating]").first().text().trim()
     || $("[class*='rating']").first().attr("data-rating");
-  const avgRating = ratingText ? parseFloat(ratingText) : null;
+  const avgRating = safeParseFloat(ratingText);
 
   // Rating count — look for "(N reviews)" or "(N)" patterns
   let ratingCount: number | null = null;

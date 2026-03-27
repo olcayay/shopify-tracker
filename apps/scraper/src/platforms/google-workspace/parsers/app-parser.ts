@@ -1,5 +1,5 @@
 import * as cheerio from "cheerio";
-import { createLogger } from "@appranks/shared";
+import { createLogger, safeParseFloat } from "@appranks/shared";
 import type { NormalizedAppDetails } from "../../platform-module.js";
 import {
   extractAfData,
@@ -192,7 +192,7 @@ function parseFromDom(html: string, slug: string): NormalizedAppDetails {
 
   // Rating
   const ratingText = $('meta[itemprop="ratingValue"]').attr("content") || "";
-  const averageRating = ratingText ? parseFloat(ratingText) : null;
+  const averageRating = safeParseFloat(ratingText);
   const ratingCountText = $('span[itemprop="ratingCount"]').text().trim();
   const ratingCount = ratingCountText ? parseInt(ratingCountText, 10) : null;
 
@@ -338,7 +338,8 @@ function extractInstallCount(text: string): number | null {
   for (const pattern of patterns) {
     const match = text.match(pattern);
     if (match) {
-      let num = parseFloat(match[1].replace(/,/g, ""));
+      let num = safeParseFloat(match[1].replace(/,/g, ""));
+      if (num == null) continue;
       const suffix = match[2]?.toUpperCase();
       if (suffix === "K") num *= 1000;
       else if (suffix === "M") num *= 1000000;

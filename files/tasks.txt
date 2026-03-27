@@ -213,3 +213,15 @@ fallback/secondary scraping methods for all 11 platforms — withFallback() util
 fallback unit tests for all 11 platforms — 15 test files, 69 total test files, 1062 tests passing. Covers primary success, fallback trigger, both-fail propagation, parser format handling ✅
 
 smoke test --compare mode — runs primary then fallback sequentially, shows phase headers and side-by-side summary with pass/fail for each mode ✅
+
+risk analysis mitigations — 10 tasks from RISK_ANALYSIS.md ✅
+  - R-35: Node.js 22 LTS migration (all 4 Dockerfiles)
+  - R-52: safeParseFloat() wrapper for all parser parseFloat calls (13 files)
+  - R-41: cascade job enqueue tracking with success/fail counts
+  - R-62: cron schedule staggering (max 2 jobs per 15-min window)
+  - R-45: invitation rate limiting (10/account/day)
+  - R-20: login rate limiting (5/IP/15min) + registration rate limiting (3/IP/hour)
+  - R-55: registration rate limiting via RateLimiter utility
+  - R-09: data sanity checks (clampRating, clampCount, clampPosition) in app-details & category scrapers
+  - R-12: DataFreshness component on app detail, rankings, category pages
+  - R-20: login error messages already generic (verified)

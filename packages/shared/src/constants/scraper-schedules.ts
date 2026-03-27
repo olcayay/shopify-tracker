@@ -8,68 +8,71 @@ export interface ScraperSchedule {
 }
 
 export const SCRAPER_SCHEDULES: ScraperSchedule[] = [
-  // ── Shopify ──
+  // Schedule grid: max 2 jobs per 15-min window. Browser platforms (GWS, Zendesk,
+  // Canva, Zoho) are spread apart to avoid Playwright memory contention.
+  //
+  // ── Shopify (HTTP only) ──
   { name: "category", cron: "0 3 * * *", type: "category", platform: "shopify" },
   { name: "app_details", cron: "0 1,13 * * *", type: "app_details", platform: "shopify" },
   { name: "keyword_search", cron: "0 0,12 * * *", type: "keyword_search", platform: "shopify" },
   { name: "reviews", cron: "0 6 * * *", type: "reviews", platform: "shopify" },
   { name: "daily_digest", cron: "0 5 * * *", type: "daily_digest", platform: "shopify" },
   { name: "compute_app_scores", cron: "0 9 * * *", type: "compute_app_scores", platform: "shopify" },
-  // ── Salesforce ──
+  // ── Salesforce (HTTP only) ──
   { name: "salesforce_category", cron: "0 4 * * *", type: "category", platform: "salesforce" },
   { name: "salesforce_app_details", cron: "0 2,14 * * *", type: "app_details", platform: "salesforce" },
   { name: "salesforce_reviews", cron: "0 7 * * *", type: "reviews", platform: "salesforce" },
-  { name: "salesforce_compute_app_scores", cron: "0 10 * * *", type: "compute_app_scores", platform: "salesforce" },
-  // ── Canva ──
+  { name: "salesforce_compute_app_scores", cron: "15 10 * * *", type: "compute_app_scores", platform: "salesforce" },
+  // ── Canva (browser) ──
   { name: "canva_category", cron: "30 4 * * *", type: "category", platform: "canva" },
   { name: "canva_app_details", cron: "30 2,14 * * *", type: "app_details", platform: "canva" },
-  { name: "canva_keyword_search", cron: "0 3,15 * * *", type: "keyword_search", platform: "canva" },
-  { name: "canva_compute_app_scores", cron: "30 10 * * *", type: "compute_app_scores", platform: "canva" },
-  // ── Wix ──
+  { name: "canva_keyword_search", cron: "15 3,15 * * *", type: "keyword_search", platform: "canva" },
+  { name: "canva_compute_app_scores", cron: "45 10 * * *", type: "compute_app_scores", platform: "canva" },
+  // ── Wix (HTTP only) ──
   { name: "wix_category", cron: "0 5 * * *", type: "category", platform: "wix" },
-  { name: "wix_app_details", cron: "0 3,15 * * *", type: "app_details", platform: "wix" },
+  { name: "wix_app_details", cron: "45 2,14 * * *", type: "app_details", platform: "wix" },
   { name: "wix_keyword_search", cron: "30 3,15 * * *", type: "keyword_search", platform: "wix" },
   { name: "wix_reviews", cron: "0 8 * * *", type: "reviews", platform: "wix" },
-  { name: "wix_compute_app_scores", cron: "0 11 * * *", type: "compute_app_scores", platform: "wix" },
-  // ── WordPress ──
+  { name: "wix_compute_app_scores", cron: "15 11 * * *", type: "compute_app_scores", platform: "wix" },
+  // ── WordPress (HTTP only) ──
   { name: "wordpress_category", cron: "30 5 * * *", type: "category", platform: "wordpress" },
   { name: "wordpress_app_details", cron: "0 4,16 * * *", type: "app_details", platform: "wordpress" },
   { name: "wordpress_keyword_search", cron: "30 4,16 * * *", type: "keyword_search", platform: "wordpress" },
   { name: "wordpress_reviews", cron: "30 8 * * *", type: "reviews", platform: "wordpress" },
-  { name: "wordpress_compute_app_scores", cron: "30 11 * * *", type: "compute_app_scores", platform: "wordpress" },
-  // ── Google Workspace ──
+  { name: "wordpress_compute_app_scores", cron: "45 11 * * *", type: "compute_app_scores", platform: "wordpress" },
+  // ── Google Workspace (browser) ──
   { name: "google_workspace_category", cron: "0 6 * * *", type: "category", platform: "google_workspace" },
   { name: "google_workspace_app_details", cron: "30 5,17 * * *", type: "app_details", platform: "google_workspace" },
   { name: "google_workspace_keyword_search", cron: "0 6,18 * * *", type: "keyword_search", platform: "google_workspace" },
   { name: "google_workspace_reviews", cron: "30 9 * * *", type: "reviews", platform: "google_workspace" },
-  { name: "google_workspace_compute_app_scores", cron: "0 12 * * *", type: "compute_app_scores", platform: "google_workspace" },
-  // ── Atlassian ──
+  { name: "google_workspace_compute_app_scores", cron: "15 12 * * *", type: "compute_app_scores", platform: "google_workspace" },
+  // ── Atlassian (HTTP only) ──
   { name: "atlassian_category", cron: "30 6 * * *", type: "category", platform: "atlassian" },
   { name: "atlassian_app_details", cron: "0 7,19 * * *", type: "app_details", platform: "atlassian" },
   { name: "atlassian_keyword_search", cron: "30 7,19 * * *", type: "keyword_search", platform: "atlassian" },
-  { name: "atlassian_reviews", cron: "0 10 * * *", type: "reviews", platform: "atlassian" },
-  { name: "atlassian_compute_app_scores", cron: "30 12 * * *", type: "compute_app_scores", platform: "atlassian" },
-  // ── Zoom ──
-  { name: "zoom_category", cron: "0 8 * * *", type: "category", platform: "zoom" },
+  { name: "atlassian_reviews", cron: "45 9 * * *", type: "reviews", platform: "atlassian" },
+  { name: "atlassian_compute_app_scores", cron: "45 12 * * *", type: "compute_app_scores", platform: "atlassian" },
+  // ── Zoom (HTTP only) ──
+  { name: "zoom_category", cron: "15 8 * * *", type: "category", platform: "zoom" },
   { name: "zoom_app_details", cron: "30 8,20 * * *", type: "app_details", platform: "zoom" },
   { name: "zoom_keyword_search", cron: "0 9,21 * * *", type: "keyword_search", platform: "zoom" },
-  { name: "zoom_compute_app_scores", cron: "0 13 * * *", type: "compute_app_scores", platform: "zoom" },
-  // ── Zoho ──
-  { name: "zoho_category", cron: "30 9 * * *", type: "category", platform: "zoho" },
+  { name: "zoom_compute_app_scores", cron: "15 13 * * *", type: "compute_app_scores", platform: "zoom" },
+  // ── Zoho (browser) ──
+  { name: "zoho_category", cron: "15 9 * * *", type: "category", platform: "zoho" },
   { name: "zoho_app_details", cron: "0 10,22 * * *", type: "app_details", platform: "zoho" },
   { name: "zoho_keyword_search", cron: "30 10,22 * * *", type: "keyword_search", platform: "zoho" },
-  { name: "zoho_compute_app_scores", cron: "30 13 * * *", type: "compute_app_scores", platform: "zoho" },
-  // ── Zendesk ──
+  { name: "zoho_compute_app_scores", cron: "45 13 * * *", type: "compute_app_scores", platform: "zoho" },
+  // ── Zendesk (browser) ──
   { name: "zendesk_category", cron: "0 11 * * *", type: "category", platform: "zendesk" },
   { name: "zendesk_app_details", cron: "30 11,23 * * *", type: "app_details", platform: "zendesk" },
-  { name: "zendesk_keyword_search", cron: "0 12,0 * * *", type: "keyword_search", platform: "zendesk" },
-  { name: "zendesk_reviews", cron: "30 10 * * *", type: "reviews", platform: "zendesk" },
+  { name: "zendesk_keyword_search", cron: "15 0,12 * * *", type: "keyword_search", platform: "zendesk" },
+  { name: "zendesk_reviews", cron: "15 10 * * *", type: "reviews", platform: "zendesk" },
   { name: "zendesk_compute_app_scores", cron: "0 14 * * *", type: "compute_app_scores", platform: "zendesk" },
-  // ── HubSpot ──
+  // ── HubSpot (HTTP only) ──
   { name: "hubspot_category", cron: "30 11 * * *", type: "category", platform: "hubspot" },
   { name: "hubspot_app_details", cron: "0 13,1 * * *", type: "app_details", platform: "hubspot" },
   { name: "hubspot_keyword_search", cron: "30 13,1 * * *", type: "keyword_search", platform: "hubspot" },
-  { name: "hubspot_reviews", cron: "0 11 * * *", type: "reviews", platform: "hubspot" },
+  { name: "hubspot_reviews", cron: "45 10 * * *", type: "reviews", platform: "hubspot" },
   { name: "hubspot_compute_app_scores", cron: "30 14 * * *", type: "compute_app_scores", platform: "hubspot" },
 ];
 

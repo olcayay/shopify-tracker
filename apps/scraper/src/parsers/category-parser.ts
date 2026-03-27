@@ -2,6 +2,7 @@ import * as cheerio from "cheerio";
 import type { AnyNode } from "domhandler";
 import {
   createLogger,
+  safeParseFloat,
   type CategoryPageData,
   type FirstPageApp,
   type FirstPageMetrics,
@@ -272,7 +273,7 @@ function extractRatingFromText(text: string): {
 } {
   // Pattern: "4.9 out of 5 stars (2,121) 2121 total reviews"
   const ratingMatch = text.match(/(\d\.\d)\s*out of 5 stars/);
-  const rating = ratingMatch ? parseFloat(ratingMatch[1]) : 0;
+  const rating = safeParseFloat(ratingMatch?.[1], 0)!;
 
   // Pattern: "(2,121)" right after the stars text
   const countMatch = text.match(/\(([\d,]+)\)\s*[\d,]*\s*total reviews/);

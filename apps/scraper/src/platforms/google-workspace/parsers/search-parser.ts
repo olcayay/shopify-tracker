@@ -1,5 +1,5 @@
 import * as cheerio from "cheerio";
-import { createLogger } from "@appranks/shared";
+import { createLogger, safeParseFloat } from "@appranks/shared";
 import type { NormalizedSearchPage, NormalizedSearchApp } from "../../platform-module.js";
 import { extractAfData, extractAppEntries, type GWorkspaceAppEntry } from "./extract-embedded-data.js";
 
@@ -81,7 +81,7 @@ function parseSearchAppsFromDom($: cheerio.CheerioAPI, offset: number): Normaliz
     const name = $card.find("div.M0atNd").text().trim();
     const shortDesc = $card.find("div.BiEFEd").text().trim();
     const ratingText = $card.find('span.wUhZA[aria-description*="Rating"]').text().trim();
-    const averageRating = ratingText ? parseFloat(ratingText) : 0;
+    const averageRating = safeParseFloat(ratingText, 0)!;
     const logoUrl = $card.find('img[jsname="DlICee"]').first().attr("src") || "";
 
     apps.push({

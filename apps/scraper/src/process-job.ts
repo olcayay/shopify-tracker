@@ -116,16 +116,27 @@ export function createProcessJob(db: ReturnType<typeof createDb>, queueName?: st
         if (opts?.scrapeAppDetails && discoveredSlugs.length > 0) {
           const cascadeReviews = opts.scrapeReviews && getPlatform(platform).hasReviews;
           const uniqueSlugs = [...new Set(discoveredSlugs)];
+          let enqueued = 0;
+          let failed = 0;
           for (const slug of uniqueSlugs) {
-            await enqueueScraperJob({
-              type: "app_details",
-              slug,
-              platform,
-              triggeredBy: `${triggeredBy}:cascade`,
-              options: cascadeReviews ? { scrapeReviews: true } : undefined,
-            }, cascadeOpts);
+            try {
+              await enqueueScraperJob({
+                type: "app_details",
+                slug,
+                platform,
+                triggeredBy: `${triggeredBy}:cascade`,
+                options: cascadeReviews ? { scrapeReviews: true } : undefined,
+              }, cascadeOpts);
+              enqueued++;
+            } catch (err) {
+              failed++;
+              log.warn("cascade enqueue failed", { slug, error: String(err) });
+            }
           }
-          log.info("cascaded app_details jobs", { count: uniqueSlugs.length });
+          log.info("cascaded app_details jobs", { enqueued, failed, total: uniqueSlugs.length });
+          if (failed > 0) {
+            log.warn("partial cascade enqueue", { type: "app_details", enqueued, failed, total: uniqueSlugs.length });
+          }
         }
         break;
       }
@@ -159,15 +170,26 @@ export function createProcessJob(db: ReturnType<typeof createDb>, queueName?: st
               .select({ slug: appsTable.slug })
               .from(appsTable)
               .where(andOp(eqOp(appsTable.isTracked, true), eqOp(appsTable.platform, platform)));
+            let enqueued = 0;
+            let failed = 0;
             for (const app of trackedApps) {
-              await enqueueScraperJob({
-                type: "reviews",
-                slug: app.slug,
-                platform,
-                triggeredBy: `${triggeredBy}:cascade`,
-              }, cascadeOpts);
+              try {
+                await enqueueScraperJob({
+                  type: "reviews",
+                  slug: app.slug,
+                  platform,
+                  triggeredBy: `${triggeredBy}:cascade`,
+                }, cascadeOpts);
+                enqueued++;
+              } catch (err) {
+                failed++;
+                log.warn("cascade enqueue failed", { slug: app.slug, error: String(err) });
+              }
             }
-            log.info("cascaded reviews jobs", { count: trackedApps.length });
+            log.info("cascaded reviews jobs", { enqueued, failed, total: trackedApps.length });
+            if (failed > 0) {
+              log.warn("partial cascade enqueue", { type: "reviews", enqueued, failed, total: trackedApps.length });
+            }
           }
         }
 
@@ -226,16 +248,27 @@ export function createProcessJob(db: ReturnType<typeof createDb>, queueName?: st
         if (opts?.scrapeAppDetails && discoveredSlugs.length > 0) {
           const cascadeReviews = opts.scrapeReviews && getPlatform(platform).hasReviews;
           const uniqueSlugs = [...new Set(discoveredSlugs)];
+          let enqueued = 0;
+          let failed = 0;
           for (const slug of uniqueSlugs) {
-            await enqueueScraperJob({
-              type: "app_details",
-              slug,
-              platform,
-              triggeredBy: `${triggeredBy}:cascade`,
-              options: cascadeReviews ? { scrapeReviews: true } : undefined,
-            }, cascadeOpts);
+            try {
+              await enqueueScraperJob({
+                type: "app_details",
+                slug,
+                platform,
+                triggeredBy: `${triggeredBy}:cascade`,
+                options: cascadeReviews ? { scrapeReviews: true } : undefined,
+              }, cascadeOpts);
+              enqueued++;
+            } catch (err) {
+              failed++;
+              log.warn("cascade enqueue failed", { slug, error: String(err) });
+            }
           }
-          log.info("cascaded app_details jobs", { count: uniqueSlugs.length });
+          log.info("cascaded app_details jobs", { enqueued, failed, total: uniqueSlugs.length });
+          if (failed > 0) {
+            log.warn("partial cascade enqueue", { type: "app_details", enqueued, failed, total: uniqueSlugs.length });
+          }
         }
 
         // Cascade: enqueue keyword_suggestions job

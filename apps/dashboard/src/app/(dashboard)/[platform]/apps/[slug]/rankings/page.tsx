@@ -14,6 +14,7 @@ import {
 } from "@/components/ui/table";
 import { RankingChart } from "@/components/ranking-chart";
 import { AdHeatmap } from "@/components/ad-heatmap";
+import { DataFreshness } from "@/components/data-freshness";
 
 export default async function RankingsPage({
   params,
@@ -51,8 +52,15 @@ export default async function RankingsPage({
   }
   const groupedAds = [...adsByKeyword.values()].sort((a, b) => b.lastSeen.localeCompare(a.lastSeen));
 
+  // Find most recent ranking timestamp
+  const allRankings = [...(rankings?.categoryRankings || []), ...(rankings?.keywordRankings || [])];
+  const latestRanking = allRankings.length > 0
+    ? allRankings.reduce((a: any, b: any) => new Date(a.scrapedAt) > new Date(b.scrapedAt) ? a : b)
+    : null;
+
   return (
     <div className="space-y-4">
+      <DataFreshness dateStr={latestRanking?.scrapedAt} />
       {rankings?.categoryRankings?.length > 0 && (
         <Card>
           <CardHeader>
