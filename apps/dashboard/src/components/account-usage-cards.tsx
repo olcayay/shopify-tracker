@@ -39,19 +39,17 @@ export function AccountUsageCards({ stats }: AccountUsageCardsProps) {
       {visible.map((stat) => {
         const content = (
           <Card className={`h-full ${stat.href ? "hover:border-primary/50 hover:shadow-sm transition-all cursor-pointer" : ""}`}>
-            <CardHeader className="pb-2">
-              <CardDescription className="flex items-center gap-2">
-                <span className={`flex h-8 w-8 items-center justify-center rounded-lg ${stat.colorClasses.bg}`}>
-                  <stat.icon className="h-4 w-4" />
-                </span>
-                {stat.label}
-              </CardDescription>
+            <CardHeader className="pb-2 items-center text-center">
+              <div className={`flex h-8 w-8 items-center justify-center rounded-lg ${stat.colorClasses.bg} mb-1`}>
+                <stat.icon className="h-4 w-4" />
+              </div>
               <CardTitle className="text-3xl tracking-tight">
                 {stat.value}
                 <span className="text-lg text-muted-foreground font-normal">
                   /{stat.limit}
                 </span>
               </CardTitle>
+              <CardDescription>{stat.label}</CardDescription>
             </CardHeader>
           </Card>
         );
