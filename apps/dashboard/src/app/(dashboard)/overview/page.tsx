@@ -173,24 +173,24 @@ export default function CrossPlatformOverviewPage() {
           <AccountUsageRow account={account} />
 
           {/* Cross-platform summary */}
-          <Card className="rounded-xl">
-            <CardContent className="py-4">
-              <div className="flex items-center justify-between flex-wrap gap-3">
-                <div className="text-sm text-muted-foreground">
-                  Tracking across <strong className="text-foreground">{platformsWithApps} platforms</strong>
+          <Card className="rounded-xl bg-gradient-to-r from-primary/5 to-transparent">
+            <CardContent className="py-5">
+              <div className="flex items-center justify-between flex-wrap gap-4">
+                <div className="text-base text-muted-foreground">
+                  Tracking across <strong className="text-foreground text-lg">{platformsWithApps} platforms</strong>
                 </div>
-                <div className="flex gap-6 text-center">
+                <div className="flex gap-8 text-center">
                   <div>
-                    <div className="text-xl font-bold">{totalApps}</div>
-                    <div className="text-xs text-muted-foreground">Apps</div>
+                    <div className="text-3xl font-bold tracking-tight">{totalApps}</div>
+                    <div className="text-xs text-muted-foreground mt-0.5">Apps</div>
                   </div>
                   <div>
-                    <div className="text-xl font-bold">{totalKeywords}</div>
-                    <div className="text-xs text-muted-foreground">Keywords</div>
+                    <div className="text-3xl font-bold tracking-tight">{totalKeywords}</div>
+                    <div className="text-xs text-muted-foreground mt-0.5">Keywords</div>
                   </div>
                   <div>
-                    <div className="text-xl font-bold">{totalCompetitors}</div>
-                    <div className="text-xs text-muted-foreground">Competitors</div>
+                    <div className="text-3xl font-bold tracking-tight">{totalCompetitors}</div>
+                    <div className="text-xs text-muted-foreground mt-0.5">Competitors</div>
                   </div>
                 </div>
               </div>
@@ -241,18 +241,18 @@ function AccountUsageRow({ account }: { account: any }) {
       <CardContent className="py-3">
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4">
           {[
-            { icon: AppWindow, usage: account.usage.trackedApps, limit: account.limits.maxTrackedApps, label: "Apps" },
-            { icon: Search, usage: account.usage.trackedKeywords, limit: account.limits.maxTrackedKeywords, label: "Keywords" },
-            { icon: Star, usage: account.usage.competitorApps, limit: account.limits.maxCompetitorApps, label: "Competitors" },
-            { icon: FlaskConical, usage: account.usage.researchProjects, limit: account.limits.maxResearchProjects, label: "Research" },
-            { icon: Users, usage: account.usage.users, limit: account.limits.maxUsers, label: "Users" },
-          ].map(({ icon: Icon, usage, limit, label }) => (
+            { icon: AppWindow, usage: account.usage.trackedApps, limit: account.limits.maxTrackedApps, label: "Apps", color: "bg-blue-50 text-blue-600" },
+            { icon: Search, usage: account.usage.trackedKeywords, limit: account.limits.maxTrackedKeywords, label: "Keywords", color: "bg-purple-50 text-purple-600" },
+            { icon: Star, usage: account.usage.competitorApps, limit: account.limits.maxCompetitorApps, label: "Competitors", color: "bg-amber-50 text-amber-600" },
+            { icon: FlaskConical, usage: account.usage.researchProjects, limit: account.limits.maxResearchProjects, label: "Research", color: "bg-emerald-50 text-emerald-600" },
+            { icon: Users, usage: account.usage.users, limit: account.limits.maxUsers, label: "Users", color: "bg-rose-50 text-rose-600" },
+          ].map(({ icon: Icon, usage, limit, label, color }) => (
             <div key={label} className="text-center">
-              <div className="mx-auto mb-1 flex h-7 w-7 items-center justify-center rounded-full bg-muted">
-                <Icon className="h-3.5 w-3.5 text-muted-foreground" />
+              <div className={`mx-auto mb-2 flex h-10 w-10 items-center justify-center rounded-xl ${color}`}>
+                <Icon className="h-5 w-5" />
               </div>
-              <div className="text-lg font-bold">{usage}/{limit}</div>
-              <div className="text-xs text-muted-foreground">{label}</div>
+              <div className="text-2xl font-bold tracking-tight">{usage}/{limit}</div>
+              <div className="text-xs text-muted-foreground mt-0.5">{label}</div>
             </div>
           ))}
         </div>
@@ -381,14 +381,17 @@ function RequestPlatformCTA() {
   const [open, setOpen] = useState(false);
   return (
     <>
-      <Card className="rounded-xl bg-gradient-to-r from-muted/50 to-muted/30">
-        <CardContent className="py-6 text-center">
-          <MessageSquarePlus className="h-8 w-8 mx-auto mb-3 text-muted-foreground" />
-          <h3 className="font-semibold mb-1">Don&apos;t see your platform?</h3>
-          <p className="text-sm text-muted-foreground mb-4">
-            We&apos;re always expanding. Tell us which marketplace you&apos;d like us to support.
+      <Card className="rounded-xl border-dashed bg-gradient-to-br from-muted/40 via-background to-muted/40">
+        <CardContent className="py-10 px-8 text-center">
+          <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-primary/10">
+            <MessageSquarePlus className="h-7 w-7 text-primary" />
+          </div>
+          <h3 className="text-lg font-semibold mb-2">Don&apos;t see your platform?</h3>
+          <p className="text-sm text-muted-foreground mb-6 max-w-md mx-auto">
+            We&apos;re always expanding our platform coverage. Let us know which marketplace you&apos;d like us to support next.
           </p>
-          <Button variant="outline" onClick={() => setOpen(true)}>
+          <Button onClick={() => setOpen(true)} className="px-6">
+            <MessageSquarePlus className="h-4 w-4 mr-2" />
             Request a Platform
           </Button>
         </CardContent>

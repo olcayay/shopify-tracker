@@ -258,92 +258,32 @@ export default function OverviewPage() {
 
       {/* Account Usage Cards - clickable */}
       <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-        <Link href={`/${platform}/apps`} className="h-full">
-          <Card className="hover:border-primary/50 transition-colors cursor-pointer h-full">
-            <CardHeader className="pb-2">
-              <CardDescription className="flex items-center gap-1.5">
-                <AppWindow className="h-4 w-4" />
-                My Apps
-              </CardDescription>
-              <CardTitle className="text-3xl">
-                {apps.length}
-                <span className="text-lg text-muted-foreground font-normal">
-                  /{account?.limits.maxTrackedApps}
-                </span>
-              </CardTitle>
-            </CardHeader>
-          </Card>
-        </Link>
-
-        {caps.hasKeywordSearch && (
-          <Link href={`/${platform}/keywords`} className="h-full">
-            <Card className="hover:border-primary/50 transition-colors cursor-pointer h-full">
+        {[
+          { href: `/${platform}/apps`, icon: AppWindow, label: "My Apps", value: apps.length, limit: account?.limits.maxTrackedApps, color: "bg-blue-50 text-blue-600", show: true },
+          { href: `/${platform}/keywords`, icon: Search, label: "Tracked Keywords", value: keywords.length, limit: account?.limits.maxTrackedKeywords, color: "bg-purple-50 text-purple-600", show: caps.hasKeywordSearch },
+          { href: `/${platform}/competitors`, icon: Star, label: "Competitor Apps", value: competitors.length, limit: account?.limits.maxCompetitorApps, color: "bg-amber-50 text-amber-600", show: true },
+          { href: `/${platform}/research`, icon: FlaskConical, label: "Research Projects", value: account?.usage.researchProjects ?? 0, limit: account?.limits?.maxResearchProjects ?? 0, color: "bg-emerald-50 text-emerald-600", show: true },
+          { href: "/settings", icon: Users, label: "Users", value: account?.usage.users ?? 1, limit: account?.limits.maxUsers, color: "bg-rose-50 text-rose-600", show: true },
+        ].filter((c) => c.show).map(({ href, icon: Icon, label, value, limit, color }) => (
+          <Link key={label} href={href} className="h-full">
+            <Card className="hover:border-primary/50 hover:shadow-sm transition-all cursor-pointer h-full">
               <CardHeader className="pb-2">
-                <CardDescription className="flex items-center gap-1.5">
-                  <Search className="h-4 w-4" />
-                  Tracked Keywords
+                <CardDescription className="flex items-center gap-2">
+                  <span className={`flex h-7 w-7 items-center justify-center rounded-lg ${color}`}>
+                    <Icon className="h-4 w-4" />
+                  </span>
+                  {label}
                 </CardDescription>
-                <CardTitle className="text-3xl">
-                  {keywords.length}
+                <CardTitle className="text-4xl tracking-tight">
+                  {value}
                   <span className="text-lg text-muted-foreground font-normal">
-                    /{account?.limits.maxTrackedKeywords}
+                    /{limit}
                   </span>
                 </CardTitle>
               </CardHeader>
             </Card>
           </Link>
-        )}
-
-        <Link href={`/${platform}/competitors`} className="h-full">
-          <Card className="hover:border-primary/50 transition-colors cursor-pointer h-full">
-            <CardHeader className="pb-2">
-              <CardDescription className="flex items-center gap-1.5">
-                <Star className="h-4 w-4" />
-                Competitor Apps
-              </CardDescription>
-              <CardTitle className="text-3xl">
-                {competitors.length}
-                <span className="text-lg text-muted-foreground font-normal">
-                  /{account?.limits.maxCompetitorApps}
-                </span>
-              </CardTitle>
-            </CardHeader>
-          </Card>
-        </Link>
-
-        <Link href={`/${platform}/research`} className="h-full">
-          <Card className="hover:border-primary/50 transition-colors cursor-pointer h-full">
-            <CardHeader className="pb-2">
-              <CardDescription className="flex items-center gap-1.5">
-                <FlaskConical className="h-4 w-4" />
-                Research Projects
-              </CardDescription>
-              <CardTitle className="text-3xl">
-                {account?.usage.researchProjects ?? 0}
-                <span className="text-lg text-muted-foreground font-normal">
-                  /{account?.limits?.maxResearchProjects ?? 0}
-                </span>
-              </CardTitle>
-            </CardHeader>
-          </Card>
-        </Link>
-
-        <Link href="/settings" className="h-full">
-          <Card className="hover:border-primary/50 transition-colors cursor-pointer h-full">
-            <CardHeader className="pb-2">
-              <CardDescription className="flex items-center gap-1.5">
-                <Users className="h-4 w-4" />
-                Users
-              </CardDescription>
-              <CardTitle className="text-3xl">
-                {account?.usage.users ?? 1}
-                <span className="text-lg text-muted-foreground font-normal">
-                  /{account?.limits.maxUsers}
-                </span>
-              </CardTitle>
-            </CardHeader>
-          </Card>
-        </Link>
+        ))}
       </div>
 
       {message && (
