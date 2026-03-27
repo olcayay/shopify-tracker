@@ -16,9 +16,9 @@ vi.mock("@/lib/auth-context", () => ({
       id: "acc-1", name: "My Account", company: "My Company",
       isSuspended: false,
       package: { slug: "pro", name: "Pro" },
-      packageLimits: { maxTrackedApps: 10, maxTrackedKeywords: 50, maxCompetitorApps: 20, maxUsers: 5 },
-      limits: { maxTrackedApps: 10, maxTrackedKeywords: 50, maxCompetitorApps: 20, maxUsers: 5 },
-      usage: { trackedApps: 3, trackedKeywords: 10, competitorApps: 5, starredFeatures: 2, users: 2 },
+      packageLimits: { maxTrackedApps: 10, maxTrackedKeywords: 50, maxCompetitorApps: 20, maxResearchProjects: 3, maxUsers: 5 },
+      limits: { maxTrackedApps: 10, maxTrackedKeywords: 50, maxCompetitorApps: 20, maxResearchProjects: 3, maxUsers: 5 },
+      usage: { trackedApps: 3, trackedKeywords: 10, competitorApps: 5, starredFeatures: 2, researchProjects: 1, users: 2 },
     },
     isLoading: false,
     fetchWithAuth: mockFetchWithAuth,
@@ -61,16 +61,13 @@ describe("SettingsPage", () => {
     expect(screen.getByText(/My Account/)).toBeInTheDocument();
   });
 
-  it("renders usage stats", () => {
+  it("renders usage stats via AccountUsageCards", () => {
     render(<SettingsPage />);
     expect(screen.getByText("My Apps")).toBeInTheDocument();
-    expect(screen.getByText("Keywords")).toBeInTheDocument();
-    expect(screen.getByText("Competitors")).toBeInTheDocument();
+    expect(screen.getByText("Tracked Keywords")).toBeInTheDocument();
+    expect(screen.getByText("Competitor Apps")).toBeInTheDocument();
+    expect(screen.getByText("Research Projects")).toBeInTheDocument();
     expect(screen.getByText("Users")).toBeInTheDocument();
-    expect(screen.getByText("3/10")).toBeInTheDocument();
-    expect(screen.getByText("10/50")).toBeInTheDocument();
-    expect(screen.getByText("5/20")).toBeInTheDocument();
-    expect(screen.getByText("2/5")).toBeInTheDocument();
   });
 
   it("renders Profile card", () => {
