@@ -412,7 +412,7 @@ This document identifies **62 risks** across 15 categories, rates them by likeli
 
 **Mitigation:**
 - [ ] **Short-term:** Implement automated daily backups to external storage (S3/Backblaze)
-- [ ] **Short-term:** Set up uptime monitoring with external service (UptimeRobot, Betterstack)
+- [x] **Short-term:** Set up uptime monitoring with external service (UptimeRobot — done)
 - [ ] **Medium-term:** Separate database to managed service (Supabase, Neon, RDS)
 - [ ] **Medium-term:** Move Redis to managed service (Upstash, ElastiCache)
 - [ ] **Long-term:** Deploy API/workers on separate hosts or container orchestration (Coolify multi-server, K8s)
@@ -783,25 +783,27 @@ This document identifies **62 risks** across 15 categories, rates them by likeli
 ## 10. Monitoring & Observability Gaps
 
 ### R-30: No External Uptime Monitoring (Medium / High Likelihood)
-**Risk Score: 15**
+**Risk Score: 15** → **Residual Risk Score: 5** (mitigated)
 
 **Description:** If the server goes down, there is no external system to detect this and alert the team. Monitoring only works while the dashboard is up.
 
 **Current State:**
-- No health check endpoint on API
-- No external monitoring service
+- ~~No health check endpoint on API~~ → `/health` endpoint added
+- ~~No external monitoring service~~ → **UptimeRobot configured** (5-min interval checks)
+  - Dashboard: [Status Page](https://stats.uptimerobot.com/9UDubU5E3m)
+  - Management: [UptimeRobot Monitor](https://dashboard.uptimerobot.com/monitors/802694156)
 - Operational Matrix is self-monitored (only visible when dashboard works)
-- No Slack/PagerDuty/email alerts for downtime
+- ~~No Slack/PagerDuty/email alerts for downtime~~ → UptimeRobot email alerts active
 
 **Impact:**
-- Outage goes unnoticed for hours (especially overnight/weekend)
+- ~~Outage goes unnoticed for hours (especially overnight/weekend)~~ → Alerts within 5 minutes
 - Data gaps accumulate silently
-- Customer reports downtime before team notices
+- ~~Customer reports downtime before team notices~~ → Team notified first via UptimeRobot
 
 **Mitigation:**
-- [ ] **URGENT:** Add `/health` endpoint to API
-- [ ] Set up UptimeRobot/Betterstack/Pingdom for external monitoring
-- [ ] Configure Slack webhook alerts for downtime
+- [x] **URGENT:** Add `/health` endpoint to API
+- [x] Set up UptimeRobot for external monitoring
+- [ ] Configure Slack webhook alerts for downtime (in addition to email)
 - [ ] Add SMS alerts for critical failures
 
 ---
@@ -1427,7 +1429,7 @@ export function keywordToSlug(keyword: string): string {
 |---|--------|------|--------|
 | 1 | Set up automated daily `pg_dump` to external storage | R-15 | 2h |
 | 2 | Add `/health` endpoint to API | R-30 | 30min |
-| 3 | Set up external uptime monitoring | R-30 | 1h |
+| ~~3~~ | ~~Set up external uptime monitoring~~ | R-30 | ✅ Done |
 | 4 | Restrict CORS to known domains | R-19 | 15min |
 | 5 | Set Docker memory limits per service | R-17 | 30min |
 | 6 | Set `max_tokens: 2000` on all OpenAI calls | R-46 | 15min |
@@ -1510,7 +1512,7 @@ export function keywordToSlug(keyword: string): string {
 | R-27 | Key person dependency | 4 | 3 | 12 | Open |
 | R-28 | Platform deprecation | 4 | 3 | 12 | Open |
 | R-29 | Competitor detection | 5 | 1 | 5 | Open |
-| R-30 | No external monitoring | 5 | 3 | 15 | **Partial** — /health endpoint added |
+| R-30 | No external monitoring | 5 | 3 | 15 → 5 | **Mitigated** — /health endpoint + UptimeRobot monitoring active |
 | R-31 | No centralized logging | 3 | 4 | 12 | Open |
 | R-32 | No error tracking | 4 | 2 | 8 | Open |
 | R-33 | No performance metrics | 2 | 5 | 10 | Open |
