@@ -1243,18 +1243,34 @@ Scale trigger: job queue depth > 20 or avg job time > 2× normal
 
 ### Architecture Tier Comparison
 
-| | Tier 1: Monolith | Tier 2: DB Out | Tier 3: Split VMs | Tier 4: Full Split | Tier 5: Auto-scale |
-|--|:----------------:|:-------------:|:-----------------:|:------------------:|:------------------:|
-| **Servers** | 1 | 1 + managed DB | 2 | 2 + managed DB | 2-3 + managed DB |
-| **GCP Cost** | $10-22 | $17-23 | $15-21 | $22-30 | $28-46 |
-| **AWS Cost** | $11-26 | $6-9 (yr1) | $14-18 | $14-18 (yr1) | $27-43 |
-| **API perf during scraping** | ❌ Slow | ❌ Slow | ✅ Fast | ✅ Fast | ✅ Fast |
-| **Worker scalability** | ❌ Fixed | ❌ Fixed | ⚠️ Manual | ⚠️ Manual | ✅ Auto |
-| **DB safety** | ❌ Container | ✅ Managed | ⚠️ Container | ✅ Managed | ✅ Managed |
-| **Playwright RAM** | ⚠️ Shared | ⚠️ Shared | ✅ Dedicated | ✅ Dedicated | ✅ Dedicated |
+**Tier overview:**
+
+| Tier | Description | Servers |
+|------|-------------|---------|
+| **Tier 1** | Monolith — all on one VM | 1 |
+| **Tier 2** | DB Outside — VM + Managed DB | 1 VM + DB |
+| **Tier 3** | Split VMs — API/Dashboard + Workers | 2 VMs |
+| **Tier 4** | Full Split — API + Workers + Managed DB | 2 VMs + DB |
+| **Tier 5** | Auto-scale — Scaling worker fleet | 2-3 VMs + DB |
+
+**Cost comparison:**
+
+| | Tier 1 | Tier 2 | Tier 3 | Tier 4 | Tier 5 |
+|--|--------|--------|--------|--------|--------|
+| **GCP** | $10-22 | $17-23 | $15-21 | $22-30 | $28-46 |
+| **AWS** | $11-26 | $6-9 yr1 | $14-18 | $14-18 yr1 | $27-43 |
+| **Budget?** | ✅ | ⚠️ | ⚠️ | ❌ | ❌ |
+
+**Capability comparison:**
+
+| | Tier 1 | Tier 2 | Tier 3 | Tier 4 | Tier 5 |
+|--|--------|--------|--------|--------|--------|
+| **API speed** | ❌ Slow | ❌ Slow | ✅ Fast | ✅ Fast | ✅ Fast |
+| **Worker scale** | ❌ Fixed | ❌ Fixed | ⚠️ Manual | ⚠️ Manual | ✅ Auto |
+| **DB safety** | ❌ | ✅ Managed | ⚠️ | ✅ Managed | ✅ Managed |
+| **Playwright** | ⚠️ Shared | ⚠️ Shared | ✅ Dedicated | ✅ Dedicated | ✅ Dedicated |
 | **Complexity** | Low | Medium | Medium | High | Very High |
-| **Budget fit ($10-20)** | ✅ | ⚠️ GCP no / AWS yr1 ✅ | ⚠️ At ceiling | ❌ GCP / ⚠️ AWS yr1 | ❌ |
-| **Best for** | MVP, solo | Data safety | Perf isolation | Production | Scale-up |
+| **Best for** | MVP | Data safety | Perf split | Production | Scale-up |
 
 ### Recommended Tier per Growth Stage
 
