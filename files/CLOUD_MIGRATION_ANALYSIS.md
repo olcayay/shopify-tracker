@@ -4,1036 +4,394 @@
 **Prepared by:** Engineering Team
 **Status:** Decision Pending
 **Current Hosting:** Hetzner VPS via Coolify
-**Budget Constraint:** $20-25/month (startup) → $40-50/month (scale-up)
+**Budget:** $20-25/month (startup) | $40-50/month (scale-up)
 
 ---
 
 ## Table of Contents
 
-1. [Current Architecture](#1-current-architecture)
-2. [Migration Scenarios](#2-migration-scenarios)
-3. [Scenario A: GCP e2-medium Spot VM](#scenario-a-gcp-e2-medium-spot-vm)
-4. [Scenario B: GCP e2-small + Cloud SQL Free Tier](#scenario-b-gcp-e2-small--cloud-sql-free-tier)
-5. [Scenario C: GCP Free Tier Only (e2-micro)](#scenario-c-gcp-free-tier-only-e2-micro)
-6. [Scenario D: Stay on Hetzner + GCP Backup](#scenario-d-stay-on-hetzner--gcp-backup)
-7. [Scenario E: Hetzner + GCP Hybrid](#scenario-e-hetzner--gcp-hybrid)
-8. [Other Cloud Alternatives](#8-other-cloud-alternatives-non-gcp)
-9. [Master Comparison Table — GCP & AWS](#9-master-comparison-table--google-cloud--aws-focus)
-10. [System Architecture Tiers](#10-system-architecture-tiers--gcp--aws)
-11. [Decision Matrix](#11-decision-matrix-all-scenarios)
-12. [Risk vs Cost vs Performance Map](#12-risk-vs-cost-vs-performance-map)
-13. [Recommended Path](#13-recommended-path)
-14. [Final Recommendation Summary](#14-final-recommendation-summary)
-15. [Migration Checklist](#15-migration-checklist)
+0. [Executive Summary](#executive-summary)
+1. [Key Decision Parameters](#key-decision-parameters)
+2. [Current System & Bottlenecks](#1-current-system--bottlenecks)
+3. [How AWS & GCP Can Help](#2-how-aws--gcp-can-help)
+4. [Architecture Tiers](#3-architecture-tiers)
+5. [Tier Comparison](#4-tier-comparison)
+6. [Growth Roadmap & Migration Checklist](#5-growth-roadmap--migration-checklist)
 
 ---
 
-## 1. Current Architecture
+## Executive Summary
 
-### System Overview
+AppRanks, 11 marketplace platformunu (Shopify, Salesforce, Canva, Wix, WordPress, Google Workspace, Atlassian, Zoom, Zoho, Zendesk, HubSpot) izleyen bir SaaS ürünüdür. Günlük ~114K database write, 73 zamanlanmış scraper job, Playwright browser otomasyonu ve Next.js dashboard içerir.
+
+**Mevcut durum:** Tek Hetzner VPS (€10/ay), Docker Compose ile 6 container. Çalışıyor ama kritik riskler var: backup yok, DB bağlantı havuzu paylaşımlı, Playwright RAM spike'ları, disaster recovery yok.
+
+**Kritik not — Worker load artışı (iki aşamalı):**
+
+Şu anda 11 platformun hepsi sağlıklı çalışmıyor. Worker load'u iki aşamada artacak:
+
+**Aşama 1 — Platform stabilizasyonu (yakın gelecek):** Tüm platformlar stabilize olduğunda worker load mevcut seviyenin **3-10 katına** çıkacak. Category scraper'lar gibi platform-bazlı joblar user sayısından bağımsız olarak sabit yükte çalışır. Bu artış kaçınılmaz ve kullanıcı sayısıyla ilgisi yoktur.
+
+**Aşama 2 — Kullanıcı büyümesi (orta-uzun vade):** App details, keyword search, reviews gibi worker'lar kullanıcıların track ettiği app ve keyword sayısına bağlıdır. Her yeni kullanıcı yeni tracked app'ler ve keyword'ler ekler → bu worker'ların load'u **kullanıcı sayısıyla doğru orantılı büyür.** 10 kullanıcıda yönetilebilir olan yük, 100 kullanıcıda 10x olur.
+
+```
+Worker Load Buyume Modeli:
+
+Load
+  |
+  |                                          xxxxxxx  User-dependent
+  |                                     xxxxx         (app_details,
+  |                                xxxxx              keywords,
+  |                           xxxxx                   reviews)
+  |                      xxxx
+  |                  xxxx
+  |              xxxx
+  |    =========================================  Platform-fixed
+  |    =  (categories, compute_scores)         =  (sabit, user'dan
+  |    =========================================   bagimsiz)
+  +--+--------+-----------+-----------+-------->
+   Now    Full capacity  10 users   100 users
+         (3-10x)
+```
+
+Bu demek ki:
+- Günlük write sayısı: 114K → **350K-1.1M** (aşama 1) → **2-5M+** (aşama 2)
+- Peak DB connections: 33 → **100-330** → **500+**
+- RAM kullanımı: 6-8GB → **12-30GB** → **30-60GB+**
+- Mevcut tek sunucu yapısı aşama 1'i bile **kesinlikle kaldıramaz**
+
+Bu nedenle mimari, worker'ların API'den bağımsız scale edilebileceği şekilde tasarlanmalıdır. Tier 1 (monolith) hiçbir aşamada yeterli değildir.
+
+**Karar gerekiyor:** Mevcut yapıyı AWS veya GCP ile nasıl güçlendireceğiz? 5 mimari tier analiz edildi (monolith'ten auto-scaling'e). Her tier'ın GCP ve AWS maliyeti, artı/eksileri ve hangi bottleneck'i çözdüğü detaylı karşılaştırıldı.
+
+**Önerilen yol:** Worker scale ihtiyacı nedeniyle minimum **Tier 3** (API/Worker ayrımı, $15-21/ay) ile başlanmalı, kısa vadede **Tier 4**'e (Managed DB eklenerek, $22-33/ay) geçilmelidir.
+
+---
+
+## Key Decision Parameters
+
+Mimari karar verirken değerlendirilmesi gereken parametreler:
+
+### System Characteristics
+
+| Parameter | Now | Phase 1: Full Capacity | Phase 2: 100 Users |
+|-----------|-----|----------------------|-------------------|
+| **Daily DB writes** | ~114K | **350K - 1.1M** | **2-5M+** |
+| **Peak DB connections** | 43 | **100 - 330** | **500+** |
+| **Peak RAM** | 6-8GB | **12-30GB** | **30-60GB+** |
+| **Scheduled jobs** | 73 | 73 (same) | 73 (same) |
+| **Tracked apps** | ~50 | ~50 | **500+** |
+| **Tracked keywords** | ~80 | ~80 | **800+** |
+| **DB size** | ~1GB | **5-10GB** | **50-100GB** |
+| **Users** | 1-5 | 1-5 | 100 |
+
+**Worker type scaling behavior:**
+
+| Worker Type | Load Driver | Phase 1 | Phase 2 (100 users) |
+|-------------|-------------|---------|---------------------|
+| **Categories** | Platform count (fixed) | Same as now | Same as now |
+| **Compute scores** | Platform count (fixed) | Same as now | Same as now |
+| **App details** | Tracked app count (user-driven) | 3-10x | **50-100x** |
+| **Keywords** | Tracked keyword count (user-driven) | 3-10x | **50-100x** |
+| **Reviews** | Tracked app count (user-driven) | 3-10x | **50-100x** |
+
+> **CRITICAL:** Category/compute workers have fixed load regardless of user count. But app_details, keywords, and reviews scale **linearly with users**. Architecture must allow these worker types to scale independently.
+
+### Business Constraints
+
+| Parameter | Value |
+|-----------|-------|
+| **Startup budget** | $20-25/month |
+| **Scale-up budget** | $40-50/month |
+| **Acceptable downtime/month** | ? (needs decision) |
+| **Data loss tolerance** | ? (needs decision — hours? days? zero?) |
+| **Geographic requirements** | EU preferred (GDPR, latency to Turkey) |
+| **Compliance needs** | GDPR consideration for scraped data |
+| **Team size for ops** | 1 person (key person risk) |
+| **Deploy frequency** | Multiple times/week |
+| **Current deploy method** | Coolify (git push auto-deploy) |
+
+### Technical Requirements
+
+| Requirement | Must Have? | Notes |
+|-------------|-----------|-------|
+| Docker Compose support | Yes | Zero code change migration |
+| Playwright/Chromium | Yes | 3 platforms need browser |
+| PostgreSQL 16 | Yes | Drizzle ORM, 88 migrations |
+| Redis | Yes | BullMQ job queue |
+| SSL/HTTPS | Yes | Customer-facing dashboard |
+| Persistent storage | Yes | DB survives VM restart |
+| Cron scheduling | Yes | 73 scheduled scraper jobs |
+| SSH access | Preferred | Debug, log access |
+| CI/CD pipeline | Nice to have | Currently Coolify handles |
+| Monitoring/alerting | Nice to have | /health endpoint exists |
+
+### Questions to Discuss with Advisor
+
+1. **Uptime requirement:** %99 (7h downtime/ay) yeterli mi yoksa %99.9 (43min/ay) mı gerekiyor?
+   - Spot VM: ~%99.2 (preemption kaynaklı)
+   - On-demand VM: ~%99.9
+   - Multi-VM: ~%99.95+
+
+2. **Data loss tolerance:** Backup'tan restore'da kaç saatlik veri kaybı kabul edilebilir?
+   - Manuel backup (cron pg_dump): 0-24 saat kayıp
+   - Managed DB (RDS/Cloud SQL): 0-5 dakika kayıp (point-in-time)
+   - Replication: 0 kayıp
+
+3. **Growth projections — CRITICAL:** Şu an platformların hepsi tam kapasitede çalışmıyor. Tüm platformlar stabilize olduğunda worker load **3-10x artacak.** Bu yakın gelecek, yeni müşteri gelmeden bile olacak. Sorular:
+   - Tüm 11 platform ne zaman tam kapasitede olacak? (Hafta? Ay?)
+   - Worker VM'in 12-30GB RAM'e ihtiyacı olacak — hangi instance type?
+   - Kaç yeni platform eklenecek? (Her platform ~7 cron job daha)
+   - Tracked app/keyword sayısı artacak mı? (Write volume doğrudan etkiler)
+
+4. **Spot VM tolerance:** Scraper'lar için 2-3 dakikalık kesinti kabul edilebilir mi?
+   - Spot VM'ler %60-70 ucuz ama her an kapatılabilir
+   - Dashboard için kabul edilebilir değilse: API on-demand, Workers Spot (Tier 3)
+
+5. **Managed vs self-managed DB:**
+   - AWS RDS: ilk yıl ücretsiz, auto backup, patching — ama yr2'den sonra $12-15/ay
+   - Self-managed: pg_dump cron ile backup — bedava ama sorumluluk sende
+   - Risk tolerance'a göre karar verilmeli
+
+6. **Vendor lock-in tolerance:**
+   - Docker Compose = taşınabilir (vendor lock-in yok)
+   - RDS/Cloud SQL = orta lock-in (başka managed DB'ye taşınabilir)
+   - Proprietary services (Lambda, Cloud Run) = yüksek lock-in
+
+7. **Network topology:**
+   - Tek region yeterli mi? (eu-west-1 / europe-west1)
+   - Multi-region gerekli mi? (latency, DR)
+   - VPN gerekli mi? (scraper IP gizleme)
+
+8. **Cost optimization willingness:**
+   - Reserved instances (1-3 yıl taahhüt, %30-60 indirim) değerlendirilebilir mi?
+   - Savings Plans (AWS) veya Committed Use (GCP) uygun mu?
+
+---
+
+## 1. Current System & Bottlenecks
+
+### Architecture
 
 ```
 +-----------------------------------------------------------------+
-|                    Hetzner VPS (Coolify)                        |
+|                    Hetzner VPS (Coolify)                         |
 |                                                                 |
-|  +----------+  +----------+  +----------+  +---------------+  |
-|  | Dashboard |  |   API    |  |  Worker  |  |   Worker      |  |
-|  | Next.js  |  | Fastify  |  | BullMQ   |  |  Interactive  |  |
-|  | :3000    |  | :3001    |  | Scraper  |  |  Playwright   |  |
-|  +----+-----+  +----+-----+  +----+-----+  +-------+-------+  |
-|       |              |              |                |          |
-|       |         +----+--------------+----------------+          |
-|       |         |                                               |
-|  +----+---------+--+  +---------+                              |
-|  |   PostgreSQL    |  |  Redis  |                              |
-|  |   :5432         |  |  :6379  |                              |
-|  +-----------------+  +---------+                              |
+|  +----------+  +----------+  +----------+  +---------------+   |
+|  | Dashboard |  |   API    |  |  Worker  |  | Worker-Inter  |   |
+|  | Next.js   |  | Fastify  |  | BullMQ   |  | Playwright    |   |
+|  | :3000     |  | :3001    |  | Scraper  |  | Browser       |   |
+|  +-----+-----+  +----+-----+  +----+-----+  +-------+-------+  |
+|        |              |             |                 |          |
+|        +--------------+-------------+-----------------+          |
+|                            |                                    |
+|                  +---------+---------+  +---------+             |
+|                  |    PostgreSQL     |  |  Redis  |             |
+|                  |    :5432          |  |  :6379  |             |
+|                  +-------------------+  +---------+             |
 |                                                                 |
-|  Disk: ~50GB used                                               |
-|  RAM: ~4-6GB used (Playwright spikes to 8GB+)                   |
-|  CPU: 3 vCPU (bursts during scraping)                           |
+|  CPU: 3 vCPU  |  RAM: 4-8GB  |  Disk: 80GB SSD                |
 +-----------------------------------------------------------------+
 ```
 
-### Resource Usage Profile
+**6 Docker container**, tek sunucuda, tek disk, tek IP adresi.
 
-| Resource | Idle | Normal Scraping | Peak (Browser Scraping) |
-|----------|------|-----------------|------------------------|
+### Resource Usage
+
+| Resource | Idle | Scraping | Peak (Playwright) |
+|----------|------|----------|-------------------|
 | CPU | 5% | 30-50% | 80-100% |
 | RAM | 2GB | 3-4GB | 6-8GB |
-| Disk I/O | Low | Medium | Medium |
 | Network | <1 Mbps | 5-10 Mbps | 10-20 Mbps |
-
-### Current Costs
-
-| Item | Cost |
-|------|------|
-| Hetzner VPS (CPX31 or similar) | €8-15/month |
-| Domain | ~$12/year |
-| Coolify (self-hosted) | Free |
-| **Total** | **~€10-17/month** |
-
----
-
-## 2. Migration Scenarios
-
-```
-                         +-----------------+
-                         |  Current State   |
-                         | Hetzner/Coolify  |
-                         |   €10-17/mo      |
-                         +--------+---------+
-                                  |
-                    +-------------┼-------------+
-                    |             |             |
-              +-----+------+ +---+----+  +-----+------+
-              |  Full GCP  | | Hybrid |  |   Hetzner  |
-              |  Migration | |  Mix   |  |  + Backup  |
-              +-----+------+ +---+----+  +-----+------+
-                    |            |              |
-             +------┼------+    |              |
-             |      |      |    |              |
-          +--+--++--+--++--+-++-+--+      +---+---+
-          |  A  ||  B  || C  || E  |      |   D   |
-          |Spot ||Free ||Mic-||Hyb-|      |Backup |
-          | VM  ||Tier ||ro  ||rid |      | Only  |
-          +-----++-----++----++----+      +-------+
-```
-
----
-
-## 3. Scenario A: GCP e2-medium Spot VM
-
-**Concept:** Mevcut Docker Compose yapısını aynen bir GCP Spot VM'e taşı.
-
-### Architecture Diagram
-
-```
-+----------------------------------------------------------+
-|              Google Cloud Platform                        |
-|                                                          |
-|  +----------------------------------------------------+  |
-|  |        GCE Spot VM (e2-medium)                     |  |
-|  |        1 vCPU, 4GB RAM                             |  |
-|  |                                                    |  |
-|  |   +----------+ +-------+ +--------+ +--------+   |  |
-|  |   |Dashboard | |  API  | | Worker | |Worker-I|   |  |
-|  |   |  :3000   | | :3001 | |BullMQ  | |Playwri.|   |  |
-|  |   +----------+ +-------+ +--------+ +--------+   |  |
-|  |          |          |          |          |        |  |
-|  |   +------+----------+----------+----------+       |  |
-|  |   |                                               |  |
-|  |   +--------------+  +---------+                   |  |
-|  |   |  PostgreSQL  |  |  Redis  |                   |  |
-|  |   +------+-------+  +---------+                   |  |
-|  |          |                                        |  |
-|  +----------┼----------------------------------------+  |
-|             |                                            |
-|  +----------+-----------+  +----------------------+     |
-|  |  Persistent Disk     |  |  Cloud Storage       |     |
-|  |  30GB SSD            |  |  Daily Backups (5GB) |     |
-|  |  Survives VM restart |  |  FREE TIER           |     |
-|  +----------------------+  +----------------------+     |
-|                                                          |
-|  +--------------------------------------------------+    |
-|  |  Startup Script (metadata)                       |    |
-|  |  → Auto-start Docker Compose on VM boot          |    |
-|  |  → Handles Spot preemption recovery              |    |
-|  +--------------------------------------------------+    |
-+----------------------------------------------------------+
-
-         +--------------+
-         |  Cloudflare  |  ← DNS + CDN + SSL (Free)
-         |  DNS/Proxy   |
-         +--------------+
-
-         +--------------+
-         | UptimeRobot  |  ← External monitoring (Free)
-         +--------------+
-```
-
-### Spot VM Lifecycle
-
-```
-Normal Operation:
-  VM Running ---- Scraping ---- Serving Dashboard ---- VM Running
-                                                         |
-Preemption Event (Google needs resources):               |
-  VM Running -- SIGTERM (30s) -- VM STOPPED -------------+
-                                     |
-                        +------------+------------+
-                        |  Persistent Disk SAFE   |
-                        |  Data preserved         |
-                        +------------+------------+
-                                     |
-  Auto-restart (instance schedule) --+
-                        |
-  VM Starting -- Docker Compose Up -- Services Ready (~2-3 min)
-                        |
-  Resume Normal Operation
-```
-
-### Cost Breakdown
-
-| Item | Monthly Cost | Notes |
-|------|-------------|-------|
-| e2-medium Spot VM (1 vCPU, 4GB) | $8-12 | ~70% discount vs on-demand |
-| 30GB SSD Persistent Disk | $2.40 | $0.08/GB/month |
-| Egress traffic (~5GB) | $0.60 | First 1GB free, then $0.12/GB |
-| Cloud Storage backup (5GB) | $0.00 | Free tier |
-| Static IP (optional) | $0.00 | Free while attached to VM |
-| **Total** | **$11-15/month** | |
-
-### Pros
-
-- [x] Mevcut Docker Compose **sıfır değişiklik** ile çalışır
-- [x] 4GB RAM — mevcut workload için yeterli (tight ama çalışır)
-- [x] Persistent Disk — VM restart'ta data korunur
-- [x] Cloud Storage backup — free tier ile günlük backup
-- [x] Google'ın global network altyapısı
-- [x] `gcloud` CLI ile kolay yönetim
-- [x] Bütçe içinde ($11-15/ay)
-
-### Cons
-
-- [ ] **Spot VM her an kapatılabilir** — 30 saniye uyarı ile
-- [ ] Preemption sırasında **2-3 dakika downtime**
-- [ ] **1 vCPU** — Hetzner'daki 3 vCPU'dan düşük
-- [ ] Managed servis yok — backup/monitoring senin sorumluluğun
-- [ ] **SLA yok** — Spot VM'lerin uptime garantisi yok
-- [ ] Browser scraping sırasında RAM sıkışabilir
-
-### Uptime Estimate
-
-| Senaryo | Tahmini Uptime |
-|---------|---------------|
-| İyi hafta (preemption yok) | %100 |
-| Normal hafta (1 preemption) | %99.5 (2-3 min downtime) |
-| Kötü hafta (3 preemption) | %98.5 (10 min downtime) |
-| Ortalama aylık | ~%99.2 |
-
----
-
-## 4. Scenario B: GCP e2-small + Cloud SQL Free Tier
-
-**Concept:** Daha küçük VM + Google'ın managed database free tier denemesi.
-
-### Architecture Diagram
-
-```
-+----------------------------------------------------------+
-|              Google Cloud Platform                        |
-|                                                          |
-|  +--------------------------+  +----------------------+  |
-|  |   GCE Spot VM            |  |  Cloud SQL (db-f1)   |  |
-|  |   e2-small               |  |  PostgreSQL 16       |  |
-|  |   0.5 vCPU, 2GB RAM     |  |  Shared vCPU         |  |
-|  |                          |  |  0.6GB RAM, 10GB     |  |
-|  |  +--------+ +--------+  |  |  Auto backup ✓       |  |
-|  |  |  API   | |Dashboard|  |  |  HA: No              |  |
-|  |  +--------+ +--------+  |  +----------------------+  |
-|  |  +--------+ +--------+  |                             |
-|  |  | Worker | |Redis   |  |  ⚠️  Cloud SQL db-f1       |
-|  |  +--------+ +--------+  |      pricing discontinued  |
-|  +--------------------------+      in some regions       |
-|                                                          |
-+----------------------------------------------------------+
-```
-
-### Cost Breakdown
-
-| Item | Monthly Cost | Notes |
-|------|-------------|-------|
-| e2-small Spot VM (0.5 vCPU, 2GB) | $4-6 | |
-| Cloud SQL db-f1-micro | $7-9 | Shared core, auto backup |
-| 20GB SSD disk | $1.60 | |
-| Egress | $0.60 | |
-| **Total** | **$13-17/month** | |
-
-### Pros
-
-- [x] **Managed database** — otomatik backup, patch, monitoring
-- [x] DB VM'den bağımsız — VM crash'inde data güvende
-- [x] Cloud SQL console'dan yönetim
-
-### Cons
-
-- [ ] **2GB RAM** — Playwright çalışamaz, worker'lar sığmaz
-- [ ] Cloud SQL db-f1-micro çok yavaş (shared CPU)
-- [ ] Redis hala container'da — managed Redis (Memorystore) $30+/ay
-- [ ] Worker'lar için ayrı VM gerekir → bütçeyi aşar
-- [ ] **Pratik olarak çalışmaz** — 2GB RAM bu workload için yetersiz
-
-### Verdict: ❌ NOT RECOMMENDED
-
-2GB RAM ile 6 Docker container + Playwright çalıştırmak imkansız. Cloud SQL free tier çok yavaş. Bütçeyi managed DB'ye harcamak VM'den çalıyor.
-
----
-
-## 5. Scenario C: GCP Free Tier Only (e2-micro)
-
-**Concept:** Google'ın always-free tier'ını kullanarak sıfır maliyet.
-
-### Architecture Diagram
-
-```
-+----------------------------------------------------------+
-|              Google Cloud Platform — Free Tier            |
-|                                                          |
-|  +--------------------------+                            |
-|  |   GCE e2-micro           |   ⚠️ LIMITATIONS:         |
-|  |   0.25 vCPU, 1GB RAM    |   - 1GB RAM total         |
-|  |   30GB HDD (free)       |   - 0.25 vCPU             |
-|  |   1GB egress/month      |   - HDD not SSD           |
-|  |                          |   - us-central1 only      |
-|  |  +--------+              |   - 1GB egress/month      |
-|  |  |  ???   |              |                            |
-|  |  +--------+              |                            |
-|  +--------------------------+                            |
-|                                                          |
-+----------------------------------------------------------+
-
-  💀 PostgreSQL alone needs 256MB+
-  💀 Redis needs 64MB+
-  💀 Node.js API needs 128MB+
-  💀 Next.js Dashboard needs 256MB+
-  💀 Playwright needs 512MB+
-  💀 Total minimum: ~1.5GB → 1GB RAM ile ÇALIŞMAZ
-```
-
-### Cost Breakdown
-
-| Item | Monthly Cost |
-|------|-------------|
-| e2-micro VM | $0 (free) |
-| 30GB HDD | $0 (free) |
-| **Total** | **$0/month** |
-
-### Verdict: ❌ IMPOSSIBLE
-
-1GB RAM ile bu sistem çalışamaz. PostgreSQL + Redis + API + Worker minimum 2GB gerektirir. Playwright eklediğinde 4GB minimum.
-
----
-
-## 6. Scenario D: Stay on Hetzner + GCP Backup
-
-**Concept:** Hetzner'da kalmaya devam et, sadece backup'ı GCP Cloud Storage'a gönder.
-
-### Architecture Diagram
-
-```
-+-------------------------------+       +------------------+
-|       Hetzner VPS             |       |  Google Cloud     |
-|       (Current Setup)         |       |                  |
-|                               |       |  +------------+  |
-|  +-------------------------+  |  pgdump  |   Cloud    |  |
-|  |  Docker Compose         |  | ------>  |  Storage   |  |
-|  |  (all 6 services)       |  |  daily   |  Bucket    |  |
-|  +-------------------------+  |       |  |  (5GB free)|  |
-|                               |       |  +------------+  |
-|  Cost: €8-15/month            |       |  Cost: $0/month  |
-+-------------------------------+       +------------------+
-
-         +--------------+
-         | UptimeRobot  |  ← External monitoring (Free)
-         +--------------+
-```
-
-### Backup Flow
-
-```
-Daily at 04:00 UTC:
-  +----------+     pg_dump      +----------+    gsutil cp     +-------------+
-  |PostgreSQL| --------------> | backup   | --------------> |Cloud Storage|
-  |Container |     ~50MB       | .sql.gz  |    encrypted    |  gs://...   |
-  +----------+                 +----------+                 +-------------+
-                                                                   |
-                                                            7 daily backups
-                                                            4 weekly backups
-                                                            retained
-```
-
-### Cost Breakdown
-
-| Item | Monthly Cost | Notes |
-|------|-------------|-------|
-| Hetzner VPS (current) | €8-15 | No change |
-| GCP Cloud Storage | $0 | 5GB free tier |
-| gsutil CLI | $0 | Free |
-| **Total** | **€8-15/month** | Same as now |
-
-### Pros
-
-- [x] **Sıfır downtime** — hiçbir şey değişmiyor
-- [x] **Sıfır risk** — mevcut çalışan sisteme dokunmuyorsun
-- [x] **Offsite backup** — Hetzner çökse bile data GCP'de güvende
-- [x] **Ek maliyet yok** — Cloud Storage 5GB free
-- [x] Hetzner'ın 3 vCPU, 4-8GB RAM'i korunuyor
-- [x] Coolify'ın kolay deploy mekanizması korunuyor
-
-### Cons
-
-- [ ] Hetzner'a bağımlılık devam ediyor
-- [ ] Managed servis yok — hala her şey senin sorumluluğun
-- [ ] Ölçeklenme planı yok
-- [ ] Single server riski devam ediyor
-
-### Implementation (15 minutes)
-
-```bash
-# 1. GCP'de bucket oluştur
-gsutil mb -l europe-west1 gs://appranks-backups/
-
-# 2. Service account oluştur, key indir
-gcloud iam service-accounts create appranks-backup
-gcloud projects add-iam-policy-binding PROJECT_ID \
-  --member="serviceAccount:appranks-backup@PROJECT.iam.gserviceaccount.com" \
-  --role="roles/storage.objectAdmin"
-
-# 3. Hetzner VPS'e gsutil kur
-# 4. Cron job ekle
-```
-
----
-
-## 7. Scenario E: Hetzner + GCP Hybrid
-
-**Concept:** Hetzner'da production çalışmaya devam, GCP'de disaster recovery (DR) replica hazır bekle.
-
-### Architecture Diagram
-
-```
-+--------------------------+           +--------------------------+
-|    Hetzner (PRIMARY)     |           |     GCP (STANDBY)        |
-|                          |           |                          |
-|  +--------------------+  |  pg_dump  |  +--------------------+  |
-|  |  Docker Compose    |  | --------> |  |  Docker Compose    |  |
-|  |  (all services)    |  |   daily   |  |  (all services)    |  |
-|  |  ACTIVE            |  |           |  |  STOPPED           |  |
-|  +--------------------+  |           |  +--------------------+  |
-|                          |           |                          |
-|  Cost: €8-15/mo          |           |  Spot VM (stopped): $2   |
-|                          |           |  30GB disk: $2.40        |
-+--------------------------+           +--------------------------+
-
-Normal: Hetzner serves everything, GCP VM is STOPPED (only disk costs)
-Disaster: Start GCP VM, restore latest backup, switch DNS → 5 min recovery
-```
-
-### Disaster Recovery Flow
-
-```
-                    Hetzner DOWN detected!
-                           |
-                    +------+------+
-                    | UptimeRobot |
-                    |   ALERT!    |
-                    +------+------+
-                           |
-              +------------+------------+
-              |  Manual or automated:   |
-              |                         |
-              |  1. Start GCP Spot VM   |
-              |  2. Restore DB backup   |
-              |  3. Switch DNS          |
-              |  4. Verify services     |
-              |                         |
-              |  Recovery: ~5-15 min    |
-              +-------------------------+
-```
-
-### Cost Breakdown
-
-| Item | Monthly Cost | Notes |
-|------|-------------|-------|
-| Hetzner VPS (current) | €8-15 | Primary — always running |
-| GCP Spot VM (STOPPED) | $0 | Stopped VMs don't cost |
-| GCP 30GB SSD Disk | $2.40 | Persistent, always attached |
-| Cloud Storage backup | $0 | 5GB free tier |
-| **Total** | **€10-18/month** | +$2.40 for DR capability |
-
-### Pros
-
-- [x] **Best of both worlds** — Hetzner performance + GCP disaster recovery
-- [x] Hetzner çökerse 5-15 dakikada GCP'ye geçiş
-- [x] Sadece $2.40/ay ek maliyet (persistent disk)
-- [x] Mevcut sisteme dokunmadan DR eklenir
-- [x] GCP VM sadece ihtiyaç olduğunda başlatılır
-
-### Cons
-
-- [ ] DR geçişi manuel (otomasyona ihtiyaç var)
-- [ ] Backup'tan restore sırasında son birkaç saatlik data kaybolabilir
-- [ ] İki ortam yönetmek karmaşıklık ekler
-- [ ] Spot VM başlatıldığında yer olmayabilir (nadir)
-
----
-
-## 8. Other Cloud Alternatives (Non-GCP)
-
-Sadece GCP değil, bütçeye uygun tüm alternatiflerin değerlendirmesi:
-
-### F1: AWS Lightsail ($20/mo)
-
-```
-+----------------------------------------------------------+
-|                    AWS Lightsail                           |
-|                                                          |
-|  +----------------------------------------------------+  |
-|  |  Instance: 2 vCPU, 4GB RAM, 80GB SSD             |  |
-|  |  Transfer: 4TB/month included                     |  |
-|  |  Static IP: Included                              |  |
-|  |                                                    |  |
-|  |  +----------+ +-------+ +--------+ +--------+   |  |
-|  |  |Dashboard | |  API  | | Worker | |Worker-I|   |  |
-|  |  +----------+ +-------+ +--------+ +--------+   |  |
-|  |  +--------------+  +---------+                   |  |
-|  |  |  PostgreSQL  |  |  Redis  |  (in Docker)      |  |
-|  |  +--------------+  +---------+                   |  |
-|  +----------------------------------------------------+  |
-|                                                          |
-|  +------------------------+                              |
-|  |  Automatic Snapshots   |  $3.50/mo (70GB × $0.05)    |
-|  |  Daily, 7-day retain   |  Point-in-time recovery     |
-|  +------------------------+                              |
-|                                                          |
-|  +------------------------+                              |
-|  |  Lightsail Firewall    |  Built-in, free              |
-|  +------------------------+                              |
-+----------------------------------------------------------+
-```
-
-**Cost:** $20/month instance + $3.50 snapshots = **$23.50** (within budget)
-**Without snapshots:** $20/month flat
-
-**Detailed breakdown:**
-| Item | Monthly Cost |
-|------|-------------|
-| Lightsail 4GB instance | $20.00 |
-| Static IP | $0 (included) |
-| Automatic snapshots (optional) | $3.50 |
-| DNS (Route 53, optional) | $0.50 |
-| **Total** | **$20-24/month** |
-
-**How Lightsail compares to Hetzner:**
-| Spec | Hetzner CPX31 | Lightsail 4GB |
-|------|:------------:|:-------------:|
-| vCPU | 4 | 2 |
-| RAM | 8GB | 4GB |
-| Disk | 160GB SSD | 80GB SSD |
-| Transfer | 20TB | 4TB |
-| Snapshots | Manual | Automatic ($3.50) |
-| Price | €9.29 ($10) | $20 |
-| SLA | 99.9% | 99.99% |
-
-**Verdict:** 2x the price of Hetzner for half the specs. BUT: AWS infrastructure, automatic snapshots, 99.99% SLA. Within budget. Good option for reliability.
-
----
-
-### F2: AWS EC2 Spot Instance ($8-12/mo)
-
-```
-+----------------------------------------------------------+
-|                    AWS EC2 Spot                            |
-|                                                          |
-|  +----------------------------------------------------+  |
-|  |  t3.medium: 2 vCPU, 4GB RAM                      |  |
-|  |  On-demand: $30/mo → Spot: ~$9-12/mo (70% off)   |  |
-|  |  Burstable CPU (baseline 20%, burst to 200%)      |  |
-|  |                                                    |  |
-|  |  Docker Compose: same as current                   |  |
-|  +----------------------------------------------------+  |
-|                                                          |
-|  +------------------------------------+                  |
-|  |  EBS Volume: 30GB gp3 SSD         |  $2.40/mo       |
-|  |  Survives instance termination     |                  |
-|  |  Snapshots to S3: $0.05/GB        |                  |
-|  +------------------------------------+                  |
-|                                                          |
-|  +------------------------------------+                  |
-|  |  Spot Interruption Handling:       |                  |
-|  |  - 2-minute warning (vs GCP 30s)  |                  |
-|  |  - Can request persistent spot     |                  |
-|  |  - Auto Scaling Group recovery     |                  |
-|  +------------------------------------+                  |
-|                                                          |
-|  S3 Backup: 5GB free tier                                |
-+----------------------------------------------------------+
-```
-
-**Spot vs GCP Spot comparison:**
-| Feature | AWS EC2 Spot | GCP Compute Spot |
-|---------|:-----------:|:----------------:|
-| Warning before termination | **2 minutes** | 30 seconds |
-| Persistent spot request | ✅ Auto-relaunch | ❌ Manual restart |
-| Price stability | More stable | More variable |
-| Interruption frequency | Low (~5%) | Medium (~10%) |
-| 2 vCPU + 4GB price | $9-12/mo | $8-12/mo |
-| EBS/Disk persistence | ✅ EBS survives | ✅ PD survives |
-| Free tier backup | S3 5GB | GCS 5GB |
-
-**Cost:** $9-12 (spot) + $2.40 (EBS) + $0.50 (egress) = **$12-15/month**
-
-**Verdict:** Better spot handling than GCP (2 min warning, auto-relaunch). Same budget. More mature spot ecosystem.
-
----
-
-### F3: AWS EC2 + RDS Free Tier ($12-18/mo)
-
-```
-+----------------------------------------------------------+
-|                    AWS EC2 + RDS                          |
-|                                                          |
-|  +----------------------+  +--------------------------+  |
-|  |  EC2 t3.micro        |  |  RDS db.t3.micro         |  |
-|  |  2 vCPU, 1GB RAM    |  |  2 vCPU, 1GB RAM         |  |
-|  |  Spot: $3-4/mo      |  |  PostgreSQL 16            |  |
-|  |                      |  |  20GB SSD                 |  |
-|  |  API + Dashboard     |  |  Auto backup (7 days)     |  |
-|  |  (workers too tight) |  |  Free tier: 12 months     |  |
-|  +----------------------+  |  After: $12-15/mo         |  |
-|                             +--------------------------+  |
-|                                                          |
-|  ⚠️ 1GB RAM = workers won't fit on EC2 t3.micro         |
-|  ⚠️ Need t3.medium ($9-12 spot) for workers             |
-|  ⚠️ RDS free tier expires after 12 months               |
-+----------------------------------------------------------+
-```
-
-**First 12 months (RDS free tier):**
-| Item | Monthly Cost |
-|------|-------------|
-| EC2 t3.medium Spot | $9-12 |
-| RDS db.t3.micro (free tier) | $0 |
-| EBS 30GB | $2.40 |
-| **Total** | **$11-15/month** |
-
-**After 12 months (RDS paid):**
-| Item | Monthly Cost |
-|------|-------------|
-| EC2 t3.medium Spot | $9-12 |
-| RDS db.t3.micro | $12-15 |
-| EBS 30GB | $2.40 |
-| **Total** | **$23-30/month** ❌ OVER BUDGET |
-
-**Verdict:** Great first year with free RDS. After yr1, $23-30/mo fits within scale-up budget ($40-50). Sustainable path.
-
----
-
-### GCP Additional Scenarios
-
-### A2: GCP e2-standard-2 Spot (Best GCP Option)
-
-```
-+----------------------------------------------------------+
-|              GCP e2-standard-2 Spot                       |
-|                                                          |
-|  +----------------------------------------------------+  |
-|  |  2 vCPU, 8GB RAM                                  |  |
-|  |  Spot price: ~$15-20/mo (region dependent)        |  |
-|  |                                                    |  |
-|  |  ✅ 8GB RAM — Playwright runs comfortably         |  |
-|  |  ✅ 2 vCPU — decent for scraping                  |  |
-|  |  ⚠️ At budget ceiling                             |  |
-|  |  ❌ Still spot — no uptime guarantee              |  |
-|  +----------------------------------------------------+  |
-|                                                          |
-|  Region pricing (Spot):                                  |
-|  us-central1: ~$15/mo                                    |
-|  europe-west1: ~$17/mo                                   |
-|  asia-east1: ~$16/mo                                     |
-+----------------------------------------------------------+
-```
-
-**Cost:** $15-20 (spot) + $2.40 (disk) = **$17-22/month** (within budget)
-
-**Verdict:** Best GCP option — 8GB RAM is ideal for Playwright. Well within $20-25 budget.
-
----
-
-### A3: GCP N1 Preemptible (Older, Cheaper)
-
-```
-+----------------------------------------------------------+
-|              GCP N1 Preemptible                           |
-|                                                          |
-|  +----------------------------------------------------+  |
-|  |  n1-standard-1: 1 vCPU, 3.75GB RAM               |  |
-|  |  Preemptible: ~$7-8/mo                            |  |
-|  |                                                    |  |
-|  |  Custom machine type possible:                     |  |
-|  |  1 vCPU, 5GB RAM: ~$9/mo preemptible              |  |
-|  |                                                    |  |
-|  |  ⚠️ N1 is older gen (Skylake/Broadwell)           |  |
-|  |  ⚠️ Preemptible = max 24h, then auto-terminated   |  |
-|  |  ❌ Worse than E2 spot (forced 24h restart)        |  |
-|  +----------------------------------------------------+  |
-+----------------------------------------------------------+
-```
-
-**Cost:** $7-9 (preemptible) + $2.40 (disk) = **$9-12/month**
-
-**Verdict:** Cheapest GCP option but forced restart every 24h. Not ideal for a production service.
-
----
-
-### G: DigitalOcean Droplet
-
-```
-+------------------------------------------+
-|         DigitalOcean                      |
-|                                          |
-|  +------------------------------------+  |
-|  |  Option 1: 2 vCPU, 4GB, 80GB     |  |
-|  |  $24/month (over budget)          |  |
-|  |                                    |  |
-|  |  Option 2: 2 vCPU, 2GB, 60GB     |  |
-|  |  $18/month (tight RAM)            |  |
-|  |                                    |  |
-|  |  Option 3: 1 vCPU, 2GB, 50GB     |  |
-|  |  $12/month (too small)            |  |
-|  +------------------------------------+  |
-|                                          |
-|  + Managed DB available ($15+/mo extra)  |
-|  + Snapshots ($0.06/GB/mo)               |
-|  + Spaces object storage (S3-compat)     |
-|  + Good community, docs                  |
-|  - $18/mo option has only 2GB RAM        |
-+------------------------------------------+
-```
-
-**Cost:** $12-24/month depending on tier
-**Verdict:** $24/month option (2 vCPU, 4GB) within budget. Good alternative to AWS Lightsail with similar specs.
-
----
-
-### H: Railway
-
-```
-+------------------------------------------+
-|             Railway                       |
-|                                          |
-|  +------------------------------------+  |
-|  |  Usage-based pricing:              |  |
-|  |  - $5/month base (Hobby plan)      |  |
-|  |  - vCPU: $0.000463/min             |  |
-|  |  - RAM: $0.000231/min/GB           |  |
-|  |  - Disk: $0.000042/min/GB          |  |
-|  |                                    |  |
-|  |  Estimated for our workload:       |  |
-|  |  ~$25-40/month (OVER BUDGET)       |  |
-|  +------------------------------------+  |
-|                                          |
-|  + Zero-config Docker deploy             |
-|  + Managed PostgreSQL + Redis included   |
-|  + Auto-scaling                          |
-|  + GitHub integration                    |
-|  - Usage-based = unpredictable costs     |
-|  - No Playwright support (no browser)    |
-|  - Memory limits per service             |
-|  - Scraper workload = expensive          |
-+------------------------------------------+
-```
-
-**Cost:** $25-40/month estimated (unpredictable)
-**Verdict:** Within scale-up budget but unpredictable. Playwright won't work. Good for API/dashboard but not scrapers.
-
----
-
-### I: Fly.io
-
-```
-+------------------------------------------+
-|              Fly.io                       |
-|                                          |
-|  +------------------------------------+  |
-|  |  Hobby plan: Free allowance        |  |
-|  |  - 3 shared-cpu VMs (256MB each)   |  |
-|  |  - 3GB storage                     |  |
-|  |                                    |  |
-|  |  Performance VM (needed):          |  |
-|  |  - 2 vCPU, 4GB: ~$30/month        |  |
-|  |  - Plus Postgres: ~$7/month        |  |
-|  |  - Plus Redis: ~$7/month           |  |
-|  +------------------------------------+  |
-|                                          |
-|  + Edge deployment, global latency       |
-|  + Managed Postgres & Redis              |
-|  + Docker-native                         |
-|  + Good DX                               |
-|  - Free tier too small for this workload |
-|  - Performance VMs over budget           |
-|  - Playwright questionable (no X11)      |
-+------------------------------------------+
-```
-
-**Cost:** $30-45/month for usable setup
-**Verdict:** At/above scale-up budget ceiling. Great platform but expensive for scraper workloads.
-
----
-
-### J: Hetzner Cloud (Upgrade)
-
-```
-+------------------------------------------+
-|         Hetzner Cloud (Upgrade)           |
-|                                          |
-|  +------------------------------------+  |
-|  |  CPX21: 3 vCPU, 4GB, 80GB SSD    |  |
-|  |  €5.39/month ($5.80)              |  |
-|  |                                    |  |
-|  |  CPX31: 4 vCPU, 8GB, 160GB SSD   |  |
-|  |  €9.29/month ($10)                |  |
-|  |                                    |  |
-|  |  CAX21 (ARM): 4 vCPU, 8GB, 80GB  |  |
-|  |  €7.49/month ($8)                 |  |
-|  +------------------------------------+  |
-|                                          |
-|  + Best price/performance ratio          |
-|  + All data in EU (GDPR friendly)        |
-|  + 20TB traffic included                 |
-|  + Snapshots: €0.01/GB/month             |
-|  + Floating IPs, firewalls               |
-|  - No managed DB/Redis                   |
-|  - Coolify handles deployment            |
-|  - Smaller company than hyperscalers     |
-+------------------------------------------+
-```
-
-**Cost:** €5.39-9.29/month ($6-10)
-**Verdict:** Best price/performance. CPX31 with 8GB RAM is ideal for Playwright workloads at only $10/month.
-
----
-
-### K: Oracle Cloud Free Tier
-
-```
-+------------------------------------------+
-|       Oracle Cloud (Always Free)          |
-|                                          |
-|  +------------------------------------+  |
-|  |  ARM VM.Standard.A1.Flex:          |  |
-|  |  4 OCPUs, 24GB RAM (!)            |  |
-|  |  200GB block storage               |  |
-|  |  10TB outbound/month               |  |
-|  |  $0/month (Always Free)           |  |
-|  |                                    |  |
-|  |  ⚠️  CAVEATS:                     |  |
-|  |  - ARM architecture (aarch64)      |  |
-|  |  - Docker images need ARM build    |  |
-|  |  - Playwright/Chromium: ARM ok     |  |
-|  |  - Account reclaim risk (idle)     |  |
-|  |  - Availability varies by region   |  |
-|  +------------------------------------+  |
-|                                          |
-|  + 24GB RAM FREE — more than any paid   |
-|  + 4 OCPUs — very powerful              |
-|  + 200GB storage                         |
-|  + Always free (not trial)               |
-|  - ARM: needs multi-arch Docker builds   |
-|  - Oracle may reclaim idle resources     |
-|  - Limited region availability           |
-|  - Oracle support is weak                |
-|  - Community smaller than AWS/GCP        |
-+------------------------------------------+
-```
-
-**Cost:** $0/month (Always Free Tier)
-**Verdict:** The most powerful free option. 24GB RAM is massive. BUT: ARM architecture requires Docker image rebuilds, and Oracle may reclaim idle accounts. Worth investigating.
-
----
-
-## 9. Master Comparison Table — Google Cloud & AWS Focus
-
-The definitive comparison. GCP and AWS variants detailed, others summarized.
-
-### Infrastructure Specs — GCP Options
-
-| | Current (Hetzner) | A: GCP e2-med Spot | A2: GCP e2-std2 Spot | A3: GCP N1 Preempt | B: GCP e2-sm+SQL | C: GCP Free |
-|--|:---------:|:------------------:|:-------------------:|:------------------:|:----------------:|:-----------:|
-| **Monthly Cost** | €10-15 | **$11-15** | $17-22 | $9-12 | $13-17 | $0 |
-| **vCPU** | 3 | 1 | **2** | 1 | 0.5 | 0.25 |
-| **RAM** | 4-8GB | 4GB | **8GB** | 3.75GB | 2GB | 1GB |
-| **Disk** | 80GB SSD | 30GB SSD | 30GB SSD | 30GB SSD | 20GB SSD | 30GB HDD |
-| **Spot Warning** | — | 30s | 30s | **24h forced kill** | 30s | — |
-| **Uptime SLA** | 99.9% | 0% | 0% | 0% | 0% | 99.5% |
-| **Playwright** | ✅ | ⚠️ Tight | ✅ Good | ⚠️ Tight | ❌ No | ❌ No |
-| **Budget Fit** | ✅ | ✅ | ✅ | ✅ | ⚠️ | ✅ |
-| **Verdict** | Baseline | Good GCP option | **Best GCP @budget** | Daily restarts | RAM too low | Impossible |
-
-### Infrastructure Specs — AWS Options
-
-| | F1: AWS Lightsail | F2: AWS EC2 t3.med Spot | F3: AWS EC2+RDS Free |
-|--|:----------------:|:----------------------:|:-------------------:|
-| **Monthly Cost** | $20-24 | **$12-15** | $11-15 (yr1) / $23-30 (yr2+) |
-| **vCPU** | 2 | **2** | 2 |
-| **RAM** | 4GB | 4GB | 4GB (EC2) + 1GB (RDS) |
-| **Disk** | 80GB SSD | 30GB EBS SSD | 30GB + 20GB RDS |
-| **Spot Warning** | — | **2 minutes** | **2 minutes** (EC2) |
-| **Auto Relaunch** | — | ✅ Persistent request | ✅ Persistent request |
-| **Uptime SLA** | **99.99%** | 0% (spot) | Mixed |
-| **Managed DB** | ❌ | ❌ | ✅ (12mo free) |
-| **Playwright** | ✅ | ✅ | ✅ |
-| **Budget Fit** | ✅ | ✅ | ✅ (yr2+ fits scale-up) |
-| **Verdict** | ✅ Safe, within budget | **Best AWS @budget** | Great with RDS free yr1 |
-
-### Infrastructure Specs — Hybrid & Other Options
-
-| | D: Hetzner+Backup | E: Hybrid DR | J: Hetzner CPX31 | K: Oracle Free |
-|--|:-----------------:|:------------:|:----------------:|:--------------:|
-| **Monthly Cost** | €10-15 (+$0) | €12-18 | **€9.29** | $0 |
-| **vCPU** | 3 | 3 | **4** | **4 (ARM)** |
-| **RAM** | 4-8GB | 4-8GB | **8GB** | **24GB** |
-| **Disk** | 80GB | 80+30GB | **160GB SSD** | **200GB** |
-| **Uptime SLA** | 99.9% | 99.9%+ | 99.9% | 99.9% |
-| **Playwright** | ✅ | ✅ | ✅✅ | ✅ (ARM build) |
-| **Data Safety** | ✅ Backup | ✅✅ DR | ❌ No backup | ❌ No backup |
-| **Migration Risk** | **Zero** | Low | **Zero** (upgrade) | Medium (ARM) |
-| **Budget Fit** | ✅ | ✅ | ✅ | ✅ |
-| **Verdict** | **Safest** | **Best protection** | **Best perf/$** | Free but risky |
-
-### Capabilities
-
-| | Current | A: GCP Spot | B: GCP+SQL | C: GCP Free | D: +Backup | E: Hybrid | F: AWS | G: DO | H: Railway | I: Fly.io | J: Hetzner | K: Oracle |
-|--|:-------:|:----------:|:---------:|:----------:|:---------:|:--------:|:-----:|:----:|:--------:|:-------:|:--------:|:-------:|
-| **Playwright** | ✅ | ⚠️ Tight | ❌ | ❌ | ✅ | ✅ | ✅ | ⚠️ | ❌ | ⚠️ | ✅✅ | ✅ |
-| **Managed DB** | ❌ | ❌ | ✅ | ❌ | ❌ | ❌ | ❌ | Optional | ✅ | ✅ | ❌ | ❌ |
-| **Managed Redis** | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | Optional | ✅ | ✅ | ❌ | ❌ |
-| **Auto Backup** | ❌ | ❌ | ✅ | ❌ | ✅ GCS | ✅ GCS | ✅ | ✅ | ✅ | ✅ | ❌ | ❌ |
-| **SSL/CDN** | Coolify | Manual | Manual | Manual | Coolify | Mixed | Manual | Manual | Auto | Auto | Coolify | Manual |
-| **CI/CD Deploy** | Coolify | Manual | Manual | N/A | Coolify | Mixed | Manual | Manual | Auto | Auto | Coolify | Manual |
-
-### Reliability & Risk
-
-| | Current | A: GCP Spot | B: GCP+SQL | C: GCP Free | D: +Backup | E: Hybrid | F: AWS | G: DO | H: Railway | I: Fly.io | J: Hetzner | K: Oracle |
-|--|:-------:|:----------:|:---------:|:----------:|:---------:|:--------:|:-----:|:----:|:--------:|:-------:|:--------:|:-------:|
-| **Uptime SLA** | 99.9% | 0%¹ | 0%¹ | 99.5% | 99.9% | 99.9%+ | 99.99% | 99.99% | 99.95% | 99.99% | 99.9% | 99.9% |
-| **Preemption Risk** | None | **HIGH** | **HIGH** | None | None | None | None | None | None | None | None | Low² |
-| **Data Loss Risk** | HIGH³ | Medium | Low | HIGH | **LOW** | **VERY LOW** | Medium | Medium | Low | Low | HIGH³ | HIGH³ |
-| **DR Capability** | None | None | Partial | None | Backup | **Full DR** | None | Snapshot | Built-in | Built-in | None | None |
-| **Migration Risk** | N/A | Medium | High | N/A | **Zero** | Low | Medium | Medium | High | High | **Zero** | Medium |
-
-¹ Spot/preemptible VMs have no uptime SLA — can be terminated anytime
-² Oracle may reclaim idle free-tier resources after 7 days of low usage
-³ No offsite backup currently — single disk failure = total data loss
-
-### Operational Complexity
-
-| | Current | A: GCP Spot | B: GCP+SQL | C: GCP Free | D: +Backup | E: Hybrid | F: AWS | G: DO | H: Railway | I: Fly.io | J: Hetzner | K: Oracle |
-|--|:-------:|:----------:|:---------:|:----------:|:---------:|:--------:|:-----:|:----:|:--------:|:-------:|:--------:|:-------:|
-| **Code Changes** | N/A | None | Minor | N/A | None | None | None | None | Major⁴ | Major⁴ | None | Minor⁵ |
-| **Setup Time** | N/A | 1h | 2h | N/A | 15min | 2h | 1h | 1h | 4h | 4h | 30min | 2h |
-| **Learning Curve** | N/A | Medium | High | N/A | **Low** | Medium | Medium | Low | Medium | Medium | **None** | Medium |
-| **Ongoing Mgmt** | Medium | Medium | Low | N/A | **Low** | Medium | Medium | Medium | **Low** | **Low** | Medium | Medium |
-| **Coolify Compat** | ✅ | ❌ | ❌ | N/A | ✅ | Partial | ❌ | ❌ | ❌ | ❌ | ✅ | ❌ |
-
-⁴ Railway/Fly.io require per-service Docker configs, can't use docker-compose.prod.yml directly
-⁵ Oracle ARM requires multi-arch Docker builds (linux/arm64)
-
-### Budget Fit
-
-| | Current | A | B | C | D | E | F | G | H | I | J | K |
-|--|:-------:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|
-| **Within $20-25?** | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ⚠️ | ⚠️ | ✅ | ✅ |
-| **Predictable Cost?** | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ❌ | ❌ | ✅ | ✅ |
-
----
-
-### GCP vs AWS Spot — Head-to-Head
-
-| Feature | GCP Spot (A/A2) | AWS EC2 Spot (F2) | Winner |
-|---------|:--------------:|:----------------:|:------:|
-| **Best price (2vCPU, 4GB)** | $15-20/mo | **$12-15/mo** | **AWS** |
-| **Budget option (1vCPU, 4GB)** | **$8-12/mo** | $6-8/mo | **AWS** |
-| **Interruption warning** | 30 seconds | **2 minutes** | **AWS** |
-| **Auto-relaunch after kill** | ❌ Manual | **✅ Persistent request** | **AWS** |
-| **Interruption frequency** | ~10%/month | **~5%/month** | **AWS** |
-| **Free tier storage** | GCS 5GB | S3 5GB | Tie |
-| **Managed DB free tier** | ❌ None | **✅ RDS 12 months** | **AWS** |
-| **CLI experience** | **gcloud (simple)** | aws-cli (verbose) | **GCP** |
-| **Console UX** | **Simple, clean** | Complex, cluttered | **GCP** |
-| **Billing transparency** | **Clear, real-time** | Confusing, delayed | **GCP** |
-| **$300 free credit** | **✅ 90 days** | ❌ None | **GCP** |
-| **Region near Turkey** | europe-west1 | eu-central-1 | Tie |
-| **Docker Compose compat** | ✅ Identical | ✅ Identical | Tie |
-| **Overall for spot VMs** | Good | **Better** | **AWS** |
-| **Overall for beginners** | **Better** | Good | **GCP** |
-
----
-
-## 10. System Architecture Tiers — GCP & AWS
 
 ### Workload Profile
 
 ```
 +-----------------------------------------------------------------+
-|                    WORKLOAD ANALYSIS                             |
+|                    DAILY WORKLOAD                                |
 |                                                                 |
-|  WRITES (Workers)                    READS (API/Dashboard)      |
-|  ===============                     ====================       |
-|  ~114,000 writes/day                 ~3K-25K queries/min        |
-|  - Keywords: 54,400 (48%)            - App list: 60-200 q/load |
-|  - Reviews:  41,250 (36%)            - App detail: 8-10 q/view |
-|  - Category: 16,500 (14%)            - Categories: 2-5 q/load  |
-|  - App det:   2,200 (2%)             - N+1 pattern on snapshots|
+|  WRITES (Workers)                  READS (API/Dashboard)        |
+|  ================                  =====================        |
 |                                                                 |
-|  Peak concurrent:                    Peak concurrent:           |
-|  11 workers × 3 threads = 33 conn   10-100 users = 30-250 q/m  |
+|  NOW (partial operations):         NOW:                         |
+|  ~114,000 writes/day               ~3K-25K queries/min          |
 |                                                                 |
-|  Write hotspots:                     Read hotspots:             |
-|  - appKeywordRankings (54K/day)      - appSnapshots (JSONB)     |
-|  - reviews (41K/day)                 - latest rankings JOINs    |
-|  - appCategoryRankings (16K/day)     - keyword positions        |
+|  FULL CAPACITY (3-10x):            FULL CAPACITY:               |
+|  ~350K - 1.1M writes/day           ~10K-50K queries/min         |
+|                                                                 |
+|  Keywords:  54,400 (48%)           App list:   60-200 q/load    |
+|  Reviews:   41,250 (36%)           App detail: 8-10 q/view      |
+|  Category:  16,500 (14%)           Categories: 2-5 q/load       |
+|  App det:    2,200 (2%)            Keyword:    5-10 q/view      |
+|                                                                 |
+|  NOW:  11 workers x 3 = 33 conn   NOW:   1-5 users             |
+|  FULL: 11 workers x 3 = 100-330   FULL:  10-100 users           |
 +-----------------------------------------------------------------+
 ```
 
-### Tier 1: Monolith — Everything on One Server
+### Current Costs
+
+| Item | Cost |
+|------|------|
+| Hetzner VPS (CPX31) | ~€10/month |
+| Domain | ~$1/month |
+| Coolify (self-hosted) | Free |
+| **Total** | **~€11/month ($12)** |
+
+### Bottlenecks
+
+```
++---+-------------------------------------------+----------+--------+
+| # | Bottleneck                                | Severity | Impact |
++---+-------------------------------------------+----------+--------+
+| 1 | Single server = single point of failure   | CRITICAL | Server |
+|   | Server down = everything down             |          | crash  |
+|   |                                           |          | = total|
+|   |                                           |          | outage |
++---+-------------------------------------------+----------+--------+
+| 2 | No database backup                        | CRITICAL | Disk   |
+|   | Disk failure = all data lost forever       |          | fail   |
+|   |                                           |          | = data |
+|   |                                           |          | gone   |
++---+-------------------------------------------+----------+--------+
+| 3 | Shared DB connection pool                 | HIGH     | Workers|
+|   | Workers (33 conn) + API (10 conn)         |          | slow   |
+|   | compete for same 20-connection pool       |          | down   |
+|   | Dashboard slows during scraping           |          | API    |
++---+-------------------------------------------+----------+--------+
+| 4 | Playwright memory spikes                  | HIGH     | OOM    |
+|   | Chromium uses 500MB+ per instance          |          | kills  |
+|   | 11 concurrent scrapers = 6-8GB RAM        |          | random |
+|   | Server only has 4-8GB total               |          | crashes|
++---+-------------------------------------------+----------+--------+
+| 5 | No disaster recovery                      | MEDIUM   | Hours  |
+|   | Server dies = hours to rebuild            |          | of     |
+|   | No standby, no failover                   |          | down-  |
+|   |                                           |          | time   |
++---+-------------------------------------------+----------+--------+
+| 6 | Workers can't scale independently         | CRITICAL | Full   |
+|   | Full capacity = 3-10x current load        |          | cap.   |
+|   | Single VM cannot handle 350K-1.1M         |          | will   |
+|   | writes/day + 12-30GB RAM                  |          | crash  |
+|   | Workers MUST be separable from API        |          | server |
++---+-------------------------------------------+----------+--------+
+```
+
+---
+
+## 2. How AWS & GCP Can Help
+
+### Bottleneck-to-Service Mapping
+
+Each bottleneck has a cloud service that solves it:
+
+```
+BOTTLENECK                        AWS SOLUTION              GCP SOLUTION
+============                      ============              ============
+
+1. Single server failure    -->   EC2 + Auto Recovery  -->  GCE + Instance Schedule
+                                  EBS persists data         Persistent Disk survives
+
+2. No database backup       -->   RDS (auto backup)   -->  Cloud SQL (auto backup)
+                                  S3 for manual dumps       GCS for manual dumps
+
+3. Shared DB pool            -->   Separate EC2 for    -->  Separate GCE for
+   (workers vs API)                API vs Workers            API vs Workers
+
+4. Playwright RAM spikes    -->   Dedicated worker     -->  Dedicated worker VM
+                                  instance (4-8GB)          (4-8GB)
+
+5. No disaster recovery    -->   Multi-AZ deploy      -->  Regional MIG
+                                  AMI snapshots              VM snapshots
+                                  Route 53 failover          Cloud DNS failover
+
+6. Workers can't scale     -->   Auto Scaling Group   -->  Managed Instance Group
+                                  Spot Fleet                 Spot VMs
+```
+
+### GCP vs AWS Head-to-Head
+
+| Feature | AWS | GCP | Winner |
+|---------|-----|-----|--------|
+| **Spot VM price (2vCPU, 4GB)** | **$9-12/mo** | $15-20/mo | **AWS** |
+| **Spot interruption warning** | **2 minutes** | 30 seconds | **AWS** |
+| **Auto-relaunch after kill** | **Persistent request** | Manual restart | **AWS** |
+| **Spot interruption rate** | **~5%/month** | ~10%/month | **AWS** |
+| **Managed DB free tier** | **RDS 12 months free** | None | **AWS** |
+| **Object storage free** | S3 5GB | GCS 5GB | Tie |
+| **Console UX** | Complex | **Simple, clean** | **GCP** |
+| **Billing clarity** | Confusing | **Real-time, clear** | **GCP** |
+| **$300 free credit** | None | **90 days** | **GCP** |
+| **CLI simplicity** | aws-cli (verbose) | **gcloud (clean)** | **GCP** |
+| **Region near Turkey** | eu-central-1 | europe-west1 | Tie |
+| **Docker Compose compat** | Identical | Identical | Tie |
+| **Spot VM verdict** | | | **AWS** (cheaper, safer) |
+| **Beginner-friendly** | | | **GCP** (simpler UX) |
+
+---
+
+## 3. Architecture Tiers
+
+### Tier 1: Monolith — All on One VM
+
+**Concept:** Same as current Hetzner setup, but on GCP/AWS.
 
 ```
 +-------------------------------------------------------+
-|                    SINGLE SERVER                       |
+|                    SINGLE VM                           |
 |                                                       |
 |  +----------+ +------+ +--------+ +--------------+   |
 |  |Dashboard | | API  | | Worker | | Worker-Inter |   |
 |  | (READ)   | |(READ)| |(WRITE) | |   (WRITE)    |   |
-|  +----+-----+ +--+---+ +---+----+ +------+-------+   |
-|       |          |          |             |            |
-|       +----------+----------+-------------+            |
-|                      |                                 |
-|              +-------+--------+                        |
-|              |   PostgreSQL   | <-- all read+write     |
-|              |  (container)   |     compete for pool   |
-|              +----------------+                        |
-|              +----------------+                        |
-|              |     Redis      |                        |
-|              +----------------+                        |
+|  +-----+----+ +--+---+ +---+----+ +------+-------+   |
+|        |         |          |             |           |
+|        +---------+----------+-------------+           |
+|                      |                                |
+|              +-------+--------+                       |
+|              |   PostgreSQL   |  <-- reads + writes   |
+|              |  (container)   |      compete          |
+|              +----------------+                       |
+|              +----------------+                       |
+|              |     Redis      |                       |
+|              +----------------+                       |
 +-------------------------------------------------------+
+
+Solves: #1 (if cloud VM has persistent disk)
+Keeps:  #2, #3, #4, #5, #6 (all other bottlenecks remain)
 ```
 
-- Workers saturate DB during scraping
-- Dashboard slows down when workers are busy
-- Single point of failure
-- Simplest setup, cheapest
+**Pros:**
+- Zero code changes — `docker-compose.prod.yml` runs as-is
+- Simplest setup, lowest cost
+- Good enough for MVP / solo user
+- Persistent disk survives VM restart
 
-**GCP Implementation:**
-| Config | Spec | Cost |
-|--------|------|------|
-| e2-medium Spot | 1 vCPU, 4GB | $8-12/mo |
-| e2-standard-2 Spot | 2 vCPU, 8GB | $15-20/mo |
-| 30GB PD SSD | | $2.40/mo |
-| **Total** | | **$10-22/mo** |
+**Cons:**
+- Workers and API still compete for DB connections
+- Playwright still fights for RAM with other containers
+- No managed backup — manual pg_dump required
+- Dashboard slow during scraping hours
+- Can't scale workers independently
 
-**AWS Implementation:**
-| Config | Spec | Cost |
-|--------|------|------|
-| t3.medium Spot | 2 vCPU, 4GB | $9-12/mo |
-| t3.large Spot | 2 vCPU, 8GB | $18-24/mo |
-| 30GB EBS gp3 | | $2.40/mo |
-| **Total** | | **$11-26/mo** |
+**Cost Comparison:**
+
+| Config | GCP | AWS |
+|--------|-----|-----|
+| **Small (1 vCPU, 4GB)** Spot | $8-12/mo | $9-12/mo |
+| **Medium (2 vCPU, 8GB)** Spot | $15-20/mo | $18-24/mo |
+| **Medium (2 vCPU, 4GB)** On-demand | $25/mo | $30/mo |
+| **Medium (2 vCPU, 4GB)** Lightsail | — | $20/mo |
+| 30GB SSD disk | $2.40/mo | $2.40/mo |
+| Backup to cloud storage | Free (5GB) | Free (5GB) |
+| **Total (recommended)** | **$17-22/mo** | **$14-20/mo** |
+
+**Recommended config:** 2 vCPU, 8GB RAM Spot + 30GB SSD + daily backup to S3/GCS
 
 ---
 
-### Tier 2: DB Outside — App + Workers on VM, Managed DB
+### Tier 2: DB Outside — VM + Managed Database
+
+**Concept:** Move PostgreSQL to a managed service. Everything else stays on VM.
 
 ```
 +----------------------------+     +----------------------+
@@ -1042,44 +400,53 @@ The definitive comparison. GCP and AWS variants detailed, others summarized.
 |  +----------+ +--------+  |     |  +----------------+  |
 |  |Dashboard | |  API   |  |     |  | Primary (RW)   |  |
 |  +----------+ +--------+  |     |  | Auto backup    |  |
-|  +----------+ +--------+  |     |  | Auto patch     |  |
+|  +----------+ +--------+  |     |  | Auto patching  |  |
 |  | Worker   | |Worker-I|  |     |  | Point-in-time  |  |
-|  +----------+ +--------+  |     |  +----------------+  |
-|  +----------+             |     |                      |
-|  | Redis    | (container) |     |  Backups: Automatic  |
-|  +----------+             |     |  HA: Optional ($$$)  |
-|                            |     |                      |
-|           +----------------+---->|  Connection: Private |
+|  +----------+ +--------+  |     |  | recovery       |  |
+|  +----------+             |     |  +----------------+  |
+|  | Redis    | (container) |     |                      |
+|  +----------+             |     |  Backups: Automatic   |
+|                            |     |  Retention: 7 days   |
+|          +-----------------+---->|  HA: Optional ($$$)  |
 |                            |     |  Latency: <1ms (VPC) |
 +----------------------------+     +----------------------+
+
+Solves: #1 (partially), #2 (DB backup automatic!)
+Keeps:  #3, #4, #5, #6
 ```
 
-- DB survives VM crash/preemption
-- Automatic backups + point-in-time recovery
-- DB patching handled by provider
-- Higher cost (managed DB $7-30+/mo)
-- Network latency for DB queries (~1ms VPC)
+**Pros:**
+- **Automatic daily backups** — solves the #1 critical risk
+- Point-in-time recovery — restore to any second in last 7 days
+- DB survives VM crash — data is on separate managed service
+- Auto security patching for PostgreSQL
+- AWS RDS free tier: **12 months free!**
 
-**GCP Implementation:**
-| Config | Spec | Cost |
-|--------|------|------|
-| e2-medium Spot (app) | 1 vCPU, 4GB | $8-12/mo |
-| Cloud SQL db-f1-micro | Shared, 0.6GB, 10GB | $7-9/mo |
-| 30GB PD SSD | | $2.40/mo |
-| **Total** | | **$17-23/mo** ✅ Within budget |
+**Cons:**
+- Workers and API still on same VM (shared RAM/CPU)
+- Playwright memory spikes still affect API
+- Managed DB adds $7-15/mo cost (except AWS yr1 free)
+- Network latency for DB queries (~1ms, negligible in VPC)
+- Redis still on VM (Managed Redis costs $30+/mo)
 
-**AWS Implementation:**
-| Config | Spec | Cost |
-|--------|------|------|
-| t3.small Spot (app) | 2 vCPU, 2GB | $4-6/mo |
-| RDS db.t3.micro (yr1 free!) | 2 vCPU, 1GB | $0 (yr1) / $12 (yr2+) |
-| 30GB EBS | | $2.40/mo |
-| **Total yr1** | | **$6-9/mo** ✅ |
-| **Total yr2+** | | **$18-21/mo** ✅ Within budget |
+**Cost Comparison:**
+
+| Config | GCP | AWS |
+|--------|-----|-----|
+| VM: 1 vCPU, 4GB Spot | $8-12/mo | $9-12/mo |
+| Managed DB (smallest) | Cloud SQL $7-9/mo | **RDS Free (yr1!)** |
+| Managed DB (after yr1) | Cloud SQL $7-9/mo | RDS $12-15/mo |
+| 30GB SSD disk | $2.40/mo | $2.40/mo |
+| **Total (yr1)** | **$17-23/mo** | **$14-18/mo** |
+| **Total (yr2+)** | **$17-23/mo** | **$23-29/mo** |
+
+**Recommended config:** AWS EC2 t3.medium Spot + RDS db.t3.micro (free yr1)
 
 ---
 
-### Tier 3: Separate Workers — API/Dashboard + Workers Split
+### Tier 3: Split VMs — API + Workers Separate
+
+**Concept:** API/Dashboard on one VM (read-optimized), Workers on another (write-optimized).
 
 ```
 +------------------------+     +------------------------+
@@ -1094,48 +461,55 @@ The definitive comparison. GCP and AWS variants detailed, others summarized.
 |  +----------+          |     |  +--------+            |
 |                        |     |  +--------+            |
 |  Pool: 10 connections  |     |  | Redis  |            |
-|  Response: Fast        |     |  +--------+            |
-|                        |     |  Pool: 20 connections   |
+|  RAM: 1-2GB            |     |  +--------+            |
+|  Response: Fast!       |     |  Pool: 20 connections  |
+|                        |     |  RAM: 4-8GB            |
 +----------+-------------+     +----------+-------------+
            |                              |
            +-------------+---------------+
                          |
                 +--------+--------+
                 |   PostgreSQL    |
-                |                 |
-                |  API: 10 read   |
-                |  Workers: 20    |
-                |  write-heavy    |
+                |  (container or  |
+                |   managed DB)   |
                 +-----------------+
+
+Solves: #3 (pool separation), #4 (dedicated worker RAM), #6 (scale workers)
+Keeps:  #2 (unless managed DB), #5
 ```
 
-- API stays fast during heavy scraping
-- Workers can be scaled independently
+**Pros:**
+- **API stays fast during scraping** — no more slow dashboard
+- Workers get dedicated RAM for Playwright (4-8GB)
+- DB connections separated: 10 for API, 20 for workers
+- Worker VM can be bigger/smaller independently
 - Worker crash doesn't affect dashboard
+- Workers can be on cheaper Spot VM (preemption okay for scrapers)
+
+**Cons:**
 - Two VMs = higher cost
-- DB still single point of failure
+- DB still in container (unless combined with Tier 2 = Tier 4)
+- Need to manage two deployments
+- Redis on worker VM — API needs network access to it
+- More operational complexity
 
-**GCP Implementation:**
-| Config | Spec | Cost |
-|--------|------|------|
-| VM1: e2-small Spot (API) | 0.5 vCPU, 2GB | $4-6/mo |
-| VM2: e2-medium Spot (Workers) | 1 vCPU, 4GB | $8-12/mo |
-| DB: Container on VM2 | — | $0 |
-| 2× 20GB PD SSD | | $3.20/mo |
-| **Total** | | **$15-21/mo** ✅ Within budget |
+**Cost Comparison:**
 
-**AWS Implementation:**
-| Config | Spec | Cost |
-|--------|------|------|
-| VM1: t3.micro Spot (API) | 2 vCPU, 1GB | $2-3/mo |
-| VM2: t3.medium Spot (Workers) | 2 vCPU, 4GB | $9-12/mo |
-| DB: Container on VM2 | — | $0 |
-| 2× 20GB EBS | | $3.20/mo |
-| **Total** | | **$14-18/mo** ✅ |
+| Config | GCP | AWS |
+|--------|-----|-----|
+| VM1 (API): 0.5 vCPU, 2GB Spot | $4-6/mo | $4-6/mo |
+| VM2 (Workers): 1 vCPU, 4GB Spot | $8-12/mo | $9-12/mo |
+| DB: Container on VM2 | $0 | $0 |
+| 2x 20GB SSD disk | $3.20/mo | $3.20/mo |
+| **Total** | **$15-21/mo** | **$16-21/mo** |
+
+**Recommended config:** Small on-demand VM for API + Medium Spot VM for workers
 
 ---
 
 ### Tier 4: Full Split — API + Workers + Managed DB
+
+**Concept:** The production-grade setup. Each concern fully isolated.
 
 ```
 +------------------+  +------------------+  +------------------+
@@ -1144,43 +518,52 @@ The definitive comparison. GCP and AWS variants detailed, others summarized.
 | +-------------+  |  | +-------------+  |  | +-------------+  |
 | | Dashboard   |  |  | | Worker (BG) |  |  | | PostgreSQL  |  |
 | | + API       |  |  | | + Inter.    |  |  | | Primary     |  |
-| | + Redis     |  |  | +-------------+  |  | | + Replica   |  |
-| +-------------+  |  | +-------------+  |  | +-------------+  |
-|                  |  | | Playwright  |  |  |                  |
-| Reads ---------> |  | | Browsers    |  |  | <-- Writes       |
-|                  |  | +-------------+  |  | <-- Reads        |
-| Pool: 10        |  | Pool: 30        |  |                  |
-| RAM: 1-2GB      |  | RAM: 4-8GB      |  | Auto backup      |
+| | + Redis     |  |  | +-------------+  |  | +-------------+  |
+| +-------------+  |  | +-------------+  |  |                  |
+|                  |  | | Playwright  |  |  | Auto backup      |
+| Reads ---------> |  | | Browsers    |  |  | Auto patching    |
+|                  |  | +-------------+  |  | Point-in-time    |
+| Pool: 10        |  | Pool: 30        |  | HA: optional     |
+| RAM: 1-2GB      |  | RAM: 4-8GB      |  |                  |
 +------------------+  +------------------+  +------------------+
+
+Solves: ALL bottlenecks (#1 through #6)
 ```
 
+**Pros:**
+- **Solves every bottleneck** — the complete solution
 - Each component scales independently
 - Worker crash = zero dashboard impact
-- DB professionally managed
-- 3 resources = highest cost
+- DB professionally managed with backups
+- Workers can burst resources during scraping
+- Can add read replica for dashboard performance
+- Production-ready architecture
 
-**GCP Implementation:**
-| Config | Spec | Cost |
-|--------|------|------|
-| VM1: e2-micro (API) | 0.25 vCPU, 1GB | $4-6/mo |
-| VM2: e2-medium Spot (Workers) | 1 vCPU, 4GB | $8-12/mo |
-| Cloud SQL db-f1-micro | Shared, 0.6GB | $7-9/mo |
-| 2× 20GB PD SSD | | $3.20/mo |
-| **Total** | | **$22-30/mo** ⚠️ Scale-up budget |
+**Cons:**
+- Highest cost at startup ($22-30/mo GCP, less with AWS free tier)
+- Three resources to manage
+- Network latency between components
+- More complex deployment pipeline
+- Overkill for single user
 
-**AWS Implementation:**
-| Config | Spec | Cost |
-|--------|------|------|
-| VM1: t3.micro Spot (API) | 2 vCPU, 1GB | $2-3/mo |
-| VM2: t3.medium Spot (Workers) | 2 vCPU, 4GB | $9-12/mo |
-| RDS db.t3.micro (yr1 free!) | 2 vCPU, 1GB, 20GB | $0 (yr1) |
-| 2× 20GB EBS | | $3.20/mo |
-| **Total yr1** | | **$14-18/mo** ✅ |
-| **Total yr2+** | | **$26-30/mo** ❌ |
+**Cost Comparison:**
+
+| Config | GCP | AWS |
+|--------|-----|-----|
+| VM1 (API): micro/small | $4-6/mo | $2-3/mo |
+| VM2 (Workers): medium Spot | $8-12/mo | $9-12/mo |
+| Managed DB | Cloud SQL $7-9/mo | **RDS Free (yr1!)** |
+| 2x 20GB SSD | $3.20/mo | $3.20/mo |
+| **Total (yr1)** | **$22-30/mo** | **$14-18/mo** |
+| **Total (yr2+)** | **$22-30/mo** | **$26-33/mo** |
+
+**AWS advantage:** With RDS free tier yr1, Tier 4 costs the same as Tier 3!
 
 ---
 
-### Tier 5: Worker Scaling — Auto-scaling Worker Fleet
+### Tier 5: Auto-scaling Workers
+
+**Concept:** Worker fleet scales based on demand. API always on.
 
 ```
               +-------------------+
@@ -1193,7 +576,7 @@ The definitive comparison. GCP and AWS variants detailed, others summarized.
   +-------+----+ +----+------+ +---+-------+
   | API + Dash | | Worker 1  | | Worker 2  |
   | (always on)| | (Spot)    | | (Spot)    |
-  | 1GB        | | Plat 1-6  | | Plat 7-11 |
+  | 1-2GB      | | Plat 1-6  | | Plat 7-11 |
   +-------+----+ +----+------+ +---+-------+
           |            |            |
           +------------+------------+
@@ -1205,266 +588,214 @@ The definitive comparison. GCP and AWS variants detailed, others summarized.
 
 Worker scaling:
   1 worker  = all 11 platforms
-  2 workers = 6 + 5 platforms
+  2 workers = 6 + 5 platforms (split by load)
   3 workers = 4 + 4 + 3 platforms
 
-Scale trigger: queue depth > 20
+Scale trigger: queue depth > 20 OR job time > 2x normal
 ```
 
-**GCP Implementation:**
-| Config | Spec | Cost |
-|--------|------|------|
-| API VM (e2-small, on-demand) | 0.5 vCPU, 2GB | $13/mo |
-| Worker MIG (e2-medium Spot × 1-2) | 1 vCPU, 4GB | $8-24/mo |
-| Cloud SQL db-f1-micro | Shared, 0.6GB | $7-9/mo |
-| **Total (1 worker)** | | **$28-46/mo** ❌ |
+**Pros:**
+- Workers scale with demand automatically
+- Pay only for what you use (Spot pricing)
+- Handle 20+ platforms without bottleneck
+- Read replica eliminates API read contention
+- True production architecture
 
-**AWS Implementation:**
-| Config | Spec | Cost |
-|--------|------|------|
-| API (t3.micro Spot) | 2 vCPU, 1GB | $2-3/mo |
-| Worker ASG (t3.medium Spot × 1-2) | 2 vCPU, 4GB | $9-24/mo |
-| RDS db.t3.micro (yr1 free) | 2 vCPU, 1GB | $0 (yr1) |
-| ALB | | $16/mo (min) |
-| **Total** | | **$27-43/mo** ❌ |
+**Cons:**
+- Requires load balancer ($16/mo AWS ALB minimum)
+- Auto-scaling config is complex
+- Multiple Spot VMs = more preemption management
+- Over-engineered for <20 platforms
+- $40-50+/mo minimum
 
-**Verdict:** Within scale-up budget ($40-50). Makes sense when:
-- Platform count > 20
-- Scrape frequency increases (4x/day)
-- Multiple customers need isolated scraping
+**Cost Comparison:**
+
+| Config | GCP | AWS |
+|--------|-----|-----|
+| API VM (small, on-demand) | $13/mo | $8/mo |
+| Worker VMs (1-2 Spot) | $8-24/mo | $9-24/mo |
+| Managed DB | Cloud SQL $7-9/mo | RDS $12-15/mo |
+| Load Balancer | $18/mo | $16/mo |
+| **Total (1 worker)** | **$46/mo** | **$45/mo** |
+| **Total (2 workers)** | **$54/mo** | **$53/mo** |
+
+**When to use:** 20+ platforms, 50+ users, $50+/mo budget
 
 ---
 
-### Architecture Tier Comparison
+## 4. Tier Comparison
 
-**Tier overview:**
-
-| Tier | Description | Servers |
-|------|-------------|---------|
-| **Tier 1** | Monolith — all on one VM | 1 |
-| **Tier 2** | DB Outside — VM + Managed DB | 1 VM + DB |
-| **Tier 3** | Split VMs — API/Dashboard + Workers | 2 VMs |
-| **Tier 4** | Full Split — API + Workers + Managed DB | 2 VMs + DB |
-| **Tier 5** | Auto-scale — Scaling worker fleet | 2-3 VMs + DB |
-
-**Cost comparison:**
+### At a Glance
 
 | | Tier 1 | Tier 2 | Tier 3 | Tier 4 | Tier 5 |
 |--|--------|--------|--------|--------|--------|
-| **GCP** | $10-22 | $17-23 | $15-21 | $22-30 | $28-46 |
-| **AWS** | $11-26 | $6-9 yr1 | $14-18 | $14-18 yr1 | $27-43 |
-| **$20-25 startup?** | ✅ | ✅ | ✅ | ⚠️ | ❌ |
+| **What** | All on 1 VM | VM + Managed DB | API VM + Worker VM | API + Worker + DB | Auto-scale |
+| **Servers** | 1 | 1 + DB | 2 | 2 + DB | 2-3 + DB |
+
+### Cost
+
+| | Tier 1 | Tier 2 | Tier 3 | Tier 4 | Tier 5 |
+|--|--------|--------|--------|--------|--------|
+| **GCP** | $17-22 | $17-23 | $15-21 | $22-30 | $46+ |
+| **AWS** | $14-20 | $14-18 yr1 | $16-21 | $14-18 yr1 | $45+ |
+| **$20-25 startup?** | ✅ | ✅ | ✅ | ⚠️ AWS yr1 only | ❌ |
 | **$40-50 scale-up?** | ✅ | ✅ | ✅ | ✅ | ✅ |
 
-**Capability comparison:**
+### Which Bottleneck Does Each Tier Solve?
+
+| Bottleneck | Tier 1 | Tier 2 | Tier 3 | Tier 4 | Tier 5 |
+|------------|--------|--------|--------|--------|--------|
+| #1 Single server failure | ⚠️ | ⚠️ | ✅ | ✅ | ✅ |
+| #2 No DB backup | ❌ | ✅ | ❌ | ✅ | ✅ |
+| #3 Shared DB pool | ❌ | ❌ | ✅ | ✅ | ✅ |
+| #4 Playwright RAM | ❌ | ❌ | ✅ | ✅ | ✅ |
+| #5 No disaster recovery | ❌ | ⚠️ | ⚠️ | ✅ | ✅ |
+| #6 Workers can't scale | ❌ | ❌ | ⚠️ | ⚠️ | ✅ |
+| **Bottlenecks solved** | **0/6** | **1/6** | **3/6** | **5/6** | **6/6** |
+
+### Operational Complexity
 
 | | Tier 1 | Tier 2 | Tier 3 | Tier 4 | Tier 5 |
 |--|--------|--------|--------|--------|--------|
-| **API speed** | ❌ Slow | ❌ Slow | ✅ Fast | ✅ Fast | ✅ Fast |
-| **Worker scale** | ❌ Fixed | ❌ Fixed | ⚠️ Manual | ⚠️ Manual | ✅ Auto |
-| **DB safety** | ❌ | ✅ Managed | ⚠️ | ✅ Managed | ✅ Managed |
-| **Playwright** | ⚠️ Shared | ⚠️ Shared | ✅ Dedicated | ✅ Dedicated | ✅ Dedicated |
-| **Complexity** | Low | Medium | Medium | High | Very High |
-| **Best for** | MVP | Data safety | Perf split | Production | Scale-up |
+| **Setup time** | 1 hour | 2 hours | 2 hours | 3 hours | 1 day |
+| **Code changes** | None | None | None | None | Minor |
+| **Deploy complexity** | Low | Low | Medium | Medium | High |
+| **Monitoring needed** | Basic | Basic | Medium | Medium | Advanced |
+| **Best for** | MVP | Data safety | Performance | Production | Scale |
 
-### Recommended Tier per Growth Stage
+### GCP vs AWS per Tier
 
-```
-Stage 1: STARTUP ($20-25/mo, 1 user, 11 platforms)
-  +-> Tier 2: DB Outside (AWS EC2 Spot + RDS Free)
-      OR Tier 1 Monolith + Backup (Scenario D)
-
-Stage 2: TRACTION ($25-40/mo, 5-10 users)
-  +-> Tier 3: Split VMs (API + Workers separate)
-
-Stage 3: GROWTH ($40-50/mo, 20+ users)
-  +-> Tier 4: Full Split + Managed DB
-
-Stage 4: SCALE ($50-100+/mo, 100+ users, 20+ platforms)
-  +-> Tier 5: Auto-scaling Workers + Read Replica
-```
-
-### DB Inside vs Outside Decision Tree
-
-```
-                    Do you need automatic backups?
-                           |
-                    +------+------+
-                    | No          | Yes
-                    |             |
-              +-----+-----+    Can you afford $7-15/mo for managed DB?
-              | Tier 1    |           |
-              | DB inside |    +------+------+
-              | + manual  |    | No          | Yes
-              | backup    |    |             |
-              +-----------+  +-+-----------+ |
-                             | Tier 1      | |
-                             | + cron      | |
-                             | pg_dump     | |
-                             | to S3/GCS   | |
-                             +-------------+ |
-                                       +-----+------+
-                                       | AWS RDS    |
-                                       | (yr1 free) |
-                                       |    OR      |
-                                       | GCP SQL    |
-                                       | ($7-9/mo)  |
-                                       +------------+
-```
+| Tier | GCP Advantage | AWS Advantage | Recommendation |
+|------|--------------|---------------|----------------|
+| **Tier 1** | $300 free credit to start | Lightsail $20 flat, simple | **GCP** (free credit) |
+| **Tier 2** | Simpler console | **RDS free 12 months** | **AWS** (free DB!) |
+| **Tier 3** | Simpler setup | **Cheaper Spot + better recovery** | **AWS** |
+| **Tier 4** | Simpler console | **RDS free yr1 = Tier 3 price** | **AWS** |
+| **Tier 5** | MIG simpler than ASG | Mature Spot Fleet | Tie |
 
 ---
 
-## 11. Decision Matrix (All Scenarios)
+## 5. Growth Roadmap & Migration Checklist
 
-Scoring: 1 (worst) to 5 (best). Only budget-feasible options scored.
-
-| Criteria (Weight) | Current | A: GCP Spot | D: +Backup | E: Hybrid | F: AWS | J: Hetzner↑ | K: Oracle |
-|-------------------|:-------:|:----------:|:---------:|:--------:|:-----:|:----------:|:--------:|
-| **Cost** (20%) | 4 | 3 | 5 | 4 | 2 | 5 | 5 |
-| **Performance** (20%) | 3 | 2 | 3 | 3 | 3 | 5 | 5 |
-| **Reliability** (20%) | 3 | 2 | 4 | 5 | 4 | 3 | 2 |
-| **Data Safety** (15%) | 1 | 2 | 4 | 5 | 3 | 1 | 1 |
-| **Simplicity** (10%) | 5 | 3 | 5 | 3 | 3 | 5 | 3 |
-| **Scalability** (10%) | 2 | 3 | 2 | 3 | 3 | 3 | 4 |
-| **Playwright** (5%) | 4 | 2 | 4 | 4 | 4 | 5 | 4 |
-| | | | | | | | |
-| **Weighted Score** | **2.85** | **2.35** | **3.80** | **3.80** | **3.05** | **3.60** | **3.25** |
-| **Rank** | #5 | #7 | **#1 (tie)** | **#1 (tie)** | #4 | **#3** | #4 |
-
----
-
-## 12. Risk vs Cost vs Performance Map
+### Recommended Path
 
 ```
-Performance (CPU+RAM)
-     |
-   5 |                              ●K (Oracle Free)
-     |                      ●J (Hetzner CPX31)
-   4 |
-     |  ●D,E (Current++)
-   3 |              ●F (AWS Lightsail)
-     |      ●A (GCP Spot)
-   2 |                      ●G (DO $18)
-     |
-   1 |  ●C (GCP Free)  ●B (GCP+SQL)
-     |
-     +--------------------------------------
-     0     5     10     15     20     25
-                Monthly Cost ($)
-
-     Size of circle = Reliability
-     ●  = Low reliability
-     ●  = High reliability
+STAGE 1: STARTUP ($20-25/mo)
++-------------------------------------------+
+|                                           |
+|  Tier 3: Split VMs (RECOMMENDED)          |
+|  - API/Dashboard on small VM              |
+|  - Workers on separate medium VM          |
+|  - Workers can scale for 3-10x load       |
+|  - Cost: $15-21/mo                        |
+|  - Solves: performance + scale            |
+|                                           |
+|  Why not Tier 1?                          |
+|  Full worker capacity (3-10x) will        |
+|  crash a single VM. Workers MUST be       |
+|  separable from day one.                  |
+|                                           |
++-------------------------------------------+
+            |
+            v
+STAGE 2: FULL CAPACITY ($25-40/mo, all platforms healthy)
++-------------------------------------------+
+|                                           |
+|  Tier 4: Full Split + Managed DB          |
+|  - Add RDS/Cloud SQL for auto backup      |
+|  - Worker VM sized for 3-10x load         |
+|  - 8-16GB RAM on worker VM                |
+|  - Cost: $22-33/mo                        |
+|  - Solves: backup + performance + scale   |
+|                                           |
++-------------------------------------------+
+            |
+            v
+STAGE 3: GROWTH ($40-50/mo, 20+ users)
++-------------------------------------------+
+|                                           |
+|  Tier 4: Full Split                       |
+|  - Add Managed DB (or keep RDS)           |
+|  - Production-grade architecture          |
+|  - Cost: $22-33/mo                        |
+|  - Solves: almost everything              |
+|                                           |
++-------------------------------------------+
+            |
+            v
+STAGE 4: SCALE ($50-100/mo, 100+ users)
++-------------------------------------------+
+|                                           |
+|  Tier 5: Auto-scaling                     |
+|  - Multiple worker VMs                    |
+|  - Load balancer + read replica           |
+|  - Cost: $45-55/mo                        |
+|  - Solves: everything                     |
+|                                           |
++-------------------------------------------+
 ```
 
-```
-Data Safety
-     |
-   5 |                  ●E (Hybrid DR)
-     |              ●D (+Backup)
-   4 |
-     |          ●F (AWS)
-   3 |
-     |      ●A (GCP Spot)
-   2 |
-     |  ●Current  ●J  ●K
-   1 |          (no backup)
-     |
-     +--------------------------------------
-     0     5     10     15     20     25
-                Monthly Cost ($)
-```
-
----
-
-## 13. Recommended Path
-
-### If Goal is Data Safety (Minimum Risk):
+### DB Inside vs Outside
 
 ```
-NOW                    MONTH 1              MONTH 3+
- |                        |                    |
- |  Scenario D            |  Scenario E        |  Budget increases?
- |  Add GCP Backup        |  Add GCP Standby   |  Consider J or F
- |  Cost: +$0             |  Cost: +$2.40      |
- |  Time: 15 min          |  Time: 2 hours     |
- |  Risk: ZERO            |  Risk: LOW         |
- ▼                        ▼                    ▼
+Do you need automatic backups?
+          |
+    +-----+-----+
+    | No         | Yes
+    |            |
+  Tier 1       Can you afford $7-15/mo?
+  + manual       |
+  pg_dump    +---+---+
+  to S3/GCS  | No    | Yes
+             |       |
+          Tier 1   +--------+--------+
+          + cron   | AWS RDS (free!) |
+          backup   | or GCP Cloud SQL|
+                   +-----------------+
 ```
 
-### If Goal is Performance Upgrade:
+### Migration Checklist
 
-```
-NOW                    MONTH 1
- |                        |
- |  Scenario J            |  + Scenario D
- |  Hetzner CPX31         |  Add GCP Backup
- |  4 vCPU, 8GB, 160GB   |  Best of both worlds
- |  Cost: €9.29/mo        |  Cost: €9.29/mo
- |  Time: 30 min          |
- ▼                        ▼
-```
+**Tier 1 (Quick Start):**
 
-### If Goal is Free Cloud:
+- [ ] Create GCP/AWS account
+- [ ] Provision VM (e2-standard-2 Spot / t3.medium Spot)
+- [ ] Attach 30GB SSD persistent disk
+- [ ] Install Docker + Docker Compose
+- [ ] Clone repo, configure `.env`
+- [ ] `docker compose -f docker-compose.prod.yml up -d`
+- [ ] Setup reverse proxy (Caddy/Nginx) + SSL
+- [ ] Update DNS records
+- [ ] Setup daily backup cron (pg_dump to S3/GCS)
+- [ ] Verify: `curl https://api.appranks.io/health`
+- [ ] Setup UptimeRobot for external monitoring
+- [ ] Migrate data: `pg_dump` from old server, `psql` restore on new
 
-```
-NOW                    MONTH 1              MONTH 2
- |                        |                    |
- |  Scenario K            |  Test stability    |  Stable?
- |  Oracle Free Tier      |  Run for 30 days   |  +- Yes: Stay
- |  4 OCPU, 24GB ARM     |  Monitor uptime    |  +- No: Fall back
- |  Cost: $0/mo           |                    |      to Hetzner
- |  Time: 2 hours         |                    |
- |  Risk: MEDIUM          |                    |
- ▼                        ▼                    ▼
-```
+**Tier 2 (Add Managed DB):**
 
----
+- [ ] All Tier 1 steps, except DB container
+- [ ] Create RDS/Cloud SQL instance
+- [ ] Update `DATABASE_URL` in `.env` to managed DB endpoint
+- [ ] Remove `postgres` service from `docker-compose.prod.yml`
+- [ ] Verify backup is automatic (check RDS/Cloud SQL console)
+- [ ] Test point-in-time recovery
 
-## 14. Final Recommendation Summary
+**Tier 3 (Split VMs):**
 
-| Priority | Scenario | Action | Cost Impact | Effort |
-|----------|----------|--------|-------------|--------|
-| **1st (DO NOW)** | D: +GCP Backup | Backup DB to Cloud Storage daily | +$0/mo | 15 min |
-| **2nd (This Month)** | J: Hetzner CPX31 | Upgrade VPS for more RAM | +€1-4/mo | 30 min |
-| **3rd (Optional)** | E: Hybrid DR | Add stopped GCP VM as standby | +$2.40/mo | 2 hours |
-| **Explore** | K: Oracle Free | Test ARM compatibility | $0 | 2 hours |
-| **Future ($50+)** | GCP Full | Full migration when budget allows | $50+/mo | 1 day |
+- [ ] VM1: Deploy API + Dashboard containers
+- [ ] VM2: Deploy Worker + Redis containers
+- [ ] Configure Redis to bind to private IP (VPC)
+- [ ] Update `REDIS_URL` in API `.env` to point to VM2
+- [ ] Verify both VMs can reach DB
+- [ ] Test: trigger scraper from dashboard, verify results
 
-**Bottom line:** $20-25/ay startup bütçeyle GCP veya AWS'e tam geçiş artık mümkün. En iyi seçenekler: **AWS EC2 Spot + RDS Free (Tier 2, $12-15/mo)** veya **GCP e2-standard-2 Spot ($17-22/mo)**. Scale-up gerektiğinde $40-50 bütçeyle Tier 3-4'e geçiş yapılabilir.
+**Tier 4 (Add Managed DB to Tier 3):**
 
----
-
-*This document should be reviewed when hosting requirements change or budget increases.*
-
----
-
-## 15. Migration Checklist
-
-### Scenario D Implementation (Recommended)
-
-- [ ] GCP hesabı oluştur / mevcut hesabı aktifleştir
-- [ ] Cloud Storage bucket oluştur: `gs://appranks-backups/`
-- [ ] Service account + key oluştur (storage.objectAdmin role)
-- [ ] Hetzner VPS'e `gsutil` kur ve authenticate et
-- [ ] `pg_dump` + `gsutil cp` backup script yaz
-- [ ] Cron job ekle: günlük 04:00 UTC
-- [ ] İlk backup'ı çalıştır ve doğrula
-- [ ] Restore test yap: backup'tan yeni DB oluştur, verify
-- [ ] 7 gün bekle, backup'ların düzenli geldiğini doğrula
-- [ ] UptimeRobot'a `/health` endpoint ekle
-- [ ] Dokümante et: restore prosedürü
-
-### Scenario E Upgrade (If Needed Later)
-
-- [ ] GCP'de e2-medium Spot VM oluştur (stopped)
-- [ ] 30GB persistent disk attach et
-- [ ] Docker + Docker Compose kur
-- [ ] Repo clone'la, .env hazırla
-- [ ] Test: VM'i başlat, backup'tan restore et, servisleri doğrula
-- [ ] Failover script yaz
-- [ ] DNS failover prosedürünü dokümante et
-- [ ] Aylık DR drill yap
+- [ ] All Tier 3 steps
+- [ ] Create managed DB (RDS/Cloud SQL)
+- [ ] Migrate data to managed DB
+- [ ] Update both VMs' `DATABASE_URL`
+- [ ] Remove DB container from worker VM
 
 ---
 
