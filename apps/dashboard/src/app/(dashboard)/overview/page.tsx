@@ -185,24 +185,24 @@ export default function CrossPlatformOverviewPage() {
 
           {/* Cross-platform summary */}
           <Card className="rounded-xl bg-gradient-to-r from-primary/5 to-transparent">
-            <CardContent className="py-5">
+            <CardContent className="py-6">
               <div className="flex items-center justify-between flex-wrap gap-4">
-                <div className="flex items-center gap-3 text-base text-muted-foreground">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10">
-                    <Globe className="h-5 w-5 text-primary" />
+                <div className="flex items-center gap-3 text-lg text-muted-foreground">
+                  <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary/10">
+                    <Globe className="h-6 w-6 text-primary" />
                   </div>
-                  <span>Tracking across <strong className="text-foreground text-lg">{platformsWithApps} platforms</strong></span>
+                  <span>Tracking across <strong className="text-foreground text-xl">{platformsWithApps} platforms</strong></span>
                 </div>
-                <div className="flex flex-wrap gap-3">
+                <div className="flex flex-wrap gap-4">
                   {[
                     { icon: AppWindow, value: totalApps, label: "Apps", bg: "bg-blue-50", ring: "ring-blue-200", text: "text-blue-600" },
                     { icon: Search, value: totalKeywords, label: "Keywords", bg: "bg-purple-50", ring: "ring-purple-200", text: "text-purple-600" },
                     { icon: Star, value: totalCompetitors, label: "Competitors", bg: "bg-amber-50", ring: "ring-amber-200", text: "text-amber-600" },
                   ].map(({ icon: Icon, value, label, bg, ring, text }) => (
-                    <div key={label} className={`flex items-center gap-2.5 px-4 py-2 rounded-xl ${bg} ring-1 ${ring}`}>
-                      <Icon className={`h-4 w-4 ${text}`} />
-                      <span className={`text-xl font-bold tracking-tight ${text}`}>{value}</span>
-                      <span className="text-xs text-muted-foreground">{label}</span>
+                    <div key={label} className={`flex items-center gap-2.5 px-5 py-2.5 rounded-xl ${bg} ring-1 ${ring}`}>
+                      <Icon className={`h-5 w-5 ${text}`} />
+                      <span className={`text-2xl font-bold tracking-tight ${text}`}>{value}</span>
+                      <span className="text-sm text-muted-foreground">{label}</span>
                     </div>
                   ))}
                 </div>
