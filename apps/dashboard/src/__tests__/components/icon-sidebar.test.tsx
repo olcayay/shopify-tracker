@@ -81,4 +81,22 @@ describe("IconSidebar", () => {
     const { container } = render(<IconSidebar />);
     expect(container.querySelector("aside")).toBeTruthy();
   });
+
+  it("Overview icon is not active on sub-pages (exact match)", () => {
+    mockPathname.mockReturnValue("/shopify/keywords");
+    render(<IconSidebar />);
+    const links = screen.getAllByRole("link");
+    const overviewLink = links.find((l) => l.getAttribute("href") === "/shopify");
+    // Overview link should NOT have active styling (bg-primary) on sub-pages
+    expect(overviewLink?.className).toContain("text-muted-foreground");
+  });
+
+  it("Overview icon is active on exact platform root", () => {
+    mockPathname.mockReturnValue("/shopify");
+    render(<IconSidebar />);
+    const links = screen.getAllByRole("link");
+    const overviewLink = links.find((l) => l.getAttribute("href") === "/shopify");
+    // Overview link should have active styling on exact match
+    expect(overviewLink?.className).not.toContain("text-muted-foreground");
+  });
 });

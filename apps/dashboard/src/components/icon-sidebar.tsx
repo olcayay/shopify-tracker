@@ -84,7 +84,9 @@ export function IconSidebar() {
         const isActive =
           item.href === "/system-admin"
             ? pathname === "/system-admin"
-            : pathname === item.href || pathname.startsWith(item.href + "/");
+            : item.exact
+              ? pathname === item.href
+              : pathname === item.href || pathname.startsWith(item.href + "/");
 
         const activeStyle = isActive && accentColor
           ? { backgroundColor: accentColor, color: "white" }
