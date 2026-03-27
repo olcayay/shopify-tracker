@@ -2562,3 +2562,38 @@ Files modified:
 - apps/api/src/routes/system-admin.ts (GET /api/system-admin/platform-requests)
 - apps/dashboard/src/app/(dashboard)/layout.tsx (use DashboardShell)
 - apps/dashboard/src/app/(dashboard)/overview/page.tsx (wire RequestPlatformCTA)
+
+Auto-Generated Task Batch Implementation (2026-03-28)
+=====================================================
+
+Implemented 5 auto-generated Linear tasks (PLA-101, PLA-99, PLA-97, PLA-100, PLA-98):
+
+PLA-101: Fix sidebar collapse button
+- Added sticky top-0 h-screen overflow-y-auto to icon-sidebar.tsx aside element
+- Toggle button now always visible at bottom regardless of content length
+
+PLA-99: Redesign overview stats card
+- Added Globe icon next to platform count in cross-platform summary
+- Replaced plain number stats with colored pill components (blue Apps, purple Keywords, amber Competitors)
+- Each pill has icon, ring border, and pastel background
+
+PLA-97: Unify overview cards
+- Created shared AccountUsageCards component with USAGE_STAT_PRESETS
+- Both /overview and /[platform] pages use same component
+- Platform page cards are clickable (href), overview cards are display-only
+- Deleted duplicate AccountUsageRow function
+
+PLA-100: Separate tracked vs available platforms
+- Split platform grid into "Your Platforms" (full cards) and "Available Platforms" (compact rows)
+- New AvailablePlatformRow component with color dot, name, capability tags, arrow
+- System admin disabled platforms shown in separate section
+- New user persona shows all platforms in Available section
+
+PLA-98: Slug-based platform developer URLs
+- New /[platform]/developers/[slug] page with cross-platform banner
+- Updated all developer links from ?name= to slug-based URLs (4 files)
+- Added backward-compat redirect from ?name=X to slug-based URL
+- Cross-platform banner shows app count across platforms with badge links
+
+Tests: 1097 → 1110 (+13 new tests)
+All 1110 dashboard tests passing
