@@ -65,10 +65,13 @@ export function PlatformRequestDialog({
 
   return (
     <Sheet open={open} onOpenChange={handleClose}>
-      <SheetContent side="right" className="w-full sm:w-[400px]">
-        <SheetTitle className="text-lg font-semibold mb-4">
+      <SheetContent side="right" className="w-full sm:w-[420px] p-6">
+        <SheetTitle className="text-lg font-semibold mb-2">
           Request a Platform
         </SheetTitle>
+        <p className="text-sm text-muted-foreground mb-6">
+          Tell us which marketplace you&apos;d like us to support.
+        </p>
 
         {submitted ? (
           <div className="text-center py-12">
