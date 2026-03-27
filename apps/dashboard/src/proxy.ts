@@ -15,7 +15,6 @@ const PLATFORM_PAGES = [
   "/featured",
   "/features",
   "/integrations",
-  "/developers",
   "/research",
 ];
 
