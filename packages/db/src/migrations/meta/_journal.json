@@ -631,6 +631,13 @@
       "when": 1776384000000,
       "tag": "0089_global_developers",
       "breakpoints": true
+    },
+    {
+      "idx": 90,
+      "version": "7",
+      "when": 1776470400000,
+      "tag": "0090_platform_requests",
+      "breakpoints": true
     }
   ]
 }

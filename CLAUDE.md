@@ -25,6 +25,15 @@
   - When fixing a bug, add a unit test that reproduces the bug to prevent regression.
 - **All tests must pass before committing.** Run `npm test` (which runs all 4 packages via turbo) and verify 0 failures before every commit. Pre-commit and pre-push hooks enforce this automatically.
 - **Smoke test after scraper changes.** When modifying any platform's scraper code (parsers, fetchers, CLI commands, platform modules), run `./scripts/smoke-test.sh --platform <name>` to verify the affected platform still works end-to-end. If any check fails, fix it before committing. The smoke test must always have 0 SKIPs.
+- **Database migration safety rules.** When creating or modifying migrations:
+  1. **Always update the journal.** After creating a new `.sql` file in `packages/db/src/migrations/`, add the corresponding entry to `packages/db/src/migrations/meta/_journal.json`. Without this, Drizzle will silently skip the migration on deploy.
+  2. **Use `IF NOT EXISTS` / `ON CONFLICT`.** All `CREATE TABLE`, `CREATE INDEX`, and seed `INSERT` statements must be idempotent.
+  3. **Use `CONCURRENTLY` for indexes on large tables.** `CREATE INDEX CONCURRENTLY` avoids table locks. Note: this cannot run inside a transaction, so add `-- breakpoint` before it.
+  4. **Split destructive migrations into phases.** If a migration needs to (a) add columns, (b) backfill data, (c) add constraints — use separate numbered migration files (e.g., 0091, 0092, 0093). Each phase must be independently safe.
+  5. **Never DROP or ALTER columns with data without a backfill plan.** Adding a `NOT NULL` column requires a default or a prior backfill migration.
+  6. **Test migration locally before committing.** Run `npm run db:migrate` against a local DB (or use `docker compose up postgres` + run the SQL manually) to verify it applies cleanly.
+  7. **Verify journal entry format.** Each entry needs: `idx` (sequential), `version: "7"`, `when` (Unix ms timestamp), `tag` (filename without .sql), `breakpoints: true`.
+  8. **Migrations run on API startup** (`apps/api/src/index.ts`). If a migration fails, the API container won't start. There is no automatic rollback — manual SQL cleanup is required.
 
 ## Linear Task Workflow
 
