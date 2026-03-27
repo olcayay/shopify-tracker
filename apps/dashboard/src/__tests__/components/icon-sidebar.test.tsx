@@ -52,4 +52,14 @@ describe("IconSidebar", () => {
     expect(screen.queryByText("Accounts")).not.toBeInTheDocument();
     expect(screen.queryByText("Scraper")).not.toBeInTheDocument();
   });
+
+  it("has sticky positioning and viewport height for always-visible toggle button", () => {
+    const { container } = render(<IconSidebar />);
+    const aside = container.querySelector("aside");
+    expect(aside).toBeTruthy();
+    expect(aside!.className).toContain("sticky");
+    expect(aside!.className).toContain("top-0");
+    expect(aside!.className).toContain("h-screen");
+    expect(aside!.className).toContain("overflow-y-auto");
+  });
 });
