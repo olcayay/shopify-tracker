@@ -91,7 +91,7 @@ function cellToRunInfo(cell: HealthCell): RunInfo {
     platform: cell.platform,
     scraperType: cell.scraperType,
     status: cell.lastRun?.status,
-    jobId: cell.lastRun?.jobId,
+    jobId: cell.lastRun?.jobId ?? undefined,
     startedAt: cell.lastRun?.startedAt,
     completedAt: cell.lastRun?.completedAt,
     error: cell.lastRun?.error,
