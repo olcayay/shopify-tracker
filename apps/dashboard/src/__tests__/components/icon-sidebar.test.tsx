@@ -1,8 +1,9 @@
 import { describe, it, expect, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
 
+const mockPathname = vi.fn(() => "/shopify/keywords");
 vi.mock("next/navigation", () => ({
-  usePathname: () => "/shopify/keywords",
+  usePathname: () => mockPathname(),
 }));
 
 vi.mock("@/lib/auth-context", () => ({
@@ -61,5 +62,23 @@ describe("IconSidebar", () => {
     expect(aside!.className).toContain("top-0");
     expect(aside!.className).toContain("h-[calc(100vh-3.5rem)]");
     expect(aside!.className).toContain("overflow-y-auto");
+  });
+
+  it("renders nothing on non-platform pages like /overview", () => {
+    mockPathname.mockReturnValue("/overview");
+    const { container } = render(<IconSidebar />);
+    expect(container.querySelector("aside")).toBeNull();
+  });
+
+  it("renders nothing on /settings page", () => {
+    mockPathname.mockReturnValue("/settings");
+    const { container } = render(<IconSidebar />);
+    expect(container.querySelector("aside")).toBeNull();
+  });
+
+  it("renders sidebar on system-admin pages", () => {
+    mockPathname.mockReturnValue("/system-admin/accounts");
+    const { container } = render(<IconSidebar />);
+    expect(container.querySelector("aside")).toBeTruthy();
   });
 });

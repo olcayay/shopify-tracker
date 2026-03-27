@@ -6,7 +6,7 @@ import { usePathname } from "next/navigation";
 import { Shield, PanelLeftClose, PanelLeftOpen } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
 import { PLATFORM_DISPLAY } from "@/lib/platform-display";
-import { extractPlatform, getNavItems, systemAdminItems } from "@/lib/nav-utils";
+import { extractPlatform, getNavItems, systemAdminItems, isOnPlatformPage } from "@/lib/nav-utils";
 import { type PlatformId } from "@appranks/shared";
 import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 
@@ -15,6 +15,7 @@ export function IconSidebar() {
   const { user } = useAuth();
   const isSystemAdmin = user?.isSystemAdmin;
   const isAdminSection = pathname.startsWith("/system-admin");
+  const isPlatformPage = isOnPlatformPage(pathname);
 
   const [expanded, setExpanded] = useState(false);
 
@@ -39,6 +40,9 @@ export function IconSidebar() {
     () => (isAdminSection ? systemAdminItems : getNavItems(activePlatform, isSystemAdmin)),
     [activePlatform, isSystemAdmin, isAdminSection]
   );
+
+  // Hide sidebar on non-platform, non-admin pages (e.g. /overview, /settings)
+  if (!isPlatformPage && !isAdminSection) return null;
 
   const accentColor = isAdminSection ? undefined : display?.color;
 

@@ -1,15 +1,19 @@
 "use client";
 
 import { useState } from "react";
+import { usePathname } from "next/navigation";
 import { TopBar } from "@/components/top-bar";
 import { IconSidebar } from "@/components/icon-sidebar";
 import { MobileSidebar } from "@/components/sidebar";
 import { PlatformDiscoverySheet } from "@/components/platform-discovery-sheet";
 import { PlatformSwitcher } from "@/components/platform-switcher";
 import { DashboardFooter } from "@/components/dashboard-footer";
+import { isOnPlatformPage } from "@/lib/nav-utils";
 
 export function DashboardShell({ children }: { children: React.ReactNode }) {
   const [discoveryOpen, setDiscoveryOpen] = useState(false);
+  const pathname = usePathname();
+  const showSidebar = isOnPlatformPage(pathname) || pathname.startsWith("/system-admin");
 
   return (
     <div className="flex flex-col min-h-screen">
@@ -19,7 +23,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
       </div>
       {/* Mobile: hamburger + logo */}
       <header className="md:hidden flex items-center gap-3 border-b px-4 h-14 shrink-0">
-        <MobileSidebar />
+        {showSidebar && <MobileSidebar />}
         <span className="font-semibold">AppRanks</span>
       </header>
       <div className="flex flex-1 min-h-0">
