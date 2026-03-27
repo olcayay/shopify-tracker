@@ -97,27 +97,20 @@ describe("CrossPlatformOverviewPage", () => {
     vi.clearAllMocks();
   });
 
-  it("renders Platforms heading", async () => {
-    setupDefaultMocks();
-    render(<OverviewPage />);
-    expect(screen.getByText("Platforms")).toBeInTheDocument();
-  });
-
-  it("renders subtitle text", async () => {
-    setupDefaultMocks();
-    render(<OverviewPage />);
-    expect(
-      screen.getByText(
-        "Monitor your app store presence across all platforms."
-      )
-    ).toBeInTheDocument();
-  });
-
   it("shows loading skeletons initially", () => {
     setupDefaultMocks();
     render(<OverviewPage />);
-    // During loading, should show the heading but platform cards with data are not yet rendered
-    expect(screen.getByText("Platforms")).toBeInTheDocument();
+    // During loading, skeletons should be rendered (no platform data yet)
+    expect(document.querySelector(".animate-pulse")).toBeTruthy();
+  });
+
+  it("renders multi-platform view when both platforms have apps", async () => {
+    setupDefaultMocks();
+    render(<OverviewPage />);
+    await waitFor(() => {
+      // Multi-platform: cross-platform summary shows "2 platforms"
+      expect(screen.getByText("2 platforms")).toBeInTheDocument();
+    });
   });
 
   it("renders platform cards for enabled platforms", async () => {
@@ -151,17 +144,8 @@ describe("CrossPlatformOverviewPage", () => {
     setupDefaultMocks();
     render(<OverviewPage />);
     await waitFor(() => {
-      // Each platform card should show app count (2 apps from mock)
       const twos = screen.getAllByText("2");
       expect(twos.length).toBeGreaterThan(0);
-    });
-  });
-
-  it("renders Account Usage section", async () => {
-    setupDefaultMocks();
-    render(<OverviewPage />);
-    await waitFor(() => {
-      expect(screen.getByText("Account Usage")).toBeInTheDocument();
     });
   });
 
@@ -179,13 +163,29 @@ describe("CrossPlatformOverviewPage", () => {
     setupDefaultMocks();
     render(<OverviewPage />);
     await waitFor(() => {
-      // Should fetch apps for shopify and salesforce
       expect(mockFetchWithAuth).toHaveBeenCalledWith(
         "/api/apps?platform=shopify"
       );
       expect(mockFetchWithAuth).toHaveBeenCalledWith(
         "/api/apps?platform=salesforce"
       );
+    });
+  });
+
+  it("shows Request a Platform CTA", async () => {
+    setupDefaultMocks();
+    render(<OverviewPage />);
+    await waitFor(() => {
+      expect(screen.getByText("Don't see your platform?")).toBeInTheDocument();
+    });
+  });
+
+  it("shows disabled platforms for discovery", async () => {
+    setupDefaultMocks();
+    render(<OverviewPage />);
+    await waitFor(() => {
+      // Non-enabled platforms should appear as disabled cards
+      expect(screen.getByText("Canva Apps")).toBeInTheDocument();
     });
   });
 });

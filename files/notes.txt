@@ -2463,3 +2463,30 @@ Files created:
 Files modified:
 - apps/dashboard/src/app/(dashboard)/layout.tsx
 - apps/dashboard/src/components/sidebar.tsx (imports from nav-utils, removed duplicates)
+
+## Multi-Platform UX Overhaul — Phase 3: Overview Hub (PLA-94)
+
+### Persona detection
+- new_user: 0 tracked apps across all platforms → OnboardingHero + all 11 platform cards
+- single_platform: 1 platform with apps → compact stats + dashboard link + ExpandYourTracking
+- multi_platform: 2+ platforms with apps → cross-platform summary + platform grid
+
+### OnboardingHero component
+- Welcome heading, subtitle with platform count
+- 11 platform color dots in a row
+- 3-step onboarding: Choose Platform → Add App → Track & Optimize
+- "Get Started" CTA links to first platform's apps page
+
+### Overview page sections
+- AccountUsageRow — compact usage/limits row (apps, keywords, competitors, research, users)
+- PlatformCard — reusable card for enabled (with stats) and disabled (with "Not enabled" message) platforms
+- ExpandYourTracking — horizontal list of disabled platforms for single-platform users
+- RequestPlatformCTA — "Don't see your platform?" with disabled button (coming soon)
+
+Files created:
+- apps/dashboard/src/components/onboarding-hero.tsx
+- apps/dashboard/src/__tests__/components/onboarding-hero.test.tsx (4 tests)
+
+Files modified:
+- apps/dashboard/src/app/(dashboard)/overview/page.tsx (full rewrite with persona logic)
+- apps/dashboard/src/__tests__/app/overview.test.tsx (updated for new structure, 10 tests)

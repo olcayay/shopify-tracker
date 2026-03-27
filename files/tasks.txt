@@ -12,7 +12,13 @@ multi-platform UX overhaul Phase 2: Navigation Overhaul (PLA-94) ✅
   - Updated layout.tsx to use TopBar + IconSidebar (desktop), MobileSidebar (mobile)
   - Added 28 tests: 16 nav-utils, 9 top-bar, 3 icon-sidebar
 
-multi-platform UX overhaul Phase 3: Overview Hub (PLA-94)
+multi-platform UX overhaul Phase 3: Overview Hub (PLA-94) ✅
+  - Persona-adaptive /overview page (new_user, single_platform, multi_platform)
+  - OnboardingHero component (welcome, 3-step onboarding, 11 platform icons)
+  - Cross-platform summary for multi-platform users
+  - ExpandYourTracking section for single-platform users
+  - RequestPlatformCTA at bottom of all persona views
+  - 14 tests: 4 onboarding-hero + 10 overview page (updated)
 
 multi-platform UX overhaul Phase 4: Discovery & Request (PLA-94)
 
