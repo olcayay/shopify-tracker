@@ -161,9 +161,10 @@ describe("CrossPlatformOverviewPage", () => {
     setupDefaultMocks();
     render(<OverviewPage />);
     await waitFor(() => {
-      expect(screen.getByText("3/10")).toBeInTheDocument(); // Apps
-      expect(screen.getByText("10/50")).toBeInTheDocument(); // Keywords
-      expect(screen.getByText("5/20")).toBeInTheDocument(); // Competitors
+      // Shared AccountUsageCards renders value and /limit in separate elements
+      expect(screen.getByText("My Apps")).toBeInTheDocument();
+      expect(screen.getByText("Tracked Keywords")).toBeInTheDocument();
+      expect(screen.getByText("Competitor Apps")).toBeInTheDocument();
     });
   });
 

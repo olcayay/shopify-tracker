@@ -23,10 +23,11 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Target, Eye, ChevronLeft, ChevronRight, Clock, ArrowLeft, Search, Star, Users, AppWindow, FlaskConical } from "lucide-react";
+import { Target, Eye, ChevronLeft, ChevronRight, Clock, ArrowLeft, AppWindow } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { StatCardSkeleton, TableSkeleton } from "@/components/skeletons";
 import { AppBadgeIcon } from "@/components/app-badges";
+import { AccountUsageCards, USAGE_STAT_PRESETS } from "@/components/account-usage-cards";
 import { PLATFORMS, type PlatformId } from "@appranks/shared";
 import { PLATFORM_COLORS, SCRAPER_TYPE_LABELS } from "@/lib/platform-display";
 
@@ -257,34 +258,13 @@ export default function OverviewPage() {
       <h1 className="text-2xl font-bold">Overview</h1>
 
       {/* Account Usage Cards - clickable */}
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-        {[
-          { href: `/${platform}/apps`, icon: AppWindow, label: "My Apps", value: apps.length, limit: account?.limits.maxTrackedApps, color: "bg-blue-50 text-blue-600", show: true },
-          { href: `/${platform}/keywords`, icon: Search, label: "Tracked Keywords", value: keywords.length, limit: account?.limits.maxTrackedKeywords, color: "bg-purple-50 text-purple-600", show: caps.hasKeywordSearch },
-          { href: `/${platform}/competitors`, icon: Star, label: "Competitor Apps", value: competitors.length, limit: account?.limits.maxCompetitorApps, color: "bg-amber-50 text-amber-600", show: true },
-          { href: `/${platform}/research`, icon: FlaskConical, label: "Research Projects", value: account?.usage.researchProjects ?? 0, limit: account?.limits?.maxResearchProjects ?? 0, color: "bg-emerald-50 text-emerald-600", show: true },
-          { href: "/settings", icon: Users, label: "Users", value: account?.usage.users ?? 1, limit: account?.limits.maxUsers, color: "bg-rose-50 text-rose-600", show: true },
-        ].filter((c) => c.show).map(({ href, icon: Icon, label, value, limit, color }) => (
-          <Link key={label} href={href} className="h-full">
-            <Card className="hover:border-primary/50 hover:shadow-sm transition-all cursor-pointer h-full">
-              <CardHeader className="pb-2">
-                <CardDescription className="flex items-center gap-2">
-                  <span className={`flex h-7 w-7 items-center justify-center rounded-lg ${color}`}>
-                    <Icon className="h-4 w-4" />
-                  </span>
-                  {label}
-                </CardDescription>
-                <CardTitle className="text-4xl tracking-tight">
-                  {value}
-                  <span className="text-lg text-muted-foreground font-normal">
-                    /{limit}
-                  </span>
-                </CardTitle>
-              </CardHeader>
-            </Card>
-          </Link>
-        ))}
-      </div>
+      <AccountUsageCards stats={[
+        { key: "apps", ...USAGE_STAT_PRESETS.apps, value: apps.length, limit: account?.limits.maxTrackedApps ?? 0, href: `/${platform}/apps`, show: true },
+        { key: "keywords", ...USAGE_STAT_PRESETS.keywords, value: keywords.length, limit: account?.limits.maxTrackedKeywords ?? 0, href: `/${platform}/keywords`, show: caps.hasKeywordSearch },
+        { key: "competitors", ...USAGE_STAT_PRESETS.competitors, value: competitors.length, limit: account?.limits.maxCompetitorApps ?? 0, href: `/${platform}/competitors`, show: true },
+        { key: "research", ...USAGE_STAT_PRESETS.research, value: account?.usage.researchProjects ?? 0, limit: account?.limits?.maxResearchProjects ?? 0, href: `/${platform}/research`, show: true },
+        { key: "users", ...USAGE_STAT_PRESETS.users, value: account?.usage.users ?? 1, limit: account?.limits.maxUsers ?? 0, href: "/settings", show: true },
+      ]} />
 
       {message && (
         <div className="text-sm px-3 py-2 rounded-md bg-muted">{message}</div>

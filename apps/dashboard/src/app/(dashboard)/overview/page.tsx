@@ -6,11 +6,12 @@ import { useAuth } from "@/lib/auth-context";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Package, ArrowRight, AppWindow, Search, Star, FlaskConical, Users, MessageSquarePlus, Globe } from "lucide-react";
+import { Package, ArrowRight, AppWindow, Search, Star, MessageSquarePlus, Globe } from "lucide-react";
 import { PLATFORMS, PLATFORM_IDS, type PlatformId } from "@appranks/shared";
 import { PLATFORM_DISPLAY } from "@/lib/platform-display";
 import { OnboardingHero } from "@/components/onboarding-hero";
 import { PlatformRequestDialog } from "@/components/platform-request-dialog";
+import { AccountUsageCards, USAGE_STAT_PRESETS } from "@/components/account-usage-cards";
 
 const CAPABILITY_LABELS: { key: string; label: string; section?: string }[] = [
   { key: "hasReviews", label: "Reviews" },
@@ -130,7 +131,13 @@ export default function CrossPlatformOverviewPage() {
       {/* Single-platform: compact stats + dashboard link */}
       {persona === "single_platform" && (
         <>
-          <AccountUsageRow account={account} />
+          <AccountUsageCards stats={[
+            { key: "apps", ...USAGE_STAT_PRESETS.apps, value: account?.usage.trackedApps ?? 0, limit: account?.limits.maxTrackedApps ?? 0 },
+            { key: "keywords", ...USAGE_STAT_PRESETS.keywords, value: account?.usage.trackedKeywords ?? 0, limit: account?.limits.maxTrackedKeywords ?? 0 },
+            { key: "competitors", ...USAGE_STAT_PRESETS.competitors, value: account?.usage.competitorApps ?? 0, limit: account?.limits.maxCompetitorApps ?? 0 },
+            { key: "research", ...USAGE_STAT_PRESETS.research, value: account?.usage.researchProjects ?? 0, limit: account?.limits.maxResearchProjects ?? 0 },
+            { key: "users", ...USAGE_STAT_PRESETS.users, value: account?.usage.users ?? 0, limit: account?.limits.maxUsers ?? 0 },
+          ]} />
           {enabledPlatforms.map((pid) => {
             const s = stats[pid];
             if (!s || s.apps === 0) return null;
@@ -168,7 +175,13 @@ export default function CrossPlatformOverviewPage() {
       {/* Multi-platform: aggregated stats + platform grid */}
       {persona === "multi_platform" && (
         <>
-          <AccountUsageRow account={account} />
+          <AccountUsageCards stats={[
+            { key: "apps", ...USAGE_STAT_PRESETS.apps, value: account?.usage.trackedApps ?? 0, limit: account?.limits.maxTrackedApps ?? 0 },
+            { key: "keywords", ...USAGE_STAT_PRESETS.keywords, value: account?.usage.trackedKeywords ?? 0, limit: account?.limits.maxTrackedKeywords ?? 0 },
+            { key: "competitors", ...USAGE_STAT_PRESETS.competitors, value: account?.usage.competitorApps ?? 0, limit: account?.limits.maxCompetitorApps ?? 0 },
+            { key: "research", ...USAGE_STAT_PRESETS.research, value: account?.usage.researchProjects ?? 0, limit: account?.limits.maxResearchProjects ?? 0 },
+            { key: "users", ...USAGE_STAT_PRESETS.users, value: account?.usage.users ?? 0, limit: account?.limits.maxUsers ?? 0 },
+          ]} />
 
           {/* Cross-platform summary */}
           <Card className="rounded-xl bg-gradient-to-r from-primary/5 to-transparent">
@@ -233,33 +246,6 @@ export default function CrossPlatformOverviewPage() {
 // -----------------------------------------------------------------------
 // Sub-components
 // -----------------------------------------------------------------------
-
-function AccountUsageRow({ account }: { account: any }) {
-  if (!account) return null;
-  return (
-    <Card className="rounded-xl">
-      <CardContent className="py-3">
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4">
-          {[
-            { icon: AppWindow, usage: account.usage.trackedApps, limit: account.limits.maxTrackedApps, label: "Apps", color: "bg-blue-50 text-blue-600" },
-            { icon: Search, usage: account.usage.trackedKeywords, limit: account.limits.maxTrackedKeywords, label: "Keywords", color: "bg-purple-50 text-purple-600" },
-            { icon: Star, usage: account.usage.competitorApps, limit: account.limits.maxCompetitorApps, label: "Competitors", color: "bg-amber-50 text-amber-600" },
-            { icon: FlaskConical, usage: account.usage.researchProjects, limit: account.limits.maxResearchProjects, label: "Research", color: "bg-emerald-50 text-emerald-600" },
-            { icon: Users, usage: account.usage.users, limit: account.limits.maxUsers, label: "Users", color: "bg-rose-50 text-rose-600" },
-          ].map(({ icon: Icon, usage, limit, label, color }) => (
-            <div key={label} className="text-center">
-              <div className={`mx-auto mb-2 flex h-10 w-10 items-center justify-center rounded-xl ${color}`}>
-                <Icon className="h-5 w-5" />
-              </div>
-              <div className="text-2xl font-bold tracking-tight">{usage}/{limit}</div>
-              <div className="text-xs text-muted-foreground mt-0.5">{label}</div>
-            </div>
-          ))}
-        </div>
-      </CardContent>
-    </Card>
-  );
-}
 
 function PlatformCard({
   platformId,
