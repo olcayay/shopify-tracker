@@ -229,3 +229,5 @@ risk analysis mitigations — 10 tasks from RISK_ANALYSIS.md ✅
 dashboard /health endpoint for UptimeRobot monitoring (PLA-90) ✅
 
 show start time in job detail modals and tooltips (PLA-89) ✅
+
+dashboard /health endpoint verifies API connectivity (PLA-92) ✅

@@ -6,6 +6,10 @@ PLA-90: Added /health endpoint to Next.js dashboard so UptimeRobot can monitor i
 - Added "/health" to PUBLIC_PATHS in proxy.ts (bypasses auth)
 - Added proxy test for /health
 
+PLA-92: Enhanced /health endpoint to verify API connectivity. Returns 200 with
+{status:"ok", api:"ok"} when API is reachable, 503 with {status:"error", api:"unreachable"}
+when API is down. 5-second timeout. UptimeRobot can use keyword monitor for "ok".
+
 PLA-89: Added "Started" timestamp to job detail modals and tooltips.
 - ErrorDetailModal: shows "Started" row before "Completed" in info grid
 - Matrix cell tooltip: shows "Started: X ago" before "Completed"
