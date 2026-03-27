@@ -958,7 +958,351 @@ The definitive comparison. GCP and AWS variants detailed, others summarized.
 
 ---
 
-## 8. Decision Matrix (All Scenarios)
+## 8. System Architecture Tiers — GCP & AWS
+
+### Workload Profile
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                    WORKLOAD ANALYSIS                             │
+│                                                                 │
+│  WRITES (Workers)                    READS (API/Dashboard)      │
+│  ═══════════════                     ════════════════════       │
+│  ~114,000 writes/day                 ~3K-25K queries/min        │
+│  - Keywords: 54,400 (48%)            - App list: 60-200 q/load │
+│  - Reviews:  41,250 (36%)            - App detail: 8-10 q/view │
+│  - Category: 16,500 (14%)            - Categories: 2-5 q/load  │
+│  - App det:   2,200 (2%)             - N+1 pattern on snapshots│
+│                                                                 │
+│  Peak concurrent:                    Peak concurrent:           │
+│  11 workers × 3 threads = 33 conn   10-100 users = 30-250 q/m  │
+│                                                                 │
+│  Write hotspots:                     Read hotspots:             │
+│  - appKeywordRankings (54K/day)      - appSnapshots (JSONB)     │
+│  - reviews (41K/day)                 - latest rankings JOINs    │
+│  - appCategoryRankings (16K/day)     - keyword positions        │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+### Tier 1: Monolith — Everything on One Server
+
+```
+┌─────────────────────────────────────────────────────────┐
+│                    SINGLE SERVER                         │
+│                                                         │
+│  ┌─────────┐ ┌─────────┐ ┌─────────┐ ┌──────────────┐ │
+│  │Dashboard│ │  API    │ │ Worker  │ │Worker-Inter. │ │
+│  │ (READ)  │ │ (READ)  │ │ (WRITE) │ │  (WRITE)     │ │
+│  └────┬────┘ └────┬────┘ └────┬────┘ └──────┬───────┘ │
+│       │           │           │              │         │
+│       └───────────┴───────────┴──────────────┘         │
+│                       │                                 │
+│              ┌────────┴────────┐                        │
+│              │   PostgreSQL    │  ← ALL read+write      │
+│              │   (container)   │     compete for pool   │
+│              └─────────────────┘                        │
+│              ┌─────────────────┐                        │
+│              │     Redis       │                        │
+│              └─────────────────┘                        │
+│                                                         │
+│  ⚠️ Workers saturate DB during scraping                 │
+│  ⚠️ Dashboard slows down when workers are busy          │
+│  ⚠️ Single point of failure                             │
+│  ✅ Simplest setup                                      │
+│  ✅ Cheapest                                            │
+└─────────────────────────────────────────────────────────┘
+```
+
+**GCP Implementation:**
+| Config | Spec | Cost |
+|--------|------|------|
+| e2-medium Spot | 1 vCPU, 4GB | $8-12/mo |
+| e2-standard-2 Spot | 2 vCPU, 8GB | $15-20/mo |
+| 30GB PD SSD | | $2.40/mo |
+| **Total** | | **$10-22/mo** |
+
+**AWS Implementation:**
+| Config | Spec | Cost |
+|--------|------|------|
+| t3.medium Spot | 2 vCPU, 4GB | $9-12/mo |
+| t3.large Spot | 2 vCPU, 8GB | $18-24/mo |
+| 30GB EBS gp3 | | $2.40/mo |
+| **Total** | | **$11-26/mo** |
+
+---
+
+### Tier 2: DB Outside — App + Workers on VM, Managed DB
+
+```
+┌──────────────────────────────┐    ┌──────────────────────┐
+│         VM (Spot/On-demand)  │    │   Managed PostgreSQL │
+│                              │    │                      │
+│  ┌─────────┐ ┌─────────┐   │    │  ┌────────────────┐  │
+│  │Dashboard│ │  API    │   │    │  │  Primary (RW)  │  │
+│  └─────────┘ └─────────┘   │    │  │  Auto backup   │  │
+│  ┌─────────┐ ┌──────────┐  │    │  │  Auto patch    │  │
+│  │ Worker  │ │Worker-I  │  │    │  │  Point-in-time │  │
+│  └─────────┘ └──────────┘  │    │  └────────────────┘  │
+│  ┌─────────┐               │    │                      │
+│  │  Redis  │  (container)  │    │  Backups: Automatic  │
+│  └─────────┘               │    │  HA: Optional ($$$)  │
+│              │              │    │                      │
+│              └──────────────┼───►│  Connection: Private │
+│                             │    │  Latency: <1ms (VPC) │
+└──────────────────────────────┘    └──────────────────────┘
+
+✅ DB survives VM crash/preemption
+✅ Automatic backups + point-in-time recovery
+✅ DB patching handled by provider
+⚠️ Higher cost (managed DB $7-30+/mo)
+⚠️ Network latency for DB queries (~1ms VPC)
+```
+
+**GCP Implementation:**
+| Config | Spec | Cost |
+|--------|------|------|
+| e2-medium Spot (app) | 1 vCPU, 4GB | $8-12/mo |
+| Cloud SQL db-f1-micro | Shared, 0.6GB, 10GB | $7-9/mo |
+| 30GB PD SSD | | $2.40/mo |
+| **Total** | | **$17-23/mo** ⚠️ Over budget |
+
+**AWS Implementation:**
+| Config | Spec | Cost |
+|--------|------|------|
+| t3.small Spot (app) | 2 vCPU, 2GB | $4-6/mo |
+| RDS db.t3.micro (yr1 free!) | 2 vCPU, 1GB | $0 (yr1) / $12 (yr2+) |
+| 30GB EBS | | $2.40/mo |
+| **Total yr1** | | **$6-9/mo** ✅ |
+| **Total yr2+** | | **$18-21/mo** ⚠️ At ceiling |
+
+---
+
+### Tier 3: Separate Workers — API/Dashboard + Workers Split
+
+```
+┌────────────────────────┐  ┌────────────────────────┐
+│   VM 1: API + Dashboard│  │   VM 2: Workers        │
+│   (READ-heavy)         │  │   (WRITE-heavy)        │
+│                        │  │                        │
+│  ┌─────────┐           │  │  ┌─────────┐           │
+│  │Dashboard│ ← Reads   │  │  │ Worker  │ ← Writes  │
+│  └─────────┘           │  │  └─────────┘           │
+│  ┌─────────┐           │  │  ┌──────────┐          │
+│  │  API    │ ← Reads   │  │  │Worker-I  │ ← Writes │
+│  └─────────┘           │  │  └──────────┘          │
+│                        │  │  ┌─────────┐           │
+│  Pool: 10 connections  │  │  │  Redis  │           │
+│  Response: Fast (no    │  │  └─────────┘           │
+│  write contention)     │  │  Pool: 20 connections  │
+│                        │  │                        │
+└───────────┬────────────┘  └───────────┬────────────┘
+            │                           │
+            └──────────┬────────────────┘
+                       │
+              ┌────────┴────────┐
+              │   PostgreSQL    │  (container or managed)
+              │                 │
+              │  Connections:   │
+              │  API: 10 (read) │
+              │  Workers: 20   │
+              │  (write-heavy)  │
+              └─────────────────┘
+
+✅ API stays fast during heavy scraping
+✅ Workers can be scaled independently
+✅ Worker crash doesn't affect dashboard
+✅ Each VM sized for its workload
+⚠️ Two VMs = higher cost
+⚠️ DB still single point of failure
+```
+
+**GCP Implementation:**
+| Config | Spec | Cost |
+|--------|------|------|
+| VM1: e2-small Spot (API) | 0.5 vCPU, 2GB | $4-6/mo |
+| VM2: e2-medium Spot (Workers) | 1 vCPU, 4GB | $8-12/mo |
+| DB: Container on VM2 | — | $0 |
+| 2× 20GB PD SSD | | $3.20/mo |
+| **Total** | | **$15-21/mo** ⚠️ At ceiling |
+
+**AWS Implementation:**
+| Config | Spec | Cost |
+|--------|------|------|
+| VM1: t3.micro Spot (API) | 2 vCPU, 1GB | $2-3/mo |
+| VM2: t3.medium Spot (Workers) | 2 vCPU, 4GB | $9-12/mo |
+| DB: Container on VM2 | — | $0 |
+| 2× 20GB EBS | | $3.20/mo |
+| **Total** | | **$14-18/mo** ✅ |
+
+---
+
+### Tier 4: Full Split — API + Workers + Managed DB
+
+```
+┌──────────────────┐  ┌──────────────────┐  ┌──────────────────┐
+│  VM 1: Frontend  │  │  VM 2: Workers   │  │  Managed DB      │
+│                  │  │                  │  │                  │
+│  ┌────────────┐  │  │  ┌────────────┐  │  │  ┌────────────┐  │
+│  │ Dashboard  │  │  │  │  Worker    │  │  │  │ PostgreSQL │  │
+│  │ + API      │  │  │  │  (BG)     │  │  │  │ Primary    │  │
+│  │ + Redis*   │  │  │  │  + Inter. │  │  │  │ + Replica  │  │
+│  └────────────┘  │  │  └────────────┘  │  │  └────────────┘  │
+│                  │  │  ┌────────────┐  │  │                  │
+│  Reads ─────────►│  │  │ Playwright │  │  │  ◄── Writes     │
+│                  │  │  │ Browsers   │  │  │  ◄── Reads      │
+│  Pool: 10       │  │  └────────────┘  │  │                  │
+│  RAM: 1-2GB     │  │  Pool: 30       │  │  Auto backup ✅   │
+│                  │  │  RAM: 4-8GB     │  │  HA optional ✅   │
+└──────────────────┘  └──────────────────┘  └──────────────────┘
+
+✅ Each component scales independently
+✅ Worker crash = zero dashboard impact
+✅ DB professionally managed (backup, patch, HA)
+✅ Workers can burst resources during scraping
+✅ API stays responsive
+❌ 3 resources = highest cost
+❌ Network latency between components
+```
+
+**GCP Implementation:**
+| Config | Spec | Cost |
+|--------|------|------|
+| VM1: e2-micro (API) | 0.25 vCPU, 1GB | $4-6/mo |
+| VM2: e2-medium Spot (Workers) | 1 vCPU, 4GB | $8-12/mo |
+| Cloud SQL db-f1-micro | Shared, 0.6GB | $7-9/mo |
+| 2× 20GB PD SSD | | $3.20/mo |
+| **Total** | | **$22-30/mo** ❌ Over budget |
+
+**AWS Implementation:**
+| Config | Spec | Cost |
+|--------|------|------|
+| VM1: t3.micro Spot (API) | 2 vCPU, 1GB | $2-3/mo |
+| VM2: t3.medium Spot (Workers) | 2 vCPU, 4GB | $9-12/mo |
+| RDS db.t3.micro (yr1 free!) | 2 vCPU, 1GB, 20GB | $0 (yr1) |
+| 2× 20GB EBS | | $3.20/mo |
+| **Total yr1** | | **$14-18/mo** ✅ |
+| **Total yr2+** | | **$26-30/mo** ❌ |
+
+---
+
+### Tier 5: Worker Scaling — Auto-scaling Worker Fleet
+
+```
+                              ┌─────────────────────┐
+                              │   Load Balancer      │
+                              │   (GCP LB / ALB)     │
+                              └──────────┬──────────┘
+                                         │
+                    ┌────────────────────┬┴───────────────────┐
+                    │                    │                    │
+              ┌─────┴──────┐      ┌─────┴──────┐      ┌─────┴──────┐
+              │ API + Dash │      │ Worker 1   │      │ Worker 2   │
+              │ (always on)│      │ (Spot)     │      │ (Spot)     │
+              │ 1GB        │      │ Platforms  │      │ Platforms  │
+              └─────┬──────┘      │ 1-6        │      │ 7-11       │
+                    │             └─────┬──────┘      └─────┬──────┘
+                    │                   │                    │
+                    └───────────────────┴────────────────────┘
+                                        │
+                               ┌────────┴────────┐
+                               │  Managed DB     │
+                               │  + Read Replica │
+                               └─────────────────┘
+
+Worker scaling strategy:
+  1 worker  = all 11 platforms (current)
+  2 workers = 6 + 5 platforms (split)
+  3 workers = 4 + 4 + 3 platforms (heavy load)
+
+Scale trigger: job queue depth > 20 or avg job time > 2× normal
+```
+
+**GCP Implementation:**
+| Config | Spec | Cost |
+|--------|------|------|
+| API VM (e2-small, on-demand) | 0.5 vCPU, 2GB | $13/mo |
+| Worker MIG (e2-medium Spot × 1-2) | 1 vCPU, 4GB | $8-24/mo |
+| Cloud SQL db-f1-micro | Shared, 0.6GB | $7-9/mo |
+| **Total (1 worker)** | | **$28-46/mo** ❌ |
+
+**AWS Implementation:**
+| Config | Spec | Cost |
+|--------|------|------|
+| API (t3.micro Spot) | 2 vCPU, 1GB | $2-3/mo |
+| Worker ASG (t3.medium Spot × 1-2) | 2 vCPU, 4GB | $9-24/mo |
+| RDS db.t3.micro (yr1 free) | 2 vCPU, 1GB | $0 (yr1) |
+| ALB | | $16/mo (min) |
+| **Total** | | **$27-43/mo** ❌ |
+
+**Verdict:** Over budget at current scale. Makes sense when:
+- Platform count > 20
+- Scrape frequency increases (4x/day)
+- Multiple customers need isolated scraping
+
+---
+
+### Architecture Tier Comparison
+
+| | Tier 1: Monolith | Tier 2: DB Out | Tier 3: Split VMs | Tier 4: Full Split | Tier 5: Auto-scale |
+|--|:----------------:|:-------------:|:-----------------:|:------------------:|:------------------:|
+| **Servers** | 1 | 1 + managed DB | 2 | 2 + managed DB | 2-3 + managed DB |
+| **GCP Cost** | $10-22 | $17-23 | $15-21 | $22-30 | $28-46 |
+| **AWS Cost** | $11-26 | $6-9 (yr1) | $14-18 | $14-18 (yr1) | $27-43 |
+| **API perf during scraping** | ❌ Slow | ❌ Slow | ✅ Fast | ✅ Fast | ✅ Fast |
+| **Worker scalability** | ❌ Fixed | ❌ Fixed | ⚠️ Manual | ⚠️ Manual | ✅ Auto |
+| **DB safety** | ❌ Container | ✅ Managed | ⚠️ Container | ✅ Managed | ✅ Managed |
+| **Playwright RAM** | ⚠️ Shared | ⚠️ Shared | ✅ Dedicated | ✅ Dedicated | ✅ Dedicated |
+| **Complexity** | Low | Medium | Medium | High | Very High |
+| **Budget fit ($10-20)** | ✅ | ⚠️ GCP no / AWS yr1 ✅ | ⚠️ At ceiling | ❌ GCP / ⚠️ AWS yr1 | ❌ |
+| **Best for** | MVP, solo | Data safety | Perf isolation | Production | Scale-up |
+
+### Recommended Tier per Growth Stage
+
+```
+Stage 1: NOW (1 user, 11 platforms, $10-20/mo)
+  └─► Tier 1 Monolith + Backup (Scenario D)
+
+Stage 2: TRACTION (5-10 users, $20-30/mo budget)
+  └─► Tier 3: Split VMs (API + Workers separate)
+
+Stage 3: GROWTH (50+ users, $50-100/mo budget)
+  └─► Tier 4: Full Split + Managed DB
+
+Stage 4: SCALE (100+ users, 20+ platforms, $100+/mo)
+  └─► Tier 5: Auto-scaling Workers + Read Replica
+```
+
+### DB Inside vs Outside Decision Tree
+
+```
+                    Do you need automatic backups?
+                           │
+                    ┌──────┴──────┐
+                    │ No          │ Yes
+                    │             │
+              ┌─────┴─────┐    Can you afford $7-15/mo for managed DB?
+              │ Tier 1    │           │
+              │ DB inside │    ┌──────┴──────┐
+              │ + manual  │    │ No          │ Yes
+              │ backup    │    │             │
+              └───────────┘  ┌─┴───────────┐ │
+                             │ Tier 1      │ │
+                             │ + cron      │ │
+                             │ pg_dump     │ │
+                             │ to S3/GCS   │ │
+                             └─────────────┘ │
+                                       ┌─────┴──────┐
+                                       │ AWS RDS    │
+                                       │ (yr1 free) │
+                                       │    OR      │
+                                       │ GCP SQL    │
+                                       │ ($7-9/mo)  │
+                                       └────────────┘
+```
+
+---
+
+## 9. Decision Matrix (All Scenarios)
 
 Scoring: 1 (worst) to 5 (best). Only budget-feasible options scored.
 
