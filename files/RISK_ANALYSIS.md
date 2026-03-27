@@ -4,7 +4,7 @@
 **Prepared by:** Engineering Team
 **Version:** 2.1
 **Status:** Active
-**Last Updated:** 2026-03-27 — 5 quick fixes implemented, status tracking added
+**Last Updated:** 2026-03-27 — 9 risks fixed/mitigated, status tracking added
 
 ---
 
@@ -1496,11 +1496,11 @@ export function keywordToSlug(keyword: string): string {
 | R-13 | App slug changes break tracking | 4 | 3 | 12 | Open |
 | R-14 | Single server failure | 5 | 5 | 25 | Open |
 | R-15 | No database backup | 5 | 4 | 20 | Open |
-| R-16 | Redis failure | 3 | 4 | 15 | Open |
+| R-16 | Redis failure | 3 | 4 | 15 | **Mitigated** — AOF persistence + maxmemory policy |
 | R-17 | Server resource exhaustion | 5 | 3 | 15 | **Mitigated** — Docker memory limits added |
 | R-18 | Docker volume corruption | 4 | 3 | 12 | Open |
 | R-19 | CORS misconfiguration | 5 | 2 | 10 | **Fixed** — restricted to known origins |
-| R-20 | Weak authentication | 5 | 4 | 20 | Open |
+| R-20 | Weak authentication | 5 | 4 | 20 | **Partial** — password complexity added (upper+lower+number) |
 | R-21 | JWT security weaknesses | 3 | 4 | 15 | Open |
 | R-22 | Secrets management | 5 | 3 | 15 | Open |
 | R-23 | Input validation gaps | 5 | 2 | 10 | Open |
@@ -1520,7 +1520,7 @@ export function keywordToSlug(keyword: string): string {
 | R-37 | Customer count growth | 3 | 4 | 12 | Open |
 | R-38 | Data volume growth | 2 | 5 | 10 | Open |
 | R-39 | Concurrent app upsert race condition | 5 | 4 | 20 | Open |
-| R-40 | Category ranking TOCTOU race | 3 | 4 | 15 | Open |
+| R-40 | Category ranking TOCTOU race | 3 | 4 | 15 | **Fixed** — unique index + onConflictDoNothing |
 | R-41 | Cascade job partial enqueue failure | 3 | 4 | 15 | Open |
 | R-42 | Platform lock bypass (multi-instance) | 4 | 3 | 12 | Open |
 | R-43 | Silent daily digest failures | 3 | 4 | 15 | Open |
@@ -1534,7 +1534,7 @@ export function keywordToSlug(keyword: string): string {
 | R-51 | Special characters break search URLs | 3 | 3 | 12 | Open |
 | R-52 | Numeric edge cases (pricing/ratings) | 2 | 3 | 8 | Open |
 | R-53 | DST impact on schedule display | 2 | 3 | 6 | Open |
-| R-54 | Large HTML response memory spikes | 2 | 5 | 10 | Open |
+| R-54 | Large HTML response memory spikes | 2 | 5 | 10 | **Mitigated** — 20MB response size limit |
 | R-55 | Free tier abuse — unlimited registration | 3 | 4 | 15 | Open |
 | R-56 | Package limits not enforced at DB level | 3 | 5 | 15 | Open |
 | R-57 | No payment integration — manual billing | 3 | 3 | 12 | Open |

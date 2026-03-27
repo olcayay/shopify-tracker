@@ -66,6 +66,12 @@ export const authRoutes: FastifyPluginAsync = async (app) => {
       });
     }
 
+    if (!/[A-Z]/.test(password) || !/[a-z]/.test(password) || !/[0-9]/.test(password)) {
+      return reply.code(400).send({
+        error: "Password must contain at least one uppercase letter, one lowercase letter, and one number",
+      });
+    }
+
     // Check if email already exists
     const [existing] = await db
       .select({ id: users.id })

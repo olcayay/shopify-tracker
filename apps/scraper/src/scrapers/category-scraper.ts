@@ -748,13 +748,14 @@ export class CategoryScraper {
         .returning({ id: apps.id });
 
       // Record ranking with global position across pages
+      // onConflictDoNothing prevents duplicates from concurrent scrapes (R-40)
       await this.db.insert(appCategoryRankings).values({
         appId: upsertedApp.id,
         categorySlug,
         scrapeRunId: runId,
         scrapedAt: now,
         position: positionOffset + (app.position || i + 1),
-      });
+      }).onConflictDoNothing();
     }
   }
 

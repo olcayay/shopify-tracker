@@ -53,7 +53,7 @@ describe("POST /api/auth/register — validation", () => {
     const res = await app.inject({
       method: "POST",
       url: "/api/auth/register",
-      payload: { password: "password123", name: "Test", accountName: "Co" },
+      payload: { password: "Password123", name: "Test", accountName: "Co" },
     });
     expect(res.statusCode).toBe(400);
     expect(res.json().error).toMatch(/email/i);
@@ -73,7 +73,7 @@ describe("POST /api/auth/register — validation", () => {
     const res = await app.inject({
       method: "POST",
       url: "/api/auth/register",
-      payload: { email: "a@b.com", password: "password123", accountName: "Co" },
+      payload: { email: "a@b.com", password: "Password123", accountName: "Co" },
     });
     expect(res.statusCode).toBe(400);
     expect(res.json().error).toMatch(/name/i);
@@ -83,7 +83,7 @@ describe("POST /api/auth/register — validation", () => {
     const res = await app.inject({
       method: "POST",
       url: "/api/auth/register",
-      payload: { email: "a@b.com", password: "password123", name: "Test" },
+      payload: { email: "a@b.com", password: "Password123", name: "Test" },
     });
     expect(res.statusCode).toBe(400);
     expect(res.json().error).toMatch(/accountName/i);
@@ -108,14 +108,34 @@ describe("POST /api/auth/register — validation", () => {
     expect(res.json().error).toMatch(/8 characters/i);
   });
 
-  it("accepts exactly 8 character password (boundary)", async () => {
+  it("accepts exactly 8 character password with complexity (boundary)", async () => {
     const res = await app.inject({
       method: "POST",
       url: "/api/auth/register",
-      payload: { email: "a@b.com", password: "12345678", name: "Test", accountName: "Co" },
+      payload: { email: "a@b.com", password: "Test1234", name: "Test", accountName: "Co" },
     });
-    // Should not be a 400 for password length
+    // Should not be a 400 for password validation
     expect(res.statusCode).not.toBe(400);
+  });
+
+  it("returns 400 when password has no uppercase letter", async () => {
+    const res = await app.inject({
+      method: "POST",
+      url: "/api/auth/register",
+      payload: { email: "a@b.com", password: "test1234", name: "Test", accountName: "Co" },
+    });
+    expect(res.statusCode).toBe(400);
+    expect(res.json().error).toMatch(/uppercase/i);
+  });
+
+  it("returns 400 when password has no number", async () => {
+    const res = await app.inject({
+      method: "POST",
+      url: "/api/auth/register",
+      payload: { email: "a@b.com", password: "Testtest", name: "Test", accountName: "Co" },
+    });
+    expect(res.statusCode).toBe(400);
+    expect(res.json().error).toMatch(/number/i);
   });
 });
 
@@ -144,7 +164,7 @@ describe("POST /api/auth/register — email uniqueness", () => {
       url: "/api/auth/register",
       payload: {
         email: "taken@example.com",
-        password: "password123",
+        password: "Password123",
         name: "Test",
         accountName: "Co",
       },
@@ -188,7 +208,7 @@ describe("POST /api/auth/register — successful registration", () => {
       url: "/api/auth/register",
       payload: {
         email: "new@example.com",
-        password: "password123",
+        password: "Password123",
         name: "New User",
         accountName: "New Co",
       },
@@ -207,7 +227,7 @@ describe("POST /api/auth/register — successful registration", () => {
       url: "/api/auth/register",
       payload: {
         email: "another@example.com",
-        password: "password123",
+        password: "Password123",
         name: "Another User",
         accountName: "Another Co",
       },
@@ -229,7 +249,7 @@ describe("POST /api/auth/register — successful registration", () => {
       url: "/api/auth/register",
       payload: {
         email: "owner@example.com",
-        password: "password123",
+        password: "Password123",
         name: "Owner User",
         accountName: "Owner Co",
       },
@@ -265,7 +285,7 @@ describe("POST /api/auth/login — validation", () => {
     const res = await app.inject({
       method: "POST",
       url: "/api/auth/login",
-      payload: { password: "password123" },
+      payload: { password: "Password123" },
     });
     expect(res.statusCode).toBe(400);
     expect(res.json().error).toMatch(/email/i);
@@ -294,7 +314,7 @@ describe("POST /api/auth/login — validation", () => {
     const res = await app.inject({
       method: "POST",
       url: "/api/auth/login",
-      payload: { email: "missing@example.com", password: "password123" },
+      payload: { email: "missing@example.com", password: "Password123" },
     });
     expect(res.statusCode).toBe(401);
     expect(res.json().error).toMatch(/invalid/i);
@@ -303,7 +323,7 @@ describe("POST /api/auth/login — validation", () => {
 
 describe("POST /api/auth/login — suspended account", () => {
   let app: FastifyInstance;
-  const passwordHash = bcrypt.hashSync("password123", 4);
+  const passwordHash = bcrypt.hashSync("Password123", 4);
 
   beforeAll(async () => {
     app = await buildTestApp({
@@ -337,7 +357,7 @@ describe("POST /api/auth/login — suspended account", () => {
     const res = await app.inject({
       method: "POST",
       url: "/api/auth/login",
-      payload: { email: "user@suspended.com", password: "password123" },
+      payload: { email: "user@suspended.com", password: "Password123" },
     });
     expect(res.statusCode).toBe(403);
     expect(res.json().error).toMatch(/suspended/i);
@@ -346,7 +366,7 @@ describe("POST /api/auth/login — suspended account", () => {
 
 describe("POST /api/auth/login — successful login", () => {
   let app: FastifyInstance;
-  const passwordHash = bcrypt.hashSync("correctpassword", 4);
+  const passwordHash = bcrypt.hashSync("Correct123", 4);
 
   beforeAll(async () => {
     app = await buildTestApp({
@@ -379,7 +399,7 @@ describe("POST /api/auth/login — successful login", () => {
     const res = await app.inject({
       method: "POST",
       url: "/api/auth/login",
-      payload: { email: "user@example.com", password: "correctpassword" },
+      payload: { email: "user@example.com", password: "Correct123" },
     });
     expect(res.statusCode).toBe(200);
     const body = res.json();
@@ -397,7 +417,7 @@ describe("POST /api/auth/login — successful login", () => {
     const res = await app.inject({
       method: "POST",
       url: "/api/auth/login",
-      payload: { email: "user@example.com", password: "correctpassword" },
+      payload: { email: "user@example.com", password: "Correct123" },
     });
     const body = res.json();
     expect(body.user.account).toBeDefined();
@@ -408,7 +428,7 @@ describe("POST /api/auth/login — successful login", () => {
     const res = await app.inject({
       method: "POST",
       url: "/api/auth/login",
-      payload: { email: "user@example.com", password: "wrongpassword" },
+      payload: { email: "user@example.com", password: "Wrong123" },
     });
     expect(res.statusCode).toBe(401);
     expect(res.json().error).toMatch(/invalid/i);

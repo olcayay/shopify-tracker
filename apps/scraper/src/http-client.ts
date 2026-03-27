@@ -2,6 +2,8 @@ import { createLogger } from "@appranks/shared";
 
 const log = createLogger("http-client");
 
+const MAX_RESPONSE_SIZE = 20 * 1024 * 1024; // 20MB
+
 const USER_AGENTS = [
   "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
   "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
@@ -113,7 +115,18 @@ export class HttpClient {
           throw err;
         }
 
-        return await response.text();
+        const contentLength = response.headers.get("content-length");
+        if (contentLength && parseInt(contentLength, 10) > MAX_RESPONSE_SIZE) {
+          log.warn("response too large, skipping", { url, contentLength });
+          lastError = new Error(`Response too large: ${contentLength} bytes (max ${MAX_RESPONSE_SIZE})`);
+          break;
+        }
+
+        const text = await response.text();
+        if (text.length > MAX_RESPONSE_SIZE) {
+          log.warn("response body too large", { url, size: text.length });
+        }
+        return text;
       } catch (error) {
         lastError = error as Error;
         log.warn("fetch attempt failed", {
