@@ -188,6 +188,9 @@ export function MatrixCell({ cell, onTrigger, triggering }: MatrixCellProps) {
           {(cell.currentlyRunning ? cell.runningJobId : cell.lastRun?.jobId) && (
             <div>Job ID: <span className="font-mono">{cell.currentlyRunning ? cell.runningJobId : cell.lastRun?.jobId}</span></div>
           )}
+          {cell.lastRun?.startedAt && (
+            <div>Started: {timeAgo(cell.lastRun.startedAt)}</div>
+          )}
           {cell.lastRun?.completedAt && (
             <div>Completed: {timeAgo(cell.lastRun.completedAt)}</div>
           )}
@@ -302,6 +305,8 @@ function ErrorDetailModal({ cell, onClose }: { cell: HealthCell; onClose: () => 
                 <div className="font-mono">{cell.lastRun.jobId}</div>
               </>
             )}
+            <div className="text-muted-foreground">Started</div>
+            <div>{cell.lastRun?.startedAt ? formatDateTime(cell.lastRun.startedAt) : "N/A"}</div>
             <div className="text-muted-foreground">Completed</div>
             <div>{cell.lastRun?.completedAt ? formatDateTime(cell.lastRun.completedAt) : "N/A"}</div>
             <div className="text-muted-foreground">Duration</div>
