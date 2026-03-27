@@ -163,6 +163,20 @@ describe("OverviewPage", () => {
     expect(screen.getByText("Coming Soon")).toBeInTheDocument();
   });
 
+  it("shows skeleton instead of 'Coming Soon' while auth is loading", () => {
+    mockUseParams.mockReturnValue({ platform: "salesforce" });
+    mockUseAuth.mockReturnValue({
+      ...mockAuthContext,
+      isLoading: true,
+      account: null,
+      fetchWithAuth: mockFetchWithAuth,
+    });
+
+    render(<OverviewPage />);
+    expect(screen.queryByText("Coming Soon")).not.toBeInTheDocument();
+    expect(screen.getAllByTestId("stat-skeleton").length).toBeGreaterThan(0);
+  });
+
   it("renders keyword table with keyword text", async () => {
     setupFetchMocks();
     render(<OverviewPage />);

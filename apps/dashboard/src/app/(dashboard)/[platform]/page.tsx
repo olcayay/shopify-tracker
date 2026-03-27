@@ -94,7 +94,7 @@ function Pagination({
 
 export default function OverviewPage() {
   const { platform } = useParams();
-  const { fetchWithAuth, user, account, refreshUser } = useAuth();
+  const { fetchWithAuth, user, account, refreshUser, isLoading: authLoading } = useAuth();
   const { formatDateOnly } = useFormatDate();
   const [apps, setApps] = useState<any[]>([]);
   const [keywords, setKeywords] = useState<any[]>([]);
@@ -125,6 +125,21 @@ export default function OverviewPage() {
   useEffect(() => {
     if (isPlatformEnabled) loadData();
   }, [isPlatformEnabled]);
+
+  // Show skeleton while auth is loading to prevent "Coming Soon" flash
+  if (authLoading) {
+    return (
+      <div className="space-y-6">
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+          <StatCardSkeleton />
+          <StatCardSkeleton />
+          <StatCardSkeleton />
+          <StatCardSkeleton />
+        </div>
+        <TableSkeleton />
+      </div>
+    );
+  }
 
   // Coming-soon page for non-enabled platforms
   if (!isPlatformEnabled) {
