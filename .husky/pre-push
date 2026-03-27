@@ -4,4 +4,7 @@ npx turbo typecheck || exit 1
 echo "Running tests before push..."
 npx turbo test || exit 1
 
+echo "Running dashboard build check before push..."
+npx turbo build --filter=@appranks/dashboard || exit 1
+
 echo "All checks passed, pushing..."

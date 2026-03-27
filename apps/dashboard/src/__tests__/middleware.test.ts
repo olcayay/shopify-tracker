@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { NextRequest, NextResponse } from "next/server";
-import { middleware } from "@/middleware";
+import { proxy } from "@/proxy";
 
 vi.mock("next/server", async () => {
   const actual = await vi.importActual<typeof import("next/server")>("next/server");
@@ -22,29 +22,29 @@ function makeRequest(path: string, cookies: Record<string, string> = {}): NextRe
   return req;
 }
 
-describe("middleware", () => {
+describe("proxy – root redirect", () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
-  it("redirects authenticated users from / to /overview", () => {
+  it("redirects authenticated users from / to /overview", async () => {
     const req = makeRequest("/", { access_token: "some-token" });
-    middleware(req);
+    await proxy(req);
     expect(NextResponse.redirect).toHaveBeenCalledTimes(1);
     const redirectUrl = (NextResponse.redirect as any).mock.calls[0][0] as URL;
     expect(redirectUrl.pathname).toBe("/overview");
   });
 
-  it("does not redirect anonymous visitors from /", () => {
+  it("does not redirect anonymous visitors from /", async () => {
     const req = makeRequest("/");
-    middleware(req);
+    await proxy(req);
     expect(NextResponse.redirect).not.toHaveBeenCalled();
     expect(NextResponse.next).toHaveBeenCalledTimes(1);
   });
 
-  it("does not redirect authenticated users on other paths", () => {
-    const req = makeRequest("/overview", { access_token: "some-token" });
-    middleware(req);
+  it("does not redirect authenticated users on other public paths", async () => {
+    const req = makeRequest("/terms", { access_token: "some-token" });
+    await proxy(req);
     expect(NextResponse.redirect).not.toHaveBeenCalled();
     expect(NextResponse.next).toHaveBeenCalledTimes(1);
   });

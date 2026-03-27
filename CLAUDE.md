@@ -40,6 +40,7 @@
 ### Creating tasks ("task aç", "issue aç", etc.)
 When the user asks to create a task, use the **Linear GraphQL API via `curl`** to create an issue in the PLA project:
 - **Team ID:** `13127a86-8941-4c00-9031-9efb4a4fb91b`
+- **Project ID:** `ee05a847-f284-4134-974f-6f3cfc7cec7a` (Shopify App Tracker) — all tasks must be created under this project. Add `projectId` to the `IssueCreateInput`.
 - **Label:** Always add `auto-generated` label (ID: `25dbb951-787e-4845-9dba-984d57a57fae`)
 - **Title:** Clear, descriptive, action-oriented (English)
 - **Body structure:**
