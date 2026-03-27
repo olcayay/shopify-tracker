@@ -35,6 +35,7 @@ import {
   researchProjects,
   categoryParents,
   accountPlatforms,
+  platformRequests,
 } from "@appranks/db";
 import { computeWeightedPowerScore, PLATFORM_IDS, type PlatformId } from "@appranks/shared";
 import { requireRole } from "../middleware/authorize.js";
@@ -3583,6 +3584,36 @@ export const accountRoutes: FastifyPluginAsync = async (app) => {
       }
 
       return { message: "Platform disabled", platform };
+    }
+  );
+
+  // POST /api/account/platform-requests — submit a platform request
+  app.post<{ Body: { platformName: string; marketplaceUrl?: string; notes?: string } }>(
+    "/platform-requests",
+    async (request, reply) => {
+      const { accountId, userId } = request.user;
+      const { platformName, marketplaceUrl, notes } = request.body as {
+        platformName: string;
+        marketplaceUrl?: string;
+        notes?: string;
+      };
+
+      if (!platformName?.trim()) {
+        return reply.code(400).send({ error: "Platform name is required" });
+      }
+
+      const [row] = await db
+        .insert(platformRequests)
+        .values({
+          accountId,
+          userId,
+          platformName: platformName.trim(),
+          marketplaceUrl: marketplaceUrl?.trim() || null,
+          notes: notes?.trim() || null,
+        })
+        .returning();
+
+      return { message: "Platform request submitted", id: row.id };
     }
   );
 };

@@ -130,3 +130,4 @@ export {
   platformDevelopers,
 } from "./schema/developers.js";
 export { ensurePlatformDeveloper } from "./ensure-platform-developer.js";
+export { platformRequests } from "./schema/platform-requests.js";

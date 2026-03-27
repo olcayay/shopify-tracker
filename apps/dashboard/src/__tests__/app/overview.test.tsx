@@ -3,6 +3,10 @@ import { render, screen, waitFor } from "@testing-library/react";
 
 const mockFetchWithAuth = vi.fn();
 
+vi.mock("@/components/platform-request-dialog", () => ({
+  PlatformRequestDialog: () => null,
+}));
+
 vi.mock("@/lib/auth-context", () => ({
   useAuth: () => ({
     user: {

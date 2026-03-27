@@ -10,6 +10,7 @@ import { Package, ArrowRight, AppWindow, Search, Star, FlaskConical, Users, Mess
 import { PLATFORMS, PLATFORM_IDS, type PlatformId } from "@appranks/shared";
 import { PLATFORM_DISPLAY } from "@/lib/platform-display";
 import { OnboardingHero } from "@/components/onboarding-hero";
+import { PlatformRequestDialog } from "@/components/platform-request-dialog";
 
 const CAPABILITY_LABELS: { key: string; label: string }[] = [
   { key: "hasReviews", label: "Reviews" },
@@ -377,18 +378,22 @@ function ExpandYourTracking({ enabledPlatforms }: { enabledPlatforms: PlatformId
 }
 
 function RequestPlatformCTA() {
+  const [open, setOpen] = useState(false);
   return (
-    <Card className="rounded-xl bg-gradient-to-r from-muted/50 to-muted/30">
-      <CardContent className="py-6 text-center">
-        <MessageSquarePlus className="h-8 w-8 mx-auto mb-3 text-muted-foreground" />
-        <h3 className="font-semibold mb-1">Don&apos;t see your platform?</h3>
-        <p className="text-sm text-muted-foreground mb-4">
-          We&apos;re always expanding. Tell us which marketplace you&apos;d like us to support.
-        </p>
-        <Button variant="outline" disabled>
-          Request a Platform (Coming Soon)
-        </Button>
-      </CardContent>
-    </Card>
+    <>
+      <Card className="rounded-xl bg-gradient-to-r from-muted/50 to-muted/30">
+        <CardContent className="py-6 text-center">
+          <MessageSquarePlus className="h-8 w-8 mx-auto mb-3 text-muted-foreground" />
+          <h3 className="font-semibold mb-1">Don&apos;t see your platform?</h3>
+          <p className="text-sm text-muted-foreground mb-4">
+            We&apos;re always expanding. Tell us which marketplace you&apos;d like us to support.
+          </p>
+          <Button variant="outline" onClick={() => setOpen(true)}>
+            Request a Platform
+          </Button>
+        </CardContent>
+      </Card>
+      <PlatformRequestDialog open={open} onOpenChange={setOpen} />
+    </>
   );
 }

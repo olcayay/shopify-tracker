@@ -2490,3 +2490,46 @@ Files created:
 Files modified:
 - apps/dashboard/src/app/(dashboard)/overview/page.tsx (full rewrite with persona logic)
 - apps/dashboard/src/__tests__/app/overview.test.tsx (updated for new structure, 10 tests)
+
+## Multi-Platform UX Overhaul — Phase 4: Discovery & Request (PLA-94)
+
+### PlatformDiscoverySheet
+- Right-side Sheet showing all 11 platforms
+- Each platform: name, marketplace name, capabilities badges, Active/Enable button
+- Search filter for platform names
+- Self-service enable/disable via API (POST/DELETE /api/account/platforms)
+- "Request a Platform" link at bottom
+
+### PlatformRequestDialog
+- Simple form: platform name (required), marketplace URL (optional), notes (optional)
+- Success state after submit with "Thank you!" message
+- Uses POST /api/account/platform-requests
+
+### Database
+- New `platform_requests` table (0090_platform_requests.sql)
+- Columns: id, account_id, user_id, platform_name, marketplace_url, notes, status, created_at
+
+### API endpoints
+- POST /api/account/platform-requests — submit request (any authenticated user)
+- GET /api/system-admin/platform-requests — list all requests with user/account info (sysadmin only)
+
+### DashboardShell
+- Client component wrapper managing PlatformDiscoverySheet state
+- TopBar [+] button opens discovery sheet
+- Layout.tsx simplified to server component importing DashboardShell
+
+Files created:
+- apps/dashboard/src/components/platform-discovery-sheet.tsx
+- apps/dashboard/src/components/platform-request-dialog.tsx
+- apps/dashboard/src/components/dashboard-shell.tsx
+- packages/db/src/schema/platform-requests.ts
+- packages/db/src/migrations/0090_platform_requests.sql
+- apps/dashboard/src/__tests__/components/platform-discovery-sheet.test.tsx (9 tests)
+- apps/dashboard/src/__tests__/components/platform-request-dialog.test.tsx (5 tests)
+
+Files modified:
+- packages/db/src/index.ts (export platformRequests)
+- apps/api/src/routes/account.ts (POST /api/account/platform-requests)
+- apps/api/src/routes/system-admin.ts (GET /api/system-admin/platform-requests)
+- apps/dashboard/src/app/(dashboard)/layout.tsx (use DashboardShell)
+- apps/dashboard/src/app/(dashboard)/overview/page.tsx (wire RequestPlatformCTA)

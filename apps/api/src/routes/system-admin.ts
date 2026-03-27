@@ -36,6 +36,7 @@ import {
   categoryParents,
   smokeTestResults,
   scrapeItemErrors,
+  platformRequests,
 } from "@appranks/db";
 import { isPlatformId, PLATFORM_IDS, SCRAPER_SCHEDULES, getNextRunFromCron, getScheduleIntervalMs, findSchedule, SMOKE_PLATFORMS, SMOKE_CHECKS, BROWSER_PLATFORMS, getSmokeCheck, getSmokePlatform, countTotalSmokeChecks } from "@appranks/shared";
 import type { SmokeCheckName } from "@appranks/shared";
@@ -2828,6 +2829,28 @@ export const systemAdminRoutes: FastifyPluginAsync = async (app) => {
       return updated;
     }
   );
+
+  // GET /api/system-admin/platform-requests — list all platform requests
+  app.get("/platform-requests", async () => {
+    const rows = await db
+      .select({
+        id: platformRequests.id,
+        platformName: platformRequests.platformName,
+        marketplaceUrl: platformRequests.marketplaceUrl,
+        notes: platformRequests.notes,
+        status: platformRequests.status,
+        createdAt: platformRequests.createdAt,
+        accountName: accounts.name,
+        userName: users.name,
+        userEmail: users.email,
+      })
+      .from(platformRequests)
+      .leftJoin(accounts, eq(platformRequests.accountId, accounts.id))
+      .leftJoin(users, eq(platformRequests.userId, users.id))
+      .orderBy(desc(platformRequests.createdAt));
+
+    return rows;
+  });
 };
 
 /**

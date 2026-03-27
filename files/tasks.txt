@@ -20,7 +20,14 @@ multi-platform UX overhaul Phase 3: Overview Hub (PLA-94) ✅
   - RequestPlatformCTA at bottom of all persona views
   - 14 tests: 4 onboarding-hero + 10 overview page (updated)
 
-multi-platform UX overhaul Phase 4: Discovery & Request (PLA-94)
+multi-platform UX overhaul Phase 4: Discovery & Request (PLA-94) ✅
+  - PlatformDiscoverySheet (right-side Sheet, all 11 platforms, capabilities, enable/disable, search filter)
+  - PlatformRequestDialog (form: platform name, URL, notes, success state)
+  - platform_requests DB table + migration (0090)
+  - POST /api/account/platform-requests endpoint
+  - GET /api/system-admin/platform-requests admin endpoint
+  - DashboardShell wrapper to manage discovery sheet state
+  - 14 tests: 9 discovery-sheet + 5 request-dialog
 
 multi-platform UX overhaul Phase 5: Power User Nav (PLA-94)
 
