@@ -1111,7 +1111,6 @@ The definitive comparison. GCP and AWS variants detailed, others summarized.
 - Worker crash doesn't affect dashboard
 - Two VMs = higher cost
 - DB still single point of failure
-```
 
 **GCP Implementation:**
 | Config | Spec | Cost |
