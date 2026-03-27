@@ -212,30 +212,74 @@ export default function CrossPlatformOverviewPage() {
         </>
       )}
 
-      {/* Platform cards grid (for multi-platform and new user) */}
-      {persona !== "single_platform" && (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {(isSystemAdmin ? PLATFORM_IDS : enabledPlatforms).map((platformId) => (
-            <PlatformCard
-              key={platformId}
-              platformId={platformId}
-              stats={stats[platformId]}
-              isEnabled={enabledPlatforms.includes(platformId)}
-            />
-          ))}
+      {/* Platform cards — split into tracked and available */}
+      {persona !== "single_platform" && (() => {
+        const platformList = isSystemAdmin ? PLATFORM_IDS : enabledPlatforms;
+        const tracked = platformList.filter((pid) => {
+          const s = stats[pid];
+          return s && (s.apps > 0 || s.keywords > 0 || s.competitors > 0);
+        });
+        const available = platformList.filter((pid) => {
+          const s = stats[pid];
+          return !s || (s.apps === 0 && s.keywords === 0 && s.competitors === 0);
+        });
+        const disabledPlatforms = isSystemAdmin
+          ? PLATFORM_IDS.filter((pid) => !enabledPlatforms.includes(pid))
+          : [];
 
-          {/* System admin: also show disabled platforms */}
-          {isSystemAdmin &&
-            PLATFORM_IDS.filter((pid) => !enabledPlatforms.includes(pid)).map((pid) => (
-              <PlatformCard
-                key={pid}
-                platformId={pid}
-                stats={undefined}
-                isEnabled={false}
-              />
-            ))}
-        </div>
-      )}
+        return (
+          <>
+            {/* Your Platforms — full cards */}
+            {tracked.length > 0 && (
+              <div className="space-y-3">
+                <h2 className="text-lg font-semibold">Your Platforms</h2>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {tracked.map((platformId) => (
+                    <PlatformCard
+                      key={platformId}
+                      platformId={platformId}
+                      stats={stats[platformId]}
+                      isEnabled={true}
+                    />
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Available Platforms — compact list */}
+            {available.length > 0 && (
+              <div className="space-y-3">
+                <div>
+                  <h2 className="text-lg font-semibold">Available Platforms</h2>
+                  <p className="text-sm text-muted-foreground">Start tracking to see stats</p>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
+                  {available.map((pid) => (
+                    <AvailablePlatformRow key={pid} platformId={pid} />
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* System admin: disabled platforms */}
+            {disabledPlatforms.length > 0 && (
+              <div className="space-y-3">
+                <h2 className="text-lg font-semibold text-muted-foreground">Disabled Platforms</h2>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {disabledPlatforms.map((pid) => (
+                    <PlatformCard
+                      key={pid}
+                      platformId={pid}
+                      stats={undefined}
+                      isEnabled={false}
+                    />
+                  ))}
+                </div>
+              </div>
+            )}
+          </>
+        );
+      })()}
 
       {/* Request a Platform CTA */}
       <RequestPlatformCTA />
@@ -338,6 +382,38 @@ function PlatformCard({
           </div>
         </CardContent>
       </Card>
+    </Link>
+  );
+}
+
+function AvailablePlatformRow({ platformId }: { platformId: PlatformId }) {
+  const config = PLATFORMS[platformId];
+  const brand = PLATFORM_DISPLAY[platformId];
+  const capabilities = CAPABILITY_LABELS.filter(
+    (c) => (config as Record<string, unknown>)[c.key] === true
+  );
+
+  return (
+    <Link
+      href={`/${platformId}`}
+      className="flex items-center gap-3 px-4 py-3 rounded-lg border border-dashed bg-muted/20 hover:bg-muted/50 transition-colors group"
+    >
+      <span
+        className="w-2.5 h-2.5 rounded-full shrink-0"
+        style={{ backgroundColor: brand.color }}
+      />
+      <span className="text-sm font-medium">{config.name}</span>
+      <div className="hidden sm:flex flex-wrap gap-1.5 ml-auto">
+        {capabilities.slice(0, 4).map((cap) => (
+          <span
+            key={cap.key}
+            className="text-[10px] px-1.5 py-0.5 rounded bg-muted text-muted-foreground"
+          >
+            {cap.label}
+          </span>
+        ))}
+      </div>
+      <ArrowRight className="h-3.5 w-3.5 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity shrink-0 ml-auto sm:ml-0" />
     </Link>
   );
 }

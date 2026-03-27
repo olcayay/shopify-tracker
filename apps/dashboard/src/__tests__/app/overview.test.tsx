@@ -214,4 +214,34 @@ describe("CrossPlatformOverviewPage", () => {
       expect(screen.queryByText("Not enabled")).not.toBeInTheDocument();
     });
   });
+
+  it("separates tracked platforms from available platforms in multi-platform view", async () => {
+    // shopify has apps (tracked), salesforce has apps (tracked) — both tracked
+    setupDefaultMocks();
+    render(<OverviewPage />);
+    await waitFor(() => {
+      expect(screen.getByText("Your Platforms")).toBeInTheDocument();
+    });
+    // Both platforms have apps so they're in "Your Platforms"
+    expect(screen.getByText("Shopify App Store")).toBeInTheDocument();
+    expect(screen.getByText("Salesforce AppExchange")).toBeInTheDocument();
+  });
+
+  it("shows available platforms section when some multi-platform platforms have zero stats", async () => {
+    // shopify has apps, salesforce has apps but no keywords/competitors — both tracked
+    // For available section test, we need new_user persona (all zeros) which shows all as available
+    mockFetchWithAuth.mockImplementation((url: string) => {
+      // All platforms return zero
+      if (url.includes("/api/apps")) return Promise.resolve({ ok: true, json: () => Promise.resolve([]) });
+      if (url.includes("/api/keywords")) return Promise.resolve({ ok: true, json: () => Promise.resolve([]) });
+      if (url.includes("/api/account/competitors")) return Promise.resolve({ ok: true, json: () => Promise.resolve([]) });
+      return Promise.resolve({ ok: true, json: () => Promise.resolve([]) });
+    });
+    render(<OverviewPage />);
+    await waitFor(() => {
+      // new_user persona shows Available Platforms
+      expect(screen.getByText("Available Platforms")).toBeInTheDocument();
+    });
+    expect(screen.getByText("Start tracking to see stats")).toBeInTheDocument();
+  });
 });
