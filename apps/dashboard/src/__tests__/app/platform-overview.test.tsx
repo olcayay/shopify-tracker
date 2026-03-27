@@ -18,7 +18,7 @@ vi.mock("next/navigation", () => ({
     back: vi.fn(),
     prefetch: vi.fn(),
   }),
-  usePathname: () => "/shopify/overview",
+  usePathname: () => "/shopify",
   useSearchParams: () => new URLSearchParams(),
   useParams: (...args: any[]) => mockUseParams(...args),
 }));

@@ -4,7 +4,7 @@ import userEvent from "@testing-library/user-event";
 
 const mockPush = vi.fn();
 vi.mock("next/navigation", () => ({
-  usePathname: () => "/shopify/overview",
+  usePathname: () => "/shopify",
   useRouter: () => ({ push: mockPush }),
 }));
 
@@ -86,7 +86,7 @@ describe("TopBar", () => {
       (el) => el.closest("button") !== dropdownBtn
     )!;
     await user.click(salesforceOption);
-    expect(mockPush).toHaveBeenCalledWith("/salesforce/overview");
+    expect(mockPush).toHaveBeenCalledWith("/salesforce");
   });
 
   it("opens user menu and can sign out", async () => {

@@ -57,8 +57,8 @@ export function TopBar({
   function switchPlatform(pid: PlatformId) {
     setDropdownOpen(false);
     // Preserve current section when switching platforms
-    const section = currentSection || "overview";
-    router.push(`/${pid}/${section}`);
+    const section = currentSection;
+    router.push(section ? `/${pid}/${section}` : `/${pid}`);
   }
 
   const display = isPlatformPage ? PLATFORM_DISPLAY[activePlatform] : null;

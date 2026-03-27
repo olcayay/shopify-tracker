@@ -32,7 +32,7 @@ export async function proxy(request: NextRequest) {
   }
 
   // Redirect legacy non-platform paths to /shopify/* equivalents
-  // e.g. /apps/formful → /shopify/apps/formful, /overview → /shopify/overview
+  // e.g. /apps/formful → /shopify/apps/formful
   const firstSegment = pathname.split("/")[1];
   if (
     PLATFORM_PAGES.some((p) => pathname === p || pathname.startsWith(p + "/")) &&
@@ -118,7 +118,7 @@ export async function proxy(request: NextRequest) {
 
     // Block non-system-admin from system-admin routes
     if (pathname.startsWith("/system-admin") && !payload.isSystemAdmin) {
-      return NextResponse.redirect(new URL("/shopify/overview", request.url));
+      return NextResponse.redirect(new URL("/overview", request.url));
     }
   } catch {
     return NextResponse.redirect(new URL("/login", request.url));

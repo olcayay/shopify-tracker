@@ -179,7 +179,7 @@ describe("proxy routing", () => {
     expect(mockNext).toHaveBeenCalled();
   });
 
-  it("redirects non-admin from /system-admin to /shopify/overview", async () => {
+  it("redirects non-admin from /system-admin to /overview", async () => {
     const { proxy } = await import("@/proxy");
     const payload = { exp: Math.floor(Date.now() / 1000) + 3600, isSystemAdmin: false };
     const token = `header.${btoa(JSON.stringify(payload))}.signature`;
@@ -187,7 +187,7 @@ describe("proxy routing", () => {
     await proxy(req);
     expect(mockRedirect).toHaveBeenCalled();
     const redirectUrl = mockRedirect.mock.calls[0][0];
-    expect(redirectUrl.pathname).toBe("/shopify/overview");
+    expect(redirectUrl.pathname).toBe("/overview");
   });
 
   it("allows system admin to access /system-admin", async () => {
