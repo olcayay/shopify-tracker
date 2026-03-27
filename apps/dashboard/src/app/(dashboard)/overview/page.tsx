@@ -6,7 +6,7 @@ import { useAuth } from "@/lib/auth-context";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Package, ArrowRight, AppWindow, Search, Star, FlaskConical, Users, MessageSquarePlus } from "lucide-react";
+import { Package, ArrowRight, AppWindow, Search, Star, FlaskConical, Users, MessageSquarePlus, Globe } from "lucide-react";
 import { PLATFORMS, PLATFORM_IDS, type PlatformId } from "@appranks/shared";
 import { PLATFORM_DISPLAY } from "@/lib/platform-display";
 import { OnboardingHero } from "@/components/onboarding-hero";
@@ -174,22 +174,24 @@ export default function CrossPlatformOverviewPage() {
           <Card className="rounded-xl bg-gradient-to-r from-primary/5 to-transparent">
             <CardContent className="py-5">
               <div className="flex items-center justify-between flex-wrap gap-4">
-                <div className="text-base text-muted-foreground">
-                  Tracking across <strong className="text-foreground text-lg">{platformsWithApps} platforms</strong>
+                <div className="flex items-center gap-3 text-base text-muted-foreground">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10">
+                    <Globe className="h-5 w-5 text-primary" />
+                  </div>
+                  <span>Tracking across <strong className="text-foreground text-lg">{platformsWithApps} platforms</strong></span>
                 </div>
-                <div className="flex gap-8 text-center">
-                  <div>
-                    <div className="text-3xl font-bold tracking-tight">{totalApps}</div>
-                    <div className="text-xs text-muted-foreground mt-0.5">Apps</div>
-                  </div>
-                  <div>
-                    <div className="text-3xl font-bold tracking-tight">{totalKeywords}</div>
-                    <div className="text-xs text-muted-foreground mt-0.5">Keywords</div>
-                  </div>
-                  <div>
-                    <div className="text-3xl font-bold tracking-tight">{totalCompetitors}</div>
-                    <div className="text-xs text-muted-foreground mt-0.5">Competitors</div>
-                  </div>
+                <div className="flex flex-wrap gap-3">
+                  {[
+                    { icon: AppWindow, value: totalApps, label: "Apps", bg: "bg-blue-50", ring: "ring-blue-200", text: "text-blue-600" },
+                    { icon: Search, value: totalKeywords, label: "Keywords", bg: "bg-purple-50", ring: "ring-purple-200", text: "text-purple-600" },
+                    { icon: Star, value: totalCompetitors, label: "Competitors", bg: "bg-amber-50", ring: "ring-amber-200", text: "text-amber-600" },
+                  ].map(({ icon: Icon, value, label, bg, ring, text }) => (
+                    <div key={label} className={`flex items-center gap-2.5 px-4 py-2 rounded-xl ${bg} ring-1 ${ring}`}>
+                      <Icon className={`h-4 w-4 ${text}`} />
+                      <span className={`text-xl font-bold tracking-tight ${text}`}>{value}</span>
+                      <span className="text-xs text-muted-foreground">{label}</span>
+                    </div>
+                  ))}
                 </div>
               </div>
             </CardContent>

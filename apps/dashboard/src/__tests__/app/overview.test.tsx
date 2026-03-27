@@ -188,6 +188,22 @@ describe("CrossPlatformOverviewPage", () => {
     });
   });
 
+  it("renders cross-platform summary with colored stat pills", async () => {
+    setupDefaultMocks();
+    render(<OverviewPage />);
+    await waitFor(() => {
+      // Globe icon container and stat pill labels
+      expect(screen.getByText("2 platforms")).toBeInTheDocument();
+      // Stat pills: Apps, Keywords, Competitors labels inside pills
+      const appsLabels = screen.getAllByText("Apps");
+      expect(appsLabels.length).toBeGreaterThan(0);
+      const keywordsLabels = screen.getAllByText("Keywords");
+      expect(keywordsLabels.length).toBeGreaterThan(0);
+      const competitorsLabels = screen.getAllByText("Competitors");
+      expect(competitorsLabels.length).toBeGreaterThan(0);
+    });
+  });
+
   it("does not show disabled platforms to regular users", async () => {
     setupDefaultMocks();
     render(<OverviewPage />);
