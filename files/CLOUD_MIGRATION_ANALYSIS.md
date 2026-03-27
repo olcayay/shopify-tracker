@@ -466,92 +466,620 @@ Disaster: Start GCP VM, restore latest backup, switch DNS → 5 min recovery
 
 ---
 
-## 6. Cost Comparison Matrix
+## 6. Other Cloud Alternatives (Non-GCP)
+
+Sadece GCP değil, bütçeye uygun tüm alternatiflerin değerlendirmesi:
+
+### F1: AWS Lightsail ($20/mo)
 
 ```
-Monthly Cost ($)
-     │
-  25 ┤                                          ┌─────────┐
-     │                                          │   GCP   │
-  20 ┤                                          │On-Demand│
-     │                                          │  $25    │
-     │                                          └─────────┘
-  15 ┤  ┌─────────┐  ┌─────────┐
-     │  │ Hetzner │  │Scenario │  ┌─────────┐
-     │  │ Current │  │   A     │  │Scenario │
-  10 ┤  │ €10-15  │  │ $11-15  │  │   B     │
-     │  └─────────┘  └─────────┘  │ $13-17  │
-     │                             └─────────┘
-   5 ┤  ┌─────────┐  ┌─────────┐
-     │  │Scenario │  │Scenario │
-     │  │   D     │  │   E     │
-     │  │ €8-15   │  │ €10-18  │  ┌─────────┐
-   0 ┤  └─────────┘  └─────────┘  │Scenario │
-     │                             │   C     │
-     │                             │  $0     │
-     └─────────────────────────────└─────────┘─────────
-       Hetzner    GCP Spot   GCP+SQL  Backup  Hybrid  Free
-       Current      (A)       (B)      (D)     (E)    (C)
+┌──────────────────────────────────────────────────────────┐
+│                    AWS Lightsail                           │
+│                                                          │
+│  ┌────────────────────────────────────────────────────┐  │
+│  │  Instance: 2 vCPU, 4GB RAM, 80GB SSD             │  │
+│  │  Transfer: 4TB/month included                     │  │
+│  │  Static IP: Included                              │  │
+│  │                                                    │  │
+│  │  ┌──────────┐ ┌───────┐ ┌────────┐ ┌────────┐   │  │
+│  │  │Dashboard │ │  API  │ │ Worker │ │Worker-I│   │  │
+│  │  └──────────┘ └───────┘ └────────┘ └────────┘   │  │
+│  │  ┌──────────────┐  ┌─────────┐                   │  │
+│  │  │  PostgreSQL  │  │  Redis  │  (in Docker)      │  │
+│  │  └──────────────┘  └─────────┘                   │  │
+│  └────────────────────────────────────────────────────┘  │
+│                                                          │
+│  ┌────────────────────────┐                              │
+│  │  Automatic Snapshots   │  $3.50/mo (70GB × $0.05)    │
+│  │  Daily, 7-day retain   │  Point-in-time recovery     │
+│  └────────────────────────┘                              │
+│                                                          │
+│  ┌────────────────────────┐                              │
+│  │  Lightsail Firewall    │  Built-in, free              │
+│  └────────────────────────┘                              │
+└──────────────────────────────────────────────────────────┘
 ```
 
-| | A: GCP Spot | B: GCP+SQL | C: Free | D: Backup | E: Hybrid |
-|--|------------|-----------|---------|----------|----------|
-| **Monthly Cost** | $11-15 | $13-17 | $0 | €8-15 | €10-18 |
-| **CPU** | 1 vCPU | 0.5 vCPU | 0.25 vCPU | 3 vCPU | 3 vCPU |
-| **RAM** | 4GB | 2GB | 1GB | 4-8GB | 4-8GB |
-| **Disk** | 30GB SSD | 20GB SSD | 30GB HDD | 80GB | 80GB+30GB |
-| **Uptime SLA** | 0% (spot) | 0% (spot) | 99.5% | 99.9% | 99.9%+ |
-| **Managed DB** | No | Yes | No | No | No |
-| **Auto Backup** | Manual | Yes | No | Manual→GCS | Manual→GCS |
-| **Playwright** | Tight | ❌ No | ❌ No | ✅ Good | ✅ Good |
-| **Code Changes** | None | Minor | N/A | None | None |
-| **Downtime Risk** | High | High | N/A | Low | Very Low |
-| **DR Capability** | None | None | N/A | Offsite backup | Full standby |
+**Cost:** $20/month instance + $3.50 snapshots = **$23.50** (slightly over budget)
+**Without snapshots:** $20/month flat
+
+**Detailed breakdown:**
+| Item | Monthly Cost |
+|------|-------------|
+| Lightsail 4GB instance | $20.00 |
+| Static IP | $0 (included) |
+| Automatic snapshots (optional) | $3.50 |
+| DNS (Route 53, optional) | $0.50 |
+| **Total** | **$20-24/month** |
+
+**How Lightsail compares to Hetzner:**
+| Spec | Hetzner CPX31 | Lightsail 4GB |
+|------|:------------:|:-------------:|
+| vCPU | 4 | 2 |
+| RAM | 8GB | 4GB |
+| Disk | 160GB SSD | 80GB SSD |
+| Transfer | 20TB | 4TB |
+| Snapshots | Manual | Automatic ($3.50) |
+| Price | €9.29 ($10) | $20 |
+| SLA | 99.9% | 99.99% |
+
+**Verdict:** 2x the price of Hetzner for half the specs. BUT: AWS infrastructure, automatic snapshots, 99.99% SLA. At budget ceiling.
 
 ---
 
-## 7. Decision Matrix
+### F2: AWS EC2 Spot Instance ($8-12/mo)
 
-Scoring: 1 (worst) to 5 (best)
+```
+┌──────────────────────────────────────────────────────────┐
+│                    AWS EC2 Spot                            │
+│                                                          │
+│  ┌────────────────────────────────────────────────────┐  │
+│  │  t3.medium: 2 vCPU, 4GB RAM                      │  │
+│  │  On-demand: $30/mo → Spot: ~$9-12/mo (70% off)   │  │
+│  │  Burstable CPU (baseline 20%, burst to 200%)      │  │
+│  │                                                    │  │
+│  │  Docker Compose: same as current                   │  │
+│  └────────────────────────────────────────────────────┘  │
+│                                                          │
+│  ┌────────────────────────────────────┐                  │
+│  │  EBS Volume: 30GB gp3 SSD         │  $2.40/mo       │
+│  │  Survives instance termination     │                  │
+│  │  Snapshots to S3: $0.05/GB        │                  │
+│  └────────────────────────────────────┘                  │
+│                                                          │
+│  ┌────────────────────────────────────┐                  │
+│  │  Spot Interruption Handling:       │                  │
+│  │  - 2-minute warning (vs GCP 30s)  │                  │
+│  │  - Can request persistent spot     │                  │
+│  │  - Auto Scaling Group recovery     │                  │
+│  └────────────────────────────────────┘                  │
+│                                                          │
+│  S3 Backup: 5GB free tier                                │
+└──────────────────────────────────────────────────────────┘
+```
 
-| Criteria (Weight) | A: GCP Spot | B: GCP+SQL | C: Free | D: Backup | E: Hybrid |
-|-------------------|:-----------:|:---------:|:------:|:--------:|:--------:|
-| **Cost** (25%) | 4 | 3 | 5 | 5 | 4 |
-| **Reliability** (25%) | 2 | 2 | 1 | 4 | 5 |
-| **Performance** (20%) | 2 | 1 | 1 | 4 | 4 |
-| **Managed Services** (10%) | 1 | 3 | 1 | 1 | 1 |
-| **Scalability** (10%) | 3 | 3 | 1 | 2 | 3 |
-| **Simplicity** (10%) | 4 | 2 | 1 | 5 | 3 |
-| | | | | | |
-| **Weighted Score** | **2.6** | **2.2** | **1.8** | **3.8** | **3.7** |
+**Spot vs GCP Spot comparison:**
+| Feature | AWS EC2 Spot | GCP Compute Spot |
+|---------|:-----------:|:----------------:|
+| Warning before termination | **2 minutes** | 30 seconds |
+| Persistent spot request | ✅ Auto-relaunch | ❌ Manual restart |
+| Price stability | More stable | More variable |
+| Interruption frequency | Low (~5%) | Medium (~10%) |
+| 2 vCPU + 4GB price | $9-12/mo | $8-12/mo |
+| EBS/Disk persistence | ✅ EBS survives | ✅ PD survives |
+| Free tier backup | S3 5GB | GCS 5GB |
+
+**Cost:** $9-12 (spot) + $2.40 (EBS) + $0.50 (egress) = **$12-15/month**
+
+**Verdict:** Better spot handling than GCP (2 min warning, auto-relaunch). Same budget. More mature spot ecosystem.
 
 ---
 
-## 8. Risk Comparison
+### F3: AWS EC2 + RDS Free Tier ($12-18/mo)
 
 ```
-Risk Level
-     │
-HIGH │  ●C             ●B
-     │      ●A
-     │
-MED  │                          ●E
-     │
-LOW  │                              ●D
-     │
-     └────────────────────────────────────
-         $0    $5    $10   $15   $20
-                  Monthly Cost
+┌──────────────────────────────────────────────────────────┐
+│                    AWS EC2 + RDS                          │
+│                                                          │
+│  ┌──────────────────────┐  ┌──────────────────────────┐  │
+│  │  EC2 t3.micro        │  │  RDS db.t3.micro         │  │
+│  │  2 vCPU, 1GB RAM    │  │  2 vCPU, 1GB RAM         │  │
+│  │  Spot: $3-4/mo      │  │  PostgreSQL 16            │  │
+│  │                      │  │  20GB SSD                 │  │
+│  │  API + Dashboard     │  │  Auto backup (7 days)     │  │
+│  │  (workers too tight) │  │  Free tier: 12 months     │  │
+│  └──────────────────────┘  │  After: $12-15/mo         │  │
+│                             └──────────────────────────┘  │
+│                                                          │
+│  ⚠️ 1GB RAM = workers won't fit on EC2 t3.micro         │
+│  ⚠️ Need t3.medium ($9-12 spot) for workers             │
+│  ⚠️ RDS free tier expires after 12 months               │
+└──────────────────────────────────────────────────────────┘
 ```
 
-| Risk | A: GCP Spot | D: Backup | E: Hybrid |
-|------|:----------:|:--------:|:--------:|
-| Total downtime/month | 5-30 min | 0 min | 0 min |
-| Data loss window | 0 (persistent disk) | 0-24h (last backup) | 0-24h |
-| VM preemption | Yes | No | No |
-| Single server failure | Full outage | Full outage | 5-15 min failover |
-| Migration risk | Medium | None | Low |
-| Performance degradation | 1→3 vCPU downgrade | None | None |
+**First 12 months (RDS free tier):**
+| Item | Monthly Cost |
+|------|-------------|
+| EC2 t3.medium Spot | $9-12 |
+| RDS db.t3.micro (free tier) | $0 |
+| EBS 30GB | $2.40 |
+| **Total** | **$11-15/month** |
+
+**After 12 months (RDS paid):**
+| Item | Monthly Cost |
+|------|-------------|
+| EC2 t3.medium Spot | $9-12 |
+| RDS db.t3.micro | $12-15 |
+| EBS 30GB | $2.40 |
+| **Total** | **$23-30/month** ❌ OVER BUDGET |
+
+**Verdict:** Good first year with free RDS. But budget doubles after free tier expires. Not sustainable long-term at $10-20/mo.
+
+---
+
+### GCP Additional Scenarios
+
+### A2: GCP e2-standard-2 Spot (Best GCP Option)
+
+```
+┌──────────────────────────────────────────────────────────┐
+│              GCP e2-standard-2 Spot                       │
+│                                                          │
+│  ┌────────────────────────────────────────────────────┐  │
+│  │  2 vCPU, 8GB RAM                                  │  │
+│  │  Spot price: ~$15-20/mo (region dependent)        │  │
+│  │                                                    │  │
+│  │  ✅ 8GB RAM — Playwright runs comfortably         │  │
+│  │  ✅ 2 vCPU — decent for scraping                  │  │
+│  │  ⚠️ At budget ceiling                             │  │
+│  │  ❌ Still spot — no uptime guarantee              │  │
+│  └────────────────────────────────────────────────────┘  │
+│                                                          │
+│  Region pricing (Spot):                                  │
+│  us-central1: ~$15/mo                                    │
+│  europe-west1: ~$17/mo                                   │
+│  asia-east1: ~$16/mo                                     │
+└──────────────────────────────────────────────────────────┘
+```
+
+**Cost:** $15-20 (spot) + $2.40 (disk) = **$17-22/month** (at/over budget)
+
+**Verdict:** Best GCP option for this workload IF budget allows. 8GB RAM is ideal.
+
+---
+
+### A3: GCP N1 Preemptible (Older, Cheaper)
+
+```
+┌──────────────────────────────────────────────────────────┐
+│              GCP N1 Preemptible                           │
+│                                                          │
+│  ┌────────────────────────────────────────────────────┐  │
+│  │  n1-standard-1: 1 vCPU, 3.75GB RAM               │  │
+│  │  Preemptible: ~$7-8/mo                            │  │
+│  │                                                    │  │
+│  │  Custom machine type possible:                     │  │
+│  │  1 vCPU, 5GB RAM: ~$9/mo preemptible              │  │
+│  │                                                    │  │
+│  │  ⚠️ N1 is older gen (Skylake/Broadwell)           │  │
+│  │  ⚠️ Preemptible = max 24h, then auto-terminated   │  │
+│  │  ❌ Worse than E2 spot (forced 24h restart)        │  │
+│  └────────────────────────────────────────────────────┘  │
+└──────────────────────────────────────────────────────────┘
+```
+
+**Cost:** $7-9 (preemptible) + $2.40 (disk) = **$9-12/month**
+
+**Verdict:** Cheapest GCP option but forced restart every 24h. Not ideal for a production service.
+
+---
+
+### G: DigitalOcean Droplet
+
+```
+┌──────────────────────────────────────────┐
+│         DigitalOcean                      │
+│                                          │
+│  ┌────────────────────────────────────┐  │
+│  │  Option 1: 2 vCPU, 4GB, 80GB     │  │
+│  │  $24/month (over budget)          │  │
+│  │                                    │  │
+│  │  Option 2: 2 vCPU, 2GB, 60GB     │  │
+│  │  $18/month (tight RAM)            │  │
+│  │                                    │  │
+│  │  Option 3: 1 vCPU, 2GB, 50GB     │  │
+│  │  $12/month (too small)            │  │
+│  └────────────────────────────────────┘  │
+│                                          │
+│  + Managed DB available ($15+/mo extra)  │
+│  + Snapshots ($0.06/GB/mo)               │
+│  + Spaces object storage (S3-compat)     │
+│  + Good community, docs                  │
+│  - $18/mo option has only 2GB RAM        │
+└──────────────────────────────────────────┘
+```
+
+**Cost:** $12-24/month depending on tier
+**Verdict:** $18/month option is borderline — 2GB RAM too tight for Playwright. $24 option is good but over budget.
+
+---
+
+### H: Railway
+
+```
+┌──────────────────────────────────────────┐
+│             Railway                       │
+│                                          │
+│  ┌────────────────────────────────────┐  │
+│  │  Usage-based pricing:              │  │
+│  │  - $5/month base (Hobby plan)      │  │
+│  │  - vCPU: $0.000463/min             │  │
+│  │  - RAM: $0.000231/min/GB           │  │
+│  │  - Disk: $0.000042/min/GB          │  │
+│  │                                    │  │
+│  │  Estimated for our workload:       │  │
+│  │  ~$25-40/month (OVER BUDGET)       │  │
+│  └────────────────────────────────────┘  │
+│                                          │
+│  + Zero-config Docker deploy             │
+│  + Managed PostgreSQL + Redis included   │
+│  + Auto-scaling                          │
+│  + GitHub integration                    │
+│  - Usage-based = unpredictable costs     │
+│  - No Playwright support (no browser)    │
+│  - Memory limits per service             │
+│  - Scraper workload = expensive          │
+└──────────────────────────────────────────┘
+```
+
+**Cost:** $25-40/month estimated (unpredictable)
+**Verdict:** Over budget. Playwright won't work. Good for API/dashboard but not scrapers.
+
+---
+
+### I: Fly.io
+
+```
+┌──────────────────────────────────────────┐
+│              Fly.io                       │
+│                                          │
+│  ┌────────────────────────────────────┐  │
+│  │  Hobby plan: Free allowance        │  │
+│  │  - 3 shared-cpu VMs (256MB each)   │  │
+│  │  - 3GB storage                     │  │
+│  │                                    │  │
+│  │  Performance VM (needed):          │  │
+│  │  - 2 vCPU, 4GB: ~$30/month        │  │
+│  │  - Plus Postgres: ~$7/month        │  │
+│  │  - Plus Redis: ~$7/month           │  │
+│  └────────────────────────────────────┘  │
+│                                          │
+│  + Edge deployment, global latency       │
+│  + Managed Postgres & Redis              │
+│  + Docker-native                         │
+│  + Good DX                               │
+│  - Free tier too small for this workload │
+│  - Performance VMs over budget           │
+│  - Playwright questionable (no X11)      │
+└──────────────────────────────────────────┘
+```
+
+**Cost:** $30-45/month for usable setup
+**Verdict:** Way over budget. Great platform but expensive for scraper workloads.
+
+---
+
+### J: Hetzner Cloud (Upgrade)
+
+```
+┌──────────────────────────────────────────┐
+│         Hetzner Cloud (Upgrade)           │
+│                                          │
+│  ┌────────────────────────────────────┐  │
+│  │  CPX21: 3 vCPU, 4GB, 80GB SSD    │  │
+│  │  €5.39/month ($5.80)              │  │
+│  │                                    │  │
+│  │  CPX31: 4 vCPU, 8GB, 160GB SSD   │  │
+│  │  €9.29/month ($10)                │  │
+│  │                                    │  │
+│  │  CAX21 (ARM): 4 vCPU, 8GB, 80GB  │  │
+│  │  €7.49/month ($8)                 │  │
+│  └────────────────────────────────────┘  │
+│                                          │
+│  + Best price/performance ratio          │
+│  + All data in EU (GDPR friendly)        │
+│  + 20TB traffic included                 │
+│  + Snapshots: €0.01/GB/month             │
+│  + Floating IPs, firewalls               │
+│  - No managed DB/Redis                   │
+│  - Coolify handles deployment            │
+│  - Smaller company than hyperscalers     │
+└──────────────────────────────────────────┘
+```
+
+**Cost:** €5.39-9.29/month ($6-10)
+**Verdict:** Best price/performance. CPX31 with 8GB RAM is ideal for Playwright workloads at only $10/month.
+
+---
+
+### K: Oracle Cloud Free Tier
+
+```
+┌──────────────────────────────────────────┐
+│       Oracle Cloud (Always Free)          │
+│                                          │
+│  ┌────────────────────────────────────┐  │
+│  │  ARM VM.Standard.A1.Flex:          │  │
+│  │  4 OCPUs, 24GB RAM (!)            │  │
+│  │  200GB block storage               │  │
+│  │  10TB outbound/month               │  │
+│  │  $0/month (Always Free)           │  │
+│  │                                    │  │
+│  │  ⚠️  CAVEATS:                     │  │
+│  │  - ARM architecture (aarch64)      │  │
+│  │  - Docker images need ARM build    │  │
+│  │  - Playwright/Chromium: ARM ok     │  │
+│  │  - Account reclaim risk (idle)     │  │
+│  │  - Availability varies by region   │  │
+│  └────────────────────────────────────┘  │
+│                                          │
+│  + 24GB RAM FREE — more than any paid   │
+│  + 4 OCPUs — very powerful              │
+│  + 200GB storage                         │
+│  + Always free (not trial)               │
+│  - ARM: needs multi-arch Docker builds   │
+│  - Oracle may reclaim idle resources     │
+│  - Limited region availability           │
+│  - Oracle support is weak                │
+│  - Community smaller than AWS/GCP        │
+└──────────────────────────────────────────┘
+```
+
+**Cost:** $0/month (Always Free Tier)
+**Verdict:** The most powerful free option. 24GB RAM is massive. BUT: ARM architecture requires Docker image rebuilds, and Oracle may reclaim idle accounts. Worth investigating.
+
+---
+
+## 7. MASTER COMPARISON TABLE — Google Cloud & AWS Focus
+
+The definitive comparison. GCP and AWS variants detailed, others summarized.
+
+### Infrastructure Specs — GCP Options
+
+| | Current (Hetzner) | A: GCP e2-med Spot | A2: GCP e2-std2 Spot | A3: GCP N1 Preempt | B: GCP e2-sm+SQL | C: GCP Free |
+|--|:---------:|:------------------:|:-------------------:|:------------------:|:----------------:|:-----------:|
+| **Monthly Cost** | €10-15 | **$11-15** | $17-22 | $9-12 | $13-17 | $0 |
+| **vCPU** | 3 | 1 | **2** | 1 | 0.5 | 0.25 |
+| **RAM** | 4-8GB | 4GB | **8GB** | 3.75GB | 2GB | 1GB |
+| **Disk** | 80GB SSD | 30GB SSD | 30GB SSD | 30GB SSD | 20GB SSD | 30GB HDD |
+| **Spot Warning** | — | 30s | 30s | **24h forced kill** | 30s | — |
+| **Uptime SLA** | 99.9% | 0% | 0% | 0% | 0% | 99.5% |
+| **Playwright** | ✅ | ⚠️ Tight | ✅ Good | ⚠️ Tight | ❌ No | ❌ No |
+| **Budget Fit** | ✅ | ✅ | ⚠️ Ceiling | ✅ | ⚠️ | ✅ |
+| **Verdict** | Baseline | **Best GCP @budget** | Best GCP overall | Daily restarts | RAM too low | Impossible |
+
+### Infrastructure Specs — AWS Options
+
+| | F1: AWS Lightsail | F2: AWS EC2 t3.med Spot | F3: AWS EC2+RDS Free |
+|--|:----------------:|:----------------------:|:-------------------:|
+| **Monthly Cost** | $20-24 | **$12-15** | $11-15 (yr1) / $23-30 (yr2+) |
+| **vCPU** | 2 | **2** | 2 |
+| **RAM** | 4GB | 4GB | 4GB (EC2) + 1GB (RDS) |
+| **Disk** | 80GB SSD | 30GB EBS SSD | 30GB + 20GB RDS |
+| **Spot Warning** | — | **2 minutes** | **2 minutes** (EC2) |
+| **Auto Relaunch** | — | ✅ Persistent request | ✅ Persistent request |
+| **Uptime SLA** | **99.99%** | 0% (spot) | Mixed |
+| **Managed DB** | ❌ | ❌ | ✅ (12mo free) |
+| **Playwright** | ✅ | ✅ | ✅ |
+| **Budget Fit** | ⚠️ Ceiling | ✅ | ✅ yr1 / ❌ yr2+ |
+| **Verdict** | Over budget, safe | **Best AWS @budget** | Free DB expires |
+
+### Infrastructure Specs — Hybrid & Other Options
+
+| | D: Hetzner+Backup | E: Hybrid DR | J: Hetzner CPX31 | K: Oracle Free |
+|--|:-----------------:|:------------:|:----------------:|:--------------:|
+| **Monthly Cost** | €10-15 (+$0) | €12-18 | **€9.29** | $0 |
+| **vCPU** | 3 | 3 | **4** | **4 (ARM)** |
+| **RAM** | 4-8GB | 4-8GB | **8GB** | **24GB** |
+| **Disk** | 80GB | 80+30GB | **160GB SSD** | **200GB** |
+| **Uptime SLA** | 99.9% | 99.9%+ | 99.9% | 99.9% |
+| **Playwright** | ✅ | ✅ | ✅✅ | ✅ (ARM build) |
+| **Data Safety** | ✅ Backup | ✅✅ DR | ❌ No backup | ❌ No backup |
+| **Migration Risk** | **Zero** | Low | **Zero** (upgrade) | Medium (ARM) |
+| **Budget Fit** | ✅ | ✅ | ✅ | ✅ |
+| **Verdict** | **Safest** | **Best protection** | **Best perf/$** | Free but risky |
+
+### Capabilities
+
+| | Current | A: GCP Spot | B: GCP+SQL | C: GCP Free | D: +Backup | E: Hybrid | F: AWS | G: DO | H: Railway | I: Fly.io | J: Hetzner | K: Oracle |
+|--|:-------:|:----------:|:---------:|:----------:|:---------:|:--------:|:-----:|:----:|:--------:|:-------:|:--------:|:-------:|
+| **Playwright** | ✅ | ⚠️ Tight | ❌ | ❌ | ✅ | ✅ | ✅ | ⚠️ | ❌ | ⚠️ | ✅✅ | ✅ |
+| **Managed DB** | ❌ | ❌ | ✅ | ❌ | ❌ | ❌ | ❌ | Optional | ✅ | ✅ | ❌ | ❌ |
+| **Managed Redis** | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | ❌ | Optional | ✅ | ✅ | ❌ | ❌ |
+| **Auto Backup** | ❌ | ❌ | ✅ | ❌ | ✅ GCS | ✅ GCS | ✅ | ✅ | ✅ | ✅ | ❌ | ❌ |
+| **SSL/CDN** | Coolify | Manual | Manual | Manual | Coolify | Mixed | Manual | Manual | Auto | Auto | Coolify | Manual |
+| **CI/CD Deploy** | Coolify | Manual | Manual | N/A | Coolify | Mixed | Manual | Manual | Auto | Auto | Coolify | Manual |
+
+### Reliability & Risk
+
+| | Current | A: GCP Spot | B: GCP+SQL | C: GCP Free | D: +Backup | E: Hybrid | F: AWS | G: DO | H: Railway | I: Fly.io | J: Hetzner | K: Oracle |
+|--|:-------:|:----------:|:---------:|:----------:|:---------:|:--------:|:-----:|:----:|:--------:|:-------:|:--------:|:-------:|
+| **Uptime SLA** | 99.9% | 0%¹ | 0%¹ | 99.5% | 99.9% | 99.9%+ | 99.99% | 99.99% | 99.95% | 99.99% | 99.9% | 99.9% |
+| **Preemption Risk** | None | **HIGH** | **HIGH** | None | None | None | None | None | None | None | None | Low² |
+| **Data Loss Risk** | HIGH³ | Medium | Low | HIGH | **LOW** | **VERY LOW** | Medium | Medium | Low | Low | HIGH³ | HIGH³ |
+| **DR Capability** | None | None | Partial | None | Backup | **Full DR** | None | Snapshot | Built-in | Built-in | None | None |
+| **Migration Risk** | N/A | Medium | High | N/A | **Zero** | Low | Medium | Medium | High | High | **Zero** | Medium |
+
+¹ Spot/preemptible VMs have no uptime SLA — can be terminated anytime
+² Oracle may reclaim idle free-tier resources after 7 days of low usage
+³ No offsite backup currently — single disk failure = total data loss
+
+### Operational Complexity
+
+| | Current | A: GCP Spot | B: GCP+SQL | C: GCP Free | D: +Backup | E: Hybrid | F: AWS | G: DO | H: Railway | I: Fly.io | J: Hetzner | K: Oracle |
+|--|:-------:|:----------:|:---------:|:----------:|:---------:|:--------:|:-----:|:----:|:--------:|:-------:|:--------:|:-------:|
+| **Code Changes** | N/A | None | Minor | N/A | None | None | None | None | Major⁴ | Major⁴ | None | Minor⁵ |
+| **Setup Time** | N/A | 1h | 2h | N/A | 15min | 2h | 1h | 1h | 4h | 4h | 30min | 2h |
+| **Learning Curve** | N/A | Medium | High | N/A | **Low** | Medium | Medium | Low | Medium | Medium | **None** | Medium |
+| **Ongoing Mgmt** | Medium | Medium | Low | N/A | **Low** | Medium | Medium | Medium | **Low** | **Low** | Medium | Medium |
+| **Coolify Compat** | ✅ | ❌ | ❌ | N/A | ✅ | Partial | ❌ | ❌ | ❌ | ❌ | ✅ | ❌ |
+
+⁴ Railway/Fly.io require per-service Docker configs, can't use docker-compose.prod.yml directly
+⁵ Oracle ARM requires multi-arch Docker builds (linux/arm64)
+
+### Budget Fit
+
+| | Current | A | B | C | D | E | F | G | H | I | J | K |
+|--|:-------:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|
+| **Within $10-20?** | ✅ | ✅ | ⚠️ | ✅ | ✅ | ✅ | ⚠️ | ⚠️ | ❌ | ❌ | ✅ | ✅ |
+| **Predictable Cost?** | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ | ❌ | ❌ | ✅ | ✅ |
+
+---
+
+### GCP vs AWS Spot — Head-to-Head
+
+| Feature | GCP Spot (A/A2) | AWS EC2 Spot (F2) | Winner |
+|---------|:--------------:|:----------------:|:------:|
+| **Best price (2vCPU, 4GB)** | $15-20/mo | **$12-15/mo** | **AWS** |
+| **Budget option (1vCPU, 4GB)** | **$8-12/mo** | $6-8/mo | **AWS** |
+| **Interruption warning** | 30 seconds | **2 minutes** | **AWS** |
+| **Auto-relaunch after kill** | ❌ Manual | **✅ Persistent request** | **AWS** |
+| **Interruption frequency** | ~10%/month | **~5%/month** | **AWS** |
+| **Free tier storage** | GCS 5GB | S3 5GB | Tie |
+| **Managed DB free tier** | ❌ None | **✅ RDS 12 months** | **AWS** |
+| **CLI experience** | **gcloud (simple)** | aws-cli (verbose) | **GCP** |
+| **Console UX** | **Simple, clean** | Complex, cluttered | **GCP** |
+| **Billing transparency** | **Clear, real-time** | Confusing, delayed | **GCP** |
+| **$300 free credit** | **✅ 90 days** | ❌ None | **GCP** |
+| **Region near Turkey** | europe-west1 | eu-central-1 | Tie |
+| **Docker Compose compat** | ✅ Identical | ✅ Identical | Tie |
+| **Overall for spot VMs** | Good | **Better** | **AWS** |
+| **Overall for beginners** | **Better** | Good | **GCP** |
+
+---
+
+## 8. Decision Matrix (All Scenarios)
+
+Scoring: 1 (worst) to 5 (best). Only budget-feasible options scored.
+
+| Criteria (Weight) | Current | A: GCP Spot | D: +Backup | E: Hybrid | F: AWS | J: Hetzner↑ | K: Oracle |
+|-------------------|:-------:|:----------:|:---------:|:--------:|:-----:|:----------:|:--------:|
+| **Cost** (20%) | 4 | 3 | 5 | 4 | 2 | 5 | 5 |
+| **Performance** (20%) | 3 | 2 | 3 | 3 | 3 | 5 | 5 |
+| **Reliability** (20%) | 3 | 2 | 4 | 5 | 4 | 3 | 2 |
+| **Data Safety** (15%) | 1 | 2 | 4 | 5 | 3 | 1 | 1 |
+| **Simplicity** (10%) | 5 | 3 | 5 | 3 | 3 | 5 | 3 |
+| **Scalability** (10%) | 2 | 3 | 2 | 3 | 3 | 3 | 4 |
+| **Playwright** (5%) | 4 | 2 | 4 | 4 | 4 | 5 | 4 |
+| | | | | | | | |
+| **Weighted Score** | **2.85** | **2.35** | **3.80** | **3.80** | **3.05** | **3.60** | **3.25** |
+| **Rank** | #5 | #7 | **#1 (tie)** | **#1 (tie)** | #4 | **#3** | #4 |
+
+---
+
+## 9. Risk vs Cost vs Performance Map
+
+```
+Performance (CPU+RAM)
+     │
+   5 │                              ●K (Oracle Free)
+     │                      ●J (Hetzner CPX31)
+   4 │
+     │  ●D,E (Current++)
+   3 │              ●F (AWS Lightsail)
+     │      ●A (GCP Spot)
+   2 │                      ●G (DO $18)
+     │
+   1 │  ●C (GCP Free)  ●B (GCP+SQL)
+     │
+     └──────────────────────────────────────
+     0     5     10     15     20     25
+                Monthly Cost ($)
+
+     Size of circle = Reliability
+     ●  = Low reliability
+     ●  = High reliability
+```
+
+```
+Data Safety
+     │
+   5 │                  ●E (Hybrid DR)
+     │              ●D (+Backup)
+   4 │
+     │          ●F (AWS)
+   3 │
+     │      ●A (GCP Spot)
+   2 │
+     │  ●Current  ●J  ●K
+   1 │          (no backup)
+     │
+     └──────────────────────────────────────
+     0     5     10     15     20     25
+                Monthly Cost ($)
+```
+
+---
+
+## 10. Recommended Path
+
+### If Goal is Data Safety (Minimum Risk):
+
+```
+NOW                    MONTH 1              MONTH 3+
+ │                        │                    │
+ │  Scenario D            │  Scenario E        │  Budget increases?
+ │  Add GCP Backup        │  Add GCP Standby   │  Consider J or F
+ │  Cost: +$0             │  Cost: +$2.40      │
+ │  Time: 15 min          │  Time: 2 hours     │
+ │  Risk: ZERO            │  Risk: LOW         │
+ ▼                        ▼                    ▼
+```
+
+### If Goal is Performance Upgrade:
+
+```
+NOW                    MONTH 1
+ │                        │
+ │  Scenario J            │  + Scenario D
+ │  Hetzner CPX31         │  Add GCP Backup
+ │  4 vCPU, 8GB, 160GB   │  Best of both worlds
+ │  Cost: €9.29/mo        │  Cost: €9.29/mo
+ │  Time: 30 min          │
+ ▼                        ▼
+```
+
+### If Goal is Free Cloud:
+
+```
+NOW                    MONTH 1              MONTH 2
+ │                        │                    │
+ │  Scenario K            │  Test stability    │  Stable?
+ │  Oracle Free Tier      │  Run for 30 days   │  ├─ Yes: Stay
+ │  4 OCPU, 24GB ARM     │  Monitor uptime    │  └─ No: Fall back
+ │  Cost: $0/mo           │                    │      to Hetzner
+ │  Time: 2 hours         │                    │
+ │  Risk: MEDIUM          │                    │
+ ▼                        ▼                    ▼
+```
+
+---
+
+## 11. Final Recommendation Summary
+
+| Priority | Scenario | Action | Cost Impact | Effort |
+|----------|----------|--------|-------------|--------|
+| **1st (DO NOW)** | D: +GCP Backup | Backup DB to Cloud Storage daily | +$0/mo | 15 min |
+| **2nd (This Month)** | J: Hetzner CPX31 | Upgrade VPS for more RAM | +€1-4/mo | 30 min |
+| **3rd (Optional)** | E: Hybrid DR | Add stopped GCP VM as standby | +$2.40/mo | 2 hours |
+| **Explore** | K: Oracle Free | Test ARM compatibility | $0 | 2 hours |
+| **Future ($50+)** | GCP Full | Full migration when budget allows | $50+/mo | 1 day |
+
+**Bottom line:** $10-20/ay bütçeyle GCP'ye tam geçiş, mevcut Hetzner'dan daha kötü. En akıllı hamle: Hetzner'da kal, GCP'yi sadece backup/DR için kullan, performans lazımsa Hetzner CPX31'e yükselt.
+
+---
+
+*This document should be reviewed when hosting requirements change or budget increases.*
 
 ---
 
