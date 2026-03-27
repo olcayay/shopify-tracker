@@ -33,67 +33,43 @@ export async function developerRoutes(app: FastifyInstance) {
       const sort = request.query.sort || "name";
       const order = request.query.order === "desc" ? "desc" : "asc";
 
-      // Count platform developers per global developer + total apps
-      const baseQuery = db
-        .select({
-          id: globalDevelopers.id,
-          slug: globalDevelopers.slug,
-          name: globalDevelopers.name,
-          website: globalDevelopers.website,
-          platformCount: sql<number>`COUNT(DISTINCT ${platformDevelopers.platform})`.as("platform_count"),
-          appCount: sql<number>`(
-            SELECT COUNT(DISTINCT a.id)
-            FROM ${platformDevelopers} pd2
-            JOIN ${apps} a ON a.platform = pd2.platform
-            JOIN ${appSnapshots} s ON s.app_id = a.id
-            WHERE pd2.global_developer_id = ${globalDevelopers.id}
-              AND s.developer->>'name' = pd2.name
-              AND s.id = (
-                SELECT s2.id FROM ${appSnapshots} s2
-                WHERE s2.app_id = a.id
-                ORDER BY s2.scraped_at DESC LIMIT 1
-              )
-          )`.as("app_count"),
-        })
-        .from(globalDevelopers)
-        .leftJoin(
-          platformDevelopers,
-          eq(platformDevelopers.globalDeveloperId, globalDevelopers.id)
-        )
-        .groupBy(globalDevelopers.id);
-
-      const conditions = [];
-      if (search) {
-        conditions.push(ilike(globalDevelopers.name, `%${search}%`));
-      }
-
-      const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
+      const searchFilter = search ? sql`WHERE g.name ILIKE ${`%${search}%`}` : sql``;
 
       // Get total count
-      const [countResult] = await db
-        .select({ count: sql<number>`COUNT(*)` })
-        .from(globalDevelopers)
-        .where(whereClause);
-
+      const [countResult] = await db.execute(sql`
+        SELECT COUNT(*) as count FROM global_developers g ${searchFilter}
+      `) as any[];
       const total = Number(countResult?.count || 0);
 
-      // Get paginated results
-      const orderFn = order === "desc" ? desc : asc;
-      const orderCol =
-        sort === "apps"
-          ? sql`app_count`
-          : sort === "platforms"
-            ? sql`platform_count`
-            : globalDevelopers.name;
+      const orderClause =
+        sort === "apps" ? sql`app_count` :
+        sort === "platforms" ? sql`platform_count` :
+        sql`g.name`;
+      const orderDir = order === "desc" ? sql`DESC` : sql`ASC`;
 
-      const rows = await baseQuery
-        .where(whereClause)
-        .orderBy(orderFn(orderCol))
-        .limit(limit)
-        .offset(offset);
+      // Get paginated results with counts
+      const rows: any[] = await db.execute(sql`
+        SELECT
+          g.id, g.slug, g.name, g.website,
+          COUNT(DISTINCT pd.platform) AS platform_count,
+          COUNT(DISTINCT pd.id) AS link_count
+        FROM global_developers g
+        LEFT JOIN platform_developers pd ON pd.global_developer_id = g.id
+        ${searchFilter}
+        GROUP BY g.id
+        ORDER BY ${orderClause} ${orderDir}
+        LIMIT ${limit} OFFSET ${offset}
+      `);
 
       return {
-        developers: rows,
+        developers: rows.map((r: any) => ({
+          id: r.id,
+          slug: r.slug,
+          name: r.name,
+          website: r.website,
+          platformCount: Number(r.platform_count || 0),
+          linkCount: Number(r.link_count || 0),
+        })),
         pagination: {
           page,
           limit,
