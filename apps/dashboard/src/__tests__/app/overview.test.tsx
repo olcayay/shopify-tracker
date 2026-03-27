@@ -126,22 +126,26 @@ describe("CrossPlatformOverviewPage", () => {
     expect(screen.getByText("Salesforce AppExchange")).toBeInTheDocument();
   });
 
-  it("renders View Dashboard buttons", async () => {
-    setupDefaultMocks();
-    render(<OverviewPage />);
-    await waitFor(() => {
-      expect(screen.getAllByText("View Dashboard").length).toBeGreaterThan(0);
-    });
-  });
-
-  it("renders links to platform overview pages", async () => {
+  it("renders clickable platform cards linking to overview", async () => {
     setupDefaultMocks();
     render(<OverviewPage />);
     await waitFor(() => {
       expect(screen.getByText("Shopify App Store")).toBeInTheDocument();
     });
-    const shopifyLink = screen.getAllByText("View Dashboard")[0].closest("a");
-    expect(shopifyLink).toHaveAttribute("href", "/shopify/overview");
+    // The whole card is wrapped in a link to platform overview
+    const shopifyCard = screen.getByText("Shopify App Store").closest("a");
+    expect(shopifyCard).toHaveAttribute("href", "/shopify/overview");
+  });
+
+  it("renders clickable stat sections in platform cards", async () => {
+    setupDefaultMocks();
+    render(<OverviewPage />);
+    await waitFor(() => {
+      expect(screen.getByText("Shopify App Store")).toBeInTheDocument();
+    });
+    // Apps stat should link to /shopify/apps
+    const appsLinks = screen.getAllByText("Apps").map((el) => el.closest("a")).filter(Boolean);
+    expect(appsLinks.some((a) => a?.getAttribute("href") === "/shopify/apps")).toBe(true);
   });
 
   it("renders tracked counts per platform", async () => {

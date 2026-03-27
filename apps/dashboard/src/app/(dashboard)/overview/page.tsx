@@ -12,13 +12,13 @@ import { PLATFORM_DISPLAY } from "@/lib/platform-display";
 import { OnboardingHero } from "@/components/onboarding-hero";
 import { PlatformRequestDialog } from "@/components/platform-request-dialog";
 
-const CAPABILITY_LABELS: { key: string; label: string }[] = [
+const CAPABILITY_LABELS: { key: string; label: string; section?: string }[] = [
   { key: "hasReviews", label: "Reviews" },
-  { key: "hasKeywordSearch", label: "Keywords" },
-  { key: "hasFeaturedSections", label: "Featured" },
+  { key: "hasKeywordSearch", label: "Keywords", section: "keywords" },
+  { key: "hasFeaturedSections", label: "Featured", section: "featured" },
   { key: "hasAdTracking", label: "Ads" },
   { key: "hasSimilarApps", label: "Similar" },
-  { key: "hasFeatureTaxonomy", label: "Features" },
+  { key: "hasFeatureTaxonomy", label: "Features", section: "features" },
 ];
 
 interface PlatformStats {
@@ -142,13 +142,11 @@ export default function CrossPlatformOverviewPage() {
                 className="rounded-xl border-t-4"
                 style={{ borderTopColor: brand.color }}
               >
-                <CardHeader className={`bg-gradient-to-r ${brand.gradient} rounded-t-xl`}>
-                  <CardTitle className="text-lg flex items-center justify-between">
-                    <span>{config.name}</span>
-                    <span className="text-sm font-normal text-muted-foreground">
-                      {s.apps} Apps &middot; {s.keywords} Keywords &middot; {s.competitors} Competitors
-                    </span>
-                  </CardTitle>
+                <CardHeader className={`bg-gradient-to-r ${brand.gradient} rounded-t-none flex flex-row items-center gap-2`}>
+                  <CardTitle className="text-lg">{config.name}</CardTitle>
+                  <span className="text-sm font-normal text-muted-foreground ml-auto">
+                    {s.apps} Apps &middot; {s.keywords} Keywords &middot; {s.competitors} Competitors
+                  </span>
                 </CardHeader>
                 <CardContent className="pt-4">
                   <Link href={`/${pid}/overview`}>
@@ -297,52 +295,62 @@ function PlatformCard({
     (c) => (config as Record<string, unknown>)[c.key] === true
   );
 
+  const p = `/${platformId}`;
+
   return (
-    <Card
-      className="rounded-xl border-t-4 hover:shadow-md transition-shadow h-full"
-      style={{ borderTopColor: brand.color }}
-    >
-      <CardHeader className={`bg-gradient-to-r ${brand.gradient} rounded-t-xl`}>
-        <CardTitle className="text-lg">{config.name}</CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-4 pt-4">
-        <div className="grid grid-cols-3 gap-4">
-          <div className="text-center">
-            <div className="text-2xl font-bold">{stats?.apps ?? 0}</div>
-            <div className="text-xs text-muted-foreground">Apps</div>
+    <Link href={`${p}/overview`} className="block h-full">
+      <Card
+        className="rounded-xl border-t-4 hover:shadow-md transition-shadow h-full cursor-pointer group"
+        style={{ borderTopColor: brand.color }}
+      >
+        <CardHeader className={`bg-gradient-to-r ${brand.gradient} rounded-t-none flex flex-row items-center gap-2`}>
+          <CardTitle className="text-lg">{config.name}</CardTitle>
+          <ArrowRight className="h-4 w-4 ml-auto text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
+        </CardHeader>
+        <CardContent className="space-y-4 pt-4">
+          {/* Stats — each clickable to its section */}
+          <div className="grid grid-cols-3 gap-4">
+            <Link href={`${p}/apps`} className="text-center hover:bg-muted/50 rounded-lg py-1.5 -mx-1 px-1 transition-colors" onClick={(e) => e.stopPropagation()}>
+              <div className="text-2xl font-bold">{stats?.apps ?? 0}</div>
+              <div className="text-xs text-muted-foreground">Apps</div>
+            </Link>
+            {config.hasKeywordSearch && (
+              <Link href={`${p}/keywords`} className="text-center hover:bg-muted/50 rounded-lg py-1.5 -mx-1 px-1 transition-colors" onClick={(e) => e.stopPropagation()}>
+                <div className="text-2xl font-bold">{stats?.keywords ?? 0}</div>
+                <div className="text-xs text-muted-foreground">Keywords</div>
+              </Link>
+            )}
+            <Link href={`${p}/competitors`} className="text-center hover:bg-muted/50 rounded-lg py-1.5 -mx-1 px-1 transition-colors" onClick={(e) => e.stopPropagation()}>
+              <div className="text-2xl font-bold">{stats?.competitors ?? 0}</div>
+              <div className="text-xs text-muted-foreground">Competitors</div>
+            </Link>
           </div>
-          {config.hasKeywordSearch && (
-            <div className="text-center">
-              <div className="text-2xl font-bold">{stats?.keywords ?? 0}</div>
-              <div className="text-xs text-muted-foreground">Keywords</div>
-            </div>
-          )}
-          <div className="text-center">
-            <div className="text-2xl font-bold">{stats?.competitors ?? 0}</div>
-            <div className="text-xs text-muted-foreground">Competitors</div>
+
+          {/* Capabilities — clickable ones link to their section */}
+          <div className="flex flex-wrap gap-x-3 gap-y-1">
+            {capabilities.map((cap) => {
+              const inner = (
+                <span className={`text-xs flex items-center gap-1 ${cap.section ? "hover:underline" : ""}`}>
+                  <span
+                    className="inline-block w-2 h-2 rounded-full"
+                    style={{ backgroundColor: brand.color }}
+                  />
+                  {cap.label}
+                </span>
+              );
+              if (cap.section) {
+                return (
+                  <Link key={cap.key} href={`${p}/${cap.section}`} onClick={(e) => e.stopPropagation()}>
+                    {inner}
+                  </Link>
+                );
+              }
+              return <span key={cap.key}>{inner}</span>;
+            })}
           </div>
-        </div>
-
-        <div className="flex flex-wrap gap-x-3 gap-y-1">
-          {capabilities.map((cap) => (
-            <span key={cap.key} className="text-xs flex items-center gap-1">
-              <span
-                className="inline-block w-2 h-2 rounded-full"
-                style={{ backgroundColor: brand.color }}
-              />
-              {cap.label}
-            </span>
-          ))}
-        </div>
-
-        <Link href={`/${platformId}/overview`}>
-          <Button variant="outline" className={`w-full ${brand.textAccent}`}>
-            View Dashboard
-            <ArrowRight className="h-4 w-4 ml-2" />
-          </Button>
-        </Link>
-      </CardContent>
-    </Card>
+        </CardContent>
+      </Card>
+    </Link>
   );
 }
 
