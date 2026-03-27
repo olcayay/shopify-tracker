@@ -5,6 +5,7 @@ import { TopBar } from "@/components/top-bar";
 import { IconSidebar } from "@/components/icon-sidebar";
 import { MobileSidebar } from "@/components/sidebar";
 import { PlatformDiscoverySheet } from "@/components/platform-discovery-sheet";
+import { PlatformSwitcher } from "@/components/platform-switcher";
 
 export function DashboardShell({ children }: { children: React.ReactNode }) {
   const [discoveryOpen, setDiscoveryOpen] = useState(false);
@@ -31,6 +32,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
         open={discoveryOpen}
         onOpenChange={setDiscoveryOpen}
       />
+      <PlatformSwitcher />
     </div>
   );
 }

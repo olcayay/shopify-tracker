@@ -29,7 +29,10 @@ multi-platform UX overhaul Phase 4: Discovery & Request (PLA-94) ✅
   - DashboardShell wrapper to manage discovery sheet state
   - 14 tests: 9 discovery-sheet + 5 request-dialog
 
-multi-platform UX overhaul Phase 5: Power User Nav (PLA-94)
+multi-platform UX overhaul Phase 5: Power User Nav (PLA-94) ✅
+  - PlatformSwitcher (Cmd+K) — quick-switch palette with type-to-filter, arrow key nav, section preservation
+  - Wired into DashboardShell for global access
+  - 8 tests: keyboard shortcuts, filtering, navigation
 
 multi-platform UX overhaul Phase 6: Polish (PLA-94)
 
