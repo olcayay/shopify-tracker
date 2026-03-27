@@ -103,6 +103,8 @@ export interface PlatformConstants {
   defaultPagesPerCategory: number;
   trackedFields: string[];
   rateLimit: { minDelayMs: number; maxDelayMs: number };
+  /** Max seed categories to crawl in parallel (default: 1 = sequential) */
+  concurrentSeedCategories?: number;
 }
 
 // --- Scoring config ---

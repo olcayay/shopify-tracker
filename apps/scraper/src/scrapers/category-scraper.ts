@@ -122,7 +122,9 @@ export class CategoryScraper {
         }
       }
 
-      for (const slug of this.seedCategories) {
+      const concurrency = this.platformModule?.constants?.concurrentSeedCategories ?? 1;
+
+      const processSeed = async (slug: string) => {
         try {
           const { node, appSlugs } = await this.crawlCategory(slug, null, 0, run.id, pageOptions);
           if (node) {
@@ -140,6 +142,19 @@ export class CategoryScraper {
             url: this.platformModule ? undefined : urls.category(slug),
             error,
           });
+        }
+      };
+
+      if (concurrency > 1) {
+        // Process seed categories in parallel batches
+        for (let i = 0; i < this.seedCategories.length; i += concurrency) {
+          const batch = this.seedCategories.slice(i, i + concurrency);
+          await Promise.all(batch.map(processSeed));
+        }
+      } else {
+        // Sequential (default for most platforms)
+        for (const slug of this.seedCategories) {
+          await processSeed(slug);
         }
       }
 

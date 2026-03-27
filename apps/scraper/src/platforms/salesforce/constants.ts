@@ -29,7 +29,8 @@ export const SALESFORCE_CONSTANTS: PlatformConstants = {
     "publisher",
     "pricing",
   ],
-  rateLimit: { minDelayMs: 500, maxDelayMs: 1500 },
+  rateLimit: { minDelayMs: 200, maxDelayMs: 500 },
+  concurrentSeedCategories: 3, // HTTP-only API, safe to parallelize
 };
 
 /** Headers required for Salesforce AppExchange API to return correct search rankings */
