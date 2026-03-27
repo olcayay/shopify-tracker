@@ -82,6 +82,8 @@ if (adminEmail && adminPassword) {
 const app = Fastify({ logger: true });
 
 const allowedOrigins = [
+  "https://appranks.io",
+  "https://api.appranks.io",
   process.env.DASHBOARD_URL,
   process.env.NEXT_PUBLIC_API_URL,
   "http://localhost:3000",
@@ -89,7 +91,7 @@ const allowedOrigins = [
 ].filter(Boolean) as string[];
 
 await app.register(cors, {
-  origin: allowedOrigins.length > 0 ? allowedOrigins : true,
+  origin: allowedOrigins,
   credentials: true,
   methods: ["GET", "HEAD", "PUT", "POST", "PATCH", "DELETE", "OPTIONS"],
 });
