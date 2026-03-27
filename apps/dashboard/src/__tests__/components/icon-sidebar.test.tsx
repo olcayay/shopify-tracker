@@ -59,7 +59,7 @@ describe("IconSidebar", () => {
     expect(aside).toBeTruthy();
     expect(aside!.className).toContain("sticky");
     expect(aside!.className).toContain("top-0");
-    expect(aside!.className).toContain("h-screen");
+    expect(aside!.className).toContain("h-[calc(100vh-3.5rem)]");
     expect(aside!.className).toContain("overflow-y-auto");
   });
 });

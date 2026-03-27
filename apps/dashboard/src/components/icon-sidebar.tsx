@@ -44,7 +44,7 @@ export function IconSidebar() {
 
   return (
     <aside
-      className={`${expanded ? "w-48" : "w-14"} border-r bg-muted/30 sticky top-0 h-screen hidden md:flex flex-col py-2 gap-1 shrink-0 transition-[width] duration-200 ease-in-out overflow-y-auto`}
+      className={`${expanded ? "w-48" : "w-14"} border-r bg-muted/30 sticky top-0 h-[calc(100vh-3.5rem)] hidden md:flex flex-col py-2 gap-1 shrink-0 transition-[width] duration-200 ease-in-out overflow-y-auto`}
     >
       {/* System Admin header */}
       {isAdminSection && (
