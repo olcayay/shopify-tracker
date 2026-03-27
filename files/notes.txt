@@ -2425,3 +2425,41 @@ Files changed:
 - apps/api/src/routes/account.ts (new platform enable/disable endpoints)
 - apps/dashboard/src/__tests__/lib/platform-display.test.ts (new, 9 tests)
 - apps/api/src/__tests__/routes/account.test.ts (10 new tests)
+
+## Multi-Platform UX Overhaul — Phase 2: Navigation Overhaul (PLA-94)
+
+### TopBar component
+- Full-width top bar with: logo → platform dropdown → [+] add → N/11 badge → breadcrumb → settings → user menu
+- Platform dropdown shows all enabled platforms (all for sysadmin) with brand color dots
+- Switching preserves current section (e.g., /shopify/keywords → /salesforce/keywords)
+- User menu with profile info and sign out
+
+### IconSidebar component
+- 56px wide icon-only sidebar for active platform's pages
+- Items generated dynamically from getNavItems() based on platform capabilities
+- Active page highlighted with platform brand color
+- Shows system admin items when in /system-admin section
+- Tooltip on hover for each icon
+
+### nav-utils.ts (shared helpers)
+- extractPlatform() — uses PLATFORM_IDS Set instead of hardcoded regex
+- extractSection() — extracts section from pathname
+- getNavItems() — moved from sidebar.tsx, shared between old sidebar and new IconSidebar
+- systemAdminItems — moved from sidebar.tsx
+
+### Layout change
+- Desktop: TopBar (top) + IconSidebar (left) + main content
+- Mobile: hamburger + MobileSidebar (Sheet) — preserved from before
+- Wider content area than old sidebar layout
+
+Files created:
+- apps/dashboard/src/components/top-bar.tsx
+- apps/dashboard/src/components/icon-sidebar.tsx
+- apps/dashboard/src/lib/nav-utils.ts
+- apps/dashboard/src/__tests__/lib/nav-utils.test.ts (16 tests)
+- apps/dashboard/src/__tests__/components/top-bar.test.tsx (9 tests)
+- apps/dashboard/src/__tests__/components/icon-sidebar.test.tsx (3 tests)
+
+Files modified:
+- apps/dashboard/src/app/(dashboard)/layout.tsx
+- apps/dashboard/src/components/sidebar.tsx (imports from nav-utils, removed duplicates)

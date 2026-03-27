@@ -4,91 +4,23 @@ import { useState, useEffect, useMemo } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import {
-  LayoutDashboard,
-  FolderTree,
-  AppWindow,
-  Search,
-  Star,
-  Puzzle,
   Settings,
   Shield,
   LogOut,
   User,
-  Users,
-  Bot,
-  KeyRound,
-  Package,
   ChevronDown,
   ChevronRight,
-  Sparkles,
-  FlaskConical,
   PanelLeftClose,
   PanelLeftOpen,
   Menu,
-  BrainCircuit,
-  Code,
-  Tag,
-  HeartPulse,
 } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
 import { PLATFORM_LABELS, PLATFORM_COLORS } from "@/lib/platform-display";
+import { extractPlatform, getNavItems, systemAdminItems } from "@/lib/nav-utils";
 import { PLATFORMS, type PlatformId } from "@appranks/shared";
 import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
 import { VisuallyHidden } from "radix-ui";
-
-function getNavItems(platformId: PlatformId, isAdmin?: boolean) {
-  const p = `/${platformId}`;
-  const caps = PLATFORMS[platformId];
-  const items: { href: string; label: string; icon: any; badge?: string; adminOnly?: boolean }[] = [
-    { href: `${p}/overview`, label: "Overview", icon: LayoutDashboard },
-    { href: `${p}/apps`, label: "Apps", icon: AppWindow },
-    { href: `${p}/competitors`, label: "Competitors", icon: Star },
-  ];
-  if (caps.hasKeywordSearch) {
-    items.push({ href: `${p}/keywords`, label: "Keywords", icon: Search });
-  }
-  items.push({
-    href: `${p}/categories`,
-    label: platformId === "wordpress" ? "Tags" : "Categories",
-    icon: platformId === "wordpress" ? Tag : FolderTree,
-  });
-  if (caps.hasFeaturedSections) {
-    items.push({ href: `${p}/featured`, label: "Featured", icon: Sparkles });
-  }
-  if (caps.hasFeatureTaxonomy) {
-    items.push({ href: `${p}/features`, label: "Features", icon: Puzzle });
-  }
-  if (platformId !== "canva" && platformId !== "salesforce" && platformId !== "wix" && platformId !== "wordpress" && platformId !== "google_workspace" && platformId !== "atlassian" && platformId !== "zoom" && platformId !== "zoho" && platformId !== "zendesk" && platformId !== "hubspot") {
-    items.push({ href: `${p}/research`, label: "Research", icon: FlaskConical, badge: "Beta" });
-  }
-  if (isAdmin) {
-    items.push({ href: `${p}/developers`, label: "Developers", icon: Code, adminOnly: true });
-  }
-  return items;
-}
-
-const systemAdminItems = [
-  { href: "/system-admin", label: "Overview", icon: Shield },
-  { href: "/system-admin/accounts", label: "Accounts", icon: Users },
-  { href: "/system-admin/users", label: "Users", icon: User },
-  { href: "/system-admin/apps", label: "Apps", icon: AppWindow },
-  { href: "/system-admin/keywords", label: "Keywords", icon: KeyRound },
-  { href: "/system-admin/categories", label: "Categories", icon: FolderTree },
-  { href: "/system-admin/features", label: "Features", icon: Puzzle },
-  { href: "/system-admin/researches", label: "Research", icon: FlaskConical },
-  { href: "/system-admin/packages", label: "Packages", icon: Package },
-  { href: "/system-admin/scraper-health", label: "Health", icon: HeartPulse },
-  { href: "/system-admin/scraper", label: "Scraper", icon: Bot },
-  { href: "/system-admin/ai-logs", label: "AI Logs", icon: BrainCircuit },
-  { href: "/system-admin/developers", label: "Developers", icon: Code },
-];
-
-/** Extract platform from current pathname */
-function extractPlatform(pathname: string): PlatformId {
-  const match = pathname.match(/^\/(shopify|salesforce|canva|wix|wordpress|google_workspace|atlassian|zoom|zoho|zendesk|hubspot)(\/|$)/);
-  return (match?.[1] as PlatformId) ?? "shopify";
-}
 
 function SidebarContent({
   collapsed = false,
@@ -119,12 +51,10 @@ function SidebarContent({
   // Route protection: redirect to /overview if user navigates to a platform they don't have access to
   useEffect(() => {
     if (!user || !account || isSystemAdmin) return;
-    const platformMatch = pathname.match(/^\/(shopify|salesforce|canva|wix|wordpress|google_workspace|atlassian|zoom|zoho|zendesk|hubspot)(\/|$)/);
-    if (platformMatch) {
-      const urlPlatform = platformMatch[1];
-      if (!enabledPlatforms.includes(urlPlatform)) {
-        router.replace("/overview");
-      }
+    const urlPlatform = extractPlatform(pathname);
+    // Only redirect if the pathname actually starts with a platform segment
+    if (pathname.startsWith(`/${urlPlatform}`) && !enabledPlatforms.includes(urlPlatform)) {
+      router.replace("/overview");
     }
   }, [pathname, user, account, isSystemAdmin, enabledPlatforms, router]);
 

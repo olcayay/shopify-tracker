@@ -5,7 +5,12 @@ multi-platform UX overhaul Phase 1: Foundation (PLA-94) ✅
   - Added self-service platform enable/disable API endpoints (POST/DELETE /api/account/platforms)
   - Added unit tests for all changes (9 platform-display tests + 10 API endpoint tests)
 
-multi-platform UX overhaul Phase 2: Navigation Overhaul (PLA-94)
+multi-platform UX overhaul Phase 2: Navigation Overhaul (PLA-94) ✅
+  - Created TopBar component (logo, platform dropdown, [+], N/11 badge, breadcrumb, settings, user menu)
+  - Created IconSidebar component (56px icon-only nav, brand color accent, capability-based items)
+  - Extracted nav-utils.ts (extractPlatform, extractSection, getNavItems, systemAdminItems)
+  - Updated layout.tsx to use TopBar + IconSidebar (desktop), MobileSidebar (mobile)
+  - Added 28 tests: 16 nav-utils, 9 top-bar, 3 icon-sidebar
 
 multi-platform UX overhaul Phase 3: Overview Hub (PLA-94)
 
