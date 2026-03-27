@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import { useAuth } from "@/lib/auth-context";
@@ -14,8 +14,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Globe, ExternalLink, Star } from "lucide-react";
-import { PLATFORMS, type PlatformId } from "@appranks/shared";
+import { Globe, Star } from "lucide-react";
 import { TableSkeleton } from "@/components/skeletons";
 
 const PLATFORM_COLORS: Record<string, string> = {
@@ -100,6 +99,12 @@ export default function DeveloperProfilePage() {
     load();
   }, [slug]);
 
+  // Determine which optional columns have data across ANY platform
+  const hasInstalls = useMemo(
+    () => data?.apps.some((a) => a.activeInstalls != null) ?? false,
+    [data]
+  );
+
   if (loading) {
     return (
       <div className="space-y-6">
@@ -183,7 +188,7 @@ export default function DeveloperProfilePage() {
         ))}
       </div>
 
-      {/* Apps table per platform */}
+      {/* Apps tables — unified column layout across all platforms */}
       {Array.from(appsByPlatform.entries()).map(([platform, platformApps]) => (
         <Card key={platform}>
           <CardHeader className="pb-3">
@@ -202,19 +207,19 @@ export default function DeveloperProfilePage() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>App</TableHead>
-                  <TableHead className="text-right">Rating</TableHead>
-                  <TableHead className="text-right">Reviews</TableHead>
-                  <TableHead>Pricing</TableHead>
-                  {platformApps.some((a) => a.activeInstalls != null) && (
-                    <TableHead className="text-right">Installs</TableHead>
+                  <TableHead className="min-w-[200px]">App</TableHead>
+                  <TableHead className="text-right w-[80px]">Rating</TableHead>
+                  <TableHead className="text-right w-[90px]">Reviews</TableHead>
+                  <TableHead className="w-[160px]">Pricing</TableHead>
+                  {hasInstalls && (
+                    <TableHead className="text-right w-[100px]">Installs</TableHead>
                   )}
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {platformApps.map((app) => (
                   <TableRow key={`${app.platform}-${app.slug}`}>
-                    <TableCell>
+                    <TableCell className="min-w-[200px]">
                       <Link
                         href={`/${app.platform}/apps/${app.slug}`}
                         className="flex items-center gap-2 hover:underline"
@@ -223,29 +228,35 @@ export default function DeveloperProfilePage() {
                           <img
                             src={app.iconUrl}
                             alt=""
-                            className="w-6 h-6 rounded"
+                            className="w-6 h-6 rounded shrink-0"
                           />
                         )}
-                        <span className="font-medium">{app.name}</span>
+                        <span className="font-medium truncate max-w-[260px]">
+                          {app.name}
+                        </span>
                         {app.isTracked && (
-                          <Star className="h-3 w-3 text-amber-500 fill-amber-500" />
+                          <Star className="h-3 w-3 text-amber-500 fill-amber-500 shrink-0" />
                         )}
                       </Link>
                     </TableCell>
-                    <TableCell className="text-right">
-                      {app.averageRating != null ? app.averageRating.toFixed(1) : "-"}
+                    <TableCell className="text-right w-[80px]">
+                      {app.averageRating != null
+                        ? app.averageRating.toFixed(1)
+                        : <span className="text-muted-foreground">-</span>}
                     </TableCell>
-                    <TableCell className="text-right">
-                      {app.ratingCount != null ? app.ratingCount.toLocaleString() : "-"}
+                    <TableCell className="text-right w-[90px]">
+                      {app.ratingCount != null
+                        ? app.ratingCount.toLocaleString()
+                        : <span className="text-muted-foreground">-</span>}
                     </TableCell>
-                    <TableCell className="text-muted-foreground text-sm">
+                    <TableCell className="w-[160px] text-muted-foreground text-sm truncate max-w-[160px]">
                       {app.pricingHint || "-"}
                     </TableCell>
-                    {platformApps.some((a) => a.activeInstalls != null) && (
-                      <TableCell className="text-right">
+                    {hasInstalls && (
+                      <TableCell className="text-right w-[100px]">
                         {app.activeInstalls != null
                           ? app.activeInstalls.toLocaleString()
-                          : "-"}
+                          : <span className="text-muted-foreground">-</span>}
                       </TableCell>
                     )}
                   </TableRow>
