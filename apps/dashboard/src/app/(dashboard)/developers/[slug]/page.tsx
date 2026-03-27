@@ -167,24 +167,28 @@ export default function DeveloperProfilePage() {
       {/* Platform badges */}
       <div className="flex flex-wrap gap-2">
         {platforms.map((p) => (
-          <Badge
+          <Link
             key={p.id}
-            variant="outline"
-            className="text-xs"
-            style={{ borderColor: PLATFORM_COLORS[p.platform] || "#666" }}
+            href={`/${p.platform}/developers?name=${encodeURIComponent(p.name)}`}
           >
-            <span
-              className="w-2 h-2 rounded-full mr-1.5 inline-block"
-              style={{ backgroundColor: PLATFORM_COLORS[p.platform] || "#666" }}
-            />
-            {PLATFORM_LABELS[p.platform] || p.platform}
-            <span className="text-muted-foreground ml-1">
-              ({p.appCount} {p.appCount === 1 ? "app" : "apps"})
-            </span>
-            {p.name !== developer.name && (
-              <span className="text-muted-foreground ml-1">as &ldquo;{p.name}&rdquo;</span>
-            )}
-          </Badge>
+            <Badge
+              variant="outline"
+              className="text-xs cursor-pointer hover:bg-muted transition-colors"
+              style={{ borderColor: PLATFORM_COLORS[p.platform] || "#666" }}
+            >
+              <span
+                className="w-2 h-2 rounded-full mr-1.5 inline-block"
+                style={{ backgroundColor: PLATFORM_COLORS[p.platform] || "#666" }}
+              />
+              {PLATFORM_LABELS[p.platform] || p.platform}
+              <span className="text-muted-foreground ml-1">
+                ({p.appCount} {p.appCount === 1 ? "app" : "apps"})
+              </span>
+              {p.name !== developer.name && (
+                <span className="text-muted-foreground ml-1">as &ldquo;{p.name}&rdquo;</span>
+              )}
+            </Badge>
+          </Link>
         ))}
       </div>
 
@@ -193,11 +197,16 @@ export default function DeveloperProfilePage() {
         <Card key={platform}>
           <CardHeader className="pb-3">
             <CardTitle className="text-base flex items-center gap-2">
-              <span
-                className="w-2.5 h-2.5 rounded-full"
-                style={{ backgroundColor: PLATFORM_COLORS[platform] || "#666" }}
-              />
-              {PLATFORM_LABELS[platform] || platform}
+              <Link
+                href={`/${platform}/developers?name=${encodeURIComponent(platforms.find((p) => p.platform === platform)?.name || "")}`}
+                className="flex items-center gap-2 hover:underline"
+              >
+                <span
+                  className="w-2.5 h-2.5 rounded-full"
+                  style={{ backgroundColor: PLATFORM_COLORS[platform] || "#666" }}
+                />
+                {PLATFORM_LABELS[platform] || platform}
+              </Link>
               <span className="text-muted-foreground font-normal text-sm">
                 ({platformApps.length})
               </span>
