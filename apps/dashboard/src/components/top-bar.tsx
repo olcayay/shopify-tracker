@@ -143,7 +143,7 @@ export function TopBar({
         onClick={onOpenDiscovery}
         className="text-xs text-muted-foreground hover:text-foreground transition-colors hidden sm:block"
       >
-        {enabledPlatforms.length}/{PLATFORM_IDS.length} platforms
+        {enabledPlatforms.length} platform{enabledPlatforms.length !== 1 ? "s" : ""} tracked
       </button>
 
       {/* Breadcrumb (only on platform pages) */}

@@ -51,7 +51,7 @@ describe("TopBar", () => {
 
   it("shows platform count badge", () => {
     render(<TopBar />);
-    expect(screen.getByText("2/11 platforms")).toBeInTheDocument();
+    expect(screen.getByText("2 platforms tracked")).toBeInTheDocument();
   });
 
   it("shows settings link", () => {

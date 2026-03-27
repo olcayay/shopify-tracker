@@ -88,4 +88,41 @@ describe("PlatformDiscoverySheet", () => {
     render(<PlatformDiscoverySheet open={true} onOpenChange={() => {}} />);
     expect(screen.getByText("Request a Platform")).toBeInTheDocument();
   });
+
+  it("shows Tracked Platforms section header", async () => {
+    vi.doMock("@/lib/auth-context", () => ({
+      useAuth: () => ({
+        user: { id: "1", isSystemAdmin: false },
+        account: { id: "a1", enabledPlatforms: ["shopify", "salesforce"] },
+      }),
+    }));
+    const { PlatformDiscoverySheet } = await import("@/components/platform-discovery-sheet");
+    render(<PlatformDiscoverySheet open={true} onOpenChange={() => {}} />);
+    expect(screen.getByText("Tracked Platforms")).toBeInTheDocument();
+  });
+
+  it("admin sees Available Platforms section for non-enabled platforms", async () => {
+    vi.doMock("@/lib/auth-context", () => ({
+      useAuth: () => ({
+        user: { id: "1", isSystemAdmin: true },
+        account: { id: "a1", enabledPlatforms: ["shopify"] },
+      }),
+    }));
+    const { PlatformDiscoverySheet } = await import("@/components/platform-discovery-sheet");
+    render(<PlatformDiscoverySheet open={true} onOpenChange={() => {}} />);
+    expect(screen.getByText("Tracked Platforms")).toBeInTheDocument();
+    expect(screen.getByText("Available Platforms")).toBeInTheDocument();
+  });
+
+  it("shows tracked count in description", async () => {
+    vi.doMock("@/lib/auth-context", () => ({
+      useAuth: () => ({
+        user: { id: "1", isSystemAdmin: false },
+        account: { id: "a1", enabledPlatforms: ["shopify", "salesforce"] },
+      }),
+    }));
+    const { PlatformDiscoverySheet } = await import("@/components/platform-discovery-sheet");
+    render(<PlatformDiscoverySheet open={true} onOpenChange={() => {}} />);
+    expect(screen.getByText("2 platforms tracked")).toBeInTheDocument();
+  });
 });
