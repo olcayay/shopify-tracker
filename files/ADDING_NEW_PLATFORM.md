@@ -59,16 +59,15 @@ Use this as a high-level task tracker. Each item links to a detailed section bel
 - [ ] Review `apps/api/src/routes/apps.ts` developer info extraction (if custom platformData)
 
 ### Phase 5: Dashboard UI
+- [ ] Add entry to `PLATFORM_DISPLAY` in `apps/dashboard/src/lib/platform-display.ts` (label, shortLabel, color, gradient, borderTop, textAccent)
 - [ ] Add `VALID_PLATFORMS` entry in `apps/dashboard/src/lib/auth-context.tsx`
 - [ ] Add `VALID_PLATFORMS` entry in `apps/dashboard/src/proxy.ts`
 - [ ] Add `VALID_PLATFORMS` entry in `apps/dashboard/src/components/admin-scraper-trigger.tsx`
-- [ ] Add sidebar navigation in `apps/dashboard/src/components/sidebar.tsx`
-- [ ] Update sidebar platform regex patterns (2 locations)
 - [ ] Add `BADGE_CONFIG` entry in `apps/dashboard/src/components/app-badges.tsx`
-- [ ] Add `PLATFORM_LABELS` and `PLATFORM_COLORS` entries in 3 files: `sidebar.tsx`, `platform-overview-cards.tsx`, `overview/page.tsx`
-- [ ] Add `PLATFORM_BRANDS` entry in `apps/dashboard/src/components/platform-overview-cards.tsx` (overview page crashes without this!)
 - [ ] Create preview component (`<platform>-preview.tsx`) and wire into `preview/page.tsx`
 - [ ] Update field labels in `details/page.tsx`, `changes/page.tsx`, app overview `page.tsx`
+
+> **Note:** As of PLA-94, platform display constants (labels, colors, gradients) are centralized in `platform-display.ts`. You no longer need to update sidebar.tsx, overview/page.tsx, or platform-overview-cards.tsx separately. Navigation items are auto-generated from platform capabilities via `getNavItems()` in `nav-utils.ts`. The platform regex in `extractPlatform()` uses `PLATFORM_IDS` from shared — no hardcoded regex to update.
 - [ ] Add platform-specific sections to `compare/page.tsx` and `research/[id]/compare/page.tsx`
 - [ ] Add to `isFlat` check in `categories/page.tsx` (if flat categories)
 - [ ] Gate all dashboard tables/cards behind capability flags
@@ -1010,57 +1009,19 @@ const VALID_PLATFORMS = new Set(["shopify", "salesforce", "canva", "wix", "wordp
 
 Controls which platforms appear in the system admin scraper trigger UI.
 
-### 6.2 Sidebar Navigation
+### 6.2 Navigation (Auto-generated — minimal work needed)
 
-**File:** `apps/dashboard/src/components/sidebar.tsx`
+As of PLA-94, navigation is auto-generated from platform capabilities:
 
-**4 things to update:**
+- **`extractPlatform()`** in `apps/dashboard/src/lib/nav-utils.ts` uses `PLATFORM_IDS` from shared — no hardcoded regex to update
+- **`getNavItems()`** in `nav-utils.ts` auto-generates nav items based on capability flags (hasKeywordSearch, hasFeaturedSections, etc.)
+- **TopBar** platform dropdown auto-includes all enabled platforms
+- **IconSidebar** auto-renders icons for the active platform's pages
+- **Cmd+K switcher** auto-includes all enabled platforms
 
-**a) Label and color:**
+**No sidebar.tsx changes needed** for new platforms. Just add the platform to `packages/shared/src/constants/platforms.ts` and it will appear everywhere.
 
-```typescript
-const PLATFORM_LABELS: Record<PlatformId, string> = {
-  // ... existing ...
-  newplatform: "New Platform",
-};
-
-const PLATFORM_COLORS: Record<PlatformId, string> = {
-  // ... existing ...
-  newplatform: "#FF5733",  // Brand color
-};
-```
-
-**b) Platform regex patterns (2 locations):**
-
-The sidebar uses regex to extract the current platform from the URL path. Both occurrences must include the new platform:
-
-```typescript
-// ~line 103
-const match = pathname.match(/^\/(shopify|salesforce|canva|wix|wordpress|google_workspace|atlassian|zoom|zoho|zendesk|newplatform)(\/|$)/);
-
-// ~line 136
-const platformMatch = pathname.match(/^\/(shopify|salesforce|canva|wix|wordpress|google_workspace|atlassian|zoom|zoho|zendesk|newplatform)(\/|$)/);
-```
-
-**Missing this causes:** The sidebar won't highlight the correct platform or render nav items for the new platform's routes.
-
-**c) Research exclusion (hardcoded):**
-
-Research is currently excluded for some platforms via a hardcoded check. Decide whether the new platform should have Research. If not, add it to the exclusion list.
-
-**d) Beta badge (optional):**
-
-If the new platform should show a badge in the sidebar:
-
-```typescript
-{platformId === "newplatform" && (
-  <span className="text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-primary/10 text-primary">
-    Beta
-  </span>
-)}
-```
-
-**Nav items** are auto-generated from capability flags via `getNavItems()` — no additional changes needed for that part.
+**Research** is currently hardcoded to Shopify only in `getNavItems()`. If the new platform should have Research, update the check in `nav-utils.ts`.
 
 ### 6.3 App Badges
 
@@ -1080,25 +1041,30 @@ const BADGE_CONFIG: Record<string, Record<string, { label: string; color: string
 
 Also has a hardcoded `platform === "shopify"` check for the "Built for Shopify" badge (line 53). If the new platform has a similar "built for" badge concept, add it here.
 
-### 6.4 Platform Labels, Colors & Brands (3 files!)
+### 6.4 Platform Display Constants (1 file!)
 
-There are **3 files** with `PLATFORM_LABELS` and/or `PLATFORM_COLORS` records. All must be updated:
+As of PLA-94, all platform display constants are centralized in a **single file**: `apps/dashboard/src/lib/platform-display.ts`.
 
-**a) Sidebar — `apps/dashboard/src/components/sidebar.tsx`**
-
-```typescript
-const PLATFORM_LABELS: Record<PlatformId, string> = { ..., newplatform: "New Platform" };
-const PLATFORM_COLORS: Record<PlatformId, string> = { ..., newplatform: "#FF5733" };
-```
-
-**b) Platform Overview Cards — `apps/dashboard/src/components/platform-overview-cards.tsx`**
+Add an entry to `PLATFORM_DISPLAY`:
 
 ```typescript
-const PLATFORM_LABELS: Record<PlatformId, string> = { ..., newplatform: "New Platform" };
-const PLATFORM_COLORS: Record<PlatformId, string> = { ..., newplatform: "#FF5733" };
+// apps/dashboard/src/lib/platform-display.ts
+export const PLATFORM_DISPLAY: Record<PlatformId, PlatformDisplayInfo> = {
+  // ... existing ...
+  newplatform: {
+    label: "New Platform",
+    shortLabel: "New Platform",
+    color: "#FF5733",
+    gradient: "from-[#FF5733]/10 to-transparent",
+    borderTop: "border-t-[#FF5733]",
+    textAccent: "text-[#FF5733]",
+  },
+};
 ```
 
-**CRITICAL: `PLATFORM_BRANDS` record** — This file also has a `PLATFORM_BRANDS` record used on the `/overview` page. **If the new platform is missing from this record, the overview page will crash.** Add:
+This automatically provides `PLATFORM_LABELS`, `PLATFORM_COLORS`, and all brand styling to every consumer (sidebar, overview page, developer pages, scraper health, etc.).
+
+**Previously** these were duplicated in 6+ files. That's no longer the case — do NOT add platform labels/colors to sidebar.tsx, overview/page.tsx, or platform-overview-cards.tsx. They import from `platform-display.ts`.
 
 ```typescript
 const PLATFORM_BRANDS: Record<string, { label: string; color: string; textColor?: string }> = {
@@ -1582,11 +1548,11 @@ grep -r "Launched" apps/dashboard/src --include="*.tsx" -l
 
 **Solution:** This is a data issue, not a UI bug. Ensure the category scraper has been run first: `npx tsx apps/scraper/src/cli.ts category --platform=newplatform`.
 
-### Pitfall 11: Sidebar regex patterns not updated
+### Pitfall 11: Platform extraction (no longer regex-based)
 
-**Problem:** New platform's URL path doesn't match the sidebar's platform extraction regex, causing no nav items to render.
+**Problem:** Previously, sidebar regex patterns needed manual updating for each new platform.
 
-**Solution:** Update BOTH regex patterns in `sidebar.tsx`.
+**Solution:** As of PLA-94, `extractPlatform()` in `nav-utils.ts` uses `PLATFORM_IDS` from the shared package. Adding a platform to `platforms.ts` automatically makes it recognized everywhere. No regex to update.
 
 ### Pitfall 12: Missing metadata-limits entry
 
@@ -2006,10 +1972,11 @@ test_newplatform() {
 | `apps/dashboard/src/proxy.ts` | Add to `VALID_PLATFORMS` array |
 | `apps/dashboard/src/lib/platform-urls.ts` | Add URL builder cases (4 switch statements) |
 | `apps/dashboard/src/lib/metadata-limits.ts` | Add platform character limits |
-| `apps/dashboard/src/components/sidebar.tsx` | Add label, color, update 2 regex patterns |
+| `apps/dashboard/src/lib/platform-display.ts` | Add entry to `PLATFORM_DISPLAY` (label, color, gradient, etc.) |
+| `apps/dashboard/src/components/sidebar.tsx` | No changes needed (imports from platform-display.ts) |
 | `apps/dashboard/src/components/admin-scraper-trigger.tsx` | Add to `VALID_PLATFORMS` set |
 | `apps/dashboard/src/components/app-badges.tsx` | Add `BADGE_CONFIG` entry |
-| `apps/dashboard/src/components/platform-overview-cards.tsx` | Add `PLATFORM_LABELS`, `PLATFORM_COLORS`, and **`PLATFORM_BRANDS`** entries |
+| `apps/dashboard/src/components/platform-overview-cards.tsx` | No changes needed (imports from platform-display.ts) |
 | `[platform]/overview/page.tsx` | Add to `PLATFORM_COLORS` record |
 | `[platform]/apps/[slug]/preview/page.tsx` | Add guard, component selector, label |
 | `[platform]/apps/[slug]/preview/<name>-preview.tsx` | **NEW** — Platform preview component |

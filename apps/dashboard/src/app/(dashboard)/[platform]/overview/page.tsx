@@ -372,12 +372,25 @@ export default function OverviewPage() {
         </CardHeader>
         <CardContent>
           {apps.length === 0 ? (
-            <p className="text-sm text-muted-foreground">
-              No apps yet.{" "}
-              <Link href={`/${platform}/apps`} className="text-primary hover:underline">
-                Add apps
+            <div className="py-6 text-center space-y-4">
+              <AppWindow className="h-10 w-10 mx-auto text-muted-foreground/50" />
+              <div>
+                <p className="font-medium mb-1">
+                  Start Tracking on {PLATFORMS[platform as PlatformId]?.name || platform}
+                </p>
+                <p className="text-sm text-muted-foreground mb-4">
+                  Search for your app by name to start tracking rankings, keywords, and competitors.
+                </p>
+              </div>
+              <Link href={`/${platform}/apps`}>
+                <Button>Add Your First App</Button>
               </Link>
-            </p>
+              <div>
+                <Link href="/overview" className="text-xs text-muted-foreground hover:text-foreground">
+                  Explore other platforms →
+                </Link>
+              </div>
+            </div>
           ) : (
             <>
               <Table>

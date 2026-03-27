@@ -34,7 +34,10 @@ multi-platform UX overhaul Phase 5: Power User Nav (PLA-94) ✅
   - Wired into DashboardShell for global access
   - 8 tests: keyboard shortcuts, filtering, navigation
 
-multi-platform UX overhaul Phase 6: Polish (PLA-94)
+multi-platform UX overhaul Phase 6: Polish (PLA-94) ✅
+  - Enhanced empty state on platform overview (AppWindow icon, "Start Tracking on X", Add Your First App button, explore link)
+  - Updated ADDING_NEW_PLATFORM.md: removed obsolete sidebar regex/duplicated constants references, documented new centralized flow
+  - All tests passing (1095 dashboard, 1092 scraper, API, shared)
 
 app için keyword suggestions ✅
 
