@@ -1,3 +1,12 @@
+Dashboard UX improvements batch (PLA-102 ~ PLA-108) ✅
+  PLA-102: Hide sidebar on homepage — show only on platform/admin pages
+  PLA-103: Redesign platform discovery sidebar — padding, tracked/available sections, badge text
+  PLA-104: Fix sidebar Overview icon always active on sub-pages — added exact match check
+  PLA-105: Use shared AccountUsageCards on Settings page — replaced inline grid
+  PLA-106: Show team members list to editors/viewers — split visibility from management
+  PLA-107: Fix "Coming Soon" card flash — show skeleton while auth loading
+  PLA-108: Scale up cross-platform summary card sizes by ~25%
+
 URL cleanup: remove redundant /overview path segment (PLA-96) ✅
   - Moved [platform]/overview/page.tsx → [platform]/page.tsx (platform dashboard at /shopify instead of /shopify/overview)
   - Created redirect stub at [platform]/overview/page.tsx → redirects to /[platform] for bookmarks/SEO

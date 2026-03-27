@@ -1,3 +1,36 @@
+Dashboard UX Improvements Batch (2026-03-28)
+=============================================
+
+PLA-102: Hide sidebar on homepage
+- IconSidebar returns null on non-platform, non-admin pages (guard after hooks)
+- DashboardShell conditionally renders MobileSidebar
+
+PLA-103: Redesign platform discovery sidebar
+- Added p-6 padding to SheetContent
+- Separated tracked vs available platforms (available only for admin)
+- Changed badge from "N/11 platforms" to "N platforms tracked"
+- Extracted PlatformCard and AvailablePlatformRow subcomponents
+
+PLA-104: Fix sidebar Overview icon active state
+- Added item.exact check to isActive logic in icon-sidebar.tsx
+- Overview only highlights on exact /{platform} path
+
+PLA-105: Use shared AccountUsageCards on Settings
+- Replaced inline usage grid with AccountUsageCards + USAGE_STAT_PRESETS
+- Removed unused Link, AppWindow, Search, Star, FlaskConical, Users imports
+
+PLA-106: Show team members to editors/viewers
+- Team Members card visible to all roles
+- Create user form and delete buttons wrapped in isOwner guard
+- Description changes per role
+
+PLA-107: Fix Coming Soon card flash
+- Added isLoading check from useAuth() before isPlatformEnabled check
+- Shows skeleton during auth loading
+
+PLA-108: Scale up cross-platform summary cards
+- All Tailwind size classes bumped ~25% (padding, icons, fonts, gaps)
+
 URL Cleanup: Remove Redundant /overview Path Segment (2026-03-28)
 ================================================================
 
