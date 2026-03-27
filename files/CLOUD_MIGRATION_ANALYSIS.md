@@ -797,6 +797,21 @@ Do you need automatic backups?
 - [ ] Update both VMs' `DATABASE_URL`
 - [ ] Remove DB container from worker VM
 
+**Tier 5 (Auto-scaling Workers):**
+
+- [ ] All Tier 4 steps
+- [ ] Setup Load Balancer (AWS ALB / GCP LB)
+- [ ] Create worker VM image (AMI / GCE Image) with Docker pre-installed
+- [ ] Configure Auto Scaling Group (AWS) / Managed Instance Group (GCP)
+  - Min: 1 worker, Max: 3 workers
+  - Scale trigger: BullMQ queue depth > 20 or CPU > 80%
+- [ ] Split platform assignments across workers (e.g., Worker 1: platforms 1-6, Worker 2: 7-11)
+- [ ] Create DB read replica for dashboard queries
+- [ ] Route API reads to replica, worker writes to primary
+- [ ] Setup monitoring: CloudWatch (AWS) / Cloud Monitoring (GCP)
+- [ ] Test: kill a worker VM, verify auto-relaunch and job recovery
+- [ ] Load test: simulate 100 users + all 11 platforms at full capacity
+
 ---
 
 *This document should be reviewed when hosting requirements change or budget increases.*
