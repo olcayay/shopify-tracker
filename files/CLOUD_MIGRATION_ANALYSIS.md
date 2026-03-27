@@ -17,11 +17,14 @@
 5. [Scenario C: GCP Free Tier Only (e2-micro)](#scenario-c-gcp-free-tier-only-e2-micro)
 6. [Scenario D: Stay on Hetzner + GCP Backup](#scenario-d-stay-on-hetzner--gcp-backup)
 7. [Scenario E: Hetzner + GCP Hybrid](#scenario-e-hetzner--gcp-hybrid)
-8. [Cost Comparison Matrix](#6-cost-comparison-matrix)
-9. [Decision Matrix](#7-decision-matrix)
-10. [Risk Comparison](#8-risk-comparison)
-11. [Recommendation](#9-recommendation)
-12. [Migration Checklist](#10-migration-checklist)
+8. [Other Cloud Alternatives](#8-other-cloud-alternatives-non-gcp)
+9. [Master Comparison Table — GCP & AWS](#9-master-comparison-table--google-cloud--aws-focus)
+10. [System Architecture Tiers](#10-system-architecture-tiers--gcp--aws)
+11. [Decision Matrix](#11-decision-matrix-all-scenarios)
+12. [Risk vs Cost vs Performance Map](#12-risk-vs-cost-vs-performance-map)
+13. [Recommended Path](#13-recommended-path)
+14. [Final Recommendation Summary](#14-final-recommendation-summary)
+15. [Migration Checklist](#15-migration-checklist)
 
 ---
 
@@ -99,7 +102,7 @@
 
 ---
 
-## Scenario A: GCP e2-medium Spot VM
+## 3. Scenario A: GCP e2-medium Spot VM
 
 **Concept:** Mevcut Docker Compose yapısını aynen bir GCP Spot VM'e taşı.
 
@@ -211,7 +214,7 @@ Preemption Event (Google needs resources):               |
 
 ---
 
-## Scenario B: GCP e2-small + Cloud SQL Free Tier
+## 4. Scenario B: GCP e2-small + Cloud SQL Free Tier
 
 **Concept:** Daha küçük VM + Google'ın managed database free tier denemesi.
 
@@ -267,7 +270,7 @@ Preemption Event (Google needs resources):               |
 
 ---
 
-## Scenario C: GCP Free Tier Only (e2-micro)
+## 5. Scenario C: GCP Free Tier Only (e2-micro)
 
 **Concept:** Google'ın always-free tier'ını kullanarak sıfır maliyet.
 
@@ -312,7 +315,7 @@ Preemption Event (Google needs resources):               |
 
 ---
 
-## Scenario D: Stay on Hetzner + GCP Backup
+## 6. Scenario D: Stay on Hetzner + GCP Backup
 
 **Concept:** Hetzner'da kalmaya devam et, sadece backup'ı GCP Cloud Storage'a gönder.
 
@@ -393,7 +396,7 @@ gcloud projects add-iam-policy-binding PROJECT_ID \
 
 ---
 
-## Scenario E: Hetzner + GCP Hybrid
+## 7. Scenario E: Hetzner + GCP Hybrid
 
 **Concept:** Hetzner'da production çalışmaya devam, GCP'de disaster recovery (DR) replica hazır bekle.
 
@@ -466,7 +469,7 @@ Disaster: Start GCP VM, restore latest backup, switch DNS → 5 min recovery
 
 ---
 
-## 6. Other Cloud Alternatives (Non-GCP)
+## 8. Other Cloud Alternatives (Non-GCP)
 
 Sadece GCP değil, bütçeye uygun tüm alternatiflerin değerlendirmesi:
 
@@ -840,7 +843,7 @@ Sadece GCP değil, bütçeye uygun tüm alternatiflerin değerlendirmesi:
 
 ---
 
-## 7. MASTER COMPARISON TABLE — Google Cloud & AWS Focus
+## 9. Master Comparison Table — Google Cloud & AWS Focus
 
 The definitive comparison. GCP and AWS variants detailed, others summarized.
 
@@ -958,7 +961,7 @@ The definitive comparison. GCP and AWS variants detailed, others summarized.
 
 ---
 
-## 8. System Architecture Tiers — GCP & AWS
+## 10. System Architecture Tiers — GCP & AWS
 
 ### Workload Profile
 
@@ -1309,7 +1312,7 @@ Stage 4: SCALE (100+ users, 20+ platforms, $100+/mo)
 
 ---
 
-## 9. Decision Matrix (All Scenarios)
+## 11. Decision Matrix (All Scenarios)
 
 Scoring: 1 (worst) to 5 (best). Only budget-feasible options scored.
 
@@ -1328,7 +1331,7 @@ Scoring: 1 (worst) to 5 (best). Only budget-feasible options scored.
 
 ---
 
-## 9. Risk vs Cost vs Performance Map
+## 12. Risk vs Cost vs Performance Map
 
 ```
 Performance (CPU+RAM)
@@ -1372,7 +1375,7 @@ Data Safety
 
 ---
 
-## 10. Recommended Path
+## 13. Recommended Path
 
 ### If Goal is Data Safety (Minimum Risk):
 
@@ -1416,7 +1419,7 @@ NOW                    MONTH 1              MONTH 2
 
 ---
 
-## 11. Final Recommendation Summary
+## 14. Final Recommendation Summary
 
 | Priority | Scenario | Action | Cost Impact | Effort |
 |----------|----------|--------|-------------|--------|
@@ -1434,49 +1437,7 @@ NOW                    MONTH 1              MONTH 2
 
 ---
 
-## 9. Recommendation
-
-### Primary: Scenario D — Hetzner + GCP Backup
-
-```
-+-------------------------------------------------------------+
-|                                                             |
-|   ★ RECOMMENDED: Scenario D                                 |
-|                                                             |
-|   Why:                                                      |
-|   • Zero risk — nothing changes in production               |
-|   • Zero downtime — no migration needed                     |
-|   • Zero extra cost — Cloud Storage 5GB free                |
-|   • Solves R-15 (no backup) — the #1 infrastructure risk   |
-|   • Can upgrade to Scenario E later if needed               |
-|   • 15 minutes to implement                                 |
-|                                                             |
-|   Cost: €8-15/month (same as now)                           |
-|                                                             |
-+-------------------------------------------------------------+
-```
-
-### Secondary: Scenario E — When More Protection Needed
-
-If Hetzner has reliability issues or business grows, upgrade from D to E by:
-1. Create a GCP Spot VM (stopped by default — $0 when off)
-2. Attach 30GB persistent disk ($2.40/month)
-3. Pre-install Docker + clone repo on the standby VM
-4. Write a failover script: start VM → restore backup → switch DNS
-
-### Not Recommended: Full GCP Migration
-
-$10-20/ay bütçeyle GCP'ye tam geçiş, Hetzner'dan **daha kötü** performans verir:
-- 1 vCPU vs 3 vCPU
-- Spot VM uptime garantisi yok
-- Managed servisler bütçeye sığmıyor
-- Playwright 4GB RAM'de sıkışır
-
-**GCP tam geçiş ancak $50+/ay bütçeyle mantıklı olur** (e2-standard-2 on-demand + Cloud SQL + Memorystore).
-
----
-
-## 10. Migration Checklist
+## 15. Migration Checklist
 
 ### Scenario D Implementation (Recommended)
 
