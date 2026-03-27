@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { extractPlatform, extractSection, getNavItems, systemAdminItems } from "../../lib/nav-utils";
+import { extractPlatform, extractSection, isOnPlatformPage, getNavItems, systemAdminItems } from "../../lib/nav-utils";
 
 describe("nav-utils", () => {
   describe("extractPlatform", () => {
@@ -19,6 +19,21 @@ describe("nav-utils", () => {
       expect(extractPlatform("/overview")).toBe("shopify");
       expect(extractPlatform("/settings")).toBe("shopify");
       expect(extractPlatform("/system-admin")).toBe("shopify");
+    });
+  });
+
+  describe("isOnPlatformPage", () => {
+    it("returns true for platform paths", () => {
+      expect(isOnPlatformPage("/shopify/overview")).toBe(true);
+      expect(isOnPlatformPage("/salesforce/keywords/slug")).toBe(true);
+      expect(isOnPlatformPage("/hubspot/apps")).toBe(true);
+    });
+
+    it("returns false for non-platform paths", () => {
+      expect(isOnPlatformPage("/overview")).toBe(false);
+      expect(isOnPlatformPage("/settings")).toBe(false);
+      expect(isOnPlatformPage("/system-admin")).toBe(false);
+      expect(isOnPlatformPage("/")).toBe(false);
     });
   });
 

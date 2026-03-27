@@ -14,7 +14,7 @@ import {
 import { useAuth } from "@/lib/auth-context";
 import { PLATFORM_DISPLAY } from "@/lib/platform-display";
 import { PLATFORMS, PLATFORM_IDS, type PlatformId } from "@appranks/shared";
-import { extractPlatform, extractSection } from "@/lib/nav-utils";
+import { extractPlatform, extractSection, isOnPlatformPage } from "@/lib/nav-utils";
 
 export function TopBar({
   onOpenDiscovery,
@@ -29,7 +29,7 @@ export function TopBar({
 
   const activePlatform = extractPlatform(pathname);
   const currentSection = extractSection(pathname);
-  const isPlatformPage = enabledPlatforms.includes(activePlatform) || isSystemAdmin;
+  const isPlatformPage = isOnPlatformPage(pathname) && (enabledPlatforms.includes(activePlatform) || !!isSystemAdmin);
 
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);

@@ -29,6 +29,12 @@ export function extractPlatform(pathname: string): PlatformId {
   return seg && PLATFORM_SET.has(seg) ? (seg as PlatformId) : "shopify";
 }
 
+/** Check if pathname is a platform-scoped route (e.g. /shopify/..., not /overview or /settings) */
+export function isOnPlatformPage(pathname: string): boolean {
+  const seg = pathname.split("/")[1];
+  return !!seg && PLATFORM_SET.has(seg);
+}
+
 /** Extract the section from a pathname like /shopify/keywords/some-slug → "keywords" */
 export function extractSection(pathname: string): string | null {
   const parts = pathname.split("/").filter(Boolean);
