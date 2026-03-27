@@ -299,16 +299,16 @@ export default function SettingsPage() {
         </CardContent>
       </Card>
 
-      {/* Team Members (owner only) */}
-      {isOwner && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Team Members</CardTitle>
-            <CardDescription>
-              Manage who has access to this account
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
+      {/* Team Members */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Team Members</CardTitle>
+          <CardDescription>
+            {isOwner ? "Manage who has access to this account" : "People with access to this account"}
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {isOwner && (
             <form onSubmit={createUser} className="grid grid-cols-1 md:grid-cols-2 gap-3">
               <Input
                 type="text"
@@ -349,23 +349,25 @@ export default function SettingsPage() {
                 </Button>
               </div>
             </form>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Name</TableHead>
-                  <TableHead>Email</TableHead>
-                  <TableHead>Role</TableHead>
-                  <TableHead className="w-12" />
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {members.map((m: any) => (
-                  <TableRow key={m.id}>
-                    <TableCell>{m.name}</TableCell>
-                    <TableCell className="text-sm">{m.email}</TableCell>
-                    <TableCell>
-                      <Badge variant="outline">{m.role}</Badge>
-                    </TableCell>
+          )}
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Name</TableHead>
+                <TableHead>Email</TableHead>
+                <TableHead>Role</TableHead>
+                {isOwner && <TableHead className="w-12" />}
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {members.map((m: any) => (
+                <TableRow key={m.id}>
+                  <TableCell>{m.name}</TableCell>
+                  <TableCell className="text-sm">{m.email}</TableCell>
+                  <TableCell>
+                    <Badge variant="outline">{m.role}</Badge>
+                  </TableCell>
+                  {isOwner && (
                     <TableCell>
                       {m.id !== user?.id && (
                         <Button
@@ -384,13 +386,13 @@ export default function SettingsPage() {
                         </Button>
                       )}
                     </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </CardContent>
-        </Card>
-      )}
+                  )}
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </CardContent>
+      </Card>
 
       {/* Email Notifications */}
       <Card>

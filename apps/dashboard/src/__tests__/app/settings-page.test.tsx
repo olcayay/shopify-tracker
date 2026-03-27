@@ -5,27 +5,51 @@ import userEvent from "@testing-library/user-event";
 const mockFetchWithAuth = vi.fn();
 const mockRefreshUser = vi.fn();
 
-vi.mock("@/lib/auth-context", () => ({
-  useAuth: () => ({
-    user: {
-      id: "u1", name: "Test User", email: "test@example.com",
-      role: "owner", isSystemAdmin: false, emailDigestEnabled: true,
-      timezone: "Europe/Istanbul",
-    },
-    account: {
-      id: "acc-1", name: "My Account", company: "My Company",
-      isSuspended: false,
-      package: { slug: "pro", name: "Pro" },
-      packageLimits: { maxTrackedApps: 10, maxTrackedKeywords: 50, maxCompetitorApps: 20, maxResearchProjects: 3, maxUsers: 5 },
-      limits: { maxTrackedApps: 10, maxTrackedKeywords: 50, maxCompetitorApps: 20, maxResearchProjects: 3, maxUsers: 5 },
-      usage: { trackedApps: 3, trackedKeywords: 10, competitorApps: 5, starredFeatures: 2, researchProjects: 1, users: 2 },
-    },
-    isLoading: false,
-    fetchWithAuth: mockFetchWithAuth,
-    refreshUser: mockRefreshUser,
-  }),
+const ownerUser = {
+  id: "u1", name: "Test User", email: "test@example.com",
+  role: "owner", isSystemAdmin: false, emailDigestEnabled: true,
+  timezone: "Europe/Istanbul",
+};
+
+const mockAccount = {
+  id: "acc-1", name: "My Account", company: "My Company",
+  isSuspended: false,
+  package: { slug: "pro", name: "Pro" },
+  packageLimits: { maxTrackedApps: 10, maxTrackedKeywords: 50, maxCompetitorApps: 20, maxResearchProjects: 3, maxUsers: 5 },
+  limits: { maxTrackedApps: 10, maxTrackedKeywords: 50, maxCompetitorApps: 20, maxResearchProjects: 3, maxUsers: 5 },
+  usage: { trackedApps: 3, trackedKeywords: 10, competitorApps: 5, starredFeatures: 2, researchProjects: 1, users: 2 },
+};
+
+const mockUseAuth = vi.fn(() => ({
+  user: ownerUser,
+  account: mockAccount,
+  isLoading: false,
+  fetchWithAuth: mockFetchWithAuth,
+  refreshUser: mockRefreshUser,
 }));
 
+vi.mock("@/lib/auth-context", () => ({
+  useAuth: (...args: any[]) => mockUseAuth(...args),
+}));
+
+vi.mock("@/components/account-usage-cards", () => ({
+  AccountUsageCards: ({ stats }: { stats: any[] }) => (
+    <div data-testid="account-usage-cards">
+      {stats.map((s: any) => (
+        <div key={s.key}>{s.label}</div>
+      ))}
+    </div>
+  ),
+  USAGE_STAT_PRESETS: {
+    apps: { icon: () => null, label: "My Apps", colorClasses: { bg: "", text: "" } },
+    keywords: { icon: () => null, label: "Tracked Keywords", colorClasses: { bg: "", text: "" } },
+    competitors: { icon: () => null, label: "Competitor Apps", colorClasses: { bg: "", text: "" } },
+    research: { icon: () => null, label: "Research Projects", colorClasses: { bg: "", text: "" } },
+    users: { icon: () => null, label: "Users", colorClasses: { bg: "", text: "" } },
+  },
+}));
+
+import React from "react";
 import SettingsPage from "@/app/(dashboard)/settings/page";
 
 const mockMembers = [
@@ -36,6 +60,13 @@ const mockMembers = [
 describe("SettingsPage", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockUseAuth.mockReturnValue({
+      user: ownerUser,
+      account: mockAccount,
+      isLoading: false,
+      fetchWithAuth: mockFetchWithAuth,
+      refreshUser: mockRefreshUser,
+    });
     mockFetchWithAuth.mockImplementation((url: string, options?: any) => {
       if (url === "/api/account/members" && !options?.method) {
         return Promise.resolve({ ok: true, json: () => Promise.resolve(mockMembers) });
@@ -266,5 +297,46 @@ describe("SettingsPage", () => {
     );
     // The count should reflect only other members, not the current user
     expect(deleteButtons.length).toBeLessThanOrEqual(1);
+  });
+
+  it("editor can see team members table but not create form or delete buttons", async () => {
+    mockUseAuth.mockReturnValue({
+      user: { ...ownerUser, id: "u2", role: "editor", name: "Bob Editor", email: "bob@example.com" },
+      account: mockAccount,
+      isLoading: false,
+      fetchWithAuth: mockFetchWithAuth,
+      refreshUser: mockRefreshUser,
+    });
+    render(<SettingsPage />);
+    expect(screen.getByText("Team Members")).toBeInTheDocument();
+    expect(screen.getByText("People with access to this account")).toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.getByText("Test User")).toBeInTheDocument();
+    });
+    expect(screen.queryByText("Create User")).not.toBeInTheDocument();
+    expect(screen.queryByPlaceholderText("Email address")).not.toBeInTheDocument();
+  });
+
+  it("viewer can see team members table but not create form or delete buttons", async () => {
+    mockUseAuth.mockReturnValue({
+      user: { ...ownerUser, id: "u3", role: "viewer", name: "View User", email: "view@example.com" },
+      account: mockAccount,
+      isLoading: false,
+      fetchWithAuth: mockFetchWithAuth,
+      refreshUser: mockRefreshUser,
+    });
+    render(<SettingsPage />);
+    expect(screen.getByText("Team Members")).toBeInTheDocument();
+    expect(screen.getByText("People with access to this account")).toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.getByText("Test User")).toBeInTheDocument();
+      expect(screen.getByText("Bob Editor")).toBeInTheDocument();
+    });
+    expect(screen.queryByText("Create User")).not.toBeInTheDocument();
+  });
+
+  it("owner sees 'Manage who has access' description", () => {
+    render(<SettingsPage />);
+    expect(screen.getByText("Manage who has access to this account")).toBeInTheDocument();
   });
 });
