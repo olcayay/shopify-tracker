@@ -1,6 +1,6 @@
 import { eq, and, desc, sql } from "drizzle-orm";
 import type { Database } from "@appranks/db";
-import { scrapeRuns, apps, appSnapshots, appFieldChanges, similarAppSightings, categories, appCategoryRankings } from "@appranks/db";
+import { scrapeRuns, apps, appSnapshots, appFieldChanges, similarAppSightings, categories, appCategoryRankings, ensurePlatformDeveloper } from "@appranks/db";
 import { urls, createLogger, clampRating, clampCount, type PlatformId } from "@appranks/shared";
 
 const log = createLogger("app-details-scraper");
@@ -608,6 +608,20 @@ export class AppDetailsScraper {
         support: details.support,
         platformData: (("_platformData" in details ? details._platformData : undefined) ?? {}) as Record<string, unknown>,
       });
+
+      // Link developer to global developer profile
+      if (details.developer?.name) {
+        try {
+          await ensurePlatformDeveloper(
+            this.db,
+            this.platform,
+            details.developer.name,
+            details.developer.website || details.developer.url || null
+          );
+        } catch (err) {
+          log.warn("failed to link developer", { slug, developer: details.developer.name, error: (err as Error).message });
+        }
+      }
 
       // Register category rankings from snapshot data
       if (resolvedCategories.length > 0) {

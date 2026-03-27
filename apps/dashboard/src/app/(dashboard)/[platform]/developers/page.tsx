@@ -14,9 +14,10 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { ArrowUpDown, ArrowUp, ArrowDown, Search as SearchIcon } from "lucide-react";
+import { ArrowUpDown, ArrowUp, ArrowDown, Search as SearchIcon, Globe } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { TableSkeleton, CardSkeleton } from "@/components/skeletons";
+import { developerNameToSlug } from "@appranks/shared";
 
 type SortKey = "name" | "rating" | "reviews" | "minPaidPrice" | "lastChangeAt" | "launchedDate";
 type SortDir = "asc" | "desc";
@@ -461,6 +462,7 @@ function DeveloperListView() {
                   <TableHead className="cursor-pointer select-none" onClick={() => toggleSort("country")}>
                     Country <SortIcon col="country" />
                   </TableHead>
+                  <TableHead className="w-10" />
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -486,6 +488,15 @@ function DeveloperListView() {
                     </TableCell>
                     <TableCell className="text-sm">
                       {dev.country || <span className="text-muted-foreground">{"\u2014"}</span>}
+                    </TableCell>
+                    <TableCell>
+                      <Link
+                        href={`/developers/${developerNameToSlug(dev.developer_name)}`}
+                        className="text-muted-foreground hover:text-foreground"
+                        title="Global developer profile"
+                      >
+                        <Globe className="h-3.5 w-3.5" />
+                      </Link>
                     </TableCell>
                   </TableRow>
                 ))}

@@ -50,6 +50,10 @@ Use this as a high-level task tracker. Each item links to a detailed section bel
 - [ ] Test fallback path: `./scripts/smoke-test.sh --platform <name> --fallback`
 - [ ] Bootstrap first data: seed categories → run category scraper → run app detail scraper (see [First Data Bootstrap](#first-data-bootstrap--testing-a-new-platform-end-to-end))
 
+### Phase 3b: Global Developers
+- [ ] Verify `ensurePlatformDeveloper()` is called in `app-details-scraper.ts` after snapshot (already wired — auto-links new platforms)
+- [ ] Run seed if needed: `npx tsx packages/db/src/scripts/seed-global-developers.ts`
+
 ### Phase 4: API
 - [ ] Add live-search branch in `apps/api/src/routes/live-search.ts`
 - [ ] Review `apps/api/src/routes/apps.ts` developer info extraction (if custom platformData)

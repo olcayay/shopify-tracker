@@ -231,3 +231,5 @@ dashboard /health endpoint for UptimeRobot monitoring (PLA-90) ✅
 show start time in job detail modals and tooltips (PLA-89) ✅
 
 dashboard /health endpoint verifies API connectivity (PLA-92) ✅
+
+global developers — cross-platform developer profiles with admin management (PLA-93) ✅

@@ -24,6 +24,7 @@ import * as aiLogsSchema from "./schema/ai-logs.js";
 import * as categoryParentsSchema from "./schema/category-parents.js";
 import * as smokeTestResultsSchema from "./schema/smoke-test-results.js";
 import * as scrapeItemErrorsSchema from "./schema/scrape-item-errors.js";
+import * as developersSchema from "./schema/developers.js";
 
 export const schema = {
   ...scrapeRunsSchema,
@@ -49,6 +50,7 @@ export const schema = {
   ...categoryParentsSchema,
   ...smokeTestResultsSchema,
   ...scrapeItemErrorsSchema,
+  ...developersSchema,
 };
 
 export function createDb(databaseUrl: string) {
@@ -123,3 +125,8 @@ export { aiLogs } from "./schema/ai-logs.js";
 export { categoryParents } from "./schema/category-parents.js";
 export { smokeTestResults } from "./schema/smoke-test-results.js";
 export { scrapeItemErrors } from "./schema/scrape-item-errors.js";
+export {
+  globalDevelopers,
+  platformDevelopers,
+} from "./schema/developers.js";
+export { ensurePlatformDeveloper } from "./ensure-platform-developer.js";

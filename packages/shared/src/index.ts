@@ -152,6 +152,13 @@ export type {
 // Parse Utilities
 export { safeParseFloat, clampRating, clampCount, clampPosition } from "./parse-utils.js";
 
+// Developer Name
+export {
+  stripCorporateSuffix,
+  developerNameToSlug,
+  normalizeDeveloperName,
+} from "./developer-name.js";
+
 // Logger
 export { Logger, createLogger } from "./logger.js";
 export type { LogLevel, LogContext } from "./logger.js";

@@ -624,6 +624,13 @@
       "when": 1776297600000,
       "tag": "0088_category_ranking_dedup",
       "breakpoints": true
+    },
+    {
+      "idx": 89,
+      "version": "7",
+      "when": 1776384000000,
+      "tag": "0089_global_developers",
+      "breakpoints": true
     }
   ]
 }

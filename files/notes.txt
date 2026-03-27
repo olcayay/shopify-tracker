@@ -1,3 +1,38 @@
+Global Developers — Cross-Platform Developer Profiles (2026-03-27)
+=================================================================
+
+PLA-93: Added global developer entity with cross-platform linking.
+
+Database:
+- Migration 0089: global_developers (id, slug, name, website) + platform_developers (platform, name, global_developer_id)
+- ensurePlatformDeveloper() auto-matches by normalized slug on scrape
+
+Shared:
+- normalizeDeveloperName() strips corporate suffixes (Inc, LLC, GmbH, A.Ş., etc.)
+- developerNameToSlug() produces URL-friendly slugs
+- 17 unit tests for normalization
+
+Scraper:
+- app-details-scraper calls ensurePlatformDeveloper() after each snapshot
+
+API (apps/api/src/routes/developers.ts):
+- GET /api/developers — paginated list with search
+- GET /api/developers/:slug — full cross-platform profile with all apps
+- GET /api/developers/admin/list — admin view with platform developer details
+- POST /api/developers/admin/create — manual creation
+- POST /api/developers/admin/merge — merge two global developers
+- POST /api/developers/admin/unlink — detach a platform developer
+- POST /api/developers/admin/link — re-link platform developer
+- GET /api/developers/admin/suggestions — trigram similarity merge candidates
+
+Dashboard:
+- /developers/[slug] — public cross-platform developer profile page
+- /system-admin/developers — admin management (merge, unlink, link, create, suggestions)
+- Updated sidebar with Developers entry in system admin section
+- Updated [platform]/developers page with Globe link to global profile
+
+Seed: 2657 global developers from 2741 platform developers (82 auto-matches)
+
 Dashboard /health endpoint + Job modal start times (2026-03-27)
 ================================================================
 

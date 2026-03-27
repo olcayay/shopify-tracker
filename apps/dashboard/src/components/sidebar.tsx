@@ -108,6 +108,7 @@ const systemAdminItems = [
   { href: "/system-admin/scraper-health", label: "Health", icon: HeartPulse },
   { href: "/system-admin/scraper", label: "Scraper", icon: Bot },
   { href: "/system-admin/ai-logs", label: "AI Logs", icon: BrainCircuit },
+  { href: "/system-admin/developers", label: "Developers", icon: Code },
 ];
 
 /** Extract platform from current pathname */
