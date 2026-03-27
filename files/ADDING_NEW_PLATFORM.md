@@ -1877,6 +1877,22 @@ async fetchAppPage(slug: string): Promise<string> {
 | Browser SPA | Browser re-launch (fresh context) | Google Workspace |
 | CHIRP HTTP API | Browser `page.evaluate()` | HubSpot |
 
+**Per-platform fallback matrix:**
+
+| Platform | fetchAppPage | fetchCategoryPage | fetchSearchPage | fetchReviewPage |
+|----------|-------------|-------------------|-----------------|-----------------|
+| Shopify | HTTP → Browser | HTTP → Browser | HTTP (Turbo-Frame) → Browser | HTTP → Browser |
+| Salesforce | Browser (SPA) → HTTP Search API | HTTP API → Browser | HTTP API → Browser | HTTP API → Browser |
+| Canva | Browser → HTTP (bulk /apps) | Browser → HTTP | Browser (API intercept) → HTTP bulk | N/A |
+| Wix | HTTP → Browser | HTTP → Browser | HTTP → Browser | via fetchAppPage |
+| WordPress | HTTP API → Browser HTML | HTTP API → Browser HTML | HTTP API → Browser HTML | HTTP HTML → Browser |
+| Google Workspace | Browser → Browser reset | Browser → Browser reset | Browser → Browser reset | via fetchAppPage |
+| Atlassian | HTTP API (multi-endpoint) → Browser | HTTP HTML → Browser | HTTP API → Browser | HTTP API → Browser |
+| Zoom | HTTP Filter API → Browser | HTTP API → Browser | HTTP API → Browser | N/A |
+| Zoho | HTTP (embedded data) → Browser | Browser (SPA) → HTTP | Browser (SPA) → HTTP | N/A |
+| Zendesk | Browser (Cloudflare) → Algolia API | Algolia API → Browser | Algolia API → Browser | via fetchAppPage |
+| HubSpot | CHIRP HTTP → Browser page.evaluate | CHIRP HTTP → Browser page.evaluate | CHIRP HTTP → Browser page.evaluate | Ecosystem API → Browser |
+
 **Key rules:**
 - Constructor must accept both `httpClient` and `browserClient` (even if primary doesn't use one)
 - `registry.ts` already passes both clients to all modules
