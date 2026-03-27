@@ -121,7 +121,9 @@ function SidebarContent({
         {collapsed ? (
           /* Collapsed: show active platform's nav icons only */
           activePlatformItems.map((item) => {
-            const isActive = pathname === item.href || pathname.startsWith(item.href + "/");
+            const isActive = item.exact
+              ? pathname === item.href
+              : pathname === item.href || pathname.startsWith(item.href + "/");
             return (
               <NavLink key={item.href} href={item.href} icon={item.icon} label={item.label} isActive={isActive} badge={item.badge} adminOnly={item.adminOnly} />
             );
@@ -139,7 +141,7 @@ function SidebarContent({
             return (
               <div key={platformId}>
                 <Link
-                  href={`/${platformId}/overview`}
+                  href={`/${platformId}`}
                   onClick={(e) => {
                     if (expandedPlatform === platformId) {
                       // Already on this platform — just toggle expand/collapse
@@ -177,7 +179,9 @@ function SidebarContent({
                   )}
                 </Link>
                 {isExpanded && items.map((item) => {
-                  const isActive = pathname === item.href || pathname.startsWith(item.href + "/");
+                  const isActive = item.exact
+                    ? pathname === item.href
+                    : pathname === item.href || pathname.startsWith(item.href + "/");
                   return (
                     <NavLink key={item.href} href={item.href} icon={item.icon} label={item.label} isActive={isActive} badge={item.badge} adminOnly={item.adminOnly} className="pl-6" />
                   );

@@ -50,6 +50,7 @@ export interface NavItem {
   icon: LucideIcon;
   badge?: string;
   adminOnly?: boolean;
+  exact?: boolean;
 }
 
 /** Get navigation items for a platform based on its capabilities */
@@ -57,7 +58,7 @@ export function getNavItems(platformId: PlatformId, isAdmin?: boolean): NavItem[
   const p = `/${platformId}`;
   const caps = PLATFORMS[platformId];
   const items: NavItem[] = [
-    { href: `${p}/overview`, label: "Overview", icon: LayoutDashboard },
+    { href: p, label: "Overview", icon: LayoutDashboard, exact: true },
     { href: `${p}/apps`, label: "Apps", icon: AppWindow },
     { href: `${p}/competitors`, label: "Competitors", icon: Star },
   ];

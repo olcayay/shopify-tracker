@@ -58,7 +58,7 @@ vi.mock("@/components/app-badges", () => ({
   AppBadgeIcon: () => null,
 }));
 
-import OverviewPage from "@/app/(dashboard)/[platform]/overview/page";
+import OverviewPage from "@/app/(dashboard)/[platform]/page";
 
 function makeJsonResponse(data: any) {
   return {

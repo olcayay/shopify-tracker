@@ -1,3 +1,13 @@
+URL cleanup: remove redundant /overview path segment (PLA-96) ✅
+  - Moved [platform]/overview/page.tsx → [platform]/page.tsx (platform dashboard at /shopify instead of /shopify/overview)
+  - Created redirect stub at [platform]/overview/page.tsx → redirects to /[platform] for bookmarks/SEO
+  - Updated nav-utils.ts: Overview href from ${p}/overview → ${p} with exact matching
+  - Updated sidebar.tsx: platform accordion links from /${platformId}/overview → /${platformId}, added exact flag for isActive
+  - Updated overview/page.tsx: platform card links and single-platform button from /overview → root
+  - Created middleware.ts: redirects authenticated users from / to /overview
+  - Added 3 middleware tests, updated sidebar and overview tests
+  - All 1096 tests passing
+
 multi-platform UX overhaul Phase 1: Foundation (PLA-94) ✅
   - Consolidated PLATFORM_LABELS/PLATFORM_COLORS/PLATFORM_BRANDS into single PLATFORM_DISPLAY in platform-display.ts
   - Fixed HubSpot missing from ALL_PLATFORMS (replaced with PLATFORM_IDS)

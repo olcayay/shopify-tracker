@@ -134,7 +134,7 @@ describe("CrossPlatformOverviewPage", () => {
     });
     // The whole card is wrapped in a link to platform overview
     const shopifyCard = screen.getByText("Shopify App Store").closest("a");
-    expect(shopifyCard).toHaveAttribute("href", "/shopify/overview");
+    expect(shopifyCard).toHaveAttribute("href", "/shopify");
   });
 
   it("renders clickable stat sections in platform cards", async () => {

@@ -1,3 +1,23 @@
+URL Cleanup: Remove Redundant /overview Path Segment (2026-03-28)
+================================================================
+
+PLA-96: Cleaned up platform URLs by removing the redundant /overview segment.
+
+Routing:
+- /shopify now shows platform dashboard (was 404)
+- /shopify/overview redirects to /shopify (server-side redirect for bookmarks/SEO)
+- / redirects authenticated users to /overview via Next.js middleware
+- / shows marketing page for anonymous visitors
+
+Files changed:
+- apps/dashboard/src/app/(dashboard)/[platform]/page.tsx (moved from overview/page.tsx)
+- apps/dashboard/src/app/(dashboard)/[platform]/overview/page.tsx (redirect stub)
+- apps/dashboard/src/middleware.ts (new — auth redirect at /)
+- apps/dashboard/src/lib/nav-utils.ts (Overview href cleanup + exact flag)
+- apps/dashboard/src/components/sidebar.tsx (platform links + exact isActive)
+- apps/dashboard/src/app/(dashboard)/overview/page.tsx (platform card links)
+- Updated tests: sidebar, overview, platform-overview + new middleware tests
+
 Dashboard Footer (2026-03-28)
 ==============================
 

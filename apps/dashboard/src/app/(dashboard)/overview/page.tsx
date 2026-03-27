@@ -149,7 +149,7 @@ export default function CrossPlatformOverviewPage() {
                   </span>
                 </CardHeader>
                 <CardContent className="pt-4">
-                  <Link href={`/${pid}/overview`}>
+                  <Link href={`/${pid}`}>
                     <Button variant="outline" className={`w-full ${brand.textAccent}`}>
                       Go to {config.name} Dashboard
                       <ArrowRight className="h-4 w-4 ml-2" />
@@ -298,7 +298,7 @@ function PlatformCard({
   const p = `/${platformId}`;
 
   return (
-    <Link href={`${p}/overview`} className="block h-full">
+    <Link href={p} className="block h-full">
       <Card
         className="rounded-xl border-t-4 hover:shadow-md transition-shadow h-full cursor-pointer group"
         style={{ borderTopColor: brand.color }}

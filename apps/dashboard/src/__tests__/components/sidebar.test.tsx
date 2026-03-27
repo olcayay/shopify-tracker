@@ -93,7 +93,7 @@ describe("Sidebar", () => {
   it("navigation links have correct hrefs", () => {
     render(<Sidebar />);
     const overviewLink = screen.getByText("Overview").closest("a");
-    expect(overviewLink).toHaveAttribute("href", "/shopify/overview");
+    expect(overviewLink).toHaveAttribute("href", "/shopify");
 
     const appsLink = screen.getByText("Apps").closest("a");
     expect(appsLink).toHaveAttribute("href", "/shopify/apps");
