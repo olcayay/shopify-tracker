@@ -35,9 +35,9 @@ const PLATFORM_COLORS: Record<PlatformId, string> = {
 };
 
 interface PlatformCounts {
-  apps: { platform: string; total: number; tracked: number; scraped: number }[];
-  keywords: { platform: string; total: number; active: number }[];
-  categories: { platform: string; total: number }[];
+  apps: { platform: string; total: number; tracked: number; scraped: number; competitor: number; last_scraped_at: string | null }[];
+  keywords: { platform: string; total: number; active: number; last_scraped_at: string | null }[];
+  categories: { platform: string; total: number; total_apps: number; starred: number }[];
 }
 
 type AssetType = "apps" | "keywords" | "categories";
@@ -53,7 +53,11 @@ function getLabel(type: AssetType, data: PlatformCounts, platform: string): { pr
     case "apps": {
       const row = data.apps.find((r) => r.platform === platform);
       if (!row) return { primary: "0" };
-      return { primary: `${row.tracked} tracked`, secondary: `${row.total} total`, extra: `${row.scraped} scraped` };
+      return {
+        primary: `${row.tracked} tracked`,
+        secondary: `${row.total} total`,
+        extra: row.competitor > 0 ? `${row.competitor} competitor` : `${row.scraped} scraped`,
+      };
     }
     case "keywords": {
       const row = data.keywords.find((r) => r.platform === platform);
@@ -63,7 +67,11 @@ function getLabel(type: AssetType, data: PlatformCounts, platform: string): { pr
     case "categories": {
       const row = data.categories.find((r) => r.platform === platform);
       if (!row) return { primary: "0" };
-      return { primary: `${row.total} categories` };
+      return {
+        primary: `${row.total} categories`,
+        secondary: row.total_apps > 0 ? `${row.total_apps.toLocaleString()} apps` : undefined,
+        extra: row.starred > 0 ? `${row.starred} starred` : undefined,
+      };
     }
   }
 }

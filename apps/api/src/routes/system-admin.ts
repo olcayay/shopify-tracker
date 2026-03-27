@@ -2099,24 +2099,36 @@ export const systemAdminRoutes: FastifyPluginAsync = async (app) => {
   // GET /api/system-admin/platform-counts — per-platform counts for apps, keywords, categories
   app.get("/platform-counts", async () => {
     const [appCounts, kwCounts, catCounts] = await Promise.all([
-      db.execute<{ platform: string; total: number; tracked: number; scraped: number }>(sql`
+      db.execute<{ platform: string; total: number; tracked: number; scraped: number; competitor: number; last_scraped_at: string | null }>(sql`
         SELECT a.platform,
           COUNT(*)::int AS total,
           COUNT(*) FILTER (WHERE a.is_tracked = true)::int AS tracked,
           COUNT(*) FILTER (WHERE EXISTS (
             SELECT 1 FROM app_snapshots s WHERE s.app_id = a.id
-          ))::int AS scraped
+          ))::int AS scraped,
+          COUNT(*) FILTER (WHERE EXISTS (
+            SELECT 1 FROM account_competitor_apps c WHERE c.app_slug = a.slug AND c.platform = a.platform
+          ))::int AS competitor,
+          MAX(a.updated_at)::text AS last_scraped_at
         FROM apps a GROUP BY a.platform
       `),
-      db.execute<{ platform: string; total: number; active: number }>(sql`
-        SELECT platform,
+      db.execute<{ platform: string; total: number; active: number; last_scraped_at: string | null }>(sql`
+        SELECT tk.platform,
           COUNT(*)::int AS total,
-          COUNT(*) FILTER (WHERE is_active = true)::int AS active
-        FROM tracked_keywords GROUP BY platform
+          COUNT(*) FILTER (WHERE tk.is_active = true)::int AS active,
+          MAX(ks.scraped_at)::text AS last_scraped_at
+        FROM tracked_keywords tk
+        LEFT JOIN keyword_snapshots ks ON ks.keyword_id = tk.id
+        GROUP BY tk.platform
       `),
-      db.execute<{ platform: string; total: number }>(sql`
-        SELECT platform, COUNT(*)::int AS total
-        FROM categories GROUP BY platform
+      db.execute<{ platform: string; total: number; total_apps: number; starred: number }>(sql`
+        SELECT c.platform,
+          COUNT(*)::int AS total,
+          COALESCE(SUM(c.app_count), 0)::int AS total_apps,
+          COUNT(*) FILTER (WHERE EXISTS (
+            SELECT 1 FROM account_starred_categories sc WHERE sc.category_slug = c.slug AND sc.platform = c.platform
+          ))::int AS starred
+        FROM categories c GROUP BY c.platform
       `),
     ]);
 
