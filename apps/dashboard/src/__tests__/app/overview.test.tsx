@@ -269,4 +269,28 @@ describe("CrossPlatformOverviewPage", () => {
     });
     expect(screen.getByText("Start tracking on any of these to see stats and rankings.")).toBeInTheDocument();
   });
+
+  it("shows error banner with retry button when API calls fail", async () => {
+    mockFetchWithAuth.mockImplementation(() =>
+      Promise.resolve({ ok: false, status: 500 })
+    );
+    render(<OverviewPage />);
+    await waitFor(() => {
+      expect(screen.getByText(/could not be loaded/i)).toBeInTheDocument();
+    });
+    expect(screen.getByRole("button", { name: /retry/i })).toBeInTheDocument();
+  });
+
+  it("does not show onboarding when API fails but user has enabled platforms", async () => {
+    // All API calls fail — should NOT show welcome/onboarding hero
+    mockFetchWithAuth.mockImplementation(() =>
+      Promise.reject(new Error("Network error"))
+    );
+    render(<OverviewPage />);
+    await waitFor(() => {
+      expect(screen.getByText(/failed to load/i)).toBeInTheDocument();
+    });
+    // OnboardingHero should not be rendered
+    expect(screen.queryByText("Welcome to AppRanks")).not.toBeInTheDocument();
+  });
 });

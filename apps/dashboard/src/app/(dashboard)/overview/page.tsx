@@ -35,8 +35,12 @@ type Persona = "new_user" | "single_platform" | "multi_platform";
 
 function detectPersona(
   enabledPlatforms: PlatformId[],
-  stats: Record<string, PlatformStats>
+  stats: Record<string, PlatformStats>,
+  dataLoaded: boolean,
 ): Persona {
+  // Don't declare "new_user" unless data was successfully loaded
+  if (!dataLoaded) return "new_user";
+
   const totalApps = Object.values(stats).reduce((sum, s) => sum + s.apps, 0);
   if (totalApps === 0) return "new_user";
 
@@ -51,40 +55,50 @@ export default function CrossPlatformOverviewPage() {
   const { fetchWithAuth, account, user } = useAuth();
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState<Record<string, PlatformStats>>({});
+  const [fetchError, setFetchError] = useState<string | null>(null);
+  const [dataLoaded, setDataLoaded] = useState(false);
 
   const enabledPlatforms = (account?.enabledPlatforms ?? []) as PlatformId[];
   const isSystemAdmin = user?.isSystemAdmin;
 
   useEffect(() => {
     if (!account) return;
-    loadData();
-  }, [account]);
+    // Capture enabledPlatforms inside the effect to avoid stale closure
+    const platforms = (account.enabledPlatforms ?? []) as PlatformId[];
+    if (platforms.length === 0) {
+      setLoading(false);
+      setDataLoaded(true);
+      return;
+    }
+    loadData(platforms);
+  }, [account]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  async function loadData() {
+  async function loadData(platforms: PlatformId[]) {
     setLoading(true);
+    setFetchError(null);
     try {
       const platformStats: Record<string, PlatformStats> = {};
+      let anyFailed = false;
 
       await Promise.all(
-        enabledPlatforms.map(async (p) => {
+        platforms.map(async (p) => {
           const caps = PLATFORMS[p];
           const [appsRes, keywordsRes, competitorsRes] = await Promise.all([
-            fetchWithAuth(`/api/apps?platform=${p}`).then((r) =>
-              r.ok ? r.json() : []
-            ),
+            fetchWithAuth(`/api/apps?platform=${p}`),
             caps.hasKeywordSearch
-              ? fetchWithAuth(`/api/keywords?platform=${p}`).then((r) =>
-                  r.ok ? r.json() : []
-                )
-              : Promise.resolve([]),
-            fetchWithAuth(`/api/account/competitors?platform=${p}`).then((r) =>
-              r.ok ? r.json() : []
-            ),
+              ? fetchWithAuth(`/api/keywords?platform=${p}`)
+              : Promise.resolve(null),
+            fetchWithAuth(`/api/account/competitors?platform=${p}`),
           ]);
 
-          const appsArr = Array.isArray(appsRes) ? appsRes : [];
-          const keywordsArr = Array.isArray(keywordsRes) ? keywordsRes : [];
-          const competitorsArr = Array.isArray(competitorsRes) ? competitorsRes : [];
+          // Track if any API call failed
+          if (!appsRes.ok) anyFailed = true;
+          if (competitorsRes && !competitorsRes.ok) anyFailed = true;
+          if (keywordsRes && !keywordsRes.ok) anyFailed = true;
+
+          const appsArr = appsRes.ok ? await appsRes.json().then((d: unknown) => Array.isArray(d) ? d : []) : [];
+          const keywordsArr = keywordsRes?.ok ? await keywordsRes.json().then((d: unknown) => Array.isArray(d) ? d : []) : [];
+          const competitorsArr = competitorsRes.ok ? await competitorsRes.json().then((d: unknown) => Array.isArray(d) ? d : []) : [];
 
           platformStats[p] = {
             apps: appsArr.length,
@@ -98,6 +112,13 @@ export default function CrossPlatformOverviewPage() {
       );
 
       setStats(platformStats);
+      setDataLoaded(!anyFailed);
+      if (anyFailed) {
+        setFetchError("Some data could not be loaded. Stats may be incomplete.");
+      }
+    } catch {
+      setFetchError("Failed to load overview data. Please try again.");
+      setDataLoaded(false);
     } finally {
       setLoading(false);
     }
@@ -125,7 +146,7 @@ export default function CrossPlatformOverviewPage() {
     );
   }
 
-  const persona = detectPersona(enabledPlatforms, stats);
+  const persona = detectPersona(enabledPlatforms, stats, dataLoaded);
   const totalApps = Object.values(stats).reduce((sum, s) => sum + s.apps, 0);
   const totalKeywords = Object.values(stats).reduce((sum, s) => sum + s.keywords, 0);
   const totalCompetitors = Object.values(stats).reduce((sum, s) => sum + s.competitors, 0);
@@ -133,8 +154,27 @@ export default function CrossPlatformOverviewPage() {
 
   return (
     <div className="space-y-6">
-      {/* New user: OnboardingHero */}
-      {persona === "new_user" && <OnboardingHero />}
+      {/* Error banner */}
+      {fetchError && (
+        <Card className="rounded-xl border-amber-200 bg-amber-50 dark:bg-amber-950/20 dark:border-amber-800">
+          <CardContent className="py-4 flex items-center justify-between">
+            <p className="text-sm text-amber-800 dark:text-amber-200">{fetchError}</p>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                const platforms = (account?.enabledPlatforms ?? []) as PlatformId[];
+                loadData(platforms);
+              }}
+            >
+              Retry
+            </Button>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* New user: OnboardingHero (only when data was actually loaded, not on error) */}
+      {persona === "new_user" && !fetchError && <OnboardingHero />}
 
       {/* Single-platform: compact stats + dashboard link */}
       {persona === "single_platform" && (

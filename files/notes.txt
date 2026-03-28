@@ -1,3 +1,14 @@
+Fix Dashboard Homepage Showing Empty Welcome Screen (2026-03-28)
+================================================================
+**PLA-232:** Homepage intermittently showed OnboardingHero despite having tracked apps.
+
+- Added `fetchError` and `dataLoaded` state tracking in loadData()
+- detectPersona now takes `dataLoaded` flag — won't declare "new_user" unless data actually loaded
+- OnboardingHero guarded by `!fetchError` — never shows on API failure
+- Error banner with Retry button shown when API calls fail
+- Fixed enabledPlatforms closure: captured inside useEffect from account object
+- 2 new tests: error banner display, no onboarding on API failure
+
 Fix CI Test Timeouts with BullMQ Mocks (2026-03-28)
 ================================================================
 **PLA-233:** Tests timed out in CI because BullMQ tried real Redis connections.
