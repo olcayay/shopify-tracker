@@ -1,3 +1,22 @@
+Fix Migration 0091: Wrong Column Names Block Deploy (2026-03-29)
+================================================================
+**PLA-237:** Migration 0091_add_missing_indexes.sql used camelCase column names
+(e.g. "completedAt") instead of snake_case (completed_at), which would fail on deploy.
+
+- Fixed all 4 index definitions to use correct snake_case PostgreSQL column names
+- scrape_runs.completed_at, app_snapshots.scraped_at, keyword_snapshots.scraped_at,
+  reviews.app_id + created_at
+
+Fix SQL Errors Causing 500s on Homepage /api/apps Endpoint (2026-03-29)
+================================================================
+**PLA-236:** Two separate SQL bugs causing 500 errors across multiple platforms.
+
+- Bug 1: Empty IN() clause when account has tracked apps for other platforms but
+  none for the requested platform. Added early return when appIds2 is empty.
+- Bug 2: category_snapshots query used non-existent column "category_slug".
+  Fixed by joining with categories table and using category_id.
+- Added regression test for empty platform case.
+
 Fix Operational Matrix Showing Running Status for Completed Jobs (2026-03-28)
 ================================================================
 **PLA-231:** Matrix showed blue "running" dot for orphaned scrape_runs.

@@ -130,6 +130,10 @@ export const appRoutes: FastifyPluginAsync = async (app) => {
     // Get latest snapshots and changes in batch (2 queries instead of 2*N)
     const appIds2 = rows.map((r) => r.id);
 
+    if (appIds2.length === 0) {
+      return [];
+    }
+
     const [latestSnapshots, latestChanges] = await Promise.all([
       db.execute(sql`
         SELECT DISTINCT ON (app_id) app_id, average_rating, rating_count, pricing, pricing_plans, scraped_at
@@ -1340,12 +1344,13 @@ export const appRoutes: FastifyPluginAsync = async (app) => {
       const catSizeRows: { category_slug: string; app_count: number }[] = await db
         .execute(
           sql`
-          SELECT DISTINCT ON (category_slug)
-            category_slug, app_count
-          FROM category_snapshots
-          WHERE category_slug IN (${sql.join(catSlugs.map((s) => sql`${s}`), sql`, `)})
-            AND app_count IS NOT NULL
-          ORDER BY category_slug, scraped_at DESC
+          SELECT DISTINCT ON (c.slug)
+            c.slug AS category_slug, cs.app_count
+          FROM category_snapshots cs
+          JOIN categories c ON c.id = cs.category_id
+          WHERE c.slug IN (${sql.join(catSlugs.map((s) => sql`${s}`), sql`, `)})
+            AND cs.app_count IS NOT NULL
+          ORDER BY c.slug, cs.scraped_at DESC
         `
         )
         .then((res: any) => (res as any).rows ?? res);

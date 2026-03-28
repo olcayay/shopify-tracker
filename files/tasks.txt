@@ -1,3 +1,9 @@
+Fix migration 0091: wrong column names block deploy (2026-03-29)
+  PLA-237: camelCase → snake_case in 0091_add_missing_indexes.sql ✅
+
+Fix SQL errors causing 500s on homepage /api/apps endpoint (2026-03-29)
+  PLA-236: Empty IN() guard + category_snapshots join fix + regression test ✅
+
 Fix operational matrix showing running status for completed jobs (2026-03-28)
   PLA-231: API health endpoint filters orphaned running runs ✅
 

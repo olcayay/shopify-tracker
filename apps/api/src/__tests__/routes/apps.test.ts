@@ -415,6 +415,57 @@ describe("App routes", () => {
 // Tests with custom mock DB data
 // ---------------------------------------------------------------------------
 
+// ---------------------------------------------------------------------------
+// Bug regression: empty platform returns [] instead of 500 (PLA-236)
+// ---------------------------------------------------------------------------
+
+describe("App routes — empty platform regression (PLA-236)", () => {
+  let app: FastifyInstance;
+
+  beforeAll(async () => {
+    // Simulate: account has tracked apps for other platforms, but the
+    // requested platform has none. The first select (trackedRows) must
+    // return rows, subsequent selects return [].
+    let selectCallCount = 0;
+    const { appRoutes } = await import("../../routes/apps.js");
+    app = await buildTestApp({
+      routes: appRoutes,
+      prefix: "/api/apps",
+      db: {
+        // First select → trackedRows (has items); rest → []
+        selectResult: new Proxy([], {
+          get(target, prop) {
+            if (prop === "then") {
+              selectCallCount++;
+              if (selectCallCount === 1) {
+                // trackedRows: account has tracked apps
+                return (resolve: any) => resolve([{ appId: 1 }, { appId: 2 }]);
+              }
+              // subsequent selects: no apps for this platform
+              return (resolve: any) => resolve([]);
+            }
+            return (target as any)[prop];
+          },
+        }),
+      },
+    });
+  });
+
+  afterAll(async () => {
+    await app.close();
+  });
+
+  it("returns [] instead of 500 when account has tracked apps but none for the requested platform", async () => {
+    const res = await app.inject({
+      method: "GET",
+      url: "/api/apps?platform=wix",
+      headers: authHeaders(userToken()),
+    });
+    expect(res.statusCode).toBe(200);
+    expect(res.json()).toEqual([]);
+  });
+});
+
 describe("App routes — with mock data", () => {
   let app: FastifyInstance;
 
