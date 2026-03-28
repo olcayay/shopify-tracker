@@ -45,6 +45,10 @@ import path from "node:path";
 import fs from "node:fs";
 import { generateAccessToken } from "./auth.js";
 import type { JwtPayload } from "../middleware/auth.js";
+import {
+  PAGINATION_DEFAULT_LIMIT,
+  PAGINATION_MAX_LIMIT_AI_LOGS,
+} from "../constants.js";
 
 type Db = ReturnType<typeof createDb>;
 
@@ -2662,7 +2666,7 @@ export const systemAdminRoutes: FastifyPluginAsync = async (app) => {
   }>("/ai-logs", async (request) => {
     const db: Db = (app as any).db;
     const {
-      limit: limitStr = "50",
+      limit: limitStr = String(PAGINATION_DEFAULT_LIMIT),
       offset: offsetStr = "0",
       accountId: filterAccountId,
       userId: filterUserId,
@@ -2672,7 +2676,7 @@ export const systemAdminRoutes: FastifyPluginAsync = async (app) => {
       tag,
     } = request.query;
 
-    const limit = Math.min(parseInt(limitStr, 10) || 50, 250);
+    const limit = Math.min(parseInt(limitStr, 10) || PAGINATION_DEFAULT_LIMIT, PAGINATION_MAX_LIMIT_AI_LOGS);
     const offset = parseInt(offsetStr, 10) || 0;
 
     const conditions = [];

@@ -2,6 +2,7 @@ import type { FastifyPluginAsync } from "fastify";
 import { eq, desc, sql } from "drizzle-orm";
 import { deadLetterJobs, type Database } from "@appranks/db";
 import { requireSystemAdmin } from "../middleware/authorize.js";
+import { PAGINATION_DEFAULT_LIMIT, PAGINATION_MAX_LIMIT } from "../constants.js";
 import { Queue } from "bullmq";
 
 const BACKGROUND_QUEUE_NAME = "scraper-jobs-background";
@@ -28,7 +29,7 @@ export const dlqRoutes: FastifyPluginAsync = async (app) => {
       platform?: string;
     };
 
-    const pageSize = Math.min(Math.max(parseInt(limit || "50", 10) || 50, 1), 200);
+    const pageSize = Math.min(Math.max(parseInt(limit || String(PAGINATION_DEFAULT_LIMIT), 10) || PAGINATION_DEFAULT_LIMIT, 1), PAGINATION_MAX_LIMIT);
 
     const conditions: ReturnType<typeof eq>[] = [];
     if (job_type) {

@@ -9,6 +9,13 @@ import { initWorkerDeps, createProcessJob, runMigrations } from "./process-job.j
 import { cleanupStaleRuns } from "./jobs/cleanup-stale-runs.js";
 import { createGracefulShutdown } from "./graceful-shutdown.js";
 import { RedisLock } from "./redis-lock.js";
+import {
+  PLATFORM_LOCK_TTL_MS,
+  PLATFORM_LOCK_TIMEOUT_MS,
+  LOCK_POLL_INTERVAL_MS,
+  BACKGROUND_WORKER_CONCURRENCY,
+  GRACEFUL_SHUTDOWN_TIMEOUT_MS,
+} from "./constants.js";
 
 const log = createLogger("worker");
 
@@ -26,8 +33,6 @@ await cleanupStaleRuns(db);
  * Ensures only one job per platform runs at a time across all worker instances.
  * 5-minute TTL auto-expires to prevent deadlocks if a worker crashes.
  */
-const LOCK_TTL_MS = 300_000; // 5 minutes
-const LOCK_TIMEOUT_MS = 300_000; // 5 minutes max wait
 const redisLock = new RedisLock(getRedisConnection() as { host?: string; port?: number; password?: string });
 
 const bgProcessJobFn = createProcessJob(db, "background");
@@ -38,9 +43,9 @@ const bgWorker = new Worker<ScraperJobData>(
   async (job) => {
     const platform = job.data.platform || "shopify";
     const lockKey = `platform:${platform}`;
-    const release = await redisLock.acquireWithWait(lockKey, LOCK_TTL_MS, 500, LOCK_TIMEOUT_MS);
+    const release = await redisLock.acquireWithWait(lockKey, PLATFORM_LOCK_TTL_MS, LOCK_POLL_INTERVAL_MS, PLATFORM_LOCK_TIMEOUT_MS);
     if (!release) {
-      throw new Error(`Could not acquire lock for platform ${platform} within ${LOCK_TIMEOUT_MS}ms`);
+      throw new Error(`Could not acquire lock for platform ${platform} within ${PLATFORM_LOCK_TIMEOUT_MS}ms`);
     }
     try {
       await bgProcessJobFn(job);
@@ -50,7 +55,7 @@ const bgWorker = new Worker<ScraperJobData>(
   },
   {
     connection: getRedisConnection(),
-    concurrency: 11,
+    concurrency: BACKGROUND_WORKER_CONCURRENCY,
     // No rate limiter — per-platform lock handles serialization
   }
 );
@@ -113,13 +118,13 @@ for (const [name, w] of [["background", bgWorker], ["interactive", intWorker]] a
   });
 }
 
-log.info("worker started, listening on background + interactive queues", { concurrency: 11 });
+log.info("worker started, listening on background + interactive queues", { concurrency: BACKGROUND_WORKER_CONCURRENCY });
 
 // ── Graceful shutdown ───────────────────────────────────────────────
 const { shutdown } = createGracefulShutdown(
   [bgWorker, intWorker],
   log,
-  { timeoutMs: 60_000 },
+  { timeoutMs: GRACEFUL_SHUTDOWN_TIMEOUT_MS },
 );
 
 process.on("SIGTERM", () => shutdown("SIGTERM"));

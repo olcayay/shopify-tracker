@@ -5,6 +5,7 @@ import { computeWeightedPowerScore, validatePlatformData, createLogger } from "@
 import { slugsBodySchema } from "../schemas/apps";
 import { getPlatformFromQuery } from "../utils/platform.js";
 import { requireSystemAdmin } from "../middleware/authorize.js";
+import { PAGINATION_DEFAULT_LIMIT, PAGINATION_MAX_LIMIT } from "../constants.js";
 import {
   apps,
   appSnapshots,
@@ -1006,9 +1007,9 @@ export const appRoutes: FastifyPluginAsync = async (app) => {
     "/:slug/changes",
     async (request) => {
       const { slug } = request.params;
-      const { limit = "50" } = request.query as { limit?: string };
+      const { limit = String(PAGINATION_DEFAULT_LIMIT) } = request.query as { limit?: string };
       const platform = getPlatformFromQuery(request.query as Record<string, unknown>);
-      const maxLimit = Math.min(parseInt(limit, 10) || 50, 200);
+      const maxLimit = Math.min(parseInt(limit, 10) || PAGINATION_DEFAULT_LIMIT, PAGINATION_MAX_LIMIT);
 
       // Look up app ID (scoped to platform)
       const [changeApp] = await db

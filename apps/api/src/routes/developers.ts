@@ -8,6 +8,7 @@ import {
 } from "@appranks/db";
 import { requireSystemAdmin } from "../middleware/authorize.js";
 import { developerNameToSlug } from "@appranks/shared";
+import { PAGINATION_DEFAULT_LIMIT, PAGINATION_MAX_LIMIT_SMALL, PAGINATION_DEFAULT_DEVELOPER_APPS, PAGINATION_MAX_DEVELOPER_APPS, PAGINATION_MAX_LIMIT } from "../constants.js";
 
 export async function developerRoutes(app: FastifyInstance) {
   const db = (app as any).db;
@@ -27,7 +28,7 @@ export async function developerRoutes(app: FastifyInstance) {
       }>
     ) => {
       const page = Math.max(1, parseInt(request.query.page || "1", 10));
-      const limit = Math.min(100, Math.max(1, parseInt(request.query.limit || "50", 10)));
+      const limit = Math.min(PAGINATION_MAX_LIMIT_SMALL, Math.max(1, parseInt(request.query.limit || String(PAGINATION_DEFAULT_LIMIT), 10)));
       const offset = (page - 1) * limit;
       const search = request.query.search?.trim() || "";
       const sort = request.query.sort || "name";
@@ -205,7 +206,7 @@ export async function developerRoutes(app: FastifyInstance) {
       }>
     ) => {
       const page = Math.max(1, parseInt(request.query.page || "1", 10));
-      const limit = Math.min(200, Math.max(1, parseInt(request.query.limit || "100", 10)));
+      const limit = Math.min(PAGINATION_MAX_LIMIT, Math.max(1, parseInt(request.query.limit || String(PAGINATION_MAX_LIMIT_SMALL), 10)));
       const offset = (page - 1) * limit;
       const search = request.query.search?.trim() || "";
 
@@ -438,7 +439,7 @@ export async function developerRoutes(app: FastifyInstance) {
         Querystring: { limit?: string };
       }>
     ) => {
-      const limit = Math.min(50, Math.max(1, parseInt(request.query.limit || "20", 10)));
+      const limit = Math.min(PAGINATION_MAX_DEVELOPER_APPS, Math.max(1, parseInt(request.query.limit || String(PAGINATION_DEFAULT_DEVELOPER_APPS), 10)));
 
       // Find global developers that share similar slugs (Levenshtein distance <= 2)
       // or where one slug is a prefix of another

@@ -14,6 +14,18 @@ import { BrowserClient } from "./browser-client.js";
 import { getModule } from "./platforms/registry.js";
 import { FallbackTracker } from "./utils/fallback-tracker.js";
 import { createLinearErrorTask } from "./utils/create-linear-error-task.js";
+import {
+  HTTP_DEFAULT_DELAY_MS,
+  HTTP_DEFAULT_MAX_CONCURRENCY,
+  JOB_TIMEOUT_CATEGORY_MS,
+  JOB_TIMEOUT_KEYWORD_SEARCH_MS,
+  JOB_TIMEOUT_REVIEWS_MS,
+  JOB_TIMEOUT_APP_DETAILS_MS,
+  JOB_TIMEOUT_KEYWORD_SUGGESTIONS_MS,
+  JOB_TIMEOUT_COMPUTE_MS,
+  JOB_TIMEOUT_DAILY_DIGEST_MS,
+  JOB_TIMEOUT_DEFAULT_MS,
+} from "./constants.js";
 
 const log = createLogger("worker");
 
@@ -42,17 +54,17 @@ export async function runMigrations(db: ReturnType<typeof createDb>, label?: str
 
 /** Per-type timeout map (milliseconds) */
 const JOB_TIMEOUT_MAP: Partial<Record<ScraperJobType, number>> & { default: number } = {
-  category: 45 * 60 * 1000,
-  keyword_search: 45 * 60 * 1000,
-  reviews: 45 * 60 * 1000,
-  app_details: 30 * 60 * 1000,
-  keyword_suggestions: 20 * 60 * 1000,
-  compute_review_metrics: 15 * 60 * 1000,
-  compute_similarity_scores: 15 * 60 * 1000,
-  compute_app_scores: 15 * 60 * 1000,
-  backfill_categories: 15 * 60 * 1000,
-  daily_digest: 10 * 60 * 1000,
-  default: 30 * 60 * 1000,
+  category: JOB_TIMEOUT_CATEGORY_MS,
+  keyword_search: JOB_TIMEOUT_KEYWORD_SEARCH_MS,
+  reviews: JOB_TIMEOUT_REVIEWS_MS,
+  app_details: JOB_TIMEOUT_APP_DETAILS_MS,
+  keyword_suggestions: JOB_TIMEOUT_KEYWORD_SUGGESTIONS_MS,
+  compute_review_metrics: JOB_TIMEOUT_COMPUTE_MS,
+  compute_similarity_scores: JOB_TIMEOUT_COMPUTE_MS,
+  compute_app_scores: JOB_TIMEOUT_COMPUTE_MS,
+  backfill_categories: JOB_TIMEOUT_COMPUTE_MS,
+  daily_digest: JOB_TIMEOUT_DAILY_DIGEST_MS,
+  default: JOB_TIMEOUT_DEFAULT_MS,
 };
 
 export function createProcessJob(db: ReturnType<typeof createDb>, queueName?: string) {
@@ -68,8 +80,8 @@ export function createProcessJob(db: ReturnType<typeof createDb>, queueName?: st
 
     // Per-job HttpClient so parallel platforms have independent rate limits
     const httpClient = new HttpClient({
-      delayMs: parseInt(process.env.SCRAPER_DELAY_MS || "2000", 10),
-      maxConcurrency: parseInt(process.env.SCRAPER_MAX_CONCURRENCY || "2", 10),
+      delayMs: parseInt(process.env.SCRAPER_DELAY_MS || String(HTTP_DEFAULT_DELAY_MS), 10),
+      maxConcurrency: parseInt(process.env.SCRAPER_MAX_CONCURRENCY || String(HTTP_DEFAULT_MAX_CONCURRENCY), 10),
     });
 
     // Create browser client for platforms that need SPA rendering

@@ -36,6 +36,7 @@ import {
   reorderCompetitorsSchema,
   addKeywordToAppSchema,
 } from "../schemas/account.js";
+import { PAGINATION_DEFAULT_LIMIT, PAGINATION_MAX_LIMIT } from "../constants.js";
 
 const INTERACTIVE_QUEUE_NAME = "scraper-jobs-interactive";
 
@@ -1981,12 +1982,12 @@ export const accountTrackingRoutes: FastifyPluginAsync = async (app) => {
     async (request, reply) => {
       const { accountId } = request.user;
       const slug = decodeURIComponent(request.params.slug);
-      const { limit: limitStr = "50", debug = "false" } = request.query as {
+      const { limit: limitStr = String(PAGINATION_DEFAULT_LIMIT), debug = "false" } = request.query as {
         limit?: string;
         debug?: string;
       };
       const isDebug = debug === "true";
-      const maxResults = Math.min(parseInt(limitStr, 10) || 50, 200);
+      const maxResults = Math.min(parseInt(limitStr, 10) || PAGINATION_DEFAULT_LIMIT, PAGINATION_MAX_LIMIT);
       const platform = getPlatformFromQuery(request.query as Record<string, unknown>);
 
       // Look up app from slug

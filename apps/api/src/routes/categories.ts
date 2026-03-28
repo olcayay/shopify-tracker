@@ -3,6 +3,10 @@ import { eq, desc, sql, and, asc, inArray } from "drizzle-orm";
 import { createDb } from "@appranks/db";
 import { categories, categorySnapshots, appCategoryRankings, apps, categoryAdSightings, appPowerScores, categoryParents } from "@appranks/db";
 import { getPlatformFromQuery } from "../utils/platform.js";
+import { PAGINATION_DEFAULT_LIMIT, PAGINATION_MAX_LIMIT } from "../constants.js";
+import { createLogger } from "@appranks/shared";
+
+const log = createLogger("categories");
 
 type Db = ReturnType<typeof createDb>;
 
@@ -141,7 +145,7 @@ export const categoryRoutes: FastifyPluginAsync = async (app) => {
       subcategories: Array.from(cat.subcategories.values()),
     }));
     } catch (err) {
-      console.error("[features-by-slugs] Error:", err);
+      log.error("[features-by-slugs] Error", { error: String(err) });
       reply.code(500);
       return { error: "Internal server error", details: String(err) };
     }
@@ -608,10 +612,10 @@ export const categoryRoutes: FastifyPluginAsync = async (app) => {
     "/:slug/scores",
     async (request) => {
       const { slug } = request.params as { slug: string };
-      const { limit: limitStr = "50" } = request.query as {
+      const { limit: limitStr = String(PAGINATION_DEFAULT_LIMIT) } = request.query as {
         limit?: string;
       };
-      const limitNum = Math.min(parseInt(limitStr) || 50, 200);
+      const limitNum = Math.min(parseInt(limitStr) || PAGINATION_DEFAULT_LIMIT, PAGINATION_MAX_LIMIT);
 
       // Get latest computedAt for this category
       const [latestPow] = await db

@@ -1,8 +1,15 @@
 import { createLogger } from "@appranks/shared";
+import {
+  HTTP_DEFAULT_DELAY_MS,
+  HTTP_DEFAULT_MAX_RETRIES,
+  HTTP_DEFAULT_MAX_CONCURRENCY,
+  HTTP_MAX_RESPONSE_SIZE,
+  HTTP_CONCURRENCY_POLL_MS,
+  HTTP_RATE_LIMIT_BASE_MS,
+  HTTP_RAW_RATE_LIMIT_BASE_MS,
+} from "./constants.js";
 
 const log = createLogger("http-client");
-
-const MAX_RESPONSE_SIZE = 20 * 1024 * 1024; // 20MB
 
 const USER_AGENTS = [
   "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
@@ -18,9 +25,9 @@ export interface HttpClientOptions {
 }
 
 const DEFAULT_OPTIONS: Required<HttpClientOptions> = {
-  delayMs: 2000,
-  maxRetries: 4,
-  maxConcurrency: 2,
+  delayMs: HTTP_DEFAULT_DELAY_MS,
+  maxRetries: HTTP_DEFAULT_MAX_RETRIES,
+  maxConcurrency: HTTP_DEFAULT_MAX_CONCURRENCY,
 };
 
 export class HttpClient {
@@ -61,7 +68,7 @@ export class HttpClient {
   private async waitForSlot(): Promise<void> {
     // Wait for concurrency slot
     while (this.activeRequests >= this.options.maxConcurrency) {
-      await this.sleep(100);
+      await this.sleep(HTTP_CONCURRENCY_POLL_MS);
     }
 
     // Enforce delay between requests
@@ -98,7 +105,7 @@ export class HttpClient {
             // Use Retry-After header, or 4s * 2^attempt (4s, 8s, 16s, 32s, 64s)
             const waitMs = retryAfter
               ? parseInt(retryAfter, 10) * 1000
-              : 4_000 * Math.pow(2, attempt);
+              : HTTP_RATE_LIMIT_BASE_MS * Math.pow(2, attempt);
             log.warn("rate limited (429), backing off", { url, attempt: attempt + 1, waitMs });
             lastError = err;
             if (attempt < this.options.maxRetries) {
@@ -116,14 +123,14 @@ export class HttpClient {
         }
 
         const contentLength = response.headers.get("content-length");
-        if (contentLength && parseInt(contentLength, 10) > MAX_RESPONSE_SIZE) {
+        if (contentLength && parseInt(contentLength, 10) > HTTP_MAX_RESPONSE_SIZE) {
           log.warn("response too large, skipping", { url, contentLength });
-          lastError = new Error(`Response too large: ${contentLength} bytes (max ${MAX_RESPONSE_SIZE})`);
+          lastError = new Error(`Response too large: ${contentLength} bytes (max ${HTTP_MAX_RESPONSE_SIZE})`);
           break;
         }
 
         const text = await response.text();
-        if (text.length > MAX_RESPONSE_SIZE) {
+        if (text.length > HTTP_MAX_RESPONSE_SIZE) {
           log.warn("response body too large", { url, size: text.length });
         }
         return text;
@@ -174,7 +181,7 @@ export class HttpClient {
             const retryAfter = response.headers.get("Retry-After");
             const waitMs = retryAfter
               ? parseInt(retryAfter, 10) * 1000
-              : 15_000 * Math.pow(2, attempt);
+              : HTTP_RAW_RATE_LIMIT_BASE_MS * Math.pow(2, attempt);
             log.warn("rate limited (429), backing off", { url, attempt: attempt + 1, waitMs });
             lastError = err;
             if (attempt < this.options.maxRetries) {

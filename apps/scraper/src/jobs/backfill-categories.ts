@@ -2,6 +2,7 @@ import { eq, and, desc, inArray } from "drizzle-orm";
 import type { Database } from "@appranks/db";
 import { scrapeRuns, apps, appSnapshots, categories } from "@appranks/db";
 import { createLogger, type PlatformId } from "@appranks/shared";
+import { DB_BATCH_CHUNK_SIZE } from "../constants.js";
 
 const log = createLogger("backfill-categories");
 
@@ -91,9 +92,9 @@ export async function backfillCategories(db: Database, triggeredBy: string, queu
     const allSlugs = [...categoryMap.keys()];
     const existingSlugs = new Set<string>();
     if (allSlugs.length > 0) {
-      // Batch in chunks of 100
-      for (let i = 0; i < allSlugs.length; i += 100) {
-        const chunk = allSlugs.slice(i, i + 100);
+      // Batch in chunks
+      for (let i = 0; i < allSlugs.length; i += DB_BATCH_CHUNK_SIZE) {
+        const chunk = allSlugs.slice(i, i + DB_BATCH_CHUNK_SIZE);
         const rows = await db
           .select({ slug: categories.slug })
           .from(categories)

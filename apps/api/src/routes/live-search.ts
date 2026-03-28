@@ -3,6 +3,7 @@ import * as cheerio from "cheerio";
 import { sql } from "drizzle-orm";
 import { createDb } from "@appranks/db";
 import { getPlatformFromQuery } from "../utils/platform.js";
+import { LIVE_SEARCH_LIMIT } from "../constants.js";
 
 const USER_AGENTS = [
   "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
@@ -52,7 +53,7 @@ function dbSearchForPlatform(platformName: string): LiveSearchHandler {
              WHEN name ILIKE ${keyword + '%'} THEN 1
              ELSE 2 END,
         name
-      LIMIT 50
+      LIMIT ${LIVE_SEARCH_LIMIT}
     `);
     const results: SearchApp[] = (rows as any[]).map((r: any, idx: number) => ({
       position: idx + 1,

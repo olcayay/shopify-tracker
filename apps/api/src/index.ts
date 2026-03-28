@@ -7,10 +7,24 @@ import { createDb, accounts, users } from "@appranks/db";
 import { migrate } from "drizzle-orm/postgres-js/migrator";
 import { sql, eq } from "drizzle-orm";
 import bcrypt from "bcryptjs";
-import { validateEnv, API_REQUIRED_ENV } from "@appranks/shared";
+import { validateEnv, API_REQUIRED_ENV, createLogger } from "@appranks/shared";
+
+const log = createLogger("api");
 import { registerAuthMiddleware } from "./middleware/auth.js";
 import { RateLimiter } from "./utils/rate-limiter.js";
 import { ApiError } from "./utils/api-error.js";
+import {
+  RATE_LIMIT_AUTHENTICATED_MAX,
+  RATE_LIMIT_AUTHENTICATED_WINDOW_MS,
+  RATE_LIMIT_UNAUTHENTICATED_MAX,
+  RATE_LIMIT_UNAUTHENTICATED_WINDOW_MS,
+  RATE_LIMIT_SYSTEM_ADMIN_MAX,
+  RATE_LIMIT_SYSTEM_ADMIN_WINDOW_MS,
+  DEFAULT_MAX_TRACKED_APPS,
+  DEFAULT_MAX_TRACKED_KEYWORDS,
+  DEFAULT_MAX_COMPETITOR_APPS,
+  REDIS_CONNECT_TIMEOUT_MS,
+} from "./constants.js";
 import { categoryRoutes } from "./routes/categories.js";
 import { appRoutes } from "./routes/apps.js";
 import { keywordRoutes } from "./routes/keywords.js";
@@ -44,17 +58,16 @@ try {
   await db.execute(sql`ALTER TYPE scraper_type ADD VALUE IF NOT EXISTS 'compute_similarity_scores'`);
 } catch (e: any) {
   // Ignore if already exists
-  if (!e.message?.includes("already exists")) console.error("Pre-migration enum error:", e.message);
+  if (!e.message?.includes("already exists")) log.error("Pre-migration enum error", { error: e.message });
 }
 
 // Run pending migrations on startup
-console.log("Running database migrations...");
+log.info("Running database migrations...");
 try {
   await migrate(db, { migrationsFolder: resolve(import.meta.dirname, "../../../packages/db/src/migrations") });
-  console.log("Database migrations complete.");
+  log.info("Database migrations complete.");
 } catch (err: any) {
-  console.error("Migration ERROR:", err.message || err);
-  console.error("Full error:", JSON.stringify(err, null, 2));
+  log.error("Migration ERROR", { error: err.message || String(err), details: JSON.stringify(err, null, 2) });
 }
 
 // Seed admin user on first run
@@ -63,14 +76,14 @@ const adminPassword = process.env.ADMIN_PASSWORD;
 if (adminEmail && adminPassword) {
   const existingAccounts = await db.select().from(accounts).limit(1);
   if (existingAccounts.length === 0) {
-    console.log("No accounts found, seeding admin user...");
+    log.info("No accounts found, seeding admin user...");
     const [account] = await db
       .insert(accounts)
       .values({
         name: "Default Account",
-        maxTrackedApps: 100,
-        maxTrackedKeywords: 100,
-        maxCompetitorApps: 50,
+        maxTrackedApps: DEFAULT_MAX_TRACKED_APPS,
+        maxTrackedKeywords: DEFAULT_MAX_TRACKED_KEYWORDS,
+        maxCompetitorApps: DEFAULT_MAX_COMPETITOR_APPS,
       })
       .returning();
     const passwordHash = await bcrypt.hash(adminPassword, 12);
@@ -82,7 +95,7 @@ if (adminEmail && adminPassword) {
       role: "owner",
       isSystemAdmin: true,
     });
-    console.log(`Admin user created: ${adminEmail}`);
+    log.info("Admin user created", { email: adminEmail });
   }
 }
 
@@ -112,9 +125,9 @@ registerAuthMiddleware(app);
 // Global API rate limiting (runs after auth so request.user is available)
 const HEALTH_PATHS = ["/health", "/health/live", "/health/ready"];
 
-const authenticatedLimiter = new RateLimiter({ maxAttempts: 200, windowMs: 60_000 }); // 200/min per user
-const unauthenticatedLimiter = new RateLimiter({ maxAttempts: 30, windowMs: 60_000 }); // 30/min per IP
-const systemAdminLimiter = new RateLimiter({ maxAttempts: 20, windowMs: 60_000 }); // 20/min per user
+const authenticatedLimiter = new RateLimiter({ maxAttempts: RATE_LIMIT_AUTHENTICATED_MAX, windowMs: RATE_LIMIT_AUTHENTICATED_WINDOW_MS });
+const unauthenticatedLimiter = new RateLimiter({ maxAttempts: RATE_LIMIT_UNAUTHENTICATED_MAX, windowMs: RATE_LIMIT_UNAUTHENTICATED_WINDOW_MS });
+const systemAdminLimiter = new RateLimiter({ maxAttempts: RATE_LIMIT_SYSTEM_ADMIN_MAX, windowMs: RATE_LIMIT_SYSTEM_ADMIN_WINDOW_MS });
 
 app.addHook("onRequest", async (request, reply) => {
   // Skip rate limiting for health checks and preflight
@@ -183,7 +196,7 @@ app.get("/health/ready", async (_request, reply) => {
   const redisStart = Date.now();
   let redis: Redis | null = null;
   try {
-    redis = new Redis(redisUrl, { connectTimeout: 5000, lazyConnect: true });
+    redis = new Redis(redisUrl, { connectTimeout: REDIS_CONNECT_TIMEOUT_MS, lazyConnect: true });
     await redis.connect();
     await redis.ping();
     checks.redis = { status: "ok", latencyMs: Date.now() - redisStart };
@@ -217,7 +230,7 @@ app.get("/health", async (_request, reply) => {
   const redisUrl = process.env.REDIS_URL || "redis://localhost:6379";
   let redis: Redis | null = null;
   try {
-    redis = new Redis(redisUrl, { connectTimeout: 5000, lazyConnect: true });
+    redis = new Redis(redisUrl, { connectTimeout: REDIS_CONNECT_TIMEOUT_MS, lazyConnect: true });
     await redis.connect();
     await redis.ping();
     checks.redis = "ok";

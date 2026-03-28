@@ -1,4 +1,10 @@
 import { Queue, type ConnectionOptions } from "bullmq";
+import {
+  JOB_DEFAULT_ATTEMPTS,
+  JOB_BACKOFF_DELAY_MS,
+  JOB_REMOVE_ON_COMPLETE_COUNT,
+  JOB_REMOVE_ON_FAIL_COUNT,
+} from "./constants.js";
 
 export const BACKGROUND_QUEUE_NAME = "scraper-jobs-background";
 export const INTERACTIVE_QUEUE_NAME = "scraper-jobs-interactive";
@@ -46,10 +52,10 @@ export function getRedisConnection(): ConnectionOptions {
 }
 
 const defaultJobOptions = {
-  attempts: 2,
-  backoff: { type: "exponential" as const, delay: 30_000 },
-  removeOnComplete: { count: 100 },
-  removeOnFail: { count: 50 },
+  attempts: JOB_DEFAULT_ATTEMPTS,
+  backoff: { type: "exponential" as const, delay: JOB_BACKOFF_DELAY_MS },
+  removeOnComplete: { count: JOB_REMOVE_ON_COMPLETE_COUNT },
+  removeOnFail: { count: JOB_REMOVE_ON_FAIL_COUNT },
 };
 
 let _backgroundQueue: Queue<ScraperJobData> | null = null;

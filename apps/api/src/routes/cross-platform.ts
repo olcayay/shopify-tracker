@@ -1,4 +1,5 @@
 import type { FastifyInstance, FastifyRequest } from "fastify";
+import { PAGINATION_DEFAULT_LIMIT, PAGINATION_MAX_LIMIT_SMALL } from "../constants.js";
 import { sql, eq, and, inArray } from "drizzle-orm";
 import {
   apps,
@@ -20,7 +21,7 @@ interface PaginationQuery {
 
 function parsePagination(query: PaginationQuery) {
   const page = Math.max(1, parseInt(query.page || "1", 10));
-  const limit = Math.min(100, Math.max(1, parseInt(query.limit || "50", 10)));
+  const limit = Math.min(PAGINATION_MAX_LIMIT_SMALL, Math.max(1, parseInt(query.limit || String(PAGINATION_DEFAULT_LIMIT), 10)));
   const offset = (page - 1) * limit;
   const search = query.search?.trim() || "";
   const order = query.order === "desc" ? "desc" : "asc";

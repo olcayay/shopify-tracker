@@ -26,15 +26,23 @@ import {
   logoutSchema,
   updateProfileSchema,
 } from "../schemas/auth.js";
+import {
+  ACCESS_TOKEN_EXPIRY,
+  REFRESH_TOKEN_EXPIRY_DAYS,
+  RATE_LIMIT_LOGIN_MAX,
+  RATE_LIMIT_LOGIN_WINDOW_MS,
+  RATE_LIMIT_REGISTER_MAX,
+  RATE_LIMIT_REGISTER_WINDOW_MS,
+  DEFAULT_MAX_TRACKED_APPS,
+  DEFAULT_MAX_TRACKED_KEYWORDS,
+  DEFAULT_MAX_COMPETITOR_APPS,
+} from "../constants.js";
 
 type Db = ReturnType<typeof createDb>;
 
-const ACCESS_TOKEN_EXPIRY = "15m";
-const REFRESH_TOKEN_EXPIRY_DAYS = 7;
-
 // Rate limiters for auth endpoints (exported for test reset)
-export const loginLimiter = new RateLimiter({ maxAttempts: 5, windowMs: 15 * 60 * 1000 }); // 5 per 15min
-export const registerLimiter = new RateLimiter({ maxAttempts: 3, windowMs: 60 * 60 * 1000 }); // 3 per hour
+export const loginLimiter = new RateLimiter({ maxAttempts: RATE_LIMIT_LOGIN_MAX, windowMs: RATE_LIMIT_LOGIN_WINDOW_MS });
+export const registerLimiter = new RateLimiter({ maxAttempts: RATE_LIMIT_REGISTER_MAX, windowMs: RATE_LIMIT_REGISTER_WINDOW_MS });
 
 export function generateAccessToken(
   payload: JwtPayload,
