@@ -75,7 +75,7 @@ export function KeywordsSection({
                   placeholder='e.g. "live chat", "email marketing"'
                   disabled={adding}
                 />
-                <Button onClick={handleAdd} disabled={!input.trim() || adding}>
+                <Button onClick={handleAdd} disabled={!input.trim() || adding} aria-label="Add keyword">
                   {adding ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
                 </Button>
               </div>
@@ -144,6 +144,7 @@ export function KeywordsSection({
                       <button
                         onClick={() => onRemove(kw.id)}
                         className="ml-1.5 hover:text-destructive transition-colors"
+                        aria-label={`Remove keyword "${kw.keyword}"`}
                       >
                         <X className="h-3 w-3" />
                       </button>
@@ -257,6 +258,7 @@ export function KeywordSuggestions({
                 target="_blank"
                 rel="noopener noreferrer"
                 title={`Search "${s.keyword}" on ${getPlatformName(platform as PlatformId)}`}
+                aria-label={`Search "${s.keyword}" on ${getPlatformName(platform as PlatformId)}`}
                 className="inline-flex items-center justify-center h-8 w-8 rounded-md hover:bg-accent transition-colors"
               >
                 <ExternalLink className="h-4 w-4 text-muted-foreground" />
@@ -267,6 +269,7 @@ export function KeywordSuggestions({
                   variant="ghost"
                   onClick={() => handleAdd(s.keyword)}
                   disabled={addingKw === s.keyword}
+                  aria-label={`Add keyword "${s.keyword}"`}
                 >
                   {addingKw === s.keyword ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Plus className="h-3.5 w-3.5" />}
                 </Button>

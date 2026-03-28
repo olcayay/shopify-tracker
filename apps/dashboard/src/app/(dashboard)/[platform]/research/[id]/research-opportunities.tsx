@@ -66,11 +66,11 @@ export function OpportunityTable({
       <Table>
         <TableHeader>
           <TableRow>
-            <TableHead className="cursor-pointer select-none" onClick={() => toggleSort("keyword")}>Keyword <SortIcon col="keyword" /></TableHead>
-            <TableHead className="text-right cursor-pointer select-none" onClick={() => toggleSort("opportunity")}>Opportunity <SortIcon col="opportunity" /></TableHead>
-            <TableHead className="text-right cursor-pointer select-none" onClick={() => toggleSort("room")}>Room <SortIcon col="room" /></TableHead>
-            <TableHead className="text-right cursor-pointer select-none" onClick={() => toggleSort("demand")}>Demand <SortIcon col="demand" /></TableHead>
-            <TableHead className="text-right cursor-pointer select-none" onClick={() => toggleSort("competitors")}>Competitors <SortIcon col="competitors" /></TableHead>
+            <TableHead className="cursor-pointer select-none" onClick={() => toggleSort("keyword")} aria-sort={sortKey === "keyword" ? (sortDir === "asc" ? "ascending" : "descending") : "none"}>Keyword <SortIcon col="keyword" /></TableHead>
+            <TableHead className="text-right cursor-pointer select-none" onClick={() => toggleSort("opportunity")} aria-sort={sortKey === "opportunity" ? (sortDir === "asc" ? "ascending" : "descending") : "none"}>Opportunity <SortIcon col="opportunity" /></TableHead>
+            <TableHead className="text-right cursor-pointer select-none" onClick={() => toggleSort("room")} aria-sort={sortKey === "room" ? (sortDir === "asc" ? "ascending" : "descending") : "none"}>Room <SortIcon col="room" /></TableHead>
+            <TableHead className="text-right cursor-pointer select-none" onClick={() => toggleSort("demand")} aria-sort={sortKey === "demand" ? (sortDir === "asc" ? "ascending" : "descending") : "none"}>Demand <SortIcon col="demand" /></TableHead>
+            <TableHead className="text-right cursor-pointer select-none" onClick={() => toggleSort("competitors")} aria-sort={sortKey === "competitors" ? (sortDir === "asc" ? "ascending" : "descending") : "none"}>Competitors <SortIcon col="competitors" /></TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>

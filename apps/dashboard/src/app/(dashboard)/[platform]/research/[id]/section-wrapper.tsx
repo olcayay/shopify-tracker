@@ -11,7 +11,7 @@ export function SectionWrapper({
   id?: string; title: string; icon: any; subtitle?: string; count?: number; headerAction?: React.ReactNode; titleHref?: string; children: React.ReactNode;
 }) {
   return (
-    <Card id={id} className="animate-in fade-in-0 slide-in-from-bottom-4 duration-500 scroll-mt-6">
+    <Card id={id} className="animate-in fade-in-0 slide-in-from-bottom-4 duration-500 scroll-mt-6" role="region" aria-label={title}>
       <CardHeader className="pb-3">
         <div className="flex items-center justify-between">
           <CardTitle className="flex items-center gap-2 text-base">

@@ -35,5 +35,14 @@ export function useSortable<K extends string>(
     [],
   );
 
-  return { sortKey, sortDir, toggleSort, setSortKey, setSortDir } as const;
+  /** Returns the appropriate `aria-sort` value for a given column. */
+  const ariaSort = useCallback(
+    (key: K): "ascending" | "descending" | "none" => {
+      if (sortKey !== key) return "none";
+      return sortDir === "asc" ? "ascending" : "descending";
+    },
+    [sortKey, sortDir],
+  );
+
+  return { sortKey, sortDir, toggleSort, setSortKey, setSortDir, ariaSort } as const;
 }

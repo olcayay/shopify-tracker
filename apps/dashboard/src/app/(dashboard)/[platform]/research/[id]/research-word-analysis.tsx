@@ -127,6 +127,7 @@ export function MarketLanguage({
                     target="_blank"
                     rel="noopener noreferrer"
                     title={`Search "${w.word}" on ${getPlatformName(platform as PlatformId)}`}
+                    aria-label={`Search "${w.word}" on ${getPlatformName(platform as PlatformId)}`}
                     className="inline-flex items-center justify-center h-8 w-8 rounded-md hover:bg-accent transition-colors"
                   >
                     <ExternalLink className="h-4 w-4 text-muted-foreground" />

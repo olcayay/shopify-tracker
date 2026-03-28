@@ -212,12 +212,13 @@ export function InlineAppSearch({
                 onClick={() => handleAdd(app.slug)}
                 disabled={addingSlug === app.slug}
                 className="shrink-0 ml-1"
+                aria-label={`Add ${app.name}`}
               >
                 {addingSlug === app.slug ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Plus className="h-3.5 w-3.5" />}
               </Button>
             </div>
           ))}
-          {searching && <p className="text-xs text-muted-foreground px-3 py-2">Searching...</p>}
+          {searching && <p className="text-xs text-muted-foreground px-3 py-2" aria-live="polite">Searching...</p>}
         </div>
       )}
     </div>
@@ -307,6 +308,7 @@ export function ManualAppSearch({
                     variant="ghost"
                     onClick={() => handleAdd(app.slug)}
                     disabled={addingSlug === app.slug}
+                    aria-label={`Add ${app.name}`}
                   >
                     {addingSlug === app.slug ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Plus className="h-3.5 w-3.5" />}
                   </Button>
@@ -314,7 +316,7 @@ export function ManualAppSearch({
               ))}
             </div>
           )}
-          {searching && <p className="text-xs text-muted-foreground mt-2">Searching...</p>}
+          {searching && <p className="text-xs text-muted-foreground mt-2" aria-live="polite">Searching...</p>}
         </div>
       </CardContent>
     </Card>
@@ -387,16 +389,16 @@ export function CompetitorTable({
       <Table>
         <TableHeader>
           <TableRow>
-            <TableHead className="cursor-pointer select-none" onClick={() => toggleSort("name")}>App <SortIcon col="name" /></TableHead>
-            {caps.hasReviews && <TableHead className="text-right cursor-pointer select-none" onClick={() => toggleSort("rating")}>Rating <SortIcon col="rating" /></TableHead>}
-            {caps.hasReviews && <TableHead className="text-right cursor-pointer select-none" onClick={() => toggleSort("reviews")}>Reviews <SortIcon col="reviews" /></TableHead>}
-            {caps.hasPricing && <TableHead className="text-right cursor-pointer select-none" onClick={() => toggleSort("pricing")}>Pricing <SortIcon col="pricing" /></TableHead>}
-            <TableHead className="text-right cursor-pointer select-none" onClick={() => toggleSort("power")}>Power <SortIcon col="power" /></TableHead>
-            {keywords.length > 0 && <TableHead className="text-center cursor-pointer select-none" onClick={() => toggleSort("rankings")}>Rankings <SortIcon col="rankings" /></TableHead>}
-            {caps.hasFeaturedSections && <TableHead className="text-right cursor-pointer select-none" onClick={() => toggleSort("featured")}>Featured <SortIcon col="featured" /></TableHead>}
-            {caps.hasSimilarApps && <TableHead className="text-right cursor-pointer select-none" onClick={() => toggleSort("similar")}>Similar <SortIcon col="similar" /></TableHead>}
+            <TableHead className="cursor-pointer select-none" onClick={() => toggleSort("name")} aria-sort={sortKey === "name" ? (sortDir === "asc" ? "ascending" : "descending") : "none"}>App <SortIcon col="name" /></TableHead>
+            {caps.hasReviews && <TableHead className="text-right cursor-pointer select-none" onClick={() => toggleSort("rating")} aria-sort={sortKey === "rating" ? (sortDir === "asc" ? "ascending" : "descending") : "none"}>Rating <SortIcon col="rating" /></TableHead>}
+            {caps.hasReviews && <TableHead className="text-right cursor-pointer select-none" onClick={() => toggleSort("reviews")} aria-sort={sortKey === "reviews" ? (sortDir === "asc" ? "ascending" : "descending") : "none"}>Reviews <SortIcon col="reviews" /></TableHead>}
+            {caps.hasPricing && <TableHead className="text-right cursor-pointer select-none" onClick={() => toggleSort("pricing")} aria-sort={sortKey === "pricing" ? (sortDir === "asc" ? "ascending" : "descending") : "none"}>Pricing <SortIcon col="pricing" /></TableHead>}
+            <TableHead className="text-right cursor-pointer select-none" onClick={() => toggleSort("power")} aria-sort={sortKey === "power" ? (sortDir === "asc" ? "ascending" : "descending") : "none"}>Power <SortIcon col="power" /></TableHead>
+            {keywords.length > 0 && <TableHead className="text-center cursor-pointer select-none" onClick={() => toggleSort("rankings")} aria-sort={sortKey === "rankings" ? (sortDir === "asc" ? "ascending" : "descending") : "none"}>Rankings <SortIcon col="rankings" /></TableHead>}
+            {caps.hasFeaturedSections && <TableHead className="text-right cursor-pointer select-none" onClick={() => toggleSort("featured")} aria-sort={sortKey === "featured" ? (sortDir === "asc" ? "ascending" : "descending") : "none"}>Featured <SortIcon col="featured" /></TableHead>}
+            {caps.hasSimilarApps && <TableHead className="text-right cursor-pointer select-none" onClick={() => toggleSort("similar")} aria-sort={sortKey === "similar" ? (sortDir === "asc" ? "ascending" : "descending") : "none"}>Similar <SortIcon col="similar" /></TableHead>}
             <TableHead>Categories</TableHead>
-            {caps.hasLaunchedDate && <TableHead className="text-right cursor-pointer select-none" onClick={() => toggleSort("launched")}>Launched <SortIcon col="launched" /></TableHead>}
+            {caps.hasLaunchedDate && <TableHead className="text-right cursor-pointer select-none" onClick={() => toggleSort("launched")} aria-sort={sortKey === "launched" ? (sortDir === "asc" ? "ascending" : "descending") : "none"}>Launched <SortIcon col="launched" /></TableHead>}
             {canEdit && <TableHead className="w-10" />}
           </TableRow>
         </TableHeader>
@@ -560,12 +562,14 @@ export function CompetitorTable({
                         rel="noopener noreferrer"
                         className="p-1 rounded hover:bg-accent text-muted-foreground hover:text-foreground transition-colors"
                         title={`View on ${getPlatformName(platform as PlatformId)}`}
+                        aria-label={`View ${comp.name} on ${getPlatformName(platform as PlatformId)}`}
                       >
                         <ExternalLink className="h-3.5 w-3.5" />
                       </a>
                       <button
                         onClick={() => onRemove(comp.slug)}
                         className="p-1 rounded hover:bg-destructive/10 text-muted-foreground hover:text-destructive transition-colors"
+                        aria-label={`Remove ${comp.name}`}
                       >
                         <X className="h-3.5 w-3.5" />
                       </button>

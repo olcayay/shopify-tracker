@@ -20,6 +20,7 @@ export function LiveSearchTrigger({
         <button
           onClick={() => setOpen(true)}
           title={`Live search: "${keyword}"`}
+          aria-label={`Live search: "${keyword}"`}
           className="inline-flex items-center justify-center h-8 w-8 rounded-md hover:bg-accent transition-colors"
         >
           <Search className="h-4 w-4 text-muted-foreground" />
