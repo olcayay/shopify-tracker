@@ -26,6 +26,7 @@ import { platformAttributeRoutes } from "./routes/platform-attributes.js";
 import { developerRoutes } from "./routes/developers.js";
 import { crossPlatformRoutes } from "./routes/cross-platform.js";
 import { adminRoutes } from "./routes/admin.js";
+import { dlqRoutes } from "./routes/dlq.js";
 import Redis from "ioredis";
 
 const databaseUrl = process.env.DATABASE_URL;
@@ -156,6 +157,7 @@ await app.register(platformAttributeRoutes, { prefix: "/api/platform-attributes"
 await app.register(developerRoutes, { prefix: "/api/developers" });
 await app.register(crossPlatformRoutes, { prefix: "/api/cross-platform" });
 await app.register(adminRoutes, { prefix: "/api/admin" });
+await app.register(dlqRoutes, { prefix: "/api/system-admin/dlq" });
 
 // Shallow health check — always responds (for load balancer liveness probes)
 app.get("/health/live", async () => {

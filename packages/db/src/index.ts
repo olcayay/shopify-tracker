@@ -25,6 +25,7 @@ import * as categoryParentsSchema from "./schema/category-parents.js";
 import * as smokeTestResultsSchema from "./schema/smoke-test-results.js";
 import * as scrapeItemErrorsSchema from "./schema/scrape-item-errors.js";
 import * as developersSchema from "./schema/developers.js";
+import * as deadLetterJobsSchema from "./schema/dead-letter-jobs.js";
 
 export const schema = {
   ...scrapeRunsSchema,
@@ -51,6 +52,7 @@ export const schema = {
   ...smokeTestResultsSchema,
   ...scrapeItemErrorsSchema,
   ...developersSchema,
+  ...deadLetterJobsSchema,
 };
 
 export function createDb(databaseUrl: string) {
@@ -131,3 +133,4 @@ export {
 } from "./schema/developers.js";
 export { ensurePlatformDeveloper } from "./ensure-platform-developer.js";
 export { platformRequests } from "./schema/platform-requests.js";
+export { deadLetterJobs } from "./schema/dead-letter-jobs.js";
