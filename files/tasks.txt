@@ -1,3 +1,6 @@
+Set up GitHub Actions CI/CD pipeline (2026-03-28)
+  PLA-201: CI workflow with lint, typecheck, test, build on push/PR to main ✅
+
 Configure Docker log rotation on production VPS (2026-03-28)
   PLA-195: Per-service logging in docker-compose.prod.yml (50m max-size, 3 files) ✅
 

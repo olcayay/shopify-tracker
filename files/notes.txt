@@ -1,3 +1,13 @@
+Set Up GitHub Actions CI/CD Pipeline (2026-03-28)
+==================================================
+**PLA-201:** Automated CI on every push/PR to main.
+
+`.github/workflows/ci.yml`: Two jobs:
+1. **lint-typecheck-test** — npm ci → turbo lint → turbo typecheck → npm test
+2. **build** — npm ci → turbo build (runs after tests pass)
+
+Node 22, npm cache, concurrency group (cancels stale runs), 15min timeout.
+
 Configure Docker Log Rotation on Production VPS (2026-03-28)
 ==============================================================
 **PLA-195:** Prevent disk fill from unbounded Docker logs.

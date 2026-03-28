@@ -1062,12 +1062,11 @@ Protected endpoints: POST /api/research-projects, POST /api/account/tracked-apps
 
 **Description:** No documented CI/CD pipeline. Deployments appear to be manual via Coolify. No automated testing before deploy, no rollback automation.
 
-**Mitigation:**
-- [ ] Set up GitHub Actions CI: lint + typecheck + test on every PR (**PLA-201**)
-- [ ] Add deployment automation via Coolify webhooks or GitHub Actions CD
-- [ ] Implement automatic rollback on health check failure
-
-**When task PLA-201 is completed, update this risk status to Mitigated.**
+**Mitigation:** ✅ **Mitigated**
+- [x] GitHub Actions CI: lint + typecheck + test on push/PR to main (**PLA-201**)
+- [x] Build verification job (runs after tests pass)
+- [ ] Add deployment automation via Coolify webhooks or GitHub Actions CD — future
+- [ ] Implement automatic rollback on health check failure — future
 
 ---
 
@@ -1183,7 +1182,7 @@ This table maps each Linear ticket to its risk(s) and priority. **Update this se
 | PLA-186 | Add missing database indexes on large tables | R-75 | P1 | **Fixed** |
 | PLA-197 | Add idempotency keys to critical endpoints | R-74 | P2 | **Fixed** |
 | PLA-195 | Configure Docker log rotation | R-76 | P2 | **Fixed** |
-| PLA-201 | Set up GitHub Actions CI/CD pipeline | R-78 | P3 | Todo |
+| PLA-201 | Set up GitHub Actions CI/CD pipeline | R-78 | P3 | **Fixed** |
 | PLA-202 | Create E2E test suite with Playwright | R-80 | P3 | Todo |
 
 ---
@@ -1269,7 +1268,7 @@ This table maps each Linear ticket to its risk(s) and priority. **Update this se
 | **R-75** | **Missing DB indexes** | **2** | **3** | **10** | **Open** |
 | **R-76** | **Docker log rotation** | **2** | **5** | **10** | **Fixed** |
 | **R-77** | **Migration coupled to API** | **3** | **3** | **9** | **Mitigated** |
-| **R-78** | **No CI/CD pipeline** | **2** | **3** | **8** | **Open** |
+| **R-78** | **No CI/CD pipeline** | **2** | **3** | **8** | **Mitigated** |
 | **R-79** | **Stale jobs not re-queued** | **2** | **4** | **8** | **Open** |
 | **R-80** | **No E2E tests** | **2** | **2** | **4** | **Open** |
 
