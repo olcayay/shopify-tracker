@@ -8,6 +8,12 @@ import {
   keywordToSlug,
   scrapeRuns,
 } from "@appranks/db";
+import {
+  addTrackedAppSchema,
+  addTrackedKeywordSchema,
+  triggerScraperSchema,
+} from "../schemas/admin.js";
+import { requireSystemAdmin } from "../middleware/authorize.js";
 
 const BACKGROUND_QUEUE_NAME = "scraper-jobs-background";
 
@@ -41,11 +47,8 @@ export const adminRoutes: FastifyPluginAsync = async (app) => {
 
   // POST /api/admin/tracked-apps — add app to tracking
   // Body: { slug: string }
-  app.post("/tracked-apps", async (request, reply) => {
-    const { slug } = request.body as { slug?: string };
-    if (!slug || typeof slug !== "string") {
-      return reply.code(400).send({ error: "slug is required" });
-    }
+  app.post("/tracked-apps", { preHandler: [requireSystemAdmin()] }, async (request, reply) => {
+    const { slug } = addTrackedAppSchema.parse(request.body);
 
     const [result] = await db
       .insert(apps)
@@ -62,6 +65,7 @@ export const adminRoutes: FastifyPluginAsync = async (app) => {
   // DELETE /api/admin/tracked-apps/:slug — remove from tracking
   app.delete<{ Params: { slug: string } }>(
     "/tracked-apps/:slug",
+    { preHandler: [requireSystemAdmin()] },
     async (request, reply) => {
       const { slug } = request.params;
 
@@ -83,11 +87,8 @@ export const adminRoutes: FastifyPluginAsync = async (app) => {
 
   // POST /api/admin/tracked-keywords — add keyword
   // Body: { keyword: string }
-  app.post("/tracked-keywords", async (request, reply) => {
-    const { keyword } = request.body as { keyword?: string };
-    if (!keyword || typeof keyword !== "string") {
-      return reply.code(400).send({ error: "keyword is required" });
-    }
+  app.post("/tracked-keywords", { preHandler: [requireSystemAdmin()] }, async (request, reply) => {
+    const { keyword } = addTrackedKeywordSchema.parse(request.body);
 
     const [result] = await db
       .insert(trackedKeywords)
@@ -104,6 +105,7 @@ export const adminRoutes: FastifyPluginAsync = async (app) => {
   // DELETE /api/admin/tracked-keywords/:id — deactivate keyword
   app.delete<{ Params: { id: string } }>(
     "/tracked-keywords/:id",
+    { preHandler: [requireSystemAdmin()] },
     async (request, reply) => {
       const id = parseInt(request.params.id, 10);
 
@@ -125,7 +127,7 @@ export const adminRoutes: FastifyPluginAsync = async (app) => {
 
   // GET /api/admin/scraper/runs — recent scraper runs
   // ?type=category|app_details|keyword_search|reviews  &limit=20
-  app.get("/scraper/runs", async (request) => {
+  app.get("/scraper/runs", { preHandler: [requireSystemAdmin()] }, async (request) => {
     const { type, limit = "20" } = request.query as {
       type?: string;
       limit?: string;
@@ -150,19 +152,8 @@ export const adminRoutes: FastifyPluginAsync = async (app) => {
 
   // POST /api/admin/scraper/trigger — manually trigger a scraper
   // Body: { type: "category" | "app_details" | "keyword_search" | "reviews" }
-  app.post("/scraper/trigger", async (request, reply) => {
-    const { type, platform: platformParam } = request.body as { type?: string; platform?: string };
-    const validTypes = [
-      "category",
-      "app_details",
-      "keyword_search",
-      "reviews",
-    ];
-    if (!type || !validTypes.includes(type)) {
-      return reply.code(400).send({
-        error: `type must be one of: ${validTypes.join(", ")}`,
-      });
-    }
+  app.post("/scraper/trigger", { preHandler: [requireSystemAdmin()] }, async (request, reply) => {
+    const { type, platform: platformParam } = triggerScraperSchema.parse(request.body);
 
     try {
       const queue = getScraperQueue();
@@ -202,7 +193,7 @@ export const adminRoutes: FastifyPluginAsync = async (app) => {
   });
 
   // GET /api/admin/stats — overview stats
-  app.get("/stats", async () => {
+  app.get("/stats", { preHandler: [requireSystemAdmin()] }, async () => {
     const [appCount] = await db
       .select({ count: sql<number>`count(*)::int` })
       .from(apps)

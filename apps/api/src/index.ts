@@ -25,6 +25,7 @@ import { platformRoutes } from "./routes/platforms.js";
 import { platformAttributeRoutes } from "./routes/platform-attributes.js";
 import { developerRoutes } from "./routes/developers.js";
 import { crossPlatformRoutes } from "./routes/cross-platform.js";
+import { adminRoutes } from "./routes/admin.js";
 import Redis from "ioredis";
 
 const databaseUrl = process.env.DATABASE_URL;
@@ -154,6 +155,7 @@ await app.register(platformRoutes, { prefix: "/api/platforms" });
 await app.register(platformAttributeRoutes, { prefix: "/api/platform-attributes" });
 await app.register(developerRoutes, { prefix: "/api/developers" });
 await app.register(crossPlatformRoutes, { prefix: "/api/cross-platform" });
+await app.register(adminRoutes, { prefix: "/api/admin" });
 
 // Shallow health check — always responds (for load balancer liveness probes)
 app.get("/health/live", async () => {
@@ -232,6 +234,18 @@ app.get("/health", async (_request, reply) => {
 
 // Error handler
 app.setErrorHandler((error: any, _request, reply) => {
+  // Zod validation errors → 400 with field-level details
+  if (error.name === "ZodError") {
+    const fieldErrors = error.issues.map((issue: any) => ({
+      field: issue.path.join("."),
+      message: issue.message,
+    }));
+    return reply.code(400).send({
+      error: "Validation failed",
+      details: fieldErrors,
+    });
+  }
+
   app.log.error(error);
   reply.code(error.statusCode ?? 500).send({
     error: error.message || "Internal Server Error",
