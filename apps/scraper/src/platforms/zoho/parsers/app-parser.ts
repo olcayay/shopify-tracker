@@ -67,13 +67,8 @@ export function parseZohoAppDetails(html: string, slug: string): NormalizedAppDe
       try {
         detailsObj = JSON.parse(jsonStr);
         log.info("parsed detailsObject via JSON.parse", { slug, size: jsonStr.length });
-      } catch {
-        try {
-          detailsObj = new Function(`return (${jsonStr})`)();
-          log.info("parsed detailsObject via Function()", { slug, size: jsonStr.length });
-        } catch (err2) {
-          log.warn("failed to parse detailsObject", { slug, error: String(err2) });
-        }
+      } catch (err) {
+        log.warn("failed to parse detailsObject via JSON.parse", { slug, error: String(err), size: jsonStr.length });
       }
       if (detailsObj) break;
     }

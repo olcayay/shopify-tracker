@@ -544,6 +544,11 @@ export const authRoutes: FastifyPluginAsync = async (app) => {
       if (newPassword.length < 8) {
         return reply.code(400).send({ error: "New password must be at least 8 characters" });
       }
+      if (!/[A-Z]/.test(newPassword) || !/[a-z]/.test(newPassword) || !/[0-9]/.test(newPassword)) {
+        return reply.code(400).send({
+          error: "Password must contain at least one uppercase letter, one lowercase letter, and one number",
+        });
+      }
       const [currentUser] = await db
         .select({ passwordHash: users.passwordHash })
         .from(users)

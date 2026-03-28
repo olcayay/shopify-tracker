@@ -84,7 +84,7 @@ app.get("/canva-search", async (request, reply) => {
 
     // If browser is broken, kill it so next request gets a fresh one
     if (canva) {
-      try { await canva.closeBrowser(); } catch {}
+      try { await canva.closeBrowser(); } catch (err) { log.warn("failed to close browser during cleanup", { error: String(err) }); }
       canva = null;
     }
 

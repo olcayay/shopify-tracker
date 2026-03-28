@@ -37,11 +37,15 @@
 
 ## Linear Task Workflow
 
-### Creating tasks ("task aç", "issue aç", etc.)
-When the user asks to create a task, use the **Linear GraphQL API via `curl`** to create an issue in the PLA project:
+- **Project:** [Shopify App Tracker](https://linear.app/plan-b-side-projects/project/shopify-app-tracker-0c73ee47f3c9/)
 - **Team ID:** `13127a86-8941-4c00-9031-9efb4a4fb91b`
-- **Project ID:** `ee05a847-f284-4134-974f-6f3cfc7cec7a` (Shopify App Tracker) — all tasks must be created under this project. Add `projectId` to the `IssueCreateInput`.
-- **Label:** Always add `auto-generated` label (ID: `25dbb951-787e-4845-9dba-984d57a57fae`)
+- **Project ID:** `ee05a847-f284-4134-974f-6f3cfc7cec7a` — all tasks must be created under this project. Add `projectId` to the `IssueCreateInput`.
+- **Label (always):** `auto-generated` (ID: `25dbb951-787e-4845-9dba-984d57a57fae`)
+- All Linear API calls use `curl` with JSON payload written to `/tmp/linear-*.json` (heredoc with `'JSONEOF'`)
+
+### Creating tasks ("task aç", "issue aç", etc.)
+
+**Single task:**
 - **Title:** Clear, descriptive, action-oriented (English)
 - **Body structure:**
   ```
@@ -60,20 +64,34 @@ When the user asks to create a task, use the **Linear GraphQL API via `curl`** t
   ## Acceptance Criteria
   - Concrete, testable outcomes
   ```
-- Write the JSON payload to `/tmp/linear-create.json` (heredoc with `'JSONEOF'`), then `curl -d @/tmp/linear-create.json`
 - Use mutation with variables: `mutation($input: IssueCreateInput!) { issueCreate(input: $input) { success issue { id identifier url } } }`
+
+**Batch/group task creation (multiple related tasks):**
+When creating a group of related tasks (e.g., a feature epic, a redesign project):
+1. **Create a topic-specific label** for the group (e.g., `app-detail-v2`, `auth-refactor`). Use `issueLabelCreate` mutation. Add this label to ALL tasks in the group alongside `auto-generated`.
+2. **Set priority** on each task to show relative importance within the group. Use the `priority` field in `IssueCreateInput` (1=Urgent, 2=High, 3=Medium, 4=Low, 0=None).
+3. **Add phase prefix to titles** if the tasks are organized into phases. Format: `Phase N: <title>` (e.g., `Phase 0: Create directory structure`, `Phase 2: Build enhanced keywords page`).
 
 ### Implementing tasks ("task çöz", "implement et", etc.)
 When the user asks to implement tasks:
-1. **Fetch Todo tasks** from Linear via GraphQL API (filter by team PLA, state "Todo")
-2. **Work on each task individually** — one task, one commit
-3. **For each task:**
+1. **Fetch Todo tasks** from Linear via GraphQL API (filter by team PLA, state "Todo", project Shopify App Tracker)
+2. **Read comments** on each task before starting — comments may contain extra context, clarifications, or updated requirements. Use: `query { issue(id: "...") { comments { nodes { body createdAt } } } }`
+3. **Prioritize and order tasks** based on:
+   - Priority field (1=Urgent first, then 2=High, etc.)
+   - Phase prefix in title (Phase 0 before Phase 1, etc.)
+   - Dependencies between tasks (blockers first)
+4. **Work on each task individually** — one task, one commit
+5. **For each task:**
    a. Move Linear issue to **In Progress** state
    b. Implement the solution, add tests, verify all tests pass
    c. Commit with message referencing the issue (e.g., `Fix dashboard /health endpoint (PLA-90)`)
-   d. Move Linear issue to **Done** state
-   e. Add a **comment** to the Linear issue with:
-      - Implementation summary (what was done, how it works, files changed)
+   d. **If the task references a document** (e.g., a design doc, spec, or guide), update that document to reflect the task's completion (mark as done, update status, add implementation notes)
+   e. Add a **comment** to the Linear issue with the following structure:
+      - **Ne yapıldı:** Short summary of what was implemented
+      - **Nasıl yapıldı:** Key technical decisions, files changed, approach taken
+      - **Proje etkisi:** What this change enables, potential side effects, what to watch out for
+      - **Test adımları:** Step-by-step manual testing instructions (how to verify the change works)
       - Commit hash as a clickable link: `[commit_hash](https://github.com/olcayay/shopify-tracker/commit/commit_hash)`
-   f. Use Linear GraphQL API via `curl` for comments — write JSON payload to `/tmp/linear-comment.json`, then `curl -d @/tmp/linear-comment.json`
-   g. Use mutation: `mutation($input: CommentCreateInput!) { commentCreate(input: $input) { success } }`
+   f. Move Linear issue to **In Review** state — **NEVER move to Done**. Only the user moves tasks to Done after manual testing.
+   g. Use Linear GraphQL API via `curl` for comments — write JSON payload to `/tmp/linear-comment.json`, then `curl -d @/tmp/linear-comment.json`
+   h. Use mutation: `mutation($input: CommentCreateInput!) { commentCreate(input: $input) { success } }`

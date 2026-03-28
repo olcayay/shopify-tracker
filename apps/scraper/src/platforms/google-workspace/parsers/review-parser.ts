@@ -109,6 +109,6 @@ function parseDateText(text: string): string {
     if (!isNaN(date.getTime())) {
       return date.toISOString().split("T")[0];
     }
-  } catch {}
+  } catch { /* expected for non-standard date formats, return raw text below */ }
   return text;
 }

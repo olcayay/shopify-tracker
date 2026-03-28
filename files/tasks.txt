@@ -1,3 +1,13 @@
+Risk Analysis V3 — Security & Reliability Fixes (2026-03-28)
+  PLA-173: Remove new Function() RCE from Zoho parser ✅
+  PLA-175: Fix 3 failing Shopify parser tests ✅ (already passing — 1270/1270)
+  PLA-130: Fix SQL injection via sql.raw() in categories endpoint ✅
+  PLA-184: Remove localhost from production CORS config ✅
+  PLA-183: Fix password complexity on password change endpoint ✅
+  PLA-182: Fix empty catch blocks in Canva/Zoho/GWS scrapers ✅
+  PLA-180: Implement deep health checks (DB + Redis) ✅
+  Linear: risk label created + priority set on 31 tasks (P0→Urgent, P1→High, P2→Medium, P3→Low)
+
 App Detail v2 Redesign — All Phases Complete (PLA-138 through PLA-172) ✅
   Phase 0: PLA-138, PLA-140, PLA-142, PLA-145 — Directory structure, header, nav, toggle ✅
   Phase 1: PLA-147, PLA-150, PLA-153 — Health scores, alerts, dashboard hub ✅

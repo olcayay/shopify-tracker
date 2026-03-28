@@ -24,6 +24,7 @@ import { platformRoutes } from "./routes/platforms.js";
 import { platformAttributeRoutes } from "./routes/platform-attributes.js";
 import { developerRoutes } from "./routes/developers.js";
 import { crossPlatformRoutes } from "./routes/cross-platform.js";
+import Redis from "ioredis";
 
 const databaseUrl = process.env.DATABASE_URL;
 if (!databaseUrl) {
@@ -88,8 +89,9 @@ const allowedOrigins = [
   "https://api.appranks.io",
   process.env.DASHBOARD_URL,
   process.env.NEXT_PUBLIC_API_URL,
-  "http://localhost:3000",
-  "http://localhost:3001",
+  ...(process.env.NODE_ENV !== "production"
+    ? ["http://localhost:3000", "http://localhost:3001"]
+    : []),
 ].filter(Boolean) as string[];
 
 await app.register(cors, {
@@ -121,9 +123,79 @@ await app.register(platformAttributeRoutes, { prefix: "/api/platform-attributes"
 await app.register(developerRoutes, { prefix: "/api/developers" });
 await app.register(crossPlatformRoutes, { prefix: "/api/cross-platform" });
 
-// Health check endpoint (no auth required)
-app.get("/health", async () => {
+// Shallow health check — always responds (for load balancer liveness probes)
+app.get("/health/live", async () => {
   return { status: "ok", timestamp: new Date().toISOString() };
+});
+
+// Deep health check — verifies DB + Redis connectivity (for readiness probes)
+app.get("/health/ready", async (_request, reply) => {
+  const checks: Record<string, { status: string; latencyMs?: number; error?: string }> = {};
+
+  // DB check
+  const dbStart = Date.now();
+  try {
+    await db.execute(sql`SELECT 1`);
+    checks.database = { status: "ok", latencyMs: Date.now() - dbStart };
+  } catch (err) {
+    checks.database = { status: "error", latencyMs: Date.now() - dbStart, error: String(err) };
+  }
+
+  // Redis check
+  const redisUrl = process.env.REDIS_URL || "redis://localhost:6379";
+  const redisStart = Date.now();
+  let redis: Redis | null = null;
+  try {
+    redis = new Redis(redisUrl, { connectTimeout: 5000, lazyConnect: true });
+    await redis.connect();
+    await redis.ping();
+    checks.redis = { status: "ok", latencyMs: Date.now() - redisStart };
+  } catch (err) {
+    checks.redis = { status: "error", latencyMs: Date.now() - redisStart, error: String(err) };
+  } finally {
+    if (redis) redis.disconnect();
+  }
+
+  const allOk = Object.values(checks).every((c) => c.status === "ok");
+  const statusCode = allOk ? 200 : 503;
+
+  return reply.code(statusCode).send({
+    status: allOk ? "ok" : "degraded",
+    timestamp: new Date().toISOString(),
+    checks,
+  });
+});
+
+// Legacy /health endpoint — deep check for backwards compatibility
+app.get("/health", async (_request, reply) => {
+  const checks: Record<string, string> = {};
+
+  try {
+    await db.execute(sql`SELECT 1`);
+    checks.database = "ok";
+  } catch {
+    checks.database = "error";
+  }
+
+  const redisUrl = process.env.REDIS_URL || "redis://localhost:6379";
+  let redis: Redis | null = null;
+  try {
+    redis = new Redis(redisUrl, { connectTimeout: 5000, lazyConnect: true });
+    await redis.connect();
+    await redis.ping();
+    checks.redis = "ok";
+  } catch {
+    checks.redis = "error";
+  } finally {
+    if (redis) redis.disconnect();
+  }
+
+  const allOk = Object.values(checks).every((c) => c === "ok");
+  return reply.code(allOk ? 200 : 503).send({
+    status: allOk ? "ok" : "degraded",
+    timestamp: new Date().toISOString(),
+    checks,
+  });
 });
 
 // Error handler

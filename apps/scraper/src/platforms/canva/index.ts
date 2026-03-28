@@ -118,7 +118,7 @@ export class CanvaModule implements PlatformModule {
         try {
           appListingJson = await response.text();
           log.info("intercepted appListing API", { slug, size: appListingJson.length });
-        } catch {}
+        } catch (err) { log.warn("failed to read appListing response", { slug, error: String(err) }); }
       }
     };
     page.on("response", responseHandler);
@@ -299,7 +299,7 @@ export class CanvaModule implements PlatformModule {
               const body = await response.text();
               clearTimeout(timeout);
               resolve(body);
-            } catch {}
+            } catch (err) { log.warn("failed to read suggest response", { error: String(err) }); }
           }
         };
         page.on("response", handler);
@@ -403,7 +403,7 @@ export class CanvaModule implements PlatformModule {
             try {
               const data = JSON.parse(body);
               if (data.A) totalResults = data.A;
-            } catch {}
+            } catch (err) { log.warn("failed to parse search response JSON", { error: String(err) }); }
           }
         } catch (e) {
           log.warn("failed to read intercepted response", { url, error: String(e) });
@@ -448,7 +448,7 @@ export class CanvaModule implements PlatformModule {
               allApps.push(app);
             }
           }
-        } catch {}
+        } catch (err) { log.warn("failed to parse doSingleSearch response JSON", { keyword, error: String(err) }); }
       }
 
       log.info("doSingleSearch done", {
@@ -504,8 +504,8 @@ export class CanvaModule implements PlatformModule {
           try {
             const data = JSON.parse(body);
             if (data.A) totalResults = data.A;
-          } catch {}
-        } catch {}
+          } catch (err) { log.warn("failed to parse bulk search response JSON", { error: String(err) }); }
+        } catch (err) { log.warn("failed to read bulk search response body", { error: String(err) }); }
       }
     };
 
@@ -555,7 +555,7 @@ export class CanvaModule implements PlatformModule {
               allApps.push(app);
             }
           }
-        } catch {}
+        } catch (err) { log.warn("failed to parse search merge response JSON", { keyword, error: String(err) }); }
       }
 
       log.info("search results merged", {
@@ -643,7 +643,7 @@ export class CanvaModule implements PlatformModule {
           break;
         }
       }
-    } catch {}
+    } catch (err) { log.warn("failed to load canva auth state", { error: String(err) }); }
 
     this.browserContext = await this.browser.newContext({
       userAgent: "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",

@@ -90,7 +90,7 @@ function parseJsonLd($: cheerio.CheerioAPI): JsonLdData | null {
           image: data.image || null,
         };
       }
-    } catch {}
+    } catch (err) { log.warn("failed to parse JSON-LD block", { error: String(err) }); }
   });
 
   return result;

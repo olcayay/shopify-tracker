@@ -1,3 +1,43 @@
+Risk Analysis V3 — Security & Reliability Fixes (2026-03-28)
+==============================================================
+7 code fixes from RISK_ANALYSIS_V3.md:
+
+**PLA-173 (P0):** Removed `new Function()` RCE vulnerability from Zoho parser.
+  Was used as fallback when JSON.parse fails on scraped data. Replaced with
+  warning log — DOM fallback already handles parse failures.
+  File: apps/scraper/src/platforms/zoho/parsers/app-parser.ts
+
+**PLA-130 (P0):** Fixed SQL injection in categories features-by-slugs endpoint.
+  Replaced `sql.raw()` with string interpolation → parameterized `sql` template
+  literal with proper array parameter binding.
+  File: apps/api/src/routes/categories.ts
+
+**PLA-184 (P1):** Removed localhost from production CORS. Now only includes
+  localhost:3000/3001 when NODE_ENV !== "production".
+  File: apps/api/src/index.ts
+
+**PLA-183 (P1):** Added password complexity check to password change endpoint.
+  Registration already required A-Z, a-z, 0-9 — now password change does too.
+  File: apps/api/src/routes/auth.ts
+
+**PLA-182 (P1):** Fixed 12 empty catch {} blocks across 5 files:
+  - canva-search-server.ts (1), parsers/app-parser.ts (1),
+  - platforms/canva/index.ts (8), google-workspace/index.ts (1),
+  - google-workspace/parsers/review-parser.ts (1 — comment only, expected path)
+
+**PLA-180 (P1):** Added deep health checks with DB + Redis connectivity:
+  - GET /health/live — shallow (liveness probe)
+  - GET /health/ready — deep with latency metrics (readiness probe)
+  - GET /health — deep (backwards compatible, returns 503 if degraded)
+  File: apps/api/src/index.ts
+
+**PLA-175 (P0):** Verified all 1270 scraper tests pass (was already fixed).
+
+**Linear Updates:** Created "risk" label (red), assigned to 31 tasks (PLA-130,
+  PLA-173–PLA-202). Set priorities: P0→Urgent(6), P1→High(9), P2→Medium(11), P3→Low(5).
+
+All 3,377 tests passing (355 shared + 486 API + 1270 scraper + 1266 dashboard).
+
 App Detail v2 — Full Redesign (PLA-138 through PLA-172) (2026-03-28)
 ===================================================================
 **Phase 0:** Directory structure, compact header, V2Nav/SubNavPills, v1↔v2 toggle

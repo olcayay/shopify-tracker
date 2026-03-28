@@ -101,9 +101,9 @@ export const categoryRoutes: FastifyPluginAsync = async (app) => {
     if (slugs.some((s) => !/^[a-z0-9-]+$/.test(s))) return [];
 
     try {
-      const queryText = `
+      const result = await db.execute(sql`
         SELECT DISTINCT
-          regexp_replace(cat->>'url', '.*\\/categories\\/([^/?#]+).*', '\\1') as cat_slug,
+          regexp_replace(cat->>'url', '.*\/categories\/([^/?#]+).*', '\1') as cat_slug,
           cat->>'title' as cat_title,
           sub->>'title' as sub_title,
           feat->>'title' as feat_title,
@@ -113,10 +113,9 @@ export const categoryRoutes: FastifyPluginAsync = async (app) => {
         jsonb_array_elements(s.categories) as cat,
         jsonb_array_elements(cat->'subcategories') as sub,
         jsonb_array_elements(sub->'features') as feat
-        WHERE regexp_replace(cat->>'url', '.*\\/categories\\/([^/?#]+).*', '\\1') = ANY(ARRAY[${slugs.map((s) => `'${s.replace(/'/g, "''")}'`).join(",")}])
+        WHERE regexp_replace(cat->>'url', '.*\/categories\/([^/?#]+).*', '\1') = ANY(${slugs})
         ORDER BY cat_title, sub_title, feat_title
-      `;
-      const result = await db.execute(sql.raw(queryText));
+      `);
       const rows = (Array.isArray(result) ? result : (result as any).rows ?? []) as { cat_slug: string; cat_title: string; sub_title: string; feat_title: string; feat_handle: string; feat_url: string }[];
 
     // Group by category → subcategory → features
