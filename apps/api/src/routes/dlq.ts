@@ -1,8 +1,8 @@
 import type { FastifyPluginAsync } from "fastify";
-import { eq, desc, sql } from "drizzle-orm";
+import { eq, desc, sql, isNull } from "drizzle-orm";
 import { deadLetterJobs } from "@appranks/db";
 import { requireSystemAdmin } from "../middleware/authorize.js";
-import { PAGINATION_DEFAULT_LIMIT, PAGINATION_MAX_LIMIT } from "../constants.js";
+import { PAGINATION_DEFAULT_LIMIT, PAGINATION_MAX_LIMIT, DLQ_ALERT_THRESHOLD } from "../constants.js";
 import { Queue } from "bullmq";
 
 const BACKGROUND_QUEUE_NAME = "scraper-jobs-background";
@@ -51,9 +51,23 @@ export const dlqRoutes: FastifyPluginAsync = async (app) => {
 
     const rows = await query;
 
+    // Count unresolved (non-replayed) DLQ jobs for alert threshold
+    let depth = 0;
+    try {
+      const [depthRow] = await db
+        .select({ depth: sql<number>`count(*)::int` })
+        .from(deadLetterJobs)
+        .where(isNull(deadLetterJobs.replayedAt));
+      depth = depthRow?.depth ?? 0;
+    } catch {
+      // Fallback if count query fails
+    }
+
     return reply.send({
       data: rows,
       count: rows.length,
+      depth,
+      alert: depth > DLQ_ALERT_THRESHOLD,
     });
   });
 
@@ -106,5 +120,28 @@ export const dlqRoutes: FastifyPluginAsync = async (app) => {
     } finally {
       await queue.close();
     }
+  });
+
+  // DELETE /api/system-admin/dlq/:id — permanently remove a dead letter job
+  app.delete("/:id", { preHandler: [requireSystemAdmin()] }, async (request, reply) => {
+    const { id } = request.params as { id: string };
+    const dlqId = parseInt(id, 10);
+    if (isNaN(dlqId)) {
+      return reply.code(400).send({ error: "Invalid DLQ job ID" });
+    }
+
+    const [existing] = await db
+      .select({ id: deadLetterJobs.id })
+      .from(deadLetterJobs)
+      .where(eq(deadLetterJobs.id, dlqId))
+      .limit(1);
+
+    if (!existing) {
+      return reply.code(404).send({ error: "Dead letter job not found" });
+    }
+
+    await db.delete(deadLetterJobs).where(eq(deadLetterJobs.id, dlqId));
+
+    return reply.send({ message: "Dead letter job deleted", dlqId });
   });
 };

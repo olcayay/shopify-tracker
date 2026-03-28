@@ -1,3 +1,18 @@
+Complete Dead Letter Queue with DELETE Endpoint and Depth Alerts (2026-03-28)
+=============================================================================
+**PLA-193:** DLQ was mostly implemented. Added missing pieces: DELETE endpoint and depth alerts.
+
+**What was added:**
+1. **DELETE /api/system-admin/dlq/:id** — permanently remove a DLQ job
+2. **DLQ depth alert** — GET response now includes `depth` (unresolved count) and `alert` (true when > 20)
+3. **DLQ_ALERT_THRESHOLD** constant (20) in constants.ts
+
+**Files changed:**
+- `apps/api/src/routes/dlq.ts` — added DELETE endpoint, depth/alert in GET response
+- `apps/api/src/constants.ts` — added DLQ_ALERT_THRESHOLD
+- `apps/api/src/__tests__/routes/dlq.test.ts` — 5 new tests (DELETE + depth/alert)
+- `files/RISK_ANALYSIS_V3.md` — R-71 marked as Mitigated
+
 Implement Redis-Backed Access Token Blacklist (2026-03-28)
 ============================================================
 **PLA-194:** Enable immediate access token revocation before 15-min expiry.

@@ -111,6 +111,20 @@ describe("DLQ Routes", () => {
       });
       expect(res.statusCode).toBe(200);
     });
+
+    it("includes depth and alert fields in response", async () => {
+      const res = await app.inject({
+        method: "GET",
+        url: "/api/system-admin/dlq",
+        headers: authHeaders(token),
+      });
+      expect(res.statusCode).toBe(200);
+      const body = res.json();
+      expect(body).toHaveProperty("depth");
+      expect(body).toHaveProperty("alert");
+      expect(typeof body.depth).toBe("number");
+      expect(typeof body.alert).toBe("boolean");
+    });
   });
 
   describe("POST /api/system-admin/dlq/:id/replay", () => {
@@ -188,4 +202,62 @@ describe("DLQ Routes", () => {
       await replayApp.close();
     });
   });
+
+  describe("DELETE /api/system-admin/dlq/:id", () => {
+    it("returns 403 for non-system-admin users", async () => {
+      const res = await app.inject({
+        method: "DELETE",
+        url: "/api/system-admin/dlq/1",
+        headers: authHeaders(normalUserToken),
+      });
+      expect(res.statusCode).toBe(403);
+    });
+
+    it("returns 400 for invalid ID", async () => {
+      const res = await app.inject({
+        method: "DELETE",
+        url: "/api/system-admin/dlq/abc",
+        headers: authHeaders(token),
+      });
+      expect(res.statusCode).toBe(400);
+      expect(res.json().error).toBe("Invalid DLQ job ID");
+    });
+
+    it("returns 404 when job not found", async () => {
+      const emptyApp = await buildTestApp({
+        routes: dlqRoutes,
+        prefix: "/api/system-admin/dlq",
+        db: { selectResult: [] },
+      });
+
+      const res = await emptyApp.inject({
+        method: "DELETE",
+        url: "/api/system-admin/dlq/999",
+        headers: authHeaders(token),
+      });
+      expect(res.statusCode).toBe(404);
+      expect(res.json().error).toBe("Dead letter job not found");
+      await emptyApp.close();
+    });
+
+    it("deletes a dead letter job successfully", async () => {
+      const deleteApp = await buildTestApp({
+        routes: dlqRoutes,
+        prefix: "/api/system-admin/dlq",
+        db: { selectResult: [sampleDlqJob] },
+      });
+
+      const res = await deleteApp.inject({
+        method: "DELETE",
+        url: "/api/system-admin/dlq/1",
+        headers: authHeaders(token),
+      });
+      expect(res.statusCode).toBe(200);
+      const body = res.json();
+      expect(body.message).toBe("Dead letter job deleted");
+      expect(body.dlqId).toBe(1);
+      await deleteApp.close();
+    });
+  });
 });
+

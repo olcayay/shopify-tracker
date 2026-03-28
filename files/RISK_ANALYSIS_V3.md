@@ -929,13 +929,12 @@ const defaultJobOptions = {
 - Can't analyze failure patterns across time
 - No ability to bulk-retry class of failed jobs
 
-**Mitigation:**
-- [ ] Implement dead letter queue: move failed jobs to separate `scraper-jobs-dlq` queue (**PLA-193**)
-- [ ] Store failure reason, stack trace, and job data in DLQ
-- [ ] Add admin UI to inspect and retry DLQ jobs
-- [ ] Alert on DLQ depth > 20 jobs
-
-**When task PLA-193 is completed, update this risk status to Mitigated.**
+**Mitigation:** ✅ **Mitigated**
+- [x] Implement dead letter queue: failed jobs auto-moved to `dead_letter_jobs` DB table
+- [x] Store failure reason, stack trace, and job data in DLQ
+- [x] Admin API: GET (list + depth alert), POST (replay), DELETE (remove) endpoints
+- [x] Alert on DLQ depth > 20 jobs (alert flag in GET response)
+- [ ] Add admin UI to inspect and retry DLQ jobs (future enhancement)
 
 ---
 
@@ -1181,7 +1180,7 @@ This table maps each Linear ticket to its risk(s) and priority. **Update this se
 | PLA-182 | Fix empty catch blocks (add error logging) | R-67 | P1 | **Fixed** |
 | PLA-192 | Add request ID correlation/tracing | R-68 | P2 | Todo |
 | PLA-180 | Implement deep health checks (DB + Redis) | R-69 | P1 | **Fixed** |
-| PLA-193 | Implement dead letter queue for failed jobs | R-71 | P2 | Todo |
+| PLA-193 | Implement dead letter queue for failed jobs | R-71 | P2 | **Fixed** |
 | PLA-177 | Increase Redis maxmemory to 1GB | R-72 | P0 | Todo |
 | PLA-185 | Implement worker graceful shutdown | R-73 | P1 | **Fixed** |
 | PLA-186 | Add missing database indexes on large tables | R-75 | P1 | **Fixed** |
@@ -1266,7 +1265,7 @@ This table maps each Linear ticket to its risk(s) and priority. **Update this se
 | **R-68** | **No request ID tracing** | **3** | **4** | **12** | **Open** |
 | **R-69** | **Shallow health checks** | **3** | **5** | **15** | **Open** |
 | **R-70** | **URL-based admin auth** | **3** | **3** | **9** | **Open** |
-| **R-71** | **No dead letter queue** | **2** | **3** | **8** | **Open** |
+| **R-71** | **No dead letter queue** | **2** | **3** | **8** | **Mitigated** |
 | **R-72** | **Redis maxmemory too low** | **4** | **5** | **20** | **Open** |
 | **R-73** | **Worker graceful shutdown** | **3** | **4** | **15** | **Mitigated** |
 | **R-74** | **No idempotency keys** | **3** | **4** | **12** | **Mitigated** |

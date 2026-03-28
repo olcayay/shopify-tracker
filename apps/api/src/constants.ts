@@ -60,6 +60,10 @@ export const DEFAULT_MAX_COMPETITOR_APPS = 50;
 /** Redis connection timeout in ms */
 export const REDIS_CONNECT_TIMEOUT_MS = 5000;
 
+// ── Dead Letter Queue ──────────────────────────────────────────────
+/** DLQ depth threshold that triggers an alert in the response */
+export const DLQ_ALERT_THRESHOLD = 20;
+
 // ── Idempotency ────────────────────────────────────────────────────
 /** Idempotency cache TTL in seconds (24 hours) */
 export const IDEMPOTENCY_TTL_SECONDS = 86_400;
