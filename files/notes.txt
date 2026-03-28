@@ -1,3 +1,10 @@
+PLA-111: Shared cross-platform components (2026-03-28)
+======================================================
+- platform-filter-chips.tsx — toggleable platform chips with brand colors
+- platform-badge-cell.tsx — colored dot + label for table cells
+- Auth context: added /api/cross-platform/ and /api/developers to PLATFORM_EXEMPT_PREFIXES
+- 7 tests (4 filter chips, 3 badge cell)
+
 PLA-110: API cross-platform endpoints (2026-03-28)
 ===================================================
 - Created cross-platform.ts with 3 endpoints:

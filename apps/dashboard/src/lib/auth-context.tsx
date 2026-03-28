@@ -117,6 +117,8 @@ const PLATFORM_EXEMPT_PREFIXES = [
   "/api/system-admin/",
   "/api/account/members",
   "/api/platforms",
+  "/api/cross-platform/",
+  "/api/developers",
 ];
 
 /** Append ?platform= to an API path if not already present and applicable */
