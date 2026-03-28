@@ -1,3 +1,12 @@
+PLA-112 to PLA-115: Cross-platform listing pages (2026-03-28)
+===============================================================
+- /developers — global developers with platform badges, search, sort, pagination
+- /apps — tracked + competitor apps with platform filter chips, status filter, ratings
+- /keywords — tracked keywords with platform filter, search, active/paused status
+- /competitors — competitor apps with "tracked for" count, ratings, pricing
+- All pages use shared PlatformFilterChips + PlatformBadgeCell components
+- All pages call /api/cross-platform/* or /api/developers endpoints
+
 PLA-111: Shared cross-platform components (2026-03-28)
 ======================================================
 - platform-filter-chips.tsx — toggleable platform chips with brand colors

@@ -1,3 +1,7 @@
+PLA-112: Dashboard cross-platform /developers listing page ✅
+PLA-113: Dashboard cross-platform /apps listing page ✅
+PLA-114: Dashboard cross-platform /keywords listing page ✅
+PLA-115: Dashboard cross-platform /competitors listing page ✅
 PLA-111: Shared cross-platform components (filter chips, platform badge, auth exempt) ✅
 PLA-110: API cross-platform endpoints for apps, keywords, competitors ✅
 PLA-116: Sidebar context-aware navigation for global vs platform pages ✅
