@@ -1,16 +1,37 @@
-export default async function CompetitorsPage({
+import { getApp } from "@/lib/api";
+import type { PlatformId } from "@appranks/shared";
+import { CompetitorsSection } from "../../../../[slug]/competitors-section";
+import { Lock } from "lucide-react";
+
+export default async function V2CompetitorsPage({
   params,
 }: {
   params: Promise<{ platform: string; slug: string }>;
 }) {
-  const { slug } = await params;
+  const { platform, slug } = await params;
+
+  let app: any;
+  try {
+    app = await getApp(slug, platform as PlatformId);
+  } catch {
+    return <p className="text-muted-foreground">App not found.</p>;
+  }
+
+  if (!app.isTrackedByAccount) {
+    return (
+      <div className="flex flex-col items-center justify-center py-12 text-center space-y-3">
+        <Lock className="h-8 w-8 text-muted-foreground" />
+        <h3 className="text-lg font-medium">Track this app to unlock competitor analysis</h3>
+        <p className="text-sm text-muted-foreground max-w-md">
+          Add competitors to compare ratings, reviews, pricing, and marketplace visibility side by side.
+        </p>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-4">
-      <h2 className="text-lg font-semibold">Competitors</h2>
-      <p className="text-sm text-muted-foreground">
-        Competitor analysis for {slug} — will be built in Phase 3.
-      </p>
+      <CompetitorsSection appSlug={slug} />
     </div>
   );
 }
