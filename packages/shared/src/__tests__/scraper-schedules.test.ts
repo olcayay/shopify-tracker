@@ -27,12 +27,13 @@ describe("SCRAPER_SCHEDULES", () => {
 
   it("all cron expressions match expected format", () => {
     for (const s of SCRAPER_SCHEDULES) {
-      // Format: M H * * *
+      // Format: M H * * * (daily) or M H * * D (weekly)
       const parts = s.cron.split(" ");
       expect(parts).toHaveLength(5);
       expect(parts[2]).toBe("*");
       expect(parts[3]).toBe("*");
-      expect(parts[4]).toBe("*");
+      // day-of-week: either * (daily) or 0-6 (weekly)
+      expect(parts[4]).toMatch(/^(\*|[0-6])$/);
     }
   });
 

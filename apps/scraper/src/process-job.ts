@@ -64,6 +64,7 @@ const JOB_TIMEOUT_MAP: Partial<Record<ScraperJobType, number>> & { default: numb
   compute_app_scores: JOB_TIMEOUT_COMPUTE_MS,
   backfill_categories: JOB_TIMEOUT_COMPUTE_MS,
   daily_digest: JOB_TIMEOUT_DAILY_DIGEST_MS,
+  data_cleanup: JOB_TIMEOUT_COMPUTE_MS,
   default: JOB_TIMEOUT_DEFAULT_MS,
 };
 
@@ -514,6 +515,12 @@ export function createProcessJob(db: ReturnType<typeof createDb>, queueName?: st
           }
         }
         log.info("digest completed", { sent, skipped, totalAccounts: byAccount.size });
+        break;
+      }
+
+      case "data_cleanup": {
+        const { dataCleanup } = await import("./jobs/data-cleanup.js");
+        await dataCleanup(db, job.id);
         break;
       }
 

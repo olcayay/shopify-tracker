@@ -599,13 +599,12 @@ See V2 for R-34, R-35 details.
 
 **Projection:** 11 platforms x 2 scrapes/day x 365 days = 8k snapshots per app. At 100k apps this is 800GB+ per year.
 
-**Mitigation:**
-- [ ] Implement data retention/cleanup job: delete snapshots >12 months (**PLA-191**)
-- [ ] Add time-based partitioning on snapshot tables (monthly)
-- [ ] Create archive strategy for old data
-- [ ] Monitor table sizes with alerts
-
-**When task PLA-191 is completed, update this risk status to Mitigated.**
+**Mitigation:** ✅ **Mitigated**
+- [x] Implement data retention/cleanup job (`data_cleanup` scheduled weekly Sun 02:00 UTC) (**PLA-191**)
+- [x] Configurable retention: app/keyword snapshots 12mo, scrape_runs 6mo, DLQ 3mo (env vars)
+- [x] VACUUM ANALYZE after deletions
+- [ ] Add time-based partitioning on snapshot tables (monthly) — future
+- [ ] Monitor table sizes with alerts — future
 
 ---
 
@@ -1173,7 +1172,7 @@ This table maps each Linear ticket to its risk(s) and priority. **Update this se
 | PLA-190 | Set up centralized logging (Loki/ELK) | R-31 | P2 | Todo |
 | PLA-188 | Integrate Sentry error tracking | R-32 | P2 | Todo |
 | PLA-189 | Add Prometheus metrics + Grafana dashboards | R-33 | P2 | Todo |
-| PLA-191 | Implement data retention/cleanup job | R-38 | P2 | Todo |
+| PLA-191 | Implement data retention/cleanup job | R-38 | P2 | **Fixed** |
 | PLA-179 | Add global API rate limiting | R-65 | P1 | **Fixed** |
 | PLA-181 | Wrap multi-step operations in DB transactions | R-66 | P1 | **Fixed** |
 | PLA-182 | Fix empty catch blocks (add error logging) | R-67 | P1 | **Fixed** |
@@ -1231,7 +1230,7 @@ This table maps each Linear ticket to its risk(s) and priority. **Update this se
 | R-35 | Node.js EOL | 5 | 1 | 5 | **Fixed** |
 | R-36 | Platform count growth | 3 | 4 | 12 | Open |
 | R-37 | Customer count growth | 3 | 4 | 12 | Open |
-| R-38 | Data volume growth | 2 | 5 | 10 | Open |
+| R-38 | Data volume growth | 2 | 5 | 10 | Mitigated |
 | R-39 | Concurrent app upsert race | 5 | 4 | 20 | Open |
 | R-40 | Category ranking TOCTOU | 3 | 4 | 15 | **Fixed** |
 | R-41 | Cascade job partial enqueue | 3 | 4 | 15 | **Mitigated** |

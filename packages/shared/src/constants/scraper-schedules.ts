@@ -74,6 +74,8 @@ export const SCRAPER_SCHEDULES: ScraperSchedule[] = [
   { name: "hubspot_keyword_search", cron: "30 13,1 * * *", type: "keyword_search", platform: "hubspot" },
   { name: "hubspot_reviews", cron: "45 10 * * *", type: "reviews", platform: "hubspot" },
   { name: "hubspot_compute_app_scores", cron: "30 14 * * *", type: "compute_app_scores", platform: "hubspot" },
+  // ── Cross-platform maintenance ──
+  { name: "data_cleanup", cron: "0 2 * * 0", type: "data_cleanup", platform: "shopify" },
 ];
 
 /** Parse cron expression and compute next run time */

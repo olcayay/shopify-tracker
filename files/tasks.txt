@@ -1,3 +1,6 @@
+Implement data retention and cleanup job for snapshot tables (2026-03-28)
+  PLA-191: Weekly data_cleanup job (Sun 02:00 UTC), configurable retention periods ✅
+
 Add request ID correlation and tracing across services (2026-03-28)
   PLA-192: requestId in error responses, BullMQ jobs, and worker logs ✅
 

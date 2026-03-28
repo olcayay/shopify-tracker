@@ -1,3 +1,28 @@
+Implement Data Retention and Cleanup Job (2026-03-28)
+=====================================================
+**PLA-191:** Prevent unbounded database growth from snapshot tables.
+
+**Implementation:**
+1. **`apps/scraper/src/jobs/data-cleanup.ts`** — New cleanup job:
+   - Deletes old rows from app_snapshots, keyword_snapshots, scrape_runs, dead_letter_jobs
+   - Configurable retention via env vars (DATA_RETENTION_SNAPSHOT_MONTHS=12, etc.)
+   - Runs VACUUM ANALYZE after each table cleanup
+   - Graceful: continues with remaining tables if one fails
+2. **Scheduled weekly** — `0 2 * * 0` (Sunday 02:00 UTC) via SCRAPER_SCHEDULES
+3. **Job type** `data_cleanup` added to ScraperJobType, process-job switch, admin trigger
+
+**Default retention:** snapshots 12mo, scrape_runs 6mo, DLQ 3mo
+
+**Files changed:**
+- `apps/scraper/src/jobs/data-cleanup.ts` (new)
+- `apps/scraper/src/queue.ts` — added data_cleanup to ScraperJobType
+- `apps/scraper/src/process-job.ts` — added case handler + timeout
+- `packages/shared/src/constants/scraper-schedules.ts` — added weekly schedule
+- `packages/shared/src/__tests__/scraper-schedules.test.ts` — allow weekly crons
+- `apps/api/src/routes/system-admin.ts` — added to validTypes
+- `apps/scraper/src/jobs/__tests__/data-cleanup.test.ts` (new, 5 tests)
+- `files/RISK_ANALYSIS_V3.md` — R-38 marked as Mitigated
+
 Add Request ID Correlation and Tracing Across Services (2026-03-28)
 ====================================================================
 **PLA-192:** Enable end-to-end request tracing from API to worker.
