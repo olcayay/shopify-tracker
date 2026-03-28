@@ -1,7 +1,8 @@
 import type { FastifyPluginAsync } from "fastify";
 import { eq, desc, sql, and, inArray, ilike } from "drizzle-orm";
 import { createDb } from "@appranks/db";
-import { computeWeightedPowerScore } from "@appranks/shared";
+import { computeWeightedPowerScore, validatePlatformData, createLogger } from "@appranks/shared";
+import { slugsBodySchema } from "../schemas/apps.js";
 import { getPlatformFromQuery } from "../utils/platform.js";
 import { requireSystemAdmin } from "../middleware/authorize.js";
 import {
@@ -28,6 +29,7 @@ import {
 } from "@appranks/db";
 
 type Db = ReturnType<typeof createDb>;
+const log = createLogger("api-apps");
 
 function getMinPaidPrice(plans: any[] | null | undefined): number | null {
   if (!plans || plans.length === 0) return null;
@@ -163,8 +165,7 @@ export const appRoutes: FastifyPluginAsync = async (app) => {
 
   // POST /api/apps/last-changes — bulk lookup lastChangeAt for multiple apps
   app.post("/last-changes", async (request) => {
-    const { slugs } = request.body as { slugs: string[] };
-    if (!slugs?.length) return {};
+    const { slugs } = slugsBodySchema.parse(request.body);
     const platform = getPlatformFromQuery(request.query as Record<string, unknown>);
 
     const rows = await db
@@ -186,8 +187,7 @@ export const appRoutes: FastifyPluginAsync = async (app) => {
 
   // POST /api/apps/min-paid-prices — bulk lookup minPaidPrice for multiple apps
   app.post("/min-paid-prices", async (request) => {
-    const { slugs } = request.body as { slugs: string[] };
-    if (!slugs?.length) return {};
+    const { slugs } = slugsBodySchema.parse(request.body);
     const platform = getPlatformFromQuery(request.query as Record<string, unknown>);
 
     const rows = await db
@@ -214,8 +214,7 @@ export const appRoutes: FastifyPluginAsync = async (app) => {
 
   // POST /api/apps/launched-dates — bulk lookup launchedDate for multiple apps
   app.post("/launched-dates", async (request) => {
-    const { slugs } = request.body as { slugs: string[] };
-    if (!slugs?.length) return {};
+    const { slugs } = slugsBodySchema.parse(request.body);
     const platform = getPlatformFromQuery(request.query as Record<string, unknown>);
 
     const rows = await db
@@ -232,8 +231,7 @@ export const appRoutes: FastifyPluginAsync = async (app) => {
 
   // POST /api/apps/categories — bulk lookup leaf categories for multiple apps
   app.post("/categories", async (request) => {
-    const { slugs } = request.body as { slugs: string[] };
-    if (!slugs?.length) return {};
+    const { slugs } = slugsBodySchema.parse(request.body);
     const platform = getPlatformFromQuery(request.query as Record<string, unknown>);
 
     // Look up app IDs from slugs (scoped to platform)
@@ -287,8 +285,7 @@ export const appRoutes: FastifyPluginAsync = async (app) => {
 
   // POST /api/apps/reverse-similar-counts — count how many apps list each slug as a similar app
   app.post("/reverse-similar-counts", async (request) => {
-    const { slugs } = request.body as { slugs: string[] };
-    if (!slugs?.length) return {};
+    const { slugs } = slugsBodySchema.parse(request.body);
     const platform = getPlatformFromQuery(request.query as Record<string, unknown>);
 
     // Look up app IDs from slugs (scoped to platform)
@@ -321,8 +318,7 @@ export const appRoutes: FastifyPluginAsync = async (app) => {
 
   // POST /api/apps/featured-section-counts — count distinct featured sections per app (last 30 days)
   app.post("/featured-section-counts", async (request) => {
-    const { slugs } = request.body as { slugs: string[] };
-    if (!slugs?.length) return {};
+    const { slugs } = slugsBodySchema.parse(request.body);
     const platform = getPlatformFromQuery(request.query as Record<string, unknown>);
 
     const since = new Date();
@@ -363,8 +359,7 @@ export const appRoutes: FastifyPluginAsync = async (app) => {
 
   // POST /api/apps/ad-keyword-counts — count distinct ad keywords per app (last 30 days)
   app.post("/ad-keyword-counts", async (request) => {
-    const { slugs } = request.body as { slugs: string[] };
-    if (!slugs?.length) return {};
+    const { slugs } = slugsBodySchema.parse(request.body);
     const platform = getPlatformFromQuery(request.query as Record<string, unknown>);
 
     const since = new Date();
@@ -405,8 +400,7 @@ export const appRoutes: FastifyPluginAsync = async (app) => {
 
   // POST /api/apps/review-velocity — bulk review velocity metrics from pre-computed table
   app.post("/review-velocity", async (request) => {
-    const { slugs } = request.body as { slugs: string[] };
-    if (!slugs?.length) return {};
+    const { slugs } = slugsBodySchema.parse(request.body);
     const platform = getPlatformFromQuery(request.query as Record<string, unknown>);
 
     // Get latest computed metrics per slug (graceful if table not yet migrated)
@@ -707,6 +701,18 @@ export const appRoutes: FastifyPluginAsync = async (app) => {
       competitorForApps = competitorLinks.map((r) => r.trackedAppSlug);
     } catch {
       // Column may not exist if migration 0022 hasn't been applied yet
+    }
+
+    // Validate platformData against Zod schema (non-blocking, warn only)
+    if (latestSnapshot?.platformData) {
+      const validation = validatePlatformData(platform, latestSnapshot.platformData);
+      if (!validation.success) {
+        log.warn("platformData validation failed", {
+          platform,
+          slug,
+          errors: validation.errors.issues.map((i) => `${i.path.join(".")}: ${i.message}`),
+        });
+      }
     }
 
     return {

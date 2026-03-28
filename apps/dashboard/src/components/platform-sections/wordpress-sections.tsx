@@ -1,7 +1,9 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import type { PlatformSection, PlatformSectionProps } from "./index";
 
-function WordPressDescription({ platformData: pd, snapshot }: PlatformSectionProps) {
+type Props = PlatformSectionProps<"wordpress">;
+
+function WordPressDescription({ platformData: pd, snapshot }: Props) {
   const wpDescriptionHtml = pd?.description as string | undefined;
 
   return (

@@ -119,6 +119,43 @@ describe("normalizePlan", () => {
 });
 
 // ---------------------------------------------------------------------------
+// Badge extraction logic (mirrors metaBadges pattern in app-details-scraper)
+// ---------------------------------------------------------------------------
+describe("badge persistence spread pattern", () => {
+  // Mirrors the extraction: ("_badges" in details ? details._badges : null)
+  // and the spread: ...(metaBadges && metaBadges.length > 0 && { badges: metaBadges })
+  function extractBadgeSpread(details: Record<string, unknown>): Record<string, string[]> | Record<string, never> {
+    const metaBadges = ("_badges" in details ? details._badges : null) as string[] | null;
+    return metaBadges && metaBadges.length > 0 ? { badges: metaBadges } : {};
+  }
+
+  it("extracts badges from details with _badges field", () => {
+    const details = { _badges: ["cloud_fortified", "top_vendor"] };
+    expect(extractBadgeSpread(details)).toEqual({ badges: ["cloud_fortified", "top_vendor"] });
+  });
+
+  it("does not spread empty badges array (avoids overwriting existing)", () => {
+    const details = { _badges: [] };
+    expect(extractBadgeSpread(details)).toEqual({});
+  });
+
+  it("does not spread when _badges is null", () => {
+    const details = { _badges: null };
+    expect(extractBadgeSpread(details)).toEqual({});
+  });
+
+  it("does not spread when _badges field is absent (Shopify path)", () => {
+    const details = { app_name: "Test App" };
+    expect(extractBadgeSpread(details)).toEqual({});
+  });
+
+  it("preserves single badge", () => {
+    const details = { _badges: ["built_for_shopify"] };
+    expect(extractBadgeSpread(details)).toEqual({ badges: ["built_for_shopify"] });
+  });
+});
+
+// ---------------------------------------------------------------------------
 // stripHtmlTags
 // ---------------------------------------------------------------------------
 describe("stripHtmlTags", () => {

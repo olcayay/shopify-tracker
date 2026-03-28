@@ -120,21 +120,30 @@ Every field below lives in `app_snapshots.platform_data` (JSONB). Parser source 
 
 **Parser:** `apps/scraper/src/platforms/canva/parsers/app-parser.ts`
 
-| Field | Type | Description |
-|---|---|---|
-| `shortDescription` | string | Short description |
-| `fullDescription` | string | Full description text |
-| `tagline` | string | Tagline / H1 text |
-| `topics` | string[] | Topic tags (e.g., `marketplace_topic.ai_audio`) |
-| `developerWebsite` | string | Developer website URL |
-| `developerEmail` | string | Developer contact email |
-| `developerPhone` | string | Developer phone |
-| `developerAddress` | object \| null | Address (street, city, country, state, zip) |
-| `promoCardUrl` | string | Promotional card image URL |
-| `screenshots` | string[] | Screenshot URLs |
-| `termsUrl` | string | Terms of service URL |
-| `privacyUrl` | string | Privacy policy URL |
-| `permissions` | object[] | Permissions array ({scope, type: MANDATORY\|OPTIONAL}) |
+Canva has two data paths with different field sets:
+- **Bulk path** (`normalizeCanvaApp`) — from `/apps` page embedded JSON, basic fields only
+- **Detail path** (`normalizeCanvaDetailApp`) — from individual app pages or appListing API, richer data
+
+| Field | Type | Source | Description |
+|---|---|---|---|
+| `canvaAppId` | string | both | Canva's internal app ID (e.g., `AAF_8lkU9VE`) |
+| `canvaAppType` | string | bulk | App type (`SDK_APP` or `EXTENSION`) |
+| `description` | string | both | Short description |
+| `tagline` | string | both | Tagline / H1 text |
+| `fullDescription` | string | both | Full description text |
+| `topics` | string[] | bulk | Topic tags (e.g., `marketplace_topic.ai_audio`) |
+| `urlSlug` | string | bulk | URL slug for the app |
+| `screenshots` | string[] | detail | Screenshot URLs |
+| `promoCardUrl` | string | detail | Promotional card image URL |
+| `developerEmail` | string | detail | Developer contact email |
+| `developerPhone` | string | detail | Developer phone |
+| `developerAddress` | object \| null | detail | Address (street, city, country, state, zip) |
+| `termsUrl` | string | detail | Terms of service URL |
+| `privacyUrl` | string | detail | Privacy policy URL |
+| `permissions` | object[] | detail | Permissions array ({scope, type: MANDATORY\|OPTIONAL}) |
+| `languages` | string[] | detail | Supported languages (locale codes) |
+
+**Note:** `developerWebsite` is NOT stored in platformData — it's mapped to the normalized `developer.website` field instead.
 
 ---
 
@@ -378,7 +387,7 @@ How `app-details-scraper.ts` maps platformData fields → common `app_snapshots`
 
 | Snapshot Column | Shopify | Salesforce | Canva | Wix | WordPress | Google WS | Atlassian | Zoom | Zoho | Zendesk | HubSpot |
 |---|---|---|---|---|---|---|---|---|---|---|---|
-| `app_introduction` | pd.appIntroduction | pd.description | pd.shortDescription | pd.tagline | *(empty)* | pd.shortDescription | pd.summary | pd.description | pd.tagline | pd.shortDescription | pd.shortDescription |
+| `app_introduction` | pd.appIntroduction | pd.description | pd.description | pd.tagline | *(empty)* | pd.shortDescription | pd.summary | pd.description | pd.tagline | pd.shortDescription | pd.shortDescription |
 | `app_details` | pd.appDetails | pd.fullDescription | pd.fullDescription | pd.description | stripHtml(pd.description) | pd.detailedDescription | pd.fullDescription | *(empty)* | pd.about | pd.longDescription | pd.longDescription |
 | `seo_title` | pd.seoTitle | name | *(empty)* | name | *(empty)* | *(empty)* | name | name | name | name | name |
 | `seo_meta_description` | pd.seoMetaDescription | pd.tagline\|pd.description | *(empty)* | pd.tagline\|pd.description | *(empty)* | *(empty)* | pd.tagline\|pd.description | *(empty)* | *(empty)* | *(empty)* | *(empty)* |
@@ -510,15 +519,28 @@ When adding a new field, answer these questions:
 
 ## Appendix: Related Linear Tasks
 
-| Task | Description | Status |
-|---|---|---|
-| **PLA-119** | Create this reference document | ✓ |
-| **PLA-120** | Per-platform TypeScript interfaces for platformData | Todo |
-| **PLA-121** | Type scraper parsers' platformData output | Todo |
-| **PLA-122** | Migrate `isBuiltForShopify` to badges array | Todo |
-| **PLA-123** | Move `demoStoreUrl` & `integrations` to platformData | Todo |
-| **PLA-124** | Platform-specific UI section components (registry pattern) | Todo |
-| **PLA-125** | Zod validation for platformData at API boundary | Todo |
-| **PLA-126** | Update ADDING_NEW_PLATFORM.md | Todo |
+All tasks are labeled **`platform-data-matrix`** in Linear.
 
-**Recommended execution order:** PLA-119 → PLA-120 → PLA-121 → PLA-122 & PLA-123 (parallel) → PLA-124 → PLA-125 → PLA-126
+### Original Tasks (PLA-119 ~ PLA-126)
+
+| Task | Description | Status | Notes |
+|---|---|---|---|
+| **PLA-119** | Create this reference document | In Review | ✅ Complete |
+| **PLA-120** | Per-platform TypeScript interfaces for platformData | In Review | ✅ Complete — 11 interfaces in `packages/shared/src/types/platform-data/` |
+| **PLA-121** | Type scraper parsers' platformData output | In Review | ✅ Complete — parsers use `satisfies` keyword |
+| **PLA-122** | Migrate `isBuiltForShopify` to badges array | In Review | ⚠️ Column still in schema — needs DB migration |
+| **PLA-123** | Move `demoStoreUrl` & `integrations` to platformData | In Review | ⚠️ Columns still in schema — needs DB migration |
+| **PLA-124** | Platform-specific UI section components (registry pattern) | In Review | ✅ Complete — 11/11 platforms (PLA-204 added remaining 7) |
+| **PLA-125** | Zod validation for platformData at API boundary | In Review | ✅ Complete — `validatePlatformData()` integrated in scraper + API (PLA-206) |
+| **PLA-126** | Update ADDING_NEW_PLATFORM.md | In Review | ✅ Complete |
+
+### New Tasks (PLA-203 ~ PLA-208)
+
+| Task | Description | Status | Notes |
+|---|---|---|---|
+| **PLA-203** | Fix badge persistence gap in app-details-scraper | In Review | ✅ Complete — badges saved to `apps.badges` via detail scraper |
+| **PLA-204** | Add platform section components for remaining 7 platforms | In Review | ✅ Complete — all 11 platforms in registry |
+| **PLA-205** | Refactor v1 detail page to use platform sections registry | In Review | ✅ Complete — 757→364 lines, zero inline platform checks |
+| **PLA-206** | Integrate `validatePlatformData()` into scraper and API pipeline | In Review | ✅ Complete — non-blocking warnings in both |
+| **PLA-207** | Fix Canva platformData field discrepancies in this document | In Review | ✅ Complete — Section 3.3 matches actual parser code |
+| **PLA-208** | Type `PlatformSectionProps` with per-platform generics | In Review | ✅ Complete — generic props with `PlatformData<P>` |

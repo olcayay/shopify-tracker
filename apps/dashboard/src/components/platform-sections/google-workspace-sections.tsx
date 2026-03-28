@@ -1,7 +1,9 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import type { PlatformSection, PlatformSectionProps } from "./index";
 
-function GoogleWorkspaceLinks({ platformData: pd }: PlatformSectionProps) {
+type Props = PlatformSectionProps<"google_workspace">;
+
+function GoogleWorkspaceLinks({ platformData: pd }: Props) {
   return (
     <Card>
       <CardHeader>

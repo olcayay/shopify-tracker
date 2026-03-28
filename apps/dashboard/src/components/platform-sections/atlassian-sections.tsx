@@ -3,7 +3,9 @@ import { Badge } from "@/components/ui/badge";
 import { Shield, Award, Bug } from "lucide-react";
 import type { PlatformSection, PlatformSectionProps } from "./index";
 
-function AtlassianAppInfo({ platformData: pd }: PlatformSectionProps) {
+type Props = PlatformSectionProps<"atlassian">;
+
+function AtlassianAppInfo({ platformData: pd }: Props) {
   const compatibilities: Array<{ application: string; cloud: boolean; server: boolean; dataCenter: boolean }> = pd?.compatibilities || [];
 
   return (
@@ -51,7 +53,7 @@ function AtlassianAppInfo({ platformData: pd }: PlatformSectionProps) {
   );
 }
 
-function AtlassianTrustSignals({ platformData: pd }: PlatformSectionProps) {
+function AtlassianTrustSignals({ platformData: pd }: Props) {
   return (
     <Card>
       <CardHeader>
@@ -80,7 +82,7 @@ function AtlassianTrustSignals({ platformData: pd }: PlatformSectionProps) {
   );
 }
 
-function AtlassianLinks({ platformData: pd }: PlatformSectionProps) {
+function AtlassianLinks({ platformData: pd }: Props) {
   const vendorLinks = pd?.vendorLinks as Record<string, string> | null;
 
   return (

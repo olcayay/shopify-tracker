@@ -1,3 +1,45 @@
+Platform Data Matrix — Phase 2 & 3 (2026-03-28)
+==============================================================
+6 tasks from PLATFORM-DATA-MATRIX.md:
+
+**PLA-203 (Urgent):** Fixed badge persistence gap in app-details-scraper.
+  Badges from platform parsers were extracted via `normalized.badges` but never
+  saved to `apps.badges` in the detail scraper upsert. Added `_badges` to the
+  generic details object and `metaBadges` spread to insert/onConflictDoUpdate
+  (same pattern as category/keyword scrapers: only set if non-empty).
+  File: apps/scraper/src/scrapers/app-details-scraper.ts
+
+**PLA-207 (Low):** Fixed Canva platformData field discrepancies in doc.
+  Updated Section 3.3: `shortDescription` → `description`, added `canvaAppId`,
+  `canvaAppType`, `urlSlug`, `languages`, documented bulk vs detail data paths,
+  noted `developerWebsite` is in normalized developer not platformData.
+  Updated Snapshot Column Mapping: Canva `app_introduction` → `pd.description`.
+  Also updated Canva Zod schema with all detail path fields.
+  Files: files/PLATFORM-DATA-MATRIX.md, packages/shared/src/types/platform-data/schemas.ts
+
+**PLA-206 (High):** Integrated validatePlatformData() into scraper and API.
+  Added non-blocking Zod validation in app-details-scraper (after snapshot insert)
+  and API app detail route (before response). Logs warnings with platform, slug,
+  and field-level errors. Invalid data is still saved/returned (non-blocking).
+  Files: apps/scraper/src/scrapers/app-details-scraper.ts, apps/api/src/routes/apps.ts
+
+**PLA-204 (Medium):** Added platform section components for 7 remaining platforms.
+  Created section components for Shopify, Canva, Wix, Zoom, Zoho, Zendesk, HubSpot.
+  All 11 platforms now have entries in PLATFORM_SECTIONS registry.
+  Files: apps/dashboard/src/components/platform-sections/*-sections.tsx
+
+**PLA-208 (Low):** Typed PlatformSectionProps with per-platform generics.
+  Made PlatformSectionProps<P> generic using PlatformData<P> from shared types.
+  Each section component uses `type Props = PlatformSectionProps<"platform">`.
+  File: apps/dashboard/src/components/platform-sections/index.ts + all sections
+
+**PLA-205 (Medium):** Refactored v1 detail page to use platform sections registry.
+  Removed 7 boolean platform flags and ~400 lines of inline platform-specific
+  conditional rendering. Replaced with `getPlatformSections(platform).map(...)`.
+  Kept shared sections (description, features, pricing, categories, support, SEO).
+  File: apps/dashboard/src/app/(dashboard)/[platform]/apps/[slug]/details/page.tsx
+
+
 Risk Analysis V3 — Security & Reliability Fixes (2026-03-28)
 ==============================================================
 11 code fixes from RISK_ANALYSIS_V3.md:

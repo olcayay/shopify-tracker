@@ -20,6 +20,6 @@ export interface CanvaPlatformData {
   };
   termsUrl?: string;
   privacyUrl?: string;
-  permissions?: { scope: string; type: "MANDATORY" | "OPTIONAL" }[];
+  permissions?: { scope: string; type: "MANDATORY" | "OPTIONAL" | string }[];
   languages?: string[];
 }

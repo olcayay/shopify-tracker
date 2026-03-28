@@ -1,7 +1,7 @@
 import { eq, and, desc, sql } from "drizzle-orm";
 import type { Database } from "@appranks/db";
 import { scrapeRuns, apps, appSnapshots, appFieldChanges, similarAppSightings, categories, appCategoryRankings, ensurePlatformDeveloper } from "@appranks/db";
-import { urls, createLogger, clampRating, clampCount, type PlatformId } from "@appranks/shared";
+import { urls, createLogger, clampRating, clampCount, validatePlatformData, type PlatformId } from "@appranks/shared";
 
 const log = createLogger("app-details-scraper");
 
@@ -408,6 +408,7 @@ export class AppDetailsScraper {
               _externalId: this.platform === "atlassian" && pd.appId
                 ? String(pd.appId)
                 : null,
+              _badges: normalized.badges,
             };
           })()
         : parseAppPage(html, slug);
@@ -490,6 +491,7 @@ export class AppDetailsScraper {
       const metaInstalls = ("_activeInstalls" in details ? (details as any)._activeInstalls : null) as number | null;
       const metaLastUpdated = ("_lastUpdatedAt" in details ? (details as any)._lastUpdatedAt : null) as Date | null;
       const metaExternalId = ("_externalId" in details ? (details as any)._externalId : null) as string | null;
+      const metaBadges = ("_badges" in details ? (details as any)._badges : null) as string[] | null;
 
       // Sanity-check parsed data before DB insert
       const validRating = clampRating(details.average_rating);
@@ -518,6 +520,7 @@ export class AppDetailsScraper {
           ...(metaInstalls != null && { activeInstalls: metaInstalls }),
           ...(metaLastUpdated != null && { lastUpdatedAt: metaLastUpdated }),
           ...(metaExternalId != null && { externalId: metaExternalId }),
+          ...(metaBadges && metaBadges.length > 0 && { badges: metaBadges }),
         })
         .onConflictDoUpdate({
           target: [apps.platform, apps.slug],
@@ -533,6 +536,7 @@ export class AppDetailsScraper {
             ...(metaInstalls != null && { activeInstalls: metaInstalls }),
             ...(metaLastUpdated != null && { lastUpdatedAt: metaLastUpdated }),
             ...(metaExternalId != null && { externalId: metaExternalId }),
+            ...(metaBadges && metaBadges.length > 0 && { badges: metaBadges }),
           },
         })
         .returning({ id: apps.id });
@@ -608,6 +612,19 @@ export class AppDetailsScraper {
         support: details.support,
         platformData: (("_platformData" in details ? details._platformData : undefined) ?? {}) as Record<string, unknown>,
       });
+
+      // Validate platformData against Zod schema (non-blocking, warn only)
+      const pdForValidation = ("_platformData" in details ? details._platformData : undefined) as Record<string, unknown> | undefined;
+      if (pdForValidation) {
+        const validation = validatePlatformData(this.platform, pdForValidation);
+        if (!validation.success) {
+          log.warn("platformData validation failed", {
+            platform: this.platform,
+            slug,
+            errors: validation.errors.issues.map((i) => `${i.path.join(".")}: ${i.message}`),
+          });
+        }
+      }
 
       // Link developer to global developer profile
       if (details.developer?.name) {

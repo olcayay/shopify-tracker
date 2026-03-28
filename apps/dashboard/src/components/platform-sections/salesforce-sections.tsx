@@ -3,7 +3,9 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import type { PlatformSection, PlatformSectionProps } from "./index";
 
-function SalesforceBadgeGrid({ platform, platformData: pd, snapshot }: PlatformSectionProps) {
+type Props = PlatformSectionProps<"salesforce">;
+
+function SalesforceBadgeGrid({ platform, platformData: pd, snapshot }: Props) {
   const industries: string[] = pd?.supportedIndustries || [];
   const businessNeeds: string[] = Array.isArray(pd?.businessNeeds) ? pd.businessNeeds : [];
   const productsRequired: string[] = pd?.productsRequired || [];

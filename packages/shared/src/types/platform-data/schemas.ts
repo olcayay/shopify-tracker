@@ -34,8 +34,21 @@ export const CanvaPlatformDataSchema = z.object({
   tagline: z.string().optional(),
   fullDescription: z.string().optional(),
   topics: z.array(z.string()).optional(),
+  urlSlug: z.string().optional(),
   screenshots: z.array(z.string()).optional(),
   languages: z.array(z.string()).optional(),
+  promoCardUrl: z.string().optional(),
+  developerEmail: z.string().optional(),
+  developerPhone: z.string().optional(),
+  developerAddress: z.object({
+    street: z.string().optional(),
+    city: z.string().optional(),
+    country: z.string().optional(),
+    state: z.string().optional(),
+    zip: z.string().optional(),
+  }).nullable().optional(),
+  termsUrl: z.string().optional(),
+  privacyUrl: z.string().optional(),
   permissions: z.array(z.object({ scope: z.string(), type: z.string() })).optional(),
 }).passthrough();
 
