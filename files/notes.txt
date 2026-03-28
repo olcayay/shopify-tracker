@@ -1,3 +1,14 @@
+Fix Stalled Jobs: Add Linear Alerts and Periodic Stale Run Cleanup (2026-03-28)
+================================================================
+**PLA-230:** Stalled BullMQ jobs had no error logging, no Linear alerts, and left orphaned scrape_runs.
+
+- Created `createLinearJobFailureTask()` for job-level failures (stalled/timeout/unrecoverable)
+- Worker `failed` event now calls it when retries are exhausted, creating an Urgent Linear task
+- Added periodic `cleanupStaleRuns()` via setInterval (every 15 min) instead of only at startup
+- Timer is cleared on graceful shutdown
+- Migrations 0092 (linear_issue_id column) and 0093 (dead_letter_jobs table) already exist — will deploy on next API startup
+- 9 new tests: 6 for createLinearJobFailureTask, 3 for cleanupStaleRuns
+
 Fix CI Typecheck Failure: Internal Packages Not Built Before Typecheck (2026-03-28)
 ================================================================
 **PLA-228:** CI `npx turbo typecheck` failed with "Cannot find module '@appranks/db'" because

@@ -17,6 +17,7 @@ import { deadLetterJobs } from "@appranks/db";
 import { BACKGROUND_QUEUE_NAME, INTERACTIVE_QUEUE_NAME, getRedisConnection, type ScraperJobData } from "./queue.js";
 import { initWorkerDeps, createProcessJob, runMigrations } from "./process-job.js";
 import { cleanupStaleRuns } from "./jobs/cleanup-stale-runs.js";
+import { createLinearJobFailureTask } from "./utils/create-linear-job-failure-task.js";
 import { createGracefulShutdown } from "./graceful-shutdown.js";
 import { browserPool } from "./browser-pool.js";
 import { RedisLock } from "./redis-lock.js";
@@ -123,9 +124,19 @@ for (const [name, w] of [["background", bgWorker], ["interactive", intWorker]] a
       extra: { queue: name, jobId: job?.id, type: job?.data?.type, platform: job?.data?.platform },
     });
 
-    // If all retries are exhausted, record in dead letter queue
+    // If all retries are exhausted, record in dead letter queue and create Linear task
     if (job && job.attemptsMade >= (job.opts?.attempts ?? 1)) {
       insertDeadLetterJob(name, job, err);
+      createLinearJobFailureTask(
+        job.id ?? "unknown",
+        name,
+        job.data?.platform,
+        job.data?.type,
+        err.message ?? String(err),
+        job.attemptsMade,
+      ).catch((linearErr) => {
+        log.error("failed to create Linear job failure task", { error: String(linearErr) });
+      });
     }
   });
 
@@ -136,13 +147,26 @@ for (const [name, w] of [["background", bgWorker], ["interactive", intWorker]] a
 
 log.info("worker started, listening on background + interactive queues", { concurrency: BACKGROUND_WORKER_CONCURRENCY });
 
+// Periodically clean up stale scrape_runs (every 15 minutes)
+const STALE_CLEANUP_INTERVAL_MS = 15 * 60 * 1000;
+const staleCleanupTimer = setInterval(async () => {
+  try {
+    await cleanupStaleRuns(db);
+  } catch (err) {
+    log.error("periodic stale run cleanup failed", { error: String(err) });
+  }
+}, STALE_CLEANUP_INTERVAL_MS);
+
 // ── Graceful shutdown ───────────────────────────────────────────────
 const { shutdown } = createGracefulShutdown(
   [bgWorker, intWorker],
   log,
   {
     timeoutMs: GRACEFUL_SHUTDOWN_TIMEOUT_MS,
-    onCleanup: () => browserPool.close(),
+    onCleanup: () => {
+      clearInterval(staleCleanupTimer);
+      return browserPool.close();
+    },
   },
 );
 

@@ -1,3 +1,6 @@
+Fix stalled jobs: Linear alerts and periodic stale run cleanup (2026-03-28)
+  PLA-230: createLinearJobFailureTask, periodic cleanupStaleRuns, worker failed event ✅
+
 Fix CI typecheck failure: internal packages not built before typecheck (2026-03-28)
   PLA-228: turbo.json typecheck dependsOn changed from ^typecheck to ^build ✅
 
