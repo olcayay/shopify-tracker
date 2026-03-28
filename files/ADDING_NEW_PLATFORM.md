@@ -32,6 +32,12 @@ Use this as a high-level task tracker. Each item links to a detailed section bel
 - [ ] Add similarity weights and stop words to `packages/shared/src/similarity.ts`
 - [ ] Add metadata character limits to `apps/dashboard/src/lib/metadata-limits.ts`
 
+### Phase 1b: Typed platformData
+- [ ] Create TypeScript interface in `packages/shared/src/types/platform-data/<name>.ts`
+- [ ] Add Zod schema in `packages/shared/src/types/platform-data/schemas.ts`
+- [ ] Add to `PlatformDataMap` in `packages/shared/src/types/platform-data/index.ts`
+- [ ] Re-export from `packages/shared/src/index.ts`
+
 ### Phase 2: Database
 - [ ] Create migration to seed `account_platforms` for existing accounts
 - [ ] Create migration to seed `platform_visibility` (hidden by default until tested)
@@ -66,6 +72,7 @@ Use this as a high-level task tracker. Each item links to a detailed section bel
 - [ ] Add `BADGE_CONFIG` entry in `apps/dashboard/src/components/app-badges.tsx`
 - [ ] Create preview component (`<platform>-preview.tsx`) and wire into `preview/page.tsx`
 - [ ] Update field labels in `details/page.tsx`, `changes/page.tsx`, app overview `page.tsx`
+- [ ] Create platform-specific UI sections in `apps/dashboard/src/components/platform-sections/<name>-sections.tsx` and register in `index.ts`
 
 > **Note:** As of PLA-94, platform display constants (labels, colors, gradients) are centralized in `platform-display.ts`. You no longer need to update sidebar.tsx, overview/page.tsx, or platform-overview-cards.tsx separately. Navigation items are auto-generated from platform capabilities via `getNavItems()` in `nav-utils.ts`. The platform regex in `extractPlatform()` uses `PLATFORM_IDS` from shared — no hardcoded regex to update.
 - [ ] Add platform-specific sections to `compare/page.tsx` and `research/[id]/compare/page.tsx`
