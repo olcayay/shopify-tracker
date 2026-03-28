@@ -12,6 +12,7 @@ export const PLATFORMS = {
     hasFeatureTaxonomy: true,
     hasPricing: true,
     hasLaunchedDate: true,
+    hasFlatCategories: false,
     maxRatingStars: 5,
     pageSize: 24,
   },
@@ -28,6 +29,7 @@ export const PLATFORMS = {
     hasFeatureTaxonomy: false,
     hasPricing: true,
     hasLaunchedDate: true,
+    hasFlatCategories: false,
     maxRatingStars: 5,
     pageSize: 12,
   },
@@ -44,6 +46,7 @@ export const PLATFORMS = {
     hasFeatureTaxonomy: false,
     hasPricing: false,
     hasLaunchedDate: false,
+    hasFlatCategories: false,
     maxRatingStars: 5,
     pageSize: 30,
   },
@@ -60,6 +63,7 @@ export const PLATFORMS = {
     hasFeatureTaxonomy: false,
     hasPricing: true,
     hasLaunchedDate: false,
+    hasFlatCategories: false,
     maxRatingStars: 5,
     pageSize: 50,
   },
@@ -76,6 +80,7 @@ export const PLATFORMS = {
     hasFeatureTaxonomy: false,
     hasPricing: false,
     hasLaunchedDate: true,
+    hasFlatCategories: true,
     maxRatingStars: 5,
     pageSize: 250,
   },
@@ -92,6 +97,7 @@ export const PLATFORMS = {
     hasFeatureTaxonomy: false,
     hasPricing: true,
     hasLaunchedDate: false,
+    hasFlatCategories: false,
     maxRatingStars: 5,
     pageSize: 20,
   },
@@ -108,6 +114,7 @@ export const PLATFORMS = {
     hasFeatureTaxonomy: false,
     hasPricing: true,
     hasLaunchedDate: false,
+    hasFlatCategories: true,
     maxRatingStars: 4,
     pageSize: 50,
   },
@@ -124,6 +131,7 @@ export const PLATFORMS = {
     hasFeatureTaxonomy: false,
     hasPricing: false,
     hasLaunchedDate: false,
+    hasFlatCategories: true,
     maxRatingStars: 5,
     pageSize: 100,
   },
@@ -140,6 +148,7 @@ export const PLATFORMS = {
     hasFeatureTaxonomy: false,
     hasPricing: false,
     hasLaunchedDate: true,
+    hasFlatCategories: true,
     maxRatingStars: 5,
     pageSize: 50,
   },
@@ -156,6 +165,7 @@ export const PLATFORMS = {
     hasFeatureTaxonomy: false,
     hasPricing: true,
     hasLaunchedDate: true,
+    hasFlatCategories: true,
     maxRatingStars: 5,
     pageSize: 24,
   },
@@ -172,6 +182,7 @@ export const PLATFORMS = {
     hasFeatureTaxonomy: false,
     hasPricing: true,
     hasLaunchedDate: false,
+    hasFlatCategories: false,
     maxRatingStars: 5,
     pageSize: 24,
   },
@@ -181,7 +192,7 @@ export type PlatformId = keyof typeof PLATFORMS;
 export type PlatformConfig = (typeof PLATFORMS)[PlatformId];
 export type PlatformCapabilities = Pick<PlatformConfig,
   "hasKeywordSearch" | "hasReviews" | "hasFeaturedSections" |
-  "hasAdTracking" | "hasSimilarApps" | "hasAutoSuggestions" | "hasFeatureTaxonomy" | "hasPricing" | "hasLaunchedDate"
+  "hasAdTracking" | "hasSimilarApps" | "hasAutoSuggestions" | "hasFeatureTaxonomy" | "hasPricing" | "hasLaunchedDate" | "hasFlatCategories"
 >;
 
 export const PLATFORM_IDS = Object.keys(PLATFORMS) as PlatformId[];

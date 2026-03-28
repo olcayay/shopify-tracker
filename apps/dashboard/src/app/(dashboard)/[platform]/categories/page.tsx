@@ -35,6 +35,7 @@ import {
 } from "lucide-react";
 import { ConfirmModal } from "@/components/confirm-modal";
 import { AdminScraperTrigger } from "@/components/admin-scraper-trigger";
+import { PLATFORMS, type PlatformId } from "@appranks/shared";
 
 interface CategoryNode {
   slug: string;
@@ -91,7 +92,7 @@ export default function CategoriesPage() {
   const [sortKey, setSortKey] = useState<FlatSortKey>("title");
   const [sortDir, setSortDir] = useState<SortDir>("asc");
 
-  const isFlat = platform === "wordpress" || platform === "zoom" || platform === "atlassian" || platform === "zoho" || platform === "zendesk";
+  const isFlat = PLATFORMS[platform as PlatformId]?.hasFlatCategories ?? false;
   const canEdit = user?.role === "owner" || user?.role === "editor";
 
   useEffect(() => {

@@ -76,7 +76,7 @@ Use this as a high-level task tracker. Each item links to a detailed section bel
 
 > **Note:** As of PLA-94, platform display constants (labels, colors, gradients) are centralized in `platform-display.ts`. You no longer need to update sidebar.tsx, overview/page.tsx, or platform-overview-cards.tsx separately. Navigation items are auto-generated from platform capabilities via `getNavItems()` in `nav-utils.ts`. The platform regex in `extractPlatform()` uses `PLATFORM_IDS` from shared — no hardcoded regex to update.
 - [ ] Add platform-specific sections to `compare/page.tsx` and `research/[id]/compare/page.tsx`
-- [ ] Add to `isFlat` check in `categories/page.tsx` (if flat categories)
+- [ ] Set `hasFlatCategories` in `packages/shared/src/constants/platforms.ts` (if flat categories — no parent-child hierarchy)
 - [ ] Gate all dashboard tables/cards behind capability flags
 - [ ] Verify all pages work for the new platform
 - [ ] Verify existing platforms still work (regression check)
@@ -1638,16 +1638,19 @@ grep -r "Launched" apps/dashboard/src --include="*.tsx" -l
 
 ### Pitfall 24: Flat vs tree category display not updated
 
-**Problem:** Categories page renders as a tree by default. Platforms with flat (non-hierarchical) categories need to be added to the `isFlat` check.
+**Problem:** Categories page renders as a tree by default. Platforms with flat (non-hierarchical) categories need the `hasFlatCategories` capability flag set to `true`.
 
-**Solution:** In `apps/dashboard/src/app/(dashboard)/[platform]/categories/page.tsx`, update the `isFlat` constant:
+**Solution:** In `packages/shared/src/constants/platforms.ts`, set `hasFlatCategories: true` for your platform:
 
 ```typescript
-const isFlat = platform === "wordpress" || platform === "zoom" || platform === "atlassian"
-  || platform === "zoho" || platform === "zendesk";
+your_platform: {
+  // ...
+  hasFlatCategories: true,  // Set to true if no parent-child hierarchy
+  // ...
+},
 ```
 
-If your new platform uses flat categories (no parent-child hierarchy), add it here. Tree view is default for hierarchical platforms (Shopify, Salesforce, Canva, Wix, Google Workspace).
+The categories page reads this flag automatically via `PLATFORMS[platform].hasFlatCategories`. No hardcoded platform checks needed.
 
 ### Pitfall 25: API-only platforms (no HTML scraping)
 
@@ -1991,7 +1994,7 @@ test_newplatform() {
 | `[platform]/apps/[slug]/changes/page.tsx` | Add field labels |
 | `[platform]/apps/[slug]/page.tsx` | Add field labels in `getFieldLabels()` |
 | `[platform]/apps/[slug]/compare/page.tsx` | Add sections config, field labels (~25 locations) |
-| `[platform]/categories/page.tsx` | Add to `isFlat` check if flat categories (no parent-child hierarchy) |
+| `[platform]/categories/page.tsx` | Uses `hasFlatCategories` from platform config automatically |
 | `[platform]/research/[id]/compare/page.tsx` | Add platform exclusion checks if no reviews |
 | All table pages (see Section 6.7-6.10) | Gate columns with capability flags |
 
