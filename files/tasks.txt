@@ -1,3 +1,4 @@
+PLA-117: Add marketplace autocomplete to Request a Platform dialog ✅
 PLA-118: System admin links always visible in sidebar regardless of current page ✅
 PLA-109: Improve Available Platforms section visibility on Overview page ✅
 

@@ -1,3 +1,12 @@
+PLA-117: Add marketplace autocomplete to Request a Platform dialog (2026-03-28)
+================================================================================
+- Created marketplace-list.ts with ~90 known app marketplaces (platformId set for 11 supported)
+- Replaced free-text input with autocomplete: search input + scrollable suggestion list
+- Filters out platforms already enabled for user's account
+- Shows "Supported" badge for implemented platforms
+- "Use custom" option for non-matching input
+- 11 tests (6 new autocomplete tests)
+
 PLA-118: System admin links always visible in sidebar (2026-03-28)
 ====================================================================
 - icon-sidebar.tsx: show admin items on non-platform pages for system admins (was returning null)
