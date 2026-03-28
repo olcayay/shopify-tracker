@@ -158,58 +158,73 @@ export const keywordRoutes: FastifyPluginAsync = async (app) => {
       }
     }
 
-    const result = await Promise.all(
-      rows.map(async (kw) => {
-        const [snapshot] = await db
-          .select({
-            totalResults: keywordSnapshots.totalResults,
-            scrapedAt: keywordSnapshots.scrapedAt,
-            appCount: sql<number>`jsonb_array_length(${keywordSnapshots.results})::int`,
-            results: keywordSnapshots.results,
-          })
-          .from(keywordSnapshots)
-          .where(eq(keywordSnapshots.keywordId, kw.id))
-          .orderBy(desc(keywordSnapshots.scrapedAt))
-          .limit(1);
+    // Batch-fetch latest snapshots for all keywords (avoids N+1 queries)
+    const snapshotMap = new Map<number, { totalResults: number | null; scrapedAt: Date; appCount: number; results: unknown }>();
+    if (ids.length > 0) {
+      const latestSnapshots = await db.execute(sql`
+        SELECT DISTINCT ON (keyword_id)
+          keyword_id,
+          total_results,
+          scraped_at,
+          jsonb_array_length(results)::int AS app_count,
+          results
+        FROM keyword_snapshots
+        WHERE keyword_id = ANY(${ids})
+        ORDER BY keyword_id, scraped_at DESC
+      `);
+      const snapRows = (latestSnapshots as any).rows ?? latestSnapshots;
+      for (const row of snapRows) {
+        snapshotMap.set(row.keyword_id, {
+          totalResults: row.total_results,
+          scrapedAt: row.scraped_at,
+          appCount: row.app_count,
+          results: row.results,
+        });
+      }
+    }
 
-        const trackedAppsInResults: { app_slug: string; app_name: string; position: number; logo_url?: string }[] = [];
-        const competitorAppsInResults: { app_slug: string; app_name: string; position: number; logo_url?: string }[] = [];
-        if (snapshot?.results) {
-          for (const app of snapshot.results as any[]) {
-            if (trackedSlugs.includes(app.app_slug)) {
-              trackedAppsInResults.push({
-                app_slug: app.app_slug,
-                app_name: app.app_name,
-                position: app.position || 0,
-                logo_url: app.logo_url,
-              });
-            }
-            if (competitorSlugs.includes(app.app_slug)) {
-              competitorAppsInResults.push({
-                app_slug: app.app_slug,
-                app_name: app.app_name,
-                position: app.position || 0,
-                logo_url: app.logo_url,
-              });
-            }
+    const result = rows.map((kw) => {
+      const snapshot = snapshotMap.get(kw.id);
+
+      const trackedAppsInResults: { app_slug: string; app_name: string; position: number; logo_url?: string }[] = [];
+      const competitorAppsInResults: { app_slug: string; app_name: string; position: number; logo_url?: string }[] = [];
+      if (snapshot?.results) {
+        for (const app of snapshot.results as any[]) {
+          if (trackedSlugs.includes(app.app_slug)) {
+            trackedAppsInResults.push({
+              app_slug: app.app_slug,
+              app_name: app.app_name,
+              position: app.position || 0,
+              logo_url: app.logo_url,
+            });
+          }
+          if (competitorSlugs.includes(app.app_slug)) {
+            competitorAppsInResults.push({
+              app_slug: app.app_slug,
+              app_name: app.app_name,
+              position: app.position || 0,
+              logo_url: app.logo_url,
+            });
           }
         }
+      }
 
-        const { results: _, ...snapshotWithoutResults } = snapshot || ({} as any);
+      const snapshotWithoutResults = snapshot
+        ? { totalResults: snapshot.totalResults, scrapedAt: snapshot.scrapedAt, appCount: snapshot.appCount }
+        : null;
 
-        return {
-          ...kw,
-          latestSnapshot: snapshot ? snapshotWithoutResults : null,
-          trackedForApps: trackedForAppsMap.get(kw.id) || [],
-          trackedInResults: trackedAppsInResults.length,
-          competitorInResults: competitorAppsInResults.length,
-          trackedAppsInResults,
-          competitorAppsInResults,
-          adApps: adAppCountMap.get(kw.id) ?? 0,
-          tags: tagMap.get(kw.id) || [],
-        };
-      })
-    );
+      return {
+        ...kw,
+        latestSnapshot: snapshotWithoutResults,
+        trackedForApps: trackedForAppsMap.get(kw.id) || [],
+        trackedInResults: trackedAppsInResults.length,
+        competitorInResults: competitorAppsInResults.length,
+        trackedAppsInResults,
+        competitorAppsInResults,
+        adApps: adAppCountMap.get(kw.id) ?? 0,
+        tags: tagMap.get(kw.id) || [],
+      };
+    });
 
     return result;
   });

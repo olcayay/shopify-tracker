@@ -272,7 +272,7 @@ export class KeywordScraper {
         scrapeRunId: runId,
         scrapedAt: now,
         position: i + 1,
-      });
+      }).onConflictDoNothing();
     }
 
     // Record null position for apps that dropped out of results.
@@ -303,7 +303,7 @@ export class KeywordScraper {
         scrapeRunId: runId,
         scrapedAt: now,
         position: null,
-      });
+      }).onConflictDoNothing();
     }
 
     if (droppedApps.length > 0) {
@@ -463,8 +463,8 @@ export class KeywordScraper {
 
       // Extract extra metadata from listing (Atlassian: vendorName, totalInstalls, externalId)
       const extra = app.extra || {};
-      const totalInstalls = extra.totalInstalls as number | undefined;
-      const vendorName = extra.vendorName as string | undefined;
+      const totalInstalls = (extra.totalInstalls ?? extra.installCount ?? extra.activeInstalls) as number | undefined;
+      const vendorName = (extra.vendorName ?? extra.companyName) as string | undefined;
       const externalId = extra.externalId as string | undefined;
 
       const [upsertedApp] = await this.db
@@ -503,10 +503,11 @@ export class KeywordScraper {
         scrapeRunId: runId,
         scrapedAt: now,
         position: i + 1,
-      });
+      }).onConflictDoNothing();
 
       // For non-Shopify platforms: ensure a minimal snapshot exists so dashboard can show rating/pricing/developer
-      if (this.platform !== "shopify" && (hasRating || hasCount || vendorName)) {
+      const hasDescription = !!app.shortDescription;
+      if (this.platform !== "shopify" && (hasRating || hasCount || vendorName || hasDescription || app.badges.length > 0 || (totalInstalls != null && totalInstalls > 0))) {
         const [existingSnap] = await this.db
           .select({ id: appSnapshots.id })
           .from(appSnapshots)
@@ -560,7 +561,7 @@ export class KeywordScraper {
         scrapeRunId: runId,
         scrapedAt: now,
         position: null,
-      });
+      }).onConflictDoNothing();
     }
 
     if (droppedApps.length > 0) {

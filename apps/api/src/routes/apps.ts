@@ -1,6 +1,6 @@
 import type { FastifyPluginAsync } from "fastify";
 import { eq, desc, sql, and, inArray, ilike } from "drizzle-orm";
-import { computeWeightedPowerScore, validatePlatformData, createLogger } from "@appranks/shared";
+import { computeWeightedPowerScore, validatePlatformData, createLogger, PLATFORMS } from "@appranks/shared";
 import { slugsBodySchema } from "../schemas/apps.js";
 import { getPlatformFromQuery } from "../utils/platform.js";
 import { requireSystemAdmin } from "../middleware/authorize.js";
@@ -488,8 +488,10 @@ export const appRoutes: FastifyPluginAsync = async (app) => {
       wix: "platform_data->>'developerEmail'",
       wordpress: "platform_data->>'homepage'",
       google_workspace: "platform_data->>'developerWebsite'",
-      zoho: "platform_data->'partnerDetails'->0->>'supportEmail'",
+      zoho: "COALESCE(platform_data->'partnerDetails'->0->>'supportEmail', NULL)",
       zendesk: "platform_data->>'authorUrl'",
+      atlassian: "platform_data->>'supportEmail'",
+      hubspot: "platform_data->>'developerWebsite'",
     };
     const countryPath: Record<string, string> = {
       canva: "platform_data->'developerAddress'->>'country'",
@@ -598,6 +600,33 @@ export const appRoutes: FastifyPluginAsync = async (app) => {
         } else if (platform === "zendesk") {
           const info: Record<string, unknown> = {};
           if (pd.authorUrl) info.website = pd.authorUrl;
+          if (Object.keys(info).length > 0) developerInfo = info;
+        } else if (platform === "atlassian") {
+          const info: Record<string, unknown> = {};
+          if (pd.supportEmail) info.email = pd.supportEmail;
+          if (pd.supportUrl) info.website = pd.supportUrl;
+          if (pd.supportPhone) info.phone = pd.supportPhone;
+          if (Object.keys(info).length > 0) developerInfo = info;
+        } else if (platform === "google_workspace") {
+          const info: Record<string, unknown> = {};
+          if (pd.developerWebsite) info.website = pd.developerWebsite;
+          if (pd.supportUrl) info.supportUrl = pd.supportUrl;
+          if (pd.termsOfServiceUrl) info.termsUrl = pd.termsOfServiceUrl;
+          if (pd.privacyPolicyUrl) info.privacyUrl = pd.privacyPolicyUrl;
+          if (Object.keys(info).length > 0) developerInfo = info;
+        } else if (platform === "zoom") {
+          const info: Record<string, unknown> = {};
+          if (pd.companyName) info.company = pd.companyName;
+          if (Object.keys(info).length > 0) developerInfo = info;
+        } else if (platform === "zoho") {
+          const info: Record<string, unknown> = {};
+          const partner = Array.isArray(pd.partnerDetails) ? pd.partnerDetails[0] : null;
+          if (partner?.supportEmail) info.email = partner.supportEmail;
+          if (partner?.website) info.website = partner.website;
+          if (Object.keys(info).length > 0) developerInfo = info;
+        } else if (platform === "hubspot") {
+          const info: Record<string, unknown> = {};
+          if (pd.developerWebsite) info.website = pd.developerWebsite;
           if (Object.keys(info).length > 0) developerInfo = info;
         }
       }
@@ -793,6 +822,12 @@ export const appRoutes: FastifyPluginAsync = async (app) => {
         sort = "newest",
       } = request.query as { limit?: string; offset?: string; sort?: string };
       const platform = getPlatformFromQuery(request.query as Record<string, unknown>);
+
+      // Check if platform supports reviews
+      const platformConfig = PLATFORMS[platform as keyof typeof PLATFORMS];
+      if (platformConfig && !platformConfig.hasReviews) {
+        return { supported: false, reviews: [], total: 0, withContentCount: 0, distribution: [] };
+      }
 
       const [appRow] = await db
         .select()

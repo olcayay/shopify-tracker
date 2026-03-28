@@ -10,6 +10,8 @@ const FAILURE_THRESHOLD = parseInt(process.env.CIRCUIT_BREAKER_FAILURE_THRESHOLD
 const OPEN_DURATION_MS = parseInt(process.env.CIRCUIT_BREAKER_OPEN_DURATION_MS || "3600000", 10);
 /** Redis key TTL — auto-cleanup after 24h of inactivity */
 const KEY_TTL_SECONDS = 86400;
+/** Retry Redis connection every 60 seconds when down */
+const REDIS_RETRY_INTERVAL_MS = 60_000;
 
 export type CircuitState = "closed" | "open" | "half-open";
 
@@ -22,6 +24,11 @@ interface CircuitData {
 
 let redis: Redis | null = null;
 let disabled = false;
+let redisUnavailableSince: number | null = null;
+let redisRetryTimer: ReturnType<typeof setInterval> | null = null;
+
+/** In-memory fallback when Redis is unavailable */
+const memoryStore = new Map<string, CircuitData>();
 
 function getRedis(): Redis | null {
   if (disabled) return null;
@@ -34,12 +41,41 @@ function getRedis(): Redis | null {
       lazyConnect: true,
     });
     redis.connect().catch(() => {
+      log.warn("Redis connection failed, using in-memory circuit breaker fallback", { url });
       redis = null;
+      redisUnavailableSince = Date.now();
+      startRetryTimer();
     });
     return redis;
   } catch {
+    log.warn("Redis initialization failed, using in-memory circuit breaker fallback");
+    redisUnavailableSince = Date.now();
+    startRetryTimer();
     return null;
   }
+}
+
+function startRetryTimer(): void {
+  if (redisRetryTimer) return;
+  redisRetryTimer = setInterval(async () => {
+    const url = process.env.REDIS_URL || "redis://localhost:6379";
+    try {
+      const testRedis = new Redis(url, { connectTimeout: 5000, maxRetriesPerRequest: 1, lazyConnect: true });
+      await testRedis.connect();
+      await testRedis.ping();
+      redis = testRedis;
+      const downtime = redisUnavailableSince ? Math.round((Date.now() - redisUnavailableSince) / 1000) : 0;
+      log.info("Redis reconnected, migrating from in-memory fallback", { downtimeSeconds: downtime });
+      redisUnavailableSince = null;
+      memoryStore.clear();
+      if (redisRetryTimer) {
+        clearInterval(redisRetryTimer);
+        redisRetryTimer = null;
+      }
+    } catch {
+      // Still unavailable, will retry
+    }
+  }, REDIS_RETRY_INTERVAL_MS);
 }
 
 /** Reset Redis for testing */
@@ -51,33 +87,48 @@ export function _resetCircuitRedis(mock?: Redis | null): void {
     redis = mock;
     disabled = false;
   }
+  memoryStore.clear();
+  redisUnavailableSince = null;
+  if (redisRetryTimer) {
+    clearInterval(redisRetryTimer);
+    redisRetryTimer = null;
+  }
 }
 
 function redisKey(platform: string): string {
   return `${REDIS_PREFIX}${platform}`;
 }
 
+const DEFAULT_DATA: CircuitData = { state: "closed", failures: 0, lastFailureAt: 0, openedAt: 0 };
+
 async function getData(platform: string): Promise<CircuitData> {
   const client = getRedis();
-  if (!client) return { state: "closed", failures: 0, lastFailureAt: 0, openedAt: 0 };
+  if (!client) {
+    // In-memory fallback
+    return memoryStore.get(platform) || { ...DEFAULT_DATA };
+  }
 
   try {
     const raw = await client.get(redisKey(platform));
-    if (!raw) return { state: "closed", failures: 0, lastFailureAt: 0, openedAt: 0 };
+    if (!raw) return { ...DEFAULT_DATA };
     return JSON.parse(raw);
   } catch {
-    return { state: "closed", failures: 0, lastFailureAt: 0, openedAt: 0 };
+    // Redis read failed, fall back to memory
+    return memoryStore.get(platform) || { ...DEFAULT_DATA };
   }
 }
 
 async function setData(platform: string, data: CircuitData): Promise<void> {
+  // Always update in-memory store as backup
+  memoryStore.set(platform, data);
+
   const client = getRedis();
   if (!client) return;
 
   try {
     await client.set(redisKey(platform), JSON.stringify(data), "EX", KEY_TTL_SECONDS);
   } catch {
-    // Redis unavailable
+    // Redis write failed, data is still in memory
   }
 }
 
@@ -154,9 +205,9 @@ export async function recordFailure(platform: string): Promise<void> {
 /**
  * Get circuit state for a platform (for admin API).
  */
-export async function getCircuitState(platform: string): Promise<CircuitData & { platform: string }> {
+export async function getCircuitState(platform: string): Promise<CircuitData & { platform: string; usingFallback: boolean }> {
   const data = await getData(platform);
-  return { platform, ...data };
+  return { platform, ...data, usingFallback: !redis };
 }
 
 /**

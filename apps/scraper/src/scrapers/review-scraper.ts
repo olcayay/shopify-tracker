@@ -207,11 +207,12 @@ export class ReviewScraper {
 
           newReviews++;
         } catch (err) {
-          log.debug("review insert skipped (likely duplicate)", {
-            slug,
-            reviewer: review.reviewerName,
-            error: String(err),
-          });
+          const errStr = String(err);
+          if (errStr.includes("duplicate key") || errStr.includes("unique constraint") || errStr.includes("idx_reviews_dedup")) {
+            log.debug("review insert skipped (duplicate)", { slug, reviewer: review.reviewerName });
+          } else {
+            log.warn("review insert failed (unexpected error)", { slug, reviewer: review.reviewerName, error: errStr });
+          }
         }
       }
 

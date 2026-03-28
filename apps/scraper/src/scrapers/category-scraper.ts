@@ -907,8 +907,8 @@ export class CategoryScraper {
 
       // Extract extra metadata from listing (Atlassian: vendorName, totalInstalls)
       const extra = app.extra || {};
-      const totalInstalls = extra.totalInstalls as number | undefined;
-      const vendorName = extra.vendorName as string | undefined;
+      const totalInstalls = (extra.totalInstalls ?? extra.installCount ?? extra.activeInstalls) as number | undefined;
+      const vendorName = (extra.vendorName ?? extra.companyName) as string | undefined;
 
       const [upsertedApp] = await this.db
         .insert(apps)
@@ -955,7 +955,8 @@ export class CategoryScraper {
 
       // For non-Shopify platforms: ensure a minimal snapshot exists with listing data
       // so dashboard can show developer/rating/pricing even without a detail scrape
-      if (this.platform !== "shopify" && (hasRating || hasCount || vendorName)) {
+      const hasDescription = !!app.shortDescription;
+      if (this.platform !== "shopify" && (hasRating || hasCount || vendorName || hasDescription || app.badges.length > 0 || (totalInstalls != null && totalInstalls > 0))) {
         const [existingSnap] = await this.db
           .select({ id: appSnapshots.id })
           .from(appSnapshots)
