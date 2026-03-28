@@ -86,10 +86,12 @@ describe("IconSidebar", () => {
     expect(screen.getByText("Developers")).toBeInTheDocument();
   });
 
-  it("renders nothing on /settings page", () => {
+  it("renders sidebar with global nav items on /settings page", () => {
     mockPathname.mockReturnValue("/settings");
     const { container } = render(<IconSidebar />);
-    expect(container.querySelector("aside")).toBeNull();
+    expect(container.querySelector("aside")).toBeTruthy();
+    expect(screen.getByText("Overview")).toBeInTheDocument();
+    expect(screen.getByText("All Apps")).toBeInTheDocument();
   });
 
   it("renders sidebar on system-admin pages", () => {

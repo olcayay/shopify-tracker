@@ -16,7 +16,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
   const [trackedCount, setTrackedCount] = useState<number | null>(null);
   const pathname = usePathname();
   const { user } = useAuth();
-  const showSidebar = isOnPlatformPage(pathname) || pathname.startsWith("/system-admin") || isOnGlobalPage(pathname) || !!user?.isSystemAdmin;
+  const showSidebar = isOnPlatformPage(pathname) || pathname.startsWith("/system-admin") || pathname.startsWith("/settings") || isOnGlobalPage(pathname) || !!user?.isSystemAdmin;
 
   return (
     <div className="flex flex-col min-h-screen">

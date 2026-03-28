@@ -37,22 +37,23 @@ export function IconSidebar() {
   const display = PLATFORM_DISPLAY[activePlatform];
 
   const isGlobalPage = isOnGlobalPage(pathname);
-  // For system admins on non-platform/non-admin/non-global pages (e.g. /settings), show admin items
-  const showAdminFallback = isSystemAdmin && !isPlatformPage && !isAdminSection && !isGlobalPage;
+  const isSettingsPage = pathname.startsWith("/settings");
+  // For system admins on non-platform/non-admin/non-global/non-settings pages, show admin items
+  const showAdminFallback = isSystemAdmin && !isPlatformPage && !isAdminSection && !isGlobalPage && !isSettingsPage;
 
   const items = useMemo(
     () => {
       if (isAdminSection || showAdminFallback) return systemAdminItems;
-      if (isGlobalPage) return globalNavItems;
+      if (isGlobalPage || isSettingsPage) return globalNavItems;
       return getNavItems(activePlatform, isSystemAdmin);
     },
-    [activePlatform, isSystemAdmin, isAdminSection, showAdminFallback, isGlobalPage]
+    [activePlatform, isSystemAdmin, isAdminSection, showAdminFallback, isGlobalPage, isSettingsPage]
   );
 
-  // Show sidebar on platform pages, admin pages, global pages, or for system admins
-  if (!isPlatformPage && !isAdminSection && !isGlobalPage && !isSystemAdmin) return null;
+  // Show sidebar on platform pages, admin pages, global pages, settings, or for system admins
+  if (!isPlatformPage && !isAdminSection && !isGlobalPage && !isSettingsPage && !isSystemAdmin) return null;
 
-  const accentColor = isAdminSection || showAdminFallback || isGlobalPage ? undefined : display?.color;
+  const accentColor = isAdminSection || showAdminFallback || isGlobalPage || isSettingsPage ? undefined : display?.color;
 
   return (
     <aside
