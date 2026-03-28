@@ -99,6 +99,7 @@ services:
       context: .
       dockerfile: Dockerfile.worker
     restart: always
+    stop_grace_period: 120s
     environment:
       DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-shopify_tracking}
       REDIS_URL: redis://redis:6379
@@ -126,6 +127,7 @@ services:
       context: .
       dockerfile: Dockerfile.worker-interactive
     restart: always
+    stop_grace_period: 120s
     environment:
       DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-shopify_tracking}
       REDIS_URL: redis://redis:6379

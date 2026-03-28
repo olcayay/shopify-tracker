@@ -6,6 +6,7 @@ import { createLogger } from "@appranks/shared";
 import { BACKGROUND_QUEUE_NAME, INTERACTIVE_QUEUE_NAME, getRedisConnection, type ScraperJobData } from "./queue.js";
 import { initWorkerDeps, createProcessJob, runMigrations } from "./process-job.js";
 import { cleanupStaleRuns } from "./jobs/cleanup-stale-runs.js";
+import { createGracefulShutdown } from "./graceful-shutdown.js";
 
 const log = createLogger("worker");
 
@@ -84,12 +85,12 @@ for (const [name, w] of [["background", bgWorker], ["interactive", intWorker]] a
 
 log.info("worker started, listening on background + interactive queues", { concurrency: 11 });
 
-// Graceful shutdown
-const shutdown = async () => {
-  log.info("shutting down workers...");
-  await Promise.all([bgWorker.close(), intWorker.close()]);
-  process.exit(0);
-};
+// ── Graceful shutdown ───────────────────────────────────────────────
+const { shutdown } = createGracefulShutdown(
+  [bgWorker, intWorker],
+  log,
+  { timeoutMs: 60_000 },
+);
 
-process.on("SIGTERM", shutdown);
-process.on("SIGINT", shutdown);
+process.on("SIGTERM", () => shutdown("SIGTERM"));
+process.on("SIGINT", () => shutdown("SIGINT"));

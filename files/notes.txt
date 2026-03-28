@@ -36,7 +36,20 @@ Risk Analysis V3 — Security & Reliability Fixes (2026-03-28)
 **Linear Updates:** Created "risk" label (red), assigned to 31 tasks (PLA-130,
   PLA-173–PLA-202). Set priorities: P0→Urgent(6), P1→High(9), P2→Medium(11), P3→Low(5).
 
-All 3,377 tests passing (355 shared + 486 API + 1270 scraper + 1266 dashboard).
+**PLA-185 (P1):** Implemented worker graceful shutdown for deployments.
+  - Extracted `createGracefulShutdown()` into testable module
+  - Duplicate SIGTERM/SIGINT calls ignored (prevents double-shutdown race)
+  - 60s hard timeout with force exit (code 1) if workers hang
+  - Logs signal, in-flight worker status, completion/timeout
+  - BullMQ Worker.close() waits for active jobs before stopping
+  - Docker stop_grace_period set to 120s for worker + worker-interactive
+  - Per-job browser cleanup already in process-job.ts finally blocks
+  - Stale runs cleaned up on restart by cleanupStaleRuns()
+  - R-73 in RISK_ANALYSIS_V3.md marked as Mitigated
+  Files: apps/scraper/src/graceful-shutdown.ts (new), apps/scraper/src/worker.ts,
+         docker-compose.prod.yml, files/RISK_ANALYSIS_V3.md
+
+All 3,384 tests passing (355 shared + 486 API + 1277 scraper + 1266 dashboard).
 
 App Detail v2 — Full Redesign (PLA-138 through PLA-172) (2026-03-28)
 ===================================================================
