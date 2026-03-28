@@ -13,6 +13,8 @@ import {
   Loader2,
 } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
+import { AnimatedLogo } from "@/components/animated-logo";
+import { useNavigationLoading } from "@/hooks/use-navigation-loading";
 import { PLATFORM_DISPLAY } from "@/lib/platform-display";
 import { PLATFORMS, PLATFORM_IDS, type PlatformId } from "@appranks/shared";
 import { extractPlatform, extractSection, isOnPlatformPage } from "@/lib/nav-utils";
@@ -29,6 +31,7 @@ export function TopBar({
   const { user, account, logout, impersonation, globalPlatformVisibility } = useAuth();
   const enabledPlatforms = (account?.enabledPlatforms ?? []) as PlatformId[];
   const isSystemAdmin = user?.isSystemAdmin;
+  const isNavigating = useNavigationLoading();
 
   const activePlatform = extractPlatform(pathname);
   const currentSection = extractSection(pathname);
@@ -71,8 +74,9 @@ export function TopBar({
       {/* Logo */}
       <Link
         href="/overview"
-        className="font-semibold text-lg hover:text-primary transition-colors shrink-0"
+        className="flex items-center gap-1.5 font-semibold text-lg hover:text-primary transition-colors shrink-0"
       >
+        <AnimatedLogo animating={isNavigating} />
         AppRanks
       </Link>
 
