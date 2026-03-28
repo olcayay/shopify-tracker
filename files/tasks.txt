@@ -1,3 +1,6 @@
+Integrate Sentry error tracking for API and Worker (2026-03-28)
+  PLA-188: @sentry/node in API, worker, worker-interactive, SENTRY_DSN env var ✅
+
 Set up GitHub Actions CI/CD pipeline (2026-03-28)
   PLA-201: CI workflow with lint, typecheck, test, build on push/PR to main ✅
 

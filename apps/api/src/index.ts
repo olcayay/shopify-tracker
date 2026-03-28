@@ -1,6 +1,17 @@
 import { config } from "dotenv";
 import { resolve } from "path";
 config({ path: resolve(import.meta.dirname, "../../../.env") });
+
+// Initialize Sentry before other imports
+import * as Sentry from "@sentry/node";
+if (process.env.SENTRY_DSN) {
+  Sentry.init({
+    dsn: process.env.SENTRY_DSN,
+    environment: process.env.NODE_ENV || "development",
+    tracesSampleRate: 0.1,
+  });
+}
+
 import Fastify from "fastify";
 import cors from "@fastify/cors";
 import { randomUUID } from "node:crypto";
@@ -272,6 +283,9 @@ app.setErrorHandler<Error & { statusCode?: number }>((error, request, reply) => 
       requestId,
     });
   }
+
+  // Report unhandled errors to Sentry
+  Sentry.captureException(error, { extra: { requestId, url: request.url, method: request.method } });
 
   app.log.error({ err: error, requestId }, "unhandled error");
   reply.code(error.statusCode ?? 500).send({

@@ -24,12 +24,13 @@
   "dependencies": {
     "@appranks/db": "*",
     "@appranks/shared": "*",
+    "@sentry/node": "^10.46.0",
     "@types/nodemailer": "^7.0.10",
     "bullmq": "^5.0.0",
     "cheerio": "^1.0.0",
     "dotenv": "^16.4.0",
-    "ioredis": "^5.0.0",
     "fastify": "^5.2.0",
+    "ioredis": "^5.0.0",
     "node-cron": "^3.0.0",
     "nodemailer": "^8.0.1",
     "playwright": "^1.58.2"

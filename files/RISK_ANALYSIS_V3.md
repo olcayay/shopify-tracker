@@ -544,12 +544,13 @@ Docker `migrate` service runs before API/worker services start (`service_complet
 ### R-32: No Error Tracking (Medium / Low Likelihood)
 **Risk Score: 8** | **Linear:** PLA-188
 
-**Mitigation:**
-- [ ] Integrate Sentry for error tracking on API, Dashboard, and Worker (**PLA-188**)
-- [ ] Configure alerting for new/regression errors
-- [ ] Add source maps for dashboard error reports
-
-**When task PLA-188 is completed, update this risk status to Mitigated.**
+**Mitigation:** ✅ **Mitigated**
+- [x] Sentry integrated on API, Worker, and Worker-Interactive (**PLA-188**)
+  - `@sentry/node` initialized with SENTRY_DSN env var
+  - Unhandled API errors captured with requestId context
+  - Worker job failures captured with jobId, type, platform context
+- [ ] Configure alerting for new/regression errors — in Sentry dashboard
+- [ ] Add `@sentry/nextjs` for Dashboard + source maps — future
 
 ---
 
@@ -1168,7 +1169,7 @@ This table maps each Linear ticket to its risk(s) and priority. **Update this se
 | PLA-178 | Add Zod validation to all API request bodies | R-23 | P1 | Todo |
 | PLA-196 | Separate migration runner from API startup | R-25 | P2 | **Fixed** |
 | PLA-190 | Set up centralized logging (Loki/ELK) | R-31 | P2 | Todo |
-| PLA-188 | Integrate Sentry error tracking | R-32 | P2 | Todo |
+| PLA-188 | Integrate Sentry error tracking | R-32 | P2 | **Fixed** |
 | PLA-189 | Add Prometheus metrics + Grafana dashboards | R-33 | P2 | Todo |
 | PLA-191 | Implement data retention/cleanup job | R-38 | P2 | **Fixed** |
 | PLA-179 | Add global API rate limiting | R-65 | P1 | **Fixed** |

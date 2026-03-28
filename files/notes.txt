@@ -1,3 +1,13 @@
+Integrate Sentry Error Tracking for API and Worker (2026-03-28)
+================================================================
+**PLA-188:** Centralized error tracking via Sentry.
+
+- `@sentry/node` added to API and scraper packages
+- Initialized with `SENTRY_DSN` env var (no-op when not set)
+- API: unhandled errors captured with requestId, URL, method context
+- Worker: job failures captured with jobId, type, platform context
+- SENTRY_DSN added to docker-compose.prod.yml for api, worker, worker-interactive
+
 Set Up GitHub Actions CI/CD Pipeline (2026-03-28)
 ==================================================
 **PLA-201:** Automated CI on every push/PR to main.

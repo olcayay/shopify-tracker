@@ -1,6 +1,16 @@
 import { config } from "dotenv";
 import { resolve } from "path";
 config({ path: resolve(import.meta.dirname, "../../../.env") });
+
+import * as Sentry from "@sentry/node";
+if (process.env.SENTRY_DSN) {
+  Sentry.init({
+    dsn: process.env.SENTRY_DSN,
+    environment: process.env.NODE_ENV || "development",
+    tracesSampleRate: 0.1,
+  });
+}
+
 import { Worker, type Job } from "bullmq";
 import { createLogger, validateEnv, SCRAPER_REQUIRED_ENV } from "@appranks/shared";
 import { deadLetterJobs } from "@appranks/db";
@@ -106,6 +116,11 @@ for (const [name, w] of [["background", bgWorker], ["interactive", intWorker]] a
       type: job?.data?.type,
       attempt: job?.attemptsMade,
       error: String(err),
+    });
+
+    // Report to Sentry
+    Sentry.captureException(err, {
+      extra: { queue: name, jobId: job?.id, type: job?.data?.type, platform: job?.data?.platform },
     });
 
     // If all retries are exhausted, record in dead letter queue
