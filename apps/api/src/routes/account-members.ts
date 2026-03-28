@@ -3,7 +3,6 @@ import { eq, sql, and } from "drizzle-orm";
 import crypto from "crypto";
 import bcrypt from "bcryptjs";
 import {
-  createDb,
   accounts,
   users,
   invitations,
@@ -15,10 +14,9 @@ import {
   updateMemberRoleSchema,
 } from "../schemas/account.js";
 
-type Db = ReturnType<typeof createDb>;
 
 export const accountMemberRoutes: FastifyPluginAsync = async (app) => {
-  const db: Db = (app as any).db;
+  const db = app.db;
 
   // --- Members ---
 

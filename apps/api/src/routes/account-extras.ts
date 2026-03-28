@@ -1,7 +1,6 @@
 import type { FastifyPluginAsync } from "fastify";
 import { eq, sql, and, desc, inArray } from "drizzle-orm";
 import {
-  createDb,
   apps,
   appSnapshots,
   accountTrackedApps,
@@ -27,10 +26,9 @@ import {
   platformRequestSchema,
 } from "../schemas/account.js";
 
-type Db = ReturnType<typeof createDb>;
 
 export const accountExtrasRoutes: FastifyPluginAsync = async (app) => {
-  const db: Db = (app as any).db;
+  const db = app.db;
 
   // --- Starred Categories ---
 

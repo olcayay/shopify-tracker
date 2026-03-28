@@ -4,7 +4,6 @@ import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import crypto from "crypto";
 import {
-  createDb,
   accounts,
   users,
   refreshTokens,
@@ -38,7 +37,6 @@ import {
   DEFAULT_MAX_COMPETITOR_APPS,
 } from "../constants.js";
 
-type Db = ReturnType<typeof createDb>;
 
 // Rate limiters for auth endpoints (exported for test reset)
 export const loginLimiter = new RateLimiter({ maxAttempts: RATE_LIMIT_LOGIN_MAX, windowMs: RATE_LIMIT_LOGIN_WINDOW_MS });
@@ -62,7 +60,7 @@ function hashToken(token: string): string {
 }
 
 export const authRoutes: FastifyPluginAsync = async (app) => {
-  const db: Db = (app as any).db;
+  const db = app.db;
 
   // POST /api/auth/register — create account + owner user
   app.post("/register", async (request, reply) => {

@@ -1,6 +1,5 @@
 import type { FastifyPluginAsync } from "fastify";
 import { eq, desc, sql, and, inArray } from "drizzle-orm";
-import { createDb } from "@appranks/db";
 import {
   featuredAppSightings,
   apps,
@@ -9,10 +8,9 @@ import {
 } from "@appranks/db";
 import { getPlatformFromQuery } from "../utils/platform.js";
 
-type Db = ReturnType<typeof createDb>;
 
 export const featuredAppRoutes: FastifyPluginAsync = async (app) => {
-  const db: Db = (app as any).db;
+  const db = app.db;
 
   // GET /api/featured-apps?days=30&surface=home|category&surfaceDetail=slug&surfaceDetailPrefix=slug
   app.get("/", async (request) => {

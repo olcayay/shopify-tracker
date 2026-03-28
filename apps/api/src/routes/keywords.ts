@@ -1,6 +1,5 @@
 import type { FastifyPluginAsync } from "fastify";
 import { eq, desc, sql, and, inArray, ilike } from "drizzle-orm";
-import { createDb } from "@appranks/db";
 import { getPlatformFromQuery } from "../utils/platform.js";
 import {
   trackedKeywords,
@@ -24,7 +23,6 @@ import type { KeywordSearchApp } from "@appranks/shared";
 import { ensureKeywordSchema, opportunitySchema } from "../schemas/keywords.js";
 import { Queue } from "bullmq";
 
-type Db = ReturnType<typeof createDb>;
 
 const INTERACTIVE_QUEUE_NAME =
   process.env.INTERACTIVE_QUEUE_NAME || "scraper-jobs-interactive";
@@ -50,7 +48,7 @@ function getScraperQueue(): Queue {
 }
 
 export const keywordRoutes: FastifyPluginAsync = async (app) => {
-  const db: Db = (app as any).db;
+  const db = app.db;
 
   // GET /api/keywords — list account's tracked keywords
   app.get("/", async (request) => {

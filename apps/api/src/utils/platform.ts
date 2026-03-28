@@ -1,7 +1,7 @@
 import { PLATFORMS, type PlatformId } from "@appranks/shared";
 
 export function getPlatformFromQuery(query: Record<string, unknown>): PlatformId {
-  const platform = (query as any)?.platform || "shopify";
+  const platform = (query?.platform as string) || "shopify";
   if (!(platform in PLATFORMS)) {
     throw { statusCode: 400, message: `Invalid platform: ${platform}` };
   }

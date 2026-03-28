@@ -1,3 +1,6 @@
+Eliminate any type casts and add Zod request validation (2026-03-28)
+  PLA-141: Add Fastify type augmentation for db, remove (app as any).db casts, fix query param typing ✅
+
 Expand test coverage for critical untested areas (2026-03-28)
   PLA-163: Add Zod schema validation tests + account route edge case tests ✅
 

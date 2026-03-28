@@ -30,8 +30,8 @@ export const createVirtualAppSchema = z
     features: z.array(z.string().max(500)).optional(),
     integrations: z.array(z.string().max(500)).optional(),
     languages: z.array(z.string().max(100)).optional(),
-    categories: z.array(z.any()).optional(),
-    pricingPlans: z.array(z.any()).optional(),
+    categories: z.array(z.record(z.string(), z.unknown())).optional(),
+    pricingPlans: z.array(z.record(z.string(), z.unknown())).optional(),
   })
   .passthrough();
 

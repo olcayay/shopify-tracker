@@ -3,7 +3,6 @@ import { eq, sql, and, inArray, desc, asc, isNotNull } from "drizzle-orm";
 import { Queue } from "bullmq";
 import OpenAI from "openai";
 import {
-  createDb,
   apps,
   appSnapshots,
   trackedKeywords,
@@ -74,7 +73,6 @@ function getMinPaidPrice(plans: any[] | null | undefined): number | null {
   return prices.length > 0 ? Math.min(...prices) : null;
 }
 
-type Db = ReturnType<typeof createDb>;
 
 function buildResearchSummary(data: any, projectName: string) {
   const competitors = (data.competitors || []).map((c: any) => ({
@@ -265,7 +263,7 @@ function buildResearchSummary(data: any, projectName: string) {
 }
 
 export const researchRoutes: FastifyPluginAsync = async (app) => {
-  const db: Db = (app as any).db;
+  const db = app.db;
 
   // ─── Project CRUD ──────────────────────────────────────────
 

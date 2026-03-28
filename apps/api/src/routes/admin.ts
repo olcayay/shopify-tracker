@@ -1,7 +1,6 @@
 import type { FastifyPluginAsync } from "fastify";
 import { eq, desc, sql } from "drizzle-orm";
 import { Queue } from "bullmq";
-import { createDb } from "@appranks/db";
 import {
   apps,
   trackedKeywords,
@@ -38,10 +37,9 @@ function getScraperQueue(): Queue {
   return scraperQueue;
 }
 
-type Db = ReturnType<typeof createDb>;
 
 export const adminRoutes: FastifyPluginAsync = async (app) => {
-  const db: Db = (app as any).db;
+  const db = app.db;
 
   // --- Tracked Apps ---
 

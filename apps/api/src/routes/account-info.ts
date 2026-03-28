@@ -1,7 +1,6 @@
 import type { FastifyPluginAsync } from "fastify";
 import { eq, sql } from "drizzle-orm";
 import {
-  createDb,
   packages,
   accounts,
   users,
@@ -14,10 +13,9 @@ import {
 import { requireRole } from "../middleware/authorize.js";
 import { updateAccountSchema } from "../schemas/account.js";
 
-type Db = ReturnType<typeof createDb>;
 
 export const accountInfoRoutes: FastifyPluginAsync = async (app) => {
-  const db: Db = (app as any).db;
+  const db = app.db;
 
   // GET /api/account — account details + limits + usage
   app.get("/", async (request) => {

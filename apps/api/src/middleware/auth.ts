@@ -70,7 +70,7 @@ export function registerAuthMiddleware(app: FastifyInstance) {
       // Set impersonation flag
       request.isImpersonating = !!request.user.realAdmin;
 
-      const db = (app as any).db;
+      const db = app.db;
 
       // When impersonating, validate target user still exists
       if (request.isImpersonating) {

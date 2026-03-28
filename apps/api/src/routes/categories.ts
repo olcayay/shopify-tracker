@@ -1,6 +1,5 @@
 import type { FastifyPluginAsync } from "fastify";
 import { eq, desc, sql, and, asc, inArray } from "drizzle-orm";
-import { createDb } from "@appranks/db";
 import { categories, categorySnapshots, appCategoryRankings, apps, categoryAdSightings, appPowerScores, categoryParents } from "@appranks/db";
 import { getPlatformFromQuery } from "../utils/platform.js";
 import { PAGINATION_DEFAULT_LIMIT, PAGINATION_MAX_LIMIT } from "../constants.js";
@@ -8,10 +7,9 @@ import { createLogger } from "@appranks/shared";
 
 const log = createLogger("categories");
 
-type Db = ReturnType<typeof createDb>;
 
 export const categoryRoutes: FastifyPluginAsync = async (app) => {
-  const db: Db = (app as any).db;
+  const db = app.db;
 
   // GET /api/categories — list all categories
   // ?format=tree (default) | flat

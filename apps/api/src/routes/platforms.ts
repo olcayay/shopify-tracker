@@ -2,7 +2,7 @@ import type { FastifyInstance, FastifyRequest } from "fastify";
 import { PLATFORMS, PLATFORM_IDS, type PlatformId } from "@appranks/shared";
 
 export async function platformRoutes(app: FastifyInstance) {
-  const db = (app as any).db;
+  const db = app.db;
 
   // GET /api/platforms — list all platforms with capabilities
   app.get("/", async () => {

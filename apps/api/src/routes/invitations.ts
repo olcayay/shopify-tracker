@@ -2,16 +2,14 @@ import type { FastifyPluginAsync } from "fastify";
 import { eq } from "drizzle-orm";
 import bcrypt from "bcryptjs";
 import {
-  createDb,
   users,
   invitations,
 } from "@appranks/db";
 import { acceptInvitationSchema } from "../schemas/invitations.js";
 
-type Db = ReturnType<typeof createDb>;
 
 export const invitationRoutes: FastifyPluginAsync = async (app) => {
-  const db: Db = (app as any).db;
+  const db = app.db;
 
   // POST /api/invitations/accept/:token — accept an invitation
   app.post<{ Params: { token: string } }>(

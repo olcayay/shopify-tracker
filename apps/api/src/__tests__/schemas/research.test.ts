@@ -104,6 +104,28 @@ describe("createVirtualAppSchema", () => {
     const result = createVirtualAppSchema.parse({ unknownField: "value" });
     expect((result as any).unknownField).toBe("value");
   });
+
+  it("accepts categories as array of record objects", () => {
+    const result = createVirtualAppSchema.parse({
+      categories: [{ title: "Marketing", slug: "marketing" }],
+    });
+    expect(result.categories).toEqual([{ title: "Marketing", slug: "marketing" }]);
+  });
+
+  it("accepts pricingPlans as array of record objects", () => {
+    const result = createVirtualAppSchema.parse({
+      pricingPlans: [{ name: "Basic", price: "9.99" }],
+    });
+    expect(result.pricingPlans).toEqual([{ name: "Basic", price: "9.99" }]);
+  });
+
+  it("rejects categories with non-object items", () => {
+    expect(() => createVirtualAppSchema.parse({ categories: ["string-item"] })).toThrow();
+  });
+
+  it("rejects pricingPlans with non-object items", () => {
+    expect(() => createVirtualAppSchema.parse({ pricingPlans: [42] })).toThrow();
+  });
 });
 
 describe("addCategoryFeatureSchema", () => {

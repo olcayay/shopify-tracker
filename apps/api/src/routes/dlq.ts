@@ -1,6 +1,6 @@
 import type { FastifyPluginAsync } from "fastify";
 import { eq, desc, sql } from "drizzle-orm";
-import { deadLetterJobs, type Database } from "@appranks/db";
+import { deadLetterJobs } from "@appranks/db";
 import { requireSystemAdmin } from "../middleware/authorize.js";
 import { PAGINATION_DEFAULT_LIMIT, PAGINATION_MAX_LIMIT } from "../constants.js";
 import { Queue } from "bullmq";
@@ -19,7 +19,7 @@ function getRedisConnection() {
 }
 
 export const dlqRoutes: FastifyPluginAsync = async (app) => {
-  const db: Database = (app as any).db;
+  const db = app.db;
 
   // GET /api/system-admin/dlq — list dead letter jobs
   app.get("/", { preHandler: [requireSystemAdmin()] }, async (request, reply) => {

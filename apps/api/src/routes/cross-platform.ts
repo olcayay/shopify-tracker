@@ -36,7 +36,7 @@ function paginationResponse(page: number, limit: number, total: number) {
 }
 
 export async function crossPlatformRoutes(app: FastifyInstance) {
-  const db = (app as any).db;
+  const db = app.db;
 
   // GET /api/cross-platform/apps — tracked + competitor apps across all platforms
   app.get(

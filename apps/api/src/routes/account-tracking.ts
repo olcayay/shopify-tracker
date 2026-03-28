@@ -1,8 +1,7 @@
-import type { FastifyPluginAsync } from "fastify";
+import type { FastifyPluginAsync, FastifyInstance } from "fastify";
 import { eq, sql, and, asc, desc, inArray } from "drizzle-orm";
 import { Queue } from "bullmq";
 import {
-  createDb,
   accounts,
   apps,
   appSnapshots,
@@ -91,10 +90,9 @@ async function enqueueAppScrapeJobs(slug: string, platform: string): Promise<boo
   }
 }
 
-type Db = ReturnType<typeof createDb>;
 
 /** After adding/removing a tracked app, sync the global isTracked flag */
-async function syncAppTrackedFlag(db: Db, appId: number) {
+async function syncAppTrackedFlag(db: FastifyInstance["db"], appId: number) {
   const [{ count }] = await db
     .select({ count: sql<number>`count(*)::int` })
     .from(accountTrackedApps)
@@ -115,7 +113,7 @@ async function syncAppTrackedFlag(db: Db, appId: number) {
 }
 
 /** After adding/removing a tracked keyword, sync the global isActive flag */
-async function syncKeywordActiveFlag(db: Db, keywordId: number) {
+async function syncKeywordActiveFlag(db: FastifyInstance["db"], keywordId: number) {
   const [{ count }] = await db
     .select({ count: sql<number>`count(*)::int` })
     .from(accountTrackedKeywords)
@@ -131,7 +129,7 @@ async function syncKeywordActiveFlag(db: Db, keywordId: number) {
 }
 
 export const accountTrackingRoutes: FastifyPluginAsync = async (app) => {
-  const db: Db = (app as any).db;
+  const db = app.db;
 
   // --- Tracked Apps ---
 
@@ -1025,7 +1023,7 @@ export const accountTrackingRoutes: FastifyPluginAsync = async (app) => {
   // --- Per-app nested routes ---
 
   // GET /api/account/tracked-apps/:slug/competitors
-  app.get<{ Params: { slug: string } }>(
+  app.get<{ Params: { slug: string }; Querystring: { platform?: string; includeSelf?: string } }>(
     "/tracked-apps/:slug/competitors",
     async (request, reply) => {
       const { accountId } = request.user;
@@ -1056,7 +1054,7 @@ export const accountTrackingRoutes: FastifyPluginAsync = async (app) => {
         return reply.code(404).send({ error: "App not in your apps" });
       }
 
-      const includeSelf = (request.query as any).includeSelf === "true";
+      const includeSelf = request.query.includeSelf === "true";
 
       const rows = await db
         .select({

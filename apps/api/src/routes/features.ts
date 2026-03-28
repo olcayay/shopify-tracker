@@ -1,16 +1,14 @@
 import type { FastifyPluginAsync } from "fastify";
 import { eq, sql, and, ilike } from "drizzle-orm";
 import {
-  createDb,
   appSnapshots,
   apps,
   accountTrackedFeatures,
 } from "@appranks/db";
 
-type Db = ReturnType<typeof createDb>;
 
 export const featureRoutes: FastifyPluginAsync = async (app) => {
-  const db: Db = (app as any).db;
+  const db = app.db;
 
   // GET /api/features/tree — all features grouped as category > subcategory > features
   app.get("/tree", async () => {

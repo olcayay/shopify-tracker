@@ -1,8 +1,6 @@
 import type { FastifyPluginAsync } from "fastify";
 import { sql } from "drizzle-orm";
-import { createDb } from "@appranks/db";
 
-type Db = ReturnType<typeof createDb>;
 
 const FIELD_MAP: Record<string, string> = {
   industry: "supportedIndustries",
@@ -11,14 +9,14 @@ const FIELD_MAP: Record<string, string> = {
 };
 
 export const platformAttributeRoutes: FastifyPluginAsync = async (app) => {
-  const db: Db = (app as any).db;
+  const db = app.db;
 
   // GET /api/platform-attributes/:type/:value?platform=salesforce
   app.get<{ Params: { type: string; value: string }; Querystring: { platform?: string } }>(
     "/:type/:value",
     async (request, reply) => {
       const { type, value } = request.params;
-      const platform = (request.query as any).platform || "salesforce";
+      const platform = request.query.platform || "salesforce";
 
       const jsonbField = FIELD_MAP[type];
       if (!jsonbField) {

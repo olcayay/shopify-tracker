@@ -158,14 +158,16 @@ export async function buildTestApp(options: TestAppOptions): Promise<FastifyInst
   const app = Fastify({ logger: false });
 
   // Global error handler (mirrors production in src/index.ts)
-  app.setErrorHandler((error: any, _request, reply) => {
+  app.setErrorHandler((error, _request, reply) => {
     // ApiError — standardized error responses
-    if (error.name === "ApiError") {
-      return reply.code(error.statusCode).send(error.toJSON());
+    if (error.name === "ApiError" && "toJSON" in error) {
+      const apiError = error as import("../../utils/api-error.js").ApiError;
+      return reply.code(apiError.statusCode).send(apiError.toJSON());
     }
 
-    if (error.name === "ZodError") {
-      const fieldErrors = error.issues.map((issue: any) => ({
+    if (error.name === "ZodError" && "issues" in error) {
+      const zodError = error as import("zod").ZodError;
+      const fieldErrors = zodError.issues.map((issue) => ({
         field: issue.path.join("."),
         message: issue.message,
       }));
@@ -222,7 +224,7 @@ export async function buildTestApp(options: TestAppOptions): Promise<FastifyInst
   await app.register(
     async (instance) => {
       // Make db accessible to routes
-      (instance as any).db = mockDb;
+      instance.db = mockDb;
       await options.routes(instance);
     },
     { prefix: options.prefix }

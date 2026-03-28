@@ -1,18 +1,17 @@
 import type { FastifyPluginAsync } from "fastify";
 import { sql } from "drizzle-orm";
-import { createDb, apps } from "@appranks/db";
+import { apps } from "@appranks/db";
 
-type Db = ReturnType<typeof createDb>;
 
 export const integrationRoutes: FastifyPluginAsync = async (app) => {
-  const db: Db = (app as any).db;
+  const db = app.db;
 
   // GET /api/integrations/:name — apps that have this integration
   app.get<{ Params: { name: string }; Querystring: { platform?: string } }>(
     "/:name",
     async (request, reply) => {
       const { name } = request.params;
-      const platform = (request.query as any).platform;
+      const platform = request.query.platform;
 
       // Find all apps that have this integration (from latest snapshot)
       const appsResult = await db.execute(sql`

@@ -11,7 +11,7 @@ import { developerNameToSlug } from "@appranks/shared";
 import { PAGINATION_DEFAULT_LIMIT, PAGINATION_MAX_LIMIT_SMALL, PAGINATION_DEFAULT_DEVELOPER_APPS, PAGINATION_MAX_DEVELOPER_APPS, PAGINATION_MAX_LIMIT } from "../constants.js";
 
 export async function developerRoutes(app: FastifyInstance) {
-  const db = (app as any).db;
+  const db = app.db;
 
   // GET /api/developers — list global developers (paginated, searchable)
   app.get(

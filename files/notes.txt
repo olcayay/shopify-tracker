@@ -1,3 +1,36 @@
+Eliminate `any` Type Casts & Zod Request Validation (2026-03-28)
+==============================================================
+**PLA-141:** Removed request-body `any` casts across the API and strengthened Zod validation.
+
+**Key changes:**
+1. **Fastify `db` type augmentation** — Created `apps/api/src/types/fastify.d.ts` that
+   augments `FastifyInstance` with a typed `db` property. This eliminates `(app as any).db`
+   casts across **25 files** (22 route files, 1 middleware, 1 test helper, 1 index).
+2. **Removed 16 local `type Db = ReturnType<typeof createDb>` aliases** — no longer
+   needed since the type is declared globally via module augmentation.
+3. **Removed unused `createDb` imports** from 16 route files that only imported it for
+   the `Db` type alias.
+4. **Fixed `(request.query as any)` casts** in platform-attributes.ts, integrations.ts,
+   and account-tracking.ts — replaced with properly typed `Querystring` generics.
+5. **Fixed `(request as any).user` casts** in system-admin.ts (4 occurrences) — `request.user`
+   is already typed via the existing Fastify module augmentation in auth middleware.
+6. **Typed error handler** in index.ts — replaced `error: any` with `Error & { statusCode?: number }`,
+   added proper `ZodError` type assertion.
+7. **Improved research schema** — replaced `z.any()` for `categories` and `pricingPlans`
+   with `z.array(z.record(z.string(), z.unknown()))` to reject non-object array items.
+8. **Fixed `getPlatformFromQuery` utility** — removed `as any` cast, uses `query?.platform as string`.
+
+**New test files (1 file):**
+- `apps/api/src/__tests__/types/fastify-db.test.ts` — 1 test verifying `app.db` is
+  accessible with proper typing in route handlers (select/insert/update/delete/execute).
+
+**Updated tests:**
+- `apps/api/src/__tests__/schemas/research.test.ts` — 4 new tests for categories/pricingPlans
+  schema validation (accepts record objects, rejects primitives).
+
+**Impact:** 25+ files have cleaner types. All 748 API tests pass. The `(app as any).db`
+pattern (previously the #1 source of `any` casts) is completely eliminated.
+
 Expand Test Coverage — Critical Untested Areas (2026-03-28)
 ==============================================================
 **PLA-163:** Added high-value test coverage for previously untested areas.

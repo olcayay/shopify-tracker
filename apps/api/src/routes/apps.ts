@@ -1,6 +1,5 @@
 import type { FastifyPluginAsync } from "fastify";
 import { eq, desc, sql, and, inArray, ilike } from "drizzle-orm";
-import { createDb } from "@appranks/db";
 import { computeWeightedPowerScore, validatePlatformData, createLogger } from "@appranks/shared";
 import { slugsBodySchema } from "../schemas/apps";
 import { getPlatformFromQuery } from "../utils/platform.js";
@@ -29,7 +28,6 @@ import {
   researchProjectCompetitors,
 } from "@appranks/db";
 
-type Db = ReturnType<typeof createDb>;
 const log = createLogger("api-apps");
 
 function getMinPaidPrice(plans: any[] | null | undefined): number | null {
@@ -41,7 +39,7 @@ function getMinPaidPrice(plans: any[] | null | undefined): number | null {
 }
 
 export const appRoutes: FastifyPluginAsync = async (app) => {
-  const db: Db = (app as any).db;
+  const db = app.db;
 
   // GET /api/apps — list account's tracked apps with latest snapshot summary
   app.get("/", async (request) => {

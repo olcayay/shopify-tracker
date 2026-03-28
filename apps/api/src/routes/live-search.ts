@@ -1,8 +1,8 @@
 import type { FastifyPluginAsync, FastifyRequest } from "fastify";
 import * as cheerio from "cheerio";
 import { sql } from "drizzle-orm";
-import { createDb } from "@appranks/db";
 import { getPlatformFromQuery } from "../utils/platform.js";
+import type { FastifyInstance } from "fastify";
 import { LIVE_SEARCH_LIMIT } from "../constants.js";
 
 const USER_AGENTS = [
@@ -30,7 +30,7 @@ interface SearchResult {
 }
 
 interface SearchContext {
-  db: ReturnType<typeof createDb>;
+  db: FastifyInstance["db"];
   keyword: string;
   request: FastifyRequest;
 }
@@ -422,7 +422,7 @@ const liveSearchRegistry: Record<string, LiveSearchHandler> = {
 // Route
 // ---------------------------------------------------------------------------
 export const liveSearchRoutes: FastifyPluginAsync = async (app) => {
-  const db: ReturnType<typeof createDb> = (app as any).db;
+  const db = app.db;
 
   // GET /api/live-search?q=keyword — real-time search
   app.get("/", async (request, reply) => {
