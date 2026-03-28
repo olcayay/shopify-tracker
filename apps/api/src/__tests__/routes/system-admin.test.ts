@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeAll, afterAll } from "vitest";
+import { describe, it, expect, beforeAll, afterAll, vi } from "vitest";
 import {
   buildTestApp,
   createMockDb,
@@ -8,6 +8,16 @@ import {
   authHeaders,
 } from "../helpers/test-app.js";
 import type { FastifyInstance } from "fastify";
+
+// Mock BullMQ Queue to avoid real Redis connections in CI
+vi.mock("bullmq", () => {
+  class MockQueue {
+    add = vi.fn().mockResolvedValue({ id: "mock-job-1" });
+    close = vi.fn().mockResolvedValue(undefined);
+    getJobCounts = vi.fn().mockResolvedValue({});
+  }
+  return { Queue: MockQueue };
+});
 
 describe("System admin routes", () => {
   let app: FastifyInstance;

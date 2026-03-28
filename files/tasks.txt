@@ -1,3 +1,6 @@
+Fix CI test timeouts with BullMQ mocks (2026-03-28)
+  PLA-233: vi.mock("bullmq") in account.test.ts and system-admin.test.ts ✅
+
 Ensure unit tests run in GitHub Actions CI (2026-03-28)
   PLA-229: Redis connection timeout + API test timeout increase for CI ✅
 

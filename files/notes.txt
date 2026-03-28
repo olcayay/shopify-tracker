@@ -1,3 +1,11 @@
+Fix CI Test Timeouts with BullMQ Mocks (2026-03-28)
+================================================================
+**PLA-233:** Tests timed out in CI because BullMQ tried real Redis connections.
+
+- Added `vi.mock("bullmq")` to `account.test.ts` and `system-admin.test.ts`
+- Follows existing pattern from `queue-stats.test.ts`
+- MockQueue stubs: `add`, `close`, `getJobCounts`
+
 Ensure Unit Tests Run in GitHub Actions CI (2026-03-28)
 ================================================================
 **PLA-229:** Two API tests timed out in CI because BullMQ Redis connections hung indefinitely.
