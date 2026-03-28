@@ -197,7 +197,7 @@ describe("Live search routes", () => {
         headers: authHeaders(userToken()),
       });
       expect(res.statusCode).toBe(502);
-      expect(res.json().error).toContain("Failed to fetch from Shopify");
+      expect(res.json().error).toContain("Failed to fetch from shopify");
     });
   });
 
