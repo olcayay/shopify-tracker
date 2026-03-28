@@ -1,3 +1,6 @@
+Fix CI typecheck failure: internal packages not built before typecheck (2026-03-28)
+  PLA-228: turbo.json typecheck dependsOn changed from ^typecheck to ^build ✅
+
 Show loading spinner for platforms tracked badge in header (2026-03-28)
   PLA-224: Loader2 spinner while trackedCount/enabledPlatforms loading ✅
 

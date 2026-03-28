@@ -1,3 +1,12 @@
+Fix CI Typecheck Failure: Internal Packages Not Built Before Typecheck (2026-03-28)
+================================================================
+**PLA-228:** CI `npx turbo typecheck` failed with "Cannot find module '@appranks/db'" because
+`dist/` directories didn't exist in clean CI checkouts.
+
+- Changed `turbo.json` typecheck task `dependsOn` from `["^typecheck"]` to `["^build"]`
+- This ensures `@appranks/db` and `@appranks/shared` are built (generating `.d.ts` files) before downstream typecheck runs
+- Verified: deleted `dist/` dirs locally, `npx turbo typecheck` passes cleanly
+
 Show Loading Spinner for Platforms Tracked Badge (2026-03-28)
 ================================================================
 **PLA-224:** Header badge showed "-/0" then "-/2" before values loaded.
