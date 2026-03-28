@@ -73,6 +73,7 @@ export function createProcessJob(db: ReturnType<typeof createDb>, queueName?: st
   return async function processJob(job: Job<ScraperJobData>): Promise<void> {
     const { type, triggeredBy } = job.data;
     const platform: PlatformId = (job.data.platform && isPlatformId(job.data.platform)) ? job.data.platform as PlatformId : "shopify";
+    const jobStartTime = Date.now();
     log.info("processing job", { jobId: job.id, type, triggeredBy, platform });
 
     const opts = job.data.options;
@@ -531,7 +532,7 @@ export function createProcessJob(db: ReturnType<typeof createDb>, queueName?: st
       }
     }
 
-    log.info("job completed", { jobId: job.id, type });
+    log.info("job completed", { jobId: job.id, type, platform, durationMs: Date.now() - jobStartTime });
 
     // Create Linear task for any item errors (fire-and-forget)
     createLinearErrorTask(db, job.id, platform, type).catch((err) => {
@@ -539,6 +540,7 @@ export function createProcessJob(db: ReturnType<typeof createDb>, queueName?: st
     });
     })()]);
     } catch (error) {
+      log.error("job failed", { jobId: job.id, type, platform, durationMs: Date.now() - jobStartTime, error: String(error) });
       // Failsafe: mark any still-running scrape_runs for this job as failed
       if (job.id) {
         try {

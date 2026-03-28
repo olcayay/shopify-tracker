@@ -1,3 +1,15 @@
+Expand test coverage for critical untested areas (2026-03-28)
+  PLA-163: Add Zod schema validation tests + account route edge case tests ✅
+
+Observability improvements (2026-03-28)
+  PLA-160: Add correlation IDs, job duration metrics, queue monitoring endpoint ✅
+
+Extract magic numbers into named constants (2026-03-28)
+  PLA-161: Create constants.ts files for scraper and API packages ✅
+
+Standardize API Error Response Format (2026-03-28)
+  PLA-143: Add ApiError class + Fastify error handler infrastructure ✅
+
 Platform Data Matrix — Phase 2 & 3 Implementation (2026-03-28)
   PLA-203: Fix badge persistence gap in app-details-scraper ✅
   PLA-207: Fix Canva platformData field discrepancies in PLATFORM-DATA-MATRIX.md ✅

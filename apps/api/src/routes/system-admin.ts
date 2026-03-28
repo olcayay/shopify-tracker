@@ -2,7 +2,6 @@ import type { FastifyPluginAsync } from "fastify";
 import { eq, desc, sql, and, inArray, like, gte, lte } from "drizzle-orm";
 import { Queue } from "bullmq";
 import {
-  createDb,
   packages,
   accounts,
   users,
@@ -50,7 +49,6 @@ import {
   PAGINATION_MAX_LIMIT_AI_LOGS,
 } from "../constants.js";
 
-type Db = ReturnType<typeof createDb>;
 
 const BACKGROUND_QUEUE_NAME = "scraper-jobs-background";
 
@@ -106,7 +104,7 @@ function getScraperQueue(): Queue {
 }
 
 export const systemAdminRoutes: FastifyPluginAsync = async (app) => {
-  const db: Db = (app as any).db;
+  const db = app.db;
 
   // GET /api/system-admin/accounts — all accounts with usage stats
   app.get("/accounts", async () => {
@@ -477,7 +475,7 @@ export const systemAdminRoutes: FastifyPluginAsync = async (app) => {
         .from(users)
         .where(eq(users.accountId, id));
 
-      const userEmail = (request as any).user?.email || "api";
+      const userEmail = request.user?.email || "api";
 
       try {
         const queue = getBackgroundQueue();
@@ -651,7 +649,7 @@ export const systemAdminRoutes: FastifyPluginAsync = async (app) => {
         return reply.code(404).send({ error: "User not found" });
       }
 
-      const userEmail = (request as any).user?.email || "api";
+      const userEmail = request.user?.email || "api";
 
       try {
         const queue = getBackgroundQueue();
@@ -1577,7 +1575,7 @@ export const systemAdminRoutes: FastifyPluginAsync = async (app) => {
           return reply.code(400).send({ error: `Cannot retry a run with status "${run.status}"` });
         }
 
-        const userEmail = (request as any).user?.email || "api";
+        const userEmail = request.user?.email || "api";
         const metadata = (run.metadata || {}) as Record<string, any>;
         const queue = getInteractiveQueue();
 
@@ -1653,7 +1651,7 @@ export const systemAdminRoutes: FastifyPluginAsync = async (app) => {
       });
     }
 
-    const userEmail = (request as any).user?.email || "api";
+    const userEmail = request.user?.email || "api";
 
     try {
       const queue = targetQueue === "interactive" ? getInteractiveQueue() : getBackgroundQueue();
@@ -2664,7 +2662,7 @@ export const systemAdminRoutes: FastifyPluginAsync = async (app) => {
       tag?: string;
     };
   }>("/ai-logs", async (request) => {
-    const db: Db = (app as any).db;
+    const db = app.db;
     const {
       limit: limitStr = String(PAGINATION_DEFAULT_LIMIT),
       offset: offsetStr = "0",
@@ -2747,7 +2745,7 @@ export const systemAdminRoutes: FastifyPluginAsync = async (app) => {
   app.get<{
     Querystring: { period?: string; days?: string };
   }>("/ai-logs/analytics/timeseries", async (request) => {
-    const db: Db = (app as any).db;
+    const db = app.db;
     const { period: rawPeriod = "day", days: daysStr = "30" } = request.query;
 
     const allowedPeriods: Record<string, string> = { daily: "day", weekly: "week", monthly: "month", day: "day", week: "week", month: "month" };
@@ -2782,7 +2780,7 @@ export const systemAdminRoutes: FastifyPluginAsync = async (app) => {
   app.get<{
     Querystring: { days?: string };
   }>("/ai-logs/analytics/per-account", async (request) => {
-    const db: Db = (app as any).db;
+    const db = app.db;
     const days = Math.min(parseInt(request.query.days || "30", 10) || 30, 365);
     const since = new Date();
     since.setDate(since.getDate() - days);
@@ -2811,7 +2809,7 @@ export const systemAdminRoutes: FastifyPluginAsync = async (app) => {
   app.patch<{ Params: { id: string }; Body: { tags?: string[]; notes?: string } }>(
     "/ai-logs/:id",
     async (request, reply) => {
-      const db: Db = (app as any).db;
+      const db = app.db;
       const { id } = request.params;
       const { tags, notes } = request.body || {};
 
@@ -2854,6 +2852,26 @@ export const systemAdminRoutes: FastifyPluginAsync = async (app) => {
       .orderBy(desc(platformRequests.createdAt));
 
     return rows;
+  });
+
+  // -------------------------------------------------------------------------
+  // Queue monitoring
+  // -------------------------------------------------------------------------
+
+  // GET /api/system-admin/queue-stats — BullMQ queue counts
+  app.get("/queue-stats", async () => {
+    const backgroundQueue = getBackgroundQueue();
+    const interactiveQueue = getInteractiveQueue();
+
+    const [backgroundCounts, interactiveCounts] = await Promise.all([
+      backgroundQueue.getJobCounts("waiting", "active", "completed", "failed", "delayed"),
+      interactiveQueue.getJobCounts("waiting", "active", "completed", "failed", "delayed"),
+    ]);
+
+    return {
+      background: backgroundCounts,
+      interactive: interactiveCounts,
+    };
   });
 };
 

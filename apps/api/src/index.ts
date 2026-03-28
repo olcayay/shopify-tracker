@@ -3,6 +3,7 @@ import { resolve } from "path";
 config({ path: resolve(import.meta.dirname, "../../../.env") });
 import Fastify from "fastify";
 import cors from "@fastify/cors";
+import { randomUUID } from "node:crypto";
 import { createDb, accounts, users } from "@appranks/db";
 import { migrate } from "drizzle-orm/postgres-js/migrator";
 import { sql, eq } from "drizzle-orm";
@@ -118,6 +119,18 @@ await app.register(cors, {
 });
 
 app.decorate("db", db);
+
+// Correlation ID: read from x-request-id header or generate a UUID.
+// Stored on request.id (Fastify built-in) and echoed back in the response.
+app.addHook("onRequest", async (request, reply) => {
+  const incomingId = request.headers["x-request-id"];
+  if (incomingId && typeof incomingId === "string") {
+    (request as any).id = incomingId;
+  } else {
+    (request as any).id = randomUUID();
+  }
+  reply.header("x-request-id", request.id);
+});
 
 // JWT auth middleware (replaces old API key auth)
 registerAuthMiddleware(app);
@@ -249,15 +262,16 @@ app.get("/health", async (_request, reply) => {
 });
 
 // Error handler
-app.setErrorHandler((error: any, _request, reply) => {
+app.setErrorHandler<Error & { statusCode?: number }>((error, request, reply) => {
   // ApiError — standardized error responses
   if (error instanceof ApiError) {
     return reply.code(error.statusCode).send(error.toJSON());
   }
 
   // Zod validation errors → 400 with field-level details
-  if (error.name === "ZodError") {
-    const fieldErrors = error.issues.map((issue: any) => ({
+  if (error.name === "ZodError" && "issues" in error) {
+    const zodError = error as import("zod").ZodError;
+    const fieldErrors = zodError.issues.map((issue) => ({
       field: issue.path.join("."),
       message: issue.message,
     }));
@@ -267,7 +281,7 @@ app.setErrorHandler((error: any, _request, reply) => {
     });
   }
 
-  app.log.error(error);
+  app.log.error({ err: error, requestId: request.id }, "unhandled error");
   reply.code(error.statusCode ?? 500).send({
     error: error.message || "Internal Server Error",
   });

@@ -1,3 +1,90 @@
+Expand Test Coverage — Critical Untested Areas (2026-03-28)
+==============================================================
+**PLA-163:** Added high-value test coverage for previously untested areas.
+
+**New test files (7 files):**
+1. `apps/api/src/__tests__/schemas/auth.test.ts` — 20 tests for registerSchema,
+   loginSchema, refreshSchema, logoutSchema, updateProfileSchema. Covers password
+   complexity rules (uppercase, lowercase, number, min length), email validation,
+   currentPassword requirement for password changes.
+2. `apps/api/src/__tests__/schemas/account.test.ts` — 38 tests for all 14 account
+   schemas. Covers role constraints (owner not allowed in addMember/invite), color
+   enum validation for keyword tags, field length limits, required vs optional fields.
+3. `apps/api/src/__tests__/schemas/admin.test.ts` — 13 tests for admin schemas
+   (addTrackedApp, addTrackedKeyword, triggerScraper). Covers type enum validation,
+   whitespace trimming.
+4. `apps/api/src/__tests__/schemas/research.test.ts` — 25 tests for research schemas
+   (createProject, updateProject, virtualApp, categoryFeature, etc.). Covers passthrough
+   behavior, trim semantics, nested arrays.
+5. `apps/api/src/__tests__/schemas/misc.test.ts` — 14 tests for apps/invitations/keywords
+   schemas. Covers slugsBody max 500, opportunitySchema max 100, acceptInvitation
+   password length.
+6. `apps/api/src/__tests__/routes/account-members.test.ts` — 14 tests for member
+   management edge cases. Key: self-removal guard (400), self-role-change guard (400),
+   owner-role promotion rejected (400), invite role constraints.
+7. `apps/api/src/__tests__/routes/account-extras.test.ts` — 21 tests for keyword tags,
+   starred categories/features, platform requests. Covers RBAC (viewer blocked for
+   mutations, viewer allowed for reads and platform requests), validation edge cases.
+
+**Total new tests:** ~145 across 7 files
+**All tests passing:** 3712 total (743 API, 375 shared, 1317 scraper, 1277 dashboard)
+
+**Key findings during coverage analysis:**
+- DLQ routes already had comprehensive tests (11 tests, all edge cases covered)
+- Redis lock already had thorough tests (10 tests including acquireWithWait retry/timeout)
+- Env validation module already had 9 tests covering all branches
+- Platform utility (getPlatformFromQuery, requireCapability) already had 10 tests
+- Main gap was Zod schema validation and account sub-route business logic edge cases
+
+Observability Improvements (2026-03-28)
+==============================================================
+**PLA-160:** Added observability features to API and scraper.
+  - **Correlation IDs:** Added Fastify onRequest hook that reads `x-request-id` header
+    or generates a UUID, stores on `request.id`, and echoes back in response headers.
+    Error handler now logs `requestId` for tracing.
+  - **Job duration metrics:** Added `jobStartTime` tracking in `process-job.ts`.
+    Both success and failure paths now log structured `durationMs` along with
+    `jobId`, `type`, and `platform` fields.
+  - **Queue monitoring endpoint:** Added `GET /api/system-admin/queue-stats` that
+    returns BullMQ job counts (waiting, active, completed, failed, delayed) for
+    both background and interactive queues. Protected by requireSystemAdmin guard.
+  - **Tests:** Added `queue-stats.test.ts` with 4 tests (401 unauthenticated,
+    403 non-admin, 200 with counts, 200 with empty queues).
+  - Files changed: apps/api/src/index.ts, apps/scraper/src/process-job.ts,
+    apps/api/src/routes/system-admin.ts
+  - All tests passing across all 4 packages.
+
+Extract Magic Numbers into Named Constants (2026-03-28)
+==============================================================
+**PLA-161:** Extracted hardcoded magic numbers into named constants.
+  - Created `apps/scraper/src/constants.ts` with 30 constants covering:
+    queue job defaults (attempts, backoff, cleanup counts), worker concurrency & locking
+    (lock TTL, timeout, poll interval), HTTP client defaults (delay, retries, concurrency,
+    response size, rate limit backoffs), job timeout map values, batch sizes, queue inspection limits
+  - Created `apps/api/src/constants.ts` with 22 constants covering:
+    pagination defaults (limit, max, per-endpoint), rate limiting (authenticated, unauth,
+    system admin, login, register, cleanup interval), auth/JWT (token expiry), default
+    account limits (tracked apps, keywords, competitors), Redis connect timeout
+  - Updated 14 source files to use named constants instead of magic numbers:
+    scraper: queue.ts, worker.ts, http-client.ts, process-job.ts, backfill-categories.ts
+    api: index.ts, auth.ts, rate-limiter.ts, cross-platform.ts, apps.ts, categories.ts,
+         developers.ts, dlq.ts, account-tracking.ts, system-admin.ts, live-search.ts
+  - Added 2 test files (scraper constants + API constants) with comprehensive value and
+    relationship assertions (e.g., unauthenticated stricter than authenticated)
+  - All 2594+ tests passing across all 4 packages
+
+Standardize API Error Response Format (2026-03-28)
+==============================================================
+**PLA-143:** Added ApiError class and Fastify error handler infrastructure.
+  - Created `apps/api/src/utils/api-error.ts` with ApiError class (statusCode, code, message),
+    factory methods (badRequest, notFound, forbidden, etc.), and toJSON() for standardized format:
+    `{ error: { code: "NOT_FOUND", message: "App not found" } }`
+  - Updated error handler in `apps/api/src/index.ts` to catch ApiError instances first
+  - Updated test helpers (test-app.ts, invitations.test.ts) to mirror the new error handler
+  - Added 20 unit tests for ApiError class (constructor, factory methods, toJSON, status code mapping)
+  - Existing route error responses (`reply.code(N).send({ error: "..." })`) left unchanged for
+    incremental migration
+
 Platform Data Matrix — Phase 2 & 3 (2026-03-28)
 ==============================================================
 6 tasks from PLATFORM-DATA-MATRIX.md:
