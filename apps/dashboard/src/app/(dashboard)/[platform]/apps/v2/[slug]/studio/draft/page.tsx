@@ -87,14 +87,18 @@ export default function V2DraftEditorPage() {
         const draftRes = await fetchWithAuth(`/api/account/tracked-apps/${slug}/draft?platform=${platform}`).catch(() => null);
         const draft = draftRes?.ok ? await draftRes.json() : null;
 
-        const makeField = (key: string, label: string, limit: number, multiline?: boolean): DraftField => ({
-          key,
-          label,
-          current: snapshot?.[key] || "",
-          draft: draft?.[key] ?? snapshot?.[key] ?? "",
-          limit,
-          multiline,
-        });
+        const appLevelKeys = ["name", "appCardSubtitle"];
+        const makeField = (key: string, label: string, limit: number, multiline?: boolean): DraftField => {
+          const source = appLevelKeys.includes(key) ? app : snapshot;
+          return {
+            key,
+            label,
+            current: source?.[key] || "",
+            draft: draft?.[key] ?? source?.[key] ?? "",
+            limit,
+            multiline,
+          };
+        };
 
         setFields([
           makeField("name", "Title", limits.appName),

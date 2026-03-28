@@ -47,13 +47,13 @@ function computeRankChanges(rankings: any[], key: string) {
   return results.sort((a, b) => Math.abs(b.delta) - Math.abs(a.delta));
 }
 
-function computeListingHealth(snapshot: any, platform: string) {
+function computeListingHealth(snapshot: any, platform: string, app?: any) {
   if (!snapshot) return { completeness: 0, checks: [] };
   const limits = getMetadataLimits(platform);
   const checks: { label: string; status: "good" | "warning" | "missing"; detail: string }[] = [];
 
-  // Title
-  const titleLen = (snapshot.name || "").length;
+  // Title — name lives on the app object, not snapshot
+  const titleLen = (app?.name || snapshot.name || "").length;
   if (titleLen > 0) {
     checks.push({
       label: "Title",
@@ -64,8 +64,8 @@ function computeListingHealth(snapshot: any, platform: string) {
     checks.push({ label: "Title", status: "missing", detail: "Missing" });
   }
 
-  // Subtitle
-  const subtitleLen = (snapshot.appCardSubtitle || "").length;
+  // Subtitle — appCardSubtitle lives on the app object, not snapshot
+  const subtitleLen = (app?.appCardSubtitle || snapshot.appCardSubtitle || "").length;
   if (subtitleLen > 0) {
     checks.push({
       label: "Subtitle",
@@ -213,7 +213,7 @@ export default async function V2DashboardPage({
   const alerts = generateAlerts({ rankings, changes, featuredData, reviewData, adData, platform, slug });
 
   // Listing health
-  const listingHealth = computeListingHealth(snapshot, platform);
+  const listingHealth = computeListingHealth(snapshot, platform, app);
 
   return (
     <div className="space-y-4">

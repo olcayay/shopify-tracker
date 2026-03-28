@@ -437,3 +437,4 @@ unify overview cards into shared AccountUsageCards component (PLA-97) ✅
 separate tracked vs available platforms on dashboard homepage (PLA-100) ✅
 
 slug-based platform developer URLs with cross-platform link (PLA-98) ✅
+fix studio draft editor showing empty title and subtitle (PLA-235) ✅

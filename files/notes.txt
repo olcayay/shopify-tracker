@@ -3339,3 +3339,11 @@ PLA-179: Global API rate limiting middleware
 - Returns 429 with Retry-After header (seconds) when limit exceeded
 - Extended rate-limiter tests: 4 → 9 tests (reset, blocking persistence, retryAfterMs decay, multi-tier independence)
 - All 491 API tests passing
+
+## PLA-235: Fix studio draft editor showing empty title and subtitle (2026-03-29)
+- `name` and `appCardSubtitle` live on the `apps` table (app root), NOT on `appSnapshots`
+- Draft editor's `makeField()` was reading all values from `snapshot`, so title/subtitle were always empty
+- Same bug in v2 app page `computeListingHealth()` and `ListingScorecard` component
+- Fix: read `name`/`appCardSubtitle` from `app` object, fall back to snapshot for backward compat
+- Added `app` prop to `ListingScorecard` component
+- 2 new regression tests for ListingScorecard (app prop vs snapshot fallback)

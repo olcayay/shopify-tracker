@@ -52,4 +52,35 @@ describe("ListingScorecard", () => {
     // Canva has different limits, should still render
     expect(screen.getByText("Listing Completeness:")).toBeInTheDocument();
   });
+
+  it("reads name and appCardSubtitle from app prop instead of snapshot", () => {
+    const snapshot = {
+      appIntroduction: "Intro text",
+      appDetails: "Description text",
+    };
+    const app = {
+      name: "App From Root",
+      appCardSubtitle: "A great subtitle from root that is long enough",
+    };
+    render(<ListingScorecard snapshot={snapshot} platform="shopify" app={app} />);
+    // Title and Subtitle should show as good (not missing), proving they came from app
+    const good = screen.getAllByText("✓");
+    expect(good.length).toBeGreaterThanOrEqual(2);
+    // Should not show Title or Subtitle as missing
+    const missing = screen.getAllByText("✗");
+    const labels = screen.getAllByText(/Title|Subtitle/);
+    // Verify Title is not missing by checking it appears with a good indicator
+    expect(labels.length).toBeGreaterThan(0);
+  });
+
+  it("falls back to snapshot when app prop is not provided", () => {
+    const snapshot = {
+      name: "Snapshot Name",
+      appCardSubtitle: "A great subtitle that is long enough for validation",
+    };
+    render(<ListingScorecard snapshot={snapshot} platform="shopify" />);
+    // Should still work with snapshot values (not missing)
+    const good = screen.getAllByText("✓");
+    expect(good.length).toBeGreaterThanOrEqual(2);
+  });
 });

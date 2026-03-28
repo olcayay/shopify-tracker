@@ -35,7 +35,7 @@ export default async function V2StudioPage({
   return (
     <div className="space-y-4">
       {/* Scorecard */}
-      <ListingScorecard snapshot={snapshot} platform={platform} />
+      <ListingScorecard snapshot={snapshot} platform={platform} app={app} />
 
       {/* Metadata cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

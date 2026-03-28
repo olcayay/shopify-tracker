@@ -7,7 +7,7 @@ interface ScorecardCheck {
   detail: string;
 }
 
-function computeChecks(snapshot: any, platform: string): ScorecardCheck[] {
+function computeChecks(snapshot: any, platform: string, app?: any): ScorecardCheck[] {
   const limits = getMetadataLimits(platform);
   const checks: ScorecardCheck[] = [];
 
@@ -26,8 +26,9 @@ function computeChecks(snapshot: any, platform: string): ScorecardCheck[] {
     }
   };
 
-  addCheck("Title", snapshot?.name, limits.appName);
-  addCheck("Subtitle", snapshot?.appCardSubtitle, limits.subtitle);
+  // name and appCardSubtitle live on the app object, not snapshot
+  addCheck("Title", app?.name || snapshot?.name, limits.appName);
+  addCheck("Subtitle", app?.appCardSubtitle || snapshot?.appCardSubtitle, limits.subtitle);
   addCheck("Introduction", snapshot?.appIntroduction, limits.introduction);
   addCheck("Description", snapshot?.appDetails, limits.details);
 
@@ -46,8 +47,8 @@ function computeChecks(snapshot: any, platform: string): ScorecardCheck[] {
   return checks;
 }
 
-export function ListingScorecard({ snapshot, platform }: { snapshot: any; platform: string }) {
-  const checks = computeChecks(snapshot, platform);
+export function ListingScorecard({ snapshot, platform, app }: { snapshot: any; platform: string; app?: any }) {
+  const checks = computeChecks(snapshot, platform, app);
   const goodCount = checks.filter((c) => c.status === "good").length;
   const completeness = checks.length > 0 ? Math.round((goodCount / checks.length) * 100) : 0;
 
