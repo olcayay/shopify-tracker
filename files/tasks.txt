@@ -1,8 +1,11 @@
-App Detail v2 Redesign — Phase 0 (PLA-138, PLA-140, PLA-142, PLA-145) ✅
-  PLA-138: Create v2 directory structure and routing foundation ✅
-  PLA-140: Build compact header layout with scores ✅
-  PLA-142: Build V2Nav and SubNavPills components ✅
-  PLA-145: Add v1↔v2 toggle links ✅
+App Detail v2 Redesign — All Phases Complete (PLA-138 through PLA-172) ✅
+  Phase 0: PLA-138, PLA-140, PLA-142, PLA-145 — Directory structure, header, nav, toggle ✅
+  Phase 1: PLA-147, PLA-150, PLA-153 — Health scores, alerts, dashboard hub ✅
+  Phase 2: PLA-154, PLA-157, PLA-159 — Visibility overview, keywords, rankings/ads/featured ✅
+  Phase 3: PLA-162, PLA-164, PLA-165 — Competitors, similar/reviews, unified change log ✅
+  Phase 4: PLA-166, PLA-167, PLA-168 — Listing scorecard, draft editor, live preview ✅
+  Phase 5: PLA-169, PLA-170, PLA-171 — Trend indicators, loading skeletons, responsive ✅
+  Phase 6: PLA-172 — v2 default with middleware redirect and classic fallback ✅
 
 PLA-122: Migrate isBuiltForShopify column to badges array ✅ (migration documented, deploy pending)
 PLA-123: Move Shopify-only snapshot columns to platformData ✅ (migration documented, deploy pending)

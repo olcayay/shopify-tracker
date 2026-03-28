@@ -1,23 +1,22 @@
-App Detail v2 — Phase 0 (PLA-138, PLA-140, PLA-142, PLA-145) (2026-03-28)
+App Detail v2 — Full Redesign (PLA-138 through PLA-172) (2026-03-28)
 ===================================================================
-- PLA-138: Created v2 directory structure at /[platform]/apps/v2/[slug]/
-  - 14 routes: dashboard, visibility (overview/keywords/rankings/ads/featured),
-    intel (overview/competitors/similar/reviews/changes), studio (overview/draft/preview)
-  - Each with placeholder pages, section layouts, sub-nav components
-- PLA-140: Compact 2-row header replacing v1's 5-row layout
-  - Row 1: App icon + name + inline stats (rating, reviews, pricing, developer)
-  - Row 2: Visibility/Power score bars + action buttons (external, scraper, star, track)
-  - ScoreBar component with color-coded progress bars (green/amber/orange/red)
-- PLA-142: V2Nav (4-section dropdown navigation) + SubNavPills (pill-style sub-nav)
-  - Dashboard, Visibility, Market Intel, Listing Studio sections
-  - Dropdown menus with platform-capability-aware sub-items
-  - Studio section gated to tracked apps only
-  - localStorage-based last-visited section persistence
-- PLA-145: v1↔v2 toggle links
-  - V1: dismissible promo banner ("Try the new app detail experience!")
-  - V2: "Back to classic view" link in score bar row
-  - Banner dismissal persisted via localStorage
-- 23 unit tests across 4 test files (score-bar, v2-nav, sub-nav-pills, v2-promo-banner)
+**Phase 0:** Directory structure, compact header, V2Nav/SubNavPills, v1↔v2 toggle
+**Phase 1:** HealthScoreBar (dual bars + trends), AlertsCard (6 types), Dashboard hub
+  with visibility/competitive/listing health snapshot cards
+**Phase 2:** Visibility overview (30d trend chart + score breakdown + quick insights),
+  Enhanced keywords (reuses v1 KeywordsSection), Rankings/Ads/Featured thin wrappers
+**Phase 3:** Competitors (reuses v1 CompetitorsSection + presets component), Similar
+  Apps (3-panel heatmaps), Reviews (insights + distribution + trend), UnifiedChangeLog
+  (self+competitor merge, source/field filters, time-period grouping)
+**Phase 4:** ListingScorecard (per-platform field checks), Studio overview (metadata cards),
+  Draft editor (side-by-side + char count bars + keyword density), Live preview (reuses
+  v1 ShopifyPreview/SalesforcePreview/CanvaPreview)
+**Phase 5:** TrendBadge component, 9 loading skeletons, responsive V2Nav scroll
+**Phase 6:** Middleware v1→v2 redirect with tab path mapping, /apps/classic/ fallback,
+  ClassicViewBanner replacing promo banner
+
+Components: 11 new (components/v2/), Tests: 66 v2 + 5 middleware = 71 new tests
+Total: 1266 tests passing, 7 commits, 20 Linear issues
 
 PLA-127 + PLA-128: Overview page UX improvements (2026-03-28)
 ==============================================================
