@@ -55,6 +55,11 @@ function entryToSearchApp(entry: GWorkspaceAppEntry, position: number): Normaliz
     logoUrl: entry.iconUrl,
     isSponsored: false,
     badges: [],
+    extra: {
+      externalId: entry.appId,
+      ...(entry.developerName && { vendorName: entry.developerName }),
+      ...(entry.installCountExact != null && { installCount: entry.installCountExact }),
+    },
   };
 }
 

@@ -26,6 +26,9 @@ export function parseZendeskSearchPage(
     const numericId = urlMatch?.[2] ?? String(hit.id);
     const textSlug = urlMatch?.[3] ?? hit.name.toLowerCase().replace(/[^a-z0-9]+/g, "-");
 
+    // Extract product type from URL for externalId (used for URL reconstruction)
+    const product = urlMatch?.[1] || "support";
+
     return {
       position: idx + 1,
       appSlug: `${numericId}--${textSlug}`,
@@ -36,6 +39,13 @@ export function parseZendeskSearchPage(
       logoUrl: hit.icon_url || "",
       isSponsored: false,
       badges: [],
+      extra: {
+        externalId: product,
+        ...(hit.author_name && { vendorName: hit.author_name }),
+        ...(hit.author_url && { authorUrl: hit.author_url }),
+        ...(hit.version && { version: hit.version }),
+        ...(hit.date_published && { datePublished: hit.date_published }),
+      },
     };
   });
 
