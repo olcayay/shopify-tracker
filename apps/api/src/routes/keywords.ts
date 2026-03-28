@@ -675,22 +675,22 @@ export const keywordRoutes: FastifyPluginAsync = async (app) => {
 
       const slugByKeywordId = new Map(kwRows.map((r) => [r.id, r.slug]));
 
-      // Step 2: Get latest snapshot per keyword (parallel)
-      const snapshotResults = await Promise.all(
-        kwRows.map(async (kw) => {
-          const [row] = await db
-            .select({
-              keywordId: keywordSnapshots.keywordId,
-              totalResults: keywordSnapshots.totalResults,
-              results: keywordSnapshots.results,
-            })
-            .from(keywordSnapshots)
-            .where(eq(keywordSnapshots.keywordId, kw.id))
-            .orderBy(desc(keywordSnapshots.scrapedAt))
-            .limit(1);
-          return row;
-        })
-      );
+      // Step 2: Batch-fetch latest snapshot per keyword (single query instead of N)
+      const kwIds = kwRows.map((r) => r.id);
+      const snapshotRows = await db.execute(sql`
+        SELECT DISTINCT ON (keyword_id)
+          keyword_id,
+          total_results,
+          results
+        FROM keyword_snapshots
+        WHERE keyword_id = ANY(${kwIds})
+        ORDER BY keyword_id, scraped_at DESC
+      `);
+      const snapshotResults = ((snapshotRows as any).rows ?? snapshotRows).map((row: any) => ({
+        keywordId: row.keyword_id,
+        totalResults: row.total_results,
+        results: row.results,
+      }));
 
       // Step 3: Compute opportunity scores
       const result: Record<string, any> = {};

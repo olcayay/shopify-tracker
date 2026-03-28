@@ -1,3 +1,17 @@
+Eliminate N+1 Query Patterns in API Routes (2026-03-29)
+================================================================
+PLA-239: Replaced all N+1 query patterns with batch queries.
+
+5 N+1 patterns fixed across 4 files:
+1. keywords.ts POST /opportunity: Per-keyword snapshot fetch → DISTINCT ON batch
+2. categories.ts GET /:slug children: Per-child appCount fetch → DISTINCT ON batch
+3. categories.ts GET /:slug descendant apps: Triple N+1 (category ID + snapshot + rankings) → 3 batch queries
+4. categories.ts GET /:slug/history: Per-snapshot ranking count → GROUP BY batch
+5. developers.ts GET /:slug: Per-platform-developer app query → single WHERE ANY() query
+
+3 endpoints were already fixed in prior work (apps.ts GET /, account-extras.ts, keywords.ts GET /).
+Added 3 new tests for POST /opportunity endpoint.
+
 Platform Robustness: 28 Tasks Implemented (2026-03-29)
 ================================================================
 28 of 30 platform-robustness tasks implemented across 4 commits:

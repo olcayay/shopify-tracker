@@ -127,8 +127,11 @@ export async function developerRoutes(app: FastifyInstance) {
         activeInstalls: number | null;
       }[] = [];
 
-      for (const pd of platformDevs) {
-        const appRows: any[] = await db.execute(sql`
+      // Batch-fetch apps for all platform developers in a single query
+      if (platformDevs.length > 0) {
+        const devNames = platformDevs.map((pd: { name: string }) => pd.name);
+        const devPlatforms = platformDevs.map((pd: { platform: string }) => pd.platform);
+        const allAppRows = await db.execute(sql`
           SELECT DISTINCT ON (a.id)
             a.id,
             a.platform,
@@ -142,8 +145,8 @@ export async function developerRoutes(app: FastifyInstance) {
             a.active_installs
           FROM ${apps} a
           JOIN ${appSnapshots} s ON s.app_id = a.id
-          WHERE a.platform = ${pd.platform}
-            AND s.developer->>'name' = ${pd.name}
+          WHERE a.platform = ANY(${devPlatforms})
+            AND s.developer->>'name' = ANY(${devNames})
             AND s.id = (
               SELECT s2.id FROM ${appSnapshots} s2
               WHERE s2.app_id = a.id
@@ -151,8 +154,8 @@ export async function developerRoutes(app: FastifyInstance) {
             )
           ORDER BY a.id
         `);
-
-        for (const row of appRows) {
+        const appData: any[] = (allAppRows as any).rows ?? allAppRows;
+        for (const row of appData) {
           developerApps.push({
             id: row.id,
             platform: row.platform,

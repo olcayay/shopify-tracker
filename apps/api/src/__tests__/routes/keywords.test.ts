@@ -340,6 +340,43 @@ describe("Keyword routes — with mock data", () => {
     expect(body.keyword).toHaveProperty("slug", "seo-optimization");
   });
 
+  // =========================================================================
+  // POST /api/keywords/opportunity — batch keyword opportunity scores
+  // =========================================================================
+
+  describe("POST /api/keywords/opportunity", () => {
+    it("returns 401 without auth", async () => {
+      const res = await app.inject({
+        method: "POST",
+        url: "/api/keywords/opportunity?platform=shopify",
+        headers: { "content-type": "application/json" },
+        payload: { slugs: ["seo"] },
+      });
+      expect(res.statusCode).toBe(401);
+    });
+
+    it("returns empty object when no slugs match", async () => {
+      const res = await app.inject({
+        method: "POST",
+        url: "/api/keywords/opportunity?platform=shopify",
+        headers: { ...authHeaders(userToken()), "content-type": "application/json" },
+        payload: { slugs: ["nonexistent-keyword"] },
+      });
+      expect(res.statusCode).toBe(200);
+      expect(res.json()).toEqual({});
+    });
+
+    it("returns 400 with invalid body", async () => {
+      const res = await app.inject({
+        method: "POST",
+        url: "/api/keywords/opportunity?platform=shopify",
+        headers: { ...authHeaders(userToken()), "content-type": "application/json" },
+        payload: { slugs: "not-an-array" },
+      });
+      expect(res.statusCode).toBe(400);
+    });
+  });
+
   it("GET /api/keywords/:slug/suggestions returns suggestions shape when keyword found", async () => {
     const res = await app.inject({
       method: "GET",

@@ -201,18 +201,24 @@ export const categoryRoutes: FastifyPluginAsync = async (app) => {
       ? junctionChildren
       : await db.select().from(categories).where(and(eq(categories.parentSlug, slug), eq(categories.platform, platform)));
 
-    // Attach latest appCount to each child from snapshots
-    const children = await Promise.all(
-      childrenRaw.map(async (child: any) => {
-        const [snap] = await db
-          .select({ appCount: categorySnapshots.appCount })
-          .from(categorySnapshots)
-          .where(eq(categorySnapshots.categoryId, child.id))
-          .orderBy(desc(categorySnapshots.scrapedAt))
-          .limit(1);
-        return { ...child, appCount: snap?.appCount ?? null };
-      })
-    );
+    // Batch-fetch latest appCount for all children (single query instead of N)
+    const childIds = childrenRaw.map((c: any) => c.id);
+    const childSnapMap = new Map<number, number | null>();
+    if (childIds.length > 0) {
+      const childSnaps = await db.execute(sql`
+        SELECT DISTINCT ON (category_id) category_id, app_count
+        FROM category_snapshots
+        WHERE category_id = ANY(${childIds})
+        ORDER BY category_id, scraped_at DESC
+      `);
+      for (const row of ((childSnaps as any).rows ?? childSnaps) as any[]) {
+        childSnapMap.set(row.category_id, row.app_count);
+      }
+    }
+    const children = childrenRaw.map((child: any) => ({
+      ...child,
+      appCount: childSnapMap.get(child.id) ?? null,
+    }));
 
     // Build breadcrumb by walking up the parent chain
     // Use junction table for parent lookups, falling back to parentSlug
@@ -412,29 +418,45 @@ export const categoryRoutes: FastifyPluginAsync = async (app) => {
               );
 
         if (descendantListingCats.length > 0) {
-          // Collect all categories per app (an app can appear in multiple listing categories)
-          const appMap = new Map<string, any>();
+          // Batch: get category IDs for all descendants in one query
+          const descSlugs = descendantListingCats.map((c) => c.slug);
+          const descCatRows = await db
+            .select({ id: categories.id, slug: categories.slug })
+            .from(categories)
+            .where(and(inArray(categories.slug, descSlugs), eq(categories.platform, platform)));
+
+          const descSlugToId = new Map(descCatRows.map((r) => [r.slug, r.id]));
+          const descCatIds = descCatRows.map((r) => r.id);
+
+          // Batch: get latest scrape_run_id per descendant category
+          const descSnapRows = descCatIds.length > 0
+            ? await db.execute(sql`
+                SELECT DISTINCT ON (category_id) category_id, scrape_run_id
+                FROM category_snapshots
+                WHERE category_id = ANY(${descCatIds})
+                ORDER BY category_id, scraped_at DESC
+              `)
+            : [];
+          const descSnapData: any[] = (descSnapRows as any).rows ?? descSnapRows;
+          const catIdToRunId = new Map(descSnapData.map((r: any) => [r.category_id, r.scrape_run_id]));
+
+          // Build slug -> scrapeRunId mapping
+          const slugRunPairs: { slug: string; scrapeRunId: string }[] = [];
           for (const descCat of descendantListingCats) {
-            // Look up category ID for descendant
-            const [descCatRow] = await db
-              .select({ id: categories.id })
-              .from(categories)
-              .where(and(eq(categories.slug, descCat.slug), eq(categories.platform, platform)))
-              .limit(1);
+            const catId = descSlugToId.get(descCat.slug);
+            if (!catId) continue;
+            const runId = catIdToRunId.get(catId);
+            if (!runId) continue;
+            slugRunPairs.push({ slug: descCat.slug, scrapeRunId: runId });
+          }
 
-            if (!descCatRow) continue;
-
-            const [descSnapshot] = await db
-              .select({ scrapeRunId: categorySnapshots.scrapeRunId })
-              .from(categorySnapshots)
-              .where(eq(categorySnapshots.categoryId, descCatRow.id))
-              .orderBy(desc(categorySnapshots.scrapedAt))
-              .limit(1);
-
-            if (!descSnapshot) continue;
-
-            const descRanked = await db
+          // Batch: get all ranked apps for all descendant categories in one query
+          if (slugRunPairs.length > 0) {
+            const runIds = [...new Set(slugRunPairs.map((p) => p.scrapeRunId))];
+            const slugsForRankings = slugRunPairs.map((p) => p.slug);
+            const allRanked = await db
               .select({
+                categorySlug: appCategoryRankings.categorySlug,
                 position: appCategoryRankings.position,
                 appSlug: apps.slug,
                 name: apps.name,
@@ -449,13 +471,24 @@ export const categoryRoutes: FastifyPluginAsync = async (app) => {
               .innerJoin(apps, eq(apps.id, appCategoryRankings.appId))
               .where(
                 and(
-                  eq(appCategoryRankings.scrapeRunId, descSnapshot.scrapeRunId),
-                  eq(appCategoryRankings.categorySlug, descCat.slug)
+                  inArray(appCategoryRankings.categorySlug, slugsForRankings),
+                  inArray(appCategoryRankings.scrapeRunId, runIds)
                 )
               )
               .orderBy(asc(appCategoryRankings.position));
 
-            for (const r of descRanked) {
+            // Build title lookup from descendantListingCats
+            const slugToTitle = new Map(descendantListingCats.map((c) => [c.slug, c.title]));
+            // Only include rankings for valid slug+runId pairs
+            const validPairs = new Set(slugRunPairs.map((p) => `${p.slug}:${p.scrapeRunId}`));
+
+            const appMap = new Map<string, any>();
+            for (const r of allRanked) {
+              // Verify this ranking belongs to a valid slug+runId pair
+              const catId = descSlugToId.get(r.categorySlug);
+              const runId = catId ? catIdToRunId.get(catId) : undefined;
+              if (!runId || !validPairs.has(`${r.categorySlug}:${runId}`)) continue;
+
               if (!appMap.has(r.appSlug)) {
                 appMap.set(r.appSlug, {
                   position: r.position,
@@ -467,23 +500,26 @@ export const categoryRoutes: FastifyPluginAsync = async (app) => {
                   rating_count: r.ratingCount ?? null,
                   pricing_hint: r.pricingHint || null,
                   launched_date: r.launchedDate || null,
-                  source_categories: [{ title: descCat.title, slug: descCat.slug }],
+                  source_categories: [{ title: slugToTitle.get(r.categorySlug) ?? r.categorySlug, slug: r.categorySlug }],
                 });
               } else {
-                appMap.get(r.appSlug).source_categories.push({ title: descCat.title, slug: descCat.slug });
+                const existing = appMap.get(r.appSlug);
+                if (!existing.source_categories.some((sc: any) => sc.slug === r.categorySlug)) {
+                  existing.source_categories.push({ title: slugToTitle.get(r.categorySlug) ?? r.categorySlug, slug: r.categorySlug });
+                }
               }
             }
-          }
-          // Keep only leaf categories per app (remove parents when a child is present)
-          for (const app of appMap.values()) {
-            const cats: { title: string; slug: string }[] = app.source_categories;
-            if (cats.length > 1) {
-              app.source_categories = cats.filter(
-                (cat) => !cats.some((other) => other.slug !== cat.slug && other.slug.startsWith(cat.slug + '-'))
-              );
+            // Keep only leaf categories per app (remove parents when a child is present)
+            for (const app of appMap.values()) {
+              const cats: { title: string; slug: string }[] = app.source_categories;
+              if (cats.length > 1) {
+                app.source_categories = cats.filter(
+                  (cat) => !cats.some((other) => other.slug !== cat.slug && other.slug.startsWith(cat.slug + '-'))
+                );
+              }
             }
+            rankedApps = [...appMap.values()];
           }
-          rankedApps = [...appMap.values()];
         }
       } catch (err) {
         app.log.warn(`Failed to fetch descendant apps for hub category ${slug}: ${err}`);
@@ -538,21 +574,31 @@ export const categoryRoutes: FastifyPluginAsync = async (app) => {
         .limit(parseInt(limit, 10))
         .offset(parseInt(offset, 10));
 
-      // Enrich with ranking count per snapshot (actual number of apps scraped)
-      const enriched = await Promise.all(
-        snapshots.map(async (s) => {
-          const [{ rankCount }] = await db
-            .select({ rankCount: sql<number>`count(*)::int` })
-            .from(appCategoryRankings)
-            .where(
-              and(
-                eq(appCategoryRankings.scrapeRunId, s.scrapeRunId),
-                eq(appCategoryRankings.categorySlug, slug)
-              )
-            );
-          return { ...s, appCount: s.appCount ?? (rankCount || null) };
-        })
-      );
+      // Batch-fetch ranking counts for all snapshots (single query instead of N)
+      const scrapeRunIds = snapshots.map((s) => s.scrapeRunId);
+      const rankCountMap = new Map<string, number>();
+      if (scrapeRunIds.length > 0) {
+        const rankCounts = await db
+          .select({
+            scrapeRunId: appCategoryRankings.scrapeRunId,
+            rankCount: sql<number>`count(*)::int`,
+          })
+          .from(appCategoryRankings)
+          .where(
+            and(
+              inArray(appCategoryRankings.scrapeRunId, scrapeRunIds),
+              eq(appCategoryRankings.categorySlug, slug)
+            )
+          )
+          .groupBy(appCategoryRankings.scrapeRunId);
+        for (const r of rankCounts) {
+          rankCountMap.set(r.scrapeRunId, r.rankCount);
+        }
+      }
+      const enriched = snapshots.map((s) => ({
+        ...s,
+        appCount: s.appCount ?? (rankCountMap.get(s.scrapeRunId) || null),
+      }));
 
       const [{ count }] = await db
         .select({ count: sql<number>`count(*)::int` })
