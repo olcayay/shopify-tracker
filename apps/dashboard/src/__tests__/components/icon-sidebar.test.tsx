@@ -6,14 +6,16 @@ vi.mock("next/navigation", () => ({
   usePathname: () => mockPathname(),
 }));
 
+const mockUser = vi.fn(() => ({
+  id: "1",
+  name: "Test User",
+  role: "owner",
+  isSystemAdmin: false,
+}));
+
 vi.mock("@/lib/auth-context", () => ({
   useAuth: () => ({
-    user: {
-      id: "1",
-      name: "Test User",
-      role: "owner",
-      isSystemAdmin: false,
-    },
+    user: mockUser(),
     account: {
       id: "a1",
       enabledPlatforms: ["shopify"],
@@ -31,6 +33,16 @@ import React from "react";
 import { IconSidebar } from "@/components/icon-sidebar";
 
 describe("IconSidebar", () => {
+  beforeEach(() => {
+    mockPathname.mockReturnValue("/shopify/keywords");
+    mockUser.mockReturnValue({
+      id: "1",
+      name: "Test User",
+      role: "owner",
+      isSystemAdmin: false,
+    });
+  });
+
   it("renders nav items for the active platform", () => {
     render(<IconSidebar />);
     // Should have tooltip content for each nav item
@@ -102,5 +114,60 @@ describe("IconSidebar", () => {
     const overviewLink = links.find((l) => l.getAttribute("href") === "/shopify");
     // Overview link should have active styling on exact match
     expect(overviewLink?.className).not.toContain("text-muted-foreground");
+  });
+
+  it("shows persistent System Admin link for admin users on platform pages", () => {
+    mockPathname.mockReturnValue("/shopify/keywords");
+    mockUser.mockReturnValue({
+      id: "1",
+      name: "Admin User",
+      role: "owner",
+      isSystemAdmin: true,
+    });
+    render(<IconSidebar />);
+    const links = screen.getAllByRole("link");
+    const adminLink = links.find((l) => l.getAttribute("href") === "/system-admin");
+    expect(adminLink).toBeDefined();
+    expect(adminLink?.className).toContain("text-amber-600");
+  });
+
+  it("shows persistent System Admin link for admin users on global pages", () => {
+    mockPathname.mockReturnValue("/overview");
+    mockUser.mockReturnValue({
+      id: "1",
+      name: "Admin User",
+      role: "owner",
+      isSystemAdmin: true,
+    });
+    render(<IconSidebar />);
+    const links = screen.getAllByRole("link");
+    const adminLink = links.find((l) => l.getAttribute("href") === "/system-admin");
+    expect(adminLink).toBeDefined();
+  });
+
+  it("does not show persistent System Admin link for non-admin users", () => {
+    mockPathname.mockReturnValue("/shopify/keywords");
+    render(<IconSidebar />);
+    const links = screen.getAllByRole("link");
+    const adminLink = links.find((l) => l.getAttribute("href") === "/system-admin");
+    expect(adminLink).toBeUndefined();
+  });
+
+  it("does not show persistent bottom admin link when already on admin pages", () => {
+    mockPathname.mockReturnValue("/system-admin/accounts");
+    mockUser.mockReturnValue({
+      id: "1",
+      name: "Admin User",
+      role: "owner",
+      isSystemAdmin: true,
+    });
+    render(<IconSidebar />);
+    // On admin pages, the admin header + nav items are shown at top
+    // The persistent bottom link (with amber hover bg) should NOT be rendered
+    const links = screen.getAllByRole("link");
+    const bottomAdminLinks = links.filter(
+      (l) => l.getAttribute("href") === "/system-admin" && l.className.includes("hover:bg-amber")
+    );
+    expect(bottomAdminLinks.length).toBe(0);
   });
 });

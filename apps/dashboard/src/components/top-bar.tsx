@@ -10,6 +10,7 @@ import {
   Plus,
   ChevronDown,
   Check,
+  Loader2,
 } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
 import { PLATFORM_DISPLAY } from "@/lib/platform-display";
@@ -145,7 +146,11 @@ export function TopBar({
         onClick={onOpenDiscovery}
         className="text-xs text-muted-foreground hover:text-foreground transition-colors hidden sm:block"
       >
-        {trackedCount != null ? trackedCount : "–"}/{enabledPlatforms.length} platforms tracked
+        {trackedCount == null || enabledPlatforms.length === 0 ? (
+          <Loader2 className="h-3 w-3 animate-spin inline" />
+        ) : (
+          <>{trackedCount}/{enabledPlatforms.length} platforms tracked</>
+        )}
       </button>
 
       {/* Breadcrumb (only on platform pages) */}

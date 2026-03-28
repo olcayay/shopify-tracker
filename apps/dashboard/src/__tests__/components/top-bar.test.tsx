@@ -54,9 +54,10 @@ describe("TopBar", () => {
     expect(screen.getByText("1/2 platforms tracked")).toBeInTheDocument();
   });
 
-  it("shows dash when tracked count not yet loaded", () => {
+  it("shows spinner when tracked count not yet loaded", () => {
     render(<TopBar />);
-    expect(screen.getByText("–/2 platforms tracked")).toBeInTheDocument();
+    // Should not show the text, but a loading spinner instead
+    expect(screen.queryByText(/platforms tracked/)).not.toBeInTheDocument();
   });
 
   it("shows settings link", () => {

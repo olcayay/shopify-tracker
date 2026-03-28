@@ -1,3 +1,6 @@
+Fix System admin menus missing from IconSidebar on platform/global pages (2026-03-28)
+  PLA-222: Add persistent Shield icon at bottom of IconSidebar for system admins ✅
+
 Integrate Sentry error tracking for API and Worker (2026-03-28)
   PLA-188: @sentry/node in API, worker, worker-interactive, SENTRY_DSN env var ✅
 

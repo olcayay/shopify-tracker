@@ -1,3 +1,12 @@
+Fix System Admin Menus Missing from IconSidebar (2026-03-28)
+================================================================
+**PLA-222:** System admin users could not access the System Admin section from the sidebar when on platform pages (e.g., /shopify) or global pages (e.g., /overview).
+
+- Added persistent Shield icon link at the bottom of `IconSidebar` (above collapse toggle) for system admin users
+- Only shows when not already on admin pages (avoids duplication with admin header)
+- Amber-colored with hover state, works in both expanded and collapsed sidebar modes
+- Added 4 new tests: admin link on platform pages, global pages, non-admin users, no duplication on admin pages
+
 Integrate Sentry Error Tracking for API and Worker (2026-03-28)
 ================================================================
 **PLA-188:** Centralized error tracking via Sentry.

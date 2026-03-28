@@ -160,6 +160,34 @@ export function IconSidebar() {
       {/* Spacer */}
       <div className="flex-1" />
 
+      {/* Persistent System Admin link (visible on platform/global pages where admin nav isn't shown) */}
+      {isSystemAdmin && !isAdminSection && !showAdminFallback && (
+        <>
+          <div className={`${expanded ? "mx-3" : "mx-auto w-6"} border-t mb-1`} />
+          {expanded ? (
+            <Link
+              href="/system-admin"
+              className="flex items-center gap-2.5 mx-2 px-2.5 py-2 rounded-md text-sm text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-950/30 transition-colors"
+            >
+              <Shield className="h-4 w-4 shrink-0" />
+              <span className="truncate">System Admin</span>
+            </Link>
+          ) : (
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Link
+                  href="/system-admin"
+                  className="h-9 w-9 mx-auto flex items-center justify-center rounded-md text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-950/30 transition-colors"
+                >
+                  <Shield className="h-4.5 w-4.5" />
+                </Link>
+              </TooltipTrigger>
+              <TooltipContent side="right">System Admin</TooltipContent>
+            </Tooltip>
+          )}
+        </>
+      )}
+
       {/* Toggle button */}
       <Tooltip>
         <TooltipTrigger asChild>
