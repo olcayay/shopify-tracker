@@ -6,6 +6,25 @@ const PUBLIC_PATHS = ["/", "/login", "/register", "/invite", "/terms", "/privacy
 
 const VALID_PLATFORMS = ["shopify", "salesforce", "canva", "wix", "wordpress", "google_workspace", "atlassian", "zoom", "zoho", "zendesk", "hubspot"];
 
+/** Map v1 app detail tab paths to v2 section paths */
+function mapV1PathToV2(v1Rest: string): string {
+  const V1_TO_V2: Record<string, string> = {
+    "": "",
+    "/details": "/studio",
+    "/rankings": "/visibility/rankings",
+    "/keywords": "/visibility/keywords",
+    "/ads": "/visibility/ads",
+    "/featured": "/visibility/featured",
+    "/competitors": "/intel/competitors",
+    "/similar": "/intel/similar",
+    "/reviews": "/intel/reviews",
+    "/changes": "/intel/changes",
+    "/compare": "/studio/draft",
+    "/preview": "/studio/preview",
+  };
+  return V1_TO_V2[v1Rest] ?? "";
+}
+
 /** Dashboard pages that should be nested under a [platform] segment. */
 const PLATFORM_PAGES = [
   "/apps",
@@ -40,6 +59,18 @@ export async function proxy(request: NextRequest) {
   ) {
     return NextResponse.redirect(
       new URL(`/shopify${pathname}`, request.url)
+    );
+  }
+
+  // Redirect v1 app detail pages to v2 (unless user opted for classic)
+  // Pattern: /{platform}/apps/{slug} and sub-routes, but NOT /apps/v2/ or /apps/classic/
+  const appDetailMatch = pathname.match(/^\/([^/]+)\/apps\/(?!v2\/)(?!classic\/)([^/]+)(\/.*)?$/);
+  if (appDetailMatch && VALID_PLATFORMS.includes(appDetailMatch[1])) {
+    const [, plat, appSlug, rest = ""] = appDetailMatch;
+    // Map v1 tab paths to v2 section paths
+    const v2Path = mapV1PathToV2(rest);
+    return NextResponse.redirect(
+      new URL(`/${plat}/apps/v2/${appSlug}${v2Path}`, request.url)
     );
   }
 

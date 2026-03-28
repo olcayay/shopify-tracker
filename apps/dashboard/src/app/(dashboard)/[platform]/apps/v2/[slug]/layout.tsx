@@ -115,7 +115,7 @@ export default async function V2AppDetailLayout({
         <ScoreBar label="Visibility" score={bestVisibility} maxScore={100} />
         <ScoreBar label="Power" score={powerScore} maxScore={100} />
         <Link
-          href={`/${platform}/apps/${slug}`}
+          href={`/${platform}/apps/classic/${slug}`}
           className="text-xs text-muted-foreground hover:text-foreground ml-auto transition-colors"
         >
           Back to classic view
