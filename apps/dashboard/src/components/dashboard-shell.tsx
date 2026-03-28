@@ -12,6 +12,7 @@ import { isOnPlatformPage } from "@/lib/nav-utils";
 
 export function DashboardShell({ children }: { children: React.ReactNode }) {
   const [discoveryOpen, setDiscoveryOpen] = useState(false);
+  const [trackedCount, setTrackedCount] = useState<number | null>(null);
   const pathname = usePathname();
   const showSidebar = isOnPlatformPage(pathname) || pathname.startsWith("/system-admin");
 
@@ -19,7 +20,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
     <div className="flex flex-col min-h-screen">
       {/* Desktop: TopBar */}
       <div className="hidden md:block">
-        <TopBar onOpenDiscovery={() => setDiscoveryOpen(true)} />
+        <TopBar onOpenDiscovery={() => setDiscoveryOpen(true)} trackedCount={trackedCount} />
       </div>
       {/* Mobile: hamburger + logo */}
       <header className="md:hidden flex items-center gap-3 border-b px-4 h-14 shrink-0">
@@ -38,6 +39,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
       <PlatformDiscoverySheet
         open={discoveryOpen}
         onOpenChange={setDiscoveryOpen}
+        onTrackedCountChange={setTrackedCount}
       />
       <PlatformSwitcher />
     </div>

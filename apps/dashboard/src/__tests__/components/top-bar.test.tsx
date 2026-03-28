@@ -49,9 +49,14 @@ describe("TopBar", () => {
     expect(screen.getByText("Shopify")).toBeInTheDocument();
   });
 
-  it("shows platform count badge", () => {
+  it("shows platform count badge with tracked count", () => {
+    render(<TopBar trackedCount={1} />);
+    expect(screen.getByText("1/2 platforms tracked")).toBeInTheDocument();
+  });
+
+  it("shows dash when tracked count not yet loaded", () => {
     render(<TopBar />);
-    expect(screen.getByText("2 platforms tracked")).toBeInTheDocument();
+    expect(screen.getByText("–/2 platforms tracked")).toBeInTheDocument();
   });
 
   it("shows settings link", () => {

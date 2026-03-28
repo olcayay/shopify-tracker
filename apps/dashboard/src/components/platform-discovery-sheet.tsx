@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
@@ -22,13 +22,19 @@ const CAPABILITY_LABELS: { key: string; label: string }[] = [
   { key: "hasLaunchedDate", label: "Launch Date" },
 ];
 
+interface PlatformStats {
+  apps: number;
+  keywords: number;
+  competitors: number;
+}
+
 function PlatformCard({
   pid,
-  isEnabled,
+  stats,
   onNavigate,
 }: {
   pid: PlatformId;
-  isEnabled: boolean;
+  stats?: PlatformStats;
   onNavigate: () => void;
 }) {
   const d = PLATFORM_DISPLAY[pid];
@@ -39,10 +45,8 @@ function PlatformCard({
 
   return (
     <div
-      className={`border rounded-lg p-3 transition-colors ${
-        isEnabled ? "border-l-4" : "border-dashed opacity-60"
-      }`}
-      style={isEnabled ? { borderLeftColor: d.color } : undefined}
+      className="border rounded-lg p-3 transition-colors border-l-4"
+      style={{ borderLeftColor: d.color }}
     >
       <div className="flex items-center gap-2 mb-1.5">
         <span
@@ -67,23 +71,23 @@ function PlatformCard({
         ))}
       </div>
 
-      {/* Status */}
-      {isEnabled ? (
-        <div className="flex items-center justify-between">
+      {/* Stats + Dashboard link */}
+      <div className="flex items-center justify-between">
+        {stats ? (
+          <span className="text-xs text-muted-foreground">
+            {stats.apps} apps · {stats.keywords} keywords · {stats.competitors} competitors
+          </span>
+        ) : (
           <span className="text-xs text-green-600 flex items-center gap-1">
             <Check className="h-3 w-3" /> Active
           </span>
-          <Link href={`/${pid}`} onClick={onNavigate}>
-            <Button variant="ghost" size="sm" className="text-xs h-7">
-              Dashboard <ArrowRight className="h-3 w-3 ml-1" />
-            </Button>
-          </Link>
-        </div>
-      ) : (
-        <span className="text-xs text-muted-foreground">
-          Not enabled for this account
-        </span>
-      )}
+        )}
+        <Link href={`/${pid}`} onClick={onNavigate}>
+          <Button variant="ghost" size="sm" className="text-xs h-7 shrink-0">
+            Dashboard <ArrowRight className="h-3 w-3 ml-1" />
+          </Button>
+        </Link>
+      </div>
     </div>
   );
 }
@@ -118,15 +122,54 @@ function AvailablePlatformRow({
 export function PlatformDiscoverySheet({
   open,
   onOpenChange,
+  onTrackedCountChange,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  onTrackedCountChange?: (count: number) => void;
 }) {
-  const { user, account } = useAuth();
+  const { user, account, fetchWithAuth } = useAuth();
   const enabledPlatforms = (account?.enabledPlatforms ?? []) as PlatformId[];
   const isSystemAdmin = user?.isSystemAdmin;
   const [search, setSearch] = useState("");
   const [requestOpen, setRequestOpen] = useState(false);
+  const [platformStats, setPlatformStats] = useState<Record<string, PlatformStats>>({});
+  const [statsLoaded, setStatsLoaded] = useState(false);
+
+  // Fetch lightweight platform stats on mount (for badge) and when sheet opens
+  useEffect(() => {
+    if (statsLoaded || !account) return;
+
+    async function loadStats() {
+      const stats: Record<string, PlatformStats> = {};
+      await Promise.all(
+        enabledPlatforms.map(async (p) => {
+          const caps = PLATFORMS[p];
+          const [appsRes, keywordsRes, competitorsRes] = await Promise.all([
+            fetchWithAuth(`/api/apps?platform=${p}`).then((r) => r.ok ? r.json() : []),
+            caps.hasKeywordSearch
+              ? fetchWithAuth(`/api/keywords?platform=${p}`).then((r) => r.ok ? r.json() : [])
+              : Promise.resolve([]),
+            fetchWithAuth(`/api/account/competitors?platform=${p}`).then((r) => r.ok ? r.json() : []),
+          ]);
+          stats[p] = {
+            apps: Array.isArray(appsRes) ? appsRes.length : 0,
+            keywords: Array.isArray(keywordsRes) ? keywordsRes.length : 0,
+            competitors: Array.isArray(competitorsRes) ? competitorsRes.length : 0,
+          };
+        })
+      );
+      setPlatformStats(stats);
+      setStatsLoaded(true);
+      const count = enabledPlatforms.filter((pid) => {
+        const s = stats[pid];
+        return s && (s.apps > 0 || s.keywords > 0 || s.competitors > 0);
+      }).length;
+      onTrackedCountChange?.(count);
+    }
+
+    loadStats();
+  }, [statsLoaded, account]);
 
   // Regular users only see their enabled platforms; system admin sees all
   const visiblePlatforms = isSystemAdmin ? PLATFORM_IDS : enabledPlatforms;
@@ -137,9 +180,18 @@ export function PlatformDiscoverySheet({
     return d.label.toLowerCase().includes(search.toLowerCase());
   });
 
-  // Split into tracked (enabled) and available (not enabled, admin-only)
-  const tracked = filtered.filter((pid) => enabledPlatforms.includes(pid));
-  const available = filtered.filter((pid) => !enabledPlatforms.includes(pid));
+  // Tracked = has data (apps/keywords/competitors > 0), same logic as overview page
+  const hasData = (pid: PlatformId) => {
+    const s = platformStats[pid];
+    return s && (s.apps > 0 || s.keywords > 0 || s.competitors > 0);
+  };
+
+  const tracked = filtered.filter((pid) => enabledPlatforms.includes(pid) && hasData(pid));
+  const available = filtered.filter((pid) => enabledPlatforms.includes(pid) && !hasData(pid));
+  // Admin-only: platforms not enabled for this account
+  const notEnabled = filtered.filter((pid) => !enabledPlatforms.includes(pid));
+
+  const trackedCount = enabledPlatforms.filter(hasData).length;
 
   const handleNavigate = () => onOpenChange(false);
 
@@ -151,7 +203,7 @@ export function PlatformDiscoverySheet({
             {isSystemAdmin ? "All Platforms" : "Your Platforms"}
           </SheetTitle>
           <p className="text-sm text-muted-foreground mb-4">
-            {tracked.length} platform{tracked.length !== 1 ? "s" : ""} tracked
+            {trackedCount}/{enabledPlatforms.length} platforms tracked
             {isSystemAdmin && ` · ${PLATFORM_IDS.length} total`}
           </p>
 
@@ -168,7 +220,7 @@ export function PlatformDiscoverySheet({
             </div>
           )}
 
-          {/* Tracked Platforms */}
+          {/* Tracked Platforms — has data */}
           {tracked.length > 0 && (
             <div className="space-y-3">
               <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
@@ -178,16 +230,16 @@ export function PlatformDiscoverySheet({
                 <PlatformCard
                   key={pid}
                   pid={pid}
-                  isEnabled={true}
+                  stats={platformStats[pid]}
                   onNavigate={handleNavigate}
                 />
               ))}
             </div>
           )}
 
-          {/* Available Platforms (admin-only: not enabled for this account) */}
+          {/* Available Platforms — enabled but no data yet */}
           {available.length > 0 && (
-            <div className="mt-6 space-y-2">
+            <div className={tracked.length > 0 ? "mt-6 space-y-2" : "space-y-2"}>
               <div className="flex items-center gap-3">
                 <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
                   Available Platforms
@@ -195,6 +247,9 @@ export function PlatformDiscoverySheet({
                 <div className="flex-1 border-t border-dashed" />
                 <span className="text-xs text-muted-foreground">{available.length}</span>
               </div>
+              <p className="text-xs text-muted-foreground">
+                Start tracking apps on these platforms to see stats and rankings.
+              </p>
               {available.map((pid) => (
                 <AvailablePlatformRow
                   key={pid}
@@ -202,6 +257,35 @@ export function PlatformDiscoverySheet({
                   onNavigate={handleNavigate}
                 />
               ))}
+            </div>
+          )}
+
+          {/* Not Enabled (admin-only) */}
+          {notEnabled.length > 0 && (
+            <div className="mt-6 space-y-2">
+              <div className="flex items-center gap-3">
+                <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                  Not Enabled
+                </h3>
+                <div className="flex-1 border-t border-dashed" />
+                <span className="text-xs text-muted-foreground">{notEnabled.length}</span>
+              </div>
+              {notEnabled.map((pid) => {
+                const d = PLATFORM_DISPLAY[pid];
+                return (
+                  <div
+                    key={pid}
+                    className="flex items-center gap-2.5 px-3 py-2 rounded-lg opacity-50"
+                  >
+                    <span
+                      className="w-2 h-2 rounded-full shrink-0"
+                      style={{ backgroundColor: d.color }}
+                    />
+                    <span className="text-sm text-muted-foreground">{d.label}</span>
+                    <span className="text-[10px] text-muted-foreground ml-auto">Not enabled</span>
+                  </div>
+                );
+              })}
             </div>
           )}
 

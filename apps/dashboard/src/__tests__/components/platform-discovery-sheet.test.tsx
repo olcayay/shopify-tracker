@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
 vi.mock("@/components/ui/sheet", () => ({
@@ -15,6 +15,15 @@ vi.mock("@/components/platform-request-dialog", () => ({
 
 import React from "react";
 
+function mockFetchWithAuth(apps = 0, keywords = 0, competitors = 0) {
+  return vi.fn((url: string) => {
+    if (url.startsWith("/api/apps")) return Promise.resolve({ ok: true, json: () => Promise.resolve(Array(apps).fill({})) });
+    if (url.startsWith("/api/keywords")) return Promise.resolve({ ok: true, json: () => Promise.resolve(Array(keywords).fill({})) });
+    if (url.startsWith("/api/account/competitors")) return Promise.resolve({ ok: true, json: () => Promise.resolve(Array(competitors).fill({})) });
+    return Promise.resolve({ ok: true, json: () => Promise.resolve([]) });
+  });
+}
+
 describe("PlatformDiscoverySheet", () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -26,6 +35,7 @@ describe("PlatformDiscoverySheet", () => {
       useAuth: () => ({
         user: { id: "1", isSystemAdmin: false },
         account: { id: "a1", enabledPlatforms: ["shopify"] },
+        fetchWithAuth: mockFetchWithAuth(),
       }),
     }));
     const { PlatformDiscoverySheet } = await import("@/components/platform-discovery-sheet");
@@ -38,6 +48,7 @@ describe("PlatformDiscoverySheet", () => {
       useAuth: () => ({
         user: { id: "1", isSystemAdmin: false },
         account: { id: "a1", enabledPlatforms: ["shopify", "salesforce"] },
+        fetchWithAuth: mockFetchWithAuth(),
       }),
     }));
     const { PlatformDiscoverySheet } = await import("@/components/platform-discovery-sheet");
@@ -55,6 +66,7 @@ describe("PlatformDiscoverySheet", () => {
       useAuth: () => ({
         user: { id: "1", isSystemAdmin: false },
         account: { id: "a1", enabledPlatforms: ["shopify"] },
+        fetchWithAuth: mockFetchWithAuth(),
       }),
     }));
     const { PlatformDiscoverySheet } = await import("@/components/platform-discovery-sheet");
@@ -68,6 +80,7 @@ describe("PlatformDiscoverySheet", () => {
       useAuth: () => ({
         user: { id: "1", isSystemAdmin: true },
         account: { id: "a1", enabledPlatforms: ["shopify"] },
+        fetchWithAuth: mockFetchWithAuth(),
       }),
     }));
     const { PlatformDiscoverySheet } = await import("@/components/platform-discovery-sheet");
@@ -82,6 +95,7 @@ describe("PlatformDiscoverySheet", () => {
       useAuth: () => ({
         user: { id: "1", isSystemAdmin: false },
         account: { id: "a1", enabledPlatforms: ["shopify"] },
+        fetchWithAuth: mockFetchWithAuth(),
       }),
     }));
     const { PlatformDiscoverySheet } = await import("@/components/platform-discovery-sheet");
@@ -89,40 +103,79 @@ describe("PlatformDiscoverySheet", () => {
     expect(screen.getByText("Request a Platform")).toBeInTheDocument();
   });
 
-  it("shows Tracked Platforms section header", async () => {
+  it("separates tracked (has data) from available (no data) platforms", async () => {
+    const fetch = vi.fn((url: string) => {
+      // Shopify has data, salesforce does not
+      if (url === "/api/apps?platform=shopify") return Promise.resolve({ ok: true, json: () => Promise.resolve([{ slug: "app1" }]) });
+      if (url === "/api/apps?platform=salesforce") return Promise.resolve({ ok: true, json: () => Promise.resolve([]) });
+      return Promise.resolve({ ok: true, json: () => Promise.resolve([]) });
+    });
     vi.doMock("@/lib/auth-context", () => ({
       useAuth: () => ({
         user: { id: "1", isSystemAdmin: false },
         account: { id: "a1", enabledPlatforms: ["shopify", "salesforce"] },
+        fetchWithAuth: fetch,
       }),
     }));
     const { PlatformDiscoverySheet } = await import("@/components/platform-discovery-sheet");
     render(<PlatformDiscoverySheet open={true} onOpenChange={() => {}} />);
-    expect(screen.getByText("Tracked Platforms")).toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.getByText("Tracked Platforms")).toBeInTheDocument();
+      expect(screen.getByText("Available Platforms")).toBeInTheDocument();
+    });
   });
 
-  it("admin sees Available Platforms section for non-enabled platforms", async () => {
+  it("admin sees Not Enabled section for non-enabled platforms", async () => {
     vi.doMock("@/lib/auth-context", () => ({
       useAuth: () => ({
         user: { id: "1", isSystemAdmin: true },
         account: { id: "a1", enabledPlatforms: ["shopify"] },
+        fetchWithAuth: mockFetchWithAuth(1),
       }),
     }));
     const { PlatformDiscoverySheet } = await import("@/components/platform-discovery-sheet");
     render(<PlatformDiscoverySheet open={true} onOpenChange={() => {}} />);
-    expect(screen.getByText("Tracked Platforms")).toBeInTheDocument();
-    expect(screen.getByText("Available Platforms")).toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.getByText("Not Enabled")).toBeInTheDocument();
+    });
   });
 
-  it("shows tracked count in description", async () => {
+  it("shows tracked/total count in description", async () => {
+    const fetch = vi.fn((url: string) => {
+      if (url === "/api/apps?platform=shopify") return Promise.resolve({ ok: true, json: () => Promise.resolve([{ slug: "app1" }]) });
+      return Promise.resolve({ ok: true, json: () => Promise.resolve([]) });
+    });
     vi.doMock("@/lib/auth-context", () => ({
       useAuth: () => ({
         user: { id: "1", isSystemAdmin: false },
         account: { id: "a1", enabledPlatforms: ["shopify", "salesforce"] },
+        fetchWithAuth: fetch,
       }),
     }));
     const { PlatformDiscoverySheet } = await import("@/components/platform-discovery-sheet");
     render(<PlatformDiscoverySheet open={true} onOpenChange={() => {}} />);
-    expect(screen.getByText("2 platforms tracked")).toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.getByText("1/2 platforms tracked")).toBeInTheDocument();
+    });
+  });
+
+  it("calls onTrackedCountChange with correct count", async () => {
+    const onTrackedCountChange = vi.fn();
+    const fetch = vi.fn((url: string) => {
+      if (url === "/api/apps?platform=shopify") return Promise.resolve({ ok: true, json: () => Promise.resolve([{ slug: "app1" }]) });
+      return Promise.resolve({ ok: true, json: () => Promise.resolve([]) });
+    });
+    vi.doMock("@/lib/auth-context", () => ({
+      useAuth: () => ({
+        user: { id: "1", isSystemAdmin: false },
+        account: { id: "a1", enabledPlatforms: ["shopify", "salesforce"] },
+        fetchWithAuth: fetch,
+      }),
+    }));
+    const { PlatformDiscoverySheet } = await import("@/components/platform-discovery-sheet");
+    render(<PlatformDiscoverySheet open={true} onOpenChange={() => {}} onTrackedCountChange={onTrackedCountChange} />);
+    await waitFor(() => {
+      expect(onTrackedCountChange).toHaveBeenCalledWith(1);
+    });
   });
 });

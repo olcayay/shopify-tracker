@@ -18,8 +18,10 @@ import { extractPlatform, extractSection, isOnPlatformPage } from "@/lib/nav-uti
 
 export function TopBar({
   onOpenDiscovery,
+  trackedCount,
 }: {
   onOpenDiscovery?: () => void;
+  trackedCount?: number | null;
 }) {
   const pathname = usePathname();
   const router = useRouter();
@@ -143,7 +145,7 @@ export function TopBar({
         onClick={onOpenDiscovery}
         className="text-xs text-muted-foreground hover:text-foreground transition-colors hidden sm:block"
       >
-        {enabledPlatforms.length} platform{enabledPlatforms.length !== 1 ? "s" : ""} tracked
+        {trackedCount != null ? trackedCount : "–"}/{enabledPlatforms.length} platforms tracked
       </button>
 
       {/* Breadcrumb (only on platform pages) */}
