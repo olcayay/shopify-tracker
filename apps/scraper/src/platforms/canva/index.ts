@@ -52,6 +52,7 @@ export class CanvaModule implements PlatformModule {
     hasFeatureTaxonomy: false,
     hasPricing: false,
     hasLaunchedDate: false,
+    hasFlatCategories: false,
   };
 
   private httpClient: HttpClient;

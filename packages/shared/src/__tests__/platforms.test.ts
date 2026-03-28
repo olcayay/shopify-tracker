@@ -4,6 +4,7 @@ import {
   PLATFORM_IDS,
   isPlatformId,
   getPlatform,
+  needsBrowser,
   buildExternalAppUrl,
   buildExternalCategoryUrl,
 } from "../constants/platforms.js";
@@ -31,6 +32,7 @@ describe("PLATFORMS", () => {
       expect(typeof config.hasFeatureTaxonomy).toBe("boolean");
       expect(typeof config.hasPricing).toBe("boolean");
       expect(typeof config.hasLaunchedDate).toBe("boolean");
+      expect(typeof config.hasFlatCategories).toBe("boolean");
       expect(config.maxRatingStars).toBeGreaterThan(0);
       expect(config.pageSize).toBeGreaterThan(0);
     }
@@ -230,5 +232,32 @@ describe("buildExternalCategoryUrl", () => {
       .toBe("https://ecosystem.hubspot.com/marketplace/apps/sales");
     expect(buildExternalCategoryUrl("hubspot", "marketing--email"))
       .toBe("https://ecosystem.hubspot.com/marketplace/apps/marketing/email");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// needsBrowser
+// ---------------------------------------------------------------------------
+describe("needsBrowser", () => {
+  it("returns true for always-browser platforms", () => {
+    expect(needsBrowser("canva")).toBe(true);
+    expect(needsBrowser("google_workspace")).toBe(true);
+    expect(needsBrowser("zoho")).toBe(true);
+    expect(needsBrowser("zendesk")).toBe(true);
+  });
+
+  it("returns false for HTTP-only platforms", () => {
+    expect(needsBrowser("shopify")).toBe(false);
+    expect(needsBrowser("wix")).toBe(false);
+    expect(needsBrowser("wordpress")).toBe(false);
+    expect(needsBrowser("atlassian")).toBe(false);
+    expect(needsBrowser("zoom")).toBe(false);
+    expect(needsBrowser("hubspot")).toBe(false);
+  });
+
+  it("supports per-scraper-type granularity for salesforce", () => {
+    expect(needsBrowser("salesforce", "app_details")).toBe(true);
+    expect(needsBrowser("salesforce", "category")).toBe(false);
+    expect(needsBrowser("salesforce")).toBe(true); // any type needs browser
   });
 });

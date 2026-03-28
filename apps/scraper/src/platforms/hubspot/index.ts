@@ -59,6 +59,7 @@ export class HubSpotModule implements PlatformModule {
     hasFeatureTaxonomy: false,
     hasPricing: true,
     hasLaunchedDate: true, // Available via firstPublishedAt in listing details
+    hasFlatCategories: false,
   };
 
   private httpClient?: HttpClient;

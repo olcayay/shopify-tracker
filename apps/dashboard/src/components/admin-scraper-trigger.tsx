@@ -6,9 +6,9 @@ import { useAuth } from "@/lib/auth-context";
 import { Button } from "@/components/ui/button";
 import { Zap, Loader2, Check } from "lucide-react";
 import { ScraperOptionsModal, type ScraperOptions } from "./scraper-options-modal";
-import { PLATFORMS } from "@appranks/shared";
+import { PLATFORMS, PLATFORM_IDS } from "@appranks/shared";
 
-const VALID_PLATFORMS = new Set(["shopify", "salesforce", "canva", "wix", "wordpress", "google_workspace", "atlassian", "zoom", "zoho", "zendesk", "hubspot"]);
+const VALID_PLATFORMS = new Set<string>(PLATFORM_IDS);
 
 interface AdminScraperTriggerProps {
   scraperType: string;

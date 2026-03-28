@@ -46,6 +46,7 @@ export class ZohoModule implements PlatformModule {
     hasFeatureTaxonomy: false,
     hasPricing: false,
     hasLaunchedDate: true,
+    hasFlatCategories: true,
   };
 
   private httpClient: HttpClient;

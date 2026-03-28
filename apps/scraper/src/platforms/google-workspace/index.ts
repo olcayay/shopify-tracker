@@ -48,6 +48,7 @@ export class GoogleWorkspaceModule implements PlatformModule {
     hasFeatureTaxonomy: false,
     hasPricing: true,
     hasLaunchedDate: false,
+    hasFlatCategories: false,
   };
 
   private httpClient: HttpClient;

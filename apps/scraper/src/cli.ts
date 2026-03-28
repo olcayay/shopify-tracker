@@ -3,7 +3,7 @@ import { resolve } from "path";
 config({ path: resolve(import.meta.dirname, "../../../.env") });
 import { createDb } from "@appranks/db";
 import { trackedKeywords, keywordToSlug, apps } from "@appranks/db";
-import { isPlatformId, type PlatformId } from "@appranks/shared";
+import { isPlatformId, PLATFORM_IDS, type PlatformId } from "@appranks/shared";
 import { CategoryScraper } from "./scrapers/category-scraper.js";
 import { AppDetailsScraper } from "./scrapers/app-details-scraper.js";
 import { KeywordScraper } from "./scrapers/keyword-scraper.js";
@@ -20,7 +20,7 @@ if (platformArgIdx !== -1 && process.argv[platformArgIdx + 1]) {
   if (isPlatformId(val)) {
     platformArg = val;
   } else {
-    console.error(`Unknown platform: ${val}. Valid: shopify, salesforce, canva, wix, wordpress, google_workspace, atlassian, zoom, zoho, zendesk, hubspot`);
+    console.error(`Unknown platform: ${val}. Valid: ${PLATFORM_IDS.join(", ")}`);
     process.exit(1);
   }
   // Remove --platform and its value from argv so they don't interfere with positional args

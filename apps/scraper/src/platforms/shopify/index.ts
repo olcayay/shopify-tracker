@@ -42,6 +42,7 @@ export class ShopifyModule implements PlatformModule {
     hasFeatureTaxonomy: true,
     hasPricing: true,
     hasLaunchedDate: true,
+    hasFlatCategories: false,
   };
 
   private httpClient: HttpClient;

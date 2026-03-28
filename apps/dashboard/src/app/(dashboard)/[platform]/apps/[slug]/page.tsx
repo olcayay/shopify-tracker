@@ -38,7 +38,7 @@ import {
 } from "lucide-react";
 import { VisibilityScorePopover } from "@/components/visibility-score-popover";
 import { PowerScorePopover } from "@/components/power-score-popover";
-import { PLATFORMS, isPlatformId, type PlatformId } from "@appranks/shared";
+import { PLATFORMS, isPlatformId, getFieldLabels, type PlatformId } from "@appranks/shared";
 
 // --- Helper functions ---
 
@@ -91,24 +91,6 @@ function computeRankingChanges(
     });
   }
   return results;
-}
-
-function getFieldLabels(platform: string): Record<string, string> {
-  const isCanva = platform === "canva";
-  const isWix = platform === "wix";
-  const isWordPress = platform === "wordpress";
-  const isGoogleWorkspace = platform === "google_workspace";
-  const isAtlassian = platform === "atlassian";
-  const isHubSpot = platform === "hubspot";
-  return {
-    name: "App Name",
-    appIntroduction: isAtlassian ? "Summary" : isCanva || isWix || isWordPress || isGoogleWorkspace || isHubSpot ? "Short Description" : "Introduction",
-    appDetails: isCanva || isWix || isWordPress || isGoogleWorkspace || isAtlassian || isHubSpot ? "Description" : "Details",
-    features: "Features",
-    seoTitle: "SEO Title",
-    seoMetaDescription: "SEO Description",
-    appCardSubtitle: isAtlassian ? "Tag Line" : isCanva || isWix ? "Tagline" : isWordPress || isGoogleWorkspace || isHubSpot ? "Short Description" : "Subtitle",
-  };
 }
 
 const FIELD_COLORS: Record<string, string> = {

@@ -54,6 +54,7 @@ export class ZendeskModule implements PlatformModule {
     hasFeatureTaxonomy: false,
     hasPricing: true,
     hasLaunchedDate: true,
+    hasFlatCategories: true,
   };
 
   private httpClient?: HttpClient;

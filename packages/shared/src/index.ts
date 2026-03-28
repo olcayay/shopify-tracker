@@ -62,6 +62,8 @@ export { urls } from "./constants/urls.js";
 export {
   PLATFORMS,
   PLATFORM_IDS,
+  BROWSER_REQUIREMENTS,
+  needsBrowser,
   isPlatformId,
   getPlatform,
   buildExternalAppUrl,
@@ -72,6 +74,10 @@ export type {
   PlatformConfig,
   PlatformCapabilities,
 } from "./constants/platforms.js";
+
+// Field Labels
+export { getFieldLabels } from "./constants/field-labels.js";
+export type { PlatformFieldLabels } from "./constants/field-labels.js";
 
 // Keyword extraction
 export {

@@ -1,10 +1,11 @@
 import { NextResponse, type NextRequest } from "next/server";
+import { PLATFORM_IDS } from "@appranks/shared";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
 
 const PUBLIC_PATHS = ["/", "/login", "/register", "/invite", "/terms", "/privacy", "/health"];
 
-const VALID_PLATFORMS = ["shopify", "salesforce", "canva", "wix", "wordpress", "google_workspace", "atlassian", "zoom", "zoho", "zendesk", "hubspot"];
+const VALID_PLATFORMS: string[] = PLATFORM_IDS;
 
 /** Map v1 app detail tab paths to v2 section paths */
 function mapV1PathToV2(v1Rest: string): string {
