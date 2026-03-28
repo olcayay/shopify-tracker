@@ -138,13 +138,23 @@ describe("proxy routing", () => {
     expect(mockNext).toHaveBeenCalled();
   });
 
-  it("redirects legacy /apps to /shopify/apps", async () => {
+  it("does not redirect /apps (cross-platform page), falls through to auth", async () => {
     const { proxy } = await import("@/proxy");
     const req = createMockRequest("/apps") as any;
     await proxy(req);
+    // No auth token → redirects to /login, NOT /shopify/apps
     expect(mockRedirect).toHaveBeenCalled();
     const redirectUrl = mockRedirect.mock.calls[0][0];
-    expect(redirectUrl.pathname).toBe("/shopify/apps");
+    expect(redirectUrl.pathname).toBe("/login");
+  });
+
+  it("redirects legacy /apps/some-slug to /shopify/apps/some-slug", async () => {
+    const { proxy } = await import("@/proxy");
+    const req = createMockRequest("/apps/some-slug") as any;
+    await proxy(req);
+    expect(mockRedirect).toHaveBeenCalled();
+    const redirectUrl = mockRedirect.mock.calls[0][0];
+    expect(redirectUrl.pathname).toBe("/shopify/apps/some-slug");
   });
 
   it("redirects unauthenticated user from /shopify/overview to /login", async () => {

@@ -50,6 +50,49 @@ describe("proxy – root redirect", () => {
   });
 });
 
+describe("proxy – cross-platform pages", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("does not redirect /apps (cross-platform page)", async () => {
+    const req = makeRequest("/apps", { access_token: "eyJhbGciOiJIUzI1NiJ9.eyJleHAiOjk5OTk5OTk5OTl9.abc" });
+    await proxy(req);
+    expect(NextResponse.redirect).not.toHaveBeenCalled();
+    expect(NextResponse.next).toHaveBeenCalledTimes(1);
+  });
+
+  it("does not redirect /keywords (cross-platform page)", async () => {
+    const req = makeRequest("/keywords", { access_token: "eyJhbGciOiJIUzI1NiJ9.eyJleHAiOjk5OTk5OTk5OTl9.abc" });
+    await proxy(req);
+    expect(NextResponse.redirect).not.toHaveBeenCalled();
+    expect(NextResponse.next).toHaveBeenCalledTimes(1);
+  });
+
+  it("does not redirect /competitors (cross-platform page)", async () => {
+    const req = makeRequest("/competitors", { access_token: "eyJhbGciOiJIUzI1NiJ9.eyJleHAiOjk5OTk5OTk5OTl9.abc" });
+    await proxy(req);
+    expect(NextResponse.redirect).not.toHaveBeenCalled();
+    expect(NextResponse.next).toHaveBeenCalledTimes(1);
+  });
+
+  it("still redirects /apps/some-slug to /shopify/apps/some-slug (legacy path)", async () => {
+    const req = makeRequest("/apps/some-slug", { access_token: "eyJhbGciOiJIUzI1NiJ9.eyJleHAiOjk5OTk5OTk5OTl9.abc" });
+    await proxy(req);
+    expect(NextResponse.redirect).toHaveBeenCalledTimes(1);
+    const redirectUrl = (NextResponse.redirect as any).mock.calls[0][0] as URL;
+    expect(redirectUrl.pathname).toBe("/shopify/apps/some-slug");
+  });
+
+  it("still redirects /keywords/some-slug to /shopify/keywords/some-slug (legacy path)", async () => {
+    const req = makeRequest("/keywords/some-slug", { access_token: "eyJhbGciOiJIUzI1NiJ9.eyJleHAiOjk5OTk5OTk5OTl9.abc" });
+    await proxy(req);
+    expect(NextResponse.redirect).toHaveBeenCalledTimes(1);
+    const redirectUrl = (NextResponse.redirect as any).mock.calls[0][0] as URL;
+    expect(redirectUrl.pathname).toBe("/shopify/keywords/some-slug");
+  });
+});
+
 describe("proxy – v1 to v2 app detail redirect", () => {
   beforeEach(() => {
     vi.clearAllMocks();

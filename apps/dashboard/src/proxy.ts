@@ -38,6 +38,9 @@ const PLATFORM_PAGES = [
   "/research",
 ];
 
+/** Cross-platform pages that exist at the root level (no platform prefix). */
+const CROSS_PLATFORM_PAGES = ["/apps", "/keywords", "/competitors"];
+
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
@@ -56,7 +59,8 @@ export async function proxy(request: NextRequest) {
   const firstSegment = pathname.split("/")[1];
   if (
     PLATFORM_PAGES.some((p) => pathname === p || pathname.startsWith(p + "/")) &&
-    !VALID_PLATFORMS.includes(firstSegment!)
+    !VALID_PLATFORMS.includes(firstSegment!) &&
+    !CROSS_PLATFORM_PAGES.includes(pathname)
   ) {
     return NextResponse.redirect(
       new URL(`/shopify${pathname}`, request.url)

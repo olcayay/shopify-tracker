@@ -1,3 +1,6 @@
+Fix middleware blocking cross-platform pages (2026-03-28)
+  PLA-221: Exclude /apps, /keywords, /competitors from legacy redirect so cross-platform pages are accessible ✅
+
 Adopt TanStack Query for dashboard data fetching (2026-03-28)
   PLA-146: Set up QueryClient provider, useApiQuery/useApiMutation hooks, convert apps + categories pages ✅
 

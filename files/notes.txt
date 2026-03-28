@@ -1,3 +1,21 @@
+Fix Middleware Blocking Cross-Platform Pages (2026-03-28)
+=========================================================
+**PLA-221:** The middleware in `proxy.ts` was redirecting `/apps`, `/keywords`, `/competitors`
+to `/shopify/apps`, `/shopify/keywords`, `/shopify/competitors` — blocking cross-platform pages.
+
+**Root cause:** The legacy redirect matched any path starting with a PLATFORM_PAGES entry where
+the first segment wasn't a valid platform. Since "apps", "keywords", "competitors" aren't platforms,
+bare paths like `/apps` were incorrectly redirected.
+
+**Fix:** Added `CROSS_PLATFORM_PAGES` exclusion list. Exact matches for `/apps`, `/keywords`,
+`/competitors` now pass through to the cross-platform page components. Paths with additional
+segments (e.g., `/apps/some-slug`) still redirect to `/shopify/apps/some-slug` for backward compat.
+
+**Files changed:**
+- `apps/dashboard/src/proxy.ts` — added CROSS_PLATFORM_PAGES array, added exclusion check
+- `apps/dashboard/src/__tests__/middleware.test.ts` — 5 new tests for cross-platform pages
+- `apps/dashboard/src/__tests__/lib/proxy.test.ts` — updated existing test + added legacy path test
+
 Adopt TanStack Query for Dashboard Data Fetching (2026-03-28)
 =============================================================
 **PLA-146:** Set up TanStack Query (React Query v5) infrastructure and converted 2 key pages
