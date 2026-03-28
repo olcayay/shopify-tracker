@@ -54,6 +54,7 @@ export type {
   HubSpotPlatformData,
 } from "./types/platform-data/index.js";
 export { getPlatformData } from "./types/platform-data/index.js";
+export { validatePlatformData } from "./types/platform-data/schemas.js";
 
 // Constants
 export { SEED_CATEGORY_SLUGS, MAX_CATEGORY_DEPTH } from "./constants/seed-categories.js";

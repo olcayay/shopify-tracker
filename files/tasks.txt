@@ -1,3 +1,4 @@
+PLA-125: Add Zod validation for platformData at API boundary ✅
 PLA-124: Create platform-specific UI section components with registry pattern ✅
 PLA-121: Type scraper parsers' platformData output with new interfaces ✅
 PLA-120: Create per-platform TypeScript interfaces for platformData ✅
