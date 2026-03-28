@@ -50,22 +50,24 @@ vi.mock("@/lib/auth-context", () => ({
 // Track useApiQuery calls for assertions
 let useApiQueryCalls: { key: readonly unknown[]; url: string }[] = [];
 
+// Mock @tanstack/react-query useQuery for the categories POST query
+vi.mock("@tanstack/react-query", () => ({
+  useQuery: (opts: any) => {
+    if (opts.queryKey?.[0] === "apps-categories") {
+      return { data: currentMockCategories, isLoading: false };
+    }
+    return { data: undefined, isLoading: false };
+  },
+}));
+
 vi.mock("@/lib/use-api-query", () => ({
-  useApiQuery: (key: readonly unknown[], url: string, options?: any) => {
+  useApiQuery: (key: readonly unknown[], url: string) => {
     useApiQueryCalls.push({ key: [...key], url });
     // For the main apps query
     if (key[0] === "apps" && !key[0].toString().includes("categories")) {
       if (url === "/api/apps") {
         return { data: currentMockApps, isLoading: false };
       }
-    }
-    // For the categories POST query (overridden queryFn)
-    if (key[0] === "apps-categories") {
-      // When enabled and there are apps, simulate calling the custom queryFn
-      if (options?.queryFn && options?.enabled !== false && currentMockApps.length > 0) {
-        // The queryFn will be called by the component, but in test we return mock data directly
-      }
-      return { data: currentMockCategories, isLoading: false };
     }
     return { data: undefined, isLoading: false };
   },

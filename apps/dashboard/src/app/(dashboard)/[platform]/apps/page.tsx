@@ -5,6 +5,7 @@ import { useParams } from "next/navigation";
 import Link from "next/link";
 import { AppIcon } from "@/components/app-icon";
 import { useAuth } from "@/lib/auth-context";
+import { useQuery } from "@tanstack/react-query";
 import { useApiQuery, useQueryClient } from "@/lib/use-api-query";
 import { useFormatDate } from "@/lib/format-date";
 import { Button } from "@/components/ui/button";
@@ -55,28 +56,19 @@ export default function AppsPage() {
   const appSlugs = useMemo(() => apps.map((a: any) => a.slug).filter(Boolean), [apps]);
 
   // Fetch categories for apps — only when we have slugs
-  const { data: appCategories = {} } = useApiQuery<Record<string, { title: string; slug: string; position: number | null }[]>>(
-    ["apps-categories", platform, appSlugs],
-    "/api/apps/categories",
-    { enabled: false }, // We use a manual fetch below since this is a POST
-  );
-
-  // Categories need a POST body, so we fetch manually but still cache in React Query
-  const categoriesQuery = useApiQuery<Record<string, { title: string; slug: string; position: number | null }[]>>(
-    ["apps-categories", platform, ...appSlugs],
-    "__unused__", // URL not used because we override queryFn
-    {
-      enabled: appSlugs.length > 0,
-      queryFn: async () => {
-        const res = await fetchWithAuth("/api/apps/categories", {
-          method: "POST",
-          body: JSON.stringify({ slugs: appSlugs }),
-        });
-        if (!res.ok) return {};
-        return res.json();
-      },
+  // Categories need a POST body, so we use useQuery directly instead of useApiQuery
+  const categoriesQuery = useQuery<Record<string, { title: string; slug: string; position: number | null }[]>>({
+    queryKey: ["apps-categories", platform, ...appSlugs],
+    queryFn: async () => {
+      const res = await fetchWithAuth("/api/apps/categories", {
+        method: "POST",
+        body: JSON.stringify({ slugs: appSlugs }),
+      });
+      if (!res.ok) return {};
+      return res.json();
     },
-  );
+    enabled: appSlugs.length > 0,
+  });
 
   const resolvedCategories = categoriesQuery.data ?? {};
 
