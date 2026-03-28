@@ -159,7 +159,10 @@ try {
 
 **Mitigation:**
 - [ ] Implement rotating proxy pool (residential proxies for browser-based platforms) (**PLA-198**)
-- [ ] Implement circuit breaker pattern: pause platform for 1h after 5 consecutive failures (**PLA-199**)
+- [x] Implement circuit breaker pattern: pause platform for 1h after 5 consecutive failures (**PLA-199**)
+  - Redis-backed, 3 states: closed/open/half-open
+  - Scheduler skips jobs when circuit is open
+  - Admin API: GET/POST circuit-breakers endpoints
 - [ ] Add global Redis-based rate limiter across all workers (per-domain)
 - [ ] Randomize request intervals with jitter (+-30% variation)
 - [ ] Diversify User-Agent rotation with realistic browser fingerprints
@@ -1160,7 +1163,7 @@ This table maps each Linear ticket to its risk(s) and priority. **Update this se
 | PLA-173 | Remove `new Function()` from Zoho parser | R-63 | P0 | **Fixed** |
 | PLA-174 | Rotate exposed secrets + add pre-commit scanning | R-64 | P0 | Todo |
 | PLA-198 | Implement rotating proxy pool for scraping | R-01 | P3 | Todo |
-| PLA-199 | Implement circuit breaker for platform failures | R-01 | P3 | Todo |
+| PLA-199 | Implement circuit breaker for platform failures | R-01 | P3 | **Fixed** |
 | PLA-175 | Fix failing Shopify parser tests (languages, integrations) | R-02 | P0 | **Fixed** |
 | PLA-187 | Implement browser connection pooling | R-03 | P2 | **Fixed** |
 | PLA-200 | Migrate PostgreSQL to managed service | R-14 | P3 | Todo |

@@ -14,6 +14,7 @@ import { BrowserClient } from "./browser-client.js";
 import { getModule } from "./platforms/registry.js";
 import { FallbackTracker } from "./utils/fallback-tracker.js";
 import { createLinearErrorTask } from "./utils/create-linear-error-task.js";
+import { recordSuccess, recordFailure } from "./circuit-breaker.js";
 import {
   HTTP_DEFAULT_DELAY_MS,
   HTTP_DEFAULT_MAX_CONCURRENCY,
@@ -541,6 +542,9 @@ export function createProcessJob(db: ReturnType<typeof createDb>, queueName?: st
 
     log.info("job completed", { jobId: job.id, type, platform, durationMs: Date.now() - jobStartTime });
 
+    // Record success for circuit breaker
+    await recordSuccess(platform).catch(() => {});
+
     // Create Linear task for any item errors (fire-and-forget)
     createLinearErrorTask(db, job.id, platform, type).catch((err) => {
       log.warn("failed to create Linear error task", { error: String(err) });
@@ -548,6 +552,9 @@ export function createProcessJob(db: ReturnType<typeof createDb>, queueName?: st
     })()]);
     } catch (error) {
       log.error("job failed", { jobId: job.id, type, platform, durationMs: Date.now() - jobStartTime, error: String(error) });
+
+      // Record failure for circuit breaker
+      await recordFailure(platform).catch(() => {});
       // Failsafe: mark any still-running scrape_runs for this job as failed
       if (job.id) {
         try {

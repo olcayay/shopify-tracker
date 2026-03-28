@@ -1,3 +1,6 @@
+Implement circuit breaker pattern for platform scraper failures (2026-03-28)
+  PLA-199: Redis-backed circuit breaker per platform, scheduler integration, admin API ✅
+
 Implement browser connection pooling for scraper worker (2026-03-28)
   PLA-187: BrowserPool singleton, auto-recycle after 10 jobs/1h, graceful shutdown ✅
 

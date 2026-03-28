@@ -4,6 +4,7 @@ config({ path: resolve(import.meta.dirname, "../../../.env") });
 import cron from "node-cron";
 import { createLogger, SCRAPER_SCHEDULES } from "@appranks/shared";
 import { enqueueScraperJob, closeQueue, type ScraperJobType } from "./queue.js";
+import { isCircuitOpen } from "./circuit-breaker.js";
 
 const log = createLogger("scheduler");
 
@@ -14,6 +15,16 @@ log.info("starting scheduler", {
 for (const schedule of SCRAPER_SCHEDULES) {
   cron.schedule(schedule.cron, async () => {
     log.info("cron triggered", { name: schedule.name, type: schedule.type });
+
+    // Check circuit breaker before enqueuing
+    if ("platform" in schedule) {
+      const open = await isCircuitOpen(schedule.platform);
+      if (open) {
+        log.warn("circuit open, skipping job", { name: schedule.name, platform: schedule.platform });
+        return;
+      }
+    }
+
     try {
       const jobId = await enqueueScraperJob({
         type: schedule.type as ScraperJobType,

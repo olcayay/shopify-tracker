@@ -2878,6 +2878,65 @@ export const systemAdminRoutes: FastifyPluginAsync = async (app) => {
       interactive: interactiveCounts,
     };
   });
+
+  // ── Circuit Breaker Admin ──────────────────────────────────────────
+
+  // GET /api/system-admin/circuit-breakers — list all platform circuit states
+  app.get("/circuit-breakers", async () => {
+    const redisUrl = process.env.REDIS_URL || "redis://localhost:6379";
+    const Redis = (await import("ioredis")).default;
+    const client = new Redis(redisUrl, { connectTimeout: 5000, maxRetriesPerRequest: 1 });
+
+    try {
+      const keys = await client.keys("circuit:*");
+      const results: Record<string, unknown>[] = [];
+      for (const key of keys) {
+        const raw = await client.get(key);
+        if (raw) {
+          const platform = key.replace("circuit:", "");
+          results.push({ platform, ...JSON.parse(raw) });
+        }
+      }
+      return { circuits: results };
+    } finally {
+      await client.quit();
+    }
+  });
+
+  // POST /api/system-admin/circuit-breakers/:platform/override — force circuit state
+  app.post<{ Params: { platform: string }; Body: { state: string } }>(
+    "/circuit-breakers/:platform/override",
+    async (request, reply) => {
+      const { platform } = request.params;
+      const { state } = request.body as { state?: string };
+
+      if (!state || !["closed", "open", "half-open"].includes(state)) {
+        return reply.code(400).send({ error: "state must be 'closed', 'open', or 'half-open'" });
+      }
+
+      if (!isPlatformId(platform)) {
+        return reply.code(400).send({ error: `Invalid platform: ${platform}` });
+      }
+
+      const redisUrl = process.env.REDIS_URL || "redis://localhost:6379";
+      const Redis = (await import("ioredis")).default;
+      const client = new Redis(redisUrl, { connectTimeout: 5000, maxRetriesPerRequest: 1 });
+
+      try {
+        const key = `circuit:${platform}`;
+        const data = state === "closed"
+          ? { state: "closed", failures: 0, lastFailureAt: 0, openedAt: 0 }
+          : state === "open"
+            ? { state: "open", failures: 0, lastFailureAt: Date.now(), openedAt: Date.now() }
+            : { state: "half-open", failures: 0, lastFailureAt: 0, openedAt: 0 };
+
+        await client.set(key, JSON.stringify(data), "EX", 86400);
+        return { message: `Circuit for ${platform} set to ${state}`, platform, state };
+      } finally {
+        await client.quit();
+      }
+    },
+  );
 };
 
 /**

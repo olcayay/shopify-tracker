@@ -1,3 +1,28 @@
+Implement Circuit Breaker Pattern for Platform Scraper Failures (2026-03-28)
+=============================================================================
+**PLA-199:** Prevent wasted scraping when a platform is down/blocking.
+
+**Implementation:**
+1. **`apps/scraper/src/circuit-breaker.ts`** — Redis-backed circuit breaker:
+   - 3 states: CLOSED (normal), OPEN (paused), HALF-OPEN (testing)
+   - Opens after 5 consecutive failures (configurable: CIRCUIT_BREAKER_FAILURE_THRESHOLD)
+   - Stays open for 1h (configurable: CIRCUIT_BREAKER_OPEN_DURATION_MS)
+   - Transitions to half-open after pause; success closes, failure re-opens
+   - Fail-open: if Redis unavailable, all circuits allow requests
+2. **Scheduler integration** — checks `isCircuitOpen()` before enqueuing jobs
+3. **Worker integration** — `recordSuccess()`/`recordFailure()` after each job
+4. **Admin API:**
+   - `GET /api/system-admin/circuit-breakers` — list all circuit states
+   - `POST /api/system-admin/circuit-breakers/:platform/override` — force state
+
+**Files changed:**
+- `apps/scraper/src/circuit-breaker.ts` (new)
+- `apps/scraper/src/scheduler.ts` — circuit check before enqueue
+- `apps/scraper/src/process-job.ts` — recordSuccess/recordFailure
+- `apps/api/src/routes/system-admin.ts` — admin circuit breaker endpoints
+- `apps/scraper/src/__tests__/circuit-breaker.test.ts` (new, 9 tests)
+- `files/RISK_ANALYSIS_V3.md` — R-01 updated
+
 Implement Browser Connection Pooling for Scraper Worker (2026-03-28)
 =====================================================================
 **PLA-187:** Prevent OOM kills by reusing a single Chromium process across jobs.
