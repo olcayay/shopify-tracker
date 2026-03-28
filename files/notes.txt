@@ -1,3 +1,13 @@
+Fix Operational Matrix Showing Running Status for Completed Jobs (2026-03-28)
+================================================================
+**PLA-231:** Matrix showed blue "running" dot for orphaned scrape_runs.
+
+- API health endpoint now detects orphaned running runs: if a completed/failed
+  run exists with completed_at AFTER the running run's started_at, the running
+  run is skipped (not included in runningMap)
+- Combined with PLA-230's periodic cleanupStaleRuns (every 15 min), orphaned
+  runs are both hidden from UI immediately and cleaned up in DB periodically
+
 Fix Dashboard Homepage Showing Empty Welcome Screen (2026-03-28)
 ================================================================
 **PLA-232:** Homepage intermittently showed OnboardingHero despite having tracked apps.

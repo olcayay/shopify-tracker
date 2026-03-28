@@ -747,6 +747,16 @@ export const systemAdminRoutes: FastifyPluginAsync = async (app) => {
     const runningMap = new Map<string, any>();
     for (const r of runningRuns as any[]) {
       const key = `${r.platform}:${r.scraper_type}`;
+      // Discard orphaned running runs: if a completed/failed run exists with
+      // completed_at AFTER this running run's started_at, the run is orphaned
+      const latest = latestMap.get(key);
+      if (latest?.completed_at && r.started_at) {
+        const completedAt = new Date(latest.completed_at).getTime();
+        const runningStartedAt = new Date(r.started_at).getTime();
+        if (completedAt > runningStartedAt) {
+          continue; // Skip orphaned running run
+        }
+      }
       runningMap.set(key, r);
     }
 
