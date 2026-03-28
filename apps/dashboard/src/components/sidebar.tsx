@@ -202,40 +202,7 @@ function SidebarContent({
 
         {/* System Admin */}
         {isSystemAdmin && (
-          <>
-            <div className="border-t my-2" />
-            {collapsed ? (
-              <NavLink href="/system-admin" icon={Shield} label="System Admin" isActive={isAdminSection} />
-            ) : (
-              <Link
-                href="/system-admin"
-                onClick={onNavigate}
-                className={`flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium transition-colors ${
-                  isAdminSection
-                    ? "text-foreground"
-                    : "text-muted-foreground hover:text-foreground"
-                }`}
-              >
-                <Shield className="h-4 w-4" />
-                System Admin
-                {isAdminSection ? (
-                  <ChevronDown className="h-3.5 w-3.5 ml-auto" />
-                ) : (
-                  <ChevronRight className="h-3.5 w-3.5 ml-auto" />
-                )}
-              </Link>
-            )}
-            {isAdminSection && !collapsed &&
-              systemAdminItems.map((item) => {
-                const isActive =
-                  item.href === "/system-admin"
-                    ? pathname === "/system-admin"
-                    : pathname.startsWith(item.href);
-                return (
-                  <NavLink key={item.href} href={item.href} icon={item.icon} label={item.label} isActive={isActive} iconSize="h-3.5 w-3.5" className="pl-7 pr-3 py-1.5" />
-                );
-              })}
-          </>
+          <SystemAdminSection collapsed={collapsed} isAdminSection={isAdminSection} pathname={pathname} onNavigate={onNavigate} NavLink={NavLink} />
         )}
       </nav>
       {user && (
@@ -318,6 +285,64 @@ export function Sidebar() {
         onToggleCollapsed={toggleCollapsed}
       />
     </aside>
+  );
+}
+
+function SystemAdminSection({ collapsed, isAdminSection, pathname, onNavigate, NavLink }: {
+  collapsed: boolean;
+  isAdminSection: boolean;
+  pathname: string;
+  onNavigate?: () => void;
+  NavLink: any;
+}) {
+  const [adminExpanded, setAdminExpanded] = useState(isAdminSection);
+
+  // Auto-expand when navigating to admin section
+  useEffect(() => {
+    if (isAdminSection) setAdminExpanded(true);
+  }, [isAdminSection]);
+
+  return (
+    <>
+      <div className="border-t my-2" />
+      {collapsed ? (
+        <NavLink href="/system-admin" icon={Shield} label="System Admin" isActive={isAdminSection} />
+      ) : (
+        <button
+          onClick={() => {
+            if (!isAdminSection && !adminExpanded) {
+              // Not on admin page and not expanded — expand to show links
+              setAdminExpanded(true);
+            } else {
+              setAdminExpanded(!adminExpanded);
+            }
+          }}
+          className={`flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium transition-colors w-full text-left ${
+            isAdminSection
+              ? "text-foreground"
+              : "text-muted-foreground hover:text-foreground hover:bg-muted"
+          }`}
+        >
+          <Shield className="h-4 w-4" />
+          System Admin
+          {adminExpanded ? (
+            <ChevronDown className="h-3.5 w-3.5 ml-auto" />
+          ) : (
+            <ChevronRight className="h-3.5 w-3.5 ml-auto" />
+          )}
+        </button>
+      )}
+      {adminExpanded && !collapsed &&
+        systemAdminItems.map((item) => {
+          const isActive =
+            item.href === "/system-admin"
+              ? pathname === "/system-admin"
+              : pathname.startsWith(item.href);
+          return (
+            <NavLink key={item.href} href={item.href} icon={item.icon} label={item.label} isActive={isActive} iconSize="h-3.5 w-3.5" className="pl-7 pr-3 py-1.5" />
+          );
+        })}
+    </>
   );
 }
 

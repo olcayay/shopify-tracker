@@ -9,12 +9,14 @@ import { PlatformDiscoverySheet } from "@/components/platform-discovery-sheet";
 import { PlatformSwitcher } from "@/components/platform-switcher";
 import { DashboardFooter } from "@/components/dashboard-footer";
 import { isOnPlatformPage } from "@/lib/nav-utils";
+import { useAuth } from "@/lib/auth-context";
 
 export function DashboardShell({ children }: { children: React.ReactNode }) {
   const [discoveryOpen, setDiscoveryOpen] = useState(false);
   const [trackedCount, setTrackedCount] = useState<number | null>(null);
   const pathname = usePathname();
-  const showSidebar = isOnPlatformPage(pathname) || pathname.startsWith("/system-admin");
+  const { user } = useAuth();
+  const showSidebar = isOnPlatformPage(pathname) || pathname.startsWith("/system-admin") || !!user?.isSystemAdmin;
 
   return (
     <div className="flex flex-col min-h-screen">

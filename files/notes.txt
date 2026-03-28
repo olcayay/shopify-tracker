@@ -1,3 +1,10 @@
+PLA-118: System admin links always visible in sidebar (2026-03-28)
+====================================================================
+- icon-sidebar.tsx: show admin items on non-platform pages for system admins (was returning null)
+- dashboard-shell.tsx: show mobile hamburger for system admins on all pages
+- sidebar.tsx: extracted SystemAdminSection component with toggleable accordion (adminExpanded state)
+- Auto-expands when on admin section, manually toggleable from any page
+
 PLA-109: Improve Available Platforms visibility (2026-03-28)
 ============================================================
 - Container: solid border + bg-muted/30 (was dashed + bg-muted/20)

@@ -36,22 +36,25 @@ export function IconSidebar() {
   const activePlatform = extractPlatform(pathname);
   const display = PLATFORM_DISPLAY[activePlatform];
 
+  // For system admins on non-platform/non-admin pages, show admin items
+  const showAdminFallback = isSystemAdmin && !isPlatformPage && !isAdminSection;
+
   const items = useMemo(
-    () => (isAdminSection ? systemAdminItems : getNavItems(activePlatform, isSystemAdmin)),
-    [activePlatform, isSystemAdmin, isAdminSection]
+    () => (isAdminSection || showAdminFallback ? systemAdminItems : getNavItems(activePlatform, isSystemAdmin)),
+    [activePlatform, isSystemAdmin, isAdminSection, showAdminFallback]
   );
 
-  // Hide sidebar on non-platform, non-admin pages (e.g. /overview, /settings)
-  if (!isPlatformPage && !isAdminSection) return null;
+  // Hide sidebar on non-platform, non-admin pages (unless system admin)
+  if (!isPlatformPage && !isAdminSection && !isSystemAdmin) return null;
 
-  const accentColor = isAdminSection ? undefined : display?.color;
+  const accentColor = isAdminSection || showAdminFallback ? undefined : display?.color;
 
   return (
     <aside
       className={`${expanded ? "w-48" : "w-14"} border-r bg-muted/30 sticky top-0 h-[calc(100vh-3.5rem)] hidden md:flex flex-col py-2 gap-1 shrink-0 transition-[width] duration-200 ease-in-out overflow-y-auto`}
     >
       {/* System Admin header */}
-      {isAdminSection && (
+      {(isAdminSection || showAdminFallback) && (
         <>
           {expanded ? (
             <Link
