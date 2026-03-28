@@ -49,7 +49,7 @@ Use this as a high-level task tracker. Each item links to a detailed section bel
 ### Phase 3: Scraper
 - [ ] Create scraper module directory under `apps/scraper/src/platforms/<name>/`
 - [ ] Register module in `apps/scraper/src/platforms/registry.ts` (pass both `httpClient` and `browserClient`)
-- [ ] Add scheduler cron jobs in `apps/scraper/src/scheduler.ts`
+- [ ] Add scheduler cron jobs in `packages/shared/src/constants/scraper-schedules.ts`
 - [ ] Add to `BROWSER_REQUIREMENTS` in `packages/shared/src/constants/platforms.ts` (if SPA/JS-rendered)
 - [ ] Add URL pattern to `apps/scraper/src/jobs/backfill-categories.ts`
 - [ ] Add branch in `keyword-suggestion-scraper.ts` (if custom suggestion API)
@@ -1286,11 +1286,12 @@ You cannot rely on `caps` being passed down from a parent — each component mus
 
 ### 7.1 Scheduler Config
 
-**File:** `apps/scraper/src/scheduler.ts`
+**File:** `packages/shared/src/constants/scraper-schedules.ts` (schedule definitions) and `apps/scraper/src/scheduler.ts` (executor)
 
-Add cron jobs for the new platform. Stagger timing to avoid resource conflicts:
+Schedules are defined in `scraper-schedules.ts` and consumed by `scheduler.ts`. Add cron jobs for the new platform. Stagger timing to avoid resource conflicts:
 
 ```typescript
+// In packages/shared/src/constants/scraper-schedules.ts
 const SCHEDULES = [
   // ... existing Shopify, Salesforce, Canva, Wix, WordPress, Google Workspace schedules ...
 
@@ -1952,6 +1953,10 @@ test_newplatform() {
 |------|--------|
 | `packages/shared/src/constants/platforms.ts` | Add platform config + capability flags + URL builders |
 | `packages/shared/src/similarity.ts` | Add similarity weights + stop words |
+| `packages/shared/src/types/platform-data/<name>.ts` | TypeScript interface for platformData fields |
+| `packages/shared/src/types/platform-data/schemas.ts` | Zod validation schema |
+| `packages/shared/src/types/platform-data/index.ts` | Add to `PlatformDataMap` |
+| `files/PLATFORM-DATA-MATRIX.md` | Document all platformData fields (type, source, description) |
 
 ### Scraper (must change)
 
@@ -1962,7 +1967,8 @@ test_newplatform() {
 | `apps/scraper/src/platforms/<name>/urls.ts` | URL builders |
 | `apps/scraper/src/platforms/<name>/parsers/*.ts` | HTML/JSON parsers |
 | `apps/scraper/src/platforms/registry.ts` | Register module in switch statement |
-| `apps/scraper/src/scheduler.ts` | Add cron schedules |
+| `packages/shared/src/constants/scraper-schedules.ts` | Define cron schedules |
+| `apps/scraper/src/scheduler.ts` | Executes schedules (no changes needed) |
 | `apps/scraper/src/process-job.ts` | Add browser client init (if needed) |
 | `apps/scraper/src/cli.ts` | Add browser client init (if needed) — mirrors `process-job.ts` logic |
 | `apps/scraper/src/jobs/backfill-categories.ts` | Add category URL pattern extraction |
