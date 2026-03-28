@@ -65,7 +65,7 @@ export default async function ChangesPage({
               >
                 <div className="flex items-center gap-2 mb-2">
                   <Badge variant="outline" className="text-xs">
-                    {fieldLabels[change.field] || change.field}
+                    {fieldLabels[change.field as keyof typeof fieldLabels] || change.field}
                   </Badge>
                   <span className="text-xs text-muted-foreground">
                     {formatDateOnly(change.detectedAt)}
