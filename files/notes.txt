@@ -1,3 +1,27 @@
+Add Request ID Correlation and Tracing Across Services (2026-03-28)
+====================================================================
+**PLA-192:** Enable end-to-end request tracing from API to worker.
+
+**Implementation:**
+1. **Error responses** — All error types now include `requestId`:
+   - `ApiError.toJSON(requestId)` adds it to the error object
+   - Zod validation errors and unhandled errors also include it
+2. **BullMQ job data** — `requestId` field added to `ScraperJobData` interface.
+   All `queue.add()` calls in API routes now pass `request.id`.
+3. **Worker logging** — `process-job.ts` extracts and logs `requestId` from job data.
+
+**Files changed:**
+- `apps/api/src/utils/api-error.ts` — toJSON accepts optional requestId
+- `apps/api/src/index.ts` — error handler passes request.id to all error responses
+- `apps/scraper/src/queue.ts` — added requestId to ScraperJobData
+- `apps/scraper/src/process-job.ts` — logs requestId from job data
+- `apps/api/src/routes/account-tracking.ts` — pass request.id in queue.add
+- `apps/api/src/routes/research.ts` — pass request.id in queue.add
+- `apps/api/src/routes/keywords.ts` — pass request.id in queue.add
+- `apps/api/src/routes/system-admin.ts` — pass request.id in queue.add
+- `apps/api/src/__tests__/utils/api-error.test.ts` — 2 new tests
+- `files/RISK_ANALYSIS_V3.md` — R-68 marked as Mitigated
+
 Complete Dead Letter Queue with DELETE Endpoint and Depth Alerts (2026-03-28)
 =============================================================================
 **PLA-193:** DLQ was mostly implemented. Added missing pieces: DELETE endpoint and depth alerts.

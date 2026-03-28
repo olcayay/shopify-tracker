@@ -440,6 +440,7 @@ export const researchRoutes: FastifyPluginAsync = async (app) => {
             keyword: kw.keyword,
             platform,
             triggeredBy: "api:research",
+            requestId: request.id,
           });
           scraperEnqueued = true;
         } catch {
@@ -583,12 +584,14 @@ export const researchRoutes: FastifyPluginAsync = async (app) => {
             slug: slug.trim(),
             platform: existingApp.platform,
             triggeredBy: "api:research",
+            requestId: request.id,
           });
           await queue.add("scrape:reviews", {
             type: "reviews",
             slug: slug.trim(),
             platform: existingApp.platform,
             triggeredBy: "api:research",
+            requestId: request.id,
           });
           scraperEnqueued = true;
         } catch {

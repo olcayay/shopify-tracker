@@ -70,7 +70,7 @@ function getScraperQueue(): Queue {
 }
 
 /** Enqueue app_details + reviews jobs for a single app after it's tracked */
-async function enqueueAppScrapeJobs(slug: string, platform: string): Promise<boolean> {
+async function enqueueAppScrapeJobs(slug: string, platform: string, requestId?: string): Promise<boolean> {
   try {
     const queue = getScraperQueue();
     await queue.add("scrape:app_details", {
@@ -78,12 +78,14 @@ async function enqueueAppScrapeJobs(slug: string, platform: string): Promise<boo
       slug,
       platform,
       triggeredBy: "api:track",
+      requestId,
     });
     await queue.add("scrape:reviews", {
       type: "reviews",
       slug,
       platform,
       triggeredBy: "api:track",
+      requestId,
     });
     return true;
   } catch {
@@ -212,7 +214,7 @@ export const accountTrackingRoutes: FastifyPluginAsync = async (app) => {
         return reply.code(409).send({ error: "App already tracked" });
       }
 
-      const scraperEnqueued = await enqueueAppScrapeJobs(slug, existingApp.platform);
+      const scraperEnqueued = await enqueueAppScrapeJobs(slug, existingApp.platform, request.id);
 
       return { ...result, scraperEnqueued };
     }
@@ -435,6 +437,7 @@ export const accountTrackingRoutes: FastifyPluginAsync = async (app) => {
             keyword: kw.keyword,
             platform,
             triggeredBy: "api",
+            requestId: request.id,
           });
           scraperEnqueued = true;
         } catch {
@@ -961,7 +964,7 @@ export const accountTrackingRoutes: FastifyPluginAsync = async (app) => {
           .send({ error: "Competitor already added for this app" });
       }
 
-      const scraperEnqueued = await enqueueAppScrapeJobs(slug, existingApp.platform);
+      const scraperEnqueued = await enqueueAppScrapeJobs(slug, existingApp.platform, request.id);
 
       return { ...result, scraperEnqueued };
     }
@@ -1553,7 +1556,7 @@ export const accountTrackingRoutes: FastifyPluginAsync = async (app) => {
           .send({ error: "Competitor already added for this app" });
       }
 
-      const scraperEnqueued = await enqueueAppScrapeJobs(competitorSlug, existingApp.platform);
+      const scraperEnqueued = await enqueueAppScrapeJobs(competitorSlug, existingApp.platform, request.id);
 
       return { ...result, scraperEnqueued };
     }
@@ -1924,6 +1927,7 @@ export const accountTrackingRoutes: FastifyPluginAsync = async (app) => {
             keyword: kw.keyword,
             platform,
             triggeredBy: "api",
+            requestId: request.id,
           });
           scraperEnqueued = true;
         } catch {

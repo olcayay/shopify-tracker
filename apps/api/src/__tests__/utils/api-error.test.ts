@@ -34,6 +34,23 @@ describe("ApiError", () => {
         },
       });
     });
+
+    it("includes requestId when provided", () => {
+      const err = new ApiError(404, "Not found");
+      expect(err.toJSON("req-abc-123")).toEqual({
+        error: {
+          code: "NOT_FOUND",
+          message: "Not found",
+          requestId: "req-abc-123",
+        },
+      });
+    });
+
+    it("omits requestId when not provided", () => {
+      const err = new ApiError(500, "Server error");
+      const json = err.toJSON();
+      expect(json.error).not.toHaveProperty("requestId");
+    });
   });
 
   describe("factory methods", () => {

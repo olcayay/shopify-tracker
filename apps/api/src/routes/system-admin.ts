@@ -484,6 +484,7 @@ export const systemAdminRoutes: FastifyPluginAsync = async (app) => {
           type: "daily_digest",
           accountId: id,
           triggeredBy: userEmail,
+          requestId: request.id,
         });
 
         return {
@@ -658,6 +659,7 @@ export const systemAdminRoutes: FastifyPluginAsync = async (app) => {
           type: "daily_digest",
           userId: id,
           triggeredBy: userEmail,
+          requestId: request.id,
         });
 
         return {
@@ -1659,6 +1661,7 @@ export const systemAdminRoutes: FastifyPluginAsync = async (app) => {
       const jobData: Record<string, any> = {
         type,
         triggeredBy: userEmail,
+        requestId: request.id,
       };
       if (platformParam) jobData.platform = platformParam;
       if (slug) jobData.slug = slug;

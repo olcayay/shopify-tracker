@@ -1,3 +1,6 @@
+Add request ID correlation and tracing across services (2026-03-28)
+  PLA-192: requestId in error responses, BullMQ jobs, and worker logs ✅
+
 Complete dead letter queue with DELETE endpoint and depth alerts (2026-03-28)
   PLA-193: Added DELETE /api/system-admin/dlq/:id + DLQ depth alert (> 20 threshold) ✅
 

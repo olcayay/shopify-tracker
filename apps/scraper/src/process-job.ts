@@ -71,10 +71,10 @@ export function createProcessJob(db: ReturnType<typeof createDb>, queueName?: st
   const cascadeOpts = queueName ? { queue: queueName as "interactive" | "background" } : undefined;
 
   return async function processJob(job: Job<ScraperJobData>): Promise<void> {
-    const { type, triggeredBy } = job.data;
+    const { type, triggeredBy, requestId } = job.data;
     const platform: PlatformId = (job.data.platform && isPlatformId(job.data.platform)) ? job.data.platform as PlatformId : "shopify";
     const jobStartTime = Date.now();
-    log.info("processing job", { jobId: job.id, type, triggeredBy, platform });
+    log.info("processing job", { jobId: job.id, type, triggeredBy, platform, ...(requestId && { requestId }) });
 
     const opts = job.data.options;
     const pageOptions = opts?.pages !== undefined ? { pages: opts.pages } : undefined;

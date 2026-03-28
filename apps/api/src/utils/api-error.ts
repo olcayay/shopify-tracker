@@ -40,11 +40,12 @@ export class ApiError extends Error {
   }
 
   /** Format the error for the JSON response body */
-  toJSON() {
+  toJSON(requestId?: string) {
     return {
       error: {
         code: this.code,
         message: this.message,
+        ...(requestId && { requestId }),
       },
     };
   }

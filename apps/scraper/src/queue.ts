@@ -39,6 +39,8 @@ export interface ScraperJobData {
   triggeredBy: string;
   /** Optional: scraper configuration options */
   options?: ScraperJobOptions;
+  /** Optional: originating API request ID for correlation */
+  requestId?: string;
 }
 
 export function getRedisConnection(): ConnectionOptions {

@@ -245,6 +245,7 @@ export const keywordRoutes: FastifyPluginAsync = async (app) => {
           keyword: kw.keyword,
           platform,
           triggeredBy: "api:ensure",
+          requestId: request.id,
         });
         scraperEnqueued = true;
       } catch {

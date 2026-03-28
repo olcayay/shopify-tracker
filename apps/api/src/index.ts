@@ -252,9 +252,11 @@ app.get("/health", async (_request, reply) => {
 
 // Error handler
 app.setErrorHandler<Error & { statusCode?: number }>((error, request, reply) => {
+  const requestId = request.id;
+
   // ApiError — standardized error responses
   if (error instanceof ApiError) {
-    return reply.code(error.statusCode).send(error.toJSON());
+    return reply.code(error.statusCode).send(error.toJSON(requestId));
   }
 
   // Zod validation errors → 400 with field-level details
@@ -267,12 +269,14 @@ app.setErrorHandler<Error & { statusCode?: number }>((error, request, reply) => 
     return reply.code(400).send({
       error: "Validation failed",
       details: fieldErrors,
+      requestId,
     });
   }
 
-  app.log.error({ err: error, requestId: request.id }, "unhandled error");
+  app.log.error({ err: error, requestId }, "unhandled error");
   reply.code(error.statusCode ?? 500).send({
     error: error.message || "Internal Server Error",
+    requestId,
   });
 });
 

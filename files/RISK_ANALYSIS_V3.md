@@ -858,12 +858,11 @@ await db.insert(refreshTokens).values({...});
 - Database queries not tagged with request context
 - No distributed tracing headers (X-Request-ID, traceparent)
 
-**Mitigation:**
-- [ ] Add request ID middleware to API (generate UUID, include in all log entries) (**PLA-192**)
-- [ ] Propagate request ID to BullMQ job data
-- [ ] Include request ID in error responses for customer support
-
-**When task PLA-192 is completed, update this risk status to Mitigated.**
+**Mitigation:** ✅ **Mitigated**
+- [x] Request ID middleware (UUID per request, echoed in x-request-id header) — already existed
+- [x] Propagate request ID to BullMQ job data (`requestId` field in ScraperJobData)
+- [x] Include request ID in all error responses (ApiError, Zod, unhandled)
+- [x] Worker logs requestId from job data for end-to-end correlation
 
 ---
 
@@ -1178,7 +1177,7 @@ This table maps each Linear ticket to its risk(s) and priority. **Update this se
 | PLA-179 | Add global API rate limiting | R-65 | P1 | **Fixed** |
 | PLA-181 | Wrap multi-step operations in DB transactions | R-66 | P1 | **Fixed** |
 | PLA-182 | Fix empty catch blocks (add error logging) | R-67 | P1 | **Fixed** |
-| PLA-192 | Add request ID correlation/tracing | R-68 | P2 | Todo |
+| PLA-192 | Add request ID correlation/tracing | R-68 | P2 | **Fixed** |
 | PLA-180 | Implement deep health checks (DB + Redis) | R-69 | P1 | **Fixed** |
 | PLA-193 | Implement dead letter queue for failed jobs | R-71 | P2 | **Fixed** |
 | PLA-177 | Increase Redis maxmemory to 1GB | R-72 | P0 | Todo |
@@ -1262,7 +1261,7 @@ This table maps each Linear ticket to its risk(s) and priority. **Update this se
 | **R-65** | **No API rate limiting** | **4** | **5** | **20** | **Open** |
 | **R-66** | **No DB transactions** | **4** | **5** | **20** | **Open** |
 | **R-67** | **Empty catch blocks** | **4** | **4** | **16** | **Open** |
-| **R-68** | **No request ID tracing** | **3** | **4** | **12** | **Open** |
+| **R-68** | **No request ID tracing** | **3** | **4** | **12** | **Mitigated** |
 | **R-69** | **Shallow health checks** | **3** | **5** | **15** | **Open** |
 | **R-70** | **URL-based admin auth** | **3** | **3** | **9** | **Open** |
 | **R-71** | **No dead letter queue** | **2** | **3** | **8** | **Mitigated** |
