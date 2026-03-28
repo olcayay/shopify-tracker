@@ -1,3 +1,11 @@
+Show Loading Spinner for Platforms Tracked Badge (2026-03-28)
+================================================================
+**PLA-224:** Header badge showed "-/0" then "-/2" before values loaded.
+
+- Replaced text placeholder with Loader2 spinner when `trackedCount == null || enabledPlatforms.length === 0`
+- Normal "N/M platforms tracked" text shown once both values are available
+- Test verifying spinner state and normal count display
+
 Add Navigation Links to Overview Page Stat Cards (2026-03-28)
 ================================================================
 **PLA-223:** Overview page AccountUsageCards were not clickable — no way to navigate to cross-platform list pages.

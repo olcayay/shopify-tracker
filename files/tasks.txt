@@ -1,3 +1,6 @@
+Show loading spinner for platforms tracked badge in header (2026-03-28)
+  PLA-224: Loader2 spinner while trackedCount/enabledPlatforms loading ✅
+
 Add navigation links to overview page stat cards (2026-03-28)
   PLA-223: My Apps→/apps, Keywords→/keywords, Competitors→/competitors, Users→/settings ✅
 
