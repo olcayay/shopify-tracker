@@ -73,6 +73,10 @@ export type {
   PlatformCapabilities,
 } from "./constants/platforms.js";
 
+// Field Labels
+export { getFieldLabels } from "./constants/field-labels.js";
+export type { PlatformFieldLabels } from "./constants/field-labels.js";
+
 // Keyword extraction
 export {
   COMMON_STOP_WORDS,

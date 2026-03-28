@@ -1,6 +1,6 @@
 import { formatDateOnly } from "@/lib/format-date";
 import { getAppChanges } from "@/lib/api";
-import type { PlatformId, PricingPlan } from "@appranks/shared";
+import { getFieldLabels, type PlatformId, type PricingPlan } from "@appranks/shared";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { formatPlanPrice, diffPricingPlans } from "@/lib/pricing-diff";
@@ -25,21 +25,7 @@ export default async function ChangesPage({
     );
   }
 
-  const isCanva = platform === "canva";
-  const isWix = platform === "wix";
-  const isWordPress = platform === "wordpress";
-  const isGoogleWorkspace = platform === "google_workspace";
-  const isHubSpot = platform === "hubspot";
-  const fieldLabels: Record<string, string> = {
-    name: "App Name",
-    appIntroduction: isCanva || isWix || isWordPress || isGoogleWorkspace || isHubSpot ? "Short Description" : "App Introduction",
-    appDetails: isCanva || isWix || isWordPress || isGoogleWorkspace || isHubSpot ? "Description" : "App Details",
-    features: "Features",
-    pricingPlans: "Pricing Plans",
-    seoTitle: "SEO Title",
-    seoMetaDescription: "SEO Meta Description",
-    appCardSubtitle: isCanva || isWix ? "Tagline" : isWordPress || isGoogleWorkspace || isHubSpot ? "Short Description" : "App Card Subtitle",
-  };
+  const fieldLabels = getFieldLabels(platform);
 
   return (
     <Card>
