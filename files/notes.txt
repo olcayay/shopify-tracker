@@ -1,3 +1,41 @@
+Adopt TanStack Query for Dashboard Data Fetching (2026-03-28)
+=============================================================
+**PLA-146:** Set up TanStack Query (React Query v5) infrastructure and converted 2 key pages
+as foundational examples for incremental migration.
+
+**Infrastructure created:**
+1. **`@tanstack/react-query` v5.75.0** added to dashboard dependencies
+2. **`apps/dashboard/src/lib/query-client.ts`** — QueryClient factory with sensible defaults
+   (staleTime: 30s, retry: 1, refetchOnWindowFocus: false). Browser singleton pattern to
+   avoid cross-request leaks on SSR.
+3. **`apps/dashboard/src/components/providers.tsx`** — Client component wrapping children with
+   `QueryClientProvider`. Integrated into root layout.tsx (wraps AuthProvider).
+4. **`apps/dashboard/src/lib/use-api-query.ts`** — Two typed hooks:
+   - `useApiQuery<T>(key, url, options?)` — wraps `useQuery` + `fetchWithAuth`, handles error
+     parsing, returns typed data.
+   - `useApiMutation<TResponse, TBody>(url, fetchOptions?, mutationOptions?)` — wraps
+     `useMutation` + `fetchWithAuth` for POST/PUT/DELETE operations.
+   - Re-exports `useQueryClient` for convenience.
+
+**Pages converted (2 examples):**
+1. **`[platform]/apps/page.tsx`** — Replaced manual `useState/useEffect/fetchWithAuth` with
+   `useApiQuery`. Apps list fetched via `["apps", platform]` key. Categories fetched with
+   custom `queryFn` (POST body). Track/untrack use `invalidateQueries` instead of manual reload.
+2. **`[platform]/categories/page.tsx`** — Two parallel queries: categories (tree or flat format)
+   and starred categories. Star/unstar mutations invalidate starred query cache.
+
+**Tests added:**
+- `src/__tests__/lib/use-api-query.test.tsx` — 8 tests covering: successful fetch, API error
+  handling, error with no body, enabled option, multiple queries, mutation request, mutation
+  error, onSuccess callback.
+- Updated `apps-list.test.tsx` and `categories-list.test.tsx` to mock `@/lib/use-api-query`
+  instead of testing against raw `fetchWithAuth` calls.
+
+**Migration pattern for remaining pages:**
+Replace `useState + useEffect + fetchWithAuth` with `useApiQuery(key, url)`. For mutations,
+use `useApiMutation` or call `fetchWithAuth` directly then `queryClient.invalidateQueries()`.
+All 1284 tests passing.
+
 Eliminate `any` Type Casts & Zod Request Validation (2026-03-28)
 ==============================================================
 **PLA-141:** Removed request-body `any` casts across the API and strengthened Zod validation.

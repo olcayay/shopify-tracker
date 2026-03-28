@@ -1,3 +1,6 @@
+Adopt TanStack Query for dashboard data fetching (2026-03-28)
+  PLA-146: Set up QueryClient provider, useApiQuery/useApiMutation hooks, convert apps + categories pages ✅
+
 Eliminate any type casts and add Zod request validation (2026-03-28)
   PLA-141: Add Fastify type augmentation for db, remove (app as any).db casts, fix query param typing ✅
 

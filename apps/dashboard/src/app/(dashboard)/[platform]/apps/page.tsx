@@ -1,10 +1,11 @@
 "use client";
 
-import { useEffect, useState, useMemo } from "react";
+import { useState, useMemo, useCallback } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import { AppIcon } from "@/components/app-icon";
 import { useAuth } from "@/lib/auth-context";
+import { useApiQuery, useQueryClient } from "@/lib/use-api-query";
 import { useFormatDate } from "@/lib/format-date";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -31,10 +32,8 @@ export default function AppsPage() {
   const { platform } = useParams();
   const { fetchWithAuth, user, account, refreshUser } = useAuth();
   const { formatDateOnly } = useFormatDate();
-  const [apps, setApps] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
+  const queryClient = useQueryClient();
   const [message, setMessage] = useState("");
-  const [appCategories, setAppCategories] = useState<Record<string, { title: string; slug: string; position: number | null }[]>>({});
   const [confirmRemove, setConfirmRemove] = useState<{
     slug: string;
     name: string;
@@ -46,11 +45,44 @@ export default function AppsPage() {
   const caps = isPlatformId(platform as string) ? PLATFORMS[platform as PlatformId] : PLATFORMS.shopify;
   const canEdit = user?.role === "owner" || user?.role === "editor";
 
-  const trackedSlugs = useMemo(() => new Set(apps.map((a) => a.slug)), [apps]);
+  // Fetch tracked apps via TanStack Query
+  const { data: apps = [], isLoading: appsLoading } = useApiQuery<any[]>(
+    ["apps", platform],
+    "/api/apps",
+  );
 
-  useEffect(() => {
-    loadApps();
-  }, []);
+  // Derive slugs for the categories query
+  const appSlugs = useMemo(() => apps.map((a: any) => a.slug).filter(Boolean), [apps]);
+
+  // Fetch categories for apps — only when we have slugs
+  const { data: appCategories = {} } = useApiQuery<Record<string, { title: string; slug: string; position: number | null }[]>>(
+    ["apps-categories", platform, appSlugs],
+    "/api/apps/categories",
+    { enabled: false }, // We use a manual fetch below since this is a POST
+  );
+
+  // Categories need a POST body, so we fetch manually but still cache in React Query
+  const categoriesQuery = useApiQuery<Record<string, { title: string; slug: string; position: number | null }[]>>(
+    ["apps-categories", platform, ...appSlugs],
+    "__unused__", // URL not used because we override queryFn
+    {
+      enabled: appSlugs.length > 0,
+      queryFn: async () => {
+        const res = await fetchWithAuth("/api/apps/categories", {
+          method: "POST",
+          body: JSON.stringify({ slugs: appSlugs }),
+        });
+        if (!res.ok) return {};
+        return res.json();
+      },
+    },
+  );
+
+  const resolvedCategories = categoriesQuery.data ?? {};
+
+  const loading = appsLoading;
+
+  const trackedSlugs = useMemo(() => new Set(apps.map((a) => a.slug)), [apps]);
 
   const sorted = useMemo(() => {
     return [...apps].sort((a, b) => {
@@ -104,24 +136,10 @@ export default function AppsPage() {
     );
   }
 
-  async function loadApps() {
-    setLoading(true);
-    const res = await fetchWithAuth("/api/apps");
-    if (res.ok) {
-      const loadedApps = await res.json();
-      setApps(loadedApps);
-
-      const slugs = loadedApps.map((a: any) => a.slug).filter(Boolean);
-      if (slugs.length > 0) {
-        const catRes = await fetchWithAuth("/api/apps/categories", {
-          method: "POST",
-          body: JSON.stringify({ slugs }),
-        });
-        if (catRes.ok) setAppCategories(await catRes.json());
-      }
-    }
-    setLoading(false);
-  }
+  const invalidateApps = useCallback(() => {
+    queryClient.invalidateQueries({ queryKey: ["apps", platform] });
+    queryClient.invalidateQueries({ queryKey: ["apps-categories", platform] });
+  }, [queryClient, platform]);
 
   async function trackApp(slug: string, name: string) {
     setMessage("");
@@ -135,7 +153,7 @@ export default function AppsPage() {
         ? " Scraping started — details will appear shortly."
         : "";
       setMessage(`Now following "${name}".${scrapeMsg}`);
-      loadApps();
+      invalidateApps();
       refreshUser();
     } else {
       const data = await res.json().catch(() => ({}));
@@ -150,7 +168,7 @@ export default function AppsPage() {
     });
     if (res.ok) {
       setMessage(`Unfollowed "${name}"`);
-      loadApps();
+      invalidateApps();
       refreshUser();
     } else {
       const data = await res.json().catch(() => ({}));
@@ -276,9 +294,9 @@ export default function AppsPage() {
                       ) : "0"}
                     </TableCell>
                     <TableCell className="text-sm">
-                      {appCategories[app.slug]?.length ? (
+                      {resolvedCategories[app.slug]?.length ? (
                         <div className="flex flex-col gap-0.5">
-                          {appCategories[app.slug].map((cat) => (
+                          {resolvedCategories[app.slug].map((cat) => (
                             <div key={cat.slug} className="flex items-center gap-1">
                               {cat.position != null && (
                                 <span className="font-medium text-muted-foreground">#{cat.position}</span>

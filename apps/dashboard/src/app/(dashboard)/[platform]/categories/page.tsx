@@ -1,10 +1,11 @@
 "use client";
 
-import { Fragment, useEffect, useState, useCallback, useMemo } from "react";
+import { Fragment, useState, useCallback, useMemo, useEffect } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import { AppIcon } from "@/components/app-icon";
 import { useAuth } from "@/lib/auth-context";
+import { useApiQuery, useQueryClient } from "@/lib/use-api-query";
 import { useFormatDate } from "@/lib/format-date";
 import { TableSkeleton } from "@/components/skeletons";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -78,10 +79,7 @@ export default function CategoriesPage() {
   const { platform } = useParams();
   const { fetchWithAuth, user } = useAuth();
   const { formatDateOnly } = useFormatDate();
-  const [tree, setTree] = useState<CategoryNode[]>([]);
-  const [flatCategories, setFlatCategories] = useState<FlatCategory[]>([]);
-  const [starred, setStarred] = useState<StarredCategory[]>([]);
-  const [loading, setLoading] = useState(true);
+  const queryClient = useQueryClient();
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const [searchQuery, setSearchQuery] = useState("");
   const [expandedStarred, setExpandedStarred] = useState<string | null>(null);
@@ -95,28 +93,29 @@ export default function CategoriesPage() {
   const isFlat = PLATFORMS[platform as PlatformId]?.hasFlatCategories ?? false;
   const canEdit = user?.role === "owner" || user?.role === "editor";
 
-  useEffect(() => {
-    loadData();
-  }, []);
+  const format = isFlat ? "flat" : "tree";
 
-  async function loadData() {
-    setLoading(true);
-    const format = isFlat ? "flat" : "tree";
-    const [catRes, starredRes] = await Promise.all([
-      fetchWithAuth(`/api/categories?format=${format}`),
-      fetchWithAuth("/api/account/starred-categories"),
-    ]);
-    if (catRes.ok) {
-      const data = await catRes.json();
-      if (isFlat) {
-        setFlatCategories(data);
-      } else {
-        setTree(data);
-      }
-    }
-    if (starredRes.ok) setStarred(await starredRes.json());
-    setLoading(false);
-  }
+  // Fetch categories via TanStack Query
+  const { data: rawCategories = [], isLoading: categoriesLoading } = useApiQuery<any[]>(
+    ["categories", platform, format],
+    `/api/categories?format=${format}`,
+  );
+
+  // Fetch starred categories via TanStack Query
+  const { data: starred = [], isLoading: starredLoading } = useApiQuery<StarredCategory[]>(
+    ["starred-categories", platform],
+    "/api/account/starred-categories",
+  );
+
+  const loading = categoriesLoading || starredLoading;
+
+  // Split raw categories into tree vs flat based on platform
+  const tree: CategoryNode[] = isFlat ? [] : rawCategories;
+  const flatCategories: FlatCategory[] = isFlat ? rawCategories : [];
+
+  const invalidateStarred = useCallback(() => {
+    queryClient.invalidateQueries({ queryKey: ["starred-categories", platform] });
+  }, [queryClient, platform]);
 
   async function doUnstar(slug: string) {
     const res = await fetchWithAuth(
@@ -124,11 +123,11 @@ export default function CategoriesPage() {
       { method: "DELETE" }
     );
     if (res.ok) {
-      // Re-fetch to get updated source fields (unstarred "both" becomes "auto")
-      const starredRes = await fetchWithAuth("/api/account/starred-categories");
-      if (starredRes.ok) setStarred(await starredRes.json());
+      invalidateStarred();
     }
   }
+
+  const starredSlugs = new Set(starred.filter((s) => s.source === "starred" || s.source === "both").map((s) => s.categorySlug));
 
   async function toggleStar(slug: string) {
     const isStarred = starredSlugs.has(slug);
@@ -148,10 +147,7 @@ export default function CategoriesPage() {
         body: JSON.stringify({ slug }),
       });
       if (res.ok) {
-        const starredRes = await fetchWithAuth(
-          "/api/account/starred-categories"
-        );
-        if (starredRes.ok) setStarred(await starredRes.json());
+        invalidateStarred();
       }
     }
   }
@@ -282,7 +278,6 @@ export default function CategoriesPage() {
   }, [filteredTree, searchQuery]);
 
   const totalCount = isFlat ? flatCategories.length : countAll(tree);
-  const starredSlugs = new Set(starred.filter((s) => s.source === "starred" || s.source === "both").map((s) => s.categorySlug));
 
   function toggleFlatSort(key: FlatSortKey) {
     if (sortKey === key) {

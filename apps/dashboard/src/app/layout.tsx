@@ -3,6 +3,7 @@ import { Suspense } from "react";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { AuthProvider } from "@/lib/auth-context";
+import { Providers } from "@/components/providers";
 import { Analytics } from "@/components/analytics";
 
 const geistSans = Geist({
@@ -37,7 +38,9 @@ export default function RootLayout({
         <Suspense>
           <Analytics />
         </Suspense>
-        <AuthProvider>{children}</AuthProvider>
+        <Providers>
+          <AuthProvider>{children}</AuthProvider>
+        </Providers>
       </body>
     </html>
   );
