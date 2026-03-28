@@ -392,14 +392,15 @@ How `app-details-scraper.ts` maps platformData fields → common `app_snapshots`
 | `seo_title` | pd.seoTitle | name | *(empty)* | name | *(empty)* | *(empty)* | name | name | name | name | name |
 | `seo_meta_description` | pd.seoMetaDescription | pd.tagline\|pd.description | *(empty)* | pd.tagline\|pd.description | *(empty)* | *(empty)* | pd.tagline\|pd.description | *(empty)* | *(empty)* | *(empty)* | *(empty)* |
 | `features` | pd.features | pd.highlights | *(empty)* | pd.benefits | *(empty)* | *(empty)* | pd.highlights (title+body) | *(empty)* | *(empty)* | *(empty)* | *(empty)* |
-| `languages` | pd.languages | pd.languages | *(empty)* | *(empty)* | *(empty)* | *(empty)* | *(empty)* | *(empty)* | *(empty)* | *(empty)* | *(empty)* |
-| `integrations` | pd.integrations | productsSupported + productsRequired | *(empty)* | *(empty)* | *(empty)* | *(empty)* | *(empty)* | *(empty)* | *(empty)* | *(empty)* | *(empty)* |
-| `categories` | pd.categories | pd.listingCategories (→ {title,url}) | *(empty)* | *(empty)* | *(empty)* | *(empty)* | *(empty)* | *(empty)* | *(empty)* | *(empty)* | *(empty)* |
-| `pricing_plans` | pd.pricingPlans | pd.pricingPlans (normalized) | *(empty)* | *(empty)* | *(empty)* | *(empty)* | *(empty)* | *(empty)* | *(empty)* | *(empty)* | *(empty)* |
-| `support` | pd.support | publisher.email + developer.website | *(empty)* | *(empty)* | *(empty)* | *(empty)* | pd.supportEmail/Url/Phone | *(empty)* | *(empty)* | *(empty)* | *(empty)* |
-| `demo_store_url` | pd.demoStoreUrl | *(null)* | *(null)* | *(null)* | *(null)* | *(null)* | *(null)* | *(null)* | *(null)* | *(null)* | *(null)* |
+| `languages` | pd.languages | pd.languages | pd.languages | pd.languages | *(empty)* | *(empty)* | *(empty)* | *(empty)* | *(empty)* | *(empty)* | *(empty)* |
+| `integrations` | pd.integrations | productsSupported + productsRequired | *(empty)* | *(empty)* | *(empty)* | pd.worksWithApps | *(empty)* | pd.worksWith | *(empty)* | *(empty)* | *(empty)* |
+| `categories` | pd.categories | pd.listingCategories | *(empty)* | pd.categories (title) | pd.tags (values) | pd.category | pd.listingCategories/categories | *(empty)* | pd.categories (slug) | pd.categories (name) | pd.categories (displayName) |
+| `pricing_plans` | pd.pricingPlans | pd.pricingPlans (normalized) | *(empty)* | pd.pricingPlans | *(empty)* | *(empty)* | pd.pricingPlans (period, yearly_price) | *(empty)* | *(empty)* | *(empty)* | pd.pricingPlans (monthlyPrice, model[]) |
+| `support` | pd.support | publisher.email + developer.website | pd.developerEmail/Phone | pd.developerEmail | *(empty)* | pd.supportUrl | pd.supportEmail/Url/Phone | *(empty)* | *(empty)* | *(empty)* | *(empty)* |
+| `demo_store_url` | pd.demoStoreUrl | *(null)* | *(null)* | pd.demoUrl | *(null)* | *(null)* | *(null)* | *(null)* | *(null)* | *(null)* | *(null)* |
 
-**Source:** `apps/scraper/src/scrapers/app-details-scraper.ts:311-413`
+**Source:** `apps/scraper/src/scrapers/app-details-scraper.ts:311-480`
+**Last verified:** 2026-03-29
 
 ---
 
@@ -414,14 +415,14 @@ How `app-details-scraper.ts` maps platformData fields → common `app_snapshots`
 ### 6.2 `demoStoreUrl` as common snapshot column
 
 - **Location:** `packages/db/src/schema/apps.ts:73`
-- **Problem:** Only Shopify populates this. The scraper hardcodes `null` for all other platforms (`app-details-scraper.ts:360`).
-- **Fix:** Move to Shopify's `platformData`. See **PLA-123**.
+- **Problem:** Originally only Shopify populated this. Now Wix also maps `pd.demoUrl` to it (PLA-278).
+- **Status:** Two platforms use it (Shopify, Wix). Anti-pattern is mitigated but column is still sparse for 9 platforms.
 
 ### 6.3 `integrations` as common snapshot column
 
 - **Location:** `packages/db/src/schema/apps.ts:75`
-- **Problem:** Only Shopify has native integrations. Salesforce artificially maps `productsSupported + productsRequired` into it (`app-details-scraper.ts:362-365`). Other 9 platforms leave it empty.
-- **Fix:** Move to `platformData`; each platform stores its own concept (Shopify: integrations, Salesforce: products, Google WS: worksWithApps). See **PLA-123**.
+- **Problem:** Originally only Shopify + Salesforce. Now Google WS (worksWithApps) and Zoom (worksWith) also map to it (PLA-276).
+- **Status:** 4 platforms use it. Remaining 7 leave it empty. Column is becoming more useful but each platform's concept differs.
 
 ### 6.4 Untyped `platformData` JSONB
 

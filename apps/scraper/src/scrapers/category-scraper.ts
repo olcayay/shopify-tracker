@@ -942,7 +942,8 @@ export class CategoryScraper {
         })
         .returning({ id: apps.id });
 
-      const position = clampPosition(positionOffset + (app.position || i + 1));
+      const rawPosition = positionOffset + (app.position || i + 1);
+      const position = clampPosition(rawPosition);
       if (position != null) {
         await this.db.insert(appCategoryRankings).values({
           appId: upsertedApp.id,
@@ -951,6 +952,8 @@ export class CategoryScraper {
           scrapedAt: now,
           position,
         });
+      } else {
+        log.debug("position clamped to null, skipping ranking", { slug: app.slug, rawPosition, categorySlug });
       }
 
       // For non-Shopify platforms: ensure a minimal snapshot exists with listing data

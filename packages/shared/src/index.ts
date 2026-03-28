@@ -68,6 +68,7 @@ export {
   getPlatform,
   buildExternalAppUrl,
   buildExternalCategoryUrl,
+  buildExternalSearchUrl,
 } from "./constants/platforms.js";
 export type {
   PlatformId,

@@ -357,12 +357,21 @@ export class AppDetailsScraper {
                 : pd.launchedDate
                   ? new Date(pd.launchedDate as string)
                   : null as Date | null,
-              demo_store_url: null as string | null,
+              demo_store_url: (this.platform === "wix" ? (pd.demoUrl as string) || null : null) as string | null,
               languages: (pd.languages as string[]) || [],
-              integrations: [
-                ...((pd.productsSupported as string[]) || []),
-                ...((pd.productsRequired as string[]) || []),
-              ],
+              integrations: (() => {
+                if (this.platform === "salesforce") {
+                  return [
+                    ...((pd.productsSupported as string[]) || []),
+                    ...((pd.productsRequired as string[]) || []),
+                  ];
+                } else if (this.platform === "google_workspace") {
+                  return ((pd.worksWithApps as string[]) || []);
+                } else if (this.platform === "zoom") {
+                  return ((pd.worksWith as string[]) || []);
+                }
+                return [];
+              })(),
               categories: (() => {
                 // Platform-specific category mapping
                 if (this.platform === "salesforce") {
@@ -445,20 +454,33 @@ export class AppDetailsScraper {
                   units: p.units || null,
                 };
               }) as import("@appranks/shared").PricingPlan[],
-              support: this.platform === "atlassian"
-                ? ((pd.supportEmail || pd.supportUrl || pd.supportPhone)
-                  ? { email: (pd.supportEmail as string) || null, portal_url: (pd.supportUrl as string) || null, phone: (pd.supportPhone as string) || null } as import("@appranks/shared").AppSupport
-                  : null)
-                : normalized.developer?.website
+              support: (() => {
+                if (this.platform === "atlassian") {
+                  return (pd.supportEmail || pd.supportUrl || pd.supportPhone)
+                    ? { email: (pd.supportEmail as string) || null, portal_url: (pd.supportUrl as string) || null, phone: (pd.supportPhone as string) || null } as import("@appranks/shared").AppSupport
+                    : null;
+                } else if (this.platform === "wix") {
+                  return pd.developerEmail
+                    ? { email: (pd.developerEmail as string) || null, portal_url: (pd.developerPrivacyUrl as string) || null, phone: null } as import("@appranks/shared").AppSupport
+                    : null;
+                } else if (this.platform === "google_workspace") {
+                  return (pd.supportUrl || pd.termsOfServiceUrl || pd.privacyPolicyUrl)
+                    ? { email: null, portal_url: (pd.supportUrl as string) || null, phone: null } as import("@appranks/shared").AppSupport
+                    : null;
+                } else if (this.platform === "canva") {
+                  return (pd.developerEmail || pd.developerPhone)
+                    ? { email: (pd.developerEmail as string) || null, portal_url: (pd.termsUrl as string) || null, phone: (pd.developerPhone as string) || null } as import("@appranks/shared").AppSupport
+                    : null;
+                }
+                return normalized.developer?.website
                   ? { email: (pd.publisher as any)?.email || null, portal_url: normalized.developer.website, phone: null } as import("@appranks/shared").AppSupport
-                  : null as import("@appranks/shared").AppSupport | null,
+                  : null;
+              })() as import("@appranks/shared").AppSupport | null,
               _platformData: pd,
               // First-class metadata columns
-              _currentVersion: this.platform === "wordpress"
+              _currentVersion: (this.platform === "wordpress" || this.platform === "atlassian" || this.platform === "zoho" || this.platform === "zendesk")
                 ? (pd.version as string) || null
-                : this.platform === "atlassian"
-                  ? (pd.version as string) || null
-                  : null,
+                : null,
               _activeInstalls: this.platform === "wordpress"
                 ? (pd.activeInstalls as number) || null
                 : this.platform === "google_workspace" || this.platform === "hubspot"

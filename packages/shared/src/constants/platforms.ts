@@ -297,3 +297,30 @@ export function buildExternalCategoryUrl(platform: PlatformId, slug: string): st
       return `https://ecosystem.hubspot.com/marketplace/apps/${slug.replace(/--/g, "/")}`;
   }
 }
+
+export function buildExternalSearchUrl(platform: PlatformId, query: string): string {
+  switch (platform) {
+    case "shopify":
+      return `https://apps.shopify.com/search?q=${encodeURIComponent(query)}`;
+    case "salesforce":
+      return `https://appexchange.salesforce.com/appxSearchKeywordResults?keywords=${encodeURIComponent(query)}`;
+    case "canva":
+      return `https://www.canva.com/your-apps?q=${encodeURIComponent(query)}`;
+    case "wix":
+      return `https://www.wix.com/app-market/search-result?query=${encodeURIComponent(query)}`;
+    case "wordpress":
+      return `https://wordpress.org/plugins/search/${encodeURIComponent(query)}/`;
+    case "google_workspace":
+      return `https://workspace.google.com/marketplace/search/${encodeURIComponent(query)}?flow_type=2`;
+    case "atlassian":
+      return `https://marketplace.atlassian.com/search?query=${encodeURIComponent(query)}`;
+    case "zoom":
+      return `https://marketplace.zoom.us/apps?q=${encodeURIComponent(query)}`;
+    case "zoho":
+      return `https://marketplace.zoho.com/search?searchTerm=${encodeURIComponent(query)}`;
+    case "zendesk":
+      return `https://www.zendesk.com/marketplace/apps/?query=${encodeURIComponent(query)}`;
+    case "hubspot":
+      return `https://ecosystem.hubspot.com/marketplace/explore?query=${encodeURIComponent(query)}`;
+  }
+}
