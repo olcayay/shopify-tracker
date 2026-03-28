@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from "react";
 import { usePathname } from "next/navigation";
 
-export function useNavigationLoading(duration = 500) {
+export function useNavigationLoading(duration = 3000) {
   const pathname = usePathname();
   const [isNavigating, setIsNavigating] = useState(true); // true on initial load
   const prevPathname = useRef(pathname);

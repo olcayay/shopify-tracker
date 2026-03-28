@@ -3,12 +3,14 @@ import { render } from "@testing-library/react";
 import { AnimatedLogo } from "@/components/animated-logo";
 
 describe("AnimatedLogo", () => {
-  it("renders an SVG with 3 bars", () => {
+  it("renders an SVG with 4 bars and axes", () => {
     const { container } = render(<AnimatedLogo />);
     const svg = container.querySelector("svg");
     expect(svg).toBeTruthy();
     const rects = container.querySelectorAll("rect");
-    expect(rects.length).toBe(3);
+    expect(rects.length).toBe(4);
+    const lines = container.querySelectorAll("line");
+    expect(lines.length).toBe(2); // X and Y axes
   });
 
   it("does not apply animation styles when animating is false", () => {
@@ -23,7 +25,7 @@ describe("AnimatedLogo", () => {
     const { container } = render(<AnimatedLogo animating={true} />);
     const rects = container.querySelectorAll("rect");
     for (const rect of rects) {
-      expect(rect.style.animation).toContain("bar-bounce");
+      expect(rect.style.animation).toContain("chart-bar-grow");
     }
   });
 
@@ -33,7 +35,7 @@ describe("AnimatedLogo", () => {
     const delays = Array.from(rects).map((r) => r.style.animationDelay);
     // All delays should be different
     const unique = new Set(delays);
-    expect(unique.size).toBe(3);
+    expect(unique.size).toBe(4);
   });
 
   it("accepts custom className", () => {
