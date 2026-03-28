@@ -94,8 +94,8 @@ export function V2Nav({
   }
 
   return (
-    <div ref={dropdownRef} className="border-b">
-      <nav className="flex items-center gap-1" role="navigation" aria-label="App detail sections">
+    <div ref={dropdownRef} className="border-b overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+      <nav className="flex items-center gap-1 min-w-max" role="navigation" aria-label="App detail sections">
         {sections.map((section) => {
           const active = isActive(section);
           const hasDropdown = section.subItems && section.subItems.length > 0;
