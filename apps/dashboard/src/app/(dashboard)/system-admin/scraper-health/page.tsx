@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
+import { usePolling } from "@/hooks/use-polling";
 import Link from "next/link";
 import { useAuth } from "@/lib/auth-context";
 import { PLATFORMS, PLATFORM_IDS, type PlatformId } from "@appranks/shared";
@@ -182,9 +183,13 @@ export default function ScraperHealthPage() {
 
   useEffect(() => {
     fetchHealth();
-    const interval = setInterval(fetchHealth, 60_000);
-    return () => clearInterval(interval);
   }, [fetchHealth]);
+
+  usePolling({
+    hasPending: true,
+    fetchFn: fetchHealth,
+    interval: 60_000,
+  });
 
   const handleRetry = async (runId: string) => {
     setRetrying(runId);

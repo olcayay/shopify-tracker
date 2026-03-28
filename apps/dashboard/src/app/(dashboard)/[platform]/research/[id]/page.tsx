@@ -1,6 +1,7 @@
 "use client";
 
-import React, { useEffect, useState, useRef, useCallback } from "react";
+import { useEffect, useState, useCallback } from "react";
+import { usePolling } from "@/hooks/use-polling";
 import { useParams, useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
 import { Button } from "@/components/ui/button";
@@ -54,8 +55,6 @@ export default function ResearchProjectPage() {
   const [pendingCompetitors, setPendingCompetitors] = useState<Set<string>>(new Set());
   const [resolvedKeywords, setResolvedKeywords] = useState<Set<number>>(new Set());
   const [resolvedCompetitors, setResolvedCompetitors] = useState<Set<string>>(new Set());
-  const pollRef = useRef<ReturnType<typeof setInterval>>(undefined);
-
   // Editing project name
   const [editingName, setEditingName] = useState(false);
   const [nameValue, setNameValue] = useState("");
@@ -140,17 +139,10 @@ export default function ResearchProjectPage() {
   }, [fetchData]);
 
   // Polling when pending items exist
-  useEffect(() => {
-    const hasPending = pendingKeywords.size > 0 || pendingCompetitors.size > 0;
-    if (hasPending) {
-      pollRef.current = setInterval(fetchData, 5000);
-    } else if (pollRef.current) {
-      clearInterval(pollRef.current);
-    }
-    return () => {
-      if (pollRef.current) clearInterval(pollRef.current);
-    };
-  }, [pendingKeywords.size, pendingCompetitors.size, fetchData]);
+  usePolling({
+    hasPending: pendingKeywords.size > 0 || pendingCompetitors.size > 0,
+    fetchFn: fetchData,
+  });
 
   // Name editing
   async function saveName() {

@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useState, useMemo } from "react";
+import { useCallback, useEffect, useState, useMemo } from "react";
+import { usePolling } from "@/hooks/use-polling";
 import { useParams } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
 import { useFormatDate } from "@/lib/format-date";
@@ -108,63 +109,62 @@ export function CompetitorsSection({ appSlug }: { appSlug: string }) {
   }, []);
 
   // Poll for pending competitors that are being scraped
-  useEffect(() => {
-    if (pendingCompetitorSlugs.size === 0) return;
+  const pollPendingCompetitors = useCallback(async () => {
+    const res = await fetchWithAuth(
+      `/api/account/tracked-apps/${encodeURIComponent(appSlug)}/competitors?includeSelf=true`
+    );
+    if (!res.ok) return;
+    const freshCompetitors = await res.json();
+    setCompetitors(freshCompetitors);
 
-    const interval = setInterval(async () => {
-      const res = await fetchWithAuth(
-        `/api/account/tracked-apps/${encodeURIComponent(appSlug)}/competitors?includeSelf=true`
-      );
-      if (!res.ok) return;
-      const freshCompetitors = await res.json();
-      setCompetitors(freshCompetitors);
-
-      // Also refresh last changes
-      const slugs = freshCompetitors.map((c: any) => c.appSlug);
-      if (slugs.length > 0) {
-        const changesRes = await fetchWithAuth(`/api/apps/last-changes`, {
-          method: "POST",
-          body: JSON.stringify({ slugs }),
-        });
-        if (changesRes.ok) {
-          setLastChanges(await changesRes.json());
-        }
+    // Also refresh last changes
+    const slugs = freshCompetitors.map((c: any) => c.appSlug);
+    if (slugs.length > 0) {
+      const changesRes = await fetchWithAuth(`/api/apps/last-changes`, {
+        method: "POST",
+        body: JSON.stringify({ slugs }),
+      });
+      if (changesRes.ok) {
+        setLastChanges(await changesRes.json());
       }
+    }
 
-      // Check which pending competitors now have enriched data (from compute jobs)
-      const newlyResolved = new Set<string>();
-      const stillPending = new Map<string, number>();
-      for (const [slug, addedAt] of pendingCompetitorSlugs) {
-        const comp = freshCompetitors.find((c: any) => c.appSlug === slug);
-        const elapsed = Date.now() - addedAt;
-        const hasEnrichedData = comp && (comp.reviewVelocity !== null || comp.similarityScore !== null);
-        if (hasEnrichedData || elapsed > 120_000) {
-          newlyResolved.add(slug);
-        } else {
-          stillPending.set(slug, addedAt);
-        }
+    // Check which pending competitors now have enriched data (from compute jobs)
+    const newlyResolved = new Set<string>();
+    const stillPending = new Map<string, number>();
+    for (const [slug, addedAt] of pendingCompetitorSlugs) {
+      const comp = freshCompetitors.find((c: any) => c.appSlug === slug);
+      const elapsed = Date.now() - addedAt;
+      const hasEnrichedData = comp && (comp.reviewVelocity !== null || comp.similarityScore !== null);
+      if (hasEnrichedData || elapsed > 120_000) {
+        newlyResolved.add(slug);
+      } else {
+        stillPending.set(slug, addedAt);
       }
+    }
 
-      if (newlyResolved.size > 0) {
-        setPendingCompetitorSlugs(stillPending);
+    if (newlyResolved.size > 0) {
+      setPendingCompetitorSlugs(stillPending);
+      setResolvedCompetitorSlugs((prev) => {
+        const next = new Set(prev);
+        for (const s of newlyResolved) next.add(s);
+        return next;
+      });
+      // Clear resolved animation after 2 seconds
+      setTimeout(() => {
         setResolvedCompetitorSlugs((prev) => {
           const next = new Set(prev);
-          for (const s of newlyResolved) next.add(s);
+          for (const s of newlyResolved) next.delete(s);
           return next;
         });
-        // Clear resolved animation after 2 seconds
-        setTimeout(() => {
-          setResolvedCompetitorSlugs((prev) => {
-            const next = new Set(prev);
-            for (const s of newlyResolved) next.delete(s);
-            return next;
-          });
-        }, 2000);
-      }
-    }, 5000);
+      }, 2000);
+    }
+  }, [pendingCompetitorSlugs, appSlug, fetchWithAuth]);
 
-    return () => clearInterval(interval);
-  }, [pendingCompetitorSlugs, appSlug]);
+  usePolling({
+    hasPending: pendingCompetitorSlugs.size > 0,
+    fetchFn: pollPendingCompetitors,
+  });
 
   async function loadCompetitors(silent = false) {
     if (!silent) setLoading(true);

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useRef, useCallback, useMemo } from "react";
+import { usePolling } from "@/hooks/use-polling";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import { useAuth } from "@/lib/auth-context";
@@ -75,8 +76,6 @@ export default function ResearchCompetitorsPage() {
   // Polling
   const [pendingCompetitors, setPendingCompetitors] = useState<Set<string>>(new Set());
   const [resolvedCompetitors, setResolvedCompetitors] = useState<Set<string>>(new Set());
-  const pollRef = useRef<ReturnType<typeof setInterval>>(undefined);
-
   const fetchData = useCallback(async () => {
     try {
       const res = await fetchWithAuth(`/api/research-projects/${id}/data`);
@@ -117,14 +116,10 @@ export default function ResearchCompetitorsPage() {
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
-  useEffect(() => {
-    if (pendingCompetitors.size > 0) {
-      pollRef.current = setInterval(fetchData, 5000);
-    } else if (pollRef.current) {
-      clearInterval(pollRef.current);
-    }
-    return () => { if (pollRef.current) clearInterval(pollRef.current); };
-  }, [pendingCompetitors.size, fetchData]);
+  usePolling({
+    hasPending: pendingCompetitors.size > 0,
+    fetchFn: fetchData,
+  });
 
   // Close search on outside click
   useEffect(() => {

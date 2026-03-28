@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
+import { usePolling } from "@/hooks/use-polling";
 import Link from "next/link";
 import { useAuth } from "@/lib/auth-context";
 import { Badge } from "@/components/ui/badge";
@@ -71,10 +72,11 @@ export default function ScraperPage() {
   }, [loadData]);
 
   // Auto-refresh every 30s
-  useEffect(() => {
-    const interval = setInterval(loadData, 30_000);
-    return () => clearInterval(interval);
-  }, [loadData]);
+  usePolling({
+    hasPending: true,
+    fetchFn: loadData,
+    interval: 30_000,
+  });
 
   // Auto-dismiss message
   useEffect(() => {

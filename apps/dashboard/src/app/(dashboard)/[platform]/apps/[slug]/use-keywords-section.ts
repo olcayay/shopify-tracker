@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useState, useRef, useMemo } from "react";
+import { useCallback, useEffect, useState, useRef, useMemo } from "react";
+import { usePolling } from "@/hooks/use-polling";
 import { useParams } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
 import { isPlatformId, PLATFORMS } from "@appranks/shared";
@@ -169,51 +170,50 @@ export function useKeywordsSection(appSlug: string) {
   }, [selectedSlugs, appSlug, competitors.length]);
 
   // Poll for pending keywords that are being scraped
-  useEffect(() => {
-    if (pendingKeywordIds.size === 0) return;
+  const pollPendingKeywords = useCallback(async () => {
+    let url = `/api/account/tracked-apps/${encodeURIComponent(appSlug)}/keywords`;
+    if (appSlugsParam) {
+      url += `?appSlugs=${encodeURIComponent(appSlugsParam)}`;
+    }
+    const res = await fetchWithAuth(url);
+    if (!res.ok) return;
+    const freshKeywords = await res.json();
+    setKeywords(freshKeywords);
 
-    const interval = setInterval(async () => {
-      let url = `/api/account/tracked-apps/${encodeURIComponent(appSlug)}/keywords`;
-      if (appSlugsParam) {
-        url += `?appSlugs=${encodeURIComponent(appSlugsParam)}`;
+    // Check which pending keywords now have results
+    const newlyResolved = new Set<number>();
+    const stillPending = new Set<number>();
+    for (const id of pendingKeywordIds) {
+      const kw = freshKeywords.find((k: any) => k.keywordId === id);
+      if (kw && kw.latestSnapshot !== null) {
+        newlyResolved.add(id);
+      } else {
+        stillPending.add(id);
       }
-      const res = await fetchWithAuth(url);
-      if (!res.ok) return;
-      const freshKeywords = await res.json();
-      setKeywords(freshKeywords);
+    }
 
-      // Check which pending keywords now have results
-      const newlyResolved = new Set<number>();
-      const stillPending = new Set<number>();
-      for (const id of pendingKeywordIds) {
-        const kw = freshKeywords.find((k: any) => k.keywordId === id);
-        if (kw && kw.latestSnapshot !== null) {
-          newlyResolved.add(id);
-        } else {
-          stillPending.add(id);
-        }
-      }
-
-      if (newlyResolved.size > 0) {
-        setPendingKeywordIds(stillPending);
+    if (newlyResolved.size > 0) {
+      setPendingKeywordIds(stillPending);
+      setResolvedKeywordIds((prev) => {
+        const next = new Set(prev);
+        for (const id of newlyResolved) next.add(id);
+        return next;
+      });
+      // Clear resolved animation after 2 seconds
+      setTimeout(() => {
         setResolvedKeywordIds((prev) => {
           const next = new Set(prev);
-          for (const id of newlyResolved) next.add(id);
+          for (const id of newlyResolved) next.delete(id);
           return next;
         });
-        // Clear resolved animation after 2 seconds
-        setTimeout(() => {
-          setResolvedKeywordIds((prev) => {
-            const next = new Set(prev);
-            for (const id of newlyResolved) next.delete(id);
-            return next;
-          });
-        }, 2000);
-      }
-    }, 5000);
+      }, 2000);
+    }
+  }, [pendingKeywordIds, appSlug, appSlugsParam, fetchWithAuth]);
 
-    return () => clearInterval(interval);
-  }, [pendingKeywordIds, appSlug, appSlugsParam]);
+  usePolling({
+    hasPending: pendingKeywordIds.size > 0,
+    fetchFn: pollPendingKeywords,
+  });
 
   // Fetch opportunity scores when keywords change
   useEffect(() => {
