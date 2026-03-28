@@ -17,6 +17,7 @@ import {
 } from "@appranks/db";
 import { PLATFORM_IDS } from "@appranks/shared";
 import { getJwtSecret, type JwtPayload } from "../middleware/auth.js";
+import { blacklistToken, revokeAllTokensForUser } from "../utils/token-blacklist.js";
 import { RateLimiter } from "../utils/rate-limiter.js";
 import {
   registerSchema,
@@ -46,9 +47,11 @@ export function generateAccessToken(
   payload: JwtPayload,
   expiresIn?: string | number
 ): string {
-  return jwt.sign(payload, getJwtSecret(), {
-    expiresIn: expiresIn ?? ACCESS_TOKEN_EXPIRY,
-  } as jwt.SignOptions);
+  return jwt.sign(
+    { ...payload, jti: crypto.randomUUID() },
+    getJwtSecret(),
+    { expiresIn: expiresIn ?? ACCESS_TOKEN_EXPIRY } as jwt.SignOptions,
+  );
 }
 
 function generateRefreshToken(): string {
@@ -287,7 +290,7 @@ export const authRoutes: FastifyPluginAsync = async (app) => {
     };
   });
 
-  // POST /api/auth/logout — revoke refresh token
+  // POST /api/auth/logout — revoke refresh token + blacklist access token
   app.post("/logout", async (request, reply) => {
     const { refreshToken: token } = logoutSchema.parse(request.body);
 
@@ -295,7 +298,32 @@ export const authRoutes: FastifyPluginAsync = async (app) => {
       .delete(refreshTokens)
       .where(eq(refreshTokens.tokenHash, hashToken(token)));
 
+    // Blacklist the current access token if it has a jti
+    if (request.user?.jti) {
+      const decoded = jwt.decode(request.headers.authorization?.slice(7) || "") as { exp?: number } | null;
+      if (decoded?.exp) {
+        await blacklistToken(request.user.jti, decoded.exp);
+      }
+    }
+
     return { message: "Logged out" };
+  });
+
+  // POST /api/auth/revoke-all-sessions — invalidate all access tokens for current user
+  app.post("/revoke-all-sessions", async (request, reply) => {
+    if (!request.user) {
+      return reply.code(401).send({ error: "Unauthorized" });
+    }
+
+    const { userId } = request.user;
+
+    // Revoke all access tokens issued before now
+    await revokeAllTokensForUser(userId);
+
+    // Delete all refresh tokens for this user
+    await db.delete(refreshTokens).where(eq(refreshTokens.userId, userId));
+
+    return { message: "All sessions revoked" };
   });
 
   // GET /api/auth/me — current user + account info + usage

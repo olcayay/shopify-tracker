@@ -1,3 +1,6 @@
+Implement Redis-backed access token blacklist (2026-03-28)
+  PLA-194: jti claim, token blacklist, revoke-all-sessions endpoint ✅
+
 Separate database migration runner from API startup (2026-03-28)
   PLA-196: Standalone migrate.ts script, Docker 'migrate' service, API no longer runs migrations ✅
 

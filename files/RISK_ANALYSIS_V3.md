@@ -420,12 +420,13 @@ const allowedOrigins = [
 - Compromised access token remains valid until expiration
 - In-memory rate limiter (not Redis-backed) — fails on horizontal scale
 
-**Mitigation:**
-- [ ] Implement Redis-backed token blacklist for immediate access token revocation (**PLA-194**)
+**Mitigation:** ✅ **Mitigated**
+- [x] Implement Redis-backed token blacklist for immediate access token revocation (**PLA-194**)
+- [x] Access tokens now include `jti` claim for individual revocation
+- [x] Logout blacklists current access token via Redis (TTL = remaining token lifetime)
+- [x] `POST /api/auth/revoke-all-sessions` invalidates all tokens + deletes refresh tokens
 - [ ] Consider reducing access token expiry to 5 minutes
 - [ ] Migrate rate limiter from in-memory to Redis-backed
-
-**When task PLA-194 is completed, update this risk status to Mitigated.**
 
 ---
 
@@ -1168,7 +1169,7 @@ This table maps each Linear ticket to its risk(s) and priority. **Update this se
 | PLA-176 | Set up automated daily PostgreSQL backup | R-15 | P0 | Todo |
 | PLA-184 | Remove localhost from production CORS | R-19 | P1 | **Fixed** |
 | PLA-183 | Fix password complexity on password change | R-20 | P1 | **Fixed** |
-| PLA-194 | Implement Redis-backed token blacklist | R-21 | P2 | Todo |
+| PLA-194 | Implement Redis-backed token blacklist | R-21 | P2 | **Fixed** |
 | PLA-178 | Add Zod validation to all API request bodies | R-23 | P1 | Todo |
 | PLA-196 | Separate migration runner from API startup | R-25 | P2 | **Fixed** |
 | PLA-190 | Set up centralized logging (Loki/ELK) | R-31 | P2 | Todo |
@@ -1215,7 +1216,7 @@ This table maps each Linear ticket to its risk(s) and priority. **Update this se
 | R-18 | Docker volume corruption | 4 | 3 | 12 | Open |
 | R-19 | CORS misconfiguration | 5 | 2 | 10 | **Partial** — localhost still allowed |
 | R-20 | Weak authentication | 5 | 4 | 20 | **Partial** — password change gap |
-| R-21 | JWT security weaknesses | 3 | 4 | 15 | Open |
+| R-21 | JWT security weaknesses | 3 | 4 | 15 | Mitigated |
 | R-22 | Secrets management | 5 | 3 | 15 | Open |
 | R-23 | Input validation gaps | 5 | 2 | 10 | Open |
 | R-24 | No zero-downtime deploy | 3 | 4 | 12 | Open |

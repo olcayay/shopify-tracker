@@ -2,8 +2,10 @@ import type { FastifyInstance, FastifyRequest, FastifyReply } from "fastify";
 import jwt from "jsonwebtoken";
 import { eq } from "drizzle-orm";
 import { accounts, users } from "@appranks/db";
+import { isTokenBlacklisted, isUserTokenRevoked } from "../utils/token-blacklist.js";
 
 export interface JwtPayload {
+  jti?: string;
   userId: string;
   email: string;
   accountId: string;
@@ -61,8 +63,24 @@ export function registerAuthMiddleware(app: FastifyInstance) {
 
       const token = authHeader.slice(7);
       try {
-        const payload = jwt.verify(token, getJwtSecret()) as JwtPayload;
+        const payload = jwt.verify(token, getJwtSecret()) as JwtPayload & { iat?: number };
         request.user = payload;
+
+        // Check token blacklist (jti-based individual revocation)
+        if (payload.jti) {
+          const blacklisted = await isTokenBlacklisted(payload.jti);
+          if (blacklisted) {
+            return reply.code(401).send({ error: "Token has been revoked" });
+          }
+        }
+
+        // Check user-level revocation (revoke-all-sessions)
+        if (payload.iat) {
+          const userRevoked = await isUserTokenRevoked(payload.userId, payload.iat);
+          if (userRevoked) {
+            return reply.code(401).send({ error: "All sessions have been revoked" });
+          }
+        }
       } catch {
         return reply.code(401).send({ error: "Invalid or expired token" });
       }

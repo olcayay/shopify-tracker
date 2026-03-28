@@ -1,3 +1,28 @@
+Implement Redis-Backed Access Token Blacklist (2026-03-28)
+============================================================
+**PLA-194:** Enable immediate access token revocation before 15-min expiry.
+
+**Implementation:**
+1. **`jti` claim** added to all access tokens via `crypto.randomUUID()` in `generateAccessToken()`
+2. **`apps/api/src/utils/token-blacklist.ts`** — Redis-backed blacklist:
+   - `blacklistToken(jti, expiresAt)` — stores jti with TTL = remaining token lifetime
+   - `isTokenBlacklisted(jti)` — O(1) Redis GET check
+   - `revokeAllTokensForUser(userId)` — stores "revoked-before" timestamp (900s TTL)
+   - `isUserTokenRevoked(userId, iat)` — compares token iat vs revocation time
+   - Fail-open: if Redis unavailable, all checks return false
+3. **Auth middleware** updated to check both jti blacklist and user-level revocation
+4. **Logout** (`POST /api/auth/logout`) now blacklists the current access token
+5. **New endpoint** `POST /api/auth/revoke-all-sessions`:
+   - Invalidates all access tokens for the user (revoke-before timestamp)
+   - Deletes all refresh tokens from DB
+
+**Files changed:**
+- `apps/api/src/middleware/auth.ts` — added jti to JwtPayload, blacklist checks
+- `apps/api/src/routes/auth.ts` — jti in token, blacklist on logout, revoke-all endpoint
+- `apps/api/src/utils/token-blacklist.ts` (new)
+- `apps/api/src/__tests__/utils/token-blacklist.test.ts` (new, 8 tests)
+- `files/RISK_ANALYSIS_V3.md` — R-21 marked as Mitigated
+
 Separate Database Migration Runner from API Startup (2026-03-28)
 ===================================================================
 **PLA-196:** Decouple migrations from API startup to prevent blocked starts and enable
