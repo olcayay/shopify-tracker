@@ -11,7 +11,8 @@ export interface NormalizedAppDetails {
   iconUrl: string | null;
   developer: { name: string; url?: string; website?: string } | null;
   badges: string[];
-  /** Platform-specific data stored as JSONB in app_snapshots.platform_data */
+  /** Platform-specific data stored as JSONB in app_snapshots.platform_data.
+   *  Use getPlatformData() from @appranks/shared for typed access. */
   platformData: Record<string, unknown>;
 }
 
