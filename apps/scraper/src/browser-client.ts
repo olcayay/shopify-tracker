@@ -1,40 +1,24 @@
 import { createLogger } from "@appranks/shared";
+import { browserPool } from "./browser-pool.js";
 
 const log = createLogger("browser-client");
 
 const USER_AGENT =
   "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36";
 
-/** Lazily resolve playwright's chromium. Throws a clear error if not installed. */
-async function getChromium() {
-  try {
-    const pw = await import("playwright");
-    return pw.chromium;
-  } catch {
-    throw new Error(
-      "Playwright is not installed. Browser-based scraping is unavailable in this environment.",
-    );
-  }
-}
-
 /**
- * Lazy Playwright wrapper — browser is launched on first use,
- * reused across calls, and closed on shutdown.
+ * Per-job Playwright wrapper — uses the shared BrowserPool
+ * for the browser process, but creates isolated contexts per job.
+ *
+ * Each BrowserClient tracks its own contexts and closes them on `close()`.
+ * The underlying browser process is managed by BrowserPool.
  */
 export class BrowserClient {
-  private browser: import("playwright").Browser | null = null;
+  private contexts: import("playwright").BrowserContext[] = [];
 
   async fetchPage(url: string, opts?: { waitUntil?: "networkidle" | "domcontentloaded" | "load"; waitForSelector?: string; extraWaitMs?: number }): Promise<string> {
-    if (!this.browser) {
-      log.info("launching browser");
-      const chromium = await getChromium();
-      this.browser = await chromium.launch({
-        headless: true,
-        args: ["--no-sandbox"],
-      });
-    }
-
-    const context = await this.browser.newContext({ userAgent: USER_AGENT });
+    const context = await browserPool.newContext({ userAgent: USER_AGENT });
+    this.contexts.push(context);
     const page = await context.newPage();
 
     try {
@@ -51,6 +35,7 @@ export class BrowserClient {
       return await page.content();
     } finally {
       await context.close();
+      this.contexts = this.contexts.filter((c) => c !== context);
     }
   }
 
@@ -59,16 +44,8 @@ export class BrowserClient {
    * for custom interactions (clicking, evaluating JS, etc.).
    */
   async withPage<T>(url: string, callback: (page: import("playwright").Page) => Promise<T>, opts?: { waitUntil?: "networkidle" | "domcontentloaded" | "load"; extraWaitMs?: number }): Promise<T> {
-    if (!this.browser) {
-      log.info("launching browser");
-      const chromium = await getChromium();
-      this.browser = await chromium.launch({
-        headless: true,
-        args: ["--no-sandbox"],
-      });
-    }
-
-    const context = await this.browser.newContext({ userAgent: USER_AGENT });
+    const context = await browserPool.newContext({ userAgent: USER_AGENT });
+    this.contexts.push(context);
     const page = await context.newPage();
 
     try {
@@ -79,13 +56,17 @@ export class BrowserClient {
       return await callback(page);
     } finally {
       await context.close();
+      this.contexts = this.contexts.filter((c) => c !== context);
     }
   }
 
+  /** Close any remaining open contexts for this job */
   async close(): Promise<void> {
-    if (this.browser) {
-      await this.browser.close();
-      this.browser = null;
+    for (const ctx of this.contexts) {
+      await ctx.close().catch(() => {});
     }
+    this.contexts = [];
+    // NOTE: We do NOT close the shared browser pool here.
+    // The pool manages the browser lifecycle independently.
   }
 }

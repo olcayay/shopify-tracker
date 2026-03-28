@@ -1,3 +1,6 @@
+Implement browser connection pooling for scraper worker (2026-03-28)
+  PLA-187: BrowserPool singleton, auto-recycle after 10 jobs/1h, graceful shutdown ✅
+
 Implement data retention and cleanup job for snapshot tables (2026-03-28)
   PLA-191: Weekly data_cleanup job (Sun 02:00 UTC), configurable retention periods ✅
 

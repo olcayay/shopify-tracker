@@ -1,3 +1,25 @@
+Implement Browser Connection Pooling for Scraper Worker (2026-03-28)
+=====================================================================
+**PLA-187:** Prevent OOM kills by reusing a single Chromium process across jobs.
+
+**Implementation:**
+1. **`apps/scraper/src/browser-pool.ts`** — Singleton `BrowserPool`:
+   - Single Chromium process shared across all jobs
+   - Each job gets isolated `BrowserContext` (cookies/storage)
+   - Auto-recycles after 10 jobs or 1 hour (env: BROWSER_POOL_MAX_JOBS, BROWSER_POOL_MAX_LIFETIME_MS)
+   - Thread-safe: concurrent `getBrowser()` calls wait for same launch promise
+   - `getStats()` for monitoring (jobCount, uptime, isConnected)
+2. **`browser-client.ts`** refactored to use pool instead of launching own browser
+3. **Graceful shutdown** — `onCleanup` callback in `createGracefulShutdown`; worker closes pool on SIGTERM/SIGINT
+
+**Files changed:**
+- `apps/scraper/src/browser-pool.ts` (new)
+- `apps/scraper/src/browser-client.ts` — uses browserPool instead of own chromium.launch
+- `apps/scraper/src/worker.ts` — imports browserPool, passes onCleanup to shutdown
+- `apps/scraper/src/graceful-shutdown.ts` — added onCleanup option
+- `apps/scraper/src/__tests__/browser-pool.test.ts` (new, 7 tests)
+- `files/RISK_ANALYSIS_V3.md` — R-03 marked as Mitigated
+
 Implement Data Retention and Cleanup Job (2026-03-28)
 =====================================================
 **PLA-191:** Prevent unbounded database growth from snapshot tables.

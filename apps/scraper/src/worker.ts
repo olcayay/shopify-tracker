@@ -8,6 +8,7 @@ import { BACKGROUND_QUEUE_NAME, INTERACTIVE_QUEUE_NAME, getRedisConnection, type
 import { initWorkerDeps, createProcessJob, runMigrations } from "./process-job.js";
 import { cleanupStaleRuns } from "./jobs/cleanup-stale-runs.js";
 import { createGracefulShutdown } from "./graceful-shutdown.js";
+import { browserPool } from "./browser-pool.js";
 import { RedisLock } from "./redis-lock.js";
 import {
   PLATFORM_LOCK_TTL_MS,
@@ -124,7 +125,10 @@ log.info("worker started, listening on background + interactive queues", { concu
 const { shutdown } = createGracefulShutdown(
   [bgWorker, intWorker],
   log,
-  { timeoutMs: GRACEFUL_SHUTDOWN_TIMEOUT_MS },
+  {
+    timeoutMs: GRACEFUL_SHUTDOWN_TIMEOUT_MS,
+    onCleanup: () => browserPool.close(),
+  },
 );
 
 process.on("SIGTERM", () => shutdown("SIGTERM"));

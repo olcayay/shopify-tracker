@@ -11,6 +11,8 @@ export interface GracefulShutdownOptions {
   timeoutMs?: number;
   /** Override process.exit for testing */
   exit?: (code: number) => void;
+  /** Optional cleanup callbacks to run after workers close (e.g., browser pool shutdown) */
+  onCleanup?: () => Promise<void>;
 }
 
 /**
@@ -57,6 +59,11 @@ export function createGracefulShutdown(
       // BullMQ Worker.close() stops picking new jobs and waits for active ones
       await Promise.all(workers.map((w) => w.close()));
       log.info("all workers closed successfully");
+
+      // Run optional cleanup (e.g., close browser pool)
+      if (opts.onCleanup) {
+        await opts.onCleanup();
+      }
     } catch (err) {
       log.error("error during worker shutdown", { error: String(err) });
     }

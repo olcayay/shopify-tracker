@@ -210,12 +210,13 @@ try {
 - Complete failure for browser-dependent platforms (5 of 11 platforms need browser)
 - Cascading failures affecting non-browser platforms on same server
 
-**Mitigation:**
-- [ ] Implement browser connection pooling (reuse single browser, create pages per context) (**PLA-187**)
-- [ ] Set hard memory limit per browser process (512MB max)
-- [ ] Add watchdog process that kills browsers exceeding memory or time limits
-- [ ] Implement headless detection evasion: stealth plugin, realistic viewport
-- [ ] Consider Browserless.io as managed fallback
+**Mitigation:** ✅ **Mitigated**
+- [x] Implement browser connection pooling via `BrowserPool` singleton (**PLA-187**)
+  - Single Chromium process reused across jobs (new context per job)
+  - Auto-recycle after 10 jobs or 1 hour (configurable via env vars)
+  - Graceful shutdown closes pool on SIGTERM/SIGINT
+- [ ] Set hard memory limit per browser process (512MB max) — future
+- [ ] Implement headless detection evasion — future
 
 ---
 
@@ -1161,7 +1162,7 @@ This table maps each Linear ticket to its risk(s) and priority. **Update this se
 | PLA-198 | Implement rotating proxy pool for scraping | R-01 | P3 | Todo |
 | PLA-199 | Implement circuit breaker for platform failures | R-01 | P3 | Todo |
 | PLA-175 | Fix failing Shopify parser tests (languages, integrations) | R-02 | P0 | **Fixed** |
-| PLA-187 | Implement browser connection pooling | R-03 | P2 | Todo |
+| PLA-187 | Implement browser connection pooling | R-03 | P2 | **Fixed** |
 | PLA-200 | Migrate PostgreSQL to managed service | R-14 | P3 | Todo |
 | PLA-176 | Set up automated daily PostgreSQL backup | R-15 | P0 | Todo |
 | PLA-184 | Remove localhost from production CORS | R-19 | P1 | **Fixed** |
@@ -1195,7 +1196,7 @@ This table maps each Linear ticket to its risk(s) and priority. **Update this se
 |----|------|--------|------------|-------|--------|
 | R-01 | Platform rate limiting/IP blocking | 5 | 5 | 25 | **Partial** — 429 retry with backoff |
 | R-02 | Scraper breakage (HTML/API changes) | 4 | 5 | 20 | **Active** — 3 failing tests |
-| R-03 | Browser scraping failures | 4 | 5 | 20 | **Partial** — GWS fixed, no pooling |
+| R-03 | Browser scraping failures | 4 | 5 | 20 | **Mitigated** — browser pooling added |
 | R-04 | Incomplete pagination data | 3 | 5 | 15 | Open |
 | R-05 | Concurrent page navigation | 5 | 5 | 25 | **Partial** — GWS fixed |
 | R-06 | Terms of Service violations | 4 | 5 | 20 | Open |
