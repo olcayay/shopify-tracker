@@ -2,7 +2,7 @@ import type { Job } from "bullmq";
 import { createDb, scrapeRuns } from "@appranks/db";
 import { eq, and, sql } from "drizzle-orm";
 import { migrate } from "drizzle-orm/postgres-js/migrator";
-import { createLogger, isPlatformId, getPlatform, type PlatformId } from "@appranks/shared";
+import { createLogger, isPlatformId, getPlatform, needsBrowser, type PlatformId } from "@appranks/shared";
 import { enqueueScraperJob, type ScraperJobData, type ScraperJobType } from "./queue.js";
 import { CategoryScraper } from "./scrapers/category-scraper.js";
 import { AppDetailsScraper } from "./scrapers/app-details-scraper.js";
@@ -74,10 +74,7 @@ export function createProcessJob(db: ReturnType<typeof createDb>, queueName?: st
 
     // Create browser client for platforms that need SPA rendering
     let browserClient: BrowserClient | undefined;
-    if (platform === "salesforce" && type === "app_details") {
-      browserClient = new BrowserClient();
-    }
-    if (platform === "canva" || platform === "google_workspace" || platform === "zoho" || platform === "zendesk") {
+    if (needsBrowser(platform, type)) {
       browserClient = new BrowserClient();
     }
 

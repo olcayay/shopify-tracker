@@ -62,6 +62,8 @@ export { urls } from "./constants/urls.js";
 export {
   PLATFORMS,
   PLATFORM_IDS,
+  BROWSER_REQUIREMENTS,
+  needsBrowser,
   isPlatformId,
   getPlatform,
   buildExternalAppUrl,

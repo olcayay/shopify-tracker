@@ -48,7 +48,7 @@ Use this as a high-level task tracker. Each item links to a detailed section bel
 - [ ] Create scraper module directory under `apps/scraper/src/platforms/<name>/`
 - [ ] Register module in `apps/scraper/src/platforms/registry.ts` (pass both `httpClient` and `browserClient`)
 - [ ] Add scheduler cron jobs in `apps/scraper/src/scheduler.ts`
-- [ ] Update browser client init in `apps/scraper/src/process-job.ts` (if SPA/JS-rendered)
+- [ ] Add to `BROWSER_REQUIREMENTS` in `packages/shared/src/constants/platforms.ts` (if SPA/JS-rendered)
 - [ ] Add URL pattern to `apps/scraper/src/jobs/backfill-categories.ts`
 - [ ] Add branch in `keyword-suggestion-scraper.ts` (if custom suggestion API)
 - [ ] **Add fallback scraping methods** using `withFallback()` in each fetch method (see [Fallback Scraping](#fallback-scraping) below)
@@ -760,33 +760,24 @@ export function getModule(platformId: PlatformId, httpClient?: HttpClient, brows
 }
 ```
 
-### 4.9 Browser Client Init in Process Job
+### 4.9 Browser Client Init (Config-Driven)
 
-**File:** `apps/scraper/src/process-job.ts`
+**File:** `packages/shared/src/constants/platforms.ts`
 
-If your platform needs browser rendering, add initialization:
-
-```typescript
-let browserClient: BrowserClient | undefined;
-if (platform === "salesforce" && type === "app_details") {
-  browserClient = new BrowserClient();
-}
-if (platform === "canva" || platform === "google_workspace" || platform === "zoho" || platform === "zendesk") {
-  browserClient = new BrowserClient();
-}
-// Add your platform:
-if (platform === "newplatform") {
-  browserClient = new BrowserClient();
-}
-```
-
-**Also update `apps/scraper/src/cli.ts`** — the CLI tool has its own browser client init:
+Browser client initialization is now config-driven via `BROWSER_REQUIREMENTS`. If your platform needs browser rendering, add it there:
 
 ```typescript
-if (platformArg === "salesforce" || platformArg === "canva" || platformArg === "google_workspace" || platformArg === "zoho" || platformArg === "zendesk") {
-  browserClient = new BrowserClient();
-}
+export const BROWSER_REQUIREMENTS: Partial<Record<PlatformId, boolean | Record<string, boolean>>> = {
+  canva: true,                        // All scraper types need browser
+  google_workspace: true,
+  zoho: true,
+  zendesk: true,
+  salesforce: { app_details: true },  // Only app_details needs browser
+  newplatform: true,                  // Add your platform here
+};
 ```
+
+Both `process-job.ts` and `cli.ts` use the `needsBrowser(platform, scraperType)` helper from `@appranks/shared` — no hardcoded checks to update.
 
 ### 4.10 Scraper Platform Checks (Hardcoded Logic in Scrapers)
 

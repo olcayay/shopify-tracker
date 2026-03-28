@@ -52,6 +52,7 @@ export class ZoomModule implements PlatformModule {
     hasFeatureTaxonomy: false,
     hasPricing: false,
     hasLaunchedDate: false,
+    hasFlatCategories: true,
   };
 
   private httpClient: HttpClient;

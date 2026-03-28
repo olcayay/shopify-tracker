@@ -49,6 +49,7 @@ export class AtlassianModule implements PlatformModule {
     hasFeatureTaxonomy: false,
     hasPricing: true,
     hasLaunchedDate: false,
+    hasFlatCategories: true,
   };
 
   private httpClient: HttpClient;

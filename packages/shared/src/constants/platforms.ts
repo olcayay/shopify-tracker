@@ -197,6 +197,28 @@ export type PlatformCapabilities = Pick<PlatformConfig,
 
 export const PLATFORM_IDS = Object.keys(PLATFORMS) as PlatformId[];
 
+/**
+ * Browser requirements per platform.
+ * - `true`: browser needed for all scraper types
+ * - `Record<string, boolean>`: browser needed only for specific scraper types
+ * - absent/`false`: no browser needed
+ */
+export const BROWSER_REQUIREMENTS: Partial<Record<PlatformId, boolean | Record<string, boolean>>> = {
+  canva: true,
+  google_workspace: true,
+  zoho: true,
+  zendesk: true,
+  salesforce: { app_details: true },
+};
+
+/** Check whether a platform needs a browser client for the given scraper type. */
+export function needsBrowser(platform: PlatformId, scraperType?: string): boolean {
+  const req = BROWSER_REQUIREMENTS[platform];
+  if (req === undefined || req === false) return false;
+  if (req === true) return true;
+  return scraperType ? (req[scraperType] ?? false) : Object.values(req).some(Boolean);
+}
+
 export function isPlatformId(value: string): value is PlatformId {
   return value in PLATFORMS;
 }
