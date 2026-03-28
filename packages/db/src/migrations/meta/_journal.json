@@ -638,6 +638,13 @@
       "when": 1776470400000,
       "tag": "0090_platform_requests",
       "breakpoints": true
+    },
+    {
+      "idx": 91,
+      "version": "7",
+      "when": 1776556800000,
+      "tag": "0091_add_missing_indexes",
+      "breakpoints": true
     }
   ]
 }

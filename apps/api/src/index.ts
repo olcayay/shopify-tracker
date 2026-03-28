@@ -8,6 +8,7 @@ import { migrate } from "drizzle-orm/postgres-js/migrator";
 import { sql, eq } from "drizzle-orm";
 import bcrypt from "bcryptjs";
 import { registerAuthMiddleware } from "./middleware/auth.js";
+import { RateLimiter } from "./utils/rate-limiter.js";
 import { categoryRoutes } from "./routes/categories.js";
 import { appRoutes } from "./routes/apps.js";
 import { keywordRoutes } from "./routes/keywords.js";
@@ -104,6 +105,37 @@ app.decorate("db", db);
 
 // JWT auth middleware (replaces old API key auth)
 registerAuthMiddleware(app);
+
+// Global API rate limiting (runs after auth so request.user is available)
+const HEALTH_PATHS = ["/health", "/health/live", "/health/ready"];
+
+const authenticatedLimiter = new RateLimiter({ maxAttempts: 200, windowMs: 60_000 }); // 200/min per user
+const unauthenticatedLimiter = new RateLimiter({ maxAttempts: 30, windowMs: 60_000 }); // 30/min per IP
+const systemAdminLimiter = new RateLimiter({ maxAttempts: 20, windowMs: 60_000 }); // 20/min per user
+
+app.addHook("onRequest", async (request, reply) => {
+  // Skip rate limiting for health checks and preflight
+  if (request.method === "OPTIONS") return;
+  if (HEALTH_PATHS.includes(request.url)) return;
+
+  let result: ReturnType<RateLimiter["check"]>;
+
+  if (request.user?.isSystemAdmin && request.url.startsWith("/api/system-admin")) {
+    // System admin endpoints: stricter limit keyed by userId
+    result = systemAdminLimiter.check(request.user.userId);
+  } else if (request.user?.userId) {
+    // Authenticated: 200/min keyed by userId
+    result = authenticatedLimiter.check(request.user.userId);
+  } else {
+    // Unauthenticated: 30/min keyed by IP
+    result = unauthenticatedLimiter.check(request.ip);
+  }
+
+  if (!result.allowed) {
+    reply.header("Retry-After", Math.ceil(result.retryAfterMs / 1000).toString());
+    return reply.code(429).send({ error: "Too many requests. Please try again later." });
+  }
+});
 
 // Register routes
 await app.register(authRoutes, { prefix: "/api/auth" });

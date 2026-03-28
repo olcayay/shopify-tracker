@@ -1173,16 +1173,16 @@ This table maps each Linear ticket to its risk(s) and priority. **Update this se
 | PLA-188 | Integrate Sentry error tracking | R-32 | P2 | Todo |
 | PLA-189 | Add Prometheus metrics + Grafana dashboards | R-33 | P2 | Todo |
 | PLA-191 | Implement data retention/cleanup job | R-38 | P2 | Todo |
-| PLA-179 | Add global API rate limiting | R-65 | P1 | Todo |
-| PLA-181 | Wrap multi-step operations in DB transactions | R-66 | P1 | Todo |
+| PLA-179 | Add global API rate limiting | R-65 | P1 | **Fixed** |
+| PLA-181 | Wrap multi-step operations in DB transactions | R-66 | P1 | **Fixed** |
 | PLA-182 | Fix empty catch blocks (add error logging) | R-67 | P1 | **Fixed** |
 | PLA-192 | Add request ID correlation/tracing | R-68 | P2 | Todo |
 | PLA-180 | Implement deep health checks (DB + Redis) | R-69 | P1 | **Fixed** |
 | PLA-193 | Implement dead letter queue for failed jobs | R-71 | P2 | Todo |
 | PLA-177 | Increase Redis maxmemory to 1GB | R-72 | P0 | Todo |
 | PLA-185 | Implement worker graceful shutdown | R-73 | P1 | **Fixed** |
+| PLA-186 | Add missing database indexes on large tables | R-75 | P1 | **Fixed** |
 | PLA-197 | Add idempotency keys to critical endpoints | R-74 | P2 | Todo |
-| PLA-186 | Add missing database indexes on large tables | R-75 | P1 | Todo |
 | PLA-195 | Configure Docker log rotation | R-76 | P2 | Todo |
 | PLA-201 | Set up GitHub Actions CI/CD pipeline | R-78 | P3 | Todo |
 | PLA-202 | Create E2E test suite with Playwright | R-80 | P3 | Todo |

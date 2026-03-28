@@ -59,6 +59,19 @@ export function createMockDb(overrides: MockDbOverrides = {}) {
     execute: (...args: any[]) => Promise.resolve(overrides.executeResult ?? []),
     // For raw SQL template tag
     query: (...args: any[]) => Promise.resolve([]),
+    // Transaction support: the callback receives a tx object with the same
+    // chainable interface, then returns whatever the callback returns.
+    transaction: async (fn: (tx: any) => Promise<any>) => {
+      const tx: any = {
+        select: (...args: any[]) => chainable(overrides.selectResult ?? []),
+        insert: (...args: any[]) => chainable(overrides.insertResult ?? []),
+        update: (...args: any[]) => chainable([]),
+        delete: (...args: any[]) => chainable([]),
+        execute: (...args: any[]) => Promise.resolve(overrides.executeResult ?? []),
+        query: (...args: any[]) => Promise.resolve([]),
+      };
+      return fn(tx);
+    },
   };
   return db;
 }

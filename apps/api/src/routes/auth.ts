@@ -96,67 +96,73 @@ export const authRoutes: FastifyPluginAsync = async (app) => {
 
     const passwordHash = await bcrypt.hash(password, 12);
 
-    // Create account
-    const [account] = await db
-      .insert(accounts)
-      .values({ name: accountName, company: company || null })
-      .returning();
+    // Wrap all DB writes in a transaction so partial registration
+    // (e.g. account created but user insert fails) cannot occur.
+    const result = await db.transaction(async (tx) => {
+      // Create account
+      const [account] = await tx
+        .insert(accounts)
+        .values({ name: accountName, company: company || null })
+        .returning();
 
-    // Enable default platforms for the new account
-    await db.insert(accountPlatforms).values([
-      { accountId: account.id, platform: "shopify" },
-      { accountId: account.id, platform: "salesforce" },
-      { accountId: account.id, platform: "canva" },
-    ]);
+      // Enable default platforms for the new account
+      await tx.insert(accountPlatforms).values([
+        { accountId: account.id, platform: "shopify" },
+        { accountId: account.id, platform: "salesforce" },
+        { accountId: account.id, platform: "canva" },
+      ]);
 
-    // Create owner user
-    const [user] = await db
-      .insert(users)
-      .values({
-        email: email.toLowerCase(),
-        passwordHash,
-        name,
-        accountId: account.id,
-        role: "owner",
-      })
-      .returning();
+      // Create owner user
+      const [user] = await tx
+        .insert(users)
+        .values({
+          email: email.toLowerCase(),
+          passwordHash,
+          name,
+          accountId: account.id,
+          role: "owner",
+        })
+        .returning();
 
-    // Generate tokens
-    const jwtPayload: JwtPayload = {
-      userId: user.id,
-      email: user.email,
-      accountId: user.accountId,
-      role: user.role,
-      isSystemAdmin: user.isSystemAdmin,
-    };
-
-    const accessToken = generateAccessToken(jwtPayload);
-    const refreshToken = generateRefreshToken();
-
-    // Store refresh token hash
-    await db.insert(refreshTokens).values({
-      userId: user.id,
-      tokenHash: hashToken(refreshToken),
-      expiresAt: new Date(
-        Date.now() + REFRESH_TOKEN_EXPIRY_DAYS * 24 * 60 * 60 * 1000
-      ),
-    });
-
-    return {
-      accessToken,
-      refreshToken,
-      user: {
-        id: user.id,
+      // Generate tokens
+      const jwtPayload: JwtPayload = {
+        userId: user.id,
         email: user.email,
-        name: user.name,
+        accountId: user.accountId,
         role: user.role,
         isSystemAdmin: user.isSystemAdmin,
-        account: {
-          id: account.id,
-          name: account.name,
+      };
+
+      const accessToken = generateAccessToken(jwtPayload);
+      const refreshToken = generateRefreshToken();
+
+      // Store refresh token hash
+      await tx.insert(refreshTokens).values({
+        userId: user.id,
+        tokenHash: hashToken(refreshToken),
+        expiresAt: new Date(
+          Date.now() + REFRESH_TOKEN_EXPIRY_DAYS * 24 * 60 * 60 * 1000
+        ),
+      });
+
+      return {
+        accessToken,
+        refreshToken,
+        user: {
+          id: user.id,
+          email: user.email,
+          name: user.name,
+          role: user.role,
+          isSystemAdmin: user.isSystemAdmin,
+          account: {
+            id: account.id,
+            name: account.name,
+          },
         },
-      },
-    };
+      };
+    });
+
+    return result;
   });
 
   // POST /api/auth/login — email + password login

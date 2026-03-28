@@ -1,6 +1,6 @@
 Risk Analysis V3 — Security & Reliability Fixes (2026-03-28)
 ==============================================================
-7 code fixes from RISK_ANALYSIS_V3.md:
+11 code fixes from RISK_ANALYSIS_V3.md:
 
 **PLA-173 (P0):** Removed `new Function()` RCE vulnerability from Zoho parser.
   Was used as fallback when JSON.parse fails on scraped data. Replaced with
@@ -49,7 +49,37 @@ Risk Analysis V3 — Security & Reliability Fixes (2026-03-28)
   Files: apps/scraper/src/graceful-shutdown.ts (new), apps/scraper/src/worker.ts,
          docker-compose.prod.yml, files/RISK_ANALYSIS_V3.md
 
-All 3,384 tests passing (355 shared + 486 API + 1277 scraper + 1266 dashboard).
+**PLA-181 (P2):** Wrapped registration flow in DB transaction.
+  - Account creation, platform enables, user creation, and refresh token storage
+    now run inside `db.transaction()` — if any step fails, all are rolled back.
+  - Duplicate email check and password hashing stay outside the transaction
+    (read-only check and CPU work, respectively).
+  - Added `transaction()` method to mock DB test helper so existing tests work.
+  - Scanned account.ts and system-admin.ts for other multi-step candidates:
+    - account.ts: only 1 mutation (user delete) — not a candidate
+    - system-admin.ts: keyword/category deletion (admin-only) — future candidates
+  Files: apps/api/src/routes/auth.ts, apps/api/src/__tests__/helpers/test-app.ts
+
+**PLA-179 (P1):** Global API rate limiting middleware. 3 tiers:
+  authenticated 200/min, unauthenticated 30/min, system-admin 20/min.
+  429 + Retry-After header. Health checks exempt.
+  File: apps/api/src/index.ts
+
+**PLA-181 (P1):** Registration flow wrapped in db.transaction().
+  4 DB writes (account, platforms, user, refresh token) now atomic.
+  File: apps/api/src/routes/auth.ts
+
+**PLA-186 (P1):** 4 missing database indexes via migration 0091:
+  scrape_runs.completedAt, app_snapshots.scrapedAt,
+  keyword_snapshots.scrapedAt, reviews.(appId, createdAt).
+  All CONCURRENTLY (no table locks).
+  File: packages/db/src/migrations/0091_add_missing_indexes.sql
+
+**PLA-185 (P1):** Worker graceful shutdown with 60s timeout.
+  Prevents job loss during deployments. Docker stop_grace_period: 120s.
+  Files: apps/scraper/src/graceful-shutdown.ts (new), worker.ts
+
+All 3,389 tests passing (355 shared + 491 API + 1277 scraper + 1266 dashboard).
 
 App Detail v2 — Full Redesign (PLA-138 through PLA-172) (2026-03-28)
 ===================================================================
@@ -2780,3 +2810,14 @@ PLA-98: Slug-based platform developer URLs
 
 Tests: 1097 → 1110 (+13 new tests)
 All 1110 dashboard tests passing
+
+PLA-179: Global API rate limiting middleware
+- Added global onRequest hook in apps/api/src/index.ts (after auth middleware so request.user is available)
+- Three-tier rate limiting using existing RateLimiter class:
+  - Authenticated users: 200 req/min keyed by userId
+  - Unauthenticated/public: 30 req/min keyed by IP
+  - System admin endpoints (/api/system-admin/*): 20 req/min keyed by userId
+- Health check endpoints (/health, /health/live, /health/ready) and OPTIONS preflight are exempt
+- Returns 429 with Retry-After header (seconds) when limit exceeded
+- Extended rate-limiter tests: 4 → 9 tests (reset, blocking persistence, retryAfterMs decay, multi-tier independence)
+- All 491 API tests passing
