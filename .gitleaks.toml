@@ -1,0 +1,35 @@
+title = "AppRanks Gitleaks Config"
+
+[allowlist]
+  description = "Global allowlist"
+  paths = [
+    '''node_modules''',
+    '''\.env\.example''',
+    '''\.next''',
+    '''dist''',
+    '''package-lock\.json''',
+  ]
+
+[[rules]]
+  id = "env-file"
+  description = "Prevent .env files from being committed"
+  regex = '''(?i)(OPENAI_API_KEY|JWT_SECRET|ADMIN_PASSWORD|SMTP_PASS|API_KEY|POSTGRES_PASSWORD)\s*=\s*[^\s]+'''
+  tags = ["env", "secret"]
+
+[[rules]]
+  id = "openai-key"
+  description = "OpenAI API key"
+  regex = '''sk-proj-[a-zA-Z0-9_-]{20,}'''
+  tags = ["api-key", "openai"]
+
+[[rules]]
+  id = "generic-api-key"
+  description = "Generic API key assignment"
+  regex = '''(?i)(api[_-]?key|secret[_-]?key|access[_-]?token)\s*[:=]\s*['"][a-zA-Z0-9_\-]{20,}['"]'''
+  tags = ["api-key"]
+
+[[rules]]
+  id = "linear-api-key"
+  description = "Linear API key"
+  regex = '''lin_api_[a-zA-Z0-9]{30,}'''
+  tags = ["api-key", "linear"]

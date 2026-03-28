@@ -188,3 +188,7 @@ export {
 // Logger
 export { Logger, createLogger } from "./logger.js";
 export type { LogLevel, LogContext } from "./logger.js";
+
+// Environment validation
+export { validateEnv, API_REQUIRED_ENV, SCRAPER_REQUIRED_ENV } from "./env.js";
+export type { EnvValidationError } from "./env.js";

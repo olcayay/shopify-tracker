@@ -659,6 +659,13 @@
       "when": 1776729600000,
       "tag": "0093_dead_letter_jobs",
       "breakpoints": true
+    },
+    {
+      "idx": 94,
+      "version": "7",
+      "when": 1776816000000,
+      "tag": "0094_add_query_pattern_indexes",
+      "breakpoints": true
     }
   ]
 }

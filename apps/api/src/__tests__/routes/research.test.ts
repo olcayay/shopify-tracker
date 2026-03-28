@@ -217,7 +217,7 @@ describe("Research routes", () => {
         payload: { name: "" },
       });
       expect(res.statusCode).toBe(400);
-      expect(res.json().error).toBe("Name is required");
+      expect(res.json().error).toBe("Validation failed");
     });
 
     it("returns 400 with whitespace-only name", async () => {
@@ -296,7 +296,7 @@ describe("Research routes", () => {
         payload: {},
       });
       expect(res.statusCode).toBe(400);
-      expect(res.json().error).toBe("Keyword is required");
+      expect(res.json().error).toBe("Validation failed");
     });
 
     it("returns 400 when keyword is empty string", async () => {
@@ -375,7 +375,7 @@ describe("Research routes", () => {
         payload: {},
       });
       expect(res.statusCode).toBe(400);
-      expect(res.json().error).toBe("App slug is required");
+      expect(res.json().error).toBe("Validation failed");
     });
 
     it("returns 400 when slug is empty", async () => {

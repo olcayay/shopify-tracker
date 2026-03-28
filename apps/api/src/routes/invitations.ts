@@ -6,6 +6,7 @@ import {
   users,
   invitations,
 } from "@appranks/db";
+import { acceptInvitationSchema } from "../schemas/invitations.js";
 
 type Db = ReturnType<typeof createDb>;
 
@@ -17,10 +18,7 @@ export const invitationRoutes: FastifyPluginAsync = async (app) => {
     "/accept/:token",
     async (request, reply) => {
       const { token } = request.params;
-      const { name, password } = request.body as {
-        name?: string;
-        password?: string;
-      };
+      const { name, password } = acceptInvitationSchema.parse(request.body);
 
       // Find invitation
       const [invitation] = await db
@@ -52,19 +50,6 @@ export const invitationRoutes: FastifyPluginAsync = async (app) => {
         return reply.code(409).send({
           error: "User with this email already exists",
         });
-      }
-
-      // Require name and password for new user
-      if (!name || !password) {
-        return reply.code(400).send({
-          error: "name and password are required to accept invitation",
-        });
-      }
-
-      if (password.length < 8) {
-        return reply
-          .code(400)
-          .send({ error: "Password must be at least 8 characters" });
       }
 
       const passwordHash = await bcrypt.hash(password, 12);

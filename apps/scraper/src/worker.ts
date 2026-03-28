@@ -2,7 +2,7 @@ import { config } from "dotenv";
 import { resolve } from "path";
 config({ path: resolve(import.meta.dirname, "../../../.env") });
 import { Worker, type Job } from "bullmq";
-import { createLogger } from "@appranks/shared";
+import { createLogger, validateEnv, SCRAPER_REQUIRED_ENV } from "@appranks/shared";
 import { deadLetterJobs } from "@appranks/db";
 import { BACKGROUND_QUEUE_NAME, INTERACTIVE_QUEUE_NAME, getRedisConnection, type ScraperJobData } from "./queue.js";
 import { initWorkerDeps, createProcessJob, runMigrations } from "./process-job.js";
@@ -11,6 +11,9 @@ import { createGracefulShutdown } from "./graceful-shutdown.js";
 import { RedisLock } from "./redis-lock.js";
 
 const log = createLogger("worker");
+
+// Validate required environment variables at startup (fail fast)
+validateEnv([...SCRAPER_REQUIRED_ENV]);
 
 const { db } = initWorkerDeps();
 await runMigrations(db, "worker");

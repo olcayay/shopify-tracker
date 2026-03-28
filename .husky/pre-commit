@@ -1,3 +1,11 @@
+# Secret scanning
+if command -v gitleaks &> /dev/null; then
+  echo "Running secret scan..."
+  gitleaks protect --staged --config .gitleaks.toml || exit 1
+else
+  echo "⚠ gitleaks not installed — skipping secret scan (brew install gitleaks)"
+fi
+
 echo "Running lint..."
 cd apps/dashboard
 npx eslint src/ || exit 1

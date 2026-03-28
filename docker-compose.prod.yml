@@ -23,7 +23,7 @@ services:
   redis:
     image: redis:7-alpine
     restart: always
-    command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
+    command: redis-server --appendonly yes --maxmemory 1gb --maxmemory-policy volatile-lru
     volumes:
       - redis_data:/data
     ports:
@@ -36,7 +36,7 @@ services:
     deploy:
       resources:
         limits:
-          memory: 512M
+          memory: 1536M
 
   api:
     build:

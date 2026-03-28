@@ -283,7 +283,7 @@ describe("Account routes", () => {
         payload: {},
       });
       expect(res.statusCode).toBe(400);
-      expect(res.json().error).toBe("slug is required");
+      expect(res.json().error).toBe("Validation failed");
     });
 
     it("accepts valid slug from editor", async () => {
@@ -388,7 +388,7 @@ describe("Account routes", () => {
         payload: { trackedAppSlug: "my-app" },
       });
       expect(res.statusCode).toBe(400);
-      expect(res.json().error).toBe("keyword is required");
+      expect(res.json().error).toBe("Validation failed");
     });
 
     it("returns 400 when trackedAppSlug is missing", async () => {
@@ -399,7 +399,7 @@ describe("Account routes", () => {
         payload: { keyword: "test keyword" },
       });
       expect(res.statusCode).toBe(400);
-      expect(res.json().error).toBe("trackedAppSlug is required");
+      expect(res.json().error).toBe("Validation failed");
     });
   });
 
@@ -491,7 +491,7 @@ describe("Account routes", () => {
         payload: { trackedAppSlug: "my-app" },
       });
       expect(res.statusCode).toBe(400);
-      expect(res.json().error).toBe("slug is required");
+      expect(res.json().error).toBe("Validation failed");
     });
 
     it("returns 400 when trackedAppSlug is missing", async () => {
@@ -502,7 +502,7 @@ describe("Account routes", () => {
         payload: { slug: "competitor-app" },
       });
       expect(res.statusCode).toBe(400);
-      expect(res.json().error).toBe("trackedAppSlug is required");
+      expect(res.json().error).toBe("Validation failed");
     });
   });
 
@@ -596,7 +596,7 @@ describe("Account routes", () => {
         payload: {},
       });
       expect(res.statusCode).toBe(400);
-      expect(res.json().error).toBe("slug is required");
+      expect(res.json().error).toBe("Validation failed");
     });
   });
 
@@ -697,7 +697,7 @@ describe("Account routes", () => {
         payload: {},
       });
       expect(res.statusCode).toBe(400);
-      expect(res.json().error).toBe("email is required");
+      expect(res.json().error).toBe("Validation failed");
     });
 
     it("returns 400 with invalid role", async () => {

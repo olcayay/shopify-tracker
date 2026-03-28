@@ -21,6 +21,7 @@ import {
 } from "@appranks/db";
 import { computeKeywordOpportunity } from "@appranks/shared";
 import type { KeywordSearchApp } from "@appranks/shared";
+import { ensureKeywordSchema, opportunitySchema } from "../schemas/keywords.js";
 import { Queue } from "bullmq";
 
 type Db = ReturnType<typeof createDb>;
@@ -218,10 +219,7 @@ export const keywordRoutes: FastifyPluginAsync = async (app) => {
   // GET /api/keywords/search?q= — search all keywords by prefix
   // POST /api/keywords/ensure — ensure keyword exists globally + trigger scraping if needed
   app.post<{ Body: { keyword: string } }>("/ensure", async (request, reply) => {
-    const { keyword } = request.body;
-    if (!keyword?.trim()) {
-      return reply.code(400).send({ error: "Keyword is required" });
-    }
+    const { keyword } = ensureKeywordSchema.parse(request.body);
 
     const platform = getPlatformFromQuery(request.query as Record<string, unknown>);
     const slug = keywordToSlug(keyword.trim());
@@ -651,13 +649,7 @@ export const keywordRoutes: FastifyPluginAsync = async (app) => {
   app.post<{ Body: { slugs: string[] } }>(
     "/opportunity",
     async (request, reply) => {
-      const { slugs } = request.body || {};
-      if (!Array.isArray(slugs) || slugs.length === 0) {
-        return reply.status(400).send({ error: "slugs array is required" });
-      }
-      if (slugs.length > 100) {
-        return reply.status(400).send({ error: "Maximum 100 slugs allowed" });
-      }
+      const { slugs } = opportunitySchema.parse(request.body);
 
       // Step 1: Get keyword slug -> id mapping
       const kwRows = await db

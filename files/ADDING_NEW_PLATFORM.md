@@ -1,6 +1,6 @@
 # Adding a New Platform — Comprehensive Guide
 
-This document covers everything needed to add a new marketplace platform to the AppRanks tracking system. It draws from lessons learned integrating Shopify, Salesforce, Canva, Wix, WordPress, Google Workspace, Atlassian, Zoom, Zoho, Zendesk, and HubSpot.
+This document covers everything needed to add a new marketplace platform to the AppRanks tracking system. It draws from lessons learned integrating all 11 platforms: Shopify, Salesforce, Canva, Wix, WordPress, Google Workspace, Atlassian, Zoom, Zoho, Zendesk, and HubSpot.
 
 ---
 
@@ -18,6 +18,7 @@ This document covers everything needed to add a new marketplace platform to the 
 10. [Common Pitfalls & Lessons Learned](#10-common-pitfalls--lessons-learned)
 11. [Testing & Verification Checklist](#11-testing--verification-checklist)
 12. [File Reference](#12-file-reference)
+13. [Improvement Opportunities](#13-improvement-opportunities)
 
 ---
 
@@ -37,6 +38,7 @@ Use this as a high-level task tracker. Each item links to a detailed section bel
 - [ ] Add Zod schema in `packages/shared/src/types/platform-data/schemas.ts`
 - [ ] Add to `PlatformDataMap` in `packages/shared/src/types/platform-data/index.ts`
 - [ ] Re-export from `packages/shared/src/index.ts`
+- [ ] Document all platformData fields in `files/PLATFORM-DATA-MATRIX.md` (Section 3) — include field type, source (bulk/detail), and description
 
 ### Phase 2: Database
 - [ ] Create migration to seed `account_platforms` for existing accounts
@@ -117,19 +119,19 @@ export const PLATFORMS = {
 
 **Current platforms and their flags:**
 
-| Flag | Shopify | Salesforce | Canva | Wix | WordPress | Google WS | Atlassian | Zoom | Zoho | Zendesk |
-|------|---------|------------|-------|-----|-----------|-----------|-----------|------|------|---------|
-| hasKeywordSearch | true | true | true | true | true | true | true | true | true | true |
-| hasReviews | true | true | false | true | true | true | true | false | false | true |
-| hasFeaturedSections | true | false | false | true | true | true | true | true | false | true |
-| hasAdTracking | true | false | false | false | false | false | false | false | false | false |
-| hasSimilarApps | true | false | false | false | false | false | false | false | false | false |
-| hasAutoSuggestions | true | false | true | false | false | false | false | false | false | false |
-| hasFeatureTaxonomy | true | false | false | false | false | false | false | false | false | false |
-| hasPricing | true | true | false | true | false | true | true | false | false | true |
-| hasLaunchedDate | true | false | false | false | true | false | false | false | true | true |
-| maxRatingStars | 5 | 5 | 5 | 5 | 5 | 5 | 4 | 5 | 5 | 5 |
-| pageSize | 20 | 12 | 20 | 20 | 20 | 20 | 50 | 100 | 50 | 24 |
+| Flag | Shopify | Salesforce | Canva | Wix | WordPress | Google WS | Atlassian | Zoom | Zoho | Zendesk | HubSpot |
+|------|---------|------------|-------|-----|-----------|-----------|-----------|------|------|---------|---------|
+| hasKeywordSearch | true | true | true | true | true | true | true | true | true | true | true |
+| hasReviews | true | true | false | true | true | true | true | false | false | true | true |
+| hasFeaturedSections | true | false | false | true | true | true | true | true | false | true | true |
+| hasAdTracking | true | false | false | false | false | false | false | false | false | false | false |
+| hasSimilarApps | true | false | false | false | false | false | false | false | false | false | false |
+| hasAutoSuggestions | true | false | true | false | false | false | false | false | false | false | false |
+| hasFeatureTaxonomy | true | false | false | false | false | false | false | false | false | false | false |
+| hasPricing | true | true | false | true | false | true | true | false | false | true | true |
+| hasLaunchedDate | true | false | false | false | true | false | false | false | true | true | false |
+| maxRatingStars | 5 | 5 | 5 | 5 | 5 | 5 | 4 | 5 | 5 | 5 | 5 |
+| pageSize | 24 | 12 | 30 | 50 | 250 | 20 | 50 | 100 | 50 | 24 | 24 |
 
 ### 2.2 PlatformCapabilities Type
 
@@ -254,15 +256,15 @@ const limitsByPlatform: Record<string, MetadataLimits> = {
 
 **Current limits by platform:**
 
-| Field | Shopify | Salesforce | Canva | Wix | WordPress | Google WS | Atlassian | Zoom | Zoho | Zendesk |
-|-------|---------|------------|-------|-----|-----------|-----------|-----------|------|------|---------|
-| appName | 30 | 80 | 18 | 50 | 70 | 50 | 50 | 50 | 50 | 50 |
-| subtitle | 62 | 62 | 50 | 80 | 150 | 200 | 80 | 80 | 80 | 80 |
-| introduction | 100 | 500 | 50 | 200 | 150 | 200 | 150 | 200 | 200 | 200 |
-| details | 500 | 2000 | 200 | 2000 | 5000 | 16000 | 5000 | 2000 | 2000 | 5000 |
-| feature | 80 | 80 | 80 | 80 | 0 | 0 | 0 | 0 | 0 | 0 |
-| seoTitle | 60 | 60 | 60 | 60 | 0 | 0 | 0 | 0 | 0 | 0 |
-| seoMetaDescription | 160 | 160 | 160 | 160 | 0 | 0 | 0 | 0 | 0 | 0 |
+| Field | Shopify | Salesforce | Canva | Wix | WordPress | Google WS | Atlassian | Zoom | Zoho | Zendesk | HubSpot |
+|-------|---------|------------|-------|-----|-----------|-----------|-----------|------|------|---------|---------|
+| appName | 30 | 80 | 18 | 50 | 70 | 50 | 50 | 50 | 50 | 50 | 50 |
+| subtitle | 62 | 62 | 50 | 80 | 150 | 200 | 80 | 80 | 80 | 80 | 80 |
+| introduction | 100 | 500 | 50 | 200 | 150 | 200 | 150 | 200 | 200 | 200 | 200 |
+| details | 500 | 2000 | 200 | 2000 | 5000 | 16000 | 5000 | 2000 | 2000 | 5000 | 2000 |
+| feature | 80 | 80 | 80 | 80 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
+| seoTitle | 60 | 60 | 60 | 60 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
+| seoMetaDescription | 160 | 160 | 160 | 160 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
 
 **Important:** Research your platform's actual limits before setting values. These control CharBadge color thresholds — wrong limits create misleading UI. Use `0` for fields the platform doesn't have.
 
@@ -455,6 +457,16 @@ interface NormalizedAppDetails {
 ```
 
 **Important:** `platformData` is your escape hatch. Put everything platform-specific here (features, screenshots, permissions, integrations, etc.). It's stored as JSONB and can be displayed on the app detail page.
+
+**Dual data paths:** Some platforms (e.g., Canva) have two data paths with different field sets:
+- **Bulk path** — from listing/category pages or embedded JSON, basic fields only
+- **Detail path** — from individual app pages or dedicated APIs, richer data (screenshots, developer info, permissions, etc.)
+
+Document which fields come from which path in `files/PLATFORM-DATA-MATRIX.md` (Section 3). This helps debug data gaps — if a field is empty, it might only be populated by the detail scraper, not the bulk/category scraper.
+
+**Normalized vs platformData field placement:** Fields that map to common `app_snapshots` columns (e.g., `developer.website`, `developer.name`) should go on the normalized `NormalizedAppDetails` object, NOT in `platformData`. Only put truly platform-specific data in `platformData`. For example, Canva's `developerWebsite` is mapped to `developer.website` on the normalized object, not stored in platformData.
+
+See `files/PLATFORM-DATA-MATRIX.md` for a complete reference of every platform's platformData fields and how they map to common snapshot columns.
 
 ### 4.4 Constants & Scoring Config
 
@@ -710,6 +722,7 @@ Many platforms use different strategies for different content types. This is the
 | Zoom | JSON API | `Accept: application/json` header; public endpoints only |
 | Zoho | Mixed HTTP/Browser | HTTP for app details (`var detailsObject`); Browser for SPA categories/search |
 | Zendesk | Mixed Algolia/Browser | Direct `fetch()` POST to Algolia API; Browser for app details (Cloudflare) |
+| HubSpot | CHIRP HTTP API | HttpClient only; CHIRP RPC gateway for all endpoints; no browser needed (SPA CDN blocks Playwright) |
 
 **Browser auth state:** For Cloudflare-protected or session-dependent sites, persist auth cookies:
 ```typescript
@@ -735,6 +748,7 @@ Choose a slug format that is URL-safe and can uniquely identify apps:
 | Zoom | `base64-like-id` | App ID from Zoom JSON API |
 | Zoho | `crm--jotform` | `{service}--{namespace}` format; service is the Zoho product (crm, desk, books, etc.) |
 | Zendesk | `972305--slack` | `{numericId}--{textSlug}`; product type (support/sell/chat) in `externalId` for URL reconstruction |
+| HubSpot | `gmail` | Direct slug from CHIRP API; same slug used in marketplace URL `/marketplace/listing/{slug}` |
 
 **`--` separator pattern:** Canva, Google Workspace, Zoho, and Zendesk use hierarchical URL paths but `/` is not safe in URL path segments. We use `--` as separator: `AAFxxx--my-app-name`. Convert back with `slug.replace("--", "/")` for external URLs. Zoho uses `{service}--{namespace}`, Zendesk uses `{numericId}--{textSlug}`.
 
@@ -1060,24 +1074,9 @@ export const PLATFORM_DISPLAY: Record<PlatformId, PlatformDisplayInfo> = {
 };
 ```
 
-This automatically provides `PLATFORM_LABELS`, `PLATFORM_COLORS`, and all brand styling to every consumer (sidebar, overview page, developer pages, scraper health, etc.).
+This automatically provides `PLATFORM_LABELS`, `PLATFORM_COLORS`, `PLATFORM_SHORT_LABELS`, and all brand styling to every consumer (sidebar, overview page, developer pages, scraper health, platform-overview-cards, etc.).
 
-**Previously** these were duplicated in 6+ files. That's no longer the case — do NOT add platform labels/colors to sidebar.tsx, overview/page.tsx, or platform-overview-cards.tsx. They import from `platform-display.ts`.
-
-```typescript
-const PLATFORM_BRANDS: Record<string, { label: string; color: string; textColor?: string }> = {
-  // ... existing ...
-  newplatform: { label: "New Platform", color: "#FF5733" },
-};
-```
-
-**c) Overview Page — `apps/dashboard/src/app/(dashboard)/[platform]/overview/page.tsx`**
-
-```typescript
-const PLATFORM_COLORS: Record<string, string> = { ..., newplatform: "#FF5733" };
-```
-
-This controls the accent color on the overview page header card.
+**Previously** these were duplicated in 6+ files. That's no longer the case — do NOT add platform labels/colors to sidebar.tsx, overview/page.tsx, or platform-overview-cards.tsx. They all import from `platform-display.ts`.
 
 ### 6.5 Capability Flag Usage in Dashboard
 
@@ -1588,11 +1587,11 @@ grep -r "Launched" apps/dashboard/src --include="*.tsx" -l
 
 **Solution:** Add an `else if (platform === "newplatform")` branch in `backfill-categories.ts` with the correct category URL regex pattern.
 
-### Pitfall 18: Missing PLATFORM_BRANDS in overview cards (CRASH)
+### Pitfall 18: Missing PLATFORM_DISPLAY entry (CRASH)
 
-**Problem:** The `/overview` page crashes with a runtime error if the new platform is missing from the `PLATFORM_BRANDS` record in `platform-overview-cards.tsx`.
+**Problem:** The `/overview` page and other platform-aware components crash if the new platform is missing from `PLATFORM_DISPLAY` in `platform-display.ts`.
 
-**Solution:** Always add the new platform to `PLATFORM_BRANDS` in `platform-overview-cards.tsx`. This is different from `PLATFORM_LABELS`/`PLATFORM_COLORS` — it's a separate record used specifically for the cross-platform overview page cards.
+**Solution:** Always add the new platform to `PLATFORM_DISPLAY` in `apps/dashboard/src/lib/platform-display.ts`. This single record drives `PLATFORM_LABELS`, `PLATFORM_COLORS`, and `PLATFORM_SHORT_LABELS` used across the entire dashboard (sidebar, overview cards, developer pages, scraper health, etc.).
 
 ### Pitfall 19: Curated categories vs real categories
 
@@ -1674,6 +1673,18 @@ Files with hardcoded counts:
 
 Prefer using `PLATFORM_IDS.length` instead of hardcoded numbers, but some tests intentionally use both as a safeguard.
 
+### Pitfall 27: Dual data paths with different field sets
+
+**Problem:** Some platforms have two scraping paths (bulk/listing vs detail/individual app pages) that return different field sets. A field populated by the detail scraper may be empty when only the bulk scraper has run, causing confusing data gaps.
+
+**Solution:** Design your TypeScript interface with all fields optional (`?`). Document which fields come from which path in `files/PLATFORM-DATA-MATRIX.md`. Example: Canva has `normalizeCanvaApp` (bulk — basic fields like `description`, `topics`, `urlSlug`) and `normalizeCanvaDetailApp` (detail — richer data like `screenshots`, `permissions`, `languages`, `developerEmail`). The detail scraper merges its data on top of existing platformData.
+
+### Pitfall 28: Developer info stored in platformData instead of normalized fields
+
+**Problem:** Developer contact info (website, email) stored in `platformData` JSONB requires platform-specific SQL extraction (`platform_data->>'developerEmail'`), adding per-platform branches to the API routes.
+
+**Solution:** Map standard developer fields to the normalized `NormalizedAppDetails.developer` object (`developer.website`, `developer.name`, `developer.url`). Only store truly platform-specific developer info (e.g., `developerPhone`, `developerAddress`) in `platformData`. This reduces the number of platform-keyed extraction maps in `apps/api/src/routes/apps.ts`.
+
 ---
 
 ## 11. Testing & Verification Checklist
@@ -1724,10 +1735,14 @@ After implementation, verify every page for the new platform AND confirm existin
 - [ ] `/atlassian/apps/<slug>` — Correct tabs/cards for Atlassian capabilities
 - [ ] `/zoom/apps` — Correct columns (no reviews, no pricing, no launched)
 - [ ] `/zoom/apps/<slug>` — Correct tabs/cards for Zoom capabilities
-- [ ] `/hubspot/apps` — Correct columns (no reviews, pricing, launched date)
+- [ ] `/hubspot/apps` — Correct columns (reviews, pricing, featured; no launched date)
 - [ ] `/hubspot/apps/<slug>` — Correct tabs/cards for HubSpot capabilities
+- [ ] `/zoho/apps` — Correct columns (no reviews, no pricing, no featured)
+- [ ] `/zoho/apps/<slug>` — Correct tabs/cards for Zoho capabilities
+- [ ] `/zendesk/apps` — Correct columns for Zendesk capabilities
+- [ ] `/zendesk/apps/<slug>` — Correct tabs/cards for Zendesk capabilities
 - [ ] All platform previews still work with correct character limits
-- [ ] `/overview` — Cross-platform overview page shows all platforms
+- [ ] `/overview` — Cross-platform overview page shows all 11 platforms
 
 ### First Data Bootstrap — Testing a New Platform End-to-End
 
@@ -1978,7 +1993,6 @@ test_newplatform() {
 | `apps/dashboard/src/components/admin-scraper-trigger.tsx` | Add to `VALID_PLATFORMS` set |
 | `apps/dashboard/src/components/app-badges.tsx` | Add `BADGE_CONFIG` entry |
 | `apps/dashboard/src/components/platform-overview-cards.tsx` | No changes needed (imports from platform-display.ts) |
-| `[platform]/overview/page.tsx` | Add to `PLATFORM_COLORS` record |
 | `[platform]/apps/[slug]/preview/page.tsx` | Add guard, component selector, label |
 | `[platform]/apps/[slug]/preview/<name>-preview.tsx` | **NEW** — Platform preview component |
 | `[platform]/apps/[slug]/details/page.tsx` | Add field labels, platform-specific sections |
@@ -2002,25 +2016,60 @@ test_newplatform() {
 
 ## Summary
 
-Adding a new platform follows this order (9th platform and beyond):
+Adding a new platform follows this order (12th platform and beyond):
 
 1. **Config first** — Get capability flags right in `platforms.ts`, add URL builders, similarity weights, metadata limits
 2. **Database second** — Create 3 migrations: platform access, categories, visibility
 3. **Scraper third** — Build module, parsers, register, schedule, update `backfill-categories.ts` URL pattern
 4. **API fourth** — Add live-search function, review `apps.ts` developer info extraction
-5. **Dashboard last** — Update ALL 3 `VALID_PLATFORMS`, sidebar (labels, colors, 2 regex patterns), `app-badges.tsx`, `platform-overview-cards.tsx` (LABELS + COLORS + **BRANDS**), preview component, field labels (details, changes, overview, compare pages), research compare page, capability-gate all tables
-6. **Test everything** — New platform pages AND regression on ALL 8 existing platforms
+5. **Dashboard last** — Update ALL 3 `VALID_PLATFORMS`, `platform-display.ts` (single source for labels/colors/gradients), `app-badges.tsx`, preview component, field labels (details, changes, overview, compare pages), research compare page, capability-gate all tables
+6. **Test everything** — New platform pages AND regression on ALL 11 existing platforms
 
 The biggest time sinks are:
 - **Compare pages** — `[slug]/compare/page.tsx` (~25 locations) + `research/[id]/compare/page.tsx` with hardcoded platform checks
 - **Details/changes pages** — Field label mappings per platform
 - **Preview** — Creating a new platform-specific preview component
 - **Tables** — Systematically finding and gating every column, card, tab, and inline display
-- **VALID_PLATFORMS** — 3 separate definitions that must ALL be updated
-- **PLATFORM_BRANDS** — Separate from labels/colors, missing it crashes the overview page
+- **VALID_PLATFORMS** — 3 separate definitions that must ALL be updated (see [Improvement Opportunities](#13-improvement-opportunities) below)
 
 Use grep to find all platform-specific references before declaring the task complete:
 
 ```bash
-grep -rn "isCanva\|isSalesforce\|isShopify\|isAtlassian\|isZoom\|platform === \"shopify\"\|platform === \"canva\"\|platform === \"salesforce\"\|platform === \"wix\"\|platform === \"wordpress\"\|platform === \"google_workspace\"\|platform === \"atlassian\"\|platform === \"zoom\"" apps/ packages/ --include="*.ts" --include="*.tsx" | grep -v node_modules | grep -v .next
+grep -rn "isCanva\|isSalesforce\|isShopify\|isAtlassian\|isZoom\|isZoho\|isZendesk\|isHubspot\|platform === \"shopify\"\|platform === \"canva\"\|platform === \"salesforce\"\|platform === \"wix\"\|platform === \"wordpress\"\|platform === \"google_workspace\"\|platform === \"atlassian\"\|platform === \"zoom\"\|platform === \"zoho\"\|platform === \"zendesk\"\|platform === \"hubspot\"" apps/ packages/ --include="*.ts" --include="*.tsx" | grep -v node_modules | grep -v .next
 ```
+
+---
+
+## 13. Improvement Opportunities
+
+These are known anti-patterns and tech debt items that make adding new platforms harder than necessary. Each has a corresponding Linear task.
+
+### 13.1 Consolidate VALID_PLATFORMS (DRY violation)
+
+**Current state:** 3 separate `VALID_PLATFORMS` definitions (auth-context.tsx, proxy.ts, admin-scraper-trigger.tsx) that must be manually kept in sync. Every new platform requires updating all 3.
+
+**Improvement:** Import `PLATFORM_IDS` from `@shopify-tracker/shared` in all 3 files, eliminating the duplication entirely. This is the same pattern already used by `extractPlatform()` in nav-utils.ts.
+
+### 13.2 Add `hasFlatCategories` capability flag
+
+**Current state:** The `isFlat` check in `categories/page.tsx` is a hardcoded `platform === "wordpress" || platform === "zoom" || ...` chain. Every new flat-category platform requires finding and updating this check.
+
+**Improvement:** Add `hasFlatCategories: boolean` to `PlatformConfig` in platforms.ts. Replace the hardcoded check with `caps.hasFlatCategories`. This makes category display behavior discoverable from the platform config.
+
+### 13.3 Centralize platform field labels
+
+**Current state:** `getFieldLabels()` functions with `isCanva ? "X" : isSalesforce ? "Y" : "Z"` patterns are duplicated across 4+ files (page.tsx, details/page.tsx, changes/page.tsx, compare/page.tsx). Adding a platform with different terminology requires updating all of them.
+
+**Improvement:** Create a centralized `packages/shared/src/constants/field-labels.ts` with a `Record<PlatformId, FieldLabels>` map. Dashboard files import from this single source.
+
+### 13.4 Make live-search extensible
+
+**Current state:** `apps/api/src/routes/live-search.ts` has a growing `if/else if` chain for each platform's search implementation. Each new platform must add a branch before the Shopify fallback.
+
+**Improvement:** Add an optional `liveSearch(query: string)` method to the PlatformModule interface, or create a `liveSearchRegistry` map. New platforms register their search function in one place.
+
+### 13.5 Config-driven browser client initialization
+
+**Current state:** Both `process-job.ts` and `cli.ts` have hardcoded `if (platform === "canva" || platform === "google_workspace" || ...)` chains to decide whether to create a BrowserClient. Adding a browser-dependent platform requires updating both files.
+
+**Improvement:** Add `requiresBrowser: boolean` (or per-scraper-type `browserRequired: { app: boolean, category: boolean, ... }`) to the platform config. Replace hardcoded checks with `if (PLATFORMS[platform].requiresBrowser)`.

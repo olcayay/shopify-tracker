@@ -319,15 +319,15 @@ describe("App routes", () => {
       expect(res.statusCode).toBe(401);
     });
 
-    it("returns empty object when slugs is empty", async () => {
+    it("returns 400 when slugs is empty", async () => {
       const res = await app.inject({
         method: "POST",
         url: "/api/apps/last-changes?platform=shopify",
         headers: authHeaders(userToken()),
         payload: { slugs: [] },
       });
-      expect(res.statusCode).toBe(200);
-      expect(res.json()).toEqual({});
+      expect(res.statusCode).toBe(400);
+      expect(res.json().error).toBe("Validation failed");
     });
 
     it("returns 200 with valid payload", async () => {
@@ -357,15 +357,15 @@ describe("App routes", () => {
       expect(res.statusCode).toBe(401);
     });
 
-    it("returns empty object when slugs is empty", async () => {
+    it("returns 400 when slugs is empty", async () => {
       const res = await app.inject({
         method: "POST",
         url: "/api/apps/min-paid-prices?platform=shopify",
         headers: authHeaders(userToken()),
         payload: { slugs: [] },
       });
-      expect(res.statusCode).toBe(200);
-      expect(res.json()).toEqual({});
+      expect(res.statusCode).toBe(400);
+      expect(res.json().error).toBe("Validation failed");
     });
   });
 

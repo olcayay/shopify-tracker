@@ -62,7 +62,10 @@ describe("POST /api/auth/register — validation", () => {
       payload: { password: "Password123", name: "Test", accountName: "Co" },
     });
     expect(res.statusCode).toBe(400);
-    expect(res.json().error).toMatch(/email/i);
+    expect(res.json().error).toBe("Validation failed");
+    expect(res.json().details).toEqual(
+      expect.arrayContaining([expect.objectContaining({ field: "email" })]),
+    );
   });
 
   it("returns 400 when password is missing", async () => {
@@ -72,7 +75,10 @@ describe("POST /api/auth/register — validation", () => {
       payload: { email: "a@b.com", name: "Test", accountName: "Co" },
     });
     expect(res.statusCode).toBe(400);
-    expect(res.json().error).toMatch(/password/i);
+    expect(res.json().error).toBe("Validation failed");
+    expect(res.json().details).toEqual(
+      expect.arrayContaining([expect.objectContaining({ field: "password" })]),
+    );
   });
 
   it("returns 400 when name is missing", async () => {
@@ -82,7 +88,10 @@ describe("POST /api/auth/register — validation", () => {
       payload: { email: "a@b.com", password: "Password123", accountName: "Co" },
     });
     expect(res.statusCode).toBe(400);
-    expect(res.json().error).toMatch(/name/i);
+    expect(res.json().error).toBe("Validation failed");
+    expect(res.json().details).toEqual(
+      expect.arrayContaining([expect.objectContaining({ field: "name" })]),
+    );
   });
 
   it("returns 400 when accountName is missing", async () => {
@@ -92,7 +101,10 @@ describe("POST /api/auth/register — validation", () => {
       payload: { email: "a@b.com", password: "Password123", name: "Test" },
     });
     expect(res.statusCode).toBe(400);
-    expect(res.json().error).toMatch(/accountName/i);
+    expect(res.json().error).toBe("Validation failed");
+    expect(res.json().details).toEqual(
+      expect.arrayContaining([expect.objectContaining({ field: "accountName" })]),
+    );
   });
 
   it("returns 400 when all required fields are missing", async () => {
@@ -111,7 +123,12 @@ describe("POST /api/auth/register — validation", () => {
       payload: { email: "a@b.com", password: "short", name: "Test", accountName: "Co" },
     });
     expect(res.statusCode).toBe(400);
-    expect(res.json().error).toMatch(/8 characters/i);
+    expect(res.json().error).toBe("Validation failed");
+    expect(res.json().details).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ field: "password", message: expect.stringMatching(/8 characters/i) }),
+      ]),
+    );
   });
 
   it("accepts exactly 8 character password with complexity (boundary)", async () => {
@@ -131,7 +148,12 @@ describe("POST /api/auth/register — validation", () => {
       payload: { email: "a@b.com", password: "test1234", name: "Test", accountName: "Co" },
     });
     expect(res.statusCode).toBe(400);
-    expect(res.json().error).toMatch(/uppercase/i);
+    expect(res.json().error).toBe("Validation failed");
+    expect(res.json().details).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ field: "password", message: expect.stringMatching(/uppercase/i) }),
+      ]),
+    );
   });
 
   it("returns 400 when password has no number", async () => {
@@ -141,7 +163,12 @@ describe("POST /api/auth/register — validation", () => {
       payload: { email: "a@b.com", password: "Testtest", name: "Test", accountName: "Co" },
     });
     expect(res.statusCode).toBe(400);
-    expect(res.json().error).toMatch(/number/i);
+    expect(res.json().error).toBe("Validation failed");
+    expect(res.json().details).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ field: "password", message: expect.stringMatching(/number/i) }),
+      ]),
+    );
   });
 });
 
@@ -294,7 +321,10 @@ describe("POST /api/auth/login — validation", () => {
       payload: { password: "Password123" },
     });
     expect(res.statusCode).toBe(400);
-    expect(res.json().error).toMatch(/email/i);
+    expect(res.json().error).toBe("Validation failed");
+    expect(res.json().details).toEqual(
+      expect.arrayContaining([expect.objectContaining({ field: "email" })]),
+    );
   });
 
   it("returns 400 when password is missing", async () => {
@@ -304,7 +334,10 @@ describe("POST /api/auth/login — validation", () => {
       payload: { email: "a@b.com" },
     });
     expect(res.statusCode).toBe(400);
-    expect(res.json().error).toMatch(/password/i);
+    expect(res.json().error).toBe("Validation failed");
+    expect(res.json().details).toEqual(
+      expect.arrayContaining([expect.objectContaining({ field: "password" })]),
+    );
   });
 
   it("returns 400 when both fields are missing", async () => {
@@ -470,7 +503,10 @@ describe("POST /api/auth/refresh — validation", () => {
       payload: {},
     });
     expect(res.statusCode).toBe(400);
-    expect(res.json().error).toMatch(/refreshToken/i);
+    expect(res.json().error).toBe("Validation failed");
+    expect(res.json().details).toEqual(
+      expect.arrayContaining([expect.objectContaining({ field: "refreshToken" })]),
+    );
   });
 
   it("returns 401 when refresh token is not found in DB", async () => {
@@ -608,15 +644,15 @@ describe("POST /api/auth/logout", () => {
     expect(res.json().message).toMatch(/logged out/i);
   });
 
-  it("returns success even without a refresh token in the body", async () => {
+  it("returns 400 when refresh token is missing from body", async () => {
     const res = await app.inject({
       method: "POST",
       url: "/api/auth/logout",
       headers: authHeaders(userToken()),
       payload: {},
     });
-    expect(res.statusCode).toBe(200);
-    expect(res.json().message).toMatch(/logged out/i);
+    expect(res.statusCode).toBe(400);
+    expect(res.json().error).toBe("Validation failed");
   });
 });
 
@@ -912,10 +948,15 @@ describe("PATCH /api/auth/me — auth and validation", () => {
       method: "PATCH",
       url: "/api/auth/me",
       headers: authHeaders(userToken()),
-      payload: { newPassword: "newpass123" },
+      payload: { newPassword: "Newpass123" },
     });
     expect(res.statusCode).toBe(400);
-    expect(res.json().error).toMatch(/current password/i);
+    expect(res.json().error).toBe("Validation failed");
+    expect(res.json().details).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ field: "currentPassword", message: expect.stringMatching(/current password/i) }),
+      ]),
+    );
   });
 
   it("returns 400 when newPassword is shorter than 8 characters", async () => {
@@ -926,7 +967,12 @@ describe("PATCH /api/auth/me — auth and validation", () => {
       payload: { newPassword: "short", currentPassword: "oldpassword" },
     });
     expect(res.statusCode).toBe(400);
-    expect(res.json().error).toMatch(/8 characters/i);
+    expect(res.json().error).toBe("Validation failed");
+    expect(res.json().details).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ field: "newPassword", message: expect.stringMatching(/8 characters/i) }),
+      ]),
+    );
   });
 });
 
@@ -962,7 +1008,7 @@ describe("PATCH /api/auth/me — impersonation restrictions", () => {
       method: "PATCH",
       url: "/api/auth/me",
       headers: authHeaders(impersonationToken()),
-      payload: { newPassword: "newpass123", currentPassword: "oldpass123" },
+      payload: { newPassword: "Newpass123", currentPassword: "oldpass123" },
     });
     expect(res.statusCode).toBe(403);
     expect(res.json().error).toMatch(/impersonat/i);

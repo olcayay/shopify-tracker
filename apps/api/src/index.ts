@@ -7,8 +7,10 @@ import { createDb, accounts, users } from "@appranks/db";
 import { migrate } from "drizzle-orm/postgres-js/migrator";
 import { sql, eq } from "drizzle-orm";
 import bcrypt from "bcryptjs";
+import { validateEnv, API_REQUIRED_ENV } from "@appranks/shared";
 import { registerAuthMiddleware } from "./middleware/auth.js";
 import { RateLimiter } from "./utils/rate-limiter.js";
+import { ApiError } from "./utils/api-error.js";
 import { categoryRoutes } from "./routes/categories.js";
 import { appRoutes } from "./routes/apps.js";
 import { keywordRoutes } from "./routes/keywords.js";
@@ -29,11 +31,10 @@ import { adminRoutes } from "./routes/admin.js";
 import { dlqRoutes } from "./routes/dlq.js";
 import Redis from "ioredis";
 
-const databaseUrl = process.env.DATABASE_URL;
-if (!databaseUrl) {
-  console.error("DATABASE_URL environment variable is required");
-  process.exit(1);
-}
+// Validate required environment variables at startup (fail fast)
+validateEnv([...API_REQUIRED_ENV]);
+
+const databaseUrl = process.env.DATABASE_URL!;
 
 const db = createDb(databaseUrl);
 
@@ -236,6 +237,11 @@ app.get("/health", async (_request, reply) => {
 
 // Error handler
 app.setErrorHandler((error: any, _request, reply) => {
+  // ApiError — standardized error responses
+  if (error instanceof ApiError) {
+    return reply.code(error.statusCode).send(error.toJSON());
+  }
+
   // Zod validation errors → 400 with field-level details
   if (error.name === "ZodError") {
     const fieldErrors = error.issues.map((issue: any) => ({

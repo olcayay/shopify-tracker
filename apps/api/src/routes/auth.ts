@@ -19,6 +19,13 @@ import {
 import { PLATFORM_IDS } from "@appranks/shared";
 import { getJwtSecret, type JwtPayload } from "../middleware/auth.js";
 import { RateLimiter } from "../utils/rate-limiter.js";
+import {
+  registerSchema,
+  loginSchema,
+  refreshSchema,
+  logoutSchema,
+  updateProfileSchema,
+} from "../schemas/auth.js";
 
 type Db = ReturnType<typeof createDb>;
 
@@ -58,31 +65,7 @@ export const authRoutes: FastifyPluginAsync = async (app) => {
       return reply.code(429).send({ error: "Too many registration attempts. Please try again later." });
     }
 
-    const { email, password, name, accountName, company } = request.body as {
-      email?: string;
-      password?: string;
-      name?: string;
-      accountName?: string;
-      company?: string;
-    };
-
-    if (!email || !password || !name || !accountName) {
-      return reply.code(400).send({
-        error: "email, password, name, and accountName are required",
-      });
-    }
-
-    if (password.length < 8) {
-      return reply.code(400).send({
-        error: "Password must be at least 8 characters",
-      });
-    }
-
-    if (!/[A-Z]/.test(password) || !/[a-z]/.test(password) || !/[0-9]/.test(password)) {
-      return reply.code(400).send({
-        error: "Password must contain at least one uppercase letter, one lowercase letter, and one number",
-      });
-    }
+    const { email, password, name, accountName, company } = registerSchema.parse(request.body);
 
     // Check if email already exists
     const [existing] = await db
@@ -174,14 +157,7 @@ export const authRoutes: FastifyPluginAsync = async (app) => {
       return reply.code(429).send({ error: "Too many login attempts. Please try again later." });
     }
 
-    const { email, password } = request.body as {
-      email?: string;
-      password?: string;
-    };
-
-    if (!email || !password) {
-      return reply.code(400).send({ error: "email and password are required" });
-    }
+    const { email, password } = loginSchema.parse(request.body);
 
     const [user] = await db
       .select()
@@ -246,13 +222,7 @@ export const authRoutes: FastifyPluginAsync = async (app) => {
 
   // POST /api/auth/refresh — exchange refresh token for new access token
   app.post("/refresh", async (request, reply) => {
-    const { refreshToken: token } = request.body as {
-      refreshToken?: string;
-    };
-
-    if (!token) {
-      return reply.code(400).send({ error: "refreshToken is required" });
-    }
+    const { refreshToken: token } = refreshSchema.parse(request.body);
 
     const tokenHash = hashToken(token);
 
@@ -313,15 +283,11 @@ export const authRoutes: FastifyPluginAsync = async (app) => {
 
   // POST /api/auth/logout — revoke refresh token
   app.post("/logout", async (request, reply) => {
-    const { refreshToken: token } = request.body as {
-      refreshToken?: string;
-    };
+    const { refreshToken: token } = logoutSchema.parse(request.body);
 
-    if (token) {
-      await db
-        .delete(refreshTokens)
-        .where(eq(refreshTokens.tokenHash, hashToken(token)));
-    }
+    await db
+      .delete(refreshTokens)
+      .where(eq(refreshTokens.tokenHash, hashToken(token)));
 
     return { message: "Logged out" };
   });
@@ -497,14 +463,8 @@ export const authRoutes: FastifyPluginAsync = async (app) => {
       return reply.code(401).send({ error: "Unauthorized" });
     }
 
-    const { emailDigestEnabled, timezone, name, email, currentPassword, newPassword } = request.body as {
-      emailDigestEnabled?: boolean;
-      timezone?: string;
-      name?: string;
-      email?: string;
-      currentPassword?: string;
-      newPassword?: string;
-    };
+    const { emailDigestEnabled, timezone, name, email, currentPassword, newPassword } =
+      updateProfileSchema.parse(request.body);
 
     // Block sensitive changes during impersonation
     if (request.isImpersonating && (newPassword || email)) {
@@ -542,24 +502,13 @@ export const authRoutes: FastifyPluginAsync = async (app) => {
       }
     }
 
-    // Password update
+    // Password update (currentPassword required by schema refine)
     if (newPassword) {
-      if (!currentPassword) {
-        return reply.code(400).send({ error: "Current password is required to change password" });
-      }
-      if (newPassword.length < 8) {
-        return reply.code(400).send({ error: "New password must be at least 8 characters" });
-      }
-      if (!/[A-Z]/.test(newPassword) || !/[a-z]/.test(newPassword) || !/[0-9]/.test(newPassword)) {
-        return reply.code(400).send({
-          error: "Password must contain at least one uppercase letter, one lowercase letter, and one number",
-        });
-      }
       const [currentUser] = await db
         .select({ passwordHash: users.passwordHash })
         .from(users)
         .where(eq(users.id, request.user.userId));
-      const valid = await bcrypt.compare(currentPassword, currentUser.passwordHash);
+      const valid = await bcrypt.compare(currentPassword!, currentUser.passwordHash);
       if (!valid) {
         return reply.code(403).send({ error: "Current password is incorrect" });
       }

@@ -157,6 +157,28 @@ export interface TestAppOptions {
 export async function buildTestApp(options: TestAppOptions): Promise<FastifyInstance> {
   const app = Fastify({ logger: false });
 
+  // Global error handler (mirrors production in src/index.ts)
+  app.setErrorHandler((error: any, _request, reply) => {
+    // ApiError — standardized error responses
+    if (error.name === "ApiError") {
+      return reply.code(error.statusCode).send(error.toJSON());
+    }
+
+    if (error.name === "ZodError") {
+      const fieldErrors = error.issues.map((issue: any) => ({
+        field: issue.path.join("."),
+        message: issue.message,
+      }));
+      return reply.code(400).send({
+        error: "Validation failed",
+        details: fieldErrors,
+      });
+    }
+    reply.code(error.statusCode ?? 500).send({
+      error: error.message || "Internal Server Error",
+    });
+  });
+
   const mockDb = createMockDb(options.db);
   app.decorate("db", mockDb);
 
