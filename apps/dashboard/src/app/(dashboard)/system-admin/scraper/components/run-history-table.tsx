@@ -29,6 +29,7 @@ import {
   Check,
   AlertTriangle,
   Loader2,
+  ExternalLink,
 } from "lucide-react";
 import { useFormatDate } from "@/lib/format-date";
 import { useAuth } from "@/lib/auth-context";
@@ -630,10 +631,24 @@ function ItemErrorCard({ run, error }: { run: any; error: any }) {
             </div>
           )}
         </div>
-        <CopyReportButton
-          getReport={() => buildItemReport(toRunInfo(run), error)}
-          className="shrink-0 p-1.5 rounded hover:bg-orange-100 text-orange-600 transition-colors"
-        />
+        <div className="flex items-center gap-1 shrink-0">
+          {error.linearIssueUrl && (
+            <a
+              href={error.linearIssueUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={(e) => e.stopPropagation()}
+              className="p-1.5 rounded hover:bg-indigo-100 text-indigo-600 transition-colors"
+              title={`Linear: ${error.linearIssueId}`}
+            >
+              <ExternalLink className="h-3.5 w-3.5" />
+            </a>
+          )}
+          <CopyReportButton
+            getReport={() => buildItemReport(toRunInfo(run), error)}
+            className="shrink-0 p-1.5 rounded hover:bg-orange-100 text-orange-600 transition-colors"
+          />
+        </div>
       </div>
     </div>
   );

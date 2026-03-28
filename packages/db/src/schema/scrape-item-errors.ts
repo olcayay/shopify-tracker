@@ -13,6 +13,8 @@ export const scrapeItemErrors = pgTable(
     url: varchar("url", { length: 1024 }),
     errorMessage: varchar("error_message", { length: 2048 }).notNull(),
     stackTrace: text("stack_trace"),
+    linearIssueId: varchar("linear_issue_id", { length: 50 }),
+    linearIssueUrl: varchar("linear_issue_url", { length: 512 }),
     createdAt: timestamp("created_at").notNull().defaultNow(),
   },
   (table) => [

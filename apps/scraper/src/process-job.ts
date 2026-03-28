@@ -13,6 +13,7 @@ import { HttpClient } from "./http-client.js";
 import { BrowserClient } from "./browser-client.js";
 import { getModule } from "./platforms/registry.js";
 import { FallbackTracker } from "./utils/fallback-tracker.js";
+import { createLinearErrorTask } from "./utils/create-linear-error-task.js";
 
 const log = createLogger("worker");
 
@@ -522,6 +523,11 @@ export function createProcessJob(db: ReturnType<typeof createDb>, queueName?: st
     }
 
     log.info("job completed", { jobId: job.id, type });
+
+    // Create Linear task for any item errors (fire-and-forget)
+    createLinearErrorTask(db, job.id, platform, type).catch((err) => {
+      log.warn("failed to create Linear error task", { error: String(err) });
+    });
     })()]);
     } catch (error) {
       // Failsafe: mark any still-running scrape_runs for this job as failed
@@ -535,6 +541,11 @@ export function createProcessJob(db: ReturnType<typeof createDb>, queueName?: st
         } catch (dbErr) {
           log.error("failed to mark scrape_runs as failed", { jobId: job.id, error: String(dbErr) });
         }
+
+        // Create Linear task for any item errors (fire-and-forget)
+        createLinearErrorTask(db, job.id, platform, type).catch((err) => {
+          log.warn("failed to create Linear error task", { error: String(err) });
+        });
       }
       throw error;
     } finally {
