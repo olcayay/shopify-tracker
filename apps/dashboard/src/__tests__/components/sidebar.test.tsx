@@ -2,6 +2,21 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
+// Override default pathname to a platform page for sidebar tests
+const mockPathname = vi.fn(() => "/shopify");
+vi.mock("next/navigation", () => ({
+  useRouter: () => ({
+    push: vi.fn(),
+    replace: vi.fn(),
+    refresh: vi.fn(),
+    back: vi.fn(),
+    prefetch: vi.fn(),
+  }),
+  usePathname: () => mockPathname(),
+  useSearchParams: () => new URLSearchParams(),
+  useParams: () => ({}),
+}));
+
 // Mock auth-context
 const mockLogout = vi.fn();
 vi.mock("@/lib/auth-context", () => ({
@@ -42,6 +57,7 @@ describe("Sidebar", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     localStorage.clear();
+    mockPathname.mockReturnValue("/shopify");
   });
 
   it("renders AppRanks brand", () => {
@@ -154,6 +170,28 @@ describe("Sidebar with admin user", () => {
     const { Sidebar: AdminSidebar } = await import("@/components/sidebar");
     render(<AdminSidebar />);
     expect(screen.getByText("System Admin")).toBeInTheDocument();
+  });
+});
+
+describe("Sidebar on global page", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    localStorage.clear();
+    mockPathname.mockReturnValue("/overview");
+  });
+
+  it("shows global nav items on /overview", () => {
+    render(<Sidebar />);
+    expect(screen.getByText("Overview")).toBeInTheDocument();
+    expect(screen.getByText("All Apps")).toBeInTheDocument();
+    expect(screen.getByText("All Keywords")).toBeInTheDocument();
+    expect(screen.getByText("All Competitors")).toBeInTheDocument();
+    expect(screen.getByText("Developers")).toBeInTheDocument();
+  });
+
+  it("does not show platform accordion on global pages", () => {
+    render(<Sidebar />);
+    expect(screen.queryByText("Shopify")).not.toBeInTheDocument();
   });
 });
 

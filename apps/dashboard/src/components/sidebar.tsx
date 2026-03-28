@@ -16,7 +16,7 @@ import {
 } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
 import { PLATFORM_LABELS, PLATFORM_COLORS } from "@/lib/platform-display";
-import { extractPlatform, getNavItems, systemAdminItems } from "@/lib/nav-utils";
+import { extractPlatform, getNavItems, systemAdminItems, globalNavItems, isOnPlatformPage, isOnGlobalPage } from "@/lib/nav-utils";
 import { PLATFORMS, type PlatformId } from "@appranks/shared";
 import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
@@ -96,8 +96,14 @@ function SidebarContent({
     return content;
   }
 
-  // In collapsed mode, just show the active platform's nav icons
-  const activePlatformItems = useMemo(() => getNavItems(currentPlatform, isSystemAdmin), [currentPlatform, isSystemAdmin]);
+  const isGlobalPage = isOnGlobalPage(pathname);
+  const isPlatformPage = isOnPlatformPage(pathname);
+
+  // In collapsed mode, show appropriate nav icons
+  const activePlatformItems = useMemo(() => {
+    if (isGlobalPage) return globalNavItems;
+    return getNavItems(currentPlatform, isSystemAdmin);
+  }, [currentPlatform, isSystemAdmin, isGlobalPage]);
 
   return (
     <>
@@ -119,7 +125,7 @@ function SidebarContent({
 
       <nav className="flex flex-col gap-1 flex-1">
         {collapsed ? (
-          /* Collapsed: show active platform's nav icons only */
+          /* Collapsed: show appropriate nav icons */
           activePlatformItems.map((item) => {
             const isActive = item.exact
               ? pathname === item.href
@@ -128,8 +134,18 @@ function SidebarContent({
               <NavLink key={item.href} href={item.href} icon={item.icon} label={item.label} isActive={isActive} badge={item.badge} adminOnly={item.adminOnly} />
             );
           })
+        ) : isGlobalPage && !isPlatformPage ? (
+          /* Global page: show global nav items as flat list */
+          globalNavItems.map((item) => {
+            const isActive = item.exact
+              ? pathname === item.href
+              : pathname === item.href || pathname.startsWith(item.href + "/");
+            return (
+              <NavLink key={item.href} href={item.href} icon={item.icon} label={item.label} isActive={isActive} />
+            );
+          })
         ) : (
-          /* Expanded: platform accordion */
+          /* Platform page: platform accordion */
           ((isSystemAdmin ? Object.keys(PLATFORMS) : enabledPlatforms) as PlatformId[])
             .filter((pid) => pid in PLATFORMS)
             .map((platformId) => {

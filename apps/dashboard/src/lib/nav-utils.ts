@@ -86,6 +86,23 @@ export function getNavItems(platformId: PlatformId, isAdmin?: boolean): NavItem[
   return items;
 }
 
+/** Global (cross-platform) navigation items for /overview, /apps, /keywords, etc. */
+export const globalNavItems: NavItem[] = [
+  { href: "/overview", label: "Overview", icon: LayoutDashboard, exact: true },
+  { href: "/apps", label: "All Apps", icon: AppWindow },
+  { href: "/keywords", label: "All Keywords", icon: Search },
+  { href: "/competitors", label: "All Competitors", icon: Star },
+  { href: "/developers", label: "Developers", icon: Code },
+];
+
+/** Check if pathname is a global (non-platform) page like /overview, /apps, /keywords, etc. */
+export function isOnGlobalPage(pathname: string): boolean {
+  return globalNavItems.some(
+    (item) =>
+      item.exact ? pathname === item.href : pathname === item.href || pathname.startsWith(item.href + "/")
+  );
+}
+
 export const systemAdminItems: NavItem[] = [
   { href: "/system-admin", label: "Overview", icon: Shield },
   { href: "/system-admin/accounts", label: "Accounts", icon: Users },

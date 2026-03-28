@@ -6,7 +6,7 @@ import { usePathname } from "next/navigation";
 import { Shield, PanelLeftClose, PanelLeftOpen } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
 import { PLATFORM_DISPLAY } from "@/lib/platform-display";
-import { extractPlatform, getNavItems, systemAdminItems, isOnPlatformPage } from "@/lib/nav-utils";
+import { extractPlatform, getNavItems, systemAdminItems, globalNavItems, isOnPlatformPage, isOnGlobalPage } from "@/lib/nav-utils";
 import { type PlatformId } from "@appranks/shared";
 import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 
@@ -36,24 +36,29 @@ export function IconSidebar() {
   const activePlatform = extractPlatform(pathname);
   const display = PLATFORM_DISPLAY[activePlatform];
 
-  // For system admins on non-platform/non-admin pages, show admin items
-  const showAdminFallback = isSystemAdmin && !isPlatformPage && !isAdminSection;
+  const isGlobalPage = isOnGlobalPage(pathname);
+  // For system admins on non-platform/non-admin/non-global pages (e.g. /settings), show admin items
+  const showAdminFallback = isSystemAdmin && !isPlatformPage && !isAdminSection && !isGlobalPage;
 
   const items = useMemo(
-    () => (isAdminSection || showAdminFallback ? systemAdminItems : getNavItems(activePlatform, isSystemAdmin)),
-    [activePlatform, isSystemAdmin, isAdminSection, showAdminFallback]
+    () => {
+      if (isAdminSection || showAdminFallback) return systemAdminItems;
+      if (isGlobalPage) return globalNavItems;
+      return getNavItems(activePlatform, isSystemAdmin);
+    },
+    [activePlatform, isSystemAdmin, isAdminSection, showAdminFallback, isGlobalPage]
   );
 
-  // Hide sidebar on non-platform, non-admin pages (unless system admin)
-  if (!isPlatformPage && !isAdminSection && !isSystemAdmin) return null;
+  // Show sidebar on platform pages, admin pages, global pages, or for system admins
+  if (!isPlatformPage && !isAdminSection && !isGlobalPage && !isSystemAdmin) return null;
 
-  const accentColor = isAdminSection || showAdminFallback ? undefined : display?.color;
+  const accentColor = isAdminSection || showAdminFallback || isGlobalPage ? undefined : display?.color;
 
   return (
     <aside
       className={`${expanded ? "w-48" : "w-14"} border-r bg-muted/30 sticky top-0 h-[calc(100vh-3.5rem)] hidden md:flex flex-col py-2 gap-1 shrink-0 transition-[width] duration-200 ease-in-out overflow-y-auto`}
     >
-      {/* System Admin header */}
+      {/* System Admin header (only on admin section or fallback, not global pages) */}
       {(isAdminSection || showAdminFallback) && (
         <>
           {expanded ? (

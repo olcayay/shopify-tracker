@@ -64,10 +64,14 @@ describe("IconSidebar", () => {
     expect(aside!.className).toContain("overflow-y-auto");
   });
 
-  it("renders nothing on non-platform pages like /overview", () => {
+  it("renders global nav items on /overview", () => {
     mockPathname.mockReturnValue("/overview");
     const { container } = render(<IconSidebar />);
-    expect(container.querySelector("aside")).toBeNull();
+    // Should render sidebar with global items
+    expect(container.querySelector("aside")).toBeTruthy();
+    expect(screen.getByText("Overview")).toBeInTheDocument();
+    expect(screen.getByText("All Apps")).toBeInTheDocument();
+    expect(screen.getByText("Developers")).toBeInTheDocument();
   });
 
   it("renders nothing on /settings page", () => {

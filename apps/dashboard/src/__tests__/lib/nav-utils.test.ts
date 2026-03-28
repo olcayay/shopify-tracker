@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { extractPlatform, extractSection, isOnPlatformPage, getNavItems, systemAdminItems } from "../../lib/nav-utils";
+import { extractPlatform, extractSection, isOnPlatformPage, isOnGlobalPage, getNavItems, systemAdminItems, globalNavItems } from "../../lib/nav-utils";
 
 describe("nav-utils", () => {
   describe("extractPlatform", () => {
@@ -95,6 +95,36 @@ describe("nav-utils", () => {
 
       const admin = getNavItems("shopify", true);
       expect(admin.some((i) => i.label === "Developers")).toBe(true);
+    });
+  });
+
+  describe("isOnGlobalPage", () => {
+    it("returns true for global pages", () => {
+      expect(isOnGlobalPage("/overview")).toBe(true);
+      expect(isOnGlobalPage("/apps")).toBe(true);
+      expect(isOnGlobalPage("/apps/some-slug")).toBe(true);
+      expect(isOnGlobalPage("/keywords")).toBe(true);
+      expect(isOnGlobalPage("/competitors")).toBe(true);
+      expect(isOnGlobalPage("/developers")).toBe(true);
+    });
+
+    it("returns false for non-global pages", () => {
+      expect(isOnGlobalPage("/settings")).toBe(false);
+      expect(isOnGlobalPage("/system-admin")).toBe(false);
+      expect(isOnGlobalPage("/shopify/apps")).toBe(false);
+      expect(isOnGlobalPage("/")).toBe(false);
+    });
+  });
+
+  describe("globalNavItems", () => {
+    it("has correct items", () => {
+      const labels = globalNavItems.map((i) => i.label);
+      expect(labels).toEqual(["Overview", "All Apps", "All Keywords", "All Competitors", "Developers"]);
+    });
+
+    it("Overview is exact match", () => {
+      const overview = globalNavItems.find((i) => i.label === "Overview");
+      expect(overview?.exact).toBe(true);
     });
   });
 

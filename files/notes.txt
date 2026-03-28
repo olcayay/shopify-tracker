@@ -1,3 +1,12 @@
+PLA-116: Sidebar context-aware navigation (2026-03-28)
+======================================================
+- Added globalNavItems (Overview, All Apps, All Keywords, All Competitors, Developers) to nav-utils.ts
+- Added isOnGlobalPage() helper to detect /overview, /apps, /keywords, /competitors, /developers
+- icon-sidebar.tsx: shows global nav items on global pages, admin items on admin pages, platform items otherwise
+- sidebar.tsx: shows global nav flat list on global pages, platform accordion on platform pages
+- dashboard-shell.tsx: shows mobile sidebar on global pages too
+- 7 new tests (isOnGlobalPage, globalNavItems, sidebar global page behavior)
+
 PLA-117: Add marketplace autocomplete to Request a Platform dialog (2026-03-28)
 ================================================================================
 - Created marketplace-list.ts with ~90 known app marketplaces (platformId set for 11 supported)
