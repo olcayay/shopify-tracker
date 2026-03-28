@@ -1,3 +1,5 @@
+PLA-109: Improve Available Platforms section visibility on Overview page ✅
+
 Dashboard UX improvements batch (PLA-102 ~ PLA-108) ✅
   PLA-102: Hide sidebar on homepage — show only on platform/admin pages
   PLA-103: Redesign platform discovery sidebar — padding, tracked/available sections, badge text

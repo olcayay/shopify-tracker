@@ -253,14 +253,14 @@ export default function CrossPlatformOverviewPage() {
 
             {/* Available Platforms — subdued container, smaller scale */}
             {available.length > 0 && (
-              <div className="rounded-xl border border-dashed bg-muted/20 p-5 space-y-3">
+              <div className="rounded-xl border bg-muted/30 p-5 space-y-3">
                 <div className="flex items-center gap-3">
-                  <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">Available Platforms</h3>
+                  <h3 className="text-base font-semibold text-foreground/70 uppercase tracking-wider">Available Platforms</h3>
                   <div className="flex-1 border-t border-dashed" />
                   <span className="text-xs text-muted-foreground">{available.length} platforms</span>
                 </div>
-                <p className="text-xs text-muted-foreground">Start tracking on any of these to see stats and rankings.</p>
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
+                <p className="text-sm text-muted-foreground">Start tracking on any of these to see stats and rankings.</p>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                   {available.map((pid) => (
                     <AvailablePlatformRow key={pid} platformId={pid} />
                   ))}
@@ -403,10 +403,10 @@ function AvailablePlatformRow({ platformId }: { platformId: PlatformId }) {
   return (
     <Link
       href={`/${platformId}`}
-      className="flex items-center gap-2.5 px-3 py-2.5 rounded-lg bg-background/60 hover:bg-background transition-colors group border border-transparent hover:border-border"
+      className="flex items-center gap-2.5 px-3 py-2.5 rounded-lg bg-background/80 hover:bg-background transition-colors group border border-transparent hover:border-border"
     >
       <span
-        className="w-2 h-2 rounded-full shrink-0 opacity-80"
+        className="w-2 h-2 rounded-full shrink-0"
         style={{ backgroundColor: brand.color }}
       />
       <span className="text-[13px] font-medium text-muted-foreground group-hover:text-foreground transition-colors">{config.name}</span>
@@ -414,7 +414,7 @@ function AvailablePlatformRow({ platformId }: { platformId: PlatformId }) {
         {capabilities.slice(0, 4).map((cap) => (
           <span
             key={cap.key}
-            className="text-[10px] px-1.5 py-0.5 rounded bg-muted/60 text-muted-foreground/70"
+            className="text-[10px] px-1.5 py-0.5 rounded bg-muted text-muted-foreground"
           >
             {cap.label}
           </span>

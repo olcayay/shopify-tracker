@@ -1,3 +1,13 @@
+PLA-109: Improve Available Platforms visibility (2026-03-28)
+============================================================
+- Container: solid border + bg-muted/30 (was dashed + bg-muted/20)
+- Title: text-base text-foreground/70 (was text-sm text-muted-foreground)
+- Description: text-sm (was text-xs)
+- Row bg: bg-background/80 (was bg-background/60)
+- Color dot: removed opacity-80
+- Badges: bg-muted text-muted-foreground (was bg-muted/60 text-muted-foreground/70)
+- Grid gap: gap-3 (was gap-2)
+
 Dashboard UX Improvements Batch (2026-03-28)
 =============================================
 
