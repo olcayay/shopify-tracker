@@ -2,7 +2,7 @@ import type { FastifyPluginAsync } from "fastify";
 import { eq, desc, sql, and, inArray, ilike } from "drizzle-orm";
 import { createDb } from "@appranks/db";
 import { computeWeightedPowerScore, validatePlatformData, createLogger } from "@appranks/shared";
-import { slugsBodySchema } from "../schemas/apps.js";
+import { slugsBodySchema } from "../schemas/apps";
 import { getPlatformFromQuery } from "../utils/platform.js";
 import { requireSystemAdmin } from "../middleware/authorize.js";
 import {
@@ -411,7 +411,7 @@ export const appRoutes: FastifyPluginAsync = async (app) => {
           a.slug AS app_slug, m.v7d, m.v30d, m.v90d, m.momentum
         FROM app_review_metrics m
         INNER JOIN apps a ON a.id = m.app_id
-        WHERE a.slug IN (${sql.join(slugs.map(s => sql`${s}`), sql`, `)})
+        WHERE a.slug IN (${sql.join(slugs.map((s: string) => sql`${s}`), sql`, `)})
           AND a.platform = ${platform}
         ORDER BY a.slug, m.computed_at DESC
       `).then((res: any) => (res as any).rows ?? res);
