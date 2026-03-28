@@ -86,7 +86,7 @@ export const appRoutes: FastifyPluginAsync = async (app) => {
     const compCountMap = new Map(competitorCounts.map((r) => [r.trackedAppId, r.count]));
     const kwCountMap = new Map(keywordCounts.map((r) => [r.trackedAppId, r.count]));
 
-    // Get ranked keyword counts per tracked app
+    // Get ranked keyword counts per tracked app (single batched query)
     const rankedKwMap = new Map<number, number>();
     const allKeywordRows = await db
       .select({
@@ -104,61 +104,76 @@ export const appRoutes: FastifyPluginAsync = async (app) => {
         kwByApp.set(row.trackedAppId, arr);
       }
 
-      for (const [trackedAppId, keywordIds] of kwByApp) {
-        const idList = sql.join(keywordIds.map((id) => sql`${id}`), sql`,`);
-        const rankedRows = await db.execute(sql`
-          SELECT COUNT(DISTINCT keyword_id)::int AS cnt
-          FROM (
-            SELECT DISTINCT ON (keyword_id) keyword_id, position
-            FROM app_keyword_rankings
-            WHERE app_id = ${trackedAppId}
-              AND keyword_id IN (${idList})
-            ORDER BY keyword_id, scraped_at DESC
-          ) latest
-          WHERE position IS NOT NULL
-        `);
-        const data: any[] = (rankedRows as any).rows ?? rankedRows;
-        rankedKwMap.set(trackedAppId, data[0]?.cnt ?? 0);
+      // Build a single query for all tracked apps at once
+      const allTrackedAppIds = [...kwByApp.keys()];
+      const allKeywordIds = [...new Set(allKeywordRows.map((r) => r.keywordId))];
+      const appIdList = sql.join(allTrackedAppIds.map((id) => sql`${id}`), sql`,`);
+      const kwIdList = sql.join(allKeywordIds.map((id) => sql`${id}`), sql`,`);
+
+      const rankedRows = await db.execute(sql`
+        SELECT app_id, COUNT(DISTINCT keyword_id)::int AS cnt
+        FROM (
+          SELECT DISTINCT ON (app_id, keyword_id) app_id, keyword_id, position
+          FROM app_keyword_rankings
+          WHERE app_id IN (${appIdList})
+            AND keyword_id IN (${kwIdList})
+          ORDER BY app_id, keyword_id, scraped_at DESC
+        ) latest
+        WHERE position IS NOT NULL
+        GROUP BY app_id
+      `);
+      const rankedData: any[] = (rankedRows as any).rows ?? rankedRows;
+      for (const row of rankedData) {
+        rankedKwMap.set(row.app_id, row.cnt);
       }
     }
 
-    // Get latest snapshot for each app
-    const result = await Promise.all(
-      rows.map(async (appRow) => {
-        const [snapshot] = await db
-          .select({
-            averageRating: appSnapshots.averageRating,
-            ratingCount: appSnapshots.ratingCount,
-            pricing: appSnapshots.pricing,
-            pricingPlans: appSnapshots.pricingPlans,
-            scrapedAt: appSnapshots.scrapedAt,
-          })
-          .from(appSnapshots)
-          .where(eq(appSnapshots.appId, appRow.id))
-          .orderBy(desc(appSnapshots.scrapedAt))
-          .limit(1);
+    // Get latest snapshots and changes in batch (2 queries instead of 2*N)
+    const appIds2 = rows.map((r) => r.id);
 
-        const [change] = await db
-          .select({ detectedAt: appFieldChanges.detectedAt })
-          .from(appFieldChanges)
-          .where(eq(appFieldChanges.appId, appRow.id))
-          .orderBy(desc(appFieldChanges.detectedAt))
-          .limit(1);
+    const [latestSnapshots, latestChanges] = await Promise.all([
+      db.execute(sql`
+        SELECT DISTINCT ON (app_id) app_id, average_rating, rating_count, pricing, pricing_plans, scraped_at
+        FROM app_snapshots
+        WHERE app_id IN (${sql.join(appIds2.map((id) => sql`${id}`), sql`,`)})
+        ORDER BY app_id, scraped_at DESC
+      `),
+      db.execute(sql`
+        SELECT DISTINCT ON (app_id) app_id, detected_at
+        FROM app_field_changes
+        WHERE app_id IN (${sql.join(appIds2.map((id) => sql`${id}`), sql`,`)})
+        ORDER BY app_id, detected_at DESC
+      `),
+    ]);
 
-        const minPaidPrice = getMinPaidPrice(snapshot?.pricingPlans);
-        const { pricingPlans: _, ...snapshotRest } = snapshot || ({} as any);
+    const snapshotData: any[] = (latestSnapshots as any).rows ?? latestSnapshots;
+    const changeData: any[] = (latestChanges as any).rows ?? latestChanges;
 
-        return {
-          ...appRow,
-          latestSnapshot: snapshot ? snapshotRest : null,
-          minPaidPrice,
-          lastChangeAt: change?.detectedAt || null,
-          competitorCount: compCountMap.get(appRow.id) ?? 0,
-          keywordCount: kwCountMap.get(appRow.id) ?? 0,
-          rankedKeywordCount: rankedKwMap.get(appRow.id) ?? 0,
-        };
-      })
-    );
+    const snapshotMap = new Map(snapshotData.map((s: any) => [s.app_id, s]));
+    const changeMap = new Map(changeData.map((c: any) => [c.app_id, c]));
+
+    const result = rows.map((appRow) => {
+      const snapshot = snapshotMap.get(appRow.id);
+      const change = changeMap.get(appRow.id);
+      const minPaidPrice = getMinPaidPrice(snapshot?.pricing_plans);
+
+      return {
+        ...appRow,
+        latestSnapshot: snapshot
+          ? {
+              averageRating: snapshot.average_rating,
+              ratingCount: snapshot.rating_count,
+              pricing: snapshot.pricing,
+              scrapedAt: snapshot.scraped_at,
+            }
+          : null,
+        minPaidPrice,
+        lastChangeAt: change?.detected_at || null,
+        competitorCount: compCountMap.get(appRow.id) ?? 0,
+        keywordCount: kwCountMap.get(appRow.id) ?? 0,
+        rankedKeywordCount: rankedKwMap.get(appRow.id) ?? 0,
+      };
+    });
 
     return result;
   });
