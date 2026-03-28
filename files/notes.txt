@@ -1,3 +1,13 @@
+Ensure Unit Tests Run in GitHub Actions CI (2026-03-28)
+================================================================
+**PLA-229:** Two API tests timed out in CI because BullMQ Redis connections hung indefinitely.
+
+- Added `connectTimeout: 3000`, `maxRetriesPerRequest: 1`, and `retryStrategy` to Redis
+  connections in `account-tracking.ts` and `system-admin.ts` so BullMQ fails fast
+  when Redis is unavailable (CI has no Redis)
+- Increased API vitest `testTimeout` from 5s to 10s for CI's slower environment
+- Affected tests: "accepts valid slug from editor" and "accepts valid scraper type for admin"
+
 Fix Stalled Jobs: Add Linear Alerts and Periodic Stale Run Cleanup (2026-03-28)
 ================================================================
 **PLA-230:** Stalled BullMQ jobs had no error logging, no Linear alerts, and left orphaned scrape_runs.

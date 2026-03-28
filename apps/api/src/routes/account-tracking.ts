@@ -55,6 +55,9 @@ function getRedisConnection() {
     host: parsed.hostname,
     port: parseInt(parsed.port || "6379", 10),
     password: parsed.password || undefined,
+    maxRetriesPerRequest: 1,
+    connectTimeout: 3000,
+    retryStrategy: (times: number) => (times > 1 ? null : 1000),
   };
 }
 
