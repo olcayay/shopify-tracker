@@ -1,3 +1,4 @@
+PLA-119: Create platform data reference document (PLATFORM-DATA-MATRIX.md) ✅
 PLA-127: Link overview summary stats to cross-platform pages ✅
 PLA-128: Direct navigation to detail page when only 1 tracked item on Overview ✅
 PLA-112: Dashboard cross-platform /developers listing page ✅
