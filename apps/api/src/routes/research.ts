@@ -30,6 +30,18 @@ import {
 } from "@appranks/shared";
 import { requireRole } from "../middleware/authorize.js";
 import { getPlatformFromQuery } from "../utils/platform.js";
+import {
+  createProjectSchema,
+  updateProjectSchema,
+  addKeywordSchema,
+  addCompetitorSchema,
+  createVirtualAppSchema,
+  updateVirtualAppSchema,
+  addCategoryFeatureSchema,
+  removeCategoryFeatureSchema,
+  addFeatureSchema,
+  addIntegrationSchema,
+} from "../schemas/research.js";
 
 const INTERACTIVE_QUEUE_NAME = "scraper-jobs-interactive";
 
@@ -284,7 +296,7 @@ export const researchRoutes: FastifyPluginAsync = async (app) => {
     { preHandler: [requireRole("owner", "editor")] },
     async (request, reply) => {
       const { accountId, userId } = request.user;
-      const { name } = request.body || {};
+      const { name } = createProjectSchema.parse(request.body);
       const platform = getPlatformFromQuery(request.query as Record<string, unknown>);
 
       // Check limit
@@ -327,11 +339,7 @@ export const researchRoutes: FastifyPluginAsync = async (app) => {
     async (request, reply) => {
       const { accountId } = request.user;
       const { id } = request.params;
-      const { name } = request.body;
-
-      if (!name?.trim()) {
-        return reply.code(400).send({ error: "Name is required" });
-      }
+      const { name } = updateProjectSchema.parse(request.body);
 
       const [updated] = await db
         .update(researchProjects)
@@ -375,11 +383,7 @@ export const researchRoutes: FastifyPluginAsync = async (app) => {
     async (request, reply) => {
       const { accountId } = request.user;
       const { id } = request.params;
-      const { keyword } = request.body;
-
-      if (!keyword?.trim()) {
-        return reply.code(400).send({ error: "Keyword is required" });
-      }
+      const { keyword } = addKeywordSchema.parse(request.body);
 
       // Verify project belongs to account
       const [project] = await db
@@ -509,11 +513,7 @@ export const researchRoutes: FastifyPluginAsync = async (app) => {
     async (request, reply) => {
       const { accountId } = request.user;
       const { id } = request.params;
-      const { slug } = request.body;
-
-      if (!slug?.trim()) {
-        return reply.code(400).send({ error: "App slug is required" });
-      }
+      const { slug } = addCompetitorSchema.parse(request.body);
 
       // Verify project belongs to account
       const [project] = await db
@@ -709,19 +709,23 @@ export const researchRoutes: FastifyPluginAsync = async (app) => {
           )
         );
 
-      // Simpler approach: get latest per keyword
+      // Batch: get latest snapshot per keyword in a single query
       const snapshotMap = new Map<number, { totalResults: number | null; scrapedAt: Date }>();
-      for (const kwId of keywordIds) {
-        const [snap] = await db
-          .select({
-            totalResults: keywordSnapshots.totalResults,
-            scrapedAt: keywordSnapshots.scrapedAt,
-          })
-          .from(keywordSnapshots)
-          .where(eq(keywordSnapshots.keywordId, kwId))
-          .orderBy(desc(keywordSnapshots.scrapedAt))
-          .limit(1);
-        if (snap) snapshotMap.set(kwId, snap);
+      if (keywordIds.length > 0) {
+        const kwIdList = sql.join(keywordIds.map((id) => sql`${id}`), sql`,`);
+        const kwSnaps = await db.execute(sql`
+          SELECT DISTINCT ON (keyword_id) keyword_id, total_results, scraped_at
+          FROM keyword_snapshots
+          WHERE keyword_id IN (${kwIdList})
+          ORDER BY keyword_id, scraped_at DESC
+        `);
+        const kwSnapData: any[] = (kwSnaps as any).rows ?? kwSnaps;
+        for (const row of kwSnapData) {
+          snapshotMap.set(row.keyword_id, {
+            totalResults: row.total_results,
+            scrapedAt: row.scraped_at,
+          });
+        }
       }
 
       keywordData = projectKeywordRows.map((k) => {
@@ -774,36 +778,50 @@ export const researchRoutes: FastifyPluginAsync = async (app) => {
 
       const appMap = new Map(appRows.map((a) => [a.slug, a]));
 
-      // Get latest snapshot per competitor for categories + pricing plans
-      const snapshotMap = new Map<string, any>();
-      for (const comp of projectCompRows) {
-        const [snap] = await db
-          .select({
-            categories: appSnapshots.categories,
-            pricingPlans: appSnapshots.pricingPlans,
-            features: appSnapshots.features,
-            integrations: appSnapshots.integrations,
-            languages: appSnapshots.languages,
-            appIntroduction: appSnapshots.appIntroduction,
-            appDetails: appSnapshots.appDetails,
-          })
-          .from(appSnapshots)
-          .where(eq(appSnapshots.appId, comp.appId))
-          .orderBy(desc(appSnapshots.scrapedAt))
-          .limit(1);
-        if (snap) snapshotMap.set(comp.appSlug, snap);
-      }
-
-      // Get latest power scores per competitor
+      // Batch: get latest snapshot + power scores per competitor (2 queries instead of 2*N)
+      const compSnapshotMap = new Map<string, any>();
       const powerMap = new Map<string, number>();
-      for (const comp of projectCompRows) {
-        const [score] = await db
-          .select({ powerScore: appPowerScores.powerScore })
-          .from(appPowerScores)
-          .where(eq(appPowerScores.appId, comp.appId))
-          .orderBy(desc(appPowerScores.computedAt))
-          .limit(1);
-        if (score) powerMap.set(comp.appSlug, score.powerScore);
+
+      if (competitorAppIds.length > 0) {
+        const compIdList = sql.join(competitorAppIds.map((id) => sql`${id}`), sql`,`);
+
+        const [snapRows, scoreRows] = await Promise.all([
+          db.execute(sql`
+            SELECT DISTINCT ON (app_id) app_id, categories, pricing_plans, features,
+              integrations, languages, app_introduction, app_details
+            FROM app_snapshots
+            WHERE app_id IN (${compIdList})
+            ORDER BY app_id, scraped_at DESC
+          `),
+          db.execute(sql`
+            SELECT DISTINCT ON (app_id) app_id, power_score
+            FROM app_power_scores
+            WHERE app_id IN (${compIdList})
+            ORDER BY app_id, computed_at DESC
+          `),
+        ]);
+
+        const snapData: any[] = (snapRows as any).rows ?? snapRows;
+        for (const row of snapData) {
+          const slug = idToSlugMap.get(row.app_id);
+          if (slug) {
+            compSnapshotMap.set(slug, {
+              categories: row.categories,
+              pricingPlans: row.pricing_plans,
+              features: row.features,
+              integrations: row.integrations,
+              languages: row.languages,
+              appIntroduction: row.app_introduction,
+              appDetails: row.app_details,
+            });
+          }
+        }
+
+        const scoreData: any[] = (scoreRows as any).rows ?? scoreRows;
+        for (const row of scoreData) {
+          const slug = idToSlugMap.get(row.app_id);
+          if (slug) powerMap.set(slug, row.power_score);
+        }
       }
 
       // Get category rankings per competitor
@@ -934,7 +952,7 @@ export const researchRoutes: FastifyPluginAsync = async (app) => {
 
       competitorData = projectCompRows.map((c) => {
         const appInfo = appMap.get(c.appSlug);
-        const snap = snapshotMap.get(c.appSlug);
+        const snap = compSnapshotMap.get(c.appSlug);
         const rawRanks = compLatestCatRank.get(c.appSlug) || [];
         const rankedSlugs = rawRanks.map((r) => r.categorySlug);
         const catRanks = rawRanks
@@ -971,34 +989,30 @@ export const researchRoutes: FastifyPluginAsync = async (app) => {
     // 6. Keyword rankings matrix
     let keywordRankings: Record<string, Record<string, number>> = {};
     if (keywordIds.length > 0 && competitorSlugs.length > 0) {
-      // Get latest rankings for project keywords x competitors
-      for (const kw of projectKeywordRows) {
-        const rankings = await db
-          .select({
-            appSlug: apps.slug,
-            position: appKeywordRankings.position,
-          })
-          .from(appKeywordRankings)
-          .innerJoin(apps, eq(apps.id, appKeywordRankings.appId))
-          .where(
-            and(
-              eq(appKeywordRankings.keywordId, kw.keywordId),
-              inArray(appKeywordRankings.appId, competitorAppIds),
-              isNotNull(appKeywordRankings.position)
-            )
-          )
-          .orderBy(desc(appKeywordRankings.scrapedAt))
-          .limit(competitorSlugs.length * 2); // Get enough for latest per app
+      // Batch: get latest rankings for all keywords x all competitors in one query
+      const kwIdList = sql.join(keywordIds.map((id) => sql`${id}`), sql`,`);
+      const compIdList2 = sql.join(competitorAppIds.map((id) => sql`${id}`), sql`,`);
 
-        // Pick latest per app
-        const latestPerApp = new Map<string, number>();
-        for (const r of rankings) {
-          if (r.position != null && !latestPerApp.has(r.appSlug)) {
-            latestPerApp.set(r.appSlug, r.position);
-          }
-        }
-        if (latestPerApp.size > 0) {
-          keywordRankings[kw.slug] = Object.fromEntries(latestPerApp);
+      const allRankings = await db.execute(sql`
+        SELECT DISTINCT ON (akr.keyword_id, akr.app_id)
+          akr.keyword_id, a.slug AS app_slug, akr.position
+        FROM app_keyword_rankings akr
+        INNER JOIN apps a ON a.id = akr.app_id
+        WHERE akr.keyword_id IN (${kwIdList})
+          AND akr.app_id IN (${compIdList2})
+          AND akr.position IS NOT NULL
+        ORDER BY akr.keyword_id, akr.app_id, akr.scraped_at DESC
+      `);
+      const rankData: any[] = (allRankings as any).rows ?? allRankings;
+
+      // Build keyword slug lookup
+      const kwIdToSlug = new Map(projectKeywordRows.map((k) => [k.keywordId, k.slug]));
+
+      for (const row of rankData) {
+        const kwSlug = kwIdToSlug.get(row.keyword_id);
+        if (kwSlug && row.position != null) {
+          if (!keywordRankings[kwSlug]) keywordRankings[kwSlug] = {};
+          keywordRankings[kwSlug][row.app_slug] = row.position;
         }
       }
     }
@@ -1088,6 +1102,35 @@ export const researchRoutes: FastifyPluginAsync = async (app) => {
       }
     }
 
+    // Batch: get latest snapshot + app info per competitor for metadata extraction
+    // Reused by keyword suggestions (section 8) and word analysis (section 9)
+    const compMetadataMap = new Map<string, any>();
+    if (competitorAppIds.length > 0) {
+      const metaIdList = sql.join(competitorAppIds.map((id) => sql`${id}`), sql`,`);
+      const metaRows = await db.execute(sql`
+        SELECT DISTINCT ON (s.app_id) s.app_id, a.name, a.app_card_subtitle,
+          s.app_introduction, s.app_details, s.features, s.categories
+        FROM app_snapshots s
+        INNER JOIN apps a ON a.id = s.app_id
+        WHERE s.app_id IN (${metaIdList})
+        ORDER BY s.app_id, s.scraped_at DESC
+      `);
+      const metaData: any[] = (metaRows as any).rows ?? metaRows;
+      for (const row of metaData) {
+        const slug = idToSlugMap.get(row.app_id);
+        if (slug) {
+          compMetadataMap.set(slug, {
+            name: row.name,
+            appCardSubtitle: row.app_card_subtitle,
+            appIntroduction: row.app_introduction,
+            appDetails: row.app_details,
+            features: row.features,
+            categories: row.categories,
+          });
+        }
+      }
+    }
+
     // 8. Keyword suggestions (from competitor rankings + metadata)
     let keywordSuggestions: any[] = [];
     if (competitorSlugs.length > 0) {
@@ -1133,21 +1176,7 @@ export const researchRoutes: FastifyPluginAsync = async (app) => {
       // Source B: Keywords from competitor metadata
       const metadataKeywords = new Map<string, { count: number; sources: string[] }>();
       for (const comp of projectCompRows) {
-        const [snap] = await db
-          .select({
-            name: apps.name,
-            appCardSubtitle: apps.appCardSubtitle,
-            appIntroduction: appSnapshots.appIntroduction,
-            appDetails: appSnapshots.appDetails,
-            features: appSnapshots.features,
-            categories: appSnapshots.categories,
-          })
-          .from(appSnapshots)
-          .innerJoin(apps, eq(apps.id, appSnapshots.appId))
-          .where(eq(appSnapshots.appId, comp.appId))
-          .orderBy(desc(appSnapshots.scrapedAt))
-          .limit(1);
-
+        const snap = compMetadataMap.get(comp.appSlug);
         if (snap) {
           const extracted = extractKeywordsFromAppMetadata({
             name: snap.name,
@@ -1206,21 +1235,7 @@ export const researchRoutes: FastifyPluginAsync = async (app) => {
       >();
 
       for (const comp of projectCompRows) {
-        const [snap] = await db
-          .select({
-            name: apps.name,
-            appCardSubtitle: apps.appCardSubtitle,
-            appIntroduction: appSnapshots.appIntroduction,
-            appDetails: appSnapshots.appDetails,
-            features: appSnapshots.features,
-            categories: appSnapshots.categories,
-          })
-          .from(appSnapshots)
-          .innerJoin(apps, eq(apps.id, appSnapshots.appId))
-          .where(eq(appSnapshots.appId, comp.appId))
-          .orderBy(desc(appSnapshots.scrapedAt))
-          .limit(1);
-
+        const snap = compMetadataMap.get(comp.appSlug);
         if (snap) {
           const extracted = extractKeywordsFromAppMetadata({
             name: snap.name,
@@ -1394,22 +1409,25 @@ export const researchRoutes: FastifyPluginAsync = async (app) => {
         .sort((a, b) => b.count - a.count);
     }
 
-    // 12. Keyword opportunities
+    // 12. Keyword opportunities (batched snapshot query)
     let opportunities: any[] = [];
     if (keywordIds.length >= 3 && competitorSlugs.length >= 2) {
+      // Batch: get latest snapshot with results per keyword
+      const oppKwIdList = sql.join(keywordIds.map((id) => sql`${id}`), sql`,`);
+      const oppSnaps = await db.execute(sql`
+        SELECT DISTINCT ON (keyword_id) keyword_id, total_results, results
+        FROM keyword_snapshots
+        WHERE keyword_id IN (${oppKwIdList})
+        ORDER BY keyword_id, scraped_at DESC
+      `);
+      const oppSnapData: any[] = (oppSnaps as any).rows ?? oppSnaps;
+      const oppSnapMap = new Map(oppSnapData.map((r: any) => [r.keyword_id, r]));
+
       for (const kw of projectKeywordRows) {
-        const [snap] = await db
-          .select({
-            totalResults: keywordSnapshots.totalResults,
-            results: keywordSnapshots.results,
-          })
-          .from(keywordSnapshots)
-          .where(eq(keywordSnapshots.keywordId, kw.keywordId))
-          .orderBy(desc(keywordSnapshots.scrapedAt))
-          .limit(1);
+        const snap = oppSnapMap.get(kw.keywordId);
 
         if (snap?.results && Array.isArray(snap.results) && snap.results.length > 0) {
-          const metrics = computeKeywordOpportunity(snap.results, snap.totalResults);
+          const metrics = computeKeywordOpportunity(snap.results, snap.total_results);
 
           // How many of our competitors rank?
           const kwRankings = keywordRankings[kw.slug] || {};
@@ -1422,7 +1440,7 @@ export const researchRoutes: FastifyPluginAsync = async (app) => {
             room: metrics.scores.room,
             demand: metrics.scores.demand,
             competitorCount: rankingComps,
-            totalResults: snap.totalResults,
+            totalResults: snap.total_results,
           });
         }
       }
@@ -1870,7 +1888,7 @@ Generate differentiated app concepts. Consider:
     async (request, reply) => {
       const { accountId } = request.user;
       const { id } = request.params;
-      const body = request.body || {};
+      const body = createVirtualAppSchema.parse(request.body);
 
       const [project] = await db
         .select({ id: researchProjects.id })
@@ -1916,7 +1934,7 @@ Generate differentiated app concepts. Consider:
     async (request, reply) => {
       const { accountId } = request.user;
       const { id, vaId } = request.params;
-      const body = request.body || {};
+      const body = updateVirtualAppSchema.parse(request.body);
 
       const [project] = await db
         .select({ id: researchProjects.id })
@@ -2003,7 +2021,7 @@ Generate differentiated app concepts. Consider:
     async (request, reply) => {
       const { accountId } = request.user;
       const { id, vaId } = request.params;
-      const { categoryTitle, subcategoryTitle, featureTitle, featureHandle, featureUrl } = request.body;
+      const { categoryTitle, subcategoryTitle, featureTitle, featureHandle, featureUrl } = addCategoryFeatureSchema.parse(request.body);
 
       const [project] = await db
         .select({ id: researchProjects.id })
@@ -2053,7 +2071,7 @@ Generate differentiated app concepts. Consider:
     async (request, reply) => {
       const { accountId } = request.user;
       const { id, vaId } = request.params;
-      const { categoryTitle, subcategoryTitle, featureHandle } = request.body;
+      const { categoryTitle, subcategoryTitle, featureHandle } = removeCategoryFeatureSchema.parse(request.body);
 
       const [project] = await db
         .select({ id: researchProjects.id })
@@ -2100,7 +2118,7 @@ Generate differentiated app concepts. Consider:
     async (request, reply) => {
       const { accountId } = request.user;
       const { id, vaId } = request.params;
-      const { feature } = request.body;
+      const { feature } = addFeatureSchema.parse(request.body);
 
       const [project] = await db
         .select({ id: researchProjects.id })
@@ -2136,7 +2154,7 @@ Generate differentiated app concepts. Consider:
     async (request, reply) => {
       const { accountId } = request.user;
       const { id, vaId } = request.params;
-      const { feature } = request.body;
+      const { feature } = addFeatureSchema.parse(request.body);
 
       const [project] = await db
         .select({ id: researchProjects.id })
@@ -2170,7 +2188,7 @@ Generate differentiated app concepts. Consider:
     async (request, reply) => {
       const { accountId } = request.user;
       const { id, vaId } = request.params;
-      const { integration } = request.body;
+      const { integration } = addIntegrationSchema.parse(request.body);
 
       const [project] = await db
         .select({ id: researchProjects.id })
@@ -2206,7 +2224,7 @@ Generate differentiated app concepts. Consider:
     async (request, reply) => {
       const { accountId } = request.user;
       const { id, vaId } = request.params;
-      const { integration } = request.body;
+      const { integration } = addIntegrationSchema.parse(request.body);
 
       const [project] = await db
         .select({ id: researchProjects.id })
