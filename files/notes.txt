@@ -1,3 +1,24 @@
+App Detail v2 — Phase 0 (PLA-138, PLA-140, PLA-142, PLA-145) (2026-03-28)
+===================================================================
+- PLA-138: Created v2 directory structure at /[platform]/apps/v2/[slug]/
+  - 14 routes: dashboard, visibility (overview/keywords/rankings/ads/featured),
+    intel (overview/competitors/similar/reviews/changes), studio (overview/draft/preview)
+  - Each with placeholder pages, section layouts, sub-nav components
+- PLA-140: Compact 2-row header replacing v1's 5-row layout
+  - Row 1: App icon + name + inline stats (rating, reviews, pricing, developer)
+  - Row 2: Visibility/Power score bars + action buttons (external, scraper, star, track)
+  - ScoreBar component with color-coded progress bars (green/amber/orange/red)
+- PLA-142: V2Nav (4-section dropdown navigation) + SubNavPills (pill-style sub-nav)
+  - Dashboard, Visibility, Market Intel, Listing Studio sections
+  - Dropdown menus with platform-capability-aware sub-items
+  - Studio section gated to tracked apps only
+  - localStorage-based last-visited section persistence
+- PLA-145: v1↔v2 toggle links
+  - V1: dismissible promo banner ("Try the new app detail experience!")
+  - V2: "Back to classic view" link in score bar row
+  - Banner dismissal persisted via localStorage
+- 23 unit tests across 4 test files (score-bar, v2-nav, sub-nav-pills, v2-promo-banner)
+
 PLA-127 + PLA-128: Overview page UX improvements (2026-03-28)
 ==============================================================
 - PLA-127: Cross-platform summary stat pills (Apps, Keywords, Competitors) now link to /apps, /keywords, /competitors

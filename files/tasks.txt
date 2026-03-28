@@ -1,3 +1,9 @@
+App Detail v2 Redesign — Phase 0 (PLA-138, PLA-140, PLA-142, PLA-145) ✅
+  PLA-138: Create v2 directory structure and routing foundation ✅
+  PLA-140: Build compact header layout with scores ✅
+  PLA-142: Build V2Nav and SubNavPills components ✅
+  PLA-145: Add v1↔v2 toggle links ✅
+
 PLA-122: Migrate isBuiltForShopify column to badges array ✅ (migration documented, deploy pending)
 PLA-123: Move Shopify-only snapshot columns to platformData ✅ (migration documented, deploy pending)
 PLA-126: Update ADDING_NEW_PLATFORM.md for typed platformData workflow ✅

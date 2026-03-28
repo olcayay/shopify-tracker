@@ -9,6 +9,7 @@ import { TrackAppButton } from "./track-button";
 import { StarAppButton } from "@/components/star-app-button";
 import { AdminScraperTrigger } from "@/components/admin-scraper-trigger";
 import { AppNav } from "./app-nav";
+import { V2PromoBanner } from "@/components/v2/v2-promo-banner";
 import { buildExternalAppUrl, getPlatformName } from "@/lib/platform-urls";
 import { PLATFORMS, isPlatformId, developerNameToSlug, type PlatformId } from "@appranks/shared";
 
@@ -39,6 +40,7 @@ export default async function AppDetailLayout({
 
   return (
     <div className="space-y-6">
+      <V2PromoBanner />
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div className="flex items-start gap-3">
           <AppIcon src={app.iconUrl} className="h-16 w-16 rounded-lg" />
