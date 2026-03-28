@@ -1,3 +1,10 @@
+PLA-127 + PLA-128: Overview page UX improvements (2026-03-28)
+==============================================================
+- PLA-127: Cross-platform summary stat pills (Apps, Keywords, Competitors) now link to /apps, /keywords, /competitors
+- PLA-128: When count=1, stat links go directly to detail page (appSlug, keywordSlug, competitorSlug)
+- Extended PlatformStats interface with optional slug fields
+- loadData captures slugs when array length === 1
+
 PLA-112 to PLA-115: Cross-platform listing pages (2026-03-28)
 ===============================================================
 - /developers — global developers with platform badges, search, sort, pagination

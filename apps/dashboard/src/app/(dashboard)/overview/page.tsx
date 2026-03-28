@@ -26,6 +26,9 @@ interface PlatformStats {
   apps: number;
   keywords: number;
   competitors: number;
+  appSlug?: string;
+  keywordSlug?: string;
+  competitorSlug?: string;
 }
 
 type Persona = "new_user" | "single_platform" | "multi_platform";
@@ -79,12 +82,17 @@ export default function CrossPlatformOverviewPage() {
             ),
           ]);
 
+          const appsArr = Array.isArray(appsRes) ? appsRes : [];
+          const keywordsArr = Array.isArray(keywordsRes) ? keywordsRes : [];
+          const competitorsArr = Array.isArray(competitorsRes) ? competitorsRes : [];
+
           platformStats[p] = {
-            apps: Array.isArray(appsRes) ? appsRes.length : 0,
-            keywords: Array.isArray(keywordsRes) ? keywordsRes.length : 0,
-            competitors: Array.isArray(competitorsRes)
-              ? competitorsRes.length
-              : 0,
+            apps: appsArr.length,
+            keywords: keywordsArr.length,
+            competitors: competitorsArr.length,
+            appSlug: appsArr.length === 1 ? appsArr[0]?.slug : undefined,
+            keywordSlug: keywordsArr.length === 1 ? keywordsArr[0]?.slug : undefined,
+            competitorSlug: competitorsArr.length === 1 ? competitorsArr[0]?.slug : undefined,
           };
         })
       );
@@ -195,15 +203,15 @@ export default function CrossPlatformOverviewPage() {
                 </div>
                 <div className="flex flex-wrap gap-4">
                   {[
-                    { icon: AppWindow, value: totalApps, label: "Apps", bg: "bg-blue-50", ring: "ring-blue-200", text: "text-blue-600" },
-                    { icon: Search, value: totalKeywords, label: "Keywords", bg: "bg-purple-50", ring: "ring-purple-200", text: "text-purple-600" },
-                    { icon: Star, value: totalCompetitors, label: "Competitors", bg: "bg-amber-50", ring: "ring-amber-200", text: "text-amber-600" },
-                  ].map(({ icon: Icon, value, label, bg, ring, text }) => (
-                    <div key={label} className={`flex items-center gap-2.5 px-5 py-2.5 rounded-xl ${bg} ring-1 ${ring}`}>
+                    { icon: AppWindow, value: totalApps, label: "Apps", bg: "bg-blue-50", ring: "ring-blue-200", text: "text-blue-600", href: "/apps" },
+                    { icon: Search, value: totalKeywords, label: "Keywords", bg: "bg-purple-50", ring: "ring-purple-200", text: "text-purple-600", href: "/keywords" },
+                    { icon: Star, value: totalCompetitors, label: "Competitors", bg: "bg-amber-50", ring: "ring-amber-200", text: "text-amber-600", href: "/competitors" },
+                  ].map(({ icon: Icon, value, label, bg, ring, text, href }) => (
+                    <Link key={label} href={href} className={`flex items-center gap-2.5 px-5 py-2.5 rounded-xl ${bg} ring-1 ${ring} hover:ring-2 transition-all`}>
                       <Icon className={`h-5 w-5 ${text}`} />
                       <span className={`text-2xl font-bold tracking-tight ${text}`}>{value}</span>
                       <span className="text-sm text-muted-foreground">{label}</span>
-                    </div>
+                    </Link>
                   ))}
                 </div>
               </div>
@@ -349,17 +357,17 @@ function PlatformCard({
         <CardContent className="space-y-4 pt-4">
           {/* Stats — each clickable to its section */}
           <div className="grid grid-cols-3 gap-4">
-            <Link href={`${p}/apps`} className="text-center hover:bg-muted/50 rounded-lg py-1.5 -mx-1 px-1 transition-colors" onClick={(e) => e.stopPropagation()}>
+            <Link href={stats?.appSlug ? `${p}/apps/${stats.appSlug}` : `${p}/apps`} className="text-center hover:bg-muted/50 rounded-lg py-1.5 -mx-1 px-1 transition-colors" onClick={(e) => e.stopPropagation()}>
               <div className="text-2xl font-bold">{stats?.apps ?? 0}</div>
               <div className="text-xs text-muted-foreground">Apps</div>
             </Link>
             {config.hasKeywordSearch && (
-              <Link href={`${p}/keywords`} className="text-center hover:bg-muted/50 rounded-lg py-1.5 -mx-1 px-1 transition-colors" onClick={(e) => e.stopPropagation()}>
+              <Link href={stats?.keywordSlug ? `${p}/keywords/${stats.keywordSlug}` : `${p}/keywords`} className="text-center hover:bg-muted/50 rounded-lg py-1.5 -mx-1 px-1 transition-colors" onClick={(e) => e.stopPropagation()}>
                 <div className="text-2xl font-bold">{stats?.keywords ?? 0}</div>
                 <div className="text-xs text-muted-foreground">Keywords</div>
               </Link>
             )}
-            <Link href={`${p}/competitors`} className="text-center hover:bg-muted/50 rounded-lg py-1.5 -mx-1 px-1 transition-colors" onClick={(e) => e.stopPropagation()}>
+            <Link href={stats?.competitorSlug ? `${p}/apps/${stats.competitorSlug}` : `${p}/competitors`} className="text-center hover:bg-muted/50 rounded-lg py-1.5 -mx-1 px-1 transition-colors" onClick={(e) => e.stopPropagation()}>
               <div className="text-2xl font-bold">{stats?.competitors ?? 0}</div>
               <div className="text-xs text-muted-foreground">Competitors</div>
             </Link>
