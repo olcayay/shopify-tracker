@@ -40,6 +40,15 @@ PLA-116: Sidebar context-aware navigation (2026-03-28)
 - dashboard-shell.tsx: shows mobile sidebar on global pages too
 - 7 new tests (isOnGlobalPage, globalNavItems, sidebar global page behavior)
 
+PLA-120-126: Platform data type system (2026-03-28)
+====================================================
+- PLA-120: 12 typed interfaces in packages/shared/src/types/platform-data/
+- PLA-121: NormalizedAppDetails JSDoc + getPlatformData() type guard
+- PLA-124: Platform section registry (atlassian, salesforce, google_workspace, wordpress)
+- PLA-125: Zod schemas with validatePlatformData() (non-blocking, passthrough)
+- PLA-126: Updated ADDING_NEW_PLATFORM.md with Phase 1b and Phase 5 checklist items
+- PLA-122/123: DB migrations documented, pending coordinated deploy
+
 PLA-117: Add marketplace autocomplete to Request a Platform dialog (2026-03-28)
 ================================================================================
 - Created marketplace-list.ts with ~90 known app marketplaces (platformId set for 11 supported)
