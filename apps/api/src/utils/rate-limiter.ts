@@ -1,3 +1,5 @@
+import { RATE_LIMIT_CLEANUP_INTERVAL_MS } from "../constants.js";
+
 /**
  * Simple in-memory IP-based rate limiter.
  * Suitable for single-server deployments.
@@ -16,8 +18,8 @@ export class RateLimiter {
     this.maxAttempts = opts.maxAttempts;
     this.windowMs = opts.windowMs;
 
-    // Cleanup expired entries every 5 minutes
-    setInterval(() => this.cleanup(), 5 * 60 * 1000).unref();
+    // Cleanup expired entries periodically
+    setInterval(() => this.cleanup(), RATE_LIMIT_CLEANUP_INTERVAL_MS).unref();
   }
 
   /**
