@@ -1,3 +1,4 @@
+PLA-110: API cross-platform endpoints for apps, keywords, competitors ✅
 PLA-116: Sidebar context-aware navigation for global vs platform pages ✅
 PLA-117: Add marketplace autocomplete to Request a Platform dialog ✅
 PLA-118: System admin links always visible in sidebar regardless of current page ✅

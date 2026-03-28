@@ -1,0 +1,329 @@
+import type { FastifyInstance, FastifyRequest } from "fastify";
+import { sql, eq, and, inArray } from "drizzle-orm";
+import {
+  apps,
+  accountTrackedApps,
+  accountCompetitorApps,
+  accountTrackedKeywords,
+  trackedKeywords,
+  accountPlatforms,
+} from "@appranks/db";
+
+interface PaginationQuery {
+  page?: string;
+  limit?: string;
+  search?: string;
+  sort?: string;
+  order?: string;
+  platforms?: string;
+}
+
+function parsePagination(query: PaginationQuery) {
+  const page = Math.max(1, parseInt(query.page || "1", 10));
+  const limit = Math.min(100, Math.max(1, parseInt(query.limit || "50", 10)));
+  const offset = (page - 1) * limit;
+  const search = query.search?.trim() || "";
+  const order = query.order === "desc" ? "desc" : "asc";
+  const platformFilter = query.platforms
+    ? query.platforms.split(",").map((p) => p.trim()).filter(Boolean)
+    : [];
+  return { page, limit, offset, search, order, platformFilter };
+}
+
+function paginationResponse(page: number, limit: number, total: number) {
+  return { page, limit, total, totalPages: Math.ceil(total / limit) };
+}
+
+export async function crossPlatformRoutes(app: FastifyInstance) {
+  const db = (app as any).db;
+
+  // GET /api/cross-platform/apps — tracked + competitor apps across all platforms
+  app.get(
+    "/apps",
+    async (
+      request: FastifyRequest<{ Querystring: PaginationQuery }>
+    ) => {
+      const { accountId } = request.user;
+      const { page, limit, offset, search, order, platformFilter } = parsePagination(request.query);
+      const sort = request.query.sort || "name";
+
+      // Get account's enabled platforms
+      const enabledPlatforms = await db
+        .select({ platform: accountPlatforms.platform })
+        .from(accountPlatforms)
+        .where(eq(accountPlatforms.accountId, accountId));
+      const enabledPlatformIds = enabledPlatforms.map((p: { platform: string }) => p.platform);
+
+      if (enabledPlatformIds.length === 0) {
+        return { items: [], pagination: paginationResponse(page, limit, 0) };
+      }
+
+      // Get tracked app IDs for this account
+      const trackedAppRows = await db
+        .select({ appId: accountTrackedApps.appId })
+        .from(accountTrackedApps)
+        .where(eq(accountTrackedApps.accountId, accountId));
+      const trackedAppIds = trackedAppRows.map((r: { appId: number }) => r.appId);
+
+      // Get competitor app IDs
+      const competitorAppRows = await db
+        .select({
+          competitorAppId: accountCompetitorApps.competitorAppId,
+          trackedAppId: accountCompetitorApps.trackedAppId,
+        })
+        .from(accountCompetitorApps)
+        .where(eq(accountCompetitorApps.accountId, accountId));
+      const competitorAppIds = competitorAppRows.map((r: { competitorAppId: number }) => r.competitorAppId);
+
+      // Merge all app IDs (unique)
+      const allAppIds: number[] = [...new Set([...trackedAppIds, ...competitorAppIds])];
+      if (allAppIds.length === 0) {
+        return { items: [], pagination: paginationResponse(page, limit, 0) };
+      }
+
+      // Build platform filter
+      const effectivePlatforms = platformFilter.length > 0
+        ? platformFilter.filter((p) => enabledPlatformIds.includes(p))
+        : enabledPlatformIds;
+
+      if (effectivePlatforms.length === 0) {
+        return { items: [], pagination: paginationResponse(page, limit, 0) };
+      }
+
+      const searchFilter = search
+        ? sql`AND a.name ILIKE ${`%${search}%`}`
+        : sql``;
+      const platformIn = sql`a.platform IN (${sql.join(effectivePlatforms.map((p: string) => sql`${p}`), sql`, `)})`;
+
+      // Count total
+      const [countResult] = await db.execute(sql`
+        SELECT COUNT(*) as count FROM apps a
+        WHERE a.id IN (${sql.join(allAppIds.map((id: number) => sql`${id}`), sql`, `)})
+        AND ${platformIn}
+        ${searchFilter}
+      `) as any[];
+      const total = Number(countResult?.count || 0);
+
+      // Sort clause
+      const orderDir = order === "desc" ? sql`DESC` : sql`ASC`;
+      const orderClause =
+        sort === "rating" ? sql`a.average_rating` :
+        sort === "reviews" ? sql`a.rating_count` :
+        sort === "platform" ? sql`a.platform` :
+        sql`a.name`;
+
+      // Fetch paginated results
+      const rows: any[] = await db.execute(sql`
+        SELECT
+          a.id, a.platform, a.slug, a.name, a.icon_url,
+          a.average_rating, a.rating_count, a.pricing_hint, a.is_tracked,
+          a.active_installs
+        FROM apps a
+        WHERE a.id IN (${sql.join(allAppIds.map((id: number) => sql`${id}`), sql`, `)})
+        AND ${platformIn}
+        ${searchFilter}
+        ORDER BY ${orderClause} ${orderDir}
+        LIMIT ${limit} OFFSET ${offset}
+      `);
+
+      const trackedSet = new Set(trackedAppIds);
+      const competitorMap = new Map<number, number[]>();
+      for (const r of competitorAppRows) {
+        const existing = competitorMap.get(r.competitorAppId) || [];
+        existing.push(r.trackedAppId);
+        competitorMap.set(r.competitorAppId, existing);
+      }
+
+      return {
+        items: rows.map((r: any) => ({
+          id: r.id,
+          platform: r.platform,
+          slug: r.slug,
+          name: r.name,
+          iconUrl: r.icon_url,
+          averageRating: r.average_rating ? parseFloat(r.average_rating) : null,
+          ratingCount: r.rating_count,
+          pricingHint: r.pricing_hint,
+          isTracked: trackedSet.has(r.id),
+          isCompetitor: competitorMap.has(r.id),
+          competitorOfAppIds: competitorMap.get(r.id) || [],
+          activeInstalls: r.active_installs,
+        })),
+        pagination: paginationResponse(page, limit, total),
+      };
+    }
+  );
+
+  // GET /api/cross-platform/keywords — tracked keywords across all platforms
+  app.get(
+    "/keywords",
+    async (
+      request: FastifyRequest<{ Querystring: PaginationQuery }>
+    ) => {
+      const { accountId } = request.user;
+      const { page, limit, offset, search, order, platformFilter } = parsePagination(request.query);
+      const sort = request.query.sort || "keyword";
+
+      // Get account's tracked keyword IDs
+      const trackedKeywordRows = await db
+        .select({
+          keywordId: accountTrackedKeywords.keywordId,
+          trackedAppId: accountTrackedKeywords.trackedAppId,
+        })
+        .from(accountTrackedKeywords)
+        .where(eq(accountTrackedKeywords.accountId, accountId));
+
+      if (trackedKeywordRows.length === 0) {
+        return { items: [], pagination: paginationResponse(page, limit, 0) };
+      }
+
+      const keywordIds = Array.from(new Set(trackedKeywordRows.map((r: { keywordId: number }) => r.keywordId))) as number[];
+
+      // Build keyword-to-apps map
+      const keywordAppMap = new Map<number, number[]>();
+      for (const r of trackedKeywordRows) {
+        const existing = keywordAppMap.get(r.keywordId) || [];
+        existing.push(r.trackedAppId);
+        keywordAppMap.set(r.keywordId, existing);
+      }
+
+      const searchFilter = search
+        ? sql`AND k.keyword ILIKE ${`%${search}%`}`
+        : sql``;
+      const platformFilterSql = platformFilter.length > 0
+        ? sql`AND k.platform IN (${sql.join(platformFilter.map((p) => sql`${p}`), sql`, `)})`
+        : sql``;
+
+      // Count total
+      const [countResult] = await db.execute(sql`
+        SELECT COUNT(*) as count FROM tracked_keywords k
+        WHERE k.id IN (${sql.join(keywordIds.map((id: number) => sql`${id}`), sql`, `)})
+        ${searchFilter}
+        ${platformFilterSql}
+      `) as any[];
+      const total = Number(countResult?.count || 0);
+
+      // Sort clause
+      const orderDir = order === "desc" ? sql`DESC` : sql`ASC`;
+      const orderClause =
+        sort === "platform" ? sql`k.platform` :
+        sql`k.keyword`;
+
+      // Fetch paginated results
+      const rows: any[] = await db.execute(sql`
+        SELECT
+          k.id, k.platform, k.keyword, k.slug, k.is_active, k.created_at
+        FROM tracked_keywords k
+        WHERE k.id IN (${sql.join(keywordIds.map((id: number) => sql`${id}`), sql`, `)})
+        ${searchFilter}
+        ${platformFilterSql}
+        ORDER BY ${orderClause} ${orderDir}
+        LIMIT ${limit} OFFSET ${offset}
+      `) as any[];
+
+      return {
+        items: rows.map((r: any) => ({
+          id: r.id,
+          platform: r.platform,
+          keyword: r.keyword,
+          slug: r.slug,
+          isActive: r.is_active,
+          appCount: keywordAppMap.get(r.id)?.length || 0,
+          trackedAppIds: keywordAppMap.get(r.id) || [],
+          createdAt: r.created_at,
+        })),
+        pagination: paginationResponse(page, limit, total),
+      };
+    }
+  );
+
+  // GET /api/cross-platform/competitors — competitor apps across all platforms
+  app.get(
+    "/competitors",
+    async (
+      request: FastifyRequest<{ Querystring: PaginationQuery }>
+    ) => {
+      const { accountId } = request.user;
+      const { page, limit, offset, search, order, platformFilter } = parsePagination(request.query);
+      const sort = request.query.sort || "name";
+
+      // Get competitor relationships
+      const competitorRows = await db
+        .select({
+          competitorAppId: accountCompetitorApps.competitorAppId,
+          trackedAppId: accountCompetitorApps.trackedAppId,
+        })
+        .from(accountCompetitorApps)
+        .where(eq(accountCompetitorApps.accountId, accountId));
+
+      if (competitorRows.length === 0) {
+        return { items: [], pagination: paginationResponse(page, limit, 0) };
+      }
+
+      const competitorAppIds = Array.from(new Set(competitorRows.map((r: { competitorAppId: number }) => r.competitorAppId))) as number[];
+
+      // Build competitor-to-tracked-apps map
+      const trackedForMap = new Map<number, number[]>();
+      for (const r of competitorRows) {
+        const existing = trackedForMap.get(r.competitorAppId) || [];
+        existing.push(r.trackedAppId);
+        trackedForMap.set(r.competitorAppId, existing);
+      }
+
+      const searchFilter = search
+        ? sql`AND a.name ILIKE ${`%${search}%`}`
+        : sql``;
+      const platformFilterSql = platformFilter.length > 0
+        ? sql`AND a.platform IN (${sql.join(platformFilter.map((p) => sql`${p}`), sql`, `)})`
+        : sql``;
+
+      // Count total
+      const [countResult] = await db.execute(sql`
+        SELECT COUNT(*) as count FROM apps a
+        WHERE a.id IN (${sql.join(competitorAppIds.map((id: number) => sql`${id}`), sql`, `)})
+        ${searchFilter}
+        ${platformFilterSql}
+      `) as any[];
+      const total = Number(countResult?.count || 0);
+
+      // Sort clause
+      const orderDir = order === "desc" ? sql`DESC` : sql`ASC`;
+      const orderClause =
+        sort === "rating" ? sql`a.average_rating` :
+        sort === "reviews" ? sql`a.rating_count` :
+        sort === "platform" ? sql`a.platform` :
+        sql`a.name`;
+
+      // Fetch paginated results
+      const rows: any[] = await db.execute(sql`
+        SELECT
+          a.id, a.platform, a.slug, a.name, a.icon_url,
+          a.average_rating, a.rating_count, a.pricing_hint,
+          a.active_installs
+        FROM apps a
+        WHERE a.id IN (${sql.join(competitorAppIds.map((id: number) => sql`${id}`), sql`, `)})
+        ${searchFilter}
+        ${platformFilterSql}
+        ORDER BY ${orderClause} ${orderDir}
+        LIMIT ${limit} OFFSET ${offset}
+      `) as any[];
+
+      return {
+        items: rows.map((r: any) => ({
+          id: r.id,
+          platform: r.platform,
+          slug: r.slug,
+          name: r.name,
+          iconUrl: r.icon_url,
+          averageRating: r.average_rating ? parseFloat(r.average_rating) : null,
+          ratingCount: r.rating_count,
+          pricingHint: r.pricing_hint,
+          trackedForAppIds: trackedForMap.get(r.id) || [],
+          trackedForCount: trackedForMap.get(r.id)?.length || 0,
+          activeInstalls: r.active_installs,
+        })),
+        pagination: paginationResponse(page, limit, total),
+      };
+    }
+  );
+}

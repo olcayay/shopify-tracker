@@ -23,6 +23,7 @@ import { researchRoutes } from "./routes/research.js";
 import { platformRoutes } from "./routes/platforms.js";
 import { platformAttributeRoutes } from "./routes/platform-attributes.js";
 import { developerRoutes } from "./routes/developers.js";
+import { crossPlatformRoutes } from "./routes/cross-platform.js";
 
 const databaseUrl = process.env.DATABASE_URL;
 if (!databaseUrl) {
@@ -118,6 +119,7 @@ await app.register(researchRoutes, { prefix: "/api/research-projects" });
 await app.register(platformRoutes, { prefix: "/api/platforms" });
 await app.register(platformAttributeRoutes, { prefix: "/api/platform-attributes" });
 await app.register(developerRoutes, { prefix: "/api/developers" });
+await app.register(crossPlatformRoutes, { prefix: "/api/cross-platform" });
 
 // Health check endpoint (no auth required)
 app.get("/health", async () => {

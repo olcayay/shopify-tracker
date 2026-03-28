@@ -47,12 +47,13 @@ export async function developerRoutes(app: FastifyInstance) {
         sql`g.name`;
       const orderDir = order === "desc" ? sql`DESC` : sql`ASC`;
 
-      // Get paginated results with counts
+      // Get paginated results with counts and platforms array
       const rows: any[] = await db.execute(sql`
         SELECT
           g.id, g.slug, g.name, g.website,
           COUNT(DISTINCT pd.platform) AS platform_count,
-          COUNT(DISTINCT pd.id) AS link_count
+          COUNT(DISTINCT pd.id) AS link_count,
+          ARRAY_AGG(DISTINCT pd.platform) FILTER (WHERE pd.platform IS NOT NULL) AS platforms
         FROM global_developers g
         LEFT JOIN platform_developers pd ON pd.global_developer_id = g.id
         ${searchFilter}
@@ -69,6 +70,7 @@ export async function developerRoutes(app: FastifyInstance) {
           website: r.website,
           platformCount: Number(r.platform_count || 0),
           linkCount: Number(r.link_count || 0),
+          platforms: r.platforms || [],
         })),
         pagination: {
           page,

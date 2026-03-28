@@ -1,3 +1,13 @@
+PLA-110: API cross-platform endpoints (2026-03-28)
+===================================================
+- Created cross-platform.ts with 3 endpoints:
+  - GET /api/cross-platform/apps — tracked + competitor apps across platforms
+  - GET /api/cross-platform/keywords — tracked keywords across platforms
+  - GET /api/cross-platform/competitors — competitor apps across platforms
+- All endpoints: paginated, searchable, platform-filterable, sortable
+- Added `platforms` array to GET /api/developers list endpoint
+- 12 tests covering auth, pagination, filtering, empty states
+
 PLA-116: Sidebar context-aware navigation (2026-03-28)
 ======================================================
 - Added globalNavItems (Overview, All Apps, All Keywords, All Competitors, Developers) to nav-utils.ts
