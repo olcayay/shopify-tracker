@@ -44,6 +44,7 @@ import { developerRoutes } from "./routes/developers.js";
 import { crossPlatformRoutes } from "./routes/cross-platform.js";
 import { adminRoutes } from "./routes/admin.js";
 import { dlqRoutes } from "./routes/dlq.js";
+import { registerIdempotencyOnSend } from "./middleware/idempotency.js";
 import Redis from "ioredis";
 
 // Validate required environment variables at startup (fail fast)
@@ -134,6 +135,9 @@ app.addHook("onRequest", async (request, reply) => {
 
 // JWT auth middleware (replaces old API key auth)
 registerAuthMiddleware(app);
+
+// Idempotency: cache responses for requests with Idempotency-Key header
+registerIdempotencyOnSend(app);
 
 // Global API rate limiting (runs after auth so request.user is available)
 const HEALTH_PATHS = ["/health", "/health/live", "/health/ready"];

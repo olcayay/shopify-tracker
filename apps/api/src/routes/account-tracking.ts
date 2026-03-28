@@ -27,6 +27,7 @@ import {
 } from "@appranks/db";
 import { computeWeightedPowerScore } from "@appranks/shared";
 import { requireRole } from "../middleware/authorize.js";
+import { requireIdempotencyKey } from "../middleware/idempotency.js";
 import { getPlatformFromQuery } from "../utils/platform.js";
 import {
   addTrackedAppSchema,
@@ -156,7 +157,7 @@ export const accountTrackingRoutes: FastifyPluginAsync = async (app) => {
   // POST /api/account/tracked-apps
   app.post(
     "/tracked-apps",
-    { preHandler: [requireRole("owner", "editor")] },
+    { preHandler: [requireRole("owner", "editor"), requireIdempotencyKey()] },
     async (request, reply) => {
       const { accountId } = request.user;
       const { slug } = addTrackedAppSchema.parse(request.body);

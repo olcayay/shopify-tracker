@@ -44,6 +44,7 @@ import path from "node:path";
 import fs from "node:fs";
 import { generateAccessToken } from "./auth.js";
 import type { JwtPayload } from "../middleware/auth.js";
+import { requireIdempotencyKey } from "../middleware/idempotency.js";
 import {
   PAGINATION_DEFAULT_LIMIT,
   PAGINATION_MAX_LIMIT_AI_LOGS,
@@ -1625,7 +1626,7 @@ export const systemAdminRoutes: FastifyPluginAsync = async (app) => {
   );
 
   // POST /api/system-admin/scraper/trigger
-  app.post("/scraper/trigger", async (request, reply) => {
+  app.post("/scraper/trigger", { preHandler: [requireIdempotencyKey()] }, async (request, reply) => {
     const { type, slug, keyword, options, queue: targetQueue, platform: platformParam } = request.body as {
       type?: string;
       slug?: string;

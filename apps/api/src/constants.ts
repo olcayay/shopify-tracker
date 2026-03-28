@@ -59,3 +59,7 @@ export const DEFAULT_MAX_COMPETITOR_APPS = 50;
 // ── Redis ───────────────────────────────────────────────────────────
 /** Redis connection timeout in ms */
 export const REDIS_CONNECT_TIMEOUT_MS = 5000;
+
+// ── Idempotency ────────────────────────────────────────────────────
+/** Idempotency cache TTL in seconds (24 hours) */
+export const IDEMPOTENCY_TTL_SECONDS = 86_400;

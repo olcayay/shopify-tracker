@@ -67,7 +67,7 @@ This document identifies **80 risks** across 20 categories, rates them by likeli
 | Severity | Likelihood: High | Likelihood: Medium | Likelihood: Low |
 |----------|------------------|---------------------|-----------------|
 | **Critical** | R-01, R-05, R-14, R-63 | R-07, R-20, R-64 | R-09, R-22 |
-| **High** | R-02, R-03, R-06, R-15, R-65, R-66, R-67, R-72 | R-08, R-10, R-16, R-21, R-68, R-73, R-74 | R-11, R-23, R-75 |
+| **High** | R-02, R-03, R-06, R-15, R-65, R-66, R-67, R-72 | R-08, R-10, R-16, R-21, R-68, R-73 | R-11, R-23, R-74, R-75 |
 | **Medium** | R-04, R-17, R-30, R-69, R-76 | R-12, R-13, R-18, R-24, R-31, R-70, R-77 | R-19, R-25, R-32, R-71, R-78 |
 | **Low** | R-26, R-33, R-79 | R-27, R-28, R-34 | R-29, R-35, R-80 |
 
@@ -1000,12 +1000,13 @@ redis:
 - Invitation sending (network retry = 2 emails)
 - Scraper job triggers (admin double-click = 2 jobs)
 
-**Mitigation:**
-- [ ] Add idempotency key support to critical POST endpoints (**PLA-197**)
-- [ ] Use `Idempotency-Key` header + Redis cache (TTL: 24h)
-- [ ] Return cached response for duplicate requests
+**Mitigation:** ✅ **Mitigated**
+- [x] Add idempotency key support to critical POST endpoints (**PLA-197**)
+- [x] Use `Idempotency-Key` header + Redis cache (TTL: 24h)
+- [x] Return cached response for duplicate requests
 
-**When task PLA-197 is completed, update this risk status to Mitigated.**
+Implemented via `requireIdempotencyKey()` preHandler + `registerIdempotencyOnSend()` global hook.
+Protected endpoints: POST /api/research-projects, POST /api/account/tracked-apps, POST /api/account/members, POST /api/system-admin/scraper/trigger.
 
 ---
 
@@ -1182,7 +1183,7 @@ This table maps each Linear ticket to its risk(s) and priority. **Update this se
 | PLA-177 | Increase Redis maxmemory to 1GB | R-72 | P0 | Todo |
 | PLA-185 | Implement worker graceful shutdown | R-73 | P1 | **Fixed** |
 | PLA-186 | Add missing database indexes on large tables | R-75 | P1 | **Fixed** |
-| PLA-197 | Add idempotency keys to critical endpoints | R-74 | P2 | Todo |
+| PLA-197 | Add idempotency keys to critical endpoints | R-74 | P2 | **Fixed** |
 | PLA-195 | Configure Docker log rotation | R-76 | P2 | Todo |
 | PLA-201 | Set up GitHub Actions CI/CD pipeline | R-78 | P3 | Todo |
 | PLA-202 | Create E2E test suite with Playwright | R-80 | P3 | Todo |
@@ -1266,7 +1267,7 @@ This table maps each Linear ticket to its risk(s) and priority. **Update this se
 | **R-71** | **No dead letter queue** | **2** | **3** | **8** | **Open** |
 | **R-72** | **Redis maxmemory too low** | **4** | **5** | **20** | **Open** |
 | **R-73** | **Worker graceful shutdown** | **3** | **4** | **15** | **Mitigated** |
-| **R-74** | **No idempotency keys** | **3** | **4** | **12** | **Open** |
+| **R-74** | **No idempotency keys** | **3** | **4** | **12** | **Mitigated** |
 | **R-75** | **Missing DB indexes** | **2** | **3** | **10** | **Open** |
 | **R-76** | **Docker log rotation** | **2** | **5** | **10** | **Open** |
 | **R-77** | **Migration coupled to API** | **3** | **3** | **9** | **Open** |

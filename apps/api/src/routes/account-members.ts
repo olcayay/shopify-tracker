@@ -8,6 +8,7 @@ import {
   invitations,
 } from "@appranks/db";
 import { requireRole } from "../middleware/authorize.js";
+import { requireIdempotencyKey } from "../middleware/idempotency.js";
 import {
   addMemberSchema,
   inviteMemberSchema,
@@ -41,7 +42,7 @@ export const accountMemberRoutes: FastifyPluginAsync = async (app) => {
   // POST /api/account/members — create a user directly (owner only)
   app.post(
     "/members",
-    { preHandler: [requireRole("owner")] },
+    { preHandler: [requireRole("owner"), requireIdempotencyKey()] },
     async (request, reply) => {
       const { accountId } = request.user;
       const { email, name, password, role } = addMemberSchema.parse(request.body);

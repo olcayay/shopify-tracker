@@ -1,3 +1,31 @@
+Add Idempotency Keys to Critical POST Endpoints (2026-03-28)
+==============================================================
+**PLA-197:** Prevent duplicate operations from network retries or double-clicks.
+
+**Implementation:**
+1. **`apps/api/src/middleware/idempotency.ts`** — Two exports:
+   - `requireIdempotencyKey()` — preHandler hook that checks `Idempotency-Key` header.
+     If cached response exists → replay with `x-idempotency-replayed: true`.
+     If "processing" → 409 Conflict. Otherwise marks as processing.
+   - `registerIdempotencyOnSend()` — global onSend hook that caches 2xx responses and
+     clears processing markers on failures (so the key can be retried).
+2. **Redis-backed storage** with 24h TTL. Keys scoped by accountId to prevent cross-account collisions.
+3. **Graceful degradation** — if Redis is unavailable, requests proceed without idempotency.
+
+**Protected endpoints:**
+- POST /api/research-projects (research.ts)
+- POST /api/account/tracked-apps (account-tracking.ts)
+- POST /api/account/members (account-members.ts)
+- POST /api/system-admin/scraper/trigger (system-admin.ts)
+
+**Files changed:**
+- `apps/api/src/middleware/idempotency.ts` (new)
+- `apps/api/src/constants.ts` — added `IDEMPOTENCY_TTL_SECONDS`
+- `apps/api/src/index.ts` — registered global onSend hook
+- 4 route files — added `requireIdempotencyKey()` to preHandler
+- `apps/api/src/__tests__/middleware/idempotency.test.ts` (new, 8 tests)
+- `files/RISK_ANALYSIS_V3.md` — R-74 marked as Mitigated
+
 Fix Middleware Blocking Cross-Platform Pages (2026-03-28)
 =========================================================
 **PLA-221:** The middleware in `proxy.ts` was redirecting `/apps`, `/keywords`, `/competitors`

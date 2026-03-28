@@ -28,6 +28,7 @@ import {
   computeKeywordOpportunity,
 } from "@appranks/shared";
 import { requireRole } from "../middleware/authorize.js";
+import { requireIdempotencyKey } from "../middleware/idempotency.js";
 import { getPlatformFromQuery } from "../utils/platform.js";
 import {
   createProjectSchema,
@@ -291,7 +292,7 @@ export const researchRoutes: FastifyPluginAsync = async (app) => {
   // POST /api/research-projects — create project
   app.post<{ Body: { name?: string } }>(
     "/",
-    { preHandler: [requireRole("owner", "editor")] },
+    { preHandler: [requireRole("owner", "editor"), requireIdempotencyKey()] },
     async (request, reply) => {
       const { accountId, userId } = request.user;
       const { name } = createProjectSchema.parse(request.body);
