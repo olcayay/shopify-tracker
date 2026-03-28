@@ -17,6 +17,7 @@ import {
   HeartPulse,
   Bot,
   BrainCircuit,
+  MessageSquarePlus,
   type LucideIcon,
 } from "lucide-react";
 import { PLATFORMS, PLATFORM_IDS, type PlatformId } from "@appranks/shared";
@@ -117,4 +118,5 @@ export const systemAdminItems: NavItem[] = [
   { href: "/system-admin/scraper", label: "Scraper", icon: Bot },
   { href: "/system-admin/ai-logs", label: "AI Logs", icon: BrainCircuit },
   { href: "/system-admin/developers", label: "Developers", icon: Code },
+  { href: "/system-admin/platform-requests", label: "Requests", icon: MessageSquarePlus },
 ];

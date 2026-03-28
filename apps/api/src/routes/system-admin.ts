@@ -2859,6 +2859,34 @@ export const systemAdminRoutes: FastifyPluginAsync = async (app) => {
     return rows;
   });
 
+  // PATCH /api/system-admin/platform-requests/:id — update platform request status
+  app.patch<{ Params: { id: string } }>(
+    "/platform-requests/:id",
+    async (request, reply) => {
+      const { id } = request.params;
+      const body = request.body as { status?: string };
+
+      if (!body.status || !["pending", "approved", "rejected"].includes(body.status)) {
+        return reply.code(400).send({ error: "Invalid status. Must be pending, approved, or rejected." });
+      }
+
+      const [updated] = await db
+        .update(platformRequests)
+        .set({ status: body.status })
+        .where(eq(platformRequests.id, id))
+        .returning({
+          id: platformRequests.id,
+          status: platformRequests.status,
+        });
+
+      if (!updated) {
+        return reply.code(404).send({ error: "Platform request not found" });
+      }
+
+      return updated;
+    }
+  );
+
   // -------------------------------------------------------------------------
   // Queue monitoring
   // -------------------------------------------------------------------------

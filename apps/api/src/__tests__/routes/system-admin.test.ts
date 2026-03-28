@@ -648,4 +648,72 @@ describe("System admin routes", () => {
       expect(res.statusCode).toBe(200);
     });
   });
+
+  // -----------------------------------------------------------------------
+  // Platform Requests
+  // -----------------------------------------------------------------------
+
+  describe("GET /api/system-admin/platform-requests", () => {
+    it("returns 403 for non-admin", async () => {
+      const res = await app.inject({
+        method: "GET",
+        url: "/api/system-admin/platform-requests",
+        headers: authHeaders(userToken()),
+      });
+      expect(res.statusCode).toBe(403);
+    });
+
+    it("returns 200 for admin", async () => {
+      const res = await app.inject({
+        method: "GET",
+        url: "/api/system-admin/platform-requests",
+        headers: authHeaders(adminToken()),
+      });
+      expect(res.statusCode).toBe(200);
+    });
+  });
+
+  describe("PATCH /api/system-admin/platform-requests/:id", () => {
+    it("returns 403 for non-admin", async () => {
+      const res = await app.inject({
+        method: "PATCH",
+        url: "/api/system-admin/platform-requests/req-001",
+        headers: authHeaders(userToken()),
+        payload: { status: "approved" },
+      });
+      expect(res.statusCode).toBe(403);
+    });
+
+    it("returns 400 for invalid status", async () => {
+      const res = await app.inject({
+        method: "PATCH",
+        url: "/api/system-admin/platform-requests/req-001",
+        headers: authHeaders(adminToken()),
+        payload: { status: "invalid" },
+      });
+      expect(res.statusCode).toBe(400);
+    });
+
+    it("returns 400 when status is missing", async () => {
+      const res = await app.inject({
+        method: "PATCH",
+        url: "/api/system-admin/platform-requests/req-001",
+        headers: authHeaders(adminToken()),
+        payload: {},
+      });
+      expect(res.statusCode).toBe(400);
+    });
+
+    it("accepts valid status for admin", async () => {
+      const res = await app.inject({
+        method: "PATCH",
+        url: "/api/system-admin/platform-requests/req-001",
+        headers: authHeaders(adminToken()),
+        payload: { status: "approved" },
+      });
+      // 200 if mock returns a row, 404 if not — both prove auth passed
+      expect(res.statusCode).not.toBe(403);
+      expect(res.statusCode).not.toBe(401);
+    });
+  });
 });

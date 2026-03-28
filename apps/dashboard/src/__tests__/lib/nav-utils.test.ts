@@ -130,7 +130,7 @@ describe("nav-utils", () => {
 
   describe("systemAdminItems", () => {
     it("has correct number of items", () => {
-      expect(systemAdminItems.length).toBe(13);
+      expect(systemAdminItems.length).toBe(14);
     });
 
     it("all items have /system-admin prefix", () => {
