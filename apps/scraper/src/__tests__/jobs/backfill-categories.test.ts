@@ -40,6 +40,9 @@ function extractCategorySlug(platform: string, url: string): string | null {
   } else if (platform === "hubspot") {
     const hubspotMatch = url.match(/\/marketplace\/apps\/([^?#]+)/);
     catSlug = hubspotMatch?.[1]?.replace(/\/$/, "").replace("/", "--") ?? null;
+  } else if (platform === "atlassian") {
+    const atlassianMatch = url.match(/\/categories\/([^/?#]+)/);
+    catSlug = atlassianMatch?.[1] ?? null;
   }
 
   return catSlug;
@@ -335,12 +338,30 @@ describe("Unknown platform", () => {
 });
 
 // ---------------------------------------------------------------------------
-// Atlassian (no pattern in backfill-categories, should return null)
+// Atlassian
 // ---------------------------------------------------------------------------
 describe("Atlassian slug extraction", () => {
-  it("returns null since atlassian has no URL pattern in backfill", () => {
+  it("extracts slug from categories URL", () => {
     expect(
       extractCategorySlug("atlassian", "https://marketplace.atlassian.com/categories/admin-tools")
+    ).toBe("admin-tools");
+  });
+
+  it("extracts slug from relative categories URL", () => {
+    expect(
+      extractCategorySlug("atlassian", "/categories/testing-tools")
+    ).toBe("testing-tools");
+  });
+
+  it("handles query parameters", () => {
+    expect(
+      extractCategorySlug("atlassian", "/categories/reporting?page=2")
+    ).toBe("reporting");
+  });
+
+  it("returns null for non-categories URL", () => {
+    expect(
+      extractCategorySlug("atlassian", "https://marketplace.atlassian.com/apps/1234")
     ).toBeNull();
   });
 });

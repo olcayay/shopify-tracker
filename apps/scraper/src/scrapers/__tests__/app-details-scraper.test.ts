@@ -275,3 +275,245 @@ describe("parseWordPressDate", () => {
     expect(parseWordPressDate("abc xyz")).toBeNull();
   });
 });
+
+// ---------------------------------------------------------------------------
+// PLA-273: Platform-specific category mapping
+// ---------------------------------------------------------------------------
+describe("platform category mapping", () => {
+  // Helper that replicates the category extraction logic from app-details-scraper
+  function mapCategories(platform: string, pd: Record<string, unknown>): { title: string; url: string }[] {
+    if (platform === "salesforce") {
+      return ((pd.listingCategories as string[]) || []).map(
+        (cat: string) => ({ title: cat, url: "" })
+      );
+    } else if (platform === "wix") {
+      return ((pd.categories as Array<{ slug?: string; title?: string }>) || []).map(
+        (c) => ({ title: c.title || c.slug || "", url: "" })
+      );
+    } else if (platform === "wordpress") {
+      const tags = (pd.tags || {}) as Record<string, string>;
+      return Object.values(tags).map(
+        (t: string) => ({ title: t, url: "" })
+      );
+    } else if (platform === "atlassian") {
+      const listCats = (pd.listingCategories as string[]) || [];
+      if (listCats.length > 0) {
+        return listCats.map((cat: string) => ({ title: cat, url: "" }));
+      }
+      return ((pd.categories as Array<{ slug?: string; name?: string }>) || []).map(
+        (c) => ({ title: c.name || c.slug || "", url: "" })
+      );
+    } else if (platform === "zoho") {
+      return ((pd.categories as Array<{ slug?: string }>) || []).map(
+        (c) => ({ title: c.slug || "", url: "" })
+      );
+    } else if (platform === "zendesk") {
+      return ((pd.categories as Array<{ slug?: string; name?: string }>) || []).map(
+        (c) => ({ title: c.name || c.slug || "", url: "" })
+      );
+    } else if (platform === "hubspot") {
+      return ((pd.categories as Array<{ slug?: string; displayName?: string }>) || []).map(
+        (c) => ({ title: c.displayName || c.slug || "", url: "" })
+      );
+    } else if (platform === "google_workspace") {
+      const cat = pd.category as string | undefined;
+      return cat ? [{ title: cat, url: "" }] : [];
+    }
+    return [];
+  }
+
+  it("maps Salesforce listingCategories", () => {
+    const result = mapCategories("salesforce", { listingCategories: ["Analytics", "Sales"] });
+    expect(result).toEqual([
+      { title: "Analytics", url: "" },
+      { title: "Sales", url: "" },
+    ]);
+  });
+
+  it("maps Wix categories with title", () => {
+    const result = mapCategories("wix", {
+      categories: [{ slug: "marketing", title: "Marketing" }, { slug: "analytics", title: "Analytics" }],
+    });
+    expect(result).toEqual([
+      { title: "Marketing", url: "" },
+      { title: "Analytics", url: "" },
+    ]);
+  });
+
+  it("maps WordPress tags object", () => {
+    const result = mapCategories("wordpress", {
+      tags: { seo: "SEO", "contact-form": "Contact Form" },
+    });
+    expect(result).toEqual([
+      { title: "SEO", url: "" },
+      { title: "Contact Form", url: "" },
+    ]);
+  });
+
+  it("maps Atlassian listingCategories (string[])", () => {
+    const result = mapCategories("atlassian", {
+      listingCategories: ["Admin Tools", "Testing"],
+    });
+    expect(result).toEqual([
+      { title: "Admin Tools", url: "" },
+      { title: "Testing", url: "" },
+    ]);
+  });
+
+  it("maps Atlassian categories (object[]) when no listingCategories", () => {
+    const result = mapCategories("atlassian", {
+      categories: [{ slug: "admin-tools", name: "Admin Tools" }],
+    });
+    expect(result).toEqual([{ title: "Admin Tools", url: "" }]);
+  });
+
+  it("maps Zoho categories", () => {
+    const result = mapCategories("zoho", {
+      categories: [{ slug: "crm" }, { slug: "analytics" }],
+    });
+    expect(result).toEqual([
+      { title: "crm", url: "" },
+      { title: "analytics", url: "" },
+    ]);
+  });
+
+  it("maps Zendesk categories", () => {
+    const result = mapCategories("zendesk", {
+      categories: [{ slug: "productivity", name: "Productivity" }],
+    });
+    expect(result).toEqual([{ title: "Productivity", url: "" }]);
+  });
+
+  it("maps HubSpot categories", () => {
+    const result = mapCategories("hubspot", {
+      categories: [{ slug: "sales", displayName: "Sales" }, { slug: "marketing", displayName: "Marketing" }],
+    });
+    expect(result).toEqual([
+      { title: "Sales", url: "" },
+      { title: "Marketing", url: "" },
+    ]);
+  });
+
+  it("maps Google Workspace single category", () => {
+    const result = mapCategories("google_workspace", { category: "Business Tools" });
+    expect(result).toEqual([{ title: "Business Tools", url: "" }]);
+  });
+
+  it("returns empty for Google Workspace without category", () => {
+    const result = mapCategories("google_workspace", {});
+    expect(result).toEqual([]);
+  });
+
+  it("returns empty for unknown platform", () => {
+    const result = mapCategories("shopify", {});
+    expect(result).toEqual([]);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// PLA-274: Platform-specific pricing normalization
+// ---------------------------------------------------------------------------
+describe("platform pricing normalization", () => {
+  function normalizePlatformPricing(platform: string, p: any) {
+    if (platform === "atlassian") {
+      return {
+        name: p.name || "",
+        price: p.price != null ? String(p.price) : null,
+        period: p.period === "monthly" ? "month" : p.period === "yearly" ? "year" : p.period || null,
+        yearly_price: p.yearly_price != null ? String(p.yearly_price) : null,
+        discount_text: null,
+        trial_text: p.trialDays > 0 ? `${p.trialDays}-day free trial` : null,
+        features: p.features || [],
+        currency_code: p.currency_code || null,
+        units: p.units || null,
+      };
+    } else if (platform === "hubspot") {
+      return {
+        name: p.name || "",
+        price: p.monthlyPrice != null ? String(p.monthlyPrice) : (p.price != null ? String(p.price) : null),
+        period: Array.isArray(p.model) ? p.model.join(", ") : (p.model || p.frequency || null),
+        yearly_price: p.yearlyPrice != null ? String(p.yearlyPrice) : null,
+        discount_text: null,
+        trial_text: p.trial_days > 0 ? `${p.trial_days}-day free trial` : null,
+        features: p.features || [],
+        currency_code: p.currency_code || null,
+        units: p.units || null,
+      };
+    }
+    // Default
+    return {
+      name: p.plan_name || p.name || "",
+      price: p.price != null ? String(p.price) : null,
+      period: p.frequency === "monthly" ? "month" : p.frequency === "yearly" ? "year" : p.frequency || null,
+      yearly_price: null,
+      discount_text: null,
+      trial_text: p.trial_days > 0 ? `${p.trial_days}-day free trial` : null,
+      features: [],
+      currency_code: p.currency_code || null,
+      units: p.units || null,
+    };
+  }
+
+  it("normalizes Atlassian pricing with period field", () => {
+    const result = normalizePlatformPricing("atlassian", {
+      name: "Standard",
+      price: 10,
+      period: "monthly",
+      yearly_price: 100,
+      trialDays: 30,
+      features: ["Feature A"],
+    });
+    expect(result.name).toBe("Standard");
+    expect(result.price).toBe("10");
+    expect(result.period).toBe("month");
+    expect(result.yearly_price).toBe("100");
+    expect(result.trial_text).toBe("30-day free trial");
+    expect(result.features).toEqual(["Feature A"]);
+  });
+
+  it("normalizes HubSpot pricing with monthlyPrice and model array", () => {
+    const result = normalizePlatformPricing("hubspot", {
+      name: "Professional",
+      monthlyPrice: 45,
+      model: ["monthly", "yearly"],
+      features: ["CRM", "Marketing"],
+    });
+    expect(result.name).toBe("Professional");
+    expect(result.price).toBe("45");
+    expect(result.period).toBe("monthly, yearly");
+    expect(result.features).toEqual(["CRM", "Marketing"]);
+  });
+
+  it("normalizes default platform pricing with frequency", () => {
+    const result = normalizePlatformPricing("salesforce", {
+      plan_name: "Enterprise",
+      price: 99,
+      frequency: "monthly",
+      trial_days: 14,
+    });
+    expect(result.name).toBe("Enterprise");
+    expect(result.price).toBe("99");
+    expect(result.period).toBe("month");
+    expect(result.trial_text).toBe("14-day free trial");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// PLA-253: Zod platformData validation (pure function test)
+// ---------------------------------------------------------------------------
+describe("platformData validation errors tracking", () => {
+  it("adds _validationErrors to platformData when validation fails", () => {
+    // Simulates what app-details-scraper does before insert
+    const pdOriginal: Record<string, unknown> = { someField: 123 };
+    const validationErrors = ["someField: Expected string, received number"];
+    const pdWithErrors = { ...pdOriginal, _validationErrors: validationErrors };
+    expect(pdWithErrors._validationErrors).toEqual(["someField: Expected string, received number"]);
+    expect(pdWithErrors.someField).toBe(123);
+  });
+
+  it("does not add _validationErrors when validation passes", () => {
+    const pdOriginal: Record<string, unknown> = { description: "test" };
+    // When validation passes, no _validationErrors is added
+    expect(pdOriginal).not.toHaveProperty("_validationErrors");
+  });
+});

@@ -363,20 +363,88 @@ export class AppDetailsScraper {
                 ...((pd.productsSupported as string[]) || []),
                 ...((pd.productsRequired as string[]) || []),
               ],
-              categories: ((pd.listingCategories as string[]) || []).map(
-                (cat) => ({ title: cat, url: "" })
-              ) as import("@appranks/shared").AppCategory[],
-              pricing_plans: ((pd.pricingPlans as any[]) || []).map((p: any) => ({
-                name: p.plan_name || p.name || "",
-                price: p.price != null ? String(p.price) : null,
-                period: p.frequency === "monthly" ? "month" : p.frequency === "yearly" ? "year" : p.frequency || null,
-                yearly_price: null,
-                discount_text: null,
-                trial_text: p.trial_days > 0 ? `${p.trial_days}-day free trial` : null,
-                features: [],
-                currency_code: p.currency_code || null,
-                units: p.units || null,
-              })) as import("@appranks/shared").PricingPlan[],
+              categories: (() => {
+                // Platform-specific category mapping
+                if (this.platform === "salesforce") {
+                  return ((pd.listingCategories as string[]) || []).map(
+                    (cat: string) => ({ title: cat, url: "" })
+                  );
+                } else if (this.platform === "wix") {
+                  return ((pd.categories as Array<{ slug?: string; title?: string; parentSlug?: string }>) || []).map(
+                    (c) => ({ title: c.title || c.slug || "", url: "" })
+                  );
+                } else if (this.platform === "wordpress") {
+                  const tags = (pd.tags || {}) as Record<string, string>;
+                  return Object.values(tags).map(
+                    (t: string) => ({ title: t, url: "" })
+                  );
+                } else if (this.platform === "atlassian") {
+                  // Atlassian has both listingCategories (string[]) and categories (object[])
+                  const listCats = (pd.listingCategories as string[]) || [];
+                  if (listCats.length > 0) {
+                    return listCats.map((cat: string) => ({ title: cat, url: "" }));
+                  }
+                  return ((pd.categories as Array<{ slug?: string; name?: string }>) || []).map(
+                    (c) => ({ title: c.name || c.slug || "", url: "" })
+                  );
+                } else if (this.platform === "zoho") {
+                  return ((pd.categories as Array<{ slug?: string }>) || []).map(
+                    (c) => ({ title: c.slug || "", url: "" })
+                  );
+                } else if (this.platform === "zendesk") {
+                  return ((pd.categories as Array<{ slug?: string; name?: string }>) || []).map(
+                    (c) => ({ title: c.name || c.slug || "", url: "" })
+                  );
+                } else if (this.platform === "hubspot") {
+                  return ((pd.categories as Array<{ slug?: string; displayName?: string }>) || []).map(
+                    (c) => ({ title: c.displayName || c.slug || "", url: "" })
+                  );
+                } else if (this.platform === "google_workspace") {
+                  const cat = pd.category as string | undefined;
+                  return cat ? [{ title: cat, url: "" }] : [];
+                }
+                return [];
+              })() as import("@appranks/shared").AppCategory[],
+              pricing_plans: ((pd.pricingPlans as any[]) || []).map((p: any) => {
+                // Platform-specific pricing normalization
+                if (this.platform === "atlassian") {
+                  return {
+                    name: p.name || "",
+                    price: p.price != null ? String(p.price) : null,
+                    period: p.period === "monthly" ? "month" : p.period === "yearly" ? "year" : p.period || null,
+                    yearly_price: p.yearly_price != null ? String(p.yearly_price) : null,
+                    discount_text: null,
+                    trial_text: p.trialDays > 0 ? `${p.trialDays}-day free trial` : null,
+                    features: p.features || [],
+                    currency_code: p.currency_code || null,
+                    units: p.units || null,
+                  };
+                } else if (this.platform === "hubspot") {
+                  return {
+                    name: p.name || "",
+                    price: p.monthlyPrice != null ? String(p.monthlyPrice) : (p.price != null ? String(p.price) : null),
+                    period: Array.isArray(p.model) ? p.model.join(", ") : (p.model || p.frequency || null),
+                    yearly_price: p.yearlyPrice != null ? String(p.yearlyPrice) : null,
+                    discount_text: null,
+                    trial_text: p.trial_days > 0 ? `${p.trial_days}-day free trial` : null,
+                    features: p.features || [],
+                    currency_code: p.currency_code || null,
+                    units: p.units || null,
+                  };
+                }
+                // Default mapping (Salesforce, Wix, etc.)
+                return {
+                  name: p.plan_name || p.name || "",
+                  price: p.price != null ? String(p.price) : null,
+                  period: p.frequency === "monthly" ? "month" : p.frequency === "yearly" ? "year" : p.frequency || null,
+                  yearly_price: null,
+                  discount_text: null,
+                  trial_text: p.trial_days > 0 ? `${p.trial_days}-day free trial` : null,
+                  features: [],
+                  currency_code: p.currency_code || null,
+                  units: p.units || null,
+                };
+              }) as import("@appranks/shared").PricingPlan[],
               support: this.platform === "atlassian"
                 ? ((pd.supportEmail || pd.supportUrl || pd.supportPhone)
                   ? { email: (pd.supportEmail as string) || null, portal_url: (pd.supportUrl as string) || null, phone: (pd.supportPhone as string) || null } as import("@appranks/shared").AppSupport
@@ -590,6 +658,22 @@ export class AppDetailsScraper {
         }
       }
 
+      // Validate platformData against Zod schema BEFORE DB insert
+      let platformDataToStore = (("_platformData" in details ? details._platformData : undefined) ?? {}) as Record<string, unknown>;
+      if (platformDataToStore && Object.keys(platformDataToStore).length > 0) {
+        const validation = validatePlatformData(this.platform, platformDataToStore);
+        if (!validation.success) {
+          const validationErrors = validation.errors.issues.map((i) => `${i.path.join(".")}: ${i.message}`);
+          log.error("platformData validation failed", {
+            platform: this.platform,
+            slug,
+            errors: validationErrors,
+          });
+          // Store validation errors alongside the data so they're visible in DB
+          platformDataToStore = { ...platformDataToStore, _validationErrors: validationErrors };
+        }
+      }
+
       // Insert snapshot
       await this.db.insert(appSnapshots).values({
         appId,
@@ -610,21 +694,8 @@ export class AppDetailsScraper {
         categories: resolvedCategories,
         pricingPlans: details.pricing_plans,
         support: details.support,
-        platformData: (("_platformData" in details ? details._platformData : undefined) ?? {}) as Record<string, unknown>,
+        platformData: platformDataToStore as Record<string, unknown>,
       });
-
-      // Validate platformData against Zod schema (non-blocking, warn only)
-      const pdForValidation = ("_platformData" in details ? details._platformData : undefined) as Record<string, unknown> | undefined;
-      if (pdForValidation) {
-        const validation = validatePlatformData(this.platform, pdForValidation);
-        if (!validation.success) {
-          log.warn("platformData validation failed", {
-            platform: this.platform,
-            slug,
-            errors: validation.errors.issues.map((i) => `${i.path.join(".")}: ${i.message}`),
-          });
-        }
-      }
 
       // Link developer to global developer profile
       if (details.developer?.name) {

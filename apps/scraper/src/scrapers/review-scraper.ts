@@ -194,9 +194,8 @@ export class ReviewScraper {
               firstSeenRunId: runId,
             })
             .onConflictDoUpdate({
-              target: [reviews.appId, reviews.reviewerName],
+              target: [reviews.appId, reviews.reviewerName, reviews.reviewDate],
               set: {
-                reviewDate: review.reviewDate,
                 content: review.content,
                 reviewerCountry: review.reviewerCountry || null,
                 durationUsingApp: review.durationUsingApp || null,
@@ -254,11 +253,21 @@ export class ReviewScraper {
           // Parse date string to proper date format
           const parsedDate = parseReviewDate(review.review_date);
 
+          // Skip reviews with unparseable dates
+          if (!parsedDate) {
+            log.warn("skipping review with unparseable date", { slug, reviewer: review.reviewer_name, rawDate: review.review_date });
+            continue;
+          }
+
           // Stop if we've gone past the 90-day window (reviews sorted newest first)
           if (parsedDate < cutoffStr) {
             hitCutoff = true;
             break;
           }
+
+          const devReplyDate = review.developer_reply_date
+            ? parseReviewDate(review.developer_reply_date)
+            : null;
 
           await this.db
             .insert(reviews)
@@ -270,23 +279,18 @@ export class ReviewScraper {
               reviewerCountry: review.reviewer_country || null,
               durationUsingApp: review.duration_using_app || null,
               rating: review.rating,
-              developerReplyDate: review.developer_reply_date
-                ? parseReviewDate(review.developer_reply_date)
-                : null,
+              developerReplyDate: devReplyDate,
               developerReplyText: review.developer_reply_text,
               firstSeenRunId: runId,
             })
             .onConflictDoUpdate({
-              target: [reviews.appId, reviews.reviewerName],
+              target: [reviews.appId, reviews.reviewerName, reviews.reviewDate],
               set: {
-                reviewDate: parsedDate,
                 content: review.content,
                 reviewerCountry: review.reviewer_country || null,
                 durationUsingApp: review.duration_using_app || null,
                 rating: review.rating,
-                developerReplyDate: review.developer_reply_date
-                  ? parseReviewDate(review.developer_reply_date)
-                  : null,
+                developerReplyDate: devReplyDate,
                 developerReplyText: review.developer_reply_text,
               },
             });
@@ -310,8 +314,10 @@ export class ReviewScraper {
   }
 }
 
-/** Parse "December 29, 2025" to "2025-12-29" */
-function parseReviewDate(dateStr: string): string {
+/** Parse "December 29, 2025" to "2025-12-29". Returns null if parsing fails. */
+export function parseReviewDate(dateStr: string): string | null {
+  if (!dateStr || !dateStr.trim()) return null;
+
   const months: Record<string, string> = {
     January: "01",
     February: "02",
@@ -327,14 +333,25 @@ function parseReviewDate(dateStr: string): string {
     December: "12",
   };
 
+  // Try "Month Day, Year" format (e.g., "December 29, 2025")
   const match = dateStr.match(
     /(\w+)\s+(\d{1,2}),\s+(\d{4})/
   );
-  if (!match) return dateStr;
+  if (match) {
+    const month = months[match[1]];
+    if (!month) {
+      log.warn("unknown month in review date", { dateStr, month: match[1] });
+      return null;
+    }
+    const day = match[2].padStart(2, "0");
+    const year = match[3];
+    return `${year}-${month}-${day}`;
+  }
 
-  const month = months[match[1]] || "01";
-  const day = match[2].padStart(2, "0");
-  const year = match[3];
+  // Try ISO-like format (e.g., "2025-12-29" or "2025-12-29T...")
+  const isoMatch = dateStr.match(/^(\d{4}-\d{2}-\d{2})/);
+  if (isoMatch) return isoMatch[1];
 
-  return `${year}-${month}-${day}`;
+  log.warn("unparseable review date", { dateStr });
+  return null;
 }

@@ -5,10 +5,9 @@ import {
   trackedKeywords,
   keywordAutoSuggestions,
 } from "@appranks/db";
-import { urls, createLogger, type PlatformId } from "@appranks/shared";
+import { urls, createLogger, PLATFORMS, type PlatformId } from "@appranks/shared";
 import { HttpClient } from "../http-client.js";
 import type { PlatformModule } from "../platforms/platform-module.js";
-import type { CanvaModule } from "../platforms/canva/index.js";
 import { runConcurrent } from "../utils/run-concurrent.js";
 
 const log = createLogger("keyword-suggestion-scraper");
@@ -122,10 +121,17 @@ export class KeywordSuggestionScraper {
   ): Promise<string[]> {
     let suggestions: string[];
 
-    if (this.platform === "canva" && this.platformModule) {
-      // Canva: generate suggestions from embedded app data (no API)
-      suggestions = await (this.platformModule as CanvaModule).generateSuggestions(keyword);
-    } else {
+    // Check if platform supports auto-suggestions
+    const platformConfig = PLATFORMS[this.platform];
+    if (!platformConfig?.hasAutoSuggestions) {
+      log.info("platform does not support auto-suggestions, skipping", { platform: this.platform, keyword });
+      return [];
+    }
+
+    // Use platform module's generateSuggestions if available (Canva, Wix)
+    if (this.platformModule && "generateSuggestions" in this.platformModule) {
+      suggestions = await (this.platformModule as any).generateSuggestions(keyword);
+    } else if (this.platform === "shopify") {
       // Shopify: use autocomplete API
       const acUrl = urls.autocomplete(keyword);
       const json = await this.httpClient.fetchPage(acUrl, {
@@ -138,6 +144,9 @@ export class KeywordSuggestionScraper {
         .filter(
           (name: string) => name.toLowerCase() !== keyword.toLowerCase()
         );
+    } else {
+      log.warn("platform has hasAutoSuggestions=true but no suggestion implementation", { platform: this.platform, keyword });
+      return [];
     }
 
     const now = new Date();
