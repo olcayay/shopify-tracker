@@ -36,6 +36,25 @@ export type {
   ScrapeRunMetadata,
 } from "./types/scraper.js";
 
+// Platform data types
+export type {
+  PlatformDataMap,
+  PlatformData,
+  AnyPlatformData,
+  ShopifyPlatformData,
+  SalesforcePlatformData,
+  CanvaPlatformData,
+  WixPlatformData,
+  WordPressPlatformData,
+  GoogleWorkspacePlatformData,
+  AtlassianPlatformData,
+  ZoomPlatformData,
+  ZohoPlatformData,
+  ZendeskPlatformData,
+  HubSpotPlatformData,
+} from "./types/platform-data/index.js";
+export { getPlatformData } from "./types/platform-data/index.js";
+
 // Constants
 export { SEED_CATEGORY_SLUGS, MAX_CATEGORY_DEPTH } from "./constants/seed-categories.js";
 export { urls } from "./constants/urls.js";
