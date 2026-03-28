@@ -6,7 +6,7 @@ import type { PlatformSection, PlatformSectionProps } from "./index";
 type Props = PlatformSectionProps<"canva">;
 
 function CanvaPermissions({ platformData: pd }: Props) {
-  const permissions: Array<{ scope: string; type: "MANDATORY" | "OPTIONAL" }> = pd?.permissions || [];
+  const permissions = pd?.permissions || [];
 
   return (
     <Card>

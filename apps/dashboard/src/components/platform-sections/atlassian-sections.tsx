@@ -6,7 +6,7 @@ import type { PlatformSection, PlatformSectionProps } from "./index";
 type Props = PlatformSectionProps<"atlassian">;
 
 function AtlassianAppInfo({ platformData: pd }: Props) {
-  const compatibilities: Array<{ application: string; cloud: boolean; server: boolean; dataCenter: boolean }> = pd?.compatibilities || [];
+  const compatibilities = pd?.compatibilities || [];
 
   return (
     <Card>

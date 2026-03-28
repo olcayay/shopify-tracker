@@ -20,17 +20,17 @@ export interface PlatformSection {
 }
 
 // Import platform section registries
-import { atlassianSections } from "./atlassian-sections.js";
-import { salesforceSections } from "./salesforce-sections.js";
-import { googleWorkspaceSections } from "./google-workspace-sections.js";
-import { wordpressSections } from "./wordpress-sections.js";
-import { shopifySections } from "./shopify-sections.js";
-import { canvaSections } from "./canva-sections.js";
-import { zoomSections } from "./zoom-sections.js";
-import { zohoSections } from "./zoho-sections.js";
-import { wixSections } from "./wix-sections.js";
-import { hubspotSections } from "./hubspot-sections.js";
-import { zendeskSections } from "./zendesk-sections.js";
+import { atlassianSections } from "./atlassian-sections";
+import { salesforceSections } from "./salesforce-sections";
+import { googleWorkspaceSections } from "./google-workspace-sections";
+import { wordpressSections } from "./wordpress-sections";
+import { shopifySections } from "./shopify-sections";
+import { canvaSections } from "./canva-sections";
+import { zoomSections } from "./zoom-sections";
+import { zohoSections } from "./zoho-sections";
+import { wixSections } from "./wix-sections";
+import { hubspotSections } from "./hubspot-sections";
+import { zendeskSections } from "./zendesk-sections";
 
 /** Registry of platform-specific sections. */
 const PLATFORM_SECTIONS: Partial<Record<PlatformId, PlatformSection[]>> = {

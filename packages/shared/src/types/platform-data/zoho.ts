@@ -8,7 +8,7 @@ export interface ZohoPlatformData {
   publishedDate?: string;
   version?: string;
   deploymentType?: string;
-  cEdition?: unknown;
+  cEdition?: string;
   categories?: { slug: string }[];
   partnerDetails?: {
     companyName?: string;

@@ -5,7 +5,7 @@ export interface HubSpotPlatformData {
   pricing?: string;
   pricingPlans?: {
     name: string;
-    model?: string;
+    model?: string[];
     monthlyPrice?: number;
     features?: string[];
   }[];

@@ -6,7 +6,7 @@ import type { PlatformSection, PlatformSectionProps } from "./index";
 type Props = PlatformSectionProps<"zendesk">;
 
 function ZendeskProducts({ platformData: pd }: Props) {
-  const products: Array<{ name?: string; label?: string }> = pd?.products || [];
+  const products = pd?.products || [];
 
   return (
     <Card>
@@ -17,7 +17,7 @@ function ZendeskProducts({ platformData: pd }: Props) {
         <div className="flex flex-wrap gap-2">
           {products.map((p, i) => (
             <Badge key={i} variant="secondary" className="text-xs gap-1">
-              <Package className="h-3 w-3" /> {p.label || p.name}
+              <Package className="h-3 w-3" /> {typeof p === "string" ? p : (p as any).label || (p as any).name}
             </Badge>
           ))}
         </div>

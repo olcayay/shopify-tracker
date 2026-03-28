@@ -6,8 +6,7 @@ import type { PlatformSection, PlatformSectionProps } from "./index";
 type Props = PlatformSectionProps<"zoom">;
 
 function ZoomAppInfo({ platformData: pd }: Props) {
-  const worksWith: string[] = pd?.worksWith || [];
-  const usage = pd?.usage as Record<string, any> | null;
+  const worksWith = pd?.worksWith || [];
 
   return (
     <Card>
@@ -22,16 +21,10 @@ function ZoomAppInfo({ platformData: pd }: Props) {
               <p className="font-medium">{pd.companyName}</p>
             </div>
           )}
-          {usage && Object.keys(usage).length > 0 && (
+          {pd?.usage && (
             <div>
               <p className="text-muted-foreground text-xs mb-1">Usage</p>
-              <div className="space-y-0.5">
-                {Object.entries(usage).map(([key, value]) => (
-                  <p key={key} className="font-medium">
-                    {key}: {String(value)}
-                  </p>
-                ))}
-              </div>
+              <p className="font-medium">{pd.usage}</p>
             </div>
           )}
           {worksWith.length > 0 && (

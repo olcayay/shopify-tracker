@@ -51,15 +51,8 @@ function HubSpotAppInfo({ platformData: pd }: Props) {
   );
 }
 
-interface PricingPlan {
-  name: string;
-  model: string[];
-  monthlyPrice: number;
-  features: string[];
-}
-
 function HubSpotPricingPlans({ platformData: pd }: Props) {
-  const plans: PricingPlan[] = pd?.pricingPlans || [];
+  const plans = pd?.pricingPlans || [];
 
   return (
     <Card>
@@ -83,18 +76,18 @@ function HubSpotPricingPlans({ platformData: pd }: Props) {
                   )}
                 </p>
               </div>
-              {plan.model.length > 0 && (
+              {(plan.model?.length ?? 0) > 0 && (
                 <div className="flex flex-wrap gap-1">
-                  {plan.model.map((m, j) => (
+                  {(plan.model ?? []).map((m, j) => (
                     <Badge key={j} variant="secondary" className="text-xs">
                       {m}
                     </Badge>
                   ))}
                 </div>
               )}
-              {plan.features.length > 0 && (
+              {(plan.features?.length ?? 0) > 0 && (
                 <ul className="text-xs text-muted-foreground space-y-1 mt-1">
-                  {plan.features.map((f, j) => (
+                  {(plan.features ?? []).map((f, j) => (
                     <li key={j}>- {f}</li>
                   ))}
                 </ul>
