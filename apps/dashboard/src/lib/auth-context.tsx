@@ -8,6 +8,7 @@ import {
   useCallback,
   type ReactNode,
 } from "react";
+import { PLATFORM_IDS } from "@appranks/shared";
 import { useRouter } from "next/navigation";
 import { ConfirmModal } from "@/components/confirm-modal";
 
@@ -102,7 +103,7 @@ function getCookie(name: string): string | undefined {
 }
 
 // Valid platform slugs for auto-injection
-const VALID_PLATFORMS = new Set(["shopify", "salesforce", "canva", "wix", "wordpress", "google_workspace", "atlassian", "zoom", "zoho", "zendesk", "hubspot"]);
+const VALID_PLATFORMS = new Set<string>(PLATFORM_IDS);
 
 /** Extract platform from the current browser URL path (e.g. /salesforce/keywords → salesforce) */
 function getPlatformFromPath(): string | undefined {
