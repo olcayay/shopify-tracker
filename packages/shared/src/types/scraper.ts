@@ -1,4 +1,15 @@
-export type ScraperType = "category" | "app_details" | "keyword_search" | "reviews";
+export type ScraperType =
+  | "category"
+  | "app_details"
+  | "keyword_search"
+  | "keyword_suggestions"
+  | "reviews"
+  | "daily_digest"
+  | "featured_apps"
+  | "compute_app_scores"
+  | "compute_similarity_scores"
+  | "compute_review_metrics"
+  | "backfill_categories";
 
 export type ScrapeRunStatus = "pending" | "running" | "completed" | "failed";
 
