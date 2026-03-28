@@ -1,3 +1,12 @@
+Platform Robustness: 28 Tasks Implemented (2026-03-29)
+================================================================
+28 of 30 platform-robustness tasks implemented across 4 commits:
+- P1 (7): Zod validation, review date parsing, review dedup, keyword suggestions, backfill-categories, categories mapping, pricing mapping
+- P2 (8): Error logging, conflict handling, developer extraction, circuit breaker, N+1 fix, category extras, bootstrap snapshots
+- P3 (13): Version/integrations/support/demo mappings, URL dedup, stale timeouts, position logging, doc updates
+- Migration 0095: Review dedup index changed to (app_id, reviewer_name, review_date)
+- 2 remaining: PLA-263 (preview components for 6 platforms) and PLA-268 (integration tests)
+
 Fix Migration 0091: Wrong Column Names Block Deploy (2026-03-29)
 ================================================================
 **PLA-237:** Migration 0091_add_missing_indexes.sql used camelCase column names

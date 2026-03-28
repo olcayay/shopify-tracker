@@ -1,3 +1,33 @@
+Platform Robustness: 28 tasks implemented (2026-03-29)
+  PLA-253: Zod validation before DB insert ✅
+  PLA-254: Review date parsing returns null on failure ✅
+  PLA-255: Review dedup includes reviewDate ✅
+  PLA-256: Keyword suggestions check hasAutoSuggestions ✅
+  PLA-257: Atlassian in backfill-categories ✅
+  PLA-258: Review insert error categorization ✅
+  PLA-259: Keyword rankings onConflictDoNothing ✅
+  PLA-260: Developer info extraction for 6 platforms ✅
+  PLA-261: Circuit breaker in-memory fallback ✅
+  PLA-262: N+1 keyword snapshots → batch query ✅
+  PLA-264: URL builders deduplicated to shared ✅
+  PLA-265: Standardized error logging levels ✅
+  PLA-266: Per-job-type stale run timeouts ✅
+  PLA-267: Position clamped logging ✅
+  PLA-269: Reviews endpoint capability check ✅
+  PLA-270: COALESCE guards for JSON paths ✅
+  PLA-271: Category scraper companyName/installCount ✅
+  PLA-272: Search parser extra fields (Zendesk, GWS) ✅
+  PLA-273: Categories mapping for 8 platforms ✅
+  PLA-274: Pricing normalization for Atlassian/HubSpot ✅
+  PLA-275: currentVersion for Zoho/Zendesk ✅
+  PLA-276: Integrations for GWS/Zoom ✅
+  PLA-277: Support for Wix/GWS/Canva ✅
+  PLA-278: Wix demoUrl mapping ✅
+  PLA-279: Languages mapping doc fix ✅
+  PLA-280: lastUpdatedAt audit (no change needed) ✅
+  PLA-281: PLATFORM-DATA-MATRIX.md Section 5 updated ✅
+  PLA-282: Bootstrap snapshots for HubSpot/Canva ✅
+
 Fix migration 0091: wrong column names block deploy (2026-03-29)
   PLA-237: camelCase → snake_case in 0091_add_missing_indexes.sql ✅
 
