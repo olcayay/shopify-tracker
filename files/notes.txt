@@ -1,3 +1,10 @@
+Configure Docker Log Rotation on Production VPS (2026-03-28)
+==============================================================
+**PLA-195:** Prevent disk fill from unbounded Docker logs.
+
+Added `x-logging` YAML anchor in docker-compose.prod.yml: json-file driver,
+50MB max-size, 3 files (150MB cap per service). Applied to all 7 services.
+
 Implement Circuit Breaker Pattern for Platform Scraper Failures (2026-03-28)
 =============================================================================
 **PLA-199:** Prevent wasted scraping when a platform is down/blocking.

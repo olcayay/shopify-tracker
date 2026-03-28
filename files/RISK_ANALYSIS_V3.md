@@ -1043,15 +1043,10 @@ Protected endpoints: POST /api/research-projects, POST /api/account/tracked-apps
 
 **Description:** Docker container logs on the VPS have no rotation configuration. Over time, logs fill the disk and eventually crash all services.
 
-**Mitigation:**
-- [ ] Configure Docker daemon log rotation (**PLA-195**)
-  ```json
-  // /etc/docker/daemon.json
-  { "log-driver": "json-file", "log-opts": { "max-size": "50m", "max-file": "3" } }
-  ```
-- [ ] Alternatively, configure per-service in docker-compose.prod.yml
-
-**When task PLA-195 is completed, update this risk status to Fixed.**
+**Mitigation:** ✅ **Fixed**
+- [x] Per-service log rotation in docker-compose.prod.yml via `x-logging` YAML anchor
+  - `json-file` driver, `max-size: 50m`, `max-file: 3` (150MB max per service)
+  - Applied to all 7 services (postgres, redis, migrate, api, dashboard, worker, worker-interactive)
 
 ---
 
@@ -1187,7 +1182,7 @@ This table maps each Linear ticket to its risk(s) and priority. **Update this se
 | PLA-185 | Implement worker graceful shutdown | R-73 | P1 | **Fixed** |
 | PLA-186 | Add missing database indexes on large tables | R-75 | P1 | **Fixed** |
 | PLA-197 | Add idempotency keys to critical endpoints | R-74 | P2 | **Fixed** |
-| PLA-195 | Configure Docker log rotation | R-76 | P2 | Todo |
+| PLA-195 | Configure Docker log rotation | R-76 | P2 | **Fixed** |
 | PLA-201 | Set up GitHub Actions CI/CD pipeline | R-78 | P3 | Todo |
 | PLA-202 | Create E2E test suite with Playwright | R-80 | P3 | Todo |
 
@@ -1272,7 +1267,7 @@ This table maps each Linear ticket to its risk(s) and priority. **Update this se
 | **R-73** | **Worker graceful shutdown** | **3** | **4** | **15** | **Mitigated** |
 | **R-74** | **No idempotency keys** | **3** | **4** | **12** | **Mitigated** |
 | **R-75** | **Missing DB indexes** | **2** | **3** | **10** | **Open** |
-| **R-76** | **Docker log rotation** | **2** | **5** | **10** | **Open** |
+| **R-76** | **Docker log rotation** | **2** | **5** | **10** | **Fixed** |
 | **R-77** | **Migration coupled to API** | **3** | **3** | **9** | **Mitigated** |
 | **R-78** | **No CI/CD pipeline** | **2** | **3** | **8** | **Open** |
 | **R-79** | **Stale jobs not re-queued** | **2** | **4** | **8** | **Open** |

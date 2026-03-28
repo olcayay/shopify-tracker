@@ -1,7 +1,14 @@
+x-logging: &default-logging
+  driver: json-file
+  options:
+    max-size: "50m"
+    max-file: "3"
+
 services:
   postgres:
     image: postgres:16-alpine
     restart: always
+    logging: *default-logging
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-postgres}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}
@@ -23,6 +30,7 @@ services:
   redis:
     image: redis:7-alpine
     restart: always
+    logging: *default-logging
     command: redis-server --appendonly yes --maxmemory 1gb --maxmemory-policy volatile-lru
     volumes:
       - redis_data:/data
@@ -43,6 +51,7 @@ services:
       context: .
       dockerfile: Dockerfile.api
     restart: "no"
+    logging: *default-logging
     command: ["node", "packages/db/dist/migrate.js"]
     environment:
       DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-shopify_tracking}
@@ -55,6 +64,7 @@ services:
       context: .
       dockerfile: Dockerfile.api
     restart: always
+    logging: *default-logging
     ports:
       - "127.0.0.1:3001:3001"
     environment:
@@ -90,6 +100,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.dashboard
+    logging: *default-logging
       args:
         NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:3001}
         NEXT_PUBLIC_GA_ID: ${NEXT_PUBLIC_GA_ID:-}
@@ -113,6 +124,7 @@ services:
       context: .
       dockerfile: Dockerfile.worker
     restart: always
+    logging: *default-logging
     stop_grace_period: 120s
     environment:
       DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-shopify_tracking}
@@ -143,6 +155,7 @@ services:
       context: .
       dockerfile: Dockerfile.worker-interactive
     restart: always
+    logging: *default-logging
     stop_grace_period: 120s
     environment:
       DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-shopify_tracking}

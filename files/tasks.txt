@@ -1,3 +1,6 @@
+Configure Docker log rotation on production VPS (2026-03-28)
+  PLA-195: Per-service logging in docker-compose.prod.yml (50m max-size, 3 files) ✅
+
 Implement circuit breaker pattern for platform scraper failures (2026-03-28)
   PLA-199: Redis-backed circuit breaker per platform, scheduler integration, admin API ✅
 
