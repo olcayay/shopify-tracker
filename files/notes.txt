@@ -1,3 +1,27 @@
+Separate Database Migration Runner from API Startup (2026-03-28)
+===================================================================
+**PLA-196:** Decouple migrations from API startup to prevent blocked starts and enable
+safer deployments.
+
+**Implementation:**
+1. **`packages/db/src/migrate.ts`** — Standalone migration script:
+   - Runs pending Drizzle migrations against DATABASE_URL
+   - `--dry-run` flag lists pending migrations without applying
+   - Handles pre-migration enum additions (ALTER TYPE outside transaction)
+   - Exits with code 1 on failure
+2. **`docker-compose.prod.yml`** — New `migrate` service:
+   - `restart: "no"` (runs once and exits)
+   - API, worker, worker-interactive depend on `migrate` with `service_completed_successfully`
+3. **API `index.ts`** — Removed migration code (kept seed logic for admin user)
+
+**Files changed:**
+- `packages/db/src/migrate.ts` (new)
+- `packages/db/package.json` — added `db:run-migrate` script
+- `apps/api/src/index.ts` — removed migration imports and code
+- `docker-compose.prod.yml` — added `migrate` service, updated dependencies
+- `apps/api/src/__tests__/migrate-runner.test.ts` (new, 5 tests)
+- `files/RISK_ANALYSIS_V3.md` — R-25, R-77 marked as Mitigated
+
 Add Idempotency Keys to Critical POST Endpoints (2026-03-28)
 ==============================================================
 **PLA-197:** Prevent duplicate operations from network retries or double-clicks.

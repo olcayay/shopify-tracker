@@ -1,3 +1,6 @@
+Separate database migration runner from API startup (2026-03-28)
+  PLA-196: Standalone migrate.ts script, Docker 'migrate' service, API no longer runs migrations ✅
+
 Add idempotency keys to critical POST endpoints (2026-03-28)
   PLA-197: Idempotency-Key header middleware + Redis cache (24h TTL) for 4 critical endpoints ✅
 

@@ -5,7 +5,6 @@ import Fastify from "fastify";
 import cors from "@fastify/cors";
 import { randomUUID } from "node:crypto";
 import { createDb, accounts, users } from "@appranks/db";
-import { migrate } from "drizzle-orm/postgres-js/migrator";
 import { sql, eq } from "drizzle-orm";
 import bcrypt from "bcryptjs";
 import { validateEnv, API_REQUIRED_ENV, createLogger } from "@appranks/shared";
@@ -54,23 +53,9 @@ const databaseUrl = process.env.DATABASE_URL!;
 
 const db = createDb(databaseUrl);
 
-// Pre-migration: add enum values outside of transaction
-// (ALTER TYPE ... ADD VALUE cannot run inside a transaction block)
-try {
-  await db.execute(sql`ALTER TYPE scraper_type ADD VALUE IF NOT EXISTS 'compute_similarity_scores'`);
-} catch (e: any) {
-  // Ignore if already exists
-  if (!e.message?.includes("already exists")) log.error("Pre-migration enum error", { error: e.message });
-}
-
-// Run pending migrations on startup
-log.info("Running database migrations...");
-try {
-  await migrate(db, { migrationsFolder: resolve(import.meta.dirname, "../../../packages/db/src/migrations") });
-  log.info("Database migrations complete.");
-} catch (err: any) {
-  log.error("Migration ERROR", { error: err.message || String(err), details: JSON.stringify(err, null, 2) });
-}
+// NOTE: Migrations are now handled by the standalone migration runner
+// (packages/db/src/migrate.ts). In Docker, the 'migrate' service runs
+// before the API starts. See docker-compose.prod.yml.
 
 // Seed admin user on first run
 const adminEmail = process.env.ADMIN_EMAIL;

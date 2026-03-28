@@ -473,12 +473,13 @@ const { email, password, name, accountName } = request.body as {
 
 **Description:** Migrations run on API startup. A failed migration prevents the API from starting, with no automated rollback.
 
-**Mitigation:**
-- [ ] Separate migration runner from API startup into dedicated service/step (**PLA-196**)
-- [ ] Add migration dry-run capability
+**Mitigation:** ✅ **Mitigated**
+- [x] Separate migration runner from API startup into dedicated service/step (**PLA-196**)
+- [x] Add migration dry-run capability (`node packages/db/dist/migrate.js --dry-run`)
 - [ ] Document manual rollback procedures per migration
 
-**When task PLA-196 is completed, update this risk status to Mitigated.**
+Migrations now run via standalone `packages/db/src/migrate.ts` script.
+Docker `migrate` service runs before API/worker services start (`service_completed_successfully`).
 
 ---
 
@@ -1055,7 +1056,7 @@ Protected endpoints: POST /api/research-projects, POST /api/account/tracked-apps
 ### R-77: Migration Runner Coupled to API Startup (Medium / Medium Likelihood)
 **Risk Score: 10**
 
-**Description:** See R-25. Migrations run on API startup, blocking all requests until complete. Long migrations can cause prolonged downtime.
+**Status:** ✅ **Mitigated** — See R-25. Migrations now run in a separate Docker service before the API starts.
 
 ---
 
@@ -1169,7 +1170,7 @@ This table maps each Linear ticket to its risk(s) and priority. **Update this se
 | PLA-183 | Fix password complexity on password change | R-20 | P1 | **Fixed** |
 | PLA-194 | Implement Redis-backed token blacklist | R-21 | P2 | Todo |
 | PLA-178 | Add Zod validation to all API request bodies | R-23 | P1 | Todo |
-| PLA-196 | Separate migration runner from API startup | R-25 | P2 | Todo |
+| PLA-196 | Separate migration runner from API startup | R-25 | P2 | **Fixed** |
 | PLA-190 | Set up centralized logging (Loki/ELK) | R-31 | P2 | Todo |
 | PLA-188 | Integrate Sentry error tracking | R-32 | P2 | Todo |
 | PLA-189 | Add Prometheus metrics + Grafana dashboards | R-33 | P2 | Todo |
@@ -1218,7 +1219,7 @@ This table maps each Linear ticket to its risk(s) and priority. **Update this se
 | R-22 | Secrets management | 5 | 3 | 15 | Open |
 | R-23 | Input validation gaps | 5 | 2 | 10 | Open |
 | R-24 | No zero-downtime deploy | 3 | 4 | 12 | Open |
-| R-25 | Migration failures | 4 | 2 | 8 | Open |
+| R-25 | Migration failures | 4 | 2 | 8 | Mitigated |
 | R-26 | No DB connection pooling | 2 | 5 | 10 | **Fixed** |
 | R-27 | Key person dependency | 4 | 3 | 12 | Open |
 | R-28 | Platform deprecation | 4 | 3 | 12 | Open |
@@ -1270,7 +1271,7 @@ This table maps each Linear ticket to its risk(s) and priority. **Update this se
 | **R-74** | **No idempotency keys** | **3** | **4** | **12** | **Mitigated** |
 | **R-75** | **Missing DB indexes** | **2** | **3** | **10** | **Open** |
 | **R-76** | **Docker log rotation** | **2** | **5** | **10** | **Open** |
-| **R-77** | **Migration coupled to API** | **3** | **3** | **9** | **Open** |
+| **R-77** | **Migration coupled to API** | **3** | **3** | **9** | **Mitigated** |
 | **R-78** | **No CI/CD pipeline** | **2** | **3** | **8** | **Open** |
 | **R-79** | **Stale jobs not re-queued** | **2** | **4** | **8** | **Open** |
 | **R-80** | **No E2E tests** | **2** | **2** | **4** | **Open** |

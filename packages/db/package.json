@@ -16,7 +16,8 @@
     "dev": "tsc --watch",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
-    "db:studio": "drizzle-kit studio"
+    "db:studio": "drizzle-kit studio",
+    "db:run-migrate": "node dist/migrate.js"
   },
   "dependencies": {
     "@appranks/shared": "*",
