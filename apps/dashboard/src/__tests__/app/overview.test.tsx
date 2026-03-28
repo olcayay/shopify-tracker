@@ -229,6 +229,29 @@ describe("CrossPlatformOverviewPage", () => {
     expect(screen.getByText("2 active")).toBeInTheDocument();
   });
 
+  it("renders stat cards with navigation links to cross-platform pages", async () => {
+    setupDefaultMocks();
+    render(<OverviewPage />);
+    await waitFor(() => {
+      expect(screen.getByText("My Apps")).toBeInTheDocument();
+    });
+    // My Apps card should link to /apps
+    const appsCard = screen.getByText("My Apps").closest("a");
+    expect(appsCard).toHaveAttribute("href", "/apps");
+    // Tracked Keywords card should link to /keywords
+    const keywordsCard = screen.getByText("Tracked Keywords").closest("a");
+    expect(keywordsCard).toHaveAttribute("href", "/keywords");
+    // Competitor Apps card should link to /competitors
+    const competitorsCard = screen.getByText("Competitor Apps").closest("a");
+    expect(competitorsCard).toHaveAttribute("href", "/competitors");
+    // Users card should link to /settings
+    const usersCard = screen.getByText("Users").closest("a");
+    expect(usersCard).toHaveAttribute("href", "/settings");
+    // Research Projects should not be a link
+    const researchCard = screen.getByText("Research Projects").closest("a");
+    expect(researchCard).toBeNull();
+  });
+
   it("shows available platforms section when some multi-platform platforms have zero stats", async () => {
     // shopify has apps, salesforce has apps but no keywords/competitors — both tracked
     // For available section test, we need new_user persona (all zeros) which shows all as available

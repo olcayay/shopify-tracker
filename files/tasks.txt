@@ -1,3 +1,6 @@
+Add navigation links to overview page stat cards (2026-03-28)
+  PLA-223: My Apps→/apps, Keywords→/keywords, Competitors→/competitors, Users→/settings ✅
+
 Fix System admin menus missing from IconSidebar on platform/global pages (2026-03-28)
   PLA-222: Add persistent Shield icon at bottom of IconSidebar for system admins ✅
 
