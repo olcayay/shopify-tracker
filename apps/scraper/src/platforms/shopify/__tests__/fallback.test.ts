@@ -8,11 +8,14 @@ describe("ShopifyModule fallback", () => {
   let browserClient: BrowserClient;
   let mod: ShopifyModule;
 
+  let stdoutSpy: ReturnType<typeof vi.spyOn>;
+
   beforeEach(() => {
     httpClient = new HttpClient();
     browserClient = new BrowserClient();
     mod = new ShopifyModule(httpClient, browserClient);
-    vi.spyOn(console, "warn").mockImplementation(() => {});
+    stdoutSpy = vi.spyOn(process.stdout, "write").mockImplementation(() => true);
+    vi.spyOn(process.stderr, "write").mockImplementation(() => true);
   });
 
   afterEach(() => {
@@ -39,9 +42,8 @@ describe("ShopifyModule fallback", () => {
       expect(result).toBe("<html>browser result</html>");
       expect(httpClient.fetchPage).toHaveBeenCalledTimes(1);
       expect(browserClient.fetchPage).toHaveBeenCalledTimes(1);
-      expect(console.warn).toHaveBeenCalledWith(
-        expect.stringContaining("primary failed"),
-      );
+      const warnCalls = stdoutSpy.mock.calls.map(c => String(c[0]));
+      expect(warnCalls.some(line => line.includes("primary failed"))).toBe(true);
     });
 
     it("throws primary error when both fail", async () => {

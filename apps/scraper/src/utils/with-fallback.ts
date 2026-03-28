@@ -1,4 +1,7 @@
 import type { FallbackTracker } from "./fallback-tracker.js";
+import { createLogger } from "@appranks/shared";
+
+const log = createLogger("with-fallback");
 
 /**
  * Try `primary`, and if it throws, log a warning and try `fallback`.
@@ -21,17 +24,17 @@ export async function withFallback<T>(
     try {
       return await primary();
     } catch (primaryErr) {
-      console.warn(
-        `[withFallback] ${context}: primary failed (${primaryErr instanceof Error ? primaryErr.message : String(primaryErr)}), trying fallback…`,
-      );
+      log.warn(`${context}: primary failed, trying fallback`, {
+        error: primaryErr instanceof Error ? primaryErr.message : String(primaryErr),
+      });
       try {
         const result = await fallback();
         tracker?.recordFallback(context);
         return result;
       } catch (fallbackErr) {
-        console.warn(
-          `[withFallback] ${context}: fallback also failed (${fallbackErr instanceof Error ? fallbackErr.message : String(fallbackErr)})`,
-        );
+        log.warn(`${context}: fallback also failed`, {
+          error: fallbackErr instanceof Error ? fallbackErr.message : String(fallbackErr),
+        });
         throw primaryErr;
       }
     }

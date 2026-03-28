@@ -3,7 +3,7 @@ import { resolve } from "path";
 config({ path: resolve(import.meta.dirname, "../../../.env") });
 import { createDb } from "@appranks/db";
 import { trackedKeywords, keywordToSlug, apps } from "@appranks/db";
-import { isPlatformId, PLATFORM_IDS, type PlatformId } from "@appranks/shared";
+import { isPlatformId, PLATFORM_IDS, type PlatformId, createLogger } from "@appranks/shared";
 import { CategoryScraper } from "./scrapers/category-scraper.js";
 import { AppDetailsScraper } from "./scrapers/app-details-scraper.js";
 import { KeywordScraper } from "./scrapers/keyword-scraper.js";
@@ -11,6 +11,8 @@ import { ReviewScraper } from "./scrapers/review-scraper.js";
 import { HttpClient } from "./http-client.js";
 import { BrowserClient } from "./browser-client.js";
 import { getModule } from "./platforms/registry.js";
+
+const log = createLogger("cli");
 
 // Parse --platform flag (can appear anywhere in args)
 const platformArgIdx = process.argv.indexOf("--platform");
@@ -20,7 +22,7 @@ if (platformArgIdx !== -1 && process.argv[platformArgIdx + 1]) {
   if (isPlatformId(val)) {
     platformArg = val;
   } else {
-    console.error(`Unknown platform: ${val}. Valid: ${PLATFORM_IDS.join(", ")}`);
+    log.error("Unknown platform", { platform: val, valid: PLATFORM_IDS.join(", ") });
     process.exit(1);
   }
   // Remove --platform and its value from argv so they don't interfere with positional args
@@ -37,28 +39,28 @@ if (forceFallbackIdx !== -1) {
 const command = process.argv[2];
 
 if (!command) {
-  console.log("Usage: tsx src/cli.ts [--platform shopify|salesforce] <command> [args]");
-  console.log("Commands:");
-  console.log("  categories              Crawl full category tree");
-  console.log("  app <slug>              Scrape single app details");
-  console.log("  app-tracked             Scrape all tracked apps");
-  console.log("  app-all                 Scrape all discovered apps");
-  console.log("  keyword <keyword>       Scrape search results for keyword");
-  console.log("  keyword-tracked         Scrape all tracked keywords");
-  console.log("  reviews <slug>          Scrape reviews for an app");
-  console.log("  reviews-tracked         Scrape reviews for all tracked apps");
-  console.log("  featured                Scrape featured apps from homepage + categories");
-  console.log("  track-app <slug>        Mark an app as tracked");
-  console.log("  track-keyword <keyword> Add a keyword to tracking");
-  console.log("\nOptions:");
-  console.log("  --platform <id>         Platform to scrape (default: shopify)");
-  console.log("  --force-fallback        Force fallback scraping methods (for testing)");
+  log.info("Usage: tsx src/cli.ts [--platform shopify|salesforce] <command> [args]");
+  log.info("Commands:");
+  log.info("  categories              Crawl full category tree");
+  log.info("  app <slug>              Scrape single app details");
+  log.info("  app-tracked             Scrape all tracked apps");
+  log.info("  app-all                 Scrape all discovered apps");
+  log.info("  keyword <keyword>       Scrape search results for keyword");
+  log.info("  keyword-tracked         Scrape all tracked keywords");
+  log.info("  reviews <slug>          Scrape reviews for an app");
+  log.info("  reviews-tracked         Scrape reviews for all tracked apps");
+  log.info("  featured                Scrape featured apps from homepage + categories");
+  log.info("  track-app <slug>        Mark an app as tracked");
+  log.info("  track-keyword <keyword> Add a keyword to tracking");
+  log.info("Options:");
+  log.info("  --platform <id>         Platform to scrape (default: shopify)");
+  log.info("  --force-fallback        Force fallback scraping methods (for testing)");
   process.exit(1);
 }
 
 const databaseUrl = process.env.DATABASE_URL;
 if (!databaseUrl) {
-  console.error("DATABASE_URL environment variable is required");
+  log.error("DATABASE_URL environment variable is required");
   process.exit(1);
 }
 
@@ -69,9 +71,9 @@ const httpClient = new HttpClient({
 });
 
 async function main() {
-  console.log(`Platform: ${platformArg}`);
+  log.info("Platform selected", { platform: platformArg });
   if (process.env.FORCE_FALLBACK === "true") {
-    console.log("Mode: FORCE_FALLBACK (using secondary scraping methods)");
+    log.info("Mode: FORCE_FALLBACK (using secondary scraping methods)");
   }
 
   // Lazy browser client: created for all platforms but only launches browser on first use.
@@ -98,12 +100,10 @@ async function main() {
       const scraper = new CategoryScraper(db, { httpClient, platformModule });
       if (slug) {
         const discovered = await scraper.scrapeSingle(slug, triggeredBy, pageOptions);
-        console.log(`\nSingle category scrape complete. Discovered ${discovered.length} apps.`);
+        log.info("Single category scrape complete", { discoveredApps: discovered.length });
       } else {
         const result = await scraper.crawl(triggeredBy, pageOptions);
-        console.log(
-          `\nCategory tree crawl complete. ${JSON.stringify(result.tree.map((n) => n.title))}`
-        );
+        log.info("Category tree crawl complete", { categories: result.tree.map((n) => n.title) });
       }
       break;
     }
@@ -111,13 +111,13 @@ async function main() {
     case "app": {
       const slug = process.argv[3];
       if (!slug) {
-        console.error("Usage: tsx src/cli.ts app <app-slug>");
+        log.error("Usage: tsx src/cli.ts app <app-slug>");
         process.exit(1);
       }
       const forceFlag = process.argv.includes("--force");
       const scraper = new AppDetailsScraper(db, httpClient, platformModule);
       await scraper.scrapeApp(slug, undefined, triggeredBy, undefined, forceFlag);
-      console.log(`\nApp "${slug}" scraped successfully.`);
+      log.info("App scraped successfully", { slug });
       break;
     }
 
@@ -137,7 +137,7 @@ async function main() {
     case "keyword": {
       const keyword = process.argv[3];
       if (!keyword) {
-        console.error("Usage: tsx src/cli.ts keyword <keyword>");
+        log.error("Usage: tsx src/cli.ts keyword <keyword>");
         process.exit(1);
       }
       // Ensure keyword is tracked
@@ -159,7 +159,7 @@ async function main() {
         await completeRun(runId, String(err));
         throw err;
       }
-      console.log(`\nKeyword "${keyword}" scraped successfully.`);
+      log.info("Keyword scraped successfully", { keyword });
       break;
     }
 
@@ -172,7 +172,7 @@ async function main() {
     case "reviews": {
       const slug = process.argv[3];
       if (!slug) {
-        console.error("Usage: tsx src/cli.ts reviews <app-slug>");
+        log.error("Usage: tsx src/cli.ts reviews <app-slug>");
         process.exit(1);
       }
       const scraper = new ReviewScraper(db, httpClient, platformArg, platformModule);
@@ -180,7 +180,7 @@ async function main() {
       try {
         const count = await scraper.scrapeAppReviews(slug, runId);
         await completeRun(runId);
-        console.log(`\nScraped ${count} reviews for "${slug}".`);
+        log.info("Reviews scraped", { slug, count });
       } catch (err) {
         await completeRun(runId, String(err));
         throw err;
@@ -196,14 +196,14 @@ async function main() {
 
     case "featured": {
       if (!platformModule?.fetchFeaturedSections) {
-        console.log(`Platform "${platformArg}" has no featured sections support.`);
+        log.info("Platform has no featured sections support", { platform: platformArg });
         break;
       }
       const sections = await platformModule.fetchFeaturedSections();
       const totalApps = sections.reduce((sum, s) => sum + s.apps.length, 0);
-      console.log(`\nFound ${sections.length} featured sections with ${totalApps} apps.`);
+      log.info("Featured sections found", { sections: sections.length, totalApps });
       for (const s of sections) {
-        console.log(`  ${s.sectionTitle}: ${s.apps.length} apps`);
+        log.info("Section", { title: s.sectionTitle, apps: s.apps.length });
       }
       break;
     }
@@ -211,7 +211,7 @@ async function main() {
     case "track-app": {
       const slug = process.argv[3];
       if (!slug) {
-        console.error("Usage: tsx src/cli.ts track-app <app-slug>");
+        log.error("Usage: tsx src/cli.ts track-app <app-slug>");
         process.exit(1);
       }
       await db
@@ -221,14 +221,14 @@ async function main() {
           target: [apps.platform, apps.slug],
           set: { isTracked: true, updatedAt: new Date() },
         });
-      console.log(`App "${slug}" is now tracked on ${platformArg}.`);
+      log.info("App is now tracked", { slug, platform: platformArg });
       break;
     }
 
     case "track-keyword": {
       const keyword = process.argv[3];
       if (!keyword) {
-        console.error("Usage: tsx src/cli.ts track-keyword <keyword>");
+        log.error("Usage: tsx src/cli.ts track-keyword <keyword>");
         process.exit(1);
       }
       await db
@@ -238,12 +238,12 @@ async function main() {
           target: [trackedKeywords.platform, trackedKeywords.keyword],
           set: { isActive: true, updatedAt: new Date() },
         });
-      console.log(`Keyword "${keyword}" is now tracked on ${platformArg}.`);
+      log.info("Keyword is now tracked", { keyword, platform: platformArg });
       break;
     }
 
     default:
-      console.error(`Unknown command: ${command}`);
+      log.error("Unknown command", { command });
       process.exit(1);
   }
   } finally {
@@ -285,6 +285,6 @@ async function completeRun(runId: string, error?: string): Promise<void> {
 }
 
 main().catch((err) => {
-  console.error("Fatal error:", String(err));
+  log.error("Fatal error", { error: String(err) });
   process.exit(1);
 });

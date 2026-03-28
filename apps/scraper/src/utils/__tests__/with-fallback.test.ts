@@ -5,9 +5,13 @@ import { FallbackTracker } from "../fallback-tracker.js";
 describe("withFallback", () => {
   const origEnv = process.env.FORCE_FALLBACK;
 
+  let stdoutSpy: ReturnType<typeof vi.spyOn>;
+  let stderrSpy: ReturnType<typeof vi.spyOn>;
+
   beforeEach(() => {
     delete process.env.FORCE_FALLBACK;
-    vi.spyOn(console, "warn").mockImplementation(() => {});
+    stdoutSpy = vi.spyOn(process.stdout, "write").mockImplementation(() => true);
+    stderrSpy = vi.spyOn(process.stderr, "write").mockImplementation(() => true);
   });
 
   afterEach(() => {
@@ -39,9 +43,8 @@ describe("withFallback", () => {
     expect(result).toBe("fallback-ok");
     expect(primary).toHaveBeenCalledOnce();
     expect(fallback).toHaveBeenCalledOnce();
-    expect(console.warn).toHaveBeenCalledWith(
-      expect.stringContaining("primary failed"),
-    );
+    const warnCalls = stdoutSpy.mock.calls.map(c => String(c[0]));
+    expect(warnCalls.some(line => line.includes("primary failed"))).toBe(true);
   });
 
   it("throws primary error when both fail", async () => {
@@ -53,7 +56,8 @@ describe("withFallback", () => {
       withFallback(primary, fallback, "test/both-fail"),
     ).rejects.toThrow(primaryErr);
 
-    expect(console.warn).toHaveBeenCalledTimes(2);
+    const warnCalls = stdoutSpy.mock.calls.map(c => String(c[0])).filter(line => line.includes('"warn"'));
+    expect(warnCalls).toHaveLength(2);
   });
 
   it("skips primary when FORCE_FALLBACK=true", async () => {
@@ -89,9 +93,8 @@ describe("withFallback", () => {
     const result = await withFallback(primary, fallback, "test/non-error");
 
     expect(result).toBe("fallback-ok");
-    expect(console.warn).toHaveBeenCalledWith(
-      expect.stringContaining("string-error"),
-    );
+    const warnCalls = stdoutSpy.mock.calls.map(c => String(c[0]));
+    expect(warnCalls.some(line => line.includes("string-error"))).toBe(true);
   });
 
   describe("FallbackTracker integration", () => {
