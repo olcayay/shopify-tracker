@@ -233,7 +233,11 @@ export default function OverviewPage() {
         ? " Scraping started — details will appear shortly."
         : "";
       setMessage(`Now following "${name}".${scrapeMsg}`);
-      loadData();
+      // Optimistic update: add app to tracked list without full reload
+      setApps((prev: any[]) => {
+        if (prev.some((a) => a.slug === slug || a.appSlug === slug)) return prev;
+        return [...prev, { slug, appSlug: slug, name, platform, isTracked: true }];
+      });
       refreshUser();
     } else {
       const data = await res.json().catch(() => ({}));
