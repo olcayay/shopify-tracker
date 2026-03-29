@@ -295,4 +295,78 @@ export const publicRoutes: FastifyPluginAsync = async (app) => {
       return result;
     }
   );
+
+  // GET /public/compare/:platform/:slug1/:slug2 — app comparison data
+  app.get<{ Params: { platform: string; slug1: string; slug2: string } }>(
+    "/compare/:platform/:slug1/:slug2",
+    async (request, reply) => {
+      const { platform, slug1, slug2 } = request.params;
+      if (!isPlatformId(platform)) return reply.code(400).send({ error: "Invalid platform" });
+
+      const result = await cacheGet(`public:compare:${platform}:${slug1}:${slug2}`, async () => {
+        // Fetch both apps with their latest snapshots
+        const appRows = await db.execute(sql`
+          SELECT a.id, a.slug, a.name, a.icon_url, a.platform, a.average_rating, a.rating_count,
+                 a.pricing_hint, a.active_installs, a.launched_date, a.is_built_for_shopify,
+                 s.intro, s.developer, s.pricing, s.pricing_plans, s.categories, s.features, s.languages
+          FROM apps a
+          LEFT JOIN LATERAL (
+            SELECT app_introduction AS intro, developer, pricing, pricing_plans, categories, features, languages
+            FROM app_snapshots WHERE app_id = a.id ORDER BY scraped_at DESC LIMIT 1
+          ) s ON true
+          WHERE a.platform = ${platform} AND a.slug IN (${slug1}, ${slug2})
+        `);
+
+        const rows = ((appRows as any).rows ?? appRows) as any[];
+        if (rows.length < 2) return null;
+
+        const app1Data = rows.find((r: any) => r.slug === slug1);
+        const app2Data = rows.find((r: any) => r.slug === slug2);
+        if (!app1Data || !app2Data) return null;
+
+        const normalize = (r: any) => ({
+          slug: r.slug,
+          name: r.name,
+          iconUrl: r.icon_url,
+          platform: r.platform,
+          averageRating: r.average_rating ? parseFloat(r.average_rating) : null,
+          ratingCount: r.rating_count,
+          pricingHint: r.pricing_hint,
+          activeInstalls: r.active_installs,
+          launchedDate: r.launched_date,
+          isBuiltForShopify: r.is_built_for_shopify,
+          intro: r.intro || null,
+          developer: r.developer || null,
+          pricing: r.pricing || null,
+          pricingPlans: r.pricing_plans || [],
+          categories: r.categories || [],
+          features: r.features || [],
+          languages: r.languages || [],
+        });
+
+        // Similarity score
+        let similarityScore: number | null = null;
+        try {
+          const simRows = await db.execute(sql`
+            SELECT overall_score FROM app_similarity_scores
+            WHERE (app_id_a = ${app1Data.id} AND app_id_b = ${app2Data.id})
+               OR (app_id_a = ${app2Data.id} AND app_id_b = ${app1Data.id})
+            LIMIT 1
+          `);
+          const simRow = ((simRows as any).rows ?? simRows)[0];
+          if (simRow) similarityScore = parseFloat(simRow.overall_score);
+        } catch { /* no similarity data */ }
+
+        return {
+          app1: normalize(app1Data),
+          app2: normalize(app2Data),
+          similarityScore,
+        };
+      }, PUBLIC_CACHE_TTL);
+
+      if (!result) return reply.code(404).send({ error: "One or both apps not found" });
+      reply.header("cache-control", "public, max-age=3600, stale-while-revalidate=7200");
+      return result;
+    }
+  );
 };

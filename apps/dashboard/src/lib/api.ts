@@ -86,6 +86,10 @@ export const getPublicPlatformStats = cache((platform: string) => {
   return fetchPublicApi<any>(`/api/public/platforms/${platform}/stats`);
 });
 
+export const getPublicComparison = cache((platform: string, slug1: string, slug2: string) => {
+  return fetchPublicApi<any>(`/api/public/compare/${platform}/${slug1}/${slug2}`);
+});
+
 // --- Categories ---
 export function getCategories(format: "tree" | "flat" = "tree", platform?: PlatformId) {
   return fetchApi<any[]>(withPlatform(`/api/categories?format=${format}`, platform));
