@@ -25,6 +25,7 @@ export async function developerRoutes(app: FastifyInstance) {
           search?: string;
           sort?: string;
           order?: string;
+          platforms?: string;
         };
       }>
     ) => {
@@ -34,12 +35,24 @@ export async function developerRoutes(app: FastifyInstance) {
       const search = request.query.search?.trim() || "";
       const sort = request.query.sort || "name";
       const order = request.query.order === "desc" ? "desc" : "asc";
+      const platformsParam = request.query.platforms?.trim() || "";
+      const platforms = platformsParam ? platformsParam.split(",").filter(Boolean) : [];
 
-      const searchFilter = search ? sql`WHERE g.name ILIKE ${`%${search}%`}` : sql``;
+      // Build WHERE conditions
+      const conditions: ReturnType<typeof sql>[] = [];
+      if (search) {
+        conditions.push(sql`g.name ILIKE ${`%${search}%`}`);
+      }
+      if (platforms.length > 0) {
+        conditions.push(sql`EXISTS (SELECT 1 FROM platform_developers pf WHERE pf.global_developer_id = g.id AND pf.platform = ANY(${sqlArray(platforms)}))`);
+      }
+      const whereClause = conditions.length > 0
+        ? sql`WHERE ${sql.join(conditions, sql` AND `)}`
+        : sql``;
 
       // Get total count
       const [countResult] = await db.execute(sql`
-        SELECT COUNT(*) as count FROM global_developers g ${searchFilter}
+        SELECT COUNT(*) as count FROM global_developers g ${whereClause}
       `) as any[];
       const total = Number(countResult?.count || 0);
 
@@ -58,7 +71,7 @@ export async function developerRoutes(app: FastifyInstance) {
           ARRAY_AGG(DISTINCT pd.platform) FILTER (WHERE pd.platform IS NOT NULL) AS platforms
         FROM global_developers g
         LEFT JOIN platform_developers pd ON pd.global_developer_id = g.id
-        ${searchFilter}
+        ${whereClause}
         GROUP BY g.id
         ORDER BY ${orderClause} ${orderDir}
         LIMIT ${limit} OFFSET ${offset}

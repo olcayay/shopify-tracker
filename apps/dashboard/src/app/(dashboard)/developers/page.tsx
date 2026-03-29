@@ -16,6 +16,8 @@ import {
 import { Search, ChevronLeft, ChevronRight, ArrowUpDown } from "lucide-react";
 import { TableSkeleton } from "@/components/skeletons";
 import { PlatformBadgeCell } from "@/components/platform-badge-cell";
+import { PlatformFilterChips } from "@/components/platform-filter-chips";
+import type { PlatformId } from "@appranks/shared";
 
 interface Developer {
   id: number;
@@ -33,26 +35,36 @@ interface DeveloperResponse {
 }
 
 export default function DevelopersPage() {
-  const { fetchWithAuth } = useAuth();
+  const { fetchWithAuth, account } = useAuth();
+  const enabledPlatforms = (account?.enabledPlatforms ?? []) as PlatformId[];
   const [data, setData] = useState<DeveloperResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
   const [sort, setSort] = useState("name");
   const [order, setOrder] = useState<"asc" | "desc">("asc");
+  const [activePlatforms, setActivePlatforms] = useState<PlatformId[]>([]);
   const limit = 25;
+
+  function togglePlatform(pid: PlatformId) {
+    setActivePlatforms((prev) =>
+      prev.includes(pid) ? prev.filter((p) => p !== pid) : [...prev, pid]
+    );
+    setPage(1);
+  }
 
   const loadData = useCallback(async () => {
     setLoading(true);
     try {
       const params = new URLSearchParams({ page: String(page), limit: String(limit), sort, order });
       if (search) params.set("search", search);
+      if (activePlatforms.length > 0) params.set("platforms", activePlatforms.join(","));
       const res = await fetchWithAuth(`/api/developers?${params}`);
       if (res.ok) setData(await res.json());
     } finally {
       setLoading(false);
     }
-  }, [fetchWithAuth, page, search, sort, order]);
+  }, [fetchWithAuth, page, search, sort, order, activePlatforms]);
 
   useEffect(() => { loadData(); }, [loadData]);
 
@@ -82,18 +94,27 @@ export default function DevelopersPage() {
         <p className="text-sm text-muted-foreground">Browse all developers across platforms</p>
       </div>
 
-      <form onSubmit={handleSearch} className="flex gap-2 max-w-md">
-        <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder="Search developers..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="pl-9"
+      <div className="space-y-3">
+        <form onSubmit={handleSearch} className="flex gap-2 max-w-md">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Search developers..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="pl-9"
+            />
+          </div>
+          <Button type="submit" variant="outline" size="sm">Search</Button>
+        </form>
+        {enabledPlatforms && enabledPlatforms.length > 1 && (
+          <PlatformFilterChips
+            enabledPlatforms={enabledPlatforms}
+            activePlatforms={activePlatforms}
+            onToggle={togglePlatform}
           />
-        </div>
-        <Button type="submit" variant="outline" size="sm">Search</Button>
-      </form>
+        )}
+      </div>
 
       {loading && !data ? (
         <TableSkeleton rows={10} cols={4} />
