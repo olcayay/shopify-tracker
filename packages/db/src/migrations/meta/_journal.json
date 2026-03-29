@@ -715,6 +715,13 @@
       "when": 1777420800000,
       "tag": "0101_developer_enrichment",
       "breakpoints": true
+    },
+    {
+      "idx": 102,
+      "version": "7",
+      "when": 1777507200000,
+      "tag": "0102_account_starred_developers",
+      "breakpoints": true
     }
   ]
 }

@@ -10,6 +10,7 @@ import { accounts } from "./auth.js";
 import { apps } from "./apps.js";
 import { trackedKeywords } from "./keywords.js";
 import { categories } from "./categories.js";
+import { globalDevelopers } from "./developers.js";
 
 export const accountTrackedFeatures = pgTable(
   "account_tracked_features",
@@ -90,6 +91,26 @@ export const accountStarredCategories = pgTable(
     uniqueIndex("idx_account_starred_categories_unique").on(
       table.accountId,
       table.categoryId
+    ),
+  ]
+);
+
+export const accountStarredDevelopers = pgTable(
+  "account_starred_developers",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    accountId: uuid("account_id")
+      .notNull()
+      .references(() => accounts.id, { onDelete: "cascade" }),
+    globalDeveloperId: integer("global_developer_id")
+      .notNull()
+      .references(() => globalDevelopers.id),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+  },
+  (table) => [
+    uniqueIndex("idx_account_starred_developers_unique").on(
+      table.accountId,
+      table.globalDeveloperId
     ),
   ]
 );

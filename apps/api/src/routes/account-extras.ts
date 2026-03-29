@@ -7,6 +7,7 @@ import {
   accountTrackedKeywords,
   accountCompetitorApps,
   accountStarredCategories,
+  accountStarredDevelopers,
   accountTrackedFeatures,
   categories,
   categorySnapshots,
@@ -15,6 +16,7 @@ import {
   keywordTagAssignments,
   categoryParents,
   platformRequests,
+  globalDevelopers,
   sqlArray,
 } from "@appranks/db";
 import { requireRole } from "../middleware/authorize.js";
@@ -644,6 +646,104 @@ export const accountExtrasRoutes: FastifyPluginAsync = async (app) => {
         .returning();
 
       return { message: "Platform request submitted", id: row.id };
+    }
+  );
+
+  // ── Starred Developers ──────────────────────────────────────────
+
+  // GET /api/account/starred-developers
+  app.get("/starred-developers", async (request) => {
+    const { accountId } = request.user;
+
+    const rows = await db
+      .select({
+        id: accountStarredDevelopers.id,
+        globalDeveloperId: accountStarredDevelopers.globalDeveloperId,
+        createdAt: accountStarredDevelopers.createdAt,
+        name: globalDevelopers.name,
+        slug: globalDevelopers.slug,
+        website: globalDevelopers.website,
+        logoUrl: globalDevelopers.logoUrl,
+        totalApps: globalDevelopers.totalApps,
+        totalReviews: globalDevelopers.totalReviews,
+        avgRating: globalDevelopers.avgRating,
+        platformsActive: globalDevelopers.platformsActive,
+      })
+      .from(accountStarredDevelopers)
+      .innerJoin(
+        globalDevelopers,
+        eq(accountStarredDevelopers.globalDeveloperId, globalDevelopers.id)
+      )
+      .where(eq(accountStarredDevelopers.accountId, accountId))
+      .orderBy(desc(accountStarredDevelopers.createdAt));
+
+    return rows;
+  });
+
+  // POST /api/account/starred-developers/:id
+  app.post<{ Params: { id: string } }>(
+    "/starred-developers/:id",
+    { preHandler: [requireRole("owner", "editor")] },
+    async (request, reply) => {
+      const { accountId } = request.user;
+      const globalDeveloperId = parseInt(request.params.id, 10);
+
+      if (isNaN(globalDeveloperId)) {
+        return reply.code(400).send({ error: "Invalid developer ID" });
+      }
+
+      // Verify developer exists
+      const [dev] = await db
+        .select({ id: globalDevelopers.id })
+        .from(globalDevelopers)
+        .where(eq(globalDevelopers.id, globalDeveloperId))
+        .limit(1);
+
+      if (!dev) {
+        return reply.code(404).send({ error: "Developer not found" });
+      }
+
+      const [result] = await db
+        .insert(accountStarredDevelopers)
+        .values({ accountId, globalDeveloperId })
+        .onConflictDoNothing()
+        .returning();
+
+      if (!result) {
+        return reply.code(409).send({ error: "Developer already starred" });
+      }
+
+      return result;
+    }
+  );
+
+  // DELETE /api/account/starred-developers/:id
+  app.delete<{ Params: { id: string } }>(
+    "/starred-developers/:id",
+    { preHandler: [requireRole("owner", "editor")] },
+    async (request, reply) => {
+      const { accountId } = request.user;
+      const globalDeveloperId = parseInt(request.params.id, 10);
+
+      if (isNaN(globalDeveloperId)) {
+        return reply.code(400).send({ error: "Invalid developer ID" });
+      }
+
+      const deleted = await db
+        .delete(accountStarredDevelopers)
+        .where(
+          and(
+            eq(accountStarredDevelopers.accountId, accountId),
+            eq(accountStarredDevelopers.globalDeveloperId, globalDeveloperId)
+          )
+        )
+        .returning();
+
+      if (deleted.length === 0) {
+        return reply.code(404).send({ error: "Starred developer not found" });
+      }
+
+      return { message: "Developer unstarred" };
     }
   );
 };

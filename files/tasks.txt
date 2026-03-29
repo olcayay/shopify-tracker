@@ -10,6 +10,7 @@ Email & Notification Infrastructure: Phase 0 (2026-03-30)
   PLA-423: Integrate event detection into scraper process-job ✅
   PLA-424: Service worker + push subscription manager ✅
   PLA-425: Docker deployment configs for 3 new workers ✅
+  PLA-434: Starred developers — DB, API & schema ✅
 
 Backlog Fixes (2026-03-30)
   PLA-412: Add Notifications and Emails links to System Admin sidebar ✅

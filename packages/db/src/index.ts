@@ -158,6 +158,7 @@ export {
   accountTrackedKeywords,
   accountCompetitorApps,
   accountStarredCategories,
+  accountStarredDevelopers,
   accountTrackedFeatures,
 } from "./schema/account-tracking.js";
 export { similarAppSightings } from "./schema/similar-apps.js";
