@@ -218,7 +218,7 @@ export const appRoutes: FastifyPluginAsync = async (app) => {
         ORDER BY app_id, scraped_at DESC
       ) s
       INNER JOIN apps a ON a.id = s.app_id
-      WHERE a.slug = ANY(${slugs})
+      WHERE a.slug = ANY(${sql.raw(`ARRAY[${slugs.map(s => `'${s.replace(/'/g, "''")}'`).join(',')}]`)})
         AND a.platform = ${platform}
     `);
 

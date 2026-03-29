@@ -145,8 +145,8 @@ export async function developerRoutes(app: FastifyInstance) {
             a.active_installs
           FROM ${apps} a
           JOIN ${appSnapshots} s ON s.app_id = a.id
-          WHERE a.platform = ANY(${devPlatforms})
-            AND s.developer->>'name' = ANY(${devNames})
+          WHERE a.platform = ANY(${sql.raw(`ARRAY[${devPlatforms.map(s => `'${s.replace(/'/g, "''")}'`).join(',')}]`)})
+            AND s.developer->>'name' = ANY(${sql.raw(`ARRAY[${devNames.map(s => `'${s.replace(/'/g, "''")}'`).join(',')}]`)})
             AND s.id = (
               SELECT s2.id FROM ${appSnapshots} s2
               WHERE s2.app_id = a.id

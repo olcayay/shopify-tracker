@@ -1411,7 +1411,7 @@ export const accountTrackingRoutes: FastifyPluginAsync = async (app) => {
           FROM (
             SELECT *, ROW_NUMBER() OVER (PARTITION BY app_id ORDER BY detected_at DESC) AS rn
             FROM app_field_changes
-            WHERE app_id = ANY(${competitorAppIds})
+            WHERE app_id = ANY(${sql.raw(`ARRAY[${competitorAppIds.join(',')}]`)})
           ) c
           INNER JOIN apps a ON a.id = c.app_id
           WHERE c.rn <= 3

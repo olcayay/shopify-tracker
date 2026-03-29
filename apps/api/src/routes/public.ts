@@ -233,7 +233,7 @@ export const publicRoutes: FastifyPluginAsync = async (app) => {
               SELECT DISTINCT ON (app_id) app_id, developer
               FROM app_snapshots ORDER BY app_id, scraped_at DESC
             ) s ON s.app_id = a.id
-            WHERE s.developer->>'name' = ANY(${devNames})
+            WHERE s.developer->>'name' = ANY(${sql.raw(`ARRAY[${devNames.map(s => `'${s.replace(/'/g, "''")}'`).join(',')}]`)})
               ${isPlatformId(platform) ? sql`AND a.platform = ${platform}` : sql``}
             ORDER BY a.id
           `);
