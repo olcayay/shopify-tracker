@@ -53,6 +53,10 @@ export const accountMemberRoutes: FastifyPluginAsync = async (app) => {
         .from(accounts)
         .where(eq(accounts.id, accountId));
 
+      if (!account) {
+        return reply.code(404).send({ error: "Account not found" });
+      }
+
       const [{ memberCount }] = await db
         .select({ memberCount: sql<number>`count(*)::int` })
         .from(users)

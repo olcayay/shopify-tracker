@@ -28,6 +28,10 @@ export const accountInfoRoutes: FastifyPluginAsync = async (app) => {
       .from(accounts)
       .where(eq(accounts.id, accountId));
 
+    if (!account) {
+      return { error: "Account not found" };
+    }
+
     const [trackedAppsCount] = await db
       .select({ count: sql<number>`count(*)::int` })
       .from(accountTrackedApps)

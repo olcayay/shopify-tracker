@@ -93,15 +93,19 @@ export function registerAuthMiddleware(app: FastifyInstance) {
       const db = app.db;
 
       // When impersonating, validate target user still exists
-      if (request.isImpersonating) {
-        const [targetUser] = await db
-          .select({ id: users.id })
-          .from(users)
-          .where(eq(users.id, request.user.userId));
-        if (!targetUser) {
-          return reply
-            .code(403)
-            .send({ error: "Impersonated user no longer exists" });
+      if (request.isImpersonating && request.user.userId) {
+        try {
+          const [targetUser] = await db
+            .select({ id: users.id })
+            .from(users)
+            .where(eq(users.id, request.user.userId));
+          if (!targetUser) {
+            return reply
+              .code(403)
+              .send({ error: "Impersonated user no longer exists" });
+          }
+        } catch {
+          return reply.code(500).send({ error: "Failed to validate user" });
         }
       }
 
@@ -114,13 +118,19 @@ export function registerAuthMiddleware(app: FastifyInstance) {
       }
 
       // Account suspension check
-      const [account] = await db
-        .select({ isSuspended: accounts.isSuspended })
-        .from(accounts)
-        .where(eq(accounts.id, request.user.accountId));
+      if (request.user.accountId) {
+        try {
+          const [account] = await db
+            .select({ isSuspended: accounts.isSuspended })
+            .from(accounts)
+            .where(eq(accounts.id, request.user.accountId));
 
-      if (account?.isSuspended && !request.user.isSystemAdmin) {
-        return reply.code(403).send({ error: "Account is suspended" });
+          if (account?.isSuspended && !request.user.isSystemAdmin) {
+            return reply.code(403).send({ error: "Account is suspended" });
+          }
+        } catch {
+          // Non-critical — allow request to proceed if account check fails
+        }
       }
     }
   );
