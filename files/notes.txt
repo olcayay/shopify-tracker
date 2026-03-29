@@ -1,3 +1,17 @@
+CORS Handling for API Unavailability: PLA-410 (2026-03-29)
+================================================================
+Problem: When API is down, Traefik returns 502/503/504 without CORS headers.
+Browser blocks the response entirely (TypeError: Failed to fetch), hiding the
+real error behind a confusing CORS message.
+
+Dashboard-side fix:
+- auth-context.tsx doFetch: catch network errors → return synthetic 503 Response
+- lib/api.ts fetchApi/fetchPublicApi: catch network errors → throw user-friendly error
+- Callers now see "Service temporarily unavailable" instead of opaque TypeError
+
+TODO (server-side): Add CORS middleware to Traefik via Coolify dashboard so
+error responses also include Access-Control-Allow-Origin headers.
+
 Fix Broken Developer Links: PLA-407 (2026-03-29)
 ================================================================
 5 broken links generating /developers/{slug} URLs (404s after route removal

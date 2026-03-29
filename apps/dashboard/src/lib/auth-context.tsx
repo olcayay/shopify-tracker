@@ -172,13 +172,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (options?.body) {
         headers["Content-Type"] = "application/json";
       }
-      const res = await fetch(`${API_BASE}${path}`, {
-        ...options,
-        headers: {
-          ...headers,
-          ...(options?.headers || {}),
-        },
-      });
+      let res: Response;
+      try {
+        res = await fetch(`${API_BASE}${path}`, {
+          ...options,
+          headers: {
+            ...headers,
+            ...(options?.headers || {}),
+          },
+        });
+      } catch {
+        // Network error — typically caused by API being down and Traefik
+        // returning 502/503/504 without CORS headers, which the browser
+        // blocks entirely. Return a synthetic 503 so callers get a clear
+        // status instead of an opaque TypeError.
+        return new Response(
+          JSON.stringify({ error: "Service temporarily unavailable. Please try again in a moment." }),
+          { status: 503, headers: { "Content-Type": "application/json" } },
+        );
+      }
 
       // Handle expired token — clear auth state
       if (res.status === 401 && token && !path.includes("/api/auth/")) {

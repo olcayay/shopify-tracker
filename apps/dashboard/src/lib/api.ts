@@ -33,15 +33,20 @@ async function fetchApi<T>(path: string, options?: RequestInit & { next?: { reva
         ? { cache: options.cache }
         : { next: { revalidate: 300 } };
 
-  const res = await fetch(url, {
-    ...options,
-    headers: {
-      "Content-Type": "application/json",
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
-      ...(options?.headers || {}),
-    },
-    ...cacheOptions,
-  });
+  let res: Response;
+  try {
+    res = await fetch(url, {
+      ...options,
+      headers: {
+        "Content-Type": "application/json",
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        ...(options?.headers || {}),
+      },
+      ...cacheOptions,
+    });
+  } catch {
+    throw new Error("Service temporarily unavailable. Please try again in a moment.");
+  }
 
   if (!res.ok) {
     const body = await res.json().catch(() => ({}));
@@ -54,11 +59,16 @@ async function fetchApi<T>(path: string, options?: RequestInit & { next?: { reva
 // --- Public (no auth required) ---
 async function fetchPublicApi<T>(path: string, options?: RequestInit & { next?: { revalidate?: number; tags?: string[] } }): Promise<T> {
   const url = `${API_BASE}${path}`;
-  const res = await fetch(url, {
-    ...options,
-    headers: { "Content-Type": "application/json", ...(options?.headers || {}) },
-    next: options?.next ?? { revalidate: 3600 },
-  });
+  let res: Response;
+  try {
+    res = await fetch(url, {
+      ...options,
+      headers: { "Content-Type": "application/json", ...(options?.headers || {}) },
+      next: options?.next ?? { revalidate: 3600 },
+    });
+  } catch {
+    throw new Error("Service temporarily unavailable. Please try again in a moment.");
+  }
   if (!res.ok) {
     const body = await res.json().catch(() => ({}));
     throw new Error(body.error || `API error: ${res.status}`);
