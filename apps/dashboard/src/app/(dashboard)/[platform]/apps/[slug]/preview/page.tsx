@@ -11,6 +11,7 @@ import type { PlatformId } from "@appranks/shared";
 import { ShopifyPreview } from "./shopify-preview";
 import { SalesforcePreview } from "./salesforce-preview";
 import { CanvaPreview } from "./canva-preview";
+import { GenericPreview } from "./generic-preview";
 
 export default function PreviewPage() {
   const params = useParams<{ platform: string; slug: string }>();
@@ -22,7 +23,7 @@ export default function PreviewPage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (platform !== "shopify" && platform !== "salesforce" && platform !== "canva" && platform !== "wix" && platform !== "google_workspace") return;
+    // Load data for all platforms (custom + generic preview support)
     async function loadData() {
       setLoading(true);
       const res = await fetchWithAuth(
@@ -40,26 +41,6 @@ export default function PreviewPage() {
       document.body.style.overflow = "";
     };
   }, [slug, platform]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  if (platform !== "shopify" && platform !== "salesforce" && platform !== "canva" && platform !== "wix") {
-    return (
-      <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4">
-        <h2 className="text-xl font-semibold">Preview not available</h2>
-        <p className="text-muted-foreground text-center max-w-md">
-          The listing preview is not available for this platform.
-        </p>
-        <a
-          href={buildExternalAppUrl(platform as PlatformId, slug)}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="inline-flex items-center gap-1.5 text-primary hover:underline"
-        >
-          View on {getPlatformName(platform as PlatformId)}
-          <ExternalLink className="h-4 w-4" />
-        </a>
-      </div>
-    );
-  }
 
   if (loading) {
     return (
@@ -96,23 +77,22 @@ function PreviewShell({
   platform: string;
   onClose: () => void;
 }) {
-  const platformPreview =
-    platform === "canva"
-      ? CanvaPreview({ appData })
-      : platform === "salesforce"
-        ? SalesforcePreview({ appData })
-        : ShopifyPreview({ appData });
-
-  const { preview, editor, resetToOriginal } = platformPreview;
-  const icon = appData.iconUrl;
-  const platformLabel =
-    platform === "wix"
-      ? "Wix App Market Preview"
-      : platform === "canva"
-        ? "Canva Apps Preview"
+  const hasCustomPreview = ["shopify", "salesforce", "canva"].includes(platform);
+  const platformPreview = hasCustomPreview
+    ? (platform === "canva"
+        ? CanvaPreview({ appData })
         : platform === "salesforce"
-          ? "AppExchange Preview"
-          : "App Store Preview";
+          ? SalesforcePreview({ appData })
+          : ShopifyPreview({ appData }))
+    : null;
+
+  // For platforms with custom previews, use the preview/editor split
+  // For others, show the generic preview without an editor panel
+  const preview = platformPreview?.preview ?? <GenericPreview app={appData} platformName={getPlatformName(platform as PlatformId)} />;
+  const editor = platformPreview?.editor ?? null;
+  const resetToOriginal = platformPreview?.resetToOriginal ?? (() => {});
+  const icon = appData.iconUrl;
+  const platformLabel = getPlatformName(platform as PlatformId) + " Preview";
 
   return (
     <div className="fixed inset-0 z-50 bg-background flex flex-col">

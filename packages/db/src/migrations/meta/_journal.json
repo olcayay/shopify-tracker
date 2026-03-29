@@ -708,6 +708,13 @@
       "when": 1777334400000,
       "tag": "0100_weekly_summary_enum",
       "breakpoints": true
+    },
+    {
+      "idx": 101,
+      "version": "7",
+      "when": 1777420800000,
+      "tag": "0101_developer_enrichment",
+      "breakpoints": true
     }
   ]
 }
