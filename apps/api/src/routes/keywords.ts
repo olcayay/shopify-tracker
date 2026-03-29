@@ -169,7 +169,7 @@ export const keywordRoutes: FastifyPluginAsync = async (app) => {
           jsonb_array_length(results)::int AS app_count,
           results
         FROM keyword_snapshots
-        WHERE keyword_id = ANY(${ids})
+        WHERE keyword_id = ANY(${sql.raw(`ARRAY[${ids.join(',')}]`)})
         ORDER BY keyword_id, scraped_at DESC
       `);
       const snapRows = (latestSnapshots as any).rows ?? latestSnapshots;
@@ -683,7 +683,7 @@ export const keywordRoutes: FastifyPluginAsync = async (app) => {
           total_results,
           results
         FROM keyword_snapshots
-        WHERE keyword_id = ANY(${kwIds})
+        WHERE keyword_id = ANY(${sql.raw(`ARRAY[${kwIds.join(',')}]`)})
         ORDER BY keyword_id, scraped_at DESC
       `);
       const snapshotResults = ((snapshotRows as any).rows ?? snapshotRows).map((row: any) => ({
