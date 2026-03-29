@@ -12,7 +12,7 @@ const STALE_TIMEOUT_HOURS: Record<string, number> = {
   keyword_search: 2,
   keyword_suggestions: 2,
   reviews: 2,
-  featured_sections: 2,
+  featured_apps: 2,
   backfill_categories: 3,
   compute_app_scores: 1,
   compute_review_metrics: 1,
