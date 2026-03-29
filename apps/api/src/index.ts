@@ -204,6 +204,10 @@ await app.register(emailTrackingRoutes, { prefix: "/api/emails" });
 const { adminEmailRoutes } = await import("./routes/admin-emails.js");
 await app.register(adminEmailRoutes, { prefix: "/api/system-admin" });
 
+// AI content generation (requires system admin auth)
+const { aiContentRoutes } = await import("./routes/ai-content.js");
+await app.register(aiContentRoutes, { prefix: "/api/system-admin/ai" });
+
 // Cache-Control headers based on route patterns
 app.addHook("onSend", async (request, reply) => {
   // Skip non-GET requests and already-set headers

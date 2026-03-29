@@ -1,5 +1,5 @@
 import type { FastifyPluginAsync } from "fastify";
-import { eq, sql, and, desc, gte, lte, ilike } from "drizzle-orm";
+import { eq, sql, and, desc, gte, lte, ilike, inArray } from "drizzle-orm";
 import {
   emailLogs,
   emailTypeConfigs,
