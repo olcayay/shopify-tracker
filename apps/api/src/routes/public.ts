@@ -296,6 +296,60 @@ export const publicRoutes: FastifyPluginAsync = async (app) => {
     }
   );
 
+  // GET /public/keywords/:platform/:slug — public keyword insight
+  app.get<{ Params: { platform: string; slug: string } }>(
+    "/keywords/:platform/:slug",
+    async (request, reply) => {
+      const { platform, slug } = request.params;
+      if (!isPlatformId(platform)) return reply.code(400).send({ error: "Invalid platform" });
+
+      const result = await cacheGet(`public:kw:${platform}:${slug}`, async () => {
+        // Get keyword
+        const kwRows = await db.execute(sql`
+          SELECT id, keyword, slug FROM tracked_keywords
+          WHERE slug = ${slug} AND platform = ${platform} LIMIT 1
+        `);
+        const kw = ((kwRows as any).rows ?? kwRows)[0];
+        if (!kw) return null;
+
+        // Get top 10 ranked apps for this keyword (latest data)
+        const rankRows = await db.execute(sql`
+          SELECT DISTINCT ON (r.app_id) r.app_id, r.position, r.scraped_at,
+                 a.slug AS app_slug, a.name AS app_name, a.icon_url, a.average_rating, a.rating_count, a.pricing_hint
+          FROM app_keyword_rankings r
+          JOIN apps a ON a.id = r.app_id
+          WHERE r.keyword_id = ${kw.id} AND r.position IS NOT NULL
+          ORDER BY r.app_id, r.scraped_at DESC
+        `);
+        const ranks = ((rankRows as any).rows ?? rankRows) as any[];
+        const topApps = ranks
+          .sort((a: any, b: any) => (a.position || 999) - (b.position || 999))
+          .slice(0, 10)
+          .map((r: any) => ({
+            position: r.position,
+            appSlug: r.app_slug,
+            name: r.app_name,
+            iconUrl: r.icon_url,
+            averageRating: r.average_rating ? parseFloat(r.average_rating) : null,
+            ratingCount: r.rating_count,
+            pricingHint: r.pricing_hint,
+          }));
+
+        return {
+          keyword: kw.keyword,
+          slug: kw.slug,
+          platform,
+          topApps,
+          totalRanked: ranks.length,
+        };
+      }, PUBLIC_CACHE_TTL);
+
+      if (!result) return reply.code(404).send({ error: "Keyword not found" });
+      reply.header("cache-control", "public, max-age=3600, stale-while-revalidate=7200");
+      return result;
+    }
+  );
+
   // GET /public/compare/:platform/:slug1/:slug2 — app comparison data
   app.get<{ Params: { platform: string; slug1: string; slug2: string } }>(
     "/compare/:platform/:slug1/:slug2",

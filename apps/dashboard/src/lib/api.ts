@@ -90,6 +90,10 @@ export const getPublicComparison = cache((platform: string, slug1: string, slug2
   return fetchPublicApi<any>(`/api/public/compare/${platform}/${slug1}/${slug2}`);
 });
 
+export const getPublicKeyword = cache((platform: string, slug: string) => {
+  return fetchPublicApi<any>(`/api/public/keywords/${platform}/${slug}`);
+});
+
 // --- Categories ---
 export function getCategories(format: "tree" | "flat" = "tree", platform?: PlatformId) {
   return fetchApi<any[]>(withPlatform(`/api/categories?format=${format}`, platform));
