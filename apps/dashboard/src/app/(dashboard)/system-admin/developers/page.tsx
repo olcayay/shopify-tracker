@@ -465,7 +465,7 @@ export default function SystemAdminDevelopersPage() {
                       <TableCell>
                         <div className="flex items-center gap-2">
                           <Link
-                            href={dev.platformDevelopers.length > 0 ? `/${dev.platformDevelopers[0].platform}/developers/${dev.slug}` : `/developers`}
+                            href={`/developer/${dev.slug}`}
                             className="text-primary hover:underline font-medium"
                           >
                             {dev.name}

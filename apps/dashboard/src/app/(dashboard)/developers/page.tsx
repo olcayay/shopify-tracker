@@ -127,7 +127,7 @@ export default function DevelopersPage() {
                   developers.map((dev) => (
                     <TableRow key={dev.id}>
                       <TableCell>
-                        <Link href={`/${dev.platforms[0]}/developers/${dev.slug}`} className="font-medium hover:underline">
+                        <Link href={`/developer/${dev.slug}`} className="font-medium hover:underline">
                           {dev.name}
                         </Link>
                       </TableCell>

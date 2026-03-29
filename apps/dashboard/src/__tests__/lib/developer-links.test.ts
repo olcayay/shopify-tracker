@@ -2,35 +2,44 @@ import { describe, it, expect } from "vitest";
 
 /**
  * Tests to prevent regression on developer link patterns.
- * All developer links in the dashboard must include a platform prefix
- * or point to the cross-platform developer list (/developers).
  *
  * Valid patterns:
- *   /{platform}/developers/{slug}  — platform-specific developer detail
- *   /developers                    — cross-platform developer list
- *   /developers?q={name}           — cross-platform developer list with search
+ *   /developer/{slug}               — cross-platform developer profile (singular)
+ *   /{platform}/developers/{slug}   — platform-specific developer detail
+ *   /developers                     — cross-platform developer list
  *
- * Invalid patterns (cause 404):
- *   /developers/{slug}             — no route exists for this
+ * Invalid/deprecated patterns:
+ *   /developers/{slug}              — conflicts with Next.js [platform] dynamic segment
+ *   /developers?q={name}            — should use /developer/{slug} instead
  */
 
 const VALID_DEVELOPER_LINK_PATTERNS = [
+  /^\/developer\/[a-z0-9-]+$/, // /developer/{slug} — cross-platform profile (singular)
   /^\/[a-z-]+\/developers\/[a-z0-9-]+$/, // /{platform}/developers/{slug}
-  /^\/developers(\?.*)?$/, // /developers or /developers?q=...
+  /^\/developers$/, // /developers (list, no query params)
 ];
 
 function isValidDeveloperLink(href: string): boolean {
   return VALID_DEVELOPER_LINK_PATTERNS.some((pattern) => pattern.test(href));
 }
 
-const INVALID_PATTERN = /^\/developers\/[a-z0-9-]+$/; // /developers/{slug} with no platform
+// These patterns are broken/deprecated and should not be used
+const BROKEN_PATTERNS = [
+  /^\/developers\/[a-z0-9-]+$/, // /developers/{slug} — conflicts with [platform]
+  /^\/developers\?q=/, // /developers?q= — old search pattern
+];
 
 function isBrokenDeveloperLink(href: string): boolean {
-  return INVALID_PATTERN.test(href);
+  return BROKEN_PATTERNS.some((pattern) => pattern.test(href));
 }
 
 describe("developer link validation", () => {
   describe("valid developer links", () => {
+    it("cross-platform developer profile (singular /developer/) is valid", () => {
+      expect(isValidDeveloperLink("/developer/jotform")).toBe(true);
+      expect(isValidDeveloperLink("/developer/acme-inc")).toBe(true);
+    });
+
     it("platform-specific developer link is valid", () => {
       expect(isValidDeveloperLink("/shopify/developers/jotform")).toBe(true);
       expect(isValidDeveloperLink("/salesforce/developers/acme-inc")).toBe(true);
@@ -40,58 +49,51 @@ describe("developer link validation", () => {
     it("cross-platform developer list link is valid", () => {
       expect(isValidDeveloperLink("/developers")).toBe(true);
     });
-
-    it("cross-platform developer list with search is valid", () => {
-      expect(isValidDeveloperLink("/developers?q=Jotform")).toBe(true);
-      expect(isValidDeveloperLink("/developers?q=Acme%20Inc")).toBe(true);
-    });
   });
 
-  describe("broken developer links (404)", () => {
-    it("detects /developers/{slug} as broken (no platform prefix)", () => {
+  describe("broken/deprecated developer links", () => {
+    it("/developers/{slug} is broken (conflicts with [platform] dynamic segment)", () => {
       expect(isBrokenDeveloperLink("/developers/jotform")).toBe(true);
       expect(isBrokenDeveloperLink("/developers/acme-inc")).toBe(true);
     });
 
-    it("platform-prefixed links are not broken", () => {
-      expect(isBrokenDeveloperLink("/shopify/developers/jotform")).toBe(false);
+    it("/developers?q= is broken (should use /developer/{slug})", () => {
+      expect(isBrokenDeveloperLink("/developers?q=Jotform")).toBe(true);
+      expect(isBrokenDeveloperLink("/developers?q=Acme%20Inc")).toBe(true);
     });
 
-    it("list page link is not broken", () => {
+    it("valid links are not detected as broken", () => {
+      expect(isBrokenDeveloperLink("/developer/jotform")).toBe(false);
+      expect(isBrokenDeveloperLink("/shopify/developers/jotform")).toBe(false);
       expect(isBrokenDeveloperLink("/developers")).toBe(false);
     });
   });
 
-  describe("real-world link examples from fixed code", () => {
-    it("globe icon link includes platform", () => {
+  describe("real-world link examples from current code", () => {
+    it("developer list links to cross-platform profile", () => {
+      const slug = "jotform";
+      const href = `/developer/${slug}`;
+      expect(isValidDeveloperLink(href)).toBe(true);
+      expect(isBrokenDeveloperLink(href)).toBe(false);
+    });
+
+    it("platform page 'View cross-platform profile' links to /developer/{slug}", () => {
+      const slug = "jotform";
+      const href = `/developer/${slug}`;
+      expect(isValidDeveloperLink(href)).toBe(true);
+      expect(isBrokenDeveloperLink(href)).toBe(false);
+    });
+
+    it("system-admin developer list links to cross-platform profile", () => {
+      const slug = "some-dev";
+      const href = `/developer/${slug}`;
+      expect(isValidDeveloperLink(href)).toBe(true);
+    });
+
+    it("platform badge on cross-platform page links to platform-specific page", () => {
       const platform = "shopify";
       const slug = "jotform";
       const href = `/${platform}/developers/${slug}`;
-      expect(isValidDeveloperLink(href)).toBe(true);
-      expect(isBrokenDeveloperLink(href)).toBe(false);
-    });
-
-    it("system-admin developer list link uses first platform", () => {
-      const platformDevelopers = [
-        { id: 1, platform: "shopify", name: "Dev" },
-        { id: 2, platform: "salesforce", name: "Dev" },
-      ];
-      const slug = "some-dev";
-      const href = `/${platformDevelopers[0].platform}/developers/${slug}`;
-      expect(isValidDeveloperLink(href)).toBe(true);
-    });
-
-    it("cross-platform profile link uses developer list with search", () => {
-      const developerName = "Jotform";
-      const href = `/developers?q=${encodeURIComponent(developerName)}`;
-      expect(isValidDeveloperLink(href)).toBe(true);
-      expect(isBrokenDeveloperLink(href)).toBe(false);
-    });
-
-    it("system-admin developer with no platforms falls back to /developers", () => {
-      const platformDevelopers: { id: number; platform: string; name: string }[] = [];
-      const slug = "orphan-dev";
-      const href = platformDevelopers.length > 0 ? `/${platformDevelopers[0].platform}/developers/${slug}` : `/developers`;
       expect(isValidDeveloperLink(href)).toBe(true);
     });
   });

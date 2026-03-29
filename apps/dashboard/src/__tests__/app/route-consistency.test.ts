@@ -34,18 +34,22 @@ function getRouteSegments(dir: string, prefix = ""): string[] {
 describe("Route consistency validation", () => {
   it("dashboard developer detail route exists under [platform]", () => {
     // Per-platform view: /[platform]/developers/[slug] — shows apps for one platform
-    // Note: cross-platform /developers/[slug] was removed because it conflicts with
-    // (dashboard)/[platform] dynamic segment in Next.js (slug !== platform error)
     const platformDevSlug = join(APP_DIR, "(dashboard)/[platform]/developers/[slug]");
     expect(existsSync(join(platformDevSlug, "page.tsx"))).toBe(true);
   });
 
   it("cross-platform developers/[slug] route must NOT exist (conflicts with [platform])", () => {
     // This route causes Next.js 500: "You cannot use different slug names for the same
-    // dynamic path ('slug' !== 'platform')". The developers list page links to
-    // /${platform}/developers/${slug} instead.
+    // dynamic path ('slug' !== 'platform')". Use /developer/{slug} (singular) instead.
     const conflictingRoute = join(APP_DIR, "(dashboard)/developers/[slug]");
     expect(existsSync(conflictingRoute)).toBe(false);
+  });
+
+  it("cross-platform developer/[slug] route exists (singular, avoids [platform] conflict)", () => {
+    // /developer/{slug} (singular) is a separate static segment that doesn't exist under
+    // [platform], so it avoids the Next.js dynamic param name conflict.
+    const crossPlatformRoute = join(APP_DIR, "(dashboard)/developer/[slug]");
+    expect(existsSync(join(crossPlatformRoute, "page.tsx"))).toBe(true);
   });
 
   it("developers list page exists", () => {
