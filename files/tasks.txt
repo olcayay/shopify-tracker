@@ -10,6 +10,12 @@ Performance: Eliminate N+1 and add count endpoints (2026-03-29)
   PLA-244: JSONB containment operators + GIN indexes ✅
   PLA-246: Research project delta polling ✅
 
+SEO/AEO: Phase 0 tasks (2026-03-29)
+  PLA-309: robots.txt ✅
+  PLA-311: llms.txt ✅
+  PLA-313: JSON-LD structured data components (6 types) ✅
+  PLA-314: Open Graph/Twitter Card meta tag utility ✅
+
 Platform Robustness: 28 tasks implemented (2026-03-29)
   PLA-253: Zod validation before DB insert ✅
   PLA-254: Review date parsing returns null on failure ✅
