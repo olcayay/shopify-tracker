@@ -8,6 +8,7 @@ import {
   appCategoryRankings,
   globalDevelopers,
   platformDevelopers,
+  appSimilarityScores,
 } from "@appranks/db";
 import { cacheGet } from "../utils/cache.js";
 import { PLATFORMS, PLATFORM_IDS, isPlatformId } from "@appranks/shared";
@@ -48,20 +49,43 @@ export const publicRoutes: FastifyPluginAsync = async (app) => {
         const snapRows = await db.execute(sql`
           SELECT DISTINCT ON (app_id)
             intro, developer, pricing, pricing_plans, categories, screenshots,
-            average_rating, rating_count
+            features, average_rating, rating_count
           FROM app_snapshots
           WHERE app_id = (SELECT id FROM apps WHERE slug = ${slug} AND platform = ${platform} LIMIT 1)
           ORDER BY app_id, scraped_at DESC
         `);
         const snap = ((snapRows as any).rows ?? snapRows)[0] || {};
 
+        // Get top 5 similar apps by similarity score
+        const similarRows = await db.execute(sql`
+          SELECT a.slug, a.name, a.icon_url, a.average_rating, a.rating_count, a.pricing_hint,
+                 s.overall_score
+          FROM app_similarity_scores s
+          JOIN apps a ON a.id = s.app_id_b
+          WHERE s.app_id_a = (SELECT id FROM apps WHERE slug = ${slug} AND platform = ${platform} LIMIT 1)
+            AND a.platform = ${platform}
+          ORDER BY s.overall_score DESC
+          LIMIT 5
+        `);
+        const similarApps = ((similarRows as any).rows ?? similarRows).map((r: any) => ({
+          slug: r.slug,
+          name: r.name,
+          iconUrl: r.icon_url,
+          averageRating: r.average_rating ? parseFloat(r.average_rating) : null,
+          ratingCount: r.rating_count,
+          pricingHint: r.pricing_hint,
+        }));
+
         return {
           ...appRow,
           intro: snap.intro || null,
           developer: snap.developer || null,
           pricing: snap.pricing || null,
+          pricingPlans: snap.pricing_plans || [],
+          features: snap.features || [],
           categories: snap.categories || [],
           screenshots: snap.screenshots || [],
+          similarApps,
           averageRating: snap.average_rating ? parseFloat(snap.average_rating) : appRow.averageRating,
           ratingCount: snap.rating_count ?? appRow.ratingCount,
         };

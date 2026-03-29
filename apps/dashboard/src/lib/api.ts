@@ -51,6 +51,41 @@ async function fetchApi<T>(path: string, options?: RequestInit & { next?: { reva
   return res.json();
 }
 
+// --- Public (no auth required) ---
+async function fetchPublicApi<T>(path: string, options?: RequestInit & { next?: { revalidate?: number; tags?: string[] } }): Promise<T> {
+  const url = `${API_BASE}${path}`;
+  const res = await fetch(url, {
+    ...options,
+    headers: { "Content-Type": "application/json", ...(options?.headers || {}) },
+    next: options?.next ?? { revalidate: 3600 },
+  });
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}));
+    throw new Error(body.error || `API error: ${res.status}`);
+  }
+  return res.json();
+}
+
+export const getPublicApp = cache((platform: string, slug: string) => {
+  return fetchPublicApi<any>(`/api/public/apps/${platform}/${slug}`);
+});
+
+export const getPublicCategory = cache((platform: string, slug: string) => {
+  return fetchPublicApi<any>(`/api/public/categories/${platform}/${slug}`);
+});
+
+export const getPublicCategoryTree = cache((platform: string) => {
+  return fetchPublicApi<any[]>(`/api/public/categories/${platform}`);
+});
+
+export const getPublicDeveloper = cache((platform: string, slug: string) => {
+  return fetchPublicApi<any>(`/api/public/developers/${platform}/${slug}`);
+});
+
+export const getPublicPlatformStats = cache((platform: string) => {
+  return fetchPublicApi<any>(`/api/public/platforms/${platform}/stats`);
+});
+
 // --- Categories ---
 export function getCategories(format: "tree" | "flat" = "tree", platform?: PlatformId) {
   return fetchApi<any[]>(withPlatform(`/api/categories?format=${format}`, platform));
