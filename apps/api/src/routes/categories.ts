@@ -1,6 +1,6 @@
 import type { FastifyPluginAsync } from "fastify";
 import { eq, desc, sql, and, asc, inArray } from "drizzle-orm";
-import { categories, categorySnapshots, appCategoryRankings, apps, categoryAdSightings, appPowerScores, categoryParents } from "@appranks/db";
+import { categories, categorySnapshots, appCategoryRankings, apps, categoryAdSightings, appPowerScores, categoryParents, sqlArray } from "@appranks/db";
 import { getPlatformFromQuery } from "../utils/platform.js";
 import { PAGINATION_DEFAULT_LIMIT, PAGINATION_MAX_LIMIT } from "../constants.js";
 import { cacheGet } from "../utils/cache.js";
@@ -116,7 +116,7 @@ export const categoryRoutes: FastifyPluginAsync = async (app) => {
         jsonb_array_elements(s.categories) as cat,
         jsonb_array_elements(cat->'subcategories') as sub,
         jsonb_array_elements(sub->'features') as feat
-        WHERE regexp_replace(cat->>'url', '.*\/categories\/([^/?#]+).*', '\1') = ANY(${sql.raw(`ARRAY[${slugs.map(s => `'${s.replace(/'/g, "''")}'`).join(',')}]`)})
+        WHERE regexp_replace(cat->>'url', '.*\/categories\/([^/?#]+).*', '\1') = ANY(${sqlArray(slugs)})
         ORDER BY cat_title, sub_title, feat_title
       `);
       const rows = (Array.isArray(result) ? result : (result as any).rows ?? []) as { cat_slug: string; cat_title: string; sub_title: string; feat_title: string; feat_handle: string; feat_url: string }[];
@@ -209,7 +209,7 @@ export const categoryRoutes: FastifyPluginAsync = async (app) => {
       const childSnaps = await db.execute(sql`
         SELECT DISTINCT ON (category_id) category_id, app_count
         FROM category_snapshots
-        WHERE category_id = ANY(${sql.raw(`ARRAY[${childIds.join(',')}]`)})
+        WHERE category_id = ANY(${sqlArray(childIds)})
         ORDER BY category_id, scraped_at DESC
       `);
       for (const row of ((childSnaps as any).rows ?? childSnaps) as any[]) {
@@ -434,7 +434,7 @@ export const categoryRoutes: FastifyPluginAsync = async (app) => {
             ? await db.execute(sql`
                 SELECT DISTINCT ON (category_id) category_id, scrape_run_id
                 FROM category_snapshots
-                WHERE category_id = ANY(${sql.raw(`ARRAY[${descCatIds.join(',')}]`)})
+                WHERE category_id = ANY(${sqlArray(descCatIds)})
                 ORDER BY category_id, scraped_at DESC
               `)
             : [];
@@ -788,7 +788,7 @@ export const categoryRoutes: FastifyPluginAsync = async (app) => {
       const snapRows = await db.execute(sql`
         SELECT DISTINCT ON (category_id) category_id, app_count, scrape_run_id
         FROM category_snapshots
-        WHERE category_id = ANY(${sql.raw(`ARRAY[${catIds.join(',')}]`)})
+        WHERE category_id = ANY(${sqlArray(catIds)})
         ORDER BY category_id, scraped_at DESC
       `);
       const snapData: any[] = (snapRows as any).rows ?? snapRows;

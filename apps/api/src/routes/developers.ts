@@ -5,6 +5,7 @@ import {
   platformDevelopers,
   apps,
   appSnapshots,
+  sqlArray,
 } from "@appranks/db";
 import { requireSystemAdmin } from "../middleware/authorize.js";
 import { developerNameToSlug } from "@appranks/shared";
@@ -145,8 +146,8 @@ export async function developerRoutes(app: FastifyInstance) {
             a.active_installs
           FROM ${apps} a
           JOIN ${appSnapshots} s ON s.app_id = a.id
-          WHERE a.platform = ANY(${sql.raw(`ARRAY[${devPlatforms.map(s => `'${s.replace(/'/g, "''")}'`).join(',')}]`)})
-            AND s.developer->>'name' = ANY(${sql.raw(`ARRAY[${devNames.map(s => `'${s.replace(/'/g, "''")}'`).join(',')}]`)})
+          WHERE a.platform = ANY(${sqlArray(devPlatforms)})
+            AND s.developer->>'name' = ANY(${sqlArray(devNames)})
             AND s.id = (
               SELECT s2.id FROM ${appSnapshots} s2
               WHERE s2.app_id = a.id

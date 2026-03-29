@@ -25,6 +25,7 @@ import {
   appFieldChanges,
   categories,
   categorySnapshots,
+  sqlArray,
 } from "@appranks/db";
 import { computeWeightedPowerScore } from "@appranks/shared";
 import { requireRole } from "../middleware/authorize.js";
@@ -1411,7 +1412,7 @@ export const accountTrackingRoutes: FastifyPluginAsync = async (app) => {
           FROM (
             SELECT *, ROW_NUMBER() OVER (PARTITION BY app_id ORDER BY detected_at DESC) AS rn
             FROM app_field_changes
-            WHERE app_id = ANY(${sql.raw(`ARRAY[${competitorAppIds.join(',')}]`)})
+            WHERE app_id = ANY(${sqlArray(competitorAppIds)})
           ) c
           INNER JOIN apps a ON a.id = c.app_id
           WHERE c.rn <= 3

@@ -22,6 +22,7 @@ import {
   categorySnapshots,
   featuredAppSightings,
   similarAppSightings,
+  sqlArray,
 } from "@appranks/db";
 import {
   extractKeywordsFromAppMetadata,
@@ -2285,7 +2286,7 @@ Generate differentiated app concepts. Consider:
     if (kwIds.length > 0) {
       const scrapedRows = await db.execute(sql`
         SELECT DISTINCT keyword_id FROM keyword_snapshots
-        WHERE keyword_id = ANY(${sql.raw(`ARRAY[${kwIds.join(',')}]`)})
+        WHERE keyword_id = ANY(${sqlArray(kwIds)})
       `);
       const scrapedData: any[] = (scrapedRows as any).rows ?? scrapedRows;
       for (const r of scrapedData) scrapedKwIds.add(r.keyword_id);
@@ -2305,7 +2306,7 @@ Generate differentiated app concepts. Consider:
     if (compIds.length > 0) {
       const scrapedCompRows = await db.execute(sql`
         SELECT DISTINCT app_id FROM app_snapshots
-        WHERE app_id = ANY(${sql.raw(`ARRAY[${compIds.join(',')}]`)})
+        WHERE app_id = ANY(${sqlArray(compIds)})
       `);
       const scrapedCompData: any[] = (scrapedCompRows as any).rows ?? scrapedCompRows;
       for (const r of scrapedCompData) scrapedCompIds.add(r.app_id);

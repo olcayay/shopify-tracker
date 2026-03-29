@@ -9,6 +9,7 @@ import {
   globalDevelopers,
   platformDevelopers,
   appSimilarityScores,
+  sqlArray,
 } from "@appranks/db";
 import { cacheGet } from "../utils/cache.js";
 import { PLATFORMS, PLATFORM_IDS, isPlatformId } from "@appranks/shared";
@@ -233,7 +234,7 @@ export const publicRoutes: FastifyPluginAsync = async (app) => {
               SELECT DISTINCT ON (app_id) app_id, developer
               FROM app_snapshots ORDER BY app_id, scraped_at DESC
             ) s ON s.app_id = a.id
-            WHERE s.developer->>'name' = ANY(${sql.raw(`ARRAY[${devNames.map(s => `'${s.replace(/'/g, "''")}'`).join(',')}]`)})
+            WHERE s.developer->>'name' = ANY(${sqlArray(devNames)})
               ${isPlatformId(platform) ? sql`AND a.platform = ${platform}` : sql``}
             ORDER BY a.id
           `);

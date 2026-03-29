@@ -26,6 +26,7 @@ import {
   appPowerScores,
   researchProjects,
   researchProjectCompetitors,
+  sqlArray,
 } from "@appranks/db";
 
 const log = createLogger("api-apps");
@@ -218,7 +219,7 @@ export const appRoutes: FastifyPluginAsync = async (app) => {
         ORDER BY app_id, scraped_at DESC
       ) s
       INNER JOIN apps a ON a.id = s.app_id
-      WHERE a.slug = ANY(${sql.raw(`ARRAY[${slugs.map(s => `'${s.replace(/'/g, "''")}'`).join(',')}]`)})
+      WHERE a.slug = ANY(${sqlArray(slugs)})
         AND a.platform = ${platform}
     `);
 

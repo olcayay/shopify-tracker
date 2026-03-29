@@ -15,6 +15,7 @@ import {
   keywordTagAssignments,
   categoryParents,
   platformRequests,
+  sqlArray,
 } from "@appranks/db";
 import { requireRole } from "../middleware/authorize.js";
 import { getPlatformFromQuery } from "../utils/platform.js";
@@ -123,7 +124,7 @@ export const accountExtrasRoutes: FastifyPluginAsync = async (app) => {
           SELECT DISTINCT ON (category_id)
             category_id, app_count, first_page_apps, scrape_run_id
           FROM category_snapshots
-          WHERE category_id = ANY(${sql.raw(`ARRAY[${categoryIds.join(',')}]`)})
+          WHERE category_id = ANY(${sqlArray(categoryIds)})
           ORDER BY category_id, scraped_at DESC
         `).then((res: any) => ((res as any).rows ?? res).map((r: any) => ({
           categoryId: r.category_id as number,

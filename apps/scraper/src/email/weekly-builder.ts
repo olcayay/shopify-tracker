@@ -14,6 +14,7 @@ import {
   appKeywordRankings,
   appSnapshots,
   apps,
+  sqlArray,
 } from "@appranks/db";
 import { getLocalDayBoundaries } from "./timezone.js";
 
@@ -126,16 +127,16 @@ export async function buildWeeklyForAccount(
     WITH first_rank AS (
       SELECT DISTINCT ON (app_id, keyword_id) app_id, keyword_id, position, scraped_at
       FROM app_keyword_rankings
-      WHERE keyword_id = ANY(${sql.raw(`ARRAY[${keywordIds.join(',')}]`)})
-        AND app_id = ANY(${sql.raw(`ARRAY[${appIdList.join(',')}]`)})
+      WHERE keyword_id = ANY(${sqlArray(keywordIds)})
+        AND app_id = ANY(${sqlArray(appIdList)})
         AND scraped_at >= ${weekStart} AND scraped_at < ${todayStart}
       ORDER BY app_id, keyword_id, scraped_at ASC
     ),
     last_rank AS (
       SELECT DISTINCT ON (app_id, keyword_id) app_id, keyword_id, position, scraped_at
       FROM app_keyword_rankings
-      WHERE keyword_id = ANY(${sql.raw(`ARRAY[${keywordIds.join(',')}]`)})
-        AND app_id = ANY(${sql.raw(`ARRAY[${appIdList.join(',')}]`)})
+      WHERE keyword_id = ANY(${sqlArray(keywordIds)})
+        AND app_id = ANY(${sqlArray(appIdList)})
         AND scraped_at >= ${weekStart}
       ORDER BY app_id, keyword_id, scraped_at DESC
     )

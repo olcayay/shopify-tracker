@@ -1,4 +1,5 @@
 import { drizzle } from "drizzle-orm/postgres-js";
+import { sql } from "drizzle-orm";
 import postgres from "postgres";
 
 import * as scrapeRunsSchema from "./schema/scrape-runs.js";
@@ -76,6 +77,31 @@ export function createDb(databaseUrl: string) {
 }
 
 export type Database = ReturnType<typeof createDb>;
+
+/**
+ * Build a PostgreSQL ARRAY literal safe for use inside raw SQL.
+ * Use this instead of `ANY(${jsArray})` which fails because Drizzle's
+ * sql`` template does not auto-cast JS arrays to PG arrays.
+ *
+ * @example
+ *   sql`WHERE id = ANY(${sqlArray(ids)})`        // integer[]
+ *   sql`WHERE name = ANY(${sqlArray(names)})`     // text[]
+ */
+export function sqlArray(arr: (number | string)[]): ReturnType<typeof sql> {
+  if (arr.length === 0) {
+    // Return an empty PG array that works with ANY — cast to unknown so the
+    // comparison still type-checks against any column type.
+    return sql.raw("ARRAY[]::integer[]");
+  }
+  if (typeof arr[0] === "number") {
+    return sql.raw(`ARRAY[${arr.join(",")}]`);
+  }
+  // String values — single-quote each, escaping embedded quotes
+  const escaped = (arr as string[]).map(
+    (s) => `'${s.replace(/'/g, "''")}'`
+  );
+  return sql.raw(`ARRAY[${escaped.join(",")}]`);
+}
 
 // Re-export schema tables for convenience
 export {
