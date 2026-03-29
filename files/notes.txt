@@ -1,3 +1,33 @@
+Email & Notification Infrastructure: Phase 0 (2026-03-30)
+================================================================
+PLA-415: Added 3 new BullMQ queues (email-instant, email-bulk, notifications)
+in queue.ts with distinct retry/backoff configs:
+- email-instant: 3 retries, 5s exponential backoff (transactional, <30s SLA)
+- email-bulk: 2 retries, 30s exponential backoff (marketing/digest)
+- notifications: 3 retries, 10s exponential backoff (in-app + push)
+Shared types: InstantEmailJobData, BulkEmailJobData, NotificationJobData
+in packages/shared/src/types/email-job.ts and notification-job.ts.
+
+PLA-417: Created 5 transactional email templates in
+apps/scraper/src/email/templates/transactional/:
+- password-reset, email-verification, invitation, login-alert, two-factor-code
+- Pure functions: (data) => { subject, html }
+- No tracking pixel, no unsubscribe link (transactional exemption)
+- Uses existing design tokens and components (layout, header, ctaButton)
+
+PLA-416: Implemented email-instant worker (email-instant-worker.ts).
+- Processes jobs from email-instant queue with concurrency: 3
+- Routes to template → renders HTML → logs to email_logs → sends via SMTP
+- Failed jobs after 3 attempts go to dead_letter_jobs table
+- Core logic extracted to email/process-instant-email.ts for testability
+
+PLA-418: Created API email-enqueue helpers (apps/api/src/lib/email-enqueue.ts)
+with 6 functions: sendWelcomeEmail, sendPasswordResetEmail,
+sendVerificationEmail, sendInvitationEmail, sendLoginAlertEmail, send2FAEmail.
+Integrated into auth routes: registration triggers welcome email,
+invitation creation triggers invitation email. All fire-and-forget
+(don't block API response).
+
 Sidebar Navigation & UI Fixes: PLA-411/412/413/414 (2026-03-30)
 ================================================================
 PLA-412: Added Notifications (Bell) and Emails (Mail) links to systemAdminItems

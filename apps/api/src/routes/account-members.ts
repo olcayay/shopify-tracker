@@ -8,6 +8,7 @@ import {
   invitations,
 } from "@appranks/db";
 import { requireRole } from "../middleware/authorize.js";
+import { sendInvitationEmail } from "../lib/email-enqueue.js";
 import { requireIdempotencyKey } from "../middleware/idempotency.js";
 import {
   addMemberSchema,
@@ -202,6 +203,20 @@ export const accountMemberRoutes: FastifyPluginAsync = async (app) => {
           expiresAt,
         })
         .returning();
+
+      // Enqueue invitation email (fire-and-forget)
+      const [inviter] = await db
+        .select({ name: users.name })
+        .from(users)
+        .where(eq(users.id, userId));
+
+      sendInvitationEmail(
+        invitation.email,
+        inviter?.name || "A team member",
+        account.name,
+        invitation.token,
+        { role: invitation.role, accountId }
+      ).catch(() => {});
 
       return {
         id: invitation.id,

@@ -19,6 +19,7 @@ import { PLATFORM_IDS } from "@appranks/shared";
 import { getJwtSecret, type JwtPayload } from "../middleware/auth.js";
 import { blacklistToken, revokeAllTokensForUser } from "../utils/token-blacklist.js";
 import { RateLimiter } from "../utils/rate-limiter.js";
+import { sendWelcomeEmail } from "../lib/email-enqueue.js";
 import {
   registerSchema,
   loginSchema,
@@ -153,6 +154,12 @@ export const authRoutes: FastifyPluginAsync = async (app) => {
         },
       };
     });
+
+    // Enqueue welcome email (fire-and-forget, don't block the response)
+    sendWelcomeEmail(result.user.email, result.user.name, {
+      userId: result.user.id,
+      accountId: result.user.account.id,
+    }).catch(() => {});
 
     return result;
   });

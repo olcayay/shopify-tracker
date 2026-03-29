@@ -1,4 +1,5 @@
 import { Queue, type ConnectionOptions } from "bullmq";
+import type { InstantEmailJobData, BulkEmailJobData, NotificationJobData } from "@appranks/shared";
 import {
   JOB_DEFAULT_ATTEMPTS,
   JOB_BACKOFF_DELAY_MS,
@@ -8,6 +9,9 @@ import {
 
 export const BACKGROUND_QUEUE_NAME = "scraper-jobs-background";
 export const INTERACTIVE_QUEUE_NAME = "scraper-jobs-interactive";
+export const EMAIL_INSTANT_QUEUE_NAME = "email-instant";
+export const EMAIL_BULK_QUEUE_NAME = "email-bulk";
+export const NOTIFICATIONS_QUEUE_NAME = "notifications";
 /** @deprecated Use BACKGROUND_QUEUE_NAME or INTERACTIVE_QUEUE_NAME */
 export const QUEUE_NAME = BACKGROUND_QUEUE_NAME;
 
@@ -62,6 +66,9 @@ const defaultJobOptions = {
 
 let _backgroundQueue: Queue<ScraperJobData> | null = null;
 let _interactiveQueue: Queue<ScraperJobData> | null = null;
+let _emailInstantQueue: Queue<InstantEmailJobData> | null = null;
+let _emailBulkQueue: Queue<BulkEmailJobData> | null = null;
+let _notificationsQueue: Queue<NotificationJobData> | null = null;
 
 export function getBackgroundQueue(): Queue<ScraperJobData> {
   if (!_backgroundQueue) {
@@ -86,6 +93,94 @@ export function getInteractiveQueue(): Queue<ScraperJobData> {
 /** @deprecated Use getBackgroundQueue() or getInteractiveQueue() */
 export function getQueue(): Queue<ScraperJobData> {
   return getBackgroundQueue();
+}
+
+// ── Email & Notification queues ─────────────────────────────────────
+
+const emailInstantJobOptions = {
+  attempts: 3,
+  backoff: { type: "exponential" as const, delay: 5_000 },
+  removeOnComplete: { count: JOB_REMOVE_ON_COMPLETE_COUNT },
+  removeOnFail: { count: JOB_REMOVE_ON_FAIL_COUNT },
+};
+
+const emailBulkJobOptions = {
+  attempts: 2,
+  backoff: { type: "exponential" as const, delay: 30_000 },
+  removeOnComplete: { count: JOB_REMOVE_ON_COMPLETE_COUNT },
+  removeOnFail: { count: JOB_REMOVE_ON_FAIL_COUNT },
+};
+
+const notificationsJobOptions = {
+  attempts: 3,
+  backoff: { type: "exponential" as const, delay: 10_000 },
+  removeOnComplete: { count: JOB_REMOVE_ON_COMPLETE_COUNT },
+  removeOnFail: { count: JOB_REMOVE_ON_FAIL_COUNT },
+};
+
+export function getEmailInstantQueue(): Queue<InstantEmailJobData> {
+  if (!_emailInstantQueue) {
+    _emailInstantQueue = new Queue<InstantEmailJobData>(EMAIL_INSTANT_QUEUE_NAME, {
+      connection: getRedisConnection(),
+      defaultJobOptions: emailInstantJobOptions,
+    });
+  }
+  return _emailInstantQueue;
+}
+
+export function getEmailBulkQueue(): Queue<BulkEmailJobData> {
+  if (!_emailBulkQueue) {
+    _emailBulkQueue = new Queue<BulkEmailJobData>(EMAIL_BULK_QUEUE_NAME, {
+      connection: getRedisConnection(),
+      defaultJobOptions: emailBulkJobOptions,
+    });
+  }
+  return _emailBulkQueue;
+}
+
+export function getNotificationsQueue(): Queue<NotificationJobData> {
+  if (!_notificationsQueue) {
+    _notificationsQueue = new Queue<NotificationJobData>(NOTIFICATIONS_QUEUE_NAME, {
+      connection: getRedisConnection(),
+      defaultJobOptions: notificationsJobOptions,
+    });
+  }
+  return _notificationsQueue;
+}
+
+export async function enqueueInstantEmail(
+  data: InstantEmailJobData,
+  options?: { priority?: number }
+): Promise<string> {
+  const queue = getEmailInstantQueue();
+  const job = await queue.add(`email:${data.type}`, data, {
+    priority: options?.priority,
+  });
+  return job.id!;
+}
+
+export async function enqueueBulkEmail(
+  data: BulkEmailJobData,
+  options?: { priority?: number; delay?: number }
+): Promise<string> {
+  const queue = getEmailBulkQueue();
+  const job = await queue.add(`email:${data.type}`, data, {
+    priority: options?.priority,
+    delay: options?.delay,
+  });
+  return job.id!;
+}
+
+export async function enqueueNotification(
+  data: NotificationJobData,
+  options?: { priority?: number; delay?: number }
+): Promise<string> {
+  const queue = getNotificationsQueue();
+  const job = await queue.add(`notification:${data.type}`, data, {
+    priority: options?.priority,
+    delay: options?.delay,
+  });
+  return job.id!;
 }
 
 /** Long-running job types that should not retry — the scheduler will re-enqueue on the next cycle */
@@ -115,12 +210,19 @@ export async function closeQueue(): Promise<void> {
 }
 
 export async function closeAllQueues(): Promise<void> {
-  if (_backgroundQueue) {
-    await _backgroundQueue.close();
-    _backgroundQueue = null;
-  }
-  if (_interactiveQueue) {
-    await _interactiveQueue.close();
-    _interactiveQueue = null;
-  }
+  const queues: [string, { close(): Promise<void> } | null][] = [
+    ["background", _backgroundQueue],
+    ["interactive", _interactiveQueue],
+    ["emailInstant", _emailInstantQueue],
+    ["emailBulk", _emailBulkQueue],
+    ["notifications", _notificationsQueue],
+  ];
+  await Promise.all(
+    queues.map(async ([, q]) => { if (q) await q.close(); })
+  );
+  _backgroundQueue = null;
+  _interactiveQueue = null;
+  _emailInstantQueue = null;
+  _emailBulkQueue = null;
+  _notificationsQueue = null;
 }

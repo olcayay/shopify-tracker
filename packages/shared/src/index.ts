@@ -36,6 +36,20 @@ export type {
   ScrapeRunMetadata,
 } from "./types/scraper.js";
 
+// Email job types
+export type {
+  InstantEmailJobType,
+  InstantEmailJobData,
+  BulkEmailJobType,
+  BulkEmailJobData,
+} from "./types/email-job.js";
+
+// Notification job types
+export type {
+  NotificationJobType,
+  NotificationJobData,
+} from "./types/notification-job.js";
+
 // Platform data types
 export type {
   PlatformDataMap,
