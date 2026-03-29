@@ -245,6 +245,19 @@ app.addHook("onSend", async (request, reply) => {
   reply.header("cache-control", "private, max-age=30");
 });
 
+// Prometheus metrics endpoint
+import { formatMetrics, registerMetricsHooks, setGauge } from "./utils/metrics.js";
+registerMetricsHooks(app);
+
+app.get("/metrics", async (request, reply) => {
+  // Require system admin auth in production
+  if (process.env.NODE_ENV === "production" && !request.user?.isSystemAdmin) {
+    return reply.code(403).send({ error: "Forbidden" });
+  }
+  reply.header("content-type", "text/plain; version=0.0.4; charset=utf-8");
+  return formatMetrics();
+});
+
 // Shallow health check — always responds (for load balancer liveness probes)
 app.get("/health/live", async () => {
   return { status: "ok", timestamp: new Date().toISOString() };
