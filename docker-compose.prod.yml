@@ -178,6 +178,32 @@ services:
       redis:
         condition: service_healthy
 
+  # Grafana Alloy: ships logs to Loki, metrics to Prometheus (Grafana Cloud)
+  alloy:
+    image: grafana/alloy:v1.5.1
+    restart: always
+    logging: *default-logging
+    volumes:
+      - ./config/alloy.river:/etc/alloy/config.alloy:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    command:
+      - run
+      - /etc/alloy/config.alloy
+      - --stability.level=generally-available
+    environment:
+      GRAFANA_LOKI_URL: ${GRAFANA_LOKI_URL:-}
+      GRAFANA_LOKI_USER: ${GRAFANA_LOKI_USER:-}
+      GRAFANA_PROMETHEUS_URL: ${GRAFANA_PROMETHEUS_URL:-}
+      GRAFANA_PROM_USER: ${GRAFANA_PROM_USER:-}
+      GRAFANA_CLOUD_TOKEN: ${GRAFANA_CLOUD_TOKEN:-}
+      METRICS_BEARER_TOKEN: ${METRICS_BEARER_TOKEN:-}
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+    depends_on:
+      - api
+
 volumes:
   postgres_data:
   redis_data:

@@ -250,9 +250,16 @@ import { formatMetrics, registerMetricsHooks, setGauge } from "./utils/metrics.j
 registerMetricsHooks(app);
 
 app.get("/metrics", async (request, reply) => {
-  // Require system admin auth in production
-  if (process.env.NODE_ENV === "production" && !request.user?.isSystemAdmin) {
-    return reply.code(403).send({ error: "Forbidden" });
+  // In production, require either system admin JWT or METRICS_BEARER_TOKEN
+  if (process.env.NODE_ENV === "production") {
+    const metricsToken = process.env.METRICS_BEARER_TOKEN;
+    const authHeader = request.headers.authorization;
+    const bearerToken = authHeader?.startsWith("Bearer ") ? authHeader.slice(7) : null;
+    const hasValidMetricsToken = metricsToken && bearerToken === metricsToken;
+
+    if (!request.user?.isSystemAdmin && !hasValidMetricsToken) {
+      return reply.code(403).send({ error: "Forbidden" });
+    }
   }
   reply.header("content-type", "text/plain; version=0.0.4; charset=utf-8");
   return formatMetrics();

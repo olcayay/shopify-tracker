@@ -1,0 +1,115 @@
+// Grafana Alloy configuration for AppRanks
+// Collects Docker container logs → Grafana Cloud Loki
+// Scrapes Prometheus metrics → Grafana Cloud Prometheus
+
+// ============================================================
+// LOG COLLECTION: Docker container logs → Loki
+// ============================================================
+
+// Discover Docker containers
+discovery.docker "containers" {
+  host = "unix:///var/run/docker.sock"
+}
+
+// Relabel: add service name from container name/compose service
+discovery.relabel "docker_logs" {
+  targets = discovery.docker.containers.targets
+
+  // Use compose service name as "service" label
+  rule {
+    source_labels = ["__meta_docker_container_label_com_docker_compose_service"]
+    target_label  = "service"
+  }
+
+  // Use container name as fallback
+  rule {
+    source_labels = ["__meta_docker_container_name"]
+    regex         = "/(.*)"
+    target_label  = "container"
+  }
+
+  // Drop alloy's own logs to avoid recursion
+  rule {
+    source_labels = ["service"]
+    regex         = "alloy"
+    action        = "drop"
+  }
+}
+
+// Collect logs from discovered containers
+loki.source.docker "containers" {
+  host    = "unix:///var/run/docker.sock"
+  targets = discovery.relabel.docker_logs.output
+
+  labels  = {
+    env     = "production",
+    project = "appranks",
+  }
+
+  forward_to = [loki.process.json_parse.receiver]
+}
+
+// Parse JSON structured logs and extract level
+loki.process "json_parse" {
+  // Try to parse JSON log lines
+  stage.json {
+    expressions = {
+      level   = "level",
+      msg     = "msg",
+      module  = "module",
+    }
+  }
+
+  // Set extracted level as a label
+  stage.labels {
+    values = {
+      level  = "",
+      module = "",
+    }
+  }
+
+  forward_to = [loki.write.grafana_cloud.receiver]
+}
+
+// Ship logs to Grafana Cloud Loki
+loki.write "grafana_cloud" {
+  endpoint {
+    url = env("GRAFANA_LOKI_URL")
+
+    basic_auth {
+      username = env("GRAFANA_LOKI_USER")
+      password = env("GRAFANA_CLOUD_TOKEN")
+    }
+  }
+}
+
+// ============================================================
+// METRICS: Scrape /metrics → Prometheus remote write
+// ============================================================
+
+// Scrape API metrics endpoint
+prometheus.scrape "api_metrics" {
+  targets = [{
+    __address__ = "api:3001",
+  }]
+
+  metrics_path    = "/metrics"
+  scrape_interval = "60s"
+
+  // Bearer token auth for the /metrics endpoint
+  bearer_token = env("METRICS_BEARER_TOKEN")
+
+  forward_to = [prometheus.remote_write.grafana_cloud.receiver]
+}
+
+// Remote write metrics to Grafana Cloud Prometheus
+prometheus.remote_write "grafana_cloud" {
+  endpoint {
+    url = env("GRAFANA_PROMETHEUS_URL")
+
+    basic_auth {
+      username = env("GRAFANA_PROM_USER")
+      password = env("GRAFANA_CLOUD_TOKEN")
+    }
+  }
+}
