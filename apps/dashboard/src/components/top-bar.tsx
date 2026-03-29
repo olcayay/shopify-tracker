@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
 import { AnimatedLogo } from "@/components/animated-logo";
+import { NotificationBell } from "@/components/notification-bell";
 import { useNavigationLoading } from "@/hooks/use-navigation-loading";
 import { PLATFORM_DISPLAY } from "@/lib/platform-display";
 import { PLATFORMS, PLATFORM_IDS, type PlatformId } from "@appranks/shared";
@@ -167,6 +168,9 @@ export function TopBar({
 
       {/* Spacer */}
       <div className="flex-1" />
+
+      {/* Notifications */}
+      <NotificationBell />
 
       {/* Settings */}
       <Link

@@ -11,6 +11,7 @@ import { DashboardFooter } from "@/components/dashboard-footer";
 import { isOnPlatformPage, isOnGlobalPage } from "@/lib/nav-utils";
 import { useAuth } from "@/lib/auth-context";
 import { AnimatedLogo } from "@/components/animated-logo";
+import { NotificationBell } from "@/components/notification-bell";
 import { useNavigationLoading } from "@/hooks/use-navigation-loading";
 
 export function DashboardShell({ children }: { children: React.ReactNode }) {
@@ -30,10 +31,11 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
       {/* Mobile: hamburger + logo */}
       <header className="md:hidden flex items-center gap-3 border-b px-4 h-14 shrink-0">
         {showSidebar && <MobileSidebar />}
-        <span className="flex items-center gap-1.5 font-semibold">
+        <span className="flex items-center gap-1.5 font-semibold flex-1">
           <AnimatedLogo animating={isNavigating} />
           AppRanks
         </span>
+        <NotificationBell />
       </header>
       <div className="flex flex-1 min-h-0">
         <IconSidebar />
