@@ -536,6 +536,43 @@ export function createProcessJob(db: ReturnType<typeof createDb>, queueName?: st
         break;
       }
 
+      case "weekly_summary": {
+        const { getWeeklyRecipients, buildWeeklyForAccount } = await import("./email/weekly-builder.js");
+        const { buildWeeklyHtml, buildWeeklySubject } = await import("./email/weekly-template.js");
+        const { sendMail: sendWeeklyMail } = await import("./email/mailer.js");
+        const { eq: eqW } = await import("drizzle-orm");
+        const { users: usersW } = await import("@appranks/db");
+
+        const weeklyRecipients = await getWeeklyRecipients(db);
+        const byAcct = new Map<string, typeof weeklyRecipients>();
+        for (const r of weeklyRecipients) {
+          const list = byAcct.get(r.accountId) || [];
+          list.push(r);
+          byAcct.set(r.accountId, list);
+        }
+
+        let wSent = 0;
+        let wSkipped = 0;
+        for (const [acctId, acctUsers] of byAcct) {
+          const tz = acctUsers[0].timezone;
+          const weeklyData = await buildWeeklyForAccount(db, acctId, tz);
+          if (!weeklyData) { wSkipped++; continue; }
+
+          const html = buildWeeklyHtml(weeklyData);
+          const subject = buildWeeklySubject(weeklyData);
+          for (const user of acctUsers) {
+            try {
+              await sendWeeklyMail(user.email, subject, html);
+              wSent++;
+            } catch (err) {
+              log.error("failed to send weekly summary", { email: user.email, error: String(err) });
+            }
+          }
+        }
+        log.info("weekly summary completed", { sent: wSent, skipped: wSkipped });
+        break;
+      }
+
       case "data_cleanup": {
         const { dataCleanup } = await import("./jobs/data-cleanup.js");
         await dataCleanup(db, job.id);

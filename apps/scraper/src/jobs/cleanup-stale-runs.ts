@@ -17,6 +17,7 @@ const STALE_TIMEOUT_HOURS: Record<string, number> = {
   compute_app_scores: 1,
   compute_review_metrics: 1,
   compute_similarity_scores: 1,
+  weekly_summary: 2,
 };
 
 const DEFAULT_TIMEOUT_HOURS = 2;
