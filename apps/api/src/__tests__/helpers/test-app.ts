@@ -19,7 +19,7 @@ process.env.JWT_SECRET = TEST_JWT_SECRET;
 function chainable(resolveValue: any = []) {
   const chain: any = {};
   const methods = [
-    "select", "from", "where", "leftJoin", "innerJoin", "rightJoin",
+    "select", "selectDistinctOn", "from", "where", "leftJoin", "innerJoin", "rightJoin",
     "orderBy", "groupBy", "limit", "offset", "as", "having",
     "insert", "values", "returning", "onConflictDoUpdate", "onConflictDoNothing",
     "update", "set", "delete",
@@ -53,6 +53,7 @@ export interface MockDbOverrides {
 export function createMockDb(overrides: MockDbOverrides = {}) {
   const db: any = {
     select: (...args: any[]) => chainable(overrides.selectResult ?? []),
+    selectDistinctOn: (...args: any[]) => chainable(overrides.selectResult ?? []),
     insert: (...args: any[]) => chainable(overrides.insertResult ?? []),
     update: (...args: any[]) => chainable([]),
     delete: (...args: any[]) => chainable([]),
@@ -64,6 +65,7 @@ export function createMockDb(overrides: MockDbOverrides = {}) {
     transaction: async (fn: (tx: any) => Promise<any>) => {
       const tx: any = {
         select: (...args: any[]) => chainable(overrides.selectResult ?? []),
+        selectDistinctOn: (...args: any[]) => chainable(overrides.selectResult ?? []),
         insert: (...args: any[]) => chainable(overrides.insertResult ?? []),
         update: (...args: any[]) => chainable([]),
         delete: (...args: any[]) => chainable([]),

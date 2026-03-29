@@ -107,4 +107,74 @@ describe("RateLimiter", () => {
     // Auth limiter still has capacity
     expect(authLimiter.check("admin1").allowed).toBe(true);
   });
+
+  // -----------------------------------------------------------------------
+  // Additional edge-case tests
+  // -----------------------------------------------------------------------
+
+  it("maxAttempts=1 blocks on the second request", () => {
+    const limiter = new RateLimiter({ maxAttempts: 1, windowMs: 60_000 });
+    expect(limiter.check("k").allowed).toBe(true);
+    const result = limiter.check("k");
+    expect(result.allowed).toBe(false);
+    if (!result.allowed) {
+      expect(result.retryAfterMs).toBeGreaterThan(0);
+    }
+  });
+
+  it("handles many different keys without interference", () => {
+    const limiter = new RateLimiter({ maxAttempts: 1, windowMs: 60_000 });
+    // 100 unique keys should all be allowed once
+    for (let i = 0; i < 100; i++) {
+      expect(limiter.check(`ip-${i}`).allowed).toBe(true);
+    }
+    // But second request from any of them should be blocked
+    expect(limiter.check("ip-0").allowed).toBe(false);
+    expect(limiter.check("ip-50").allowed).toBe(false);
+    expect(limiter.check("ip-99").allowed).toBe(false);
+  });
+
+  it("reset() only clears the specific limiter instance", () => {
+    const limiterA = new RateLimiter({ maxAttempts: 1, windowMs: 60_000 });
+    const limiterB = new RateLimiter({ maxAttempts: 1, windowMs: 60_000 });
+
+    limiterA.check("key1"); // use up the attempt
+    limiterB.check("key1"); // use up the attempt
+
+    limiterA.reset();
+    expect(limiterA.check("key1").allowed).toBe(true); // reset cleared it
+    expect(limiterB.check("key1").allowed).toBe(false); // still blocked
+  });
+
+  it("per-user key (userId) and per-IP key are independent", () => {
+    const limiter = new RateLimiter({ maxAttempts: 2, windowMs: 60_000 });
+
+    // Per-IP key
+    expect(limiter.check("ip:192.168.1.1").allowed).toBe(true);
+    expect(limiter.check("ip:192.168.1.1").allowed).toBe(true);
+    expect(limiter.check("ip:192.168.1.1").allowed).toBe(false);
+
+    // Per-user key from the same conceptual user — independent in the limiter
+    expect(limiter.check("user:user-001").allowed).toBe(true);
+    expect(limiter.check("user:user-001").allowed).toBe(true);
+    expect(limiter.check("user:user-001").allowed).toBe(false);
+  });
+
+  it("window reset allows new burst of requests", () => {
+    const limiter = new RateLimiter({ maxAttempts: 3, windowMs: 10 }); // 10ms window
+    // Exhaust the limit
+    for (let i = 0; i < 3; i++) limiter.check("burst");
+    expect(limiter.check("burst").allowed).toBe(false);
+
+    return new Promise<void>((resolve) => {
+      setTimeout(() => {
+        // After window expires, full burst should be available again
+        for (let i = 0; i < 3; i++) {
+          expect(limiter.check("burst").allowed).toBe(true);
+        }
+        expect(limiter.check("burst").allowed).toBe(false);
+        resolve();
+      }, 20);
+    });
+  });
 });
