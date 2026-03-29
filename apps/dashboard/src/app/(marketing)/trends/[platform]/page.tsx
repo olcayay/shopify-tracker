@@ -95,10 +95,12 @@ export default async function TrendsPage({ params }: PageProps) {
             <p className="text-sm text-muted-foreground mt-1">Categories</p>
           </div>
           <div className="rounded-lg border p-4 text-center">
-            <p className="text-3xl font-bold flex items-center justify-center gap-1">
-              {stats?.averageRating || "N/A"}
-              {stats?.averageRating && <Star className="h-5 w-5 fill-yellow-400 text-yellow-400" />}
-            </p>
+            {stats?.averageRating && (
+              <div className="flex justify-center mb-2">
+                <Star className="h-5 w-5 fill-yellow-400 text-yellow-400" />
+              </div>
+            )}
+            <p className="text-3xl font-bold">{stats?.averageRating || "N/A"}</p>
             <p className="text-sm text-muted-foreground mt-1">Avg Rating</p>
           </div>
           <div className="rounded-lg border p-4 text-center">

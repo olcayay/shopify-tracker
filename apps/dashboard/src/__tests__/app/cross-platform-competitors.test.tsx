@@ -46,6 +46,14 @@ vi.mock("@/components/platform-badge-cell", () => ({
   ),
 }));
 
+vi.mock("@/lib/platform-display", () => ({
+  PLATFORM_DISPLAY: {
+    shopify: { label: "Shopify", shortLabel: "Shopify", color: "#95BF47", gradient: "", borderTop: "", textAccent: "" },
+    salesforce: { label: "Salesforce", shortLabel: "Salesforce", color: "#00A1E0", gradient: "", borderTop: "", textAccent: "" },
+  },
+  getPlatformColor: (p: string) => (p === "shopify" ? "#95BF47" : "#00A1E0"),
+}));
+
 vi.mock("@/components/platform-filter-chips", () => ({
   PlatformFilterChips: ({
     enabledPlatforms,
@@ -311,5 +319,101 @@ describe("CrossPlatformCompetitorsPage", () => {
     expect(screen.getByText("Platform")).toBeInTheDocument();
     expect(screen.getByText("Tracked For")).toBeInTheDocument();
     expect(screen.getByText("Pricing")).toBeInTheDocument();
+  });
+
+  it("renders List and By Platform toggle buttons", async () => {
+    setupFetchMocks();
+    render(<CrossPlatformCompetitorsPage />);
+    expect(screen.getByRole("button", { name: /List/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /By Platform/i })).toBeInTheDocument();
+  });
+
+  it("groups competitors by platform when By Platform is clicked", async () => {
+    setupFetchMocks();
+    render(<CrossPlatformCompetitorsPage />);
+    await waitFor(() => {
+      expect(screen.getByText("Rival App")).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: /By Platform/i }));
+
+    await waitFor(() => {
+      // Platform group headers should appear
+      expect(screen.getByText("Shopify")).toBeInTheDocument();
+      expect(screen.getByText("Salesforce")).toBeInTheDocument();
+      // Competitors should still be visible
+      expect(screen.getByText("Rival App")).toBeInTheDocument();
+      expect(screen.getByText("SF Competitor")).toBeInTheDocument();
+    });
+  });
+
+  it("shows competitor count per platform group", async () => {
+    setupFetchMocks();
+    render(<CrossPlatformCompetitorsPage />);
+    await waitFor(() => {
+      expect(screen.getByText("Rival App")).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: /By Platform/i }));
+
+    await waitFor(() => {
+      const countBadges = screen.getAllByText("(1 competitor)");
+      expect(countBadges).toHaveLength(2); // one per platform group
+    });
+  });
+
+  it("hides Platform column in grouped view", async () => {
+    setupFetchMocks();
+    render(<CrossPlatformCompetitorsPage />);
+    await waitFor(() => {
+      expect(screen.getByText("Rival App")).toBeInTheDocument();
+    });
+
+    // In flat view, Platform column exists
+    expect(screen.getByText("Platform")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: /By Platform/i }));
+
+    await waitFor(() => {
+      expect(screen.getByText("Shopify")).toBeInTheDocument();
+    });
+
+    // In grouped view, no Platform column header
+    expect(screen.queryByText("Platform")).not.toBeInTheDocument();
+  });
+
+  it("switches back to flat list view", async () => {
+    setupFetchMocks();
+    render(<CrossPlatformCompetitorsPage />);
+    await waitFor(() => {
+      expect(screen.getByText("Rival App")).toBeInTheDocument();
+    });
+
+    // Switch to grouped
+    fireEvent.click(screen.getByRole("button", { name: /By Platform/i }));
+    await waitFor(() => {
+      expect(screen.getByText("Shopify")).toBeInTheDocument();
+    });
+
+    // Switch back to list
+    fireEvent.click(screen.getByRole("button", { name: /List/i }));
+    await waitFor(() => {
+      expect(screen.getByText("Platform")).toBeInTheDocument();
+      expect(screen.queryByText("(1 competitor)")).not.toBeInTheDocument();
+    });
+  });
+
+  it("shows empty message in grouped view when no competitors", async () => {
+    setupFetchMocks({ items: [] });
+    render(<CrossPlatformCompetitorsPage />);
+    await waitFor(() => {
+      expect(screen.getByText("No competitors tracked.")).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: /By Platform/i }));
+
+    await waitFor(() => {
+      expect(screen.getByText("No competitors tracked.")).toBeInTheDocument();
+    });
   });
 });

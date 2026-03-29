@@ -100,20 +100,20 @@ export function PlatformOverviewCards({ type, activePlatform, onSelect }: Platfo
             style={isActive ? { borderColor: color, ringColor: color } as any : undefined}
             onClick={() => onSelect(isActive ? "" : pid)}
           >
-            <CardContent className="pt-4 pb-3">
-              <div className="flex items-center gap-2 mb-1">
-                <div className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: color }} />
-                <span className="text-sm font-medium">{PLATFORM_LABELS[pid]}</span>
+            <CardContent className="pt-4 pb-3 text-center">
+              <div className="flex items-center justify-center mb-2">
+                <div className="w-8 h-8 rounded-full flex items-center justify-center" style={{ backgroundColor: `${color}20` }}>
+                  <div className="w-3 h-3 rounded-full" style={{ backgroundColor: color }} />
+                </div>
               </div>
-              <div className="pl-[18px]">
-                <span className="text-lg font-semibold">{primary}</span>
-                {secondary && (
-                  <span className="text-xs text-muted-foreground ml-2">{secondary}</span>
-                )}
-                {extra && (
-                  <span className="text-xs text-muted-foreground ml-2">{extra}</span>
-                )}
-              </div>
+              <div className="text-sm font-medium mb-1">{PLATFORM_LABELS[pid]}</div>
+              <div className="text-2xl font-semibold">{primary}</div>
+              {secondary && (
+                <div className="text-xs text-muted-foreground mt-1">{secondary}</div>
+              )}
+              {extra && (
+                <div className="text-xs text-muted-foreground">{extra}</div>
+              )}
             </CardContent>
           </Card>
         );
