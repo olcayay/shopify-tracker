@@ -8,6 +8,7 @@ Performance: Eliminate N+1 and add count endpoints (2026-03-29)
   PLA-247: Replace correlated subqueries with DISTINCT ON/CTEs ✅
   PLA-248: HTTP Cache-Control headers for API responses ✅
   PLA-244: JSONB containment operators + GIN indexes ✅
+  PLA-246: Research project delta polling ✅
 
 Platform Robustness: 28 tasks implemented (2026-03-29)
   PLA-253: Zod validation before DB insert ✅

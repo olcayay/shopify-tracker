@@ -2252,4 +2252,74 @@ Generate differentiated app concepts. Consider:
       return updated;
     }
   );
+
+  // GET /api/research-projects/:id/status — lightweight polling endpoint
+  // Returns only pending keyword/competitor IDs and last updated timestamp
+  app.get<{ Params: { id: string } }>("/:id/status", async (request, reply) => {
+    const { accountId } = request.user;
+    const { id } = request.params;
+
+    const [project] = await db
+      .select({ id: researchProjects.id })
+      .from(researchProjects)
+      .where(and(eq(researchProjects.id, id), eq(researchProjects.accountId, accountId)));
+
+    if (!project) {
+      return reply.code(404).send({ error: "Project not found" });
+    }
+
+    // Get keyword IDs and their scraped status
+    const kwRows = await db
+      .select({
+        keywordId: trackedKeywords.id,
+        slug: trackedKeywords.slug,
+      })
+      .from(researchProjectKeywords)
+      .innerJoin(trackedKeywords, eq(researchProjectKeywords.keywordId, trackedKeywords.id))
+      .where(eq(researchProjectKeywords.researchProjectId, id));
+
+    const kwIds = kwRows.map((k) => k.keywordId);
+
+    // Check which keywords have snapshots (scraped)
+    const scrapedKwIds = new Set<number>();
+    if (kwIds.length > 0) {
+      const scrapedRows = await db.execute(sql`
+        SELECT DISTINCT keyword_id FROM keyword_snapshots
+        WHERE keyword_id = ANY(${kwIds})
+      `);
+      const scrapedData: any[] = (scrapedRows as any).rows ?? scrapedRows;
+      for (const r of scrapedData) scrapedKwIds.add(r.keyword_id);
+    }
+
+    const pendingKeywordIds = kwIds.filter((id) => !scrapedKwIds.has(id));
+
+    // Get competitor slugs and their scraped status
+    const compRows = await db
+      .select({ appSlug: apps.slug, appId: apps.id })
+      .from(researchProjectCompetitors)
+      .innerJoin(apps, eq(researchProjectCompetitors.appId, apps.id))
+      .where(eq(researchProjectCompetitors.researchProjectId, id));
+
+    const compIds = compRows.map((c) => c.appId);
+    const scrapedCompIds = new Set<number>();
+    if (compIds.length > 0) {
+      const scrapedCompRows = await db.execute(sql`
+        SELECT DISTINCT app_id FROM app_snapshots
+        WHERE app_id = ANY(${compIds})
+      `);
+      const scrapedCompData: any[] = (scrapedCompRows as any).rows ?? scrapedCompRows;
+      for (const r of scrapedCompData) scrapedCompIds.add(r.app_id);
+    }
+
+    const pendingCompetitorSlugs = compRows
+      .filter((c) => !scrapedCompIds.has(c.appId))
+      .map((c) => c.appSlug);
+
+    return {
+      pendingKeywordIds,
+      pendingCompetitorSlugs,
+      totalKeywords: kwIds.length,
+      totalCompetitors: compRows.length,
+    };
+  });
 };

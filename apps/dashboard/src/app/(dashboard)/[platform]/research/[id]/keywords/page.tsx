@@ -107,9 +107,26 @@ export default function ResearchKeywordsPage() {
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
+  // Lightweight status polling — only fetches full data when pending items resolve
+  const pollStatus = useCallback(async () => {
+    try {
+      const res = await fetchWithAuth(`/api/research-projects/${id}/status`);
+      if (!res.ok) return;
+      const status = await res.json();
+      const pendingNow = new Set<number>(status.pendingKeywordIds || []);
+      // If some pending keywords resolved, fetch full data
+      if (pendingKeywords.size > 0 && pendingNow.size < pendingKeywords.size) {
+        await fetchData();
+      }
+      setPendingKeywords(pendingNow);
+    } catch {
+      // ignore
+    }
+  }, [id, fetchWithAuth, fetchData, pendingKeywords.size]);
+
   usePolling({
     hasPending: pendingKeywords.size > 0,
-    fetchFn: fetchData,
+    fetchFn: pollStatus,
   });
 
   async function handleAdd() {
