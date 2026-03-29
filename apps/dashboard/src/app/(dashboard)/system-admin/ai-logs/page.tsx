@@ -112,6 +112,7 @@ export default function AiLogsPage() {
   // Filters
   const [filterStatus, setFilterStatus] = useState("");
   const [filterPlatform, setFilterPlatform] = useState("");
+  const [filterProductType, setFilterProductType] = useState("");
   const [filterTag, setFilterTag] = useState("");
 
   // Tag input
@@ -131,9 +132,10 @@ export default function AiLogsPage() {
     params.set("offset", String(offset));
     if (filterStatus) params.set("status", filterStatus);
     if (filterPlatform) params.set("platform", filterPlatform);
+    if (filterProductType) params.set("productType", filterProductType);
     if (filterTag) params.set("tag", filterTag);
     return params.toString();
-  }, [offset, filterStatus, filterPlatform, filterTag]);
+  }, [offset, filterStatus, filterPlatform, filterProductType, filterTag]);
 
   const loadData = useCallback(async () => {
     setLoading(true);
@@ -183,6 +185,7 @@ export default function AiLogsPage() {
   function resetFilters() {
     setFilterStatus("");
     setFilterPlatform("");
+    setFilterProductType("");
     setFilterTag("");
     setOffset(0);
   }
@@ -476,13 +479,23 @@ export default function AiLogsPage() {
                 <option key={p} value={p}>{p}</option>
               ))}
             </select>
+            <select
+              className="border rounded px-2 py-1.5 text-sm bg-background"
+              value={filterProductType}
+              onChange={(e) => { setFilterProductType(e.target.value); setOffset(0); }}
+            >
+              <option value="">All Types</option>
+              {["research_virtual_app", "seo_comparison", "seo_category_overview", "seo_best_of_intro", "seo_app_description", "seo_faq", "review_sentiment"].map((t) => (
+                <option key={t} value={t}>{t.replace(/_/g, " ")}</option>
+              ))}
+            </select>
             <Input
               placeholder="Filter by tag..."
               className="w-40"
               value={filterTag}
               onChange={(e) => { setFilterTag(e.target.value); setOffset(0); }}
             />
-            {(filterStatus || filterPlatform || filterTag) && (
+            {(filterStatus || filterPlatform || filterProductType || filterTag) && (
               <Button variant="ghost" size="sm" onClick={resetFilters}>
                 Clear Filters
               </Button>
