@@ -136,7 +136,7 @@ export const appRoutes: FastifyPluginAsync = async (app) => {
 
     const [latestSnapshots, latestChanges] = await Promise.all([
       db.execute(sql`
-        SELECT DISTINCT ON (app_id) app_id, average_rating, rating_count, pricing, pricing_plans, scraped_at
+        SELECT DISTINCT ON (app_id) app_id, average_rating, rating_count, pricing, pricing_plans, categories, scraped_at
         FROM app_snapshots
         WHERE app_id IN (${sql.join(appIds2.map((id) => sql`${id}`), sql`,`)})
         ORDER BY app_id, scraped_at DESC
@@ -167,6 +167,7 @@ export const appRoutes: FastifyPluginAsync = async (app) => {
               averageRating: snapshot.average_rating,
               ratingCount: snapshot.rating_count,
               pricing: snapshot.pricing,
+              categories: snapshot.categories || [],
               scrapedAt: snapshot.scraped_at,
             }
           : null,
