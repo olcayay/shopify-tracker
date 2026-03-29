@@ -81,6 +81,7 @@ export const appSnapshots = pgTable(
       .$type<PricingPlan[]>()
       .notNull()
       .default([]),
+    screenshots: jsonb("screenshots").$type<string[]>().notNull().default([]),
     support: jsonb("support").$type<AppSupport>(),
     platformData: jsonb("platform_data")
       .$type<Record<string, unknown>>()

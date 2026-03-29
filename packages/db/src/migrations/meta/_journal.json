@@ -694,6 +694,13 @@
       "when": 1777161600000,
       "tag": "0098_email_system",
       "breakpoints": true
+    },
+    {
+      "idx": 99,
+      "version": "7",
+      "when": 1777248000000,
+      "tag": "0099_screenshots_column",
+      "breakpoints": true
     }
   ]
 }

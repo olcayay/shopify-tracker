@@ -696,6 +696,14 @@ export class AppDetailsScraper {
         }
       }
 
+      // Extract screenshots from platformData (each platform stores them there)
+      const rawScreenshots = (platformDataToStore as any)?.screenshots;
+      const screenshots: string[] = Array.isArray(rawScreenshots)
+        ? rawScreenshots
+            .map((s: any) => (typeof s === "string" ? s : s?.src || s?.url || null))
+            .filter((url: string | null): url is string => typeof url === "string" && url.startsWith("http"))
+        : [];
+
       // Insert snapshot
       await this.db.insert(appSnapshots).values({
         appId,
@@ -716,6 +724,7 @@ export class AppDetailsScraper {
         categories: resolvedCategories,
         pricingPlans: details.pricing_plans,
         support: details.support,
+        screenshots,
         platformData: platformDataToStore as Record<string, unknown>,
       });
 

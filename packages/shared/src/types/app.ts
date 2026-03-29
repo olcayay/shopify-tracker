@@ -69,6 +69,7 @@ export interface AppDetails {
   categories: AppCategory[];
   pricing_plans: PricingPlan[];
   support: AppSupport | null;
+  screenshots?: string[];
 }
 
 /** Platform-agnostic app detail type used by all platforms */

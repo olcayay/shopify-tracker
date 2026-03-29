@@ -150,6 +150,7 @@ export class ShopifyModule implements PlatformModule {
         languages: parsed.languages,
         launchedDate: parsed.launched_date,
         similarApps,
+        screenshots: parsed.screenshots || [],
       },
     };
   }

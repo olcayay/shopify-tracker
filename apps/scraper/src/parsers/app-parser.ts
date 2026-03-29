@@ -43,6 +43,7 @@ export function parseAppPage(html: string, slug: string): AppDetails {
   const pricingPlans = safeParse("pricingPlans", () => parsePricingPlans($), []);
   const launchedDate = safeParse("launchedDate", () => parseLaunchedDate($), null);
   const support = safeParse("support", () => parseSupport($), null);
+  const screenshots = safeParse("screenshots", () => parseScreenshots($), []);
 
   return {
     app_slug: slug,
@@ -64,6 +65,7 @@ export function parseAppPage(html: string, slug: string): AppDetails {
     categories,
     pricing_plans: pricingPlans,
     support,
+    screenshots,
   };
 }
 
@@ -97,6 +99,42 @@ function parseJsonLd($: cheerio.CheerioAPI): JsonLdData | null {
 }
 
 // --- Parsers ---
+
+function parseScreenshots($: cheerio.CheerioAPI): string[] {
+  const urls: string[] = [];
+  // Shopify gallery: look for picture > source or img within the gallery section
+  // The gallery section contains img tags with data-src or src attributes
+  $("img").each((_, el) => {
+    const src = $(el).attr("data-src") || $(el).attr("src") || "";
+    // Filter for CDN-hosted screenshots (exclude icons, logos, avatars, etc.)
+    if (
+      src &&
+      (src.includes("cdn.shopify.com") || src.includes("shopifycdn.com")) &&
+      !urls.includes(src) &&
+      urls.length < 10 &&
+      // Skip small images (icons, badges) — screenshot URLs typically contain dimensions
+      !src.includes("/avatar/") &&
+      !src.includes("icon") &&
+      // Screenshots are typically wider images
+      (src.includes("/screenshots/") || src.includes("/screen_") || src.includes("/slide_") ||
+       src.includes("/listing-") || src.includes("original"))
+    ) {
+      urls.push(src);
+    }
+  });
+
+  // Fallback: find img tags within sections that look like galleries
+  if (urls.length === 0) {
+    $("[class*=gallery] img, [class*=carousel] img, [class*=slider] img, [class*=media] img").each((_, el) => {
+      const src = $(el).attr("data-src") || $(el).attr("src") || "";
+      if (src && src.startsWith("http") && !urls.includes(src) && urls.length < 10) {
+        urls.push(src);
+      }
+    });
+  }
+
+  return urls;
+}
 
 function parseAppIntroduction($: cheerio.CheerioAPI): string {
   // The app introduction (short tagline) is the h2 inside #app-details

@@ -284,6 +284,53 @@ describe("parseAppPage", () => {
     expect(result.languages).toEqual([]);
   });
 
+  it("returns empty screenshots when no gallery images", () => {
+    const html = wrapHtml("<p>No screenshots here</p>");
+    const result = parseAppPage(html, "test");
+    expect(result.screenshots).toEqual([]);
+  });
+
+  it("extracts screenshot URLs from CDN images with screenshot paths", () => {
+    const html = wrapHtml(`
+      <img src="https://cdn.shopify.com/screenshots/ss1.png" />
+      <img src="https://cdn.shopify.com/screenshots/ss2.png" />
+      <img src="https://cdn.shopify.com/avatar/small.png" />
+    `);
+    const result = parseAppPage(html, "test");
+    expect(result.screenshots).toHaveLength(2);
+    expect(result.screenshots![0]).toContain("screenshots/ss1.png");
+    expect(result.screenshots![1]).toContain("screenshots/ss2.png");
+  });
+
+  it("extracts screenshots from gallery class containers", () => {
+    const html = wrapHtml(`
+      <div class="image-gallery">
+        <img src="https://example.com/slide1.jpg" />
+        <img src="https://example.com/slide2.jpg" />
+      </div>
+    `);
+    const result = parseAppPage(html, "test");
+    expect(result.screenshots).toHaveLength(2);
+  });
+
+  it("limits screenshots to 10 max", () => {
+    const imgs = Array.from({ length: 15 }, (_, i) =>
+      `<img src="https://cdn.shopify.com/screenshots/ss${i}.png" />`
+    ).join("");
+    const html = wrapHtml(imgs);
+    const result = parseAppPage(html, "test");
+    expect(result.screenshots!.length).toBeLessThanOrEqual(10);
+  });
+
+  it("deduplicates screenshot URLs", () => {
+    const html = wrapHtml(`
+      <img src="https://cdn.shopify.com/screenshots/same.png" />
+      <img src="https://cdn.shopify.com/screenshots/same.png" />
+    `);
+    const result = parseAppPage(html, "test");
+    expect(result.screenshots).toHaveLength(1);
+  });
+
   it("does not include mega-menu partner links as developer", () => {
     const html = wrapHtml(`
       <div class="megamenu-component">
