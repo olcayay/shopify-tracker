@@ -762,6 +762,88 @@ export const categoryRoutes: FastifyPluginAsync = async (app) => {
       return { power };
     }
   );
+
+  // POST /api/categories/batch — batch-fetch category leaders + appCount for multiple slugs
+  app.post<{ Body: { slugs: string[] } }>(
+    "/batch",
+    async (request) => {
+      const { slugs } = request.body as { slugs: string[] };
+      if (!Array.isArray(slugs) || slugs.length === 0) return {};
+      const platform = getPlatformFromQuery(request.query as Record<string, unknown>);
+
+      // Get category IDs
+      const catRows = await db
+        .select({ id: categories.id, slug: categories.slug, isListingPage: categories.isListingPage })
+        .from(categories)
+        .where(and(inArray(categories.slug, slugs), eq(categories.platform, platform)));
+
+      if (catRows.length === 0) return {};
+
+      const catIds = catRows.map((r) => r.id);
+      const catIdToSlug = new Map(catRows.map((r) => [r.id, r.slug]));
+      const listingSlugs = catRows.filter((r) => r.isListingPage).map((r) => r.slug);
+
+      // Batch-fetch latest snapshots (appCount + scrapeRunId)
+      const snapRows = await db.execute(sql`
+        SELECT DISTINCT ON (category_id) category_id, app_count, scrape_run_id
+        FROM category_snapshots
+        WHERE category_id = ANY(${catIds})
+        ORDER BY category_id, scraped_at DESC
+      `);
+      const snapData: any[] = (snapRows as any).rows ?? snapRows;
+      const snapMap = new Map(snapData.map((r: any) => [
+        catIdToSlug.get(r.category_id)!,
+        { appCount: r.app_count, scrapeRunId: r.scrape_run_id },
+      ]));
+
+      // Batch-fetch top 3 ranked apps for all listing categories
+      const runIds = [...new Set(snapData
+        .filter((r: any) => listingSlugs.includes(catIdToSlug.get(r.category_id)!))
+        .map((r: any) => r.scrape_run_id)
+        .filter(Boolean)
+      )];
+
+      const leadersMap = new Map<string, any[]>();
+      if (runIds.length > 0 && listingSlugs.length > 0) {
+        const rankedRows = await db
+          .select({
+            categorySlug: appCategoryRankings.categorySlug,
+            position: appCategoryRankings.position,
+            appSlug: apps.slug,
+            name: apps.name,
+            iconUrl: apps.iconUrl,
+          })
+          .from(appCategoryRankings)
+          .innerJoin(apps, eq(apps.id, appCategoryRankings.appId))
+          .where(
+            and(
+              inArray(appCategoryRankings.categorySlug, listingSlugs),
+              inArray(appCategoryRankings.scrapeRunId, runIds)
+            )
+          )
+          .orderBy(asc(appCategoryRankings.position));
+
+        for (const r of rankedRows) {
+          const list = leadersMap.get(r.categorySlug) ?? [];
+          if (list.length < 3) {
+            list.push({ slug: r.appSlug, name: r.name, iconUrl: r.iconUrl, position: r.position });
+            leadersMap.set(r.categorySlug, list);
+          }
+        }
+      }
+
+      // Build result
+      const result: Record<string, { leaders: any[]; appCount: number | null }> = {};
+      for (const slug of slugs) {
+        const snap = snapMap.get(slug);
+        result[slug] = {
+          leaders: leadersMap.get(slug) ?? [],
+          appCount: snap?.appCount ?? null,
+        };
+      }
+      return result;
+    }
+  );
 };
 
 function buildTree(

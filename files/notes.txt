@@ -1,3 +1,17 @@
+Reduce App Detail Page Waterfall from 3 Rounds to 2 (2026-03-29)
+================================================================
+PLA-241: Collapsed 3-round sequential fetch to 2 rounds.
+
+Changes:
+1. POST /api/categories/batch — batch-fetch leaders + appCount for multiple slugs
+2. GET /api/account/tracked-apps/:slug/competitors?includeChanges=true — returns
+   recent changes per competitor inline (eliminates Round 3)
+3. Dashboard page uses getCategoriesBatch instead of N×getCategory
+4. Competitor changes extracted from competitors response instead of N×getAppChanges
+
+Before: 10 + 2+N + 10 = ~25 sequential API calls in 3 rounds
+After: 10 + 3 = 13 API calls in 2 rounds
+
 Add Server-Side Count Endpoint for Overview Page (2026-03-29)
 ================================================================
 PLA-240: New GET /api/account/stats endpoint returns per-platform counts

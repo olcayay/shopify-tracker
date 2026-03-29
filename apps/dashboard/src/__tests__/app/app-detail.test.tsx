@@ -13,7 +13,7 @@ const mockGetAppFeaturedPlacements = vi.fn();
 const mockGetAppAdSightings = vi.fn();
 const mockGetAppSimilarApps = vi.fn();
 const mockGetAppsMinPaidPrices = vi.fn();
-const mockGetCategory = vi.fn();
+const mockGetCategoriesBatch = vi.fn();
 const mockGetAppScores = vi.fn();
 
 vi.mock("@/lib/api", () => ({
@@ -28,7 +28,7 @@ vi.mock("@/lib/api", () => ({
   getAppAdSightings: (...args: any[]) => mockGetAppAdSightings(...args),
   getAppSimilarApps: (...args: any[]) => mockGetAppSimilarApps(...args),
   getAppsMinPaidPrices: (...args: any[]) => mockGetAppsMinPaidPrices(...args),
-  getCategory: (...args: any[]) => mockGetCategory(...args),
+  getCategoriesBatch: (...args: any[]) => mockGetCategoriesBatch(...args),
   getAppScores: (...args: any[]) => mockGetAppScores(...args),
 }));
 
@@ -133,6 +133,7 @@ function setupDefaultMocks() {
       iconUrl: "https://example.com/comp.png",
       latestSnapshot: { averageRating: "4.5", ratingCount: 180 },
       minPaidPrice: 14.99,
+      recentChanges: [],
     },
   ]);
   mockGetAppKeywords.mockResolvedValue([
@@ -157,11 +158,13 @@ function setupDefaultMocks() {
     secondDegree: [],
   });
   mockGetAppsMinPaidPrices.mockResolvedValue({ "form-builder": 9.99 });
-  mockGetCategory.mockResolvedValue({
-    rankedApps: [
-      { slug: "form-builder", name: "Form Builder Pro", position: 3, icon_url: null },
-    ],
-    latestSnapshot: { appCount: 120 },
+  mockGetCategoriesBatch.mockResolvedValue({
+    marketing: {
+      leaders: [
+        { slug: "form-builder", name: "Form Builder Pro", position: 3, iconUrl: null },
+      ],
+      appCount: 120,
+    },
   });
   mockGetAppScores.mockResolvedValue({
     visibility: [],

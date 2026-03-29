@@ -22,6 +22,7 @@ import {
   appReviewMetrics,
   appVisibilityScores,
   appPowerScores,
+  appFieldChanges,
   categories,
   categorySnapshots,
 } from "@appranks/db";
@@ -1030,12 +1031,13 @@ export const accountTrackingRoutes: FastifyPluginAsync = async (app) => {
   // --- Per-app nested routes ---
 
   // GET /api/account/tracked-apps/:slug/competitors
-  app.get<{ Params: { slug: string }; Querystring: { platform?: string; includeSelf?: string } }>(
+  app.get<{ Params: { slug: string }; Querystring: { platform?: string; includeSelf?: string; includeChanges?: string } }>(
     "/tracked-apps/:slug/competitors",
     async (request, reply) => {
       const { accountId } = request.user;
       const slug = decodeURIComponent(request.params.slug);
       const platform = getPlatformFromQuery(request.query as Record<string, unknown>);
+      const includeChanges = request.query.includeChanges === "true";
 
       // Look up tracked app ID from slug
       const [trackedAppRow] = await db
@@ -1401,6 +1403,35 @@ export const accountTrackingRoutes: FastifyPluginAsync = async (app) => {
         } catch { /* table may not exist yet */ }
       }
 
+      // Batch-fetch recent changes for each competitor (when includeChanges=true)
+      const changesMap = new Map<string, any[]>();
+      if (includeChanges && competitorAppIds.length > 0) {
+        const changeRows = await db.execute(sql`
+          SELECT c.*, a.slug AS app_slug
+          FROM (
+            SELECT *, ROW_NUMBER() OVER (PARTITION BY app_id ORDER BY detected_at DESC) AS rn
+            FROM app_field_changes
+            WHERE app_id = ANY(${competitorAppIds})
+          ) c
+          INNER JOIN apps a ON a.id = c.app_id
+          WHERE c.rn <= 3
+          ORDER BY c.detected_at DESC
+        `);
+        const changeData: any[] = (changeRows as any).rows ?? changeRows;
+        for (const r of changeData) {
+          const list = changesMap.get(r.app_slug) ?? [];
+          list.push({
+            id: r.id,
+            appId: r.app_id,
+            fieldName: r.field_name,
+            oldValue: r.old_value,
+            newValue: r.new_value,
+            detectedAt: r.detected_at,
+          });
+          changesMap.set(r.app_slug, list);
+        }
+      }
+
       const result = await Promise.all(
         allRows.map(async (row) => {
           const [snapshot] = await db
@@ -1447,6 +1478,7 @@ export const accountTrackingRoutes: FastifyPluginAsync = async (app) => {
             reviewVelocity: velocityMap2.get(row.appSlug) ?? null,
             similarityScore: similarityMap2.get(row.appSlug) ?? null,
             isSelf: includeSelf && row.appSlug === slug,
+            ...(includeChanges ? { recentChanges: changesMap.get(row.appSlug) ?? [] } : {}),
           };
         })
       );

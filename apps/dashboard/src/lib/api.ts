@@ -50,6 +50,13 @@ export function getCategory(slug: string, platform?: PlatformId) {
   return fetchApi<any>(withPlatform(`/api/categories/${slug}`, platform));
 }
 
+export function getCategoriesBatch(slugs: string[], platform?: PlatformId) {
+  return fetchApi<Record<string, { leaders: any[]; appCount: number | null }>>(
+    withPlatform(`/api/categories/batch`, platform),
+    { method: "POST", body: JSON.stringify({ slugs }), headers: { "Content-Type": "application/json" } }
+  );
+}
+
 export function getCategoryHistory(slug: string, limit = 20, platform?: PlatformId) {
   return fetchApi<any>(withPlatform(`/api/categories/${slug}/history?limit=${limit}`, platform));
 }
@@ -295,8 +302,9 @@ export function getAccountCompetitors(platform?: PlatformId) {
   return fetchApi<any[]>(withPlatform(`/api/account/competitors`, platform));
 }
 
-export function getAppCompetitors(slug: string, platform?: PlatformId) {
-  return fetchApi<any[]>(withPlatform(`/api/account/tracked-apps/${encodeURIComponent(slug)}/competitors`, platform));
+export function getAppCompetitors(slug: string, platform?: PlatformId, includeChanges = false) {
+  const params = includeChanges ? `&includeChanges=true` : '';
+  return fetchApi<any[]>(withPlatform(`/api/account/tracked-apps/${encodeURIComponent(slug)}/competitors${params}`, platform));
 }
 
 export function getAppKeywords(slug: string, platform?: PlatformId) {

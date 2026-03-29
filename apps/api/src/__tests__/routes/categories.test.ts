@@ -490,4 +490,49 @@ describe("Category routes — with mock data", () => {
 
     await userApp.close();
   });
+
+  // -----------------------------------------------------------------------
+  // POST /api/categories/batch
+  // -----------------------------------------------------------------------
+
+  describe("POST /api/categories/batch", () => {
+    it("returns 401 without auth", async () => {
+      const res = await app.inject({
+        method: "POST",
+        url: "/api/categories/batch?platform=shopify",
+        headers: { "content-type": "application/json" },
+        payload: { slugs: ["marketing"] },
+      });
+      expect(res.statusCode).toBe(401);
+    });
+
+    it("returns empty object for empty slugs", async () => {
+      const res = await app.inject({
+        method: "POST",
+        url: "/api/categories/batch?platform=shopify",
+        headers: { ...authHeaders(userToken()), "content-type": "application/json" },
+        payload: { slugs: [] },
+      });
+      expect(res.statusCode).toBe(200);
+      expect(res.json()).toEqual({});
+    });
+
+    it("returns object keyed by slug with leaders and appCount", async () => {
+      const res = await app.inject({
+        method: "POST",
+        url: "/api/categories/batch?platform=shopify",
+        headers: { ...authHeaders(userToken()), "content-type": "application/json" },
+        payload: { slugs: ["marketing", "sales"] },
+      });
+      expect(res.statusCode).toBe(200);
+      const body = res.json();
+      expect(typeof body).toBe("object");
+      // With mock DB returning empty results, each slug should have empty leaders
+      for (const slug of Object.keys(body)) {
+        expect(body[slug]).toHaveProperty("leaders");
+        expect(body[slug]).toHaveProperty("appCount");
+        expect(Array.isArray(body[slug].leaders)).toBe(true);
+      }
+    });
+  });
 });

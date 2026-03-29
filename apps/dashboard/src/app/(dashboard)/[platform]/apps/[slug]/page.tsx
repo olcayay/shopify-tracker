@@ -10,7 +10,7 @@ import {
   getAppAdSightings,
   getAppSimilarApps,
   getAppsMinPaidPrices,
-  getCategory,
+  getCategoriesBatch,
   getAppScores,
 } from "@/lib/api";
 import { DataFreshness } from "@/components/data-freshness";
@@ -78,49 +78,45 @@ export default async function AppOverviewPage({
   const catRankings = rankings?.categoryRankings || [];
   const catChanges = computeRankingChanges(catRankings, "categorySlug", "categoryTitle");
 
-  // Round 2: tracked-only fetches + category leaders (all parallel)
+  // Round 2: tracked-only fetches + batch category leaders (all parallel, no Round 3 needed)
   let competitors: any[] = [];
   let keywords: any[] = [];
   const categoryInfoMap = new Map<string, { leaders: any[]; appCount: number | null }>();
 
+  const catSlugs = catChanges.map((c) => c.slug);
   await Promise.all([
     ...(app.isTrackedByAccount
       ? [
-          getAppCompetitors(slug, platform as PlatformId).catch(() => []).then((c: any[]) => { competitors = c; }),
+          getAppCompetitors(slug, platform as PlatformId, true).catch(() => []).then((c: any[]) => { competitors = c; }),
           getAppKeywords(slug, platform as PlatformId).catch(() => []).then((k: any[]) => { keywords = k; }),
         ]
       : []),
-    ...catChanges.map((cat) =>
-      getCategory(cat.slug, platform as PlatformId)
-        .then((catData: any) => {
-          categoryInfoMap.set(cat.slug, {
-            leaders: (catData?.rankedApps || []).slice(0, 3),
-            appCount: catData?.latestSnapshot?.appCount ?? null,
-          });
-        })
-        .catch(() => {})
-    ),
+    ...(catSlugs.length > 0
+      ? [
+          getCategoriesBatch(catSlugs, platform as PlatformId)
+            .then((batchData) => {
+              for (const [catSlug, info] of Object.entries(batchData || {})) {
+                categoryInfoMap.set(catSlug, info);
+              }
+            })
+            .catch(() => {}),
+        ]
+      : []),
   ]);
 
-  // Round 3: competitor changes (need competitor slugs from Round 2)
+  // Competitor changes extracted from competitors response (includeChanges=true eliminates Round 3)
   let competitorChanges: any[] = [];
   if (competitors.length > 0) {
-    const changeBatches = await Promise.all(
-      competitors.slice(0, 10).map((c: any) =>
-        getAppChanges(c.appSlug, 3, platform as PlatformId)
-          .then((arr: any[]) =>
-            arr.map((ch) => ({
-              ...ch,
-              competitorName: c.appName || c.appSlug,
-              competitorSlug: c.appSlug,
-              competitorIcon: c.iconUrl,
-            }))
-          )
-          .catch(() => [])
+    competitorChanges = competitors
+      .slice(0, 10)
+      .flatMap((c: any) =>
+        (c.recentChanges || []).map((ch: any) => ({
+          ...ch,
+          competitorName: c.appName || c.appSlug,
+          competitorSlug: c.appSlug,
+          competitorIcon: c.iconUrl,
+        }))
       )
-    );
-    competitorChanges = changeBatches
-      .flat()
       .sort((a, b) => new Date(b.detectedAt).getTime() - new Date(a.detectedAt).getTime());
   }
 
