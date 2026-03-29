@@ -12,6 +12,8 @@ export const integrationRoutes: FastifyPluginAsync = async (app) => {
     async (request, reply) => {
       const { name } = request.params;
       const platform = request.query.platform;
+      const maxLimit = Math.min(parseInt((request.query as any).limit || "200", 10) || 200, 200);
+      const parsedOffset = parseInt((request.query as any).offset || "0", 10) || 0;
 
       // Find all apps that have this integration (from latest snapshot)
       const appsResult = await db.execute(sql`
@@ -38,6 +40,7 @@ export const integrationRoutes: FastifyPluginAsync = async (app) => {
         )
         ${platform ? sql`AND a.platform = ${platform}` : sql``}
         ORDER BY a.name
+        LIMIT ${maxLimit} OFFSET ${parsedOffset}
       `);
 
       const rows = (appsResult as any).rows ?? appsResult;

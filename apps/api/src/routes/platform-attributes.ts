@@ -17,6 +17,8 @@ export const platformAttributeRoutes: FastifyPluginAsync = async (app) => {
     async (request, reply) => {
       const { type, value } = request.params;
       const platform = request.query.platform || "salesforce";
+      const maxLimit = Math.min(parseInt((request.query as any).limit || "200", 10) || 200, 200);
+      const parsedOffset = parseInt((request.query as any).offset || "0", 10) || 0;
 
       const jsonbField = FIELD_MAP[type];
       if (!jsonbField) {
@@ -46,6 +48,7 @@ export const platformAttributeRoutes: FastifyPluginAsync = async (app) => {
             WHERE elem = ${value}
           )
         ORDER BY a.name
+        LIMIT ${maxLimit} OFFSET ${parsedOffset}
       `);
 
       const result = (rows as any).rows ?? rows;

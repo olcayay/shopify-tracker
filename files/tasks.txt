@@ -2,6 +2,7 @@ Performance: Eliminate N+1 and add count endpoints (2026-03-29)
   PLA-239: N+1 → batch queries in 4 endpoints ✅
   PLA-240: Server-side /api/account/stats endpoint ✅
   PLA-241: App detail page 3-round → 2-round waterfall ✅
+  PLA-242: Server-side pagination for unbounded endpoints ✅
 
 Platform Robustness: 28 tasks implemented (2026-03-29)
   PLA-253: Zod validation before DB insert ✅

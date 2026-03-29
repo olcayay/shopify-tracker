@@ -1,3 +1,15 @@
+Add Server-Side Pagination to Unbounded API Endpoints (2026-03-29)
+================================================================
+PLA-242: Added limit/offset pagination to 4 endpoints that returned unbounded results.
+
+- featured-apps GET / — limit=500 (max 500)
+- featured-apps GET /my-apps — limit=500 (max 500)
+- platform-attributes GET /:type/:value — limit=200 (max 200)
+- integrations GET /:name — limit=200 (max 200)
+
+Features tree (/features/tree) not paginated — it's a static taxonomy that changes rarely.
+Starred features (/starred-features) not paginated — bounded by account limits.
+
 Reduce App Detail Page Waterfall from 3 Rounds to 2 (2026-03-29)
 ================================================================
 PLA-241: Collapsed 3-round sequential fetch to 2 rounds.

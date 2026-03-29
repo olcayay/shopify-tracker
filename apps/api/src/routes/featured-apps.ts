@@ -14,12 +14,16 @@ export const featuredAppRoutes: FastifyPluginAsync = async (app) => {
 
   // GET /api/featured-apps?days=30&surface=home|category&surfaceDetail=slug&surfaceDetailPrefix=slug
   app.get("/", async (request) => {
-    const { days = "30", surface, surfaceDetail, surfaceDetailPrefix } = request.query as {
+    const { days = "30", surface, surfaceDetail, surfaceDetailPrefix, limit = "500", offset = "0" } = request.query as {
       days?: string;
       surface?: string;
       surfaceDetail?: string;
       surfaceDetailPrefix?: string;
+      limit?: string;
+      offset?: string;
     };
+    const maxLimit = Math.min(parseInt(limit, 10) || 500, 500);
+    const parsedOffset = parseInt(offset, 10) || 0;
     const platform = getPlatformFromQuery(request.query as Record<string, unknown>);
     const since = new Date();
     since.setDate(since.getDate() - parseInt(days, 10));
@@ -62,7 +66,9 @@ export const featuredAppRoutes: FastifyPluginAsync = async (app) => {
         featuredAppSightings.surfaceDetail,
         featuredAppSightings.sectionHandle,
         desc(featuredAppSightings.seenDate)
-      );
+      )
+      .limit(maxLimit)
+      .offset(parsedOffset);
 
     // Get tracked/competitor slugs for badges
     const { accountId } = request.user;
@@ -89,7 +95,9 @@ export const featuredAppRoutes: FastifyPluginAsync = async (app) => {
   // GET /api/featured-apps/my-apps?days=30&platform=shopify
   // Returns featured sightings only for tracked & competitor apps (all surfaces)
   app.get("/my-apps", async (request) => {
-    const { days = "30" } = request.query as { days?: string };
+    const { days = "30", limit = "500", offset = "0" } = request.query as { days?: string; limit?: string; offset?: string };
+    const myMaxLimit = Math.min(parseInt(limit, 10) || 500, 500);
+    const myParsedOffset = parseInt(offset, 10) || 0;
     const platform = getPlatformFromQuery(request.query as Record<string, unknown>);
     const since = new Date();
     since.setDate(since.getDate() - parseInt(days, 10));
@@ -145,7 +153,9 @@ export const featuredAppRoutes: FastifyPluginAsync = async (app) => {
         featuredAppSightings.surfaceDetail,
         featuredAppSightings.sectionHandle,
         desc(featuredAppSightings.seenDate)
-      );
+      )
+      .limit(myMaxLimit)
+      .offset(myParsedOffset);
 
     return {
       sightings: rows,
