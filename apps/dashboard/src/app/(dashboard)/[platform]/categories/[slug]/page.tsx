@@ -32,13 +32,23 @@ export default async function CategoryDetailPage({
   let competitors: any[] = [];
   let trackedApps: any[] = [];
   let starredCategories: any[] = [];
+  let featuredData: any;
+  let categoryAdData: any;
+  let categoryScoresData: any;
+
+  const caps = isPlatformId(platform) ? PLATFORMS[platform as PlatformId] : PLATFORMS.shopify;
+
   try {
-    [category, history, competitors, trackedApps, starredCategories] = await Promise.all([
+    // Flatten waterfall: fetch slug-only dependencies in Phase 1
+    [category, history, competitors, trackedApps, starredCategories, featuredData, categoryAdData, categoryScoresData] = await Promise.all([
       getCategory(slug, platform as PlatformId),
       getCategoryHistory(slug, 10, platform as PlatformId),
       getAccountCompetitors(platform as PlatformId).catch(() => []),
       getAccountTrackedApps(platform as PlatformId).catch(() => []),
       getAccountStarredCategories(platform as PlatformId).catch(() => []),
+      getFeaturedApps(30, "category", slug, undefined, platform as PlatformId).catch(() => ({ sightings: [], trackedSlugs: [], competitorSlugs: [] })),
+      caps.hasAdTracking ? getCategoryAds(slug, 30, platform as PlatformId).catch(() => ({ adSightings: [] })) : Promise.resolve({ adSightings: [] }),
+      getCategoryScores(slug, 50, platform as PlatformId).catch(() => ({ scores: [], computedAt: null })),
     ]);
   } catch {
     return (
@@ -80,24 +90,18 @@ export default async function CategoryDetailPage({
     );
   }
 
-  const caps = isPlatformId(platform) ? PLATFORMS[platform as PlatformId] : PLATFORMS.shopify;
   const competitorSlugs = new Set(competitors.map((c: any) => c.appSlug));
   const trackedSlugs = new Set(trackedApps.map((a: any) => a.appSlug));
   const isStarred = starredCategories.some((sc: any) => sc.categorySlug === slug);
 
   const rankedApps = category.rankedApps || [];
   const appSlugs: string[] = rankedApps.map((a: any) => a.slug);
-  const [lastChanges, minPaidPrices, reverseSimilarCounts, featuredData, categoryAdData, categoryScoresData] = await Promise.all([
+
+  // Phase 2: only fetches that depend on rankedApps (app slugs from Phase 1)
+  const [lastChanges, minPaidPrices, reverseSimilarCounts] = await Promise.all([
     getAppsLastChanges(appSlugs, platform as PlatformId).catch(() => ({} as Record<string, string>)),
     getAppsMinPaidPrices(appSlugs, platform as PlatformId).catch(() => ({} as Record<string, number | null>)),
     getAppsReverseSimilarCounts(appSlugs, platform as PlatformId).catch(() => ({} as Record<string, number>)),
-    getFeaturedApps(30, "category", slug, undefined, platform as PlatformId).catch(() => ({
-      sightings: [],
-      trackedSlugs: [],
-      competitorSlugs: [],
-    })),
-    caps.hasAdTracking ? getCategoryAds(slug, 30, platform as PlatformId).catch(() => ({ adSightings: [] })) : Promise.resolve({ adSightings: [] }),
-    getCategoryScores(slug, 50, platform as PlatformId).catch(() => ({ scores: [], computedAt: null })),
   ]);
 
   // Build score lookup maps (power only, visibility is now account-scoped)
