@@ -178,6 +178,97 @@ services:
       redis:
         condition: service_healthy
 
+  worker-email-instant:
+    build:
+      context: .
+      dockerfile: Dockerfile.worker-email
+    restart: always
+    logging: *default-logging
+    stop_grace_period: 30s
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-shopify_tracking}
+      REDIS_URL: redis://redis:6379
+      WORKER_MODE: email-instant
+      SMTP_HOST: ${SMTP_HOST:-}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_USER: ${SMTP_USER:-}
+      SMTP_PASS: ${SMTP_PASS:-}
+      SMTP_FROM: ${SMTP_FROM:-}
+      DASHBOARD_URL: ${DASHBOARD_URL:-http://localhost:3000}
+      SENTRY_DSN: ${SENTRY_DSN:-}
+      NODE_ENV: production
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  worker-email-bulk:
+    build:
+      context: .
+      dockerfile: Dockerfile.worker-email
+    restart: always
+    logging: *default-logging
+    stop_grace_period: 120s
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-shopify_tracking}
+      REDIS_URL: redis://redis:6379
+      WORKER_MODE: email-bulk
+      SMTP_HOST: ${SMTP_HOST:-}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_USER: ${SMTP_USER:-}
+      SMTP_PASS: ${SMTP_PASS:-}
+      SMTP_FROM: ${SMTP_FROM:-}
+      DASHBOARD_URL: ${DASHBOARD_URL:-http://localhost:3000}
+      SENTRY_DSN: ${SENTRY_DSN:-}
+      NODE_ENV: production
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  worker-notifications:
+    build:
+      context: .
+      dockerfile: Dockerfile.worker-email
+    restart: always
+    logging: *default-logging
+    stop_grace_period: 30s
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-shopify_tracking}
+      REDIS_URL: redis://redis:6379
+      WORKER_MODE: notifications
+      VAPID_PUBLIC_KEY: ${VAPID_PUBLIC_KEY:-}
+      VAPID_PRIVATE_KEY: ${VAPID_PRIVATE_KEY:-}
+      VAPID_SUBJECT: ${VAPID_SUBJECT:-mailto:push@appranks.io}
+      DASHBOARD_URL: ${DASHBOARD_URL:-http://localhost:3000}
+      SENTRY_DSN: ${SENTRY_DSN:-}
+      NODE_ENV: production
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
   # Grafana Alloy: ships logs to Loki, metrics to Prometheus (Grafana Cloud)
   alloy:
     image: grafana/alloy:v1.5.1
