@@ -23,6 +23,11 @@
 - **Always add unit tests:**
   - When implementing a new feature, add unit tests covering the new functionality.
   - When fixing a bug, add a unit test that reproduces the bug to prevent regression.
+- **Bug fix prevention rule.** When fixing any bug, always ask: "What test or guard would have caught this before deployment?" Then:
+  1. Add a test that reproduces the specific bug.
+  2. Proactively add tests/guards for similar variations of the same bug class — don't just fix the one instance.
+  3. Consider structural safeguards (types, validation, shared constants, lint rules) that could prevent the entire category.
+  4. The fix must include both the code change AND the preventive measures — never ship a fix without them.
 - **All tests must pass before committing.** Run `npm test` (which runs all 4 packages via turbo) and verify 0 failures before every commit. Pre-commit and pre-push hooks enforce this automatically.
 - **Smoke test after scraper changes.** When modifying any platform's scraper code (parsers, fetchers, CLI commands, platform modules), run `./scripts/smoke-test.sh --platform <name>` to verify the affected platform still works end-to-end. If any check fails, fix it before committing. The smoke test must always have 0 SKIPs.
 - **Database migration safety rules.** When creating or modifying migrations:
