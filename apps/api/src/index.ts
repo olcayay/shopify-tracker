@@ -339,6 +339,24 @@ app.setErrorHandler<Error & { statusCode?: number }>((error, request, reply) => 
     });
   }
 
+  // Database connection/query errors → 503 Service Unavailable
+  const errMsg = error.message || "";
+  const isDbError =
+    errMsg.includes("connection") ||
+    errMsg.includes("ECONNREFUSED") ||
+    errMsg.includes("timeout") ||
+    errMsg.includes("too many clients") ||
+    errMsg.includes("terminating connection") ||
+    error.constructor?.name === "PostgresError";
+
+  if (isDbError) {
+    app.log.error({ err: error, requestId }, "database error");
+    return reply.code(503).send({
+      error: "Service temporarily unavailable",
+      requestId,
+    });
+  }
+
   // Report unhandled errors to Sentry
   Sentry.captureException(error, { extra: { requestId, url: request.url, method: request.method } });
 

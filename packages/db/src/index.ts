@@ -65,6 +65,12 @@ export function createDb(databaseUrl: string) {
     idle_timeout: 30,
     max_lifetime: 60 * 30,
     connection: { timezone: "UTC" },
+    // Connection retry with exponential backoff
+    connect_timeout: 10,
+    backoff(retries: number) {
+      // Exponential backoff: 1s, 2s, 4s, 8s, max 30s
+      return Math.min(1000 * Math.pow(2, retries), 30000);
+    },
   });
   return drizzle(client, { schema });
 }
