@@ -16,7 +16,7 @@ export const SCRAPER_SCHEDULES: ScraperSchedule[] = [
   { name: "app_details", cron: "0 1,13 * * *", type: "app_details", platform: "shopify" },
   { name: "keyword_search", cron: "0 0,12 * * *", type: "keyword_search", platform: "shopify" },
   { name: "reviews", cron: "0 6 * * *", type: "reviews", platform: "shopify" },
-  { name: "daily_digest", cron: "0 5 * * *", type: "daily_digest", platform: "shopify" },
+  { name: "daily_digest", cron: "*/15 * * * *", type: "daily_digest", platform: "shopify" },
   { name: "compute_app_scores", cron: "0 9 * * *", type: "compute_app_scores", platform: "shopify" },
   // ── Salesforce (HTTP only) ──
   { name: "salesforce_category", cron: "0 4 * * *", type: "category", platform: "salesforce" },

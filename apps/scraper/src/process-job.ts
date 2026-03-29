@@ -483,9 +483,24 @@ export function createProcessJob(db: ReturnType<typeof createDb>, queueName?: st
           break;
         }
 
-        // Bulk digest for all eligible users
-        const recipients = await getDigestRecipients(db);
-        log.info("digest recipients found", { count: recipients.length });
+        // Timezone-aware bulk digest: runs every 15 min, sends only to users
+        // whose local time is in the delivery window (8:00-8:14 AM local)
+        const { isInDeliveryWindow, alreadySentToday } = await import("./email/timezone.js");
+        const now = new Date();
+        const allRecipients = await getDigestRecipients(db);
+
+        // Filter to users in their delivery window who haven't received today's digest
+        const recipients = allRecipients.filter((r) =>
+          isInDeliveryWindow(now, r.timezone) &&
+          !alreadySentToday(r.lastDigestSentAt, now, r.timezone)
+        );
+
+        log.info("digest recipients in delivery window", {
+          eligible: allRecipients.length,
+          inWindow: recipients.length,
+        });
+
+        if (recipients.length === 0) break;
 
         // Group recipients by account
         const byAccount = new Map<string, typeof recipients>();
@@ -498,7 +513,9 @@ export function createProcessJob(db: ReturnType<typeof createDb>, queueName?: st
         let sent = 0;
         let skipped = 0;
         for (const [accountId, accountUsers] of byAccount) {
-          const data = await buildDigestForAccount(db, accountId);
+          // Use the first user's timezone for date boundaries
+          const tz = accountUsers[0].timezone;
+          const data = await buildDigestForAccount(db, accountId, tz);
           if (!data) {
             skipped++;
             continue;

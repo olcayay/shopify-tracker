@@ -11,6 +11,7 @@ import {
   appSnapshots,
   apps,
 } from "@appranks/db";
+import { getLocalDayBoundaries } from "./timezone.js";
 
 export interface RankingChange {
   keyword: string;
@@ -59,10 +60,13 @@ export interface DigestRecipient {
   email: string;
   name: string;
   accountId: string;
+  timezone: string;
+  lastDigestSentAt: Date | null;
 }
 
 /**
- * Get all users who should receive the daily digest
+ * Get all users who should receive the daily digest.
+ * Includes timezone and lastDigestSentAt for timezone-aware scheduling.
  */
 export async function getDigestRecipients(
   db: Database
@@ -72,6 +76,8 @@ export async function getDigestRecipients(
       email: users.email,
       name: users.name,
       accountId: users.accountId,
+      timezone: users.timezone,
+      lastDigestSentAt: users.lastDigestSentAt,
     })
     .from(users)
     .innerJoin(accounts, eq(accounts.id, users.accountId))
@@ -86,11 +92,13 @@ export async function getDigestRecipients(
 }
 
 /**
- * Build digest data for a specific account
+ * Build digest data for a specific account.
+ * @param timezone - IANA timezone for date boundaries (defaults to UTC)
  */
 export async function buildDigestForAccount(
   db: Database,
-  accountId: string
+  accountId: string,
+  timezone?: string
 ): Promise<DigestData | null> {
   // Get account name
   const [account] = await db
@@ -133,12 +141,17 @@ export async function buildDigestForAccount(
   const relevantAppIds = new Set([...trackedAppIds, ...competitorAppIds]);
   if (relevantAppIds.size === 0) return null;
 
-  // Date boundaries
+  // Date boundaries (timezone-aware if timezone is provided)
   const now = new Date();
-  const todayStart = new Date(now);
-  todayStart.setHours(0, 0, 0, 0);
-  const yesterdayStart = new Date(todayStart);
-  yesterdayStart.setDate(yesterdayStart.getDate() - 1);
+  const { todayStart, yesterdayStart } = timezone
+    ? getLocalDayBoundaries(now, timezone)
+    : (() => {
+        const ts = new Date(now);
+        ts.setHours(0, 0, 0, 0);
+        const ys = new Date(ts);
+        ys.setDate(ys.getDate() - 1);
+        return { todayStart: ts, yesterdayStart: ys };
+      })();
 
   const keywordIds = trackedKws.map((k) => k.keywordId);
 
