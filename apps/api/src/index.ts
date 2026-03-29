@@ -188,6 +188,10 @@ await app.register(adminRoutes, { prefix: "/api/admin" });
 await app.register(dlqRoutes, { prefix: "/api/system-admin/dlq" });
 await app.register(publicRoutes, { prefix: "/api/public" });
 
+// Email tracking and unsubscribe (public — no auth required)
+const { emailTrackingRoutes } = await import("./routes/email-tracking.js");
+await app.register(emailTrackingRoutes, { prefix: "/api/emails" });
+
 // Cache-Control headers based on route patterns
 app.addHook("onSend", async (request, reply) => {
   // Skip non-GET requests and already-set headers

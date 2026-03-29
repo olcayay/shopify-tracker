@@ -29,12 +29,20 @@ function getTransporter(): nodemailer.Transporter {
 export async function sendMail(
   to: string,
   subject: string,
-  html: string
-): Promise<void> {
+  html: string,
+  headers?: Record<string, string>
+): Promise<{ messageId?: string }> {
   const from = process.env.SMTP_FROM || process.env.SMTP_USER;
   try {
-    await getTransporter().sendMail({ from, to, subject, html });
+    const info = await getTransporter().sendMail({
+      from,
+      to,
+      subject,
+      html,
+      ...(headers ? { headers } : {}),
+    });
     log.info("email sent", { to, subject });
+    return { messageId: info.messageId };
   } catch (err) {
     log.error("failed to send email", { to, subject, error: String(err) });
     throw err;

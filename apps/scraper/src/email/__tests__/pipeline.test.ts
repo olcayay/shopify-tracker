@@ -61,16 +61,19 @@ describe("Email send pipeline", () => {
       subject: "Daily Digest",
       htmlBody: "<p>Hello</p>",
       sendFn: mockSendFn,
+      skipTracking: true,
     });
 
     expect(result.sent).toBe(true);
     expect(result.logId).toBe("log-id-1");
     expect(logEmailAttempt).toHaveBeenCalledOnce();
-    expect(mockSendFn).toHaveBeenCalledWith({
-      to: "test@example.com",
-      subject: "Daily Digest",
-      html: "<p>Hello</p>",
-    });
+    expect(mockSendFn).toHaveBeenCalledWith(
+      expect.objectContaining({
+        to: "test@example.com",
+        subject: "Daily Digest",
+        html: "<p>Hello</p>",
+      })
+    );
     expect(updateEmailStatus).toHaveBeenCalledWith(
       mockDb, "log-id-1", "sent", { messageId: "msg-123" }
     );
@@ -89,6 +92,7 @@ describe("Email send pipeline", () => {
       subject: "Daily Digest",
       htmlBody: "<p>Hello</p>",
       sendFn: mockSendFn,
+      skipTracking: true,
     });
 
     expect(result.sent).toBe(false);
@@ -112,6 +116,7 @@ describe("Email send pipeline", () => {
       htmlBody: "<p>Alert</p>",
       deduplicationKey: "ranking:app1:cat1",
       sendFn: mockSendFn,
+      skipTracking: true,
     });
 
     expect(checkEligibility).toHaveBeenCalledWith(mockDb, expect.objectContaining({
