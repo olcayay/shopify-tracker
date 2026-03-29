@@ -45,6 +45,7 @@ export interface CompetitorSummary {
 export interface DigestData {
   accountName: string;
   date: string;
+  platform?: string;
   rankingChanges: RankingChange[];
   competitorSummaries: CompetitorSummary[];
   summary: {

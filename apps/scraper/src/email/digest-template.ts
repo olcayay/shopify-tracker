@@ -1,32 +1,34 @@
 import type { DigestData, RankingChange } from "./digest-builder.js";
+import {
+  emailLayout,
+  header,
+  heroStat,
+  dataTable,
+  insightBlock,
+  competitorCard,
+  footer,
+  summaryBadge,
+} from "./components/index.js";
+
+const DASHBOARD_URL = process.env.DASHBOARD_URL || "http://localhost:3000";
 
 function changeIcon(type: RankingChange["type"]): string {
   switch (type) {
-    case "improved":
-      return "&#9650;"; // ▲
-    case "dropped":
-      return "&#9660;"; // ▼
-    case "new_entry":
-      return "&#9733;"; // ★
-    case "dropped_out":
-      return "&#10005;"; // ✕
-    default:
-      return "";
+    case "improved": return "&#9650;"; // ▲
+    case "dropped": return "&#9660;"; // ▼
+    case "new_entry": return "&#9733;"; // ★
+    case "dropped_out": return "&#10005;"; // ✕
+    default: return "";
   }
 }
 
 function changeColor(type: RankingChange["type"]): string {
   switch (type) {
-    case "improved":
-      return "#16a34a";
-    case "dropped":
-      return "#dc2626";
-    case "new_entry":
-      return "#2563eb";
-    case "dropped_out":
-      return "#9ca3af";
-    default:
-      return "#6b7280";
+    case "improved": return "#16a34a";
+    case "dropped": return "#dc2626";
+    case "new_entry": return "#2563eb";
+    case "dropped_out": return "#9ca3af";
+    default: return "#6b7280";
   }
 }
 
@@ -41,169 +43,215 @@ function changeStr(change: number | null, type: RankingChange["type"]): string {
   return change > 0 ? `+${change}` : `${change}`;
 }
 
-const DASHBOARD_URL = process.env.DASHBOARD_URL || "http://localhost:3000";
+/**
+ * Determine today's highlight — the single most important event.
+ */
+function buildHighlight(data: DigestData): { label: string; value: string; change?: { from: string; to: string; isPositive: boolean } } | null {
+  const { rankingChanges } = data;
+  if (rankingChanges.length === 0) return null;
 
-export function buildDigestHtml(data: DigestData): string {
-  const { accountName, date, rankingChanges, competitorSummaries, summary } =
-    data;
-
-  const summaryParts: string[] = [];
-  if (summary.improved > 0)
-    summaryParts.push(
-      `<span style="color:#16a34a;font-weight:600">${summary.improved} improved</span>`
-    );
-  if (summary.dropped > 0)
-    summaryParts.push(
-      `<span style="color:#dc2626;font-weight:600">${summary.dropped} dropped</span>`
-    );
-  if (summary.newEntries > 0)
-    summaryParts.push(
-      `<span style="color:#2563eb;font-weight:600">${summary.newEntries} new</span>`
-    );
-  if (summary.droppedOut > 0)
-    summaryParts.push(
-      `<span style="color:#9ca3af;font-weight:600">${summary.droppedOut} dropped out</span>`
-    );
-
-  let rankingRows = "";
-  for (const r of rankingChanges) {
-    const badge = r.isTracked
-      ? '<span style="background:#dbeafe;color:#1d4ed8;padding:1px 6px;border-radius:3px;font-size:11px;margin-left:4px">tracked</span>'
-      : r.isCompetitor
-        ? '<span style="background:#fef3c7;color:#92400e;padding:1px 6px;border-radius:3px;font-size:11px;margin-left:4px">competitor</span>'
-        : "";
-
-    rankingRows += `
-      <tr style="border-bottom:1px solid #f3f4f6">
-        <td style="padding:8px 12px;font-size:13px">${r.keyword}</td>
-        <td style="padding:8px 12px;font-size:13px">${r.appName}${badge}</td>
-        <td style="padding:8px 12px;font-size:13px;text-align:center">${posStr(r.yesterdayPosition)}</td>
-        <td style="padding:8px 12px;font-size:13px;text-align:center">${posStr(r.todayPosition)}</td>
-        <td style="padding:8px 12px;font-size:13px;text-align:center;color:${changeColor(r.type)};font-weight:600">
-          ${changeIcon(r.type)} ${changeStr(r.change, r.type)}
-        </td>
-      </tr>`;
+  // Priority: top3 entry > top3 exit > biggest improvement > biggest drop
+  const top3Entry = rankingChanges.find((r) => r.type === "improved" && r.todayPosition !== null && r.todayPosition <= 3);
+  if (top3Entry) {
+    return {
+      label: `${top3Entry.appName} for "${top3Entry.keyword}"`,
+      value: `#${top3Entry.todayPosition}`,
+      change: { from: posStr(top3Entry.yesterdayPosition), to: posStr(top3Entry.todayPosition), isPositive: true },
+    };
   }
 
-  let competitorSection = "";
-  if (competitorSummaries.length > 0) {
-    let competitorRows = "";
-    for (const c of competitorSummaries) {
-      const ratingDisplay = c.todayRating
-        ? `${parseFloat(c.todayRating).toFixed(1)}`
-        : "\u2014";
-      const ratingDelta =
-        c.ratingChange !== null && c.ratingChange !== 0
-          ? `<span style="color:${c.ratingChange > 0 ? "#16a34a" : "#dc2626"};font-size:11px;margin-left:2px">(${c.ratingChange > 0 ? "+" : ""}${c.ratingChange.toFixed(1)})</span>`
-          : "";
-      const reviewsDisplay =
-        c.todayReviews !== null ? c.todayReviews.toLocaleString() : "\u2014";
-      const reviewsDelta =
-        c.reviewsChange !== null && c.reviewsChange !== 0
-          ? `<span style="color:${c.reviewsChange > 0 ? "#16a34a" : "#dc2626"};font-size:11px;margin-left:2px">(${c.reviewsChange > 0 ? "+" : ""}${c.reviewsChange})</span>`
-          : "";
-
-      const positionCells = c.keywordPositions
-        .filter((kp) => kp.position !== null || kp.change !== null)
-        .map((kp) => {
-          const posDisplay = kp.position !== null ? `#${kp.position}` : "\u2014";
-          const changePart =
-            kp.change !== null && kp.change !== 0
-              ? `<span style="color:${kp.change > 0 ? "#16a34a" : "#dc2626"};font-size:11px;margin-left:2px">(${kp.change > 0 ? "+" : ""}${kp.change})</span>`
-              : "";
-          return `${kp.keyword}: ${posDisplay}${changePart}`;
-        })
-        .join(" &middot; ");
-
-      competitorRows += `
-        <tr style="border-bottom:1px solid #f3f4f6">
-          <td style="padding:8px 12px;font-size:13px;font-weight:500">${c.appName}</td>
-          <td style="padding:8px 12px;font-size:13px;text-align:center">${ratingDisplay}${ratingDelta}</td>
-          <td style="padding:8px 12px;font-size:13px;text-align:center">${reviewsDisplay}${reviewsDelta}</td>
-          <td style="padding:8px 12px;font-size:12px;color:#6b7280">${positionCells || "\u2014"}</td>
-        </tr>`;
-    }
-
-    competitorSection = `
-      <div style="margin-top:32px">
-        <h2 style="font-size:16px;font-weight:600;color:#111827;margin:0 0 12px">Competitor Overview</h2>
-        <table style="width:100%;border-collapse:collapse;border:1px solid #e5e7eb;border-radius:6px">
-          <thead>
-            <tr style="background:#f9fafb">
-              <th style="padding:8px 12px;text-align:left;font-size:12px;color:#6b7280;font-weight:500">App</th>
-              <th style="padding:8px 12px;text-align:center;font-size:12px;color:#6b7280;font-weight:500">Rating</th>
-              <th style="padding:8px 12px;text-align:center;font-size:12px;color:#6b7280;font-weight:500">Reviews</th>
-              <th style="padding:8px 12px;text-align:left;font-size:12px;color:#6b7280;font-weight:500">Keyword Positions</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${competitorRows}
-          </tbody>
-        </table>
-      </div>`;
+  const competitorOvertook = rankingChanges.find((r) => r.isCompetitor && r.type === "improved" && r.change !== null && r.change >= 3);
+  if (competitorOvertook) {
+    return {
+      label: `${competitorOvertook.appName} gained on "${competitorOvertook.keyword}"`,
+      value: `+${competitorOvertook.change}`,
+      change: { from: posStr(competitorOvertook.yesterdayPosition), to: posStr(competitorOvertook.todayPosition), isPositive: false },
+    };
   }
 
-  return `<!DOCTYPE html>
-<html>
-<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
-<body style="margin:0;padding:0;background:#f3f4f6;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif">
-  <div style="max-width:640px;margin:0 auto;padding:24px 16px">
-    <div style="background:#ffffff;border-radius:8px;border:1px solid #e5e7eb;overflow:hidden">
-      <!-- Header -->
-      <div style="background:#111827;padding:20px 24px">
-        <h1 style="margin:0;font-size:18px;color:#ffffff;font-weight:600">Daily Ranking Report</h1>
-        <p style="margin:4px 0 0;font-size:13px;color:#9ca3af">${accountName} &middot; ${date}</p>
-      </div>
+  const bestWin = rankingChanges
+    .filter((r) => r.type === "improved" && r.isTracked && r.change !== null)
+    .sort((a, b) => (b.change || 0) - (a.change || 0))[0];
+  if (bestWin) {
+    return {
+      label: `${bestWin.appName} for "${bestWin.keyword}"`,
+      value: `+${bestWin.change}`,
+      change: { from: posStr(bestWin.yesterdayPosition), to: posStr(bestWin.todayPosition), isPositive: true },
+    };
+  }
 
-      <div style="padding:24px">
-        <!-- Summary -->
-        <div style="background:#f9fafb;border-radius:6px;padding:12px 16px;margin-bottom:24px;font-size:14px;color:#374151">
-          ${summaryParts.length > 0 ? summaryParts.join(" &middot; ") : "No ranking changes today"}
-        </div>
-
-        ${
-          rankingChanges.length > 0
-            ? `
-        <!-- Ranking Changes -->
-        <h2 style="font-size:16px;font-weight:600;color:#111827;margin:0 0 12px">Keyword Rankings</h2>
-        <table style="width:100%;border-collapse:collapse;border:1px solid #e5e7eb;border-radius:6px">
-          <thead>
-            <tr style="background:#f9fafb">
-              <th style="padding:8px 12px;text-align:left;font-size:12px;color:#6b7280;font-weight:500">Keyword</th>
-              <th style="padding:8px 12px;text-align:left;font-size:12px;color:#6b7280;font-weight:500">App</th>
-              <th style="padding:8px 12px;text-align:center;font-size:12px;color:#6b7280;font-weight:500">Yesterday</th>
-              <th style="padding:8px 12px;text-align:center;font-size:12px;color:#6b7280;font-weight:500">Today</th>
-              <th style="padding:8px 12px;text-align:center;font-size:12px;color:#6b7280;font-weight:500">Change</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${rankingRows}
-          </tbody>
-        </table>`
-            : ""
-        }
-
-        ${competitorSection}
-      </div>
-
-      <!-- Footer -->
-      <div style="border-top:1px solid #e5e7eb;padding:16px 24px;text-align:center">
-        <a href="${DASHBOARD_URL}/settings" style="color:#6b7280;font-size:12px;text-decoration:none">Manage email preferences</a>
-      </div>
-    </div>
-  </div>
-</body>
-</html>`;
+  return {
+    label: "Keyword Rankings",
+    value: `${rankingChanges.length}`,
+  };
 }
 
-export function buildDigestSubject(data: DigestData): string {
-  const parts: string[] = [];
-  if (data.summary.improved > 0)
-    parts.push(`${data.summary.improved} improved`);
-  if (data.summary.dropped > 0) parts.push(`${data.summary.dropped} dropped`);
-  if (data.summary.newEntries > 0)
-    parts.push(`${data.summary.newEntries} new`);
+/**
+ * Generate a rule-based insight from the digest data.
+ */
+function generateInsight(data: DigestData): string | null {
+  const { rankingChanges, competitorSummaries, summary } = data;
 
-  const detail = parts.length > 0 ? ` \u2014 ${parts.join(", ")}` : "";
-  return `Ranking Report ${data.date}${detail}`;
+  if (summary.improved > summary.dropped * 2 && summary.improved >= 3) {
+    return `Strong momentum today with ${summary.improved} keyword improvements. Consider expanding your keyword coverage while things are trending up.`;
+  }
+
+  if (summary.dropped > summary.improved * 2 && summary.dropped >= 3) {
+    return `${summary.dropped} keywords dropped today. Check if competitors launched new features or promotions that may be pulling traffic.`;
+  }
+
+  const competitorGains = competitorSummaries.filter((c) => c.reviewsChange !== null && c.reviewsChange > 5);
+  if (competitorGains.length > 0) {
+    return `${competitorGains[0].appName} gained ${competitorGains[0].reviewsChange} reviews today. Monitor their review velocity — it may signal a marketing push.`;
+  }
+
+  const newEntries = rankingChanges.filter((r) => r.type === "new_entry" && r.isTracked);
+  if (newEntries.length > 0) {
+    return `Your app appeared in ${newEntries.length} new keyword ranking${newEntries.length > 1 ? "s" : ""}. These fresh positions are opportunities to optimize and climb higher.`;
+  }
+
+  return null;
+}
+
+export function buildDigestHtml(data: DigestData, unsubscribeUrl?: string): string {
+  const { accountName, date, rankingChanges, competitorSummaries, summary } = data;
+  const highlight = buildHighlight(data);
+  const insight = generateInsight(data);
+
+  // Split ranking changes into wins and attention-needed
+  const wins = rankingChanges.filter((r) => r.type === "improved" || r.type === "new_entry");
+  const attention = rankingChanges.filter((r) => r.type === "dropped" || r.type === "dropped_out");
+
+  // Summary badges
+  const badgeItems = [
+    { label: "improved", count: summary.improved, color: "green" as const },
+    { label: "dropped", count: summary.dropped, color: "red" as const },
+    { label: "new", count: summary.newEntries, color: "blue" as const },
+    { label: "dropped out", count: summary.droppedOut, color: "amber" as const },
+  ];
+
+  // Build sections
+  let sections = "";
+
+  // 1. Today's Highlight
+  if (highlight) {
+    sections += heroStat(highlight.label, highlight.value, highlight.change);
+  }
+
+  // 2. Summary badges
+  if (badgeItems.some((b) => b.count > 0)) {
+    sections += summaryBadge(badgeItems);
+  }
+
+  // 3. Biggest Wins
+  if (wins.length > 0) {
+    const winRows = wins.map((r) => ({
+      cells: [
+        `<a href="${DASHBOARD_URL}/${data.platform || "shopify"}/keywords/${r.keywordSlug}" style="color:#111;text-decoration:none">${r.keyword}</a>`,
+        r.appName,
+        posStr(r.todayPosition),
+        `<span style="color:${changeColor(r.type)};font-weight:600">${changeIcon(r.type)} ${changeStr(r.change, r.type)}</span>`,
+      ],
+    }));
+    sections += `<div style="margin-top:16px;"><div style="font-size:16px;font-weight:600;color:#16a34a;margin-bottom:4px;">&#9650; Biggest Wins</div>`;
+    sections += dataTable(["Keyword", "App", "Position", "Change"], winRows);
+    sections += `</div>`;
+  }
+
+  // 4. Needs Attention
+  if (attention.length > 0) {
+    const attRows = attention.map((r) => ({
+      cells: [
+        `<a href="${DASHBOARD_URL}/${data.platform || "shopify"}/keywords/${r.keywordSlug}" style="color:#111;text-decoration:none">${r.keyword}</a>`,
+        r.appName,
+        posStr(r.todayPosition),
+        `<span style="color:${changeColor(r.type)};font-weight:600">${changeIcon(r.type)} ${changeStr(r.change, r.type)}</span>`,
+      ],
+    }));
+    sections += `<div style="margin-top:16px;"><div style="font-size:16px;font-weight:600;color:#dc2626;margin-bottom:4px;">&#9660; Needs Attention</div>`;
+    sections += dataTable(["Keyword", "App", "Position", "Change"], attRows);
+    sections += `</div>`;
+  }
+
+  // 5. Competitor Watch
+  if (competitorSummaries.length > 0) {
+    sections += `<div style="margin-top:16px;"><div style="font-size:16px;font-weight:600;color:#111;margin-bottom:8px;">Competitor Watch</div>`;
+    for (const comp of competitorSummaries) {
+      const changeParts: string[] = [];
+      if (comp.ratingChange && comp.ratingChange !== 0) {
+        changeParts.push(`Rating ${comp.ratingChange > 0 ? "+" : ""}${comp.ratingChange.toFixed(1)}`);
+      }
+      if (comp.reviewsChange && comp.reviewsChange !== 0) {
+        changeParts.push(`${comp.reviewsChange > 0 ? "+" : ""}${comp.reviewsChange} reviews`);
+      }
+      const kwRanked = comp.keywordPositions.filter((kp) => kp.position !== null).length;
+
+      sections += competitorCard({
+        name: comp.appName,
+        rating: comp.todayRating ? parseFloat(comp.todayRating) : null,
+        ratingCount: comp.todayReviews,
+        keywordPositions: kwRanked || undefined,
+        change: changeParts.length > 0 ? changeParts.join(" · ") : undefined,
+      });
+    }
+    sections += `</div>`;
+  }
+
+  // 6. Insight
+  if (insight) {
+    sections += insightBlock(insight);
+  }
+
+  const content = `
+    ${header("Daily Ranking Report", `${accountName} · ${date}`)}
+    <div style="padding:0 24px 24px;">
+      ${sections}
+    </div>
+    ${footer(unsubscribeUrl)}
+  `;
+
+  return emailLayout(content, `${accountName}: Ranking changes for ${date}`);
+}
+
+/**
+ * Generate dynamic subject line based on content sentiment.
+ */
+export function buildDigestSubject(data: DigestData): string {
+  const { rankingChanges, summary } = data;
+
+  // Win day — highlight best improvement
+  if (summary.improved > summary.dropped && summary.improved >= 2) {
+    const best = rankingChanges
+      .filter((r) => r.type === "improved" && r.isTracked)
+      .sort((a, b) => (b.change || 0) - (a.change || 0))[0];
+    if (best && best.todayPosition !== null && best.todayPosition <= 5) {
+      return `Great day! ${best.appName} climbed to #${best.todayPosition} for "${best.keyword}" (+${best.change})`;
+    }
+    if (best) {
+      return `${best.appName}: ${summary.improved} keywords up — "${best.keyword}" +${best.change} positions`;
+    }
+  }
+
+  // Alert day — highlight biggest drop
+  if (summary.dropped > summary.improved && summary.dropped >= 2) {
+    const worst = rankingChanges
+      .filter((r) => r.type === "dropped" && r.isTracked)
+      .sort((a, b) => (a.change || 0) - (b.change || 0))[0];
+    if (worst) {
+      return `Heads up: ${worst.appName} dropped for "${worst.keyword}" (${worst.change} positions)`;
+    }
+  }
+
+  // Mixed day
+  if (summary.improved > 0 && summary.dropped > 0) {
+    return `${data.accountName}: ${summary.improved} keywords up, ${summary.dropped} down — ${data.date}`;
+  }
+
+  // Steady / no changes
+  const total = rankingChanges.filter((r) => r.isTracked).length;
+  if (total > 0) {
+    return `Ranking Report: ${total} change${total !== 1 ? "s" : ""} detected — ${data.date}`;
+  }
+
+  return `Daily Ranking Report — ${data.date}`;
 }
