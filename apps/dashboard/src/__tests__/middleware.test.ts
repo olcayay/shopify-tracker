@@ -8,6 +8,7 @@ vi.mock("next/server", async () => {
     ...actual,
     NextResponse: {
       redirect: vi.fn((url: URL) => ({ type: "redirect", url })),
+      rewrite: vi.fn((url: URL) => ({ type: "rewrite", url })),
       next: vi.fn(() => ({ type: "next" })),
     },
   };
@@ -90,6 +91,32 @@ describe("proxy – cross-platform pages", () => {
     expect(NextResponse.redirect).toHaveBeenCalledTimes(1);
     const redirectUrl = (NextResponse.redirect as any).mock.calls[0][0] as URL;
     expect(redirectUrl.pathname).toBe("/shopify/keywords/some-slug");
+  });
+});
+
+describe("proxy – cross-platform developer profile rewrite", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("rewrites /developers/{slug} to /developer/{slug}", async () => {
+    const req = makeRequest("/developers/jotform", { access_token: "eyJhbGciOiJIUzI1NiJ9.eyJleHAiOjk5OTk5OTk5OTl9.abc" });
+    await proxy(req);
+    expect(NextResponse.rewrite).toHaveBeenCalledTimes(1);
+    const rewriteUrl = (NextResponse.rewrite as any).mock.calls[0][0] as URL;
+    expect(rewriteUrl.pathname).toBe("/developer/jotform");
+  });
+
+  it("does not rewrite /developers (list page)", async () => {
+    const req = makeRequest("/developers", { access_token: "eyJhbGciOiJIUzI1NiJ9.eyJleHAiOjk5OTk5OTk5OTl9.abc" });
+    await proxy(req);
+    expect(NextResponse.rewrite).not.toHaveBeenCalled();
+  });
+
+  it("does not rewrite /{platform}/developers/{slug}", async () => {
+    const req = makeRequest("/shopify/developers/jotform", { access_token: "eyJhbGciOiJIUzI1NiJ9.eyJleHAiOjk5OTk5OTk5OTl9.abc" });
+    await proxy(req);
+    expect(NextResponse.rewrite).not.toHaveBeenCalled();
   });
 });
 
