@@ -20,9 +20,19 @@ function withPlatform(path: string, platform?: PlatformId): string {
   return `${path}${sep}platform=${platform}`;
 }
 
-async function fetchApi<T>(path: string, options?: RequestInit): Promise<T> {
+async function fetchApi<T>(path: string, options?: RequestInit & { next?: { revalidate?: number; tags?: string[] } }): Promise<T> {
   const token = await getAuthToken();
   const url = `${API_BASE}${path}`;
+  const method = options?.method?.toUpperCase() || "GET";
+  // GET requests default to 5-minute revalidation; mutations use no-store
+  const cacheOptions = method !== "GET"
+    ? { cache: "no-store" as const }
+    : options?.next
+      ? { next: options.next }
+      : options?.cache
+        ? { cache: options.cache }
+        : { next: { revalidate: 300 } };
+
   const res = await fetch(url, {
     ...options,
     headers: {
@@ -30,7 +40,7 @@ async function fetchApi<T>(path: string, options?: RequestInit): Promise<T> {
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
       ...(options?.headers || {}),
     },
-    cache: "no-store",
+    ...cacheOptions,
   });
 
   if (!res.ok) {
@@ -278,45 +288,45 @@ export function getPlatformAttribute(type: string, value: string, platform?: Pla
 
 // --- Auth ---
 export function getUserProfile() {
-  return fetchApi<any>(`/api/auth/me`);
+  return fetchApi<any>(`/api/auth/me`, { cache: "no-store" });
 }
 
-// --- Account ---
+// --- Account (user-specific, must be fresh) ---
 export function getAccountInfo() {
-  return fetchApi<any>(`/api/account`);
+  return fetchApi<any>(`/api/account`, { cache: "no-store" });
 }
 
 export function getAccountMembers() {
-  return fetchApi<any[]>(`/api/account/members`);
+  return fetchApi<any[]>(`/api/account/members`, { cache: "no-store" });
 }
 
 export function getAccountTrackedApps(platform?: PlatformId) {
-  return fetchApi<any[]>(withPlatform(`/api/account/tracked-apps`, platform));
+  return fetchApi<any[]>(withPlatform(`/api/account/tracked-apps`, platform), { cache: "no-store" });
 }
 
 export function getAccountTrackedKeywords(platform?: PlatformId) {
-  return fetchApi<any[]>(withPlatform(`/api/account/tracked-keywords`, platform));
+  return fetchApi<any[]>(withPlatform(`/api/account/tracked-keywords`, platform), { cache: "no-store" });
 }
 
 export function getAccountCompetitors(platform?: PlatformId) {
-  return fetchApi<any[]>(withPlatform(`/api/account/competitors`, platform));
+  return fetchApi<any[]>(withPlatform(`/api/account/competitors`, platform), { cache: "no-store" });
 }
 
 export function getAppCompetitors(slug: string, platform?: PlatformId, includeChanges = false) {
   const params = includeChanges ? `&includeChanges=true` : '';
-  return fetchApi<any[]>(withPlatform(`/api/account/tracked-apps/${encodeURIComponent(slug)}/competitors${params}`, platform));
+  return fetchApi<any[]>(withPlatform(`/api/account/tracked-apps/${encodeURIComponent(slug)}/competitors${params}`, platform), { cache: "no-store" });
 }
 
 export function getAppKeywords(slug: string, platform?: PlatformId) {
-  return fetchApi<any[]>(withPlatform(`/api/account/tracked-apps/${encodeURIComponent(slug)}/keywords`, platform));
+  return fetchApi<any[]>(withPlatform(`/api/account/tracked-apps/${encodeURIComponent(slug)}/keywords`, platform), { cache: "no-store" });
 }
 
 export function getAccountStarredFeatures(platform?: PlatformId) {
-  return fetchApi<any[]>(withPlatform(`/api/account/starred-features`, platform));
+  return fetchApi<any[]>(withPlatform(`/api/account/starred-features`, platform), { cache: "no-store" });
 }
 
 export function getAccountStarredCategories(platform?: PlatformId) {
-  return fetchApi<any[]>(withPlatform(`/api/account/starred-categories`, platform));
+  return fetchApi<any[]>(withPlatform(`/api/account/starred-categories`, platform), { cache: "no-store" });
 }
 
 // --- App Scores ---
@@ -337,13 +347,15 @@ export const getCategoryScores = cache((slug: string, limit = 50, platform?: Pla
 // --- Membership ---
 export function getKeywordMembership(slug: string, platform?: PlatformId) {
   return fetchApi<{ trackedAppSlugs: string[]; researchProjectIds: string[] }>(
-    withPlatform(`/api/keywords/${encodeURIComponent(slug)}/membership`, platform)
+    withPlatform(`/api/keywords/${encodeURIComponent(slug)}/membership`, platform),
+    { cache: "no-store" }
   );
 }
 
 export function getAppMembership(slug: string, platform?: PlatformId) {
   return fetchApi<{ competitorForApps: string[]; researchProjectIds: string[] }>(
-    withPlatform(`/api/apps/${encodeURIComponent(slug)}/membership`, platform)
+    withPlatform(`/api/apps/${encodeURIComponent(slug)}/membership`, platform),
+    { cache: "no-store" }
   );
 }
 
@@ -354,7 +366,7 @@ export function getPlatforms() {
 
 // --- Research Projects ---
 export function getResearchProjects(platform?: PlatformId) {
-  return fetchApi<any[]>(withPlatform(`/api/research-projects`, platform));
+  return fetchApi<any[]>(withPlatform(`/api/research-projects`, platform), { cache: "no-store" });
 }
 
 export function getResearchProjectData(id: string) {
