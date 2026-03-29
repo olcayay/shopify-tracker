@@ -5,53 +5,57 @@ import {
   apps,
   accountTrackedFeatures,
 } from "@appranks/db";
+import { cacheGet } from "../utils/cache.js";
 
+const FEATURE_TREE_TTL = 43200; // 12 hours
 
 export const featureRoutes: FastifyPluginAsync = async (app) => {
   const db = app.db;
 
   // GET /api/features/tree — all features grouped as category > subcategory > features
+  // Cached for 12 hours — changes only when scraper runs
   app.get("/tree", async () => {
-    const rows = await db.execute(sql`
-      SELECT DISTINCT
-        cat->>'title' AS category_title,
-        sub->>'title' AS subcategory_title,
-        f->>'feature_handle' AS feature_handle,
-        f->>'title' AS feature_title
-      FROM (
-        SELECT DISTINCT ON (app_id) categories
-        FROM app_snapshots
-        ORDER BY app_id, scraped_at DESC
-      ) latest,
-      jsonb_array_elements(latest.categories) AS cat,
-      jsonb_array_elements(cat->'subcategories') AS sub,
-      jsonb_array_elements(sub->'features') AS f
-      ORDER BY category_title, subcategory_title, feature_title
-    `);
+    return cacheGet("features:tree", async () => {
+      const rows = await db.execute(sql`
+        SELECT DISTINCT
+          cat->>'title' AS category_title,
+          sub->>'title' AS subcategory_title,
+          f->>'feature_handle' AS feature_handle,
+          f->>'title' AS feature_title
+        FROM (
+          SELECT DISTINCT ON (app_id) categories
+          FROM app_snapshots
+          ORDER BY app_id, scraped_at DESC
+        ) latest,
+        jsonb_array_elements(latest.categories) AS cat,
+        jsonb_array_elements(cat->'subcategories') AS sub,
+        jsonb_array_elements(sub->'features') AS f
+        ORDER BY category_title, subcategory_title, feature_title
+      `);
 
-    const data = (rows as any).rows ?? rows;
+      const data = (rows as any).rows ?? rows;
 
-    // Group into tree: category > subcategory > features
-    const catMap = new Map<string, Map<string, { handle: string; title: string }[]>>();
-    for (const row of data) {
-      const cat = row.category_title;
-      const sub = row.subcategory_title;
-      if (!catMap.has(cat)) catMap.set(cat, new Map());
-      const subMap = catMap.get(cat)!;
-      if (!subMap.has(sub)) subMap.set(sub, []);
-      subMap.get(sub)!.push({ handle: row.feature_handle, title: row.feature_title });
-    }
-
-    const tree = [];
-    for (const [catTitle, subMap] of catMap) {
-      const subcategories = [];
-      for (const [subTitle, features] of subMap) {
-        subcategories.push({ title: subTitle, features });
+      const catMap = new Map<string, Map<string, { handle: string; title: string }[]>>();
+      for (const row of data) {
+        const cat = row.category_title;
+        const sub = row.subcategory_title;
+        if (!catMap.has(cat)) catMap.set(cat, new Map());
+        const subMap = catMap.get(cat)!;
+        if (!subMap.has(sub)) subMap.set(sub, []);
+        subMap.get(sub)!.push({ handle: row.feature_handle, title: row.feature_title });
       }
-      tree.push({ title: catTitle, subcategories });
-    }
 
-    return tree;
+      const tree = [];
+      for (const [catTitle, subMap] of catMap) {
+        const subcategories = [];
+        for (const [subTitle, features] of subMap) {
+          subcategories.push({ title: subTitle, features });
+        }
+        tree.push({ title: catTitle, subcategories });
+      }
+
+      return tree;
+    }, FEATURE_TREE_TTL);
   });
 
   // GET /api/features/search?q= — search features by title

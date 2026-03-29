@@ -4,6 +4,7 @@ Performance: Eliminate N+1 and add count endpoints (2026-03-29)
   PLA-241: App detail page 3-round → 2-round waterfall ✅
   PLA-242: Server-side pagination for unbounded endpoints ✅
   PLA-251: Remove no-store, enable Next.js data cache ✅
+  PLA-243: Redis caching layer for features tree ✅
 
 Platform Robustness: 28 tasks implemented (2026-03-29)
   PLA-253: Zod validation before DB insert ✅

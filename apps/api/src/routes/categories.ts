@@ -3,6 +3,7 @@ import { eq, desc, sql, and, asc, inArray } from "drizzle-orm";
 import { categories, categorySnapshots, appCategoryRankings, apps, categoryAdSightings, appPowerScores, categoryParents } from "@appranks/db";
 import { getPlatformFromQuery } from "../utils/platform.js";
 import { PAGINATION_DEFAULT_LIMIT, PAGINATION_MAX_LIMIT } from "../constants.js";
+import { cacheGet } from "../utils/cache.js";
 import { createLogger } from "@appranks/shared";
 
 const log = createLogger("categories");
