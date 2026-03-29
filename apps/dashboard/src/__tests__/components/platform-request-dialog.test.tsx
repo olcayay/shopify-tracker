@@ -111,11 +111,11 @@ describe("PlatformRequestDialog", () => {
     expect(screen.getByPlaceholderText(/Search marketplaces/)).toHaveValue("Monday.com Apps");
   });
 
-  it("shows Supported badge for implemented platforms", async () => {
+  it("does not show Supported badge for implemented platforms", async () => {
     const user = userEvent.setup();
     render(<PlatformRequestDialog open={true} onOpenChange={() => {}} />);
     await user.type(screen.getByPlaceholderText(/Search marketplaces/), "HubSpot");
-    // HubSpot has platformId set, should show "Supported" badge
-    expect(screen.getByText("Supported")).toBeInTheDocument();
+    // HubSpot has platformId set, but badge should not be shown
+    expect(screen.queryByText("Supported")).not.toBeInTheDocument();
   });
 });

@@ -18,6 +18,9 @@ import {
   Bot,
   BrainCircuit,
   MessageSquarePlus,
+  Bell,
+  Mail,
+  Settings,
   type LucideIcon,
 } from "lucide-react";
 import { PLATFORMS, PLATFORM_IDS, type PlatformId } from "@appranks/shared";
@@ -94,6 +97,8 @@ export const globalNavItems: NavItem[] = [
   { href: "/keywords", label: "All Keywords", icon: Search },
   { href: "/competitors", label: "All Competitors", icon: Star },
   { href: "/developers", label: "Developers", icon: Code },
+  { href: "/notifications", label: "Notifications", icon: Bell },
+  { href: "/settings", label: "Settings", icon: Settings },
 ];
 
 /** Check if pathname is a global (non-platform) page like /overview, /apps, /keywords, etc. */
@@ -119,4 +124,6 @@ export const systemAdminItems: NavItem[] = [
   { href: "/system-admin/ai-logs", label: "AI Logs", icon: BrainCircuit },
   { href: "/system-admin/developers", label: "Developers", icon: Code },
   { href: "/system-admin/platform-requests", label: "Requests", icon: MessageSquarePlus },
+  { href: "/system-admin/notifications", label: "Notifications", icon: Bell },
+  { href: "/system-admin/emails", label: "Emails", icon: Mail },
 ];

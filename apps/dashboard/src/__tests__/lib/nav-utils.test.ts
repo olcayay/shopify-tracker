@@ -106,10 +106,12 @@ describe("nav-utils", () => {
       expect(isOnGlobalPage("/keywords")).toBe(true);
       expect(isOnGlobalPage("/competitors")).toBe(true);
       expect(isOnGlobalPage("/developers")).toBe(true);
+      expect(isOnGlobalPage("/notifications")).toBe(true);
+      expect(isOnGlobalPage("/settings")).toBe(true);
+      expect(isOnGlobalPage("/settings/email-preferences")).toBe(true);
     });
 
     it("returns false for non-global pages", () => {
-      expect(isOnGlobalPage("/settings")).toBe(false);
       expect(isOnGlobalPage("/system-admin")).toBe(false);
       expect(isOnGlobalPage("/shopify/apps")).toBe(false);
       expect(isOnGlobalPage("/")).toBe(false);
@@ -119,7 +121,7 @@ describe("nav-utils", () => {
   describe("globalNavItems", () => {
     it("has correct items", () => {
       const labels = globalNavItems.map((i) => i.label);
-      expect(labels).toEqual(["Overview", "All Apps", "All Keywords", "All Competitors", "Developers"]);
+      expect(labels).toEqual(["Overview", "All Apps", "All Keywords", "All Competitors", "Developers", "Notifications", "Settings"]);
     });
 
     it("Overview is exact match", () => {
@@ -130,7 +132,13 @@ describe("nav-utils", () => {
 
   describe("systemAdminItems", () => {
     it("has correct number of items", () => {
-      expect(systemAdminItems.length).toBe(14);
+      expect(systemAdminItems.length).toBe(16);
+    });
+
+    it("includes Notifications and Emails links", () => {
+      const labels = systemAdminItems.map((i) => i.label);
+      expect(labels).toContain("Notifications");
+      expect(labels).toContain("Emails");
     });
 
     it("all items have /system-admin prefix", () => {

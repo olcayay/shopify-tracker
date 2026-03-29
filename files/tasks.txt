@@ -1,3 +1,9 @@
+Backlog Fixes (2026-03-30)
+  PLA-412: Add Notifications and Emails links to System Admin sidebar ✅
+  PLA-413: Add Notifications link to global sidebar navigation ✅
+  PLA-414: Add Settings link to global sidebar navigation ✅
+  PLA-411: Remove "Supported" badge from Request a Platform dialog ✅
+
 Backlog Fixes (2026-03-29)
   PLA-409: Fix pool hang — statement_timeout, health check DB, pool monitor ✅
   PLA-407: Fix broken /developers/{slug} links — add platform prefix ✅

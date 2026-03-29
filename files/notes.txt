@@ -1,3 +1,17 @@
+Sidebar Navigation & UI Fixes: PLA-411/412/413/414 (2026-03-30)
+================================================================
+PLA-412: Added Notifications (Bell) and Emails (Mail) links to systemAdminItems
+in nav-utils.ts (after Requests). System Admin sidebar now has 16 items.
+
+PLA-413: Added Notifications (Bell) link to globalNavItems in nav-utils.ts.
+
+PLA-414: Added Settings (Settings icon) link to globalNavItems in nav-utils.ts.
+Email Preferences is a sub-page of Settings — no separate sidebar entry needed.
+
+PLA-411: Removed "Supported" badge from platform-request-dialog.tsx. The badge
+was developer-facing info that confused end users. Updated test to verify badge
+is no longer rendered.
+
 Fix Salesforce businessNeeds Type Mismatch: PLA-408 (2026-03-29)
 ================================================================
 businessNeeds returned as nested object { key: { isSelected, categories } }

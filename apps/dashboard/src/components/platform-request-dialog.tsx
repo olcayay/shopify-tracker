@@ -167,11 +167,6 @@ export function PlatformRequestDialog({
                       }`}
                     >
                       {m.name}
-                      {m.platformId && (
-                        <span className="ml-2 text-[10px] px-1.5 py-0.5 rounded bg-primary/10 text-primary">
-                          Supported
-                        </span>
-                      )}
                     </button>
                   ))}
                   {platformName.trim() && !exactMatch && (
