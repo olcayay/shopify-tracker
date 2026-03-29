@@ -32,14 +32,15 @@ function getRouteSegments(dir: string, prefix = ""): string[] {
 }
 
 describe("Route consistency validation", () => {
-  it("dashboard developer detail route uses [slug], not [platform]", () => {
-    const devDir = join(APP_DIR, "(dashboard)/developers");
-    if (!existsSync(devDir)) return;
+  it("dashboard developer detail uses [platform]/developers/[slug], not developers/[slug]", () => {
+    // The old (dashboard)/developers/[slug] route was removed because it conflicted
+    // with (marketing)/developers/[platform]/[slug]. Developer profiles are now served
+    // exclusively via (dashboard)/[platform]/developers/[slug].
+    const oldDevSlug = join(APP_DIR, "(dashboard)/developers/[slug]");
+    expect(existsSync(oldDevSlug)).toBe(false);
 
-    const entries = readdirSync(devDir);
-    // [slug] should exist, [platform] should NOT
-    expect(entries).toContain("[slug]");
-    expect(entries).not.toContain("[platform]");
+    const platformDevSlug = join(APP_DIR, "(dashboard)/[platform]/developers/[slug]");
+    expect(existsSync(platformDevSlug)).toBe(true);
   });
 
   it("marketing routes do not conflict with dashboard routes", () => {
