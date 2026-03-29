@@ -32,24 +32,25 @@ function getRouteSegments(dir: string, prefix = ""): string[] {
 }
 
 describe("Route consistency validation", () => {
-  it("dashboard developer detail routes exist for both cross-platform and per-platform views", () => {
-    // Cross-platform view: /developers/[slug] — shows all apps across platforms
-    const crossPlatformDevSlug = join(APP_DIR, "(dashboard)/developers/[slug]");
-    expect(existsSync(join(crossPlatformDevSlug, "page.tsx"))).toBe(true);
-
+  it("dashboard developer detail route exists under [platform]", () => {
     // Per-platform view: /[platform]/developers/[slug] — shows apps for one platform
+    // Note: cross-platform /developers/[slug] was removed because it conflicts with
+    // (dashboard)/[platform] dynamic segment in Next.js (slug !== platform error)
     const platformDevSlug = join(APP_DIR, "(dashboard)/[platform]/developers/[slug]");
     expect(existsSync(join(platformDevSlug, "page.tsx"))).toBe(true);
   });
 
-  it("developers list page links to /developers/[slug] which must have a matching route", () => {
-    // The developers list page (dashboard)/developers/page.tsx links to /developers/${dev.slug}.
-    // This test ensures the target route exists so those links don't 404.
+  it("cross-platform developers/[slug] route must NOT exist (conflicts with [platform])", () => {
+    // This route causes Next.js 500: "You cannot use different slug names for the same
+    // dynamic path ('slug' !== 'platform')". The developers list page links to
+    // /${platform}/developers/${slug} instead.
+    const conflictingRoute = join(APP_DIR, "(dashboard)/developers/[slug]");
+    expect(existsSync(conflictingRoute)).toBe(false);
+  });
+
+  it("developers list page exists", () => {
     const listPage = join(APP_DIR, "(dashboard)/developers/page.tsx");
     expect(existsSync(listPage)).toBe(true);
-
-    const detailRoute = join(APP_DIR, "(dashboard)/developers/[slug]/page.tsx");
-    expect(existsSync(detailRoute)).toBe(true);
   });
 
   it("marketing routes do not conflict with dashboard routes", () => {

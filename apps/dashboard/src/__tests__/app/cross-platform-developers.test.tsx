@@ -214,7 +214,7 @@ describe("DevelopersPage (cross-platform)", () => {
       expect(screen.getByText("Acme Inc")).toBeInTheDocument();
     });
     const link = screen.getByText("Acme Inc").closest("a");
-    expect(link).toHaveAttribute("href", "/developers/acme-inc");
+    expect(link).toHaveAttribute("href", "/shopify/developers/acme-inc");
   });
 
   it("renders table column headers", async () => {
