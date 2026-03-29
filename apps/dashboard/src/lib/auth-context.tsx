@@ -159,19 +159,35 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const doFetch = useCallback(
     async (path: string, options?: RequestInit): Promise<Response> => {
       const token = getCookie("access_token");
+      if (!token && !path.includes("/api/auth/")) {
+        // No token and not an auth endpoint — return synthetic 401
+        return new Response(JSON.stringify({ error: "Not authenticated" }), {
+          status: 401,
+          headers: { "Content-Type": "application/json" },
+        });
+      }
       const headers: Record<string, string> = {
         ...(token ? { Authorization: `Bearer ${token}` } : {}),
       };
       if (options?.body) {
         headers["Content-Type"] = "application/json";
       }
-      return fetch(`${API_BASE}${path}`, {
+      const res = await fetch(`${API_BASE}${path}`, {
         ...options,
         headers: {
           ...headers,
           ...(options?.headers || {}),
         },
       });
+
+      // Handle expired token — clear auth state
+      if (res.status === 401 && token && !path.includes("/api/auth/")) {
+        setUser(null);
+        setAccount(null);
+        setImpersonation(null);
+      }
+
+      return res;
     },
     []
   );
