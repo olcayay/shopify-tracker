@@ -673,6 +673,13 @@
       "when": 1776902400000,
       "tag": "0095_review_dedup_include_date",
       "breakpoints": true
+    },
+    {
+      "idx": 96,
+      "version": "7",
+      "when": 1776988800000,
+      "tag": "0096_gin_indexes_jsonb",
+      "breakpoints": true
     }
   ]
 }

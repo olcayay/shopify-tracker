@@ -33,11 +33,7 @@ export const integrationRoutes: FastifyPluginAsync = async (app) => {
           ORDER BY app_id, scraped_at DESC
         ) s
         INNER JOIN apps a ON a.id = s.app_id
-        WHERE EXISTS (
-          SELECT 1
-          FROM jsonb_array_elements_text(s.integrations) AS elem
-          WHERE elem = ${name}
-        )
+        WHERE s.integrations @> to_jsonb(ARRAY[${name}])::jsonb
         ${platform ? sql`AND a.platform = ${platform}` : sql``}
         ORDER BY a.name
         LIMIT ${maxLimit} OFFSET ${parsedOffset}
