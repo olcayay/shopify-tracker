@@ -206,6 +206,9 @@ export async function developerRoutes(app: FastifyInstance) {
           page?: string;
           limit?: string;
           search?: string;
+          platform?: string;
+          sort?: string;
+          order?: string;
         };
       }>
     ) => {
@@ -213,18 +216,32 @@ export async function developerRoutes(app: FastifyInstance) {
       const limit = Math.min(PAGINATION_MAX_LIMIT, Math.max(1, parseInt(request.query.limit || String(PAGINATION_MAX_LIMIT_SMALL), 10)));
       const offset = (page - 1) * limit;
       const search = request.query.search?.trim() || "";
+      const platformFilter = request.query.platform?.trim() || "";
+      const sortField = (["name", "apps", "platforms"].includes(request.query.sort || "") ? request.query.sort : "name") as string;
+      const sortOrder = request.query.order === "desc" ? "DESC" : "ASC";
 
-      const conditions = [];
+      // Build WHERE conditions
+      const whereParts: ReturnType<typeof sql>[] = [];
       if (search) {
-        conditions.push(ilike(globalDevelopers.name, `%${search}%`));
+        whereParts.push(sql`g.name ILIKE ${`%${search}%`}`);
       }
-      const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
+      if (platformFilter) {
+        whereParts.push(sql`EXISTS (SELECT 1 FROM platform_developers pd2 WHERE pd2.global_developer_id = g.id AND pd2.platform = ${platformFilter})`);
+      }
+      const whereSQL = whereParts.length > 0
+        ? sql`WHERE ${sql.join(whereParts, sql` AND `)}`
+        : sql``;
 
-      const [countResult] = await db
-        .select({ count: sql<number>`COUNT(*)` })
-        .from(globalDevelopers)
-        .where(whereClause);
+      // Build ORDER BY
+      const orderSQL = sortField === "apps"
+        ? sql`ORDER BY app_count ${sql.raw(sortOrder)}, g.name`
+        : sortField === "platforms"
+        ? sql`ORDER BY platform_count ${sql.raw(sortOrder)}, g.name`
+        : sql`ORDER BY g.name ${sql.raw(sortOrder)}`;
 
+      const [countResult]: any[] = await db.execute(sql`
+        SELECT COUNT(*) FROM global_developers g ${whereSQL}
+      `);
       const total = Number(countResult?.count || 0);
 
       // Use CTEs instead of correlated subqueries for platform_developers and app_count
@@ -257,11 +274,12 @@ export async function developerRoutes(app: FastifyInstance) {
             FROM platform_developers pd
             WHERE pd.global_developer_id = g.id
           ) AS platform_developers,
-          COALESCE(dac.app_count, 0) AS app_count
+          COALESCE(dac.app_count, 0) AS app_count,
+          (SELECT COUNT(*) FROM platform_developers pd3 WHERE pd3.global_developer_id = g.id) AS platform_count
         FROM global_developers g
         LEFT JOIN dev_app_counts dac ON dac.global_developer_id = g.id
-        ${search ? sql`WHERE g.name ILIKE ${`%${search}%`}` : sql``}
-        ORDER BY g.name
+        ${whereSQL}
+        ${orderSQL}
         LIMIT ${limit} OFFSET ${offset}
       `);
 

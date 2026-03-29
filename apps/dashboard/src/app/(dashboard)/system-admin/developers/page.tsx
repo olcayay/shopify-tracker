@@ -24,9 +24,14 @@ import {
   Lightbulb,
   Globe,
   ExternalLink,
+  ArrowUpDown,
+  ArrowUp,
+  ArrowDown,
+  Filter,
 } from "lucide-react";
 import { TableSkeleton } from "@/components/skeletons";
 import { getPlatformLabel, getPlatformColor } from "@/lib/platform-display";
+import { PLATFORMS, type PlatformId } from "@appranks/shared";
 
 interface PlatformDev {
   id: number;
@@ -60,6 +65,9 @@ export default function SystemAdminDevelopersPage() {
   const [total, setTotal] = useState(0);
   const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
   const [showSuggestions, setShowSuggestions] = useState(false);
+  const [platformFilter, setPlatformFilter] = useState("");
+  const [sortField, setSortField] = useState<"name" | "apps" | "platforms">("name");
+  const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [newDevName, setNewDevName] = useState("");
   const [newDevWebsite, setNewDevWebsite] = useState("");
@@ -74,7 +82,7 @@ export default function SystemAdminDevelopersPage() {
 
   useEffect(() => {
     loadDevelopers();
-  }, [page, search]);
+  }, [page, search, platformFilter, sortField, sortOrder]);
 
   useEffect(() => {
     if (!message) return;
@@ -82,10 +90,30 @@ export default function SystemAdminDevelopersPage() {
     return () => clearTimeout(timer);
   }, [message]);
 
+  function toggleSort(field: "name" | "apps" | "platforms") {
+    if (sortField === field) {
+      setSortOrder(sortOrder === "asc" ? "desc" : "asc");
+    } else {
+      setSortField(field);
+      setSortOrder(field === "name" ? "asc" : "desc");
+    }
+    setPage(1);
+  }
+
+  function SortIcon({ field }: { field: string }) {
+    if (sortField !== field) return <ArrowUpDown className="h-3 w-3 ml-1 opacity-40" />;
+    return sortOrder === "asc"
+      ? <ArrowUp className="h-3 w-3 ml-1" />
+      : <ArrowDown className="h-3 w-3 ml-1" />;
+  }
+
   async function loadDevelopers() {
     setLoading(true);
     const params = new URLSearchParams({ page: String(page), limit: "50" });
     if (search) params.set("search", search);
+    if (platformFilter) params.set("platform", platformFilter);
+    if (sortField !== "name") params.set("sort", sortField);
+    if (sortOrder !== "asc") params.set("order", sortOrder);
 
     const res = await fetchWithAuth(`/api/developers/admin/list?${params}`);
     if (res.ok) {
@@ -423,8 +451,8 @@ export default function SystemAdminDevelopersPage() {
         </Card>
       )}
 
-      {/* Search */}
-      <div className="flex gap-3 items-center">
+      {/* Search + Filters */}
+      <div className="flex gap-3 items-center flex-wrap">
         <div className="relative w-72">
           <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
@@ -436,6 +464,19 @@ export default function SystemAdminDevelopersPage() {
             }}
             className="pl-9"
           />
+        </div>
+        <div className="relative">
+          <Filter className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <select
+            value={platformFilter}
+            onChange={(e) => { setPlatformFilter(e.target.value); setPage(1); }}
+            className="pl-9 pr-8 py-2 text-sm border rounded-md bg-background appearance-none cursor-pointer"
+          >
+            <option value="">All Platforms</option>
+            {(Object.keys(PLATFORMS) as PlatformId[]).map((pid) => (
+              <option key={pid} value={pid}>{getPlatformLabel(pid)}</option>
+            ))}
+          </select>
         </div>
       </div>
 
@@ -450,9 +491,21 @@ export default function SystemAdminDevelopersPage() {
                 <TableHeader>
                   <TableRow>
                     <TableHead>ID</TableHead>
-                    <TableHead>Developer</TableHead>
-                    <TableHead>Platforms</TableHead>
-                    <TableHead className="text-right">Apps</TableHead>
+                    <TableHead>
+                      <button className="flex items-center hover:text-foreground" onClick={() => toggleSort("name")}>
+                        Developer <SortIcon field="name" />
+                      </button>
+                    </TableHead>
+                    <TableHead>
+                      <button className="flex items-center hover:text-foreground" onClick={() => toggleSort("platforms")}>
+                        Platforms <SortIcon field="platforms" />
+                      </button>
+                    </TableHead>
+                    <TableHead className="text-right">
+                      <button className="flex items-center justify-end hover:text-foreground ml-auto" onClick={() => toggleSort("apps")}>
+                        Apps <SortIcon field="apps" />
+                      </button>
+                    </TableHead>
                     <TableHead className="w-24">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
