@@ -228,7 +228,7 @@ describe("ensurePlatformDeveloper", () => {
     const origSelect = db.select;
     db.select = vi.fn((...args: any[]) => {
       selectCount++;
-      const chain = origSelect(...args);
+      const chain = (origSelect as any)(...args);
 
       // Override the then for the 3rd select call (race condition re-fetch)
       if (selectCount >= 2) {

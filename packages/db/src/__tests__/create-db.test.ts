@@ -2,18 +2,18 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 
 // Mock the postgres module before importing createDb
 const mockPostgresClient = {};
-const mockPostgres = vi.fn(() => mockPostgresClient);
+const mockPostgres = vi.fn((..._args: any[]) => mockPostgresClient);
 
 vi.mock("postgres", () => ({
-  default: (...args: unknown[]) => mockPostgres(...args),
+  default: (...args: any[]) => mockPostgres(...args),
 }));
 
 // Mock drizzle to capture what it receives
 const mockDrizzleReturn = { query: {} };
-const mockDrizzle = vi.fn(() => mockDrizzleReturn);
+const mockDrizzle = vi.fn((..._args: any[]) => mockDrizzleReturn);
 
 vi.mock("drizzle-orm/postgres-js", () => ({
-  drizzle: (...args: unknown[]) => mockDrizzle(...args),
+  drizzle: (...args: any[]) => mockDrizzle(...args),
 }));
 
 // Import after mocks are set up
