@@ -46,7 +46,7 @@ export function parseAppFromSearchResult(card: Record<string, any>, slug: string
       supportedIndustries: [],
       targetUserPersona: [],
       solution: null,
-      businessNeeds: {},
+      businessNeeds: [],
       plugins: null,
       sponsored: card.sponsored || false,
       source: "search-api",

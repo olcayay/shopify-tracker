@@ -2,6 +2,7 @@ Backlog Fixes (2026-03-29)
   PLA-409: Fix pool hang — statement_timeout, health check DB, pool monitor ✅
   PLA-407: Fix broken /developers/{slug} links — add platform prefix ✅
   PLA-410: CORS handling for Traefik error responses — dashboard-side fix ✅
+  PLA-408: Fix Salesforce businessNeeds type mismatch — flatten object to array ✅
 
 Performance: Eliminate N+1 and add count endpoints (2026-03-29)
   PLA-239: N+1 → batch queries in 4 endpoints ✅

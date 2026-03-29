@@ -59,13 +59,26 @@ export function parseSalesforceAppPage(html: string, slug: string): NormalizedAp
       supportedIndustries: ext?.supportedIndustries || [],
       targetUserPersona: ext?.targetUserPersona || [],
       solution: normalizeSolution(listing.solution),
-      businessNeeds: listing.businessNeeds,
+      businessNeeds: flattenBusinessNeeds(listing.businessNeeds),
       plugins: normalizePlugins(listing.plugins),
     },
   };
 }
 
 // --- Internal helpers ---
+
+/**
+ * Flatten Salesforce businessNeeds from nested object to array of selected keys.
+ * API returns: { marketing: { categories: [...], isSelected: true }, ... }
+ * We want: ["customerService", "analytics"] (only isSelected: true keys)
+ */
+export function flattenBusinessNeeds(raw: unknown): string[] {
+  if (Array.isArray(raw)) return raw;
+  if (!raw || typeof raw !== "object") return [];
+  return Object.entries(raw as Record<string, any>)
+    .filter(([, v]) => v && v.isSelected)
+    .map(([key]) => key);
+}
 
 function extractWindowStores(html: string): any | null {
   const match = html.match(/window\.stores\s*=\s*(\{[\s\S]*?\});\s*<\/script>/);
