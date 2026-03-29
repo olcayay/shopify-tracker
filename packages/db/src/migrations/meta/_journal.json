@@ -687,6 +687,13 @@
       "when": 1777075200000,
       "tag": "0097_notification_infrastructure",
       "breakpoints": true
+    },
+    {
+      "idx": 98,
+      "version": "7",
+      "when": 1777161600000,
+      "tag": "0098_email_system",
+      "breakpoints": true
     }
   ]
 }

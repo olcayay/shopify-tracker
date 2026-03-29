@@ -27,6 +27,7 @@ import * as scrapeItemErrorsSchema from "./schema/scrape-item-errors.js";
 import * as developersSchema from "./schema/developers.js";
 import * as deadLetterJobsSchema from "./schema/dead-letter-jobs.js";
 import * as notificationsSchema from "./schema/notifications.js";
+import * as emailSchema from "./schema/email.js";
 
 export const schema = {
   ...scrapeRunsSchema,
@@ -55,6 +56,7 @@ export const schema = {
   ...developersSchema,
   ...deadLetterJobsSchema,
   ...notificationsSchema,
+  ...emailSchema,
 };
 
 export function createDb(databaseUrl: string) {
@@ -143,3 +145,12 @@ export {
   userNotificationPreferences,
   notificationDeliveryLog,
 } from "./schema/notifications.js";
+export {
+  emailTypeConfigs,
+  emailTypeAccountOverrides,
+  emailLogs,
+  emailCampaigns,
+  emailProspects,
+  userEmailPreferences,
+  emailUnsubscribeTokens,
+} from "./schema/email.js";
