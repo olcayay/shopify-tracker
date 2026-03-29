@@ -16,7 +16,7 @@ const STALE_TIMEOUT_HOURS: Record<string, number> = {
   backfill_categories: 3,
   compute_app_scores: 1,
   compute_review_metrics: 1,
-  compute_category_scores: 1,
+  compute_similarity_scores: 1,
 };
 
 const DEFAULT_TIMEOUT_HOURS = 2;
