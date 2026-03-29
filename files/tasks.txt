@@ -24,6 +24,7 @@ Notification: Phase 0 (2026-03-29)
 Email System: Phase 1 (2026-03-29)
   PLA-304: Database schema for email system ✅
   PLA-305: Component-based email template engine (11 components) ✅
+  PLA-306: Email send pipeline with eligibility checks ✅
 
 Platform Robustness: 28 tasks implemented (2026-03-29)
   PLA-253: Zod validation before DB insert ✅
