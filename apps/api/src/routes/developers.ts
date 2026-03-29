@@ -226,7 +226,21 @@ export async function developerRoutes(app: FastifyInstance) {
 
       const total = Number(countResult?.count || 0);
 
+      // Use CTEs instead of correlated subqueries for platform_developers and app_count
       const rows: any[] = await db.execute(sql`
+        WITH latest_snapshots AS (
+          SELECT DISTINCT ON (app_id) app_id, developer
+          FROM app_snapshots
+          ORDER BY app_id, scraped_at DESC
+        ),
+        dev_app_counts AS (
+          SELECT pd.global_developer_id, COUNT(DISTINCT a.id) AS app_count
+          FROM platform_developers pd
+          JOIN apps a ON a.platform = pd.platform
+          JOIN latest_snapshots s ON s.app_id = a.id
+          WHERE s.developer->>'name' = pd.name
+          GROUP BY pd.global_developer_id
+        )
         SELECT
           g.id,
           g.slug,
@@ -242,20 +256,9 @@ export async function developerRoutes(app: FastifyInstance) {
             FROM platform_developers pd
             WHERE pd.global_developer_id = g.id
           ) AS platform_developers,
-          (
-            SELECT COUNT(DISTINCT a.id)
-            FROM platform_developers pd
-            JOIN apps a ON a.platform = pd.platform
-            JOIN app_snapshots s ON s.app_id = a.id
-            WHERE pd.global_developer_id = g.id
-              AND s.developer->>'name' = pd.name
-              AND s.id = (
-                SELECT s2.id FROM app_snapshots s2
-                WHERE s2.app_id = a.id
-                ORDER BY s2.scraped_at DESC LIMIT 1
-              )
-          ) AS app_count
+          COALESCE(dac.app_count, 0) AS app_count
         FROM global_developers g
+        LEFT JOIN dev_app_counts dac ON dac.global_developer_id = g.id
         ${search ? sql`WHERE g.name ILIKE ${`%${search}%`}` : sql``}
         ORDER BY g.name
         LIMIT ${limit} OFFSET ${offset}

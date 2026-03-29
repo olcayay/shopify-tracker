@@ -117,24 +117,21 @@ export const accountExtrasRoutes: FastifyPluginAsync = async (app) => {
     const catIdToSlug = new Map(catRows.map((c) => [c.id, c.slug]));
     const categoryIds = catRows.map((c) => c.id);
 
-    const snapshots = categoryIds.length > 0 ? await db
-      .select({
-        categoryId: categorySnapshots.categoryId,
-        appCount: categorySnapshots.appCount,
-        firstPageApps: categorySnapshots.firstPageApps,
-        scrapeRunId: categorySnapshots.scrapeRunId,
-      })
-      .from(categorySnapshots)
-      .where(
-        and(
-          inArray(categorySnapshots.categoryId, categoryIds),
-          sql`${categorySnapshots.id} = (
-            SELECT s2.id FROM category_snapshots s2
-            WHERE s2.category_id = ${categorySnapshots.categoryId}
-            ORDER BY s2.scraped_at DESC LIMIT 1
-          )`
-        )
-      ) : [];
+    // Use DISTINCT ON instead of correlated subquery for latest category snapshots
+    const snapshots: { categoryId: number; appCount: number | null; firstPageApps: unknown; scrapeRunId: string }[] = categoryIds.length > 0
+      ? await db.execute(sql`
+          SELECT DISTINCT ON (category_id)
+            category_id, app_count, first_page_apps, scrape_run_id
+          FROM category_snapshots
+          WHERE category_id = ANY(${categoryIds})
+          ORDER BY category_id, scraped_at DESC
+        `).then((res: any) => ((res as any).rows ?? res).map((r: any) => ({
+          categoryId: r.category_id as number,
+          appCount: r.app_count as number | null,
+          firstPageApps: r.first_page_apps,
+          scrapeRunId: r.scrape_run_id as string,
+        })))
+      : [];
 
     const snapshotMap = new Map(snapshots.map((s) => [catIdToSlug.get(s.categoryId) ?? "", s]));
 

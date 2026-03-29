@@ -208,24 +208,23 @@ export const appRoutes: FastifyPluginAsync = async (app) => {
     const { slugs } = slugsBodySchema.parse(request.body);
     const platform = getPlatformFromQuery(request.query as Record<string, unknown>);
 
-    const rows = await db
-      .select({
-        appSlug: apps.slug,
-        pricingPlans: appSnapshots.pricingPlans,
-      })
-      .from(appSnapshots)
-      .innerJoin(apps, eq(apps.id, appSnapshots.appId))
-      .where(
-        and(
-          inArray(apps.slug, slugs),
-          eq(apps.platform, platform),
-          sql`${appSnapshots.id} = (SELECT s2.id FROM app_snapshots s2 WHERE s2.app_id = ${appSnapshots.appId} ORDER BY s2.scraped_at DESC LIMIT 1)`
-        )
-      );
+    // Use DISTINCT ON instead of correlated subquery for latest snapshot
+    const rows: any[] = await db.execute(sql`
+      SELECT a.slug AS app_slug, s.pricing_plans
+      FROM (
+        SELECT DISTINCT ON (app_id) app_id, pricing_plans
+        FROM app_snapshots
+        ORDER BY app_id, scraped_at DESC
+      ) s
+      INNER JOIN apps a ON a.id = s.app_id
+      WHERE a.slug = ANY(${slugs})
+        AND a.platform = ${platform}
+    `);
 
+    const data = (rows as any).rows ?? rows;
     const result: Record<string, number | null> = {};
-    for (const r of rows) {
-      result[r.appSlug] = getMinPaidPrice(r.pricingPlans);
+    for (const r of data) {
+      result[r.app_slug] = getMinPaidPrice(r.pricing_plans);
     }
     return result;
   });
@@ -451,30 +450,23 @@ export const appRoutes: FastifyPluginAsync = async (app) => {
     const platform = getPlatformFromQuery(request.query as Record<string, unknown>);
     if (q.length < 1) return [];
 
-    const rows = await db
-      .select({
-        slug: apps.slug,
-        name: apps.name,
-        iconUrl: apps.iconUrl,
-        isBuiltForShopify: apps.isBuiltForShopify,
-        averageRating: appSnapshots.averageRating,
-        ratingCount: appSnapshots.ratingCount,
-      })
-      .from(apps)
-      .leftJoin(
-        appSnapshots,
-        sql`${appSnapshots.appId} = ${apps.id}
-          AND ${appSnapshots.id} = (
-            SELECT s2.id FROM app_snapshots s2
-            WHERE s2.app_id = "apps"."id"
-            ORDER BY s2.scraped_at DESC LIMIT 1
-          )`
-      )
-      .where(and(ilike(apps.name, `%${q}%`), eq(apps.platform, platform)))
-      .orderBy(apps.name)
-      .limit(20);
+    // Use DISTINCT ON in subquery instead of correlated subquery for latest snapshot
+    const rows: any[] = await db.execute(sql`
+      SELECT a.slug, a.name, a.icon_url AS "iconUrl", a.is_built_for_shopify AS "isBuiltForShopify",
+             s.average_rating AS "averageRating", s.rating_count AS "ratingCount"
+      FROM apps a
+      LEFT JOIN (
+        SELECT DISTINCT ON (app_id) app_id, average_rating, rating_count
+        FROM app_snapshots
+        ORDER BY app_id, scraped_at DESC
+      ) s ON s.app_id = a.id
+      WHERE a.name ILIKE ${`%${q}%`}
+        AND a.platform = ${platform}
+      ORDER BY a.name
+      LIMIT 20
+    `);
 
-    return rows;
+    return (rows as any).rows ?? rows;
   });
 
   // GET /api/apps/developers — list all developers with app counts and contact info (system admin only)
@@ -507,21 +499,21 @@ export const appRoutes: FastifyPluginAsync = async (app) => {
       email: string | null;
       country: string | null;
     }>(sql`
+      WITH latest AS (
+        SELECT DISTINCT ON (app_id) app_id, developer, platform_data
+        FROM app_snapshots
+        ORDER BY app_id, scraped_at DESC
+      )
       SELECT
         s.developer->>'name' AS developer_name,
         COUNT(DISTINCT a.id)::int AS app_count,
         (ARRAY_AGG(${emailExpr}) FILTER (WHERE ${emailExpr} IS NOT NULL))[1] AS email,
         (ARRAY_AGG(${countryExpr}) FILTER (WHERE ${countryExpr} IS NOT NULL))[1] AS country
       FROM apps a
-      INNER JOIN app_snapshots s ON s.app_id = a.id
+      INNER JOIN latest s ON s.app_id = a.id
       WHERE a.platform = ${platform}
         AND s.developer->>'name' IS NOT NULL
         AND s.developer->>'name' != ''
-        AND s.id = (
-          SELECT s2.id FROM app_snapshots s2
-          WHERE s2.app_id = a.id
-          ORDER BY s2.scraped_at DESC LIMIT 1
-        )
       GROUP BY s.developer->>'name'
       ORDER BY app_count DESC, developer_name ASC
     `);
@@ -535,40 +527,31 @@ export const appRoutes: FastifyPluginAsync = async (app) => {
     const platform = getPlatformFromQuery(request.query as Record<string, unknown>);
     if (name.length < 1) return [];
 
-    // Find apps whose latest snapshot has matching developer name
-    const rows = await db
-      .select({
-        slug: apps.slug,
-        name: apps.name,
-        iconUrl: apps.iconUrl,
-        isBuiltForShopify: apps.isBuiltForShopify,
-        launchedDate: apps.launchedDate,
-        averageRating: appSnapshots.averageRating,
-        ratingCount: appSnapshots.ratingCount,
-        pricing: appSnapshots.pricing,
-        pricingPlans: appSnapshots.pricingPlans,
-        developer: appSnapshots.developer,
-        platformData: appSnapshots.platformData,
-      })
-      .from(apps)
-      .innerJoin(appSnapshots, eq(appSnapshots.appId, apps.id))
-      .where(
-        and(
-          sql`${appSnapshots.developer}->>'name' = ${name}
-            AND ${appSnapshots.id} = (
-              SELECT s2.id FROM app_snapshots s2
-              WHERE s2.app_id = "apps"."id"
-              ORDER BY s2.scraped_at DESC LIMIT 1
-            )`,
-          eq(apps.platform, platform)
-        )
-      )
-      .orderBy(apps.name);
+    // Find apps whose latest snapshot has matching developer name (DISTINCT ON instead of correlated subquery)
+    const rows: any[] = await db.execute(sql`
+      SELECT a.slug, a.name, a.icon_url AS "iconUrl",
+             a.is_built_for_shopify AS "isBuiltForShopify",
+             a.launched_date AS "launchedDate",
+             s.average_rating AS "averageRating", s.rating_count AS "ratingCount",
+             s.pricing, s.pricing_plans AS "pricingPlans",
+             s.developer, s.platform_data AS "platformData"
+      FROM apps a
+      INNER JOIN (
+        SELECT DISTINCT ON (app_id)
+          app_id, average_rating, rating_count, pricing, pricing_plans, developer, platform_data
+        FROM app_snapshots
+        ORDER BY app_id, scraped_at DESC
+      ) s ON s.app_id = a.id
+      WHERE s.developer->>'name' = ${name}
+        AND a.platform = ${platform}
+      ORDER BY a.name
+    `);
+    const byDevRows = (rows as any).rows ?? rows;
 
     // Extract developer contact info from the first app's platformData
     let developerInfo: Record<string, unknown> | null = null;
-    if (rows.length > 0) {
-      const pd = rows[0].platformData as Record<string, any> | undefined;
+    if (byDevRows.length > 0) {
+      const pd = byDevRows[0].platformData as Record<string, any> | undefined;
       if (pd) {
         if (platform === "canva") {
           const info: Record<string, unknown> = {};
@@ -632,7 +615,7 @@ export const appRoutes: FastifyPluginAsync = async (app) => {
       }
     }
 
-    const appRows = rows.map((r) => {
+    const appRows = byDevRows.map((r: any) => {
       const minPaidPrice = getMinPaidPrice(r.pricingPlans);
       const { pricingPlans: _, platformData: _pd, ...rest } = r;
       return { ...rest, minPaidPrice };
