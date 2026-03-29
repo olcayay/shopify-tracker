@@ -73,18 +73,15 @@ describe("Route consistency validation", () => {
   });
 
   it("no duplicate dynamic segments at same level", () => {
-    // Check that no directory has both [slug] and [platform] children
     function checkNoDuplicateDynamic(dir: string) {
       if (!existsSync(dir)) return;
       const entries = readdirSync(dir);
       const dynamicSegments = entries.filter((e) => e.startsWith("[") && e.endsWith("]"));
 
-      // Each dynamic segment name should be unique at this level
       const names = dynamicSegments.map((s) => s);
       const unique = new Set(names);
       expect(names.length).toBe(unique.size);
 
-      // Recurse into subdirectories
       for (const entry of entries) {
         const full = join(dir, entry);
         if (statSync(full).isDirectory()) {
@@ -94,5 +91,89 @@ describe("Route consistency validation", () => {
     }
 
     checkNoDuplicateDynamic(APP_DIR);
+  });
+
+  it("static siblings of a dynamic route must not have child dynamic segments with different names", () => {
+    // Next.js error: "You cannot use different slug names for the same dynamic path"
+    // When a directory has [platform] and a static sibling like "developers",
+    // any dynamic child of "developers" (e.g. [slug]) conflicts with [platform]'s
+    // children because Next.js resolves them at the same path depth.
+    function checkRouteGroup(dir: string) {
+      if (!existsSync(dir)) return;
+      const entries = readdirSync(dir);
+      const dynamicEntries = entries.filter((e) => e.startsWith("[") && e.endsWith("]"));
+      const staticEntries = entries.filter(
+        (e) => !e.startsWith("[") && !e.startsWith("(") && statSync(join(dir, e)).isDirectory()
+      );
+
+      if (dynamicEntries.length === 0) {
+        // No dynamic segment at this level — recurse into children
+        for (const entry of entries) {
+          const full = join(dir, entry);
+          if (statSync(full).isDirectory()) {
+            checkRouteGroup(full);
+          }
+        }
+        return;
+      }
+
+      // There's a dynamic segment (e.g. [platform]) at this level.
+      // Collect all dynamic param names used by the dynamic segment's children at each depth.
+      const dynamicParamsByDepth = new Map<number, Set<string>>();
+      function collectDynamicParams(d: string, depth: number) {
+        if (!existsSync(d)) return;
+        for (const child of readdirSync(d)) {
+          const childPath = join(d, child);
+          if (!statSync(childPath).isDirectory()) continue;
+          if (child.startsWith("[") && child.endsWith("]")) {
+            if (!dynamicParamsByDepth.has(depth)) dynamicParamsByDepth.set(depth, new Set());
+            dynamicParamsByDepth.get(depth)!.add(child);
+          }
+          collectDynamicParams(childPath, depth + 1);
+        }
+      }
+      for (const dyn of dynamicEntries) {
+        collectDynamicParams(join(dir, dyn), 1);
+      }
+
+      // Now check static siblings — their dynamic children at each depth must
+      // use the same param name as the dynamic route's children at that depth.
+      for (const staticDir of staticEntries) {
+        function checkStaticChildren(d: string, depth: number) {
+          if (!existsSync(d)) return;
+          for (const child of readdirSync(d)) {
+            const childPath = join(d, child);
+            if (!statSync(childPath).isDirectory()) continue;
+            if (child.startsWith("[") && child.endsWith("]")) {
+              const expected = dynamicParamsByDepth.get(depth);
+              if (expected && expected.size > 0 && !expected.has(child)) {
+                // This will fail with a descriptive message
+                expect(child).toBe(
+                  `one of ${[...expected].join(", ")} (found in ${dir}/${staticDir} at depth ${depth})`
+                );
+              }
+            }
+            checkStaticChildren(childPath, depth + 1);
+          }
+        }
+        checkStaticChildren(join(dir, staticDir), 1);
+      }
+
+      // Recurse into route groups and all children
+      for (const entry of entries) {
+        const full = join(dir, entry);
+        if (statSync(full).isDirectory()) {
+          checkRouteGroup(full);
+        }
+      }
+    }
+
+    // Check each route group under app/
+    for (const entry of readdirSync(APP_DIR)) {
+      const full = join(APP_DIR, entry);
+      if (statSync(full).isDirectory()) {
+        checkRouteGroup(full);
+      }
+    }
   });
 });
