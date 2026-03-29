@@ -4,6 +4,8 @@ import {
   packages,
   accounts,
   users,
+  apps,
+  trackedKeywords,
   accountTrackedApps,
   accountTrackedKeywords,
   accountCompetitorApps,
@@ -93,6 +95,73 @@ export const accountInfoRoutes: FastifyPluginAsync = async (app) => {
         researchProjects: researchProjectsCount.count,
       },
     };
+  });
+
+  // GET /api/account/stats — per-platform counts (apps, keywords, competitors)
+  // Returns counts and single-item slugs for each platform in one response.
+  app.get("/stats", async (request) => {
+    const { accountId } = request.user;
+
+    // Batch: counts + single-item slugs per platform in 3 queries
+    const [appRows, kwRows, compRows] = await Promise.all([
+      // Apps per platform with slug when count=1
+      db.execute(sql`
+        SELECT a.platform,
+               count(*)::int AS count,
+               CASE WHEN count(*) = 1 THEN min(a.slug) END AS single_slug
+        FROM account_tracked_apps t
+        JOIN apps a ON a.id = t.app_id
+        WHERE t.account_id = ${accountId}
+        GROUP BY a.platform
+      `),
+      // Distinct keywords per platform (via tracked app's platform)
+      db.execute(sql`
+        SELECT a.platform,
+               count(DISTINCT tk.keyword_id)::int AS count,
+               CASE WHEN count(DISTINCT tk.keyword_id) = 1 THEN min(k.slug) END AS single_slug
+        FROM account_tracked_keywords tk
+        JOIN apps a ON a.id = tk.tracked_app_id
+        JOIN tracked_keywords k ON k.id = tk.keyword_id
+        WHERE tk.account_id = ${accountId}
+        GROUP BY a.platform
+      `),
+      // Distinct competitors per platform (via tracked app's platform)
+      db.execute(sql`
+        SELECT a.platform,
+               count(DISTINCT c.competitor_app_id)::int AS count,
+               CASE WHEN count(DISTINCT c.competitor_app_id) = 1 THEN min(ca.slug) END AS single_slug
+        FROM account_competitor_apps c
+        JOIN apps a ON a.id = c.tracked_app_id
+        JOIN apps ca ON ca.id = c.competitor_app_id
+        WHERE c.account_id = ${accountId}
+        GROUP BY a.platform
+      `),
+    ]);
+
+    const appData: any[] = (appRows as any).rows ?? appRows;
+    const kwData: any[] = (kwRows as any).rows ?? kwRows;
+    const compData: any[] = (compRows as any).rows ?? compRows;
+
+    // Build per-platform stats map
+    const stats: Record<string, { apps: number; keywords: number; competitors: number; appSlug?: string; keywordSlug?: string; competitorSlug?: string }> = {};
+
+    for (const r of appData) {
+      if (!stats[r.platform]) stats[r.platform] = { apps: 0, keywords: 0, competitors: 0 };
+      stats[r.platform].apps = r.count;
+      if (r.single_slug) stats[r.platform].appSlug = r.single_slug;
+    }
+    for (const r of kwData) {
+      if (!stats[r.platform]) stats[r.platform] = { apps: 0, keywords: 0, competitors: 0 };
+      stats[r.platform].keywords = r.count;
+      if (r.single_slug) stats[r.platform].keywordSlug = r.single_slug;
+    }
+    for (const r of compData) {
+      if (!stats[r.platform]) stats[r.platform] = { apps: 0, keywords: 0, competitors: 0 };
+      stats[r.platform].competitors = r.count;
+      if (r.single_slug) stats[r.platform].competitorSlug = r.single_slug;
+    }
+
+    return stats;
   });
 
   // PUT /api/account — update account name and company

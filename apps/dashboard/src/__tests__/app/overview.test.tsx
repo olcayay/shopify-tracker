@@ -61,32 +61,14 @@ import OverviewPage from "@/app/(dashboard)/overview/page";
 
 function setupDefaultMocks() {
   mockFetchWithAuth.mockImplementation((url: string) => {
-    if (url.includes("/api/apps")) {
+    if (url.includes("/api/account/stats")) {
       return Promise.resolve({
         ok: true,
         json: () =>
-          Promise.resolve([
-            { slug: "app1" },
-            { slug: "app2" },
-          ]),
-      });
-    }
-    if (url.includes("/api/keywords")) {
-      return Promise.resolve({
-        ok: true,
-        json: () =>
-          Promise.resolve([
-            { id: 1, keyword: "kw1" },
-          ]),
-      });
-    }
-    if (url.includes("/api/account/competitors")) {
-      return Promise.resolve({
-        ok: true,
-        json: () =>
-          Promise.resolve([
-            { slug: "comp1" },
-          ]),
+          Promise.resolve({
+            shopify: { apps: 2, keywords: 1, competitors: 1 },
+            salesforce: { apps: 2, keywords: 1, competitors: 1 },
+          }),
       });
     }
     return Promise.resolve({
@@ -168,15 +150,12 @@ describe("CrossPlatformOverviewPage", () => {
     });
   });
 
-  it("calls fetchWithAuth for each enabled platform", async () => {
+  it("calls fetchWithAuth for stats endpoint", async () => {
     setupDefaultMocks();
     render(<OverviewPage />);
     await waitFor(() => {
       expect(mockFetchWithAuth).toHaveBeenCalledWith(
-        "/api/apps?platform=shopify"
-      );
-      expect(mockFetchWithAuth).toHaveBeenCalledWith(
-        "/api/apps?platform=salesforce"
+        "/api/account/stats"
       );
     });
   });

@@ -1,3 +1,13 @@
+Add Server-Side Count Endpoint for Overview Page (2026-03-29)
+================================================================
+PLA-240: New GET /api/account/stats endpoint returns per-platform counts
+(apps, keywords, competitors) with single-item slugs in one response.
+
+- 3 SQL queries with GROUP BY platform (instead of 3×N per-platform fetches)
+- Dashboard overview page now makes 1 API call instead of up to 33
+- Response under 1KB vs hundreds of KB for full array payloads
+- Added 3 tests for the new endpoint
+
 Eliminate N+1 Query Patterns in API Routes (2026-03-29)
 ================================================================
 PLA-239: Replaced all N+1 query patterns with batch queries.

@@ -77,45 +77,30 @@ export default function CrossPlatformOverviewPage() {
     setLoading(true);
     setFetchError(null);
     try {
+      // Single API call returns counts + single-item slugs for all platforms
+      const statsRes = await fetchWithAuth("/api/account/stats");
+      if (!statsRes.ok) {
+        setFetchError("Some data could not be loaded. Stats may be incomplete.");
+        setDataLoaded(false);
+        return;
+      }
+
+      const rawStats: Record<string, { apps: number; keywords: number; competitors: number; appSlug?: string; keywordSlug?: string; competitorSlug?: string }> = await statsRes.json();
       const platformStats: Record<string, PlatformStats> = {};
-      let anyFailed = false;
-
-      await Promise.all(
-        platforms.map(async (p) => {
-          const caps = PLATFORMS[p];
-          const [appsRes, keywordsRes, competitorsRes] = await Promise.all([
-            fetchWithAuth(`/api/apps?platform=${p}`),
-            caps.hasKeywordSearch
-              ? fetchWithAuth(`/api/keywords?platform=${p}`)
-              : Promise.resolve(null),
-            fetchWithAuth(`/api/account/competitors?platform=${p}`),
-          ]);
-
-          // Track if any API call failed
-          if (!appsRes.ok) anyFailed = true;
-          if (competitorsRes && !competitorsRes.ok) anyFailed = true;
-          if (keywordsRes && !keywordsRes.ok) anyFailed = true;
-
-          const appsArr = appsRes.ok ? await appsRes.json().then((d: unknown) => Array.isArray(d) ? d : []) : [];
-          const keywordsArr = keywordsRes?.ok ? await keywordsRes.json().then((d: unknown) => Array.isArray(d) ? d : []) : [];
-          const competitorsArr = competitorsRes.ok ? await competitorsRes.json().then((d: unknown) => Array.isArray(d) ? d : []) : [];
-
-          platformStats[p] = {
-            apps: appsArr.length,
-            keywords: keywordsArr.length,
-            competitors: competitorsArr.length,
-            appSlug: appsArr.length === 1 ? appsArr[0]?.slug : undefined,
-            keywordSlug: keywordsArr.length === 1 ? keywordsArr[0]?.slug : undefined,
-            competitorSlug: competitorsArr.length === 1 ? competitorsArr[0]?.slug : undefined,
-          };
-        })
-      );
+      for (const p of platforms) {
+        const s = rawStats[p];
+        platformStats[p] = {
+          apps: s?.apps ?? 0,
+          keywords: s?.keywords ?? 0,
+          competitors: s?.competitors ?? 0,
+          appSlug: s?.appSlug,
+          keywordSlug: s?.keywordSlug,
+          competitorSlug: s?.competitorSlug,
+        };
+      }
 
       setStats(platformStats);
-      setDataLoaded(!anyFailed);
-      if (anyFailed) {
-        setFetchError("Some data could not be loaded. Stats may be incomplete.");
-      }
+      setDataLoaded(true);
     } catch {
       setFetchError("Failed to load overview data. Please try again.");
       setDataLoaded(false);

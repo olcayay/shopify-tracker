@@ -777,4 +777,51 @@ describe("Account routes", () => {
 
   // NOTE: Platform enable/disable endpoints removed — system-admin only.
   // Tests for POST/DELETE /api/account/platforms removed accordingly.
+
+  // -----------------------------------------------------------------------
+  // GET /api/account/stats
+  // -----------------------------------------------------------------------
+
+  describe("GET /api/account/stats", () => {
+    it("returns 401 without auth", async () => {
+      const res = await app.inject({
+        method: "GET",
+        url: "/api/account/stats",
+      });
+      expect(res.statusCode).toBe(401);
+    });
+
+    it("returns 200 with valid auth and empty stats", async () => {
+      const res = await app.inject({
+        method: "GET",
+        url: "/api/account/stats",
+        headers: authHeaders(userToken()),
+      });
+      expect(res.statusCode).toBe(200);
+      const body = res.json();
+      expect(typeof body).toBe("object");
+    });
+
+    it("returns per-platform stats shape", async () => {
+      // With mock DB returning empty results, stats should be empty object
+      const res = await app.inject({
+        method: "GET",
+        url: "/api/account/stats",
+        headers: authHeaders(userToken()),
+      });
+      expect(res.statusCode).toBe(200);
+      const body = res.json();
+      // Verify it's a plain object (not an array)
+      expect(body).not.toBeInstanceOf(Array);
+      // Each platform entry (if any) should have the expected shape
+      for (const platform of Object.keys(body)) {
+        expect(body[platform]).toHaveProperty("apps");
+        expect(body[platform]).toHaveProperty("keywords");
+        expect(body[platform]).toHaveProperty("competitors");
+        expect(typeof body[platform].apps).toBe("number");
+        expect(typeof body[platform].keywords).toBe("number");
+        expect(typeof body[platform].competitors).toBe("number");
+      }
+    });
+  });
 });
