@@ -1,0 +1,11 @@
+export { emailLayout } from "./layout.js";
+export { header } from "./header.js";
+export { heroStat } from "./hero-stat.js";
+export { dataTable } from "./data-table.js";
+export { insightBlock } from "./insight-block.js";
+export { competitorCard } from "./competitor-card.js";
+export { ctaButton } from "./cta-button.js";
+export { footer } from "./footer.js";
+export { summaryBadge } from "./summary-badge.js";
+export { reviewCard } from "./review-card.js";
+export { milestoneCard } from "./milestone-card.js";
