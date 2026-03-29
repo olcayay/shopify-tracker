@@ -79,15 +79,6 @@ export async function proxy(request: NextRequest) {
     );
   }
 
-  // Rewrite /developers/{slug} → /developer/{slug} (internal route uses singular
-  // "developer" to avoid Next.js dynamic param conflict with [platform])
-  const devProfileMatch = pathname.match(/^\/developers\/([a-z0-9-]+)$/);
-  if (devProfileMatch) {
-    const url = request.nextUrl.clone();
-    url.pathname = `/developer/${devProfileMatch[1]}`;
-    return NextResponse.rewrite(url);
-  }
-
   const accessToken = request.cookies.get("access_token")?.value;
 
   // If no access token, try to refresh
@@ -167,6 +158,16 @@ export async function proxy(request: NextRequest) {
     }
   } catch {
     return NextResponse.redirect(new URL("/login", request.url));
+  }
+
+  // Rewrite /developers/{slug} → /developer/{slug} (internal route uses singular
+  // "developer" to avoid Next.js dynamic param conflict with [platform]).
+  // Must be AFTER auth checks so token refresh and login redirect still work.
+  const devProfileMatch = pathname.match(/^\/developers\/([a-z0-9-]+)$/);
+  if (devProfileMatch) {
+    const url = request.nextUrl.clone();
+    url.pathname = `/developer/${devProfileMatch[1]}`;
+    return NextResponse.rewrite(url);
   }
 
   return NextResponse.next();
