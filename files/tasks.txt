@@ -5,6 +5,9 @@ Email & Notification Infrastructure: Phase 0 (2026-03-30)
   PLA-418: Integrate transactional emails into auth routes (register, invitation) ✅
   PLA-419: Implement email-bulk worker with rate limiting (50/min) ✅
   PLA-420: Implement notification worker (in-app + web push delivery) ✅
+  PLA-421: Implement event detector module (ranking, competitor, review, milestone) ✅
+  PLA-422: Implement event dispatcher (fan out to email + notification queues) ✅
+  PLA-423: Integrate event detection into scraper process-job ✅
 
 Backlog Fixes (2026-03-30)
   PLA-412: Add Notifications and Emails links to System Admin sidebar ✅

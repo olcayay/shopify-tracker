@@ -37,6 +37,21 @@ PLA-420: Implemented notification worker (notification-worker.ts).
 - Push failures handled: 410/404 → deactivate, 5 failures → deactivate
 - Delivery logged to notification_delivery_log table
 
+PLA-421: Event detector module (apps/scraper/src/events/event-detector.ts).
+6 detection functions: checkRankingAlerts, checkCategoryAlerts,
+checkCompetitorMoves, checkNewReviews, detectMilestones, checkFeaturedChanges.
+Configurable thresholds (DEFAULT_THRESHOLDS). Returns DetectedEvent[] with
+type, appId, platform, severity, data. 28 unit tests.
+
+PLA-422: Event dispatcher (apps/scraper/src/events/event-dispatcher.ts).
+dispatch() finds affected users via accountTrackedApps + accountCompetitorApps,
+enqueues to email-bulk and notifications queues. EMAIL_EVENT_TYPES controls
+which events generate emails vs notification-only. dispatchAll() for batches.
+
+PLA-423: Integrated event detection into process-job.ts.
+afterKeywordScrape() after keyword_search, afterCategoryScrape() after category.
+All wrapped in try/catch — event detection never breaks scraping.
+
 PLA-418: Created API email-enqueue helpers (apps/api/src/lib/email-enqueue.ts)
 with 6 functions: sendWelcomeEmail, sendPasswordResetEmail,
 sendVerificationEmail, sendInvitationEmail, sendLoginAlertEmail, send2FAEmail.

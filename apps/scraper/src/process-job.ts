@@ -15,6 +15,7 @@ import { getModule } from "./platforms/registry.js";
 import { FallbackTracker } from "./utils/fallback-tracker.js";
 import { createLinearErrorTask } from "./utils/create-linear-error-task.js";
 import { recordSuccess, recordFailure } from "./circuit-breaker.js";
+import { afterKeywordScrape, afterCategoryScrape, afterReviewScrape } from "./events/post-scrape-events.js";
 import {
   HTTP_DEFAULT_DELAY_MS,
   HTTP_DEFAULT_MAX_CONCURRENCY,
@@ -151,6 +152,10 @@ export function createProcessJob(db: ReturnType<typeof createDb>, queueName?: st
             log.warn("partial cascade enqueue", { type: "app_details", enqueued, failed, total: uniqueSlugs.length });
           }
         }
+
+        // Event detection: category ranking changes
+        try { await afterCategoryScrape(db, platform, job.id!); } catch {}
+
         break;
       }
 
@@ -300,6 +305,10 @@ export function createProcessJob(db: ReturnType<typeof createDb>, queueName?: st
           triggeredBy: `${triggeredBy}:cascade`,
         }, cascadeOpts);
         log.info("cascaded compute_similarity_scores job");
+
+        // Event detection: keyword ranking changes
+        try { await afterKeywordScrape(db, platform, job.id!); } catch {}
+
         break;
       }
 
