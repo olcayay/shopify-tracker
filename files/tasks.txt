@@ -3,6 +3,8 @@ Email & Notification Infrastructure: Phase 0 (2026-03-30)
   PLA-417: Create transactional email templates (password-reset, verification, invitation, login-alert, 2fa) ✅
   PLA-416: Implement email-instant worker for transactional emails ✅
   PLA-418: Integrate transactional emails into auth routes (register, invitation) ✅
+  PLA-419: Implement email-bulk worker with rate limiting (50/min) ✅
+  PLA-420: Implement notification worker (in-app + web push delivery) ✅
 
 Backlog Fixes (2026-03-30)
   PLA-412: Add Notifications and Emails links to System Admin sidebar ✅
