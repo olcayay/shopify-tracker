@@ -186,6 +186,43 @@ await app.register(crossPlatformRoutes, { prefix: "/api/cross-platform" });
 await app.register(adminRoutes, { prefix: "/api/admin" });
 await app.register(dlqRoutes, { prefix: "/api/system-admin/dlq" });
 
+// Cache-Control headers based on route patterns
+app.addHook("onSend", async (request, reply) => {
+  // Skip non-GET requests and already-set headers
+  if (request.method !== "GET" || reply.getHeader("cache-control")) return;
+
+  const url = request.url.split("?")[0];
+
+  // No cache: auth, account, admin, mutations
+  if (url.startsWith("/api/auth") || url.startsWith("/api/account") || url.startsWith("/api/system-admin") || url.startsWith("/api/admin")) {
+    reply.header("cache-control", "private, no-cache");
+    return;
+  }
+
+  // Long cache (1 hour): platform list, feature tree
+  if (url === "/api/platforms" || url === "/api/features/tree") {
+    reply.header("cache-control", "public, max-age=3600, stale-while-revalidate=7200");
+    return;
+  }
+
+  // Medium cache (5 min): app detail, category detail, keyword detail, scores
+  if (url.match(/^\/api\/(apps|categories|keywords|developers)\/[^/]+$/) ||
+      url.match(/^\/api\/apps\/[^/]+\/(scores|rankings|changes|reviews|similar|featured|ads)/)) {
+    reply.header("cache-control", "public, max-age=300, stale-while-revalidate=600");
+    return;
+  }
+
+  // Short cache (1 min): list endpoints, featured apps
+  if (url.match(/^\/api\/(categories|featured-apps|integrations|platform-attributes)\/?$/) ||
+      url.match(/^\/api\/categories\?/)) {
+    reply.header("cache-control", "public, max-age=60, stale-while-revalidate=300");
+    return;
+  }
+
+  // Default: private, short cache
+  reply.header("cache-control", "private, max-age=30");
+});
+
 // Shallow health check — always responds (for load balancer liveness probes)
 app.get("/health/live", async () => {
   return { status: "ok", timestamp: new Date().toISOString() };
