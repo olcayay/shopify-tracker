@@ -188,6 +188,10 @@ await app.register(adminRoutes, { prefix: "/api/admin" });
 await app.register(dlqRoutes, { prefix: "/api/system-admin/dlq" });
 await app.register(publicRoutes, { prefix: "/api/public" });
 
+// Notification endpoints (authenticated)
+const { notificationRoutes } = await import("./routes/notifications.js");
+await app.register(notificationRoutes, { prefix: "/api/notifications" });
+
 // Email tracking and unsubscribe (public — no auth required)
 const { emailTrackingRoutes } = await import("./routes/email-tracking.js");
 await app.register(emailTrackingRoutes, { prefix: "/api/emails" });
