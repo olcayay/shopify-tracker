@@ -23,7 +23,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Target, Eye, ChevronLeft, ChevronRight, Clock, ArrowLeft, AppWindow } from "lucide-react";
+import { Target, Eye, ChevronLeft, ChevronRight, Clock, ArrowLeft, AppWindow, Search } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { StatCardSkeleton, TableSkeleton } from "@/components/skeletons";
 import { AppBadgeIcon } from "@/components/app-badges";
@@ -118,6 +118,7 @@ export default function OverviewPage() {
   // Pagination state
   const [appsPage, setAppsPage] = useState(0);
   const [keywordsPage, setKeywordsPage] = useState(0);
+  const [keywordSearch, setKeywordSearch] = useState("");
   const [competitorsPage, setCompetitorsPage] = useState(0);
   const [featuresPage, setFeaturesPage] = useState(0);
   const [categoriesPage, setCategoriesPage] = useState(0);
@@ -267,7 +268,10 @@ export default function OverviewPage() {
   }
 
   const appsTotalPages = Math.ceil(apps.length / PAGE_SIZE);
-  const keywordsTotalPages = Math.ceil(keywords.length / PAGE_SIZE);
+  const filteredKeywords = keywordSearch
+    ? keywords.filter((kw: any) => kw.keyword.toLowerCase().includes(keywordSearch.toLowerCase()))
+    : keywords;
+  const keywordsTotalPages = Math.ceil(filteredKeywords.length / PAGE_SIZE);
   const competitorsTotalPages = Math.ceil(competitors.length / PAGE_SIZE);
   const featuresTotalPages = Math.ceil(features.length / PAGE_SIZE);
   const categoriesTotalPages = Math.ceil(categories.length / PAGE_SIZE);
@@ -435,11 +439,25 @@ export default function OverviewPage() {
       {/* Tracked Keywords List */}
       {caps.hasKeywordSearch && <Card>
         <CardHeader className="pb-3">
-          <div className="flex items-center justify-between">
-            <CardTitle className="text-base">Tracked Keywords ({keywords.length}/{account?.limits.maxTrackedKeywords})</CardTitle>
-            <Link href={`/${platform}/keywords`} className="text-sm text-primary hover:underline">
-              View all
-            </Link>
+          <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+            <CardTitle className="text-base">
+              Tracked Keywords ({keywordSearch ? `${filteredKeywords.length}/` : ""}{keywords.length}/{account?.limits.maxTrackedKeywords})
+            </CardTitle>
+            <div className="flex items-center gap-2 sm:ml-auto">
+              <div className="relative">
+                <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <input
+                  type="text"
+                  placeholder="Search keywords..."
+                  value={keywordSearch}
+                  onChange={(e) => { setKeywordSearch(e.target.value); setKeywordsPage(0); }}
+                  className="pl-9 pr-3 py-1.5 text-sm border rounded-md bg-background w-48"
+                />
+              </div>
+              <Link href={`/${platform}/keywords`} className="text-sm text-primary hover:underline whitespace-nowrap">
+                View all
+              </Link>
+            </div>
           </div>
         </CardHeader>
         <CardContent>
@@ -462,7 +480,7 @@ export default function OverviewPage() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {keywords
+                  {filteredKeywords
                     .slice(keywordsPage * PAGE_SIZE, (keywordsPage + 1) * PAGE_SIZE)
                     .map((kw: any) => (
                       <TableRow key={kw.id}>
