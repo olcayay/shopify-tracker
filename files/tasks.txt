@@ -16,6 +16,7 @@ SEO/AEO: Phase 0 tasks (2026-03-29)
   PLA-313: JSON-LD structured data components (6 types) ✅
   PLA-314: Open Graph/Twitter Card meta tag utility ✅
   PLA-310: Dynamic XML sitemap infrastructure ✅
+  PLA-318: Public API endpoints (apps, categories, developers, stats) ✅
 
 Platform Robustness: 28 tasks implemented (2026-03-29)
   PLA-253: Zod validation before DB insert ✅

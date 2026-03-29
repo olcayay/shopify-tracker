@@ -31,6 +31,7 @@ const PUBLIC_PATHS = [
   "/api/auth/register",
   "/api/auth/refresh",
   "/api/invitations/",
+  "/api/public/",
 ];
 
 export function getJwtSecret(): string {

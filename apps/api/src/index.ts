@@ -54,6 +54,7 @@ import { developerRoutes } from "./routes/developers.js";
 import { crossPlatformRoutes } from "./routes/cross-platform.js";
 import { adminRoutes } from "./routes/admin.js";
 import { dlqRoutes } from "./routes/dlq.js";
+import { publicRoutes } from "./routes/public.js";
 import { registerIdempotencyOnSend } from "./middleware/idempotency.js";
 import Redis from "ioredis";
 
@@ -185,6 +186,7 @@ await app.register(developerRoutes, { prefix: "/api/developers" });
 await app.register(crossPlatformRoutes, { prefix: "/api/cross-platform" });
 await app.register(adminRoutes, { prefix: "/api/admin" });
 await app.register(dlqRoutes, { prefix: "/api/system-admin/dlq" });
+await app.register(publicRoutes, { prefix: "/api/public" });
 
 // Cache-Control headers based on route patterns
 app.addHook("onSend", async (request, reply) => {
