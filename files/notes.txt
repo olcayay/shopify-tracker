@@ -1,3 +1,12 @@
+Fix Broken Developer Links: PLA-407 (2026-03-29)
+================================================================
+5 broken links generating /developers/{slug} URLs (404s after route removal
+in commit b1816db). Fixed:
+1. [platform]/developers/page.tsx Globe icon → /${platform}/developers/${slug}
+2-3. system-admin merge suggestions → plain text (no platform data available)
+4. system-admin developer list → /${firstPlatform}/developers/${slug}
+5. [platform]/developers/[slug] cross-platform link → /developers?q=${name}
+
 Fix DB Pool Hang: PLA-409 (2026-03-29)
 ================================================================
 Problem: postgres.js connection pool enters stuck state after concurrent

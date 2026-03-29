@@ -305,23 +305,17 @@ export default function SystemAdminDevelopersPage() {
                 {suggestions.map((s, i) => (
                   <TableRow key={i}>
                     <TableCell>
-                      <Link
-                        href={`/developers/${s.developer1.slug}`}
-                        className="text-primary hover:underline font-medium"
-                      >
+                      <span className="font-medium">
                         {s.developer1.name}
-                      </Link>
+                      </span>
                       <span className="text-xs text-muted-foreground ml-1">
                         #{s.developer1.id}
                       </span>
                     </TableCell>
                     <TableCell>
-                      <Link
-                        href={`/developers/${s.developer2.slug}`}
-                        className="text-primary hover:underline font-medium"
-                      >
+                      <span className="font-medium">
                         {s.developer2.name}
-                      </Link>
+                      </span>
                       <span className="text-xs text-muted-foreground ml-1">
                         #{s.developer2.id}
                       </span>
@@ -471,7 +465,7 @@ export default function SystemAdminDevelopersPage() {
                       <TableCell>
                         <div className="flex items-center gap-2">
                           <Link
-                            href={`/developers/${dev.slug}`}
+                            href={dev.platformDevelopers.length > 0 ? `/${dev.platformDevelopers[0].platform}/developers/${dev.slug}` : `/developers`}
                             className="text-primary hover:underline font-medium"
                           >
                             {dev.name}

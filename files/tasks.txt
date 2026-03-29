@@ -1,5 +1,6 @@
-DB Pool Stability (2026-03-29)
+Backlog Fixes (2026-03-29)
   PLA-409: Fix pool hang — statement_timeout, health check DB, pool monitor ✅
+  PLA-407: Fix broken /developers/{slug} links — add platform prefix ✅
 
 Performance: Eliminate N+1 and add count endpoints (2026-03-29)
   PLA-239: N+1 → batch queries in 4 endpoints ✅

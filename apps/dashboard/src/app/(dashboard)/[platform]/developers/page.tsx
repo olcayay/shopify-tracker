@@ -500,9 +500,9 @@ function DeveloperListView() {
                     </TableCell>
                     <TableCell>
                       <Link
-                        href={`/developers/${developerNameToSlug(dev.developer_name)}`}
+                        href={`/${platform}/developers/${developerNameToSlug(dev.developer_name)}`}
                         className="text-muted-foreground hover:text-foreground"
-                        title="Global developer profile"
+                        title="Developer profile"
                       >
                         <Globe className="h-3.5 w-3.5" />
                       </Link>

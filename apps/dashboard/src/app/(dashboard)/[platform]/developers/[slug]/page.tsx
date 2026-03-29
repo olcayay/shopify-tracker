@@ -161,7 +161,7 @@ export default function PlatformDeveloperPage() {
                 )}
               </div>
               <Link
-                href={`/developers/${developer.slug}`}
+                href={`/developers?q=${encodeURIComponent(developer.name)}`}
                 className="text-sm text-primary hover:underline flex items-center gap-1"
               >
                 View cross-platform profile
