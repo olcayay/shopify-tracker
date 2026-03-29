@@ -47,7 +47,7 @@ interface DeveloperProfile {
 }
 
 export default function DeveloperProfilePage() {
-  const { slug } = useParams();
+  const { platform: slug } = useParams();
   const { fetchWithAuth } = useAuth();
   const [data, setData] = useState<DeveloperProfile | null>(null);
   const [loading, setLoading] = useState(true);
