@@ -32,15 +32,24 @@ function getRouteSegments(dir: string, prefix = ""): string[] {
 }
 
 describe("Route consistency validation", () => {
-  it("dashboard developer detail uses [platform]/developers/[slug], not developers/[slug]", () => {
-    // The old (dashboard)/developers/[slug] route was removed because it conflicted
-    // with (marketing)/developers/[platform]/[slug]. Developer profiles are now served
-    // exclusively via (dashboard)/[platform]/developers/[slug].
-    const oldDevSlug = join(APP_DIR, "(dashboard)/developers/[slug]");
-    expect(existsSync(oldDevSlug)).toBe(false);
+  it("dashboard developer detail routes exist for both cross-platform and per-platform views", () => {
+    // Cross-platform view: /developers/[slug] — shows all apps across platforms
+    const crossPlatformDevSlug = join(APP_DIR, "(dashboard)/developers/[slug]");
+    expect(existsSync(join(crossPlatformDevSlug, "page.tsx"))).toBe(true);
 
+    // Per-platform view: /[platform]/developers/[slug] — shows apps for one platform
     const platformDevSlug = join(APP_DIR, "(dashboard)/[platform]/developers/[slug]");
-    expect(existsSync(platformDevSlug)).toBe(true);
+    expect(existsSync(join(platformDevSlug, "page.tsx"))).toBe(true);
+  });
+
+  it("developers list page links to /developers/[slug] which must have a matching route", () => {
+    // The developers list page (dashboard)/developers/page.tsx links to /developers/${dev.slug}.
+    // This test ensures the target route exists so those links don't 404.
+    const listPage = join(APP_DIR, "(dashboard)/developers/page.tsx");
+    expect(existsSync(listPage)).toBe(true);
+
+    const detailRoute = join(APP_DIR, "(dashboard)/developers/[slug]/page.tsx");
+    expect(existsSync(detailRoute)).toBe(true);
   });
 
   it("marketing routes do not conflict with dashboard routes", () => {
