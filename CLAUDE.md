@@ -11,6 +11,7 @@
 
 ## Rules
 - All user-facing text in the dashboard must be in English. Never use Turkish or any other language for UI text, labels, warnings, descriptions, or placeholder text.
+- **Icon library:** Use Lucide React (`lucide-react`) exclusively for all icons. Do NOT use Heroicons, FontAwesome, or other icon libraries. Dashboard header icons must use `h-4 w-4` size with `h-8 w-8` button wrappers. Page-level section icons use `h-5 w-5` or `h-6 w-6`.
 - Commits should include both `files/tasks.txt` and `files/notes.txt`
 - **`files/ADDING_NEW_PLATFORM.md` must always be kept up to date.** This is the critical reference guide for adding new platforms. Whenever you:
   - Add a new platform or modify platform integration code
