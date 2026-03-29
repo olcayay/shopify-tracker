@@ -15,7 +15,7 @@ if (process.env.SENTRY_DSN) {
 import Fastify from "fastify";
 import cors from "@fastify/cors";
 import { randomUUID } from "node:crypto";
-import { createDb, accounts, users } from "@appranks/db";
+import { createDb, createHealthCheckDb, accounts, users } from "@appranks/db";
 import { sql, eq } from "drizzle-orm";
 import bcrypt from "bcryptjs";
 import { validateEnv, API_REQUIRED_ENV, createLogger } from "@appranks/shared";
@@ -64,6 +64,7 @@ validateEnv([...API_REQUIRED_ENV]);
 const databaseUrl = process.env.DATABASE_URL!;
 
 const db = createDb(databaseUrl);
+const healthDb = createHealthCheckDb(databaseUrl);
 
 // NOTE: Migrations are now handled by the standalone migration runner
 // (packages/db/src/migrate.ts). In Docker, the 'migrate' service runs
@@ -271,16 +272,31 @@ app.get("/health/live", async () => {
 });
 
 // Deep health check — verifies DB + Redis connectivity (for readiness probes)
+// Uses dedicated healthDb (separate single-connection pool) so it never blocks
+// when the main pool is stuck.
 app.get("/health/ready", async (_request, reply) => {
   const checks: Record<string, { status: string; latencyMs?: number; error?: string }> = {};
 
-  // DB check
+  // DB check — uses dedicated health check connection, not main pool
   const dbStart = Date.now();
   try {
-    await db.execute(sql`SELECT 1`);
+    await healthDb.execute(sql`SELECT 1`);
     checks.database = { status: "ok", latencyMs: Date.now() - dbStart };
   } catch (err) {
     checks.database = { status: "error", latencyMs: Date.now() - dbStart, error: String(err) };
+  }
+
+  // Main pool check — verify main pool can also respond (with timeout)
+  const poolStart = Date.now();
+  try {
+    await Promise.race([
+      db.execute(sql`SELECT 1`),
+      new Promise((_, reject) => setTimeout(() => reject(new Error("pool_timeout")), 5000)),
+    ]);
+    checks.mainPool = { status: "ok", latencyMs: Date.now() - poolStart };
+  } catch (err) {
+    checks.mainPool = { status: "error", latencyMs: Date.now() - poolStart, error: String(err) };
+    app.log.warn("Main DB pool health check failed — pool may be stuck");
   }
 
   // Redis check
@@ -309,11 +325,12 @@ app.get("/health/ready", async (_request, reply) => {
 });
 
 // Legacy /health endpoint — deep check for backwards compatibility
+// Uses dedicated healthDb so it never blocks when main pool is stuck.
 app.get("/health", async (_request, reply) => {
   const checks: Record<string, string> = {};
 
   try {
-    await db.execute(sql`SELECT 1`);
+    await healthDb.execute(sql`SELECT 1`);
     checks.database = "ok";
   } catch {
     checks.database = "error";
@@ -401,3 +418,35 @@ try {
   app.log.error(err);
   process.exit(1);
 }
+
+// Pool health monitor — detect stuck pool and log warnings.
+// Runs every 30s. If main pool can't respond in 5s, it's likely stuck.
+// Coolify's health check (hitting /health) will restart the container if needed.
+const POOL_CHECK_INTERVAL_MS = 30_000;
+const POOL_CHECK_TIMEOUT_MS = 5_000;
+let poolCheckFailures = 0;
+
+const poolMonitorInterval = setInterval(async () => {
+  try {
+    await Promise.race([
+      db.execute(sql`SELECT 1`),
+      new Promise((_, reject) =>
+        setTimeout(() => reject(new Error("pool_monitor_timeout")), POOL_CHECK_TIMEOUT_MS)
+      ),
+    ]);
+    if (poolCheckFailures > 0) {
+      app.log.info(`DB pool recovered after ${poolCheckFailures} failed checks`);
+      setGauge("db_pool_stuck", 0, "Whether the main DB pool is stuck (1=stuck, 0=healthy)");
+    }
+    poolCheckFailures = 0;
+  } catch {
+    poolCheckFailures++;
+    setGauge("db_pool_stuck", 1, "Whether the main DB pool is stuck (1=stuck, 0=healthy)");
+    app.log.error(
+      `DB pool health check failed (${poolCheckFailures} consecutive). Pool may be stuck — container restart may be needed.`
+    );
+  }
+}, POOL_CHECK_INTERVAL_MS);
+
+// Don't let the interval keep the process alive if it's shutting down
+poolMonitorInterval.unref();

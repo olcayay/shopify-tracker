@@ -17,7 +17,7 @@ vi.mock("drizzle-orm/postgres-js", () => ({
 }));
 
 // Import after mocks are set up
-import { createDb, schema } from "../index.js";
+import { createDb, createHealthCheckDb, schema } from "../index.js";
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -32,10 +32,10 @@ describe("createDb", () => {
     );
   });
 
-  it("sets max connections to 20", () => {
+  it("sets max connections to 10", () => {
     createDb("postgres://localhost/db");
     const config = mockPostgres.mock.calls[0][1];
-    expect(config.max).toBe(20);
+    expect(config.max).toBe(10);
   });
 
   it("sets idle timeout to 30 seconds", () => {
@@ -50,10 +50,13 @@ describe("createDb", () => {
     expect(config.max_lifetime).toBe(60 * 30);
   });
 
-  it("forces UTC timezone in connection settings", () => {
+  it("forces UTC timezone and statement_timeout in connection settings", () => {
     createDb("postgres://localhost/db");
     const config = mockPostgres.mock.calls[0][1];
-    expect(config.connection).toEqual({ timezone: "UTC" });
+    expect(config.connection).toEqual({
+      timezone: "UTC",
+      statement_timeout: 30000,
+    });
   });
 
   it("sets connect timeout to 10 seconds", () => {
@@ -118,5 +121,37 @@ describe("createDb", () => {
     expect(schema).toHaveProperty("scrapeRuns");
     expect(schema).toHaveProperty("notifications");
     expect(schema).toHaveProperty("emailLogs");
+  });
+});
+
+describe("createHealthCheckDb", () => {
+  it("creates a postgres client with max 1 connection", () => {
+    createHealthCheckDb("postgres://localhost/db");
+    const config = mockPostgres.mock.calls[0][1];
+    expect(config.max).toBe(1);
+  });
+
+  it("sets idle timeout to 60 seconds", () => {
+    createHealthCheckDb("postgres://localhost/db");
+    const config = mockPostgres.mock.calls[0][1];
+    expect(config.idle_timeout).toBe(60);
+  });
+
+  it("sets connect timeout to 5 seconds", () => {
+    createHealthCheckDb("postgres://localhost/db");
+    const config = mockPostgres.mock.calls[0][1];
+    expect(config.connect_timeout).toBe(5);
+  });
+
+  it("sets statement_timeout to 5 seconds for fast health checks", () => {
+    createHealthCheckDb("postgres://localhost/db");
+    const config = mockPostgres.mock.calls[0][1];
+    expect(config.connection.statement_timeout).toBe(5000);
+  });
+
+  it("returns a drizzle instance", () => {
+    const db = createHealthCheckDb("postgres://localhost/db");
+    expect(db).toBe(mockDrizzleReturn);
+    expect(mockDrizzle).toHaveBeenCalledWith(mockPostgresClient, { schema });
   });
 });

@@ -1,3 +1,6 @@
+DB Pool Stability (2026-03-29)
+  PLA-409: Fix pool hang — statement_timeout, health check DB, pool monitor ✅
+
 Performance: Eliminate N+1 and add count endpoints (2026-03-29)
   PLA-239: N+1 → batch queries in 4 endpoints ✅
   PLA-240: Server-side /api/account/stats endpoint ✅

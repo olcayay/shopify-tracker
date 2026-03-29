@@ -1,3 +1,20 @@
+Fix DB Pool Hang: PLA-409 (2026-03-29)
+================================================================
+Problem: postgres.js connection pool enters stuck state after concurrent
+query bursts. All requests (including /health) hang indefinitely.
+Pool believes connections are "in use" but they're closed at DB level.
+
+Solution:
+- Reduced pool max from 20 to 10 (single Node.js process doesn't need 20)
+- Added statement_timeout: 30s to prevent queries from hanging forever
+- Created separate health check DB client (max: 1, 5s timeout) so /health
+  never blocks when main pool is stuck
+- /health/ready now also probes main pool with 5s timeout to detect stuck state
+- Added pool health monitor (every 30s) that logs warnings + sets Prometheus
+  gauge (db_pool_stuck) when pool can't respond
+- Coolify health check (hitting /health) will detect degraded state and
+  restart the container automatically
+
 Performance Optimization: 9 Tasks Completed (2026-03-29)
 ================================================================
 P1: PLA-239 — N+1 → batch queries (5 endpoints)

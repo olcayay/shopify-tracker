@@ -62,15 +62,35 @@ export const schema = {
 
 export function createDb(databaseUrl: string) {
   const client = postgres(databaseUrl, {
-    max: 20,
+    max: 10,
     idle_timeout: 30,
     max_lifetime: 60 * 30,
-    connection: { timezone: "UTC" },
+    connection: {
+      timezone: "UTC",
+      statement_timeout: 30000,
+    },
     // Connection retry with exponential backoff
     connect_timeout: 10,
     backoff(retries: number) {
       // Exponential backoff: 1s, 2s, 4s, 8s, max 30s
       return Math.min(1000 * Math.pow(2, retries), 30000);
+    },
+  });
+  return drizzle(client, { schema });
+}
+
+/**
+ * Create a dedicated single-connection DB client for health checks.
+ * This bypasses the main pool so /health never hangs when the pool is stuck.
+ */
+export function createHealthCheckDb(databaseUrl: string) {
+  const client = postgres(databaseUrl, {
+    max: 1,
+    idle_timeout: 60,
+    connect_timeout: 5,
+    connection: {
+      timezone: "UTC",
+      statement_timeout: 5000,
     },
   });
   return drizzle(client, { schema });
