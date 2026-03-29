@@ -1,3 +1,17 @@
+Performance Optimization: 9 Tasks Completed (2026-03-29)
+================================================================
+P1: PLA-239 — N+1 → batch queries (5 endpoints)
+P2: PLA-240 — /api/account/stats (33 → 1 API call on overview)
+P2: PLA-241 — App detail 3→2 round waterfall (batch categories + inline competitor changes)
+P2: PLA-242 — Pagination for featured-apps, platform-attributes, integrations
+P2: PLA-243 — Redis cache layer (cache.ts utility, 12h TTL for features tree)
+P2: PLA-251 — Next.js data cache (removed blanket no-store, 5min revalidation)
+P3: PLA-247 — 6 correlated subqueries → DISTINCT ON / CTEs
+P3: PLA-248 — HTTP Cache-Control headers (1h/5min/1min tiers)
+P3: PLA-244 — JSONB @> containment + GIN indexes
+
+Remaining: PLA-245, 246, 249, 250, 252 (P3-P4)
+
 Add Server-Side Pagination to Unbounded API Endpoints (2026-03-29)
 ================================================================
 PLA-242: Added limit/offset pagination to 4 endpoints that returned unbounded results.
