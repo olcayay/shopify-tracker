@@ -680,6 +680,13 @@
       "when": 1776988800000,
       "tag": "0096_gin_indexes_jsonb",
       "breakpoints": true
+    },
+    {
+      "idx": 97,
+      "version": "7",
+      "when": 1777075200000,
+      "tag": "0097_notification_infrastructure",
+      "breakpoints": true
     }
   ]
 }

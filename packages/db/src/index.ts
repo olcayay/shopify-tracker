@@ -26,6 +26,7 @@ import * as smokeTestResultsSchema from "./schema/smoke-test-results.js";
 import * as scrapeItemErrorsSchema from "./schema/scrape-item-errors.js";
 import * as developersSchema from "./schema/developers.js";
 import * as deadLetterJobsSchema from "./schema/dead-letter-jobs.js";
+import * as notificationsSchema from "./schema/notifications.js";
 
 export const schema = {
   ...scrapeRunsSchema,
@@ -53,6 +54,7 @@ export const schema = {
   ...scrapeItemErrorsSchema,
   ...developersSchema,
   ...deadLetterJobsSchema,
+  ...notificationsSchema,
 };
 
 export function createDb(databaseUrl: string) {
@@ -134,3 +136,10 @@ export {
 export { ensurePlatformDeveloper } from "./ensure-platform-developer.js";
 export { platformRequests } from "./schema/platform-requests.js";
 export { deadLetterJobs } from "./schema/dead-letter-jobs.js";
+export {
+  notifications,
+  pushSubscriptions,
+  notificationTypeConfigs,
+  userNotificationPreferences,
+  notificationDeliveryLog,
+} from "./schema/notifications.js";
