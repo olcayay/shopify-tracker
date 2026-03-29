@@ -192,6 +192,10 @@ await app.register(publicRoutes, { prefix: "/api/public" });
 const { notificationRoutes } = await import("./routes/notifications.js");
 await app.register(notificationRoutes, { prefix: "/api/notifications" });
 
+// Notification SSE stream (authenticated)
+const { notificationStreamRoutes } = await import("./routes/notification-stream.js");
+await app.register(notificationStreamRoutes, { prefix: "/api/notifications" });
+
 // Email tracking and unsubscribe (public — no auth required)
 const { emailTrackingRoutes } = await import("./routes/email-tracking.js");
 await app.register(emailTrackingRoutes, { prefix: "/api/emails" });
