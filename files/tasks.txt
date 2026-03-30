@@ -7,6 +7,7 @@ Dark Mode Implementation (2026-03-30)
 Design System Components (2026-03-30)
   PLA-507: Create shared PageHeader component ✅
   PLA-508: Create shared SearchInput component ✅
+  PLA-509: Create shared SortableHeader and FilterButtonGroup ✅
 
 Shared Cross-Platform Components (2026-03-30)
   PLA-481: Phase 0: Create shared ViewModeToggle component ✅
