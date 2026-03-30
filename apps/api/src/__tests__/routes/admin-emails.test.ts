@@ -189,6 +189,185 @@ describe("POST /api/system-admin/email-configs/:type/toggle", () => {
   });
 });
 
+// --- Variable Registry & Preview ---
+
+describe("GET /api/system-admin/emails/variables/:emailType", () => {
+  let app: FastifyInstance;
+  afterEach(async () => { if (app) await app.close(); });
+
+  it("returns variables for a valid email type", async () => {
+    app = await buildApp();
+    const res = await app.inject({
+      method: "GET",
+      url: "/api/system-admin/emails/variables/email_ranking_alert",
+      headers: authHeaders(adminToken()),
+    });
+    expect(res.statusCode).toBe(200);
+    const body = res.json();
+    expect(body.emailType).toBe("email_ranking_alert");
+    expect(Array.isArray(body.variables)).toBe(true);
+    expect(body.variables.length).toBeGreaterThan(0);
+    expect(body.variables[0]).toHaveProperty("name");
+    expect(body.variables[0]).toHaveProperty("description");
+    expect(body.variables[0]).toHaveProperty("example");
+  });
+
+  it("returns 404 for unknown email type", async () => {
+    app = await buildApp();
+    const res = await app.inject({
+      method: "GET",
+      url: "/api/system-admin/emails/variables/unknown_type",
+      headers: authHeaders(adminToken()),
+    });
+    expect(res.statusCode).toBe(404);
+  });
+});
+
+describe("POST /api/system-admin/emails/preview", () => {
+  let app: FastifyInstance;
+  afterEach(async () => { if (app) await app.close(); });
+
+  it("renders email preview with default sample data", async () => {
+    app = await buildApp();
+    const res = await app.inject({
+      method: "POST",
+      url: "/api/system-admin/emails/preview",
+      headers: authHeaders(adminToken()),
+      payload: { emailType: "email_ranking_alert" },
+    });
+    expect(res.statusCode).toBe(200);
+    const body = res.json();
+    expect(body.subject).toBeDefined();
+    expect(body.html).toBeDefined();
+    expect(body.variables).toBeDefined();
+    expect(body.resolvedVariables).toBeDefined();
+  });
+
+  it("renders email preview with custom variables", async () => {
+    app = await buildApp();
+    const res = await app.inject({
+      method: "POST",
+      url: "/api/system-admin/emails/preview",
+      headers: authHeaders(adminToken()),
+      payload: {
+        emailType: "email_ranking_alert",
+        variables: { appName: "TestApp", position: 1 },
+      },
+    });
+    expect(res.statusCode).toBe(200);
+    const body = res.json();
+    expect(body.resolvedVariables.appName).toBe("TestApp");
+    expect(body.resolvedVariables.position).toBe(1);
+  });
+
+  it("renders custom subject with variable interpolation", async () => {
+    app = await buildApp();
+    const res = await app.inject({
+      method: "POST",
+      url: "/api/system-admin/emails/preview",
+      headers: authHeaders(adminToken()),
+      payload: {
+        emailType: "email_ranking_alert",
+        variables: { appName: "MyApp" },
+        customSubject: "{{appName}} moved to position {{position}}!",
+      },
+    });
+    expect(res.statusCode).toBe(200);
+    const body = res.json();
+    expect(body.subject).toContain("MyApp");
+    expect(body.subject).toContain("position");
+  });
+
+  it("returns 400 for unknown email type", async () => {
+    app = await buildApp();
+    const res = await app.inject({
+      method: "POST",
+      url: "/api/system-admin/emails/preview",
+      headers: authHeaders(adminToken()),
+      payload: { emailType: "nonexistent" },
+    });
+    expect(res.statusCode).toBe(400);
+  });
+});
+
+describe("GET /api/system-admin/notifications/variables/:notificationType", () => {
+  let app: FastifyInstance;
+  afterEach(async () => { if (app) await app.close(); });
+
+  it("returns variables for a valid notification type", async () => {
+    app = await buildApp();
+    const res = await app.inject({
+      method: "GET",
+      url: "/api/system-admin/notifications/variables/ranking_top3_entry",
+      headers: authHeaders(adminToken()),
+    });
+    expect(res.statusCode).toBe(200);
+    const body = res.json();
+    expect(body.notificationType).toBe("ranking_top3_entry");
+    expect(Array.isArray(body.variables)).toBe(true);
+    expect(body.variables.length).toBeGreaterThan(0);
+  });
+
+  it("returns 404 for unknown notification type", async () => {
+    app = await buildApp();
+    const res = await app.inject({
+      method: "GET",
+      url: "/api/system-admin/notifications/variables/unknown_type",
+      headers: authHeaders(adminToken()),
+    });
+    expect(res.statusCode).toBe(404);
+  });
+});
+
+describe("POST /api/system-admin/notifications/preview", () => {
+  let app: FastifyInstance;
+  afterEach(async () => { if (app) await app.close(); });
+
+  it("renders notification preview with default sample data", async () => {
+    app = await buildApp();
+    const res = await app.inject({
+      method: "POST",
+      url: "/api/system-admin/notifications/preview",
+      headers: authHeaders(adminToken()),
+      payload: { notificationType: "ranking_top3_entry" },
+    });
+    expect(res.statusCode).toBe(200);
+    const body = res.json();
+    expect(body.title).toBeDefined();
+    expect(body.body).toBeDefined();
+    expect(body.priority).toBeDefined();
+    expect(body.variables).toBeDefined();
+  });
+
+  it("renders notification preview with custom title and body", async () => {
+    app = await buildApp();
+    const res = await app.inject({
+      method: "POST",
+      url: "/api/system-admin/notifications/preview",
+      headers: authHeaders(adminToken()),
+      payload: {
+        notificationType: "ranking_top3_entry",
+        variables: { appName: "TestApp", position: 1 },
+        customTitle: "{{appName}} is #{{position}}!",
+      },
+    });
+    expect(res.statusCode).toBe(200);
+    const body = res.json();
+    expect(body.title).toBe("TestApp is #1!");
+  });
+
+  it("returns 400 for unknown notification type", async () => {
+    app = await buildApp();
+    const res = await app.inject({
+      method: "POST",
+      url: "/api/system-admin/notifications/preview",
+      headers: authHeaders(adminToken()),
+      payload: { notificationType: "nonexistent" },
+    });
+    expect(res.statusCode).toBe(400);
+  });
+});
+
 describe("POST /api/system-admin/emails/send", () => {
   let app: FastifyInstance;
   afterEach(async () => { if (app) await app.close(); });

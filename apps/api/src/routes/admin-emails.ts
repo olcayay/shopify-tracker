@@ -6,6 +6,16 @@ import {
   emailTypeAccountOverrides,
   userEmailPreferences,
 } from "@appranks/db";
+import {
+  EMAIL_TEMPLATE_VARIABLES,
+  NOTIFICATION_TEMPLATE_VARIABLES,
+  renderTemplate,
+  buildEmailSampleData,
+  buildNotificationSampleData,
+  buildNotificationContent,
+} from "@appranks/shared";
+import type { EmailType, TemplateVariable } from "@appranks/shared";
+import type { NotificationType } from "@appranks/shared";
 
 export const adminEmailRoutes: FastifyPluginAsync = async (app) => {
   const db = app.db;
@@ -294,4 +304,101 @@ export const adminEmailRoutes: FastifyPluginAsync = async (app) => {
       return { logId: newLog.id, status: "pending", note: "Resend logged — use /emails/send to trigger delivery" };
     }
   );
+
+  // --- Variable Registry & Preview Endpoints ---
+
+  // GET /emails/variables/:emailType — list available variables for an email type
+  app.get<{ Params: { emailType: string } }>("/emails/variables/:emailType", async (request, reply) => {
+    const emailType = request.params.emailType as EmailType;
+    const variables = EMAIL_TEMPLATE_VARIABLES[emailType];
+    if (!variables) {
+      return reply.code(404).send({ error: `Unknown email type: ${emailType}` });
+    }
+    return { emailType, variables };
+  });
+
+  // POST /emails/preview — render email preview with provided variables
+  app.post<{
+    Body: {
+      emailType: string;
+      variables?: Record<string, string | number>;
+      customSubject?: string;
+      customBody?: string;
+    };
+  }>("/emails/preview", async (request, reply) => {
+    const { emailType, variables: userVars, customSubject, customBody } = request.body;
+    const type = emailType as EmailType;
+    const templateVars = EMAIL_TEMPLATE_VARIABLES[type];
+    if (!templateVars) {
+      return reply.code(400).send({ error: `Unknown email type: ${emailType}` });
+    }
+
+    // Merge user variables with defaults from sample data
+    const sampleData = buildEmailSampleData(type);
+    const mergedVars: Record<string, string | number> = { ...sampleData, ...userVars };
+
+    // Render subject and body
+    const subject = customSubject
+      ? renderTemplate(customSubject, mergedVars)
+      : `Preview: ${emailType.replace(/_/g, " ")}`;
+    const body = customBody
+      ? renderTemplate(customBody, mergedVars)
+      : `<p>Email preview for type <strong>${emailType}</strong> with variables:</p>
+         <pre>${JSON.stringify(mergedVars, null, 2)}</pre>`;
+
+    return {
+      subject,
+      html: body,
+      variables: templateVars,
+      resolvedVariables: mergedVars,
+    };
+  });
+
+  // GET /notifications/variables/:notificationType — list available variables for a notification type
+  app.get<{ Params: { notificationType: string } }>("/notifications/variables/:notificationType", async (request, reply) => {
+    const notificationType = request.params.notificationType as NotificationType;
+    const variables = NOTIFICATION_TEMPLATE_VARIABLES[notificationType];
+    if (!variables) {
+      return reply.code(404).send({ error: `Unknown notification type: ${notificationType}` });
+    }
+    return { notificationType, variables };
+  });
+
+  // POST /notifications/preview — render notification preview with provided variables
+  app.post<{
+    Body: {
+      notificationType: string;
+      variables?: Record<string, string | number>;
+      customTitle?: string;
+      customBody?: string;
+    };
+  }>("/notifications/preview", async (request, reply) => {
+    const { notificationType, variables: userVars, customTitle, customBody } = request.body;
+    const type = notificationType as NotificationType;
+    const templateVars = NOTIFICATION_TEMPLATE_VARIABLES[type];
+    if (!templateVars) {
+      return reply.code(400).send({ error: `Unknown notification type: ${notificationType}` });
+    }
+
+    // Merge user variables with defaults
+    const sampleData = buildNotificationSampleData(type);
+    const mergedVars: Record<string, string | number> = { ...sampleData, ...userVars };
+
+    // Build notification content using the shared template engine
+    const content = buildNotificationContent(type, mergedVars as any);
+
+    // Apply custom overrides if provided
+    const title = customTitle ? renderTemplate(customTitle, mergedVars) : content.title;
+    const body = customBody ? renderTemplate(customBody, mergedVars) : content.body;
+
+    return {
+      title,
+      body,
+      url: content.url,
+      icon: content.icon,
+      priority: content.priority,
+      variables: templateVars,
+      resolvedVariables: mergedVars,
+    };
+  });
 };
