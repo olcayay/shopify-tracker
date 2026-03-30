@@ -1,10 +1,11 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useMemo } from "react";
 import Link from "next/link";
 import { useAuth } from "@/lib/auth-context";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import {
   Table,
   TableBody,
@@ -13,10 +14,11 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Search, ChevronLeft, ChevronRight, ArrowUpDown, Star } from "lucide-react";
+import { Search, ChevronLeft, ChevronRight, ArrowUpDown, Star, LayoutList, Layers, ChevronDown } from "lucide-react";
 import { TableSkeleton } from "@/components/skeletons";
 import { PlatformBadgeCell } from "@/components/platform-badge-cell";
 import { PlatformFilterChips } from "@/components/platform-filter-chips";
+import { getPlatformLabel, getPlatformColor } from "@/lib/platform-display";
 import type { PlatformId } from "@appranks/shared";
 
 interface AppItem {
@@ -39,6 +41,12 @@ interface AppResponse {
 }
 
 type StatusFilter = "all" | "tracked" | "competitor";
+type ViewMode = "list" | "grouped";
+
+function getStoredViewMode(): ViewMode {
+  if (typeof window === "undefined") return "list";
+  return (localStorage.getItem("apps-view-mode") as ViewMode) || "list";
+}
 
 export default function CrossPlatformAppsPage() {
   const { fetchWithAuth, account } = useAuth();
@@ -51,14 +59,30 @@ export default function CrossPlatformAppsPage() {
   const [order, setOrder] = useState<"asc" | "desc">("asc");
   const [activePlatforms, setActivePlatforms] = useState<PlatformId[]>(enabledPlatforms);
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
-  const limit = 25;
+  const [viewMode, setViewMode] = useState<ViewMode>(getStoredViewMode);
+  const [collapsedPlatforms, setCollapsedPlatforms] = useState<Set<string>>(new Set());
+  const limit = viewMode === "grouped" ? 200 : 25;
 
-  // Sync activePlatforms when enabledPlatforms loads
   useEffect(() => {
     if (enabledPlatforms.length > 0 && activePlatforms.length === 0) {
       setActivePlatforms(enabledPlatforms);
     }
   }, [enabledPlatforms, activePlatforms.length]);
+
+  function changeViewMode(mode: ViewMode) {
+    setViewMode(mode);
+    localStorage.setItem("apps-view-mode", mode);
+    setPage(1);
+  }
+
+  function toggleCollapse(platform: string) {
+    setCollapsedPlatforms((prev) => {
+      const next = new Set(prev);
+      if (next.has(platform)) next.delete(platform);
+      else next.add(platform);
+      return next;
+    });
+  }
 
   const loadData = useCallback(async () => {
     setLoading(true);
@@ -73,7 +97,7 @@ export default function CrossPlatformAppsPage() {
     } finally {
       setLoading(false);
     }
-  }, [fetchWithAuth, page, search, sort, order, activePlatforms, enabledPlatforms.length]);
+  }, [fetchWithAuth, page, search, sort, order, activePlatforms, enabledPlatforms.length, limit]);
 
   useEffect(() => { loadData(); }, [loadData]);
 
@@ -104,11 +128,73 @@ export default function CrossPlatformAppsPage() {
     : items.filter((a) => a.isCompetitor);
   const pagination = data?.pagination;
 
+  const groupedByPlatform = useMemo(() => {
+    if (viewMode !== "grouped") return new Map<string, AppItem[]>();
+    const map = new Map<string, AppItem[]>();
+    for (const app of filtered) {
+      const list = map.get(app.platform) || [];
+      list.push(app);
+      map.set(app.platform, list);
+    }
+    return map;
+  }, [filtered, viewMode]);
+
+  function renderAppRow(app: AppItem, showPlatform: boolean) {
+    return (
+      <TableRow key={app.id}>
+        {showPlatform && <TableCell><PlatformBadgeCell platform={app.platform} /></TableCell>}
+        <TableCell>
+          <Link href={`/${app.platform}/apps/${app.slug}`} className="flex items-center gap-2 font-medium hover:underline">
+            {app.iconUrl && <img src={app.iconUrl} alt="" className="w-6 h-6 rounded" />}
+            {app.name}
+          </Link>
+        </TableCell>
+        <TableCell>
+          <span className={`text-xs px-1.5 py-0.5 rounded ${app.isTracked ? "bg-primary/10 text-primary" : "bg-muted text-muted-foreground"}`}>
+            {app.isTracked ? "Tracked" : "Competitor"}
+          </span>
+        </TableCell>
+        <TableCell>
+          {app.averageRating != null ? (
+            <span className="flex items-center gap-1">
+              <Star className="h-3 w-3 text-amber-500 fill-amber-500" />
+              {app.averageRating.toFixed(1)}
+            </span>
+          ) : "—"}
+        </TableCell>
+        <TableCell className="text-muted-foreground">{app.ratingCount ?? "—"}</TableCell>
+        <TableCell className="text-xs text-muted-foreground">{app.pricingHint || "—"}</TableCell>
+      </TableRow>
+    );
+  }
+
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold">All Apps</h1>
-        <p className="text-sm text-muted-foreground">Tracked and competitor apps across all platforms</p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold">All Apps</h1>
+          <p className="text-sm text-muted-foreground">Tracked and competitor apps across all platforms</p>
+        </div>
+        <div className="flex gap-1 border rounded-md p-0.5">
+          <Button
+            variant={viewMode === "list" ? "default" : "ghost"}
+            size="sm"
+            onClick={() => changeViewMode("list")}
+            className="h-7 px-2"
+            aria-label="List view"
+          >
+            <LayoutList className="h-4 w-4" />
+          </Button>
+          <Button
+            variant={viewMode === "grouped" ? "default" : "ghost"}
+            size="sm"
+            onClick={() => changeViewMode("grouped")}
+            className="h-7 px-2"
+            aria-label="Grouped view"
+          >
+            <Layers className="h-4 w-4" />
+          </Button>
+        </div>
       </div>
 
       <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center justify-between">
@@ -142,6 +228,45 @@ export default function CrossPlatformAppsPage() {
 
       {loading && !data ? (
         <TableSkeleton rows={10} cols={5} />
+      ) : viewMode === "grouped" ? (
+        <div className="space-y-4">
+          {groupedByPlatform.size === 0 ? (
+            <p className="text-center text-muted-foreground py-8">No apps found.</p>
+          ) : (
+            Array.from(groupedByPlatform.entries()).map(([platform, apps]) => {
+              const isCollapsed = collapsedPlatforms.has(platform);
+              return (
+                <div key={platform} className="rounded-md border">
+                  <button
+                    onClick={() => toggleCollapse(platform)}
+                    className="flex items-center gap-2 w-full p-3 hover:bg-muted/50 transition-colors"
+                  >
+                    <ChevronDown className={`h-4 w-4 transition-transform ${isCollapsed ? "-rotate-90" : ""}`} />
+                    <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: getPlatformColor(platform) }} />
+                    <span className="font-medium">{getPlatformLabel(platform)}</span>
+                    <Badge variant="secondary">{apps.length}</Badge>
+                  </button>
+                  {!isCollapsed && (
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>App</TableHead>
+                          <TableHead>Type</TableHead>
+                          <TableHead>Rating</TableHead>
+                          <TableHead>Reviews</TableHead>
+                          <TableHead>Pricing</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {apps.map((app) => renderAppRow(app, false))}
+                      </TableBody>
+                    </Table>
+                  )}
+                </div>
+              );
+            })
+          )}
+        </div>
       ) : (
         <>
           <div className="rounded-md border">
@@ -176,34 +301,7 @@ export default function CrossPlatformAppsPage() {
                     </TableCell>
                   </TableRow>
                 ) : (
-                  filtered.map((app) => (
-                    <TableRow key={app.id}>
-                      <TableCell><PlatformBadgeCell platform={app.platform} /></TableCell>
-                      <TableCell>
-                        <Link href={`/${app.platform}/apps/${app.slug}`} className="flex items-center gap-2 font-medium hover:underline">
-                          {app.iconUrl && (
-                            <img src={app.iconUrl} alt="" className="w-6 h-6 rounded" />
-                          )}
-                          {app.name}
-                        </Link>
-                      </TableCell>
-                      <TableCell>
-                        <span className={`text-xs px-1.5 py-0.5 rounded ${app.isTracked ? "bg-primary/10 text-primary" : "bg-muted text-muted-foreground"}`}>
-                          {app.isTracked ? "Tracked" : "Competitor"}
-                        </span>
-                      </TableCell>
-                      <TableCell>
-                        {app.averageRating != null ? (
-                          <span className="flex items-center gap-1">
-                            <Star className="h-3 w-3 text-amber-500 fill-amber-500" />
-                            {app.averageRating.toFixed(1)}
-                          </span>
-                        ) : "—"}
-                      </TableCell>
-                      <TableCell className="text-muted-foreground">{app.ratingCount ?? "—"}</TableCell>
-                      <TableCell className="text-xs text-muted-foreground">{app.pricingHint || "—"}</TableCell>
-                    </TableRow>
-                  ))
+                  filtered.map((app) => renderAppRow(app, true))
                 )}
               </TableBody>
             </Table>
