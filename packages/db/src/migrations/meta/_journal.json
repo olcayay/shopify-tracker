@@ -729,6 +729,13 @@
       "when": 1777593600000,
       "tag": "0103_editable_templates",
       "breakpoints": true
+    },
+    {
+      "idx": 104,
+      "version": "7",
+      "when": 1777680000000,
+      "tag": "0104_ai_suggestion_cache_tables",
+      "breakpoints": true
     }
   ]
 }

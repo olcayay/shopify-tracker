@@ -30,6 +30,7 @@ import * as deadLetterJobsSchema from "./schema/dead-letter-jobs.js";
 import * as notificationsSchema from "./schema/notifications.js";
 import * as emailSchema from "./schema/email.js";
 import * as templatesSchema from "./schema/templates.js";
+import * as aiSuggestionsSchema from "./schema/ai-suggestions.js";
 
 export const schema = {
   ...scrapeRunsSchema,
@@ -60,6 +61,7 @@ export const schema = {
   ...notificationsSchema,
   ...emailSchema,
   ...templatesSchema,
+  ...aiSuggestionsSchema,
 };
 
 export function createDb(databaseUrl: string) {
@@ -213,3 +215,7 @@ export {
   notificationTemplates,
   emailTemplates,
 } from "./schema/templates.js";
+export {
+  aiKeywordSuggestions,
+  aiCompetitorSuggestions,
+} from "./schema/ai-suggestions.js";

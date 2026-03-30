@@ -1,3 +1,14 @@
+PLA-451: AI suggestion cache tables (2026-03-30)
+================================================================
+Migration 0104: ai_keyword_suggestions + ai_competitor_suggestions tables.
+- Unique index on (account_id, app_id) for one cache entry per app per account
+- Status lifecycle: pending → generating → success/error
+- Expires_at for 7-day TTL, indexed for cleanup queries
+- JSONB columns for keywords, ngram_keywords, merged_keywords (keyword cache)
+  and competitors, jaccard_competitors, merged_competitors (competitor cache)
+- Metadata: model, ai_log_id, tokens, cost, duration
+Schema: packages/db/src/schema/ai-suggestions.ts
+
 PLA-444: Editable templates infrastructure (2026-03-30)
 ================================================================
 Migration 0103: notification_templates + email_templates tables with unique type indexes.
