@@ -132,7 +132,7 @@ describe("nav-utils", () => {
 
   describe("systemAdminItems", () => {
     it("has correct number of items", () => {
-      expect(systemAdminItems.length).toBe(16);
+      expect(systemAdminItems.length).toBe(17);
     });
 
     it("includes Notifications and Emails links", () => {
