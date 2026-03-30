@@ -1,3 +1,17 @@
+PLA-475: API endpoint for overview daily highlights (2026-03-30)
+================================================================
+GET /api/overview/highlights?platform=<optional> — per-platform highlight data:
+- App summaries (name, icon, rating, reviewCount, keywordCount)
+- Top keyword movers (biggest absolute rank changes)
+- Top category movers (biggest category rank changes)
+- Review pulse (v7d velocity + momentum)
+- Recent listing changes (last 48h)
+- Featured sightings (last 7 days)
+- Competitor alerts (competitor field changes last 48h)
+- Ad activity (last 7 days)
+All scoped to account's tracked apps and competitors. 4 API tests.
+Future: add Redis caching with 1-hour TTL for production performance.
+
 PLA-464: My Developers section on /developers page (2026-03-30)
 ================================================================
 API: GET /api/developers/tracked — developers of tracked apps with only their tracked apps listed

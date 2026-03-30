@@ -56,6 +56,7 @@ import { templateRoutes } from "./routes/templates.js";
 import { adminRoutes } from "./routes/admin.js";
 import { dlqRoutes } from "./routes/dlq.js";
 import { publicRoutes } from "./routes/public.js";
+import { overviewHighlightsRoutes } from "./routes/overview-highlights.js";
 import { registerIdempotencyOnSend } from "./middleware/idempotency.js";
 import Redis from "ioredis";
 
@@ -187,6 +188,7 @@ await app.register(platformRoutes, { prefix: "/api/platforms" });
 await app.register(platformAttributeRoutes, { prefix: "/api/platform-attributes" });
 await app.register(developerRoutes, { prefix: "/api/developers" });
 await app.register(crossPlatformRoutes, { prefix: "/api/cross-platform" });
+await app.register(overviewHighlightsRoutes, { prefix: "/api/overview" });
 await app.register(adminRoutes, { prefix: "/api/admin" });
 await app.register(dlqRoutes, { prefix: "/api/system-admin/dlq" });
 await app.register(publicRoutes, { prefix: "/api/public" });

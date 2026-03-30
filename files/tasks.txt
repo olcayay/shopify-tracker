@@ -31,6 +31,9 @@ UI Redesign & Platform Filtering (2026-03-30)
   PLA-473: Apps page: only show enabled platforms in app listings ✅
   PLA-474: Developer detail page: filter cross-platform overview by enabled platforms ✅
 
+Overview Page Redesign (2026-03-30)
+  PLA-475: Phase 0: API endpoint for overview daily highlights ✅
+
 Standalone UI Improvements (2026-03-30)
   PLA-430: Fix developer profile — unify table columns across platforms ✅
   PLA-440: Competitors table — show tracked app names & logos instead of count ✅
