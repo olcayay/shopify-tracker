@@ -7,6 +7,9 @@ Shared Cross-Platform Components (2026-03-30)
   PLA-485: Phase 1: Migrate /competitors page to shared PlatformGroupedTable ✅
   PLA-486: Phase 1: Migrate /developers page to shared components ✅
 
+Standalone Fixes (2026-03-30)
+  PLA-488: Starred developers should respect current sort order ✅
+
 UI Redesign & Platform Filtering (2026-03-30)
   PLA-465: Phase 1: Redesign 'Follow' button → 'My App' with new icon and color ✅
   PLA-466: Phase 2: Redesign 'Star' competitor button → 'Competitor' with Target icon

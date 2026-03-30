@@ -90,29 +90,39 @@ export default function DevelopersPage() {
     loadData();
   }
 
+  function sortDevelopers(devs: Developer[]): Developer[] {
+    return [...devs].sort((a, b) => {
+      // Starred always first
+      if (a.isStarred !== b.isStarred) return a.isStarred ? -1 : 1;
+      // Then by current sort field
+      let cmp = 0;
+      if (sort === "platforms") {
+        cmp = a.platformCount - b.platformCount;
+      } else {
+        cmp = a.name.localeCompare(b.name);
+      }
+      return order === "desc" ? -cmp : cmp;
+    });
+  }
+
   async function toggleStar(devId: number, currentlyStarred: boolean) {
     if (!data) return;
-    setData({
-      ...data,
-      developers: data.developers.map((d) =>
-        d.id === devId ? { ...d, isStarred: !currentlyStarred } : d
-      ),
-    });
+    const updated = data.developers.map((d) =>
+      d.id === devId ? { ...d, isStarred: !currentlyStarred } : d
+    );
+    setData({ ...data, developers: sortDevelopers(updated) });
     try {
       const method = currentlyStarred ? "DELETE" : "POST";
       const res = await fetchWithAuth(`/api/account/starred-developers/${devId}`, { method });
       if (!res.ok) throw new Error();
     } catch {
-      setData((prev) =>
-        prev
-          ? {
-              ...prev,
-              developers: prev.developers.map((d) =>
-                d.id === devId ? { ...d, isStarred: currentlyStarred } : d
-              ),
-            }
-          : prev
-      );
+      setData((prev) => {
+        if (!prev) return prev;
+        const reverted = prev.developers.map((d) =>
+          d.id === devId ? { ...d, isStarred: currentlyStarred } : d
+        );
+        return { ...prev, developers: sortDevelopers(reverted) };
+      });
     }
   }
 

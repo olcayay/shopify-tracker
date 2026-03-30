@@ -436,6 +436,64 @@ describe("DevelopersPage (cross-platform)", () => {
     });
   });
 
+  it("re-sorts list after starring a developer (starred moves to top)", async () => {
+    // Set up with unstarred developer first, starred second
+    mockFetchWithAuth.mockImplementation((url: string) => {
+      if (url.includes("/api/developers")) {
+        return Promise.resolve(
+          makeJsonResponse({
+            developers: [
+              {
+                id: 10,
+                slug: "beta-dev",
+                name: "Beta Dev",
+                website: null,
+                platformCount: 1,
+                linkCount: 1,
+                platforms: ["shopify"],
+                topAppIcons: [],
+                isStarred: false,
+              },
+              {
+                id: 11,
+                slug: "alpha-dev",
+                name: "Alpha Dev",
+                website: null,
+                platformCount: 1,
+                linkCount: 2,
+                platforms: ["shopify"],
+                topAppIcons: [],
+                isStarred: true,
+              },
+            ],
+            pagination: { page: 1, limit: 25, total: 2, totalPages: 1 },
+          })
+        );
+      }
+      if (url.includes("/api/account/starred-developers/")) {
+        return Promise.resolve({ ok: true, json: () => Promise.resolve({ message: "ok" }) });
+      }
+      return Promise.resolve(makeJsonResponse(null));
+    });
+    render(<DevelopersPage />);
+    await waitFor(() => {
+      expect(screen.getByText("Beta Dev")).toBeInTheDocument();
+    });
+    // Check initial order: rows in DOM. Alpha (starred) should be first due to API sort.
+    // But our test data has Beta first, Alpha second (as API returned).
+    // After starring Beta, it should move to top (both starred now, sorted by name).
+    const rows = screen.getAllByRole("row");
+    // Find the bookmark button for Beta Dev (the unstarred one)
+    const bookmarkBtn = screen.getByLabelText("Bookmark developer");
+    fireEvent.click(bookmarkBtn);
+    // After optimistic update, both are starred, sorted alphabetically: Alpha, Beta
+    await waitFor(() => {
+      const links = screen.getAllByRole("link").filter((l) => l.textContent === "Alpha Dev" || l.textContent === "Beta Dev");
+      expect(links[0].textContent).toBe("Alpha Dev");
+      expect(links[1].textContent).toBe("Beta Dev");
+    });
+  });
+
   it("pagination buttons are disabled when on first page", async () => {
     setupFetchMocks({
       pagination: { page: 1, limit: 25, total: 50, totalPages: 2 },
