@@ -336,29 +336,29 @@ describe("DevelopersPage (cross-platform)", () => {
     expect(screen.getByText("+1")).toBeInTheDocument();
   });
 
-  it("renders star buttons for each developer", async () => {
+  it("renders bookmark buttons for each developer", async () => {
     setupFetchMocks();
     render(<DevelopersPage />);
     await waitFor(() => {
       expect(screen.getByText("Acme Inc")).toBeInTheDocument();
     });
-    const starButtons = screen.getAllByLabelText(/star developer/i);
-    expect(starButtons.length).toBe(2);
+    const bookmarkButtons = screen.getAllByLabelText(/bookmark developer|remove bookmark/i);
+    expect(bookmarkButtons.length).toBe(2);
   });
 
-  it("shows filled star for starred developers", async () => {
+  it("shows filled bookmark for starred developers", async () => {
     setupFetchMocks();
     render(<DevelopersPage />);
     await waitFor(() => {
       expect(screen.getByText("Acme Inc")).toBeInTheDocument();
     });
-    // Acme Inc is starred — its star button should have the unstar label
-    expect(screen.getByLabelText("Unstar developer")).toBeInTheDocument();
-    // Widget Co is not starred — its star button should have the star label
-    expect(screen.getByLabelText("Star developer")).toBeInTheDocument();
+    // Acme Inc is starred — its bookmark button should have the remove label
+    expect(screen.getByLabelText("Remove bookmark")).toBeInTheDocument();
+    // Widget Co is not starred — its bookmark button should have the bookmark label
+    expect(screen.getByLabelText("Bookmark developer")).toBeInTheDocument();
   });
 
-  it("toggles star on click with optimistic update", async () => {
+  it("toggles bookmark on click with optimistic update", async () => {
     mockFetchWithAuth.mockImplementation((url: string, opts?: any) => {
       if (url.includes("/api/developers")) {
         return Promise.resolve(makeJsonResponse(mockDevelopersResponse));
@@ -373,12 +373,12 @@ describe("DevelopersPage (cross-platform)", () => {
     await waitFor(() => {
       expect(screen.getByText("Acme Inc")).toBeInTheDocument();
     });
-    // Click the star button for Widget Co (not starred)
-    const starButton = screen.getByLabelText("Star developer");
-    fireEvent.click(starButton);
-    // After click, should now show two "Unstar developer" labels
+    // Click the bookmark button for Widget Co (not starred)
+    const bookmarkButton = screen.getByLabelText("Bookmark developer");
+    fireEvent.click(bookmarkButton);
+    // After click, should now show two "Remove bookmark" labels
     await waitFor(() => {
-      expect(screen.getAllByLabelText("Unstar developer").length).toBe(2);
+      expect(screen.getAllByLabelText("Remove bookmark").length).toBe(2);
     });
   });
 

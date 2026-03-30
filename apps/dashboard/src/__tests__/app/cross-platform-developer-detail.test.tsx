@@ -83,29 +83,29 @@ describe("CrossPlatformDeveloperPage (/developers/[slug])", () => {
     });
   });
 
-  it("renders star button in header", async () => {
+  it("renders bookmark button in header", async () => {
     mockFetchWithAuth.mockResolvedValue({
       ok: true,
       json: () => Promise.resolve(mockData),
     });
     render(<CrossPlatformDeveloperPage />);
     await waitFor(() => {
-      expect(screen.getByLabelText("Star developer")).toBeInTheDocument();
+      expect(screen.getByLabelText("Bookmark developer")).toBeInTheDocument();
     });
   });
 
-  it("shows filled star when developer is starred", async () => {
+  it("shows filled bookmark when developer is starred", async () => {
     mockFetchWithAuth.mockResolvedValue({
       ok: true,
       json: () => Promise.resolve({ ...mockData, isStarred: true }),
     });
     render(<CrossPlatformDeveloperPage />);
     await waitFor(() => {
-      expect(screen.getByLabelText("Unstar developer")).toBeInTheDocument();
+      expect(screen.getByLabelText("Remove bookmark")).toBeInTheDocument();
     });
   });
 
-  it("toggles star on click", async () => {
+  it("toggles bookmark on click", async () => {
     mockFetchWithAuth.mockImplementation((url: string) => {
       if (url.includes("/api/developers/")) {
         return Promise.resolve({ ok: true, json: () => Promise.resolve(mockData) });
@@ -117,11 +117,11 @@ describe("CrossPlatformDeveloperPage (/developers/[slug])", () => {
     });
     render(<CrossPlatformDeveloperPage />);
     await waitFor(() => {
-      expect(screen.getByLabelText("Star developer")).toBeInTheDocument();
+      expect(screen.getByLabelText("Bookmark developer")).toBeInTheDocument();
     });
-    fireEvent.click(screen.getByLabelText("Star developer"));
+    fireEvent.click(screen.getByLabelText("Bookmark developer"));
     await waitFor(() => {
-      expect(screen.getByLabelText("Unstar developer")).toBeInTheDocument();
+      expect(screen.getByLabelText("Remove bookmark")).toBeInTheDocument();
     });
   });
 

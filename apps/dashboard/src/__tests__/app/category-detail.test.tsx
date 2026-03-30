@@ -44,8 +44,8 @@ vi.mock("@/lib/api", () => ({
 }));
 
 // Mock child components
-vi.mock("@/components/star-category-button", () => ({
-  StarCategoryButton: ({ categorySlug, initialStarred }: any) => (
+vi.mock("@/components/bookmark-category-button", () => ({
+  BookmarkCategoryButton: ({ categorySlug, initialStarred }: any) => (
     <button data-testid="star-category-button">
       {initialStarred ? "Unstar" : "Star"} {categorySlug}
     </button>

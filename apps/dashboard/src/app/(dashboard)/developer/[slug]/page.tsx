@@ -14,7 +14,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Globe, Star } from "lucide-react";
+import { Globe, Star, Bookmark } from "lucide-react";
 import { TableSkeleton } from "@/components/skeletons";
 import { getPlatformLabel, getPlatformColor } from "@/lib/platform-display";
 
@@ -142,9 +142,9 @@ export default function CrossPlatformDeveloperPage() {
         <button
           onClick={toggleStar}
           className="p-1 rounded hover:bg-muted transition-colors"
-          aria-label={starred ? "Unstar developer" : "Star developer"}
+          aria-label={starred ? "Remove bookmark" : "Bookmark developer"}
         >
-          <Star
+          <Bookmark
             className={`h-5 w-5 ${
               starred
                 ? "fill-amber-500 text-amber-500"

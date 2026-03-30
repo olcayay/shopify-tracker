@@ -13,42 +13,42 @@ vi.mock("@/lib/auth-context", () => ({
   }),
 }));
 
-import { StarCategoryButton } from "@/components/star-category-button";
+import { BookmarkCategoryButton } from "@/components/bookmark-category-button";
 
-describe("StarCategoryButton", () => {
+describe("BookmarkCategoryButton", () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
-  it("renders star button", () => {
+  it("renders bookmark button", () => {
     render(
-      <StarCategoryButton categorySlug="analytics" initialStarred={false} />
+      <BookmarkCategoryButton categorySlug="analytics" initialStarred={false} />
     );
     expect(screen.getByRole("button")).toBeInTheDocument();
   });
 
-  it("shows unstarred state initially", () => {
+  it("shows unbookmarked state initially", () => {
     render(
-      <StarCategoryButton categorySlug="analytics" initialStarred={false} />
+      <BookmarkCategoryButton categorySlug="analytics" initialStarred={false} />
     );
     const button = screen.getByRole("button");
-    expect(button.title).toBe("Star this category");
+    expect(button.title).toBe("Bookmark this category");
   });
 
-  it("shows starred state initially", () => {
+  it("shows bookmarked state initially", () => {
     render(
-      <StarCategoryButton categorySlug="analytics" initialStarred={true} />
+      <BookmarkCategoryButton categorySlug="analytics" initialStarred={true} />
     );
     const button = screen.getByRole("button");
-    expect(button.title).toBe("Remove from starred categories");
+    expect(button.title).toBe("Remove bookmark");
   });
 
-  it("stars category on click when unstarred", async () => {
+  it("bookmarks category on click when unbookmarked", async () => {
     const user = userEvent.setup();
     mockFetchWithAuth.mockResolvedValue({ ok: true });
 
     render(
-      <StarCategoryButton categorySlug="analytics" initialStarred={false} />
+      <BookmarkCategoryButton categorySlug="analytics" initialStarred={false} />
     );
 
     await user.click(screen.getByRole("button"));
@@ -62,12 +62,12 @@ describe("StarCategoryButton", () => {
     );
   });
 
-  it("refreshes user after successful star", async () => {
+  it("refreshes user after successful bookmark", async () => {
     const user = userEvent.setup();
     mockFetchWithAuth.mockResolvedValue({ ok: true });
 
     render(
-      <StarCategoryButton categorySlug="analytics" initialStarred={false} />
+      <BookmarkCategoryButton categorySlug="analytics" initialStarred={false} />
     );
 
     await user.click(screen.getByRole("button"));
@@ -77,27 +77,27 @@ describe("StarCategoryButton", () => {
     });
   });
 
-  it("shows confirm modal when clicking starred button", async () => {
+  it("shows confirm modal when clicking bookmarked button", async () => {
     const user = userEvent.setup();
 
     render(
-      <StarCategoryButton categorySlug="analytics" initialStarred={true} />
+      <BookmarkCategoryButton categorySlug="analytics" initialStarred={true} />
     );
 
     await user.click(screen.getByRole("button"));
 
-    expect(screen.getByText("Remove Starred Category")).toBeInTheDocument();
+    expect(screen.getByText("Remove Bookmarked Category")).toBeInTheDocument();
     expect(
-      screen.getByText(/Are you sure you want to remove/)
+      screen.getByText(/Remove bookmark for/)
     ).toBeInTheDocument();
   });
 
-  it("unstars after confirming in modal", async () => {
+  it("removes bookmark after confirming in modal", async () => {
     const user = userEvent.setup();
     mockFetchWithAuth.mockResolvedValue({ ok: true });
 
     render(
-      <StarCategoryButton categorySlug="analytics" initialStarred={true} />
+      <BookmarkCategoryButton categorySlug="analytics" initialStarred={true} />
     );
 
     await user.click(screen.getByRole("button"));
@@ -109,11 +109,11 @@ describe("StarCategoryButton", () => {
     );
   });
 
-  it("cancels unstar from modal", async () => {
+  it("cancels remove bookmark from modal", async () => {
     const user = userEvent.setup();
 
     render(
-      <StarCategoryButton categorySlug="analytics" initialStarred={true} />
+      <BookmarkCategoryButton categorySlug="analytics" initialStarred={true} />
     );
 
     await user.click(screen.getByRole("button"));
@@ -122,7 +122,7 @@ describe("StarCategoryButton", () => {
     expect(mockFetchWithAuth).not.toHaveBeenCalled();
   });
 
-  it("shows error modal on star failure", async () => {
+  it("shows error modal on bookmark failure", async () => {
     const user = userEvent.setup();
     mockFetchWithAuth.mockResolvedValue({
       ok: false,
@@ -130,7 +130,7 @@ describe("StarCategoryButton", () => {
     });
 
     render(
-      <StarCategoryButton categorySlug="analytics" initialStarred={false} />
+      <BookmarkCategoryButton categorySlug="analytics" initialStarred={false} />
     );
 
     await user.click(screen.getByRole("button"));
@@ -143,7 +143,7 @@ describe("StarCategoryButton", () => {
 
   it("supports small size", () => {
     render(
-      <StarCategoryButton
+      <BookmarkCategoryButton
         categorySlug="analytics"
         initialStarred={false}
         size="sm"
@@ -155,7 +155,7 @@ describe("StarCategoryButton", () => {
 
   it("supports default size", () => {
     render(
-      <StarCategoryButton categorySlug="analytics" initialStarred={false} />
+      <BookmarkCategoryButton categorySlug="analytics" initialStarred={false} />
     );
     const button = screen.getByRole("button");
     expect(button.className).toContain("h-9");
@@ -171,7 +171,7 @@ describe("StarCategoryButton", () => {
     );
 
     render(
-      <StarCategoryButton categorySlug="analytics" initialStarred={false} />
+      <BookmarkCategoryButton categorySlug="analytics" initialStarred={false} />
     );
 
     await user.click(screen.getByRole("button"));

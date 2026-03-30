@@ -14,7 +14,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Search, ChevronLeft, ChevronRight, ArrowUpDown, Star, LayoutList, Layers, ChevronDown } from "lucide-react";
+import { Search, ChevronLeft, ChevronRight, ArrowUpDown, Bookmark, LayoutList, Layers, ChevronDown } from "lucide-react";
 import { TableSkeleton } from "@/components/skeletons";
 import { PlatformBadgeCell } from "@/components/platform-badge-cell";
 import { PlatformFilterChips } from "@/components/platform-filter-chips";
@@ -166,9 +166,9 @@ export default function DevelopersPage() {
           <button
             onClick={() => toggleStar(dev.id, dev.isStarred)}
             className="p-1 rounded hover:bg-muted transition-colors"
-            aria-label={dev.isStarred ? "Unstar developer" : "Star developer"}
+            aria-label={dev.isStarred ? "Remove bookmark" : "Bookmark developer"}
           >
-            <Star
+            <Bookmark
               className={`h-4 w-4 ${
                 dev.isStarred
                   ? "fill-amber-500 text-amber-500"

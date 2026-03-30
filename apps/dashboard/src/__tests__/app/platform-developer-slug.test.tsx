@@ -107,22 +107,22 @@ describe("PlatformDeveloperPage", () => {
     });
     render(<PlatformDeveloperPage />);
     await waitFor(() => {
-      expect(screen.getByLabelText("Star developer")).toBeInTheDocument();
+      expect(screen.getByLabelText("Bookmark developer")).toBeInTheDocument();
     });
   });
 
-  it("shows filled star when developer is starred", async () => {
+  it("shows filled bookmark when developer is starred", async () => {
     mockFetchWithAuth.mockResolvedValue({
       ok: true,
       json: () => Promise.resolve({ ...mockDeveloperData, isStarred: true }),
     });
     render(<PlatformDeveloperPage />);
     await waitFor(() => {
-      expect(screen.getByLabelText("Unstar developer")).toBeInTheDocument();
+      expect(screen.getByLabelText("Remove bookmark")).toBeInTheDocument();
     });
   });
 
-  it("toggles star on click with optimistic update", async () => {
+  it("toggles bookmark on click with optimistic update", async () => {
     mockFetchWithAuth.mockImplementation((url: string, opts?: any) => {
       if (url.includes("/api/developers/")) {
         return Promise.resolve({ ok: true, json: () => Promise.resolve(mockDeveloperData) });
@@ -134,11 +134,11 @@ describe("PlatformDeveloperPage", () => {
     });
     render(<PlatformDeveloperPage />);
     await waitFor(() => {
-      expect(screen.getByLabelText("Star developer")).toBeInTheDocument();
+      expect(screen.getByLabelText("Bookmark developer")).toBeInTheDocument();
     });
-    fireEvent.click(screen.getByLabelText("Star developer"));
+    fireEvent.click(screen.getByLabelText("Bookmark developer"));
     await waitFor(() => {
-      expect(screen.getByLabelText("Unstar developer")).toBeInTheDocument();
+      expect(screen.getByLabelText("Remove bookmark")).toBeInTheDocument();
     });
   });
 });
