@@ -5,7 +5,6 @@ import Link from "next/link";
 import { useAuth } from "@/lib/auth-context";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import {
   Table,
   TableBody,
@@ -14,11 +13,13 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Search, ChevronLeft, ChevronRight, ArrowUpDown, Bookmark, LayoutList, Layers, ChevronDown } from "lucide-react";
+import { Search, ChevronLeft, ChevronRight, ArrowUpDown, Bookmark } from "lucide-react";
 import { TableSkeleton } from "@/components/skeletons";
 import { PlatformBadgeCell } from "@/components/platform-badge-cell";
 import { PlatformFilterChips } from "@/components/platform-filter-chips";
-import { getPlatformLabel, getPlatformColor } from "@/lib/platform-display";
+import { ViewModeToggle, useViewMode } from "@/components/view-mode-toggle";
+import { PlatformGroupedTable, type PlatformGroup } from "@/components/platform-grouped-table";
+import { PLATFORM_DISPLAY } from "@/lib/platform-display";
 import type { PlatformId } from "@appranks/shared";
 
 interface Developer {
@@ -38,13 +39,6 @@ interface DeveloperResponse {
   pagination: { page: number; limit: number; total: number; totalPages: number };
 }
 
-type ViewMode = "list" | "grouped";
-
-function getStoredViewMode(): ViewMode {
-  if (typeof window === "undefined") return "list";
-  return (localStorage.getItem("developers-view-mode") as ViewMode) || "list";
-}
-
 export default function DevelopersPage() {
   const { fetchWithAuth, account } = useAuth();
   const enabledPlatforms = (account?.enabledPlatforms ?? []) as PlatformId[];
@@ -55,30 +49,14 @@ export default function DevelopersPage() {
   const [sort, setSort] = useState("name");
   const [order, setOrder] = useState<"asc" | "desc">("asc");
   const [activePlatforms, setActivePlatforms] = useState<PlatformId[]>([]);
-  const [viewMode, setViewMode] = useState<ViewMode>(getStoredViewMode);
-  const [collapsedPlatforms, setCollapsedPlatforms] = useState<Set<string>>(new Set());
+  const { viewMode, changeViewMode } = useViewMode("developers-view-mode", () => setPage(1));
   const limit = viewMode === "grouped" ? 200 : 25;
-
-  function changeViewMode(mode: ViewMode) {
-    setViewMode(mode);
-    localStorage.setItem("developers-view-mode", mode);
-    setPage(1);
-  }
 
   function togglePlatform(pid: PlatformId) {
     setActivePlatforms((prev) =>
       prev.includes(pid) ? prev.filter((p) => p !== pid) : [...prev, pid]
     );
     setPage(1);
-  }
-
-  function toggleCollapse(platform: string) {
-    setCollapsedPlatforms((prev) => {
-      const next = new Set(prev);
-      if (next.has(platform)) next.delete(platform);
-      else next.add(platform);
-      return next;
-    });
   }
 
   const loadData = useCallback(async () => {
@@ -140,10 +118,11 @@ export default function DevelopersPage() {
 
   const developers = data?.developers ?? [];
   const pagination = data?.pagination;
+  const emptyMessage = search ? "No developers found matching your search." : "No developers found.";
 
-  // Group developers by platform for grouped view
-  const groupedByPlatform = useMemo(() => {
-    if (viewMode !== "grouped") return new Map<string, Developer[]>();
+  // Group developers by platform (a dev can appear in multiple groups)
+  const platformGroups = useMemo<PlatformGroup<Developer>[]>(() => {
+    if (viewMode !== "grouped") return [];
     const map = new Map<string, Developer[]>();
     for (const dev of developers) {
       for (const p of dev.platforms) {
@@ -156,7 +135,13 @@ export default function DevelopersPage() {
     for (const [key, devs] of map) {
       map.set(key, devs.sort((a, b) => (a.isStarred === b.isStarred ? 0 : a.isStarred ? -1 : 1)));
     }
-    return map;
+    return Array.from(map.entries())
+      .sort(([a], [b]) => {
+        const labelA = PLATFORM_DISPLAY[a as PlatformId]?.label ?? a;
+        const labelB = PLATFORM_DISPLAY[b as PlatformId]?.label ?? b;
+        return labelA.localeCompare(labelB);
+      })
+      .map(([platform, devs]) => ({ platform, items: devs }));
   }, [developers, viewMode]);
 
   function renderDeveloperRow(dev: Developer) {
@@ -212,6 +197,16 @@ export default function DevelopersPage() {
     );
   }
 
+  const groupedColCount = 2;
+  const flatColCount = 4;
+
+  const renderGroupedHeaders = () => (
+    <>
+      <TableHead className="w-10"></TableHead>
+      <TableHead>Developer</TableHead>
+    </>
+  );
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -219,26 +214,7 @@ export default function DevelopersPage() {
           <h1 className="text-2xl font-bold">Developers</h1>
           <p className="text-sm text-muted-foreground">Browse all developers across platforms</p>
         </div>
-        <div className="flex gap-1 border rounded-md p-0.5">
-          <Button
-            variant={viewMode === "list" ? "default" : "ghost"}
-            size="sm"
-            onClick={() => changeViewMode("list")}
-            className="h-7 px-2"
-            aria-label="List view"
-          >
-            <LayoutList className="h-4 w-4" />
-          </Button>
-          <Button
-            variant={viewMode === "grouped" ? "default" : "ghost"}
-            size="sm"
-            onClick={() => changeViewMode("grouped")}
-            className="h-7 px-2"
-            aria-label="Grouped view"
-          >
-            <Layers className="h-4 w-4" />
-          </Button>
-        </div>
+        <ViewModeToggle viewMode={viewMode} onChangeViewMode={changeViewMode} />
       </div>
 
       <div className="space-y-3">
@@ -264,53 +240,17 @@ export default function DevelopersPage() {
       </div>
 
       {loading && !data ? (
-        <TableSkeleton rows={10} cols={4} />
+        <TableSkeleton rows={10} cols={viewMode === "grouped" ? groupedColCount : flatColCount} />
       ) : viewMode === "grouped" ? (
-        /* Grouped view */
-        <div className="space-y-4">
-          {groupedByPlatform.size === 0 ? (
-            <p className="text-center text-muted-foreground py-8">
-              {search ? "No developers found matching your search." : "No developers found."}
-            </p>
-          ) : (
-            Array.from(groupedByPlatform.entries()).map(([platform, devs]) => {
-              const isCollapsed = collapsedPlatforms.has(platform);
-              return (
-                <div key={platform} className="rounded-md border">
-                  <button
-                    onClick={() => toggleCollapse(platform)}
-                    className="flex items-center gap-2 w-full p-3 hover:bg-muted/50 transition-colors"
-                  >
-                    <ChevronDown
-                      className={`h-4 w-4 transition-transform ${isCollapsed ? "-rotate-90" : ""}`}
-                    />
-                    <span
-                      className="w-2.5 h-2.5 rounded-full"
-                      style={{ backgroundColor: getPlatformColor(platform) }}
-                    />
-                    <span className="font-medium">{getPlatformLabel(platform)}</span>
-                    <Badge variant="secondary">{devs.length}</Badge>
-                  </button>
-                  {!isCollapsed && (
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead className="w-10"></TableHead>
-                          <TableHead>Developer</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {devs.map((dev) => renderDeveloperRow(dev))}
-                      </TableBody>
-                    </Table>
-                  )}
-                </div>
-              );
-            })
-          )}
-        </div>
+        <PlatformGroupedTable
+          groups={platformGroups}
+          colCount={groupedColCount}
+          renderHeaderRow={renderGroupedHeaders}
+          renderRow={(dev) => renderDeveloperRow(dev)}
+          entityLabel="developer"
+          emptyMessage={emptyMessage}
+        />
       ) : (
-        /* List view */
         <>
           <div className="rounded-md border">
             <Table>
@@ -334,7 +274,7 @@ export default function DevelopersPage() {
                 {developers.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={4} className="text-center text-muted-foreground py-8">
-                      {search ? "No developers found matching your search." : "No developers found."}
+                      {emptyMessage}
                     </TableCell>
                   </TableRow>
                 ) : (

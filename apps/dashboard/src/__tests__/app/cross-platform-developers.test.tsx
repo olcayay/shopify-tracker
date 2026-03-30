@@ -39,6 +39,10 @@ vi.mock("@/components/skeletons", () => ({
 vi.mock("@/lib/platform-display", () => ({
   getPlatformLabel: (p: string) => p.charAt(0).toUpperCase() + p.slice(1),
   getPlatformColor: () => "#000",
+  PLATFORM_DISPLAY: {
+    shopify: { label: "Shopify", color: "#95BF47" },
+    salesforce: { label: "Salesforce", color: "#00A1E0" },
+  },
 }));
 
 vi.mock("@/components/platform-badge-cell", () => ({
@@ -388,8 +392,8 @@ describe("DevelopersPage (cross-platform)", () => {
     await waitFor(() => {
       expect(screen.getByText("Acme Inc")).toBeInTheDocument();
     });
-    expect(screen.getByLabelText("List view")).toBeInTheDocument();
-    expect(screen.getByLabelText("Grouped view")).toBeInTheDocument();
+    expect(screen.getByTitle("Flat list")).toBeInTheDocument();
+    expect(screen.getByTitle("Group by platform")).toBeInTheDocument();
   });
 
   it("switches to grouped view and shows platform groups", async () => {
@@ -399,7 +403,7 @@ describe("DevelopersPage (cross-platform)", () => {
       expect(screen.getByText("Acme Inc")).toBeInTheDocument();
     });
     // Switch to grouped view
-    fireEvent.click(screen.getByLabelText("Grouped view"));
+    fireEvent.click(screen.getByTitle("Group by platform"));
     await waitFor(() => {
       // Platform group headers should appear (Acme has shopify+salesforce, Widget has shopify)
       expect(screen.getByText("Shopify")).toBeInTheDocument();
@@ -413,20 +417,22 @@ describe("DevelopersPage (cross-platform)", () => {
     await waitFor(() => {
       expect(screen.getByText("Acme Inc")).toBeInTheDocument();
     });
-    fireEvent.click(screen.getByLabelText("Grouped view"));
+    fireEvent.click(screen.getByTitle("Group by platform"));
     await waitFor(() => {
       expect(screen.getByText("Shopify")).toBeInTheDocument();
     });
-    // Before collapse: tables should exist
-    const groupsBefore = document.querySelectorAll("table");
-    expect(groupsBefore.length).toBeGreaterThan(0);
-    // Click on Shopify group header to collapse
-    fireEvent.click(screen.getByText("Shopify").closest("button")!);
-    // After collapse, Shopify group's table should be removed
-    // Salesforce group table should still exist
+    // Acme Inc appears in both Shopify and Salesforce groups
+    expect(screen.getAllByText("Acme Inc").length).toBe(2);
+    // Click on Shopify platform group header to collapse
+    fireEvent.click(screen.getByTestId("platform-group-shopify"));
+    // After collapse, Acme only appears in Salesforce group
     await waitFor(() => {
-      // Check that a table still exists (Salesforce group)
-      expect(document.querySelectorAll("table").length).toBe(1);
+      expect(screen.getAllByText("Acme Inc").length).toBe(1);
+    });
+    // Re-expand Shopify
+    fireEvent.click(screen.getByTestId("platform-group-shopify"));
+    await waitFor(() => {
+      expect(screen.getAllByText("Acme Inc").length).toBe(2);
     });
   });
 
