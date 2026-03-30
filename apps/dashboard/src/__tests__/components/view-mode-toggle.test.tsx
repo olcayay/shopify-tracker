@@ -15,49 +15,57 @@ function HookWrapper({ storageKey, onChange }: { storageKey: string; onChange?: 
   );
 }
 
+// Wrapper that wires useViewMode to ViewModeToggle (the typical usage pattern)
+function ToggleWrapper({ storageKey, onChange }: { storageKey: string; onChange?: (mode: "list" | "grouped") => void }) {
+  const { viewMode, changeViewMode } = useViewMode(storageKey, onChange);
+  return <ViewModeToggle viewMode={viewMode} onChangeViewMode={changeViewMode} />;
+}
+
 describe("ViewModeToggle", () => {
   beforeEach(() => {
     localStorage.clear();
   });
 
   it("renders List and By Platform buttons", () => {
-    render(<ViewModeToggle storageKey="test-view-mode" />);
+    render(<ViewModeToggle viewMode="list" onChangeViewMode={() => {}} />);
     expect(screen.getByTitle("Flat list")).toBeInTheDocument();
     expect(screen.getByTitle("Group by platform")).toBeInTheDocument();
   });
 
-  it("defaults to list mode when no localStorage value", () => {
-    render(<ViewModeToggle storageKey="test-view-mode" />);
+  it("highlights list button when viewMode is list", () => {
+    render(<ViewModeToggle viewMode="list" onChangeViewMode={() => {}} />);
     const listBtn = screen.getByTitle("Flat list");
-    // secondary variant means it's active
     expect(listBtn.className).toContain("secondary");
   });
 
-  it("reads initial value from localStorage", () => {
-    localStorage.setItem("test-view-mode", "grouped");
-    render(<ViewModeToggle storageKey="test-view-mode" />);
+  it("highlights grouped button when viewMode is grouped", () => {
+    render(<ViewModeToggle viewMode="grouped" onChangeViewMode={() => {}} />);
     const groupedBtn = screen.getByTitle("Group by platform");
     expect(groupedBtn.className).toContain("secondary");
   });
 
-  it("writes to localStorage on toggle", () => {
-    render(<ViewModeToggle storageKey="test-view-mode" />);
+  it("calls onChangeViewMode when toggling", () => {
+    const onChangeViewMode = vi.fn();
+    render(<ViewModeToggle viewMode="list" onChangeViewMode={onChangeViewMode} />);
+    fireEvent.click(screen.getByTitle("Group by platform"));
+    expect(onChangeViewMode).toHaveBeenCalledWith("grouped");
+  });
+
+  it("integrates with useViewMode hook via ToggleWrapper", () => {
+    render(<ToggleWrapper storageKey="test-view-mode" />);
+    // Default is list
+    const listBtn = screen.getByTitle("Flat list");
+    expect(listBtn.className).toContain("secondary");
+    // Click grouped
     fireEvent.click(screen.getByTitle("Group by platform"));
     expect(localStorage.getItem("test-view-mode")).toBe("grouped");
   });
 
-  it("calls onChange callback when mode changes", () => {
-    const onChange = vi.fn();
-    render(<ViewModeToggle storageKey="test-view-mode" onChange={onChange} />);
-    fireEvent.click(screen.getByTitle("Group by platform"));
-    expect(onChange).toHaveBeenCalledWith("grouped");
-  });
-
-  it("handles invalid localStorage value gracefully", () => {
-    localStorage.setItem("test-view-mode", "invalid");
-    render(<ViewModeToggle storageKey="test-view-mode" />);
-    const listBtn = screen.getByTitle("Flat list");
-    expect(listBtn.className).toContain("secondary");
+  it("reads initial value from localStorage via ToggleWrapper", () => {
+    localStorage.setItem("test-view-mode", "grouped");
+    render(<ToggleWrapper storageKey="test-view-mode" />);
+    const groupedBtn = screen.getByTitle("Group by platform");
+    expect(groupedBtn.className).toContain("secondary");
   });
 });
 
@@ -99,5 +107,11 @@ describe("useViewMode", () => {
     render(<HookWrapper storageKey="hook-test" onChange={onChange} />);
     fireEvent.click(screen.getByTestId("set-grouped"));
     expect(onChange).toHaveBeenCalledWith("grouped");
+  });
+
+  it("handles invalid localStorage value gracefully", () => {
+    localStorage.setItem("hook-test", "invalid");
+    render(<HookWrapper storageKey="hook-test" />);
+    expect(screen.getByTestId("mode").textContent).toBe("list");
   });
 });

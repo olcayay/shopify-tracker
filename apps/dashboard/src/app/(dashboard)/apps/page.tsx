@@ -5,7 +5,6 @@ import Link from "next/link";
 import { useAuth } from "@/lib/auth-context";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import {
   Table,
   TableBody,
@@ -14,11 +13,13 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Search, ChevronLeft, ChevronRight, ArrowUpDown, Star, LayoutList, Group } from "lucide-react";
+import { Search, ChevronLeft, ChevronRight, ArrowUpDown, Star } from "lucide-react";
 import { TableSkeleton } from "@/components/skeletons";
 import { PlatformBadgeCell } from "@/components/platform-badge-cell";
 import { PlatformFilterChips } from "@/components/platform-filter-chips";
-import { PLATFORM_DISPLAY, getPlatformColor } from "@/lib/platform-display";
+import { ViewModeToggle, useViewMode } from "@/components/view-mode-toggle";
+import { PlatformGroupedTable, type PlatformGroup } from "@/components/platform-grouped-table";
+import { PLATFORM_DISPLAY } from "@/lib/platform-display";
 import type { PlatformId } from "@appranks/shared";
 
 interface AppItem {
@@ -41,12 +42,6 @@ interface AppResponse {
 }
 
 type StatusFilter = "all" | "tracked" | "competitor";
-type ViewMode = "list" | "grouped";
-
-function getStoredViewMode(): ViewMode {
-  if (typeof window === "undefined") return "list";
-  return (localStorage.getItem("apps-view-mode") as ViewMode) || "list";
-}
 
 export default function CrossPlatformAppsPage() {
   const { fetchWithAuth, account } = useAuth();
@@ -59,7 +54,7 @@ export default function CrossPlatformAppsPage() {
   const [order, setOrder] = useState<"asc" | "desc">("asc");
   const [activePlatforms, setActivePlatforms] = useState<PlatformId[]>(enabledPlatforms);
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
-  const [viewMode, setViewMode] = useState<ViewMode>(getStoredViewMode);
+  const { viewMode, changeViewMode } = useViewMode("apps-view-mode", () => setPage(1));
   const limit = viewMode === "grouped" ? 200 : 25;
 
   useEffect(() => {
@@ -67,12 +62,6 @@ export default function CrossPlatformAppsPage() {
       setActivePlatforms(enabledPlatforms);
     }
   }, [enabledPlatforms, activePlatforms.length]);
-
-  function changeViewMode(mode: ViewMode) {
-    setViewMode(mode);
-    localStorage.setItem("apps-view-mode", mode);
-    setPage(1);
-  }
 
   const loadData = useCallback(async () => {
     setLoading(true);
@@ -118,19 +107,20 @@ export default function CrossPlatformAppsPage() {
     : items.filter((a) => a.isCompetitor);
   const pagination = data?.pagination;
 
-  const groupedByPlatform = useMemo(() => {
-    if (viewMode !== "grouped") return {};
-    return filtered.reduce<Record<string, AppItem[]>>((acc, app) => {
+  const platformGroups = useMemo<PlatformGroup<AppItem>[]>(() => {
+    if (viewMode !== "grouped") return [];
+    const grouped = filtered.reduce<Record<string, AppItem[]>>((acc, app) => {
       (acc[app.platform] ??= []).push(app);
       return acc;
     }, {});
+    return Object.entries(grouped)
+      .sort(([a], [b]) => {
+        const labelA = PLATFORM_DISPLAY[a as PlatformId]?.label ?? a;
+        const labelB = PLATFORM_DISPLAY[b as PlatformId]?.label ?? b;
+        return labelA.localeCompare(labelB);
+      })
+      .map(([platform, apps]) => ({ platform, items: apps }));
   }, [filtered, viewMode]);
-
-  const platformGroups = Object.entries(groupedByPlatform).sort(([a], [b]) => {
-    const labelA = PLATFORM_DISPLAY[a as PlatformId]?.label ?? a;
-    const labelB = PLATFORM_DISPLAY[b as PlatformId]?.label ?? b;
-    return labelA.localeCompare(labelB);
-  });
 
   function renderAppRow(app: AppItem, showPlatform: boolean) {
     return (
@@ -161,7 +151,30 @@ export default function CrossPlatformAppsPage() {
     );
   }
 
-  const colCount = viewMode === "grouped" ? 5 : 6;
+  const groupedColCount = 5;
+  const flatColCount = 6;
+
+  const renderGroupedHeaders = () => (
+    <>
+      <TableHead>
+        <button onClick={() => toggleSort("name")} className="flex items-center gap-1 hover:text-foreground">
+          App <ArrowUpDown className="h-3 w-3" />
+        </button>
+      </TableHead>
+      <TableHead>Type</TableHead>
+      <TableHead>
+        <button onClick={() => toggleSort("rating")} className="flex items-center gap-1 hover:text-foreground">
+          Rating <ArrowUpDown className="h-3 w-3" />
+        </button>
+      </TableHead>
+      <TableHead>
+        <button onClick={() => toggleSort("reviews")} className="flex items-center gap-1 hover:text-foreground">
+          Reviews <ArrowUpDown className="h-3 w-3" />
+        </button>
+      </TableHead>
+      <TableHead>Pricing</TableHead>
+    </>
+  );
 
   return (
     <div className="space-y-6">
@@ -170,28 +183,7 @@ export default function CrossPlatformAppsPage() {
           <h1 className="text-2xl font-bold">All Apps</h1>
           <p className="text-sm text-muted-foreground">Tracked and competitor apps across all platforms</p>
         </div>
-        <div className="flex items-center gap-1 rounded-md border p-0.5">
-          <Button
-            variant={viewMode === "list" ? "secondary" : "ghost"}
-            size="sm"
-            className="h-7 px-2 text-xs"
-            onClick={() => changeViewMode("list")}
-            title="Flat list"
-          >
-            <LayoutList className="h-3.5 w-3.5 mr-1" />
-            List
-          </Button>
-          <Button
-            variant={viewMode === "grouped" ? "secondary" : "ghost"}
-            size="sm"
-            className="h-7 px-2 text-xs"
-            onClick={() => changeViewMode("grouped")}
-            title="Group by platform"
-          >
-            <Group className="h-3.5 w-3.5 mr-1" />
-            By Platform
-          </Button>
-        </div>
+        <ViewModeToggle viewMode={viewMode} onChangeViewMode={changeViewMode} />
       </div>
 
       <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center justify-between">
@@ -224,64 +216,17 @@ export default function CrossPlatformAppsPage() {
       </form>
 
       {loading && !data ? (
-        <TableSkeleton rows={10} cols={colCount} />
+        <TableSkeleton rows={10} cols={viewMode === "grouped" ? groupedColCount : flatColCount} />
       ) : viewMode === "grouped" ? (
-        /* ── Grouped by platform view ── */
-        filtered.length === 0 ? (
-          <div className="text-center text-muted-foreground py-8 border rounded-md">No apps found.</div>
-        ) : (
-          <div className="space-y-6">
-            {platformGroups.map(([platform, apps]) => {
-              const color = getPlatformColor(platform as PlatformId);
-              const label = PLATFORM_DISPLAY[platform as PlatformId]?.label ?? platform;
-              return (
-                <div key={platform} className="rounded-md border overflow-hidden">
-                  <div
-                    className="flex items-center gap-2 px-4 py-2.5 border-b"
-                    style={{ borderLeftWidth: 3, borderLeftColor: color }}
-                  >
-                    <span
-                      className="w-2.5 h-2.5 rounded-full shrink-0"
-                      style={{ backgroundColor: color }}
-                    />
-                    <span className="font-semibold text-sm">{label}</span>
-                    <span className="text-xs text-muted-foreground">
-                      ({apps.length} app{apps.length !== 1 ? "s" : ""})
-                    </span>
-                  </div>
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>
-                          <button onClick={() => toggleSort("name")} className="flex items-center gap-1 hover:text-foreground">
-                            App <ArrowUpDown className="h-3 w-3" />
-                          </button>
-                        </TableHead>
-                        <TableHead>Type</TableHead>
-                        <TableHead>
-                          <button onClick={() => toggleSort("rating")} className="flex items-center gap-1 hover:text-foreground">
-                            Rating <ArrowUpDown className="h-3 w-3" />
-                          </button>
-                        </TableHead>
-                        <TableHead>
-                          <button onClick={() => toggleSort("reviews")} className="flex items-center gap-1 hover:text-foreground">
-                            Reviews <ArrowUpDown className="h-3 w-3" />
-                          </button>
-                        </TableHead>
-                        <TableHead>Pricing</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {apps.map((app) => renderAppRow(app, false))}
-                    </TableBody>
-                  </Table>
-                </div>
-              );
-            })}
-          </div>
-        )
+        <PlatformGroupedTable
+          groups={platformGroups}
+          colCount={groupedColCount}
+          renderHeaderRow={renderGroupedHeaders}
+          renderRow={(app) => renderAppRow(app, false)}
+          entityLabel="app"
+          emptyMessage="No apps found."
+        />
       ) : (
-        /* ── Flat list view ── */
         <>
           <div className="rounded-md border">
             <Table>
