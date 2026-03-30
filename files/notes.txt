@@ -1,3 +1,18 @@
+PLA-436: Star/unstar UI on /developers list with starred-first sorting (2026-03-30)
+================================================================
+Backend (apps/api/src/routes/developers.ts):
+- LEFT JOIN account_starred_developers to add isStarred boolean per developer
+- Default ORDER BY: starred-first (asd.id IS NOT NULL DESC), then user's sort choice
+- Uses request.user.accountId for per-account star status
+
+Frontend (apps/dashboard/src/app/(dashboard)/developers/page.tsx):
+- Added Star column (first column) with amber-500 filled/outlined icon
+- Optimistic UI: toggles immediately, reverts on API error
+- Calls POST/DELETE /api/account/starred-developers/:id
+
+Tests: 3 new dashboard tests (star rendering, filled star state, optimistic toggle)
+       Updated API test to verify isStarred field
+
 PLA-435: Show app icons on /developers list page (2026-03-30)
 ================================================================
 Backend (apps/api/src/routes/developers.ts):

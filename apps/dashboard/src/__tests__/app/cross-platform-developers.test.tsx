@@ -59,6 +59,7 @@ const mockDevelopersResponse = {
       linkCount: 3,
       platforms: ["shopify", "salesforce"],
       topAppIcons: ["https://example.com/icon1.png", "https://example.com/icon2.png", "https://example.com/icon3.png"],
+      isStarred: true,
     },
     {
       id: 2,
@@ -69,6 +70,7 @@ const mockDevelopersResponse = {
       linkCount: 1,
       platforms: ["shopify"],
       topAppIcons: [],
+      isStarred: false,
     },
   ],
   pagination: { page: 1, limit: 25, total: 2, totalPages: 1 },
@@ -173,7 +175,7 @@ describe("DevelopersPage (cross-platform)", () => {
       expect(screen.getByText("Acme Inc")).toBeInTheDocument();
     });
     expect(
-      screen.getByRole("button", { name: /Developer/i })
+      screen.getByRole("button", { name: /^Developer$/i })
     ).toBeInTheDocument();
     expect(
       screen.getByRole("button", { name: /Platform Count/i })
@@ -254,7 +256,7 @@ describe("DevelopersPage (cross-platform)", () => {
       expect(screen.getByText("Acme Inc")).toBeInTheDocument();
     });
     const callCountBefore = mockFetchWithAuth.mock.calls.length;
-    fireEvent.click(screen.getByRole("button", { name: /Developer/i }));
+    fireEvent.click(screen.getByRole("button", { name: /^Developer$/i }));
     await waitFor(() => {
       expect(mockFetchWithAuth.mock.calls.length).toBeGreaterThan(
         callCountBefore
@@ -286,6 +288,7 @@ describe("DevelopersPage (cross-platform)", () => {
           linkCount: 1,
           platforms: ["shopify"],
           topAppIcons: [],
+          isStarred: false,
         },
       ],
     });
@@ -307,6 +310,7 @@ describe("DevelopersPage (cross-platform)", () => {
           platformCount: 3,
           linkCount: 5,
           platforms: ["shopify", "salesforce", "wix"],
+          isStarred: false,
           topAppIcons: [
             "https://example.com/a.png",
             "https://example.com/b.png",
@@ -324,6 +328,52 @@ describe("DevelopersPage (cross-platform)", () => {
     // 4 icons rendered + "+1" badge
     expect(document.querySelectorAll("img[src*='example.com']")).toHaveLength(4);
     expect(screen.getByText("+1")).toBeInTheDocument();
+  });
+
+  it("renders star buttons for each developer", async () => {
+    setupFetchMocks();
+    render(<DevelopersPage />);
+    await waitFor(() => {
+      expect(screen.getByText("Acme Inc")).toBeInTheDocument();
+    });
+    const starButtons = screen.getAllByLabelText(/star developer/i);
+    expect(starButtons.length).toBe(2);
+  });
+
+  it("shows filled star for starred developers", async () => {
+    setupFetchMocks();
+    render(<DevelopersPage />);
+    await waitFor(() => {
+      expect(screen.getByText("Acme Inc")).toBeInTheDocument();
+    });
+    // Acme Inc is starred — its star button should have the unstar label
+    expect(screen.getByLabelText("Unstar developer")).toBeInTheDocument();
+    // Widget Co is not starred — its star button should have the star label
+    expect(screen.getByLabelText("Star developer")).toBeInTheDocument();
+  });
+
+  it("toggles star on click with optimistic update", async () => {
+    mockFetchWithAuth.mockImplementation((url: string, opts?: any) => {
+      if (url.includes("/api/developers")) {
+        return Promise.resolve(makeJsonResponse(mockDevelopersResponse));
+      }
+      // Star/unstar endpoint
+      if (url.includes("/api/account/starred-developers/")) {
+        return Promise.resolve({ ok: true, json: () => Promise.resolve({ message: "ok" }) });
+      }
+      return Promise.resolve(makeJsonResponse(null));
+    });
+    render(<DevelopersPage />);
+    await waitFor(() => {
+      expect(screen.getByText("Acme Inc")).toBeInTheDocument();
+    });
+    // Click the star button for Widget Co (not starred)
+    const starButton = screen.getByLabelText("Star developer");
+    fireEvent.click(starButton);
+    // After click, should now show two "Unstar developer" labels
+    await waitFor(() => {
+      expect(screen.getAllByLabelText("Unstar developer").length).toBe(2);
+    });
   });
 
   it("pagination buttons are disabled when on first page", async () => {

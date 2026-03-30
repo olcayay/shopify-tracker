@@ -5,6 +5,7 @@ import {
   platformDevelopers,
   apps,
   appSnapshots,
+  accountStarredDevelopers,
   sqlArray,
 } from "@appranks/db";
 import { requireSystemAdmin } from "../middleware/authorize.js";
@@ -62,7 +63,10 @@ export async function developerRoutes(app: FastifyInstance) {
         sql`g.name`;
       const orderDir = order === "desc" ? sql`DESC` : sql`ASC`;
 
-      // Get paginated results with counts, platforms array, and top app icons
+      // Get account ID for starred status (may be null for unauthenticated)
+      const accountId = (request as any).user?.accountId || null;
+
+      // Get paginated results with counts, platforms array, top app icons, and starred status
       const rows: any[] = await db.execute(sql`
         SELECT
           g.id, g.slug, g.name, g.website,
@@ -83,12 +87,15 @@ export async function developerRoutes(app: FastifyInstance) {
               ORDER BY a.icon_url
               LIMIT 5
             ) sub
-          ) AS top_app_icons
+          ) AS top_app_icons,
+          CASE WHEN asd.id IS NOT NULL THEN true ELSE false END AS is_starred
         FROM global_developers g
         LEFT JOIN platform_developers pd ON pd.global_developer_id = g.id
+        LEFT JOIN account_starred_developers asd ON asd.global_developer_id = g.id
+          AND asd.account_id = ${accountId}
         ${whereClause}
-        GROUP BY g.id
-        ORDER BY ${orderClause} ${orderDir}
+        GROUP BY g.id, asd.id
+        ORDER BY (asd.id IS NOT NULL) DESC, ${orderClause} ${orderDir}
         LIMIT ${limit} OFFSET ${offset}
       `);
 
@@ -102,6 +109,7 @@ export async function developerRoutes(app: FastifyInstance) {
           linkCount: Number(r.link_count || 0),
           platforms: r.platforms || [],
           topAppIcons: (r.top_app_icons || []).filter(Boolean),
+          isStarred: r.is_starred === true || r.is_starred === "true",
         })),
         pagination: {
           page,

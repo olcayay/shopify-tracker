@@ -13,7 +13,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Search, ChevronLeft, ChevronRight, ArrowUpDown } from "lucide-react";
+import { Search, ChevronLeft, ChevronRight, ArrowUpDown, Star } from "lucide-react";
 import { TableSkeleton } from "@/components/skeletons";
 import { PlatformBadgeCell } from "@/components/platform-badge-cell";
 import { PlatformFilterChips } from "@/components/platform-filter-chips";
@@ -28,6 +28,7 @@ interface Developer {
   linkCount: number;
   platforms: string[];
   topAppIcons: string[];
+  isStarred: boolean;
 }
 
 interface DeveloperResponse {
@@ -85,6 +86,34 @@ export default function DevelopersPage() {
     loadData();
   }
 
+  async function toggleStar(devId: number, currentlyStarred: boolean) {
+    if (!data) return;
+    // Optimistic update
+    setData({
+      ...data,
+      developers: data.developers.map((d) =>
+        d.id === devId ? { ...d, isStarred: !currentlyStarred } : d
+      ),
+    });
+    try {
+      const method = currentlyStarred ? "DELETE" : "POST";
+      const res = await fetchWithAuth(`/api/account/starred-developers/${devId}`, { method });
+      if (!res.ok) throw new Error();
+    } catch {
+      // Revert on error
+      setData((prev) =>
+        prev
+          ? {
+              ...prev,
+              developers: prev.developers.map((d) =>
+                d.id === devId ? { ...d, isStarred: currentlyStarred } : d
+              ),
+            }
+          : prev
+      );
+    }
+  }
+
   const developers = data?.developers ?? [];
   const pagination = data?.pagination;
 
@@ -125,6 +154,7 @@ export default function DevelopersPage() {
             <Table>
               <TableHeader>
                 <TableRow>
+                  <TableHead className="w-10"></TableHead>
                   <TableHead>
                     <button onClick={() => toggleSort("name")} className="flex items-center gap-1 hover:text-foreground">
                       Developer <ArrowUpDown className="h-3 w-3" />
@@ -141,13 +171,28 @@ export default function DevelopersPage() {
               <TableBody>
                 {developers.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={3} className="text-center text-muted-foreground py-8">
+                    <TableCell colSpan={4} className="text-center text-muted-foreground py-8">
                       {search ? "No developers found matching your search." : "No developers found."}
                     </TableCell>
                   </TableRow>
                 ) : (
                   developers.map((dev) => (
                     <TableRow key={dev.id}>
+                      <TableCell className="w-10">
+                        <button
+                          onClick={() => toggleStar(dev.id, dev.isStarred)}
+                          className="p-1 rounded hover:bg-muted transition-colors"
+                          aria-label={dev.isStarred ? "Unstar developer" : "Star developer"}
+                        >
+                          <Star
+                            className={`h-4 w-4 ${
+                              dev.isStarred
+                                ? "fill-amber-500 text-amber-500"
+                                : "text-muted-foreground hover:text-amber-500"
+                            }`}
+                          />
+                        </button>
+                      </TableCell>
                       <TableCell>
                         <div className="flex items-center gap-2">
                           {dev.topAppIcons && dev.topAppIcons.length > 0 && (

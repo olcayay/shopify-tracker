@@ -64,7 +64,7 @@ describe("Developer routes", () => {
       expect(body.pagination).toHaveProperty("totalPages");
     });
 
-    it("returns topAppIcons field for each developer", async () => {
+    it("returns topAppIcons and isStarred fields for each developer", async () => {
       const res = await app.inject({
         method: "GET",
         url: "/api/developers",
@@ -76,6 +76,8 @@ describe("Developer routes", () => {
       for (const dev of body.developers) {
         expect(dev).toHaveProperty("topAppIcons");
         expect(Array.isArray(dev.topAppIcons)).toBe(true);
+        expect(dev).toHaveProperty("isStarred");
+        expect(typeof dev.isStarred).toBe("boolean");
       }
     });
 
