@@ -209,6 +209,23 @@ export async function developerRoutes(app: FastifyInstance) {
         }
       }
 
+      // Check if developer is starred by current account
+      const detailAccountId = (request as any).user?.accountId || null;
+      let isStarred = false;
+      if (detailAccountId) {
+        const [starred] = await db
+          .select({ id: accountStarredDevelopers.id })
+          .from(accountStarredDevelopers)
+          .where(
+            and(
+              eq(accountStarredDevelopers.accountId, detailAccountId),
+              eq(accountStarredDevelopers.globalDeveloperId, developer.id)
+            )
+          )
+          .limit(1);
+        isStarred = !!starred;
+      }
+
       return {
         developer: {
           id: developer.id,
@@ -225,6 +242,7 @@ export async function developerRoutes(app: FastifyInstance) {
         })),
         apps: developerApps,
         totalApps: developerApps.length,
+        isStarred,
       };
     }
   );

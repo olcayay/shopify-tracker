@@ -1,3 +1,15 @@
+PLA-437: Star/unstar on developer detail pages (2026-03-30)
+================================================================
+API (apps/api/src/routes/developers.ts GET /:slug):
+- Added isStarred boolean to developer detail response via account_starred_developers check
+
+Frontend pages updated:
+- /[platform]/developers/[slug]/page.tsx — added star button in header + optimistic toggle
+- /developer/[slug]/page.tsx (existing) — added star button + isStarred interface + optimistic toggle
+
+Tests: 3 new tests per page (star rendering, filled star, optimistic toggle)
+       + 8 new cross-platform developer detail tests
+
 PLA-436: Star/unstar UI on /developers list with starred-first sorting (2026-03-30)
 ================================================================
 Backend (apps/api/src/routes/developers.ts):

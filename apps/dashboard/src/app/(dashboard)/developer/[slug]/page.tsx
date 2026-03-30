@@ -44,6 +44,7 @@ interface DeveloperProfile {
     activeInstalls: number | null;
   }[];
   totalApps: number;
+  isStarred: boolean;
 }
 
 export default function CrossPlatformDeveloperPage() {
@@ -52,13 +53,16 @@ export default function CrossPlatformDeveloperPage() {
   const [data, setData] = useState<DeveloperProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [starred, setStarred] = useState(false);
 
   useEffect(() => {
     async function load() {
       try {
         const res = await fetchWithAuth(`/api/developers/${slug}`);
         if (res.ok) {
-          setData(await res.json());
+          const json = await res.json();
+          setData(json);
+          setStarred(json.isStarred ?? false);
         } else {
           const body = await res.json().catch(() => ({}));
           setError(body.error || "Developer not found");
@@ -71,6 +75,19 @@ export default function CrossPlatformDeveloperPage() {
     }
     load();
   }, [slug]);
+
+  async function toggleStar() {
+    if (!data) return;
+    const prev = starred;
+    setStarred(!prev);
+    try {
+      const method = prev ? "DELETE" : "POST";
+      const res = await fetchWithAuth(`/api/account/starred-developers/${data.developer.id}`, { method });
+      if (!res.ok) throw new Error();
+    } catch {
+      setStarred(prev);
+    }
+  }
 
   const appsByPlatform = useMemo(() => {
     if (!data) return new Map<string, DeveloperProfile["apps"]>();
@@ -122,6 +139,19 @@ export default function CrossPlatformDeveloperPage() {
       {/* Header */}
       <div className="flex items-center gap-3">
         <h1 className="text-2xl font-bold">{developer.name}</h1>
+        <button
+          onClick={toggleStar}
+          className="p-1 rounded hover:bg-muted transition-colors"
+          aria-label={starred ? "Unstar developer" : "Star developer"}
+        >
+          <Star
+            className={`h-5 w-5 ${
+              starred
+                ? "fill-amber-500 text-amber-500"
+                : "text-muted-foreground hover:text-amber-500"
+            }`}
+          />
+        </button>
         {developer.website && (
           <a
             href={developer.website}
