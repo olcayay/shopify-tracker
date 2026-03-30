@@ -5,6 +5,7 @@ AI Suggestion Engine (2026-03-30)
   PLA-444: Phase 0: Database tables and API endpoints for editable templates ✅
   PLA-451: Phase 3: Database — AI suggestion cache tables ✅
   PLA-452: Phase 4: API endpoints — AI keyword suggestions ✅
+  PLA-453: Phase 5: API endpoints — AI competitor suggestions ✅
 
 Bug Fix (2026-03-30)
   PLA-458: Fix duplicate key constraint error in non-Shopify category scraper ✅

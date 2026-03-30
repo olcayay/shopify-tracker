@@ -37,8 +37,11 @@ import {
   isRateLimitOrQuota,
   generateKeywordSuggestions,
   mergeKeywords,
+  generateCompetitorSuggestions,
+  mergeCompetitorScores,
+  preFilterCandidates,
 } from "@appranks/shared";
-import type { AIClient, NgramKeyword } from "@appranks/shared";
+import type { AIClient, NgramKeyword, CompetitorCandidate, JaccardScore } from "@appranks/shared";
 import OpenAI from "openai";
 import { requireRole } from "../middleware/authorize.js";
 import { requireIdempotencyKey } from "../middleware/idempotency.js";
@@ -2413,7 +2416,7 @@ export const accountTrackingRoutes: FastifyPluginAsync = async (app) => {
     async (request, reply) => {
       const { accountId } = request.user;
       const slug = decodeURIComponent(request.params.slug);
-      const { limit: limitStr = "20" } = request.query as { limit?: string };
+      const { limit: limitStr = "20", source = "all" } = request.query as { limit?: string; source?: string };
       const maxResults = Math.min(parseInt(limitStr, 10) || 20, 48);
       const platform = getPlatformFromQuery(request.query as Record<string, unknown>);
 
@@ -2697,10 +2700,281 @@ export const accountTrackingRoutes: FastifyPluginAsync = async (app) => {
       // 9. Sort by overall score descending, return top N
       suggestions.sort((a, b) => b.similarity.overall - a.similarity.overall);
 
-      return { suggestions: suggestions.slice(0, maxResults) };
+      // Check AI cache status
+      const [aiCompCache] = await db
+        .select()
+        .from(aiCompetitorSuggestions)
+        .where(and(eq(aiCompetitorSuggestions.accountId, accountId), eq(aiCompetitorSuggestions.appId, compSugAppRow.id)))
+        .limit(1);
+
+      const compNow = new Date();
+      const compAiStatus = !aiCompCache
+        ? "not_generated"
+        : aiCompCache.status === "generating"
+          ? "generating"
+          : aiCompCache.status === "success" && aiCompCache.expiresAt && aiCompCache.expiresAt > compNow
+            ? "available"
+            : aiCompCache.status === "success"
+              ? "expired"
+              : "error";
+
+      // For "ai" source, return AI-only results from cache
+      if (source === "ai") {
+        if (compAiStatus !== "available") {
+          return { suggestions: [], aiStatus: compAiStatus, aiGeneratedAt: aiCompCache?.generatedAt ?? null };
+        }
+        const mergedComps = (aiCompCache!.mergedCompetitors as any[]) || [];
+        return {
+          suggestions: mergedComps.slice(0, maxResults),
+          aiStatus: compAiStatus,
+          aiGeneratedAt: aiCompCache!.generatedAt,
+        };
+      }
+
+      // For "all" with available AI cache, return merged AI results
+      if (source === "all" && compAiStatus === "available") {
+        const mergedComps = (aiCompCache!.mergedCompetitors as any[]) || [];
+        return {
+          suggestions: mergedComps.slice(0, maxResults),
+          aiStatus: compAiStatus,
+          aiGeneratedAt: aiCompCache!.generatedAt,
+        };
+      }
+
+      // Default: Jaccard results
+      return {
+        suggestions: suggestions.slice(0, maxResults),
+        aiStatus: compAiStatus,
+        aiGeneratedAt: aiCompCache?.generatedAt ?? null,
+      };
+    }
+  );
+
+  // POST /api/account/tracked-apps/:slug/ai-competitor-suggestions/generate
+  app.post<{ Params: { slug: string } }>(
+    "/tracked-apps/:slug/ai-competitor-suggestions/generate",
+    async (request, reply) => {
+      const { accountId, userId } = request.user;
+      const slug = decodeURIComponent(request.params.slug);
+      const platform = getPlatformFromQuery(request.query as Record<string, unknown>);
+
+      const apiKey = process.env.OPENAI_API_KEY;
+      if (!apiKey) return reply.code(503).send({ error: "AI service not configured" });
+
+      // Look up app
+      const [appRow] = await db
+        .select({ id: apps.id, name: apps.name, subtitle: apps.appCardSubtitle })
+        .from(apps)
+        .where(and(eq(apps.slug, slug), eq(apps.platform, platform)))
+        .limit(1);
+      if (!appRow) return reply.code(404).send({ error: "App not found" });
+
+      // Verify tracked
+      const [tracked] = await db
+        .select({ id: accountTrackedApps.id })
+        .from(accountTrackedApps)
+        .where(and(eq(accountTrackedApps.accountId, accountId), eq(accountTrackedApps.appId, appRow.id)))
+        .limit(1);
+      if (!tracked) return reply.code(404).send({ error: "App not tracked" });
+
+      // Check existing cache
+      const [existing] = await db
+        .select()
+        .from(aiCompetitorSuggestions)
+        .where(and(eq(aiCompetitorSuggestions.accountId, accountId), eq(aiCompetitorSuggestions.appId, appRow.id)))
+        .limit(1);
+
+      const now = new Date();
+      if (existing?.status === "success" && existing.expiresAt && existing.expiresAt > now) {
+        return { cached: true, ...formatAiCompetitorResult(existing) };
+      }
+      if (existing?.status === "generating") {
+        return reply.code(409).send({ error: "Generation already in progress" });
+      }
+
+      // Mark as generating
+      if (existing) {
+        await db.update(aiCompetitorSuggestions)
+          .set({ status: "generating", errorMessage: null })
+          .where(eq(aiCompetitorSuggestions.id, existing.id));
+      } else {
+        await db.insert(aiCompetitorSuggestions).values({
+          accountId, appId: appRow.id, platform, status: "generating",
+        }).onConflictDoNothing();
+      }
+
+      try {
+        // Get app snapshot
+        const [snapshot] = await db
+          .select({
+            appIntroduction: appSnapshots.appIntroduction,
+            appDetails: appSnapshots.appDetails,
+            features: appSnapshots.features,
+            categories: appSnapshots.categories,
+          })
+          .from(appSnapshots)
+          .where(eq(appSnapshots.appId, appRow.id))
+          .orderBy(desc(appSnapshots.scrapedAt))
+          .limit(1);
+
+        const categoryNames = ((snapshot?.categories as any[]) ?? [])
+          .map((c: any) => c.title || c.name || c).filter(Boolean);
+
+        // Get Jaccard top candidates using existing category ranking logic
+        const catRows: any[] = await db
+          .execute(sql`
+            SELECT DISTINCT ON (category_slug) category_slug
+            FROM app_category_rankings WHERE app_id = ${appRow.id}
+            ORDER BY category_slug, scraped_at DESC
+          `).then((res: any) => (res as any).rows ?? res);
+
+        const catSlugs = catRows.map((r: any) => r.category_slug as string);
+
+        let candidates: CompetitorCandidate[] = [];
+        if (catSlugs.length > 0) {
+          const catSlugList = sql.join(catSlugs.map(s => sql`${s}`), sql`, `);
+          const candidateRows: any[] = await db
+            .execute(sql`
+              WITH latest AS (
+                SELECT DISTINCT ON (r.app_id) a.slug, a.name, a.app_card_subtitle, a.pricing_hint, a.average_rating, a.rating_count
+                FROM app_category_rankings r
+                INNER JOIN apps a ON a.id = r.app_id
+                WHERE r.category_slug IN (${catSlugList}) AND r.app_id != ${appRow.id} AND a.platform = ${platform}
+                ORDER BY r.app_id, r.scraped_at DESC
+              )
+              SELECT * FROM latest LIMIT 48
+            `).then((res: any) => (res as any).rows ?? res);
+
+          candidates = candidateRows.map((r: any) => ({
+            slug: r.slug,
+            name: r.name,
+            subtitle: r.app_card_subtitle,
+            pricingHint: r.pricing_hint,
+            rating: r.average_rating ? parseFloat(r.average_rating) : null,
+            ratingCount: r.rating_count ? Number(r.rating_count) : null,
+            categories: categoryNames, // approximate
+          }));
+        }
+
+        const filtered = preFilterCandidates(candidates);
+
+        // Call AI
+        const openaiClient = new OpenAI({ apiKey }) as unknown as AIClient;
+        const { response: aiResponse, aiResult } = await generateCompetitorSuggestions({
+          client: openaiClient,
+          input: {
+            app: {
+              name: appRow.name ?? "",
+              slug,
+              subtitle: appRow.subtitle,
+              introduction: snapshot?.appIntroduction ?? null,
+              description: snapshot?.appDetails ?? null,
+              features: (snapshot?.features as string[]) ?? [],
+              categories: categoryNames,
+              pricingHint: null,
+            },
+            candidates: filtered,
+            platform,
+          },
+        });
+
+        // Build Jaccard scores from candidates (approximate using position)
+        const jaccardScores: JaccardScore[] = candidates.map((c, i) => ({
+          slug: c.slug,
+          overall: Math.max(0, 1 - (i / candidates.length)),
+        }));
+
+        // Merge AI + Jaccard
+        const merged = mergeCompetitorScores(aiResponse.competitors, jaccardScores, 25);
+
+        // Log to ai_logs
+        await logAICall(db, aiLogs, {
+          accountId, userId, platform,
+          productType: "ai_competitor_suggestions",
+          productId: String(appRow.id),
+          model: aiResult.model,
+          systemPrompt: "[competitor-suggestion-engine]",
+          userPrompt: `App: ${appRow.name} (${slug}), ${filtered.length} candidates`,
+          responseContent: aiResult.content,
+          promptTokens: aiResult.promptTokens,
+          completionTokens: aiResult.completionTokens,
+          totalTokens: aiResult.totalTokens,
+          costUsd: aiResult.costUsd,
+          durationMs: aiResult.durationMs,
+          status: "success",
+          triggerType: "manual",
+        });
+
+        // Update cache
+        const expiresAt = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
+        const cacheData = {
+          platform,
+          appSummary: aiResponse.appSummary,
+          marketContext: aiResponse.marketContext,
+          competitors: aiResponse.competitors,
+          jaccardCompetitors: jaccardScores,
+          mergedCompetitors: merged,
+          model: aiResult.model,
+          promptTokens: aiResult.promptTokens,
+          completionTokens: aiResult.completionTokens,
+          costUsd: aiResult.costUsd,
+          durationMs: aiResult.durationMs,
+          status: "success" as const,
+          errorMessage: null,
+          generatedAt: now,
+          expiresAt,
+        };
+
+        await db.insert(aiCompetitorSuggestions)
+          .values({ accountId, appId: appRow.id, ...cacheData })
+          .onConflictDoUpdate({
+            target: [aiCompetitorSuggestions.accountId, aiCompetitorSuggestions.appId],
+            set: cacheData,
+          });
+
+        return {
+          cached: false,
+          appSummary: aiResponse.appSummary,
+          marketContext: aiResponse.marketContext,
+          competitors: merged,
+          aiCompetitorCount: aiResponse.competitors.length,
+          mergedCount: merged.length,
+          model: aiResult.model,
+          costUsd: aiResult.costUsd,
+          durationMs: aiResult.durationMs,
+          generatedAt: now,
+          expiresAt,
+        };
+      } catch (err: any) {
+        await db.update(aiCompetitorSuggestions)
+          .set({ status: "error", errorMessage: err?.message || String(err) })
+          .where(and(eq(aiCompetitorSuggestions.accountId, accountId), eq(aiCompetitorSuggestions.appId, appRow.id)));
+
+        const { isRateLimit, isQuota } = isRateLimitOrQuota(err);
+        if (isRateLimit || isQuota) {
+          return reply.code(429).send({ error: isQuota ? "AI quota exceeded" : "AI service busy, try again" });
+        }
+        request.log.error(err, "AI competitor generation failed");
+        return reply.code(502).send({ error: "AI generation failed" });
+      }
     }
   );
 };
+
+function formatAiCompetitorResult(row: any) {
+  return {
+    appSummary: row.appSummary,
+    marketContext: row.marketContext,
+    competitors: row.mergedCompetitors || [],
+    aiCompetitorCount: (row.competitors as any[])?.length ?? 0,
+    mergedCount: (row.mergedCompetitors as any[])?.length ?? 0,
+    model: row.model,
+    costUsd: row.costUsd,
+    durationMs: row.durationMs,
+    generatedAt: row.generatedAt,
+    expiresAt: row.expiresAt,
+  };
+}
 
 function formatAiKeywordResult(row: any) {
   return {

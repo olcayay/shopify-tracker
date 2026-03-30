@@ -1,3 +1,20 @@
+PLA-453: AI competitor suggestion API endpoints (2026-03-30)
+================================================================
+Modified GET /api/account/tracked-apps/:slug/competitor-suggestions:
+- Added ?source=all|jaccard|ai query parameter (default: all)
+- Added aiStatus and aiGeneratedAt fields
+- source=ai returns cached AI merged results
+- source=all returns AI if cached, falls back to Jaccard
+
+Added POST /api/account/tracked-apps/:slug/ai-competitor-suggestions/generate:
+- Cache check → candidate collection → AI call → merge → store → return
+- Collects Jaccard top 48 candidates from category rankings
+- preFilterCandidates compresses to top 60 with 5 features each
+- generateCompetitorSuggestions with 6-dimension evaluation
+- mergeCompetitorScores: 0.6 × AI + 0.4 × Jaccard
+- 7-day cache TTL, concurrent generation protection
+- Logs to ai_logs
+
 PLA-452: AI keyword suggestion API endpoints (2026-03-30)
 ================================================================
 Modified GET /api/account/tracked-apps/:slug/keyword-suggestions:
