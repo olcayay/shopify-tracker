@@ -1,3 +1,18 @@
+PLA-435: Show app icons on /developers list page (2026-03-30)
+================================================================
+Backend (apps/api/src/routes/developers.ts):
+- Added correlated subquery to GET /api/developers to fetch top 5 app icon URLs per developer
+- Joins apps → app_snapshots → platform_developers to match apps to their developer
+- Returns topAppIcons: string[] in response
+
+Frontend (apps/dashboard/src/app/(dashboard)/developers/page.tsx):
+- Added overlapping icon stack (flex -space-x-1.5) before developer name
+- Max 4 icons displayed, +N badge for overflow
+- Graceful fallback: no icons shown when topAppIcons is empty
+
+Tests: 3 new dashboard tests (icon rendering, empty state, +N overflow badge)
+       1 new API test (topAppIcons field presence)
+
 PLA-440: Show tracked app names & logos in competitors table (2026-03-30)
 ================================================================
 Problem: "Tracked For" column showed only a count badge (e.g. "2 apps").

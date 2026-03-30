@@ -58,6 +58,7 @@ const mockDevelopersResponse = {
       platformCount: 2,
       linkCount: 3,
       platforms: ["shopify", "salesforce"],
+      topAppIcons: ["https://example.com/icon1.png", "https://example.com/icon2.png", "https://example.com/icon3.png"],
     },
     {
       id: 2,
@@ -67,6 +68,7 @@ const mockDevelopersResponse = {
       platformCount: 1,
       linkCount: 1,
       platforms: ["shopify"],
+      topAppIcons: [],
     },
   ],
   pagination: { page: 1, limit: 25, total: 2, totalPages: 1 },
@@ -258,6 +260,70 @@ describe("DevelopersPage (cross-platform)", () => {
         callCountBefore
       );
     });
+  });
+
+  it("renders app icon stack for developers with icons", async () => {
+    setupFetchMocks();
+    render(<DevelopersPage />);
+    await waitFor(() => {
+      expect(screen.getByText("Acme Inc")).toBeInTheDocument();
+    });
+    // Acme Inc has 3 icons — img elements with alt=""
+    const icons = document.querySelectorAll("img[src*='example.com']");
+    expect(icons.length).toBe(3);
+    expect(icons[0]).toHaveAttribute("src", "https://example.com/icon1.png");
+  });
+
+  it("does not render icon stack for developers with no icons", async () => {
+    setupFetchMocks({
+      developers: [
+        {
+          id: 2,
+          slug: "widget-co",
+          name: "Widget Co",
+          website: null,
+          platformCount: 1,
+          linkCount: 1,
+          platforms: ["shopify"],
+          topAppIcons: [],
+        },
+      ],
+    });
+    render(<DevelopersPage />);
+    await waitFor(() => {
+      expect(screen.getByText("Widget Co")).toBeInTheDocument();
+    });
+    expect(document.querySelectorAll("img[src*='example.com']")).toHaveLength(0);
+  });
+
+  it("shows +N badge when developer has more than 4 icons", async () => {
+    setupFetchMocks({
+      developers: [
+        {
+          id: 3,
+          slug: "mega-dev",
+          name: "Mega Dev",
+          website: null,
+          platformCount: 3,
+          linkCount: 5,
+          platforms: ["shopify", "salesforce", "wix"],
+          topAppIcons: [
+            "https://example.com/a.png",
+            "https://example.com/b.png",
+            "https://example.com/c.png",
+            "https://example.com/d.png",
+            "https://example.com/e.png",
+          ],
+        },
+      ],
+    });
+    render(<DevelopersPage />);
+    await waitFor(() => {
+      expect(screen.getByText("Mega Dev")).toBeInTheDocument();
+    });
+    // 4 icons rendered + "+1" badge
+    expect(document.querySelectorAll("img[src*='example.com']")).toHaveLength(4);
+    expect(screen.getByText("+1")).toBeInTheDocument();
   });
 
   it("pagination buttons are disabled when on first page", async () => {

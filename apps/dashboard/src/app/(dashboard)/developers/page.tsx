@@ -27,6 +27,7 @@ interface Developer {
   platformCount: number;
   linkCount: number;
   platforms: string[];
+  topAppIcons: string[];
 }
 
 interface DeveloperResponse {
@@ -148,9 +149,23 @@ export default function DevelopersPage() {
                   developers.map((dev) => (
                     <TableRow key={dev.id}>
                       <TableCell>
-                        <Link href={`/developers/${dev.slug}`} className="font-medium hover:underline">
-                          {dev.name}
-                        </Link>
+                        <div className="flex items-center gap-2">
+                          {dev.topAppIcons && dev.topAppIcons.length > 0 && (
+                            <div className="flex -space-x-1.5 shrink-0">
+                              {dev.topAppIcons.slice(0, 4).map((url, i) => (
+                                <img key={i} src={url} alt="" className="w-5 h-5 rounded border border-background" />
+                              ))}
+                              {dev.topAppIcons.length > 4 && (
+                                <span className="w-5 h-5 rounded-full bg-muted flex items-center justify-center text-[10px] font-medium border border-background">
+                                  +{dev.topAppIcons.length - 4}
+                                </span>
+                              )}
+                            </div>
+                          )}
+                          <Link href={`/developers/${dev.slug}`} className="font-medium hover:underline">
+                            {dev.name}
+                          </Link>
+                        </div>
                       </TableCell>
                       <TableCell>
                         <div className="flex flex-wrap gap-1.5">

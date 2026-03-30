@@ -64,6 +64,21 @@ describe("Developer routes", () => {
       expect(body.pagination).toHaveProperty("totalPages");
     });
 
+    it("returns topAppIcons field for each developer", async () => {
+      const res = await app.inject({
+        method: "GET",
+        url: "/api/developers",
+        headers: authHeaders(userToken()),
+      });
+
+      expect(res.statusCode).toBe(200);
+      const body = res.json();
+      for (const dev of body.developers) {
+        expect(dev).toHaveProperty("topAppIcons");
+        expect(Array.isArray(dev.topAppIcons)).toBe(true);
+      }
+    });
+
     it("accepts search parameter", async () => {
       const res = await app.inject({
         method: "GET",

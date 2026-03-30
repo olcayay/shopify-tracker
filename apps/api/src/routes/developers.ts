@@ -62,13 +62,28 @@ export async function developerRoutes(app: FastifyInstance) {
         sql`g.name`;
       const orderDir = order === "desc" ? sql`DESC` : sql`ASC`;
 
-      // Get paginated results with counts and platforms array
+      // Get paginated results with counts, platforms array, and top app icons
       const rows: any[] = await db.execute(sql`
         SELECT
           g.id, g.slug, g.name, g.website,
           COUNT(DISTINCT pd.platform) AS platform_count,
           COUNT(DISTINCT pd.id) AS link_count,
-          ARRAY_AGG(DISTINCT pd.platform) FILTER (WHERE pd.platform IS NOT NULL) AS platforms
+          ARRAY_AGG(DISTINCT pd.platform) FILTER (WHERE pd.platform IS NOT NULL) AS platforms,
+          (
+            SELECT COALESCE(ARRAY_AGG(sub.icon_url), '{}')
+            FROM (
+              SELECT DISTINCT a.icon_url
+              FROM apps a
+              JOIN app_snapshots s ON s.app_id = a.id
+              JOIN platform_developers pd2 ON pd2.global_developer_id = g.id
+                AND a.platform = pd2.platform
+              WHERE s.developer->>'name' = pd2.name
+                AND a.icon_url IS NOT NULL
+                AND s.id = (SELECT s2.id FROM app_snapshots s2 WHERE s2.app_id = a.id ORDER BY s2.scraped_at DESC LIMIT 1)
+              ORDER BY a.icon_url
+              LIMIT 5
+            ) sub
+          ) AS top_app_icons
         FROM global_developers g
         LEFT JOIN platform_developers pd ON pd.global_developer_id = g.id
         ${whereClause}
@@ -86,6 +101,7 @@ export async function developerRoutes(app: FastifyInstance) {
           platformCount: Number(r.platform_count || 0),
           linkCount: Number(r.link_count || 0),
           platforms: r.platforms || [],
+          topAppIcons: (r.top_app_icons || []).filter(Boolean),
         })),
         pagination: {
           page,
