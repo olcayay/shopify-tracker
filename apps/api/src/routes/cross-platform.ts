@@ -309,20 +309,40 @@ export async function crossPlatformRoutes(app: FastifyInstance) {
         LIMIT ${limit} OFFSET ${offset}
       `) as any[];
 
+      // Fetch tracked app details for display
+      const allTrackedAppIds = Array.from(new Set(competitorRows.map((r: { trackedAppId: number }) => r.trackedAppId))) as number[];
+      const trackedAppDetailsMap = new Map<number, { id: number; name: string; iconUrl: string | null; slug: string; platform: string }>();
+      if (allTrackedAppIds.length > 0) {
+        const trackedAppRows: any[] = await db.execute(sql`
+          SELECT id, name, icon_url, slug, platform
+          FROM apps
+          WHERE id IN (${sql.join(allTrackedAppIds.map((id: number) => sql`${id}`), sql`, `)})
+        `) as any[];
+        for (const ta of trackedAppRows) {
+          trackedAppDetailsMap.set(ta.id, { id: ta.id, name: ta.name, iconUrl: ta.icon_url, slug: ta.slug, platform: ta.platform });
+        }
+      }
+
       return {
-        items: rows.map((r: any) => ({
-          id: r.id,
-          platform: r.platform,
-          slug: r.slug,
-          name: r.name,
-          iconUrl: r.icon_url,
-          averageRating: r.average_rating ? parseFloat(r.average_rating) : null,
-          ratingCount: r.rating_count,
-          pricingHint: r.pricing_hint,
-          trackedForAppIds: trackedForMap.get(r.id) || [],
-          trackedForCount: trackedForMap.get(r.id)?.length || 0,
-          activeInstalls: r.active_installs,
-        })),
+        items: rows.map((r: any) => {
+          const trackedAppIds = trackedForMap.get(r.id) || [];
+          return {
+            id: r.id,
+            platform: r.platform,
+            slug: r.slug,
+            name: r.name,
+            iconUrl: r.icon_url,
+            averageRating: r.average_rating ? parseFloat(r.average_rating) : null,
+            ratingCount: r.rating_count,
+            pricingHint: r.pricing_hint,
+            trackedForAppIds: trackedAppIds,
+            trackedForCount: trackedAppIds.length,
+            trackedForApps: trackedAppIds
+              .map((id: number) => trackedAppDetailsMap.get(id))
+              .filter(Boolean),
+            activeInstalls: r.active_installs,
+          };
+        }),
         pagination: paginationResponse(page, limit, total),
       };
     }

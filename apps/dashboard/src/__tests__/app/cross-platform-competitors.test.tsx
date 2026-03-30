@@ -93,6 +93,10 @@ const mockCompetitorsResponse = {
       ratingCount: 300,
       pricingHint: "Free",
       trackedForCount: 2,
+      trackedForApps: [
+        { id: 10, name: "My App", iconUrl: "https://example.com/my-app.png", slug: "my-app", platform: "shopify" },
+        { id: 11, name: "Other App", iconUrl: null, slug: "other-app", platform: "shopify" },
+      ],
       activeInstalls: null,
     },
     {
@@ -105,6 +109,9 @@ const mockCompetitorsResponse = {
       ratingCount: 80,
       pricingHint: "$25/mo",
       trackedForCount: 1,
+      trackedForApps: [
+        { id: 12, name: "SF Tracked", iconUrl: null, slug: "sf-tracked", platform: "salesforce" },
+      ],
       activeInstalls: 1000,
     },
   ],
@@ -182,12 +189,62 @@ describe("CrossPlatformCompetitorsPage", () => {
     });
   });
 
-  it("shows tracked-for count badges", async () => {
+  it("shows tracked-for app names and logos instead of count", async () => {
     setupFetchMocks();
     render(<CrossPlatformCompetitorsPage />);
     await waitFor(() => {
-      expect(screen.getByText("2 apps")).toBeInTheDocument();
-      expect(screen.getByText("1 app")).toBeInTheDocument();
+      // Tracked app names should be visible
+      expect(screen.getByText("My App")).toBeInTheDocument();
+      expect(screen.getByText("Other App")).toBeInTheDocument();
+      expect(screen.getByText("SF Tracked")).toBeInTheDocument();
+    });
+
+    // Tracked app names should link to their detail pages
+    const myAppLink = screen.getByText("My App").closest("a");
+    expect(myAppLink).toHaveAttribute("href", "/shopify/apps/my-app");
+    const sfTrackedLink = screen.getByText("SF Tracked").closest("a");
+    expect(sfTrackedLink).toHaveAttribute("href", "/salesforce/apps/sf-tracked");
+  });
+
+  it("shows tracked app icon when iconUrl is provided", async () => {
+    setupFetchMocks();
+    render(<CrossPlatformCompetitorsPage />);
+    await waitFor(() => {
+      expect(screen.getByText("My App")).toBeInTheDocument();
+    });
+
+    // My App has an icon, Other App does not
+    const myAppContainer = screen.getByText("My App").closest("a")!;
+    const myAppImg = myAppContainer.querySelector("img");
+    expect(myAppImg).toBeTruthy();
+    expect(myAppImg!.getAttribute("src")).toBe("https://example.com/my-app.png");
+
+    const otherAppContainer = screen.getByText("Other App").closest("a")!;
+    const otherAppImg = otherAppContainer.querySelector("img");
+    expect(otherAppImg).toBeNull();
+  });
+
+  it("falls back to count badge when trackedForApps is empty", async () => {
+    setupFetchMocks({
+      items: [
+        {
+          id: 3,
+          platform: "shopify",
+          slug: "old-competitor",
+          name: "Old Competitor",
+          iconUrl: null,
+          averageRating: 2.0,
+          ratingCount: 10,
+          pricingHint: null,
+          trackedForCount: 3,
+          trackedForApps: [],
+          activeInstalls: null,
+        },
+      ],
+    });
+    render(<CrossPlatformCompetitorsPage />);
+    await waitFor(() => {
+      expect(screen.getByText("3 apps")).toBeInTheDocument();
     });
   });
 
@@ -304,10 +361,11 @@ describe("CrossPlatformCompetitorsPage", () => {
     await waitFor(() => {
       expect(screen.getByText("SF Competitor")).toBeInTheDocument();
     });
-    // The icon uses alt="" so we query by tag
-    const imgs = document.querySelectorAll("img");
-    expect(imgs.length).toBe(1);
-    expect(imgs[0].getAttribute("src")).toBe("https://example.com/sf-icon.png");
+    // SF Competitor has an icon in the name column
+    const sfLink = screen.getByText("SF Competitor").closest("a")!;
+    const sfImg = sfLink.querySelector("img");
+    expect(sfImg).toBeTruthy();
+    expect(sfImg!.getAttribute("src")).toBe("https://example.com/sf-icon.png");
   });
 
   it("renders table column headers", async () => {

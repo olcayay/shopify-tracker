@@ -1,3 +1,23 @@
+PLA-440: Show tracked app names & logos in competitors table (2026-03-30)
+================================================================
+Problem: "Tracked For" column showed only a count badge (e.g. "2 apps").
+User couldn't see which apps without clicking through.
+
+Backend fix (apps/api/src/routes/cross-platform.ts):
+- Added second query to fetch tracked app details (name, icon_url, slug, platform)
+- Built trackedAppDetailsMap from all unique tracked app IDs
+- Added `trackedForApps` array to response: [{id, name, iconUrl, slug, platform}]
+- Kept `trackedForCount` for backwards compatibility
+
+Frontend fix (apps/dashboard/src/app/(dashboard)/competitors/page.tsx):
+- Added TrackedForApp interface
+- Updated CompetitorItem to include trackedForApps[]
+- Replaced count badge with linked app chips: icon (w-4 h-4) + truncated name
+- Each chip links to /{platform}/apps/{slug}
+- Falls back to count badge when trackedForApps is empty (backwards compat)
+
+Tests: 3 new tests (app names/links, icon rendering, fallback to count badge)
+
 PLA-430: Unify developer profile table columns (2026-03-30)
 ================================================================
 Problem: /developers/[slug] page showed different column counts per platform

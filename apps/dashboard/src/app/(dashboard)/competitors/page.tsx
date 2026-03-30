@@ -20,6 +20,14 @@ import { PlatformFilterChips } from "@/components/platform-filter-chips";
 import { PLATFORM_DISPLAY, getPlatformColor } from "@/lib/platform-display";
 import type { PlatformId } from "@appranks/shared";
 
+interface TrackedForApp {
+  id: number;
+  name: string;
+  iconUrl: string | null;
+  slug: string;
+  platform: string;
+}
+
 interface CompetitorItem {
   id: number;
   platform: string;
@@ -30,6 +38,7 @@ interface CompetitorItem {
   ratingCount: number | null;
   pricingHint: string | null;
   trackedForCount: number;
+  trackedForApps: TrackedForApp[];
   activeInstalls: number | null;
 }
 
@@ -122,9 +131,27 @@ export default function CrossPlatformCompetitorsPage() {
           </Link>
         </TableCell>
         <TableCell>
-          <span className="text-xs px-1.5 py-0.5 rounded bg-muted text-muted-foreground">
-            {comp.trackedForCount} app{comp.trackedForCount !== 1 ? "s" : ""}
-          </span>
+          {comp.trackedForApps && comp.trackedForApps.length > 0 ? (
+            <div className="flex flex-wrap gap-1.5">
+              {comp.trackedForApps.map((app) => (
+                <Link
+                  key={app.id}
+                  href={`/${app.platform}/apps/${app.slug}`}
+                  className="flex items-center gap-1 text-xs px-1.5 py-0.5 rounded bg-muted hover:bg-muted/80 transition-colors"
+                  title={app.name}
+                >
+                  {app.iconUrl && (
+                    <img src={app.iconUrl} alt="" className="w-4 h-4 rounded shrink-0" />
+                  )}
+                  <span className="truncate max-w-[120px]">{app.name}</span>
+                </Link>
+              ))}
+            </div>
+          ) : (
+            <span className="text-xs px-1.5 py-0.5 rounded bg-muted text-muted-foreground">
+              {comp.trackedForCount} app{comp.trackedForCount !== 1 ? "s" : ""}
+            </span>
+          )}
         </TableCell>
         <TableCell>
           {comp.averageRating != null ? (
