@@ -8,6 +8,7 @@ Dark Mode Implementation (2026-03-30)
   PLA-496: Phase 2: Migrate hardcoded colors to semantic tokens (partial) ✅
   PLA-503: Phase 2.5: Fix inline style colors (partial) ✅
   PLA-500: Phase 6: Dark mode for AI button gradient ✅
+  PLA-504: Phase 6.5: Fix Recharts hardcoded colors ✅
 
 Design System Components (2026-03-30)
   PLA-507: Create shared PageHeader component ✅

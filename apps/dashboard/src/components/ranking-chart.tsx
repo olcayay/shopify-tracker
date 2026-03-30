@@ -13,11 +13,11 @@ import {
 } from "recharts";
 
 const COLORS = [
-  "hsl(221, 83%, 53%)",
-  "hsl(38, 92%, 50%)",
-  "hsl(142, 71%, 45%)",
-  "hsl(0, 72%, 51%)",
-  "hsl(262, 83%, 58%)",
+  "hsl(var(--chart-1))",
+  "hsl(var(--chart-2))",
+  "hsl(var(--chart-3))",
+  "hsl(var(--chart-4))",
+  "hsl(var(--chart-5))",
   "hsl(180, 70%, 40%)",
   "hsl(330, 70%, 50%)",
   "hsl(200, 80%, 50%)",
@@ -108,10 +108,17 @@ export function RankingChart({ data, pageSize = 24 }: { data: RankingData[]; pag
     <div className="space-y-4">
       <ResponsiveContainer width="100%" height={labels.length === 1 ? 250 : 300}>
         <LineChart data={pivoted}>
-          <CartesianGrid strokeDasharray="3 3" />
+          <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
           <XAxis dataKey="date" fontSize={12} />
           <YAxis reversed domain={[1, "auto"]} fontSize={12} />
-          <Tooltip />
+          <Tooltip
+            contentStyle={{
+              backgroundColor: "hsl(var(--card))",
+              borderColor: "hsl(var(--border))",
+              color: "hsl(var(--foreground))",
+              borderRadius: "0.5rem",
+            }}
+          />
           {labels.map((label) => (
             <Line
               key={label}

@@ -68,7 +68,7 @@ export function RatingReviewChart({ snapshots }: { snapshots: Snapshot[] }) {
           <CardContent>
             <ResponsiveContainer width="100%" height={200}>
               <LineChart data={data}>
-                <CartesianGrid strokeDasharray="3 3" />
+                <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
                 <XAxis dataKey="date" fontSize={11} tickMargin={4} />
                 <YAxis
                   domain={[minRating, maxRating]}
@@ -78,11 +78,17 @@ export function RatingReviewChart({ snapshots }: { snapshots: Snapshot[] }) {
                 <Tooltip
                   formatter={(value) => [Number(value).toFixed(2), "Rating"]}
                   labelFormatter={(label) => `Week of ${label}`}
+                  contentStyle={{
+                    backgroundColor: "hsl(var(--card))",
+                    borderColor: "hsl(var(--border))",
+                    color: "hsl(var(--foreground))",
+                    borderRadius: "0.5rem",
+                  }}
                 />
                 <Line
                   type="monotone"
                   dataKey="averageRating"
-                  stroke="hsl(221, 83%, 53%)"
+                  stroke="hsl(var(--chart-1))"
                   strokeWidth={2}
                   dot={{ r: 3 }}
                   connectNulls
@@ -102,7 +108,7 @@ export function RatingReviewChart({ snapshots }: { snapshots: Snapshot[] }) {
           <CardContent>
             <ResponsiveContainer width="100%" height={200}>
               <LineChart data={data}>
-                <CartesianGrid strokeDasharray="3 3" />
+                <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
                 <XAxis dataKey="date" fontSize={11} tickMargin={4} />
                 <YAxis fontSize={11} />
                 <Tooltip
@@ -111,11 +117,17 @@ export function RatingReviewChart({ snapshots }: { snapshots: Snapshot[] }) {
                     "Reviews",
                   ]}
                   labelFormatter={(label) => `Week of ${label}`}
+                  contentStyle={{
+                    backgroundColor: "hsl(var(--card))",
+                    borderColor: "hsl(var(--border))",
+                    color: "hsl(var(--foreground))",
+                    borderRadius: "0.5rem",
+                  }}
                 />
                 <Line
                   type="monotone"
                   dataKey="ratingCount"
-                  stroke="hsl(38, 92%, 50%)"
+                  stroke="hsl(var(--chart-2))"
                   strokeWidth={2}
                   dot={{ r: 3 }}
                   connectNulls
