@@ -134,6 +134,7 @@ function setupFetchMocks(overrides: { items?: any[]; pagination?: any } = {}) {
 describe("CrossPlatformCompetitorsPage", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    localStorage.clear();
     mockUseAuth.mockReturnValue({
       ...mockAuthContext,
       account: {

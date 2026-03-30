@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useMemo } from "react";
 import Link from "next/link";
 import { useAuth } from "@/lib/auth-context";
 import { Input } from "@/components/ui/input";
@@ -13,11 +13,13 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Search, ChevronLeft, ChevronRight, ArrowUpDown, Star, LayoutList, Group } from "lucide-react";
+import { Search, ChevronLeft, ChevronRight, ArrowUpDown, Star } from "lucide-react";
 import { TableSkeleton } from "@/components/skeletons";
 import { PlatformBadgeCell } from "@/components/platform-badge-cell";
 import { PlatformFilterChips } from "@/components/platform-filter-chips";
-import { PLATFORM_DISPLAY, getPlatformColor } from "@/lib/platform-display";
+import { ViewModeToggle, useViewMode } from "@/components/view-mode-toggle";
+import { PlatformGroupedTable, type PlatformGroup } from "@/components/platform-grouped-table";
+import { PLATFORM_DISPLAY } from "@/lib/platform-display";
 import type { PlatformId } from "@appranks/shared";
 
 interface TrackedForApp {
@@ -57,7 +59,7 @@ export default function CrossPlatformCompetitorsPage() {
   const [sort, setSort] = useState("name");
   const [order, setOrder] = useState<"asc" | "desc">("asc");
   const [activePlatforms, setActivePlatforms] = useState<PlatformId[]>(enabledPlatforms);
-  const [groupByPlatform, setGroupByPlatform] = useState(false);
+  const { viewMode, changeViewMode } = useViewMode("competitors-view-mode", () => setPage(1));
   const limit = 25;
 
   useEffect(() => {
@@ -102,19 +104,22 @@ export default function CrossPlatformCompetitorsPage() {
 
   const items = data?.items ?? [];
   const pagination = data?.pagination;
+  const emptyMessage = search ? "No competitors found matching your search." : "No competitors tracked.";
 
-  // Group items by platform for grouped view
-  const groupedItems = groupByPlatform
-    ? items.reduce<Record<string, CompetitorItem[]>>((acc, item) => {
-        (acc[item.platform] ??= []).push(item);
-        return acc;
-      }, {})
-    : {};
-  const platformGroups = Object.entries(groupedItems).sort(([a], [b]) => {
-    const labelA = PLATFORM_DISPLAY[a as PlatformId]?.label ?? a;
-    const labelB = PLATFORM_DISPLAY[b as PlatformId]?.label ?? b;
-    return labelA.localeCompare(labelB);
-  });
+  const platformGroups = useMemo<PlatformGroup<CompetitorItem>[]>(() => {
+    if (viewMode !== "grouped") return [];
+    const grouped = items.reduce<Record<string, CompetitorItem[]>>((acc, item) => {
+      (acc[item.platform] ??= []).push(item);
+      return acc;
+    }, {});
+    return Object.entries(grouped)
+      .sort(([a], [b]) => {
+        const labelA = PLATFORM_DISPLAY[a as PlatformId]?.label ?? a;
+        const labelB = PLATFORM_DISPLAY[b as PlatformId]?.label ?? b;
+        return labelA.localeCompare(labelB);
+      })
+      .map(([platform, comps]) => ({ platform, items: comps }));
+  }, [items, viewMode]);
 
   function renderCompetitorRow(comp: CompetitorItem, showPlatform: boolean) {
     return (
@@ -167,7 +172,30 @@ export default function CrossPlatformCompetitorsPage() {
     );
   }
 
-  const colCount = groupByPlatform ? 5 : 6;
+  const groupedColCount = 5;
+  const flatColCount = 6;
+
+  const renderGroupedHeaders = () => (
+    <>
+      <TableHead>
+        <button onClick={() => toggleSort("name")} className="flex items-center gap-1 hover:text-foreground">
+          Competitor <ArrowUpDown className="h-3 w-3" />
+        </button>
+      </TableHead>
+      <TableHead>Tracked For</TableHead>
+      <TableHead>
+        <button onClick={() => toggleSort("rating")} className="flex items-center gap-1 hover:text-foreground">
+          Rating <ArrowUpDown className="h-3 w-3" />
+        </button>
+      </TableHead>
+      <TableHead>
+        <button onClick={() => toggleSort("reviews")} className="flex items-center gap-1 hover:text-foreground">
+          Reviews <ArrowUpDown className="h-3 w-3" />
+        </button>
+      </TableHead>
+      <TableHead>Pricing</TableHead>
+    </>
+  );
 
   return (
     <div className="space-y-6">
@@ -176,28 +204,7 @@ export default function CrossPlatformCompetitorsPage() {
           <h1 className="text-2xl font-bold">All Competitors</h1>
           <p className="text-sm text-muted-foreground">Competitor apps tracked across all platforms</p>
         </div>
-        <div className="flex items-center gap-1 rounded-md border p-0.5">
-          <Button
-            variant={groupByPlatform ? "ghost" : "secondary"}
-            size="sm"
-            className="h-7 px-2 text-xs"
-            onClick={() => setGroupByPlatform(false)}
-            title="Flat list"
-          >
-            <LayoutList className="h-3.5 w-3.5 mr-1" />
-            List
-          </Button>
-          <Button
-            variant={groupByPlatform ? "secondary" : "ghost"}
-            size="sm"
-            className="h-7 px-2 text-xs"
-            onClick={() => setGroupByPlatform(true)}
-            title="Group by platform"
-          >
-            <Group className="h-3.5 w-3.5 mr-1" />
-            By Platform
-          </Button>
-        </div>
+        <ViewModeToggle viewMode={viewMode} onChangeViewMode={changeViewMode} />
       </div>
 
       <PlatformFilterChips
@@ -215,66 +222,17 @@ export default function CrossPlatformCompetitorsPage() {
       </form>
 
       {loading && !data ? (
-        <TableSkeleton rows={10} cols={colCount} />
-      ) : groupByPlatform ? (
-        /* ── Grouped by platform view ── */
-        items.length === 0 ? (
-          <div className="text-center text-muted-foreground py-8 border rounded-md">
-            {search ? "No competitors found matching your search." : "No competitors tracked."}
-          </div>
-        ) : (
-          <div className="space-y-6">
-            {platformGroups.map(([platform, platformItems]) => {
-              const color = getPlatformColor(platform as PlatformId);
-              const label = PLATFORM_DISPLAY[platform as PlatformId]?.label ?? platform;
-              return (
-                <div key={platform} className="rounded-md border overflow-hidden">
-                  <div
-                    className="flex items-center gap-2 px-4 py-2.5 border-b"
-                    style={{ borderLeftWidth: 3, borderLeftColor: color }}
-                  >
-                    <span
-                      className="w-2.5 h-2.5 rounded-full shrink-0"
-                      style={{ backgroundColor: color }}
-                    />
-                    <span className="font-semibold text-sm">{label}</span>
-                    <span className="text-xs text-muted-foreground">
-                      ({platformItems.length} competitor{platformItems.length !== 1 ? "s" : ""})
-                    </span>
-                  </div>
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>
-                          <button onClick={() => toggleSort("name")} className="flex items-center gap-1 hover:text-foreground">
-                            Competitor <ArrowUpDown className="h-3 w-3" />
-                          </button>
-                        </TableHead>
-                        <TableHead>Tracked For</TableHead>
-                        <TableHead>
-                          <button onClick={() => toggleSort("rating")} className="flex items-center gap-1 hover:text-foreground">
-                            Rating <ArrowUpDown className="h-3 w-3" />
-                          </button>
-                        </TableHead>
-                        <TableHead>
-                          <button onClick={() => toggleSort("reviews")} className="flex items-center gap-1 hover:text-foreground">
-                            Reviews <ArrowUpDown className="h-3 w-3" />
-                          </button>
-                        </TableHead>
-                        <TableHead>Pricing</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {platformItems.map((comp) => renderCompetitorRow(comp, false))}
-                    </TableBody>
-                  </Table>
-                </div>
-              );
-            })}
-          </div>
-        )
+        <TableSkeleton rows={10} cols={viewMode === "grouped" ? groupedColCount : flatColCount} />
+      ) : viewMode === "grouped" ? (
+        <PlatformGroupedTable
+          groups={platformGroups}
+          colCount={groupedColCount}
+          renderHeaderRow={renderGroupedHeaders}
+          renderRow={(comp) => renderCompetitorRow(comp, false)}
+          entityLabel="competitor"
+          emptyMessage={emptyMessage}
+        />
       ) : (
-        /* ── Flat list view ── */
         <>
           <div className="rounded-md border">
             <Table>
@@ -304,7 +262,7 @@ export default function CrossPlatformCompetitorsPage() {
                 {items.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
-                      {search ? "No competitors found matching your search." : "No competitors tracked."}
+                      {emptyMessage}
                     </TableCell>
                   </TableRow>
                 ) : (
