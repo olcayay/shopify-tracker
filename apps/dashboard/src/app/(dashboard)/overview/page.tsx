@@ -296,18 +296,17 @@ export default function CrossPlatformOverviewPage() {
               </div>
             )}
 
-            {/* Available Platforms — subdued container, smaller scale */}
+            {/* Available Platforms — compact pill layout */}
             {available.length > 0 && (
-              <div className="rounded-xl border bg-muted/30 p-5 space-y-3">
-                <div className="flex items-center gap-3">
-                  <h3 className="text-base font-semibold text-foreground/70 uppercase tracking-wider">Available Platforms</h3>
+              <div className="space-y-3">
+                <div className="flex items-center gap-2">
+                  <Globe className="h-4 w-4 text-muted-foreground" />
+                  <h3 className="text-sm font-semibold text-muted-foreground">Explore More Platforms</h3>
                   <div className="flex-1 border-t border-dashed" />
-                  <span className="text-xs text-muted-foreground">{available.length} platforms</span>
                 </div>
-                <p className="text-sm text-muted-foreground">Start tracking on any of these to see stats and rankings.</p>
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                <div className="flex flex-wrap gap-2">
                   {available.map((pid) => (
-                    <AvailablePlatformRow key={pid} platformId={pid} />
+                    <AvailablePlatformPill key={pid} platformId={pid} />
                   ))}
                 </div>
               </div>
@@ -438,7 +437,7 @@ function PlatformCard({
   );
 }
 
-function AvailablePlatformRow({ platformId }: { platformId: PlatformId }) {
+function AvailablePlatformPill({ platformId }: { platformId: PlatformId }) {
   const config = PLATFORMS[platformId];
   const brand = PLATFORM_DISPLAY[platformId];
   const capabilities = CAPABILITY_LABELS.filter(
@@ -448,24 +447,18 @@ function AvailablePlatformRow({ platformId }: { platformId: PlatformId }) {
   return (
     <Link
       href={`/${platformId}`}
-      className="flex items-center gap-2.5 px-3 py-2.5 rounded-lg bg-background/80 hover:bg-background transition-colors group border border-transparent hover:border-border"
+      className="inline-flex items-center gap-2 px-3 py-2 rounded-lg border bg-background hover:bg-muted/50 hover:shadow-sm transition-all group"
     >
       <span
-        className="w-2 h-2 rounded-full shrink-0"
+        className="w-2.5 h-2.5 rounded-full shrink-0"
         style={{ backgroundColor: brand.color }}
       />
-      <span className="text-[13px] font-medium text-muted-foreground group-hover:text-foreground transition-colors">{config.name}</span>
-      <div className="hidden sm:flex flex-wrap gap-1 ml-auto">
-        {capabilities.slice(0, 4).map((cap) => (
-          <span
-            key={cap.key}
-            className="text-[10px] px-1.5 py-0.5 rounded bg-muted text-muted-foreground"
-          >
-            {cap.label}
-          </span>
-        ))}
-      </div>
-      <ArrowRight className="h-3 w-3 text-muted-foreground/50 opacity-0 group-hover:opacity-100 transition-opacity shrink-0 ml-auto sm:ml-0" />
+      <span className="text-sm font-medium text-muted-foreground group-hover:text-foreground transition-colors">
+        {config.name}
+      </span>
+      <span className="text-[10px] text-muted-foreground/60">
+        {capabilities.length} features
+      </span>
     </Link>
   );
 }

@@ -245,10 +245,12 @@ describe("CrossPlatformOverviewPage", () => {
     });
     render(<OverviewPage />);
     await waitFor(() => {
-      // new_user persona shows Available Platforms
-      expect(screen.getByText("Available Platforms")).toBeInTheDocument();
+      // new_user persona shows Explore More Platforms
+      expect(screen.getByText("Explore More Platforms")).toBeInTheDocument();
     });
-    expect(screen.getByText("Start tracking on any of these to see stats and rankings.")).toBeInTheDocument();
+    // Available platforms should be rendered as pills
+    const pills = screen.getAllByText(/features$/);
+    expect(pills.length).toBeGreaterThan(0);
   });
 
   it("shows error banner with retry button when API calls fail", async () => {
