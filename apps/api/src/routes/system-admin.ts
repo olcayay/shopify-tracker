@@ -2904,7 +2904,7 @@ export const systemAdminRoutes: FastifyPluginAsync = async (app) => {
   // Queue monitoring
   // -------------------------------------------------------------------------
 
-  // GET /api/system-admin/queue-stats — BullMQ queue counts
+  // GET /api/system-admin/queue-stats — BullMQ queue counts for all 5 queues
   app.get("/queue-stats", async () => {
     const backgroundQueue = getBackgroundQueue();
     const interactiveQueue = getInteractiveQueue();
@@ -2914,9 +2914,38 @@ export const systemAdminRoutes: FastifyPluginAsync = async (app) => {
       interactiveQueue.getJobCounts("waiting", "active", "completed", "failed", "delayed"),
     ]);
 
+    // Try to get email/notification queue stats (may not be available in API context)
+    let emailInstant = null;
+    let emailBulk = null;
+    let notifications = null;
+    try {
+      const { Queue } = await import("bullmq");
+      const Redis = (await import("ioredis")).default;
+      const redisUrl = process.env.REDIS_URL || "redis://localhost:6379";
+      const connection = new Redis(redisUrl, { connectTimeout: 5000, maxRetriesPerRequest: 1 });
+
+      const emailInstantQ = new Queue("email-instant", { connection });
+      const emailBulkQ = new Queue("email-bulk", { connection });
+      const notificationsQ = new Queue("notifications", { connection });
+
+      [emailInstant, emailBulk, notifications] = await Promise.all([
+        emailInstantQ.getJobCounts("waiting", "active", "completed", "failed", "delayed").catch(() => null),
+        emailBulkQ.getJobCounts("waiting", "active", "completed", "failed", "delayed").catch(() => null),
+        notificationsQ.getJobCounts("waiting", "active", "completed", "failed", "delayed").catch(() => null),
+      ]);
+
+      await Promise.all([emailInstantQ.close(), emailBulkQ.close(), notificationsQ.close()]);
+      await connection.quit();
+    } catch {
+      // Non-critical — email queues may not be accessible
+    }
+
     return {
       background: backgroundCounts,
       interactive: interactiveCounts,
+      emailInstant,
+      emailBulk,
+      notifications,
     };
   });
 

@@ -289,3 +289,7 @@ export { buildNotificationContent } from "./notifications/templates.js";
 export type { NotificationContent, NotificationEventData, DbNotificationTemplate } from "./notifications/templates.js";
 export { emitNotification } from "./notifications/engine.js";
 export type { NotificationStore, NotificationRecipient, NotificationRecord, EmitResult } from "./notifications/engine.js";
+
+// AI Rate Limiting
+export { checkAiRateLimit, checkMonthlyBudget, DEFAULT_AI_RATE_LIMITS } from "./ai-rate-limiter.js";
+export type { AiRateLimitConfig, RateLimitCheck } from "./ai-rate-limiter.js";
