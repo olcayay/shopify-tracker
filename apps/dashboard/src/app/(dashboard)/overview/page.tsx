@@ -6,13 +6,14 @@ import { useAuth } from "@/lib/auth-context";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Package, ArrowRight, AppWindow, Search, Star, MessageSquarePlus, Globe } from "lucide-react";
+import { Package, ArrowRight, AppWindow, Search, Star, MessageSquarePlus, Globe, Bell, Flame, Calendar } from "lucide-react";
 import { PLATFORMS, PLATFORM_IDS, type PlatformId } from "@appranks/shared";
 import { PLATFORM_DISPLAY } from "@/lib/platform-display";
 import { OnboardingHero } from "@/components/onboarding-hero";
 import { PlatformRequestDialog } from "@/components/platform-request-dialog";
 import { AccountUsageCards, USAGE_STAT_PRESETS } from "@/components/account-usage-cards";
 import { OverviewPlatformCard } from "@/components/overview-platform-card";
+import { selectHighlights } from "@/components/overview-daily-highlights";
 
 const CAPABILITY_LABELS: { key: string; label: string; section?: string }[] = [
   { key: "hasReviews", label: "Reviews" },
@@ -228,30 +229,63 @@ export default function CrossPlatformOverviewPage() {
             { key: "users", ...USAGE_STAT_PRESETS.users, value: account?.usage.users ?? 0, limit: account?.limits.maxUsers ?? 0, href: "/settings" },
           ]} />
 
-          {/* Cross-platform summary */}
-          <Card className="rounded-xl bg-gradient-to-r from-primary/5 to-transparent">
-            <CardContent className="py-6">
-              <div className="flex items-center justify-between flex-wrap gap-4">
-                <div className="flex items-center gap-3 text-lg text-muted-foreground">
-                  <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-primary/10">
-                    <Globe className="h-6 w-6 text-primary" />
+          {/* Cross-platform hero summary */}
+          <Card className="rounded-xl bg-gradient-to-r from-primary/5 via-transparent to-primary/5 overflow-hidden">
+            <CardContent className="py-6 space-y-4">
+              <div className="flex items-center justify-between flex-wrap gap-2">
+                <div className="flex items-center gap-3">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10">
+                    <Globe className="h-5 w-5 text-primary" />
                   </div>
-                  <span>Tracking across <strong className="text-foreground text-xl">{platformsWithApps} platforms</strong></span>
+                  <span className="text-lg">
+                    Tracking across <strong className="text-foreground">{platformsWithApps} platforms</strong>
+                  </span>
                 </div>
-                <div className="flex flex-wrap gap-4">
-                  {[
-                    { icon: AppWindow, value: totalApps, label: "Apps", bg: "bg-blue-50", ring: "ring-blue-200", text: "text-blue-600", href: "/apps" },
-                    { icon: Search, value: totalKeywords, label: "Keywords", bg: "bg-purple-50", ring: "ring-purple-200", text: "text-purple-600", href: "/keywords" },
-                    { icon: Star, value: totalCompetitors, label: "Competitors", bg: "bg-amber-50", ring: "ring-amber-200", text: "text-amber-600", href: "/competitors" },
-                  ].map(({ icon: Icon, value, label, bg, ring, text, href }) => (
-                    <Link key={label} href={href} className={`flex items-center gap-2.5 px-5 py-2.5 rounded-xl ${bg} ring-1 ${ring} hover:ring-2 transition-all`}>
-                      <Icon className={`h-5 w-5 ${text}`} />
-                      <span className={`text-2xl font-bold tracking-tight ${text}`}>{value}</span>
-                      <span className="text-sm text-muted-foreground">{label}</span>
-                    </Link>
-                  ))}
+                <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                  <Calendar className="h-3.5 w-3.5" />
+                  {new Date().toLocaleDateString("en-US", { month: "long", day: "numeric" })}
                 </div>
               </div>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                {[
+                  { icon: AppWindow, value: totalApps, label: "tracked", sublabel: "Apps", bg: "bg-blue-50 dark:bg-blue-950/30", text: "text-blue-600 dark:text-blue-400", href: "/apps" },
+                  { icon: Search, value: totalKeywords, label: "tracked", sublabel: "Keywords", bg: "bg-purple-50 dark:bg-purple-950/30", text: "text-purple-600 dark:text-purple-400", href: "/keywords" },
+                  { icon: Star, value: totalCompetitors, label: "watched", sublabel: "Competitors", bg: "bg-amber-50 dark:bg-amber-950/30", text: "text-amber-600 dark:text-amber-400", href: "/competitors" },
+                  { icon: Bell, value: (() => {
+                    let alertCount = 0;
+                    for (const p of Object.values(highlights)) {
+                      const h = p?.highlights;
+                      if (h) {
+                        alertCount += (h.recentChanges?.length ?? 0) + (h.competitorAlerts?.length ?? 0);
+                      }
+                    }
+                    return alertCount;
+                  })(), label: "today", sublabel: "Alerts", bg: "bg-rose-50 dark:bg-rose-950/30", text: "text-rose-600 dark:text-rose-400", href: "/apps" },
+                ].map(({ icon: Icon, value, label, sublabel, bg, text, href }) => (
+                  <Link key={sublabel} href={href} className={`flex flex-col items-center gap-1 px-4 py-3 rounded-xl ${bg} hover:ring-1 hover:ring-border transition-all`}>
+                    <Icon className={`h-4 w-4 ${text}`} />
+                    <span className={`text-2xl font-bold tracking-tight ${text}`}>{value}</span>
+                    <span className="text-xs text-muted-foreground">{sublabel} {label}</span>
+                  </Link>
+                ))}
+              </div>
+              {/* Top highlight across all platforms */}
+              {(() => {
+                const allHighlights = Object.entries(highlights).flatMap(([pid, data]) => {
+                  if (!data?.highlights) return [];
+                  return selectHighlights(data.highlights, pid, 1);
+                });
+                allHighlights.sort((a, b) => b.score - a.score);
+                const top = allHighlights[0];
+                if (!top) return null;
+                return (
+                  <Link href={top.href} className="flex items-center gap-2 px-3 py-2 rounded-lg bg-muted/50 hover:bg-muted transition-colors text-sm">
+                    <Flame className="h-4 w-4 text-orange-500 shrink-0" />
+                    <span className="text-muted-foreground font-medium">Top highlight:</span>
+                    <span className="truncate">{top.detail}</span>
+                  </Link>
+                );
+              })()}
             </CardContent>
           </Card>
         </>

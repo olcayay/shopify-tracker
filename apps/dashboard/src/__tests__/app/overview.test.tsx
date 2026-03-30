@@ -170,19 +170,17 @@ describe("CrossPlatformOverviewPage", () => {
     });
   });
 
-  it("renders cross-platform summary with colored stat pills", async () => {
+  it("renders cross-platform hero summary with stat cards", async () => {
     setupDefaultMocks();
     render(<OverviewPage />);
     await waitFor(() => {
-      // Globe icon container and stat pill labels
+      // Hero title
       expect(screen.getByText("2 platforms")).toBeInTheDocument();
-      // Stat pills: Apps, Keywords, Competitors labels inside pills
-      const appsLabels = screen.getAllByText("Apps");
-      expect(appsLabels.length).toBeGreaterThan(0);
-      const keywordsLabels = screen.getAllByText("Keywords");
-      expect(keywordsLabels.length).toBeGreaterThan(0);
-      const competitorsLabels = screen.getAllByText("Competitors");
-      expect(competitorsLabels.length).toBeGreaterThan(0);
+      // Stat cards show labels like "Apps tracked", "Keywords tracked", "Competitors watched"
+      expect(screen.getByText("Apps tracked")).toBeInTheDocument();
+      expect(screen.getByText("Keywords tracked")).toBeInTheDocument();
+      expect(screen.getByText("Competitors watched")).toBeInTheDocument();
+      expect(screen.getByText("Alerts today")).toBeInTheDocument();
     });
   });
 
