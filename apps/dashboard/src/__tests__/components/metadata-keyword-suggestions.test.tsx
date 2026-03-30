@@ -345,7 +345,7 @@ describe("MetadataKeywordSuggestions", () => {
 
     await waitFor(() => {
       expect(
-        screen.getByText("No suggestions available. The app may not have enough metadata.")
+        screen.getByText("No suggestions available.")
       ).toBeInTheDocument();
     });
   });
