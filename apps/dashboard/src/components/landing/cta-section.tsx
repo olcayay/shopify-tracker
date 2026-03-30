@@ -20,7 +20,7 @@ export function CtaSection() {
           <div className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-4">
             <Button
               size="lg"
-              className="text-base px-8 h-12 bg-white text-violet-700 hover:bg-white/90"
+              className="text-base px-8 h-12 bg-background text-violet-700 hover:bg-white/90"
               asChild
             >
               <Link href="/register">

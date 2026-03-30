@@ -98,7 +98,7 @@ export function IconSidebar() {
               : pathname === item.href || pathname.startsWith(item.href + "/");
 
         const activeStyle = isActive && accentColor
-          ? { backgroundColor: accentColor, color: "white" }
+          ? { backgroundColor: accentColor, color: "var(--primary-foreground)" }
           : undefined;
 
         if (expanded) {

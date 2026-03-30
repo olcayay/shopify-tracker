@@ -39,7 +39,7 @@ export function PlatformFilterChips({
           >
             <span
               className="w-2 h-2 rounded-full shrink-0"
-              style={{ backgroundColor: isActive ? "white" : color }}
+              style={{ backgroundColor: isActive ? "var(--background)" : color }}
             />
             {label}
           </button>

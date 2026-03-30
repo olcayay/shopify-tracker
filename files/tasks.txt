@@ -5,6 +5,8 @@ Dark Mode Implementation (2026-03-30)
   PLA-497: Phase 3: Update tag-colors.ts with dark mode variants ✅
   PLA-498: Phase 4: Dark mode variants for platform brand colors ✅
   PLA-499: Phase 5: Fix dark mode shadows, rings, focus states ✅
+  PLA-496: Phase 2: Migrate hardcoded colors to semantic tokens (partial) ✅
+  PLA-503: Phase 2.5: Fix inline style colors (partial) ✅
 
 Design System Components (2026-03-30)
   PLA-507: Create shared PageHeader component ✅
