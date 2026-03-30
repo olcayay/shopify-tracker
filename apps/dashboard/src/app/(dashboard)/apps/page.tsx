@@ -14,11 +14,11 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Search, ChevronLeft, ChevronRight, ArrowUpDown, Star, LayoutList, Layers, ChevronDown } from "lucide-react";
+import { Search, ChevronLeft, ChevronRight, ArrowUpDown, Star, LayoutList, Group } from "lucide-react";
 import { TableSkeleton } from "@/components/skeletons";
 import { PlatformBadgeCell } from "@/components/platform-badge-cell";
 import { PlatformFilterChips } from "@/components/platform-filter-chips";
-import { getPlatformLabel, getPlatformColor } from "@/lib/platform-display";
+import { PLATFORM_DISPLAY, getPlatformColor } from "@/lib/platform-display";
 import type { PlatformId } from "@appranks/shared";
 
 interface AppItem {
@@ -60,7 +60,6 @@ export default function CrossPlatformAppsPage() {
   const [activePlatforms, setActivePlatforms] = useState<PlatformId[]>(enabledPlatforms);
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
   const [viewMode, setViewMode] = useState<ViewMode>(getStoredViewMode);
-  const [collapsedPlatforms, setCollapsedPlatforms] = useState<Set<string>>(new Set());
   const limit = viewMode === "grouped" ? 200 : 25;
 
   useEffect(() => {
@@ -73,15 +72,6 @@ export default function CrossPlatformAppsPage() {
     setViewMode(mode);
     localStorage.setItem("apps-view-mode", mode);
     setPage(1);
-  }
-
-  function toggleCollapse(platform: string) {
-    setCollapsedPlatforms((prev) => {
-      const next = new Set(prev);
-      if (next.has(platform)) next.delete(platform);
-      else next.add(platform);
-      return next;
-    });
   }
 
   const loadData = useCallback(async () => {
@@ -129,15 +119,18 @@ export default function CrossPlatformAppsPage() {
   const pagination = data?.pagination;
 
   const groupedByPlatform = useMemo(() => {
-    if (viewMode !== "grouped") return new Map<string, AppItem[]>();
-    const map = new Map<string, AppItem[]>();
-    for (const app of filtered) {
-      const list = map.get(app.platform) || [];
-      list.push(app);
-      map.set(app.platform, list);
-    }
-    return map;
+    if (viewMode !== "grouped") return {};
+    return filtered.reduce<Record<string, AppItem[]>>((acc, app) => {
+      (acc[app.platform] ??= []).push(app);
+      return acc;
+    }, {});
   }, [filtered, viewMode]);
+
+  const platformGroups = Object.entries(groupedByPlatform).sort(([a], [b]) => {
+    const labelA = PLATFORM_DISPLAY[a as PlatformId]?.label ?? a;
+    const labelB = PLATFORM_DISPLAY[b as PlatformId]?.label ?? b;
+    return labelA.localeCompare(labelB);
+  });
 
   function renderAppRow(app: AppItem, showPlatform: boolean) {
     return (
@@ -168,6 +161,8 @@ export default function CrossPlatformAppsPage() {
     );
   }
 
+  const colCount = viewMode === "grouped" ? 5 : 6;
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -175,24 +170,26 @@ export default function CrossPlatformAppsPage() {
           <h1 className="text-2xl font-bold">All Apps</h1>
           <p className="text-sm text-muted-foreground">Tracked and competitor apps across all platforms</p>
         </div>
-        <div className="flex gap-1 border rounded-md p-0.5">
+        <div className="flex items-center gap-1 rounded-md border p-0.5">
           <Button
-            variant={viewMode === "list" ? "default" : "ghost"}
+            variant={viewMode === "list" ? "secondary" : "ghost"}
             size="sm"
+            className="h-7 px-2 text-xs"
             onClick={() => changeViewMode("list")}
-            className="h-7 px-2"
-            aria-label="List view"
+            title="Flat list"
           >
-            <LayoutList className="h-4 w-4" />
+            <LayoutList className="h-3.5 w-3.5 mr-1" />
+            List
           </Button>
           <Button
-            variant={viewMode === "grouped" ? "default" : "ghost"}
+            variant={viewMode === "grouped" ? "secondary" : "ghost"}
             size="sm"
+            className="h-7 px-2 text-xs"
             onClick={() => changeViewMode("grouped")}
-            className="h-7 px-2"
-            aria-label="Grouped view"
+            title="Group by platform"
           >
-            <Layers className="h-4 w-4" />
+            <Group className="h-3.5 w-3.5 mr-1" />
+            By Platform
           </Button>
         </div>
       </div>
@@ -227,47 +224,64 @@ export default function CrossPlatformAppsPage() {
       </form>
 
       {loading && !data ? (
-        <TableSkeleton rows={10} cols={5} />
+        <TableSkeleton rows={10} cols={colCount} />
       ) : viewMode === "grouped" ? (
-        <div className="space-y-4">
-          {groupedByPlatform.size === 0 ? (
-            <p className="text-center text-muted-foreground py-8">No apps found.</p>
-          ) : (
-            Array.from(groupedByPlatform.entries()).map(([platform, apps]) => {
-              const isCollapsed = collapsedPlatforms.has(platform);
+        /* ── Grouped by platform view ── */
+        filtered.length === 0 ? (
+          <div className="text-center text-muted-foreground py-8 border rounded-md">No apps found.</div>
+        ) : (
+          <div className="space-y-6">
+            {platformGroups.map(([platform, apps]) => {
+              const color = getPlatformColor(platform as PlatformId);
+              const label = PLATFORM_DISPLAY[platform as PlatformId]?.label ?? platform;
               return (
-                <div key={platform} className="rounded-md border">
-                  <button
-                    onClick={() => toggleCollapse(platform)}
-                    className="flex items-center gap-2 w-full p-3 hover:bg-muted/50 transition-colors"
+                <div key={platform} className="rounded-md border overflow-hidden">
+                  <div
+                    className="flex items-center gap-2 px-4 py-2.5 border-b"
+                    style={{ borderLeftWidth: 3, borderLeftColor: color }}
                   >
-                    <ChevronDown className={`h-4 w-4 transition-transform ${isCollapsed ? "-rotate-90" : ""}`} />
-                    <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: getPlatformColor(platform) }} />
-                    <span className="font-medium">{getPlatformLabel(platform)}</span>
-                    <Badge variant="secondary">{apps.length}</Badge>
-                  </button>
-                  {!isCollapsed && (
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead>App</TableHead>
-                          <TableHead>Type</TableHead>
-                          <TableHead>Rating</TableHead>
-                          <TableHead>Reviews</TableHead>
-                          <TableHead>Pricing</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {apps.map((app) => renderAppRow(app, false))}
-                      </TableBody>
-                    </Table>
-                  )}
+                    <span
+                      className="w-2.5 h-2.5 rounded-full shrink-0"
+                      style={{ backgroundColor: color }}
+                    />
+                    <span className="font-semibold text-sm">{label}</span>
+                    <span className="text-xs text-muted-foreground">
+                      ({apps.length} app{apps.length !== 1 ? "s" : ""})
+                    </span>
+                  </div>
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>
+                          <button onClick={() => toggleSort("name")} className="flex items-center gap-1 hover:text-foreground">
+                            App <ArrowUpDown className="h-3 w-3" />
+                          </button>
+                        </TableHead>
+                        <TableHead>Type</TableHead>
+                        <TableHead>
+                          <button onClick={() => toggleSort("rating")} className="flex items-center gap-1 hover:text-foreground">
+                            Rating <ArrowUpDown className="h-3 w-3" />
+                          </button>
+                        </TableHead>
+                        <TableHead>
+                          <button onClick={() => toggleSort("reviews")} className="flex items-center gap-1 hover:text-foreground">
+                            Reviews <ArrowUpDown className="h-3 w-3" />
+                          </button>
+                        </TableHead>
+                        <TableHead>Pricing</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {apps.map((app) => renderAppRow(app, false))}
+                    </TableBody>
+                  </Table>
                 </div>
               );
-            })
-          )}
-        </div>
+            })}
+          </div>
+        )
       ) : (
+        /* ── Flat list view ── */
         <>
           <div className="rounded-md border">
             <Table>

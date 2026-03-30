@@ -49,6 +49,10 @@ vi.mock("@/components/platform-badge-cell", () => ({
 vi.mock("@/lib/platform-display", () => ({
   getPlatformLabel: (p: string) => p.charAt(0).toUpperCase() + p.slice(1),
   getPlatformColor: () => "#000",
+  PLATFORM_DISPLAY: {
+    shopify: { label: "Shopify", color: "#96bf48" },
+    salesforce: { label: "Salesforce", color: "#00a1e0" },
+  },
 }));
 
 vi.mock("@/components/platform-filter-chips", () => ({
@@ -342,8 +346,8 @@ describe("CrossPlatformAppsPage", () => {
     await waitFor(() => {
       expect(screen.getByText("My Shopify App")).toBeInTheDocument();
     });
-    expect(screen.getByLabelText("List view")).toBeInTheDocument();
-    expect(screen.getByLabelText("Grouped view")).toBeInTheDocument();
+    expect(screen.getByText("List")).toBeInTheDocument();
+    expect(screen.getByText("By Platform")).toBeInTheDocument();
   });
 
   it("switches to grouped view and shows platform groups", async () => {
@@ -352,31 +356,10 @@ describe("CrossPlatformAppsPage", () => {
     await waitFor(() => {
       expect(screen.getByText("My Shopify App")).toBeInTheDocument();
     });
-    fireEvent.click(screen.getByLabelText("Grouped view"));
+    fireEvent.click(screen.getByText("By Platform"));
     await waitFor(() => {
       expect(screen.getByText("Shopify")).toBeInTheDocument();
       expect(screen.getByText("Salesforce")).toBeInTheDocument();
-    });
-  });
-
-  it("collapses platform group on click", async () => {
-    setupFetchMocks();
-    render(<CrossPlatformAppsPage />);
-    await waitFor(() => {
-      expect(screen.getByText("My Shopify App")).toBeInTheDocument();
-    });
-    fireEvent.click(screen.getByLabelText("Grouped view"));
-    await waitFor(() => {
-      expect(screen.getByText("Shopify")).toBeInTheDocument();
-    });
-    // Tables should exist before collapse
-    const tablesBefore = document.querySelectorAll("table");
-    expect(tablesBefore.length).toBeGreaterThan(0);
-    // Collapse shopify group
-    fireEvent.click(screen.getByText("Shopify").closest("button")!);
-    await waitFor(() => {
-      // One fewer table after collapse
-      expect(document.querySelectorAll("table").length).toBe(tablesBefore.length - 1);
     });
   });
 });
