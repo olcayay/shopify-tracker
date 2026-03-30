@@ -40,6 +40,13 @@ vi.mock("@/components/skeletons", () => ({
   ),
 }));
 
+vi.mock("@/components/ui/tooltip", () => ({
+  Tooltip: ({ children }: any) => <div>{children}</div>,
+  TooltipTrigger: ({ children }: any) => <div>{children}</div>,
+  TooltipContent: ({ children }: any) => <div>{children}</div>,
+  TooltipProvider: ({ children }: any) => <div>{children}</div>,
+}));
+
 vi.mock("@/components/platform-badge-cell", () => ({
   PlatformBadgeCell: ({ platform }: any) => (
     <span data-testid={`platform-badge-${platform}`}>{platform}</span>
@@ -81,7 +88,11 @@ const mockKeywordsResponse = {
       keyword: "email marketing",
       slug: "email-marketing",
       isActive: true,
-      appCount: 12,
+      appCount: 2,
+      trackedApps: [
+        { iconUrl: "https://example.com/icon1.png", name: "Klaviyo", slug: "klaviyo", platform: "shopify" },
+        { iconUrl: "https://example.com/icon2.png", name: "Mailchimp", slug: "mailchimp", platform: "shopify" },
+      ],
       createdAt: "2025-01-01T00:00:00Z",
     },
     {
@@ -90,7 +101,10 @@ const mockKeywordsResponse = {
       keyword: "crm integration",
       slug: "crm-integration",
       isActive: false,
-      appCount: 5,
+      appCount: 1,
+      trackedApps: [
+        { iconUrl: null, name: "HubSpot CRM", slug: "hubspot-crm", platform: "salesforce" },
+      ],
       createdAt: "2025-02-15T00:00:00Z",
     },
   ],
@@ -113,6 +127,7 @@ function setupFetchMocks(overrides: { items?: any[]; pagination?: any } = {}) {
 describe("CrossPlatformKeywordsPage", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    localStorage.clear();
     mockUseAuth.mockReturnValue({
       ...mockAuthContext,
       account: {
@@ -177,12 +192,26 @@ describe("CrossPlatformKeywordsPage", () => {
     });
   });
 
-  it("renders tracked app count", async () => {
+  it("renders tracked app icons with links", async () => {
     setupFetchMocks();
     render(<CrossPlatformKeywordsPage />);
     await waitFor(() => {
-      expect(screen.getByText("12")).toBeInTheDocument();
-      expect(screen.getByText("5")).toBeInTheDocument();
+      expect(screen.getByAltText("Klaviyo")).toBeInTheDocument();
+      expect(screen.getByAltText("Mailchimp")).toBeInTheDocument();
+    });
+    // App icons should link to app detail pages
+    const klaviyoLink = screen.getByAltText("Klaviyo").closest("a");
+    expect(klaviyoLink).toHaveAttribute("href", "/apps/shopify/klaviyo");
+    const mailchimpLink = screen.getByAltText("Mailchimp").closest("a");
+    expect(mailchimpLink).toHaveAttribute("href", "/apps/shopify/mailchimp");
+  });
+
+  it("renders fallback initial for apps without icon", async () => {
+    setupFetchMocks();
+    render(<CrossPlatformKeywordsPage />);
+    await waitFor(() => {
+      // HubSpot CRM has no icon, should show "H" initial
+      expect(screen.getByText("H")).toBeInTheDocument();
     });
   });
 
@@ -274,7 +303,21 @@ describe("CrossPlatformKeywordsPage", () => {
       expect(screen.getByText("email marketing")).toBeInTheDocument();
     });
     expect(screen.getByText("Platform")).toBeInTheDocument();
-    expect(screen.getByText("Tracked Apps")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Tracked Apps/i })).toBeInTheDocument();
     expect(screen.getByText("Status")).toBeInTheDocument();
+  });
+
+  it("sorts by tracked apps when column header is clicked", async () => {
+    setupFetchMocks();
+    render(<CrossPlatformKeywordsPage />);
+    await waitFor(() => {
+      expect(screen.getByText("email marketing")).toBeInTheDocument();
+    });
+    const callCountBefore = mockFetchWithAuth.mock.calls.length;
+    fireEvent.click(screen.getByRole("button", { name: /Tracked Apps/i }));
+    await waitFor(() => {
+      const lastCall = mockFetchWithAuth.mock.calls[mockFetchWithAuth.mock.calls.length - 1][0];
+      expect(lastCall).toContain("sort=apps");
+    });
   });
 });

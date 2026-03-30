@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useMemo } from "react";
 import Link from "next/link";
 import { useAuth } from "@/lib/auth-context";
 import { Input } from "@/components/ui/input";
@@ -13,12 +13,22 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Search, ChevronLeft, ChevronRight, ArrowUpDown, LayoutList, Group } from "lucide-react";
+import { Search, ChevronLeft, ChevronRight, ArrowUpDown } from "lucide-react";
 import { TableSkeleton } from "@/components/skeletons";
 import { PlatformBadgeCell } from "@/components/platform-badge-cell";
 import { PlatformFilterChips } from "@/components/platform-filter-chips";
-import { PLATFORM_DISPLAY, getPlatformColor } from "@/lib/platform-display";
+import { ViewModeToggle, useViewMode } from "@/components/view-mode-toggle";
+import { PlatformGroupedTable, type PlatformGroup } from "@/components/platform-grouped-table";
+import { PLATFORM_DISPLAY } from "@/lib/platform-display";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import type { PlatformId } from "@appranks/shared";
+
+interface TrackedApp {
+  iconUrl: string | null;
+  name: string;
+  slug: string;
+  platform: string;
+}
 
 interface KeywordItem {
   id: number;
@@ -27,6 +37,7 @@ interface KeywordItem {
   slug: string;
   isActive: boolean;
   appCount: number;
+  trackedApps: TrackedApp[];
   createdAt: string;
 }
 
@@ -45,8 +56,8 @@ export default function CrossPlatformKeywordsPage() {
   const [sort, setSort] = useState("keyword");
   const [order, setOrder] = useState<"asc" | "desc">("asc");
   const [activePlatforms, setActivePlatforms] = useState<PlatformId[]>(enabledPlatforms);
-  const [groupByPlatform, setGroupByPlatform] = useState(false);
-  const limit = groupByPlatform ? 200 : 25;
+  const { viewMode, changeViewMode } = useViewMode("keywords-view-mode", () => setPage(1));
+  const limit = viewMode === "grouped" ? 200 : 25;
 
   useEffect(() => {
     if (enabledPlatforms.length > 0 && activePlatforms.length === 0) {
@@ -90,21 +101,28 @@ export default function CrossPlatformKeywordsPage() {
 
   const items = data?.items ?? [];
   const pagination = data?.pagination;
+  const emptyMessage = search ? "No keywords found matching your search." : "No tracked keywords.";
 
-  // Group items by platform for grouped view
-  const groupedItems = groupByPlatform
-    ? items.reduce<Record<string, KeywordItem[]>>((acc, item) => {
-        (acc[item.platform] ??= []).push(item);
-        return acc;
-      }, {})
-    : {};
-  const platformGroups = Object.entries(groupedItems).sort(([a], [b]) => {
-    const labelA = PLATFORM_DISPLAY[a as PlatformId]?.label ?? a;
-    const labelB = PLATFORM_DISPLAY[b as PlatformId]?.label ?? b;
-    return labelA.localeCompare(labelB);
-  });
+  const platformGroups = useMemo<PlatformGroup<KeywordItem>[]>(() => {
+    if (viewMode !== "grouped") return [];
+    const grouped = items.reduce<Record<string, KeywordItem[]>>((acc, item) => {
+      (acc[item.platform] ??= []).push(item);
+      return acc;
+    }, {});
+    return Object.entries(grouped)
+      .sort(([a], [b]) => {
+        const labelA = PLATFORM_DISPLAY[a as PlatformId]?.label ?? a;
+        const labelB = PLATFORM_DISPLAY[b as PlatformId]?.label ?? b;
+        return labelA.localeCompare(labelB);
+      })
+      .map(([platform, kws]) => ({ platform, items: kws }));
+  }, [items, viewMode]);
 
   function renderKeywordRow(kw: KeywordItem, showPlatform: boolean) {
+    const maxIcons = 5;
+    const visibleApps = kw.trackedApps?.slice(0, maxIcons) ?? [];
+    const remainingCount = kw.appCount - visibleApps.length;
+
     return (
       <TableRow key={kw.id}>
         {showPlatform && <TableCell><PlatformBadgeCell platform={kw.platform} /></TableCell>}
@@ -113,7 +131,40 @@ export default function CrossPlatformKeywordsPage() {
             {kw.keyword}
           </Link>
         </TableCell>
-        <TableCell className="text-muted-foreground">{kw.appCount}</TableCell>
+        <TableCell>
+          {visibleApps.length > 0 ? (
+            <TooltipProvider delayDuration={200}>
+              <div className="flex items-center -space-x-1.5">
+                {visibleApps.map((app, i) => (
+                  <Tooltip key={i}>
+                    <TooltipTrigger asChild>
+                      <Link
+                        href={`/apps/${app.platform}/${app.slug}`}
+                        className="shrink-0 rounded border border-background hover:z-10 hover:scale-110 transition-transform"
+                      >
+                        {app.iconUrl ? (
+                          <img src={app.iconUrl} alt={app.name} className="w-6 h-6 rounded" />
+                        ) : (
+                          <span className="w-6 h-6 rounded bg-muted flex items-center justify-center text-[10px] font-medium">
+                            {app.name.charAt(0)}
+                          </span>
+                        )}
+                      </Link>
+                    </TooltipTrigger>
+                    <TooltipContent side="top" className="text-xs">{app.name}</TooltipContent>
+                  </Tooltip>
+                ))}
+                {remainingCount > 0 && (
+                  <span className="w-6 h-6 rounded-full bg-muted flex items-center justify-center text-[10px] font-medium border border-background shrink-0">
+                    +{remainingCount}
+                  </span>
+                )}
+              </div>
+            </TooltipProvider>
+          ) : (
+            <span className="text-muted-foreground text-sm">0</span>
+          )}
+        </TableCell>
         <TableCell>
           <span className={`text-xs px-1.5 py-0.5 rounded ${kw.isActive ? "bg-green-100 text-green-700" : "bg-muted text-muted-foreground"}`}>
             {kw.isActive ? "Active" : "Paused"}
@@ -123,7 +174,24 @@ export default function CrossPlatformKeywordsPage() {
     );
   }
 
-  const colCount = groupByPlatform ? 3 : 4;
+  const groupedColCount = 3;
+  const flatColCount = 4;
+
+  const renderGroupedHeaders = () => (
+    <>
+      <TableHead>
+        <button onClick={() => toggleSort("keyword")} className="flex items-center gap-1 hover:text-foreground">
+          Keyword <ArrowUpDown className="h-3 w-3" />
+        </button>
+      </TableHead>
+      <TableHead>
+        <button onClick={() => toggleSort("apps")} className="flex items-center gap-1 hover:text-foreground">
+          Tracked Apps <ArrowUpDown className="h-3 w-3" />
+        </button>
+      </TableHead>
+      <TableHead>Status</TableHead>
+    </>
+  );
 
   return (
     <div className="space-y-6">
@@ -132,28 +200,7 @@ export default function CrossPlatformKeywordsPage() {
           <h1 className="text-2xl font-bold">All Keywords</h1>
           <p className="text-sm text-muted-foreground">Tracked keywords across all platforms</p>
         </div>
-        <div className="flex items-center gap-1 rounded-md border p-0.5">
-          <Button
-            variant={groupByPlatform ? "ghost" : "secondary"}
-            size="sm"
-            className="h-7 px-2 text-xs"
-            onClick={() => { setGroupByPlatform(false); setPage(1); }}
-            title="Flat list"
-          >
-            <LayoutList className="h-3.5 w-3.5 mr-1" />
-            List
-          </Button>
-          <Button
-            variant={groupByPlatform ? "secondary" : "ghost"}
-            size="sm"
-            className="h-7 px-2 text-xs"
-            onClick={() => { setGroupByPlatform(true); setPage(1); }}
-            title="Group by platform"
-          >
-            <Group className="h-3.5 w-3.5 mr-1" />
-            By Platform
-          </Button>
-        </div>
+        <ViewModeToggle viewMode={viewMode} onChangeViewMode={changeViewMode} />
       </div>
 
       <PlatformFilterChips
@@ -171,56 +218,17 @@ export default function CrossPlatformKeywordsPage() {
       </form>
 
       {loading && !data ? (
-        <TableSkeleton rows={10} cols={colCount} />
-      ) : groupByPlatform ? (
-        /* ── Grouped by platform view ── */
-        items.length === 0 ? (
-          <div className="text-center text-muted-foreground py-8 border rounded-md">
-            {search ? "No keywords found matching your search." : "No tracked keywords."}
-          </div>
-        ) : (
-          <div className="space-y-6">
-            {platformGroups.map(([platform, platformItems]) => {
-              const color = getPlatformColor(platform as PlatformId);
-              const label = PLATFORM_DISPLAY[platform as PlatformId]?.label ?? platform;
-              return (
-                <div key={platform} className="rounded-md border overflow-hidden">
-                  <div
-                    className="flex items-center gap-2 px-4 py-2.5 border-b"
-                    style={{ borderLeftWidth: 3, borderLeftColor: color }}
-                  >
-                    <span
-                      className="w-2.5 h-2.5 rounded-full shrink-0"
-                      style={{ backgroundColor: color }}
-                    />
-                    <span className="font-semibold text-sm">{label}</span>
-                    <span className="text-xs text-muted-foreground">
-                      ({platformItems.length} keyword{platformItems.length !== 1 ? "s" : ""})
-                    </span>
-                  </div>
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>
-                          <button onClick={() => toggleSort("keyword")} className="flex items-center gap-1 hover:text-foreground">
-                            Keyword <ArrowUpDown className="h-3 w-3" />
-                          </button>
-                        </TableHead>
-                        <TableHead>Tracked Apps</TableHead>
-                        <TableHead>Status</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {platformItems.map((kw) => renderKeywordRow(kw, false))}
-                    </TableBody>
-                  </Table>
-                </div>
-              );
-            })}
-          </div>
-        )
+        <TableSkeleton rows={10} cols={viewMode === "grouped" ? groupedColCount : flatColCount} />
+      ) : viewMode === "grouped" ? (
+        <PlatformGroupedTable
+          groups={platformGroups}
+          colCount={groupedColCount}
+          renderHeaderRow={renderGroupedHeaders}
+          renderRow={(kw) => renderKeywordRow(kw, false)}
+          entityLabel="keyword"
+          emptyMessage={emptyMessage}
+        />
       ) : (
-        /* ── Flat list view ── */
         <>
           <div className="rounded-md border">
             <Table>
@@ -232,7 +240,11 @@ export default function CrossPlatformKeywordsPage() {
                       Keyword <ArrowUpDown className="h-3 w-3" />
                     </button>
                   </TableHead>
-                  <TableHead>Tracked Apps</TableHead>
+                  <TableHead>
+                    <button onClick={() => toggleSort("apps")} className="flex items-center gap-1 hover:text-foreground">
+                      Tracked Apps <ArrowUpDown className="h-3 w-3" />
+                    </button>
+                  </TableHead>
                   <TableHead>Status</TableHead>
                 </TableRow>
               </TableHeader>
@@ -240,7 +252,7 @@ export default function CrossPlatformKeywordsPage() {
                 {items.length === 0 ? (
                   <TableRow>
                     <TableCell colSpan={4} className="text-center text-muted-foreground py-8">
-                      {search ? "No keywords found matching your search." : "No tracked keywords."}
+                      {emptyMessage}
                     </TableCell>
                   </TableRow>
                 ) : (
@@ -252,7 +264,7 @@ export default function CrossPlatformKeywordsPage() {
         </>
       )}
 
-      {pagination && pagination.totalPages > 1 && !groupByPlatform && (
+      {pagination && pagination.totalPages > 1 && viewMode !== "grouped" && (
         <div className="flex items-center justify-between">
           <span className="text-sm text-muted-foreground">
             Page {pagination.page} of {pagination.totalPages} ({pagination.total} keywords)
