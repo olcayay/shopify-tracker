@@ -1,3 +1,19 @@
+PLA-448: Shared AI service layer (2026-03-30)
+================================================================
+Created packages/shared/src/ai-service.ts with:
+- computeCost(model, promptTokens, completionTokens) — model pricing table for 8 models
+- callAI(options) — wraps OpenAI call with retry logic, timing, cost calculation, JSON parsing
+  Uses dependency injection (AIClient interface) so shared doesn't depend on openai package
+- logAICall(db, aiLogsTable, params) — inserts into ai_logs, silently catches errors
+  Uses DI for db and table reference so shared doesn't depend on @appranks/db
+- isRateLimitOrQuota(err) — detects 429/quota errors for caller error handling
+
+Refactored apps/api/src/routes/research.ts to use callAI + logAICall instead of
+inline OpenAI calls. No behavior change — same model, temperature, timeout, prompts.
+
+21 unit tests covering cost calculation, retry logic, response parsing, error handling,
+and logging.
+
 PLA-458: Fix duplicate key constraint error in non-Shopify category scraper (2026-03-30)
 ================================================================
 Root cause: `recordNormalizedAppRankings` in category-scraper.ts (used by all non-Shopify

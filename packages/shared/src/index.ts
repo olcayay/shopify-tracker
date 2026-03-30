@@ -208,6 +208,23 @@ export type { LogLevel, LogContext } from "./logger.js";
 export { validateEnv, API_REQUIRED_ENV, SCRAPER_REQUIRED_ENV } from "./env.js";
 export type { EnvValidationError } from "./env.js";
 
+// AI Service
+export {
+  AI_MODEL_PRICING,
+  computeCost,
+  callAI,
+  logAICall,
+  isRateLimitOrQuota,
+} from "./ai-service.js";
+export type {
+  ModelPricing,
+  AIClient,
+  AICompletionResponse,
+  CallAIOptions,
+  CallAIResult,
+  LogAICallParams,
+} from "./ai-service.js";
+
 // Notifications
 export { NOTIFICATION_TYPES, NOTIFICATION_CATEGORIES, NOTIFICATION_TYPE_IDS } from "./notification-types.js";
 export type { NotificationType, NotificationCategory } from "./notification-types.js";

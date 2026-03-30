@@ -27,7 +27,11 @@ import {
 import {
   extractKeywordsFromAppMetadata,
   computeKeywordOpportunity,
+  callAI,
+  logAICall,
+  isRateLimitOrQuota,
 } from "@appranks/shared";
+import type { AIClient } from "@appranks/shared";
 import { requireRole } from "../middleware/authorize.js";
 import { requireIdempotencyKey } from "../middleware/idempotency.js";
 import { getPlatformFromQuery } from "../utils/platform.js";
@@ -1570,8 +1574,8 @@ export const researchRoutes: FastifyPluginAsync = async (app) => {
       // Build compressed summary
       const summary = buildResearchSummary(data, project.name);
 
-      // Call OpenAI
-      const openai = new OpenAI({ apiKey });
+      // Call OpenAI via shared AI service
+      const openai = new OpenAI({ apiKey }) as unknown as AIClient;
 
       const systemPrompt = `You are a Shopify app market analyst and product strategist. Given competitive research data, generate 2-4 distinct virtual app concepts for the Shopify App Store.
 
@@ -1699,41 +1703,28 @@ Generate differentiated app concepts. Consider:
       };
 
       let aiResponse: any;
-      const aiStartTime = Date.now();
+      let aiResult: Awaited<ReturnType<typeof callAI>>;
       let aiStatus: "success" | "error" | "timeout" = "success";
       let aiErrorMessage: string | undefined;
-      let aiResponseContent: string | undefined;
-      let aiPromptTokens = 0;
-      let aiCompletionTokens = 0;
-      let aiTotalTokens = 0;
       try {
-        const completion = await openai.chat.completions.create({
+        aiResult = await callAI({
+          client: openai,
+          systemPrompt,
+          userPrompt,
           model: "gpt-4o",
           temperature: 0.8,
-          max_tokens: 4000,
-          messages: [
-            { role: "system", content: systemPrompt },
-            { role: "user", content: userPrompt },
-          ],
-          response_format: {
-            type: "json_schema",
-            json_schema: responseSchema,
-          },
-        }, { timeout: 120000 });
-
-        const content = completion.choices[0]?.message?.content;
-        if (!content) throw new Error("Empty response from AI");
-        aiResponseContent = content;
-        aiResponse = JSON.parse(content);
-
-        aiPromptTokens = completion.usage?.prompt_tokens ?? 0;
-        aiCompletionTokens = completion.usage?.completion_tokens ?? 0;
-        aiTotalTokens = completion.usage?.total_tokens ?? 0;
+          maxTokens: 4000,
+          responseFormat: { type: "json_schema", json_schema: responseSchema },
+          timeout: 120000,
+          parseJson: true,
+        });
+        if (!aiResult.content) throw new Error("Empty response from AI");
+        aiResponse = aiResult.parsed ?? JSON.parse(aiResult.content);
       } catch (err: any) {
         aiStatus = err?.code === "ETIMEDOUT" || err?.message?.includes("timeout") ? "timeout" : "error";
         aiErrorMessage = err?.message || String(err);
-        if (err?.status === 429 || err?.code === "insufficient_quota") {
-          const isQuota = err?.code === "insufficient_quota" || err?.error?.code === "insufficient_quota";
+        const { isRateLimit, isQuota } = isRateLimitOrQuota(err);
+        if (isRateLimit || isQuota) {
           return reply.code(429).send({
             error: isQuota
               ? "OpenAI quota exceeded — check your plan and billing at platform.openai.com"
@@ -1743,37 +1734,34 @@ Generate differentiated app concepts. Consider:
         request.log.error(err, "OpenAI error");
         return reply.code(502).send({ error: "AI service error, try again" });
       } finally {
-        const durationMs = Date.now() - aiStartTime;
-        const costUsd = ((aiPromptTokens * 2.5 + aiCompletionTokens * 10) / 1_000_000).toFixed(6);
-        db.insert(aiLogs)
-          .values({
-            accountId,
-            userId: request.user.userId,
-            platform,
-            productType: "research_virtual_app",
-            triggerType: "manual",
-            productId: id,
-            model: "gpt-4o",
-            systemPrompt,
-            userPrompt,
-            responseContent: aiResponseContent ?? null,
-            promptTokens: aiPromptTokens,
-            completionTokens: aiCompletionTokens,
-            totalTokens: aiTotalTokens,
-            costUsd,
-            durationMs,
-            status: aiStatus,
-            errorMessage: aiErrorMessage ?? null,
-            metadata: {
-              temperature: 0.8,
-              responseFormat: "json_schema",
-              outputCount: aiResponse?.apps?.length ?? 0,
-              promptChars: systemPrompt.length + userPrompt.length,
-            },
-            ipAddress: request.ip,
-            userAgent: request.headers["user-agent"] ?? null,
-          })
-          .catch((logErr: any) => request.log.error(logErr, "Failed to insert AI log"));
+        const r = aiResult!;
+        logAICall(db, aiLogs, {
+          accountId,
+          userId: request.user.userId,
+          platform,
+          productType: "research_virtual_app",
+          triggerType: "manual",
+          productId: id,
+          model: "gpt-4o",
+          systemPrompt,
+          userPrompt,
+          responseContent: r?.content ?? null,
+          promptTokens: r?.promptTokens ?? 0,
+          completionTokens: r?.completionTokens ?? 0,
+          totalTokens: r?.totalTokens ?? 0,
+          costUsd: r?.costUsd ?? "0",
+          durationMs: r?.durationMs ?? 0,
+          status: aiStatus,
+          errorMessage: aiErrorMessage ?? null,
+          metadata: {
+            temperature: 0.8,
+            responseFormat: "json_schema",
+            outputCount: aiResponse?.apps?.length ?? 0,
+            promptChars: systemPrompt.length + userPrompt.length,
+          },
+          ipAddress: request.ip,
+          userAgent: request.headers["user-agent"] ?? null,
+        });
       }
 
       // Build lookup for valid categories from full structure (with URLs/handles)
