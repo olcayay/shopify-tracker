@@ -1,3 +1,16 @@
+PLA-450: AI competitor suggestion engine (2026-03-30)
+================================================================
+Created packages/shared/src/ai-competitor-suggestions.ts implementing AI competitive
+intelligence with 6 evaluation dimensions:
+- Value Proposition Overlap (30%), Target Audience Match (20%), Feature Functionality
+  Overlap (20%), Market Positioning (15%), Keyword/Search Overlap (10%),
+  Category Proximity (5%)
+- Competitor classification: direct, indirect, alternative, aspirational
+- Hybrid scoring: finalScore = 0.6 × AI + 0.4 × Jaccard × 100
+- Flags: "semantic_competitor" (AI>70, Jaccard<0.1), "superficially_similar" (Jaccard>0.5, AI<30)
+- preFilterCandidates: Jaccard top 48 + sightings, cap at 60, compress features to top 5
+- 20 unit tests covering filtering, input building, score merging, normalization
+
 PLA-449: AI keyword suggestion engine (2026-03-30)
 ================================================================
 Created packages/shared/src/ai-keyword-suggestions.ts implementing an ASO-inspired

@@ -225,6 +225,28 @@ export type {
   LogAICallParams,
 } from "./ai-service.js";
 
+// AI Competitor Suggestions
+export {
+  COMPETITOR_DIMENSION_WEIGHTS,
+  HYBRID_WEIGHTS,
+  COMPETITOR_RESPONSE_SCHEMA,
+  preFilterCandidates,
+  buildCompetitorSuggestionInput,
+  generateCompetitorSuggestions,
+  mergeCompetitorScores,
+} from "./ai-competitor-suggestions.js";
+export type {
+  CompetitorType,
+  AICompetitorScore,
+  AICompetitorResponse,
+  CompetitorCandidate,
+  CompetitorSuggestionInput,
+  MergedCompetitor,
+  JaccardScore,
+  GenerateCompetitorSuggestionsOptions,
+  GenerateCompetitorSuggestionsResult,
+} from "./ai-competitor-suggestions.js";
+
 // AI Keyword Suggestions
 export {
   ASO_WEIGHTS,
