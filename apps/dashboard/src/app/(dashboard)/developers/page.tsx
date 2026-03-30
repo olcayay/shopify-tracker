@@ -13,7 +13,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Search, ChevronLeft, ChevronRight, ArrowUpDown, Bookmark } from "lucide-react";
+import { Search, ChevronLeft, ChevronRight, ArrowUpDown, Bookmark, Users } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { TableSkeleton } from "@/components/skeletons";
 import { PlatformBadgeCell } from "@/components/platform-badge-cell";
@@ -43,6 +43,16 @@ interface Developer {
   isStarred: boolean;
 }
 
+interface TrackedDeveloper {
+  id: number;
+  slug: string;
+  name: string;
+  platformCount: number;
+  platforms: string[];
+  isStarred: boolean;
+  trackedApps: { slug: string; name: string; platform: string; iconUrl: string | null }[];
+}
+
 interface DeveloperResponse {
   developers: Developer[];
   pagination: { page: number; limit: number; total: number; totalPages: number };
@@ -52,6 +62,7 @@ export default function DevelopersPage() {
   const { fetchWithAuth, account } = useAuth();
   const enabledPlatforms = (account?.enabledPlatforms ?? []) as PlatformId[];
   const [data, setData] = useState<DeveloperResponse | null>(null);
+  const [trackedDevs, setTrackedDevs] = useState<TrackedDeveloper[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
@@ -82,6 +93,19 @@ export default function DevelopersPage() {
   }, [fetchWithAuth, page, search, sort, order, activePlatforms, limit]);
 
   useEffect(() => { loadData(); }, [loadData]);
+
+  // Fetch tracked app developers once
+  useEffect(() => {
+    (async () => {
+      try {
+        const res = await fetchWithAuth("/api/developers/tracked");
+        if (res.ok) {
+          const body = await res.json();
+          setTrackedDevs(body.developers ?? []);
+        }
+      } catch { /* ignore */ }
+    })();
+  }, [fetchWithAuth]);
 
   function toggleSort(field: string) {
     if (sort === field) {
@@ -295,6 +319,69 @@ export default function DevelopersPage() {
           />
         )}
       </div>
+
+      {/* My Developers section — developers of tracked apps */}
+      {trackedDevs.length > 0 && (
+        <div className="rounded-lg border bg-card">
+          <div className="flex items-center gap-2 px-4 py-3 border-b">
+            <Users className="h-4 w-4 text-muted-foreground" />
+            <h2 className="font-semibold text-sm">My Developers</h2>
+            <span className="text-xs text-muted-foreground">Developers of your tracked apps</span>
+          </div>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Developer</TableHead>
+                <TableHead>My Tracked Apps</TableHead>
+                <TableHead>Platforms</TableHead>
+                <TableHead className="w-36 text-right">Platform Count</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {trackedDevs.map((dev) => (
+                <TableRow key={dev.id}>
+                  <TableCell>
+                    <Link href={`/developers/${dev.slug}`} className="font-medium hover:underline">
+                      {dev.name}
+                    </Link>
+                  </TableCell>
+                  <TableCell>
+                    <div className="flex flex-wrap gap-1.5">
+                      {dev.trackedApps.map((app) => (
+                        <Link
+                          key={`${app.platform}-${app.slug}`}
+                          href={`/${app.platform}/apps/${app.slug}`}
+                          className="flex items-center gap-1 text-xs px-1.5 py-0.5 rounded bg-muted hover:bg-muted/80 transition-colors"
+                          title={app.name}
+                        >
+                          {app.iconUrl && (
+                            <img src={app.iconUrl} alt="" className="w-4 h-4 rounded shrink-0" />
+                          )}
+                          <span className="truncate max-w-[120px]">{app.name}</span>
+                        </Link>
+                      ))}
+                    </div>
+                  </TableCell>
+                  <TableCell>
+                    <div className="flex flex-wrap gap-1.5">
+                      {dev.platforms
+                        .filter((p) => enabledPlatforms.length === 0 || enabledPlatforms.includes(p as PlatformId))
+                        .map((p) => (
+                          <PlatformBadgeCell key={p} platform={p} />
+                        ))}
+                    </div>
+                  </TableCell>
+                  <TableCell className="text-muted-foreground text-right">
+                    {enabledPlatforms.length > 0
+                      ? dev.platforms.filter((p) => enabledPlatforms.includes(p as PlatformId)).length
+                      : dev.platformCount}
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
+      )}
 
       {loading && !data ? (
         <TableSkeleton rows={10} cols={viewMode === "grouped" ? groupedColCount : flatColCount} />

@@ -105,6 +105,9 @@ function setupFetchMocks(
     pagination: overrides.pagination ?? mockDevelopersResponse.pagination,
   };
   mockFetchWithAuth.mockImplementation((url: string) => {
+    if (url.includes("/api/developers/tracked")) {
+      return Promise.resolve(makeJsonResponse({ developers: [] }));
+    }
     if (url.includes("/api/developers")) {
       return Promise.resolve(makeJsonResponse(response));
     }
@@ -385,6 +388,9 @@ describe("DevelopersPage (cross-platform)", () => {
 
   it("toggles bookmark on click with optimistic update", async () => {
     mockFetchWithAuth.mockImplementation((url: string, opts?: any) => {
+      if (url.includes("/api/developers/tracked")) {
+        return Promise.resolve(makeJsonResponse({ developers: [] }));
+      }
       if (url.includes("/api/developers")) {
         return Promise.resolve(makeJsonResponse(mockDevelopersResponse));
       }
@@ -460,6 +466,9 @@ describe("DevelopersPage (cross-platform)", () => {
   it("re-sorts list after starring a developer (starred moves to top)", async () => {
     // Set up with unstarred developer first, starred second
     mockFetchWithAuth.mockImplementation((url: string) => {
+      if (url.includes("/api/developers/tracked")) {
+        return Promise.resolve(makeJsonResponse({ developers: [] }));
+      }
       if (url.includes("/api/developers")) {
         return Promise.resolve(
           makeJsonResponse({
@@ -515,6 +524,49 @@ describe("DevelopersPage (cross-platform)", () => {
       expect(links[0].textContent).toBe("Alpha Dev");
       expect(links[1].textContent).toBe("Beta Dev");
     });
+  });
+
+  it("shows My Developers section when tracked developers exist", async () => {
+    mockFetchWithAuth.mockImplementation((url: string) => {
+      if (url.includes("/api/developers/tracked")) {
+        return Promise.resolve(
+          makeJsonResponse({
+            developers: [
+              {
+                id: 100,
+                slug: "tracked-dev",
+                name: "Tracked Dev Co",
+                platformCount: 1,
+                platforms: ["shopify"],
+                isStarred: false,
+                trackedApps: [
+                  { slug: "my-app", name: "My App", platform: "shopify", iconUrl: "https://example.com/tracked.png" },
+                ],
+              },
+            ],
+          })
+        );
+      }
+      if (url.includes("/api/developers")) {
+        return Promise.resolve(makeJsonResponse(mockDevelopersResponse));
+      }
+      return Promise.resolve(makeJsonResponse(null));
+    });
+    render(<DevelopersPage />);
+    await waitFor(() => {
+      expect(screen.getByText("My Developers")).toBeInTheDocument();
+      expect(screen.getByText("Tracked Dev Co")).toBeInTheDocument();
+      expect(screen.getByText("My App")).toBeInTheDocument();
+    });
+  });
+
+  it("hides My Developers section when no tracked developers", async () => {
+    setupFetchMocks();
+    render(<DevelopersPage />);
+    await waitFor(() => {
+      expect(screen.getByText("Acme Inc")).toBeInTheDocument();
+    });
+    expect(screen.queryByText("My Developers")).not.toBeInTheDocument();
   });
 
   it("pagination buttons are disabled when on first page", async () => {

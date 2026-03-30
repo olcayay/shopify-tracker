@@ -136,6 +136,62 @@ export async function developerRoutes(app: FastifyInstance) {
     }
   );
 
+  // GET /api/developers/tracked — developers of user's tracked apps with their tracked apps
+  app.get("/tracked", async (request) => {
+    const accountId = (request as any).user?.accountId || null;
+    if (!accountId) return { developers: [] };
+
+    const rows: any[] = await db.execute(sql`
+      SELECT
+        g.id, g.slug, g.name,
+        COUNT(DISTINCT pd.platform) AS platform_count,
+        ARRAY_AGG(DISTINCT pd.platform) FILTER (WHERE pd.platform IS NOT NULL) AS platforms,
+        CASE WHEN asd.id IS NOT NULL THEN true ELSE false END AS is_starred,
+        (
+          SELECT COALESCE(json_agg(json_build_object(
+            'slug', ta.slug,
+            'name', ta.name,
+            'platform', ta.platform,
+            'icon_url', ta.icon_url
+          )), '[]'::json)
+          FROM apps ta
+          JOIN account_tracked_apps ata ON ata.app_id = ta.id AND ata.account_id = ${accountId}
+          JOIN app_snapshots ts ON ts.app_id = ta.id
+            AND ts.id = (SELECT ts2.id FROM app_snapshots ts2 WHERE ts2.app_id = ta.id ORDER BY ts2.scraped_at DESC LIMIT 1)
+          JOIN platform_developers pd2 ON pd2.global_developer_id = g.id
+            AND ta.platform = pd2.platform
+          WHERE ts.developer->>'name' = pd2.name
+        ) AS tracked_apps
+      FROM global_developers g
+      JOIN platform_developers pd ON pd.global_developer_id = g.id
+      JOIN apps a ON a.platform = pd.platform
+      JOIN app_snapshots s ON s.app_id = a.id
+        AND s.id = (SELECT s2.id FROM app_snapshots s2 WHERE s2.app_id = a.id ORDER BY s2.scraped_at DESC LIMIT 1)
+      JOIN account_tracked_apps ata ON ata.app_id = a.id AND ata.account_id = ${accountId}
+      LEFT JOIN account_starred_developers asd ON asd.global_developer_id = g.id AND asd.account_id = ${accountId}
+      WHERE s.developer->>'name' = pd.name
+      GROUP BY g.id, asd.id
+      ORDER BY (asd.id IS NOT NULL) DESC, g.name ASC
+    `);
+
+    return {
+      developers: rows.map((r: any) => ({
+        id: r.id,
+        slug: r.slug,
+        name: r.name,
+        platformCount: Number(r.platform_count || 0),
+        platforms: r.platforms || [],
+        isStarred: r.is_starred === true || r.is_starred === "true",
+        trackedApps: (r.tracked_apps || []).map((a: any) => ({
+          slug: a.slug,
+          name: a.name,
+          platform: a.platform,
+          iconUrl: a.icon_url,
+        })),
+      })),
+    };
+  });
+
   // GET /api/developers/:slug — developer profile + all apps across platforms
   app.get(
     "/:slug",
