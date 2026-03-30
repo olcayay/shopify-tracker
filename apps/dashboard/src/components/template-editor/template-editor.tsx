@@ -63,7 +63,7 @@ export function TemplateEditor({
   // Sync external value changes
   useEffect(() => {
     if (editor && editor.getText() !== value) {
-      editor.commands.setContent(value, false);
+      editor.commands.setContent(value, { emitUpdate: false });
     }
   }, [editor, value]);
 
