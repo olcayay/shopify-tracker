@@ -1,3 +1,14 @@
+PLA-482: Shared PlatformGroupedTable component (2026-03-30)
+================================================================
+Created reusable PlatformGroupedTable component:
+- components/platform-grouped-table.tsx: generic component with single-table layout
+- Single <Table> for all platform groups — columns are automatically aligned across groups
+- Platform group headers as full-width <TableRow> with colSpan, colored left-border, dot, label, count
+- Collapsible groups via click on platform header (ChevronDown/ChevronRight)
+- Props: groups, colCount, renderHeaderRow, renderRow, entityLabel, singleHeader, emptyMessage
+- singleHeader=true (default): one shared header at top; false: repeat headers per group
+- 9 unit tests: rendering, collapse/expand, pluralization, empty state, per-group headers, styling
+
 PLA-481+487: Shared ViewModeToggle component with per-page localStorage (2026-03-30)
 ================================================================
 Created reusable ViewModeToggle component + useViewMode hook:
