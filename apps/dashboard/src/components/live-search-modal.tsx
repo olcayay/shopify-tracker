@@ -8,7 +8,7 @@ import { useAuth } from "@/lib/auth-context";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Search, X, ExternalLink } from "lucide-react";
-import { StarAppButton } from "@/components/star-app-button";
+import { CompetitorButton } from "@/components/competitor-button";
 import { buildExternalSearchUrl, getPlatformName } from "@/lib/platform-urls";
 import { PLATFORMS, type PlatformId } from "@appranks/shared";
 
@@ -285,7 +285,7 @@ export function LiveSearchModal({
                             ? `${app.rating_count.toLocaleString()}`
                             : "—"}
                         </span>
-                        <StarAppButton
+                        <CompetitorButton
                           appSlug={app.app_slug}
                           appName={app.app_name}
                           initialStarred={isCompetitor}
@@ -364,7 +364,7 @@ export function LiveSearchModal({
                             ? `${app.rating_count.toLocaleString()}`
                             : "—"}
                         </span>
-                        <StarAppButton
+                        <CompetitorButton
                           appSlug={app.app_slug}
                           appName={app.app_name}
                           initialStarred={isCompetitor}

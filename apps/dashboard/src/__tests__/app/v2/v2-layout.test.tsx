@@ -24,8 +24,8 @@ vi.mock(
   })
 );
 
-vi.mock("@/components/star-app-button", () => ({
-  StarAppButton: ({ appName }: any) => (
+vi.mock("@/components/competitor-button", () => ({
+  CompetitorButton: ({ appName }: any) => (
     <button data-testid="star-button">Star {appName}</button>
   ),
 }));

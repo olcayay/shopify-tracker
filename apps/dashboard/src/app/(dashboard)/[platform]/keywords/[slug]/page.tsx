@@ -15,7 +15,7 @@ import {
 import { ExternalLink } from "lucide-react";
 import { RankingChart } from "@/components/ranking-chart";
 import { TrackKeywordButton } from "./track-button";
-import { StarAppButton } from "@/components/star-app-button";
+import { CompetitorButton } from "@/components/competitor-button";
 import { LiveSearchTrigger } from "@/components/live-search-trigger";
 import { AdminScraperTrigger } from "@/components/admin-scraper-trigger";
 import { KeywordAppResults } from "./app-results";
@@ -276,7 +276,7 @@ export default async function KeywordDetailPage({
                       ) : "\u2014"}
                     </TableCell>
                     <TableCell>
-                      <StarAppButton
+                      <CompetitorButton
                         appSlug={app.app_slug}
                         appName={app.app_name}
                         initialStarred={competitorSlugs.has(app.app_slug)}
@@ -407,7 +407,7 @@ export default async function KeywordDetailPage({
                       {ad.daysActive}
                     </TableCell>
                     <TableCell>
-                      <StarAppButton
+                      <CompetitorButton
                         appSlug={ad.appSlug}
                         appName={ad.appName}
                         initialStarred={competitorSlugs.has(ad.appSlug)}

@@ -3,9 +3,9 @@ import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { setupAuthMock } from "../test-utils";
 
-// Mock star-app-button since it uses useAuth internally
-vi.mock("@/components/star-app-button", () => ({
-  StarAppButton: ({ appSlug }: { appSlug: string }) => (
+// Mock competitor-button since it uses useAuth internally
+vi.mock("@/components/competitor-button", () => ({
+  CompetitorButton: ({ appSlug }: { appSlug: string }) => (
     <button data-testid={`star-${appSlug}`}>Star</button>
   ),
 }));

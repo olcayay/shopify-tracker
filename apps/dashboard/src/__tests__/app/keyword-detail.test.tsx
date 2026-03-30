@@ -74,8 +74,8 @@ vi.mock("@/components/keyword-suggestions-trigger", () => ({
   ),
 }));
 
-vi.mock("@/components/star-app-button", () => ({
-  StarAppButton: ({ appSlug }: any) => (
+vi.mock("@/components/competitor-button", () => ({
+  CompetitorButton: ({ appSlug }: any) => (
     <button data-testid={`star-app-${appSlug}`}>Star</button>
   ),
 }));

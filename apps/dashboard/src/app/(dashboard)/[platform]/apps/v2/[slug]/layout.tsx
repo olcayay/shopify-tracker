@@ -2,7 +2,7 @@ import Link from "next/link";
 import { AppIcon } from "@/components/app-icon";
 import { getApp, getAppMembership, getAppScores } from "@/lib/api";
 import { TrackAppButton } from "../../[slug]/track-button";
-import { StarAppButton } from "@/components/star-app-button";
+import { CompetitorButton } from "@/components/competitor-button";
 import { AdminScraperTrigger } from "@/components/admin-scraper-trigger";
 import { buildExternalAppUrl, getPlatformName } from "@/lib/platform-urls";
 import { PLATFORMS, isPlatformId, developerNameToSlug, type PlatformId } from "@appranks/shared";
@@ -96,7 +96,7 @@ export default async function V2AppDetailLayout({
             <ExternalLink className="h-4 w-4 text-muted-foreground" />
           </a>
           <AdminScraperTrigger scraperType="app_details" slug={app.slug} label="Scrape App" />
-          <StarAppButton
+          <CompetitorButton
             appSlug={app.slug}
             appName={app.name}
             initialStarred={app.isCompetitor}

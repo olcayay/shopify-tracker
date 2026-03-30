@@ -16,7 +16,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { StarAppButton } from "@/components/star-app-button";
+import { CompetitorButton } from "@/components/competitor-button";
 import { useFormatDate } from "@/lib/format-date";
 import {
   ArrowUpDown,
@@ -427,7 +427,7 @@ export function KeywordAppResults({
                       )}
                     </TableCell>
                     <TableCell>
-                      <StarAppButton
+                      <CompetitorButton
                         appSlug={app.app_slug}
                         appName={app.app_name}
                         initialStarred={competitorSet.has(app.app_slug)}

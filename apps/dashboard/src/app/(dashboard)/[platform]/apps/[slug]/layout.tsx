@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ExternalLink } from "lucide-react";
 import { TrackAppButton } from "./track-button";
-import { StarAppButton } from "@/components/star-app-button";
+import { CompetitorButton } from "@/components/competitor-button";
 import { AdminScraperTrigger } from "@/components/admin-scraper-trigger";
 import { AppNav } from "./app-nav";
 import { ClassicViewBanner } from "@/components/v2/classic-view-banner";
@@ -87,7 +87,7 @@ export default async function AppDetailLayout({
             slug={app.slug}
             label="Scrape App"
           />
-          <StarAppButton
+          <CompetitorButton
             appSlug={app.slug}
             appName={app.name}
             initialStarred={app.isCompetitor}
