@@ -26,7 +26,7 @@ const steps: { icon: LucideIcon; title: string; description: string }[] = [
   },
   {
     icon: Star,
-    title: "Star Categories",
+    title: "Bookmark Categories",
     description: "Bookmark what matters most to you.",
   },
   {

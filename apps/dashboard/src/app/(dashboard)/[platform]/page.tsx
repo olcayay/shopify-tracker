@@ -600,11 +600,11 @@ export default function OverviewPage() {
         </CardContent>
       </Card>
 
-      {/* Starred Features List */}
+      {/* Bookmarked Features List */}
       {caps.hasFeatureTaxonomy && <Card>
         <CardHeader className="pb-3">
           <div className="flex items-center justify-between">
-            <CardTitle className="text-base">Starred Features ({features.length})</CardTitle>
+            <CardTitle className="text-base">Bookmarked Features ({features.length})</CardTitle>
             <Link href={`/${platform}/features`} className="text-sm text-primary hover:underline">
               View all
             </Link>
@@ -613,9 +613,9 @@ export default function OverviewPage() {
         <CardContent>
           {features.length === 0 ? (
             <p className="text-sm text-muted-foreground">
-              No starred features yet.{" "}
+              No bookmarked features yet.{" "}
               <Link href={`/${platform}/features`} className="text-primary hover:underline">
-                Star features
+                Bookmark features
               </Link>
             </p>
           ) : (

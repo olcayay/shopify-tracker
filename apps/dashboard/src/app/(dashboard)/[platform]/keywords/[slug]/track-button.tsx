@@ -86,7 +86,7 @@ export function TrackKeywordButton({
       ];
 
       if (items.length === 0) {
-        setErrorMsg("Follow an app or create a research project first");
+        setErrorMsg("Add an app or create a research project first");
         setShowError(true);
         setLoading(false);
         return;

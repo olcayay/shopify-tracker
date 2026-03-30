@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useAuth } from "@/lib/auth-context";
 import { Button } from "@/components/ui/button";
 import { ConfirmModal } from "@/components/confirm-modal";
-import { Star } from "lucide-react";
+import { Bookmark } from "lucide-react";
 
 export function StarFeatureButton({
   featureHandle,
@@ -66,15 +66,15 @@ export function StarFeatureButton({
         disabled={loading}
         className="gap-1.5"
       >
-        <Star className={`h-4 w-4 ${starred ? "fill-yellow-400 text-yellow-400" : ""}`} />
-        {starred ? "Starred" : "Star Feature"}
+        <Bookmark className={`h-4 w-4 ${starred ? "fill-amber-500 text-amber-500" : ""}`} />
+        {starred ? "Bookmarked" : "Bookmark Feature"}
       </Button>
 
       <ConfirmModal
         open={showConfirm}
-        title="Unstar Feature"
-        description={`Are you sure you want to unstar "${featureTitle}"?`}
-        confirmLabel="Unstar"
+        title="Remove Bookmark"
+        description={`Remove bookmark for "${featureTitle}"?`}
+        confirmLabel="Remove"
         onConfirm={() => {
           setShowConfirm(false);
           doUnstar();

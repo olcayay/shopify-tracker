@@ -23,7 +23,7 @@ describe("HowItWorksSection", () => {
     expect(screen.getAllByText("Add Your Apps").length).toBeGreaterThanOrEqual(1);
     expect(screen.getAllByText("Set Up Keywords").length).toBeGreaterThanOrEqual(1);
     expect(screen.getAllByText("Add Competitors").length).toBeGreaterThanOrEqual(1);
-    expect(screen.getAllByText("Star Categories").length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText("Bookmark Categories").length).toBeGreaterThanOrEqual(1);
     expect(screen.getAllByText("Watch Your Dashboard").length).toBeGreaterThanOrEqual(1);
     expect(screen.getAllByText("Get Daily Digests").length).toBeGreaterThanOrEqual(1);
   });

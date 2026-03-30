@@ -20,7 +20,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import {
   X,
-  Star,
+  Bookmark,
   Search,
   ChevronRight,
   ChevronDown,
@@ -287,9 +287,9 @@ export default function FeaturesPage() {
                 >
                   <span>{s.title}</span>
                   {starredHandles.has(s.handle) ? (
-                    <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
+                    <Bookmark className="h-4 w-4 fill-amber-500 text-amber-500" />
                   ) : (
-                    <Star className="h-4 w-4 text-muted-foreground" />
+                    <Bookmark className="h-4 w-4 text-muted-foreground" />
                   )}
                 </button>
               ))}
@@ -306,12 +306,12 @@ export default function FeaturesPage() {
         </div>
       )}
 
-      {/* Starred Features */}
+      {/* Bookmarked Features */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
-            Starred Features ({features.length})
+            <Bookmark className="h-4 w-4 fill-amber-500 text-amber-500" />
+            Bookmarked Features ({features.length})
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -391,7 +391,7 @@ export default function FeaturesPage() {
             </Table>
           ) : (
             <p className="text-center text-muted-foreground py-8">
-              No starred features yet. Use the search above to find and star features.
+              No bookmarked features yet. Use the search above to find and bookmark features.
             </p>
           )}
         </CardContent>
@@ -525,10 +525,10 @@ export default function FeaturesPage() {
                                         }
                                         className={isStarred ? "ml-1 shrink-0" : "opacity-0 group-hover:opacity-100 transition-opacity ml-1 shrink-0"}
                                       >
-                                        <Star className={`h-3.5 w-3.5 ${isStarred ? "fill-yellow-400 text-yellow-400" : "text-muted-foreground hover:text-yellow-400"}`} />
+                                        <Bookmark className={`h-3.5 w-3.5 ${isStarred ? "fill-amber-500 text-amber-500" : "text-muted-foreground hover:text-amber-500"}`} />
                                       </button>
                                     ) : isStarred ? (
-                                      <Star className="h-3.5 w-3.5 fill-yellow-400 text-yellow-400 shrink-0 ml-1" />
+                                      <Bookmark className="h-3.5 w-3.5 fill-amber-500 text-amber-500 shrink-0 ml-1" />
                                     ) : null}
                                   </div>
                                 );
@@ -546,9 +546,9 @@ export default function FeaturesPage() {
 
       <ConfirmModal
         open={!!confirmRemove}
-        title="Unstar Feature"
-        description={`Are you sure you want to unstar "${confirmRemove?.title}"?`}
-        confirmLabel="Unstar"
+        title="Remove Bookmark"
+        description={`Remove bookmark for "${confirmRemove?.title}"?`}
+        confirmLabel="Remove"
         onConfirm={() => {
           if (confirmRemove) {
             unstarFeature(confirmRemove.handle, confirmRemove.title);
