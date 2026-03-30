@@ -234,7 +234,7 @@ export default function DevelopersPage() {
                 ))}
               </div>
             </TableCell>
-            <TableCell className="text-muted-foreground">{dev.platformCount}</TableCell>
+            <TableCell className="text-muted-foreground text-right">{dev.platformCount}</TableCell>
           </>
         )}
       </TableRow>
@@ -302,7 +302,7 @@ export default function DevelopersPage() {
       ) : (
         <>
           <div className="rounded-md border">
-            <Table>
+            <Table className="table-fixed">
               <TableHeader>
                 <TableRow>
                   <TableHead className="w-10"></TableHead>
@@ -311,14 +311,14 @@ export default function DevelopersPage() {
                       Developer <ArrowUpDown className="h-3 w-3" />
                     </button>
                   </TableHead>
-                  <TableHead>
+                  <TableHead className="w-36">
                     <button onClick={() => toggleSort("apps")} className="flex items-center gap-1 hover:text-foreground">
                       Apps <ArrowUpDown className="h-3 w-3" />
                     </button>
                   </TableHead>
-                  <TableHead>Platforms</TableHead>
-                  <TableHead>
-                    <button onClick={() => toggleSort("platforms")} className="flex items-center gap-1 hover:text-foreground">
+                  <TableHead className="w-56">Platforms</TableHead>
+                  <TableHead className="w-36 text-right">
+                    <button onClick={() => toggleSort("platforms")} className="flex items-center gap-1 justify-end hover:text-foreground">
                       Platform Count <ArrowUpDown className="h-3 w-3" />
                     </button>
                   </TableHead>

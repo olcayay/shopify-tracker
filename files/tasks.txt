@@ -10,6 +10,8 @@ Shared Cross-Platform Components (2026-03-30)
 Standalone Fixes (2026-03-30)
   PLA-488: Starred developers should respect current sort order ✅
   PLA-490: Add Apps column with clickable icons to developers table ✅
+  PLA-489: Right-align platform count column in developers table ✅
+  PLA-491: Fix column width shifting on sort/pagination in developers table ✅
 
 UI Redesign & Platform Filtering (2026-03-30)
   PLA-465: Phase 1: Redesign 'Follow' button → 'My App' with new icon and color ✅
