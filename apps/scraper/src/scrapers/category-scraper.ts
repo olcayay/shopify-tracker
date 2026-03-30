@@ -951,7 +951,7 @@ export class CategoryScraper {
           scrapeRunId: runId,
           scrapedAt: now,
           position,
-        });
+        }).onConflictDoNothing();
       } else {
         log.debug("position clamped to null, skipping ranking", { slug: app.slug, rawPosition, categorySlug });
       }

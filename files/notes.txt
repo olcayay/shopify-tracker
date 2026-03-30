@@ -1,3 +1,19 @@
+PLA-458: Fix duplicate key constraint error in non-Shopify category scraper (2026-03-30)
+================================================================
+Root cause: `recordNormalizedAppRankings` in category-scraper.ts (used by all non-Shopify
+platforms) was missing `.onConflictDoNothing()` on the `appCategoryRankings` insert.
+The Shopify path (`recordAppRankings`) already had it. When the same app appeared in
+multiple pages or overlapping scrape runs on the same day, the unique index
+`idx_app_cat_rank_daily_unique` on `(app_id, category_slug, DATE(scraped_at))` raised
+a duplicate key violation.
+
+Fix: Added `.onConflictDoNothing()` to the insert at line ~948, matching the Shopify path.
+This is a one-line fix that protects all non-Shopify platforms (Salesforce, Canva, Wix,
+WordPress, Google Workspace, Atlassian, Zoom, Zoho, Zendesk, HubSpot).
+
+Tests: 3 new tests in category-scraper-rankings.test.ts verifying onConflictDoNothing
+is called, duplicate inserts don't throw, and sponsored apps are skipped.
+
 Email & Notification Infrastructure: Phase 0 (2026-03-30)
 ================================================================
 PLA-415: Added 3 new BullMQ queues (email-instant, email-bulk, notifications)

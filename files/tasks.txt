@@ -1,3 +1,6 @@
+Bug Fix (2026-03-30)
+  PLA-458: Fix duplicate key constraint error in non-Shopify category scraper ✅
+
 Email & Notification Infrastructure: Phase 0 (2026-03-30)
   PLA-415: Add 3 new BullMQ queues (email-instant, email-bulk, notifications) ✅
   PLA-417: Create transactional email templates (password-reset, verification, invitation, login-alert, 2fa) ✅
