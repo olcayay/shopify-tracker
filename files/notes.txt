@@ -1,3 +1,22 @@
+PLA-449: AI keyword suggestion engine (2026-03-30)
+================================================================
+Created packages/shared/src/ai-keyword-suggestions.ts implementing an ASO-inspired
+5-tier keyword suggestion engine:
+
+- ASO Weight Model: App Title (10x), Subtitle (7x), Introduction (5x), Features (4x),
+  Categories (3x), Description (2x), Pricing Plans (1x), Developer (0.5x)
+- 5-Tier Keyword Model: Direct Match (90-100), Feature Keywords (70-89), Problem/Intent
+  (50-69), Adjacent/Semantic (30-49), Long-tail Opportunities (10-29)
+- buildKeywordSuggestionInput() — collects app metadata + context into prompt format
+- generateKeywordSuggestions() — calls AI with ASO system prompt, validates/clamps output
+- mergeKeywords() — hybrid scoring combining AI + n-gram results:
+  - Both AI + n-gram → 20% score boost (capped at 100)
+  - N-gram only → normalized to 0-80 range, assigned tier 2
+  - AI only → original score
+- Uses gpt-4o-mini by default (cheaper for keyword generation)
+- JSON schema validation for structured output
+- 27 unit tests covering input building, response parsing, score merging, normalization
+
 PLA-448: Shared AI service layer (2026-03-30)
 ================================================================
 Created packages/shared/src/ai-service.ts with:

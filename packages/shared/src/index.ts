@@ -225,6 +225,28 @@ export type {
   LogAICallParams,
 } from "./ai-service.js";
 
+// AI Keyword Suggestions
+export {
+  ASO_WEIGHTS,
+  KEYWORD_TIERS,
+  KEYWORD_RESPONSE_SCHEMA,
+  buildKeywordSuggestionInput,
+  generateKeywordSuggestions,
+  mergeKeywords,
+} from "./ai-keyword-suggestions.js";
+export type {
+  KeywordTier,
+  SearchIntent,
+  Competitiveness,
+  AIKeywordSuggestion,
+  AIKeywordResponse,
+  KeywordSuggestionInput,
+  MergedKeyword,
+  NgramKeyword,
+  GenerateKeywordSuggestionsOptions,
+  GenerateKeywordSuggestionsResult,
+} from "./ai-keyword-suggestions.js";
+
 // Notifications
 export { NOTIFICATION_TYPES, NOTIFICATION_CATEGORIES, NOTIFICATION_TYPE_IDS } from "./notification-types.js";
 export type { NotificationType, NotificationCategory } from "./notification-types.js";
