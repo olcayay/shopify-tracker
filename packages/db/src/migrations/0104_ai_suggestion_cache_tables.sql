@@ -3,7 +3,7 @@
 CREATE TABLE IF NOT EXISTS ai_keyword_suggestions (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   account_id UUID NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
-  app_id UUID NOT NULL REFERENCES apps(id) ON DELETE CASCADE,
+  app_id INTEGER NOT NULL REFERENCES apps(id) ON DELETE CASCADE,
   platform VARCHAR(20) NOT NULL,
   app_summary TEXT,
   primary_category VARCHAR(200),
@@ -34,7 +34,7 @@ CREATE INDEX IF NOT EXISTS idx_ai_kw_sugg_status
 CREATE TABLE IF NOT EXISTS ai_competitor_suggestions (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   account_id UUID NOT NULL REFERENCES accounts(id) ON DELETE CASCADE,
-  app_id UUID NOT NULL REFERENCES apps(id) ON DELETE CASCADE,
+  app_id INTEGER NOT NULL REFERENCES apps(id) ON DELETE CASCADE,
   platform VARCHAR(20) NOT NULL,
   app_summary TEXT,
   market_context TEXT,

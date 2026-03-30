@@ -26,8 +26,20 @@ import {
   categories,
   categorySnapshots,
   sqlArray,
+  aiKeywordSuggestions,
+  aiCompetitorSuggestions,
+  aiLogs,
 } from "@appranks/db";
-import { computeWeightedPowerScore } from "@appranks/shared";
+import {
+  computeWeightedPowerScore,
+  callAI,
+  logAICall,
+  isRateLimitOrQuota,
+  generateKeywordSuggestions,
+  mergeKeywords,
+} from "@appranks/shared";
+import type { AIClient, NgramKeyword } from "@appranks/shared";
+import OpenAI from "openai";
 import { requireRole } from "../middleware/authorize.js";
 import { requireIdempotencyKey } from "../middleware/idempotency.js";
 import { getPlatformFromQuery } from "../utils/platform.js";
@@ -2021,9 +2033,10 @@ export const accountTrackingRoutes: FastifyPluginAsync = async (app) => {
     async (request, reply) => {
       const { accountId } = request.user;
       const slug = decodeURIComponent(request.params.slug);
-      const { limit: limitStr = String(PAGINATION_DEFAULT_LIMIT), debug = "false" } = request.query as {
+      const { limit: limitStr = String(PAGINATION_DEFAULT_LIMIT), debug = "false", source = "all" } = request.query as {
         limit?: string;
         debug?: string;
+        source?: string;
       };
       const isDebug = debug === "true";
       const maxResults = Math.min(parseInt(limitStr, 10) || PAGINATION_DEFAULT_LIMIT, PAGINATION_MAX_LIMIT);
@@ -2091,7 +2104,54 @@ export const accountTrackingRoutes: FastifyPluginAsync = async (app) => {
         trackedKws.map((k) => k.keyword.toLowerCase())
       );
 
-      // Extract keyword suggestions
+      // Check AI cache status
+      const [aiCache] = await db
+        .select()
+        .from(aiKeywordSuggestions)
+        .where(
+          and(
+            eq(aiKeywordSuggestions.accountId, accountId),
+            eq(aiKeywordSuggestions.appId, appRow.id)
+          )
+        )
+        .limit(1);
+
+      const now = new Date();
+      const aiStatus = !aiCache
+        ? "not_generated"
+        : aiCache.status === "generating"
+          ? "generating"
+          : aiCache.status === "success" && aiCache.expiresAt && aiCache.expiresAt > now
+            ? "available"
+            : aiCache.status === "success"
+              ? "expired"
+              : "error";
+
+      // For "ai" source, return AI-only results from cache
+      if (source === "ai") {
+        if (aiStatus !== "available") {
+          return { suggestions: [], aiStatus, aiGeneratedAt: aiCache?.generatedAt ?? null };
+        }
+        const mergedKws = (aiCache!.mergedKeywords as any[]) || [];
+        return {
+          suggestions: mergedKws.slice(0, maxResults).map((k: any) => ({
+            keyword: k.keyword,
+            score: k.score,
+            tier: k.tier,
+            rationale: k.rationale,
+            source: k.source,
+            competitiveness: k.competitiveness,
+            searchIntent: k.searchIntent,
+            fromAI: k.fromAI,
+            fromNgram: k.fromNgram,
+            tracked: trackedSet.has(k.keyword.toLowerCase()),
+          })),
+          aiStatus,
+          aiGeneratedAt: aiCache!.generatedAt,
+        };
+      }
+
+      // Extract n-gram keyword suggestions
       const { extractKeywordsFromAppMetadata } = await import(
         "@appranks/shared"
       );
@@ -2105,6 +2165,28 @@ export const accountTrackingRoutes: FastifyPluginAsync = async (app) => {
         categories: (snapshot?.categories as any[]) ?? [],
       });
 
+      // For "all" source with available AI cache, return AI merged results
+      if (source === "all" && aiStatus === "available") {
+        const mergedKws = (aiCache!.mergedKeywords as any[]) || [];
+        return {
+          suggestions: mergedKws.slice(0, maxResults).map((k: any) => ({
+            keyword: k.keyword,
+            score: k.score,
+            tier: k.tier,
+            rationale: k.rationale,
+            source: k.source,
+            competitiveness: k.competitiveness,
+            searchIntent: k.searchIntent,
+            fromAI: k.fromAI,
+            fromNgram: k.fromNgram,
+            tracked: trackedSet.has(k.keyword.toLowerCase()),
+          })),
+          aiStatus,
+          aiGeneratedAt: aiCache!.generatedAt,
+        };
+      }
+
+      // Default: n-gram results (source=ngram or source=all without AI cache)
       const suggestions = allSuggestions.slice(0, maxResults).map((s: any) => ({
         keyword: s.keyword,
         score: Math.round(s.score * 10) / 10,
@@ -2120,6 +2202,8 @@ export const accountTrackingRoutes: FastifyPluginAsync = async (app) => {
 
       return {
         suggestions,
+        aiStatus,
+        aiGeneratedAt: aiCache?.generatedAt ?? null,
         ...(isDebug && {
           weights: (await import("@appranks/shared")).FIELD_WEIGHTS,
           metadata: {
@@ -2129,6 +2213,197 @@ export const accountTrackingRoutes: FastifyPluginAsync = async (app) => {
           },
         }),
       };
+    }
+  );
+
+  // POST /api/account/tracked-apps/:slug/ai-keyword-suggestions/generate
+  app.post<{ Params: { slug: string } }>(
+    "/tracked-apps/:slug/ai-keyword-suggestions/generate",
+    async (request, reply) => {
+      const { accountId, userId } = request.user;
+      const slug = decodeURIComponent(request.params.slug);
+      const platform = getPlatformFromQuery(request.query as Record<string, unknown>);
+
+      const apiKey = process.env.OPENAI_API_KEY;
+      if (!apiKey) {
+        return reply.code(503).send({ error: "AI service not configured" });
+      }
+
+      // Look up app
+      const [appRow] = await db
+        .select({ id: apps.id, name: apps.name, subtitle: apps.appCardSubtitle })
+        .from(apps)
+        .where(and(eq(apps.slug, slug), eq(apps.platform, platform)))
+        .limit(1);
+      if (!appRow) return reply.code(404).send({ error: "App not found" });
+
+      // Verify tracked
+      const [tracked] = await db
+        .select({ id: accountTrackedApps.id })
+        .from(accountTrackedApps)
+        .where(and(eq(accountTrackedApps.accountId, accountId), eq(accountTrackedApps.appId, appRow.id)))
+        .limit(1);
+      if (!tracked) return reply.code(404).send({ error: "App not tracked" });
+
+      // Check existing cache — return if still valid
+      const [existing] = await db
+        .select()
+        .from(aiKeywordSuggestions)
+        .where(and(eq(aiKeywordSuggestions.accountId, accountId), eq(aiKeywordSuggestions.appId, appRow.id)))
+        .limit(1);
+
+      const now = new Date();
+      if (existing?.status === "success" && existing.expiresAt && existing.expiresAt > now) {
+        return { cached: true, ...formatAiKeywordResult(existing) };
+      }
+      if (existing?.status === "generating") {
+        return reply.code(409).send({ error: "Generation already in progress" });
+      }
+
+      // Mark as generating
+      if (existing) {
+        await db.update(aiKeywordSuggestions)
+          .set({ status: "generating", errorMessage: null })
+          .where(eq(aiKeywordSuggestions.id, existing.id));
+      } else {
+        await db.insert(aiKeywordSuggestions).values({
+          accountId, appId: appRow.id, platform, status: "generating",
+        }).onConflictDoNothing();
+      }
+
+      try {
+        // Collect context data
+        const [snapshot] = await db
+          .select({
+            appIntroduction: appSnapshots.appIntroduction,
+            appDetails: appSnapshots.appDetails,
+            features: appSnapshots.features,
+            categories: appSnapshots.categories,
+          })
+          .from(appSnapshots)
+          .where(eq(appSnapshots.appId, appRow.id))
+          .orderBy(desc(appSnapshots.scrapedAt))
+          .limit(1);
+
+        const trackedKws = await db
+          .select({ keyword: trackedKeywords.keyword })
+          .from(accountTrackedKeywords)
+          .innerJoin(trackedKeywords, eq(trackedKeywords.id, accountTrackedKeywords.keywordId))
+          .where(and(eq(accountTrackedKeywords.accountId, accountId), eq(accountTrackedKeywords.trackedAppId, appRow.id)));
+
+        // N-gram top 20
+        const { extractKeywordsFromAppMetadata } = await import("@appranks/shared");
+        const ngramAll = extractKeywordsFromAppMetadata({
+          name: appRow.name ?? "",
+          subtitle: appRow.subtitle,
+          introduction: snapshot?.appIntroduction ?? null,
+          description: snapshot?.appDetails ?? null,
+          features: (snapshot?.features as string[]) ?? [],
+          categories: (snapshot?.categories as any[]) ?? [],
+        });
+        const ngramTop20: NgramKeyword[] = ngramAll.slice(0, 20).map((s: any) => ({
+          keyword: s.keyword,
+          score: s.score,
+        }));
+
+        const categoryNames = ((snapshot?.categories as any[]) ?? []).map((c: any) => c.title || c.name || c).filter(Boolean);
+
+        // Call AI
+        const openaiClient = new OpenAI({ apiKey }) as unknown as AIClient;
+        const { response: aiResponse, aiResult } = await generateKeywordSuggestions({
+          client: openaiClient,
+          input: {
+            name: appRow.name ?? "",
+            subtitle: appRow.subtitle,
+            introduction: snapshot?.appIntroduction ?? null,
+            description: snapshot?.appDetails ?? null,
+            features: (snapshot?.features as string[]) ?? [],
+            categories: categoryNames,
+            platform,
+            existingKeywords: trackedKws.map(k => k.keyword),
+            ngramTopKeywords: ngramTop20,
+          },
+        });
+
+        // Merge AI + n-gram
+        const merged = mergeKeywords(aiResponse.keywords, ngramTop20, 50);
+
+        // Log to ai_logs
+        await logAICall(db, aiLogs, {
+          accountId, userId, platform,
+          productType: "ai_keyword_suggestions",
+          productId: String(appRow.id),
+          model: aiResult.model,
+          systemPrompt: "[keyword-suggestion-engine]",
+          userPrompt: `App: ${appRow.name} (${slug})`,
+          responseContent: aiResult.content,
+          promptTokens: aiResult.promptTokens,
+          completionTokens: aiResult.completionTokens,
+          totalTokens: aiResult.totalTokens,
+          costUsd: aiResult.costUsd,
+          durationMs: aiResult.durationMs,
+          status: "success",
+          triggerType: "manual",
+        });
+
+        // Update cache
+        const expiresAt = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000); // 7 days
+        const cacheData = {
+          platform,
+          appSummary: aiResponse.appSummary,
+          primaryCategory: aiResponse.primaryCategory,
+          targetAudience: aiResponse.targetAudience,
+          keywords: aiResponse.keywords,
+          ngramKeywords: ngramTop20,
+          mergedKeywords: merged,
+          model: aiResult.model,
+          promptTokens: aiResult.promptTokens,
+          completionTokens: aiResult.completionTokens,
+          costUsd: aiResult.costUsd,
+          durationMs: aiResult.durationMs,
+          status: "success" as const,
+          errorMessage: null,
+          generatedAt: now,
+          expiresAt,
+        };
+
+        await db.insert(aiKeywordSuggestions)
+          .values({ accountId, appId: appRow.id, ...cacheData })
+          .onConflictDoUpdate({
+            target: [aiKeywordSuggestions.accountId, aiKeywordSuggestions.appId],
+            set: cacheData,
+          });
+
+        return {
+          cached: false,
+          appSummary: aiResponse.appSummary,
+          primaryCategory: aiResponse.primaryCategory,
+          targetAudience: aiResponse.targetAudience,
+          keywords: merged,
+          aiKeywordCount: aiResponse.keywords.length,
+          ngramKeywordCount: ngramTop20.length,
+          mergedCount: merged.length,
+          model: aiResult.model,
+          costUsd: aiResult.costUsd,
+          durationMs: aiResult.durationMs,
+          generatedAt: now,
+          expiresAt,
+        };
+      } catch (err: any) {
+        // Update cache status to error
+        await db.update(aiKeywordSuggestions)
+          .set({ status: "error", errorMessage: err?.message || String(err) })
+          .where(and(eq(aiKeywordSuggestions.accountId, accountId), eq(aiKeywordSuggestions.appId, appRow.id)));
+
+        const { isRateLimit, isQuota } = isRateLimitOrQuota(err);
+        if (isRateLimit || isQuota) {
+          return reply.code(429).send({
+            error: isQuota ? "AI quota exceeded" : "AI service busy, try again",
+          });
+        }
+        request.log.error(err, "AI keyword generation failed");
+        return reply.code(502).send({ error: "AI generation failed" });
+      }
     }
   );
 
@@ -2426,3 +2701,20 @@ export const accountTrackingRoutes: FastifyPluginAsync = async (app) => {
     }
   );
 };
+
+function formatAiKeywordResult(row: any) {
+  return {
+    appSummary: row.appSummary,
+    primaryCategory: row.primaryCategory,
+    targetAudience: row.targetAudience,
+    keywords: row.mergedKeywords || [],
+    aiKeywordCount: (row.keywords as any[])?.length ?? 0,
+    ngramKeywordCount: (row.ngramKeywords as any[])?.length ?? 0,
+    mergedCount: (row.mergedKeywords as any[])?.length ?? 0,
+    model: row.model,
+    costUsd: row.costUsd,
+    durationMs: row.durationMs,
+    generatedAt: row.generatedAt,
+    expiresAt: row.expiresAt,
+  };
+}

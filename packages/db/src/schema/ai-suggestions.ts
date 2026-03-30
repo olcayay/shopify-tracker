@@ -21,7 +21,7 @@ export const aiKeywordSuggestions = pgTable(
     accountId: uuid("account_id")
       .notNull()
       .references(() => accounts.id, { onDelete: "cascade" }),
-    appId: uuid("app_id")
+    appId: integer("app_id")
       .notNull()
       .references(() => apps.id, { onDelete: "cascade" }),
     platform: varchar("platform", { length: 20 }).notNull(),
@@ -62,7 +62,7 @@ export const aiCompetitorSuggestions = pgTable(
     accountId: uuid("account_id")
       .notNull()
       .references(() => accounts.id, { onDelete: "cascade" }),
-    appId: uuid("app_id")
+    appId: integer("app_id")
       .notNull()
       .references(() => apps.id, { onDelete: "cascade" }),
     platform: varchar("platform", { length: 20 }).notNull(),

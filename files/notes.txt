@@ -1,3 +1,25 @@
+PLA-452: AI keyword suggestion API endpoints (2026-03-30)
+================================================================
+Modified GET /api/account/tracked-apps/:slug/keyword-suggestions:
+- Added ?source=all|ngram|ai query parameter (default: all)
+  - all: returns AI merged if cached, falls back to n-gram
+  - ngram: original behavior (n-gram only)
+  - ai: AI results only (from cache)
+- Added aiStatus field: available | generating | expired | not_generated
+- Added aiGeneratedAt field
+
+Added POST /api/account/tracked-apps/:slug/ai-keyword-suggestions/generate:
+- Checks cache first — returns if valid and not expired
+- 409 if already generating
+- Collects context: snapshot, tracked keywords, n-gram top 20
+- Calls generateKeywordSuggestions (gpt-4o-mini)
+- Merges AI + n-gram via mergeKeywords (50 max)
+- Stores in ai_keyword_suggestions cache (7-day TTL)
+- Logs to ai_logs
+- Error handling: timeout, rate limit, quota
+
+Also fixed: ai_suggestion tables app_id changed from UUID to INTEGER (apps.id is serial)
+
 PLA-451: AI suggestion cache tables (2026-03-30)
 ================================================================
 Migration 0104: ai_keyword_suggestions + ai_competitor_suggestions tables.
