@@ -1,3 +1,14 @@
+PLA-481+487: Shared ViewModeToggle component with per-page localStorage (2026-03-30)
+================================================================
+Created reusable ViewModeToggle component + useViewMode hook:
+- components/view-mode-toggle.tsx: shared component matching competitors page style
+- Buttons: "List" (LayoutList icon) + "By Platform" (Group icon), secondary/ghost variants
+- useViewMode hook: manages state + localStorage persistence with configurable storageKey
+- storageKey is required — enforces per-page isolation (apps-view-mode, keywords-view-mode, etc.)
+- Default fallback to "list" when no stored value or invalid value
+- onChange callback for parent to react (e.g., reset pagination)
+- 11 unit tests: component rendering, localStorage read/write, per-page isolation, callbacks
+
 PLA-465: Redesign 'Follow' button → 'My App' (2026-03-30)
 ================================================================
 Changed "Follow/Following" → "My App" across entire dashboard:
