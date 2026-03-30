@@ -50,7 +50,8 @@ interface DeveloperProfile {
 
 export default function PlatformDeveloperPage() {
   const { platform, slug } = useParams();
-  const { fetchWithAuth } = useAuth();
+  const { fetchWithAuth, account } = useAuth();
+  const enabledPlatforms = (account?.enabledPlatforms ?? []) as PlatformId[];
   const [data, setData] = useState<DeveloperProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -118,7 +119,10 @@ export default function PlatformDeveloperPage() {
     );
   }
 
-  const { developer, platforms } = data;
+  const { developer } = data;
+  const platforms = enabledPlatforms.length > 0
+    ? data.platforms.filter((p) => enabledPlatforms.includes(p.platform as PlatformId))
+    : data.platforms;
   const otherPlatforms = platforms.filter((p) => p.platform !== platform);
 
   return (

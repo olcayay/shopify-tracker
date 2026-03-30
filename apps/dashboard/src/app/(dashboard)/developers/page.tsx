@@ -145,8 +145,10 @@ export default function DevelopersPage() {
   const platformGroups = useMemo<PlatformGroup<Developer>[]>(() => {
     if (viewMode !== "grouped") return [];
     const map = new Map<string, Developer[]>();
+    const allowed = enabledPlatforms.length > 0 ? new Set<string>(enabledPlatforms) : null;
     for (const dev of developers) {
       for (const p of dev.platforms) {
+        if (allowed && !allowed.has(p)) continue;
         const list = map.get(p) || [];
         list.push(dev);
         map.set(p, list);
@@ -163,7 +165,7 @@ export default function DevelopersPage() {
         return labelA.localeCompare(labelB);
       })
       .map(([platform, devs]) => ({ platform, items: devs }));
-  }, [developers, viewMode]);
+  }, [developers, viewMode, enabledPlatforms]);
 
   const maxIcons = 4;
 
@@ -229,12 +231,18 @@ export default function DevelopersPage() {
           <>
             <TableCell>
               <div className="flex flex-wrap gap-1.5">
-                {dev.platforms.map((p) => (
-                  <PlatformBadgeCell key={p} platform={p} />
-                ))}
+                {dev.platforms
+                  .filter((p) => enabledPlatforms.length === 0 || enabledPlatforms.includes(p as PlatformId))
+                  .map((p) => (
+                    <PlatformBadgeCell key={p} platform={p} />
+                  ))}
               </div>
             </TableCell>
-            <TableCell className="text-muted-foreground text-right">{dev.platformCount}</TableCell>
+            <TableCell className="text-muted-foreground text-right">
+              {enabledPlatforms.length > 0
+                ? dev.platforms.filter((p) => enabledPlatforms.includes(p as PlatformId)).length
+                : dev.platformCount}
+            </TableCell>
           </>
         )}
       </TableRow>

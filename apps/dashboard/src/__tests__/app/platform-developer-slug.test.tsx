@@ -12,7 +12,7 @@ vi.mock("@/lib/auth-context", () => ({
   useAuth: () => ({
     fetchWithAuth: mockFetchWithAuth,
     user: { id: "1", role: "owner", isSystemAdmin: false },
-    account: { id: "a1", enabledPlatforms: ["shopify"] },
+    account: { id: "a1", enabledPlatforms: ["shopify", "salesforce"] },
   }),
 }));
 

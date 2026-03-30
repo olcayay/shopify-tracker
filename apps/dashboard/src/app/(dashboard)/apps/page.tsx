@@ -68,7 +68,7 @@ export default function CrossPlatformAppsPage() {
     try {
       const params = new URLSearchParams({ page: String(page), limit: String(limit), sort, order });
       if (search) params.set("search", search);
-      if (activePlatforms.length > 0 && activePlatforms.length < enabledPlatforms.length) {
+      if (activePlatforms.length > 0) {
         params.set("platforms", activePlatforms.join(","));
       }
       const res = await fetchWithAuth(`/api/cross-platform/apps?${params}`);

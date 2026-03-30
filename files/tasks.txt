@@ -25,11 +25,11 @@ UI Redesign & Platform Filtering (2026-03-30)
   PLA-462: Fix column alignment across platform groups on /apps page
   PLA-463: Fix column alignment across platform groups on /keywords page
   PLA-464: Show tracked apps' developers in a dedicated section on /developers page
-  PLA-470: Developers page: filter platforms column and count by enabled platforms
-  PLA-471: Competitors page: only show enabled platforms in competitor listings
-  PLA-472: Keywords page: only show enabled platforms in keyword listings
-  PLA-473: Apps page: only show enabled platforms in app listings
-  PLA-474: Developer detail page: filter cross-platform overview by enabled platforms
+  PLA-470: Developers page: filter platforms column and count by enabled platforms ✅
+  PLA-471: Competitors page: only show enabled platforms in competitor listings ✅
+  PLA-472: Keywords page: only show enabled platforms in keyword listings ✅
+  PLA-473: Apps page: only show enabled platforms in app listings ✅
+  PLA-474: Developer detail page: filter cross-platform overview by enabled platforms ✅
 
 Standalone UI Improvements (2026-03-30)
   PLA-430: Fix developer profile — unify table columns across platforms ✅

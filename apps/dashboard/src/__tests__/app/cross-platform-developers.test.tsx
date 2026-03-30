@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, waitFor, fireEvent } from "@testing-library/react";
-import { mockAuthContext } from "../test-utils";
+import { mockAccount, mockAuthContext } from "../test-utils";
 
 // Mock next/navigation
 vi.mock("next/navigation", () => ({
@@ -118,6 +118,10 @@ describe("DevelopersPage (cross-platform)", () => {
     localStorage.clear();
     mockUseAuth.mockReturnValue({
       ...mockAuthContext,
+      account: {
+        ...mockAccount,
+        enabledPlatforms: ["shopify", "salesforce"],
+      },
       fetchWithAuth: mockFetchWithAuth,
     });
   });
@@ -423,8 +427,8 @@ describe("DevelopersPage (cross-platform)", () => {
     fireEvent.click(screen.getByTitle("Group by platform"));
     await waitFor(() => {
       // Platform group headers should appear (Acme has shopify+salesforce, Widget has shopify)
-      expect(screen.getByText("Shopify")).toBeInTheDocument();
-      expect(screen.getByText("Salesforce")).toBeInTheDocument();
+      expect(screen.getByTestId("platform-group-shopify")).toBeInTheDocument();
+      expect(screen.getByTestId("platform-group-salesforce")).toBeInTheDocument();
     });
   });
 
@@ -436,7 +440,7 @@ describe("DevelopersPage (cross-platform)", () => {
     });
     fireEvent.click(screen.getByTitle("Group by platform"));
     await waitFor(() => {
-      expect(screen.getByText("Shopify")).toBeInTheDocument();
+      expect(screen.getByTestId("platform-group-shopify")).toBeInTheDocument();
     });
     // Acme Inc appears in both Shopify and Salesforce groups
     expect(screen.getAllByText("Acme Inc").length).toBe(2);
