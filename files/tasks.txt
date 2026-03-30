@@ -10,6 +10,7 @@ Dark Mode Implementation (2026-03-30)
   PLA-500: Phase 6: Dark mode for AI button gradient ✅
   PLA-504: Phase 6.5: Fix Recharts hardcoded colors ✅
   PLA-506: Phase 4.5: Dark mode for images and SVGs ✅
+  PLA-501: Phase 7: Dark mode for marketing/auth pages (audited - already semantic) ✅
 
 Design System Components (2026-03-30)
   PLA-507: Create shared PageHeader component ✅
