@@ -4,6 +4,7 @@ Dark Mode Implementation (2026-03-30)
   PLA-505: Phase 0.5: Add meta theme-color and prevent FOIT ✅
   PLA-497: Phase 3: Update tag-colors.ts with dark mode variants ✅
   PLA-498: Phase 4: Dark mode variants for platform brand colors ✅
+  PLA-499: Phase 5: Fix dark mode shadows, rings, focus states ✅
 
 Design System Components (2026-03-30)
   PLA-507: Create shared PageHeader component ✅

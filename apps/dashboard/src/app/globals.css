@@ -137,12 +137,16 @@
 @layer base {
   * {
     @apply border-border outline-ring/50;
-    @apply border-border outline-ring/50;
   }
   body {
     @apply bg-background text-foreground;
-    @apply bg-background text-foreground;
   }
+}
+
+/* Dark mode: use lighter shadow color for visible depth on dark backgrounds */
+.dark {
+  --tw-shadow-color: rgba(255, 255, 255, 0.05);
+  --tw-ring-color: oklch(0.556 0 0 / 50%);
 }
 
 /* WordPress description formatting */
