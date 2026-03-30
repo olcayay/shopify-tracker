@@ -119,15 +119,17 @@ describe("CrossPlatformOverviewPage", () => {
     expect(shopifyCard).toHaveAttribute("href", "/shopify");
   });
 
-  it("renders clickable stat sections in platform cards", async () => {
+  it("renders platform card with stats summary", async () => {
     setupDefaultMocks();
     render(<OverviewPage />);
     await waitFor(() => {
       expect(screen.getByText("Shopify App Store")).toBeInTheDocument();
     });
-    // Apps stat should link to /shopify/apps
-    const appsLinks = screen.getAllByText("Apps").map((el) => el.closest("a")).filter(Boolean);
-    expect(appsLinks.some((a) => a?.getAttribute("href") === "/shopify/apps")).toBe(true);
+    // Platform header should link to /shopify
+    const link = screen.getByText("Shopify App Store").closest("a");
+    expect(link).toHaveAttribute("href", "/shopify");
+    // Stats summary should show counts (may appear for multiple platforms)
+    expect(screen.getAllByText("2 Apps").length).toBeGreaterThan(0);
   });
 
   it("renders tracked counts per platform", async () => {

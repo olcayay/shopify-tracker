@@ -12,6 +12,7 @@ import { PLATFORM_DISPLAY } from "@/lib/platform-display";
 import { OnboardingHero } from "@/components/onboarding-hero";
 import { PlatformRequestDialog } from "@/components/platform-request-dialog";
 import { AccountUsageCards, USAGE_STAT_PRESETS } from "@/components/account-usage-cards";
+import { OverviewPlatformCard } from "@/components/overview-platform-card";
 
 const CAPABILITY_LABELS: { key: string; label: string; section?: string }[] = [
   { key: "hasReviews", label: "Reviews" },
@@ -55,6 +56,7 @@ export default function CrossPlatformOverviewPage() {
   const { fetchWithAuth, account, user } = useAuth();
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState<Record<string, PlatformStats>>({});
+  const [highlights, setHighlights] = useState<Record<string, any>>({});
   const [fetchError, setFetchError] = useState<string | null>(null);
   const [dataLoaded, setDataLoaded] = useState(false);
 
@@ -100,6 +102,16 @@ export default function CrossPlatformOverviewPage() {
       }
 
       setStats(platformStats);
+
+      // Fetch highlights in parallel (non-blocking)
+      try {
+        const hlRes = await fetchWithAuth("/api/overview/highlights");
+        if (hlRes.ok) {
+          const hlBody = await hlRes.json();
+          setHighlights(hlBody.platforms ?? {});
+        }
+      } catch { /* highlights are optional, don't block */ }
+
       setDataLoaded(true);
     } catch {
       setFetchError("Failed to load overview data. Please try again.");
@@ -271,13 +283,13 @@ export default function CrossPlatformOverviewPage() {
                     {tracked.length} active
                   </span>
                 </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <div className="space-y-4">
                   {tracked.map((platformId) => (
-                    <PlatformCard
+                    <OverviewPlatformCard
                       key={platformId}
                       platformId={platformId}
+                      data={highlights[platformId] ?? null}
                       stats={stats[platformId]}
-                      isEnabled={true}
                     />
                   ))}
                 </div>

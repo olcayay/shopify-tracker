@@ -33,6 +33,7 @@ UI Redesign & Platform Filtering (2026-03-30)
 
 Overview Page Redesign (2026-03-30)
   PLA-475: Phase 0: API endpoint for overview daily highlights ✅
+  PLA-476: Phase 1: Full-width platform card with app grid ✅
 
 Standalone UI Improvements (2026-03-30)
   PLA-430: Fix developer profile — unify table columns across platforms ✅
