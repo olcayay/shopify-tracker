@@ -36,6 +36,11 @@ vi.mock("@/components/skeletons", () => ({
   ),
 }));
 
+vi.mock("@/lib/platform-display", () => ({
+  getPlatformLabel: (p: string) => p.charAt(0).toUpperCase() + p.slice(1),
+  getPlatformColor: () => "#000",
+}));
+
 vi.mock("@/components/platform-badge-cell", () => ({
   PlatformBadgeCell: ({ platform }: any) => (
     <span data-testid={`platform-badge-${platform}`}>{platform}</span>
@@ -94,6 +99,7 @@ function setupFetchMocks(
 describe("DevelopersPage (cross-platform)", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    localStorage.clear();
     mockUseAuth.mockReturnValue({
       ...mockAuthContext,
       fetchWithAuth: mockFetchWithAuth,
@@ -373,6 +379,54 @@ describe("DevelopersPage (cross-platform)", () => {
     // After click, should now show two "Unstar developer" labels
     await waitFor(() => {
       expect(screen.getAllByLabelText("Unstar developer").length).toBe(2);
+    });
+  });
+
+  it("renders view mode toggle buttons", async () => {
+    setupFetchMocks();
+    render(<DevelopersPage />);
+    await waitFor(() => {
+      expect(screen.getByText("Acme Inc")).toBeInTheDocument();
+    });
+    expect(screen.getByLabelText("List view")).toBeInTheDocument();
+    expect(screen.getByLabelText("Grouped view")).toBeInTheDocument();
+  });
+
+  it("switches to grouped view and shows platform groups", async () => {
+    setupFetchMocks();
+    render(<DevelopersPage />);
+    await waitFor(() => {
+      expect(screen.getByText("Acme Inc")).toBeInTheDocument();
+    });
+    // Switch to grouped view
+    fireEvent.click(screen.getByLabelText("Grouped view"));
+    await waitFor(() => {
+      // Platform group headers should appear (Acme has shopify+salesforce, Widget has shopify)
+      expect(screen.getByText("Shopify")).toBeInTheDocument();
+      expect(screen.getByText("Salesforce")).toBeInTheDocument();
+    });
+  });
+
+  it("collapses and expands platform groups", async () => {
+    setupFetchMocks();
+    render(<DevelopersPage />);
+    await waitFor(() => {
+      expect(screen.getByText("Acme Inc")).toBeInTheDocument();
+    });
+    fireEvent.click(screen.getByLabelText("Grouped view"));
+    await waitFor(() => {
+      expect(screen.getByText("Shopify")).toBeInTheDocument();
+    });
+    // Before collapse: tables should exist
+    const groupsBefore = document.querySelectorAll("table");
+    expect(groupsBefore.length).toBeGreaterThan(0);
+    // Click on Shopify group header to collapse
+    fireEvent.click(screen.getByText("Shopify").closest("button")!);
+    // After collapse, Shopify group's table should be removed
+    // Salesforce group table should still exist
+    await waitFor(() => {
+      // Check that a table still exists (Salesforce group)
+      expect(document.querySelectorAll("table").length).toBe(1);
     });
   });
 

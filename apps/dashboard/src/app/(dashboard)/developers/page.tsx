@@ -1,10 +1,11 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useMemo } from "react";
 import Link from "next/link";
 import { useAuth } from "@/lib/auth-context";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import {
   Table,
   TableBody,
@@ -13,10 +14,11 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Search, ChevronLeft, ChevronRight, ArrowUpDown, Star } from "lucide-react";
+import { Search, ChevronLeft, ChevronRight, ArrowUpDown, Star, LayoutList, Layers, ChevronDown } from "lucide-react";
 import { TableSkeleton } from "@/components/skeletons";
 import { PlatformBadgeCell } from "@/components/platform-badge-cell";
 import { PlatformFilterChips } from "@/components/platform-filter-chips";
+import { getPlatformLabel, getPlatformColor } from "@/lib/platform-display";
 import type { PlatformId } from "@appranks/shared";
 
 interface Developer {
@@ -36,6 +38,13 @@ interface DeveloperResponse {
   pagination: { page: number; limit: number; total: number; totalPages: number };
 }
 
+type ViewMode = "list" | "grouped";
+
+function getStoredViewMode(): ViewMode {
+  if (typeof window === "undefined") return "list";
+  return (localStorage.getItem("developers-view-mode") as ViewMode) || "list";
+}
+
 export default function DevelopersPage() {
   const { fetchWithAuth, account } = useAuth();
   const enabledPlatforms = (account?.enabledPlatforms ?? []) as PlatformId[];
@@ -46,13 +55,30 @@ export default function DevelopersPage() {
   const [sort, setSort] = useState("name");
   const [order, setOrder] = useState<"asc" | "desc">("asc");
   const [activePlatforms, setActivePlatforms] = useState<PlatformId[]>([]);
-  const limit = 25;
+  const [viewMode, setViewMode] = useState<ViewMode>(getStoredViewMode);
+  const [collapsedPlatforms, setCollapsedPlatforms] = useState<Set<string>>(new Set());
+  const limit = viewMode === "grouped" ? 200 : 25;
+
+  function changeViewMode(mode: ViewMode) {
+    setViewMode(mode);
+    localStorage.setItem("developers-view-mode", mode);
+    setPage(1);
+  }
 
   function togglePlatform(pid: PlatformId) {
     setActivePlatforms((prev) =>
       prev.includes(pid) ? prev.filter((p) => p !== pid) : [...prev, pid]
     );
     setPage(1);
+  }
+
+  function toggleCollapse(platform: string) {
+    setCollapsedPlatforms((prev) => {
+      const next = new Set(prev);
+      if (next.has(platform)) next.delete(platform);
+      else next.add(platform);
+      return next;
+    });
   }
 
   const loadData = useCallback(async () => {
@@ -66,7 +92,7 @@ export default function DevelopersPage() {
     } finally {
       setLoading(false);
     }
-  }, [fetchWithAuth, page, search, sort, order, activePlatforms]);
+  }, [fetchWithAuth, page, search, sort, order, activePlatforms, limit]);
 
   useEffect(() => { loadData(); }, [loadData]);
 
@@ -88,7 +114,6 @@ export default function DevelopersPage() {
 
   async function toggleStar(devId: number, currentlyStarred: boolean) {
     if (!data) return;
-    // Optimistic update
     setData({
       ...data,
       developers: data.developers.map((d) =>
@@ -100,7 +125,6 @@ export default function DevelopersPage() {
       const res = await fetchWithAuth(`/api/account/starred-developers/${devId}`, { method });
       if (!res.ok) throw new Error();
     } catch {
-      // Revert on error
       setData((prev) =>
         prev
           ? {
@@ -117,11 +141,104 @@ export default function DevelopersPage() {
   const developers = data?.developers ?? [];
   const pagination = data?.pagination;
 
+  // Group developers by platform for grouped view
+  const groupedByPlatform = useMemo(() => {
+    if (viewMode !== "grouped") return new Map<string, Developer[]>();
+    const map = new Map<string, Developer[]>();
+    for (const dev of developers) {
+      for (const p of dev.platforms) {
+        const list = map.get(p) || [];
+        list.push(dev);
+        map.set(p, list);
+      }
+    }
+    // Sort starred-first within each group
+    for (const [key, devs] of map) {
+      map.set(key, devs.sort((a, b) => (a.isStarred === b.isStarred ? 0 : a.isStarred ? -1 : 1)));
+    }
+    return map;
+  }, [developers, viewMode]);
+
+  function renderDeveloperRow(dev: Developer) {
+    return (
+      <TableRow key={dev.id}>
+        <TableCell className="w-10">
+          <button
+            onClick={() => toggleStar(dev.id, dev.isStarred)}
+            className="p-1 rounded hover:bg-muted transition-colors"
+            aria-label={dev.isStarred ? "Unstar developer" : "Star developer"}
+          >
+            <Star
+              className={`h-4 w-4 ${
+                dev.isStarred
+                  ? "fill-amber-500 text-amber-500"
+                  : "text-muted-foreground hover:text-amber-500"
+              }`}
+            />
+          </button>
+        </TableCell>
+        <TableCell>
+          <div className="flex items-center gap-2">
+            {dev.topAppIcons && dev.topAppIcons.length > 0 && (
+              <div className="flex -space-x-1.5 shrink-0">
+                {dev.topAppIcons.slice(0, 4).map((url, i) => (
+                  <img key={i} src={url} alt="" className="w-5 h-5 rounded border border-background" />
+                ))}
+                {dev.topAppIcons.length > 4 && (
+                  <span className="w-5 h-5 rounded-full bg-muted flex items-center justify-center text-[10px] font-medium border border-background">
+                    +{dev.topAppIcons.length - 4}
+                  </span>
+                )}
+              </div>
+            )}
+            <Link href={`/developers/${dev.slug}`} className="font-medium hover:underline">
+              {dev.name}
+            </Link>
+          </div>
+        </TableCell>
+        {viewMode === "list" && (
+          <>
+            <TableCell>
+              <div className="flex flex-wrap gap-1.5">
+                {dev.platforms.map((p) => (
+                  <PlatformBadgeCell key={p} platform={p} />
+                ))}
+              </div>
+            </TableCell>
+            <TableCell className="text-muted-foreground">{dev.platformCount}</TableCell>
+          </>
+        )}
+      </TableRow>
+    );
+  }
+
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold">Developers</h1>
-        <p className="text-sm text-muted-foreground">Browse all developers across platforms</p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold">Developers</h1>
+          <p className="text-sm text-muted-foreground">Browse all developers across platforms</p>
+        </div>
+        <div className="flex gap-1 border rounded-md p-0.5">
+          <Button
+            variant={viewMode === "list" ? "default" : "ghost"}
+            size="sm"
+            onClick={() => changeViewMode("list")}
+            className="h-7 px-2"
+            aria-label="List view"
+          >
+            <LayoutList className="h-4 w-4" />
+          </Button>
+          <Button
+            variant={viewMode === "grouped" ? "default" : "ghost"}
+            size="sm"
+            onClick={() => changeViewMode("grouped")}
+            className="h-7 px-2"
+            aria-label="Grouped view"
+          >
+            <Layers className="h-4 w-4" />
+          </Button>
+        </div>
       </div>
 
       <div className="space-y-3">
@@ -148,7 +265,52 @@ export default function DevelopersPage() {
 
       {loading && !data ? (
         <TableSkeleton rows={10} cols={4} />
+      ) : viewMode === "grouped" ? (
+        /* Grouped view */
+        <div className="space-y-4">
+          {groupedByPlatform.size === 0 ? (
+            <p className="text-center text-muted-foreground py-8">
+              {search ? "No developers found matching your search." : "No developers found."}
+            </p>
+          ) : (
+            Array.from(groupedByPlatform.entries()).map(([platform, devs]) => {
+              const isCollapsed = collapsedPlatforms.has(platform);
+              return (
+                <div key={platform} className="rounded-md border">
+                  <button
+                    onClick={() => toggleCollapse(platform)}
+                    className="flex items-center gap-2 w-full p-3 hover:bg-muted/50 transition-colors"
+                  >
+                    <ChevronDown
+                      className={`h-4 w-4 transition-transform ${isCollapsed ? "-rotate-90" : ""}`}
+                    />
+                    <span
+                      className="w-2.5 h-2.5 rounded-full"
+                      style={{ backgroundColor: getPlatformColor(platform) }}
+                    />
+                    <span className="font-medium">{getPlatformLabel(platform)}</span>
+                    <Badge variant="secondary">{devs.length}</Badge>
+                  </button>
+                  {!isCollapsed && (
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead className="w-10"></TableHead>
+                          <TableHead>Developer</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {devs.map((dev) => renderDeveloperRow(dev))}
+                      </TableBody>
+                    </Table>
+                  )}
+                </div>
+              );
+            })
+          )}
+        </div>
       ) : (
+        /* List view */
         <>
           <div className="rounded-md border">
             <Table>
@@ -176,52 +338,7 @@ export default function DevelopersPage() {
                     </TableCell>
                   </TableRow>
                 ) : (
-                  developers.map((dev) => (
-                    <TableRow key={dev.id}>
-                      <TableCell className="w-10">
-                        <button
-                          onClick={() => toggleStar(dev.id, dev.isStarred)}
-                          className="p-1 rounded hover:bg-muted transition-colors"
-                          aria-label={dev.isStarred ? "Unstar developer" : "Star developer"}
-                        >
-                          <Star
-                            className={`h-4 w-4 ${
-                              dev.isStarred
-                                ? "fill-amber-500 text-amber-500"
-                                : "text-muted-foreground hover:text-amber-500"
-                            }`}
-                          />
-                        </button>
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-2">
-                          {dev.topAppIcons && dev.topAppIcons.length > 0 && (
-                            <div className="flex -space-x-1.5 shrink-0">
-                              {dev.topAppIcons.slice(0, 4).map((url, i) => (
-                                <img key={i} src={url} alt="" className="w-5 h-5 rounded border border-background" />
-                              ))}
-                              {dev.topAppIcons.length > 4 && (
-                                <span className="w-5 h-5 rounded-full bg-muted flex items-center justify-center text-[10px] font-medium border border-background">
-                                  +{dev.topAppIcons.length - 4}
-                                </span>
-                              )}
-                            </div>
-                          )}
-                          <Link href={`/developers/${dev.slug}`} className="font-medium hover:underline">
-                            {dev.name}
-                          </Link>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex flex-wrap gap-1.5">
-                          {dev.platforms.map((p) => (
-                            <PlatformBadgeCell key={p} platform={p} />
-                          ))}
-                        </div>
-                      </TableCell>
-                      <TableCell className="text-muted-foreground">{dev.platformCount}</TableCell>
-                    </TableRow>
-                  ))
+                  developers.map((dev) => renderDeveloperRow(dev))
                 )}
               </TableBody>
             </Table>

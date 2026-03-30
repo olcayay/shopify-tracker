@@ -4,6 +4,7 @@ Standalone UI Improvements (2026-03-30)
   PLA-435: Show app icons on /developers list page ✅
   PLA-436: Star/unstar UI on /developers list with starred-first sorting ✅
   PLA-437: Star/unstar on developer detail pages ✅
+  PLA-438: Group developers by platform on /developers page ✅
   PLA-431: Add group-by-platform view to /apps page
 
 AI Suggestion Engine (2026-03-30)
