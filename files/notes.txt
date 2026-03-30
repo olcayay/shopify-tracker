@@ -1,3 +1,24 @@
+PLA-444: Editable templates infrastructure (2026-03-30)
+================================================================
+Migration 0103: notification_templates + email_templates tables with unique type indexes.
+Seeded 23 notification templates and 14 email templates with current hardcoded content.
+
+Schema: packages/db/src/schema/templates.ts (notificationTemplates, emailTemplates)
+
+Template Registry: packages/shared/src/template-registry.ts
+- NOTIFICATION_TEMPLATE_VARIABLES: 23 types → variables with name/description/example
+- EMAIL_TEMPLATE_VARIABLES: 14 types → variables
+- renderTemplate(): {{variable}} substitution
+- buildNotificationSampleData() / buildEmailSampleData(): preview data
+
+API Endpoints (apps/api/src/routes/templates.ts, under /api/system-admin/):
+- GET/PATCH /templates/notifications/:type + /reset + /preview
+- GET/PATCH /templates/emails/:type + /reset + /preview
+- PATCH uses onConflictDoUpdate (upsert)
+- Preview renders template with sample or custom data
+
+17 unit tests for template registry.
+
 PLA-450: AI competitor suggestion engine (2026-03-30)
 ================================================================
 Created packages/shared/src/ai-competitor-suggestions.ts implementing AI competitive

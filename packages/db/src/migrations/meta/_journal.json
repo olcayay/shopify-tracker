@@ -722,6 +722,13 @@
       "when": 1777507200000,
       "tag": "0102_account_starred_developers",
       "breakpoints": true
+    },
+    {
+      "idx": 103,
+      "version": "7",
+      "when": 1777593600000,
+      "tag": "0103_editable_templates",
+      "breakpoints": true
     }
   ]
 }

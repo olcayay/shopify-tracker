@@ -225,6 +225,19 @@ export type {
   LogAICallParams,
 } from "./ai-service.js";
 
+// Template Registry
+export {
+  NOTIFICATION_TEMPLATE_VARIABLES,
+  EMAIL_TEMPLATE_VARIABLES,
+  renderTemplate,
+  buildNotificationSampleData,
+  buildEmailSampleData,
+} from "./template-registry.js";
+export type {
+  TemplateVariable,
+  EmailType,
+} from "./template-registry.js";
+
 // AI Competitor Suggestions
 export {
   COMPETITOR_DIMENSION_WEIGHTS,
