@@ -1,3 +1,19 @@
+PLA-490: Apps column with clickable icons in developers table (2026-03-30)
+================================================================
+API: top_app_icons → top_apps (json_agg with iconUrl, name, slug, platform) + app_count subquery
+Dashboard: Dedicated Apps column with tooltip-enabled clickable icons, +N overflow badge
+Sortable by app count (sort=apps). Works in list and grouped views.
+
+PLA-489+491: Right-align platform count + table-fixed layout (2026-03-30)
+================================================================
+table-fixed with explicit widths: w-10 (bookmark), flex (developer), w-36 (apps),
+w-56 (platforms), w-36 (platform count, text-right). Prevents column shifting on sort/pagination.
+
+PLA-488: Starred developers optimistic re-sort (2026-03-30)
+================================================================
+sortDevelopers() function: starred first, then by current sort field/order.
+Applied after both star and unstar (including rollback on API failure).
+
 PLA-482: Shared PlatformGroupedTable component (2026-03-30)
 ================================================================
 Created reusable PlatformGroupedTable component:
