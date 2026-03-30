@@ -1,3 +1,12 @@
+PLA-465: Redesign 'Follow' button → 'My App' (2026-03-30)
+================================================================
+Changed "Follow/Following" → "My App" across entire dashboard:
+- track-button.tsx: emerald/green active state, red hover (remove intent), tooltips
+- app-search-bar.tsx: "Following" badge → "My App" (emerald), tooltip "Add to My Apps"
+- [platform]/apps/page.tsx: toast "added to My Apps"/"removed from My Apps", modal "Remove from My Apps"
+- [platform]/page.tsx (overview): toast "added to My Apps"
+- Tests updated: apps-list.test.tsx, app-search-bar.test.tsx
+
 PLA-437: Star/unstar on developer detail pages (2026-03-30)
 ================================================================
 API (apps/api/src/routes/developers.ts GET /:slug):

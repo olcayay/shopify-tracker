@@ -100,7 +100,7 @@ describe("AppSearchBar", () => {
     );
   });
 
-  it("shows 'Following' label for already tracked apps", async () => {
+  it("shows 'My App' label for already tracked apps", async () => {
     const mockFetchWithAuth = vi.fn().mockResolvedValue({
       ok: true,
       json: () =>
@@ -132,7 +132,7 @@ describe("AppSearchBar", () => {
 
     await vi.waitFor(
       () => {
-        expect(screen.getByText("Following")).toBeInTheDocument();
+        expect(screen.getByText("My App")).toBeInTheDocument();
       },
       { timeout: 1000 }
     );

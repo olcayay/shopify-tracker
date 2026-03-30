@@ -233,7 +233,7 @@ export default function OverviewPage() {
       const scrapeMsg = data.scraperEnqueued
         ? " Scraping started — details will appear shortly."
         : "";
-      setMessage(`Now following "${name}".${scrapeMsg}`);
+      setMessage(`"${name}" added to My Apps.${scrapeMsg}`);
       // Optimistic update: add app to tracked list without full reload
       setApps((prev: any[]) => {
         if (prev.some((a) => a.slug === slug || a.appSlug === slug)) return prev;
@@ -547,7 +547,7 @@ export default function OverviewPage() {
         <CardContent>
           {competitors.length === 0 ? (
             <p className="text-sm text-muted-foreground">
-              No competitor apps yet. Star an app to add it as a competitor.
+              No competitor apps yet. Mark an app as a competitor to start tracking.
             </p>
           ) : (
             <>

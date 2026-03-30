@@ -170,7 +170,7 @@ export function AppSearchBar({
                     <span className="text-xs text-muted-foreground">This app</span>
                   )}
                   {status === "following" && (
-                    <span className="text-xs text-muted-foreground">Following</span>
+                    <span className="text-xs text-emerald-600 dark:text-emerald-400 font-medium">My App</span>
                   )}
                   {status === "competitor" && (
                     <span className="text-xs text-muted-foreground">Competitor</span>
@@ -180,7 +180,7 @@ export function AppSearchBar({
                       variant="ghost"
                       size="icon"
                       className="h-7 w-7"
-                      title="Follow this app"
+                      title="Add to My Apps"
                       disabled={!!actionLoadingSlug}
                       onClick={(e) => {
                         e.preventDefault();

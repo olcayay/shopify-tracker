@@ -207,7 +207,7 @@ describe("AppsPage", () => {
     render(<AppsPage />);
     await waitFor(() => {
       expect(
-        screen.getByText("No apps yet. Search and follow an app to get started.")
+        screen.getByText("No apps yet. Search and add an app to get started.")
       ).toBeInTheDocument();
     });
   });

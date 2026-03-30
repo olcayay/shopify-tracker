@@ -144,7 +144,7 @@ export default function AppsPage() {
       const scrapeMsg = data.scraperEnqueued
         ? " Scraping started — details will appear shortly."
         : "";
-      setMessage(`Now following "${name}".${scrapeMsg}`);
+      setMessage(`"${name}" added to My Apps.${scrapeMsg}`);
       invalidateApps();
       refreshUser();
     } else {
@@ -159,7 +159,7 @@ export default function AppsPage() {
       method: "DELETE",
     });
     if (res.ok) {
-      setMessage(`Unfollowed "${name}"`);
+      setMessage(`"${name}" removed from My Apps`);
       invalidateApps();
       refreshUser();
     } else {
@@ -354,7 +354,7 @@ export default function AppsPage() {
                       colSpan={canEdit ? 10 : 9}
                       className="text-center text-muted-foreground"
                     >
-                      No apps yet. Search and follow an app to get started.
+                      No apps yet. Search and add an app to get started.
                     </TableCell>
                   </TableRow>
                 )}
@@ -366,8 +366,8 @@ export default function AppsPage() {
 
       <ConfirmModal
         open={!!confirmRemove}
-        title="Unfollow App"
-        description={`Are you sure you want to unfollow "${confirmRemove?.name}"? Its competitors and keywords will also be removed.`}
+        title="Remove from My Apps"
+        description={`Are you sure you want to remove "${confirmRemove?.name}" from your apps? Its competitors and keywords will also be removed.`}
         onConfirm={() => {
           if (confirmRemove) {
             untrackApp(confirmRemove.slug, confirmRemove.name);
