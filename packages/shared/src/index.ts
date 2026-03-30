@@ -286,6 +286,6 @@ export type {
 export { NOTIFICATION_TYPES, NOTIFICATION_CATEGORIES, NOTIFICATION_TYPE_IDS } from "./notification-types.js";
 export type { NotificationType, NotificationCategory } from "./notification-types.js";
 export { buildNotificationContent } from "./notifications/templates.js";
-export type { NotificationContent, NotificationEventData } from "./notifications/templates.js";
+export type { NotificationContent, NotificationEventData, DbNotificationTemplate } from "./notifications/templates.js";
 export { emitNotification } from "./notifications/engine.js";
 export type { NotificationStore, NotificationRecipient, NotificationRecord, EmitResult } from "./notifications/engine.js";

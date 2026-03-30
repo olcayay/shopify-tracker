@@ -224,10 +224,39 @@ const TEMPLATES: Record<NotificationType, (e: NotificationEventData) => Notifica
   }),
 };
 
+export interface DbNotificationTemplate {
+  titleTemplate: string;
+  bodyTemplate: string;
+  isCustomized: boolean;
+}
+
 export function buildNotificationContent(
   type: NotificationType,
-  eventData: NotificationEventData
+  eventData: NotificationEventData,
+  dbTemplate?: DbNotificationTemplate | null,
 ): NotificationContent {
+  // If a customized DB template exists, use it with variable interpolation
+  if (dbTemplate?.isCustomized) {
+    const codeContent = TEMPLATES[type](eventData);
+    const vars: Record<string, string> = {};
+    for (const [key, value] of Object.entries(eventData)) {
+      if (value != null) vars[key] = String(value);
+    }
+    return {
+      title: interpolateVars(dbTemplate.titleTemplate, vars),
+      body: interpolateVars(dbTemplate.bodyTemplate, vars),
+      url: codeContent.url,
+      icon: codeContent.icon,
+      priority: codeContent.priority,
+    };
+  }
+  // Fall back to code-based template
   const builder = TEMPLATES[type];
   return builder(eventData);
+}
+
+function interpolateVars(template: string, vars: Record<string, string>): string {
+  return template.replace(/\{\{(\w+)\}\}/g, (match, key) => {
+    return vars[key] !== undefined ? vars[key] : match;
+  });
 }

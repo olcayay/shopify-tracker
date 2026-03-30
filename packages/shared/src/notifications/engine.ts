@@ -6,7 +6,7 @@
  */
 import type { NotificationType, NotificationCategory } from "../notification-types.js";
 import { NOTIFICATION_TYPES } from "../notification-types.js";
-import { buildNotificationContent, type NotificationEventData } from "./templates.js";
+import { buildNotificationContent, type NotificationEventData, type DbNotificationTemplate } from "./templates.js";
 
 export interface NotificationRecipient {
   userId: string;
@@ -43,6 +43,8 @@ export interface NotificationStore {
   countRecent(userId: string, withinHours: number): Promise<number>;
   /** Save a notification record */
   save(record: NotificationRecord): Promise<string>;
+  /** Fetch customized DB template for a notification type (optional) */
+  getDbTemplate?(type: NotificationType): Promise<DbNotificationTemplate | null>;
 }
 
 const DEDUP_HOURS = 6;
@@ -82,8 +84,11 @@ export async function emitNotification(
 
   if (users.length === 0) return { sent: 0, skipped: 0, errors: 0 };
 
+  // Fetch DB template if available
+  const dbTemplate = store.getDbTemplate ? await store.getDbTemplate(type) : null;
+
   // Build content once (same for all recipients)
-  const content = buildNotificationContent(type, eventData);
+  const content = buildNotificationContent(type, eventData, dbTemplate);
   const dedupKey = buildDedupKey(type, eventData);
 
   let sent = 0;
