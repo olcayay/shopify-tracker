@@ -14,6 +14,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Search, ChevronLeft, ChevronRight, ArrowUpDown, Bookmark } from "lucide-react";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { TableSkeleton } from "@/components/skeletons";
 import { PlatformBadgeCell } from "@/components/platform-badge-cell";
 import { PlatformFilterChips } from "@/components/platform-filter-chips";
@@ -22,6 +23,13 @@ import { PlatformGroupedTable, type PlatformGroup } from "@/components/platform-
 import { PLATFORM_DISPLAY } from "@/lib/platform-display";
 import type { PlatformId } from "@appranks/shared";
 
+interface TopApp {
+  iconUrl: string;
+  name: string;
+  slug: string;
+  platform: string;
+}
+
 interface Developer {
   id: number;
   slug: string;
@@ -29,8 +37,9 @@ interface Developer {
   website: string | null;
   platformCount: number;
   linkCount: number;
+  appCount: number;
   platforms: string[];
-  topAppIcons: string[];
+  topApps: TopApp[];
   isStarred: boolean;
 }
 
@@ -96,7 +105,9 @@ export default function DevelopersPage() {
       if (a.isStarred !== b.isStarred) return a.isStarred ? -1 : 1;
       // Then by current sort field
       let cmp = 0;
-      if (sort === "platforms") {
+      if (sort === "apps") {
+        cmp = a.appCount - b.appCount;
+      } else if (sort === "platforms") {
         cmp = a.platformCount - b.platformCount;
       } else {
         cmp = a.name.localeCompare(b.name);
@@ -154,6 +165,42 @@ export default function DevelopersPage() {
       .map(([platform, devs]) => ({ platform, items: devs }));
   }, [developers, viewMode]);
 
+  const maxIcons = 4;
+
+  function renderAppsCell(dev: Developer) {
+    const visibleApps = dev.topApps.slice(0, maxIcons);
+    const remaining = dev.appCount - visibleApps.length;
+
+    if (visibleApps.length === 0) {
+      return <span className="text-muted-foreground text-sm">0</span>;
+    }
+
+    return (
+      <TooltipProvider delayDuration={200}>
+        <div className="flex items-center -space-x-1.5">
+          {visibleApps.map((app, i) => (
+            <Tooltip key={i}>
+              <TooltipTrigger asChild>
+                <Link
+                  href={`/${app.platform}/apps/${app.slug}`}
+                  className="shrink-0 rounded border border-background hover:z-10 hover:scale-110 transition-transform"
+                >
+                  <img src={app.iconUrl} alt={app.name} className="w-5 h-5 rounded" />
+                </Link>
+              </TooltipTrigger>
+              <TooltipContent side="top" className="text-xs">{app.name}</TooltipContent>
+            </Tooltip>
+          ))}
+          {remaining > 0 && (
+            <span className="w-5 h-5 rounded-full bg-muted flex items-center justify-center text-[10px] font-medium border border-background shrink-0">
+              +{remaining}
+            </span>
+          )}
+        </div>
+      </TooltipProvider>
+    );
+  }
+
   function renderDeveloperRow(dev: Developer) {
     return (
       <TableRow key={dev.id}>
@@ -173,24 +220,11 @@ export default function DevelopersPage() {
           </button>
         </TableCell>
         <TableCell>
-          <div className="flex items-center gap-2">
-            {dev.topAppIcons && dev.topAppIcons.length > 0 && (
-              <div className="flex -space-x-1.5 shrink-0">
-                {dev.topAppIcons.slice(0, 4).map((url, i) => (
-                  <img key={i} src={url} alt="" className="w-5 h-5 rounded border border-background" />
-                ))}
-                {dev.topAppIcons.length > 4 && (
-                  <span className="w-5 h-5 rounded-full bg-muted flex items-center justify-center text-[10px] font-medium border border-background">
-                    +{dev.topAppIcons.length - 4}
-                  </span>
-                )}
-              </div>
-            )}
-            <Link href={`/developers/${dev.slug}`} className="font-medium hover:underline">
-              {dev.name}
-            </Link>
-          </div>
+          <Link href={`/developers/${dev.slug}`} className="font-medium hover:underline">
+            {dev.name}
+          </Link>
         </TableCell>
+        <TableCell>{renderAppsCell(dev)}</TableCell>
         {viewMode === "list" && (
           <>
             <TableCell>
@@ -207,13 +241,18 @@ export default function DevelopersPage() {
     );
   }
 
-  const groupedColCount = 2;
-  const flatColCount = 4;
+  const groupedColCount = 3;
+  const flatColCount = 5;
 
   const renderGroupedHeaders = () => (
     <>
       <TableHead className="w-10"></TableHead>
       <TableHead>Developer</TableHead>
+      <TableHead>
+        <button onClick={() => toggleSort("apps")} className="flex items-center gap-1 hover:text-foreground">
+          Apps <ArrowUpDown className="h-3 w-3" />
+        </button>
+      </TableHead>
     </>
   );
 
@@ -272,6 +311,11 @@ export default function DevelopersPage() {
                       Developer <ArrowUpDown className="h-3 w-3" />
                     </button>
                   </TableHead>
+                  <TableHead>
+                    <button onClick={() => toggleSort("apps")} className="flex items-center gap-1 hover:text-foreground">
+                      Apps <ArrowUpDown className="h-3 w-3" />
+                    </button>
+                  </TableHead>
                   <TableHead>Platforms</TableHead>
                   <TableHead>
                     <button onClick={() => toggleSort("platforms")} className="flex items-center gap-1 hover:text-foreground">
@@ -283,7 +327,7 @@ export default function DevelopersPage() {
               <TableBody>
                 {developers.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={4} className="text-center text-muted-foreground py-8">
+                    <TableCell colSpan={5} className="text-center text-muted-foreground py-8">
                       {emptyMessage}
                     </TableCell>
                   </TableRow>

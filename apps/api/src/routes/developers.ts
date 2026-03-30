@@ -74,9 +74,9 @@ export async function developerRoutes(app: FastifyInstance) {
           COUNT(DISTINCT pd.id) AS link_count,
           ARRAY_AGG(DISTINCT pd.platform) FILTER (WHERE pd.platform IS NOT NULL) AS platforms,
           (
-            SELECT COALESCE(ARRAY_AGG(sub.icon_url), '{}')
+            SELECT COALESCE(json_agg(sub), '[]'::json)
             FROM (
-              SELECT DISTINCT a.icon_url
+              SELECT DISTINCT a.icon_url, a.name, a.slug, a.platform
               FROM apps a
               JOIN app_snapshots s ON s.app_id = a.id
               JOIN platform_developers pd2 ON pd2.global_developer_id = g.id
@@ -84,10 +84,19 @@ export async function developerRoutes(app: FastifyInstance) {
               WHERE s.developer->>'name' = pd2.name
                 AND a.icon_url IS NOT NULL
                 AND s.id = (SELECT s2.id FROM app_snapshots s2 WHERE s2.app_id = a.id ORDER BY s2.scraped_at DESC LIMIT 1)
-              ORDER BY a.icon_url
+              ORDER BY a.name
               LIMIT 5
             ) sub
-          ) AS top_app_icons,
+          ) AS top_apps,
+          (
+            SELECT COUNT(DISTINCT a2.id)
+            FROM apps a2
+            JOIN app_snapshots s2 ON s2.app_id = a2.id
+            JOIN platform_developers pd3 ON pd3.global_developer_id = g.id
+              AND a2.platform = pd3.platform
+            WHERE s2.developer->>'name' = pd3.name
+              AND s2.id = (SELECT s3.id FROM app_snapshots s3 WHERE s3.app_id = a2.id ORDER BY s3.scraped_at DESC LIMIT 1)
+          ) AS app_count,
           CASE WHEN asd.id IS NOT NULL THEN true ELSE false END AS is_starred
         FROM global_developers g
         LEFT JOIN platform_developers pd ON pd.global_developer_id = g.id
@@ -107,8 +116,14 @@ export async function developerRoutes(app: FastifyInstance) {
           website: r.website,
           platformCount: Number(r.platform_count || 0),
           linkCount: Number(r.link_count || 0),
+          appCount: Number(r.app_count || 0),
           platforms: r.platforms || [],
-          topAppIcons: (r.top_app_icons || []).filter(Boolean),
+          topApps: (r.top_apps || []).map((a: any) => ({
+            iconUrl: a.icon_url,
+            name: a.name,
+            slug: a.slug,
+            platform: a.platform,
+          })),
           isStarred: r.is_starred === true || r.is_starred === "true",
         })),
         pagination: {

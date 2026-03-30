@@ -45,6 +45,13 @@ vi.mock("@/lib/platform-display", () => ({
   },
 }));
 
+vi.mock("@/components/ui/tooltip", () => ({
+  Tooltip: ({ children }: any) => <div>{children}</div>,
+  TooltipTrigger: ({ children }: any) => <div>{children}</div>,
+  TooltipContent: ({ children }: any) => <div>{children}</div>,
+  TooltipProvider: ({ children }: any) => <div>{children}</div>,
+}));
+
 vi.mock("@/components/platform-badge-cell", () => ({
   PlatformBadgeCell: ({ platform }: any) => (
     <span data-testid={`platform-badge-${platform}`}>{platform}</span>
@@ -66,8 +73,12 @@ const mockDevelopersResponse = {
       website: "https://acme.com",
       platformCount: 2,
       linkCount: 3,
+      appCount: 3,
       platforms: ["shopify", "salesforce"],
-      topAppIcons: ["https://example.com/icon1.png", "https://example.com/icon2.png", "https://example.com/icon3.png"],
+      topApps: [
+        { iconUrl: "https://example.com/icon1.png", name: "App One", slug: "app-one", platform: "shopify" },
+        { iconUrl: "https://example.com/icon2.png", name: "App Two", slug: "app-two", platform: "salesforce" },
+      ],
       isStarred: true,
     },
     {
@@ -77,8 +88,9 @@ const mockDevelopersResponse = {
       website: null,
       platformCount: 1,
       linkCount: 1,
+      appCount: 1,
       platforms: ["shopify"],
-      topAppIcons: [],
+      topApps: [],
       isStarred: false,
     },
   ],
@@ -274,16 +286,19 @@ describe("DevelopersPage (cross-platform)", () => {
     });
   });
 
-  it("renders app icon stack for developers with icons", async () => {
+  it("renders clickable app icons with tooltips for developers with apps", async () => {
     setupFetchMocks();
     render(<DevelopersPage />);
     await waitFor(() => {
       expect(screen.getByText("Acme Inc")).toBeInTheDocument();
     });
-    // Acme Inc has 3 icons — img elements with alt=""
+    // Acme Inc has 2 top apps with icons
     const icons = document.querySelectorAll("img[src*='example.com']");
-    expect(icons.length).toBe(3);
+    expect(icons.length).toBe(2);
     expect(icons[0]).toHaveAttribute("src", "https://example.com/icon1.png");
+    // Icons should be wrapped in links to app pages
+    const appLink = icons[0].closest("a");
+    expect(appLink).toHaveAttribute("href", "/shopify/apps/app-one");
   });
 
   it("does not render icon stack for developers with no icons", async () => {
@@ -296,8 +311,9 @@ describe("DevelopersPage (cross-platform)", () => {
           website: null,
           platformCount: 1,
           linkCount: 1,
+          appCount: 1,
           platforms: ["shopify"],
-          topAppIcons: [],
+          topApps: [],
           isStarred: false,
         },
       ],
@@ -309,7 +325,7 @@ describe("DevelopersPage (cross-platform)", () => {
     expect(document.querySelectorAll("img[src*='example.com']")).toHaveLength(0);
   });
 
-  it("shows +N badge when developer has more than 4 icons", async () => {
+  it("shows +N badge when developer has more than 4 app icons", async () => {
     setupFetchMocks({
       developers: [
         {
@@ -319,14 +335,15 @@ describe("DevelopersPage (cross-platform)", () => {
           website: null,
           platformCount: 3,
           linkCount: 5,
+          appCount: 6,
           platforms: ["shopify", "salesforce", "wix"],
           isStarred: false,
-          topAppIcons: [
-            "https://example.com/a.png",
-            "https://example.com/b.png",
-            "https://example.com/c.png",
-            "https://example.com/d.png",
-            "https://example.com/e.png",
+          topApps: [
+            { iconUrl: "https://example.com/a.png", name: "App A", slug: "app-a", platform: "shopify" },
+            { iconUrl: "https://example.com/b.png", name: "App B", slug: "app-b", platform: "shopify" },
+            { iconUrl: "https://example.com/c.png", name: "App C", slug: "app-c", platform: "salesforce" },
+            { iconUrl: "https://example.com/d.png", name: "App D", slug: "app-d", platform: "wix" },
+            { iconUrl: "https://example.com/e.png", name: "App E", slug: "app-e", platform: "shopify" },
           ],
         },
       ],
@@ -335,9 +352,9 @@ describe("DevelopersPage (cross-platform)", () => {
     await waitFor(() => {
       expect(screen.getByText("Mega Dev")).toBeInTheDocument();
     });
-    // 4 icons rendered + "+1" badge
+    // 4 icons rendered + "+2" badge (6 total - 4 shown = 2 remaining)
     expect(document.querySelectorAll("img[src*='example.com']")).toHaveLength(4);
-    expect(screen.getByText("+1")).toBeInTheDocument();
+    expect(screen.getByText("+2")).toBeInTheDocument();
   });
 
   it("renders bookmark buttons for each developer", async () => {
@@ -451,7 +468,8 @@ describe("DevelopersPage (cross-platform)", () => {
                 platformCount: 1,
                 linkCount: 1,
                 platforms: ["shopify"],
-                topAppIcons: [],
+                topApps: [],
+                appCount: 0,
                 isStarred: false,
               },
               {
@@ -462,7 +480,8 @@ describe("DevelopersPage (cross-platform)", () => {
                 platformCount: 1,
                 linkCount: 2,
                 platforms: ["shopify"],
-                topAppIcons: [],
+                topApps: [],
+                appCount: 0,
                 isStarred: true,
               },
             ],
