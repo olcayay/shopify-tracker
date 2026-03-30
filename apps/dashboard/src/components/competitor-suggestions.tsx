@@ -4,7 +4,7 @@ import { useState, useCallback, useEffect } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
-import { Sparkles, Plus, Check, ExternalLink, ChevronDown, ChevronUp } from "lucide-react";
+import { Sparkles, Plus, Check, ExternalLink, ChevronDown, ChevronUp, Brain, Loader2, RefreshCw } from "lucide-react";
 import { buildExternalAppUrl, getPlatformName } from "@/lib/platform-urls";
 import { PLATFORMS, isPlatformId, type PlatformId } from "@appranks/shared";
 import { Badge } from "@/components/ui/badge";
@@ -88,6 +88,9 @@ export function CompetitorSuggestions({
   const [error, setError] = useState("");
   const [addedSlugs, setAddedSlugs] = useState<Set<string>>(new Set());
   const [addingSlug, setAddingSlug] = useState<string | null>(null);
+  const [aiData, setAiData] = useState<any>(null);
+  const [aiLoading, setAiLoading] = useState(false);
+  const [aiError, setAiError] = useState("");
 
   const loadSuggestions = useCallback(async () => {
     setLoading(true);
@@ -106,6 +109,26 @@ export function CompetitorSuggestions({
     }
     setLoading(false);
   }, [appSlug, fetchWithAuth]);
+
+  const generateAiSuggestions = useCallback(async () => {
+    setAiLoading(true);
+    setAiError("");
+    try {
+      const res = await fetchWithAuth(
+        `/api/account/tracked-apps/${encodeURIComponent(appSlug)}/ai-competitor-suggestions/generate?platform=${platform}`,
+        { method: "POST" }
+      );
+      if (res.ok) {
+        setAiData(await res.json());
+      } else {
+        const body = await res.json().catch(() => ({}));
+        setAiError(body.error || "Failed to generate AI suggestions");
+      }
+    } catch (err: any) {
+      setAiError(err.message || "Failed to generate");
+    }
+    setAiLoading(false);
+  }, [appSlug, platform, fetchWithAuth]);
 
   // Auto-open and fetch when prominent (empty state)
   useEffect(() => {
@@ -197,7 +220,64 @@ export function CompetitorSuggestions({
                 </Badge>
               )}
             </div>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={generateAiSuggestions}
+              disabled={aiLoading}
+              className="gap-1.5 text-xs"
+            >
+              {aiLoading ? (
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              ) : aiData ? (
+                <RefreshCw className="h-3.5 w-3.5" />
+              ) : (
+                <Brain className="h-3.5 w-3.5" />
+              )}
+              {aiData ? "Regenerate AI" : "AI Analysis"}
+            </Button>
           </div>
+
+          {/* AI Insights */}
+          {aiData?.insights && (
+            <div className="px-3 py-2 border-b bg-purple-50/50 dark:bg-purple-950/20 text-xs text-muted-foreground space-y-0.5">
+              {aiData.insights.marketAnalysis && <p><strong>Market:</strong> {aiData.insights.marketAnalysis}</p>}
+              {aiData.insights.competitiveLandscape && <p><strong>Landscape:</strong> {aiData.insights.competitiveLandscape}</p>}
+            </div>
+          )}
+
+          {aiError && <div className="px-4 py-2 text-xs text-destructive border-b">{aiError}</div>}
+
+          {/* AI Competitor Results */}
+          {aiData?.competitors && aiData.competitors.length > 0 && (
+            <div className="border-b">
+              <div className="px-3 py-1.5 bg-purple-50/30 dark:bg-purple-950/10 text-xs font-medium text-muted-foreground">
+                AI Suggested Competitors ({aiData.competitors.length})
+              </div>
+              {aiData.competitors.map((comp: any) => (
+                <div key={`ai-${comp.appSlug || comp.name}`} className="flex items-center gap-3 px-3 py-2 border-b last:border-0 hover:bg-accent/50 transition-colors">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm font-medium truncate">{comp.name || comp.appSlug}</span>
+                      <Badge variant="outline" className="text-[10px] bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-300">AI</Badge>
+                      {comp.threatLevel && (
+                        <span className={`text-[10px] ${comp.threatLevel === "high" ? "text-red-500" : comp.threatLevel === "medium" ? "text-amber-500" : "text-green-500"}`}>
+                          {comp.threatLevel} threat
+                        </span>
+                      )}
+                    </div>
+                    {comp.reason && <p className="text-xs text-muted-foreground mt-0.5 truncate">{comp.reason}</p>}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {aiLoading && (
+            <div className="px-4 py-4 text-center text-sm text-muted-foreground flex items-center justify-center gap-2 border-b">
+              <Loader2 className="h-4 w-4 animate-spin" /> Analyzing competitors...
+            </div>
+          )}
 
           {/* Content */}
           <div className="max-h-[500px] overflow-auto">
