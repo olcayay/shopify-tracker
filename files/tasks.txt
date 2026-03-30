@@ -6,6 +6,7 @@ Standalone UI Improvements (2026-03-30)
   PLA-437: Star/unstar on developer detail pages ✅
   PLA-438: Group developers by platform on /developers page ✅
   PLA-432: Email & notification template variable registry with preview API ✅
+  PLA-426: Alert email data builders (ranking, competitor, review, win-celebration) ✅
   PLA-431: Add group-by-platform view to /apps page
 
 AI Suggestion Engine (2026-03-30)
