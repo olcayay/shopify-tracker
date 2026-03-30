@@ -1,3 +1,18 @@
+PLA-430: Unify developer profile table columns (2026-03-30)
+================================================================
+Problem: /developers/[slug] page showed different column counts per platform
+because `hasInstalls` was computed per-platform — if only Shopify had installs,
+Shopify table had 5 columns but Salesforce had 4. Columns didn't align.
+
+Fix:
+- Moved `hasInstalls` from per-platform to global (across ALL apps)
+- When any platform has install data, ALL tables show the Installs column
+- Platforms without install data show "-" placeholder
+- Changed table layout to `table-fixed` with percentage widths (40/10/10/25/15%)
+- Removed hardcoded pixel widths from cells — widths now come from headers only
+- 4 unit tests added covering: global installs column, hidden when no data,
+  same column count across all tables, dash placeholders for missing data
+
 PLA-453: AI competitor suggestion API endpoints (2026-03-30)
 ================================================================
 Modified GET /api/account/tracked-apps/:slug/competitor-suggestions:

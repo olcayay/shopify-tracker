@@ -83,6 +83,11 @@ export default function CrossPlatformDeveloperPage() {
     return map;
   }, [data]);
 
+  const hasInstalls = useMemo(() => {
+    if (!data) return false;
+    return data.apps.some((a) => a.activeInstalls != null);
+  }, [data]);
+
   if (loading) {
     return (
       <div className="space-y-6">
@@ -157,7 +162,6 @@ export default function CrossPlatformDeveloperPage() {
       {/* Apps grouped by platform */}
       {platforms.map((p) => {
         const platformApps = appsByPlatform.get(p.platform) || [];
-        const hasInstalls = platformApps.some((a) => a.activeInstalls != null);
 
         return (
           <Card key={p.platform}>
@@ -184,22 +188,22 @@ export default function CrossPlatformDeveloperPage() {
                   No apps found on {getPlatformLabel(p.platform)}.
                 </p>
               ) : (
-                <Table>
+                <Table className="table-fixed">
                   <TableHeader>
                     <TableRow>
-                      <TableHead className="min-w-[200px]">App</TableHead>
-                      <TableHead className="text-right w-[80px]">Rating</TableHead>
-                      <TableHead className="text-right w-[90px]">Reviews</TableHead>
-                      <TableHead className="w-[160px]">Pricing</TableHead>
+                      <TableHead className="w-[40%]">App</TableHead>
+                      <TableHead className="text-right w-[10%]">Rating</TableHead>
+                      <TableHead className="text-right w-[10%]">Reviews</TableHead>
+                      <TableHead className="w-[25%]">Pricing</TableHead>
                       {hasInstalls && (
-                        <TableHead className="text-right w-[100px]">Installs</TableHead>
+                        <TableHead className="text-right w-[15%]">Installs</TableHead>
                       )}
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {platformApps.map((app) => (
                       <TableRow key={`${app.platform}-${app.slug}`}>
-                        <TableCell className="min-w-[200px]">
+                        <TableCell>
                           <Link
                             href={`/${app.platform}/apps/${app.slug}`}
                             className="flex items-center gap-2 hover:underline"
@@ -211,7 +215,7 @@ export default function CrossPlatformDeveloperPage() {
                                 className="w-6 h-6 rounded shrink-0"
                               />
                             )}
-                            <span className="font-medium truncate max-w-[260px]">
+                            <span className="font-medium truncate">
                               {app.name}
                             </span>
                             {app.isTracked && (
@@ -219,21 +223,21 @@ export default function CrossPlatformDeveloperPage() {
                             )}
                           </Link>
                         </TableCell>
-                        <TableCell className="text-right w-[80px]">
+                        <TableCell className="text-right">
                           {app.averageRating != null
                             ? app.averageRating.toFixed(1)
                             : <span className="text-muted-foreground">-</span>}
                         </TableCell>
-                        <TableCell className="text-right w-[90px]">
+                        <TableCell className="text-right">
                           {app.ratingCount != null
                             ? app.ratingCount.toLocaleString()
                             : <span className="text-muted-foreground">-</span>}
                         </TableCell>
-                        <TableCell className="w-[160px] text-muted-foreground text-sm truncate max-w-[160px]">
-                          {app.pricingHint || "-"}
+                        <TableCell className="text-muted-foreground text-sm truncate">
+                          {app.pricingHint || <span className="text-muted-foreground">-</span>}
                         </TableCell>
                         {hasInstalls && (
-                          <TableCell className="text-right w-[100px]">
+                          <TableCell className="text-right">
                             {app.activeInstalls != null
                               ? app.activeInstalls.toLocaleString()
                               : <span className="text-muted-foreground">-</span>}
