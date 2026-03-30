@@ -1,5 +1,6 @@
 Dark Mode Implementation (2026-03-30)
   PLA-494: Phase 0: Add next-themes provider and theme toggle ✅
+  PLA-495: Phase 1: Define extended semantic color tokens ✅
 
 Shared Cross-Platform Components (2026-03-30)
   PLA-481: Phase 0: Create shared ViewModeToggle component ✅
