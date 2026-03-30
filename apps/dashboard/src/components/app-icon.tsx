@@ -32,7 +32,7 @@ export function AppIcon({
     <img
       src={src}
       alt={alt}
-      className={cn("shrink-0", className)}
+      className={cn("shrink-0 dark:ring-1 dark:ring-border", className)}
       onError={() => setFailed(true)}
     />
   );

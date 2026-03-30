@@ -47,9 +47,9 @@ export function AnimatedLogo({ animating = false, className = "" }: AnimatedLogo
       `}</style>
 
       {/* Y-axis */}
-      <line x1="4" y1="2" x2="4" y2="21.5" stroke="#6366f1" strokeWidth="1.5" strokeLinecap="round" opacity="0.4" />
+      <line x1="4" y1="2" x2="4" y2="21.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" opacity="0.4" />
       {/* X-axis */}
-      <line x1="3.5" y1="21.5" x2="23" y2="21.5" stroke="#6366f1" strokeWidth="1.5" strokeLinecap="round" opacity="0.4" />
+      <line x1="3.5" y1="21.5" x2="23" y2="21.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" opacity="0.4" />
 
       {/* Bars */}
       {bars.map((bar, i) => (
