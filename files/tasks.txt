@@ -12,6 +12,7 @@ Design System Components (2026-03-30)
   PLA-509: Create shared SortableHeader and FilterButtonGroup ✅
   PLA-510: Create shared StatCard and EmptyState components ✅
   PLA-511: Create shared StatusIndicator component ✅
+  PLA-512: Standardize page-level spacing rules ✅
 
 Shared Cross-Platform Components (2026-03-30)
   PLA-481: Phase 0: Create shared ViewModeToggle component ✅
