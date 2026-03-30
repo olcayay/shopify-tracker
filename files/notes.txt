@@ -1,3 +1,15 @@
+PLA-464: My Developers section on /developers page (2026-03-30)
+================================================================
+API: GET /api/developers/tracked — developers of tracked apps with only their tracked apps listed
+Dashboard: Card section at top of /developers page with developer name, tracked app badges
+(icon + name + link), platform badges, platform count. Hidden when no tracked apps.
+
+PLA-470-474: Filter cross-platform pages by enabled platforms (2026-03-30)
+================================================================
+All listing pages always send platforms query param to API (previously omitted when all active).
+Developers page: platform badges/count filtered client-side against enabledPlatforms.
+Developer detail: platforms overview filtered. Grouped view only shows enabled platform groups.
+
 PLA-490: Apps column with clickable icons in developers table (2026-03-30)
 ================================================================
 API: top_app_icons → top_apps (json_agg with iconUrl, name, slug, platform) + app_count subquery
