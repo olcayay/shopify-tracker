@@ -5,55 +5,80 @@ import { useAuth } from "@/lib/auth-context";
 import {
   Card,
   CardContent,
+  CardHeader,
+  CardTitle,
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import {
   Bell,
   RefreshCw,
   Loader2,
-  Settings,
-  ToggleLeft,
-  ToggleRight,
+  ChevronDown,
+  Save,
+  RotateCcw,
+  Eye,
+  Pencil,
+  X,
 } from "lucide-react";
+import { VariablePicker, TemplatePreview } from "@/components/template-editor";
 
-interface NotificationConfig {
-  id: string;
+interface TemplateVariable {
+  name: string;
+  description: string;
+  example: string;
+}
+
+interface NotificationTemplate {
   notificationType: string;
-  inAppEnabled: boolean;
-  pushDefaultEnabled: boolean;
+  titleTemplate: string;
+  bodyTemplate: string;
+  isCustomized: boolean;
+  variables: TemplateVariable[];
+  updatedAt: string | null;
+}
+
+const CATEGORY_ORDER = ["ranking", "competitor", "review", "keyword", "featured", "system", "account"];
+
+function getCategory(type: string): string {
+  const prefix = type.split("_")[0];
+  return CATEGORY_ORDER.includes(prefix) ? prefix : "other";
+}
+
+function getCategoryLabel(cat: string): string {
+  return cat.charAt(0).toUpperCase() + cat.slice(1);
+}
+
+function formatTypeName(type: string): string {
+  return type.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+}
+
+function renderPreviewText(template: string, variables: TemplateVariable[]): string {
+  let result = template;
+  for (const v of variables) {
+    result = result.replace(new RegExp(`\\{\\{${v.name}\\}\\}`, "g"), v.example);
+  }
+  return result;
 }
 
 export default function AdminNotificationDashboard() {
   const { fetchWithAuth } = useAuth();
-  const [configs, setConfigs] = useState<NotificationConfig[]>([]);
+  const [templates, setTemplates] = useState<NotificationTemplate[]>([]);
   const [loading, setLoading] = useState(true);
-  const [stats, setStats] = useState<any>(null);
+  const [editingType, setEditingType] = useState<string | null>(null);
+  const [editTitle, setEditTitle] = useState("");
+  const [editBody, setEditBody] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [collapsedCategories, setCollapsedCategories] = useState<Set<string>>(new Set());
 
   const loadData = useCallback(async () => {
     setLoading(true);
     try {
-      // Get notification type configs
-      const [configRes, statsRes] = await Promise.all([
-        fetchWithAuth("/api/system-admin/email-configs").catch(() => null),
-        fetchWithAuth("/api/system-admin/emails/stats").catch(() => null),
-      ]);
-
-      if (configRes?.ok) {
-        // Reuse email configs endpoint — notification configs are similar
-        const data = await configRes.json();
-        setConfigs(data || []);
-      }
-      if (statsRes?.ok) {
-        setStats(await statsRes.json());
+      const res = await fetchWithAuth("/api/system-admin/templates/notifications");
+      if (res.ok) {
+        setTemplates(await res.json());
       }
     } finally {
       setLoading(false);
@@ -62,111 +87,198 @@ export default function AdminNotificationDashboard() {
 
   useEffect(() => { loadData(); }, [loadData]);
 
-  const categoryLabel = (type: string) => {
-    if (type.startsWith("ranking_")) return "Ranking";
-    if (type.startsWith("competitor_")) return "Competitor";
-    if (type.startsWith("review_")) return "Review";
-    if (type.startsWith("keyword_")) return "Keyword";
-    if (type.startsWith("featured_")) return "Featured";
-    if (type.startsWith("system_")) return "System";
-    if (type.startsWith("account_")) return "Account";
-    return "Other";
-  };
+  function toggleCategory(cat: string) {
+    setCollapsedCategories((prev) => {
+      const next = new Set(prev);
+      if (next.has(cat)) next.delete(cat);
+      else next.add(cat);
+      return next;
+    });
+  }
+
+  function startEditing(t: NotificationTemplate) {
+    setEditingType(t.notificationType);
+    setEditTitle(t.titleTemplate);
+    setEditBody(t.bodyTemplate);
+  }
+
+  function cancelEditing() {
+    setEditingType(null);
+    setEditTitle("");
+    setEditBody("");
+  }
+
+  function insertVariable(varName: string, field: "title" | "body") {
+    const token = `{{${varName}}}`;
+    if (field === "title") {
+      setEditTitle((prev) => prev + token);
+    } else {
+      setEditBody((prev) => prev + token);
+    }
+  }
+
+  async function saveTemplate() {
+    if (!editingType) return;
+    setSaving(true);
+    try {
+      const res = await fetchWithAuth(`/api/system-admin/templates/notifications/${editingType}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ titleTemplate: editTitle, bodyTemplate: editBody }),
+      });
+      if (res.ok) {
+        await loadData();
+        cancelEditing();
+      }
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function resetTemplate(type: string) {
+    const res = await fetchWithAuth(`/api/system-admin/templates/notifications/${type}/reset`, {
+      method: "POST",
+    });
+    if (res.ok) {
+      await loadData();
+      if (editingType === type) cancelEditing();
+    }
+  }
+
+  // Group templates by category
+  const grouped = new Map<string, NotificationTemplate[]>();
+  for (const t of templates) {
+    const cat = getCategory(t.notificationType);
+    const list = grouped.get(cat) || [];
+    list.push(t);
+    grouped.set(cat, list);
+  }
 
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold flex items-center gap-2">
-          <Bell className="h-6 w-6" /> Notification Management
-        </h1>
-        <Button variant="outline" size="sm" onClick={loadData}>
-          <RefreshCw className="h-4 w-4 mr-1" /> Refresh
+        <div>
+          <h1 className="text-2xl font-bold flex items-center gap-2">
+            <Bell className="h-6 w-6" /> Notification Templates
+          </h1>
+          <p className="text-sm text-muted-foreground">{templates.length} notification types across {grouped.size} categories</p>
+        </div>
+        <Button variant="outline" size="sm" onClick={loadData} disabled={loading}>
+          <RefreshCw className={`h-4 w-4 mr-1 ${loading ? "animate-spin" : ""}`} /> Refresh
         </Button>
       </div>
 
-      {/* Stats */}
-      {stats && (
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <Card>
-            <CardContent className="pt-4 text-center">
-              <p className="text-2xl font-bold">{stats.total || 0}</p>
-              <p className="text-xs text-muted-foreground">Total Emails</p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="pt-4 text-center">
-              <p className="text-2xl font-bold">{stats.sent24h || 0}</p>
-              <p className="text-xs text-muted-foreground">Last 24h</p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="pt-4 text-center">
-              <p className="text-2xl font-bold">{stats.openRate || 0}%</p>
-              <p className="text-xs text-muted-foreground">Open Rate</p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="pt-4 text-center">
-              <p className="text-2xl font-bold">{configs.length}</p>
-              <p className="text-xs text-muted-foreground">Config Types</p>
-            </CardContent>
-          </Card>
+      {loading && templates.length === 0 ? (
+        <div className="flex justify-center py-12">
+          <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+        </div>
+      ) : (
+        <div className="space-y-4">
+          {CATEGORY_ORDER.map((cat) => {
+            const catTemplates = grouped.get(cat);
+            if (!catTemplates || catTemplates.length === 0) return null;
+            const isCollapsed = collapsedCategories.has(cat);
+
+            return (
+              <Card key={cat}>
+                <button
+                  onClick={() => toggleCategory(cat)}
+                  className="flex items-center gap-2 w-full p-4 hover:bg-muted/50 transition-colors text-left"
+                >
+                  <ChevronDown className={`h-4 w-4 transition-transform ${isCollapsed ? "-rotate-90" : ""}`} />
+                  <span className="font-semibold">{getCategoryLabel(cat)}</span>
+                  <Badge variant="secondary">{catTemplates.length}</Badge>
+                </button>
+
+                {!isCollapsed && (
+                  <CardContent className="pt-0 space-y-3">
+                    {catTemplates.map((t) => {
+                      const isEditing = editingType === t.notificationType;
+                      const previewTitle = isEditing
+                        ? renderPreviewText(editTitle, t.variables)
+                        : renderPreviewText(t.titleTemplate, t.variables);
+                      const previewBody = isEditing
+                        ? renderPreviewText(editBody, t.variables)
+                        : renderPreviewText(t.bodyTemplate, t.variables);
+
+                      return (
+                        <div
+                          key={t.notificationType}
+                          className="border rounded-md p-3 space-y-3"
+                        >
+                          {/* Header row */}
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                              <span className="text-sm font-medium">{formatTypeName(t.notificationType)}</span>
+                              {t.isCustomized && (
+                                <Badge variant="outline" className="text-[10px]">Customized</Badge>
+                              )}
+                            </div>
+                            <div className="flex items-center gap-1">
+                              {!isEditing ? (
+                                <Button variant="ghost" size="sm" onClick={() => startEditing(t)}>
+                                  <Pencil className="h-3.5 w-3.5" />
+                                </Button>
+                              ) : (
+                                <>
+                                  <Button variant="ghost" size="sm" onClick={cancelEditing}>
+                                    <X className="h-3.5 w-3.5" />
+                                  </Button>
+                                  <Button variant="ghost" size="sm" onClick={() => resetTemplate(t.notificationType)}>
+                                    <RotateCcw className="h-3.5 w-3.5" />
+                                  </Button>
+                                  <Button size="sm" onClick={saveTemplate} disabled={saving}>
+                                    {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />}
+                                    <span className="ml-1">Save</span>
+                                  </Button>
+                                </>
+                              )}
+                            </div>
+                          </div>
+
+                          {isEditing ? (
+                            /* Edit mode */
+                            <div className="space-y-3">
+                              <div>
+                                <label className="text-xs font-medium text-muted-foreground mb-1 block">Title Template</label>
+                                <Input
+                                  value={editTitle}
+                                  onChange={(e) => setEditTitle(e.target.value)}
+                                  className="font-mono text-sm"
+                                />
+                              </div>
+                              <div>
+                                <label className="text-xs font-medium text-muted-foreground mb-1 block">Body Template</label>
+                                <Textarea
+                                  value={editBody}
+                                  onChange={(e) => setEditBody(e.target.value)}
+                                  className="font-mono text-sm"
+                                  rows={3}
+                                />
+                              </div>
+                              <VariablePicker
+                                variables={t.variables}
+                                onInsert={(name) => insertVariable(name, "body")}
+                              />
+                              <TemplatePreview title={previewTitle} body={previewBody} />
+                            </div>
+                          ) : (
+                            /* View mode */
+                            <div className="text-sm">
+                              <p className="font-medium">{previewTitle}</p>
+                              <p className="text-muted-foreground">{previewBody}</p>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </CardContent>
+                )}
+              </Card>
+            );
+          })}
         </div>
       )}
-
-      {/* Notification Type Configs */}
-      <Card>
-        <CardContent className="p-0">
-          {loading ? (
-            <div className="flex justify-center py-12">
-              <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-            </div>
-          ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Type</TableHead>
-                  <TableHead>Category</TableHead>
-                  <TableHead>Status</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {configs.length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={3} className="text-center py-8 text-muted-foreground">
-                      No notification configs found
-                    </TableCell>
-                  </TableRow>
-                ) : (
-                  configs.map((c: any) => (
-                    <TableRow key={c.id || c.emailType || c.notificationType}>
-                      <TableCell className="text-sm font-mono">
-                        {(c.emailType || c.notificationType || "").replace(/_/g, " ")}
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant="outline">
-                          {categoryLabel(c.emailType || c.notificationType || "")}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        {(c.enabled ?? c.inAppEnabled) ? (
-                          <span className="flex items-center gap-1 text-green-600 text-sm">
-                            <ToggleRight className="h-4 w-4" /> Enabled
-                          </span>
-                        ) : (
-                          <span className="flex items-center gap-1 text-muted-foreground text-sm">
-                            <ToggleLeft className="h-4 w-4" /> Disabled
-                          </span>
-                        )}
-                      </TableCell>
-                    </TableRow>
-                  ))
-                )}
-              </TableBody>
-            </Table>
-          )}
-        </CardContent>
-      </Card>
     </div>
   );
 }
