@@ -1,3 +1,14 @@
+Dark Mode + Design System Implementation (2026-03-30)
+================================================================
+Dark mode: next-themes + ThemeToggle (PLA-494), FOIT prevention script (PLA-505),
+semantic tokens (PLA-495), tag colors (PLA-497), platform brand colors (PLA-498),
+shadow/ring fixes (PLA-499), AI gradient (PLA-500), Recharts (PLA-504),
+app icon ring (PLA-506), inline style fixes (PLA-496/503), auth audit (PLA-501).
+
+Design system: PageHeader, SearchInput, SortableHeader, FilterButtonGroup,
+StatCard, EmptyState, StatusIndicator components (PLA-507-511).
+Spacing + icon + grid tokens (PLA-512-513). Design system admin page (PLA-514).
+
 PLA-475: API endpoint for overview daily highlights (2026-03-30)
 ================================================================
 GET /api/overview/highlights?platform=<optional> — per-platform highlight data:
