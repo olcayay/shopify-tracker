@@ -208,6 +208,8 @@ await app.register(emailTrackingRoutes, { prefix: "/api/emails" });
 // Admin email management (requires system admin auth)
 const { adminEmailRoutes } = await import("./routes/admin-emails.js");
 await app.register(adminEmailRoutes, { prefix: "/api/system-admin" });
+const { adminNotificationRoutes } = await import("./routes/admin-notifications.js");
+await app.register(adminNotificationRoutes, { prefix: "/api/system-admin" });
 
 // AI content generation (requires system admin auth)
 const { aiContentRoutes } = await import("./routes/ai-content.js");

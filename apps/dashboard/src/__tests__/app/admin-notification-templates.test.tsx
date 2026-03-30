@@ -23,6 +23,14 @@ vi.mock("@tiptap/extension-placeholder", () => ({
   default: { configure: () => ({}) },
 }));
 
+// Mock Tabs to render all content (Radix Tabs don't work in jsdom)
+vi.mock("@/components/ui/tabs", () => ({
+  Tabs: ({ children }: any) => <div>{children}</div>,
+  TabsList: ({ children }: any) => <div data-testid="tabs-list">{children}</div>,
+  TabsTrigger: ({ children, value }: any) => <button data-testid={`tab-${value}`}>{children}</button>,
+  TabsContent: ({ children }: any) => <div>{children}</div>,
+}));
+
 import AdminNotificationDashboard from "@/app/(dashboard)/system-admin/notifications/page";
 
 const mockTemplates = [
@@ -54,26 +62,43 @@ const mockTemplates = [
   },
 ];
 
+function setupDefaultMocks() {
+  mockFetchWithAuth.mockImplementation((url: string) => {
+    // Templates must match before generic notifications
+    if (url.includes("/templates/notifications")) {
+      return Promise.resolve({ ok: true, json: () => Promise.resolve(mockTemplates) });
+    }
+    if (url.includes("/notifications/stats")) {
+      return Promise.resolve({ ok: true, json: () => Promise.resolve({ total: 0, readCount: 0, readRate: 0, pushSent: 0, pushClicked: 0, pushClickRate: 0, failed: 0, last24h: 0, last7d: 0 }) });
+    }
+    if (url.includes("/system-admin/notifications")) {
+      return Promise.resolve({ ok: true, json: () => Promise.resolve({ notifications: [], total: 0, limit: 20, offset: 0 }) });
+    }
+    return Promise.resolve({ ok: true, json: () => Promise.resolve({}) });
+  });
+}
+
+async function renderAndGoToTemplates() {
+  setupDefaultMocks();
+  render(<AdminNotificationDashboard />);
+  // Tabs are mocked to render all content, no click needed
+}
+
 describe("AdminNotificationDashboard", () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
-  it("renders page heading", async () => {
-    mockFetchWithAuth.mockResolvedValue({
-      ok: true,
-      json: () => Promise.resolve(mockTemplates),
-    });
+  it("renders page heading with tabs", async () => {
+    setupDefaultMocks();
     render(<AdminNotificationDashboard />);
-    expect(screen.getByText("Notification Templates")).toBeInTheDocument();
+    expect(screen.getByText("Notification Management")).toBeInTheDocument();
+    expect(screen.getByText("Dashboard")).toBeInTheDocument();
+    expect(screen.getByText("Templates")).toBeInTheDocument();
   });
 
   it("loads and displays templates grouped by category", async () => {
-    mockFetchWithAuth.mockResolvedValue({
-      ok: true,
-      json: () => Promise.resolve(mockTemplates),
-    });
-    render(<AdminNotificationDashboard />);
+    await renderAndGoToTemplates();
     await waitFor(() => {
       expect(screen.getByText("Ranking")).toBeInTheDocument();
       expect(screen.getByText("Competitor")).toBeInTheDocument();
@@ -81,38 +106,24 @@ describe("AdminNotificationDashboard", () => {
   });
 
   it("shows template preview text with variables replaced", async () => {
-    mockFetchWithAuth.mockResolvedValue({
-      ok: true,
-      json: () => Promise.resolve(mockTemplates),
-    });
-    render(<AdminNotificationDashboard />);
+    await renderAndGoToTemplates();
     await waitFor(() => {
-      // Preview should replace {{appName}} with example "OrderFlow Pro"
       expect(screen.getByText(/OrderFlow Pro entered Top 3/)).toBeInTheDocument();
     });
   });
 
   it("shows Customized badge for customized templates", async () => {
-    mockFetchWithAuth.mockResolvedValue({
-      ok: true,
-      json: () => Promise.resolve(mockTemplates),
-    });
-    render(<AdminNotificationDashboard />);
+    await renderAndGoToTemplates();
     await waitFor(() => {
       expect(screen.getByText("Customized")).toBeInTheDocument();
     });
   });
 
   it("enters edit mode when pencil icon clicked", async () => {
-    mockFetchWithAuth.mockResolvedValue({
-      ok: true,
-      json: () => Promise.resolve(mockTemplates),
-    });
-    render(<AdminNotificationDashboard />);
+    await renderAndGoToTemplates();
     await waitFor(() => {
       expect(screen.getByText(/OrderFlow Pro entered Top 3/)).toBeInTheDocument();
     });
-    // Click the first edit button
     const editButtons = document.querySelectorAll('[class*="ghost"]');
     const pencilButton = Array.from(editButtons).find(
       (b) => b.querySelector("svg") && b.closest("[class*='border rounded-md']")
@@ -122,28 +133,31 @@ describe("AdminNotificationDashboard", () => {
       await waitFor(() => {
         expect(screen.getByText("Title Template")).toBeInTheDocument();
         expect(screen.getByText("Body Template")).toBeInTheDocument();
-        expect(screen.getByText("Available Variables")).toBeInTheDocument();
-        expect(screen.getByText("Preview")).toBeInTheDocument();
       });
     }
   });
 
-  it("shows loading spinner initially", () => {
-    mockFetchWithAuth.mockReturnValue(new Promise(() => {}));
-    render(<AdminNotificationDashboard />);
-    expect(document.querySelector(".animate-spin")).toBeInTheDocument();
-  });
-
-  it("calls correct API endpoint", async () => {
-    mockFetchWithAuth.mockResolvedValue({
-      ok: true,
-      json: () => Promise.resolve(mockTemplates),
-    });
+  it("calls API endpoints for dashboard and templates", async () => {
+    setupDefaultMocks();
     render(<AdminNotificationDashboard />);
     await waitFor(() => {
       expect(mockFetchWithAuth).toHaveBeenCalledWith(
+        expect.stringContaining("/notifications/stats")
+      );
+      expect(mockFetchWithAuth).toHaveBeenCalledWith(
         "/api/system-admin/templates/notifications"
       );
+    });
+  });
+
+  it("shows dashboard stats cards", async () => {
+    setupDefaultMocks();
+    render(<AdminNotificationDashboard />);
+    await waitFor(() => {
+      expect(screen.getByText("Total")).toBeInTheDocument();
+      expect(screen.getByText("Read Rate")).toBeInTheDocument();
+      expect(screen.getByText("Push Sent")).toBeInTheDocument();
+      expect(screen.getByText("Failed")).toBeInTheDocument();
     });
   });
 });

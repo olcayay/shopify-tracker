@@ -38,6 +38,7 @@ Overview Page Redesign (2026-03-30)
   PLA-478: Phase 3: Available platforms section redesign ✅
   PLA-479: Phase 4: Cross-platform summary hero card ✅
   PLA-480: Phase 5: Polish — skeleton loaders, hover effects, empty states ✅
+  PLA-493: Build Notification Management dashboard page ✅
 
 Standalone UI Improvements (2026-03-30)
   PLA-430: Fix developer profile — unify table columns across platforms ✅
