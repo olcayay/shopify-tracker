@@ -2,7 +2,8 @@
 
 import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { ArrowRight, Star, Search, Users } from "lucide-react";
+import { ArrowRight, Star, Search } from "lucide-react";
+import { DailyHighlights } from "@/components/overview-daily-highlights";
 import { PLATFORMS, type PlatformId } from "@appranks/shared";
 import { PLATFORM_DISPLAY } from "@/lib/platform-display";
 
@@ -79,6 +80,13 @@ export function OverviewPlatformCard({ platformId, data, stats }: OverviewPlatfo
             <Link href={`/${platformId}`} className="text-primary hover:underline">
               Start tracking
             </Link>
+          </div>
+        )}
+
+        {/* Daily highlights section */}
+        {data?.highlights && apps.length > 0 && (
+          <div className="mt-3 pt-3 border-t">
+            <DailyHighlights highlights={data.highlights} platformId={platformId} />
           </div>
         )}
       </CardContent>
