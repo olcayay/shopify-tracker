@@ -20,6 +20,7 @@ Design System Components (2026-03-30)
   PLA-511: Create shared StatusIndicator component ✅
   PLA-512: Standardize page-level spacing rules ✅
   PLA-513: Standardize icon sizes, grid patterns, button sizes ✅
+  PLA-514: Design system admin page with component showcase ✅
 
 Shared Cross-Platform Components (2026-03-30)
   PLA-481: Phase 0: Create shared ViewModeToggle component ✅
