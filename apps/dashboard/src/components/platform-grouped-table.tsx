@@ -69,7 +69,7 @@ export function PlatformGroupedTable<T>({
           </TableHeader>
         )}
         <TableBody>
-          {groups.map((group) => {
+          {groups.map((group, groupIndex) => {
             const color = getPlatformColor(group.platform as PlatformId);
             const label =
               PLATFORM_DISPLAY[group.platform as PlatformId]?.label ??
@@ -87,6 +87,7 @@ export function PlatformGroupedTable<T>({
                 plural={plural}
                 colCount={colCount}
                 isCollapsed={isCollapsed}
+                isFirst={groupIndex === 0}
                 onToggle={() => toggleCollapse(group.platform)}
                 renderHeaderRow={singleHeader ? undefined : renderHeaderRow}
                 renderRow={renderRow}
@@ -107,6 +108,7 @@ function PlatformGroupRows<T>({
   plural,
   colCount,
   isCollapsed,
+  isFirst,
   onToggle,
   renderHeaderRow,
   renderRow,
@@ -117,6 +119,7 @@ function PlatformGroupRows<T>({
   plural: string;
   colCount: number;
   isCollapsed: boolean;
+  isFirst: boolean;
   onToggle: () => void;
   renderHeaderRow?: () => ReactNode;
   renderRow: (item: T, index: number) => ReactNode;
@@ -125,18 +128,24 @@ function PlatformGroupRows<T>({
 
   return (
     <>
+      {/* Spacer row between platform groups */}
+      {!isFirst && (
+        <tr>
+          <td colSpan={colCount} className="h-2 bg-muted/20 border-t border-border" />
+        </tr>
+      )}
       {/* Platform group header row */}
       <TableRow
-        className="hover:bg-muted/30 cursor-pointer border-b"
+        className="bg-muted/50 hover:bg-muted/70 cursor-pointer border-b"
         style={{ borderLeftWidth: 3, borderLeftColor: color }}
         onClick={onToggle}
         data-testid={`platform-group-${group.platform}`}
       >
-        <TableCell colSpan={colCount} className="px-4 py-2.5">
+        <TableCell colSpan={colCount} className="px-4 py-3">
           <div className="flex items-center gap-2">
             <ChevronIcon className="h-4 w-4 text-muted-foreground shrink-0" />
             <span
-              className="w-2.5 h-2.5 rounded-full shrink-0"
+              className="w-3 h-3 rounded-full shrink-0"
               style={{ backgroundColor: color }}
             />
             <span className="font-semibold text-sm">{label}</span>
