@@ -5,6 +5,7 @@ Dark Mode QA & Polish (2026-03-31)
   PLA-537: Visual QA — Keywords, research, virtual apps dark mode fixes ✅
   PLA-538: Visual QA — Settings, admin, auth, marketing dark mode fixes ✅
   PLA-539: Visual QA — Interactive states, modals, theme toggle ✅
+  PLA-540: Add 'By App' grouping mode to cross-platform competitors page ✅
 
 Dark Mode Fixes (2026-03-31)
   PLA-527: Fix dark mode for preview components (force-light container) ✅

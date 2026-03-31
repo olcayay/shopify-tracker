@@ -75,7 +75,7 @@ vi.mock("@/components/platform-filter-chips", () => ({
   ),
 }));
 
-import CrossPlatformCompetitorsPage from "@/app/(dashboard)/competitors/page";
+import CrossPlatformCompetitorsPage, { groupCompetitorsByApp } from "@/app/(dashboard)/competitors/page";
 
 function makeJsonResponse(data: any) {
   return { ok: true, json: () => Promise.resolve(data) };
@@ -474,5 +474,174 @@ describe("CrossPlatformCompetitorsPage", () => {
     await waitFor(() => {
       expect(screen.getByText("No competitors tracked.")).toBeInTheDocument();
     });
+  });
+
+  // --- By App view mode tests ---
+
+  it("renders By App toggle button", async () => {
+    setupFetchMocks();
+    render(<CrossPlatformCompetitorsPage />);
+    expect(screen.getByRole("button", { name: /By App/i })).toBeInTheDocument();
+  });
+
+  it("groups competitors by tracked app when By App is clicked", async () => {
+    setupFetchMocks();
+    render(<CrossPlatformCompetitorsPage />);
+    await waitFor(() => {
+      expect(screen.getByText("Rival App")).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: /By App/i }));
+
+    await waitFor(() => {
+      // App group headers should appear with tracked app names
+      expect(screen.getByText("My App")).toBeInTheDocument();
+      expect(screen.getByText("Other App")).toBeInTheDocument();
+      expect(screen.getByText("SF Tracked")).toBeInTheDocument();
+      // Rival App appears in multiple groups (tracked for 2 apps)
+      expect(screen.getAllByText("Rival App").length).toBeGreaterThanOrEqual(2);
+      expect(screen.getByText("SF Competitor")).toBeInTheDocument();
+    });
+  });
+
+  it("shows competitor count per app group", async () => {
+    setupFetchMocks();
+    render(<CrossPlatformCompetitorsPage />);
+    await waitFor(() => {
+      expect(screen.getByText("Rival App")).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: /By App/i }));
+
+    await waitFor(() => {
+      const countBadges = screen.getAllByText("(1 competitor)");
+      expect(countBadges.length).toBeGreaterThanOrEqual(2);
+    });
+  });
+
+  it("shows empty message in By App view when no competitors", async () => {
+    setupFetchMocks({ items: [] });
+    render(<CrossPlatformCompetitorsPage />);
+    await waitFor(() => {
+      expect(screen.getByText("No competitors tracked.")).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: /By App/i }));
+
+    await waitFor(() => {
+      expect(screen.getByText("No competitors tracked.")).toBeInTheDocument();
+    });
+  });
+
+  it("switches from By App back to List view", async () => {
+    setupFetchMocks();
+    render(<CrossPlatformCompetitorsPage />);
+    await waitFor(() => {
+      expect(screen.getByText("Rival App")).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: /By App/i }));
+    await waitFor(() => {
+      expect(screen.getByText("My App")).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: /List/i }));
+    await waitFor(() => {
+      expect(screen.getByText("Platform")).toBeInTheDocument();
+    });
+  });
+
+  it("persists By App view mode in localStorage", async () => {
+    setupFetchMocks();
+    render(<CrossPlatformCompetitorsPage />);
+    await waitFor(() => {
+      expect(screen.getByText("Rival App")).toBeInTheDocument();
+    });
+
+    fireEvent.click(screen.getByRole("button", { name: /By App/i }));
+
+    expect(localStorage.getItem("competitors-view-mode")).toBe("by-app");
+  });
+});
+
+// --- groupCompetitorsByApp unit tests ---
+
+describe("groupCompetitorsByApp", () => {
+  const makeComp = (id: number, name: string, apps: { id: number; name: string; slug: string; platform: string }[]): any => ({
+    id,
+    platform: apps[0]?.platform ?? "shopify",
+    slug: name.toLowerCase().replace(/\s/g, "-"),
+    name,
+    iconUrl: null,
+    averageRating: null,
+    ratingCount: null,
+    pricingHint: null,
+    trackedForCount: apps.length,
+    trackedForApps: apps.map((a) => ({ ...a, iconUrl: null })),
+    activeInstalls: null,
+  });
+
+  it("groups competitors by their tracked apps", () => {
+    const items = [
+      makeComp(1, "Comp A", [{ id: 10, name: "App X", slug: "app-x", platform: "shopify" }]),
+      makeComp(2, "Comp B", [{ id: 10, name: "App X", slug: "app-x", platform: "shopify" }]),
+      makeComp(3, "Comp C", [{ id: 20, name: "App Y", slug: "app-y", platform: "salesforce" }]),
+    ];
+
+    const groups = groupCompetitorsByApp(items);
+    expect(groups).toHaveLength(2);
+
+    const appX = groups.find((g) => g.appName === "App X");
+    expect(appX).toBeDefined();
+    expect(appX!.items).toHaveLength(2);
+
+    const appY = groups.find((g) => g.appName === "App Y");
+    expect(appY).toBeDefined();
+    expect(appY!.items).toHaveLength(1);
+  });
+
+  it("duplicates competitors tracked for multiple apps", () => {
+    const items = [
+      makeComp(1, "Shared Comp", [
+        { id: 10, name: "App X", slug: "app-x", platform: "shopify" },
+        { id: 20, name: "App Y", slug: "app-y", platform: "salesforce" },
+      ]),
+    ];
+
+    const groups = groupCompetitorsByApp(items);
+    expect(groups).toHaveLength(2);
+    expect(groups[0].items).toHaveLength(1);
+    expect(groups[1].items).toHaveLength(1);
+    // Same competitor appears in both groups
+    expect(groups[0].items[0].id).toBe(1);
+    expect(groups[1].items[0].id).toBe(1);
+  });
+
+  it("puts competitors without trackedForApps in 'Other' group", () => {
+    const items = [
+      makeComp(1, "Orphan Comp", []),
+    ];
+    // Override trackedForApps to empty
+    items[0].trackedForApps = [];
+
+    const groups = groupCompetitorsByApp(items);
+    expect(groups).toHaveLength(1);
+    expect(groups[0].appName).toBe("Other");
+    expect(groups[0].items).toHaveLength(1);
+  });
+
+  it("sorts groups alphabetically by app name", () => {
+    const items = [
+      makeComp(1, "Comp A", [{ id: 20, name: "Zeta App", slug: "zeta", platform: "shopify" }]),
+      makeComp(2, "Comp B", [{ id: 10, name: "Alpha App", slug: "alpha", platform: "shopify" }]),
+    ];
+
+    const groups = groupCompetitorsByApp(items);
+    expect(groups[0].appName).toBe("Alpha App");
+    expect(groups[1].appName).toBe("Zeta App");
+  });
+
+  it("returns empty array for empty input", () => {
+    expect(groupCompetitorsByApp([])).toEqual([]);
   });
 });

@@ -1,3 +1,12 @@
+PLA-540: By App grouping for cross-platform competitors (2026-03-31)
+================================================================
+Added third view mode "By App" to /competitors page. Competitors are
+grouped by the tracked app they belong to. A competitor tracked for
+2+ apps appears in each group. Local CompetitorsViewModeToggle (3 buttons),
+local useCompetitorsViewMode hook, AppGroupedTable component. Shared
+ViewModeToggle not modified. 11 new tests (37 total). groupCompetitorsByApp
+exported for unit testing.
+
 PLA-534: Automated dark mode CSS antipattern scanner (2026-03-31)
 ================================================================
 Created vitest-based scanner at __tests__/lint/dark-mode-antipatterns.test.ts.
