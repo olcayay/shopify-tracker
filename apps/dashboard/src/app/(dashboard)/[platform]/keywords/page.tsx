@@ -640,7 +640,7 @@ export default function KeywordsPage() {
                                       (app: any) => (
                                         <div
                                           key={app.app_slug}
-                                          className="flex items-center justify-between text-sm py-1 px-2 rounded bg-emerald-500/10 border-l-2 border-l-emerald-500"
+                                          className="flex items-center justify-between text-sm py-1 px-2 rounded bg-emerald-500/10 dark:bg-emerald-500/5 border-l-2 border-l-emerald-500 dark:border-l-emerald-400"
                                         >
                                           <div className="flex items-center gap-2">
                                             <AppIcon src={app.logo_url} className="h-5 w-5 rounded" />
@@ -674,7 +674,7 @@ export default function KeywordsPage() {
                                       (app: any) => (
                                         <div
                                           key={app.app_slug}
-                                          className="flex items-center justify-between text-sm py-1 px-2 rounded bg-amber-500/10 border-l-2 border-l-amber-500"
+                                          className="flex items-center justify-between text-sm py-1 px-2 rounded bg-amber-500/10 dark:bg-amber-500/5 border-l-2 border-l-amber-500 dark:border-l-amber-400"
                                         >
                                           <div className="flex items-center gap-2">
                                             <AppIcon src={app.logo_url} className="h-5 w-5 rounded" />

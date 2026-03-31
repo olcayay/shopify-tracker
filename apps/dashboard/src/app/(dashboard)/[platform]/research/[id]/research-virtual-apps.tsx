@@ -381,7 +381,7 @@ export function VirtualAppsGrid({
                   {/* Footer: AI badge + creator + time */}
                   <div className="mt-2 pt-2 border-t flex items-center gap-2 text-[10px]">
                     {va.generatedByAi ? (
-                      <span className="inline-flex items-center gap-1 font-medium px-1.5 py-0.5 rounded-full bg-purple-100 text-purple-700 dark:bg-purple-950 dark:text-purple-300">
+                      <span className="inline-flex items-center gap-1 font-medium px-1.5 py-0.5 rounded-full bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-300">
                         <Sparkles className="h-2.5 w-2.5" /> AI
                       </span>
                     ) : (

@@ -183,7 +183,7 @@ export default async function KeywordDetailPage({
               </TableHeader>
               <TableBody>
                 {builtInApps.map((app: any) => (
-                  <TableRow key={app.app_slug} className="bg-blue-50/50 border-l-2 border-l-blue-400">
+                  <TableRow key={app.app_slug} className="bg-blue-50/50 dark:bg-blue-950/30 border-l-2 border-l-blue-400 dark:border-l-blue-500">
                     <TableCell>
                       <div className="flex items-center gap-2">
                         <AppIcon src={app.logo_url} className="h-6 w-6 rounded" />
@@ -195,7 +195,7 @@ export default async function KeywordDetailPage({
                           >
                             {app.app_name}
                           </ExternalLink>
-                          <Badge className="text-[10px] px-1 py-0 h-4 bg-blue-100 text-blue-700 border-blue-300" variant="outline">
+                          <Badge className="text-[10px] px-1 py-0 h-4 bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 border-blue-300 dark:border-blue-600" variant="outline">
                             Built-in
                           </Badge>
                         </div>
