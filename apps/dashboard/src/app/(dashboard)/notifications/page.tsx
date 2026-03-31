@@ -106,7 +106,7 @@ export default function NotificationsPage() {
     urgent: "bg-red-500",
     high: "bg-orange-500",
     normal: "bg-blue-500",
-    low: "bg-gray-400",
+    low: "bg-gray-400 dark:bg-gray-500",
   };
 
   const formatDate = (dateStr: string) => {
