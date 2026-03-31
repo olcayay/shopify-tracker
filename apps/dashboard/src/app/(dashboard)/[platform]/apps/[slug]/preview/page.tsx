@@ -116,8 +116,8 @@ function PreviewShell({
 
       {/* Main content: Preview left, Editor right */}
       <div className="flex-1 flex min-h-0">
-        {/* Left — Preview (scrollable) */}
-        <div className="flex-1 overflow-y-auto p-6 min-w-0">
+        {/* Left — Preview (scrollable, forced light mode for marketplace-authentic colors) */}
+        <div className="flex-1 overflow-y-auto p-6 min-w-0 force-light bg-white">
           {preview}
         </div>
 
