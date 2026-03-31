@@ -1,4 +1,5 @@
 Design System Components (2026-03-31)
+  PLA-515: Add Email Templates nav item in system admin sidebar ✅
   PLA-517: Create ExternalLink component and migrate external links ✅
   PLA-518: Create formatNumber utility and consolidate toLocaleString calls ✅
 

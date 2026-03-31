@@ -20,6 +20,7 @@ import {
   MessageSquarePlus,
   Bell,
   Mail,
+  FileText,
   Palette,
   Settings,
   type LucideIcon,
@@ -127,5 +128,6 @@ export const systemAdminItems: NavItem[] = [
   { href: "/system-admin/platform-requests", label: "Requests", icon: MessageSquarePlus },
   { href: "/system-admin/notifications", label: "Notifications", icon: Bell },
   { href: "/system-admin/emails", label: "Emails", icon: Mail },
+  { href: "/system-admin/email-templates", label: "Email Templates", icon: FileText },
   { href: "/system-admin/design-system", label: "Design", icon: Palette },
 ];

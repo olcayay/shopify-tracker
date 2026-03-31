@@ -132,13 +132,20 @@ describe("nav-utils", () => {
 
   describe("systemAdminItems", () => {
     it("has correct number of items", () => {
-      expect(systemAdminItems.length).toBe(17);
+      expect(systemAdminItems.length).toBe(18);
     });
 
-    it("includes Notifications and Emails links", () => {
+    it("includes Notifications, Emails, and Email Templates links", () => {
       const labels = systemAdminItems.map((i) => i.label);
       expect(labels).toContain("Notifications");
       expect(labels).toContain("Emails");
+      expect(labels).toContain("Email Templates");
+    });
+
+    it("Email Templates comes right after Emails", () => {
+      const labels = systemAdminItems.map((i) => i.label);
+      const emailsIdx = labels.indexOf("Emails");
+      expect(labels[emailsIdx + 1]).toBe("Email Templates");
     });
 
     it("all items have /system-admin prefix", () => {
