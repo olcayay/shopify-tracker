@@ -1,3 +1,11 @@
+PLA-534: Automated dark mode CSS antipattern scanner (2026-03-31)
+================================================================
+Created vitest-based scanner at __tests__/lint/dark-mode-antipatterns.test.ts.
+Scans all dashboard TSX files for missing dark: variants (bg-white, bg-gray-*,
+text-gray-*, border-gray-*, hardcoded hex colors). Has exclusions for preview/,
+api/og/, test files, and per-line allowlist for intentional patterns.
+Shell wrapper: scripts/lint-dark-mode.sh. 5 tests, 0 violations on current codebase.
+
 Bulk task session (2026-03-31) — 10 tasks completed
 ================================================================
 PLA-515: Email Templates nav item in system admin sidebar
