@@ -3,6 +3,7 @@ Design System & Admin (2026-03-31)
   PLA-516: Split notification templates into separate page ✅
   PLA-517: Create ExternalLink component and migrate external links ✅
   PLA-518: Create formatNumber utility and consolidate toLocaleString calls ✅
+  PLA-521: Create CopyButton and PlatformColorDot components ✅
   PLA-524: Add icon showcase section to design system page ✅
 
 Dark Mode Implementation (2026-03-30)

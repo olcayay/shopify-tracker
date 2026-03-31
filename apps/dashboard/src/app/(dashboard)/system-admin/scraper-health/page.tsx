@@ -32,13 +32,12 @@ import {
   TrendingUp,
   TrendingDown,
   AlertTriangle,
-  Copy,
-  Check,
   ChevronDown,
   ChevronRight,
   Loader2,
 } from "lucide-react";
 import { useFormatDate } from "@/lib/format-date";
+import { CopyButton } from "@/components/ui/copy-button";
 import { SmokeTestPanel } from "./smoke-test-panel";
 import { SmokeTestHistory, type SmokeHistoryEntry } from "../scraper/components/smoke-test-history";
 import { PLATFORM_LABELS, PLATFORM_COLORS, SCRAPER_TYPE_LABELS, HEALTH_SCRAPER_TYPES } from "@/lib/platform-display";
@@ -627,30 +626,14 @@ function RecentFailureCard({
 }
 
 function ErrorBlock({ error }: { error: string }) {
-  const [copied, setCopied] = useState(false);
-
-  const handleCopy = async () => {
-    await navigator.clipboard.writeText(error);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-  };
-
   return (
     <div className="relative group">
       <pre className="text-xs text-red-600 bg-red-50 rounded px-3 py-2 font-mono whitespace-pre-wrap break-words max-h-[7.5rem] overflow-y-auto">
         {error}
       </pre>
-      <button
-        onClick={handleCopy}
-        className="absolute top-1.5 right-1.5 p-1 rounded bg-red-100 hover:bg-red-200 text-red-600 opacity-0 group-hover:opacity-100 transition-opacity"
-        title="Copy error"
-      >
-        {copied ? (
-          <Check className="w-3.5 h-3.5" />
-        ) : (
-          <Copy className="w-3.5 h-3.5" />
-        )}
-      </button>
+      <div className="absolute top-1.5 right-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
+        <CopyButton value={error} variant="icon" size="xs" />
+      </div>
     </div>
   );
 }

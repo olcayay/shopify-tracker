@@ -24,9 +24,8 @@ import {
   X,
   ChevronDown,
   ChevronRight,
-  Copy,
-  Check,
 } from "lucide-react";
+import { CopyButton } from "@/components/ui/copy-button";
 import { ConfirmModal } from "@/components/confirm-modal";
 import { useFormatDate } from "@/lib/format-date";
 
@@ -303,26 +302,14 @@ export function QueueStatusCard({
 }
 
 function CopyableError({ error }: { error: string }) {
-  const [copied, setCopied] = useState(false);
-
-  const handleCopy = async () => {
-    await navigator.clipboard.writeText(error);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-  };
-
   return (
     <div className="relative group inline">
       <pre className="text-xs bg-destructive/10 text-destructive p-2 rounded whitespace-pre-wrap break-words max-h-16 overflow-y-auto inline-block">
         {error.slice(0, 120)}{error.length > 120 ? "..." : ""}
       </pre>
-      <button
-        onClick={(e) => { e.stopPropagation(); handleCopy(); }}
-        className="absolute top-1 right-1 p-0.5 rounded bg-destructive/10 hover:bg-destructive/20 text-destructive opacity-0 group-hover:opacity-100 transition-opacity"
-        title="Copy error"
-      >
-        {copied ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />}
-      </button>
+      <div className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity">
+        <CopyButton value={error} variant="icon" size="xs" />
+      </div>
     </div>
   );
 }
