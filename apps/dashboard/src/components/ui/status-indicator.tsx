@@ -10,12 +10,12 @@ interface StatusIndicatorProps {
 }
 
 const DOT_COLORS: Record<StatusVariant, string> = {
-  success: "bg-emerald-500",
-  warning: "bg-amber-500",
-  error: "bg-red-500",
-  info: "bg-blue-500",
+  success: "bg-emerald-500 dark:bg-emerald-400",
+  warning: "bg-amber-500 dark:bg-amber-400",
+  error: "bg-red-500 dark:bg-red-400",
+  info: "bg-blue-500 dark:bg-blue-400",
   neutral: "bg-slate-400 dark:bg-slate-500",
-  active: "bg-emerald-500",
+  active: "bg-emerald-500 dark:bg-emerald-400",
   inactive: "bg-slate-400 dark:bg-slate-500",
 };
 
