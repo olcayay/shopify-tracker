@@ -4,7 +4,7 @@
  */
 import Image from "next/image";
 import { Star, Globe, Tag, Calendar, Download, CheckCircle2 } from "lucide-react";
-import { formatNumber } from "@/lib/format-utils";
+import { formatNumber, formatMonthYear } from "@/lib/format-utils";
 
 interface GenericPreviewProps {
   app: any;
@@ -126,7 +126,7 @@ export function GenericPreview({ app, platformName }: GenericPreviewProps) {
       <div className="p-4 bg-slate-50 text-center text-xs text-muted-foreground">
         Preview of how this app appears on {platformName}
         {app.launchedDate && (
-          <> · Launched {new Date(app.launchedDate).toLocaleDateString("en-US", { month: "short", year: "numeric" })}</>
+          <> · Launched {formatMonthYear(app.launchedDate)}</>
         )}
       </div>
     </div>

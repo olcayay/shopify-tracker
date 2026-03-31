@@ -12,7 +12,7 @@ import { TableSkeleton } from "@/components/skeletons";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Plus, FlaskConical, Trash2, User, Star, Pencil, Check, X } from "lucide-react";
 import { ConfirmModal } from "@/components/confirm-modal";
-import { formatNumber } from "@/lib/format-utils";
+import { formatNumber, formatFullDate } from "@/lib/format-utils";
 
 // ─── Types ──────────────────────────────────────────────────
 
@@ -164,11 +164,7 @@ export default function ResearchListPage() {
   }
 
   function formatDate(date: string) {
-    return new Date(date).toLocaleDateString("en-US", {
-      month: "short",
-      day: "numeric",
-      year: "numeric",
-    });
+    return formatFullDate(date);
   }
 
   if (loading) {

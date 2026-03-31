@@ -10,7 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { formatNumber } from "@/lib/format-utils";
+import { formatNumber, formatMonthYear } from "@/lib/format-utils";
 import {
   Table,
   TableBody,
@@ -496,7 +496,7 @@ export default function ResearchCompetitorsPage() {
                             ) : (
                               <span className={animate}>
                                 {comp.launchedAt
-                                  ? new Date(comp.launchedAt).toLocaleDateString("en-US", { month: "short", year: "numeric" })
+                                  ? formatMonthYear(comp.launchedAt)
                                   : "\u2014"}
                               </span>
                             )}

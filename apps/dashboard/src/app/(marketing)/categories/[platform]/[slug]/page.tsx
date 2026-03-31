@@ -17,6 +17,7 @@ import { getPublicCategory, getPublicCategoryTree } from "@/lib/api";
 import { CategoryJsonLd, BreadcrumbJsonLd } from "@/components/seo/json-ld";
 import { PLATFORMS, isPlatformId } from "@appranks/shared";
 import type { PlatformId } from "@appranks/shared";
+import { formatFullDate } from "@/lib/format-utils";
 
 const BASE_URL = "https://appranks.io";
 
@@ -134,7 +135,7 @@ export default async function PublicCategoryPage({ params }: PageProps) {
             )}
             {category.lastUpdated && (
               <span>
-                Updated {new Date(category.lastUpdated).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
+                Updated {formatFullDate(category.lastUpdated)}
               </span>
             )}
           </div>

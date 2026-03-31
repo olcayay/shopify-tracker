@@ -1,6 +1,7 @@
 "use client";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { formatShortDate } from "@/lib/format-utils";
 import {
   LineChart,
   Line,
@@ -32,7 +33,7 @@ export function VisibilityTrendChart({ history }: VisibilityTrendChartProps) {
   }
 
   const data = history.map((h) => ({
-    date: new Date(h.date).toLocaleDateString("en-US", { month: "short", day: "numeric" }),
+    date: formatShortDate(h.date),
     visibility: h.visibilityScore != null ? Math.round(h.visibilityScore) : null,
     power: h.powerScore != null ? Math.round(h.powerScore) : null,
   }));

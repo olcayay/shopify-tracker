@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Download, Clock, Code, Globe, FileCode } from "lucide-react";
 import { ExternalLink } from "@/components/ui/external-link";
+import { formatFullDate } from "@/lib/format-utils";
 import { DataFreshness } from "@/components/data-freshness";
 import { getPlatformSections } from "@/components/platform-sections";
 
@@ -65,7 +66,7 @@ export default async function DetailsPage({
           icon: <Clock className="h-5 w-5 text-amber-600 dark:text-amber-400" />,
           bg: "bg-amber-50 dark:bg-amber-950/40",
           label: "Last Updated",
-          value: new Date(app.lastUpdatedAt).toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" }),
+          value: formatFullDate(app.lastUpdatedAt),
         });
         if (isWordPress && pd?.requiresWP) stats.push({
           icon: <Globe className="h-5 w-5 text-indigo-600 dark:text-indigo-400" />,

@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { useAuth } from "@/lib/auth-context";
+import { formatShortDate } from "@/lib/format-utils";
 import {
   Bell,
   Check,
@@ -118,7 +119,7 @@ export default function NotificationsPage() {
     if (hours < 24) return `${hours}h ago`;
     const days = Math.floor(hours / 24);
     if (days < 7) return `${days}d ago`;
-    return date.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+    return formatShortDate(date.toISOString());
   };
 
   return (

@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, afterEach } from "vitest";
-import { formatDuration, timeAgo, formatNumber, formatCurrency, formatPercent } from "@/lib/format-utils";
+import { formatDuration, timeAgo, formatNumber, formatCurrency, formatPercent, formatShortDate, formatFullDate, formatMonthYear } from "@/lib/format-utils";
 
 describe("formatNumber", () => {
   it("formats integers with grouping separators", () => {
@@ -90,6 +90,27 @@ describe("formatPercent", () => {
 
   it("formats negative percentages", () => {
     expect(formatPercent(-0.05)).toBe("-5%");
+  });
+});
+
+describe("formatShortDate", () => {
+  it("formats as short month + day", () => {
+    expect(formatShortDate("2026-01-05")).toBe("Jan 5");
+    expect(formatShortDate("2026-12-25")).toBe("Dec 25");
+  });
+});
+
+describe("formatFullDate", () => {
+  it("formats as short month + day + year", () => {
+    expect(formatFullDate("2026-01-05")).toBe("Jan 5, 2026");
+    expect(formatFullDate("2026-12-25")).toBe("Dec 25, 2026");
+  });
+});
+
+describe("formatMonthYear", () => {
+  it("formats as short month + year", () => {
+    expect(formatMonthYear("2026-01-05")).toBe("Jan 2026");
+    expect(formatMonthYear("2026-12-25")).toBe("Dec 2026");
   });
 });
 

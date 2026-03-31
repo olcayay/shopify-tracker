@@ -17,7 +17,7 @@ import {
 } from "lucide-react";
 import { getPublicComparison } from "@/lib/api";
 import { ComparisonJsonLd, BreadcrumbJsonLd } from "@/components/seo/json-ld";
-import { formatNumber } from "@/lib/format-utils";
+import { formatNumber, formatMonthYear } from "@/lib/format-utils";
 import { PLATFORMS, isPlatformId } from "@appranks/shared";
 import type { PlatformId } from "@appranks/shared";
 
@@ -63,7 +63,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 
 function formatDate(date: string | null) {
   if (!date) return "N/A";
-  return new Date(date).toLocaleDateString("en-US", { year: "numeric", month: "short" });
+  return formatMonthYear(date);
 }
 
 function featureSet(features: any[]): Set<string> {

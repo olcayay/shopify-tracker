@@ -1,6 +1,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Package, Info } from "lucide-react";
+import { formatFullDate } from "@/lib/format-utils";
 import type { PlatformSection, PlatformSectionProps } from "./index";
 
 type Props = PlatformSectionProps<"zendesk">;
@@ -50,7 +51,7 @@ function ZendeskAppInfo({ platformData: pd }: Props) {
             <div>
               <p className="text-muted-foreground text-xs mb-1">Date Published</p>
               <p className="font-medium">
-                {new Date(pd.datePublished).toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" })}
+                {formatFullDate(pd.datePublished)}
               </p>
             </div>
           )}

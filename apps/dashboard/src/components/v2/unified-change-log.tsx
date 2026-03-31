@@ -3,6 +3,7 @@
 import { useState, useMemo } from "react";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
+import { formatShortDate } from "@/lib/format-utils";
 
 const FIELD_COLORS: Record<string, string> = {
   name: "bg-blue-100 text-blue-800 dark:bg-blue-900/50 dark:text-blue-300",
@@ -135,7 +136,7 @@ export function UnifiedChangeLog({ entries }: { entries: ChangeEntry[] }) {
                   </div>
                 </div>
                 <span className="text-xs text-muted-foreground whitespace-nowrap">
-                  {new Date(entry.detectedAt).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+                  {formatShortDate(entry.detectedAt)}
                 </span>
               </div>
             ))}

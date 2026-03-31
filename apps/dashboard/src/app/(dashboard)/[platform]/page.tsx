@@ -28,21 +28,12 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { StatCardSkeleton, TableSkeleton } from "@/components/skeletons";
 import { AppBadgeIcon } from "@/components/app-badges";
 import { AccountUsageCards, USAGE_STAT_PRESETS } from "@/components/account-usage-cards";
-import { formatNumber } from "@/lib/format-utils";
+import { formatNumber, timeAgo } from "@/lib/format-utils";
 import { PLATFORMS, type PlatformId } from "@appranks/shared";
 import { PLATFORM_COLORS, SCRAPER_TYPE_LABELS } from "@/lib/platform-display";
 
 
 const PAGE_SIZE = 10;
-
-function timeAgo(dateStr: string): string {
-  const diff = Date.now() - new Date(dateStr).getTime();
-  const hours = Math.floor(diff / (1000 * 60 * 60));
-  if (hours < 1) return "just now";
-  if (hours < 24) return `${hours}h ago`;
-  const days = Math.floor(hours / 24);
-  return `${days}d ago`;
-}
 
 function freshnessColor(
   dateStr: string

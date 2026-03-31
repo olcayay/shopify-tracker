@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { Bell, Check, CheckCheck, ExternalLink } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
+import { timeAgo } from "@/lib/format-utils";
 import { Button } from "@/components/ui/button";
 
 interface Notification {
@@ -83,15 +84,6 @@ export function NotificationBell() {
     high: "bg-orange-500",
     normal: "bg-blue-500",
     low: "bg-gray-400",
-  };
-
-  const timeAgo = (dateStr: string) => {
-    const diff = Date.now() - new Date(dateStr).getTime();
-    const mins = Math.floor(diff / 60000);
-    if (mins < 60) return `${mins}m ago`;
-    const hours = Math.floor(mins / 60);
-    if (hours < 24) return `${hours}h ago`;
-    return `${Math.floor(hours / 24)}d ago`;
   };
 
   return (

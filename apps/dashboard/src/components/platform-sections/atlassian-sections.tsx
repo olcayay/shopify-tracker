@@ -2,6 +2,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Shield, Award, Bug } from "lucide-react";
 import { ExternalLink } from "@/components/ui/external-link";
+import { formatFullDate } from "@/lib/format-utils";
 import type { PlatformSection, PlatformSectionProps } from "./index";
 
 type Props = PlatformSectionProps<"atlassian">;
@@ -33,7 +34,7 @@ function AtlassianAppInfo({ platformData: pd }: Props) {
           {pd?.releaseDate && (
             <div>
               <p className="text-muted-foreground text-xs mb-1">Release Date</p>
-              <p className="font-medium">{new Date(pd.releaseDate).toLocaleDateString("en-US", { year: "numeric", month: "short", day: "numeric" })}</p>
+              <p className="font-medium">{formatFullDate(pd.releaseDate)}</p>
             </div>
           )}
           {compatibilities.length > 0 && (
