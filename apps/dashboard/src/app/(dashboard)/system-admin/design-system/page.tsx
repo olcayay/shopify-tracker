@@ -29,6 +29,7 @@ import { FilterButtonGroup } from "@/components/ui/filter-button-group";
 import { StatCard } from "@/components/ui/stat-card";
 import { EmptyState } from "@/components/ui/empty-state";
 import { StatusIndicator } from "@/components/ui/status-indicator";
+import { ViewModeToggle, useViewMode } from "@/components/view-mode-toggle";
 import { PLATFORM_DISPLAY } from "@/lib/platform-display";
 import { PLATFORM_IDS, type PlatformId } from "@appranks/shared";
 
@@ -381,6 +382,24 @@ function IconShowcase() {
           </div>
         ))
       )}
+    </div>
+  );
+}
+
+function ViewModeToggleDemo() {
+  const { viewMode, changeViewMode } = useViewMode("ds-demo");
+  return (
+    <div className="space-y-3">
+      <div className="flex items-center gap-4">
+        <ViewModeToggle viewMode={viewMode} onChangeViewMode={changeViewMode} />
+        <span className="text-sm text-muted-foreground">
+          Current: <code className="bg-muted px-1 rounded text-xs">{viewMode}</code>
+        </span>
+      </div>
+      <div className="text-xs text-muted-foreground space-y-1">
+        <p><code className="bg-muted px-1 rounded">useViewMode(storageKey, onChange?)</code> — persists selection in localStorage</p>
+        <p>Used in: Competitors, Keywords, Apps, Developers pages</p>
+      </div>
     </div>
   );
 }
@@ -796,6 +815,14 @@ export default function DesignSystemPage() {
                 description="Try adjusting your search or filters"
                 action={{ label: "Clear Filters", onClick: () => {} }}
               />
+            </div>
+          </div>
+
+          {/* ViewModeToggle */}
+          <div className="space-y-2">
+            <h3 className="text-sm font-semibold text-muted-foreground">ViewModeToggle</h3>
+            <div className="border rounded-lg p-4">
+              <ViewModeToggleDemo />
             </div>
           </div>
         </div>

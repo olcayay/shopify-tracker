@@ -6,6 +6,7 @@ Design System & Admin (2026-03-31)
   PLA-520: Consolidate timeAgo and date formatting ✅
   PLA-521: Create CopyButton and PlatformColorDot components ✅
   PLA-524: Add icon showcase section to design system page ✅
+  PLA-525: Add ViewModeToggle component showcase to design system page ✅
 
 Dark Mode Implementation (2026-03-30)
   PLA-494: Phase 0: Add next-themes provider and theme toggle ✅
