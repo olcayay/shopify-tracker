@@ -132,14 +132,21 @@ describe("nav-utils", () => {
 
   describe("systemAdminItems", () => {
     it("has correct number of items", () => {
-      expect(systemAdminItems.length).toBe(18);
+      expect(systemAdminItems.length).toBe(19);
     });
 
-    it("includes Notifications, Emails, and Email Templates links", () => {
+    it("includes Notifications, Notification Templates, Emails, and Email Templates links", () => {
       const labels = systemAdminItems.map((i) => i.label);
       expect(labels).toContain("Notifications");
+      expect(labels).toContain("Notification Templates");
       expect(labels).toContain("Emails");
       expect(labels).toContain("Email Templates");
+    });
+
+    it("Notification Templates comes right after Notifications", () => {
+      const labels = systemAdminItems.map((i) => i.label);
+      const notifIdx = labels.indexOf("Notifications");
+      expect(labels[notifIdx + 1]).toBe("Notification Templates");
     });
 
     it("Email Templates comes right after Emails", () => {
