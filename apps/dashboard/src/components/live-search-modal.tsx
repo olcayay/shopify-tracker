@@ -7,7 +7,8 @@ import { useParams } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Search, X, ExternalLink } from "lucide-react";
+import { Search, X } from "lucide-react";
+import { ExternalLink } from "@/components/ui/external-link";
 import { formatNumber } from "@/lib/format-utils";
 import { CompetitorButton } from "@/components/competitor-button";
 import { buildExternalSearchUrl, getPlatformName } from "@/lib/platform-urls";
@@ -150,15 +151,12 @@ export function LiveSearchModal({
             >
               Refresh
             </Button>
-            <a
+            <ExternalLink
               href={buildExternalSearchUrl(platform as PlatformId, keyword)}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="p-1 rounded hover:bg-accent"
+              className="p-1 rounded hover:bg-accent text-muted-foreground"
+              iconSize="default"
               title={`Open on ${getPlatformName(platform as PlatformId)}`}
-            >
-              <ExternalLink className="h-4 w-4 text-muted-foreground" />
-            </a>
+            />
             <button
               onClick={onClose}
               className="p-1 rounded hover:bg-accent"
@@ -200,14 +198,13 @@ export function LiveSearchModal({
                         Built-in
                       </Badge>
                       <div className="flex-1 min-w-0">
-                        <a
+                        <ExternalLink
                           href={`${PLATFORMS[platform as PlatformId].baseUrl}/built-in-features/${app.app_slug.replace("bif:", "")}`}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="font-medium text-sm text-primary hover:underline truncate block"
+                          showIcon={false}
+                          className="font-medium text-sm text-primary truncate block"
                         >
                           {app.app_name}
-                        </a>
+                        </ExternalLink>
                         {app.short_description && (
                           <p className="text-xs text-muted-foreground line-clamp-1 mt-0.5">
                             {app.short_description}

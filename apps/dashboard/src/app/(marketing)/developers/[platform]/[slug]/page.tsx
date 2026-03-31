@@ -6,7 +6,6 @@ import {
   Star,
   ChevronRight,
   BarChart3,
-  ExternalLink,
   Globe,
   Tag,
   ArrowRight,
@@ -18,6 +17,7 @@ import { getPublicDeveloper } from "@/lib/api";
 import { BreadcrumbJsonLd } from "@/components/seo/json-ld";
 import { formatNumber } from "@/lib/format-utils";
 import { PLATFORMS, isPlatformId } from "@appranks/shared";
+import { ExternalLink } from "@/components/ui/external-link";
 import type { PlatformId } from "@appranks/shared";
 
 const BASE_URL = "https://appranks.io";
@@ -126,16 +126,14 @@ export default async function PublicDeveloperPage({ params }: PageProps) {
             )}
           </div>
           {dev.website && (
-            <a
+            <ExternalLink
               href={dev.website}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-1.5 text-sm text-primary hover:underline"
+              iconSize="sm"
+              className="text-sm text-primary"
             >
               <Globe className="h-3.5 w-3.5" />
               {dev.website.replace(/^https?:\/\//, "").replace(/\/$/, "")}
-              <ExternalLink className="h-3 w-3" />
-            </a>
+            </ExternalLink>
           )}
         </section>
 

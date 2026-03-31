@@ -4,6 +4,7 @@ import { useMemo } from "react";
 import { useParams } from "next/navigation";
 import { buildExternalCategoryUrl } from "@/lib/platform-urls";
 import { PLATFORMS, type PlatformId } from "@appranks/shared";
+import { ExternalLink } from "@/components/ui/external-link";
 
 interface Sighting {
   surface: string;
@@ -130,15 +131,14 @@ export function FeaturedHistory({ sightings }: FeaturedHistoryProps) {
           return (
             <div key={section.key} className="flex items-center gap-0 py-[2px]">
               <div className="w-[300px] shrink-0 pr-2 flex items-center gap-1.5 min-w-0">
-                <a
+                <ExternalLink
                   href={externalUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-sm text-primary hover:underline truncate"
+                  showIcon={false}
+                  className="text-sm text-primary truncate"
                   title={section.sectionTitle}
                 >
                   {section.sectionTitle}
-                </a>
+                </ExternalLink>
                 <span className="text-[10px] text-muted-foreground shrink-0">
                   {daysActive}d
                 </span>

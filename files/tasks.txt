@@ -1,4 +1,5 @@
-Number Formatting Utilities (2026-03-31)
+Design System Components (2026-03-31)
+  PLA-517: Create ExternalLink component and migrate external links ✅
   PLA-518: Create formatNumber utility and consolidate toLocaleString calls ✅
 
 Dark Mode Implementation (2026-03-30)

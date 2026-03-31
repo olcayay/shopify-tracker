@@ -1,6 +1,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Folder, DollarSign, Star, Mail } from "lucide-react";
+import { ExternalLink } from "@/components/ui/external-link";
 import type { PlatformSection, PlatformSectionProps } from "./index";
 
 type Props = PlatformSectionProps<"wix">;
@@ -130,13 +131,13 @@ function WixDeveloperInfo({ platformData: pd }: Props) {
           {pd?.developerPrivacyUrl && (
             <p>
               <span className="text-muted-foreground">Privacy Policy:</span>{" "}
-              <a href={pd.developerPrivacyUrl} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">{pd.developerPrivacyUrl}</a>
+              <ExternalLink href={pd.developerPrivacyUrl} showIcon={false} className="text-primary">{pd.developerPrivacyUrl}</ExternalLink>
             </p>
           )}
           {pd?.demoUrl && (
             <p>
               <span className="text-muted-foreground">Demo:</span>{" "}
-              <a href={pd.demoUrl} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">{pd.demoUrl}</a>
+              <ExternalLink href={pd.demoUrl} showIcon={false} className="text-primary">{pd.demoUrl}</ExternalLink>
             </p>
           )}
         </div>

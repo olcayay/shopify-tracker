@@ -4,6 +4,7 @@ import type { PlatformId } from "@appranks/shared";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Download, Clock, Code, Globe, FileCode } from "lucide-react";
+import { ExternalLink } from "@/components/ui/external-link";
 import { DataFreshness } from "@/components/data-freshness";
 import { getPlatformSections } from "@/components/platform-sections";
 
@@ -267,9 +268,9 @@ export default async function DetailsPage({
               {snapshot.support.portal_url && (
                 <p>
                   <span className="text-muted-foreground">Support Portal:</span>{" "}
-                  <a href={snapshot.support.portal_url} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
+                  <ExternalLink href={snapshot.support.portal_url} showIcon={false} className="text-primary">
                     {snapshot.support.portal_url}
-                  </a>
+                  </ExternalLink>
                 </p>
               )}
               {snapshot.support.phone && (

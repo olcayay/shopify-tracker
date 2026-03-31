@@ -1,4 +1,5 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { ExternalLink } from "@/components/ui/external-link";
 import type { PlatformSection, PlatformSectionProps } from "./index";
 
 type Props = PlatformSectionProps<"google_workspace">;
@@ -14,25 +15,25 @@ function GoogleWorkspaceLinks({ platformData: pd }: Props) {
           {pd?.supportUrl && (
             <p>
               <span className="text-muted-foreground">Support:</span>{" "}
-              <a href={pd.supportUrl} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">{pd.supportUrl}</a>
+              <ExternalLink href={pd.supportUrl} showIcon={false} className="text-primary">{pd.supportUrl}</ExternalLink>
             </p>
           )}
           {pd?.developerWebsite && (
             <p>
               <span className="text-muted-foreground">Developer Website:</span>{" "}
-              <a href={pd.developerWebsite} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">{pd.developerWebsite}</a>
+              <ExternalLink href={pd.developerWebsite} showIcon={false} className="text-primary">{pd.developerWebsite}</ExternalLink>
             </p>
           )}
           {pd?.privacyPolicyUrl && (
             <p>
               <span className="text-muted-foreground">Privacy Policy:</span>{" "}
-              <a href={pd.privacyPolicyUrl} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">{pd.privacyPolicyUrl}</a>
+              <ExternalLink href={pd.privacyPolicyUrl} showIcon={false} className="text-primary">{pd.privacyPolicyUrl}</ExternalLink>
             </p>
           )}
           {pd?.termsOfServiceUrl && (
             <p>
               <span className="text-muted-foreground">Terms of Service:</span>{" "}
-              <a href={pd.termsOfServiceUrl} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">{pd.termsOfServiceUrl}</a>
+              <ExternalLink href={pd.termsOfServiceUrl} showIcon={false} className="text-primary">{pd.termsOfServiceUrl}</ExternalLink>
             </p>
           )}
         </div>

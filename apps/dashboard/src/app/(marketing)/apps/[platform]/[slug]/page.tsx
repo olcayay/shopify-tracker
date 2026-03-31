@@ -4,7 +4,6 @@ import Link from "next/link";
 import Image from "next/image";
 import {
   Star,
-  ExternalLink,
   Calendar,
   Download,
   ChevronRight,
@@ -21,6 +20,7 @@ import { getPublicApp } from "@/lib/api";
 import { AppJsonLd, BreadcrumbJsonLd } from "@/components/seo/json-ld";
 import { formatNumber } from "@/lib/format-utils";
 import { PLATFORMS, isPlatformId, buildExternalAppUrl } from "@appranks/shared";
+import { ExternalLink } from "@/components/ui/external-link";
 import type { PlatformId } from "@appranks/shared";
 
 const BASE_URL = "https://appranks.io";
@@ -228,14 +228,13 @@ export default async function PublicAppPage({ params }: PageProps) {
               <p className="text-sm text-muted-foreground">
                 By{" "}
                 {developer.website ? (
-                  <a
+                  <ExternalLink
                     href={developer.website}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-primary hover:underline"
+                    showIcon={false}
+                    className="text-primary"
                   >
                     {developer.name}
-                  </a>
+                  </ExternalLink>
                 ) : (
                   <span className="font-medium">{developer.name}</span>
                 )}
@@ -247,14 +246,12 @@ export default async function PublicAppPage({ params }: PageProps) {
               </span>
             )}
             <div className="flex gap-3 pt-1">
-              <a
+              <ExternalLink
                 href={externalUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-1.5 text-sm text-primary hover:underline"
+                className="text-sm text-primary"
               >
-                View on {platformConfig.name} <ExternalLink className="h-3.5 w-3.5" />
-              </a>
+                View on {platformConfig.name}
+              </ExternalLink>
             </div>
           </div>
         </section>

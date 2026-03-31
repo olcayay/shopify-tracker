@@ -6,7 +6,8 @@ import { useAuth } from "@/lib/auth-context";
 import { buildExternalSearchUrl, getPlatformName } from "@/lib/platform-urls";
 import type { PlatformId } from "@appranks/shared";
 import { Badge } from "@/components/ui/badge";
-import { Lightbulb, X, Plus, Check, ExternalLink } from "lucide-react";
+import { Lightbulb, X, Plus, Check } from "lucide-react";
+import { ExternalLink } from "@/components/ui/external-link";
 
 function ShimmerRow() {
   return (
@@ -167,15 +168,11 @@ export function KeywordSuggestionsModal({
                 className="flex items-center gap-3 px-4 py-2.5 border-b last:border-0 hover:bg-accent/50 transition-colors"
               >
                 <span className="flex-1 text-sm">{s}</span>
-                <a
+                <ExternalLink
                   href={buildExternalSearchUrl((platform as PlatformId) || "shopify", s)}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="p-1 rounded hover:bg-accent shrink-0"
+                  className="p-1 rounded hover:bg-accent shrink-0 text-muted-foreground"
                   title={`Search on ${getPlatformName((platform as PlatformId) || "shopify")}`}
-                >
-                  <ExternalLink className="h-3.5 w-3.5 text-muted-foreground" />
-                </a>
+                />
                 {isTracked(s) ? (
                   <div className="flex items-center gap-1 text-xs text-muted-foreground shrink-0">
                     <Check className="h-3.5 w-3.5" />

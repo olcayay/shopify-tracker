@@ -1,6 +1,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Shield, Award, Bug } from "lucide-react";
+import { ExternalLink } from "@/components/ui/external-link";
 import type { PlatformSection, PlatformSectionProps } from "./index";
 
 type Props = PlatformSectionProps<"atlassian">;
@@ -95,43 +96,43 @@ function AtlassianLinks({ platformData: pd }: Props) {
           {pd?.vendorHomePage && (
             <p>
               <span className="text-muted-foreground">Developer Website:</span>{" "}
-              <a href={pd.vendorHomePage} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">{pd.vendorHomePage}</a>
+              <ExternalLink href={pd.vendorHomePage} showIcon={false} className="text-primary">{pd.vendorHomePage}</ExternalLink>
             </p>
           )}
           {pd?.documentationUrl && (
             <p>
               <span className="text-muted-foreground">Documentation:</span>{" "}
-              <a href={pd.documentationUrl} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">{pd.documentationUrl}</a>
+              <ExternalLink href={pd.documentationUrl} showIcon={false} className="text-primary">{pd.documentationUrl}</ExternalLink>
             </p>
           )}
           {pd?.eulaUrl && (
             <p>
               <span className="text-muted-foreground">EULA:</span>{" "}
-              <a href={pd.eulaUrl} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">{pd.eulaUrl}</a>
+              <ExternalLink href={pd.eulaUrl} showIcon={false} className="text-primary">{pd.eulaUrl}</ExternalLink>
             </p>
           )}
           {vendorLinks?.privacy && (
             <p>
               <span className="text-muted-foreground">Privacy Policy:</span>{" "}
-              <a href={vendorLinks.privacy} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">{vendorLinks.privacy}</a>
+              <ExternalLink href={vendorLinks.privacy} showIcon={false} className="text-primary">{vendorLinks.privacy}</ExternalLink>
             </p>
           )}
           {vendorLinks?.appStatusPage && (
             <p>
               <span className="text-muted-foreground">Status Page:</span>{" "}
-              <a href={vendorLinks.appStatusPage} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">{vendorLinks.appStatusPage}</a>
+              <ExternalLink href={vendorLinks.appStatusPage} showIcon={false} className="text-primary">{vendorLinks.appStatusPage}</ExternalLink>
             </p>
           )}
           {pd?.slaUrl && (
             <p>
               <span className="text-muted-foreground">SLA:</span>{" "}
-              <a href={pd.slaUrl} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">{pd.slaUrl}</a>
+              <ExternalLink href={pd.slaUrl} showIcon={false} className="text-primary">{pd.slaUrl}</ExternalLink>
             </p>
           )}
           {pd?.trustCenterUrl && (
             <p>
               <span className="text-muted-foreground">Trust Center:</span>{" "}
-              <a href={pd.trustCenterUrl} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">{pd.trustCenterUrl}</a>
+              <ExternalLink href={pd.trustCenterUrl} showIcon={false} className="text-primary">{pd.trustCenterUrl}</ExternalLink>
             </p>
           )}
           {pd?.contactEmail && (

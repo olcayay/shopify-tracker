@@ -1,3 +1,10 @@
+PLA-517: ExternalLink component (2026-03-31)
+================================================================
+Created ExternalLink component (components/ui/external-link.tsx) with built-in
+target="_blank", rel="noopener noreferrer", optional icon, hover:underline.
+Migrated ~37 text links across 22+ files. Icon-only buttons left as <a> tags.
+10 unit tests added. Remaining target="_blank" are icon-only buttons (correct).
+
 PLA-518: formatNumber utility consolidation (2026-03-31)
 ================================================================
 Created formatNumber(), formatCurrency(), formatPercent() in lib/format-utils.ts.

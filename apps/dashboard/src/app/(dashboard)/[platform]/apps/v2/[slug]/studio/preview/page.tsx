@@ -5,7 +5,8 @@ import { useParams } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
 import { Button } from "@/components/ui/button";
 import { CardSkeleton } from "@/components/skeletons";
-import { RotateCcw, ExternalLink } from "lucide-react";
+import { RotateCcw, ExternalLink as ExternalLinkIcon } from "lucide-react";
+import { ExternalLink } from "@/components/ui/external-link";
 import { buildExternalAppUrl, getPlatformName } from "@/lib/platform-urls";
 import type { PlatformId } from "@appranks/shared";
 import { ShopifyPreview } from "../../../../[slug]/preview/shopify-preview";
@@ -72,14 +73,12 @@ export default function V2PreviewPage() {
         <p className="text-muted-foreground">
           Live preview is not yet available for {getPlatformName(platform as PlatformId)}.
         </p>
-        <a
+        <ExternalLink
           href={buildExternalAppUrl(platform as PlatformId, slug)}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="inline-flex items-center gap-1.5 text-primary hover:underline text-sm"
+          className="text-primary text-sm"
         >
-          View on {getPlatformName(platform as PlatformId)} <ExternalLink className="h-3.5 w-3.5" />
-        </a>
+          View on {getPlatformName(platform as PlatformId)}
+        </ExternalLink>
       </div>
     );
   }
@@ -95,15 +94,14 @@ export default function V2PreviewPage() {
           <Button size="sm" variant="outline" onClick={loadData}>
             <RotateCcw className="h-4 w-4 mr-1" /> Refresh
           </Button>
-          <a
+          <ExternalLink
             href={buildExternalAppUrl(platform as PlatformId, appData.slug, appData.externalId)}
-            target="_blank"
-            rel="noopener noreferrer"
+            showIcon={false}
           >
             <Button size="sm" variant="outline">
-              <ExternalLink className="h-4 w-4 mr-1" /> Open on {getPlatformName(platform as PlatformId)}
+              <ExternalLinkIcon className="h-4 w-4 mr-1" /> Open on {getPlatformName(platform as PlatformId)}
             </Button>
-          </a>
+          </ExternalLink>
         </div>
       </div>
 

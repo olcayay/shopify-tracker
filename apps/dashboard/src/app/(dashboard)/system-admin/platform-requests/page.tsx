@@ -23,8 +23,8 @@ import {
   CheckCircle,
   XCircle,
   Undo2,
-  ExternalLink,
 } from "lucide-react";
+import { ExternalLink } from "@/components/ui/external-link";
 import { useFormatDate } from "@/lib/format-date";
 
 interface PlatformRequest {
@@ -277,15 +277,13 @@ export default function PlatformRequestsPage() {
                   </TableCell>
                   <TableCell>
                     {req.marketplaceUrl ? (
-                      <a
+                      <ExternalLink
                         href={req.marketplaceUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-primary hover:underline inline-flex items-center gap-1 text-sm"
+                        iconSize="sm"
+                        className="text-primary text-sm"
                       >
                         Link
-                        <ExternalLink className="h-3 w-3" />
-                      </a>
+                      </ExternalLink>
                     ) : (
                       <span className="text-muted-foreground text-sm">{"\u2014"}</span>
                     )}

@@ -5,7 +5,8 @@ import { useParams } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
 import { buildExternalSearchUrl, getPlatformName } from "@/lib/platform-urls";
 import type { PlatformId } from "@appranks/shared";
-import { Sparkles, Plus, Check, ExternalLink, ChevronDown, ChevronUp, Brain, Loader2, RefreshCw } from "lucide-react";
+import { Sparkles, Plus, Check, ChevronDown, ChevronUp, Brain, Loader2, RefreshCw } from "lucide-react";
+import { ExternalLink } from "@/components/ui/external-link";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 
@@ -282,14 +283,11 @@ export function MetadataKeywordSuggestions({
                         {kw.competitiveness === "low" ? "Low" : kw.competitiveness === "medium" ? "Med" : "High"}
                       </span>
                       <span className="text-xs text-muted-foreground tabular-nums shrink-0">{kw.score}</span>
-                      <a
+                      <ExternalLink
                         href={buildExternalSearchUrl((platform as PlatformId) || "shopify", kw.keyword)}
-                        target="_blank" rel="noopener noreferrer"
-                        className="p-1 rounded hover:bg-accent shrink-0"
+                        className="p-1 rounded hover:bg-accent shrink-0 text-muted-foreground"
                         title={`Search on ${getPlatformName((platform as PlatformId) || "shopify")}`}
-                      >
-                        <ExternalLink className="h-3.5 w-3.5 text-muted-foreground" />
-                      </a>
+                      />
                       {isTracked(kw.keyword) ? (
                         <div className="flex items-center gap-1 text-xs text-muted-foreground shrink-0">
                           <Check className="h-3.5 w-3.5" /> Added
@@ -328,9 +326,11 @@ export function MetadataKeywordSuggestions({
                       <span className="text-xs text-muted-foreground tabular-nums shrink-0 text-right" title={`Appears in ${s.count} field${s.count > 1 ? "s" : ""}, score: ${s.score}`}>
                         {s.count}x | {s.score}
                       </span>
-                      <a href={buildExternalSearchUrl((platform as PlatformId) || "shopify", s.keyword)} target="_blank" rel="noopener noreferrer" className="p-1 rounded hover:bg-accent shrink-0" title={`Search on ${getPlatformName((platform as PlatformId) || "shopify")}`}>
-                        <ExternalLink className="h-3.5 w-3.5 text-muted-foreground" />
-                      </a>
+                      <ExternalLink
+                        href={buildExternalSearchUrl((platform as PlatformId) || "shopify", s.keyword)}
+                        className="p-1 rounded hover:bg-accent shrink-0 text-muted-foreground"
+                        title={`Search on ${getPlatformName((platform as PlatformId) || "shopify")}`}
+                      />
                       {isTracked(s.keyword, s.tracked) ? (
                         <div className="flex items-center gap-1 text-xs text-muted-foreground shrink-0">
                           <Check className="h-3.5 w-3.5" /> Added

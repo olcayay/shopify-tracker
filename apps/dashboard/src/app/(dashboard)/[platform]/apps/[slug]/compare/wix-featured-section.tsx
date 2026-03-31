@@ -2,6 +2,7 @@
 
 import { CompareSection } from "./compare-section";
 import type { AppData } from "./compare-types";
+import { ExternalLink } from "@/components/ui/external-link";
 
 export function WixFeaturedSection({
   id,
@@ -51,14 +52,13 @@ export function WixFeaturedSection({
                   return (
                     <td key={app.slug} className="py-2 px-2 align-top">
                       {found ? (
-                        <a
+                        <ExternalLink
                           href={`https://www.wix.com/app-market/collection/${found.slug}`}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-primary hover:underline"
+                          showIcon={false}
+                          className="text-primary"
                         >
                           {found.name}
-                        </a>
+                        </ExternalLink>
                       ) : (
                         <span className="text-muted-foreground">—</span>
                       )}

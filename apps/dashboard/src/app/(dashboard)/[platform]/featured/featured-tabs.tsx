@@ -14,7 +14,8 @@ import {
 import { AdHeatmap } from "@/components/ad-heatmap";
 import { AppIcon } from "@/components/app-icon";
 import { Badge } from "@/components/ui/badge";
-import { ChevronDown, ChevronRight, ExternalLink, Loader2, Star } from "lucide-react";
+import { ChevronDown, ChevronRight, ExternalLink as ExternalLinkIcon, Loader2, Star } from "lucide-react";
+import { ExternalLink } from "@/components/ui/external-link";
 import { buildExternalCategoryUrl, getPlatformName } from "@/lib/platform-urls";
 import { PLATFORMS } from "@appranks/shared";
 import type { PlatformId } from "@appranks/shared";
@@ -120,14 +121,9 @@ function SectionCard({
     <Card id={id} className="scroll-mt-4">
       <CardHeader>
         <CardTitle>
-          <a
-            href={externalUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="hover:underline"
-          >
+          <ExternalLink href={externalUrl} showIcon={false}>
             {group.sectionTitle}
-          </a>
+          </ExternalLink>
         </CardTitle>
       </CardHeader>
       <CardContent>
@@ -176,7 +172,7 @@ function SectionNav({ groups }: { groups: SightingGroup[] }) {
                   rel="noopener noreferrer"
                   className="text-muted-foreground hover:text-foreground"
                 >
-                  <ExternalLink className="h-3 w-3" />
+                  <ExternalLinkIcon className="h-3 w-3" />
                 </a>
               </span>
             );

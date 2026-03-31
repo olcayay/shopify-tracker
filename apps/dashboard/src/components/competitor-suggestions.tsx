@@ -4,7 +4,8 @@ import { useState, useCallback, useEffect } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
-import { Sparkles, Plus, Check, ExternalLink, ChevronDown, ChevronUp, Brain, Loader2, RefreshCw } from "lucide-react";
+import { Sparkles, Plus, Check, ChevronDown, ChevronUp, Brain, Loader2, RefreshCw } from "lucide-react";
+import { ExternalLink } from "@/components/ui/external-link";
 import { buildExternalAppUrl, getPlatformName } from "@/lib/platform-urls";
 import { formatNumber } from "@/lib/format-utils";
 import { PLATFORMS, isPlatformId, type PlatformId } from "@appranks/shared";
@@ -336,16 +337,12 @@ export function CompetitorSuggestions({
                       </span>
                     )}
 
-                    {/* Shopify link */}
-                    <a
+                    {/* Platform link */}
+                    <ExternalLink
                       href={buildExternalAppUrl(platform as PlatformId, s.appSlug, s.externalId)}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="p-1 rounded hover:bg-accent shrink-0"
+                      className="p-1 rounded hover:bg-accent shrink-0 text-muted-foreground"
                       title={`View on ${getPlatformName(platform as PlatformId)}`}
-                    >
-                      <ExternalLink className="h-3.5 w-3.5 text-muted-foreground" />
-                    </a>
+                    />
 
                     {/* Add / Added */}
                     {isAdded(s) ? (

@@ -1,6 +1,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { AppWindow, ExternalLink } from "lucide-react";
+import { AppWindow } from "lucide-react";
+import { ExternalLink } from "@/components/ui/external-link";
 import type { PlatformSection, PlatformSectionProps } from "./index";
 
 type Props = PlatformSectionProps<"shopify">;
@@ -16,16 +17,16 @@ function ShopifySimilarApps({ platformData: pd }: Props) {
       <CardContent>
         <div className="flex flex-wrap gap-2">
           {similarApps.map((app) => (
-            <a
+            <ExternalLink
               key={app.slug}
               href={`https://apps.shopify.com/${app.slug}`}
-              target="_blank"
-              rel="noopener noreferrer"
+              showIcon={false}
+              className="hover:no-underline"
             >
               <Badge variant="secondary" className="text-xs gap-1 cursor-pointer hover:bg-muted">
                 <AppWindow className="h-3 w-3" /> {app.name}
               </Badge>
-            </a>
+            </ExternalLink>
           ))}
         </div>
       </CardContent>
@@ -40,14 +41,9 @@ function ShopifyDemoStore({ platformData: pd }: Props) {
         <CardTitle>Demo Store</CardTitle>
       </CardHeader>
       <CardContent>
-        <a
-          href={pd?.demoStoreUrl ?? ""}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="text-primary hover:underline text-sm inline-flex items-center gap-1"
-        >
-          <ExternalLink className="h-3 w-3" /> {pd?.demoStoreUrl}
-        </a>
+        <ExternalLink href={pd?.demoStoreUrl ?? ""} iconSize="sm" className="text-primary text-sm">
+          {pd?.demoStoreUrl}
+        </ExternalLink>
       </CardContent>
     </Card>
   );

@@ -15,6 +15,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { ArrowUpDown, ArrowUp, ArrowDown, Search as SearchIcon, Globe } from "lucide-react";
+import { ExternalLink } from "@/components/ui/external-link";
 import { Input } from "@/components/ui/input";
 import { TableSkeleton, CardSkeleton } from "@/components/skeletons";
 import { formatNumber } from "@/lib/format-utils";
@@ -207,13 +208,13 @@ function DeveloperAppsContent() {
               {developerInfo.termsUrl && (
                 <p>
                   <span className="text-muted-foreground">Terms of Service:</span>{" "}
-                  <a href={developerInfo.termsUrl} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">{developerInfo.termsUrl}</a>
+                  <ExternalLink href={developerInfo.termsUrl} showIcon={false} className="text-primary">{developerInfo.termsUrl}</ExternalLink>
                 </p>
               )}
               {developerInfo.privacyUrl && (
                 <p>
                   <span className="text-muted-foreground">Privacy Policy:</span>{" "}
-                  <a href={developerInfo.privacyUrl} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">{developerInfo.privacyUrl}</a>
+                  <ExternalLink href={developerInfo.privacyUrl} showIcon={false} className="text-primary">{developerInfo.privacyUrl}</ExternalLink>
                 </p>
               )}
             </div>

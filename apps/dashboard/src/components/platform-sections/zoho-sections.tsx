@@ -1,6 +1,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Star, Globe, Mail } from "lucide-react";
+import { ExternalLink } from "@/components/ui/external-link";
 import type { PlatformSection, PlatformSectionProps } from "./index";
 
 type Props = PlatformSectionProps<"zoho">;
@@ -73,7 +74,7 @@ function ZohoPartnerDetails({ platformData: pd }: Props) {
               {p.websiteUrl && (
                 <p className="flex items-center gap-1 text-muted-foreground">
                   <Globe className="h-3 w-3" />
-                  <a href={p.websiteUrl} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">{p.websiteUrl}</a>
+                  <ExternalLink href={p.websiteUrl} showIcon={false} className="text-primary">{p.websiteUrl}</ExternalLink>
                 </p>
               )}
               {i < partners.length - 1 && <hr className="mt-2" />}

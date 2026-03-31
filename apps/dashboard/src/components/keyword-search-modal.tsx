@@ -7,7 +7,8 @@ import { useAuth } from "@/lib/auth-context";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Search, X, ExternalLink, Plus } from "lucide-react";
+import { Search, X, Plus } from "lucide-react";
+import { ExternalLink } from "@/components/ui/external-link";
 import { buildExternalSearchUrl, getPlatformName } from "@/lib/platform-urls";
 import type { PlatformId } from "@appranks/shared";
 
@@ -279,15 +280,11 @@ export function KeywordSearchModal({
                           Track
                         </Button>
                       ) : null}
-                      <a
+                      <ExternalLink
                         href={buildExternalSearchUrl(platform as PlatformId, kw.keyword)}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="p-1 rounded hover:bg-accent"
+                        className="p-1 rounded hover:bg-accent text-muted-foreground"
                         title={`Search on ${getPlatformName(platform as PlatformId)}`}
-                      >
-                        <ExternalLink className="h-3.5 w-3.5 text-muted-foreground" />
-                      </a>
+                      />
                     </div>
                   </div>
                 );

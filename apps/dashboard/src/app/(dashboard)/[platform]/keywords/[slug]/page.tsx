@@ -13,7 +13,8 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { ExternalLink } from "lucide-react";
+import { ExternalLink as ExternalLinkIcon } from "lucide-react";
+import { ExternalLink } from "@/components/ui/external-link";
 import { RankingChart } from "@/components/ranking-chart";
 import { TrackKeywordButton } from "./track-button";
 import { CompetitorButton } from "@/components/competitor-button";
@@ -143,7 +144,7 @@ export default async function KeywordDetailPage({
             title={`Search on ${getPlatformName(platform as PlatformId)}`}
             className="inline-flex items-center justify-center h-9 w-9 rounded-md hover:bg-accent transition-colors"
           >
-            <ExternalLink className="h-5 w-5 text-muted-foreground" />
+            <ExternalLinkIcon className="h-5 w-5 text-muted-foreground" />
           </a>
           <AdminScraperTrigger
             scraperType="keyword_search"
@@ -187,14 +188,13 @@ export default async function KeywordDetailPage({
                       <div className="flex items-center gap-2">
                         <AppIcon src={app.logo_url} className="h-6 w-6 rounded" />
                         <div className="flex items-center gap-1.5">
-                          <a
+                          <ExternalLink
                             href={app.app_url || `${PLATFORMS[platform as PlatformId].baseUrl}/built-in-features/${app.app_slug.replace("bif:", "")}`}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="font-medium text-primary hover:underline"
+                            showIcon={false}
+                            className="font-medium text-primary"
                           >
                             {app.app_name}
-                          </a>
+                          </ExternalLink>
                           <Badge className="text-[10px] px-1 py-0 h-4 bg-blue-100 text-blue-700 border-blue-300" variant="outline">
                             Built-in
                           </Badge>

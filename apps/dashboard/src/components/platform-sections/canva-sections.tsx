@@ -1,6 +1,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { ShieldCheck, Tag, User, ExternalLink } from "lucide-react";
+import { ShieldCheck, Tag, User, ExternalLink as ExternalLinkIcon } from "lucide-react";
+import { ExternalLink } from "@/components/ui/external-link";
 import type { PlatformSection, PlatformSectionProps } from "./index";
 
 type Props = PlatformSectionProps<"canva">;
@@ -94,7 +95,7 @@ function CanvaLinks({ platformData: pd }: Props) {
     <Card>
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
-          <ExternalLink className="h-4 w-4" /> Links
+          <ExternalLinkIcon className="h-4 w-4" /> Links
         </CardTitle>
       </CardHeader>
       <CardContent>
@@ -102,13 +103,13 @@ function CanvaLinks({ platformData: pd }: Props) {
           {pd?.termsUrl && (
             <p>
               <span className="text-muted-foreground">Terms of Service:</span>{" "}
-              <a href={pd.termsUrl} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">{pd.termsUrl}</a>
+              <ExternalLink href={pd.termsUrl} showIcon={false} className="text-primary">{pd.termsUrl}</ExternalLink>
             </p>
           )}
           {pd?.privacyUrl && (
             <p>
               <span className="text-muted-foreground">Privacy Policy:</span>{" "}
-              <a href={pd.privacyUrl} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">{pd.privacyUrl}</a>
+              <ExternalLink href={pd.privacyUrl} showIcon={false} className="text-primary">{pd.privacyUrl}</ExternalLink>
             </p>
           )}
         </div>
