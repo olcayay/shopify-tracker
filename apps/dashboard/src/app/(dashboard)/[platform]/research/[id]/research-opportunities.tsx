@@ -88,7 +88,7 @@ export function OpportunityTable({
                 </Badge>
               </TableCell>
               <TableCell className="text-right text-sm">
-                <span className={opp.room >= 0.7 ? "text-green-600" : opp.room >= 0.4 ? "text-yellow-600" : "text-red-600"}>
+                <span className={opp.room >= 0.7 ? "text-green-600 dark:text-green-400" : opp.room >= 0.4 ? "text-yellow-600 dark:text-yellow-500" : "text-red-600 dark:text-red-400"}>
                   {roomLabel(opp.room)}
                 </span>
               </TableCell>

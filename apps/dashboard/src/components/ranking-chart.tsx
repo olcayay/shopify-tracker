@@ -188,7 +188,7 @@ export function RankingChart({ data, pageSize = 24 }: { data: RankingData[]; pag
                   </td>
                   <td className="text-right px-3 py-2 font-semibold">
                     {stat.dropped ? (
-                      <span className="text-red-500 font-normal text-xs">Dropped</span>
+                      <span className="text-red-500 dark:text-red-400 font-normal text-xs">Dropped</span>
                     ) : stat.position === 0 ? (
                       <span className="text-muted-foreground font-normal text-xs">Linked</span>
                     ) : (
@@ -202,13 +202,13 @@ export function RankingChart({ data, pageSize = 24 }: { data: RankingData[]; pag
                   </td>
                   <td className="text-right px-3 py-2">
                     {stat.dropped ? (
-                      <span className="text-red-500">{"\u2014"}</span>
+                      <span className="text-red-500 dark:text-red-400">{"\u2014"}</span>
                     ) : stat.change !== undefined && stat.change !== 0 ? (
                       <span
                         className={
                           stat.change > 0
-                            ? "text-green-600"
-                            : "text-red-500"
+                            ? "text-green-600 dark:text-green-400"
+                            : "text-red-500 dark:text-red-400"
                         }
                       >
                         {stat.change > 0 ? `+${stat.change}` : stat.change}

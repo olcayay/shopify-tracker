@@ -16,12 +16,12 @@ export function CharBadge({ count, max }: { count: number; max?: number }) {
       colorClass = "border-muted-foreground/50 text-muted-foreground/50";
     } else {
       const pct = count / max;
-      if (pct > 1) colorClass = "border-red-600 text-red-600";
-      else if (pct >= 0.9) colorClass = "border-green-600 text-green-600";
-      else if (pct >= 0.8) colorClass = "border-lime-600 text-lime-600";
-      else if (pct >= 0.7) colorClass = "border-yellow-600 text-yellow-600";
-      else if (pct >= 0.6) colorClass = "border-orange-500 text-orange-500";
-      else colorClass = "border-red-600 text-red-600";
+      if (pct > 1) colorClass = "border-red-600 text-red-600 dark:border-red-400 dark:text-red-400";
+      else if (pct >= 0.9) colorClass = "border-green-600 text-green-600 dark:border-green-400 dark:text-green-400";
+      else if (pct >= 0.8) colorClass = "border-lime-600 text-lime-600 dark:border-lime-400 dark:text-lime-400";
+      else if (pct >= 0.7) colorClass = "border-yellow-600 text-yellow-600 dark:border-yellow-500 dark:text-yellow-500";
+      else if (pct >= 0.6) colorClass = "border-orange-500 text-orange-500 dark:border-orange-400 dark:text-orange-400";
+      else colorClass = "border-red-600 text-red-600 dark:border-red-400 dark:text-red-400";
     }
   }
   return (
@@ -96,7 +96,7 @@ export function StarRating({ rating }: { rating: number }) {
         return (
           <Star
             key={star}
-            className={cn("h-4 w-4", fill >= 0.5 ? "fill-yellow-500 text-yellow-500" : "text-muted-foreground/30")}
+            className={cn("h-4 w-4", fill >= 0.5 ? "fill-yellow-500 text-yellow-500 dark:fill-yellow-400 dark:text-yellow-400" : "text-muted-foreground/30")}
           />
         );
       })}

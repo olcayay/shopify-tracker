@@ -1,6 +1,7 @@
 Dark Mode QA & Polish (2026-03-31)
   PLA-534: Automated dark mode CSS antipattern scanner ✅
   PLA-535: Isolate preview components from dark mode ✅
+  PLA-536: Visual QA — Core pages dark mode color fixes ✅
 
 Dark Mode Fixes (2026-03-31)
   PLA-527: Fix dark mode for preview components (force-light container) ✅
