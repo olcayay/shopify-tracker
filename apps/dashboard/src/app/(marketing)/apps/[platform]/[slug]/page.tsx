@@ -19,6 +19,7 @@ import {
 } from "lucide-react";
 import { getPublicApp } from "@/lib/api";
 import { AppJsonLd, BreadcrumbJsonLd } from "@/components/seo/json-ld";
+import { formatNumber } from "@/lib/format-utils";
 import { PLATFORMS, isPlatformId, buildExternalAppUrl } from "@appranks/shared";
 import type { PlatformId } from "@appranks/shared";
 
@@ -213,7 +214,7 @@ export default async function PublicAppPage({ params }: PageProps) {
               {app.activeInstalls != null && (
                 <span className="flex items-center gap-1">
                   <Download className="h-3.5 w-3.5" />
-                  {app.activeInstalls.toLocaleString()} installs
+                  {formatNumber(app.activeInstalls)} installs
                 </span>
               )}
               {app.launchedDate && (
@@ -414,13 +415,13 @@ export default async function PublicAppPage({ params }: PageProps) {
                 {app.ratingCount != null && (
                   <div className="flex justify-between">
                     <dt className="text-muted-foreground">Reviews</dt>
-                    <dd className="font-medium">{app.ratingCount.toLocaleString()}</dd>
+                    <dd className="font-medium">{formatNumber(app.ratingCount)}</dd>
                   </div>
                 )}
                 {app.activeInstalls != null && (
                   <div className="flex justify-between">
                     <dt className="text-muted-foreground">Installs</dt>
-                    <dd className="font-medium">{app.activeInstalls.toLocaleString()}</dd>
+                    <dd className="font-medium">{formatNumber(app.activeInstalls)}</dd>
                   </div>
                 )}
                 {app.launchedDate && (

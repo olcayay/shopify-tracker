@@ -21,6 +21,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { useFormatDate } from "@/lib/format-date";
+import { formatNumber } from "@/lib/format-utils";
 import { ChevronDown, ChevronRight, X, Plus } from "lucide-react";
 import {
   LineChart,
@@ -287,7 +288,7 @@ export default function AiLogsPage() {
             <CardHeader className="pb-2">
               <CardDescription>Total Tokens</CardDescription>
               <CardTitle className="text-2xl">
-                {stats.totalTokens.toLocaleString()}
+                {formatNumber(stats.totalTokens)}
               </CardTitle>
             </CardHeader>
           </Card>
@@ -374,7 +375,7 @@ export default function AiLogsPage() {
                   <YAxis tick={{ fontSize: 11 }} />
                   <Tooltip
                     formatter={(value, name) => [
-                      Number(value).toLocaleString(),
+                      formatNumber(Number(value)),
                       name === "promptTokens" ? "Prompt" : "Completion",
                     ]}
                     labelFormatter={(label) => `Date: ${label}`}
@@ -432,7 +433,7 @@ export default function AiLogsPage() {
                       {formatCost(acc.cost)}
                     </TableCell>
                     <TableCell className="text-sm text-right tabular-nums">
-                      {acc.totalTokens.toLocaleString()}
+                      {formatNumber(acc.totalTokens)}
                     </TableCell>
                     <TableCell className="text-sm text-right tabular-nums">
                       {formatDuration(acc.avgDuration)}
@@ -556,10 +557,10 @@ export default function AiLogsPage() {
                         <TableCell className="text-sm font-mono">{log.productType}</TableCell>
                         <TableCell className="text-sm font-mono">{log.model}</TableCell>
                         <TableCell className="text-sm text-right tabular-nums">
-                          {log.promptTokens.toLocaleString()}
+                          {formatNumber(log.promptTokens)}
                         </TableCell>
                         <TableCell className="text-sm text-right tabular-nums">
-                          {log.completionTokens.toLocaleString()}
+                          {formatNumber(log.completionTokens)}
                         </TableCell>
                         <TableCell className="text-sm text-right tabular-nums">
                           {formatCost(log.costUsd)}
@@ -676,14 +677,14 @@ export default function AiLogsPage() {
                               )}
 
                               <div>
-                                <h4 className="text-sm font-semibold mb-1">System Prompt <span className="font-normal text-muted-foreground">({log.systemPrompt.length.toLocaleString()} chars)</span></h4>
+                                <h4 className="text-sm font-semibold mb-1">System Prompt <span className="font-normal text-muted-foreground">({formatNumber(log.systemPrompt.length)} chars)</span></h4>
                                 <pre className="text-xs bg-background rounded p-3 whitespace-pre-wrap break-words max-h-60 overflow-y-auto border">
                                   {log.systemPrompt}
                                 </pre>
                               </div>
 
                               <div>
-                                <h4 className="text-sm font-semibold mb-1">User Prompt <span className="font-normal text-muted-foreground">({log.userPrompt.length.toLocaleString()} chars)</span></h4>
+                                <h4 className="text-sm font-semibold mb-1">User Prompt <span className="font-normal text-muted-foreground">({formatNumber(log.userPrompt.length)} chars)</span></h4>
                                 <pre className="text-xs bg-background rounded p-3 whitespace-pre-wrap break-words max-h-60 overflow-y-auto border">
                                   {log.userPrompt}
                                 </pre>
@@ -691,7 +692,7 @@ export default function AiLogsPage() {
 
                               {log.responseContent && (
                                 <div>
-                                  <h4 className="text-sm font-semibold mb-1">Response <span className="font-normal text-muted-foreground">({(log.responseContent?.length ?? 0).toLocaleString()} chars)</span></h4>
+                                  <h4 className="text-sm font-semibold mb-1">Response <span className="font-normal text-muted-foreground">({formatNumber(log.responseContent?.length ?? 0)} chars)</span></h4>
                                   <pre className="text-xs bg-background rounded p-3 whitespace-pre-wrap break-words max-h-60 overflow-y-auto border">
                                     {log.responseContent}
                                   </pre>

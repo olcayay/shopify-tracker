@@ -17,6 +17,7 @@ import {
 import { Globe, Star, Bookmark } from "lucide-react";
 import { TableSkeleton } from "@/components/skeletons";
 import { getPlatformLabel, getPlatformColor } from "@/lib/platform-display";
+import { formatNumber } from "@/lib/format-utils";
 
 interface DeveloperProfile {
   developer: {
@@ -260,7 +261,7 @@ export default function CrossPlatformDeveloperPage() {
                         </TableCell>
                         <TableCell className="text-right">
                           {app.ratingCount != null
-                            ? app.ratingCount.toLocaleString()
+                            ? formatNumber(app.ratingCount)
                             : <span className="text-muted-foreground">-</span>}
                         </TableCell>
                         <TableCell className="text-muted-foreground text-sm truncate">
@@ -269,7 +270,7 @@ export default function CrossPlatformDeveloperPage() {
                         {hasInstalls && (
                           <TableCell className="text-right">
                             {app.activeInstalls != null
-                              ? app.activeInstalls.toLocaleString()
+                              ? formatNumber(app.activeInstalls)
                               : <span className="text-muted-foreground">-</span>}
                           </TableCell>
                         )}

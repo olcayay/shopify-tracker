@@ -15,6 +15,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Globe, Star, Bookmark, ArrowRight } from "lucide-react";
+import { formatNumber } from "@/lib/format-utils";
 import { TableSkeleton } from "@/components/skeletons";
 import { getPlatformLabel, getPlatformColor } from "@/lib/platform-display";
 import type { PlatformId } from "@appranks/shared";
@@ -268,7 +269,7 @@ export default function PlatformDeveloperPage() {
                     </TableCell>
                     <TableCell className="text-right w-[90px]">
                       {app.ratingCount != null
-                        ? app.ratingCount.toLocaleString()
+                        ? formatNumber(app.ratingCount)
                         : <span className="text-muted-foreground">-</span>}
                     </TableCell>
                     <TableCell className="w-[160px] text-muted-foreground text-sm truncate max-w-[160px]">
@@ -277,7 +278,7 @@ export default function PlatformDeveloperPage() {
                     {hasInstalls && (
                       <TableCell className="text-right w-[100px]">
                         {app.activeInstalls != null
-                          ? app.activeInstalls.toLocaleString()
+                          ? formatNumber(app.activeInstalls)
                           : <span className="text-muted-foreground">-</span>}
                       </TableCell>
                     )}

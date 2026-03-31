@@ -6,6 +6,7 @@ import { useParams } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
 import { Sparkles, Plus, Check, ExternalLink, ChevronDown, ChevronUp, Brain, Loader2, RefreshCw } from "lucide-react";
 import { buildExternalAppUrl, getPlatformName } from "@/lib/platform-urls";
+import { formatNumber } from "@/lib/format-utils";
 import { PLATFORMS, isPlatformId, type PlatformId } from "@appranks/shared";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -330,7 +331,7 @@ export function CompetitorSuggestions({
                         <span className="text-amber-500">&#9733;</span>
                         <span className="font-medium">{parseFloat(s.averageRating).toFixed(1)}</span>
                         {s.ratingCount != null && (
-                          <span className="text-xs text-muted-foreground">({s.ratingCount.toLocaleString()})</span>
+                          <span className="text-xs text-muted-foreground">({formatNumber(s.ratingCount)})</span>
                         )}
                       </span>
                     )}

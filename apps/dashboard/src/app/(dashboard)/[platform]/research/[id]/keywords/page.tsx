@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
+import { formatNumber } from "@/lib/format-utils";
 import {
   Table,
   TableBody,
@@ -400,7 +401,7 @@ export default function ResearchKeywordsPage() {
                           {isPending ? (
                             <Skeleton className="h-4 w-12 ml-auto" />
                           ) : (
-                            <span className={animate}>{kw.totalResults?.toLocaleString() ?? "\u2014"}</span>
+                            <span className={animate}>{kw.totalResults != null ? formatNumber(kw.totalResults) : "\u2014"}</span>
                           )}
                         </TableCell>
                         <TableCell className="text-right">

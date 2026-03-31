@@ -28,6 +28,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { StatCardSkeleton, TableSkeleton } from "@/components/skeletons";
 import { AppBadgeIcon } from "@/components/app-badges";
 import { AccountUsageCards, USAGE_STAT_PRESETS } from "@/components/account-usage-cards";
+import { formatNumber } from "@/lib/format-utils";
 import { PLATFORMS, type PlatformId } from "@appranks/shared";
 import { PLATFORM_COLORS, SCRAPER_TYPE_LABELS } from "@/lib/platform-display";
 
@@ -493,7 +494,7 @@ export default function OverviewPage() {
                           </Link>
                         </TableCell>
                         <TableCell>
-                          {kw.latestSnapshot?.totalResults?.toLocaleString() ?? "\u2014"}
+                          {kw.latestSnapshot?.totalResults != null ? formatNumber(kw.latestSnapshot.totalResults) : "\u2014"}
                         </TableCell>
                         <TableCell>
                           {kw.trackedInResults > 0 ? (
@@ -718,7 +719,7 @@ export default function OverviewPage() {
                           </Link>
                         </TableCell>
                         <TableCell className="text-sm text-muted-foreground">
-                          {c.appCount?.toLocaleString() ?? "\u2014"}
+                          {c.appCount != null ? formatNumber(c.appCount) : "\u2014"}
                         </TableCell>
                         <TableCell>
                           {c.trackedInResults > 0 ? (

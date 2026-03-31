@@ -17,6 +17,7 @@ import {
 import { ArrowUpDown, ArrowUp, ArrowDown, Search as SearchIcon, Globe } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { TableSkeleton, CardSkeleton } from "@/components/skeletons";
+import { formatNumber } from "@/lib/format-utils";
 import { developerNameToSlug } from "@appranks/shared";
 
 type SortKey = "name" | "rating" | "reviews" | "minPaidPrice" | "lastChangeAt" | "launchedDate";
@@ -286,7 +287,7 @@ function DeveloperAppsContent() {
                     <TableCell>
                       {app.ratingCount != null ? (
                         <Link href={`/${platform}/apps/${app.slug}/reviews`} className="text-primary hover:underline">
-                          {app.ratingCount.toLocaleString()}
+                          {formatNumber(app.ratingCount)}
                         </Link>
                       ) : "\u2014"}
                     </TableCell>

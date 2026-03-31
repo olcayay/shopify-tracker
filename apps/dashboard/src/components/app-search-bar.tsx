@@ -7,6 +7,7 @@ import { useAuth } from "@/lib/auth-context";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Search, Plus, Loader2 } from "lucide-react";
+import { formatNumber } from "@/lib/format-utils";
 
 interface SearchResult {
   slug: string;
@@ -160,7 +161,7 @@ export function AppSearchBar({
                   {s.averageRating != null && (
                     <span className="text-muted-foreground shrink-0">
                       ({Number(s.averageRating).toFixed(1)} /{" "}
-                      {s.ratingCount?.toLocaleString() ?? 0})
+                      {s.ratingCount != null ? formatNumber(s.ratingCount) : 0})
                     </span>
                   )}
                 </Link>

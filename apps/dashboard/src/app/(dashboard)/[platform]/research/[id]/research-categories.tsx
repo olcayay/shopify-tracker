@@ -6,6 +6,7 @@ import { Star } from "lucide-react";
 import Link from "next/link";
 import { formatCategoryTitle } from "@/lib/platform-urls";
 import { type PlatformId } from "@appranks/shared";
+import { formatNumber } from "@/lib/format-utils";
 
 export function CategoryLandscape({
   categories, competitors, keywordRankings,
@@ -71,7 +72,7 @@ export function CategoryLandscape({
                       </span>
                     )}
                     {comp.ratingCount != null && (
-                      <span className="w-14 text-right">{comp.ratingCount.toLocaleString()} rev</span>
+                      <span className="w-14 text-right">{formatNumber(comp.ratingCount)} rev</span>
                     )}
                     {(rankedKeywordCounts.get(c.slug) ?? 0) > 0 && (
                       <span className="w-12 text-right">{rankedKeywordCounts.get(c.slug)} kw</span>

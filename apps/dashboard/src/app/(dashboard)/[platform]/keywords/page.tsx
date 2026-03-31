@@ -6,6 +6,7 @@ import Link from "next/link";
 import { AppIcon } from "@/components/app-icon";
 import { useAuth } from "@/lib/auth-context";
 import { useFormatDate } from "@/lib/format-date";
+import { formatNumber } from "@/lib/format-utils";
 import { TableSkeleton } from "@/components/skeletons";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -547,7 +548,7 @@ export default function KeywordsPage() {
                           </div>
                         </TableCell>
                         <TableCell>
-                          {kw.latestSnapshot?.totalResults?.toLocaleString() ??
+                          {kw.latestSnapshot?.totalResults != null ? formatNumber(kw.latestSnapshot.totalResults) :
                             "\u2014"}
                         </TableCell>
                         <TableCell>

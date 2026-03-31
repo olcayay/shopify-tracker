@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import { getPublicPlatformStats, getPublicCategoryTree } from "@/lib/api";
 import { BreadcrumbJsonLd } from "@/components/seo/json-ld";
+import { formatNumber } from "@/lib/format-utils";
 import { PLATFORMS, isPlatformId } from "@appranks/shared";
 import type { PlatformId } from "@appranks/shared";
 
@@ -87,7 +88,7 @@ export default async function TrendsPage({ params }: PageProps) {
         {/* Stats Grid */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           <div className="rounded-lg border p-4 text-center">
-            <p className="text-3xl font-bold">{stats?.totalApps?.toLocaleString() || 0}</p>
+            <p className="text-3xl font-bold">{stats?.totalApps != null ? formatNumber(stats.totalApps) : 0}</p>
             <p className="text-sm text-muted-foreground mt-1">Total Apps</p>
           </div>
           <div className="rounded-lg border p-4 text-center">

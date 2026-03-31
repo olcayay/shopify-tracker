@@ -7,6 +7,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { formatNumber } from "@/lib/format-utils";
 import {
   Table,
   TableBody,
@@ -76,7 +77,7 @@ export function CompetitorSuggestions({
                     {s.averageRating.toFixed(1)}
                   </span>
                 )}
-                {caps.hasReviews && s.ratingCount != null && <span>({s.ratingCount.toLocaleString()})</span>}
+                {caps.hasReviews && s.ratingCount != null && <span>({formatNumber(s.ratingCount)})</span>}
                 <span className="text-muted-foreground/60">|</span>
                 <span>Matches: {s.matchedKeywords.join(", ")}</span>
               </div>
@@ -202,7 +203,7 @@ export function InlineAppSearch({
                 {caps.hasReviews && app.averageRating != null && (
                   <span className="text-xs text-muted-foreground shrink-0">
                     <Star className="h-3 w-3 inline fill-yellow-500 text-yellow-500" /> {parseFloat(app.averageRating).toFixed(1)}
-                    {app.ratingCount != null && <span className="ml-1">({Number(app.ratingCount).toLocaleString()})</span>}
+                    {app.ratingCount != null && <span className="ml-1">({formatNumber(Number(app.ratingCount))})</span>}
                   </span>
                 )}
               </div>
@@ -299,7 +300,7 @@ export function ManualAppSearch({
                     {caps.hasReviews && app.averageRating != null && (
                       <span className="text-xs text-muted-foreground">
                         <Star className="h-3 w-3 inline fill-yellow-500 text-yellow-500" /> {parseFloat(app.averageRating).toFixed(1)}
-                        {app.ratingCount != null && <span className="ml-1">({Number(app.ratingCount).toLocaleString()})</span>}
+                        {app.ratingCount != null && <span className="ml-1">({formatNumber(Number(app.ratingCount))})</span>}
                       </span>
                     )}
                   </div>
@@ -443,7 +444,7 @@ export function CompetitorTable({
                     {isPending ? (
                       <Skeleton className="h-4 w-12 ml-auto" />
                     ) : (
-                      <span className={animate}>{comp.ratingCount?.toLocaleString() ?? "\u2014"}</span>
+                      <span className={animate}>{comp.ratingCount != null ? formatNumber(comp.ratingCount) : "\u2014"}</span>
                     )}
                   </TableCell>
                 )}

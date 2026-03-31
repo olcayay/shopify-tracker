@@ -8,6 +8,7 @@ import { useAuth } from "@/lib/auth-context";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Search, X, ExternalLink } from "lucide-react";
+import { formatNumber } from "@/lib/format-utils";
 import { CompetitorButton } from "@/components/competitor-button";
 import { buildExternalSearchUrl, getPlatformName } from "@/lib/platform-urls";
 import { PLATFORMS, type PlatformId } from "@appranks/shared";
@@ -135,7 +136,7 @@ export function LiveSearchModal({
             </span>
             {result?.totalResults != null && (
               <Badge variant="secondary" className="text-xs">
-                {result.totalResults.toLocaleString()} results
+                {formatNumber(result.totalResults)} results
               </Badge>
             )}
           </div>
@@ -282,7 +283,7 @@ export function LiveSearchModal({
                         </span>
                         <span className="text-xs text-muted-foreground shrink-0 w-14 text-right">
                           {app.rating_count > 0
-                            ? `${app.rating_count.toLocaleString()}`
+                            ? `${formatNumber(app.rating_count)}`
                             : "—"}
                         </span>
                         <CompetitorButton
@@ -361,7 +362,7 @@ export function LiveSearchModal({
                         </span>
                         <span className="text-xs text-muted-foreground shrink-0 w-14 text-right">
                           {app.rating_count > 0
-                            ? `${app.rating_count.toLocaleString()}`
+                            ? `${formatNumber(app.rating_count)}`
                             : "—"}
                         </span>
                         <CompetitorButton

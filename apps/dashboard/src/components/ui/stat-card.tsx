@@ -1,5 +1,6 @@
 import { Card, CardContent } from "@/components/ui/card";
 import type { LucideIcon } from "lucide-react";
+import { formatNumber } from "@/lib/format-utils";
 
 interface StatCardProps {
   label: string;
@@ -27,7 +28,7 @@ export function StatCard({
         </div>
         <div className="flex items-baseline gap-2 mt-1">
           <span className={`font-bold ${isCompact ? "text-xl" : "text-2xl"}`}>
-            {typeof value === "number" ? value.toLocaleString() : value}
+            {typeof value === "number" ? formatNumber(value) : value}
           </span>
           {change && (
             <span

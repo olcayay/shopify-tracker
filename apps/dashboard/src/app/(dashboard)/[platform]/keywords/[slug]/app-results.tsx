@@ -18,6 +18,7 @@ import {
 } from "@/components/ui/table";
 import { CompetitorButton } from "@/components/competitor-button";
 import { useFormatDate } from "@/lib/format-date";
+import { formatNumber } from "@/lib/format-utils";
 import {
   ArrowUpDown,
   ArrowUp,
@@ -359,7 +360,7 @@ export function KeywordAppResults({
                       <TableCell>
                         {app.rating_count != null ? (
                           <Link href={`/${platform}/apps/${app.app_slug}/reviews`} className="text-primary hover:underline">
-                            {app.rating_count.toLocaleString()}
+                            {formatNumber(app.rating_count)}
                           </Link>
                         ) : "\u2014"}
                       </TableCell>

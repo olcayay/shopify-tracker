@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/table";
 import { ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
 import Link from "next/link";
+import { formatNumber } from "@/lib/format-utils";
 
 export function OpportunityTable({
   opportunities,
@@ -92,7 +93,7 @@ export function OpportunityTable({
                 </span>
               </TableCell>
               <TableCell className="text-right text-sm">
-                {opp.totalResults?.toLocaleString() ?? "\u2014"}
+                {opp.totalResults != null ? formatNumber(opp.totalResults) : "\u2014"}
               </TableCell>
               <TableCell className="text-right text-sm text-muted-foreground">
                 {opp.competitorCount} rank

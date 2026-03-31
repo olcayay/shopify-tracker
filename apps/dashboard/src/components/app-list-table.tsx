@@ -16,6 +16,7 @@ import {
 } from "@/components/ui/table";
 import { CompetitorButton } from "@/components/competitor-button";
 import { useFormatDate } from "@/lib/format-date";
+import { formatNumber } from "@/lib/format-utils";
 import {
   ArrowUpDown,
   ArrowUp,
@@ -460,7 +461,7 @@ export function AppListTable({
                             href={`/${platform}/apps/${app.slug}#reviews`}
                             className="text-primary hover:underline"
                           >
-                            {Number(app.rating_count).toLocaleString()}
+                            {formatNumber(Number(app.rating_count))}
                           </Link>
                         ) : (
                           "\u2014"

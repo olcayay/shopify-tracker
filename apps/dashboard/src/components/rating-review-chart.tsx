@@ -10,6 +10,7 @@ import {
   ResponsiveContainer,
 } from "recharts";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { formatNumber } from "@/lib/format-utils";
 
 interface Snapshot {
   scrapedAt: string;
@@ -113,7 +114,7 @@ export function RatingReviewChart({ snapshots }: { snapshots: Snapshot[] }) {
                 <YAxis fontSize={11} />
                 <Tooltip
                   formatter={(value) => [
-                    Number(value).toLocaleString(),
+                    formatNumber(Number(value)),
                     "Reviews",
                   ]}
                   labelFormatter={(label) => `Week of ${label}`}

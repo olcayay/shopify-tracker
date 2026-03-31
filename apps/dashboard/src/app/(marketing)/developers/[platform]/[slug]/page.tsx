@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import { getPublicDeveloper } from "@/lib/api";
 import { BreadcrumbJsonLd } from "@/components/seo/json-ld";
+import { formatNumber } from "@/lib/format-utils";
 import { PLATFORMS, isPlatformId } from "@appranks/shared";
 import type { PlatformId } from "@appranks/shared";
 
@@ -121,7 +122,7 @@ export default async function PublicDeveloperPage({ params }: PageProps) {
               </span>
             )}
             {totalReviews > 0 && (
-              <span>{totalReviews.toLocaleString()} total reviews</span>
+              <span>{formatNumber(totalReviews)} total reviews</span>
             )}
           </div>
           {dev.website && (
@@ -214,7 +215,7 @@ export default async function PublicDeveloperPage({ params }: PageProps) {
                 {totalReviews > 0 && (
                   <div className="flex justify-between">
                     <dt className="text-muted-foreground">Total Reviews</dt>
-                    <dd className="font-medium">{totalReviews.toLocaleString()}</dd>
+                    <dd className="font-medium">{formatNumber(totalReviews)}</dd>
                   </div>
                 )}
                 {dev.platforms && dev.platforms.length > 0 && (

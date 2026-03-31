@@ -12,6 +12,7 @@ import { TableSkeleton } from "@/components/skeletons";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Plus, FlaskConical, Trash2, User, Star, Pencil, Check, X } from "lucide-react";
 import { ConfirmModal } from "@/components/confirm-modal";
+import { formatNumber } from "@/lib/format-utils";
 
 // ─── Types ──────────────────────────────────────────────────
 
@@ -366,7 +367,7 @@ function ProjectSummaryCards({ data }: { data: ResearchData }) {
               <span className="text-muted-foreground flex items-center gap-1">
                 <Star className="h-3 w-3 fill-yellow-400 text-yellow-400" />{avgRating.toFixed(1)} avg rating
               </span>
-              <span className="font-medium text-xs">{avgReviews?.toLocaleString()} reviews</span>
+              <span className="font-medium text-xs">{avgReviews != null ? formatNumber(avgReviews) : "—"} reviews</span>
             </StatRow>
           )}
           <StatRow>

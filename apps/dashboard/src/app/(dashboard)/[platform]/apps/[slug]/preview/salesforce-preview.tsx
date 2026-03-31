@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import { getMetadataLimits } from "@/lib/metadata-limits";
 import { CharBadge, EditorField, mod } from "./shared";
+import { formatNumber } from "@/lib/format-utils";
 
 export interface SalesforceAppData {
   slug: string;
@@ -152,7 +153,7 @@ function SalesforceSearchCard({
                 })}
               </div>
               <span className="text-[13px] text-[#444] font-medium">
-                {rating.toFixed(2)} ({reviewCount?.toLocaleString() ?? 0})
+                {rating.toFixed(2)} ({reviewCount != null ? formatNumber(reviewCount) : 0})
               </span>
             </div>
           )}
@@ -432,7 +433,7 @@ export function SalesforcePreview({
                       <SalesforceStars rating={rating} />
                       <span className="text-[14px] text-[#444]">{rating.toFixed(2)} Average Rating</span>
                       <span className="text-[14px] text-[#0176D3] underline cursor-pointer">
-                        ({reviewCount?.toLocaleString() ?? 0} Reviews)
+                        ({reviewCount != null ? formatNumber(reviewCount) : 0} Reviews)
                       </span>
                     </div>
                   )}
@@ -824,7 +825,7 @@ export function SalesforcePreview({
                   <div className="flex items-center justify-between border-b border-[#E5E5E5] pb-3 mb-5">
                     <p className="text-[14px] text-[#444]">
                       Showing {totalReviews > 0 ? `1-${Math.min(totalReviews, 10)}` : "0"} of{" "}
-                      <span className="font-bold">{totalReviews.toLocaleString()}</span> Reviews
+                      <span className="font-bold">{formatNumber(totalReviews)}</span> Reviews
                     </p>
                     <div className="flex items-center gap-2 text-[13px]">
                       <span className="text-[#666]">Sort by</span>

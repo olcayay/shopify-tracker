@@ -3,6 +3,7 @@
 import * as React from "react";
 import { Popover } from "radix-ui";
 import { Eye } from "lucide-react";
+import { formatNumber } from "@/lib/format-utils";
 
 export function VisibilityScorePopover({
   visibilityScore,
@@ -98,7 +99,7 @@ export function VisibilityScorePopover({
               <span className="shrink-0 w-4 h-4 rounded-full bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-300 flex items-center justify-center text-[10px] font-bold mt-0.5">5</span>
               <div>
                 <p className="font-medium">
-                  Raw score: {visibilityRaw.toLocaleString(undefined, { maximumFractionDigits: 1 })}
+                  Raw score: {formatNumber(visibilityRaw, { decimals: 1 })}
                 </p>
                 <p className="text-muted-foreground">Sum of all keyword contributions</p>
               </div>

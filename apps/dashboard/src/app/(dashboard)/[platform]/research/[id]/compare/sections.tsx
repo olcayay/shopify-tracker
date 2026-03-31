@@ -7,6 +7,7 @@ import { Check } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { AppData } from "./types";
 import { CharBadge, useKeywordDensity, N_GRAM_COLORS, StarRating, getAppLink, AppIcon } from "./helpers";
+import { formatNumber } from "@/lib/format-utils";
 
 // ─── Vertical List (Name / Subtitle / Intro) ────────────────
 
@@ -299,7 +300,7 @@ export function ReviewsSection({ apps }: { apps: AppData[] }) {
               <td key={app.slug} className="py-2 px-3 text-center font-medium">
                 {app.latestSnapshot?.ratingCount != null ? (
                   <Link href={app.slug.startsWith("__virtual__") ? getAppLink(app.slug, id as string) : `/apps/${app.slug}/reviews`} className="hover:underline">
-                    {app.latestSnapshot.ratingCount.toLocaleString()}
+                    {formatNumber(app.latestSnapshot.ratingCount)}
                   </Link>
                 ) : (
                   <span className="text-muted-foreground">{"\u2014"}</span>

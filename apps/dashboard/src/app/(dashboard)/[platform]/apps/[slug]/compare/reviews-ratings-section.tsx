@@ -3,6 +3,7 @@
 import { CompareSection } from "./compare-section";
 import { LinkedAppIcon } from "./app-icon";
 import type { AppData } from "./compare-types";
+import { formatNumber } from "@/lib/format-utils";
 
 function StarRating({ rating }: { rating: number }) {
   return (
@@ -110,7 +111,7 @@ export function ReviewsRatingsSection({
                   <td key={app.slug} className="py-2 px-2 text-center">
                     {count != null ? (
                       <span className="font-bold">
-                        {count.toLocaleString()}
+                        {formatNumber(count)}
                       </span>
                     ) : (
                       <span className="text-muted-foreground">-</span>

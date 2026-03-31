@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { formatNumber } from "@/lib/format-utils";
 import { Plus, X as XIcon } from "lucide-react";
 import { getMetadataLimits } from "@/lib/metadata-limits";
 import { CharBadge, EditorField, mod } from "./shared";
@@ -94,7 +95,7 @@ function SearchResultCard({
               <>
                 <span className="font-semibold text-[#1a1a1a]">{rating}</span>
                 <ShopifyStar className="h-3 w-3" />
-                <span>({reviewCount?.toLocaleString() ?? 0})</span>
+                <span>({reviewCount != null ? formatNumber(reviewCount) : 0})</span>
                 <span>•</span>
               </>
             )}
@@ -268,7 +269,7 @@ export function ShopifyPreview({
                       <div className="flex items-center gap-1">
                         <span className="text-[12px]">{rating}</span>
                         <ShopifyStar className="h-3 w-3" />
-                        <span className="text-[12px] text-[#616161]">({reviewCount?.toLocaleString() ?? 0})</span>
+                        <span className="text-[12px] text-[#616161]">({reviewCount != null ? formatNumber(reviewCount) : 0})</span>
                       </div>
                     </div>
                   )}

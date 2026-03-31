@@ -18,6 +18,7 @@ import {
 } from "@/components/ui/table";
 import { CompetitorButton } from "@/components/competitor-button";
 import { useFormatDate } from "@/lib/format-date";
+import { formatNumber } from "@/lib/format-utils";
 import {
   ArrowUpDown,
   ArrowUp,
@@ -351,7 +352,7 @@ export function CategoryAppResults({
                       <TableCell>{app.average_rating?.toFixed(1) ?? "\u2014"}</TableCell>
                     )}
                     {caps.hasReviews && (
-                      <TableCell>{app.rating_count?.toLocaleString() ?? "\u2014"}</TableCell>
+                      <TableCell>{app.rating_count != null ? formatNumber(app.rating_count) : "\u2014"}</TableCell>
                     )}
                     {caps.hasPricing && (
                       <TableCell className="text-sm text-muted-foreground">

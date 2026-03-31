@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
+import { formatNumber } from "@/lib/format-utils";
 import {
   Table,
   TableBody,
@@ -297,7 +298,7 @@ export default function ResearchCompetitorsPage() {
                               {caps.hasReviews && app.averageRating != null && (
                                 <span className="text-xs text-muted-foreground shrink-0">
                                   <Star className="h-3 w-3 inline fill-yellow-500 text-yellow-500" /> {parseFloat(app.averageRating).toFixed(1)}
-                                  {app.ratingCount != null && <span className="ml-1">({Number(app.ratingCount).toLocaleString()})</span>}
+                                  {app.ratingCount != null && <span className="ml-1">({formatNumber(Number(app.ratingCount))})</span>}
                                 </span>
                               )}
                             </div>
@@ -389,7 +390,7 @@ export default function ResearchCompetitorsPage() {
                               <span className={animate}>
                                 {comp.ratingCount != null ? (
                                   <Link href={`/apps/${comp.slug}/reviews`} className="hover:underline">
-                                    {comp.ratingCount.toLocaleString()}
+                                    {formatNumber(comp.ratingCount)}
                                   </Link>
                                 ) : "\u2014"}
                               </span>

@@ -6,6 +6,7 @@ import { PLATFORM_LABELS, PLATFORM_COLORS } from "@/lib/platform-display";
 import { PLATFORMS, type PlatformId } from "@appranks/shared";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
+import { formatNumber } from "@/lib/format-utils";
 
 interface PlatformCounts {
   apps: { platform: string; total: number; tracked: number; scraped: number; competitor: number; last_scraped_at: string | null }[];
@@ -42,7 +43,7 @@ function getLabel(type: AssetType, data: PlatformCounts, platform: string): { pr
       if (!row) return { primary: "0" };
       return {
         primary: `${row.total} categories`,
-        secondary: row.total_apps > 0 ? `${row.total_apps.toLocaleString()} apps` : undefined,
+        secondary: row.total_apps > 0 ? `${formatNumber(row.total_apps)} apps` : undefined,
         extra: row.starred > 0 ? `${row.starred} starred` : undefined,
       };
     }

@@ -7,6 +7,7 @@ import { AppIcon } from "@/components/app-icon";
 import { useAuth } from "@/lib/auth-context";
 import { useApiQuery, useQueryClient } from "@/lib/use-api-query";
 import { useFormatDate } from "@/lib/format-date";
+import { formatNumber } from "@/lib/format-utils";
 import { TableSkeleton } from "@/components/skeletons";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -416,7 +417,7 @@ export default function CategoriesPage() {
                     </TableCell>
                     )}
                     <TableCell>
-                      {s.appCount != null ? s.appCount.toLocaleString() : "\u2014"}
+                      {s.appCount != null ? formatNumber(s.appCount) : "\u2014"}
                     </TableCell>
                     <TableCell>
                       {s.trackedInResults > 0 ? (
@@ -536,7 +537,7 @@ export default function CategoriesPage() {
                         {label}
                         {tag.appCount != null && (
                           <span className="text-xs opacity-70">
-                            ({tag.appCount.toLocaleString()})
+                            ({formatNumber(tag.appCount)})
                           </span>
                         )}
                       </Link>
@@ -601,7 +602,7 @@ export default function CategoriesPage() {
                           </TableCell>
                           <TableCell className="tabular-nums">
                             {tag.appCount != null
-                              ? tag.appCount.toLocaleString()
+                              ? formatNumber(tag.appCount)
                               : "\u2014"}
                           </TableCell>
                           {canEdit && (
@@ -786,7 +787,7 @@ function CategoryRow({
 
         {node.isListingPage && node.appCount != null && (
           <span className="text-xs text-muted-foreground tabular-nums shrink-0">
-            {node.appCount.toLocaleString()} apps
+            {formatNumber(node.appCount)} apps
           </span>
         )}
       </div>

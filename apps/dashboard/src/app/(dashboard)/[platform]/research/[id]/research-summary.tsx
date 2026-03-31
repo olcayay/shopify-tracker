@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Star } from "lucide-react";
 import { PLATFORMS, isPlatformId, type PlatformId } from "@appranks/shared";
 import type { ResearchData } from "./research-types";
+import { formatNumber } from "@/lib/format-utils";
 
 // ─── Helpers ──────────────────────────────────────────────────
 
@@ -88,7 +89,7 @@ export function SummaryCards({ data }: { data: ResearchData }) {
               <span className="text-muted-foreground flex items-center gap-1">
                 <Star className="h-3 w-3 fill-yellow-400 text-yellow-400" />{avgRating.toFixed(1)} avg rating
               </span>
-              <span className="font-medium text-xs">{avgReviews?.toLocaleString()} reviews</span>
+              <span className="font-medium text-xs">{avgReviews != null ? formatNumber(avgReviews) : "—"} reviews</span>
             </SummaryLink>
           )}
           <SummaryLink href="section-competitors">

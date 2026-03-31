@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { AppIcon } from "@/components/app-icon";
 import { formatDateOnly } from "@/lib/format-date";
+import { formatNumber } from "@/lib/format-utils";
 import { getKeyword, getKeywordRankings, getKeywordAds, getKeywordSuggestions, getKeywordMembership, getAccountCompetitors, getAccountTrackedApps, getAppsLastChanges, getAppsMinPaidPrices, getAppsReverseSimilarCounts, getAppsLaunchedDates, getAppsCategories } from "@/lib/api";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -98,7 +99,7 @@ export default async function KeywordDetailPage({
             &ldquo;{keyword.keyword}&rdquo;
           </h1>
           <p className="text-muted-foreground">
-            {snapshot?.totalResults?.toLocaleString() ?? "?"} total results
+            {snapshot?.totalResults != null ? formatNumber(snapshot.totalResults) : "?"} total results
             {snapshot?.scrapedAt && (
               <>
                 {" "}
@@ -271,7 +272,7 @@ export default async function KeywordDetailPage({
                     <TableCell>
                       {app.rating_count != null ? (
                         <Link href={`/${platform}/apps/${app.app_slug}/reviews`} className="text-primary hover:underline">
-                          {app.rating_count.toLocaleString()}
+                          {formatNumber(app.rating_count)}
                         </Link>
                       ) : "\u2014"}
                     </TableCell>
@@ -386,7 +387,7 @@ export default async function KeywordDetailPage({
                     <TableCell>
                       {ad.ratingCount != null ? (
                         <Link href={`/${platform}/apps/${ad.appSlug}/reviews`} className="text-primary hover:underline">
-                          {ad.ratingCount.toLocaleString()}
+                          {formatNumber(ad.ratingCount)}
                         </Link>
                       ) : "\u2014"}
                     </TableCell>

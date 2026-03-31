@@ -4,6 +4,7 @@ import * as React from "react";
 import { Popover } from "radix-ui";
 import { Star, Shield, TrendingUp } from "lucide-react";
 import type { KeywordOpportunityMetrics } from "@appranks/shared";
+import { formatNumber } from "@/lib/format-utils";
 
 function ScoreBar({ label, value, weight }: { label: string; value: number; weight: number }) {
   const pct = Math.round(value * 100);
@@ -87,7 +88,7 @@ export function KeywordOpportunityPopover({
           <div className="border-t pt-3 mb-3">
             <p className="text-xs font-medium text-muted-foreground mb-2">First Page Analysis</p>
             <div className="space-y-1">
-              <StatRow label="Total Results" value={stats.totalResults.toLocaleString()} />
+              <StatRow label="Total Results" value={formatNumber(stats.totalResults)} />
               <StatRow
                 label="Avg Rating"
                 value={stats.firstPageAvgRating != null ? stats.firstPageAvgRating.toFixed(1) : "\u2014"}
@@ -150,7 +151,7 @@ export function KeywordOpportunityPopover({
                       {app.rating.toFixed(1)}
                     </span>
                     <span className="text-muted-foreground/60 shrink-0 tabular-nums">
-                      {app.reviews.toLocaleString()}
+                      {formatNumber(app.reviews)}
                     </span>
                     {app.isBuiltForShopify && (
                       <Shield className="h-3 w-3 text-violet-500 shrink-0" />

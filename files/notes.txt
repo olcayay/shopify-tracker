@@ -1,3 +1,10 @@
+PLA-518: formatNumber utility consolidation (2026-03-31)
+================================================================
+Created formatNumber(), formatCurrency(), formatPercent() in lib/format-utils.ts.
+Migrated ~45 toLocaleString() calls across 30+ dashboard files to use formatNumber().
+Added 20 unit tests for the new utilities (33 total in format-utils.test.ts).
+Date toLocaleString() calls left untouched (different concern).
+
 Dark Mode + Design System Implementation (2026-03-30)
 ================================================================
 Dark mode: next-themes + ThemeToggle (PLA-494), FOIT prevention script (PLA-505),

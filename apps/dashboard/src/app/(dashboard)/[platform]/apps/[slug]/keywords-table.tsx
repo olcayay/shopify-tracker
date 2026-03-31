@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { cn } from "@/lib/utils";
+import { formatNumber } from "@/lib/format-utils";
 import { Button } from "@/components/ui/button";
 import {
   Table,
@@ -305,7 +306,7 @@ export function KeywordsTable({
                       <div className="min-w-0">
                         <div className="truncate max-w-[10ch] font-medium leading-tight">{app.name}</div>
                         <div className="text-muted-foreground text-[10px] leading-tight tabular-nums">
-                          {app.rating.toFixed(1)} &middot; {app.reviews.toLocaleString()}
+                          {app.rating.toFixed(1)} &middot; {formatNumber(app.reviews)}
                         </div>
                       </div>
                     </div>

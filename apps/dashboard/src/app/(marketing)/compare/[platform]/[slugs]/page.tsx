@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 import { getPublicComparison } from "@/lib/api";
 import { ComparisonJsonLd, BreadcrumbJsonLd } from "@/components/seo/json-ld";
+import { formatNumber } from "@/lib/format-utils";
 import { PLATFORMS, isPlatformId } from "@appranks/shared";
 import type { PlatformId } from "@appranks/shared";
 
@@ -107,7 +108,7 @@ export default async function ComparisonPage({ params }: PageProps) {
 
   const rows: { label: string; v1: string; v2: string }[] = [
     { label: "Rating", v1: app1.averageRating ? `${app1.averageRating.toFixed(1)} ★` : "N/A", v2: app2.averageRating ? `${app2.averageRating.toFixed(1)} ★` : "N/A" },
-    { label: "Reviews", v1: app1.ratingCount?.toLocaleString() || "N/A", v2: app2.ratingCount?.toLocaleString() || "N/A" },
+    { label: "Reviews", v1: app1.ratingCount != null ? formatNumber(app1.ratingCount) : "N/A", v2: app2.ratingCount != null ? formatNumber(app2.ratingCount) : "N/A" },
     { label: "Pricing", v1: app1.pricingHint || "N/A", v2: app2.pricingHint || "N/A" },
     { label: "Launched", v1: formatDate(app1.launchedDate), v2: formatDate(app2.launchedDate) },
     { label: "Developer", v1: app1.developer?.name || "N/A", v2: app2.developer?.name || "N/A" },
@@ -118,8 +119,8 @@ export default async function ComparisonPage({ params }: PageProps) {
   if (app1.activeInstalls != null || app2.activeInstalls != null) {
     rows.splice(3, 0, {
       label: "Installs",
-      v1: app1.activeInstalls?.toLocaleString() || "N/A",
-      v2: app2.activeInstalls?.toLocaleString() || "N/A",
+      v1: app1.activeInstalls != null ? formatNumber(app1.activeInstalls) : "N/A",
+      v2: app2.activeInstalls != null ? formatNumber(app2.activeInstalls) : "N/A",
     });
   }
 

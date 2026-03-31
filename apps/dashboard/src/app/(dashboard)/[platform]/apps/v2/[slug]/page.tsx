@@ -12,6 +12,7 @@ import {
   getAppKeywords,
 } from "@/lib/api";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { formatNumber } from "@/lib/format-utils";
 import { HealthScoreBar } from "@/components/v2/health-score-bar";
 import { AlertsCard, generateAlerts } from "@/components/v2/alerts-card";
 import { PLATFORMS, isPlatformId, type PlatformId } from "@appranks/shared";
@@ -82,7 +83,7 @@ function computeListingHealth(snapshot: any, platform: string, app?: any) {
     checks.push({
       label: "Description",
       status: limits.details > 0 && descLen < limits.details * 0.3 ? "warning" : "good",
-      detail: limits.details > 0 ? `${descLen.toLocaleString()}/${limits.details.toLocaleString()} chars` : `${descLen.toLocaleString()} chars`,
+      detail: limits.details > 0 ? `${formatNumber(descLen)}/${formatNumber(limits.details)} chars` : `${formatNumber(descLen)} chars`,
     });
   } else {
     checks.push({ label: "Description", status: "missing", detail: "Missing" });
