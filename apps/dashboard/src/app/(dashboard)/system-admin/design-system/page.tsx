@@ -1,7 +1,21 @@
 "use client";
 
+import { useState } from "react";
 import Link from "next/link";
-import { ChevronRight, Palette, Check, X, AlertTriangle, Info, Sun, Moon, Monitor, Search, Users, Settings, Inbox } from "lucide-react";
+import {
+  ChevronRight, Palette, Check, X, AlertTriangle, Info, Sun, Moon, Monitor, Search, Users, Settings, Inbox,
+  // Icon showcase imports
+  ArrowDown, ArrowLeft, ArrowRight, ArrowUp, ArrowUpDown, ChevronDown, ChevronLeft, ChevronUp, ExternalLink as ExternalLinkIcon, Globe, Home, Menu,
+  CheckCheck, CheckCircle, CheckCircle2, Copy, Download, Eraser, Pencil, Play, Plus, RefreshCw, RotateCcw, Save, Send, Trash2,
+  Bug, Loader2, ShieldCheck, Shield, Eye, EyeOff,
+  Activity, BarChart3, Calendar, Clock, DollarSign, FileCode, FileText, Folder, History, LayoutList, Star, Tag, Target, TrendingDown, TrendingUp,
+  Bell, BellDot, Mail, MailX, Megaphone, MessageSquare, MessageSquarePlus,
+  Bookmark, Columns3, GitCompare, Group, Lightbulb, PanelLeftClose, PanelLeftOpen,
+  AppWindow, Award, Blocks, Brain, BrainCircuit, Building2, Code, Flame, FlaskConical, Lock, Package, Pin, PinOff, Rocket, Trophy,
+  UserCheck, UserPlus, User, Settings2,
+  Minus, Sparkles, Zap,
+  KeyRound, HeartPulse, Bot, Puzzle, FolderTree, MousePointerClick, type LucideIcon,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -105,6 +119,268 @@ function ColorSwatch({ name, twClass, fgClass, varName }: { name: string; twClas
     <div className="flex flex-col items-center gap-1.5">
       <div className={`h-14 w-14 rounded-lg border border-border ${twClass}`} title={varName} />
       <span className="text-xs text-muted-foreground font-mono">{name}</span>
+    </div>
+  );
+}
+
+/* ---------- icon showcase data ---------- */
+interface IconEntry {
+  name: string;
+  icon: LucideIcon;
+  usage: number;
+}
+
+const ICON_CATEGORIES: { category: string; icons: IconEntry[] }[] = [
+  {
+    category: "Navigation",
+    icons: [
+      { name: "ArrowDown", icon: ArrowDown, usage: 3 },
+      { name: "ArrowLeft", icon: ArrowLeft, usage: 5 },
+      { name: "ArrowRight", icon: ArrowRight, usage: 4 },
+      { name: "ArrowUp", icon: ArrowUp, usage: 3 },
+      { name: "ArrowUpDown", icon: ArrowUpDown, usage: 15 },
+      { name: "ChevronDown", icon: ChevronDown, usage: 14 },
+      { name: "ChevronLeft", icon: ChevronLeft, usage: 8 },
+      { name: "ChevronRight", icon: ChevronRight, usage: 15 },
+      { name: "ChevronUp", icon: ChevronUp, usage: 3 },
+      { name: "ExternalLink", icon: ExternalLinkIcon, usage: 19 },
+      { name: "Globe", icon: Globe, usage: 8 },
+      { name: "Home", icon: Home, usage: 2 },
+      { name: "Menu", icon: Menu, usage: 2 },
+    ],
+  },
+  {
+    category: "Actions",
+    icons: [
+      { name: "Check", icon: Check, usage: 30 },
+      { name: "CheckCheck", icon: CheckCheck, usage: 2 },
+      { name: "CheckCircle", icon: CheckCircle, usage: 3 },
+      { name: "CheckCircle2", icon: CheckCircle2, usage: 2 },
+      { name: "Copy", icon: Copy, usage: 8 },
+      { name: "Download", icon: Download, usage: 3 },
+      { name: "Eraser", icon: Eraser, usage: 2 },
+      { name: "Pencil", icon: Pencil, usage: 5 },
+      { name: "Play", icon: Play, usage: 3 },
+      { name: "Plus", icon: Plus, usage: 16 },
+      { name: "RefreshCw", icon: RefreshCw, usage: 10 },
+      { name: "RotateCcw", icon: RotateCcw, usage: 3 },
+      { name: "Save", icon: Save, usage: 4 },
+      { name: "Search", icon: Search, usage: 28 },
+      { name: "Send", icon: Send, usage: 5 },
+      { name: "Trash2", icon: Trash2, usage: 6 },
+    ],
+  },
+  {
+    category: "Status & Feedback",
+    icons: [
+      { name: "AlertTriangle", icon: AlertTriangle, usage: 7 },
+      { name: "Bug", icon: Bug, usage: 2 },
+      { name: "Info", icon: Info, usage: 5 },
+      { name: "Loader2", icon: Loader2, usage: 15 },
+      { name: "Shield", icon: Shield, usage: 3 },
+      { name: "ShieldCheck", icon: ShieldCheck, usage: 2 },
+      { name: "X", icon: X, usage: 22 },
+      { name: "Eye", icon: Eye, usage: 6 },
+      { name: "EyeOff", icon: EyeOff, usage: 3 },
+    ],
+  },
+  {
+    category: "Content & Data",
+    icons: [
+      { name: "Activity", icon: Activity, usage: 3 },
+      { name: "BarChart3", icon: BarChart3, usage: 4 },
+      { name: "Calendar", icon: Calendar, usage: 5 },
+      { name: "Clock", icon: Clock, usage: 7 },
+      { name: "DollarSign", icon: DollarSign, usage: 4 },
+      { name: "FileCode", icon: FileCode, usage: 2 },
+      { name: "FileText", icon: FileText, usage: 3 },
+      { name: "Folder", icon: Folder, usage: 2 },
+      { name: "FolderTree", icon: FolderTree, usage: 2 },
+      { name: "History", icon: History, usage: 4 },
+      { name: "LayoutList", icon: LayoutList, usage: 3 },
+      { name: "Star", icon: Star, usage: 23 },
+      { name: "Tag", icon: Tag, usage: 5 },
+      { name: "Target", icon: Target, usage: 4 },
+      { name: "TrendingDown", icon: TrendingDown, usage: 5 },
+      { name: "TrendingUp", icon: TrendingUp, usage: 8 },
+    ],
+  },
+  {
+    category: "Communication",
+    icons: [
+      { name: "Bell", icon: Bell, usage: 8 },
+      { name: "BellDot", icon: BellDot, usage: 2 },
+      { name: "Mail", icon: Mail, usage: 4 },
+      { name: "MailX", icon: MailX, usage: 2 },
+      { name: "Megaphone", icon: Megaphone, usage: 2 },
+      { name: "MessageSquare", icon: MessageSquare, usage: 3 },
+      { name: "MessageSquarePlus", icon: MessageSquarePlus, usage: 2 },
+    ],
+  },
+  {
+    category: "UI Elements",
+    icons: [
+      { name: "Bookmark", icon: Bookmark, usage: 3 },
+      { name: "Columns3", icon: Columns3, usage: 2 },
+      { name: "GitCompare", icon: GitCompare, usage: 3 },
+      { name: "Group", icon: Group, usage: 2 },
+      { name: "Inbox", icon: Inbox, usage: 3 },
+      { name: "Lightbulb", icon: Lightbulb, usage: 3 },
+      { name: "Monitor", icon: Monitor, usage: 2 },
+      { name: "Moon", icon: Moon, usage: 2 },
+      { name: "PanelLeftClose", icon: PanelLeftClose, usage: 2 },
+      { name: "PanelLeftOpen", icon: PanelLeftOpen, usage: 2 },
+      { name: "Sun", icon: Sun, usage: 2 },
+      { name: "Palette", icon: Palette, usage: 2 },
+    ],
+  },
+  {
+    category: "Domain-Specific",
+    icons: [
+      { name: "AppWindow", icon: AppWindow, usage: 10 },
+      { name: "Award", icon: Award, usage: 4 },
+      { name: "Blocks", icon: Blocks, usage: 2 },
+      { name: "Brain", icon: Brain, usage: 2 },
+      { name: "BrainCircuit", icon: BrainCircuit, usage: 3 },
+      { name: "Building2", icon: Building2, usage: 3 },
+      { name: "Code", icon: Code, usage: 5 },
+      { name: "Flame", icon: Flame, usage: 3 },
+      { name: "FlaskConical", icon: FlaskConical, usage: 3 },
+      { name: "Lock", icon: Lock, usage: 3 },
+      { name: "Package", icon: Package, usage: 3 },
+      { name: "Pin", icon: Pin, usage: 2 },
+      { name: "PinOff", icon: PinOff, usage: 2 },
+      { name: "Rocket", icon: Rocket, usage: 3 },
+      { name: "Trophy", icon: Trophy, usage: 4 },
+    ],
+  },
+  {
+    category: "People & Settings",
+    icons: [
+      { name: "User", icon: User, usage: 6 },
+      { name: "UserCheck", icon: UserCheck, usage: 2 },
+      { name: "UserPlus", icon: UserPlus, usage: 2 },
+      { name: "Users", icon: Users, usage: 5 },
+      { name: "Settings", icon: Settings, usage: 4 },
+      { name: "Settings2", icon: Settings2, usage: 2 },
+      { name: "KeyRound", icon: KeyRound, usage: 2 },
+      { name: "HeartPulse", icon: HeartPulse, usage: 2 },
+      { name: "Bot", icon: Bot, usage: 3 },
+      { name: "Puzzle", icon: Puzzle, usage: 2 },
+      { name: "MousePointerClick", icon: MousePointerClick, usage: 2 },
+    ],
+  },
+  {
+    category: "Decorative",
+    icons: [
+      { name: "Minus", icon: Minus, usage: 4 },
+      { name: "Sparkles", icon: Sparkles, usage: 5 },
+      { name: "Zap", icon: Zap, usage: 3 },
+    ],
+  },
+];
+
+const ALL_ICONS = ICON_CATEGORIES.flatMap((cat) => cat.icons);
+
+function IconShowcase() {
+  const [iconSearch, setIconSearch] = useState("");
+  const [iconSize, setIconSize] = useState<"h-4 w-4" | "h-5 w-5" | "h-6 w-6" | "h-8 w-8">("h-5 w-5");
+  const [copiedIcon, setCopiedIcon] = useState<string | null>(null);
+
+  const filtered = iconSearch.trim()
+    ? ALL_ICONS.filter((i) => i.name.toLowerCase().includes(iconSearch.toLowerCase()))
+    : null;
+
+  function copyImport(name: string) {
+    navigator.clipboard.writeText(`import { ${name} } from "lucide-react";`);
+    setCopiedIcon(name);
+    setTimeout(() => setCopiedIcon(null), 1500);
+  }
+
+  const sizeOptions = ["h-4 w-4", "h-5 w-5", "h-6 w-6", "h-8 w-8"] as const;
+
+  return (
+    <div className="space-y-4">
+      <div className="flex flex-wrap items-center gap-3">
+        <div className="relative flex-1 max-w-xs">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Search icons..."
+            value={iconSearch}
+            onChange={(e) => setIconSearch(e.target.value)}
+            className="pl-9"
+          />
+        </div>
+        <div className="flex items-center gap-1 rounded-lg border p-1">
+          {sizeOptions.map((s) => (
+            <button
+              key={s}
+              onClick={() => setIconSize(s)}
+              className={`px-2 py-1 text-xs rounded ${iconSize === s ? "bg-primary text-primary-foreground" : "hover:bg-accent"}`}
+            >
+              {s.split(" ")[0]}
+            </button>
+          ))}
+        </div>
+        <span className="text-xs text-muted-foreground">{ALL_ICONS.length} icons</span>
+      </div>
+
+      {filtered ? (
+        <div className="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 lg:grid-cols-10 gap-2">
+          {filtered.map((entry) => {
+            const Icon = entry.icon;
+            return (
+              <button
+                key={entry.name}
+                onClick={() => copyImport(entry.name)}
+                className="flex flex-col items-center gap-1.5 p-2 rounded-lg border hover:bg-accent transition-colors group relative"
+                title={`${entry.name} — used in ${entry.usage} files. Click to copy import.`}
+              >
+                <Icon className={iconSize} />
+                <span className="text-[10px] text-muted-foreground truncate w-full text-center">{entry.name}</span>
+                {copiedIcon === entry.name && (
+                  <span className="absolute inset-0 flex items-center justify-center bg-primary/90 text-primary-foreground text-xs rounded-lg">
+                    Copied!
+                  </span>
+                )}
+              </button>
+            );
+          })}
+          {filtered.length === 0 && (
+            <p className="col-span-full text-sm text-muted-foreground text-center py-8">No icons match &quot;{iconSearch}&quot;</p>
+          )}
+        </div>
+      ) : (
+        ICON_CATEGORIES.map((cat) => (
+          <div key={cat.category}>
+            <h4 className="text-sm font-semibold text-muted-foreground mb-2">
+              {cat.category} <span className="font-normal">({cat.icons.length})</span>
+            </h4>
+            <div className="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 lg:grid-cols-10 gap-2 mb-4">
+              {cat.icons.map((entry) => {
+                const Icon = entry.icon;
+                return (
+                  <button
+                    key={entry.name}
+                    onClick={() => copyImport(entry.name)}
+                    className="flex flex-col items-center gap-1.5 p-2 rounded-lg border hover:bg-accent transition-colors relative"
+                    title={`${entry.name} — used in ${entry.usage} files. Click to copy import.`}
+                  >
+                    <Icon className={iconSize} />
+                    <span className="text-[10px] text-muted-foreground truncate w-full text-center">{entry.name}</span>
+                    <Badge variant="secondary" className="absolute -top-1 -right-1 text-[8px] px-1 py-0 h-3.5">{entry.usage}</Badge>
+                    {copiedIcon === entry.name && (
+                      <span className="absolute inset-0 flex items-center justify-center bg-primary/90 text-primary-foreground text-xs rounded-lg">
+                        Copied!
+                      </span>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        ))
+      )}
     </div>
   );
 }
@@ -422,6 +698,11 @@ export default function DesignSystemPage() {
             </tbody>
           </table>
         </div>
+      </Section>
+
+      {/* ========== ICONS ========== */}
+      <Section title="Icons" description={`${ALL_ICONS.length} lucide-react icons used across the project. Click any icon to copy its import statement.`}>
+        <IconShowcase />
       </Section>
 
       {/* Shared Components Showcase */}
