@@ -92,10 +92,10 @@ const RATE_STYLES: Record<RateLevel, { badge: string; bg: string; bar: string; d
     dot: "bg-red-500",
   },
   nodata: {
-    badge: "bg-gray-50 text-gray-400 border-gray-200",
+    badge: "bg-gray-50 dark:bg-gray-900/30 text-gray-400 dark:text-gray-500 border-gray-200 dark:border-gray-700",
     bg: "",
-    bar: "bg-gray-200",
-    dot: "bg-gray-300",
+    bar: "bg-gray-200 dark:bg-gray-700/30",
+    dot: "bg-gray-300 dark:bg-gray-600/30",
   },
 };
 
@@ -235,7 +235,7 @@ export function SmokeTestHistory({ history }: SmokeTestHistoryProps) {
                               return (
                                 <TableCell key={check} className="text-center px-1">
                                   <div className="flex items-center justify-center py-1">
-                                    <Minus className="w-4 h-4 text-gray-300" />
+                                    <Minus className="w-4 h-4 text-gray-300 dark:text-gray-600" />
                                   </div>
                                 </TableCell>
                               );
@@ -371,7 +371,7 @@ function SmokeCell({
           </Badge>
 
           {/* Mini progress bar */}
-          <div className="w-full h-1.5 bg-gray-100 rounded-full overflow-hidden">
+          <div className="w-full h-1.5 bg-gray-100 dark:bg-gray-800/30 rounded-full overflow-hidden">
             <div
               className={`h-full rounded-full transition-all ${styles.bar}`}
               style={{ width: `${entry.totalCount > 0 ? (entry.passCount / entry.totalCount) * 100 : 0}%` }}

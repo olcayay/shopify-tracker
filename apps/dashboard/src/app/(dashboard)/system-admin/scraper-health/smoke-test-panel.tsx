@@ -111,7 +111,7 @@ function StatusCell({
   if (isNA) {
     return (
       <div className="flex items-center justify-center py-2">
-        <Minus className="w-4 h-4 text-gray-300" />
+        <Minus className="w-4 h-4 text-gray-300 dark:text-gray-600" />
       </div>
     );
   }
@@ -131,7 +131,7 @@ function StatusCell({
     >
       <div className="flex items-center justify-center gap-1.5">
         {status === "pending" && (
-          <div className="w-2.5 h-2.5 rounded-full bg-gray-300" />
+          <div className="w-2.5 h-2.5 rounded-full bg-gray-300 dark:bg-gray-600/30" />
         )}
         {status === "running" && (
           <>
@@ -163,7 +163,7 @@ function StatusCell({
       {/* Cell-level run button — visible on hover when not running */}
       {!isRunning && status !== "running" && (
         <button
-          className="absolute inset-0 flex items-center justify-center bg-white/80 opacity-0 group-hover/cell:opacity-100 transition-opacity rounded-md"
+          className="absolute inset-0 flex items-center justify-center bg-background/80 opacity-0 group-hover/cell:opacity-100 transition-opacity rounded-md"
           onClick={(e) => {
             e.stopPropagation();
             onRun();
@@ -368,7 +368,7 @@ export function SmokeTestPanel({ onComplete, history }: SmokeTestPanelProps) {
               </span>
               <span>{progressPercent}%</span>
             </div>
-            <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
+            <div className="h-2 bg-gray-100 dark:bg-gray-800/30 rounded-full overflow-hidden">
               <div
                 className={`h-full rounded-full transition-all duration-300 ${
                   liveCounts.failed > 0
@@ -520,7 +520,7 @@ export function SmokeTestPanel({ onComplete, history }: SmokeTestPanelProps) {
                   </Badge>
                 )}
                 {(summary?.na ?? 0) > 0 && (
-                  <Badge variant="outline" className="text-sm text-gray-500 px-3 py-1">
+                  <Badge variant="outline" className="text-sm text-gray-500 dark:text-gray-400 px-3 py-1">
                     {summary?.na} N/A
                   </Badge>
                 )}

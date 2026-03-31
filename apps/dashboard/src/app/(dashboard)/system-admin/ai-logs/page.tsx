@@ -326,7 +326,7 @@ export default function AiLogsPage() {
                   <Line
                     type="monotone"
                     dataKey="costNum"
-                    stroke="hsl(221, 83%, 53%)"
+                    stroke="var(--chart-1)"
                     strokeWidth={2}
                     dot={false}
                   />
@@ -353,7 +353,7 @@ export default function AiLogsPage() {
                   <Line
                     type="monotone"
                     dataKey="calls"
-                    stroke="hsl(142, 71%, 45%)"
+                    stroke="var(--chart-2)"
                     strokeWidth={2}
                     dot={false}
                   />
@@ -383,14 +383,14 @@ export default function AiLogsPage() {
                   <Line
                     type="monotone"
                     dataKey="promptTokens"
-                    stroke="hsl(38, 92%, 50%)"
+                    stroke="var(--chart-4)"
                     strokeWidth={2}
                     dot={false}
                   />
                   <Line
                     type="monotone"
                     dataKey="completionTokens"
-                    stroke="hsl(262, 83%, 58%)"
+                    stroke="var(--chart-5)"
                     strokeWidth={2}
                     dot={false}
                   />

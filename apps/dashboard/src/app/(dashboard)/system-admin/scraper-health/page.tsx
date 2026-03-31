@@ -120,7 +120,7 @@ const STATUS_COLORS: Record<CellStatus, string> = {
   red: "bg-red-500",
   yellow: "bg-yellow-500",
   blue: "bg-blue-500",
-  gray: "bg-gray-300",
+  gray: "bg-gray-300 dark:bg-gray-600/30",
 };
 
 const STATUS_RING: Record<CellStatus, string> = {
@@ -128,7 +128,7 @@ const STATUS_RING: Record<CellStatus, string> = {
   red: "ring-red-200",
   yellow: "ring-yellow-200",
   blue: "ring-blue-200 animate-pulse",
-  gray: "ring-gray-100",
+  gray: "ring-gray-100 dark:ring-gray-800",
 };
 
 const STATUS_LABEL_MAP: Record<CellStatus, string> = {
@@ -312,7 +312,7 @@ export default function ScraperHealthPage() {
                                   status === "red" ? "bg-red-50" :
                                   status === "yellow" ? "bg-yellow-50" :
                                   status === "blue" ? "bg-blue-50" :
-                                  status === "gray" ? "bg-gray-50" : ""
+                                  status === "gray" ? "bg-gray-50 dark:bg-gray-900/30" : ""
                                 }`}>
                                   <div className="flex items-center justify-center gap-1.5 mb-0.5">
                                     <div className={`w-2.5 h-2.5 rounded-full ${STATUS_COLORS[status]} ring-2 ${STATUS_RING[status]}`} />
