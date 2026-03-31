@@ -256,7 +256,7 @@ export default function VirtualAppPreviewPage() {
       </div>
 
       {/* Forced light mode for marketplace-authentic preview colors */}
-      <div className="max-w-[1400px] mx-auto space-y-6 force-light bg-white rounded-lg p-4">
+      <div className="max-w-[1400px] mx-auto space-y-6 force-light bg-white rounded-lg p-4 border dark:border-gray-700 dark:shadow-lg">
         {/* Search / Category Result Cards */}
         <div>
           <p className="text-xs text-muted-foreground font-medium mb-3 uppercase tracking-wide">
