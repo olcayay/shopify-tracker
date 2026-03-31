@@ -827,6 +827,58 @@ export default function DesignSystemPage() {
           </div>
         </div>
       </Section>
+
+      {/* ========== HOOKS REFERENCE ========== */}
+      <Section title="Hooks Reference" description="Shared hooks for common patterns. Use these instead of manual state management.">
+        <div className="space-y-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="border rounded-lg p-4 space-y-2">
+              <h4 className="font-semibold text-sm">useSortable</h4>
+              <p className="text-xs text-muted-foreground">Sort state for tables: sortKey, sortDir, toggleSort, ariaSort</p>
+              <pre className="text-xs bg-muted p-2 rounded overflow-x-auto font-mono">
+{`const { sortKey, sortDir, toggleSort } = useSortable<
+  "name" | "rating" | "date"
+>("name", "asc", ["name"]);`}
+              </pre>
+              <p className="text-[10px] text-muted-foreground">Location: hooks/use-sortable.ts</p>
+            </div>
+
+            <div className="border rounded-lg p-4 space-y-2">
+              <h4 className="font-semibold text-sm">usePagination</h4>
+              <p className="text-xs text-muted-foreground">Pagination state: page, offset, totalPages, navigation helpers</p>
+              <pre className="text-xs bg-muted p-2 rounded overflow-x-auto font-mono">
+{`const { page, offset, totalPages, nextPage, prevPage,
+  canGoNext, canGoPrev } = usePagination({
+  totalItems: 100, pageSize: 25
+});`}
+              </pre>
+              <p className="text-[10px] text-muted-foreground">Location: hooks/use-pagination.ts</p>
+            </div>
+
+            <div className="border rounded-lg p-4 space-y-2">
+              <h4 className="font-semibold text-sm">useApiQuery</h4>
+              <p className="text-xs text-muted-foreground">Fetches API data with auth, caching, and error handling via React Query</p>
+              <pre className="text-xs bg-muted p-2 rounded overflow-x-auto font-mono">
+{`const { data, isLoading, error } = useApiQuery<App[]>(
+  ["apps"], "/api/apps"
+);`}
+              </pre>
+              <p className="text-[10px] text-muted-foreground">Location: lib/use-api-query.ts — use instead of manual fetchWithAuth + useState</p>
+            </div>
+
+            <div className="border rounded-lg p-4 space-y-2">
+              <h4 className="font-semibold text-sm">useViewMode</h4>
+              <p className="text-xs text-muted-foreground">Persisted list/grouped toggle with localStorage</p>
+              <pre className="text-xs bg-muted p-2 rounded overflow-x-auto font-mono">
+{`const { viewMode, changeViewMode } = useViewMode(
+  "keywords-view"
+);`}
+              </pre>
+              <p className="text-[10px] text-muted-foreground">Location: components/view-mode-toggle.tsx</p>
+            </div>
+          </div>
+        </div>
+      </Section>
     </div>
   );
 }

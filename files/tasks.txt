@@ -6,6 +6,7 @@ Dark Mode Fixes (2026-03-31)
   PLA-531: Fix dark mode for generic preview (covered by PLA-527) ✅
   PLA-532: Fix dark mode for notifications page ✅
   PLA-533: Fix dark mode for landing page CTA section ✅
+  PLA-522: Promote useSortable/useApiQuery adoption (hooks reference docs) ✅
   PLA-523: Create FormField wrapper component ✅
 
 Design System & Admin (2026-03-31)
