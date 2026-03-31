@@ -20,11 +20,11 @@ export interface UsageStat {
 }
 
 export const USAGE_STAT_PRESETS = {
-  apps: { icon: AppWindow, label: "My Apps", colorClasses: { bg: "bg-blue-50 text-blue-600", text: "text-blue-600" } },
-  keywords: { icon: Search, label: "Tracked Keywords", colorClasses: { bg: "bg-purple-50 text-purple-600", text: "text-purple-600" } },
-  competitors: { icon: Star, label: "Competitor Apps", colorClasses: { bg: "bg-amber-50 text-amber-600", text: "text-amber-600" } },
-  research: { icon: FlaskConical, label: "Research Projects", colorClasses: { bg: "bg-emerald-50 text-emerald-600", text: "text-emerald-600" } },
-  users: { icon: Users, label: "Users", colorClasses: { bg: "bg-rose-50 text-rose-600", text: "text-rose-600" } },
+  apps: { icon: AppWindow, label: "My Apps", colorClasses: { bg: "bg-blue-50 text-blue-600 dark:bg-blue-950/30 dark:text-blue-400", text: "text-blue-600 dark:text-blue-400" } },
+  keywords: { icon: Search, label: "Tracked Keywords", colorClasses: { bg: "bg-purple-50 text-purple-600 dark:bg-purple-950/30 dark:text-purple-400", text: "text-purple-600 dark:text-purple-400" } },
+  competitors: { icon: Star, label: "Competitor Apps", colorClasses: { bg: "bg-amber-50 text-amber-600 dark:bg-amber-950/30 dark:text-amber-400", text: "text-amber-600 dark:text-amber-400" } },
+  research: { icon: FlaskConical, label: "Research Projects", colorClasses: { bg: "bg-emerald-50 text-emerald-600 dark:bg-emerald-950/30 dark:text-emerald-400", text: "text-emerald-600 dark:text-emerald-400" } },
+  users: { icon: Users, label: "Users", colorClasses: { bg: "bg-rose-50 text-rose-600 dark:bg-rose-950/30 dark:text-rose-400", text: "text-rose-600 dark:text-rose-400" } },
 } as const;
 
 interface AccountUsageCardsProps {
