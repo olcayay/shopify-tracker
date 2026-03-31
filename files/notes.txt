@@ -1,3 +1,16 @@
+Bulk task session (2026-03-31) — 10 tasks completed
+================================================================
+PLA-515: Email Templates nav item in system admin sidebar
+PLA-516: Split notification templates into separate page
+PLA-517: ExternalLink component — 37 text links migrated across 22+ files
+PLA-518: formatNumber/formatCurrency/formatPercent — 45 toLocaleString calls migrated
+PLA-519: usePagination hook (9 tests, incremental migration available)
+PLA-520: timeAgo dedup (3 removed) + formatShortDate/formatFullDate/formatMonthYear
+PLA-521: CopyButton + PlatformColorDot components (3 clipboard patterns migrated)
+PLA-524: Icon showcase (95+ icons, 9 categories, searchable, click-to-copy)
+PLA-525: ViewModeToggle showcase in design system
+PLA-526: PlatformGroupedTable — spacer rows, stronger headers, larger dots
+
 PLA-517: ExternalLink component (2026-03-31)
 ================================================================
 Created ExternalLink component (components/ui/external-link.tsx) with built-in
