@@ -154,7 +154,7 @@ function AiGenerationOverlay({ currentStep, error, onClose }: {
                     </div>
                     {/* Spinner for active */}
                     {isActive && (
-                      <Loader2 className="h-4 w-4 text-purple-500 animate-spin shrink-0 mt-1 ml-auto" />
+                      <Loader2 className="h-4 w-4 text-purple-500 dark:text-purple-400 animate-spin shrink-0 mt-1 ml-auto" />
                     )}
                   </div>
                 );

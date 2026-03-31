@@ -2,6 +2,8 @@ Dark Mode Fixes (2026-03-31)
   PLA-527: Fix dark mode for preview components (force-light container) ✅
   PLA-528: Fix dark mode for account usage cards ✅
   PLA-529: Fix dark mode for system admin pages ✅
+  PLA-530: Fix dark mode for research virtual apps page ✅
+  PLA-531: Fix dark mode for generic preview (covered by PLA-527) ✅
 
 Design System & Admin (2026-03-31)
   PLA-515: Add Email Templates nav item in system admin sidebar ✅
