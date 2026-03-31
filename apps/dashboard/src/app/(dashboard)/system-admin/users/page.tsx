@@ -178,7 +178,7 @@ export default function UsersListPage() {
       </div>
 
       {message && (
-        <div className="text-sm px-3 py-2 rounded-md text-green-700 bg-green-50">
+        <div className="text-sm px-3 py-2 rounded-md text-green-700 dark:text-green-400 bg-green-50 dark:bg-green-950/20">
           {message}
         </div>
       )}

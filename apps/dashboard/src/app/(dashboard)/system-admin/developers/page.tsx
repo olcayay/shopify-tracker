@@ -269,8 +269,8 @@ export default function SystemAdminDevelopersPage() {
         <div
           className={`text-sm px-3 py-2 rounded-md ${
             message.type === "success"
-              ? "text-green-700 bg-green-50"
-              : "text-red-700 bg-red-50"
+              ? "text-green-700 dark:text-green-400 bg-green-50 dark:bg-green-950/20"
+              : "text-red-700 dark:text-red-400 bg-red-50 dark:bg-red-950/20"
           }`}
         >
           {message.text}
@@ -387,7 +387,7 @@ export default function SystemAdminDevelopersPage() {
 
       {/* Merge dialog */}
       {mergeSource && (
-        <Card className="border-amber-200 bg-amber-50/50">
+        <Card className="border-amber-200 dark:border-amber-900/50 bg-amber-50/50 dark:bg-amber-950/30">
           <CardContent className="pt-6">
             <div className="flex items-center gap-3">
               <span className="text-sm">

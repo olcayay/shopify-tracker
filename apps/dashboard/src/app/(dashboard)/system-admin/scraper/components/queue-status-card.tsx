@@ -65,7 +65,7 @@ export function QueueStatusCard({
 
   return (
     <>
-      <Card className={queueStatus.isPaused ? "border-yellow-300 bg-yellow-50/50" : hasQueueJobs ? "border-blue-200 bg-blue-50/50" : ""}>
+      <Card className={queueStatus.isPaused ? "border-yellow-300 dark:border-yellow-800 bg-yellow-50/50 dark:bg-yellow-950/20" : hasQueueJobs ? "border-blue-200 dark:border-blue-800 bg-blue-50/50 dark:bg-blue-950/20" : ""}>
         <CardHeader className="pb-2">
           <div className="flex items-center justify-between">
             <div

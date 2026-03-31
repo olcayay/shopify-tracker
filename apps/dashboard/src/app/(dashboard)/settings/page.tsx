@@ -173,7 +173,7 @@ export default function SettingsPage() {
 
       {(message || error) && (
         <div
-          className={`text-sm px-3 py-2 rounded-md ${error ? "text-destructive bg-destructive/10" : "text-green-700 bg-green-50"}`}
+          className={`text-sm px-3 py-2 rounded-md ${error ? "text-destructive bg-destructive/10" : "text-green-700 dark:text-green-400 bg-green-50 dark:bg-green-950/20"}`}
         >
           {error || message}
         </div>

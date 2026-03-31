@@ -138,10 +138,10 @@ export default async function BestOfPage({ params }: PageProps) {
                   className="flex items-start gap-4 p-5 rounded-xl border hover:bg-muted/50 transition-colors"
                 >
                   <div className="flex-shrink-0 text-center">
-                    <span className={`text-2xl font-bold ${i < 3 ? "text-yellow-600" : "text-muted-foreground"}`}>
+                    <span className={`text-2xl font-bold ${i < 3 ? "text-yellow-600 dark:text-yellow-500" : "text-muted-foreground"}`}>
                       #{i + 1}
                     </span>
-                    {i < 3 && <Trophy className="h-4 w-4 mx-auto mt-1 text-yellow-500" />}
+                    {i < 3 && <Trophy className="h-4 w-4 mx-auto mt-1 text-yellow-500 dark:text-yellow-400" />}
                   </div>
                   {app.iconUrl ? (
                     <Image src={app.iconUrl} alt={app.name} width={56} height={56} className="rounded-xl flex-shrink-0" unoptimized />

@@ -59,7 +59,7 @@ export function OperationalMatrix({ healthData, onTrigger, onTriggerAll, trigger
               <span className={`inline-block w-2 h-2 rounded-full ${STATUS_COLORS.blue} animate-pulse`} /> Running
             </span>
             <span className="flex items-center gap-1">
-              <Badge variant="outline" className="text-[9px] px-1 py-0 h-4 bg-orange-50 text-orange-600 border-orange-200">F</Badge> Fallback
+              <Badge variant="outline" className="text-[9px] px-1 py-0 h-4 bg-orange-50 dark:bg-orange-950/30 text-orange-600 dark:text-orange-400 border-orange-200 dark:border-orange-900/50">F</Badge> Fallback
             </span>
           </div>
         </div>

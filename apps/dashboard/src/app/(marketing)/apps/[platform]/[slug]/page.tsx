@@ -84,10 +84,10 @@ function StarRating({ rating, maxStars = 5 }: { rating: number; maxStars?: numbe
             key={i}
             className={`h-4 w-4 ${
               filled
-                ? "fill-yellow-400 text-yellow-400"
+                ? "fill-yellow-400 text-yellow-400 dark:fill-yellow-500 dark:text-yellow-500"
                 : partial
                   ? "fill-yellow-400/50 text-yellow-400"
-                  : "text-gray-300"
+                  : "text-gray-300 dark:text-gray-600"
             }`}
           />
         );
@@ -241,7 +241,7 @@ export default async function PublicAppPage({ params }: PageProps) {
               </p>
             )}
             {app.isBuiltForShopify && (
-              <span className="inline-flex items-center gap-1 text-xs font-medium bg-green-100 text-green-800 px-2 py-0.5 rounded-full">
+              <span className="inline-flex items-center gap-1 text-xs font-medium bg-green-100 dark:bg-green-950/40 text-green-800 dark:text-green-300 px-2 py-0.5 rounded-full">
                 <CheckCircle2 className="h-3 w-3" /> Built for Shopify
               </span>
             )}
