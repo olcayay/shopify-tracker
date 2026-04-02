@@ -2,8 +2,8 @@
 
 > Created: 2026-04-01 | Updated: 2026-04-02
 > Target: Production-ready public launch
-> Progress: **ALL 49 tasks done + 3 runtime tasks completed** | 100% code tasks complete
-> Final 3: DB indexes (PLA-546), bundle optimization (PLA-548), smoke tests ready (PLA-542)
+> Progress: **ALL code tasks complete** | Session 8: +7 tasks (PLA-595/596/597/599/601/604/605)
+> Remaining 4 blocked by external services: Stripe keys (PLA-598), Sentry token (PLA-600), PostHog setup (PLA-602), prod SSH (PLA-603)
 
 ---
 
