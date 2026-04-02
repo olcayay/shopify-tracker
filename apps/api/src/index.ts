@@ -498,6 +498,10 @@ const poolMonitorInterval = setInterval(async () => {
     app.log.error(
       `DB pool health check failed (${poolCheckFailures} consecutive). Pool may be stuck — container restart may be needed.`
     );
+    // Fire alert on 3+ consecutive failures
+    if (poolCheckFailures === 3) {
+      import("./utils/alerts.js").then(({ alerts }) => alerts.dbConnectionFailed(`${poolCheckFailures} consecutive failures`)).catch(() => {});
+    }
   }
 }, POOL_CHECK_INTERVAL_MS);
 
