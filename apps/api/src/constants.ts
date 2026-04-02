@@ -42,6 +42,14 @@ export const RATE_LIMIT_REGISTER_WINDOW_MS = 60 * 60 * 1000;
 /** Rate limiter internal cleanup interval in ms (5 minutes) */
 export const RATE_LIMIT_CLEANUP_INTERVAL_MS = 5 * 60 * 1000;
 
+// ── Password Reset ─────────────────────────────────────────────────
+/** Password reset: max attempts per window */
+export const RATE_LIMIT_PASSWORD_RESET_MAX = 3;
+/** Password reset: window duration in ms (1 hour) */
+export const RATE_LIMIT_PASSWORD_RESET_WINDOW_MS = 60 * 60 * 1000;
+/** Password reset token lifetime in ms (1 hour) */
+export const PASSWORD_RESET_TOKEN_EXPIRY_MS = 60 * 60 * 1000;
+
 // ── Auth / JWT ──────────────────────────────────────────────────────
 /** Access token lifetime */
 export const ACCESS_TOKEN_EXPIRY = "15m";

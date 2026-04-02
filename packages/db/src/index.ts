@@ -156,6 +156,7 @@ export {
   users,
   invitations,
   refreshTokens,
+  passwordResetTokens,
 } from "./schema/auth.js";
 export {
   accountTrackedApps,

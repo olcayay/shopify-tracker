@@ -28,6 +28,15 @@ export const logoutSchema = z.object({
   refreshToken: z.string().min(1, "Refresh token is required"),
 });
 
+export const forgotPasswordSchema = z.object({
+  email: z.string().email("Invalid email address"),
+});
+
+export const resetPasswordSchema = z.object({
+  token: z.string().min(1, "Token is required"),
+  password: passwordSchema,
+});
+
 export const updateProfileSchema = z
   .object({
     emailDigestEnabled: z.boolean().optional(),

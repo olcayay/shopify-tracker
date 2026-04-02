@@ -736,6 +736,13 @@
       "when": 1777680000000,
       "tag": "0104_ai_suggestion_cache_tables",
       "breakpoints": true
+    },
+    {
+      "idx": 105,
+      "version": "7",
+      "when": 1777766400000,
+      "tag": "0105_password_reset_tokens",
+      "breakpoints": true
     }
   ]
 }

@@ -7,6 +7,7 @@ import {
   accounts,
   users,
   refreshTokens,
+  passwordResetTokens,
   accountTrackedApps,
   accountTrackedKeywords,
   accountCompetitorApps,
@@ -19,13 +20,15 @@ import { PLATFORM_IDS } from "@appranks/shared";
 import { getJwtSecret, type JwtPayload } from "../middleware/auth.js";
 import { blacklistToken, revokeAllTokensForUser } from "../utils/token-blacklist.js";
 import { RateLimiter } from "../utils/rate-limiter.js";
-import { sendWelcomeEmail } from "../lib/email-enqueue.js";
+import { sendWelcomeEmail, sendPasswordResetEmail } from "../lib/email-enqueue.js";
 import {
   registerSchema,
   loginSchema,
   refreshSchema,
   logoutSchema,
   updateProfileSchema,
+  forgotPasswordSchema,
+  resetPasswordSchema,
 } from "../schemas/auth.js";
 import {
   ACCESS_TOKEN_EXPIRY,
@@ -34,6 +37,9 @@ import {
   RATE_LIMIT_LOGIN_WINDOW_MS,
   RATE_LIMIT_REGISTER_MAX,
   RATE_LIMIT_REGISTER_WINDOW_MS,
+  RATE_LIMIT_PASSWORD_RESET_MAX,
+  RATE_LIMIT_PASSWORD_RESET_WINDOW_MS,
+  PASSWORD_RESET_TOKEN_EXPIRY_MS,
   DEFAULT_MAX_TRACKED_APPS,
   DEFAULT_MAX_TRACKED_KEYWORDS,
   DEFAULT_MAX_COMPETITOR_APPS,
@@ -43,6 +49,7 @@ import {
 // Rate limiters for auth endpoints (exported for test reset)
 export const loginLimiter = new RateLimiter({ maxAttempts: RATE_LIMIT_LOGIN_MAX, windowMs: RATE_LIMIT_LOGIN_WINDOW_MS });
 export const registerLimiter = new RateLimiter({ maxAttempts: RATE_LIMIT_REGISTER_MAX, windowMs: RATE_LIMIT_REGISTER_WINDOW_MS });
+export const passwordResetLimiter = new RateLimiter({ maxAttempts: RATE_LIMIT_PASSWORD_RESET_MAX, windowMs: RATE_LIMIT_PASSWORD_RESET_WINDOW_MS });
 
 export function generateAccessToken(
   payload: JwtPayload,
@@ -162,6 +169,96 @@ export const authRoutes: FastifyPluginAsync = async (app) => {
     }).catch(() => {});
 
     return result;
+  });
+
+  // POST /api/auth/forgot-password — request a password reset email
+  app.post("/forgot-password", async (request, reply) => {
+    const ip = request.ip;
+    const resetLimit = passwordResetLimiter.check(ip);
+    if (!resetLimit.allowed) {
+      reply.header("Retry-After", Math.ceil(resetLimit.retryAfterMs / 1000).toString());
+      return reply.code(429).send({ error: "Too many password reset attempts. Please try again later." });
+    }
+
+    const { email } = forgotPasswordSchema.parse(request.body);
+
+    // Always return success to prevent email enumeration
+    const successResponse = { message: "If an account exists with that email, a password reset link has been sent." };
+
+    const [user] = await db
+      .select({ id: users.id, name: users.name, email: users.email })
+      .from(users)
+      .where(eq(users.email, email.toLowerCase()));
+
+    if (!user) {
+      return successResponse;
+    }
+
+    // Invalidate any existing unused reset tokens for this user
+    await db
+      .update(passwordResetTokens)
+      .set({ usedAt: new Date() })
+      .where(eq(passwordResetTokens.userId, user.id));
+
+    // Generate new token
+    const token = crypto.randomBytes(32).toString("hex");
+    const tokenHash = crypto.createHash("sha256").update(token).digest("hex");
+    const expiresAt = new Date(Date.now() + PASSWORD_RESET_TOKEN_EXPIRY_MS);
+
+    await db.insert(passwordResetTokens).values({
+      userId: user.id,
+      tokenHash,
+      expiresAt,
+    });
+
+    // Enqueue password reset email (fire-and-forget)
+    sendPasswordResetEmail(user.email, token, user.name, { userId: user.id }).catch(() => {});
+
+    return successResponse;
+  });
+
+  // POST /api/auth/reset-password — complete password reset with token
+  app.post("/reset-password", async (request, reply) => {
+    const { token, password } = resetPasswordSchema.parse(request.body);
+
+    const tokenHash = crypto.createHash("sha256").update(token).digest("hex");
+
+    const [resetToken] = await db
+      .select()
+      .from(passwordResetTokens)
+      .where(eq(passwordResetTokens.tokenHash, tokenHash));
+
+    if (!resetToken) {
+      return reply.code(400).send({ error: "Invalid or expired reset token" });
+    }
+
+    if (resetToken.usedAt) {
+      return reply.code(400).send({ error: "This reset link has already been used" });
+    }
+
+    if (resetToken.expiresAt < new Date()) {
+      return reply.code(400).send({ error: "This reset link has expired" });
+    }
+
+    // Hash new password and update user
+    const passwordHash = await bcrypt.hash(password, 12);
+
+    await db
+      .update(users)
+      .set({ passwordHash, updatedAt: new Date() })
+      .where(eq(users.id, resetToken.userId));
+
+    // Mark token as used
+    await db
+      .update(passwordResetTokens)
+      .set({ usedAt: new Date() })
+      .where(eq(passwordResetTokens.id, resetToken.id));
+
+    // Invalidate all existing sessions for this user
+    await revokeAllTokensForUser(resetToken.userId);
+    await db.delete(refreshTokens).where(eq(refreshTokens.userId, resetToken.userId));
+
+    return { message: "Password has been reset successfully. Please log in with your new password." };
   });
 
   // POST /api/auth/login — email + password login

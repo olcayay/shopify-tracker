@@ -14,13 +14,14 @@ import {
   impersonationToken,
   authHeaders,
 } from "../helpers/test-app.js";
-import { authRoutes, loginLimiter, registerLimiter } from "../../routes/auth.js";
+import { authRoutes, loginLimiter, registerLimiter, passwordResetLimiter } from "../../routes/auth.js";
 import type { FastifyInstance } from "fastify";
 
 // Reset rate limiters before each test suite to avoid cross-test contamination
 beforeEach(() => {
   loginLimiter.reset();
   registerLimiter.reset();
+  passwordResetLimiter.reset();
 });
 
 // ---------------------------------------------------------------------------
@@ -1195,5 +1196,241 @@ describe("POST /api/auth/register — rate limiting", () => {
     });
     expect(res.statusCode).toBe(429);
     expect(res.json().error).toMatch(/too many/i);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// POST /api/auth/forgot-password
+// ---------------------------------------------------------------------------
+
+describe("POST /api/auth/forgot-password", () => {
+  let app: FastifyInstance;
+
+  beforeAll(async () => {
+    app = await buildTestApp({
+      routes: authRoutes,
+      prefix: "/api/auth",
+      db: {
+        selectResult: [{ id: "user-001", name: "Test User", email: "test@example.com" }],
+        insertResult: [{ id: "reset-001" }],
+      },
+    });
+  });
+
+  afterAll(async () => {
+    await app.close();
+  });
+
+  it("returns 400 when email is missing", async () => {
+    const res = await app.inject({
+      method: "POST",
+      url: "/api/auth/forgot-password",
+      payload: {},
+    });
+    expect(res.statusCode).toBe(400);
+    expect(res.json().error).toBe("Validation failed");
+  });
+
+  it("returns 400 when email is invalid", async () => {
+    const res = await app.inject({
+      method: "POST",
+      url: "/api/auth/forgot-password",
+      payload: { email: "not-an-email" },
+    });
+    expect(res.statusCode).toBe(400);
+  });
+
+  it("returns success message for valid email (prevents enumeration)", async () => {
+    const res = await app.inject({
+      method: "POST",
+      url: "/api/auth/forgot-password",
+      payload: { email: "test@example.com" },
+    });
+    expect(res.statusCode).toBe(200);
+    expect(res.json().message).toMatch(/if an account exists/i);
+  });
+
+  it("returns same success message for non-existent email", async () => {
+    const nonExistentApp = await buildTestApp({
+      routes: authRoutes,
+      prefix: "/api/auth",
+      db: { selectResult: [] },
+    });
+    const res = await nonExistentApp.inject({
+      method: "POST",
+      url: "/api/auth/forgot-password",
+      payload: { email: "nobody@example.com" },
+    });
+    expect(res.statusCode).toBe(200);
+    expect(res.json().message).toMatch(/if an account exists/i);
+    await nonExistentApp.close();
+  });
+
+  it("rate limits after 3 attempts", async () => {
+    passwordResetLimiter.reset();
+    const limitedApp = await buildTestApp({
+      routes: authRoutes,
+      prefix: "/api/auth",
+      db: { selectResult: [] },
+    });
+    for (let i = 0; i < 3; i++) {
+      await limitedApp.inject({
+        method: "POST",
+        url: "/api/auth/forgot-password",
+        payload: { email: "test@example.com" },
+        remoteAddress: "10.0.0.99",
+      });
+    }
+    const res = await limitedApp.inject({
+      method: "POST",
+      url: "/api/auth/forgot-password",
+      payload: { email: "test@example.com" },
+      remoteAddress: "10.0.0.99",
+    });
+    expect(res.statusCode).toBe(429);
+    expect(res.json().error).toMatch(/too many/i);
+    await limitedApp.close();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// POST /api/auth/reset-password
+// ---------------------------------------------------------------------------
+
+describe("POST /api/auth/reset-password", () => {
+  it("returns 400 when token is missing", async () => {
+    const app = await buildTestApp({
+      routes: authRoutes,
+      prefix: "/api/auth",
+      db: { selectResult: [] },
+    });
+    const res = await app.inject({
+      method: "POST",
+      url: "/api/auth/reset-password",
+      payload: { password: "NewPassword123" },
+    });
+    expect(res.statusCode).toBe(400);
+    await app.close();
+  });
+
+  it("returns 400 when password is missing", async () => {
+    const app = await buildTestApp({
+      routes: authRoutes,
+      prefix: "/api/auth",
+      db: { selectResult: [] },
+    });
+    const res = await app.inject({
+      method: "POST",
+      url: "/api/auth/reset-password",
+      payload: { token: "some-token" },
+    });
+    expect(res.statusCode).toBe(400);
+    await app.close();
+  });
+
+  it("returns 400 when password does not meet requirements", async () => {
+    const app = await buildTestApp({
+      routes: authRoutes,
+      prefix: "/api/auth",
+      db: { selectResult: [] },
+    });
+    const res = await app.inject({
+      method: "POST",
+      url: "/api/auth/reset-password",
+      payload: { token: "some-token", password: "weak" },
+    });
+    expect(res.statusCode).toBe(400);
+    await app.close();
+  });
+
+  it("returns 400 for invalid token", async () => {
+    const app = await buildTestApp({
+      routes: authRoutes,
+      prefix: "/api/auth",
+      db: { selectResult: [] },
+    });
+    const res = await app.inject({
+      method: "POST",
+      url: "/api/auth/reset-password",
+      payload: { token: "invalid-token-123", password: "NewPassword123" },
+    });
+    expect(res.statusCode).toBe(400);
+    expect(res.json().error).toMatch(/invalid|expired/i);
+    await app.close();
+  });
+
+  it("returns 400 for already used token", async () => {
+    const app = await buildTestApp({
+      routes: authRoutes,
+      prefix: "/api/auth",
+      db: {
+        selectResult: [{
+          id: "reset-001",
+          userId: "user-001",
+          tokenHash: "some-hash",
+          expiresAt: new Date(Date.now() + 3600000),
+          usedAt: new Date(), // already used
+          createdAt: new Date(),
+        }],
+      },
+    });
+    const res = await app.inject({
+      method: "POST",
+      url: "/api/auth/reset-password",
+      payload: { token: "any-token-value", password: "NewPassword123" },
+    });
+    expect(res.statusCode).toBe(400);
+    expect(res.json().error).toMatch(/already been used/i);
+    await app.close();
+  });
+
+  it("returns 400 for expired token", async () => {
+    const app = await buildTestApp({
+      routes: authRoutes,
+      prefix: "/api/auth",
+      db: {
+        selectResult: [{
+          id: "reset-001",
+          userId: "user-001",
+          tokenHash: "some-hash",
+          expiresAt: new Date(Date.now() - 1000), // expired
+          usedAt: null,
+          createdAt: new Date(),
+        }],
+      },
+    });
+    const res = await app.inject({
+      method: "POST",
+      url: "/api/auth/reset-password",
+      payload: { token: "any-token-value", password: "NewPassword123" },
+    });
+    expect(res.statusCode).toBe(400);
+    expect(res.json().error).toMatch(/expired/i);
+    await app.close();
+  });
+
+  it("returns success for valid token and password", async () => {
+    const app = await buildTestApp({
+      routes: authRoutes,
+      prefix: "/api/auth",
+      db: {
+        selectResult: [{
+          id: "reset-001",
+          userId: "user-001",
+          tokenHash: "some-hash",
+          expiresAt: new Date(Date.now() + 3600000),
+          usedAt: null,
+          createdAt: new Date(),
+        }],
+      },
+    });
+    const res = await app.inject({
+      method: "POST",
+      url: "/api/auth/reset-password",
+      payload: { token: "valid-token-value", password: "NewPassword123" },
+    });
+    expect(res.statusCode).toBe(200);
+    expect(res.json().message).toMatch(/reset successfully/i);
+    await app.close();
   });
 });
