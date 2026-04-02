@@ -12,9 +12,18 @@ log.info("starting scheduler", {
   schedules: SCRAPER_SCHEDULES.map((s) => ({ name: s.name, cron: s.cron })),
 });
 
+/** Random jitter (0-120s) to stagger job starts and avoid thundering herd. Disabled in tests. */
+const JITTER_MAX_MS = process.env.SMOKE_TEST === "1" || process.env.NODE_ENV === "test" ? 0 : 120_000;
+
 for (const schedule of SCRAPER_SCHEDULES) {
   cron.schedule(schedule.cron, async () => {
-    log.info("cron triggered", { name: schedule.name, type: schedule.type });
+    const delay = JITTER_MAX_MS > 0 ? Math.floor(Math.random() * JITTER_MAX_MS) : 0;
+    if (delay > 0) {
+      log.info("cron triggered, applying jitter", { name: schedule.name, delayMs: delay });
+      await new Promise((r) => setTimeout(r, delay));
+    } else {
+      log.info("cron triggered", { name: schedule.name, type: schedule.type });
+    }
 
     // Check circuit breaker before enqueuing
     if ("platform" in schedule) {
