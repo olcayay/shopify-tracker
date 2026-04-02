@@ -1,9 +1,9 @@
 # AppRanks.io Pre-Release Checklist
 
-> Created: 2026-04-01 | Updated: 2026-04-02
+> Created: 2026-04-01 | Updated: 2026-04-03
 > Target: Production-ready public launch
-> Progress: **9 new code tasks found** (PLA-606 to PLA-614) | Session 9 deep scan
-> Blocked by external: Stripe keys (PLA-598), Sentry token (PLA-600), PostHog (PLA-602), prod SSH (PLA-603)
+> Progress: **ALL 9 new tasks done** (PLA-606→614) | Session 9: build fix + 8 features
+> Blocked by external services only: Stripe keys (PLA-598), Sentry token (PLA-600), PostHog (PLA-602), prod SSH (PLA-603)
 
 ---
 
@@ -476,15 +476,15 @@ Production environment hardened and documented.
 | P4 | Onboarding Wizard | ✅ Done | [PLA-565](https://linear.app/plan-b-side-projects/issue/PLA-565) | ~~M~~ Done |
 | P4 | Activity Feed | ✅ Done | [PLA-566](https://linear.app/plan-b-side-projects/issue/PLA-566) | ~~M~~ Done |
 | P3 | Docker HEALTHCHECK | ✅ Done | [PLA-605](https://linear.app/plan-b-side-projects/issue/PLA-605) | ~~S~~ Done |
-| P0 | Build Fix (prerender) | ⏳ Todo | [PLA-610](https://linear.app/plan-b-side-projects/issue/PLA-610) | S |
-| P0 | Login returnUrl | ⏳ Todo | [PLA-606](https://linear.app/plan-b-side-projects/issue/PLA-606) | S |
-| P0 | Admin Nav Links | ⏳ Todo | [PLA-608](https://linear.app/plan-b-side-projects/issue/PLA-608) | S |
-| P1 | Settings Billing UI | ⏳ Todo | [PLA-609](https://linear.app/plan-b-side-projects/issue/PLA-609) | S |
-| P1 | Payment Grace Period | ⏳ Todo | [PLA-611](https://linear.app/plan-b-side-projects/issue/PLA-611) | M |
-| P1 | Downgrade Handling | ⏳ Todo | [PLA-612](https://linear.app/plan-b-side-projects/issue/PLA-612) | M |
-| P2 | Stale Data Alerts | ⏳ Todo | [PLA-607](https://linear.app/plan-b-side-projects/issue/PLA-607) | S |
-| P2 | Email Unsubscribe Headers | ⏳ Todo | [PLA-613](https://linear.app/plan-b-side-projects/issue/PLA-613) | S |
-| P3 | Changelog Page | ⏳ Todo | [PLA-614](https://linear.app/plan-b-side-projects/issue/PLA-614) | S |
+| P0 | Build Fix (prerender) | ✅ Done | [PLA-610](https://linear.app/plan-b-side-projects/issue/PLA-610) | ~~S~~ Done |
+| P0 | Login returnUrl | ✅ Done | [PLA-606](https://linear.app/plan-b-side-projects/issue/PLA-606) | ~~S~~ Done |
+| P0 | Admin Nav Links | ✅ Done | [PLA-608](https://linear.app/plan-b-side-projects/issue/PLA-608) | ~~S~~ Done |
+| P1 | Settings Billing UI | ✅ Done | [PLA-609](https://linear.app/plan-b-side-projects/issue/PLA-609) | ~~S~~ Done |
+| P1 | Payment Grace Period | ✅ Done | [PLA-611](https://linear.app/plan-b-side-projects/issue/PLA-611) | ~~M~~ Done |
+| P1 | Downgrade Handling | ✅ Done | [PLA-612](https://linear.app/plan-b-side-projects/issue/PLA-612) | ~~M~~ Done |
+| P2 | Stale Data Alerts | ✅ Done | [PLA-607](https://linear.app/plan-b-side-projects/issue/PLA-607) | ~~S~~ Done |
+| P2 | Email Unsubscribe Headers | ✅ Done | [PLA-613](https://linear.app/plan-b-side-projects/issue/PLA-613) | ~~S~~ Done |
+| P3 | Changelog Page | ✅ Done | [PLA-614](https://linear.app/plan-b-side-projects/issue/PLA-614) | ~~S~~ Done |
 | P3 | Landing/Marketing | ⚠️ Pricing done, blog optional | 🔧 Manual | S |
 | P3 | Deployment/Infra | ⚠️ Needs hardening | 🔧 Manual | S |
 
