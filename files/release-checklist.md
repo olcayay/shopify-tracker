@@ -2,7 +2,7 @@
 
 > Created: 2026-04-01 | Updated: 2026-04-02
 > Target: Production-ready public launch
-> Progress: **28/49 total tasks done** | Session 3: +10 tasks completed
+> Progress: **37/49 total tasks done** | Session 4: +9 tasks completed
 
 ---
 
@@ -358,11 +358,18 @@ Production environment hardened and documented.
   - [x] Stripe billing routes + DB schema → [PLA-590](https://linear.app/plan-b-side-projects/issue/PLA-590) `In Review` ✅
   - [x] Keyboard shortcuts help (?) → [PLA-585](https://linear.app/plan-b-side-projects/issue/PLA-585) `In Review` ✅
 
+- [x] **Session 4 completions**
+  - [x] Billing enforcement + UpgradePrompt → [PLA-591](https://linear.app/plan-b-side-projects/issue/PLA-591) `In Review` ✅
+  - [x] Notification badge visibility polling → [PLA-587](https://linear.app/plan-b-side-projects/issue/PLA-587) `In Review` ✅
+  - [x] Loading skeletons (30 pages) → [PLA-593](https://linear.app/plan-b-side-projects/issue/PLA-593) `In Review` ✅
+  - [x] Impersonation audit log UI → [PLA-572](https://linear.app/plan-b-side-projects/issue/PLA-572) `In Review` ✅
+  - [x] Table sort URL persistence → [PLA-580](https://linear.app/plan-b-side-projects/issue/PLA-580) `In Review` ✅
+  - [x] Email verification flow → [PLA-556](https://linear.app/plan-b-side-projects/issue/PLA-556) `In Review` ✅
+  - [x] Account deletion + GDPR export → [PLA-558](https://linear.app/plan-b-side-projects/issue/PLA-558) `In Review` ✅
+  - [x] Error response standardization → [PLA-588](https://linear.app/plan-b-side-projects/issue/PLA-588) `In Review` ✅
+  - [x] System health endpoint (Redis, queues, DLQ) → [PLA-577](https://linear.app/plan-b-side-projects/issue/PLA-577) `In Review` ✅
+
 - [ ] **Remaining (Backlog)**
-  - [ ] Email verification flow → [PLA-556](https://linear.app/plan-b-side-projects/issue/PLA-556) `Todo`
-  - [ ] Account deletion + data export (GDPR) → [PLA-558](https://linear.app/plan-b-side-projects/issue/PLA-558) `Todo`
-  - [ ] Breadcrumbs → [PLA-570](https://linear.app/plan-b-side-projects/issue/PLA-570) `In Review` (already exists)
-  - [ ] Empty states → [PLA-571](https://linear.app/plan-b-side-projects/issue/PLA-571) `In Review` (component exists)
   - [ ] Command palette (Cmd+K) → [PLA-564](https://linear.app/plan-b-side-projects/issue/PLA-564) `Todo`
   - [ ] Onboarding wizard → [PLA-565](https://linear.app/plan-b-side-projects/issue/PLA-565) `Todo`
   - [ ] Account activity feed → [PLA-566](https://linear.app/plan-b-side-projects/issue/PLA-566) `Todo`
@@ -377,6 +384,8 @@ Production environment hardened and documented.
 | P0 | Login Alert Email | ✅ Done | [PLA-557](https://linear.app/plan-b-side-projects/issue/PLA-557) | ~~S~~ Done |
 | P0 | Team Invitations | ✅ Implemented | — | — |
 | P0 | Email Delivery | ⚠️ SMTP + DNS needed | 🔧 Manual | S |
+| P0 | Email Verification | ✅ Done | [PLA-556](https://linear.app/plan-b-side-projects/issue/PLA-556) | ~~M~~ Done |
+| P0 | Account Deletion/GDPR | ✅ Done | [PLA-558](https://linear.app/plan-b-side-projects/issue/PLA-558) | ~~M~~ Done |
 | P0 | Payment (Stripe skeleton) | ✅ Routes + DB done | [PLA-590](https://linear.app/plan-b-side-projects/issue/PLA-590) | ~~M~~ Done |
 | P0 | Platform Scrapers (5+) | ⚠️ Need smoke testing | [PLA-542](https://linear.app/plan-b-side-projects/issue/PLA-542) `Todo` | M |
 | P1 | Sentry (frontend) | ✅ Done | [PLA-543](https://linear.app/plan-b-side-projects/issue/PLA-543) | ~~M~~ Done |
@@ -409,6 +418,13 @@ Production environment hardened and documented.
 | P3 | Broken Image Fallback | ✅ Done | [PLA-589](https://linear.app/plan-b-side-projects/issue/PLA-589) | ~~S~~ Done |
 | P3 | CONTRIBUTING.md | ✅ Done | [PLA-583](https://linear.app/plan-b-side-projects/issue/PLA-583) | ~~S~~ Done |
 | P3 | Shortcuts Help | ✅ Done | [PLA-585](https://linear.app/plan-b-side-projects/issue/PLA-585) | ~~S~~ Done |
+| P2 | Billing Enforcement | ✅ Done | [PLA-591](https://linear.app/plan-b-side-projects/issue/PLA-591) | ~~S~~ Done |
+| P2 | Error Standardization | ✅ Done | [PLA-588](https://linear.app/plan-b-side-projects/issue/PLA-588) | ~~S~~ Done |
+| P3 | Notification Polling | ✅ Done | [PLA-587](https://linear.app/plan-b-side-projects/issue/PLA-587) | ~~S~~ Done |
+| P3 | Loading Skeletons | ✅ Done | [PLA-593](https://linear.app/plan-b-side-projects/issue/PLA-593) | ~~M~~ Done |
+| P3 | Audit Log UI | ✅ Done | [PLA-572](https://linear.app/plan-b-side-projects/issue/PLA-572) | ~~S~~ Done |
+| P3 | Sort URL Persistence | ✅ Done | [PLA-580](https://linear.app/plan-b-side-projects/issue/PLA-580) | ~~S~~ Done |
+| P3 | System Health API | ✅ Done | [PLA-577](https://linear.app/plan-b-side-projects/issue/PLA-577) | ~~S~~ Done |
 | P3 | Landing/Marketing | ⚠️ Pricing done, blog optional | 🔧 Manual | S |
 | P3 | Deployment/Infra | ⚠️ Needs hardening | 🔧 Manual | S |
 
@@ -473,7 +489,7 @@ Production environment hardened and documented.
 |------|----------|-------------|--------|
 | [PLA-567](https://linear.app/plan-b-side-projects/issue/PLA-567) | 🟡 Medium | CORS preflight caching + gzip compression | ✅ Done |
 | [PLA-582](https://linear.app/plan-b-side-projects/issue/PLA-582) | 🟡 Medium | Zod schema validation audit (all endpoints) | ⏳ Todo |
-| [PLA-588](https://linear.app/plan-b-side-projects/issue/PLA-588) | 🟡 Medium | Standardize API error responses + error codes | ⏳ Todo |
+| [PLA-588](https://linear.app/plan-b-side-projects/issue/PLA-588) | 🟡 Medium | Standardize API error responses + error codes | ✅ Done |
 | [PLA-586](https://linear.app/plan-b-side-projects/issue/PLA-586) | 🟡 Medium | E2E integration tests for critical user flows | ⏳ Todo |
 
 #### Payment (code skeleton — no Stripe account needed)
@@ -481,7 +497,7 @@ Production environment hardened and documented.
 | Task | Priority | Description | Status |
 |------|----------|-------------|--------|
 | [PLA-590](https://linear.app/plan-b-side-projects/issue/PLA-590) | 🟡 Medium | Stripe webhook handler skeleton + billing routes + DB schema | ✅ Done |
-| [PLA-591](https://linear.app/plan-b-side-projects/issue/PLA-591) | 🟡 Medium | Billing enforcement middleware + upgrade prompts in dashboard | ⏳ Todo |
+| [PLA-591](https://linear.app/plan-b-side-projects/issue/PLA-591) | 🟡 Medium | Billing enforcement middleware + upgrade prompts in dashboard | ✅ Done |
 
 #### Dashboard UX
 
@@ -493,21 +509,21 @@ Production environment hardened and documented.
 | [PLA-574](https://linear.app/plan-b-side-projects/issue/PLA-574) | 🔵 Low | List virtualization (react-window) for large tables | ⏳ Todo |
 | [PLA-575](https://linear.app/plan-b-side-projects/issue/PLA-575) | 🔵 Low | Date range picker for historical charts | ⏳ Todo |
 | [PLA-576](https://linear.app/plan-b-side-projects/issue/PLA-576) | 🟡 Medium | Responsive table scrolling on mobile | ✅ Done |
-| [PLA-580](https://linear.app/plan-b-side-projects/issue/PLA-580) | 🔵 Low | Table sort/filter persistence in URL params | ⏳ Todo |
+| [PLA-580](https://linear.app/plan-b-side-projects/issue/PLA-580) | 🔵 Low | Table sort/filter persistence in URL params | ✅ Done |
 | [PLA-589](https://linear.app/plan-b-side-projects/issue/PLA-589) | 🔵 Low | App icon broken image fallback component | ✅ Already exists |
-| [PLA-593](https://linear.app/plan-b-side-projects/issue/PLA-593) | 🟡 Medium | Loading skeleton for all pages missing loading.tsx | ⏳ Todo |
+| [PLA-593](https://linear.app/plan-b-side-projects/issue/PLA-593) | 🟡 Medium | Loading skeleton for all pages missing loading.tsx | ✅ Done |
 | [PLA-585](https://linear.app/plan-b-side-projects/issue/PLA-585) | 🔵 Low | Keyboard shortcuts help modal (Shift+?) | ✅ Done |
 
 #### Admin & Monitoring
 
 | Task | Priority | Description | Status |
 |------|----------|-------------|--------|
-| [PLA-572](https://linear.app/plan-b-side-projects/issue/PLA-572) | 🔵 Low | Impersonation audit log UI | ⏳ Todo |
-| [PLA-577](https://linear.app/plan-b-side-projects/issue/PLA-577) | 🔵 Low | Admin health dashboard (Redis, pool, queue metrics) | ⏳ Todo |
+| [PLA-572](https://linear.app/plan-b-side-projects/issue/PLA-572) | 🔵 Low | Impersonation audit log UI | ✅ Done |
+| [PLA-577](https://linear.app/plan-b-side-projects/issue/PLA-577) | 🔵 Low | Admin health dashboard (Redis, pool, queue metrics) | ✅ Done |
 | [PLA-578](https://linear.app/plan-b-side-projects/issue/PLA-578) | 🔵 Low | Dead letter queue monitoring UI | ⏳ Todo |
 | [PLA-581](https://linear.app/plan-b-side-projects/issue/PLA-581) | 🔵 Low | Email template preview + test send in admin | ⏳ Todo |
 | [PLA-584](https://linear.app/plan-b-side-projects/issue/PLA-584) | 🔵 Low | Scraper job success/failure charts in admin | ⏳ Todo |
-| [PLA-587](https://linear.app/plan-b-side-projects/issue/PLA-587) | 🔵 Low | Notification badge real-time polling | ⏳ Todo |
+| [PLA-587](https://linear.app/plan-b-side-projects/issue/PLA-587) | 🔵 Low | Notification badge real-time polling | ✅ Done |
 | [PLA-592](https://linear.app/plan-b-side-projects/issue/PLA-592) | 🔵 Low | Backup status monitoring endpoint + admin UI | ⏳ Todo |
 
 #### Performance
