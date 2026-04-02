@@ -3083,6 +3083,49 @@ export const systemAdminRoutes: FastifyPluginAsync = async (app) => {
     }
   });
 
+  // GET /api/system-admin/scraper-stats — success/failure breakdown by platform
+  app.get("/scraper-stats", async () => {
+    // Last 24h stats by platform
+    const stats24h = await db.execute(sql`
+      SELECT
+        platform,
+        status,
+        count(*)::int as count,
+        round(avg(EXTRACT(EPOCH FROM (ended_at - started_at)))::numeric, 1) as avg_duration_seconds
+      FROM scrape_runs
+      WHERE started_at > NOW() - INTERVAL '24 hours'
+      GROUP BY platform, status
+      ORDER BY platform, status
+    `) as any[];
+
+    // Last 7d daily totals
+    const daily7d = await db.execute(sql`
+      SELECT
+        date_trunc('day', started_at)::date as day,
+        status,
+        count(*)::int as count
+      FROM scrape_runs
+      WHERE started_at > NOW() - INTERVAL '7 days'
+      GROUP BY day, status
+      ORDER BY day
+    `) as any[];
+
+    // Top failure reasons (last 24h)
+    const topErrors = await db.execute(sql`
+      SELECT
+        platform,
+        error_message,
+        count(*)::int as count
+      FROM scrape_item_errors
+      WHERE created_at > NOW() - INTERVAL '24 hours'
+      GROUP BY platform, error_message
+      ORDER BY count DESC
+      LIMIT 20
+    `) as any[];
+
+    return { stats24h, daily7d, topErrors };
+  });
+
   // GET /api/system-admin/backup-status — check last backup status
   app.get("/backup-status", async () => {
     const backupDir = process.env.BACKUP_DIR || "/tmp/appranks-backups";
