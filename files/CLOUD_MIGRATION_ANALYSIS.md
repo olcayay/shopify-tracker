@@ -14,7 +14,7 @@
 1. [Key Decision Parameters](#key-decision-parameters)
 2. [Current System & Bottlenecks](#1-current-system--bottlenecks)
 3. [How AWS & GCP Can Help](#2-how-aws--gcp-can-help)
-4. [Architecture Tiers](#3-architecture-tiers)
+4. [Architecture Tiers](#3-architecture-tiers) (Tier 1-5 + Tier 6: Email & AI Workers)
 5. [Tier Comparison](#4-tier-comparison)
 6. [Growth Roadmap & Migration Checklist](#5-growth-roadmap--migration-checklist)
 7. [Glossary](#glossary)
@@ -624,45 +624,774 @@ Scale trigger: queue depth > 20 OR job time > 2x normal
 
 ---
 
+### Tier 6: Dedicated Email & AI Workers (Add-on)
+
+**Concept:** Mevcut scraper altyapısından bağımsız, Email ve AI işlemleri için ayrılmış worker'lar. Her hizmet için biri anlık (real-time) diğeri batch (deferred) olmak üzere 2'şer worker process — toplam 4 yeni worker. Herhangi bir Tier (1-5) üzerine add-on olarak eklenir.
+
+> **Not:** Email worker'ları (`email-instant`, `email-bulk`, `notifications`) zaten code-level'da mevcut ve Docker Compose'da tanımlı. Tier 6 bu yapıyı **AI worker'ları** ile genişletir ve tüm yapının mimari ilişkilerini resmileştirir.
+
+---
+
+#### 6.1 Sistem Topolojisi — Full Container Map
+
+```
+┌─────────────────────────────────────────────────────────────────────────────────┐
+│                              DOCKER COMPOSE                                     │
+│                                                                                 │
+│  ┌──────────┐  ┌──────────┐                                                    │
+│  │ postgres │  │  redis   │  ← Shared infrastructure                           │
+│  │ (2GB)    │  │ (1.5GB)  │                                                    │
+│  └────┬─────┘  └────┬─────┘                                                    │
+│       │              │                                                          │
+│       │    ┌─────────┴──────────────────────────────────────────┐               │
+│       │    │              Redis (BullMQ Broker)                  │               │
+│       │    │                                                    │               │
+│       │    │  Queues:                                           │               │
+│       │    │  ├── scraper-jobs-background   (scraper)           │               │
+│       │    │  ├── scraper-jobs-interactive  (scraper)           │               │
+│       │    │  ├── email-instant             (email)             │               │
+│       │    │  ├── email-bulk                (email)             │               │
+│       │    │  ├── notifications             (email/push)        │               │
+│       │    │  ├── ai-realtime          ★NEW (ai)               │               │
+│       │    │  └── ai-deferred          ★NEW (ai)               │               │
+│       │    └────────────────────────────────────────────────────┘               │
+│       │         │          │          │           │          │                  │
+│  ┌────┴─────────┴──┐  ┌───┴──────┐  ┌┴─────────┐ ┌┴────────┐┌┴──────────┐     │
+│  │    TIER 1-5     │  │  EMAIL   │  │  EMAIL   │ │NOTIFIC. ││           │     │
+│  │   CONTAINERS    │  │  LAYER   │  │  LAYER   │ │  LAYER  ││  AI LAYER │     │
+│  │                 │  │          │  │          │ │         ││   ★ NEW   │     │
+│  │ ┌─────────────┐ │  │ ┌──────┐ │  │ ┌──────┐ │ │ ┌─────┐ ││ ┌───────┐ │     │
+│  │ │ api (1GB)   │ │  │ │email │ │  │ │email │ │ │ │notif│ ││ │ai-rt  │ │     │
+│  │ │ port 3001   │ │  │ │instnt│ │  │ │bulk  │ │ │ │     │ ││ │(1GB)  │ │     │
+│  │ └─────────────┘ │  │ │(512M)│ │  │ │(1GB) │ │ │ │(512M│ ││ └───────┘ │     │
+│  │ ┌─────────────┐ │  │ └──────┘ │  │ └──────┘ │ │ └─────┘ ││ ┌───────┐ │     │
+│  │ │ dashboard   │ │  └──────────┘  └──────────┘ └─────────┘│ │ai-def │ │     │
+│  │ │ (512M)      │ │                                         │ │(512M) │ │     │
+│  │ └─────────────┘ │                EXISTING                 │ └───────┘ │     │
+│  │ ┌─────────────┐ │                                         └──────────┘     │
+│  │ │ worker (3GB)│ │                                                          │
+│  │ │ bg+scheduler│ │                                                          │
+│  │ └─────────────┘ │                                                          │
+│  │ ┌─────────────┐ │                                                          │
+│  │ │ worker-int  │ │                                                          │
+│  │ │ (1GB)       │ │                                                          │
+│  │ └─────────────┘ │                                                          │
+│  │ ┌─────────────┐ │                                                          │
+│  │ │ alloy (256M)│ │                                                          │
+│  │ │ monitoring  │ │                                                          │
+│  │ └─────────────┘ │                                                          │
+│  └──────────────────┘                                                          │
+│                                                                                 │
+│  Total containers: 12 (was 10)     Total RAM: ~12GB (was ~10.3GB)              │
+└─────────────────────────────────────────────────────────────────────────────────┘
+```
+
+---
+
+#### 6.2 Queue Topolojisi & Haberleşme
+
+Tüm worker'lar aynı Redis instance üzerinden BullMQ queue'ları ile haberleşir. Doğrudan worker-to-worker iletişim **yoktur** — tüm koordinasyon Redis üzerinden queue mesajları ile gerçekleşir.
+
+```
+                        ┌────────────────────────┐
+                        │         API            │
+                        │  (Job Producer)        │
+                        │                        │
+                        │  Routes:               │
+                        │  POST /forgot-password │──→ enqueueInstantEmail()
+                        │  POST /signup          │──→ enqueueInstantEmail()   + enqueueNotification()
+                        │  POST /login           │──→ enqueueInstantEmail()
+                        │  POST /invite          │──→ enqueueInstantEmail()   + enqueueNotification()
+                        │  POST /ai/analyze      │──→ enqueueAIJob()     ★NEW
+                        │  POST /ai/keywords     │──→ enqueueAIJob()     ★NEW
+                        │  POST /ai/content      │──→ enqueueAIJob()     ★NEW
+                        │  POST /scraper/trigger │──→ enqueueScraperJob()
+                        └───────────┬────────────┘
+                                    │
+                                    ▼
+                ┌───────────────────────────────────────────┐
+                │               REDIS                       │
+                │         (BullMQ Message Broker)           │
+                │                                           │
+                │  7 Queues, 3 Domains:                     │
+                │                                           │
+                │  SCRAPER DOMAIN (existing)                │
+                │  ┌─────────────────────────────────────┐  │
+                │  │ scraper-jobs-background              │  │
+                │  │   concurrency: 11                    │  │
+                │  │   attempts: 1 (long-running)         │  │
+                │  │   backoff: 30s exponential            │  │
+                │  │   lock: per-platform Redis SET NX     │  │
+                │  ├─────────────────────────────────────┤  │
+                │  │ scraper-jobs-interactive              │  │
+                │  │   concurrency: 1 (serial)            │  │
+                │  │   attempts: 1                        │  │
+                │  └─────────────────────────────────────┘  │
+                │                                           │
+                │  EMAIL/NOTIFICATION DOMAIN (existing)     │
+                │  ┌─────────────────────────────────────┐  │
+                │  │ email-instant                        │  │
+                │  │   concurrency: 3                     │  │
+                │  │   attempts: 3                        │  │
+                │  │   backoff: 5s exponential             │  │
+                │  │   priority: 2FA=1, others=default    │  │
+                │  ├─────────────────────────────────────┤  │
+                │  │ email-bulk                           │  │
+                │  │   concurrency: 5                     │  │
+                │  │   attempts: 2                        │  │
+                │  │   backoff: 30s exponential            │  │
+                │  │   rate limit: 50 jobs/min            │  │
+                │  ├─────────────────────────────────────┤  │
+                │  │ notifications                        │  │
+                │  │   concurrency: 5                     │  │
+                │  │   attempts: 3                        │  │
+                │  │   backoff: 10s exponential            │  │
+                │  │   rate limit: 100 jobs/min           │  │
+                │  └─────────────────────────────────────┘  │
+                │                                           │
+                │  AI DOMAIN ★ NEW                          │
+                │  ┌─────────────────────────────────────┐  │
+                │  │ ai-realtime                          │  │
+                │  │   concurrency: 2                     │  │
+                │  │   attempts: 2                        │  │
+                │  │   backoff: 5s exponential             │  │
+                │  │   timeout: 60s per job               │  │
+                │  │   rate limit: 30 jobs/min            │  │
+                │  │   priority: user-facing=1            │  │
+                │  ├─────────────────────────────────────┤  │
+                │  │ ai-deferred                          │  │
+                │  │   concurrency: 1                     │  │
+                │  │   attempts: 2                        │  │
+                │  │   backoff: 30s exponential            │  │
+                │  │   timeout: 5min per job              │  │
+                │  │   rate limit: 10 jobs/min            │  │
+                │  └─────────────────────────────────────┘  │
+                └───────────────────┬───────────────────────┘
+                                    │
+                    ┌───────────────┼───────────────────────────┐
+                    │               │               │           │
+                    ▼               ▼               ▼           ▼
+            ┌──────────┐   ┌──────────┐   ┌──────────┐  ┌──────────┐
+            │ SCRAPER  │   │  EMAIL   │   │  NOTIF   │  │    AI    │
+            │ WORKERS  │   │ WORKERS  │   │  WORKER  │  │ WORKERS  │
+            │ (2 cont) │   │ (2 cont) │   │ (1 cont) │  │ (2 cont) │
+            └──────────┘   └──────────┘   └──────────┘  └──────────┘
+```
+
+---
+
+#### 6.3 Job Akış Diyagramları
+
+**A) Scraper → Email Cross-domain Akışı (mevcut)**
+
+Scraper worker'ları tamamladıkları işler sonucu email veya notification tetikleyebilir.
+Bu durumda scraper worker, Redis üzerinden email/notification queue'suna yeni job ekler.
+
+```
+Scheduler (cron)
+    │
+    ▼
+scraper-jobs-background ──→ Worker (bg)
+    │                           │
+    │                           │  job type: daily_digest
+    │                           │  1. DB'den digest data çek
+    │                           │  2. Her user için email oluştur
+    │                           │  3. enqueueBulkEmail() ──→ email-bulk queue
+    │                           │  4. enqueueNotification() ──→ notifications queue
+    │                           │
+    │                           │  job type: category (scrape complete)
+    │                           │  1. Yeni app keşfedildi
+    │                           │  2. enqueueNotification() ──→ notifications queue
+    │                           │     (competitor_alert tipi)
+    │                           ▼
+    │                    ┌──────────────┐
+    │                    │  email-bulk  │──→ worker-email-bulk
+    │                    └──────────────┘       │
+    │                    ┌──────────────┐       │  SMTP gönderim
+    │                    │notifications │──→ worker-notifications
+    │                    └──────────────┘       │
+    │                                          │  Push + in-app
+    │                                          ▼
+    │                                     PostgreSQL
+    │                                     (email_logs, notification_logs)
+```
+
+**B) API → Email Real-time Akışı (mevcut)**
+
+Kullanıcı aksiyonları anlık email tetikler. API doğrudan `email-instant` queue'suna job ekler.
+
+```
+User Request
+    │
+    ▼
+API Route Handler
+    │
+    ├── POST /forgot-password
+    │   └── enqueueInstantEmail({ type: "email_password_reset", ... })
+    │       priority: default
+    │
+    ├── POST /auth/signup
+    │   └── enqueueInstantEmail({ type: "email_welcome", ... })
+    │       priority: default
+    │
+    ├── POST /auth/login
+    │   └── enqueueInstantEmail({ type: "email_login_alert", ... })
+    │       priority: default
+    │
+    ├── POST /auth/2fa/verify
+    │   └── enqueueInstantEmail({ type: "email_2fa_code", ... })
+    │       priority: 1 (HIGHEST)
+    │
+    └── POST /invite
+        └── enqueueInstantEmail({ type: "email_invitation", ... })
+            priority: default
+    │
+    ▼
+┌──────────────┐
+│email-instant │──→ worker-email-instant (concurrency: 3)
+└──────────────┘       │
+                       ├── Template render (HTML)
+                       ├── SMTP transport (Nodemailer)
+                       ├── Tracking pixel injection
+                       ├── email_logs INSERT
+                       └── Bounce handling
+```
+
+**C) API → AI Real-time Akışı ★ NEW**
+
+Kullanıcı dashboard'dan AI analizi istediğinde, API `ai-realtime` queue'suna job ekler.
+Worker OpenAI API'ye istek yapar, sonucu DB'ye yazar, opsiyonel olarak notification tetikler.
+
+```
+User Request (Dashboard)
+    │
+    ▼
+API Route Handler
+    │
+    ├── POST /ai/analyze-app
+    │   └── enqueueAIJob({ type: "app_analysis", slug, accountId })
+    │       queue: ai-realtime, priority: 1
+    │
+    ├── POST /ai/keyword-suggestions
+    │   └── enqueueAIJob({ type: "keyword_suggestions", keyword, platform })
+    │       queue: ai-realtime, priority: 1
+    │
+    ├── POST /ai/content/comparison
+    │   └── enqueueAIJob({ type: "content_comparison", appSlugs })
+    │       queue: ai-realtime, priority: 2
+    │
+    └── POST /ai/content/category-overview
+        └── enqueueAIJob({ type: "content_category", categorySlug })
+            queue: ai-realtime, priority: 3
+    │
+    ▼
+┌──────────────┐
+│ ai-realtime  │──→ worker-ai-realtime (concurrency: 2)
+└──────────────┘       │
+                       ├── Check ai cache (aiKeywordSuggestions / aiCompetitorSuggestions)
+                       │   └── Cache hit → return cached, skip LLM call
+                       ├── callAI() → OpenAI API (gpt-4o / gpt-4o-mini)
+                       │   ├── Structured JSON output
+                       │   ├── Timeout: 60s
+                       │   └── Auto-retry: transient errors only
+                       ├── logAICall() → ai_logs INSERT (tokens, cost tracking)
+                       ├── Result → DB write (cache table)
+                       └── Opsiyonel: enqueueNotification()
+                           └── "AI analysis complete" in-app notification
+```
+
+**D) Scheduler/Scraper → AI Deferred Akışı ★ NEW**
+
+Cron job'lar veya scraper tamamlanma event'leri batch AI işlerini tetikler.
+Bu işler zamanlamaya duyarlı değil, arka planda çalışır.
+
+```
+Scheduler (cron) veya Scraper Completion Event
+    │
+    ├── Cron: "Her gece 03:00 — tüm app'ler için score hesapla"
+    │   └── enqueueAIJob({ type: "bulk_app_scoring" })
+    │       queue: ai-deferred
+    │
+    ├── Cron: "Her hafta Pazar — trend analizi"
+    │   └── enqueueAIJob({ type: "trend_analysis", platform })
+    │       queue: ai-deferred
+    │
+    ├── Cron: "Her gece 04:00 — expired AI cache temizliği"
+    │   └── enqueueAIJob({ type: "cache_cleanup" })
+    │       queue: ai-deferred
+    │
+    └── Scraper completion → "Yeni kategori verisi → SEO content üret"
+        └── enqueueAIJob({ type: "content_category", categorySlug })
+            queue: ai-deferred, priority: 10 (low)
+    │
+    ▼
+┌──────────────┐
+│ ai-deferred  │──→ worker-ai-deferred (concurrency: 1)
+└──────────────┘       │
+                       ├── callAI() → OpenAI API (gpt-4o-mini preferred, cheaper)
+                       │   ├── Timeout: 5min (bulk operations)
+                       │   └── Rate limit: 10 jobs/min (API quota koruma)
+                       ├── logAICall() → ai_logs INSERT
+                       ├── Bulk DB writes (app_scores, ai cache tables)
+                       └── Opsiyonel: enqueueBulkEmail()
+                           └── "Weekly AI insights ready" digest
+```
+
+---
+
+#### 6.4 Cross-domain Haberleşme Matrisi
+
+Hangi worker hangi queue'ya job ekleyebilir? Tüm haberleşme Redis üzerinden, tek yönlü producer→queue→consumer.
+
+```
+PRODUCER (satır) hangi QUEUE'ya (sütun) job ekler?
+
+                    │ scraper │ scraper  │ email  │ email │ notif. │ ai-rt  │ ai-def │
+                    │   bg    │  inter.  │ instant│ bulk  │        │  ★NEW  │  ★NEW  │
+────────────────────┼─────────┼──────────┼────────┼───────┼────────┼────────┼────────┤
+API                 │   ✅    │    ✅    │   ✅   │  —    │   ✅   │  ✅    │   —    │
+Scheduler (cron)    │   ✅    │    —     │   —    │  —    │   —    │  —     │  ✅    │
+Worker (bg scraper) │   ✅¹   │    —     │   —    │  ✅   │   ✅   │  —     │  ✅²   │
+Worker (interactive)│   —     │    —     │   —    │  —    │   —    │  —     │   —    │
+Worker (email-inst) │   —     │    —     │   —    │  —    │   —    │  —     │   —    │
+Worker (email-bulk) │   —     │    —     │   ✅³  │  —    │   ✅   │  —     │   —    │
+Worker (notif.)     │   —     │    —     │   —    │  —    │   —    │  —     │   —    │
+Worker (ai-rt) ★NEW │   —     │    —     │   —    │  —    │   ✅   │  —     │   —    │
+Worker (ai-def)★NEW │   —     │    —     │   —    │  ✅   │   ✅   │  —     │   —    │
+
+¹ Cascade: category → app_details → reviews (same queue, new jobs)
+² Scraper tamamlanınca AI content üretimi tetiklenir
+³ Bulk email bounce → instant queue'ya "email_bounce_alert" ekleyebilir
+```
+
+---
+
+#### 6.5 Queue Konfigürasyonu — Detaylı
+
+| Queue | Domain | Worker | Conc. | Attempts | Backoff | Rate Limit | Timeout | Priority Range | Memory |
+|-------|--------|--------|-------|----------|---------|------------|---------|----------------|--------|
+| `scraper-jobs-background` | Scraper | worker | 11 | 1 | 30s exp | — | 10-45min | default | 3GB |
+| `scraper-jobs-interactive` | Scraper | worker-interactive | 1 | 1 | 30s exp | — | 10-45min | default | 1GB |
+| `email-instant` | Email | worker-email-instant | 3 | 3 | 5s exp | — | 30s | 1 (2FA) - default | 512MB |
+| `email-bulk` | Email | worker-email-bulk | 5 | 2 | 30s exp | 50/min | 2min | default | 1GB |
+| `notifications` | Notif. | worker-notifications | 5 | 3 | 10s exp | 100/min | 30s | default | 512MB |
+| `ai-realtime` ★ | AI | worker-ai-realtime | 2 | 2 | 5s exp | 30/min | 60s | 1-3 | 1GB |
+| `ai-deferred` ★ | AI | worker-ai-deferred | 1 | 2 | 30s exp | 10/min | 5min | 10 (low) | 512MB |
+
+**Neden bu rate limit'ler?**
+- `ai-realtime: 30/min` — OpenAI API tier-1 RPM limit'i (~60 RPM). %50 headroom bırakır.
+- `ai-deferred: 10/min` — Realtime'a quota bırakmak için kasıtlı olarak düşük. Gece çalışırken artırılabilir.
+- `email-bulk: 50/min` — SMTP provider günlük limit'ine (genelde 500-2000/gün) uyumlu.
+
+---
+
+#### 6.6 Queue Kodu — Yeni Eklenecekler
+
+**`apps/scraper/src/queue.ts` — yeni queue tanımları:**
+
+```typescript
+// ── Existing queue names ──────────────────────────────────────
+export const BACKGROUND_QUEUE_NAME = "scraper-jobs-background";
+export const INTERACTIVE_QUEUE_NAME = "scraper-jobs-interactive";
+export const EMAIL_INSTANT_QUEUE_NAME = "email-instant";
+export const EMAIL_BULK_QUEUE_NAME = "email-bulk";
+export const NOTIFICATIONS_QUEUE_NAME = "notifications";
+
+// ── NEW: AI queue names ────────────────────────────────────────
+export const AI_REALTIME_QUEUE_NAME = "ai-realtime";
+export const AI_DEFERRED_QUEUE_NAME = "ai-deferred";
+
+// ── NEW: AI job data interface ─────────────────────────────────
+export interface AIJobData {
+  type:
+    | "app_analysis"           // Tek app analizi (realtime)
+    | "keyword_suggestions"    // Keyword önerileri (realtime)
+    | "competitor_suggestions" // Rakip önerileri (realtime)
+    | "content_comparison"     // App karşılaştırma (realtime)
+    | "content_category"       // Kategori SEO content (realtime veya deferred)
+    | "content_best_of"        // Best-of listicle (deferred)
+    | "bulk_app_scoring"       // Toplu app puanlama (deferred)
+    | "trend_analysis"         // Haftalık trend analizi (deferred)
+    | "cache_cleanup";         // Expired cache temizliği (deferred)
+  /** App slug for single-app operations */
+  slug?: string;
+  /** Keyword for keyword-related operations */
+  keyword?: string;
+  /** Platform scope */
+  platform?: string;
+  /** Category slug for category-level operations */
+  categorySlug?: string;
+  /** Multiple app slugs for comparison */
+  appSlugs?: string[];
+  /** Account ID for account-scoped operations */
+  accountId?: string;
+  /** User ID for user-scoped operations */
+  userId?: string;
+  /** Job origin: "api" | "scheduler" | "scraper" */
+  triggeredBy: string;
+  /** API request ID for correlation/tracing */
+  requestId?: string;
+}
+
+// ── NEW: AI queue options ──────────────────────────────────────
+const aiRealtimeJobOptions = {
+  attempts: 2,
+  backoff: { type: "exponential" as const, delay: 5_000 },
+  removeOnComplete: { count: JOB_REMOVE_ON_COMPLETE_COUNT },
+  removeOnFail: { count: JOB_REMOVE_ON_FAIL_COUNT },
+};
+
+const aiDeferredJobOptions = {
+  attempts: 2,
+  backoff: { type: "exponential" as const, delay: 30_000 },
+  removeOnComplete: { count: JOB_REMOVE_ON_COMPLETE_COUNT },
+  removeOnFail: { count: JOB_REMOVE_ON_FAIL_COUNT },
+};
+
+// ── NEW: AI queue singletons + enqueue helpers ─────────────────
+let _aiRealtimeQueue: Queue<AIJobData> | null = null;
+let _aiDeferredQueue: Queue<AIJobData> | null = null;
+
+export function getAIRealtimeQueue(): Queue<AIJobData> {
+  if (!_aiRealtimeQueue) {
+    _aiRealtimeQueue = new Queue<AIJobData>(AI_REALTIME_QUEUE_NAME, {
+      connection: getRedisConnection(),
+      defaultJobOptions: aiRealtimeJobOptions,
+    });
+  }
+  return _aiRealtimeQueue;
+}
+
+export function getAIDeferredQueue(): Queue<AIJobData> {
+  if (!_aiDeferredQueue) {
+    _aiDeferredQueue = new Queue<AIJobData>(AI_DEFERRED_QUEUE_NAME, {
+      connection: getRedisConnection(),
+      defaultJobOptions: aiDeferredJobOptions,
+    });
+  }
+  return _aiDeferredQueue;
+}
+
+export async function enqueueAIJob(
+  data: AIJobData,
+  options?: { priority?: number; delay?: number; queue?: "realtime" | "deferred" }
+): Promise<string> {
+  const queue = options?.queue === "deferred"
+    ? getAIDeferredQueue()
+    : getAIRealtimeQueue();
+  const job = await queue.add(`ai:${data.type}`, data, {
+    priority: options?.priority,
+    delay: options?.delay,
+  });
+  return job.id!;
+}
+```
+
+---
+
+#### 6.7 Worker Entrypoint'ler — Yeni Dosyalar
+
+**`apps/scraper/src/ai-realtime-worker.ts`:**
+
+```typescript
+import { Worker, type Job } from "bullmq";
+import { AI_REALTIME_QUEUE_NAME, getRedisConnection, type AIJobData } from "./queue.js";
+import { processAIJob } from "./ai/process-ai-job.js";
+import { createLogger } from "@appranks/shared";
+import { setupGracefulShutdown } from "./graceful-shutdown.js";
+
+const log = createLogger("ai-realtime-worker");
+const AI_REALTIME_CONCURRENCY = 2;
+const AI_REALTIME_RATE_LIMIT = { max: 30, duration: 60_000 }; // 30 jobs/min
+
+const worker = new Worker<AIJobData>(
+  AI_REALTIME_QUEUE_NAME,
+  async (job: Job<AIJobData>) => {
+    log.info("processing ai job", { type: job.data.type, id: job.id });
+    return processAIJob(job.data, { timeout: 60_000, preferredModel: "gpt-4o" });
+  },
+  {
+    connection: getRedisConnection(),
+    concurrency: AI_REALTIME_CONCURRENCY,
+    limiter: AI_REALTIME_RATE_LIMIT,
+  }
+);
+
+worker.on("completed", (job) => log.info("ai job completed", { id: job.id, type: job.data.type }));
+worker.on("failed", (job, err) => log.error("ai job failed", { id: job?.id, error: err.message }));
+
+setupGracefulShutdown([worker], { timeout: 30_000 });
+log.info("ai-realtime-worker started", { concurrency: AI_REALTIME_CONCURRENCY });
+```
+
+**`apps/scraper/src/ai-deferred-worker.ts`:**
+
+```typescript
+import { Worker, type Job } from "bullmq";
+import { AI_DEFERRED_QUEUE_NAME, getRedisConnection, type AIJobData } from "./queue.js";
+import { processAIJob } from "./ai/process-ai-job.js";
+import { createLogger } from "@appranks/shared";
+import { setupGracefulShutdown } from "./graceful-shutdown.js";
+
+const log = createLogger("ai-deferred-worker");
+const AI_DEFERRED_CONCURRENCY = 1;
+const AI_DEFERRED_RATE_LIMIT = { max: 10, duration: 60_000 }; // 10 jobs/min
+
+const worker = new Worker<AIJobData>(
+  AI_DEFERRED_QUEUE_NAME,
+  async (job: Job<AIJobData>) => {
+    log.info("processing deferred ai job", { type: job.data.type, id: job.id });
+    return processAIJob(job.data, { timeout: 300_000, preferredModel: "gpt-4o-mini" });
+  },
+  {
+    connection: getRedisConnection(),
+    concurrency: AI_DEFERRED_CONCURRENCY,
+    limiter: AI_DEFERRED_RATE_LIMIT,
+  }
+);
+
+worker.on("completed", (job) => log.info("deferred ai job completed", { id: job.id }));
+worker.on("failed", (job, err) => log.error("deferred ai job failed", { id: job?.id, error: err.message }));
+
+setupGracefulShutdown([worker], { timeout: 120_000 }); // longer grace for bulk ops
+log.info("ai-deferred-worker started", { concurrency: AI_DEFERRED_CONCURRENCY });
+```
+
+---
+
+#### 6.8 Docker Compose — Yeni Container Tanımları
+
+```yaml
+  # ── AI Workers ★ NEW ────────────────────────────────────────────
+
+  worker-ai-realtime:
+    build:
+      context: .
+      dockerfile: Dockerfile.worker-ai       # lightweight, no Playwright
+    restart: always
+    logging: *default-logging
+    stop_grace_period: 30s
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-shopify_tracking}
+      REDIS_URL: redis://redis:6379
+      WORKER_MODE: ai-realtime
+      OPENAI_API_KEY: ${OPENAI_API_KEY:?OPENAI_API_KEY is required}
+      SENTRY_DSN: ${SENTRY_DSN:-}
+      DASHBOARD_URL: ${DASHBOARD_URL:-http://localhost:3000}
+      NODE_ENV: production
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  worker-ai-deferred:
+    build:
+      context: .
+      dockerfile: Dockerfile.worker-ai
+    restart: always
+    logging: *default-logging
+    stop_grace_period: 120s
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-shopify_tracking}
+      REDIS_URL: redis://redis:6379
+      WORKER_MODE: ai-deferred
+      OPENAI_API_KEY: ${OPENAI_API_KEY:?OPENAI_API_KEY is required}
+      SENTRY_DSN: ${SENTRY_DSN:-}
+      DASHBOARD_URL: ${DASHBOARD_URL:-http://localhost:3000}
+      NODE_ENV: production
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+```
+
+**`Dockerfile.worker-ai`** — Playwright olmadan hafif image:
+
+```dockerfile
+FROM node:20-alpine
+WORKDIR /app
+COPY package*.json turbo.json ./
+COPY packages/ packages/
+COPY apps/scraper/ apps/scraper/
+RUN npm ci --omit=dev && npm run build -w packages/shared -w packages/db -w apps/scraper
+# No Playwright, no Chromium — pure Node.js
+HEALTHCHECK --interval=30s --timeout=5s CMD node -e "process.exit(0)"
+CMD ["node", "apps/scraper/dist/${WORKER_MODE}-worker.js"]
+```
+
+---
+
+#### 6.9 Failure Handling & Dead Letter Queue
+
+Tüm domain'ler aynı DLQ pattern'ini kullanır. Max retry sonrası iş `dead_letter_jobs` tablosuna yazılır.
+
+```
+Job fails (max attempts exceeded)
+    │
+    ▼
+Worker "failed" event handler
+    │
+    ├── 1. dead_letter_jobs INSERT
+    │   {
+    │     jobId, queueName, jobType, platform,
+    │     payload (JSON), errorMessage, errorStack,
+    │     attemptsMade, maxAttempts, failedAt
+    │   }
+    │
+    ├── 2. Sentry captureException (error tracking)
+    │
+    ├── 3. Queue-specific recovery:
+    │   │
+    │   ├── email-instant failure:
+    │   │   └── enqueueNotification("email_delivery_failed")
+    │   │       → Admin'e in-app alert
+    │   │
+    │   ├── email-bulk failure:
+    │   │   └── Log to email_logs (status: "failed")
+    │   │       → Bounce tracking counter++
+    │   │
+    │   ├── ai-realtime failure:
+    │   │   └── DB cache status → "failed"
+    │   │       → User dashboard'da "Analysis failed, retry?" gösterir
+    │   │
+    │   └── ai-deferred failure:
+    │       └── Log only. Scheduler sonraki cycle'da tekrar tetikler.
+    │
+    └── 4. Critical failure (5+ DLQ entries/hour same type):
+        └── Linear issue auto-create (existing pattern)
+```
+
+---
+
+#### 6.10 Monitoring & Health Checks
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                GET /api/system-admin/queue-stats             │
+│                                                             │
+│  Returns per-queue:                                         │
+│  {                                                          │
+│    "background":    { waiting, active, completed, failed }, │
+│    "interactive":   { waiting, active, completed, failed }, │
+│    "emailInstant":  { waiting, active, completed, failed }, │
+│    "emailBulk":     { waiting, active, completed, failed }, │
+│    "notifications": { waiting, active, completed, failed }, │
+│    "aiRealtime":    { waiting, active, completed, failed }, ★NEW
+│    "aiDeferred":    { waiting, active, completed, failed }, ★NEW
+│  }                                                          │
+│                                                             │
+│  Alert thresholds:                                          │
+│  ├── ai-realtime waiting > 10  → "AI response delay" alert │
+│  ├── ai-deferred waiting > 50  → "AI batch backlog" warn   │
+│  ├── email-instant waiting > 5 → "Email delay" alert       │
+│  └── Any queue failed > 10/hr  → "Queue health" critical   │
+└─────────────────────────────────────────────────────────────┘
+
+Admin Dashboard (existing system-admin/scraper page):
+  ├── Queue status cards (7 queues, was 5)
+  ├── Per-queue job listing (waiting/active/failed)
+  ├── Manual trigger buttons
+  └── DLQ viewer with retry/discard actions
+```
+
+---
+
+#### 6.11 Resource Özeti
+
+| Container | RAM Limit | CPU Profile | Playwright? | External API? |
+|-----------|-----------|-------------|-------------|---------------|
+| worker (bg+sched) | 3GB | CPU-heavy | ✅ Yes | — |
+| worker-interactive | 1GB | CPU-heavy | ✅ Yes | — |
+| worker-email-instant | 512MB | I/O-bound | ❌ | SMTP |
+| worker-email-bulk | 1GB | I/O-bound | ❌ | SMTP |
+| worker-notifications | 512MB | I/O-bound | ❌ | Push API |
+| worker-ai-realtime ★ | 1GB | I/O-bound | ❌ | OpenAI API |
+| worker-ai-deferred ★ | 512MB | I/O-bound | ❌ | OpenAI API |
+| **Tier 6 ek RAM** | **+1.5GB** | | | |
+| **Toplam tüm worker'lar** | **~7.5GB** | | | |
+
+---
+
+#### 6.12 Neden Bu Mimari?
+
+**Problem:** Scraper worker'ları CPU/RAM yoğun (Playwright, HTML parsing, 11 concurrent platform). Email ve AI işleri aynı process'te çalışırsa:
+- Password reset email'i 45 dakikalık category scrape bitene kadar bekler
+- AI analiz isteği Playwright RAM spike'ından etkilenir
+- OpenAI API rate limit'i scraper timeout'larından etkilenir
+
+**Çözüm — Domain izolasyonu:**
+1. **Scraper domain** → CPU/RAM yoğun, Playwright gerektirir, uzun sürer (10-45 min)
+2. **Email domain** → I/O yoğun (SMTP), kısa süreli (<30s), güvenilirlik kritik
+3. **AI domain** → I/O yoğun (HTTP→OpenAI), orta süreli (1s-5min), maliyet kontrolü kritik
+
+**Real-time vs Deferred ayrımı:**
+- Real-time queue: Kullanıcı ekranda bekliyor. Düşük latency, yüksek priority.
+- Deferred queue: Cron tetikliyor, kimse beklemiyor. Düşük priority, rate limit ile maliyet kontrolü.
+- Aynı worker process'te olsalar bile ayrı queue = ayrı concurrency + priority. Deferred batch asla real-time'ı bloklamaz.
+
+**Maliyet avantajı:**
+- AI deferred worker `gpt-4o-mini` kullanır (10x ucuz) çünkü batch kalite toleransı yüksek
+- AI realtime worker `gpt-4o` kullanır çünkü kullanıcı kaliteli yanıt bekler
+- Rate limit ile aylık OpenAI faturası kontrol altında
+
+**When to use:** Email ve AI feature'ları aktif olduğunda, herhangi bir Tier (1-5) ile birlikte
+
+---
+
 ## 4. Tier Comparison
 
 ### At a Glance
 
-| | Tier 1 | Tier 2 | Tier 3 | Tier 4 | Tier 5 |
-|--|--------|--------|--------|--------|--------|
-| **What** | All on 1 VM | VM + Managed DB | API VM + Worker VM | API + Worker + DB | Auto-scale |
-| **Servers** | 1 | 1 + DB | 2 | 2 + DB | 2-3 + DB |
+| | Tier 1 | Tier 2 | Tier 3 | Tier 4 | Tier 5 | Tier 6 (add-on) |
+|--|--------|--------|--------|--------|--------|-----------------|
+| **What** | All on 1 VM | VM + Managed DB | API VM + Worker VM | API + Worker + DB | Auto-scale | + Email & AI Workers |
+| **Servers** | 1 | 1 + DB | 2 | 2 + DB | 2-3 + DB | Same + 4 containers |
 
 ### Cost
 
-| | Tier 1 | Tier 2 | Tier 3 | Tier 4 | Tier 5 |
-|--|--------|--------|--------|--------|--------|
-| **GCP** | $17-22 | $17-23 | $15-21 | $22-30 | $46+ |
-| **AWS** | $14-20 | $14-18 yr1 | $16-21 | $14-18 yr1 | $45+ |
-| **$20-25 startup?** | ✅ | ✅ | ✅ | ⚠️ AWS yr1 only | ❌ |
-| **$40-50 scale-up?** | ✅ | ✅ | ✅ | ✅ | ✅ |
+| | Tier 1 | Tier 2 | Tier 3 | Tier 4 | Tier 5 | Tier 6 (add-on) |
+|--|--------|--------|--------|--------|--------|-----------------|
+| **GCP** | $17-22 | $17-23 | $15-21 | $22-30 | $46+ | +$0-2/mo |
+| **AWS** | $14-20 | $14-18 yr1 | $16-21 | $14-18 yr1 | $45+ | +$0-2/mo |
+| **$20-25 startup?** | ✅ | ✅ | ✅ | ⚠️ AWS yr1 only | ❌ | ✅ (minimal overhead) |
+| **$40-50 scale-up?** | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 
 ### Which Bottleneck Does Each Tier Solve?
 
-| Bottleneck | Tier 1 | Tier 2 | Tier 3 | Tier 4 | Tier 5 |
-|------------|--------|--------|--------|--------|--------|
-| #1 Single server failure | ⚠️ | ⚠️ | ✅ | ✅ | ✅ |
-| #2 No DB backup | ❌ | ✅ | ❌ | ✅ | ✅ |
-| #3 Shared DB pool | ❌ | ❌ | ✅ | ✅ | ✅ |
-| #4 Playwright RAM | ❌ | ❌ | ✅ | ✅ | ✅ |
-| #5 No disaster recovery | ❌ | ⚠️ | ⚠️ | ✅ | ✅ |
-| #6 Workers can't scale | ❌ | ❌ | ⚠️ | ⚠️ | ✅ |
-| **Bottlenecks solved** | **0/6** | **1/6** | **3/6** | **5/6** | **6/6** |
+| Bottleneck | Tier 1 | Tier 2 | Tier 3 | Tier 4 | Tier 5 | Tier 6 (add-on) |
+|------------|--------|--------|--------|--------|--------|-----------------|
+| #1 Single server failure | ⚠️ | ⚠️ | ✅ | ✅ | ✅ | — |
+| #2 No DB backup | ❌ | ✅ | ❌ | ✅ | ✅ | — |
+| #3 Shared DB pool | ❌ | ❌ | ✅ | ✅ | ✅ | — |
+| #4 Playwright RAM | ❌ | ❌ | ✅ | ✅ | ✅ | — |
+| #5 No disaster recovery | ❌ | ⚠️ | ⚠️ | ✅ | ✅ | — |
+| #6 Workers can't scale | ❌ | ❌ | ⚠️ | ⚠️ | ✅ | — |
+| #7 Email/AI blocked by scrapers | ❌ | ❌ | ❌ | ❌ | ❌ | ✅ |
+| **Bottlenecks solved** | **0/7** | **1/7** | **3/7** | **5/7** | **6/7** | **+1** |
 
 ### Operational Complexity
 
-| | Tier 1 | Tier 2 | Tier 3 | Tier 4 | Tier 5 |
-|--|--------|--------|--------|--------|--------|
-| **Setup time** | 1 hour | 2 hours | 2 hours | 3 hours | 1 day |
-| **Code changes** | None | None | None | None | Minor |
-| **Deploy complexity** | Low | Low | Medium | Medium | High |
-| **Monitoring needed** | Basic | Basic | Medium | Medium | Advanced |
-| **Best for** | MVP | Data safety | Performance | Production | Scale |
+| | Tier 1 | Tier 2 | Tier 3 | Tier 4 | Tier 5 | Tier 6 (add-on) |
+|--|--------|--------|--------|--------|--------|-----------------|
+| **Setup time** | 1 hour | 2 hours | 2 hours | 3 hours | 1 day | +2 hours |
+| **Code changes** | None | None | None | None | Minor | Moderate (queue setup) |
+| **Deploy complexity** | Low | Low | Medium | Medium | High | +Low (containers) |
+| **Monitoring needed** | Basic | Basic | Medium | Medium | Advanced | +4 health checks |
+| **Best for** | MVP | Data safety | Performance | Production | Scale | Email/AI features |
 
 ### GCP vs AWS per Tier
 
@@ -673,6 +1402,7 @@ Scale trigger: queue depth > 20 OR job time > 2x normal
 | **Tier 3** | Simpler setup | **Cheaper Spot + better recovery** | **AWS** |
 | **Tier 4** | Simpler console | **RDS free yr1 = Tier 3 price** | **AWS** |
 | **Tier 5** | Instance Group simpler | Spot Fleet more mature | Tie |
+| **Tier 6** | N/A (add-on) | N/A (add-on) | Cloud-agnostic (containers) |
 
 ---
 
@@ -812,6 +1542,42 @@ Do you need automatic backups?
 - [ ] Setup monitoring: CloudWatch (AWS) / Cloud Monitoring (GCP)
 - [ ] Test: kill a worker VM, verify auto-relaunch and job recovery
 - [ ] Load test: simulate 100 users + all 11 platforms at full capacity
+
+**Tier 6 (Email & AI Workers — any Tier ile birlikte):**
+
+Email worker'ları (email-instant, email-bulk, notifications) zaten mevcut. Aşağıdaki checklist AI worker'larının eklenmesini kapsar.
+
+- [ ] **Queue setup:**
+  - [ ] `queue.ts`'e `AI_REALTIME_QUEUE_NAME` ve `AI_DEFERRED_QUEUE_NAME` ekle
+  - [ ] `AIJobData` interface tanımla (type, slug, keyword, platform, accountId, triggeredBy, requestId)
+  - [ ] `getAIRealtimeQueue()` ve `getAIDeferredQueue()` singleton getter'ları
+  - [ ] `enqueueAIJob()` helper (queue seçimi: realtime/deferred, priority, delay)
+  - [ ] `closeAllQueues()`'a yeni queue'ları ekle
+- [ ] **Worker entrypoint'ler:**
+  - [ ] `ai-realtime-worker.ts` — concurrency: 2, rate limit: 30/min, timeout: 60s, model: gpt-4o
+  - [ ] `ai-deferred-worker.ts` — concurrency: 1, rate limit: 10/min, timeout: 5min, model: gpt-4o-mini
+  - [ ] `ai/process-ai-job.ts` — job type router (app_analysis, keyword_suggestions, bulk_scoring, vb.)
+- [ ] **Docker:**
+  - [ ] `Dockerfile.worker-ai` oluştur (Playwright yok, hafif Alpine image)
+  - [ ] `docker-compose.prod.yml`'a `worker-ai-realtime` service ekle (1GB RAM limit)
+  - [ ] `docker-compose.prod.yml`'a `worker-ai-deferred` service ekle (512MB RAM limit)
+  - [ ] `OPENAI_API_KEY` env var zorunlu (`?` suffix)
+- [ ] **API integration:**
+  - [ ] AI route'larında `enqueueAIJob()` kullan (mevcut senkron `callAI()` yerine)
+  - [ ] Scheduler'a AI deferred cron job'ları ekle (bulk_scoring, trend_analysis, cache_cleanup)
+  - [ ] Scraper completion event'lerinde `enqueueAIJob(queue: "deferred")` tetikle
+- [ ] **Monitoring:**
+  - [ ] `GET /api/system-admin/queue-stats`'a `aiRealtime` ve `aiDeferred` ekle
+  - [ ] Admin dashboard queue status cards'a 2 yeni kart
+  - [ ] Alert threshold: ai-realtime waiting > 10, ai-deferred waiting > 50
+- [ ] **DLQ & error handling:**
+  - [ ] AI worker failed event → `dead_letter_jobs` INSERT
+  - [ ] ai-realtime failure → DB cache status "failed" (dashboard retry butonu)
+  - [ ] Sentry integration (her iki worker)
+- [ ] **Test:**
+  - [ ] Real-time AI isteği deferred batch sırasında gecikmiyor
+  - [ ] Rate limit aşıldığında job graceful delay (BullMQ limiter)
+  - [ ] Graceful shutdown: in-flight AI call tamamlanıyor
 
 ---
 
