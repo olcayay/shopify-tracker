@@ -72,6 +72,11 @@ function hashToken(token: string): string {
   return crypto.createHash("sha256").update(token).digest("hex");
 }
 
+function hashUserAgent(ua: string | undefined): string | null {
+  if (!ua) return null;
+  return crypto.createHash("sha256").update(ua).digest("hex").slice(0, 16);
+}
+
 export const authRoutes: FastifyPluginAsync = async (app) => {
   const db = app.db;
 
@@ -142,6 +147,7 @@ export const authRoutes: FastifyPluginAsync = async (app) => {
       await tx.insert(refreshTokens).values({
         userId: user.id,
         tokenHash: hashToken(refreshToken),
+        userAgentHash: hashUserAgent(request.headers["user-agent"]),
         expiresAt: new Date(
           Date.now() + REFRESH_TOKEN_EXPIRY_DAYS * 24 * 60 * 60 * 1000
         ),
@@ -321,6 +327,7 @@ export const authRoutes: FastifyPluginAsync = async (app) => {
     await db.insert(refreshTokens).values({
       userId: user.id,
       tokenHash: hashToken(refreshToken),
+      userAgentHash: hashUserAgent(request.headers["user-agent"]),
       expiresAt: new Date(
         Date.now() + REFRESH_TOKEN_EXPIRY_DAYS * 24 * 60 * 60 * 1000
       ),
@@ -371,6 +378,16 @@ export const authRoutes: FastifyPluginAsync = async (app) => {
         .delete(refreshTokens)
         .where(eq(refreshTokens.id, storedToken.id));
       return reply.code(401).send({ error: "Refresh token expired" });
+    }
+
+    // Verify device fingerprint (User-Agent hash)
+    if (storedToken.userAgentHash) {
+      const currentHash = hashUserAgent(request.headers["user-agent"]);
+      if (currentHash !== storedToken.userAgentHash) {
+        // Possible token theft — revoke this token
+        await db.delete(refreshTokens).where(eq(refreshTokens.id, storedToken.id));
+        return reply.code(401).send({ error: "Session invalidated due to device mismatch" });
+      }
     }
 
     // Get user

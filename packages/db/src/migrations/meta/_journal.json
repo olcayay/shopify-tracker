@@ -743,6 +743,13 @@
       "when": 1777766400000,
       "tag": "0105_password_reset_tokens",
       "breakpoints": true
+    },
+    {
+      "idx": 106,
+      "version": "7",
+      "when": 1777852800000,
+      "tag": "0106_refresh_token_ua_hash",
+      "breakpoints": true
     }
   ]
 }
