@@ -34,14 +34,25 @@ export const billingRoutes: FastifyPluginAsync = async (app) => {
         subscriptionStatus: accounts.subscriptionStatus,
         subscriptionPlan: accounts.subscriptionPlan,
         subscriptionPeriodEnd: accounts.subscriptionPeriodEnd,
+        pastDueSince: accounts.pastDueSince,
+        maxTrackedApps: accounts.maxTrackedApps,
+        maxTrackedKeywords: accounts.maxTrackedKeywords,
+        maxUsers: accounts.maxUsers,
       })
       .from(accounts)
       .where(eq(accounts.id, request.user.accountId));
+
+    // Check grace period: 7 days after pastDueSince
+    const graceDaysRemaining = account?.pastDueSince
+      ? Math.max(0, 7 - Math.floor((Date.now() - new Date(account.pastDueSince).getTime()) / (1000 * 60 * 60 * 24)))
+      : null;
 
     return {
       status: account?.subscriptionStatus || "free",
       plan: account?.subscriptionPlan || null,
       periodEnd: account?.subscriptionPeriodEnd || null,
+      pastDueSince: account?.pastDueSince || null,
+      graceDaysRemaining,
     };
   });
 
