@@ -1,7 +1,8 @@
 import { getApp, getAppReviews, getAppHistory } from "@/lib/api";
 import { PLATFORMS, isPlatformId, type PlatformId } from "@appranks/shared";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { RatingReviewChart } from "@/components/rating-review-chart";
+import dynamic from "next/dynamic";
+const RatingReviewChart = dynamic(() => import("@/components/rating-review-chart").then(m => m.RatingReviewChart), { ssr: false });
 import { ReviewList } from "../review-list";
 
 export default async function ReviewsPage({

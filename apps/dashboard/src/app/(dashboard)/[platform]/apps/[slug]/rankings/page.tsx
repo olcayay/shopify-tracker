@@ -12,7 +12,8 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { RankingChart } from "@/components/ranking-chart";
+import dynamic from "next/dynamic";
+const RankingChart = dynamic(() => import("@/components/ranking-chart").then(m => m.RankingChart), { ssr: false });
 import { AdHeatmap } from "@/components/ad-heatmap";
 import { DataFreshness } from "@/components/data-freshness";
 

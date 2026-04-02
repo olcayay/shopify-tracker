@@ -10,7 +10,8 @@ import {
 } from "@/lib/api";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { PLATFORMS, isPlatformId, type PlatformId } from "@appranks/shared";
-import { VisibilityTrendChart } from "@/components/v2/visibility-trend-chart";
+import dynamic from "next/dynamic";
+const VisibilityTrendChart = dynamic(() => import("@/components/v2/visibility-trend-chart").then(m => m.VisibilityTrendChart), { ssr: false });
 import { Search, TrendingUp, Award, Megaphone, ArrowRight } from "lucide-react";
 
 export default async function VisibilityOverviewPage({
