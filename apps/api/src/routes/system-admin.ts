@@ -3007,6 +3007,36 @@ export const systemAdminRoutes: FastifyPluginAsync = async (app) => {
       }
     },
   );
+
+  // GET /api/system-admin/audit-logs — impersonation audit log
+  app.get(
+    "/audit-logs",
+    async (request, reply) => {
+      const query = request.query as { page?: string; limit?: string };
+      const page = Math.max(1, parseInt(query.page || "1", 10));
+      const limit = Math.min(100, Math.max(1, parseInt(query.limit || "50", 10)));
+      const offset = (page - 1) * limit;
+
+      const logs = await db
+        .select({
+          id: impersonationAuditLogs.id,
+          action: impersonationAuditLogs.action,
+          createdAt: impersonationAuditLogs.createdAt,
+          adminEmail: sql<string>`(SELECT email FROM users WHERE id = ${impersonationAuditLogs.adminUserId})`,
+          targetEmail: sql<string>`(SELECT email FROM users WHERE id = ${impersonationAuditLogs.targetUserId})`,
+        })
+        .from(impersonationAuditLogs)
+        .orderBy(desc(impersonationAuditLogs.createdAt))
+        .limit(limit)
+        .offset(offset);
+
+      const [{ count }] = await db
+        .select({ count: sql<number>`count(*)::int` })
+        .from(impersonationAuditLogs);
+
+      return { logs, total: count, page, limit };
+    },
+  );
 };
 
 /**
