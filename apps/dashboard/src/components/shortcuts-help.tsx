@@ -4,7 +4,7 @@ import { useEffect, useState, useCallback } from "react";
 import { Keyboard, X } from "lucide-react";
 
 const SHORTCUTS = [
-  { keys: ["⌘", "K"], description: "Open search" },
+  { keys: ["⌘", "K"], description: "Command palette / search" },
   { keys: ["?"], description: "Show keyboard shortcuts" },
   { keys: ["Esc"], description: "Close modal / cancel" },
 ] as const;

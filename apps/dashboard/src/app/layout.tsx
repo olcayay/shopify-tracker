@@ -7,6 +7,7 @@ import { Providers } from "@/components/providers";
 import { Analytics } from "@/components/analytics";
 import { Toaster } from "sonner";
 import { ShortcutsHelp } from "@/components/shortcuts-help";
+import { CommandPalette } from "@/components/command-palette";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -73,6 +74,7 @@ export default function RootLayout({
         </Providers>
         <Toaster richColors closeButton position="bottom-right" />
         <ShortcutsHelp />
+        <CommandPalette />
       </body>
     </html>
   );
