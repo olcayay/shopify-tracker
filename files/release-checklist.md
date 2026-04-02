@@ -2,7 +2,7 @@
 
 > Created: 2026-04-01 | Updated: 2026-04-02
 > Target: Production-ready public launch
-> Progress: **37/49 total tasks done** | Session 4: +9 tasks completed
+> Progress: **43/49 total tasks done** | Session 5: +6 tasks completed
 
 ---
 
@@ -425,6 +425,12 @@ Production environment hardened and documented.
 | P3 | Audit Log UI | ✅ Done | [PLA-572](https://linear.app/plan-b-side-projects/issue/PLA-572) | ~~S~~ Done |
 | P3 | Sort URL Persistence | ✅ Done | [PLA-580](https://linear.app/plan-b-side-projects/issue/PLA-580) | ~~S~~ Done |
 | P3 | System Health API | ✅ Done | [PLA-577](https://linear.app/plan-b-side-projects/issue/PLA-577) | ~~S~~ Done |
+| P3 | E2E Tests | ✅ Done | [PLA-586](https://linear.app/plan-b-side-projects/issue/PLA-586) | ~~M~~ Done |
+| P3 | Zod Validation | ✅ Done | [PLA-582](https://linear.app/plan-b-side-projects/issue/PLA-582) | ~~S~~ Done |
+| P3 | DLQ Monitoring UI | ✅ Done | [PLA-578](https://linear.app/plan-b-side-projects/issue/PLA-578) | ~~S~~ Done |
+| P3 | Email Preview/Test | ✅ Done | [PLA-581](https://linear.app/plan-b-side-projects/issue/PLA-581) | ~~S~~ Done |
+| P3 | Backup Monitoring | ✅ Done | [PLA-592](https://linear.app/plan-b-side-projects/issue/PLA-592) | ~~S~~ Done |
+| P3 | Scraper Stats API | ✅ Done | [PLA-584](https://linear.app/plan-b-side-projects/issue/PLA-584) | ~~S~~ Done |
 | P3 | Landing/Marketing | ⚠️ Pricing done, blog optional | 🔧 Manual | S |
 | P3 | Deployment/Infra | ⚠️ Needs hardening | 🔧 Manual | S |
 
@@ -488,9 +494,9 @@ Production environment hardened and documented.
 | Task | Priority | Description | Status |
 |------|----------|-------------|--------|
 | [PLA-567](https://linear.app/plan-b-side-projects/issue/PLA-567) | 🟡 Medium | CORS preflight caching + gzip compression | ✅ Done |
-| [PLA-582](https://linear.app/plan-b-side-projects/issue/PLA-582) | 🟡 Medium | Zod schema validation audit (all endpoints) | ⏳ Todo |
+| [PLA-582](https://linear.app/plan-b-side-projects/issue/PLA-582) | 🟡 Medium | Zod schema validation audit (all endpoints) | ✅ Done |
 | [PLA-588](https://linear.app/plan-b-side-projects/issue/PLA-588) | 🟡 Medium | Standardize API error responses + error codes | ✅ Done |
-| [PLA-586](https://linear.app/plan-b-side-projects/issue/PLA-586) | 🟡 Medium | E2E integration tests for critical user flows | ⏳ Todo |
+| [PLA-586](https://linear.app/plan-b-side-projects/issue/PLA-586) | 🟡 Medium | E2E integration tests for critical user flows | ✅ Done |
 
 #### Payment (code skeleton — no Stripe account needed)
 
@@ -520,11 +526,11 @@ Production environment hardened and documented.
 |------|----------|-------------|--------|
 | [PLA-572](https://linear.app/plan-b-side-projects/issue/PLA-572) | 🔵 Low | Impersonation audit log UI | ✅ Done |
 | [PLA-577](https://linear.app/plan-b-side-projects/issue/PLA-577) | 🔵 Low | Admin health dashboard (Redis, pool, queue metrics) | ✅ Done |
-| [PLA-578](https://linear.app/plan-b-side-projects/issue/PLA-578) | 🔵 Low | Dead letter queue monitoring UI | ⏳ Todo |
-| [PLA-581](https://linear.app/plan-b-side-projects/issue/PLA-581) | 🔵 Low | Email template preview + test send in admin | ⏳ Todo |
-| [PLA-584](https://linear.app/plan-b-side-projects/issue/PLA-584) | 🔵 Low | Scraper job success/failure charts in admin | ⏳ Todo |
+| [PLA-578](https://linear.app/plan-b-side-projects/issue/PLA-578) | 🔵 Low | Dead letter queue monitoring UI | ✅ Done |
+| [PLA-581](https://linear.app/plan-b-side-projects/issue/PLA-581) | 🔵 Low | Email template preview + test send in admin | ✅ Done |
+| [PLA-584](https://linear.app/plan-b-side-projects/issue/PLA-584) | 🔵 Low | Scraper job success/failure charts in admin | ✅ Done |
 | [PLA-587](https://linear.app/plan-b-side-projects/issue/PLA-587) | 🔵 Low | Notification badge real-time polling | ✅ Done |
-| [PLA-592](https://linear.app/plan-b-side-projects/issue/PLA-592) | 🔵 Low | Backup status monitoring endpoint + admin UI | ⏳ Todo |
+| [PLA-592](https://linear.app/plan-b-side-projects/issue/PLA-592) | 🔵 Low | Backup status monitoring endpoint + admin UI | ✅ Done |
 
 #### Performance
 
