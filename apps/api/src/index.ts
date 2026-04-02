@@ -460,6 +460,10 @@ try {
   process.exit(1);
 }
 
+// Scheduled cleanup for expired tokens, invitations, and email logs
+import { startScheduledCleanup } from "./utils/scheduled-cleanup.js";
+startScheduledCleanup(db);
+
 // Pool health monitor — detect stuck pool and log warnings.
 // Runs every 30s. If main pool can't respond in 5s, it's likely stuck.
 // Coolify's health check (hitting /health) will restart the container if needed.
