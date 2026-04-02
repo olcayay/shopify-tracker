@@ -20,7 +20,7 @@ import { PLATFORM_IDS } from "@appranks/shared";
 import { getJwtSecret, type JwtPayload } from "../middleware/auth.js";
 import { blacklistToken, revokeAllTokensForUser } from "../utils/token-blacklist.js";
 import { RateLimiter } from "../utils/rate-limiter.js";
-import { sendWelcomeEmail, sendPasswordResetEmail } from "../lib/email-enqueue.js";
+import { sendWelcomeEmail, sendPasswordResetEmail, sendLoginAlertEmail } from "../lib/email-enqueue.js";
 import {
   registerSchema,
   loginSchema,
@@ -315,6 +315,13 @@ export const authRoutes: FastifyPluginAsync = async (app) => {
         Date.now() + REFRESH_TOKEN_EXPIRY_DAYS * 24 * 60 * 60 * 1000
       ),
     });
+
+    // Send login alert email (fire-and-forget)
+    const userAgent = request.headers["user-agent"] || "Unknown device";
+    sendLoginAlertEmail(user.email, user.name, userAgent, {
+      ip: request.ip,
+      userId: user.id,
+    }).catch(() => {});
 
     return {
       accessToken,
