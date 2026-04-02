@@ -798,7 +798,8 @@ export class AppDetailsScraper {
                   scrapeRunId: runId!,
                   scrapedAt: new Date(),
                   position: 0,
-                });
+                })
+                .onConflictDoNothing();
             }
           }
         }
@@ -853,7 +854,8 @@ export class AppDetailsScraper {
                   scrapeRunId: runId!,
                   scrapedAt: new Date(),
                   position: 0,
-                });
+                })
+                .onConflictDoNothing();
             }
           }
           if (newTags > 0) {
