@@ -1,4 +1,18 @@
-Pre-Release (2026-04-02)
+Pre-Release Batch 2 (2026-04-02)
+  PLA-550: Add HTTP security headers (HSTS, X-Frame-Options) ✅
+  PLA-551: Scheduled cleanup for expired tokens/invitations ✅
+  PLA-552: Pricing page with plan comparison ✅
+  PLA-553: Custom 404 not-found page ✅
+  PLA-554: Accessibility — decorative images aria-hidden ✅
+  PLA-555: .env.example files for all packages ✅
+  PLA-557: Wire login alert email to login endpoint ✅
+  PLA-559: Session timeout warning + auto-refresh ✅
+  PLA-560: CSV export for tracked apps and keywords ✅
+  PLA-561: X-RateLimit-* response headers ✅
+  PLA-562: Password strength indicator ✅
+  PLA-563: Request timeout (30s) + graceful shutdown ✅
+
+Pre-Release Batch 1 (2026-04-02)
   PLA-541: Implement password reset flow (API + Dashboard) ✅
   PLA-543: Add Sentry error tracking to dashboard (frontend) ✅
   PLA-544: Migrate rate limiting from in-memory to Redis ✅

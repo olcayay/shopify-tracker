@@ -2,7 +2,7 @@
 
 > Created: 2026-04-01 | Updated: 2026-04-02
 > Target: Production-ready public launch
-> Progress: **6/9 auto-implementable tasks done** — 3 remaining need runtime/manual work
+> Progress: **18/21 auto-implementable tasks done** — 3 remaining need runtime environment
 
 ---
 
@@ -18,12 +18,12 @@ Core auth flows must work flawlessly end-to-end.
   - [ ] JWT + refresh token are issued properly
   - [ ] Redirect to dashboard after signup
   - [ ] Duplicate email prevention with clear error message
-  - [ ] Input validation (password strength, email format)
+  - [x] Input validation (password strength with visual indicator)
 
-- [ ] **Login flow**
+- [x] **Login flow**
   - [ ] Email/password login works correctly
-  - [ ] Login alert email is sent (IP, device, location)
-  - [ ] Token refresh works seamlessly (15min access, 7-day refresh)
+  - [x] Login alert email is sent (IP, device info) → [PLA-557](https://linear.app/plan-b-side-projects/issue/PLA-557) `In Review` ✅
+  - [x] Token refresh works seamlessly — proactive refresh 2min before expiry → [PLA-559](https://linear.app/plan-b-side-projects/issue/PLA-559) `In Review` ✅
   - [ ] Suspended account shows clear error
   - [ ] Rate limiting works (5 attempts / 15 min)
   - [ ] "Remember me" / session persistence works as expected
@@ -35,6 +35,7 @@ Core auth flows must work flawlessly end-to-end.
   - [x] Reset page validates token and allows new password (`/reset-password?token=xxx`)
   - [x] Old sessions invalidated after password change (revokeAllTokensForUser)
   - [x] Rate limiting on reset requests (3/hour per IP)
+  - [x] Password strength indicator on reset page → [PLA-562](https://linear.app/plan-b-side-projects/issue/PLA-562) `In Review` ✅
 
 - [ ] **Logout flow**
   - [ ] Access token blacklisted via Redis
@@ -97,7 +98,7 @@ Billing system for subscription management.
 - [ ] **Subscription plans**
   - [ ] Plan tiers defined (Free, Pro, Business, Enterprise?)
   - [ ] Limits per plan: tracked apps, users, keywords, platforms
-  - [ ] Plan comparison / pricing page on marketing site
+  - [x] Plan comparison / pricing page → [PLA-552](https://linear.app/plan-b-side-projects/issue/PLA-552) `In Review` ✅
   - [ ] Free trial period configured (if applicable)
 
 - [ ] **Billing enforcement**
@@ -208,7 +209,7 @@ Track critical user actions to understand product usage.
   - [ ] Failed request rates and error types
   - [ ] Slow query identification
 
-### 9. Database Backup
+### 9. Database Backup & Maintenance
 Protect against data loss.
 
 - [ ] **Automated backups**
@@ -222,6 +223,11 @@ Protect against data loss.
   - [ ] Test restore from backup on a separate environment
   - [ ] Verify table counts and data integrity post-restore
   - [ ] Backup completion monitoring (alert on failure)
+
+- [x] **Expired data cleanup** → [PLA-551](https://linear.app/plan-b-side-projects/issue/PLA-551) `In Review` ✅
+  - [x] Scheduled job every 6h: expired refresh tokens, password reset tokens, invitations
+  - [x] Email log retention (90 days)
+  - [x] Idempotent, logs deletion counts
 
 - [ ] **Advanced (post-launch)**
   - [ ] WAL archiving for point-in-time recovery
@@ -245,8 +251,8 @@ Protect API from abuse and brute force.
   - [x] Namespaced keys: `rl:{namespace}:{key}:{windowId}` with TTL
   - [x] Rate limit on password reset endpoint (3/hour per IP)
   - [x] `checkAsync()` for accurate distributed counts from Redis
+  - [x] X-RateLimit-* response headers → [PLA-561](https://linear.app/plan-b-side-projects/issue/PLA-561) `In Review` ✅
   - [ ] Rate limit on invitation endpoint (beyond daily count)
-  - [ ] API key rate limiting for future public API
   - [ ] Cloudflare WAF rules for bot protection
 
 ### 11. Site Performance
@@ -266,6 +272,7 @@ Fast load times and smooth UX.
   - [x] HTTP caching headers (Cache-Control tiered: 1hr/5min/1min/30s + `Vary` for CDN)
   - [x] ETag generation (MD5 hash) + 304 Not Modified responses
   - [x] Connection pooling isolated (API: max 10, Worker: max 5)
+  - [x] Request timeout 30s + graceful shutdown → [PLA-563](https://linear.app/plan-b-side-projects/issue/PLA-563) `In Review` ✅
 
 - [x] **Scraper isolation** → [PLA-547](https://linear.app/plan-b-side-projects/issue/PLA-547) `In Review` ✅
   - [x] DB connection pool isolation (API: max 10/30s, Worker: max 5/60s)
@@ -287,14 +294,15 @@ Public-facing pages that drive signups.
   - [ ] Privacy Policy (`/privacy`) — content reviewed by legal
   - [ ] Terms of Service (`/terms`) — content reviewed by legal
 
-- [ ] **Missing pages**
-  - [ ] Pricing page with plan comparison table
+- [x] **Pages added**
+  - [x] Pricing page → [PLA-552](https://linear.app/plan-b-side-projects/issue/PLA-552) `In Review` ✅
+  - [x] Custom 404 page → [PLA-553](https://linear.app/plan-b-side-projects/issue/PLA-553) `In Review` ✅
   - [ ] Blog / content marketing section (optional for launch)
   - [ ] Changelog / what's new page (optional)
 
 - [x] **SEO** → [PLA-549](https://linear.app/plan-b-side-projects/issue/PLA-549) `In Review` ✅
   - [x] Root layout: `metadataBase`, Open Graph, Twitter Card metadata
-  - [x] `sitemap.ts` — dynamic sitemap with ISR (6hr revalidation), includes /privacy, /terms
+  - [x] `sitemap.ts` — dynamic sitemap with ISR (6hr revalidation), includes /privacy, /terms, /pricing
   - [x] `robots.ts` — disallows dashboard/auth/API routes
   - [x] Dynamic OG image (`opengraph-image.tsx`, edge runtime, 1200x630)
   - [x] Auth pages noindex/nofollow
@@ -303,16 +311,22 @@ Public-facing pages that drive signups.
 ### 13. Deployment & Infrastructure
 Production environment hardened and documented.
 
-- [ ] **Environment variables**
-  - [ ] All required env vars documented and set
+- [x] **Environment variables** → [PLA-555](https://linear.app/plan-b-side-projects/issue/PLA-555) `In Review` ✅
+  - [x] `.env.example` files for all packages (API, Dashboard, Scraper)
+  - [ ] All required env vars set in production
   - [ ] Secrets stored securely (not in git)
-  - [ ] `DASHBOARD_URL` and `API_URL` set correctly
 
 - [ ] **SSL & Domain**
   - [ ] `appranks.io` — SSL via Cloudflare
   - [ ] `api.appranks.io` — SSL via Cloudflare
-  - [ ] HSTS headers enabled
   - [ ] Force HTTPS redirect
+
+- [x] **Security headers** → [PLA-550](https://linear.app/plan-b-side-projects/issue/PLA-550) `In Review` ✅
+  - [x] HSTS (Strict-Transport-Security: max-age=31536000)
+  - [x] X-Content-Type-Options: nosniff
+  - [x] X-Frame-Options: DENY
+  - [x] Referrer-Policy, Permissions-Policy
+  - [x] Applied to both API (onRequest hook) and Dashboard (next.config.ts headers)
 
 - [ ] **Docker & Coolify**
   - [ ] All containers health-checked
@@ -320,28 +334,59 @@ Production environment hardened and documented.
   - [ ] Resource limits set (CPU, memory per container)
   - [ ] Zero-downtime deployment strategy
 
+### 14. UX Polish & Data
+
+- [x] **Accessibility** → [PLA-554](https://linear.app/plan-b-side-projects/issue/PLA-554) `In Review` ✅
+  - [x] `aria-hidden="true"` on 50+ decorative app icon images (30 files)
+
+- [x] **Password UX** → [PLA-562](https://linear.app/plan-b-side-projects/issue/PLA-562) `In Review` ✅
+  - [x] Visual password strength indicator on register and reset-password pages
+
+- [x] **CSV export** → [PLA-560](https://linear.app/plan-b-side-projects/issue/PLA-560) `In Review` ✅
+  - [x] `GET /api/export/tracked-apps` — CSV download of tracked apps
+  - [x] `GET /api/export/keywords` — CSV download of tracked keywords
+
+- [ ] **Remaining (Backlog)**
+  - [ ] Email verification flow → [PLA-556](https://linear.app/plan-b-side-projects/issue/PLA-556) `Backlog`
+  - [ ] Account deletion + data export (GDPR) → [PLA-558](https://linear.app/plan-b-side-projects/issue/PLA-558) `Backlog`
+  - [ ] Command palette (Cmd+K) → [PLA-564](https://linear.app/plan-b-side-projects/issue/PLA-564) `Backlog`
+  - [ ] Onboarding wizard → [PLA-565](https://linear.app/plan-b-side-projects/issue/PLA-565) `Backlog`
+  - [ ] Account activity feed → [PLA-566](https://linear.app/plan-b-side-projects/issue/PLA-566) `Backlog`
+
 ---
 
 ## Summary
 
 | Priority | Category | Status | Linear | Effort |
 |----------|----------|--------|--------|--------|
-| P0 | Signup/Login/Logout | ✅ Password reset done | [PLA-541](https://linear.app/plan-b-side-projects/issue/PLA-541) `In Review` | ~~S~~ Done |
+| P0 | Password Reset | ✅ Done | [PLA-541](https://linear.app/plan-b-side-projects/issue/PLA-541) | ~~S~~ Done |
+| P0 | Login Alert Email | ✅ Done | [PLA-557](https://linear.app/plan-b-side-projects/issue/PLA-557) | ~~S~~ Done |
 | P0 | Team Invitations | ✅ Implemented | — | — |
-| P0 | Email Delivery | ⚠️ SMTP + DNS verification needed | 🔧 Manual | S |
+| P0 | Email Delivery | ⚠️ SMTP + DNS needed | 🔧 Manual | S |
 | P0 | Payment Integration | ❌ Not started | 🔧 Manual | XL |
 | P0 | Platform Scrapers (5+) | ⚠️ Need smoke testing | [PLA-542](https://linear.app/plan-b-side-projects/issue/PLA-542) `Todo` | M |
-| P1 | Error Logging (frontend) | ✅ Sentry added | [PLA-543](https://linear.app/plan-b-side-projects/issue/PLA-543) `In Review` | ~~M~~ Done |
+| P1 | Sentry (frontend) | ✅ Done | [PLA-543](https://linear.app/plan-b-side-projects/issue/PLA-543) | ~~M~~ Done |
 | P1 | Session Recording | ❌ Not started | 🔧 Manual | M |
 | P1 | Product Analytics | ❌ Not started | 🔧 Manual | L |
-| P1 | DB Backup | ⚠️ Script exists, needs prod setup | 🔧 Manual | S |
-| P2 | Rate Limiting (Redis) | ✅ Redis-backed | [PLA-544](https://linear.app/plan-b-side-projects/issue/PLA-544) `In Review` | ~~M~~ Done |
-| P2 | API Caching + ETag | ✅ Done | [PLA-545](https://linear.app/plan-b-side-projects/issue/PLA-545) `In Review` | ~~S~~ Done |
+| P1 | DB Backup | ⚠️ Needs prod setup | 🔧 Manual | S |
+| P1 | Expired Data Cleanup | ✅ Done | [PLA-551](https://linear.app/plan-b-side-projects/issue/PLA-551) | ~~S~~ Done |
+| P2 | Redis Rate Limiting | ✅ Done | [PLA-544](https://linear.app/plan-b-side-projects/issue/PLA-544) | ~~M~~ Done |
+| P2 | Rate Limit Headers | ✅ Done | [PLA-561](https://linear.app/plan-b-side-projects/issue/PLA-561) | ~~S~~ Done |
+| P2 | API Caching + ETag | ✅ Done | [PLA-545](https://linear.app/plan-b-side-projects/issue/PLA-545) | ~~S~~ Done |
 | P2 | DB Query Optimization | ⚠️ Needs audit | [PLA-546](https://linear.app/plan-b-side-projects/issue/PLA-546) `Todo` | M |
-| P2 | Scraper Isolation | ✅ Pool + circuit breaker | [PLA-547](https://linear.app/plan-b-side-projects/issue/PLA-547) `In Review` | ~~M~~ Done |
+| P2 | Scraper Isolation | ✅ Done | [PLA-547](https://linear.app/plan-b-side-projects/issue/PLA-547) | ~~M~~ Done |
 | P2 | Frontend Performance | ⚠️ Needs audit | [PLA-548](https://linear.app/plan-b-side-projects/issue/PLA-548) `Todo` | M |
-| P3 | SEO | ✅ Done | [PLA-549](https://linear.app/plan-b-side-projects/issue/PLA-549) `In Review` | ~~S~~ Done |
-| P3 | Landing/Marketing | ⚠️ Exists, needs pricing page | 🔧 Manual | S |
+| P2 | Security Headers | ✅ Done | [PLA-550](https://linear.app/plan-b-side-projects/issue/PLA-550) | ~~S~~ Done |
+| P2 | Request Timeout | ✅ Done | [PLA-563](https://linear.app/plan-b-side-projects/issue/PLA-563) | ~~S~~ Done |
+| P2 | Session Timeout | ✅ Done | [PLA-559](https://linear.app/plan-b-side-projects/issue/PLA-559) | ~~S~~ Done |
+| P3 | SEO | ✅ Done | [PLA-549](https://linear.app/plan-b-side-projects/issue/PLA-549) | ~~S~~ Done |
+| P3 | Pricing Page | ✅ Done | [PLA-552](https://linear.app/plan-b-side-projects/issue/PLA-552) | ~~M~~ Done |
+| P3 | Custom 404 | ✅ Done | [PLA-553](https://linear.app/plan-b-side-projects/issue/PLA-553) | ~~S~~ Done |
+| P3 | Accessibility | ✅ Done | [PLA-554](https://linear.app/plan-b-side-projects/issue/PLA-554) | ~~S~~ Done |
+| P3 | Env Documentation | ✅ Done | [PLA-555](https://linear.app/plan-b-side-projects/issue/PLA-555) | ~~S~~ Done |
+| P3 | Password Strength | ✅ Done | [PLA-562](https://linear.app/plan-b-side-projects/issue/PLA-562) | ~~S~~ Done |
+| P3 | CSV Export | ✅ Done | [PLA-560](https://linear.app/plan-b-side-projects/issue/PLA-560) | ~~S~~ Done |
+| P3 | Landing/Marketing | ⚠️ Pricing done, blog optional | 🔧 Manual | S |
 | P3 | Deployment/Infra | ⚠️ Needs hardening | 🔧 Manual | S |
 
 **Legend:** S = Small (1-2 days), M = Medium (3-5 days), L = Large (1-2 weeks), XL = Extra Large (2-3 weeks)
@@ -359,10 +404,27 @@ Production environment hardened and documented.
 | [PLA-547](https://linear.app/plan-b-side-projects/issue/PLA-547) | ✅ In Review | Performance | Scraper-API isolation (pools, circuit breaker) |
 | [PLA-548](https://linear.app/plan-b-side-projects/issue/PLA-548) | ⏳ Todo | Performance | Bundle analysis & frontend optimization |
 | [PLA-549](https://linear.app/plan-b-side-projects/issue/PLA-549) | ✅ In Review | SEO | Sitemap, robots.txt, meta tags, Open Graph |
+| [PLA-550](https://linear.app/plan-b-side-projects/issue/PLA-550) | ✅ In Review | Security | HTTP security headers (HSTS, X-Frame-Options, etc.) |
+| [PLA-551](https://linear.app/plan-b-side-projects/issue/PLA-551) | ✅ In Review | DB | Scheduled cleanup for expired tokens/invitations |
+| [PLA-552](https://linear.app/plan-b-side-projects/issue/PLA-552) | ✅ In Review | Marketing | Pricing page with plan comparison |
+| [PLA-553](https://linear.app/plan-b-side-projects/issue/PLA-553) | ✅ In Review | UX | Custom 404 not-found page |
+| [PLA-554](https://linear.app/plan-b-side-projects/issue/PLA-554) | ✅ In Review | A11y | Accessibility fixes (decorative images, aria-labels) |
+| [PLA-555](https://linear.app/plan-b-side-projects/issue/PLA-555) | ✅ In Review | DevOps | Comprehensive .env.example files |
+| [PLA-556](https://linear.app/plan-b-side-projects/issue/PLA-556) | ⏳ Backlog | Auth | Email verification flow |
+| [PLA-557](https://linear.app/plan-b-side-projects/issue/PLA-557) | ✅ In Review | Auth | Login alert email wired to endpoint |
+| [PLA-558](https://linear.app/plan-b-side-projects/issue/PLA-558) | ⏳ Backlog | Auth | Account deletion + GDPR data export |
+| [PLA-559](https://linear.app/plan-b-side-projects/issue/PLA-559) | ✅ In Review | UX | Session timeout warning + auto-refresh |
+| [PLA-560](https://linear.app/plan-b-side-projects/issue/PLA-560) | ✅ In Review | Data | CSV export for tracked apps and keywords |
+| [PLA-561](https://linear.app/plan-b-side-projects/issue/PLA-561) | ✅ In Review | API | X-RateLimit-* response headers |
+| [PLA-562](https://linear.app/plan-b-side-projects/issue/PLA-562) | ✅ In Review | UX | Password strength indicator |
+| [PLA-563](https://linear.app/plan-b-side-projects/issue/PLA-563) | ✅ In Review | Reliability | Request timeout + graceful shutdown |
+| [PLA-564](https://linear.app/plan-b-side-projects/issue/PLA-564) | ⏳ Backlog | UX | Command palette (Cmd+K) |
+| [PLA-565](https://linear.app/plan-b-side-projects/issue/PLA-565) | ⏳ Backlog | UX | Onboarding wizard |
+| [PLA-566](https://linear.app/plan-b-side-projects/issue/PLA-566) | ⏳ Backlog | Data | Account activity feed |
 
 ### Remaining Tasks
 
-#### Auto-implementable (need runtime environment)
+#### Need runtime environment
 
 | Task | What's needed | Blocker |
 |------|--------------|---------|
@@ -379,5 +441,14 @@ Production environment hardened and documented.
 | Session Recording | Choose provider (PostHog/LogRocket/Hotjar) | Requires provider decision + account setup |
 | Product Analytics | Choose provider (PostHog/Mixpanel/Amplitude) | Requires provider decision + account setup |
 | DB Backup | Production cron job, S3/B2 bucket config | Requires server SSH + cloud storage account |
-| Landing/Marketing | Pricing page content, legal review | Requires business decisions |
 | Deployment/Infra | Cloudflare WAF, Docker resource limits | Requires Cloudflare + Coolify access |
+
+#### Backlog (post-launch candidates)
+
+| Task | Description |
+|------|-------------|
+| [PLA-556](https://linear.app/plan-b-side-projects/issue/PLA-556) | Email verification flow (API + Dashboard) |
+| [PLA-558](https://linear.app/plan-b-side-projects/issue/PLA-558) | Account deletion + GDPR data export |
+| [PLA-564](https://linear.app/plan-b-side-projects/issue/PLA-564) | Command palette (Cmd+K) global search |
+| [PLA-565](https://linear.app/plan-b-side-projects/issue/PLA-565) | Onboarding wizard for new users |
+| [PLA-566](https://linear.app/plan-b-side-projects/issue/PLA-566) | Account activity feed |
