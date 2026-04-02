@@ -1,3 +1,13 @@
+PLA-547: Scraper-API performance isolation (2026-04-02)
+================================================================
+- DB pool isolation: createDb() now accepts DbPoolOptions (max, idleTimeout,
+  maxLifetime, statementTimeout). API: max 10, 30s timeout. Worker: max 5,
+  60s timeout. Prevents scraper from saturating API's DB connections.
+- HTTP-level circuit breaker: HttpClient now accepts optional `platform`
+  parameter. When all retries are exhausted, records failure to the
+  per-platform circuit breaker (Redis-backed, 5 failures → 1hr open).
+  This supplements the existing job-level circuit breaker.
+
 PLA-549: SEO enhancements (2026-04-02)
 ================================================================
 Filled gaps in existing SEO infrastructure:

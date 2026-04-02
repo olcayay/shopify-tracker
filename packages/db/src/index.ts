@@ -64,14 +64,25 @@ export const schema = {
   ...aiSuggestionsSchema,
 };
 
-export function createDb(databaseUrl: string) {
+export interface DbPoolOptions {
+  /** Max connections in pool (default: 10) */
+  max?: number;
+  /** Idle timeout in seconds (default: 30) */
+  idleTimeout?: number;
+  /** Max connection lifetime in seconds (default: 1800 = 30 min) */
+  maxLifetime?: number;
+  /** Statement timeout in ms (default: 30000) */
+  statementTimeout?: number;
+}
+
+export function createDb(databaseUrl: string, opts?: DbPoolOptions) {
   const client = postgres(databaseUrl, {
-    max: 10,
-    idle_timeout: 30,
-    max_lifetime: 60 * 30,
+    max: opts?.max ?? 10,
+    idle_timeout: opts?.idleTimeout ?? 30,
+    max_lifetime: opts?.maxLifetime ?? 60 * 30,
     connection: {
       timezone: "UTC",
-      statement_timeout: 30000,
+      statement_timeout: opts?.statementTimeout ?? 30000,
     },
     // Connection retry with exponential backoff
     connect_timeout: 10,

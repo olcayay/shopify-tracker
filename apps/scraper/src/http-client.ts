@@ -8,6 +8,7 @@ import {
   HTTP_RATE_LIMIT_BASE_MS,
   HTTP_RAW_RATE_LIMIT_BASE_MS,
 } from "./constants.js";
+import { recordFailure as recordCircuitFailure } from "./circuit-breaker.js";
 
 const log = createLogger("http-client");
 
@@ -22,21 +23,32 @@ export interface HttpClientOptions {
   delayMs?: number;
   maxRetries?: number;
   maxConcurrency?: number;
+  /** Platform name for circuit breaker integration. When set, exhausted retries record a failure. */
+  platform?: string;
 }
 
-const DEFAULT_OPTIONS: Required<HttpClientOptions> = {
+interface HttpClientConfig {
+  delayMs: number;
+  maxRetries: number;
+  maxConcurrency: number;
+}
+
+const DEFAULT_OPTIONS: HttpClientConfig = {
   delayMs: HTTP_DEFAULT_DELAY_MS,
   maxRetries: HTTP_DEFAULT_MAX_RETRIES,
   maxConcurrency: HTTP_DEFAULT_MAX_CONCURRENCY,
 };
 
 export class HttpClient {
-  private options: Required<HttpClientOptions>;
+  private options: HttpClientConfig;
+  private platform?: string;
   private lastRequestTime = 0;
   private activeRequests = 0;
 
   constructor(options: HttpClientOptions = {}) {
-    this.options = { ...DEFAULT_OPTIONS, ...options };
+    const { platform, ...rest } = options;
+    this.options = { ...DEFAULT_OPTIONS, ...rest };
+    this.platform = platform;
   }
 
   async fetchPage(url: string, extraHeaders?: Record<string, string>): Promise<string> {
@@ -156,6 +168,11 @@ export class HttpClient {
       error: lastError?.message,
     });
 
+    // Record failure to circuit breaker if platform is set
+    if (this.platform) {
+      recordCircuitFailure(this.platform).catch(() => {});
+    }
+
     throw new Error(
       `All ${this.options.maxRetries + 1} attempts failed for ${url}: ${lastError?.message}`
     );
@@ -212,6 +229,11 @@ export class HttpClient {
           await this.sleep(backoff);
         }
       }
+    }
+
+    // Record failure to circuit breaker if platform is set
+    if (this.platform) {
+      recordCircuitFailure(this.platform).catch(() => {});
     }
 
     throw new Error(

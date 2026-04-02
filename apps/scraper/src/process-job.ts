@@ -38,7 +38,13 @@ export function initWorkerDeps() {
     process.exit(1);
   }
 
-  const db = createDb(databaseUrl);
+  // Worker uses a smaller pool than API to avoid saturating DB connections.
+  // API pool: max 10 (fast queries for dashboard).
+  // Worker pool: max 5, longer statement timeout for scraping operations.
+  const db = createDb(databaseUrl, {
+    max: 5,
+    statementTimeout: 60000, // 60s for heavy scraping queries
+  });
   return { db };
 }
 

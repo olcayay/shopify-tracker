@@ -262,7 +262,7 @@ Fast load times and smooth UX.
   - [ ] HTTP caching headers (ETag, Cache-Control) on public endpoints
   - [ ] Connection pooling configured for PostgreSQL
 
-- [ ] **Scraper isolation** → [PLA-547](https://linear.app/plan-b-side-projects/issue/PLA-547) `Todo`
+- [x] **Scraper isolation** → [PLA-547](https://linear.app/plan-b-side-projects/issue/PLA-547) `In Review`
   - [ ] ⚠️ Scraper operations must not affect dashboard/API performance
   - [ ] Separate worker containers with resource limits (CPU/memory caps)
   - [ ] Database connection pool isolation (scraper vs API)
