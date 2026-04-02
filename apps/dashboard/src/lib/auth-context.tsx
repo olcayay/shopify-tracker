@@ -156,6 +156,45 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   } | null>(null);
   const router = useRouter();
 
+  // Silent token refresh using refresh_token cookie
+  const silentRefresh = useCallback(async (): Promise<boolean> => {
+    const refreshToken = getCookie("refresh_token");
+    if (!refreshToken) return false;
+    try {
+      const res = await fetch(`${API_BASE}/api/auth/refresh`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ refreshToken }),
+      });
+      if (!res.ok) return false;
+      const data = await res.json();
+      setCookie("access_token", data.accessToken, 900);
+      setCookie("refresh_token", data.refreshToken, 7 * 86400);
+      return true;
+    } catch {
+      return false;
+    }
+  }, []);
+
+  // Proactive token refresh — refresh 2 minutes before expiry
+  useEffect(() => {
+    const token = getCookie("access_token");
+    if (!token) return;
+    try {
+      const payload = JSON.parse(atob(token.split(".")[1]));
+      const expiresAt = payload.exp * 1000;
+      const refreshAt = expiresAt - 2 * 60 * 1000; // 2 min before expiry
+      const delay = refreshAt - Date.now();
+      if (delay <= 0) return;
+      const timer = setTimeout(() => {
+        silentRefresh();
+      }, delay);
+      return () => clearTimeout(timer);
+    } catch {
+      // Invalid token — skip proactive refresh
+    }
+  }, [user, silentRefresh]);
+
   const doFetch = useCallback(
     async (path: string, options?: RequestInit): Promise<Response> => {
       const token = getCookie("access_token");
@@ -192,11 +231,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         );
       }
 
-      // Handle expired token — clear auth state
+      // Handle expired token — try silent refresh, then redirect to login
       if (res.status === 401 && token && !path.includes("/api/auth/")) {
+        const refreshed = await silentRefresh();
+        if (refreshed) {
+          // Retry the original request with the new token
+          const newToken = getCookie("access_token");
+          if (newToken) {
+            return fetch(`${API_BASE}${path}`, {
+              ...options,
+              headers: { ...headers, Authorization: `Bearer ${newToken}`, ...(options?.headers || {}) },
+            });
+          }
+        }
+        // Refresh failed — clear state and redirect to login
         setUser(null);
         setAccount(null);
         setImpersonation(null);
+        const returnUrl = typeof window !== "undefined" ? window.location.pathname : "/overview";
+        router.push(`/login?returnUrl=${encodeURIComponent(returnUrl)}`);
       }
 
       return res;
