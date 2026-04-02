@@ -44,6 +44,11 @@ export const accounts = pgTable("accounts", {
   maxResearchProjects: integer("max_research_projects").notNull().default(1),
   maxPlatforms: integer("max_platforms").notNull().default(1),
   isSuspended: boolean("is_suspended").notNull().default(false),
+  stripeCustomerId: varchar("stripe_customer_id", { length: 255 }),
+  stripeSubscriptionId: varchar("stripe_subscription_id", { length: 255 }),
+  subscriptionStatus: varchar("subscription_status", { length: 30 }).notNull().default("free"),
+  subscriptionPlan: varchar("subscription_plan", { length: 50 }),
+  subscriptionPeriodEnd: timestamp("subscription_period_end"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });

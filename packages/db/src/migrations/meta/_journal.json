@@ -750,6 +750,13 @@
       "when": 1777852800000,
       "tag": "0106_refresh_token_ua_hash",
       "breakpoints": true
+    },
+    {
+      "idx": 107,
+      "version": "7",
+      "when": 1777939200000,
+      "tag": "0107_billing_columns",
+      "breakpoints": true
     }
   ]
 }
