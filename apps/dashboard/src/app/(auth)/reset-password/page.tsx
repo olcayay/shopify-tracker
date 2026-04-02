@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { Suspense, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
@@ -15,7 +15,7 @@ import {
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
 
-export default function ResetPasswordPage() {
+function ResetPasswordForm() {
   const searchParams = useSearchParams();
   const token = searchParams.get("token");
 
@@ -151,5 +151,13 @@ export default function ResetPasswordPage() {
         </form>
       </CardContent>
     </Card>
+  );
+}
+
+export default function ResetPasswordPage() {
+  return (
+    <Suspense>
+      <ResetPasswordForm />
+    </Suspense>
   );
 }
