@@ -1,3 +1,15 @@
+PLA-543: Frontend Sentry error tracking (2026-04-02)
+================================================================
+Added @sentry/nextjs v10 to the dashboard with full integration:
+- sentry.client.config.ts, sentry.server.config.ts, sentry.edge.config.ts
+- instrumentation.ts with onRequestError hook
+- next.config.ts wrapped with withSentryConfig
+- global-error.tsx for root-level error catching
+- All 4 error.tsx pages report to Sentry instead of console.error
+- ErrorBoundary component reports to Sentry via componentDidCatch
+- 10% trace sample rate, env-based DSN (NEXT_PUBLIC_SENTRY_DSN)
+- Source map upload disabled when no SENTRY_AUTH_TOKEN
+
 PLA-541: Password reset flow (2026-04-02)
 ================================================================
 Implemented full forgot-password / reset-password flow:

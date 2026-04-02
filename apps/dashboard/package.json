@@ -13,6 +13,7 @@
   },
   "dependencies": {
     "@appranks/shared": "*",
+    "@sentry/nextjs": "^10.47.0",
     "@tanstack/react-query": "^5.75.0",
     "@tiptap/extension-placeholder": "^3.21.0",
     "@tiptap/pm": "^3.21.0",

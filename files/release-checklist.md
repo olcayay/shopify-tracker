@@ -146,7 +146,7 @@ Visibility into production issues.
   - [ ] Source maps uploaded for readable stack traces
   - [ ] Alert rules configured (email/Slack on new errors)
 
-- [ ] **Sentry (frontend — missing)** → [PLA-543](https://linear.app/plan-b-side-projects/issue/PLA-543) `Todo`
+- [x] **Sentry (frontend)** → [PLA-543](https://linear.app/plan-b-side-projects/issue/PLA-543) `In Review`
   - [ ] ⚠️ Add `@sentry/nextjs` to dashboard app
   - [ ] Configure error boundary for React errors
   - [ ] Track client-side errors (JS exceptions, failed API calls)

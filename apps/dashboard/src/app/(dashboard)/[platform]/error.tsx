@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
+import * as Sentry from "@sentry/nextjs";
 import { useParams, useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 
@@ -16,7 +17,7 @@ export default function PlatformError({
   const platform = params.platform as string;
 
   useEffect(() => {
-    console.error(`[Platform Error Boundary] ${platform}:`, error);
+    Sentry.captureException(error, { tags: { platform } });
   }, [error, platform]);
 
   return (
