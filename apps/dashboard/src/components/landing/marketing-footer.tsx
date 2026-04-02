@@ -23,6 +23,16 @@ export function MarketingFooter() {
             <h3 className="font-semibold text-sm">Product</h3>
             <ul className="space-y-2 text-sm text-muted-foreground">
               <li>
+                <Link href="/pricing" className="hover:text-foreground transition-colors">
+                  Pricing
+                </Link>
+              </li>
+              <li>
+                <Link href="/changelog" className="hover:text-foreground transition-colors">
+                  Changelog
+                </Link>
+              </li>
+              <li>
                 <Link href="/register" className="hover:text-foreground transition-colors">
                   Get Started
                 </Link>
