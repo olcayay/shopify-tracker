@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { toast } from "sonner";
 import { useAuth } from "@/lib/auth-context";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -86,10 +87,13 @@ export default function SettingsPage() {
     });
     if (res.ok) {
       setMessage(successMsg || "Done");
+      toast.success(successMsg || "Done");
       await Promise.all([loadData(), refreshUser()]);
     } else {
       const data = await res.json().catch(() => ({}));
-      setError(data.error || "Operation failed");
+      const errMsg = data.error || "Operation failed";
+      setError(errMsg);
+      toast.error(errMsg);
     }
   }
 
