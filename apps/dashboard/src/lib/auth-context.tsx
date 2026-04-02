@@ -87,12 +87,14 @@ interface AuthState {
 
 const AuthContext = createContext<AuthState | null>(null);
 
+const isSecure = typeof window !== "undefined" && window.location.protocol === "https:";
+
 function setCookie(name: string, value: string, maxAge: number) {
-  document.cookie = `${name}=${encodeURIComponent(value)}; path=/; max-age=${maxAge}; SameSite=Lax`;
+  document.cookie = `${name}=${encodeURIComponent(value)}; path=/; max-age=${maxAge}; SameSite=Lax${isSecure ? "; Secure" : ""}`;
 }
 
 function deleteCookie(name: string) {
-  document.cookie = `${name}=; path=/; max-age=0`;
+  document.cookie = `${name}=; path=/; max-age=0; SameSite=Lax${isSecure ? "; Secure" : ""}`;
 }
 
 function getCookie(name: string): string | undefined {
