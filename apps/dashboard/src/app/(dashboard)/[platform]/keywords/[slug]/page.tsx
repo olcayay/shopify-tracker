@@ -15,8 +15,7 @@ import {
 } from "@/components/ui/table";
 import { ExternalLink as ExternalLinkIcon } from "lucide-react";
 import { ExternalLink } from "@/components/ui/external-link";
-import dynamic from "next/dynamic";
-const RankingChart = dynamic(() => import("@/components/ranking-chart").then(m => m.RankingChart), { ssr: false });
+import { RankingChart } from "@/components/ranking-chart";
 import { TrackKeywordButton } from "./track-button";
 import { CompetitorButton } from "@/components/competitor-button";
 import { LiveSearchTrigger } from "@/components/live-search-trigger";

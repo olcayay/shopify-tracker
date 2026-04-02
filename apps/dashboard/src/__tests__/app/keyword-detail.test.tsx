@@ -289,7 +289,7 @@ describe("KeywordDetailPage", () => {
     });
     render(page);
     expect(screen.getByText("Organic Ranking History")).toBeInTheDocument();
-    // RankingChart is dynamically imported (ssr: false) — not rendered in test env
+    expect(screen.getByTestId("ranking-chart")).toBeInTheDocument();
   });
 
   it("renders the track keyword button", async () => {

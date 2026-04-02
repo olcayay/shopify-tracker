@@ -70,11 +70,13 @@ export default function RootLayout({
           <Analytics />
         </Suspense>
         <Providers>
-          <AuthProvider>{children}</AuthProvider>
+          <AuthProvider>
+            {children}
+            <CommandPalette />
+          </AuthProvider>
         </Providers>
         <Toaster richColors closeButton position="bottom-right" />
         <ShortcutsHelp />
-        <CommandPalette />
       </body>
     </html>
   );

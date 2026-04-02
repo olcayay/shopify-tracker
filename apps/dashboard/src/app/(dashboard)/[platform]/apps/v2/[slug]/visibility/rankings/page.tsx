@@ -3,8 +3,7 @@ import { PLATFORMS, type PlatformId } from "@appranks/shared";
 import { formatDateOnly } from "@/lib/format-date";
 import { formatCategoryTitle } from "@/lib/platform-urls";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import dynamic from "next/dynamic";
-const RankingChart = dynamic(() => import("@/components/ranking-chart").then(m => m.RankingChart), { ssr: false });
+import { RankingChart } from "@/components/ranking-chart";
 import { DataFreshness } from "@/components/data-freshness";
 
 export default async function V2RankingsPage({
