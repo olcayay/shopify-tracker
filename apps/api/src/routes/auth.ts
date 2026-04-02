@@ -50,6 +50,8 @@ import {
 export const loginLimiter = new RateLimiter({ maxAttempts: RATE_LIMIT_LOGIN_MAX, windowMs: RATE_LIMIT_LOGIN_WINDOW_MS, namespace: "login" });
 export const registerLimiter = new RateLimiter({ maxAttempts: RATE_LIMIT_REGISTER_MAX, windowMs: RATE_LIMIT_REGISTER_WINDOW_MS, namespace: "register" });
 export const passwordResetLimiter = new RateLimiter({ maxAttempts: RATE_LIMIT_PASSWORD_RESET_MAX, windowMs: RATE_LIMIT_PASSWORD_RESET_WINDOW_MS, namespace: "pwreset" });
+// Account lockout: 10 failed login attempts per email → 30 minute lockout
+export const accountLockout = new RateLimiter({ maxAttempts: 10, windowMs: 30 * 60 * 1000, namespace: "lockout" });
 
 export function generateAccessToken(
   payload: JwtPayload,
@@ -271,11 +273,19 @@ export const authRoutes: FastifyPluginAsync = async (app) => {
     }
 
     const { email, password } = loginSchema.parse(request.body);
+    const normalizedEmail = email.toLowerCase();
+
+    // Account-level lockout check (per email, not per IP)
+    const lockoutCheck = accountLockout.check(normalizedEmail);
+    if (!lockoutCheck.allowed) {
+      reply.header("Retry-After", Math.ceil(lockoutCheck.retryAfterMs / 1000).toString());
+      return reply.code(423).send({ error: "Account temporarily locked due to too many failed login attempts. Please try again later." });
+    }
 
     const [user] = await db
       .select()
       .from(users)
-      .where(eq(users.email, email.toLowerCase()));
+      .where(eq(users.email, normalizedEmail));
 
     if (!user) {
       return reply.code(401).send({ error: "Invalid email or password" });
