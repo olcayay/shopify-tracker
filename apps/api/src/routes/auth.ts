@@ -96,6 +96,12 @@ export const authRoutes: FastifyPluginAsync = async (app) => {
 
     const { email, password, name, accountName, company } = registerSchema.parse(request.body);
 
+    // Block disposable email domains
+    const { isDisposableEmail } = await import("../utils/disposable-emails.js");
+    if (isDisposableEmail(email)) {
+      return reply.code(400).send({ error: "Disposable email addresses are not allowed. Please use a permanent email." });
+    }
+
     // Check if email already exists
     const [existing] = await db
       .select({ id: users.id })
