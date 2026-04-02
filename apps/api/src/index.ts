@@ -121,6 +121,16 @@ await app.register(cors, {
 
 app.decorate("db", db);
 
+// Security headers — defense-in-depth alongside Cloudflare
+app.addHook("onRequest", async (_request, reply) => {
+  reply.header("strict-transport-security", "max-age=31536000; includeSubDomains");
+  reply.header("x-content-type-options", "nosniff");
+  reply.header("x-frame-options", "DENY");
+  reply.header("x-xss-protection", "0");
+  reply.header("referrer-policy", "strict-origin-when-cross-origin");
+  reply.header("permissions-policy", "camera=(), microphone=(), geolocation=()");
+});
+
 // Correlation ID: read from x-request-id header or generate a UUID.
 // Stored on request.id (Fastify built-in) and echoed back in the response.
 app.addHook("onRequest", async (request, reply) => {
