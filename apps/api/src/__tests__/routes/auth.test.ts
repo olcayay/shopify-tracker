@@ -1434,3 +1434,132 @@ describe("POST /api/auth/reset-password", () => {
     await app.close();
   });
 });
+
+// ---------------------------------------------------------------------------
+// POST /api/auth/revoke-all-sessions
+// ---------------------------------------------------------------------------
+
+describe("POST /api/auth/revoke-all-sessions", () => {
+  let app: FastifyInstance;
+
+  beforeAll(async () => {
+    app = await buildTestApp({
+      routes: authRoutes,
+      prefix: "/api/auth",
+      db: { selectResult: [] },
+    });
+  });
+
+  afterAll(async () => {
+    await app.close();
+  });
+
+  it("returns 401 without auth token", async () => {
+    const res = await app.inject({
+      method: "POST",
+      url: "/api/auth/revoke-all-sessions",
+    });
+    expect(res.statusCode).toBe(401);
+  });
+
+  it("returns success with valid auth token", async () => {
+    const res = await app.inject({
+      method: "POST",
+      url: "/api/auth/revoke-all-sessions",
+      headers: authHeaders(userToken({ role: "owner" })),
+    });
+    expect(res.statusCode).toBe(200);
+    expect(res.json().message).toMatch(/revoked/i);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// GET /api/auth/export — GDPR data export
+// ---------------------------------------------------------------------------
+
+describe("GET /api/auth/export", () => {
+  let app: FastifyInstance;
+
+  beforeAll(async () => {
+    app = await buildTestApp({
+      routes: authRoutes,
+      prefix: "/api/auth",
+      db: {
+        selectResult: [{
+          id: "user-001",
+          email: "user@test.com",
+          name: "Test User",
+          role: "owner",
+          accountId: "account-001",
+          timezone: "UTC",
+          emailDigestEnabled: true,
+          isSystemAdmin: false,
+          createdAt: new Date(),
+          company: null,
+          maxTrackedApps: 10,
+        }],
+      },
+    });
+  });
+
+  afterAll(async () => {
+    await app.close();
+  });
+
+  it("returns 401 without auth token", async () => {
+    const res = await app.inject({
+      method: "GET",
+      url: "/api/auth/export",
+    });
+    expect(res.statusCode).toBe(401);
+  });
+
+  it("returns JSON export with content-disposition header", async () => {
+    const res = await app.inject({
+      method: "GET",
+      url: "/api/auth/export",
+      headers: authHeaders(userToken({ role: "owner" })),
+    });
+    expect(res.statusCode).toBe(200);
+    expect(res.headers["content-disposition"]).toContain("attachment");
+    const body = res.json();
+    expect(body.exportedAt).toBeDefined();
+    expect(body.user).toBeDefined();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// DELETE /api/auth/me — account deletion
+// ---------------------------------------------------------------------------
+
+describe("DELETE /api/auth/me", () => {
+  it("returns 401 without auth token", async () => {
+    const app = await buildTestApp({
+      routes: authRoutes,
+      prefix: "/api/auth",
+      db: { selectResult: [] },
+    });
+    const res = await app.inject({
+      method: "DELETE",
+      url: "/api/auth/me",
+    });
+    expect(res.statusCode).toBe(401);
+    await app.close();
+  });
+
+  it("returns 403 for non-owner users", async () => {
+    const app = await buildTestApp({
+      routes: authRoutes,
+      prefix: "/api/auth",
+      db: { selectResult: [] },
+    });
+    const res = await app.inject({
+      method: "DELETE",
+      url: "/api/auth/me",
+      headers: authHeaders(userToken({ role: "editor" })),
+      payload: { password: "Password123" },
+    });
+    expect(res.statusCode).toBe(403);
+    await app.close();
+  });
+});
