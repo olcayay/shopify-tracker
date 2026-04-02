@@ -2,7 +2,7 @@
 
 > Created: 2026-04-01 | Updated: 2026-04-02
 > Target: Production-ready public launch
-> Progress: **18/21 auto-implementable tasks done** — 3 remaining need runtime environment
+> Progress: **18/49 total tasks done** | 28 new code tasks added | 3 need runtime
 
 ---
 
@@ -422,7 +422,74 @@ Production environment hardened and documented.
 | [PLA-565](https://linear.app/plan-b-side-projects/issue/PLA-565) | ⏳ Backlog | UX | Onboarding wizard |
 | [PLA-566](https://linear.app/plan-b-side-projects/issue/PLA-566) | ⏳ Backlog | Data | Account activity feed |
 
-### Remaining Tasks
+### New Tasks (Batch 3 — 2026-04-02)
+
+#### Security & Auth
+
+| Task | Priority | Description |
+|------|----------|-------------|
+| [PLA-568](https://linear.app/plan-b-side-projects/issue/PLA-568) | 🟡 Medium | Account lockout after 10 failed logins |
+| [PLA-573](https://linear.app/plan-b-side-projects/issue/PLA-573) | 🔵 Low | Refresh token device fingerprinting (UA binding) |
+| [PLA-594](https://linear.app/plan-b-side-projects/issue/PLA-594) | 🟡 Medium | Cookie security flags (Secure, SameSite) |
+
+#### API Quality
+
+| Task | Priority | Description |
+|------|----------|-------------|
+| [PLA-567](https://linear.app/plan-b-side-projects/issue/PLA-567) | 🟡 Medium | CORS preflight caching + gzip compression |
+| [PLA-582](https://linear.app/plan-b-side-projects/issue/PLA-582) | 🟡 Medium | Zod schema validation audit (all endpoints) |
+| [PLA-588](https://linear.app/plan-b-side-projects/issue/PLA-588) | 🟡 Medium | Standardize API error responses + error codes |
+| [PLA-586](https://linear.app/plan-b-side-projects/issue/PLA-586) | 🟡 Medium | E2E integration tests for critical user flows |
+
+#### Payment (code skeleton — no Stripe account needed)
+
+| Task | Priority | Description |
+|------|----------|-------------|
+| [PLA-590](https://linear.app/plan-b-side-projects/issue/PLA-590) | 🟡 Medium | Stripe webhook handler skeleton + billing routes + DB schema |
+| [PLA-591](https://linear.app/plan-b-side-projects/issue/PLA-591) | 🟡 Medium | Billing enforcement middleware + upgrade prompts in dashboard |
+
+#### Dashboard UX
+
+| Task | Priority | Description |
+|------|----------|-------------|
+| [PLA-569](https://linear.app/plan-b-side-projects/issue/PLA-569) | 🟡 Medium | Toast notification system for action feedback |
+| [PLA-570](https://linear.app/plan-b-side-projects/issue/PLA-570) | 🔵 Low | Breadcrumb navigation on nested pages |
+| [PLA-571](https://linear.app/plan-b-side-projects/issue/PLA-571) | 🔵 Low | Empty state illustrations for list pages |
+| [PLA-574](https://linear.app/plan-b-side-projects/issue/PLA-574) | 🔵 Low | List virtualization (react-window) for large tables |
+| [PLA-575](https://linear.app/plan-b-side-projects/issue/PLA-575) | 🔵 Low | Date range picker for historical charts |
+| [PLA-576](https://linear.app/plan-b-side-projects/issue/PLA-576) | 🟡 Medium | Responsive table scrolling on mobile |
+| [PLA-580](https://linear.app/plan-b-side-projects/issue/PLA-580) | 🔵 Low | Table sort/filter persistence in URL params |
+| [PLA-589](https://linear.app/plan-b-side-projects/issue/PLA-589) | 🔵 Low | App icon broken image fallback component |
+| [PLA-593](https://linear.app/plan-b-side-projects/issue/PLA-593) | 🟡 Medium | Loading skeleton for all pages missing loading.tsx |
+| [PLA-585](https://linear.app/plan-b-side-projects/issue/PLA-585) | 🔵 Low | Keyboard shortcuts help modal (Shift+?) |
+
+#### Admin & Monitoring
+
+| Task | Priority | Description |
+|------|----------|-------------|
+| [PLA-572](https://linear.app/plan-b-side-projects/issue/PLA-572) | 🔵 Low | Impersonation audit log UI |
+| [PLA-577](https://linear.app/plan-b-side-projects/issue/PLA-577) | 🔵 Low | Admin health dashboard (Redis, pool, queue metrics) |
+| [PLA-578](https://linear.app/plan-b-side-projects/issue/PLA-578) | 🔵 Low | Dead letter queue monitoring UI |
+| [PLA-581](https://linear.app/plan-b-side-projects/issue/PLA-581) | 🔵 Low | Email template preview + test send in admin |
+| [PLA-584](https://linear.app/plan-b-side-projects/issue/PLA-584) | 🔵 Low | Scraper job success/failure charts in admin |
+| [PLA-587](https://linear.app/plan-b-side-projects/issue/PLA-587) | 🔵 Low | Notification badge real-time polling |
+| [PLA-592](https://linear.app/plan-b-side-projects/issue/PLA-592) | 🔵 Low | Backup status monitoring endpoint + admin UI |
+
+#### Performance
+
+| Task | Priority | Description |
+|------|----------|-------------|
+| [PLA-579](https://linear.app/plan-b-side-projects/issue/PLA-579) | 🔵 Low | Migrate app icons to next/image (lazy load) |
+
+#### Documentation
+
+| Task | Priority | Description |
+|------|----------|-------------|
+| [PLA-583](https://linear.app/plan-b-side-projects/issue/PLA-583) | 🔵 Low | Create CONTRIBUTING.md |
+
+---
+
+### Previously Remaining Tasks
 
 #### Need runtime environment
 
@@ -437,10 +504,9 @@ Production environment hardened and documented.
 | Category | What's needed | Why manual |
 |----------|--------------|------------|
 | Email Delivery | SMTP config, SPF/DKIM/DMARC DNS records | Requires DNS provider access |
-| Payment Integration | Stripe setup, plan/pricing decisions | Requires business decisions + Stripe account |
 | Session Recording | Choose provider (PostHog/LogRocket/Hotjar) | Requires provider decision + account setup |
 | Product Analytics | Choose provider (PostHog/Mixpanel/Amplitude) | Requires provider decision + account setup |
-| DB Backup | Production cron job, S3/B2 bucket config | Requires server SSH + cloud storage account |
+| DB Backup Cron | Production cron job setup | Requires server SSH |
 | Deployment/Infra | Cloudflare WAF, Docker resource limits | Requires Cloudflare + Coolify access |
 
 #### Backlog (post-launch candidates)
