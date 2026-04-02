@@ -55,6 +55,8 @@ export const registerLimiter = new RateLimiter({ maxAttempts: RATE_LIMIT_REGISTE
 export const passwordResetLimiter = new RateLimiter({ maxAttempts: RATE_LIMIT_PASSWORD_RESET_MAX, windowMs: RATE_LIMIT_PASSWORD_RESET_WINDOW_MS, namespace: "pwreset" });
 // Account lockout: 10 failed login attempts per email → 30 minute lockout
 export const accountLockout = new RateLimiter({ maxAttempts: 10, windowMs: 30 * 60 * 1000, namespace: "lockout" });
+// Refresh token: 30 attempts per 5 min per IP
+export const refreshLimiter = new RateLimiter({ maxAttempts: 30, windowMs: 5 * 60 * 1000, namespace: "refresh" });
 
 export function generateAccessToken(
   payload: JwtPayload,
@@ -448,6 +450,13 @@ export const authRoutes: FastifyPluginAsync = async (app) => {
 
   // POST /api/auth/refresh — exchange refresh token for new access token
   app.post("/refresh", async (request, reply) => {
+    // Rate limit: 30 refresh requests per 5 minutes per IP
+    const refreshLimit = refreshLimiter.check(request.ip);
+    if (!refreshLimit.allowed) {
+      reply.header("Retry-After", Math.ceil(refreshLimit.retryAfterMs / 1000).toString());
+      return reply.code(429).send({ error: "Too many refresh attempts. Please try again later." });
+    }
+
     const { refreshToken: token } = refreshSchema.parse(request.body);
 
     const tokenHash = hashToken(token);
