@@ -3008,6 +3008,81 @@ export const systemAdminRoutes: FastifyPluginAsync = async (app) => {
     },
   );
 
+  // GET /api/system-admin/email-preview/:type — preview an email template with sample data
+  app.get("/email-preview/:type", async (request, reply) => {
+    const { type } = request.params as { type: string };
+
+    const sampleData: Record<string, { subject: string; data: Record<string, string> }> = {
+      password_reset: {
+        subject: "Reset Your Password",
+        data: { name: "Jane Doe", resetUrl: "https://appranks.io/reset-password?token=sample", expiryHours: "1" },
+      },
+      email_verification: {
+        subject: "Verify Your Email",
+        data: { name: "Jane Doe", verificationUrl: "https://appranks.io/verify-email?token=sample" },
+      },
+      invitation: {
+        subject: "You're Invited to AppRanks",
+        data: { inviterName: "John Smith", accountName: "Acme Corp", acceptUrl: "https://appranks.io/invite/accept/sample", role: "editor" },
+      },
+      login_alert: {
+        subject: "New Login to Your Account",
+        data: { name: "Jane Doe", device: "Chrome on macOS", ip: "203.0.113.42", location: "Istanbul, Turkey", loginTime: new Date().toISOString(), secureAccountUrl: "https://appranks.io/settings" },
+      },
+    };
+
+    const sample = sampleData[type];
+    if (!sample) {
+      return reply.code(404).send({ error: `Unknown template type: ${type}. Available: ${Object.keys(sampleData).join(", ")}` });
+    }
+
+    return { type, subject: sample.subject, sampleData: sample.data };
+  });
+
+  // POST /api/system-admin/email-test-send — send a test email to the admin
+  app.post("/email-test-send", async (request, reply) => {
+    const { type } = request.body as { type?: string };
+    if (!type) return reply.code(400).send({ error: "type is required" });
+
+    const validTypes = ["email_password_reset", "email_verification", "email_invitation", "email_login_alert", "email_welcome"];
+    if (!validTypes.includes(type)) {
+      return reply.code(400).send({ error: `Invalid type. Valid: ${validTypes.join(", ")}` });
+    }
+
+    // Import email enqueue to send a test
+    const { Queue } = await import("bullmq");
+    const redisUrl = process.env.REDIS_URL || "redis://localhost:6379";
+    const parsed = new URL(redisUrl);
+    const queue = new Queue("email-instant", {
+      connection: { host: parsed.hostname, port: parseInt(parsed.port || "6379"), password: parsed.password || undefined },
+    });
+
+    try {
+      const job = await queue.add(`email:${type}:test`, {
+        type,
+        to: request.user!.email,
+        name: request.user!.email.split("@")[0],
+        payload: {
+          name: "Test User",
+          resetUrl: "https://appranks.io/reset-password?token=test",
+          verificationUrl: "https://appranks.io/verify-email?token=test",
+          inviterName: "Admin",
+          accountName: "Test Account",
+          acceptUrl: "https://appranks.io/invite/accept/test",
+          device: "Test Send",
+          ip: "127.0.0.1",
+          loginTime: new Date().toISOString(),
+          secureAccountUrl: "https://appranks.io/settings",
+        },
+        createdAt: new Date().toISOString(),
+      });
+
+      return { message: `Test email queued for ${request.user!.email}`, jobId: job.id };
+    } finally {
+      await queue.close();
+    }
+  });
+
   // GET /api/system-admin/system-health — extended health info for admin dashboard
   app.get("/system-health", async () => {
     const checks: Record<string, unknown> = {};
