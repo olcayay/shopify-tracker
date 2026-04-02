@@ -70,7 +70,7 @@ interface AuthState {
   isLoading: boolean;
   impersonation: ImpersonationState | null;
   globalPlatformVisibility: Record<string, boolean> | null;
-  login: (email: string, password: string) => Promise<void>;
+  login: (email: string, password: string, returnUrl?: string) => Promise<void>;
   register: (
     email: string,
     password: string,
@@ -339,7 +339,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     refreshUser().finally(() => setIsLoading(false));
   }, [refreshUser]);
 
-  const login = async (email: string, password: string) => {
+  const login = async (email: string, password: string, returnUrl?: string) => {
     const res = await fetch(`${API_BASE}/api/auth/login`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -356,7 +356,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setCookie("refresh_token", data.refreshToken, 7 * 86400);
     setUser(data.user);
     await refreshUser();
-    router.push("/overview");
+    // Redirect to returnUrl if safe (must start with / to prevent open redirect)
+    const dest = returnUrl && returnUrl.startsWith("/") ? returnUrl : "/overview";
+    router.push(dest);
     router.refresh();
   };
 

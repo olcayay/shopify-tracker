@@ -56,7 +56,7 @@ describe("LoginPage", () => {
     await user.type(screen.getByLabelText("Password"), "password123");
     await user.click(screen.getByText("Sign in"));
 
-    expect(mockLogin).toHaveBeenCalledWith("test@example.com", "password123");
+    expect(mockLogin).toHaveBeenCalledWith("test@example.com", "password123", undefined);
   });
 
   it("shows loading state during login", async () => {
