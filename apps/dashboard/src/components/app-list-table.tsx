@@ -420,7 +420,7 @@ export function AppListTable({
                         {app.icon_url && (
                           <img
                             src={app.icon_url}
-                            alt=""
+                            alt="" aria-hidden="true"
                             className="h-6 w-6 rounded shrink-0"
                           />
                         )}

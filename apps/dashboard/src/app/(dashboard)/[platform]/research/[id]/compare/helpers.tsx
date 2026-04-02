@@ -130,7 +130,7 @@ export function AppIcon({ app, size = "sm" }: { app: AppData; size?: "sm" | "md"
     );
   }
   if (app.iconUrl) {
-    return <img src={app.iconUrl} alt="" className={cn(dim, "rounded")} />;
+    return <img src={app.iconUrl} alt="" aria-hidden="true" className={cn(dim, "rounded")} />;
   }
   return <div className={cn(dim, "rounded bg-muted flex items-center justify-center text-xs font-bold")}>{app.name.charAt(0)}</div>;
 }

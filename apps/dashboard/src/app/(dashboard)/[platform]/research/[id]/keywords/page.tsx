@@ -353,7 +353,7 @@ export default function ResearchKeywordsPage() {
                       <TableHead key={comp.slug} className="text-center min-w-[60px]">
                         <Link href={`/apps/${comp.slug}`} className="flex flex-col items-center gap-1 hover:opacity-80" title={comp.name}>
                           {comp.iconUrl ? (
-                            <img src={comp.iconUrl} alt="" className="h-5 w-5 rounded" />
+                            <img src={comp.iconUrl} alt="" aria-hidden="true" className="h-5 w-5 rounded" />
                           ) : (
                             <div className="h-5 w-5 rounded bg-muted" />
                           )}

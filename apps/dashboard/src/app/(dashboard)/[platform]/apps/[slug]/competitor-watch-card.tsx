@@ -82,7 +82,7 @@ export function CompetitorWatchCard({
                 {allWithSelf.filter((c) => !c.isSelf).slice(0, 5).map((c) => (
                   <div key={c.slug} className="flex items-center gap-2 text-sm">
                     {c.iconUrl ? (
-                      <img src={c.iconUrl} alt="" className="h-5 w-5 rounded shrink-0" />
+                      <img src={c.iconUrl} alt="" aria-hidden="true" className="h-5 w-5 rounded shrink-0" />
                     ) : (
                       <div className="h-5 w-5 rounded bg-muted shrink-0" />
                     )}

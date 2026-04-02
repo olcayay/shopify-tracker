@@ -265,7 +265,7 @@ function DeveloperAppsContent() {
                     <TableCell className="max-w-[260px]">
                       <div className="flex items-center gap-2">
                         {app.iconUrl && (
-                          <img src={app.iconUrl} alt="" className="h-6 w-6 rounded shrink-0" />
+                          <img src={app.iconUrl} alt="" aria-hidden="true" className="h-6 w-6 rounded shrink-0" />
                         )}
                         <div className="min-w-0">
                           <div className="flex items-center gap-1.5">

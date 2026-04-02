@@ -44,7 +44,7 @@ function CanvaBrowseCard({
     <div className="border border-[#e0e0e0] rounded-xl bg-white text-[#0d1216] hover:shadow-md transition-shadow w-[280px]">
       <div className="p-4 flex items-start gap-3">
         {icon ? (
-          <img src={icon} alt="" className="h-12 w-12 rounded-lg shrink-0" />
+          <img src={icon} alt="" aria-hidden="true" className="h-12 w-12 rounded-lg shrink-0" />
         ) : (
           <div className="h-12 w-12 rounded-lg bg-[#f0f0f0] flex items-center justify-center text-lg font-bold shrink-0 text-[#7C3AED]">
             {name.charAt(0) || "?"}
@@ -197,7 +197,7 @@ export function CanvaPreview({ appData }: { appData: CanvaAppData }) {
                 {/* App header: large icon + name + created by */}
                 <div className="flex items-center gap-4">
                   {icon ? (
-                    <img src={icon} alt="" className="h-16 w-16 rounded-2xl shrink-0" />
+                    <img src={icon} alt="" aria-hidden="true" className="h-16 w-16 rounded-2xl shrink-0" />
                   ) : (
                     <div className="h-16 w-16 rounded-2xl bg-[#f0ebff] flex items-center justify-center text-2xl font-bold shrink-0 text-[#7C3AED]">
                       {name.charAt(0) || "?"}

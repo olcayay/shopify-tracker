@@ -99,7 +99,7 @@ function PreviewShell({
       {/* Header bar */}
       <div className="shrink-0 border-b px-4 py-2.5 flex items-center justify-between bg-background">
         <div className="flex items-center gap-3">
-          {icon && <img src={icon} alt="" className="h-6 w-6 rounded" />}
+          {icon && <img src={icon} alt="" aria-hidden="true" className="h-6 w-6 rounded" />}
           <h2 className="font-semibold text-sm">{appData.name}</h2>
           <span className="text-xs text-muted-foreground">{platformLabel}</span>
         </div>

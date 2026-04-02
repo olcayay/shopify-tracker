@@ -128,7 +128,7 @@ export default function CrossPlatformAppsPage() {
         {showPlatform && <TableCell><PlatformBadgeCell platform={app.platform} /></TableCell>}
         <TableCell>
           <Link href={`/${app.platform}/apps/${app.slug}`} className="flex items-center gap-2 font-medium hover:underline">
-            {app.iconUrl && <img src={app.iconUrl} alt="" className="w-6 h-6 rounded" />}
+            {app.iconUrl && <img src={app.iconUrl} alt="" aria-hidden="true" className="w-6 h-6 rounded" />}
             {app.name}
           </Link>
         </TableCell>

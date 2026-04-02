@@ -355,7 +355,7 @@ export default function DevelopersPage() {
                           title={app.name}
                         >
                           {app.iconUrl && (
-                            <img src={app.iconUrl} alt="" className="w-4 h-4 rounded shrink-0" />
+                            <img src={app.iconUrl} alt="" aria-hidden="true" className="w-4 h-4 rounded shrink-0" />
                           )}
                           <span className="truncate max-w-[120px]">{app.name}</span>
                         </Link>

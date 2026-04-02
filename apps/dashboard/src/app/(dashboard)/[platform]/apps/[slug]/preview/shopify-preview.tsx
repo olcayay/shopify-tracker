@@ -77,7 +77,7 @@ function SearchResultCard({
     <div className="border border-[#e3e3e3] rounded-2xl p-4 bg-white text-[#1a1a1a] hover:shadow-md transition-shadow flex-1 min-w-[280px] max-w-[380px]">
       <div className="flex gap-3">
         {icon ? (
-          <img src={icon} alt="" className="h-12 w-12 rounded-xl shadow-sm shrink-0" />
+          <img src={icon} alt="" aria-hidden="true" className="h-12 w-12 rounded-xl shadow-sm shrink-0" />
         ) : (
           <div className="h-12 w-12 rounded-xl bg-gray-100 flex items-center justify-center text-lg font-bold shrink-0">
             {name.charAt(0) || "?"}
@@ -242,7 +242,7 @@ export function ShopifyPreview({
               <div className="w-[260px] shrink-0 p-5 border-r border-[#e3e3e3] space-y-5">
                 <div className="flex items-start gap-2.5">
                   {icon ? (
-                    <img src={icon} alt="" className="h-12 w-12 rounded-lg shrink-0" />
+                    <img src={icon} alt="" aria-hidden="true" className="h-12 w-12 rounded-lg shrink-0" />
                   ) : (
                     <div className="h-12 w-12 rounded-lg bg-gray-100 flex items-center justify-center text-sm font-bold shrink-0">
                       {name.charAt(0) || "?"}

@@ -186,7 +186,7 @@ function CheckboxRow({
         {isChecked && <Check className="h-3 w-3 text-primary-foreground" />}
       </div>
       {item.iconUrl && (
-        <img src={item.iconUrl} alt="" className="h-5 w-5 rounded shrink-0" />
+        <img src={item.iconUrl} alt="" aria-hidden="true" className="h-5 w-5 rounded shrink-0" />
       )}
       <span className="flex-1 truncate">{item.label}</span>
     </button>

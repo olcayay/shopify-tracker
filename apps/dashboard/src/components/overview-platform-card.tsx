@@ -104,7 +104,7 @@ function AppMiniCard({ app, platformId }: { app: AppSummary; platformId: Platfor
     >
       <div className="flex items-center gap-2">
         {app.iconUrl ? (
-          <img src={app.iconUrl} alt="" className="w-8 h-8 rounded-lg shrink-0" />
+          <img src={app.iconUrl} alt="" aria-hidden="true" className="w-8 h-8 rounded-lg shrink-0" />
         ) : (
           <div
             className="w-8 h-8 rounded-lg flex items-center justify-center text-white text-xs font-bold shrink-0"

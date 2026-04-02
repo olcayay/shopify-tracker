@@ -106,7 +106,7 @@ export function CompetitorTableRowItem({
           {comp.iconUrl && (
             <img
               src={comp.iconUrl}
-              alt=""
+              alt="" aria-hidden="true"
               className="h-6 w-6 rounded shrink-0"
             />
           )}

@@ -153,7 +153,7 @@ export function AppSearchBar({
                   {s.iconUrl && (
                     <img
                       src={s.iconUrl}
-                      alt=""
+                      alt="" aria-hidden="true"
                       className="h-5 w-5 rounded shrink-0"
                     />
                   )}

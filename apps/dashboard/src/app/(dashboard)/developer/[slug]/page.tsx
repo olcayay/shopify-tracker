@@ -242,7 +242,7 @@ export default function CrossPlatformDeveloperPage() {
                             {app.iconUrl && (
                               <img
                                 src={app.iconUrl}
-                                alt=""
+                                alt="" aria-hidden="true"
                                 className="w-6 h-6 rounded shrink-0"
                               />
                             )}

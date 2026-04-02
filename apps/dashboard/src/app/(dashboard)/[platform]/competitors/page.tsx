@@ -212,7 +212,7 @@ export default function CompetitorsPage() {
                       {myApp.iconUrl && (
                         <img
                           src={myApp.iconUrl}
-                          alt=""
+                          alt="" aria-hidden="true"
                           className="h-6 w-6 rounded shrink-0"
                         />
                       )}
@@ -288,7 +288,7 @@ export default function CompetitorsPage() {
                       {myApp.iconUrl && (
                         <img
                           src={myApp.iconUrl}
-                          alt=""
+                          alt="" aria-hidden="true"
                           className="h-5 w-5 rounded shrink-0"
                         />
                       )}

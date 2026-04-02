@@ -141,7 +141,7 @@ export function KeywordOpportunityPopover({
                       {i + 1}
                     </span>
                     {app.logoUrl ? (
-                      <img src={app.logoUrl} alt="" className="h-5 w-5 rounded shrink-0" />
+                      <img src={app.logoUrl} alt="" aria-hidden="true" className="h-5 w-5 rounded shrink-0" />
                     ) : (
                       <div className="h-5 w-5 rounded bg-muted shrink-0" />
                     )}

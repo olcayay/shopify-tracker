@@ -299,7 +299,7 @@ export function KeywordsTable({
                   ) : app ? (
                     <div className="flex items-center gap-1 text-xs whitespace-nowrap">
                       {app.logoUrl ? (
-                        <img src={app.logoUrl} alt="" className="h-4 w-4 rounded shrink-0" />
+                        <img src={app.logoUrl} alt="" aria-hidden="true" className="h-4 w-4 rounded shrink-0" />
                       ) : (
                         <div className="h-4 w-4 rounded bg-muted shrink-0" />
                       )}

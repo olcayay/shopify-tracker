@@ -118,7 +118,7 @@ function SalesforceSearchCard({
       {/* Icon + Name + Developer + Rating */}
       <div className="flex gap-3.5 mb-3">
         {icon ? (
-          <img src={icon} alt="" className="h-14 w-14 rounded-xl shrink-0" />
+          <img src={icon} alt="" aria-hidden="true" className="h-14 w-14 rounded-xl shrink-0" />
         ) : (
           <div className="h-14 w-14 rounded-xl bg-[#032D60] flex items-center justify-center text-xl font-bold text-white shrink-0">
             {name.charAt(0) || "?"}
@@ -402,7 +402,7 @@ export function SalesforcePreview({
           <div className="px-8 pt-7 pb-0">
             <div className="flex items-start gap-5">
               {icon ? (
-                <img src={icon} alt="" className="h-14 w-14 rounded-xl shrink-0" />
+                <img src={icon} alt="" aria-hidden="true" className="h-14 w-14 rounded-xl shrink-0" />
               ) : (
                 <div className="h-14 w-14 rounded-xl bg-[#032D60] flex items-center justify-center text-xl font-bold text-white shrink-0">
                   {name.charAt(0) || "?"}
@@ -646,7 +646,7 @@ export function SalesforcePreview({
                     <div>
                       <div className="flex items-center gap-4 mb-5">
                         {icon ? (
-                          <img src={icon} alt="" className="h-12 w-12 rounded shrink-0" />
+                          <img src={icon} alt="" aria-hidden="true" className="h-12 w-12 rounded shrink-0" />
                         ) : (
                           <div className="h-12 w-12 rounded bg-[#F4F6F9] flex items-center justify-center text-base font-bold text-[#0176D3] shrink-0 border border-[#E5E5E5]">
                             {(publisher.name || "P").charAt(0)}
@@ -1121,7 +1121,7 @@ export function SalesforcePreview({
                     <h3 className="text-[16px] font-bold text-[#666] mb-4">Need help?</h3>
                     <div className="flex items-center gap-3 mb-4">
                       {icon ? (
-                        <img src={icon} alt="" className="h-10 w-10 rounded shrink-0" />
+                        <img src={icon} alt="" aria-hidden="true" className="h-10 w-10 rounded shrink-0" />
                       ) : (
                         <div className="h-10 w-10 rounded bg-[#F4F6F9] flex items-center justify-center text-sm font-bold text-[#0176D3] shrink-0 border border-[#E5E5E5]">
                           {(publisher.name || "P").charAt(0)}

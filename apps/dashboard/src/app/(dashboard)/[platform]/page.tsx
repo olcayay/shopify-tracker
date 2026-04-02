@@ -349,7 +349,7 @@ export default function OverviewPage() {
                         <TableCell className="max-w-[260px]">
                           <div className="flex items-center gap-2">
                             {app.iconUrl && (
-                              <img src={app.iconUrl} alt="" className="h-5 w-5 rounded shrink-0" />
+                              <img src={app.iconUrl} alt="" aria-hidden="true" className="h-5 w-5 rounded shrink-0" />
                             )}
                             <Link
                               href={`/${platform}/apps/${app.slug}`}
@@ -560,7 +560,7 @@ export default function OverviewPage() {
                         <TableCell className="max-w-[260px]">
                           <div className="flex items-center gap-2">
                             {c.iconUrl && (
-                              <img src={c.iconUrl} alt="" className="h-5 w-5 rounded shrink-0" />
+                              <img src={c.iconUrl} alt="" aria-hidden="true" className="h-5 w-5 rounded shrink-0" />
                             )}
                             <Link
                               href={`/${platform}/apps/${c.appSlug}`}

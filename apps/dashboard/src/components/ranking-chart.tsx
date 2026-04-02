@@ -170,7 +170,7 @@ export function RankingChart({ data, pageSize = 24 }: { data: RankingData[]; pag
                         }}
                       />
                       {meta?.iconUrl && (
-                        <img src={meta.iconUrl} alt="" className="h-5 w-5 rounded shrink-0" />
+                        <img src={meta.iconUrl} alt="" aria-hidden="true" className="h-5 w-5 rounded shrink-0" />
                       )}
                       {href ? (
                         <Link

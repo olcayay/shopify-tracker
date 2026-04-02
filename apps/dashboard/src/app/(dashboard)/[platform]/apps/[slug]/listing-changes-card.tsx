@@ -41,7 +41,7 @@ export function CompetitorUpdatesCard({
                 className="flex items-center gap-2 text-sm rounded-md p-1.5 -mx-1.5 hover:bg-muted/50 transition-colors"
               >
                 {g.competitorIcon ? (
-                  <img src={g.competitorIcon} alt="" className="h-5 w-5 rounded shrink-0" />
+                  <img src={g.competitorIcon} alt="" aria-hidden="true" className="h-5 w-5 rounded shrink-0" />
                 ) : (
                   <div className="h-5 w-5 rounded bg-muted shrink-0" />
                 )}

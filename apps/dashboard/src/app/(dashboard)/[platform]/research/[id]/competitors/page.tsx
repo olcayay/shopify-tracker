@@ -290,7 +290,7 @@ export default function ResearchCompetitorsPage() {
                           <div key={app.slug} className="flex items-center justify-between py-1.5 px-3 hover:bg-muted/50">
                             <div className="flex items-center gap-2 min-w-0">
                               {app.iconUrl ? (
-                                <img src={app.iconUrl} alt="" className="h-6 w-6 rounded" />
+                                <img src={app.iconUrl} alt="" aria-hidden="true" className="h-6 w-6 rounded" />
                               ) : (
                                 <div className="h-6 w-6 rounded bg-muted" />
                               )}
@@ -358,7 +358,7 @@ export default function ResearchCompetitorsPage() {
                         <TableCell className="max-w-[260px]">
                           <div className="flex items-center gap-2">
                             {comp.iconUrl ? (
-                              <img src={comp.iconUrl} alt="" className="h-7 w-7 rounded shrink-0" />
+                              <img src={comp.iconUrl} alt="" aria-hidden="true" className="h-7 w-7 rounded shrink-0" />
                             ) : (
                               <div className="h-7 w-7 rounded bg-muted shrink-0" />
                             )}

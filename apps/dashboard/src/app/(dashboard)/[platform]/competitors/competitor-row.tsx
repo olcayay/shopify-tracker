@@ -31,7 +31,7 @@ export function CompetitorRow({ c, myAppSlug, platform, isCol, canEdit, caps, fo
           {c.iconUrl && (
             <img
               src={c.iconUrl}
-              alt=""
+              alt="" aria-hidden="true"
               className="h-6 w-6 rounded shrink-0"
             />
           )}

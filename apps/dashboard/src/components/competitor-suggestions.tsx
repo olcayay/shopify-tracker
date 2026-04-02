@@ -310,7 +310,7 @@ export function CompetitorSuggestions({
                     {s.iconUrl ? (
                       <img
                         src={s.iconUrl}
-                        alt=""
+                        alt="" aria-hidden="true"
                         className="h-8 w-8 rounded shrink-0"
                       />
                     ) : (

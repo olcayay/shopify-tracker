@@ -67,7 +67,7 @@ export function CategoryRankingsCard({
                               #{leader.position}
                             </Badge>
                             {leader.icon_url ? (
-                              <img src={leader.icon_url} alt="" className="h-4 w-4 rounded shrink-0" />
+                              <img src={leader.icon_url} alt="" aria-hidden="true" className="h-4 w-4 rounded shrink-0" />
                             ) : (
                               <div className="h-4 w-4 rounded bg-muted shrink-0" />
                             )}

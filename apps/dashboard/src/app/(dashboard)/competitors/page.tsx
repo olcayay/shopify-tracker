@@ -270,7 +270,7 @@ function AppGroupRows({
           <div className="flex items-center gap-2">
             <ChevronIcon className="h-4 w-4 text-muted-foreground shrink-0" />
             {group.appIconUrl ? (
-              <img src={group.appIconUrl} alt="" className="w-5 h-5 rounded shrink-0" />
+              <img src={group.appIconUrl} alt="" aria-hidden="true" className="w-5 h-5 rounded shrink-0" />
             ) : (
               <AppWindow className="h-5 w-5 text-muted-foreground shrink-0" />
             )}
@@ -384,7 +384,7 @@ export default function CrossPlatformCompetitorsPage() {
               title={app.name}
             >
               {app.iconUrl && (
-                <img src={app.iconUrl} alt="" className="w-4 h-4 rounded shrink-0" />
+                <img src={app.iconUrl} alt="" aria-hidden="true" className="w-4 h-4 rounded shrink-0" />
               )}
               <span className="truncate max-w-[120px]">{app.name}</span>
             </Link>
@@ -422,7 +422,7 @@ export default function CrossPlatformCompetitorsPage() {
         <TableCell><PlatformBadgeCell platform={comp.platform} /></TableCell>
         <TableCell>
           <Link href={`/${comp.platform}/apps/${comp.slug}`} className="flex items-center gap-2 font-medium hover:underline">
-            {comp.iconUrl && <img src={comp.iconUrl} alt="" className="w-6 h-6 rounded" />}
+            {comp.iconUrl && <img src={comp.iconUrl} alt="" aria-hidden="true" className="w-6 h-6 rounded" />}
             {comp.name}
           </Link>
         </TableCell>
@@ -437,7 +437,7 @@ export default function CrossPlatformCompetitorsPage() {
       <TableRow key={comp.id}>
         <TableCell>
           <Link href={`/${comp.platform}/apps/${comp.slug}`} className="flex items-center gap-2 font-medium hover:underline">
-            {comp.iconUrl && <img src={comp.iconUrl} alt="" className="w-6 h-6 rounded" />}
+            {comp.iconUrl && <img src={comp.iconUrl} alt="" aria-hidden="true" className="w-6 h-6 rounded" />}
             {comp.name}
           </Link>
         </TableCell>
@@ -452,7 +452,7 @@ export default function CrossPlatformCompetitorsPage() {
       <TableRow key={comp.id}>
         <TableCell>
           <Link href={`/${comp.platform}/apps/${comp.slug}`} className="flex items-center gap-2 font-medium hover:underline">
-            {comp.iconUrl && <img src={comp.iconUrl} alt="" className="w-6 h-6 rounded" />}
+            {comp.iconUrl && <img src={comp.iconUrl} alt="" aria-hidden="true" className="w-6 h-6 rounded" />}
             {comp.name}
           </Link>
         </TableCell>
