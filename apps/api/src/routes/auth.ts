@@ -582,6 +582,7 @@ export const authRoutes: FastifyPluginAsync = async (app) => {
         role: users.role,
         isSystemAdmin: users.isSystemAdmin,
         emailDigestEnabled: users.emailDigestEnabled,
+        emailVerifiedAt: users.emailVerifiedAt,
         timezone: users.timezone,
         accountId: users.accountId,
         lastSeenAt: users.lastSeenAt,
@@ -674,6 +675,7 @@ export const authRoutes: FastifyPluginAsync = async (app) => {
         role: user.role,
         isSystemAdmin: user.isSystemAdmin,
         emailDigestEnabled: user.emailDigestEnabled,
+        emailVerifiedAt: user.emailVerifiedAt,
         timezone: user.timezone,
       },
       account: {
