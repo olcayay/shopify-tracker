@@ -65,7 +65,7 @@ export const accountMemberRoutes: FastifyPluginAsync = async (app) => {
 
       if (memberCount >= account.maxUsers) {
         return reply.code(403).send({
-          error: "User limit reached",
+          error: "User limit reached", code: "PLAN_LIMIT_REACHED", upgradeUrl: "/pricing",
           current: memberCount,
           max: account.maxUsers,
         });
@@ -136,7 +136,7 @@ export const accountMemberRoutes: FastifyPluginAsync = async (app) => {
 
       if (memberCount + pendingCount >= account.maxUsers) {
         return reply.code(403).send({
-          error: "User limit reached",
+          error: "User limit reached", code: "PLAN_LIMIT_REACHED", upgradeUrl: "/pricing",
           current: memberCount + pendingCount,
           max: account.maxUsers,
         });

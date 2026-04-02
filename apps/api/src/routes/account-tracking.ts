@@ -198,7 +198,7 @@ export const accountTrackingRoutes: FastifyPluginAsync = async (app) => {
 
       if (count >= account.maxTrackedApps) {
         return reply.code(403).send({
-          error: "Tracked apps limit reached",
+          error: "Tracked apps limit reached", code: "PLAN_LIMIT_REACHED", upgradeUrl: "/pricing",
           current: count,
           max: account.maxTrackedApps,
         });
@@ -411,7 +411,7 @@ export const accountTrackingRoutes: FastifyPluginAsync = async (app) => {
 
       if (count >= account.maxTrackedKeywords) {
         return reply.code(403).send({
-          error: "Tracked keywords limit reached",
+          error: "Tracked keywords limit reached", code: "PLAN_LIMIT_REACHED", upgradeUrl: "/pricing",
           current: count,
           max: account.maxTrackedKeywords,
         });
@@ -934,7 +934,7 @@ export const accountTrackingRoutes: FastifyPluginAsync = async (app) => {
 
       if (count >= account.maxCompetitorApps) {
         return reply.code(403).send({
-          error: "Competitor apps limit reached",
+          error: "Competitor apps limit reached", code: "PLAN_LIMIT_REACHED", upgradeUrl: "/pricing",
           current: count,
           max: account.maxCompetitorApps,
         });
@@ -1553,7 +1553,7 @@ export const accountTrackingRoutes: FastifyPluginAsync = async (app) => {
 
       if (count >= account.maxCompetitorApps) {
         return reply.code(403).send({
-          error: "Competitor apps limit reached",
+          error: "Competitor apps limit reached", code: "PLAN_LIMIT_REACHED", upgradeUrl: "/pricing",
           current: count,
           max: account.maxCompetitorApps,
         });
@@ -1933,7 +1933,7 @@ export const accountTrackingRoutes: FastifyPluginAsync = async (app) => {
 
       if (count >= account.maxTrackedKeywords) {
         return reply.code(403).send({
-          error: "Tracked keywords limit reached",
+          error: "Tracked keywords limit reached", code: "PLAN_LIMIT_REACHED", upgradeUrl: "/pricing",
           current: count,
           max: account.maxTrackedKeywords,
         });
