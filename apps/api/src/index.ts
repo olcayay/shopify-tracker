@@ -121,7 +121,12 @@ await app.register(cors, {
   origin: allowedOrigins,
   credentials: true,
   methods: ["GET", "HEAD", "PUT", "POST", "PATCH", "DELETE", "OPTIONS"],
+  maxAge: 86400, // Cache preflight responses for 24 hours
 });
+
+// Response compression (gzip/brotli)
+import compress from "@fastify/compress";
+await app.register(compress);
 
 app.decorate("db", db);
 
