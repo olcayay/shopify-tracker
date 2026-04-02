@@ -88,8 +88,15 @@ export async function processInstantEmail(
     dataSnapshot: payload,
   });
 
+  // Add List-Unsubscribe headers for informational (non-critical) emails
+  const CRITICAL_TYPES: InstantEmailJobType[] = ["email_password_reset", "email_verification", "email_2fa_code"];
+  const baseUrl = process.env.DASHBOARD_URL || process.env.NEXT_PUBLIC_BASE_URL || "https://appranks.io";
+  const emailHeaders = CRITICAL_TYPES.includes(type) ? undefined : {
+    "List-Unsubscribe": `<${baseUrl}/settings/email-preferences>`,
+  };
+
   try {
-    const { messageId } = await sendMail(to, subject, html);
+    const { messageId } = await sendMail(to, subject, html, emailHeaders);
     await updateEmailStatus(db, logId, "sent", { messageId });
     log.info("instant email sent", { jobId: job.id, type, to, messageId });
   } catch (err) {

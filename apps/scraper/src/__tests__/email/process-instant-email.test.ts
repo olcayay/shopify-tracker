@@ -126,10 +126,12 @@ describe("processInstantEmail", () => {
 
     // Sent email
     expect(mockSendMail).toHaveBeenCalledOnce();
+    // Password reset is a critical email — no List-Unsubscribe headers
     expect(mockSendMail).toHaveBeenCalledWith(
       "user@test.com",
       expect.any(String),
-      expect.stringContaining("<!DOCTYPE html>")
+      expect.stringContaining("<!DOCTYPE html>"),
+      undefined
     );
 
     // Updated status to sent
