@@ -22,6 +22,7 @@ import {
 } from "@/components/ui/table";
 import { Trash2, UserPlus, Mail } from "lucide-react";
 import { AccountUsageCards, USAGE_STAT_PRESETS } from "@/components/account-usage-cards";
+import { BillingCard } from "@/components/billing-card";
 
 export default function SettingsPage() {
   const { user, account, fetchWithAuth, refreshUser } = useAuth();
@@ -230,6 +231,9 @@ export default function SettingsPage() {
       </Card>
 
       {/* Profile */}
+      {/* Billing */}
+      <BillingCard />
+
       <Card>
         <CardHeader>
           <CardTitle>Profile</CardTitle>
