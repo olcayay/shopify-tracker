@@ -1,5 +1,5 @@
 import type { FastifyPluginAsync } from "fastify";
-import { eq, sql } from "drizzle-orm";
+import { eq, sql, desc } from "drizzle-orm";
 import {
   packages,
   accounts,
@@ -11,6 +11,7 @@ import {
   accountCompetitorApps,
   accountTrackedFeatures,
   researchProjects,
+  accountActivityLog,
 } from "@appranks/db";
 import { requireRole } from "../middleware/authorize.js";
 import { updateAccountSchema } from "../schemas/account.js";
@@ -199,4 +200,31 @@ export const accountInfoRoutes: FastifyPluginAsync = async (app) => {
       return updated;
     }
   );
+
+  // GET /api/account/activity — recent account activity feed
+  app.get("/activity", async (request, reply) => {
+    if (!request.user) return reply.code(401).send({ error: "Unauthorized" });
+
+    const { limit = "20", offset = "0" } = request.query as { limit?: string; offset?: string };
+    const pageSize = Math.min(100, Math.max(1, parseInt(limit, 10) || 20));
+    const skip = Math.max(0, parseInt(offset, 10) || 0);
+
+    const activities = await db
+      .select({
+        id: accountActivityLog.id,
+        action: accountActivityLog.action,
+        entityType: accountActivityLog.entityType,
+        entityId: accountActivityLog.entityId,
+        metadata: accountActivityLog.metadata,
+        createdAt: accountActivityLog.createdAt,
+        userEmail: sql<string>`(SELECT email FROM users WHERE id = ${accountActivityLog.userId})`,
+      })
+      .from(accountActivityLog)
+      .where(eq(accountActivityLog.accountId, request.user.accountId))
+      .orderBy(desc(accountActivityLog.createdAt))
+      .limit(pageSize)
+      .offset(skip);
+
+    return { activities };
+  });
 };

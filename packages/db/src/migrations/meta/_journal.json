@@ -764,6 +764,13 @@
       "when": 1778025600000,
       "tag": "0108_email_verification",
       "breakpoints": true
+    },
+    {
+      "idx": 109,
+      "version": "7",
+      "when": 1778112000000,
+      "tag": "0109_account_activity_log",
+      "breakpoints": true
     }
   ]
 }
