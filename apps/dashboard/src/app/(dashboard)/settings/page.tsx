@@ -25,6 +25,7 @@ import { Trash2, UserPlus, Mail } from "lucide-react";
 import { AccountUsageCards, USAGE_STAT_PRESETS } from "@/components/account-usage-cards";
 import { BillingCard } from "@/components/billing-card";
 import { DeleteAccountSection } from "@/components/delete-account-section";
+import { Download } from "lucide-react";
 
 export default function SettingsPage() {
   const { user, account, fetchWithAuth, refreshUser } = useAuth();
@@ -472,6 +473,44 @@ export default function SettingsPage() {
               <option value="Australia/Sydney">Australia/Sydney (UTC+10/+11)</option>
             </select>
           </div>
+        </CardContent>
+      </Card>
+
+      {/* Data & Privacy */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base flex items-center gap-2">
+            <Download className="h-4 w-4" />
+            Data & Privacy
+          </CardTitle>
+          <CardDescription>Download your personal data or delete your account</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={async () => {
+              const res = await fetchWithAuth("/api/auth/export");
+              if (res.ok) {
+                const blob = await res.blob();
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement("a");
+                a.href = url;
+                a.download = "appranks-data-export.json";
+                a.click();
+                URL.revokeObjectURL(url);
+                toast.success("Data export downloaded");
+              } else {
+                toast.error("Failed to download data");
+              }
+            }}
+          >
+            <Download className="h-3 w-3 mr-1.5" />
+            Download My Data
+          </Button>
+          <p className="text-xs text-muted-foreground mt-2">
+            Includes your profile, tracked apps, keywords, and account settings as JSON.
+          </p>
         </CardContent>
       </Card>
 
