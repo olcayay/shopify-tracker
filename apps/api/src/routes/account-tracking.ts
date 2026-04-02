@@ -334,6 +334,8 @@ export const accountTrackingRoutes: FastifyPluginAsync = async (app) => {
         await syncKeywordActiveFlag(db, k.keywordId);
       }
 
+      // Activity log (fire-and-forget)
+      import("../utils/activity-log.js").then(m => m.logActivity(db, request.user.accountId, request.user.userId, "app_untracked", "app", slug)).catch(() => {});
       return { message: "App removed from tracking" };
     }
   );
@@ -509,6 +511,7 @@ export const accountTrackingRoutes: FastifyPluginAsync = async (app) => {
 
       await syncKeywordActiveFlag(db, keywordId);
 
+      import("../utils/activity-log.js").then(m => m.logActivity(db, request.user.accountId, request.user.userId, "keyword_untracked", "keyword", String(keywordId))).catch(() => {});
       return { message: "Keyword removed from tracking" };
     }
   );
@@ -1040,6 +1043,7 @@ export const accountTrackingRoutes: FastifyPluginAsync = async (app) => {
 
       await syncAppTrackedFlag(db, compAppRow.id);
 
+      import("../utils/activity-log.js").then(m => m.logActivity(db, request.user.accountId, request.user.userId, "competitor_removed", "competitor", String(0))).catch(() => {});
       return { message: "Competitor removed" };
     }
   );
@@ -1658,6 +1662,7 @@ export const accountTrackingRoutes: FastifyPluginAsync = async (app) => {
 
       await syncAppTrackedFlag(db, delCompAppRow.id);
 
+      import("../utils/activity-log.js").then(m => m.logActivity(db, request.user.accountId, request.user.userId, "competitor_removed", "competitor", String(0))).catch(() => {});
       return { message: "Competitor removed" };
     }
   );
@@ -2026,6 +2031,7 @@ export const accountTrackingRoutes: FastifyPluginAsync = async (app) => {
 
       await syncKeywordActiveFlag(db, keywordId);
 
+      import("../utils/activity-log.js").then(m => m.logActivity(db, request.user.accountId, request.user.userId, "keyword_untracked", "keyword", String(keywordId))).catch(() => {});
       return { message: "Keyword removed from tracking" };
     }
   );
