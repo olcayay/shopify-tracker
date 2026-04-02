@@ -2,8 +2,8 @@
 
 > Created: 2026-04-01 | Updated: 2026-04-02
 > Target: Production-ready public launch
-> Progress: **ALL code tasks complete** | Session 8: +7 tasks (PLA-595/596/597/599/601/604/605)
-> Remaining 4 blocked by external services: Stripe keys (PLA-598), Sentry token (PLA-600), PostHog setup (PLA-602), prod SSH (PLA-603)
+> Progress: **9 new code tasks found** (PLA-606 to PLA-614) | Session 9 deep scan
+> Blocked by external: Stripe keys (PLA-598), Sentry token (PLA-600), PostHog (PLA-602), prod SSH (PLA-603)
 
 ---
 
@@ -28,6 +28,7 @@ Core auth flows must work flawlessly end-to-end.
   - [ ] Suspended account shows clear error
   - [ ] Rate limiting works (5 attempts / 15 min)
   - [ ] "Remember me" / session persistence works as expected
+  - [ ] Login preserves returnUrl after session expiry → [PLA-606](https://linear.app/plan-b-side-projects/issue/PLA-606) `Todo`
 
 - [x] **Password reset flow** → [PLA-541](https://linear.app/plan-b-side-projects/issue/PLA-541) `In Review` ✅
   - [x] API endpoints implemented (`POST /forgot-password`, `POST /reset-password`)
@@ -105,8 +106,8 @@ Billing system for subscription management.
 - [ ] **Billing enforcement** → [PLA-598](https://linear.app/plan-b-side-projects/issue/PLA-598) `Todo`
   - [x] Account limits enforced based on active plan (PLA-591)
   - [x] Upgrade prompts when limits reached (PLA-591)
-  - [ ] Graceful handling of failed payments (grace period?)
-  - [ ] Downgrade flow — what happens to excess data?
+  - [ ] Graceful handling of failed payments (grace period?) → [PLA-611](https://linear.app/plan-b-side-projects/issue/PLA-611) `Todo`
+  - [ ] Downgrade flow — what happens to excess data? → [PLA-612](https://linear.app/plan-b-side-projects/issue/PLA-612) `Todo`
   - [ ] Invoice generation and email delivery
 
 ### 5. Platform Scrapers (minimum 5 stable)
@@ -133,7 +134,7 @@ At least 5 platforms must scrape reliably in production.
   - [x] Retry logic with exponential backoff
   - [x] Timeout handling (no indefinite hangs)
   - [x] Graceful degradation on partial failure (1 platform failing doesn't affect others)
-  - [ ] Stale data detection — alert if a platform hasn't updated in X hours
+  - [ ] Stale data detection — alert if a platform hasn't updated in X hours → [PLA-607](https://linear.app/plan-b-side-projects/issue/PLA-607) `Todo`
   - [x] Browser pool management (for Playwright-dependent platforms)
   - [ ] Scraper scheduling spread across time windows (not all at once)
 
@@ -300,7 +301,7 @@ Public-facing pages that drive signups.
   - [x] Pricing page → [PLA-552](https://linear.app/plan-b-side-projects/issue/PLA-552) `In Review` ✅
   - [x] Custom 404 page → [PLA-553](https://linear.app/plan-b-side-projects/issue/PLA-553) `In Review` ✅
   - [ ] Blog / content marketing section (optional for launch)
-  - [ ] Changelog / what's new page (optional)
+  - [ ] Changelog / what's new page → [PLA-614](https://linear.app/plan-b-side-projects/issue/PLA-614) `Todo`
 
 - [x] **SEO** → [PLA-549](https://linear.app/plan-b-side-projects/issue/PLA-549) `In Review` ✅
   - [x] Root layout: `metadataBase`, Open Graph, Twitter Card metadata
@@ -331,7 +332,7 @@ Production environment hardened and documented.
   - [x] Applied to both API (onRequest hook) and Dashboard (next.config.ts headers)
 
 - [ ] **Docker & Coolify**
-  - [ ] All containers health-checked → [PLA-605](https://linear.app/plan-b-side-projects/issue/PLA-605) `Todo` (code: HEALTHCHECK in Dockerfiles)
+  - [x] All containers health-checked → [PLA-605](https://linear.app/plan-b-side-projects/issue/PLA-605) `In Review` ✅
   - [x] Restart policies configured (unless-stopped) ✅
   - [ ] 🔧 Resource limits set (CPU, memory per container) — **manual Coolify config**
   - [ ] 🔧 Zero-downtime deployment strategy — **manual Coolify config**
@@ -379,6 +380,32 @@ Production environment hardened and documented.
   - [x] Onboarding wizard → [PLA-565](https://linear.app/plan-b-side-projects/issue/PLA-565) `In Review` ✅
   - [x] Account activity feed → [PLA-566](https://linear.app/plan-b-side-projects/issue/PLA-566) `In Review` ✅
 
+### New Tasks (Batch 4 — 2026-04-03)
+
+#### Critical Fixes
+
+| Task | Priority | Description |
+|------|----------|-------------|
+| [PLA-610](https://linear.app/plan-b-side-projects/issue/PLA-610) | 🔴 Urgent | Fix dashboard build — email-templates prerender failure |
+| [PLA-606](https://linear.app/plan-b-side-projects/issue/PLA-606) | 🟠 High | Login returnUrl redirect after session expiry |
+| [PLA-608](https://linear.app/plan-b-side-projects/issue/PLA-608) | 🟠 High | Admin sidebar links for Audit Logs + DLQ pages |
+
+#### Billing & Payments
+
+| Task | Priority | Description |
+|------|----------|-------------|
+| [PLA-609](https://linear.app/plan-b-side-projects/issue/PLA-609) | 🟡 Medium | Billing section in settings page (plan status + portal link) |
+| [PLA-611](https://linear.app/plan-b-side-projects/issue/PLA-611) | 🟡 Medium | Payment grace period (7 days before restricting) |
+| [PLA-612](https://linear.app/plan-b-side-projects/issue/PLA-612) | 🟡 Medium | Subscription downgrade handling (over-limit warnings) |
+
+#### Quality & Polish
+
+| Task | Priority | Description |
+|------|----------|-------------|
+| [PLA-607](https://linear.app/plan-b-side-projects/issue/PLA-607) | 🟡 Medium | Wire stale scraper detection to alerting system |
+| [PLA-613](https://linear.app/plan-b-side-projects/issue/PLA-613) | 🟡 Medium | Add List-Unsubscribe headers to transactional emails |
+| [PLA-614](https://linear.app/plan-b-side-projects/issue/PLA-614) | 🔵 Low | Create changelog page for product updates |
+
 ---
 
 ## Summary
@@ -387,9 +414,9 @@ Production environment hardened and documented.
 |----------|----------|--------|--------|--------|
 | P0 | Password Reset | ✅ Done | [PLA-541](https://linear.app/plan-b-side-projects/issue/PLA-541) | ~~S~~ Done |
 | P0 | Login Alert Email | ✅ Done | [PLA-557](https://linear.app/plan-b-side-projects/issue/PLA-557) | ~~S~~ Done |
-| P0 | Auth E2E Tests | ⏳ Todo | [PLA-595](https://linear.app/plan-b-side-projects/issue/PLA-595) | M |
-| P0 | Team Invitations E2E | ⏳ Todo | [PLA-596](https://linear.app/plan-b-side-projects/issue/PLA-596) | M |
-| P0 | Email Templates + Queue | ⏳ Todo | [PLA-597](https://linear.app/plan-b-side-projects/issue/PLA-597) | S |
+| P0 | Auth E2E Tests | ✅ Done | [PLA-595](https://linear.app/plan-b-side-projects/issue/PLA-595) | ~~M~~ Done |
+| P0 | Team Invitations E2E | ✅ Done | [PLA-596](https://linear.app/plan-b-side-projects/issue/PLA-596) | ~~M~~ Done |
+| P0 | Email Templates + Queue | ✅ Done | [PLA-597](https://linear.app/plan-b-side-projects/issue/PLA-597) | ~~S~~ Done |
 | P0 | Email Delivery (SMTP/DNS) | ⚠️ SMTP + DNS needed | 🔧 Manual | S |
 | P0 | Email Verification | ✅ Done | [PLA-556](https://linear.app/plan-b-side-projects/issue/PLA-556) | ~~M~~ Done |
 | P0 | Account Deletion/GDPR | ✅ Done | [PLA-558](https://linear.app/plan-b-side-projects/issue/PLA-558) | ~~M~~ Done |
@@ -397,14 +424,14 @@ Production environment hardened and documented.
 | P0 | Stripe Checkout + Webhooks | ⏳ Todo | [PLA-598](https://linear.app/plan-b-side-projects/issue/PLA-598) | M |
 | P0 | Platform Scrapers (5+) | ⚠️ Need smoke testing | [PLA-542](https://linear.app/plan-b-side-projects/issue/PLA-542) `In Review` ✅ | M |
 | P1 | Sentry (frontend) | ✅ Done | [PLA-543](https://linear.app/plan-b-side-projects/issue/PLA-543) | ~~M~~ Done |
-| P1 | Scraper Resilience | ⏳ Todo | [PLA-599](https://linear.app/plan-b-side-projects/issue/PLA-599) | M |
+| P1 | Scraper Resilience | ✅ Done | [PLA-599](https://linear.app/plan-b-side-projects/issue/PLA-599) | ~~M~~ Done |
 | P1 | Sentry Source Maps | ⏳ Todo | [PLA-600](https://linear.app/plan-b-side-projects/issue/PLA-600) | S |
-| P1 | Alerting System | ⏳ Todo | [PLA-601](https://linear.app/plan-b-side-projects/issue/PLA-601) | M |
+| P1 | Alerting System | ✅ Done | [PLA-601](https://linear.app/plan-b-side-projects/issue/PLA-601) | ~~M~~ Done |
 | P1 | Session Recording + Analytics | ⏳ Todo | [PLA-602](https://linear.app/plan-b-side-projects/issue/PLA-602) | L |
 | P1 | DB Backup Verification | ⏳ Todo | [PLA-603](https://linear.app/plan-b-side-projects/issue/PLA-603) | S |
 | P1 | Expired Data Cleanup | ✅ Done | [PLA-551](https://linear.app/plan-b-side-projects/issue/PLA-551) | ~~S~~ Done |
 | P2 | Redis Rate Limiting | ✅ Done | [PLA-544](https://linear.app/plan-b-side-projects/issue/PLA-544) | ~~M~~ Done |
-| P2 | Invitation Rate Limit | ⏳ Todo | [PLA-604](https://linear.app/plan-b-side-projects/issue/PLA-604) | S |
+| P2 | Invitation Rate Limit | ✅ Done | [PLA-604](https://linear.app/plan-b-side-projects/issue/PLA-604) | ~~S~~ Done |
 | P2 | Rate Limit Headers | ✅ Done | [PLA-561](https://linear.app/plan-b-side-projects/issue/PLA-561) | ~~S~~ Done |
 | P2 | API Caching + ETag | ✅ Done | [PLA-545](https://linear.app/plan-b-side-projects/issue/PLA-545) | ~~S~~ Done |
 | P2 | DB Query Optimization | ✅ 8 indexes added | [PLA-546](https://linear.app/plan-b-side-projects/issue/PLA-546) `In Review` | M |
@@ -448,7 +475,16 @@ Production environment hardened and documented.
 | P4 | Date Range Picker | ✅ Done | [PLA-575](https://linear.app/plan-b-side-projects/issue/PLA-575) | ~~S~~ Done |
 | P4 | Onboarding Wizard | ✅ Done | [PLA-565](https://linear.app/plan-b-side-projects/issue/PLA-565) | ~~M~~ Done |
 | P4 | Activity Feed | ✅ Done | [PLA-566](https://linear.app/plan-b-side-projects/issue/PLA-566) | ~~M~~ Done |
-| P3 | Docker HEALTHCHECK | ⏳ Todo | [PLA-605](https://linear.app/plan-b-side-projects/issue/PLA-605) | S |
+| P3 | Docker HEALTHCHECK | ✅ Done | [PLA-605](https://linear.app/plan-b-side-projects/issue/PLA-605) | ~~S~~ Done |
+| P0 | Build Fix (prerender) | ⏳ Todo | [PLA-610](https://linear.app/plan-b-side-projects/issue/PLA-610) | S |
+| P0 | Login returnUrl | ⏳ Todo | [PLA-606](https://linear.app/plan-b-side-projects/issue/PLA-606) | S |
+| P0 | Admin Nav Links | ⏳ Todo | [PLA-608](https://linear.app/plan-b-side-projects/issue/PLA-608) | S |
+| P1 | Settings Billing UI | ⏳ Todo | [PLA-609](https://linear.app/plan-b-side-projects/issue/PLA-609) | S |
+| P1 | Payment Grace Period | ⏳ Todo | [PLA-611](https://linear.app/plan-b-side-projects/issue/PLA-611) | M |
+| P1 | Downgrade Handling | ⏳ Todo | [PLA-612](https://linear.app/plan-b-side-projects/issue/PLA-612) | M |
+| P2 | Stale Data Alerts | ⏳ Todo | [PLA-607](https://linear.app/plan-b-side-projects/issue/PLA-607) | S |
+| P2 | Email Unsubscribe Headers | ⏳ Todo | [PLA-613](https://linear.app/plan-b-side-projects/issue/PLA-613) | S |
+| P3 | Changelog Page | ⏳ Todo | [PLA-614](https://linear.app/plan-b-side-projects/issue/PLA-614) | S |
 | P3 | Landing/Marketing | ⚠️ Pricing done, blog optional | 🔧 Manual | S |
 | P3 | Deployment/Infra | ⚠️ Needs hardening | 🔧 Manual | S |
 
