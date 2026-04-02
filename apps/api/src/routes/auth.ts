@@ -785,4 +785,87 @@ export const authRoutes: FastifyPluginAsync = async (app) => {
 
     return updated;
   });
+
+  // GET /api/auth/export — export user's personal data (GDPR)
+  app.get("/export", async (request, reply) => {
+    if (!request.user) return reply.code(401).send({ error: "Unauthorized" });
+
+    const [user] = await db.select().from(users).where(eq(users.id, request.user.userId));
+    if (!user) return reply.code(404).send({ error: "User not found" });
+
+    const [account] = await db.select().from(accounts).where(eq(accounts.id, user.accountId));
+
+    const trackedApps = await db
+      .select({ appId: accountTrackedApps.appId, createdAt: accountTrackedApps.createdAt })
+      .from(accountTrackedApps)
+      .where(eq(accountTrackedApps.accountId, user.accountId));
+
+    const trackedKeywords = await db
+      .select({ keywordId: accountTrackedKeywords.keywordId, createdAt: accountTrackedKeywords.createdAt })
+      .from(accountTrackedKeywords)
+      .where(eq(accountTrackedKeywords.accountId, user.accountId));
+
+    reply.header("content-type", "application/json");
+    reply.header("content-disposition", 'attachment; filename="appranks-data-export.json"');
+
+    return {
+      exportedAt: new Date().toISOString(),
+      user: {
+        email: user.email,
+        name: user.name,
+        role: user.role,
+        timezone: user.timezone,
+        emailDigestEnabled: user.emailDigestEnabled,
+        createdAt: user.createdAt,
+      },
+      account: {
+        name: account.name,
+        company: account.company,
+      },
+      trackedApps,
+      trackedKeywords,
+    };
+  });
+
+  // DELETE /api/auth/me — delete account (soft delete, anonymize PII)
+  app.delete("/me", async (request, reply) => {
+    if (!request.user) return reply.code(401).send({ error: "Unauthorized" });
+    if (request.user.role !== "owner") {
+      return reply.code(403).send({ error: "Only account owners can delete the account" });
+    }
+
+    const { password } = (request.body as any) || {};
+    if (!password) return reply.code(400).send({ error: "Password confirmation required" });
+
+    const [user] = await db.select().from(users).where(eq(users.id, request.user.userId));
+    if (!user) return reply.code(404).send({ error: "User not found" });
+
+    const valid = await bcrypt.compare(password, user.passwordHash);
+    if (!valid) return reply.code(403).send({ error: "Incorrect password" });
+
+    const deletedId = crypto.randomUUID();
+
+    // Anonymize user PII
+    await db
+      .update(users)
+      .set({
+        email: `deleted-${deletedId}@deleted`,
+        name: "Deleted User",
+        passwordHash: "DELETED",
+        updatedAt: new Date(),
+      })
+      .where(eq(users.id, user.id));
+
+    // Suspend the account
+    await db
+      .update(accounts)
+      .set({ isSuspended: true, updatedAt: new Date() })
+      .where(eq(accounts.id, user.accountId));
+
+    // Revoke all sessions
+    await revokeAllTokensForUser(user.id);
+    await db.delete(refreshTokens).where(eq(refreshTokens.userId, user.id));
+
+    return { message: "Account deleted. Your data has been anonymized." };
+  });
 };
