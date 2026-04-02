@@ -24,6 +24,7 @@ import {
 import { Trash2, UserPlus, Mail } from "lucide-react";
 import { AccountUsageCards, USAGE_STAT_PRESETS } from "@/components/account-usage-cards";
 import { BillingCard } from "@/components/billing-card";
+import { DeleteAccountSection } from "@/components/delete-account-section";
 
 export default function SettingsPage() {
   const { user, account, fetchWithAuth, refreshUser } = useAuth();
@@ -473,6 +474,9 @@ export default function SettingsPage() {
           </div>
         </CardContent>
       </Card>
+
+      {/* Danger Zone — Delete Account */}
+      <DeleteAccountSection />
     </div>
   );
 }
