@@ -19,21 +19,21 @@ class InMemoryStore {
     this.cleanupTimer.unref();
   }
 
-  check(key: string, maxAttempts: number, windowMs: number): { allowed: true } | { allowed: false; retryAfterMs: number } {
+  check(key: string, maxAttempts: number, windowMs: number): RateLimitResult {
     const now = Date.now();
     const entry = this.store.get(key);
 
     if (!entry || now >= entry.resetAt) {
       this.store.set(key, { count: 1, resetAt: now + windowMs });
-      return { allowed: true };
+      return { allowed: true, remaining: maxAttempts - 1, resetAt: now + windowMs, limit: maxAttempts };
     }
 
     if (entry.count >= maxAttempts) {
-      return { allowed: false, retryAfterMs: entry.resetAt - now };
+      return { allowed: false, retryAfterMs: entry.resetAt - now, remaining: 0, resetAt: entry.resetAt, limit: maxAttempts };
     }
 
     entry.count++;
-    return { allowed: true };
+    return { allowed: true, remaining: maxAttempts - entry.count, resetAt: entry.resetAt, limit: maxAttempts };
   }
 
   clear(prefix?: string) {
@@ -97,7 +97,9 @@ export function _resetRateLimitRedis(mock?: Redis | null): void {
 // RateLimiter (Redis-backed with in-memory fallback)
 // ---------------------------------------------------------------------------
 
-type RateLimitResult = { allowed: true } | { allowed: false; retryAfterMs: number };
+export type RateLimitResult =
+  | { allowed: true; remaining: number; resetAt: number; limit: number }
+  | { allowed: false; retryAfterMs: number; remaining: number; resetAt: number; limit: number };
 
 const fallbackStore = new InMemoryStore();
 
@@ -174,12 +176,13 @@ export class RateLimiter {
         await redis.expire(redisKey, ttlSeconds);
       }
 
+      const resetAtMs = Date.now() + ttlSeconds * 1000;
       if (count > this.maxAttempts) {
         const ttl = await redis.ttl(redisKey);
-        return { allowed: false, retryAfterMs: Math.max(ttl * 1000, 1000) };
+        return { allowed: false, retryAfterMs: Math.max(ttl * 1000, 1000), remaining: 0, resetAt: resetAtMs, limit: this.maxAttempts };
       }
 
-      return { allowed: true };
+      return { allowed: true, remaining: this.maxAttempts - count, resetAt: resetAtMs, limit: this.maxAttempts };
     } catch {
       // Redis failed — fall back to in-memory
       return fallbackStore.check(

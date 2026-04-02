@@ -177,6 +177,11 @@ app.addHook("onRequest", async (request, reply) => {
     result = unauthenticatedLimiter.check(request.ip);
   }
 
+  // Set rate limit headers on every response
+  reply.header("x-ratelimit-limit", result.limit.toString());
+  reply.header("x-ratelimit-remaining", Math.max(0, result.remaining).toString());
+  reply.header("x-ratelimit-reset", Math.ceil(result.resetAt / 1000).toString());
+
   if (!result.allowed) {
     reply.header("Retry-After", Math.ceil(result.retryAfterMs / 1000).toString());
     return reply.code(429).send({ error: "Too many requests. Please try again later." });
