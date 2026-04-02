@@ -101,7 +101,10 @@ if (adminEmail && adminPassword) {
   }
 }
 
-const app = Fastify({ logger: true });
+const app = Fastify({
+  logger: true,
+  requestTimeout: 30_000, // 30s — matches DB statement timeout
+});
 
 const allowedOrigins = [
   "https://appranks.io",
@@ -483,3 +486,19 @@ const poolMonitorInterval = setInterval(async () => {
 
 // Don't let the interval keep the process alive if it's shutting down
 poolMonitorInterval.unref();
+
+// Graceful shutdown — finish in-flight requests, close connections
+async function shutdown(signal: string) {
+  log.info(`${signal} received, starting graceful shutdown...`);
+  clearInterval(poolMonitorInterval);
+  try {
+    await app.close(); // stops accepting, waits for in-flight requests
+    log.info("Server closed gracefully");
+  } catch (err) {
+    log.error("Error during shutdown", { error: String(err) });
+  }
+  process.exit(0);
+}
+
+process.on("SIGTERM", () => shutdown("SIGTERM"));
+process.on("SIGINT", () => shutdown("SIGINT"));
