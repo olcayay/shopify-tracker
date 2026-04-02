@@ -1,16 +1,9 @@
 "use client";
 
-import { useRef, useEffect, useState } from "react";
-import { FixedSizeList, type ListChildComponentProps } from "react-window";
-
 interface VirtualizedListProps<T> {
   items: T[];
-  /** Height of each row in pixels */
-  rowHeight: number;
-  /** Max visible height before scrolling (default: 600) */
+  /** Max visible height before scrolling (default: 600px) */
   maxHeight?: number;
-  /** Minimum items before virtualization kicks in (default: 50) */
-  threshold?: number;
   /** Render function for each item */
   renderItem: (item: T, index: number) => React.ReactNode;
   /** Optional className for the container */
@@ -18,67 +11,22 @@ interface VirtualizedListProps<T> {
 }
 
 /**
- * Virtualized list that only renders visible items.
- * Falls back to regular rendering when item count < threshold.
- *
- * Usage:
- * ```tsx
- * <VirtualizedList
- *   items={apps}
- *   rowHeight={48}
- *   renderItem={(app, i) => <AppRow key={app.id} app={app} />}
- * />
- * ```
+ * Scrollable list container with a max height.
+ * For large lists, limits the visible area and enables scrolling.
+ * CSS `content-visibility: auto` enables browser-native lazy rendering.
  */
 export function VirtualizedList<T>({
   items,
-  rowHeight,
   maxHeight = 600,
-  threshold = 50,
   renderItem,
   className,
 }: VirtualizedListProps<T>) {
-  const containerRef = useRef<HTMLDivElement>(null);
-  const [width, setWidth] = useState(0);
-
-  useEffect(() => {
-    if (!containerRef.current) return;
-    const observer = new ResizeObserver((entries) => {
-      for (const entry of entries) {
-        setWidth(entry.contentRect.width);
-      }
-    });
-    observer.observe(containerRef.current);
-    return () => observer.disconnect();
-  }, []);
-
-  // Below threshold: render normally (no virtualization overhead)
-  if (items.length < threshold) {
-    return (
-      <div className={className}>
-        {items.map((item, i) => renderItem(item, i))}
-      </div>
-    );
-  }
-
-  const listHeight = Math.min(items.length * rowHeight, maxHeight);
-
-  const Row = ({ index, style }: ListChildComponentProps) => (
-    <div style={style}>{renderItem(items[index], index)}</div>
-  );
-
   return (
-    <div ref={containerRef} className={className}>
-      {width > 0 && (
-        <FixedSizeList
-          height={listHeight}
-          itemCount={items.length}
-          itemSize={rowHeight}
-          width={width}
-        >
-          {Row}
-        </FixedSizeList>
-      )}
+    <div
+      className={className}
+      style={{ maxHeight, overflowY: "auto", contentVisibility: "auto" } as React.CSSProperties}
+    >
+      {items.map((item, i) => renderItem(item, i))}
     </div>
   );
 }

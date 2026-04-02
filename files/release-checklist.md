@@ -2,7 +2,7 @@
 
 > Created: 2026-04-01 | Updated: 2026-04-02
 > Target: Production-ready public launch
-> Progress: **43/49 total tasks done** | Session 5: +6 tasks completed
+> Progress: **49/49 code tasks done** | Only 3 runtime tasks remain (smoke tests, DB optimization, bundle analysis)
 
 ---
 
@@ -369,10 +369,13 @@ Production environment hardened and documented.
   - [x] Error response standardization → [PLA-588](https://linear.app/plan-b-side-projects/issue/PLA-588) `In Review` ✅
   - [x] System health endpoint (Redis, queues, DLQ) → [PLA-577](https://linear.app/plan-b-side-projects/issue/PLA-577) `In Review` ✅
 
-- [ ] **Remaining (Backlog)**
-  - [ ] Command palette (Cmd+K) → [PLA-564](https://linear.app/plan-b-side-projects/issue/PLA-564) `Todo`
-  - [ ] Onboarding wizard → [PLA-565](https://linear.app/plan-b-side-projects/issue/PLA-565) `Todo`
-  - [ ] Account activity feed → [PLA-566](https://linear.app/plan-b-side-projects/issue/PLA-566) `Todo`
+- [x] **Session 6 completions**
+  - [x] AppIcon → next/image migration → [PLA-579](https://linear.app/plan-b-side-projects/issue/PLA-579) `In Review` ✅
+  - [x] Command palette (Cmd+K) → [PLA-564](https://linear.app/plan-b-side-projects/issue/PLA-564) `In Review` ✅
+  - [x] VirtualizedList (react-window) → [PLA-574](https://linear.app/plan-b-side-projects/issue/PLA-574) `In Review` ✅
+  - [x] DateRangePicker component → [PLA-575](https://linear.app/plan-b-side-projects/issue/PLA-575) `In Review` ✅
+  - [x] Onboarding wizard → [PLA-565](https://linear.app/plan-b-side-projects/issue/PLA-565) `In Review` ✅
+  - [x] Account activity feed → [PLA-566](https://linear.app/plan-b-side-projects/issue/PLA-566) `In Review` ✅
 
 ---
 
@@ -431,6 +434,12 @@ Production environment hardened and documented.
 | P3 | Email Preview/Test | ✅ Done | [PLA-581](https://linear.app/plan-b-side-projects/issue/PLA-581) | ~~S~~ Done |
 | P3 | Backup Monitoring | ✅ Done | [PLA-592](https://linear.app/plan-b-side-projects/issue/PLA-592) | ~~S~~ Done |
 | P3 | Scraper Stats API | ✅ Done | [PLA-584](https://linear.app/plan-b-side-projects/issue/PLA-584) | ~~S~~ Done |
+| P4 | AppIcon next/image | ✅ Done | [PLA-579](https://linear.app/plan-b-side-projects/issue/PLA-579) | ~~S~~ Done |
+| P4 | Command Palette | ✅ Done | [PLA-564](https://linear.app/plan-b-side-projects/issue/PLA-564) | ~~M~~ Done |
+| P4 | List Virtualization | ✅ Done | [PLA-574](https://linear.app/plan-b-side-projects/issue/PLA-574) | ~~S~~ Done |
+| P4 | Date Range Picker | ✅ Done | [PLA-575](https://linear.app/plan-b-side-projects/issue/PLA-575) | ~~S~~ Done |
+| P4 | Onboarding Wizard | ✅ Done | [PLA-565](https://linear.app/plan-b-side-projects/issue/PLA-565) | ~~M~~ Done |
+| P4 | Activity Feed | ✅ Done | [PLA-566](https://linear.app/plan-b-side-projects/issue/PLA-566) | ~~M~~ Done |
 | P3 | Landing/Marketing | ⚠️ Pricing done, blog optional | 🔧 Manual | S |
 | P3 | Deployment/Infra | ⚠️ Needs hardening | 🔧 Manual | S |
 
@@ -512,8 +521,8 @@ Production environment hardened and documented.
 | [PLA-569](https://linear.app/plan-b-side-projects/issue/PLA-569) | 🟡 Medium | Toast notification system for action feedback | ✅ Done |
 | [PLA-570](https://linear.app/plan-b-side-projects/issue/PLA-570) | 🔵 Low | Breadcrumb navigation on nested pages | ✅ Already exists |
 | [PLA-571](https://linear.app/plan-b-side-projects/issue/PLA-571) | 🔵 Low | Empty state illustrations for list pages | ✅ Component exists |
-| [PLA-574](https://linear.app/plan-b-side-projects/issue/PLA-574) | 🔵 Low | List virtualization (react-window) for large tables | ⏳ Todo |
-| [PLA-575](https://linear.app/plan-b-side-projects/issue/PLA-575) | 🔵 Low | Date range picker for historical charts | ⏳ Todo |
+| [PLA-574](https://linear.app/plan-b-side-projects/issue/PLA-574) | 🔵 Low | List virtualization (react-window) for large tables | ✅ Done |
+| [PLA-575](https://linear.app/plan-b-side-projects/issue/PLA-575) | 🔵 Low | Date range picker for historical charts | ✅ Done |
 | [PLA-576](https://linear.app/plan-b-side-projects/issue/PLA-576) | 🟡 Medium | Responsive table scrolling on mobile | ✅ Done |
 | [PLA-580](https://linear.app/plan-b-side-projects/issue/PLA-580) | 🔵 Low | Table sort/filter persistence in URL params | ✅ Done |
 | [PLA-589](https://linear.app/plan-b-side-projects/issue/PLA-589) | 🔵 Low | App icon broken image fallback component | ✅ Already exists |
@@ -536,7 +545,7 @@ Production environment hardened and documented.
 
 | Task | Priority | Description | Status |
 |------|----------|-------------|--------|
-| [PLA-579](https://linear.app/plan-b-side-projects/issue/PLA-579) | 🔵 Low | Migrate app icons to next/image (lazy load) | ⏳ Todo |
+| [PLA-579](https://linear.app/plan-b-side-projects/issue/PLA-579) | 🔵 Low | Migrate app icons to next/image (lazy load) | ✅ Done |
 
 #### Documentation
 
