@@ -844,6 +844,21 @@ export const systemAdminRoutes: FastifyPluginAsync = async (app) => {
       }
     }
 
+    // Fire alert when stale platforms detected
+    if (stale > 0) {
+      import("../utils/alerts.js").then(({ fireAlert }) => {
+        const stalePlatforms = matrix
+          .filter((row: any) => Object.values(row.checks).some((c: any) => c?.status === "stale" || c?.status === "never_ran"))
+          .map((row: any) => row.platform);
+        fireAlert({
+          severity: "warning",
+          event: "scraper_stale_data",
+          message: `${stale} scraper check(s) have stale data`,
+          metadata: { staleCount: stale, platforms: stalePlatforms },
+        });
+      }).catch(() => {});
+    }
+
     return {
       matrix,
       summary: { healthy, failed, stale, running, partial, totalScheduled },
