@@ -1,7 +1,8 @@
 # AppRanks.io Pre-Release Checklist
 
-> Created: 2026-04-01
+> Created: 2026-04-01 | Updated: 2026-04-02
 > Target: Production-ready public launch
+> Progress: **6/9 auto-implementable tasks done** — 3 remaining need runtime/manual work
 
 ---
 
@@ -27,13 +28,13 @@ Core auth flows must work flawlessly end-to-end.
   - [ ] Rate limiting works (5 attempts / 15 min)
   - [ ] "Remember me" / session persistence works as expected
 
-- [x] **Password reset flow** → [PLA-541](https://linear.app/plan-b-side-projects/issue/PLA-541) `In Review`
-  - [ ] ⚠️ **API endpoint needs implementation** — email template exists, endpoint missing
-  - [ ] "Forgot password" link on login page
-  - [ ] Reset email sent with secure token (1-hour expiry)
-  - [ ] Reset page validates token and allows new password
-  - [ ] Old sessions invalidated after password change
-  - [ ] Rate limiting on reset requests
+- [x] **Password reset flow** → [PLA-541](https://linear.app/plan-b-side-projects/issue/PLA-541) `In Review` ✅
+  - [x] API endpoints implemented (`POST /forgot-password`, `POST /reset-password`)
+  - [x] "Forgot password?" link on login page
+  - [x] Reset email sent with secure token (SHA256 hash, 1-hour expiry)
+  - [x] Reset page validates token and allows new password (`/reset-password?token=xxx`)
+  - [x] Old sessions invalidated after password change (revokeAllTokensForUser)
+  - [x] Rate limiting on reset requests (3/hour per IP)
 
 - [ ] **Logout flow**
   - [ ] Access token blacklisted via Redis
@@ -146,10 +147,12 @@ Visibility into production issues.
   - [ ] Source maps uploaded for readable stack traces
   - [ ] Alert rules configured (email/Slack on new errors)
 
-- [x] **Sentry (frontend)** → [PLA-543](https://linear.app/plan-b-side-projects/issue/PLA-543) `In Review`
-  - [ ] ⚠️ Add `@sentry/nextjs` to dashboard app
-  - [ ] Configure error boundary for React errors
-  - [ ] Track client-side errors (JS exceptions, failed API calls)
+- [x] **Sentry (frontend)** → [PLA-543](https://linear.app/plan-b-side-projects/issue/PLA-543) `In Review` ✅
+  - [x] `@sentry/nextjs` v10 installed + `withSentryConfig` wrapper
+  - [x] `global-error.tsx` + 4 route-level error boundaries report to Sentry
+  - [x] `ErrorBoundary` component reports via `componentDidCatch`
+  - [x] `instrumentation.ts` with server/edge/client configs (10% trace sample)
+  - [ ] **Needs prod setup:** Set `NEXT_PUBLIC_SENTRY_DSN` env var
 
 - [ ] **Structured logging**
   - [ ] Pino JSON logs flowing to log aggregation (Loki or ELK)
@@ -237,13 +240,14 @@ Protect API from abuse and brute force.
   - [ ] Authenticated: 100 req / min per user ✅
   - [ ] Unauthenticated: 30 req / min per IP ✅
 
-- [x] **Improvements needed** → [PLA-544](https://linear.app/plan-b-side-projects/issue/PLA-544) `In Review`
-  - [ ] ⚠️ Migrate from in-memory to Redis-based rate limiting (multi-server ready)
-  - [ ] Rate limit on password reset endpoint
+- [x] **Redis rate limiting** → [PLA-544](https://linear.app/plan-b-side-projects/issue/PLA-544) `In Review` ✅
+  - [x] Migrated to Redis-backed rate limiter with in-memory fallback (fail-open)
+  - [x] Namespaced keys: `rl:{namespace}:{key}:{windowId}` with TTL
+  - [x] Rate limit on password reset endpoint (3/hour per IP)
+  - [x] `checkAsync()` for accurate distributed counts from Redis
   - [ ] Rate limit on invitation endpoint (beyond daily count)
   - [ ] API key rate limiting for future public API
   - [ ] Cloudflare WAF rules for bot protection
-  - [ ] CAPTCHA on signup/login after repeated failures (optional)
 
 ### 11. Site Performance
 Fast load times and smooth UX.
@@ -255,20 +259,20 @@ Fast load times and smooth UX.
   - [ ] Lazy loading for below-fold components
   - [ ] Route-level code splitting verified
 
-- [ ] **API performance** → [PLA-545](https://linear.app/plan-b-side-projects/issue/PLA-545) `In Review` (caching) / [PLA-546](https://linear.app/plan-b-side-projects/issue/PLA-546) `Todo` (DB optimization)
+- [ ] **API performance** → [PLA-545](https://linear.app/plan-b-side-projects/issue/PLA-545) `In Review` ✅ (caching) / [PLA-546](https://linear.app/plan-b-side-projects/issue/PLA-546) `Todo` (DB optimization)
   - [ ] Response times < 200ms for dashboard endpoints
-  - [ ] Database query optimization (check for N+1, missing indexes)
+  - [ ] Database query optimization (check for N+1, missing indexes) — **PLA-546 Todo**
   - [ ] Redis caching for frequently accessed data (app listings, categories)
-  - [ ] HTTP caching headers (ETag, Cache-Control) on public endpoints
-  - [ ] Connection pooling configured for PostgreSQL
+  - [x] HTTP caching headers (Cache-Control tiered: 1hr/5min/1min/30s + `Vary` for CDN)
+  - [x] ETag generation (MD5 hash) + 304 Not Modified responses
+  - [x] Connection pooling isolated (API: max 10, Worker: max 5)
 
-- [x] **Scraper isolation** → [PLA-547](https://linear.app/plan-b-side-projects/issue/PLA-547) `In Review`
-  - [ ] ⚠️ Scraper operations must not affect dashboard/API performance
-  - [ ] Separate worker containers with resource limits (CPU/memory caps)
-  - [ ] Database connection pool isolation (scraper vs API)
-  - [ ] Queue-based job processing prevents burst load
+- [x] **Scraper isolation** → [PLA-547](https://linear.app/plan-b-side-projects/issue/PLA-547) `In Review` ✅
+  - [x] DB connection pool isolation (API: max 10/30s, Worker: max 5/60s)
+  - [x] HTTP-level circuit breaker: failures wired to per-platform circuit (5 failures → 1hr open)
+  - [x] Circuit breaker already existed at job level (Redis-backed, per-platform)
+  - [ ] Separate worker containers with resource limits (CPU/memory caps) — Docker config
   - [ ] Scraper scheduling spread across time windows (not all at once)
-  - [ ] Circuit breaker pattern for external API calls
 
 ---
 
@@ -288,12 +292,13 @@ Public-facing pages that drive signups.
   - [ ] Blog / content marketing section (optional for launch)
   - [ ] Changelog / what's new page (optional)
 
-- [x] **SEO** → [PLA-549](https://linear.app/plan-b-side-projects/issue/PLA-549) `In Review`
-  - [ ] Meta tags on all public pages
-  - [ ] Sitemap.xml generated
-  - [ ] robots.txt configured
-  - [ ] Open Graph / Twitter card images
-  - [ ] Structured data (JSON-LD) for app listings
+- [x] **SEO** → [PLA-549](https://linear.app/plan-b-side-projects/issue/PLA-549) `In Review` ✅
+  - [x] Root layout: `metadataBase`, Open Graph, Twitter Card metadata
+  - [x] `sitemap.ts` — dynamic sitemap with ISR (6hr revalidation), includes /privacy, /terms
+  - [x] `robots.ts` — disallows dashboard/auth/API routes
+  - [x] Dynamic OG image (`opengraph-image.tsx`, edge runtime, 1200x630)
+  - [x] Auth pages noindex/nofollow
+  - [x] `buildMetadata()` helper + JSON-LD components already in use on marketing pages
 
 ### 13. Deployment & Infrastructure
 Production environment hardened and documented.
@@ -321,41 +326,51 @@ Production environment hardened and documented.
 
 | Priority | Category | Status | Linear | Effort |
 |----------|----------|--------|--------|--------|
-| P0 | Signup/Login/Logout | ⚠️ Password reset missing | [PLA-541](https://linear.app/plan-b-side-projects/issue/PLA-541) | S |
+| P0 | Signup/Login/Logout | ✅ Password reset done | [PLA-541](https://linear.app/plan-b-side-projects/issue/PLA-541) `In Review` | ~~S~~ Done |
 | P0 | Team Invitations | ✅ Implemented | — | — |
 | P0 | Email Delivery | ⚠️ SMTP + DNS verification needed | 🔧 Manual | S |
 | P0 | Payment Integration | ❌ Not started | 🔧 Manual | XL |
-| P0 | Platform Scrapers (5+) | ✅ 11 platforms exist | [PLA-542](https://linear.app/plan-b-side-projects/issue/PLA-542) | M |
-| P1 | Error Logging (frontend) | ⚠️ Backend OK, frontend missing | [PLA-543](https://linear.app/plan-b-side-projects/issue/PLA-543) | M |
+| P0 | Platform Scrapers (5+) | ⚠️ Need smoke testing | [PLA-542](https://linear.app/plan-b-side-projects/issue/PLA-542) `Todo` | M |
+| P1 | Error Logging (frontend) | ✅ Sentry added | [PLA-543](https://linear.app/plan-b-side-projects/issue/PLA-543) `In Review` | ~~M~~ Done |
 | P1 | Session Recording | ❌ Not started | 🔧 Manual | M |
 | P1 | Product Analytics | ❌ Not started | 🔧 Manual | L |
 | P1 | DB Backup | ⚠️ Script exists, needs prod setup | 🔧 Manual | S |
-| P2 | Rate Limiting (Redis) | ⚠️ Basic exists, needs Redis migration | [PLA-544](https://linear.app/plan-b-side-projects/issue/PLA-544) | M |
-| P2 | API Caching Headers | ❌ Not started | [PLA-545](https://linear.app/plan-b-side-projects/issue/PLA-545) | S |
-| P2 | DB Query Optimization | ⚠️ Needs audit | [PLA-546](https://linear.app/plan-b-side-projects/issue/PLA-546) | M |
-| P2 | Scraper Isolation | ⚠️ Needs improvement | [PLA-547](https://linear.app/plan-b-side-projects/issue/PLA-547) | M |
-| P2 | Frontend Performance | ⚠️ Needs audit | [PLA-548](https://linear.app/plan-b-side-projects/issue/PLA-548) | M |
-| P3 | SEO | ❌ Not started | [PLA-549](https://linear.app/plan-b-side-projects/issue/PLA-549) | S |
+| P2 | Rate Limiting (Redis) | ✅ Redis-backed | [PLA-544](https://linear.app/plan-b-side-projects/issue/PLA-544) `In Review` | ~~M~~ Done |
+| P2 | API Caching + ETag | ✅ Done | [PLA-545](https://linear.app/plan-b-side-projects/issue/PLA-545) `In Review` | ~~S~~ Done |
+| P2 | DB Query Optimization | ⚠️ Needs audit | [PLA-546](https://linear.app/plan-b-side-projects/issue/PLA-546) `Todo` | M |
+| P2 | Scraper Isolation | ✅ Pool + circuit breaker | [PLA-547](https://linear.app/plan-b-side-projects/issue/PLA-547) `In Review` | ~~M~~ Done |
+| P2 | Frontend Performance | ⚠️ Needs audit | [PLA-548](https://linear.app/plan-b-side-projects/issue/PLA-548) `Todo` | M |
+| P3 | SEO | ✅ Done | [PLA-549](https://linear.app/plan-b-side-projects/issue/PLA-549) `In Review` | ~~S~~ Done |
 | P3 | Landing/Marketing | ⚠️ Exists, needs pricing page | 🔧 Manual | S |
 | P3 | Deployment/Infra | ⚠️ Needs hardening | 🔧 Manual | S |
 
 **Legend:** S = Small (1-2 days), M = Medium (3-5 days), L = Large (1-2 weeks), XL = Extra Large (2-3 weeks)
 
-### Linear Task Reference (auto-implementable)
+### Linear Task Reference
 
-| Task | Priority | Category | Description |
-|------|----------|----------|-------------|
-| [PLA-541](https://linear.app/plan-b-side-projects/issue/PLA-541) | 🔴 Urgent | Auth | Password reset flow (API + Dashboard) |
-| [PLA-542](https://linear.app/plan-b-side-projects/issue/PLA-542) | 🟠 High | Scrapers | Smoke test all 11 platforms, fix failures |
-| [PLA-543](https://linear.app/plan-b-side-projects/issue/PLA-543) | 🟠 High | Monitoring | Frontend Sentry error tracking |
-| [PLA-544](https://linear.app/plan-b-side-projects/issue/PLA-544) | 🟡 Medium | Security | Redis-based rate limiting |
-| [PLA-545](https://linear.app/plan-b-side-projects/issue/PLA-545) | 🟡 Medium | Performance | HTTP caching headers on public endpoints |
-| [PLA-546](https://linear.app/plan-b-side-projects/issue/PLA-546) | 🟡 Medium | Performance | Database query optimization & indexes |
-| [PLA-547](https://linear.app/plan-b-side-projects/issue/PLA-547) | 🟡 Medium | Performance | Scraper-API isolation (pools, circuit breaker) |
-| [PLA-548](https://linear.app/plan-b-side-projects/issue/PLA-548) | 🟡 Medium | Performance | Bundle analysis & frontend optimization |
-| [PLA-549](https://linear.app/plan-b-side-projects/issue/PLA-549) | 🔵 Low | SEO | Sitemap, robots.txt, meta tags, Open Graph |
+| Task | Status | Category | Description |
+|------|--------|----------|-------------|
+| [PLA-541](https://linear.app/plan-b-side-projects/issue/PLA-541) | ✅ In Review | Auth | Password reset flow (API + Dashboard) |
+| [PLA-542](https://linear.app/plan-b-side-projects/issue/PLA-542) | ⏳ Todo | Scrapers | Smoke test all 11 platforms, fix failures |
+| [PLA-543](https://linear.app/plan-b-side-projects/issue/PLA-543) | ✅ In Review | Monitoring | Frontend Sentry error tracking |
+| [PLA-544](https://linear.app/plan-b-side-projects/issue/PLA-544) | ✅ In Review | Security | Redis-based rate limiting |
+| [PLA-545](https://linear.app/plan-b-side-projects/issue/PLA-545) | ✅ In Review | Performance | HTTP caching headers + ETag on public endpoints |
+| [PLA-546](https://linear.app/plan-b-side-projects/issue/PLA-546) | ⏳ Todo | Performance | Database query optimization & indexes |
+| [PLA-547](https://linear.app/plan-b-side-projects/issue/PLA-547) | ✅ In Review | Performance | Scraper-API isolation (pools, circuit breaker) |
+| [PLA-548](https://linear.app/plan-b-side-projects/issue/PLA-548) | ⏳ Todo | Performance | Bundle analysis & frontend optimization |
+| [PLA-549](https://linear.app/plan-b-side-projects/issue/PLA-549) | ✅ In Review | SEO | Sitemap, robots.txt, meta tags, Open Graph |
 
-### Manual Tasks (require user action/decisions)
+### Remaining Tasks
+
+#### Auto-implementable (need runtime environment)
+
+| Task | What's needed | Blocker |
+|------|--------------|---------|
+| [PLA-542](https://linear.app/plan-b-side-projects/issue/PLA-542) | Run smoke tests, fix broken scrapers | Live network access to marketplace APIs |
+| [PLA-546](https://linear.app/plan-b-side-projects/issue/PLA-546) | EXPLAIN ANALYZE on slow queries, add indexes | Live database for profiling |
+| [PLA-548](https://linear.app/plan-b-side-projects/issue/PLA-548) | `@next/bundle-analyzer` build, Lighthouse audit | Runtime build profiling |
+
+#### Manual (require user action/decisions)
 
 | Category | What's needed | Why manual |
 |----------|--------------|------------|
