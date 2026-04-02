@@ -24,6 +24,9 @@ import {
   FileText,
   Palette,
   Settings,
+  ShieldCheck,
+  AlertTriangle,
+  Activity,
   type LucideIcon,
 } from "lucide-react";
 import { PLATFORMS, PLATFORM_IDS, type PlatformId } from "@appranks/shared";
@@ -131,5 +134,8 @@ export const systemAdminItems: NavItem[] = [
   { href: "/system-admin/notification-templates", label: "Notification Templates", icon: BellDot },
   { href: "/system-admin/emails", label: "Emails", icon: Mail },
   { href: "/system-admin/email-templates", label: "Email Templates", icon: FileText },
+  { href: "/system-admin/queues", label: "Queues", icon: Activity },
+  { href: "/system-admin/audit-logs", label: "Audit Logs", icon: ShieldCheck },
+  { href: "/system-admin/dlq", label: "Dead Letter Queue", icon: AlertTriangle },
   { href: "/system-admin/design-system", label: "Design", icon: Palette },
 ];
