@@ -179,6 +179,22 @@ export const authRoutes: FastifyPluginAsync = async (app) => {
       accountId: result.user.account.id,
     }).catch(() => {});
 
+    // Send verification email (fire-and-forget)
+    const verificationToken = crypto.randomBytes(32).toString("hex");
+    const verificationTokenHash = crypto.createHash("sha256").update(verificationToken).digest("hex");
+    db.insert(emailVerificationTokens)
+      .values({
+        userId: result.user.id,
+        tokenHash: verificationTokenHash,
+        expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
+      })
+      .then(() => {
+        sendVerificationEmail(result.user.email, verificationToken, result.user.name, {
+          userId: result.user.id,
+        }).catch(() => {});
+      })
+      .catch(() => {});
+
     return result;
   });
 
