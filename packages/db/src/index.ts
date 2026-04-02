@@ -168,6 +168,7 @@ export {
   invitations,
   refreshTokens,
   passwordResetTokens,
+  emailVerificationTokens,
 } from "./schema/auth.js";
 export {
   accountTrackedApps,

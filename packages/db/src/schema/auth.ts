@@ -67,6 +67,7 @@ export const users = pgTable(
     isSystemAdmin: boolean("is_system_admin").notNull().default(false),
     emailDigestEnabled: boolean("email_digest_enabled").notNull().default(true),
     timezone: varchar("timezone", { length: 100 }).notNull().default("Europe/Istanbul"),
+    emailVerifiedAt: timestamp("email_verified_at"),
     lastSeenAt: timestamp("last_seen_at"),
     lastDigestSentAt: timestamp("last_digest_sent_at"),
     createdAt: timestamp("created_at").notNull().defaultNow(),
@@ -131,5 +132,23 @@ export const passwordResetTokens = pgTable(
   (table) => [
     index("idx_password_reset_tokens_user").on(table.userId),
     index("idx_password_reset_tokens_hash").on(table.tokenHash),
+  ]
+);
+
+export const emailVerificationTokens = pgTable(
+  "email_verification_tokens",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    tokenHash: varchar("token_hash", { length: 255 }).notNull().unique(),
+    expiresAt: timestamp("expires_at").notNull(),
+    usedAt: timestamp("used_at"),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+  },
+  (table) => [
+    index("idx_email_verification_tokens_user").on(table.userId),
+    index("idx_email_verification_tokens_hash").on(table.tokenHash),
   ]
 );

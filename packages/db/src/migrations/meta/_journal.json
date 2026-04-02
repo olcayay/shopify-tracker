@@ -757,6 +757,13 @@
       "when": 1777939200000,
       "tag": "0107_billing_columns",
       "breakpoints": true
+    },
+    {
+      "idx": 108,
+      "version": "7",
+      "when": 1778025600000,
+      "tag": "0108_email_verification",
+      "breakpoints": true
     }
   ]
 }

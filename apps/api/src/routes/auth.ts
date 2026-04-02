@@ -15,12 +15,13 @@ import {
   researchProjects,
   accountPlatforms,
   platformVisibility,
+  emailVerificationTokens,
 } from "@appranks/db";
 import { PLATFORM_IDS } from "@appranks/shared";
 import { getJwtSecret, type JwtPayload } from "../middleware/auth.js";
 import { blacklistToken, revokeAllTokensForUser } from "../utils/token-blacklist.js";
 import { RateLimiter } from "../utils/rate-limiter.js";
-import { sendWelcomeEmail, sendPasswordResetEmail, sendLoginAlertEmail } from "../lib/email-enqueue.js";
+import { sendWelcomeEmail, sendPasswordResetEmail, sendLoginAlertEmail, sendVerificationEmail } from "../lib/email-enqueue.js";
 import {
   registerSchema,
   loginSchema,
@@ -177,6 +178,79 @@ export const authRoutes: FastifyPluginAsync = async (app) => {
     }).catch(() => {});
 
     return result;
+  });
+
+  // POST /api/auth/verify-email — verify email with token
+  app.post("/verify-email", async (request, reply) => {
+    const { token } = (request.body as any) || {};
+    if (!token || typeof token !== "string") {
+      return reply.code(400).send({ error: "Token is required" });
+    }
+
+    const tokenHash = crypto.createHash("sha256").update(token).digest("hex");
+
+    const [verifyToken] = await db
+      .select()
+      .from(emailVerificationTokens)
+      .where(eq(emailVerificationTokens.tokenHash, tokenHash));
+
+    if (!verifyToken) {
+      return reply.code(400).send({ error: "Invalid or expired verification token" });
+    }
+
+    if (verifyToken.usedAt) {
+      return reply.code(400).send({ error: "This verification link has already been used" });
+    }
+
+    if (verifyToken.expiresAt < new Date()) {
+      return reply.code(400).send({ error: "This verification link has expired" });
+    }
+
+    // Mark token as used and verify user email
+    await db
+      .update(emailVerificationTokens)
+      .set({ usedAt: new Date() })
+      .where(eq(emailVerificationTokens.id, verifyToken.id));
+
+    await db
+      .update(users)
+      .set({ emailVerifiedAt: new Date(), updatedAt: new Date() })
+      .where(eq(users.id, verifyToken.userId));
+
+    return { message: "Email verified successfully" };
+  });
+
+  // POST /api/auth/resend-verification — send a new verification email
+  app.post("/resend-verification", async (request, reply) => {
+    if (!request.user) return reply.code(401).send({ error: "Unauthorized" });
+
+    const [user] = await db
+      .select({ id: users.id, email: users.email, name: users.name, emailVerifiedAt: users.emailVerifiedAt })
+      .from(users)
+      .where(eq(users.id, request.user.userId));
+
+    if (!user) return reply.code(404).send({ error: "User not found" });
+    if (user.emailVerifiedAt) return reply.code(400).send({ error: "Email already verified" });
+
+    // Invalidate old tokens
+    await db
+      .update(emailVerificationTokens)
+      .set({ usedAt: new Date() })
+      .where(eq(emailVerificationTokens.userId, user.id));
+
+    // Generate new token (24h expiry)
+    const token = crypto.randomBytes(32).toString("hex");
+    const tokenHash = crypto.createHash("sha256").update(token).digest("hex");
+
+    await db.insert(emailVerificationTokens).values({
+      userId: user.id,
+      tokenHash,
+      expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000),
+    });
+
+    sendVerificationEmail(user.email, token, user.name, { userId: user.id }).catch(() => {});
+
+    return { message: "Verification email sent" };
   });
 
   // POST /api/auth/forgot-password — request a password reset email
