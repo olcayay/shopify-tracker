@@ -288,7 +288,7 @@ Public-facing pages that drive signups.
   - [ ] Blog / content marketing section (optional for launch)
   - [ ] Changelog / what's new page (optional)
 
-- [ ] **SEO** → [PLA-549](https://linear.app/plan-b-side-projects/issue/PLA-549) `Todo`
+- [x] **SEO** → [PLA-549](https://linear.app/plan-b-side-projects/issue/PLA-549) `In Review`
   - [ ] Meta tags on all public pages
   - [ ] Sitemap.xml generated
   - [ ] robots.txt configured

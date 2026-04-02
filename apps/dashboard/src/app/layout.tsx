@@ -16,6 +16,8 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
+const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || "https://appranks.io";
+
 export const metadata: Metadata = {
   title: {
     default: "AppRanks — App Marketplace Intelligence",
@@ -23,6 +25,23 @@ export const metadata: Metadata = {
   },
   description:
     "Track rankings, monitor competitors, and optimize your app store presence across multiple marketplaces.",
+  metadataBase: new URL(BASE_URL),
+  openGraph: {
+    type: "website",
+    siteName: "AppRanks",
+    title: "AppRanks — App Marketplace Intelligence",
+    description:
+      "Track rankings, monitor competitors, and optimize your app store presence across multiple marketplaces.",
+    url: BASE_URL,
+    images: [{ url: "/og-default.png", width: 1200, height: 630, alt: "AppRanks" }],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "AppRanks — App Marketplace Intelligence",
+    description:
+      "Track rankings, monitor competitors, and optimize your app store presence across multiple marketplaces.",
+    images: ["/og-default.png"],
+  },
 };
 
 export default function RootLayout({

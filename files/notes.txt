@@ -1,3 +1,16 @@
+PLA-549: SEO enhancements (2026-04-02)
+================================================================
+Filled gaps in existing SEO infrastructure:
+- Root layout: added metadataBase, Open Graph, Twitter card metadata
+- Auth layout: added robots noindex/nofollow
+- Sitemap: removed login/register, added /privacy and /terms
+- robots.txt: added forgot-password, reset-password, overview to disallow
+- Created dynamic OG image (opengraph-image.tsx) using Next.js ImageResponse
+  (edge runtime, gradient background, 1200x630 PNG)
+
+Note: sitemap.ts, robots.ts, seo.ts helper, and JSON-LD components already
+existed — this task filled the remaining gaps.
+
 PLA-545: HTTP caching headers + ETag support (2026-04-02)
 ================================================================
 Enhanced the global onSend hook in index.ts:
