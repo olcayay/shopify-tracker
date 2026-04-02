@@ -11,6 +11,7 @@ import {
   ChevronDown,
   Check,
   Loader2,
+  Search,
 } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
 import { AnimatedLogo } from "@/components/animated-logo";
@@ -169,6 +170,18 @@ export function TopBar({
 
       {/* Spacer */}
       <div className="flex-1" />
+
+      {/* Search Hint — opens command palette */}
+      <button
+        onClick={() => {
+          document.dispatchEvent(new KeyboardEvent("keydown", { key: "k", metaKey: true }));
+        }}
+        className="hidden md:flex items-center gap-2 h-8 px-3 rounded-md border bg-muted/50 text-muted-foreground text-sm hover:bg-muted transition-colors"
+      >
+        <Search className="h-3.5 w-3.5" />
+        <span>Search...</span>
+        <kbd className="ml-2 text-[10px] font-mono bg-background border rounded px-1 py-0.5">⌘K</kbd>
+      </button>
 
       {/* Theme Toggle */}
       <ThemeToggle />
