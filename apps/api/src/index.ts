@@ -424,8 +424,7 @@ app.setErrorHandler<Error & { statusCode?: number }>((error, request, reply) => 
       message: issue.message,
     }));
     return reply.code(400).send({
-      error: "Validation failed",
-      details: fieldErrors,
+      error: { code: "VALIDATION_ERROR", message: "Validation failed", details: fieldErrors },
       requestId,
     });
   }
@@ -443,7 +442,7 @@ app.setErrorHandler<Error & { statusCode?: number }>((error, request, reply) => 
   if (isDbError) {
     app.log.error({ err: error, requestId }, "database error");
     return reply.code(503).send({
-      error: "Service temporarily unavailable",
+      error: { code: "SERVICE_UNAVAILABLE", message: "Service temporarily unavailable" },
       requestId,
     });
   }
@@ -453,7 +452,7 @@ app.setErrorHandler<Error & { statusCode?: number }>((error, request, reply) => 
 
   app.log.error({ err: error, requestId }, "unhandled error");
   reply.code(error.statusCode ?? 500).send({
-    error: error.message || "Internal Server Error",
+    error: { code: "INTERNAL_ERROR", message: error.message || "Internal Server Error" },
     requestId,
   });
 });
