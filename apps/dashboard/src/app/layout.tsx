@@ -5,6 +5,7 @@ import "./globals.css";
 import { AuthProvider } from "@/lib/auth-context";
 import { Providers } from "@/components/providers";
 import { Analytics } from "@/components/analytics";
+import { Toaster } from "sonner";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -69,6 +70,7 @@ export default function RootLayout({
         <Providers>
           <AuthProvider>{children}</AuthProvider>
         </Providers>
+        <Toaster richColors closeButton position="bottom-right" />
       </body>
     </html>
   );
