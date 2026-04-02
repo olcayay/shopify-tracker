@@ -3083,6 +3083,42 @@ export const systemAdminRoutes: FastifyPluginAsync = async (app) => {
     }
   });
 
+  // GET /api/system-admin/backup-status — check last backup status
+  app.get("/backup-status", async () => {
+    const backupDir = process.env.BACKUP_DIR || "/tmp/appranks-backups";
+    const maxAgeHours = 26; // Alert if backup is older than 26 hours
+
+    try {
+      const { readdirSync, statSync } = await import("fs");
+      const files = readdirSync(backupDir)
+        .filter((f: string) => f.endsWith(".sql.gz"))
+        .sort()
+        .reverse();
+
+      if (files.length === 0) {
+        return { status: "unknown", message: "No backup files found", backupDir };
+      }
+
+      const latest = files[0];
+      const stat = statSync(`${backupDir}/${latest}`);
+      const ageMs = Date.now() - stat.mtime.getTime();
+      const ageHours = Math.round(ageMs / (1000 * 60 * 60) * 10) / 10;
+      const isStale = ageHours > maxAgeHours;
+
+      return {
+        status: isStale ? "stale" : "ok",
+        lastBackup: latest,
+        lastBackupTime: stat.mtime.toISOString(),
+        ageHours,
+        sizeBytes: stat.size,
+        totalBackups: files.length,
+        backupDir,
+      };
+    } catch {
+      return { status: "error", message: "Cannot read backup directory", backupDir };
+    }
+  });
+
   // GET /api/system-admin/system-health — extended health info for admin dashboard
   app.get("/system-health", async () => {
     const checks: Record<string, unknown> = {};
