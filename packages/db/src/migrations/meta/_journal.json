@@ -778,6 +778,13 @@
       "when": 1778198400000,
       "tag": "0110_query_optimization_indexes",
       "breakpoints": true
+    },
+    {
+      "idx": 111,
+      "version": "7",
+      "when": 1778284800000,
+      "tag": "0111_payment_grace_period",
+      "breakpoints": true
     }
   ]
 }

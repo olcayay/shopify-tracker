@@ -144,6 +144,7 @@ export const billingRoutes: FastifyPluginAsync = async (app) => {
           await db.update(accounts).set({
             subscriptionStatus: "active",
             subscriptionPeriodEnd: new Date(subscription.current_period_end * 1000),
+            pastDueSince: null, // Clear grace period on successful payment
             updatedAt: new Date(),
           }).where(eq(accounts.stripeCustomerId, data.customer));
         }
@@ -151,11 +152,13 @@ export const billingRoutes: FastifyPluginAsync = async (app) => {
       }
 
       case "invoice.payment_failed": {
+        // Set past_due with grace period timestamp (7 days before restricting)
         await db.update(accounts).set({
           subscriptionStatus: "past_due",
+          pastDueSince: new Date(),
           updatedAt: new Date(),
         }).where(eq(accounts.stripeCustomerId, data.customer));
-        log.warn("Payment failed", { customer: data.customer });
+        log.warn("Payment failed — 7-day grace period started", { customer: data.customer });
         break;
       }
 

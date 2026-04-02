@@ -49,6 +49,7 @@ export const accounts = pgTable("accounts", {
   subscriptionStatus: varchar("subscription_status", { length: 30 }).notNull().default("free"),
   subscriptionPlan: varchar("subscription_plan", { length: 50 }),
   subscriptionPeriodEnd: timestamp("subscription_period_end"),
+  pastDueSince: timestamp("past_due_since"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });
