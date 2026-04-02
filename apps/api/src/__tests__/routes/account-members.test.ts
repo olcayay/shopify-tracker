@@ -233,4 +233,44 @@ describe("Account Member Routes — edge cases", () => {
       expect(res.statusCode).toBe(403);
     });
   });
+
+  // ── Invitation cancellation ─────────────────────────────────────────
+  describe("DELETE /api/account/invitations/:id", () => {
+    it("returns 401 without auth", async () => {
+      const res = await app.inject({
+        method: "DELETE",
+        url: "/api/account/invitations/inv-001",
+      });
+      expect(res.statusCode).toBe(401);
+    });
+
+    it("returns 403 for non-owner", async () => {
+      const res = await app.inject({
+        method: "DELETE",
+        url: "/api/account/invitations/inv-001",
+        headers: authHeaders(viewerToken()),
+      });
+      expect(res.statusCode).toBe(403);
+    });
+  });
+
+  // ── Team member listing ─────────────────────────────────────────────
+  describe("GET /api/account/members", () => {
+    it("returns 401 without auth", async () => {
+      const res = await app.inject({
+        method: "GET",
+        url: "/api/account/members",
+      });
+      expect(res.statusCode).toBe(401);
+    });
+
+    it("returns 200 for authenticated user", async () => {
+      const res = await app.inject({
+        method: "GET",
+        url: "/api/account/members",
+        headers: authHeaders(ownerToken()),
+      });
+      expect(res.statusCode).toBe(200);
+    });
+  });
 });
