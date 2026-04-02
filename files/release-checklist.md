@@ -2,8 +2,8 @@
 
 > Created: 2026-04-01 | Updated: 2026-04-03
 > Target: Production-ready public launch
-> Progress: **ALL 9 new tasks done** (PLA-606→614) | Session 9: build fix + 8 features
-> Blocked by external services only: Stripe keys (PLA-598), Sentry token (PLA-600), PostHog (PLA-602), prod SSH (PLA-603)
+> Progress: **10 new code tasks found** (PLA-615→624) | Batch 5 deep scan
+> Blocked by external: Stripe keys (PLA-598), Sentry token (PLA-600), PostHog (PLA-602), prod SSH (PLA-603)
 
 ---
 
@@ -405,6 +405,38 @@ Production environment hardened and documented.
 | [PLA-607](https://linear.app/plan-b-side-projects/issue/PLA-607) | 🟡 Medium | Wire stale scraper detection to alerting system |
 | [PLA-613](https://linear.app/plan-b-side-projects/issue/PLA-613) | 🟡 Medium | Add List-Unsubscribe headers to transactional emails |
 | [PLA-614](https://linear.app/plan-b-side-projects/issue/PLA-614) | 🔵 Low | Create changelog page for product updates |
+
+### New Tasks (Batch 5 — 2026-04-03)
+
+#### Critical Auth & Verification
+
+| Task | Priority | Description |
+|------|----------|-------------|
+| [PLA-617](https://linear.app/plan-b-side-projects/issue/PLA-617) | 🔴 Urgent | Send verification email on registration |
+| [PLA-621](https://linear.app/plan-b-side-projects/issue/PLA-621) | 🟠 High | Email verification banner in dashboard |
+| [PLA-622](https://linear.app/plan-b-side-projects/issue/PLA-622) | 🟠 High | Account suspension banner |
+
+#### Billing & Payments
+
+| Task | Priority | Description |
+|------|----------|-------------|
+| [PLA-615](https://linear.app/plan-b-side-projects/issue/PLA-615) | 🟠 High | Payment grace period warning banner |
+| [PLA-616](https://linear.app/plan-b-side-projects/issue/PLA-616) | 🟠 High | Pricing page checkout integration for authenticated users |
+
+#### Settings & GDPR
+
+| Task | Priority | Description |
+|------|----------|-------------|
+| [PLA-619](https://linear.app/plan-b-side-projects/issue/PLA-619) | 🟡 Medium | Delete account UI with confirmation dialog |
+| [PLA-620](https://linear.app/plan-b-side-projects/issue/PLA-620) | 🟡 Medium | Download My Data button (GDPR export) |
+
+#### Activity & UX
+
+| Task | Priority | Description |
+|------|----------|-------------|
+| [PLA-618](https://linear.app/plan-b-side-projects/issue/PLA-618) | 🟡 Medium | Wire logActivity() into all mutation routes |
+| [PLA-623](https://linear.app/plan-b-side-projects/issue/PLA-623) | 🔵 Low | Changelog link in marketing footer/header |
+| [PLA-624](https://linear.app/plan-b-side-projects/issue/PLA-624) | 🔵 Low | Cmd+K search hint button in dashboard header |
 
 ---
 
