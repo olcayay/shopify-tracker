@@ -255,7 +255,7 @@ Fast load times and smooth UX.
   - [ ] Lazy loading for below-fold components
   - [ ] Route-level code splitting verified
 
-- [ ] **API performance** → [PLA-545](https://linear.app/plan-b-side-projects/issue/PLA-545) `Todo` (caching) / [PLA-546](https://linear.app/plan-b-side-projects/issue/PLA-546) `Todo` (DB optimization)
+- [ ] **API performance** → [PLA-545](https://linear.app/plan-b-side-projects/issue/PLA-545) `In Review` (caching) / [PLA-546](https://linear.app/plan-b-side-projects/issue/PLA-546) `Todo` (DB optimization)
   - [ ] Response times < 200ms for dashboard endpoints
   - [ ] Database query optimization (check for N+1, missing indexes)
   - [ ] Redis caching for frequently accessed data (app listings, categories)

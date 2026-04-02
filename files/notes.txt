@@ -1,3 +1,17 @@
+PLA-545: HTTP caching headers + ETag support (2026-04-02)
+================================================================
+Enhanced the global onSend hook in index.ts:
+- /api/public/* → public, max-age=3600, stale-while-revalidate=7200
+- /api/platforms, /api/features/tree → public, 1hr cache
+- App/category/keyword detail → public, 5min cache
+- List endpoints → public, 1min cache
+- Auth/account/admin → private, no-cache
+- Default → private, max-age=30
+- Added Vary: Accept-Encoding for Cloudflare CDN compatibility
+- ETag generation (MD5 hash of response) for public endpoints
+- 304 Not Modified responses for matching If-None-Match headers
+- 14 new cache policy tests
+
 PLA-544: Redis-backed rate limiting (2026-04-02)
 ================================================================
 Migrated rate limiter from in-memory-only to Redis-backed with fallback:

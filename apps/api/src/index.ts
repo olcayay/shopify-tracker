@@ -215,8 +215,8 @@ await app.register(adminNotificationRoutes, { prefix: "/api/system-admin" });
 const { aiContentRoutes } = await import("./routes/ai-content.js");
 await app.register(aiContentRoutes, { prefix: "/api/system-admin/ai" });
 
-// Cache-Control headers based on route patterns
-app.addHook("onSend", async (request, reply) => {
+// Cache-Control + ETag headers based on route patterns
+app.addHook("onSend", async (request, reply, payload) => {
   // Skip non-GET requests and already-set headers
   if (request.method !== "GET" || reply.getHeader("cache-control")) return;
 
@@ -228,28 +228,45 @@ app.addHook("onSend", async (request, reply) => {
     return;
   }
 
-  // Long cache (1 hour): platform list, feature tree
-  if (url === "/api/platforms" || url === "/api/features/tree") {
+  // Public endpoints: long cache (1 hour)
+  if (url.startsWith("/api/public/")) {
     reply.header("cache-control", "public, max-age=3600, stale-while-revalidate=7200");
-    return;
+    reply.header("vary", "Accept-Encoding");
   }
-
+  // Long cache (1 hour): platform list, feature tree
+  else if (url === "/api/platforms" || url === "/api/features/tree") {
+    reply.header("cache-control", "public, max-age=3600, stale-while-revalidate=7200");
+    reply.header("vary", "Accept-Encoding");
+  }
   // Medium cache (5 min): app detail, category detail, keyword detail, scores
-  if (url.match(/^\/api\/(apps|categories|keywords|developers)\/[^/]+$/) ||
+  else if (url.match(/^\/api\/(apps|categories|keywords|developers)\/[^/]+$/) ||
       url.match(/^\/api\/apps\/[^/]+\/(scores|rankings|changes|reviews|similar|featured|ads)/)) {
     reply.header("cache-control", "public, max-age=300, stale-while-revalidate=600");
-    return;
+    reply.header("vary", "Accept-Encoding");
   }
-
   // Short cache (1 min): list endpoints, featured apps
-  if (url.match(/^\/api\/(categories|featured-apps|integrations|platform-attributes)\/?$/) ||
+  else if (url.match(/^\/api\/(categories|featured-apps|integrations|platform-attributes)\/?$/) ||
       url.match(/^\/api\/categories\?/)) {
     reply.header("cache-control", "public, max-age=60, stale-while-revalidate=300");
-    return;
+    reply.header("vary", "Accept-Encoding");
+  }
+  // Authenticated endpoints: private, short cache
+  else {
+    reply.header("cache-control", "private, max-age=30");
   }
 
-  // Default: private, short cache
-  reply.header("cache-control", "private, max-age=30");
+  // ETag support for public cacheable responses
+  if (payload && typeof payload === "string" && reply.getHeader("cache-control")?.toString().includes("public")) {
+    const { createHash } = await import("crypto");
+    const etag = `"${createHash("md5").update(payload).digest("hex").slice(0, 16)}"`;
+    reply.header("etag", etag);
+
+    const ifNoneMatch = request.headers["if-none-match"];
+    if (ifNoneMatch === etag) {
+      reply.code(304);
+      return "";
+    }
+  }
 });
 
 // Prometheus metrics endpoint
