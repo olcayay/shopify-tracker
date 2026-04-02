@@ -3008,6 +3008,65 @@ export const systemAdminRoutes: FastifyPluginAsync = async (app) => {
     },
   );
 
+  // GET /api/system-admin/system-health — extended health info for admin dashboard
+  app.get("/system-health", async () => {
+    const checks: Record<string, unknown> = {};
+
+    // DB check
+    try {
+      const [result] = await db.execute(sql`SELECT count(*) as count FROM users`);
+      checks.database = { status: "ok", userCount: (result as any)?.count };
+    } catch (err) {
+      checks.database = { status: "error", error: String(err) };
+    }
+
+    // Redis check
+    const redisUrl = process.env.REDIS_URL || "redis://localhost:6379";
+    try {
+      const Redis = (await import("ioredis")).default;
+      const redis = new Redis(redisUrl, { connectTimeout: 3000, lazyConnect: true });
+      await redis.connect();
+      const info = await redis.info("memory");
+      const usedMemory = info.match(/used_memory_human:(\S+)/)?.[1] || "unknown";
+      const connectedClients = info.match(/connected_clients:(\d+)/)?.[1] || "unknown";
+      checks.redis = { status: "ok", usedMemory, connectedClients };
+      await redis.disconnect();
+    } catch (err) {
+      checks.redis = { status: "error", error: String(err) };
+    }
+
+    // Queue depths (BullMQ)
+    try {
+      const { Queue } = await import("bullmq");
+      const queues = ["scraper-jobs-background", "scraper-jobs-interactive", "email-instant", "notifications"];
+      const queueStats: Record<string, unknown> = {};
+
+      for (const name of queues) {
+        try {
+          const q = new Queue(name, { connection: { host: new URL(redisUrl).hostname, port: parseInt(new URL(redisUrl).port || "6379") } });
+          const counts = await q.getJobCounts();
+          queueStats[name] = counts;
+          await q.close();
+        } catch {
+          queueStats[name] = { error: "unavailable" };
+        }
+      }
+      checks.queues = queueStats;
+    } catch {
+      checks.queues = { error: "BullMQ unavailable" };
+    }
+
+    // DLQ count
+    try {
+      const [dlqResult] = await db.execute(sql`SELECT count(*)::int as count FROM dead_letter_jobs`);
+      checks.dlq = { count: (dlqResult as any)?.count || 0 };
+    } catch {
+      checks.dlq = { error: "unavailable" };
+    }
+
+    return { timestamp: new Date().toISOString(), checks };
+  });
+
   // GET /api/system-admin/audit-logs — impersonation audit log
   app.get(
     "/audit-logs",
