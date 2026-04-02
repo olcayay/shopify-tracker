@@ -8,7 +8,7 @@ export function KeywordDensityTable({ text }: { text: string }) {
   if (analysis.length === 0) return null;
 
   return (
-    <div className="border rounded-md overflow-hidden">
+    <div className="border rounded-md overflow-x-auto">
       <table className="w-full text-sm">
         <thead>
           <tr className="bg-muted/50">

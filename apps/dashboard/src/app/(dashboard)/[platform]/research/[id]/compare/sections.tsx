@@ -95,7 +95,7 @@ function KeywordDensityTable({ text }: { text: string }) {
     return <p className="text-xs text-muted-foreground italic">No repeated keywords found.</p>;
   }
   return (
-    <div className="border rounded-md overflow-hidden max-h-60 overflow-y-auto">
+    <div className="border rounded-md overflow-hidden overflow-x-auto max-h-60 overflow-y-auto">
       <table className="w-full text-sm">
         <thead>
           <tr className="bg-muted/50 sticky top-0">

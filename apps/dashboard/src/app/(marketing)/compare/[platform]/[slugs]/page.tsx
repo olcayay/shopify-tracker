@@ -189,7 +189,7 @@ export default async function ComparisonPage({ params }: PageProps) {
         {/* Comparison Table */}
         <section>
           <h2 className="text-xl font-semibold mb-4">Comparison</h2>
-          <div className="rounded-lg border overflow-hidden">
+          <div className="rounded-lg border overflow-hidden overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
                 <tr className="bg-muted/50">
