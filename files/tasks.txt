@@ -1,7 +1,7 @@
 Pre-Release (2026-04-02)
   PLA-541: Implement password reset flow (API + Dashboard) ✅
   PLA-543: Add Sentry error tracking to dashboard (frontend) ✅
-  PLA-544: Migrate rate limiting from in-memory to Redis
+  PLA-544: Migrate rate limiting from in-memory to Redis ✅
   PLA-545: Add HTTP caching headers to public API endpoints
   PLA-546: Database query optimization — indexes and N+1 fixes
   PLA-547: Scraper-API performance isolation (connection pools, circuit breaker)

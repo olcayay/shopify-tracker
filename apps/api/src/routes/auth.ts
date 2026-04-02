@@ -47,9 +47,9 @@ import {
 
 
 // Rate limiters for auth endpoints (exported for test reset)
-export const loginLimiter = new RateLimiter({ maxAttempts: RATE_LIMIT_LOGIN_MAX, windowMs: RATE_LIMIT_LOGIN_WINDOW_MS });
-export const registerLimiter = new RateLimiter({ maxAttempts: RATE_LIMIT_REGISTER_MAX, windowMs: RATE_LIMIT_REGISTER_WINDOW_MS });
-export const passwordResetLimiter = new RateLimiter({ maxAttempts: RATE_LIMIT_PASSWORD_RESET_MAX, windowMs: RATE_LIMIT_PASSWORD_RESET_WINDOW_MS });
+export const loginLimiter = new RateLimiter({ maxAttempts: RATE_LIMIT_LOGIN_MAX, windowMs: RATE_LIMIT_LOGIN_WINDOW_MS, namespace: "login" });
+export const registerLimiter = new RateLimiter({ maxAttempts: RATE_LIMIT_REGISTER_MAX, windowMs: RATE_LIMIT_REGISTER_WINDOW_MS, namespace: "register" });
+export const passwordResetLimiter = new RateLimiter({ maxAttempts: RATE_LIMIT_PASSWORD_RESET_MAX, windowMs: RATE_LIMIT_PASSWORD_RESET_WINDOW_MS, namespace: "pwreset" });
 
 export function generateAccessToken(
   payload: JwtPayload,

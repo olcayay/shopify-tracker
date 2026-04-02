@@ -1,3 +1,14 @@
+PLA-544: Redis-backed rate limiting (2026-04-02)
+================================================================
+Migrated rate limiter from in-memory-only to Redis-backed with fallback:
+- RateLimiter now syncs counts to Redis (fire-and-forget) for cross-server awareness
+- checkAsync() reads from Redis for accurate distributed counts
+- Falls back to in-memory when Redis unavailable (fail-open)
+- Namespaced keys: rl:{namespace}:{key}:{windowId} with TTL
+- All existing limiters (login, register, pwreset, auth, unauth, admin) tagged with namespaces
+- Shared InMemoryStore singleton with per-namespace clear()
+- 2 new tests for namespace isolation and async fallback
+
 PLA-543: Frontend Sentry error tracking (2026-04-02)
 ================================================================
 Added @sentry/nextjs v10 to the dashboard with full integration:

@@ -1,5 +1,10 @@
-import { describe, it, expect } from "vitest";
-import { RateLimiter } from "../../utils/rate-limiter.js";
+import { describe, it, expect, beforeEach } from "vitest";
+import { RateLimiter, _resetRateLimitRedis } from "../../utils/rate-limiter.js";
+
+// Disable Redis for unit tests — tests use in-memory fallback
+beforeEach(() => {
+  _resetRateLimitRedis(null);
+});
 
 describe("RateLimiter", () => {
   it("allows requests within limit", () => {
@@ -158,6 +163,26 @@ describe("RateLimiter", () => {
     expect(limiter.check("user:user-001").allowed).toBe(true);
     expect(limiter.check("user:user-001").allowed).toBe(true);
     expect(limiter.check("user:user-001").allowed).toBe(false);
+  });
+
+  it("namespace separates limiters in shared store", () => {
+    const limiterA = new RateLimiter({ maxAttempts: 1, windowMs: 60_000, namespace: "ns_a" });
+    const limiterB = new RateLimiter({ maxAttempts: 1, windowMs: 60_000, namespace: "ns_b" });
+
+    expect(limiterA.check("key1").allowed).toBe(true);
+    expect(limiterA.check("key1").allowed).toBe(false);
+
+    // limiterB should be independent
+    expect(limiterB.check("key1").allowed).toBe(true);
+    expect(limiterB.check("key1").allowed).toBe(false);
+  });
+
+  it("checkAsync falls back to in-memory when Redis is disabled", async () => {
+    _resetRateLimitRedis(null); // disable Redis
+    const limiter = new RateLimiter({ maxAttempts: 2, windowMs: 60_000, namespace: "async_test" });
+    expect((await limiter.checkAsync("ip1")).allowed).toBe(true);
+    expect((await limiter.checkAsync("ip1")).allowed).toBe(true);
+    expect((await limiter.checkAsync("ip1")).allowed).toBe(false);
   });
 
   it("window reset allows new burst of requests", () => {

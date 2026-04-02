@@ -237,7 +237,7 @@ Protect API from abuse and brute force.
   - [ ] Authenticated: 100 req / min per user ✅
   - [ ] Unauthenticated: 30 req / min per IP ✅
 
-- [ ] **Improvements needed** → [PLA-544](https://linear.app/plan-b-side-projects/issue/PLA-544) `Todo`
+- [x] **Improvements needed** → [PLA-544](https://linear.app/plan-b-side-projects/issue/PLA-544) `In Review`
   - [ ] ⚠️ Migrate from in-memory to Redis-based rate limiting (multi-server ready)
   - [ ] Rate limit on password reset endpoint
   - [ ] Rate limit on invitation endpoint (beyond daily count)
