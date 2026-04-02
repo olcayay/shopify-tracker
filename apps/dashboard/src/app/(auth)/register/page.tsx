@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useAuth } from "@/lib/auth-context";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { PasswordStrength } from "@/components/password-strength";
 import {
   Card,
   CardContent,
@@ -90,6 +91,7 @@ export default function RegisterPage() {
               required
               minLength={8}
             />
+            <PasswordStrength password={password} />
           </div>
           <div className="flex flex-col gap-2">
             <label htmlFor="accountName" className="text-sm font-medium">

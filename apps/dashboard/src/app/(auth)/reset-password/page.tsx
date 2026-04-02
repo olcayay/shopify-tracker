@@ -5,6 +5,7 @@ import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { PasswordStrength } from "@/components/password-strength";
 import {
   Card,
   CardContent,
@@ -122,9 +123,7 @@ function ResetPasswordForm() {
               required
               minLength={8}
             />
-            <p className="text-xs text-muted-foreground">
-              Must contain uppercase, lowercase, and a number.
-            </p>
+            <PasswordStrength password={password} />
           </div>
           <div className="flex flex-col gap-2">
             <label htmlFor="confirmPassword" className="text-sm font-medium">
