@@ -1,7 +1,16 @@
 import type { FastifyPluginAsync } from "fastify";
 import { eq } from "drizzle-orm";
+import { z } from "zod";
 import { accounts } from "@appranks/db";
 import { createLogger } from "@appranks/shared";
+
+const checkoutSchema = z.object({
+  priceId: z.string().min(1, "priceId is required"),
+});
+
+const testSendSchema = z.object({
+  type: z.string().min(1, "type is required"),
+});
 
 const log = createLogger("api:billing");
 
@@ -44,8 +53,7 @@ export const billingRoutes: FastifyPluginAsync = async (app) => {
     const stripe = getStripe();
     if (!stripe) return reply.code(503).send({ error: "Billing not configured" });
 
-    const { priceId } = (request.body as any) || {};
-    if (!priceId) return reply.code(400).send({ error: "priceId is required" });
+    const { priceId } = checkoutSchema.parse(request.body);
 
     const [account] = await db
       .select()

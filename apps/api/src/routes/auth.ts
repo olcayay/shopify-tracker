@@ -30,6 +30,8 @@ import {
   updateProfileSchema,
   forgotPasswordSchema,
   resetPasswordSchema,
+  verifyEmailSchema,
+  deleteAccountSchema,
 } from "../schemas/auth.js";
 import {
   ACCESS_TOKEN_EXPIRY,
@@ -182,10 +184,7 @@ export const authRoutes: FastifyPluginAsync = async (app) => {
 
   // POST /api/auth/verify-email — verify email with token
   app.post("/verify-email", async (request, reply) => {
-    const { token } = (request.body as any) || {};
-    if (!token || typeof token !== "string") {
-      return reply.code(400).send({ error: "Token is required" });
-    }
+    const { token } = verifyEmailSchema.parse(request.body);
 
     const tokenHash = crypto.createHash("sha256").update(token).digest("hex");
 
@@ -834,8 +833,7 @@ export const authRoutes: FastifyPluginAsync = async (app) => {
       return reply.code(403).send({ error: "Only account owners can delete the account" });
     }
 
-    const { password } = (request.body as any) || {};
-    if (!password) return reply.code(400).send({ error: "Password confirmation required" });
+    const { password } = deleteAccountSchema.parse(request.body);
 
     const [user] = await db.select().from(users).where(eq(users.id, request.user.userId));
     if (!user) return reply.code(404).send({ error: "User not found" });

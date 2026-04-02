@@ -37,6 +37,14 @@ export const resetPasswordSchema = z.object({
   password: passwordSchema,
 });
 
+export const verifyEmailSchema = z.object({
+  token: z.string().min(1, "Token is required"),
+});
+
+export const deleteAccountSchema = z.object({
+  password: z.string().min(1, "Password confirmation required"),
+});
+
 export const updateProfileSchema = z
   .object({
     emailDigestEnabled: z.boolean().optional(),
