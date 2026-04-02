@@ -10,6 +10,10 @@ import {
 import { requireRole } from "../middleware/authorize.js";
 import { sendInvitationEmail } from "../lib/email-enqueue.js";
 import { requireIdempotencyKey } from "../middleware/idempotency.js";
+import { RateLimiter } from "../utils/rate-limiter.js";
+
+// Rate limit invitation endpoint: 20 requests per hour per user
+const invitationLimiter = new RateLimiter({ maxAttempts: 20, windowMs: 60 * 60 * 1000, namespace: "invite" });
 import {
   addMemberSchema,
   inviteMemberSchema,
@@ -109,6 +113,13 @@ export const accountMemberRoutes: FastifyPluginAsync = async (app) => {
     "/members/invite",
     { preHandler: [requireRole("owner")] },
     async (request, reply) => {
+      // IP-based rate limit for invitation endpoint
+      const rl = invitationLimiter.check(request.user.userId);
+      if (!rl.allowed) {
+        reply.header("Retry-After", Math.ceil(rl.retryAfterMs / 1000).toString());
+        return reply.code(429).send({ error: "Too many invitation requests. Please try again later." });
+      }
+
       const { accountId, userId } = request.user;
       const { email, role } = inviteMemberSchema.parse(request.body);
 
