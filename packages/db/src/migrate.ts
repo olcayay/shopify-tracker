@@ -26,10 +26,14 @@ if (!databaseUrl) {
   process.exit(1);
 }
 
-const migrationsFolder = resolve(__dirname, "./migrations");
-
+// Try dist/migrations first (when running compiled), then src/migrations (Docker/dev)
+let migrationsFolder = resolve(__dirname, "./migrations");
 if (!existsSync(migrationsFolder)) {
-  console.error(`ERROR: Migrations folder not found at ${migrationsFolder}`);
+  // In Docker, migrations are copied to packages/db/src/migrations
+  migrationsFolder = resolve(__dirname, "../src/migrations");
+}
+if (!existsSync(migrationsFolder)) {
+  console.error(`ERROR: Migrations folder not found. Tried:\n  - ${resolve(__dirname, "./migrations")}\n  - ${resolve(__dirname, "../src/migrations")}`);
   process.exit(1);
 }
 
