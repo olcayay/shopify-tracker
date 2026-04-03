@@ -74,6 +74,14 @@ const healthDb = createHealthCheckDb(databaseUrl);
 // (packages/db/src/migrate.ts). In Docker, the 'migrate' service runs
 // before the API starts. See docker-compose.prod.yml.
 
+// Safety net: ensure critical columns exist even if Drizzle migration tracking
+// marked them as applied before the SQL actually ran (PLA-647).
+try {
+  await db.execute(sql`ALTER TABLE "accounts" ADD COLUMN IF NOT EXISTS "past_due_since" timestamp`);
+} catch (e: any) {
+  log.warn("schema safety-net check failed (non-fatal)", { error: e.message });
+}
+
 // Seed admin user on first run
 const adminEmail = process.env.ADMIN_EMAIL;
 const adminPassword = process.env.ADMIN_PASSWORD;

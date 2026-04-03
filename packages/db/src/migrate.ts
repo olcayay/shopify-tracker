@@ -94,6 +94,20 @@ async function run() {
       console.log("Running database migrations...");
       await migrate(db, { migrationsFolder });
       console.log("Database migrations complete.");
+
+      // Post-migration safety net: ensure critical columns exist.
+      // Drizzle may skip migrations it believes are already applied (hash match)
+      // even if the SQL never actually ran on this database. (PLA-647)
+      const safetyStatements = [
+        `ALTER TABLE "accounts" ADD COLUMN IF NOT EXISTS "past_due_since" timestamp`,
+      ];
+      for (const stmt of safetyStatements) {
+        try {
+          await db.execute(sql.raw(stmt));
+        } catch (e: any) {
+          console.warn(`Safety-net statement failed (non-fatal): ${e.message}`);
+        }
+      }
     }
   } catch (err: any) {
     console.error("Migration ERROR:", err.message || String(err));
