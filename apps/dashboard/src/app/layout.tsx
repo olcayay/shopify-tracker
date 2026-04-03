@@ -8,6 +8,7 @@ import { Analytics } from "@/components/analytics";
 import { Toaster } from "sonner";
 import { ShortcutsHelp } from "@/components/shortcuts-help";
 import { CommandPalette } from "@/components/command-palette";
+import { PostHogProvider } from "@/components/posthog-provider";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -73,6 +74,7 @@ export default function RootLayout({
           <AuthProvider>
             {children}
             <CommandPalette />
+            <PostHogProvider />
           </AuthProvider>
         </Providers>
         <Toaster richColors closeButton position="bottom-right" />
