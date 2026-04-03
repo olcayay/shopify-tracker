@@ -3,11 +3,13 @@ import { eq, sql, and, desc, inArray } from "drizzle-orm";
 import {
   apps,
   appSnapshots,
+  accounts,
   accountTrackedApps,
   accountTrackedKeywords,
   accountCompetitorApps,
   accountStarredCategories,
   accountStarredDevelopers,
+  accountPlatforms,
   accountTrackedFeatures,
   categories,
   categorySnapshots,
@@ -746,4 +748,43 @@ export const accountExtrasRoutes: FastifyPluginAsync = async (app) => {
       return { message: "Developer unstarred" };
     }
   );
+
+  // GET /api/account/platforms — list enabled platforms for account
+  app.get("/platforms", async (request, reply) => {
+    if (!request.user) return reply.code(401).send({ error: "Unauthorized" });
+    const rows = await db
+      .select({ platform: accountPlatforms.platform })
+      .from(accountPlatforms)
+      .where(eq(accountPlatforms.accountId, request.user.accountId));
+    return { platforms: rows.map((r) => r.platform) };
+  });
+
+  // POST /api/account/platforms/:platform — enable a platform
+  app.post("/platforms/:platform", async (request, reply) => {
+    if (!request.user) return reply.code(401).send({ error: "Unauthorized" });
+    if (request.user.role !== "owner") return reply.code(403).send({ error: "Only owners can manage platforms" });
+    const { platform } = request.params as { platform: string };
+
+    // Check maxPlatforms limit
+    const [account] = await db.select({ maxPlatforms: accounts.maxPlatforms }).from(accounts).where(eq(accounts.id, request.user.accountId));
+    const [count] = await db.select({ count: sql<number>`count(*)::int` }).from(accountPlatforms).where(eq(accountPlatforms.accountId, request.user.accountId));
+    if (count.count >= account.maxPlatforms) {
+      return reply.code(403).send({ error: "Platform limit reached", code: "PLAN_LIMIT_REACHED", max: account.maxPlatforms, current: count.count });
+    }
+
+    await db.insert(accountPlatforms)
+      .values({ accountId: request.user.accountId, platform })
+      .onConflictDoNothing();
+    return { message: `Platform ${platform} enabled` };
+  });
+
+  // DELETE /api/account/platforms/:platform — disable a platform
+  app.delete("/platforms/:platform", async (request, reply) => {
+    if (!request.user) return reply.code(401).send({ error: "Unauthorized" });
+    if (request.user.role !== "owner") return reply.code(403).send({ error: "Only owners can manage platforms" });
+    const { platform } = request.params as { platform: string };
+    await db.delete(accountPlatforms)
+      .where(and(eq(accountPlatforms.accountId, request.user.accountId), eq(accountPlatforms.platform, platform)));
+    return { message: `Platform ${platform} disabled` };
+  });
 };
