@@ -639,6 +639,43 @@ export const systemAdminRoutes: FastifyPluginAsync = async (app) => {
     };
   });
 
+  // PATCH /api/system-admin/users/:id — update user (name, role, suspend)
+  app.patch<{ Params: { id: string } }>(
+    "/users/:id",
+    async (request, reply) => {
+      const { id } = request.params;
+      const body = request.body as { name?: string; role?: string; isSuspended?: boolean };
+
+      const [user] = await db
+        .select({ id: users.id, accountId: users.accountId })
+        .from(users)
+        .where(eq(users.id, id));
+
+      if (!user) {
+        return reply.code(404).send({ error: "User not found" });
+      }
+
+      const updates: Record<string, unknown> = {};
+      if (body.name !== undefined) updates.name = body.name;
+      if (body.role !== undefined && ["owner", "editor", "viewer"].includes(body.role)) {
+        updates.role = body.role;
+      }
+      updates.updatedAt = new Date();
+
+      await db.update(users).set(updates).where(eq(users.id, id));
+
+      // If suspending, update the account
+      if (body.isSuspended !== undefined) {
+        await db.update(accounts).set({
+          isSuspended: body.isSuspended,
+          updatedAt: new Date(),
+        }).where(eq(accounts.id, user.accountId));
+      }
+
+      return { message: "User updated", userId: id };
+    }
+  );
+
   // POST /api/system-admin/users/:id/send-digest — manually trigger digest email for a user
   app.post<{ Params: { id: string } }>(
     "/users/:id/send-digest",
