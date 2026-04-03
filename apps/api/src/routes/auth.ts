@@ -804,6 +804,12 @@ export const authRoutes: FastifyPluginAsync = async (app) => {
       .set(updates)
       .where(eq(users.id, request.user.userId));
 
+    // If password changed, revoke all sessions for security
+    if (updates.passwordHash) {
+      await revokeAllTokensForUser(request.user.userId);
+      await db.delete(refreshTokens).where(eq(refreshTokens.userId, request.user.userId));
+    }
+
     const [updated] = await db
       .select({
         id: users.id,
