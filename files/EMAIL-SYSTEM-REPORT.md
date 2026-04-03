@@ -277,7 +277,7 @@ Her email gonderilmeden once su pipeline'dan gecer (`apps/scraper/src/email/pipe
 
 ---
 
-#### TASK 1.1: SMTP Failover Sistemi
+#### TASK 1.1: SMTP Failover Sistemi — [PLA-670](https://linear.app/plan-b-side-projects/issue/PLA-670/phase-1-smtp-failover-system)
 
 **Problem:** Tek SMTP provider kullaniliyor. Provider coktugunde tum email gonderimleri duruyor.
 
@@ -318,7 +318,7 @@ Her email gonderilmeden once su pipeline'dan gecer (`apps/scraper/src/email/pipe
 
 ---
 
-#### TASK 1.2: Queue Resilience & Recovery
+#### TASK 1.2: Queue Resilience & Recovery — [PLA-671](https://linear.app/plan-b-side-projects/issue/PLA-671/phase-1-queue-resilience-and-recovery)
 
 **Problem:** SMTP down oldugunda queue'daki emailler retry limitine ulasip DLQ'ya dusuyor. SMTP donunce bu emailler otomatik gonderilemiyor.
 
@@ -359,7 +359,7 @@ Her email gonderilmeden once su pipeline'dan gecer (`apps/scraper/src/email/pipe
 
 ---
 
-#### TASK 1.3: Bounce/Complaint Webhook Entegrasyonu
+#### TASK 1.3: Bounce/Complaint Webhook Entegrasyonu — [PLA-672](https://linear.app/plan-b-side-projects/issue/PLA-672/phase-1-bouncecomplaint-webhook-integration)
 
 **Problem:** Bounce ve complaint bildirimleri anlik gelmiyor. SMTP hata mesajindan parse ediliyor, bu guvenilir degil.
 
@@ -405,7 +405,7 @@ Her email gonderilmeden once su pipeline'dan gecer (`apps/scraper/src/email/pipe
 
 ---
 
-#### TASK 2.1: Email Worker Health Metrikleri
+#### TASK 2.1: Email Worker Health Metrikleri — [PLA-673](https://linear.app/plan-b-side-projects/issue/PLA-673/phase-2-email-worker-health-metrics)
 
 **Problem:** Email worker'larin processing rate, error rate, latency gibi metrikleri gorulmuyor.
 
@@ -475,7 +475,7 @@ Her email gonderilmeden once su pipeline'dan gecer (`apps/scraper/src/email/pipe
 
 ---
 
-#### TASK 2.2: Queue Depth Alert Sistemi
+#### TASK 2.2: Queue Depth Alert Sistemi — [PLA-674](https://linear.app/plan-b-side-projects/issue/PLA-674/phase-2-queue-depth-alert-system)
 
 **Problem:** Queue birikirse (SMTP down, worker crash, vb.) admin haberdar olmuyor.
 
@@ -521,7 +521,7 @@ Her email gonderilmeden once su pipeline'dan gecer (`apps/scraper/src/email/pipe
 
 ---
 
-#### TASK 2.3: Email Analytics Dashboard v2
+#### TASK 2.3: Email Analytics Dashboard v2 — [PLA-675](https://linear.app/plan-b-side-projects/issue/PLA-675/phase-2-email-analytics-dashboard-v2)
 
 **Problem:** Sadece basit open/click istatistikleri var. Trend analizi, template karsilastirma, user engagement yok.
 
@@ -566,7 +566,7 @@ Her email gonderilmeden once su pipeline'dan gecer (`apps/scraper/src/email/pipe
 
 ---
 
-#### TASK 3.1: Global Sandbox Mode
+#### TASK 3.1: Global Sandbox Mode — [PLA-676](https://linear.app/plan-b-side-projects/issue/PLA-676/phase-3-global-sandbox-mode)
 
 **Problem:** Production'da email testi yapmak riskli. Yanlislikla gercek kullaniciya email gidebilir.
 
@@ -603,7 +603,7 @@ Her email gonderilmeden once su pipeline'dan gecer (`apps/scraper/src/email/pipe
 
 ---
 
-#### TASK 3.2: Gelismis Dry-Run & Email Simulation
+#### TASK 3.2: Gelismis Dry-Run & Email Simulation — [PLA-677](https://linear.app/plan-b-side-projects/issue/PLA-677/phase-3-advanced-dry-run-and-email-simulation)
 
 **Problem:** Mevcut dry-run sadece digest/weekly icin calisiyor. Tum email tipleri icin "bu kullaniciya ne gonderirdim?" testi yapilmiyor.
 
@@ -656,7 +656,7 @@ Her email gonderilmeden once su pipeline'dan gecer (`apps/scraper/src/email/pipe
 
 ---
 
-#### TASK 3.3: Email Template Test Suite
+#### TASK 3.3: Email Template Test Suite — [PLA-678](https://linear.app/plan-b-side-projects/issue/PLA-678/phase-3-email-template-test-suite)
 
 **Problem:** Template degisiklikleri production'da beklenmedik gorunum sorunlarina yol acabiliyor.
 
@@ -689,7 +689,7 @@ Her email gonderilmeden once su pipeline'dan gecer (`apps/scraper/src/email/pipe
 
 ---
 
-#### TASK 4.1: Email Scheduling (Delayed Send)
+#### TASK 4.1: Email Scheduling (Delayed Send) — *Linear task bekliyor*
 
 **Problem:** Emailler anlik veya cron ile gonderiliyor. Belirli bir zamanda gondermek mumkun degil.
 
@@ -721,7 +721,7 @@ Her email gonderilmeden once su pipeline'dan gecer (`apps/scraper/src/email/pipe
 
 ---
 
-#### TASK 4.2: A/B Test Altyapisi
+#### TASK 4.2: A/B Test Altyapisi — *Linear task bekliyor*
 
 **Problem:** Farkli subject line veya template varyasyonlarinin performansini karsilastirmak mumkun degil.
 
@@ -753,7 +753,7 @@ Her email gonderilmeden once su pipeline'dan gecer (`apps/scraper/src/email/pipe
 
 ---
 
-#### TASK 4.3: Email Preference Center
+#### TASK 4.3: Email Preference Center — *Linear task bekliyor*
 
 **Problem:** Kullanicilar sadece unsubscribe edebiliyor. Hangi emailleri alacaklarini secemiyorlar.
 
@@ -786,7 +786,7 @@ Her email gonderilmeden once su pipeline'dan gecer (`apps/scraper/src/email/pipe
 
 ---
 
-#### TASK 4.4: Email Error Tracking & Diagnostics
+#### TASK 4.4: Email Error Tracking & Diagnostics — *Linear task bekliyor*
 
 **Problem:** Email hatalari Sentry'de generic loglanıyor. Spesifik email hatalarini debug etmek zor.
 
@@ -845,7 +845,7 @@ Her email gonderilmeden once su pipeline'dan gecer (`apps/scraper/src/email/pipe
 
 ---
 
-#### TASK 5.1: Email Log Search & Export
+#### TASK 5.1: Email Log Search & Export — *Linear task bekliyor*
 
 **Alt Tasklar:**
 
@@ -866,7 +866,7 @@ Her email gonderilmeden once su pipeline'dan gecer (`apps/scraper/src/email/pipe
 
 ---
 
-#### TASK 5.2: Cron Monitor & Digest Scheduler
+#### TASK 5.2: Cron Monitor & Digest Scheduler — *Linear task bekliyor*
 
 **Alt Tasklar:**
 
@@ -886,7 +886,7 @@ Her email gonderilmeden once su pipeline'dan gecer (`apps/scraper/src/email/pipe
 
 ---
 
-#### TASK 5.3: Rate Limit Synchronization
+#### TASK 5.3: Rate Limit Synchronization — *Linear task bekliyor*
 
 **Alt Tasklar:**
 
@@ -904,24 +904,24 @@ Her email gonderilmeden once su pipeline'dan gecer (`apps/scraper/src/email/pipe
 
 ## 5. Onceliklendirme Ozeti
 
-| Faz | Task | Oncelik | Tahmini Karmasiklik | Bagimlilik |
-|-----|------|---------|---------------------|------------|
-| 1 | 1.1 SMTP Failover | KRITIK | Orta | - |
-| 1 | 1.2 Queue Resilience | KRITIK | Orta | - |
-| 1 | 1.3 Bounce Webhooks | YUKSEK | Yuksek | - |
-| 2 | 2.1 Worker Health Metrikleri | YUKSEK | Orta | - |
-| 2 | 2.2 Queue Depth Alerts | YUKSEK | Orta | 2.1 |
-| 2 | 2.3 Analytics Dashboard v2 | ORTA | Yuksek | - |
-| 3 | 3.1 Global Sandbox Mode | YUKSEK | Dusuk | - |
-| 3 | 3.2 Email Simulation | YUKSEK | Orta | - |
-| 3 | 3.3 Template Test Suite | ORTA | Dusuk | - |
-| 4 | 4.1 Email Scheduling | ORTA | Dusuk | - |
-| 4 | 4.2 A/B Test | DUSUK | Yuksek | 2.3 |
-| 4 | 4.3 Preference Center | ORTA | Orta | - |
-| 4 | 4.4 Error Tracking | ORTA | Orta | 2.1 |
-| 5 | 5.1 Log Search & Export | DUSUK | Dusuk | - |
-| 5 | 5.2 Cron Monitor | ORTA | Dusuk | - |
-| 5 | 5.3 Rate Limit Sync | DUSUK | Orta | 1.1 |
+| Faz | Task | Linear | Oncelik | Tahmini Karmasiklik | Bagimlilik |
+|-----|------|--------|---------|---------------------|------------|
+| 1 | 1.1 SMTP Failover | [PLA-670](https://linear.app/plan-b-side-projects/issue/PLA-670) | KRITIK | Orta | - |
+| 1 | 1.2 Queue Resilience | [PLA-671](https://linear.app/plan-b-side-projects/issue/PLA-671) | KRITIK | Orta | - |
+| 1 | 1.3 Bounce Webhooks | [PLA-672](https://linear.app/plan-b-side-projects/issue/PLA-672) | YUKSEK | Yuksek | - |
+| 2 | 2.1 Worker Health Metrikleri | [PLA-673](https://linear.app/plan-b-side-projects/issue/PLA-673) | YUKSEK | Orta | - |
+| 2 | 2.2 Queue Depth Alerts | [PLA-674](https://linear.app/plan-b-side-projects/issue/PLA-674) | YUKSEK | Orta | 2.1 |
+| 2 | 2.3 Analytics Dashboard v2 | [PLA-675](https://linear.app/plan-b-side-projects/issue/PLA-675) | ORTA | Yuksek | - |
+| 3 | 3.1 Global Sandbox Mode | [PLA-676](https://linear.app/plan-b-side-projects/issue/PLA-676) | YUKSEK | Dusuk | - |
+| 3 | 3.2 Email Simulation | [PLA-677](https://linear.app/plan-b-side-projects/issue/PLA-677) | YUKSEK | Orta | - |
+| 3 | 3.3 Template Test Suite | [PLA-678](https://linear.app/plan-b-side-projects/issue/PLA-678) | ORTA | Dusuk | - |
+| 4 | 4.1 Email Scheduling | *bekliyor* | ORTA | Dusuk | - |
+| 4 | 4.2 A/B Test | *bekliyor* | DUSUK | Yuksek | 2.3 |
+| 4 | 4.3 Preference Center | *bekliyor* | ORTA | Orta | - |
+| 4 | 4.4 Error Tracking | *bekliyor* | ORTA | Orta | 2.1 |
+| 5 | 5.1 Log Search & Export | *bekliyor* | DUSUK | Dusuk | - |
+| 5 | 5.2 Cron Monitor | *bekliyor* | ORTA | Dusuk | - |
+| 5 | 5.3 Rate Limit Sync | *bekliyor* | DUSUK | Orta | 1.1 |
 
 ### Onerilen Uygulama Sirasi
 
