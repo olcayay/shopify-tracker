@@ -6,6 +6,7 @@ import Link from "next/link";
 import { useAuth } from "@/lib/auth-context";
 import { useFormatDate } from "@/lib/format-date";
 import { AppSearchBar } from "@/components/app-search-bar";
+import { QuickStartCards } from "@/components/quick-start-cards";
 import {
   Card,
   CardContent,
@@ -271,6 +272,13 @@ export default function OverviewPage() {
   return (
     <div className="space-y-6">
       <h1 className="text-2xl font-bold">Overview</h1>
+
+      {/* Quick-start cards for new users with zero data */}
+      <QuickStartCards
+        trackedApps={apps.length}
+        trackedKeywords={keywords.length}
+        competitors={competitors.length}
+      />
 
       {/* Account Usage Cards - clickable */}
       <AccountUsageCards stats={[
