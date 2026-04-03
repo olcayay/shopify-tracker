@@ -2,8 +2,8 @@
 
 > Created: 2026-04-01 | Updated: 2026-04-03
 > Target: Production-ready public launch
-> Progress: **ALL CODE TASKS COMPLETE** — Session 11: +18 tasks. Only 5 external-service tasks remain.
-> Remaining external: Stripe keys (PLA-598/616), Sentry token (PLA-600), PostHog (PLA-602), prod SSH (PLA-603)
+> Progress: **Session 12: ALL code tasks complete** — 5 CI/test tasks done (PLA-649/650/651/652/653)
+> Remaining external only: Stripe (PLA-598/616), Sentry (PLA-600), PostHog (PLA-602), prod SSH (PLA-603)
 
 ---
 
