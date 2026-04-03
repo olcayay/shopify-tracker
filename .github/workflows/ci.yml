@@ -56,6 +56,33 @@ jobs:
       - name: Build all packages
         run: npx turbo build
 
+  docker-build:
+    name: Docker Build Validation
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    needs: lint-typecheck-test
+
+    strategy:
+      matrix:
+        dockerfile:
+          - { file: Dockerfile.api, name: api }
+          - { file: Dockerfile.dashboard, name: dashboard }
+          - { file: Dockerfile.worker, name: worker }
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build Docker image (${{ matrix.dockerfile.name }})
+        run: |
+          docker build \
+            -f ${{ matrix.dockerfile.file }} \
+            --build-arg NEXT_PUBLIC_API_URL=https://api.appranks.io \
+            -t appranks-${{ matrix.dockerfile.name }}:ci \
+            .
+
+      - name: Verify image was created
+        run: docker image inspect appranks-${{ matrix.dockerfile.name }}:ci > /dev/null
+
   deploy:
     name: Deploy to Production
     runs-on: ubuntu-latest
