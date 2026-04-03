@@ -1,7 +1,7 @@
 import type { FastifyPluginAsync } from "fastify";
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import { z } from "zod";
-import { accounts } from "@appranks/db";
+import { accounts, accountTrackedApps, accountTrackedKeywords, users } from "@appranks/db";
 import { createLogger } from "@appranks/shared";
 
 const checkoutSchema = z.object({
@@ -47,12 +47,39 @@ export const billingRoutes: FastifyPluginAsync = async (app) => {
       ? Math.max(0, 7 - Math.floor((Date.now() - new Date(account.pastDueSince).getTime()) / (1000 * 60 * 60 * 24)))
       : null;
 
+    // Check current usage for over-limit detection
+    const [appsCount] = await db.select({ count: sql<number>`count(*)::int` }).from(accountTrackedApps).where(eq(accountTrackedApps.accountId, request.user.accountId));
+    const [keywordsCount] = await db.select({ count: sql<number>`count(*)::int` }).from(accountTrackedKeywords).where(eq(accountTrackedKeywords.accountId, request.user.accountId));
+    const [usersCount] = await db.select({ count: sql<number>`count(*)::int` }).from(users).where(eq(users.accountId, request.user.accountId));
+
+    const usage = {
+      trackedApps: appsCount?.count ?? 0,
+      trackedKeywords: keywordsCount?.count ?? 0,
+      users: usersCount?.count ?? 0,
+    };
+
+    const limits = {
+      maxTrackedApps: account?.maxTrackedApps ?? 0,
+      maxTrackedKeywords: account?.maxTrackedKeywords ?? 0,
+      maxUsers: account?.maxUsers ?? 0,
+    };
+
+    const overLimit = {
+      apps: usage.trackedApps > limits.maxTrackedApps,
+      keywords: usage.trackedKeywords > limits.maxTrackedKeywords,
+      users: usage.users > limits.maxUsers,
+      any: usage.trackedApps > limits.maxTrackedApps || usage.trackedKeywords > limits.maxTrackedKeywords || usage.users > limits.maxUsers,
+    };
+
     return {
       status: account?.subscriptionStatus || "free",
       plan: account?.subscriptionPlan || null,
       periodEnd: account?.subscriptionPeriodEnd || null,
       pastDueSince: account?.pastDueSince || null,
       graceDaysRemaining,
+      usage,
+      limits,
+      overLimit,
     };
   });
 
