@@ -75,6 +75,23 @@ jobs:
       - name: Build all packages
         run: npx turbo build
 
+      - name: Upload Sentry source maps (dashboard)
+        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+        env:
+          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+          SENTRY_ORG: ${{ secrets.SENTRY_ORG }}
+          SENTRY_PROJECT: ${{ secrets.SENTRY_PROJECT }}
+        run: |
+          if [ -z "$SENTRY_AUTH_TOKEN" ]; then
+            echo "SENTRY_AUTH_TOKEN not set — skipping source map upload"
+            exit 0
+          fi
+          npx @sentry/cli releases files "$GITHUB_SHA" upload-sourcemaps \
+            apps/dashboard/.next/static \
+            --url-prefix "~/_next/static" \
+            --rewrite \
+            || echo "Source map upload failed (non-fatal)"
+
   docker-build:
     name: Docker Build Validation
     runs-on: ubuntu-latest
