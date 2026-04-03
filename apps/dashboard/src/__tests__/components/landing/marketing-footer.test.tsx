@@ -52,7 +52,7 @@ describe("MarketingFooter", () => {
   it("renders Contact link", () => {
     render(<MarketingFooter />);
     const link = screen.getByText("Contact").closest("a");
-    expect(link).toHaveAttribute("href", "mailto:support@appranks.io");
+    expect(link).toHaveAttribute("href", "/contact");
   });
 
   it("renders copyright text", () => {

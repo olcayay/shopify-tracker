@@ -60,12 +60,9 @@ export function MarketingFooter() {
                 </Link>
               </li>
               <li>
-                <a
-                  href="mailto:support@appranks.io"
-                  className="hover:text-foreground transition-colors"
-                >
+                <Link href="/contact" className="hover:text-foreground transition-colors">
                   Contact
-                </a>
+                </Link>
               </li>
             </ul>
           </div>
