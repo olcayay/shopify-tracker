@@ -1,3 +1,17 @@
+PLA-670: SMTP Failover System (2026-04-04)
+================================================================
+- Multi-provider SMTP support: primary + secondary providers via env vars
+- SmtpCircuitBreaker class: tracks failures per provider, opens circuit after
+  5 consecutive failures, auto-transitions to half-open after 5min timeout
+- Failover logic: sendMail() iterates available providers in priority order,
+  skipping open-circuit providers, falling back to next on failure
+- SMTP health check: periodic EHLO/HELO probe (every 5min), auto-updates
+  circuit breaker state based on connectivity
+- New files: smtp-circuit-breaker.ts, smtp-health-check.ts
+- Updated mailer.ts: singleton → multi-provider with circuit breakers
+- 20 new tests covering circuit states, failover, health checks, provider loading
+- Updated .env.example with SMTP_SECONDARY_* variables
+
 PLA-547: Scraper-API performance isolation (2026-04-02)
 ================================================================
 - DB pool isolation: createDb() now accepts DbPoolOptions (max, idleTimeout,

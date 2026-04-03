@@ -1,50 +1,186 @@
 import nodemailer from "nodemailer";
 import { createLogger } from "@appranks/shared";
+import {
+  SmtpCircuitBreaker,
+  type SmtpProviderConfig,
+} from "./smtp-circuit-breaker.js";
+import { startHealthCheckLoop } from "./smtp-health-check.js";
 
 const log = createLogger("mailer");
 
-let transporter: nodemailer.Transporter | null = null;
+// ── Provider management ────────────────────────────────────────────
 
-function getTransporter(): nodemailer.Transporter {
-  if (!transporter) {
-    const host = process.env.SMTP_HOST;
-    const port = parseInt(process.env.SMTP_PORT || "587", 10);
-    const user = process.env.SMTP_USER;
-    const pass = process.env.SMTP_PASS;
+const transporters = new Map<string, nodemailer.Transporter>();
+let circuitBreakers: SmtpCircuitBreaker[] = [];
+let healthCheckTimer: NodeJS.Timeout | null = null;
 
-    if (!host || !user || !pass) {
-      throw new Error("SMTP_HOST, SMTP_USER, and SMTP_PASS are required");
-    }
+/** Build provider configs from environment variables */
+export function loadSmtpProviders(): SmtpProviderConfig[] {
+  const providers: SmtpProviderConfig[] = [];
 
-    transporter = nodemailer.createTransport({
-      host,
-      port,
-      secure: port === 465,
-      auth: { user, pass },
+  const primaryHost = process.env.SMTP_HOST;
+  const primaryUser = process.env.SMTP_USER;
+  const primaryPass = process.env.SMTP_PASS;
+  if (primaryHost && primaryUser && primaryPass) {
+    providers.push({
+      name: "primary",
+      host: primaryHost,
+      port: parseInt(process.env.SMTP_PORT || "587", 10),
+      user: primaryUser,
+      pass: primaryPass,
+      from: process.env.SMTP_FROM || primaryUser,
+      priority: 1,
     });
   }
-  return transporter;
+
+  const secondaryHost = process.env.SMTP_SECONDARY_HOST;
+  const secondaryUser = process.env.SMTP_SECONDARY_USER;
+  const secondaryPass = process.env.SMTP_SECONDARY_PASS;
+  if (secondaryHost && secondaryUser && secondaryPass) {
+    providers.push({
+      name: "secondary",
+      host: secondaryHost,
+      port: parseInt(process.env.SMTP_SECONDARY_PORT || "587", 10),
+      user: secondaryUser,
+      pass: secondaryPass,
+      from: process.env.SMTP_SECONDARY_FROM || secondaryUser,
+      priority: 2,
+    });
+  }
+
+  if (providers.length === 0) {
+    throw new Error(
+      "At least one SMTP provider is required (SMTP_HOST, SMTP_USER, SMTP_PASS)"
+    );
+  }
+
+  return providers.sort((a, b) => a.priority - b.priority);
 }
+
+function getTransporter(provider: SmtpProviderConfig): nodemailer.Transporter {
+  let t = transporters.get(provider.name);
+  if (!t) {
+    t = nodemailer.createTransport({
+      host: provider.host,
+      port: provider.port,
+      secure: provider.port === 465,
+      auth: { user: provider.user, pass: provider.pass },
+    });
+    transporters.set(provider.name, t);
+  }
+  return t;
+}
+
+/** Initialize circuit breakers and start health checks. Called once at startup. */
+export function initSmtpFailover(
+  options?: { healthCheckIntervalMs?: number }
+): SmtpCircuitBreaker[] {
+  if (circuitBreakers.length > 0) return circuitBreakers;
+
+  const providers = loadSmtpProviders();
+  circuitBreakers = providers.map((p) => new SmtpCircuitBreaker(p));
+
+  log.info("SMTP failover initialized", {
+    providers: providers.map((p) => p.name),
+  });
+
+  // Start periodic health checks (skip in test env)
+  if (process.env.NODE_ENV !== "test") {
+    healthCheckTimer = startHealthCheckLoop(
+      circuitBreakers,
+      options?.healthCheckIntervalMs
+    );
+  }
+
+  return circuitBreakers;
+}
+
+/** Get circuit breakers (initializes if needed) */
+export function getCircuitBreakers(): SmtpCircuitBreaker[] {
+  if (circuitBreakers.length === 0) {
+    initSmtpFailover();
+  }
+  return circuitBreakers;
+}
+
+/** Check if all SMTP providers are down */
+export function allProvidersDown(): boolean {
+  const cbs = getCircuitBreakers();
+  return cbs.every((cb) => !cb.isAvailable());
+}
+
+// ── Send with failover ─────────────────────────────────────────────
 
 export async function sendMail(
   to: string,
   subject: string,
   html: string,
   headers?: Record<string, string>
-): Promise<{ messageId?: string }> {
-  const from = process.env.SMTP_FROM || process.env.SMTP_USER;
-  try {
-    const info = await getTransporter().sendMail({
-      from,
-      to,
-      subject,
-      html,
-      ...(headers ? { headers } : {}),
-    });
-    log.info("email sent", { to, subject });
-    return { messageId: info.messageId };
-  } catch (err) {
-    log.error("failed to send email", { to, subject, error: String(err) });
+): Promise<{ messageId?: string; provider?: string }> {
+  const cbs = getCircuitBreakers();
+  const availableProviders = cbs.filter((cb) => cb.isAvailable());
+
+  if (availableProviders.length === 0) {
+    const err = new Error("All SMTP providers are unavailable");
+    (err as any).code = "ALL_PROVIDERS_DOWN";
+    log.error("all SMTP providers down", { to, subject });
     throw err;
+  }
+
+  let lastError: Error | undefined;
+
+  for (const cb of availableProviders) {
+    const provider = cb.provider;
+    const from = provider.from;
+    try {
+      const transporter = getTransporter(provider);
+      const info = await transporter.sendMail({
+        from,
+        to,
+        subject,
+        html,
+        ...(headers ? { headers } : {}),
+      });
+
+      cb.recordSuccess();
+      log.info("email sent", { to, subject, provider: provider.name });
+      return { messageId: info.messageId, provider: provider.name };
+    } catch (err) {
+      lastError = err instanceof Error ? err : new Error(String(err));
+      cb.recordFailure();
+      log.warn("SMTP send failed, trying next provider", {
+        provider: provider.name,
+        to,
+        subject,
+        error: lastError.message,
+      });
+    }
+  }
+
+  // All available providers failed
+  log.error("all available SMTP providers failed", { to, subject });
+  throw lastError!;
+}
+
+/** Cleanup: stop health checks and close transporters */
+export async function closeMailer(): Promise<void> {
+  if (healthCheckTimer) {
+    clearInterval(healthCheckTimer);
+    healthCheckTimer = null;
+  }
+  for (const [, t] of transporters) {
+    t.close();
+  }
+  transporters.clear();
+  circuitBreakers = [];
+}
+
+/** Reset internal state (for testing) */
+export function _resetMailerState(): void {
+  transporters.clear();
+  circuitBreakers = [];
+  if (healthCheckTimer) {
+    clearInterval(healthCheckTimer);
+    healthCheckTimer = null;
   }
 }

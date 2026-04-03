@@ -1,3 +1,8 @@
+Email System Reliability (2026-04-04)
+  PLA-670: SMTP Failover System ✅
+  PLA-671: Queue Resilience & Recovery
+  PLA-672: Bounce/Complaint Webhook Integration
+
 Pre-Release Batch 2 (2026-04-02)
   PLA-550: Add HTTP security headers (HSTS, X-Frame-Options) ✅
   PLA-551: Scheduled cleanup for expired tokens/invitations ✅
