@@ -197,7 +197,7 @@ export async function buildTestApp(options: TestAppOptions): Promise<FastifyInst
   app.addHook("onRequest", async (request, reply) => {
     if (request.method === "OPTIONS") return;
 
-    const publicPaths = ["/api/auth/login", "/api/auth/register", "/api/auth/refresh", "/api/auth/forgot-password", "/api/auth/reset-password", "/api/auth/verify-email", "/api/invitations/"];
+    const publicPaths = ["/api/auth/login", "/api/auth/register", "/api/auth/refresh", "/api/auth/forgot-password", "/api/auth/reset-password", "/api/auth/verify-email", "/api/invitations/", "/api/billing/webhook"];
     const fullUrl = request.url;
     if (publicPaths.some((p) => fullUrl.startsWith(p))) return;
 
