@@ -17,7 +17,6 @@ export function initPostHog() {
     autocapture: true,
     session_recording: {
       maskAllInputs: true, // Privacy: mask form inputs
-      maskTextContent: false,
     },
     persistence: "localStorage",
   });
