@@ -24,7 +24,8 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Target, Eye, ChevronLeft, ChevronRight, Clock, ArrowLeft, AppWindow, Search } from "lucide-react";
+import { Target, Eye, ChevronLeft, ChevronRight, Clock, ArrowLeft, AppWindow, Search, Key, Users } from "lucide-react";
+import { EmptyState } from "@/components/ui/empty-state";
 import { Skeleton } from "@/components/ui/skeleton";
 import { StatCardSkeleton, TableSkeleton } from "@/components/skeletons";
 import { AppBadgeIcon } from "@/components/app-badges";
@@ -462,12 +463,12 @@ export default function OverviewPage() {
         </CardHeader>
         <CardContent>
           {keywords.length === 0 ? (
-            <p className="text-sm text-muted-foreground">
-              No tracked keywords yet.{" "}
-              <Link href={`/${platform}/keywords`} className="text-primary hover:underline">
-                Add keywords
-              </Link>
-            </p>
+            <EmptyState
+              icon={Key}
+              title="No tracked keywords yet"
+              description="Track keywords to monitor your app's search rankings."
+              action={{ label: "Add Keywords", href: `/${platform}/keywords` }}
+            />
           ) : (
             <>
               <Table>
@@ -546,9 +547,12 @@ export default function OverviewPage() {
         </CardHeader>
         <CardContent>
           {competitors.length === 0 ? (
-            <p className="text-sm text-muted-foreground">
-              No competitor apps yet. Mark an app as a competitor to start tracking.
-            </p>
+            <EmptyState
+              icon={Users}
+              title="No competitor apps yet"
+              description="Mark an app as a competitor to compare rankings and features."
+              action={{ label: "Browse Apps", href: `/${platform}/apps` }}
+            />
           ) : (
             <>
               <div className="overflow-auto">
