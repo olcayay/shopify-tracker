@@ -1,5 +1,6 @@
 "use client";
 
+import { trackEvent } from "@/lib/posthog";
 import {
   createContext,
   useContext,
@@ -356,6 +357,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setCookie("refresh_token", data.refreshToken, 7 * 86400);
     setUser(data.user);
     await refreshUser();
+    trackEvent("user_logged_in", { role: data.user.role });
     // Redirect to returnUrl if safe (must start with / to prevent open redirect)
     const dest = returnUrl && returnUrl.startsWith("/") ? returnUrl : "/overview";
     router.push(dest);
@@ -385,6 +387,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setCookie("refresh_token", data.refreshToken, 7 * 86400);
     setUser(data.user);
     await refreshUser();
+    trackEvent("user_signed_up");
     router.push("/overview");
     router.refresh();
   };
@@ -400,6 +403,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } catch {
       // ignore logout errors
     }
+    trackEvent("user_logged_out");
     deleteCookie("access_token");
     deleteCookie("refresh_token");
     setUser(null);
