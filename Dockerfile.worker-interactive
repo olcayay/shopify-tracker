@@ -44,6 +44,6 @@ COPY apps/scraper/canva-auth-state.json ./apps/scraper/canva-auth-state.json
 
 # Start only the interactive worker (no scheduler)
 HEALTHCHECK --interval=60s --timeout=5s --start-period=15s --retries=3 \
-  CMD pgrep -x node > /dev/null || exit 1
+  CMD test -f /proc/1/status || exit 1
 
 CMD ["node", "apps/scraper/dist/interactive-worker.js"]

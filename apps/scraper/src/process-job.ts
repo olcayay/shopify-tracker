@@ -58,6 +58,43 @@ export async function runMigrations(db: ReturnType<typeof createDb>, label?: str
   } catch (err) {
     log.error(`[${ctx}] migration failed`, { error: String(err), stack: (err as Error).stack });
   }
+
+  // Post-migration verification: ensure critical tables/columns exist
+  try {
+    const checks = await db.execute(sql`
+      SELECT
+        (SELECT count(*)::int FROM information_schema.tables WHERE table_schema='public' AND table_name='accounts') as has_accounts,
+        (SELECT count(*)::int FROM information_schema.tables WHERE table_schema='public' AND table_name='users') as has_users,
+        (SELECT count(*)::int FROM information_schema.tables WHERE table_schema='public' AND table_name='apps') as has_apps,
+        (SELECT count(*)::int FROM information_schema.tables WHERE table_schema='public' AND table_name='password_reset_tokens') as has_password_reset,
+        (SELECT count(*)::int FROM information_schema.tables WHERE table_schema='public' AND table_name='email_verification_tokens') as has_email_verify,
+        (SELECT count(*)::int FROM information_schema.tables WHERE table_schema='public' AND table_name='account_activity_log') as has_activity_log,
+        (SELECT count(*)::int FROM information_schema.columns WHERE table_name='accounts' AND column_name='past_due_since') as has_past_due_col,
+        (SELECT count(*)::int FROM information_schema.columns WHERE table_name='accounts' AND column_name='stripe_customer_id') as has_stripe_col,
+        (SELECT count(*)::int FROM information_schema.columns WHERE table_name='users' AND column_name='email_verified_at') as has_email_verified_col,
+        (SELECT count(*)::int FROM information_schema.columns WHERE table_name='refresh_tokens' AND column_name='user_agent_hash') as has_ua_hash_col
+    `);
+    const row = (checks as any[])[0];
+    const failures: string[] = [];
+    if (!row?.has_accounts) failures.push("accounts table");
+    if (!row?.has_users) failures.push("users table");
+    if (!row?.has_apps) failures.push("apps table");
+    if (!row?.has_password_reset) failures.push("password_reset_tokens table");
+    if (!row?.has_email_verify) failures.push("email_verification_tokens table");
+    if (!row?.has_activity_log) failures.push("account_activity_log table");
+    if (!row?.has_past_due_col) failures.push("accounts.past_due_since column");
+    if (!row?.has_stripe_col) failures.push("accounts.stripe_customer_id column");
+    if (!row?.has_email_verified_col) failures.push("users.email_verified_at column");
+    if (!row?.has_ua_hash_col) failures.push("refresh_tokens.user_agent_hash column");
+
+    if (failures.length > 0) {
+      log.error(`[${ctx}] POST-MIGRATION CHECK FAILED — missing: ${failures.join(", ")}`, { failures });
+    } else {
+      log.info(`[${ctx}] post-migration verification passed — all critical tables and columns present`);
+    }
+  } catch (err) {
+    log.error(`[${ctx}] post-migration verification query failed`, { error: String(err) });
+  }
 }
 
 /** Per-type timeout map (milliseconds) */

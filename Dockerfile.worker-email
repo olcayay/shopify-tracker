@@ -45,7 +45,7 @@ COPY --from=build /app/apps/scraper/dist ./apps/scraper/dist
 ENV WORKER_MODE=email-instant
 
 HEALTHCHECK --interval=60s --timeout=5s --start-period=15s --retries=3 \
-  CMD pgrep -x node > /dev/null || exit 1
+  CMD test -f /proc/1/status || exit 1
 
 CMD ["sh", "-c", "\
   case \"$WORKER_MODE\" in \

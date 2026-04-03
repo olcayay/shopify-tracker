@@ -43,7 +43,16 @@ describe("Docker HEALTHCHECK configuration", () => {
     for (const file of workerFiles) {
       const content = readFileSync(resolve(projectRoot, file), "utf-8");
       expect(content, `${file} missing HEALTHCHECK`).toContain("HEALTHCHECK");
-      expect(content, `${file} should use pgrep for process check`).toContain("pgrep");
+      // Uses /proc/1/status check (pgrep not available in slim images)
+      expect(content, `${file} should use /proc check`).toContain("/proc/1/status");
+    }
+  });
+
+  it("Worker Dockerfiles do NOT use pgrep (not available in slim images)", () => {
+    const workerFiles = ["Dockerfile.worker", "Dockerfile.worker-email", "Dockerfile.worker-interactive"];
+    for (const file of workerFiles) {
+      const content = readFileSync(resolve(projectRoot, file), "utf-8");
+      expect(content, `${file} should not use pgrep (not in bookworm-slim)`).not.toContain("pgrep");
     }
   });
 

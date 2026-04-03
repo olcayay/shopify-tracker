@@ -82,6 +82,20 @@ describe("Migration integrity", () => {
       ).toBe(0);
     }
   });
+  it("no migration uses CONCURRENTLY (incompatible with Drizzle transaction wrapper)", () => {
+    const sqlFiles = readdirSync(migrationsDir).filter((f) => f.endsWith(".sql"));
+    for (const file of sqlFiles) {
+      const content = readFileSync(resolve(migrationsDir, file), "utf-8");
+      const concurrentlyLines = content
+        .split("\n")
+        .filter((l) => /CONCURRENTLY/i.test(l) && !/^--/.test(l.trim()));
+
+      expect(
+        concurrentlyLines.length,
+        `CONCURRENTLY found in ${file} — Drizzle runs migrations in transactions, CONCURRENTLY is not allowed. Use plain CREATE INDEX IF NOT EXISTS instead.`
+      ).toBe(0);
+    }
+  });
 });
 
 describe("Schema critical columns", () => {
