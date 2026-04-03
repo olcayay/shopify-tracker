@@ -1,5 +1,5 @@
 import type { FastifyPluginAsync } from "fastify";
-import { eq, sql } from "drizzle-orm";
+import { eq, sql, and, desc } from "drizzle-orm";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import crypto from "crypto";
@@ -566,6 +566,44 @@ export const authRoutes: FastifyPluginAsync = async (app) => {
     await db.delete(refreshTokens).where(eq(refreshTokens.userId, userId));
 
     return { message: "All sessions revoked" };
+  });
+
+  // GET /api/auth/sessions — list active sessions (refresh tokens)
+  app.get("/sessions", async (request, reply) => {
+    if (!request.user) return reply.code(401).send({ error: "Unauthorized" });
+
+    const sessions = await db
+      .select({
+        id: refreshTokens.id,
+        userAgentHash: refreshTokens.userAgentHash,
+        createdAt: refreshTokens.createdAt,
+        expiresAt: refreshTokens.expiresAt,
+      })
+      .from(refreshTokens)
+      .where(eq(refreshTokens.userId, request.user.userId))
+      .orderBy(desc(refreshTokens.createdAt));
+
+    return { sessions };
+  });
+
+  // DELETE /api/auth/sessions/:id — revoke a specific session
+  app.delete("/sessions/:id", async (request, reply) => {
+    if (!request.user) return reply.code(401).send({ error: "Unauthorized" });
+    const { id } = request.params as { id: string };
+
+    const [deleted] = await db
+      .delete(refreshTokens)
+      .where(and(
+        eq(refreshTokens.id, id),
+        eq(refreshTokens.userId, request.user.userId),
+      ))
+      .returning();
+
+    if (!deleted) {
+      return reply.code(404).send({ error: "Session not found" });
+    }
+
+    return { message: "Session revoked" };
   });
 
   // GET /api/auth/me — current user + account info + usage
