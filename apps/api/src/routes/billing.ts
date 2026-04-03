@@ -145,6 +145,7 @@ export const billingRoutes: FastifyPluginAsync = async (app) => {
             updatedAt: new Date(),
           }).where(eq(accounts.id, accountId));
           log.info("Subscription activated", { accountId });
+          import("../utils/activity-log.js").then(m => m.logActivity(db, accountId, null, "subscription_activated", "account", accountId)).catch(() => {});
         }
         break;
       }

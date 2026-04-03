@@ -363,6 +363,7 @@ export const authRoutes: FastifyPluginAsync = async (app) => {
     await revokeAllTokensForUser(resetToken.userId);
     await db.delete(refreshTokens).where(eq(refreshTokens.userId, resetToken.userId));
 
+    import("../utils/activity-log.js").then(m => m.logActivity(db, "", resetToken.userId, "password_reset", "user", resetToken.userId)).catch(() => {});
     return { message: "Password has been reset successfully. Please log in with your new password." };
   });
 
@@ -859,6 +860,10 @@ export const authRoutes: FastifyPluginAsync = async (app) => {
       .from(users)
       .where(eq(users.id, request.user.userId));
 
+    // Log profile update activity
+    const action = updates.passwordHash ? "password_changed" : "profile_updated";
+    import("../utils/activity-log.js").then(m => m.logActivity(db, request.user.accountId, request.user.userId, action, "user", request.user.userId)).catch(() => {});
+
     return updated;
   });
 
@@ -941,6 +946,7 @@ export const authRoutes: FastifyPluginAsync = async (app) => {
     await revokeAllTokensForUser(user.id);
     await db.delete(refreshTokens).where(eq(refreshTokens.userId, user.id));
 
+    import("../utils/activity-log.js").then(m => m.logActivity(db, user.accountId, user.id, "account_deleted", "account", user.accountId)).catch(() => {});
     return { message: "Account deleted. Your data has been anonymized." };
   });
 };

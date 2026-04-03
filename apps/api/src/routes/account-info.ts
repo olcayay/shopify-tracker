@@ -197,6 +197,7 @@ export const accountInfoRoutes: FastifyPluginAsync = async (app) => {
         .where(eq(accounts.id, accountId))
         .returning();
 
+      import("../utils/activity-log.js").then(m => m.logActivity(db, accountId, request.user.userId, "account_updated", "account", accountId)).catch(() => {});
       return updated;
     }
   );
