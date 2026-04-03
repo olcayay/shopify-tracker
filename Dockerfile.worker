@@ -45,4 +45,9 @@ COPY apps/scraper/canva-auth-state.json ./apps/scraper/canva-auth-state.json
 # WORKER_MODE: "background" (default) runs worker + scheduler
 #               "interactive" runs only the interactive worker
 ENV WORKER_MODE=background
+
+# Health check: verify node process is still running
+HEALTHCHECK --interval=60s --timeout=5s --start-period=15s --retries=3 \
+  CMD pgrep -x node > /dev/null || exit 1
+
 CMD ["sh", "-c", "if [ \"$WORKER_MODE\" = \"interactive\" ]; then node apps/scraper/dist/interactive-worker.js; else node apps/scraper/dist/worker.js & node apps/scraper/dist/scheduler.js & wait; fi"]

@@ -38,10 +38,13 @@ describe("Docker HEALTHCHECK configuration", () => {
     });
   }
 
-  it("Worker Dockerfile does NOT have HEALTHCHECK (process-based)", () => {
-    const content = readFileSync(resolve(projectRoot, "Dockerfile.worker"), "utf-8");
-    // Workers don't have HTTP endpoints — process exit = unhealthy
-    expect(content).not.toContain("HEALTHCHECK");
+  it("Worker Dockerfiles have process-based HEALTHCHECK", () => {
+    const workerFiles = ["Dockerfile.worker", "Dockerfile.worker-email", "Dockerfile.worker-interactive"];
+    for (const file of workerFiles) {
+      const content = readFileSync(resolve(projectRoot, file), "utf-8");
+      expect(content, `${file} missing HEALTHCHECK`).toContain("HEALTHCHECK");
+      expect(content, `${file} should use pgrep for process check`).toContain("pgrep");
+    }
   });
 
   it("All Dockerfiles have CMD instruction", () => {
