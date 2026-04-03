@@ -10,6 +10,7 @@ import { CompetitorButton } from "@/components/competitor-button";
 import { AdminScraperTrigger } from "@/components/admin-scraper-trigger";
 import { AppNav } from "./app-nav";
 import { ClassicViewBanner } from "@/components/v2/classic-view-banner";
+import { StaleDataBanner } from "@/components/stale-data-banner";
 import { buildExternalAppUrl, getPlatformName } from "@/lib/platform-urls";
 import { PLATFORMS, isPlatformId, developerNameToSlug, type PlatformId } from "@appranks/shared";
 
@@ -226,6 +227,8 @@ export default async function AppDetailLayout({
         </div>
         );
       })()}
+
+      <StaleDataBanner lastScrapedAt={app.snapshot?.scrapedAt} />
 
       <AppNav slug={slug} isTracked={app.isTrackedByAccount} />
 
