@@ -787,4 +787,47 @@ export const accountExtrasRoutes: FastifyPluginAsync = async (app) => {
       .where(and(eq(accountPlatforms.accountId, request.user.accountId), eq(accountPlatforms.platform, platform)));
     return { message: `Platform ${platform} disabled` };
   });
+
+  // POST /api/account/refresh-app/:slug — trigger a manual scrape for a tracked app
+  app.post("/refresh-app/:slug", async (request, reply) => {
+    if (!request.user) return reply.code(401).send({ error: "Unauthorized" });
+    const { slug } = request.params as { slug: string };
+
+    // Verify app is tracked by this account
+    const [tracked] = await db
+      .select({ appId: accountTrackedApps.appId })
+      .from(accountTrackedApps)
+      .innerJoin(apps, eq(apps.id, accountTrackedApps.appId))
+      .where(and(
+        eq(accountTrackedApps.accountId, request.user.accountId),
+        eq(apps.slug, slug),
+      ))
+      .limit(1);
+
+    if (!tracked) {
+      return reply.code(404).send({ error: "App not tracked or not found" });
+    }
+
+    // Enqueue interactive scrape job
+    const redisUrl = process.env.REDIS_URL || "redis://localhost:6379";
+    const parsed = new URL(redisUrl);
+    const { Queue } = await import("bullmq");
+    const queue = new Queue("scraper-jobs-interactive", {
+      connection: { host: parsed.hostname, port: parseInt(parsed.port || "6379"), password: parsed.password || undefined },
+    });
+
+    try {
+      const [appRow] = await db.select({ platform: apps.platform }).from(apps).where(eq(apps.slug, slug)).limit(1);
+      const job = await queue.add("scrape:app_details", {
+        type: "app_details",
+        slug,
+        platform: appRow.platform,
+        triggeredBy: "user",
+      }, { attempts: 2, backoff: { type: "exponential", delay: 30_000 } });
+
+      return { message: "Scrape queued", jobId: job.id };
+    } finally {
+      await queue.close();
+    }
+  });
 };
