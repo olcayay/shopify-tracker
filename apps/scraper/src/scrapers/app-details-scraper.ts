@@ -324,7 +324,9 @@ export class AppDetailsScraper {
                     ? (pd.shortDescription as string) || ""
                     : this.platform === "atlassian"
                       ? (pd.summary as string) || ""
-                      : (pd.description as string) || "",
+                      : this.platform === "zoho"
+                        ? (pd.tagline as string) || (pd.about as string) || ""
+                        : (pd.description as string) || "",
               app_details: this.platform === "wix"
                 ? (pd.description as string) || ""
                 : this.platform === "wordpress"
@@ -497,7 +499,9 @@ export class AppDetailsScraper {
                     : null,
               _externalId: this.platform === "atlassian" && pd.appId
                 ? String(pd.appId)
-                : null,
+                : this.platform === "zoho" && pd.extensionId
+                  ? String(pd.extensionId)
+                  : null,
               _badges: normalized.badges,
             };
           })()

@@ -134,15 +134,19 @@ function parseFromDetailsObject(obj: any, slug: string): NormalizedAppDetails {
       : null,
     badges: [],
     platformData: {
-      extensionId: ext.extensionId || ext.ext_uuid || null,
-      namespace: ext.namespace || null,
-      tagline: ext.tagline || ext.shortDescription || null,
-      about: ext.about || ext.description || null,
-      pricing: ext.pricing || null,
-      publishedDate: ext.publishedDate || null,
-      version: ext.version || null,
-      deploymentType: ext.deploymentname || ext.deploymentType || null,
-      cEdition: ext.cEdition ?? null,
+      extensionId: ext.extensionId
+        ? String(ext.extensionId)
+        : ext.ext_uuid
+          ? String(ext.ext_uuid)
+          : undefined,
+      namespace: ext.namespace || undefined,
+      tagline: ext.tagline || ext.shortDescription || undefined,
+      about: ext.about || ext.description || undefined,
+      pricing: ext.pricing || undefined,
+      publishedDate: ext.publishedDate || undefined,
+      version: ext.version || undefined,
+      deploymentType: ext.deploymentname || ext.deploymentType || undefined,
+      cEdition: ext.cEdition ?? undefined,
       categories: categorySlugs.map((s: string) => ({ slug: s })),
       partnerDetails: partners.map((p: any) => ({
         companyName: p.companyName || null,
@@ -150,7 +154,7 @@ function parseFromDetailsObject(obj: any, slug: string): NormalizedAppDetails {
         partner_uuid: p.partner_uuid || null,
         websiteUrl: p.websiteUrl || null,
       })),
-      versionhistory: obj.versionhistory || null,
+      versionhistory: obj.versionhistory || undefined,
       ratingBreakdown: {
         onestar: Number(ext.onestar) || 0,
         twostar: Number(ext.twostar) || 0,
@@ -164,7 +168,7 @@ function parseFromDetailsObject(obj: any, slug: string): NormalizedAppDetails {
 
 function parseFromDom($: cheerio.CheerioAPI, slug: string): NormalizedAppDetails {
   const name = $("h1").first().text().trim() || $(".extension-name").first().text().trim() || slug;
-  const tagline = $(".tagline, .short-description").first().text().trim() || null;
+  const tagline = $(".tagline, .short-description").first().text().trim() || undefined;
 
   const ratingText = $(".rating-value, .avg-rating").first().text().trim();
   const avgRating = safeParseFloat(ratingText);
