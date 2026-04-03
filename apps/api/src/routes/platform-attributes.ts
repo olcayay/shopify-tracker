@@ -1,5 +1,6 @@
 import type { FastifyPluginAsync } from "fastify";
 import { sql } from "drizzle-orm";
+import { parsePaginationQuery } from "../schemas/query.js";
 
 
 const FIELD_MAP: Record<string, string> = {
@@ -17,8 +18,7 @@ export const platformAttributeRoutes: FastifyPluginAsync = async (app) => {
     async (request, reply) => {
       const { type, value } = request.params;
       const platform = request.query.platform || "salesforce";
-      const maxLimit = Math.min(parseInt((request.query as any).limit || "200", 10) || 200, 200);
-      const parsedOffset = parseInt((request.query as any).offset || "0", 10) || 0;
+      const { limit: maxLimit, offset: parsedOffset } = parsePaginationQuery(request.query, 200);
 
       const jsonbField = FIELD_MAP[type];
       if (!jsonbField) {
