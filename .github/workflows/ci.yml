@@ -36,6 +36,25 @@ jobs:
       - name: Test
         run: npm test
 
+  dockerfile-lint:
+    name: Dockerfile Lint
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install hadolint
+        run: |
+          wget -qO /usr/local/bin/hadolint https://github.com/hadolint/hadolint/releases/latest/download/hadolint-Linux-x86_64
+          chmod +x /usr/local/bin/hadolint
+
+      - name: Lint Dockerfiles
+        run: |
+          hadolint --ignore DL3018 --ignore DL3008 Dockerfile.api
+          hadolint --ignore DL3018 --ignore DL3008 Dockerfile.dashboard
+          hadolint --ignore DL3018 --ignore DL3008 Dockerfile.worker
+
   build:
     name: Build
     runs-on: ubuntu-latest
