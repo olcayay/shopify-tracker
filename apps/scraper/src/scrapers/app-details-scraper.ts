@@ -357,7 +357,7 @@ export class AppDetailsScraper {
                 : pd.launchedDate
                   ? new Date(pd.launchedDate as string)
                   : null as Date | null,
-              demo_store_url: (this.platform === "wix" ? (pd.demoUrl as string) || null : null) as string | null,
+              demo_store_url: (this.platform === "wix" && pd.demoUrl && typeof pd.demoUrl === "string" ? pd.demoUrl : null) as string | null,
               languages: (pd.languages as string[]) || [],
               integrations: (() => {
                 if (this.platform === "salesforce") {
