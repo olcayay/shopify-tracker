@@ -229,6 +229,9 @@ export const accountMemberRoutes: FastifyPluginAsync = async (app) => {
         { role: invitation.role, accountId }
       ).catch(() => {});
 
+      // Log activity
+      import("../utils/activity-log.js").then(m => m.logActivity(db, accountId, userId, "member_invited", "invitation", invitation.email)).catch(() => {});
+
       return {
         id: invitation.id,
         email: invitation.email,
@@ -286,6 +289,7 @@ export const accountMemberRoutes: FastifyPluginAsync = async (app) => {
         return reply.code(404).send({ error: "Invitation not found" });
       }
 
+      import("../utils/activity-log.js").then(m => m.logActivity(db, request.user.accountId, request.user.userId, "invitation_cancelled", "invitation", id)).catch(() => {});
       return { message: "Invitation cancelled" };
     }
   );
@@ -313,6 +317,7 @@ export const accountMemberRoutes: FastifyPluginAsync = async (app) => {
 
       await db.delete(users).where(eq(users.id, userId));
 
+      import("../utils/activity-log.js").then(m => m.logActivity(db, request.user.accountId, request.user.userId, "member_removed", "user", userId)).catch(() => {});
       return { message: "User removed" };
     }
   );
