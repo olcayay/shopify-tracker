@@ -164,6 +164,10 @@ app.addHook("onRequest", async (request, reply) => {
 // JWT auth middleware (replaces old API key auth)
 registerAuthMiddleware(app);
 
+// Billing guard: block write operations when payment grace period has expired
+import { requireActiveBilling } from "./middleware/billing-guard.js";
+app.addHook("preHandler", requireActiveBilling());
+
 // Idempotency: cache responses for requests with Idempotency-Key header
 registerIdempotencyOnSend(app);
 
