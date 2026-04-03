@@ -689,7 +689,7 @@ Her email gonderilmeden once su pipeline'dan gecer (`apps/scraper/src/email/pipe
 
 ---
 
-#### TASK 4.1: Email Scheduling (Delayed Send) — *Linear task bekliyor*
+#### TASK 4.1: Email Scheduling (Delayed Send) — [PLA-679](https://linear.app/plan-b-side-projects/issue/PLA-679/phase-4-email-scheduling-delayed-send)
 
 **Problem:** Emailler anlik veya cron ile gonderiliyor. Belirli bir zamanda gondermek mumkun degil.
 
@@ -721,7 +721,7 @@ Her email gonderilmeden once su pipeline'dan gecer (`apps/scraper/src/email/pipe
 
 ---
 
-#### TASK 4.2: A/B Test Altyapisi — *Linear task bekliyor*
+#### TASK 4.2: A/B Test Altyapisi — [PLA-680](https://linear.app/plan-b-side-projects/issue/PLA-680/phase-4-ab-test-infrastructure-for-emails)
 
 **Problem:** Farkli subject line veya template varyasyonlarinin performansini karsilastirmak mumkun degil.
 
@@ -753,7 +753,7 @@ Her email gonderilmeden once su pipeline'dan gecer (`apps/scraper/src/email/pipe
 
 ---
 
-#### TASK 4.3: Email Preference Center — *Linear task bekliyor*
+#### TASK 4.3: Email Preference Center — [PLA-681](https://linear.app/plan-b-side-projects/issue/PLA-681/phase-4-email-preference-center)
 
 **Problem:** Kullanicilar sadece unsubscribe edebiliyor. Hangi emailleri alacaklarini secemiyorlar.
 
@@ -786,7 +786,7 @@ Her email gonderilmeden once su pipeline'dan gecer (`apps/scraper/src/email/pipe
 
 ---
 
-#### TASK 4.4: Email Error Tracking & Diagnostics — *Linear task bekliyor*
+#### TASK 4.4: Email Error Tracking & Diagnostics — [PLA-682](https://linear.app/plan-b-side-projects/issue/PLA-682/phase-4-email-error-tracking-and-diagnostics)
 
 **Problem:** Email hatalari Sentry'de generic loglanıyor. Spesifik email hatalarini debug etmek zor.
 
@@ -845,7 +845,7 @@ Her email gonderilmeden once su pipeline'dan gecer (`apps/scraper/src/email/pipe
 
 ---
 
-#### TASK 5.1: Email Log Search & Export — *Linear task bekliyor*
+#### TASK 5.1: Email Log Search & Export — [PLA-683](https://linear.app/plan-b-side-projects/issue/PLA-683/phase-5-email-log-search-and-export)
 
 **Alt Tasklar:**
 
@@ -866,7 +866,7 @@ Her email gonderilmeden once su pipeline'dan gecer (`apps/scraper/src/email/pipe
 
 ---
 
-#### TASK 5.2: Cron Monitor & Digest Scheduler — *Linear task bekliyor*
+#### TASK 5.2: Cron Monitor & Digest Scheduler — [PLA-684](https://linear.app/plan-b-side-projects/issue/PLA-684/phase-5-cron-monitor-and-digest-scheduler)
 
 **Alt Tasklar:**
 
@@ -886,7 +886,7 @@ Her email gonderilmeden once su pipeline'dan gecer (`apps/scraper/src/email/pipe
 
 ---
 
-#### TASK 5.3: Rate Limit Synchronization — *Linear task bekliyor*
+#### TASK 5.3: Rate Limit Synchronization — [PLA-685](https://linear.app/plan-b-side-projects/issue/PLA-685/phase-5-rate-limit-synchronization)
 
 **Alt Tasklar:**
 
@@ -915,13 +915,13 @@ Her email gonderilmeden once su pipeline'dan gecer (`apps/scraper/src/email/pipe
 | 3 | 3.1 Global Sandbox Mode | [PLA-676](https://linear.app/plan-b-side-projects/issue/PLA-676) | YUKSEK | Dusuk | - |
 | 3 | 3.2 Email Simulation | [PLA-677](https://linear.app/plan-b-side-projects/issue/PLA-677) | YUKSEK | Orta | - |
 | 3 | 3.3 Template Test Suite | [PLA-678](https://linear.app/plan-b-side-projects/issue/PLA-678) | ORTA | Dusuk | - |
-| 4 | 4.1 Email Scheduling | *bekliyor* | ORTA | Dusuk | - |
-| 4 | 4.2 A/B Test | *bekliyor* | DUSUK | Yuksek | 2.3 |
-| 4 | 4.3 Preference Center | *bekliyor* | ORTA | Orta | - |
-| 4 | 4.4 Error Tracking | *bekliyor* | ORTA | Orta | 2.1 |
-| 5 | 5.1 Log Search & Export | *bekliyor* | DUSUK | Dusuk | - |
-| 5 | 5.2 Cron Monitor | *bekliyor* | ORTA | Dusuk | - |
-| 5 | 5.3 Rate Limit Sync | *bekliyor* | DUSUK | Orta | 1.1 |
+| 4 | 4.1 Email Scheduling | [PLA-679](https://linear.app/plan-b-side-projects/issue/PLA-679) | ORTA | Dusuk | - |
+| 4 | 4.2 A/B Test | [PLA-680](https://linear.app/plan-b-side-projects/issue/PLA-680) | DUSUK | Yuksek | 2.3 |
+| 4 | 4.3 Preference Center | [PLA-681](https://linear.app/plan-b-side-projects/issue/PLA-681) | ORTA | Orta | - |
+| 4 | 4.4 Error Tracking | [PLA-682](https://linear.app/plan-b-side-projects/issue/PLA-682) | ORTA | Orta | 2.1 |
+| 5 | 5.1 Log Search & Export | [PLA-683](https://linear.app/plan-b-side-projects/issue/PLA-683) | DUSUK | Dusuk | - |
+| 5 | 5.2 Cron Monitor | [PLA-684](https://linear.app/plan-b-side-projects/issue/PLA-684) | ORTA | Dusuk | - |
+| 5 | 5.3 Rate Limit Sync | [PLA-685](https://linear.app/plan-b-side-projects/issue/PLA-685) | DUSUK | Orta | 1.1 |
 
 ### Onerilen Uygulama Sirasi
 
