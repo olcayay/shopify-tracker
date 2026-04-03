@@ -3,6 +3,7 @@ import Link from "next/link";
 import { Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { PricingCtaButton } from "@/components/pricing-cta-button";
 
 export const metadata: Metadata = {
   title: "Pricing",
@@ -17,6 +18,8 @@ interface Plan {
   features: string[];
   cta: string;
   ctaHref: string;
+  /** Stripe Price ID for checkout (set via NEXT_PUBLIC_STRIPE_PRICE_* env vars) */
+  priceId?: string;
   highlight?: boolean;
 }
 
@@ -36,6 +39,7 @@ const PLANS: Plan[] = [
     ],
     cta: "Start free",
     ctaHref: "/register",
+    priceId: undefined,
   },
   {
     name: "Pro",
@@ -54,6 +58,7 @@ const PLANS: Plan[] = [
     ],
     cta: "Start free trial",
     ctaHref: "/register",
+    priceId: process.env.NEXT_PUBLIC_STRIPE_PRICE_PRO || undefined,
     highlight: true,
   },
   {
@@ -74,6 +79,7 @@ const PLANS: Plan[] = [
     ],
     cta: "Start free trial",
     ctaHref: "/register",
+    priceId: process.env.NEXT_PUBLIC_STRIPE_PRICE_BUSINESS || undefined,
   },
   {
     name: "Enterprise",
@@ -125,9 +131,13 @@ function PlanCard({ plan }: { plan: Plan }) {
         </div>
       </CardHeader>
       <CardContent className="space-y-4">
-        <Button asChild className="w-full" variant={plan.highlight ? "default" : "outline"}>
-          <Link href={plan.ctaHref}>{plan.cta}</Link>
-        </Button>
+        <PricingCtaButton
+          planName={plan.name}
+          ctaLabel={plan.cta}
+          ctaHref={plan.ctaHref}
+          priceId={plan.priceId}
+          highlight={plan.highlight}
+        />
         <ul className="space-y-2">
           {plan.features.map((feature) => (
             <li key={feature} className="flex items-start gap-2 text-sm">
