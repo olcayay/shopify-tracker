@@ -3159,6 +3159,46 @@ export const systemAdminRoutes: FastifyPluginAsync = async (app) => {
     }
   );
 
+  // POST /api/system-admin/email-preview — render email template from type + payload
+  app.post("/email-preview", async (request, reply) => {
+    const { type, payload } = request.body as {
+      type: string;
+      payload: Record<string, unknown>;
+    };
+
+    if (!type || !payload) {
+      return reply.code(400).send({ error: "type and payload are required" });
+    }
+
+    try {
+      // Dynamic import from scraper's compiled templates (same Docker image)
+      // @ts-expect-error — cross-package import resolved at runtime in Docker
+      const { templateRenderers } = await import("../../../scraper/dist/email/process-instant-email.js");
+
+      const renderer = templateRenderers[type as keyof typeof templateRenderers];
+      if (!renderer) {
+        return reply.code(404).send({ error: `No template found for type: ${type}` });
+      }
+
+      const { subject, html } = renderer(payload);
+      return { subject, html };
+    } catch (err) {
+      // Fallback: try to render a simple preview from payload
+      const name = (payload.name || payload.recipientName || "User") as string;
+      const subject = `Preview: ${type.replace(/_/g, " ")}`;
+      const html = `
+        <div style="font-family:sans-serif;padding:24px;max-width:600px;margin:0 auto;">
+          <h2>${type.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase())}</h2>
+          <p>To: ${name}</p>
+          <hr/>
+          <pre style="font-size:12px;background:#f5f5f5;padding:16px;border-radius:8px;overflow:auto;">${JSON.stringify(payload, null, 2)}</pre>
+          <p style="color:#999;font-size:11px;">Template preview unavailable — showing raw payload.</p>
+        </div>
+      `;
+      return { subject, html, fallback: true };
+    }
+  });
+
   // POST /api/system-admin/queue-jobs/:queue/:jobId/retry — retry a failed job
   app.post<{ Params: { queue: string; jobId: string } }>(
     "/queue-jobs/:queue/:jobId/retry",

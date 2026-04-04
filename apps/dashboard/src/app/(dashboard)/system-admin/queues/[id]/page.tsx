@@ -303,54 +303,158 @@ export default function QueueJobsPage() {
         </div>
 
         {/* Detail panel */}
-        <div className="lg:col-span-2 border rounded-lg p-4 min-h-[400px] max-h-[80vh] overflow-y-auto">
-          {loadingDetail ? (
-            <div className="flex items-center justify-center h-full text-muted-foreground">Loading...</div>
-          ) : selectedJob ? (
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <h3 className="text-sm font-bold">Job #{selectedJob.id}</h3>
-                <Badge className={STATE_COLORS[selectedJob.state] || ""}>{selectedJob.state}</Badge>
-              </div>
-              <div className="grid grid-cols-2 gap-2 text-xs">
-                <div><span className="text-muted-foreground">Name:</span> <span className="font-mono">{selectedJob.name}</span></div>
-                {selectedJob.recipient && <div><span className="text-muted-foreground">To:</span> <span className="font-medium">{selectedJob.recipient}</span></div>}
-                {selectedJob.emailType && <div><span className="text-muted-foreground">Type:</span> <span className="font-mono">{selectedJob.emailType}</span></div>}
-                {selectedJob.userId && <div><span className="text-muted-foreground">User:</span> <span className="font-mono text-[10px]">{selectedJob.userId}</span></div>}
-                {selectedJob.platform && <div><span className="text-muted-foreground">Platform:</span> {selectedJob.platform}</div>}
-                {selectedJob.triggeredBy && <div><span className="text-muted-foreground">Trigger:</span> {selectedJob.triggeredBy}</div>}
-                <div><span className="text-muted-foreground">Attempts:</span> {selectedJob.attemptsMade}</div>
-                <div><span className="text-muted-foreground">Created:</span> {selectedJob.timestamp ? timeAgo(selectedJob.timestamp) : "—"}</div>
-                {selectedJob.processedOn && <div><span className="text-muted-foreground">Processed:</span> {timeAgo(selectedJob.processedOn)}</div>}
-                {selectedJob.finishedOn && <div><span className="text-muted-foreground">Finished:</span> {timeAgo(selectedJob.finishedOn)}</div>}
-              </div>
-              {selectedJob.failedReason && (
-                <div className="rounded-md border border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-950/30 p-3">
-                  <p className="text-xs font-medium text-red-800 dark:text-red-200 mb-1">Error</p>
-                  <p className="text-xs text-red-700 dark:text-red-300 font-mono break-all">{selectedJob.failedReason}</p>
-                  {selectedJob.stacktrace.length > 0 && (
-                    <details className="mt-2">
-                      <summary className="text-[10px] text-red-600 dark:text-red-400 cursor-pointer">Stack trace</summary>
-                      <pre className="text-[10px] text-red-600 dark:text-red-400 mt-1 overflow-x-auto max-h-40 overflow-y-auto">{selectedJob.stacktrace.join("\n")}</pre>
-                    </details>
-                  )}
-                </div>
-              )}
-              <div>
-                <p className="text-xs font-medium mb-1">Job Data</p>
-                <pre className="text-[10px] font-mono bg-muted p-3 rounded-md overflow-x-auto max-h-60 overflow-y-auto">{JSON.stringify(selectedJob.data, null, 2)}</pre>
-              </div>
-              {selectedJob.returnvalue && (
-                <div>
-                  <p className="text-xs font-medium mb-1">Return Value</p>
-                  <pre className="text-[10px] font-mono bg-muted p-3 rounded-md overflow-x-auto max-h-40 overflow-y-auto">{JSON.stringify(selectedJob.returnvalue, null, 2)}</pre>
-                </div>
-              )}
-            </div>
-          ) : (
-            <div className="flex items-center justify-center h-full text-muted-foreground text-sm">Click a job to see details</div>
-          )}
+        <DetailPanel
+          selectedJob={selectedJob}
+          loadingDetail={loadingDetail}
+          queueKey={queueKey}
+          fetchWithAuth={fetchWithAuth}
+        />
+      </div>
+    </div>
+  );
+}
+
+// ── Detail Panel with Email Preview ───────────────────────────────
+
+function DetailPanel({
+  selectedJob,
+  loadingDetail,
+  queueKey,
+  fetchWithAuth,
+}: {
+  selectedJob: JobDetail | null;
+  loadingDetail: boolean;
+  queueKey: string;
+  fetchWithAuth: (path: string, options?: RequestInit) => Promise<Response>;
+}) {
+  const [detailTab, setDetailTab] = useState<"details" | "preview">("details");
+  const [previewHtml, setPreviewHtml] = useState<string | null>(null);
+  const [previewSubject, setPreviewSubject] = useState<string | null>(null);
+  const [previewLoading, setPreviewLoading] = useState(false);
+
+  const isEmailQueue = queueKey.startsWith("email");
+
+  useEffect(() => {
+    setDetailTab("details");
+    setPreviewHtml(null);
+    setPreviewSubject(null);
+  }, [selectedJob?.id]);
+
+  const loadPreview = async () => {
+    if (!selectedJob) return;
+    setPreviewLoading(true);
+    try {
+      const type = selectedJob.emailType || (selectedJob.data?.type as string);
+      const payload = (selectedJob.data?.payload || selectedJob.data) as Record<string, unknown>;
+
+      const res = await fetchWithAuth("/api/system-admin/email-preview", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ type, payload }),
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        setPreviewHtml(data.html);
+        setPreviewSubject(data.subject);
+        setDetailTab("preview");
+      } else {
+        toast.error("Preview failed");
+      }
+    } finally {
+      setPreviewLoading(false);
+    }
+  };
+
+  if (loadingDetail) {
+    return <div className="lg:col-span-2 border rounded-lg p-4 min-h-[400px] flex items-center justify-center text-muted-foreground">Loading...</div>;
+  }
+
+  if (!selectedJob) {
+    return <div className="lg:col-span-2 border rounded-lg p-4 min-h-[400px] flex items-center justify-center text-muted-foreground text-sm">Click a job to see details</div>;
+  }
+
+  return (
+    <div className="lg:col-span-2 border rounded-lg min-h-[400px] max-h-[80vh] flex flex-col">
+      <div className="flex items-center justify-between px-4 pt-3 pb-2 border-b shrink-0">
+        <div className="flex items-center gap-2">
+          <h3 className="text-sm font-bold">#{selectedJob.id}</h3>
+          <Badge className={STATE_COLORS[selectedJob.state] || ""}>{selectedJob.state}</Badge>
         </div>
+        {isEmailQueue && (
+          <div className="flex gap-1">
+            <button
+              onClick={() => setDetailTab("details")}
+              className={`px-2 py-1 text-xs rounded ${detailTab === "details" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}
+            >
+              Details
+            </button>
+            <button
+              onClick={() => { if (!previewHtml) loadPreview(); else setDetailTab("preview"); }}
+              disabled={previewLoading}
+              className={`px-2 py-1 text-xs rounded ${detailTab === "preview" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}
+            >
+              {previewLoading ? "Loading..." : "Preview"}
+            </button>
+          </div>
+        )}
+      </div>
+
+      <div className="flex-1 overflow-y-auto p-4">
+        {detailTab === "preview" && previewHtml ? (
+          <div className="space-y-3">
+            {previewSubject && (
+              <div className="text-xs">
+                <span className="text-muted-foreground">Subject:</span>{" "}
+                <span className="font-medium">{previewSubject}</span>
+              </div>
+            )}
+            <iframe
+              srcDoc={previewHtml}
+              className="w-full border rounded-md bg-white dark:bg-white"
+              style={{ minHeight: 500 }}
+              sandbox="allow-same-origin"
+              title="Email preview"
+            />
+          </div>
+        ) : (
+          <div className="space-y-4">
+            <div className="grid grid-cols-2 gap-2 text-xs">
+              <div><span className="text-muted-foreground">Name:</span> <span className="font-mono">{selectedJob.name}</span></div>
+              {selectedJob.recipient && <div><span className="text-muted-foreground">To:</span> <span className="font-medium">{selectedJob.recipient}</span></div>}
+              {selectedJob.emailType && <div><span className="text-muted-foreground">Type:</span> <span className="font-mono">{selectedJob.emailType}</span></div>}
+              {selectedJob.userId && <div><span className="text-muted-foreground">User:</span> <span className="font-mono text-[10px]">{selectedJob.userId}</span></div>}
+              {selectedJob.platform && <div><span className="text-muted-foreground">Platform:</span> {selectedJob.platform}</div>}
+              {selectedJob.triggeredBy && <div><span className="text-muted-foreground">Trigger:</span> {selectedJob.triggeredBy}</div>}
+              <div><span className="text-muted-foreground">Attempts:</span> {selectedJob.attemptsMade}</div>
+              <div><span className="text-muted-foreground">Created:</span> {selectedJob.timestamp ? timeAgo(selectedJob.timestamp) : "—"}</div>
+              {selectedJob.processedOn && <div><span className="text-muted-foreground">Processed:</span> {timeAgo(selectedJob.processedOn)}</div>}
+              {selectedJob.finishedOn && <div><span className="text-muted-foreground">Finished:</span> {timeAgo(selectedJob.finishedOn)}</div>}
+            </div>
+            {selectedJob.failedReason && (
+              <div className="rounded-md border border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-950/30 p-3">
+                <p className="text-xs font-medium text-red-800 dark:text-red-200 mb-1">Error</p>
+                <p className="text-xs text-red-700 dark:text-red-300 font-mono break-all">{selectedJob.failedReason}</p>
+                {selectedJob.stacktrace.length > 0 && (
+                  <details className="mt-2">
+                    <summary className="text-[10px] text-red-600 dark:text-red-400 cursor-pointer">Stack trace</summary>
+                    <pre className="text-[10px] text-red-600 dark:text-red-400 mt-1 overflow-x-auto max-h-40 overflow-y-auto">{selectedJob.stacktrace.join("\n")}</pre>
+                  </details>
+                )}
+              </div>
+            )}
+            <div>
+              <p className="text-xs font-medium mb-1">Job Data</p>
+              <pre className="text-[10px] font-mono bg-muted p-3 rounded-md overflow-x-auto max-h-60 overflow-y-auto">{JSON.stringify(selectedJob.data, null, 2)}</pre>
+            </div>
+            {selectedJob.returnvalue && (
+              <div>
+                <p className="text-xs font-medium mb-1">Return Value</p>
+                <pre className="text-[10px] font-mono bg-muted p-3 rounded-md overflow-x-auto max-h-40 overflow-y-auto">{JSON.stringify(selectedJob.returnvalue, null, 2)}</pre>
+              </div>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );
