@@ -183,6 +183,92 @@ export async function enqueueNotification(
   return job.id!;
 }
 
+/**
+ * Enqueue an instant email to be sent at a specific time (delayed send).
+ */
+export async function enqueueScheduledInstantEmail(
+  data: InstantEmailJobData,
+  sendAt: Date,
+  options?: { priority?: number }
+): Promise<{ jobId: string; delayMs: number; sendAt: string }> {
+  const delayMs = Math.max(0, sendAt.getTime() - Date.now());
+  const queue = getEmailInstantQueue();
+  const job = await queue.add(`scheduled:${data.type}`, data, {
+    delay: delayMs,
+    priority: options?.priority,
+  });
+  return { jobId: job.id!, delayMs, sendAt: sendAt.toISOString() };
+}
+
+/**
+ * Enqueue a bulk email to be sent at a specific time (delayed send).
+ */
+export async function enqueueScheduledBulkEmail(
+  data: BulkEmailJobData,
+  sendAt: Date,
+  options?: { priority?: number }
+): Promise<{ jobId: string; delayMs: number; sendAt: string }> {
+  const delayMs = Math.max(0, sendAt.getTime() - Date.now());
+  const queue = getEmailBulkQueue();
+  const job = await queue.add(`scheduled:${data.type}`, data, {
+    delay: delayMs,
+    priority: options?.priority,
+  });
+  return { jobId: job.id!, delayMs, sendAt: sendAt.toISOString() };
+}
+
+/**
+ * Get all scheduled (delayed) email jobs.
+ */
+export async function getScheduledEmails(): Promise<{
+  instant: { id: string; name: string; delay: number; data: unknown; timestamp: number }[];
+  bulk: { id: string; name: string; delay: number; data: unknown; timestamp: number }[];
+}> {
+  const instantQueue = getEmailInstantQueue();
+  const bulkQueue = getEmailBulkQueue();
+
+  const [instantDelayed, bulkDelayed] = await Promise.all([
+    instantQueue.getDelayed(),
+    bulkQueue.getDelayed(),
+  ]);
+
+  return {
+    instant: instantDelayed.map((j) => ({
+      id: j.id!,
+      name: j.name,
+      delay: j.opts?.delay ?? 0,
+      data: j.data,
+      timestamp: j.timestamp,
+    })),
+    bulk: bulkDelayed.map((j) => ({
+      id: j.id!,
+      name: j.name,
+      delay: j.opts?.delay ?? 0,
+      data: j.data,
+      timestamp: j.timestamp,
+    })),
+  };
+}
+
+/**
+ * Cancel a scheduled email job.
+ */
+export async function cancelScheduledEmail(
+  jobId: string,
+  queue: "instant" | "bulk" = "instant"
+): Promise<boolean> {
+  const q = queue === "bulk" ? getEmailBulkQueue() : getEmailInstantQueue();
+  const job = await q.getJob(jobId);
+  if (!job) return false;
+
+  const state = await job.getState();
+  if (state === "delayed") {
+    await job.remove();
+    return true;
+  }
+  return false;
+}
+
 /** Long-running job types that should not retry — the scheduler will re-enqueue on the next cycle */
 const NO_RETRY_TYPES: Set<ScraperJobType> = new Set([
   "category",

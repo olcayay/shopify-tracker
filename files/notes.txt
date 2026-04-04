@@ -1,3 +1,11 @@
+PLA-679: Email Scheduling / Delayed Send (2026-04-04)
+================================================================
+- enqueueScheduledEmail(): BullMQ delay-based scheduling for any email type
+- getScheduledEmails(): list all delayed jobs across instant + bulk queues
+- cancelScheduledEmail(): remove a delayed job by ID
+- API: POST /schedule (sendAt param), GET /scheduled, DELETE /:jobId
+- Auto-detects queue (instant vs bulk) based on email type prefix
+
 PLA-675: Email Analytics Dashboard v2 (2026-04-04)
 ================================================================
 - DB: email_daily_stats table (date × email_type aggregation)
