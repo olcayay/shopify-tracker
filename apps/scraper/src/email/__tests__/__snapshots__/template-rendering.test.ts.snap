@@ -1,0 +1,382 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`emailVerificationTemplate > matches snapshot 1`] = `
+"<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<title>AppRanks</title>
+<style>
+  body { margin: 0; padding: 0; background: #f9fafb; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; color: #111827; line-height: 1.6; }
+  .container { max-width: 640px; margin: 0 auto; background: #ffffff; border-radius: 8px; }
+  img { max-width: 100%; }
+  a { color: #6366f1; text-decoration: none; }
+  @media (prefers-color-scheme: dark) {
+    body { background: #1a1a2e !important; color: #e0e0e0 !important; }
+    .container { background: #16213e !important; }
+  }
+</style>
+<span style="display:none;max-height:0;overflow:hidden;">Verify your email address</span>
+</head>
+<body>
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f9fafb;padding:24px 0;">
+<tr><td align="center">
+<div class="container" style="max-width:640px;margin:0 auto;background:#ffffff;border-radius:8px;overflow:hidden;">
+
+    
+<div style="background:#6366f1;padding:24px;text-align:center;">
+  <div style="font-size:24px;font-weight:bold;color:#ffffff;letter-spacing:-0.5px;">AppRanks</div>
+  <div style="font-size:14px;color:rgba(255,255,255,0.8);margin-top:4px;">Email Verification</div>
+  <div style="font-size:12px;color:rgba(255,255,255,0.6);margin-top:2px;">Apr 4, 2026</div>
+</div>
+    <div style="padding:24px;">
+      <p style="font-size:16px;line-height:1.6;color:#374151;">Hi Alice,</p>
+      <p style="font-size:16px;line-height:1.6;color:#374151;">
+        Please verify your email address to complete your AppRanks account setup.
+      </p>
+      
+<div style="text-align:center;padding:16px 0;">
+  <a href="https://appranks.io/verify?token=xyz789" style="display:inline-block;padding:12px 32px;background:#6366f1;color:#ffffff;border:none;border-radius:6px;font-weight:600;font-size:15px;text-decoration:none;">
+    Verify Email Address
+  </a>
+</div>
+      <p style="font-size:14px;line-height:1.6;color:#6b7280;">
+        If you didn't create an AppRanks account, you can safely ignore this email.
+      </p>
+      <div style="margin-top:24px;padding:16px;background:#f9fafb;border-radius:6px;">
+        <p style="font-size:13px;color:#6b7280;margin:0;">
+          If the button above doesn't work, copy and paste this URL into your browser:
+        </p>
+        <p style="font-size:13px;color:#6366f1;word-break:break-all;margin:8px 0 0;">
+          https://appranks.io/verify?token=xyz789
+        </p>
+      </div>
+    </div>
+    <div style="padding:24px;text-align:center;border-top:1px solid #e5e7eb;color:#6b7280;font-size:12px;">
+      <div>AppRanks &mdash; Multi-platform app marketplace intelligence</div>
+    </div>
+  
+</div>
+</td></tr>
+</table>
+</body>
+</html>"
+`;
+
+exports[`invitationTemplate > matches snapshot 1`] = `
+"<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<title>AppRanks</title>
+<style>
+  body { margin: 0; padding: 0; background: #f9fafb; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; color: #111827; line-height: 1.6; }
+  .container { max-width: 640px; margin: 0 auto; background: #ffffff; border-radius: 8px; }
+  img { max-width: 100%; }
+  a { color: #6366f1; text-decoration: none; }
+  @media (prefers-color-scheme: dark) {
+    body { background: #1a1a2e !important; color: #e0e0e0 !important; }
+    .container { background: #16213e !important; }
+  }
+</style>
+<span style="display:none;max-height:0;overflow:hidden;">Join Acme Corp on AppRanks</span>
+</head>
+<body>
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f9fafb;padding:24px 0;">
+<tr><td align="center">
+<div class="container" style="max-width:640px;margin:0 auto;background:#ffffff;border-radius:8px;overflow:hidden;">
+
+    
+<div style="background:#6366f1;padding:24px;text-align:center;">
+  <div style="font-size:24px;font-weight:bold;color:#ffffff;letter-spacing:-0.5px;">AppRanks</div>
+  <div style="font-size:14px;color:rgba(255,255,255,0.8);margin-top:4px;">Team Invitation</div>
+  <div style="font-size:12px;color:rgba(255,255,255,0.6);margin-top:2px;">Apr 4, 2026</div>
+</div>
+    <div style="padding:24px;">
+      <p style="font-size:16px;line-height:1.6;color:#374151;">Hello,</p>
+      <p style="font-size:16px;line-height:1.6;color:#374151;">
+        <strong>Bob Smith</strong> has invited you to join
+        <strong>Acme Corp</strong> as a editor on AppRanks.
+      </p>
+      <div style="margin:24px 0;padding:20px;background:#f9fafb;border-radius:8px;text-align:center;">
+        <div style="font-size:14px;color:#6b7280;margin-bottom:4px;">You've been invited to</div>
+        <div style="font-size:20px;font-weight:600;color:#111827;">Acme Corp</div>
+      </div>
+      
+<div style="text-align:center;padding:16px 0;">
+  <a href="https://appranks.io/invite/accept/token123" style="display:inline-block;padding:12px 32px;background:#6366f1;color:#ffffff;border:none;border-radius:6px;font-weight:600;font-size:15px;text-decoration:none;">
+    Accept Invitation
+  </a>
+</div>
+      <p style="font-size:14px;line-height:1.6;color:#6b7280;">
+        This invitation will allow you to access the team's tracked apps, keywords, and competitive intelligence data.
+        If you weren't expecting this invitation, you can safely ignore this email.
+      </p>
+    </div>
+    <div style="padding:24px;text-align:center;border-top:1px solid #e5e7eb;color:#6b7280;font-size:12px;">
+      <div>AppRanks &mdash; Multi-platform app marketplace intelligence</div>
+    </div>
+  
+</div>
+</td></tr>
+</table>
+</body>
+</html>"
+`;
+
+exports[`loginAlertTemplate > matches snapshot 1`] = `
+"<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<title>AppRanks</title>
+<style>
+  body { margin: 0; padding: 0; background: #f9fafb; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; color: #111827; line-height: 1.6; }
+  .container { max-width: 640px; margin: 0 auto; background: #ffffff; border-radius: 8px; }
+  img { max-width: 100%; }
+  a { color: #6366f1; text-decoration: none; }
+  @media (prefers-color-scheme: dark) {
+    body { background: #1a1a2e !important; color: #e0e0e0 !important; }
+    .container { background: #16213e !important; }
+  }
+</style>
+<span style="display:none;max-height:0;overflow:hidden;">New sign-in detected</span>
+</head>
+<body>
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f9fafb;padding:24px 0;">
+<tr><td align="center">
+<div class="container" style="max-width:640px;margin:0 auto;background:#ffffff;border-radius:8px;overflow:hidden;">
+
+    
+<div style="background:#6366f1;padding:24px;text-align:center;">
+  <div style="font-size:24px;font-weight:bold;color:#ffffff;letter-spacing:-0.5px;">AppRanks</div>
+  <div style="font-size:14px;color:rgba(255,255,255,0.8);margin-top:4px;">Security Alert</div>
+  <div style="font-size:12px;color:rgba(255,255,255,0.6);margin-top:2px;">Apr 4, 2026</div>
+</div>
+    <div style="padding:24px;">
+      <p style="font-size:16px;line-height:1.6;color:#374151;">Hi Carol,</p>
+      <p style="font-size:16px;line-height:1.6;color:#374151;">
+        We detected a new sign-in to your AppRanks account.
+      </p>
+      <div style="margin:20px 0;padding:20px;background:#f9fafb;border-radius:8px;border-left:4px solid #f59e0b;">
+        <table role="presentation" cellpadding="0" cellspacing="0" style="width:100%;font-size:14px;color:#374151;">
+          <tr>
+            <td style="padding:4px 12px 4px 0;font-weight:600;white-space:nowrap;">Time</td>
+            <td style="padding:4px 0;">Apr 4, 2026, 3:00 PM</td>
+          </tr>
+          <tr>
+            <td style="padding:4px 12px 4px 0;font-weight:600;white-space:nowrap;">Device</td>
+            <td style="padding:4px 0;">Chrome on macOS</td>
+          </tr>
+          <tr>
+            <td style="padding:4px 12px 4px 0;font-weight:600;white-space:nowrap;">Location</td>
+            <td style="padding:4px 0;">San Francisco, CA</td>
+          </tr>
+          <tr>
+            <td style="padding:4px 12px 4px 0;font-weight:600;white-space:nowrap;">IP Address</td>
+            <td style="padding:4px 0;font-family:ui-monospace,monospace;">203.0.113.42</td>
+          </tr>
+        </table>
+      </div>
+      <p style="font-size:16px;line-height:1.6;color:#374151;">
+        If this was you, no action is needed.
+      </p>
+      <p style="font-size:16px;line-height:1.6;color:#ef4444;font-weight:600;">
+        If this wasn't you, please
+        <a href="https://appranks.io/settings/security" style="color:#ef4444;text-decoration:underline;">secure your account immediately</a>
+        by changing your password.
+      </p>
+    </div>
+    <div style="padding:24px;text-align:center;border-top:1px solid #e5e7eb;color:#6b7280;font-size:12px;">
+      <div>AppRanks &mdash; Multi-platform app marketplace intelligence</div>
+    </div>
+  
+</div>
+</td></tr>
+</table>
+</body>
+</html>"
+`;
+
+exports[`passwordResetTemplate > matches snapshot 1`] = `
+"<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<title>AppRanks</title>
+<style>
+  body { margin: 0; padding: 0; background: #f9fafb; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; color: #111827; line-height: 1.6; }
+  .container { max-width: 640px; margin: 0 auto; background: #ffffff; border-radius: 8px; }
+  img { max-width: 100%; }
+  a { color: #6366f1; text-decoration: none; }
+  @media (prefers-color-scheme: dark) {
+    body { background: #1a1a2e !important; color: #e0e0e0 !important; }
+    .container { background: #16213e !important; }
+  }
+</style>
+<span style="display:none;max-height:0;overflow:hidden;">Reset your password</span>
+</head>
+<body>
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f9fafb;padding:24px 0;">
+<tr><td align="center">
+<div class="container" style="max-width:640px;margin:0 auto;background:#ffffff;border-radius:8px;overflow:hidden;">
+
+    
+<div style="background:#6366f1;padding:24px;text-align:center;">
+  <div style="font-size:24px;font-weight:bold;color:#ffffff;letter-spacing:-0.5px;">AppRanks</div>
+  <div style="font-size:14px;color:rgba(255,255,255,0.8);margin-top:4px;">Password Reset</div>
+  <div style="font-size:12px;color:rgba(255,255,255,0.6);margin-top:2px;">Apr 4, 2026</div>
+</div>
+    <div style="padding:24px;">
+      <p style="font-size:16px;line-height:1.6;color:#374151;">Hi John Doe,</p>
+      <p style="font-size:16px;line-height:1.6;color:#374151;">
+        We received a request to reset the password for your AppRanks account.
+        Click the button below to create a new password.
+      </p>
+      
+<div style="text-align:center;padding:16px 0;">
+  <a href="https://appranks.io/reset-password?token=abc123" style="display:inline-block;padding:12px 32px;background:#6366f1;color:#ffffff;border:none;border-radius:6px;font-weight:600;font-size:15px;text-decoration:none;">
+    Reset Your Password
+  </a>
+</div>
+      <p style="font-size:14px;line-height:1.6;color:#6b7280;">
+        This link will expire in 1 hour.
+        If you didn't request a password reset, you can safely ignore this email.
+        Your password will not be changed.
+      </p>
+      <div style="margin-top:24px;padding:16px;background:#f9fafb;border-radius:6px;">
+        <p style="font-size:13px;color:#6b7280;margin:0;">
+          If the button above doesn't work, copy and paste this URL into your browser:
+        </p>
+        <p style="font-size:13px;color:#6366f1;word-break:break-all;margin:8px 0 0;">
+          https://appranks.io/reset-password?token=abc123
+        </p>
+      </div>
+    </div>
+    <div style="padding:24px;text-align:center;border-top:1px solid #e5e7eb;color:#6b7280;font-size:12px;">
+      <div>AppRanks &mdash; Multi-platform app marketplace intelligence</div>
+    </div>
+  
+</div>
+</td></tr>
+</table>
+</body>
+</html>"
+`;
+
+exports[`twoFactorCodeTemplate > matches snapshot 1`] = `
+"<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<title>AppRanks</title>
+<style>
+  body { margin: 0; padding: 0; background: #f9fafb; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; color: #111827; line-height: 1.6; }
+  .container { max-width: 640px; margin: 0 auto; background: #ffffff; border-radius: 8px; }
+  img { max-width: 100%; }
+  a { color: #6366f1; text-decoration: none; }
+  @media (prefers-color-scheme: dark) {
+    body { background: #1a1a2e !important; color: #e0e0e0 !important; }
+    .container { background: #16213e !important; }
+  }
+</style>
+<span style="display:none;max-height:0;overflow:hidden;">Your verification code: 847291</span>
+</head>
+<body>
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f9fafb;padding:24px 0;">
+<tr><td align="center">
+<div class="container" style="max-width:640px;margin:0 auto;background:#ffffff;border-radius:8px;overflow:hidden;">
+
+    
+<div style="background:#6366f1;padding:24px;text-align:center;">
+  <div style="font-size:24px;font-weight:bold;color:#ffffff;letter-spacing:-0.5px;">AppRanks</div>
+  <div style="font-size:14px;color:rgba(255,255,255,0.8);margin-top:4px;">Verification Code</div>
+  <div style="font-size:12px;color:rgba(255,255,255,0.6);margin-top:2px;">Apr 4, 2026</div>
+</div>
+    <div style="padding:24px;">
+      <p style="font-size:16px;line-height:1.6;color:#374151;">Hi Dave,</p>
+      <p style="font-size:16px;line-height:1.6;color:#374151;">
+        Your verification code is:
+      </p>
+      <div style="margin:24px 0;text-align:center;">
+        <div style="display:inline-block;padding:16px 40px;background:#f9fafb;border:2px solid #e5e7eb;border-radius:8px;font-family:ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Monaco, Consolas, monospace;font-size:32px;font-weight:700;letter-spacing:8px;color:#111827;">
+          847291
+        </div>
+      </div>
+      <p style="font-size:14px;line-height:1.6;color:#6b7280;text-align:center;">
+        This code expires in 10 minutes.
+      </p>
+      <p style="font-size:14px;line-height:1.6;color:#6b7280;">
+        If you didn't request this code, someone may be trying to access your account.
+        Please change your password immediately.
+      </p>
+    </div>
+    <div style="padding:24px;text-align:center;border-top:1px solid #e5e7eb;color:#6b7280;font-size:12px;">
+      <div>AppRanks &mdash; Multi-platform app marketplace intelligence</div>
+    </div>
+  
+</div>
+</td></tr>
+</table>
+</body>
+</html>"
+`;
+
+exports[`welcome email (inline) > matches snapshot 1`] = `
+"<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<title>AppRanks</title>
+<style>
+  body { margin: 0; padding: 0; background: #f9fafb; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; color: #111827; line-height: 1.6; }
+  .container { max-width: 640px; margin: 0 auto; background: #ffffff; border-radius: 8px; }
+  img { max-width: 100%; }
+  a { color: #6366f1; text-decoration: none; }
+  @media (prefers-color-scheme: dark) {
+    body { background: #1a1a2e !important; color: #e0e0e0 !important; }
+    .container { background: #16213e !important; }
+  }
+</style>
+<span style="display:none;max-height:0;overflow:hidden;">Welcome to AppRanks!</span>
+</head>
+<body>
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f9fafb;padding:24px 0;">
+<tr><td align="center">
+<div class="container" style="max-width:640px;margin:0 auto;background:#ffffff;border-radius:8px;overflow:hidden;">
+
+      
+<div style="background:#6366f1;padding:24px;text-align:center;">
+  <div style="font-size:24px;font-weight:bold;color:#ffffff;letter-spacing:-0.5px;">AppRanks</div>
+  <div style="font-size:14px;color:rgba(255,255,255,0.8);margin-top:4px;">Welcome to AppRanks</div>
+  <div style="font-size:12px;color:rgba(255,255,255,0.6);margin-top:2px;">Apr 4, 2026</div>
+</div>
+      <div style="padding:24px;">
+        <p style="font-size:16px;line-height:1.6;color:#374151;">Hi NewUser,</p>
+        <p style="font-size:16px;line-height:1.6;color:#374151;">Welcome to AppRanks! Your account is ready.</p>
+        
+<div style="text-align:center;padding:16px 0;">
+  <a href="http://localhost:3000" style="display:inline-block;padding:12px 32px;background:#6366f1;color:#ffffff;border:none;border-radius:6px;font-weight:600;font-size:15px;text-decoration:none;">
+    Go to Dashboard
+  </a>
+</div>
+      </div>
+    
+</div>
+</td></tr>
+</table>
+</body>
+</html>"
+`;

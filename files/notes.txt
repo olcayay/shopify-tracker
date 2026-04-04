@@ -1,3 +1,14 @@
+PLA-678: Email Template Test Suite (2026-04-04)
+================================================================
+- Comprehensive template rendering tests for all 6 transactional templates:
+  password reset, email verification, invitation, login alert, 2FA code, welcome
+- Each template tested for: rendering, variable substitution (no {{leftover}}),
+  CTA links, HTML validity, mobile responsive (viewport meta, max-width),
+  broken images, AppRanks branding, snapshot
+- Cross-template quality checks: max-width, branding, DOCTYPE
+- Template registry completeness test
+- 42 new tests + 6 snapshots
+
 PLA-674: Queue Depth Alert System (2026-04-04)
 ================================================================
 - DB tables: email_alert_rules (configurable rules), email_alerts_log (history)
