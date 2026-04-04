@@ -413,5 +413,36 @@ describe("Invitation routes", () => {
 
       await app.close();
     });
+
+    it("sets emailVerifiedAt when creating user via invitation", async () => {
+      let capturedValues: any = null;
+      const mockDb = buildSequentialMockDb({
+        selectResults: [[validInvitation], []],
+        insertResult: [createdUser],
+      });
+      // Intercept the insert to capture values
+      const origInsert = mockDb.insert.bind(mockDb);
+      mockDb.insert = (...args: any[]) => {
+        const chain = origInsert(...args);
+        const origValues = chain.values.bind(chain);
+        chain.values = (vals: any) => {
+          capturedValues = vals;
+          return origValues(vals);
+        };
+        return chain;
+      };
+      const app = await buildInvitationApp(mockDb);
+
+      await app.inject({
+        method: "POST",
+        url: "/api/invitations/accept/valid-token-123",
+        payload: { name: "New User", password: "securepass123" },
+      });
+
+      expect(capturedValues).not.toBeNull();
+      expect(capturedValues.emailVerifiedAt).toBeInstanceOf(Date);
+
+      await app.close();
+    });
   });
 });

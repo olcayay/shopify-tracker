@@ -54,6 +54,7 @@ export const invitationRoutes: FastifyPluginAsync = async (app) => {
       const passwordHash = await bcrypt.hash(password, 12);
 
       // Create user in the invitation's account
+      // Email is pre-verified since the user arrived via invitation email link
       const [user] = await db
         .insert(users)
         .values({
@@ -62,6 +63,7 @@ export const invitationRoutes: FastifyPluginAsync = async (app) => {
           name,
           accountId: invitation.accountId,
           role: invitation.role,
+          emailVerifiedAt: new Date(),
         })
         .returning();
 
