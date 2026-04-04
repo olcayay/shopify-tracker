@@ -134,12 +134,12 @@ export type EmailType =
 export const EMAIL_TEMPLATE_VARIABLES: Record<EmailType, TemplateVariable[]> = {
   email_password_reset: [
     { name: "name", description: "User name", example: "Jane Doe" },
-    { name: "resetUrl", description: "Password reset URL", example: "https://appranks.io/reset?token=..." },
-    { name: "expiryMinutes", description: "Link expiry time in minutes", example: "30" },
+    { name: "resetUrl", description: "Password reset URL", example: "https://appranks.io/reset-password?token=sample" },
+    { name: "expiryHours", description: "Link expiry time in hours", example: "1" },
   ],
   email_verification: [
     { name: "name", description: "User name", example: "Jane Doe" },
-    { name: "verifyUrl", description: "Verification URL", example: "https://appranks.io/verify?token=..." },
+    { name: "verificationUrl", description: "Verification URL", example: "https://appranks.io/verify-email?token=sample" },
   ],
   email_welcome: [
     { name: "name", description: "User name", example: "Jane Doe" },
@@ -147,16 +147,19 @@ export const EMAIL_TEMPLATE_VARIABLES: Record<EmailType, TemplateVariable[]> = {
   email_invitation: [
     { name: "inviterName", description: "Person who sent the invite", example: "John Smith" },
     { name: "accountName", description: "Account name", example: "Acme Corp" },
-    { name: "role", description: "Assigned role", example: "member" },
-    { name: "inviteUrl", description: "Invitation URL", example: "https://appranks.io/invite?token=..." },
+    { name: "role", description: "Assigned role", example: "editor" },
+    { name: "acceptUrl", description: "Invitation accept URL", example: "https://appranks.io/invitations/accept/sample-token" },
   ],
   email_login_alert: [
     { name: "name", description: "User name", example: "Jane Doe" },
-    { name: "ipAddress", description: "Login IP address", example: "203.0.113.42" },
-    { name: "userAgent", description: "Browser/device info", example: "Chrome on macOS" },
+    { name: "device", description: "Browser/device info", example: "Chrome on macOS" },
+    { name: "location", description: "Login location", example: "Istanbul, Turkey" },
+    { name: "ip", description: "Login IP address", example: "203.0.113.42" },
     { name: "loginTime", description: "Login timestamp", example: "2026-03-30 10:15 UTC" },
+    { name: "secureAccountUrl", description: "Security settings URL", example: "https://appranks.io/settings/security" },
   ],
   email_2fa_code: [
+    { name: "name", description: "User name", example: "Jane Doe" },
     { name: "code", description: "Verification code", example: "483921" },
     { name: "expiryMinutes", description: "Code expiry time in minutes", example: "10" },
   ],

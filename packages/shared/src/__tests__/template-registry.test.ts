@@ -126,7 +126,7 @@ describe("buildNotificationSampleData", () => {
 describe("buildEmailSampleData", () => {
   it("returns sample data for a valid type", () => {
     const data = buildEmailSampleData("email_password_reset");
-    expect(data.expiryMinutes).toBe("30");
+    expect(data.expiryHours).toBe("1");
   });
 
   it("returns data for all email types", () => {
