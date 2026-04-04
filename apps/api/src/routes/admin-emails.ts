@@ -22,7 +22,7 @@ export const adminEmailRoutes: FastifyPluginAsync = async (app) => {
 
   // --- Email Logs ---
 
-  // GET /emails — List sent emails (paginated, filterable)
+  // GET /emails — List sent emails (paginated, filterable, searchable)
   app.get<{
     Querystring: {
       limit?: string;
@@ -32,11 +32,12 @@ export const adminEmailRoutes: FastifyPluginAsync = async (app) => {
       recipient?: string;
       from?: string;
       to?: string;
+      search?: string;
     };
   }>("/emails", async (request) => {
     const limit = Math.min(parseInt(request.query.limit || "50", 10), 200);
     const offset = parseInt(request.query.offset || "0", 10);
-    const { type, status, recipient, from, to } = request.query;
+    const { type, status, recipient, from, to, search } = request.query;
 
     const conditions = [];
     if (type) conditions.push(eq(emailLogs.emailType, type));
@@ -44,6 +45,7 @@ export const adminEmailRoutes: FastifyPluginAsync = async (app) => {
     if (recipient) conditions.push(ilike(emailLogs.recipientEmail, `%${recipient}%`));
     if (from) conditions.push(gte(emailLogs.createdAt, new Date(from)));
     if (to) conditions.push(lte(emailLogs.createdAt, new Date(to)));
+    if (search) conditions.push(ilike(emailLogs.subject, `%${search}%`));
 
     const where = conditions.length > 0 ? and(...conditions) : undefined;
 
@@ -400,5 +402,90 @@ export const adminEmailRoutes: FastifyPluginAsync = async (app) => {
       variables: templateVars,
       resolvedVariables: mergedVars,
     };
+  });
+
+  // ── Email Log Export (PLA-683) ──────────────────────────────────
+
+  // GET /emails/export — Export email logs as CSV or JSON
+  app.get<{
+    Querystring: {
+      format?: string;
+      type?: string;
+      status?: string;
+      recipient?: string;
+      from?: string;
+      to?: string;
+      search?: string;
+      limit?: string;
+    };
+  }>("/emails/export", async (request, reply) => {
+    const format = request.query.format || "csv";
+    const maxExport = Math.min(parseInt(request.query.limit || "5000", 10), 10000);
+    const { type, status, recipient, from, to, search } = request.query;
+
+    const conditions = [];
+    if (type) conditions.push(eq(emailLogs.emailType, type));
+    if (status) conditions.push(eq(emailLogs.status, status));
+    if (recipient) conditions.push(ilike(emailLogs.recipientEmail, `%${recipient}%`));
+    if (from) conditions.push(gte(emailLogs.createdAt, new Date(from)));
+    if (to) conditions.push(lte(emailLogs.createdAt, new Date(to)));
+    if (search) conditions.push(ilike(emailLogs.subject, `%${search}%`));
+
+    const where = conditions.length > 0 ? and(...conditions) : undefined;
+
+    const rows = await db
+      .select({
+        id: emailLogs.id,
+        emailType: emailLogs.emailType,
+        recipientEmail: emailLogs.recipientEmail,
+        recipientName: emailLogs.recipientName,
+        subject: emailLogs.subject,
+        status: emailLogs.status,
+        sentAt: emailLogs.sentAt,
+        openedAt: emailLogs.openedAt,
+        clickedAt: emailLogs.clickedAt,
+        createdAt: emailLogs.createdAt,
+        errorMessage: emailLogs.errorMessage,
+      })
+      .from(emailLogs)
+      .where(where)
+      .orderBy(desc(emailLogs.createdAt))
+      .limit(maxExport);
+
+    if (format === "json") {
+      const filename = `email-logs-${new Date().toISOString().slice(0, 10)}.json`;
+      void reply.header("Content-Disposition", `attachment; filename="${filename}"`);
+      void reply.header("Content-Type", "application/json");
+      return rows;
+    }
+
+    // CSV format (default)
+    const filename = `email-logs-${new Date().toISOString().slice(0, 10)}.csv`;
+    void reply.header("Content-Disposition", `attachment; filename="${filename}"`);
+    void reply.header("Content-Type", "text/csv");
+
+    const csvHeader = "id,emailType,recipientEmail,recipientName,subject,status,sentAt,openedAt,clickedAt,createdAt,errorMessage";
+    const csvRows = rows.map((r) => {
+      const escape = (v: string | null | undefined) => {
+        if (v == null) return "";
+        const s = String(v).replace(/"/g, '""');
+        return s.includes(",") || s.includes('"') || s.includes("\n") ? `"${s}"` : s;
+      };
+      return [
+        r.id,
+        r.emailType,
+        escape(r.recipientEmail),
+        escape(r.recipientName),
+        escape(r.subject),
+        r.status,
+        r.sentAt?.toISOString() ?? "",
+        r.openedAt?.toISOString() ?? "",
+        r.clickedAt?.toISOString() ?? "",
+        r.createdAt?.toISOString() ?? "",
+        escape(r.errorMessage),
+      ].join(",");
+    });
+
+    return [csvHeader, ...csvRows].join("\n");
   });
 };
