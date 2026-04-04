@@ -1,3 +1,14 @@
+PLA-651: Parser→Zod schema conformance tests (2026-04-04)
+================================================================
+- Comprehensive conformance test suite for all 11 platforms:
+  shopify, salesforce, canva, wix, wordpress, google_workspace,
+  atlassian, zoom, zoho, zendesk, hubspot
+- Each platform: full output, minimal output, null guards, wrong type rejection
+- assertNoUnexpectedNulls helper catches null-vs-undefined mismatches
+- Cross-platform normalization tests (null/undefined input → empty object)
+- Preserved existing CommonAppDetails/AppDetails schema tests
+- Updated ADDING_NEW_PLATFORM.md checklist with conformance test requirement
+
 PLA-672: Bounce/Complaint Webhook Integration (2026-04-04)
 ================================================================
 - New DB tables: email_suppression_list (with unique email index),

@@ -38,6 +38,7 @@ Use this as a high-level task tracker. Each item links to a detailed section bel
 - [ ] Add Zod schema in `packages/shared/src/types/platform-data/schemas.ts`
 - [ ] Add to `PlatformDataMap` in `packages/shared/src/types/platform-data/index.ts`
 - [ ] Re-export from `packages/shared/src/index.ts`
+- [ ] **Add parser→schema conformance tests** in `packages/shared/src/__tests__/parser-schema-conformance.test.ts` — full output, minimal output, null guards, wrong type rejection (see existing platforms for pattern)
 - [ ] Document all platformData fields in `files/PLATFORM-DATA-MATRIX.md` (Section 3) — include field type, source (bulk/detail), and description
 
 ### Phase 2: Database
