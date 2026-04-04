@@ -11,6 +11,7 @@ import {
 } from "react";
 import { PLATFORM_IDS } from "@appranks/shared";
 import { useRouter } from "next/navigation";
+import { toast } from "sonner";
 import { ConfirmModal } from "@/components/confirm-modal";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
@@ -179,7 +180,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
-  // Proactive token refresh — refresh 2 minutes before expiry
+  // Proactive token refresh — refresh 2 minutes before expiry (PLA-559)
   useEffect(() => {
     const token = getCookie("access_token");
     if (!token) return;
@@ -189,8 +190,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const refreshAt = expiresAt - 2 * 60 * 1000; // 2 min before expiry
       const delay = refreshAt - Date.now();
       if (delay <= 0) return;
-      const timer = setTimeout(() => {
-        silentRefresh();
+      const timer = setTimeout(async () => {
+        const ok = await silentRefresh();
+        if (!ok) {
+          toast.warning("Your session is about to expire. Please save your work.", {
+            duration: 10000,
+          });
+        }
       }, delay);
       return () => clearTimeout(timer);
     } catch {
@@ -247,7 +253,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             });
           }
         }
-        // Refresh failed — clear state and redirect to login
+        // Refresh failed — clear state and redirect to login (PLA-559)
+        toast.error("Session expired. Redirecting to login...", { duration: 3000 });
         setUser(null);
         setAccount(null);
         setImpersonation(null);
