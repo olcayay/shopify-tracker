@@ -1,3 +1,14 @@
+PLA-677: Advanced Dry-Run & Email Simulation (2026-04-04)
+================================================================
+- Universal email simulator: simulateEmail() and simulateBulkEmail()
+- Per-user simulation: eligibility checks, template rendering, metadata
+- Bulk simulation: eligible/ineligible counts, breakdown by skip reason
+- API: POST /simulate (single user), POST /simulate-bulk (bulk estimate),
+  GET /types (all email type definitions)
+- 5-point eligibility check: global config, account override, user pref,
+  suppression list, frequency cap
+- 8 new simulator tests
+
 PLA-676: Global Sandbox Mode (2026-04-04)
 ================================================================
 - EMAIL_SANDBOX_MODE=true + EMAIL_SANDBOX_RECIPIENT env vars
