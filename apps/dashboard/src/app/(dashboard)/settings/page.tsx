@@ -448,22 +448,21 @@ export default function SettingsPage() {
         </CardHeader>
         <CardContent className="space-y-4">
           {isOwner && (
-            <form onSubmit={handleInvite} className="flex gap-2 items-end">
-              <div className="flex-1">
-                <Input
-                  type="email"
-                  value={inviteEmail}
-                  onChange={(e) => setInviteEmail(e.target.value)}
-                  placeholder="Email address"
-                  required
-                />
-              </div>
+            <form onSubmit={handleInvite} className="flex gap-2 items-center">
+              <Input
+                type="email"
+                value={inviteEmail}
+                onChange={(e) => setInviteEmail(e.target.value)}
+                placeholder="Email address"
+                required
+                className="max-w-xs"
+              />
               <select
                 value={inviteRole}
                 onChange={(e) =>
                   setInviteRole(e.target.value as "editor" | "viewer")
                 }
-                className="border rounded-md px-3 py-2 text-sm bg-background"
+                className="border rounded-md px-3 py-2 text-sm bg-background h-9"
               >
                 <option value="viewer">Viewer</option>
                 <option value="editor">Editor</option>
@@ -503,7 +502,9 @@ export default function SettingsPage() {
                         </div>
                       </TableCell>
                       <TableCell>
-                        <Badge variant="outline">{m.role}</Badge>
+                        <Badge variant="outline">
+                          {m.role === "owner" && "👑 "}{m.role}
+                        </Badge>
                       </TableCell>
                       <TableCell>
                         <Badge className="bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400 hover:bg-green-100">
