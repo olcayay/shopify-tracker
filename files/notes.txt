@@ -1,3 +1,13 @@
+PLA-681: Email Preference Center (2026-04-04)
+================================================================
+- API: GET /api/email-preferences (categorized preferences with current state),
+  PATCH (toggle individual types), GET /categories (all types)
+- 5 categories: transactional (required), alerts, digests, lifecycle, team
+- Required types (password reset, 2FA, verification, invitation) can't be disabled
+- Dashboard: updated email-preferences page with category cards,
+  required type badges, per-type toggle buttons
+- Integrated with existing notification preference page
+
 PLA-682: Email Error Tracking & Diagnostics (2026-04-04)
 ================================================================
 - Error tracker: categorizeEmailError() → smtp_connection, smtp_auth,

@@ -11,6 +11,7 @@ Email System Reliability (2026-04-04)
   PLA-679: Email Scheduling (Delayed Send) ✅
   PLA-676: Global Sandbox Mode ✅
   PLA-677: Advanced Dry-Run & Email Simulation ✅
+  PLA-681: Email Preference Center ✅
   PLA-682: Email Error Tracking & Diagnostics ✅
   PLA-683: Email Log Search & Export ✅
   PLA-678: Email Template Test Suite ✅

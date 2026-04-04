@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
-import Link from "next/link";
 import { useAuth } from "@/lib/auth-context";
 import {
   Card,
@@ -14,20 +13,28 @@ import { Button } from "@/components/ui/button";
 import {
   Mail,
   Bell,
+  Shield,
   TrendingUp,
   Users,
   Star,
-  Tag,
   Award,
-  AlertTriangle,
   Settings,
   Check,
   Loader2,
+  Lock,
 } from "lucide-react";
+import { toast } from "sonner";
 
-interface EmailPreference {
-  type: string;
-  enabled: boolean;
+interface EmailCategory {
+  key: string;
+  label: string;
+  description: string;
+  types: {
+    type: string;
+    label: string;
+    required: boolean;
+    enabled: boolean;
+  }[];
 }
 
 interface NotificationPreference {
@@ -35,19 +42,6 @@ interface NotificationPreference {
   inAppEnabled: boolean;
   pushEnabled: boolean;
 }
-
-const EMAIL_TYPE_META: Record<string, { label: string; description: string; icon: typeof Mail; category: string }> = {
-  daily_digest: { label: "Daily Digest", description: "Daily ranking report delivered to your inbox", icon: TrendingUp, category: "Reports" },
-  weekly_summary: { label: "Weekly Summary", description: "Weekly performance overview every Monday", icon: TrendingUp, category: "Reports" },
-  ranking_alert: { label: "Ranking Alerts", description: "Notifications when ranking positions change significantly", icon: TrendingUp, category: "Alerts" },
-  competitor_alert: { label: "Competitor Alerts", description: "Updates when competitors make notable moves", icon: Users, category: "Alerts" },
-  review_alert: { label: "Review Alerts", description: "New review notifications for your tracked apps", icon: Star, category: "Alerts" },
-  opportunity_alert: { label: "Opportunity Alerts", description: "Weekly analysis of market opportunities", icon: Award, category: "Alerts" },
-  win_celebration: { label: "Win Celebrations", description: "Milestone notifications when you achieve something great", icon: Award, category: "Alerts" },
-  welcome: { label: "Welcome Email", description: "Initial onboarding email after signup", icon: Mail, category: "System" },
-  re_engagement: { label: "Re-engagement", description: "Check-in emails when you haven't logged in for a while", icon: Mail, category: "System" },
-  security_password_change: { label: "Security Alerts", description: "Password change confirmations and security notifications", icon: AlertTriangle, category: "System" },
-};
 
 const NOTIFICATION_TYPE_META: Record<string, { label: string; category: string }> = {
   ranking_top3_entry: { label: "Entered Top 3", category: "Ranking" },
@@ -65,25 +59,32 @@ const NOTIFICATION_TYPE_META: Record<string, { label: string; category: string }
   account_limit_reached: { label: "Limit Reached", category: "Account" },
 };
 
+const CATEGORY_ICONS: Record<string, typeof Mail> = {
+  transactional: Shield,
+  alerts: Bell,
+  digests: TrendingUp,
+  lifecycle: Award,
+  team: Users,
+};
+
 export default function EmailPreferencesPage() {
   const { fetchWithAuth } = useAuth();
-  const [emailPrefs, setEmailPrefs] = useState<EmailPreference[]>([]);
+  const [emailCategories, setEmailCategories] = useState<EmailCategory[]>([]);
   const [notifPrefs, setNotifPrefs] = useState<NotificationPreference[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState<string | null>(null);
-  const [message, setMessage] = useState("");
 
   const loadPreferences = useCallback(async () => {
     try {
       setLoading(true);
       const [emailRes, notifRes] = await Promise.all([
-        fetchWithAuth("/api/account/email-preferences").catch(() => null),
+        fetchWithAuth("/api/email-preferences").catch(() => null),
         fetchWithAuth("/api/notifications/preferences").catch(() => null),
       ]);
 
       if (emailRes?.ok) {
         const data = await emailRes.json();
-        setEmailPrefs(data.preferences || []);
+        setEmailCategories(data.categories || []);
       }
       if (notifRes?.ok) {
         const data = await notifRes.json();
@@ -98,31 +99,57 @@ export default function EmailPreferencesPage() {
 
   const toggleEmailPref = async (type: string, currentEnabled: boolean) => {
     setSaving(type);
-    setMessage("");
+    try {
+      const res = await fetchWithAuth("/api/email-preferences", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ preferences: [{ type, enabled: !currentEnabled }] }),
+      });
+      if (res.ok) {
+        setEmailCategories((prev) =>
+          prev.map((cat) => ({
+            ...cat,
+            types: cat.types.map((t) =>
+              t.type === type ? { ...t, enabled: !currentEnabled } : t
+            ),
+          }))
+        );
+        toast.success("Email preference updated");
+      } else {
+        toast.error("Failed to update preference");
+      }
+    } finally {
+      setSaving(null);
+    }
+  };
+
+  const toggleNotifPref = async (type: string, currentEnabled: boolean) => {
+    setSaving(`notif-${type}`);
     try {
       const res = await fetchWithAuth("/api/notifications/preferences", {
         method: "PATCH",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ preferences: [{ type, inAppEnabled: !currentEnabled }] }),
       });
       if (res.ok) {
         setNotifPrefs((prev) =>
           prev.map((p) => (p.type === type ? { ...p, inAppEnabled: !currentEnabled } : p))
         );
-        setMessage("Preference updated");
+        toast.success("Notification preference updated");
       }
     } finally {
       setSaving(null);
-      setTimeout(() => setMessage(""), 2000);
     }
   };
 
-  const groups = new Map<string, NotificationPreference[]>();
+  // Group notification prefs by category
+  const notifGroups = new Map<string, NotificationPreference[]>();
   for (const pref of notifPrefs) {
     const meta = NOTIFICATION_TYPE_META[pref.type];
     const cat = meta?.category || "Other";
-    const list = groups.get(cat) || [];
+    const list = notifGroups.get(cat) || [];
     list.push(pref);
-    groups.set(cat, list);
+    notifGroups.set(cat, list);
   }
 
   return (
@@ -137,67 +164,110 @@ export default function EmailPreferencesPage() {
         </p>
       </div>
 
-      {message && (
-        <div className="flex items-center gap-2 text-sm text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-950/20 px-3 py-2 rounded-md">
-          <Check className="h-4 w-4" />
-          {message}
-        </div>
-      )}
-
       {loading ? (
         <div className="flex items-center justify-center py-12">
           <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
         </div>
       ) : (
         <>
-          {/* Notification Preferences by Category */}
-          {[...groups.entries()].map(([category, prefs]) => (
-            <Card key={category}>
-              <CardHeader>
-                <CardTitle className="text-lg">{category} Notifications</CardTitle>
-                <CardDescription>Control in-app notifications for {category.toLowerCase()} events</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-3">
-                  {prefs.map((pref) => {
-                    const meta = NOTIFICATION_TYPE_META[pref.type];
-                    return (
-                      <div key={pref.type} className="flex items-center justify-between py-2 border-b last:border-0">
-                        <div>
-                          <p className="text-sm font-medium">{meta?.label || pref.type}</p>
-                        </div>
-                        <Button
-                          variant={pref.inAppEnabled ? "default" : "outline"}
-                          size="sm"
-                          disabled={saving === pref.type}
-                          onClick={() => toggleEmailPref(pref.type, pref.inAppEnabled)}
-                        >
-                          {saving === pref.type ? (
-                            <Loader2 className="h-3 w-3 animate-spin" />
-                          ) : pref.inAppEnabled ? (
-                            <><Bell className="h-3 w-3 mr-1" /> On</>
-                          ) : (
-                            "Off"
-                          )}
-                        </Button>
-                      </div>
-                    );
-                  })}
-                </div>
-              </CardContent>
-            </Card>
-          ))}
+          {/* Email Preferences by Category */}
+          <div>
+            <h2 className="text-lg font-semibold mb-3 flex items-center gap-2">
+              <Mail className="h-5 w-5" /> Email Preferences
+            </h2>
 
-          {/* Info card */}
-          <Card>
-            <CardContent className="pt-6">
-              <p className="text-sm text-muted-foreground">
-                Email digests (daily/weekly) can be managed from your{" "}
-                <Link href="/settings" className="text-primary hover:underline">account settings</Link>.
-                You can also unsubscribe from individual email types using the link in any email.
-              </p>
-            </CardContent>
-          </Card>
+            {emailCategories.map((cat) => {
+              const Icon = CATEGORY_ICONS[cat.key] || Mail;
+              return (
+                <Card key={cat.key} className="mb-4">
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-base flex items-center gap-2">
+                      <Icon className="h-4 w-4" />
+                      {cat.label}
+                    </CardTitle>
+                    <CardDescription>{cat.description}</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-2">
+                      {cat.types.map((t) => (
+                        <div key={t.type} className="flex items-center justify-between py-2 border-b last:border-0">
+                          <div className="flex items-center gap-2">
+                            <span className="text-sm font-medium">{t.label}</span>
+                            {t.required && (
+                              <span className="flex items-center gap-0.5 text-[10px] text-muted-foreground bg-muted px-1.5 py-0.5 rounded">
+                                <Lock className="h-2.5 w-2.5" /> Required
+                              </span>
+                            )}
+                          </div>
+                          {t.required ? (
+                            <span className="text-xs text-muted-foreground">Always on</span>
+                          ) : (
+                            <Button
+                              variant={t.enabled ? "default" : "outline"}
+                              size="sm"
+                              disabled={saving === t.type}
+                              onClick={() => toggleEmailPref(t.type, t.enabled)}
+                            >
+                              {saving === t.type ? (
+                                <Loader2 className="h-3 w-3 animate-spin" />
+                              ) : t.enabled ? (
+                                <><Check className="h-3 w-3 mr-1" /> On</>
+                              ) : (
+                                "Off"
+                              )}
+                            </Button>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+              );
+            })}
+          </div>
+
+          {/* In-App Notification Preferences */}
+          {notifGroups.size > 0 && (
+            <div>
+              <h2 className="text-lg font-semibold mb-3 flex items-center gap-2">
+                <Bell className="h-5 w-5" /> In-App Notifications
+              </h2>
+
+              {[...notifGroups.entries()].map(([category, prefs]) => (
+                <Card key={category} className="mb-4">
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-base">{category} Notifications</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-2">
+                      {prefs.map((pref) => {
+                        const meta = NOTIFICATION_TYPE_META[pref.type];
+                        return (
+                          <div key={pref.type} className="flex items-center justify-between py-2 border-b last:border-0">
+                            <span className="text-sm font-medium">{meta?.label || pref.type}</span>
+                            <Button
+                              variant={pref.inAppEnabled ? "default" : "outline"}
+                              size="sm"
+                              disabled={saving === `notif-${pref.type}`}
+                              onClick={() => toggleNotifPref(pref.type, pref.inAppEnabled)}
+                            >
+                              {saving === `notif-${pref.type}` ? (
+                                <Loader2 className="h-3 w-3 animate-spin" />
+                              ) : pref.inAppEnabled ? (
+                                <><Bell className="h-3 w-3 mr-1" /> On</>
+                              ) : (
+                                "Off"
+                              )}
+                            </Button>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          )}
         </>
       )}
     </div>
