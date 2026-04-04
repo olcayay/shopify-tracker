@@ -1,3 +1,6 @@
+Queue Job Inspector (2026-04-05)
+  PLA-717: Queue Job Detail Inspector ✅
+
 Notification System (2026-04-05)
   PLA-686: Push Subscription & Dismiss Endpoints ✅
   PLA-687: Notification Batching Engine ✅

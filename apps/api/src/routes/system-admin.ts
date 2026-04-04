@@ -3001,6 +3001,199 @@ export const systemAdminRoutes: FastifyPluginAsync = async (app) => {
     };
   });
 
+  // ── Queue Job Inspector (PLA-717) ─────────────────────────────────
+
+  const QUEUE_MAP: Record<string, string> = {
+    background: "scraper-jobs-background",
+    interactive: "scraper-jobs-interactive",
+    "email-instant": "email-instant",
+    "email-bulk": "email-bulk",
+    notifications: "notifications",
+  };
+
+  // GET /api/system-admin/queue-jobs?queue=email-instant&state=waiting&limit=50
+  app.get("/queue-jobs", async (request, reply) => {
+    const { queue: queueKey, state, limit: limitStr } = request.query as {
+      queue?: string;
+      state?: string;
+      limit?: string;
+    };
+
+    if (!queueKey || !QUEUE_MAP[queueKey]) {
+      return reply.code(400).send({
+        error: `Invalid queue. Valid queues: ${Object.keys(QUEUE_MAP).join(", ")}`,
+      });
+    }
+
+    const validStates = ["waiting", "active", "completed", "failed", "delayed"];
+    const jobState = validStates.includes(state || "") ? state! : "waiting";
+    const limit = Math.min(parseInt(limitStr || "50", 10) || 50, 200);
+
+    const { Queue } = await import("bullmq");
+    const Redis = (await import("ioredis")).default;
+    const redisUrl = process.env.REDIS_URL || "redis://localhost:6379";
+    const connection = new Redis(redisUrl, { connectTimeout: 5000, maxRetriesPerRequest: 1 });
+
+    try {
+      const q = new Queue(QUEUE_MAP[queueKey], { connection });
+      const jobs = await q.getJobs([jobState as any], 0, limit - 1);
+
+      const result = jobs.map((job) => ({
+        id: job.id,
+        name: job.name,
+        state: jobState,
+        data: job.data,
+        timestamp: job.timestamp ? new Date(job.timestamp).toISOString() : null,
+        processedOn: job.processedOn ? new Date(job.processedOn).toISOString() : null,
+        finishedOn: job.finishedOn ? new Date(job.finishedOn).toISOString() : null,
+        failedReason: job.failedReason || null,
+        attemptsMade: job.attemptsMade,
+        opts: {
+          delay: job.opts?.delay,
+          priority: job.opts?.priority,
+          attempts: job.opts?.attempts,
+        },
+        // Convenience fields for email jobs
+        recipient: job.data?.to || null,
+        emailType: job.data?.type || null,
+        // For scraper jobs
+        platform: job.data?.platform || null,
+        slug: job.data?.slug || null,
+        triggeredBy: job.data?.triggeredBy || null,
+        // For notification jobs
+        userId: job.data?.userId || null,
+      }));
+
+      await q.close();
+
+      return {
+        queue: queueKey,
+        state: jobState,
+        count: result.length,
+        jobs: result,
+      };
+    } finally {
+      await connection.quit();
+    }
+  });
+
+  // GET /api/system-admin/queue-jobs/:queue/:jobId — single job detail
+  app.get<{ Params: { queue: string; jobId: string } }>(
+    "/queue-jobs/:queue/:jobId",
+    async (request, reply) => {
+      const { queue: queueKey, jobId } = request.params;
+
+      if (!QUEUE_MAP[queueKey]) {
+        return reply.code(400).send({
+          error: `Invalid queue. Valid: ${Object.keys(QUEUE_MAP).join(", ")}`,
+        });
+      }
+
+      const { Queue } = await import("bullmq");
+      const Redis = (await import("ioredis")).default;
+      const redisUrl = process.env.REDIS_URL || "redis://localhost:6379";
+      const connection = new Redis(redisUrl, { connectTimeout: 5000, maxRetriesPerRequest: 1 });
+
+      try {
+        const q = new Queue(QUEUE_MAP[queueKey], { connection });
+        const job = await q.getJob(jobId);
+
+        if (!job) {
+          await q.close();
+          return reply.code(404).send({ error: "Job not found" });
+        }
+
+        const state = await job.getState();
+        const logs = await q.getJobLogs(jobId).catch(() => ({ logs: [], count: 0 }));
+
+        const result = {
+          id: job.id,
+          name: job.name,
+          state,
+          data: job.data,
+          returnvalue: job.returnvalue,
+          timestamp: job.timestamp ? new Date(job.timestamp).toISOString() : null,
+          processedOn: job.processedOn ? new Date(job.processedOn).toISOString() : null,
+          finishedOn: job.finishedOn ? new Date(job.finishedOn).toISOString() : null,
+          failedReason: job.failedReason || null,
+          stacktrace: job.stacktrace || [],
+          attemptsMade: job.attemptsMade,
+          opts: job.opts,
+          logs: logs.logs || [],
+          // Convenience fields
+          recipient: job.data?.to || null,
+          emailType: job.data?.type || null,
+          platform: job.data?.platform || null,
+          userId: job.data?.userId || null,
+        };
+
+        await q.close();
+        return result;
+      } finally {
+        await connection.quit();
+      }
+    }
+  );
+
+  // POST /api/system-admin/queue-jobs/:queue/:jobId/retry — retry a failed job
+  app.post<{ Params: { queue: string; jobId: string } }>(
+    "/queue-jobs/:queue/:jobId/retry",
+    async (request, reply) => {
+      const { queue: queueKey, jobId } = request.params;
+      if (!QUEUE_MAP[queueKey]) {
+        return reply.code(400).send({ error: "Invalid queue" });
+      }
+
+      const { Queue } = await import("bullmq");
+      const Redis = (await import("ioredis")).default;
+      const redisUrl = process.env.REDIS_URL || "redis://localhost:6379";
+      const connection = new Redis(redisUrl, { connectTimeout: 5000, maxRetriesPerRequest: 1 });
+
+      try {
+        const q = new Queue(QUEUE_MAP[queueKey], { connection });
+        const job = await q.getJob(jobId);
+        if (!job) { await q.close(); return reply.code(404).send({ error: "Job not found" }); }
+
+        const state = await job.getState();
+        if (state !== "failed") { await q.close(); return reply.code(409).send({ error: `Job is ${state}, not failed` }); }
+
+        await job.retry();
+        await q.close();
+        return { success: true, message: "Job retried" };
+      } finally {
+        await connection.quit();
+      }
+    }
+  );
+
+  // DELETE /api/system-admin/queue-jobs/:queue/:jobId — remove a job
+  app.delete<{ Params: { queue: string; jobId: string } }>(
+    "/queue-jobs/:queue/:jobId",
+    async (request, reply) => {
+      const { queue: queueKey, jobId } = request.params;
+      if (!QUEUE_MAP[queueKey]) {
+        return reply.code(400).send({ error: "Invalid queue" });
+      }
+
+      const { Queue } = await import("bullmq");
+      const Redis = (await import("ioredis")).default;
+      const redisUrl = process.env.REDIS_URL || "redis://localhost:6379";
+      const connection = new Redis(redisUrl, { connectTimeout: 5000, maxRetriesPerRequest: 1 });
+
+      try {
+        const q = new Queue(QUEUE_MAP[queueKey], { connection });
+        const job = await q.getJob(jobId);
+        if (!job) { await q.close(); return reply.code(404).send({ error: "Job not found" }); }
+
+        await job.remove();
+        await q.close();
+        return { success: true, message: "Job removed" };
+      } finally {
+        await connection.quit();
+      }
+    }
+  );
+
   // ── Circuit Breaker Admin ──────────────────────────────────────────
 
   // GET /api/system-admin/circuit-breakers — list all platform circuit states

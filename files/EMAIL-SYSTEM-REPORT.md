@@ -1123,6 +1123,33 @@ Dashboard: /system-admin/email-campaigns
 ❌ eligibility.ts            — 5 aşamalı eligibility karar mekanizması
 ```
 
+---
+
+## Queue Job Inspector (2026-04-05)
+
+> **Task:** [PLA-717](https://linear.app/plan-b-side-projects/issue/PLA-717)
+
+Queue Monitor sayfasında email/notification queue job'larının detaylarını incelemek için eklenen özellik:
+
+### API Endpoint'leri
+
+| Endpoint | Açıklama |
+|----------|----------|
+| `GET /api/system-admin/queue-jobs?queue=email-instant&state=waiting` | Job listesi (tüm 5 queue) |
+| `GET /api/system-admin/queue-jobs/:queue/:jobId` | Tekil job detayı + stacktrace + logs |
+| `POST /api/system-admin/queue-jobs/:queue/:jobId/retry` | Failed job'u retry et |
+| `DELETE /api/system-admin/queue-jobs/:queue/:jobId` | Job'u sil |
+
+### Dashboard UI
+
+- Queue kartlarındaki sayılara tıklanabilir linkler eklendi
+- `/system-admin/queues/[id]?state=waiting` — job listesi sayfası
+- Sol panel: job listesi (filtrelenebilir: waiting/active/completed/failed/delayed)
+- Sağ panel: tıklanan job'un detayı (data, error, stacktrace, timestamps)
+- Email job'lar için: recipient, type, body
+- Scraper job'lar için: platform, slug, triggeredBy
+- Retry ve Remove butonları
+
 ### Notification ile Paralellik
 
 Email ve notification broadcast sistemleri paralel mimari kullanır:
