@@ -1,5 +1,6 @@
 Notification System (2026-04-05)
   PLA-686: Push Subscription & Dismiss Endpoints ✅
+  PLA-687: Notification Batching Engine ✅
 
 Parser Conformance (2026-04-04)
   PLA-651: Parser→Zod schema conformance tests for all platforms ✅
