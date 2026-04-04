@@ -104,7 +104,7 @@ describe("email-enqueue helpers", () => {
         payload: expect.objectContaining({
           inviterName: "Charlie",
           accountName: "Acme Corp",
-          acceptUrl: "https://appranks.io/invitations/accept/inv-token",
+          acceptUrl: "https://appranks.io/invite/accept/inv-token",
           role: "member",
         }),
       }),

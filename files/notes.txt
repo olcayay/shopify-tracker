@@ -1,3 +1,30 @@
+Member Invitation Flow v2 (2026-04-04)
+================================================================
+Complete overhaul of member invitation system:
+
+API Changes:
+- Fixed URL mismatch: email-enqueue.ts sent to /invitations/accept/ but page is /invite/accept/
+- GET /api/invitations/:token now returns inviterName, accountName, accountCompany
+- New POST /api/account/invitations/:id/resend — new token, reset expiry, re-send email (rate limited 3/hr per invitation)
+- GET /api/account/members now returns lastSeenAt
+- GET /api/account/invitations now returns invitedByName (via join)
+
+Dashboard - Accept Page (/invite/accept/[token]):
+- Shows who invited you, which company/account
+- Read-only email field (pre-filled from invitation)
+- Password with PasswordStrength indicator + confirm password
+- Auto-login after accept (sets cookies, redirects to /)
+- Join {accountName} button
+
+Dashboard - Settings Page:
+- Replaced "Create User" form with "Send Invitation" form (email + role only)
+- Unified members + invitations table with status badges (Active/Pending/Expired)
+- Date columns: Invited, Signed Up, Last Login (relative time)
+- Confirmation modal for member deletion
+- Confirmation modal for invitation cancellation
+- Resend button for pending/expired invitations
+- Seats used counter: "X of Y seats used"
+
 SMTP Configuration (2026-04-05)
 ================================================================
 - Google Workspace SMTP configured: smtp.gmail.com:587

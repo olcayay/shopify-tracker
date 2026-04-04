@@ -254,6 +254,54 @@ describe("Account Member Routes — edge cases", () => {
     });
   });
 
+  // ── Resend invitation ───────────────────────────────────────────────
+  describe("POST /api/account/invitations/:id/resend", () => {
+    it("returns 401 without auth", async () => {
+      const res = await app.inject({
+        method: "POST",
+        url: "/api/account/invitations/inv-001/resend",
+      });
+      expect(res.statusCode).toBe(401);
+    });
+
+    it("returns 403 for non-owner", async () => {
+      const res = await app.inject({
+        method: "POST",
+        url: "/api/account/invitations/inv-001/resend",
+        headers: authHeaders(viewerToken()),
+      });
+      expect(res.statusCode).toBe(403);
+    });
+
+    it("returns 400 when invitation is already accepted", async () => {
+      const acceptedApp = await buildTestApp({
+        routes: accountMemberRoutes,
+        prefix: "/api/account",
+        db: {
+          selectResult: [{
+            id: "inv-001",
+            email: "user@test.com",
+            role: "editor",
+            accountId: "account-001",
+            acceptedAt: new Date(),
+            token: "old-token",
+            expiresAt: new Date(Date.now() + 86400_000),
+          }],
+        },
+      });
+
+      const res = await acceptedApp.inject({
+        method: "POST",
+        url: "/api/account/invitations/inv-001/resend",
+        headers: authHeaders(ownerToken()),
+      });
+      expect(res.statusCode).toBe(400);
+      expect(res.json().error).toBe("Invitation already accepted");
+
+      await acceptedApp.close();
+    });
+  });
+
   // ── Team member listing ─────────────────────────────────────────────
   describe("GET /api/account/members", () => {
     it("returns 401 without auth", async () => {

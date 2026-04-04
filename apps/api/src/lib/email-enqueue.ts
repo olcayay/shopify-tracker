@@ -99,7 +99,7 @@ export async function sendInvitationEmail(
   opts?: { role?: string; accountId?: string }
 ): Promise<string> {
   const baseUrl = process.env.DASHBOARD_URL || "http://localhost:3000";
-  const acceptUrl = `${baseUrl}/invitations/accept/${encodeURIComponent(token)}`;
+  const acceptUrl = `${baseUrl}/invite/accept/${encodeURIComponent(token)}`;
   return enqueue(
     "email_invitation",
     email,

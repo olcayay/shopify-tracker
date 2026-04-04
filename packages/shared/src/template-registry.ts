@@ -148,7 +148,7 @@ export const EMAIL_TEMPLATE_VARIABLES: Record<EmailType, TemplateVariable[]> = {
     { name: "inviterName", description: "Person who sent the invite", example: "John Smith" },
     { name: "accountName", description: "Account name", example: "Acme Corp" },
     { name: "role", description: "Assigned role", example: "editor" },
-    { name: "acceptUrl", description: "Invitation accept URL", example: "https://appranks.io/invitations/accept/sample-token" },
+    { name: "acceptUrl", description: "Invitation accept URL", example: "https://appranks.io/invite/accept/sample-token" },
   ],
   email_login_alert: [
     { name: "name", description: "User name", example: "Jane Doe" },

@@ -16,8 +16,9 @@ const mockAccount = {
   isSuspended: false,
   package: { slug: "pro", name: "Pro" },
   packageLimits: { maxTrackedApps: 10, maxTrackedKeywords: 50, maxCompetitorApps: 20, maxResearchProjects: 3, maxUsers: 5 },
-  limits: { maxTrackedApps: 10, maxTrackedKeywords: 50, maxCompetitorApps: 20, maxResearchProjects: 3, maxUsers: 5 },
-  usage: { trackedApps: 3, trackedKeywords: 10, competitorApps: 5, starredFeatures: 2, researchProjects: 1, users: 2 },
+  limits: { maxTrackedApps: 10, maxTrackedKeywords: 50, maxCompetitorApps: 20, maxResearchProjects: 3, maxUsers: 5, maxPlatforms: 3 },
+  usage: { trackedApps: 3, trackedKeywords: 10, competitorApps: 5, starredFeatures: 2, researchProjects: 1, users: 2, platforms: 2 },
+  enabledPlatforms: ["shopify"],
 };
 
 const mockUseAuth = vi.fn(() => ({
@@ -53,9 +54,34 @@ import React from "react";
 import SettingsPage from "@/app/(dashboard)/settings/page";
 
 const mockMembers = [
-  { id: "u1", name: "Test User", email: "test@example.com", role: "owner" },
-  { id: "u2", name: "Bob Editor", email: "bob@example.com", role: "editor" },
+  { id: "u1", name: "Test User", email: "test@example.com", role: "owner", createdAt: "2026-01-01", lastSeenAt: "2026-04-04T10:00:00Z" },
+  { id: "u2", name: "Bob Editor", email: "bob@example.com", role: "editor", createdAt: "2026-02-15", lastSeenAt: "2026-04-03T08:00:00Z" },
 ];
+
+const mockInvitations = [
+  {
+    id: "inv-1", email: "pending@example.com", role: "viewer",
+    createdAt: "2026-04-01", expiresAt: "2026-04-08", acceptedAt: null,
+    invitedByName: "Test User", expired: false, accepted: false,
+  },
+  {
+    id: "inv-2", email: "expired@example.com", role: "editor",
+    createdAt: "2026-03-01", expiresAt: "2026-03-08", acceptedAt: null,
+    invitedByName: "Test User", expired: true, accepted: false,
+  },
+];
+
+function setupMockFetch(overrides?: Record<string, any>) {
+  mockFetchWithAuth.mockImplementation((url: string, options?: any) => {
+    if (url === "/api/account/members" && !options?.method) {
+      return Promise.resolve({ ok: true, json: () => Promise.resolve(overrides?.members ?? mockMembers) });
+    }
+    if (url === "/api/account/invitations" && !options?.method) {
+      return Promise.resolve({ ok: true, json: () => Promise.resolve(overrides?.invitations ?? mockInvitations) });
+    }
+    return Promise.resolve({ ok: true, json: () => Promise.resolve({}) });
+  });
+}
 
 describe("SettingsPage", () => {
   beforeEach(() => {
@@ -67,12 +93,7 @@ describe("SettingsPage", () => {
       fetchWithAuth: mockFetchWithAuth,
       refreshUser: mockRefreshUser,
     });
-    mockFetchWithAuth.mockImplementation((url: string, options?: any) => {
-      if (url === "/api/account/members" && !options?.method) {
-        return Promise.resolve({ ok: true, json: () => Promise.resolve(mockMembers) });
-      }
-      return Promise.resolve({ ok: true, json: () => Promise.resolve({}) });
-    });
+    setupMockFetch();
     mockRefreshUser.mockResolvedValue(undefined);
   });
 
@@ -130,7 +151,6 @@ describe("SettingsPage", () => {
       await user.type(screen.getByPlaceholderText("Current password"), "oldpass123");
       await user.type(screen.getByPlaceholderText("New password (min 8 chars)"), "newpass123");
       await user.type(screen.getByPlaceholderText("Confirm new password"), "different123");
-      // Click the Change Password button (the one inside the form)
       const changePwdBtns = screen.getAllByText("Change Password");
       const buttonEl = changePwdBtns.find((el) => el.closest("button"));
       await user.click(buttonEl!);
@@ -160,44 +180,52 @@ describe("SettingsPage", () => {
     expect(screen.getByText("Team Members")).toBeInTheDocument();
   });
 
-  it("renders member list", async () => {
+  it("renders member list with status badges", async () => {
     render(<SettingsPage />);
     await waitFor(() => {
       expect(screen.getByText("Bob Editor")).toBeInTheDocument();
     });
     expect(screen.getByText("bob@example.com")).toBeInTheDocument();
+    // Active members should have Active badge
+    const activeBadges = screen.getAllByText("Active");
+    expect(activeBadges.length).toBe(2); // 2 active members
   });
 
-  it("renders create user form", () => {
+  it("renders invite member form for owner", () => {
     render(<SettingsPage />);
-    expect(screen.getByText("Create User")).toBeInTheDocument();
-    expect(screen.getByPlaceholderText("Name")).toBeInTheDocument();
+    expect(screen.getByText("Send Invitation")).toBeInTheDocument();
     expect(screen.getByPlaceholderText("Email address")).toBeInTheDocument();
-    // There are two password fields with "min 8" pattern - one in change password, one in create user
-    const passwordFields = screen.getAllByPlaceholderText(/Password.*min 8/i);
-    expect(passwordFields.length).toBeGreaterThanOrEqual(2);
   });
 
-  it("creates a new user", async () => {
+  it("sends invitation when form is submitted", async () => {
     const user = userEvent.setup();
     render(<SettingsPage />);
-    // Use specific placeholders that only appear in create user form
-    const nameInput = screen.getByPlaceholderText("Name");
-    const emailInput = screen.getByPlaceholderText("Email address");
-    // The create user password field has placeholder "Password (min 8 chars)"
-    const passwordFields = screen.getAllByPlaceholderText(/Password.*min 8/i);
-    // The first one is in the change password section, the second in create user
-    const createPasswordInput = passwordFields[passwordFields.length - 1];
     await act(async () => {
-      await user.type(nameInput, "New User");
-      await user.type(emailInput, "new@example.com");
-      await user.type(createPasswordInput, "password123");
-      await user.click(screen.getByText("Create User"));
+      await user.type(screen.getByPlaceholderText("Email address"), "new@example.com");
+      await user.click(screen.getByText("Send Invitation"));
     });
     expect(mockFetchWithAuth).toHaveBeenCalledWith(
-      "/api/account/members",
+      "/api/account/members/invite",
       expect.objectContaining({ method: "POST" })
     );
+  });
+
+  it("shows pending and expired invitations", async () => {
+    render(<SettingsPage />);
+    await waitFor(() => {
+      expect(screen.getByText("pending@example.com")).toBeInTheDocument();
+    });
+    expect(screen.getByText("expired@example.com")).toBeInTheDocument();
+    expect(screen.getByText("Pending")).toBeInTheDocument();
+    expect(screen.getByText("Expired")).toBeInTheDocument();
+  });
+
+  it("shows seats used count for owner", async () => {
+    render(<SettingsPage />);
+    // 2 members + 1 pending invitation = 3 of 5
+    await waitFor(() => {
+      expect(screen.getByText(/3 of 5 seats used/)).toBeInTheDocument();
+    });
   });
 
   it("renders Email Notifications section", () => {
@@ -241,7 +269,6 @@ describe("SettingsPage", () => {
     await act(async () => {
       await user.clear(accountNameInput);
       await user.type(accountNameInput, "Updated Account");
-      // Find the save button next to account form
       const saveBtns = screen.getAllByText("Save");
       await user.click(saveBtns[0]);
     });
@@ -271,6 +298,9 @@ describe("SettingsPage", () => {
       if (url === "/api/account/members" && !options?.method) {
         return Promise.resolve({ ok: true, json: () => Promise.resolve(mockMembers) });
       }
+      if (url === "/api/account/invitations" && !options?.method) {
+        return Promise.resolve({ ok: true, json: () => Promise.resolve(mockInvitations) });
+      }
       return Promise.resolve({ ok: false, json: () => Promise.resolve({ error: "Update failed" }) });
     });
     const user = userEvent.setup();
@@ -291,15 +321,14 @@ describe("SettingsPage", () => {
     await waitFor(() => {
       expect(screen.getByText("Bob Editor")).toBeInTheDocument();
     });
-    // There should be exactly 1 delete icon (for Bob, not for Test User)
+    // Owner row should not have delete button, but Bob's row should
     const deleteButtons = screen.getAllByRole("button").filter(
       (btn) => btn.querySelector("svg")?.classList.contains("text-destructive") || false
     );
-    // The count should reflect only other members, not the current user
-    expect(deleteButtons.length).toBeLessThanOrEqual(1);
+    expect(deleteButtons.length).toBeGreaterThanOrEqual(1);
   });
 
-  it("editor can see team members table but not create form or delete buttons", async () => {
+  it("editor can see team members table but not invite form", async () => {
     mockUseAuth.mockReturnValue({
       user: { ...ownerUser, id: "u2", role: "editor", name: "Bob Editor", email: "bob@example.com" },
       account: mockAccount,
@@ -313,11 +342,11 @@ describe("SettingsPage", () => {
     await waitFor(() => {
       expect(screen.getByText("Test User")).toBeInTheDocument();
     });
-    expect(screen.queryByText("Create User")).not.toBeInTheDocument();
+    expect(screen.queryByText("Send Invitation")).not.toBeInTheDocument();
     expect(screen.queryByPlaceholderText("Email address")).not.toBeInTheDocument();
   });
 
-  it("viewer can see team members table but not create form or delete buttons", async () => {
+  it("viewer can see team members table but not invite form", async () => {
     mockUseAuth.mockReturnValue({
       user: { ...ownerUser, id: "u3", role: "viewer", name: "View User", email: "view@example.com" },
       account: mockAccount,
@@ -332,11 +361,11 @@ describe("SettingsPage", () => {
       expect(screen.getByText("Test User")).toBeInTheDocument();
       expect(screen.getByText("Bob Editor")).toBeInTheDocument();
     });
-    expect(screen.queryByText("Create User")).not.toBeInTheDocument();
+    expect(screen.queryByText("Send Invitation")).not.toBeInTheDocument();
   });
 
-  it("owner sees 'Manage who has access' description", () => {
+  it("owner sees seats used in description", () => {
     render(<SettingsPage />);
-    expect(screen.getByText("Manage who has access to this account")).toBeInTheDocument();
+    expect(screen.getByText(/seats used/)).toBeInTheDocument();
   });
 });

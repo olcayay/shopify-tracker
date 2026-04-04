@@ -37,6 +37,7 @@ export const accountMemberRoutes: FastifyPluginAsync = async (app) => {
         name: users.name,
         role: users.role,
         createdAt: users.createdAt,
+        lastSeenAt: users.lastSeenAt,
       })
       .from(users)
       .where(eq(users.accountId, accountId));
@@ -258,12 +259,15 @@ export const accountMemberRoutes: FastifyPluginAsync = async (app) => {
           createdAt: invitations.createdAt,
           expiresAt: invitations.expiresAt,
           acceptedAt: invitations.acceptedAt,
+          invitedByName: users.name,
         })
         .from(invitations)
+        .leftJoin(users, eq(invitations.invitedByUserId, users.id))
         .where(eq(invitations.accountId, accountId));
 
       return rows.map((r) => ({
         ...r,
+        invitedByName: r.invitedByName || "Unknown",
         expired: r.expiresAt < new Date() && !r.acceptedAt,
         accepted: !!r.acceptedAt,
       }));
@@ -291,6 +295,80 @@ export const accountMemberRoutes: FastifyPluginAsync = async (app) => {
 
       import("../utils/activity-log.js").then(m => m.logActivity(db, request.user.accountId, request.user.userId, "invitation_cancelled", "invitation", id)).catch(() => {});
       return { message: "Invitation cancelled" };
+    }
+  );
+
+  // POST /api/account/invitations/:id/resend — resend invitation email
+  const resendLimiter = new RateLimiter({ maxAttempts: 3, windowMs: 60 * 60 * 1000, namespace: "resend" });
+
+  app.post<{ Params: { id: string } }>(
+    "/invitations/:id/resend",
+    { preHandler: [requireRole("owner")] },
+    async (request, reply) => {
+      const { accountId, userId } = request.user;
+      const { id } = request.params;
+
+      // Rate limit per invitation
+      const rl = resendLimiter.check(id);
+      if (!rl.allowed) {
+        reply.header("Retry-After", Math.ceil(rl.retryAfterMs / 1000).toString());
+        return reply.code(429).send({ error: "Resend limit reached. Please try again later." });
+      }
+
+      // Find invitation
+      const [invitation] = await db
+        .select()
+        .from(invitations)
+        .where(
+          and(eq(invitations.id, id), eq(invitations.accountId, accountId))
+        );
+
+      if (!invitation) {
+        return reply.code(404).send({ error: "Invitation not found" });
+      }
+
+      if (invitation.acceptedAt) {
+        return reply.code(400).send({ error: "Invitation already accepted" });
+      }
+
+      // Generate new token and reset expiry
+      const newToken = crypto.randomBytes(32).toString("hex");
+      const newExpiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+
+      const [updated] = await db
+        .update(invitations)
+        .set({ token: newToken, expiresAt: newExpiresAt })
+        .where(eq(invitations.id, id))
+        .returning();
+
+      // Get inviter name and account name for email
+      const [account] = await db
+        .select({ name: accounts.name })
+        .from(accounts)
+        .where(eq(accounts.id, accountId));
+
+      const [inviter] = await db
+        .select({ name: users.name })
+        .from(users)
+        .where(eq(users.id, userId));
+
+      sendInvitationEmail(
+        updated.email,
+        inviter?.name || "A team member",
+        account?.name || "Your team",
+        updated.token,
+        { role: updated.role, accountId }
+      ).catch(() => {});
+
+      import("../utils/activity-log.js").then(m => m.logActivity(db, accountId, userId, "invitation_resent", "invitation", id)).catch(() => {});
+
+      return {
+        id: updated.id,
+        email: updated.email,
+        role: updated.role,
+        token: updated.token,
+        expiresAt: updated.expiresAt,
+      };
     }
   );
 

@@ -2,6 +2,7 @@ import type { FastifyPluginAsync } from "fastify";
 import { eq } from "drizzle-orm";
 import bcrypt from "bcryptjs";
 import {
+  accounts,
   users,
   invitations,
 } from "@appranks/db";
@@ -88,20 +89,33 @@ export const invitationRoutes: FastifyPluginAsync = async (app) => {
     async (request, reply) => {
       const { token } = request.params;
 
-      const [invitation] = await db
-        .select()
+      const [row] = await db
+        .select({
+          email: invitations.email,
+          role: invitations.role,
+          expiresAt: invitations.expiresAt,
+          acceptedAt: invitations.acceptedAt,
+          inviterName: users.name,
+          accountName: accounts.name,
+          accountCompany: accounts.company,
+        })
         .from(invitations)
+        .leftJoin(users, eq(invitations.invitedByUserId, users.id))
+        .leftJoin(accounts, eq(invitations.accountId, accounts.id))
         .where(eq(invitations.token, token));
 
-      if (!invitation) {
+      if (!row) {
         return reply.code(404).send({ error: "Invitation not found" });
       }
 
       return {
-        email: invitation.email,
-        role: invitation.role,
-        expired: invitation.expiresAt < new Date(),
-        accepted: !!invitation.acceptedAt,
+        email: row.email,
+        role: row.role,
+        expired: row.expiresAt < new Date(),
+        accepted: !!row.acceptedAt,
+        inviterName: row.inviterName || "A team member",
+        accountName: row.accountName || "Unknown",
+        accountCompany: row.accountCompany,
       };
     }
   );

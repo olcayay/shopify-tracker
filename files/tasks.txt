@@ -1,3 +1,13 @@
+Member Invitation Flow v2 (2026-04-04)
+  PLA-718: Fix invitation email accept URL mismatch ✅
+  PLA-719: Enrich invitation GET endpoint with inviter and account info ✅
+  PLA-720: Add resend invitation API endpoint ✅
+  PLA-721: Enrich members and invitations list API responses ✅
+  PLA-722: Redesign invitation accept page as signup-like experience ✅
+  PLA-723: Replace direct user creation with email invitation ✅
+  PLA-724: Build unified members + invitations table with statuses and dates ✅
+  PLA-725: Add resend, delete, and cancel actions with confirmation modals ✅
+
 Queue Job Inspector (2026-04-05)
   PLA-717: Queue Job Detail Inspector ✅
 

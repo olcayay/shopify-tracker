@@ -130,11 +130,22 @@ describe("Invitation routes", () => {
   // -----------------------------------------------------------------------
 
   describe("GET /api/invitations/:token", () => {
-    it("returns invitation details for a valid token", async () => {
+    // Joined shape: the GET handler now does leftJoin on users + accounts
+    const validJoined = {
+      email: validInvitation.email,
+      role: validInvitation.role,
+      expiresAt: validInvitation.expiresAt,
+      acceptedAt: validInvitation.acceptedAt,
+      inviterName: "John Owner",
+      accountName: "Acme Corp",
+      accountCompany: "Acme Inc.",
+    };
+
+    it("returns invitation details with inviter and account info", async () => {
       const app = await buildTestApp({
         routes: invitationRoutes,
         prefix: "/api/invitations",
-        db: { selectResult: [validInvitation] },
+        db: { selectResult: [validJoined] },
       });
 
       const res = await app.inject({
@@ -146,9 +157,29 @@ describe("Invitation routes", () => {
       const body = res.json();
       expect(body).toHaveProperty("email", "newuser@test.com");
       expect(body).toHaveProperty("role", "editor");
-      expect(body).toHaveProperty("expired");
-      expect(body).toHaveProperty("accepted");
-      expect(body.accepted).toBe(false);
+      expect(body).toHaveProperty("expired", false);
+      expect(body).toHaveProperty("accepted", false);
+      expect(body).toHaveProperty("inviterName", "John Owner");
+      expect(body).toHaveProperty("accountName", "Acme Corp");
+      expect(body).toHaveProperty("accountCompany", "Acme Inc.");
+
+      await app.close();
+    });
+
+    it("defaults inviterName when inviter is null", async () => {
+      const app = await buildTestApp({
+        routes: invitationRoutes,
+        prefix: "/api/invitations",
+        db: { selectResult: [{ ...validJoined, inviterName: null }] },
+      });
+
+      const res = await app.inject({
+        method: "GET",
+        url: "/api/invitations/valid-token-123",
+      });
+
+      expect(res.statusCode).toBe(200);
+      expect(res.json().inviterName).toBe("A team member");
 
       await app.close();
     });
@@ -172,10 +203,14 @@ describe("Invitation routes", () => {
     });
 
     it("indicates when invitation is expired", async () => {
+      const expired = {
+        ...validJoined,
+        expiresAt: new Date(Date.now() - 86400_000),
+      };
       const app = await buildTestApp({
         routes: invitationRoutes,
         prefix: "/api/invitations",
-        db: { selectResult: [expiredInvitation] },
+        db: { selectResult: [expired] },
       });
 
       const res = await app.inject({
@@ -190,10 +225,14 @@ describe("Invitation routes", () => {
     });
 
     it("indicates when invitation is already accepted", async () => {
+      const accepted = {
+        ...validJoined,
+        acceptedAt: new Date(),
+      };
       const app = await buildTestApp({
         routes: invitationRoutes,
         prefix: "/api/invitations",
-        db: { selectResult: [acceptedInvitation] },
+        db: { selectResult: [accepted] },
       });
 
       const res = await app.inject({

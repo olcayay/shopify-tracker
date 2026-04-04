@@ -13,6 +13,16 @@ vi.mock("next/navigation", () => ({
 
 import AcceptInvitePage from "@/app/(auth)/invite/accept/[token]/page";
 
+const validInvitation = {
+  email: "test@test.com",
+  role: "editor",
+  expired: false,
+  accepted: false,
+  inviterName: "John Owner",
+  accountName: "Acme Corp",
+  accountCompany: "Acme Inc.",
+};
+
 describe("AcceptInvitePage", () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -49,7 +59,7 @@ describe("AcceptInvitePage", () => {
   it("shows expired invitation message", async () => {
     (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValue({
       ok: true,
-      json: () => Promise.resolve({ email: "test@test.com", role: "editor", expired: true, accepted: false }),
+      json: () => Promise.resolve({ ...validInvitation, expired: true }),
     });
     render(<AcceptInvitePage />);
     await waitFor(() => {
@@ -61,7 +71,7 @@ describe("AcceptInvitePage", () => {
   it("shows already accepted message", async () => {
     (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValue({
       ok: true,
-      json: () => Promise.resolve({ email: "test@test.com", role: "editor", expired: false, accepted: true }),
+      json: () => Promise.resolve({ ...validInvitation, accepted: true }),
     });
     render(<AcceptInvitePage />);
     await waitFor(() => {
@@ -70,42 +80,77 @@ describe("AcceptInvitePage", () => {
     expect(screen.getByText(/already been accepted/)).toBeInTheDocument();
   });
 
-  it("renders accept form for valid invitation", async () => {
+  it("renders accept form with inviter and account info", async () => {
     (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValue({
       ok: true,
-      json: () => Promise.resolve({ email: "test@test.com", role: "editor", expired: false, accepted: false }),
+      json: () => Promise.resolve(validInvitation),
     });
     render(<AcceptInvitePage />);
     await waitFor(() => {
-      expect(screen.getByText("Accept Invitation")).toBeInTheDocument();
+      expect(screen.getAllByText(/Join Acme Corp/).length).toBeGreaterThan(0);
     });
-    expect(screen.getByText("editor")).toBeInTheDocument();
-    expect(screen.getByText("test@test.com")).toBeInTheDocument();
+    // Inviter info
+    expect(screen.getByText(/John Owner/)).toBeInTheDocument();
+    expect(screen.getByText(/editor/)).toBeInTheDocument();
+    // Company
+    expect(screen.getByText("Acme Inc.")).toBeInTheDocument();
+    // Read-only email
+    const emailInput = screen.getByLabelText("Email") as HTMLInputElement;
+    expect(emailInput.value).toBe("test@test.com");
+    expect(emailInput).toHaveAttribute("readOnly");
+    // Form fields
     expect(screen.getByLabelText("Your Name")).toBeInTheDocument();
     expect(screen.getByLabelText("Password")).toBeInTheDocument();
-    expect(screen.getByText("Accept & Create Account")).toBeInTheDocument();
+    expect(screen.getByLabelText("Confirm Password")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /Join Acme Corp/ })).toBeInTheDocument();
   });
 
-  it("submits the form successfully", async () => {
+  it("shows password mismatch error", async () => {
+    const user = userEvent.setup();
+    (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve(validInvitation),
+    });
+    render(<AcceptInvitePage />);
+    await waitFor(() => {
+      expect(screen.getAllByText(/Join Acme Corp/).length).toBeGreaterThan(0);
+    });
+    await act(async () => {
+      await user.type(screen.getByLabelText("Your Name"), "Jane Doe");
+      await user.type(screen.getByLabelText("Password"), "securepass123");
+      await user.type(screen.getByLabelText("Confirm Password"), "different123");
+    });
+    expect(screen.getByText("Passwords do not match")).toBeInTheDocument();
+  });
+
+  it("submits and auto-logs in on success", async () => {
     const user = userEvent.setup();
     (global.fetch as ReturnType<typeof vi.fn>)
       .mockResolvedValueOnce({
         ok: true,
-        json: () => Promise.resolve({ email: "test@test.com", role: "editor", expired: false, accepted: false }),
+        json: () => Promise.resolve(validInvitation),
       })
+      // Accept invitation
       .mockResolvedValueOnce({
         ok: true,
-        json: () => Promise.resolve({}),
+        json: () => Promise.resolve({ message: "Invitation accepted" }),
+      })
+      // Auto-login
+      .mockResolvedValueOnce({
+        ok: true,
+        json: () => Promise.resolve({ accessToken: "at", refreshToken: "rt" }),
       });
     render(<AcceptInvitePage />);
     await waitFor(() => {
-      expect(screen.getByText("Accept Invitation")).toBeInTheDocument();
+      expect(screen.getAllByText(/Join Acme Corp/).length).toBeGreaterThan(0);
     });
     await act(async () => {
       await user.type(screen.getByLabelText("Your Name"), "John Doe");
       await user.type(screen.getByLabelText("Password"), "securepass123");
-      await user.click(screen.getByText("Accept & Create Account"));
+      await user.type(screen.getByLabelText("Confirm Password"), "securepass123");
+      await user.click(screen.getByRole("button", { name: /Join Acme Corp/i }));
     });
+    // Verify accept call
     expect(global.fetch).toHaveBeenCalledWith(
       expect.stringContaining("/api/invitations/accept/test-token-123"),
       expect.objectContaining({ method: "POST" })
@@ -113,33 +158,14 @@ describe("AcceptInvitePage", () => {
     await waitFor(() => {
       expect(screen.getByText("Welcome!")).toBeInTheDocument();
     });
-    expect(screen.getByText(/Redirecting to login/)).toBeInTheDocument();
-  });
-
-  it("shows loading state during submission", async () => {
-    const user = userEvent.setup();
-    let resolveSubmit: (value: unknown) => void;
-    (global.fetch as ReturnType<typeof vi.fn>)
-      .mockResolvedValueOnce({
-        ok: true,
-        json: () => Promise.resolve({ email: "test@test.com", role: "editor", expired: false, accepted: false }),
-      })
-      .mockImplementationOnce(() => new Promise((resolve) => {
-        resolveSubmit = resolve;
-      }));
-    render(<AcceptInvitePage />);
+    expect(screen.getByText(/Signing you in/)).toBeInTheDocument();
+    // Verify auto-login call
+    expect(global.fetch).toHaveBeenCalledWith(
+      expect.stringContaining("/api/auth/login"),
+      expect.objectContaining({ method: "POST" })
+    );
     await waitFor(() => {
-      expect(screen.getByText("Accept Invitation")).toBeInTheDocument();
-    });
-    await act(async () => {
-      await user.type(screen.getByLabelText("Your Name"), "John Doe");
-      await user.type(screen.getByLabelText("Password"), "securepass123");
-      await user.click(screen.getByText("Accept & Create Account"));
-    });
-    expect(screen.getByText("Creating account...")).toBeInTheDocument();
-    // Cleanup: resolve the pending promise
-    await act(async () => {
-      resolveSubmit!({ ok: true, json: () => Promise.resolve({}) });
+      expect(mockPush).toHaveBeenCalledWith("/");
     });
   });
 
@@ -148,7 +174,7 @@ describe("AcceptInvitePage", () => {
     (global.fetch as ReturnType<typeof vi.fn>)
       .mockResolvedValueOnce({
         ok: true,
-        json: () => Promise.resolve({ email: "test@test.com", role: "editor", expired: false, accepted: false }),
+        json: () => Promise.resolve(validInvitation),
       })
       .mockResolvedValueOnce({
         ok: false,
@@ -156,12 +182,13 @@ describe("AcceptInvitePage", () => {
       });
     render(<AcceptInvitePage />);
     await waitFor(() => {
-      expect(screen.getByText("Accept Invitation")).toBeInTheDocument();
+      expect(screen.getAllByText(/Join Acme Corp/).length).toBeGreaterThan(0);
     });
     await act(async () => {
       await user.type(screen.getByLabelText("Your Name"), "John Doe");
       await user.type(screen.getByLabelText("Password"), "securepass123");
-      await user.click(screen.getByText("Accept & Create Account"));
+      await user.type(screen.getByLabelText("Confirm Password"), "securepass123");
+      await user.click(screen.getByRole("button", { name: /Join Acme Corp/i }));
     });
     await waitFor(() => {
       expect(screen.getByText("Token expired")).toBeInTheDocument();
@@ -173,17 +200,18 @@ describe("AcceptInvitePage", () => {
     (global.fetch as ReturnType<typeof vi.fn>)
       .mockResolvedValueOnce({
         ok: true,
-        json: () => Promise.resolve({ email: "test@test.com", role: "viewer", expired: false, accepted: false }),
+        json: () => Promise.resolve(validInvitation),
       })
       .mockRejectedValueOnce(new Error("Network error"));
     render(<AcceptInvitePage />);
     await waitFor(() => {
-      expect(screen.getByText("Accept Invitation")).toBeInTheDocument();
+      expect(screen.getAllByText(/Join Acme Corp/).length).toBeGreaterThan(0);
     });
     await act(async () => {
       await user.type(screen.getByLabelText("Your Name"), "John Doe");
       await user.type(screen.getByLabelText("Password"), "securepass123");
-      await user.click(screen.getByText("Accept & Create Account"));
+      await user.type(screen.getByLabelText("Confirm Password"), "securepass123");
+      await user.click(screen.getByRole("button", { name: /Join Acme Corp/i }));
     });
     await waitFor(() => {
       expect(screen.getByText("Network error")).toBeInTheDocument();
@@ -193,11 +221,23 @@ describe("AcceptInvitePage", () => {
   it("has sign in link on already accepted page", async () => {
     (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValue({
       ok: true,
-      json: () => Promise.resolve({ email: "test@test.com", role: "editor", expired: false, accepted: true }),
+      json: () => Promise.resolve({ ...validInvitation, accepted: true }),
     });
     render(<AcceptInvitePage />);
     await waitFor(() => {
       expect(screen.getByText("Sign in")).toBeInTheDocument();
     });
+  });
+
+  it("has sign in link on the accept form", async () => {
+    (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve(validInvitation),
+    });
+    render(<AcceptInvitePage />);
+    await waitFor(() => {
+      expect(screen.getAllByText(/Join Acme Corp/).length).toBeGreaterThan(0);
+    });
+    expect(screen.getByText("Sign in")).toBeInTheDocument();
   });
 });
