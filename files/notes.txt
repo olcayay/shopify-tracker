@@ -1,3 +1,12 @@
+PLA-682: Email Error Tracking & Diagnostics (2026-04-04)
+================================================================
+- Error tracker: categorizeEmailError() → smtp_connection, smtp_auth,
+  smtp_rejected, template_render, rate_limited, provider_down, unknown
+- buildErrorContext(): structured context with SMTP response extraction
+- API: GET /email-errors (list + category filter), GET /breakdown (pie),
+  GET /trend (hourly), GET /:id (detail)
+- 12 new error categorization tests
+
 PLA-677: Advanced Dry-Run & Email Simulation (2026-04-04)
 ================================================================
 - Universal email simulator: simulateEmail() and simulateBulkEmail()

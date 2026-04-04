@@ -66,6 +66,7 @@ import { emailAnalyticsRoutes } from "./routes/email-analytics.js";
 import { emailSchedulingRoutes } from "./routes/email-scheduling.js";
 import { emailLogRoutes } from "./routes/email-logs.js";
 import { emailSimulationRoutes } from "./routes/email-simulation.js";
+import { emailErrorRoutes } from "./routes/email-errors.js";
 import { registerIdempotencyOnSend } from "./middleware/idempotency.js";
 import Redis from "ioredis";
 
@@ -243,6 +244,7 @@ await app.register(emailAnalyticsRoutes, { prefix: "/api/system-admin/email-anal
 await app.register(emailSchedulingRoutes, { prefix: "/api/system-admin/email-scheduling" });
 await app.register(emailLogRoutes, { prefix: "/api/system-admin/email-logs" });
 await app.register(emailSimulationRoutes, { prefix: "/api/system-admin/email-simulation" });
+await app.register(emailErrorRoutes, { prefix: "/api/system-admin/email-errors" });
 await app.register(emailWebhookRoutes, { prefix: "/api/webhooks/email" });
 await app.register(publicRoutes, { prefix: "/api/public" });
 
