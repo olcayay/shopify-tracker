@@ -1,3 +1,12 @@
+PLA-686: Push Subscription & Dismiss Endpoints (2026-04-05)
+================================================================
+- POST /push-subscription: register with duplicate/reactivation handling
+- DELETE /push-subscription: unregister by endpoint
+- GET /push-subscription/status: list subs with active count
+- GET /push/vapid-key: VAPID public key for client
+- POST /:id/dismiss: mark pushDismissed + delivery log
+- 6 new API tests
+
 PLA-684: Cron Monitor & Digest Scheduler (2026-04-04)
 ================================================================
 - Cron execution tracking: cronStarted/cronSucceeded/cronFailed

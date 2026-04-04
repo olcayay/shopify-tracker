@@ -4,7 +4,15 @@ import {
   notifications,
   notificationTypeConfigs,
   userNotificationPreferences,
+  pushSubscriptions,
+  notificationDeliveryLog,
 } from "@appranks/db";
+import {
+  registerSubscription,
+  unregisterSubscription,
+  getVapidPublicKey,
+  isWebPushConfigured,
+} from "../services/web-push.js";
 
 export const notificationRoutes: FastifyPluginAsync = async (app) => {
   const db = app.db;
@@ -119,6 +127,138 @@ export const notificationRoutes: FastifyPluginAsync = async (app) => {
       .returning({ id: notifications.id });
 
     if (result.length === 0) return reply.code(404).send({ error: "Notification not found" });
+    return { success: true };
+  });
+
+  // ── Push Subscription endpoints ───────────────────────────────────
+
+  // GET /notifications/push/vapid-key — get VAPID public key for client
+  app.get("/push/vapid-key", async (_request, reply) => {
+    const key = getVapidPublicKey();
+    if (!key) {
+      return reply.code(503).send({ error: "Web Push not configured" });
+    }
+    return { vapidPublicKey: key, configured: true };
+  });
+
+  // POST /notifications/push-subscription — register a push subscription
+  app.post<{
+    Body: {
+      endpoint: string;
+      keys: { p256dh: string; auth: string };
+      userAgent?: string;
+    };
+  }>("/push-subscription", async (request, reply) => {
+    const userId = request.user.userId;
+    const { endpoint, keys, userAgent } = request.body;
+
+    if (!endpoint || !keys?.p256dh || !keys?.auth) {
+      return reply.code(400).send({ error: "endpoint and keys (p256dh, auth) are required" });
+    }
+
+    // Check for existing subscription with same endpoint
+    const [existing] = await db
+      .select({ id: pushSubscriptions.id, isActive: pushSubscriptions.isActive })
+      .from(pushSubscriptions)
+      .where(
+        and(
+          eq(pushSubscriptions.userId, userId),
+          eq(pushSubscriptions.endpoint, endpoint)
+        )
+      )
+      .limit(1);
+
+    if (existing) {
+      // Reactivate if was deactivated
+      await db
+        .update(pushSubscriptions)
+        .set({
+          isActive: true,
+          p256dh: keys.p256dh,
+          auth: keys.auth,
+          userAgent: userAgent || null,
+          failureCount: 0,
+        })
+        .where(eq(pushSubscriptions.id, existing.id));
+      return { subscriptionId: existing.id, reactivated: !existing.isActive };
+    }
+
+    const id = await registerSubscription(db, userId, { endpoint, keys }, userAgent);
+    return reply.code(201).send({ subscriptionId: id });
+  });
+
+  // DELETE /notifications/push-subscription — unregister a push subscription
+  app.delete<{
+    Body: { endpoint: string };
+  }>("/push-subscription", async (request, reply) => {
+    const userId = request.user.userId;
+    const { endpoint } = request.body || {};
+
+    if (!endpoint) {
+      return reply.code(400).send({ error: "endpoint is required" });
+    }
+
+    await unregisterSubscription(db, userId, endpoint);
+    return { success: true };
+  });
+
+  // GET /notifications/push-subscription/status — check subscription status
+  app.get("/push-subscription/status", async (request) => {
+    const userId = request.user.userId;
+
+    const subs = await db
+      .select({
+        id: pushSubscriptions.id,
+        endpoint: pushSubscriptions.endpoint,
+        isActive: pushSubscriptions.isActive,
+        lastPushAt: pushSubscriptions.lastPushAt,
+        failureCount: pushSubscriptions.failureCount,
+        createdAt: pushSubscriptions.createdAt,
+      })
+      .from(pushSubscriptions)
+      .where(eq(pushSubscriptions.userId, userId))
+      .orderBy(desc(pushSubscriptions.createdAt));
+
+    return {
+      configured: isWebPushConfigured(),
+      subscriptions: subs,
+      activeCount: subs.filter((s) => s.isActive).length,
+    };
+  });
+
+  // ── Dismiss endpoint ─────────────────────────────────────────────
+
+  // POST /notifications/:id/dismiss — mark as dismissed (from push notification)
+  app.post<{ Params: { id: string } }>("/:id/dismiss", async (request, reply) => {
+    const userId = request.user.userId;
+
+    const result = await db
+      .update(notifications)
+      .set({ pushDismissed: true })
+      .where(
+        and(
+          eq(notifications.id, request.params.id),
+          eq(notifications.userId, userId)
+        )
+      )
+      .returning({ id: notifications.id });
+
+    if (result.length === 0) {
+      return reply.code(404).send({ error: "Notification not found" });
+    }
+
+    // Log dismissal in delivery log
+    try {
+      await db.insert(notificationDeliveryLog).values({
+        notificationId: request.params.id,
+        channel: "push",
+        status: "dismissed",
+        interactedAt: new Date(),
+      });
+    } catch {
+      // Non-critical — don't fail the dismiss
+    }
+
     return { success: true };
   });
 
