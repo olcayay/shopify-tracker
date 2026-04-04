@@ -1,5 +1,5 @@
 /**
- * Admin broadcast notification API (PLA-695).
+ * Admin broadcast notification API (PLA-695, PLA-704).
  * Send notifications to all users or targeted audiences.
  */
 import type { FastifyPluginAsync } from "fastify";
@@ -10,8 +10,72 @@ import { createLogger } from "@appranks/shared";
 
 const log = createLogger("notification-broadcast");
 
+/**
+ * Build a SQL user query from an audience string.
+ * Supported formats:
+ *  - "all" — all active users
+ *  - "active_last_7d" / "active_last_30d" — recently active
+ *  - "platform:<id>" — users tracking a specific platform (e.g. "platform:shopify")
+ *  - "user:<uuid>" — single user
+ *  - "users:<id1>,<id2>,..." — specific user list
+ *  - "account:<uuid>" — all users in an account
+ */
+function buildAudienceQuery(audience: string): string {
+  if (audience === "active_last_7d") {
+    return "SELECT id, account_id FROM users WHERE status = 'active' AND last_login_at >= now() - interval '7 days'";
+  }
+  if (audience === "active_last_30d") {
+    return "SELECT id, account_id FROM users WHERE status = 'active' AND last_login_at >= now() - interval '30 days'";
+  }
+  if (audience.startsWith("platform:")) {
+    const platform = audience.slice("platform:".length).replace(/[^a-z0-9_-]/gi, "");
+    return `SELECT DISTINCT u.id, u.account_id FROM users u JOIN account_platforms ap ON ap.account_id = u.account_id WHERE u.status = 'active' AND ap.platform = '${platform}'`;
+  }
+  if (audience.startsWith("user:")) {
+    const userId = audience.slice("user:".length).replace(/[^a-f0-9-]/gi, "");
+    return `SELECT id, account_id FROM users WHERE id = '${userId}'`;
+  }
+  if (audience.startsWith("users:")) {
+    const ids = audience
+      .slice("users:".length)
+      .split(",")
+      .map((id) => id.trim().replace(/[^a-f0-9-]/gi, ""))
+      .filter(Boolean)
+      .map((id) => `'${id}'`)
+      .join(",");
+    if (!ids) return "SELECT id, account_id FROM users WHERE false";
+    return `SELECT id, account_id FROM users WHERE id IN (${ids})`;
+  }
+  if (audience.startsWith("account:")) {
+    const accountId = audience.slice("account:".length).replace(/[^a-f0-9-]/gi, "");
+    return `SELECT id, account_id FROM users WHERE account_id = '${accountId}' AND status = 'active'`;
+  }
+  // Default: all active users
+  return "SELECT id, account_id FROM users WHERE status = 'active'";
+}
+
 export const notificationBroadcastRoutes: FastifyPluginAsync = async (app) => {
   const db = app.db;
+
+  // POST /api/system-admin/notifications/broadcast/preview — preview audience size
+  app.post("/broadcast/preview", { preHandler: [requireSystemAdmin()] }, async (request, reply) => {
+    const { audience } = request.body as { audience: string };
+    if (!audience) {
+      return reply.code(400).send({ error: "audience is required" });
+    }
+
+    try {
+      const countQuery = `SELECT count(*)::int AS count FROM (${buildAudienceQuery(audience)}) sub`;
+      const result: any = await db.execute(sql.raw(countQuery));
+      const rows = (result as any)?.rows ?? result ?? [];
+      const count = parseInt(rows[0]?.count || "0", 10);
+
+      return { audience, recipientCount: count };
+    } catch (err) {
+      log.error("broadcast preview failed", { audience, error: String(err) });
+      return reply.code(400).send({ error: "Invalid audience filter" });
+    }
+  });
 
   // POST /api/system-admin/notifications/broadcast — send to audience
   app.post("/broadcast", { preHandler: [requireSystemAdmin()] }, async (request, reply) => {
@@ -29,7 +93,7 @@ export const notificationBroadcastRoutes: FastifyPluginAsync = async (app) => {
       url?: string;
       icon?: string;
       priority?: string;
-      audience: "all" | "active_last_7d" | "active_last_30d";
+      audience: string;
       category?: string;
     };
 
@@ -37,22 +101,8 @@ export const notificationBroadcastRoutes: FastifyPluginAsync = async (app) => {
       return reply.code(400).send({ error: "title, body, and audience are required" });
     }
 
-    // Build user query based on audience
-    let userQuery: string;
-    switch (audience) {
-      case "active_last_7d":
-        userQuery = "SELECT id, account_id FROM users WHERE status = 'active' AND last_login_at >= now() - interval '7 days'";
-        break;
-      case "active_last_30d":
-        userQuery = "SELECT id, account_id FROM users WHERE status = 'active' AND last_login_at >= now() - interval '30 days'";
-        break;
-      case "all":
-      default:
-        userQuery = "SELECT id, account_id FROM users WHERE status = 'active'";
-        break;
-    }
-
     try {
+      const userQuery = buildAudienceQuery(audience);
       const usersResult: any = await db.execute(sql.raw(userQuery));
       const users = (usersResult as any)?.rows ?? usersResult ?? [];
       const batchId = `broadcast-${Date.now()}`;
