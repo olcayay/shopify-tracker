@@ -8,7 +8,14 @@ Notification System (2026-04-05)
   PLA-692: Notification Grouping UI ✅
   PLA-695: Admin Broadcast Notifications ✅
   PLA-696: Notification Health Monitoring ✅
+  PLA-693: Notification Settings Page ✅
+  PLA-694: Notification Analytics Dashboard ✅
+  PLA-697: Cross-Tab Notification Sync ✅
   PLA-698: Per-Type Rate Limiting ✅
+  PLA-699: Notification Scheduling ✅
+  PLA-700: Webhook/External Delivery ✅
+  PLA-701: Priority Queue ✅
+  PLA-703: Sound & Vibration Preferences ✅
 
 Parser Conformance (2026-04-04)
   PLA-651: Parser→Zod schema conformance tests for all platforms ✅
