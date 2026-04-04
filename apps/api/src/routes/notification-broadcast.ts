@@ -77,7 +77,7 @@ export const notificationBroadcastRoutes: FastifyPluginAsync = async (app) => {
     }
   });
 
-  // POST /api/system-admin/notifications/broadcast — send to audience
+  // POST /api/system-admin/notifications/broadcast — send to audience (PLA-705: scheduling)
   app.post("/broadcast", { preHandler: [requireSystemAdmin()] }, async (request, reply) => {
     const {
       title,
@@ -87,6 +87,9 @@ export const notificationBroadcastRoutes: FastifyPluginAsync = async (app) => {
       priority,
       audience,
       category,
+      scheduledAt,
+      useLocalTime,
+      localTimeHour,
     } = request.body as {
       title: string;
       body: string;
@@ -95,33 +98,88 @@ export const notificationBroadcastRoutes: FastifyPluginAsync = async (app) => {
       priority?: string;
       audience: string;
       category?: string;
+      /** ISO8601 timestamp — schedule broadcast for later */
+      scheduledAt?: string;
+      /** If true, deliver at localTimeHour in each user's timezone */
+      useLocalTime?: boolean;
+      /** Hour (0-23) to deliver in user's local timezone (default: 9) */
+      localTimeHour?: number;
     };
 
     if (!title || !body || !audience) {
       return reply.code(400).send({ error: "title, body, and audience are required" });
     }
 
+    // If scheduledAt is in the past, reject
+    if (scheduledAt && new Date(scheduledAt) <= new Date()) {
+      return reply.code(400).send({ error: "scheduledAt must be in the future" });
+    }
+
     try {
-      const userQuery = buildAudienceQuery(audience);
+      // Extend the query to include timezone for local-time delivery
+      const baseQuery = buildAudienceQuery(audience);
+      const userQuery = useLocalTime
+        ? baseQuery.replace("SELECT ", "SELECT u.timezone, ").replace("SELECT DISTINCT ", "SELECT DISTINCT u.timezone, ")
+        : baseQuery;
+
       const usersResult: any = await db.execute(sql.raw(userQuery));
       const users = (usersResult as any)?.rows ?? usersResult ?? [];
       const batchId = `broadcast-${Date.now()}`;
 
+      // Calculate per-user delay for timezone-aware delivery
+      const targetHour = localTimeHour ?? 9;
+      const globalDelay = scheduledAt ? Math.max(0, new Date(scheduledAt).getTime() - Date.now()) : 0;
+
       let inserted = 0;
+      let scheduled = 0;
       for (const user of users as any[]) {
         try {
-          await db.insert(notifications).values({
-            userId: user.id,
-            accountId: user.account_id,
-            type: "system_broadcast",
-            category: category || "system",
-            title,
-            body,
-            url: url || null,
-            icon: icon || null,
-            priority: priority || "normal",
-            batchId,
-          });
+          // Calculate timezone-specific delay if useLocalTime is enabled
+          let userDelay = globalDelay;
+          if (useLocalTime && user.timezone) {
+            try {
+              const now = new Date();
+              const userNow = new Date(now.toLocaleString("en-US", { timeZone: user.timezone }));
+              const targetTime = new Date(userNow);
+              targetTime.setHours(targetHour, 0, 0, 0);
+              if (targetTime <= userNow) targetTime.setDate(targetTime.getDate() + 1); // next day
+              userDelay = targetTime.getTime() - userNow.getTime();
+            } catch {
+              // Invalid timezone — use global delay
+            }
+          }
+
+          if (userDelay > 0) {
+            // Schedule for later — store in notifications with a scheduledFor marker
+            await db.insert(notifications).values({
+              userId: user.id,
+              accountId: user.account_id,
+              type: "system_broadcast",
+              category: category || "system",
+              title,
+              body,
+              url: url || null,
+              icon: icon || null,
+              priority: priority || "normal",
+              batchId,
+              // Use eventData to store scheduling info
+              eventData: { scheduledFor: new Date(Date.now() + userDelay).toISOString() },
+            });
+            scheduled++;
+          } else {
+            await db.insert(notifications).values({
+              userId: user.id,
+              accountId: user.account_id,
+              type: "system_broadcast",
+              category: category || "system",
+              title,
+              body,
+              url: url || null,
+              icon: icon || null,
+              priority: priority || "normal",
+              batchId,
+            });
+          }
           inserted++;
         } catch (err) {
           log.warn("failed to insert broadcast notification", {
@@ -131,19 +189,47 @@ export const notificationBroadcastRoutes: FastifyPluginAsync = async (app) => {
         }
       }
 
-      log.info("broadcast sent", { audience, totalUsers: (users as any[]).length, inserted, batchId });
-
-      return reply.send({
-        message: "Broadcast sent",
+      const status = scheduledAt || useLocalTime ? "scheduled" : "sent";
+      log.info("broadcast processed", {
         audience,
         totalUsers: (users as any[]).length,
         inserted,
+        scheduled,
+        status,
         batchId,
+      });
+
+      return reply.send({
+        message: status === "scheduled" ? "Broadcast scheduled" : "Broadcast sent",
+        audience,
+        totalUsers: (users as any[]).length,
+        inserted,
+        scheduled,
+        batchId,
+        status,
       });
     } catch (err) {
       log.error("broadcast failed", { error: String(err) });
       return reply.code(500).send({ error: "Broadcast failed" });
     }
+  });
+
+  // DELETE /api/system-admin/notifications/broadcast/:batchId — cancel scheduled broadcast (PLA-705)
+  app.delete<{ Params: { batchId: string } }>("/broadcast/:batchId", { preHandler: [requireSystemAdmin()] }, async (request, reply) => {
+    const { batchId } = request.params;
+
+    // Delete unread scheduled notifications for this batch
+    const result: any = await db.execute(sql`
+      DELETE FROM notifications
+      WHERE batch_id = ${batchId}
+        AND is_read = false
+        AND type = 'system_broadcast'
+    `);
+
+    const deleted = (result as any)?.rowCount ?? 0;
+    log.info("broadcast cancelled", { batchId, deleted });
+
+    return { success: true, deleted, batchId };
   });
 
   // GET /api/system-admin/notifications/broadcasts — list past broadcasts
