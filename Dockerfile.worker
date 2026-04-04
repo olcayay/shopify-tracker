@@ -50,4 +50,4 @@ ENV WORKER_MODE=background
 HEALTHCHECK --interval=60s --timeout=5s --start-period=15s --retries=3 \
   CMD test -f /proc/1/status || exit 1
 
-CMD ["sh", "-c", "if [ \"$WORKER_MODE\" = \"interactive\" ]; then node apps/scraper/dist/interactive-worker.js; else node apps/scraper/dist/worker.js & node apps/scraper/dist/scheduler.js & wait; fi"]
+CMD ["sh", "-c", "if [ \"$WORKER_MODE\" = \"interactive\" ]; then node apps/scraper/dist/interactive-worker.js; else node apps/scraper/dist/worker.js & node apps/scraper/dist/scheduler.js & node apps/scraper/dist/email-instant-worker.js & node apps/scraper/dist/email-bulk-worker.js & node apps/scraper/dist/notification-worker.js & wait; fi"]
