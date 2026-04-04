@@ -2,8 +2,8 @@
 
 > Created: 2026-04-01 | Updated: 2026-04-04
 > Target: Production-ready public launch
-> Progress: **Session 16: Email system reliability** (PLA-670, 671, 672, 673, 651)
-> SMTP failover, queue resilience, bounce webhooks, health metrics, parser conformance tests.
+> Progress: **Session 17: Email system features** (PLA-674, 675, 678, 679, 683)
+> Queue alerts, analytics dashboard, template tests, email scheduling, log search & export.
 
 ---
 
@@ -106,6 +106,31 @@ All transactional emails must be delivered reliably.
   - [x] Email health API endpoint (queue stats, 24h metrics, DLQ depth)
   - [x] System status: healthy/degraded/unhealthy
   - [x] Admin dashboard email health page with auto-refresh
+
+- [x] **Queue depth alerts** → [PLA-674](https://linear.app/plan-b-side-projects/issue/PLA-674) `In Review` ✅
+  - [x] Configurable alert rules with thresholds and cooldowns
+  - [x] 5 default rules (queue depth, error rate, bounce rate, DLQ)
+  - [x] Alert evaluator with cooldown enforcement
+  - [x] Admin dashboard alert management (enable/disable, test, history)
+
+- [x] **Email template test suite** → [PLA-678](https://linear.app/plan-b-side-projects/issue/PLA-678) `In Review` ✅
+  - [x] Rendering tests for all 6 transactional templates
+  - [x] Variable substitution, CTA links, HTML validity checks
+  - [x] Snapshot tests for visual regression detection
+
+- [x] **Email analytics dashboard** → [PLA-675](https://linear.app/plan-b-side-projects/issue/PLA-675) `In Review` ✅
+  - [x] Overview metrics (sent, delivery/open/click/bounce rates)
+  - [x] Daily trend time-series
+  - [x] Per-email-type comparison table
+
+- [x] **Email scheduling** → [PLA-679](https://linear.app/plan-b-side-projects/issue/PLA-679) `In Review` ✅
+  - [x] BullMQ delay-based scheduling (sendAt parameter)
+  - [x] List and cancel scheduled emails
+
+- [x] **Email log search & export** → [PLA-683](https://linear.app/plan-b-side-projects/issue/PLA-683) `In Review` ✅
+  - [x] Full-text search in subject/recipient
+  - [x] Advanced filtering (status, type, date range)
+  - [x] CSV export (up to 10K rows)
 
 ### 4. Payment Integration
 Billing system for subscription management.
