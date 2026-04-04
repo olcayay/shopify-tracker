@@ -1,6 +1,6 @@
 # Notification Sistemi: Mevcut Durum Analizi & Yol Haritasi
 
-> Tarih: 2026-04-04
+> Tarih: 2026-04-04 | Güncelleme: 2026-04-05
 > Proje: AppRanks (Shopify Tracking)
 
 ---
@@ -1357,3 +1357,108 @@ FIREBASE_CLIENT_EMAIL=           # FCM service account email
 | Admin Dashboard | `apps/dashboard/src/app/(dashboard)/system-admin/notifications/page.tsx` | Tum |
 | Templates Admin | `apps/dashboard/src/app/(dashboard)/system-admin/notification-templates/page.tsx` | Tum |
 | Docker Config | `docker-compose.prod.yml` | 243-270 |
+
+---
+
+## 8. Admin Broadcast & Zamanlama — Yeni Özellik Planı (2026-04-05)
+
+> **Label:** `admin-broadcast`
+
+### 8.1 Mevcut Durum
+
+Mevcut broadcast sistemi (`notification-broadcast.ts`, PLA-695) şu kısıtlamalara sahip:
+- Sadece 3 sabit audience: `all`, `active_last_7d`, `active_last_30d`
+- Platform/plan bazlı hedefleme yok
+- Tek kullanıcıya gönderim yok
+- Zamanlama (scheduling) yok — sadece anlık gönderim
+- Timezone-aware delivery yok
+
+### 8.2 Planlanan Özellikler
+
+#### Phase 1: Gelişmiş Hedefleme → [PLA-704](https://linear.app/plan-b-side-projects/issue/PLA-704)
+
+```
+Audience Types:
+┌────────────────────────────────────────────────────┐
+│ all                → tüm aktif kullanıcılar         │
+│ active_last_Nd     → son N gün aktif                │
+│ platform:<id>      → platformu takip edenler        │
+│ plan:<name>        → free/pro/business kullanıcılar │
+│ user:<uuid>        → tek kullanıcı                  │
+│ users:[id1,id2]    → belirli kullanıcı listesi      │
+│ account:<uuid>     → hesaptaki tüm kullanıcılar     │
+└────────────────────────────────────────────────────┘
+```
+
+**Platform bazlı hedefleme** — `account_platforms` tablosu üzerinden JOIN:
+```sql
+SELECT DISTINCT u.id, u.account_id
+FROM users u
+JOIN account_platforms ap ON ap.account_id = u.account_id
+WHERE ap.platform_id = 'shopify'
+  AND u.status = 'active'
+```
+
+**Audience preview** — gönderim öncesi hedef kitle büyüklüğünü gösterme:
+```
+POST /api/system-admin/notifications/broadcast/preview
+{ audience: "platform:shopify" }
+→ { estimatedRecipients: 342, breakdown: { active: 342, optedOut: 12, suppressed: 3 } }
+```
+
+#### Phase 2: Timezone-Aware Zamanlama → [PLA-705](https://linear.app/plan-b-side-projects/issue/PLA-705)
+
+```
+Admin Seçenekleri:
+┌─────────────────────────────────────────────────────┐
+│ ○ Send now          — anlık gönderim                 │
+│ ○ Schedule for      — belirli tarih/saat             │
+│   ├── 2026-04-10 09:00 UTC                          │
+│   └── ☑ Use recipient's local time                  │
+│        → TR kullanıcısı: 09:00 +03:00               │
+│        → US kullanıcısı: 09:00 -05:00               │
+└─────────────────────────────────────────────────────┘
+```
+
+**Kampanya durumları:** `draft → scheduled → sending → sent / cancelled`
+
+**DB tablosu:** `broadcast_campaigns`
+| Kolon | Tip | Açıklama |
+|-------|-----|----------|
+| id | uuid | PK |
+| title | varchar | Kampanya başlığı |
+| body | text | Bildirim içeriği |
+| audience | varchar | Hedef kitle tipi |
+| audience_filter | jsonb | Ek filtreler |
+| status | varchar | draft/scheduled/sending/sent/cancelled |
+| scheduled_at | timestamp | Planlanan gönderim zamanı |
+| use_local_time | boolean | Alıcının yerel saatini kullan |
+| sent_at | timestamp | Gerçek gönderim zamanı |
+| recipient_count | int | Alıcı sayısı |
+| read_count | int | Okunma sayısı |
+| created_by | uuid | Oluşturan admin |
+
+#### Phase 3: Admin Dashboard → [PLA-706](https://linear.app/plan-b-side-projects/issue/PLA-706)
+
+```
+Dashboard Sayfası: /system-admin/notifications/broadcast
+┌─────────────────────────────────────────────────────┐
+│ ● Create Broadcast                                   │
+│                                                       │
+│ [Kampanya Listesi]                                   │
+│ ┌─────────┬──────────┬────────┬──────┬──────────┐   │
+│ │ Title   │ Audience │ Status │ Sent │ Read Rate│   │
+│ ├─────────┼──────────┼────────┼──────┼──────────┤   │
+│ │ Welcome │ all      │ ✅ sent│ 1.2K │ 45%      │   │
+│ │ Update  │ shopify  │ ⏳ sch │ —    │ —        │   │
+│ └─────────┴──────────┴────────┴──────┴──────────┘   │
+└─────────────────────────────────────────────────────┘
+```
+
+### 8.3 Bağımlılıklar
+
+| Task | Bağımlılık | Açıklama |
+|------|-----------|----------|
+| PLA-704 | — | Bağımsız, ilk implementasyon |
+| PLA-705 | PLA-704 | Hedefleme sistemini kullanır |
+| PLA-706 | PLA-704, PLA-705 | Her iki özelliği UI'da birleştirir |

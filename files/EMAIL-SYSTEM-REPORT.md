@@ -1,6 +1,6 @@
 # Email Sistemi: Mevcut Durum Analizi & Yol Haritasi
 
-> Tarih: 2026-04-03
+> Tarih: 2026-04-03 | Güncelleme: 2026-04-05
 > Proje: AppRanks (Shopify Tracking)
 
 ---
@@ -975,3 +975,133 @@ EMAIL_BULK_MAX_RATE=100
 # Alert Webhook (Task 2.2)
 EMAIL_ALERT_WEBHOOK_URL=
 ```
+
+---
+
+## Admin Email Broadcast & Kampanya Yönetimi — Yeni Özellik Planı (2026-04-05)
+
+> **Label:** `admin-email-broadcast`
+
+### Mevcut Durum
+
+Email sistemi transactional (şifre sıfırlama, davet vb.) ve bulk (digest, alert) emailler için tam altyapıya sahip. Ancak:
+- Admin'den hedefli email kampanyası gönderilemiyor
+- Platform/plan bazlı kullanıcı segmentasyonu yok
+- Kampanya zamanlama ve timezone-aware delivery yok
+- Kampanya performans takibi (open/click rate per campaign) yok
+
+### Planlanan Özellikler
+
+#### Phase 1: Hedefli Email Kampanyaları → [PLA-707](https://linear.app/plan-b-side-projects/issue/PLA-707)
+
+```
+Audience Types (Notification ile paralel):
+┌────────────────────────────────────────────────────┐
+│ all                → tüm aktif kullanıcılar         │
+│ active_last_Nd     → son N gün aktif                │
+│ platform:<id>      → platformu takip edenler        │
+│ plan:<name>        → free/pro/business kullanıcılar │
+│ user:<uuid>        → tek kullanıcı                  │
+│ users:[id1,id2]    → belirli kullanıcı listesi      │
+│ account:<uuid>     → hesaptaki tüm kullanıcılar     │
+└────────────────────────────────────────────────────┘
+```
+
+**Otomatik filtreleme:**
+- Suppression list (bounce/complaint) otomatik hariç tutma
+- Eligibility check (user preferences, opt-out) uygulanması
+- Audience preview: kaç kullanıcıya gidecek + hariç tutulanlar
+
+**DB tablosu:** `email_campaigns_v2`
+| Kolon | Tip | Açıklama |
+|-------|-----|----------|
+| id | uuid | PK |
+| name | varchar | Kampanya adı |
+| subject | varchar | Email subject line |
+| html_body | text | Email HTML içeriği |
+| audience | varchar | Hedef kitle tipi |
+| audience_filter | jsonb | Ek filtreler |
+| status | varchar | draft/scheduled/sending/sent/cancelled |
+| scheduled_at | timestamp | Planlanan gönderim zamanı |
+| use_local_time | boolean | Alıcının yerel saatini kullan |
+| sent_at | timestamp | Gönderim başlangıcı |
+| recipient_count | int | Toplam alıcı |
+| delivered_count | int | Başarıyla teslim |
+| open_count | int | Açılma |
+| click_count | int | Tıklanma |
+| bounce_count | int | Bounce |
+| created_by | uuid | Oluşturan admin |
+
+#### Phase 2: Timezone-Aware Kampanya Zamanlama → [PLA-708](https://linear.app/plan-b-side-projects/issue/PLA-708)
+
+```
+Email Kampanya Zamanlama:
+┌──────────────────────────────────────────────────────┐
+│ ○ Send now                                            │
+│ ○ Schedule for: [2026-04-10] [09:00] [UTC+3]        │
+│   ☑ Use recipient's local time                        │
+│     → Timezone grupları oluştur                       │
+│     → Her grup için BullMQ delay hesapla              │
+│     → TR (UTC+3): delay = X ms                       │
+│     → US-East (UTC-5): delay = Y ms                  │
+│     → US-West (UTC-8): delay = Z ms                  │
+└──────────────────────────────────────────────────────┘
+```
+
+**Kampanya çalıştırıcı cron:**
+- Her 1dk'da scheduled kampanyaları kontrol et
+- Gönderim zamanı gelen kampanyaları başlat
+- Timezone-aware: kullanıcıları timezone'a göre grupla
+- Rate-limited: `AdaptiveRateLimiter` (PLA-685) entegrasyonu
+
+#### Phase 3: Kampanya Admin Dashboard → [PLA-709](https://linear.app/plan-b-side-projects/issue/PLA-709)
+
+```
+Dashboard: /system-admin/email-campaigns
+┌──────────────────────────────────────────────────────┐
+│ ● Create Campaign (Wizard)                            │
+│                                                        │
+│ Step 1: Content   → subject + body (template/custom)  │
+│ Step 2: Audience  → hedef kitle + preview              │
+│ Step 3: Schedule  → now / schedule / local-time        │
+│ Step 4: Review    → preview + confirm                  │
+│                                                        │
+│ [Kampanya Listesi]                                    │
+│ ┌──────────┬────────┬────────┬──────┬──────┬───────┐ │
+│ │ Campaign │ Status │  Sent  │ Open │ Click│ Bounce│ │
+│ ├──────────┼────────┼────────┼──────┼──────┼───────┤ │
+│ │ Welcome  │ ✅sent │  1,200 │  45% │  12% │  0.5% │ │
+│ │ Feature  │ ⏳schd │    —   │   —  │   —  │   —   │ │
+│ │ Promo    │ 📝drft │    —   │   —  │   —  │   —   │ │
+│ └──────────┴────────┴────────┴──────┴──────┴───────┘ │
+│                                                        │
+│ [Kampanya Detay: Welcome]                             │
+│ ┌──────────────────────────────────────────┐          │
+│ │ Delivery Funnel:                          │          │
+│ │ Sent(1200) → Delivered(1180) → Opened(531)│         │
+│ │                          → Clicked(142)    │         │
+│ └──────────────────────────────────────────┘          │
+└──────────────────────────────────────────────────────┘
+```
+
+### Bağımlılıklar
+
+| Task | Bağımlılık | Açıklama |
+|------|-----------|----------|
+| PLA-707 | — | Bağımsız, kampanya modeli + hedefleme |
+| PLA-708 | PLA-707 | Kampanya modeline zamanlama ekler |
+| PLA-709 | PLA-707, PLA-708 | Her iki özelliği UI'da birleştirir |
+
+### Notification ile Paralellik
+
+Email ve notification broadcast sistemleri paralel mimari kullanır:
+
+| Özellik | Notification | Email |
+|---------|-------------|-------|
+| Audience targeting | PLA-704 | PLA-707 |
+| Timezone scheduling | PLA-705 | PLA-708 |
+| Admin dashboard | PLA-706 | PLA-709 |
+| Label | `admin-broadcast` | `admin-email-broadcast` |
+| Delivery mechanism | In-app + push | SMTP + queue |
+| Rate limiting | Per-type (PLA-698) | Adaptive (PLA-685) |
+| Suppression | Quiet hours (PLA-689) | Suppression list (PLA-672) |
