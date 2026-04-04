@@ -81,25 +81,34 @@ interface CampaignConfig {
   htmlBody: string;
   audience: string;
   scheduledAt?: string;
+  useLocalTime?: boolean;
+  localTimeHour?: number;
 }
 
 export const emailCampaignRoutes: FastifyPluginAsync = async (app) => {
   const db = app.db;
 
-  // POST /campaigns — create a campaign (draft)
+  // POST /campaigns — create a campaign (draft) (PLA-708: scheduling)
   app.post("/campaigns", { preHandler: [requireSystemAdmin()] }, async (request, reply) => {
-    const { name, subject, htmlBody, audience } = request.body as {
+    const { name, subject, htmlBody, audience, scheduledAt, useLocalTime, localTimeHour } = request.body as {
       name: string;
       subject: string;
       htmlBody: string;
       audience: string;
+      scheduledAt?: string;
+      useLocalTime?: boolean;
+      localTimeHour?: number;
     };
 
     if (!name || !subject || !htmlBody || !audience) {
       return reply.code(400).send({ error: "name, subject, htmlBody, and audience are required" });
     }
 
-    const config: CampaignConfig = { subject, htmlBody, audience };
+    if (scheduledAt && new Date(scheduledAt) <= new Date()) {
+      return reply.code(400).send({ error: "scheduledAt must be in the future" });
+    }
+
+    const config: CampaignConfig = { subject, htmlBody, audience, scheduledAt, useLocalTime, localTimeHour };
 
     const [campaign] = await db
       .insert(emailCampaigns)
@@ -204,13 +213,18 @@ export const emailCampaignRoutes: FastifyPluginAsync = async (app) => {
       return reply.code(400).send({ error: "Campaign missing subject, htmlBody, or audience" });
     }
 
-    // Get target users
-    const usersResult: any = await db.execute(sql.raw(buildAudienceQuery(config.audience)));
+    // Get target users (include timezone for local-time delivery)
+    const baseQuery = buildAudienceQuery(config.audience);
+    const userQuery = config.useLocalTime
+      ? baseQuery.replace("SELECT ", "SELECT u.timezone, ").replace("SELECT DISTINCT ", "SELECT DISTINCT u.timezone, ")
+      : baseQuery;
+    const usersResult: any = await db.execute(sql.raw(userQuery));
     const users = ((usersResult as any)?.rows ?? usersResult ?? []) as Array<{
       id: string;
       account_id: string;
       email: string;
       name: string;
+      timezone?: string;
     }>;
 
     // Update campaign status
@@ -223,12 +237,29 @@ export const emailCampaignRoutes: FastifyPluginAsync = async (app) => {
       })
       .where(eq(emailCampaigns.id, campaign.id));
 
-    // Enqueue emails in batches
+    // Enqueue emails with optional scheduling delay (PLA-708)
     const queue = getBulkQueue();
     let enqueued = 0;
+    const globalDelay = config.scheduledAt ? Math.max(0, new Date(config.scheduledAt).getTime() - Date.now()) : 0;
+    const targetHour = config.localTimeHour ?? 9;
 
     for (const user of users) {
       try {
+        // Calculate per-user delay for timezone-aware delivery
+        let delay = globalDelay;
+        if (config.useLocalTime && user.timezone) {
+          try {
+            const now = new Date();
+            const userNow = new Date(now.toLocaleString("en-US", { timeZone: user.timezone }));
+            const targetTime = new Date(userNow);
+            targetTime.setHours(targetHour, 0, 0, 0);
+            if (targetTime <= userNow) targetTime.setDate(targetTime.getDate() + 1);
+            delay = targetTime.getTime() - userNow.getTime();
+          } catch {
+            // Invalid timezone — use global delay
+          }
+        }
+
         const jobData: BulkEmailJobData = {
           type: "email_campaign",
           to: user.email,
@@ -242,18 +273,21 @@ export const emailCampaignRoutes: FastifyPluginAsync = async (app) => {
           campaignId: campaign.id,
           createdAt: new Date().toISOString(),
         };
-        await queue.add(`campaign:${campaign.id}`, jobData);
+        await queue.add(`campaign:${campaign.id}`, jobData, {
+          ...(delay > 0 ? { delay } : {}),
+        });
         enqueued++;
       } catch (err) {
         log.warn("failed to enqueue campaign email", { userId: user.id, error: String(err) });
       }
     }
 
-    // Update status to sent
+    // Update status
+    const finalStatus = (config.scheduledAt || config.useLocalTime) ? "scheduled" : "sent";
     await db
       .update(emailCampaigns)
       .set({
-        status: "sent",
+        status: finalStatus,
         sentCount: enqueued,
         updatedAt: new Date(),
       })
