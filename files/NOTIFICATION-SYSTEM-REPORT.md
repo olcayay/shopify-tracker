@@ -1459,3 +1459,37 @@ Dashboard Sayfası: /system-admin/notifications/broadcast
 | PLA-704 | — | Bağımsız, ilk implementasyon |
 | PLA-705 | PLA-704 | Hedefleme sistemini kullanır |
 | PLA-706 | PLA-704, PLA-705 | Her iki özelliği UI'da birleştirir |
+
+---
+
+## 9. Test Kapsam Analizi & Eksik Testler (2026-04-05)
+
+> **Label:** `notification-tests`
+
+### Mevcut Test Durumu
+
+| Kategori | Toplam | Testli | Testsiz | Kapsam |
+|----------|--------|--------|---------|--------|
+| Notification modülleri (scraper) | 9 | 5 | 4 | 55.6% |
+| Notification API route'ları | 6 | 2 | 4 | 33.3% |
+| Dashboard components | 8 | 2 | 6 | 25.0% |
+| **Toplam** | **23** | **9** | **14** | **39.1%** |
+
+### Eksik Test Taskları
+
+| Task | Öncelik | Kapsam |
+|------|---------|--------|
+| [PLA-713](https://linear.app/plan-b-side-projects/issue/PLA-713) | 🔴 Urgent | Core: scheduling, webhook-delivery, priority-queue, mobile-push |
+| [PLA-714](https://linear.app/plan-b-side-projects/issue/PLA-714) | 🟠 High | API routes: broadcast, health, analytics, stream, admin-notifications |
+| [PLA-715](https://linear.app/plan-b-side-projects/issue/PLA-715) | 🟡 Medium | Dashboard: bell, grouping, banner, stream hook, sync, sound |
+
+### Kritik testsiz dosyalar
+
+```
+❌ scheduling.ts         — Bildirim zamanlama (BullMQ delay)
+❌ webhook-delivery.ts   — Slack/Discord/custom webhook
+❌ priority-queue.ts     — Tip bazlı öncelik atama
+❌ mobile-push.ts        — FCM/APNs mobil push
+❌ notification-broadcast.ts (API) — Admin broadcast endpoint
+❌ notification-health.ts (API)    — Health monitoring
+```

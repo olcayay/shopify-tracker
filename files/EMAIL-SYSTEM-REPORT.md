@@ -1092,6 +1092,37 @@ Dashboard: /system-admin/email-campaigns
 | PLA-708 | PLA-707 | Kampanya modeline zamanlama ekler |
 | PLA-709 | PLA-707, PLA-708 | Her iki özelliği UI'da birleştirir |
 
+---
+
+## Test Kapsam Analizi & Eksik Testler (2026-04-05)
+
+> **Label:** `email-tests`
+
+### Mevcut Test Durumu
+
+| Kategori | Toplam | Testli | Testsiz | Kapsam |
+|----------|--------|--------|---------|--------|
+| Email implementasyon (scraper) | 38 | 20 | 18 | 52.6% |
+| Email API route'ları | 11 | 3 | 8 | 27.3% |
+| **Toplam** | **49** | **23** | **26** | **46.9%** |
+
+### Eksik Test Taskları
+
+| Task | Öncelik | Kapsam |
+|------|---------|--------|
+| [PLA-710](https://linear.app/plan-b-side-projects/issue/PLA-710) | 🔴 Urgent | Core processing: process-instant, process-bulk, eligibility |
+| [PLA-711](https://linear.app/plan-b-side-projects/issue/PLA-711) | 🟠 High | Templates, builders, bounce handler, tracking, email-logger |
+| [PLA-712](https://linear.app/plan-b-side-projects/issue/PLA-712) | 🟠 High | API routes: alerts, analytics, logs, scheduling, simulation, preferences, suppression |
+| [PLA-716](https://linear.app/plan-b-side-projects/issue/PLA-716) | 🟡 Medium | Utilities: alert-batching, dry-run, timezone |
+
+### Kritik testsiz dosyalar (P1)
+
+```
+❌ process-instant-email.ts  — 6 transactional email tipinin işlenmesi
+❌ process-bulk-email.ts     — digest, alert, campaign email işleme
+❌ eligibility.ts            — 5 aşamalı eligibility karar mekanizması
+```
+
 ### Notification ile Paralellik
 
 Email ve notification broadcast sistemleri paralel mimari kullanır:
