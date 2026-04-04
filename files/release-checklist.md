@@ -2,8 +2,8 @@
 
 > Created: 2026-04-01 | Updated: 2026-04-04
 > Target: Production-ready public launch
-> Progress: **Session 17: Email system features** (PLA-674, 675, 678, 679, 683)
-> Queue alerts, analytics dashboard, template tests, email scheduling, log search & export.
+> Progress: **Session 18: Complete email system** (PLA-676, 677, 680, 681, 682, 684, 685)
+> Sandbox mode, simulation, A/B testing, preference center, error diagnostics, cron monitor, rate limiter.
 
 ---
 
@@ -131,6 +131,34 @@ All transactional emails must be delivered reliably.
   - [x] Full-text search in subject/recipient
   - [x] Advanced filtering (status, type, date range)
   - [x] CSV export (up to 10K rows)
+
+- [x] **Global sandbox mode** → [PLA-676](https://linear.app/plan-b-side-projects/issue/PLA-676) `In Review` ✅
+  - [x] EMAIL_SANDBOX_MODE + EMAIL_SANDBOX_RECIPIENT env vars
+  - [x] All emails redirected to sandbox with original recipient in subject
+
+- [x] **Email simulation engine** → [PLA-677](https://linear.app/plan-b-side-projects/issue/PLA-677) `In Review` ✅
+  - [x] Per-user simulation with 5-point eligibility check
+  - [x] Bulk simulation with eligible/ineligible breakdown
+  - [x] Template rendering preview
+
+- [x] **Email preference center** → [PLA-681](https://linear.app/plan-b-side-projects/issue/PLA-681) `In Review` ✅
+  - [x] Categorized preference management (transactional/alerts/digests/lifecycle/team)
+  - [x] Required types locked, per-type toggle
+
+- [x] **Email error diagnostics** → [PLA-682](https://linear.app/plan-b-side-projects/issue/PLA-682) `In Review` ✅
+  - [x] Error categorization (smtp_connection, smtp_auth, smtp_rejected, template_render, etc.)
+  - [x] Error breakdown and hourly trend APIs
+
+- [x] **Cron monitor** → [PLA-684](https://linear.app/plan-b-side-projects/issue/PLA-684) `In Review` ✅
+  - [x] Execution tracking with duration, status, and job counts
+  - [x] History, running jobs, and health summary
+
+- [x] **Adaptive rate limiter** → [PLA-685](https://linear.app/plan-b-side-projects/issue/PLA-685) `In Review` ✅
+  - [x] Dynamic rate reduction on throttle, gradual recovery on success
+
+- [x] **A/B test infrastructure** → [PLA-680](https://linear.app/plan-b-side-projects/issue/PLA-680) `In Review` ✅
+  - [x] Weighted variant selection with deterministic user assignment
+  - [x] Date range support and result tracking
 
 ### 4. Payment Integration
 Billing system for subscription management.
