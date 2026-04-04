@@ -12,6 +12,8 @@ Email System Reliability (2026-04-04)
   PLA-676: Global Sandbox Mode ✅
   PLA-677: Advanced Dry-Run & Email Simulation ✅
   PLA-681: Email Preference Center ✅
+  PLA-680: A/B Test Infrastructure for Emails ✅
+  PLA-684: Cron Monitor & Digest Scheduler ✅
   PLA-685: Rate Limit Synchronization ✅
   PLA-682: Email Error Tracking & Diagnostics ✅
   PLA-683: Email Log Search & Export ✅

@@ -1,3 +1,20 @@
+PLA-684: Cron Monitor & Digest Scheduler (2026-04-04)
+================================================================
+- Cron execution tracking: cronStarted/cronSucceeded/cronFailed
+- In-memory history (ring buffer, 200 entries)
+- getCronHistory() with name/status filters, getRunningCrons()
+- getCronSummary(): total executions, recent failures, running count
+- 9 new tests
+
+PLA-680: A/B Test Infrastructure for Emails (2026-04-04)
+================================================================
+- ABTest/ABTestVariant interfaces with weighted variant selection
+- registerABTest(): validate weights sum to 100
+- getActiveTest(): find active test for email type (with date range)
+- selectVariant(): deterministic hash-based assignment (djb2)
+- getTestResults(): assignment counts per variant
+- 10 new tests covering registration, selection, distribution, weights
+
 PLA-685: Rate Limit Synchronization (2026-04-04)
 ================================================================
 - AdaptiveRateLimiter class: tracks throttle events, auto-adjusts rate
