@@ -11,12 +11,13 @@ if (process.env.SENTRY_DSN) {
   });
 }
 
-import { Worker } from "bullmq";
+import { Worker, UnrecoverableError } from "bullmq";
 import type { InstantEmailJobData } from "@appranks/shared";
 import { createLogger } from "@appranks/shared";
 import { createDb, deadLetterJobs } from "@appranks/db";
 import { EMAIL_INSTANT_QUEUE_NAME, getRedisConnection } from "./queue.js";
 import { processInstantEmail } from "./email/process-instant-email.js";
+import { classifyEmailError } from "./email/error-classifier.js";
 
 const log = createLogger("email-instant-worker");
 
@@ -29,7 +30,30 @@ const db = createDb(databaseUrl);
 
 const worker = new Worker<InstantEmailJobData>(
   EMAIL_INSTANT_QUEUE_NAME,
-  (job) => processInstantEmail(job, db),
+  async (job) => {
+    try {
+      await processInstantEmail(job, db);
+    } catch (err) {
+      const errorClass = classifyEmailError(err);
+      log.warn("email send error classified", {
+        jobId: job.id,
+        type: job.data.type,
+        errorClass,
+        error: String(err),
+      });
+
+      if (errorClass === "permanent") {
+        // Permanent errors should not be retried — go straight to DLQ
+        throw new UnrecoverableError(
+          `Permanent error: ${err instanceof Error ? err.message : String(err)}`
+        );
+      }
+
+      // For provider_down, we still throw to let BullMQ retry with increased attempts
+      // The queue config gives provider_down errors more retry attempts
+      throw err;
+    }
+  },
   {
     connection: getRedisConnection(),
     concurrency: 3,
@@ -37,11 +61,14 @@ const worker = new Worker<InstantEmailJobData>(
 );
 
 worker.on("failed", async (job, err) => {
+  const errorClass = classifyEmailError(err);
+
   log.error("instant email job failed", {
     jobId: job?.id,
     type: job?.data?.type,
     to: job?.data?.to,
     attempt: job?.attemptsMade,
+    errorClass,
     error: String(err),
   });
 
@@ -53,11 +80,11 @@ worker.on("failed", async (job, err) => {
         queueName: EMAIL_INSTANT_QUEUE_NAME,
         jobType: job.data.type,
         payload: job.data as unknown as Record<string, unknown>,
-        errorMessage: String(err),
+        errorMessage: `[${errorClass}] ${String(err)}`,
         errorStack: err instanceof Error ? err.stack : undefined,
         attemptsMade: job.attemptsMade,
       });
-      log.info("job moved to dead letter queue", { jobId: job.id, type: job.data.type });
+      log.info("job moved to dead letter queue", { jobId: job.id, type: job.data.type, errorClass });
     } catch (dlErr) {
       log.error("failed to insert dead letter job", { error: String(dlErr) });
     }

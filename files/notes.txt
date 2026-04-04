@@ -1,3 +1,17 @@
+PLA-671: Queue Resilience & Recovery (2026-04-04)
+================================================================
+- Error classifier: classifyEmailError() categorizes errors as transient
+  (retry normally), permanent (skip to DLQ), or provider_down (extended retry)
+- Workers use BullMQ UnrecoverableError for permanent errors — no retry
+- DLQ error messages now prefixed with error class [transient]/[permanent]/[provider_down]
+- Bulk replay: POST /api/system-admin/dlq/bulk-replay with filters (job_type,
+  error_class, date range), rate-limited at ~10/sec
+- DLQ stats: GET /api/system-admin/dlq/stats returns error distribution,
+  top failing types, and 7-day daily trend
+- Dashboard: provider-down banner with targeted replay, "Replay All" button,
+  error class badges per job, stats panel toggle
+- 32 new tests for error classification
+
 PLA-670: SMTP Failover System (2026-04-04)
 ================================================================
 - Multi-provider SMTP support: primary + secondary providers via env vars

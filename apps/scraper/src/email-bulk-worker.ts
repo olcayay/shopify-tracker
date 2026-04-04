@@ -11,12 +11,13 @@ if (process.env.SENTRY_DSN) {
   });
 }
 
-import { Worker } from "bullmq";
+import { Worker, UnrecoverableError } from "bullmq";
 import type { BulkEmailJobData } from "@appranks/shared";
 import { createLogger } from "@appranks/shared";
 import { createDb, deadLetterJobs } from "@appranks/db";
 import { EMAIL_BULK_QUEUE_NAME, getRedisConnection } from "./queue.js";
 import { processBulkEmail } from "./email/process-bulk-email.js";
+import { classifyEmailError } from "./email/error-classifier.js";
 
 const log = createLogger("email-bulk-worker");
 
@@ -29,7 +30,27 @@ const db = createDb(databaseUrl);
 
 const worker = new Worker<BulkEmailJobData>(
   EMAIL_BULK_QUEUE_NAME,
-  (job) => processBulkEmail(job, db),
+  async (job) => {
+    try {
+      await processBulkEmail(job, db);
+    } catch (err) {
+      const errorClass = classifyEmailError(err);
+      log.warn("email send error classified", {
+        jobId: job.id,
+        type: job.data.type,
+        errorClass,
+        error: String(err),
+      });
+
+      if (errorClass === "permanent") {
+        throw new UnrecoverableError(
+          `Permanent error: ${err instanceof Error ? err.message : String(err)}`
+        );
+      }
+
+      throw err;
+    }
+  },
   {
     connection: getRedisConnection(),
     concurrency: 5,
@@ -41,11 +62,14 @@ const worker = new Worker<BulkEmailJobData>(
 );
 
 worker.on("failed", async (job, err) => {
+  const errorClass = classifyEmailError(err);
+
   log.error("bulk email job failed", {
     jobId: job?.id,
     type: job?.data?.type,
     to: job?.data?.to,
     attempt: job?.attemptsMade,
+    errorClass,
     error: String(err),
   });
 
@@ -57,11 +81,11 @@ worker.on("failed", async (job, err) => {
         queueName: EMAIL_BULK_QUEUE_NAME,
         jobType: job.data.type,
         payload: job.data as unknown as Record<string, unknown>,
-        errorMessage: String(err),
+        errorMessage: `[${errorClass}] ${String(err)}`,
         errorStack: err instanceof Error ? err.stack : undefined,
         attemptsMade: job.attemptsMade,
       });
-      log.info("job moved to dead letter queue", { jobId: job.id, type: job.data.type });
+      log.info("job moved to dead letter queue", { jobId: job.id, type: job.data.type, errorClass });
     } catch (dlErr) {
       log.error("failed to insert dead letter job", { error: String(dlErr) });
     }
