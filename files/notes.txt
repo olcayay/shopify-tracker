@@ -1,3 +1,11 @@
+SMTP Configuration (2026-04-05)
+================================================================
+- Google Workspace SMTP configured: smtp.gmail.com:587
+- Sender: AppRanks <noreply@appranks.io>
+- App Password auth (16-char Google Workspace app password)
+- Env vars added to Coolify DB for: API, Worker, Worker-Interactive
+- Vars: SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS, SMTP_FROM
+
 PLA-686: Push Subscription & Dismiss Endpoints (2026-04-05)
 ================================================================
 - POST /push-subscription: register with duplicate/reactivation handling
