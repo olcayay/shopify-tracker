@@ -1,3 +1,15 @@
+PLA-673: Email Worker Health Metrics (2026-04-04)
+================================================================
+- WorkerMetrics class: in-memory metric tracking (processed/failed totals,
+  1-minute rolling averages, processing duration, queue wait time, active jobs)
+- Both email workers (instant + bulk) instrumented with metrics collection
+- GET /api/system-admin/email-health: queue stats (BullMQ), 24h send stats
+  (from email_logs), DLQ depth, suppressed count, recent errors, overall status
+- System status: healthy/degraded/unhealthy based on queue depth, error rate, DLQ
+- Admin dashboard email-health page: status banner, 6 key metric cards,
+  queue cards, recent error list, auto-refresh every 30s
+- 13 new WorkerMetrics unit tests
+
 PLA-651: Parser→Zod schema conformance tests (2026-04-04)
 ================================================================
 - Comprehensive conformance test suite for all 11 platforms:

@@ -18,6 +18,7 @@ import { createDb, deadLetterJobs } from "@appranks/db";
 import { EMAIL_INSTANT_QUEUE_NAME, getRedisConnection } from "./queue.js";
 import { processInstantEmail } from "./email/process-instant-email.js";
 import { classifyEmailError } from "./email/error-classifier.js";
+import { instantWorkerMetrics } from "./email/worker-metrics.js";
 
 const log = createLogger("email-instant-worker");
 
@@ -31,8 +32,12 @@ const db = createDb(databaseUrl);
 const worker = new Worker<InstantEmailJobData>(
   EMAIL_INSTANT_QUEUE_NAME,
   async (job) => {
+    const startTime = Date.now();
+    const queueWaitMs = job.processedOn ? job.processedOn - job.timestamp : undefined;
+    instantWorkerMetrics.jobStarted();
     try {
       await processInstantEmail(job, db);
+      instantWorkerMetrics.recordSuccess(Date.now() - startTime, queueWaitMs);
     } catch (err) {
       const errorClass = classifyEmailError(err);
       log.warn("email send error classified", {
@@ -42,16 +47,17 @@ const worker = new Worker<InstantEmailJobData>(
         error: String(err),
       });
 
+      instantWorkerMetrics.recordFailure(Date.now() - startTime);
+
       if (errorClass === "permanent") {
-        // Permanent errors should not be retried — go straight to DLQ
         throw new UnrecoverableError(
           `Permanent error: ${err instanceof Error ? err.message : String(err)}`
         );
       }
 
-      // For provider_down, we still throw to let BullMQ retry with increased attempts
-      // The queue config gives provider_down errors more retry attempts
       throw err;
+    } finally {
+      instantWorkerMetrics.jobFinished();
     }
   },
   {

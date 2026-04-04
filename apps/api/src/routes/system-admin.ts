@@ -3273,6 +3273,129 @@ export const systemAdminRoutes: FastifyPluginAsync = async (app) => {
     return { timestamp: new Date().toISOString(), checks };
   });
 
+  // GET /api/system-admin/email-health — email system health overview
+  app.get("/email-health", async () => {
+    const redisUrl = process.env.REDIS_URL || "redis://localhost:6379";
+    const result: Record<string, unknown> = {};
+
+    // Queue stats (BullMQ)
+    try {
+      const { Queue } = await import("bullmq");
+      const parsed = new URL(redisUrl);
+      const conn = { host: parsed.hostname, port: parseInt(parsed.port || "6379"), password: parsed.password || undefined };
+
+      for (const name of ["email-instant", "email-bulk"]) {
+        try {
+          const q = new Queue(name, { connection: conn });
+          const counts = await q.getJobCounts();
+          result[name] = {
+            waiting: counts.waiting ?? 0,
+            active: counts.active ?? 0,
+            delayed: counts.delayed ?? 0,
+            failed: counts.failed ?? 0,
+            completed: counts.completed ?? 0,
+          };
+          await q.close();
+        } catch {
+          result[name] = { error: "unavailable" };
+        }
+      }
+    } catch {
+      result.queues = { error: "BullMQ unavailable" };
+    }
+
+    // Email send stats (last 24h from email_logs)
+    try {
+      const [stats]: any[] = await db.execute(sql`
+        SELECT
+          COUNT(*) FILTER (WHERE status = 'sent') AS sent,
+          COUNT(*) FILTER (WHERE status = 'failed') AS failed,
+          COUNT(*) FILTER (WHERE status = 'bounced') AS bounced,
+          COUNT(*) FILTER (WHERE status = 'complained') AS complained,
+          COUNT(*) AS total,
+          ROUND(AVG(EXTRACT(EPOCH FROM (sent_at - created_at)) * 1000) FILTER (WHERE sent_at IS NOT NULL), 0) AS avg_send_ms
+        FROM email_logs
+        WHERE created_at >= now() - interval '24 hours'
+      `);
+      const row = (stats as any)?.rows?.[0] ?? stats;
+      const total = Number(row?.total || 0);
+      const sent = Number(row?.sent || 0);
+      const failed = Number(row?.failed || 0);
+      result.last24h = {
+        sent,
+        failed,
+        bounced: Number(row?.bounced || 0),
+        complained: Number(row?.complained || 0),
+        total,
+        successRate: total > 0 ? Math.round((sent / total) * 10000) / 100 : 100,
+        errorRate: total > 0 ? Math.round((failed / total) * 10000) / 100 : 0,
+        avgSendMs: Number(row?.avg_send_ms || 0),
+      };
+    } catch {
+      result.last24h = { error: "unavailable" };
+    }
+
+    // DLQ depth
+    try {
+      const [dlq]: any[] = await db.execute(sql`
+        SELECT count(*)::int AS depth FROM dead_letter_jobs WHERE replayed_at IS NULL
+      `);
+      const row = (dlq as any)?.rows?.[0] ?? dlq;
+      result.dlqDepth = Number(row?.depth || 0);
+    } catch {
+      result.dlqDepth = 0;
+    }
+
+    // Suppression list size
+    try {
+      const [sup]: any[] = await db.execute(sql`
+        SELECT count(*)::int AS count FROM email_suppression_list WHERE removed_at IS NULL
+      `);
+      const row = (sup as any)?.rows?.[0] ?? sup;
+      result.suppressedCount = Number(row?.count || 0);
+    } catch {
+      result.suppressedCount = 0;
+    }
+
+    // Recent errors (last 10)
+    try {
+      const errors = await db.execute(sql`
+        SELECT email_type, recipient_email, error_message, created_at
+        FROM email_logs
+        WHERE status = 'failed'
+        ORDER BY created_at DESC
+        LIMIT 10
+      `);
+      result.recentErrors = (errors as any)?.rows ?? errors;
+    } catch {
+      result.recentErrors = [];
+    }
+
+    // Overall status
+    const instantQueue = result["email-instant"] as any;
+    const bulkQueue = result["email-bulk"] as any;
+    const stats24h = result.last24h as any;
+    const dlqDepth = result.dlqDepth as number;
+
+    let status = "healthy";
+    if (dlqDepth > 20 || (stats24h?.errorRate ?? 0) > 10) {
+      status = "unhealthy";
+    } else if (
+      (instantQueue?.waiting ?? 0) > 50 ||
+      (bulkQueue?.waiting ?? 0) > 200 ||
+      dlqDepth > 10 ||
+      (stats24h?.errorRate ?? 0) > 5
+    ) {
+      status = "degraded";
+    }
+
+    return {
+      timestamp: new Date().toISOString(),
+      status,
+      ...result,
+    };
+  });
+
   // GET /api/system-admin/audit-logs — impersonation audit log
   app.get(
     "/audit-logs",

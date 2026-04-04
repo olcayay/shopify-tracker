@@ -18,6 +18,7 @@ import { createDb, deadLetterJobs } from "@appranks/db";
 import { EMAIL_BULK_QUEUE_NAME, getRedisConnection } from "./queue.js";
 import { processBulkEmail } from "./email/process-bulk-email.js";
 import { classifyEmailError } from "./email/error-classifier.js";
+import { bulkWorkerMetrics } from "./email/worker-metrics.js";
 
 const log = createLogger("email-bulk-worker");
 
@@ -31,8 +32,12 @@ const db = createDb(databaseUrl);
 const worker = new Worker<BulkEmailJobData>(
   EMAIL_BULK_QUEUE_NAME,
   async (job) => {
+    const startTime = Date.now();
+    const queueWaitMs = job.processedOn ? job.processedOn - job.timestamp : undefined;
+    bulkWorkerMetrics.jobStarted();
     try {
       await processBulkEmail(job, db);
+      bulkWorkerMetrics.recordSuccess(Date.now() - startTime, queueWaitMs);
     } catch (err) {
       const errorClass = classifyEmailError(err);
       log.warn("email send error classified", {
@@ -42,6 +47,8 @@ const worker = new Worker<BulkEmailJobData>(
         error: String(err),
       });
 
+      bulkWorkerMetrics.recordFailure(Date.now() - startTime);
+
       if (errorClass === "permanent") {
         throw new UnrecoverableError(
           `Permanent error: ${err instanceof Error ? err.message : String(err)}`
@@ -49,6 +56,8 @@ const worker = new Worker<BulkEmailJobData>(
       }
 
       throw err;
+    } finally {
+      bulkWorkerMetrics.jobFinished();
     }
   },
   {
