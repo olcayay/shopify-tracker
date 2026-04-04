@@ -1,3 +1,12 @@
+PLA-685: Rate Limit Synchronization (2026-04-04)
+================================================================
+- AdaptiveRateLimiter class: tracks throttle events, auto-adjusts rate
+- Throttle: reduce rate by factor (default 0.5), floor at minPerMinute (5)
+- Recovery: after 10 consecutive successes, increase by recoveryIncrement (5)
+- isRateLimitError() pattern detection for 429/rate-limit/throttle
+- getBullMQConfig() for dynamic limiter configuration
+- 12 new tests covering throttle, recovery, floor, reset, detection
+
 PLA-681: Email Preference Center (2026-04-04)
 ================================================================
 - API: GET /api/email-preferences (categorized preferences with current state),
