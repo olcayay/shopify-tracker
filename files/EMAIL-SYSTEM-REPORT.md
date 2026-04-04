@@ -849,20 +849,20 @@ Her email gonderilmeden once su pipeline'dan gecer (`apps/scraper/src/email/pipe
 
 **Alt Tasklar:**
 
-**5.1.1 — Full-text search**
-- Email subject ve body icinde arama
-- PostgreSQL `tsvector` veya `ILIKE` ile
-- Admin endpoint: `GET /api/system-admin/emails?search=keyword`
+**5.1.1 — Full-text search** ✅
+- `GET /api/system-admin/emails?search=keyword` — subject ILIKE araması eklendi
+- admin-emails.ts'e `search` query param eklendi
 
-**5.1.2 — Advanced filtreleme**
-- Mevcut filtrelere ek: campaign, sandbox, A/B test variant
-- Tarih araligi picker (calendar widget)
-- Multi-select email type filtresi
+**5.1.2 — Advanced filtreleme** (kısmi)
+- Mevcut filtreler: type, status, recipient, from, to, search
+- Henuz eklenmedi: campaign, sandbox, A/B test variant, multi-select
 
-**5.1.3 — Export**
-- CSV export: `GET /api/system-admin/emails/export?format=csv&filters=...`
-- JSON export: ayni endpoint `format=json` ile
-- Background export: buyuk veri setleri icin async (BullMQ job + download link)
+**5.1.3 — Export** ✅
+- `GET /api/system-admin/emails/export?format=csv` — CSV export eklendi
+- `GET /api/system-admin/emails/export?format=json` — JSON export eklendi
+- Ayni filtreler destekleniyor (type, status, recipient, date range, search)
+- Max 10000 satir, Content-Disposition header ile download
+- CSV'de proper escaping (virgul, tirnak, newline)
 
 ---
 
