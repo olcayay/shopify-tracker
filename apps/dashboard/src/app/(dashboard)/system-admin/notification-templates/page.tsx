@@ -20,7 +20,9 @@ import {
   Eye,
   Pencil,
   X,
+  Bell,
 } from "lucide-react";
+import { toast } from "sonner";
 import { VariablePicker, TemplatePreview } from "@/components/template-editor";
 
 // ─── Types & helpers ───────────────────────────────────────────────────────
@@ -142,6 +144,36 @@ export default function NotificationTemplatesPage() {
     }
   }
 
+  const [sendingTest, setSendingTest] = useState<string | null>(null);
+
+  async function sendTestNotification(t: NotificationTemplate) {
+    setSendingTest(t.notificationType);
+    try {
+      const variables: Record<string, string> = {};
+      for (const v of t.variables) {
+        variables[v.name] = v.example;
+      }
+
+      const res = await fetchWithAuth("/api/system-admin/notification-test", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ type: t.notificationType, variables }),
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        toast.success(`Test notification created: ${data.title}`);
+      } else {
+        const err = await res.json().catch(() => ({}));
+        toast.error(err.error || "Failed to send test notification");
+      }
+    } catch {
+      toast.error("Failed to send test notification");
+    } finally {
+      setSendingTest(null);
+    }
+  }
+
   // Group templates by category
   const grouped = new Map<string, NotificationTemplate[]>();
   for (const t of templates) {
@@ -212,6 +244,20 @@ export default function NotificationTemplatesPage() {
                                 )}
                               </div>
                               <div className="flex items-center gap-1">
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => sendTestNotification(t)}
+                                  disabled={sendingTest === t.notificationType}
+                                  title="Send test notification to yourself"
+                                >
+                                  {sendingTest === t.notificationType ? (
+                                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                                  ) : (
+                                    <Bell className="h-3.5 w-3.5" />
+                                  )}
+                                  <span className="ml-1 text-xs">Test</span>
+                                </Button>
                                 {!isEditing ? (
                                   <Button variant="ghost" size="sm" onClick={() => startEditing(t)}>
                                     <Pencil className="h-3.5 w-3.5" />

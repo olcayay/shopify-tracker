@@ -36,6 +36,7 @@ import {
   smokeTestResults,
   scrapeItemErrors,
   platformRequests,
+  notifications,
 } from "@appranks/db";
 import { isPlatformId, PLATFORM_IDS, SCRAPER_SCHEDULES, getNextRunFromCron, getScheduleIntervalMs, findSchedule, SMOKE_PLATFORMS, SMOKE_CHECKS, BROWSER_PLATFORMS, getSmokeCheck, getSmokePlatform, countTotalSmokeChecks } from "@appranks/shared";
 import type { SmokeCheckName } from "@appranks/shared";
@@ -3252,6 +3253,69 @@ export const systemAdminRoutes: FastifyPluginAsync = async (app) => {
     } catch (err: any) {
       return reply.code(500).send({
         error: "Send failed",
+        details: err?.message || String(err),
+      });
+    }
+  });
+
+  // POST /api/system-admin/notification-test — create a test notification for the admin user
+  app.post("/notification-test", async (request, reply) => {
+    const { type, variables } = request.body as {
+      type: string;
+      variables?: Record<string, string>;
+    };
+
+    if (!type) {
+      return reply.code(400).send({ error: "type is required" });
+    }
+
+    const userId = request.user.userId;
+    const accountId = request.user.accountId;
+
+    try {
+      // Build title and body from template variables
+      const vars = variables || {};
+      // Use the shared template engine to build content
+      let title = `[TEST] ${type.replace(/_/g, " ").replace(/\b\w/g, (c: string) => c.toUpperCase())}`;
+      let body = `Test notification for type: ${type}`;
+      let url: string | null = null;
+      let category = type.split("_")[0] || "system";
+
+      // Try to use shared notification templates for realistic content
+      try {
+        const shared = await import("@appranks/shared");
+        const templates = (shared as any).TEMPLATES;
+        if (templates && templates[type]) {
+          const content = templates[type](vars);
+          title = `[TEST] ${content.title}`;
+          body = content.body;
+          url = content.url;
+          category = type.split("_")[0] || "system";
+        }
+      } catch {
+        // Shared templates not available — use fallback above
+      }
+
+      // Insert directly into notifications table
+      const [notif] = await db
+        .insert(notifications)
+        .values({
+          userId,
+          accountId,
+          type,
+          category,
+          title,
+          body,
+          url,
+          priority: "normal",
+          eventData: { ...vars, isTest: true },
+        })
+        .returning({ id: notifications.id });
+
+      return { sent: true, notificationId: notif.id, title, body };
+    } catch (err: any) {
+      return reply.code(500).send({
+        error: "Failed to create test notification",
         details: err?.message || String(err),
       });
     }
