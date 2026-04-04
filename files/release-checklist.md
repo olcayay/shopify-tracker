@@ -1,9 +1,9 @@
 # AppRanks.io Pre-Release Checklist
 
-> Created: 2026-04-01 | Updated: 2026-04-04
+> Created: 2026-04-01 | Updated: 2026-04-05
 > Target: Production-ready public launch
-> Progress: **Session 18: Complete email system** (PLA-676, 677, 680, 681, 682, 684, 685)
-> Sandbox mode, simulation, A/B testing, preference center, error diagnostics, cron monitor, rate limiter.
+> Progress: **All email system tasks complete** — 19 tasks across sessions 16-18.
+> **0 Todo tasks remain.** 19 Backlog items (notification system) for post-launch.
 
 ---
 
@@ -591,6 +591,23 @@ Production environment hardened and documented.
 | P2 | Stale Data Alerts | ✅ Done | [PLA-607](https://linear.app/plan-b-side-projects/issue/PLA-607) | ~~S~~ Done |
 | P2 | Email Unsubscribe Headers | ✅ Done | [PLA-613](https://linear.app/plan-b-side-projects/issue/PLA-613) | ~~S~~ Done |
 | P3 | Changelog Page | ✅ Done | [PLA-614](https://linear.app/plan-b-side-projects/issue/PLA-614) | ~~S~~ Done |
+| P1 | SMTP Failover | ✅ Done | [PLA-670](https://linear.app/plan-b-side-projects/issue/PLA-670) | ~~S~~ Done |
+| P1 | Queue Resilience | ✅ Done | [PLA-671](https://linear.app/plan-b-side-projects/issue/PLA-671) | ~~M~~ Done |
+| P1 | Bounce Webhooks | ✅ Done | [PLA-672](https://linear.app/plan-b-side-projects/issue/PLA-672) | ~~M~~ Done |
+| P1 | Worker Health Metrics | ✅ Done | [PLA-673](https://linear.app/plan-b-side-projects/issue/PLA-673) | ~~S~~ Done |
+| P2 | Queue Depth Alerts | ✅ Done | [PLA-674](https://linear.app/plan-b-side-projects/issue/PLA-674) | ~~M~~ Done |
+| P2 | Email Analytics v2 | ✅ Done | [PLA-675](https://linear.app/plan-b-side-projects/issue/PLA-675) | ~~M~~ Done |
+| P2 | Sandbox Mode | ✅ Done | [PLA-676](https://linear.app/plan-b-side-projects/issue/PLA-676) | ~~S~~ Done |
+| P2 | Email Simulation | ✅ Done | [PLA-677](https://linear.app/plan-b-side-projects/issue/PLA-677) | ~~M~~ Done |
+| P3 | Template Test Suite | ✅ Done | [PLA-678](https://linear.app/plan-b-side-projects/issue/PLA-678) | ~~S~~ Done |
+| P3 | Email Scheduling | ✅ Done | [PLA-679](https://linear.app/plan-b-side-projects/issue/PLA-679) | ~~S~~ Done |
+| P4 | A/B Test Infra | ✅ Done | [PLA-680](https://linear.app/plan-b-side-projects/issue/PLA-680) | ~~S~~ Done |
+| P3 | Preference Center | ✅ Done | [PLA-681](https://linear.app/plan-b-side-projects/issue/PLA-681) | ~~S~~ Done |
+| P3 | Error Diagnostics | ✅ Done | [PLA-682](https://linear.app/plan-b-side-projects/issue/PLA-682) | ~~S~~ Done |
+| P4 | Email Log Search | ✅ Done | [PLA-683](https://linear.app/plan-b-side-projects/issue/PLA-683) | ~~S~~ Done |
+| P3 | Cron Monitor | ✅ Done | [PLA-684](https://linear.app/plan-b-side-projects/issue/PLA-684) | ~~S~~ Done |
+| P4 | Adaptive Rate Limiter | ✅ Done | [PLA-685](https://linear.app/plan-b-side-projects/issue/PLA-685) | ~~S~~ Done |
+| P2 | Parser Conformance | ✅ Done | [PLA-651](https://linear.app/plan-b-side-projects/issue/PLA-651) | ~~S~~ Done |
 | P3 | Landing/Marketing | ⚠️ Pricing done, blog optional | 🔧 Manual | S |
 | P3 | Deployment/Infra | ⚠️ Needs hardening | 🔧 Manual | S |
 
@@ -748,3 +765,82 @@ Production environment hardened and documented.
 | [PLA-564](https://linear.app/plan-b-side-projects/issue/PLA-564) | Command palette (Cmd+K) global search |
 | [PLA-565](https://linear.app/plan-b-side-projects/issue/PLA-565) | Onboarding wizard for new users |
 | [PLA-566](https://linear.app/plan-b-side-projects/issue/PLA-566) | Account activity feed |
+
+---
+
+## Post-Launch: Notification System (Backlog)
+
+19 tasks in Backlog for the notification system enhancement project.
+These are planned for post-launch implementation.
+
+### Phase 1 — Foundation (Priority 1-2)
+| Task | Title | Priority |
+|------|-------|----------|
+| [PLA-686](https://linear.app/plan-b-side-projects/issue/PLA-686) | Push Subscription & Dismiss Endpoints | Urgent |
+| [PLA-687](https://linear.app/plan-b-side-projects/issue/PLA-687) | Notification Batching Engine | Urgent |
+| [PLA-688](https://linear.app/plan-b-side-projects/issue/PLA-688) | Notification Retention Cleanup | High |
+
+### Phase 2 — User Experience (Priority 2-3)
+| Task | Title | Priority |
+|------|-------|----------|
+| [PLA-689](https://linear.app/plan-b-side-projects/issue/PLA-689) | Quiet Hours & Do Not Disturb Mode | High |
+| [PLA-690](https://linear.app/plan-b-side-projects/issue/PLA-690) | Push Permission Request Banner | High |
+| [PLA-691](https://linear.app/plan-b-side-projects/issue/PLA-691) | SSE Client Integration & Real-Time Delivery | High |
+| [PLA-692](https://linear.app/plan-b-side-projects/issue/PLA-692) | Notification Grouping/Threading UI | Medium |
+| [PLA-693](https://linear.app/plan-b-side-projects/issue/PLA-693) | Dedicated Notification Settings Page | Medium |
+
+### Phase 3 — Admin & Analytics (Priority 2-3)
+| Task | Title | Priority |
+|------|-------|----------|
+| [PLA-694](https://linear.app/plan-b-side-projects/issue/PLA-694) | Notification Analytics Dashboard | Medium |
+| [PLA-695](https://linear.app/plan-b-side-projects/issue/PLA-695) | Admin Broadcast Notifications | Medium |
+| [PLA-696](https://linear.app/plan-b-side-projects/issue/PLA-696) | Notification Health Monitoring | High |
+
+### Phase 4 — Advanced (Priority 3-4)
+| Task | Title | Priority |
+|------|-------|----------|
+| [PLA-697](https://linear.app/plan-b-side-projects/issue/PLA-697) | Cross-Tab Notification Sync | Medium |
+| [PLA-698](https://linear.app/plan-b-side-projects/issue/PLA-698) | Per-Type Notification Rate Limiting | Medium |
+| [PLA-699](https://linear.app/plan-b-side-projects/issue/PLA-699) | Notification Scheduling | Low |
+| [PLA-700](https://linear.app/plan-b-side-projects/issue/PLA-700) | Webhook/External Delivery (Slack/Discord) | Low |
+
+### Phase 5 — Mobile & Scale (Priority 4)
+| Task | Title | Priority |
+|------|-------|----------|
+| [PLA-701](https://linear.app/plan-b-side-projects/issue/PLA-701) | Notification Priority Queue | Low |
+| [PLA-702](https://linear.app/plan-b-side-projects/issue/PLA-702) | Mobile Push Support (Firebase/APNs) | Low |
+| [PLA-703](https://linear.app/plan-b-side-projects/issue/PLA-703) | Notification Sound & Vibration Preferences | Low |
+
+---
+
+## Email System — Complete Implementation Summary
+
+All 19 email system tasks implemented across sessions 16-18 (2026-04-04):
+
+| Task | Title | Session |
+|------|-------|---------|
+| PLA-651 | Parser→Zod schema conformance tests | 16 |
+| PLA-670 | SMTP Failover System | 16 |
+| PLA-671 | Queue Resilience & Recovery | 16 |
+| PLA-672 | Bounce/Complaint Webhook Integration | 16 |
+| PLA-673 | Email Worker Health Metrics | 16 |
+| PLA-674 | Queue Depth Alert System | 17 |
+| PLA-675 | Email Analytics Dashboard v2 | 17 |
+| PLA-678 | Email Template Test Suite | 17 |
+| PLA-679 | Email Scheduling (Delayed Send) | 17 |
+| PLA-683 | Email Log Search & Export | 17 |
+| PLA-676 | Global Sandbox Mode | 18 |
+| PLA-677 | Advanced Dry-Run & Email Simulation | 18 |
+| PLA-680 | A/B Test Infrastructure | 18 |
+| PLA-681 | Email Preference Center | 18 |
+| PLA-682 | Email Error Tracking & Diagnostics | 18 |
+| PLA-684 | Cron Monitor & Digest Scheduler | 18 |
+| PLA-685 | Rate Limit Synchronization | 18 |
+
+**New test count:** ~150+ tests added across these tasks.
+
+**Key files added:**
+- `apps/scraper/src/email/` — smtp-circuit-breaker, smtp-health-check, error-classifier, worker-metrics, alert-evaluator, simulator, error-tracker, rate-limiter, cron-monitor, ab-test
+- `apps/api/src/routes/` — email-webhooks, suppression, email-alerts, email-analytics, email-scheduling, email-logs, email-simulation, email-errors, email-preferences
+- `apps/dashboard/src/app/(dashboard)/system-admin/` — email-health, email-alerts, email-analytics pages
+- `packages/db/src/migrations/` — 0112 (suppression + health), 0113 (alert rules), 0114 (daily stats)
