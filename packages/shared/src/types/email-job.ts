@@ -38,7 +38,8 @@ export type BulkEmailJobType =
   | "email_review_alert"
   | "email_win_celebration"
   | "email_re_engagement"
-  | "email_onboarding";
+  | "email_onboarding"
+  | "email_campaign";
 
 export interface BulkEmailJobData {
   type: BulkEmailJobType;
