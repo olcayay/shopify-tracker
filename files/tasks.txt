@@ -2,6 +2,13 @@ Notification System (2026-04-05)
   PLA-686: Push Subscription & Dismiss Endpoints ✅
   PLA-687: Notification Batching Engine ✅
   PLA-688: Notification Retention Cleanup ✅
+  PLA-689: Quiet Hours & DND Mode ✅
+  PLA-690: Push Permission Banner ✅
+  PLA-691: SSE Client Integration ✅
+  PLA-692: Notification Grouping UI ✅
+  PLA-695: Admin Broadcast Notifications ✅
+  PLA-696: Notification Health Monitoring ✅
+  PLA-698: Per-Type Rate Limiting ✅
 
 Parser Conformance (2026-04-04)
   PLA-651: Parser→Zod schema conformance tests for all platforms ✅

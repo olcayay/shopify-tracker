@@ -68,6 +68,8 @@ import { emailLogRoutes } from "./routes/email-logs.js";
 import { emailSimulationRoutes } from "./routes/email-simulation.js";
 import { emailErrorRoutes } from "./routes/email-errors.js";
 import { emailPreferenceRoutes } from "./routes/email-preferences.js";
+import { notificationBroadcastRoutes } from "./routes/notification-broadcast.js";
+import { notificationHealthRoutes } from "./routes/notification-health.js";
 import { registerIdempotencyOnSend } from "./middleware/idempotency.js";
 import Redis from "ioredis";
 
@@ -247,6 +249,8 @@ await app.register(emailLogRoutes, { prefix: "/api/system-admin/email-logs" });
 await app.register(emailSimulationRoutes, { prefix: "/api/system-admin/email-simulation" });
 await app.register(emailErrorRoutes, { prefix: "/api/system-admin/email-errors" });
 await app.register(emailPreferenceRoutes, { prefix: "/api/email-preferences" });
+await app.register(notificationBroadcastRoutes, { prefix: "/api/system-admin/notifications" });
+await app.register(notificationHealthRoutes, { prefix: "/api/system-admin/notification-health" });
 await app.register(emailWebhookRoutes, { prefix: "/api/webhooks/email" });
 await app.register(publicRoutes, { prefix: "/api/public" });
 
