@@ -1,3 +1,14 @@
+PLA-674: Queue Depth Alert System (2026-04-04)
+================================================================
+- DB tables: email_alert_rules (configurable rules), email_alerts_log (history)
+- Migration 0113: tables + 5 default seed rules (instant/bulk queue depth,
+  error rate, bounce rate, DLQ depth)
+- Alert evaluator: collectMetrics() from BullMQ + DB, evaluateCondition(),
+  cooldown enforcement, pluggable delivery function
+- API: GET/PUT /rules, GET /history, POST /test (test alert)
+- Dashboard: rules tab (enable/disable toggle, test), history tab with timeline
+- 15 evaluateCondition unit tests
+
 PLA-673: Email Worker Health Metrics (2026-04-04)
 ================================================================
 - WorkerMetrics class: in-memory metric tracking (processed/failed totals,

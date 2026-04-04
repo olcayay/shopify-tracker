@@ -792,6 +792,13 @@
       "when": 1778371200000,
       "tag": "0112_email_suppression_and_health",
       "breakpoints": true
+    },
+    {
+      "idx": 113,
+      "version": "7",
+      "when": 1778457600000,
+      "tag": "0113_email_alert_rules",
+      "breakpoints": true
     }
   ]
 }

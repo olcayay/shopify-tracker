@@ -177,6 +177,48 @@ export const emailHealthMetrics = pgTable(
   ]
 );
 
+// Configurable alert rules for email system monitoring
+export const emailAlertRules = pgTable(
+  "email_alert_rules",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    ruleName: varchar("rule_name", { length: 255 }).notNull(),
+    metric: varchar("metric", { length: 100 }).notNull(), // instant_queue_depth, bulk_queue_depth, error_rate_1h, bounce_rate_24h, dlq_depth
+    operator: varchar("operator", { length: 10 }).notNull().default(">"), // >, <, >=, <=, ==
+    threshold: integer("threshold").notNull(),
+    cooldownMinutes: integer("cooldown_minutes").notNull().default(60),
+    enabled: boolean("enabled").notNull().default(true),
+    channels: jsonb("channels").notNull().default(["email", "notification"]), // email, notification, webhook
+    webhookUrl: varchar("webhook_url", { length: 1000 }),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+    updatedAt: timestamp("updated_at").notNull().defaultNow(),
+  },
+  (table) => [
+    uniqueIndex("idx_email_alert_rules_name").on(table.ruleName),
+  ]
+);
+
+// Alert history log
+export const emailAlertsLog = pgTable(
+  "email_alerts_log",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    ruleId: uuid("rule_id").references(() => emailAlertRules.id, { onDelete: "set null" }),
+    ruleName: varchar("rule_name", { length: 255 }).notNull(),
+    metric: varchar("metric", { length: 100 }).notNull(),
+    currentValue: integer("current_value").notNull(),
+    threshold: integer("threshold").notNull(),
+    message: text("message"),
+    channels: jsonb("channels"),
+    deliveredAt: timestamp("delivered_at"),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+  },
+  (table) => [
+    index("idx_email_alerts_log_rule").on(table.ruleId),
+    index("idx_email_alerts_log_created").on(table.createdAt),
+  ]
+);
+
 // One-click unsubscribe tokens
 export const emailUnsubscribeTokens = pgTable(
   "email_unsubscribe_tokens",
