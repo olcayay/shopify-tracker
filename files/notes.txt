@@ -1,3 +1,10 @@
+PLA-683: Email Log Search & Export (2026-04-04)
+================================================================
+- GET /api/system-admin/email-logs: search (subject/recipient ILIKE),
+  filter by status/email_type/recipient/date range, paginated
+- GET /export: CSV or JSON export with filters, max 10K rows
+- GET /types: distinct email types with counts
+
 PLA-679: Email Scheduling / Delayed Send (2026-04-04)
 ================================================================
 - enqueueScheduledEmail(): BullMQ delay-based scheduling for any email type
