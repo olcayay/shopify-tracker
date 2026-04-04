@@ -1,3 +1,19 @@
+PLA-672: Bounce/Complaint Webhook Integration (2026-04-04)
+================================================================
+- New DB tables: email_suppression_list (with unique email index),
+  email_health_metrics (daily sent/bounced/complained counters)
+- Webhook endpoints: POST /api/webhooks/email/{bounce,complaint,delivery,ses,sendgrid}
+  - Generic JSON, AWS SES SNS, SendGrid Event Webhook format support
+  - HMAC signature verification (WEBHOOK_EMAIL_SECRET env var)
+  - SES SNS subscription auto-confirmation
+- Bounce processor: hard_bounce → immediate suppress, soft_bounce → suppress
+  after 3 consecutive, complaint → immediate suppress
+- Suppression list admin: GET/DELETE /api/system-admin/suppression,
+  POST /import (bulk), GET /export, GET /bounce-rate (with daily trend)
+- Bounce rate monitoring: alert at 5%, critical at 10%
+- Migration 0112: email_suppression_and_health tables
+- 24 new webhook parser tests
+
 PLA-671: Queue Resilience & Recovery (2026-04-04)
 ================================================================
 - Error classifier: classifyEmailError() categorizes errors as transient

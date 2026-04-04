@@ -137,6 +137,46 @@ export const userEmailPreferences = pgTable(
   ]
 );
 
+// Email suppression list — addresses that should not receive email
+export const emailSuppressionList = pgTable(
+  "email_suppression_list",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    email: varchar("email", { length: 500 }).notNull(),
+    reason: varchar("reason", { length: 50 }).notNull(), // hard_bounce, soft_bounce, complaint, manual
+    source: varchar("source", { length: 50 }).notNull(), // webhook, automatic, admin
+    bounceCount: integer("bounce_count").notNull().default(1),
+    lastBounceAt: timestamp("last_bounce_at").notNull().defaultNow(),
+    diagnosticCode: text("diagnostic_code"),
+    removedAt: timestamp("removed_at"), // null = active suppression
+    removedBy: varchar("removed_by", { length: 255 }),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+  },
+  (table) => [
+    uniqueIndex("idx_email_suppression_email").on(table.email),
+    index("idx_email_suppression_reason").on(table.reason),
+  ]
+);
+
+// Daily email health metrics for bounce rate monitoring
+export const emailHealthMetrics = pgTable(
+  "email_health_metrics",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    date: timestamp("date").notNull(),
+    sent: integer("sent").notNull().default(0),
+    delivered: integer("delivered").notNull().default(0),
+    bounced: integer("bounced").notNull().default(0),
+    complained: integer("complained").notNull().default(0),
+    bounceRate: varchar("bounce_rate", { length: 10 }), // e.g. "2.5"
+    complaintRate: varchar("complaint_rate", { length: 10 }),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+  },
+  (table) => [
+    uniqueIndex("idx_email_health_metrics_date").on(table.date),
+  ]
+);
+
 // One-click unsubscribe tokens
 export const emailUnsubscribeTokens = pgTable(
   "email_unsubscribe_tokens",

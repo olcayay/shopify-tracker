@@ -225,6 +225,8 @@ export {
   emailProspects,
   userEmailPreferences,
   emailUnsubscribeTokens,
+  emailSuppressionList,
+  emailHealthMetrics,
 } from "./schema/email.js";
 export {
   notificationTemplates,

@@ -59,6 +59,8 @@ import { dlqRoutes } from "./routes/dlq.js";
 import { publicRoutes } from "./routes/public.js";
 import { billingRoutes } from "./routes/billing.js";
 import { overviewHighlightsRoutes } from "./routes/overview-highlights.js";
+import { emailWebhookRoutes } from "./routes/email-webhooks.js";
+import { suppressionRoutes } from "./routes/suppression.js";
 import { registerIdempotencyOnSend } from "./middleware/idempotency.js";
 import Redis from "ioredis";
 
@@ -230,6 +232,8 @@ await app.register(crossPlatformRoutes, { prefix: "/api/cross-platform" });
 await app.register(overviewHighlightsRoutes, { prefix: "/api/overview" });
 await app.register(adminRoutes, { prefix: "/api/admin" });
 await app.register(dlqRoutes, { prefix: "/api/system-admin/dlq" });
+await app.register(suppressionRoutes, { prefix: "/api/system-admin/suppression" });
+await app.register(emailWebhookRoutes, { prefix: "/api/webhooks/email" });
 await app.register(publicRoutes, { prefix: "/api/public" });
 
 // Notification endpoints (authenticated)
