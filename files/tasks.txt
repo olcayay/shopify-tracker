@@ -15,6 +15,7 @@ Notification System (2026-04-05)
   PLA-699: Notification Scheduling ✅
   PLA-700: Webhook/External Delivery ✅
   PLA-701: Priority Queue ✅
+  PLA-702: Mobile Push Support (Firebase/APNs) ✅
   PLA-703: Sound & Vibration Preferences ✅
 
 Parser Conformance (2026-04-04)
