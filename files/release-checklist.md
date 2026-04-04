@@ -1,9 +1,9 @@
 # AppRanks.io Pre-Release Checklist
 
-> Created: 2026-04-01 | Updated: 2026-04-03
+> Created: 2026-04-01 | Updated: 2026-04-04
 > Target: Production-ready public launch
-> Progress: **Session 15: 9 audited tasks completed** (PLA-618/663, 602, 612/662, 639, 571, 574, 582)
-> Previous audit found 9 tasks moved to In Review without implementation — all now fixed.
+> Progress: **Session 16: Email system reliability** (PLA-670, 671, 672, 673, 651)
+> SMTP failover, queue resilience, bounce webhooks, health metrics, parser conformance tests.
 
 ---
 
@@ -73,6 +73,9 @@ All transactional emails must be delivered reliably.
   - [ ] `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`, `SMTP_FROM` set
   - [ ] SPF, DKIM, DMARC records configured for `appranks.io`
   - [ ] Test email delivery to Gmail, Outlook, Yahoo (check spam folders)
+  - [x] SMTP failover — secondary provider config (`SMTP_SECONDARY_*`) → [PLA-670](https://linear.app/plan-b-side-projects/issue/PLA-670) `In Review` ✅
+  - [x] Circuit breaker pattern (5 failures → 5min cooldown → half-open probe) → PLA-670 ✅
+  - [x] SMTP health check (periodic EHLO every 5min) → PLA-670 ✅
 
 - [ ] **Email templates verified** → [PLA-597](https://linear.app/plan-b-side-projects/issue/PLA-597) `Todo` (code: rendering tests)
   - [ ] Welcome email — content, links, branding correct
@@ -82,9 +85,27 @@ All transactional emails must be delivered reliably.
 
 - [ ] **Email queue health** → [PLA-597](https://linear.app/plan-b-side-projects/issue/PLA-597) `Todo` (code: queue tests)
   - [ ] BullMQ worker processes emails (3 concurrent)
-  - [ ] Failed emails retry with exponential backoff
+  - [x] Smart retry — error classification (transient/permanent/provider_down) → [PLA-671](https://linear.app/plan-b-side-projects/issue/PLA-671) `In Review` ✅
+  - [x] Permanent errors skip retry via UnrecoverableError → PLA-671 ✅
+  - [x] DLQ bulk replay with filters (job_type, error_class, date range) → PLA-671 ✅
+  - [x] DLQ stats API (error distribution, top failing types, daily trend) → PLA-671 ✅
   - [ ] Dead letter queue monitored for stuck emails
   - [ ] Email logs stored in DB (sent/failed/bounced status)
+
+- [x] **Bounce/complaint handling** → [PLA-672](https://linear.app/plan-b-side-projects/issue/PLA-672) `In Review` ✅
+  - [x] Webhook endpoints for SES, SendGrid, and generic providers
+  - [x] HMAC signature verification (WEBHOOK_EMAIL_SECRET)
+  - [x] Hard bounce → immediate suppression
+  - [x] Soft bounce → suppress after 3 consecutive
+  - [x] Complaint → immediate suppression
+  - [x] Suppression list admin (list, remove, bulk import/export)
+  - [x] Bounce rate monitoring (alert at 5%, critical at 10%)
+
+- [x] **Email system monitoring** → [PLA-673](https://linear.app/plan-b-side-projects/issue/PLA-673) `In Review` ✅
+  - [x] Worker metrics (processing rate, error rate, latency)
+  - [x] Email health API endpoint (queue stats, 24h metrics, DLQ depth)
+  - [x] System status: healthy/degraded/unhealthy
+  - [x] Admin dashboard email health page with auto-refresh
 
 ### 4. Payment Integration
 Billing system for subscription management.
