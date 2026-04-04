@@ -22,7 +22,7 @@ export interface UseNotificationStreamOptions {
 }
 
 export function useNotificationStream(options: UseNotificationStreamOptions = {}) {
-  const { accessToken } = useAuth();
+  const { fetchWithAuth } = useAuth();
   const {
     autoReconnect = true,
     reconnectDelay = 5000,
@@ -32,64 +32,41 @@ export function useNotificationStream(options: UseNotificationStreamOptions = {}
 
   const [connected, setConnected] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const eventSourceRef = useRef<EventSource | null>(null);
   const reconnectTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const connect = useCallback(() => {
-    if (!accessToken) return;
     if (typeof window === "undefined") return;
 
-    const apiUrl = process.env.NEXT_PUBLIC_API_URL || "";
-    const url = `${apiUrl}/api/notifications/stream?token=${encodeURIComponent(accessToken)}`;
-
-    try {
-      const es = new EventSource(url);
-      eventSourceRef.current = es;
-
-      es.onopen = () => {
-        setConnected(true);
-        setError(null);
-      };
-
-      es.addEventListener("unread-count", (event) => {
-        try {
-          const data = JSON.parse(event.data);
+    // Use polling via fetchWithAuth since EventSource doesn't support
+    // Authorization headers. Poll every 10s for new notifications.
+    const poll = async () => {
+      try {
+        const res = await fetchWithAuth("/api/notifications/unread-count");
+        if (res.ok) {
+          const data = await res.json();
           onUnreadCount?.(data.count ?? 0);
-        } catch { /* ignore parse errors */ }
-      });
-
-      es.addEventListener("notification", (event) => {
-        try {
-          const data = JSON.parse(event.data);
-          onNotification?.(data);
-        } catch { /* ignore parse errors */ }
-      });
-
-      es.onerror = () => {
-        setConnected(false);
-        es.close();
-        eventSourceRef.current = null;
-
-        if (autoReconnect) {
-          setError("Disconnected — reconnecting...");
-          reconnectTimerRef.current = setTimeout(connect, reconnectDelay);
-        } else {
-          setError("Connection lost");
+          setConnected(true);
+          setError(null);
         }
-      };
-    } catch (err) {
-      setError(String(err));
-    }
-  }, [accessToken, autoReconnect, reconnectDelay, onUnreadCount, onNotification]);
+      } catch {
+        setConnected(false);
+        if (autoReconnect) {
+          setError("Polling failed — retrying...");
+        }
+      }
+    };
+
+    poll(); // Initial fetch
+    const intervalId = setInterval(poll, 10_000); // Poll every 10s
+    reconnectTimerRef.current = intervalId as any;
+
+    return () => clearInterval(intervalId);
+  }, [fetchWithAuth, autoReconnect, onUnreadCount, onNotification]);
 
   const disconnect = useCallback(() => {
     if (reconnectTimerRef.current) {
       clearTimeout(reconnectTimerRef.current);
       reconnectTimerRef.current = null;
-    }
-    if (eventSourceRef.current) {
-      eventSourceRef.current.close();
-      eventSourceRef.current = null;
     }
     setConnected(false);
   }, []);

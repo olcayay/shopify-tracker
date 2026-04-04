@@ -3,11 +3,45 @@
 import { useState, useEffect } from "react";
 import { Bell, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { subscribeToPush, isPushSupported, getPermissionStatus } from "@/lib/push-notifications";
+import { isPushSupported, getPermissionStatus } from "@/lib/push-notifications";
 import { useAuth } from "@/lib/auth-context";
 
 const DISMISS_KEY = "push-banner-dismissed";
 const DISMISS_DURATION_DAYS = 30;
+
+/** Minimal push subscription via fetchWithAuth instead of raw token */
+async function requestPushAndRegister(fetchWithAuth: (path: string, options?: RequestInit) => Promise<Response>): Promise<boolean> {
+  try {
+    if (!("Notification" in window)) return false;
+    const permission = await Notification.requestPermission();
+    if (permission !== "granted") return false;
+
+    const reg = await navigator.serviceWorker.ready;
+    // Get VAPID key from API
+    const keyRes = await fetchWithAuth("/api/notifications/push/vapid-key");
+    if (!keyRes.ok) return false;
+    const { vapidPublicKey } = await keyRes.json();
+
+    const subscription = await reg.pushManager.subscribe({
+      userVisibleOnly: true,
+      applicationServerKey: vapidPublicKey,
+    });
+
+    const json = subscription.toJSON();
+    const res = await fetchWithAuth("/api/notifications/push-subscription", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        endpoint: json.endpoint,
+        keys: json.keys,
+        userAgent: navigator.userAgent,
+      }),
+    });
+    return res.ok;
+  } catch {
+    return false;
+  }
+}
 
 /**
  * Two-step push permission banner (PLA-690).
@@ -15,7 +49,7 @@ const DISMISS_DURATION_DAYS = 30;
  * Remembers dismissal for 30 days.
  */
 export function PushPermissionBanner() {
-  const { accessToken } = useAuth();
+  const { fetchWithAuth } = useAuth();
   const [show, setShow] = useState(false);
   const [subscribing, setSubscribing] = useState(false);
 
@@ -46,15 +80,8 @@ export function PushPermissionBanner() {
   const handleEnable = async () => {
     setSubscribing(true);
     try {
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || "";
-      const success = await subscribeToPush(
-        process.env.NEXT_PUBLIC_VAPID_KEY || "",
-        apiUrl,
-        accessToken || ""
-      );
-      if (success) {
-        setShow(false);
-      }
+      const success = await requestPushAndRegister(fetchWithAuth);
+      if (success) setShow(false);
     } finally {
       setSubscribing(false);
     }

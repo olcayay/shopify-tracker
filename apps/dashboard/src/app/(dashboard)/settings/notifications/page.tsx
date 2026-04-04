@@ -5,11 +5,11 @@ import { Bell, Moon, Clock, TestTube, RefreshCw, Loader2 } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { isPushSupported, getPermissionStatus, subscribeToPush, unsubscribeFromPush, isSubscribed } from "@/lib/push-notifications";
+import { isPushSupported, getPermissionStatus, isSubscribed } from "@/lib/push-notifications";
 import { toast } from "sonner";
 
 export default function NotificationSettingsPage() {
-  const { fetchWithAuth, accessToken } = useAuth();
+  const { fetchWithAuth } = useAuth();
   const [preferences, setPreferences] = useState<{ type: string; inAppEnabled: boolean; pushEnabled: boolean }[]>([]);
   const [pushStatus, setPushStatus] = useState<"loading" | "granted" | "denied" | "default" | "unsupported">("loading");
   const [pushSubscribed, setPushSubscribed] = useState(false);
@@ -60,19 +60,44 @@ export default function NotificationSettingsPage() {
 
   const handlePushToggle = async () => {
     if (pushSubscribed) {
-      await unsubscribeFromPush(process.env.NEXT_PUBLIC_API_URL || "", accessToken || "");
+      // Unsubscribe via browser API
+      try {
+        const reg = await navigator.serviceWorker.ready;
+        const sub = await reg.pushManager.getSubscription();
+        if (sub) {
+          await sub.unsubscribe();
+          await fetchWithAuth("/api/notifications/push-subscription", {
+            method: "DELETE",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ endpoint: sub.endpoint }),
+          });
+        }
+      } catch { /* ignore */ }
       setPushSubscribed(false);
       toast.success("Push notifications disabled");
     } else {
-      const success = await subscribeToPush(
-        process.env.NEXT_PUBLIC_VAPID_KEY || "",
-        process.env.NEXT_PUBLIC_API_URL || "",
-        accessToken || ""
-      );
-      if (success) {
-        setPushSubscribed(true);
-        toast.success("Push notifications enabled");
-      }
+      try {
+        const permission = await Notification.requestPermission();
+        if (permission !== "granted") return;
+        const reg = await navigator.serviceWorker.ready;
+        const keyRes = await fetchWithAuth("/api/notifications/push/vapid-key");
+        if (!keyRes.ok) return;
+        const { vapidPublicKey } = await keyRes.json();
+        const sub = await reg.pushManager.subscribe({
+          userVisibleOnly: true,
+          applicationServerKey: vapidPublicKey,
+        });
+        const json = sub.toJSON();
+        const res = await fetchWithAuth("/api/notifications/push-subscription", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ endpoint: json.endpoint, keys: json.keys }),
+        });
+        if (res.ok) {
+          setPushSubscribed(true);
+          toast.success("Push notifications enabled");
+        }
+      } catch { /* ignore */ }
     }
     setPushStatus(getPermissionStatus() as any);
   };
