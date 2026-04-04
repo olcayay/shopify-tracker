@@ -3,8 +3,10 @@ import { resolve } from "path";
 config({ path: resolve(import.meta.dirname, "../../../.env") });
 import cron from "node-cron";
 import { createLogger, SCRAPER_SCHEDULES } from "@appranks/shared";
+import { createDb } from "@appranks/db";
 import { enqueueScraperJob, closeQueue, type ScraperJobType } from "./queue.js";
 import { isCircuitOpen } from "./circuit-breaker.js";
+import { cleanupOldNotifications } from "./notifications/retention-cleanup.js";
 
 const log = createLogger("scheduler");
 
@@ -48,6 +50,28 @@ for (const schedule of SCRAPER_SCHEDULES) {
       });
     }
   });
+}
+
+// ── Notification retention cleanup — daily at 03:00 UTC (PLA-688)
+const databaseUrl = process.env.DATABASE_URL;
+if (databaseUrl) {
+  cron.schedule("0 3 * * *", async () => {
+    log.info("notification retention cleanup starting");
+    try {
+      const db = createDb(databaseUrl);
+      const result = await cleanupOldNotifications(db);
+      log.info("notification retention cleanup complete", {
+        notificationsDeleted: result.notificationsDeleted,
+        deliveryLogsDeleted: result.deliveryLogsDeleted,
+        durationMs: result.durationMs,
+      });
+    } catch (err) {
+      log.error("notification retention cleanup failed", { error: String(err) });
+    }
+  });
+  log.info("notification retention cleanup scheduled (daily 03:00 UTC)");
+} else {
+  log.warn("DATABASE_URL not set, skipping notification retention cleanup");
 }
 
 log.info("scheduler running. Press Ctrl+C to stop.");

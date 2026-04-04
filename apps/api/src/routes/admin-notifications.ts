@@ -110,4 +110,29 @@ export const adminNotificationRoutes: FastifyPluginAsync = async (app) => {
 
     return { notification, deliveryLogs };
   });
+
+  // ── Retention management (PLA-688) ──────────────────────────────
+
+  // GET /notifications/retention — Get retention stats
+  app.get("/notifications/retention", async () => {
+    const retentionDays = parseInt(process.env.NOTIFICATION_RETENTION_DAYS || "90", 10);
+    const cutoff = new Date();
+    cutoff.setDate(cutoff.getDate() - retentionDays);
+
+    const [stats] = await db.execute(sql`
+      SELECT
+        count(*)::int AS total,
+        count(*) FILTER (WHERE created_at < ${cutoff})::int AS expired
+      FROM notifications
+    `);
+
+    const row = ((stats as any).rows ?? [stats])[0] || {};
+
+    return {
+      retentionDays,
+      cutoffDate: cutoff.toISOString(),
+      totalNotifications: parseInt(row.total || "0", 10),
+      expiredNotifications: parseInt(row.expired || "0", 10),
+    };
+  });
 };

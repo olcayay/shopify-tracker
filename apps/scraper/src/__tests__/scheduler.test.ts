@@ -46,6 +46,23 @@ vi.mock("../circuit-breaker.js", () => ({
   isCircuitOpen: (...args: unknown[]) => mockIsCircuitOpen(...args),
 }));
 
+// Mock DB + retention cleanup (PLA-688)
+vi.mock("@appranks/db", () => ({
+  createDb: vi.fn().mockReturnValue({}),
+}));
+
+const mockCleanupOldNotifications = vi.fn().mockResolvedValue({
+  notificationsDeleted: 0,
+  deliveryLogsDeleted: 0,
+  retentionDays: 90,
+  cutoffDate: new Date().toISOString(),
+  durationMs: 100,
+});
+
+vi.mock("../notifications/retention-cleanup.js", () => ({
+  cleanupOldNotifications: (...args: unknown[]) => mockCleanupOldNotifications(...args),
+}));
+
 // Mock logger
 vi.mock("@appranks/shared", async (importOriginal) => {
   const actual = (await importOriginal()) as Record<string, unknown>;
@@ -67,12 +84,20 @@ const mockProcessExit = vi.fn();
 
 describe("scheduler", () => {
   beforeEach(() => {
+    process.env.DATABASE_URL = "postgresql://test:test@localhost:5432/test";
     scheduledJobs.length = 0;
     (cron.schedule as ReturnType<typeof vi.fn>).mockClear();
     mockEnqueueScraperJob.mockClear().mockResolvedValue("mock-job-id-123");
     mockCloseQueue.mockClear().mockResolvedValue(undefined);
     mockIsCircuitOpen.mockClear().mockResolvedValue(false);
     mockProcessExit.mockClear();
+    mockCleanupOldNotifications.mockClear().mockResolvedValue({
+      notificationsDeleted: 0,
+      deliveryLogsDeleted: 0,
+      retentionDays: 90,
+      cutoffDate: new Date().toISOString(),
+      durationMs: 100,
+    });
 
     // Capture signal handlers
     vi.spyOn(process, "on").mockImplementation((signal: string, handler: (...args: unknown[]) => void) => {
@@ -102,10 +127,11 @@ describe("scheduler", () => {
   // ── 1. Schedule registration ─────────────────────────────────────────────
 
   describe("schedule registration", () => {
-    it("registers a cron job for every entry in SCRAPER_SCHEDULES", async () => {
+    it("registers a cron job for every entry in SCRAPER_SCHEDULES plus retention cleanup", async () => {
       await loadScheduler();
 
-      expect(cron.schedule).toHaveBeenCalledTimes(SCRAPER_SCHEDULES.length);
+      // SCRAPER_SCHEDULES + 1 for notification retention cleanup (PLA-688)
+      expect(cron.schedule).toHaveBeenCalledTimes(SCRAPER_SCHEDULES.length + 1);
     });
 
     it("registers jobs with the correct cron expressions from SCRAPER_SCHEDULES", async () => {
@@ -124,8 +150,8 @@ describe("scheduler", () => {
       const callExpressions = (cron.schedule as ReturnType<typeof vi.fn>).mock.calls.map(
         (call: unknown[]) => call[0] as string,
       );
-      // Every schedule's cron should appear (some may share the same cron, so check count matches)
-      expect(callExpressions.length).toBe(SCRAPER_SCHEDULES.length);
+      // SCRAPER_SCHEDULES + 1 for retention cleanup
+      expect(callExpressions.length).toBe(SCRAPER_SCHEDULES.length + 1);
     });
   });
 
@@ -486,6 +512,27 @@ describe("scheduler", () => {
       expect(weekly).toBeDefined();
       const dow = weekly!.cron.split(" ")[4];
       expect(dow).toBe("1"); // Monday
+    });
+  });
+
+  // ── 12. Notification retention cleanup (PLA-688) ──────────────────────────
+
+  describe("notification retention cleanup", () => {
+    it("registers retention cleanup cron at 03:00 UTC daily", async () => {
+      await loadScheduler();
+
+      const retentionJob = scheduledJobs.find((j) => j.expression === "0 3 * * *");
+      expect(retentionJob).toBeDefined();
+    });
+
+    it("retention cron callback does not crash", async () => {
+      await loadScheduler();
+
+      const retentionJob = scheduledJobs.find((j) => j.expression === "0 3 * * *");
+      expect(retentionJob).toBeDefined();
+
+      // Should not throw regardless of cleanup result
+      await expect(retentionJob!.callback()).resolves.toBeUndefined();
     });
   });
 });
