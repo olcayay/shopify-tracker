@@ -227,6 +227,7 @@ export {
   emailUnsubscribeTokens,
   emailSuppressionList,
   emailHealthMetrics,
+  emailDailyStats,
   emailAlertRules,
   emailAlertsLog,
 } from "./schema/email.js";

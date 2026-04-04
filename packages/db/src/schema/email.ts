@@ -177,6 +177,28 @@ export const emailHealthMetrics = pgTable(
   ]
 );
 
+// Daily aggregated email statistics for analytics
+export const emailDailyStats = pgTable(
+  "email_daily_stats",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    date: timestamp("date").notNull(),
+    emailType: varchar("email_type", { length: 100 }).notNull(),
+    sent: integer("sent").notNull().default(0),
+    delivered: integer("delivered").notNull().default(0),
+    opened: integer("opened").notNull().default(0),
+    clicked: integer("clicked").notNull().default(0),
+    bounced: integer("bounced").notNull().default(0),
+    complained: integer("complained").notNull().default(0),
+    unsubscribed: integer("unsubscribed").notNull().default(0),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+  },
+  (table) => [
+    uniqueIndex("idx_email_daily_stats_date_type").on(table.date, table.emailType),
+    index("idx_email_daily_stats_date").on(table.date),
+  ]
+);
+
 // Configurable alert rules for email system monitoring
 export const emailAlertRules = pgTable(
   "email_alert_rules",

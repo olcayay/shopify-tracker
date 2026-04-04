@@ -1,3 +1,13 @@
+PLA-675: Email Analytics Dashboard v2 (2026-04-04)
+================================================================
+- DB: email_daily_stats table (date × email_type aggregation)
+- Migration 0114: email_daily_stats with unique date+type index
+- API endpoints: overview (aggregate rates), trends (daily time-series),
+  by-type (per email type comparison), engagement (open heatmap by day/hour)
+- Dashboard: overview cards (sent, delivery/open/click/bounce rates),
+  send volume trend bar chart, performance by email type table,
+  configurable time range (7/30/90 days)
+
 PLA-678: Email Template Test Suite (2026-04-04)
 ================================================================
 - Comprehensive template rendering tests for all 6 transactional templates:

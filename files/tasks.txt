@@ -7,6 +7,7 @@ Email System Reliability (2026-04-04)
   PLA-672: Bounce/Complaint Webhook Integration ✅
   PLA-673: Email Worker Health Metrics ✅
   PLA-674: Queue Depth Alert System ✅
+  PLA-675: Email Analytics Dashboard v2 ✅
   PLA-678: Email Template Test Suite ✅
 
 Pre-Release Batch 2 (2026-04-02)
