@@ -3011,12 +3011,13 @@ export const systemAdminRoutes: FastifyPluginAsync = async (app) => {
     notifications: "notifications",
   };
 
-  // GET /api/system-admin/queue-jobs?queue=email-instant&state=waiting&limit=50
+  // GET /api/system-admin/queue-jobs?queue=email-instant&state=all&limit=50&offset=0
   app.get("/queue-jobs", async (request, reply) => {
-    const { queue: queueKey, state, limit: limitStr } = request.query as {
+    const { queue: queueKey, state, limit: limitStr, offset: offsetStr } = request.query as {
       queue?: string;
       state?: string;
       limit?: string;
+      offset?: string;
     };
 
     if (!queueKey || !QUEUE_MAP[queueKey]) {
@@ -3026,8 +3027,13 @@ export const systemAdminRoutes: FastifyPluginAsync = async (app) => {
     }
 
     const validStates = ["waiting", "active", "completed", "failed", "delayed"];
-    const jobState = validStates.includes(state || "") ? state! : "waiting";
     const limit = Math.min(parseInt(limitStr || "50", 10) || 50, 200);
+    const offset = Math.max(parseInt(offsetStr || "0", 10) || 0, 0);
+
+    // "all" or empty → fetch all states; otherwise filter to one state
+    const statesToFetch = (!state || state === "all")
+      ? validStates
+      : validStates.includes(state) ? [state] : validStates;
 
     const { Queue } = await import("bullmq");
     const Redis = (await import("ioredis")).default;
@@ -3036,9 +3042,28 @@ export const systemAdminRoutes: FastifyPluginAsync = async (app) => {
 
     try {
       const q = new Queue(QUEUE_MAP[queueKey], { connection });
-      const jobs = await q.getJobs([jobState as any], 0, limit - 1);
 
-      const result = jobs.map((job) => ({
+      // Fetch jobs from each requested state
+      const allJobs: { job: any; state: string }[] = [];
+      for (const s of statesToFetch) {
+        const jobs = await q.getJobs([s as any], 0, 199); // fetch up to 200 per state
+        for (const job of jobs) {
+          allJobs.push({ job, state: s });
+        }
+      }
+
+      // Sort by job ID descending (newest first) as default
+      allJobs.sort((a, b) => {
+        const idA = parseInt(a.job.id || "0", 10);
+        const idB = parseInt(b.job.id || "0", 10);
+        return idB - idA;
+      });
+
+      // Apply pagination
+      const total = allJobs.length;
+      const paged = allJobs.slice(offset, offset + limit);
+
+      const result = paged.map(({ job, state: jobState }) => ({
         id: job.id,
         name: job.name,
         state: jobState,
@@ -3053,14 +3078,11 @@ export const systemAdminRoutes: FastifyPluginAsync = async (app) => {
           priority: job.opts?.priority,
           attempts: job.opts?.attempts,
         },
-        // Convenience fields for email jobs
         recipient: job.data?.to || null,
         emailType: job.data?.type || null,
-        // For scraper jobs
         platform: job.data?.platform || null,
         slug: job.data?.slug || null,
         triggeredBy: job.data?.triggeredBy || null,
-        // For notification jobs
         userId: job.data?.userId || null,
       }));
 
@@ -3068,8 +3090,10 @@ export const systemAdminRoutes: FastifyPluginAsync = async (app) => {
 
       return {
         queue: queueKey,
-        state: jobState,
-        count: result.length,
+        state: state || "all",
+        total,
+        offset,
+        limit,
         jobs: result,
       };
     } finally {
