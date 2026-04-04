@@ -465,7 +465,7 @@ Event Detected
 
 ---
 
-#### TASK 1.1: Push Subscription & Dismiss Endpoint'leri
+#### TASK 1.1: Push Subscription & Dismiss Endpoint'leri — [PLA-686](https://linear.app/plan-b-side-projects/issue/PLA-686/phase-1-push-subscription-and-dismiss-endpoints)
 
 **Problem:** Client-side push subscription kodu `POST/DELETE /api/notifications/push-subscription` ve `POST /:id/dismiss` endpoint'lerini cagiriyor ama bu endpoint'ler API'da tanimli degil. Web push aboneligi ve dismiss tracking calismıyor.
 
@@ -516,7 +516,7 @@ Event Detected
 
 ---
 
-#### TASK 1.2: Notification Batching Engine
+#### TASK 1.2: Notification Batching Engine — [PLA-687](https://linear.app/plan-b-side-projects/issue/PLA-687/phase-1-notification-batching-engine)
 
 **Problem:** Ayni anda 20 ranking degisikligi olursa 20 ayrı bildirim gonderiliyor. Bu notification spam'e neden oluyor.
 
@@ -572,7 +572,7 @@ Event Detected
 
 ---
 
-#### TASK 1.3: Notification Retention Cleanup
+#### TASK 1.3: Notification Retention Cleanup — [PLA-688](https://linear.app/plan-b-side-projects/issue/PLA-688/phase-1-notification-retention-cleanup)
 
 **Problem:** 90 gunluk retention policy tanimli ama cleanup cron'u yok. Notifications tablosu surekli buyuyor.
 
@@ -619,7 +619,7 @@ Event Detected
 
 ---
 
-#### TASK 2.1: Quiet Hours & Do Not Disturb
+#### TASK 2.1: Quiet Hours & Do Not Disturb — [PLA-689](https://linear.app/plan-b-side-projects/issue/PLA-689/phase-2-quiet-hours-and-do-not-disturb-mode)
 
 **Problem:** Kullanicilar gece push bildirimi aliyor. Bildirimleri gecici olarak durdurma imkani yok.
 
@@ -678,7 +678,7 @@ Event Detected
 
 ---
 
-#### TASK 2.2: Push Permission Request Banner
+#### TASK 2.2: Push Permission Request Banner — [PLA-690](https://linear.app/plan-b-side-projects/issue/PLA-690/phase-2-push-permission-request-banner)
 
 **Problem:** Web push adoption dusuk. Kullaniciya push izni istemek icin UX akisi yok. Browser'in native izin diyalogu direkt gostermek low-conversion.
 
@@ -733,7 +733,7 @@ Event Detected
 
 ---
 
-#### TASK 2.3: SSE Client Entegrasyonu & Real-Time Delivery
+#### TASK 2.3: SSE Client Entegrasyonu & Real-Time Delivery — [PLA-691](https://linear.app/plan-b-side-projects/issue/PLA-691/phase-2-sse-client-integration-and-real-time-delivery)
 
 **Problem:** Dashboard bildirim icin 60s polling kullaniyor. SSE stream backend'de hazir ama client entegrasyonu yok. Bildirimler 60 saniyeye kadar gecikebilir.
 
@@ -789,7 +789,7 @@ Event Detected
 
 ---
 
-#### TASK 2.4: Notification Grouping/Threading UI
+#### TASK 2.4: Notification Grouping/Threading UI — [PLA-692](https://linear.app/plan-b-side-projects/issue/PLA-692/phase-2-notification-groupingthreading-ui)
 
 **Problem:** Ayni kategorideki bildirimler tek tek listeleniyor. 20 ranking degisikligi 20 satir kapliyor.
 
@@ -835,7 +835,7 @@ Event Detected
 
 ---
 
-#### TASK 2.5: Ayri Notification Settings Sayfasi
+#### TASK 2.5: Ayri Notification Settings Sayfasi — [PLA-693](https://linear.app/plan-b-side-projects/issue/PLA-693/phase-2-dedicated-notification-settings-page)
 
 **Problem:** Notification tercihleri email preferences sayfasinda karisik. Kullanici notification ayarlarini kolayca bulamiyor.
 
@@ -880,7 +880,7 @@ Event Detected
 
 ---
 
-#### TASK 3.1: Notification Analytics Dashboard
+#### TASK 3.1: Notification Analytics Dashboard — [PLA-694](https://linear.app/plan-b-side-projects/issue/PLA-694/phase-3-notification-analytics-dashboard)
 
 **Problem:** Admin dashboard'da sadece toplam stats var. Tip bazli, zaman bazli, kullanici bazli analiz yok.
 
@@ -926,7 +926,7 @@ Event Detected
 
 ---
 
-#### TASK 3.2: Admin Broadcast Notifications
+#### TASK 3.2: Admin Broadcast Notifications — [PLA-695](https://linear.app/plan-b-side-projects/issue/PLA-695/phase-3-admin-broadcast-notifications)
 
 **Problem:** Admin'den kullanicilara manual bildirim gonderilemıyor. Sistem duyurulari, bakim bildirimleri icin mekanizma yok.
 
@@ -969,7 +969,7 @@ Event Detected
 
 ---
 
-#### TASK 3.3: Notification Health Monitoring
+#### TASK 3.3: Notification Health Monitoring — [PLA-696](https://linear.app/plan-b-side-projects/issue/PLA-696/phase-3-notification-health-monitoring)
 
 **Problem:** Notification worker'in saglik durumu, delivery basari orani, queue derinligi anlik izlenemiyor.
 
@@ -1019,7 +1019,7 @@ Event Detected
 
 ---
 
-#### TASK 4.1: Cross-Tab Notification Sync
+#### TASK 4.1: Cross-Tab Notification Sync — [PLA-697](https://linear.app/plan-b-side-projects/issue/PLA-697/phase-4-cross-tab-notification-sync)
 
 **Problem:** Kullanici bir tab'da bildirimi okundu olarak isaretlerse diger tab'lar guncellenmıyor.
 
@@ -1054,7 +1054,7 @@ Event Detected
 
 ---
 
-#### TASK 4.2: Per-Type Rate Limiting
+#### TASK 4.2: Per-Type Rate Limiting — [PLA-698](https://linear.app/plan-b-side-projects/issue/PLA-698/phase-4-per-type-notification-rate-limiting)
 
 **Problem:** Genel rate limit 50/user/saat var ama tip bazli limit yok. Ayni tipte sinirsiz bildirim gidebilir.
 
@@ -1100,7 +1100,7 @@ Event Detected
 
 ---
 
-#### TASK 4.3: Notification Scheduling
+#### TASK 4.3: Notification Scheduling — [PLA-699](https://linear.app/plan-b-side-projects/issue/PLA-699/phase-4-notification-scheduling)
 
 **Problem:** Zamanlanmis bildirim gonderilemıyor. Admin belirli bir zamanda bildirim planlamak istiyor.
 
@@ -1133,7 +1133,7 @@ Event Detected
 
 ---
 
-#### TASK 4.4: Webhook/External Delivery (Slack/Discord)
+#### TASK 4.4: Webhook/External Delivery (Slack/Discord) — [PLA-700](https://linear.app/plan-b-side-projects/issue/PLA-700/phase-4-webhookexternal-delivery-slackdiscord)
 
 **Problem:** Bildirimler sadece in-app ve web push olarak gonderiliyor. Slack, Discord gibi harici kanallara gondermek mumkun degil.
 
@@ -1187,7 +1187,7 @@ Event Detected
 
 ---
 
-#### TASK 5.1: Notification Priority Queue
+#### TASK 5.1: Notification Priority Queue — [PLA-701](https://linear.app/plan-b-side-projects/issue/PLA-701/phase-5-notification-priority-queue)
 
 **Problem:** Urgent ve low-priority bildirimler ayni kuyrukta FIFO sirasiyla isleniyor. Urgent bildirimler gecikmeli olabiliyor.
 
@@ -1208,7 +1208,7 @@ Event Detected
 
 ---
 
-#### TASK 5.2: Mobile Push (Firebase/APNs)
+#### TASK 5.2: Mobile Push (Firebase/APNs) — [PLA-702](https://linear.app/plan-b-side-projects/issue/PLA-702/phase-5-mobile-push-support-firebaseapns)
 
 **Problem:** Sadece web push (VAPID) destegi var. Mobil cihazlara push gondermek mumkun degil.
 
@@ -1237,7 +1237,7 @@ Event Detected
 
 ---
 
-#### TASK 5.3: Notification Sound & Vibration Preferences
+#### TASK 5.3: Notification Sound & Vibration Preferences — [PLA-703](https://linear.app/plan-b-side-projects/issue/PLA-703/phase-5-notification-sound-and-vibration-preferences)
 
 **Problem:** Push bildirimlerinde ses ve vibrasyon tercihi yok. Sabit vibrasyon pattern'i var.
 
@@ -1262,26 +1262,26 @@ Event Detected
 
 ## 5. Onceliklendirme Ozeti
 
-| Faz | Task | Oncelik | Tahmini Karmasiklik | Bagimlilik |
-|-----|------|---------|---------------------|------------|
-| 1 | 1.1 Push Subscription & Dismiss Endpoints | KRITIK | Dusuk | - |
-| 1 | 1.2 Notification Batching Engine | KRITIK | Yuksek | - |
-| 1 | 1.3 Notification Retention Cleanup | YUKSEK | Dusuk | - |
-| 2 | 2.1 Quiet Hours & DND | YUKSEK | Orta | - |
-| 2 | 2.2 Push Permission Banner | YUKSEK | Orta | 1.1 |
-| 2 | 2.3 SSE Client & Real-Time | YUKSEK | Orta | - |
-| 2 | 2.4 Grouping/Threading UI | ORTA | Orta | 1.2 |
-| 2 | 2.5 Notification Settings Page | ORTA | Dusuk | 2.1 |
-| 3 | 3.1 Analytics Dashboard | ORTA | Yuksek | - |
-| 3 | 3.2 Admin Broadcast | ORTA | Orta | - |
-| 3 | 3.3 Health Monitoring | YUKSEK | Orta | - |
-| 4 | 4.1 Cross-Tab Sync | ORTA | Dusuk | 2.3 |
-| 4 | 4.2 Per-Type Rate Limiting | ORTA | Orta | - |
-| 4 | 4.3 Notification Scheduling | DUSUK | Dusuk | - |
-| 4 | 4.4 Webhook Delivery (Slack/Discord) | DUSUK | Orta | - |
-| 5 | 5.1 Priority Queue | DUSUK | Dusuk | - |
-| 5 | 5.2 Mobile Push (Firebase) | DUSUK | Yuksek | 1.1 |
-| 5 | 5.3 Sound & Vibration Prefs | DUSUK | Dusuk | 2.5 |
+| Faz | Task | Linear | Oncelik | Tahmini Karmasiklik | Bagimlilik |
+|-----|------|--------|---------|---------------------|------------|
+| 1 | 1.1 Push Subscription & Dismiss Endpoints | [PLA-686](https://linear.app/plan-b-side-projects/issue/PLA-686) | KRITIK | Dusuk | - |
+| 1 | 1.2 Notification Batching Engine | [PLA-687](https://linear.app/plan-b-side-projects/issue/PLA-687) | KRITIK | Yuksek | - |
+| 1 | 1.3 Notification Retention Cleanup | [PLA-688](https://linear.app/plan-b-side-projects/issue/PLA-688) | YUKSEK | Dusuk | - |
+| 2 | 2.1 Quiet Hours & DND | [PLA-689](https://linear.app/plan-b-side-projects/issue/PLA-689) | YUKSEK | Orta | - |
+| 2 | 2.2 Push Permission Banner | [PLA-690](https://linear.app/plan-b-side-projects/issue/PLA-690) | YUKSEK | Orta | 1.1 |
+| 2 | 2.3 SSE Client & Real-Time | [PLA-691](https://linear.app/plan-b-side-projects/issue/PLA-691) | YUKSEK | Orta | - |
+| 2 | 2.4 Grouping/Threading UI | [PLA-692](https://linear.app/plan-b-side-projects/issue/PLA-692) | ORTA | Orta | 1.2 |
+| 2 | 2.5 Notification Settings Page | [PLA-693](https://linear.app/plan-b-side-projects/issue/PLA-693) | ORTA | Dusuk | 2.1 |
+| 3 | 3.1 Analytics Dashboard | [PLA-694](https://linear.app/plan-b-side-projects/issue/PLA-694) | ORTA | Yuksek | - |
+| 3 | 3.2 Admin Broadcast | [PLA-695](https://linear.app/plan-b-side-projects/issue/PLA-695) | ORTA | Orta | - |
+| 3 | 3.3 Health Monitoring | [PLA-696](https://linear.app/plan-b-side-projects/issue/PLA-696) | YUKSEK | Orta | - |
+| 4 | 4.1 Cross-Tab Sync | [PLA-697](https://linear.app/plan-b-side-projects/issue/PLA-697) | ORTA | Dusuk | 2.3 |
+| 4 | 4.2 Per-Type Rate Limiting | [PLA-698](https://linear.app/plan-b-side-projects/issue/PLA-698) | ORTA | Orta | - |
+| 4 | 4.3 Notification Scheduling | [PLA-699](https://linear.app/plan-b-side-projects/issue/PLA-699) | DUSUK | Dusuk | - |
+| 4 | 4.4 Webhook Delivery (Slack/Discord) | [PLA-700](https://linear.app/plan-b-side-projects/issue/PLA-700) | DUSUK | Orta | - |
+| 5 | 5.1 Priority Queue | [PLA-701](https://linear.app/plan-b-side-projects/issue/PLA-701) | DUSUK | Dusuk | - |
+| 5 | 5.2 Mobile Push (Firebase) | [PLA-702](https://linear.app/plan-b-side-projects/issue/PLA-702) | DUSUK | Yuksek | 1.1 |
+| 5 | 5.3 Sound & Vibration Prefs | [PLA-703](https://linear.app/plan-b-side-projects/issue/PLA-703) | DUSUK | Dusuk | 2.5 |
 
 ### Onerilen Uygulama Sirasi
 
