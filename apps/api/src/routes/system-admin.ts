@@ -3231,10 +3231,24 @@ export const systemAdminRoutes: FastifyPluginAsync = async (app) => {
     const adminEmail = request.user?.email || process.env.ADMIN_EMAIL || "admin@appranks.io";
 
     try {
-      const mailerModule: any = await import("../../../scraper/dist/email/mailer.js");
-      const { sendMail } = mailerModule;
-      const result = await sendMail(adminEmail, subject, html);
-      return { sent: true, to: adminEmail, subject, messageId: result.messageId };
+      // Send directly via nodemailer (avoid cross-package import)
+      const nodemailer = await import("nodemailer");
+      const transport = nodemailer.default.createTransport({
+        host: process.env.SMTP_HOST || "smtp.gmail.com",
+        port: parseInt(process.env.SMTP_PORT || "587", 10),
+        secure: false,
+        auth: {
+          user: process.env.SMTP_USER,
+          pass: process.env.SMTP_PASS,
+        },
+      });
+      const info = await transport.sendMail({
+        from: process.env.SMTP_FROM || process.env.SMTP_USER,
+        to: adminEmail,
+        subject,
+        html,
+      });
+      return { sent: true, to: adminEmail, subject, messageId: info.messageId };
     } catch (err: any) {
       return reply.code(500).send({
         error: "Send failed",
