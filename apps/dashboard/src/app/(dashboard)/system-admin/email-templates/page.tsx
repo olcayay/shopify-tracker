@@ -21,7 +21,9 @@ import {
   RotateCcw,
   Pencil,
   X,
+  Send,
 } from "lucide-react";
+import { toast } from "sonner";
 import { VariablePicker, TemplatePreview } from "@/components/template-editor";
 
 interface TemplateVariable {
@@ -150,6 +152,50 @@ export default function AdminEmailTemplates() {
     }
   }
 
+  const [sendingTest, setSendingTest] = useState<string | null>(null);
+
+  async function sendTestEmail(t: EmailTemplate) {
+    setSendingTest(t.emailType);
+    try {
+      // Build sample payload from variable examples
+      const payload: Record<string, string> = {};
+      for (const v of t.variables) {
+        payload[v.name] = v.example;
+      }
+
+      const res = await fetchWithAuth("/api/system-admin/email-preview", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ type: t.emailType, payload }),
+      });
+
+      if (res.ok) {
+        const { subject, html } = await res.json();
+        // Now send via the test endpoint
+        const sendRes = await fetchWithAuth("/api/system-admin/email-test", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ type: t.emailType, payload }),
+        });
+
+        if (sendRes.ok) {
+          toast.success(`Test email sent (${t.emailType})`);
+        } else {
+          // If no send endpoint, show preview instead
+          const w = window.open("", "_blank");
+          if (w) { w.document.write(html); w.document.title = subject; }
+          toast.info("Preview opened — send endpoint not available");
+        }
+      } else {
+        toast.error("Failed to render template");
+      }
+    } catch {
+      toast.error("Failed to send test email");
+    } finally {
+      setSendingTest(null);
+    }
+  }
+
   // Group templates by category
   const grouped = new Map<string, EmailTemplate[]>();
   for (const t of templates) {
@@ -216,6 +262,20 @@ export default function AdminEmailTemplates() {
                               )}
                             </div>
                             <div className="flex items-center gap-1">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => sendTestEmail(t)}
+                                disabled={sendingTest === t.emailType}
+                                title="Send test email / preview"
+                              >
+                                {sendingTest === t.emailType ? (
+                                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                                ) : (
+                                  <Send className="h-3.5 w-3.5" />
+                                )}
+                                <span className="ml-1 text-xs">Test</span>
+                              </Button>
                               {!isEditing ? (
                                 <Button variant="ghost" size="sm" onClick={() => startEditing(t)}>
                                   <Pencil className="h-3.5 w-3.5" />

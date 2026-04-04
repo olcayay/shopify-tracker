@@ -3199,6 +3199,50 @@ export const systemAdminRoutes: FastifyPluginAsync = async (app) => {
     }
   });
 
+  // POST /api/system-admin/email-test — render + send test email to admin
+  app.post("/email-test", async (request, reply) => {
+    const { type, payload } = request.body as {
+      type: string;
+      payload: Record<string, unknown>;
+    };
+
+    if (!type || !payload) {
+      return reply.code(400).send({ error: "type and payload are required" });
+    }
+
+    // Render template
+    let subject: string;
+    let html: string;
+    try {
+      // @ts-expect-error — cross-package import resolved at runtime in Docker
+      const { templateRenderers } = await import("../../../scraper/dist/email/process-instant-email.js");
+      const renderer = templateRenderers[type as keyof typeof templateRenderers];
+      if (!renderer) {
+        return reply.code(404).send({ error: `No template for: ${type}` });
+      }
+      const result = renderer(payload);
+      subject = `[TEST] ${result.subject}`;
+      html = result.html;
+    } catch {
+      return reply.code(500).send({ error: "Template rendering failed" });
+    }
+
+    // Send to admin's email
+    const adminEmail = request.user?.email || process.env.ADMIN_EMAIL || "admin@appranks.io";
+
+    try {
+      const mailerModule: any = await import("../../../scraper/dist/email/mailer.js");
+      const { sendMail } = mailerModule;
+      const result = await sendMail(adminEmail, subject, html);
+      return { sent: true, to: adminEmail, subject, messageId: result.messageId };
+    } catch (err: any) {
+      return reply.code(500).send({
+        error: "Send failed",
+        details: err?.message || String(err),
+      });
+    }
+  });
+
   // POST /api/system-admin/queue-jobs/:queue/:jobId/retry — retry a failed job
   app.post<{ Params: { queue: string; jobId: string } }>(
     "/queue-jobs/:queue/:jobId/retry",
