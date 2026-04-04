@@ -9,6 +9,7 @@ Email System Reliability (2026-04-04)
   PLA-674: Queue Depth Alert System ✅
   PLA-675: Email Analytics Dashboard v2 ✅
   PLA-679: Email Scheduling (Delayed Send) ✅
+  PLA-676: Global Sandbox Mode ✅
   PLA-683: Email Log Search & Export ✅
   PLA-678: Email Template Test Suite ✅
 

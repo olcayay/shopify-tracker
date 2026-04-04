@@ -109,6 +109,35 @@ export function allProvidersDown(): boolean {
   return cbs.every((cb) => !cb.isAvailable());
 }
 
+// ── Sandbox mode ───────────────────────────────────────────────────
+
+/**
+ * When EMAIL_SANDBOX_MODE=true, all outgoing emails are redirected
+ * to EMAIL_SANDBOX_RECIPIENT. The original recipient is preserved
+ * in the subject line for debugging.
+ */
+function applySandbox(to: string, subject: string): { to: string; subject: string; sandboxed: boolean } {
+  const sandboxMode = process.env.EMAIL_SANDBOX_MODE === "true";
+  if (!sandboxMode) return { to, subject, sandboxed: false };
+
+  const sandboxRecipient = process.env.EMAIL_SANDBOX_RECIPIENT;
+  if (!sandboxRecipient) {
+    log.warn("EMAIL_SANDBOX_MODE is true but EMAIL_SANDBOX_RECIPIENT is not set — sending normally");
+    return { to, subject, sandboxed: false };
+  }
+
+  return {
+    to: sandboxRecipient,
+    subject: `[SANDBOX → ${to}] ${subject}`,
+    sandboxed: true,
+  };
+}
+
+/** Check if sandbox mode is active */
+export function isSandboxMode(): boolean {
+  return process.env.EMAIL_SANDBOX_MODE === "true" && !!process.env.EMAIL_SANDBOX_RECIPIENT;
+}
+
 // ── Send with failover ─────────────────────────────────────────────
 
 export async function sendMail(
@@ -116,7 +145,15 @@ export async function sendMail(
   subject: string,
   html: string,
   headers?: Record<string, string>
-): Promise<{ messageId?: string; provider?: string }> {
+): Promise<{ messageId?: string; provider?: string; sandboxed?: boolean }> {
+  // Apply sandbox redirect
+  const sandbox = applySandbox(to, subject);
+  if (sandbox.sandboxed) {
+    log.info("sandbox mode: redirecting email", { originalTo: to, sandboxTo: sandbox.to });
+  }
+  to = sandbox.to;
+  subject = sandbox.subject;
+
   const cbs = getCircuitBreakers();
   const availableProviders = cbs.filter((cb) => cb.isAvailable());
 
@@ -143,8 +180,8 @@ export async function sendMail(
       });
 
       cb.recordSuccess();
-      log.info("email sent", { to, subject, provider: provider.name });
-      return { messageId: info.messageId, provider: provider.name };
+      log.info("email sent", { to, subject, provider: provider.name, sandboxed: sandbox.sandboxed });
+      return { messageId: info.messageId, provider: provider.name, sandboxed: sandbox.sandboxed };
     } catch (err) {
       lastError = err instanceof Error ? err : new Error(String(err));
       cb.recordFailure();

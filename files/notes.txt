@@ -1,3 +1,12 @@
+PLA-676: Global Sandbox Mode (2026-04-04)
+================================================================
+- EMAIL_SANDBOX_MODE=true + EMAIL_SANDBOX_RECIPIENT env vars
+- All outgoing emails redirected to sandbox recipient
+- Original recipient preserved in subject: [SANDBOX → real@user.com] Subject
+- isSandboxMode() helper, sandbox status in email-health API
+- Graceful fallback: if no recipient set, sends normally with warning
+- 5 new tests for sandbox/non-sandbox behavior
+
 PLA-683: Email Log Search & Export (2026-04-04)
 ================================================================
 - GET /api/system-admin/email-logs: search (subject/recipient ILIKE),

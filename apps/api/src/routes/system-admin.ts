@@ -3392,6 +3392,8 @@ export const systemAdminRoutes: FastifyPluginAsync = async (app) => {
     return {
       timestamp: new Date().toISOString(),
       status,
+      sandboxMode: process.env.EMAIL_SANDBOX_MODE === "true",
+      sandboxRecipient: process.env.EMAIL_SANDBOX_MODE === "true" ? (process.env.EMAIL_SANDBOX_RECIPIENT || null) : null,
       ...result,
     };
   });
