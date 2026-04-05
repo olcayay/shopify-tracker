@@ -30,6 +30,8 @@ import {
 } from "@/components/ui/tooltip";
 import { Check, X, Minus, History, ChevronDown, ChevronRight } from "lucide-react";
 import { CopyButton } from "@/components/ui/copy-button";
+import { CopyReportButton } from "@/components/copy-report-button";
+import { buildSmokeTestReport } from "@/lib/scraper-report";
 import { PLATFORM_LABELS, PLATFORM_COLORS } from "@/lib/platform-display";
 import { useFormatDate } from "@/lib/format-date";
 import { timeAgo, formatDuration } from "@/lib/format-utils";
@@ -288,12 +290,18 @@ export function SmokeTestHistory({ history }: SmokeTestHistoryProps) {
                       <Badge variant="outline" className="text-xs bg-red-50 text-red-600 border-red-200">
                         {entry.recentErrors.length} failure{entry.recentErrors.length !== 1 ? "s" : ""} in last {entry.totalCount} runs
                       </Badge>
-                      <button
-                        className="ml-auto text-xs text-muted-foreground hover:text-foreground px-2 py-1 rounded hover:bg-muted transition-colors"
-                        onClick={() => setExpandedCell(null)}
-                      >
-                        Close
-                      </button>
+                      <div className="ml-auto flex items-center gap-2">
+                        <CopyReportButton
+                          getReport={() => entry.recentErrors.map((err) => buildSmokeTestReport({ platform, check, status: "fail", durationMs: err.durationMs ?? undefined, error: err.error })).join("\n\n")}
+                          label="Copy All"
+                        />
+                        <button
+                          className="text-xs text-muted-foreground hover:text-foreground px-2 py-1 rounded hover:bg-muted transition-colors"
+                          onClick={() => setExpandedCell(null)}
+                        >
+                          Close
+                        </button>
+                      </div>
                     </div>
                     <div className="space-y-2 max-h-72 overflow-y-auto">
                       {entry.recentErrors.map((err, i) => (

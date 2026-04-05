@@ -106,3 +106,62 @@ export function buildFallbackReport(run: RunInfo): string {
   if (run.error) lines.push("", "--- Run Error ---", run.error);
   return lines.join("\n");
 }
+
+/** Build a report for a smoke test result */
+export function buildSmokeTestReport(result: {
+  platform: string;
+  check: string;
+  status: string;
+  durationMs?: number;
+  error?: string;
+  output?: string;
+  traceId?: string;
+}): string {
+  const lines = [
+    "=== SMOKE TEST REPORT ===",
+    "",
+    `Platform:     ${result.platform}`,
+    `Check:        ${result.check}`,
+    `Status:       ${result.status}`,
+    `Duration:     ${result.durationMs ? `${result.durationMs}ms` : "N/A"}`,
+  ];
+  if (result.traceId) lines.push(`Trace ID:     ${result.traceId}`);
+  if (result.error) lines.push("", "--- Error ---", result.error);
+  if (result.output) lines.push("", "--- Output ---", result.output);
+  return lines.join("\n");
+}
+
+/** Build a report for a health matrix cell */
+export function buildHealthCellReport(cell: {
+  platform: string;
+  scraperType: string;
+  status?: string;
+  error?: string | null;
+  durationMs?: number | null;
+  completedAt?: string | null;
+  startedAt?: string | null;
+  jobId?: string | null;
+  runId?: string;
+  itemsScraped?: number | null;
+  itemsFailed?: number | null;
+  triggeredBy?: string | null;
+}): string {
+  const lines = [
+    "=== HEALTH CELL REPORT ===",
+    "",
+    `Platform:     ${cell.platform}`,
+    `Scraper Type: ${cell.scraperType}`,
+    `Status:       ${cell.status || "unknown"}`,
+  ];
+  if (cell.runId) lines.push(`Run ID:       ${cell.runId}`);
+  if (cell.jobId) lines.push(`Job ID:       ${cell.jobId}`);
+  lines.push(
+    `Started:      ${cell.startedAt || "N/A"}`,
+    `Completed:    ${cell.completedAt || "N/A"}`,
+    `Duration:     ${cell.durationMs ? `${cell.durationMs}ms` : "N/A"}`,
+  );
+  if (cell.itemsScraped != null) lines.push(`Items:        ${cell.itemsScraped} scraped, ${cell.itemsFailed ?? 0} failed`);
+  if (cell.triggeredBy) lines.push(`Triggered By: ${cell.triggeredBy}`);
+  if (cell.error) lines.push("", "--- Error ---", cell.error);
+  return lines.join("\n");
+}

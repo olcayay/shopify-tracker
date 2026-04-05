@@ -49,6 +49,8 @@ import {
 } from "./use-smoke-test";
 import { PLATFORM_LABELS, PLATFORM_COLORS } from "@/lib/platform-display";
 import { timeAgo } from "@/lib/format-utils";
+import { CopyReportButton } from "@/components/copy-report-button";
+import { buildSmokeTestReport } from "@/lib/scraper-report";
 
 const CHECK_LABELS: Record<SmokeCheckName, string> = {
   categories: "Categories",
@@ -244,6 +246,10 @@ function FailureDetails({
           )}
         </div>
         <div className="flex items-center gap-2">
+          <CopyReportButton
+            getReport={() => buildSmokeTestReport({ platform: result.platform, check: result.check, status: result.status, durationMs: result.durationMs, error: result.error, output: result.output, traceId: result.traceId })}
+            label="Copy Report"
+          />
           <Button
             size="sm"
             variant="outline"

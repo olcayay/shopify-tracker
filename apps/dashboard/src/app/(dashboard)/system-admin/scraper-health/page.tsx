@@ -43,7 +43,7 @@ import { CopyButton } from "@/components/ui/copy-button";
 import { SmokeTestPanel } from "./smoke-test-panel";
 import { SmokeTestHistory, type SmokeHistoryEntry } from "../scraper/components/smoke-test-history";
 import { PLATFORM_LABELS, PLATFORM_COLORS, SCRAPER_TYPE_LABELS, HEALTH_SCRAPER_TYPES } from "@/lib/platform-display";
-import { buildRunReport, type RunInfo } from "@/lib/scraper-report";
+import { buildRunReport, buildHealthCellReport, type RunInfo } from "@/lib/scraper-report";
 import { CopyReportButton } from "@/components/copy-report-button";
 
 interface HealthCell {
@@ -832,6 +832,26 @@ function CellTooltip({ cell, status }: { cell: HealthCell; status: CellStatus })
             <span>{new Date(cell.schedule.nextRunAt).toLocaleString()}</span>
           </div>
         </>
+      )}
+
+      {cell.lastRun && (
+        <div className="border-t pt-1.5 mt-1.5">
+          <CopyReportButton
+            getReport={() => buildHealthCellReport({
+              platform: cell.platform,
+              scraperType: cell.scraperType,
+              status: cell.lastRun?.status,
+              error: cell.lastRun?.error,
+              durationMs: cell.lastRun?.durationMs,
+              completedAt: cell.lastRun?.completedAt,
+              runId: cell.lastRun?.runId,
+              jobId: cell.lastRun?.jobId,
+              itemsScraped: cell.lastRun?.itemsScraped,
+              itemsFailed: cell.lastRun?.itemsFailed,
+            })}
+            label="Copy Report"
+          />
+        </div>
       )}
     </div>
   );
