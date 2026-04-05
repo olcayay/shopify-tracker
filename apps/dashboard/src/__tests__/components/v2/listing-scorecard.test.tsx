@@ -83,4 +83,40 @@ describe("ListingScorecard", () => {
     const good = screen.getAllByText("✓");
     expect(good.length).toBeGreaterThanOrEqual(2);
   });
+
+  it("shows good status for fields at or near the character limit (PLA-767)", () => {
+    // Shopify title limit is 30 chars
+    const snapshot = {
+      name: "A".repeat(30), // exactly at limit — should be good, not warning
+      appCardSubtitle: "B".repeat(60), // 60/62 — near limit, should be good
+      appIntroduction: "C".repeat(92), // 92/100 — near limit, should be good
+      appDetails: "D".repeat(480), // 480/500 — near limit, should be good
+      features: ["F1", "F2", "F3", "F4", "F5"],
+      seoTitle: "E".repeat(58), // 58/60 — near limit, should be good
+      seoMetaDescription: "F".repeat(155), // 155/160 — near limit, should be good
+    };
+    render(<ListingScorecard snapshot={snapshot} platform="shopify" />);
+    const good = screen.getAllByText("✓");
+    // All 7 checks should be good (Title, Subtitle, Introduction, Description, Features, SEO Title, SEO Description)
+    expect(good.length).toBe(7);
+    // No warnings should exist
+    const warnings = screen.queryAllByText("⚠");
+    expect(warnings.length).toBe(0);
+  });
+
+  it("shows warning for fields over the character limit (PLA-767)", () => {
+    const snapshot = {
+      name: "A".repeat(35), // 35/30 — over limit, should warn
+    };
+    render(<ListingScorecard snapshot={snapshot} platform="shopify" />);
+    expect(screen.getByText(/over limit/)).toBeInTheDocument();
+  });
+
+  it("shows warning for fields below 30% of limit", () => {
+    const snapshot = {
+      name: "Hi", // 2/30 — too short
+    };
+    render(<ListingScorecard snapshot={snapshot} platform="shopify" />);
+    expect(screen.getByText(/too short/)).toBeInTheDocument();
+  });
 });

@@ -13,14 +13,14 @@ import {
 } from "recharts";
 
 const COLORS = [
-  "hsl(var(--chart-1))",
-  "hsl(var(--chart-2))",
-  "hsl(var(--chart-3))",
-  "hsl(var(--chart-4))",
-  "hsl(var(--chart-5))",
-  "hsl(180, 70%, 40%)",
-  "hsl(330, 70%, 50%)",
-  "hsl(200, 80%, 50%)",
+  "var(--chart-1)",
+  "var(--chart-2)",
+  "var(--chart-3)",
+  "var(--chart-4)",
+  "var(--chart-5)",
+  "oklch(0.6 0.15 180)",
+  "oklch(0.6 0.2 330)",
+  "oklch(0.6 0.15 200)",
 ];
 
 interface RankingData {
@@ -136,7 +136,7 @@ export function RankingChart({ data, pageSize = 24 }: { data: RankingData[]; pag
       {/* Ranking table */}
       <div className="border rounded-md overflow-x-auto">
         <table className="w-full text-sm">
-          <thead>
+          <thead className="sticky top-0 z-10">
             <tr className="border-b bg-muted/50">
               <th className="text-left px-3 py-2 font-medium">Name</th>
               <th className="text-right px-3 py-2 font-medium w-24">Position</th>

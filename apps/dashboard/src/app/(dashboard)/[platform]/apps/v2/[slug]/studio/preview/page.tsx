@@ -32,11 +32,11 @@ function PreviewContent({ appData, platform }: { appData: any; platform: string 
           <RotateCcw className="h-4 w-4 mr-1" /> Reset
         </Button>
       </div>
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <div className="rounded-lg border p-4 overflow-auto force-light bg-white">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
+        <div className="lg:col-span-8 rounded-lg border p-4 overflow-auto force-light bg-white">
           {preview}
         </div>
-        <div className="rounded-lg border bg-card p-4 overflow-auto">
+        <div className="lg:col-span-4 rounded-lg border bg-card p-4 overflow-auto">
           {editor}
         </div>
       </div>

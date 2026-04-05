@@ -25,6 +25,22 @@ import type { PlatformModule } from "../platforms/platform-module.js";
 import { runConcurrent } from "../utils/run-concurrent.js";
 import { recordItemError } from "../utils/record-item-error.js";
 
+/** Known platform boilerplate meta descriptions — indicate scraper got shell page, not app content */
+const BOILERPLATE_META: Record<string, string[]> = {
+  shopify: ["Shopify App Store, download apps for your Shopify store"],
+  canva: ["Discover apps and integrations for Canva"],
+  wordpress: ["WordPress.org Plugin Directory"],
+  salesforce: ["Salesforce AppExchange"],
+};
+
+/** Check if a seoMetaDescription matches a known platform boilerplate */
+export function isBoilerplateMeta(meta: string, platform: string): boolean {
+  const patterns = BOILERPLATE_META[platform];
+  if (!patterns) return false;
+  const trimmed = meta.trim().toLowerCase();
+  return patterns.some((p) => trimmed.startsWith(p.toLowerCase()));
+}
+
 /** Strip HTML tags and decode common entities, collapse whitespace */
 function stripHtmlTags(html: string): string {
   return html
@@ -563,6 +579,16 @@ export class AppDetailsScraper {
         for (const [field, [oldVal, newVal]] of Object.entries(fieldMap)) {
           // Skip when old value was empty (first-time population, not a real change)
           if (oldVal !== newVal && oldVal) {
+            // Guard: skip when new value is empty (scrape failure, not real change)
+            if (!newVal) {
+              log.warn("skipping false change: content→empty (likely scrape failure)", { slug, field });
+              continue;
+            }
+            // Guard: skip boilerplate seoMetaDescription (scraper got shell page)
+            if (field === "seoMetaDescription" && isBoilerplateMeta(newVal, this.platform)) {
+              log.warn("skipping false change: boilerplate meta description", { slug, field, newVal });
+              continue;
+            }
             changes.push({ field, oldValue: oldVal, newValue: newVal });
           }
         }
@@ -570,13 +596,23 @@ export class AppDetailsScraper {
         const newFeatures = JSON.stringify(details.features);
         // Skip when features were empty (first-time population)
         if (oldFeatures !== newFeatures && oldFeatures !== "[]") {
-          changes.push({ field: "features", oldValue: oldFeatures, newValue: newFeatures });
+          // Guard: skip when new features are empty (scrape failure)
+          if (newFeatures === "[]" || newFeatures === "null") {
+            log.warn("skipping false change: features→empty (likely scrape failure)", { slug });
+          } else {
+            changes.push({ field: "features", oldValue: oldFeatures, newValue: newFeatures });
+          }
         }
 
         const oldPlans = JSON.stringify((prevSnapshot.pricingPlans || []).map(normalizePlan));
         const newPlans = JSON.stringify((details.pricing_plans || []).map(normalizePlan));
         if (oldPlans !== newPlans && oldPlans !== "[]") {
-          changes.push({ field: "pricingPlans", oldValue: oldPlans, newValue: newPlans });
+          // Guard: skip when new plans are empty (scrape failure)
+          if (newPlans === "[]" || newPlans === "null") {
+            log.warn("skipping false change: pricingPlans→empty (likely scrape failure)", { slug });
+          } else {
+            changes.push({ field: "pricingPlans", oldValue: oldPlans, newValue: newPlans });
+          }
         }
       }
 

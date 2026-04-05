@@ -19,8 +19,8 @@ function computeChecks(snapshot: any, platform: string, app?: any): ScorecardChe
     }
     if (limit > 0 && len < limit * 0.3) {
       checks.push({ label, status: "warning", detail: `${len}/${limit} chars — too short` });
-    } else if (limit > 0 && len > limit * 0.9) {
-      checks.push({ label, status: "warning", detail: `${len}/${limit} chars — near limit` });
+    } else if (limit > 0 && len > limit) {
+      checks.push({ label, status: "warning", detail: `${len}/${limit} chars — over limit` });
     } else {
       checks.push({ label, status: "good", detail: limit > 0 ? `${len}/${limit} chars` : `${len} chars` });
     }

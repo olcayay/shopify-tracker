@@ -517,3 +517,125 @@ describe("platformData validation errors tracking", () => {
     expect(pdOriginal).not.toHaveProperty("_validationErrors");
   });
 });
+
+// ---------------------------------------------------------------------------
+// PLA-769: isBoilerplateMeta — guard against false change detection
+// Replicated here since the module has heavy DB/HTTP imports
+// ---------------------------------------------------------------------------
+const BOILERPLATE_META: Record<string, string[]> = {
+  shopify: ["Shopify App Store, download apps for your Shopify store"],
+  canva: ["Discover apps and integrations for Canva"],
+  wordpress: ["WordPress.org Plugin Directory"],
+  salesforce: ["Salesforce AppExchange"],
+};
+
+function isBoilerplateMeta(meta: string, platform: string): boolean {
+  const patterns = BOILERPLATE_META[platform];
+  if (!patterns) return false;
+  const trimmed = meta.trim().toLowerCase();
+  return patterns.some((p) => trimmed.startsWith(p.toLowerCase()));
+}
+
+describe("isBoilerplateMeta", () => {
+  it("detects Shopify boilerplate meta", () => {
+    expect(isBoilerplateMeta("Shopify App Store, download apps for your Shopify store", "shopify")).toBe(true);
+  });
+
+  it("detects Canva boilerplate meta", () => {
+    expect(isBoilerplateMeta("Discover apps and integrations for Canva", "canva")).toBe(true);
+  });
+
+  it("detects WordPress boilerplate meta", () => {
+    expect(isBoilerplateMeta("WordPress.org Plugin Directory", "wordpress")).toBe(true);
+  });
+
+  it("detects Salesforce boilerplate meta", () => {
+    expect(isBoilerplateMeta("Salesforce AppExchange", "salesforce")).toBe(true);
+  });
+
+  it("is case-insensitive", () => {
+    expect(isBoilerplateMeta("shopify app store, download apps for your shopify store", "shopify")).toBe(true);
+  });
+
+  it("trims whitespace", () => {
+    expect(isBoilerplateMeta("  Shopify App Store, download apps for your Shopify store  ", "shopify")).toBe(true);
+  });
+
+  it("returns false for real app meta description", () => {
+    expect(isBoilerplateMeta("Boost your sales with our amazing marketing tool", "shopify")).toBe(false);
+  });
+
+  it("returns false for unknown platform", () => {
+    expect(isBoilerplateMeta("Some meta description", "unknown_platform")).toBe(false);
+  });
+
+  it("returns false for empty string", () => {
+    expect(isBoilerplateMeta("", "shopify")).toBe(false);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// PLA-769: Change detection guards (unit logic)
+// ---------------------------------------------------------------------------
+describe("change detection guards", () => {
+  // Replicate the guarded logic from app-details-scraper
+  function detectFieldChanges(
+    fieldMap: Record<string, [string, string]>,
+    platform: string,
+  ): Array<{ field: string; oldValue: string; newValue: string }> {
+    const changes: Array<{ field: string; oldValue: string; newValue: string }> = [];
+    for (const [field, [oldVal, newVal]] of Object.entries(fieldMap)) {
+      if (oldVal !== newVal && oldVal) {
+        if (!newVal) continue; // skip content→empty
+        if (field === "seoMetaDescription" && isBoilerplateMeta(newVal, platform)) continue;
+        changes.push({ field, oldValue: oldVal, newValue: newVal });
+      }
+    }
+    return changes;
+  }
+
+  it("records legitimate field change", () => {
+    const changes = detectFieldChanges({
+      appIntroduction: ["Old intro", "New intro"],
+    }, "shopify");
+    expect(changes).toHaveLength(1);
+    expect(changes[0]).toEqual({ field: "appIntroduction", oldValue: "Old intro", newValue: "New intro" });
+  });
+
+  it("skips first-time population (old empty)", () => {
+    const changes = detectFieldChanges({
+      appIntroduction: ["", "New intro"],
+    }, "shopify");
+    expect(changes).toHaveLength(0);
+  });
+
+  it("skips content→empty (scrape failure)", () => {
+    const changes = detectFieldChanges({
+      appIntroduction: ["Real content here", ""],
+    }, "shopify");
+    expect(changes).toHaveLength(0);
+  });
+
+  it("skips boilerplate seoMetaDescription", () => {
+    const changes = detectFieldChanges({
+      seoMetaDescription: ["Real app SEO description", "Shopify App Store, download apps for your Shopify store"],
+    }, "shopify");
+    expect(changes).toHaveLength(0);
+  });
+
+  it("records real seoMetaDescription change", () => {
+    const changes = detectFieldChanges({
+      seoMetaDescription: ["Old SEO desc", "New and improved SEO desc"],
+    }, "shopify");
+    expect(changes).toHaveLength(1);
+  });
+
+  it("skips content→empty for multiple fields simultaneously", () => {
+    const changes = detectFieldChanges({
+      appIntroduction: ["Intro", ""],
+      appDetails: ["Details", ""],
+      seoTitle: ["Title", ""],
+    }, "canva");
+    expect(changes).toHaveLength(0);
+  });
+});
