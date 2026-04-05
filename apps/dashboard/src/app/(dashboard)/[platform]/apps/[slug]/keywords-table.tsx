@@ -71,9 +71,8 @@ export function KeywordsTable({
   onUpdateTag: (tagId: string, color: string, name?: string) => Promise<void>;
 }) {
   return (
-    <div className="overflow-x-auto">
     <Table>
-      <TableHeader className="sticky top-0 z-10 bg-background">
+      <TableHeader>
         <TableRow>
           <TableHead {...(showScoreDetails ? { rowSpan: 2 } : {})}>
             <button
@@ -368,6 +367,5 @@ export function KeywordsTable({
         })}
       </TableBody>
     </Table>
-    </div>
   );
 }

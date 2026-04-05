@@ -25,7 +25,7 @@ export function CompetitorTableHeader({
   platform: string;
 }) {
   return (
-    <TableHeader className="sticky top-0 z-10 bg-background">
+    <TableHeader>
       <TableRow>
         {canEdit && (
           <TableHead

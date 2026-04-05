@@ -136,12 +136,12 @@ export function RankingChart({ data, pageSize = 24 }: { data: RankingData[]; pag
       {/* Ranking table */}
       <div className="border rounded-md overflow-x-auto">
         <table className="w-full text-sm">
-          <thead className="sticky top-0 z-10">
-            <tr className="border-b bg-muted/50">
-              <th className="text-left px-3 py-2 font-medium">Name</th>
-              <th className="text-right px-3 py-2 font-medium w-24">Position</th>
-              <th className="text-right px-3 py-2 font-medium w-16">Page</th>
-              <th className="text-right px-3 py-2 font-medium w-24">Change</th>
+          <thead>
+            <tr className="border-b">
+              <th className="sticky top-0 z-10 bg-muted/50 text-left px-3 py-2 font-medium">Name</th>
+              <th className="sticky top-0 z-10 bg-muted/50 text-right px-3 py-2 font-medium w-24">Position</th>
+              <th className="sticky top-0 z-10 bg-muted/50 text-right px-3 py-2 font-medium w-16">Page</th>
+              <th className="sticky top-0 z-10 bg-muted/50 text-right px-3 py-2 font-medium w-24">Change</th>
             </tr>
           </thead>
           <tbody>
