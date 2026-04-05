@@ -13,6 +13,7 @@ import {
   featuredAppSightings,
   accountCompetitorApps,
   accountTrackedApps,
+  scrapeRuns,
 } from "@appranks/db";
 import { createLogger } from "@appranks/shared";
 import type { PlatformId } from "@appranks/shared";
@@ -40,9 +41,23 @@ const log = createLogger("post-scrape-events");
 export async function afterKeywordScrape(
   db: any,
   platform: PlatformId,
-  scrapeRunId: string
+  jobId: string
 ): Promise<void> {
   try {
+    // Resolve BullMQ job ID → scrape run UUID
+    const [run] = await db
+      .select({ id: scrapeRuns.id })
+      .from(scrapeRuns)
+      .where(and(eq(scrapeRuns.jobId, jobId), eq(scrapeRuns.scraperType, "keyword_search")))
+      .orderBy(desc(scrapeRuns.createdAt))
+      .limit(1);
+
+    if (!run) {
+      log.warn("no scrape run found for keyword job", { jobId, platform });
+      return;
+    }
+    const scrapeRunId = run.id;
+
     // Find tracked apps on this platform
     const trackedApps = await db
       .select({
@@ -184,9 +199,23 @@ export async function afterReviewScrape(
 export async function afterCategoryScrape(
   db: any,
   platform: PlatformId,
-  scrapeRunId: string
+  jobId: string
 ): Promise<void> {
   try {
+    // Resolve BullMQ job ID → scrape run UUID
+    const [run] = await db
+      .select({ id: scrapeRuns.id })
+      .from(scrapeRuns)
+      .where(and(eq(scrapeRuns.jobId, jobId), eq(scrapeRuns.scraperType, "category")))
+      .orderBy(desc(scrapeRuns.createdAt))
+      .limit(1);
+
+    if (!run) {
+      log.warn("no scrape run found for category job", { jobId, platform });
+      return;
+    }
+    const scrapeRunId = run.id;
+
     const trackedApps = await db
       .select({ appId: apps.id, appSlug: apps.slug, appName: apps.name })
       .from(apps)

@@ -113,23 +113,44 @@ jobs:
 
       - name: Deploy to all VMs
         run: |
-          for vm in appranks-api appranks-scraper appranks-email appranks-ai; do
-            echo "Deploying to $vm..."
-            gcloud compute ssh "deploy@$vm" --zone=europe-west1-b \
+          FAILED=""
+          for vm in appranks-api appranks-scraper appranks-email; do
+            echo "::group::Deploying to $vm"
+            if gcloud compute ssh "deploy@$vm" --zone=europe-west1-b \
               --command="cd /opt/appranks && sudo docker compose pull && sudo docker compose up -d" \
-              --tunnel-through-iap --quiet \
-              || echo "WARNING: $vm deploy failed (may be preempted)"
+              --tunnel-through-iap --quiet; then
+              echo "✓ $vm deployed successfully"
+            else
+              echo "::error::$vm deploy failed"
+              FAILED="$FAILED $vm"
+            fi
+            echo "::endgroup::"
           done
+
+          # AI VM is optional (Spot instance, may be preempted)
+          echo "::group::Deploying to appranks-ai (optional)"
+          gcloud compute ssh "deploy@appranks-ai" --zone=europe-west1-b \
+            --command="cd /opt/appranks && sudo docker compose pull && sudo docker compose up -d" \
+            --tunnel-through-iap --quiet \
+            || echo "::warning::appranks-ai deploy failed (Spot VM may be preempted)"
+          echo "::endgroup::"
+
+          if [ -n "$FAILED" ]; then
+            echo "::error::Deploy failed for:$FAILED"
+            exit 1
+          fi
 
       - name: Health check
         run: |
-          sleep 10
+          echo "Waiting 15s for containers to start..."
+          sleep 15
           for i in 1 2 3; do
             if curl -sf https://api.appranks.io/health/live; then
-              echo " Health check passed"
+              echo "Health check passed"
               exit 0
             fi
+            echo "Attempt $i failed, retrying in 15s..."
             sleep 15
           done
-          echo "Health check failed"
+          echo "::error::Health check failed after 3 attempts"
           exit 1
