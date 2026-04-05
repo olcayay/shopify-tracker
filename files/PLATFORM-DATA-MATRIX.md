@@ -24,16 +24,16 @@
 
 These properties are stored in the **`apps`** table and returned by every platform's parser via `NormalizedAppDetails`.
 
-| Property | Shopify | Salesforce | Canva | Wix | WordPress | Google WS | Atlassian | Zoom | Zoho | Zendesk | HubSpot | DB Column |
-|---|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|---|
-| **name** | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | `apps.name` |
-| **slug** | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | `apps.slug` |
-| **iconUrl** | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | `apps.icon_url` |
-| **developer** | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | `app_snapshots.developer` (JSONB) |
-| **badges** | ✓ | ✓ | ✓ | — | ✓ | ✓ | ✓ | ✓ | — | — | ✓ | `apps.badges` (JSONB) |
-| **averageRating** | ✓ | ✓ | — | ✓ | ✓ | ✓ | ✓ | ~ | ~ | ✓ | — | `apps.average_rating` |
-| **ratingCount** | ✓ | ✓ | — | ✓ | ✓ | ✓ | ✓ | ~ | ~ | ✓ | — | `apps.rating_count` |
-| **pricingHint** | ✓ | ✓ | — | ✓ | — | ✓ | ✓ | — | ✓ | ✓ | ✓ | `apps.pricing_hint` |
+| Property | Shopify | Salesforce | Canva | Wix | WordPress | Google WS | Atlassian | Zoom | Zoho | Zendesk | HubSpot | WooCommerce | DB Column |
+|---|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|---|
+| **name** | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | `apps.name` |
+| **slug** | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | `apps.slug` |
+| **iconUrl** | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | `apps.icon_url` |
+| **developer** | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | `app_snapshots.developer` (JSONB) |
+| **badges** | ✓ | ✓ | ✓ | — | ✓ | ✓ | ✓ | ✓ | — | — | ✓ | ✓ | `apps.badges` (JSONB) |
+| **averageRating** | ✓ | ✓ | — | ✓ | ✓ | ✓ | ✓ | ~ | ~ | ✓ | — | ✓ | `apps.average_rating` |
+| **ratingCount** | ✓ | ✓ | — | ✓ | ✓ | ✓ | ✓ | ~ | ~ | ✓ | — | ✓ | `apps.rating_count` |
+| **pricingHint** | ✓ | ✓ | — | ✓ | — | ✓ | ✓ | — | ✓ | ✓ | ✓ | ✓ | `apps.pricing_hint` |
 
 **Legend:** ✓ = always available, ~ = sometimes available, — = not available
 
@@ -43,15 +43,15 @@ These properties are stored in the **`apps`** table and returned by every platfo
 
 These fields are available on multiple platforms. Some have dedicated columns in `apps` or `app_snapshots`, others live inside `platformData`.
 
-| Property | Shopify | SF | Canva | Wix | WP | GWS | Atl | Zoom | Zoho | ZD | HS | DB Location |
-|---|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|---|
-| **pricingPlans** (structured) | ✓ | ✓ | — | ✓ | — | — | ✓ | — | — | — | ✓ | `app_snapshots.pricing_plans` |
-| **categories** | ✓ | ✓ | ~ | ✓ | ~ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | `app_snapshots.categories` |
-| **languages** | ✓ | ✓ | ✓ | ✓ | — | — | — | — | — | — | — | `app_snapshots.languages` |
-| **launchedDate** | ✓ | ✓ | — | — | ✓ | — | — | — | ✓ | ✓ | ✓ | `apps.launched_date` |
-| **activeInstalls** | — | — | — | — | ✓ | ✓ | ✓ | — | — | — | ✓ | `apps.active_installs` |
-| **currentVersion** | — | — | — | — | ✓ | — | ✓ | — | ✓ | ✓ | — | `apps.current_version` |
-| **lastUpdatedAt** | — | — | — | — | ✓ | ✓ | ✓ | — | — | — | — | `apps.last_updated_at` |
+| Property | Shopify | SF | Canva | Wix | WP | GWS | Atl | Zoom | Zoho | ZD | HS | WC | DB Location |
+|---|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|---|
+| **pricingPlans** (structured) | ✓ | ✓ | — | ✓ | — | — | ✓ | — | — | — | ✓ | — | `app_snapshots.pricing_plans` |
+| **categories** | ✓ | ✓ | ~ | ✓ | ~ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ | `app_snapshots.categories` |
+| **languages** | ✓ | ✓ | ✓ | ✓ | — | — | — | — | — | — | — | — | `app_snapshots.languages` |
+| **launchedDate** | ✓ | ✓ | — | — | ✓ | — | — | — | ✓ | ✓ | ✓ | — | `apps.launched_date` |
+| **activeInstalls** | — | — | — | — | ✓ | ✓ | ✓ | — | — | — | ✓ | — | `apps.active_installs` |
+| **currentVersion** | — | — | — | — | ✓ | — | ✓ | — | ✓ | ✓ | — | — | `apps.current_version` |
+| **lastUpdatedAt** | — | — | — | — | ✓ | ✓ | ✓ | — | — | — | — | — | `apps.last_updated_at` |
 | **screenshots** | — | — | ✓ | ✓ | ✓ | ✓ | — | — | — | — | — | `platformData` |
 | **support** | ✓ | ~ | — | — | — | ✓ | ✓ | — | — | — | — | `app_snapshots.support` |
 | **features/highlights** | ✓ | ✓ | — | ✓ | — | — | ✓ | — | — | — | — | `app_snapshots.features` |
@@ -350,6 +350,31 @@ Canva has two data paths with different field sets:
 
 **Note:** HubSpot pricing is stored in **centicents** in the raw API. Parsers convert: `pricingMonthlyCenticents / 10000 = dollars/month`.
 
+### 3.12 WooCommerce
+
+**Parser:** `apps/scraper/src/platforms/woocommerce/parsers/app-parser.ts`
+**Source:** WooCommerce REST API (`/wp-json/wccom-extensions/1.0/search`)
+
+| Field | Type | Description |
+|---|---|---|
+| `shortDescription` | string | Product excerpt from search API |
+| `pricing` | string | Formatted price string (e.g., "Free", "$79/year") |
+| `rawPrice` | number | Raw price value (0 = free) |
+| `currency` | string | Currency code (e.g., "USD") |
+| `billingPeriod` | string | Billing period (e.g., "year", "month") |
+| `regularPrice` | number | Regular price before sale |
+| `isOnSale` | boolean | Whether the extension is on sale |
+| `freemiumType` | string | Freemium type (e.g., "unset", "freemium") |
+| `vendorName` | string | Vendor display name → `developer.name` |
+| `vendorUrl` | string | Vendor profile URL → `developer.url` |
+| `type` | string | Extension type (e.g., "extension") |
+| `hash` | string | Unique hash identifier |
+| `isInstallable` | boolean | Whether extension is directly installable |
+| `categories` | object[] | Category slugs with labels |
+| `source` | string | Always `woocommerce-api` |
+
+**Note:** All fields come from the search API (bulk path). There is no dedicated single-product API endpoint. Individual reviews are not available via API — only aggregate `rating` and `reviews_count` from the search response.
+
 ---
 
 ## 4. Badge System
@@ -376,6 +401,9 @@ Badge keys are stored in `apps.badges` (JSONB string array). The UI renders them
 | **Wix** | — | *(no badges defined)* | — | `appBadges` array (unused) |
 | **Zoho** | — | *(no badges defined)* | — | — |
 | **Zendesk** | — | *(no badges defined)* | — | — |
+| **WooCommerce** | `developed_by_woo` | Developed by Woo | — | `vendor_name === "Woo"` |
+| **WooCommerce** | `on_sale` | On Sale | — | `is_on_sale` boolean |
+| **WooCommerce** | `freemium` | Freemium | — | `freemium_type === "freemium"` |
 
 **Legacy:** `apps.is_built_for_shopify` boolean column still exists alongside badges. See Anti-Patterns section.
 

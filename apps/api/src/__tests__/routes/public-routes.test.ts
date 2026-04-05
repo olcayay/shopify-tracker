@@ -857,7 +857,7 @@ describe("All valid platforms are accepted", () => {
   let app: FastifyInstance;
   afterEach(async () => { if (app) await app.close(); });
 
-  it("stats endpoint accepts all 11 platforms", async () => {
+  it("stats endpoint accepts all 12 platforms", async () => {
     for (const platform of ALL_PLATFORMS) {
       app = await buildPublicApp({ selectResult: [{ count: 1 }] });
       const res = await app.inject({ method: "GET", url: `/api/public/platforms/${platform}/stats` });

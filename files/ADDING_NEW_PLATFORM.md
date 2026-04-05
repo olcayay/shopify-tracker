@@ -1,6 +1,6 @@
 # Adding a New Platform — Comprehensive Guide
 
-This document covers everything needed to add a new marketplace platform to the AppRanks tracking system. It draws from lessons learned integrating all 11 platforms: Shopify, Salesforce, Canva, Wix, WordPress, Google Workspace, Atlassian, Zoom, Zoho, Zendesk, and HubSpot.
+This document covers everything needed to add a new marketplace platform to the AppRanks tracking system. It draws from lessons learned integrating all 12 platforms: Shopify, Salesforce, Canva, Wix, WordPress, Google Workspace, Atlassian, Zoom, Zoho, Zendesk, HubSpot, and WooCommerce.
 
 ---
 
@@ -120,19 +120,19 @@ export const PLATFORMS = {
 
 **Current platforms and their flags:**
 
-| Flag | Shopify | Salesforce | Canva | Wix | WordPress | Google WS | Atlassian | Zoom | Zoho | Zendesk | HubSpot |
-|------|---------|------------|-------|-----|-----------|-----------|-----------|------|------|---------|---------|
-| hasKeywordSearch | true | true | true | true | true | true | true | true | true | true | true |
-| hasReviews | true | true | false | true | true | true | true | false | false | true | true |
-| hasFeaturedSections | true | false | false | true | true | true | true | true | false | true | true |
-| hasAdTracking | true | false | false | false | false | false | false | false | false | false | false |
-| hasSimilarApps | true | false | false | false | false | false | false | false | false | false | false |
-| hasAutoSuggestions | true | false | true | false | false | false | false | false | false | false | false |
-| hasFeatureTaxonomy | true | false | false | false | false | false | false | false | false | false | false |
-| hasPricing | true | true | false | true | false | true | true | false | false | true | true |
-| hasLaunchedDate | true | false | false | false | true | false | false | false | true | true | false |
-| maxRatingStars | 5 | 5 | 5 | 5 | 5 | 5 | 4 | 5 | 5 | 5 | 5 |
-| pageSize | 24 | 12 | 30 | 50 | 250 | 20 | 50 | 100 | 50 | 24 | 24 |
+| Flag | Shopify | Salesforce | Canva | Wix | WordPress | Google WS | Atlassian | Zoom | Zoho | Zendesk | HubSpot | WooCommerce |
+|------|---------|------------|-------|-----|-----------|-----------|-----------|------|------|---------|---------|-------------|
+| hasKeywordSearch | true | true | true | true | true | true | true | true | true | true | true | true |
+| hasReviews | true | true | false | true | true | true | true | false | false | true | true | true |
+| hasFeaturedSections | true | false | false | true | true | true | true | true | false | true | true | true |
+| hasAdTracking | true | false | false | false | false | false | false | false | false | false | false | false |
+| hasSimilarApps | true | false | false | false | false | false | false | false | false | false | false | false |
+| hasAutoSuggestions | true | false | true | false | false | false | false | false | false | false | false | false |
+| hasFeatureTaxonomy | true | false | false | false | false | false | false | false | false | false | false | false |
+| hasPricing | true | true | false | true | false | true | true | false | false | true | true | true |
+| hasLaunchedDate | true | false | false | false | true | false | false | false | true | true | false | false |
+| maxRatingStars | 5 | 5 | 5 | 5 | 5 | 5 | 4 | 5 | 5 | 5 | 5 | 5 |
+| pageSize | 24 | 12 | 30 | 50 | 250 | 20 | 50 | 100 | 50 | 24 | 24 | 60 |
 
 ### 2.2 PlatformCapabilities Type
 
@@ -257,15 +257,15 @@ const limitsByPlatform: Record<string, MetadataLimits> = {
 
 **Current limits by platform:**
 
-| Field | Shopify | Salesforce | Canva | Wix | WordPress | Google WS | Atlassian | Zoom | Zoho | Zendesk | HubSpot |
-|-------|---------|------------|-------|-----|-----------|-----------|-----------|------|------|---------|---------|
-| appName | 30 | 80 | 18 | 50 | 70 | 50 | 50 | 50 | 50 | 50 | 50 |
-| subtitle | 62 | 62 | 50 | 80 | 150 | 200 | 80 | 80 | 80 | 80 | 80 |
-| introduction | 100 | 500 | 50 | 200 | 150 | 200 | 150 | 200 | 200 | 200 | 200 |
-| details | 500 | 2000 | 200 | 2000 | 5000 | 16000 | 5000 | 2000 | 2000 | 5000 | 2000 |
-| feature | 80 | 80 | 80 | 80 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
-| seoTitle | 60 | 60 | 60 | 60 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
-| seoMetaDescription | 160 | 160 | 160 | 160 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
+| Field | Shopify | Salesforce | Canva | Wix | WordPress | Google WS | Atlassian | Zoom | Zoho | Zendesk | HubSpot | WooCommerce |
+|-------|---------|------------|-------|-----|-----------|-----------|-----------|------|------|---------|---------|-------------|
+| appName | 30 | 80 | 18 | 50 | 70 | 50 | 50 | 50 | 50 | 50 | 50 | 50 |
+| subtitle | 62 | 62 | 50 | 80 | 150 | 200 | 80 | 80 | 80 | 80 | 80 | 80 |
+| introduction | 100 | 500 | 50 | 200 | 150 | 200 | 150 | 200 | 200 | 200 | 200 | 200 |
+| details | 500 | 2000 | 200 | 2000 | 5000 | 16000 | 5000 | 2000 | 2000 | 5000 | 2000 | 5000 |
+| feature | 80 | 80 | 80 | 80 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
+| seoTitle | 60 | 60 | 60 | 60 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
+| seoMetaDescription | 160 | 160 | 160 | 160 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
 
 **Important:** Research your platform's actual limits before setting values. These control CharBadge color thresholds — wrong limits create misleading UI. Use `0` for fields the platform doesn't have.
 

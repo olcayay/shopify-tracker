@@ -13,8 +13,8 @@ import {
 // PLATFORMS
 // ---------------------------------------------------------------------------
 describe("PLATFORMS", () => {
-  it("has exactly 11 platforms", () => {
-    expect(Object.keys(PLATFORMS)).toHaveLength(11);
+  it("has exactly 12 platforms", () => {
+    expect(Object.keys(PLATFORMS)).toHaveLength(12);
   });
 
   it("each platform has required properties", () => {

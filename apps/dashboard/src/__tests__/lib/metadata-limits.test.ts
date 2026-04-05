@@ -53,7 +53,7 @@ describe("getMetadataLimits", () => {
     expect(limits).toEqual(shopifyLimits);
   });
 
-  it("all 11 platforms have limits defined", () => {
+  it("all 12 platforms have limits defined", () => {
     for (const platform of SUPPORTED_PLATFORMS) {
       const limits = getMetadataLimits(platform);
       expect(limits).toBeDefined();

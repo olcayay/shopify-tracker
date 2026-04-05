@@ -123,6 +123,16 @@ const hubspotLimits: MetadataLimits = {
   seoMetaDescription: 0,
 };
 
+const woocommerceLimits: MetadataLimits = {
+  appName: 50,
+  subtitle: 80,
+  introduction: 200,
+  details: 5000,
+  feature: 0,
+  seoTitle: 0,
+  seoMetaDescription: 0,
+};
+
 const defaultLimits = shopifyLimits;
 
 const limitsByPlatform: Record<string, MetadataLimits> = {
@@ -137,6 +147,7 @@ const limitsByPlatform: Record<string, MetadataLimits> = {
   zoho: zohoLimits,
   zendesk: zendeskLimits,
   hubspot: hubspotLimits,
+  woocommerce: woocommerceLimits,
 };
 
 export function getMetadataLimits(platform: string): MetadataLimits {

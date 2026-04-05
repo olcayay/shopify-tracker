@@ -289,7 +289,7 @@ describe("ScraperPage", () => {
     render(<ScraperPage />);
     await waitFor(() => {
       // There should be 11 "All" buttons (one per platform)
-      expect(screen.getAllByText("All").length).toBe(11);
+      expect(screen.getAllByText("All").length).toBe(12);
     });
   });
 

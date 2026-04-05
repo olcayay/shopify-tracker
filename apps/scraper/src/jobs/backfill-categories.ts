@@ -80,6 +80,9 @@ export async function backfillCategories(db: Database, triggeredBy: string, queu
         } else if (platform === "hubspot") {
           const hubspotMatch = cat.url?.match(/\/marketplace\/apps\/([^?#]+)/);
           catSlug = hubspotMatch?.[1]?.replace(/\/$/, "").replace("/", "--") ?? null;
+        } else if (platform === "woocommerce") {
+          const wooMatch = cat.url?.match(/[?&]category=([^&]+)/);
+          catSlug = wooMatch?.[1] ? decodeURIComponent(wooMatch[1]) : null;
         } else if (platform === "atlassian") {
           const atlassianMatch = cat.url?.match(/\/categories\/([^/?#]+)/);
           catSlug = atlassianMatch?.[1] ?? null;

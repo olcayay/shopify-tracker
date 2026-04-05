@@ -153,6 +153,17 @@ export const SMOKE_PLATFORMS: SmokePlatform[] = [
       { check: "featured" },
     ],
   },
+  {
+    platform: "woocommerce",
+    clientType: "http",
+    timeoutSec: 60,
+    checks: [
+      { check: "categories", arg: "merchandising --pages first" },
+      { check: "app", arg: "woocommerce-subscriptions" },
+      { check: "keyword", arg: "payment --pages first" },
+      { check: "featured" },
+    ],
+  },
 ];
 
 /** Browser-dependent platforms (need Playwright) */

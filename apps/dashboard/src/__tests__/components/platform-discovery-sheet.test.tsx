@@ -75,7 +75,7 @@ describe("PlatformDiscoverySheet", () => {
     expect(screen.queryByText("Disable")).not.toBeInTheDocument();
   });
 
-  it("system admin sees all 11 platforms", async () => {
+  it("system admin sees all 12 platforms", async () => {
     vi.doMock("@/lib/auth-context", () => ({
       useAuth: () => ({
         user: { id: "1", isSystemAdmin: true },

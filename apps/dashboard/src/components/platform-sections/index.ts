@@ -31,6 +31,7 @@ import { zohoSections } from "./zoho-sections";
 import { wixSections } from "./wix-sections";
 import { hubspotSections } from "./hubspot-sections";
 import { zendeskSections } from "./zendesk-sections";
+import { woocommerceSections } from "./woocommerce-sections";
 
 /** Registry of platform-specific sections. */
 const PLATFORM_SECTIONS: Partial<Record<PlatformId, PlatformSection[]>> = {
@@ -45,6 +46,7 @@ const PLATFORM_SECTIONS: Partial<Record<PlatformId, PlatformSection[]>> = {
   wix: wixSections,
   hubspot: hubspotSections,
   zendesk: zendeskSections,
+  woocommerce: woocommerceSections,
 };
 
 /** Get platform-specific section components for a given platform. */

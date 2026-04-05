@@ -71,8 +71,8 @@ describe("GET /api/system-admin/scraper/health", () => {
     expect(body).toHaveProperty("recentFailures");
     expect(body).toHaveProperty("anomalies");
 
-    // Matrix has 11 platforms × 5 types = 55 cells
-    expect(body.matrix).toHaveLength(55);
+    // Matrix has 12 platforms × 5 types = 60 cells
+    expect(body.matrix).toHaveLength(60);
 
     // Summary has all required fields
     expect(body.summary).toHaveProperty("healthy");
@@ -101,7 +101,7 @@ describe("GET /api/system-admin/scraper/health", () => {
     expect(cell).toHaveProperty("schedule");
   });
 
-  it("covers all 11 platforms in the matrix", async () => {
+  it("covers all 12 platforms in the matrix", async () => {
     const res = await app.inject({
       method: "GET",
       url: "/api/system-admin/scraper/health",
@@ -109,7 +109,7 @@ describe("GET /api/system-admin/scraper/health", () => {
     });
     const body = res.json();
     const platforms = [...new Set(body.matrix.map((c: any) => c.platform))];
-    expect(platforms).toHaveLength(11);
+    expect(platforms).toHaveLength(12);
     expect(platforms).toContain("shopify");
     expect(platforms).toContain("salesforce");
     expect(platforms).toContain("canva");

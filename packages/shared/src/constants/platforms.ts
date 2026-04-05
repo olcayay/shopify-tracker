@@ -186,6 +186,23 @@ export const PLATFORMS = {
     maxRatingStars: 5,
     pageSize: 24,
   },
+  woocommerce: {
+    id: "woocommerce" as const,
+    name: "WooCommerce Marketplace",
+    baseUrl: "https://woocommerce.com/products",
+    hasKeywordSearch: true,
+    hasReviews: true,
+    hasFeaturedSections: true,
+    hasAdTracking: false,
+    hasSimilarApps: false,
+    hasAutoSuggestions: false,
+    hasFeatureTaxonomy: false,
+    hasPricing: true,
+    hasLaunchedDate: false,
+    hasFlatCategories: true,
+    maxRatingStars: 5,
+    pageSize: 60,
+  },
 } as const;
 
 export type PlatformId = keyof typeof PLATFORMS;
@@ -258,6 +275,8 @@ export function buildExternalAppUrl(platform: PlatformId, slug: string, external
     }
     case "hubspot":
       return `https://ecosystem.hubspot.com/marketplace/listing/${slug}`;
+    case "woocommerce":
+      return `https://woocommerce.com/products/${slug}/`;
   }
 }
 
@@ -295,6 +314,8 @@ export function buildExternalCategoryUrl(platform: PlatformId, slug: string): st
       return `https://www.zendesk.com/marketplace/apps/?categories.name=${encodeURIComponent(slug)}`;
     case "hubspot":
       return `https://ecosystem.hubspot.com/marketplace/apps/${slug.replace(/--/g, "/")}`;
+    case "woocommerce":
+      return `https://woocommerce.com/product-category/woocommerce-extensions/?category=${slug}`;
   }
 }
 
@@ -322,5 +343,7 @@ export function buildExternalSearchUrl(platform: PlatformId, query: string): str
       return `https://www.zendesk.com/marketplace/apps/?query=${encodeURIComponent(query)}`;
     case "hubspot":
       return `https://ecosystem.hubspot.com/marketplace/explore?query=${encodeURIComponent(query)}`;
+    case "woocommerce":
+      return `https://woocommerce.com/search/?q=${encodeURIComponent(query)}`;
   }
 }

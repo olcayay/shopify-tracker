@@ -7,7 +7,7 @@ export interface MarketplaceEntry {
 
 /**
  * ~96 known app marketplaces.
- * platformId is set for the 11 platforms we already support.
+ * platformId is set for the 12 platforms we already support.
  * Sorted alphabetically.
  */
 export const MARKETPLACE_LIST: MarketplaceEntry[] = [
@@ -93,7 +93,7 @@ export const MARKETPLACE_LIST: MarketplaceEntry[] = [
   { name: "Webflow Apps" },
   { name: "Weebly App Center" },
   { name: "Wix App Market", platformId: "wix" },
-  { name: "WooCommerce Marketplace" },
+  { name: "WooCommerce Marketplace", platformId: "woocommerce" },
   { name: "WordPress Plugin Directory", platformId: "wordpress" },
   { name: "Workato Connector" },
   { name: "Workday Marketplace" },

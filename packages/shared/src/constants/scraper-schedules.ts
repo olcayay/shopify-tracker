@@ -75,6 +75,12 @@ export const SCRAPER_SCHEDULES: ScraperSchedule[] = [
   { name: "hubspot_keyword_search", cron: "30 13,1 * * *", type: "keyword_search", platform: "hubspot" },
   { name: "hubspot_reviews", cron: "45 10 * * *", type: "reviews", platform: "hubspot" },
   { name: "hubspot_compute_app_scores", cron: "30 14 * * *", type: "compute_app_scores", platform: "hubspot" },
+  // ── WooCommerce (HTTP only) ──
+  { name: "woocommerce_category", cron: "0 15 * * *", type: "category", platform: "woocommerce" },
+  { name: "woocommerce_app_details", cron: "30 15,3 * * *", type: "app_details", platform: "woocommerce" },
+  { name: "woocommerce_keyword_search", cron: "0 16,4 * * *", type: "keyword_search", platform: "woocommerce" },
+  { name: "woocommerce_reviews", cron: "0 17 * * *", type: "reviews", platform: "woocommerce" },
+  { name: "woocommerce_compute_app_scores", cron: "0 18 * * *", type: "compute_app_scores", platform: "woocommerce" },
   // ── Cross-platform maintenance ──
   { name: "data_cleanup", cron: "0 2 * * 0", type: "data_cleanup", platform: "shopify" },
 ];

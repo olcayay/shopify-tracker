@@ -146,6 +146,24 @@ export const HubSpotPlatformDataSchema = z.object({
   source: z.string().optional(),
 }).passthrough();
 
+export const WooCommercePlatformDataSchema = z.object({
+  shortDescription: z.string().optional(),
+  pricing: z.string().optional(),
+  rawPrice: z.number().optional(),
+  currency: z.string().optional(),
+  billingPeriod: z.string().optional(),
+  regularPrice: z.number().optional(),
+  isOnSale: z.boolean().optional(),
+  freemiumType: z.string().optional(),
+  vendorName: z.string().optional(),
+  vendorUrl: z.string().optional(),
+  type: z.string().optional(),
+  hash: z.string().optional(),
+  isInstallable: z.boolean().optional(),
+  categories: z.array(z.object({ slug: z.string(), label: z.string() })).optional(),
+  source: z.string().optional(),
+}).passthrough();
+
 /** Schema registry keyed by platform ID. */
 const PLATFORM_SCHEMAS: Partial<Record<PlatformId, z.ZodType>> = {
   shopify: ShopifyPlatformDataSchema,
@@ -159,6 +177,7 @@ const PLATFORM_SCHEMAS: Partial<Record<PlatformId, z.ZodType>> = {
   zoho: ZohoPlatformDataSchema,
   zendesk: ZendeskPlatformDataSchema,
   hubspot: HubSpotPlatformDataSchema,
+  woocommerce: WooCommercePlatformDataSchema,
 };
 
 /** Validate platformData against the platform's schema. Non-blocking — returns result. */

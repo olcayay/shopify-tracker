@@ -416,6 +416,7 @@ const liveSearchRegistry: Record<string, LiveSearchHandler> = {
   zoho: dbSearchForPlatform("zoho"),
   zendesk: dbSearchForPlatform("zendesk"),
   hubspot: dbSearchForPlatform("hubspot"),
+  woocommerce: dbSearchForPlatform("woocommerce"),
 };
 
 // ---------------------------------------------------------------------------

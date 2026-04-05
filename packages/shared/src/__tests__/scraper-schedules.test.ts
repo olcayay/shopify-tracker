@@ -8,7 +8,7 @@ import {
 import { PLATFORM_IDS } from "../constants/platforms.js";
 
 describe("SCRAPER_SCHEDULES", () => {
-  it("has entries for all 11 platforms", () => {
+  it("has entries for all 12 platforms", () => {
     const platforms = [...new Set(SCRAPER_SCHEDULES.map((s) => s.platform))];
     for (const pid of PLATFORM_IDS) {
       expect(platforms).toContain(pid);

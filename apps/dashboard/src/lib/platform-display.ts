@@ -98,6 +98,14 @@ export const PLATFORM_DISPLAY: Record<PlatformId, PlatformDisplayInfo> = {
     borderTop: "border-t-[#FF7A59]",
     textAccent: "text-[#FF7A59] dark:text-[#FFA088]",
   },
+  woocommerce: {
+    label: "WooCommerce",
+    shortLabel: "WooCommerce",
+    color: "#7F54B3",
+    gradient: "from-[#7F54B3]/10 to-transparent dark:from-[#7F54B3]/20 dark:to-transparent",
+    borderTop: "border-t-[#7F54B3]",
+    textAccent: "text-[#7F54B3] dark:text-[#A67ED6]",
+  },
 };
 
 // Convenience accessors derived from PLATFORM_DISPLAY

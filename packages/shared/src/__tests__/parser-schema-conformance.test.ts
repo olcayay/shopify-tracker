@@ -475,12 +475,45 @@ describe("hubspot platformData conformance", () => {
   it("no unexpected nulls", () => assertNoUnexpectedNulls("hubspot", fullData));
 });
 
+describe("woocommerce platformData conformance", () => {
+  const fullData = {
+    shortDescription: "Payment gateway extension.",
+    pricing: "$79/year",
+    rawPrice: 79,
+    currency: "USD",
+    billingPeriod: "year",
+    regularPrice: 79,
+    isOnSale: false,
+    freemiumType: "unset",
+    vendorName: "Woo",
+    vendorUrl: "https://woocommerce.com/vendor/woo/",
+    type: "extension",
+    hash: "abc123",
+    isInstallable: true,
+    categories: [{ slug: "payment-gateways", label: "Payment Gateways" }],
+    source: "woocommerce-api",
+  };
+
+  it("validates full output", () => expectValid("woocommerce", fullData));
+  it("validates minimal output", () => expectValid("woocommerce", {}));
+  it("rejects wrong types", () => {
+    expectInvalid("woocommerce", { rawPrice: "79" });
+    expectInvalid("woocommerce", { isOnSale: "yes" });
+    expectInvalid("woocommerce", { isInstallable: "true" });
+  });
+  it("rejects null", () => {
+    expectInvalid("woocommerce", { shortDescription: null });
+    expectInvalid("woocommerce", { isOnSale: null });
+  });
+  it("no unexpected nulls", () => assertNoUnexpectedNulls("woocommerce", fullData));
+});
+
 // ── Cross-platform null/undefined guard ────────────────────────────
 
 describe("cross-platform null/undefined normalization", () => {
   const platforms: PlatformId[] = [
     "shopify", "salesforce", "canva", "wix", "wordpress",
-    "google_workspace", "atlassian", "zoom", "zoho", "zendesk", "hubspot",
+    "google_workspace", "atlassian", "zoom", "zoho", "zendesk", "hubspot", "woocommerce",
   ];
 
   for (const platform of platforms) {

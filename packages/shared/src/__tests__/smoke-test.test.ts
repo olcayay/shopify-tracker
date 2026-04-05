@@ -10,9 +10,9 @@ import {
 import { PLATFORM_IDS } from "../constants/platforms.js";
 
 describe("SMOKE_PLATFORMS", () => {
-  it("covers all 11 platforms", () => {
+  it("covers all 12 platforms", () => {
     const platforms = SMOKE_PLATFORMS.map((p) => p.platform);
-    expect(platforms).toHaveLength(11);
+    expect(platforms).toHaveLength(12);
     for (const id of PLATFORM_IDS) {
       expect(platforms).toContain(id);
     }

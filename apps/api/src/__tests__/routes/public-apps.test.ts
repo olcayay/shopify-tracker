@@ -172,7 +172,7 @@ describe("GET /api/public/apps/:platform/:slug", () => {
     expect(body.similarApps).toEqual([]);
   });
 
-  it("works for all 11 platforms", async () => {
+  it("works for all 12 platforms", async () => {
     const platforms = [
       "shopify", "salesforce", "canva", "wix", "wordpress",
       "google_workspace", "atlassian", "zoom", "zoho", "zendesk", "hubspot",

@@ -13,6 +13,7 @@ const SUPPORTED_PLATFORMS = [
   "zoho",
   "zendesk",
   "hubspot",
+  "woocommerce",
 ] as const;
 
 describe("MARKETPLACE_LIST", () => {
@@ -35,9 +36,9 @@ describe("MARKETPLACE_LIST", () => {
     }
   });
 
-  it("exactly 11 entries have platformId set", () => {
+  it("exactly 12 entries have platformId set", () => {
     const count = MARKETPLACE_LIST.filter((e) => e.platformId).length;
-    expect(count).toBe(11);
+    expect(count).toBe(12);
   });
 
   it("is sorted alphabetically by name", () => {
@@ -46,7 +47,7 @@ describe("MARKETPLACE_LIST", () => {
     expect(names).toEqual(sorted);
   });
 
-  it("all 11 supported platforms are represented", () => {
+  it("all 12 supported platforms are represented", () => {
     const platformIds = MARKETPLACE_LIST
       .filter((e) => e.platformId)
       .map((e) => e.platformId);

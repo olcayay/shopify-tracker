@@ -11,6 +11,7 @@ import { ZoomModule } from "./zoom/index.js";
 import { ZohoModule } from "./zoho/index.js";
 import { ZendeskModule } from "./zendesk/index.js";
 import { HubSpotModule } from "./hubspot/index.js";
+import { WooCommerceModule } from "./woocommerce/index.js";
 import type { HttpClient } from "../http-client.js";
 import type { BrowserClient } from "../browser-client.js";
 import type { FallbackTracker } from "../utils/fallback-tracker.js";
@@ -59,6 +60,9 @@ export function getModule(platformId: PlatformId, httpClient?: HttpClient, brows
       break;
     case "hubspot":
       module = new HubSpotModule(httpClient, browserClient, tracker);
+      break;
+    case "woocommerce":
+      module = new WooCommerceModule(httpClient, browserClient, tracker);
       break;
     default:
       throw new Error(`Unknown platform: ${platformId}`);

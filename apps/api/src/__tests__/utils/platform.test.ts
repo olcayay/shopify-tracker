@@ -34,9 +34,9 @@ describe("getPlatformFromQuery", () => {
     expect(getPlatformFromQuery({ platform: "" })).toBe("shopify");
   });
 
-  it("all 11 valid platform IDs are accepted", () => {
+  it("all 12 valid platform IDs are accepted", () => {
     const platformIds = Object.keys(PLATFORMS);
-    expect(platformIds).toHaveLength(11);
+    expect(platformIds).toHaveLength(12);
     for (const id of platformIds) {
       expect(getPlatformFromQuery({ platform: id })).toBe(id);
     }

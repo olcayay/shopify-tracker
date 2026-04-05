@@ -31,8 +31,8 @@ describe("OnboardingHero", () => {
 
   it("renders platform icon dots", () => {
     const { container } = render(<OnboardingHero />);
-    // Should have 11 platform dots (one per platform)
+    // Should have 12 platform dots (one per platform)
     const dots = container.querySelectorAll('[title]');
-    expect(dots.length).toBe(11);
+    expect(dots.length).toBe(12);
   });
 });
