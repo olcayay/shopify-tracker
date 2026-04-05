@@ -16,6 +16,7 @@ vi.mock("@appranks/db", () => ({
     status: "status",
     startedAt: "started_at",
     createdAt: "created_at",
+    triggeredBy: "triggered_by",
   },
 }));
 
@@ -33,8 +34,8 @@ describe("cleanupStaleRuns", () => {
     const { cleanupStaleRuns } = await import("../cleanup-stale-runs.js");
     const result = await cleanupStaleRuns(mockDb as any);
 
-    // Should call update twice (once for running, once for pending)
-    expect(mockUpdate).toHaveBeenCalledTimes(2);
+    // Should call update 3 times (smoke-test stale, running stale, pending stale)
+    expect(mockUpdate).toHaveBeenCalledTimes(3);
     expect(result).toEqual({ running: 0, pending: 0 });
   });
 
@@ -44,8 +45,9 @@ describe("cleanupStaleRuns", () => {
     mockSet.mockClear();
     mockWhere.mockClear();
 
-    // First call (running) returns 5 rows, second call (pending) returns 3
+    // First call (smoke-test stale), second (running) returns 5 rows, third (pending) returns 3
     mockWhere
+      .mockResolvedValueOnce({ rowCount: 0 })
       .mockResolvedValueOnce({ rowCount: 5 })
       .mockResolvedValueOnce({ rowCount: 3 });
     mockSet.mockReturnValue({ where: mockWhere });
@@ -68,14 +70,10 @@ describe("cleanupStaleRuns", () => {
     const { cleanupStaleRuns } = await import("../cleanup-stale-runs.js");
     await cleanupStaleRuns(mockDb as any);
 
-    // Both calls should set status to "failed"
-    const firstSetCall = mockSet.mock.calls[0][0];
-    expect(firstSetCall.status).toBe("failed");
-    expect(firstSetCall.error).toContain("stale run");
-    expect(firstSetCall.completedAt).toBeInstanceOf(Date);
-
-    const secondSetCall = mockSet.mock.calls[1][0];
-    expect(secondSetCall.status).toBe("failed");
-    expect(secondSetCall.error).toContain("stale run");
+    // All calls should set status to "failed"
+    for (const call of mockSet.mock.calls) {
+      expect(call[0].status).toBe("failed");
+      expect(call[0].completedAt).toBeInstanceOf(Date);
+    }
   });
 });

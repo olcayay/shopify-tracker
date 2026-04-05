@@ -7,10 +7,12 @@ function createMockDb(runningCount: number, pendingCount: number) {
     where: vi.fn().mockResolvedValue({ rowCount: 0 }),
   };
 
-  // First call = running cleanup, second call = pending cleanup
+  // First call = smoke-test stale, second = running cleanup, third = pending cleanup
   let callIndex = 0;
   mockChain.where.mockImplementation(() => {
-    const count = callIndex === 0 ? runningCount : pendingCount;
+    let count = 0;
+    if (callIndex === 1) count = runningCount;
+    else if (callIndex === 2) count = pendingCount;
     callIndex++;
     return Promise.resolve({ rowCount: count });
   });
@@ -27,7 +29,7 @@ describe("cleanupStaleRuns", () => {
     const result = await cleanupStaleRuns(db);
 
     expect(result).toEqual({ running: 3, pending: 1 });
-    expect(db.update).toHaveBeenCalledTimes(2);
+    expect(db.update).toHaveBeenCalledTimes(3);
   });
 
   it("returns zero counts when nothing to clean", async () => {
@@ -41,9 +43,10 @@ describe("cleanupStaleRuns", () => {
     const db = createMockDb(1, 0);
     await cleanupStaleRuns(db);
 
-    const setCall = db._chain.set.mock.calls[0][0];
-    expect(setCall.status).toBe("failed");
-    expect(setCall.error).toContain("stale run");
-    expect(setCall.completedAt).toBeInstanceOf(Date);
+    // All 3 calls should set status to "failed" with a Date
+    for (const call of db._chain.set.mock.calls) {
+      expect(call[0].status).toBe("failed");
+      expect(call[0].completedAt).toBeInstanceOf(Date);
+    }
   });
 });

@@ -76,6 +76,28 @@ const httpClient = new HttpClient({
   maxRetries: isSmokeTest ? 1 : undefined,
 });
 
+// Track active run ID for cleanup on signal/timeout
+let activeRunId: string | null = null;
+
+// Cleanup orphaned runs on process termination (timeout, SIGTERM, etc.)
+async function cleanupOnExit(signal: string) {
+  if (activeRunId) {
+    log.warn("process terminated, marking run as failed", { signal, runId: activeRunId });
+    try {
+      const { scrapeRuns } = await import("@appranks/db");
+      const { eq } = await import("drizzle-orm");
+      await db.update(scrapeRuns).set({
+        status: "failed",
+        error: `process terminated: ${signal}`,
+        completedAt: new Date(),
+      }).where(eq(scrapeRuns.id, activeRunId));
+    } catch {}
+  }
+  process.exit(signal === "SIGTERM" ? 143 : 130);
+}
+process.on("SIGTERM", () => cleanupOnExit("SIGTERM"));
+process.on("SIGINT", () => cleanupOnExit("SIGINT"));
+
 async function main() {
   const t0 = Date.now();
   log.info("Platform selected", { platform: platformArg, smokeTest: isSmokeTest });
@@ -271,12 +293,14 @@ async function createRun(type: "category" | "app_details" | "keyword_search" | "
   const { scrapeRuns } = await import("@appranks/db");
   const [run] = await db
     .insert(scrapeRuns)
-    .values({ scraperType: type, status: "running", platform: platformArg, createdAt: new Date(), startedAt: new Date() })
+    .values({ scraperType: type, status: "running", platform: platformArg, createdAt: new Date(), startedAt: new Date(), triggeredBy })
     .returning();
+  activeRunId = run.id;
   return run.id;
 }
 
 async function completeRun(runId: string, error?: string): Promise<void> {
+  activeRunId = null;
   const { scrapeRuns } = await import("@appranks/db");
   const { eq } = await import("drizzle-orm");
   await db

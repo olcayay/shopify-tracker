@@ -36,6 +36,18 @@ export async function cleanupStaleRuns(db: Database): Promise<{ running: number;
     .join(" ");
   const caseExpr = `CASE ${caseExprParts} ELSE interval '${DEFAULT_TIMEOUT_HOURS} hours' END`;
 
+  // Smoke-test runs: 5 minute timeout (they should finish in < 2 minutes)
+  await db
+    .update(scrapeRuns)
+    .set({
+      status: "failed",
+      completedAt: new Date(),
+      error: "stale smoke-test run: timed out",
+    })
+    .where(
+      sql`${scrapeRuns.status} = 'running' AND ${scrapeRuns.triggeredBy} = 'smoke-test' AND ${scrapeRuns.startedAt} < now() - interval '5 minutes'`
+    );
+
   const runningResult = await db
     .update(scrapeRuns)
     .set({
