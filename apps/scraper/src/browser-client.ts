@@ -1,5 +1,6 @@
 import { createLogger } from "@appranks/shared";
 import { browserPool } from "./browser-pool.js";
+import { IS_SMOKE_TEST } from "./constants.js";
 
 const log = createLogger("browser-client");
 
@@ -17,21 +18,33 @@ export class BrowserClient {
   private contexts: import("playwright").BrowserContext[] = [];
 
   async fetchPage(url: string, opts?: { waitUntil?: "networkidle" | "domcontentloaded" | "load"; waitForSelector?: string; extraWaitMs?: number }): Promise<string> {
+    const t0 = Date.now();
     const context = await browserPool.newContext({ userAgent: USER_AGENT });
     this.contexts.push(context);
     const page = await context.newPage();
 
     try {
-      const waitUntil = opts?.waitUntil ?? "networkidle";
+      // Smoke test: use faster wait strategy
+      const waitUntil = IS_SMOKE_TEST ? "domcontentloaded" : (opts?.waitUntil ?? "networkidle");
+      const gotoTimeout = IS_SMOKE_TEST ? 15_000 : 30_000;
+      const selectorTimeout = IS_SMOKE_TEST ? 8_000 : 15_000;
+      const extraWait = IS_SMOKE_TEST ? 500 : (opts?.extraWaitMs ?? 2000);
+
       log.info("fetching page", { url, waitUntil });
-      await page.goto(url, { waitUntil, timeout: 30_000 });
+      const tGoto = Date.now();
+      await page.goto(url, { waitUntil, timeout: gotoTimeout });
+      const gotoMs = Date.now() - tGoto;
+
+      let selectorMs = 0;
       if (opts?.waitForSelector) {
-        await page.waitForSelector(opts.waitForSelector, { timeout: 15_000 }).catch(() => {
+        const tSel = Date.now();
+        await page.waitForSelector(opts.waitForSelector, { timeout: selectorTimeout }).catch(() => {
           log.warn("waitForSelector timed out, continuing", { selector: opts.waitForSelector });
         });
+        selectorMs = Date.now() - tSel;
       }
-      // Extra wait for SPA hydration (matches Python script pattern)
-      await page.waitForTimeout(opts?.extraWaitMs ?? 2000);
+      await page.waitForTimeout(extraWait);
+      log.info("browser:page_timing", { url: url.slice(0, 120), gotoMs, selectorMs, extraWait, totalMs: Date.now() - t0 });
       return await page.content();
     } finally {
       await context.close();
@@ -44,15 +57,20 @@ export class BrowserClient {
    * for custom interactions (clicking, evaluating JS, etc.).
    */
   async withPage<T>(url: string, callback: (page: import("playwright").Page) => Promise<T>, opts?: { waitUntil?: "networkidle" | "domcontentloaded" | "load"; extraWaitMs?: number }): Promise<T> {
+    const t0 = Date.now();
     const context = await browserPool.newContext({ userAgent: USER_AGENT });
     this.contexts.push(context);
     const page = await context.newPage();
 
     try {
-      const waitUntil = opts?.waitUntil ?? "networkidle";
+      const waitUntil = IS_SMOKE_TEST ? "domcontentloaded" : (opts?.waitUntil ?? "networkidle");
+      const gotoTimeout = IS_SMOKE_TEST ? 15_000 : 45_000;
+      const extraWait = IS_SMOKE_TEST ? 500 : (opts?.extraWaitMs ?? 3000);
+
       log.info("opening page for interaction", { url, waitUntil });
-      await page.goto(url, { waitUntil, timeout: 45_000 });
-      await page.waitForTimeout(opts?.extraWaitMs ?? 3000);
+      await page.goto(url, { waitUntil, timeout: gotoTimeout });
+      await page.waitForTimeout(extraWait);
+      log.info("browser:page_timing", { url: url.slice(0, 120), totalMs: Date.now() - t0 });
       return await callback(page);
     } finally {
       await context.close();

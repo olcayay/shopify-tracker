@@ -64,14 +64,21 @@ if (!databaseUrl) {
   process.exit(1);
 }
 
-const db = createDb(databaseUrl);
+const isSmokeTest = process.env.SMOKE_TEST === "1";
+
+// CLI uses minimal pool (single-threaded, no need for 10 connections)
+const db = createDb(databaseUrl, { max: isSmokeTest ? 1 : 3 });
+
+// Smoke test: no delays, minimal retries (fast path)
 const httpClient = new HttpClient({
-  delayMs: parseInt(process.env.SCRAPER_DELAY_MS || "2000", 10),
+  delayMs: isSmokeTest ? 0 : parseInt(process.env.SCRAPER_DELAY_MS || "2000", 10),
   maxConcurrency: parseInt(process.env.SCRAPER_MAX_CONCURRENCY || "2", 10),
+  maxRetries: isSmokeTest ? 1 : undefined,
 });
 
 async function main() {
-  log.info("Platform selected", { platform: platformArg });
+  const t0 = Date.now();
+  log.info("Platform selected", { platform: platformArg, smokeTest: isSmokeTest });
   if (process.env.FORCE_FALLBACK === "true") {
     log.info("Mode: FORCE_FALLBACK (using secondary scraping methods)");
   }
@@ -254,10 +261,10 @@ async function main() {
     }
   }
 
+  log.info("cli:total_timing", { command, platform: platformArg, totalMs: Date.now() - t0 });
   process.exit(0);
 }
 
-const isSmokeTest = process.env.SMOKE_TEST === "1";
 const triggeredBy = isSmokeTest ? "smoke-test" : "cli";
 
 async function createRun(type: "category" | "app_details" | "keyword_search" | "reviews"): Promise<string> {

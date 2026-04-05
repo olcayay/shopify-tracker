@@ -70,39 +70,87 @@ export async function afterKeywordScrape(
 
     if (trackedApps.length === 0) return;
 
+    const appIds = trackedApps.map((a: any) => a.appId);
+    const t1 = Date.now();
+
+    // Batch query: get ALL current rankings for all tracked apps in ONE query
+    const allCurrentRankings: any[] = await db
+      .select({
+        appId: appKeywordRankings.appId,
+        keywordId: appKeywordRankings.keywordId,
+        position: appKeywordRankings.position,
+      })
+      .from(appKeywordRankings)
+      .where(
+        and(
+          sql`${appKeywordRankings.appId} = ANY(ARRAY[${appIds.join(",")}]::int[])`,
+          eq(appKeywordRankings.scrapeRunId, scrapeRunId)
+        )
+      );
+
+    // Batch query: get ALL previous rankings in ONE query
+    const allPreviousRankings: any[] = await db
+      .select({
+        appId: appKeywordRankings.appId,
+        keywordId: appKeywordRankings.keywordId,
+        position: appKeywordRankings.position,
+      })
+      .from(appKeywordRankings)
+      .where(
+        and(
+          sql`${appKeywordRankings.appId} = ANY(ARRAY[${appIds.join(",")}]::int[])`,
+          sql`${appKeywordRankings.scrapeRunId} != ${scrapeRunId}`
+        )
+      )
+      .orderBy(desc(appKeywordRankings.scrapedAt))
+      .limit(appIds.length * 100);
+
+    // Batch query: get ALL metrics in ONE query
+    const allMetrics: any[] = await db
+      .select({
+        appId: appReviewMetrics.appId,
+        averageRating: appReviewMetrics.averageRating,
+        ratingCount: appReviewMetrics.ratingCount,
+        reviewVelocity7d: appReviewMetrics.v7d,
+        computedAt: appReviewMetrics.computedAt,
+      })
+      .from(appReviewMetrics)
+      .where(sql`${appReviewMetrics.appId} = ANY(ARRAY[${appIds.join(",")}]::int[])`)
+      .orderBy(desc(appReviewMetrics.computedAt));
+
+    log.info("batch queries completed", { apps: appIds.length, queryMs: Date.now() - t1 });
+
+    // Group by appId in memory
+    const curByApp = new Map<number, any[]>();
+    for (const r of allCurrentRankings) {
+      const list = curByApp.get(r.appId) || [];
+      list.push(r);
+      curByApp.set(r.appId, list);
+    }
+
+    const prevByApp = new Map<number, any[]>();
+    for (const r of allPreviousRankings) {
+      const list = prevByApp.get(r.appId) || [];
+      list.push(r);
+      prevByApp.set(r.appId, list);
+    }
+
+    // Group metrics: first 2 per app (latest + previous)
+    const metricsByApp = new Map<number, { latest: any; previous: any | null }>();
+    for (const m of allMetrics) {
+      if (!metricsByApp.has(m.appId)) {
+        metricsByApp.set(m.appId, { latest: m, previous: null });
+      } else {
+        const entry = metricsByApp.get(m.appId)!;
+        if (!entry.previous) entry.previous = m;
+      }
+    }
+
     for (const app of trackedApps) {
       try {
-        // Get current rankings (from this scrape run)
-        const currentRankings = await db
-          .select({
-            keywordId: appKeywordRankings.keywordId,
-            position: appKeywordRankings.position,
-          })
-          .from(appKeywordRankings)
-          .where(
-            and(
-              eq(appKeywordRankings.appId, app.appId),
-              eq(appKeywordRankings.scrapeRunId, scrapeRunId)
-            )
-          );
+        const currentRankings = curByApp.get(app.appId) || [];
+        const previousRankings = prevByApp.get(app.appId) || [];
 
-        // Get previous rankings (most recent before this run)
-        const previousRankings = await db
-          .select({
-            keywordId: appKeywordRankings.keywordId,
-            position: appKeywordRankings.position,
-          })
-          .from(appKeywordRankings)
-          .where(
-            and(
-              eq(appKeywordRankings.appId, app.appId),
-              sql`${appKeywordRankings.scrapeRunId} != ${scrapeRunId}`
-            )
-          )
-          .orderBy(desc(appKeywordRankings.scrapedAt))
-          .limit(100); // Get enough to cover all keywords
-
-        // TODO: join with keywords table for slug/name — for now use keywordId as slug
         const curSnap: RankingSnapshot[] = currentRankings.map((r: any) => ({
           keywordId: r.keywordId,
           keywordSlug: String(r.keywordId),
@@ -119,9 +167,18 @@ export async function afterKeywordScrape(
 
         const events = checkRankingAlerts(app.appId, app.appSlug, app.appName, platform, curSnap, prevSnap);
 
-        // Also check milestones
-        const metrics = await getAppMetrics(db, app.appId);
-        const prevMetrics = await getPreviousAppMetrics(db, app.appId);
+        const metricsEntry = metricsByApp.get(app.appId);
+        const metrics = metricsEntry?.latest ? {
+          averageRating: metricsEntry.latest.averageRating ? Number(metricsEntry.latest.averageRating) : null,
+          ratingCount: metricsEntry.latest.ratingCount,
+          reviewVelocity7d: metricsEntry.latest.reviewVelocity7d,
+        } : null;
+        const prevMetrics = metricsEntry?.previous ? {
+          averageRating: metricsEntry.previous.averageRating ? Number(metricsEntry.previous.averageRating) : null,
+          ratingCount: metricsEntry.previous.ratingCount,
+          reviewVelocity7d: metricsEntry.previous.reviewVelocity7d,
+        } : null;
+
         if (metrics) {
           const milestoneEvents = detectMilestones(
             app.appId, app.appSlug, app.appName, platform,
@@ -221,43 +278,68 @@ export async function afterCategoryScrape(
       .from(apps)
       .where(and(eq(apps.platform, platform), eq(apps.isTracked, true)));
 
+    if (trackedApps.length === 0) return;
+
+    const appIds = trackedApps.map((a: any) => a.appId);
+    const t1 = Date.now();
+
+    // Batch query: all current category rankings
+    const allCurCat: any[] = await db
+      .select({
+        appId: appCategoryRankings.appId,
+        categorySlug: appCategoryRankings.categorySlug,
+        position: appCategoryRankings.position,
+      })
+      .from(appCategoryRankings)
+      .where(
+        and(
+          sql`${appCategoryRankings.appId} = ANY(ARRAY[${appIds.join(",")}]::int[])`,
+          eq(appCategoryRankings.scrapeRunId, scrapeRunId)
+        )
+      );
+
+    // Batch query: all previous category rankings
+    const allPrevCat: any[] = await db
+      .select({
+        appId: appCategoryRankings.appId,
+        categorySlug: appCategoryRankings.categorySlug,
+        position: appCategoryRankings.position,
+      })
+      .from(appCategoryRankings)
+      .where(
+        and(
+          sql`${appCategoryRankings.appId} = ANY(ARRAY[${appIds.join(",")}]::int[])`,
+          sql`${appCategoryRankings.scrapeRunId} != ${scrapeRunId}`
+        )
+      )
+      .orderBy(desc(appCategoryRankings.scrapedAt))
+      .limit(appIds.length * 100);
+
+    log.info("batch category queries completed", { apps: appIds.length, queryMs: Date.now() - t1 });
+
+    // Group by appId
+    const curCatByApp = new Map<number, any[]>();
+    for (const r of allCurCat) {
+      const list = curCatByApp.get(r.appId) || [];
+      list.push(r);
+      curCatByApp.set(r.appId, list);
+    }
+    const prevCatByApp = new Map<number, any[]>();
+    for (const r of allPrevCat) {
+      const list = prevCatByApp.get(r.appId) || [];
+      list.push(r);
+      prevCatByApp.set(r.appId, list);
+    }
+
     for (const app of trackedApps) {
       try {
-        const currentCatRankings = await db
-          .select({
-            categorySlug: appCategoryRankings.categorySlug,
-            position: appCategoryRankings.position,
-          })
-          .from(appCategoryRankings)
-          .where(
-            and(
-              eq(appCategoryRankings.appId, app.appId),
-              eq(appCategoryRankings.scrapeRunId, scrapeRunId)
-            )
-          );
-
-        const previousCatRankings = await db
-          .select({
-            categorySlug: appCategoryRankings.categorySlug,
-            position: appCategoryRankings.position,
-          })
-          .from(appCategoryRankings)
-          .where(
-            and(
-              eq(appCategoryRankings.appId, app.appId),
-              sql`${appCategoryRankings.scrapeRunId} != ${scrapeRunId}`
-            )
-          )
-          .orderBy(desc(appCategoryRankings.scrapedAt))
-          .limit(100);
-
-        const curSnap: CategoryRankingSnapshot[] = currentCatRankings.map((r: any) => ({
+        const curSnap: CategoryRankingSnapshot[] = (curCatByApp.get(app.appId) || []).map((r: any) => ({
           categorySlug: r.categorySlug,
-          categoryName: r.categorySlug, // TODO: resolve name
+          categoryName: r.categorySlug,
           position: r.position,
         }));
 
-        const prevSnap: CategoryRankingSnapshot[] = previousCatRankings.map((r: any) => ({
+        const prevSnap: CategoryRankingSnapshot[] = (prevCatByApp.get(app.appId) || []).map((r: any) => ({
           categorySlug: r.categorySlug,
           categoryName: r.categorySlug,
           position: r.position,

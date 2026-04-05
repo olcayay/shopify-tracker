@@ -39,7 +39,7 @@ export const GOOGLE_WORKSPACE_CONSTANTS: PlatformConstants = {
     "casaCertified",
     "installCount",
   ],
-  rateLimit: { minDelayMs: 3000, maxDelayMs: 5000 }, // Conservative for Google
+  rateLimit: { minDelayMs: 500, maxDelayMs: 1500 }, // REST API
 };
 
 export const GOOGLE_WORKSPACE_SCORING: PlatformScoringConfig = {

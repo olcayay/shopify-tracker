@@ -36,7 +36,7 @@ export const HUBSPOT_CONSTANTS: PlatformConstants = {
     "authorUrl",
     "version",
   ],
-  rateLimit: { minDelayMs: 1000, maxDelayMs: 3000 },
+  rateLimit: { minDelayMs: 300, maxDelayMs: 800 },
 };
 
 export const HUBSPOT_SCORING: PlatformScoringConfig = {

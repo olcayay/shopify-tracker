@@ -86,7 +86,7 @@ export const ZOHO_CONSTANTS: PlatformConstants = {
     "partnerDetails",
     "versionhistory",
   ],
-  rateLimit: { minDelayMs: 1000, maxDelayMs: 3000 },
+  rateLimit: { minDelayMs: 500, maxDelayMs: 1500 },
 };
 
 export const ZOHO_SCORING: PlatformScoringConfig = {

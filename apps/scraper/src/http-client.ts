@@ -52,11 +52,16 @@ export class HttpClient {
   }
 
   async fetchPage(url: string, extraHeaders?: Record<string, string>): Promise<string> {
+    const t0 = Date.now();
     await this.waitForSlot();
+    const waitMs = Date.now() - t0;
 
     this.activeRequests++;
     try {
-      return await this.fetchWithRetry(url, extraHeaders);
+      const t1 = Date.now();
+      const result = await this.fetchWithRetry(url, extraHeaders);
+      log.info("http:request_timing", { url: url.slice(0, 120), waitMs, fetchMs: Date.now() - t1, totalMs: Date.now() - t0 });
+      return result;
     } finally {
       this.activeRequests--;
     }
@@ -156,8 +161,9 @@ export class HttpClient {
         });
 
         if (attempt < this.options.maxRetries) {
-          const backoff = Math.pow(2, attempt) * 1000;
-          await this.sleep(backoff);
+          const backoff = Math.min(Math.pow(2, attempt) * 500, 4000);
+          const jitter = backoff * (0.8 + Math.random() * 0.4); // ±20% jitter
+          await this.sleep(jitter);
         }
       }
     }
@@ -225,8 +231,9 @@ export class HttpClient {
         });
 
         if (attempt < this.options.maxRetries) {
-          const backoff = Math.pow(2, attempt) * 1000;
-          await this.sleep(backoff);
+          const backoff = Math.min(Math.pow(2, attempt) * 500, 4000);
+          const jitter = backoff * (0.8 + Math.random() * 0.4); // ±20% jitter
+          await this.sleep(jitter);
         }
       }
     }

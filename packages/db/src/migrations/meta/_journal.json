@@ -806,6 +806,13 @@
       "when": 1778544000000,
       "tag": "0114_email_daily_stats",
       "breakpoints": true
+    },
+    {
+      "idx": 115,
+      "version": "7",
+      "when": 1778630400000,
+      "tag": "0115_scraper_performance_indexes",
+      "breakpoints": true
     }
   ]
 }

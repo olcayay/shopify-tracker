@@ -124,7 +124,7 @@ export const CANVA_CONSTANTS: PlatformConstants = {
     "permissions",
     "languages",
   ],
-  rateLimit: { minDelayMs: 2000, maxDelayMs: 4000 }, // Conservative — Cloudflare protected
+  rateLimit: { minDelayMs: 1000, maxDelayMs: 2000 }, // Cloudflare protected
 };
 
 export const CANVA_SCORING: PlatformScoringConfig = {

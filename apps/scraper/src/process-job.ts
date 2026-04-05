@@ -206,8 +206,10 @@ export function createProcessJob(db: ReturnType<typeof createDb>, queueName?: st
           }
         }
 
-        // Event detection: category ranking changes
-        try { await afterCategoryScrape(db, platform, job.id!); } catch {}
+        // Event detection: category ranking changes (skip in smoke tests)
+        if (triggeredBy !== "smoke-test") {
+          try { await afterCategoryScrape(db, platform, job.id!); } catch {}
+        }
 
         break;
       }
@@ -359,8 +361,10 @@ export function createProcessJob(db: ReturnType<typeof createDb>, queueName?: st
         }, cascadeOpts);
         log.info("cascaded compute_similarity_scores job");
 
-        // Event detection: keyword ranking changes
-        try { await afterKeywordScrape(db, platform, job.id!); } catch {}
+        // Event detection: keyword ranking changes (skip in smoke tests)
+        if (triggeredBy !== "smoke-test") {
+          try { await afterKeywordScrape(db, platform, job.id!); } catch {}
+        }
 
         break;
       }

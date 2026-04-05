@@ -27,11 +27,15 @@ export const LOCK_POLL_INTERVAL_MS = 500;
 /** Graceful shutdown timeout in ms before force-exiting */
 export const GRACEFUL_SHUTDOWN_TIMEOUT_MS = 60_000;
 
+// ── Smoke test mode ────────────────────────────────────────────────
+/** Whether running in smoke test mode (fast path: no delays, minimal retries) */
+export const IS_SMOKE_TEST = process.env.SMOKE_TEST === "1";
+
 // ── HTTP client defaults ────────────────────────────────────────────
 /** Default delay between HTTP requests in ms */
-export const HTTP_DEFAULT_DELAY_MS = 2000;
+export const HTTP_DEFAULT_DELAY_MS = IS_SMOKE_TEST ? 0 : 2000;
 /** Default maximum retry count for HTTP requests */
-export const HTTP_DEFAULT_MAX_RETRIES = 4;
+export const HTTP_DEFAULT_MAX_RETRIES = IS_SMOKE_TEST ? 1 : 4;
 /** Default max concurrent HTTP requests */
 export const HTTP_DEFAULT_MAX_CONCURRENCY = 2;
 /** Maximum allowed HTTP response body size in bytes (20MB) */
@@ -39,9 +43,9 @@ export const HTTP_MAX_RESPONSE_SIZE = 20 * 1024 * 1024;
 /** Concurrency wait polling interval in ms */
 export const HTTP_CONCURRENCY_POLL_MS = 100;
 /** Base backoff for 429 rate-limit responses in fetchPage (ms) */
-export const HTTP_RATE_LIMIT_BASE_MS = 4_000;
+export const HTTP_RATE_LIMIT_BASE_MS = IS_SMOKE_TEST ? 1_000 : 2_000;
 /** Base backoff for 429 rate-limit responses in fetchRaw (ms) */
-export const HTTP_RAW_RATE_LIMIT_BASE_MS = 15_000;
+export const HTTP_RAW_RATE_LIMIT_BASE_MS = IS_SMOKE_TEST ? 2_000 : 8_000;
 
 // ── Job timeouts (ms) ───────────────────────────────────────────────
 export const JOB_TIMEOUT_CATEGORY_MS = 45 * 60 * 1000;

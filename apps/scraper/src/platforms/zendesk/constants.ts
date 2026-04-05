@@ -64,7 +64,7 @@ export const ZENDESK_CONSTANTS: PlatformConstants = {
     "authorName",
     "authorUrl",
   ],
-  rateLimit: { minDelayMs: 2000, maxDelayMs: 5000 },
+  rateLimit: { minDelayMs: 500, maxDelayMs: 1500 },
 };
 
 export const ZENDESK_SCORING: PlatformScoringConfig = {

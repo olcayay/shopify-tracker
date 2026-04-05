@@ -53,16 +53,22 @@ describe("scraper constants", () => {
 
   describe("HTTP client defaults", () => {
     it("has correct HTTP defaults", () => {
-      expect(HTTP_DEFAULT_DELAY_MS).toBe(2000);
-      expect(HTTP_DEFAULT_MAX_RETRIES).toBe(4);
+      // delay and retries are reduced in smoke test mode
+      expect(HTTP_DEFAULT_DELAY_MS).toBeGreaterThanOrEqual(0);
+      expect(HTTP_DEFAULT_DELAY_MS).toBeLessThanOrEqual(2000);
+      expect(HTTP_DEFAULT_MAX_RETRIES).toBeGreaterThanOrEqual(1);
+      expect(HTTP_DEFAULT_MAX_RETRIES).toBeLessThanOrEqual(4);
       expect(HTTP_DEFAULT_MAX_CONCURRENCY).toBe(2);
       expect(HTTP_MAX_RESPONSE_SIZE).toBe(20 * 1024 * 1024);
       expect(HTTP_CONCURRENCY_POLL_MS).toBe(100);
     });
 
     it("has correct rate limit backoff values", () => {
-      expect(HTTP_RATE_LIMIT_BASE_MS).toBe(4_000);
-      expect(HTTP_RAW_RATE_LIMIT_BASE_MS).toBe(15_000);
+      // Values are lower in smoke test mode (IS_SMOKE_TEST=true)
+      expect(HTTP_RATE_LIMIT_BASE_MS).toBeGreaterThanOrEqual(1_000);
+      expect(HTTP_RATE_LIMIT_BASE_MS).toBeLessThanOrEqual(4_000);
+      expect(HTTP_RAW_RATE_LIMIT_BASE_MS).toBeGreaterThanOrEqual(2_000);
+      expect(HTTP_RAW_RATE_LIMIT_BASE_MS).toBeLessThanOrEqual(15_000);
     });
   });
 
