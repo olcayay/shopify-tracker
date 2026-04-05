@@ -13,7 +13,11 @@ import {
   authHeaders,
 } from "../helpers/test-app.js";
 import { authRoutes, loginLimiter, registerLimiter, passwordResetLimiter, accountLockout } from "../../routes/auth.js";
+import { _resetRateLimitRedis } from "../../utils/rate-limiter.js";
 import type { FastifyInstance } from "fastify";
+
+// Disable Redis for CI — rate limiter falls back to in-memory
+_resetRateLimitRedis(null);
 
 beforeEach(() => {
   loginLimiter.reset();

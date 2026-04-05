@@ -73,6 +73,10 @@ function getRedis(): Redis | null {
       maxRetriesPerRequest: 1,
       lazyConnect: true,
     });
+    // Catch connection errors on the event emitter to prevent unhandled AggregateError
+    _redis.on("error", () => {
+      _redis = null;
+    });
     _redis.connect().catch(() => {
       _redis = null;
     });

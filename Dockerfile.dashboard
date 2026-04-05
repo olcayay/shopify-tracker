@@ -27,8 +27,11 @@ COPY apps/dashboard/sentry.*.config.ts ./apps/dashboard/
 
 # Build shared packages then dashboard (tsc from root node_modules)
 RUN ./node_modules/.bin/tsc -p packages/shared && \
-    ./node_modules/.bin/tsc -p packages/db/tsconfig.build.json && \
-    cd apps/dashboard && npm run build
+    ./node_modules/.bin/tsc -p packages/db/tsconfig.build.json
+
+WORKDIR /app/apps/dashboard
+RUN npm run build
+WORKDIR /app
 
 # ---- Production ----
 FROM base AS runner

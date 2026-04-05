@@ -35,6 +35,9 @@ function getRedis(): Redis | null {
       maxRetriesPerRequest: 1,
       lazyConnect: true,
     });
+    redis.on("error", () => {
+      redis = null;
+    });
     redis.connect().catch(() => {
       redis = null;
     });
