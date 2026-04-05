@@ -7,6 +7,7 @@ import {
   useEffect,
   useState,
   useCallback,
+  useRef,
   type ReactNode,
 } from "react";
 import { PLATFORM_IDS } from "@appranks/shared";
@@ -159,25 +160,41 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     reject: () => void;
   } | null>(null);
   const router = useRouter();
+  // Counter to force proactive refresh timer to re-arm after token rotation
+  const [tokenGeneration, setTokenGeneration] = useState(0);
 
   // Silent token refresh using refresh_token cookie
+  // Uses a mutex to prevent concurrent refresh requests (race condition:
+  // multiple 401s trigger parallel refreshes, first rotates the token,
+  // second fails with "Invalid refresh token" → session drops)
+  const refreshPromiseRef = useRef<Promise<boolean> | null>(null);
   const silentRefresh = useCallback(async (): Promise<boolean> => {
-    const refreshToken = getCookie("refresh_token");
-    if (!refreshToken) return false;
-    try {
-      const res = await fetch(`${API_BASE}/api/auth/refresh`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ refreshToken }),
-      });
-      if (!res.ok) return false;
-      const data = await res.json();
-      setCookie("access_token", data.accessToken, 900);
-      setCookie("refresh_token", data.refreshToken, 7 * 86400);
-      return true;
-    } catch {
-      return false;
-    }
+    // If a refresh is already in flight, wait for it instead of starting another
+    if (refreshPromiseRef.current) return refreshPromiseRef.current;
+
+    const doRefresh = async (): Promise<boolean> => {
+      const refreshToken = getCookie("refresh_token");
+      if (!refreshToken) return false;
+      try {
+        const res = await fetch(`${API_BASE}/api/auth/refresh`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ refreshToken }),
+        });
+        if (!res.ok) return false;
+        const data = await res.json();
+        setCookie("access_token", data.accessToken, 900);
+        setCookie("refresh_token", data.refreshToken, 7 * 86400);
+        return true;
+      } catch {
+        return false;
+      }
+    };
+
+    refreshPromiseRef.current = doRefresh().finally(() => {
+      refreshPromiseRef.current = null;
+    });
+    return refreshPromiseRef.current;
   }, []);
 
   // Proactive token refresh — refresh 2 minutes before expiry (PLA-559)
@@ -192,7 +209,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (delay <= 0) return;
       const timer = setTimeout(async () => {
         const ok = await silentRefresh();
-        if (!ok) {
+        if (ok) {
+          // Bump counter to re-arm the timer for the new token
+          setTokenGeneration((g) => g + 1);
+        } else {
           toast.warning("Your session is about to expire. Please save your work.", {
             duration: 10000,
           });
@@ -202,17 +222,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } catch {
       // Invalid token — skip proactive refresh
     }
-  }, [user, silentRefresh]);
+  }, [user, silentRefresh, tokenGeneration]);
 
   const doFetch = useCallback(
     async (path: string, options?: RequestInit): Promise<Response> => {
-      const token = getCookie("access_token");
+      let token = getCookie("access_token");
       if (!token && !path.includes("/api/auth/")) {
-        // No token and not an auth endpoint — return synthetic 401
-        return new Response(JSON.stringify({ error: "Not authenticated" }), {
-          status: 401,
-          headers: { "Content-Type": "application/json" },
-        });
+        // Access token missing — try silent refresh before giving up
+        const refreshed = await silentRefresh();
+        if (refreshed) {
+          token = getCookie("access_token");
+        }
+        if (!token) {
+          return new Response(JSON.stringify({ error: "Not authenticated" }), {
+            status: 401,
+            headers: { "Content-Type": "application/json" },
+          });
+        }
       }
       const headers: Record<string, string> = {
         ...(token ? { Authorization: `Bearer ${token}` } : {}),
