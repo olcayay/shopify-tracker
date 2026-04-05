@@ -1,3 +1,9 @@
+Performance Optimization: Dashboard Page Load (2026-04-05)
+  Parallelize highlights queries (8 sequential → 7 parallel) ✅
+  Replace correlated subqueries with window functions ✅
+  Make overview highlights truly non-blocking ✅
+  Make platform page categories fetch non-blocking ✅
+
 Scraper Health & Diagnostics Improvements (2026-04-05)
   PLA-761: Fix GET /api/apps/developers 500 error on Shopify platform ✅
   PLA-755: Smoke test table: show last run results on page load ✅

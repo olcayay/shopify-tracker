@@ -205,14 +205,15 @@ export default function OverviewPage() {
     }
     setLoading(false);
 
-    // Fetch categories with rankings for apps
+    // Fetch categories in background (non-blocking — page already rendered)
     const appSlugs = loadedApps.map((a: any) => a.slug).filter(Boolean);
     if (appSlugs.length > 0) {
-      const catRes = await fetchWithAuth("/api/apps/categories", {
+      fetchWithAuth("/api/apps/categories", {
         method: "POST",
         body: JSON.stringify({ slugs: appSlugs }),
-      });
-      if (catRes.ok) setAppCategories(await catRes.json());
+      }).then(async (catRes) => {
+        if (catRes.ok) setAppCategories(await catRes.json());
+      }).catch(() => {});
     }
   }
 

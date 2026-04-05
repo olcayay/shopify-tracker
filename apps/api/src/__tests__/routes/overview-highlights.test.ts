@@ -95,13 +95,13 @@ describe("Overview highlights routes", () => {
         [
           { competitor_app_id: 10 },
         ],
-        // 8. Competitor alerts
-        [
-          { competitor_id: 10, field: "pricing", old_value: "Free", new_value: "$10/mo", detected_at: "2026-03-30T09:00:00Z", competitor_name: "Rival", competitor_slug: "rival", competitor_platform: "shopify" },
-        ],
-        // 9. Ad activity
+        // 8. Ad activity (moved before competitor alerts due to Promise.all reorder)
         [
           { app_id: 1, keyword: "form builder", seen_date: "2026-03-30" },
+        ],
+        // 9. Competitor alerts (sequential after Promise.all, depends on competitor IDs)
+        [
+          { competitor_id: 10, field: "pricing", old_value: "Free", new_value: "$10/mo", detected_at: "2026-03-30T09:00:00Z", competitor_name: "Rival", competitor_slug: "rival", competitor_platform: "shopify" },
         ],
       );
 

@@ -1,3 +1,21 @@
+Performance Optimization: Dashboard Page Load (2026-04-05)
+================================================================
+
+Problem: Login sonrası ve platform sayfaları çok yavaş yükleniyor.
+
+Root causes:
+1. /api/overview/highlights 8 sequential DB sorgusu yapıyor (toplam 2-5 saniye)
+2. keyword/category movers CTE'leri correlated subquery kullanıyor (O(n²))
+3. Overview highlights "non-blocking" görünüyor ama aslında await ile bekleniyor
+4. Platform sayfasında categories fetch apps yüklendikten sonra sequential
+
+Fixes:
+1. highlights: 8 sequential → Promise.all ile 7 parallel + 1 dependent = ~70% hızlanma
+2. keyword movers: DISTINCT ON + correlated subquery → ROW_NUMBER() window function
+3. category movers: Aynı pattern, window function ile değiştirildi
+4. Overview: highlights fetch'i truly non-blocking (fire-and-forget, setDataLoaded önce)
+5. Platform page: categories fetch non-blocking (fire-and-forget after setLoading(false))
+
 Scraper Health & Diagnostics Improvements (2026-04-05)
 ================================================================
 5 tasks implemented for better scraper monitoring and debugging:

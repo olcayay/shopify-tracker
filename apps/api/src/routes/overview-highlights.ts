@@ -35,97 +35,104 @@ export async function overviewHighlightsRoutes(app: FastifyInstance) {
       const appIds = trackedApps.map((a) => a.id);
       const platforms = [...new Set(trackedApps.map((a) => a.platform))];
 
-      // 2. Top keyword movers — biggest absolute rank changes (latest vs previous snapshot)
-      const keywordMovers: any[] = await db.execute(sql`
-        WITH latest_ranks AS (
-          SELECT DISTINCT ON (akr.app_id, akr.keyword_id)
-            akr.app_id, akr.keyword_id, akr.position, akr.scraped_at
-          FROM app_keyword_rankings akr
-          WHERE akr.app_id = ANY(${sqlArray(appIds)})
-          ORDER BY akr.app_id, akr.keyword_id, akr.scraped_at DESC
-        ),
-        prev_ranks AS (
-          SELECT DISTINCT ON (akr.app_id, akr.keyword_id)
-            akr.app_id, akr.keyword_id, akr.position
-          FROM app_keyword_rankings akr
-          WHERE akr.app_id = ANY(${sqlArray(appIds)})
-            AND akr.scraped_at < (SELECT MIN(lr.scraped_at) FROM latest_ranks lr WHERE lr.app_id = akr.app_id AND lr.keyword_id = akr.keyword_id)
-          ORDER BY akr.app_id, akr.keyword_id, akr.scraped_at DESC
-        )
-        SELECT lr.app_id, tk.keyword, pr.position AS old_position, lr.position AS new_position,
-          (pr.position - lr.position) AS delta
-        FROM latest_ranks lr
-        JOIN prev_ranks pr ON pr.app_id = lr.app_id AND pr.keyword_id = lr.keyword_id
-        JOIN tracked_keywords tk ON tk.id = lr.keyword_id
-        WHERE pr.position != lr.position
-        ORDER BY ABS(pr.position - lr.position) DESC
-        LIMIT 10
-      `);
+      // Run all highlight queries in parallel (previously sequential — major perf win)
+      const [
+        keywordMovers,
+        categoryMovers,
+        reviewPulse,
+        recentChanges,
+        featuredSightings,
+        competitorAppIdsRaw,
+        adActivity,
+      ] = await Promise.all<any[]>([
+        // 2. Top keyword movers — window function instead of correlated subquery
+        db.execute(sql`
+          WITH ranked AS (
+            SELECT akr.app_id, akr.keyword_id, akr.position, akr.scraped_at,
+              ROW_NUMBER() OVER (PARTITION BY akr.app_id, akr.keyword_id ORDER BY akr.scraped_at DESC) AS rn
+            FROM app_keyword_rankings akr
+            WHERE akr.app_id = ANY(${sqlArray(appIds)})
+          )
+          SELECT lr.app_id, tk.keyword, pr.position AS old_position, lr.position AS new_position,
+            (pr.position - lr.position) AS delta
+          FROM ranked lr
+          JOIN ranked pr ON pr.app_id = lr.app_id AND pr.keyword_id = lr.keyword_id AND pr.rn = 2
+          JOIN tracked_keywords tk ON tk.id = lr.keyword_id
+          WHERE lr.rn = 1 AND lr.position IS NOT NULL AND pr.position IS NOT NULL AND pr.position != lr.position
+          ORDER BY ABS(pr.position - lr.position) DESC
+          LIMIT 10
+        `),
+        // 3. Top category movers — window function instead of correlated subquery
+        db.execute(sql`
+          WITH ranked AS (
+            SELECT acr.app_id, acr.category_slug, acr.position, acr.scraped_at,
+              ROW_NUMBER() OVER (PARTITION BY acr.app_id, acr.category_slug ORDER BY acr.scraped_at DESC) AS rn
+            FROM app_category_rankings acr
+            WHERE acr.app_id = ANY(${sqlArray(appIds)})
+          )
+          SELECT lr.app_id, lr.category_slug AS category, pr.position AS old_position, lr.position AS new_position,
+            (pr.position - lr.position) AS delta
+          FROM ranked lr
+          JOIN ranked pr ON pr.app_id = lr.app_id AND pr.category_slug = lr.category_slug AND pr.rn = 2
+          WHERE lr.rn = 1 AND lr.position IS NOT NULL AND pr.position IS NOT NULL AND pr.position != lr.position
+          ORDER BY ABS(pr.position - lr.position) DESC
+          LIMIT 10
+        `),
+        // 4. Review pulse
+        db.execute(sql`
+          SELECT DISTINCT ON (arm.app_id)
+            arm.app_id, arm.v7d, arm.v30d, arm.momentum, arm.average_rating
+          FROM app_review_metrics arm
+          WHERE arm.app_id = ANY(${sqlArray(appIds)})
+            AND arm.v7d > 0
+          ORDER BY arm.app_id, arm.computed_at DESC
+        `),
+        // 5. Recent listing changes (last 48h)
+        db.execute(sql`
+          SELECT afc.app_id, afc.field, afc.old_value, afc.new_value, afc.detected_at
+          FROM app_field_changes afc
+          WHERE afc.app_id = ANY(${sqlArray(appIds)})
+            AND afc.detected_at >= NOW() - INTERVAL '48 hours'
+          ORDER BY afc.detected_at DESC
+          LIMIT 20
+        `),
+        // 6. Featured sightings (last 7 days)
+        db.execute(sql`
+          SELECT fas.app_id, fas.section_title, fas.position, fas.seen_date
+          FROM featured_app_sightings fas
+          WHERE fas.app_id = ANY(${sqlArray(appIds)})
+            AND fas.seen_date >= CURRENT_DATE - INTERVAL '7 days'
+          ORDER BY fas.seen_date DESC, fas.position ASC
+          LIMIT 20
+        `),
+        // 7a. Competitor app IDs
+        db.execute(sql`
+          SELECT DISTINCT aca.competitor_app_id
+          FROM account_competitor_apps aca
+          WHERE aca.account_id = ${accountId}
+        `),
+        // 8. Ad activity (last 7 days)
+        db.execute(sql`
+          SELECT kas.app_id, tk.keyword, kas.seen_date
+          FROM keyword_ad_sightings kas
+          JOIN tracked_keywords tk ON tk.id = kas.keyword_id
+          WHERE kas.app_id = ANY(${sqlArray(appIds)})
+            AND kas.seen_date >= CURRENT_DATE - INTERVAL '7 days'
+          ORDER BY kas.seen_date DESC
+          LIMIT 20
+        `),
+      ]);
 
-      // 3. Top category movers
-      const categoryMovers: any[] = await db.execute(sql`
-        WITH latest_cat AS (
-          SELECT DISTINCT ON (acr.app_id, acr.category_slug)
-            acr.app_id, acr.category_slug, acr.position, acr.scraped_at
-          FROM app_category_rankings acr
-          WHERE acr.app_id = ANY(${sqlArray(appIds)})
-          ORDER BY acr.app_id, acr.category_slug, acr.scraped_at DESC
-        ),
-        prev_cat AS (
-          SELECT DISTINCT ON (acr.app_id, acr.category_slug)
-            acr.app_id, acr.category_slug, acr.position
-          FROM app_category_rankings acr
-          WHERE acr.app_id = ANY(${sqlArray(appIds)})
-            AND acr.scraped_at < (SELECT MIN(lc.scraped_at) FROM latest_cat lc WHERE lc.app_id = acr.app_id AND lc.category_slug = acr.category_slug)
-          ORDER BY acr.app_id, acr.category_slug, acr.scraped_at DESC
-        )
-        SELECT lc.app_id, lc.category_slug AS category, pc.position AS old_position, lc.position AS new_position,
-          (pc.position - lc.position) AS delta
-        FROM latest_cat lc
-        JOIN prev_cat pc ON pc.app_id = lc.app_id AND pc.category_slug = lc.category_slug
-        WHERE pc.position != lc.position
-        ORDER BY ABS(pc.position - lc.position) DESC
-        LIMIT 10
-      `);
+      // Cast Promise.all results (db.execute returns unknown[])
+      const kwMovers = keywordMovers as any[];
+      const catMovers = categoryMovers as any[];
+      const revPulse = reviewPulse as any[];
+      const changes = recentChanges as any[];
+      const featured = featuredSightings as any[];
+      const ads = adActivity as any[];
 
-      // 4. Review pulse — top apps by v7d review velocity
-      const reviewPulse: any[] = await db.execute(sql`
-        SELECT DISTINCT ON (arm.app_id)
-          arm.app_id, arm.v7d, arm.v30d, arm.momentum, arm.average_rating
-        FROM app_review_metrics arm
-        WHERE arm.app_id = ANY(${sqlArray(appIds)})
-          AND arm.v7d > 0
-        ORDER BY arm.app_id, arm.computed_at DESC
-      `);
-
-      // 5. Recent listing changes (last 48h)
-      const recentChanges: any[] = await db.execute(sql`
-        SELECT afc.app_id, afc.field, afc.old_value, afc.new_value, afc.detected_at
-        FROM app_field_changes afc
-        WHERE afc.app_id = ANY(${sqlArray(appIds)})
-          AND afc.detected_at >= NOW() - INTERVAL '48 hours'
-        ORDER BY afc.detected_at DESC
-        LIMIT 20
-      `);
-
-      // 6. Featured sightings (last 7 days)
-      const featuredSightings: any[] = await db.execute(sql`
-        SELECT fas.app_id, fas.section_title, fas.position, fas.seen_date
-        FROM featured_app_sightings fas
-        WHERE fas.app_id = ANY(${sqlArray(appIds)})
-          AND fas.seen_date >= CURRENT_DATE - INTERVAL '7 days'
-        ORDER BY fas.seen_date DESC, fas.position ASC
-        LIMIT 20
-      `);
-
-      // 7. Competitor alerts — recent field changes in competitor apps (last 48h)
-      const competitorAppIds: any[] = await db.execute(sql`
-        SELECT DISTINCT aca.competitor_app_id
-        FROM account_competitor_apps aca
-        WHERE aca.account_id = ${accountId}
-      `);
-      const compIds = competitorAppIds.map((r) => r.competitor_app_id).filter(Boolean);
-
+      // 7b. Competitor alerts (depends on competitor IDs from above)
+      const compIds = (competitorAppIdsRaw as any[]).map((r) => r.competitor_app_id).filter(Boolean);
       let competitorAlerts: any[] = [];
       if (compIds.length > 0) {
         competitorAlerts = await db.execute(sql`
@@ -139,17 +146,6 @@ export async function overviewHighlightsRoutes(app: FastifyInstance) {
           LIMIT 20
         `);
       }
-
-      // 8. Ad activity (last 7 days)
-      const adActivity: any[] = await db.execute(sql`
-        SELECT kas.app_id, tk.keyword, kas.seen_date
-        FROM keyword_ad_sightings kas
-        JOIN tracked_keywords tk ON tk.id = kas.keyword_id
-        WHERE kas.app_id = ANY(${sqlArray(appIds)})
-          AND kas.seen_date >= CURRENT_DATE - INTERVAL '7 days'
-        ORDER BY kas.seen_date DESC
-        LIMIT 20
-      `);
 
       // Build app lookup
       const appLookup = new Map(trackedApps.map((a) => [a.id, a]));
@@ -177,51 +173,51 @@ export async function overviewHighlightsRoutes(app: FastifyInstance) {
             keywordCount: Number(a.keyword_count || 0),
           })),
           highlights: {
-            keywordMovers: keywordMovers
-              .filter((m) => platformAppIds.has(m.app_id))
+            keywordMovers: kwMovers
+              .filter((m: any) => platformAppIds.has(m.app_id))
               .slice(0, 5)
-              .map((m) => ({
+              .map((m: any) => ({
                 app: appRef(m.app_id),
                 keyword: m.keyword,
                 oldPosition: m.old_position,
                 newPosition: m.new_position,
                 delta: Number(m.delta),
               })),
-            categoryMovers: categoryMovers
-              .filter((m) => platformAppIds.has(m.app_id))
+            categoryMovers: catMovers
+              .filter((m: any) => platformAppIds.has(m.app_id))
               .slice(0, 5)
-              .map((m) => ({
+              .map((m: any) => ({
                 app: appRef(m.app_id),
                 category: m.category,
                 oldPosition: m.old_position,
                 newPosition: m.new_position,
                 delta: Number(m.delta),
               })),
-            reviewPulse: reviewPulse
-              .filter((m) => platformAppIds.has(m.app_id))
-              .sort((a, b) => (b.v7d || 0) - (a.v7d || 0))
+            reviewPulse: revPulse
+              .filter((m: any) => platformAppIds.has(m.app_id))
+              .sort((a: any, b: any) => (b.v7d || 0) - (a.v7d || 0))
               .slice(0, 5)
-              .map((m) => ({
+              .map((m: any) => ({
                 app: appRef(m.app_id),
                 v7d: Number(m.v7d || 0),
                 v30d: Number(m.v30d || 0),
                 momentum: m.momentum,
                 latestRating: m.average_rating != null ? Number(m.average_rating) : null,
               })),
-            recentChanges: recentChanges
-              .filter((c) => platformAppIds.has(c.app_id))
+            recentChanges: changes
+              .filter((c: any) => platformAppIds.has(c.app_id))
               .slice(0, 5)
-              .map((c) => ({
+              .map((c: any) => ({
                 app: appRef(c.app_id),
                 field: c.field,
                 oldValue: c.old_value,
                 newValue: c.new_value,
                 detectedAt: c.detected_at,
               })),
-            featuredSightings: featuredSightings
-              .filter((f) => platformAppIds.has(f.app_id))
+            featuredSightings: featured
+              .filter((f: any) => platformAppIds.has(f.app_id))
               .slice(0, 5)
-              .map((f) => ({
+              .map((f: any) => ({
                 app: appRef(f.app_id),
                 sectionTitle: f.section_title,
                 position: f.position,
@@ -240,10 +236,10 @@ export async function overviewHighlightsRoutes(app: FastifyInstance) {
                 newValue: c.new_value,
                 detectedAt: c.detected_at,
               })),
-            adActivity: adActivity
-              .filter((a) => platformAppIds.has(a.app_id))
+            adActivity: ads
+              .filter((a: any) => platformAppIds.has(a.app_id))
               .slice(0, 5)
-              .map((a) => ({
+              .map((a: any) => ({
                 app: appRef(a.app_id),
                 keyword: a.keyword,
                 seenDate: a.seen_date,

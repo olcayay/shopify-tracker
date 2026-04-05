@@ -103,17 +103,15 @@ export default function CrossPlatformOverviewPage() {
       }
 
       setStats(platformStats);
+      setDataLoaded(true);
 
-      // Fetch highlights in parallel (non-blocking)
-      try {
-        const hlRes = await fetchWithAuth("/api/overview/highlights");
+      // Fetch highlights in background (truly non-blocking — page already rendered)
+      fetchWithAuth("/api/overview/highlights").then(async (hlRes) => {
         if (hlRes.ok) {
           const hlBody = await hlRes.json();
           setHighlights(hlBody.platforms ?? {});
         }
-      } catch { /* highlights are optional, don't block */ }
-
-      setDataLoaded(true);
+      }).catch(() => {});
     } catch {
       setFetchError("Failed to load overview data. Please try again.");
       setDataLoaded(false);
