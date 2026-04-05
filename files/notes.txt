@@ -45,6 +45,23 @@ PLA-773: Allow keywords without tracked app (research mode)
 - Untrack: handles both app-linked and research keywords
 - Migration: `0118_keyword_research_mode.sql`
 
+PLA-774: Fix slow platform badge (20s → <200ms)
+- Root cause: 6 heavy API calls (apps, keywords, competitors × 2 platforms) on every page nav
+- Fix: New `GET /api/account/platform-stats` endpoint with 3 simple COUNT queries
+- Dashboard: Single fetch instead of 6, cached by TanStack Query
+
+PLA-775, PLA-776: Fix competitor slug/name property mismatch
+- API returns `appSlug`/`appName`, code used `slug`/`name` → always undefined
+- Fixed in changes page (PLA-775) and v2 dashboard Competitive Snapshot (PLA-776)
+
+PLA-777: Fix "Back to classic view" error on first click
+- Root cause: Single `getApp()` failure in `Promise.all` broke entire page
+- Fix: Separated critical `getApp()` try/catch from degradable data calls
+
+PLA-778: Classic view banner redesign
+- Changed from subtle muted to primary-tinted: `border-primary/30`, `bg-primary/5`
+- Sparkles icon instead of Info, ArrowRight with hover animation
+
 Performance Optimization: Dashboard Page Load (2026-04-05)
 ================================================================
 

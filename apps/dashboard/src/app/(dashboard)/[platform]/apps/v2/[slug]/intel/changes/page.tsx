@@ -39,11 +39,11 @@ export default async function V2ChangesPage({
     if (topCompetitors.length > 0) {
       const competitorChanges = await Promise.all(
         topCompetitors.map((c: any) =>
-          getAppChanges(c.slug, 20, platform as PlatformId)
+          getAppChanges(c.appSlug, 20, platform as PlatformId)
             .then((changes: any[]) =>
               changes.map((ch: any) => ({
-                appSlug: c.slug,
-                appName: c.name,
+                appSlug: c.appSlug,
+                appName: c.appName,
                 isSelf: false,
                 field: ch.field,
                 oldValue: typeof ch.oldValue === "string" ? ch.oldValue : JSON.stringify(ch.oldValue),

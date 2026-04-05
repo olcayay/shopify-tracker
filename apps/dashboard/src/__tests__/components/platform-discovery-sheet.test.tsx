@@ -17,9 +17,15 @@ import React from "react";
 
 function mockFetchWithAuth(apps = 0, keywords = 0, competitors = 0) {
   return vi.fn((url: string) => {
-    if (url.startsWith("/api/apps")) return Promise.resolve({ ok: true, json: () => Promise.resolve(Array(apps).fill({})) });
-    if (url.startsWith("/api/keywords")) return Promise.resolve({ ok: true, json: () => Promise.resolve(Array(keywords).fill({})) });
-    if (url.startsWith("/api/account/competitors")) return Promise.resolve({ ok: true, json: () => Promise.resolve(Array(competitors).fill({})) });
+    if (url === "/api/account/platform-stats") {
+      // Return stats for all platforms that might be enabled in tests
+      const platforms = ["shopify", "salesforce", "canva", "wix", "wordpress", "google_workspace", "atlassian", "zoom", "zoho", "zendesk", "hubspot", "woocommerce"];
+      const stats: Record<string, { apps: number; keywords: number; competitors: number }> = {};
+      for (const p of platforms) {
+        stats[p] = { apps, keywords, competitors };
+      }
+      return Promise.resolve({ ok: true, json: () => Promise.resolve(stats) });
+    }
     return Promise.resolve({ ok: true, json: () => Promise.resolve([]) });
   });
 }
@@ -105,9 +111,12 @@ describe("PlatformDiscoverySheet", () => {
 
   it("separates tracked (has data) from available (no data) platforms", async () => {
     const fetch = vi.fn((url: string) => {
-      // Shopify has data, salesforce does not
-      if (url === "/api/apps?platform=shopify") return Promise.resolve({ ok: true, json: () => Promise.resolve([{ slug: "app1" }]) });
-      if (url === "/api/apps?platform=salesforce") return Promise.resolve({ ok: true, json: () => Promise.resolve([]) });
+      if (url === "/api/account/platform-stats") {
+        return Promise.resolve({ ok: true, json: () => Promise.resolve({
+          shopify: { apps: 1, keywords: 0, competitors: 0 },
+          salesforce: { apps: 0, keywords: 0, competitors: 0 },
+        }) });
+      }
       return Promise.resolve({ ok: true, json: () => Promise.resolve([]) });
     });
     vi.doMock("@/lib/auth-context", () => ({
@@ -142,7 +151,11 @@ describe("PlatformDiscoverySheet", () => {
 
   it("shows tracked/total count in description", async () => {
     const fetch = vi.fn((url: string) => {
-      if (url === "/api/apps?platform=shopify") return Promise.resolve({ ok: true, json: () => Promise.resolve([{ slug: "app1" }]) });
+      if (url === "/api/account/platform-stats") {
+        return Promise.resolve({ ok: true, json: () => Promise.resolve({
+          shopify: { apps: 1, keywords: 0, competitors: 0 },
+        }) });
+      }
       return Promise.resolve({ ok: true, json: () => Promise.resolve([]) });
     });
     vi.doMock("@/lib/auth-context", () => ({
@@ -162,7 +175,11 @@ describe("PlatformDiscoverySheet", () => {
   it("calls onTrackedCountChange with correct count", async () => {
     const onTrackedCountChange = vi.fn();
     const fetch = vi.fn((url: string) => {
-      if (url === "/api/apps?platform=shopify") return Promise.resolve({ ok: true, json: () => Promise.resolve([{ slug: "app1" }]) });
+      if (url === "/api/account/platform-stats") {
+        return Promise.resolve({ ok: true, json: () => Promise.resolve({
+          shopify: { apps: 1, keywords: 0, competitors: 0 },
+        }) });
+      }
       return Promise.resolve({ ok: true, json: () => Promise.resolve([]) });
     });
     vi.doMock("@/lib/auth-context", () => ({

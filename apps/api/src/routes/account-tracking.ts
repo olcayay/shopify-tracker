@@ -154,6 +154,52 @@ async function syncKeywordActiveFlag(db: FastifyInstance["db"], keywordId: numbe
 export const accountTrackingRoutes: FastifyPluginAsync = async (app) => {
   const db = app.db;
 
+  // --- Platform Stats (lightweight badge counts) ---
+
+  // GET /api/account/platform-stats — fast counts for the platform badge
+  app.get("/platform-stats", async (request) => {
+    const { accountId } = request.user;
+
+    // 3 simple COUNT queries — no joins with snapshots/rankings
+    const [appCounts, keywordCounts, competitorCounts] = await Promise.all([
+      db
+        .select({ platform: apps.platform, count: sql<number>`count(*)::int` })
+        .from(accountTrackedApps)
+        .innerJoin(apps, eq(apps.id, accountTrackedApps.appId))
+        .where(eq(accountTrackedApps.accountId, accountId))
+        .groupBy(apps.platform),
+      db
+        .select({ platform: sql<string>`COALESCE(a.platform, tk.platform)`, count: sql<number>`count(distinct ${accountTrackedKeywords.keywordId})::int` })
+        .from(accountTrackedKeywords)
+        .leftJoin(apps, eq(apps.id, accountTrackedKeywords.trackedAppId))
+        .innerJoin(trackedKeywords, eq(trackedKeywords.id, accountTrackedKeywords.keywordId))
+        .where(eq(accountTrackedKeywords.accountId, accountId))
+        .groupBy(sql`COALESCE(a.platform, tk.platform)`),
+      db
+        .select({ platform: apps.platform, count: sql<number>`count(distinct ${accountCompetitorApps.competitorAppId})::int` })
+        .from(accountCompetitorApps)
+        .innerJoin(apps, eq(apps.id, accountCompetitorApps.trackedAppId))
+        .where(eq(accountCompetitorApps.accountId, accountId))
+        .groupBy(apps.platform),
+    ]);
+
+    const stats: Record<string, { apps: number; keywords: number; competitors: number }> = {};
+    for (const row of appCounts) {
+      if (!stats[row.platform]) stats[row.platform] = { apps: 0, keywords: 0, competitors: 0 };
+      stats[row.platform].apps = row.count;
+    }
+    for (const row of keywordCounts) {
+      if (!stats[row.platform]) stats[row.platform] = { apps: 0, keywords: 0, competitors: 0 };
+      stats[row.platform].keywords = row.count;
+    }
+    for (const row of competitorCounts) {
+      if (!stats[row.platform]) stats[row.platform] = { apps: 0, keywords: 0, competitors: 0 };
+      stats[row.platform].competitors = row.count;
+    }
+
+    return stats;
+  });
+
   // --- Tracked Apps ---
 
   // GET /api/account/tracked-apps

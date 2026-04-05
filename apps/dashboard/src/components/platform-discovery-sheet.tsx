@@ -136,29 +136,18 @@ export function PlatformDiscoverySheet({
   const [platformStats, setPlatformStats] = useState<Record<string, PlatformStats>>({});
   const [statsLoaded, setStatsLoaded] = useState(false);
 
-  // Fetch lightweight platform stats on mount (for badge) and when sheet opens
+  // Fetch lightweight platform stats (single fast endpoint)
   useEffect(() => {
     if (statsLoaded || !account) return;
 
     async function loadStats() {
+      const res = await fetchWithAuth("/api/account/platform-stats");
+      if (!res.ok) return;
+      const data = await res.json();
       const stats: Record<string, PlatformStats> = {};
-      await Promise.all(
-        enabledPlatforms.map(async (p) => {
-          const caps = PLATFORMS[p];
-          const [appsRes, keywordsRes, competitorsRes] = await Promise.all([
-            fetchWithAuth(`/api/apps?platform=${p}`).then((r) => r.ok ? r.json() : []),
-            caps.hasKeywordSearch
-              ? fetchWithAuth(`/api/keywords?platform=${p}`).then((r) => r.ok ? r.json() : [])
-              : Promise.resolve([]),
-            fetchWithAuth(`/api/account/competitors?platform=${p}`).then((r) => r.ok ? r.json() : []),
-          ]);
-          stats[p] = {
-            apps: Array.isArray(appsRes) ? appsRes.length : 0,
-            keywords: Array.isArray(keywordsRes) ? keywordsRes.length : 0,
-            competitors: Array.isArray(competitorsRes) ? competitorsRes.length : 0,
-          };
-        })
-      );
+      for (const [p, s] of Object.entries(data) as [string, any][]) {
+        stats[p] = { apps: s.apps ?? 0, keywords: s.keywords ?? 0, competitors: s.competitors ?? 0 };
+      }
       setPlatformStats(stats);
       setStatsLoaded(true);
       const count = enabledPlatforms.filter((pid) => {

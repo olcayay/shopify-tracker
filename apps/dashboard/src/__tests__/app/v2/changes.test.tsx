@@ -64,7 +64,7 @@ describe("V2ChangesPage", () => {
       if (slug === "comp-1") return Promise.resolve([{ field: "price", oldValue: "10", newValue: "20", detectedAt: "2026-03-01" }]);
       return Promise.resolve([]);
     });
-    mockGetAppCompetitors.mockResolvedValue([{ slug: "comp-1", name: "Comp 1" }]);
+    mockGetAppCompetitors.mockResolvedValue([{ appSlug: "comp-1", appName: "Comp 1" }]);
     await renderAsync(V2ChangesPage({ params }));
     expect(screen.getByText("Test App: name")).toBeInTheDocument();
     expect(screen.getByText("Comp 1: price")).toBeInTheDocument();

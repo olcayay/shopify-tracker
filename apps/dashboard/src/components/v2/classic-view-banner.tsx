@@ -2,21 +2,22 @@
 
 import Link from "next/link";
 import { useParams } from "next/navigation";
-import { Info } from "lucide-react";
+import { Sparkles, ArrowRight } from "lucide-react";
 
 export function ClassicViewBanner() {
   const { platform, slug } = useParams();
 
   return (
-    <div className="flex items-center justify-between gap-3 rounded-lg border border-muted bg-muted/30 px-4 py-2 text-sm">
-      <div className="flex items-center gap-2 text-muted-foreground">
-        <Info className="h-4 w-4" />
-        <span>You are viewing the classic layout.</span>
+    <div className="group flex items-center justify-between gap-3 rounded-lg border border-primary/30 bg-primary/5 px-4 py-2 text-sm hover:bg-primary/10 transition-colors">
+      <div className="flex items-center gap-2">
+        <Sparkles className="h-4 w-4 text-primary" />
+        <span className="text-muted-foreground">You are viewing the classic layout.</span>
         <Link
           href={`/${platform}/apps/v2/${slug}`}
-          className="font-medium text-primary hover:underline"
+          className="font-medium text-primary hover:underline inline-flex items-center gap-1"
         >
-          Switch to new experience →
+          Switch to new experience
+          <ArrowRight className="h-3 w-3 group-hover:translate-x-0.5 transition-transform" />
         </Link>
       </div>
     </div>

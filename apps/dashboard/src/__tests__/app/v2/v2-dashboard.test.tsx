@@ -138,7 +138,7 @@ describe("V2DashboardPage", () => {
   it("shows competitor names when tracked with competitors", async () => {
     setupDefaultMocks();
     mockGetAppCompetitors.mockResolvedValue([
-      { slug: "comp-1", name: "Competitor One", latestSnapshot: { averageRating: 4.2 } },
+      { appSlug: "comp-1", appName: "Competitor One", latestSnapshot: { averageRating: 4.2 } },
     ]);
     await renderAsync(V2DashboardPage({ params }));
     expect(screen.getByText("Competitor One")).toBeInTheDocument();

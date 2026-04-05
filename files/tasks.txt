@@ -10,6 +10,11 @@ Dashboard & Scraper Bugfixes (2026-04-06)
   PLA-771: Fix removed app stays in My Apps list (optimistic cache update) ✅
   PLA-770: Fix My Categories table column alignment ✅
   PLA-773: Allow keywords without tracked app (research mode) ✅
+  PLA-774: Fix slow platform badge (20s → <200ms, single endpoint) ✅
+  PLA-775: Fix competitor Change Log always empty (slug → appSlug) ✅
+  PLA-776: Fix Competitive Snapshot names missing (slug → appSlug) ✅
+  PLA-777: Fix "Back to classic view" error on first click ✅
+  PLA-778: Make classic view banner more visually prominent ✅
 
 Performance Optimization: Dashboard Page Load (2026-04-05)
   Parallelize highlights queries (8 sequential → 7 parallel) ✅

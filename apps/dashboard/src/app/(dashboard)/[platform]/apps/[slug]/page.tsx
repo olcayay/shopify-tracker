@@ -33,46 +33,38 @@ export default async function AppOverviewPage({
   const caps = isPlatformId(platform) ? PLATFORMS[platform as PlatformId] : PLATFORMS.shopify;
 
   // Round 1: parallel fetches (all apps)
+  // Critical: getApp must succeed; everything else degrades gracefully
   let app: any;
-  let reviewData: any;
-  let rankings: any;
-  let changes: any[];
-  let reviewMetrics: any;
-  let featuredData: any;
-  let adData: any;
-  let similarData: any;
-  let selfMinPaidPriceMap: Record<string, number | null>;
-  let scoresData: any;
-
   try {
-    [app, reviewData, rankings, changes, reviewMetrics, featuredData, adData, similarData, selfMinPaidPriceMap, scoresData] =
-      await Promise.all([
-        getApp(slug, platform as PlatformId),
-        caps.hasReviews
-          ? getAppReviews(slug, 3, 0, "newest", platform as PlatformId).catch(() => ({ reviews: [], total: 0, distribution: [] }))
-          : Promise.resolve({ reviews: [], total: 0, distribution: [] }),
-        getAppRankings(slug, 30, platform as PlatformId).catch(() => ({})),
-        getAppChanges(slug, 10, platform as PlatformId).catch(() => []),
-        caps.hasReviews
-          ? getAppReviewMetrics(slug, platform as PlatformId).catch(() => null)
-          : Promise.resolve(null),
-        caps.hasFeaturedSections
-          ? getAppFeaturedPlacements(slug, 30, platform as PlatformId).catch(() => ({ sightings: [] }))
-          : Promise.resolve({ sightings: [] }),
-        caps.hasAdTracking
-          ? getAppAdSightings(slug, 30, platform as PlatformId).catch(() => ({ sightings: [] }))
-          : Promise.resolve({ sightings: [] }),
-        caps.hasSimilarApps
-          ? getAppSimilarApps(slug, 30, platform as PlatformId).catch(() => ({ direct: [], reverse: [], secondDegree: [] }))
-          : Promise.resolve({ direct: [], reverse: [], secondDegree: [] }),
-        caps.hasPricing
-          ? getAppsMinPaidPrices([slug], platform as PlatformId).catch(() => ({}))
-          : Promise.resolve({}),
-        getAppScores(slug, platform as PlatformId).catch(() => ({ visibility: [], power: [], weightedPowerScore: 0 })),
-      ]);
+    app = await getApp(slug, platform as PlatformId);
   } catch {
     return <p className="text-muted-foreground">App not found.</p>;
   }
+
+  const [reviewData, rankings, changes, reviewMetrics, featuredData, adData, similarData, selfMinPaidPriceMap, scoresData] =
+    await Promise.all([
+      caps.hasReviews
+        ? getAppReviews(slug, 3, 0, "newest", platform as PlatformId).catch(() => ({ reviews: [], total: 0, distribution: [] }))
+        : Promise.resolve({ reviews: [], total: 0, distribution: [] }),
+      getAppRankings(slug, 30, platform as PlatformId).catch(() => ({})),
+      getAppChanges(slug, 10, platform as PlatformId).catch(() => []),
+      caps.hasReviews
+        ? getAppReviewMetrics(slug, platform as PlatformId).catch(() => null)
+        : Promise.resolve(null),
+      caps.hasFeaturedSections
+        ? getAppFeaturedPlacements(slug, 30, platform as PlatformId).catch(() => ({ sightings: [] }))
+        : Promise.resolve({ sightings: [] }),
+      caps.hasAdTracking
+        ? getAppAdSightings(slug, 30, platform as PlatformId).catch(() => ({ sightings: [] }))
+        : Promise.resolve({ sightings: [] }),
+      caps.hasSimilarApps
+        ? getAppSimilarApps(slug, 30, platform as PlatformId).catch(() => ({ direct: [], reverse: [], secondDegree: [] }))
+        : Promise.resolve({ direct: [], reverse: [], secondDegree: [] }),
+      caps.hasPricing
+        ? getAppsMinPaidPrices([slug], platform as PlatformId).catch(() => ({}))
+        : Promise.resolve({}),
+      getAppScores(slug, platform as PlatformId).catch(() => ({ visibility: [], power: [], weightedPowerScore: 0 })),
+    ]);
 
   // Category ranking changes (computed early for category leader fetches)
   const catRankings = rankings?.categoryRankings || [];
@@ -146,7 +138,7 @@ export default async function AppOverviewPage({
   // Competitor ranking — by rating, by reviews, by price
   const selfRating = parseFloat(app.latestSnapshot?.averageRating) || 0;
   const selfReviews = app.latestSnapshot?.ratingCount || 0;
-  const selfMinPaidPrice = selfMinPaidPriceMap[slug] ?? null;
+  const selfMinPaidPrice = (selfMinPaidPriceMap as Record<string, number | null>)[slug] ?? null;
 
   const allWithSelf = [
     { slug: app.slug, name: app.name, iconUrl: app.iconUrl, rating: selfRating, reviews: selfReviews, minPaidPrice: selfMinPaidPrice, isSelf: true },

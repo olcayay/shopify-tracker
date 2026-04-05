@@ -298,8 +298,8 @@ export default async function V2DashboardPage({
                 {competitors.length > 0 && (
                   <div className="space-y-1">
                     {competitors.slice(0, 4).map((c: any) => (
-                      <div key={c.slug} className="flex items-center justify-between text-sm">
-                        <span className="truncate">{c.name}</span>
+                      <div key={c.appSlug} className="flex items-center justify-between text-sm">
+                        <span className="truncate">{c.appName}</span>
                         <span className="text-xs text-muted-foreground tabular-nums">
                           {c.latestSnapshot?.averageRating != null && `${Number(c.latestSnapshot.averageRating).toFixed(1)}★`}
                         </span>
