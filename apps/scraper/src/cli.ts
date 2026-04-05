@@ -261,7 +261,6 @@ const isSmokeTest = process.env.SMOKE_TEST === "1";
 const triggeredBy = isSmokeTest ? "smoke-test" : "cli";
 
 async function createRun(type: "category" | "app_details" | "keyword_search" | "reviews"): Promise<string> {
-  if (isSmokeTest) return "smoke-test";
   const { scrapeRuns } = await import("@appranks/db");
   const [run] = await db
     .insert(scrapeRuns)
@@ -271,7 +270,6 @@ async function createRun(type: "category" | "app_details" | "keyword_search" | "
 }
 
 async function completeRun(runId: string, error?: string): Promise<void> {
-  if (isSmokeTest) return;
   const { scrapeRuns } = await import("@appranks/db");
   const { eq } = await import("drizzle-orm");
   await db
