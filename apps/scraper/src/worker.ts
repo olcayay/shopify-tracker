@@ -18,6 +18,7 @@ import { BACKGROUND_QUEUE_NAME, INTERACTIVE_QUEUE_NAME, getRedisConnection, type
 import { initWorkerDeps, createProcessJob, runMigrations } from "./process-job.js";
 import { cleanupStaleRuns } from "./jobs/cleanup-stale-runs.js";
 import { createLinearJobFailureTask } from "./utils/create-linear-job-failure-task.js";
+import { serializeError, getErrorMessage } from "./utils/serialize-error.js";
 import { createGracefulShutdown } from "./graceful-shutdown.js";
 import { browserPool } from "./browser-pool.js";
 import { RedisLock } from "./redis-lock.js";
@@ -97,7 +98,7 @@ async function insertDeadLetterJob(
       jobType: job.data?.type ?? "unknown",
       platform: job.data?.platform ?? null,
       payload: job.data as unknown as Record<string, unknown>,
-      errorMessage: err.message ?? String(err),
+      errorMessage: getErrorMessage(err),
       errorStack: err.stack ?? null,
       attemptsMade: job.attemptsMade,
     });
@@ -105,7 +106,7 @@ async function insertDeadLetterJob(
   } catch (dlqErr) {
     log.error("failed to insert dead letter job", {
       jobId: job.id,
-      error: String(dlqErr),
+      error: serializeError(dlqErr),
     });
   }
 }
@@ -116,7 +117,7 @@ for (const [name, w] of [["background", bgWorker], ["interactive", intWorker]] a
       jobId: job?.id,
       type: job?.data?.type,
       attempt: job?.attemptsMade,
-      error: String(err),
+      error: serializeError(err),
     });
 
     // Report to Sentry
@@ -132,16 +133,16 @@ for (const [name, w] of [["background", bgWorker], ["interactive", intWorker]] a
         name,
         job.data?.platform,
         job.data?.type,
-        err.message ?? String(err),
+        getErrorMessage(err),
         job.attemptsMade,
       ).catch((linearErr) => {
-        log.error("failed to create Linear job failure task", { error: String(linearErr) });
+        log.error("failed to create Linear job failure task", { error: serializeError(linearErr) });
       });
     }
   });
 
   w.on("error", (err) => {
-    log.error(`[${name}] worker error`, { error: String(err) });
+    log.error(`[${name}] worker error`, { error: serializeError(err) });
   });
 }
 
@@ -153,7 +154,7 @@ const staleCleanupTimer = setInterval(async () => {
   try {
     await cleanupStaleRuns(db);
   } catch (err) {
-    log.error("periodic stale run cleanup failed", { error: String(err) });
+    log.error("periodic stale run cleanup failed", { error: serializeError(err) });
   }
 }, STALE_CLEANUP_INTERVAL_MS);
 

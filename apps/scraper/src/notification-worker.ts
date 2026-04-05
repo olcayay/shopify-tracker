@@ -17,6 +17,7 @@ import { createLogger } from "@appranks/shared";
 import { createDb, deadLetterJobs } from "@appranks/db";
 import { NOTIFICATIONS_QUEUE_NAME, getRedisConnection } from "./queue.js";
 import { processNotification } from "./notifications/process-notification.js";
+import { serializeError, getErrorMessage, getErrorStack } from "./utils/serialize-error.js";
 
 const log = createLogger("notification-worker");
 
@@ -46,7 +47,7 @@ worker.on("failed", async (job, err) => {
     type: job?.data?.type,
     userId: job?.data?.userId,
     attempt: job?.attemptsMade,
-    error: String(err),
+    error: serializeError(err),
   });
 
   if (job && job.attemptsMade >= (job.opts?.attempts ?? 3)) {
@@ -56,19 +57,19 @@ worker.on("failed", async (job, err) => {
         queueName: NOTIFICATIONS_QUEUE_NAME,
         jobType: job.data.type,
         payload: job.data as unknown as Record<string, unknown>,
-        errorMessage: String(err),
-        errorStack: err instanceof Error ? err.stack : undefined,
+        errorMessage: getErrorMessage(err),
+        errorStack: getErrorStack(err),
         attemptsMade: job.attemptsMade,
       });
       log.info("job moved to dead letter queue", { jobId: job.id, type: job.data.type });
     } catch (dlErr) {
-      log.error("failed to insert dead letter job", { error: String(dlErr) });
+      log.error("failed to insert dead letter job", { error: serializeError(dlErr) });
     }
   }
 });
 
 worker.on("error", (err) => {
-  log.error("worker error", { error: String(err) });
+  log.error("worker error", { error: serializeError(err) });
 });
 
 log.info("notification worker started (concurrency: 5, rate: 100/min), waiting for jobs...");

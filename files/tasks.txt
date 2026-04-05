@@ -1,3 +1,11 @@
+GCP Production Bugfixes (2026-04-05)
+  PLA-741: Fix AggregateError serialization in workers ✅
+  PLA-742: Add missing compute_similarity_scores enum to worker migrations ✅
+  PLA-743: Fix notification retention cleanup Date vs string ✅
+  PLA-744: Add Redis ECONNRESET error handler ✅
+  PLA-745: Downgrade premature close errors to info level ✅
+  PLA-746: Fix WordPress platformData null field validation ✅
+
 Member Invitation Flow v2 (2026-04-04)
   PLA-718: Fix invitation email accept URL mismatch ✅
   PLA-719: Enrich invitation GET endpoint with inviter and account info ✅

@@ -54,6 +54,8 @@ export function getRedisConnection(): ConnectionOptions {
     host: parsed.hostname,
     port: parseInt(parsed.port || "6379", 10),
     password: parsed.password || undefined,
+    maxRetriesPerRequest: null, // Required for BullMQ — allows unlimited retries on connection loss
+    enableReadyCheck: false, // Prevent blocking on Redis restarts
   };
 }
 

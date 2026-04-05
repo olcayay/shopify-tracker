@@ -16,6 +16,7 @@ import { createLogger } from "@appranks/shared";
 import { INTERACTIVE_QUEUE_NAME, getRedisConnection, type ScraperJobData } from "./queue.js";
 import { initWorkerDeps, createProcessJob, runMigrations } from "./process-job.js";
 import { cleanupStaleRuns } from "./jobs/cleanup-stale-runs.js";
+import { serializeError } from "./utils/serialize-error.js";
 
 const log = createLogger("interactive-worker");
 
@@ -42,12 +43,12 @@ worker.on("failed", (job, err) => {
     jobId: job?.id,
     type: job?.data?.type,
     attempt: job?.attemptsMade,
-    error: String(err),
+    error: serializeError(err),
   });
 });
 
 worker.on("error", (err) => {
-  log.error("worker error", { error: String(err) });
+  log.error("worker error", { error: serializeError(err) });
 });
 
 log.info("interactive worker started, waiting for jobs...");

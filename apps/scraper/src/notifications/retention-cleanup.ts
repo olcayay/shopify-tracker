@@ -55,7 +55,7 @@ export async function cleanupOldNotifications(
       DELETE FROM notification_delivery_log
       WHERE notification_id IN (
         SELECT id FROM notifications
-        WHERE created_at < ${cutoff}
+        WHERE created_at < ${cutoffStr}
         LIMIT ${BATCH_SIZE}
       )
     `);
@@ -69,7 +69,7 @@ export async function cleanupOldNotifications(
       DELETE FROM notifications
       WHERE id IN (
         SELECT id FROM notifications
-        WHERE created_at < ${cutoff}
+        WHERE created_at < ${cutoffStr}
         LIMIT ${BATCH_SIZE}
       )
     `);
@@ -109,12 +109,13 @@ export async function getRetentionStats(
 }> {
   const cutoff = new Date();
   cutoff.setDate(cutoff.getDate() - retentionDays);
+  const cutoffStr = cutoff.toISOString();
 
   const totalResult: any = await db.execute(sql`
     SELECT count(*)::int AS count FROM notifications
   `);
   const expiredResult: any = await db.execute(sql`
-    SELECT count(*)::int AS count FROM notifications WHERE created_at < ${cutoff}
+    SELECT count(*)::int AS count FROM notifications WHERE created_at < ${cutoffStr}
   `);
 
   const totalRow = totalResult?.rows?.[0] ?? (Array.isArray(totalResult) ? totalResult[0] : totalResult);

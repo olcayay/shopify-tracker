@@ -67,13 +67,13 @@ export const WordPressPlatformDataSchema = z.object({
   shortDescription: z.string().optional(),
   version: z.string().optional(),
   testedUpTo: z.string().optional(),
-  requiresWP: z.string().optional(),
-  requiresPHP: z.string().optional(),
+  requiresWP: z.string().nullable().optional(),
+  requiresPHP: z.string().nullable().optional(),
   activeInstalls: z.number().optional(),
-  downloaded: z.number().optional(),
+  downloaded: z.number().nullable().optional(),
   lastUpdated: z.string().optional(),
   added: z.string().optional(),
-  businessModel: z.string().optional(),
+  businessModel: z.string().nullable().optional(),
 }).passthrough();
 
 export const GoogleWorkspacePlatformDataSchema = z.object({

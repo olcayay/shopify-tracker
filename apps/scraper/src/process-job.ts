@@ -53,6 +53,16 @@ export async function runMigrations(db: ReturnType<typeof createDb>, label?: str
   const ctx = label || "worker";
   log.info(`[${ctx}] running database migrations`, { migrationsFolder });
   try {
+    // Pre-migration: add enum values outside of transaction
+    // (ALTER TYPE ... ADD VALUE cannot run inside a transaction block)
+    try {
+      await db.execute(sql`ALTER TYPE scraper_type ADD VALUE IF NOT EXISTS 'compute_similarity_scores'`);
+    } catch (e: any) {
+      if (!e.message?.includes("already exists")) {
+        log.warn(`[${ctx}] pre-migration enum error`, { error: e.message });
+      }
+    }
+
     await migrate(db, { migrationsFolder });
     log.info(`[${ctx}] database migrations complete`);
   } catch (err) {

@@ -1,3 +1,35 @@
+GCP Production Bugfixes (2026-04-05)
+================================================================
+6 bug fixes from GCP error logs:
+
+PLA-741 (Urgent): AggregateError serialization
+- Created serialize-error.ts utility with serializeError(), getErrorMessage(), getErrorStack()
+- AggregateError now properly serializes nested .errors array instead of losing details
+- Updated all 5 workers: email-instant, email-bulk, notification, background, interactive
+- Dead letter queue entries now contain full error details
+
+PLA-742 (High): compute_similarity_scores enum missing
+- Worker's runMigrations() in process-job.ts was missing the pre-migration ALTER TYPE
+- Added same enum addition that standalone migrate.ts already has
+- Now both migration paths add the enum value before running Drizzle migrations
+
+PLA-743 (Medium): Notification retention cleanup TypeError
+- SQL queries passed Date object instead of ISO string to postgres
+- Fixed by using cutoffStr (already computed) instead of cutoff Date object
+- Also fixed same bug in getRetentionStats()
+
+PLA-744 (Medium): Redis ECONNRESET unhandled
+- Added maxRetriesPerRequest: null to Redis connection options (BullMQ requirement)
+- Added enableReadyCheck: false to prevent blocking on Redis restarts
+
+PLA-745 (Medium): API premature close errors
+- Added premature close handling in Fastify error handler — logs at info, not error
+- Expected behavior with Cloudflare proxy timeouts and browser navigation
+
+PLA-746 (Low): WordPress platformData null fields
+- Added .nullable() to requiresWP, requiresPHP, downloaded, businessModel in Zod schema
+- These fields can legitimately be null for some WordPress plugins
+
 Member Invitation Flow v2 (2026-04-04)
 ================================================================
 Complete overhaul of member invitation system:

@@ -19,6 +19,7 @@ import { EMAIL_INSTANT_QUEUE_NAME, getRedisConnection } from "./queue.js";
 import { processInstantEmail } from "./email/process-instant-email.js";
 import { classifyEmailError } from "./email/error-classifier.js";
 import { instantWorkerMetrics } from "./email/worker-metrics.js";
+import { serializeError, getErrorMessage, getErrorStack } from "./utils/serialize-error.js";
 
 const log = createLogger("email-instant-worker");
 
@@ -44,7 +45,7 @@ const worker = new Worker<InstantEmailJobData>(
         jobId: job.id,
         type: job.data.type,
         errorClass,
-        error: String(err),
+        error: serializeError(err),
       });
 
       instantWorkerMetrics.recordFailure(Date.now() - startTime);
@@ -75,7 +76,7 @@ worker.on("failed", async (job, err) => {
     to: job?.data?.to,
     attempt: job?.attemptsMade,
     errorClass,
-    error: String(err),
+    error: serializeError(err),
   });
 
   // After final failure, log to dead letter table
@@ -86,19 +87,19 @@ worker.on("failed", async (job, err) => {
         queueName: EMAIL_INSTANT_QUEUE_NAME,
         jobType: job.data.type,
         payload: job.data as unknown as Record<string, unknown>,
-        errorMessage: `[${errorClass}] ${String(err)}`,
-        errorStack: err instanceof Error ? err.stack : undefined,
+        errorMessage: `[${errorClass}] ${getErrorMessage(err)}`,
+        errorStack: getErrorStack(err),
         attemptsMade: job.attemptsMade,
       });
       log.info("job moved to dead letter queue", { jobId: job.id, type: job.data.type, errorClass });
     } catch (dlErr) {
-      log.error("failed to insert dead letter job", { error: String(dlErr) });
+      log.error("failed to insert dead letter job", { error: serializeError(dlErr) });
     }
   }
 });
 
 worker.on("error", (err) => {
-  log.error("worker error", { error: String(err) });
+  log.error("worker error", { error: serializeError(err) });
 });
 
 log.info("email-instant worker started, waiting for jobs...");

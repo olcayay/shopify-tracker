@@ -449,6 +449,14 @@ app.get("/health", async (_request, reply) => {
 app.setErrorHandler<Error & { statusCode?: number }>((error, request, reply) => {
   const requestId = request.id;
 
+  // Premature close — client disconnected before response completed.
+  // Expected with Cloudflare proxy timeouts and browser navigation.
+  // Log at info level, not error/fatal.
+  if (error.message === "premature close" || (error as any).code === "ERR_STREAM_PREMATURE_CLOSE") {
+    request.log.info({ reqId: requestId, url: request.url }, "client disconnected (premature close)");
+    return;
+  }
+
   // ApiError — standardized error responses
   if (error instanceof ApiError) {
     return reply.code(error.statusCode).send(error.toJSON(requestId));
