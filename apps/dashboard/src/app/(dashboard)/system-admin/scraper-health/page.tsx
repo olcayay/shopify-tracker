@@ -732,13 +732,14 @@ function RecentFailureCard({
               ) : itemErrors && itemErrors.length > 0 ? (
                 <div className="space-y-1.5">
                   {itemErrors.map((err: any) => (
-                    <div key={err.id} className="border border-orange-200 bg-orange-50/50 rounded p-2 text-xs">
+                    <div key={err.id} className="relative group border border-orange-200 bg-orange-50/50 rounded p-2 text-xs">
                       <div className="flex items-center gap-2 mb-0.5">
                         <span className="font-mono font-medium text-orange-700">{err.itemIdentifier}</span>
                         <Badge variant="outline" className="text-[9px] px-1 py-0 h-4">{err.itemType}</Badge>
                       </div>
                       {err.url && <div className="text-muted-foreground truncate" title={err.url}>{err.url}</div>}
                       <div className="text-destructive mt-0.5">{err.errorMessage}</div>
+                      <CopyButton value={`${err.itemIdentifier} (${err.itemType}): ${err.errorMessage}${err.url ? `\nURL: ${err.url}` : ""}`} variant="icon" size="xs" className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity" />
                     </div>
                   ))}
                 </div>
@@ -759,7 +760,7 @@ function ErrorBlock({ error }: { error: string }) {
       <pre className="text-xs text-red-600 bg-red-50 rounded px-3 py-2 font-mono whitespace-pre-wrap break-words max-h-[7.5rem] overflow-y-auto">
         {error}
       </pre>
-      <div className="absolute top-1.5 right-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
+      <div className="absolute top-1.5 right-1.5 opacity-40 group-hover:opacity-100 transition-opacity z-10">
         <CopyButton value={error} variant="icon" size="xs" />
       </div>
     </div>
@@ -813,10 +814,11 @@ function CellTooltip({ cell, status }: { cell: HealthCell; status: CellStatus })
             </div>
           )}
           {cell.lastRun.error && (
-            <div className="text-red-600 break-words max-w-[250px]">
-              {cell.lastRun.error.length > 150
+            <div className="relative group text-red-600 break-words max-w-[250px]">
+              <div>{cell.lastRun.error.length > 150
                 ? cell.lastRun.error.slice(0, 150) + "..."
-                : cell.lastRun.error}
+                : cell.lastRun.error}</div>
+              <CopyButton value={cell.lastRun.error} variant="icon" size="xs" className="absolute -top-1 -right-1 opacity-0 group-hover:opacity-100 transition-opacity" />
             </div>
           )}
         </>

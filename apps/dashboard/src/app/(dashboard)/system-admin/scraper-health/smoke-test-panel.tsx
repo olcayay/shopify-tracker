@@ -100,6 +100,7 @@ function StatusCell({
   isExpanded,
   onToggleExpand,
   isRunning,
+  isHistorical,
 }: {
   platform: string;
   check: SmokeCheckName;
@@ -110,6 +111,7 @@ function StatusCell({
   isExpanded: boolean;
   onToggleExpand: () => void;
   isRunning: boolean;
+  isHistorical?: boolean;
 }) {
   if (isNA) {
     return (
@@ -129,7 +131,7 @@ function StatusCell({
           : status === "running"
             ? "bg-blue-50"
             : ""
-      }`}
+      } ${isHistorical ? "opacity-60" : ""}`}
       onClick={status === "fail" ? onToggleExpand : undefined}
     >
       <div className="flex items-center justify-center gap-1.5">
@@ -298,7 +300,8 @@ interface SmokeTestPanelProps {
 export function SmokeTestPanel({ onComplete, history }: SmokeTestPanelProps) {
   const { isRunning, results, progress, summary, start, stop, retryCheck } =
     useSmokeTest();
-  const [isOpen, setIsOpen] = useState(false);
+  const hasHistory = history && history.length > 0;
+  const [isOpen, setIsOpen] = useState(!!hasHistory);
   const [expandedCells, setExpandedCells] = useState<Set<string>>(new Set());
 
   // Build effective results: use live results when available, fall back to history
@@ -533,6 +536,7 @@ export function SmokeTestPanel({ onComplete, history }: SmokeTestPanelProps) {
                                     isExpanded={expandedCells.has(key)}
                                     onToggleExpand={() => toggleCellExpand(key)}
                                     isRunning={isRunning}
+                                    isHistorical={isHistorical}
                                   />
                                 </div>
                               </TooltipTrigger>

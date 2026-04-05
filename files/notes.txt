@@ -1,3 +1,36 @@
+Scraper Health & Diagnostics Improvements (2026-04-05)
+================================================================
+5 tasks implemented for better scraper monitoring and debugging:
+
+PLA-761 (Urgent): Fix developers endpoint 500 error
+- Root cause: CTE in GET /api/apps/developers scanned ALL app_snapshots without platform filter
+- Fix: Added INNER JOIN with apps table inside CTE to filter by platform before DISTINCT ON
+- This eliminates full table scan on app_snapshots (hundreds of thousands of rows)
+
+PLA-755: Show last run results on smoke test page load
+- Panel now auto-opens when historical data exists (useState initialized from history prop)
+- Historical cells shown with 60% opacity to distinguish from live results
+- "Last run results" label and "last run X ago" badge in header
+
+PLA-757: Fix copyable error logs
+- Health Matrix ErrorBlock: copy button now always partially visible (opacity-40 → 100 on hover)
+- Cell tooltip error: added CopyButton for quick copy of truncated error text
+- Item error cards: added CopyButton with structured error info (identifier, type, message, URL)
+
+PLA-756: Add consistent job ID (traceId) tracing
+- Workers now generate traceId from job.id (first 8 chars) and include in start/complete/error logs
+- smoke_test_results table: added trace_id column (migration 0116)
+- API persists traceId from CLI output to DB when saving smoke test results
+- History API returns lastTraceId field
+- Single check retry also extracts and returns traceId
+
+PLA-760: Improve smoke test failure reports
+- Enhanced print_failures() in smoke-test.sh with ISO timestamps, exit code descriptions
+- Shows last 20 lines of output (was 5)
+- Adds diagnosis section for timeouts and OOM kills
+- Includes full CLI command, timeout value, and structured formatting
+- New describe_exit_code() function maps common exit codes to human-readable descriptions
+
 GCP Production Bugfixes (2026-04-05)
 ================================================================
 6 bug fixes from GCP error logs:

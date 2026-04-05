@@ -18,6 +18,7 @@ export const smokeTestResults = pgTable(
     durationMs: integer("duration_ms"),
     error: text("error"),
     output: text("output"),
+    traceId: varchar("trace_id", { length: 50 }),
     createdAt: timestamp("created_at").notNull().defaultNow(),
   },
   (table) => [

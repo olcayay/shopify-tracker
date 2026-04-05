@@ -1121,6 +1121,7 @@ export const systemAdminRoutes: FastifyPluginAsync = async (app) => {
               durationMs,
               error: error ?? null,
               output: output.slice(-5000),
+              traceId: traceId ?? null,
             })
             .then(
               () => {},
@@ -1279,6 +1280,10 @@ export const systemAdminRoutes: FastifyPluginAsync = async (app) => {
       });
     });
 
+    // Extract traceId from CLI output for log correlation
+    const traceIdMatch = result.output.match(/"traceId"\s*:\s*"([^"]+)"/);
+    const resultTraceId = traceIdMatch?.[1] ?? null;
+
     // Persist result to DB
     db.insert(smokeTestResults)
       .values({
@@ -1288,20 +1293,21 @@ export const systemAdminRoutes: FastifyPluginAsync = async (app) => {
         durationMs: result.durationMs,
         error: result.error ?? null,
         output: result.output.slice(-5000),
+        traceId: resultTraceId,
       })
       .then(
         () => {},
         (err) => app.log.error(`Failed to persist smoke test result: ${err.message}`)
       );
 
-    return result;
+    return { ...result, ...(resultTraceId ? { traceId: resultTraceId } : {}) };
   });
 
   // GET /api/system-admin/scraper/smoke-test/history
   app.get("/scraper/smoke-test/history", async (_request, reply) => {
     // Get the last 10 results per platform+check using window function
     const rows = await db.execute(sql`
-      SELECT platform, check_name, status, error, duration_ms, created_at
+      SELECT platform, check_name, status, error, duration_ms, trace_id, created_at
       FROM (
         SELECT *, ROW_NUMBER() OVER (
           PARTITION BY platform, check_name
@@ -1322,6 +1328,7 @@ export const systemAdminRoutes: FastifyPluginAsync = async (app) => {
       lastRunAt: string | null;
       lastStatus: string | null;
       lastDurationMs: number | null;
+      lastTraceId: string | null;
       recentErrors: { error: string; createdAt: string; durationMs: number | null }[];
     }>();
 
@@ -1337,6 +1344,7 @@ export const systemAdminRoutes: FastifyPluginAsync = async (app) => {
           lastRunAt: null,
           lastStatus: null,
           lastDurationMs: null,
+          lastTraceId: null,
           recentErrors: [],
         };
         map.set(key, entry);
@@ -1349,6 +1357,7 @@ export const systemAdminRoutes: FastifyPluginAsync = async (app) => {
           : String(row.created_at);
         entry.lastStatus = row.status;
         entry.lastDurationMs = row.duration_ms;
+        entry.lastTraceId = row.trace_id ?? null;
       }
       if (row.status === "fail" && row.error) {
         entry.recentErrors.push({

@@ -552,4 +552,44 @@ describe("App routes — with mock data", () => {
     expect(body).toHaveProperty("snapshots");
     expect(body.app).toHaveProperty("slug", "test-app");
   });
+
+  // =========================================================================
+  // GET /api/apps/developers — list developers (system admin only)
+  // =========================================================================
+
+  describe("GET /api/apps/developers", () => {
+    it("returns 403 for non-admin users", async () => {
+      const res = await app.inject({
+        method: "GET",
+        url: "/api/apps/developers?platform=shopify",
+        headers: authHeaders(userToken()),
+      });
+      expect(res.statusCode).toBe(403);
+    });
+
+    it("returns 200 with developer list for admin", async () => {
+      const mockDevs = [
+        { developer_name: "Acme Corp", app_count: 5, email: null, country: null },
+      ];
+      const adminApp = await buildAppsApp({ executeResult: mockDevs });
+      const res = await adminApp.inject({
+        method: "GET",
+        url: "/api/apps/developers?platform=shopify",
+        headers: authHeaders(adminToken()),
+      });
+      expect(res.statusCode).toBe(200);
+      const body = res.json();
+      expect(body).toEqual(mockDevs);
+      await adminApp.close();
+    });
+
+    it("returns 400 for invalid platform", async () => {
+      const res = await app.inject({
+        method: "GET",
+        url: "/api/apps/developers?platform=invalid_platform",
+        headers: authHeaders(adminToken()),
+      });
+      expect(res.statusCode).toBe(400);
+    });
+  });
 });

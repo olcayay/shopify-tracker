@@ -502,9 +502,11 @@ export const appRoutes: FastifyPluginAsync = async (app) => {
       country: string | null;
     }>(sql`
       WITH latest AS (
-        SELECT DISTINCT ON (app_id) app_id, developer, platform_data
-        FROM app_snapshots
-        ORDER BY app_id, scraped_at DESC
+        SELECT DISTINCT ON (s.app_id) s.app_id, s.developer, s.platform_data
+        FROM app_snapshots s
+        INNER JOIN apps a ON a.id = s.app_id
+        WHERE a.platform = ${platform}
+        ORDER BY s.app_id, s.scraped_at DESC
       )
       SELECT
         s.developer->>'name' AS developer_name,
@@ -513,8 +515,7 @@ export const appRoutes: FastifyPluginAsync = async (app) => {
         (ARRAY_AGG(${countryExpr}) FILTER (WHERE ${countryExpr} IS NOT NULL))[1] AS country
       FROM apps a
       INNER JOIN latest s ON s.app_id = a.id
-      WHERE a.platform = ${platform}
-        AND s.developer->>'name' IS NOT NULL
+      WHERE s.developer->>'name' IS NOT NULL
         AND s.developer->>'name' != ''
       GROUP BY s.developer->>'name'
       ORDER BY app_count DESC, developer_name ASC

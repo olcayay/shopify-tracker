@@ -274,6 +274,9 @@ run_check_bg() {
     cmd="$CLI --platform $platform $check"
   fi
 
+  # Save command for failure report
+  echo "$cmd" > "$WORK_DIR/${platform}-${check}.command"
+
   local output exit_code
   local env_prefix=""
   if $FORCE_FALLBACK; then
@@ -460,6 +463,24 @@ render_table() {
   TABLE_LINES=$lines
 }
 
+# ── Exit code description ────────────────────────────────────────────────────
+describe_exit_code() {
+  local code="$1"
+  case "$code" in
+    0)   echo "success" ;;
+    1)   echo "error" ;;
+    2)   echo "misuse of shell builtin" ;;
+    124) echo "timeout (GNU coreutils)" ;;
+    125) echo "timeout failed to run command" ;;
+    126) echo "command invoked cannot execute" ;;
+    127) echo "command not found" ;;
+    130) echo "SIGINT (Ctrl+C)" ;;
+    137) echo "SIGKILL — killed (likely OOM)" ;;
+    143) echo "SIGTERM — killed by timeout or system" ;;
+    *)   echo "unknown" ;;
+  esac
+}
+
 # ── Print failure details ────────────────────────────────────────────────────
 print_failures() {
   local has_failures=false
@@ -485,15 +506,69 @@ print_failures() {
       local s
       s=$(get_status "$platform" "$check")
       if [[ "$s" == "FAIL" || "$s" == "TIMEOUT" ]]; then
-        local dur exit_code
+        local dur exit_code tout
         dur=$(get_duration "$platform" "$check")
         exit_code=$(cat "$WORK_DIR/${platform}-${check}.exitcode" 2>/dev/null || echo "?")
-        echo -e "  ${RED}✗${RESET} ${BOLD}${platform} / ${check}${RESET} (exit=${exit_code}, ${dur}s):"
-        local output_file="$WORK_DIR/${platform}-${check}.output"
-        if [[ -f "$output_file" ]]; then
-          tail -5 "$output_file" | sed 's/^/    /'
+        tout=$(get_timeout "$platform")
+        local exit_desc
+        exit_desc=$(describe_exit_code "$exit_code")
+
+        # Timestamps
+        local start_epoch end_epoch start_iso end_iso
+        start_epoch=$(cat "$WORK_DIR/${platform}-${check}.start" 2>/dev/null || echo "0")
+        end_epoch=$((start_epoch + dur))
+        start_iso=$(date -r "$start_epoch" '+%Y-%m-%dT%H:%M:%SZ' 2>/dev/null || date -d "@$start_epoch" '+%Y-%m-%dT%H:%M:%SZ' 2>/dev/null || echo "N/A")
+        end_iso=$(date -r "$end_epoch" '+%Y-%m-%dT%H:%M:%SZ' 2>/dev/null || date -d "@$end_epoch" '+%Y-%m-%dT%H:%M:%SZ' 2>/dev/null || echo "N/A")
+
+        # Build command string
+        local arg cli_arg cmd_str
+        arg=$(get_check_arg "$platform" "$check")
+        cli_arg="${arg//+/ }"
+        if [[ -n "$cli_arg" ]]; then
+          cmd_str="$CLI --platform $platform $check $cli_arg"
+        else
+          cmd_str="$CLI --platform $platform $check"
         fi
+
         echo ""
+        echo -e "  ${RED}═══ SMOKE TEST FAILURE ═══${RESET}"
+        echo ""
+        echo -e "  Platform:     ${BOLD}${platform}${RESET}"
+        echo -e "  Check:        ${BOLD}${check}${RESET}"
+        echo -e "  Status:       ${RED}${s}${RESET}"
+        echo -e "  Started:      ${start_iso}"
+        echo -e "  Finished:     ${end_iso}"
+        echo -e "  Duration:     ${dur}s"
+        echo -e "  Timeout:      ${tout}s${s:+ $([ "$s" = "TIMEOUT" ] && echo "${RED}(exceeded)${RESET}" || echo "")}"
+        echo -e "  Exit Code:    ${exit_code} (${exit_desc})"
+        echo -e "  Command:      ${DIM}${cmd_str}${RESET}"
+
+        local output_file="$WORK_DIR/${platform}-${check}.output"
+        if [[ -f "$output_file" ]] && [[ -s "$output_file" ]]; then
+          echo ""
+          echo -e "  ${DIM}--- Last 20 lines of output ---${RESET}"
+          tail -20 "$output_file" | sed 's/^/    /'
+        fi
+
+        # Diagnosis for specific failure modes
+        if [[ "$s" == "TIMEOUT" || "$exit_code" == "124" || "$exit_code" == "143" ]]; then
+          echo ""
+          echo -e "  ${YELLOW}--- Diagnosis ---${RESET}"
+          echo -e "  ⚠  This check exceeded the ${tout}s timeout."
+          echo "     Possible causes:"
+          echo "     - Platform rate limiting (look for 429 in output)"
+          echo "     - Large dataset taking too long to fetch"
+          echo "     - Network latency or DNS issues"
+          echo "     Suggestion: Increase timeout with --timeout $((tout * 2))"
+        elif [[ "$exit_code" == "137" ]]; then
+          echo ""
+          echo -e "  ${YELLOW}--- Diagnosis ---${RESET}"
+          echo -e "  ⚠  Process killed by SIGKILL (likely out of memory)."
+          echo "     Check system memory usage during scraper runs."
+        fi
+
+        echo ""
+        printf "  "; printf '─%.0s' $(seq 1 74); echo ""
       fi
     done
   done

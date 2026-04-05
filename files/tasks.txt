@@ -1,3 +1,10 @@
+Scraper Health & Diagnostics Improvements (2026-04-05)
+  PLA-761: Fix GET /api/apps/developers 500 error on Shopify platform ✅
+  PLA-755: Smoke test table: show last run results on page load ✅
+  PLA-757: Fix copyable error logs in Health Matrix and Smoke Test History ✅
+  PLA-756: Add consistent job ID to all scraper logs and smoke test UI ✅
+  PLA-760: Improve smoke test failure reports with detailed diagnostics ✅
+
 GCP Production Bugfixes (2026-04-05)
   PLA-741: Fix AggregateError serialization in workers ✅
   PLA-742: Add missing compute_similarity_scores enum to worker migrations ✅

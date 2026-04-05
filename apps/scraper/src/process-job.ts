@@ -130,7 +130,8 @@ export function createProcessJob(db: ReturnType<typeof createDb>, queueName?: st
     const { type, triggeredBy, requestId } = job.data;
     const platform: PlatformId = (job.data.platform && isPlatformId(job.data.platform)) ? job.data.platform as PlatformId : "shopify";
     const jobStartTime = Date.now();
-    log.info("processing job", { jobId: job.id, type, triggeredBy, platform, ...(requestId && { requestId }) });
+    const traceId = String(job.id).slice(0, 8);
+    log.info("processing job", { jobId: job.id, traceId, type, triggeredBy, platform, ...(requestId && { requestId }) });
 
     const opts = job.data.options;
     const pageOptions = opts?.pages !== undefined ? { pages: opts.pages } : undefined;
@@ -660,7 +661,7 @@ export function createProcessJob(db: ReturnType<typeof createDb>, queueName?: st
       }
     }
 
-    log.info("job completed", { jobId: job.id, type, platform, durationMs: Date.now() - jobStartTime });
+    log.info("job completed", { jobId: job.id, traceId, type, platform, durationMs: Date.now() - jobStartTime });
 
     // Record success for circuit breaker
     await recordSuccess(platform).catch(() => {});
@@ -671,7 +672,7 @@ export function createProcessJob(db: ReturnType<typeof createDb>, queueName?: st
     });
     })()]);
     } catch (error) {
-      log.error("job failed", { jobId: job.id, type, platform, durationMs: Date.now() - jobStartTime, error: String(error) });
+      log.error("job failed", { jobId: job.id, traceId, type, platform, durationMs: Date.now() - jobStartTime, error: String(error) });
 
       // Record failure for circuit breaker
       await recordFailure(platform).catch(() => {});
