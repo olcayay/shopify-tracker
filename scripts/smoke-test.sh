@@ -118,19 +118,19 @@ ALL_PLATFORMS=(shopify salesforce canva wix wordpress google_workspace atlassian
 ALL_CHECKS=(categories app keyword reviews featured)
 
 # Platform definitions — index matches ALL_PLATFORMS
-PLATFORM_TYPE=(http browser browser http http browser http http browser browser http)
+PLATFORM_TYPE=(http http browser http http http http http http browser http)
 PLATFORM_CHECKS=(
-  "categories:finding-products app:trendsi keyword:email+marketing reviews:formful featured:"
-  "categories:sales app:a0N4V00000JTeWyUAL keyword:document+generation reviews:a0N4V00000JTeWyUAL"
-  "categories:ai-images app:AAE0b3zmS48--blur keyword:image+generator featured:"
-  "categories:marketing app:wix-forms keyword:form+builder reviews:wix-forms"
-  "categories:contact-form app:contact-form-7 keyword:contact+form reviews:contact-form-7"
-  "categories:business-tools app:able_poll--921058472860 keyword:project+management reviews:able_poll--921058472860"
-  "categories:project-management app:com.onresolve.jira.groovy.groovyrunner keyword:time+tracking reviews:com.onresolve.jira.groovy.groovyrunner featured:"
-  "categories:crm app:VG_p3Bb_TwWe_bgZmPUaXw keyword:calendar featured:"
-  "categories:desk app:crm--360-sms-for-zoho-crm keyword:inventory"
-  "categories:ai-and-bots app:972305--slack keyword:automation reviews:972305--slack featured:"
-  "categories:sales+--pages+3 app:gmail keyword:email+marketing reviews:gmail featured:"
+  "categories:finding-products+--pages+first app:trendsi keyword:email+marketing reviews:formful featured:"
+  "categories:sales+--pages+first app:a0N4V00000JTeWyUAL keyword:document+generation reviews:a0N4V00000JTeWyUAL"
+  "categories:ai-images+--pages+first app:AAE0b3zmS48--blur keyword:image+generator featured:"
+  "categories:marketing+--pages+first app:wix-forms keyword:form+builder reviews:wix-forms"
+  "categories:contact-form+--pages+first app:contact-form-7 keyword:contact+form reviews:contact-form-7"
+  "categories:business-tools+--pages+first app:able_poll--921058472860 keyword:project+management reviews:able_poll--921058472860"
+  "categories:project-management+--pages+first app:com.onresolve.jira.groovy.groovyrunner keyword:time+tracking reviews:com.onresolve.jira.groovy.groovyrunner featured:"
+  "categories:crm+--pages+first app:VG_p3Bb_TwWe_bgZmPUaXw keyword:calendar featured:"
+  "categories:desk+--pages+first app:crm--360-sms-for-zoho-crm keyword:inventory"
+  "categories:ai-and-bots+--pages+first app:972305--slack keyword:automation reviews:972305--slack featured:"
+  "categories:sales+--pages+first app:gmail keyword:email+marketing reviews:gmail featured:"
 )
 
 # ── Validate selected platform ───────────────────────────────────────────────

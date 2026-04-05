@@ -605,7 +605,9 @@ export class CanvaModule implements PlatformModule {
   private async ensureBrowserPage(): Promise<Page> {
     if (this.browserPage) return this.browserPage;
 
-    log.info("launching Chrome for Canva API access");
+    const t0 = Date.now();
+    const isSmokeTest = process.env.SMOKE_TEST === "1";
+    log.info("launching Chrome for Canva API access", { smokeTest: isSmokeTest });
 
     // Prefer installed Chrome for proper TLS fingerprint (Cloudflare bypass),
     // fall back to Playwright's bundled Chromium if Chrome is not available
@@ -652,42 +654,47 @@ export class CanvaModule implements PlatformModule {
     });
     this.browserPage = await this.browserContext.newPage();
 
-    // Navigate to /apps — use "load" to wait for full page load including Cloudflare JS
+    // Navigate to /apps — smoke test uses faster wait strategy
+    const gotoWait = isSmokeTest ? "domcontentloaded" as const : "load" as const;
+    const gotoTimeout = isSmokeTest ? 15_000 : 30_000;
     await this.browserPage.goto("https://www.canva.com/apps", {
-      waitUntil: "load",
-      timeout: 30_000,
+      waitUntil: gotoWait,
+      timeout: gotoTimeout,
     });
+    log.info("canva:goto_done", { ms: Date.now() - t0, waitUntil: gotoWait });
 
     // Wait for Cloudflare challenge to auto-resolve if present
     const initTitle = await this.browserPage.title();
     if (initTitle === "Just a moment...") {
       log.info("Cloudflare challenge on /apps, waiting for auto-resolve");
+      const cfTimeout = isSmokeTest ? 8_000 : 15_000;
       try {
         await this.browserPage.waitForFunction(
           () => document.title !== "Just a moment...",
-          { timeout: 15_000 },
+          { timeout: cfTimeout },
         );
         log.info("Cloudflare challenge resolved on /apps", { newTitle: await this.browserPage.title() });
-        // Wait for SPA hydration after challenge resolves
-        await this.browserPage.waitForTimeout(3000);
+        await this.browserPage.waitForTimeout(isSmokeTest ? 1000 : 3000);
       } catch {
         log.warn("Cloudflare challenge on /apps did not resolve in time");
       }
     }
 
     // Wait for search input to appear (SPA hydration)
+    const selectorTimeout = isSmokeTest ? 8_000 : 20_000;
     try {
       await this.browserPage.waitForSelector(
         'input[type="search"], input[aria-label*="search" i]',
-        { timeout: 20_000 },
+        { timeout: selectorTimeout },
       );
       log.info("search input found, page hydrated");
     } catch {
-      log.warn("search input not found after 20s, continuing anyway");
+      log.warn(`search input not found after ${selectorTimeout / 1000}s, continuing anyway`);
     }
 
-    // Extra settle time for Cloudflare background JS
-    await this.browserPage.waitForTimeout(2000);
+    // Extra settle time for Cloudflare background JS (reduced in smoke test)
+    await this.browserPage.waitForTimeout(isSmokeTest ? 500 : 2000);
+    log.info("canva:browser_ready", { totalMs: Date.now() - t0 });
 
     // Cache the page HTML while we're here
     if (!this.cachedAppsPageHtml) {

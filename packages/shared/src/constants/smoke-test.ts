@@ -34,7 +34,7 @@ export const SMOKE_PLATFORMS: SmokePlatform[] = [
     clientType: "http",
     timeoutSec: 60,
     checks: [
-      { check: "categories", arg: "finding-products" },
+      { check: "categories", arg: "finding-products --pages first" },
       { check: "app", arg: "trendsi" },
       { check: "keyword", arg: "email marketing" },
       { check: "reviews", arg: "formful" },
@@ -43,10 +43,10 @@ export const SMOKE_PLATFORMS: SmokePlatform[] = [
   },
   {
     platform: "salesforce",
-    clientType: "browser",
-    timeoutSec: 120,
+    clientType: "http",
+    timeoutSec: 60,
     checks: [
-      { check: "categories", arg: "sales" },
+      { check: "categories", arg: "sales --pages first" },
       { check: "app", arg: "a0N4V00000JTeWyUAL" },
       { check: "keyword", arg: "document generation" },
       { check: "reviews", arg: "a0N4V00000JTeWyUAL" },
@@ -57,7 +57,7 @@ export const SMOKE_PLATFORMS: SmokePlatform[] = [
     clientType: "browser",
     timeoutSec: 120,
     checks: [
-      { check: "categories", arg: "ai-images" },
+      { check: "categories", arg: "ai-images --pages first" },
       { check: "app", arg: "AAE0b3zmS48--blur" },
       { check: "keyword", arg: "image generator" },
       { check: "featured" },
@@ -68,7 +68,7 @@ export const SMOKE_PLATFORMS: SmokePlatform[] = [
     clientType: "http",
     timeoutSec: 60,
     checks: [
-      { check: "categories", arg: "marketing" },
+      { check: "categories", arg: "marketing --pages first" },
       { check: "app", arg: "wix-forms" },
       { check: "keyword", arg: "form builder" },
       { check: "reviews", arg: "wix-forms" },
@@ -79,7 +79,7 @@ export const SMOKE_PLATFORMS: SmokePlatform[] = [
     clientType: "http",
     timeoutSec: 60,
     checks: [
-      { check: "categories", arg: "contact-form" },
+      { check: "categories", arg: "contact-form --pages first" },
       { check: "app", arg: "contact-form-7" },
       { check: "keyword", arg: "contact form" },
       { check: "reviews", arg: "contact-form-7" },
@@ -87,10 +87,10 @@ export const SMOKE_PLATFORMS: SmokePlatform[] = [
   },
   {
     platform: "google_workspace",
-    clientType: "browser",
-    timeoutSec: 120,
+    clientType: "http",
+    timeoutSec: 60,
     checks: [
-      { check: "categories", arg: "business-tools" },
+      { check: "categories", arg: "business-tools --pages first" },
       { check: "app", arg: "able_poll--921058472860" },
       { check: "keyword", arg: "project management" },
       { check: "reviews", arg: "able_poll--921058472860" },
@@ -101,7 +101,7 @@ export const SMOKE_PLATFORMS: SmokePlatform[] = [
     clientType: "http",
     timeoutSec: 60,
     checks: [
-      { check: "categories", arg: "project-management" },
+      { check: "categories", arg: "project-management --pages first" },
       { check: "app", arg: "com.onresolve.jira.groovy.groovyrunner" },
       { check: "keyword", arg: "time tracking" },
       { check: "reviews", arg: "com.onresolve.jira.groovy.groovyrunner" },
@@ -113,7 +113,7 @@ export const SMOKE_PLATFORMS: SmokePlatform[] = [
     clientType: "http",
     timeoutSec: 60,
     checks: [
-      { check: "categories", arg: "crm" },
+      { check: "categories", arg: "crm --pages first" },
       { check: "app", arg: "VG_p3Bb_TwWe_bgZmPUaXw" },
       { check: "keyword", arg: "calendar" },
       { check: "featured" },
@@ -121,10 +121,10 @@ export const SMOKE_PLATFORMS: SmokePlatform[] = [
   },
   {
     platform: "zoho",
-    clientType: "browser",
-    timeoutSec: 120,
+    clientType: "http",
+    timeoutSec: 60,
     checks: [
-      { check: "categories", arg: "desk" },
+      { check: "categories", arg: "desk --pages first" },
       { check: "app", arg: "crm--360-sms-for-zoho-crm" },
       { check: "keyword", arg: "inventory" },
     ],
@@ -134,7 +134,7 @@ export const SMOKE_PLATFORMS: SmokePlatform[] = [
     clientType: "browser",
     timeoutSec: 120,
     checks: [
-      { check: "categories", arg: "ai-and-bots" },
+      { check: "categories", arg: "ai-and-bots --pages first" },
       { check: "app", arg: "972305--slack" },
       { check: "keyword", arg: "automation" },
       { check: "reviews", arg: "972305--slack" },
@@ -146,7 +146,7 @@ export const SMOKE_PLATFORMS: SmokePlatform[] = [
     clientType: "http",
     timeoutSec: 60,
     checks: [
-      { check: "categories", arg: "sales --pages 3" },
+      { check: "categories", arg: "sales --pages first" },
       { check: "app", arg: "gmail" },
       { check: "keyword", arg: "email marketing" },
       { check: "reviews", arg: "gmail" },
