@@ -19,6 +19,7 @@ export function loginAlertTemplate(data: LoginAlertData): { subject: string; htm
   const time = new Date(data.loginTime).toLocaleString("en-US", {
     dateStyle: "medium",
     timeStyle: "short",
+    timeZone: "UTC",
   });
 
   const body = `

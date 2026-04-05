@@ -2,7 +2,7 @@ import { colors, sizes } from "../design-tokens.js";
 
 /** Email header with AppRanks branding and type label */
 export function header(emailTypeLabel: string, date?: string): string {
-  const dateStr = date || new Date().toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+  const dateStr = date || new Date().toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" });
   return `
 <div style="background:${colors.primary};padding:${sizes.padding};text-align:center;">
   <div style="font-size:24px;font-weight:bold;color:${colors.white};letter-spacing:-0.5px;">AppRanks</div>
