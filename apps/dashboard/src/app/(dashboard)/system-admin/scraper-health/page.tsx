@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { usePolling } from "@/hooks/use-polling";
 import Link from "next/link";
 import { useAuth } from "@/lib/auth-context";
@@ -35,6 +35,8 @@ import {
   ChevronDown,
   ChevronRight,
   Loader2,
+  Skull,
+  Trash2,
 } from "lucide-react";
 import { useFormatDate } from "@/lib/format-date";
 import { CopyButton } from "@/components/ui/copy-button";
@@ -93,6 +95,15 @@ interface HealthData {
     lastDurationMs: number;
     avgDurationMs: number;
     changePercent: number;
+  }[];
+  staleRuns?: {
+    id: string;
+    platform: string;
+    scraperType: string;
+    startedAt: string | null;
+    runningSecs: number;
+    triggeredBy: string | null;
+    jobId: string | null;
   }[];
 }
 
@@ -156,6 +167,8 @@ export default function ScraperHealthPage() {
   const [lastRefresh, setLastRefresh] = useState<Date | null>(null);
   const [retrying, setRetrying] = useState<string | null>(null);
   const [smokeHistory, setSmokeHistory] = useState<SmokeHistoryEntry[] | null>(null);
+  const [killingRun, setKillingRun] = useState<string | null>(null);
+  const staleRunsRef = useRef<HTMLDivElement>(null);
 
   const fetchHealth = useCallback(async () => {
     try {
@@ -198,6 +211,24 @@ export default function ScraperHealthPage() {
     } finally {
       setRetrying(null);
     }
+  };
+
+  const handleKillRun = async (runId: string) => {
+    setKillingRun(runId);
+    try {
+      await fetchWithAuth(`/api/system-admin/scraper/runs/${runId}/kill`, { method: "POST" });
+      await fetchHealth();
+    } finally {
+      setKillingRun(null);
+    }
+  };
+
+  const handleKillAllStale = async () => {
+    if (!data?.staleRuns?.length) return;
+    for (const run of data.staleRuns) {
+      await fetchWithAuth(`/api/system-admin/scraper/runs/${run.id}/kill`, { method: "POST" }).catch(() => {});
+    }
+    await fetchHealth();
   };
 
   // Build matrix lookup: platform -> scraperType -> cell
@@ -246,10 +277,17 @@ export default function ScraperHealthPage() {
               <div className="text-sm text-muted-foreground mt-1">Failed</div>
             </CardContent>
           </Card>
-          <Card>
+          <Card
+            className={data.summary.stale > 0 || (data.staleRuns?.length ?? 0) > 0 ? "cursor-pointer hover:ring-2 hover:ring-yellow-300 transition-all" : ""}
+            onClick={() => {
+              if (data.summary.stale > 0 || (data.staleRuns?.length ?? 0) > 0) {
+                staleRunsRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+              }
+            }}
+          >
             <CardContent className="pt-5 pb-4 px-5">
-              <div className="text-3xl font-bold text-yellow-600">{data.summary.stale}</div>
-              <div className="text-sm text-muted-foreground mt-1">Stale</div>
+              <div className="text-3xl font-bold text-yellow-600">{Math.max(data.summary.stale, data.staleRuns?.length ?? 0)}</div>
+              <div className="text-sm text-muted-foreground mt-1">Stale / Stuck</div>
             </CardContent>
           </Card>
           <Card>
@@ -367,6 +405,80 @@ export default function ScraperHealthPage() {
 
       {/* Smoke Test History — last 10 runs success ratio */}
       <SmokeTestHistory history={smokeHistory} />
+
+      {/* Stale / Stuck Runs */}
+      {data && (data.staleRuns?.length ?? 0) > 0 && (
+        <div ref={staleRunsRef}>
+          <Card>
+            <CardHeader className="pb-2">
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-lg text-yellow-600 flex items-center gap-2">
+                  <Skull className="h-4 w-4" /> Stale / Stuck Runs ({data.staleRuns!.length})
+                </CardTitle>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="text-red-600 border-red-200 hover:bg-red-50"
+                  onClick={handleKillAllStale}
+                >
+                  <Trash2 className="h-3 w-3 mr-1" /> Kill All
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="text-sm">Platform</TableHead>
+                    <TableHead className="text-sm">Type</TableHead>
+                    <TableHead className="text-sm">Running For</TableHead>
+                    <TableHead className="text-sm">Started</TableHead>
+                    <TableHead className="text-sm">Triggered By</TableHead>
+                    <TableHead className="text-sm">Job ID</TableHead>
+                    <TableHead className="text-sm text-right">Action</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {data.staleRuns!.map((run) => (
+                    <TableRow key={run.id}>
+                      <TableCell>
+                        <div className="flex items-center gap-2">
+                          <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: PLATFORM_COLORS[run.platform as PlatformId] || "#888" }} />
+                          <span className="text-sm font-medium">{PLATFORM_LABELS[run.platform as PlatformId] || run.platform}</span>
+                        </div>
+                      </TableCell>
+                      <TableCell className="text-sm">{SCRAPER_TYPE_LABELS[run.scraperType] || run.scraperType}</TableCell>
+                      <TableCell>
+                        <Badge variant="outline" className={`text-xs font-mono ${run.runningSecs > 3600 ? "bg-red-50 text-red-700 border-red-200" : "bg-yellow-50 text-yellow-700 border-yellow-200"}`}>
+                          {run.runningSecs > 3600
+                            ? `${Math.floor(run.runningSecs / 3600)}h ${Math.floor((run.runningSecs % 3600) / 60)}m`
+                            : `${Math.floor(run.runningSecs / 60)}m ${run.runningSecs % 60}s`}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-sm text-muted-foreground">
+                        {run.startedAt ? timeAgo(run.startedAt) : "—"}
+                      </TableCell>
+                      <TableCell className="text-sm text-muted-foreground">{run.triggeredBy || "—"}</TableCell>
+                      <TableCell className="text-xs font-mono text-muted-foreground">{run.jobId || run.id.slice(0, 8)}</TableCell>
+                      <TableCell className="text-right">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="h-7 text-xs text-red-600 border-red-200 hover:bg-red-50"
+                          onClick={() => handleKillRun(run.id)}
+                          disabled={killingRun === run.id}
+                        >
+                          {killingRun === run.id ? <Loader2 className="h-3 w-3 animate-spin" /> : <><Trash2 className="h-3 w-3 mr-1" /> Kill</>}
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+        </div>
+      )}
 
       {/* Bottom panels: Recent Failures, Duration Anomalies, Active Jobs */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">

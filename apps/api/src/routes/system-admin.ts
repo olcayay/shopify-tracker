@@ -757,7 +757,18 @@ export const systemAdminRoutes: FastifyPluginAsync = async (app) => {
         AND started_at > NOW() - INTERVAL '2 hours'
     `);
 
-    // 4. Recent failures (last 24h, max 10)
+    // 4. Stale/stuck runs (running > 10 min, likely orphaned)
+    const staleRunsResult = await db.execute(sql`
+      SELECT id, platform, scraper_type, started_at, triggered_by, job_id,
+        (EXTRACT(EPOCH FROM (NOW() - started_at)))::int AS running_secs
+      FROM scrape_runs
+      WHERE status = 'running' AND platform IS NOT NULL
+        AND started_at < NOW() - INTERVAL '10 minutes'
+      ORDER BY started_at ASC
+      LIMIT 50
+    `);
+
+    // 5. Recent failures (last 24h, max 10)
     const recentFailures = await db.execute(sql`
       SELECT id, platform, scraper_type, completed_at, started_at, error, metadata,
         triggered_by, queue, job_id,
@@ -918,7 +929,28 @@ export const systemAdminRoutes: FastifyPluginAsync = async (app) => {
         };
       }),
       anomalies,
+      staleRuns: (staleRunsResult as any[]).map((r: any) => ({
+        id: r.id,
+        platform: r.platform,
+        scraperType: r.scraper_type,
+        startedAt: r.started_at ? new Date(r.started_at).toISOString() : null,
+        runningSecs: r.running_secs,
+        triggeredBy: r.triggered_by,
+        jobId: r.job_id,
+      })),
     };
+  });
+
+  // POST /api/system-admin/scraper/runs/:id/kill — mark stale run as failed
+  app.post<{ Params: { id: string } }>("/scraper/runs/:id/kill", async (request, reply) => {
+    const { id } = request.params;
+    const result = await db.execute(
+      sql`UPDATE scrape_runs SET status = 'failed', error = 'killed by admin', completed_at = NOW() WHERE id = ${id}::uuid AND status = 'running' RETURNING id`
+    );
+    if ((result as any[]).length === 0) {
+      return reply.code(404).send({ error: "Run not found or not running" });
+    }
+    return { success: true, id };
   });
 
   // GET /api/system-admin/scraper/smoke-test — SSE endpoint that runs smoke test checks
