@@ -14,10 +14,14 @@ import {
 } from "../helpers/test-app.js";
 import { authRoutes, loginLimiter, registerLimiter, passwordResetLimiter, accountLockout } from "../../routes/auth.js";
 import { _resetRateLimitRedis } from "../../utils/rate-limiter.js";
+import { _resetBlacklistRedis } from "../../utils/token-blacklist.js";
+import { _resetCacheRedis } from "../../utils/cache.js";
 import type { FastifyInstance } from "fastify";
 
-// Disable Redis for CI — rate limiter falls back to in-memory
+// Disable all Redis connections for CI — each falls back to in-memory/no-op
 _resetRateLimitRedis(null);
+_resetBlacklistRedis(null);
+_resetCacheRedis(null);
 
 beforeEach(() => {
   loginLimiter.reset();
