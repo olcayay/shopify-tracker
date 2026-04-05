@@ -1,0 +1,33 @@
+services:
+  worker:
+    image: ghcr.io/olcayay/appranks-worker:latest
+    restart: always
+    stop_grace_period: 120s
+    env_file: .env
+    deploy:
+      resources:
+        limits:
+          memory: 3G
+
+  worker-interactive:
+    image: ghcr.io/olcayay/appranks-worker-interactive:latest
+    restart: always
+    stop_grace_period: 120s
+    env_file: .env
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+
+  alloy:
+    image: grafana/alloy:v1.5.1
+    restart: always
+    volumes:
+      - ./alloy.river:/etc/alloy/config.alloy:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    command: [run, /etc/alloy/config.alloy, --stability.level=generally-available]
+    env_file: .env
+    deploy:
+      resources:
+        limits:
+          memory: 256M

@@ -1,0 +1,79 @@
+services:
+  redis:
+    image: redis:7-alpine
+    restart: always
+    command: redis-server --appendonly yes --maxmemory 1gb --maxmemory-policy volatile-lru --bind 0.0.0.0 --protected-mode no
+    volumes:
+      - redis_data:/data
+    ports:
+      - "0.0.0.0:6379:6379" # VPC internal — firewall ile korunuyor
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    deploy:
+      resources:
+        limits:
+          memory: 1536M
+
+  worker-email-instant:
+    image: ghcr.io/olcayay/appranks-worker-email:latest
+    restart: always
+    stop_grace_period: 30s
+    environment:
+      WORKER_MODE: email-instant
+    env_file: .env
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+    depends_on:
+      redis:
+        condition: service_healthy
+
+  worker-email-bulk:
+    image: ghcr.io/olcayay/appranks-worker-email:latest
+    restart: always
+    stop_grace_period: 120s
+    environment:
+      WORKER_MODE: email-bulk
+    env_file: .env
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+    depends_on:
+      redis:
+        condition: service_healthy
+
+  worker-notifications:
+    image: ghcr.io/olcayay/appranks-worker-email:latest
+    restart: always
+    stop_grace_period: 30s
+    environment:
+      WORKER_MODE: notifications
+    env_file: .env
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+    depends_on:
+      redis:
+        condition: service_healthy
+
+  alloy:
+    image: grafana/alloy:v1.5.1
+    restart: always
+    volumes:
+      - ./alloy.river:/etc/alloy/config.alloy:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    command: [run, /etc/alloy/config.alloy, --stability.level=generally-available]
+    env_file: .env
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+
+volumes:
+  redis_data:

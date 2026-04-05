@@ -1,0 +1,15 @@
+:80 {
+	@dashboard host appranks.io
+	handle @dashboard {
+		reverse_proxy localhost:3000
+	}
+
+	@api host api.appranks.io
+	handle @api {
+		reverse_proxy localhost:3001
+	}
+
+	handle {
+		respond "OK" 200
+	}
+}

@@ -1,0 +1,41 @@
+# AI Worker compose — Tier 6 implementasyonu tamamlandığında aktif edilecek.
+# Şimdilik placeholder olarak oluşturuldu.
+# AI worker image (Dockerfile.worker-ai) henüz mevcut değil.
+
+services:
+  # ai-realtime:
+  #   image: ghcr.io/olcayay/appranks-worker-ai:latest
+  #   restart: always
+  #   stop_grace_period: 30s
+  #   environment:
+  #     WORKER_MODE: ai-realtime
+  #   env_file: .env
+  #   deploy:
+  #     resources:
+  #       limits:
+  #         memory: 1G
+
+  # ai-deferred:
+  #   image: ghcr.io/olcayay/appranks-worker-ai:latest
+  #   restart: always
+  #   stop_grace_period: 120s
+  #   environment:
+  #     WORKER_MODE: ai-deferred
+  #   env_file: .env
+  #   deploy:
+  #     resources:
+  #       limits:
+  #         memory: 512M
+
+  alloy:
+    image: grafana/alloy:v1.5.1
+    restart: always
+    volumes:
+      - ./alloy.river:/etc/alloy/config.alloy:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    command: [run, /etc/alloy/config.alloy, --stability.level=generally-available]
+    env_file: .env
+    deploy:
+      resources:
+        limits:
+          memory: 256M
