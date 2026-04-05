@@ -74,6 +74,7 @@ export class KeywordScraper {
 
     try {
       await runConcurrent(keywords, async (kw) => {
+        const kwStart = Date.now();
         try {
           const slugs = await Promise.race([
             this.scrapeKeyword(kw.id, kw.keyword, run.id, pageOptions),
@@ -83,8 +84,9 @@ export class KeywordScraper {
           ]);
           for (const s of slugs) allDiscoveredSlugs.add(s);
           itemsScraped++;
+          log.info("keyword:scraped", { keyword: kw.keyword, durationMs: Date.now() - kwStart, apps: slugs.length });
         } catch (error) {
-          log.error("failed to scrape keyword", { keyword: kw.keyword, error: String(error) });
+          log.error("keyword:failed", { keyword: kw.keyword, durationMs: Date.now() - kwStart, error: String(error) });
           itemsFailed++;
           await recordItemError(this.db, {
             scrapeRunId: run.id,
@@ -145,7 +147,8 @@ export class KeywordScraper {
     runId: string,
     pageOptions?: { pages?: "first" | "all" | number }
   ): Promise<string[]> {
-    log.info("scraping keyword", { keyword, platform: this.platform });
+    const kwStart = Date.now();
+    log.info("scraping keyword", { keyword, platform: this.platform, pages: pageOptions?.pages ?? "default" });
 
     // Use generic path for non-Shopify platforms
     if (this.platformModule && !this.isShopify) {
@@ -190,11 +193,12 @@ export class KeywordScraper {
       }
     }
 
-    log.info("keyword pages scraped", { keyword, totalApps: allApps.length, organicCount });
+    const fetchMs = Date.now() - kwStart;
+    log.info("keyword:fetch_done", { keyword, fetchMs, totalApps: allApps.length, organicCount });
 
-    // In smoke test mode, skip DB writes (runId is not a valid UUID)
+    // In smoke test mode, skip DB writes
     if (this.isSmokeTest) {
-      log.info("smoke test mode — skipping DB writes", { keyword, totalApps: allApps.length });
+      log.info("keyword:complete", { keyword, totalApps: allApps.length, totalMs: Date.now() - kwStart });
       return [...new Set(allApps.filter((a) => !a.is_sponsored && !a.is_built_in).map((a) => a.app_slug))];
     }
 
@@ -378,6 +382,7 @@ export class KeywordScraper {
     runId: string,
     pageOptions?: { pages?: "first" | "all" | number }
   ): Promise<string[]> {
+    const kwStart = Date.now();
     const mod = this.platformModule!;
 
     const MAX_PAGES = pageOptions?.pages === "first" ? 1
@@ -416,11 +421,12 @@ export class KeywordScraper {
       }
     }
 
-    log.info("keyword pages scraped", { keyword, platform: this.platform, totalApps: allNormalizedApps.length, organicCount });
+    const fetchMs = Date.now() - kwStart;
+    log.info("keyword:fetch_done", { keyword, platform: this.platform, fetchMs, totalApps: allNormalizedApps.length, organicCount });
 
-    // In smoke test mode, skip DB writes (runId is not a valid UUID)
+    // In smoke test mode, skip DB writes
     if (this.isSmokeTest) {
-      log.info("smoke test mode — skipping DB writes", { keyword, platform: this.platform, totalApps: allNormalizedApps.length });
+      log.info("keyword:complete", { keyword, platform: this.platform, totalApps: allNormalizedApps.length, totalMs: Date.now() - kwStart });
       return [...new Set(allNormalizedApps.filter((a) => !a.isSponsored).map((a) => a.appSlug))];
     }
 

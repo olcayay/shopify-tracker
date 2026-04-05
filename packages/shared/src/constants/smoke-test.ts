@@ -36,7 +36,7 @@ export const SMOKE_PLATFORMS: SmokePlatform[] = [
     checks: [
       { check: "categories", arg: "finding-products --pages first" },
       { check: "app", arg: "trendsi" },
-      { check: "keyword", arg: "email marketing" },
+      { check: "keyword", arg: "email marketing --pages first" },
       { check: "reviews", arg: "formful" },
       { check: "featured" },
     ],
@@ -48,7 +48,7 @@ export const SMOKE_PLATFORMS: SmokePlatform[] = [
     checks: [
       { check: "categories", arg: "sales --pages first" },
       { check: "app", arg: "a0N4V00000JTeWyUAL" },
-      { check: "keyword", arg: "document generation" },
+      { check: "keyword", arg: "document generation --pages first" },
       { check: "reviews", arg: "a0N4V00000JTeWyUAL" },
     ],
   },
@@ -59,7 +59,7 @@ export const SMOKE_PLATFORMS: SmokePlatform[] = [
     checks: [
       { check: "categories", arg: "ai-images --pages first" },
       { check: "app", arg: "AAE0b3zmS48--blur" },
-      { check: "keyword", arg: "image generator" },
+      { check: "keyword", arg: "image generator --pages first" },
       { check: "featured" },
     ],
   },
@@ -70,7 +70,7 @@ export const SMOKE_PLATFORMS: SmokePlatform[] = [
     checks: [
       { check: "categories", arg: "marketing --pages first" },
       { check: "app", arg: "wix-forms" },
-      { check: "keyword", arg: "form builder" },
+      { check: "keyword", arg: "form builder --pages first" },
       { check: "reviews", arg: "wix-forms" },
     ],
   },
@@ -81,7 +81,7 @@ export const SMOKE_PLATFORMS: SmokePlatform[] = [
     checks: [
       { check: "categories", arg: "contact-form --pages first" },
       { check: "app", arg: "contact-form-7" },
-      { check: "keyword", arg: "contact form" },
+      { check: "keyword", arg: "contact form --pages first" },
       { check: "reviews", arg: "contact-form-7" },
     ],
   },
@@ -92,7 +92,7 @@ export const SMOKE_PLATFORMS: SmokePlatform[] = [
     checks: [
       { check: "categories", arg: "business-tools --pages first" },
       { check: "app", arg: "able_poll--921058472860" },
-      { check: "keyword", arg: "project management" },
+      { check: "keyword", arg: "project management --pages first" },
       { check: "reviews", arg: "able_poll--921058472860" },
     ],
   },
@@ -103,7 +103,7 @@ export const SMOKE_PLATFORMS: SmokePlatform[] = [
     checks: [
       { check: "categories", arg: "project-management --pages first" },
       { check: "app", arg: "com.onresolve.jira.groovy.groovyrunner" },
-      { check: "keyword", arg: "time tracking" },
+      { check: "keyword", arg: "time tracking --pages first" },
       { check: "reviews", arg: "com.onresolve.jira.groovy.groovyrunner" },
       { check: "featured" },
     ],
@@ -115,7 +115,7 @@ export const SMOKE_PLATFORMS: SmokePlatform[] = [
     checks: [
       { check: "categories", arg: "crm --pages first" },
       { check: "app", arg: "VG_p3Bb_TwWe_bgZmPUaXw" },
-      { check: "keyword", arg: "calendar" },
+      { check: "keyword", arg: "calendar --pages first" },
       { check: "featured" },
     ],
   },
@@ -126,7 +126,7 @@ export const SMOKE_PLATFORMS: SmokePlatform[] = [
     checks: [
       { check: "categories", arg: "desk --pages first" },
       { check: "app", arg: "crm--360-sms-for-zoho-crm" },
-      { check: "keyword", arg: "inventory" },
+      { check: "keyword", arg: "inventory --pages first" },
     ],
   },
   {
@@ -136,7 +136,7 @@ export const SMOKE_PLATFORMS: SmokePlatform[] = [
     checks: [
       { check: "categories", arg: "ai-and-bots --pages first" },
       { check: "app", arg: "972305--slack" },
-      { check: "keyword", arg: "automation" },
+      { check: "keyword", arg: "automation --pages first" },
       { check: "reviews", arg: "972305--slack" },
       { check: "featured" },
     ],
@@ -148,7 +148,7 @@ export const SMOKE_PLATFORMS: SmokePlatform[] = [
     checks: [
       { check: "categories", arg: "sales --pages first" },
       { check: "app", arg: "gmail" },
-      { check: "keyword", arg: "email marketing" },
+      { check: "keyword", arg: "email marketing --pages first" },
       { check: "reviews", arg: "gmail" },
       { check: "featured" },
     ],

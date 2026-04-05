@@ -172,6 +172,12 @@ async function main() {
         log.error("Usage: tsx src/cli.ts keyword <keyword>");
         process.exit(1);
       }
+      const kwPagesIdx = process.argv.indexOf("--pages");
+      const kwPagesArg = kwPagesIdx !== -1 ? process.argv[kwPagesIdx + 1] : undefined;
+      const kwPageOptions = kwPagesArg
+        ? { pages: kwPagesArg === "all" ? "all" as const : kwPagesArg === "first" ? "first" as const : parseInt(kwPagesArg, 10) }
+        : undefined;
+
       // Ensure keyword is tracked
       const [kw] = await db
         .insert(trackedKeywords)
@@ -185,13 +191,13 @@ async function main() {
       const scraper = new KeywordScraper(db, httpClient, platformModule);
       const runId = await createRun("keyword_search");
       try {
-        await scraper.scrapeKeyword(kw.id, keyword, runId);
+        await scraper.scrapeKeyword(kw.id, keyword, runId, kwPageOptions);
         await completeRun(runId);
       } catch (err) {
         await completeRun(runId, String(err));
         throw err;
       }
-      log.info("Keyword scraped successfully", { keyword });
+      log.info("Keyword scraped successfully", { keyword, traceId });
       break;
     }
 
