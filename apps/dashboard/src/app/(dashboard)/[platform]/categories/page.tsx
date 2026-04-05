@@ -352,11 +352,11 @@ export default function CategoriesPage() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>{entitySingular}</TableHead>
+                  <TableHead className="w-full">{entitySingular}</TableHead>
                   {!isFlat && <TableHead>Parents</TableHead>}
-                  <TableHead>Total {appNoun}</TableHead>
-                  <TableHead>Tracked</TableHead>
-                  <TableHead>Competitor</TableHead>
+                  <TableHead className="text-right">Total {appNoun}</TableHead>
+                  <TableHead className="text-right">Tracked</TableHead>
+                  <TableHead className="text-right">Competitor</TableHead>
                   {canEdit && <TableHead className="w-12" />}
                 </TableRow>
               </TableHeader>
@@ -416,10 +416,10 @@ export default function CategoriesPage() {
                       )}
                     </TableCell>
                     )}
-                    <TableCell>
+                    <TableCell className="text-right">
                       {s.appCount != null ? formatNumber(s.appCount) : "\u2014"}
                     </TableCell>
-                    <TableCell>
+                    <TableCell className="text-right">
                       {s.trackedInResults > 0 ? (
                         <Badge className="bg-emerald-500/20 text-emerald-700 dark:text-emerald-400 border-emerald-500/50">
                           <Target className="h-3 w-3 mr-1" />
@@ -429,7 +429,7 @@ export default function CategoriesPage() {
                         <span className="text-muted-foreground">{"\u2014"}</span>
                       )}
                     </TableCell>
-                    <TableCell>
+                    <TableCell className="text-right">
                       {s.competitorInResults > 0 ? (
                         <Badge className="bg-amber-500/20 text-amber-700 dark:text-amber-400 border-amber-500/50">
                           <Eye className="h-3 w-3 mr-1" />

@@ -80,16 +80,16 @@ export function RatingReviewChart({ snapshots }: { snapshots: Snapshot[] }) {
                   formatter={(value) => [Number(value).toFixed(2), "Rating"]}
                   labelFormatter={(label) => `Week of ${label}`}
                   contentStyle={{
-                    backgroundColor: "hsl(var(--card))",
-                    borderColor: "hsl(var(--border))",
-                    color: "hsl(var(--foreground))",
+                    backgroundColor: "var(--card)",
+                    borderColor: "var(--border)",
+                    color: "var(--foreground)",
                     borderRadius: "0.5rem",
                   }}
                 />
                 <Line
                   type="monotone"
                   dataKey="averageRating"
-                  stroke="hsl(var(--chart-1))"
+                  stroke="var(--chart-1)"
                   strokeWidth={2}
                   dot={{ r: 3 }}
                   connectNulls
@@ -119,16 +119,16 @@ export function RatingReviewChart({ snapshots }: { snapshots: Snapshot[] }) {
                   ]}
                   labelFormatter={(label) => `Week of ${label}`}
                   contentStyle={{
-                    backgroundColor: "hsl(var(--card))",
-                    borderColor: "hsl(var(--border))",
-                    color: "hsl(var(--foreground))",
+                    backgroundColor: "var(--card)",
+                    borderColor: "var(--border)",
+                    color: "var(--foreground)",
                     borderRadius: "0.5rem",
                   }}
                 />
                 <Line
                   type="monotone"
                   dataKey="ratingCount"
-                  stroke="hsl(var(--chart-2))"
+                  stroke="var(--chart-2)"
                   strokeWidth={2}
                   dot={{ r: 3 }}
                   connectNulls

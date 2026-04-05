@@ -61,8 +61,8 @@ export function VisibilityTrendChart({ history }: VisibilityTrendChartProps) {
             />
             <Tooltip
               contentStyle={{
-                backgroundColor: "hsl(var(--card))",
-                border: "1px solid hsl(var(--border))",
+                backgroundColor: "var(--card)",
+                border: "1px solid var(--border)",
                 borderRadius: "6px",
                 fontSize: "12px",
               }}
@@ -70,7 +70,7 @@ export function VisibilityTrendChart({ history }: VisibilityTrendChartProps) {
             <Line
               type="monotone"
               dataKey="visibility"
-              stroke="hsl(var(--primary))"
+              stroke="var(--primary)"
               strokeWidth={2}
               dot={false}
               name="Visibility"

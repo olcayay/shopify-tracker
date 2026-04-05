@@ -20,6 +20,23 @@ PLA-768, PLA-765, PLA-763: Sticky table headers
 PLA-766: Studio preview 8:4 layout
 - Changed grid from `lg:grid-cols-2` to `lg:grid-cols-12` with 8:4 split
 
+PLA-772: Fix invisible lines in Rating & Review Trend charts
+- Same bug class as PLA-764: `hsl(var(--chart-N))` wrapping oklch CSS vars
+- Also fixed all remaining `hsl(var(--))` occurrences across dashboard:
+  - rating-review-chart.tsx (strokes + tooltip styles)
+  - ranking-chart.tsx (tooltip styles)
+  - visibility-trend-chart.tsx (stroke + tooltip)
+  - icon-sidebar.tsx (active state inline style)
+  - 7 compare section files (shadow classes)
+
+PLA-771: Fix removed app stays in My Apps list
+- Root cause: `invalidateQueries` marks stale but refetch not triggering
+- Fix: Optimistic update via `queryClient.setQueryData` removes app from cache immediately
+
+PLA-770: Fix My Categories table column alignment
+- Category column: `w-full` to fill remaining space
+- Total Apps, Tracked, Competitor: `text-right` on both header and cells
+
 Performance Optimization: Dashboard Page Load (2026-04-05)
 ================================================================
 

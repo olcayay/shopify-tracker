@@ -60,11 +60,11 @@ export function PermissionsComparisonSection({
         <table className="w-full text-sm table-fixed">
           <thead>
             <tr>
-              <th className="text-left py-2 pr-4 text-muted-foreground font-medium w-[200px] min-w-[200px] sticky top-0 bg-card z-10 border-b border-border shadow-[0_1px_0_0_hsl(var(--border))]">
+              <th className="text-left py-2 pr-4 text-muted-foreground font-medium w-[200px] min-w-[200px] sticky top-0 bg-card z-10 border-b border-border shadow-[0_1px_0_0_var(--border)]">
                 Permission
               </th>
               {apps.map((app) => (
-                <th key={app.slug} className="py-2 px-2 pb-6 text-center min-w-[130px] sticky top-0 bg-card z-10 border-b border-border shadow-[0_1px_0_0_hsl(var(--border))]">
+                <th key={app.slug} className="py-2 px-2 pb-6 text-center min-w-[130px] sticky top-0 bg-card z-10 border-b border-border shadow-[0_1px_0_0_var(--border)]">
                   <div className="flex justify-center">
                     <LinkedAppIcon app={app} />
                   </div>

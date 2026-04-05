@@ -113,9 +113,9 @@ export function RankingChart({ data, pageSize = 24 }: { data: RankingData[]; pag
           <YAxis reversed domain={[1, "auto"]} fontSize={12} />
           <Tooltip
             contentStyle={{
-              backgroundColor: "hsl(var(--card))",
-              borderColor: "hsl(var(--border))",
-              color: "hsl(var(--foreground))",
+              backgroundColor: "var(--card)",
+              borderColor: "var(--border)",
+              color: "var(--foreground)",
               borderRadius: "0.5rem",
             }}
           />

@@ -6,6 +6,7 @@ const mockFetchWithAuth = vi.fn();
 const mockRefreshUser = vi.fn();
 const mockUseParams = vi.fn();
 const mockInvalidateQueries = vi.fn();
+const mockSetQueryData = vi.fn();
 
 // Mutable user/account so individual tests can override
 let mockUser: any = {
@@ -73,6 +74,7 @@ vi.mock("@/lib/use-api-query", () => ({
   },
   useQueryClient: () => ({
     invalidateQueries: mockInvalidateQueries,
+    setQueryData: mockSetQueryData,
   }),
 }));
 
@@ -287,6 +289,38 @@ describe("AppsPage", () => {
       expect(screen.getByText("Forms")).toBeInTheDocument();
     });
     expect(screen.getByText("#5")).toBeInTheDocument();
+  });
+
+  it("optimistically removes app from cache on untrack (PLA-771)", async () => {
+    setupDefaultMocks();
+    const user = userEvent.setup();
+    render(<AppsPage />);
+    await waitFor(() => {
+      expect(screen.getByText("Form Builder Pro")).toBeInTheDocument();
+    });
+
+    // Find the first remove button (X icon)
+    const removeButtons = screen.getAllByRole("button").filter(
+      (btn) => btn.querySelector("svg") && btn.className.includes("hover:text-destructive")
+    );
+    expect(removeButtons.length).toBeGreaterThan(0);
+    await user.click(removeButtons[0]);
+
+    // Confirm modal should appear
+    await waitFor(() => {
+      expect(screen.getByTestId("confirm-modal")).toBeInTheDocument();
+    });
+    await user.click(screen.getByText("Confirm"));
+
+    // After confirmation, setQueryData should be called to optimistically remove
+    await waitFor(() => {
+      expect(mockSetQueryData).toHaveBeenCalledWith(
+        ["apps", "shopify"],
+        expect.any(Function),
+      );
+    });
+    // Also invalidateQueries should be called for server confirmation
+    expect(mockInvalidateQueries).toHaveBeenCalled();
   });
 
   it("invalidates queries when tracking an app", async () => {

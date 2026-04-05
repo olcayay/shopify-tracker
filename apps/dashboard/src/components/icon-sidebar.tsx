@@ -113,7 +113,7 @@ export function IconSidebar() {
               }`}
               style={
                 isActive
-                  ? activeStyle ?? { backgroundColor: "hsl(var(--primary))", color: "hsl(var(--primary-foreground))" }
+                  ? activeStyle ?? { backgroundColor: "var(--primary)", color: "var(--primary-foreground)" }
                   : undefined
               }
             >

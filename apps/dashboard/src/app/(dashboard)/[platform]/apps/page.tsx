@@ -160,6 +160,10 @@ export default function AppsPage() {
     });
     if (res.ok) {
       setMessage(`"${name}" removed from My Apps`);
+      // Optimistic: remove from cache immediately for instant UI feedback
+      queryClient.setQueryData(["apps", platform], (old: any[] | undefined) =>
+        old ? old.filter((a: any) => a.slug !== slug) : [],
+      );
       invalidateApps();
       refreshUser();
     } else {
