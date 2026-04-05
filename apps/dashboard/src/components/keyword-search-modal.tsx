@@ -131,19 +131,18 @@ export function KeywordSearchModal({
 
   async function trackKeyword(keyword: string) {
     const appSlug = getEffectiveApp();
-    if (!appSlug) {
-      setMessage("Select an app first to track keywords");
-      return;
-    }
     setTrackingSlug(keyword);
     setMessage("");
-    const res = await fetchWithAuth(
-      `/api/account/tracked-apps/${encodeURIComponent(appSlug)}/keywords`,
-      {
-        method: "POST",
-        body: JSON.stringify({ keyword }),
-      }
-    );
+    // Use app-scoped endpoint if app selected, otherwise generic endpoint (research mode)
+    const res = appSlug
+      ? await fetchWithAuth(
+          `/api/account/tracked-apps/${encodeURIComponent(appSlug)}/keywords?platform=${platform}`,
+          { method: "POST", body: JSON.stringify({ keyword }) },
+        )
+      : await fetchWithAuth(
+          `/api/account/tracked-keywords?platform=${platform}`,
+          { method: "POST", body: JSON.stringify({ keyword }) },
+        );
     if (res.ok) {
       const data = await res.json().catch(() => ({}));
       const scrapeMsg = data.scraperEnqueued ? " Scraping started." : "";
@@ -210,12 +209,7 @@ export function KeywordSearchModal({
             ref={inputRef}
             value={query}
             onChange={(e) => handleInput(e.target.value)}
-            placeholder={
-              getEffectiveApp()
-                ? "Search keywords..."
-                : "Select an app first..."
-            }
-            disabled={!getEffectiveApp()}
+            placeholder="Search keywords..."
             className="border-0 focus-visible:ring-0 shadow-none"
           />
           <button
@@ -272,7 +266,7 @@ export function KeywordSearchModal({
                           size="sm"
                           className="h-7 text-xs"
                           disabled={
-                            trackingSlug === kw.keyword || !getEffectiveApp()
+                            trackingSlug === kw.keyword
                           }
                           onClick={() => trackKeyword(kw.keyword)}
                         >
@@ -305,7 +299,7 @@ export function KeywordSearchModal({
                       size="sm"
                       className="h-7 text-xs"
                       disabled={
-                        trackingSlug === query.trim() || !getEffectiveApp()
+                        trackingSlug === query.trim()
                       }
                       onClick={() => trackKeyword(query.trim())}
                     >
@@ -325,7 +319,7 @@ export function KeywordSearchModal({
                   variant="outline"
                   size="sm"
                   disabled={
-                    trackingSlug === query.trim() || !getEffectiveApp()
+                    trackingSlug === query.trim()
                   }
                   onClick={() => trackKeyword(query.trim())}
                 >
@@ -336,9 +330,7 @@ export function KeywordSearchModal({
             </div>
           ) : (
             <div className="px-4 py-8 text-center text-sm text-muted-foreground">
-              {getEffectiveApp()
-                ? "Start typing to search keywords..."
-                : "Select an app above first, then search keywords."}
+              Start typing to search keywords...
             </div>
           )}
         </div>

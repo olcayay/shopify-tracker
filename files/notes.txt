@@ -37,6 +37,14 @@ PLA-770: Fix My Categories table column alignment
 - Category column: `w-full` to fill remaining space
 - Total Apps, Tracked, Competitor: `text-right` on both header and cells
 
+PLA-773: Allow keywords without tracked app (research mode)
+- DB: `tracked_app_id` made nullable, unique index split into two partial indexes (with/without app)
+- API: `trackedAppSlug` now optional in `addTrackedKeywordSchema`; handler skips app lookup if null
+- Keywords query: `innerJoin` → `leftJoin` to include app-less keywords
+- Dashboard: keyword tracking works without app; "Research" badge on unlinked keywords
+- Untrack: handles both app-linked and research keywords
+- Migration: `0118_keyword_research_mode.sql`
+
 Performance Optimization: Dashboard Page Load (2026-04-05)
 ================================================================
 

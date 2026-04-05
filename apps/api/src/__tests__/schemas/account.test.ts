@@ -139,8 +139,10 @@ describe("addTrackedKeywordSchema", () => {
     expect(() => addTrackedKeywordSchema.parse({ trackedAppSlug: "app" })).toThrow();
   });
 
-  it("rejects missing trackedAppSlug", () => {
-    expect(() => addTrackedKeywordSchema.parse({ keyword: "seo" })).toThrow();
+  it("accepts missing trackedAppSlug (research mode)", () => {
+    const result = addTrackedKeywordSchema.parse({ keyword: "seo" });
+    expect(result.keyword).toBe("seo");
+    expect(result.trackedAppSlug).toBeUndefined();
   });
 });
 

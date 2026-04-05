@@ -99,6 +99,7 @@ export const appRoutes: FastifyPluginAsync = async (app) => {
     if (allKeywordRows.length > 0) {
       const kwByApp = new Map<number, number[]>();
       for (const row of allKeywordRows) {
+        if (row.trackedAppId == null) continue; // Skip research-mode keywords (no app)
         const arr = kwByApp.get(row.trackedAppId) ?? [];
         arr.push(row.keywordId);
         kwByApp.set(row.trackedAppId, arr);

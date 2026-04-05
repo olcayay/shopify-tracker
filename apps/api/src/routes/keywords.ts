@@ -62,7 +62,7 @@ export const keywordRoutes: FastifyPluginAsync = async (app) => {
         trackedAppSlug: apps.slug,
       })
       .from(accountTrackedKeywords)
-      .innerJoin(apps, eq(apps.id, accountTrackedKeywords.trackedAppId))
+      .leftJoin(apps, eq(apps.id, accountTrackedKeywords.trackedAppId))
       .where(eq(accountTrackedKeywords.accountId, accountId));
 
     if (trackedRows.length === 0) {
@@ -73,7 +73,7 @@ export const keywordRoutes: FastifyPluginAsync = async (app) => {
     const trackedForAppsMap = new Map<number, string[]>();
     for (const row of trackedRows) {
       const existing = trackedForAppsMap.get(row.keywordId) || [];
-      if (!existing.includes(row.trackedAppSlug)) {
+      if (row.trackedAppSlug && !existing.includes(row.trackedAppSlug)) {
         existing.push(row.trackedAppSlug);
       }
       trackedForAppsMap.set(row.keywordId, existing);

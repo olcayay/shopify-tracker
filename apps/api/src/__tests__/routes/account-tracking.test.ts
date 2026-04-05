@@ -471,14 +471,15 @@ describe("POST /api/account/tracked-keywords — add keyword", () => {
     expect(res.statusCode).toBe(400);
   });
 
-  it("returns 400 when trackedAppSlug is missing", async () => {
+  it("accepts keyword without trackedAppSlug (research mode)", async () => {
     const res = await app.inject({
       method: "POST",
       url: "/api/account/tracked-keywords?platform=shopify",
       headers: authHeaders(userToken()),
       payload: { keyword: "email marketing" },
     });
-    expect(res.statusCode).toBe(400);
+    // Should not return 400 — trackedAppSlug is now optional
+    expect(res.statusCode).not.toBe(400);
   });
 
   it("returns 400 when keyword is empty", async () => {

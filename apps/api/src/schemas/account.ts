@@ -40,7 +40,7 @@ export const addTrackedAppSchema = z.object({
 
 export const addTrackedKeywordSchema = z.object({
   keyword: z.string().min(1, "Keyword is required").max(200),
-  trackedAppSlug: z.string().min(1, "trackedAppSlug is required").max(200),
+  trackedAppSlug: z.string().max(200).optional(),
 });
 
 export const addCompetitorSchema = z.object({

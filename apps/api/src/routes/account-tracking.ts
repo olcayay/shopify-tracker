@@ -374,28 +374,32 @@ export const accountTrackingRoutes: FastifyPluginAsync = async (app) => {
 
       const platform = getPlatformFromQuery(request.query as Record<string, unknown>);
 
-      // Look up app ID from slug
-      const [trackedAppRow] = await db
-        .select({ id: apps.id })
-        .from(apps)
-        .where(and(eq(apps.slug, trackedAppSlug), eq(apps.platform, platform)))
-        .limit(1);
-      if (!trackedAppRow) {
-        return reply.code(404).send({ error: "App not found" });
-      }
+      // Look up app ID from slug (optional — null for research mode)
+      let trackedAppIdValue: number | null = null;
+      if (trackedAppSlug) {
+        const [trackedAppRow] = await db
+          .select({ id: apps.id })
+          .from(apps)
+          .where(and(eq(apps.slug, trackedAppSlug), eq(apps.platform, platform)))
+          .limit(1);
+        if (!trackedAppRow) {
+          return reply.code(404).send({ error: "App not found" });
+        }
 
-      // Verify the tracked app belongs to this account
-      const [trackedApp] = await db
-        .select({ id: accountTrackedApps.id })
-        .from(accountTrackedApps)
-        .where(
-          and(
-            eq(accountTrackedApps.accountId, accountId),
-            eq(accountTrackedApps.appId, trackedAppRow.id)
-          )
-        );
-      if (!trackedApp) {
-        return reply.code(404).send({ error: "App not in your apps" });
+        // Verify the tracked app belongs to this account
+        const [trackedApp] = await db
+          .select({ id: accountTrackedApps.id })
+          .from(accountTrackedApps)
+          .where(
+            and(
+              eq(accountTrackedApps.accountId, accountId),
+              eq(accountTrackedApps.appId, trackedAppRow.id)
+            )
+          );
+        if (!trackedApp) {
+          return reply.code(404).send({ error: "App not in your apps" });
+        }
+        trackedAppIdValue = trackedAppRow.id;
       }
 
       // Check limit (unique keywords across all my-apps)
@@ -430,17 +434,17 @@ export const accountTrackingRoutes: FastifyPluginAsync = async (app) => {
         })
         .returning();
 
-      // Add to account tracking with trackedAppId
+      // Add to account tracking (trackedAppId is null for research mode)
       const [result] = await db
         .insert(accountTrackedKeywords)
-        .values({ accountId, trackedAppId: trackedAppRow.id, keywordId: kw.id })
+        .values({ accountId, trackedAppId: trackedAppIdValue, keywordId: kw.id })
         .onConflictDoNothing()
         .returning();
 
       if (!result) {
         return reply
           .code(409)
-          .send({ error: "Keyword already tracked for this app" });
+          .send({ error: trackedAppSlug ? "Keyword already tracked for this app" : "Keyword already tracked" });
       }
 
       // If keyword has no snapshots yet, enqueue a scraper job

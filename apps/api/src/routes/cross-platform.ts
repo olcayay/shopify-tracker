@@ -183,6 +183,7 @@ export async function crossPlatformRoutes(app: FastifyInstance) {
       // Build keyword-to-apps map
       const keywordAppMap = new Map<number, number[]>();
       for (const r of trackedKeywordRows) {
+        if (r.trackedAppId == null) continue; // Skip research-mode keywords
         const existing = keywordAppMap.get(r.keywordId) || [];
         existing.push(r.trackedAppId);
         keywordAppMap.set(r.keywordId, existing);

@@ -215,18 +215,17 @@ export default function KeywordsPage() {
 
   async function trackKeyword(keyword: string) {
     const appSlug = getEffectiveApp();
-    if (!appSlug) {
-      setMessage("Select an app first to track keywords");
-      return;
-    }
     setMessage("");
-    const res = await fetchWithAuth(
-      `/api/account/tracked-apps/${encodeURIComponent(appSlug)}/keywords`,
-      {
-        method: "POST",
-        body: JSON.stringify({ keyword }),
-      }
-    );
+    // Use app-scoped endpoint if app selected, otherwise generic endpoint (research mode)
+    const res = appSlug
+      ? await fetchWithAuth(
+          `/api/account/tracked-apps/${encodeURIComponent(appSlug)}/keywords?platform=${platform}`,
+          { method: "POST", body: JSON.stringify({ keyword }) },
+        )
+      : await fetchWithAuth(
+          `/api/account/tracked-keywords?platform=${platform}`,
+          { method: "POST", body: JSON.stringify({ keyword }) },
+        );
     if (res.ok) {
       const data = await res.json().catch(() => ({}));
       const scrapeMsg = data.scraperEnqueued
@@ -250,9 +249,17 @@ export default function KeywordsPage() {
     trackedForApps: string[]
   ) {
     setMessage("");
-    for (const appSlug of trackedForApps) {
+    if (trackedForApps.length > 0) {
+      for (const appSlug of trackedForApps) {
+        await fetchWithAuth(
+          `/api/account/tracked-apps/${encodeURIComponent(appSlug)}/keywords/${keywordId}`,
+          { method: "DELETE" }
+        );
+      }
+    } else {
+      // Research-mode keyword (no app linked)
       await fetchWithAuth(
-        `/api/account/tracked-apps/${encodeURIComponent(appSlug)}/keywords/${keywordId}`,
+        `/api/account/tracked-keywords/${keywordId}`,
         { method: "DELETE" }
       );
     }
@@ -501,13 +508,18 @@ export default function KeywordsPage() {
                               <span className="w-4" />
                             )}
                             <div>
-                              <Link
-                                href={`/${platform}/keywords/${kw.slug}`}
-                                className="text-primary hover:underline font-medium"
-                                onClick={(e) => e.stopPropagation()}
-                              >
-                                {kw.keyword}
-                              </Link>
+                              <span className="flex items-center gap-1.5">
+                                <Link
+                                  href={`/${platform}/keywords/${kw.slug}`}
+                                  className="text-primary hover:underline font-medium"
+                                  onClick={(e) => e.stopPropagation()}
+                                >
+                                  {kw.keyword}
+                                </Link>
+                                {(!kw.trackedForApps || kw.trackedForApps.length === 0) && (
+                                  <Badge variant="outline" className="text-[10px] px-1 py-0 shrink-0 text-muted-foreground">Research</Badge>
+                                )}
+                              </span>
                               {(kw.tags?.length > 0 || canEdit) && (
                                 <div
                                   className="flex items-center gap-1 mt-0.5 flex-wrap"

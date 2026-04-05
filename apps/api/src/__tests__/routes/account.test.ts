@@ -401,15 +401,15 @@ describe("Account routes", () => {
       expect(res.json().error).toBe("Validation failed");
     });
 
-    it("returns 400 when trackedAppSlug is missing", async () => {
+    it("accepts keyword without trackedAppSlug (research mode)", async () => {
       const res = await app.inject({
         method: "POST",
         url: "/api/account/tracked-keywords",
         headers: authHeaders(userToken()),
         payload: { keyword: "test keyword" },
       });
-      expect(res.statusCode).toBe(400);
-      expect(res.json().error).toBe("Validation failed");
+      // Should not return 400 — trackedAppSlug is now optional
+      expect(res.statusCode).not.toBe(400);
     });
   });
 

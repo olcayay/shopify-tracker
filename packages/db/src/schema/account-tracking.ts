@@ -59,7 +59,6 @@ export const accountTrackedKeywords = pgTable(
       .notNull()
       .references(() => accounts.id, { onDelete: "cascade" }),
     trackedAppId: integer("tracked_app_id")
-      .notNull()
       .references(() => apps.id),
     keywordId: integer("keyword_id")
       .notNull()
