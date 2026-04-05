@@ -149,27 +149,30 @@ export async function computeAppScores(
     // === SHARED DATA: Fetch all source data ===
 
     // 1a. Latest keyword rankings per (app, keyword) where position IS NOT NULL
+    // Filtered by platform via JOIN to avoid scanning all platforms
     const appKeywordRows: AppKeywordRow[] = await db
       .execute(
         sql`
-        SELECT DISTINCT ON (app_id, keyword_id)
-          app_id, keyword_id, position
-        FROM app_keyword_rankings
-        WHERE position IS NOT NULL
-        ORDER BY app_id, keyword_id, scraped_at DESC
+        SELECT DISTINCT ON (akr.app_id, akr.keyword_id)
+          akr.app_id, akr.keyword_id, akr.position
+        FROM app_keyword_rankings akr
+        JOIN apps a ON a.id = akr.app_id
+        WHERE akr.position IS NOT NULL AND a.platform = ${platform}
+        ORDER BY akr.app_id, akr.keyword_id, akr.scraped_at DESC
       `
       )
       .then((res: any) => (res as any).rows ?? res);
 
-    // 1b. Latest totalResults per keyword
+    // 1b. Latest totalResults per keyword (filtered by platform)
     const keywordTotalRows: KeywordTotalRow[] = await db
       .execute(
         sql`
-        SELECT DISTINCT ON (keyword_id)
-          keyword_id, total_results
-        FROM keyword_snapshots
-        WHERE total_results IS NOT NULL
-        ORDER BY keyword_id, scraped_at DESC
+        SELECT DISTINCT ON (ks.keyword_id)
+          ks.keyword_id, ks.total_results
+        FROM keyword_snapshots ks
+        JOIN tracked_keywords tk ON tk.id = ks.keyword_id
+        WHERE ks.total_results IS NOT NULL AND tk.platform = ${platform}
+        ORDER BY ks.keyword_id, ks.scraped_at DESC
       `
       )
       .then((res: any) => (res as any).rows ?? res);
@@ -180,13 +183,16 @@ export async function computeAppScores(
     }
 
     // 1c. Latest category rank per (app, category)
+    // Filtered by platform via JOIN to avoid scanning all platforms
     const appCategoryRows: AppCategoryRow[] = await db
       .execute(
         sql`
-        SELECT DISTINCT ON (app_id, category_slug)
-          app_id, category_slug, position
-        FROM app_category_rankings
-        ORDER BY app_id, category_slug, scraped_at DESC
+        SELECT DISTINCT ON (acr.app_id, acr.category_slug)
+          acr.app_id, acr.category_slug, acr.position
+        FROM app_category_rankings acr
+        JOIN apps a ON a.id = acr.app_id
+        WHERE a.platform = ${platform}
+        ORDER BY acr.app_id, acr.category_slug, acr.scraped_at DESC
       `
       )
       .then((res: any) => (res as any).rows ?? res);
@@ -228,13 +234,16 @@ export async function computeAppScores(
     }
 
     // 1f. Latest momentum (accMacro) from appReviewMetrics
+    // Filtered by platform via JOIN
     const momentumRows: AppMomentumRow[] = await db
       .execute(
         sql`
-        SELECT DISTINCT ON (app_id)
-          app_id, acc_macro
-        FROM app_review_metrics
-        ORDER BY app_id, computed_at DESC
+        SELECT DISTINCT ON (arm.app_id)
+          arm.app_id, arm.acc_macro
+        FROM app_review_metrics arm
+        JOIN apps a ON a.id = arm.app_id
+        WHERE a.platform = ${platform}
+        ORDER BY arm.app_id, arm.computed_at DESC
       `
       )
       .then((res: any) => (res as any).rows ?? res);
