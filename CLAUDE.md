@@ -1,13 +1,22 @@
 # Shopify Tracking Project
 
-## Production Server
-- **SSH:** `ssh root@5.78.101.102`
-- **Hosting:** Coolify (self-hosted PaaS) on Hetzner VPS
-- **Proxy:** Cloudflare → Traefik (Coolify) → Docker containers
+## Production Server (GCP Tier 7 Light)
+- **Infrastructure:** Google Cloud Platform — 4 VMs + Cloud SQL (europe-west1)
+- **Project ID:** `appranks-web-app`
+- **Proxy:** Cloudflare → Caddy (VM1) → Docker containers
 - **Domains:** `appranks.io` (dashboard), `api.appranks.io` (API)
-- **Containers:** API (port 3001), Dashboard (port 3000), Worker, Worker-Interactive, PostgreSQL, Redis
-- **Container names:** Random Coolify IDs (use `docker ps` to find them)
-- **DB container:** PostgreSQL with default `postgres` database (not `shopify_tracking`)
+- **VMs:**
+  - `appranks-api` (VM1): API + Dashboard + Caddy — e2-small, on-demand, IP: `34.62.80.10`
+  - `appranks-scraper` (VM2): Worker + Worker-Interactive — e2-medium, Spot
+  - `appranks-email` (VM3): Redis + Email workers + Notifications — e2-custom-2-4096, on-demand
+  - `appranks-ai` (VM4): AI workers (placeholder) — e2-small, Spot
+- **Database:** Cloud SQL PostgreSQL 16, db-f1-micro, private IP `10.218.0.3`, database: `appranks`
+- **Redis:** VM3 (`10.0.1.5:6379`), shared BullMQ broker for all queues
+- **SSH (API VM):** `ssh -i ~/.ssh/appranks-gcp deploy@34.62.80.10`
+- **SSH (other VMs):** `gcloud compute ssh deploy@appranks-<name> --zone=europe-west1-b --tunnel-through-iap`
+- **SSH shortcut:** `./infra/scripts/ssh.sh <api|scraper|email|ai>`
+- **Deploy:** `git push main` → GitHub Actions auto-deploy (~1 min) or `./infra/scripts/deploy.sh`
+- **Architecture docs:** `files/SYSTEM_ARCHITECTURE.md`, `files/GCP_TIER7_LIGHT_MIGRATION.md`
 
 ## Rules
 - All user-facing text in the dashboard must be in English. Never use Turkish or any other language for UI text, labels, warnings, descriptions, or placeholder text.

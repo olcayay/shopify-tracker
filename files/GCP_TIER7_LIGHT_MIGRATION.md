@@ -31,33 +31,33 @@
 |---|-------|------|--------|----------|--------|
 | # | Phase | Task | Linear | Priority | Status |
 |---|-------|------|--------|----------|--------|
-| 1 | Phase 0: Hazırlık | GCP account setup & $300 free credit activation | [PLA-726](https://linear.app/plan-b-side-projects/issue/PLA-726) | Urgent | Todo |
-| 2 | Phase 0: Hazırlık | Install Terraform & create infra/ directory structure | [PLA-727](https://linear.app/plan-b-side-projects/issue/PLA-727) | Urgent | **In Review** |
-| 3 | Phase 1: Terraform | VPC, subnet, firewall rules & Cloud NAT | [PLA-728](https://linear.app/plan-b-side-projects/issue/PLA-728) | High | **In Review** |
-| 4 | Phase 1: Terraform | Cloud SQL (PostgreSQL 16) with private IP | [PLA-729](https://linear.app/plan-b-side-projects/issue/PLA-729) | High | **In Review** |
-| 5 | Phase 1: Terraform | 4 VM definitions (API, Scraper, Email, AI) | [PLA-730](https://linear.app/plan-b-side-projects/issue/PLA-730) | High | **In Review** |
-| 6 | Phase 1: Terraform | Write startup scripts & Terraform provisioners | [PLA-731](https://linear.app/plan-b-side-projects/issue/PLA-731) | High | **In Review** |
-| 7 | Phase 2: Config | Per-VM Docker Compose files & env templates | [PLA-732](https://linear.app/plan-b-side-projects/issue/PLA-732) | High | **In Review** |
-| 8 | Phase 2: Config | Deploy scripts (deploy.sh, deploy-one.sh, ssh.sh) | [PLA-733](https://linear.app/plan-b-side-projects/issue/PLA-733) | High | **In Review** |
-| 9 | Phase 2: Config | GitHub Actions — Docker image build & push to GHCR | [PLA-734](https://linear.app/plan-b-side-projects/issue/PLA-734) | High | **In Review** |
-| 10 | Phase 3: Provision | Terraform apply — provision all GCP resources | [PLA-735](https://linear.app/plan-b-side-projects/issue/PLA-735) | High | Todo |
-| 11 | Phase 3: Provision | First deploy — .env files & docker compose up | [PLA-736](https://linear.app/plan-b-side-projects/issue/PLA-736) | High | Todo |
-| 12 | Phase 4: Migration | Database migration — Hetzner PostgreSQL → Cloud SQL | [PLA-737](https://linear.app/plan-b-side-projects/issue/PLA-737) | High | **In Review** |
-| 13 | Phase 5: Cutover | DNS cutover — Cloudflare → GCP API VM | [PLA-738](https://linear.app/plan-b-side-projects/issue/PLA-738) | High | Todo |
-| 14 | Phase 5: Cutover | Setup monitoring alerts & GCP billing budget | [PLA-739](https://linear.app/plan-b-side-projects/issue/PLA-739) | Medium | **In Review** |
+| 1 | Phase 0: Hazırlık | GCP account setup & $300 free credit activation | [PLA-726](https://linear.app/plan-b-side-projects/issue/PLA-726) | Urgent | **Done** ✅ |
+| 2 | Phase 0: Hazırlık | Install Terraform & create infra/ directory structure | [PLA-727](https://linear.app/plan-b-side-projects/issue/PLA-727) | Urgent | **Done** ✅ |
+| 3 | Phase 1: Terraform | VPC, subnet, firewall rules & Cloud NAT | [PLA-728](https://linear.app/plan-b-side-projects/issue/PLA-728) | High | **Done** ✅ |
+| 4 | Phase 1: Terraform | Cloud SQL (PostgreSQL 16) with private IP | [PLA-729](https://linear.app/plan-b-side-projects/issue/PLA-729) | High | **Done** ✅ |
+| 5 | Phase 1: Terraform | 4 VM definitions (API, Scraper, Email, AI) | [PLA-730](https://linear.app/plan-b-side-projects/issue/PLA-730) | High | **Done** ✅ |
+| 6 | Phase 1: Terraform | Write startup scripts & Terraform provisioners | [PLA-731](https://linear.app/plan-b-side-projects/issue/PLA-731) | High | **Done** ✅ |
+| 7 | Phase 2: Config | Per-VM Docker Compose files & env templates | [PLA-732](https://linear.app/plan-b-side-projects/issue/PLA-732) | High | **Done** ✅ |
+| 8 | Phase 2: Config | Deploy scripts (deploy.sh, deploy-one.sh, ssh.sh) | [PLA-733](https://linear.app/plan-b-side-projects/issue/PLA-733) | High | **Done** ✅ |
+| 9 | Phase 2: Config | GitHub Actions — Docker image build & push to GHCR | [PLA-734](https://linear.app/plan-b-side-projects/issue/PLA-734) | High | **Done** ✅ |
+| 10 | Phase 3: Provision | Terraform apply — provision all GCP resources | [PLA-735](https://linear.app/plan-b-side-projects/issue/PLA-735) | High | **Done** ✅ |
+| 11 | Phase 3: Provision | First deploy — .env files & docker compose up | [PLA-736](https://linear.app/plan-b-side-projects/issue/PLA-736) | High | **Done** ✅ |
+| 12 | Phase 4: Migration | Database migration — Hetzner PostgreSQL → Cloud SQL | [PLA-737](https://linear.app/plan-b-side-projects/issue/PLA-737) | High | **Done** ✅ |
+| 13 | Phase 5: Cutover | DNS cutover — Cloudflare → GCP API VM | [PLA-738](https://linear.app/plan-b-side-projects/issue/PLA-738) | High | **Done** ✅ |
+| 14 | Phase 5: Cutover | Setup monitoring alerts & GCP billing budget | [PLA-739](https://linear.app/plan-b-side-projects/issue/PLA-739) | Medium | Todo |
 | 15 | Phase 5: Cutover | Decommission Hetzner VPS (after 1 week stable) | [PLA-740](https://linear.app/plan-b-side-projects/issue/PLA-740) | Low | Todo |
 
-**Progress: 10/15 (67%) — Code complete. Manual ops bekliyor: GCP account, terraform apply, DNS, decommission.**
+**Progress: 13/15 (87%) — GCP'de canl��! Monitoring setup ve Hetzner kapatma bekliyor.**
 
 ```
-Phase 0: Hazırlık      ░█ (PLA-726 todo, PLA-727 ✓)
+Phase 0: Hazırlık      ██ (PLA-726, PLA-727 ✓)
 Phase 1: Terraform      ████ (PLA-728..731 ✓)
 Phase 2: Config         ███ (PLA-732..734 ✓)
-Phase 3: Provision      ░░ (PLA-735, PLA-736 — GCP credentials gerekli)
-Phase 4: Migration      █ (PLA-737 ✓ script yazıldı, manual çalıştırma gerekli)
-Phase 5: Cutover        ░█░ (PLA-738 todo, PLA-739 ✓ script, PLA-740 todo)
+Phase 3: Provision      ██ (PLA-735, PLA-736 ✓)
+Phase 4: Migration      █ (PLA-737 ✓)
+Phase 5: Cutover        ██░░ (PLA-738 ✓, PLA-739 todo, PLA-740 todo)
 
-░ = Todo  ▓ = In Progress  █ = In Review
+░ = Todo  █ = Done
 ```
 
 ---
@@ -1606,7 +1606,13 @@ BACKUP STRATEGY
 
 ## 11. CI/CD Pipeline Güncellemesi
 
-Mevcut GitHub Actions workflow'u güncellenmeli: Coolify webhook → Multi-VM SSH deploy.
+**Status: TAMAMLANDI ✅** — CI/CD aktif, `git push main` → ~1 dk deploy.
+
+**Gerçek performans (2026-04-05):** Build 32s (cached) + Deploy 40s = **~1 dk 12s**
+
+**Auth:** GCP Workload Identity Federation (SA key yok), GHCR PAT ile image push.
+
+Güncel workflow (`.github/workflows/deploy.yml`):
 
 ```yaml
 # .github/workflows/deploy.yml (yeni)

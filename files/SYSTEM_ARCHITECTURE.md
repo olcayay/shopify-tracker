@@ -333,11 +333,11 @@ graph TB
         E3 --> E4[Auto-deploy<br/>same machine]
     end
 
-    subgraph "ŞU AN (Geçici — Manuel)"
+    subgraph "ŞU AN (GCP + GitHub Actions) ✅"
         direction LR
-        S1[git push main] --> S2[Local'de<br/>docker buildx<br/>--platform amd64]
-        S2 --> S3[docker push<br/>GHCR]
-        S3 --> S4[./deploy.sh<br/>SSH + pull]
+        S1[git push main] --> S2[GitHub Actions<br/>x86 build + cache]
+        S2 --> S3[Push to GHCR<br/>~30s cached]
+        S3 --> S4[IAP SSH deploy<br/>4 VMs ~40s]
     end
 
     subgraph "HEDEF (GitHub Actions CI/CD)"
@@ -352,13 +352,13 @@ graph TB
     style H1 fill:#6c6,color:#fff
 ```
 
-| | Eski (Coolify) | Şu An (Manuel) | Hedef (GH Actions) |
-|--|----------------|-----------------|---------------------|
-| **Tetikleme** | `git push` otomatik | Manual build + push | `git push` otomatik |
-| **Build süresi** | ~5 dk (native x86) | ~15-20 dk (QEMU cross-compile) | ~5-7 dk (native x86 + cache) |
-| **Deploy süresi** | ~1 dk (aynı makine) | ~2 dk (SSH pull) | ~2 dk (SSH pull) |
-| **Toplam** | **~6 dk** | **~20 dk** ❌ | **~7-9 dk** ✅ |
-| **Effort** | Sıfır | Her seferinde manual | Sıfır |
+| | Eski (Coolify) | Şu An (GH Actions) ✅ |
+|--|----------------|------------------------|
+| **Tetikleme** | `git push` otomatik | `git push` otomatik |
+| **Build süresi** | ~5 dk (native x86) | **~30s** (native x86 + layer cache) |
+| **Deploy süresi** | ~1 dk (aynı makine) | **~40s** (IAP SSH, 4 VM parallel) |
+| **Toplam** | **~6 dk** | **~1 dk 12s** ✅ |
+| **Effort** | Sıfır | Sıfır |
 
 ### 4.2 Neden Şu An Yavaş?
 
@@ -527,63 +527,38 @@ git push
   Full rebuild: ~5-7 min
 ```
 
-### 4.5 Şu An Nasıl Deploy Ederim? (Geçici)
+### 4.5 CI/CD Detayları (Aktif ✅)
 
-GitHub Actions henüz aktif değil. Şimdilik manual:
+**Workflow:** `.github/workflows/deploy.yml`
+**Auth:** GCP Workload Identity Federation (SA key gerektirmez)
+**Registry:** GHCR (`GHCR_PAT` secret ile)
+**Deploy:** `gcloud compute ssh` + IAP tunnel (tüm 4 VM)
+
+**GitHub Secrets:**
+
+| Secret | Değer | Kullanım |
+|--------|-------|----------|
+| `GHCR_PAT` | GitHub PAT (write:packages) | GHCR image push |
+| `GCP_SSH_PRIVATE_KEY` | SSH private key | Legacy (kullanılmıyor) |
+| `GCP_PROJECT_ID` | `appranks-web-app` | gcloud config |
+| `API_VM_IP` | `34.62.80.10` | Legacy (kullanılmıyor) |
+
+**Gerçek performans (2026-04-05 ölçümü):**
+- İlk build (cache yok): **10 dk 34s**
+- Cached build: **32s** ✅
+- Deploy (4 VM): **40s**
+- Toplam (cached): **~1 dk 12s**
+
+### 4.6 Manual Deploy (fallback)
 
 ```bash
-# 1. Code değişikliğini commit + push
-git add . && git commit -m "Fix something" && git push
-
-# 2. Image build (local, ~15-20 dk — cross-compile yavaş)
-cd /path/to/shopify-tracking
+# Eğer GitHub Actions çalışmıyorsa:
+# 1. Local build (yavaş — QEMU cross-compile)
 docker buildx build --platform linux/amd64 -f Dockerfile.api -t ghcr.io/olcayay/appranks-api:latest --push .
-docker buildx build --platform linux/amd64 -f Dockerfile.dashboard --build-arg NEXT_PUBLIC_API_URL=https://api.appranks.io -t ghcr.io/olcayay/appranks-dashboard:latest --push .
-docker buildx build --platform linux/amd64 -f Dockerfile.worker -t ghcr.io/olcayay/appranks-worker:latest --push .
-docker buildx build --platform linux/amd64 -f Dockerfile.worker-interactive -t ghcr.io/olcayay/appranks-worker-interactive:latest --push .
-docker buildx build --platform linux/amd64 -f Dockerfile.worker-email -t ghcr.io/olcayay/appranks-worker-email:latest --push .
 
-# 3. Deploy to VMs (~2 dk)
-./infra/scripts/deploy.sh
-
-# VEYA sadece tek VM (örn. sadece API değiştiysen):
-docker buildx build --platform linux/amd64 -f Dockerfile.api -t ghcr.io/olcayay/appranks-api:latest --push .
+# 2. Deploy
 ./infra/scripts/deploy-one.sh api
 ```
-
-### 4.6 GitHub Actions'ı Aktif Etme (TODO)
-
-CI/CD'yi tam otomatik yapmak için şu adımlar gerekli:
-
-```bash
-# 1. GitHub repo secrets ekle (Settings → Secrets → Actions)
-#    GCP_SSH_PRIVATE_KEY  = ~/.ssh/appranks-gcp içeriği
-#    GCP_PROJECT_ID       = appranks-web-app  
-#    GCP_SA_KEY           = GCP service account JSON key
-#    API_VM_IP            = 34.62.80.10
-#    GA_ID                = Google Analytics ID
-#    CLARITY_ID           = Microsoft Clarity ID
-
-# 2. GCP service account oluştur (GitHub Actions'ın VM'lere bağlanması için)
-gcloud iam service-accounts create github-deploy \
-  --display-name="GitHub Actions Deploy"
-gcloud projects add-iam-policy-binding appranks-web-app \
-  --member="serviceAccount:github-deploy@appranks-web-app.iam.gserviceaccount.com" \
-  --role="roles/compute.instanceAdmin.v1"
-gcloud projects add-iam-policy-binding appranks-web-app \
-  --member="serviceAccount:github-deploy@appranks-web-app.iam.gserviceaccount.com" \
-  --role="roles/iap.tunnelResourceAccessor"
-gcloud iam service-accounts keys create /tmp/gcp-sa-key.json \
-  --iam-account=github-deploy@appranks-web-app.iam.gserviceaccount.com
-
-# 3. SA key'i GitHub secret olarak ekle
-#    GCP_SA_KEY = /tmp/gcp-sa-key.json dosyasının içeriği
-
-# 4. Mevcut ci.yml'daki Coolify webhook'u deploy.yml ile değiştir
-#    .github/workflows/deploy.yml zaten hazır
-```
-
-Bu adımlar tamamlandıktan sonra: **`git push main` → ~5 dk → canlıda** ✅
 
 ### 4.7 Deploy Commands Reference
 
