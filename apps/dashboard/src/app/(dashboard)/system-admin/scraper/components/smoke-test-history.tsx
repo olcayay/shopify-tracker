@@ -29,6 +29,7 @@ import {
   TooltipContent,
 } from "@/components/ui/tooltip";
 import { Check, X, Minus, History, ChevronDown, ChevronRight } from "lucide-react";
+import { CopyButton } from "@/components/ui/copy-button";
 import { PLATFORM_LABELS, PLATFORM_COLORS } from "@/lib/platform-display";
 import { useFormatDate } from "@/lib/format-date";
 import { timeAgo, formatDuration } from "@/lib/format-utils";
@@ -48,6 +49,7 @@ export interface SmokeHistoryEntry {
   totalCount: number;
   lastRunAt: string | null;
   lastStatus: string | null;
+  lastDurationMs: number | null;
   recentErrors: { error: string; createdAt: string; durationMs: number | null }[];
 }
 
@@ -310,9 +312,12 @@ export function SmokeTestHistory({ history }: SmokeTestHistoryProps) {
                               </Badge>
                             )}
                           </div>
-                          <pre className="whitespace-pre-wrap text-red-700 font-mono text-[11px] leading-relaxed break-all bg-red-50 rounded p-2 border border-red-100">
-                            {err.error}
-                          </pre>
+                          <div className="relative group">
+                            <pre className="whitespace-pre-wrap text-red-700 font-mono text-[11px] leading-relaxed break-all bg-red-50 rounded p-2 border border-red-100">
+                              {err.error}
+                            </pre>
+                            <CopyButton value={err.error} variant="icon" size="xs" className="absolute top-1.5 right-1.5 opacity-0 group-hover:opacity-100 transition-opacity" />
+                          </div>
                         </div>
                       ))}
                     </div>

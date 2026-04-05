@@ -12,6 +12,9 @@ import { HttpClient } from "./http-client.js";
 import { BrowserClient } from "./browser-client.js";
 import { getModule } from "./platforms/registry.js";
 
+import { randomUUID } from "node:crypto";
+
+const traceId = randomUUID().slice(0, 8); // Short trace ID for log correlation
 const log = createLogger("cli");
 
 // Parse --platform flag (can appear anywhere in args)
@@ -100,7 +103,7 @@ process.on("SIGINT", () => cleanupOnExit("SIGINT"));
 
 async function main() {
   const t0 = Date.now();
-  log.info("Platform selected", { platform: platformArg, smokeTest: isSmokeTest });
+  log.info("Platform selected", { platform: platformArg, smokeTest: isSmokeTest, traceId });
   if (process.env.FORCE_FALLBACK === "true") {
     log.info("Mode: FORCE_FALLBACK (using secondary scraping methods)");
   }
@@ -283,7 +286,7 @@ async function main() {
     }
   }
 
-  log.info("cli:total_timing", { command, platform: platformArg, totalMs: Date.now() - t0 });
+  log.info("cli:total_timing", { command, platform: platformArg, totalMs: Date.now() - t0, traceId });
   process.exit(0);
 }
 

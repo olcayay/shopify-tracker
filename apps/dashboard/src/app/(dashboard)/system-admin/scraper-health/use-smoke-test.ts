@@ -22,6 +22,7 @@ export interface CellResult {
   output?: string;
   error?: string;
   startedAt?: number;
+  traceId?: string;
 }
 
 export interface SmokeTestProgress {
@@ -175,6 +176,7 @@ export function useSmokeTest() {
               durationMs: data.durationMs,
               output: data.output,
               error: data.error,
+              traceId: data.traceId,
             });
             return next;
           });

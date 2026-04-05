@@ -40,6 +40,7 @@ import {
   RotateCcw,
   Loader2,
   FlaskConical,
+  Copy,
 } from "lucide-react";
 import {
   useSmokeTest,
@@ -177,6 +178,31 @@ function StatusCell({
   );
 }
 
+function CopyableLog({ text, maxHeight = "max-h-48" }: { text: string; maxHeight?: string }) {
+  const [copied, setCopied] = useState(false);
+  const handleCopy = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    await navigator.clipboard.writeText(text);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  return (
+    <div className="relative group">
+      <pre className={`text-xs text-red-700 bg-red-100 rounded p-3 ${maxHeight} overflow-auto font-mono whitespace-pre-wrap break-words`}>
+        {text.slice(-3000)}
+      </pre>
+      <button
+        onClick={handleCopy}
+        className="absolute top-2 right-2 p-1 rounded bg-red-200/80 hover:bg-red-300 opacity-0 group-hover:opacity-100 transition-opacity"
+        title={copied ? "Copied!" : "Copy log"}
+      >
+        {copied ? <Check className="w-3.5 h-3.5 text-green-600" /> : <Copy className="w-3.5 h-3.5 text-red-700" />}
+      </button>
+    </div>
+  );
+}
+
 function FailureDetails({
   result,
   onRetry,
@@ -184,6 +210,15 @@ function FailureDetails({
   result: CellResult;
   onRetry: () => void;
 }) {
+  const fullLog = [
+    `Platform: ${result.platform}`,
+    `Check: ${result.check}`,
+    `Status: ${result.status}`,
+    result.durationMs ? `Duration: ${formatDuration(result.durationMs)}` : null,
+    result.error ? `Error: ${result.error}` : null,
+    result.output ? `\nOutput:\n${result.output}` : null,
+  ].filter(Boolean).join("\n");
+
   return (
     <div className="bg-red-50 border border-red-200 rounded-md p-3 mt-1 mb-2">
       <div className="flex items-center justify-between mb-2">
@@ -192,43 +227,51 @@ function FailureDetails({
           <span className="text-base font-medium text-red-800">
             {PLATFORM_LABELS[result.platform as PlatformId]} / {CHECK_LABELS[result.check]}
           </span>
+          {result.durationMs != null && (
+            <Badge variant="outline" className="text-xs font-mono border-red-300">
+              {formatDuration(result.durationMs)}
+            </Badge>
+          )}
           {result.error && (
             <Badge variant="outline" className="text-xs text-red-600 border-red-300">
               {result.error}
             </Badge>
           )}
-        </div>
-        <Button
-          size="sm"
-          variant="outline"
-          className="h-7 text-sm px-3"
-          onClick={(e) => {
-            e.stopPropagation();
-            onRetry();
-          }}
-          disabled={result.status === "running"}
-        >
-          {result.status === "running" ? (
-            <Loader2 className="w-3 h-3 animate-spin" />
-          ) : (
-            <>
-              <RotateCcw className="w-3 h-3 mr-1" /> Retry
-            </>
+          {result.traceId && (
+            <Badge variant="outline" className="text-xs font-mono text-muted-foreground cursor-pointer" onClick={(e) => { e.stopPropagation(); navigator.clipboard.writeText(result.traceId!); }} title="Click to copy trace ID">
+              trace: {result.traceId}
+            </Badge>
           )}
-        </Button>
+        </div>
+        <div className="flex items-center gap-2">
+          <Button
+            size="sm"
+            variant="outline"
+            className="h-7 text-sm px-3"
+            onClick={(e) => {
+              e.stopPropagation();
+              onRetry();
+            }}
+            disabled={result.status === "running"}
+          >
+            {result.status === "running" ? (
+              <Loader2 className="w-3 h-3 animate-spin" />
+            ) : (
+              <>
+                <RotateCcw className="w-3 h-3 mr-1" /> Retry
+              </>
+            )}
+          </Button>
+        </div>
       </div>
-      {result.output && (
-        <pre className="text-xs text-red-700 bg-red-100 rounded p-3 max-h-48 overflow-auto font-mono whitespace-pre-wrap break-words">
-          {result.output.slice(-2000)}
-        </pre>
-      )}
+      {result.output && <CopyableLog text={result.output} />}
     </div>
   );
 }
 
 interface SmokeTestPanelProps {
   onComplete?: () => void;
-  history?: { platform: string; checkName: string; passCount: number; totalCount: number; lastRunAt: string | null; lastStatus: string | null }[] | null;
+  history?: { platform: string; checkName: string; passCount: number; totalCount: number; lastRunAt: string | null; lastStatus: string | null; lastDurationMs?: number | null; recentErrors?: { error: string; createdAt: string; durationMs: number | null }[] }[] | null;
 }
 
 export function SmokeTestPanel({ onComplete, history }: SmokeTestPanelProps) {
@@ -246,7 +289,9 @@ export function SmokeTestPanel({ onComplete, history }: SmokeTestPanelProps) {
         platform: entry.platform,
         check: entry.checkName as SmokeCheckName,
         status: entry.lastStatus === "pass" ? "pass" : entry.lastStatus === "fail" ? "fail" : "pending",
-        ...(entry.lastRunAt ? {} : {}),
+        durationMs: entry.lastDurationMs ?? undefined,
+        error: entry.recentErrors?.[0]?.error,
+        output: entry.recentErrors?.[0]?.error,
       });
     }
     return map;
@@ -470,11 +515,16 @@ export function SmokeTestPanel({ onComplete, history }: SmokeTestPanelProps) {
                                   />
                                 </div>
                               </TooltipTrigger>
-                              {result?.status === "fail" && result.error && (
+                              {result && (result.status === "fail" || result.traceId) && (
                                 <TooltipContent side="bottom">
-                                  <span className="text-sm text-red-600">
-                                    {result.error} — click for details
-                                  </span>
+                                  <div className="space-y-1">
+                                    {result.status === "fail" && result.error && (
+                                      <div className="text-sm text-red-600">{result.error} — click for details</div>
+                                    )}
+                                    {result.traceId && (
+                                      <div className="text-xs font-mono text-muted-foreground">trace: {result.traceId}</div>
+                                    )}
+                                  </div>
                                 </TooltipContent>
                               )}
                             </Tooltip>

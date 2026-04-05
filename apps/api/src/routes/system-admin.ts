@@ -1066,6 +1066,10 @@ export const systemAdminRoutes: FastifyPluginAsync = async (app) => {
             else error = `exit code ${code}`;
           }
 
+          // Extract traceId from CLI output for log correlation
+          const traceIdMatch = output.match(/"traceId"\s*:\s*"([^"]+)"/);
+          const traceId = traceIdMatch?.[1] ?? undefined;
+
           sendEvent("complete", {
             platform: job.platform,
             check: job.check,
@@ -1073,6 +1077,7 @@ export const systemAdminRoutes: FastifyPluginAsync = async (app) => {
             durationMs,
             output,
             ...(error ? { error } : {}),
+            ...(traceId ? { traceId } : {}),
           });
 
           // Persist result to DB
@@ -1284,6 +1289,7 @@ export const systemAdminRoutes: FastifyPluginAsync = async (app) => {
       totalCount: number;
       lastRunAt: string | null;
       lastStatus: string | null;
+      lastDurationMs: number | null;
       recentErrors: { error: string; createdAt: string; durationMs: number | null }[];
     }>();
 
@@ -1298,6 +1304,7 @@ export const systemAdminRoutes: FastifyPluginAsync = async (app) => {
           totalCount: 0,
           lastRunAt: null,
           lastStatus: null,
+          lastDurationMs: null,
           recentErrors: [],
         };
         map.set(key, entry);
@@ -1309,6 +1316,7 @@ export const systemAdminRoutes: FastifyPluginAsync = async (app) => {
           ? row.created_at.toISOString()
           : String(row.created_at);
         entry.lastStatus = row.status;
+        entry.lastDurationMs = row.duration_ms;
       }
       if (row.status === "fail" && row.error) {
         entry.recentErrors.push({
