@@ -87,7 +87,7 @@ describe("Flow: Register → Login → Get /me", () => {
 
 describe("Flow: Failed logins → Account lockout", () => {
   let app: FastifyInstance;
-  const passwordHash = bcrypt.hashSync("Password123", 12);
+  const passwordHash = bcrypt.hashSync("Password123", 4); // Low rounds for test speed
 
   beforeAll(async () => {
     app = await buildTestApp({
@@ -114,7 +114,7 @@ describe("Flow: Failed logins → Account lockout", () => {
     await app.close();
   });
 
-  it("locks account after 10 failed attempts", async () => {
+  it("locks account after 10 failed attempts", { timeout: 30_000 }, async () => {
     // Use different IPs to avoid IP-based rate limiting (5/15min)
     for (let i = 0; i < 10; i++) {
       const res = await app.inject({
