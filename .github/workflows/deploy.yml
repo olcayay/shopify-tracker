@@ -102,13 +102,6 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Setup SSH key
-        run: |
-          mkdir -p ~/.ssh
-          echo "${{ secrets.GCP_SSH_PRIVATE_KEY }}" > ~/.ssh/appranks-gcp
-          chmod 600 ~/.ssh/appranks-gcp
-          echo "StrictHostKeyChecking no" >> ~/.ssh/config
-
       - name: Authenticate to GCP
         uses: google-github-actions/auth@v2
         with:
@@ -118,14 +111,9 @@ jobs:
       - name: Setup gcloud CLI
         uses: google-github-actions/setup-gcloud@v2
 
-      - name: Deploy to API VM
+      - name: Deploy to all VMs
         run: |
-          ssh -i ~/.ssh/appranks-gcp deploy@34.62.80.10 \
-            "cd /opt/appranks && sudo docker compose pull && sudo docker compose up -d"
-
-      - name: Deploy to Worker VMs
-        run: |
-          for vm in appranks-scraper appranks-email appranks-ai; do
+          for vm in appranks-api appranks-scraper appranks-email appranks-ai; do
             echo "Deploying to $vm..."
             gcloud compute ssh "deploy@$vm" --zone=europe-west1-b \
               --command="cd /opt/appranks && sudo docker compose pull && sudo docker compose up -d" \
