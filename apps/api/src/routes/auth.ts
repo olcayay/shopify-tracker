@@ -431,12 +431,28 @@ export const authRoutes: FastifyPluginAsync = async (app) => {
       ),
     });
 
-    // Send login alert email (fire-and-forget)
+    // Send login alert email only for new/unknown devices
     const userAgent = request.headers["user-agent"] || "Unknown device";
-    sendLoginAlertEmail(user.email, user.name, userAgent, {
-      ip: request.ip,
-      userId: user.id,
-    }).catch(() => {});
+    const currentUaHash = hashUserAgent(request.headers["user-agent"]);
+    if (currentUaHash) {
+      const knownSessions = await db
+        .select({ id: refreshTokens.id })
+        .from(refreshTokens)
+        .where(
+          and(
+            eq(refreshTokens.userId, user.id),
+            eq(refreshTokens.userAgentHash, currentUaHash)
+          )
+        )
+        .limit(2); // We just inserted one above, so ≤1 means new device
+      const isNewDevice = knownSessions.length <= 1;
+      if (isNewDevice) {
+        sendLoginAlertEmail(user.email, user.name, userAgent, {
+          ip: request.ip,
+          userId: user.id,
+        }).catch(() => {});
+      }
+    }
 
     return {
       accessToken,
