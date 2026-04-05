@@ -165,16 +165,31 @@ function StatusCell({
       </div>
       {/* Cell-level run button — visible on hover when not running */}
       {!isRunning && status !== "running" && (
-        <button
-          className="absolute inset-0 flex items-center justify-center bg-background/80 opacity-0 group-hover/cell:opacity-100 transition-opacity rounded-md"
-          onClick={(e) => {
-            e.stopPropagation();
-            onRun();
-          }}
-          title={`Run ${CHECK_LABELS[check]} for ${platform}`}
-        >
-          <Play className="w-3.5 h-3.5 text-blue-600" />
-        </button>
+        status === "fail" ? (
+          /* Failed cells: small corner button so click-to-expand still works */
+          <button
+            className="absolute top-0.5 right-0.5 p-0.5 rounded bg-background/90 border border-border opacity-0 group-hover/cell:opacity-100 transition-opacity z-10"
+            onClick={(e) => {
+              e.stopPropagation();
+              onRun();
+            }}
+            title={`Re-run ${CHECK_LABELS[check]} for ${platform}`}
+          >
+            <Play className="w-3 h-3 text-blue-600" />
+          </button>
+        ) : (
+          /* Non-failed cells: full overlay */
+          <button
+            className="absolute inset-0 flex items-center justify-center bg-background/80 opacity-0 group-hover/cell:opacity-100 transition-opacity rounded-md"
+            onClick={(e) => {
+              e.stopPropagation();
+              onRun();
+            }}
+            title={`Run ${CHECK_LABELS[check]} for ${platform}`}
+          >
+            <Play className="w-3.5 h-3.5 text-blue-600" />
+          </button>
+        )
       )}
     </div>
   );
