@@ -461,15 +461,31 @@ export default function ScraperHealthPage() {
                       <TableCell className="text-sm text-muted-foreground">{run.triggeredBy || "—"}</TableCell>
                       <TableCell className="text-xs font-mono text-muted-foreground">{run.jobId || run.id.slice(0, 8)}</TableCell>
                       <TableCell className="text-right">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="h-7 text-xs text-red-600 border-red-200 hover:bg-red-50"
-                          onClick={() => handleKillRun(run.id)}
-                          disabled={killingRun === run.id}
-                        >
-                          {killingRun === run.id ? <Loader2 className="h-3 w-3 animate-spin" /> : <><Trash2 className="h-3 w-3 mr-1" /> Kill</>}
-                        </Button>
+                        <div className="flex items-center justify-end gap-1.5">
+                          <CopyReportButton
+                            getReport={() => buildHealthCellReport({
+                              platform: run.platform,
+                              scraperType: run.scraperType,
+                              status: "running (stuck)",
+                              startedAt: run.startedAt,
+                              runId: run.id,
+                              jobId: run.jobId,
+                              triggeredBy: run.triggeredBy,
+                              error: `Stuck for ${run.runningSecs > 3600 ? `${Math.floor(run.runningSecs / 3600)}h ${Math.floor((run.runningSecs % 3600) / 60)}m` : `${Math.floor(run.runningSecs / 60)}m ${run.runningSecs % 60}s`}`,
+                            })}
+                            className="flex items-center h-7 px-2 border rounded-md text-xs text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+                            title="Copy diagnostic report"
+                          />
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="h-7 text-xs text-red-600 border-red-200 hover:bg-red-50"
+                            onClick={() => handleKillRun(run.id)}
+                            disabled={killingRun === run.id}
+                          >
+                            {killingRun === run.id ? <Loader2 className="h-3 w-3 animate-spin" /> : <><Trash2 className="h-3 w-3 mr-1" /> Kill</>}
+                          </Button>
+                        </div>
                       </TableCell>
                     </TableRow>
                   ))}
