@@ -216,6 +216,77 @@ describe("AuthProvider", () => {
     expect(screen.getByTestId("user").textContent).toBe("null");
   });
 
+  it("uses silentRefresh when access_token expired but refresh_token exists", async () => {
+    // Simulate post-deploy state: no access_token but refresh_token still valid
+    document.cookie = "refresh_token=valid-refresh-token; path=/";
+
+    (global.fetch as ReturnType<typeof vi.fn>)
+      // 1st call: POST /api/auth/refresh — silentRefresh
+      .mockResolvedValueOnce(
+        mockFetchOk({
+          accessToken: "refreshed-access-tok",
+          refreshToken: "refreshed-refresh-tok",
+        })
+      )
+      // 2nd call: GET /api/auth/me — after silentRefresh sets new access_token
+      .mockResolvedValueOnce(mockFetchOk(meResponse()));
+
+    render(
+      <AuthProvider>
+        <AuthConsumer />
+      </AuthProvider>
+    );
+
+    await waitFor(() => {
+      expect(screen.getByTestId("loading").textContent).toBe("false");
+    });
+
+    // User should be loaded via silentRefresh → /me
+    expect(screen.getByTestId("user").textContent).toBe("Test User");
+    expect(screen.getByTestId("account").textContent).toBe("Test Account");
+
+    // Verify silentRefresh was called (POST to /api/auth/refresh)
+    const fetchMock = global.fetch as ReturnType<typeof vi.fn>;
+    const refreshCall = fetchMock.mock.calls.find(
+      (c: unknown[]) => typeof c[0] === "string" && c[0].includes("/api/auth/refresh")
+    );
+    expect(refreshCall).toBeDefined();
+  });
+
+  it("redirects to login when both access_token and refresh_token missing", async () => {
+    // No cookies at all
+    render(
+      <AuthProvider>
+        <AuthConsumer />
+      </AuthProvider>
+    );
+    await waitFor(() => {
+      expect(screen.getByTestId("loading").textContent).toBe("false");
+    });
+    expect(screen.getByTestId("user").textContent).toBe("null");
+    // No fetch calls should be made
+    expect(global.fetch).not.toHaveBeenCalled();
+  });
+
+  it("redirects to login when silentRefresh fails", async () => {
+    // Only refresh_token exists but refresh endpoint fails
+    document.cookie = "refresh_token=expired-refresh-token; path=/";
+
+    (global.fetch as ReturnType<typeof vi.fn>)
+      .mockResolvedValueOnce(mockFetchFail(401)); // refresh fails
+
+    render(
+      <AuthProvider>
+        <AuthConsumer />
+      </AuthProvider>
+    );
+
+    await waitFor(() => {
+      expect(screen.getByTestId("loading").textContent).toBe("false");
+    });
+    expect(screen.getByTestId("user").textContent).toBe("null");
+  });
+
   it("fetches user when token exists", async () => {
     document.cookie = "access_token=valid-token; path=/";
     (global.fetch as ReturnType<typeof vi.fn>).mockResolvedValue(

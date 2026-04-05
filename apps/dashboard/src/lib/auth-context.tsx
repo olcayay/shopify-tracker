@@ -305,7 +305,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   );
 
   const refreshUser = useCallback(async () => {
-    const token = getCookie("access_token");
+    let token = getCookie("access_token");
+
+    // Access token expired/missing but refresh token exists — try silent refresh
+    // This prevents session drops after deploy or 15min idle
+    if (!token) {
+      const refreshed = await silentRefresh();
+      if (refreshed) {
+        token = getCookie("access_token");
+      }
+    }
+
     if (!token) {
       setUser(null);
       setAccount(null);
@@ -341,7 +351,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setImpersonation(null);
       setGlobalPlatformVisibility(null);
     }
-  }, []);
+  }, [silentRefresh]);
 
   useEffect(() => {
     refreshUser().finally(() => setIsLoading(false));
