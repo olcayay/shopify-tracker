@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import Link from "next/link";
 import { useAuth } from "@/lib/auth-context";
 import {
   Card,
@@ -29,6 +30,7 @@ import {
   Search,
   RefreshCw,
   X,
+  ListOrdered,
 } from "lucide-react";
 
 interface EmailStats {
@@ -146,9 +148,16 @@ export default function AdminEmailDashboard() {
         <h1 className="text-2xl font-bold flex items-center gap-2">
           <Mail className="h-6 w-6" /> Email Management
         </h1>
-        <Button variant="outline" size="sm" onClick={() => { loadStats(); loadEmails(); }}>
-          <RefreshCw className="h-4 w-4 mr-1" /> Refresh
-        </Button>
+        <div className="flex items-center gap-2">
+          <Link href="/system-admin/queues/email-instant">
+            <Button variant="outline" size="sm">
+              <ListOrdered className="h-4 w-4 mr-1" /> Email Queue
+            </Button>
+          </Link>
+          <Button variant="outline" size="sm" onClick={() => { loadStats(); loadEmails(); }}>
+            <RefreshCw className="h-4 w-4 mr-1" /> Refresh
+          </Button>
+        </div>
       </div>
 
       {/* Stats Cards */}
