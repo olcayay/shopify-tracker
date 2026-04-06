@@ -195,6 +195,11 @@ export class AppDetailsScraper {
         })
         .where(eq(scrapeRuns.id, run.id));
       throw error;
+    } finally {
+      // Clean up browser if the platform module has one (e.g. Canva)
+      if (this.platformModule && "closeBrowser" in this.platformModule && typeof (this.platformModule as any).closeBrowser === "function") {
+        await (this.platformModule as any).closeBrowser().catch((e: unknown) => log.warn("failed to close browser", { error: String(e) }));
+      }
     }
 
     log.info("scraping complete", { itemsScraped, itemsFailed, durationMs: Date.now() - startTime });

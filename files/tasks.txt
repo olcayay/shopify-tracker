@@ -10,7 +10,7 @@ Scraper Reliability & Diagnostics (2026-04-06)
   PLA-807: Replace raw error copy in Queue Status with full Copy Report
   PLA-808: Enrich smoke test Copy Report with full diagnostic context + show seconds in all reports ✅
   PLA-809: Google Workspace smoke tests fail with SIGTERM timeout ✅
-  PLA-810: Canva keyword smoke test fails: Cloudflare 403 + browser timeout
+  PLA-810: Canva keyword smoke test fails: Cloudflare 403 + browser timeout ✅
 
 Digest Redesign (2026-04-06)
   PLA-783: Phase 1: Restructure digest data model — app-centric instead of keyword-centric ✅

@@ -141,11 +141,12 @@ export class KeywordScraper {
         })
         .where(eq(scrapeRuns.id, run.id));
       throw error;
-    }
-
-    // Clean up browser if the platform module has one (e.g. Canva)
-    if (this.platformModule && "closeBrowser" in this.platformModule && typeof (this.platformModule as any).closeBrowser === "function") {
-      await (this.platformModule as any).closeBrowser();
+    } finally {
+      // Clean up browser if the platform module has one (e.g. Canva)
+      // Must be in finally to prevent process from hanging on error paths
+      if (this.platformModule && "closeBrowser" in this.platformModule && typeof (this.platformModule as any).closeBrowser === "function") {
+        await (this.platformModule as any).closeBrowser().catch((e: unknown) => log.warn("failed to close browser", { error: String(e) }));
+      }
     }
 
     log.info("scraping complete", { itemsScraped, itemsFailed, discoveredApps: allDiscoveredSlugs.size, durationMs: Date.now() - startTime });
