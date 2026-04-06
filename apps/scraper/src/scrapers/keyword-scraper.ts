@@ -71,6 +71,8 @@ export class KeywordScraper {
     let itemsFailed = 0;
 
     const KEYWORD_TIMEOUT_MS = 180_000; // 180 seconds per keyword (increased from 90s to accommodate 10 pages + retries)
+    const MAX_ITEMS_PROCESSED = 50;
+    const itemsProcessed: { id: string; apps: number }[] = [];
 
     const currentlyProcessing = new Set<string>();
 
@@ -85,6 +87,7 @@ export class KeywordScraper {
             currently_processing: [...currentlyProcessing],
             current_index: index,
             total_keywords: keywords.length,
+            items_processed: itemsProcessed.slice(0, MAX_ITEMS_PROCESSED),
           },
         }).where(eq(scrapeRuns.id, run.id));
 
@@ -98,6 +101,9 @@ export class KeywordScraper {
           ]);
           for (const s of slugs) allDiscoveredSlugs.add(s);
           itemsScraped++;
+          if (itemsProcessed.length < MAX_ITEMS_PROCESSED) {
+            itemsProcessed.push({ id: kw.keyword, apps: slugs.length });
+          }
           log.info("keyword:scraped", { keyword: kw.keyword, durationMs: Date.now() - kwStart, apps: slugs.length });
         } catch (error) {
           log.error("keyword:failed", { keyword: kw.keyword, durationMs: Date.now() - kwStart, error: String(error) });
@@ -123,6 +129,7 @@ export class KeywordScraper {
             items_scraped: itemsScraped,
             items_failed: itemsFailed,
             duration_ms: Date.now() - startTime,
+            items_processed: itemsProcessed.slice(0, MAX_ITEMS_PROCESSED),
           },
         })
         .where(eq(scrapeRuns.id, run.id));
@@ -137,6 +144,7 @@ export class KeywordScraper {
             items_scraped: itemsScraped,
             items_failed: itemsFailed,
             duration_ms: Date.now() - startTime,
+            items_processed: itemsProcessed.slice(0, MAX_ITEMS_PROCESSED),
           },
         })
         .where(eq(scrapeRuns.id, run.id));

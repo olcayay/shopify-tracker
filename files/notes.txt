@@ -1,6 +1,13 @@
 Scraper Reliability & Diagnostics (2026-04-06)
 ================================================================
 
+PLA-805: Optimize review scraper performance and add per-item tracking to all scraper reports
+- Review scraper: skip apps already scraped today, increase concurrency 3→5
+- Added items_processed array to metadata (capped at 50 entries) for review + keyword scrapers
+- Review metadata now includes: apps_skipped, new_reviews, items_processed
+- Keyword metadata includes: items_processed with app count per keyword
+- scraper-report.ts: renders "Items Processed" section from metadata, shows new_reviews and apps_skipped
+
 PLA-809: Google Workspace smoke tests fail with SIGTERM timeout
 - Changed clientType from "http" to "browser" in SMOKE_PLATFORMS config (60s→120s timeout)
 - Added IS_SMOKE_TEST checks to GoogleWorkspaceModule: reduced goto, selector, and render timeouts

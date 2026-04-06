@@ -1,4 +1,4 @@
-import { eq, and } from "drizzle-orm";
+import { eq, and, sql, max } from "drizzle-orm";
 import type { Database } from "@appranks/db";
 import { scrapeRuns, apps, reviews } from "@appranks/db";
 import { urls, createLogger, type PlatformId } from "@appranks/shared";
@@ -60,6 +60,9 @@ export class ReviewScraper {
     let itemsScraped = 0;
     let itemsFailed = 0;
     let totalNewReviews = 0;
+    let appsSkipped = 0;
+    const MAX_ITEMS_PROCESSED = 50;
+    const itemsProcessed: { id: string; newReviews: number; pages: number; skipped?: boolean }[] = [];
 
     const currentlyProcessing = new Set<string>();
 
@@ -72,20 +75,56 @@ export class ReviewScraper {
             items_scraped: itemsScraped,
             items_failed: itemsFailed,
             new_reviews: totalNewReviews,
+            apps_skipped: appsSkipped,
             duration_ms: Date.now() - startTime,
             currently_processing: [...currentlyProcessing],
             current_index: index,
             total_apps: trackedApps.length,
+            items_processed: itemsProcessed.slice(0, MAX_ITEMS_PROCESSED),
           },
         }).where(eq(scrapeRuns.id, run.id));
 
         try {
+          // Skip apps already scraped today
+          const todayStr = new Date().toISOString().slice(0, 10);
+          const [latestReview] = await this.db
+            .select({ maxDate: max(reviews.reviewDate) })
+            .from(reviews)
+            .where(eq(reviews.appId, app.id));
+
+          if (latestReview?.maxDate) {
+            const [latestRun] = await this.db
+              .select({ completedAt: scrapeRuns.completedAt })
+              .from(scrapeRuns)
+              .where(
+                and(
+                  eq(scrapeRuns.scraperType, "reviews"),
+                  eq(scrapeRuns.platform, this.platform),
+                  eq(scrapeRuns.status, "completed"),
+                ),
+              )
+              .orderBy(sql`completed_at DESC`)
+              .limit(1);
+
+            if (latestRun?.completedAt && latestRun.completedAt.toISOString().slice(0, 10) === todayStr) {
+              log.info("skipping app, already scraped today", { slug: app.slug });
+              appsSkipped++;
+              if (itemsProcessed.length < MAX_ITEMS_PROCESSED) {
+                itemsProcessed.push({ id: app.slug, newReviews: 0, pages: 0, skipped: true });
+              }
+              return;
+            }
+          }
+
           const newReviews = await this.scrapeAppReviews(
             app.slug,
             run.id
           );
           totalNewReviews += newReviews;
           itemsScraped++;
+          if (itemsProcessed.length < MAX_ITEMS_PROCESSED) {
+            itemsProcessed.push({ id: app.slug, newReviews, pages: 0 });
+          }
         } catch (error) {
           log.error("failed to scrape reviews", { slug: app.slug, error: String(error) });
           itemsFailed++;
@@ -99,7 +138,7 @@ export class ReviewScraper {
         } finally {
           currentlyProcessing.delete(app.slug);
         }
-      }, 3);
+      }, 5);
 
       await this.db
         .update(scrapeRuns)
@@ -110,7 +149,9 @@ export class ReviewScraper {
             items_scraped: itemsScraped,
             items_failed: itemsFailed,
             new_reviews: totalNewReviews,
+            apps_skipped: appsSkipped,
             duration_ms: Date.now() - startTime,
+            items_processed: itemsProcessed.slice(0, MAX_ITEMS_PROCESSED),
           },
         })
         .where(eq(scrapeRuns.id, run.id));
@@ -125,14 +166,16 @@ export class ReviewScraper {
             items_scraped: itemsScraped,
             items_failed: itemsFailed,
             new_reviews: totalNewReviews,
+            apps_skipped: appsSkipped,
             duration_ms: Date.now() - startTime,
+            items_processed: itemsProcessed.slice(0, MAX_ITEMS_PROCESSED),
           },
         })
         .where(eq(scrapeRuns.id, run.id));
       throw error;
     }
 
-    log.info("scraping complete", { itemsScraped, itemsFailed, totalNewReviews, durationMs: Date.now() - startTime });
+    log.info("scraping complete", { itemsScraped, itemsFailed, totalNewReviews, appsSkipped, durationMs: Date.now() - startTime });
   }
 
   /** Scrape reviews for a single app, returns count of new reviews */

@@ -36,9 +36,12 @@ export interface RunInfo {
     duration_ms?: number;
     items_scraped?: number;
     items_failed?: number;
+    new_reviews?: number;
+    apps_skipped?: number;
     fallback_used?: boolean;
     fallback_count?: number;
     fallback_contexts?: string[];
+    items_processed?: { id: string; [key: string]: unknown }[];
   };
   schedule?: string;
 }
@@ -77,9 +80,22 @@ function buildRunSection(run: RunInfo): string[] {
       lines.push(`Contexts:     ${run.metadata.fallback_contexts.join(", ")}`);
     }
   }
+  if (run.metadata?.new_reviews != null) lines.push(`New Reviews:  ${run.metadata.new_reviews}`);
+  if (run.metadata?.apps_skipped) lines.push(`Apps Skipped: ${run.metadata.apps_skipped}`);
   if (run.schedule) lines.push(`Schedule:     ${run.schedule}`);
   const file = SCRAPER_TYPE_FILE_MAP[run.scraperType || ""];
   if (file) lines.push(`Scraper File: apps/scraper/src/scrapers/${file}`);
+  // Items processed section
+  if (run.metadata?.items_processed?.length) {
+    lines.push("", "--- Items Processed ---");
+    for (const item of run.metadata.items_processed) {
+      const extras = Object.entries(item)
+        .filter(([k]) => k !== "id")
+        .map(([k, v]) => `${k}=${v}`)
+        .join(", ");
+      lines.push(`  ${item.id}${extras ? ` (${extras})` : ""}`);
+    }
+  }
   return lines;
 }
 
