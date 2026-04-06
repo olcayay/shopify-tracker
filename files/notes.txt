@@ -1,6 +1,13 @@
 Digest Redesign (2026-04-06)
 ================================================================
 
+PLA-786: Phase 4: Improve digest subject line and insight logic for app-centric model
+- Subject line now follows priority order: category milestone (#1) > big keyword jump (+3) > review milestone (50/100/500...) > mixed summary > quiet day
+- Subject always references the tracked app by name (uses pickSubjectApp() to find most impactful app)
+- generateInsight() now references: category rankings, review velocity, rating changes, competitor keyword comparison
+- buildHighlight() adds review milestone detection (50/100/200/500/1000/2000/5000 thresholds)
+- 22 new/updated template tests, 4 new insight-via-HTML tests
+
 PLA-785: Phase 3: Remove non-tracked/non-competitor apps from digest email
 - Removed `isTracked` and `isCompetitor` fields from `RankingChange` interface — structurally separated now
 - Removed `rankingChanges` from `DigestData` — template uses `trackedApps[].keywordChanges` since Phase 2

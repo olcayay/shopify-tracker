@@ -241,48 +241,71 @@ describe("buildDigestHtml", () => {
 });
 
 describe("buildDigestSubject", () => {
-  it("returns win-day subject for improvements", () => {
+  it("returns category milestone subject when app reaches #1", () => {
     const data = makeDigest({
       trackedApps: [
         makeTrackedApp({
-          keywordChanges: [
-            makeRankingChange({ keyword: "email marketing", todayPosition: 3, change: 5 }),
-            makeRankingChange({ keyword: "shopify email", todayPosition: 8, change: 2 }),
-          ],
+          appName: "Klaviyo",
+          categoryChanges: [makeCategoryChange({ categoryName: "Marketing", todayPosition: 1, yesterdayPosition: 3, change: 2, type: "improved" })],
+          keywordChanges: [makeRankingChange()],
         }),
       ],
-      summary: { improved: 2, dropped: 0, newEntries: 0, droppedOut: 0, unchanged: 0 },
+      summary: { improved: 1, dropped: 0, newEntries: 0, droppedOut: 0, unchanged: 0 },
     });
 
     const subject = buildDigestSubject(data);
-    expect(subject).toContain("Great day!");
-    expect(subject).toContain("#3");
+    expect(subject).toContain("Klaviyo");
+    expect(subject).toContain("reached #1");
+    expect(subject).toContain("Marketing");
+  });
+
+  it("returns big keyword jump subject (+3 or more)", () => {
+    const data = makeDigest({
+      trackedApps: [
+        makeTrackedApp({
+          appName: "My App",
+          keywordChanges: [
+            makeRankingChange({ keyword: "email marketing", todayPosition: 3, change: 5 }),
+          ],
+        }),
+      ],
+      summary: { improved: 1, dropped: 0, newEntries: 0, droppedOut: 0, unchanged: 0 },
+    });
+
+    const subject = buildDigestSubject(data);
+    expect(subject).toContain("My App");
+    expect(subject).toContain("jumped +5");
     expect(subject).toContain("email marketing");
   });
 
-  it("returns alert-day subject for drops", () => {
+  it("returns review milestone subject when crossing threshold", () => {
     const data = makeDigest({
       trackedApps: [
         makeTrackedApp({
-          keywordChanges: [
-            makeRankingChange({ keyword: "kw1", change: -3, type: "dropped", todayPosition: 15 }),
-            makeRankingChange({ keyword: "kw2", change: -5, type: "dropped", todayPosition: 20 }),
-          ],
+          appName: "My App",
+          ratingToday: 4.8,
+          ratingChange: 0,
+          reviewCountToday: 502,
+          reviewCountYesterday: 498,
+          reviewCountChange: 4,
+          keywordChanges: [],
         }),
       ],
-      summary: { improved: 0, dropped: 2, newEntries: 0, droppedOut: 0, unchanged: 0 },
     });
 
     const subject = buildDigestSubject(data);
-    expect(subject).toContain("Heads up");
+    expect(subject).toContain("hit 500 reviews");
+    expect(subject).toContain("4.8");
   });
 
-  it("returns mixed-day subject", () => {
+  it("returns mixed summary subject with app name", () => {
     const data = makeDigest({
       trackedApps: [
         makeTrackedApp({
+          appName: "My App",
           keywordChanges: [
-            makeRankingChange({ keyword: "kw1", change: 2 }),
+            makeRankingChange({ change: 1, todayPosition: 15, yesterdayPosition: 16 }),
+            makeRankingChange({ keyword: "kw2", change: -2, type: "dropped", todayPosition: 20, yesterdayPosition: 18 }),
           ],
         }),
       ],
@@ -290,31 +313,115 @@ describe("buildDigestSubject", () => {
     });
 
     const subject = buildDigestSubject(data);
-    expect(subject).toContain("1 keywords up, 1 down");
+    expect(subject).toContain("My App");
+    expect(subject).toContain("keywords");
   });
 
-  it("returns default subject when no changes", () => {
-    const data = makeDigest();
+  it("returns quiet-day subject when no changes", () => {
+    const data = makeDigest({
+      trackedApps: [makeTrackedApp({ appName: "My App" })],
+    });
     const subject = buildDigestSubject(data);
-    expect(subject).toBe("Daily Ranking Report — 04/06/2026");
+    expect(subject).toContain("My App");
+    expect(subject).toContain("stable");
   });
 
-  it("uses tracked app name in subject", () => {
+  it("picks app with biggest change when multiple tracked apps", () => {
     const data = makeDigest({
       trackedApps: [
-        makeTrackedApp({
-          appName: "Klaviyo",
-          keywordChanges: [
-            makeRankingChange({ appName: "Klaviyo", keyword: "email", todayPosition: 2, change: 8 }),
-            makeRankingChange({ appName: "Klaviyo", keyword: "sms", todayPosition: 10, change: 3 }),
-            makeRankingChange({ appName: "Klaviyo", keyword: "flow", todayPosition: 5, change: 2 }),
-          ],
-        }),
+        makeTrackedApp({ appName: "Small App", keywordChanges: [makeRankingChange({ change: 1 })] }),
+        makeTrackedApp({ appName: "Big App", appId: 2, keywordChanges: [makeRankingChange({ appName: "Big App", change: 10 })] }),
       ],
-      summary: { improved: 3, dropped: 0, newEntries: 0, droppedOut: 0, unchanged: 0 },
+      summary: { improved: 2, dropped: 0, newEntries: 0, droppedOut: 0, unchanged: 0 },
     });
 
     const subject = buildDigestSubject(data);
-    expect(subject).toContain("Klaviyo");
+    expect(subject).toContain("Big App");
+  });
+});
+
+describe("generateInsight (via buildDigestHtml)", () => {
+  it("generates category insight when app reaches top 3 in a category", () => {
+    const data = makeDigest({
+      trackedApps: [
+        makeTrackedApp({
+          appName: "My App",
+          categoryChanges: [makeCategoryChange({ categoryName: "Sales", todayPosition: 2, change: 3, type: "improved" })],
+          keywordChanges: [makeRankingChange()],
+        }),
+      ],
+      summary: { improved: 1, dropped: 0, newEntries: 0, droppedOut: 0, unchanged: 0 },
+    });
+
+    const html = buildDigestHtml(data);
+    expect(html).toContain("Insight");
+    expect(html).toContain("My App");
+    expect(html).toContain("Sales");
+  });
+
+  it("generates review velocity insight", () => {
+    const data = makeDigest({
+      trackedApps: [
+        makeTrackedApp({
+          appName: "My App",
+          reviewCountToday: 105,
+          reviewCountYesterday: 100,
+          reviewCountChange: 5,
+          keywordChanges: [makeRankingChange()],
+        }),
+      ],
+      summary: { improved: 1, dropped: 0, newEntries: 0, droppedOut: 0, unchanged: 0 },
+    });
+
+    const html = buildDigestHtml(data);
+    expect(html).toContain("Insight");
+    expect(html).toContain("5 reviews");
+  });
+
+  it("generates rating improvement insight", () => {
+    const data = makeDigest({
+      trackedApps: [
+        makeTrackedApp({
+          appName: "My App",
+          ratingToday: 4.6,
+          ratingYesterday: 4.4,
+          ratingChange: 0.2,
+          keywordChanges: [],
+          categoryChanges: [],
+          reviewCountToday: 50,
+          reviewCountYesterday: 50,
+          reviewCountChange: 0,
+        }),
+      ],
+    });
+
+    const html = buildDigestHtml(data);
+    expect(html).toContain("Insight");
+    expect(html).toContain("rating improved");
+  });
+
+  it("mentions competitor in drop insight when competitor gained", () => {
+    const data = makeDigest({
+      trackedApps: [
+        makeTrackedApp({
+          keywordChanges: [
+            makeRankingChange({ keyword: "kw1", change: -3, type: "dropped" }),
+            makeRankingChange({ keyword: "kw2", change: -4, type: "dropped" }),
+            makeRankingChange({ keyword: "kw3", change: -2, type: "dropped" }),
+          ],
+        }),
+      ],
+      competitorSummaries: [{
+        appName: "Rival", appSlug: "rival",
+        todayRating: "4.5", yesterdayRating: "4.5", ratingChange: 0,
+        todayReviews: 100, yesterdayReviews: 100, reviewsChange: 0,
+        keywordPositions: [{ keyword: "kw1", position: 2, change: 3 }],
+      }],
+      summary: { improved: 0, dropped: 3, newEntries: 0, droppedOut: 0, unchanged: 0 },
+    });
+
+    const html = buildDigestHtml(data);
+    expect(html).toContain("Insight");
+    expect(html).toContain("Rival");
   });
 });

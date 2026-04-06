@@ -109,6 +109,22 @@ function buildHighlight(data: DigestData): { label: string; value: string; chang
     }
   }
 
+  // Priority 5: Review milestone
+  const milestones = [50, 100, 200, 500, 1000, 2000, 5000];
+  for (const app of data.trackedApps) {
+    if (app.reviewCountToday !== null && app.reviewCountChange !== null && app.reviewCountChange > 0) {
+      const crossed = milestones.find(
+        (m) => app.reviewCountToday! >= m && (app.reviewCountToday! - app.reviewCountChange!) < m
+      );
+      if (crossed) {
+        return {
+          label: `"${app.appName}" hit ${crossed} reviews`,
+          value: `${ratingStr(app.ratingToday)}★`,
+        };
+      }
+    }
+  }
+
   return {
     label: "Keyword Rankings",
     value: `${allTrackedChanges.length}`,
@@ -117,24 +133,62 @@ function buildHighlight(data: DigestData): { label: string; value: string; chang
 
 /**
  * Generate a rule-based insight from the digest data.
+ * References app-specific data: categories, rating, review velocity, competitor comparison.
  */
 function generateInsight(data: DigestData): string | null {
-  const { competitorSummaries, summary } = data;
+  const { competitorSummaries, summary, trackedApps } = data;
 
-  if (summary.improved > summary.dropped * 2 && summary.improved >= 3) {
-    return `Strong momentum today with ${summary.improved} keyword improvements. Consider expanding your keyword coverage while things are trending up.`;
+  // Category milestone insight
+  for (const app of trackedApps) {
+    const topCat = app.categoryChanges.find((c) => c.todayPosition !== null && c.todayPosition <= 3 && c.type === "improved");
+    if (topCat) {
+      return `"${app.appName}" climbed to ${posStr(topCat.todayPosition)} in ${topCat.categoryName}. Category rankings drive organic discovery — keep optimizing your listing for this category.`;
+    }
   }
 
+  // Strong keyword momentum
+  if (summary.improved > summary.dropped * 2 && summary.improved >= 3) {
+    const topApp = trackedApps.find((a) => a.keywordChanges.filter((k) => k.type === "improved").length > 0);
+    const appRef = topApp ? ` for "${topApp.appName}"` : "";
+    return `Strong momentum today${appRef} with ${summary.improved} keyword improvements. Consider expanding your keyword coverage while things are trending up.`;
+  }
+
+  // Keywords dropping — compare with competitor movement
   if (summary.dropped > summary.improved * 2 && summary.dropped >= 3) {
+    const competitorImproved = competitorSummaries.filter((c) =>
+      c.keywordPositions.some((kp) => kp.change !== null && kp.change > 0)
+    );
+    if (competitorImproved.length > 0) {
+      return `${summary.dropped} keywords dropped today while ${competitorImproved[0].appName} gained positions. Check if they launched new features or updated their listing.`;
+    }
     return `${summary.dropped} keywords dropped today. Check if competitors launched new features or promotions that may be pulling traffic.`;
   }
 
+  // Review velocity insight
+  for (const app of trackedApps) {
+    if (app.reviewCountChange !== null && app.reviewCountChange >= 5) {
+      return `"${app.appName}" gained ${app.reviewCountChange} reviews today. Strong review velocity helps improve marketplace rankings and conversion rates.`;
+    }
+  }
+
+  // Competitor review surge
   const competitorGains = competitorSummaries.filter((c) => c.reviewsChange !== null && c.reviewsChange > 5);
   if (competitorGains.length > 0) {
     return `${competitorGains[0].appName} gained ${competitorGains[0].reviewsChange} reviews today. Monitor their review velocity — it may signal a marketing push.`;
   }
 
-  const allTrackedChanges = data.trackedApps.flatMap((a) => a.keywordChanges);
+  // Rating change insight
+  for (const app of trackedApps) {
+    if (app.ratingChange !== null && app.ratingChange > 0) {
+      return `"${app.appName}" rating improved to ${ratingStr(app.ratingToday)} (+${app.ratingChange.toFixed(1)}). Higher ratings improve conversion and can boost category rankings.`;
+    }
+    if (app.ratingChange !== null && app.ratingChange < -0.1) {
+      return `"${app.appName}" rating dropped to ${ratingStr(app.ratingToday)} (${app.ratingChange.toFixed(1)}). Consider checking recent reviews for actionable feedback.`;
+    }
+  }
+
+  // New keyword entries
+  const allTrackedChanges = trackedApps.flatMap((a) => a.keywordChanges);
   const newEntries = allTrackedChanges.filter((r) => r.type === "new_entry");
   if (newEntries.length > 0) {
     return `Your app appeared in ${newEntries.length} new keyword ranking${newEntries.length > 1 ? "s" : ""}. These fresh positions are opportunities to optimize and climb higher.`;
@@ -314,45 +368,113 @@ export function buildDigestHtml(data: DigestData, unsubscribeUrl?: string): stri
 }
 
 /**
- * Generate dynamic subject line based on content sentiment.
+ * Pick the tracked app with the most impactful change for the subject line.
+ * When multiple tracked apps exist, references the one with the biggest change.
+ */
+function pickSubjectApp(data: DigestData): TrackedAppDigest | null {
+  const { trackedApps } = data;
+  if (trackedApps.length === 0) return null;
+  if (trackedApps.length === 1) return trackedApps[0];
+
+  // Score each app: biggest abs(keyword change) + category milestone bonus
+  let best: TrackedAppDigest | null = null;
+  let bestScore = -1;
+  for (const app of trackedApps) {
+    let score = 0;
+    for (const kw of app.keywordChanges) {
+      score = Math.max(score, Math.abs(kw.change ?? 0));
+    }
+    for (const cat of app.categoryChanges) {
+      if (cat.todayPosition === 1 && cat.type === "improved") score += 100;
+      else score = Math.max(score, Math.abs(cat.change ?? 0));
+    }
+    if (app.reviewCountChange !== null && app.reviewCountChange > 0) {
+      score += app.reviewCountChange;
+    }
+    if (score > bestScore) {
+      bestScore = score;
+      best = app;
+    }
+  }
+  return best;
+}
+
+/**
+ * Generate dynamic subject line referencing the tracked app by name.
+ *
+ * Priority:
+ * 1. Category milestone: "{App}" reached #1 in {Category}!
+ * 2. Big keyword jump: "{App}" jumped +N for "{keyword}" — now #X
+ * 3. Review milestone: "{App}" hit N reviews (X.X★)
+ * 4. Mixed summary: "{App}": N keywords ▲, rating +X — date
+ * 5. Quiet day: "{App}" rankings stable — date
  */
 export function buildDigestSubject(data: DigestData): string {
   const { summary, trackedApps } = data;
-  const allTrackedChanges = trackedApps.flatMap((a) => a.keywordChanges);
+  const app = pickSubjectApp(data);
+  const appName = app?.appName || data.accountName;
 
-  // Win day — highlight best improvement
-  if (summary.improved > summary.dropped && summary.improved >= 2) {
-    const best = allTrackedChanges
+  // 1. Category milestone
+  if (app) {
+    const catMilestone = app.categoryChanges.find((c) => c.todayPosition === 1 && c.type === "improved");
+    if (catMilestone) {
+      return `"${appName}" reached #1 in ${catMilestone.categoryName}!`;
+    }
+  }
+
+  // 2. Big keyword jump (change >= 3 or top-5 entry)
+  if (app) {
+    const allKwChanges = app.keywordChanges
       .filter((r) => r.type === "improved" && r.change !== null)
-      .sort((a, b) => (b.change || 0) - (a.change || 0))[0];
+      .sort((a, b) => (b.change || 0) - (a.change || 0));
+    const best = allKwChanges[0];
+    if (best && best.change !== null && best.change >= 3) {
+      return `"${appName}" jumped +${best.change} for "${best.keyword}" — now ${posStr(best.todayPosition)}`;
+    }
     if (best && best.todayPosition !== null && best.todayPosition <= 5) {
-      return `Great day! ${best.appName} climbed to #${best.todayPosition} for "${best.keyword}" (+${best.change})`;
-    }
-    if (best) {
-      return `${best.appName}: ${summary.improved} keywords up — "${best.keyword}" +${best.change} positions`;
+      return `Great day! ${appName} climbed to #${best.todayPosition} for "${best.keyword}" (+${best.change})`;
     }
   }
 
-  // Alert day — highlight biggest drop
-  if (summary.dropped > summary.improved && summary.dropped >= 2) {
-    const worst = allTrackedChanges
-      .filter((r) => r.type === "dropped" && r.change !== null)
-      .sort((a, b) => (a.change || 0) - (b.change || 0))[0];
-    if (worst) {
-      return `Heads up: ${worst.appName} dropped for "${worst.keyword}" (${worst.change} positions)`;
+  // 3. Review milestone (round numbers)
+  if (app && app.reviewCountToday !== null && app.reviewCountChange !== null && app.reviewCountChange > 0) {
+    const milestones = [50, 100, 200, 500, 1000, 2000, 5000];
+    const crossed = milestones.find(
+      (m) => app.reviewCountToday! >= m && (app.reviewCountToday! - app.reviewCountChange!) < m
+    );
+    if (crossed) {
+      return `"${appName}" hit ${crossed} reviews (${ratingStr(app.ratingToday)}★)`;
     }
   }
 
-  // Mixed day
-  if (summary.improved > 0 && summary.dropped > 0) {
-    return `${data.accountName}: ${summary.improved} keywords up, ${summary.dropped} down — ${data.date}`;
+  // 4. Mixed summary with app name
+  if (summary.improved > 0 || summary.dropped > 0) {
+    const parts: string[] = [];
+    if (summary.improved > 0) parts.push(`${summary.improved} keywords ▲`);
+    if (summary.dropped > 0) parts.push(`${summary.dropped} ▼`);
+    if (app?.ratingChange && app.ratingChange !== 0) {
+      parts.push(`rating ${app.ratingChange > 0 ? "+" : ""}${app.ratingChange.toFixed(1)}`);
+    }
+    return `"${appName}": ${parts.join(", ")} — ${data.date}`;
   }
 
-  // Steady / no changes
-  const total = allTrackedChanges.length;
+  // 5. Quiet day — check for category or rating-only changes
+  if (app) {
+    const hasCatChanges = app.categoryChanges.length > 0;
+    const hasRatingChange = app.ratingChange !== null && app.ratingChange !== 0;
+    if (hasCatChanges || hasRatingChange) {
+      const detail = hasCatChanges
+        ? `${app.categoryChanges.length} category change${app.categoryChanges.length !== 1 ? "s" : ""}`
+        : `rating ${app.ratingChange! > 0 ? "+" : ""}${app.ratingChange!.toFixed(1)}`;
+      return `"${appName}": ${detail} — ${data.date}`;
+    }
+  }
+
+  // Fallback
+  const total = trackedApps.reduce((n, a) => n + a.keywordChanges.length, 0);
   if (total > 0) {
-    return `Ranking Report: ${total} change${total !== 1 ? "s" : ""} detected — ${data.date}`;
+    return `"${appName}": ${total} ranking change${total !== 1 ? "s" : ""} — ${data.date}`;
   }
 
-  return `Daily Ranking Report — ${data.date}`;
+  return `"${appName}" rankings stable — ${data.date}`;
 }

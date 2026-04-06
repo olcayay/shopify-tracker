@@ -2,6 +2,7 @@ Digest Redesign (2026-04-06)
   PLA-783: Phase 1: Restructure digest data model — app-centric instead of keyword-centric ✅
   PLA-784: Phase 2: Redesign digest email template — app-centric sections ✅
   PLA-785: Phase 3: Remove non-tracked/non-competitor apps from digest email ✅
+  PLA-786: Phase 4: Improve digest subject line and insight logic for app-centric model ✅
 
 Overview & API Fixes (2026-04-06)
   PLA-779: Fix overview platform cards showing empty state instead of loading shimmer ✅

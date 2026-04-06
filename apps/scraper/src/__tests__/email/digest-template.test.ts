@@ -168,52 +168,47 @@ describe("buildDigestHtml", () => {
 });
 
 describe("buildDigestSubject", () => {
-  it("returns win subject when improvements dominate", () => {
-    const kw = makeRankingChange({ keyword: "email", appName: "Klaviyo", appSlug: "klaviyo", todayPosition: 2, change: 3 });
+  it("returns subject with app name for keyword improvements", () => {
+    const kw = makeRankingChange({ keyword: "email", appName: "Klaviyo", appSlug: "klaviyo", todayPosition: 2, change: 5 });
     const subject = buildDigestSubject(
       makeDigestData({
-        summary: { improved: 5, dropped: 1, newEntries: 0, droppedOut: 0, unchanged: 0 },
+        summary: { improved: 1, dropped: 0, newEntries: 0, droppedOut: 0, unchanged: 0 },
         trackedApps: [makeTrackedApp({ appName: "Klaviyo", appSlug: "klaviyo", keywordChanges: [kw] })],
       }),
     );
     expect(subject).toContain("Klaviyo");
-  });
-
-  it("returns alert subject when drops dominate", () => {
-    const kw = makeRankingChange({ keyword: "crm", appName: "MyCRM", appSlug: "my-crm", todayPosition: 8, yesterdayPosition: 3, change: -5, type: "dropped" });
-    const subject = buildDigestSubject(
-      makeDigestData({
-        summary: { improved: 0, dropped: 3, newEntries: 0, droppedOut: 0, unchanged: 0 },
-        trackedApps: [makeTrackedApp({ appName: "MyCRM", appSlug: "my-crm", keywordChanges: [kw] })],
-      }),
-    );
-    expect(subject).toContain("Heads up");
-    expect(subject).toContain("MyCRM");
+    expect(subject).toContain("jumped");
   });
 
   it("returns mixed subject for mixed day", () => {
+    const kw1 = makeRankingChange({ change: 1, todayPosition: 15, yesterdayPosition: 16 });
+    const kw2 = makeRankingChange({ keyword: "kw2", change: -2, type: "dropped", todayPosition: 20, yesterdayPosition: 18 });
     const subject = buildDigestSubject(
       makeDigestData({
         summary: { improved: 2, dropped: 2, newEntries: 0, droppedOut: 0, unchanged: 0 },
+        trackedApps: [makeTrackedApp({ keywordChanges: [kw1, kw2] })],
       }),
     );
-    expect(subject).toContain("2 keywords up");
-    expect(subject).toContain("2 down");
+    expect(subject).toContain("keywords");
   });
 
-  it("returns default subject for no changes", () => {
-    const subject = buildDigestSubject(makeDigestData());
-    expect(subject).toContain("Daily Ranking Report");
+  it("returns stable subject for no changes", () => {
+    const subject = buildDigestSubject(
+      makeDigestData({
+        trackedApps: [makeTrackedApp({ appName: "App" })],
+      }),
+    );
+    expect(subject).toContain("stable");
   });
 
-  it("highlights top position for win day with top 5 entry", () => {
+  it("references app name in subject", () => {
     const kw = makeRankingChange({ keyword: "email", todayPosition: 3, yesterdayPosition: 7, change: 4 });
     const subject = buildDigestSubject(
       makeDigestData({
-        summary: { improved: 3, dropped: 1, newEntries: 0, droppedOut: 0, unchanged: 0 },
-        trackedApps: [makeTrackedApp({ keywordChanges: [kw] })],
+        summary: { improved: 1, dropped: 0, newEntries: 0, droppedOut: 0, unchanged: 0 },
+        trackedApps: [makeTrackedApp({ appName: "MyApp", keywordChanges: [kw] })],
       }),
     );
-    expect(subject).toContain("climbed to #3");
+    expect(subject).toContain("MyApp");
   });
 });
