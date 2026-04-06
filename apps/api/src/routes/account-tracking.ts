@@ -169,12 +169,12 @@ export const accountTrackingRoutes: FastifyPluginAsync = async (app) => {
         .where(eq(accountTrackedApps.accountId, accountId))
         .groupBy(apps.platform),
       db
-        .select({ platform: sql<string>`COALESCE(a.platform, tk.platform)`, count: sql<number>`count(distinct ${accountTrackedKeywords.keywordId})::int` })
+        .select({ platform: sql<string>`COALESCE(${apps.platform}, ${trackedKeywords.platform})`, count: sql<number>`count(distinct ${accountTrackedKeywords.keywordId})::int` })
         .from(accountTrackedKeywords)
         .leftJoin(apps, eq(apps.id, accountTrackedKeywords.trackedAppId))
         .innerJoin(trackedKeywords, eq(trackedKeywords.id, accountTrackedKeywords.keywordId))
         .where(eq(accountTrackedKeywords.accountId, accountId))
-        .groupBy(sql`COALESCE(a.platform, tk.platform)`),
+        .groupBy(sql`COALESCE(${apps.platform}, ${trackedKeywords.platform})`),
       db
         .select({ platform: apps.platform, count: sql<number>`count(distinct ${accountCompetitorApps.competitorAppId})::int` })
         .from(accountCompetitorApps)
