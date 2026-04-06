@@ -352,13 +352,13 @@ export default function KeywordsPage() {
 
       {canEdit && (
         <div className="flex items-center gap-3">
-          {myApps.length > 1 && (
+          {myApps.length > 0 && (
             <select
               className="h-9 rounded-md border border-input bg-background px-3 py-1 text-sm"
               value={selectedApp}
               onChange={(e) => setSelectedApp(e.target.value)}
             >
-              <option value="">Select app...</option>
+              <option value="">Research only</option>
               {myApps.map((a) => (
                 <option key={a.appSlug} value={a.appSlug}>
                   {a.appName}
@@ -370,17 +370,12 @@ export default function KeywordsPage() {
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
-                placeholder={
-                  getEffectiveApp()
-                    ? "Search keywords to track..."
-                    : "Select an app first..."
-                }
+                placeholder="Search keywords to track..."
                 value={query}
                 onChange={(e) => handleSearchInput(e.target.value)}
                 onFocus={() =>
                   suggestions.length > 0 && setShowSuggestions(true)
                 }
-                disabled={!getEffectiveApp()}
                 className="pl-9"
               />
             </div>

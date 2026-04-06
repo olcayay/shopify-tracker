@@ -185,14 +185,14 @@ export function KeywordSearchModal({
       />
       <div className="relative bg-background border rounded-lg shadow-lg w-full max-w-lg mx-4 overflow-hidden">
         {/* App selector (when no trackedAppSlug prop and multiple apps) */}
-        {!trackedAppSlug && myApps.length > 1 && (
+        {!trackedAppSlug && myApps.length > 0 && (
           <div className="px-4 py-2 border-b bg-muted/30">
             <select
               className="w-full h-8 rounded-md border border-input bg-background px-2 text-sm"
               value={selectedApp}
               onChange={(e) => setSelectedApp(e.target.value)}
             >
-              <option value="">Select app to track for...</option>
+              <option value="">Research only</option>
               {myApps.map((a) => (
                 <option key={a.appSlug} value={a.appSlug}>
                   {a.appName}

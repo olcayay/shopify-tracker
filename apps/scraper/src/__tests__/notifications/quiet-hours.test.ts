@@ -109,8 +109,10 @@ describe("Quiet Hours & DND", () => {
     });
 
     it("suppresses during quiet hours", () => {
-      setQuietHours("u1", { enabled: true, startHour: 0, endHour: 23, timezone: "UTC" });
-      const result = shouldSuppressPush("u1");
+      setQuietHours("u1", { enabled: true, startHour: 22, endHour: 7, timezone: "UTC" });
+      // Use a fixed time to avoid flakiness based on when the test runs
+      const at23 = new Date("2026-04-05T23:00:00Z");
+      const result = shouldSuppressPush("u1", at23);
       expect(result.suppress).toBe(true);
       expect(result.reason).toBe("quiet_hours");
     });
@@ -127,7 +129,10 @@ describe("Quiet Hours & DND", () => {
     });
 
     it("does NOT suppress in-app during quiet hours", () => {
-      setQuietHours("u1", { enabled: true, startHour: 0, endHour: 23, timezone: "UTC" });
+      setQuietHours("u1", { enabled: true, startHour: 22, endHour: 7, timezone: "UTC" });
+      // Verify we ARE in quiet hours at 23:00 UTC, then confirm shouldSuppressAll is false
+      const at23 = new Date("2026-04-05T23:00:00Z");
+      expect(isInQuietHours("u1", at23)).toBe(true);
       // Quiet hours only suppress push, not in-app
       expect(shouldSuppressAll("u1").suppress).toBe(false);
     });

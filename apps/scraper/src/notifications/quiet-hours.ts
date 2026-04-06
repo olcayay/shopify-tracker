@@ -123,11 +123,11 @@ export function isInDnd(userId: string): boolean {
  * Should we suppress push notifications for this user right now?
  * Returns { suppress: boolean, reason?: string }
  */
-export function shouldSuppressPush(userId: string): { suppress: boolean; reason?: string } {
+export function shouldSuppressPush(userId: string, now?: Date): { suppress: boolean; reason?: string } {
   if (isInDnd(userId)) {
     return { suppress: true, reason: "dnd_active" };
   }
-  if (isInQuietHours(userId)) {
+  if (isInQuietHours(userId, now)) {
     return { suppress: true, reason: "quiet_hours" };
   }
   return { suppress: false };
