@@ -1,6 +1,15 @@
 Digest Redesign (2026-04-06)
 ================================================================
 
+PLA-788: Add email HTML preview to system-admin emails page
+- Added split-pane layout (3:2 grid) when an email row is selected
+- EmailDetailPanel component with Details and Preview tabs
+- Details tab: email metadata (type, recipient, subject, status, timestamps, messageId, error, dataSnapshot JSON)
+- Preview tab: iframe with srcDoc={htmlBody}, sandbox="allow-same-origin" for security
+- Rows are clickable (cursor-pointer, hover highlight, selected state)
+- Click same row to deselect, X button to close panel
+- Uses existing GET /api/system-admin/emails/:id endpoint (no new API needed)
+
 PLA-786: Phase 4: Improve digest subject line and insight logic for app-centric model
 - Subject line now follows priority order: category milestone (#1) > big keyword jump (+3) > review milestone (50/100/500...) > mixed summary > quiet day
 - Subject always references the tracked app by name (uses pickSubjectApp() to find most impactful app)
