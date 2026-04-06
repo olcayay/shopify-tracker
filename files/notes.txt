@@ -1,6 +1,12 @@
 Scraper Reliability & Diagnostics (2026-04-06)
 ================================================================
 
+PLA-800: Increase keyword scrape timeout and add per-page progress tracking
+- Increased KEYWORD_TIMEOUT_MS from 90s to 180s — accommodates 10 pages + retries + network variability
+- Added per-page timing logs (keyword:page_fetched) in both Shopify and generic scrape paths
+- Logs include: keyword, page number, page duration, app count, hasNextPage
+- Enables debugging future timeout issues by seeing exactly where time is spent
+
 PLA-799: Add per-request timeout to HttpClient fetch calls
 - Added AbortSignal.timeout(30s) to every fetch() call in fetchWithRetry and fetchRawWithRetry
 - Prevents a single hung request from consuming the entire keyword timeout budget

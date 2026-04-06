@@ -70,7 +70,7 @@ export class KeywordScraper {
     let itemsScraped = 0;
     let itemsFailed = 0;
 
-    const KEYWORD_TIMEOUT_MS = 90_000; // 90 seconds per keyword
+    const KEYWORD_TIMEOUT_MS = 180_000; // 180 seconds per keyword (increased from 90s to accommodate 10 pages + retries)
 
     try {
       await runConcurrent(keywords, async (kw) => {
@@ -166,11 +166,13 @@ export class KeywordScraper {
     let organicCount = 0;
 
     for (let page = 1; page <= MAX_PAGES; page++) {
+      const pageStart = Date.now();
       const searchUrl = urls.search(keyword, page);
       const html = await this.httpClient.fetchPage(searchUrl, {
         "Turbo-Frame": "search_page",
       });
       const data = parseSearchPage(html, keyword, page, organicCount);
+      log.info("keyword:page_fetched", { keyword, page, pageMs: Date.now() - pageStart, apps: data.apps.length, hasNext: data.has_next_page });
 
       if (page === 1) totalResults = data.total_results;
 
@@ -397,10 +399,12 @@ export class KeywordScraper {
     let organicCount = 0;
 
     for (let page = 1; page <= MAX_PAGES; page++) {
+      const pageStart = Date.now();
       const json = await mod.fetchSearchPage!(keyword, page);
       if (!json) break;
 
       const data = mod.parseSearchPage!(json, keyword, page, organicCount);
+      log.info("keyword:page_fetched", { keyword, platform: this.platform, page, pageMs: Date.now() - pageStart, apps: data.apps.length, hasNext: data.hasNextPage });
       if (page === 1) totalResults = data.totalResults;
 
       for (const app of data.apps) {
