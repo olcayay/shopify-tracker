@@ -18,14 +18,19 @@ export async function overviewHighlightsRoutes(app: FastifyInstance) {
 
       const platformFilter = request.query.platform?.trim() || "";
 
-      // 1. Get tracked apps with basic info
+      // 1. Get tracked apps with basic info (CTE for keyword counts to avoid N+1)
       const trackedApps: any[] = await db.execute(sql`
+        WITH kw_counts AS (
+          SELECT atk.tracked_app_id, COUNT(DISTINCT atk.keyword_id) AS keyword_count
+          FROM account_tracked_keywords atk
+          WHERE atk.account_id = ${accountId}
+          GROUP BY atk.tracked_app_id
+        )
         SELECT a.id, a.platform, a.slug, a.name, a.icon_url, a.average_rating, a.rating_count,
-          (SELECT COUNT(*) FROM account_tracked_keywords atk
-           JOIN tracked_keywords tk ON tk.id = atk.keyword_id
-           WHERE atk.account_id = ${accountId} AND tk.platform = a.platform) AS keyword_count
+          COALESCE(kc.keyword_count, 0) AS keyword_count
         FROM apps a
         JOIN account_tracked_apps ata ON ata.app_id = a.id AND ata.account_id = ${accountId}
+        LEFT JOIN kw_counts kc ON kc.tracked_app_id = a.id
         ${platformFilter ? sql`WHERE a.platform = ${platformFilter}` : sql``}
         ORDER BY a.platform, a.name
       `);
@@ -45,13 +50,14 @@ export async function overviewHighlightsRoutes(app: FastifyInstance) {
         competitorAppIdsRaw,
         adActivity,
       ] = await Promise.all<any[]>([
-        // 2. Top keyword movers — window function instead of correlated subquery
+        // 2. Top keyword movers — window function with 14-day time bound
         db.execute(sql`
           WITH ranked AS (
             SELECT akr.app_id, akr.keyword_id, akr.position, akr.scraped_at,
               ROW_NUMBER() OVER (PARTITION BY akr.app_id, akr.keyword_id ORDER BY akr.scraped_at DESC) AS rn
             FROM app_keyword_rankings akr
             WHERE akr.app_id = ANY(${sqlArray(appIds)})
+              AND akr.scraped_at >= NOW() - INTERVAL '14 days'
           )
           SELECT lr.app_id, tk.keyword, pr.position AS old_position, lr.position AS new_position,
             (pr.position - lr.position) AS delta
@@ -62,13 +68,14 @@ export async function overviewHighlightsRoutes(app: FastifyInstance) {
           ORDER BY ABS(pr.position - lr.position) DESC
           LIMIT 10
         `),
-        // 3. Top category movers — window function instead of correlated subquery
+        // 3. Top category movers — window function with 14-day time bound
         db.execute(sql`
           WITH ranked AS (
             SELECT acr.app_id, acr.category_slug, acr.position, acr.scraped_at,
               ROW_NUMBER() OVER (PARTITION BY acr.app_id, acr.category_slug ORDER BY acr.scraped_at DESC) AS rn
             FROM app_category_rankings acr
             WHERE acr.app_id = ANY(${sqlArray(appIds)})
+              AND acr.scraped_at >= NOW() - INTERVAL '14 days'
           )
           SELECT lr.app_id, lr.category_slug AS category, pr.position AS old_position, lr.position AS new_position,
             (pr.position - lr.position) AS delta

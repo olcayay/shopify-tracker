@@ -5,6 +5,7 @@ import {
   integer,
   timestamp,
   uniqueIndex,
+  index,
 } from "drizzle-orm/pg-core";
 import { accounts } from "./auth.js";
 import { apps } from "./apps.js";
@@ -71,6 +72,7 @@ export const accountTrackedKeywords = pgTable(
       table.trackedAppId,
       table.keywordId
     ),
+    index("idx_account_tracked_keywords_app").on(table.trackedAppId),
   ]
 );
 
@@ -136,5 +138,6 @@ export const accountCompetitorApps = pgTable(
       table.trackedAppId,
       table.competitorAppId
     ),
+    index("idx_account_competitor_apps_tracked").on(table.trackedAppId),
   ]
 );

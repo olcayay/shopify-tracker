@@ -7,6 +7,12 @@ PLA-779: Fix overview platform cards showing empty state instead of loading shim
 - Fix: Added highlightsLoading state, pass to OverviewPlatformCard, show shimmer when loading + has apps
 - 4 new tests for loading/shimmer/empty state logic
 
+PLA-780: Optimize overview highlights API
+- Fix 1: Replaced N+1 correlated subquery (keyword_count per app) with CTE + LEFT JOIN
+- Fix 2: Added 14-day time bound to keyword movers and category movers CTEs
+- Fix 3: Added indexes on account_tracked_keywords(tracked_app_id) and account_competitor_apps(tracked_app_id)
+- Migration 0119 for the new indexes
+
 ================================================================
 
 Dashboard & Scraper Bugfixes (2026-04-06)

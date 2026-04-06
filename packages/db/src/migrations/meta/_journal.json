@@ -834,6 +834,13 @@
       "when": 1778889600000,
       "tag": "0118_keyword_research_mode",
       "breakpoints": true
+    },
+    {
+      "idx": 119,
+      "version": "7",
+      "when": 1778976000000,
+      "tag": "0119_overview_highlights_indexes",
+      "breakpoints": true
     }
   ]
 }

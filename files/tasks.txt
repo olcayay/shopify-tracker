@@ -1,5 +1,6 @@
 Overview & API Fixes (2026-04-06)
   PLA-779: Fix overview platform cards showing empty state instead of loading shimmer ✅
+  PLA-780: Optimize overview highlights API: fix N+1, add time bounds, add indexes ✅
 
 Dashboard & Scraper Bugfixes (2026-04-06)
   PLA-764: Fix invisible lines in Category Rankings chart (color format mismatch) ✅
