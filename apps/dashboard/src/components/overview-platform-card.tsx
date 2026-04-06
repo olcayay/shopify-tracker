@@ -61,11 +61,11 @@ export function OverviewPlatformCard({ platformId, data, stats, highlightsLoadin
             <ArrowRight className="h-4 w-4 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
           </Link>
           <div className="flex items-center gap-3 text-xs text-muted-foreground">
-            <span>{appCount} Apps</span>
+            <Link href={`/${platformId}/apps`} className="hover:text-foreground hover:underline transition-colors">{appCount} Apps</Link>
             <span>&middot;</span>
-            <span>{keywordCount} Keywords</span>
+            <Link href={`/${platformId}/keywords`} className="hover:text-foreground hover:underline transition-colors">{keywordCount} Keywords</Link>
             <span>&middot;</span>
-            <span>{competitorCount} Competitors</span>
+            <Link href={`/${platformId}/competitors`} className="hover:text-foreground hover:underline transition-colors">{competitorCount} Competitors</Link>
           </div>
         </div>
       </CardHeader>
