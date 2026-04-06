@@ -487,6 +487,72 @@ describe("registerAuthMiddleware — full integration", () => {
   });
 
   // -----------------------------------------------------------------------
+  // Parallel Redis checks
+  // -----------------------------------------------------------------------
+
+  describe("parallel Redis blacklist + revocation checks", () => {
+    it("calls both isTokenBlacklisted and isUserTokenRevoked in parallel", async () => {
+      const callOrder: string[] = [];
+      mockIsTokenBlacklisted.mockImplementation(async () => {
+        callOrder.push("blacklist-start");
+        await new Promise((r) => setTimeout(r, 10));
+        callOrder.push("blacklist-end");
+        return false;
+      });
+      mockIsUserTokenRevoked.mockImplementation(async () => {
+        callOrder.push("revoked-start");
+        await new Promise((r) => setTimeout(r, 10));
+        callOrder.push("revoked-end");
+        return false;
+      });
+
+      app = await buildAuthApp();
+      const token = signToken({ jti: "parallel-test", userId: "u1" });
+      const res = await app.inject({
+        method: "GET",
+        url: "/api/test",
+        headers: { authorization: `Bearer ${token}` },
+      });
+      expect(res.statusCode).toBe(200);
+      // Both should have started before either finished (parallel execution)
+      expect(callOrder.indexOf("blacklist-start")).toBeLessThan(callOrder.indexOf("blacklist-end"));
+      expect(callOrder.indexOf("revoked-start")).toBeLessThan(callOrder.indexOf("revoked-end"));
+      // Both started before either ended — true parallelism
+      const firstEnd = Math.min(callOrder.indexOf("blacklist-end"), callOrder.indexOf("revoked-end"));
+      expect(callOrder.indexOf("blacklist-start")).toBeLessThan(firstEnd);
+      expect(callOrder.indexOf("revoked-start")).toBeLessThan(firstEnd);
+    });
+
+    it("rejects with blacklisted even when revocation is false", async () => {
+      mockIsTokenBlacklisted.mockResolvedValue(true);
+      mockIsUserTokenRevoked.mockResolvedValue(false);
+      app = await buildAuthApp();
+      const token = signToken({ jti: "bl-jti" });
+      const res = await app.inject({
+        method: "GET",
+        url: "/api/test",
+        headers: { authorization: `Bearer ${token}` },
+      });
+      expect(res.statusCode).toBe(401);
+      expect(res.json().error).toBe("Token has been revoked");
+    });
+
+    it("rejects with revocation even when blacklist is false", async () => {
+      mockIsTokenBlacklisted.mockResolvedValue(false);
+      mockIsUserTokenRevoked.mockResolvedValue(true);
+      app = await buildAuthApp();
+      const token = signToken({ userId: "rev-user" });
+      const res = await app.inject({
+        method: "GET",
+        url: "/api/test",
+        headers: { authorization: `Bearer ${token}` },
+      });
+      expect(res.statusCode).toBe(401);
+      expect(res.json().error).toBe("All sessions have been revoked");
+    });
+  });
+
+  // -----------------------------------------------------------------------
   // Account suspension
   // -----------------------------------------------------------------------
 

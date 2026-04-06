@@ -73,20 +73,17 @@ export function registerAuthMiddleware(app: FastifyInstance) {
         const payload = jwt.verify(token, getJwtSecret()) as JwtPayload & { iat?: number };
         request.user = payload;
 
-        // Check token blacklist (jti-based individual revocation)
-        if (payload.jti) {
-          const blacklisted = await isTokenBlacklisted(payload.jti);
-          if (blacklisted) {
-            return reply.code(401).send({ error: "Token has been revoked" });
-          }
-        }
+        // Check token blacklist + user-level revocation in parallel
+        const [blacklisted, userRevoked] = await Promise.all([
+          payload.jti ? isTokenBlacklisted(payload.jti) : Promise.resolve(false),
+          payload.iat ? isUserTokenRevoked(payload.userId, payload.iat) : Promise.resolve(false),
+        ]);
 
-        // Check user-level revocation (revoke-all-sessions)
-        if (payload.iat) {
-          const userRevoked = await isUserTokenRevoked(payload.userId, payload.iat);
-          if (userRevoked) {
-            return reply.code(401).send({ error: "All sessions have been revoked" });
-          }
+        if (blacklisted) {
+          return reply.code(401).send({ error: "Token has been revoked" });
+        }
+        if (userRevoked) {
+          return reply.code(401).send({ error: "All sessions have been revoked" });
         }
       } catch {
         return reply.code(401).send({ error: "Invalid or expired token" });

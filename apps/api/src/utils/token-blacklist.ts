@@ -1,5 +1,5 @@
 import Redis from "ioredis";
-import { REDIS_CONNECT_TIMEOUT_MS } from "../constants.js";
+import { REDIS_CONNECT_TIMEOUT_MS, REDIS_OPERATION_TIMEOUT_MS } from "../constants.js";
 
 const BLACKLIST_PREFIX = "token:blacklist:";
 
@@ -55,17 +55,25 @@ export async function blacklistToken(jti: string, expiresAt: number): Promise<vo
   }
 }
 
+/** Race a promise against a timeout. Returns fallback on timeout. */
+function withTimeout<T>(promise: Promise<T>, fallback: T): Promise<T> {
+  return Promise.race([
+    promise,
+    new Promise<T>((resolve) => setTimeout(() => resolve(fallback), REDIS_OPERATION_TIMEOUT_MS)),
+  ]);
+}
+
 /**
  * Check if a token's jti is blacklisted.
  * Returns true if blacklisted, false otherwise.
- * If Redis is unavailable, returns false (fail-open).
+ * If Redis is unavailable or slow, returns false (fail-open).
  */
 export async function isTokenBlacklisted(jti: string): Promise<boolean> {
   const client = getRedis();
   if (!client) return false;
 
   try {
-    const result = await client.get(`${BLACKLIST_PREFIX}${jti}`);
+    const result = await withTimeout(client.get(`${BLACKLIST_PREFIX}${jti}`), null);
     return result !== null;
   } catch {
     return false;
@@ -93,13 +101,14 @@ export async function revokeAllTokensForUser(userId: string): Promise<void> {
 /**
  * Check if all tokens for a user have been revoked.
  * Returns true if the token was issued before the revocation timestamp.
+ * If Redis is unavailable or slow, returns false (fail-open).
  */
 export async function isUserTokenRevoked(userId: string, iat: number): Promise<boolean> {
   const client = getRedis();
   if (!client) return false;
 
   try {
-    const revokedBefore = await client.get(`${BLACKLIST_PREFIX}user:${userId}`);
+    const revokedBefore = await withTimeout(client.get(`${BLACKLIST_PREFIX}user:${userId}`), null);
     if (!revokedBefore) return false;
     return iat <= parseInt(revokedBefore, 10);
   } catch {

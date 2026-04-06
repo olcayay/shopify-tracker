@@ -24,6 +24,7 @@ import {
   DEFAULT_MAX_TRACKED_KEYWORDS,
   DEFAULT_MAX_COMPETITOR_APPS,
   REDIS_CONNECT_TIMEOUT_MS,
+  REDIS_OPERATION_TIMEOUT_MS,
 } from "../constants.js";
 
 describe("API constants", () => {
@@ -89,6 +90,14 @@ describe("API constants", () => {
   describe("redis", () => {
     it("has correct Redis connect timeout", () => {
       expect(REDIS_CONNECT_TIMEOUT_MS).toBe(5000);
+    });
+
+    it("has correct Redis operation timeout", () => {
+      expect(REDIS_OPERATION_TIMEOUT_MS).toBe(2000);
+    });
+
+    it("operation timeout is shorter than connect timeout", () => {
+      expect(REDIS_OPERATION_TIMEOUT_MS).toBeLessThan(REDIS_CONNECT_TIMEOUT_MS);
     });
   });
 });

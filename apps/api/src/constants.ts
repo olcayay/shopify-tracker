@@ -67,6 +67,8 @@ export const DEFAULT_MAX_COMPETITOR_APPS = 50;
 // ── Redis ───────────────────────────────────────────────────────────
 /** Redis connection timeout in ms */
 export const REDIS_CONNECT_TIMEOUT_MS = 5000;
+/** Redis per-operation timeout in ms (for GET/SET calls) */
+export const REDIS_OPERATION_TIMEOUT_MS = 2000;
 
 // ── Dead Letter Queue ──────────────────────────────────────────────
 /** DLQ depth threshold that triggers an alert in the response */

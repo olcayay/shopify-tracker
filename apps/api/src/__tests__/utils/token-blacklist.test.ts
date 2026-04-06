@@ -197,4 +197,32 @@ describe("token blacklist", () => {
       await expect(revokeAllTokensForUser("user")).resolves.toBeUndefined();
     });
   });
+
+  describe("Redis operation timeout (fail-open)", () => {
+    it("isTokenBlacklisted returns false when Redis hangs (timeout)", async () => {
+      const hangingRedis = createMockRedis();
+      hangingRedis.get = vi.fn(() => new Promise(() => {})); // never resolves
+      _resetBlacklistRedis(hangingRedis);
+
+      vi.useFakeTimers();
+      const promise = isTokenBlacklisted("hang-jti");
+      vi.advanceTimersByTime(3000); // exceed REDIS_OPERATION_TIMEOUT_MS (2000)
+      const result = await promise;
+      expect(result).toBe(false);
+      vi.useRealTimers();
+    });
+
+    it("isUserTokenRevoked returns false when Redis hangs (timeout)", async () => {
+      const hangingRedis = createMockRedis();
+      hangingRedis.get = vi.fn(() => new Promise(() => {})); // never resolves
+      _resetBlacklistRedis(hangingRedis);
+
+      vi.useFakeTimers();
+      const promise = isUserTokenRevoked("hang-user", Math.floor(Date.now() / 1000));
+      vi.advanceTimersByTime(3000);
+      const result = await promise;
+      expect(result).toBe(false);
+      vi.useRealTimers();
+    });
+  });
 });

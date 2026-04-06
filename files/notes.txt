@@ -1,3 +1,13 @@
+API Performance & Reliability (2026-04-07)
+================================================================
+
+PLA-811: Fix /api/auth/me and /api/notifications/unread-count hanging indefinitely
+- Parallelized 6 sequential COUNT(*) queries in /api/auth/me using Promise.all() (also account, platforms, visibility)
+- Parallelized Redis blacklist + user revocation checks in auth middleware using Promise.all()
+- Added REDIS_OPERATION_TIMEOUT_MS (2s) with fail-open behavior to token-blacklist.ts
+- withTimeout() helper races Redis operations against a timeout, returns fallback on timeout
+- 7 new tests: parallel Redis execution, timeout fail-open, constants
+
 Scraper Reliability & Diagnostics (2026-04-06)
 ================================================================
 
