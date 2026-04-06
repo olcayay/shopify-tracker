@@ -157,7 +157,10 @@ export class ZoomModule implements PlatformModule {
         if (!this.browserClient) throw new Error("no browserClient for zoom fallback");
         const url = zoomUrls.search(keyword);
         log.info("fetching search page via browser (fallback)", { keyword, url });
-        const html = await this.browserClient.fetchPage(url, { waitUntil: "networkidle" });
+        const html = await this.browserClient.fetchPage(url, {
+          waitUntil: "domcontentloaded",
+          waitForSelector: '[class*="marketplace"], [class*="app-card"], [class*="search-result"], a[href*="/marketplace/"]',
+        });
         const parsed = parseSearchHtml(html, keyword, page ?? 1, 0);
         return JSON.stringify({ _fromHtml: true, _parsed: parsed });
       },

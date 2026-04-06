@@ -2,7 +2,7 @@ Scraper Reliability & Diagnostics (2026-04-06)
   PLA-799: Add per-request timeout to HttpClient fetch calls ✅
   PLA-800: Increase keyword scrape timeout and add per-page progress tracking ✅
   PLA-801: Fix Canva browser page race condition in concurrent app scrapes ✅
-  PLA-802: Zoom keyword scrape timeout: browser fallback with networkidle is too slow
+  PLA-802: Zoom keyword scrape timeout: browser fallback with networkidle is too slow ✅
   PLA-803: Show Copy Report button on matrix cells with fallback (no errors)
   PLA-804: Add progress tracking to review scraper for crash diagnosis ✅
   PLA-805: Optimize review scraper performance and add per-item tracking to all scraper reports
