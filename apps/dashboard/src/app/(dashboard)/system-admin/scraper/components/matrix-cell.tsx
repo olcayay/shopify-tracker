@@ -116,6 +116,8 @@ export function MatrixCell({ cell, onTrigger, triggering }: MatrixCellProps) {
   const triggerKey = `${cell.platform}:${cell.scraperType}`;
   const isTriggering = triggering === triggerKey;
   const hasError = !!(cell.lastRun?.error) || (cell.lastRun?.itemsFailed ?? 0) > 0;
+  const hasFallback = !!cell.lastRun?.fallbackUsed;
+  const showDetailButton = hasError || hasFallback;
   const [showErrorDetail, setShowErrorDetail] = useState(false);
 
   return (
@@ -143,8 +145,8 @@ export function MatrixCell({ cell, onTrigger, triggering }: MatrixCellProps) {
               F
             </Badge>
           )}
-          {/* Error detail button */}
-          {hasError && (
+          {/* Detail button (errors or fallback) */}
+          {showDetailButton && (
             <Button
               variant="ghost"
               size="sm"
@@ -153,9 +155,9 @@ export function MatrixCell({ cell, onTrigger, triggering }: MatrixCellProps) {
                 e.stopPropagation();
                 setShowErrorDetail(true);
               }}
-              title="View error details"
+              title={hasError ? "View error details" : "View fallback details"}
             >
-              <FileText className="h-3 w-3 text-destructive" />
+              <FileText className={`h-3 w-3 ${hasError ? "text-destructive" : "text-orange-500"}`} />
             </Button>
           )}
           {/* Trigger button */}
@@ -214,9 +216,9 @@ export function MatrixCell({ cell, onTrigger, triggering }: MatrixCellProps) {
               {cell.lastRun.error.length > 80 ? "..." : ""}
             </div>
           )}
-          {hasError && (
+          {showDetailButton && (
             <div className="text-muted-foreground italic">
-              Click <FileText className="inline h-3 w-3" /> for full error details
+              Click <FileText className="inline h-3 w-3" /> for {hasError ? "full error details" : "run details & copy report"}
             </div>
           )}
           {cell.schedule && (
