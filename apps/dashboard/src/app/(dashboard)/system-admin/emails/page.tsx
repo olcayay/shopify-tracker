@@ -432,7 +432,7 @@ function EmailDetailPanel({
               </div>
             )}
 
-            {email.dataSnapshot && (
+            {email.dataSnapshot != null && (
               <div>
                 <p className="text-xs font-medium mb-1">Data Snapshot</p>
                 <pre className="text-[10px] font-mono bg-muted p-3 rounded-md overflow-x-auto max-h-60 overflow-y-auto">
