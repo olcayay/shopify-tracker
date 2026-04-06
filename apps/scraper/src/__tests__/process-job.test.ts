@@ -245,6 +245,9 @@ vi.mock("../email/digest-template.js", () => ({
 vi.mock("../email/mailer.js", () => ({
   sendMail: vi.fn().mockResolvedValue(undefined),
 }));
+vi.mock("../email/pipeline.js", () => ({
+  sendEmail: vi.fn().mockResolvedValue({ sent: true }),
+}));
 vi.mock("../email/timezone.js", () => ({
   isInDeliveryWindow: vi.fn().mockReturnValue(false),
   alreadySentToday: vi.fn().mockReturnValue(false),
@@ -824,8 +827,8 @@ describe("createProcessJob", () => {
   // ── 12. Daily digest job ────────────────────────────────────────────────
 
   describe("daily_digest job", () => {
-    it("sends digest for a single user when userId is provided", async () => {
-      const { sendMail } = await import("../email/mailer.js");
+    it("sends digest via pipeline for a single user when userId is provided", async () => {
+      const { sendEmail } = await import("../email/pipeline.js");
       const { buildDigestForAccount } = await import("../email/digest-builder.js");
 
       // Mock user lookup
@@ -839,25 +842,83 @@ describe("createProcessJob", () => {
       (buildDigestForAccount as Mock).mockResolvedValueOnce({ someData: true });
 
       await processJob(makeJob({ type: "daily_digest", userId: "user-1" }));
-      expect(sendMail).toHaveBeenCalledWith("user@test.com", "Test Digest", "<html></html>");
+      expect(sendEmail).toHaveBeenCalledWith(expect.objectContaining({
+        emailType: "daily_digest",
+        userId: "user-1",
+        accountId: "acc-1",
+        recipientEmail: "user@test.com",
+        subject: "Test Digest",
+        htmlBody: "<html></html>",
+      }));
     });
 
     it("skips when user not found for manual digest", async () => {
-      const { sendMail } = await import("../email/mailer.js");
+      const { sendEmail } = await import("../email/pipeline.js");
       db.select.mockReturnValueOnce({
         from: vi.fn().mockReturnValue({
           where: vi.fn().mockResolvedValue([]),
         }),
       });
       await processJob(makeJob({ type: "daily_digest", userId: "nonexistent" }));
-      expect(sendMail).not.toHaveBeenCalled();
+      expect(sendEmail).not.toHaveBeenCalled();
     });
 
     it("skips bulk digest when no recipients are in delivery window", async () => {
-      const { sendMail } = await import("../email/mailer.js");
+      const { sendEmail } = await import("../email/pipeline.js");
       // Default mock returns empty recipients
       await processJob(makeJob({ type: "daily_digest" }));
-      expect(sendMail).not.toHaveBeenCalled();
+      expect(sendEmail).not.toHaveBeenCalled();
+    });
+
+    it("sends account-level digest via pipeline for all users", async () => {
+      const { sendEmail } = await import("../email/pipeline.js");
+      const { buildDigestForAccount } = await import("../email/digest-builder.js");
+
+      // Mock user lookup for account
+      db.select.mockReturnValueOnce({
+        from: vi.fn().mockReturnValue({
+          where: vi.fn().mockResolvedValue([
+            { id: "user-1", email: "user1@test.com", name: "User 1" },
+            { id: "user-2", email: "user2@test.com", name: "User 2" },
+          ]),
+        }),
+      });
+      (buildDigestForAccount as Mock).mockResolvedValueOnce({ someData: true });
+
+      await processJob(makeJob({ type: "daily_digest", accountId: "acc-1" }));
+      expect(sendEmail).toHaveBeenCalledTimes(2);
+      expect(sendEmail).toHaveBeenCalledWith(expect.objectContaining({
+        emailType: "daily_digest",
+        userId: "user-1",
+        recipientEmail: "user1@test.com",
+      }));
+      expect(sendEmail).toHaveBeenCalledWith(expect.objectContaining({
+        emailType: "daily_digest",
+        userId: "user-2",
+        recipientEmail: "user2@test.com",
+      }));
+    });
+
+    it("sends bulk digest via pipeline for users in delivery window", async () => {
+      const { sendEmail } = await import("../email/pipeline.js");
+      const { getDigestRecipients } = await import("../email/digest-builder.js");
+      const { buildDigestForAccount } = await import("../email/digest-builder.js");
+      const { isInDeliveryWindow, alreadySentToday } = await import("../email/timezone.js");
+
+      (getDigestRecipients as Mock).mockResolvedValueOnce([
+        { userId: "user-1", email: "user@test.com", name: "User 1", accountId: "acc-1", timezone: "UTC", lastDigestSentAt: null },
+      ]);
+      (isInDeliveryWindow as Mock).mockReturnValue(true);
+      (alreadySentToday as Mock).mockReturnValue(false);
+      (buildDigestForAccount as Mock).mockResolvedValueOnce({ someData: true });
+
+      await processJob(makeJob({ type: "daily_digest" }));
+      expect(sendEmail).toHaveBeenCalledWith(expect.objectContaining({
+        emailType: "daily_digest",
+        userId: "user-1",
+        recipientEmail: "user@test.com",
+        accountId: "acc-1",
+      }));
     });
   });
 

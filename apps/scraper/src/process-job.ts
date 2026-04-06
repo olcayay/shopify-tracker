@@ -486,7 +486,7 @@ export function createProcessJob(db: ReturnType<typeof createDb>, queueName?: st
       case "daily_digest": {
         const { getDigestRecipients, buildDigestForAccount } = await import("./email/digest-builder.js");
         const { buildDigestHtml, buildDigestSubject } = await import("./email/digest-template.js");
-        const { sendMail } = await import("./email/mailer.js");
+        const { sendEmail } = await import("./email/pipeline.js");
         const { eq: eqOp } = await import("drizzle-orm");
         const { users: usersTable } = await import("@appranks/db");
 
@@ -510,7 +510,17 @@ export function createProcessJob(db: ReturnType<typeof createDb>, queueName?: st
 
           const html = buildDigestHtml(data);
           const subject = buildDigestSubject(data);
-          await sendMail(targetUser.email, subject, html);
+          await sendEmail({
+            db,
+            emailType: "daily_digest",
+            userId: targetUser.id,
+            accountId: targetUser.accountId,
+            recipientEmail: targetUser.email,
+            recipientName: targetUser.name,
+            subject,
+            htmlBody: html,
+            dataSnapshot: { accountId: targetUser.accountId, digestDate: new Date().toISOString() },
+          });
           await db.update(usersTable).set({ lastDigestSentAt: new Date() }).where(eqOp(usersTable.id, targetUser.id));
           log.info("manual digest sent", { email: targetUser.email });
           break;
@@ -539,7 +549,17 @@ export function createProcessJob(db: ReturnType<typeof createDb>, queueName?: st
           let sent = 0;
           for (const u of accountUsers) {
             try {
-              await sendMail(u.email, subject, html);
+              await sendEmail({
+                db,
+                emailType: "daily_digest",
+                userId: u.id,
+                accountId: job.data.accountId,
+                recipientEmail: u.email,
+                recipientName: u.name,
+                subject,
+                htmlBody: html,
+                dataSnapshot: { accountId: job.data.accountId, digestDate: new Date().toISOString() },
+              });
               await db.update(usersTable).set({ lastDigestSentAt: new Date() }).where(eqOp(usersTable.id, u.id));
               sent++;
             } catch (err) {
@@ -591,7 +611,17 @@ export function createProcessJob(db: ReturnType<typeof createDb>, queueName?: st
           const subject = buildDigestSubject(data);
           for (const user of accountUsers) {
             try {
-              await sendMail(user.email, subject, html);
+              await sendEmail({
+                db,
+                emailType: "daily_digest",
+                userId: user.userId,
+                accountId,
+                recipientEmail: user.email,
+                recipientName: user.name,
+                subject,
+                htmlBody: html,
+                dataSnapshot: { accountId, digestDate: new Date().toISOString() },
+              });
               await db.update(usersTable).set({ lastDigestSentAt: new Date() }).where(eqOp(usersTable.email, user.email));
               sent++;
             } catch (err) {

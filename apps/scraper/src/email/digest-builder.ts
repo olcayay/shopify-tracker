@@ -58,6 +58,7 @@ export interface DigestData {
 }
 
 export interface DigestRecipient {
+  userId: string;
   email: string;
   name: string;
   accountId: string;
@@ -74,6 +75,7 @@ export async function getDigestRecipients(
 ): Promise<DigestRecipient[]> {
   const rows = await db
     .select({
+      userId: users.id,
       email: users.email,
       name: users.name,
       accountId: users.accountId,

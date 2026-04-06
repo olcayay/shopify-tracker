@@ -13,6 +13,13 @@ PLA-780: Optimize overview highlights API
 - Fix 3: Added indexes on account_tracked_keywords(tracked_app_id) and account_competitor_apps(tracked_app_id)
 - Migration 0119 for the new indexes
 
+PLA-781: Daily Ranking Report emails bypass pipeline — not logged to emailLogs
+- Root cause: daily_digest job handler called sendMail() directly, bypassing central sendEmail() pipeline
+- Fix: Replaced all 3 sendMail() calls (manual single-user, manual account-level, automated cron) with sendEmail() from pipeline.ts
+- Added userId to DigestRecipient interface and getDigestRecipients query
+- All digest emails now get: emailLogs row, eligibility checks, unsubscribe token, tracking pixel, link rewriting
+- 5 tests updated/added for pipeline integration
+
 ================================================================
 
 Dashboard & Scraper Bugfixes (2026-04-06)
