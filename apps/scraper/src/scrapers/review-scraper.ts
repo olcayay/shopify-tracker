@@ -61,8 +61,24 @@ export class ReviewScraper {
     let itemsFailed = 0;
     let totalNewReviews = 0;
 
+    const currentlyProcessing = new Set<string>();
+
     try {
-      await runConcurrent(trackedApps, async (app) => {
+      await runConcurrent(trackedApps, async (app, index) => {
+        currentlyProcessing.add(app.slug);
+        // Update metadata with currently processing info
+        await this.db.update(scrapeRuns).set({
+          metadata: {
+            items_scraped: itemsScraped,
+            items_failed: itemsFailed,
+            new_reviews: totalNewReviews,
+            duration_ms: Date.now() - startTime,
+            currently_processing: [...currentlyProcessing],
+            current_index: index,
+            total_apps: trackedApps.length,
+          },
+        }).where(eq(scrapeRuns.id, run.id));
+
         try {
           const newReviews = await this.scrapeAppReviews(
             app.slug,
@@ -80,6 +96,8 @@ export class ReviewScraper {
             url: this.platformModule ? undefined : urls.appReviews(app.slug),
             error,
           });
+        } finally {
+          currentlyProcessing.delete(app.slug);
         }
       }, 3);
 

@@ -1,6 +1,14 @@
 Scraper Reliability & Diagnostics (2026-04-06)
 ================================================================
 
+PLA-804: Add progress tracking to review scraper for crash diagnosis
+- Added incremental metadata updates to all 3 scrapers: review, app-details, keyword
+- Before each item: writes currently_processing slugs/keywords, current_index, total count
+- After each item: removes from currently_processing set
+- If process crashes, metadata shows which items were in-flight and how far through the list it got
+- Updated runConcurrent to pass index as second callback parameter
+- 1 new test: verifies runConcurrent passes correct indices
+
 PLA-801: Fix Canva browser page race condition in concurrent app scrapes
 - Root cause: single shared browserPage used by all concurrent workers in app-details scraper (concurrency=3)
 - Added page pool to CanvaModule: acquirePoolPage() / releasePoolPage() pattern

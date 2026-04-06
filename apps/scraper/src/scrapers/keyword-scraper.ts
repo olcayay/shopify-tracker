@@ -72,8 +72,22 @@ export class KeywordScraper {
 
     const KEYWORD_TIMEOUT_MS = 180_000; // 180 seconds per keyword (increased from 90s to accommodate 10 pages + retries)
 
+    const currentlyProcessing = new Set<string>();
+
     try {
-      await runConcurrent(keywords, async (kw) => {
+      await runConcurrent(keywords, async (kw, index) => {
+        currentlyProcessing.add(kw.keyword);
+        await this.db.update(scrapeRuns).set({
+          metadata: {
+            items_scraped: itemsScraped,
+            items_failed: itemsFailed,
+            duration_ms: Date.now() - startTime,
+            currently_processing: [...currentlyProcessing],
+            current_index: index,
+            total_keywords: keywords.length,
+          },
+        }).where(eq(scrapeRuns.id, run.id));
+
         const kwStart = Date.now();
         try {
           const slugs = await Promise.race([
@@ -95,6 +109,8 @@ export class KeywordScraper {
             url: this.platformModule ? undefined : urls.search(kw.keyword),
             error,
           });
+        } finally {
+          currentlyProcessing.delete(kw.keyword);
         }
       }, 3);
 

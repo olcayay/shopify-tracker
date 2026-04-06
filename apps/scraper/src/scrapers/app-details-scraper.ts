@@ -134,8 +134,22 @@ export class AppDetailsScraper {
     let itemsScraped = 0;
     let itemsFailed = 0;
 
+    const currentlyProcessing = new Set<string>();
+
     try {
-      await runConcurrent(trackedApps, async (app) => {
+      await runConcurrent(trackedApps, async (app, index) => {
+        currentlyProcessing.add(app.slug);
+        await this.db.update(scrapeRuns).set({
+          metadata: {
+            items_scraped: itemsScraped,
+            items_failed: itemsFailed,
+            duration_ms: Date.now() - startTime,
+            currently_processing: [...currentlyProcessing],
+            current_index: index,
+            total_apps: trackedApps.length,
+          },
+        }).where(eq(scrapeRuns.id, run.id));
+
         try {
           await this.scrapeApp(app.slug, run.id, triggeredBy, undefined, force);
           itemsScraped++;
@@ -149,6 +163,8 @@ export class AppDetailsScraper {
             url: this.platformModule ? undefined : urls.app(app.slug),
             error,
           });
+        } finally {
+          currentlyProcessing.delete(app.slug);
         }
       }, 3);
 

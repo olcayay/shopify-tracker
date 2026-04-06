@@ -51,6 +51,14 @@ describe("runConcurrent", () => {
     expect(results.sort()).toEqual([1, 2]);
   });
 
+  it("passes correct index to callback", async () => {
+    const indices: number[] = [];
+    await runConcurrent(["a", "b", "c", "d"], async (_item, index) => {
+      indices.push(index);
+    }, 2);
+    expect(indices.sort()).toEqual([0, 1, 2, 3]);
+  });
+
   it("processes items faster with higher concurrency", async () => {
     const delay = 50;
     const items = [1, 2, 3, 4, 5, 6];

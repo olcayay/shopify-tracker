@@ -5,7 +5,7 @@
  */
 export async function runConcurrent<T>(
   items: T[],
-  fn: (item: T) => Promise<void>,
+  fn: (item: T, index: number) => Promise<void>,
   concurrency: number,
 ): Promise<void> {
   let index = 0;
@@ -14,7 +14,7 @@ export async function runConcurrent<T>(
     async () => {
       while (index < items.length) {
         const i = index++;
-        await fn(items[i]);
+        await fn(items[i], i);
       }
     },
   );
