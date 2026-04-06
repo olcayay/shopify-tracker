@@ -1,3 +1,19 @@
+import {
+  getSmokeCheck,
+  getSmokePlatform,
+  type PlatformId,
+} from "@appranks/shared";
+
+/** Format milliseconds for human-readable report display */
+export function formatDurationForReport(ms: number): string {
+  if (ms < 1000) return `${ms}ms`;
+  const sec = ms / 1000;
+  if (sec < 60) return `${sec.toFixed(1)}s`;
+  const min = Math.floor(sec / 60);
+  const remainSec = Math.round(sec % 60);
+  return `${min}m ${remainSec}s`;
+}
+
 const SCRAPER_TYPE_FILE_MAP: Record<string, string> = {
   app_details: "app-details-scraper.ts",
   keyword_search: "keyword-scraper.ts",
@@ -50,7 +66,7 @@ function buildRunSection(run: RunInfo): string[] {
   lines.push(
     `Started:      ${run.startedAt || "N/A"}`,
     `Completed:    ${run.completedAt || "N/A"}`,
-    `Duration:     ${run.metadata?.duration_ms ? `${run.metadata.duration_ms}ms` : "N/A"}`,
+    `Duration:     ${run.metadata?.duration_ms ? formatDurationForReport(run.metadata.duration_ms) : "N/A"}`,
     `Items:        ${run.metadata?.items_scraped ?? 0} scraped, ${run.metadata?.items_failed ?? 0} failed`,
   );
   if (run.metadata?.fallback_used) {
@@ -117,16 +133,34 @@ export function buildSmokeTestReport(result: {
   output?: string;
   traceId?: string;
 }): string {
+  // Look up smoke test config for enriched context
+  const smokeCheck = getSmokeCheck(result.platform as PlatformId, result.check as any);
+  const smokePlatform = getSmokePlatform(result.platform as PlatformId);
+
   const lines = [
     "=== SMOKE TEST REPORT ===",
     "",
     `Platform:     ${result.platform}`,
     `Check:        ${result.check}`,
-    `Status:       ${result.status}`,
-    `Duration:     ${result.durationMs ? `${result.durationMs}ms` : "N/A"}`,
   ];
+  if (smokeCheck?.arg) lines.push(`Test Subject: ${smokeCheck.arg}`);
+  if (smokePlatform) {
+    lines.push(`Client Type:  ${smokePlatform.clientType}`);
+    lines.push(`Timeout:      ${smokePlatform.timeoutSec}s`);
+  }
+  lines.push(
+    `Status:       ${result.status}`,
+    `Duration:     ${result.durationMs ? formatDurationForReport(result.durationMs) : "N/A"}`,
+  );
   if (result.traceId) lines.push(`Trace ID:     ${result.traceId}`);
-  if (result.error) lines.push("", "--- Error ---", result.error);
+  if (result.error) {
+    let enrichedError = result.error;
+    // Annotate SIGTERM (exit code 143) with human-readable explanation
+    if (enrichedError.includes("exit code 143")) {
+      enrichedError += " (SIGTERM — likely killed by timeout)";
+    }
+    lines.push("", "--- Error ---", enrichedError);
+  }
   if (result.output) lines.push("", "--- Output ---", result.output);
   return lines.join("\n");
 }
@@ -158,7 +192,7 @@ export function buildHealthCellReport(cell: {
   lines.push(
     `Started:      ${cell.startedAt || "N/A"}`,
     `Completed:    ${cell.completedAt || "N/A"}`,
-    `Duration:     ${cell.durationMs ? `${cell.durationMs}ms` : "N/A"}`,
+    `Duration:     ${cell.durationMs ? formatDurationForReport(cell.durationMs) : "N/A"}`,
   );
   if (cell.itemsScraped != null) lines.push(`Items:        ${cell.itemsScraped} scraped, ${cell.itemsFailed ?? 0} failed`);
   if (cell.triggeredBy) lines.push(`Triggered By: ${cell.triggeredBy}`);

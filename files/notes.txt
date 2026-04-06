@@ -1,6 +1,13 @@
 Scraper Reliability & Diagnostics (2026-04-06)
 ================================================================
 
+PLA-808: Enrich smoke test Copy Report with full diagnostic context + show seconds in all reports
+- Added formatDurationForReport() helper: <1s=ms, <60s=X.Ys, ≥60s=Xm Ys
+- Smoke test report now includes: Test Subject (from SMOKE_PLATFORMS), Client Type, Timeout
+- Exit code 143 annotated with "(SIGTERM — likely killed by timeout)"
+- All report durations (run, smoke, health cell) now show human-readable seconds
+- 10 new tests: duration formatting, smoke test enrichment, SIGTERM annotation, unknown platform handling
+
 PLA-804: Add progress tracking to review scraper for crash diagnosis
 - Added incremental metadata updates to all 3 scrapers: review, app-details, keyword
 - Before each item: writes currently_processing slugs/keywords, current_index, total count

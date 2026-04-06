@@ -3,6 +3,8 @@ import {
   buildItemReport,
   buildRunReport,
   buildFallbackReport,
+  buildSmokeTestReport,
+  formatDurationForReport,
   type RunInfo,
   type ItemError,
 } from "@/lib/scraper-report";
@@ -163,5 +165,105 @@ describe("buildFallbackReport", () => {
     const run: RunInfo = { ...baseRun, schedule: "0 3 * * *" };
     const report = buildFallbackReport(run);
     expect(report).toContain("Schedule:     0 3 * * *");
+  });
+});
+
+describe("formatDurationForReport", () => {
+  it("shows ms for sub-second durations", () => {
+    expect(formatDurationForReport(500)).toBe("500ms");
+    expect(formatDurationForReport(0)).toBe("0ms");
+    expect(formatDurationForReport(999)).toBe("999ms");
+  });
+
+  it("shows seconds for durations under 1 minute", () => {
+    expect(formatDurationForReport(1000)).toBe("1.0s");
+    expect(formatDurationForReport(30453)).toBe("30.5s");
+    expect(formatDurationForReport(59999)).toBe("60.0s");
+  });
+
+  it("shows minutes + seconds for durations over 1 minute", () => {
+    expect(formatDurationForReport(60000)).toBe("1m 0s");
+    expect(formatDurationForReport(154000)).toBe("2m 34s");
+    expect(formatDurationForReport(300000)).toBe("5m 0s");
+    expect(formatDurationForReport(7547297)).toBe("125m 47s");
+  });
+});
+
+describe("buildSmokeTestReport", () => {
+  it("includes test subject from SMOKE_PLATFORMS config", () => {
+    const report = buildSmokeTestReport({
+      platform: "shopify",
+      check: "app",
+      status: "pass",
+      durationMs: 5000,
+    });
+    expect(report).toContain("Test Subject: trendsi");
+    expect(report).toContain("Client Type:  http");
+    expect(report).toContain("Timeout:      60s");
+  });
+
+  it("includes test subject for keyword checks with --pages arg", () => {
+    const report = buildSmokeTestReport({
+      platform: "shopify",
+      check: "keyword",
+      status: "pass",
+      durationMs: 12000,
+    });
+    expect(report).toContain("Test Subject: email marketing --pages first");
+  });
+
+  it("shows duration in human-readable seconds", () => {
+    const report = buildSmokeTestReport({
+      platform: "canva",
+      check: "app",
+      status: "fail",
+      durationMs: 30453,
+    });
+    expect(report).toContain("Duration:     30.5s");
+    expect(report).not.toContain("30453ms");
+  });
+
+  it("annotates exit code 143 with SIGTERM explanation", () => {
+    const report = buildSmokeTestReport({
+      platform: "google_workspace",
+      check: "app",
+      status: "fail",
+      durationMs: 60588,
+      error: "exit code 143",
+    });
+    expect(report).toContain("exit code 143 (SIGTERM — likely killed by timeout)");
+    expect(report).toContain("Client Type:  http");
+    expect(report).toContain("Timeout:      60s");
+  });
+
+  it("shows browser client type for browser platforms", () => {
+    const report = buildSmokeTestReport({
+      platform: "canva",
+      check: "keyword",
+      status: "fail",
+      durationMs: 121926,
+      error: "exit code 143",
+    });
+    expect(report).toContain("Client Type:  browser");
+    expect(report).toContain("Timeout:      120s");
+  });
+
+  it("handles unknown platforms gracefully", () => {
+    const report = buildSmokeTestReport({
+      platform: "unknown_platform",
+      check: "app",
+      status: "fail",
+    });
+    expect(report).toContain("Platform:     unknown_platform");
+    expect(report).not.toContain("Client Type:");
+    expect(report).not.toContain("Test Subject:");
+  });
+});
+
+describe("duration formatting in run reports", () => {
+  it("buildRunReport shows duration in seconds", () => {
+    const report = buildRunReport(baseRun);
+    expect(report).toContain("Duration:     5m 0s");
+    expect(report).not.toContain("300000ms");
   });
 });
