@@ -1,11 +1,46 @@
 import { describe, it, expect } from "vitest";
 import { buildDigestHtml, buildDigestSubject } from "../../email/digest-template.js";
-import type { DigestData } from "../../email/digest-builder.js";
+import type { DigestData, TrackedAppDigest, RankingChange } from "../../email/digest-builder.js";
+
+function makeRankingChange(overrides: Partial<RankingChange> = {}): RankingChange {
+  return {
+    keyword: "email",
+    keywordSlug: "email",
+    appName: "App",
+    appSlug: "app",
+    isTracked: true,
+    isCompetitor: false,
+    yesterdayPosition: 5,
+    todayPosition: 3,
+    change: 2,
+    type: "improved",
+    ...overrides,
+  };
+}
+
+function makeTrackedApp(overrides: Partial<TrackedAppDigest> = {}): TrackedAppDigest {
+  return {
+    appId: 1,
+    appName: "App",
+    appSlug: "app",
+    platform: "shopify",
+    keywordChanges: [],
+    categoryChanges: [],
+    ratingToday: null,
+    ratingYesterday: null,
+    ratingChange: null,
+    reviewCountToday: null,
+    reviewCountYesterday: null,
+    reviewCountChange: null,
+    ...overrides,
+  };
+}
 
 function makeDigestData(overrides: Partial<DigestData> = {}): DigestData {
   return {
     accountName: "Test Account",
     date: "03/29/2026",
+    trackedApps: [],
     rankingChanges: [],
     competitorSummaries: [],
     summary: { improved: 0, dropped: 0, newEntries: 0, droppedOut: 0, unchanged: 0 },
@@ -43,16 +78,15 @@ describe("buildDigestHtml", () => {
   });
 
   it("renders hero stat highlight for improvements", () => {
+    const kwChange = makeRankingChange({
+      keyword: "crm tools", keywordSlug: "crm-tools",
+      appName: "Super CRM", appSlug: "super-crm",
+      yesterdayPosition: 5, todayPosition: 2, change: 3, type: "improved",
+    });
     const html = buildDigestHtml(
       makeDigestData({
-        rankingChanges: [
-          {
-            keyword: "crm tools", keywordSlug: "crm-tools",
-            appName: "Super CRM", appSlug: "super-crm",
-            isTracked: true, isCompetitor: false,
-            yesterdayPosition: 5, todayPosition: 2, change: 3, type: "improved",
-          },
-        ],
+        trackedApps: [makeTrackedApp({ appName: "Super CRM", appSlug: "super-crm", keywordChanges: [kwChange] })],
+        rankingChanges: [kwChange],
         summary: { improved: 1, dropped: 0, newEntries: 0, droppedOut: 0, unchanged: 0 },
       }),
     );
@@ -60,27 +94,28 @@ describe("buildDigestHtml", () => {
     expect(html).toContain("crm tools");
   });
 
-  it("splits ranking changes into Biggest Wins and Needs Attention", () => {
+  it("renders per-app keyword rankings with wins and drops", () => {
+    const kw1 = makeRankingChange({ keyword: "k1", keywordSlug: "k1", appName: "A1", appSlug: "a1", yesterdayPosition: 5, todayPosition: 2, change: 3, type: "improved" });
+    const kw2 = makeRankingChange({ keyword: "k2", keywordSlug: "k2", appName: "A1", appSlug: "a1", yesterdayPosition: 2, todayPosition: 5, change: -3, type: "dropped" });
     const html = buildDigestHtml(
       makeDigestData({
-        rankingChanges: [
-          { keyword: "k1", keywordSlug: "k1", appName: "A1", appSlug: "a1", isTracked: true, isCompetitor: false, yesterdayPosition: 5, todayPosition: 2, change: 3, type: "improved" },
-          { keyword: "k2", keywordSlug: "k2", appName: "A2", appSlug: "a2", isTracked: true, isCompetitor: false, yesterdayPosition: 2, todayPosition: 5, change: -3, type: "dropped" },
-        ],
+        trackedApps: [makeTrackedApp({ appName: "A1", appSlug: "a1", keywordChanges: [kw1, kw2] })],
+        rankingChanges: [kw1, kw2],
         summary: { improved: 1, dropped: 1, newEntries: 0, droppedOut: 0, unchanged: 0 },
       }),
     );
-    expect(html).toContain("Biggest Wins");
-    expect(html).toContain("Needs Attention");
+    expect(html).toContain("Keyword Rankings");
+    expect(html).toContain("k1");
+    expect(html).toContain("k2");
   });
 
   it("shows change icons (▲ for improved, ▼ for dropped)", () => {
+    const kw1 = makeRankingChange({ keyword: "k1", keywordSlug: "k1", change: 3, type: "improved" });
+    const kw2 = makeRankingChange({ keyword: "k2", keywordSlug: "k2", change: -3, type: "dropped", todayPosition: 8, yesterdayPosition: 5 });
     const html = buildDigestHtml(
       makeDigestData({
-        rankingChanges: [
-          { keyword: "k1", keywordSlug: "k1", appName: "A1", appSlug: "a1", isTracked: false, isCompetitor: false, yesterdayPosition: 5, todayPosition: 2, change: 3, type: "improved" },
-          { keyword: "k2", keywordSlug: "k2", appName: "A2", appSlug: "a2", isTracked: false, isCompetitor: false, yesterdayPosition: 2, todayPosition: 5, change: -3, type: "dropped" },
-        ],
+        trackedApps: [makeTrackedApp({ keywordChanges: [kw1, kw2] })],
+        rankingChanges: [kw1, kw2],
       }),
     );
     expect(html).toContain("&#9650;"); // ▲
@@ -90,6 +125,7 @@ describe("buildDigestHtml", () => {
   it("renders Competitor Watch section", () => {
     const html = buildDigestHtml(
       makeDigestData({
+        trackedApps: [makeTrackedApp({ keywordChanges: [makeRankingChange()] })],
         competitorSummaries: [
           {
             appName: "Competitor X", appSlug: "competitor-x",
@@ -98,6 +134,7 @@ describe("buildDigestHtml", () => {
             keywordPositions: [{ keyword: "analytics", position: 3, change: 1 }],
           },
         ],
+        summary: { improved: 1, dropped: 0, newEntries: 0, droppedOut: 0, unchanged: 0 },
       }),
     );
     expect(html).toContain("Competitor Watch");
@@ -105,14 +142,14 @@ describe("buildDigestHtml", () => {
   });
 
   it("generates insight for strong momentum", () => {
+    const kws = Array.from({ length: 5 }, (_, i) =>
+      makeRankingChange({ keyword: `kw${i}`, keywordSlug: `kw${i}`, change: 5, type: "improved" })
+    );
     const html = buildDigestHtml(
       makeDigestData({
         summary: { improved: 5, dropped: 1, newEntries: 0, droppedOut: 0, unchanged: 0 },
-        rankingChanges: Array.from({ length: 5 }, (_, i) => ({
-          keyword: `kw${i}`, keywordSlug: `kw${i}`, appName: "App", appSlug: "app",
-          isTracked: true, isCompetitor: false,
-          yesterdayPosition: 10, todayPosition: 5, change: 5, type: "improved" as const,
-        })),
+        trackedApps: [makeTrackedApp({ keywordChanges: kws })],
+        rankingChanges: kws,
       }),
     );
     expect(html).toContain("Insight");
@@ -120,12 +157,12 @@ describe("buildDigestHtml", () => {
   });
 
   it("includes deep links to keyword pages", () => {
+    const kw = makeRankingChange({ keyword: "email", keywordSlug: "email", todayPosition: 3, change: 2 });
     const html = buildDigestHtml(
       makeDigestData({
         platform: "shopify",
-        rankingChanges: [
-          { keyword: "email", keywordSlug: "email", appName: "A1", appSlug: "a1", isTracked: true, isCompetitor: false, yesterdayPosition: 5, todayPosition: 3, change: 2, type: "improved" },
-        ],
+        trackedApps: [makeTrackedApp({ keywordChanges: [kw] })],
+        rankingChanges: [kw],
         summary: { improved: 1, dropped: 0, newEntries: 0, droppedOut: 0, unchanged: 0 },
       }),
     );
@@ -140,24 +177,24 @@ describe("buildDigestHtml", () => {
 
 describe("buildDigestSubject", () => {
   it("returns win subject when improvements dominate", () => {
+    const kw = makeRankingChange({ keyword: "email", appName: "Klaviyo", appSlug: "klaviyo", todayPosition: 2, change: 3 });
     const subject = buildDigestSubject(
       makeDigestData({
         summary: { improved: 5, dropped: 1, newEntries: 0, droppedOut: 0, unchanged: 0 },
-        rankingChanges: [
-          { keyword: "email", keywordSlug: "email", appName: "Klaviyo", appSlug: "klaviyo", isTracked: true, isCompetitor: false, yesterdayPosition: 5, todayPosition: 2, change: 3, type: "improved" },
-        ],
+        trackedApps: [makeTrackedApp({ appName: "Klaviyo", appSlug: "klaviyo", keywordChanges: [kw] })],
+        rankingChanges: [kw],
       }),
     );
     expect(subject).toContain("Klaviyo");
   });
 
   it("returns alert subject when drops dominate", () => {
+    const kw = makeRankingChange({ keyword: "crm", appName: "MyCRM", appSlug: "my-crm", todayPosition: 8, yesterdayPosition: 3, change: -5, type: "dropped" });
     const subject = buildDigestSubject(
       makeDigestData({
         summary: { improved: 0, dropped: 3, newEntries: 0, droppedOut: 0, unchanged: 0 },
-        rankingChanges: [
-          { keyword: "crm", keywordSlug: "crm", appName: "MyCRM", appSlug: "my-crm", isTracked: true, isCompetitor: false, yesterdayPosition: 3, todayPosition: 8, change: -5, type: "dropped" },
-        ],
+        trackedApps: [makeTrackedApp({ appName: "MyCRM", appSlug: "my-crm", keywordChanges: [kw] })],
+        rankingChanges: [kw],
       }),
     );
     expect(subject).toContain("Heads up");
@@ -180,12 +217,12 @@ describe("buildDigestSubject", () => {
   });
 
   it("highlights top position for win day with top 5 entry", () => {
+    const kw = makeRankingChange({ keyword: "email", todayPosition: 3, yesterdayPosition: 7, change: 4 });
     const subject = buildDigestSubject(
       makeDigestData({
         summary: { improved: 3, dropped: 1, newEntries: 0, droppedOut: 0, unchanged: 0 },
-        rankingChanges: [
-          { keyword: "email", keywordSlug: "email", appName: "App", appSlug: "app", isTracked: true, isCompetitor: false, yesterdayPosition: 7, todayPosition: 3, change: 4, type: "improved" },
-        ],
+        trackedApps: [makeTrackedApp({ keywordChanges: [kw] })],
+        rankingChanges: [kw],
       }),
     );
     expect(subject).toContain("climbed to #3");

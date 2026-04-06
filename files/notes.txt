@@ -1,6 +1,17 @@
 Digest Redesign (2026-04-06)
 ================================================================
 
+PLA-784: Phase 2: Redesign digest email template — app-centric sections
+- Rewrote buildDigestHtml() to render per-tracked-app sections instead of flat keyword tables
+- Each app section: overview card (rating+change, reviews+change, keyword count), category rankings table, keyword rankings table (sorted by abs change)
+- Updated buildHighlight() to prioritize: category #1 milestone > top-3 keyword > biggest improvement
+- Updated buildDigestSubject() and generateInsight() to use trackedApps instead of rankingChanges
+- Competitor Watch section preserved as-is
+- Helper functions: buildOverviewCard(), buildCategorySection(), buildKeywordSection(), buildAppSection()
+- Updated old test file at src/__tests__/email/digest-template.test.ts to use new DigestData shape
+- Added new test file at src/email/__tests__/digest-template.test.ts with 14 tests
+- 30 total template tests passing (14 new + 16 updated old)
+
 PLA-783: Phase 1: Restructure digest data model — app-centric instead of keyword-centric
 - Added TrackedAppDigest interface: per-app keyword changes, category changes, rating/review deltas
 - Added CategoryRankingChange interface for category position tracking
