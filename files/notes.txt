@@ -1,6 +1,12 @@
 API Performance & Reliability (2026-04-07)
 ================================================================
 
+PLA-813: PostgresError: invalid input syntax in post-scrape-events SQL array interpolation
+- Replaced 6 raw SQL `ANY(ARRAY[ids.join(",")]::int[])` with Drizzle's `inArray()` operator
+- Drizzle parameterizes the join-ed string as a single value → PostgreSQL can't cast "1,2,3" to int
+- Affected: afterKeywordScrape (3), afterReviewScrape (1), afterCategoryScrape (2)
+- Added 10 tests for post-scrape-events: multi-app scenarios, empty cases, error resilience
+
 PLA-811: Fix /api/auth/me and /api/notifications/unread-count hanging indefinitely
 - Parallelized 6 sequential COUNT(*) queries in /api/auth/me using Promise.all() (also account, platforms, visibility)
 - Parallelized Redis blacklist + user revocation checks in auth middleware using Promise.all()

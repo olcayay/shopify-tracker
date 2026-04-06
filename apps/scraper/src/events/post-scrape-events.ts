@@ -3,7 +3,7 @@
  * Called after each scraper type completes to detect and dispatch events.
  * All functions are wrapped in try/catch — event detection must never break scraping.
  */
-import { eq, and, sql, desc } from "drizzle-orm";
+import { eq, and, sql, desc, inArray } from "drizzle-orm";
 import {
   apps,
   appKeywordRankings,
@@ -83,7 +83,7 @@ export async function afterKeywordScrape(
       .from(appKeywordRankings)
       .where(
         and(
-          sql`${appKeywordRankings.appId} = ANY(ARRAY[${appIds.join(",")}]::int[])`,
+          inArray(appKeywordRankings.appId, appIds),
           eq(appKeywordRankings.scrapeRunId, scrapeRunId)
         )
       );
@@ -98,7 +98,7 @@ export async function afterKeywordScrape(
       .from(appKeywordRankings)
       .where(
         and(
-          sql`${appKeywordRankings.appId} = ANY(ARRAY[${appIds.join(",")}]::int[])`,
+          inArray(appKeywordRankings.appId, appIds),
           sql`${appKeywordRankings.scrapeRunId} != ${scrapeRunId}`
         )
       )
@@ -115,7 +115,7 @@ export async function afterKeywordScrape(
         computedAt: appReviewMetrics.computedAt,
       })
       .from(appReviewMetrics)
-      .where(sql`${appReviewMetrics.appId} = ANY(ARRAY[${appIds.join(",")}]::int[])`)
+      .where(inArray(appReviewMetrics.appId, appIds))
       .orderBy(desc(appReviewMetrics.computedAt));
 
     log.info("batch queries completed", { apps: appIds.length, queryMs: Date.now() - t1 });
@@ -223,7 +223,7 @@ export async function afterReviewScrape(
         reviewDate: reviews.reviewDate,
       })
       .from(reviews)
-      .where(sql`${reviews.id} = ANY(ARRAY[${newReviewIds.join(",")}]::int[])`);
+      .where(inArray(reviews.id, newReviewIds));
 
     const reviewSnaps: ReviewSnapshot[] = newReviews.map((r: any) => ({
       id: r.id,
@@ -293,7 +293,7 @@ export async function afterCategoryScrape(
       .from(appCategoryRankings)
       .where(
         and(
-          sql`${appCategoryRankings.appId} = ANY(ARRAY[${appIds.join(",")}]::int[])`,
+          inArray(appCategoryRankings.appId, appIds),
           eq(appCategoryRankings.scrapeRunId, scrapeRunId)
         )
       );
@@ -308,7 +308,7 @@ export async function afterCategoryScrape(
       .from(appCategoryRankings)
       .where(
         and(
-          sql`${appCategoryRankings.appId} = ANY(ARRAY[${appIds.join(",")}]::int[])`,
+          inArray(appCategoryRankings.appId, appIds),
           sql`${appCategoryRankings.scrapeRunId} != ${scrapeRunId}`
         )
       )
