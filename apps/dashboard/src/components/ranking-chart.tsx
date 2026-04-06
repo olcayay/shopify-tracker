@@ -134,7 +134,7 @@ export function RankingChart({ data, pageSize = 24 }: { data: RankingData[]; pag
       </ResponsiveContainer>
 
       {/* Ranking table */}
-      <div className="border rounded-md overflow-x-auto">
+      <div className="border rounded-md">
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b">
