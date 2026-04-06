@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect } from "vitest";
 import type {
   DigestData,
   TrackedAppDigest,
@@ -6,20 +6,12 @@ import type {
   RankingChange,
 } from "../digest-builder.js";
 
-/**
- * Since buildDigestForAccount relies heavily on DB queries that are hard to mock,
- * we test the data model contracts and structure expectations instead.
- * These tests verify the new app-centric DigestData structure.
- */
-
 function makeRankingChange(overrides: Partial<RankingChange> = {}): RankingChange {
   return {
     keyword: "email marketing",
     keywordSlug: "email-marketing",
     appName: "My App",
     appSlug: "my-app",
-    isTracked: true,
-    isCompetitor: false,
     yesterdayPosition: 5,
     todayPosition: 3,
     change: 2,
@@ -63,7 +55,6 @@ function makeDigestData(overrides: Partial<DigestData> = {}): DigestData {
     accountName: "Test Account",
     date: "04/06/2026",
     trackedApps: [],
-    rankingChanges: [],
     competitorSummaries: [],
     summary: { improved: 0, dropped: 0, newEntries: 0, droppedOut: 0, unchanged: 0 },
     ...overrides,
@@ -81,7 +72,6 @@ describe("DigestData app-centric structure", () => {
         ],
       });
 
-      // Sort by absolute change desc (as buildDigestForAccount does)
       const sorted = [...app.keywordChanges].sort(
         (a, b) => Math.abs(b.change ?? 0) - Math.abs(a.change ?? 0)
       );
@@ -157,7 +147,7 @@ describe("DigestData app-centric structure", () => {
       const change = makeCategoryChange({
         yesterdayPosition: 10,
         todayPosition: 5,
-        change: 5, // yesterdayPos - todayPos = positive = improved
+        change: 5,
         type: "improved",
       });
       expect(change.type).toBe("improved");
@@ -198,46 +188,6 @@ describe("DigestData app-centric structure", () => {
     });
   });
 
-  describe("DigestData summary counts only tracked apps", () => {
-    it("summary counts exclude competitor changes", () => {
-      const trackedChange = makeRankingChange({ isTracked: true, isCompetitor: false, type: "improved" });
-      const competitorChange = makeRankingChange({ isTracked: false, isCompetitor: true, type: "improved", appSlug: "comp-app" });
-
-      const allChanges = [trackedChange, competitorChange];
-      const trackedOnly = allChanges.filter((r) => r.isTracked);
-
-      const summary = {
-        improved: trackedOnly.filter((r) => r.type === "improved").length,
-        dropped: trackedOnly.filter((r) => r.type === "dropped").length,
-        newEntries: trackedOnly.filter((r) => r.type === "new_entry").length,
-        droppedOut: trackedOnly.filter((r) => r.type === "dropped_out").length,
-        unchanged: 0,
-      };
-
-      // Only the tracked app's change should count
-      expect(summary.improved).toBe(1);
-    });
-
-    it("summary counts exclude unrelated app changes", () => {
-      const trackedChange = makeRankingChange({ isTracked: true, type: "dropped" });
-      const unrelatedChange = makeRankingChange({ isTracked: false, isCompetitor: false, type: "improved", appSlug: "random-app" });
-
-      const allChanges = [trackedChange, unrelatedChange];
-      const trackedOnly = allChanges.filter((r) => r.isTracked);
-
-      const summary = {
-        improved: trackedOnly.filter((r) => r.type === "improved").length,
-        dropped: trackedOnly.filter((r) => r.type === "dropped").length,
-        newEntries: trackedOnly.filter((r) => r.type === "new_entry").length,
-        droppedOut: trackedOnly.filter((r) => r.type === "dropped_out").length,
-        unchanged: 0,
-      };
-
-      expect(summary.improved).toBe(0);
-      expect(summary.dropped).toBe(1);
-    });
-  });
-
   describe("DigestData structure", () => {
     it("contains trackedApps array", () => {
       const data = makeDigestData({
@@ -252,70 +202,94 @@ describe("DigestData app-centric structure", () => {
       expect(data.trackedApps[1].appName).toBe("App B");
     });
 
-    it("still contains deprecated rankingChanges for backward compatibility", () => {
-      const data = makeDigestData({
-        rankingChanges: [makeRankingChange()],
-      });
+    it("does not contain rankingChanges (removed in Phase 3)", () => {
+      const data = makeDigestData();
+      expect(data).not.toHaveProperty("rankingChanges");
+    });
 
-      expect(data.rankingChanges).toHaveLength(1);
+    it("RankingChange does not have isTracked/isCompetitor fields", () => {
+      const change = makeRankingChange();
+      expect(change).not.toHaveProperty("isTracked");
+      expect(change).not.toHaveProperty("isCompetitor");
     });
 
     it("trackedApp keyword changes only include that app's changes", () => {
       const appAChanges = [
-        makeRankingChange({ appSlug: "app-a", keyword: "kw1", isTracked: true }),
-        makeRankingChange({ appSlug: "app-a", keyword: "kw2", isTracked: true }),
+        makeRankingChange({ appSlug: "app-a", keyword: "kw1" }),
+        makeRankingChange({ appSlug: "app-a", keyword: "kw2" }),
       ];
       const appBChanges = [
-        makeRankingChange({ appSlug: "app-b", keyword: "kw1", isTracked: true }),
-      ];
-      const competitorChanges = [
-        makeRankingChange({ appSlug: "comp-app", keyword: "kw1", isTracked: false, isCompetitor: true }),
+        makeRankingChange({ appSlug: "app-b", keyword: "kw1" }),
       ];
 
-      const allChanges = [...appAChanges, ...appBChanges, ...competitorChanges];
+      const allChanges = [...appAChanges, ...appBChanges];
 
-      // Simulate the filtering logic from buildDigestForAccount
       const appADigest = makeTrackedAppDigest({
         appSlug: "app-a",
-        keywordChanges: allChanges.filter((r) => r.appSlug === "app-a" && r.isTracked),
+        keywordChanges: allChanges.filter((r) => r.appSlug === "app-a"),
       });
 
       expect(appADigest.keywordChanges).toHaveLength(2);
       expect(appADigest.keywordChanges.every((r) => r.appSlug === "app-a")).toBe(true);
     });
 
-    it("competitor keyword change does NOT appear in trackedApps keyword changes", () => {
-      const competitorChange = makeRankingChange({
-        appSlug: "competitor-app",
-        isTracked: false,
-        isCompetitor: true,
+    it("competitor keyword changes are excluded from trackedApps (structurally separated)", () => {
+      // Since ranking comparison only processes tracked app IDs,
+      // competitor changes never appear in trackedRankingChanges
+      const trackedChanges = [makeRankingChange({ appSlug: "my-app" })];
+
+      // Competitor data only in competitorSummaries.keywordPositions
+      const data = makeDigestData({
+        trackedApps: [makeTrackedAppDigest({ keywordChanges: trackedChanges })],
+        competitorSummaries: [{
+          appName: "Comp",
+          appSlug: "comp",
+          todayRating: "4.0",
+          yesterdayRating: "3.9",
+          ratingChange: 0.1,
+          todayReviews: 100,
+          yesterdayReviews: 95,
+          reviewsChange: 5,
+          keywordPositions: [{ keyword: "email marketing", position: 3, change: 2 }],
+        }],
       });
 
-      const trackedApp = makeTrackedAppDigest({
-        appSlug: "my-app",
-        keywordChanges: [competitorChange].filter(
-          (r) => r.appSlug === "my-app" && r.isTracked
-        ),
-      });
-
-      expect(trackedApp.keywordChanges).toHaveLength(0);
+      // Tracked app changes don't contain competitor data
+      expect(data.trackedApps[0].keywordChanges.every((r) => r.appSlug === "my-app")).toBe(true);
+      // Competitor keyword positions are in competitorSummaries
+      expect(data.competitorSummaries[0].keywordPositions).toHaveLength(1);
     });
 
-    it("unrelated app is completely excluded from trackedApps", () => {
-      const unrelatedChange = makeRankingChange({
-        appSlug: "random-app",
-        isTracked: false,
-        isCompetitor: false,
+    it("unrelated app is completely excluded", () => {
+      // Since the ranking loop skips non-tracked appIds,
+      // unrelated apps never appear anywhere in DigestData
+      const data = makeDigestData({
+        trackedApps: [makeTrackedAppDigest({ appSlug: "my-app", keywordChanges: [] })],
+        competitorSummaries: [],
       });
 
-      const allChanges = [unrelatedChange];
+      // No unrelated app data anywhere
+      const allAppSlugs = data.trackedApps.map((a) => a.appSlug);
+      expect(allAppSlugs).not.toContain("random-app");
+    });
+  });
 
-      // Filter for tracked app "my-app"
-      const myAppChanges = allChanges.filter(
-        (r) => r.appSlug === "my-app" && r.isTracked
-      );
+  describe("summary counts only tracked apps", () => {
+    it("summary reflects only tracked app keyword changes", () => {
+      const data = makeDigestData({
+        trackedApps: [
+          makeTrackedAppDigest({
+            keywordChanges: [
+              makeRankingChange({ type: "improved" }),
+              makeRankingChange({ keyword: "kw2", type: "dropped", change: -2, todayPosition: 8 }),
+            ],
+          }),
+        ],
+        summary: { improved: 1, dropped: 1, newEntries: 0, droppedOut: 0, unchanged: 0 },
+      });
 
-      expect(myAppChanges).toHaveLength(0);
+      expect(data.summary.improved).toBe(1);
+      expect(data.summary.dropped).toBe(1);
     });
   });
 

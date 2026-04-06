@@ -41,7 +41,9 @@ describe("dry-run", () => {
     it("generates daily digest preview with correct structure", async () => {
       const digestData = {
         summary: { totalApps: 5 },
-        rankingChanges: [{ appId: "app-1" }, { appId: "app-2" }],
+        trackedApps: [
+          { keywordChanges: [{ keyword: "kw1" }, { keyword: "kw2" }] },
+        ],
       };
       vi.mocked(buildDigestForAccount).mockResolvedValue(digestData as any);
       vi.mocked(buildDigestSubject).mockReturnValue("Daily Digest - Apr 3");
@@ -134,7 +136,7 @@ describe("dry-run", () => {
         .mockRejectedValueOnce(new Error("DB connection lost"))
         .mockResolvedValueOnce({
           summary: {},
-          rankingChanges: [],
+          trackedApps: [],
         } as any);
       vi.mocked(buildDigestSubject).mockReturnValue("Digest");
       vi.mocked(buildDigestHtml).mockReturnValue("<html/>");

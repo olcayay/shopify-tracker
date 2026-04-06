@@ -20,8 +20,6 @@ export interface RankingChange {
   keywordSlug: string;
   appName: string;
   appSlug: string;
-  isTracked: boolean;
-  isCompetitor: boolean;
   yesterdayPosition: number | null;
   todayPosition: number | null;
   change: number | null; // positive = improved (moved up), negative = dropped
@@ -73,8 +71,6 @@ export interface DigestData {
   date: string;
   platform?: string;
   trackedApps: TrackedAppDigest[];
-  /** @deprecated Use trackedApps[].keywordChanges instead. Kept for backward compatibility during migration. */
-  rankingChanges: RankingChange[];
   competitorSummaries: CompetitorSummary[];
   summary: {
     improved: number;
@@ -268,13 +264,17 @@ export async function buildDigestForAccount(
     trackedKws.map((k) => [k.keywordId, { keyword: k.keyword, slug: k.slug }])
   );
 
-  // Compare rankings
-  const rankingChanges: RankingChange[] = [];
+  // Compare rankings — only for tracked apps (competitor keyword data stays in todayMap/yesterdayMap for competitor loop)
+  const trackedRankingChanges: RankingChange[] = [];
   const allKeys = new Set([...todayMap.keys(), ...yesterdayMap.keys()]);
 
   for (const key of allKeys) {
     const [appIdStr, keywordIdStr] = key.split("::");
     const appId = parseInt(appIdStr, 10);
+
+    // Only build ranking changes for tracked apps
+    if (!trackedAppIds.has(appId)) continue;
+
     const keywordId = parseInt(keywordIdStr, 10);
     const kwInfo = keywordMap.get(keywordId);
     if (!kwInfo) continue;
@@ -299,23 +299,17 @@ export async function buildDigestForAccount(
 
     if (type === "unchanged") continue; // Skip unchanged
 
-    rankingChanges.push({
+    trackedRankingChanges.push({
       keyword: kwInfo.keyword,
       keywordSlug: kwInfo.slug,
       appName: appNameMap.get(appId) || appSlug,
       appSlug,
-      isTracked: trackedAppIds.has(appId),
-      isCompetitor: competitorAppIds.has(appId),
       yesterdayPosition: yesterdayPos,
       todayPosition: todayPos,
       change,
       type,
     });
   }
-
-  // Sort: improved first, then new entries, dropped, dropped out
-  const typeOrder = { improved: 0, new_entry: 1, dropped: 2, dropped_out: 3, unchanged: 4 };
-  rankingChanges.sort((a, b) => typeOrder[a.type] - typeOrder[b.type]);
 
   // --- Build per-tracked-app digests ---
   const trackedAppDigests: TrackedAppDigest[] = [];
@@ -444,8 +438,8 @@ export async function buildDigestForAccount(
     const appName = appNameMap.get(trackedAppId) || appSlug;
 
     // Keyword changes for this tracked app (sorted by absolute change desc)
-    const appKeywordChanges = rankingChanges
-      .filter((r) => r.appSlug === appSlug && r.isTracked)
+    const appKeywordChanges = trackedRankingChanges
+      .filter((r) => r.appSlug === appSlug)
       .sort((a, b) => Math.abs(b.change ?? 0) - Math.abs(a.change ?? 0));
 
     // Category ranking changes for this tracked app
@@ -561,7 +555,6 @@ export async function buildDigestForAccount(
   }
 
   // Summary counts only for tracked app changes
-  const trackedRankingChanges = rankingChanges.filter((r) => r.isTracked);
   const summary = {
     improved: trackedRankingChanges.filter((r) => r.type === "improved").length,
     dropped: trackedRankingChanges.filter((r) => r.type === "dropped").length,
@@ -597,7 +590,6 @@ export async function buildDigestForAccount(
     accountName: account.name,
     date: dateStr,
     trackedApps: trackedAppDigests,
-    rankingChanges, // kept for backward compatibility
     competitorSummaries,
     summary,
   };

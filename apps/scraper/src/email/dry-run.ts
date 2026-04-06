@@ -46,7 +46,7 @@ export async function dryRunPreview(
         subject: buildDigestSubject(data),
         html: buildDigestHtml(data),
         recipientCount: 1,
-        dataSnapshot: { summary: data.summary, rankingCount: data.rankingChanges.length },
+        dataSnapshot: { summary: data.summary, rankingCount: data.trackedApps.reduce((n, a) => n + a.keywordChanges.length, 0) },
       };
     }
     case "weekly_summary": {

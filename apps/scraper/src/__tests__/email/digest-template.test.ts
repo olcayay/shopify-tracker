@@ -8,8 +8,6 @@ function makeRankingChange(overrides: Partial<RankingChange> = {}): RankingChang
     keywordSlug: "email",
     appName: "App",
     appSlug: "app",
-    isTracked: true,
-    isCompetitor: false,
     yesterdayPosition: 5,
     todayPosition: 3,
     change: 2,
@@ -41,7 +39,6 @@ function makeDigestData(overrides: Partial<DigestData> = {}): DigestData {
     accountName: "Test Account",
     date: "03/29/2026",
     trackedApps: [],
-    rankingChanges: [],
     competitorSummaries: [],
     summary: { improved: 0, dropped: 0, newEntries: 0, droppedOut: 0, unchanged: 0 },
     ...overrides,
@@ -86,7 +83,6 @@ describe("buildDigestHtml", () => {
     const html = buildDigestHtml(
       makeDigestData({
         trackedApps: [makeTrackedApp({ appName: "Super CRM", appSlug: "super-crm", keywordChanges: [kwChange] })],
-        rankingChanges: [kwChange],
         summary: { improved: 1, dropped: 0, newEntries: 0, droppedOut: 0, unchanged: 0 },
       }),
     );
@@ -100,7 +96,6 @@ describe("buildDigestHtml", () => {
     const html = buildDigestHtml(
       makeDigestData({
         trackedApps: [makeTrackedApp({ appName: "A1", appSlug: "a1", keywordChanges: [kw1, kw2] })],
-        rankingChanges: [kw1, kw2],
         summary: { improved: 1, dropped: 1, newEntries: 0, droppedOut: 0, unchanged: 0 },
       }),
     );
@@ -115,7 +110,6 @@ describe("buildDigestHtml", () => {
     const html = buildDigestHtml(
       makeDigestData({
         trackedApps: [makeTrackedApp({ keywordChanges: [kw1, kw2] })],
-        rankingChanges: [kw1, kw2],
       }),
     );
     expect(html).toContain("&#9650;"); // ▲
@@ -149,7 +143,6 @@ describe("buildDigestHtml", () => {
       makeDigestData({
         summary: { improved: 5, dropped: 1, newEntries: 0, droppedOut: 0, unchanged: 0 },
         trackedApps: [makeTrackedApp({ keywordChanges: kws })],
-        rankingChanges: kws,
       }),
     );
     expect(html).toContain("Insight");
@@ -162,7 +155,6 @@ describe("buildDigestHtml", () => {
       makeDigestData({
         platform: "shopify",
         trackedApps: [makeTrackedApp({ keywordChanges: [kw] })],
-        rankingChanges: [kw],
         summary: { improved: 1, dropped: 0, newEntries: 0, droppedOut: 0, unchanged: 0 },
       }),
     );
@@ -182,7 +174,6 @@ describe("buildDigestSubject", () => {
       makeDigestData({
         summary: { improved: 5, dropped: 1, newEntries: 0, droppedOut: 0, unchanged: 0 },
         trackedApps: [makeTrackedApp({ appName: "Klaviyo", appSlug: "klaviyo", keywordChanges: [kw] })],
-        rankingChanges: [kw],
       }),
     );
     expect(subject).toContain("Klaviyo");
@@ -194,7 +185,6 @@ describe("buildDigestSubject", () => {
       makeDigestData({
         summary: { improved: 0, dropped: 3, newEntries: 0, droppedOut: 0, unchanged: 0 },
         trackedApps: [makeTrackedApp({ appName: "MyCRM", appSlug: "my-crm", keywordChanges: [kw] })],
-        rankingChanges: [kw],
       }),
     );
     expect(subject).toContain("Heads up");
@@ -222,7 +212,6 @@ describe("buildDigestSubject", () => {
       makeDigestData({
         summary: { improved: 3, dropped: 1, newEntries: 0, droppedOut: 0, unchanged: 0 },
         trackedApps: [makeTrackedApp({ keywordChanges: [kw] })],
-        rankingChanges: [kw],
       }),
     );
     expect(subject).toContain("climbed to #3");
