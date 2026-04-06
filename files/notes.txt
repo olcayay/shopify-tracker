@@ -1,3 +1,16 @@
+Digest Redesign (2026-04-06)
+================================================================
+
+PLA-783: Phase 1: Restructure digest data model — app-centric instead of keyword-centric
+- Added TrackedAppDigest interface: per-app keyword changes, category changes, rating/review deltas
+- Added CategoryRankingChange interface for category position tracking
+- DigestData now has `trackedApps: TrackedAppDigest[]` (main new field)
+- `rankingChanges` kept for backward compatibility (digest-template.ts still uses it)
+- buildDigestForAccount() now queries app_category_rankings and app_snapshots for tracked apps
+- Keyword changes within each TrackedAppDigest sorted by Math.abs(change) desc (biggest jumps first)
+- Summary counts now only reflect tracked app changes (exclude competitor/unrelated)
+- 19 unit tests covering: data structure contracts, category change types, summary filtering, rating calculation
+
 Overview & API Fixes (2026-04-06)
 ================================================================
 

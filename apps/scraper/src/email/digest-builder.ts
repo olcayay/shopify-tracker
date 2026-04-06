@@ -9,6 +9,8 @@ import {
   trackedKeywords,
   appKeywordRankings,
   appSnapshots,
+  appCategoryRankings,
+  categories,
   apps,
 } from "@appranks/db";
 import { getLocalDayBoundaries } from "./timezone.js";
@@ -24,6 +26,30 @@ export interface RankingChange {
   todayPosition: number | null;
   change: number | null; // positive = improved (moved up), negative = dropped
   type: "improved" | "dropped" | "new_entry" | "dropped_out" | "unchanged";
+}
+
+export interface CategoryRankingChange {
+  categorySlug: string;
+  categoryName: string;
+  yesterdayPosition: number | null;
+  todayPosition: number | null;
+  change: number | null;
+  type: "improved" | "dropped" | "new_entry" | "dropped_out" | "unchanged";
+}
+
+export interface TrackedAppDigest {
+  appId: number;
+  appName: string;
+  appSlug: string;
+  platform: string;
+  keywordChanges: RankingChange[];
+  categoryChanges: CategoryRankingChange[];
+  ratingToday: number | null;
+  ratingYesterday: number | null;
+  ratingChange: number | null;
+  reviewCountToday: number | null;
+  reviewCountYesterday: number | null;
+  reviewCountChange: number | null;
 }
 
 export interface CompetitorSummary {
@@ -46,6 +72,8 @@ export interface DigestData {
   accountName: string;
   date: string;
   platform?: string;
+  trackedApps: TrackedAppDigest[];
+  /** @deprecated Use trackedApps[].keywordChanges instead. Kept for backward compatibility during migration. */
   rankingChanges: RankingChange[];
   competitorSummaries: CompetitorSummary[];
   summary: {
@@ -224,7 +252,7 @@ export async function buildDigestForAccount(
   // Get app names and slugs for all relevant app IDs
   const allAppIds = [...relevantAppIds];
   const appRows = await db
-    .select({ id: apps.id, slug: apps.slug, name: apps.name })
+    .select({ id: apps.id, slug: apps.slug, name: apps.name, platform: apps.platform })
     .from(apps)
     .where(
       sql`${apps.id} IN (${sql.join(
@@ -289,11 +317,11 @@ export async function buildDigestForAccount(
   const typeOrder = { improved: 0, new_entry: 1, dropped: 2, dropped_out: 3, unchanged: 4 };
   rankingChanges.sort((a, b) => typeOrder[a.type] - typeOrder[b.type]);
 
-  // Build competitor summaries
-  const competitorSummaries: CompetitorSummary[] = [];
+  // --- Build per-tracked-app digests ---
+  const trackedAppDigests: TrackedAppDigest[] = [];
 
-  for (const compAppId of competitorAppIds) {
-    // Get latest app snapshots for today and yesterday
+  // Helper to get app snapshots (today + yesterday)
+  async function getAppSnapshotDelta(appId: number) {
     const [todaySnap] = await db
       .select({
         averageRating: appSnapshots.averageRating,
@@ -302,7 +330,7 @@ export async function buildDigestForAccount(
       .from(appSnapshots)
       .where(
         and(
-          eq(appSnapshots.appId, compAppId),
+          eq(appSnapshots.appId, appId),
           gte(appSnapshots.scrapedAt, todayStart)
         )
       )
@@ -317,13 +345,183 @@ export async function buildDigestForAccount(
       .from(appSnapshots)
       .where(
         and(
-          eq(appSnapshots.appId, compAppId),
+          eq(appSnapshots.appId, appId),
           gte(appSnapshots.scrapedAt, yesterdayStart),
           lt(appSnapshots.scrapedAt, todayStart)
         )
       )
       .orderBy(desc(appSnapshots.scrapedAt))
       .limit(1);
+
+    return { todaySnap: todaySnap ?? null, yesterdaySnap: yesterdaySnap ?? null };
+  }
+
+  // Get category rankings for tracked apps
+  const trackedAppIdList = [...trackedAppIds];
+  let todayCatRankings: Array<{ appId: number; categorySlug: string; position: number }> = [];
+  let yesterdayCatRankings: Array<{ appId: number; categorySlug: string; position: number }> = [];
+
+  if (trackedAppIdList.length > 0) {
+    todayCatRankings = await db
+      .select({
+        appId: appCategoryRankings.appId,
+        categorySlug: appCategoryRankings.categorySlug,
+        position: appCategoryRankings.position,
+      })
+      .from(appCategoryRankings)
+      .where(
+        and(
+          sql`${appCategoryRankings.appId} IN (${sql.join(
+            trackedAppIdList.map((id) => sql`${id}`),
+            sql`, `
+          )})`,
+          gte(appCategoryRankings.scrapedAt, todayStart)
+        )
+      )
+      .orderBy(desc(appCategoryRankings.scrapedAt));
+
+    yesterdayCatRankings = await db
+      .select({
+        appId: appCategoryRankings.appId,
+        categorySlug: appCategoryRankings.categorySlug,
+        position: appCategoryRankings.position,
+      })
+      .from(appCategoryRankings)
+      .where(
+        and(
+          sql`${appCategoryRankings.appId} IN (${sql.join(
+            trackedAppIdList.map((id) => sql`${id}`),
+            sql`, `
+          )})`,
+          gte(appCategoryRankings.scrapedAt, yesterdayStart),
+          lt(appCategoryRankings.scrapedAt, todayStart)
+        )
+      )
+      .orderBy(desc(appCategoryRankings.scrapedAt));
+  }
+
+  // Build category ranking maps: (appId::categorySlug) -> latest position
+  const todayCatMap = new Map<string, number>();
+  for (const r of todayCatRankings) {
+    const key = `${r.appId}::${r.categorySlug}`;
+    if (!todayCatMap.has(key)) todayCatMap.set(key, r.position);
+  }
+  const yesterdayCatMap = new Map<string, number>();
+  for (const r of yesterdayCatRankings) {
+    const key = `${r.appId}::${r.categorySlug}`;
+    if (!yesterdayCatMap.has(key)) yesterdayCatMap.set(key, r.position);
+  }
+
+  // Get category display names for all slugs
+  const allCatSlugs = new Set<string>();
+  for (const key of [...todayCatMap.keys(), ...yesterdayCatMap.keys()]) {
+    allCatSlugs.add(key.split("::")[1]);
+  }
+  const categoryNameMap = new Map<string, string>();
+  if (allCatSlugs.size > 0) {
+    const catRows = await db
+      .select({ slug: categories.slug, title: categories.title })
+      .from(categories)
+      .where(
+        sql`${categories.slug} IN (${sql.join(
+          [...allCatSlugs].map((s) => sql`${s}`),
+          sql`, `
+        )})`
+      );
+    for (const r of catRows) {
+      categoryNameMap.set(r.slug, r.title);
+    }
+  }
+
+  // Get app platform info
+  const appPlatformMap = new Map<number, string>();
+  for (const r of appRows) {
+    appPlatformMap.set(r.id, r.platform);
+  }
+
+  for (const trackedAppId of trackedAppIds) {
+    const appSlug = appSlugMap.get(trackedAppId) || String(trackedAppId);
+    const appName = appNameMap.get(trackedAppId) || appSlug;
+
+    // Keyword changes for this tracked app (sorted by absolute change desc)
+    const appKeywordChanges = rankingChanges
+      .filter((r) => r.appSlug === appSlug && r.isTracked)
+      .sort((a, b) => Math.abs(b.change ?? 0) - Math.abs(a.change ?? 0));
+
+    // Category ranking changes for this tracked app
+    const appCatChanges: CategoryRankingChange[] = [];
+    const appCatKeys = new Set<string>();
+    for (const key of [...todayCatMap.keys(), ...yesterdayCatMap.keys()]) {
+      if (key.startsWith(`${trackedAppId}::`)) {
+        appCatKeys.add(key);
+      }
+    }
+    for (const key of appCatKeys) {
+      const catSlug = key.split("::")[1];
+      const todayPos = todayCatMap.get(key) ?? null;
+      const yesterdayPos = yesterdayCatMap.get(key) ?? null;
+
+      let catType: CategoryRankingChange["type"];
+      let catChange: number | null = null;
+
+      if (todayPos !== null && yesterdayPos !== null) {
+        catChange = yesterdayPos - todayPos;
+        if (catChange > 0) catType = "improved";
+        else if (catChange < 0) catType = "dropped";
+        else catType = "unchanged";
+      } else if (todayPos !== null && yesterdayPos === null) {
+        catType = "new_entry";
+      } else {
+        catType = "dropped_out";
+      }
+
+      if (catType === "unchanged") continue;
+
+      appCatChanges.push({
+        categorySlug: catSlug,
+        categoryName: categoryNameMap.get(catSlug) || catSlug,
+        yesterdayPosition: yesterdayPos,
+        todayPosition: todayPos,
+        change: catChange,
+        type: catType,
+      });
+    }
+    appCatChanges.sort((a, b) => Math.abs(b.change ?? 0) - Math.abs(a.change ?? 0));
+
+    // Rating/review changes
+    const { todaySnap, yesterdaySnap } = await getAppSnapshotDelta(trackedAppId);
+    const ratingToday = todaySnap?.averageRating ? parseFloat(todaySnap.averageRating) : null;
+    const ratingYesterday = yesterdaySnap?.averageRating ? parseFloat(yesterdaySnap.averageRating) : null;
+    const ratingChange = ratingToday !== null && ratingYesterday !== null
+      ? Math.round((ratingToday - ratingYesterday) * 100) / 100
+      : null;
+    const reviewCountToday = todaySnap?.ratingCount ?? null;
+    const reviewCountYesterday = yesterdaySnap?.ratingCount ?? null;
+    const reviewCountChange = reviewCountToday !== null && reviewCountYesterday !== null
+      ? reviewCountToday - reviewCountYesterday
+      : null;
+
+    trackedAppDigests.push({
+      appId: trackedAppId,
+      appName,
+      appSlug,
+      platform: appPlatformMap.get(trackedAppId) || "shopify",
+      keywordChanges: appKeywordChanges,
+      categoryChanges: appCatChanges,
+      ratingToday,
+      ratingYesterday,
+      ratingChange,
+      reviewCountToday,
+      reviewCountYesterday,
+      reviewCountChange,
+    });
+  }
+
+  // Build competitor summaries
+  const competitorSummaries: CompetitorSummary[] = [];
+
+  for (const compAppId of competitorAppIds) {
+    const { todaySnap, yesterdaySnap } = await getAppSnapshotDelta(compAppId);
 
     const compSlug = appSlugMap.get(compAppId) || String(compAppId);
 
@@ -362,17 +560,26 @@ export async function buildDigestForAccount(
     });
   }
 
+  // Summary counts only for tracked app changes
+  const trackedRankingChanges = rankingChanges.filter((r) => r.isTracked);
   const summary = {
-    improved: rankingChanges.filter((r) => r.type === "improved").length,
-    dropped: rankingChanges.filter((r) => r.type === "dropped").length,
-    newEntries: rankingChanges.filter((r) => r.type === "new_entry").length,
-    droppedOut: rankingChanges.filter((r) => r.type === "dropped_out").length,
+    improved: trackedRankingChanges.filter((r) => r.type === "improved").length,
+    dropped: trackedRankingChanges.filter((r) => r.type === "dropped").length,
+    newEntries: trackedRankingChanges.filter((r) => r.type === "new_entry").length,
+    droppedOut: trackedRankingChanges.filter((r) => r.type === "dropped_out").length,
     unchanged: 0,
   };
 
   // If no changes at all, skip
+  const hasTrackedChanges = trackedAppDigests.some(
+    (a) =>
+      a.keywordChanges.length > 0 ||
+      a.categoryChanges.length > 0 ||
+      a.ratingChange !== null ||
+      a.reviewCountChange !== null
+  );
   if (
-    rankingChanges.length === 0 &&
+    !hasTrackedChanges &&
     competitorSummaries.every(
       (c) => c.ratingChange === null && c.reviewsChange === null
     )
@@ -389,7 +596,8 @@ export async function buildDigestForAccount(
   return {
     accountName: account.name,
     date: dateStr,
-    rankingChanges,
+    trackedApps: trackedAppDigests,
+    rankingChanges, // kept for backward compatibility
     competitorSummaries,
     summary,
   };
