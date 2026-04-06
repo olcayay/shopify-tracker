@@ -99,15 +99,20 @@ export class GoogleWorkspaceModule implements PlatformModule {
     );
   }
 
+  private get isSmokeTest(): boolean {
+    return process.env.SMOKE_TEST === "1";
+  }
+
   private async fetchAppPagePrimary(slug: string, url: string): Promise<string> {
     const context = await this.ensureBrowserContext();
     const page = await context.newPage();
     try {
       log.info("fetching app detail page", { slug, url });
 
-      await page.goto(url, { waitUntil: "load", timeout: 30_000 });
+      const gotoTimeout = this.isSmokeTest ? 15_000 : 30_000;
+      await page.goto(url, { waitUntil: "load", timeout: gotoTimeout });
       await this.waitForAngularRender(page);
-      await page.waitForTimeout(2000);
+      await page.waitForTimeout(this.isSmokeTest ? 500 : 2000);
 
       const html = await page.content();
       log.info("app detail page fetched", { slug, htmlLength: html.length });
@@ -136,12 +141,14 @@ export class GoogleWorkspaceModule implements PlatformModule {
     try {
       log.info("fetching category page", { slug, url });
 
-      await page.goto(url, { waitUntil: "load", timeout: 30_000 });
+      const catGotoTimeout = this.isSmokeTest ? 15_000 : 30_000;
+      await page.goto(url, { waitUntil: "load", timeout: catGotoTimeout });
       await this.waitForAngularRender(page);
 
       // Wait for app cards to load
       try {
-        await page.waitForSelector('a[href*="/marketplace/app/"]', { timeout: 15_000 });
+        const selectorTimeout = this.isSmokeTest ? 8_000 : 15_000;
+        await page.waitForSelector('a[href*="/marketplace/app/"]', { timeout: selectorTimeout });
       } catch {
         log.warn("no app cards found on category page", { slug });
       }
@@ -307,6 +314,7 @@ export class GoogleWorkspaceModule implements PlatformModule {
    * We wait for actual content elements instead of framework-specific roots.
    */
   private async waitForAngularRender(page: Page): Promise<void> {
+    const renderTimeout = this.isSmokeTest ? 8_000 : 15_000;
     try {
       await page.waitForFunction(
         () => {
@@ -317,7 +325,7 @@ export class GoogleWorkspaceModule implements PlatformModule {
           const appLinks = document.querySelectorAll('a[href*="/marketplace/app/"]');
           return appLinks.length > 0;
         },
-        { timeout: 15_000 },
+        { timeout: renderTimeout },
       );
     } catch {
       log.warn("content render wait timed out, continuing anyway");

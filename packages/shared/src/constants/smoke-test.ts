@@ -87,8 +87,8 @@ export const SMOKE_PLATFORMS: SmokePlatform[] = [
   },
   {
     platform: "google_workspace",
-    clientType: "http",
-    timeoutSec: 60,
+    clientType: "browser",
+    timeoutSec: 120,
     checks: [
       { check: "categories", arg: "business-tools --pages first" },
       { check: "app", arg: "able_poll--921058472860" },

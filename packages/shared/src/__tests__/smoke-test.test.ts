@@ -83,9 +83,10 @@ describe("BROWSER_PLATFORMS", () => {
     expect(BROWSER_PLATFORMS).toEqual(expected);
   });
 
-  it("includes only browser-dependent platforms (canva, zendesk)", () => {
+  it("includes browser-dependent platforms (canva, zendesk, google_workspace)", () => {
     expect(BROWSER_PLATFORMS).toContain("canva");
     expect(BROWSER_PLATFORMS).toContain("zendesk");
+    expect(BROWSER_PLATFORMS).toContain("google_workspace");
   });
 
   it("does not include http-only platforms", () => {
@@ -93,7 +94,6 @@ describe("BROWSER_PLATFORMS", () => {
     expect(BROWSER_PLATFORMS).not.toContain("salesforce");
     expect(BROWSER_PLATFORMS).not.toContain("wix");
     expect(BROWSER_PLATFORMS).not.toContain("wordpress");
-    expect(BROWSER_PLATFORMS).not.toContain("google_workspace");
     expect(BROWSER_PLATFORMS).not.toContain("atlassian");
     expect(BROWSER_PLATFORMS).not.toContain("zoom");
     expect(BROWSER_PLATFORMS).not.toContain("zoho");

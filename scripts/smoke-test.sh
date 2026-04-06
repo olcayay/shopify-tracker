@@ -278,9 +278,9 @@ run_check_bg() {
   echo "$cmd" > "$WORK_DIR/${platform}-${check}.command"
 
   local output exit_code
-  local env_prefix=""
+  local env_prefix="SMOKE_TEST=1 "
   if $FORCE_FALLBACK; then
-    env_prefix="FORCE_FALLBACK=true "
+    env_prefix="${env_prefix}FORCE_FALLBACK=true "
   fi
   output=$(cd "$SCRAPER_DIR" && timeout "$tout" env ${env_prefix} $cmd 2>&1) && exit_code=0 || exit_code=$?
 

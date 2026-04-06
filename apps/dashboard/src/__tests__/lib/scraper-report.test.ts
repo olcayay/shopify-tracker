@@ -232,8 +232,8 @@ describe("buildSmokeTestReport", () => {
       error: "exit code 143",
     });
     expect(report).toContain("exit code 143 (SIGTERM — likely killed by timeout)");
-    expect(report).toContain("Client Type:  http");
-    expect(report).toContain("Timeout:      60s");
+    expect(report).toContain("Client Type:  browser");
+    expect(report).toContain("Timeout:      120s");
   });
 
   it("shows browser client type for browser platforms", () => {
