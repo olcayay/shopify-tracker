@@ -7,6 +7,8 @@ import {
   HTTP_CONCURRENCY_POLL_MS,
   HTTP_RATE_LIMIT_BASE_MS,
   HTTP_RAW_RATE_LIMIT_BASE_MS,
+  HTTP_REQUEST_TIMEOUT_MS,
+  HTTP_MAX_CUMULATIVE_BACKOFF_MS,
 } from "./constants.js";
 import { recordFailure as recordCircuitFailure } from "./circuit-breaker.js";
 
@@ -99,6 +101,7 @@ export class HttpClient {
 
   private async fetchWithRetry(url: string, extraHeaders?: Record<string, string>): Promise<string> {
     let lastError: Error | null = null;
+    let cumulativeBackoffMs = 0;
 
     for (let attempt = 0; attempt <= this.options.maxRetries; attempt++) {
       try {
@@ -112,6 +115,7 @@ export class HttpClient {
             ...extraHeaders,
           },
           redirect: "follow",
+          signal: AbortSignal.timeout(HTTP_REQUEST_TIMEOUT_MS),
         });
 
         if (!response.ok) {
@@ -123,7 +127,13 @@ export class HttpClient {
             const waitMs = retryAfter
               ? parseInt(retryAfter, 10) * 1000
               : HTTP_RATE_LIMIT_BASE_MS * Math.pow(2, attempt);
-            log.warn("rate limited (429), backing off", { url, attempt: attempt + 1, waitMs });
+            cumulativeBackoffMs += waitMs;
+            if (cumulativeBackoffMs > HTTP_MAX_CUMULATIVE_BACKOFF_MS) {
+              log.warn("cumulative backoff budget exceeded, bailing", { url, cumulativeBackoffMs, budgetMs: HTTP_MAX_CUMULATIVE_BACKOFF_MS });
+              lastError = new Error(`Rate limit backoff budget exceeded (${Math.round(cumulativeBackoffMs / 1000)}s > ${Math.round(HTTP_MAX_CUMULATIVE_BACKOFF_MS / 1000)}s) for ${url}`);
+              break;
+            }
+            log.warn("rate limited (429), backing off", { url, attempt: attempt + 1, waitMs, cumulativeBackoffMs });
             lastError = err;
             if (attempt < this.options.maxRetries) {
               await this.sleep(waitMs);
@@ -186,6 +196,7 @@ export class HttpClient {
 
   private async fetchRawWithRetry(url: string, init: RequestInit): Promise<string> {
     let lastError: Error | null = null;
+    let cumulativeBackoffMs = 0;
 
     for (let attempt = 0; attempt <= this.options.maxRetries; attempt++) {
       try {
@@ -196,6 +207,7 @@ export class HttpClient {
             "User-Agent": ua,
             ...init.headers,
           },
+          signal: init.signal ?? AbortSignal.timeout(HTTP_REQUEST_TIMEOUT_MS),
         });
 
         if (!response.ok) {
@@ -205,7 +217,13 @@ export class HttpClient {
             const waitMs = retryAfter
               ? parseInt(retryAfter, 10) * 1000
               : HTTP_RAW_RATE_LIMIT_BASE_MS * Math.pow(2, attempt);
-            log.warn("rate limited (429), backing off", { url, attempt: attempt + 1, waitMs });
+            cumulativeBackoffMs += waitMs;
+            if (cumulativeBackoffMs > HTTP_MAX_CUMULATIVE_BACKOFF_MS) {
+              log.warn("cumulative backoff budget exceeded, bailing", { url, cumulativeBackoffMs, budgetMs: HTTP_MAX_CUMULATIVE_BACKOFF_MS });
+              lastError = new Error(`Rate limit backoff budget exceeded (${Math.round(cumulativeBackoffMs / 1000)}s > ${Math.round(HTTP_MAX_CUMULATIVE_BACKOFF_MS / 1000)}s) for ${url}`);
+              break;
+            }
+            log.warn("rate limited (429), backing off", { url, attempt: attempt + 1, waitMs, cumulativeBackoffMs });
             lastError = err;
             if (attempt < this.options.maxRetries) {
               await this.sleep(waitMs);

@@ -139,6 +139,72 @@ describe("HttpClient", () => {
     });
   });
 
+  describe("per-request timeout", () => {
+    it("passes AbortSignal.timeout to fetch in fetchPage", async () => {
+      mockFetch.mockResolvedValueOnce(ok("ok"));
+      await createClient().fetchPage("https://example.com");
+      const callArgs = mockFetch.mock.calls[0];
+      expect(callArgs[1]).toHaveProperty("signal");
+      // AbortSignal.timeout returns an AbortSignal instance
+      expect(callArgs[1].signal).toBeInstanceOf(AbortSignal);
+    });
+
+    it("passes AbortSignal.timeout to fetch in fetchRaw", async () => {
+      mockFetch.mockResolvedValueOnce(ok("ok"));
+      await createClient().fetchRaw("https://example.com", { method: "GET" });
+      const callArgs = mockFetch.mock.calls[0];
+      expect(callArgs[1]).toHaveProperty("signal");
+      expect(callArgs[1].signal).toBeInstanceOf(AbortSignal);
+    });
+
+    it("respects caller-provided signal in fetchRaw", async () => {
+      const controller = new AbortController();
+      mockFetch.mockResolvedValueOnce(ok("ok"));
+      await createClient().fetchRaw("https://example.com", {
+        method: "GET",
+        signal: controller.signal,
+      });
+      const callArgs = mockFetch.mock.calls[0];
+      // Should use the caller's signal, not override it
+      expect(callArgs[1].signal).toBe(controller.signal);
+    });
+
+    it("AbortError from timeout is retried like network errors", async () => {
+      const abortError = new DOMException("The operation was aborted", "TimeoutError");
+      mockFetch
+        .mockRejectedValueOnce(abortError)
+        .mockResolvedValueOnce(ok("recovered"));
+      const result = await createClient(1).fetchPage("https://example.com");
+      expect(result).toBe("recovered");
+      expect(mockFetch).toHaveBeenCalledTimes(2);
+    });
+  });
+
+  describe("cumulative backoff budget", () => {
+    it("bails early when 429 backoff exceeds budget", async () => {
+      // With maxRetries=4 and base=2000ms: 2000 + 4000 + 8000 + 16000 + 32000 = 62000ms
+      // Budget is 45000ms, so should bail after cumulative exceeds 45s
+      mockFetch.mockResolvedValue(httpError(429, "Too Many Requests"));
+      const client = new HttpClient({ delayMs: 0, maxRetries: 4, maxConcurrency: 10 });
+      // Mock sleep to be instant
+      vi.spyOn(client, "sleep").mockResolvedValue(undefined);
+
+      await expect(client.fetchPage("https://example.com")).rejects.toThrow(
+        "Rate limit backoff budget exceeded"
+      );
+    });
+
+    it("bails early in fetchRaw when 429 backoff exceeds budget", async () => {
+      mockFetch.mockResolvedValue(httpError(429, "Too Many Requests"));
+      const client = new HttpClient({ delayMs: 0, maxRetries: 4, maxConcurrency: 10 });
+      vi.spyOn(client, "sleep").mockResolvedValue(undefined);
+
+      await expect(client.fetchRaw("https://example.com", { method: "GET" })).rejects.toThrow(
+        "Rate limit backoff budget exceeded"
+      );
+    });
+  });
+
   describe("default options", () => {
     it("error message includes attempt count from maxRetries", async () => {
       mockFetch.mockResolvedValue(httpError(404, "Not Found"));

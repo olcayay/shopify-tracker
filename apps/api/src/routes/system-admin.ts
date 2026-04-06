@@ -3222,8 +3222,8 @@ export const systemAdminRoutes: FastifyPluginAsync = async (app) => {
 
     try {
       // Dynamic import from scraper's compiled templates (same Docker image)
-      // @ts-expect-error — cross-package import resolved at runtime in Docker
-      const { templateRenderers } = await import("../../../scraper/dist/email/process-instant-email.js");
+      // eslint-disable-next-line @typescript-eslint/no-require-imports -- cross-package import resolved at runtime in Docker
+      const { templateRenderers } = await import(/* @vite-ignore */ "../../../scraper/dist/email/process-instant-email.js") as any;
 
       const renderer = templateRenderers[type as keyof typeof templateRenderers];
       if (!renderer) {
@@ -3264,8 +3264,8 @@ export const systemAdminRoutes: FastifyPluginAsync = async (app) => {
     let subject: string;
     let html: string;
     try {
-      // @ts-expect-error — cross-package import resolved at runtime in Docker
-      const { templateRenderers } = await import("../../../scraper/dist/email/process-instant-email.js");
+      // eslint-disable-next-line @typescript-eslint/no-require-imports -- cross-package import resolved at runtime in Docker
+      const { templateRenderers } = await import(/* @vite-ignore */ "../../../scraper/dist/email/process-instant-email.js") as any;
       const renderer = templateRenderers[type as keyof typeof templateRenderers];
       if (!renderer) {
         return reply.code(404).send({ error: `No template for: ${type}` });

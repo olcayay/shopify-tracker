@@ -1,3 +1,15 @@
+Scraper Reliability & Diagnostics (2026-04-06)
+================================================================
+
+PLA-799: Add per-request timeout to HttpClient fetch calls
+- Added AbortSignal.timeout(30s) to every fetch() call in fetchWithRetry and fetchRawWithRetry
+- Prevents a single hung request from consuming the entire keyword timeout budget
+- Added cumulative backoff budget (45s) — if 429 retry delays exceed budget, bail early instead of waiting
+- fetchRaw respects caller-provided signal (init.signal ?? AbortSignal.timeout)
+- New constants: HTTP_REQUEST_TIMEOUT_MS (30s prod, 15s smoke), HTTP_MAX_CUMULATIVE_BACKOFF_MS (45s prod, 10s smoke)
+- 4 new tests: signal passed to fetch, caller signal respected, cumulative budget bail for fetchPage and fetchRaw
+- Cleaned up stale .js/.js.map/.d.ts artifacts in apps/scraper/src/ that were causing vitest to pick up old compiled code
+
 Digest Redesign (2026-04-06)
 ================================================================
 
