@@ -3223,6 +3223,7 @@ export const systemAdminRoutes: FastifyPluginAsync = async (app) => {
     try {
       // Dynamic import from scraper's compiled templates (same Docker image)
       // eslint-disable-next-line @typescript-eslint/no-require-imports -- cross-package import resolved at runtime in Docker
+      // @ts-ignore -- cross-package runtime import resolved in Docker, not available at typecheck in CI
       const { templateRenderers } = await import(/* @vite-ignore */ "../../../scraper/dist/email/process-instant-email.js") as any;
 
       const renderer = templateRenderers[type as keyof typeof templateRenderers];
@@ -3265,6 +3266,7 @@ export const systemAdminRoutes: FastifyPluginAsync = async (app) => {
     let html: string;
     try {
       // eslint-disable-next-line @typescript-eslint/no-require-imports -- cross-package import resolved at runtime in Docker
+      // @ts-ignore -- cross-package runtime import resolved in Docker, not available at typecheck in CI
       const { templateRenderers } = await import(/* @vite-ignore */ "../../../scraper/dist/email/process-instant-email.js") as any;
       const renderer = templateRenderers[type as keyof typeof templateRenderers];
       if (!renderer) {
