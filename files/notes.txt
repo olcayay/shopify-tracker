@@ -20,6 +20,12 @@ PLA-781: Daily Ranking Report emails bypass pipeline — not logged to emailLogs
 - All digest emails now get: emailLogs row, eligibility checks, unsubscribe token, tracking pixel, link rewriting
 - 5 tests updated/added for pipeline integration
 
+PLA-782: Verify all email send paths go through central pipeline
+- Audit: Found weekly_summary also bypassed pipeline (same bug class as PLA-781)
+- Fix: weekly_summary now uses sendEmail() from pipeline.ts, added userId to WeeklyRecipient
+- Structural guard test: sendmail-guard.test.ts scans all scraper .ts files, fails if sendMail is imported outside allowed files (mailer.ts, pipeline.ts, process-instant-email.ts)
+- No remaining direct sendMail() calls in process-job.ts
+
 ================================================================
 
 Dashboard & Scraper Bugfixes (2026-04-06)

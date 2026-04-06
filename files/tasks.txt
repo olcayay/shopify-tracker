@@ -2,6 +2,7 @@ Overview & API Fixes (2026-04-06)
   PLA-779: Fix overview platform cards showing empty state instead of loading shimmer ✅
   PLA-780: Optimize overview highlights API: fix N+1, add time bounds, add indexes ✅
   PLA-781: Daily Ranking Report emails bypass pipeline — not logged to emailLogs ✅
+  PLA-782: Verify all email send paths go through central pipeline ✅
 
 Dashboard & Scraper Bugfixes (2026-04-06)
   PLA-764: Fix invisible lines in Category Rankings chart (color format mismatch) ✅

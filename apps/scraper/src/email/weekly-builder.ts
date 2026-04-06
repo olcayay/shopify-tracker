@@ -56,6 +56,7 @@ export interface WeeklyDigestData {
 }
 
 export interface WeeklyRecipient {
+  userId: string;
   email: string;
   name: string;
   accountId: string;
@@ -65,6 +66,7 @@ export interface WeeklyRecipient {
 export async function getWeeklyRecipients(db: Database): Promise<WeeklyRecipient[]> {
   return db
     .select({
+      userId: users.id,
       email: users.email,
       name: users.name,
       accountId: users.accountId,

@@ -636,9 +636,7 @@ export function createProcessJob(db: ReturnType<typeof createDb>, queueName?: st
       case "weekly_summary": {
         const { getWeeklyRecipients, buildWeeklyForAccount } = await import("./email/weekly-builder.js");
         const { buildWeeklyHtml, buildWeeklySubject } = await import("./email/weekly-template.js");
-        const { sendMail: sendWeeklyMail } = await import("./email/mailer.js");
-        const { eq: eqW } = await import("drizzle-orm");
-        const { users: usersW } = await import("@appranks/db");
+        const { sendEmail: sendWeeklyEmail } = await import("./email/pipeline.js");
 
         const weeklyRecipients = await getWeeklyRecipients(db);
         const byAcct = new Map<string, typeof weeklyRecipients>();
@@ -659,7 +657,17 @@ export function createProcessJob(db: ReturnType<typeof createDb>, queueName?: st
           const subject = buildWeeklySubject(weeklyData);
           for (const user of acctUsers) {
             try {
-              await sendWeeklyMail(user.email, subject, html);
+              await sendWeeklyEmail({
+                db,
+                emailType: "weekly_summary",
+                userId: user.userId,
+                accountId: acctId,
+                recipientEmail: user.email,
+                recipientName: user.name,
+                subject,
+                htmlBody: html,
+                dataSnapshot: { accountId: acctId, weekDate: new Date().toISOString() },
+              });
               wSent++;
             } catch (err) {
               log.error("failed to send weekly summary", { email: user.email, error: String(err) });
