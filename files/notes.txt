@@ -1,6 +1,14 @@
 Scraper Reliability & Diagnostics (2026-04-06)
 ================================================================
 
+PLA-801: Fix Canva browser page race condition in concurrent app scrapes
+- Root cause: single shared browserPage used by all concurrent workers in app-details scraper (concurrency=3)
+- Added page pool to CanvaModule: acquirePoolPage() / releasePoolPage() pattern
+- Pool creates new pages on demand up to MAX_POOL_SIZE (5), reuses released pages
+- fetchAppPageViaBrowser() now acquires a dedicated page, uses it, then releases it
+- closeBrowser() clears pool and all tracking state
+- 3 new tests: different pages for concurrent callers, page reuse after release, pool cleanup
+
 PLA-800: Increase keyword scrape timeout and add per-page progress tracking
 - Increased KEYWORD_TIMEOUT_MS from 90s to 180s — accommodates 10 pages + retries + network variability
 - Added per-page timing logs (keyword:page_fetched) in both Shopify and generic scrape paths

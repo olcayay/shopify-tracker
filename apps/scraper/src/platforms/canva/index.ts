@@ -67,6 +67,11 @@ export class CanvaModule implements PlatformModule {
   private browserContext: BrowserContext | null = null;
   private browserPage: Page | null = null;
 
+  /** Page pool for concurrent app scrapes (prevents navigation race conditions) */
+  private pagePool: Page[] = [];
+  private pagesInUse = new Set<Page>();
+  private static readonly MAX_POOL_SIZE = 5;
+
   /** Cache search results per keyword (all pages fetched at once) */
   private searchCache = new Map<string, string>();
 
@@ -106,7 +111,15 @@ export class CanvaModule implements PlatformModule {
   }
 
   private async fetchAppPageViaBrowser(slug: string): Promise<string> {
-    const page = await this.ensureBrowserPage();
+    const page = await this.acquirePoolPage();
+    try {
+      return await this.fetchAppPageWithPage(page, slug);
+    } finally {
+      this.releasePoolPage(page);
+    }
+  }
+
+  private async fetchAppPageWithPage(page: Page, slug: string): Promise<string> {
     const appId = slug.split("--")[0];
     const urlSlug = slug.split("--")[1] || "";
     const detailUrl = `https://www.canva.com/apps/${appId}/${urlSlug}`;
@@ -475,13 +488,60 @@ export class CanvaModule implements PlatformModule {
    */
   async closeBrowser(): Promise<void> {
     if (this.browser) {
-      log.info("closing persistent browser");
+      log.info("closing persistent browser", { poolSize: this.pagePool.length, inUse: this.pagesInUse.size });
       await this.browser.close();
       this.browser = null;
       this.browserContext = null;
       this.browserPage = null;
+      this.pagePool = [];
+      this.pagesInUse.clear();
     }
     this.searchCache.clear();
+  }
+
+  /**
+   * Acquire a page from the pool for concurrent use (app detail scraping).
+   * Creates a new page if the pool is empty and under the max limit.
+   */
+  private async acquirePoolPage(): Promise<Page> {
+    await this.ensureBrowserPage(); // ensure browser + context are initialized
+
+    // Return an available page from the pool
+    for (const page of this.pagePool) {
+      if (!this.pagesInUse.has(page)) {
+        this.pagesInUse.add(page);
+        log.info("pool:acquired_existing", { poolSize: this.pagePool.length, inUse: this.pagesInUse.size });
+        return page;
+      }
+    }
+
+    // Create a new page if under the max
+    if (this.pagePool.length < CanvaModule.MAX_POOL_SIZE && this.browserContext) {
+      const page = await this.browserContext.newPage();
+      this.pagePool.push(page);
+      this.pagesInUse.add(page);
+      log.info("pool:created_new", { poolSize: this.pagePool.length, inUse: this.pagesInUse.size });
+      return page;
+    }
+
+    // All pages in use — wait for one to be released
+    log.info("pool:waiting", { poolSize: this.pagePool.length, inUse: this.pagesInUse.size });
+    while (true) {
+      await new Promise((r) => setTimeout(r, 200));
+      for (const page of this.pagePool) {
+        if (!this.pagesInUse.has(page)) {
+          this.pagesInUse.add(page);
+          return page;
+        }
+      }
+    }
+  }
+
+  /**
+   * Release a page back to the pool.
+   */
+  private releasePoolPage(page: Page): void {
+    this.pagesInUse.delete(page);
   }
 
   // --- Private helpers ---

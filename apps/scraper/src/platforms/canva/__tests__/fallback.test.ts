@@ -99,6 +99,67 @@ describe("CanvaModule fallback", () => {
     });
   });
 
+  describe("page pool for concurrent scrapes", () => {
+    it("acquirePoolPage returns different pages for concurrent callers", async () => {
+      // Simulate browser context by mocking internal state
+      const mockPages: any[] = [];
+      const mockContext = {
+        newPage: vi.fn().mockImplementation(() => {
+          const page = { id: mockPages.length, close: vi.fn() };
+          mockPages.push(page);
+          return page;
+        }),
+      };
+      (mod as any).browserContext = mockContext;
+      // Pretend browser is initialized by setting browserPage
+      (mod as any).browserPage = { fake: true };
+      (mod as any).browser = { close: vi.fn() };
+
+      // Acquire 3 pages concurrently
+      const p1 = await (mod as any).acquirePoolPage();
+      const p2 = await (mod as any).acquirePoolPage();
+      const p3 = await (mod as any).acquirePoolPage();
+
+      // All should be different page instances
+      expect(p1).not.toBe(p2);
+      expect(p2).not.toBe(p3);
+      expect(p1).not.toBe(p3);
+      expect((mod as any).pagePool.length).toBe(3);
+      expect((mod as any).pagesInUse.size).toBe(3);
+    });
+
+    it("releasePoolPage allows page reuse", async () => {
+      const mockContext = {
+        newPage: vi.fn().mockImplementation(() => ({
+          id: Math.random(),
+          close: vi.fn(),
+        })),
+      };
+      (mod as any).browserContext = mockContext;
+      (mod as any).browserPage = { fake: true };
+      (mod as any).browser = { close: vi.fn() };
+
+      const p1 = await (mod as any).acquirePoolPage();
+      (mod as any).releasePoolPage(p1);
+
+      // Should reuse the released page
+      const p2 = await (mod as any).acquirePoolPage();
+      expect(p2).toBe(p1);
+      expect(mockContext.newPage).toHaveBeenCalledTimes(1); // Only created once
+    });
+
+    it("closeBrowser clears the page pool", async () => {
+      (mod as any).browser = { close: vi.fn().mockResolvedValue(undefined) };
+      (mod as any).pagePool = [{ id: 1 }, { id: 2 }];
+      (mod as any).pagesInUse = new Set([{ id: 1 }]);
+
+      await mod.closeBrowser();
+
+      expect((mod as any).pagePool).toEqual([]);
+      expect((mod as any).pagesInUse.size).toBe(0);
+    });
+  });
+
   describe("withFallback integration", () => {
     it("module methods use withFallback pattern", () => {
       // Verify the source code uses withFallback by checking the module exports the right structure
