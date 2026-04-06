@@ -26,6 +26,7 @@ import {
   ChevronRight,
 } from "lucide-react";
 import { CopyButton } from "@/components/ui/copy-button";
+import { buildRunReport, type RunInfo } from "@/lib/scraper-report";
 import { ConfirmModal } from "@/components/confirm-modal";
 import { useFormatDate } from "@/lib/format-date";
 
@@ -234,7 +235,25 @@ export function QueueStatusCard({
                           </span>
                         )}
                         {job.failedReason && (
-                          <CopyableError error={job.failedReason} />
+                          <div className="flex items-start gap-1.5">
+                            <pre className="text-xs bg-destructive/10 text-destructive p-2 rounded whitespace-pre-wrap break-words max-h-16 overflow-y-auto inline-block flex-1">
+                              {job.failedReason.slice(0, 120)}{job.failedReason.length > 120 ? "..." : ""}
+                            </pre>
+                            <CopyButton
+                              value={buildRunReport({
+                                platform: job.data?.platform,
+                                scraperType: job.type,
+                                status: job.status,
+                                jobId: job.id,
+                                queue: job.queue,
+                                startedAt: job.createdAt,
+                                error: job.failedReason,
+                              } as RunInfo)}
+                              variant="icon"
+                              size="xs"
+                              title="Copy full report"
+                            />
+                          </div>
                         )}
                       </TableCell>
                       <TableCell>
@@ -301,15 +320,3 @@ export function QueueStatusCard({
   );
 }
 
-function CopyableError({ error }: { error: string }) {
-  return (
-    <div className="relative group inline">
-      <pre className="text-xs bg-destructive/10 text-destructive p-2 rounded whitespace-pre-wrap break-words max-h-16 overflow-y-auto inline-block">
-        {error.slice(0, 120)}{error.length > 120 ? "..." : ""}
-      </pre>
-      <div className="absolute top-1 right-1 opacity-0 group-hover:opacity-100 transition-opacity">
-        <CopyButton value={error} variant="icon" size="xs" />
-      </div>
-    </div>
-  );
-}
