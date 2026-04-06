@@ -251,7 +251,6 @@ export function QueueStatusCard({
                               } as RunInfo)}
                               variant="icon"
                               size="xs"
-                              title="Copy full report"
                             />
                           </div>
                         )}
