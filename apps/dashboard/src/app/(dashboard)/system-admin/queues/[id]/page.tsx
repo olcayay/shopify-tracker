@@ -59,7 +59,7 @@ const QUEUE_NAMES: Record<string, string> = {
 const STATES = ["all", "waiting", "active", "completed", "failed", "delayed"];
 const PAGE_SIZE = 25;
 
-type SortField = "id" | "state" | "name" | "timestamp" | "finishedOn" | "attemptsMade";
+type SortField = "id" | "state" | "name" | "timestamp" | "finishedOn" | "attemptsMade" | "emailType" | "recipient";
 type SortDir = "asc" | "desc";
 
 function SortIcon({ field, currentField, currentDir }: { field: string; currentField: string; currentDir: SortDir }) {
@@ -111,6 +111,10 @@ export default function QueueJobsPage() {
   const [page, setPage] = useState(0);
   const [selectedJob, setSelectedJob] = useState<JobDetail | null>(null);
   const [loadingDetail, setLoadingDetail] = useState(false);
+  const [emailTypeFilter, setEmailTypeFilter] = useState("");
+  const [recipientFilter, setRecipientFilter] = useState("");
+
+  const isEmailQueue = queueKey.startsWith("email");
 
   const loadJobs = useCallback(async () => {
     setLoading(true);
@@ -131,13 +135,28 @@ export default function QueueJobsPage() {
   useEffect(() => { setPage(0); loadJobs(); }, [loadJobs]);
 
   const sortedJobs = useMemo(() => {
-    return [...allJobs].sort((a, b) => {
+    let filtered = [...allJobs];
+
+    // Apply email-specific filters
+    if (isEmailQueue) {
+      if (emailTypeFilter) {
+        filtered = filtered.filter((j) => (j.emailType || j.name) === emailTypeFilter);
+      }
+      if (recipientFilter) {
+        const q = recipientFilter.toLowerCase();
+        filtered = filtered.filter((j) => j.recipient?.toLowerCase().includes(q));
+      }
+    }
+
+    return filtered.sort((a, b) => {
       let valA: string | number = "";
       let valB: string | number = "";
       switch (sortField) {
         case "id": valA = parseInt(a.id || "0", 10); valB = parseInt(b.id || "0", 10); break;
         case "state": valA = a.state; valB = b.state; break;
         case "name": valA = a.emailType || a.name || ""; valB = b.emailType || b.name || ""; break;
+        case "emailType": valA = a.emailType || a.name || ""; valB = b.emailType || b.name || ""; break;
+        case "recipient": valA = a.recipient || ""; valB = b.recipient || ""; break;
         case "timestamp": valA = a.timestamp || ""; valB = b.timestamp || ""; break;
         case "finishedOn": valA = a.finishedOn || ""; valB = b.finishedOn || ""; break;
         case "attemptsMade": valA = a.attemptsMade; valB = b.attemptsMade; break;
@@ -146,7 +165,7 @@ export default function QueueJobsPage() {
       if (valA > valB) return sortDir === "asc" ? 1 : -1;
       return 0;
     });
-  }, [allJobs, sortField, sortDir]);
+  }, [allJobs, sortField, sortDir, isEmailQueue, emailTypeFilter, recipientFilter]);
 
   const totalPages = Math.ceil(sortedJobs.length / PAGE_SIZE);
   const pagedJobs = sortedJobs.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
@@ -185,6 +204,17 @@ export default function QueueJobsPage() {
     return c;
   }, [allJobs, stateFilter]);
 
+  // Unique email types for the filter dropdown
+  const uniqueEmailTypes = useMemo(() => {
+    if (!isEmailQueue) return [];
+    const types = new Set<string>();
+    for (const j of allJobs) {
+      const t = j.emailType || j.name;
+      if (t) types.add(t);
+    }
+    return [...types].sort();
+  }, [allJobs, isEmailQueue]);
+
   return (
     <div className="space-y-4">
       <div className="flex items-center gap-3">
@@ -222,6 +252,31 @@ export default function QueueJobsPage() {
         })}
       </div>
 
+      {/* Email-specific filters */}
+      {isEmailQueue && (
+        <div className="flex flex-wrap items-center gap-3">
+          <select
+            value={emailTypeFilter}
+            onChange={(e) => { setEmailTypeFilter(e.target.value); setPage(0); }}
+            className="h-9 rounded-md border bg-background px-3 text-sm"
+          >
+            <option value="">All types</option>
+            {uniqueEmailTypes.map((t) => (
+              <option key={t} value={t}>{t.replace(/_/g, " ")}</option>
+            ))}
+          </select>
+          <div className="relative flex-1 max-w-xs">
+            <input
+              type="text"
+              placeholder="Filter by recipient..."
+              value={recipientFilter}
+              onChange={(e) => { setRecipientFilter(e.target.value); setPage(0); }}
+              className="h-9 w-full rounded-md border bg-background px-3 text-sm"
+            />
+          </div>
+        </div>
+      )}
+
       <div className="grid grid-cols-1 lg:grid-cols-5 gap-4">
         {/* Job table */}
         <div className="lg:col-span-3 border rounded-lg overflow-hidden">
@@ -232,9 +287,20 @@ export default function QueueJobsPage() {
                   <TableHead className="w-16 cursor-pointer select-none" onClick={() => toggleSort("id")}>
                     <span className="flex items-center">ID <SortIcon field="id" currentField={sortField} currentDir={sortDir} /></span>
                   </TableHead>
-                  <TableHead className="cursor-pointer select-none" onClick={() => toggleSort("name")}>
-                    <span className="flex items-center">Job <SortIcon field="name" currentField={sortField} currentDir={sortDir} /></span>
-                  </TableHead>
+                  {isEmailQueue ? (
+                    <>
+                      <TableHead className="cursor-pointer select-none" onClick={() => toggleSort("emailType")}>
+                        <span className="flex items-center">Type <SortIcon field="emailType" currentField={sortField} currentDir={sortDir} /></span>
+                      </TableHead>
+                      <TableHead className="cursor-pointer select-none" onClick={() => toggleSort("recipient")}>
+                        <span className="flex items-center">Recipient <SortIcon field="recipient" currentField={sortField} currentDir={sortDir} /></span>
+                      </TableHead>
+                    </>
+                  ) : (
+                    <TableHead className="cursor-pointer select-none" onClick={() => toggleSort("name")}>
+                      <span className="flex items-center">Job <SortIcon field="name" currentField={sortField} currentDir={sortDir} /></span>
+                    </TableHead>
+                  )}
                   <TableHead className="w-20 cursor-pointer select-none" onClick={() => toggleSort("state")}>
                     <span className="flex items-center">State <SortIcon field="state" currentField={sortField} currentDir={sortDir} /></span>
                   </TableHead>
@@ -249,9 +315,9 @@ export default function QueueJobsPage() {
               </TableHeader>
               <TableBody>
                 {loading ? (
-                  <TableRow><TableCell colSpan={6} className="text-center py-8 text-muted-foreground">Loading...</TableCell></TableRow>
+                  <TableRow><TableCell colSpan={isEmailQueue ? 7 : 6} className="text-center py-8 text-muted-foreground">Loading...</TableCell></TableRow>
                 ) : pagedJobs.length === 0 ? (
-                  <TableRow><TableCell colSpan={6} className="text-center py-8 text-muted-foreground">No jobs</TableCell></TableRow>
+                  <TableRow><TableCell colSpan={isEmailQueue ? 7 : 6} className="text-center py-8 text-muted-foreground">No jobs</TableCell></TableRow>
                 ) : (
                   pagedJobs.map((job) => (
                     <TableRow
@@ -260,10 +326,17 @@ export default function QueueJobsPage() {
                       onClick={() => loadJobDetail(job.id)}
                     >
                       <TableCell className="font-mono text-xs text-muted-foreground">#{job.id}</TableCell>
-                      <TableCell>
-                        <JobSummary job={job} queueKey={queueKey} />
-                        {job.failedReason && <p className="text-[10px] text-red-500 truncate max-w-[200px] mt-0.5">{job.failedReason}</p>}
-                      </TableCell>
+                      {isEmailQueue ? (
+                        <>
+                          <TableCell className="text-xs font-mono">{job.emailType || job.name}</TableCell>
+                          <TableCell className="text-xs truncate max-w-[160px]">{job.recipient || "—"}</TableCell>
+                        </>
+                      ) : (
+                        <TableCell>
+                          <JobSummary job={job} queueKey={queueKey} />
+                          {job.failedReason && <p className="text-[10px] text-red-500 truncate max-w-[200px] mt-0.5">{job.failedReason}</p>}
+                        </TableCell>
+                      )}
                       <TableCell><Badge className={`text-[10px] ${STATE_COLORS[job.state] || ""}`}>{job.state}</Badge></TableCell>
                       <TableCell className="hidden md:table-cell text-xs text-muted-foreground">{job.timestamp ? timeAgo(job.timestamp) : "—"}</TableCell>
                       <TableCell className="hidden lg:table-cell text-xs text-center">{job.attemptsMade}</TableCell>

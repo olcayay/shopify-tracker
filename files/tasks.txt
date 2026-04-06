@@ -6,6 +6,7 @@ Digest Redesign (2026-04-06)
 
 System Admin (2026-04-06)
   PLA-788: Add email HTML preview to system-admin emails page ✅
+  PLA-789: Queue jobs page: separate email/type columns + email & type filters ✅
 
 Overview & API Fixes (2026-04-06)
   PLA-779: Fix overview platform cards showing empty state instead of loading shimmer ✅

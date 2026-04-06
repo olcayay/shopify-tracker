@@ -1,6 +1,14 @@
 Digest Redesign (2026-04-06)
 ================================================================
 
+PLA-789: Queue jobs page: separate email/type columns + email & type filters
+- Email queue pages now show "Type" and "Recipient" as separate sortable columns (non-email queues keep single "Job" column)
+- Added email type dropdown filter (auto-populated from unique email types in loaded jobs)
+- Added recipient text search filter (client-side, case-insensitive)
+- Filters work alongside state filter (AND logic)
+- SortField type extended with "emailType" and "recipient"
+- colSpan adjusted for email queue's 7-column layout
+
 PLA-788: Add email HTML preview to system-admin emails page
 - Added split-pane layout (3:2 grid) when an email row is selected
 - EmailDetailPanel component with Details and Preview tabs
