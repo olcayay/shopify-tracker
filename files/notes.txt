@@ -1,3 +1,14 @@
+Overview & API Fixes (2026-04-06)
+================================================================
+
+PLA-779: Fix overview platform cards showing empty state instead of loading shimmer
+- Root cause: highlights API fetches in background after stats load; loading=false before highlights arrive
+- When data=null and stats.apps>0, card showed "No tracked apps" instead of skeleton
+- Fix: Added highlightsLoading state, pass to OverviewPlatformCard, show shimmer when loading + has apps
+- 4 new tests for loading/shimmer/empty state logic
+
+================================================================
+
 Dashboard & Scraper Bugfixes (2026-04-06)
 ================================================================
 

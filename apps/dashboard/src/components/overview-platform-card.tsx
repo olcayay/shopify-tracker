@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
 import { ArrowRight, Star, Search } from "lucide-react";
 import { DailyHighlights } from "@/components/overview-daily-highlights";
 import { PLATFORMS, type PlatformId } from "@appranks/shared";
@@ -33,9 +34,10 @@ interface OverviewPlatformCardProps {
   platformId: PlatformId;
   data: PlatformHighlights | null;
   stats?: { apps: number; keywords: number; competitors: number };
+  highlightsLoading?: boolean;
 }
 
-export function OverviewPlatformCard({ platformId, data, stats }: OverviewPlatformCardProps) {
+export function OverviewPlatformCard({ platformId, data, stats, highlightsLoading }: OverviewPlatformCardProps) {
   const config = PLATFORMS[platformId];
   const brand = PLATFORM_DISPLAY[platformId];
   const apps = data?.apps ?? [];
@@ -72,6 +74,21 @@ export function OverviewPlatformCard({ platformId, data, stats }: OverviewPlatfo
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
             {apps.map((app) => (
               <AppMiniCard key={app.slug} app={app} platformId={platformId} />
+            ))}
+          </div>
+        ) : highlightsLoading && (stats?.apps ?? 0) > 0 ? (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
+            {Array.from({ length: Math.min(stats?.apps ?? 2, 4) }).map((_, i) => (
+              <div key={i} className="flex flex-col gap-2 p-3 rounded-lg border">
+                <div className="flex items-center gap-2">
+                  <Skeleton className="w-8 h-8 rounded-lg shrink-0" />
+                  <Skeleton className="h-4 w-24" />
+                </div>
+                <div className="flex items-center gap-3">
+                  <Skeleton className="h-3 w-12" />
+                  <Skeleton className="h-3 w-8" />
+                </div>
+              </div>
             ))}
           </div>
         ) : (

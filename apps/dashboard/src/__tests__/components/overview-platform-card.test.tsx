@@ -106,4 +106,59 @@ describe("OverviewPlatformCard", () => {
     const link = screen.getByText("Shopify").closest("a");
     expect(link).toHaveAttribute("href", "/shopify");
   });
+
+  it("shows loading shimmer when highlights are loading and stats show tracked apps", () => {
+    const { container } = render(
+      <OverviewPlatformCard
+        platformId="shopify"
+        data={null}
+        stats={{ apps: 3, keywords: 5, competitors: 1 }}
+        highlightsLoading={true}
+      />,
+    );
+    // Should NOT show empty state
+    expect(screen.queryByText(/No tracked apps/)).not.toBeInTheDocument();
+    // Should show skeleton placeholders (min of stats.apps=3, cap=4)
+    const skeletonCards = container.querySelectorAll(".rounded-lg.border");
+    expect(skeletonCards.length).toBe(3);
+  });
+
+  it("caps loading shimmer skeletons at 4", () => {
+    const { container } = render(
+      <OverviewPlatformCard
+        platformId="shopify"
+        data={null}
+        stats={{ apps: 10, keywords: 5, competitors: 1 }}
+        highlightsLoading={true}
+      />,
+    );
+    expect(screen.queryByText(/No tracked apps/)).not.toBeInTheDocument();
+    const skeletonCards = container.querySelectorAll(".rounded-lg.border");
+    expect(skeletonCards.length).toBe(4);
+  });
+
+  it("shows empty state when highlights finished loading and no apps", () => {
+    render(
+      <OverviewPlatformCard
+        platformId="shopify"
+        data={null}
+        stats={{ apps: 0, keywords: 0, competitors: 0 }}
+        highlightsLoading={false}
+      />,
+    );
+    expect(screen.getByText(/No tracked apps/)).toBeInTheDocument();
+  });
+
+  it("shows empty state (not shimmer) when highlightsLoading but stats.apps is 0", () => {
+    render(
+      <OverviewPlatformCard
+        platformId="shopify"
+        data={null}
+        stats={{ apps: 0, keywords: 0, competitors: 0 }}
+        highlightsLoading={true}
+      />,
+    );
+    // Even though highlights are loading, stats say 0 apps — show empty state
+    expect(screen.getByText(/No tracked apps/)).toBeInTheDocument();
+  });
 });

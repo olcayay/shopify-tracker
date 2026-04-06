@@ -58,6 +58,7 @@ export default function CrossPlatformOverviewPage() {
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState<Record<string, PlatformStats>>({});
   const [highlights, setHighlights] = useState<Record<string, any>>({});
+  const [highlightsLoading, setHighlightsLoading] = useState(true);
   const [fetchError, setFetchError] = useState<string | null>(null);
   const [dataLoaded, setDataLoaded] = useState(false);
 
@@ -106,12 +107,15 @@ export default function CrossPlatformOverviewPage() {
       setDataLoaded(true);
 
       // Fetch highlights in background (truly non-blocking — page already rendered)
+      setHighlightsLoading(true);
       fetchWithAuth("/api/overview/highlights").then(async (hlRes) => {
         if (hlRes.ok) {
           const hlBody = await hlRes.json();
           setHighlights(hlBody.platforms ?? {});
         }
-      }).catch(() => {});
+      }).catch(() => {}).finally(() => {
+        setHighlightsLoading(false);
+      });
     } catch {
       setFetchError("Failed to load overview data. Please try again.");
       setDataLoaded(false);
@@ -339,6 +343,7 @@ export default function CrossPlatformOverviewPage() {
                       platformId={platformId}
                       data={highlights[platformId] ?? null}
                       stats={stats[platformId]}
+                      highlightsLoading={highlightsLoading}
                     />
                   ))}
                 </div>
