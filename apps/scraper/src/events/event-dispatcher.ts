@@ -176,25 +176,28 @@ export async function dispatch(db: any, event: DetectedEvent): Promise<DispatchR
     }
 
     // Enqueue email (for significant events only)
-    if (shouldEmail) {
-      try {
-        const emailData: BulkEmailJobData = {
-          type: emailType as any,
-          to: user.email,
-          name: user.name,
-          userId: user.userId,
-          accountId: user.accountId,
-          payload: { ...event.data, eventType: event.type },
-          createdAt: now,
-        };
-        await enqueueBulkEmail(emailData);
-        emailJobsEnqueued++;
-      } catch (err) {
-        log.error("failed to enqueue email", {
-          type: event.type, userId: user.userId, error: String(err),
-        });
-      }
-    }
+    // DISABLED: Alert emails temporarily disabled — eligibility check handles
+    // this via DB config, but skipping enqueue entirely avoids queue buildup.
+    // Re-enable when email templates are verified and ready for production.
+    // if (shouldEmail) {
+    //   try {
+    //     const emailData: BulkEmailJobData = {
+    //       type: emailType as any,
+    //       to: user.email,
+    //       name: user.name,
+    //       userId: user.userId,
+    //       accountId: user.accountId,
+    //       payload: { ...event.data, eventType: event.type },
+    //       createdAt: now,
+    //     };
+    //     await enqueueBulkEmail(emailData);
+    //     emailJobsEnqueued++;
+    //   } catch (err) {
+    //     log.error("failed to enqueue email", {
+    //       type: event.type, userId: user.userId, error: String(err),
+    //     });
+    //   }
+    // }
   }
 
   log.info("event dispatched", {

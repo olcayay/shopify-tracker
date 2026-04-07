@@ -86,9 +86,10 @@ describe("dispatch", () => {
     const result = await dispatch(db, event);
 
     expect(mockEnqueueNotification).toHaveBeenCalledTimes(2);
-    expect(mockEnqueueBulkEmail).toHaveBeenCalledTimes(2);
+    // Email enqueuing is temporarily disabled in event-dispatcher
+    expect(mockEnqueueBulkEmail).not.toHaveBeenCalled();
     expect(result.usersAffected).toBe(2);
-    expect(result.emailJobsEnqueued).toBe(2);
+    expect(result.emailJobsEnqueued).toBe(0);
     expect(result.notificationJobsEnqueued).toBe(2);
   });
 
@@ -103,16 +104,14 @@ describe("dispatch", () => {
     expect(result.notificationJobsEnqueued).toBe(0);
   });
 
-  it("handles enqueue errors gracefully", async () => {
+  it("does not enqueue emails when email dispatch is disabled", async () => {
     const users = [{ userId: "u1", accountId: "a1", email: "u1@test.com", name: "Alice" }];
     const db = makeMockDb(users);
-    mockEnqueueBulkEmail.mockRejectedValueOnce(new Error("Redis down"));
 
     const result = await dispatch(db, makeEvent());
 
-    // Notification should still be enqueued
     expect(mockEnqueueNotification).toHaveBeenCalledTimes(1);
-    // Email failed but didn't throw
+    expect(mockEnqueueBulkEmail).not.toHaveBeenCalled();
     expect(result.notificationJobsEnqueued).toBe(1);
     expect(result.emailJobsEnqueued).toBe(0);
   });
@@ -160,7 +159,7 @@ describe("dispatchAll", () => {
 
     const result = await dispatchAll(db, events);
 
-    expect(result.emailJobsEnqueued).toBe(2);
+    expect(result.emailJobsEnqueued).toBe(0);
     expect(result.notificationJobsEnqueued).toBe(2);
   });
 
