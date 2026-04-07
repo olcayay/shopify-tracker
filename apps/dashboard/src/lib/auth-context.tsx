@@ -59,6 +59,7 @@ export interface Account {
     platforms: number;
   };
   enabledPlatforms: string[];
+  enabledFeatures: string[];
 }
 
 export interface ImpersonationState {
@@ -358,6 +359,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setAccount({
           ...data.account,
           enabledPlatforms: data.enabledPlatforms ?? ["shopify"],
+          enabledFeatures: data.enabledFeatures ?? [],
         });
         if (data.impersonation) {
           setImpersonation(data.impersonation);

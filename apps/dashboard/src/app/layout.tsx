@@ -9,6 +9,7 @@ import { Toaster } from "sonner";
 import { ShortcutsHelp } from "@/components/shortcuts-help";
 import { CommandPalette } from "@/components/command-palette";
 import { PostHogProvider } from "@/components/posthog-provider";
+import { FeatureFlagsProvider } from "@/contexts/feature-flags-context";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -72,9 +73,11 @@ export default function RootLayout({
         </Suspense>
         <Providers>
           <AuthProvider>
-            {children}
-            <CommandPalette />
-            <PostHogProvider />
+            <FeatureFlagsProvider>
+              {children}
+              <CommandPalette />
+              <PostHogProvider />
+            </FeatureFlagsProvider>
           </AuthProvider>
         </Providers>
         <Toaster richColors closeButton position="bottom-right" />

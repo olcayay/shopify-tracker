@@ -43,6 +43,16 @@ PLA-794: Phase 3: API — feature flag evaluation in /auth/me & account detail
 - `/api/system-admin/accounts/:id` now returns `featureFlags` array with slug, name, isGloballyEnabled, enabledAt
 - 2 new tests: enabledFeatures in /auth/me, featureFlags in account detail
 
+PLA-795: Phase 4: Dashboard — feature flags context & provider
+- Created `apps/dashboard/src/contexts/feature-flags-context.tsx`
+- `FeatureFlagsProvider` reads `enabledFeatures` from auth context
+- `useFeatureFlags()` returns `{ enabledFeatures, hasFeature }`, `useFeatureFlag(slug)` convenience hook
+- System admins: `hasFeature()` always returns `true`
+- Regular users: Set-based lookup of account's enabled features
+- Added `enabledFeatures: string[]` to Account interface in auth-context.tsx
+- Mounted `FeatureFlagsProvider` inside `AuthProvider` in root layout
+- 8 unit tests: provider, hasFeature, system admin override, empty/null handling, outside provider throw
+
 Scraper Reliability (2026-04-07)
 ================================================================
 
