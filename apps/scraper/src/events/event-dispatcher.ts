@@ -197,7 +197,7 @@ export async function dispatch(db: any, event: DetectedEvent): Promise<DispatchR
           type: notifType as any,
           userId: user.userId,
           accountId: user.accountId,
-          payload: { ...event.data, eventType: event.type },
+          payload: { ...event.data, platform: event.platform, eventType: event.type },
           createdAt: now,
           sendPush: true,
         };
@@ -222,7 +222,7 @@ export async function dispatch(db: any, event: DetectedEvent): Promise<DispatchR
           name: user.name,
           userId: user.userId,
           accountId: user.accountId,
-          payload: { ...event.data, eventType: event.type },
+          payload: { ...event.data, platform: event.platform, eventType: event.type },
           createdAt: now,
         };
         await enqueueBulkEmail(emailData);

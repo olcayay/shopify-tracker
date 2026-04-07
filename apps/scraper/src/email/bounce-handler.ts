@@ -78,7 +78,7 @@ export async function refreshSuppressionList(db: Database): Promise<number> {
     SELECT DISTINCT recipient_email
     FROM email_logs
     WHERE (status = 'bounced' OR status = 'complained')
-      AND created_at >= ${cutoff}
+      AND created_at >= ${cutoff.toISOString()}
   `);
 
   const rows = (bounced as any).rows ?? bounced;
@@ -112,7 +112,7 @@ export async function getBounceStats(db: Database, days: number = 30): Promise<{
       COUNT(*) FILTER (WHERE status = 'complained') AS complaints
     FROM email_logs
     WHERE (status = 'bounced' OR status = 'complained')
-      AND created_at >= ${cutoff}
+      AND created_at >= ${cutoff.toISOString()}
   `);
 
   const row = (stats as any)?.rows?.[0] ?? stats;

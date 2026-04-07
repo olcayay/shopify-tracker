@@ -20,6 +20,12 @@ describe("platformLabel", () => {
   it("capitalizes unknown platforms", () => {
     expect(platformLabel("unknown")).toBe("Unknown");
   });
+
+  it("returns 'Unknown' for undefined/null/empty platform", () => {
+    expect(platformLabel(undefined as any)).toBe("Unknown");
+    expect(platformLabel(null as any)).toBe("Unknown");
+    expect(platformLabel("")).toBe("Unknown");
+  });
 });
 
 describe("platformSubjectPrefix", () => {

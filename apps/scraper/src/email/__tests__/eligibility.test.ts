@@ -213,6 +213,46 @@ describe("checkEligibility", () => {
     expect(result.eligible).toBe(true);
   });
 
+  it("passes ISO strings (not raw Date objects) to sql template in frequency cap", async () => {
+    // Intercept the drizzle sql tagged template to check for raw Date values
+    const { sql } = await import("drizzle-orm");
+    const sqlSpy = vi.spyOn({ sql }, "sql");
+
+    // The real check: verify the code uses .toISOString() by reading the source
+    const fs = await import("fs");
+    const source = fs.readFileSync(
+      new URL("../eligibility.ts", import.meta.url).pathname.replace("/eligibility.ts", "/eligibility.ts"),
+      "utf-8"
+    );
+
+    // Line with frequency cap should use .toISOString()
+    const freqCapLines = source.split("\n").filter(
+      (line) => line.includes("emailLogs.createdAt") && line.includes("since")
+    );
+    expect(freqCapLines.length).toBeGreaterThan(0);
+    for (const line of freqCapLines) {
+      expect(line).toContain(".toISOString()");
+    }
+
+    // Line with dedup check should use .toISOString()
+    const dedupLines = source.split("\n").filter(
+      (line) => line.includes("emailLogs.createdAt") && line.includes("oneHourAgo")
+    );
+    expect(dedupLines.length).toBeGreaterThan(0);
+    for (const line of dedupLines) {
+      expect(line).toContain(".toISOString()");
+    }
+
+    // Daily limit line should also use .toISOString()
+    const dailyLines = source.split("\n").filter(
+      (line) => line.includes("emailLogs.createdAt") && line.includes("todayMidnight")
+    );
+    expect(dailyLines.length).toBeGreaterThan(0);
+    for (const line of dailyLines) {
+      expect(line).toContain(".toISOString()");
+    }
+  });
+
   it("skips daily limit check for non-alert email types", async () => {
     const db = createMockDb([
       FLAG_ENABLED,

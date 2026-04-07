@@ -55,6 +55,10 @@ Scraper Reliability (2026-04-07)
 Smoke Test Reliability (2026-04-07)
   PLA-819: Smoke tests fail for all platforms due to DB dependency ✅
 
+Email Bug Fixes (2026-04-07)
+  PLA-859: Fix digest email crash: Date object passed to postgres.js sql template ✅
+  PLA-858: Fix email_win_celebration crash: platform field missing from payload ✅
+
 Dashboard Table Fixes (2026-04-07)
   PLA-855: Fix sticky table header on competitors page ✅
   PLA-853: Widen Apps column in Developer table on /developers page ✅

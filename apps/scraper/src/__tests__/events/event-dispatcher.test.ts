@@ -115,6 +115,21 @@ describe("dispatch", () => {
     expect(result.emailJobsEnqueued).toBe(1);
   });
 
+  it("includes platform field in email and notification payloads", async () => {
+    const users = [{ userId: "u1", accountId: "a1", email: "u1@test.com", name: "Alice" }];
+    const db = makeMockDb(users);
+    const event = makeEvent({ platform: "zendesk" });
+
+    await dispatch(db, event);
+
+    // Both email and notification payloads should include platform
+    const emailPayload = mockEnqueueBulkEmail.mock.calls[0][0].payload;
+    expect(emailPayload.platform).toBe("zendesk");
+
+    const notifPayload = mockEnqueueNotification.mock.calls[0][0].payload;
+    expect(notifPayload.platform).toBe("zendesk");
+  });
+
   it("sends only notification for keyword position events", async () => {
     const users = [{ userId: "u1", accountId: "a1", email: "u1@test.com", name: "Alice" }];
     const db = makeMockDb(users);

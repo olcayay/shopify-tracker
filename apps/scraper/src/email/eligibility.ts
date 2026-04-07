@@ -107,7 +107,7 @@ export async function checkEligibility(
         and(
           eq(emailLogs.emailType, emailType),
           eq(emailLogs.userId, userId),
-          sql`${emailLogs.createdAt} >= ${since}`,
+          sql`${emailLogs.createdAt} >= ${since.toISOString()}`,
           sql`${emailLogs.status} != 'failed'`
         )
       );
@@ -127,7 +127,7 @@ export async function checkEligibility(
         and(
           eq(emailLogs.emailType, emailType),
           eq(emailLogs.userId, userId),
-          sql`${emailLogs.createdAt} >= ${oneHourAgo}`,
+          sql`${emailLogs.createdAt} >= ${oneHourAgo.toISOString()}`,
           sql`${emailLogs.dataSnapshot}->>'deduplicationKey' = ${params.deduplicationKey}`
         )
       );

@@ -35,6 +35,7 @@ const PLATFORM_LABELS: Record<string, string> = {
 
 /** Get human-readable platform label */
 export function platformLabel(platform: string): string {
+  if (!platform) return "Unknown";
   return PLATFORM_LABELS[platform] || platform.charAt(0).toUpperCase() + platform.slice(1);
 }
 
