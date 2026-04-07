@@ -25,7 +25,7 @@ export const notificationAnalyticsRoutes: FastifyPluginAsync = async (app) => {
         COUNT(*) FILTER (WHERE push_dismissed = true)::int AS push_dismissed,
         COUNT(*) FILTER (WHERE is_archived = true)::int AS archived
       FROM notifications
-      WHERE created_at >= ${cutoff}
+      WHERE created_at >= ${cutoff.toISOString()}
     `);
     const row = (result as any)?.rows?.[0] ?? result;
     const total = Number(row?.total || 0);
@@ -57,7 +57,7 @@ export const notificationAnalyticsRoutes: FastifyPluginAsync = async (app) => {
         COUNT(*) FILTER (WHERE is_read = true)::int AS read_count,
         COUNT(*) FILTER (WHERE push_sent = true)::int AS push_sent
       FROM notifications
-      WHERE created_at >= ${cutoff}
+      WHERE created_at >= ${cutoff.toISOString()}
       GROUP BY 1
       ORDER BY 1
     `);
@@ -80,7 +80,7 @@ export const notificationAnalyticsRoutes: FastifyPluginAsync = async (app) => {
         COUNT(*) FILTER (WHERE push_sent = true)::int AS push_sent,
         COUNT(*) FILTER (WHERE push_clicked = true)::int AS push_clicked
       FROM notifications
-      WHERE created_at >= ${cutoff}
+      WHERE created_at >= ${cutoff.toISOString()}
       GROUP BY type, category
       ORDER BY total DESC
     `);

@@ -28,7 +28,7 @@ export const emailAnalyticsRoutes: FastifyPluginAsync = async (app) => {
         COUNT(*) FILTER (WHERE status = 'failed') AS failed,
         COUNT(*) AS total
       FROM email_logs
-      WHERE created_at >= ${cutoff}
+      WHERE created_at >= ${cutoff.toISOString()}
     `);
 
     const row = (result as any)?.rows?.[0] ?? result;
@@ -71,7 +71,7 @@ export const emailAnalyticsRoutes: FastifyPluginAsync = async (app) => {
         COUNT(*) FILTER (WHERE status = 'bounced') AS bounced,
         COUNT(*) FILTER (WHERE status = 'failed') AS failed
       FROM email_logs
-      WHERE created_at >= ${cutoff}
+      WHERE created_at >= ${cutoff.toISOString()}
       GROUP BY 1
       ORDER BY 1
     `);
@@ -97,7 +97,7 @@ export const emailAnalyticsRoutes: FastifyPluginAsync = async (app) => {
         COUNT(*) FILTER (WHERE status = 'bounced') AS bounced,
         COUNT(*) FILTER (WHERE status = 'failed') AS failed
       FROM email_logs
-      WHERE created_at >= ${cutoff}
+      WHERE created_at >= ${cutoff.toISOString()}
       GROUP BY email_type
       ORDER BY COUNT(*) DESC
     `);
@@ -137,7 +137,7 @@ export const emailAnalyticsRoutes: FastifyPluginAsync = async (app) => {
         COUNT(*) AS opens
       FROM email_logs
       WHERE opened_at IS NOT NULL
-        AND opened_at >= ${cutoff}
+        AND opened_at >= ${cutoff.toISOString()}
       GROUP BY 1, 2
       ORDER BY 1, 2
     `);

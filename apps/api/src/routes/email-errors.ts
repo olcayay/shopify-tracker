@@ -34,7 +34,7 @@ export const emailErrorRoutes: FastifyPluginAsync = async (app) => {
         message_id, created_at, sent_at, bounced_at
       FROM email_logs
       WHERE status = 'failed'
-        AND created_at >= ${cutoff}
+        AND created_at >= ${cutoff.toISOString()}
         ${sql.raw(categoryFilter)}
       ORDER BY created_at DESC
       LIMIT ${pageSize}
@@ -65,7 +65,7 @@ export const emailErrorRoutes: FastifyPluginAsync = async (app) => {
         COUNT(*)::int AS count
       FROM email_logs
       WHERE status = 'failed'
-        AND created_at >= ${cutoff}
+        AND created_at >= ${cutoff.toISOString()}
       GROUP BY 1
       ORDER BY count DESC
     `);
@@ -88,7 +88,7 @@ export const emailErrorRoutes: FastifyPluginAsync = async (app) => {
         COUNT(DISTINCT email_type)::int AS types_affected
       FROM email_logs
       WHERE status = 'failed'
-        AND created_at >= ${cutoff}
+        AND created_at >= ${cutoff.toISOString()}
       GROUP BY 1
       ORDER BY 1
     `);

@@ -68,7 +68,7 @@ export const emailAlertRoutes: FastifyPluginAsync = async (app) => {
     const logs = await db
       .select()
       .from(emailAlertsLog)
-      .where(sql`${emailAlertsLog.createdAt} >= ${cutoff}`)
+      .where(sql`${emailAlertsLog.createdAt} >= ${cutoff.toISOString()}`)
       .orderBy(desc(emailAlertsLog.createdAt))
       .limit(pageSize);
 

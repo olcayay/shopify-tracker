@@ -122,7 +122,7 @@ export const adminNotificationRoutes: FastifyPluginAsync = async (app) => {
     const [stats] = await db.execute(sql`
       SELECT
         count(*)::int AS total,
-        count(*) FILTER (WHERE created_at < ${cutoff})::int AS expired
+        count(*) FILTER (WHERE created_at < ${cutoff.toISOString()})::int AS expired
       FROM notifications
     `);
 

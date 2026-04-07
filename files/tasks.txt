@@ -1,3 +1,6 @@
+Date Serialization Fixes (2026-04-07)
+  PLA-867: Fix remaining raw Date objects in sql templates (email-analytics, email-errors, notification-analytics, email-alerts, admin-notifications) ✅
+
 Email System Overhaul — Alert Safeguards & Fixes (2026-04-07)
   PLA-829: Phase 0: Fix digest email platform lock timeout ✅
   PLA-830: Phase 0: Fix digest builder Date serialization error ✅

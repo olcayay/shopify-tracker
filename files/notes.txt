@@ -1,3 +1,18 @@
+Date Serialization in SQL Templates — Remaining Fixes (2026-04-07)
+================================================================
+
+PLA-867: Fix remaining raw Date objects in sql tagged template literals
+- Prior commits (0042bf77, 47bacd8c) fixed sql templates in bounce-handler, eligibility,
+  event-dispatcher, suppression, notification-stream
+- This fix covers 13 remaining locations across 5 files where `const cutoff = new Date()`
+  was interpolated into sql`` templates without .toISOString()
+- Affected files: email-analytics.ts (4), email-errors.ts (3), notification-analytics.ts (3),
+  email-alerts.ts (1), admin-notifications.ts (1)
+- Root cause: Buffer.byteLength() in postgres-js driver rejects Date objects in sql template
+  interpolation — must be ISO strings. Note: Drizzle .set()/.values() handle Date objects fine.
+- Added regression test (sql-date-serialization.test.ts) that scans source files for raw Date
+  objects in sql templates to prevent future regressions
+
 Feature Flags — User-Level Support (2026-04-07)
 ================================================================
 
