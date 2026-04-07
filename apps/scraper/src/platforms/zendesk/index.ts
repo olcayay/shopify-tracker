@@ -32,11 +32,11 @@ const log = createLogger("zendesk");
  * Key architectural notes:
  * - Categories & search use Algolia API directly (no browser needed)
  * - App detail pages still use BrowserClient (Cloudflare blocks HTTP)
+ * - Reviews use REST API v2: marketplace.zendesk.com/api/v2/apps/{id}/reviews.json (no browser needed)
  * - App URL: /marketplace/apps/{product}/{numericId}/{text-slug}/
  * - Slug format: {numericId}--{text-slug}
  * - Product type (support/sell/chat) stored in externalId for URL reconstruction
  * - 16 flat categories, no hierarchy
- * - Reviews are on the app detail page
  * - Featured sections on homepage
  */
 export class ZendeskModule implements PlatformModule {
@@ -186,10 +186,55 @@ export class ZendeskModule implements PlatformModule {
     );
   }
 
-  async fetchReviewPage(slug: string): Promise<string | null> {
-    // Reviews are on the app detail page
-    return this.fetchAppPage(slug);
+  /**
+   * Fetch reviews via Zendesk Marketplace REST API v2 — no browser needed.
+   * API: marketplace.zendesk.com/api/v2/apps/{numericId}/reviews.json
+   * Returns JSON string with { reviews, count, next_url }.
+   */
+  async fetchReviewPage(slug: string, page?: number): Promise<string | null> {
+    const numericId = slug.split("--")[0];
+    if (!numericId || !/^\d+$/.test(numericId)) {
+      log.warn("invalid slug for review fetch, no numeric ID", { slug });
+      return null;
+    }
+
+    let url = `https://marketplace.zendesk.com/api/v2/apps/${numericId}/reviews.json`;
+
+    // For pagination, the page parameter represents which page to fetch.
+    // The review scraper passes page numbers starting at 1.
+    // We store the next_url in a per-slug cache for pagination.
+    if (page && page > 1 && this._reviewPaginationUrls.has(slug)) {
+      url = this._reviewPaginationUrls.get(slug)!;
+    }
+
+    log.info("fetching reviews via REST API", { slug, numericId, page: page ?? 1, url: url.slice(0, 120) });
+
+    const resp = await fetch(url, {
+      headers: { Accept: "application/json" },
+    });
+
+    if (!resp.ok) {
+      log.error("review API request failed", { slug, status: resp.status, statusText: resp.statusText });
+      return null;
+    }
+
+    const json = await resp.text();
+
+    // Store next_url for pagination
+    try {
+      const data = JSON.parse(json);
+      if (data.next_url) {
+        this._reviewPaginationUrls.set(slug, data.next_url);
+      } else {
+        this._reviewPaginationUrls.delete(slug);
+      }
+    } catch { /* ignore parse errors */ }
+
+    return json;
   }
+
+  /** Pagination URL cache for review pages (per slug) */
+  private _reviewPaginationUrls = new Map<string, string>();
 
   // --- Parse ---
 

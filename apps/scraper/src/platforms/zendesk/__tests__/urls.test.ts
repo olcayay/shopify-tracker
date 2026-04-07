@@ -123,22 +123,22 @@ describe("zendeskUrls", () => {
   });
 
   describe("reviews", () => {
-    it("returns the same URL as app detail (reviews are on the app page)", () => {
+    it("builds REST API review URL from slug", () => {
       expect(zendeskUrls.reviews("972305--slack")).toBe(
-        "https://www.zendesk.com/marketplace/apps/support/972305/slack/",
+        "https://marketplace.zendesk.com/api/v2/apps/972305/reviews.json",
       );
     });
 
-    it("uses specified product in reviews URL", () => {
+    it("extracts numeric ID from slug for API URL", () => {
+      expect(zendeskUrls.reviews("849231--stylo-assist")).toBe(
+        "https://marketplace.zendesk.com/api/v2/apps/849231/reviews.json",
+      );
+    });
+
+    it("ignores product parameter (API is product-agnostic)", () => {
       expect(zendeskUrls.reviews("972305--slack", "chat")).toBe(
-        "https://www.zendesk.com/marketplace/apps/chat/972305/slack/",
+        "https://marketplace.zendesk.com/api/v2/apps/972305/reviews.json",
       );
-    });
-
-    it("matches app URL for the same slug and product", () => {
-      const slug = "849231--stylo-assist";
-      const product = "support";
-      expect(zendeskUrls.reviews(slug, product)).toBe(zendeskUrls.app(slug, product));
     });
   });
 });

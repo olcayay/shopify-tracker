@@ -1,71 +1,63 @@
-import * as cheerio from "cheerio";
-import { createLogger, safeParseFloat } from "@appranks/shared";
+import { createLogger } from "@appranks/shared";
 import type { NormalizedReviewPage, NormalizedReview } from "../../platform-module.js";
 
 const log = createLogger("zendesk:review-parser");
 
 /**
- * Parse reviews from a Zendesk Marketplace app detail page.
+ * Parse reviews from the Zendesk Marketplace REST API v2 response.
  *
- * Reviews are displayed on the app detail page itself.
- * The page is rendered via Playwright (Cloudflare).
+ * API endpoint: marketplace.zendesk.com/api/v2/apps/{numericId}/reviews.json
+ * Returns: { reviews: [...], count, links: { next }, next_url }
+ *
+ * Each review object:
+ *   id, app_id, rating (1-5), review (text), state, time_ago,
+ *   created_at, updated_at, user_details?: { name, subdomain }
  */
 export function parseZendeskReviewPage(
-  html: string,
+  json: string,
   page: number,
 ): NormalizedReviewPage {
-  const $ = cheerio.load(html);
+  let data: any;
+  try {
+    data = JSON.parse(json);
+  } catch {
+    log.error("failed to parse review API response as JSON", { page });
+    return { reviews: [], hasNextPage: false, currentPage: page };
+  }
+
+  const rawReviews = data.reviews || [];
   const reviews: NormalizedReview[] = [];
 
-  // Look for review containers — common patterns in marketplace pages
-  $("[class*='review'], [class*='Review'], [data-review]").each((_i, el) => {
-    const reviewEl = $(el);
+  for (const r of rawReviews) {
+    if (!r || r.state !== "published") continue;
 
-    // Skip containers that are just review summaries/headers
-    if (reviewEl.find("[class*='review'], [class*='Review']").length > 1) return;
-
-    // Reviewer name
-    const reviewerName = reviewEl.find("[class*='reviewer'], [class*='author'], [class*='Reviewer'], [class*='Author']").first().text().trim()
-      || "Anonymous";
-
-    // Rating
-    const ratingText = reviewEl.find("[class*='rating'], [class*='stars'], [class*='Rating']").first().attr("data-rating")
-      || reviewEl.find("[class*='rating'], [class*='stars']").first().text().trim();
-    const ratingMatch = ratingText?.match(/([\d.]+)/);
-    const rating = safeParseFloat(ratingMatch?.[1], 0)!;
-    if (rating === 0) return; // Skip if no rating found (likely not a review element)
-
-    // Review content
-    const content = reviewEl.find("[class*='content'], [class*='body'], [class*='text'], [class*='Content'], [class*='Body'], p").first().text().trim()
-      || "";
-
-    // Date
-    const dateText = reviewEl.find("[class*='date'], [class*='Date'], time").first().text().trim()
-      || reviewEl.find("time").first().attr("datetime")
-      || "";
-
-    // Developer reply
-    const replyEl = reviewEl.find("[class*='reply'], [class*='Reply'], [class*='response'], [class*='Response']").first();
-    const developerReplyText = replyEl.text().trim() || null;
-    const developerReplyDate = replyEl.find("time, [class*='date']").first().text().trim() || null;
+    const rating = Number(r.rating);
+    if (!rating || rating < 1 || rating > 5) continue;
 
     reviews.push({
-      reviewDate: dateText,
-      content,
-      reviewerName,
+      reviewDate: r.created_at || "",
+      content: r.review || "",
+      reviewerName: r.user_details?.name || "Anonymous",
       reviewerCountry: "",
       durationUsingApp: "",
       rating,
-      developerReplyDate,
-      developerReplyText,
+      developerReplyDate: null,
+      developerReplyText: null,
     });
-  });
+  }
 
-  log.info("parsed reviews", { reviewsFound: reviews.length, page });
+  const hasNextPage = !!data.next_url;
+
+  log.info("parsed reviews from API", {
+    reviewsFound: reviews.length,
+    totalCount: data.count,
+    page,
+    hasNextPage,
+  });
 
   return {
     reviews,
-    hasNextPage: false, // Reviews are on the same page
+    hasNextPage,
     currentPage: page,
   };
 }

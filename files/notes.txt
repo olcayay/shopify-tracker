@@ -13,6 +13,21 @@ PLA-867: Fix remaining raw Date objects in sql tagged template literals
 - Added regression test (sql-date-serialization.test.ts) that scans source files for raw Date
   objects in sql templates to prevent future regressions
 
+Zendesk Review Scraper — Switch to REST API (2026-04-07)
+================================================================
+
+PLA-866: Fix Zendesk review scraper failure
+- Root cause: CSS selectors in review-parser.ts were speculative and never matched
+  real Zendesk DOM (React SPA behind Cloudflare). Browser scraping yielded 0 reviews.
+- Solution: Switched from BrowserClient (Playwright) to Zendesk Marketplace REST API v2:
+  `marketplace.zendesk.com/api/v2/apps/{numericId}/reviews.json`
+- API returns: id, rating (1-5), review text, created_at, user_details.name
+- Pagination via next_url (since_id cursor-based), 5 reviews per page
+- No Cloudflare blocking on the API endpoint
+- Eliminated browser overhead entirely for review scraping
+- Updated: review-parser.ts (JSON parsing), index.ts (API fetch), urls.ts (API URL)
+- 11 new tests replacing 7 old tests (now testing JSON API response parsing)
+
 Feature Flags — User-Level Support (2026-04-07)
 ================================================================
 

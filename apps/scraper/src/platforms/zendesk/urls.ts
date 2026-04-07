@@ -28,10 +28,9 @@ export const zendeskUrls = {
   /** Homepage (for featured sections): /marketplace/apps/ */
   homepage: () => `${BASE_URL}/apps/`,
 
-  /** Review page (reviews are on the app detail page) */
-  reviews: (slug: string, product = "support") => {
-    const [id, ...rest] = slug.split("--");
-    const textSlug = rest.join("-");
-    return `${BASE_URL}/apps/${product}/${id}/${textSlug}/`;
+  /** Review API endpoint */
+  reviews: (slug: string, _product = "support") => {
+    const [id] = slug.split("--");
+    return `https://marketplace.zendesk.com/api/v2/apps/${id}/reviews.json`;
   },
 } as const;

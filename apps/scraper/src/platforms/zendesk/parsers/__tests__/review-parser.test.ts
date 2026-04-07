@@ -2,159 +2,160 @@ import { describe, it, expect } from "vitest";
 import { parseZendeskReviewPage } from "../review-parser.js";
 
 /**
- * Build HTML that matches the parser's selectors:
- * - Container: [class*='review'] (but only one level deep so container check passes)
- * - Reviewer name: [class*='author']
- * - Rating: [class*='rating'] with data-rating attr
- * - Content: [class*='body']
- * - Date: time element
- * - Reply: [class*='reply']
+ * Build a Zendesk Marketplace REST API v2 review response.
+ * Mirrors the real API shape: { reviews, count, links, next_url }
  */
-function makeReviewHtml(reviews: Array<{
-  reviewerName?: string;
-  rating?: string;
-  content?: string;
-  date?: string;
-  replyText?: string;
-  replyDate?: string;
-}> = []): string {
-  const reviewHtml = reviews.map((r) => `
-    <div class="user-review-card">
-      <span class="author-name">${r.reviewerName ?? ""}</span>
-      <span class="rating-stars" data-rating="${r.rating ?? ""}">${r.rating ?? ""}</span>
-      <p class="body-text">${r.content ?? ""}</p>
-      <time datetime="${r.date ?? ""}">${r.date ?? ""}</time>
-      ${r.replyText ? `
-        <div class="dev-reply">
-          <p>${r.replyText}</p>
-          <time datetime="${r.replyDate ?? ""}">${r.replyDate ?? ""}</time>
-        </div>
-      ` : ""}
-    </div>
-  `).join("");
+function makeReviewJson(
+  reviews: Array<{
+    id?: number;
+    rating?: number;
+    review?: string;
+    state?: string;
+    created_at?: string;
+    userName?: string;
+  }> = [],
+  opts?: { nextUrl?: string; count?: number },
+): string {
+  const apiReviews = reviews.map((r, i) => ({
+    id: r.id ?? 90000 + i,
+    app_id: 976803,
+    subject_id: 976803,
+    subject_type: "App",
+    rating: r.rating ?? 5,
+    review: r.review ?? "",
+    state: r.state ?? "published",
+    time_ago: "3 months",
+    created_at: r.created_at ?? "2025-11-24T00:46:32Z",
+    updated_at: r.created_at ?? "2025-11-24T00:46:32Z",
+    ...(r.userName ? { user_details: { name: r.userName, subdomain: "test.zendesk.com" } } : {}),
+  }));
 
-  return `<html><body>${reviewHtml}</body></html>`;
+  return JSON.stringify({
+    reviews: apiReviews,
+    count: opts?.count ?? reviews.length,
+    links: opts?.nextUrl ? { next: opts.nextUrl } : {},
+    next_url: opts?.nextUrl ?? null,
+  });
 }
 
 describe("parseZendeskReviewPage", () => {
-  it("should parse reviews from rendered HTML", () => {
-    const html = makeReviewHtml([
-      {
-        reviewerName: "John Doe",
-        rating: "4.5",
-        content: "Great app, works perfectly!",
-        date: "2024-01-15",
-      },
-      {
-        reviewerName: "Jane Smith",
-        rating: "3",
-        content: "Decent but needs improvement.",
-        date: "2024-02-20",
-      },
+  it("parses reviews from API JSON", () => {
+    const json = makeReviewJson([
+      { rating: 5, review: "Great app, works perfectly!", userName: "John Doe", created_at: "2024-01-15T10:00:00Z" },
+      { rating: 3, review: "Decent but needs improvement.", userName: "Jane Smith", created_at: "2024-02-20T14:30:00Z" },
     ]);
 
-    const result = parseZendeskReviewPage(html, 1);
+    const result = parseZendeskReviewPage(json, 1);
 
     expect(result.reviews).toHaveLength(2);
     expect(result.hasNextPage).toBe(false);
     expect(result.currentPage).toBe(1);
   });
 
-  it("should parse review details correctly", () => {
-    const html = makeReviewHtml([
-      {
-        reviewerName: "Alice",
-        rating: "5",
-        content: "Absolutely fantastic!",
-        date: "2024-03-10",
-      },
+  it("parses review details correctly", () => {
+    const json = makeReviewJson([
+      { rating: 5, review: "Absolutely fantastic!", userName: "Alice", created_at: "2024-03-10T08:00:00Z" },
     ]);
 
-    const result = parseZendeskReviewPage(html, 1);
+    const result = parseZendeskReviewPage(json, 1);
     const r = result.reviews[0];
 
     expect(r.reviewerName).toBe("Alice");
     expect(r.rating).toBe(5);
     expect(r.content).toBe("Absolutely fantastic!");
-    expect(r.reviewDate).toBe("2024-03-10");
+    expect(r.reviewDate).toBe("2024-03-10T08:00:00Z");
     expect(r.reviewerCountry).toBe("");
     expect(r.durationUsingApp).toBe("");
     expect(r.developerReplyText).toBeNull();
     expect(r.developerReplyDate).toBeNull();
   });
 
-  it("should parse developer reply", () => {
-    const html = makeReviewHtml([
-      {
-        reviewerName: "Bob",
-        rating: "2",
-        content: "Not great.",
-        date: "2024-04-01",
-        replyText: "We are sorry to hear that. Please contact support.",
-        replyDate: "2024-04-02",
-      },
+  it("defaults reviewerName to Anonymous when no user_details", () => {
+    const json = makeReviewJson([
+      { rating: 4, review: "Nice app" },
     ]);
 
-    const result = parseZendeskReviewPage(html, 1);
-    const r = result.reviews[0];
-
-    expect(r.developerReplyText).toContain("We are sorry to hear that");
-    expect(r.developerReplyDate).toBe("2024-04-02");
-  });
-
-  it("should skip elements without a valid rating (rating=0)", () => {
-    const html = makeReviewHtml([
-      { reviewerName: "No Rating", rating: "", content: "Missing rating" },
-      { reviewerName: "Valid", rating: "4", content: "Has rating" },
-    ]);
-
-    const result = parseZendeskReviewPage(html, 1);
-
-    // First item has no valid rating and should be skipped
-    const validReviews = result.reviews.filter((r) => r.rating > 0);
-    expect(validReviews.length).toBe(1);
-    expect(validReviews[0].reviewerName).toBe("Valid");
-  });
-
-  it("should default reviewerName to Anonymous when no author element", () => {
-    // Build manually without author-name span
-    const html = `<html><body>
-      <div class="user-review-card">
-        <span class="rating-stars" data-rating="3">3</span>
-        <p class="body-text">Anonymous review</p>
-      </div>
-    </body></html>`;
-
-    const result = parseZendeskReviewPage(html, 1);
-    expect(result.reviews.length).toBe(1);
+    const result = parseZendeskReviewPage(json, 1);
     expect(result.reviews[0].reviewerName).toBe("Anonymous");
   });
 
-  it("should handle empty HTML with no reviews", () => {
-    const html = "<html><body><p>No reviews yet</p></body></html>";
-    const result = parseZendeskReviewPage(html, 1);
+  it("skips reviews with invalid ratings", () => {
+    const json = makeReviewJson([
+      { rating: 0, review: "Bad rating" },
+      { rating: 4, review: "Valid review", userName: "Valid" },
+      { rating: 6, review: "Out of range" },
+    ]);
+
+    const result = parseZendeskReviewPage(json, 1);
+    expect(result.reviews).toHaveLength(1);
+    expect(result.reviews[0].reviewerName).toBe("Valid");
+  });
+
+  it("skips non-published reviews", () => {
+    const json = makeReviewJson([
+      { rating: 5, review: "Published", state: "published" },
+      { rating: 5, review: "Pending", state: "pending" },
+      { rating: 5, review: "Removed", state: "removed" },
+    ]);
+
+    const result = parseZendeskReviewPage(json, 1);
+    expect(result.reviews).toHaveLength(1);
+    expect(result.reviews[0].content).toBe("Published");
+  });
+
+  it("handles empty reviews array", () => {
+    const json = makeReviewJson([]);
+    const result = parseZendeskReviewPage(json, 1);
 
     expect(result.reviews).toHaveLength(0);
     expect(result.hasNextPage).toBe(false);
     expect(result.currentPage).toBe(1);
   });
 
-  it("should always set hasNextPage to false (reviews on same page)", () => {
-    const html = makeReviewHtml([
-      { reviewerName: "User", rating: "5", content: "Test" },
-    ]);
+  it("detects hasNextPage when next_url is present", () => {
+    const json = makeReviewJson(
+      [{ rating: 5, review: "Review 1" }],
+      { nextUrl: "https://marketplace.zendesk.com/api/v2/apps/976803/reviews.json?since_id=123", count: 15 },
+    );
 
-    const result1 = parseZendeskReviewPage(html, 1);
-    expect(result1.hasNextPage).toBe(false);
-
-    const result2 = parseZendeskReviewPage(html, 2);
-    expect(result2.hasNextPage).toBe(false);
+    const result = parseZendeskReviewPage(json, 1);
+    expect(result.hasNextPage).toBe(true);
   });
 
-  it("should preserve the page number in currentPage", () => {
-    const html = makeReviewHtml([]);
+  it("sets hasNextPage to false when no next_url", () => {
+    const json = makeReviewJson(
+      [{ rating: 5, review: "Last page" }],
+      { count: 1 },
+    );
 
-    expect(parseZendeskReviewPage(html, 1).currentPage).toBe(1);
-    expect(parseZendeskReviewPage(html, 3).currentPage).toBe(3);
+    const result = parseZendeskReviewPage(json, 1);
+    expect(result.hasNextPage).toBe(false);
+  });
+
+  it("preserves the page number in currentPage", () => {
+    const json = makeReviewJson([]);
+
+    expect(parseZendeskReviewPage(json, 1).currentPage).toBe(1);
+    expect(parseZendeskReviewPage(json, 3).currentPage).toBe(3);
+  });
+
+  it("handles invalid JSON gracefully", () => {
+    const result = parseZendeskReviewPage("not-valid-json", 1);
+    expect(result.reviews).toHaveLength(0);
+    expect(result.hasNextPage).toBe(false);
+  });
+
+  it("handles API response with total count > returned reviews", () => {
+    const json = makeReviewJson(
+      [
+        { rating: 5, review: "Review A" },
+        { rating: 4, review: "Review B" },
+      ],
+      { count: 50, nextUrl: "https://marketplace.zendesk.com/api/v2/apps/976803/reviews.json?page=2" },
+    );
+
+    const result = parseZendeskReviewPage(json, 1);
+    expect(result.reviews).toHaveLength(2);
+    expect(result.hasNextPage).toBe(true);
   });
 });
