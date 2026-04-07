@@ -8,6 +8,7 @@ vi.mock("../eligibility.js", () => ({
 // Mock the email-logger module
 vi.mock("../email-logger.js", () => ({
   logEmailAttempt: vi.fn().mockResolvedValue("log-id-1"),
+  logSkippedEmail: vi.fn().mockResolvedValue("skip-log-id-1"),
   updateEmailStatus: vi.fn().mockResolvedValue(undefined),
 }));
 
@@ -18,7 +19,7 @@ vi.mock("../../mailer.js", () => ({
 
 import { sendEmail } from "../pipeline.js";
 import { checkEligibility } from "../eligibility.js";
-import { logEmailAttempt, updateEmailStatus } from "../email-logger.js";
+import { logEmailAttempt, logSkippedEmail, updateEmailStatus } from "../email-logger.js";
 
 const mockDb = {};
 
@@ -46,6 +47,12 @@ describe("Email send pipeline", () => {
     expect(result.sent).toBe(false);
     expect(result.skipReason).toBe("user opted out");
     expect(logEmailAttempt).not.toHaveBeenCalled();
+    expect(logSkippedEmail).toHaveBeenCalledWith(mockDb, expect.objectContaining({
+      emailType: "daily_digest",
+      userId: "user-1",
+      skipReason: "user opted out",
+    }));
+    expect(result.logId).toBe("skip-log-id-1");
   });
 
   it("sends when eligible and logs to DB", async () => {
@@ -124,6 +131,57 @@ describe("Email send pipeline", () => {
     }));
     expect(logEmailAttempt).toHaveBeenCalledWith(mockDb, expect.objectContaining({
       dataSnapshot: expect.objectContaining({ deduplicationKey: "ranking:app1:cat1" }),
+    }));
+  });
+
+  it("logs skipped email with correct skip reason variants", async () => {
+    // Test frequency cap skip
+    vi.mocked(checkEligibility).mockResolvedValue({
+      eligible: false,
+      skipReason: "frequency cap: last sent 30min ago",
+    });
+
+    const result = await sendEmail({
+      db: mockDb,
+      emailType: "daily_digest",
+      userId: "user-2",
+      accountId: "acc-2",
+      recipientEmail: "user2@example.com",
+      subject: "Daily Digest",
+      htmlBody: "<p>Digest</p>",
+      dataSnapshot: { digestDate: "2026-04-07" },
+    });
+
+    expect(result.sent).toBe(false);
+    expect(logSkippedEmail).toHaveBeenCalledWith(mockDb, expect.objectContaining({
+      emailType: "daily_digest",
+      userId: "user-2",
+      accountId: "acc-2",
+      recipientEmail: "user2@example.com",
+      subject: "Daily Digest",
+      skipReason: "frequency cap: last sent 30min ago",
+      dataSnapshot: { digestDate: "2026-04-07" },
+    }));
+  });
+
+  it("logs skipped email with fallback reason when skipReason is undefined", async () => {
+    vi.mocked(checkEligibility).mockResolvedValue({
+      eligible: false,
+    });
+
+    const result = await sendEmail({
+      db: mockDb,
+      emailType: "daily_digest",
+      userId: "user-3",
+      accountId: "acc-3",
+      recipientEmail: "user3@example.com",
+      subject: "Daily Digest",
+      htmlBody: "<p>Digest</p>",
+    });
+
+    expect(result.sent).toBe(false);
+    expect(logSkippedEmail).toHaveBeenCalledWith(mockDb, expect.objectContaining({
+      skipReason: "eligibility check failed",
     }));
   });
 });

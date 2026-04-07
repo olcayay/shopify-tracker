@@ -487,6 +487,7 @@ export function createProcessJob(db: ReturnType<typeof createDb>, queueName?: st
         const { getDigestRecipients, buildDigestForAccount } = await import("./email/digest-builder.js");
         const { buildDigestHtml, buildDigestSubject } = await import("./email/digest-template.js");
         const { sendEmail } = await import("./email/pipeline.js");
+        const { logSkippedEmail } = await import("./email/email-logger.js");
         const { eq: eqOp } = await import("drizzle-orm");
         const { users: usersTable } = await import("@appranks/db");
 
@@ -499,12 +500,30 @@ export function createProcessJob(db: ReturnType<typeof createDb>, queueName?: st
 
           if (!targetUser) {
             log.warn("user not found for manual digest", { userId: job.data.userId });
+            await logSkippedEmail(db, {
+              emailType: "daily_digest",
+              userId: job.data.userId,
+              recipientEmail: "unknown",
+              subject: "[Skipped] Daily Digest",
+              skipReason: `User not found (ID: ${job.data.userId})`,
+              dataSnapshot: { triggeredBy: job.data.triggeredBy },
+            });
             break;
           }
 
           const data = await buildDigestForAccount(db, targetUser.accountId);
           if (!data) {
             log.info("no digest data for user's account", { userId: targetUser.id, accountId: targetUser.accountId });
+            await logSkippedEmail(db, {
+              emailType: "daily_digest",
+              userId: targetUser.id,
+              accountId: targetUser.accountId,
+              recipientEmail: targetUser.email,
+              recipientName: targetUser.name,
+              subject: "[Skipped] Daily Digest",
+              skipReason: "No digest data: account has no tracked keywords or no ranking changes",
+              dataSnapshot: { accountId: targetUser.accountId, triggeredBy: job.data.triggeredBy },
+            });
             break;
           }
 
@@ -535,12 +554,28 @@ export function createProcessJob(db: ReturnType<typeof createDb>, queueName?: st
 
           if (accountUsers.length === 0) {
             log.warn("no users found for account digest", { accountId: job.data.accountId });
+            await logSkippedEmail(db, {
+              emailType: "daily_digest",
+              accountId: job.data.accountId,
+              recipientEmail: "unknown",
+              subject: "[Skipped] Daily Digest",
+              skipReason: `No users found for account (ID: ${job.data.accountId})`,
+              dataSnapshot: { triggeredBy: job.data.triggeredBy },
+            });
             break;
           }
 
           const data = await buildDigestForAccount(db, job.data.accountId);
           if (!data) {
             log.info("no digest data for account", { accountId: job.data.accountId });
+            await logSkippedEmail(db, {
+              emailType: "daily_digest",
+              accountId: job.data.accountId,
+              recipientEmail: accountUsers.map((u) => u.email).join(", "),
+              subject: "[Skipped] Daily Digest",
+              skipReason: "No digest data: account has no tracked keywords or no ranking changes",
+              dataSnapshot: { accountId: job.data.accountId, triggeredBy: job.data.triggeredBy },
+            });
             break;
           }
 

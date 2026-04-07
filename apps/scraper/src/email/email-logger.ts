@@ -37,6 +37,26 @@ export async function logEmailAttempt(db: any, params: LogEmailParams): Promise<
   return row.id;
 }
 
+/** Log a skipped email to the database for admin visibility */
+export async function logSkippedEmail(db: any, params: LogEmailParams & { skipReason: string }): Promise<string> {
+  const [row] = await db
+    .insert(emailLogs)
+    .values({
+      emailType: params.emailType,
+      userId: params.userId,
+      accountId: params.accountId,
+      recipientEmail: params.recipientEmail,
+      recipientName: params.recipientName,
+      subject: params.subject || `[Skipped] ${params.emailType}`,
+      dataSnapshot: params.dataSnapshot,
+      status: "skipped",
+      errorMessage: params.skipReason,
+    })
+    .returning({ id: emailLogs.id });
+
+  return row.id;
+}
+
 /** Update email log status after send attempt */
 export async function updateEmailStatus(
   db: any,

@@ -1,6 +1,6 @@
 import { createLogger } from "@appranks/shared";
 import { checkEligibility } from "./eligibility.js";
-import { logEmailAttempt, updateEmailStatus } from "./email-logger.js";
+import { logEmailAttempt, logSkippedEmail, updateEmailStatus } from "./email-logger.js";
 import {
   generateUnsubscribeToken,
   injectTracking,
@@ -56,7 +56,17 @@ export async function sendEmail(params: SendEmailParams): Promise<SendEmailResul
 
   if (!eligibility.eligible) {
     log.info("email skipped", { emailType, userId, reason: eligibility.skipReason });
-    return { sent: false, skipReason: eligibility.skipReason };
+    const skipLogId = await logSkippedEmail(db, {
+      emailType,
+      userId,
+      accountId,
+      recipientEmail,
+      recipientName: params.recipientName,
+      subject,
+      dataSnapshot: params.dataSnapshot,
+      skipReason: eligibility.skipReason || "eligibility check failed",
+    });
+    return { sent: false, skipReason: eligibility.skipReason, logId: skipLogId };
   }
 
   // Step 2: Generate unsubscribe token

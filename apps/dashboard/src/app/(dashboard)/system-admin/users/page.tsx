@@ -58,7 +58,9 @@ export default function UsersListPage() {
         method: "POST",
       });
       if (res.ok) {
-        setMessage(`Digest email queued for ${email}`);
+        const data = await res.json().catch(() => ({}));
+        const queue = data.queueName || "scraper-jobs-background";
+        setMessage(`Digest email queued for ${email} (queue: ${queue}, job: ${data.jobId || "?"})`);
       } else {
         const data = await res.json().catch(() => ({}));
         setMessage(data.error || "Failed to send digest");

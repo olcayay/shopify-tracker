@@ -706,6 +706,7 @@ export const systemAdminRoutes: FastifyPluginAsync = async (app) => {
         return {
           message: `Digest email queued for ${user.email}`,
           jobId: job.id,
+          queueName: "scraper-jobs-background",
         };
       } catch (err) {
         return reply.code(500).send({ error: "Failed to enqueue digest job" });

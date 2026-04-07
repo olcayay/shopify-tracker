@@ -217,6 +217,7 @@ vi.mock("@appranks/db", () => ({
   trackedKeywords: { id: "trackedKeywords.id", keyword: "trackedKeywords.keyword", platform: "trackedKeywords.platform" },
   apps: { slug: "apps.slug", isTracked: "apps.isTracked", platform: "apps.platform" },
   users: { id: "users.id", email: "users.email", name: "users.name", accountId: "users.accountId" },
+  emailLogs: { id: "emailLogs.id", emailType: "emailLogs.emailType", status: "emailLogs.status" },
 }));
 
 // Mock constants to use very short timeouts in tests

@@ -1,3 +1,6 @@
+Email System Reliability (2026-04-07)
+  PLA-816: Fix Send Daily Digest button: email not sent, no tracking visible ✅
+
 Dashboard Layout & Navigation (2026-04-07)
   PLA-815: Fix classical layout: rename /classic/ to /v1/ and keep user in v1 when navigating ✅
 

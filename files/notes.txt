@@ -1,3 +1,16 @@
+Email System Reliability (2026-04-07)
+================================================================
+
+PLA-816: Fix Send Daily Digest button: email not sent, no tracking visible
+- Added `logSkippedEmail()` function to email-logger.ts — inserts email_logs with status "skipped" + skipReason
+- Updated process-job.ts digest handler: when user not found or no digest data, creates a skipped email_logs entry
+  - Single-user mode: logs skip for user not found + no digest data
+  - Account-level mode: logs skip for no users + no digest data
+- Updated pipeline.ts: when eligibility check fails, logs a skipped email_logs entry (previously silent)
+- API response now includes queueName + jobId so admin knows where to find the job
+- Dashboard toast now shows queue name and job ID after triggering digest
+- 2 new pipeline tests for skip reason variants + fallback reason
+
 Dashboard Layout & Navigation (2026-04-07)
 ================================================================
 
