@@ -1,7 +1,7 @@
 import { eq, and, sql, max } from "drizzle-orm";
 import type { Database } from "@appranks/db";
 import { scrapeRuns, apps, reviews } from "@appranks/db";
-import { urls, createLogger, type PlatformId } from "@appranks/shared";
+import { urls, createLogger, needsBrowser, type PlatformId } from "@appranks/shared";
 
 const log = createLogger("review-scraper");
 import { HttpClient } from "../http-client.js";
@@ -116,10 +116,13 @@ export class ReviewScraper {
             }
           }
 
-          const newReviews = await this.scrapeAppReviews(
-            app.slug,
-            run.id
-          );
+          const PER_APP_TIMEOUT_MS = 5 * 60 * 1000; // 5 minutes per app
+          const newReviews = await Promise.race([
+            this.scrapeAppReviews(app.slug, run.id),
+            new Promise<never>((_, reject) =>
+              setTimeout(() => reject(new Error(`per-app timeout after ${PER_APP_TIMEOUT_MS / 1000}s`)), PER_APP_TIMEOUT_MS)
+            ),
+          ]);
           totalNewReviews += newReviews;
           itemsScraped++;
           if (itemsProcessed.length < MAX_ITEMS_PROCESSED) {
@@ -220,7 +223,8 @@ export class ReviewScraper {
     runId: string,
     cutoffStr: string
   ): Promise<number> {
-    const MAX_PAGES = 50;
+    // Browser-based platforms (Zendesk) use lower page limit to avoid long-running browser sessions
+    const MAX_PAGES = needsBrowser(this.platform, "reviews") ? 20 : 50;
     let newReviews = 0;
     let page = 1;
     let hitCutoff = false;

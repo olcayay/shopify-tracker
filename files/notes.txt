@@ -1,3 +1,11 @@
+Scraper Reliability (2026-04-07)
+================================================================
+
+PLA-820: Zendesk reviews scraper crashes with orphaned process
+- Added 5-minute per-app timeout in `scrapeTracked()` — wraps each app with `Promise.race()` timeout
+- Reduced MAX_PAGES from 50 to 20 for browser-based platforms (uses `needsBrowser()` from shared)
+- Prevents single-app hangs from blocking the entire reviews batch job
+
 Smoke Test Reliability (2026-04-07)
 ================================================================
 

@@ -1,3 +1,6 @@
+Scraper Reliability (2026-04-07)
+  PLA-820: Zendesk reviews scraper crashes with orphaned process ✅
+
 Smoke Test Reliability (2026-04-07)
   PLA-819: Smoke tests fail for all platforms due to DB dependency ✅
 
