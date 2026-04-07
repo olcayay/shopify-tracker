@@ -332,7 +332,7 @@ describe("DevelopersPage (cross-platform)", () => {
     expect(document.querySelectorAll("img[src*='example.com']")).toHaveLength(0);
   });
 
-  it("shows +N badge when developer has more than 4 app icons", async () => {
+  it("shows +N badge when developer has more than 8 app icons", async () => {
     setupFetchMocks({
       developers: [
         {
@@ -342,7 +342,7 @@ describe("DevelopersPage (cross-platform)", () => {
           website: null,
           platformCount: 3,
           linkCount: 5,
-          appCount: 6,
+          appCount: 12,
           platforms: ["shopify", "salesforce", "wix"],
           isStarred: false,
           topApps: [
@@ -351,6 +351,10 @@ describe("DevelopersPage (cross-platform)", () => {
             { iconUrl: "https://example.com/c.png", name: "App C", slug: "app-c", platform: "salesforce" },
             { iconUrl: "https://example.com/d.png", name: "App D", slug: "app-d", platform: "wix" },
             { iconUrl: "https://example.com/e.png", name: "App E", slug: "app-e", platform: "shopify" },
+            { iconUrl: "https://example.com/f.png", name: "App F", slug: "app-f", platform: "shopify" },
+            { iconUrl: "https://example.com/g.png", name: "App G", slug: "app-g", platform: "salesforce" },
+            { iconUrl: "https://example.com/h.png", name: "App H", slug: "app-h", platform: "wix" },
+            { iconUrl: "https://example.com/i.png", name: "App I", slug: "app-i", platform: "shopify" },
           ],
         },
       ],
@@ -359,9 +363,9 @@ describe("DevelopersPage (cross-platform)", () => {
     await waitFor(() => {
       expect(screen.getByText("Mega Dev")).toBeInTheDocument();
     });
-    // 4 icons rendered + "+2" badge (6 total - 4 shown = 2 remaining)
-    expect(document.querySelectorAll("img[src*='example.com']")).toHaveLength(4);
-    expect(screen.getByText("+2")).toBeInTheDocument();
+    // 8 icons rendered + "+4" badge (12 total - 8 shown = 4 remaining)
+    expect(document.querySelectorAll("img[src*='example.com']")).toHaveLength(8);
+    expect(screen.getByText("+4")).toBeInTheDocument();
   });
 
   it("renders bookmark buttons for each developer", async () => {

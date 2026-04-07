@@ -1,3 +1,21 @@
+Dashboard Table Fixes (2026-04-07)
+================================================================
+
+PLA-855: Sticky table header on competitors page
+- Wrapped Table in scroll container: overflow-auto max-h-[calc(100vh-14rem)] border rounded-md
+- TableHeader already had [&_th]:sticky [&_th]:top-0 — just needed a bounded scroll ancestor
+
+PLA-853: Widen Apps column on /developers page
+- Column width: w-36 → w-72 (doubled)
+- maxIcons: 4 → 8 (shows more app icons)
+- Updated test to verify +N badge with 8+ icons
+
+PLA-854: Developer detail table layout
+- Removed table-fixed and percentage widths
+- Fixed columns use fixed widths (w-28, w-28, w-48, w-32) — App column takes remaining space
+- Added text-right to Pricing cell
+- Updated test: removed table-fixed assertion
+
 Email System Overhaul — Alert Safeguards & Fixes (2026-04-07)
 ================================================================
 

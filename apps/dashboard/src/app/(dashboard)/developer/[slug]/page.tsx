@@ -219,15 +219,15 @@ export default function CrossPlatformDeveloperPage() {
                   No apps found on {getPlatformLabel(p.platform)}.
                 </p>
               ) : (
-                <Table className="table-fixed">
+                <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead className="w-[40%]">App</TableHead>
-                      <TableHead className="text-right w-[10%]">Rating</TableHead>
-                      <TableHead className="text-right w-[10%]">Reviews</TableHead>
-                      <TableHead className="w-[25%]">Pricing</TableHead>
+                      <TableHead>App</TableHead>
+                      <TableHead className="text-right w-28">Rating</TableHead>
+                      <TableHead className="text-right w-28">Reviews</TableHead>
+                      <TableHead className="text-right w-48">Pricing</TableHead>
                       {hasInstalls && (
-                        <TableHead className="text-right w-[15%]">Installs</TableHead>
+                        <TableHead className="text-right w-32">Installs</TableHead>
                       )}
                     </TableRow>
                   </TableHeader>
@@ -264,7 +264,7 @@ export default function CrossPlatformDeveloperPage() {
                             ? formatNumber(app.ratingCount)
                             : <span className="text-muted-foreground">-</span>}
                         </TableCell>
-                        <TableCell className="text-muted-foreground text-sm truncate">
+                        <TableCell className="text-right text-muted-foreground text-sm truncate">
                           {app.pricingHint || <span className="text-muted-foreground">-</span>}
                         </TableCell>
                         {hasInstalls && (

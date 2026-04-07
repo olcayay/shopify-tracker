@@ -225,14 +225,9 @@ describe("CrossPlatformDeveloperPage — unified columns", () => {
       expect(screen.getByText("App A")).toBeInTheDocument();
     });
 
-    // All tables should use table-fixed layout
+    // All header rows should have same column count
     const tables = document.querySelectorAll("table");
     expect(tables.length).toBe(3);
-    tables.forEach((table) => {
-      expect(table.className).toContain("table-fixed");
-    });
-
-    // All header rows should have same column count
     const headerRows = document.querySelectorAll("thead tr");
     expect(headerRows.length).toBe(3);
     const colCounts = Array.from(headerRows).map(

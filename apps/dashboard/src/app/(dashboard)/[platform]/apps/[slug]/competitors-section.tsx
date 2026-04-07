@@ -328,48 +328,50 @@ export function CompetitorsSection({ appSlug }: { appSlug: string }) {
           {canEdit && " Use the search above to add competitors."}
         </p>
       ) : (
-        <Table>
-          <CompetitorTableHeader
-            canEdit={canEdit}
-            isCol={isCol}
-            sortKey={sortKey}
-            sortDir={sortDir}
-            toggleSort={toggleSort}
-            platform={platform as string}
-          />
-          <TableBody>
-            {(() => {
-              const sorted = sortedCompetitors();
-              let competitorNum = 0;
-              return sorted.map((comp, idx) => {
-              if (!comp.isSelf || !selfPinned) competitorNum++;
-              return (
-                <CompetitorTableRowItem
-                  key={comp.appSlug}
-                  comp={comp}
-                  idx={idx}
-                  competitorNum={competitorNum}
-                  platform={platform as string}
-                  canEdit={canEdit}
-                  isCol={isCol}
-                  isCustomOrder={isCustomOrder}
-                  selfPinned={selfPinned}
-                  reordering={reordering}
-                  competitors={competitors}
-                  isPending={pendingCompetitorSlugs.has(comp.appSlug)}
-                  isResolved={resolvedCompetitorSlugs.has(comp.appSlug)}
-                  caps={caps}
-                  lastChanges={lastChanges}
-                  formatDateOnly={formatDateOnly}
-                  toggleSelfPinned={toggleSelfPinned}
-                  moveCompetitor={moveCompetitor}
-                  setConfirmRemove={setConfirmRemove}
-                />
-              );
-              });
-            })()}
-          </TableBody>
-        </Table>
+        <div className="overflow-auto max-h-[calc(100vh-14rem)] border rounded-md">
+          <Table>
+            <CompetitorTableHeader
+              canEdit={canEdit}
+              isCol={isCol}
+              sortKey={sortKey}
+              sortDir={sortDir}
+              toggleSort={toggleSort}
+              platform={platform as string}
+            />
+            <TableBody>
+              {(() => {
+                const sorted = sortedCompetitors();
+                let competitorNum = 0;
+                return sorted.map((comp, idx) => {
+                if (!comp.isSelf || !selfPinned) competitorNum++;
+                return (
+                  <CompetitorTableRowItem
+                    key={comp.appSlug}
+                    comp={comp}
+                    idx={idx}
+                    competitorNum={competitorNum}
+                    platform={platform as string}
+                    canEdit={canEdit}
+                    isCol={isCol}
+                    isCustomOrder={isCustomOrder}
+                    selfPinned={selfPinned}
+                    reordering={reordering}
+                    competitors={competitors}
+                    isPending={pendingCompetitorSlugs.has(comp.appSlug)}
+                    isResolved={resolvedCompetitorSlugs.has(comp.appSlug)}
+                    caps={caps}
+                    lastChanges={lastChanges}
+                    formatDateOnly={formatDateOnly}
+                    toggleSelfPinned={toggleSelfPinned}
+                    moveCompetitor={moveCompetitor}
+                    setConfirmRemove={setConfirmRemove}
+                  />
+                );
+                });
+              })()}
+            </TableBody>
+          </Table>
+        </div>
       )}
 
       <ConfirmModal

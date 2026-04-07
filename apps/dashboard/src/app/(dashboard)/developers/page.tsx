@@ -191,7 +191,7 @@ export default function DevelopersPage() {
       .map(([platform, devs]) => ({ platform, items: devs }));
   }, [developers, viewMode, enabledPlatforms]);
 
-  const maxIcons = 4;
+  const maxIcons = 8;
 
   function renderAppsCell(dev: Developer) {
     const visibleApps = dev.topApps.slice(0, maxIcons);
@@ -406,7 +406,7 @@ export default function DevelopersPage() {
                       Developer <ArrowUpDown className="h-3 w-3" />
                     </button>
                   </TableHead>
-                  <TableHead className="w-36">
+                  <TableHead className="w-72">
                     <button onClick={() => toggleSort("apps")} className="flex items-center gap-1 hover:text-foreground">
                       Apps <ArrowUpDown className="h-3 w-3" />
                     </button>
