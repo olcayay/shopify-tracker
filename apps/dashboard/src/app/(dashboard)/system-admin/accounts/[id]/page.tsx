@@ -317,6 +317,29 @@ export default function AccountDetailPage() {
         </CardContent>
       </Card>
 
+      {/* Feature Flags */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Feature Flags ({account.featureFlags?.length ?? 0})</CardTitle>
+          <CardDescription>Feature flags enabled for this account via per-account override.</CardDescription>
+        </CardHeader>
+        <CardContent>
+          {account.featureFlags && account.featureFlags.length > 0 ? (
+            <div className="flex flex-wrap gap-2">
+              {account.featureFlags.map((flag: { slug: string; name: string; isGloballyEnabled: boolean }) => (
+                <Link key={flag.slug} href={`/system-admin/feature-flags/${flag.slug}`}>
+                  <Badge variant={flag.isGloballyEnabled ? "default" : "secondary"}>
+                    {flag.name}
+                  </Badge>
+                </Link>
+              ))}
+            </div>
+          ) : (
+            <p className="text-sm text-muted-foreground">No feature flags enabled</p>
+          )}
+        </CardContent>
+      </Card>
+
       {/* Limits */}
       <Card>
         <CardHeader>

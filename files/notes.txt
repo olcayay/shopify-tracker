@@ -61,6 +61,13 @@ PLA-796: Phase 5: Dashboard — system admin feature flags listing & detail page
 - Nav entry added with ToggleLeft icon
 - Updated nav-utils test count from 22 to 23
 
+PLA-797: Phase 6: Dashboard — account detail feature flags card
+- Added Feature Flags card to `system-admin/accounts/[id]/page.tsx` between Platforms and Limits cards
+- Shows count in header, Badge per flag linked to `/system-admin/feature-flags/[slug]`
+- Badge variant: `default` if globally enabled, `secondary` if per-account only
+- Empty state: "No feature flags enabled"
+- Data comes from `featureFlags` array in account detail API (Phase 3)
+
 Scraper Reliability (2026-04-07)
 ================================================================
 
