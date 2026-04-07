@@ -15,6 +15,9 @@ import {
   userAppEmailPreferences,
 } from "@appranks/db";
 import { getLocalDayBoundaries } from "./timezone.js";
+import { createLogger } from "@appranks/shared";
+
+const log = createLogger("email:digest-builder");
 
 export interface RankingChange {
   keyword: string;
@@ -129,6 +132,7 @@ export async function buildDigestForAccount(
   timezone?: string,
   userId?: string,
 ): Promise<DigestData | null> {
+  const startMs = Date.now();
   // Get account name
   const [account] = await db
     .select({ name: accounts.name })
@@ -334,40 +338,69 @@ export async function buildDigestForAccount(
   // --- Build per-tracked-app digests ---
   const trackedAppDigests: TrackedAppDigest[] = [];
 
-  // Helper to get app snapshots (today + yesterday)
-  async function getAppSnapshotDelta(appId: number) {
-    const [todaySnap] = await db
+  // Batch fetch app snapshots for all relevant apps (today + yesterday) — avoids N+1
+  const allAppIdList = [...relevantAppIds];
+  const snapshotDeltaMap = new Map<number, { todaySnap: any; yesterdaySnap: any }>();
+
+  if (allAppIdList.length > 0) {
+    const todaySnaps = await db
       .select({
+        appId: appSnapshots.appId,
         averageRating: appSnapshots.averageRating,
         ratingCount: appSnapshots.ratingCount,
+        scrapedAt: appSnapshots.scrapedAt,
       })
       .from(appSnapshots)
       .where(
         and(
-          eq(appSnapshots.appId, appId),
+          sql`${appSnapshots.appId} IN (${sql.join(
+            allAppIdList.map((id) => sql`${id}`),
+            sql`, `
+          )})`,
           sql`${appSnapshots.scrapedAt} >= ${todayStart.toISOString()}`
         )
       )
-      .orderBy(desc(appSnapshots.scrapedAt))
-      .limit(1);
+      .orderBy(desc(appSnapshots.scrapedAt));
 
-    const [yesterdaySnap] = await db
+    const yesterdaySnaps = await db
       .select({
+        appId: appSnapshots.appId,
         averageRating: appSnapshots.averageRating,
         ratingCount: appSnapshots.ratingCount,
+        scrapedAt: appSnapshots.scrapedAt,
       })
       .from(appSnapshots)
       .where(
         and(
-          eq(appSnapshots.appId, appId),
+          sql`${appSnapshots.appId} IN (${sql.join(
+            allAppIdList.map((id) => sql`${id}`),
+            sql`, `
+          )})`,
           sql`${appSnapshots.scrapedAt} >= ${yesterdayStart.toISOString()}`,
           sql`${appSnapshots.scrapedAt} < ${todayStart.toISOString()}`
         )
       )
-      .orderBy(desc(appSnapshots.scrapedAt))
-      .limit(1);
+      .orderBy(desc(appSnapshots.scrapedAt));
 
-    return { todaySnap: todaySnap ?? null, yesterdaySnap: yesterdaySnap ?? null };
+    // Group by appId, take latest per app (results are ordered by scrapedAt DESC)
+    for (const snap of todaySnaps) {
+      if (!snapshotDeltaMap.has(snap.appId)) {
+        snapshotDeltaMap.set(snap.appId, { todaySnap: snap, yesterdaySnap: null });
+      }
+    }
+    for (const snap of yesterdaySnaps) {
+      const entry = snapshotDeltaMap.get(snap.appId);
+      if (entry && !entry.yesterdaySnap) {
+        entry.yesterdaySnap = snap;
+      } else if (!entry) {
+        snapshotDeltaMap.set(snap.appId, { todaySnap: null, yesterdaySnap: snap });
+      }
+    }
+  }
+
+  function getAppSnapshotDelta(appId: number) {
+    const entry = snapshotDeltaMap.get(appId);
+    return { todaySnap: entry?.todaySnap ?? null, yesterdaySnap: entry?.yesterdaySnap ?? null };
   }
 
   // Get category rankings for tracked apps
@@ -503,7 +536,7 @@ export async function buildDigestForAccount(
     appCatChanges.sort((a, b) => Math.abs(b.change ?? 0) - Math.abs(a.change ?? 0));
 
     // Rating/review changes
-    const { todaySnap, yesterdaySnap } = await getAppSnapshotDelta(trackedAppId);
+    const { todaySnap, yesterdaySnap } = getAppSnapshotDelta(trackedAppId);
     const ratingToday = todaySnap?.averageRating ? parseFloat(todaySnap.averageRating) : null;
     const ratingYesterday = yesterdaySnap?.averageRating ? parseFloat(yesterdaySnap.averageRating) : null;
     const ratingChange = ratingToday !== null && ratingYesterday !== null
@@ -535,7 +568,7 @@ export async function buildDigestForAccount(
   const competitorSummaries: CompetitorSummary[] = [];
 
   for (const compAppId of competitorAppIds) {
-    const { todaySnap, yesterdaySnap } = await getAppSnapshotDelta(compAppId);
+    const { todaySnap, yesterdaySnap } = getAppSnapshotDelta(compAppId);
 
     const compSlug = appSlugMap.get(compAppId) || String(compAppId);
 
@@ -604,6 +637,14 @@ export async function buildDigestForAccount(
     day: "2-digit",
     month: "2-digit",
     year: "numeric",
+  });
+
+  log.info("digest built for account", {
+    accountId,
+    trackedApps: trackedAppDigests.length,
+    competitors: competitorSummaries.length,
+    keywords: keywordIds.length,
+    elapsedMs: Date.now() - startMs,
   });
 
   return {

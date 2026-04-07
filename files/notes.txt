@@ -1,3 +1,13 @@
+Digest Job Performance (2026-04-07)
+================================================================
+
+PLA-860: Fix scheduler digest job timeout
+- Root cause: N+1 queries in getAppSnapshotDelta() — 2 queries per tracked/competitor app
+- Fix: Batch snapshot queries — 2 queries total (today + yesterday) for ALL relevant apps
+- Also: cached digest per-account for single-user accounts (most common case)
+- Added performance logging: per-account elapsed time, total digest elapsed, app/keyword counts
+- No timeout increase needed — batch queries should bring total time well under 60s
+
 Email Bug Fixes (2026-04-07)
 ================================================================
 

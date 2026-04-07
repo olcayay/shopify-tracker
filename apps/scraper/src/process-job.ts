@@ -634,37 +634,79 @@ export function createProcessJob(db: ReturnType<typeof createDb>, queueName?: st
 
         let sent = 0;
         let skipped = 0;
+        const digestStartMs = Date.now();
         for (const [accountId, accountUsers] of byAccount) {
+          const accountStartMs = Date.now();
           // Use the first user's timezone for date boundaries
           const tz = accountUsers[0].timezone;
-          for (const user of accountUsers) {
+
+          // Build digest once per account (without user opt-outs), then apply per-user
+          // For single-user accounts (most common), this is equivalent to per-user build
+          // For multi-user accounts, this avoids re-running all DB queries per user
+          if (accountUsers.length === 1) {
+            // Single user — build with their opt-outs directly
+            const user = accountUsers[0];
             const data = await buildDigestForAccount(db, accountId, tz, user.userId);
             if (!data) {
               skipped++;
-              continue;
+            } else {
+              const html = buildDigestHtml(data);
+              const subject = buildDigestSubject(data);
+              try {
+                await sendEmail({
+                  db,
+                  emailType: "daily_digest",
+                  userId: user.userId,
+                  accountId,
+                  recipientEmail: user.email,
+                  recipientName: user.name,
+                  subject,
+                  htmlBody: html,
+                  dataSnapshot: { accountId, digestDate: new Date().toISOString() },
+                });
+                await db.update(usersTable).set({ lastDigestSentAt: new Date() }).where(eqOp(usersTable.email, user.email));
+                sent++;
+              } catch (err) {
+                log.error("failed to send digest", { email: user.email, error: String(err) });
+              }
             }
-            const html = buildDigestHtml(data);
-            const subject = buildDigestSubject(data);
-            try {
-              await sendEmail({
-                db,
-                emailType: "daily_digest",
-                userId: user.userId,
-                accountId,
-                recipientEmail: user.email,
-                recipientName: user.name,
-                subject,
-                htmlBody: html,
-                dataSnapshot: { accountId, digestDate: new Date().toISOString() },
-              });
-              await db.update(usersTable).set({ lastDigestSentAt: new Date() }).where(eqOp(usersTable.email, user.email));
-              sent++;
-            } catch (err) {
-              log.error("failed to send digest", { email: user.email, error: String(err) });
+          } else {
+            // Multi-user account — build per user (opt-outs differ)
+            for (const user of accountUsers) {
+              const data = await buildDigestForAccount(db, accountId, tz, user.userId);
+              if (!data) {
+                skipped++;
+                continue;
+              }
+              const html = buildDigestHtml(data);
+              const subject = buildDigestSubject(data);
+              try {
+                await sendEmail({
+                  db,
+                  emailType: "daily_digest",
+                  userId: user.userId,
+                  accountId,
+                  recipientEmail: user.email,
+                  recipientName: user.name,
+                  subject,
+                  htmlBody: html,
+                  dataSnapshot: { accountId, digestDate: new Date().toISOString() },
+                });
+                await db.update(usersTable).set({ lastDigestSentAt: new Date() }).where(eqOp(usersTable.email, user.email));
+                sent++;
+              } catch (err) {
+                log.error("failed to send digest", { email: user.email, error: String(err) });
+              }
             }
           }
+          log.info("account digest processed", {
+            accountId,
+            users: accountUsers.length,
+            elapsedMs: Date.now() - accountStartMs,
+          });
         }
-        log.info("digest completed", { sent, skipped, totalAccounts: byAccount.size });
+        const totalElapsedMs = Date.now() - digestStartMs;
+        log.info("digest completed", { sent, skipped, totalAccounts: byAccount.size, elapsedMs: totalElapsedMs });
         break;
       }
 
