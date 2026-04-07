@@ -51,7 +51,7 @@ export const notificationStreamRoutes: FastifyPluginAsync = async (app) => {
           .where(
             and(
               eq(notifications.userId, userId),
-              sql`${notifications.createdAt} > ${lastCheckedAt}`
+              sql`${notifications.createdAt} > ${lastCheckedAt.toISOString()}`
             )
           )
           .orderBy(desc(notifications.createdAt))

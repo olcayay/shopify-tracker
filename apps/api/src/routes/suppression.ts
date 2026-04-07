@@ -153,7 +153,7 @@ export const suppressionRoutes: FastifyPluginAsync = async (app) => {
         COALESCE(SUM(bounced), 0) AS total_bounced,
         COALESCE(SUM(complained), 0) AS total_complained
       FROM email_health_metrics
-      WHERE date >= ${cutoff}
+      WHERE date >= ${cutoff.toISOString()}
     `);
 
     const row = (aggregate as any)?.rows?.[0] ?? aggregate;
@@ -173,7 +173,7 @@ export const suppressionRoutes: FastifyPluginAsync = async (app) => {
         complained: emailHealthMetrics.complained,
       })
       .from(emailHealthMetrics)
-      .where(sql`${emailHealthMetrics.date} >= ${cutoff}`)
+      .where(sql`${emailHealthMetrics.date} >= ${cutoff.toISOString()}`)
       .orderBy(emailHealthMetrics.date);
 
     // Suppression by reason
