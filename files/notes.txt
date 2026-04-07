@@ -76,6 +76,39 @@ PLA-846: Request-level retry middleware
 - Response includes x-db-retry header for observability
 - 14 unit tests for isTransientDbError()
 
+PLA-847: DB proxy for pool reset propagation
+- Route handlers capture `const db = app.db` at registration time
+- After pool reset, these closures still pointed to old dead pool
+- Fix: Proxy object delegates all method calls to current `db` reference
+- `app.decorate("db", dbProxy)` — routes capture proxy, proxy forwards to latest pool
+- Zero changes to 51 route files — fully transparent
+
+PLA-849: Fix healthcheck pg_settings access on Cloud SQL
+- Cloud SQL restricts `pg_settings` table access
+- Changed from subquery `(SELECT setting::int FROM pg_settings)` to `SHOW max_connections`
+- Fallback to 25 (db-f1-micro default) if SHOW fails
+
+PLA-851: Connection exhaustion fix — pool size reduction
+- Cloud SQL db-f1-micro max_connections=25, was being exceeded
+- API: max 10 → 5, email workers: 10 → 2 each, notification worker: 10 → 2, scheduler: 10 → 2
+- New total: API(5) + healthDb(1) + worker(5) + cli(3) + email(2+2) + notification(2) + scheduler(2) = 22
+- resetPool() now checks connection headroom before creating new pool
+- If near limit (>=20), closes old pool first before creating new one
+
+PLA-852: Fix empty IN() clause with research-mode keywords
+- `apps/api/src/routes/apps.ts` line 109: keyword batch query generated `IN ()` SQL syntax error
+- Occurred when account has only research-mode keywords (trackedAppId=null)
+- Added guard: skip ranked keyword query when allTrackedAppIds is empty
+
+PLA-848: Cloud SQL connection drops at ~26 min (resolved by PLA-851)
+- Root cause was connection exhaustion (25 limit) not GCP proxy timeout
+- All fixes combined (reduced pools, recovery, warming, retry) prevent recurrence
+
+PLA-850: skip_reason column error (not from app code)
+- Cloud SQL error log referenced el.skip_reason which doesn't exist in schema
+- Confirmed: no application code references this column
+- Likely a manual SQL query — monitor for recurrence
+
 DB Pool Fix — Connection Reduction (2026-04-07)
 ================================================================
 

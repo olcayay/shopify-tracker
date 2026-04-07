@@ -58,7 +58,7 @@ if (databaseUrl) {
   cron.schedule("0 3 * * *", async () => {
     log.info("notification retention cleanup starting");
     try {
-      const db = createDb(databaseUrl);
+      const db = createDb(databaseUrl, { max: 2 });
       const result = await cleanupOldNotifications(db);
       log.info("notification retention cleanup complete", {
         notificationsDeleted: result.notificationsDeleted,

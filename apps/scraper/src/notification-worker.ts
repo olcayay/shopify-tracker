@@ -26,7 +26,7 @@ if (!databaseUrl) {
   log.error("DATABASE_URL environment variable is required");
   process.exit(1);
 }
-const db = createDb(databaseUrl);
+const db = createDb(databaseUrl, { max: 2 });
 
 const worker = new Worker<NotificationJobData>(
   NOTIFICATIONS_QUEUE_NAME,

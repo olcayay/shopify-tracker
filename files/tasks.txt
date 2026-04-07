@@ -41,6 +41,12 @@ DB Pool Reliability — Active Recovery & Hardening (2026-04-07)
   PLA-844: Phase 2: Add connection warming and periodic pool exercise ✅
   PLA-845: Phase 3: Add external uptime monitoring and alerting ✅
   PLA-846: Phase 3: Add request-level retry middleware for transient DB errors ✅
+  PLA-847: Fix route DB references: pool reset propagation via Proxy ✅
+  PLA-848: Fix Cloud SQL connection drops (root cause: connection exhaustion) ✅
+  PLA-849: Fix healthcheck pg_settings access on Cloud SQL ✅
+  PLA-850: Investigate skip_reason column (confirmed: not from app code) ✅
+  PLA-851: Fix connection exhaustion: reduce pool sizes across services ✅
+  PLA-852: Fix empty IN() clause with research-mode only keywords ✅
 
 Scraper Reliability (2026-04-07)
   PLA-817: Stale run cleanup lacks retry — crashed scraper runs are silently lost ✅

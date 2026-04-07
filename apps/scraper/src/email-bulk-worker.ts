@@ -28,7 +28,7 @@ if (!databaseUrl) {
   log.error("DATABASE_URL environment variable is required");
   process.exit(1);
 }
-const db = createDb(databaseUrl);
+const db = createDb(databaseUrl, { max: 2 });
 
 const worker = new Worker<BulkEmailJobData>(
   EMAIL_BULK_QUEUE_NAME,

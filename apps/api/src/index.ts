@@ -81,8 +81,25 @@ validateEnv([...API_REQUIRED_ENV]);
 
 const databaseUrl = process.env.DATABASE_URL!;
 
-let db = createDb(databaseUrl);
+let db = createDb(databaseUrl, { max: 5 });
 const healthDb = createHealthCheckDb(databaseUrl);
+
+// Proxy that always delegates to the current `db` reference.
+// Route handlers capture this proxy at registration time via `const db = app.db`.
+// After a pool reset reassigns `db`, the proxy transparently forwards to the new pool.
+const dbProxy = new Proxy({} as typeof db, {
+  get(_target, prop, receiver) {
+    const value = (db as any)[prop];
+    if (typeof value === "function") {
+      return value.bind(db);
+    }
+    return value;
+  },
+  set(_target, prop, value) {
+    (db as any)[prop] = value;
+    return true;
+  },
+});
 
 // NOTE: Migrations are now handled by the standalone migration runner
 // (packages/db/src/migrate.ts). In Docker, the 'migrate' service runs
@@ -151,7 +168,7 @@ await app.register(cors, {
 import compress from "@fastify/compress";
 await app.register(compress);
 
-app.decorate("db", db);
+app.decorate("db", dbProxy);
 
 // Security headers — defense-in-depth alongside Cloudflare
 app.addHook("onRequest", async (_request, reply) => {
@@ -385,6 +402,12 @@ app.get("/health/ready", async (_request, reply) => {
   let connections: Record<string, unknown> = {};
   let poolStatus = "ok";
   try {
+    // Fetch max_connections separately — Cloud SQL restricts pg_settings access
+    let dbMaxConnections = 25; // default for db-f1-micro
+    try {
+      const [maxConnRow] = await healthDb.execute(sql`SHOW max_connections`) as any;
+      if (maxConnRow?.max_connections) dbMaxConnections = Number(maxConnRow.max_connections);
+    } catch { /* fallback to default */ }
     const [connInfo] = await healthDb.execute(sql`
       SELECT
         count(*) FILTER (WHERE state = 'active') AS active_connections,
@@ -392,15 +415,14 @@ app.get("/health/ready", async (_request, reply) => {
         count(*) FILTER (WHERE state = 'idle in transaction') AS idle_in_transaction,
         count(*) FILTER (WHERE wait_event_type = 'Lock') AS waiting_on_lock,
         count(*) AS total_connections,
-        max(EXTRACT(EPOCH FROM (now() - query_start)))::int AS longest_query_secs,
-        (SELECT setting::int FROM pg_settings WHERE name = 'max_connections') AS max_connections
+        max(EXTRACT(EPOCH FROM (now() - query_start)))::int AS longest_query_secs
       FROM pg_stat_activity
       WHERE datname = current_database()
         AND pid != pg_backend_pid()
     `) as any;
     if (connInfo) {
       const active = Number(connInfo.active_connections ?? 0);
-      const maxConn = Number(connInfo.max_connections ?? 25);
+      const maxConn = dbMaxConnections;
       const idleInTx = Number(connInfo.idle_in_transaction ?? 0);
       connections = {
         active,
@@ -606,18 +628,28 @@ async function resetPool(): Promise<boolean> {
   app.log.warn(`Attempting pool reset #${poolResetCount}...`);
   try {
     const oldDb = db;
-    // Create new pool first, then close old one
-    const newDb = createDb(databaseUrl);
+    // Check connection headroom before creating new pool
+    const conns = await getRuntimeConnections();
+    const totalConns = Number(conns.total ?? 0);
+    if (totalConns >= 20) {
+      app.log.warn(`Near connection limit (${totalConns}/25) — closing old pool first`);
+      await closeDb(oldDb).catch(() => {});
+    }
+    // Create new pool, then close old one
+    const newDb = createDb(databaseUrl, { max: 5 });
     // Verify new pool works
     await Promise.race([
       newDb.execute(sql`SELECT 1`),
       new Promise((_, reject) => setTimeout(() => reject(new Error("new_pool_timeout")), POOL_CHECK_TIMEOUT_MS)),
     ]);
-    // New pool works — swap it in
+    // New pool works — swap it in.
+    // dbProxy (used by all routes via app.db) automatically delegates to
+    // the module-level `db`, so reassigning here propagates everywhere.
     db = newDb;
-    (app as any).db = newDb;
     // Close old pool in background (don't block on stuck connections)
-    closeDb(oldDb).catch(() => {});
+    if (totalConns < 20) {
+      closeDb(oldDb).catch(() => {});
+    }
     app.log.info(`Pool reset #${poolResetCount} successful — new pool is healthy`);
     setGauge("db_pool_stuck", 0, "Whether the main DB pool is stuck (1=stuck, 0=healthy)");
     setGauge("db_pool_resets", poolResetCount, "Total number of pool resets since process start");

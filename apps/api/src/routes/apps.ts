@@ -107,7 +107,14 @@ export const appRoutes: FastifyPluginAsync = async (app) => {
 
       // Build a single query for all tracked apps at once
       const allTrackedAppIds = [...kwByApp.keys()];
-      const allKeywordIds = [...new Set(allKeywordRows.map((r) => r.keywordId))];
+      const allKeywordIds = [...new Set(
+        allKeywordRows.filter((r) => r.trackedAppId != null).map((r) => r.keywordId),
+      )];
+
+      // Skip query if no app-bound keywords (all research-mode)
+      if (allTrackedAppIds.length === 0 || allKeywordIds.length === 0) {
+        // No ranked keyword data to fetch
+      } else {
       const appIdList = sql.join(allTrackedAppIds.map((id) => sql`${id}`), sql`,`);
       const kwIdList = sql.join(allKeywordIds.map((id) => sql`${id}`), sql`,`);
 
@@ -127,6 +134,7 @@ export const appRoutes: FastifyPluginAsync = async (app) => {
       for (const row of rankedData) {
         rankedKwMap.set(row.app_id, row.cnt);
       }
+      } // end else (app-bound keywords exist)
     }
 
     // Get latest snapshots and changes in batch (2 queries instead of 2*N)
