@@ -16,6 +16,8 @@ import {
   accountPlatforms,
   platformVisibility,
   emailVerificationTokens,
+  featureFlags,
+  accountFeatureFlags,
 } from "@appranks/db";
 import { PLATFORM_IDS } from "@appranks/shared";
 import { getJwtSecret, type JwtPayload } from "../middleware/auth.js";
@@ -678,10 +680,19 @@ export const authRoutes: FastifyPluginAsync = async (app) => {
       FROM accounts a WHERE a.id = ${user.accountId}
     `);
 
-    // These two are lightweight and independent — 2 parallel queries
-    const [enabledPlatformsResult, visibilityRows] = await Promise.all([
+    // These are lightweight and independent — 3 parallel queries
+    const [enabledPlatformsResult, visibilityRows, enabledFeaturesResult] = await Promise.all([
       db.select({ platform: accountPlatforms.platform, overrideGlobalVisibility: accountPlatforms.overrideGlobalVisibility }).from(accountPlatforms).where(eq(accountPlatforms.accountId, user.accountId)),
       db.select().from(platformVisibility),
+      // Feature flags: globally enabled OR per-account override
+      db.execute<{ slug: string }>(sql`
+        SELECT DISTINCT ff.slug FROM feature_flags ff
+        WHERE ff.is_enabled = true
+        UNION
+        SELECT ff.slug FROM feature_flags ff
+        INNER JOIN account_feature_flags aff ON aff.feature_flag_id = ff.id
+        WHERE aff.account_id = ${user.accountId}
+      `),
     ]);
 
     const account = accountWithCounts;
@@ -700,6 +711,15 @@ export const authRoutes: FastifyPluginAsync = async (app) => {
       effectivePlatforms = enabledPlatformsResult
         .filter((p) => globalVisibility[p.platform] === true || p.overrideGlobalVisibility === true)
         .map((p) => p.platform);
+    }
+
+    // Feature flags: system admins get ALL flags, regular users get computed set
+    let enabledFeatures: string[];
+    if (user.isSystemAdmin) {
+      const allFlags = await db.select({ slug: featureFlags.slug }).from(featureFlags);
+      enabledFeatures = allFlags.map((f) => f.slug);
+    } else {
+      enabledFeatures = enabledFeaturesResult.map((r) => r.slug);
     }
 
     const response: Record<string, unknown> = {
@@ -738,6 +758,7 @@ export const authRoutes: FastifyPluginAsync = async (app) => {
         },
       },
       enabledPlatforms: effectivePlatforms,
+      enabledFeatures,
     };
 
     // Include global visibility map for system admin

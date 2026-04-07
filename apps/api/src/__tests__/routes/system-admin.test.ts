@@ -241,6 +241,18 @@ describe("System admin routes", () => {
       });
       expect(res.statusCode).toBe(200);
     });
+
+    it("includes featureFlags in account detail response", async () => {
+      const res = await app.inject({
+        method: "GET",
+        url: "/api/system-admin/accounts/account-001",
+        headers: authHeaders(adminToken()),
+      });
+      expect(res.statusCode).toBe(200);
+      const body = res.json();
+      expect(body.featureFlags).toBeDefined();
+      expect(Array.isArray(body.featureFlags)).toBe(true);
+    });
   });
 
   // -----------------------------------------------------------------------

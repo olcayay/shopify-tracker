@@ -35,6 +35,14 @@ PLA-793: Phase 2: API — system admin feature flag CRUD endpoints
 - Registered at `/api/system-admin/feature-flags` (auth middleware auto-protects)
 - 23 unit tests covering all endpoints, auth, validation, 404s
 
+PLA-794: Phase 3: API — feature flag evaluation in /auth/me & account detail
+- `/api/auth/me` now returns `enabledFeatures: string[]` — globally enabled OR per-account override slugs
+- System admins get ALL feature flag slugs (regardless of enabled state)
+- Regular users get UNION of globally enabled + per-account overrides (single SQL query)
+- Feature flags query added to parallel batch (3 queries instead of 2)
+- `/api/system-admin/accounts/:id` now returns `featureFlags` array with slug, name, isGloballyEnabled, enabledAt
+- 2 new tests: enabledFeatures in /auth/me, featureFlags in account detail
+
 Scraper Reliability (2026-04-07)
 ================================================================
 

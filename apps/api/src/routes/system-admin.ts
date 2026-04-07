@@ -37,6 +37,8 @@ import {
   scrapeItemErrors,
   platformRequests,
   notifications,
+  featureFlags,
+  accountFeatureFlags,
 } from "@appranks/db";
 import { isPlatformId, PLATFORM_IDS, SCRAPER_SCHEDULES, getNextRunFromCron, getScheduleIntervalMs, findSchedule, SMOKE_PLATFORMS, SMOKE_CHECKS, BROWSER_PLATFORMS, getSmokeCheck, getSmokePlatform, countTotalSmokeChecks } from "@appranks/shared";
 import type { SmokeCheckName } from "@appranks/shared";
@@ -280,6 +282,18 @@ export const systemAdminRoutes: FastifyPluginAsync = async (app) => {
       .from(accountPlatforms)
       .where(eq(accountPlatforms.accountId, id));
 
+    // Feature flags enabled for this account (globally enabled OR per-account override)
+    const accountFlags = await db
+      .select({
+        slug: featureFlags.slug,
+        name: featureFlags.name,
+        isGloballyEnabled: featureFlags.isEnabled,
+        enabledAt: accountFeatureFlags.enabledAt,
+      })
+      .from(accountFeatureFlags)
+      .innerJoin(featureFlags, eq(featureFlags.id, accountFeatureFlags.featureFlagId))
+      .where(eq(accountFeatureFlags.accountId, id));
+
     return {
       ...account,
       package: pkg,
@@ -294,6 +308,7 @@ export const systemAdminRoutes: FastifyPluginAsync = async (app) => {
         acc[p.platform] = p.overrideGlobalVisibility;
         return acc;
       }, {} as Record<string, boolean>),
+      featureFlags: accountFlags,
     };
   });
 

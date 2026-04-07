@@ -836,6 +836,17 @@ describe("GET /api/auth/me — response structure", () => {
     expect(Array.isArray(body.enabledPlatforms)).toBe(true);
   });
 
+  it("returns enabledFeatures array", async () => {
+    const res = await app.inject({
+      method: "GET",
+      url: "/api/auth/me",
+      headers: authHeaders(userToken()),
+    });
+    const body = res.json();
+    expect(body.enabledFeatures).toBeDefined();
+    expect(Array.isArray(body.enabledFeatures)).toBe(true);
+  });
+
   it("returns user preferences (emailDigestEnabled, timezone)", async () => {
     const res = await app.inject({
       method: "GET",
