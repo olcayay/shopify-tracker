@@ -67,9 +67,9 @@ export async function proxy(request: NextRequest) {
     );
   }
 
-  // Redirect v1 app detail pages to v2 (unless user opted for classic)
-  // Pattern: /{platform}/apps/{slug} and sub-routes, but NOT /apps/v2/ or /apps/classic/
-  const appDetailMatch = pathname.match(/^\/([^/]+)\/apps\/(?!v2\/)(?!classic\/)([^/]+)(\/.*)?$/);
+  // Redirect bare app detail pages to v2 (unless user opted for v1/classic)
+  // Pattern: /{platform}/apps/{slug} and sub-routes, but NOT /apps/v2/ or /apps/v1/
+  const appDetailMatch = pathname.match(/^\/([^/]+)\/apps\/(?!v2\/)(?!v1\/)([^/]+)(\/.*)?$/);
   if (appDetailMatch && VALID_PLATFORMS.includes(appDetailMatch[1])) {
     const [, plat, appSlug, rest = ""] = appDetailMatch;
     // Map v1 tab paths to v2 section paths

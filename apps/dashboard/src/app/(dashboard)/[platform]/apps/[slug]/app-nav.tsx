@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useParams, usePathname, useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { PLATFORMS, isPlatformId, type PlatformId } from "@appranks/shared";
+import { useLayoutVersion, buildAppLink } from "@/hooks/use-layout-version";
 
 export function AppNav({
   slug,
@@ -17,7 +18,8 @@ export function AppNav({
   const caps = isPlatformId(platform as string) ? PLATFORMS[platform as PlatformId] : PLATFORMS.shopify;
   const pathname = usePathname();
   const router = useRouter();
-  const base = `/${platform}/apps/${slug}`;
+  const version = useLayoutVersion();
+  const base = buildAppLink(platform as string, slug, "", version);
   const didMount = useRef(false);
 
   useEffect(() => {

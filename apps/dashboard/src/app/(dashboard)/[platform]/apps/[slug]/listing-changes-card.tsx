@@ -7,6 +7,7 @@ import {
   ArrowRight,
 } from "lucide-react";
 import { relativeDate, getFieldLabels, FIELD_COLORS } from "./utils";
+import { useLayoutVersion, buildAppLink } from "@/hooks/use-layout-version";
 
 export function CompetitorUpdatesCard({
   platform,
@@ -23,6 +24,8 @@ export function CompetitorUpdatesCard({
     latestDate: string;
   }[];
 }) {
+  const version = useLayoutVersion();
+
   return (
     <Card className="h-full">
       <CardHeader className="flex flex-row items-center justify-between pb-2">
@@ -37,7 +40,7 @@ export function CompetitorUpdatesCard({
             {groupedCompChanges.slice(0, 5).map((g) => (
               <Link
                 key={g.competitorSlug}
-                href={`/${platform}/apps/${g.competitorSlug}/changes`}
+                href={buildAppLink(platform, g.competitorSlug, "changes", version)}
                 className="flex items-center gap-2 text-sm rounded-md p-1.5 -mx-1.5 hover:bg-muted/50 transition-colors"
               >
                 {g.competitorIcon ? (
@@ -62,7 +65,7 @@ export function CompetitorUpdatesCard({
               </Link>
             ))}
             <Link
-              href={`/${platform}/apps/${slug}/competitors`}
+              href={buildAppLink(platform, slug, "competitors", version)}
               className="block text-xs text-muted-foreground pt-2 hover:text-primary transition-colors"
             >
               View all competitors {"\u2192"}
@@ -97,8 +100,10 @@ export function ListingChangesCard({
   weekChanges: any[];
   earlierChanges: any[];
 }) {
+  const version = useLayoutVersion();
+
   return (
-    <Link href={`/${platform}/apps/${slug}/changes`} className="group">
+    <Link href={buildAppLink(platform, slug, "changes", version)} className="group">
       <Card className="h-full transition-colors group-hover:border-primary/50">
         <CardHeader className="flex flex-row items-center justify-between pb-2">
           <CardTitle className="text-sm font-medium flex items-center gap-2">

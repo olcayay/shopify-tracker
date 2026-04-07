@@ -6,6 +6,7 @@ import { ChevronDown } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import type { AppData } from "./compare-types";
+import { useLayoutVersion, buildAppLink } from "@/hooks/use-layout-version";
 
 export function CompareSection({
   id,
@@ -65,6 +66,7 @@ export function VerticalListSection({
   header?: React.ReactNode;
 }) {
   const { platform } = useParams();
+  const version = useLayoutVersion();
   return (
     <CompareSection
       id={id}
@@ -83,7 +85,7 @@ export function VerticalListSection({
               app.slug === mainSlug && "bg-muted/50"
             )}
           >
-            <Link href={`/${platform}/apps/${app.slug}`} title={app.name} className="shrink-0 mt-0.5">
+            <Link href={buildAppLink(platform as string, app.slug, "", version)} title={app.name} className="shrink-0 mt-0.5">
               {app.iconUrl ? (
                 <img
                   src={app.iconUrl}

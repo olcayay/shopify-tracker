@@ -9,6 +9,7 @@ import {
   Star,
 } from "lucide-react";
 import { relativeDate } from "./utils";
+import { useLayoutVersion, buildAppLink } from "@/hooks/use-layout-version";
 
 export function ReviewPulseCard({
   platform,
@@ -33,8 +34,10 @@ export function ReviewPulseCard({
   maxDistCount: number;
   maxRatingStars: number;
 }) {
+  const version = useLayoutVersion();
+
   return (
-    <Link href={`/${platform}/apps/${slug}/reviews`} className="group">
+    <Link href={buildAppLink(platform, slug, "reviews", version)} className="group">
       <Card className="h-full transition-colors group-hover:border-primary/50">
         <CardHeader className="flex flex-row items-center justify-between pb-2">
           <CardTitle className="text-sm font-medium flex items-center gap-2">

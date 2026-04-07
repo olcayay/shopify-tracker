@@ -18,7 +18,7 @@ export default async function KeywordsPage({
   }
 
   if (!app.isTrackedByAccount) {
-    redirect(`/${platform}/apps/${slug}`);
+    redirect(`/${platform}/apps/v1/${slug}`);
   }
 
   return <KeywordsSection appSlug={slug} />;

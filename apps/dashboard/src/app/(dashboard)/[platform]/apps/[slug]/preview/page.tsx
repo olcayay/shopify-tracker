@@ -8,6 +8,7 @@ import { CardSkeleton } from "@/components/skeletons";
 import { RotateCcw, X as XIcon, ExternalLink } from "lucide-react";
 import { buildExternalAppUrl, getPlatformName } from "@/lib/platform-urls";
 import type { PlatformId } from "@appranks/shared";
+import { useLayoutVersion, buildAppLink } from "@/hooks/use-layout-version";
 import { ShopifyPreview } from "./shopify-preview";
 import { SalesforcePreview } from "./salesforce-preview";
 import { CanvaPreview } from "./canva-preview";
@@ -17,6 +18,7 @@ export default function PreviewPage() {
   const params = useParams<{ platform: string; slug: string }>();
   const { platform, slug } = params;
   const router = useRouter();
+  const version = useLayoutVersion();
   const { fetchWithAuth } = useAuth();
 
   const [appData, setAppData] = useState<any>(null);
@@ -56,7 +58,7 @@ export default function PreviewPage() {
   }
 
   function closePreview() {
-    router.push(`/${platform}/apps/${slug}`);
+    router.push(buildAppLink(platform, slug, "", version));
   }
 
   return (

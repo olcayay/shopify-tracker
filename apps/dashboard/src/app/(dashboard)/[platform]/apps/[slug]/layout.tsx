@@ -56,7 +56,7 @@ export default async function AppDetailLayout({
             {(memberApps.length > 0 || memberProjects.length > 0) && (
               <div className="flex flex-wrap gap-1.5 mt-1.5">
                 {memberApps.map((a: any) => (
-                  <Link key={a.slug} href={`/${platform}/apps/${a.slug}`}>
+                  <Link key={a.slug} href={`/${platform}/apps/v1/${a.slug}`}>
                     <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-5 bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-500/30 hover:bg-amber-500/20">
                       Competitor for {a.name}
                     </Badge>
@@ -108,7 +108,7 @@ export default async function AppDetailLayout({
         return (
         <div className={`grid grid-cols-2 sm:grid-cols-3 ${lgCols} gap-4`}>
           {caps.hasReviews && (
-            <Link href={`/${platform}/apps/${slug}/reviews`} className="block h-full">
+            <Link href={`/${platform}/apps/v1/${slug}/reviews`} className="block h-full">
             <Card className="min-w-0 py-3 gap-1 h-full hover:ring-1 hover:ring-muted-foreground/20 transition-all">
               <CardHeader>
                 <CardTitle className="text-sm text-muted-foreground">Rating</CardTitle>
@@ -142,7 +142,7 @@ export default async function AppDetailLayout({
             </Link>
           )}
           {caps.hasReviews && (
-            <Link href={`/${platform}/apps/${slug}/reviews`} className="block h-full">
+            <Link href={`/${platform}/apps/v1/${slug}/reviews`} className="block h-full">
             <Card className="min-w-0 py-3 gap-1 h-full hover:ring-1 hover:ring-muted-foreground/20 transition-all">
               <CardHeader>
                 <CardTitle className="text-sm text-muted-foreground">Reviews</CardTitle>
@@ -156,7 +156,7 @@ export default async function AppDetailLayout({
             </Link>
           )}
           {caps.hasPricing && (
-            <Link href={`/${platform}/apps/${slug}/details#pricing-plans`} className="block h-full">
+            <Link href={`/${platform}/apps/v1/${slug}/details#pricing-plans`} className="block h-full">
             <Card className="min-w-0 py-3 gap-1 h-full hover:ring-1 hover:ring-muted-foreground/20 transition-all">
               <CardHeader>
                 <CardTitle className="text-sm text-muted-foreground">Pricing</CardTitle>

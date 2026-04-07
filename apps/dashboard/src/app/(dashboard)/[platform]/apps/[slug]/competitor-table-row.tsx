@@ -16,6 +16,7 @@ import { MomentumBadge } from "@/components/momentum-badge";
 import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 import { VisibilityScorePopover } from "@/components/visibility-score-popover";
 import { WeightedPowerPopover } from "@/components/power-score-popover";
+import { useLayoutVersion, buildAppLink } from "@/hooks/use-layout-version";
 
 export function CompetitorTableRowItem({
   comp,
@@ -56,6 +57,8 @@ export function CompetitorTableRowItem({
   moveCompetitor: (index: number, direction: "up" | "down") => void;
   setConfirmRemove: (v: { slug: string; name: string } | null) => void;
 }) {
+  const version = useLayoutVersion();
+
   return (
     <TableRow className={cn(
       comp.isSelf && "border-l-2 border-l-emerald-500 bg-emerald-500/10",
@@ -112,7 +115,7 @@ export function CompetitorTableRowItem({
           )}
           <div className="flex items-center gap-1.5 min-w-0">
             <Link
-              href={`/${platform}/apps/${comp.appSlug}`}
+              href={buildAppLink(platform, comp.appSlug, "", version)}
               className="text-primary hover:underline font-medium truncate"
             >
               {comp.appName}
@@ -200,7 +203,7 @@ export function CompetitorTableRowItem({
       </TableCell>}
       {isCol("reviews") && <TableCell>
         {comp.latestSnapshot?.ratingCount != null ? (
-          <Link href={`/${platform}/apps/${comp.appSlug}/reviews`} className="text-primary hover:underline">
+          <Link href={buildAppLink(platform, comp.appSlug, "reviews", version)} className="text-primary hover:underline">
             {comp.latestSnapshot.ratingCount}
           </Link>
         ) : "\u2014"}
@@ -246,7 +249,7 @@ export function CompetitorTableRowItem({
       </TableCell>}
       {isCol("minPaidPrice") && <TableCell className="text-sm">
         {comp.minPaidPrice != null ? (
-          <Link href={`/${platform}/apps/${comp.appSlug}/details#pricing-plans`} className="text-primary hover:underline">
+          <Link href={buildAppLink(platform, comp.appSlug, "details#pricing-plans", version)} className="text-primary hover:underline">
             ${comp.minPaidPrice}/mo
           </Link>
         ) : "\u2014"}
@@ -256,28 +259,28 @@ export function CompetitorTableRowItem({
       </TableCell>}
       {isCol("featured") && <TableCell className="text-sm">
         {comp.featuredSections > 0 ? (
-          <Link href={`/${platform}/apps/${comp.appSlug}/featured`} className="text-primary hover:underline">{comp.featuredSections}</Link>
+          <Link href={buildAppLink(platform, comp.appSlug, "featured", version)} className="text-primary hover:underline">{comp.featuredSections}</Link>
         ) : (
           <span className="text-muted-foreground">{"\u2014"}</span>
         )}
       </TableCell>}
       {isCol("ads") && <TableCell className="text-sm">
         {comp.adKeywords > 0 ? (
-          <Link href={`/${platform}/apps/${comp.appSlug}/ads`} className="text-primary hover:underline">{comp.adKeywords}</Link>
+          <Link href={buildAppLink(platform, comp.appSlug, "ads", version)} className="text-primary hover:underline">{comp.adKeywords}</Link>
         ) : (
           <span className="text-muted-foreground">{"\u2014"}</span>
         )}
       </TableCell>}
       {isCol("ranked") && <TableCell className="text-sm">
         {comp.rankedKeywordCount > 0 ? (
-          <Link href={`/${platform}/apps/${comp.appSlug}/keywords`} className="text-primary hover:underline">{comp.rankedKeywordCount}</Link>
+          <Link href={buildAppLink(platform, comp.appSlug, "keywords", version)} className="text-primary hover:underline">{comp.rankedKeywordCount}</Link>
         ) : (
           <span className="text-muted-foreground">{"\u2014"}</span>
         )}
       </TableCell>}
       {isCol("similar") && <TableCell className="text-sm">
         {comp.reverseSimilarCount > 0 ? (
-          <Link href={`/${platform}/apps/${comp.appSlug}/similar`} className="text-primary hover:underline">{comp.reverseSimilarCount}</Link>
+          <Link href={buildAppLink(platform, comp.appSlug, "similar", version)} className="text-primary hover:underline">{comp.reverseSimilarCount}</Link>
         ) : (
           <span className="text-muted-foreground">{"\u2014"}</span>
         )}
@@ -323,7 +326,7 @@ export function CompetitorTableRowItem({
       </TableCell>}
       {isCol("lastChange") && <TableCell className="text-sm">
         {lastChanges[comp.appSlug] ? (
-          <Link href={`/${platform}/apps/${comp.appSlug}/changes`} className="text-primary hover:underline">
+          <Link href={buildAppLink(platform, comp.appSlug, "changes", version)} className="text-primary hover:underline">
             {formatDateOnly(lastChanges[comp.appSlug])}
           </Link>
         ) : "\u2014"}

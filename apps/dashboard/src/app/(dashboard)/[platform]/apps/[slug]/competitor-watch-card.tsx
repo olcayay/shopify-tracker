@@ -10,6 +10,7 @@ import {
   Star,
 } from "lucide-react";
 import { ordinal } from "./utils";
+import { useLayoutVersion, buildAppLink } from "@/hooks/use-layout-version";
 
 export function CompetitorWatchCard({
   platform,
@@ -30,8 +31,10 @@ export function CompetitorWatchCard({
   selfPricePos: number;
   caps: { hasReviews: boolean; hasPricing: boolean };
 }) {
+  const version = useLayoutVersion();
+
   return (
-    <Link href={`/${platform}/apps/${slug}/competitors`} className="group">
+    <Link href={buildAppLink(platform, slug, "competitors", version)} className="group">
       <Card className="h-full transition-colors group-hover:border-primary/50">
         <CardHeader className="flex flex-row items-center justify-between pb-2">
           <CardTitle className="text-sm font-medium flex items-center gap-2">

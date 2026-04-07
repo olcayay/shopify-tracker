@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 import { Check } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useLayoutVersion, buildAppLink } from "@/hooks/use-layout-version";
 
 export function AppIcon({
   app,
@@ -68,9 +69,10 @@ export function LinkedAppIcon({
   app: { slug: string; name: string; iconUrl: string | null };
 }) {
   const { platform } = useParams();
+  const version = useLayoutVersion();
   return (
     <Link
-      href={`/${platform}/apps/${app.slug}`}
+      href={buildAppLink(platform as string, app.slug, "", version)}
       className="group relative inline-flex flex-col items-center"
     >
       {app.iconUrl ? (

@@ -9,6 +9,7 @@ import {
   Megaphone,
   Users,
 } from "lucide-react";
+import { useLayoutVersion, buildAppLink } from "@/hooks/use-layout-version";
 
 export function VisibilityDiscoveryCard({
   platform,
@@ -27,6 +28,8 @@ export function VisibilityDiscoveryCard({
   reverseSimilarSlugs: string[];
   caps: { hasFeaturedSections: boolean; hasAdTracking: boolean; hasSimilarApps: boolean };
 }) {
+  const version = useLayoutVersion();
+
   return (
     <Card className="h-full">
       <CardHeader className="flex flex-row items-center justify-between pb-2">
@@ -41,7 +44,7 @@ export function VisibilityDiscoveryCard({
             {/* Featured */}
             {caps.hasFeaturedSections && (
               <Link
-                href={`/${platform}/apps/${slug}/featured`}
+                href={buildAppLink(platform, slug, "featured", version)}
                 className="block rounded-md p-2 -mx-2 hover:bg-muted/50 transition-colors"
               >
                 <div className="flex items-center gap-2 text-sm">
@@ -64,7 +67,7 @@ export function VisibilityDiscoveryCard({
             {/* Search Ads */}
             {caps.hasAdTracking && (
               <Link
-                href={`/${platform}/apps/${slug}/ads`}
+                href={buildAppLink(platform, slug, "ads", version)}
                 className="block rounded-md p-2 -mx-2 hover:bg-muted/50 transition-colors"
               >
                 <div className="flex items-center gap-2 text-sm">
@@ -88,7 +91,7 @@ export function VisibilityDiscoveryCard({
             {/* Similar Apps */}
             {caps.hasSimilarApps && (
               <Link
-                href={`/${platform}/apps/${slug}/similar`}
+                href={buildAppLink(platform, slug, "similar", version)}
                 className="block rounded-md p-2 -mx-2 hover:bg-muted/50 transition-colors"
               >
                 <div className="flex items-center gap-2 text-sm">

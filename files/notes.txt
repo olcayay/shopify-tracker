@@ -1,3 +1,18 @@
+Dashboard Layout & Navigation (2026-04-07)
+================================================================
+
+PLA-815: Fix classical layout: rename /classic/ to /v1/ and keep user in v1 when navigating
+- Renamed route folder from /classic/ to /v1/ for cleaner URLs
+- Created useLayoutVersion() hook + buildAppLink() utility for version-aware link building
+- Updated all card components (ReviewPulse, CompetitorWatch, CategoryRankings, KeywordPerformance,
+  ListingChanges, CompetitorUpdates, VisibilityDiscovery) to use version-aware links
+- Updated AppNav tabs, competitor-table-row, compare components, preview page
+- Updated shared [slug]/layout.tsx hardcoded links to use /v1/ prefix
+- Updated proxy.ts regex to exclude /v1/ instead of /classic/
+- Updated v2 layout "Back to classic view" link to use /v1/
+- Added 9 tests for useLayoutVersion hook and buildAppLink utility
+- Updated 3 existing tests (middleware, keywords redirect)
+
 API Performance & Reliability (2026-04-07)
 ================================================================
 

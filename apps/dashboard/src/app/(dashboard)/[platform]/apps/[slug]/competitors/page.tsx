@@ -18,7 +18,7 @@ export default async function CompetitorsPage({
   }
 
   if (!app.isTrackedByAccount) {
-    redirect(`/apps/${slug}`);
+    redirect(`/${platform}/apps/v1/${slug}`);
   }
 
   return <CompetitorsSection appSlug={slug} />;

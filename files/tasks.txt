@@ -1,3 +1,6 @@
+Dashboard Layout & Navigation (2026-04-07)
+  PLA-815: Fix classical layout: rename /classic/ to /v1/ and keep user in v1 when navigating ✅
+
 API Performance & Reliability (2026-04-07)
   PLA-811: Fix /api/auth/me and /api/notifications/unread-count hanging indefinitely ✅
   PLA-813: PostgresError: invalid input syntax in post-scrape-events SQL array interpolation ✅

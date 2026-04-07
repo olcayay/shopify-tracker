@@ -158,8 +158,8 @@ describe("proxy – v1 to v2 app detail redirect", () => {
     }
   });
 
-  it("does not redirect classic URLs", async () => {
-    const req = makeRequest("/shopify/apps/classic/formful", { access_token: "eyJhbGciOiJIUzI1NiJ9.eyJleHAiOjk5OTk5OTk5OTl9.abc" });
+  it("does not redirect v1 URLs", async () => {
+    const req = makeRequest("/shopify/apps/v1/formful", { access_token: "eyJhbGciOiJIUzI1NiJ9.eyJleHAiOjk5OTk5OTk5OTl9.abc" });
     await proxy(req);
     const calls = (NextResponse.redirect as any).mock.calls;
     const redirectedToV2 = calls.some((c: any) => (c[0] as URL).pathname.includes("/apps/v2/"));

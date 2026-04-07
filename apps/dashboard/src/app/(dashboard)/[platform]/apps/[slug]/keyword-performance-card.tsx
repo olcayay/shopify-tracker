@@ -11,6 +11,7 @@ import {
   ArrowDownRight,
   Plus,
 } from "lucide-react";
+import { useLayoutVersion, buildAppLink } from "@/hooks/use-layout-version";
 
 export function KeywordPerformanceCard({
   platform,
@@ -27,8 +28,10 @@ export function KeywordPerformanceCard({
   kwMovers: { slug: string; label: string; position: number; delta: number }[];
   topKeywords: { slug: string; label: string; position: number }[];
 }) {
+  const version = useLayoutVersion();
+
   return (
-    <Link href={`/${platform}/apps/${slug}/keywords`} className="group">
+    <Link href={buildAppLink(platform, slug, "keywords", version)} className="group">
       <Card className="h-full transition-colors group-hover:border-primary/50">
         <CardHeader className="flex flex-row items-center justify-between pb-2">
           <CardTitle className="text-sm font-medium flex items-center gap-2">

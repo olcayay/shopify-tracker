@@ -111,7 +111,7 @@ describe("App KeywordsPage", () => {
       })
     ).rejects.toThrow("NEXT_REDIRECT");
 
-    expect(mockRedirect).toHaveBeenCalledWith("/shopify/apps/other-app");
+    expect(mockRedirect).toHaveBeenCalledWith("/shopify/apps/v1/other-app");
   });
 
   it("calls getApp with correct slug and platform", async () => {
@@ -219,6 +219,6 @@ describe("KeywordsSection (client component)", () => {
       })
     ).rejects.toThrow("NEXT_REDIRECT");
 
-    expect(mockRedirect).toHaveBeenCalledWith("/salesforce/apps/sf-app");
+    expect(mockRedirect).toHaveBeenCalledWith("/salesforce/apps/v1/sf-app");
   });
 });
