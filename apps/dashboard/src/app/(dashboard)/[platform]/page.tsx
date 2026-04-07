@@ -4,6 +4,7 @@ import { useEffect, useState, useMemo } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import { useAuth } from "@/lib/auth-context";
+import { useFeatureFlag } from "@/contexts/feature-flags-context";
 import { useFormatDate } from "@/lib/format-date";
 import { AppSearchBar } from "@/components/app-search-bar";
 import { QuickStartCards } from "@/components/quick-start-cards";
@@ -89,6 +90,7 @@ function Pagination({
 export default function OverviewPage() {
   const { platform } = useParams();
   const { fetchWithAuth, user, account, refreshUser, isLoading: authLoading } = useAuth();
+  const hasResearch = useFeatureFlag("market-research");
   const { formatDateOnly } = useFormatDate();
   const [apps, setApps] = useState<any[]>([]);
   const [keywords, setKeywords] = useState<any[]>([]);
@@ -287,7 +289,7 @@ export default function OverviewPage() {
         { key: "apps", ...USAGE_STAT_PRESETS.apps, value: apps.length, limit: account?.limits.maxTrackedApps ?? 0, href: `/${platform}/apps`, show: true },
         { key: "keywords", ...USAGE_STAT_PRESETS.keywords, value: keywords.length, limit: account?.limits.maxTrackedKeywords ?? 0, href: `/${platform}/keywords`, show: caps.hasKeywordSearch },
         { key: "competitors", ...USAGE_STAT_PRESETS.competitors, value: competitors.length, limit: account?.limits.maxCompetitorApps ?? 0, href: `/${platform}/competitors`, show: true },
-        { key: "research", ...USAGE_STAT_PRESETS.research, value: account?.usage.researchProjects ?? 0, limit: account?.limits?.maxResearchProjects ?? 0, href: `/${platform}/research`, show: true },
+        { key: "research", ...USAGE_STAT_PRESETS.research, value: account?.usage.researchProjects ?? 0, limit: account?.limits?.maxResearchProjects ?? 0, href: `/${platform}/research`, show: hasResearch },
         { key: "users", ...USAGE_STAT_PRESETS.users, value: account?.usage.users ?? 1, limit: account?.limits.maxUsers ?? 0, href: "/settings", show: true },
       ]} />
 

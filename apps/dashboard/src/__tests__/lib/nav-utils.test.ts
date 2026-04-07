@@ -81,12 +81,19 @@ describe("nav-utils", () => {
       expect(items.some((i) => i.label === "Categories")).toBe(false);
     });
 
-    it("includes research only for shopify", () => {
-      const shopifyItems = getNavItems("shopify");
-      expect(shopifyItems.some((i) => i.label === "Research")).toBe(true);
+    it("includes research only when market-research feature flag is enabled", () => {
+      const withFlag = getNavItems("shopify", false, ["market-research"]);
+      expect(withFlag.some((i) => i.label === "Research")).toBe(true);
 
-      const salesforceItems = getNavItems("salesforce");
-      expect(salesforceItems.some((i) => i.label === "Research")).toBe(false);
+      const withoutFlag = getNavItems("shopify", false, []);
+      expect(withoutFlag.some((i) => i.label === "Research")).toBe(false);
+
+      const noFeatures = getNavItems("shopify");
+      expect(noFeatures.some((i) => i.label === "Research")).toBe(false);
+
+      // Works for any platform, not just shopify
+      const salesforceWithFlag = getNavItems("salesforce", false, ["market-research"]);
+      expect(salesforceWithFlag.some((i) => i.label === "Research")).toBe(true);
     });
 
     it("includes developers only for admin", () => {

@@ -57,6 +57,11 @@ vi.mock("@/lib/auth-context", () => ({
   }),
 }));
 
+vi.mock("@/contexts/feature-flags-context", () => ({
+  useFeatureFlag: () => true,
+  useFeatureFlags: () => ({ enabledFeatures: ["market-research"], hasFeature: () => true }),
+}));
+
 import OverviewPage from "@/app/(dashboard)/overview/page";
 
 function setupDefaultMocks() {

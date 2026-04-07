@@ -33,6 +33,11 @@ vi.mock("@/lib/auth-context", () => ({
   useAuth: (...args: any[]) => mockUseAuth(...args),
 }));
 
+vi.mock("@/contexts/feature-flags-context", () => ({
+  useFeatureFlag: () => true,
+  useFeatureFlags: () => ({ enabledFeatures: ["market-research"], hasFeature: () => true }),
+}));
+
 vi.mock("@/components/account-usage-cards", () => ({
   AccountUsageCards: ({ stats }: { stats: any[] }) => (
     <div data-testid="account-usage-cards">

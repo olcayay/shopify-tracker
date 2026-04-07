@@ -68,6 +68,17 @@ PLA-797: Phase 6: Dashboard — account detail feature flags card
 - Empty state: "No feature flags enabled"
 - Data comes from `featureFlags` array in account detail API (Phase 3)
 
+PLA-798: Phase 7: Gate market research features behind feature flag
+- Replaced `platformId === "shopify"` check in `nav-utils.ts` with `enabledFeatures?.includes("market-research")`
+- `getNavItems()` now accepts optional `enabledFeatures` parameter
+- Updated sidebar.tsx and icon-sidebar.tsx to pass `account.enabledFeatures` to `getNavItems()`
+- Added research route guard: `[platform]/research/layout.tsx` redirects to platform overview if flag disabled
+- Platform overview page: research usage card now uses `show: hasResearch`
+- Overview page: research usage cards gated behind `hasResearch`
+- Settings page: research usage stat gated behind `hasResearch`
+- Updated nav-utils test: research is now feature-flag-gated, not shopify-only
+- Added feature-flags-context mock to 3 existing test files (overview, platform-overview, settings)
+
 Scraper Reliability (2026-04-07)
 ================================================================
 

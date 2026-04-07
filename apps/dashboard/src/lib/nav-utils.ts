@@ -65,7 +65,7 @@ export interface NavItem {
 }
 
 /** Get navigation items for a platform based on its capabilities */
-export function getNavItems(platformId: PlatformId, isAdmin?: boolean): NavItem[] {
+export function getNavItems(platformId: PlatformId, isAdmin?: boolean, enabledFeatures?: string[]): NavItem[] {
   const p = `/${platformId}`;
   const caps = PLATFORMS[platformId];
   const items: NavItem[] = [
@@ -87,8 +87,8 @@ export function getNavItems(platformId: PlatformId, isAdmin?: boolean): NavItem[
   if (caps.hasFeatureTaxonomy) {
     items.push({ href: `${p}/features`, label: "Features", icon: Puzzle });
   }
-  // Research is only available on Shopify for now
-  if (platformId === "shopify") {
+  // Research is gated behind the market-research feature flag
+  if (enabledFeatures?.includes("market-research")) {
     items.push({ href: `${p}/research`, label: "Research", icon: FlaskConical, badge: "Beta" });
   }
   if (isAdmin) {

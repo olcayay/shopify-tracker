@@ -38,6 +38,7 @@ function SidebarContent({
   const { user, account, logout, impersonation, globalPlatformVisibility } = useAuth();
   const isSystemAdmin = user?.isSystemAdmin;
   const enabledPlatforms = account?.enabledPlatforms ?? [];
+  const enabledFeatures = account?.enabledFeatures ?? [];
   const isAdminSection = pathname.startsWith("/system-admin");
 
   const currentPlatform = extractPlatform(pathname);
@@ -102,8 +103,8 @@ function SidebarContent({
   // In collapsed mode, show appropriate nav icons
   const activePlatformItems = useMemo(() => {
     if (isGlobalPage) return globalNavItems;
-    return getNavItems(currentPlatform, isSystemAdmin);
-  }, [currentPlatform, isSystemAdmin, isGlobalPage]);
+    return getNavItems(currentPlatform, isSystemAdmin, enabledFeatures);
+  }, [currentPlatform, isSystemAdmin, isGlobalPage, enabledFeatures]);
 
   return (
     <>
@@ -150,7 +151,7 @@ function SidebarContent({
             .filter((pid) => pid in PLATFORMS)
             .map((platformId) => {
             const isExpanded = expandedPlatform === platformId;
-            const items = getNavItems(platformId, isSystemAdmin);
+            const items = getNavItems(platformId, isSystemAdmin, enabledFeatures);
             const accentColor = PLATFORM_COLORS[platformId];
             const isGloballyHidden = isSystemAdmin && globalPlatformVisibility && globalPlatformVisibility[platformId] === false;
 

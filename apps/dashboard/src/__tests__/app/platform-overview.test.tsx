@@ -34,6 +34,11 @@ vi.mock("@/lib/auth-context", () => ({
   useAuth: (...args: any[]) => mockUseAuth(...args),
 }));
 
+vi.mock("@/contexts/feature-flags-context", () => ({
+  useFeatureFlag: () => true,
+  useFeatureFlags: () => ({ enabledFeatures: ["market-research"], hasFeature: () => true }),
+}));
+
 // Mock useFormatDate
 vi.mock("@/lib/format-date", () => ({
   useFormatDate: () => ({

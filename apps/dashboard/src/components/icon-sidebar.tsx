@@ -12,8 +12,9 @@ import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip
 
 export function IconSidebar() {
   const pathname = usePathname();
-  const { user } = useAuth();
+  const { user, account } = useAuth();
   const isSystemAdmin = user?.isSystemAdmin;
+  const enabledFeatures = account?.enabledFeatures ?? [];
   const isAdminSection = pathname.startsWith("/system-admin");
   const isPlatformPage = isOnPlatformPage(pathname);
 
@@ -45,9 +46,9 @@ export function IconSidebar() {
     () => {
       if (isAdminSection || showAdminFallback) return systemAdminItems;
       if (isGlobalPage || isSettingsPage) return globalNavItems;
-      return getNavItems(activePlatform, isSystemAdmin);
+      return getNavItems(activePlatform, isSystemAdmin, enabledFeatures);
     },
-    [activePlatform, isSystemAdmin, isAdminSection, showAdminFallback, isGlobalPage, isSettingsPage]
+    [activePlatform, isSystemAdmin, isAdminSection, showAdminFallback, isGlobalPage, isSettingsPage, enabledFeatures]
   );
 
   // Show sidebar on platform pages, admin pages, global pages, settings, or for system admins
