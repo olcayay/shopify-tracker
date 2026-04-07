@@ -1,3 +1,14 @@
+Feature Flags Infrastructure (2026-04-07)
+================================================================
+
+PLA-792: Phase 1: Database schema & migration for feature flags
+- Created `feature_flags` table: slug (unique), name, description, is_enabled, activated_at, deactivated_at
+- Created `account_feature_flags` table: per-account flag override with unique (account_id, feature_flag_id)
+- Drizzle schema: `packages/db/src/schema/feature-flags.ts`
+- Migration `0120_feature_flags.sql`: IF NOT EXISTS, ON CONFLICT seed for `market-research` flag
+- Re-exported from `@appranks/db` index
+- 5 tests: column names, index export, idempotent DDL, journal entry
+
 Scraper Reliability (2026-04-07)
 ================================================================
 

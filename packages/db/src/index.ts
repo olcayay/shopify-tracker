@@ -32,6 +32,7 @@ import * as emailSchema from "./schema/email.js";
 import * as templatesSchema from "./schema/templates.js";
 import * as aiSuggestionsSchema from "./schema/ai-suggestions.js";
 import * as activityLogSchema from "./schema/activity-log.js";
+import * as featureFlagsSchema from "./schema/feature-flags.js";
 
 export const schema = {
   ...scrapeRunsSchema,
@@ -64,6 +65,7 @@ export const schema = {
   ...templatesSchema,
   ...aiSuggestionsSchema,
   ...activityLogSchema,
+  ...featureFlagsSchema,
 };
 
 export interface DbPoolOptions {
@@ -246,3 +248,4 @@ export {
 } from "./schema/ai-suggestions.js";
 
 export { accountActivityLog } from "./schema/activity-log.js";
+export { featureFlags, accountFeatureFlags } from "./schema/feature-flags.js";
