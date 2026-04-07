@@ -885,55 +885,62 @@ export const accountTrackingRoutes: FastifyPluginAsync = async (app) => {
       } catch { /* table may not exist yet */ }
     }
 
-    // Attach latest snapshot summary for each competitor
-    const result = await Promise.all(
-      rows.map(async (row) => {
-        const [snapshot] = await db
-          .select({
-            averageRating: appSnapshots.averageRating,
-            ratingCount: appSnapshots.ratingCount,
-            pricing: appSnapshots.pricing,
-            pricingPlans: appSnapshots.pricingPlans,
-            categories: appSnapshots.categories,
-          })
-          .from(appSnapshots)
-          .where(eq(appSnapshots.appId, row._appId))
-          .orderBy(desc(appSnapshots.scrapedAt))
-          .limit(1);
+    // Batch queries for snapshots and changes (was N+1: 2 queries per competitor)
+    const compAppIdsForBatch = rows.map((r) => r._appId).filter((id): id is number => id != null);
 
-        const [change] = await db
-          .select({ detectedAt: sql<string | null>`max(detected_at)` })
-          .from(sql`app_field_changes`)
-          .where(sql`app_id = ${row._appId}`);
+    const [snapshotRows, changeRows] = compAppIdsForBatch.length > 0
+      ? await Promise.all([
+          db.execute(sql`
+            SELECT DISTINCT ON (app_id)
+              app_id, average_rating, rating_count, pricing, pricing_plans, categories
+            FROM app_snapshots
+            WHERE app_id = ANY(${sqlArray(compAppIdsForBatch)})
+            ORDER BY app_id, scraped_at DESC
+          `),
+          db.execute(sql`
+            SELECT app_id, max(detected_at) AS detected_at
+            FROM app_field_changes
+            WHERE app_id = ANY(${sqlArray(compAppIdsForBatch)})
+            GROUP BY app_id
+          `),
+        ])
+      : [[], []];
 
-        const minPaidPrice = getMinPaidPrice(snapshot?.pricingPlans);
-        const { pricingPlans: _, categories: cats, ...snapshotRest } = snapshot || ({} as any);
-        const appCategories = (cats as any[]) || [];
+    const snapshotMap = new Map((snapshotRows as any[]).map((s: any) => [s.app_id, s]));
+    const changeMap = new Map((changeRows as any[]).map((c: any) => [c.app_id, c.detected_at]));
 
-        return {
-          ...row,
-          latestSnapshot: snapshot ? snapshotRest : null,
-          minPaidPrice,
-          lastChangeAt: change?.detectedAt || null,
-          rankedKeywords: rankedKeywordMap.get(row.appSlug) ?? 0,
-          adKeywords: adKeywordMap.get(row.appSlug) ?? 0,
-          featuredSections: featuredCountMap.get(row.appSlug) ?? 0,
-          reverseSimilarCount: reverseSimilarMap.get(row.appSlug) ?? 0,
-          visibilityScore: visibilityMap.get(`${row.trackedAppSlug}:${row.appSlug}`)?.visibilityScore ?? null,
-          visibilityKeywordCount: visibilityMap.get(`${row.trackedAppSlug}:${row.appSlug}`)?.keywordCount ?? null,
-          visibilityRaw: visibilityMap.get(`${row.trackedAppSlug}:${row.appSlug}`)?.visibilityRaw ?? null,
-          weightedPowerScore: weightedPowerMap.get(row.appSlug) ?? null,
-          powerCategories: powerCategoriesMap.get(row.appSlug) ?? [],
-          categories: appCategories.map((c: any) => {
-            const slug = c.url ? c.url.replace(/.*\/categories\//, "").replace(/\/.*/, "") : null;
-            return { type: c.type || "primary", title: c.title, slug };
-          }),
-          categoryRankings: categoryRankingMap.get(row.appSlug) ?? [],
-          reviewVelocity: velocityMap.get(row.appSlug) ?? null,
-          similarityScore: similarityMap.get(row.trackedAppSlug)?.get(row.appSlug) ?? null,
-        };
-      })
-    );
+    const result = rows.map((row) => {
+      const snapshot = snapshotMap.get(row._appId) || null;
+      const minPaidPrice = getMinPaidPrice(snapshot?.pricing_plans ?? snapshot?.pricingPlans);
+      const cats = (snapshot?.categories as any[]) || [];
+
+      return {
+        ...row,
+        latestSnapshot: snapshot ? {
+          averageRating: snapshot.average_rating ?? snapshot.averageRating,
+          ratingCount: snapshot.rating_count ?? snapshot.ratingCount,
+          pricing: snapshot.pricing,
+        } : null,
+        minPaidPrice,
+        lastChangeAt: changeMap.get(row._appId) || null,
+        rankedKeywords: rankedKeywordMap.get(row.appSlug) ?? 0,
+        adKeywords: adKeywordMap.get(row.appSlug) ?? 0,
+        featuredSections: featuredCountMap.get(row.appSlug) ?? 0,
+        reverseSimilarCount: reverseSimilarMap.get(row.appSlug) ?? 0,
+        visibilityScore: visibilityMap.get(`${row.trackedAppSlug}:${row.appSlug}`)?.visibilityScore ?? null,
+        visibilityKeywordCount: visibilityMap.get(`${row.trackedAppSlug}:${row.appSlug}`)?.keywordCount ?? null,
+        visibilityRaw: visibilityMap.get(`${row.trackedAppSlug}:${row.appSlug}`)?.visibilityRaw ?? null,
+        weightedPowerScore: weightedPowerMap.get(row.appSlug) ?? null,
+        powerCategories: powerCategoriesMap.get(row.appSlug) ?? [],
+        categories: cats.map((c: any) => {
+          const slug = c.url ? c.url.replace(/.*\/categories\//, "").replace(/\/.*/, "") : null;
+          return { type: c.type || "primary", title: c.title, slug };
+        }),
+        categoryRankings: categoryRankingMap.get(row.appSlug) ?? [],
+        reviewVelocity: velocityMap.get(row.appSlug) ?? null,
+        similarityScore: similarityMap.get(row.trackedAppSlug)?.get(row.appSlug) ?? null,
+      };
+    });
 
     return result;
   });

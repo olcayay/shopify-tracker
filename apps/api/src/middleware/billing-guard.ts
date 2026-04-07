@@ -3,11 +3,26 @@ import { eq } from "drizzle-orm";
 import { accounts } from "@appranks/db";
 
 const GRACE_PERIOD_DAYS = 7;
+const CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
+
+interface BillingCacheEntry {
+  subscriptionStatus: string | null;
+  pastDueSince: string | null;
+  expiry: number;
+}
+
+const billingCache = new Map<string, BillingCacheEntry>();
+
+/** Clear billing cache for a specific account (call after subscription changes) */
+export function invalidateBillingCache(accountId: string) {
+  billingCache.delete(accountId);
+}
 
 /**
  * Middleware that blocks write operations when payment grace period has expired.
  * Read-only access is still allowed (GET requests pass through).
  * Accounts with status "free" or "active" are always allowed.
+ * Uses a 5-minute TTL cache to avoid querying DB on every write request.
  */
 export function requireActiveBilling() {
   return async (request: FastifyRequest, reply: FastifyReply) => {
@@ -22,17 +37,42 @@ export function requireActiveBilling() {
     // Skip for system admins
     if (request.user.isSystemAdmin) return;
 
-    const db = (request.server as any).db;
-    if (!db) return;
+    const accountId = request.user.accountId;
+
+    // Check cache first
+    const cached = billingCache.get(accountId);
+    let account: { subscriptionStatus: string | null; pastDueSince: string | null } | undefined;
+
+    if (cached && cached.expiry > Date.now()) {
+      account = { subscriptionStatus: cached.subscriptionStatus, pastDueSince: cached.pastDueSince };
+    } else {
+      const db = (request.server as any).db;
+      if (!db) return;
+
+      try {
+        const [row] = await db
+          .select({
+            subscriptionStatus: accounts.subscriptionStatus,
+            pastDueSince: accounts.pastDueSince,
+          })
+          .from(accounts)
+          .where(eq(accounts.id, accountId));
+
+        if (row) {
+          billingCache.set(accountId, {
+            subscriptionStatus: row.subscriptionStatus,
+            pastDueSince: row.pastDueSince ? String(row.pastDueSince) : null,
+            expiry: Date.now() + CACHE_TTL_MS,
+          });
+          account = row;
+        }
+      } catch {
+        // Fail-open: don't block requests if billing check fails
+        return;
+      }
+    }
 
     try {
-      const [account] = await db
-        .select({
-          subscriptionStatus: accounts.subscriptionStatus,
-          pastDueSince: accounts.pastDueSince,
-        })
-        .from(accounts)
-        .where(eq(accounts.id, request.user.accountId));
 
       if (!account) return;
 

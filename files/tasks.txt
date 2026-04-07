@@ -2,7 +2,9 @@ DB Pool Fix — Connection Reduction (2026-04-07)
   PLA-821: Phase 1: Consolidate /api/auth/me from 9 parallel queries to 1+2 ✅
   PLA-822: Phase 2: Consolidate /api/system-admin/accounts N+1 into single query ✅
   PLA-823: Phase 3: Batch overview highlights from 7 parallel to 2 batches ✅
+  PLA-824: Phase 4: Batch competitor snapshots N+1 into 2 batch queries ✅
   PLA-825: Phase 5: Fix /health/ready to not consume main pool connections ✅
+  PLA-826: Phase 6: Add TTL cache to billing guard middleware ✅
 
 Feature Flags Infrastructure (2026-04-07)
   PLA-792: Phase 1: Database schema & migration for feature flags ✅
