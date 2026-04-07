@@ -8,6 +8,7 @@ DB Pool Fix — Connection Reduction (2026-04-07)
 
 Feature Flags Infrastructure (2026-04-07)
   PLA-792: Phase 1: Database schema & migration for feature flags ✅
+  PLA-793: Phase 2: API — system admin feature flag CRUD endpoints ✅
 
 Scraper Reliability (2026-04-07)
   PLA-817: Stale run cleanup lacks retry — crashed scraper runs are silently lost ✅

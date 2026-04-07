@@ -23,6 +23,18 @@ PLA-792: Phase 1: Database schema & migration for feature flags
 - Re-exported from `@appranks/db` index
 - 5 tests: column names, index export, idempotent DDL, journal entry
 
+PLA-793: Phase 2: API — system admin feature flag CRUD endpoints
+- Created `apps/api/src/routes/feature-flags.ts` with 7 endpoints:
+  - GET / — list all flags with accountCount (subquery)
+  - POST / — create flag with slug validation (lowercase+hyphens, starts with letter)
+  - GET /:slug — flag detail with enabled accounts (innerJoin)
+  - PATCH /:slug — toggle isEnabled (sets activatedAt/deactivatedAt), edit name/desc
+  - POST /:slug/accounts — enable flag for account (onConflictDoNothing)
+  - DELETE /:slug/accounts/:accountId — disable flag for account
+  - GET /:slug/accounts/search?q= — search accounts not yet enabled (notInArray exclusion)
+- Registered at `/api/system-admin/feature-flags` (auth middleware auto-protects)
+- 23 unit tests covering all endpoints, auth, validation, 404s
+
 Scraper Reliability (2026-04-07)
 ================================================================
 
