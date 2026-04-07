@@ -181,3 +181,130 @@ describe("GET /api/email-preferences/categories", () => {
     expect(body.categories.team).toBeDefined();
   });
 });
+
+// ─── Per-App Email Preferences ──────────────────────────────────────────────
+
+describe("GET /api/email-preferences/apps", () => {
+  let app: FastifyInstance;
+  afterEach(async () => { if (app) await app.close(); });
+
+  it("returns tracked apps with email preferences", async () => {
+    app = await buildApp({
+      selectResult: [
+        { appId: 1, slug: "slack", name: "Slack", platform: "shopify", iconUrl: null, dailyDigestEnabled: null },
+      ],
+    });
+
+    const res = await app.inject({
+      method: "GET",
+      url: "/api/email-preferences/apps",
+      headers: authHeaders(userToken()),
+    });
+
+    expect(res.statusCode).toBe(200);
+    const body = res.json();
+    expect(body.apps).toBeDefined();
+    expect(Array.isArray(body.apps)).toBe(true);
+    expect(body.apps[0].dailyDigestEnabled).toBe(true);
+  });
+
+  it("returns 401 without auth", async () => {
+    app = await buildApp();
+    const res = await app.inject({ method: "GET", url: "/api/email-preferences/apps" });
+    expect(res.statusCode).toBe(401);
+  });
+});
+
+describe("GET /api/email-preferences/apps/:appId", () => {
+  let app: FastifyInstance;
+  afterEach(async () => { if (app) await app.close(); });
+
+  it("returns default enabled for app without preference", async () => {
+    app = await buildApp({ selectResult: [] });
+
+    const res = await app.inject({
+      method: "GET",
+      url: "/api/email-preferences/apps/123",
+      headers: authHeaders(userToken()),
+    });
+
+    expect(res.statusCode).toBe(200);
+    expect(res.json().dailyDigestEnabled).toBe(true);
+  });
+
+  it("returns 400 for invalid appId", async () => {
+    app = await buildApp();
+
+    const res = await app.inject({
+      method: "GET",
+      url: "/api/email-preferences/apps/abc",
+      headers: authHeaders(userToken()),
+    });
+
+    expect(res.statusCode).toBe(400);
+  });
+});
+
+describe("PATCH /api/email-preferences/apps/:appId", () => {
+  let app: FastifyInstance;
+  afterEach(async () => { if (app) await app.close(); });
+
+  it("updates per-app email preference", async () => {
+    app = await buildApp({ insertResult: [] });
+
+    const res = await app.inject({
+      method: "PATCH",
+      url: "/api/email-preferences/apps/123",
+      headers: authHeaders(userToken()),
+      payload: { dailyDigestEnabled: false },
+    });
+
+    expect(res.statusCode).toBe(200);
+    expect(res.json().dailyDigestEnabled).toBe(false);
+  });
+
+  it("returns 400 when dailyDigestEnabled missing", async () => {
+    app = await buildApp();
+
+    const res = await app.inject({
+      method: "PATCH",
+      url: "/api/email-preferences/apps/123",
+      headers: authHeaders(userToken()),
+      payload: {},
+    });
+
+    expect(res.statusCode).toBe(400);
+  });
+});
+
+describe("PATCH /api/email-preferences/apps/bulk", () => {
+  let app: FastifyInstance;
+  afterEach(async () => { if (app) await app.close(); });
+
+  it("bulk updates per-app preferences", async () => {
+    app = await buildApp({ insertResult: [] });
+
+    const res = await app.inject({
+      method: "PATCH",
+      url: "/api/email-preferences/apps/bulk",
+      headers: authHeaders(userToken()),
+      payload: { appIds: [1, 2, 3], dailyDigestEnabled: true },
+    });
+
+    expect(res.statusCode).toBe(200);
+    expect(res.json().count).toBe(3);
+  });
+
+  it("returns 400 when appIds missing", async () => {
+    app = await buildApp();
+
+    const res = await app.inject({
+      method: "PATCH",
+      url: "/api/email-preferences/apps/bulk",
+      headers: authHeaders(userToken()),
+      payload: { dailyDigestEnabled: true },
+    });
+
+    expect(res.statusCode).toBe(400);
+  });
+});

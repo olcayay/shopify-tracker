@@ -11,6 +11,7 @@ import { AdminScraperTrigger } from "@/components/admin-scraper-trigger";
 import { AppNav } from "./app-nav";
 import { ClassicViewBanner } from "@/components/v2/classic-view-banner";
 import { StaleDataBanner } from "@/components/stale-data-banner";
+import { EmailDigestToggle } from "./email-digest-toggle";
 import { buildExternalAppUrl, getPlatformName } from "@/lib/platform-urls";
 import { PLATFORMS, isPlatformId, developerNameToSlug, type PlatformId } from "@appranks/shared";
 
@@ -88,6 +89,7 @@ export default async function AppDetailLayout({
             slug={app.slug}
             label="Scrape App"
           />
+          <EmailDigestToggle appId={app.id} isTracked={app.isTrackedByAccount} />
           <CompetitorButton
             appSlug={app.slug}
             appName={app.name}

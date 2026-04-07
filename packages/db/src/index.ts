@@ -232,6 +232,7 @@ export {
   emailProspects,
   userEmailPreferences,
   emailUnsubscribeTokens,
+  userAppEmailPreferences,
   emailSuppressionList,
   emailHealthMetrics,
   emailDailyStats,

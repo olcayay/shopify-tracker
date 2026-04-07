@@ -15,6 +15,9 @@ Feature Flags Infrastructure (2026-04-07)
   PLA-797: Phase 6: Dashboard — account detail feature flags card ✅
   PLA-798: Phase 7: Gate market research features behind feature flag ✅
 
+Per-App Email Digest (2026-04-07)
+  PLA-790: Per-app daily email digest opt-in/out ✅
+
 Scraper Reliability (2026-04-07)
   PLA-817: Stale run cleanup lacks retry — crashed scraper runs are silently lost ✅
   PLA-820: Zendesk reviews scraper crashes with orphaned process ✅

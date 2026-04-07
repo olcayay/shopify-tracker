@@ -11,6 +11,7 @@ import {
   uniqueIndex,
 } from "drizzle-orm/pg-core";
 import { users, accounts } from "./auth.js";
+import { apps } from "./apps.js";
 
 // Admin-managed configuration per email type
 export const emailTypeConfigs = pgTable(
@@ -256,5 +257,25 @@ export const emailUnsubscribeTokens = pgTable(
   },
   (table) => [
     uniqueIndex("idx_email_unsubscribe_token").on(table.token),
+  ]
+);
+
+/** Per-user, per-app email digest opt-in/out (opt-out model: missing row = enabled) */
+export const userAppEmailPreferences = pgTable(
+  "user_app_email_preferences",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    appId: integer("app_id")
+      .notNull()
+      .references(() => apps.id, { onDelete: "cascade" }),
+    dailyDigestEnabled: boolean("daily_digest_enabled").notNull().default(true),
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+    updatedAt: timestamp("updated_at").notNull().defaultNow(),
+  },
+  (table) => [
+    uniqueIndex("idx_user_app_email_prefs_unique").on(table.userId, table.appId),
   ]
 );

@@ -12,6 +12,7 @@ import {
   appCategoryRankings,
   categories,
   apps,
+  userAppEmailPreferences,
 } from "@appranks/db";
 import { getLocalDayBoundaries } from "./timezone.js";
 
@@ -125,7 +126,8 @@ export async function getDigestRecipients(
 export async function buildDigestForAccount(
   db: Database,
   accountId: string,
-  timezone?: string
+  timezone?: string,
+  userId?: string,
 ): Promise<DigestData | null> {
   // Get account name
   const [account] = await db
@@ -163,6 +165,24 @@ export async function buildDigestForAccount(
     .from(accountCompetitorApps)
     .where(eq(accountCompetitorApps.accountId, accountId));
   const competitorAppIds = new Set(competitorAppRows.map((r) => r.competitorAppId));
+
+  // Filter out apps the user has opted out of daily digest
+  if (userId) {
+    const optedOutApps = await db
+      .select({ appId: userAppEmailPreferences.appId })
+      .from(userAppEmailPreferences)
+      .where(
+        and(
+          eq(userAppEmailPreferences.userId, userId),
+          eq(userAppEmailPreferences.dailyDigestEnabled, false),
+        ),
+      );
+    const optedOutIds = new Set(optedOutApps.map((r) => r.appId));
+    for (const id of optedOutIds) {
+      trackedAppIds.delete(id);
+      competitorAppIds.delete(id);
+    }
+  }
 
   // Relevant app IDs (tracked + competitors)
   const relevantAppIds = new Set([...trackedAppIds, ...competitorAppIds]);

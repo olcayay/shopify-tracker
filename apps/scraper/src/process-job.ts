@@ -511,7 +511,7 @@ export function createProcessJob(db: ReturnType<typeof createDb>, queueName?: st
             break;
           }
 
-          const data = await buildDigestForAccount(db, targetUser.accountId);
+          const data = await buildDigestForAccount(db, targetUser.accountId, undefined, targetUser.id);
           if (!data) {
             log.info("no digest data for user's account", { userId: targetUser.id, accountId: targetUser.accountId });
             await logSkippedEmail(db, {
@@ -637,14 +637,14 @@ export function createProcessJob(db: ReturnType<typeof createDb>, queueName?: st
         for (const [accountId, accountUsers] of byAccount) {
           // Use the first user's timezone for date boundaries
           const tz = accountUsers[0].timezone;
-          const data = await buildDigestForAccount(db, accountId, tz);
-          if (!data) {
-            skipped++;
-            continue;
-          }
-          const html = buildDigestHtml(data);
-          const subject = buildDigestSubject(data);
           for (const user of accountUsers) {
+            const data = await buildDigestForAccount(db, accountId, tz, user.userId);
+            if (!data) {
+              skipped++;
+              continue;
+            }
+            const html = buildDigestHtml(data);
+            const subject = buildDigestSubject(data);
             try {
               await sendEmail({
                 db,
@@ -685,12 +685,12 @@ export function createProcessJob(db: ReturnType<typeof createDb>, queueName?: st
         let wSkipped = 0;
         for (const [acctId, acctUsers] of byAcct) {
           const tz = acctUsers[0].timezone;
-          const weeklyData = await buildWeeklyForAccount(db, acctId, tz);
-          if (!weeklyData) { wSkipped++; continue; }
-
-          const html = buildWeeklyHtml(weeklyData);
-          const subject = buildWeeklySubject(weeklyData);
           for (const user of acctUsers) {
+            const weeklyData = await buildWeeklyForAccount(db, acctId, tz, user.userId);
+            if (!weeklyData) { wSkipped++; continue; }
+
+            const html = buildWeeklyHtml(weeklyData);
+            const subject = buildWeeklySubject(weeklyData);
             try {
               await sendWeeklyEmail({
                 db,

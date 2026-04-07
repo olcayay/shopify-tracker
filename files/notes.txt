@@ -79,6 +79,23 @@ PLA-798: Phase 7: Gate market research features behind feature flag
 - Updated nav-utils test: research is now feature-flag-gated, not shopify-only
 - Added feature-flags-context mock to 3 existing test files (overview, platform-overview, settings)
 
+Per-App Email Digest (2026-04-07)
+================================================================
+
+PLA-790: Per-app daily email digest opt-in/out
+- DB: `user_app_email_preferences` table (opt-out model: missing row = enabled)
+- Migration `0121_user_app_email_preferences.sql`: unique (user_id, app_id)
+- API: 4 new endpoints in `email-preferences.ts`:
+  - GET /apps — all tracked apps with per-app prefs (LEFT JOIN)
+  - GET /apps/:appId — per-app prefs for current user
+  - PATCH /apps/:appId — upsert with onConflictDoUpdate
+  - PATCH /apps/bulk — bulk upsert for multiple apps
+- Digest builder: `buildDigestForAccount()` now accepts optional `userId`, filters opted-out apps
+- Weekly builder: same `userId` parameter and filtering
+- Process job: digest/weekly now built per-user (not per-account) for per-app filtering
+- App detail page: `EmailDigestToggle` client component (Bell/BellOff icon, tooltip, optimistic toggle)
+- 8 new API tests for per-app endpoints
+
 Scraper Reliability (2026-04-07)
 ================================================================
 

@@ -3,8 +3,8 @@
  * which emails they want to receive and at what frequency.
  */
 import type { FastifyPluginAsync } from "fastify";
-import { eq, and } from "drizzle-orm";
-import { userEmailPreferences } from "@appranks/db";
+import { eq, and, inArray, sql } from "drizzle-orm";
+import { userEmailPreferences, userAppEmailPreferences, accountTrackedApps, apps } from "@appranks/db";
 
 /** Email types grouped by category */
 const EMAIL_TYPE_CATEGORIES = {
@@ -142,5 +142,137 @@ export const emailPreferenceRoutes: FastifyPluginAsync = async (app) => {
   // GET /api/email-preferences/categories — list all available email types
   app.get("/categories", async (_request, reply) => {
     return reply.send({ categories: EMAIL_TYPE_CATEGORIES });
+  });
+
+  // ─── Per-App Email Preferences ────────────────────────────────────────────
+
+  // GET /api/email-preferences/apps — all tracked apps with per-app email prefs
+  app.get("/apps", async (request, reply) => {
+    const userId = request.user.userId;
+    const accountId = request.user.accountId;
+
+    const rows = await db
+      .select({
+        appId: apps.id,
+        slug: apps.slug,
+        name: apps.name,
+        platform: apps.platform,
+        iconUrl: apps.iconUrl,
+        dailyDigestEnabled: userAppEmailPreferences.dailyDigestEnabled,
+      })
+      .from(accountTrackedApps)
+      .innerJoin(apps, eq(apps.id, accountTrackedApps.appId))
+      .leftJoin(
+        userAppEmailPreferences,
+        and(
+          eq(userAppEmailPreferences.appId, apps.id),
+          eq(userAppEmailPreferences.userId, userId),
+        ),
+      )
+      .where(eq(accountTrackedApps.accountId, accountId))
+      .orderBy(apps.name);
+
+    const result = rows.map((r) => ({
+      appId: r.appId,
+      slug: r.slug,
+      name: r.name,
+      platform: r.platform,
+      iconUrl: r.iconUrl,
+      dailyDigestEnabled: r.dailyDigestEnabled ?? true, // No row = enabled
+    }));
+
+    return reply.send({ apps: result });
+  });
+
+  // GET /api/email-preferences/apps/:appId — per-app prefs for current user
+  app.get<{ Params: { appId: string } }>("/apps/:appId", async (request, reply) => {
+    const userId = request.user.userId;
+    const appId = parseInt(request.params.appId, 10);
+    if (isNaN(appId)) {
+      return reply.code(400).send({ error: "Invalid appId" });
+    }
+
+    const [pref] = await db
+      .select()
+      .from(userAppEmailPreferences)
+      .where(
+        and(
+          eq(userAppEmailPreferences.userId, userId),
+          eq(userAppEmailPreferences.appId, appId),
+        ),
+      )
+      .limit(1);
+
+    return reply.send({
+      dailyDigestEnabled: pref ? (pref as any).dailyDigestEnabled : true,
+    });
+  });
+
+  // PATCH /api/email-preferences/apps/:appId — update per-app prefs
+  app.patch<{ Params: { appId: string } }>("/apps/:appId", async (request, reply) => {
+    const userId = request.user.userId;
+    const appId = parseInt(request.params.appId, 10);
+    if (isNaN(appId)) {
+      return reply.code(400).send({ error: "Invalid appId" });
+    }
+
+    const body = request.body as { dailyDigestEnabled: boolean };
+    if (body.dailyDigestEnabled === undefined) {
+      return reply.code(400).send({ error: "dailyDigestEnabled is required" });
+    }
+
+    await db
+      .insert(userAppEmailPreferences)
+      .values({
+        userId,
+        appId,
+        dailyDigestEnabled: body.dailyDigestEnabled,
+      })
+      .onConflictDoUpdate({
+        target: [userAppEmailPreferences.userId, userAppEmailPreferences.appId],
+        set: {
+          dailyDigestEnabled: body.dailyDigestEnabled,
+          updatedAt: new Date(),
+        },
+      });
+
+    return reply.send({ dailyDigestEnabled: body.dailyDigestEnabled });
+  });
+
+  // PATCH /api/email-preferences/apps/bulk — bulk update per-app prefs
+  app.patch("/apps/bulk", async (request, reply) => {
+    const userId = request.user.userId;
+    const body = request.body as { appIds: number[]; dailyDigestEnabled: boolean };
+
+    if (!body.appIds || !Array.isArray(body.appIds) || body.appIds.length === 0) {
+      return reply.code(400).send({ error: "appIds array is required" });
+    }
+    if (body.dailyDigestEnabled === undefined) {
+      return reply.code(400).send({ error: "dailyDigestEnabled is required" });
+    }
+
+    // Upsert all in a single query using raw SQL for ON CONFLICT
+    for (const appId of body.appIds) {
+      await db
+        .insert(userAppEmailPreferences)
+        .values({
+          userId,
+          appId,
+          dailyDigestEnabled: body.dailyDigestEnabled,
+        })
+        .onConflictDoUpdate({
+          target: [userAppEmailPreferences.userId, userAppEmailPreferences.appId],
+          set: {
+            dailyDigestEnabled: body.dailyDigestEnabled,
+            updatedAt: new Date(),
+          },
+        });
+    }
+
+    return reply.send({
+      message: "Bulk preferences updated",
+      count: body.appIds.length,
+      dailyDigestEnabled: body.dailyDigestEnabled,
+    });
   });
 };
