@@ -124,23 +124,25 @@ export type Database = ReturnType<typeof createDb>;
  * sql`` template does not auto-cast JS arrays to PG arrays.
  *
  * @example
- *   sql`WHERE id = ANY(${sqlArray(ids)})`        // integer[]
- *   sql`WHERE name = ANY(${sqlArray(names)})`     // text[]
+ *   sql`WHERE id = ANY(${sqlArray(ids)})`              // integer[]
+ *   sql`WHERE name = ANY(${sqlArray(names)})`           // text[]
+ *   sql`WHERE account_id = ANY(${sqlArray(ids, 'uuid')})` // uuid[]
  */
-export function sqlArray(arr: (number | string)[]): ReturnType<typeof sql> {
+export function sqlArray(arr: (number | string)[], pgType?: "uuid" | "text" | "integer"): ReturnType<typeof sql> {
   if (arr.length === 0) {
-    // Return an empty PG array that works with ANY — cast to unknown so the
-    // comparison still type-checks against any column type.
-    return sql.raw("ARRAY[]::integer[]");
+    const cast = pgType || "integer";
+    return sql.raw(`ARRAY[]::${cast}[]`);
   }
   if (typeof arr[0] === "number") {
-    return sql.raw(`ARRAY[${arr.join(",")}]`);
+    const cast = pgType ? `::${pgType}[]` : "";
+    return sql.raw(`ARRAY[${arr.join(",")}]${cast}`);
   }
   // String values — single-quote each, escaping embedded quotes
   const escaped = (arr as string[]).map(
     (s) => `'${s.replace(/'/g, "''")}'`
   );
-  return sql.raw(`ARRAY[${escaped.join(",")}]`);
+  const cast = pgType ? `::${pgType}[]` : "";
+  return sql.raw(`ARRAY[${escaped.join(",")}]${cast}`);
 }
 
 // Re-export schema tables for convenience

@@ -12,7 +12,7 @@ import {
 } from "@appranks/shared";
 import type { NotificationType } from "@appranks/shared";
 import { createLogger } from "@appranks/shared";
-import { eq, and, sql } from "drizzle-orm";
+import { eq, and, inArray, sql } from "drizzle-orm";
 import {
   notifications,
   notificationTypeConfigs,
@@ -22,7 +22,6 @@ import {
   accountTrackedApps,
   accountTrackedKeywords,
   users,
-  sqlArray,
 } from "@appranks/db";
 
 const log = createLogger("notification-worker");
@@ -43,7 +42,7 @@ export function createNotificationStore(db: any): NotificationStore {
       const accountUsers = await db
         .select({ userId: users.id, accountId: users.accountId })
         .from(users)
-        .where(sql`${users.accountId} = ANY(${sqlArray(accountIds)})`);
+        .where(inArray(users.accountId, accountIds));
 
       return accountUsers;
     },
@@ -60,7 +59,7 @@ export function createNotificationStore(db: any): NotificationStore {
       const accountUsers = await db
         .select({ userId: users.id, accountId: users.accountId })
         .from(users)
-        .where(sql`${users.accountId} = ANY(${sqlArray(accountIds)})`);
+        .where(inArray(users.accountId, accountIds));
 
       return accountUsers;
     },

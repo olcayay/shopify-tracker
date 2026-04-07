@@ -1,3 +1,15 @@
+PostgreSQL Type Safety (2026-04-07)
+================================================================
+
+PLA-818: Fix PostgreSQL uuid = text type mismatch in sqlArray() queries
+- Replaced raw `sql\`ANY(${sqlArray(accountIds)})\`` with Drizzle's `inArray()` in 3 locations:
+  - event-dispatcher.ts:128 (findAffectedUsers)
+  - process-notification.ts:46 (app notification user lookup)
+  - process-notification.ts:63 (keyword notification user lookup)
+- Added optional `pgType` parameter to `sqlArray()` for explicit casting (uuid, text, integer)
+- 5 new tests for pgType parameter (uuid cast, text cast, empty array with uuid, integer cast, backwards compat)
+- Root cause: string UUID values in ARRAY[] are text type, but accountId is UUID column → PostgreSQL rejects comparison
+
 Dashboard UX (2026-04-07)
 ================================================================
 

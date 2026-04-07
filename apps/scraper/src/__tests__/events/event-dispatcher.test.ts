@@ -12,6 +12,7 @@ vi.mock("../../queue.js", () => ({
 // Mock DB
 vi.mock("drizzle-orm", () => ({
   eq: vi.fn((a, b) => ({ type: "eq", a, b })),
+  inArray: vi.fn((col, vals) => ({ type: "inArray", col, vals })),
   sql: vi.fn((strings: TemplateStringsArray, ...values: any[]) => ({ type: "sql" })),
 }));
 

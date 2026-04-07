@@ -1,3 +1,6 @@
+PostgreSQL Type Safety (2026-04-07)
+  PLA-818: Fix PostgreSQL uuid = text type mismatch in sqlArray() queries ✅
+
 Dashboard UX (2026-04-07)
   PLA-812: Show loading skeleton for item count headers while data is fetching ✅
 

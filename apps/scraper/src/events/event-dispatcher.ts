@@ -2,13 +2,12 @@
  * Event dispatcher: fans out detected events to email-bulk and notifications queues.
  * Finds affected users and enqueues jobs for each.
  */
-import { eq } from "drizzle-orm";
+import { eq, inArray } from "drizzle-orm";
 import {
   accountTrackedApps,
   accountTrackedKeywords,
   accountCompetitorApps,
   users,
-  sqlArray,
 } from "@appranks/db";
 import { createLogger } from "@appranks/shared";
 import type { BulkEmailJobData, NotificationJobData } from "@appranks/shared";
@@ -125,13 +124,10 @@ export async function findAffectedUsers(db: any, event: DetectedEvent): Promise<
       name: users.name,
     })
     .from(users)
-    .where(sql`${users.accountId} = ANY(${sqlArray(accountIds)})`);
+    .where(inArray(users.accountId, accountIds));
 
   return affectedUsers;
 }
-
-// Need sql import for the ANY query
-import { sql } from "drizzle-orm";
 
 export interface DispatchResult {
   emailJobsEnqueued: number;

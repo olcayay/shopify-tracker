@@ -112,6 +112,32 @@ describe("sqlArray", () => {
     expect(str).toBe("ARRAY[]::integer[]");
   });
 
+  it("returns empty PG array with uuid cast when pgType specified", () => {
+    const str = toSqlString(sqlArray([], "uuid"));
+    expect(str).toBe("ARRAY[]::uuid[]");
+  });
+
+  // --- pgType parameter (explicit PostgreSQL type cast) ---
+  it("adds ::uuid[] cast for UUID string arrays", () => {
+    const str = toSqlString(sqlArray(["869253b7-eb5a-42c2-8751-e1211dbdf0c4"], "uuid"));
+    expect(str).toBe("ARRAY['869253b7-eb5a-42c2-8751-e1211dbdf0c4']::uuid[]");
+  });
+
+  it("adds ::text[] cast for text arrays when explicitly requested", () => {
+    const str = toSqlString(sqlArray(["foo", "bar"], "text"));
+    expect(str).toBe("ARRAY['foo','bar']::text[]");
+  });
+
+  it("no cast for string arrays when pgType not specified (backwards compat)", () => {
+    const str = toSqlString(sqlArray(["foo", "bar"]));
+    expect(str).toBe("ARRAY['foo','bar']");
+  });
+
+  it("adds cast to integer arrays when pgType specified", () => {
+    const str = toSqlString(sqlArray([1, 2, 3], "integer"));
+    expect(str).toBe("ARRAY[1,2,3]::integer[]");
+  });
+
   // --- Type detection ---
   it("detects type from first element — number", () => {
     // First element is number → no quoting
