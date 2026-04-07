@@ -363,7 +363,7 @@ app.get("/health/live", async () => {
 // Uses dedicated healthDb (separate single-connection pool) so it never blocks
 // when the main pool is stuck.
 app.get("/health/ready", async (_request, reply) => {
-  const checks: Record<string, { status: string; latencyMs?: number; error?: string }> = {};
+  const checks: Record<string, Record<string, unknown>> = {};
 
   // DB check — uses dedicated health check connection, not main pool
   const dbStart = Date.now();
@@ -374,19 +374,10 @@ app.get("/health/ready", async (_request, reply) => {
     checks.database = { status: "error", latencyMs: Date.now() - dbStart, error: String(err) };
   }
 
-  // Main pool check — verify main pool can also respond (with timeout)
-  const poolStart = Date.now();
-  try {
-    await Promise.race([
-      db.execute(sql`SELECT 1`),
-      new Promise((_, reject) => setTimeout(() => reject(new Error("pool_timeout")), 5000)),
-    ]);
-    checks.mainPool = { status: "ok", latencyMs: Date.now() - poolStart };
-  } catch (err) {
-    const poolStats = getPoolStats();
-    checks.mainPool = { status: "error", latencyMs: Date.now() - poolStart, error: String(err), ...poolStats };
-    app.log.warn({ msg: "Main DB pool health check failed — pool may be stuck", pool: poolStats });
-  }
+  // Main pool status from the pool monitor (does not consume a connection)
+  checks.mainPool = poolCheckFailures > 0
+    ? { status: "degraded", consecutiveFailures: poolCheckFailures, ...getPoolStats() }
+    : { status: "ok" };
 
   // Redis check
   const redisUrl = process.env.REDIS_URL || "redis://localhost:6379";

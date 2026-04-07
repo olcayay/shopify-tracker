@@ -40,14 +40,52 @@ export async function overviewHighlightsRoutes(app: FastifyInstance) {
       const appIds = trackedApps.map((a) => a.id);
       const platforms = [...new Set(trackedApps.map((a) => a.platform))];
 
-      // Run all highlight queries in parallel (previously sequential — major perf win)
+      // Batch 1: lighter queries (4 connections max)
       const [
-        keywordMovers,
-        categoryMovers,
         reviewPulse,
         recentChanges,
         featuredSightings,
         competitorAppIdsRaw,
+      ] = await Promise.all<any[]>([
+        // 4. Review pulse
+        db.execute(sql`
+          SELECT DISTINCT ON (arm.app_id)
+            arm.app_id, arm.v7d, arm.v30d, arm.momentum, arm.average_rating
+          FROM app_review_metrics arm
+          WHERE arm.app_id = ANY(${sqlArray(appIds)})
+            AND arm.v7d > 0
+          ORDER BY arm.app_id, arm.computed_at DESC
+        `),
+        // 5. Recent listing changes (last 48h)
+        db.execute(sql`
+          SELECT afc.app_id, afc.field, afc.old_value, afc.new_value, afc.detected_at
+          FROM app_field_changes afc
+          WHERE afc.app_id = ANY(${sqlArray(appIds)})
+            AND afc.detected_at >= NOW() - INTERVAL '48 hours'
+          ORDER BY afc.detected_at DESC
+          LIMIT 20
+        `),
+        // 6. Featured sightings (last 7 days)
+        db.execute(sql`
+          SELECT fas.app_id, fas.section_title, fas.position, fas.seen_date
+          FROM featured_app_sightings fas
+          WHERE fas.app_id = ANY(${sqlArray(appIds)})
+            AND fas.seen_date >= CURRENT_DATE - INTERVAL '7 days'
+          ORDER BY fas.seen_date DESC, fas.position ASC
+          LIMIT 20
+        `),
+        // 7a. Competitor app IDs
+        db.execute(sql`
+          SELECT DISTINCT aca.competitor_app_id
+          FROM account_competitor_apps aca
+          WHERE aca.account_id = ${accountId}
+        `),
+      ]);
+
+      // Batch 2: heavy window function queries (3 connections max)
+      const [
+        keywordMovers,
+        categoryMovers,
         adActivity,
       ] = await Promise.all<any[]>([
         // 2. Top keyword movers — window function with 14-day time bound
@@ -84,39 +122,6 @@ export async function overviewHighlightsRoutes(app: FastifyInstance) {
           WHERE lr.rn = 1 AND lr.position IS NOT NULL AND pr.position IS NOT NULL AND pr.position != lr.position
           ORDER BY ABS(pr.position - lr.position) DESC
           LIMIT 10
-        `),
-        // 4. Review pulse
-        db.execute(sql`
-          SELECT DISTINCT ON (arm.app_id)
-            arm.app_id, arm.v7d, arm.v30d, arm.momentum, arm.average_rating
-          FROM app_review_metrics arm
-          WHERE arm.app_id = ANY(${sqlArray(appIds)})
-            AND arm.v7d > 0
-          ORDER BY arm.app_id, arm.computed_at DESC
-        `),
-        // 5. Recent listing changes (last 48h)
-        db.execute(sql`
-          SELECT afc.app_id, afc.field, afc.old_value, afc.new_value, afc.detected_at
-          FROM app_field_changes afc
-          WHERE afc.app_id = ANY(${sqlArray(appIds)})
-            AND afc.detected_at >= NOW() - INTERVAL '48 hours'
-          ORDER BY afc.detected_at DESC
-          LIMIT 20
-        `),
-        // 6. Featured sightings (last 7 days)
-        db.execute(sql`
-          SELECT fas.app_id, fas.section_title, fas.position, fas.seen_date
-          FROM featured_app_sightings fas
-          WHERE fas.app_id = ANY(${sqlArray(appIds)})
-            AND fas.seen_date >= CURRENT_DATE - INTERVAL '7 days'
-          ORDER BY fas.seen_date DESC, fas.position ASC
-          LIMIT 20
-        `),
-        // 7a. Competitor app IDs
-        db.execute(sql`
-          SELECT DISTINCT aca.competitor_app_id
-          FROM account_competitor_apps aca
-          WHERE aca.account_id = ${accountId}
         `),
         // 8. Ad activity (last 7 days)
         db.execute(sql`

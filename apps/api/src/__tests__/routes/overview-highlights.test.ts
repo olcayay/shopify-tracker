@@ -71,35 +71,37 @@ describe("Overview highlights routes", () => {
           { id: 1, platform: "shopify", slug: "my-app", name: "My App", icon_url: "https://example.com/icon.png", average_rating: "4.5", rating_count: 100, keyword_count: "5" },
           { id: 2, platform: "salesforce", slug: "sf-app", name: "SF App", icon_url: null, average_rating: null, rating_count: 0, keyword_count: "0" },
         ],
-        // 2. Keyword movers
-        [
-          { app_id: 1, keyword: "forms", old_position: 10, new_position: 5, delta: 5 },
-        ],
-        // 3. Category movers
-        [
-          { app_id: 1, category: "productivity", old_position: 8, new_position: 3, delta: 5 },
-        ],
-        // 4. Review pulse
+        // Batch 1: reviewPulse, recentChanges, featuredSightings, competitorAppIds
+        // 2. Review pulse
         [
           { app_id: 1, v7d: 12, v30d: 45, momentum: "accelerating", average_rating: "4.5" },
         ],
-        // 5. Recent changes
+        // 3. Recent changes
         [
           { app_id: 1, field: "description", old_value: "Old desc", new_value: "New desc", detected_at: "2026-03-30T10:00:00Z" },
         ],
-        // 6. Featured sightings
+        // 4. Featured sightings
         [
           { app_id: 1, section_title: "Staff Picks", position: 2, seen_date: "2026-03-30" },
         ],
-        // 7. Competitor app IDs
+        // 5. Competitor app IDs
         [
           { competitor_app_id: 10 },
         ],
-        // 8. Ad activity (moved before competitor alerts due to Promise.all reorder)
+        // Batch 2: keywordMovers, categoryMovers, adActivity
+        // 6. Keyword movers
+        [
+          { app_id: 1, keyword: "forms", old_position: 10, new_position: 5, delta: 5 },
+        ],
+        // 7. Category movers
+        [
+          { app_id: 1, category: "productivity", old_position: 8, new_position: 3, delta: 5 },
+        ],
+        // 8. Ad activity
         [
           { app_id: 1, keyword: "form builder", seen_date: "2026-03-30" },
         ],
-        // 9. Competitor alerts (sequential after Promise.all, depends on competitor IDs)
+        // 9. Competitor alerts (sequential after batches)
         [
           { competitor_id: 10, field: "pricing", old_value: "Free", new_value: "$10/mo", detected_at: "2026-03-30T09:00:00Z", competitor_name: "Rival", competitor_slug: "rival", competitor_platform: "shopify" },
         ],
