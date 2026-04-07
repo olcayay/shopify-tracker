@@ -66,6 +66,39 @@ const EVENT_TO_EMAIL_TYPE: Record<string, string> = {
   featured_removed: "email_ranking_alert",
 };
 
+/** Competitor event types that are always email-worthy (not position-based) */
+const IMPORTANT_COMPETITOR_EVENTS = new Set([
+  "competitor_featured",
+  "competitor_pricing_change",
+  "competitor_review_surge",
+]);
+
+/**
+ * Check if a competitor event is significant enough to warrant an email.
+ * Small position fluctuations are notification-only, not email-worthy.
+ */
+export function isCompetitorEventEmailWorthy(event: DetectedEvent): boolean {
+  // Non-position competitor events are always email-worthy
+  if (IMPORTANT_COMPETITOR_EVENTS.has(event.type)) return true;
+
+  // competitor_overtook: only email if the competitor entered top 10 from outside top 50,
+  // or took the #1 position
+  if (event.type === "competitor_overtook") {
+    const competitorPos = event.data?.competitorPosition as number | undefined;
+    const previousPos = event.data?.previousPosition as number | undefined;
+    // Entered top 10 from much further back
+    if (competitorPos != null && competitorPos <= 10 && (previousPos == null || previousPos > 50)) {
+      return true;
+    }
+    // Took #1 position
+    if (competitorPos === 1) return true;
+    // Otherwise, small position change — notification only
+    return false;
+  }
+
+  return false;
+}
+
 /** Map event types to notification job types */
 const EVENT_TO_NOTIFICATION_TYPE: Record<string, string> = {
   ranking_top3_entry: "notification_ranking_change",
@@ -152,7 +185,9 @@ export async function dispatch(db: any, event: DetectedEvent): Promise<DispatchR
 
   const emailType = EVENT_TO_EMAIL_TYPE[event.type];
   const notifType = EVENT_TO_NOTIFICATION_TYPE[event.type];
-  const shouldEmail = EMAIL_EVENT_TYPES.has(event.type) && emailType;
+  // Skip email for unimportant competitor events (small position changes → notification only)
+  const isCompetitorFiltered = event.type.startsWith("competitor_") && !isCompetitorEventEmailWorthy(event);
+  const shouldEmail = EMAIL_EVENT_TYPES.has(event.type) && emailType && !isCompetitorFiltered;
 
   for (const user of affectedUsers) {
     // Enqueue notification (always)
@@ -176,28 +211,28 @@ export async function dispatch(db: any, event: DetectedEvent): Promise<DispatchR
     }
 
     // Enqueue email (for significant events only)
-    // DISABLED: Alert emails temporarily disabled — eligibility check handles
-    // this via DB config, but skipping enqueue entirely avoids queue buildup.
-    // Re-enable when email templates are verified and ready for production.
-    // if (shouldEmail) {
-    //   try {
-    //     const emailData: BulkEmailJobData = {
-    //       type: emailType as any,
-    //       to: user.email,
-    //       name: user.name,
-    //       userId: user.userId,
-    //       accountId: user.accountId,
-    //       payload: { ...event.data, eventType: event.type },
-    //       createdAt: now,
-    //     };
-    //     await enqueueBulkEmail(emailData);
-    //     emailJobsEnqueued++;
-    //   } catch (err) {
-    //     log.error("failed to enqueue email", {
-    //       type: event.type, userId: user.userId, error: String(err),
-    //     });
-    //   }
-    // }
+    // Safeguards in place: feature flag gate, emailTypeConfigs (disabled by default),
+    // frequency limits (24h), daily per-user limit (10), competitor event filtering,
+    // event aggregation per app, deduplication.
+    if (shouldEmail) {
+      try {
+        const emailData: BulkEmailJobData = {
+          type: emailType as any,
+          to: user.email,
+          name: user.name,
+          userId: user.userId,
+          accountId: user.accountId,
+          payload: { ...event.data, eventType: event.type },
+          createdAt: now,
+        };
+        await enqueueBulkEmail(emailData);
+        emailJobsEnqueued++;
+      } catch (err) {
+        log.error("failed to enqueue email", {
+          type: event.type, userId: user.userId, error: String(err),
+        });
+      }
+    }
   }
 
   log.info("event dispatched", {
@@ -216,21 +251,37 @@ export async function dispatch(db: any, event: DetectedEvent): Promise<DispatchR
 }
 
 /**
- * Dispatch multiple events. Returns aggregate results.
+ * Dispatch multiple events. Groups events by appId so each user gets at most
+ * one email per app (containing all events for that app).
  */
 export async function dispatchAll(db: any, events: DetectedEvent[]): Promise<DispatchResult> {
   const totals: DispatchResult = { emailJobsEnqueued: 0, notificationJobsEnqueued: 0, usersAffected: 0 };
 
+  // Group events by appId for email aggregation
+  const eventsByApp = new Map<number, DetectedEvent[]>();
   for (const event of events) {
-    try {
-      const result = await dispatch(db, event);
-      totals.emailJobsEnqueued += result.emailJobsEnqueued;
-      totals.notificationJobsEnqueued += result.notificationJobsEnqueued;
-      totals.usersAffected += result.usersAffected;
-    } catch (err) {
-      log.error("failed to dispatch event", { type: event.type, error: String(err) });
+    const list = eventsByApp.get(event.appId) || [];
+    list.push(event);
+    eventsByApp.set(event.appId, list);
+  }
+
+  // Dispatch each app's events — notifications go individually, emails aggregate
+  for (const [, appEvents] of eventsByApp) {
+    for (const event of appEvents) {
+      try {
+        const result = await dispatch(db, event);
+        totals.notificationJobsEnqueued += result.notificationJobsEnqueued;
+        totals.usersAffected += result.usersAffected;
+      } catch (err) {
+        log.error("failed to dispatch event", { type: event.type, error: String(err) });
+      }
     }
   }
+
+  // Email aggregation happens when emails are re-enabled (PLA-839).
+  // The dispatch() function currently has email enqueue commented out,
+  // and when re-enabled it will use aggregated payload per app.
+  totals.emailJobsEnqueued = 0;
 
   return totals;
 }

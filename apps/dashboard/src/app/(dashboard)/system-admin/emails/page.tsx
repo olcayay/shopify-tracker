@@ -218,11 +218,12 @@ export default function AdminEmailDashboard() {
           className="h-9 rounded-md border bg-background px-3 text-sm"
         >
           <option value="">All types</option>
-          <option value="daily_digest">Daily Digest</option>
-          <option value="weekly_summary">Weekly Summary</option>
-          <option value="ranking_alert">Ranking Alert</option>
-          <option value="competitor_alert">Competitor Alert</option>
-          <option value="review_alert">Review Alert</option>
+          <option value="email_daily_digest">Daily Digest</option>
+          <option value="email_weekly_summary">Weekly Summary</option>
+          <option value="email_ranking_alert">Ranking Alert</option>
+          <option value="email_competitor_alert">Competitor Alert</option>
+          <option value="email_review_alert">Review Alert</option>
+          <option value="email_win_celebration">Win Celebration</option>
           <option value="welcome">Welcome</option>
         </select>
         <select
@@ -235,6 +236,7 @@ export default function AdminEmailDashboard() {
           <option value="failed">Failed</option>
           <option value="queued">Queued</option>
           <option value="pending">Pending</option>
+          <option value="skipped">Skipped</option>
         </select>
       </div>
 

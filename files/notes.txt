@@ -1,3 +1,41 @@
+Email System Overhaul — Alert Safeguards & Fixes (2026-04-07)
+================================================================
+
+14 tasks implemented to fix the email flood issue and add proper safeguards:
+
+Phase 0 — Critical Fixes:
+- PLA-829: Non-scraping jobs (daily_digest, weekly_summary, data_cleanup) bypass platform lock
+- PLA-830: Date objects converted to ISO strings for postgres.js compatibility in digest/weekly builders
+- PLA-840: Feature flag `email_alerts_enabled` gates all email sending; only Jotform account enabled
+
+Phase 1 — Bug Fixes & Infrastructure:
+- PLA-831: Previous rankings Map deduplication — keeps newest per keywordId (was keeping oldest, causing -255 position changes)
+- PLA-827: Null subject fallback in logEmailAttempt and pipeline.ts with warning logs
+- PLA-828: /health/ready now shows pg_stat_activity runtime connection counts (active, idle, idle_in_tx, etc.)
+- PLA-832: Events grouped by appId in dispatchAll — one email per app per user instead of per event
+- PLA-833: Category change emails use categoryName instead of undefined keyword; CTA links to /categories/ path
+- PLA-834: Migration seeds emailTypeConfigs for 4 alert types (disabled by default, 24h frequency limit)
+
+Phase 2 — Rate Limiting & Quality:
+- PLA-835: Daily email limit: max 10 alert emails per user per day, admin bypass via skipDailyLimit
+- PLA-836: Competitor events filtered — only email for featured/pricing/review_surge or major rank jumps (top 10 from >50, #1)
+- PLA-837: Platform badge component + [Platform] subject prefix on all 4 alert email templates
+- PLA-838: Admin email filters fixed (email_ prefix), added skipped status filter
+
+Phase 3 — Re-enable:
+- PLA-839: Email enqueue block uncommented with all safeguards verified
+
+Safeguard layers (in order):
+1. Feature flag gate (email_alerts_enabled per account)
+2. Global email type enabled/disabled (emailTypeConfigs — all alert types disabled by default)
+3. Account override (emailTypeAccountOverrides)
+4. User opt-out (userEmailPreferences)
+5. Frequency cap (24h per email type per user)
+6. Deduplication (1h window, same type + user + dedup key)
+7. Daily limit (10 alert emails per user per day)
+8. Competitor event filtering (only significant events)
+9. Event aggregation (one email per app per user)
+
 DB Pool Fix — Connection Reduction (2026-04-07)
 ================================================================
 

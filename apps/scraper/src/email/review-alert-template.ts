@@ -10,6 +10,8 @@ import {
   ctaButton,
   footer,
   insightBlock,
+  platformBadge,
+  platformSubjectPrefix,
 } from "./components/index.js";
 
 export interface ReviewAlertData {
@@ -82,7 +84,7 @@ export function buildReviewAlertHtml(data: ReviewAlertData, unsubscribeUrl?: str
   sections += ctaButton("View All Reviews", `${DASHBOARD_URL}/${platform}/apps/${data.appSlug}`);
 
   const content = `
-    ${header("Review Alert", `${data.accountName} · ${appName}`)}
+    ${header("Review Alert", `${data.accountName} · ${platformBadge(platform)} ${appName}`)}
     <div style="padding:0 24px 24px;">${sections}</div>
     ${footer(unsubscribeUrl)}
   `;
@@ -91,11 +93,12 @@ export function buildReviewAlertHtml(data: ReviewAlertData, unsubscribeUrl?: str
 }
 
 export function buildReviewAlertSubject(data: ReviewAlertData): string {
-  const { appName, alertType, rating, reviewCount } = data;
+  const { appName, alertType, rating, reviewCount, platform } = data;
+  const prefix = platformSubjectPrefix(platform);
   switch (alertType) {
-    case "new_positive": return `⭐ New ${rating}★ review for ${appName}`;
-    case "new_negative": return `⚠️ New ${rating}★ review for ${appName} — needs attention`;
-    case "velocity_spike": return `📊 ${appName}: ${reviewCount} new reviews detected`;
-    default: return `Review alert: ${appName}`;
+    case "new_positive": return `${prefix} ⭐ New ${rating}★ review for ${appName}`;
+    case "new_negative": return `${prefix} ⚠️ New ${rating}★ review for ${appName} — needs attention`;
+    case "velocity_spike": return `${prefix} 📊 ${appName}: ${reviewCount} new reviews detected`;
+    default: return `${prefix} Review alert: ${appName}`;
   }
 }

@@ -10,6 +10,8 @@ import {
   ctaButton,
   footer,
   insightBlock,
+  platformBadge,
+  platformSubjectPrefix,
 } from "./components/index.js";
 
 export interface RankingAlertData {
@@ -30,7 +32,10 @@ export interface RankingAlertData {
 const DASHBOARD_URL = process.env.DASHBOARD_URL || "http://localhost:3000";
 
 export function buildRankingAlertHtml(data: RankingAlertData, unsubscribeUrl?: string): string {
-  const { appName, platform, keyword, previousPosition, currentPosition, change, alertType } = data;
+  const { appName, platform, previousPosition, currentPosition, change, alertType, categoryName } = data;
+
+  // Use categoryName for category_change events when keyword is undefined
+  const displayKeyword = data.keyword || categoryName || "unknown";
 
   const isPositive = alertType === "top3_entry" || alertType === "new_entry" || (change != null && change > 0);
   const posFrom = previousPosition != null ? `#${previousPosition}` : "—";
@@ -42,23 +47,23 @@ export function buildRankingAlertHtml(data: RankingAlertData, unsubscribeUrl?: s
 
   switch (alertType) {
     case "top3_entry":
-      heroLabel = `${appName} entered Top 3 for "${keyword}"`;
+      heroLabel = `${appName} entered Top 3 for "${displayKeyword}"`;
       heroValue = `#${currentPosition}`;
       break;
     case "top3_exit":
-      heroLabel = `${appName} dropped out of Top 3 for "${keyword}"`;
+      heroLabel = `${appName} dropped out of Top 3 for "${displayKeyword}"`;
       heroValue = `#${currentPosition}`;
       break;
     case "new_entry":
-      heroLabel = `${appName} appeared in rankings for "${keyword}"`;
+      heroLabel = `${appName} appeared in rankings for "${displayKeyword}"`;
       heroValue = `#${currentPosition}`;
       break;
     case "dropped_out":
-      heroLabel = `${appName} dropped out of rankings for "${keyword}"`;
+      heroLabel = `${appName} dropped out of rankings for "${displayKeyword}"`;
       heroValue = "Out";
       break;
     default:
-      heroLabel = `${appName} for "${keyword}"`;
+      heroLabel = `${appName} for "${displayKeyword}"`;
       heroValue = change != null ? (change > 0 ? `+${change}` : `${change}`) : posTo;
   }
 
@@ -89,11 +94,14 @@ export function buildRankingAlertHtml(data: RankingAlertData, unsubscribeUrl?: s
     sections += insightBlock("Check if a competitor made recent changes. Consider updating your listing or responding to reviews.");
   }
 
-  // CTA
-  sections += ctaButton("View Full Rankings", `${DASHBOARD_URL}/${platform}/keywords/${data.keywordSlug}`);
+  // CTA — use category URL for category changes, keyword URL otherwise
+  const ctaUrl = !data.keyword && categoryName
+    ? `${DASHBOARD_URL}/${platform}/categories/${data.keywordSlug || categoryName}`
+    : `${DASHBOARD_URL}/${platform}/keywords/${data.keywordSlug || displayKeyword}`;
+  sections += ctaButton("View Full Rankings", ctaUrl);
 
   const content = `
-    ${header("Ranking Alert", `${data.accountName} · ${appName}`)}
+    ${header("Ranking Alert", `${data.accountName} · ${platformBadge(platform)} ${appName}`)}
     <div style="padding:0 24px 24px;">${sections}</div>
     ${footer(unsubscribeUrl)}
   `;
@@ -102,18 +110,28 @@ export function buildRankingAlertHtml(data: RankingAlertData, unsubscribeUrl?: s
 }
 
 export function buildRankingAlertSubject(data: RankingAlertData): string {
-  const { appName, keyword, alertType, currentPosition, change } = data;
+  const { appName, keyword, alertType, currentPosition, change, categoryName, otherChanges, platform } = data;
+  const prefix = platformSubjectPrefix(platform);
+
+  // If there are multiple changes, use aggregated subject
+  const totalChanges = 1 + (otherChanges?.length ?? 0);
+  if (totalChanges > 1) {
+    return `${prefix} ${appName}: ${totalChanges} ranking changes detected`;
+  }
+
+  // Use categoryName for category_change events when keyword is undefined
+  const displayKeyword = keyword || categoryName || "unknown";
 
   switch (alertType) {
     case "top3_entry":
-      return `🏆 ${appName} reached #${currentPosition} for "${keyword}"`;
+      return `${prefix} 🏆 ${appName} reached #${currentPosition} for "${displayKeyword}"`;
     case "top3_exit":
-      return `⚠️ ${appName} dropped out of Top 3 for "${keyword}"`;
+      return `${prefix} ⚠️ ${appName} dropped out of Top 3 for "${displayKeyword}"`;
     case "new_entry":
-      return `🆕 ${appName} appeared at #${currentPosition} for "${keyword}"`;
+      return `${prefix} 🆕 ${appName} appeared at #${currentPosition} for "${displayKeyword}"`;
     case "dropped_out":
-      return `📉 ${appName} dropped out of rankings for "${keyword}"`;
+      return `${prefix} 📉 ${appName} dropped out of rankings for "${displayKeyword}"`;
     default:
-      return `${appName}: ${change != null && change > 0 ? "+" : ""}${change} positions for "${keyword}"`;
+      return `${prefix} ${appName}: ${change != null && change > 0 ? "+" : ""}${change} positions for "${displayKeyword}"`;
   }
 }

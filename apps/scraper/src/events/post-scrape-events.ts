@@ -131,7 +131,10 @@ export async function afterKeywordScrape(
     const prevByApp = new Map<number, any[]>();
     for (const r of allPreviousRankings) {
       const list = prevByApp.get(r.appId) || [];
-      list.push(r);
+      // Deduplicate: keep only the first (newest, due to DESC order) entry per keywordId
+      if (!list.some((existing) => existing.keywordId === r.keywordId)) {
+        list.push(r);
+      }
       prevByApp.set(r.appId, list);
     }
 
@@ -327,7 +330,10 @@ export async function afterCategoryScrape(
     const prevCatByApp = new Map<number, any[]>();
     for (const r of allPrevCat) {
       const list = prevCatByApp.get(r.appId) || [];
-      list.push(r);
+      // Deduplicate: keep only the first (newest, due to DESC order) entry per categorySlug
+      if (!list.some((existing) => existing.categorySlug === r.categorySlug)) {
+        list.push(r);
+      }
       prevCatByApp.set(r.appId, list);
     }
 

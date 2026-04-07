@@ -43,7 +43,11 @@ export interface SendEmailResult {
  * 4. Update status
  */
 export async function sendEmail(params: SendEmailParams): Promise<SendEmailResult> {
-  const { db, emailType, userId, accountId, recipientEmail, subject, htmlBody } = params;
+  const { db, emailType, userId, accountId, recipientEmail, htmlBody } = params;
+  const subject = params.subject || `[No Subject] ${emailType}`;
+  if (!params.subject) {
+    log.warn("sendEmail called with null/undefined subject", { emailType, userId, recipientEmail });
+  }
 
   // Step 1: Eligibility check
   const eligibility = await checkEligibility(db, {

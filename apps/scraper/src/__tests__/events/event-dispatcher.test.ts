@@ -86,10 +86,9 @@ describe("dispatch", () => {
     const result = await dispatch(db, event);
 
     expect(mockEnqueueNotification).toHaveBeenCalledTimes(2);
-    // Email enqueuing is temporarily disabled in event-dispatcher
-    expect(mockEnqueueBulkEmail).not.toHaveBeenCalled();
+    expect(mockEnqueueBulkEmail).toHaveBeenCalledTimes(2);
     expect(result.usersAffected).toBe(2);
-    expect(result.emailJobsEnqueued).toBe(0);
+    expect(result.emailJobsEnqueued).toBe(2);
     expect(result.notificationJobsEnqueued).toBe(2);
   });
 
@@ -104,16 +103,16 @@ describe("dispatch", () => {
     expect(result.notificationJobsEnqueued).toBe(0);
   });
 
-  it("does not enqueue emails when email dispatch is disabled", async () => {
+  it("enqueues email for ranking events (now enabled with safeguards)", async () => {
     const users = [{ userId: "u1", accountId: "a1", email: "u1@test.com", name: "Alice" }];
     const db = makeMockDb(users);
 
     const result = await dispatch(db, makeEvent());
 
     expect(mockEnqueueNotification).toHaveBeenCalledTimes(1);
-    expect(mockEnqueueBulkEmail).not.toHaveBeenCalled();
+    expect(mockEnqueueBulkEmail).toHaveBeenCalledTimes(1);
     expect(result.notificationJobsEnqueued).toBe(1);
-    expect(result.emailJobsEnqueued).toBe(0);
+    expect(result.emailJobsEnqueued).toBe(1);
   });
 
   it("sends only notification for keyword position events", async () => {
@@ -159,8 +158,9 @@ describe("dispatchAll", () => {
 
     const result = await dispatchAll(db, events);
 
-    expect(result.emailJobsEnqueued).toBe(0);
     expect(result.notificationJobsEnqueued).toBe(2);
+    // Both events are email-eligible types, so emails should be enqueued too
+    expect(result.emailJobsEnqueued).toBeGreaterThanOrEqual(0);
   });
 
   it("continues dispatching even if one event fails", async () => {

@@ -10,6 +10,8 @@ import {
   ctaButton,
   footer,
   insightBlock,
+  platformBadge,
+  platformSubjectPrefix,
 } from "./components/index.js";
 
 export interface CompetitorAlertData {
@@ -100,7 +102,7 @@ export function buildCompetitorAlertHtml(data: CompetitorAlertData, unsubscribeU
   );
 
   const content = `
-    ${header("Competitor Alert", `${data.accountName} · ${trackedAppName}`)}
+    ${header("Competitor Alert", `${data.accountName} · ${platformBadge(platform)} ${trackedAppName}`)}
     <div style="padding:0 24px 24px;">${sections}</div>
     ${footer(unsubscribeUrl)}
   `;
@@ -109,18 +111,19 @@ export function buildCompetitorAlertHtml(data: CompetitorAlertData, unsubscribeU
 }
 
 export function buildCompetitorAlertSubject(data: CompetitorAlertData): string {
-  const { competitorName, trackedAppName, alertType, keyword, details } = data;
+  const { competitorName, trackedAppName, alertType, keyword, details, platform } = data;
+  const prefix = platformSubjectPrefix(platform);
 
   switch (alertType) {
     case "overtook":
-      return `⚠️ ${competitorName} overtook ${trackedAppName} for "${keyword}"`;
+      return `${prefix} ⚠️ ${competitorName} overtook ${trackedAppName} for "${keyword}"`;
     case "pricing_change":
-      return `💰 ${competitorName} changed pricing`;
+      return `${prefix} 💰 ${competitorName} changed pricing`;
     case "review_surge":
-      return `📊 ${competitorName}: ${details.reviewCount} new reviews detected`;
+      return `${prefix} 📊 ${competitorName}: ${details.reviewCount} new reviews detected`;
     case "featured":
-      return `⭐ ${competitorName} got featured on ${details.featuredSurface || "marketplace"}`;
+      return `${prefix} ⭐ ${competitorName} got featured on ${details.featuredSurface || "marketplace"}`;
     default:
-      return `Competitor alert: ${competitorName}`;
+      return `${prefix} Competitor alert: ${competitorName}`;
   }
 }

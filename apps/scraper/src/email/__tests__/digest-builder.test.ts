@@ -318,4 +318,27 @@ describe("DigestData app-centric structure", () => {
       expect(ratingChange).toBeNull();
     });
   });
+
+  describe("Date serialization safety", () => {
+    it("Date.toISOString() returns a string suitable for postgres queries", () => {
+      const todayStart = new Date("2026-04-07T00:00:00.000Z");
+      const yesterdayStart = new Date("2026-04-06T00:00:00.000Z");
+
+      // The fix: convert Date to ISO string before passing to gte/lt
+      const todayStr = todayStart.toISOString();
+      const yesterdayStr = yesterdayStart.toISOString();
+
+      expect(typeof todayStr).toBe("string");
+      expect(typeof yesterdayStr).toBe("string");
+      expect(todayStr).toBe("2026-04-07T00:00:00.000Z");
+      expect(yesterdayStr).toBe("2026-04-06T00:00:00.000Z");
+    });
+
+    it("toISOString is always a string, never a Date object", () => {
+      const date = new Date();
+      const result = date.toISOString();
+      expect(result).not.toBeInstanceOf(Date);
+      expect(typeof result).toBe("string");
+    });
+  });
 });

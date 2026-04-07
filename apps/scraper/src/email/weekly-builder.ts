@@ -141,6 +141,10 @@ export async function buildWeeklyForAccount(
     : { todayStart: (() => { const d = new Date(now); d.setHours(0, 0, 0, 0); return d; })() };
   const weekStart = new Date(todayStart.getTime() - 7 * 24 * 60 * 60 * 1000);
 
+  // Convert to ISO strings to avoid postgres.js Date serialization errors
+  const weekStartStr = weekStart.toISOString();
+  const todayStartStr = todayStart.toISOString();
+
   const keywordIds = trackedKws.map((k) => k.keywordId);
   const appIdList = [...relevantAppIds];
 
@@ -151,7 +155,7 @@ export async function buildWeeklyForAccount(
       FROM app_keyword_rankings
       WHERE keyword_id = ANY(${sqlArray(keywordIds)})
         AND app_id = ANY(${sqlArray(appIdList)})
-        AND scraped_at >= ${weekStart} AND scraped_at < ${todayStart}
+        AND scraped_at >= ${weekStartStr} AND scraped_at < ${todayStartStr}
       ORDER BY app_id, keyword_id, scraped_at ASC
     ),
     last_rank AS (
@@ -159,7 +163,7 @@ export async function buildWeeklyForAccount(
       FROM app_keyword_rankings
       WHERE keyword_id = ANY(${sqlArray(keywordIds)})
         AND app_id = ANY(${sqlArray(appIdList)})
-        AND scraped_at >= ${weekStart}
+        AND scraped_at >= ${weekStartStr}
       ORDER BY app_id, keyword_id, scraped_at DESC
     )
     SELECT f.app_id, f.keyword_id,
@@ -213,7 +217,7 @@ export async function buildWeeklyForAccount(
     const snapRows = await db.execute(sql`
       SELECT average_rating, rating_count, scraped_at
       FROM app_snapshots
-      WHERE app_id = ${compAppId} AND scraped_at >= ${weekStart}
+      WHERE app_id = ${compAppId} AND scraped_at >= ${weekStartStr}
       ORDER BY scraped_at ASC
     `);
     const snaps = ((snapRows as any).rows ?? snapRows) as any[];

@@ -855,6 +855,20 @@
       "when": 1780963200000,
       "tag": "0121_user_app_email_preferences",
       "breakpoints": true
+    },
+    {
+      "idx": 122,
+      "version": "7",
+      "when": 1781049600000,
+      "tag": "0122_email_alerts_feature_flag",
+      "breakpoints": true
+    },
+    {
+      "idx": 123,
+      "version": "7",
+      "when": 1781136000000,
+      "tag": "0123_seed_alert_email_type_configs",
+      "breakpoints": true
     }
   ]
 }

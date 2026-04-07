@@ -164,6 +164,55 @@ describe("Email send pipeline", () => {
     }));
   });
 
+  it("handles null/undefined subject with fallback", async () => {
+    vi.mocked(checkEligibility).mockResolvedValue({ eligible: true });
+    const mockSendFn = vi.fn().mockResolvedValue({ messageId: "msg-456" });
+
+    const result = await sendEmail({
+      db: mockDb,
+      emailType: "email_ranking_alert",
+      userId: "user-1",
+      accountId: "acc-1",
+      recipientEmail: "test@example.com",
+      subject: undefined as any,
+      htmlBody: "<p>Alert</p>",
+      sendFn: mockSendFn,
+      skipTracking: true,
+    });
+
+    expect(result.sent).toBe(true);
+    // Subject should have been replaced with fallback
+    expect(mockSendFn).toHaveBeenCalledWith(
+      expect.objectContaining({
+        subject: "[No Subject] email_ranking_alert",
+      })
+    );
+  });
+
+  it("handles empty string subject with fallback", async () => {
+    vi.mocked(checkEligibility).mockResolvedValue({ eligible: true });
+    const mockSendFn = vi.fn().mockResolvedValue({ messageId: "msg-789" });
+
+    const result = await sendEmail({
+      db: mockDb,
+      emailType: "email_competitor_alert",
+      userId: "user-1",
+      accountId: "acc-1",
+      recipientEmail: "test@example.com",
+      subject: "",
+      htmlBody: "<p>Alert</p>",
+      sendFn: mockSendFn,
+      skipTracking: true,
+    });
+
+    expect(result.sent).toBe(true);
+    expect(mockSendFn).toHaveBeenCalledWith(
+      expect.objectContaining({
+        subject: "[No Subject] email_competitor_alert",
+      })
+    );
+  });
+
   it("logs skipped email with fallback reason when skipReason is undefined", async () => {
     vi.mocked(checkEligibility).mockResolvedValue({
       eligible: false,

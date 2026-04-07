@@ -18,6 +18,15 @@ interface LogEmailParams {
 
 /** Log an email attempt to the database and return the log ID */
 export async function logEmailAttempt(db: any, params: LogEmailParams): Promise<string> {
+  const subject = params.subject || `[No Subject] ${params.emailType}`;
+  if (!params.subject) {
+    log.warn("logEmailAttempt called with null/undefined subject", {
+      emailType: params.emailType,
+      userId: params.userId,
+      recipientEmail: params.recipientEmail,
+    });
+  }
+
   const [row] = await db
     .insert(emailLogs)
     .values({
@@ -26,7 +35,7 @@ export async function logEmailAttempt(db: any, params: LogEmailParams): Promise<
       accountId: params.accountId,
       recipientEmail: params.recipientEmail,
       recipientName: params.recipientName,
-      subject: params.subject,
+      subject,
       htmlBody: params.htmlBody,
       dataSnapshot: params.dataSnapshot,
       status: "queued",

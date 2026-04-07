@@ -51,9 +51,18 @@ const redisLock = new RedisLock(getRedisConnection() as { host?: string; port?: 
 const bgProcessJobFn = createProcessJob(db, "background");
 const intProcessJob = createProcessJob(db, "interactive");
 
+/** Job types that don't need per-platform serialization (no scraping involved) */
+const NON_PLATFORM_JOBS = new Set(["daily_digest", "weekly_summary", "data_cleanup"]);
+
 const bgWorker = new Worker<ScraperJobData>(
   BACKGROUND_QUEUE_NAME,
   async (job) => {
+    // Non-scraping jobs bypass the platform lock entirely
+    if (NON_PLATFORM_JOBS.has(job.data.type)) {
+      await bgProcessJobFn(job);
+      return;
+    }
+
     const platform = job.data.platform || "shopify";
     const lockKey = `platform:${platform}`;
     const release = await redisLock.acquireWithWait(lockKey, PLATFORM_LOCK_TTL_MS, LOCK_POLL_INTERVAL_MS, PLATFORM_LOCK_TIMEOUT_MS);

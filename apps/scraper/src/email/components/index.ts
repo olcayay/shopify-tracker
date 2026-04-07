@@ -9,3 +9,4 @@ export { footer } from "./footer.js";
 export { summaryBadge } from "./summary-badge.js";
 export { reviewCard } from "./review-card.js";
 export { milestoneCard } from "./milestone-card.js";
+export { platformBadge, platformLabel, platformSubjectPrefix } from "./platform-badge.js";

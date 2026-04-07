@@ -9,6 +9,8 @@ import {
   milestoneCard,
   ctaButton,
   footer,
+  platformBadge,
+  platformSubjectPrefix,
 } from "./components/index.js";
 
 export interface WinCelebrationData {
@@ -85,7 +87,7 @@ export function buildWinCelebrationHtml(data: WinCelebrationData, unsubscribeUrl
   sections += ctaButton("View Details", `${DASHBOARD_URL}/${platform}/apps/${data.appSlug}`);
 
   const content = `
-    ${header("Congratulations! 🎉", `${data.accountName} · ${appName}`)}
+    ${header("Congratulations! 🎉", `${data.accountName} · ${platformBadge(platform)} ${appName}`)}
     <div style="padding:0 24px 24px;">${sections}</div>
     ${footer(unsubscribeUrl)}
   `;
@@ -94,12 +96,13 @@ export function buildWinCelebrationHtml(data: WinCelebrationData, unsubscribeUrl
 }
 
 export function buildWinCelebrationSubject(data: WinCelebrationData): string {
-  const { appName, milestoneType, keyword, reviewCount, rating, installCount, position } = data;
+  const { appName, milestoneType, keyword, reviewCount, rating, installCount, position, platform } = data;
+  const prefix = platformSubjectPrefix(platform);
   switch (milestoneType) {
-    case "top1": return `🏆 ${appName} is #1 for "${keyword}"!`;
-    case "top3": return `🥇 ${appName} entered Top 3 for "${keyword}" (#${position})`;
-    case "review_milestone": return `⭐ ${appName} reached ${reviewCount} reviews!`;
-    case "rating_milestone": return `⭐ ${appName} hit ${rating}★ rating!`;
-    case "install_milestone": return `🚀 ${appName} reached ${installCount?.toLocaleString()} installs!`;
+    case "top1": return `${prefix} 🏆 ${appName} is #1 for "${keyword}"!`;
+    case "top3": return `${prefix} 🥇 ${appName} entered Top 3 for "${keyword}" (#${position})`;
+    case "review_milestone": return `${prefix} ⭐ ${appName} reached ${reviewCount} reviews!`;
+    case "rating_milestone": return `${prefix} ⭐ ${appName} hit ${rating}★ rating!`;
+    case "install_milestone": return `${prefix} 🚀 ${appName} reached ${installCount?.toLocaleString()} installs!`;
   }
 }

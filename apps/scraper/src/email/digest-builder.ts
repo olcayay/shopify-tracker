@@ -1,4 +1,4 @@
-import { eq, and, sql, gte, lt, desc } from "drizzle-orm";
+import { eq, and, sql, desc } from "drizzle-orm";
 import type { Database } from "@appranks/db";
 import {
   accounts,
@@ -217,7 +217,7 @@ export async function buildDigestForAccount(
           keywordIds.map((id) => sql`${id}`),
           sql`, `
         )})`,
-        gte(appKeywordRankings.scrapedAt, todayStart),
+        sql`${appKeywordRankings.scrapedAt} >= ${todayStart.toISOString()}`,
         sql`${appKeywordRankings.appId} IN (${sql.join(
           [...relevantAppIds].map((id) => sql`${id}`),
           sql`, `
@@ -241,8 +241,8 @@ export async function buildDigestForAccount(
           keywordIds.map((id) => sql`${id}`),
           sql`, `
         )})`,
-        gte(appKeywordRankings.scrapedAt, yesterdayStart),
-        lt(appKeywordRankings.scrapedAt, todayStart),
+        sql`${appKeywordRankings.scrapedAt} >= ${yesterdayStart.toISOString()}`,
+        sql`${appKeywordRankings.scrapedAt} < ${todayStart.toISOString()}`,
         sql`${appKeywordRankings.appId} IN (${sql.join(
           [...relevantAppIds].map((id) => sql`${id}`),
           sql`, `
@@ -345,7 +345,7 @@ export async function buildDigestForAccount(
       .where(
         and(
           eq(appSnapshots.appId, appId),
-          gte(appSnapshots.scrapedAt, todayStart)
+          sql`${appSnapshots.scrapedAt} >= ${todayStart.toISOString()}`
         )
       )
       .orderBy(desc(appSnapshots.scrapedAt))
@@ -360,8 +360,8 @@ export async function buildDigestForAccount(
       .where(
         and(
           eq(appSnapshots.appId, appId),
-          gte(appSnapshots.scrapedAt, yesterdayStart),
-          lt(appSnapshots.scrapedAt, todayStart)
+          sql`${appSnapshots.scrapedAt} >= ${yesterdayStart.toISOString()}`,
+          sql`${appSnapshots.scrapedAt} < ${todayStart.toISOString()}`
         )
       )
       .orderBy(desc(appSnapshots.scrapedAt))
@@ -389,7 +389,7 @@ export async function buildDigestForAccount(
             trackedAppIdList.map((id) => sql`${id}`),
             sql`, `
           )})`,
-          gte(appCategoryRankings.scrapedAt, todayStart)
+          sql`${appCategoryRankings.scrapedAt} >= ${todayStart.toISOString()}`
         )
       )
       .orderBy(desc(appCategoryRankings.scrapedAt));
@@ -407,8 +407,8 @@ export async function buildDigestForAccount(
             trackedAppIdList.map((id) => sql`${id}`),
             sql`, `
           )})`,
-          gte(appCategoryRankings.scrapedAt, yesterdayStart),
-          lt(appCategoryRankings.scrapedAt, todayStart)
+          sql`${appCategoryRankings.scrapedAt} >= ${yesterdayStart.toISOString()}`,
+          sql`${appCategoryRankings.scrapedAt} < ${todayStart.toISOString()}`
         )
       )
       .orderBy(desc(appCategoryRankings.scrapedAt));

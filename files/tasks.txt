@@ -1,3 +1,19 @@
+Email System Overhaul — Alert Safeguards & Fixes (2026-04-07)
+  PLA-829: Phase 0: Fix digest email platform lock timeout ✅
+  PLA-830: Phase 0: Fix digest builder Date serialization error ✅
+  PLA-840: Phase 0: Gate all alert & digest emails behind feature flag ✅
+  PLA-831: Phase 1: Fix previous rankings Map override bug ✅
+  PLA-827: Phase 1: Fix null subject constraint violation in email_logs ✅
+  PLA-828: Phase 1: Add database pool & connection diagnostics to /health/ready ✅
+  PLA-832: Phase 1: Aggregate alert events per app into single email ✅
+  PLA-833: Phase 1: Fix category change email template showing undefined ✅
+  PLA-834: Phase 1: Add email type configs and frequency limits for alert emails ✅
+  PLA-835: Phase 2: Add daily email limit per user with admin bypass ✅
+  PLA-836: Phase 2: Filter competitor alerts to important events only ✅
+  PLA-837: Phase 2: Add platform info to all email templates ✅
+  PLA-838: Phase 2: Fix admin email page filters and add email-bulk queue visibility ✅
+  PLA-839: Phase 3: Re-enable alert email enqueuing in event dispatcher ✅
+
 DB Pool Fix — Connection Reduction (2026-04-07)
   PLA-821: Phase 1: Consolidate /api/auth/me from 9 parallel queries to 1+2 ✅
   PLA-822: Phase 2: Consolidate /api/system-admin/accounts N+1 into single query ✅

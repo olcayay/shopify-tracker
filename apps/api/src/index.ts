@@ -376,10 +376,53 @@ app.get("/health/ready", async (_request, reply) => {
     checks.database = { status: "error", latencyMs: Date.now() - dbStart, error: String(err) };
   }
 
-  // Main pool status from the pool monitor (does not consume a connection)
-  checks.mainPool = poolCheckFailures > 0
-    ? { status: "degraded", consecutiveFailures: poolCheckFailures, ...getPoolStats() }
-    : { status: "ok" };
+  // Main pool diagnostics — query pg_stat_activity via healthDb (not main pool)
+  const poolStats = getPoolStats();
+  let connections: Record<string, unknown> = {};
+  let poolStatus = "ok";
+  try {
+    const [connInfo] = await healthDb.execute(sql`
+      SELECT
+        count(*) FILTER (WHERE state = 'active') AS active_connections,
+        count(*) FILTER (WHERE state = 'idle') AS idle_connections,
+        count(*) FILTER (WHERE state = 'idle in transaction') AS idle_in_transaction,
+        count(*) FILTER (WHERE wait_event_type = 'Lock') AS waiting_on_lock,
+        count(*) AS total_connections,
+        max(EXTRACT(EPOCH FROM (now() - query_start)))::int AS longest_query_secs,
+        (SELECT setting::int FROM pg_settings WHERE name = 'max_connections') AS max_connections
+      FROM pg_stat_activity
+      WHERE datname = current_database()
+        AND pid != pg_backend_pid()
+    `) as any;
+    if (connInfo) {
+      const active = Number(connInfo.active_connections ?? 0);
+      const maxConn = Number(connInfo.max_connections ?? 25);
+      const idleInTx = Number(connInfo.idle_in_transaction ?? 0);
+      connections = {
+        active,
+        idle: Number(connInfo.idle_connections ?? 0),
+        idleInTransaction: idleInTx,
+        waitingOnLock: Number(connInfo.waiting_on_lock ?? 0),
+        total: Number(connInfo.total_connections ?? 0),
+        max: maxConn,
+        longestQuerySecs: connInfo.longest_query_secs != null ? Number(connInfo.longest_query_secs) : null,
+      };
+      if (poolCheckFailures > 0 || active >= maxConn) {
+        poolStatus = "error";
+      } else if (active >= maxConn * 0.8 || idleInTx > 0) {
+        poolStatus = "warning";
+      }
+    }
+  } catch {
+    // Non-critical — fall back to basic pool status
+  }
+
+  checks.mainPool = {
+    status: poolCheckFailures > 0 ? "error" : poolStatus,
+    config: poolStats,
+    connections,
+    consecutiveFailures: poolCheckFailures,
+  };
 
   // Redis check
   const redisUrl = process.env.REDIS_URL || "redis://localhost:6379";
@@ -552,11 +595,27 @@ const poolMonitorInterval = setInterval(async () => {
     poolCheckFailures++;
     setGauge("db_pool_stuck", 1, "Whether the main DB pool is stuck (1=stuck, 0=healthy)");
     const poolStats = getPoolStats();
+    // Try to get runtime connection counts via healthDb for better diagnostics
+    let runtimeConnections: Record<string, unknown> = {};
+    try {
+      const [connInfo] = await healthDb.execute(sql`
+        SELECT count(*) FILTER (WHERE state = 'active') AS active,
+               count(*) FILTER (WHERE state = 'idle') AS idle,
+               count(*) FILTER (WHERE state = 'idle in transaction') AS idle_in_tx,
+               count(*) AS total
+        FROM pg_stat_activity
+        WHERE datname = current_database() AND pid != pg_backend_pid()
+      `) as any;
+      if (connInfo) {
+        runtimeConnections = { active: Number(connInfo.active), idle: Number(connInfo.idle), idleInTx: Number(connInfo.idle_in_tx), total: Number(connInfo.total) };
+      }
+    } catch { /* non-critical */ }
     app.log.error({
       msg: `DB pool health check failed (${poolCheckFailures} consecutive). Pool may be stuck — container restart may be needed.`,
       consecutiveFailures: poolCheckFailures,
       error: err instanceof Error ? err.message : String(err),
       pool: poolStats,
+      connections: runtimeConnections,
     });
     // Fire alert on 3+ consecutive failures
     if (poolCheckFailures === 3) {
