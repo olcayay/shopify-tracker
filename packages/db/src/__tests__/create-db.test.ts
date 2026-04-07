@@ -38,16 +38,16 @@ describe("createDb", () => {
     expect(config.max).toBe(10);
   });
 
-  it("sets idle timeout to 30 seconds", () => {
+  it("sets idle timeout to 20 seconds", () => {
     createDb("postgres://localhost/db");
     const config = mockPostgres.mock.calls[0][1];
-    expect(config.idle_timeout).toBe(30);
+    expect(config.idle_timeout).toBe(20);
   });
 
-  it("sets max lifetime to 30 minutes (1800 seconds)", () => {
+  it("sets max lifetime to 15 minutes (900 seconds)", () => {
     createDb("postgres://localhost/db");
     const config = mockPostgres.mock.calls[0][1];
-    expect(config.max_lifetime).toBe(60 * 30);
+    expect(config.max_lifetime).toBe(60 * 15);
   });
 
   it("forces UTC timezone and statement_timeout in connection settings", () => {

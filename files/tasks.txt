@@ -1,3 +1,6 @@
+DB Pool Reliability (2026-04-07)
+  PLA-814: API: DB pool health check fails intermittently (pool stuck state) ✅
+
 Email System Reliability (2026-04-07)
   PLA-816: Fix Send Daily Digest button: email not sent, no tracking visible ✅
 

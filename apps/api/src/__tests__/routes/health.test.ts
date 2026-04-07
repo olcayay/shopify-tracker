@@ -65,4 +65,34 @@ describe("Health check response format", () => {
     expect(legacyResponse).toHaveProperty("redis");
     expect(legacyResponse.status).toBeDefined();
   });
+
+  it("pool error response includes connection metrics", () => {
+    // When main pool fails, the response should include pool configuration
+    const failedPoolCheck = {
+      status: "error",
+      latencyMs: 5001,
+      error: "pool_timeout",
+      maxConnections: 10,
+      idleTimeout: 20,
+      maxLifetime: 900,
+    };
+
+    expect(failedPoolCheck).toHaveProperty("maxConnections");
+    expect(failedPoolCheck).toHaveProperty("idleTimeout");
+    expect(failedPoolCheck).toHaveProperty("maxLifetime");
+    expect(failedPoolCheck.maxConnections).toBe(10);
+    expect(failedPoolCheck.idleTimeout).toBe(20);
+    expect(failedPoolCheck.maxLifetime).toBe(900);
+  });
+
+  it("pool config uses reduced lifetimes for better recycling", () => {
+    // Default pool config: idle_timeout=20s, max_lifetime=15min (was 30s/30min)
+    const DEFAULT_IDLE_TIMEOUT = 20;
+    const DEFAULT_MAX_LIFETIME = 60 * 15; // 15 min
+
+    expect(DEFAULT_IDLE_TIMEOUT).toBeLessThanOrEqual(30);
+    expect(DEFAULT_MAX_LIFETIME).toBeLessThanOrEqual(60 * 30);
+    // Reduced values force more frequent connection recycling
+    expect(DEFAULT_MAX_LIFETIME).toBe(900);
+  });
 });

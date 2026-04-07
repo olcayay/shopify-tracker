@@ -383,8 +383,9 @@ app.get("/health/ready", async (_request, reply) => {
     ]);
     checks.mainPool = { status: "ok", latencyMs: Date.now() - poolStart };
   } catch (err) {
-    checks.mainPool = { status: "error", latencyMs: Date.now() - poolStart, error: String(err) };
-    app.log.warn("Main DB pool health check failed — pool may be stuck");
+    const poolStats = getPoolStats();
+    checks.mainPool = { status: "error", latencyMs: Date.now() - poolStart, error: String(err), ...poolStats };
+    app.log.warn({ msg: "Main DB pool health check failed — pool may be stuck", pool: poolStats });
   }
 
   // Redis check
@@ -525,6 +526,22 @@ const POOL_CHECK_INTERVAL_MS = 30_000;
 const POOL_CHECK_TIMEOUT_MS = 5_000;
 let poolCheckFailures = 0;
 
+function getPoolStats(): Record<string, unknown> {
+  try {
+    const pgClient = (db as any).__pgClient;
+    if (!pgClient) return { note: "no pg client ref" };
+    // postgres.js exposes connection counts on the sql function
+    const opts = pgClient.options || {};
+    return {
+      maxConnections: opts.max ?? "?",
+      idleTimeout: opts.idle_timeout ?? "?",
+      maxLifetime: opts.max_lifetime ?? "?",
+    };
+  } catch {
+    return { note: "failed to read pool stats" };
+  }
+}
+
 const poolMonitorInterval = setInterval(async () => {
   try {
     await Promise.race([
@@ -538,15 +555,19 @@ const poolMonitorInterval = setInterval(async () => {
       setGauge("db_pool_stuck", 0, "Whether the main DB pool is stuck (1=stuck, 0=healthy)");
     }
     poolCheckFailures = 0;
-  } catch {
+  } catch (err) {
     poolCheckFailures++;
     setGauge("db_pool_stuck", 1, "Whether the main DB pool is stuck (1=stuck, 0=healthy)");
-    app.log.error(
-      `DB pool health check failed (${poolCheckFailures} consecutive). Pool may be stuck — container restart may be needed.`
-    );
+    const poolStats = getPoolStats();
+    app.log.error({
+      msg: `DB pool health check failed (${poolCheckFailures} consecutive). Pool may be stuck — container restart may be needed.`,
+      consecutiveFailures: poolCheckFailures,
+      error: err instanceof Error ? err.message : String(err),
+      pool: poolStats,
+    });
     // Fire alert on 3+ consecutive failures
     if (poolCheckFailures === 3) {
-      import("./utils/alerts.js").then(({ alerts }) => alerts.dbConnectionFailed(`${poolCheckFailures} consecutive failures`)).catch(() => {});
+      import("./utils/alerts.js").then(({ alerts }) => alerts.dbConnectionFailed(`${poolCheckFailures} consecutive failures, pool: ${JSON.stringify(poolStats)}`)).catch(() => {});
     }
   }
 }, POOL_CHECK_INTERVAL_MS);

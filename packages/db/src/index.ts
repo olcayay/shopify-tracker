@@ -80,8 +80,8 @@ export interface DbPoolOptions {
 export function createDb(databaseUrl: string, opts?: DbPoolOptions) {
   const client = postgres(databaseUrl, {
     max: opts?.max ?? 10,
-    idle_timeout: opts?.idleTimeout ?? 30,
-    max_lifetime: opts?.maxLifetime ?? 60 * 30,
+    idle_timeout: opts?.idleTimeout ?? 20,
+    max_lifetime: opts?.maxLifetime ?? 60 * 15,
     connection: {
       timezone: "UTC",
       statement_timeout: opts?.statementTimeout ?? 30000,
@@ -93,7 +93,10 @@ export function createDb(databaseUrl: string, opts?: DbPoolOptions) {
       return Math.min(1000 * Math.pow(2, retries), 30000);
     },
   });
-  return drizzle(client, { schema });
+  const db = drizzle(client, { schema });
+  // Expose raw postgres client for pool diagnostics
+  (db as any).__pgClient = client;
+  return db;
 }
 
 /**

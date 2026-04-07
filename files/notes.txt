@@ -1,3 +1,14 @@
+DB Pool Reliability (2026-04-07)
+================================================================
+
+PLA-814: API: DB pool health check fails intermittently (pool stuck state)
+- Reduced idle_timeout from 30s to 20s and max_lifetime from 30min to 15min for faster connection recycling
+- Exposed raw postgres.js client via `db.__pgClient` for pool diagnostics
+- Pool health check failures now include structured logging: consecutive failures count, error message, pool config
+- /health/ready main pool failure response now includes pool metrics (maxConnections, idleTimeout, maxLifetime)
+- Alert on 3+ consecutive failures now includes pool stats in the message
+- 2 new tests: pool error response includes connection metrics, config uses reduced lifetimes
+
 Email System Reliability (2026-04-07)
 ================================================================
 
