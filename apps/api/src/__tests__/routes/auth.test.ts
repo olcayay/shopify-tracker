@@ -732,6 +732,57 @@ describe("GET /api/auth/me — auth checks", () => {
   });
 });
 
+const meDbConfig = {
+  selectResult: [
+    {
+      id: "user-001",
+      email: "user@example.com",
+      name: "Test User",
+      role: "editor",
+      isSystemAdmin: false,
+      emailDigestEnabled: true,
+      timezone: "Europe/Istanbul",
+      accountId: "account-001",
+      lastSeenAt: null,
+      company: "Test Corp",
+      isSuspended: false,
+      maxTrackedApps: 10,
+      maxTrackedKeywords: 50,
+      maxCompetitorApps: 5,
+      maxTrackedFeatures: 20,
+      maxUsers: 5,
+      maxResearchProjects: 3,
+      maxPlatforms: 5,
+      count: 3,
+      platform: "shopify",
+      overrideGlobalVisibility: false,
+      isVisible: true,
+    },
+  ],
+  executeResult: [
+    {
+      id: "account-001",
+      name: "Test Account",
+      company: "Test Corp",
+      is_suspended: false,
+      max_tracked_apps: 10,
+      max_tracked_keywords: 50,
+      max_competitor_apps: 5,
+      max_tracked_features: 20,
+      max_users: 5,
+      max_research_projects: 3,
+      max_platforms: 5,
+      tracked_apps_count: 3,
+      tracked_keywords_count: 3,
+      competitor_apps_count: 3,
+      tracked_features_count: 3,
+      users_count: 3,
+      research_projects_count: 3,
+    },
+  ],
+  insertResult: [],
+};
+
 describe("GET /api/auth/me — response structure", () => {
   let app: FastifyInstance;
 
@@ -739,35 +790,7 @@ describe("GET /api/auth/me — response structure", () => {
     app = await buildTestApp({
       routes: authRoutes,
       prefix: "/api/auth",
-      db: {
-        selectResult: [
-          {
-            id: "user-001",
-            email: "user@example.com",
-            name: "Test User",
-            role: "editor",
-            isSystemAdmin: false,
-            emailDigestEnabled: true,
-            timezone: "Europe/Istanbul",
-            accountId: "account-001",
-            lastSeenAt: null,
-            company: "Test Corp",
-            isSuspended: false,
-            maxTrackedApps: 10,
-            maxTrackedKeywords: 50,
-            maxCompetitorApps: 5,
-            maxTrackedFeatures: 20,
-            maxUsers: 5,
-            maxResearchProjects: 3,
-            maxPlatforms: 5,
-            count: 3,
-            platform: "shopify",
-            overrideGlobalVisibility: false,
-            isVisible: true,
-          },
-        ],
-        insertResult: [],
-      },
+      db: meDbConfig,
     });
   });
 
@@ -833,6 +856,7 @@ describe("GET /api/auth/me — impersonation metadata", () => {
       routes: authRoutes,
       prefix: "/api/auth",
       db: {
+        ...meDbConfig,
         selectResult: [
           {
             id: "user-001",

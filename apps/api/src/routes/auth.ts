@@ -659,52 +659,32 @@ export const authRoutes: FastifyPluginAsync = async (app) => {
         .catch(() => {});
     }
 
-    const [account] = await db
-      .select()
-      .from(accounts)
-      .where(eq(accounts.id, user.accountId));
+    // Consolidated query: account + 6 usage counts in a single round-trip (was 9 parallel queries)
+    const [accountWithCounts] = await db.execute<{
+      id: string; name: string; company: string | null; is_suspended: boolean;
+      max_tracked_apps: number; max_tracked_keywords: number; max_competitor_apps: number;
+      max_tracked_features: number; max_users: number; max_research_projects: number; max_platforms: number;
+      past_due_since: Date | null;
+      tracked_apps_count: number; tracked_keywords_count: number; competitor_apps_count: number;
+      tracked_features_count: number; users_count: number; research_projects_count: number;
+    }>(sql`
+      SELECT a.*,
+        (SELECT count(*)::int FROM account_tracked_apps WHERE account_id = ${user.accountId}) AS tracked_apps_count,
+        (SELECT count(*)::int FROM account_tracked_keywords WHERE account_id = ${user.accountId}) AS tracked_keywords_count,
+        (SELECT count(*)::int FROM account_competitor_apps WHERE account_id = ${user.accountId}) AS competitor_apps_count,
+        (SELECT count(*)::int FROM account_tracked_features WHERE account_id = ${user.accountId}) AS tracked_features_count,
+        (SELECT count(*)::int FROM users WHERE account_id = ${user.accountId}) AS users_count,
+        (SELECT count(*)::int FROM research_projects WHERE account_id = ${user.accountId}) AS research_projects_count
+      FROM accounts a WHERE a.id = ${user.accountId}
+    `);
 
-    // Get usage counts
-    const [trackedAppsCount] = await db
-      .select({ count: sql<number>`count(*)::int` })
-      .from(accountTrackedApps)
-      .where(eq(accountTrackedApps.accountId, user.accountId));
+    // These two are lightweight and independent — 2 parallel queries
+    const [enabledPlatformsResult, visibilityRows] = await Promise.all([
+      db.select({ platform: accountPlatforms.platform, overrideGlobalVisibility: accountPlatforms.overrideGlobalVisibility }).from(accountPlatforms).where(eq(accountPlatforms.accountId, user.accountId)),
+      db.select().from(platformVisibility),
+    ]);
 
-    const [trackedKeywordsCount] = await db
-      .select({ count: sql<number>`count(*)::int` })
-      .from(accountTrackedKeywords)
-      .where(eq(accountTrackedKeywords.accountId, user.accountId));
-
-    const [competitorAppsCount] = await db
-      .select({ count: sql<number>`count(*)::int` })
-      .from(accountCompetitorApps)
-      .where(eq(accountCompetitorApps.accountId, user.accountId));
-
-    const [trackedFeaturesCount] = await db
-      .select({ count: sql<number>`count(*)::int` })
-      .from(accountTrackedFeatures)
-      .where(eq(accountTrackedFeatures.accountId, user.accountId));
-
-    const [usersCount] = await db
-      .select({ count: sql<number>`count(*)::int` })
-      .from(users)
-      .where(eq(users.accountId, user.accountId));
-
-    const [researchProjectsCount] = await db
-      .select({ count: sql<number>`count(*)::int` })
-      .from(researchProjects)
-      .where(eq(researchProjects.accountId, user.accountId));
-
-    const enabledPlatformsResult = await db
-      .select({
-        platform: accountPlatforms.platform,
-        overrideGlobalVisibility: accountPlatforms.overrideGlobalVisibility,
-      })
-      .from(accountPlatforms)
-      .where(eq(accountPlatforms.accountId, user.accountId));
-
-    // Get global platform visibility
-    const visibilityRows = await db.select().from(platformVisibility);
+    const account = accountWithCounts;
     const globalVisibility: Record<string, boolean> = {};
     for (const row of visibilityRows) {
       globalVisibility[row.platform] = row.isVisible;
@@ -737,23 +717,23 @@ export const authRoutes: FastifyPluginAsync = async (app) => {
         id: account.id,
         name: account.name,
         company: account.company,
-        isSuspended: account.isSuspended,
+        isSuspended: account.is_suspended,
         limits: {
-          maxTrackedApps: account.maxTrackedApps,
-          maxTrackedKeywords: account.maxTrackedKeywords,
-          maxCompetitorApps: account.maxCompetitorApps,
-          maxTrackedFeatures: account.maxTrackedFeatures,
-          maxUsers: account.maxUsers,
-          maxResearchProjects: account.maxResearchProjects,
-          maxPlatforms: account.maxPlatforms,
+          maxTrackedApps: account.max_tracked_apps,
+          maxTrackedKeywords: account.max_tracked_keywords,
+          maxCompetitorApps: account.max_competitor_apps,
+          maxTrackedFeatures: account.max_tracked_features,
+          maxUsers: account.max_users,
+          maxResearchProjects: account.max_research_projects,
+          maxPlatforms: account.max_platforms,
         },
         usage: {
-          trackedApps: trackedAppsCount.count,
-          trackedKeywords: trackedKeywordsCount.count,
-          competitorApps: competitorAppsCount.count,
-          trackedFeatures: trackedFeaturesCount.count,
-          users: usersCount.count,
-          researchProjects: researchProjectsCount.count,
+          trackedApps: account.tracked_apps_count,
+          trackedKeywords: account.tracked_keywords_count,
+          competitorApps: account.competitor_apps_count,
+          trackedFeatures: account.tracked_features_count,
+          users: account.users_count,
+          researchProjects: account.research_projects_count,
           platforms: enabledPlatformsResult.length,
         },
       },

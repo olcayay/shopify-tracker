@@ -1,3 +1,13 @@
+DB Pool Fix — Connection Reduction (2026-04-07)
+================================================================
+
+PLA-821: Phase 1: Consolidate /api/auth/me from 9 parallel queries to 1+2
+- Replaced 9-query Promise.all with single SQL query using scalar subselects for 6 COUNTs
+- Account data + usage counts fetched in 1 round-trip (was 7 separate queries)
+- accountPlatforms + platformVisibility remain as 2 parallel queries
+- 9 connections per request → 3 connections (67% reduction)
+- Updated auth tests and critical-flows test with executeResult mock
+
 Feature Flags Infrastructure (2026-04-07)
 ================================================================
 

@@ -224,6 +224,15 @@ describe("Flow: Auth header validation", () => {
             isSuspended: false,
           },
         ],
+        executeResult: [
+          {
+            id: "account-001", name: "Test", company: null, is_suspended: false,
+            max_tracked_apps: 10, max_tracked_keywords: 10, max_competitor_apps: 5,
+            max_tracked_features: 10, max_users: 5, max_research_projects: 1, max_platforms: 1,
+            tracked_apps_count: 0, tracked_keywords_count: 0, competitor_apps_count: 0,
+            tracked_features_count: 0, users_count: 1, research_projects_count: 0,
+          },
+        ],
       },
     });
   });
