@@ -569,6 +569,12 @@ const poolMonitorInterval = setInterval(async () => {
     if (poolCheckFailures === 3) {
       import("./utils/alerts.js").then(({ alerts }) => alerts.dbConnectionFailed(`${poolCheckFailures} consecutive failures, pool: ${JSON.stringify(poolStats)}`)).catch(() => {});
     }
+    // Auto-restart on 5+ consecutive failures — Docker restart policy will bring us back
+    if (poolCheckFailures >= 5) {
+      app.log.error(`DB pool stuck for ${poolCheckFailures * 30}s — forcing process restart`);
+      clearInterval(poolMonitorInterval);
+      process.exit(1);
+    }
   }
 }, POOL_CHECK_INTERVAL_MS);
 
