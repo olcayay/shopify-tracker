@@ -1,4 +1,5 @@
 Scraper Reliability (2026-04-07)
+  PLA-817: Stale run cleanup lacks retry — crashed scraper runs are silently lost ✅
   PLA-820: Zendesk reviews scraper crashes with orphaned process ✅
 
 Smoke Test Reliability (2026-04-07)

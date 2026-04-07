@@ -1,7 +1,7 @@
-import { sql } from "drizzle-orm";
+import { sql, eq, and } from "drizzle-orm";
 import type { Database } from "@appranks/db";
 import { scrapeRuns } from "@appranks/db";
-import { createLogger } from "@appranks/shared";
+import { createLogger, type PlatformId } from "@appranks/shared";
 
 const log = createLogger("cleanup-stale-runs");
 
@@ -22,14 +22,34 @@ const STALE_TIMEOUT_HOURS: Record<string, number> = {
 
 const DEFAULT_TIMEOUT_HOURS = 2;
 
+/** Scraper types that should be retried when found stale (scheduled batch jobs) */
+const RETRYABLE_TYPES = new Set([
+  "category",
+  "app_details",
+  "keyword_search",
+  "reviews",
+  "featured_apps",
+]);
+
+/** Max automatic retries per stale run (tracked via metadata.retryOf) */
+const MAX_RETRIES = 1;
+
+export interface CleanupResult {
+  running: number;
+  pending: number;
+  retried: number;
+}
+
 /**
  * Mark orphaned scrape_runs as failed:
  *  - "running" entries older than per-type timeout (default 2 hours)
  *  - "pending" entries older than 24 hours
  *
- * Called at worker startup to clean up leftovers from crashes/restarts.
+ * For retryable scraper types, automatically re-queue the job (max 1 retry).
+ *
+ * Called at worker startup and periodically (every 15 min).
  */
-export async function cleanupStaleRuns(db: Database): Promise<{ running: number; pending: number }> {
+export async function cleanupStaleRuns(db: Database): Promise<CleanupResult> {
   // Build per-type CASE expression for dynamic timeout
   const caseExprParts = Object.entries(STALE_TIMEOUT_HOURS)
     .map(([type, hours]) => `WHEN scraper_type = '${type}' THEN interval '${hours} hours'`)
@@ -48,6 +68,19 @@ export async function cleanupStaleRuns(db: Database): Promise<{ running: number;
       sql`${scrapeRuns.status} = 'running' AND ${scrapeRuns.triggeredBy} = 'smoke-test' AND ${scrapeRuns.startedAt} < now() - interval '5 minutes'`
     );
 
+  // Find stale running runs BEFORE updating them (we need their type/platform for retry)
+  const staleRunningRuns = await db
+    .select({
+      id: scrapeRuns.id,
+      scraperType: scrapeRuns.scraperType,
+      platform: scrapeRuns.platform,
+      metadata: scrapeRuns.metadata,
+    })
+    .from(scrapeRuns)
+    .where(
+      sql.raw(`status = 'running' AND (triggered_by IS NULL OR triggered_by != 'smoke-test') AND started_at < now() - (${caseExpr})`)
+    );
+
   const runningResult = await db
     .update(scrapeRuns)
     .set({
@@ -56,7 +89,7 @@ export async function cleanupStaleRuns(db: Database): Promise<{ running: number;
       error: "stale run: marked as failed by cleanup on worker startup",
     })
     .where(
-      sql.raw(`status = 'running' AND started_at < now() - (${caseExpr})`)
+      sql.raw(`status = 'running' AND (triggered_by IS NULL OR triggered_by != 'smoke-test') AND started_at < now() - (${caseExpr})`)
     );
 
   const pendingResult = await db
@@ -73,9 +106,44 @@ export async function cleanupStaleRuns(db: Database): Promise<{ running: number;
   const runningCount = (runningResult as any).rowCount ?? 0;
   const pendingCount = (pendingResult as any).rowCount ?? 0;
 
-  if (runningCount > 0 || pendingCount > 0) {
-    log.info("cleaned up stale scrape_runs", { running: runningCount, pending: pendingCount });
+  // Auto-retry retryable stale runs (max 1 retry)
+  let retried = 0;
+  for (const run of staleRunningRuns) {
+    if (!run.scraperType || !run.platform) continue;
+    if (!RETRYABLE_TYPES.has(run.scraperType)) continue;
+
+    // Check if this run was already a retry (prevent infinite loops)
+    const meta = (run.metadata as Record<string, unknown>) || {};
+    if (meta.retryOf) continue;
+
+    try {
+      const { enqueueScraperJob } = await import("../queue.js");
+      const jobId = await enqueueScraperJob({
+        type: run.scraperType as any,
+        platform: run.platform as PlatformId,
+        triggeredBy: "stale-run-retry",
+        retryOf: run.id,
+      });
+      retried++;
+      log.info("auto-retried stale run", {
+        staleRunId: run.id,
+        scraperType: run.scraperType,
+        platform: run.platform,
+        newJobId: jobId,
+      });
+    } catch (err) {
+      log.error("failed to retry stale run", {
+        staleRunId: run.id,
+        scraperType: run.scraperType,
+        platform: run.platform,
+        error: String(err),
+      });
+    }
   }
 
-  return { running: runningCount, pending: pendingCount };
+  if (runningCount > 0 || pendingCount > 0 || retried > 0) {
+    log.info("cleaned up stale scrape_runs", { running: runningCount, pending: pendingCount, retried });
+  }
+
+  return { running: runningCount, pending: pendingCount, retried };
 }

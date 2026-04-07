@@ -45,6 +45,8 @@ export interface ScraperJobData {
   options?: ScraperJobOptions;
   /** Optional: originating API request ID for correlation */
   requestId?: string;
+  /** Optional: ID of the stale run this job is retrying */
+  retryOf?: string;
 }
 
 export function getRedisConnection(): ConnectionOptions {

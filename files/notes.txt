@@ -1,6 +1,14 @@
 Scraper Reliability (2026-04-07)
 ================================================================
 
+PLA-817: Stale run cleanup lacks retry — crashed scraper runs are silently lost
+- Added auto-retry for stale runs: when a retryable scraper type (category, app_details, keyword_search, reviews, featured_apps) is found stale, it's automatically re-queued
+- Max 1 retry per run — tracked via `retryOf` field in ScraperJobData and metadata
+- Already-retried runs are skipped to prevent infinite loops
+- SELECT stale runs before UPDATE so we know their type/platform
+- Return type extended to include `retried` count
+- 3 new tests: auto-retry, non-retryable skip, infinite-loop prevention
+
 PLA-820: Zendesk reviews scraper crashes with orphaned process
 - Added 5-minute per-app timeout in `scrapeTracked()` — wraps each app with `Promise.race()` timeout
 - Reduced MAX_PAGES from 50 to 20 for browser-based platforms (uses `needsBrowser()` from shared)
