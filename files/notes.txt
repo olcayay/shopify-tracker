@@ -1,3 +1,13 @@
+Smoke Test Reliability (2026-04-07)
+================================================================
+
+PLA-819: Smoke tests fail for all platforms due to DB dependency
+- Created no-op DB stub (createNoopDb) for SMOKE_TEST=1 mode — chainable proxy returns empty results
+- DATABASE_URL is no longer required when SMOKE_TEST=1
+- Cleanup handler skips DB operations in smoke test mode
+- 6 tests for the no-op DB stub: select/insert/update/execute/conflict/deep chain
+- Smoke tests now validate scraping/parsing without requiring a local PostgreSQL
+
 PostgreSQL Type Safety (2026-04-07)
 ================================================================
 

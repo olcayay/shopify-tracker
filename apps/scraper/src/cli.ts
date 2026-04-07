@@ -61,16 +61,43 @@ if (!command) {
   process.exit(1);
 }
 
+const isSmokeTest = process.env.SMOKE_TEST === "1";
+
 const databaseUrl = process.env.DATABASE_URL;
-if (!databaseUrl) {
+if (!databaseUrl && !isSmokeTest) {
   log.error("DATABASE_URL environment variable is required");
   process.exit(1);
 }
 
-const isSmokeTest = process.env.SMOKE_TEST === "1";
+// Smoke tests: use a no-op DB stub to avoid requiring a real database.
+// This lets smoke tests validate scraping/parsing without DB persistence.
+function createNoopDb(): any {
+  const chain: any = {
+    select: () => chain,
+    from: () => chain,
+    where: () => chain,
+    orderBy: () => chain,
+    limit: () => chain,
+    offset: () => chain,
+    groupBy: () => chain,
+    leftJoin: () => chain,
+    innerJoin: () => chain,
+    insert: () => chain,
+    values: () => chain,
+    returning: () => Promise.resolve([{ id: "smoke-test-stub" }]),
+    update: () => chain,
+    set: () => chain,
+    delete: () => chain,
+    onConflictDoUpdate: () => chain,
+    onConflictDoNothing: () => chain,
+    execute: () => Promise.resolve([]),
+    then: (resolve: any) => resolve([]),
+  };
+  return chain;
+}
 
 // CLI uses minimal pool (single-threaded, no need for 10 connections)
-const db = createDb(databaseUrl, { max: isSmokeTest ? 1 : 3 });
+const db = isSmokeTest ? createNoopDb() : createDb(databaseUrl!, { max: 3 });
 
 // Smoke test: no delays, minimal retries (fast path)
 const httpClient = new HttpClient({
@@ -84,7 +111,7 @@ let activeRunId: string | null = null;
 
 // Cleanup orphaned runs on process termination (timeout, SIGTERM, etc.)
 async function cleanupOnExit(signal: string) {
-  if (activeRunId) {
+  if (activeRunId && !isSmokeTest) {
     log.warn("process terminated, marking run as failed", { signal, runId: activeRunId });
     try {
       const { scrapeRuns } = await import("@appranks/db");
