@@ -17,7 +17,7 @@ vi.mock("drizzle-orm/postgres-js", () => ({
 }));
 
 // Import after mocks are set up
-import { createDb, createHealthCheckDb, schema } from "../index.js";
+import { createDb, createHealthCheckDb, closeDb, schema } from "../index.js";
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -38,16 +38,24 @@ describe("createDb", () => {
     expect(config.max).toBe(10);
   });
 
-  it("sets idle timeout to 20 seconds", () => {
+  it("sets idle timeout to 60 seconds", () => {
     createDb("postgres://localhost/db");
     const config = mockPostgres.mock.calls[0][1];
-    expect(config.idle_timeout).toBe(20);
+    expect(config.idle_timeout).toBe(60);
   });
 
-  it("sets max lifetime to 15 minutes (900 seconds)", () => {
+  it("sets max lifetime to ~15 minutes with jitter (±25%)", () => {
     createDb("postgres://localhost/db");
     const config = mockPostgres.mock.calls[0][1];
-    expect(config.max_lifetime).toBe(60 * 15);
+    // Base is 900s, jitter ±25% → range [675, 1125]
+    expect(config.max_lifetime).toBeGreaterThanOrEqual(675);
+    expect(config.max_lifetime).toBeLessThanOrEqual(1125);
+  });
+
+  it("sets keep_alive to 30 seconds", () => {
+    createDb("postgres://localhost/db");
+    const config = mockPostgres.mock.calls[0][1];
+    expect(config.keep_alive).toBe(30);
   });
 
   it("forces UTC timezone and statement_timeout in connection settings", () => {
@@ -121,6 +129,20 @@ describe("createDb", () => {
     expect(schema).toHaveProperty("scrapeRuns");
     expect(schema).toHaveProperty("notifications");
     expect(schema).toHaveProperty("emailLogs");
+  });
+});
+
+describe("closeDb", () => {
+  it("calls end on the underlying postgres client", async () => {
+    const mockEnd = vi.fn().mockResolvedValue(undefined);
+    const db = { __pgClient: { end: mockEnd } } as any;
+    await closeDb(db);
+    expect(mockEnd).toHaveBeenCalledWith({ timeout: 5 });
+  });
+
+  it("does nothing if no __pgClient exists", async () => {
+    const db = {} as any;
+    await closeDb(db); // should not throw
   });
 });
 

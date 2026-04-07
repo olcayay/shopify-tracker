@@ -71,19 +71,24 @@ export const schema = {
 export interface DbPoolOptions {
   /** Max connections in pool (default: 10) */
   max?: number;
-  /** Idle timeout in seconds (default: 30) */
+  /** Idle timeout in seconds (default: 60) */
   idleTimeout?: number;
-  /** Max connection lifetime in seconds (default: 1800 = 30 min) */
+  /** Max connection lifetime in seconds (default: 900 = 15 min) */
   maxLifetime?: number;
   /** Statement timeout in ms (default: 30000) */
   statementTimeout?: number;
 }
 
 export function createDb(databaseUrl: string, opts?: DbPoolOptions) {
+  const baseMaxLifetime = opts?.maxLifetime ?? 60 * 15;
+  // Add ±25% jitter to max_lifetime to prevent thundering herd
+  // (all connections dying at the same time)
+  const jitter = Math.floor(baseMaxLifetime * 0.25 * (Math.random() * 2 - 1));
   const client = postgres(databaseUrl, {
     max: opts?.max ?? 10,
-    idle_timeout: opts?.idleTimeout ?? 20,
-    max_lifetime: opts?.maxLifetime ?? 60 * 15,
+    idle_timeout: opts?.idleTimeout ?? 60,
+    max_lifetime: baseMaxLifetime + jitter,
+    keep_alive: 30,
     connection: {
       timezone: "UTC",
       statement_timeout: opts?.statementTimeout ?? 30000,
@@ -99,6 +104,17 @@ export function createDb(databaseUrl: string, opts?: DbPoolOptions) {
   // Expose raw postgres client for pool diagnostics
   (db as any).__pgClient = client;
   return db;
+}
+
+/**
+ * Close the pool of a DB instance created by createDb().
+ * Returns a promise that resolves when all connections are closed.
+ */
+export async function closeDb(db: Database): Promise<void> {
+  const pgClient = (db as any).__pgClient;
+  if (pgClient) {
+    await pgClient.end({ timeout: 5 });
+  }
 }
 
 /**

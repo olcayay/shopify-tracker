@@ -15,7 +15,7 @@ if (process.env.SENTRY_DSN) {
 import Fastify from "fastify";
 import cors from "@fastify/cors";
 import { randomUUID } from "node:crypto";
-import { createDb, createHealthCheckDb, accounts, users } from "@appranks/db";
+import { createDb, createHealthCheckDb, closeDb, accounts, users } from "@appranks/db";
 import { sql, eq } from "drizzle-orm";
 import bcrypt from "bcryptjs";
 import { validateEnv, API_REQUIRED_ENV, createLogger } from "@appranks/shared";
@@ -81,7 +81,7 @@ validateEnv([...API_REQUIRED_ENV]);
 
 const databaseUrl = process.env.DATABASE_URL!;
 
-const db = createDb(databaseUrl);
+let db = createDb(databaseUrl);
 const healthDb = createHealthCheckDb(databaseUrl);
 
 // NOTE: Migrations are now handled by the standalone migration runner
@@ -555,18 +555,20 @@ try {
 import { startScheduledCleanup } from "./utils/scheduled-cleanup.js";
 startScheduledCleanup(db);
 
-// Pool health monitor — detect stuck pool and log warnings.
+// Pool health monitor — detect stuck pool and actively recover.
 // Runs every 30s. If main pool can't respond in 5s, it's likely stuck.
-// Coolify's health check (hitting /health) will restart the container if needed.
+// On 3rd failure: reset pool (close + recreate). On 7th failure: process.exit.
 const POOL_CHECK_INTERVAL_MS = 30_000;
 const POOL_CHECK_TIMEOUT_MS = 5_000;
+const POOL_RESET_THRESHOLD = 3;
+const POOL_EXIT_THRESHOLD = 7;
 let poolCheckFailures = 0;
+let poolResetCount = 0;
 
 function getPoolStats(): Record<string, unknown> {
   try {
     const pgClient = (db as any).__pgClient;
     if (!pgClient) return { note: "no pg client ref" };
-    // postgres.js exposes connection counts on the sql function
     const opts = pgClient.options || {};
     return {
       maxConnections: opts.max ?? "?",
@@ -575,6 +577,50 @@ function getPoolStats(): Record<string, unknown> {
     };
   } catch {
     return { note: "failed to read pool stats" };
+  }
+}
+
+async function getRuntimeConnections(): Promise<Record<string, unknown>> {
+  try {
+    const [connInfo] = await healthDb.execute(sql`
+      SELECT count(*) FILTER (WHERE state = 'active') AS active,
+             count(*) FILTER (WHERE state = 'idle') AS idle,
+             count(*) FILTER (WHERE state = 'idle in transaction') AS idle_in_tx,
+             count(*) AS total
+      FROM pg_stat_activity
+      WHERE datname = current_database() AND pid != pg_backend_pid()
+    `) as any;
+    if (connInfo) {
+      return { active: Number(connInfo.active), idle: Number(connInfo.idle), idleInTx: Number(connInfo.idle_in_tx), total: Number(connInfo.total) };
+    }
+  } catch { /* non-critical */ }
+  return {};
+}
+
+async function resetPool(): Promise<boolean> {
+  poolResetCount++;
+  app.log.warn(`Attempting pool reset #${poolResetCount}...`);
+  try {
+    const oldDb = db;
+    // Create new pool first, then close old one
+    const newDb = createDb(databaseUrl);
+    // Verify new pool works
+    await Promise.race([
+      newDb.execute(sql`SELECT 1`),
+      new Promise((_, reject) => setTimeout(() => reject(new Error("new_pool_timeout")), POOL_CHECK_TIMEOUT_MS)),
+    ]);
+    // New pool works — swap it in
+    db = newDb;
+    (app as any).db = newDb;
+    // Close old pool in background (don't block on stuck connections)
+    closeDb(oldDb).catch(() => {});
+    app.log.info(`Pool reset #${poolResetCount} successful — new pool is healthy`);
+    setGauge("db_pool_stuck", 0, "Whether the main DB pool is stuck (1=stuck, 0=healthy)");
+    setGauge("db_pool_resets", poolResetCount, "Total number of pool resets since process start");
+    return true;
+  } catch (err) {
+    app.log.error({ msg: `Pool reset #${poolResetCount} failed`, error: err instanceof Error ? err.message : String(err) });
+    return false;
   }
 }
 
@@ -595,35 +641,28 @@ const poolMonitorInterval = setInterval(async () => {
     poolCheckFailures++;
     setGauge("db_pool_stuck", 1, "Whether the main DB pool is stuck (1=stuck, 0=healthy)");
     const poolStats = getPoolStats();
-    // Try to get runtime connection counts via healthDb for better diagnostics
-    let runtimeConnections: Record<string, unknown> = {};
-    try {
-      const [connInfo] = await healthDb.execute(sql`
-        SELECT count(*) FILTER (WHERE state = 'active') AS active,
-               count(*) FILTER (WHERE state = 'idle') AS idle,
-               count(*) FILTER (WHERE state = 'idle in transaction') AS idle_in_tx,
-               count(*) AS total
-        FROM pg_stat_activity
-        WHERE datname = current_database() AND pid != pg_backend_pid()
-      `) as any;
-      if (connInfo) {
-        runtimeConnections = { active: Number(connInfo.active), idle: Number(connInfo.idle), idleInTx: Number(connInfo.idle_in_tx), total: Number(connInfo.total) };
-      }
-    } catch { /* non-critical */ }
+    const runtimeConnections = await getRuntimeConnections();
     app.log.error({
-      msg: `DB pool health check failed (${poolCheckFailures} consecutive). Pool may be stuck — container restart may be needed.`,
+      msg: `DB pool health check failed (${poolCheckFailures} consecutive).`,
       consecutiveFailures: poolCheckFailures,
       error: err instanceof Error ? err.message : String(err),
       pool: poolStats,
       connections: runtimeConnections,
     });
-    // Fire alert on 3+ consecutive failures
-    if (poolCheckFailures === 3) {
-      import("./utils/alerts.js").then(({ alerts }) => alerts.dbConnectionFailed(`${poolCheckFailures} consecutive failures, pool: ${JSON.stringify(poolStats)}`)).catch(() => {});
+
+    // Active recovery: reset pool on threshold
+    if (poolCheckFailures === POOL_RESET_THRESHOLD) {
+      import("./utils/alerts.js").then(({ alerts }) => alerts.dbConnectionFailed(`${poolCheckFailures} consecutive failures — attempting pool reset. Pool: ${JSON.stringify(poolStats)}`)).catch(() => {});
+      const recovered = await resetPool();
+      if (recovered) {
+        poolCheckFailures = 0;
+        return;
+      }
     }
-    // Auto-restart on 5+ consecutive failures — Docker restart policy will bring us back
-    if (poolCheckFailures >= 5) {
-      app.log.error(`DB pool stuck for ${poolCheckFailures * 30}s — forcing process restart`);
+
+    // Last resort: process.exit after extended failure (even after reset attempt)
+    if (poolCheckFailures >= POOL_EXIT_THRESHOLD) {
+      app.log.error(`DB pool stuck for ${poolCheckFailures * 30}s (after ${poolResetCount} reset attempts) — forcing process restart`);
       clearInterval(poolMonitorInterval);
       process.exit(1);
     }
@@ -632,6 +671,23 @@ const poolMonitorInterval = setInterval(async () => {
 
 // Don't let the interval keep the process alive if it's shutting down
 poolMonitorInterval.unref();
+
+// Connection warming — keep at least 1 connection alive in the pool.
+// Runs every 60s. Also serves as early failure detection.
+const WARM_INTERVAL_MS = 60_000;
+const warmingInterval = setInterval(async () => {
+  try {
+    await Promise.race([
+      db.execute(sql`SELECT 1`),
+      new Promise((_, reject) => setTimeout(() => reject(new Error("warming_timeout")), POOL_CHECK_TIMEOUT_MS)),
+    ]);
+  } catch {
+    // Don't increment poolCheckFailures here — the pool monitor handles that.
+    // This just ensures the pool periodically exercises a connection.
+    app.log.warn("Connection warming query failed — pool monitor will handle recovery");
+  }
+}, WARM_INTERVAL_MS);
+warmingInterval.unref();
 
 // Graceful shutdown — finish in-flight requests, close connections
 async function shutdown(signal: string) {
