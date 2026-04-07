@@ -1,3 +1,12 @@
+Dashboard UX (2026-04-07)
+================================================================
+
+PLA-812: Show loading skeleton for item count headers while data is fetching
+- Added inline Skeleton component to 6 page headers that showed misleading "0" counts during loading
+- Affected pages: My Apps, Competitor Apps, Tracked Keywords, Categories, Features, Research Projects
+- Pattern: `loading ? <Skeleton /> : <>({count})</>` — no layout shift due to fixed skeleton dimensions
+- Each page already had a loading state variable — just needed to conditionally render the count
+
 DB Pool Reliability (2026-04-07)
 ================================================================
 

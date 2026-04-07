@@ -23,6 +23,7 @@ import { ConfirmModal } from "@/components/confirm-modal";
 import { AdminScraperTrigger } from "@/components/admin-scraper-trigger";
 import { AppSearchBar } from "@/components/app-search-bar";
 import { TableSkeleton } from "@/components/skeletons";
+import { Skeleton } from "@/components/ui/skeleton";
 import { PLATFORMS, isPlatformId, type PlatformId } from "@appranks/shared";
 import { formatCategoryTitle } from "@/lib/platform-urls";
 
@@ -176,8 +177,11 @@ export default function AppsPage() {
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <h1 className="text-2xl font-bold">
-          My Apps ({apps.length}
-          {account ? `/${account.limits.maxTrackedApps}` : ""})
+          My Apps {loading ? (
+            <Skeleton className="inline-block h-6 w-16 align-middle" />
+          ) : (
+            <>({apps.length}{account ? `/${account.limits.maxTrackedApps}` : ""})</>
+          )}
         </h1>
         <AdminScraperTrigger
           scraperType="app_details"

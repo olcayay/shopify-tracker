@@ -9,6 +9,7 @@ import { useApiQuery, useQueryClient } from "@/lib/use-api-query";
 import { useFormatDate } from "@/lib/format-date";
 import { formatNumber } from "@/lib/format-utils";
 import { TableSkeleton } from "@/components/skeletons";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -308,7 +309,13 @@ export default function CategoriesPage() {
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-        <h1 className="text-2xl font-bold">{entityLabel} ({totalCount})</h1>
+        <h1 className="text-2xl font-bold">
+          {entityLabel} {loading ? (
+            <Skeleton className="inline-block h-6 w-12 align-middle" />
+          ) : (
+            <>({totalCount})</>
+          )}
+        </h1>
         <AdminScraperTrigger
           scraperType="category"
           label={`Scrape All ${entityLabel}`}

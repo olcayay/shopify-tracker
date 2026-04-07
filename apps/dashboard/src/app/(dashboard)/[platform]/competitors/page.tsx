@@ -6,6 +6,7 @@ import Link from "next/link";
 import { useAuth } from "@/lib/auth-context";
 import { useFormatDate } from "@/lib/format-date";
 import { TableSkeleton } from "@/components/skeletons";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Table,
@@ -151,8 +152,11 @@ export default function CompetitorsPage() {
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center gap-3">
         <h1 className="text-2xl font-bold shrink-0">
-          Competitor Apps ({uniqueCount}
-          {account ? `/${account.limits.maxCompetitorApps}` : ""})
+          Competitor Apps {loading ? (
+            <Skeleton className="inline-block h-6 w-16 align-middle" />
+          ) : (
+            <>({uniqueCount}{account ? `/${account.limits.maxCompetitorApps}` : ""})</>
+          )}
         </h1>
         <div className="flex items-center gap-3 flex-wrap sm:ml-auto">
           <AppSearchBar

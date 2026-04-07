@@ -188,11 +188,13 @@ export default function ResearchListPage() {
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-bold">
           Research Projects
-          {account && (
+          {loading ? (
+            <Skeleton className="inline-block h-5 w-14 align-middle ml-2" />
+          ) : account ? (
             <span className="text-lg text-muted-foreground font-normal ml-2">
               ({account.usage.researchProjects}/{account.limits.maxResearchProjects})
             </span>
-          )}
+          ) : null}
         </h1>
         {canEdit && (
           <div className="flex items-center gap-3">

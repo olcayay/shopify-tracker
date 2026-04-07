@@ -6,6 +6,7 @@ import Link from "next/link";
 import { useAuth } from "@/lib/auth-context";
 import { useFormatDate } from "@/lib/format-date";
 import { TableSkeleton } from "@/components/skeletons";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -237,7 +238,13 @@ export default function FeaturesPage() {
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-        <h1 className="text-2xl font-bold">Features ({totalFeatures})</h1>
+        <h1 className="text-2xl font-bold">
+          Features {loading ? (
+            <Skeleton className="inline-block h-6 w-12 align-middle" />
+          ) : (
+            <>({totalFeatures})</>
+          )}
+        </h1>
         <div className="flex items-center gap-2">
           <button
             onClick={expandAll}

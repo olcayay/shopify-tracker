@@ -8,6 +8,7 @@ import { useAuth } from "@/lib/auth-context";
 import { useFormatDate } from "@/lib/format-date";
 import { formatNumber } from "@/lib/format-utils";
 import { TableSkeleton } from "@/components/skeletons";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
@@ -332,8 +333,11 @@ export default function KeywordsPage() {
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <h1 className="text-2xl font-bold">
-          Tracked Keywords ({uniqueCount}
-          {account ? `/${account.limits.maxTrackedKeywords}` : ""})
+          Tracked Keywords {loading ? (
+            <Skeleton className="inline-block h-6 w-16 align-middle" />
+          ) : (
+            <>({uniqueCount}{account ? `/${account.limits.maxTrackedKeywords}` : ""})</>
+          )}
         </h1>
         <div className="flex items-center gap-2">
           <AdminScraperTrigger

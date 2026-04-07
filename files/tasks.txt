@@ -1,3 +1,6 @@
+Dashboard UX (2026-04-07)
+  PLA-812: Show loading skeleton for item count headers while data is fetching ✅
+
 DB Pool Reliability (2026-04-07)
   PLA-814: API: DB pool health check fails intermittently (pool stuck state) ✅
 
