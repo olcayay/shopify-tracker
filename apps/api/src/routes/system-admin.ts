@@ -113,80 +113,71 @@ export const systemAdminRoutes: FastifyPluginAsync = async (app) => {
 
   // GET /api/system-admin/accounts — all accounts with usage stats
   app.get("/accounts", async () => {
-    const accountList = await db.select().from(accounts);
+    // Single query: all accounts + usage counts + last seen (was N+1: 7 queries per account)
+    const accountRows = await db.execute<{
+      id: string; name: string; company: string | null; is_suspended: boolean;
+      package_id: number | null; created_at: Date;
+      max_tracked_apps: number; max_tracked_keywords: number; max_competitor_apps: number;
+      max_tracked_features: number; max_users: number; max_research_projects: number; max_platforms: number;
+      past_due_since: Date | null;
+      tracked_apps_count: number; tracked_keywords_count: number; competitor_apps_count: number;
+      tracked_features_count: number; member_count: number; research_projects_count: number;
+      last_seen: string | null;
+    }>(sql`
+      SELECT a.*,
+        (SELECT count(*)::int FROM account_tracked_apps WHERE account_id = a.id) AS tracked_apps_count,
+        (SELECT count(*)::int FROM account_tracked_keywords WHERE account_id = a.id) AS tracked_keywords_count,
+        (SELECT count(*)::int FROM account_competitor_apps WHERE account_id = a.id) AS competitor_apps_count,
+        (SELECT count(*)::int FROM account_tracked_features WHERE account_id = a.id) AS tracked_features_count,
+        (SELECT count(*)::int FROM users WHERE account_id = a.id) AS member_count,
+        (SELECT count(*)::int FROM research_projects WHERE account_id = a.id) AS research_projects_count,
+        (SELECT max(last_seen_at) FROM users WHERE account_id = a.id) AS last_seen
+      FROM accounts a
+    `);
+
     const packageList = await db.select().from(packages);
     const packageMap = new Map(packageList.map((p) => [p.id, p]));
 
-    const result = await Promise.all(
-      accountList.map(async (account) => {
-        const [trackedAppsCount] = await db
-          .select({ count: sql<number>`count(*)::int` })
-          .from(accountTrackedApps)
-          .where(eq(accountTrackedApps.accountId, account.id));
+    return accountRows.map((a) => {
+      const pkg = a.package_id ? packageMap.get(a.package_id) : null;
+      const hasOverrides = pkg
+        ? a.max_tracked_apps !== pkg.maxTrackedApps ||
+          a.max_tracked_keywords !== pkg.maxTrackedKeywords ||
+          a.max_competitor_apps !== pkg.maxCompetitorApps ||
+          a.max_tracked_features !== pkg.maxTrackedFeatures ||
+          a.max_users !== pkg.maxUsers ||
+          a.max_research_projects !== pkg.maxResearchProjects
+        : false;
 
-        const [trackedKeywordsCount] = await db
-          .select({ count: sql<number>`count(*)::int` })
-          .from(accountTrackedKeywords)
-          .where(eq(accountTrackedKeywords.accountId, account.id));
-
-        const [competitorAppsCount] = await db
-          .select({ count: sql<number>`count(*)::int` })
-          .from(accountCompetitorApps)
-          .where(eq(accountCompetitorApps.accountId, account.id));
-
-        const [trackedFeaturesCount] = await db
-          .select({ count: sql<number>`count(*)::int` })
-          .from(accountTrackedFeatures)
-          .where(eq(accountTrackedFeatures.accountId, account.id));
-
-        const [memberCount] = await db
-          .select({ count: sql<number>`count(*)::int` })
-          .from(users)
-          .where(eq(users.accountId, account.id));
-
-        const [researchProjectsCount] = await db
-          .select({ count: sql<number>`count(*)::int` })
-          .from(researchProjects)
-          .where(eq(researchProjects.accountId, account.id));
-
-        const [lastSeenResult] = await db
-          .select({
-            lastSeen: sql<string | null>`(
-              SELECT max(last_seen_at) FROM users WHERE account_id = ${account.id}
-            )`,
-          })
-          .from(accounts)
-          .where(eq(accounts.id, account.id));
-
-        const pkg = account.packageId ? packageMap.get(account.packageId) : null;
-        const hasOverrides = pkg
-          ? account.maxTrackedApps !== pkg.maxTrackedApps ||
-            account.maxTrackedKeywords !== pkg.maxTrackedKeywords ||
-            account.maxCompetitorApps !== pkg.maxCompetitorApps ||
-            account.maxTrackedFeatures !== pkg.maxTrackedFeatures ||
-            account.maxUsers !== pkg.maxUsers ||
-            account.maxResearchProjects !== pkg.maxResearchProjects
-          : false;
-
-        return {
-          ...account,
-          packageName: pkg?.name ?? null,
-          packageSlug: pkg?.slug ?? null,
-          hasLimitOverrides: hasOverrides,
-          lastSeen: lastSeenResult?.lastSeen ?? null,
-          usage: {
-            trackedApps: trackedAppsCount.count,
-            trackedKeywords: trackedKeywordsCount.count,
-            competitorApps: competitorAppsCount.count,
-            trackedFeatures: trackedFeaturesCount.count,
-            members: memberCount.count,
-            researchProjects: researchProjectsCount.count,
-          },
-        };
-      })
-    );
-
-    return result;
+      return {
+        id: a.id,
+        name: a.name,
+        company: a.company,
+        isSuspended: a.is_suspended,
+        packageId: a.package_id,
+        maxTrackedApps: a.max_tracked_apps,
+        maxTrackedKeywords: a.max_tracked_keywords,
+        maxCompetitorApps: a.max_competitor_apps,
+        maxTrackedFeatures: a.max_tracked_features,
+        maxUsers: a.max_users,
+        maxResearchProjects: a.max_research_projects,
+        maxPlatforms: a.max_platforms,
+        pastDueSince: a.past_due_since,
+        createdAt: a.created_at,
+        packageName: pkg?.name ?? null,
+        packageSlug: pkg?.slug ?? null,
+        hasLimitOverrides: hasOverrides,
+        lastSeen: a.last_seen ?? null,
+        usage: {
+          trackedApps: a.tracked_apps_count,
+          trackedKeywords: a.tracked_keywords_count,
+          competitorApps: a.competitor_apps_count,
+          trackedFeatures: a.tracked_features_count,
+          members: a.member_count,
+          researchProjects: a.research_projects_count,
+        },
+      };
+    });
   });
 
   // GET /api/system-admin/accounts/:id — account detail with members + tracked items

@@ -1,6 +1,10 @@
 DB Pool Fix — Connection Reduction (2026-04-07)
 ================================================================
 
+PLA-822: Phase 2: Consolidate /api/system-admin/accounts N+1 into single query
+- Replaced N+1 pattern (7 queries per account × N accounts) with single SQL using correlated subselects
+- 10 accounts: 70+ queries → 2 queries (accounts+counts + packages)
+
 PLA-821: Phase 1: Consolidate /api/auth/me from 9 parallel queries to 1+2
 - Replaced 9-query Promise.all with single SQL query using scalar subselects for 6 COUNTs
 - Account data + usage counts fetched in 1 round-trip (was 7 separate queries)
