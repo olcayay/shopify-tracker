@@ -132,7 +132,12 @@ describe("nav-utils", () => {
 
   describe("systemAdminItems", () => {
     it("has correct number of items", () => {
-      expect(systemAdminItems.length).toBe(22);
+      expect(systemAdminItems.length).toBe(23);
+    });
+
+    it("includes Feature Flags link", () => {
+      const labels = systemAdminItems.map((i) => i.label);
+      expect(labels).toContain("Feature Flags");
     });
 
     it("includes Notifications, Notification Templates, Emails, and Email Templates links", () => {

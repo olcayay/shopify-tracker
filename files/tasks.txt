@@ -11,6 +11,7 @@ Feature Flags Infrastructure (2026-04-07)
   PLA-793: Phase 2: API — system admin feature flag CRUD endpoints ✅
   PLA-794: Phase 3: API — feature flag evaluation in /auth/me & account detail ✅
   PLA-795: Phase 4: Dashboard — feature flags context & provider ✅
+  PLA-796: Phase 5: Dashboard — system admin feature flags listing & detail pages ✅
 
 Scraper Reliability (2026-04-07)
   PLA-817: Stale run cleanup lacks retry — crashed scraper runs are silently lost ✅

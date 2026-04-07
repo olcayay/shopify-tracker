@@ -53,6 +53,14 @@ PLA-795: Phase 4: Dashboard — feature flags context & provider
 - Mounted `FeatureFlagsProvider` inside `AuthProvider` in root layout
 - 8 unit tests: provider, hasFeature, system admin override, empty/null handling, outside provider throw
 
+PLA-796: Phase 5: Dashboard — system admin feature flags listing & detail pages
+- Listing page: `system-admin/feature-flags/page.tsx` — table with all flags, toggle, create form
+- Detail page: `system-admin/feature-flags/[slug]/page.tsx` — flag info, edit name/desc, global toggle
+- Account management: debounced search (300ms) → enable button, table of enabled accounts with disable confirm
+- Optimistic UI updates for toggle operations
+- Nav entry added with ToggleLeft icon
+- Updated nav-utils test count from 22 to 23
+
 Scraper Reliability (2026-04-07)
 ================================================================
 
