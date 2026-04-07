@@ -36,6 +36,7 @@ export default function UsersListPage() {
   const [roleFilter, setRoleFilter] = useState<RoleFilter>("all");
   const [sendingDigest, setSendingDigest] = useState<string | null>(null);
   const [message, setMessage] = useState("");
+  const [messageLink, setMessageLink] = useState("");
   const [impersonateTarget, setImpersonateTarget] = useState<{
     id: string;
     name: string;
@@ -53,6 +54,7 @@ export default function UsersListPage() {
   async function sendDigest(userId: string, email: string) {
     setSendingDigest(userId);
     setMessage("");
+    setMessageLink("");
     try {
       const res = await fetchWithAuth(`/api/system-admin/users/${userId}/send-digest`, {
         method: "POST",
@@ -60,7 +62,8 @@ export default function UsersListPage() {
       if (res.ok) {
         const data = await res.json().catch(() => ({}));
         const queue = data.queueName || "scraper-jobs-background";
-        setMessage(`Digest email queued for ${email} (queue: ${queue}, job: ${data.jobId || "?"})`);
+        setMessage(`Digest email queued for ${email} — Job #${data.jobId || "?"} on ${queue}.`);
+        setMessageLink("/system-admin/queues/background");
       } else {
         const data = await res.json().catch(() => ({}));
         setMessage(data.error || "Failed to send digest");
@@ -182,6 +185,9 @@ export default function UsersListPage() {
       {message && (
         <div className="text-sm px-3 py-2 rounded-md text-green-700 dark:text-green-400 bg-green-50 dark:bg-green-950/20">
           {message}
+          {messageLink && (
+            <> <Link href={messageLink} className="underline font-medium">View in queue monitor</Link></>
+          )}
         </div>
       )}
 
