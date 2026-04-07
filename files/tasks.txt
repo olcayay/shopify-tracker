@@ -55,8 +55,9 @@ Scraper Reliability (2026-04-07)
 Smoke Test Reliability (2026-04-07)
   PLA-819: Smoke tests fail for all platforms due to DB dependency ✅
 
-Feature Flags — User-Level Support (2026-04-07)
+Feature Flags (2026-04-07)
   PLA-856: Feature flags: add user-level enable/disable support ✅
+  PLA-857: Feature flags: fix case-sensitive account search ✅
 
 Digest Job Performance (2026-04-07)
   PLA-860: Fix scheduler digest job timeout (600s exceeded) ✅

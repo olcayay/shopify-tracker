@@ -3,7 +3,7 @@
  * CRUD for feature flags + per-account flag enablement.
  */
 import type { FastifyPluginAsync } from "fastify";
-import { eq, sql, and, like, notInArray } from "drizzle-orm";
+import { eq, sql, and, ilike, notInArray } from "drizzle-orm";
 import { featureFlags, accountFeatureFlags, userFeatureFlags, accounts, users } from "@appranks/db";
 
 const SLUG_REGEX = /^[a-z][a-z0-9-]*$/;
@@ -280,7 +280,7 @@ export const featureFlagRoutes: FastifyPluginAsync = async (app) => {
       conditions.push(notInArray(accounts.id, enabledIds));
     }
     if (q.trim()) {
-      conditions.push(like(accounts.name, `%${q.trim()}%`));
+      conditions.push(ilike(accounts.name, `%${q.trim()}%`));
     }
 
     const results = await db

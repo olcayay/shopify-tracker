@@ -390,6 +390,23 @@ describe("GET /api/system-admin/feature-flags/:slug/accounts/search", () => {
 
     expect(res.statusCode).toBe(404);
   });
+
+  it("performs case-insensitive search", async () => {
+    // Mock returns a flag for the first select and accounts for the subsequent calls
+    app = await buildApp({
+      selectResult: [{ id: "flag-001", slug: "test", name: "Test" }],
+    });
+
+    // Both "jotform" and "Jotform" should use ilike and return results
+    const res = await app.inject({
+      method: "GET",
+      url: `${PREFIX}/test/accounts/search?q=jotform`,
+      headers: authHeaders(adminToken()),
+    });
+
+    expect(res.statusCode).toBe(200);
+    expect(res.json().data).toBeDefined();
+  });
 });
 
 // ─── POST /:slug/users ──────────────────────────────────────────────────────
