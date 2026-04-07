@@ -132,6 +132,60 @@ describe("createDb", () => {
   });
 });
 
+describe("createDb — custom pool options", () => {
+  it("respects custom max connections", () => {
+    createDb("postgres://localhost/db", { max: 5 });
+    const config = mockPostgres.mock.calls[0][1];
+    expect(config.max).toBe(5);
+  });
+
+  it("respects custom idle timeout", () => {
+    createDb("postgres://localhost/db", { idleTimeout: 120 });
+    const config = mockPostgres.mock.calls[0][1];
+    expect(config.idle_timeout).toBe(120);
+  });
+
+  it("respects custom max lifetime", () => {
+    createDb("postgres://localhost/db", { maxLifetime: 300 });
+    const config = mockPostgres.mock.calls[0][1];
+    // 300 ± 25% jitter → [225, 375]
+    expect(config.max_lifetime).toBeGreaterThanOrEqual(225);
+    expect(config.max_lifetime).toBeLessThanOrEqual(375);
+  });
+
+  it("respects custom statement timeout", () => {
+    createDb("postgres://localhost/db", { statementTimeout: 60000 });
+    const config = mockPostgres.mock.calls[0][1];
+    expect(config.connection.statement_timeout).toBe(60000);
+  });
+
+  it("keeps keep_alive at 30 regardless of options", () => {
+    createDb("postgres://localhost/db", { max: 3 });
+    const config = mockPostgres.mock.calls[0][1];
+    expect(config.keep_alive).toBe(30);
+  });
+
+  it("keeps connect_timeout at 10 regardless of options", () => {
+    createDb("postgres://localhost/db", { max: 3 });
+    const config = mockPostgres.mock.calls[0][1];
+    expect(config.connect_timeout).toBe(10);
+  });
+
+  it("API pool max=5 config works", () => {
+    createDb("postgres://localhost/db", { max: 5 });
+    const config = mockPostgres.mock.calls[0][1];
+    expect(config.max).toBe(5);
+    expect(config.idle_timeout).toBe(60);
+    expect(config.keep_alive).toBe(30);
+  });
+
+  it("worker pool max=2 config works", () => {
+    createDb("postgres://localhost/db", { max: 2 });
+    const config = mockPostgres.mock.calls[0][1];
+    expect(config.max).toBe(2);
+  });
+});
+
 describe("closeDb", () => {
   it("calls end on the underlying postgres client", async () => {
     const mockEnd = vi.fn().mockResolvedValue(undefined);
