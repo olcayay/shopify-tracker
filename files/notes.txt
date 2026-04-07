@@ -1,3 +1,16 @@
+Feature Flags — User-Level Support (2026-04-07)
+================================================================
+
+PLA-856: User-level feature flag overrides
+- New table: user_feature_flags (userId, featureFlagId, enabled, enabledAt)
+- enabled=true → force-enable for user; enabled=false → force-disable even if account has it
+- Migration: 0124_user_feature_flags.sql
+- API: POST/DELETE /:slug/users, GET /:slug/users/search — parallel to account endpoints
+- Auth/me: 3-level evaluation — global flags UNION account flags UNION user enabled flags, MINUS user disabled flags
+- Dashboard: Users section on flag detail page with search, enable/disable, remove actions
+- List page shows "Accounts / Users" count column
+- 8 new API tests (31 total for feature-flags routes)
+
 Digest Job Performance (2026-04-07)
 ================================================================
 

@@ -869,6 +869,13 @@
       "when": 1781136000000,
       "tag": "0123_seed_alert_email_type_configs",
       "breakpoints": true
+    },
+    {
+      "idx": 124,
+      "version": "7",
+      "when": 1781222400000,
+      "tag": "0124_user_feature_flags",
+      "breakpoints": true
     }
   ]
 }

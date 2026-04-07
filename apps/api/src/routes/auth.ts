@@ -684,14 +684,28 @@ export const authRoutes: FastifyPluginAsync = async (app) => {
     const [enabledPlatformsResult, visibilityRows, enabledFeaturesResult] = await Promise.all([
       db.select({ platform: accountPlatforms.platform, overrideGlobalVisibility: accountPlatforms.overrideGlobalVisibility }).from(accountPlatforms).where(eq(accountPlatforms.accountId, user.accountId)),
       db.select().from(platformVisibility),
-      // Feature flags: globally enabled OR per-account override
+      // Feature flags: user-level overrides > account-level > global
+      // 1. Start with globally enabled + account-level flags
+      // 2. Add user-level enabled flags
+      // 3. Subtract user-level disabled flags
       db.execute<{ slug: string }>(sql`
-        SELECT DISTINCT ff.slug FROM feature_flags ff
-        WHERE ff.is_enabled = true
-        UNION
-        SELECT ff.slug FROM feature_flags ff
-        INNER JOIN account_feature_flags aff ON aff.feature_flag_id = ff.id
-        WHERE aff.account_id = ${user.accountId}
+        SELECT DISTINCT slug FROM (
+          SELECT ff.slug FROM feature_flags ff
+          WHERE ff.is_enabled = true
+          UNION
+          SELECT ff.slug FROM feature_flags ff
+          INNER JOIN account_feature_flags aff ON aff.feature_flag_id = ff.id
+          WHERE aff.account_id = ${user.accountId}
+          UNION
+          SELECT ff.slug FROM feature_flags ff
+          INNER JOIN user_feature_flags uff ON uff.feature_flag_id = ff.id
+          WHERE uff.user_id = ${user.id} AND uff.enabled = true
+        ) AS enabled_flags
+        WHERE slug NOT IN (
+          SELECT ff.slug FROM feature_flags ff
+          INNER JOIN user_feature_flags uff ON uff.feature_flag_id = ff.id
+          WHERE uff.user_id = ${user.id} AND uff.enabled = false
+        )
       `),
     ]);
 

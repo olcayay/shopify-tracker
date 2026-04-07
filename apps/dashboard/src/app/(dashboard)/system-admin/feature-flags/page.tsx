@@ -28,6 +28,7 @@ interface FeatureFlag {
   deactivatedAt: string | null;
   createdAt: string;
   accountCount: number;
+  userCount: number;
 }
 
 export default function FeatureFlagsPage() {
@@ -171,7 +172,7 @@ export default function FeatureFlagsPage() {
                   <TableHead>Name</TableHead>
                   <TableHead>Slug</TableHead>
                   <TableHead>Status</TableHead>
-                  <TableHead>Accounts</TableHead>
+                  <TableHead>Accounts / Users</TableHead>
                   <TableHead>Created</TableHead>
                   <TableHead>Activated</TableHead>
                   <TableHead>Deactivated</TableHead>
@@ -197,7 +198,7 @@ export default function FeatureFlagsPage() {
                         {flag.isEnabled ? "Enabled" : "Disabled"}
                       </Badge>
                     </TableCell>
-                    <TableCell>{flag.accountCount}</TableCell>
+                    <TableCell>{flag.accountCount} / {flag.userCount ?? 0}</TableCell>
                     <TableCell className="text-sm text-muted-foreground">
                       {new Date(flag.createdAt).toLocaleDateString()}
                     </TableCell>

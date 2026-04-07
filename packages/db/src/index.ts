@@ -265,4 +265,4 @@ export {
 } from "./schema/ai-suggestions.js";
 
 export { accountActivityLog } from "./schema/activity-log.js";
-export { featureFlags, accountFeatureFlags } from "./schema/feature-flags.js";
+export { featureFlags, accountFeatureFlags, userFeatureFlags } from "./schema/feature-flags.js";

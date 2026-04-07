@@ -19,6 +19,16 @@ import {
 import { ToggleLeft, Trash2, Search } from "lucide-react";
 import { toast } from "sonner";
 
+interface FlagUser {
+  userId: string;
+  enabled: boolean;
+  enabledAt: string;
+  userEmail: string;
+  userName: string;
+  accountId: string;
+  accountName: string;
+}
+
 interface FlagDetail {
   id: string;
   slug: string;
@@ -34,11 +44,21 @@ interface FlagDetail {
     accountName: string;
     enabledAt: string;
   }>;
+  userCount: number;
+  users: FlagUser[];
 }
 
 interface SearchResult {
   id: string;
   name: string;
+}
+
+interface UserSearchResult {
+  id: string;
+  email: string;
+  name: string;
+  accountId: string;
+  accountName: string;
 }
 
 export default function FeatureFlagDetailPage() {
@@ -57,8 +77,14 @@ export default function FeatureFlagDetailPage() {
   const [searchResults, setSearchResults] = useState<SearchResult[]>([]);
   const [searching, setSearching] = useState(false);
 
+  // User search state
+  const [userSearchQuery, setUserSearchQuery] = useState("");
+  const [userSearchResults, setUserSearchResults] = useState<UserSearchResult[]>([]);
+  const [userSearching, setUserSearching] = useState(false);
+
   // Confirmation modal state
   const [confirmDisable, setConfirmDisable] = useState<string | null>(null);
+  const [confirmUserRemove, setConfirmUserRemove] = useState<string | null>(null);
 
   const loadFlag = useCallback(async () => {
     const res = await fetchWithAuth(`/api/system-admin/feature-flags/${slug}`);
@@ -96,6 +122,59 @@ export default function FeatureFlagDetailPage() {
 
     return () => clearTimeout(timer);
   }, [searchQuery, slug, fetchWithAuth]);
+
+  // Debounced user search
+  useEffect(() => {
+    if (!userSearchQuery.trim()) {
+      setUserSearchResults([]);
+      return;
+    }
+
+    const timer = setTimeout(async () => {
+      setUserSearching(true);
+      const res = await fetchWithAuth(
+        `/api/system-admin/feature-flags/${slug}/users/search?q=${encodeURIComponent(userSearchQuery.trim())}`
+      );
+      if (res.ok) {
+        const data = await res.json();
+        setUserSearchResults(data.data);
+      }
+      setUserSearching(false);
+    }, 300);
+
+    return () => clearTimeout(timer);
+  }, [userSearchQuery, slug, fetchWithAuth]);
+
+  async function enableUser(userId: string, enabled: boolean = true) {
+    const res = await fetchWithAuth(`/api/system-admin/feature-flags/${slug}/users`, {
+      method: "POST",
+      body: JSON.stringify({ userId, enabled }),
+    });
+
+    if (res.ok) {
+      toast.success(enabled ? "User enabled" : "User disabled");
+      setUserSearchQuery("");
+      setUserSearchResults([]);
+      loadFlag();
+    } else {
+      const err = await res.json();
+      toast.error(err.error || "Failed to update user");
+    }
+  }
+
+  async function removeUser(userId: string) {
+    const res = await fetchWithAuth(`/api/system-admin/feature-flags/${slug}/users/${userId}`, {
+      method: "DELETE",
+    });
+
+    if (res.ok) {
+      toast.success("User override removed");
+      setConfirmUserRemove(null);
+      loadFlag();
+    } else {
+      toast.error("Failed to remove user override");
+    }
+  }
 
   async function toggleGlobal() {
     if (!flag) return;
@@ -372,6 +451,146 @@ export default function FeatureFlagDetailPage() {
                           <Trash2 className="h-4 w-4 text-destructive" />
                         </Button>
                       )}
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Users Card */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Users ({flag.userCount ?? 0})</CardTitle>
+          <CardDescription>
+            Per-user overrides. User-level settings take precedence over account-level.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {/* User Search */}
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              className="pl-9"
+              placeholder="Search users by email or name..."
+              value={userSearchQuery}
+              onChange={(e) => setUserSearchQuery(e.target.value)}
+            />
+            {userSearchResults.length > 0 && (
+              <div className="absolute z-10 mt-1 w-full bg-popover border rounded-md shadow-md max-h-48 overflow-y-auto">
+                {userSearchResults.map((user) => (
+                  <div
+                    key={user.id}
+                    className="flex items-center justify-between px-3 py-2 hover:bg-accent"
+                  >
+                    <div>
+                      <span className="text-sm font-medium">{user.email}</span>
+                      <span className="text-xs text-muted-foreground ml-2">({user.accountName})</span>
+                    </div>
+                    <div className="flex gap-1">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => enableUser(user.id, true)}
+                      >
+                        Enable
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => enableUser(user.id, false)}
+                      >
+                        Disable
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+            {userSearching && (
+              <div className="absolute z-10 mt-1 w-full bg-popover border rounded-md shadow-md px-3 py-2">
+                <span className="text-sm text-muted-foreground">Searching...</span>
+              </div>
+            )}
+          </div>
+
+          {/* Enabled Users Table */}
+          {(!flag.users || flag.users.length === 0) ? (
+            <p className="text-sm text-muted-foreground">No user-level overrides configured.</p>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>User</TableHead>
+                  <TableHead>Account</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead>Set At</TableHead>
+                  <TableHead className="text-right">Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {flag.users.map((user) => (
+                  <TableRow key={user.userId}>
+                    <TableCell>
+                      <div>
+                        <p className="font-medium text-sm">{user.userEmail}</p>
+                        <p className="text-xs text-muted-foreground">{user.userName}</p>
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <Link
+                        href={`/system-admin/accounts/${user.accountId}`}
+                        className="text-primary hover:underline text-sm"
+                      >
+                        {user.accountName}
+                      </Link>
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant={user.enabled ? "default" : "destructive"}>
+                        {user.enabled ? "Enabled" : "Disabled"}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="text-sm text-muted-foreground">
+                      {new Date(user.enabledAt).toLocaleDateString()}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <div className="flex items-center justify-end gap-1">
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => enableUser(user.userId, !user.enabled)}
+                        >
+                          {user.enabled ? "Disable" : "Enable"}
+                        </Button>
+                        {confirmUserRemove === user.userId ? (
+                          <div className="flex items-center gap-1">
+                            <Button
+                              size="sm"
+                              variant="destructive"
+                              onClick={() => removeUser(user.userId)}
+                            >
+                              Yes
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={() => setConfirmUserRemove(null)}
+                            >
+                              No
+                            </Button>
+                          </div>
+                        ) : (
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => setConfirmUserRemove(user.userId)}
+                          >
+                            <Trash2 className="h-4 w-4 text-destructive" />
+                          </Button>
+                        )}
+                      </div>
                     </TableCell>
                   </TableRow>
                 ))}

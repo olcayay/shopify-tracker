@@ -199,6 +199,8 @@ describe("GET /api/system-admin/feature-flags/:slug", () => {
     expect(body.slug).toBe("market-research");
     expect(body.accounts).toBeDefined();
     expect(body.accountCount).toBeDefined();
+    expect(body.users).toBeDefined();
+    expect(body.userCount).toBeDefined();
   });
 
   it("returns 404 for non-existent slug", async () => {
@@ -383,6 +385,138 @@ describe("GET /api/system-admin/feature-flags/:slug/accounts/search", () => {
     const res = await app.inject({
       method: "GET",
       url: `${PREFIX}/nonexistent/accounts/search?q=test`,
+      headers: authHeaders(adminToken()),
+    });
+
+    expect(res.statusCode).toBe(404);
+  });
+});
+
+// ─── POST /:slug/users ──────────────────────────────────────────────────────
+
+describe("POST /api/system-admin/feature-flags/:slug/users", () => {
+  let app: FastifyInstance;
+  afterEach(async () => { if (app) await app.close(); });
+
+  it("enables flag for user", async () => {
+    app = await buildApp({
+      selectResult: [mockFlag],
+      insertResult: [{ id: "uff-1" }],
+    });
+
+    const res = await app.inject({
+      method: "POST",
+      url: `${PREFIX}/market-research/users`,
+      headers: authHeaders(adminToken()),
+      payload: { userId: "user-001", enabled: true },
+    });
+
+    expect(res.statusCode).toBe(201);
+    const body = res.json();
+    expect(body.enabled).toBe(true);
+    expect(body.featureFlagId).toBeDefined();
+  });
+
+  it("returns 400 when userId missing", async () => {
+    app = await buildApp({ selectResult: [mockFlag] });
+
+    const res = await app.inject({
+      method: "POST",
+      url: `${PREFIX}/market-research/users`,
+      headers: authHeaders(adminToken()),
+      payload: {},
+    });
+
+    expect(res.statusCode).toBe(400);
+    expect(res.json().error).toContain("userId");
+  });
+
+  it("returns 404 for non-existent flag", async () => {
+    app = await buildApp({ selectResult: [] });
+
+    const res = await app.inject({
+      method: "POST",
+      url: `${PREFIX}/nonexistent/users`,
+      headers: authHeaders(adminToken()),
+      payload: { userId: "user-001" },
+    });
+
+    expect(res.statusCode).toBe(404);
+  });
+
+  it("returns 403 for non-admin", async () => {
+    app = await buildApp();
+
+    const res = await app.inject({
+      method: "POST",
+      url: `${PREFIX}/market-research/users`,
+      headers: authHeaders(userToken()),
+      payload: { userId: "user-001" },
+    });
+
+    expect(res.statusCode).toBe(403);
+  });
+});
+
+// ─── DELETE /:slug/users/:userId ────────────────────────────────────────────
+
+describe("DELETE /api/system-admin/feature-flags/:slug/users/:userId", () => {
+  let app: FastifyInstance;
+  afterEach(async () => { if (app) await app.close(); });
+
+  it("returns 404 for non-existent flag", async () => {
+    app = await buildApp({ selectResult: [] });
+
+    const res = await app.inject({
+      method: "DELETE",
+      url: `${PREFIX}/nonexistent/users/user-001`,
+      headers: authHeaders(adminToken()),
+    });
+
+    expect(res.statusCode).toBe(404);
+  });
+
+  it("returns 403 for non-admin", async () => {
+    app = await buildApp();
+
+    const res = await app.inject({
+      method: "DELETE",
+      url: `${PREFIX}/market-research/users/user-001`,
+      headers: authHeaders(userToken()),
+    });
+
+    expect(res.statusCode).toBe(403);
+  });
+});
+
+// ─── GET /:slug/users/search ────────────────────────────────────────────────
+
+describe("GET /api/system-admin/feature-flags/:slug/users/search", () => {
+  let app: FastifyInstance;
+  afterEach(async () => { if (app) await app.close(); });
+
+  it("returns search results for admin", async () => {
+    app = await buildApp({
+      selectResult: [{ id: "user-001", email: "test@test.com", name: "Test", accountId: "a1", accountName: "Acme" }],
+    });
+
+    const res = await app.inject({
+      method: "GET",
+      url: `${PREFIX}/market-research/users/search?q=test`,
+      headers: authHeaders(adminToken()),
+    });
+
+    expect(res.statusCode).toBe(200);
+    const body = res.json();
+    expect(body.data).toBeDefined();
+  });
+
+  it("returns 404 for non-existent flag", async () => {
+    app = await buildApp({ selectResult: [] });
+
+    const res = await app.inject({
+      method: "GET",
+      url: `${PREFIX}/nonexistent/users/search?q=test`,
       headers: authHeaders(adminToken()),
     });
 
