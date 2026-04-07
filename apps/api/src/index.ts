@@ -185,6 +185,10 @@ app.addHook("preHandler", requireActiveBilling());
 // Idempotency: cache responses for requests with Idempotency-Key header
 registerIdempotencyOnSend(app);
 
+// Retry GET requests once on transient DB connection errors (pool recovery, maintenance)
+import { registerDbRetry } from "./middleware/db-retry.js";
+registerDbRetry(app);
+
 // Global API rate limiting (runs after auth so request.user is available)
 const HEALTH_PATHS = ["/health", "/health/live", "/health/ready"];
 
@@ -693,6 +697,7 @@ warmingInterval.unref();
 async function shutdown(signal: string) {
   log.info(`${signal} received, starting graceful shutdown...`);
   clearInterval(poolMonitorInterval);
+  clearInterval(warmingInterval);
   try {
     await app.close(); // stops accepting, waits for in-flight requests
     log.info("Server closed gracefully");

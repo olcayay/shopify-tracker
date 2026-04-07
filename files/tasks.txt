@@ -34,6 +34,14 @@ Feature Flags Infrastructure (2026-04-07)
 Per-App Email Digest (2026-04-07)
   PLA-790: Per-app daily email digest opt-in/out ✅
 
+DB Pool Reliability — Active Recovery & Hardening (2026-04-07)
+  PLA-841: Phase 1: Implement active pool recovery instead of process.exit ✅
+  PLA-842: Phase 1: Tune pool config — increase idle_timeout, add keep-alive ✅
+  PLA-843: Phase 2: Fix Docker healthcheck to use /health/ready ✅
+  PLA-844: Phase 2: Add connection warming and periodic pool exercise ✅
+  PLA-845: Phase 3: Add external uptime monitoring and alerting ✅
+  PLA-846: Phase 3: Add request-level retry middleware for transient DB errors ✅
+
 Scraper Reliability (2026-04-07)
   PLA-817: Stale run cleanup lacks retry — crashed scraper runs are silently lost ✅
   PLA-820: Zendesk reviews scraper crashes with orphaned process ✅

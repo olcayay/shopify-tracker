@@ -604,7 +604,8 @@ sudo docker stats --no-stream                      # resource usage
 
 | Check | Endpoint | Method | Expected |
 |-------|----------|--------|----------|
-| API Health | `https://api.appranks.io/health` | GET | `{"status":"ok","checks":{"database":"ok","redis":"ok"}}` |
+| API Readiness | `https://api.appranks.io/health/ready` | GET | `{"status":"ok","checks":{"database":...,"mainPool":...,"redis":...}}` |
+| API Health (legacy) | `https://api.appranks.io/health` | GET | `{"status":"ok","checks":{"database":"ok","redis":"ok"}}` |
 | API Liveness | `https://api.appranks.io/health/live` | GET | 200 |
 | Dashboard | `https://appranks.io` | GET | 200 |
 | Redis (from any VM) | `redis-cli -h 10.0.1.5 ping` | TCP | PONG |
@@ -635,7 +636,24 @@ graph TB
     Prom --> Dashboard
 ```
 
-### 5.3 Key Metrics to Watch
+### 5.3 External Uptime Monitoring
+
+Set up an external uptime service (UptimeRobot, BetterStack, or similar) to monitor from outside our infrastructure:
+
+| Monitor | URL | Interval | Alert |
+|---------|-----|----------|-------|
+| API Readiness | `https://api.appranks.io/health/ready` | 5 min | Email/Slack on 2 consecutive failures |
+| Dashboard | `https://appranks.io` | 5 min | Email/Slack on 2 consecutive failures |
+
+**Why external:** Internal monitoring (Grafana Alloy) can't detect full infrastructure failures (VM down, Caddy crash, network issues). External monitoring alerts even when our VMs are unreachable.
+
+**Setup (UptimeRobot free tier — 50 monitors, 5-min interval):**
+1. Create account at https://uptimerobot.com
+2. Add HTTP(s) monitor for `https://api.appranks.io/health/ready` (keyword: `"status":"ok"`)
+3. Add HTTP(s) monitor for `https://appranks.io` (status code 200)
+4. Configure alert contacts (email, Telegram, or Slack webhook)
+
+### 5.4 Key Metrics to Watch
 
 | Metric | Where | Warning | Critical |
 |--------|-------|---------|----------|

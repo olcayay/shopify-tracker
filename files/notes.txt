@@ -36,6 +36,46 @@ Safeguard layers (in order):
 8. Competitor event filtering (only significant events)
 9. Event aggregation (one email per app per user)
 
+DB Pool Reliability — Active Recovery & Hardening (2026-04-07)
+================================================================
+
+Root cause: postgres.js connection pool periodically gets stuck (all connections drop to 0).
+DB is reachable via healthDb but main pool can't create new connections.
+Triggered by Cloud SQL maintenance/network blips + aggressive idle_timeout (20s) + no keep-alive.
+
+PLA-841: Active pool recovery
+- On 3rd consecutive health check failure, reset pool (close old, create new) instead of waiting for process.exit
+- resetPool() creates new pool first, verifies it works, then swaps + closes old in background
+- Exit threshold raised from 5 to 7 failures (gives recovery time after reset attempt)
+- New metrics: db_pool_resets gauge tracks total resets since process start
+
+PLA-842: Pool config tuning
+- idle_timeout: 20s → 60s (prevents premature connection death during low traffic)
+- keep_alive: 30s (TCP keepalive detects dead connections before queries fail)
+- max_lifetime jitter: ±25% randomization prevents thundering herd (all connections dying at once)
+- Exported closeDb() utility for pool reset
+
+PLA-843: Docker healthcheck uses /health/ready
+- Changed from /health (always 200 via healthDb) to /health/ready (returns 503 when pool stuck)
+- timeout: 5s → 10s, start_period: 30s → 45s (account for pool init time)
+- Updated both docker-compose-api.yml and docker-compose.prod.yml
+
+PLA-844: Connection warming (60s interval)
+- Periodic SELECT 1 through main pool keeps at least 1 connection alive
+- Runs independently of traffic — prevents all connections from idling out during low-traffic periods
+- Failures logged but don't increment pool monitor counter (avoids double-counting)
+
+PLA-845: External uptime monitoring docs
+- Added Section 5.3 to SYSTEM_ARCHITECTURE.md with UptimeRobot setup instructions
+- Monitors: /health/ready + dashboard, 5-min interval, alert on 2 consecutive failures
+
+PLA-846: Request-level retry middleware
+- GET requests automatically retry once (500ms delay) on transient DB errors
+- Detects: ECONNREFUSED, ECONNRESET, connection terminated, PG codes 57P01/57P03/08006/08001/08004
+- Non-idempotent requests (POST/PUT/DELETE) never retried
+- Response includes x-db-retry header for observability
+- 14 unit tests for isTransientDbError()
+
 DB Pool Fix — Connection Reduction (2026-04-07)
 ================================================================
 
