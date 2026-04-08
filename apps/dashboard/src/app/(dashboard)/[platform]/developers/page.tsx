@@ -258,14 +258,7 @@ function PlatformDevelopersContent() {
                       Developer <ArrowUpDown className="h-3 w-3" />
                     </button>
                   </TableHead>
-                  <TableHead className="w-72">
-                    <button
-                      onClick={() => toggleSort("apps")}
-                      className="flex items-center gap-1 hover:text-foreground"
-                    >
-                      Apps <ArrowUpDown className="h-3 w-3" />
-                    </button>
-                  </TableHead>
+                  <TableHead className="w-72">Apps</TableHead>
                   <TableHead className="w-36 text-right">
                     <button
                       onClick={() => toggleSort("apps")}

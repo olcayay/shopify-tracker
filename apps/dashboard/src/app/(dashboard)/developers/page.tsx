@@ -179,9 +179,9 @@ export default function DevelopersPage() {
         map.set(p, list);
       }
     }
-    // Sort starred-first within each group
+    // Sort within each group using active sort field + starred first
     for (const [key, devs] of map) {
-      map.set(key, devs.sort((a, b) => (a.isStarred === b.isStarred ? 0 : a.isStarred ? -1 : 1)));
+      map.set(key, sortDevelopers(devs));
     }
     return Array.from(map.entries())
       .sort(([a], [b]) => {
@@ -190,7 +190,7 @@ export default function DevelopersPage() {
         return labelA.localeCompare(labelB);
       })
       .map(([platform, devs]) => ({ platform, items: devs }));
-  }, [developers, viewMode, enabledPlatforms]);
+  }, [developers, viewMode, enabledPlatforms, sort, order]);
 
   const maxIcons = 10;
 

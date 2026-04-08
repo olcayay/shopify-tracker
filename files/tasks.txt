@@ -1,3 +1,6 @@
+Developer Sorting Fix (2026-04-09)
+  PLA-923: Fix broken sorting on developers listing pages ✅
+
 Activity Log (2026-04-08)
   PLA-937: Phase 1: Fix logActivity to persist metadata and add missing action logging ✅
   PLA-938: Phase 2: Create API endpoint to fetch activity logs ✅
