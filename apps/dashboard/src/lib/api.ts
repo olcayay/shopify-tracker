@@ -104,6 +104,10 @@ export const getPublicKeyword = cache((platform: string, slug: string) => {
   return fetchPublicApi<any>(`/api/public/keywords/${platform}/${slug}`);
 });
 
+export const getPublicAudit = cache((platform: string, slug: string) => {
+  return fetchPublicApi<any>(`/api/public/audit/${platform}/${slug}`);
+});
+
 // --- Categories ---
 export function getCategories(format: "tree" | "flat" = "tree", platform?: PlatformId) {
   return fetchApi<any[]>(withPlatform(`/api/categories?format=${format}`, platform));

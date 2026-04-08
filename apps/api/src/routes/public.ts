@@ -418,6 +418,39 @@ export const publicRoutes: FastifyPluginAsync = async (app) => {
     }
   );
 
+  // GET /public/apps/search — public app search for audit page
+  app.get<{ Querystring: { q: string; platform?: string; limit?: string } }>(
+    "/apps/search",
+    async (request, reply) => {
+      const { q, platform, limit: limitStr } = request.query;
+      if (!q || q.length < 2) return reply.code(400).send({ error: "Query must be at least 2 characters" });
+      const searchLimit = Math.min(parseInt(limitStr || "10", 10), 20);
+
+      const platformFilter = platform && isPlatformId(platform) ? sql`AND a.platform = ${platform}` : sql``;
+      const result = await cacheGet(`public:search:${q}:${platform || "all"}:${searchLimit}`, async () => {
+        const rows = await db.execute(sql`
+          SELECT a.slug, a.name, a.icon_url, a.platform, a.average_rating, a.rating_count, a.pricing_hint
+          FROM apps a
+          WHERE a.name ILIKE ${"%" + q + "%"} ${platformFilter}
+          ORDER BY a.rating_count DESC NULLS LAST
+          LIMIT ${searchLimit}
+        `);
+        return ((rows as any).rows ?? rows).map((r: any) => ({
+          slug: r.slug,
+          name: r.name,
+          iconUrl: r.icon_url,
+          platform: r.platform,
+          averageRating: r.average_rating ? parseFloat(r.average_rating) : null,
+          ratingCount: r.rating_count,
+          pricingHint: r.pricing_hint,
+        }));
+      }, 300); // short cache for search
+
+      reply.header("cache-control", "public, max-age=300");
+      return result;
+    }
+  );
+
   // GET /public/compare/:platform/:slug1/:slug2 — app comparison data
   app.get<{ Params: { platform: string; slug1: string; slug2: string } }>(
     "/compare/:platform/:slug1/:slug2",
