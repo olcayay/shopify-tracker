@@ -160,11 +160,26 @@ export default function CompetitorsPage() {
         </h1>
         <div className="flex items-center gap-3 flex-wrap sm:ml-auto">
           <AppSearchBar
-            mode="browse-only"
+            mode={canEdit && myApps.length > 0 ? "competitor" : "browse-only"}
             trackedSlugs={trackedSlugs}
             competitorSlugs={competitorSlugs}
             placeholder="Search apps..."
             className="w-full sm:w-72"
+            onAddCompetitor={canEdit && myApps.length > 0 ? async (slug, name) => {
+              const trackedApp = myApps[0];
+              const res = await fetchWithAuth(
+                `/api/account/tracked-apps/${encodeURIComponent(trackedApp.appSlug)}/competitors`,
+                { method: "POST", body: JSON.stringify({ slug }) }
+              );
+              if (res.ok) {
+                setMessage(`"${name}" added as competitor of ${trackedApp.appName}`);
+                loadData();
+                refreshUser();
+              } else {
+                const err = await res.json();
+                setMessage(err.error || "Failed to add competitor");
+              }
+            } : undefined}
           />
           <ColumnToggleDropdown
             hiddenColumns={hiddenColumns}

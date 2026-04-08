@@ -1,3 +1,6 @@
+Competitor Search (2026-04-09)
+  PLA-925: Add competitor directly from search bar on /competitors page ✅
+
 Keywords Total Results (2026-04-09)
   PLA-927: Add Total Results column to /keywords page ✅
 
