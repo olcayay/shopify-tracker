@@ -3,18 +3,38 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { Command } from "cmdk";
-import { Search, BarChart3, Key, Globe, Settings, Home } from "lucide-react";
+import { Search, BarChart3, Key, Globe, Settings, Home, Star, Plus, UserPlus } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
+import { getPlatformColor, PLATFORM_DISPLAY } from "@/lib/platform-display";
+import { toast } from "sonner";
 
-interface SearchResult {
+// ---------------------------------------------------------------------------
+// Types
+// ---------------------------------------------------------------------------
+
+interface PageResult {
   id: string;
   label: string;
   href: string;
   icon: React.ReactNode;
-  group: string;
+  group: "Pages";
 }
 
-const PAGES: SearchResult[] = [
+interface AppResult {
+  slug: string;
+  name: string;
+  iconUrl: string | null;
+  platform: string;
+  averageRating: number | null;
+  ratingCount: number | null;
+  pricingHint: string | null;
+}
+
+// ---------------------------------------------------------------------------
+// Static pages
+// ---------------------------------------------------------------------------
+
+const PAGES: PageResult[] = [
   { id: "overview", label: "Overview", href: "/overview", icon: <Home className="h-4 w-4" />, group: "Pages" },
   { id: "apps", label: "Tracked Apps", href: "/apps", icon: <BarChart3 className="h-4 w-4" />, group: "Pages" },
   { id: "competitors", label: "Competitors", href: "/competitors", icon: <Globe className="h-4 w-4" />, group: "Pages" },
@@ -22,21 +42,29 @@ const PAGES: SearchResult[] = [
   { id: "pricing", label: "Pricing", href: "/pricing", icon: <BarChart3 className="h-4 w-4" />, group: "Pages" },
 ];
 
+// ---------------------------------------------------------------------------
+// Component
+// ---------------------------------------------------------------------------
+
 export function CommandPalette() {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
-  const [appResults, setAppResults] = useState<SearchResult[]>([]);
-  const { fetchWithAuth } = useAuth();
+  const [appResults, setAppResults] = useState<AppResult[]>([]);
+  const [loading, setLoading] = useState(false);
+  const { fetchWithAuth, user } = useAuth();
   const router = useRouter();
   const params = useParams();
   const platform = (params.platform as string) || "shopify";
   const debounceRef = useRef<ReturnType<typeof setTimeout>>(undefined);
+  const fetchRef = useRef(fetchWithAuth);
+  useEffect(() => { fetchRef.current = fetchWithAuth; }, [fetchWithAuth]);
 
-  // Cmd+K opens the palette (unless keyword search modal is open)
+  const canEdit = user?.role === "owner" || user?.role === "editor";
+
+  // Cmd+K opens the palette
   useEffect(() => {
     function handleKeyDown(e: KeyboardEvent) {
       if ((e.metaKey || e.ctrlKey) && e.key === "k") {
-        // Don't hijack if a modal is already open
         const hasOpenModal = document.querySelector("[data-keyword-search-open]");
         if (hasOpenModal) return;
         e.preventDefault();
@@ -47,47 +75,60 @@ export function CommandPalette() {
     return () => document.removeEventListener("keydown", handleKeyDown);
   }, []);
 
-  // Search apps when query changes
-  const searchApps = useCallback(
-    (q: string) => {
-      if (debounceRef.current) clearTimeout(debounceRef.current);
-      if (q.length < 2) {
-        setAppResults([]);
-        return;
-      }
-      debounceRef.current = setTimeout(async () => {
-        try {
-          const res = await fetchWithAuth(
-            `/api/apps?platform=${platform}&search=${encodeURIComponent(q)}&limit=5`
-          );
-          if (res.ok) {
-            const data = await res.json();
-            const items = (data.items || data.apps || []).slice(0, 5);
-            setAppResults(
-              items.map((app: any) => ({
-                id: `app-${app.slug}`,
-                label: app.name || app.slug,
-                href: `/${platform}/apps/${app.slug}`,
-                icon: <BarChart3 className="h-4 w-4" />,
-                group: "Apps",
-              }))
-            );
-          }
-        } catch {
-          /* ignore */
+  // Search apps when query changes (cross-platform via public search)
+  const searchApps = useCallback((q: string) => {
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    if (q.length < 2) {
+      setAppResults([]);
+      setLoading(false);
+      return;
+    }
+    setLoading(true);
+    debounceRef.current = setTimeout(async () => {
+      try {
+        const res = await fetchRef.current(
+          `/public/apps/search?q=${encodeURIComponent(q)}&limit=10`
+        );
+        if (res.ok) {
+          const data = await res.json();
+          setAppResults(Array.isArray(data) ? data : []);
         }
-      }, 300);
-    },
-    [fetchWithAuth, platform]
-  );
+      } catch {
+        /* ignore */
+      } finally {
+        setLoading(false);
+      }
+    }, 300);
+  }, []);
 
   useEffect(() => {
     searchApps(query);
   }, [query, searchApps]);
 
-  if (!open) return null;
+  async function handleTrack(app: AppResult, e: React.MouseEvent) {
+    e.stopPropagation();
+    try {
+      const res = await fetchRef.current(`/api/account/tracked-apps?platform=${app.platform}`, {
+        method: "POST",
+        body: JSON.stringify({ slug: app.slug }),
+      });
+      if (res.ok) {
+        toast.success(`Now tracking ${app.name}`);
+      } else {
+        const err = await res.json();
+        toast.error(err.error || "Failed to track app");
+      }
+    } catch {
+      toast.error("Failed to track app");
+    }
+  }
 
-  const allResults = [...PAGES, ...appResults];
+  async function handleAddCompetitor(app: AppResult, e: React.MouseEvent) {
+    e.stopPropagation();
+    toast.info(`Navigate to a tracked app to add "${app.name}" as competitor`);
+  }
+
+  if (!open) return null;
 
   return (
     <div className="fixed inset-0 z-50">
@@ -102,20 +143,28 @@ export function CommandPalette() {
             <Command.Input
               value={query}
               onValueChange={setQuery}
-              placeholder="Search apps, pages..."
+              placeholder="Search apps across all platforms..."
               className="flex h-10 w-full bg-transparent py-3 px-2 text-sm outline-none placeholder:text-muted-foreground"
             />
           </div>
-          <Command.List className="max-h-64 overflow-y-auto p-1">
-            <Command.Empty className="py-6 text-center text-sm text-muted-foreground">
-              No results found.
-            </Command.Empty>
+          <Command.List className="max-h-80 overflow-y-auto p-1">
+            {!loading && (
+              <Command.Empty className="py-6 text-center text-sm text-muted-foreground">
+                No results found.
+              </Command.Empty>
+            )}
 
-            {["Pages", "Apps"].map((group) => {
-              const items = allResults.filter((r) => r.group === group);
-              if (items.length === 0) return null;
+            {loading && appResults.length === 0 && (
+              <div className="py-6 text-center text-sm text-muted-foreground">
+                Searching...
+              </div>
+            )}
+
+            {/* Pages */}
+            {(() => {
+              const items = PAGES;
               return (
-                <Command.Group key={group} heading={group} className="px-1 py-1.5 text-xs font-medium text-muted-foreground">
+                <Command.Group heading="Pages" className="px-1 py-1.5 text-xs font-medium text-muted-foreground">
                   {items.map((result) => (
                     <Command.Item
                       key={result.id}
@@ -133,7 +182,77 @@ export function CommandPalette() {
                   ))}
                 </Command.Group>
               );
-            })}
+            })()}
+
+            {/* App Results */}
+            {appResults.length > 0 && (
+              <Command.Group heading="Apps" className="px-1 py-1.5 text-xs font-medium text-muted-foreground">
+                {appResults.map((app) => {
+                  const color = getPlatformColor(app.platform);
+                  const platformLabel = PLATFORM_DISPLAY[app.platform as keyof typeof PLATFORM_DISPLAY]?.label ?? app.platform;
+                  return (
+                    <Command.Item
+                      key={`${app.platform}-${app.slug}`}
+                      value={`${app.name} ${app.platform}`}
+                      onSelect={() => {
+                        setOpen(false);
+                        setQuery("");
+                        router.push(`/${app.platform}/apps/${app.slug}`);
+                      }}
+                      className="flex items-center gap-2 rounded-md px-2 py-1.5 text-sm cursor-pointer aria-selected:bg-accent group"
+                    >
+                      {/* App icon */}
+                      {app.iconUrl ? (
+                        <img
+                          src={app.iconUrl}
+                          alt=""
+                          className="h-6 w-6 rounded shrink-0"
+                        />
+                      ) : (
+                        <div className="h-6 w-6 rounded bg-muted shrink-0" />
+                      )}
+
+                      {/* App name + platform */}
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-1.5">
+                          <span className="truncate font-medium">{app.name}</span>
+                          <span className="inline-flex items-center gap-1 text-[10px] text-muted-foreground shrink-0">
+                            <span
+                              className="w-1.5 h-1.5 rounded-full"
+                              style={{ backgroundColor: color }}
+                            />
+                            {platformLabel}
+                          </span>
+                        </div>
+                        {/* Rating */}
+                        {app.averageRating != null && (
+                          <div className="flex items-center gap-1 text-[10px] text-muted-foreground">
+                            <Star className="h-2.5 w-2.5 fill-yellow-400 text-yellow-400" />
+                            {app.averageRating.toFixed(1)}
+                            {app.ratingCount != null && (
+                              <span>({app.ratingCount.toLocaleString()})</span>
+                            )}
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Action buttons */}
+                      {canEdit && (
+                        <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 group-aria-selected:opacity-100 transition-opacity shrink-0">
+                          <button
+                            onClick={(e) => handleTrack(app, e)}
+                            className="p-1 rounded hover:bg-primary/10 text-primary"
+                            title="Track app"
+                          >
+                            <Plus className="h-3.5 w-3.5" />
+                          </button>
+                        </div>
+                      )}
+                    </Command.Item>
+                  );
+                })}
+              </Command.Group>
+            )}
           </Command.List>
         </Command>
       </div>
