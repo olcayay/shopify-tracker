@@ -13,6 +13,7 @@ import {
   getCategoriesBatch,
   getAppScores,
 } from "@/lib/api";
+import { Card, CardContent } from "@/components/ui/card";
 import { DataFreshness } from "@/components/data-freshness";
 import { PLATFORMS, isPlatformId, type PlatformId } from "@appranks/shared";
 import { computeRankingChanges } from "./utils";
@@ -327,6 +328,26 @@ export default async function AppOverviewPage({
         reverseSimilarSlugs={reverseSimilarSlugs}
         caps={{ hasFeaturedSections: caps.hasFeaturedSections, hasAdTracking: caps.hasAdTracking, hasSimilarApps: caps.hasSimilarApps }}
       />
+
+      {/* Listing Audit CTA */}
+      <Card>
+        <CardContent className="pt-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium">Listing Audit</p>
+              <p className="text-xs text-muted-foreground">Get a free score with actionable recommendations</p>
+            </div>
+            <a
+              href={`/audit/${platform}/${slug}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-sm text-primary hover:underline whitespace-nowrap"
+            >
+              View Audit →
+            </a>
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 }

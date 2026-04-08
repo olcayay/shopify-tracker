@@ -352,11 +352,21 @@ export default async function V2DashboardPage({
               ))}
             </div>
           </div>
-          {app.isTrackedByAccount && (
-            <Link href={`${base}/studio`} className="flex items-center gap-1 text-xs text-primary hover:underline mt-2">
-              Go to Listing Studio <ArrowRight className="h-3 w-3" />
-            </Link>
-          )}
+          <div className="flex items-center gap-4 mt-2">
+            {app.isTrackedByAccount && (
+              <Link href={`${base}/studio`} className="flex items-center gap-1 text-xs text-primary hover:underline">
+                Go to Listing Studio <ArrowRight className="h-3 w-3" />
+              </Link>
+            )}
+            <a
+              href={`/audit/${platform}/${app.slug}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-xs text-primary hover:underline"
+            >
+              View Full Audit →
+            </a>
+          </div>
         </CardContent>
       </Card>
     </div>
