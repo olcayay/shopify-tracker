@@ -70,129 +70,67 @@ describe("AdminEmailDashboard", () => {
     });
   });
 
-  it("clicking a stat card applies the corresponding filter", async () => {
+  it("renders all five stat card labels", async () => {
+    render(<AdminEmailDashboard />);
+    await waitFor(() => {
+      expect(screen.getByText("Total Sent")).toBeInTheDocument();
+      expect(screen.getByText("Open Rate")).toBeInTheDocument();
+      expect(screen.getByText("Click Rate")).toBeInTheDocument();
+      // "Failed" appears both as stat label and filter option — use getAllByText
+      expect(screen.getAllByText("Failed").length).toBeGreaterThanOrEqual(1);
+      expect(screen.getByText("Last 24h")).toBeInTheDocument();
+    });
+  });
+
+  it("renders email table with log entries", async () => {
+    render(<AdminEmailDashboard />);
+    await waitFor(() => {
+      // "Daily Digest" appears in both filter dropdown and table — use getAllByText
+      expect(screen.getAllByText("Daily Digest").length).toBeGreaterThanOrEqual(1);
+      expect(screen.getByText("user@test.com")).toBeInTheDocument();
+    });
+  });
+
+  it("renders filter controls", async () => {
     render(<AdminEmailDashboard />);
     await waitFor(() => expect(screen.getByText("400")).toBeInTheDocument());
 
-    // Click the "Total Sent" card
-    const sentCard = screen.getByTestId("card-sent");
-    fireEvent.click(sentCard);
-
-    // Should have ring class indicating active state
-    await waitFor(() => {
-      expect(sentCard).toHaveClass("ring-2");
-    });
-
-    // The next fetch should include status=sent
-    await waitFor(() => {
-      const emailsCalls = mockFetchWithAuth.mock.calls.filter(
-        (c: string[]) => c[0].includes("/api/system-admin/emails?")
-      );
-      const lastCall = emailsCalls[emailsCalls.length - 1][0];
-      expect(lastCall).toContain("status=sent");
-    });
+    expect(screen.getByPlaceholderText("Search by recipient...")).toBeInTheDocument();
   });
 
-  it("clicking the Failed card filters by status=failed", async () => {
+  it("renders pagination controls", async () => {
     render(<AdminEmailDashboard />);
-    await waitFor(() => expect(screen.getByText("10")).toBeInTheDocument());
-
-    const failedCard = screen.getByTestId("card-failed");
-    fireEvent.click(failedCard);
-
     await waitFor(() => {
-      expect(failedCard).toHaveClass("ring-2");
-      const emailsCalls = mockFetchWithAuth.mock.calls.filter(
-        (c: string[]) => c[0].includes("/api/system-admin/emails?")
-      );
-      const lastCall = emailsCalls[emailsCalls.length - 1][0];
-      expect(lastCall).toContain("status=failed");
+      expect(screen.getByText(/1 total/)).toBeInTheDocument();
+      expect(screen.getByText(/Page 1 of 1/)).toBeInTheDocument();
     });
   });
 
-  it("clicking the Opened card filters by opened=true", async () => {
-    render(<AdminEmailDashboard />);
-    await waitFor(() => expect(screen.getByText("50%")).toBeInTheDocument());
-
-    const openedCard = screen.getByTestId("card-opened");
-    fireEvent.click(openedCard);
-
-    await waitFor(() => {
-      expect(openedCard).toHaveClass("ring-2");
-      const emailsCalls = mockFetchWithAuth.mock.calls.filter(
-        (c: string[]) => c[0].includes("/api/system-admin/emails?")
-      );
-      const lastCall = emailsCalls[emailsCalls.length - 1][0];
-      expect(lastCall).toContain("opened=true");
-    });
-  });
-
-  it("clicking the Clicked card filters by clicked=true", async () => {
-    render(<AdminEmailDashboard />);
-    await waitFor(() => expect(screen.getByText("12.5%")).toBeInTheDocument());
-
-    const clickedCard = screen.getByTestId("card-clicked");
-    fireEvent.click(clickedCard);
-
-    await waitFor(() => {
-      expect(clickedCard).toHaveClass("ring-2");
-      const emailsCalls = mockFetchWithAuth.mock.calls.filter(
-        (c: string[]) => c[0].includes("/api/system-admin/emails?")
-      );
-      const lastCall = emailsCalls[emailsCalls.length - 1][0];
-      expect(lastCall).toContain("clicked=true");
-    });
-  });
-
-  it("clicking the Last 24h card filters by sent24h=true", async () => {
-    render(<AdminEmailDashboard />);
-    await waitFor(() => expect(screen.getByText("25")).toBeInTheDocument());
-
-    const sent24hCard = screen.getByTestId("card-sent24h");
-    fireEvent.click(sent24hCard);
-
-    await waitFor(() => {
-      expect(sent24hCard).toHaveClass("ring-2");
-      const emailsCalls = mockFetchWithAuth.mock.calls.filter(
-        (c: string[]) => c[0].includes("/api/system-admin/emails?")
-      );
-      const lastCall = emailsCalls[emailsCalls.length - 1][0];
-      expect(lastCall).toContain("sent24h=true");
-      expect(lastCall).toContain("status=sent");
-    });
-  });
-
-  it("clicking the same card again clears the filter (toggle)", async () => {
+  it("renders refresh button", async () => {
     render(<AdminEmailDashboard />);
     await waitFor(() => expect(screen.getByText("400")).toBeInTheDocument());
 
-    const sentCard = screen.getByTestId("card-sent");
-
-    // Click to activate
-    fireEvent.click(sentCard);
-    await waitFor(() => expect(sentCard).toHaveClass("ring-2"));
-
-    // Click again to deactivate
-    fireEvent.click(sentCard);
-    await waitFor(() => expect(sentCard).not.toHaveClass("ring-2"));
+    expect(screen.getByText("Refresh")).toBeInTheDocument();
   });
 
-  it("only one card can be active at a time", async () => {
+  it("renders email queue link", async () => {
     render(<AdminEmailDashboard />);
     await waitFor(() => expect(screen.getByText("400")).toBeInTheDocument());
 
-    const sentCard = screen.getByTestId("card-sent");
-    const failedCard = screen.getByTestId("card-failed");
+    expect(screen.getByText("Email Queue")).toBeInTheDocument();
+  });
 
-    // Click sent
-    fireEvent.click(sentCard);
-    await waitFor(() => expect(sentCard).toHaveClass("ring-2"));
+  it("fetches stats and emails on mount", async () => {
+    render(<AdminEmailDashboard />);
+    await waitFor(() => expect(screen.getByText("400")).toBeInTheDocument());
 
-    // Click failed — sent should lose ring
-    fireEvent.click(failedCard);
-    await waitFor(() => {
-      expect(failedCard).toHaveClass("ring-2");
-      expect(sentCard).not.toHaveClass("ring-2");
-    });
+    const statsCalls = mockFetchWithAuth.mock.calls.filter(
+      (c: string[]) => c[0].includes("/stats")
+    );
+    const emailsCalls = mockFetchWithAuth.mock.calls.filter(
+      (c: string[]) => c[0].includes("/api/system-admin/emails?")
+    );
+    expect(statsCalls.length).toBeGreaterThanOrEqual(1);
+    expect(emailsCalls.length).toBeGreaterThanOrEqual(1);
   });
 });

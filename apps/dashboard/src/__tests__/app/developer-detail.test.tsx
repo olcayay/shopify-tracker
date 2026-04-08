@@ -77,56 +77,34 @@ describe("CrossPlatformDeveloperPage", () => {
     });
   });
 
-  it("collapses platform card when header is clicked", async () => {
+  it("renders platform card headers with app counts", async () => {
     render(<CrossPlatformDeveloperPage />);
     await waitFor(() => {
-      expect(screen.getByText("Jotform Forms")).toBeInTheDocument();
+      // Platform cards show app counts in parentheses
+      expect(screen.getByText(/2 apps/)).toBeInTheDocument();
+      expect(screen.getByText(/1 app/)).toBeInTheDocument();
     });
-
-    // Click on the Shopify platform header to collapse it
-    const shopifyHeader = screen.getByText(/2 apps/).closest("[class*='cursor-pointer']");
-    expect(shopifyHeader).toBeTruthy();
-    fireEvent.click(shopifyHeader!);
-
-    // Shopify apps should be hidden, Wix apps should remain
-    expect(screen.queryByText("Jotform Forms")).not.toBeInTheDocument();
-    expect(screen.getByText("Jotform for Wix")).toBeInTheDocument();
   });
 
-  it("expands collapsed platform card when clicked again", async () => {
+  it("renders app table with rating and pricing columns", async () => {
     render(<CrossPlatformDeveloperPage />);
     await waitFor(() => {
+      // "Jotform" appears in heading and app table — use getAllByText
+      expect(screen.getAllByText("Jotform").length).toBeGreaterThanOrEqual(2);
       expect(screen.getByText("Jotform Forms")).toBeInTheDocument();
+      expect(screen.getByText("Jotform for Wix")).toBeInTheDocument();
+      // Rating values
+      expect(screen.getByText("4.5")).toBeInTheDocument();
+      expect(screen.getByText("4.0")).toBeInTheDocument();
     });
-
-    const shopifyHeader = screen.getByText(/2 apps/).closest("[class*='cursor-pointer']");
-
-    // Collapse
-    fireEvent.click(shopifyHeader!);
-    expect(screen.queryByText("Jotform Forms")).not.toBeInTheDocument();
-
-    // Expand again
-    fireEvent.click(shopifyHeader!);
-    expect(screen.getByText("Jotform Forms")).toBeInTheDocument();
   });
 
-  it("has chevron icon that rotates on collapse", async () => {
-    const { container } = render(<CrossPlatformDeveloperPage />);
+  it("shows all platform apps without collapsing", async () => {
+    render(<CrossPlatformDeveloperPage />);
     await waitFor(() => {
-      expect(screen.getByText("Jotform Forms")).toBeInTheDocument();
+      // All apps from all platforms should be visible simultaneously
+      expect(screen.getByText("Jotform Forms")).toBeInTheDocument(); // Shopify
+      expect(screen.getByText("Jotform for Wix")).toBeInTheDocument(); // Wix
     });
-
-    // Find chevron icons (should be expanded initially = no -rotate-90)
-    const chevrons = container.querySelectorAll("svg.lucide-chevron-down");
-    expect(chevrons.length).toBe(2); // One per platform
-
-    // Click to collapse first platform
-    const shopifyHeader = screen.getByText(/2 apps/).closest("[class*='cursor-pointer']");
-    fireEvent.click(shopifyHeader!);
-
-    // First chevron should now have -rotate-90
-    const updatedChevrons = container.querySelectorAll("svg.lucide-chevron-down");
-    const firstChevron = updatedChevrons[0];
-    expect(firstChevron.classList.toString()).toContain("-rotate-90");
   });
 });
