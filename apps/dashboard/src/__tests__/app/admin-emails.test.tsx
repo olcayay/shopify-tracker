@@ -18,6 +18,7 @@ const mockStats = {
   total: 500,
   sent: 400,
   failed: 10,
+  skipped: 15,
   opened: 200,
   clicked: 50,
   sent24h: 25,
@@ -70,7 +71,7 @@ describe("AdminEmailDashboard", () => {
     });
   });
 
-  it("renders all five stat card labels", async () => {
+  it("renders all six stat card labels", async () => {
     render(<AdminEmailDashboard />);
     await waitFor(() => {
       expect(screen.getByText("Total Sent")).toBeInTheDocument();
@@ -78,7 +79,16 @@ describe("AdminEmailDashboard", () => {
       expect(screen.getByText("Click Rate")).toBeInTheDocument();
       // "Failed" appears both as stat label and filter option — use getAllByText
       expect(screen.getAllByText("Failed").length).toBeGreaterThanOrEqual(1);
+      // "Skipped" appears both as stat label and filter option — use getAllByText
+      expect(screen.getAllByText("Skipped").length).toBeGreaterThanOrEqual(1);
       expect(screen.getByText("Last 24h")).toBeInTheDocument();
+    });
+  });
+
+  it("renders skipped count in stat card", async () => {
+    render(<AdminEmailDashboard />);
+    await waitFor(() => {
+      expect(screen.getByText("15")).toBeInTheDocument();
     });
   });
 

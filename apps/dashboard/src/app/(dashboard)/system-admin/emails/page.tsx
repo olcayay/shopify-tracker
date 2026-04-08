@@ -31,12 +31,14 @@ import {
   RefreshCw,
   X,
   ListOrdered,
+  SkipForward,
 } from "lucide-react";
 
 interface EmailStats {
   total: number;
   sent: number;
   failed: number;
+  skipped: number;
   opened: number;
   clicked: number;
   sent24h: number;
@@ -162,7 +164,7 @@ export default function AdminEmailDashboard() {
 
       {/* Stats Cards */}
       {stats && (
-        <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+        <div className="grid grid-cols-2 md:grid-cols-6 gap-4">
           <Card>
             <CardContent className="pt-4 text-center">
               <Send className="h-5 w-5 mx-auto text-blue-500 mb-1" />
@@ -189,6 +191,13 @@ export default function AdminEmailDashboard() {
               <AlertTriangle className="h-5 w-5 mx-auto text-red-500 mb-1" />
               <p className="text-2xl font-bold">{stats.failed}</p>
               <p className="text-xs text-muted-foreground">Failed</p>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="pt-4 text-center">
+              <SkipForward className="h-5 w-5 mx-auto text-orange-500 mb-1" />
+              <p className="text-2xl font-bold">{stats.skipped}</p>
+              <p className="text-xs text-muted-foreground">Skipped</p>
             </CardContent>
           </Card>
           <Card>

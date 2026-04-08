@@ -84,6 +84,7 @@ export const adminEmailRoutes: FastifyPluginAsync = async (app) => {
       SELECT
         count(*) FILTER (WHERE status = 'sent') AS sent,
         count(*) FILTER (WHERE status = 'failed') AS failed,
+        count(*) FILTER (WHERE status = 'skipped') AS skipped,
         count(*) FILTER (WHERE opened_at IS NOT NULL) AS opened,
         count(*) FILTER (WHERE clicked_at IS NOT NULL) AS clicked,
         count(*) FILTER (WHERE status = 'sent' AND created_at > now() - interval '24 hours') AS sent_24h,
@@ -102,6 +103,7 @@ export const adminEmailRoutes: FastifyPluginAsync = async (app) => {
       total,
       sent,
       failed: parseInt(row.failed || "0", 10),
+      skipped: parseInt(row.skipped || "0", 10),
       opened,
       clicked,
       sent24h: parseInt(row.sent_24h || "0", 10),
