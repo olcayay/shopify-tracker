@@ -16,6 +16,7 @@ import {
 } from "@/components/ui/table";
 import { Search, ChevronLeft, ChevronRight, ArrowUpDown, Star, LayoutList, Group, AppWindow, ChevronDown, ChevronRight as ChevronRightIcon } from "lucide-react";
 import { TableSkeleton } from "@/components/skeletons";
+import { GlobalAppSearch } from "@/components/global-app-search";
 import { PlatformBadgeCell } from "@/components/platform-badge-cell";
 import { PlatformFilterChips } from "@/components/platform-filter-chips";
 import { PlatformGroupedTable, type PlatformGroup } from "@/components/platform-grouped-table";
@@ -527,13 +528,22 @@ export default function CrossPlatformCompetitorsPage() {
         onToggle={togglePlatform}
       />
 
-      <form onSubmit={(e) => { e.preventDefault(); setPage(1); loadData(); }} className="flex gap-2 max-w-md">
-        <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input placeholder="Search competitors..." value={search} onChange={(e) => setSearch(e.target.value)} className="pl-9" />
-        </div>
-        <Button type="submit" variant="outline" size="sm">Search</Button>
-      </form>
+      <div className="flex gap-4 items-start flex-wrap">
+        <form onSubmit={(e) => { e.preventDefault(); setPage(1); loadData(); }} className="flex gap-2 max-w-md">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input placeholder="Filter competitors..." value={search} onChange={(e) => setSearch(e.target.value)} className="pl-9" />
+          </div>
+          <Button type="submit" variant="outline" size="sm">Filter</Button>
+        </form>
+        <GlobalAppSearch
+          mode="track"
+          trackedSlugs={new Set((data?.items ?? []).map((c: any) => c.slug))}
+          onAction={() => loadData()}
+          placeholder="Discover & track new apps..."
+          className="w-full sm:w-72"
+        />
+      </div>
 
       {loading && !data ? (
         <TableSkeleton rows={10} cols={viewMode === "list" ? flatColCount : viewMode === "grouped" ? groupedColCount : byAppColCount} />

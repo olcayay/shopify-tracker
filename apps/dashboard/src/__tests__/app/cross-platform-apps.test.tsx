@@ -243,7 +243,7 @@ describe("CrossPlatformAppsPage", () => {
   it("renders search input", async () => {
     setupFetchMocks();
     render(<CrossPlatformAppsPage />);
-    expect(screen.getByPlaceholderText("Search apps...")).toBeInTheDocument();
+    expect(screen.getByPlaceholderText("Filter tracked apps...")).toBeInTheDocument();
   });
 
   it("renders sort buttons in table headers", async () => {

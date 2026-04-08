@@ -1,3 +1,6 @@
+Global App Search (2026-04-09)
+  PLA-928: Global app search on /apps and /competitors pages with platform info and quick-add ✅
+
 Overview Card Enrichment (2026-04-09)
   PLA-932: Enrich overview platform card app rows with developer name and competitor count ✅
 

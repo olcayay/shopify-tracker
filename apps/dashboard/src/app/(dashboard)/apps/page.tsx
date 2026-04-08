@@ -17,6 +17,7 @@ import {
 import { Search, ChevronLeft, ChevronRight, ArrowUpDown, Star } from "lucide-react";
 import { TableSkeleton } from "@/components/skeletons";
 import { PlatformBadgeCell } from "@/components/platform-badge-cell";
+import { GlobalAppSearch } from "@/components/global-app-search";
 import { PlatformFilterChips } from "@/components/platform-filter-chips";
 import { ViewModeToggle, useViewMode } from "@/components/view-mode-toggle";
 import { PlatformGroupedTable, type PlatformGroup } from "@/components/platform-grouped-table";
@@ -229,13 +230,22 @@ export default function CrossPlatformAppsPage() {
         </div>
       </div>
 
-      <form onSubmit={(e) => { e.preventDefault(); setPage(1); loadData(); }} className="flex gap-2 max-w-md">
-        <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input placeholder="Search apps..." value={search} onChange={(e) => setSearch(e.target.value)} className="pl-9" />
-        </div>
-        <Button type="submit" variant="outline" size="sm">Search</Button>
-      </form>
+      <div className="flex gap-4 items-start flex-wrap">
+        <form onSubmit={(e) => { e.preventDefault(); setPage(1); loadData(); }} className="flex gap-2 max-w-md">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input placeholder="Filter tracked apps..." value={search} onChange={(e) => setSearch(e.target.value)} className="pl-9" />
+          </div>
+          <Button type="submit" variant="outline" size="sm">Filter</Button>
+        </form>
+        <GlobalAppSearch
+          mode="track"
+          trackedSlugs={new Set(items.map((a: any) => a.slug))}
+          onAction={() => loadData()}
+          placeholder="Discover & track new apps..."
+          className="w-full sm:w-72"
+        />
+      </div>
 
       {loading && !data ? (
         <TableSkeleton rows={10} cols={viewMode === "grouped" ? groupedColCount : flatColCount} />

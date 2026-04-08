@@ -286,7 +286,7 @@ describe("CrossPlatformCompetitorsPage", () => {
     setupFetchMocks();
     render(<CrossPlatformCompetitorsPage />);
     expect(
-      screen.getByPlaceholderText("Search competitors...")
+      screen.getByPlaceholderText("Filter competitors...")
     ).toBeInTheDocument();
   });
 
