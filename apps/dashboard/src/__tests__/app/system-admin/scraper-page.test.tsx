@@ -84,6 +84,7 @@ describe("ScraperPage", () => {
     vi.clearAllMocks();
     localStorage.clear();
     mockFetchWithAuth.mockImplementation((url: string) => {
+      if (url.includes("/scraper/platforms")) return Promise.resolve({ ok: true, json: () => Promise.resolve([{ platform: "shopify", isVisible: true, scraperEnabled: true }, { platform: "salesforce", isVisible: true, scraperEnabled: true }]) });
       if (url.includes("/scraper/health")) return Promise.resolve({ ok: true, json: () => Promise.resolve(mockHealthData) });
       if (url.includes("/stats")) return Promise.resolve({ ok: true, json: () => Promise.resolve(mockStats) });
       if (url.includes("/smoke-test/history")) return Promise.resolve({ ok: true, json: () => Promise.resolve([]) });
@@ -259,6 +260,7 @@ describe("ScraperPage", () => {
 
   it("shows empty state for runs", async () => {
     mockFetchWithAuth.mockImplementation((url: string) => {
+      if (url.includes("/scraper/platforms")) return Promise.resolve({ ok: true, json: () => Promise.resolve([]) });
       if (url.includes("/scraper/health")) return Promise.resolve({ ok: true, json: () => Promise.resolve(mockHealthData) });
       if (url.includes("/stats")) return Promise.resolve({ ok: true, json: () => Promise.resolve(mockStats) });
       if (url.includes("/runs")) return Promise.resolve({ ok: true, json: () => Promise.resolve({ runs: [], total: 0 }) });
@@ -307,6 +309,7 @@ describe("ScraperPage", () => {
       { platform: "shopify", checkName: "app", passCount: 3, totalCount: 10, lastRunAt: new Date().toISOString(), lastStatus: "fail", recentErrors: [{ error: "timeout", createdAt: new Date().toISOString(), durationMs: 60000 }] },
     ];
     mockFetchWithAuth.mockImplementation((url: string) => {
+      if (url.includes("/scraper/platforms")) return Promise.resolve({ ok: true, json: () => Promise.resolve([]) });
       if (url.includes("/scraper/health")) return Promise.resolve({ ok: true, json: () => Promise.resolve(mockHealthData) });
       if (url.includes("/stats")) return Promise.resolve({ ok: true, json: () => Promise.resolve(mockStats) });
       if (url.includes("/smoke-test/history")) return Promise.resolve({ ok: true, json: () => Promise.resolve(mockSmokeHistory) });

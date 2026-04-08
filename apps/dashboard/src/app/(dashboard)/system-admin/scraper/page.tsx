@@ -36,6 +36,8 @@ export default function ScraperPage() {
   const [retryingRunId, setRetryingRunId] = useState<string | null>(null);
   const [lastRefresh, setLastRefresh] = useState<Date | null>(null);
   const [smokeHistory, setSmokeHistory] = useState<SmokeHistoryEntry[] | null>(null);
+  const [scraperPlatforms, setScraperPlatforms] = useState<any[] | null>(null);
+  const [togglingPlatform, setTogglingPlatform] = useState<string | null>(null);
 
   const loadData = useCallback(async () => {
     const params = new URLSearchParams();
@@ -47,12 +49,13 @@ export default function ScraperPage() {
     params.set("limit", String(PAGE_SIZE));
     params.set("offset", String(page * PAGE_SIZE));
 
-    const [healthRes, statsRes, runsRes, queueRes, smokeRes] = await Promise.all([
+    const [healthRes, statsRes, runsRes, queueRes, smokeRes, scraperPlatformsRes] = await Promise.all([
       fetchWithAuth("/api/system-admin/scraper/health"),
       fetchWithAuth("/api/system-admin/stats?platform=all"),
       fetchWithAuth(`/api/system-admin/scraper/runs?${params.toString()}`),
       fetchWithAuth("/api/system-admin/scraper/queue"),
       fetchWithAuth("/api/system-admin/scraper/smoke-test/history"),
+      fetchWithAuth("/api/system-admin/scraper/platforms"),
     ]);
 
     if (healthRes.ok) setHealthData(await healthRes.json());
@@ -64,6 +67,10 @@ export default function ScraperPage() {
     }
     if (queueRes.ok) setQueueStatus(await queueRes.json());
     if (smokeRes.ok) setSmokeHistory(await smokeRes.json());
+    if (scraperPlatformsRes.ok) {
+      const spData = await scraperPlatformsRes.json();
+      if (Array.isArray(spData)) setScraperPlatforms(spData);
+    }
     setLastRefresh(new Date());
   }, [fetchWithAuth, filterType, filterTrigger, filterQueue, filterPlatform, filterStatus, page]);
 
@@ -126,6 +133,25 @@ export default function ScraperPage() {
       setMessage(data.error || "Failed to trigger scraper");
     }
     setTriggering(null);
+  }
+
+  async function toggleScraper(platform: string) {
+    setTogglingPlatform(platform);
+    setMessage("");
+    const res = await fetchWithAuth(`/api/system-admin/scraper/platform/${platform}/toggle`, {
+      method: "PATCH",
+    });
+    if (res.ok) {
+      const data = await res.json();
+      setMessage(`Scraper ${data.scraperEnabled ? "enabled" : "disabled"} for ${platform}`);
+      setScraperPlatforms((prev) =>
+        prev?.map((sp) => sp.platform === platform ? { ...sp, scraperEnabled: data.scraperEnabled } : sp) ?? null
+      );
+    } else {
+      const data = await res.json().catch(() => ({}));
+      setMessage(data.error || "Failed to toggle scraper");
+    }
+    setTogglingPlatform(null);
   }
 
   async function togglePause() {
@@ -255,6 +281,9 @@ export default function ScraperPage() {
         onTrigger={triggerScraper}
         onTriggerAll={triggerAllForPlatform}
         triggering={triggering}
+        scraperPlatforms={scraperPlatforms}
+        onToggleScraper={toggleScraper}
+        togglingPlatform={togglingPlatform}
       />
 
       {/* Schedule Timeline */}
