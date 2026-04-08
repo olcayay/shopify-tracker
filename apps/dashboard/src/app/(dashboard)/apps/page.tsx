@@ -20,6 +20,7 @@ import { PlatformFilterChips } from "@/components/platform-filter-chips";
 import { ViewModeToggle, useViewMode } from "@/components/view-mode-toggle";
 import { PlatformGroupedTable, type PlatformGroup } from "@/components/platform-grouped-table";
 import { PLATFORM_DISPLAY } from "@/lib/platform-display";
+import { AppQuickActions } from "@/components/app-quick-actions";
 import type { PlatformId } from "@appranks/shared";
 
 interface AppItem {
@@ -122,15 +123,35 @@ export default function CrossPlatformAppsPage() {
       .map(([platform, apps]) => ({ platform, items: apps }));
   }, [filtered, viewMode]);
 
+  function updateAppState(appId: number, updates: Partial<AppItem>) {
+    setData((prev) => {
+      if (!prev) return prev;
+      return {
+        ...prev,
+        items: prev.items.map((a) => (a.id === appId ? { ...a, ...updates } : a)),
+      };
+    });
+  }
+
   function renderAppRow(app: AppItem, showPlatform: boolean) {
     return (
       <TableRow key={app.id}>
         {showPlatform && <TableCell><PlatformBadgeCell platform={app.platform} /></TableCell>}
         <TableCell>
-          <Link href={`/${app.platform}/apps/${app.slug}`} className="flex items-center gap-2 font-medium hover:underline">
-            {app.iconUrl && <img src={app.iconUrl} alt="" aria-hidden="true" className="w-6 h-6 rounded" />}
-            {app.name}
-          </Link>
+          <AppQuickActions
+            appSlug={app.slug}
+            appName={app.name}
+            platform={app.platform}
+            isTracked={app.isTracked}
+            isCompetitor={app.isCompetitor}
+            onTrackChange={(tracked) => updateAppState(app.id, { isTracked: tracked })}
+            onCompetitorChange={(competitor) => updateAppState(app.id, { isCompetitor: competitor })}
+          >
+            <Link href={`/${app.platform}/apps/${app.slug}`} className="flex items-center gap-2 font-medium hover:underline">
+              {app.iconUrl && <img src={app.iconUrl} alt="" aria-hidden="true" className="w-6 h-6 rounded" />}
+              {app.name}
+            </Link>
+          </AppQuickActions>
         </TableCell>
         <TableCell>
           <span className={`text-xs px-1.5 py-0.5 rounded ${app.isTracked ? "bg-primary/10 text-primary" : "bg-muted text-muted-foreground"}`}>

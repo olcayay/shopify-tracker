@@ -72,6 +72,10 @@ vi.mock("@/components/platform-filter-chips", () => ({
   ),
 }));
 
+vi.mock("@/components/app-quick-actions", () => ({
+  AppQuickActions: ({ children }: any) => <>{children}</>,
+}));
+
 import CrossPlatformAppsPage from "@/app/(dashboard)/apps/page";
 
 function makeJsonResponse(data: any) {

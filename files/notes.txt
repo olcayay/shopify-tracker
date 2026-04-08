@@ -6,6 +6,19 @@ PLA-904: Increased visible app icons from 8 to 10
 - Updated test to verify 10 icons shown with correct +N badge
 - Files: developers/page.tsx, [platform]/developers/page.tsx, cross-platform-developers.test.tsx
 
+PLA-905: Already implemented in PLA-902 rewrite — no changes needed
+
+PLA-906: Added long-hover quick-action tooltip on /apps listing page
+- New component: AppQuickActions — 800ms hover delay, Radix Popover
+- Two actions: "Start tracking" (POST /api/account/tracked-apps) and
+  "Mark as competitor" (POST to first tracked app's competitors)
+- Shows "Already tracking" / "Already a competitor" for existing states
+- Only shown to owner/editor users, not viewers
+- Integrated into apps/page.tsx renderAppRow, wrapping the app name cell
+- State updates optimistically in the table without full reload
+- 8 unit tests covering: render, hover timing, actions, viewer guard, dismiss
+- Files: components/app-quick-actions.tsx (new), apps/page.tsx, tests
+
 Platform Developers Page — Rewrite & Access Fix (2026-04-08)
 ================================================================
 

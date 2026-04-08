@@ -1,7 +1,7 @@
 Developers Page UX Improvements (2026-04-08)
   PLA-904: Increase visible app icons from 8 to 10 in developers table ✅
-  PLA-905: Move search, filters & view toggle below My Developers section
-  PLA-906: Add long-hover quick-action tooltip on /apps listing page
+  PLA-905: Move search, filters & view toggle below My Developers section ✅ (already done in PLA-902)
+  PLA-906: Add long-hover quick-action tooltip on /apps listing page ✅
 
 Platform Developers Page (2026-04-08)
   PLA-902: Make /{platform}/developers a proper developer listing page ✅
