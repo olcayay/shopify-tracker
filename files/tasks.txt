@@ -1,3 +1,6 @@
+Invitation Error Messages (2026-04-09)
+  PLA-941: Improve invitation error messages for existing users ✅
+
 Global App Search (2026-04-09)
   PLA-934: Fix global app search (Cmd+K) — add platform, ratings, and action buttons ✅
 

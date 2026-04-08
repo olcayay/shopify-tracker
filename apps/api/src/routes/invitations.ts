@@ -41,13 +41,20 @@ export const invitationRoutes: FastifyPluginAsync = async (app) => {
 
       // Check if user already exists with this email
       const [existingUser] = await db
-        .select()
+        .select({ id: users.id, accountId: users.accountId })
         .from(users)
         .where(eq(users.email, invitation.email));
 
       if (existingUser) {
+        if (existingUser.accountId === invitation.accountId) {
+          return reply.code(409).send({
+            error: "You are already a member of this organization. Please log in instead.",
+            code: "ALREADY_MEMBER",
+          });
+        }
         return reply.code(409).send({
-          error: "User with this email already exists",
+          error: "This email is already registered with another organization. Cross-account invitations are not yet supported.",
+          code: "EXISTING_USER_OTHER_ACCOUNT",
         });
       }
 

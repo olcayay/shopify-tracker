@@ -362,12 +362,13 @@ describe("Invitation routes", () => {
       await app.close();
     });
 
-    it("returns 409 when user with email already exists", async () => {
-      // Both selects return non-empty: 1st = invitation, 2nd = existing user
+    it("returns 409 when user with email already exists in another account", async () => {
+      // Both selects return non-empty: 1st = invitation, 2nd = existing user (different account)
       const existingUser = {
         id: "user-existing",
         email: "newuser@test.com",
         name: "Existing",
+        accountId: "other-account-999",
       };
       const mockDb = buildSequentialMockDb({
         selectResults: [[validInvitation], [existingUser]],
@@ -382,7 +383,35 @@ describe("Invitation routes", () => {
 
       expect(res.statusCode).toBe(409);
       expect(res.json()).toEqual({
-        error: "User with this email already exists",
+        error: "This email is already registered with another organization. Cross-account invitations are not yet supported.",
+        code: "EXISTING_USER_OTHER_ACCOUNT",
+      });
+
+      await app.close();
+    });
+
+    it("returns 409 when user is already a member of the same account", async () => {
+      const existingUser = {
+        id: "user-existing",
+        email: "newuser@test.com",
+        name: "Existing",
+        accountId: "account-001", // same as invitation
+      };
+      const mockDb = buildSequentialMockDb({
+        selectResults: [[validInvitation], [existingUser]],
+      });
+      const app = await buildInvitationApp(mockDb);
+
+      const res = await app.inject({
+        method: "POST",
+        url: "/api/invitations/accept/valid-token-123",
+        payload: { name: "New User", password: "securepass123" },
+      });
+
+      expect(res.statusCode).toBe(409);
+      expect(res.json()).toEqual({
+        error: "You are already a member of this organization. Please log in instead.",
+        code: "ALREADY_MEMBER",
       });
 
       await app.close();
