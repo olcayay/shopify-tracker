@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { Search } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { PLATFORMS } from "@appranks/shared";
+import { PLATFORMS, isPlatformId } from "@appranks/shared";
 
 interface SearchResult {
   slug: string;
@@ -24,7 +24,7 @@ export function AuditSearch() {
   const [isOpen, setIsOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const wrapperRef = useRef<HTMLDivElement>(null);
-  const debounceRef = useRef<ReturnType<typeof setTimeout>>();
+  const debounceRef = useRef<ReturnType<typeof setTimeout>>(undefined);
 
   useEffect(() => {
     if (query.length < 2) {
@@ -95,7 +95,7 @@ export function AuditSearch() {
       {isOpen && (
         <div className="absolute z-50 w-full mt-1 bg-popover border rounded-lg shadow-lg max-h-80 overflow-y-auto">
           {results.map((app) => {
-            const platformConfig = PLATFORMS.find((p) => p.id === app.platform);
+            const platformConfig = isPlatformId(app.platform) ? PLATFORMS[app.platform] : null;
             return (
               <button
                 key={`${app.platform}:${app.slug}`}

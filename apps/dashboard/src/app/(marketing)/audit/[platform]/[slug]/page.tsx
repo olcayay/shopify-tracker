@@ -2,7 +2,7 @@ import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { getPublicAudit } from "@/lib/api";
 import { AuditReport } from "@/components/audit/audit-report";
-import { PLATFORMS } from "@appranks/shared";
+import { isPlatformId } from "@appranks/shared";
 
 interface PageProps {
   params: Promise<{ platform: string; slug: string }>;
@@ -31,8 +31,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 export default async function AuditReportPage({ params }: PageProps) {
   const { platform, slug } = await params;
 
-  const platformConfig = PLATFORMS.find((p) => p.id === platform);
-  if (!platformConfig) notFound();
+  if (!isPlatformId(platform)) notFound();
 
   let report;
   try {

@@ -2,8 +2,8 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { PLATFORMS } from "@appranks/shared";
-import type { AuditReport as AuditReportType, AuditSection, AuditCheck, AuditRecommendation } from "@appranks/shared";
+import { PLATFORMS, isPlatformId } from "@appranks/shared";
+import type { AuditReport as AuditReportType, AuditSection, AuditCheck, AuditRecommendation, PlatformId } from "@appranks/shared";
 import { cn } from "@/lib/utils";
 import {
   ChevronDown,
@@ -151,7 +151,7 @@ function ImpactBadge({ impact }: { impact: string }) {
 
 // --- Main Report ---
 export function AuditReport({ report, platform }: { report: AuditReportType; platform: string }) {
-  const platformConfig = PLATFORMS.find((p) => p.id === platform);
+  const platformConfig = isPlatformId(platform) ? PLATFORMS[platform] : null;
 
   return (
     <div className="space-y-8">
