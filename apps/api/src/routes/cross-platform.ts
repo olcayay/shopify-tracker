@@ -223,17 +223,39 @@ export async function crossPlatformRoutes(app: FastifyInstance) {
         LIMIT ${limit} OFFSET ${offset}
       `) as any[];
 
+      // Fetch tracked app details for display
+      const allTrackedAppIds = Array.from(new Set(
+        Array.from(keywordAppMap.values()).flat()
+      )) as number[];
+      const trackedAppDetailsMap = new Map<number, { name: string; iconUrl: string | null; slug: string; platform: string }>();
+      if (allTrackedAppIds.length > 0) {
+        const trackedAppRows: any[] = await db.execute(sql`
+          SELECT id, name, icon_url, slug, platform
+          FROM apps
+          WHERE id IN (${sql.join(allTrackedAppIds.map((id: number) => sql`${id}`), sql`, `)})
+        `) as any[];
+        for (const ta of trackedAppRows) {
+          trackedAppDetailsMap.set(ta.id, { name: ta.name, iconUrl: ta.icon_url, slug: ta.slug, platform: ta.platform });
+        }
+      }
+
       return {
-        items: rows.map((r: any) => ({
-          id: r.id,
-          platform: r.platform,
-          keyword: r.keyword,
-          slug: r.slug,
-          isActive: r.is_active,
-          appCount: keywordAppMap.get(r.id)?.length || 0,
-          trackedAppIds: keywordAppMap.get(r.id) || [],
-          createdAt: r.created_at,
-        })),
+        items: rows.map((r: any) => {
+          const appIds = keywordAppMap.get(r.id) || [];
+          return {
+            id: r.id,
+            platform: r.platform,
+            keyword: r.keyword,
+            slug: r.slug,
+            isActive: r.is_active,
+            appCount: appIds.length,
+            trackedAppIds: appIds,
+            trackedApps: appIds
+              .map((id: number) => trackedAppDetailsMap.get(id))
+              .filter(Boolean),
+            createdAt: r.created_at,
+          };
+        }),
         pagination: paginationResponse(page, limit, total),
       };
     }
