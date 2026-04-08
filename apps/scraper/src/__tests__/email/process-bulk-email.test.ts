@@ -16,9 +16,11 @@ const mockBuildDigestForAccount = vi.fn().mockResolvedValue({
   winsAndAttention: [],
   competitorWatch: [],
 });
+const mockSplitDigestByPlatform = vi.fn((data: any) => data ? [{ ...data, platform: "shopify" }] : []);
 vi.mock("../../email/digest-builder.js", () => ({
   buildDigestForAccount: (...args: any[]) => mockBuildDigestForAccount(...args),
   getDigestRecipients: vi.fn(),
+  splitDigestByPlatform: (...args: any[]) => mockSplitDigestByPlatform(...args),
 }));
 
 const mockBuildDigestHtml = vi.fn().mockReturnValue("<html>digest</html>");
@@ -81,7 +83,9 @@ describe("processBulkEmail", () => {
 
     // Built digest data from DB
     expect(mockBuildDigestForAccount).toHaveBeenCalledWith(mockDb, "a1", "America/New_York");
-    // Rendered template
+    // Split into per-platform digests
+    expect(mockSplitDigestByPlatform).toHaveBeenCalledOnce();
+    // Rendered template for each platform
     expect(mockBuildDigestHtml).toHaveBeenCalledOnce();
     expect(mockBuildDigestSubject).toHaveBeenCalledOnce();
     // Sent via pipeline

@@ -1,4 +1,5 @@
 import { describe, it, expect } from "vitest";
+import { splitDigestByPlatform } from "../digest-builder.js";
 import type {
   DigestData,
   TrackedAppDigest,
@@ -340,5 +341,252 @@ describe("DigestData app-centric structure", () => {
       expect(result).not.toBeInstanceOf(Date);
       expect(typeof result).toBe("string");
     });
+  });
+});
+
+describe("splitDigestByPlatform", () => {
+  it("splits multi-platform digest into separate per-platform digests", () => {
+    const data = makeDigestData({
+      trackedApps: [
+        makeTrackedAppDigest({
+          appId: 1,
+          appName: "Shopify App",
+          appSlug: "shopify-app",
+          platform: "shopify",
+          keywordChanges: [makeRankingChange({ keyword: "email", type: "improved", change: 3 })],
+        }),
+        makeTrackedAppDigest({
+          appId: 2,
+          appName: "Zendesk App",
+          appSlug: "zendesk-app",
+          platform: "zendesk",
+          keywordChanges: [makeRankingChange({ keyword: "support", type: "dropped", change: -2 })],
+        }),
+        makeTrackedAppDigest({
+          appId: 3,
+          appName: "Another Shopify App",
+          appSlug: "another-shopify-app",
+          platform: "shopify",
+          keywordChanges: [makeRankingChange({ keyword: "crm", type: "improved", change: 1 })],
+        }),
+      ],
+      summary: { improved: 2, dropped: 1, newEntries: 0, droppedOut: 0, unchanged: 0 },
+    });
+
+    const result = splitDigestByPlatform(data);
+
+    expect(result).toHaveLength(2);
+
+    const shopifyDigest = result.find((d) => d.platform === "shopify");
+    const zendeskDigest = result.find((d) => d.platform === "zendesk");
+
+    expect(shopifyDigest).toBeDefined();
+    expect(zendeskDigest).toBeDefined();
+
+    // Shopify digest should have 2 apps
+    expect(shopifyDigest!.trackedApps).toHaveLength(2);
+    expect(shopifyDigest!.trackedApps[0].appName).toBe("Shopify App");
+    expect(shopifyDigest!.trackedApps[1].appName).toBe("Another Shopify App");
+
+    // Zendesk digest should have 1 app
+    expect(zendeskDigest!.trackedApps).toHaveLength(1);
+    expect(zendeskDigest!.trackedApps[0].appName).toBe("Zendesk App");
+  });
+
+  it("recalculates summary counts per platform", () => {
+    const data = makeDigestData({
+      trackedApps: [
+        makeTrackedAppDigest({
+          appId: 1,
+          platform: "shopify",
+          keywordChanges: [
+            makeRankingChange({ type: "improved", change: 3 }),
+            makeRankingChange({ keyword: "kw2", type: "improved", change: 1 }),
+          ],
+        }),
+        makeTrackedAppDigest({
+          appId: 2,
+          platform: "zendesk",
+          keywordChanges: [
+            makeRankingChange({ type: "dropped", change: -2 }),
+          ],
+        }),
+      ],
+      summary: { improved: 2, dropped: 1, newEntries: 0, droppedOut: 0, unchanged: 0 },
+    });
+
+    const result = splitDigestByPlatform(data);
+    const shopifyDigest = result.find((d) => d.platform === "shopify")!;
+    const zendeskDigest = result.find((d) => d.platform === "zendesk")!;
+
+    expect(shopifyDigest.summary.improved).toBe(2);
+    expect(shopifyDigest.summary.dropped).toBe(0);
+
+    expect(zendeskDigest.summary.improved).toBe(0);
+    expect(zendeskDigest.summary.dropped).toBe(1);
+  });
+
+  it("skips platforms with no changes", () => {
+    const data = makeDigestData({
+      trackedApps: [
+        makeTrackedAppDigest({
+          appId: 1,
+          platform: "shopify",
+          keywordChanges: [makeRankingChange({ type: "improved", change: 3 })],
+        }),
+        makeTrackedAppDigest({
+          appId: 2,
+          platform: "zendesk",
+          keywordChanges: [],
+          categoryChanges: [],
+          ratingChange: null,
+          reviewCountChange: null,
+        }),
+      ],
+      summary: { improved: 1, dropped: 0, newEntries: 0, droppedOut: 0, unchanged: 0 },
+    });
+
+    const result = splitDigestByPlatform(data);
+
+    // Zendesk has no changes, should be skipped
+    expect(result).toHaveLength(1);
+    expect(result[0].platform).toBe("shopify");
+  });
+
+  it("returns single digest for single-platform data", () => {
+    const data = makeDigestData({
+      trackedApps: [
+        makeTrackedAppDigest({
+          appId: 1,
+          platform: "shopify",
+          keywordChanges: [makeRankingChange({ type: "improved", change: 2 })],
+        }),
+      ],
+      summary: { improved: 1, dropped: 0, newEntries: 0, droppedOut: 0, unchanged: 0 },
+    });
+
+    const result = splitDigestByPlatform(data);
+
+    expect(result).toHaveLength(1);
+    expect(result[0].platform).toBe("shopify");
+    expect(result[0].trackedApps).toHaveLength(1);
+  });
+
+  it("preserves account name and date in each platform digest", () => {
+    const data = makeDigestData({
+      accountName: "My Company",
+      date: "04/07/2026",
+      trackedApps: [
+        makeTrackedAppDigest({
+          appId: 1,
+          platform: "shopify",
+          keywordChanges: [makeRankingChange({ type: "improved", change: 2 })],
+        }),
+        makeTrackedAppDigest({
+          appId: 2,
+          platform: "zendesk",
+          keywordChanges: [makeRankingChange({ type: "dropped", change: -1 })],
+        }),
+      ],
+      summary: { improved: 1, dropped: 1, newEntries: 0, droppedOut: 0, unchanged: 0 },
+    });
+
+    const result = splitDigestByPlatform(data);
+
+    for (const digest of result) {
+      expect(digest.accountName).toBe("My Company");
+      expect(digest.date).toBe("04/07/2026");
+    }
+  });
+
+  it("includes competitor summaries in each platform digest", () => {
+    const competitors = [{
+      appName: "Competitor",
+      appSlug: "competitor",
+      todayRating: "4.5",
+      yesterdayRating: "4.4",
+      ratingChange: 0.1,
+      todayReviews: 100,
+      yesterdayReviews: 95,
+      reviewsChange: 5,
+      keywordPositions: [{ keyword: "email", position: 3, change: 2 }],
+    }];
+
+    const data = makeDigestData({
+      trackedApps: [
+        makeTrackedAppDigest({
+          appId: 1,
+          platform: "shopify",
+          keywordChanges: [makeRankingChange({ type: "improved", change: 2 })],
+        }),
+        makeTrackedAppDigest({
+          appId: 2,
+          platform: "zendesk",
+          keywordChanges: [makeRankingChange({ type: "dropped", change: -1 })],
+        }),
+      ],
+      competitorSummaries: competitors,
+      summary: { improved: 1, dropped: 1, newEntries: 0, droppedOut: 0, unchanged: 0 },
+    });
+
+    const result = splitDigestByPlatform(data);
+
+    // Both platform digests should include competitor summaries
+    for (const digest of result) {
+      expect(digest.competitorSummaries).toHaveLength(1);
+      expect(digest.competitorSummaries[0].appName).toBe("Competitor");
+    }
+  });
+
+  it("returns empty array when no tracked apps exist", () => {
+    const data = makeDigestData({
+      trackedApps: [],
+      summary: { improved: 0, dropped: 0, newEntries: 0, droppedOut: 0, unchanged: 0 },
+    });
+
+    const result = splitDigestByPlatform(data);
+    expect(result).toHaveLength(0);
+  });
+
+  it("includes platform with only category changes (no keyword changes)", () => {
+    const data = makeDigestData({
+      trackedApps: [
+        makeTrackedAppDigest({
+          appId: 1,
+          platform: "hubspot",
+          keywordChanges: [],
+          categoryChanges: [makeCategoryChange({ type: "improved", change: 3 })],
+        }),
+      ],
+      summary: { improved: 0, dropped: 0, newEntries: 0, droppedOut: 0, unchanged: 0 },
+    });
+
+    const result = splitDigestByPlatform(data);
+
+    expect(result).toHaveLength(1);
+    expect(result[0].platform).toBe("hubspot");
+    expect(result[0].trackedApps[0].categoryChanges).toHaveLength(1);
+  });
+
+  it("includes platform with only rating changes (no keyword/category changes)", () => {
+    const data = makeDigestData({
+      trackedApps: [
+        makeTrackedAppDigest({
+          appId: 1,
+          platform: "wix",
+          keywordChanges: [],
+          categoryChanges: [],
+          ratingChange: 0.2,
+          ratingToday: 4.5,
+          ratingYesterday: 4.3,
+        }),
+      ],
+      summary: { improved: 0, dropped: 0, newEntries: 0, droppedOut: 0, unchanged: 0 },
+    });
+
+    const result = splitDigestByPlatform(data);
+
+    expect(result).toHaveLength(1);
+    expect(result[0].platform).toBe("wix");
   });
 });

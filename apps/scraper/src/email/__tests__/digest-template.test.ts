@@ -425,3 +425,120 @@ describe("generateInsight (via buildDigestHtml)", () => {
     expect(html).toContain("Rival");
   });
 });
+
+describe("per-platform digest subject and HTML", () => {
+  it("includes platform prefix in subject when platform is set", () => {
+    const data = makeDigest({
+      platform: "shopify",
+      trackedApps: [
+        makeTrackedApp({
+          appName: "My App",
+          keywordChanges: [
+            makeRankingChange({ change: 1, todayPosition: 15, yesterdayPosition: 16 }),
+          ],
+        }),
+      ],
+      summary: { improved: 1, dropped: 0, newEntries: 0, droppedOut: 0, unchanged: 0 },
+    });
+
+    const subject = buildDigestSubject(data);
+    expect(subject).toMatch(/^\[Shopify\] /);
+  });
+
+  it("does not include platform prefix when platform is not set", () => {
+    const data = makeDigest({
+      platform: undefined,
+      trackedApps: [
+        makeTrackedApp({
+          appName: "My App",
+          keywordChanges: [
+            makeRankingChange({ change: 1, todayPosition: 15, yesterdayPosition: 16 }),
+          ],
+        }),
+      ],
+      summary: { improved: 1, dropped: 0, newEntries: 0, droppedOut: 0, unchanged: 0 },
+    });
+
+    const subject = buildDigestSubject(data);
+    expect(subject).not.toMatch(/^\[/);
+  });
+
+  it("uses correct platform label (e.g. HubSpot not hubspot)", () => {
+    const data = makeDigest({
+      platform: "hubspot",
+      trackedApps: [makeTrackedApp({ appName: "My App" })],
+    });
+
+    const subject = buildDigestSubject(data);
+    expect(subject).toContain("[HubSpot]");
+  });
+
+  it("includes platform name in HTML header when platform is set", () => {
+    const data = makeDigest({
+      platform: "zendesk",
+      trackedApps: [
+        makeTrackedApp({
+          appName: "My App",
+          keywordChanges: [makeRankingChange()],
+        }),
+      ],
+      summary: { improved: 1, dropped: 0, newEntries: 0, droppedOut: 0, unchanged: 0 },
+    });
+
+    const html = buildDigestHtml(data);
+    expect(html).toContain("Zendesk Daily Ranking Report");
+  });
+
+  it("uses generic header when platform is not set", () => {
+    const data = makeDigest({
+      platform: undefined,
+      trackedApps: [
+        makeTrackedApp({
+          appName: "My App",
+          keywordChanges: [makeRankingChange()],
+        }),
+      ],
+      summary: { improved: 1, dropped: 0, newEntries: 0, droppedOut: 0, unchanged: 0 },
+    });
+
+    const html = buildDigestHtml(data);
+    expect(html).toContain("Daily Ranking Report");
+    expect(html).not.toContain("undefined Daily Ranking Report");
+  });
+
+  it("platform prefix appears in all subject line variants", () => {
+    // Test with keyword jump (big change)
+    const jumpData = makeDigest({
+      platform: "wix",
+      trackedApps: [
+        makeTrackedApp({
+          appName: "App",
+          keywordChanges: [makeRankingChange({ keyword: "email", todayPosition: 2, change: 5 })],
+        }),
+      ],
+      summary: { improved: 1, dropped: 0, newEntries: 0, droppedOut: 0, unchanged: 0 },
+    });
+    expect(buildDigestSubject(jumpData)).toMatch(/^\[Wix\] /);
+
+    // Test with stable (fallback)
+    const stableData = makeDigest({
+      platform: "wix",
+      trackedApps: [makeTrackedApp({ appName: "App" })],
+    });
+    expect(buildDigestSubject(stableData)).toMatch(/^\[Wix\] /);
+
+    // Test with category milestone
+    const catData = makeDigest({
+      platform: "wix",
+      trackedApps: [
+        makeTrackedApp({
+          appName: "App",
+          categoryChanges: [makeCategoryChange({ categoryName: "Marketing", todayPosition: 1, change: 2, type: "improved" })],
+          keywordChanges: [makeRankingChange()],
+        }),
+      ],
+      summary: { improved: 1, dropped: 0, newEntries: 0, droppedOut: 0, unchanged: 0 },
+    });
+    expect(buildDigestSubject(catData)).toMatch(/^\[Wix\] /);
+  });
+});

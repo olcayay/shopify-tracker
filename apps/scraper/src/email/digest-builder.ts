@@ -655,3 +655,65 @@ export async function buildDigestForAccount(
     summary,
   };
 }
+
+/**
+ * Split a combined DigestData into per-platform DigestData objects.
+ * Each returned digest contains only apps and competitors for one platform,
+ * with recalculated summary counts. Platforms with no changes are omitted.
+ */
+export function splitDigestByPlatform(data: DigestData): DigestData[] {
+  // Collect all unique platforms from tracked apps and competitors
+  const platformSet = new Set<string>();
+  for (const app of data.trackedApps) {
+    platformSet.add(app.platform);
+  }
+
+  // We need competitor platforms too — get them from the app data
+  // Competitors don't have a platform field in CompetitorSummary,
+  // so we include them in ALL platform digests (they are relevant across platforms)
+  // Actually, competitors are account-level (not platform-specific), so we skip them
+  // in per-platform digests and only include them if the user tracks apps on that platform.
+
+  const results: DigestData[] = [];
+
+  for (const platform of platformSet) {
+    const platformApps = data.trackedApps.filter((a) => a.platform === platform);
+
+    // Recalculate summary for this platform's apps only
+    const allKwChanges = platformApps.flatMap((a) => a.keywordChanges);
+    const summary = {
+      improved: allKwChanges.filter((r) => r.type === "improved").length,
+      dropped: allKwChanges.filter((r) => r.type === "dropped").length,
+      newEntries: allKwChanges.filter((r) => r.type === "new_entry").length,
+      droppedOut: allKwChanges.filter((r) => r.type === "dropped_out").length,
+      unchanged: 0,
+    };
+
+    // Check if this platform has any actual changes
+    const hasTrackedChanges = platformApps.some(
+      (a) =>
+        a.keywordChanges.length > 0 ||
+        a.categoryChanges.length > 0 ||
+        a.ratingChange !== null ||
+        a.reviewCountChange !== null
+    );
+
+    // Include competitors in each platform digest (they're account-level)
+    const hasCompetitorChanges = data.competitorSummaries.some(
+      (c) => c.ratingChange !== null || c.reviewsChange !== null
+    );
+
+    if (!hasTrackedChanges && !hasCompetitorChanges) continue;
+
+    results.push({
+      accountName: data.accountName,
+      date: data.date,
+      platform,
+      trackedApps: platformApps,
+      competitorSummaries: data.competitorSummaries,
+      summary,
+    });
+  }
+
+  return results;
+}

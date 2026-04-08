@@ -112,6 +112,34 @@ export async function processBulkEmail(
     data = builtData;
   }
 
+  // For daily digest, split into per-platform emails
+  if (type === "email_daily_digest") {
+    const { splitDigestByPlatform } = await import("./digest-builder.js");
+    const platformDigests = splitDigestByPlatform(data);
+    for (const platformData of platformDigests) {
+      const html = builder.buildHtml(platformData);
+      const subject = builder.buildSubject(platformData);
+      const result = await sendEmail({
+        db,
+        emailType: type,
+        userId,
+        accountId,
+        recipientEmail: to,
+        recipientName: name,
+        subject,
+        htmlBody: html,
+        dataSnapshot: { ...payload, platform: platformData.platform },
+        campaignId,
+      });
+      if (result.sent) {
+        log.info("bulk email sent", { jobId: job.id, type, platform: platformData.platform, to, logId: result.logId });
+      } else {
+        log.info("bulk email skipped", { jobId: job.id, type, platform: platformData.platform, to, reason: result.skipReason });
+      }
+    }
+    return;
+  }
+
   const html = builder.buildHtml(data);
   const subject = builder.buildSubject(data);
 

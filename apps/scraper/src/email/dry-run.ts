@@ -5,7 +5,7 @@
  * Supports single preview and bulk preview (eligible count + sample subjects).
  */
 import type { Database } from "@appranks/db";
-import { buildDigestForAccount, getDigestRecipients } from "./digest-builder.js";
+import { buildDigestForAccount, getDigestRecipients, splitDigestByPlatform } from "./digest-builder.js";
 import { buildDigestHtml, buildDigestSubject } from "./digest-template.js";
 import { buildWeeklyForAccount, getWeeklyRecipients } from "./weekly-builder.js";
 import { buildWeeklyHtml, buildWeeklySubject } from "./weekly-template.js";
@@ -41,12 +41,15 @@ export async function dryRunPreview(
     case "daily_digest": {
       const data = await buildDigestForAccount(db, accountId, timezone);
       if (!data) return null;
+      // Return the first platform's digest for preview (dry run shows one sample)
+      const platformDigests = splitDigestByPlatform(data);
+      const preview = platformDigests[0] || data;
       return {
         emailType,
-        subject: buildDigestSubject(data),
-        html: buildDigestHtml(data),
+        subject: buildDigestSubject(preview),
+        html: buildDigestHtml(preview),
         recipientCount: 1,
-        dataSnapshot: { summary: data.summary, rankingCount: data.trackedApps.reduce((n, a) => n + a.keywordChanges.length, 0) },
+        dataSnapshot: { summary: preview.summary, platform: preview.platform, platformCount: platformDigests.length, rankingCount: preview.trackedApps.reduce((n, a) => n + a.keywordChanges.length, 0) },
       };
     }
     case "weekly_summary": {

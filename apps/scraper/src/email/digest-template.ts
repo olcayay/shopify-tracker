@@ -9,6 +9,7 @@ import {
   footer,
   summaryBadge,
 } from "./components/index.js";
+import { platformLabel } from "./components/platform-badge.js";
 import { colors } from "./design-tokens.js";
 
 const DASHBOARD_URL = process.env.DASHBOARD_URL || "http://localhost:3000";
@@ -356,15 +357,23 @@ export function buildDigestHtml(data: DigestData, unsubscribeUrl?: string): stri
     sections += insightBlock(insight);
   }
 
+  const platformName = data.platform ? platformLabel(data.platform) : null;
+  const headerTitle = platformName
+    ? `${platformName} Daily Ranking Report`
+    : "Daily Ranking Report";
+  const preheader = platformName
+    ? `${accountName} · ${platformName} · ${date}`
+    : `${accountName}: Ranking changes for ${date}`;
+
   const content = `
-    ${header("Daily Ranking Report", `${accountName} · ${date}`)}
+    ${header(headerTitle, `${accountName} · ${date}`)}
     <div style="padding:0 24px 24px;">
       ${sections}
     </div>
     ${footer(unsubscribeUrl)}
   `;
 
-  return emailLayout(content, `${accountName}: Ranking changes for ${date}`);
+  return emailLayout(content, preheader);
 }
 
 /**
@@ -413,12 +422,13 @@ export function buildDigestSubject(data: DigestData): string {
   const { summary, trackedApps } = data;
   const app = pickSubjectApp(data);
   const appName = app?.appName || data.accountName;
+  const prefix = data.platform ? `[${platformLabel(data.platform)}] ` : "";
 
   // 1. Category milestone
   if (app) {
     const catMilestone = app.categoryChanges.find((c) => c.todayPosition === 1 && c.type === "improved");
     if (catMilestone) {
-      return `"${appName}" reached #1 in ${catMilestone.categoryName}!`;
+      return `${prefix}"${appName}" reached #1 in ${catMilestone.categoryName}!`;
     }
   }
 
@@ -429,10 +439,10 @@ export function buildDigestSubject(data: DigestData): string {
       .sort((a, b) => (b.change || 0) - (a.change || 0));
     const best = allKwChanges[0];
     if (best && best.change !== null && best.change >= 3) {
-      return `"${appName}" jumped +${best.change} for "${best.keyword}" — now ${posStr(best.todayPosition)}`;
+      return `${prefix}"${appName}" jumped +${best.change} for "${best.keyword}" — now ${posStr(best.todayPosition)}`;
     }
     if (best && best.todayPosition !== null && best.todayPosition <= 5) {
-      return `Great day! ${appName} climbed to #${best.todayPosition} for "${best.keyword}" (+${best.change})`;
+      return `${prefix}Great day! ${appName} climbed to #${best.todayPosition} for "${best.keyword}" (+${best.change})`;
     }
   }
 
@@ -443,7 +453,7 @@ export function buildDigestSubject(data: DigestData): string {
       (m) => app.reviewCountToday! >= m && (app.reviewCountToday! - app.reviewCountChange!) < m
     );
     if (crossed) {
-      return `"${appName}" hit ${crossed} reviews (${ratingStr(app.ratingToday)}★)`;
+      return `${prefix}"${appName}" hit ${crossed} reviews (${ratingStr(app.ratingToday)}★)`;
     }
   }
 
@@ -455,7 +465,7 @@ export function buildDigestSubject(data: DigestData): string {
     if (app?.ratingChange && app.ratingChange !== 0) {
       parts.push(`rating ${app.ratingChange > 0 ? "+" : ""}${app.ratingChange.toFixed(1)}`);
     }
-    return `"${appName}": ${parts.join(", ")} — ${data.date}`;
+    return `${prefix}"${appName}": ${parts.join(", ")} — ${data.date}`;
   }
 
   // 5. Quiet day — check for category or rating-only changes
@@ -466,15 +476,15 @@ export function buildDigestSubject(data: DigestData): string {
       const detail = hasCatChanges
         ? `${app.categoryChanges.length} category change${app.categoryChanges.length !== 1 ? "s" : ""}`
         : `rating ${app.ratingChange! > 0 ? "+" : ""}${app.ratingChange!.toFixed(1)}`;
-      return `"${appName}": ${detail} — ${data.date}`;
+      return `${prefix}"${appName}": ${detail} — ${data.date}`;
     }
   }
 
   // Fallback
   const total = trackedApps.reduce((n, a) => n + a.keywordChanges.length, 0);
   if (total > 0) {
-    return `"${appName}": ${total} ranking change${total !== 1 ? "s" : ""} — ${data.date}`;
+    return `${prefix}"${appName}": ${total} ranking change${total !== 1 ? "s" : ""} — ${data.date}`;
   }
 
-  return `"${appName}" rankings stable — ${data.date}`;
+  return `${prefix}"${appName}" rankings stable — ${data.date}`;
 }

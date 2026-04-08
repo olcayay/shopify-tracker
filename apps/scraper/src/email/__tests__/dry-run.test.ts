@@ -3,6 +3,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 vi.mock("../digest-builder.js", () => ({
   buildDigestForAccount: vi.fn(),
   getDigestRecipients: vi.fn(),
+  splitDigestByPlatform: vi.fn((data: any) => data ? [data] : []),
 }));
 
 vi.mock("../digest-template.js", () => ({
@@ -58,6 +59,8 @@ describe("dry-run", () => {
       expect(result!.recipientCount).toBe(1);
       expect(result!.dataSnapshot).toEqual({
         summary: { totalApps: 5 },
+        platform: undefined,
+        platformCount: 1,
         rankingCount: 2,
       });
     });
