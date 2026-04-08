@@ -220,6 +220,19 @@ describe("CompetitorsPage", () => {
     });
   });
 
+  it("wraps table in overflow-x-auto container for horizontal scrolling", async () => {
+    setupFetchMocks();
+    const { container } = render(<CompetitorsPage />);
+    await waitFor(() => {
+      expect(screen.getByText("Competitor One")).toBeInTheDocument();
+    });
+    // The table's parent CardContent should have overflow-x-auto
+    const table = container.querySelector("table");
+    expect(table).toBeTruthy();
+    const cardContent = table!.closest(".overflow-x-auto");
+    expect(cardContent).toBeTruthy();
+  });
+
   it("shows 'Apps without competitors' section when some apps have no competitors", async () => {
     setupFetchMocks({
       competitors: [],

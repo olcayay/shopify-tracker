@@ -233,7 +233,7 @@ export default function CompetitorsPage() {
                       </Badge>
                     </div>
                   </CardHeader>
-                  <CardContent>
+                  <CardContent className="overflow-x-auto">
                     <Table>
                       <TableHeader>
                         <CompetitorTableHeaders
