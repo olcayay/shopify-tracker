@@ -99,6 +99,25 @@ export class BrowserPool {
     });
   }
 
+  /**
+   * Force-recycle the browser after a crash (e.g. OOM).
+   * Closes the current browser (if still alive) and resets state
+   * so the next getBrowser() call launches a fresh instance.
+   */
+  async recycleBrowser(): Promise<void> {
+    const old = this.browser;
+    this.browser = null;
+    this.launching = null;
+    this.jobCount = 0;
+    this.launchedAt = 0;
+    if (old) {
+      await old.close().catch((err) => {
+        log.warn("failed to close crashed browser during recycle", { error: String(err) });
+      });
+    }
+    log.info("browser forcefully recycled after crash");
+  }
+
   /** Shutdown the browser pool */
   async close(): Promise<void> {
     if (this.browser) {

@@ -81,4 +81,42 @@ describe("BrowserPool", () => {
     await pool.getBrowser();
     expect(pool.getStats().jobCount).toBe(3);
   });
+
+  describe("recycleBrowser", () => {
+    it("resets state and closes old browser", async () => {
+      await pool.getBrowser();
+      expect(pool.getStats().isConnected).toBe(true);
+      expect(pool.getStats().jobCount).toBe(1);
+
+      await pool.recycleBrowser();
+      expect(mockBrowser.close).toHaveBeenCalledTimes(1);
+      expect(pool.getStats().jobCount).toBe(0);
+      expect(pool.getStats().uptimeMs).toBe(0);
+    });
+
+    it("next getBrowser launches a fresh browser after recycle", async () => {
+      await pool.getBrowser();
+      const { chromium } = await import("playwright");
+      expect(chromium.launch).toHaveBeenCalledTimes(1);
+
+      await pool.recycleBrowser();
+      await pool.getBrowser();
+      expect(chromium.launch).toHaveBeenCalledTimes(2);
+    });
+
+    it("handles recycle when browser.close() throws", async () => {
+      await pool.getBrowser();
+      mockBrowser.close.mockRejectedValueOnce(new Error("already dead"));
+
+      // Should not throw
+      await pool.recycleBrowser();
+      expect(pool.getStats().jobCount).toBe(0);
+    });
+
+    it("is safe to call when no browser exists", async () => {
+      // No getBrowser() call — pool has no browser
+      await pool.recycleBrowser();
+      expect(pool.getStats().jobCount).toBe(0);
+    });
+  });
 });

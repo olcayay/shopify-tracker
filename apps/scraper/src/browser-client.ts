@@ -7,6 +7,15 @@ const log = createLogger("browser-client");
 const USER_AGENT =
   "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36";
 
+/** Error messages that indicate the browser process has crashed or been killed (e.g. OOM) */
+const BROWSER_CRASH_PATTERNS = [
+  "Target page, context or browser has been closed",
+  "browser has been closed",
+  "Browser closed",
+  "Protocol error",
+  "Target closed",
+];
+
 /**
  * Per-job Playwright wrapper — uses the shared BrowserPool
  * for the browser process, but creates isolated contexts per job.
@@ -17,7 +26,13 @@ const USER_AGENT =
 export class BrowserClient {
   private contexts: import("playwright").BrowserContext[] = [];
 
-  async fetchPage(url: string, opts?: { waitUntil?: "networkidle" | "domcontentloaded" | "load"; waitForSelector?: string; extraWaitMs?: number }): Promise<string> {
+  /** Check if an error indicates the browser process has crashed */
+  static isBrowserCrash(error: unknown): boolean {
+    const msg = error instanceof Error ? error.message : String(error);
+    return BROWSER_CRASH_PATTERNS.some((pattern) => msg.includes(pattern));
+  }
+
+  private async fetchPageInternal(url: string, opts?: { waitUntil?: "networkidle" | "domcontentloaded" | "load"; waitForSelector?: string; extraWaitMs?: number }): Promise<string> {
     const t0 = Date.now();
     const context = await browserPool.newContext({ userAgent: USER_AGENT });
     this.contexts.push(context);
@@ -47,16 +62,29 @@ export class BrowserClient {
       log.info("browser:page_timing", { url: url.slice(0, 120), gotoMs, selectorMs, extraWait, totalMs: Date.now() - t0 });
       return await page.content();
     } finally {
-      await context.close();
+      await context.close().catch(() => {});
       this.contexts = this.contexts.filter((c) => c !== context);
     }
   }
 
-  /**
-   * Opens a page, then hands the live Playwright Page to a callback
-   * for custom interactions (clicking, evaluating JS, etc.).
-   */
-  async withPage<T>(url: string, callback: (page: import("playwright").Page) => Promise<T>, opts?: { waitUntil?: "networkidle" | "domcontentloaded" | "load"; extraWaitMs?: number }): Promise<T> {
+  async fetchPage(url: string, opts?: { waitUntil?: "networkidle" | "domcontentloaded" | "load"; waitForSelector?: string; extraWaitMs?: number }): Promise<string> {
+    try {
+      return await this.fetchPageInternal(url, opts);
+    } catch (err) {
+      if (!BrowserClient.isBrowserCrash(err)) throw err;
+
+      log.warn("browser crash detected during fetchPage, recycling browser and retrying", {
+        url,
+        error: err instanceof Error ? err.message : String(err),
+      });
+      await browserPool.recycleBrowser();
+
+      // Retry once with a fresh browser
+      return await this.fetchPageInternal(url, opts);
+    }
+  }
+
+  private async withPageInternal<T>(url: string, callback: (page: import("playwright").Page) => Promise<T>, opts?: { waitUntil?: "networkidle" | "domcontentloaded" | "load"; extraWaitMs?: number }): Promise<T> {
     const t0 = Date.now();
     const context = await browserPool.newContext({ userAgent: USER_AGENT });
     this.contexts.push(context);
@@ -73,8 +101,29 @@ export class BrowserClient {
       log.info("browser:page_timing", { url: url.slice(0, 120), totalMs: Date.now() - t0 });
       return await callback(page);
     } finally {
-      await context.close();
+      await context.close().catch(() => {});
       this.contexts = this.contexts.filter((c) => c !== context);
+    }
+  }
+
+  /**
+   * Opens a page, then hands the live Playwright Page to a callback
+   * for custom interactions (clicking, evaluating JS, etc.).
+   */
+  async withPage<T>(url: string, callback: (page: import("playwright").Page) => Promise<T>, opts?: { waitUntil?: "networkidle" | "domcontentloaded" | "load"; extraWaitMs?: number }): Promise<T> {
+    try {
+      return await this.withPageInternal(url, callback, opts);
+    } catch (err) {
+      if (!BrowserClient.isBrowserCrash(err)) throw err;
+
+      log.warn("browser crash detected during withPage, recycling browser and retrying", {
+        url,
+        error: err instanceof Error ? err.message : String(err),
+      });
+      await browserPool.recycleBrowser();
+
+      // Retry once with a fresh browser
+      return await this.withPageInternal(url, callback, opts);
     }
   }
 

@@ -1,3 +1,22 @@
+BrowserClient OOM Crash Recovery (2026-04-07)
+================================================================
+
+PLA-864: Fix Salesforce app_details scraper browser crash (OOM recovery)
+- Problem: When Playwright browser crashes mid-scrape (OOM on Spot VM), subsequent fetches fail
+  with "Target page, context or browser has been closed" — BrowserClient didn't detect or recover
+- Solution:
+  - Added `recycleBrowser()` to BrowserPool — forcefully closes crashed browser and resets state
+    so next `getBrowser()` launches fresh instance
+  - Added crash detection in BrowserClient via `isBrowserCrash()` static method — matches 5 error
+    patterns: "Target page, context or browser has been closed", "browser has been closed",
+    "Browser closed", "Protocol error", "Target closed"
+  - Wrapped both `fetchPage()` and `withPage()` with try/catch — on crash, recycle browser and
+    retry ONCE with fresh context
+  - Also made context.close() calls use `.catch(() => {})` in finally blocks since context may
+    already be dead after crash
+- Files changed: browser-client.ts, browser-pool.ts
+- Tests: 18 new tests (14 browser-client + 4 browser-pool recycleBrowser)
+
 Date Serialization in SQL Templates — Remaining Fixes (2026-04-07)
 ================================================================
 

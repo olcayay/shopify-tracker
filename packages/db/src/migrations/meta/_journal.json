@@ -876,6 +876,20 @@
       "when": 1781222400000,
       "tag": "0124_user_feature_flags",
       "breakpoints": true
+    },
+    {
+      "idx": 125,
+      "version": "7",
+      "when": 1781308800000,
+      "tag": "0125_waitlist",
+      "breakpoints": true
+    },
+    {
+      "idx": 126,
+      "version": "7",
+      "when": 1781395200000,
+      "tag": "0126_scraper_enabled",
+      "breakpoints": true
     }
   ]
 }
