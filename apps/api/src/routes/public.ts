@@ -12,7 +12,7 @@ import {
   sqlArray,
 } from "@appranks/db";
 import { cacheGet } from "../utils/cache.js";
-import { PLATFORMS, PLATFORM_IDS, isPlatformId } from "@appranks/shared";
+import { PLATFORMS, PLATFORM_IDS, isPlatformId, computeAudit } from "@appranks/shared";
 
 const PUBLIC_CACHE_TTL = 3600; // 1 hour
 
@@ -346,6 +346,73 @@ export const publicRoutes: FastifyPluginAsync = async (app) => {
       }, PUBLIC_CACHE_TTL);
 
       if (!result) return reply.code(404).send({ error: "Keyword not found" });
+      reply.header("cache-control", "public, max-age=3600, stale-while-revalidate=7200");
+      return result;
+    }
+  );
+
+  // GET /public/audit/:platform/:slug — listing audit report
+  app.get<{ Params: { platform: string; slug: string } }>(
+    "/audit/:platform/:slug",
+    async (request, reply) => {
+      const { platform, slug } = request.params;
+      if (!isPlatformId(platform)) return reply.code(400).send({ error: "Invalid platform" });
+
+      const result = await cacheGet(`public:audit:${platform}:${slug}`, async () => {
+        // Fetch app + latest snapshot with all fields needed for audit
+        const rows = await db.execute(sql`
+          SELECT a.slug, a.name, a.icon_url, a.platform, a.average_rating, a.rating_count,
+                 a.pricing_hint, a.is_built_for_shopify, a.badges, a.app_card_subtitle,
+                 s.app_introduction, s.app_details, s.seo_title, s.seo_meta_description,
+                 s.features, s.screenshots, s.languages, s.integrations, s.categories,
+                 s.pricing, s.pricing_plans, s.developer, s.support, s.demo_store_url,
+                 s.platform_data
+          FROM apps a
+          LEFT JOIN LATERAL (
+            SELECT * FROM app_snapshots WHERE app_id = a.id ORDER BY scraped_at DESC LIMIT 1
+          ) s ON true
+          WHERE a.platform = ${platform} AND a.slug = ${slug}
+          LIMIT 1
+        `);
+
+        const row = ((rows as any).rows ?? rows)[0];
+        if (!row) return null;
+
+        const appData = {
+          name: row.name,
+          slug: row.slug,
+          platform: row.platform,
+          iconUrl: row.icon_url,
+          averageRating: row.average_rating ? parseFloat(row.average_rating) : null,
+          ratingCount: row.rating_count,
+          pricingHint: row.pricing_hint,
+          isBuiltForShopify: row.is_built_for_shopify,
+          badges: row.badges || [],
+          appCardSubtitle: row.app_card_subtitle,
+        };
+
+        const snapshot = {
+          appIntroduction: row.app_introduction || "",
+          appDetails: row.app_details || "",
+          seoTitle: row.seo_title || "",
+          seoMetaDescription: row.seo_meta_description || "",
+          features: row.features || [],
+          screenshots: row.screenshots || [],
+          languages: row.languages || [],
+          integrations: row.integrations || [],
+          categories: row.categories || [],
+          pricing: row.pricing || "",
+          pricingPlans: row.pricing_plans || [],
+          developer: row.developer || null,
+          support: row.support || {},
+          demoStoreUrl: row.demo_store_url || "",
+          platformData: row.platform_data || {},
+        };
+
+        return computeAudit(snapshot, appData, platform);
+      }, PUBLIC_CACHE_TTL);
+
+      if (!result) return reply.code(404).send({ error: "App not found" });
       reply.header("cache-control", "public, max-age=3600, stale-while-revalidate=7200");
       return result;
     }

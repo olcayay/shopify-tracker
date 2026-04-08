@@ -7,7 +7,7 @@ Listing Audit Feature (2026-04-08)
   PLA-881: Phase 1: Audit rules — Categories & Discoverability section ✅
   PLA-882: Phase 1: Audit rules — Technical & Support section ✅
   PLA-883: Phase 1: Audit rules — Languages section ✅
-  PLA-884: Phase 2: Add public audit API endpoint
+  PLA-884: Phase 2: Add public audit API endpoint ✅
   PLA-885: Phase 2: Audit search page — /audit landing
   PLA-886: Phase 2: Audit report page — /audit/[platform]/[slug]
   PLA-887: Phase 3: Add 'Free Audit' button to marketing navbar
