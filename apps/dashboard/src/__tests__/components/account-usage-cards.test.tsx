@@ -54,6 +54,27 @@ describe("AccountUsageCards", () => {
     expect(screen.getByText("My Apps")).toBeInTheDocument();
   });
 
+  it("adapts grid columns when cards are hidden (4 visible → md:grid-cols-4)", () => {
+    const stats = makeStats([{}, {}, {}, { show: false }, {}]);
+    const { container } = render(<AccountUsageCards stats={stats} />);
+    const grid = container.firstElementChild as HTMLElement;
+    expect(grid.className).toContain("md:grid-cols-4");
+    expect(grid.className).not.toContain("md:grid-cols-5");
+  });
+
+  it("uses md:grid-cols-5 when all 5 cards are visible", () => {
+    const { container } = render(<AccountUsageCards stats={makeStats()} />);
+    const grid = container.firstElementChild as HTMLElement;
+    expect(grid.className).toContain("md:grid-cols-5");
+  });
+
+  it("uses md:grid-cols-3 when only 3 cards are visible", () => {
+    const stats = makeStats([{}, {}, {}, { show: false }, { show: false }]);
+    const { container } = render(<AccountUsageCards stats={stats} />);
+    const grid = container.firstElementChild as HTMLElement;
+    expect(grid.className).toContain("md:grid-cols-3");
+  });
+
   it("USAGE_STAT_PRESETS has correct keys", () => {
     expect(USAGE_STAT_PRESETS).toHaveProperty("apps");
     expect(USAGE_STAT_PRESETS).toHaveProperty("keywords");

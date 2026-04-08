@@ -35,7 +35,7 @@ export function AccountUsageCards({ stats }: AccountUsageCardsProps) {
   const visible = stats.filter((s) => s.show !== false);
 
   return (
-    <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+    <div className={`grid grid-cols-2 gap-4 ${visible.length <= 3 ? "md:grid-cols-3" : visible.length === 4 ? "md:grid-cols-4" : "md:grid-cols-5"}`}>
       {visible.map((stat) => {
         const content = (
           <Card className={`h-full ${stat.href ? "hover:border-primary/50 hover:shadow-sm transition-all cursor-pointer" : ""}`}>
