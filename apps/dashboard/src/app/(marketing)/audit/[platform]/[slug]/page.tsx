@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { getPublicAudit } from "@/lib/api";
-import { AuditReport } from "@/components/audit/audit-report";
+import { AuditProgressiveReveal } from "@/components/audit/audit-progressive-reveal";
 import { isPlatformId } from "@appranks/shared";
 
 interface PageProps {
@@ -56,7 +56,7 @@ export default async function AuditReportPage({ params }: PageProps) {
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
       />
       <div className="mx-auto max-w-4xl px-4 py-8">
-        <AuditReport report={report} platform={platform} />
+        <AuditProgressiveReveal report={report} platform={platform} />
       </div>
     </>
   );
