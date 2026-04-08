@@ -88,6 +88,11 @@ export const adminEmailRoutes: FastifyPluginAsync = async (app) => {
         count(*) FILTER (WHERE opened_at IS NOT NULL) AS opened,
         count(*) FILTER (WHERE clicked_at IS NOT NULL) AS clicked,
         count(*) FILTER (WHERE status = 'sent' AND created_at > now() - interval '24 hours') AS sent_24h,
+        count(*) FILTER (WHERE status = 'failed' AND created_at > now() - interval '24 hours') AS failed_24h,
+        count(*) FILTER (WHERE status = 'skipped' AND created_at > now() - interval '24 hours') AS skipped_24h,
+        count(*) FILTER (WHERE status IN ('queued', 'pending') AND created_at > now() - interval '24 hours') AS queued_24h,
+        count(*) FILTER (WHERE created_at > now() - interval '24 hours') AS total_24h,
+        count(*) FILTER (WHERE opened_at IS NOT NULL AND created_at > now() - interval '24 hours') AS opened_24h,
         count(*) FILTER (WHERE status = 'sent' AND created_at > now() - interval '7 days') AS sent_7d,
         count(*) AS total
       FROM email_logs
@@ -99,6 +104,9 @@ export const adminEmailRoutes: FastifyPluginAsync = async (app) => {
     const opened = parseInt(row.opened || "0", 10);
     const clicked = parseInt(row.clicked || "0", 10);
 
+    const sent24h = parseInt(row.sent_24h || "0", 10);
+    const opened24h = parseInt(row.opened_24h || "0", 10);
+
     return {
       total,
       sent,
@@ -106,10 +114,19 @@ export const adminEmailRoutes: FastifyPluginAsync = async (app) => {
       skipped: parseInt(row.skipped || "0", 10),
       opened,
       clicked,
-      sent24h: parseInt(row.sent_24h || "0", 10),
+      sent24h,
       sent7d: parseInt(row.sent_7d || "0", 10),
       openRate: sent > 0 ? Math.round((opened / sent) * 10000) / 100 : 0,
       clickRate: sent > 0 ? Math.round((clicked / sent) * 10000) / 100 : 0,
+      // Last 24h per-status breakdown
+      last24h: {
+        total: parseInt(row.total_24h || "0", 10),
+        sent: sent24h,
+        failed: parseInt(row.failed_24h || "0", 10),
+        skipped: parseInt(row.skipped_24h || "0", 10),
+        queued: parseInt(row.queued_24h || "0", 10),
+        openRate: sent24h > 0 ? Math.round((opened24h / sent24h) * 10000) / 100 : 0,
+      },
     };
   });
 

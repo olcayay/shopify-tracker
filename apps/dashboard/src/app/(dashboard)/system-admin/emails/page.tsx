@@ -32,6 +32,8 @@ import {
   X,
   ListOrdered,
   SkipForward,
+  Clock,
+  Inbox,
 } from "lucide-react";
 
 interface EmailStats {
@@ -45,6 +47,14 @@ interface EmailStats {
   sent7d: number;
   openRate: number;
   clickRate: number;
+  last24h: {
+    total: number;
+    sent: number;
+    failed: number;
+    skipped: number;
+    queued: number;
+    openRate: number;
+  };
 }
 
 interface EmailLog {
@@ -207,6 +217,59 @@ export default function AdminEmailDashboard() {
               <p className="text-xs text-muted-foreground">Last 24h</p>
             </CardContent>
           </Card>
+        </div>
+      )}
+
+      {/* Last 24 Hours Section */}
+      {stats?.last24h && (
+        <div className="space-y-2">
+          <h2 className="text-sm font-semibold text-muted-foreground flex items-center gap-1.5">
+            <Clock className="h-4 w-4" /> Last 24 Hours
+          </h2>
+          <div className="grid grid-cols-2 md:grid-cols-6 gap-3">
+            <Card className="border-dashed">
+              <CardContent className="pt-3 pb-3 text-center">
+                <Inbox className="h-4 w-4 mx-auto text-slate-500 mb-1" />
+                <p className="text-xl font-bold">{stats.last24h.total}</p>
+                <p className="text-[10px] text-muted-foreground">Total</p>
+              </CardContent>
+            </Card>
+            <Card className="border-dashed">
+              <CardContent className="pt-3 pb-3 text-center">
+                <Send className="h-4 w-4 mx-auto text-blue-500 mb-1" />
+                <p className="text-xl font-bold">{stats.last24h.sent}</p>
+                <p className="text-[10px] text-muted-foreground">Sent</p>
+              </CardContent>
+            </Card>
+            <Card className="border-dashed">
+              <CardContent className="pt-3 pb-3 text-center">
+                <AlertTriangle className="h-4 w-4 mx-auto text-red-500 mb-1" />
+                <p className="text-xl font-bold">{stats.last24h.failed}</p>
+                <p className="text-[10px] text-muted-foreground">Failed</p>
+              </CardContent>
+            </Card>
+            <Card className="border-dashed">
+              <CardContent className="pt-3 pb-3 text-center">
+                <SkipForward className="h-4 w-4 mx-auto text-orange-500 mb-1" />
+                <p className="text-xl font-bold">{stats.last24h.skipped}</p>
+                <p className="text-[10px] text-muted-foreground">Skipped</p>
+              </CardContent>
+            </Card>
+            <Card className="border-dashed">
+              <CardContent className="pt-3 pb-3 text-center">
+                <Loader2 className="h-4 w-4 mx-auto text-yellow-500 mb-1" />
+                <p className="text-xl font-bold">{stats.last24h.queued}</p>
+                <p className="text-[10px] text-muted-foreground">Queued</p>
+              </CardContent>
+            </Card>
+            <Card className="border-dashed">
+              <CardContent className="pt-3 pb-3 text-center">
+                <Eye className="h-4 w-4 mx-auto text-green-500 mb-1" />
+                <p className="text-xl font-bold">{stats.last24h.openRate}%</p>
+                <p className="text-[10px] text-muted-foreground">Open Rate</p>
+              </CardContent>
+            </Card>
+          </div>
         </div>
       )}
 

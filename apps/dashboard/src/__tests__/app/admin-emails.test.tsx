@@ -25,6 +25,14 @@ const mockStats = {
   sent7d: 150,
   openRate: 50,
   clickRate: 12.5,
+  last24h: {
+    total: 30,
+    sent: 25,
+    failed: 2,
+    skipped: 3,
+    queued: 0,
+    openRate: 40,
+  },
 };
 
 const mockEmails = {
@@ -67,7 +75,8 @@ describe("AdminEmailDashboard", () => {
       expect(screen.getByText("50%")).toBeInTheDocument();
       expect(screen.getByText("12.5%")).toBeInTheDocument();
       expect(screen.getByText("10")).toBeInTheDocument();
-      expect(screen.getByText("25")).toBeInTheDocument();
+      // "25" appears in both all-time and 24h sections
+      expect(screen.getAllByText("25").length).toBeGreaterThanOrEqual(1);
     });
   });
 
@@ -75,11 +84,12 @@ describe("AdminEmailDashboard", () => {
     render(<AdminEmailDashboard />);
     await waitFor(() => {
       expect(screen.getByText("Total Sent")).toBeInTheDocument();
-      expect(screen.getByText("Open Rate")).toBeInTheDocument();
+      // "Open Rate" appears in all-time and 24h sections
+      expect(screen.getAllByText("Open Rate").length).toBeGreaterThanOrEqual(1);
       expect(screen.getByText("Click Rate")).toBeInTheDocument();
-      // "Failed" appears both as stat label and filter option — use getAllByText
+      // "Failed" appears in stat label, filter option, and 24h section
       expect(screen.getAllByText("Failed").length).toBeGreaterThanOrEqual(1);
-      // "Skipped" appears both as stat label and filter option — use getAllByText
+      // "Skipped" appears in stat label, filter option, and 24h section
       expect(screen.getAllByText("Skipped").length).toBeGreaterThanOrEqual(1);
       expect(screen.getByText("Last 24h")).toBeInTheDocument();
     });
@@ -98,6 +108,15 @@ describe("AdminEmailDashboard", () => {
       // "Daily Digest" appears in both filter dropdown and table — use getAllByText
       expect(screen.getAllByText("Daily Digest").length).toBeGreaterThanOrEqual(1);
       expect(screen.getByText("user@test.com")).toBeInTheDocument();
+    });
+  });
+
+  it("renders Last 24 Hours section with per-status cards", async () => {
+    render(<AdminEmailDashboard />);
+    await waitFor(() => {
+      expect(screen.getByText("Last 24 Hours")).toBeInTheDocument();
+      expect(screen.getByText("30")).toBeInTheDocument(); // total 24h
+      expect(screen.getByText("40%")).toBeInTheDocument(); // open rate 24h
     });
   });
 
