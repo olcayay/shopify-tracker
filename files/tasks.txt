@@ -1,3 +1,6 @@
+Table Alignment Fix (2026-04-09)
+  PLA-935: Fix table column alignment across all dashboard pages ✅
+
 Global App Search (2026-04-09)
   PLA-928: Global app search on /apps and /competitors pages with platform info and quick-add ✅
 

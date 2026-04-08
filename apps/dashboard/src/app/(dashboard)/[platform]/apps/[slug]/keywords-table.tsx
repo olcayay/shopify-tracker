@@ -104,7 +104,7 @@ export function KeywordsTable({
               </button>
             </TableHead>
           ))}
-          <TableHead {...(showScoreDetails ? { rowSpan: 2 } : {})}>Total Results</TableHead>
+          <TableHead className="text-right" {...(showScoreDetails ? { rowSpan: 2 } : {})}>Total Results</TableHead>
           <TableHead className="text-center w-16" {...(showScoreDetails ? { rowSpan: 2 } : {})}>
             <div className="flex items-center justify-center gap-1">
               <button
@@ -235,18 +235,18 @@ export function KeywordsTable({
                 </TableCell>
               );
             })}
-            <TableCell>
+            <TableCell className="text-right tabular-nums">
               {isPending ? (
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 justify-end">
                   <Skeleton className="h-4 w-16" />
                   <Loader2 className="h-3 w-3 animate-spin text-muted-foreground" />
                 </div>
               ) : isResolved ? (
                 <span className="animate-in fade-in duration-700">
-                  {kw.latestSnapshot?.totalResults ?? "\u2014"}
+                  {kw.latestSnapshot?.totalResults != null ? kw.latestSnapshot.totalResults.toLocaleString() : "\u2014"}
                 </span>
               ) : (
-                kw.latestSnapshot?.totalResults ?? "\u2014"
+                kw.latestSnapshot?.totalResults != null ? kw.latestSnapshot.totalResults.toLocaleString() : "\u2014"
               )}
             </TableCell>
             <TableCell className="text-center">

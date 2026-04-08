@@ -284,7 +284,7 @@ export function AppListTable({
               </TableHead>
               {caps.hasReviews && (
                 <TableHead
-                  className="cursor-pointer select-none"
+                  className="cursor-pointer select-none text-right"
                   onClick={() => toggleSort("average_rating")}
                 >
                   Rating <SortIcon col="average_rating" />
@@ -292,7 +292,7 @@ export function AppListTable({
               )}
               {caps.hasReviews && (
                 <TableHead
-                  className="cursor-pointer select-none"
+                  className="cursor-pointer select-none text-right"
                   onClick={() => toggleSort("rating_count")}
                 >
                   Reviews <SortIcon col="rating_count" />
@@ -300,7 +300,7 @@ export function AppListTable({
               )}
               {reviewVelocity && (
                 <TableHead
-                  className="cursor-pointer select-none"
+                  className="cursor-pointer select-none text-right"
                   onClick={() => toggleSort("v7d")}
                 >
                   <Tooltip><TooltipTrigger asChild><span>R7d <SortIcon col="v7d" /></span></TooltipTrigger><TooltipContent>Reviews received in the last 7 days</TooltipContent></Tooltip>
@@ -308,7 +308,7 @@ export function AppListTable({
               )}
               {reviewVelocity && (
                 <TableHead
-                  className="cursor-pointer select-none"
+                  className="cursor-pointer select-none text-right"
                   onClick={() => toggleSort("v30d")}
                 >
                   <Tooltip><TooltipTrigger asChild><span>R30d <SortIcon col="v30d" /></span></TooltipTrigger><TooltipContent>Reviews received in the last 30 days</TooltipContent></Tooltip>
@@ -316,7 +316,7 @@ export function AppListTable({
               )}
               {reviewVelocity && (
                 <TableHead
-                  className="cursor-pointer select-none"
+                  className="cursor-pointer select-none text-right"
                   onClick={() => toggleSort("v90d")}
                 >
                   <Tooltip><TooltipTrigger asChild><span>R90d <SortIcon col="v90d" /></span></TooltipTrigger><TooltipContent>Reviews received in the last 90 days</TooltipContent></Tooltip>
@@ -333,7 +333,7 @@ export function AppListTable({
               {caps.hasPricing && <TableHead>Pricing</TableHead>}
               {caps.hasPricing && (
                 <TableHead
-                  className="cursor-pointer select-none"
+                  className="cursor-pointer select-none text-right"
                   onClick={() => toggleSort("min_paid")}
                 >
                   <Tooltip><TooltipTrigger asChild><span>Min. Paid <SortIcon col="min_paid" /></span></TooltipTrigger><TooltipContent>Lowest paid plan price per month</TooltipContent></Tooltip>
@@ -347,7 +347,7 @@ export function AppListTable({
               </TableHead>
               {caps.hasSimilarApps && (
                 <TableHead
-                  className="cursor-pointer select-none"
+                  className="cursor-pointer select-none text-right"
                   onClick={() => toggleSort("similar")}
                 >
                   <Tooltip><TooltipTrigger asChild><span>Similar <SortIcon col="similar" /></span></TooltipTrigger><TooltipContent>Number of other apps that list this app as similar</TooltipContent></Tooltip>
@@ -355,7 +355,7 @@ export function AppListTable({
               )}
               {caps.hasFeaturedSections && (
                 <TableHead
-                  className="cursor-pointer select-none"
+                  className="cursor-pointer select-none text-right"
                   onClick={() => toggleSort("featured")}
                 >
                   <Tooltip><TooltipTrigger asChild><span>Featured <SortIcon col="featured" /></span></TooltipTrigger><TooltipContent>Number of featured sections this app appears in</TooltipContent></Tooltip>
@@ -363,7 +363,7 @@ export function AppListTable({
               )}
               {caps.hasAdTracking && (
                 <TableHead
-                  className="cursor-pointer select-none"
+                  className="cursor-pointer select-none text-right"
                   onClick={() => toggleSort("ads")}
                 >
                   <Tooltip><TooltipTrigger asChild><span>Ads <SortIcon col="ads" /></span></TooltipTrigger><TooltipContent>Number of keywords this app is running ads for</TooltipContent></Tooltip>
@@ -448,14 +448,14 @@ export function AppListTable({
                       </div>
                     </TableCell>
                     {caps.hasReviews && (
-                      <TableCell>
+                      <TableCell className="text-right tabular-nums">
                         {app.average_rating != null
                           ? Number(app.average_rating).toFixed(1)
                           : "\u2014"}
                       </TableCell>
                     )}
                     {caps.hasReviews && (
-                      <TableCell>
+                      <TableCell className="text-right tabular-nums">
                         {app.rating_count != null ? (
                           <Link
                             href={`/${platform}/apps/${app.slug}#reviews`}
@@ -469,17 +469,17 @@ export function AppListTable({
                       </TableCell>
                     )}
                     {reviewVelocity && (
-                      <TableCell className="text-sm">
+                      <TableCell className="text-sm text-right tabular-nums">
                         <VelocityCell value={reviewVelocity[app.slug]?.v7d} />
                       </TableCell>
                     )}
                     {reviewVelocity && (
-                      <TableCell className="text-sm">
+                      <TableCell className="text-sm text-right tabular-nums">
                         <VelocityCell value={reviewVelocity[app.slug]?.v30d} />
                       </TableCell>
                     )}
                     {reviewVelocity && (
-                      <TableCell className="text-sm">
+                      <TableCell className="text-sm text-right tabular-nums">
                         <VelocityCell value={reviewVelocity[app.slug]?.v90d} />
                       </TableCell>
                     )}
@@ -494,7 +494,7 @@ export function AppListTable({
                       </TableCell>
                     )}
                     {caps.hasPricing && (
-                      <TableCell className="text-sm">
+                      <TableCell className="text-sm text-right tabular-nums">
                         {minPaidPrices[app.slug] != null ? (
                           <Link
                             href={`/${platform}/apps/${app.slug}/details#pricing-plans`}
@@ -533,7 +533,7 @@ export function AppListTable({
                       )}
                     </TableCell>
                     {caps.hasSimilarApps && (
-                      <TableCell className="text-sm">
+                      <TableCell className="text-sm text-right tabular-nums">
                         {similarCount > 0 ? (
                           <Link
                             href={`/${platform}/apps/${app.slug}/similar`}
@@ -547,7 +547,7 @@ export function AppListTable({
                       </TableCell>
                     )}
                     {caps.hasFeaturedSections && (
-                      <TableCell className="text-sm">
+                      <TableCell className="text-sm text-right tabular-nums">
                         {featuredCount > 0 ? (
                           <Link
                             href={`/${platform}/apps/${app.slug}/featured`}
@@ -561,7 +561,7 @@ export function AppListTable({
                       </TableCell>
                     )}
                     {caps.hasAdTracking && (
-                      <TableCell className="text-sm">
+                      <TableCell className="text-sm text-right tabular-nums">
                         {adsCount > 0 ? (
                           <Link
                             href={`/${platform}/apps/${app.slug}/rankings`}
