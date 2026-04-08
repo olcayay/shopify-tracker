@@ -1,3 +1,6 @@
+Developers Platform Filter (2026-04-09)
+  PLA-933: Filter /developers page by enabled platform feature flags ✅
+
 Feature Flag Search Fix (2026-04-09)
   PLA-931: Feature flag user/account search broken when entries already exist ✅
 

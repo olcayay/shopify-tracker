@@ -6,6 +6,7 @@ import {
   apps,
   appSnapshots,
   accountStarredDevelopers,
+  accountPlatforms,
   sqlArray,
 } from "@appranks/db";
 import { requireSystemAdmin } from "../middleware/authorize.js";
@@ -37,7 +38,38 @@ export async function developerRoutes(app: FastifyInstance) {
       const sort = request.query.sort || "name";
       const order = request.query.order === "desc" ? "desc" : "asc";
       const platformsParam = request.query.platforms?.trim() || "";
-      const platforms = platformsParam ? platformsParam.split(",").filter(Boolean) : [];
+      const requestedPlatforms = platformsParam ? platformsParam.split(",").filter(Boolean) : [];
+
+      // Get account ID (may be null for unauthenticated)
+      const accountId = (request as any).user?.accountId || null;
+
+      // Resolve enabled platforms for the user's account (system admins bypass)
+      const isAdmin = (request as any).user?.isSystemAdmin === true;
+      let allowedPlatforms: string[] = [];
+      if (!isAdmin && accountId) {
+        const enabledRows = await db
+          .select({ platform: accountPlatforms.platform })
+          .from(accountPlatforms)
+          .where(eq(accountPlatforms.accountId, accountId));
+        allowedPlatforms = enabledRows.map((r) => r.platform);
+        if (allowedPlatforms.length === 0) {
+          return { developers: [], pagination: { page, limit, total: 0, totalPages: 0 } };
+        }
+      }
+
+      // Intersect requested platforms with allowed platforms
+      let platforms: string[];
+      if (isAdmin || !accountId) {
+        platforms = requestedPlatforms;
+      } else if (requestedPlatforms.length > 0) {
+        const allowedSet = new Set(allowedPlatforms);
+        platforms = requestedPlatforms.filter((p) => allowedSet.has(p));
+        if (platforms.length === 0) {
+          return { developers: [], pagination: { page, limit, total: 0, totalPages: 0 } };
+        }
+      } else {
+        platforms = allowedPlatforms;
+      }
 
       // Build WHERE conditions
       const conditions: ReturnType<typeof sql>[] = [];
@@ -63,8 +95,13 @@ export async function developerRoutes(app: FastifyInstance) {
         sql`g.name`;
       const orderDir = order === "desc" ? sql`DESC` : sql`ASC`;
 
-      // Get account ID for starred status (may be null for unauthenticated)
-      const accountId = (request as any).user?.accountId || null;
+      // Platform filter for subqueries
+      const platformSubFilter = platforms.length > 0
+        ? sql`AND a.platform = ANY(${sqlArray(platforms)})`
+        : sql``;
+      const platformJoinFilter = platforms.length > 0
+        ? sql`AND pd.platform = ANY(${sqlArray(platforms)})`
+        : sql``;
 
       // Get paginated results with counts, platforms array, top app icons, and starred status
       const rows: any[] = await db.execute(sql`
@@ -84,6 +121,7 @@ export async function developerRoutes(app: FastifyInstance) {
               WHERE s.developer->>'name' = pd2.name
                 AND a.icon_url IS NOT NULL
                 AND s.id = (SELECT s2.id FROM app_snapshots s2 WHERE s2.app_id = a.id ORDER BY s2.scraped_at DESC LIMIT 1)
+                ${platformSubFilter}
               ORDER BY a.name
               LIMIT 5
             ) sub
@@ -96,10 +134,11 @@ export async function developerRoutes(app: FastifyInstance) {
               AND a2.platform = pd3.platform
             WHERE s2.developer->>'name' = pd3.name
               AND s2.id = (SELECT s3.id FROM app_snapshots s3 WHERE s3.app_id = a2.id ORDER BY s3.scraped_at DESC LIMIT 1)
+              ${platforms.length > 0 ? sql`AND a2.platform = ANY(${sqlArray(platforms)})` : sql``}
           ) AS app_count,
           CASE WHEN asd.id IS NOT NULL THEN true ELSE false END AS is_starred
         FROM global_developers g
-        LEFT JOIN platform_developers pd ON pd.global_developer_id = g.id
+        LEFT JOIN platform_developers pd ON pd.global_developer_id = g.id ${platformJoinFilter}
         LEFT JOIN account_starred_developers asd ON asd.global_developer_id = g.id
           AND asd.account_id = ${accountId}
         ${whereClause}
@@ -141,6 +180,19 @@ export async function developerRoutes(app: FastifyInstance) {
     const accountId = (request as any).user?.accountId || null;
     if (!accountId) return { developers: [] };
 
+    // Filter by enabled platforms (system admins bypass)
+    const isAdmin = (request as any).user?.isSystemAdmin === true;
+    let platformFilterSql = sql``;
+    if (!isAdmin) {
+      const enabledRows = await db
+        .select({ platform: accountPlatforms.platform })
+        .from(accountPlatforms)
+        .where(eq(accountPlatforms.accountId, accountId));
+      const enabledPlatforms = enabledRows.map((r) => r.platform);
+      if (enabledPlatforms.length === 0) return { developers: [] };
+      platformFilterSql = sql`AND a.platform = ANY(${sqlArray(enabledPlatforms)})`;
+    }
+
     const rows: any[] = await db.execute(sql`
       SELECT
         g.id, g.slug, g.name,
@@ -169,7 +221,7 @@ export async function developerRoutes(app: FastifyInstance) {
         AND s.id = (SELECT s2.id FROM app_snapshots s2 WHERE s2.app_id = a.id ORDER BY s2.scraped_at DESC LIMIT 1)
       JOIN account_tracked_apps ata ON ata.app_id = a.id AND ata.account_id = ${accountId}
       LEFT JOIN account_starred_developers asd ON asd.global_developer_id = g.id AND asd.account_id = ${accountId}
-      WHERE s.developer->>'name' = pd.name
+      WHERE s.developer->>'name' = pd.name ${platformFilterSql}
       GROUP BY g.id, asd.id
       ORDER BY (asd.id IS NOT NULL) DESC, g.name ASC
     `);
