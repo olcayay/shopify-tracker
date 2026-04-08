@@ -84,6 +84,7 @@ export {
   buildExternalAppUrl,
   buildExternalCategoryUrl,
   buildExternalSearchUrl,
+  platformFeatureFlagSlug,
 } from "./constants/platforms.js";
 export type {
   PlatformId,

@@ -1,3 +1,17 @@
+Platform Feature Flags — Phase 0 (2026-04-08)
+================================================================
+
+PLA-917: Seeded platform feature flags for all 12 platforms
+- Created migration 0127_seed_platform_feature_flags.sql
+- Inserts 12 feature flags (platform-shopify, platform-salesforce, etc.)
+- All flags start as isEnabled: true to preserve current behavior
+- Uses ON CONFLICT DO NOTHING for idempotency
+- Added platformFeatureFlagSlug() utility to @appranks/shared
+  - Maps platformId to flag slug (e.g. "google_workspace" → "platform-google-workspace")
+  - Exported from shared package for use in API, dashboard, and scraper
+- Added 4 unit tests for the new utility
+- Files: 0127_seed_platform_feature_flags.sql, _journal.json, platforms.ts, platforms.test.ts, index.ts
+
 Developers Page UX Improvements (2026-04-08)
 ================================================================
 

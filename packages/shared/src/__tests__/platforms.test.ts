@@ -7,6 +7,7 @@ import {
   needsBrowser,
   buildExternalAppUrl,
   buildExternalCategoryUrl,
+  platformFeatureFlagSlug,
 } from "../constants/platforms.js";
 
 // ---------------------------------------------------------------------------
@@ -232,6 +233,33 @@ describe("buildExternalCategoryUrl", () => {
       .toBe("https://ecosystem.hubspot.com/marketplace/apps/sales");
     expect(buildExternalCategoryUrl("hubspot", "marketing--email"))
       .toBe("https://ecosystem.hubspot.com/marketplace/apps/marketing/email");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// platformFeatureFlagSlug
+// ---------------------------------------------------------------------------
+describe("platformFeatureFlagSlug", () => {
+  it("converts simple platform IDs", () => {
+    expect(platformFeatureFlagSlug("shopify")).toBe("platform-shopify");
+    expect(platformFeatureFlagSlug("salesforce")).toBe("platform-salesforce");
+    expect(platformFeatureFlagSlug("zendesk")).toBe("platform-zendesk");
+  });
+
+  it("converts underscore platform IDs to hyphens", () => {
+    expect(platformFeatureFlagSlug("google_workspace")).toBe("platform-google-workspace");
+  });
+
+  it("generates a valid slug for every platform", () => {
+    for (const id of PLATFORM_IDS) {
+      const slug = platformFeatureFlagSlug(id);
+      expect(slug).toMatch(/^platform-[a-z][a-z0-9-]*$/);
+    }
+  });
+
+  it("generates unique slugs for all platforms", () => {
+    const slugs = PLATFORM_IDS.map(platformFeatureFlagSlug);
+    expect(new Set(slugs).size).toBe(PLATFORM_IDS.length);
   });
 });
 

@@ -236,6 +236,11 @@ export function needsBrowser(platform: PlatformId, scraperType?: string): boolea
   return scraperType ? (req[scraperType] ?? false) : Object.values(req).some(Boolean);
 }
 
+/** Map a platformId to its feature flag slug (e.g. "google_workspace" → "platform-google-workspace") */
+export function platformFeatureFlagSlug(platform: PlatformId): string {
+  return `platform-${platform.replace(/_/g, "-")}`;
+}
+
 export function isPlatformId(value: string): value is PlatformId {
   return value in PLATFORMS;
 }
