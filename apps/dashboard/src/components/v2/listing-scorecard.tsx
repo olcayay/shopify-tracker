@@ -81,6 +81,17 @@ export function ListingScorecard({ snapshot, platform, app }: { snapshot: any; p
           </div>
         ))}
       </div>
+
+      {app?.slug && (
+        <a
+          href={`/audit/${platform}/${app.slug}`}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-xs text-primary hover:underline"
+        >
+          View Full Audit →
+        </a>
+      )}
     </div>
   );
 }

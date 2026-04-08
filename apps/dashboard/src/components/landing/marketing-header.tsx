@@ -23,6 +23,9 @@ export function MarketingHeader() {
         {/* Desktop nav */}
         <div className="hidden md:flex items-center gap-3">
           <Button variant="ghost" asChild>
+            <Link href="/audit">Free Audit</Link>
+          </Button>
+          <Button variant="ghost" asChild>
             <Link href="/pricing">Pricing</Link>
           </Button>
           {!isLoading && user ? (
@@ -55,6 +58,9 @@ export function MarketingHeader() {
               <SheetTitle>Menu</SheetTitle>
             </VisuallyHidden.Root>
             <div className="flex flex-col gap-4 mt-8">
+              <Button variant="ghost" asChild onClick={() => setOpen(false)}>
+                <Link href="/audit">Free Audit</Link>
+              </Button>
               <Button variant="ghost" asChild onClick={() => setOpen(false)}>
                 <Link href="/pricing">Pricing</Link>
               </Button>

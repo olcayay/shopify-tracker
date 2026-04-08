@@ -430,6 +430,20 @@ export default async function PublicAppPage({ params }: PageProps) {
               </dl>
             </div>
 
+            {/* Audit CTA */}
+            <div className="rounded-lg border p-4 space-y-3">
+              <h3 className="font-semibold text-sm">How does this listing score?</h3>
+              <p className="text-sm text-muted-foreground">
+                Get a free audit with actionable recommendations to improve this app&apos;s listing.
+              </p>
+              <Link
+                href={`/audit/${platform}/${slug}`}
+                className="block w-full text-center bg-secondary text-secondary-foreground text-sm font-medium py-2 rounded-md hover:bg-secondary/80 transition-colors"
+              >
+                View Audit Report
+              </Link>
+            </div>
+
             {/* CTA Cards */}
             <div className="rounded-lg border border-primary/20 bg-primary/5 p-4 space-y-3">
               <h3 className="font-semibold text-sm">Unlock Full Analytics</h3>

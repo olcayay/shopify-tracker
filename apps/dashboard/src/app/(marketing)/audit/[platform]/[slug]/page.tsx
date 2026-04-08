@@ -42,9 +42,23 @@ export default async function AuditReportPage({ params }: PageProps) {
   }
   if (!report) notFound();
 
+  const jsonLd = {
+    "@context": "https://schema.org",
+    "@type": "WebPage",
+    name: `${report.app.name} Listing Audit`,
+    description: `See how ${report.app.name} scores across title, description, visuals, categories, and more.`,
+    url: `https://appranks.io/audit/${platform}/${slug}`,
+  };
+
   return (
-    <div className="mx-auto max-w-4xl px-4 py-8">
-      <AuditReport report={report} platform={platform} />
-    </div>
+    <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      />
+      <div className="mx-auto max-w-4xl px-4 py-8">
+        <AuditReport report={report} platform={platform} />
+      </div>
+    </>
   );
 }
