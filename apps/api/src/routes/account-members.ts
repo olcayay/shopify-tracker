@@ -231,7 +231,7 @@ export const accountMemberRoutes: FastifyPluginAsync = async (app) => {
       ).catch(() => {});
 
       // Log activity
-      import("../utils/activity-log.js").then(m => m.logActivity(db, accountId, userId, "member_invited", "invitation", invitation.email)).catch(() => {});
+      import("../utils/activity-log.js").then(m => m.logActivity(db, accountId, userId, "member_invited", "invitation", invitation.email, { email: invitation.email, role: invitation.role })).catch(() => {});
 
       return {
         id: invitation.id,
@@ -293,7 +293,7 @@ export const accountMemberRoutes: FastifyPluginAsync = async (app) => {
         return reply.code(404).send({ error: "Invitation not found" });
       }
 
-      import("../utils/activity-log.js").then(m => m.logActivity(db, request.user.accountId, request.user.userId, "invitation_cancelled", "invitation", id)).catch(() => {});
+      import("../utils/activity-log.js").then(m => m.logActivity(db, request.user.accountId, request.user.userId, "invitation_cancelled", "invitation", id, { email: deleted[0].email })).catch(() => {});
       return { message: "Invitation cancelled" };
     }
   );
@@ -360,7 +360,7 @@ export const accountMemberRoutes: FastifyPluginAsync = async (app) => {
         { role: updated.role, accountId }
       ).catch(() => {});
 
-      import("../utils/activity-log.js").then(m => m.logActivity(db, accountId, userId, "invitation_resent", "invitation", id)).catch(() => {});
+      import("../utils/activity-log.js").then(m => m.logActivity(db, accountId, userId, "invitation_resent", "invitation", id, { email: updated.email })).catch(() => {});
 
       return {
         id: updated.id,
@@ -395,7 +395,7 @@ export const accountMemberRoutes: FastifyPluginAsync = async (app) => {
 
       await db.delete(users).where(eq(users.id, userId));
 
-      import("../utils/activity-log.js").then(m => m.logActivity(db, request.user.accountId, request.user.userId, "member_removed", "user", userId)).catch(() => {});
+      import("../utils/activity-log.js").then(m => m.logActivity(db, request.user.accountId, request.user.userId, "member_removed", "user", userId, { email: user.email, role: user.role })).catch(() => {});
       return { message: "User removed" };
     }
   );

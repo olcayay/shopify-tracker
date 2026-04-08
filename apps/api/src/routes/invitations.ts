@@ -73,6 +73,8 @@ export const invitationRoutes: FastifyPluginAsync = async (app) => {
         .set({ acceptedAt: new Date() })
         .where(eq(invitations.id, invitation.id));
 
+      import("../utils/activity-log.js").then(m => m.logActivity(db, invitation.accountId, user.id, "invitation_accepted", "user", user.id, { email: invitation.email, role: invitation.role })).catch(() => {});
+
       return {
         message: "Invitation accepted",
         user: {

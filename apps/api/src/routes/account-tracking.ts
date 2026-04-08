@@ -282,6 +282,7 @@ export const accountTrackingRoutes: FastifyPluginAsync = async (app) => {
 
       const scraperEnqueued = await enqueueAppScrapeJobs(slug, existingApp.platform, request.id);
 
+      import("../utils/activity-log.js").then(m => m.logActivity(db, request.user.accountId, request.user.userId, "app_tracked", "app", slug, { platform, slug })).catch(() => {});
       return { ...result, scraperEnqueued };
     }
   );
@@ -381,7 +382,7 @@ export const accountTrackingRoutes: FastifyPluginAsync = async (app) => {
       }
 
       // Activity log (fire-and-forget)
-      import("../utils/activity-log.js").then(m => m.logActivity(db, request.user.accountId, request.user.userId, "app_untracked", "app", slug)).catch(() => {});
+      import("../utils/activity-log.js").then(m => m.logActivity(db, request.user.accountId, request.user.userId, "app_untracked", "app", slug, { platform, slug })).catch(() => {});
       return { message: "App removed from tracking" };
     }
   );
@@ -517,6 +518,7 @@ export const accountTrackingRoutes: FastifyPluginAsync = async (app) => {
         }
       }
 
+      import("../utils/activity-log.js").then(m => m.logActivity(db, request.user.accountId, request.user.userId, "keyword_tracked", "keyword", String(kw.id), { keyword: kw.keyword, platform, appSlug: trackedAppSlug || null })).catch(() => {});
       return { ...result, keyword: kw.keyword, scraperEnqueued };
     }
   );
@@ -561,7 +563,7 @@ export const accountTrackingRoutes: FastifyPluginAsync = async (app) => {
 
       await syncKeywordActiveFlag(db, keywordId);
 
-      import("../utils/activity-log.js").then(m => m.logActivity(db, request.user.accountId, request.user.userId, "keyword_untracked", "keyword", String(keywordId))).catch(() => {});
+      import("../utils/activity-log.js").then(m => m.logActivity(db, request.user.accountId, request.user.userId, "keyword_untracked", "keyword", String(keywordId), { keywordId })).catch(() => {});
       return { message: "Keyword removed from tracking" };
     }
   );
@@ -1046,6 +1048,7 @@ export const accountTrackingRoutes: FastifyPluginAsync = async (app) => {
 
       const scraperEnqueued = await enqueueAppScrapeJobs(slug, existingApp.platform, request.id);
 
+      import("../utils/activity-log.js").then(m => m.logActivity(db, request.user.accountId, request.user.userId, "competitor_added", "competitor", slug, { competitorSlug: slug, platform, trackedAppSlug })).catch(() => {});
       return { ...result, scraperEnqueued };
     }
   );
@@ -1100,7 +1103,7 @@ export const accountTrackingRoutes: FastifyPluginAsync = async (app) => {
 
       await syncAppTrackedFlag(db, compAppRow.id);
 
-      import("../utils/activity-log.js").then(m => m.logActivity(db, request.user.accountId, request.user.userId, "competitor_removed", "competitor", String(0))).catch(() => {});
+      import("../utils/activity-log.js").then(m => m.logActivity(db, request.user.accountId, request.user.userId, "competitor_removed", "competitor", slug, { competitorSlug: slug, platform, trackedAppSlug: trackedAppSlug || null })).catch(() => {});
       return { message: "Competitor removed" };
     }
   );
@@ -1670,6 +1673,7 @@ export const accountTrackingRoutes: FastifyPluginAsync = async (app) => {
 
       const scraperEnqueued = await enqueueAppScrapeJobs(competitorSlug, existingApp.platform, request.id);
 
+      import("../utils/activity-log.js").then(m => m.logActivity(db, request.user.accountId, request.user.userId, "competitor_added", "competitor", competitorSlug, { competitorSlug, platform, trackedAppSlug })).catch(() => {});
       return { ...result, scraperEnqueued };
     }
   );
@@ -1719,7 +1723,7 @@ export const accountTrackingRoutes: FastifyPluginAsync = async (app) => {
 
       await syncAppTrackedFlag(db, delCompAppRow.id);
 
-      import("../utils/activity-log.js").then(m => m.logActivity(db, request.user.accountId, request.user.userId, "competitor_removed", "competitor", String(0))).catch(() => {});
+      import("../utils/activity-log.js").then(m => m.logActivity(db, request.user.accountId, request.user.userId, "competitor_removed", "competitor", competitorSlug, { competitorSlug, platform: getPlatformFromQuery(request.query as Record<string, unknown>), trackedAppSlug })).catch(() => {});
       return { message: "Competitor removed" };
     }
   );
@@ -2088,7 +2092,7 @@ export const accountTrackingRoutes: FastifyPluginAsync = async (app) => {
 
       await syncKeywordActiveFlag(db, keywordId);
 
-      import("../utils/activity-log.js").then(m => m.logActivity(db, request.user.accountId, request.user.userId, "keyword_untracked", "keyword", String(keywordId))).catch(() => {});
+      import("../utils/activity-log.js").then(m => m.logActivity(db, request.user.accountId, request.user.userId, "keyword_untracked", "keyword", String(keywordId), { keywordId })).catch(() => {});
       return { message: "Keyword removed from tracking" };
     }
   );

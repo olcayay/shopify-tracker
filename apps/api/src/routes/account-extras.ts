@@ -775,7 +775,7 @@ export const accountExtrasRoutes: FastifyPluginAsync = async (app) => {
     await db.insert(accountPlatforms)
       .values({ accountId: request.user.accountId, platform })
       .onConflictDoNothing();
-    import("../utils/activity-log.js").then(m => m.logActivity(db, request.user.accountId, request.user.userId, "platform_enabled", "platform", platform)).catch(() => {});
+    import("../utils/activity-log.js").then(m => m.logActivity(db, request.user.accountId, request.user.userId, "platform_enabled", "platform", platform, { platform })).catch(() => {});
     return { message: `Platform ${platform} enabled` };
   });
 
@@ -786,7 +786,7 @@ export const accountExtrasRoutes: FastifyPluginAsync = async (app) => {
     const { platform } = request.params as { platform: string };
     await db.delete(accountPlatforms)
       .where(and(eq(accountPlatforms.accountId, request.user.accountId), eq(accountPlatforms.platform, platform)));
-    import("../utils/activity-log.js").then(m => m.logActivity(db, request.user.accountId, request.user.userId, "platform_disabled", "platform", platform)).catch(() => {});
+    import("../utils/activity-log.js").then(m => m.logActivity(db, request.user.accountId, request.user.userId, "platform_disabled", "platform", platform, { platform })).catch(() => {});
     return { message: `Platform ${platform} disabled` };
   });
 

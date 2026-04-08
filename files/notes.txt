@@ -1,3 +1,28 @@
+Activity Log — Phase 1 (2026-04-08)
+================================================================
+
+PLA-937: Fix logActivity to persist metadata and add missing action logging
+- Fixed logActivity() in utils/activity-log.ts to persist metadata as JSONB
+  - Previously _metadata param was unused (prefixed with _)
+  - Now serializes to JSON and inserts as ::jsonb
+- Added missing action logging:
+  - app_tracked: POST /tracked-apps — logs platform + slug
+  - keyword_tracked: POST /tracked-keywords — logs keyword, platform, appSlug
+  - competitor_added: POST /competitors and POST /tracked-apps/:slug/competitors — logs competitorSlug, platform, trackedAppSlug
+  - invitation_accepted: POST /invitations/accept/:token — logs email, role
+- Added metadata to ALL existing logActivity calls:
+  - app_untracked: { platform, slug }
+  - keyword_untracked: { keywordId }
+  - competitor_removed: { competitorSlug, platform, trackedAppSlug }
+  - member_invited: { email, role }
+  - member_removed: { email, role }
+  - invitation_cancelled: { email }
+  - invitation_resent: { email }
+  - platform_enabled/disabled: { platform }
+  - account_updated: { fields: [...changedFields] }
+- Added 6 unit tests for logActivity utility
+- Files changed: activity-log.ts, account-tracking.ts, invitations.ts, account-members.ts, account-extras.ts, account-info.ts, activity-log.test.ts
+
 Platform Feature Flags — Phase 0 (2026-04-08)
 ================================================================
 
