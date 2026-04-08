@@ -1,20 +1,32 @@
-Listing Audit: Move metadata-limits to shared package (2026-04-08)
+Listing Audit Feature — Full Implementation (2026-04-08)
 ================================================================
 
-PLA-876: Phase 0: Move metadata-limits.ts to shared package
-- Problem: metadata-limits.ts lived in dashboard's lib/ but the new audit engine needs it
-  in packages/shared/ so both API and dashboard can use it
-- Solution:
-  - Moved apps/dashboard/src/lib/metadata-limits.ts → packages/shared/src/metadata-limits.ts
-  - Exported getMetadataLimits and MetadataLimits type from packages/shared/src/index.ts
-  - Updated 8 dashboard files to import from @appranks/shared instead of @/lib/metadata-limits
-  - Moved test from dashboard to packages/shared/src/__tests__/metadata-limits.test.ts
-  - Updated files/ADDING_NEW_PLATFORM.md references (4 locations)
-  - Deleted old files from dashboard
-- Files changed: packages/shared/src/metadata-limits.ts (new), packages/shared/src/index.ts,
-  listing-scorecard.tsx, 3 preview editors, 2 compare pages, 1 studio/draft page,
-  ADDING_NEW_PLATFORM.md
-- Tests: 7 tests in shared (all pass), 10 listing-scorecard tests (all pass), 659 shared total
+15 backlog tasks (PLA-876 to PLA-890) implemented across 4 phases:
+
+Phase 0 — PLA-876: Move metadata-limits.ts to shared package
+- Moved apps/dashboard/src/lib/metadata-limits.ts → packages/shared/src/metadata-limits.ts
+- Updated 8 dashboard imports to @appranks/shared
+
+Phase 1 — PLA-877 to PLA-883: Audit engine core + 6 rule sections
+- packages/shared/src/audit/: types, computeAudit(), 6 rule modules
+- Title (4 checks), Content (9 checks), Visuals (4 checks), Categories (4 checks),
+  Technical (7 checks), Languages (6 checks)
+- Section weights: Title 15%, Content 25%, Visuals 20%, Categories 15%, Technical 15%, Languages 10%
+- Score: Pass=100, Warning=50, Fail=0, weighted average
+- 54 unit tests for rules + 15 for engine = 69 audit tests in shared package
+
+Phase 2 — PLA-884 to PLA-886: Public API + Dashboard pages
+- GET /public/audit/:platform/:slug — returns full AuditReport (1h cache)
+- GET /public/apps/search?q=&platform=&limit= — public search for audit page (5min cache)
+- /audit — search page with autocomplete, "How it works" section
+- /audit/[platform]/[slug] — full report with score circle, collapsible sections, recommendations, CTA
+- 5 API tests + 9 dashboard tests
+
+Phase 3 — PLA-887 to PLA-890: CTAs, navbar, SEO
+- Marketing navbar: "Free Audit" link (desktop + mobile)
+- Public app page sidebar: "View Audit Report" CTA card
+- ListingScorecard: "View Full Audit →" link
+- Audit pages: full SEO metadata + JSON-LD (WebPage schema)
 
 Queue Monitor: Per-Queue Pause/Resume Controls (2026-04-07)
 ================================================================
