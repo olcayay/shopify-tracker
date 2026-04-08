@@ -6,6 +6,7 @@ import { useAuth } from "@/lib/auth-context";
 import { PageHeader } from "@/components/ui/page-header";
 import { Button } from "@/components/ui/button";
 import { timeAgo } from "@/lib/format-utils";
+import { TimeSeriesChart } from "@/components/ui/time-series-chart";
 
 interface EmailHealthData {
   timestamp: string;
@@ -95,6 +96,17 @@ export default function EmailHealthPage() {
   const { fetchWithAuth } = useAuth();
   const [data, setData] = useState<EmailHealthData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [hourlyData, setHourlyData] = useState<Record<string, unknown>[]>([]);
+  const [hourlyRange, setHourlyRange] = useState("24h");
+
+  const fetchHourly = useCallback(async () => {
+    const hours = hourlyRange.replace("h", "");
+    const res = await fetchWithAuth(`/api/system-admin/email-health/hourly?hours=${hours}`);
+    if (res.ok) {
+      const json = await res.json();
+      setHourlyData(json.data || []);
+    }
+  }, [fetchWithAuth, hourlyRange]);
 
   const fetchHealth = useCallback(async () => {
     setLoading(true);
@@ -110,9 +122,14 @@ export default function EmailHealthPage() {
 
   useEffect(() => {
     fetchHealth();
+    fetchHourly();
     const interval = setInterval(fetchHealth, 30_000); // Auto-refresh every 30s
     return () => clearInterval(interval);
   }, [fetchHealth]);
+
+  useEffect(() => {
+    fetchHourly();
+  }, [fetchHourly]);
 
   const statusConfig = data ? STATUS_CONFIG[data.status] : STATUS_CONFIG.healthy;
   const StatusIcon = statusConfig.Icon;
@@ -182,6 +199,34 @@ export default function EmailHealthPage() {
               subtitle="Active suppressions"
             />
           </div>
+
+          {/* Hourly Health Chart */}
+          {hourlyData.length > 0 && (
+            <div className="rounded-lg border bg-card p-4">
+              <h3 className="text-sm font-medium mb-1">Hourly Send / Fail / Bounce</h3>
+              <TimeSeriesChart
+                data={hourlyData}
+                series={[
+                  { key: "sent", label: "Sent", color: "#10b981" },
+                  { key: "failed", label: "Failed", color: "#ef4444" },
+                  { key: "bounced", label: "Bounced", color: "#f59e0b" },
+                  { key: "skipped", label: "Skipped", color: "#8b5cf6" },
+                ]}
+                height={240}
+                formatXAxis={(v) => {
+                  const d = new Date(v);
+                  return `${d.getHours().toString().padStart(2, "0")}:00`;
+                }}
+                formatTooltipTime={(v) => {
+                  const d = new Date(v);
+                  return d.toLocaleString("en-US", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" });
+                }}
+                timeRanges={["12h", "24h", "48h"]}
+                selectedRange={hourlyRange}
+                onRangeChange={setHourlyRange}
+              />
+            </div>
+          )}
 
           {/* Queue Status */}
           <div>

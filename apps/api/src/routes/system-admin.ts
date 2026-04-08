@@ -3987,6 +3987,40 @@ export const systemAdminRoutes: FastifyPluginAsync = async (app) => {
     };
   });
 
+  // GET /api/system-admin/email-health/hourly — hourly email health metrics
+  app.get("/email-health/hourly", async (request) => {
+    const { hours } = request.query as { hours?: string };
+    const lookbackHours = Math.min(parseInt(hours || "24", 10) || 24, 48);
+    const cutoff = new Date();
+    cutoff.setHours(cutoff.getHours() - lookbackHours);
+
+    const hourly = await db.execute(sql`
+      SELECT
+        date_trunc('hour', created_at)::text AS hour,
+        COUNT(*) FILTER (WHERE status = 'sent') AS sent,
+        COUNT(*) FILTER (WHERE status = 'failed') AS failed,
+        COUNT(*) FILTER (WHERE status = 'bounced') AS bounced,
+        COUNT(*) FILTER (WHERE status = 'skipped') AS skipped,
+        ROUND(AVG(EXTRACT(EPOCH FROM (sent_at - created_at)) * 1000) FILTER (WHERE sent_at IS NOT NULL), 0) AS avg_send_ms
+      FROM email_logs
+      WHERE created_at >= ${cutoff.toISOString()}
+      GROUP BY 1
+      ORDER BY 1
+    `);
+
+    const rows = (hourly as any)?.rows ?? hourly;
+    const data = (rows as any[]).map((r: any) => ({
+      time: r.hour,
+      sent: Number(r.sent || 0),
+      failed: Number(r.failed || 0),
+      bounced: Number(r.bounced || 0),
+      skipped: Number(r.skipped || 0),
+      avgSendMs: Number(r.avg_send_ms || 0),
+    }));
+
+    return { data, hours: lookbackHours };
+  });
+
   // GET /api/system-admin/audit-logs — impersonation audit log
   app.get(
     "/audit-logs",
