@@ -100,28 +100,29 @@ export function isCompetitorEventEmailWorthy(event: DetectedEvent): boolean {
 }
 
 /** Map event types to notification job types */
+/** Map event types to notification types (must match keys in NOTIFICATION_TYPES) */
 const EVENT_TO_NOTIFICATION_TYPE: Record<string, string> = {
-  ranking_top3_entry: "notification_ranking_change",
-  ranking_top3_exit: "notification_ranking_change",
-  ranking_significant_change: "notification_ranking_change",
-  ranking_dropped_out: "notification_ranking_change",
-  ranking_new_entry: "notification_ranking_change",
-  ranking_category_change: "notification_ranking_change",
-  ranking_top1: "notification_milestone",
-  keyword_new_ranking: "notification_ranking_change",
-  keyword_position_gained: "notification_ranking_change",
-  keyword_position_lost: "notification_ranking_change",
-  competitor_overtook: "notification_new_competitor",
-  competitor_featured: "notification_new_competitor",
-  competitor_review_surge: "notification_new_competitor",
-  competitor_pricing_change: "notification_price_change",
-  review_new_positive: "notification_new_review",
-  review_new_negative: "notification_new_review",
-  review_velocity_spike: "notification_new_review",
-  review_milestone: "notification_milestone",
-  rating_milestone: "notification_milestone",
-  featured_new_placement: "notification_ranking_change",
-  featured_removed: "notification_ranking_change",
+  ranking_top3_entry: "ranking_top3_entry",
+  ranking_top3_exit: "ranking_top3_exit",
+  ranking_significant_change: "ranking_significant_change",
+  ranking_dropped_out: "ranking_dropped_out",
+  ranking_new_entry: "ranking_new_entry",
+  ranking_category_change: "ranking_category_change",
+  ranking_top1: "ranking_top3_entry", // #1 is a special case of top3 entry
+  keyword_new_ranking: "keyword_new_ranking",
+  keyword_position_gained: "keyword_position_gained",
+  keyword_position_lost: "keyword_position_lost",
+  competitor_overtook: "competitor_overtook",
+  competitor_featured: "competitor_featured",
+  competitor_review_surge: "competitor_review_surge",
+  competitor_pricing_change: "competitor_pricing_change",
+  review_new_positive: "review_new_positive",
+  review_new_negative: "review_new_negative",
+  review_velocity_spike: "review_velocity_spike",
+  review_milestone: "review_new_positive", // milestone treated as positive review event
+  rating_milestone: "review_new_positive", // rating milestone treated as positive review event
+  featured_new_placement: "featured_new_placement",
+  featured_removed: "featured_removed",
 };
 
 /**
