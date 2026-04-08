@@ -145,4 +145,51 @@ export const emailAnalyticsRoutes: FastifyPluginAsync = async (app) => {
     const rows = (heatmap as any)?.rows ?? heatmap;
     return reply.send({ data: rows });
   });
+
+  // GET /api/system-admin/email-analytics/hourly — hourly counts grouped by email type
+  app.get("/hourly", { preHandler: [requireSystemAdmin()] }, async (request, reply) => {
+    const { hours } = request.query as { hours?: string };
+    const lookbackHours = Math.min(parseInt(hours || "24", 10) || 24, 72);
+    const cutoff = new Date();
+    cutoff.setHours(cutoff.getHours() - lookbackHours);
+
+    const hourly = await db.execute(sql`
+      SELECT
+        date_trunc('hour', created_at)::text AS hour,
+        email_type,
+        COUNT(*) FILTER (WHERE status IN ('sent', 'delivered')) AS sent,
+        COUNT(*) FILTER (WHERE status = 'failed') AS failed,
+        COUNT(*) FILTER (WHERE status = 'skipped') AS skipped,
+        COUNT(*) AS total
+      FROM email_logs
+      WHERE created_at >= ${cutoff.toISOString()}
+      GROUP BY 1, 2
+      ORDER BY 1
+    `);
+
+    const rows = (hourly as any)?.rows ?? hourly;
+
+    // Pivot: group by hour, with each email_type as a key
+    const hourMap = new Map<string, Record<string, number>>();
+    const emailTypes = new Set<string>();
+
+    for (const row of rows as any[]) {
+      const hour = row.hour;
+      emailTypes.add(row.email_type);
+      if (!hourMap.has(hour)) hourMap.set(hour, {});
+      const entry = hourMap.get(hour)!;
+      entry[row.email_type] = Number(row.total || 0);
+    }
+
+    const data = Array.from(hourMap.entries()).map(([hour, counts]) => ({
+      time: hour,
+      ...counts,
+    }));
+
+    return reply.send({
+      data,
+      emailTypes: Array.from(emailTypes).sort(),
+      hours: lookbackHours,
+    });
+  });
 };

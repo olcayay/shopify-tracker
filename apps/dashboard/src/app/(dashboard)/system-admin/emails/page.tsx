@@ -6,7 +6,10 @@ import { useAuth } from "@/lib/auth-context";
 import {
   Card,
   CardContent,
+  CardHeader,
+  CardTitle,
 } from "@/components/ui/card";
+import { TimeSeriesChart, type TimeSeriesConfig } from "@/components/ui/time-series-chart";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -76,6 +79,11 @@ interface EmailDetail extends EmailLog {
   dataSnapshot: unknown;
 }
 
+const CHART_COLORS = [
+  "#3b82f6", "#ef4444", "#f59e0b", "#10b981", "#8b5cf6",
+  "#ec4899", "#06b6d4", "#f97316", "#6366f1", "#14b8a6",
+];
+
 export default function AdminEmailDashboard() {
   const { fetchWithAuth } = useAuth();
   const [stats, setStats] = useState<EmailStats | null>(null);
@@ -87,6 +95,11 @@ export default function AdminEmailDashboard() {
   const [typeFilter, setTypeFilter] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
   const LIMIT = 20;
+
+  // Hourly chart state
+  const [hourlyData, setHourlyData] = useState<Record<string, unknown>[]>([]);
+  const [hourlyTypes, setHourlyTypes] = useState<string[]>([]);
+  const [hourlyRange, setHourlyRange] = useState("24h");
 
   // Detail panel state
   const [selectedEmailId, setSelectedEmailId] = useState<string | null>(null);
@@ -115,8 +128,19 @@ export default function AdminEmailDashboard() {
     setLoading(false);
   }, [fetchWithAuth, page, search, typeFilter, statusFilter]);
 
+  const loadHourly = useCallback(async () => {
+    const hours = hourlyRange.replace("h", "");
+    const res = await fetchWithAuth(`/api/system-admin/email-analytics/hourly?hours=${hours}`);
+    if (res.ok) {
+      const json = await res.json();
+      setHourlyData(json.data || []);
+      setHourlyTypes(json.emailTypes || []);
+    }
+  }, [fetchWithAuth, hourlyRange]);
+
   useEffect(() => { loadStats(); }, [loadStats]);
   useEffect(() => { loadEmails(); }, [loadEmails]);
+  useEffect(() => { loadHourly(); }, [loadHourly]);
 
   // Load email detail on click
   const handleRowClick = useCallback(async (emailId: string) => {
@@ -271,6 +295,37 @@ export default function AdminEmailDashboard() {
             </Card>
           </div>
         </div>
+      )}
+
+      {/* Hourly Email Activity Chart */}
+      {hourlyData.length > 0 && (
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-semibold">Email Activity by Type</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <TimeSeriesChart
+              data={hourlyData}
+              series={hourlyTypes.map((type, i) => ({
+                key: type,
+                label: type.replace(/^email_/, "").replace(/_/g, " "),
+                color: CHART_COLORS[i % CHART_COLORS.length],
+              }))}
+              height={280}
+              formatXAxis={(v) => {
+                const d = new Date(v);
+                return `${d.getHours().toString().padStart(2, "0")}:00`;
+              }}
+              formatTooltipTime={(v) => {
+                const d = new Date(v);
+                return d.toLocaleString("en-US", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" });
+              }}
+              timeRanges={["12h", "24h", "48h", "72h"]}
+              selectedRange={hourlyRange}
+              onRangeChange={setHourlyRange}
+            />
+          </CardContent>
+        </Card>
       )}
 
       {/* Filters */}
