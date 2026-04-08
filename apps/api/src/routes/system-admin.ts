@@ -2740,6 +2740,49 @@ export const systemAdminRoutes: FastifyPluginAsync = async (app) => {
     }
   );
 
+  // ── Scraper Enable/Disable ──────────────────────────────────────────
+
+  // GET /api/system-admin/scraper/platforms — return all platform visibility + scraper status
+  app.get("/scraper/platforms", async () => {
+    const rows = await db.select().from(platformVisibility);
+    const result: Array<{ platform: string; isVisible: boolean; scraperEnabled: boolean }> = [];
+    for (const pid of PLATFORM_IDS) {
+      const row = rows.find((r) => r.platform === pid);
+      result.push({
+        platform: pid,
+        isVisible: row?.isVisible ?? false,
+        scraperEnabled: row?.scraperEnabled ?? true,
+      });
+    }
+    return result;
+  });
+
+  // PATCH /api/system-admin/scraper/platform/:platform/toggle — toggle scraperEnabled for a platform
+  app.patch<{ Params: { platform: string } }>(
+    "/scraper/platform/:platform/toggle",
+    async (request, reply) => {
+      const { platform } = request.params;
+      if (!isPlatformId(platform)) {
+        return reply.code(400).send({ error: "Invalid platform" });
+      }
+
+      // Get current state
+      const rows = await db.select().from(platformVisibility).where(eq(platformVisibility.platform, platform));
+      const current = rows[0];
+      const newState = !(current?.scraperEnabled ?? true);
+
+      await db
+        .insert(platformVisibility)
+        .values({ platform, isVisible: current?.isVisible ?? false, scraperEnabled: newState, updatedAt: new Date() })
+        .onConflictDoUpdate({
+          target: platformVisibility.platform,
+          set: { scraperEnabled: newState, updatedAt: new Date() },
+        });
+
+      return { platform, scraperEnabled: newState };
+    }
+  );
+
   // PATCH /api/system-admin/accounts/:id/platforms/:platform/override — toggle per-account override
   app.patch<{ Params: { id: string; platform: string } }>(
     "/accounts/:id/platforms/:platform/override",

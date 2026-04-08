@@ -1,5 +1,5 @@
 import type { Job } from "bullmq";
-import { createDb, scrapeRuns } from "@appranks/db";
+import { createDb, scrapeRuns, platformVisibility } from "@appranks/db";
 import { eq, and, sql } from "drizzle-orm";
 import { migrate } from "drizzle-orm/postgres-js/migrator";
 import { createLogger, isPlatformId, getPlatform, needsBrowser, type PlatformId } from "@appranks/shared";
@@ -132,6 +132,13 @@ export function createProcessJob(db: ReturnType<typeof createDb>, queueName?: st
     const jobStartTime = Date.now();
     const traceId = String(job.id).slice(0, 8);
     log.info("processing job", { jobId: job.id, traceId, type, triggeredBy, platform, ...(requestId && { requestId }) });
+
+    // Check if scraper is enabled for this platform
+    const visRows = await db.select().from(platformVisibility).where(eq(platformVisibility.platform, platform));
+    if (visRows.length > 0 && visRows[0].scraperEnabled === false) {
+      log.warn("scraper disabled for platform, skipping job", { jobId: job.id, platform, type });
+      return;
+    }
 
     const opts = job.data.options;
     const pageOptions = opts?.pages !== undefined ? { pages: opts.pages } : undefined;
@@ -484,7 +491,7 @@ export function createProcessJob(db: ReturnType<typeof createDb>, queueName?: st
       }
 
       case "daily_digest": {
-        const { getDigestRecipients, buildDigestForAccount } = await import("./email/digest-builder.js");
+        const { getDigestRecipients, buildDigestForAccount, splitDigestByPlatform } = await import("./email/digest-builder.js");
         const { buildDigestHtml, buildDigestSubject } = await import("./email/digest-template.js");
         const { sendEmail } = await import("./email/pipeline.js");
         const { logSkippedEmail } = await import("./email/email-logger.js");
@@ -527,21 +534,25 @@ export function createProcessJob(db: ReturnType<typeof createDb>, queueName?: st
             break;
           }
 
-          const html = buildDigestHtml(data);
-          const subject = buildDigestSubject(data);
-          await sendEmail({
-            db,
-            emailType: "daily_digest",
-            userId: targetUser.id,
-            accountId: targetUser.accountId,
-            recipientEmail: targetUser.email,
-            recipientName: targetUser.name,
-            subject,
-            htmlBody: html,
-            dataSnapshot: { accountId: targetUser.accountId, digestDate: new Date().toISOString() },
-          });
+          // Split into per-platform digests and send one email per platform
+          const userPlatformDigests = splitDigestByPlatform(data);
+          for (const platformData of userPlatformDigests) {
+            const html = buildDigestHtml(platformData);
+            const subject = buildDigestSubject(platformData);
+            await sendEmail({
+              db,
+              emailType: "daily_digest",
+              userId: targetUser.id,
+              accountId: targetUser.accountId,
+              recipientEmail: targetUser.email,
+              recipientName: targetUser.name,
+              subject,
+              htmlBody: html,
+              dataSnapshot: { accountId: targetUser.accountId, platform: platformData.platform, digestDate: new Date().toISOString() },
+            });
+          }
           await db.update(usersTable).set({ lastDigestSentAt: new Date() }).where(eqOp(usersTable.id, targetUser.id));
-          log.info("manual digest sent", { email: targetUser.email });
+          log.info("manual digest sent", { email: targetUser.email, platforms: userPlatformDigests.length });
           break;
         }
 
@@ -579,29 +590,33 @@ export function createProcessJob(db: ReturnType<typeof createDb>, queueName?: st
             break;
           }
 
-          const html = buildDigestHtml(data);
-          const subject = buildDigestSubject(data);
+          // Split into per-platform digests
+          const acctPlatformDigests = splitDigestByPlatform(data);
           let sent = 0;
           for (const u of accountUsers) {
-            try {
-              await sendEmail({
-                db,
-                emailType: "daily_digest",
-                userId: u.id,
-                accountId: job.data.accountId,
-                recipientEmail: u.email,
-                recipientName: u.name,
-                subject,
-                htmlBody: html,
-                dataSnapshot: { accountId: job.data.accountId, digestDate: new Date().toISOString() },
-              });
-              await db.update(usersTable).set({ lastDigestSentAt: new Date() }).where(eqOp(usersTable.id, u.id));
-              sent++;
-            } catch (err) {
-              log.error("failed to send account digest", { email: u.email, error: String(err) });
+            for (const platformData of acctPlatformDigests) {
+              try {
+                const html = buildDigestHtml(platformData);
+                const subject = buildDigestSubject(platformData);
+                await sendEmail({
+                  db,
+                  emailType: "daily_digest",
+                  userId: u.id,
+                  accountId: job.data.accountId,
+                  recipientEmail: u.email,
+                  recipientName: u.name,
+                  subject,
+                  htmlBody: html,
+                  dataSnapshot: { accountId: job.data.accountId, platform: platformData.platform, digestDate: new Date().toISOString() },
+                });
+                sent++;
+              } catch (err) {
+                log.error("failed to send account digest", { email: u.email, platform: platformData.platform, error: String(err) });
+              }
             }
+            await db.update(usersTable).set({ lastDigestSentAt: new Date() }).where(eqOp(usersTable.id, u.id));
           }
-          log.info("account digest completed", { accountId: job.data.accountId, sent, total: accountUsers.length });
+          log.info("account digest completed", { accountId: job.data.accountId, sent, total: accountUsers.length, platforms: acctPlatformDigests.length });
           break;
         }
 
@@ -632,6 +647,38 @@ export function createProcessJob(db: ReturnType<typeof createDb>, queueName?: st
           byAccount.set(r.accountId, list);
         }
 
+        // Helper: send per-platform digests for a user given their combined digest data
+        async function sendPerPlatformDigests(
+          userData: Awaited<ReturnType<typeof buildDigestForAccount>>,
+          user: { userId: string; email: string; name: string },
+          accountId: string,
+        ): Promise<number> {
+          if (!userData) return 0;
+          const perPlatform = splitDigestByPlatform(userData);
+          let count = 0;
+          for (const platformData of perPlatform) {
+            try {
+              const html = buildDigestHtml(platformData);
+              const subject = buildDigestSubject(platformData);
+              await sendEmail({
+                db,
+                emailType: "daily_digest",
+                userId: user.userId,
+                accountId,
+                recipientEmail: user.email,
+                recipientName: user.name,
+                subject,
+                htmlBody: html,
+                dataSnapshot: { accountId, platform: platformData.platform, digestDate: new Date().toISOString() },
+              });
+              count++;
+            } catch (err) {
+              log.error("failed to send digest", { email: user.email, platform: platformData.platform, error: String(err) });
+            }
+          }
+          return count;
+        }
+
         let sent = 0;
         let skipped = 0;
         const digestStartMs = Date.now();
@@ -640,63 +687,18 @@ export function createProcessJob(db: ReturnType<typeof createDb>, queueName?: st
           // Use the first user's timezone for date boundaries
           const tz = accountUsers[0].timezone;
 
-          // Build digest once per account (without user opt-outs), then apply per-user
-          // For single-user accounts (most common), this is equivalent to per-user build
-          // For multi-user accounts, this avoids re-running all DB queries per user
-          if (accountUsers.length === 1) {
-            // Single user — build with their opt-outs directly
-            const user = accountUsers[0];
+          for (const user of accountUsers) {
             const data = await buildDigestForAccount(db, accountId, tz, user.userId);
             if (!data) {
               skipped++;
-            } else {
-              const html = buildDigestHtml(data);
-              const subject = buildDigestSubject(data);
-              try {
-                await sendEmail({
-                  db,
-                  emailType: "daily_digest",
-                  userId: user.userId,
-                  accountId,
-                  recipientEmail: user.email,
-                  recipientName: user.name,
-                  subject,
-                  htmlBody: html,
-                  dataSnapshot: { accountId, digestDate: new Date().toISOString() },
-                });
-                await db.update(usersTable).set({ lastDigestSentAt: new Date() }).where(eqOp(usersTable.email, user.email));
-                sent++;
-              } catch (err) {
-                log.error("failed to send digest", { email: user.email, error: String(err) });
-              }
+              continue;
             }
-          } else {
-            // Multi-user account — build per user (opt-outs differ)
-            for (const user of accountUsers) {
-              const data = await buildDigestForAccount(db, accountId, tz, user.userId);
-              if (!data) {
-                skipped++;
-                continue;
-              }
-              const html = buildDigestHtml(data);
-              const subject = buildDigestSubject(data);
-              try {
-                await sendEmail({
-                  db,
-                  emailType: "daily_digest",
-                  userId: user.userId,
-                  accountId,
-                  recipientEmail: user.email,
-                  recipientName: user.name,
-                  subject,
-                  htmlBody: html,
-                  dataSnapshot: { accountId, digestDate: new Date().toISOString() },
-                });
-                await db.update(usersTable).set({ lastDigestSentAt: new Date() }).where(eqOp(usersTable.email, user.email));
-                sent++;
-              } catch (err) {
-                log.error("failed to send digest", { email: user.email, error: String(err) });
-              }
+            const emailsSent = await sendPerPlatformDigests(data, user, accountId);
+            if (emailsSent > 0) {
+              await db.update(usersTable).set({ lastDigestSentAt: new Date() }).where(eqOp(usersTable.email, user.email));
+              sent += emailsSent;
+            } else {
+              skipped++;
             }
           }
           log.info("account digest processed", {

@@ -214,6 +214,7 @@ vi.mock("drizzle-orm", () => ({
 vi.mock("@appranks/db", () => ({
   createDb: vi.fn(),
   scrapeRuns: { id: "scrapeRuns.id", jobId: "scrapeRuns.jobId", status: "scrapeRuns.status" },
+  platformVisibility: { platform: "platformVisibility.platform", scraperEnabled: "platformVisibility.scraperEnabled" },
   trackedKeywords: { id: "trackedKeywords.id", keyword: "trackedKeywords.keyword", platform: "trackedKeywords.platform" },
   apps: { slug: "apps.slug", isTracked: "apps.isTracked", platform: "apps.platform" },
   users: { id: "users.id", email: "users.email", name: "users.name", accountId: "users.accountId" },
@@ -238,6 +239,7 @@ vi.mock("../constants.js", () => ({
 vi.mock("../email/digest-builder.js", () => ({
   getDigestRecipients: vi.fn().mockResolvedValue([]),
   buildDigestForAccount: vi.fn().mockResolvedValue(null),
+  splitDigestByPlatform: vi.fn().mockImplementation((data: any) => [{ platform: "shopify", ...data }]),
 }));
 vi.mock("../email/digest-template.js", () => ({
   buildDigestHtml: vi.fn().mockReturnValue("<html></html>"),
@@ -276,6 +278,15 @@ function makeJob(data: Partial<ScraperJobData> & { type: ScraperJobData["type"] 
       ...data,
     },
   } as any;
+}
+
+/** Mock the platformVisibility select that happens at the start of every job */
+function mockPlatformVisibilitySelect(db: any, enabled = true) {
+  db.select.mockReturnValueOnce({
+    from: vi.fn().mockReturnValue({
+      where: vi.fn().mockResolvedValue(enabled ? [] : [{ platform: "shopify", scraperEnabled: false }]),
+    }),
+  });
 }
 
 // ─── Tests ──────────────────────────────────────────────────────────────────
@@ -519,7 +530,8 @@ describe("createProcessJob", () => {
     });
 
     it("cascades reviews for all tracked apps when no slug and scrapeReviews set", async () => {
-      // Mock the DB select for tracked apps
+      // Mock platformVisibility check + DB select for tracked apps
+      mockPlatformVisibilitySelect(db);
       const trackedAppsResult = [{ slug: "tracked-1" }, { slug: "tracked-2" }];
       db.select.mockReturnValueOnce({
         from: vi.fn().mockReturnValue({
@@ -581,7 +593,8 @@ describe("createProcessJob", () => {
     });
 
     it("logs warning when keyword not found in DB for single scrape", async () => {
-      // Return empty result for keyword lookup
+      // Mock platformVisibility check + return empty result for keyword lookup
+      mockPlatformVisibilitySelect(db);
       db.select.mockReturnValueOnce({
         from: vi.fn().mockReturnValue({
           where: vi.fn().mockReturnValue({
@@ -832,7 +845,8 @@ describe("createProcessJob", () => {
       const { sendEmail } = await import("../email/pipeline.js");
       const { buildDigestForAccount } = await import("../email/digest-builder.js");
 
-      // Mock user lookup
+      // Mock platformVisibility check + user lookup
+      mockPlatformVisibilitySelect(db);
       db.select.mockReturnValueOnce({
         from: vi.fn().mockReturnValue({
           where: vi.fn().mockResolvedValue([{
@@ -855,6 +869,7 @@ describe("createProcessJob", () => {
 
     it("skips when user not found for manual digest", async () => {
       const { sendEmail } = await import("../email/pipeline.js");
+      mockPlatformVisibilitySelect(db);
       db.select.mockReturnValueOnce({
         from: vi.fn().mockReturnValue({
           where: vi.fn().mockResolvedValue([]),
@@ -875,7 +890,8 @@ describe("createProcessJob", () => {
       const { sendEmail } = await import("../email/pipeline.js");
       const { buildDigestForAccount } = await import("../email/digest-builder.js");
 
-      // Mock user lookup for account
+      // Mock platformVisibility check + user lookup for account
+      mockPlatformVisibilitySelect(db);
       db.select.mockReturnValueOnce({
         from: vi.fn().mockReturnValue({
           where: vi.fn().mockResolvedValue([
@@ -972,6 +988,37 @@ describe("createProcessJob", () => {
       expect(mockCategoryScraper.scrapeSingle).toHaveBeenCalledWith(
         "test", "test", undefined, undefined,
       );
+    });
+  });
+
+  // ── 16. Scraper enabled/disabled check ────────────────────────────────
+
+  describe("scraper disabled skip", () => {
+    it("skips job when scraper is disabled for the platform", async () => {
+      mockPlatformVisibilitySelect(db, false);
+
+      await processJob(makeJob({ type: "category", slug: "test" }));
+
+      // Should NOT have called the category scraper since platform is disabled
+      expect(mockCategoryScraper.scrapeSingle).not.toHaveBeenCalled();
+      expect(mockCategoryScraper.crawl).not.toHaveBeenCalled();
+    });
+
+    it("processes job when scraper is enabled for the platform", async () => {
+      mockPlatformVisibilitySelect(db, true);
+
+      await processJob(makeJob({ type: "category", slug: "test" }));
+
+      // Should have called the category scraper
+      expect(mockCategoryScraper.scrapeSingle).toHaveBeenCalled();
+    });
+
+    it("processes job when no platform visibility row exists (default enabled)", async () => {
+      // Default mock returns chainableSelect which resolves to a non-array,
+      // so the job should proceed (default is enabled)
+      await processJob(makeJob({ type: "category", slug: "test" }));
+
+      expect(mockCategoryScraper.scrapeSingle).toHaveBeenCalled();
     });
   });
 });

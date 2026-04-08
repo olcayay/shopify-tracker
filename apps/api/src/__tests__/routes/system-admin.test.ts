@@ -886,4 +886,80 @@ describe("System admin routes", () => {
       expect(body).toEqual({ queueName: "scraper-jobs-background", isPaused: false });
     });
   });
+
+  // -----------------------------------------------------------------------
+  // Scraper platform toggle
+  // -----------------------------------------------------------------------
+
+  describe("GET /api/system-admin/scraper/platforms", () => {
+    it("returns 401 without token", async () => {
+      const res = await app.inject({
+        method: "GET",
+        url: "/api/system-admin/scraper/platforms",
+      });
+      expect(res.statusCode).toBe(401);
+    });
+
+    it("returns 403 for non-admin", async () => {
+      const res = await app.inject({
+        method: "GET",
+        url: "/api/system-admin/scraper/platforms",
+        headers: authHeaders(userToken()),
+      });
+      expect(res.statusCode).toBe(403);
+    });
+
+    it("returns platform list for admin", async () => {
+      const res = await app.inject({
+        method: "GET",
+        url: "/api/system-admin/scraper/platforms",
+        headers: authHeaders(adminToken()),
+      });
+      expect(res.statusCode).toBe(200);
+      const body = res.json();
+      expect(Array.isArray(body)).toBe(true);
+      expect(body.length).toBeGreaterThan(0);
+      expect(body[0]).toHaveProperty("platform");
+      expect(body[0]).toHaveProperty("isVisible");
+      expect(body[0]).toHaveProperty("scraperEnabled");
+    });
+  });
+
+  describe("PATCH /api/system-admin/scraper/platform/:platform/toggle", () => {
+    it("returns 401 without token", async () => {
+      const res = await app.inject({
+        method: "PATCH",
+        url: "/api/system-admin/scraper/platform/shopify/toggle",
+      });
+      expect(res.statusCode).toBe(401);
+    });
+
+    it("returns 403 for non-admin", async () => {
+      const res = await app.inject({
+        method: "PATCH",
+        url: "/api/system-admin/scraper/platform/shopify/toggle",
+        headers: authHeaders(userToken()),
+      });
+      expect(res.statusCode).toBe(403);
+    });
+
+    it("returns 400 for invalid platform", async () => {
+      const res = await app.inject({
+        method: "PATCH",
+        url: "/api/system-admin/scraper/platform/invalid_platform/toggle",
+        headers: authHeaders(adminToken()),
+      });
+      expect(res.statusCode).toBe(400);
+    });
+
+    it("toggles scraper for valid platform", async () => {
+      const res = await app.inject({
+        method: "PATCH",
+        url: "/api/system-admin/scraper/platform/shopify/toggle",
+        headers: authHeaders(adminToken()),
+      });
+      expect(res.statusCode).not.toBe(401);
+      expect(res.statusCode).not.toBe(403);
+    });
+  });
 });
