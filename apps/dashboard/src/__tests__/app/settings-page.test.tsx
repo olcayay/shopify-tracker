@@ -84,6 +84,9 @@ function setupMockFetch(overrides?: Record<string, any>) {
     if (url === "/api/account/invitations" && !options?.method) {
       return Promise.resolve({ ok: true, json: () => Promise.resolve(overrides?.invitations ?? mockInvitations) });
     }
+    if (url.startsWith("/api/account/activity-log")) {
+      return Promise.resolve({ ok: true, json: () => Promise.resolve({ logs: [], total: 0, page: 1, limit: 25 }) });
+    }
     return Promise.resolve({ ok: true, json: () => Promise.resolve({}) });
   });
 }

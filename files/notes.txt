@@ -1,6 +1,22 @@
 Activity Log — Phase 1 (2026-04-08)
 ================================================================
 
+PLA-939: Build Activity Log UI on organization settings page
+- New component: apps/dashboard/src/components/activity-log.tsx
+- Placed on settings page after Team Members, before Email Notifications
+- Features:
+  - Table with User (avatar + name), Action (badge), Details, Platform (color dot), Date (relative + tooltip)
+  - 19 action label mappings (app_tracked, keyword_tracked, competitor_added, etc.)
+  - Action filter dropdown with 13 filter options
+  - Pagination (25 per page) with prev/next buttons and total count
+  - Loading skeleton (5 rows)
+  - Empty state ("No activity yet")
+  - System actions show "System" user when userId is null
+  - Platform badges with color dots from platform-display.ts
+- 12 unit tests for the ActivityLog component
+- Fixed settings-page.test.tsx to mock activity-log API endpoint
+- Files: activity-log.tsx, settings/page.tsx, activity-log.test.tsx, settings-page.test.tsx
+
 PLA-938: Create API endpoint to fetch activity logs
 - New file: apps/api/src/routes/account-activity-log.ts
 - GET /api/account/activity-log — paginated, filtered activity logs

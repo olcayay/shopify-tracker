@@ -28,6 +28,7 @@ import { BillingCard } from "@/components/billing-card";
 import { DeleteAccountSection } from "@/components/delete-account-section";
 import { ConfirmModal } from "@/components/confirm-modal";
 import { Download } from "lucide-react";
+import { ActivityLog } from "@/components/activity-log";
 
 function timeAgo(date: string | Date | null | undefined): string {
   if (!date) return "—";
@@ -596,6 +597,9 @@ export default function SettingsPage() {
           </Table>
         </CardContent>
       </Card>
+
+      {/* Activity Log */}
+      <ActivityLog />
 
       {/* Email Notifications — gated by feature flag */}
       {hasNotifications && (<Card>
