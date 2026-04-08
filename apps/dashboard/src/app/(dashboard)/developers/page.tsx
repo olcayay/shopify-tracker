@@ -373,7 +373,9 @@ export default function DevelopersPage() {
             </div>
             <Button type="submit" variant="outline" size="sm">Search</Button>
           </form>
-          <ViewModeToggle viewMode={viewMode} onChangeViewMode={changeViewMode} />
+          <div className="ml-auto">
+            <ViewModeToggle viewMode={viewMode} onChangeViewMode={changeViewMode} />
+          </div>
         </div>
         {enabledPlatforms && enabledPlatforms.length > 1 && (
           <PlatformFilterChips

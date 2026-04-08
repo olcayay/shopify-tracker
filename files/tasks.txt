@@ -1,3 +1,7 @@
+Developer Page Quick Fixes (2026-04-09)
+  PLA-929: Right-align ViewModeToggle on /developers page ✅
+  PLA-904: Increase visible app icons from 8 to 10 — already done ✅
+
 Invitation Error Messages (2026-04-09)
   PLA-941: Improve invitation error messages for existing users ✅
 
