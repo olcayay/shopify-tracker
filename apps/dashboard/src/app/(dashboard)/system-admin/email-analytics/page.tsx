@@ -6,6 +6,7 @@ import { useAuth } from "@/lib/auth-context";
 import { PageHeader } from "@/components/ui/page-header";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
+import { TimeSeriesChart } from "@/components/ui/time-series-chart";
 
 interface Overview {
   days: number;
@@ -67,29 +68,13 @@ function MetricCard({ label, value, rate, icon: Icon, color }: {
   );
 }
 
-function TrendBar({ data }: { data: TrendPoint[] }) {
-  if (data.length === 0) return <p className="text-xs text-muted-foreground py-4">No data yet</p>;
-
-  const maxSent = Math.max(...data.map((d) => Number(d.sent) || 1));
-
-  return (
-    <div className="flex items-end gap-0.5 h-24">
-      {data.map((d, i) => {
-        const height = Math.max(4, (Number(d.sent) / maxSent) * 100);
-        const failRate = Number(d.sent) > 0 ? Number(d.failed) / Number(d.sent) : 0;
-        const barColor = failRate > 0.1 ? "bg-red-400" : failRate > 0.05 ? "bg-yellow-400" : "bg-blue-400";
-        return (
-          <div
-            key={i}
-            className={`${barColor} rounded-t-sm flex-1 min-w-1`}
-            style={{ height: `${height}%` }}
-            title={`${d.date}: ${d.sent} sent, ${d.failed} failed`}
-          />
-        );
-      })}
-    </div>
-  );
-}
+const TREND_SERIES = [
+  { key: "sent", label: "Sent", color: "#3b82f6" },
+  { key: "opened", label: "Opened", color: "#8b5cf6" },
+  { key: "clicked", label: "Clicked", color: "#6366f1" },
+  { key: "bounced", label: "Bounced", color: "#f59e0b" },
+  { key: "failed", label: "Failed", color: "#ef4444" },
+];
 
 export default function EmailAnalyticsPage() {
   const { fetchWithAuth } = useAuth();
@@ -98,6 +83,9 @@ export default function EmailAnalyticsPage() {
   const [byType, setByType] = useState<TypeBreakdown[]>([]);
   const [loading, setLoading] = useState(true);
   const [days, setDays] = useState(30);
+  const [granularity, setGranularity] = useState<"daily" | "hourly">("daily");
+  const [hourlyData, setHourlyData] = useState<Record<string, unknown>[]>([]);
+  const [hourlyRange, setHourlyRange] = useState("24h");
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -122,9 +110,24 @@ export default function EmailAnalyticsPage() {
     }
   }, [fetchWithAuth, days]);
 
+  const fetchHourly = useCallback(async () => {
+    const hours = hourlyRange.replace("h", "");
+    const res = await fetchWithAuth(`/api/system-admin/email-analytics/hourly?hours=${hours}`);
+    if (res.ok) {
+      const json = await res.json();
+      // Hourly endpoint returns per-type data; we need per-status aggregation
+      // Use the trends-style format: aggregate all types into sent/failed/skipped per hour
+      setHourlyData(json.data || []);
+    }
+  }, [fetchWithAuth, hourlyRange]);
+
   useEffect(() => {
     fetchData();
   }, [fetchData]);
+
+  useEffect(() => {
+    if (granularity === "hourly") fetchHourly();
+  }, [granularity, fetchHourly]);
 
   return (
     <div className="space-y-6">
@@ -169,13 +172,62 @@ export default function EmailAnalyticsPage() {
 
           {/* Trend Chart */}
           <div className="rounded-lg border bg-card p-4">
-            <h3 className="text-sm font-medium mb-3">Send Volume Trend</h3>
-            <TrendBar data={trends} />
-            {trends.length > 0 && (
-              <div className="flex justify-between text-[10px] text-muted-foreground mt-1">
-                <span>{trends[0]?.date}</span>
-                <span>{trends[trends.length - 1]?.date}</span>
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-sm font-medium">Email Volume Trend</h3>
+              <div className="flex items-center gap-1">
+                <button
+                  onClick={() => setGranularity("daily")}
+                  className={`px-2 py-0.5 text-xs rounded ${
+                    granularity === "daily"
+                      ? "bg-primary text-primary-foreground"
+                      : "text-muted-foreground hover:text-foreground hover:bg-muted"
+                  }`}
+                >
+                  Daily
+                </button>
+                <button
+                  onClick={() => setGranularity("hourly")}
+                  className={`px-2 py-0.5 text-xs rounded ${
+                    granularity === "hourly"
+                      ? "bg-primary text-primary-foreground"
+                      : "text-muted-foreground hover:text-foreground hover:bg-muted"
+                  }`}
+                >
+                  Hourly
+                </button>
               </div>
+            </div>
+            {granularity === "daily" ? (
+              <TimeSeriesChart
+                data={trends.map((t) => ({ time: t.date, sent: Number(t.sent), opened: Number(t.opened), clicked: Number(t.clicked), bounced: Number(t.bounced), failed: Number(t.failed) }))}
+                series={TREND_SERIES}
+                height={260}
+                formatXAxis={(v) => v.slice(5)}
+                formatTooltipTime={(v) => v}
+              />
+            ) : (
+              <TimeSeriesChart
+                data={hourlyData}
+                series={Object.keys(hourlyData[0] || {})
+                  .filter((k) => k !== "time")
+                  .map((k, i) => ({
+                    key: k,
+                    label: k.replace(/^email_/, "").replace(/_/g, " "),
+                    color: ["#3b82f6", "#ef4444", "#f59e0b", "#10b981", "#8b5cf6", "#ec4899", "#06b6d4", "#f97316"][i % 8],
+                  }))}
+                height={260}
+                formatXAxis={(v) => {
+                  const d = new Date(v);
+                  return `${d.getHours().toString().padStart(2, "0")}:00`;
+                }}
+                formatTooltipTime={(v) => {
+                  const d = new Date(v);
+                  return d.toLocaleString("en-US", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" });
+                }}
+                timeRanges={["12h", "24h", "48h", "72h"]}
+                selectedRange={hourlyRange}
+                onRangeChange={setHourlyRange}
+              />
             )}
           </div>
 
