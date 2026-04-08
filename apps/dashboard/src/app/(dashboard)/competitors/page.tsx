@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback, useMemo } from "react";
 import Link from "next/link";
 import { useAuth } from "@/lib/auth-context";
+import { usePlatformAccess } from "@/hooks/use-platform-access";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import {
@@ -296,8 +297,8 @@ function AppGroupRows({
 // --- Main page ---
 
 export default function CrossPlatformCompetitorsPage() {
-  const { fetchWithAuth, account } = useAuth();
-  const enabledPlatforms = (account?.enabledPlatforms ?? []) as PlatformId[];
+  const { fetchWithAuth } = useAuth();
+  const { accessiblePlatforms: enabledPlatforms } = usePlatformAccess();
   const [data, setData] = useState<CompetitorResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");

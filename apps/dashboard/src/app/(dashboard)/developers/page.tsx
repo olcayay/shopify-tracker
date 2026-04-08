@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback, useMemo } from "react";
 import Link from "next/link";
 import { useAuth } from "@/lib/auth-context";
+import { usePlatformAccess } from "@/hooks/use-platform-access";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import {
@@ -59,8 +60,8 @@ interface DeveloperResponse {
 }
 
 export default function DevelopersPage() {
-  const { fetchWithAuth, account } = useAuth();
-  const enabledPlatforms = (account?.enabledPlatforms ?? []) as PlatformId[];
+  const { fetchWithAuth } = useAuth();
+  const { accessiblePlatforms: enabledPlatforms } = usePlatformAccess();
   const [data, setData] = useState<DeveloperResponse | null>(null);
   const [trackedDevs, setTrackedDevs] = useState<TrackedDeveloper[]>([]);
   const [loading, setLoading] = useState(true);

@@ -19,6 +19,7 @@ vi.mock("@/lib/auth-context", () => ({
     account: {
       id: "a1",
       enabledPlatforms: ["shopify"],
+      enabledFeatures: ["platform-shopify"],
     },
   }),
 }));

@@ -17,7 +17,7 @@ import {
 import { useAuth } from "@/lib/auth-context";
 import { PLATFORM_LABELS, PLATFORM_COLORS } from "@/lib/platform-display";
 import { extractPlatform, getNavItems, systemAdminItems, globalNavItems, isOnPlatformPage, isOnGlobalPage } from "@/lib/nav-utils";
-import { PLATFORMS, type PlatformId } from "@appranks/shared";
+import { PLATFORMS, type PlatformId, platformFeatureFlagSlug } from "@appranks/shared";
 import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
 import { VisuallyHidden } from "radix-ui";
@@ -41,6 +41,15 @@ function SidebarContent({
   const enabledFeatures = account?.enabledFeatures ?? [];
   const isAdminSection = pathname.startsWith("/system-admin");
 
+  // Filter platforms by both account-level enablement and feature flags
+  const enabledFeatureSet = useMemo(() => new Set(enabledFeatures), [enabledFeatures]);
+  const accessiblePlatforms = useMemo<PlatformId[]>(() => {
+    if (isSystemAdmin) return Object.keys(PLATFORMS) as PlatformId[];
+    return enabledPlatforms.filter(
+      (pid) => pid in PLATFORMS && enabledFeatureSet.has(platformFeatureFlagSlug(pid as PlatformId))
+    ) as PlatformId[];
+  }, [isSystemAdmin, enabledPlatforms, enabledFeatureSet]);
+
   const currentPlatform = extractPlatform(pathname);
   const [expandedPlatform, setExpandedPlatform] = useState<PlatformId | null>(currentPlatform);
 
@@ -54,10 +63,10 @@ function SidebarContent({
     if (!user || !account || isSystemAdmin) return;
     const urlPlatform = extractPlatform(pathname);
     // Only redirect if the pathname actually starts with a platform segment
-    if (pathname.startsWith(`/${urlPlatform}`) && !enabledPlatforms.includes(urlPlatform)) {
+    if (pathname.startsWith(`/${urlPlatform}`) && !accessiblePlatforms.includes(urlPlatform)) {
       router.replace("/overview");
     }
-  }, [pathname, user, account, isSystemAdmin, enabledPlatforms, router]);
+  }, [pathname, user, account, isSystemAdmin, accessiblePlatforms, router]);
 
   function NavLink({ href, icon: Icon, label, isActive, iconSize = "h-4 w-4", className = "", badge, adminOnly }: {
     href: string; icon: any; label: string; isActive: boolean; iconSize?: string; className?: string; badge?: string; adminOnly?: boolean;
@@ -153,8 +162,7 @@ function SidebarContent({
           })
         ) : (
           /* Platform page: platform accordion */
-          ((isSystemAdmin ? Object.keys(PLATFORMS) : enabledPlatforms) as PlatformId[])
-            .filter((pid) => pid in PLATFORMS)
+          accessiblePlatforms
             .map((platformId) => {
             const isExpanded = expandedPlatform === platformId;
             const items = getNavItems(platformId, isSystemAdmin, enabledFeatures);

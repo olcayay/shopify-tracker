@@ -30,7 +30,7 @@ vi.mock("@/lib/auth-context", () => ({
       emailDigestEnabled: true,
       timezone: "UTC",
     },
-    account: { id: "a1", name: "Test Account", isSuspended: false, enabledPlatforms: ["shopify", "salesforce", "canva"] },
+    account: { id: "a1", name: "Test Account", isSuspended: false, enabledPlatforms: ["shopify", "salesforce", "canva"], enabledFeatures: ["platform-shopify", "platform-salesforce", "platform-canva"] },
     logout: mockLogout,
   }),
 }));
@@ -149,7 +149,7 @@ describe("Sidebar with admin user", () => {
           emailDigestEnabled: true,
           timezone: "UTC",
         },
-        account: { id: "a1", name: "Test Account", isSuspended: false, enabledPlatforms: ["shopify", "salesforce", "canva"] },
+        account: { id: "a1", name: "Test Account", isSuspended: false, enabledPlatforms: ["shopify", "salesforce", "canva"], enabledFeatures: ["platform-shopify", "platform-salesforce", "platform-canva"] },
         logout: mockLogout,
       }),
     }));

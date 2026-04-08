@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useAuth } from "@/lib/auth-context";
 import { useFeatureFlag } from "@/contexts/feature-flags-context";
+import { usePlatformAccess } from "@/hooks/use-platform-access";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -64,20 +65,18 @@ export default function CrossPlatformOverviewPage() {
   const [fetchError, setFetchError] = useState<string | null>(null);
   const [dataLoaded, setDataLoaded] = useState(false);
 
-  const enabledPlatforms = (account?.enabledPlatforms ?? []) as PlatformId[];
+  const { accessiblePlatforms: enabledPlatforms } = usePlatformAccess();
   const isSystemAdmin = user?.isSystemAdmin;
 
   useEffect(() => {
     if (!account) return;
-    // Capture enabledPlatforms inside the effect to avoid stale closure
-    const platforms = (account.enabledPlatforms ?? []) as PlatformId[];
-    if (platforms.length === 0) {
+    if (enabledPlatforms.length === 0) {
       setLoading(false);
       setDataLoaded(true);
       return;
     }
-    loadData(platforms);
-  }, [account]); // eslint-disable-line react-hooks/exhaustive-deps
+    loadData(enabledPlatforms);
+  }, [account, enabledPlatforms]); // eslint-disable-line react-hooks/exhaustive-deps
 
   async function loadData(platforms: PlatformId[]) {
     setLoading(true);
@@ -182,8 +181,7 @@ export default function CrossPlatformOverviewPage() {
               variant="outline"
               size="sm"
               onClick={() => {
-                const platforms = (account?.enabledPlatforms ?? []) as PlatformId[];
-                loadData(platforms);
+                loadData(enabledPlatforms);
               }}
             >
               Retry

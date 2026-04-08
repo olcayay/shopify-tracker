@@ -12,6 +12,17 @@ PLA-917: Seeded platform feature flags for all 12 platforms
 - Added 4 unit tests for the new utility
 - Files: 0127_seed_platform_feature_flags.sql, _journal.json, platforms.ts, platforms.test.ts, index.ts
 
+PLA-919: Gate dashboard sidebar and navigation by platform flags
+- Sidebar now filters platforms by both enabledPlatforms AND feature flags
+- Created usePlatformAccess() hook: shared logic for computing accessible platforms
+- Route protection enhanced: redirects to /overview if platform flag is disabled
+- Cross-platform pages (overview, apps, keywords, competitors, developers) use filtered list
+- System admins see all platforms (hasFeature always returns true for admins)
+- 6 new unit tests for usePlatformAccess hook
+- Updated existing sidebar/cross-platform tests with feature flag mocks
+- Files: sidebar.tsx, use-platform-access.ts (new), overview/page.tsx, apps/page.tsx,
+  keywords/page.tsx, competitors/page.tsx, developers/page.tsx, 5 test files
+
 PLA-918: Added platform feature flag middleware to API routes
 - Global preHandler hook: registerPlatformAccessGuard() in platform-access.ts
 - Automatically checks any request with `?platform=X` query param
