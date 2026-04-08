@@ -298,3 +298,22 @@ export type { AiRateLimitConfig, RateLimitCheck } from "./ai-rate-limiter.js";
 // Metadata Limits
 export { getMetadataLimits } from "./metadata-limits.js";
 export type { MetadataLimits } from "./metadata-limits.js";
+
+// Audit Engine
+export {
+  computeAudit,
+  computeSectionScore,
+  computeOverallScore,
+  collectRecommendations,
+  DEFAULT_SECTION_WEIGHTS,
+} from "./audit/index.js";
+export type {
+  AuditReport,
+  AuditSection,
+  AuditCheck,
+  AuditRecommendation,
+  AuditAppMeta,
+  AuditStatus,
+  AuditImpact,
+  SectionWeights,
+} from "./audit/index.js";

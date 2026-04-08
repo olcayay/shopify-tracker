@@ -1,6 +1,6 @@
 Listing Audit Feature (2026-04-08)
   PLA-876: Phase 0: Move metadata-limits.ts to shared package ✅
-  PLA-877: Phase 1: Create audit engine types and core structure
+  PLA-877: Phase 1: Create audit engine types and core structure ✅
   PLA-878: Phase 1: Audit rules — Title Optimization section
   PLA-879: Phase 1: Audit rules — Description & Content section
   PLA-880: Phase 1: Audit rules — Visual Assets section
