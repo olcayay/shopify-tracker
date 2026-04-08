@@ -12,6 +12,14 @@ PLA-917: Seeded platform feature flags for all 12 platforms
 - Added 4 unit tests for the new utility
 - Files: 0127_seed_platform_feature_flags.sql, _journal.json, platforms.ts, platforms.test.ts, index.ts
 
+PLA-921: Gate email and notification jobs by platform flags
+- process-notification.ts: checks platform flag from payload after notifications flag check
+- process-bulk-email.ts: checks platform flag from payload before processing
+- Both extract platform from `payload.platform`, skip if isPlatformId and flag disabled
+- Fail-open on DB errors (bulk email) or missing platform (no check)
+- 3 new tests for notification platform flag check
+- Files: process-notification.ts, process-bulk-email.ts, process-notification.test.ts
+
 PLA-920: Gate scraper and background jobs by platform flags
 - Scheduler: checks platform feature flag before enqueuing jobs (after circuit breaker)
 - Worker: early rejection before acquiring per-platform lock

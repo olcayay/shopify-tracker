@@ -4,7 +4,9 @@
  */
 import type { Job } from "bullmq";
 import type { BulkEmailJobData, BulkEmailJobType } from "@appranks/shared";
-import { createLogger } from "@appranks/shared";
+import { createLogger, isPlatformId, platformFeatureFlagSlug, type PlatformId } from "@appranks/shared";
+import { featureFlags } from "@appranks/db";
+import { eq } from "drizzle-orm";
 import { sendEmail } from "./pipeline.js";
 
 const log = createLogger("email-bulk");
@@ -94,6 +96,24 @@ export async function processBulkEmail(
 ): Promise<void> {
   const { type, to, payload, userId, accountId, name, campaignId } = job.data;
   log.info("processing bulk email", { jobId: job.id, type, to });
+
+  // Check if platform feature flag is enabled (platform is in payload for alert emails)
+  const platform = payload?.platform as string | undefined;
+  if (platform && isPlatformId(platform)) {
+    try {
+      const flagSlug = platformFeatureFlagSlug(platform as PlatformId);
+      const [platformFlag] = await db
+        .select({ isEnabled: featureFlags.isEnabled })
+        .from(featureFlags)
+        .where(eq(featureFlags.slug, flagSlug));
+      if (platformFlag && !platformFlag.isEnabled) {
+        log.info("platform feature flag disabled, skipping email", { jobId: job.id, type, platform });
+        return;
+      }
+    } catch {
+      // Fail-open: don't block emails if flag check fails
+    }
+  }
 
   const builder = await getBuilder(type);
   if (!builder) {

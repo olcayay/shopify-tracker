@@ -110,7 +110,7 @@ describe("processNotification", () => {
     mockDbFrom.mockReturnThis();
     mockDbWhere.mockImplementation(() => {
       if (selectCallCount === 1) {
-        // Feature flag check — return enabled
+        // Notifications feature flag check — return enabled
         return Promise.resolve([{ isEnabled: true }]);
       }
       return mockDb;
@@ -126,6 +126,15 @@ describe("processNotification", () => {
   });
 
   it("calls emitNotification with correct params", async () => {
+    // Override mock to also handle platform feature flag check
+    let selectCallCount = 0;
+    mockDbSelect.mockImplementation(() => { selectCallCount++; return mockDb; });
+    mockDbWhere.mockImplementation(() => {
+      if (selectCallCount === 1) return Promise.resolve([{ isEnabled: true }]); // notifications flag
+      if (selectCallCount === 2) return Promise.resolve([{ isEnabled: true }]); // platform flag
+      return mockDb;
+    });
+
     const job = makeJob({
       type: "notification_ranking_change",
       userId: "u1",
@@ -240,5 +249,88 @@ describe("processNotification", () => {
 
     await processNotification(job, mockDb);
     expect(mockEmitNotification).not.toHaveBeenCalled();
+  });
+
+  it("skips processing when platform feature flag is disabled", async () => {
+    let selectCallCount = 0;
+    mockDbSelect.mockImplementation(() => {
+      selectCallCount++;
+      return mockDb;
+    });
+    mockDbWhere.mockImplementation(() => {
+      if (selectCallCount === 1) {
+        // notifications flag: enabled
+        return Promise.resolve([{ isEnabled: true }]);
+      }
+      if (selectCallCount === 2) {
+        // platform flag: disabled
+        return Promise.resolve([{ isEnabled: false }]);
+      }
+      return mockDb;
+    });
+
+    const job = makeJob({
+      type: "notification_ranking_change",
+      userId: "u1",
+      accountId: "a1",
+      payload: { appName: "Test App", platform: "shopify" },
+      createdAt: new Date().toISOString(),
+    });
+
+    await processNotification(job, mockDb);
+    expect(mockEmitNotification).not.toHaveBeenCalled();
+  });
+
+  it("processes notification when platform feature flag is enabled", async () => {
+    let selectCallCount = 0;
+    mockDbSelect.mockImplementation(() => {
+      selectCallCount++;
+      return mockDb;
+    });
+    mockDbWhere.mockImplementation(() => {
+      if (selectCallCount === 1) {
+        return Promise.resolve([{ isEnabled: true }]); // notifications flag
+      }
+      if (selectCallCount === 2) {
+        return Promise.resolve([{ isEnabled: true }]); // platform flag
+      }
+      return mockDb;
+    });
+
+    const job = makeJob({
+      type: "notification_ranking_change",
+      userId: "u1",
+      accountId: "a1",
+      payload: { appName: "Test App", platform: "shopify" },
+      createdAt: new Date().toISOString(),
+    });
+
+    await processNotification(job, mockDb);
+    expect(mockEmitNotification).toHaveBeenCalled();
+  });
+
+  it("processes notification when no platform in payload (skip platform check)", async () => {
+    let selectCallCount = 0;
+    mockDbSelect.mockImplementation(() => {
+      selectCallCount++;
+      return mockDb;
+    });
+    mockDbWhere.mockImplementation(() => {
+      if (selectCallCount === 1) {
+        return Promise.resolve([{ isEnabled: true }]); // notifications flag
+      }
+      return mockDb;
+    });
+
+    const job = makeJob({
+      type: "notification_ranking_change",
+      userId: "u1",
+      accountId: "a1",
+      payload: { appName: "Test App" }, // no platform
+      createdAt: new Date().toISOString(),
+    });
+
+    await processNotification(job, mockDb);
+    expect(mockEmitNotification).toHaveBeenCalled();
   });
 });

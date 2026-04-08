@@ -11,7 +11,7 @@ import {
   type NotificationRecord,
 } from "@appranks/shared";
 import type { NotificationType } from "@appranks/shared";
-import { createLogger } from "@appranks/shared";
+import { createLogger, isPlatformId, platformFeatureFlagSlug, type PlatformId } from "@appranks/shared";
 import { eq, and, inArray, sql } from "drizzle-orm";
 import {
   notifications,
@@ -265,6 +265,20 @@ export async function processNotification(
   if (!flag?.isEnabled) {
     log.info("notifications feature flag disabled, skipping", { jobId: job.id, type });
     return;
+  }
+
+  // Check if platform feature flag is enabled (platform is in payload)
+  const platform = payload?.platform as string | undefined;
+  if (platform && isPlatformId(platform)) {
+    const flagSlug = platformFeatureFlagSlug(platform as PlatformId);
+    const [platformFlag] = await db
+      .select({ isEnabled: featureFlags.isEnabled })
+      .from(featureFlags)
+      .where(eq(featureFlags.slug, flagSlug));
+    if (platformFlag && !platformFlag.isEnabled) {
+      log.info("platform feature flag disabled, skipping notification", { jobId: job.id, type, platform });
+      return;
+    }
   }
 
   const store = createNotificationStore(db);
