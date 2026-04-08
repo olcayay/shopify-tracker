@@ -1,6 +1,16 @@
 Activity Log — Phase 1 (2026-04-08)
 ================================================================
 
+PLA-938: Create API endpoint to fetch activity logs
+- New file: apps/api/src/routes/account-activity-log.ts
+- GET /api/account/activity-log — paginated, filtered activity logs
+- Query params: page (default 1), limit (default 25, max 100), action, entityType, userId
+- LEFT JOIN with users table for user name/email
+- Ordered by created_at DESC, uses idx_activity_log_account index
+- Registered in account.ts route aggregator
+- 13 unit tests: auth (401/viewer/editor), pagination (defaults, custom, clamp, invalid), filtering, response shape
+- Files: account-activity-log.ts, account.ts, account-activity-log.test.ts
+
 PLA-937: Fix logActivity to persist metadata and add missing action logging
 - Fixed logActivity() in utils/activity-log.ts to persist metadata as JSONB
   - Previously _metadata param was unused (prefixed with _)

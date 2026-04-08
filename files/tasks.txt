@@ -1,6 +1,6 @@
 Activity Log (2026-04-08)
   PLA-937: Phase 1: Fix logActivity to persist metadata and add missing action logging ✅
-  PLA-938: Phase 2: Create API endpoint to fetch activity logs
+  PLA-938: Phase 2: Create API endpoint to fetch activity logs ✅
   PLA-939: Phase 3: Build Activity Log UI on organization settings page
 
 Platform Feature Flags (2026-04-08)
