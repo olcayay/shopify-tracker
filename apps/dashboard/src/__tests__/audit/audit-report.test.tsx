@@ -6,10 +6,11 @@ vi.mock("next/navigation", () => ({
 }));
 
 vi.mock("@appranks/shared", () => ({
-  PLATFORMS: [
-    { id: "shopify", name: "Shopify" },
-    { id: "salesforce", name: "Salesforce" },
-  ],
+  PLATFORMS: {
+    shopify: { id: "shopify", name: "Shopify" },
+    salesforce: { id: "salesforce", name: "Salesforce" },
+  },
+  isPlatformId: (id: string) => ["shopify", "salesforce"].includes(id),
 }));
 
 // Import after mocks

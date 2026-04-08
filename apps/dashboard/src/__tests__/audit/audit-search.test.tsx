@@ -6,7 +6,8 @@ vi.mock("next/navigation", () => ({
 }));
 
 vi.mock("@appranks/shared", () => ({
-  PLATFORMS: [{ id: "shopify", name: "Shopify" }],
+  PLATFORMS: { shopify: { id: "shopify", name: "Shopify" } },
+  isPlatformId: (id: string) => id === "shopify",
 }));
 
 const { AuditSearch } = await import("@/components/audit/audit-search");
