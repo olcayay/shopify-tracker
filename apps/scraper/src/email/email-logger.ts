@@ -57,6 +57,7 @@ export async function logSkippedEmail(db: any, params: LogEmailParams & { skipRe
       recipientEmail: params.recipientEmail,
       recipientName: params.recipientName,
       subject: params.subject || `[Skipped] ${params.emailType}`,
+      htmlBody: params.htmlBody,
       dataSnapshot: params.dataSnapshot,
       status: "skipped",
       errorMessage: params.skipReason,

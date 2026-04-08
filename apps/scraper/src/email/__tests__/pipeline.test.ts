@@ -213,6 +213,28 @@ describe("Email send pipeline", () => {
     );
   });
 
+  it("stores htmlBody when email is skipped for admin preview", async () => {
+    vi.mocked(checkEligibility).mockResolvedValue({
+      eligible: false,
+      skipReason: "feature flag disabled",
+    });
+
+    await sendEmail({
+      db: mockDb,
+      emailType: "daily_digest",
+      userId: "user-1",
+      accountId: "acc-1",
+      recipientEmail: "test@example.com",
+      subject: "Daily Digest",
+      htmlBody: "<html><body><h1>Your Daily Digest</h1></body></html>",
+    });
+
+    expect(logSkippedEmail).toHaveBeenCalledWith(mockDb, expect.objectContaining({
+      htmlBody: "<html><body><h1>Your Daily Digest</h1></body></html>",
+      skipReason: "feature flag disabled",
+    }));
+  });
+
   it("logs skipped email with fallback reason when skipReason is undefined", async () => {
     vi.mocked(checkEligibility).mockResolvedValue({
       eligible: false,

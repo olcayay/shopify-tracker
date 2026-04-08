@@ -67,6 +67,7 @@ export async function sendEmail(params: SendEmailParams): Promise<SendEmailResul
       recipientEmail,
       recipientName: params.recipientName,
       subject,
+      htmlBody,
       dataSnapshot: params.dataSnapshot,
       skipReason: eligibility.skipReason || "eligibility check failed",
     });
