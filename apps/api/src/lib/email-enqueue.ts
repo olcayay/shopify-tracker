@@ -30,8 +30,8 @@ function getQueue(): Queue<InstantEmailJobData> {
     _queue = new Queue<InstantEmailJobData>(EMAIL_INSTANT_QUEUE_NAME, {
       connection: getRedisConnection(),
       defaultJobOptions: {
-        attempts: 3,
-        backoff: { type: "exponential", delay: 5_000 },
+        attempts: 6,
+        backoff: { type: "exponential", delay: 30_000 },
         removeOnComplete: { count: 100 },
         removeOnFail: { count: 50 },
       },

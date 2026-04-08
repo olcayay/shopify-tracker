@@ -56,6 +56,19 @@ const worker = new Worker<InstantEmailJobData>(
         );
       }
 
+      // provider_down: use longer delay to align with circuit breaker recovery (~5 min)
+      if (errorClass === "provider_down" && job.attemptsMade < (job.opts?.attempts ?? 6)) {
+        const providerDownDelay = 60_000 * Math.min(job.attemptsMade + 1, 5); // 60s, 120s, 180s, 240s, 300s
+        log.info("provider_down: scheduling extended retry", {
+          jobId: job.id,
+          attempt: job.attemptsMade,
+          nextDelayMs: providerDownDelay,
+        });
+        await job.moveToDelayed(Date.now() + providerDownDelay, job.token);
+        await job.updateProgress({ lastRetryReason: "provider_down", delayMs: providerDownDelay });
+        return; // Don't throw — moveToDelayed handles retry scheduling
+      }
+
       throw err;
     } finally {
       instantWorkerMetrics.jobFinished();

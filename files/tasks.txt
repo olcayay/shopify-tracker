@@ -3,6 +3,7 @@ Date Serialization Fixes (2026-04-07)
   PLA-866: Fix Zendesk review scraper — switch from browser (0 results) to REST API v2 ✅
   PLA-865: Fix Canva keyword search timeouts — per-keyword retry with fresh page, 60s timeout ✅
   PLA-862: Fix competitors table horizontal overflow — add overflow-x-auto to CardContent ✅
+  PLA-868: Improve email retry — 6 attempts, 30s base backoff, provider_down gets 60-300s delays ✅
 
 Email System Overhaul — Alert Safeguards & Fixes (2026-04-07)
   PLA-829: Phase 0: Fix digest email platform lock timeout ✅
