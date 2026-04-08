@@ -91,9 +91,7 @@ export function getNavItems(platformId: PlatformId, isAdmin?: boolean, enabledFe
   if (enabledFeatures?.includes("market-research")) {
     items.push({ href: `${p}/research`, label: "Research", icon: FlaskConical, badge: "Beta" });
   }
-  if (isAdmin) {
-    items.push({ href: `${p}/developers`, label: "Developers", icon: Code, adminOnly: true });
-  }
+  items.push({ href: `${p}/developers`, label: "Developers", icon: Code });
   return items;
 }
 

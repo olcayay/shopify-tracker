@@ -1,11 +1,11 @@
 "use client";
 
-import { Suspense, useEffect, useState, useMemo } from "react";
+import { Suspense, useEffect, useState, useCallback, useMemo } from "react";
 import { useSearchParams, useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { useAuth } from "@/lib/auth-context";
-import { useFormatDate } from "@/lib/format-date";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 import {
   Table,
   TableBody,
@@ -14,508 +14,347 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { ArrowUpDown, ArrowUp, ArrowDown, Search as SearchIcon, Globe } from "lucide-react";
-import { ExternalLink } from "@/components/ui/external-link";
-import { Input } from "@/components/ui/input";
-import { TableSkeleton, CardSkeleton } from "@/components/skeletons";
-import { formatNumber } from "@/lib/format-utils";
+import {
+  Search,
+  ChevronLeft,
+  ChevronRight,
+  ArrowUpDown,
+  Bookmark,
+} from "lucide-react";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import { TableSkeleton } from "@/components/skeletons";
 import { developerNameToSlug } from "@appranks/shared";
 
-type SortKey = "name" | "rating" | "reviews" | "minPaidPrice" | "lastChangeAt" | "launchedDate";
-type SortDir = "asc" | "desc";
+interface TopApp {
+  iconUrl: string;
+  name: string;
+  slug: string;
+  platform: string;
+}
 
-export default function DeveloperAppsPage() {
+interface Developer {
+  id: number;
+  slug: string;
+  name: string;
+  website: string | null;
+  platformCount: number;
+  linkCount: number;
+  appCount: number;
+  platforms: string[];
+  topApps: TopApp[];
+  isStarred: boolean;
+}
+
+interface DeveloperResponse {
+  developers: Developer[];
+  pagination: {
+    page: number;
+    limit: number;
+    total: number;
+    totalPages: number;
+  };
+}
+
+export default function PlatformDevelopersPage() {
   return (
-    <Suspense
-      fallback={<TableSkeleton rows={8} cols={5} />}
-    >
-      <DeveloperAppsContent />
+    <Suspense fallback={<TableSkeleton rows={10} cols={4} />}>
+      <PlatformDevelopersContent />
     </Suspense>
   );
 }
 
-function DeveloperAppsContent() {
+function PlatformDevelopersContent() {
   const { platform } = useParams();
   const searchParams = useSearchParams();
   const router = useRouter();
   const developerName = searchParams.get("name") || "";
-  const { fetchWithAuth, user } = useAuth();
+  const { fetchWithAuth } = useAuth();
 
-  // Redirect ?name=X to slug-based URL
+  // Redirect legacy ?name=X to slug-based URL
   useEffect(() => {
     if (developerName) {
       const slug = developerNameToSlug(developerName);
       router.replace(`/${platform}/developers/${slug}`);
     }
   }, [developerName, platform, router]);
-  const { formatDateOnly } = useFormatDate();
-  const [apps, setApps] = useState<any[]>([]);
-  const [developerInfo, setDeveloperInfo] = useState<Record<string, any> | null>(null);
+
+  const [data, setData] = useState<DeveloperResponse | null>(null);
   const [loading, setLoading] = useState(true);
-  const [appCategories, setAppCategories] = useState<Record<string, { title: string; slug: string; position: number | null }[]>>({});
-  const [lastChanges, setLastChanges] = useState<Record<string, string>>({});
-
-  const [sortKey, setSortKey] = useState<SortKey>("name");
-  const [sortDir, setSortDir] = useState<SortDir>("asc");
-
-  useEffect(() => {
-    if (!developerName) {
-      setLoading(false);
-      return;
-    }
-    loadApps();
-  }, [developerName]);
-
-  async function loadApps() {
-    setLoading(true);
-    const res = await fetchWithAuth(
-      `/api/apps/by-developer?name=${encodeURIComponent(developerName)}`
-    );
-    if (res.ok) {
-      const data = await res.json();
-      const loadedApps = data.apps || [];
-      setApps(loadedApps);
-      setDeveloperInfo(data.developerInfo || null);
-
-      const slugs = loadedApps.map((a: any) => a.slug).filter(Boolean);
-      if (slugs.length > 0) {
-        const [catRes, lcRes] = await Promise.all([
-          fetchWithAuth("/api/apps/categories", {
-            method: "POST",
-            body: JSON.stringify({ slugs }),
-          }),
-          fetchWithAuth("/api/apps/last-changes", {
-            method: "POST",
-            body: JSON.stringify({ slugs }),
-          }),
-        ]);
-        if (catRes.ok) setAppCategories(await catRes.json());
-        if (lcRes.ok) setLastChanges(await lcRes.json());
-      }
-    }
-    setLoading(false);
-  }
-
-  const sorted = useMemo(() => {
-    return [...apps].sort((a, b) => {
-      let cmp = 0;
-      switch (sortKey) {
-        case "name":
-          cmp = (a.name || a.slug).localeCompare(b.name || b.slug);
-          break;
-        case "rating":
-          cmp = (a.averageRating ?? 0) - (b.averageRating ?? 0);
-          break;
-        case "reviews":
-          cmp = (a.ratingCount ?? 0) - (b.ratingCount ?? 0);
-          break;
-        case "minPaidPrice":
-          cmp = (a.minPaidPrice ?? 0) - (b.minPaidPrice ?? 0);
-          break;
-        case "lastChangeAt":
-          cmp = (lastChanges[a.slug] || "").localeCompare(lastChanges[b.slug] || "");
-          break;
-        case "launchedDate":
-          cmp = (a.launchedDate || "").localeCompare(b.launchedDate || "");
-          break;
-      }
-      return sortDir === "asc" ? cmp : -cmp;
-    });
-  }, [apps, sortKey, sortDir, lastChanges]);
-
-  function toggleSort(key: SortKey) {
-    if (sortKey === key) {
-      setSortDir((d) => (d === "asc" ? "desc" : "asc"));
-    } else {
-      setSortKey(key);
-      setSortDir(key === "name" ? "asc" : "desc");
-    }
-  }
-
-  function SortIcon({ col }: { col: SortKey }) {
-    if (sortKey !== col)
-      return <ArrowUpDown className="inline h-3.5 w-3.5 ml-1 opacity-40" />;
-    return sortDir === "asc" ? (
-      <ArrowUp className="inline h-3.5 w-3.5 ml-1" />
-    ) : (
-      <ArrowDown className="inline h-3.5 w-3.5 ml-1" />
-    );
-  }
-
-  if (!developerName) {
-    if (!user?.isSystemAdmin) {
-      return (
-        <div className="text-center py-12 text-muted-foreground">
-          No developer specified.
-        </div>
-      );
-    }
-    return <DeveloperListView />;
-  }
-
-  return (
-    <div className="space-y-6">
-      <h1 className="text-2xl font-bold">Apps by {developerName}</h1>
-
-      {loading && (
-        <CardSkeleton lines={4} />
-      )}
-
-      {!loading && developerInfo && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Developer Information</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-1 text-sm">
-              {developerInfo.email && (
-                <p>
-                  <span className="text-muted-foreground">Email:</span>{" "}
-                  <a href={`mailto:${developerInfo.email}`} className="text-primary hover:underline">{developerInfo.email}</a>
-                </p>
-              )}
-              {developerInfo.phone && (
-                <p>
-                  <span className="text-muted-foreground">Phone:</span> {developerInfo.phone}
-                </p>
-              )}
-              {developerInfo.address && (
-                <p>
-                  <span className="text-muted-foreground">Address:</span>{" "}
-                  {[developerInfo.address.street, developerInfo.address.city, developerInfo.address.state ? `${developerInfo.address.state} ${developerInfo.address.zip || ""}`.trim() : developerInfo.address.zip, developerInfo.address.country].filter(Boolean).join(", ")}
-                </p>
-              )}
-              {developerInfo.employees != null && (
-                <p>
-                  <span className="text-muted-foreground">Employees:</span> {developerInfo.employees}
-                </p>
-              )}
-              {developerInfo.yearFounded != null && (
-                <p>
-                  <span className="text-muted-foreground">Year Founded:</span> {developerInfo.yearFounded}
-                </p>
-              )}
-              {developerInfo.location && (
-                <p>
-                  <span className="text-muted-foreground">Location:</span> {developerInfo.location}
-                </p>
-              )}
-              {developerInfo.country && (
-                <p>
-                  <span className="text-muted-foreground">Country:</span> {developerInfo.country}
-                </p>
-              )}
-              {developerInfo.termsUrl && (
-                <p>
-                  <span className="text-muted-foreground">Terms of Service:</span>{" "}
-                  <ExternalLink href={developerInfo.termsUrl} showIcon={false} className="text-primary">{developerInfo.termsUrl}</ExternalLink>
-                </p>
-              )}
-              {developerInfo.privacyUrl && (
-                <p>
-                  <span className="text-muted-foreground">Privacy Policy:</span>{" "}
-                  <ExternalLink href={developerInfo.privacyUrl} showIcon={false} className="text-primary">{developerInfo.privacyUrl}</ExternalLink>
-                </p>
-              )}
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      <Card>
-        <CardHeader>
-          <CardTitle>{loading ? "Loading..." : `${apps.length} Apps`}</CardTitle>
-        </CardHeader>
-        <CardContent>
-          {loading ? (
-            <TableSkeleton rows={8} cols={5} />
-          ) : apps.length === 0 ? (
-            <p className="text-muted-foreground text-center py-8">
-              No apps found for this developer.
-            </p>
-          ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="cursor-pointer select-none" onClick={() => toggleSort("name")}>
-                    App <SortIcon col="name" />
-                  </TableHead>
-                  <TableHead className="cursor-pointer select-none" onClick={() => toggleSort("rating")}>
-                    Rating <SortIcon col="rating" />
-                  </TableHead>
-                  <TableHead className="cursor-pointer select-none" onClick={() => toggleSort("reviews")}>
-                    Reviews <SortIcon col="reviews" />
-                  </TableHead>
-                  <TableHead>Categories</TableHead>
-                  <TableHead>Pricing</TableHead>
-                  <TableHead className="cursor-pointer select-none" onClick={() => toggleSort("minPaidPrice")}>
-                    Min. Paid <SortIcon col="minPaidPrice" />
-                  </TableHead>
-                  <TableHead className="cursor-pointer select-none" onClick={() => toggleSort("lastChangeAt")}>
-                    Last Change <SortIcon col="lastChangeAt" />
-                  </TableHead>
-                  <TableHead className="cursor-pointer select-none" onClick={() => toggleSort("launchedDate")}>
-                    Launched <SortIcon col="launchedDate" />
-                  </TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {sorted.map((app: any) => (
-                  <TableRow key={app.slug}>
-                    <TableCell className="max-w-[260px]">
-                      <div className="flex items-center gap-2">
-                        {app.iconUrl && (
-                          <img src={app.iconUrl} alt="" aria-hidden="true" className="h-6 w-6 rounded shrink-0" />
-                        )}
-                        <div className="min-w-0">
-                          <div className="flex items-center gap-1.5">
-                            <Link
-                              href={`/${platform}/apps/${app.slug}`}
-                              className="text-primary hover:underline font-medium truncate"
-                            >
-                              {app.name}
-                            </Link>
-                            {app.isBuiltForShopify && <span title="Built for Shopify" className="shrink-0">💎</span>}
-                          </div>
-                        </div>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      {app.averageRating != null
-                        ? Number(app.averageRating).toFixed(1)
-                        : "\u2014"}
-                    </TableCell>
-                    <TableCell>
-                      {app.ratingCount != null ? (
-                        <Link href={`/${platform}/apps/${app.slug}/reviews`} className="text-primary hover:underline">
-                          {formatNumber(app.ratingCount)}
-                        </Link>
-                      ) : "\u2014"}
-                    </TableCell>
-                    <TableCell className="text-sm">
-                      {appCategories[app.slug]?.length ? (
-                        <div className="flex flex-col gap-0.5">
-                          {appCategories[app.slug].map((cat) => (
-                            <div key={cat.slug} className="flex items-center gap-1">
-                              {cat.position != null && (
-                                <span className="font-medium text-muted-foreground">#{cat.position}</span>
-                              )}
-                              <Link href={`/${platform}/categories/${cat.slug}`} className="text-primary hover:underline">
-                                {cat.title}
-                              </Link>
-                            </div>
-                          ))}
-                        </div>
-                      ) : "\u2014"}
-                    </TableCell>
-                    <TableCell className="text-sm">
-                      {app.pricing ?? "\u2014"}
-                    </TableCell>
-                    <TableCell className="text-sm">
-                      {app.minPaidPrice != null ? (
-                        <Link href={`/${platform}/apps/${app.slug}/details#pricing-plans`} className="text-primary hover:underline">
-                          {app.minPaidPrice === 0
-                            ? "Free"
-                            : `$${app.minPaidPrice}/mo`}
-                        </Link>
-                      ) : "\u2014"}
-                    </TableCell>
-                    <TableCell className="text-sm">
-                      {lastChanges[app.slug] ? (
-                        <Link href={`/${platform}/apps/${app.slug}/changes`} className="text-primary hover:underline">
-                          {formatDateOnly(lastChanges[app.slug])}
-                        </Link>
-                      ) : "\u2014"}
-                    </TableCell>
-                    <TableCell className="text-sm text-muted-foreground">
-                      {app.launchedDate
-                        ? formatDateOnly(app.launchedDate)
-                        : "\u2014"}
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          )}
-        </CardContent>
-      </Card>
-    </div>
-  );
-}
-
-type DevSortKey = "name" | "apps" | "email" | "country";
-
-function DeveloperListView() {
-  const { platform } = useParams();
-  const { fetchWithAuth } = useAuth();
-  const [developers, setDevelopers] = useState<{ developer_name: string; app_count: number; email: string | null; country: string | null }[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [sortKey, setSortKey] = useState<DevSortKey>("apps");
-  const [sortDir, setSortDir] = useState<SortDir>("desc");
   const [search, setSearch] = useState("");
-  const [countryFilter, setCountryFilter] = useState("");
+  const [page, setPage] = useState(1);
+  const [sort, setSort] = useState("name");
+  const [order, setOrder] = useState<"asc" | "desc">("asc");
+  const limit = 25;
+
+  const loadData = useCallback(async () => {
+    setLoading(true);
+    try {
+      const params = new URLSearchParams({
+        page: String(page),
+        limit: String(limit),
+        sort,
+        order,
+        platforms: String(platform),
+      });
+      if (search) params.set("search", search);
+      const res = await fetchWithAuth(`/api/developers?${params}`);
+      if (res.ok) setData(await res.json());
+    } finally {
+      setLoading(false);
+    }
+  }, [fetchWithAuth, page, search, sort, order, platform]);
 
   useEffect(() => {
-    (async () => {
-      const res = await fetchWithAuth(`/api/apps/developers`);
-      if (res.ok) setDevelopers(await res.json());
-      setLoading(false);
-    })();
-  }, []);
+    if (!developerName) loadData();
+  }, [loadData, developerName]);
 
-  const countries = useMemo(() => {
-    const set = new Set<string>();
-    for (const d of developers) {
-      if (d.country) set.add(d.country);
-    }
-    return [...set].sort();
-  }, [developers]);
-
-  const filtered = useMemo(() => {
-    const q = search.toLowerCase();
-    return developers.filter((d) => {
-      if (q && !d.developer_name.toLowerCase().includes(q) && !(d.email || "").toLowerCase().includes(q)) return false;
-      if (countryFilter && d.country !== countryFilter) return false;
-      return true;
-    });
-  }, [developers, search, countryFilter]);
-
-  const sorted = useMemo(() => {
-    return [...filtered].sort((a, b) => {
-      let cmp = 0;
-      switch (sortKey) {
-        case "name":
-          cmp = a.developer_name.localeCompare(b.developer_name);
-          break;
-        case "apps":
-          cmp = a.app_count - b.app_count;
-          break;
-        case "email":
-          cmp = (a.email || "").localeCompare(b.email || "");
-          break;
-        case "country":
-          cmp = (a.country || "").localeCompare(b.country || "");
-          break;
-      }
-      return sortDir === "asc" ? cmp : -cmp;
-    });
-  }, [filtered, sortKey, sortDir]);
-
-  function toggleSort(key: DevSortKey) {
-    if (sortKey === key) {
-      setSortDir((d) => (d === "asc" ? "desc" : "asc"));
+  function toggleSort(field: string) {
+    if (sort === field) {
+      setOrder(order === "asc" ? "desc" : "asc");
     } else {
-      setSortKey(key);
-      setSortDir(key === "name" ? "asc" : "desc");
+      setSort(field);
+      setOrder("asc");
+    }
+    setPage(1);
+  }
+
+  function handleSearch(e: React.FormEvent) {
+    e.preventDefault();
+    setPage(1);
+    loadData();
+  }
+
+  function sortDevelopers(devs: Developer[]): Developer[] {
+    return [...devs].sort((a, b) => {
+      if (a.isStarred !== b.isStarred) return a.isStarred ? -1 : 1;
+      let cmp = 0;
+      if (sort === "apps") {
+        cmp = a.appCount - b.appCount;
+      } else {
+        cmp = a.name.localeCompare(b.name);
+      }
+      return order === "desc" ? -cmp : cmp;
+    });
+  }
+
+  async function toggleStar(devId: number, currentlyStarred: boolean) {
+    if (!data) return;
+    const updated = data.developers.map((d) =>
+      d.id === devId ? { ...d, isStarred: !currentlyStarred } : d
+    );
+    setData({ ...data, developers: sortDevelopers(updated) });
+    try {
+      const method = currentlyStarred ? "DELETE" : "POST";
+      const res = await fetchWithAuth(
+        `/api/account/starred-developers/${devId}`,
+        { method }
+      );
+      if (!res.ok) throw new Error();
+    } catch {
+      setData((prev) => {
+        if (!prev) return prev;
+        const reverted = prev.developers.map((d) =>
+          d.id === devId ? { ...d, isStarred: currentlyStarred } : d
+        );
+        return { ...prev, developers: sortDevelopers(reverted) };
+      });
     }
   }
 
-  function SortIcon({ col }: { col: DevSortKey }) {
-    if (sortKey !== col)
-      return <ArrowUpDown className="inline h-3.5 w-3.5 ml-1 opacity-40" />;
-    return sortDir === "asc" ? (
-      <ArrowUp className="inline h-3.5 w-3.5 ml-1" />
-    ) : (
-      <ArrowDown className="inline h-3.5 w-3.5 ml-1" />
+  // If redirecting ?name=X, show nothing
+  if (developerName) return null;
+
+  const developers = data?.developers ?? [];
+  const pagination = data?.pagination;
+  const emptyMessage = search
+    ? "No developers found matching your search."
+    : "No developers found.";
+
+  const maxIcons = 8;
+
+  function renderAppsCell(dev: Developer) {
+    const visibleApps = dev.topApps.slice(0, maxIcons);
+    const remaining = dev.appCount - visibleApps.length;
+
+    if (visibleApps.length === 0) {
+      return <span className="text-muted-foreground text-sm">0</span>;
+    }
+
+    return (
+      <TooltipProvider delayDuration={200}>
+        <div className="flex items-center -space-x-1.5">
+          {visibleApps.map((app, i) => (
+            <Tooltip key={i}>
+              <TooltipTrigger asChild>
+                <Link
+                  href={`/${app.platform}/apps/${app.slug}`}
+                  className="shrink-0 rounded border border-background hover:z-10 hover:scale-110 transition-transform"
+                >
+                  <img
+                    src={app.iconUrl}
+                    alt={app.name}
+                    className="w-5 h-5 rounded"
+                  />
+                </Link>
+              </TooltipTrigger>
+              <TooltipContent side="top" className="text-xs">
+                {app.name}
+              </TooltipContent>
+            </Tooltip>
+          ))}
+          {remaining > 0 && (
+            <span className="w-5 h-5 rounded-full bg-muted flex items-center justify-center text-[10px] font-medium border border-background shrink-0">
+              +{remaining}
+            </span>
+          )}
+        </div>
+      </TooltipProvider>
     );
   }
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-bold">Developers</h1>
-      <Card>
-        <CardHeader>
-          <div className="flex flex-col sm:flex-row sm:items-center gap-3">
-            <CardTitle className="shrink-0">
-              {loading ? "Loading..." : filtered.length === developers.length ? `${developers.length} Developers` : `${filtered.length} / ${developers.length} Developers`}
-            </CardTitle>
-            {!loading && (
-              <div className="flex items-center gap-2 ml-auto">
-                <div className="relative">
-                  <SearchIcon className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
-                  <Input
-                    placeholder="Search name or email..."
-                    value={search}
-                    onChange={(e) => setSearch(e.target.value)}
-                    className="pl-8 h-9 w-56 text-sm"
-                  />
-                </div>
-                <select
-                  value={countryFilter}
-                  onChange={(e) => setCountryFilter(e.target.value)}
-                  className="border rounded-md px-3 py-1.5 text-sm bg-background h-9"
-                >
-                  <option value="">All Countries</option>
-                  {countries.map((c) => (
-                    <option key={c} value={c}>{c}</option>
-                  ))}
-                </select>
-              </div>
-            )}
-          </div>
-        </CardHeader>
-        <CardContent>
-          {loading ? (
-            <TableSkeleton rows={10} cols={4} />
-          ) : (
-            <Table>
+      <div>
+        <h1 className="text-2xl font-bold">Developers</h1>
+        <p className="text-sm text-muted-foreground">
+          Browse all developers on this platform
+        </p>
+      </div>
+
+      <form onSubmit={handleSearch} className="flex gap-2 max-w-md">
+        <div className="relative flex-1">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Search developers..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="pl-9"
+          />
+        </div>
+        <Button type="submit" variant="outline" size="sm">
+          Search
+        </Button>
+      </form>
+
+      {loading && !data ? (
+        <TableSkeleton rows={10} cols={4} />
+      ) : (
+        <>
+          <div className="rounded-md border">
+            <Table className="table-fixed">
               <TableHeader>
                 <TableRow>
-                  <TableHead className="cursor-pointer select-none" onClick={() => toggleSort("name")}>
-                    Developer <SortIcon col="name" />
+                  <TableHead className="w-10"></TableHead>
+                  <TableHead>
+                    <button
+                      onClick={() => toggleSort("name")}
+                      className="flex items-center gap-1 hover:text-foreground"
+                    >
+                      Developer <ArrowUpDown className="h-3 w-3" />
+                    </button>
                   </TableHead>
-                  <TableHead className="cursor-pointer select-none" onClick={() => toggleSort("apps")}>
-                    Apps <SortIcon col="apps" />
+                  <TableHead className="w-72">
+                    <button
+                      onClick={() => toggleSort("apps")}
+                      className="flex items-center gap-1 hover:text-foreground"
+                    >
+                      Apps <ArrowUpDown className="h-3 w-3" />
+                    </button>
                   </TableHead>
-                  <TableHead className="cursor-pointer select-none" onClick={() => toggleSort("email")}>
-                    Email <SortIcon col="email" />
+                  <TableHead className="w-36 text-right">
+                    <button
+                      onClick={() => toggleSort("apps")}
+                      className="flex items-center gap-1 justify-end hover:text-foreground"
+                    >
+                      App Count <ArrowUpDown className="h-3 w-3" />
+                    </button>
                   </TableHead>
-                  <TableHead className="cursor-pointer select-none" onClick={() => toggleSort("country")}>
-                    Country <SortIcon col="country" />
-                  </TableHead>
-                  <TableHead className="w-10" />
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {sorted.map((dev) => (
-                  <TableRow key={dev.developer_name}>
-                    <TableCell>
-                      <Link
-                        href={`/${platform}/developers/${developerNameToSlug(dev.developer_name)}`}
-                        className="text-primary hover:underline font-medium"
-                      >
-                        {dev.developer_name}
-                      </Link>
-                    </TableCell>
-                    <TableCell>{dev.app_count}</TableCell>
-                    <TableCell className="text-sm">
-                      {dev.email ? (
-                        <a href={`mailto:${dev.email}`} className="text-primary hover:underline">
-                          {dev.email}
-                        </a>
-                      ) : (
-                        <span className="text-muted-foreground">{"\u2014"}</span>
-                      )}
-                    </TableCell>
-                    <TableCell className="text-sm">
-                      {dev.country || <span className="text-muted-foreground">{"\u2014"}</span>}
-                    </TableCell>
-                    <TableCell>
-                      <Link
-                        href={`/${platform}/developers/${developerNameToSlug(dev.developer_name)}`}
-                        className="text-muted-foreground hover:text-foreground"
-                        title="Developer profile"
-                      >
-                        <Globe className="h-3.5 w-3.5" />
-                      </Link>
+                {developers.length === 0 ? (
+                  <TableRow>
+                    <TableCell
+                      colSpan={4}
+                      className="text-center text-muted-foreground py-8"
+                    >
+                      {emptyMessage}
                     </TableCell>
                   </TableRow>
-                ))}
+                ) : (
+                  developers.map((dev) => (
+                    <TableRow key={dev.id}>
+                      <TableCell className="w-10">
+                        <button
+                          onClick={() => toggleStar(dev.id, dev.isStarred)}
+                          className="p-1 rounded hover:bg-muted transition-colors"
+                          aria-label={
+                            dev.isStarred
+                              ? "Remove bookmark"
+                              : "Bookmark developer"
+                          }
+                        >
+                          <Bookmark
+                            className={`h-4 w-4 ${
+                              dev.isStarred
+                                ? "fill-amber-500 text-amber-500"
+                                : "text-muted-foreground hover:text-amber-500"
+                            }`}
+                          />
+                        </button>
+                      </TableCell>
+                      <TableCell>
+                        <Link
+                          href={`/${platform}/developers/${dev.slug}`}
+                          className="font-medium hover:underline"
+                        >
+                          {dev.name}
+                        </Link>
+                      </TableCell>
+                      <TableCell>{renderAppsCell(dev)}</TableCell>
+                      <TableCell className="text-muted-foreground text-right">
+                        {dev.appCount}
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
               </TableBody>
             </Table>
+          </div>
+
+          {pagination && pagination.totalPages > 1 && (
+            <div className="flex items-center justify-between">
+              <span className="text-sm text-muted-foreground">
+                Page {pagination.page} of {pagination.totalPages} (
+                {pagination.total} developers)
+              </span>
+              <div className="flex gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={pagination.page <= 1}
+                  onClick={() => setPage(page - 1)}
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={pagination.page >= pagination.totalPages}
+                  onClick={() => setPage(page + 1)}
+                >
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
           )}
-        </CardContent>
-      </Card>
+        </>
+      )}
     </div>
   );
 }

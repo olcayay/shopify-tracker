@@ -96,9 +96,9 @@ describe("nav-utils", () => {
       expect(salesforceWithFlag.some((i) => i.label === "Research")).toBe(true);
     });
 
-    it("includes developers only for admin", () => {
+    it("includes developers for all users", () => {
       const regular = getNavItems("shopify", false);
-      expect(regular.some((i) => i.label === "Developers")).toBe(false);
+      expect(regular.some((i) => i.label === "Developers")).toBe(true);
 
       const admin = getNavItems("shopify", true);
       expect(admin.some((i) => i.label === "Developers")).toBe(true);

@@ -1,3 +1,23 @@
+Platform Developers Page — Rewrite & Access Fix (2026-04-08)
+================================================================
+
+PLA-902: Rewrote [platform]/developers/page.tsx as a proper listing page
+- Replaced legacy DeveloperListView (admin-only, /api/apps/developers) with new page
+  using /api/developers?platforms={platform} endpoint
+- Search, sortable columns, pagination, bookmark/star support
+- App icon tooltips with links, same UX patterns as global /developers page
+- Kept ?name=X → slug redirect for backwards compatibility
+
+PLA-903: Removed admin-only gate from Developers nav item
+- Removed isAdmin check and adminOnly flag from nav-utils.ts
+- All authenticated users now see Developers in platform sidebar
+- Updated test to reflect new behavior
+
+Files changed:
+- apps/dashboard/src/app/(dashboard)/[platform]/developers/page.tsx (full rewrite)
+- apps/dashboard/src/lib/nav-utils.ts (removed admin gate)
+- apps/dashboard/src/__tests__/lib/nav-utils.test.ts (updated test)
+
 Listing Audit Feature — Full Implementation (2026-04-08)
 ================================================================
 

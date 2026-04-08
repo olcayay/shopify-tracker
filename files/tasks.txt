@@ -1,3 +1,7 @@
+Platform Developers Page (2026-04-08)
+  PLA-902: Make /{platform}/developers a proper developer listing page ✅
+  PLA-903: Make platform Developers page accessible to all users ✅
+
 Listing Audit Feature (2026-04-08)
   PLA-876: Phase 0: Move metadata-limits.ts to shared package ✅
   PLA-877: Phase 1: Create audit engine types and core structure ✅
