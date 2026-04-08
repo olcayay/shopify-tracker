@@ -332,7 +332,7 @@ describe("DevelopersPage (cross-platform)", () => {
     expect(document.querySelectorAll("img[src*='example.com']")).toHaveLength(0);
   });
 
-  it("shows +N badge when developer has more than 8 app icons", async () => {
+  it("shows +N badge when developer has more than 10 app icons", async () => {
     setupFetchMocks({
       developers: [
         {
@@ -342,7 +342,7 @@ describe("DevelopersPage (cross-platform)", () => {
           website: null,
           platformCount: 3,
           linkCount: 5,
-          appCount: 12,
+          appCount: 14,
           platforms: ["shopify", "salesforce", "wix"],
           isStarred: false,
           topApps: [
@@ -355,6 +355,8 @@ describe("DevelopersPage (cross-platform)", () => {
             { iconUrl: "https://example.com/g.png", name: "App G", slug: "app-g", platform: "salesforce" },
             { iconUrl: "https://example.com/h.png", name: "App H", slug: "app-h", platform: "wix" },
             { iconUrl: "https://example.com/i.png", name: "App I", slug: "app-i", platform: "shopify" },
+            { iconUrl: "https://example.com/j.png", name: "App J", slug: "app-j", platform: "wix" },
+            { iconUrl: "https://example.com/k.png", name: "App K", slug: "app-k", platform: "salesforce" },
           ],
         },
       ],
@@ -363,8 +365,8 @@ describe("DevelopersPage (cross-platform)", () => {
     await waitFor(() => {
       expect(screen.getByText("Mega Dev")).toBeInTheDocument();
     });
-    // 8 icons rendered + "+4" badge (12 total - 8 shown = 4 remaining)
-    expect(document.querySelectorAll("img[src*='example.com']")).toHaveLength(8);
+    // 10 icons rendered + "+4" badge (14 total - 10 shown = 4 remaining)
+    expect(document.querySelectorAll("img[src*='example.com']")).toHaveLength(10);
     expect(screen.getByText("+4")).toBeInTheDocument();
   });
 

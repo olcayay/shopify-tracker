@@ -175,7 +175,7 @@ function PlatformDevelopersContent() {
     ? "No developers found matching your search."
     : "No developers found.";
 
-  const maxIcons = 8;
+  const maxIcons = 10;
 
   function renderAppsCell(dev: Developer) {
     const visibleApps = dev.topApps.slice(0, maxIcons);

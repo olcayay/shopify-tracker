@@ -1,3 +1,11 @@
+Developers Page UX Improvements (2026-04-08)
+================================================================
+
+PLA-904: Increased visible app icons from 8 to 10
+- Changed maxIcons constant from 8 to 10 in both developers pages
+- Updated test to verify 10 icons shown with correct +N badge
+- Files: developers/page.tsx, [platform]/developers/page.tsx, cross-platform-developers.test.tsx
+
 Platform Developers Page — Rewrite & Access Fix (2026-04-08)
 ================================================================
 

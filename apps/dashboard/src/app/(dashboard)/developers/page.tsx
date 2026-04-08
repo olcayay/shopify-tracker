@@ -191,7 +191,7 @@ export default function DevelopersPage() {
       .map(([platform, devs]) => ({ platform, items: devs }));
   }, [developers, viewMode, enabledPlatforms]);
 
-  const maxIcons = 8;
+  const maxIcons = 10;
 
   function renderAppsCell(dev: Developer) {
     const visibleApps = dev.topApps.slice(0, maxIcons);
@@ -290,34 +290,9 @@ export default function DevelopersPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold">Developers</h1>
-          <p className="text-sm text-muted-foreground">Browse all developers across platforms</p>
-        </div>
-        <ViewModeToggle viewMode={viewMode} onChangeViewMode={changeViewMode} />
-      </div>
-
-      <div className="space-y-3">
-        <form onSubmit={handleSearch} className="flex gap-2 max-w-md">
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Search developers..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="pl-9"
-            />
-          </div>
-          <Button type="submit" variant="outline" size="sm">Search</Button>
-        </form>
-        {enabledPlatforms && enabledPlatforms.length > 1 && (
-          <PlatformFilterChips
-            enabledPlatforms={enabledPlatforms}
-            activePlatforms={activePlatforms}
-            onToggle={togglePlatform}
-          />
-        )}
+      <div>
+        <h1 className="text-2xl font-bold">Developers</h1>
+        <p className="text-sm text-muted-foreground">Browse all developers across platforms</p>
       </div>
 
       {/* My Developers section — developers of tracked apps */}
@@ -382,6 +357,31 @@ export default function DevelopersPage() {
           </Table>
         </div>
       )}
+
+      <div className="space-y-3">
+        <div className="flex items-center gap-2">
+          <form onSubmit={handleSearch} className="flex gap-2 max-w-md flex-1">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Search developers..."
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="pl-9"
+              />
+            </div>
+            <Button type="submit" variant="outline" size="sm">Search</Button>
+          </form>
+          <ViewModeToggle viewMode={viewMode} onChangeViewMode={changeViewMode} />
+        </div>
+        {enabledPlatforms && enabledPlatforms.length > 1 && (
+          <PlatformFilterChips
+            enabledPlatforms={enabledPlatforms}
+            activePlatforms={activePlatforms}
+            onToggle={togglePlatform}
+          />
+        )}
+      </div>
 
       {loading && !data ? (
         <TableSkeleton rows={10} cols={viewMode === "grouped" ? groupedColCount : flatColCount} />
