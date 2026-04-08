@@ -141,6 +141,7 @@ vi.mock("@appranks/shared", () => ({
     if (platform === "zendesk" && (type === "app_details" || type === "reviews")) return true;
     return false;
   },
+  platformFeatureFlagSlug: (platform: string) => `platform-${platform.replace(/_/g, "-")}`,
 }));
 
 // Mock compute jobs (dynamic imports inside switch cases)
@@ -188,7 +189,7 @@ function createMockDb() {
   const chainableSelect = {
     from: vi.fn().mockReturnValue({
       where: vi.fn().mockReturnValue({
-        limit: vi.fn().mockResolvedValue([{ id: "kw-1", keyword: "test-keyword" }]),
+        limit: vi.fn().mockResolvedValue([{ isEnabled: true, id: "kw-1", keyword: "test-keyword" }]),
       }),
     }),
   };
@@ -215,6 +216,7 @@ vi.mock("@appranks/db", () => ({
   createDb: vi.fn(),
   scrapeRuns: { id: "scrapeRuns.id", jobId: "scrapeRuns.jobId", status: "scrapeRuns.status" },
   platformVisibility: { platform: "platformVisibility.platform", scraperEnabled: "platformVisibility.scraperEnabled" },
+  featureFlags: { slug: "featureFlags.slug", isEnabled: "featureFlags.isEnabled" },
   trackedKeywords: { id: "trackedKeywords.id", keyword: "trackedKeywords.keyword", platform: "trackedKeywords.platform" },
   apps: { slug: "apps.slug", isTracked: "apps.isTracked", platform: "apps.platform" },
   users: { id: "users.id", email: "users.email", name: "users.name", accountId: "users.accountId" },
@@ -280,13 +282,24 @@ function makeJob(data: Partial<ScraperJobData> & { type: ScraperJobData["type"] 
   } as any;
 }
 
-/** Mock the platformVisibility select that happens at the start of every job */
+/** Mock the platformVisibility + featureFlag selects that happen at the start of every job */
 function mockPlatformVisibilitySelect(db: any, enabled = true) {
+  // 1) platformVisibility check
   db.select.mockReturnValueOnce({
     from: vi.fn().mockReturnValue({
       where: vi.fn().mockResolvedValue(enabled ? [] : [{ platform: "shopify", scraperEnabled: false }]),
     }),
   });
+  // 2) featureFlags check (always enabled unless testing specifically)
+  if (enabled) {
+    db.select.mockReturnValueOnce({
+      from: vi.fn().mockReturnValue({
+        where: vi.fn().mockReturnValue({
+          limit: vi.fn().mockResolvedValue([{ isEnabled: true }]),
+        }),
+      }),
+    });
+  }
 }
 
 // ─── Tests ──────────────────────────────────────────────────────────────────
@@ -1016,6 +1029,61 @@ describe("createProcessJob", () => {
     it("processes job when no platform visibility row exists (default enabled)", async () => {
       // Default mock returns chainableSelect which resolves to a non-array,
       // so the job should proceed (default is enabled)
+      await processJob(makeJob({ type: "category", slug: "test" }));
+
+      expect(mockCategoryScraper.scrapeSingle).toHaveBeenCalled();
+    });
+  });
+
+  // ── 17. Platform feature flag check ──────────────────────────────────
+
+  describe("platform feature flag disabled skip", () => {
+    it("skips job when platform feature flag is globally disabled", async () => {
+      // 1) platformVisibility: enabled
+      db.select.mockReturnValueOnce({
+        from: vi.fn().mockReturnValue({
+          where: vi.fn().mockResolvedValue([]),
+        }),
+      });
+      // 2) featureFlags: disabled
+      db.select.mockReturnValueOnce({
+        from: vi.fn().mockReturnValue({
+          where: vi.fn().mockReturnValue({
+            limit: vi.fn().mockResolvedValue([{ isEnabled: false }]),
+          }),
+        }),
+      });
+
+      await processJob(makeJob({ type: "category", slug: "test" }));
+
+      expect(mockCategoryScraper.scrapeSingle).not.toHaveBeenCalled();
+      expect(mockCategoryScraper.crawl).not.toHaveBeenCalled();
+    });
+
+    it("processes job when platform feature flag is enabled", async () => {
+      mockPlatformVisibilitySelect(db, true);
+
+      await processJob(makeJob({ type: "category", slug: "test" }));
+
+      expect(mockCategoryScraper.scrapeSingle).toHaveBeenCalled();
+    });
+
+    it("processes job when platform feature flag does not exist (fail-open)", async () => {
+      // 1) platformVisibility: enabled
+      db.select.mockReturnValueOnce({
+        from: vi.fn().mockReturnValue({
+          where: vi.fn().mockResolvedValue([]),
+        }),
+      });
+      // 2) featureFlags: not found
+      db.select.mockReturnValueOnce({
+        from: vi.fn().mockReturnValue({
+          where: vi.fn().mockReturnValue({
+            limit: vi.fn().mockResolvedValue([]),
+          }),
+        }),
+      });
+
       await processJob(makeJob({ type: "category", slug: "test" }));
 
       expect(mockCategoryScraper.scrapeSingle).toHaveBeenCalled();

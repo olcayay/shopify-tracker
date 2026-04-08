@@ -12,6 +12,15 @@ PLA-917: Seeded platform feature flags for all 12 platforms
 - Added 4 unit tests for the new utility
 - Files: 0127_seed_platform_feature_flags.sql, _journal.json, platforms.ts, platforms.test.ts, index.ts
 
+PLA-920: Gate scraper and background jobs by platform flags
+- Scheduler: checks platform feature flag before enqueuing jobs (after circuit breaker)
+- Worker: early rejection before acquiring per-platform lock
+- Process-job: checks feature flag after platformVisibility/scraperEnabled check
+- All checks use platformFeatureFlagSlug() to map platformId → flag slug
+- Fail-open: DB errors don't block jobs
+- 3 new tests for feature flag skip in process-job tests
+- Files: scheduler.ts, worker.ts, process-job.ts, process-job.test.ts
+
 PLA-919: Gate dashboard sidebar and navigation by platform flags
 - Sidebar now filters platforms by both enabledPlatforms AND feature flags
 - Created usePlatformAccess() hook: shared logic for computing accessible platforms

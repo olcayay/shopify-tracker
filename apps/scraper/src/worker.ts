@@ -12,8 +12,9 @@ if (process.env.SENTRY_DSN) {
 }
 
 import { Worker, type Job } from "bullmq";
-import { createLogger, validateEnv, SCRAPER_REQUIRED_ENV } from "@appranks/shared";
-import { deadLetterJobs } from "@appranks/db";
+import { createLogger, validateEnv, SCRAPER_REQUIRED_ENV, platformFeatureFlagSlug, isPlatformId, type PlatformId } from "@appranks/shared";
+import { deadLetterJobs, featureFlags } from "@appranks/db";
+import { eq } from "drizzle-orm";
 import { BACKGROUND_QUEUE_NAME, INTERACTIVE_QUEUE_NAME, getRedisConnection, type ScraperJobData } from "./queue.js";
 import { initWorkerDeps, createProcessJob, runMigrations } from "./process-job.js";
 import { cleanupStaleRuns } from "./jobs/cleanup-stale-runs.js";
@@ -64,6 +65,21 @@ const bgWorker = new Worker<ScraperJobData>(
     }
 
     const platform = job.data.platform || "shopify";
+
+    // Early check: skip if platform feature flag is disabled (before acquiring lock)
+    if (isPlatformId(platform)) {
+      try {
+        const flagSlug = platformFeatureFlagSlug(platform as PlatformId);
+        const [flag] = await db.select({ isEnabled: featureFlags.isEnabled }).from(featureFlags).where(eq(featureFlags.slug, flagSlug)).limit(1);
+        if (flag && !flag.isEnabled) {
+          log.warn("platform feature flag disabled, skipping job", { jobId: job.id, platform, type: job.data.type });
+          return;
+        }
+      } catch {
+        // Fail-open: continue processing if flag check fails
+      }
+    }
+
     const lockKey = `platform:${platform}`;
     const release = await redisLock.acquireWithWait(lockKey, PLATFORM_LOCK_TTL_MS, LOCK_POLL_INTERVAL_MS, PLATFORM_LOCK_TIMEOUT_MS);
     if (!release) {

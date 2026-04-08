@@ -2,7 +2,7 @@ Platform Feature Flags (2026-04-08)
   PLA-917: Phase 0: Seed platform feature flags for all 12 platforms ✅
   PLA-918: Phase 1: Add platform feature flag middleware to API routes ✅
   PLA-919: Phase 2: Gate dashboard sidebar and navigation by platform flags ✅
-  PLA-920: Phase 3: Gate scraper and background jobs by platform flags
+  PLA-920: Phase 3: Gate scraper and background jobs by platform flags ✅
   PLA-921: Phase 4: Gate email and notification jobs by platform flags
   PLA-922: Phase 5: Add platform access management UI to admin panel
 

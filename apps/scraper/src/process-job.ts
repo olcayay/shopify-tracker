@@ -1,8 +1,8 @@
 import type { Job } from "bullmq";
-import { createDb, scrapeRuns, platformVisibility } from "@appranks/db";
+import { createDb, scrapeRuns, platformVisibility, featureFlags } from "@appranks/db";
 import { eq, and, sql } from "drizzle-orm";
 import { migrate } from "drizzle-orm/postgres-js/migrator";
-import { createLogger, isPlatformId, getPlatform, needsBrowser, type PlatformId } from "@appranks/shared";
+import { createLogger, isPlatformId, getPlatform, needsBrowser, platformFeatureFlagSlug, type PlatformId } from "@appranks/shared";
 import { enqueueScraperJob, type ScraperJobData, type ScraperJobType } from "./queue.js";
 import { CategoryScraper } from "./scrapers/category-scraper.js";
 import { AppDetailsScraper } from "./scrapers/app-details-scraper.js";
@@ -137,6 +137,14 @@ export function createProcessJob(db: ReturnType<typeof createDb>, queueName?: st
     const visRows = await db.select().from(platformVisibility).where(eq(platformVisibility.platform, platform));
     if (visRows.length > 0 && visRows[0].scraperEnabled === false) {
       log.warn("scraper disabled for platform, skipping job", { jobId: job.id, platform, type });
+      return;
+    }
+
+    // Check if platform feature flag is globally enabled
+    const flagSlug = platformFeatureFlagSlug(platform);
+    const [flag] = await db.select({ isEnabled: featureFlags.isEnabled }).from(featureFlags).where(eq(featureFlags.slug, flagSlug)).limit(1);
+    if (flag && !flag.isEnabled) {
+      log.warn("platform feature flag disabled, skipping job", { jobId: job.id, platform, type, flagSlug });
       return;
     }
 
