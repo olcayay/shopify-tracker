@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef, useCallback } from "react";
 import Link from "next/link";
 import { PLATFORMS, isPlatformId } from "@appranks/shared";
 import type { AuditReport as AuditReportType, AuditSection, AuditCheck, AuditRecommendation, PlatformId } from "@appranks/shared";
@@ -12,6 +12,8 @@ import {
   AlertTriangle,
   XCircle,
   ArrowLeft,
+  Download,
+  Loader2,
   Type,
   FileText,
   Image,
@@ -152,18 +154,80 @@ function ImpactBadge({ impact }: { impact: string }) {
 // --- Main Report ---
 export function AuditReport({ report, platform }: { report: AuditReportType; platform: string }) {
   const platformConfig = isPlatformId(platform) ? PLATFORMS[platform] : null;
+  const reportRef = useRef<HTMLDivElement>(null);
+  const [isExporting, setIsExporting] = useState(false);
+
+  const handleDownloadPdf = useCallback(async () => {
+    if (!reportRef.current || isExporting) return;
+    setIsExporting(true);
+    try {
+      const html2canvas = (await import("html2canvas-pro")).default;
+      const { jsPDF } = await import("jspdf");
+
+      const el = reportRef.current;
+      const canvas = await html2canvas(el, {
+        scale: 2,
+        useCORS: true,
+        logging: false,
+        backgroundColor: "#ffffff",
+      });
+
+      const imgWidth = 190; // A4 width minus margins (mm)
+      const imgHeight = (canvas.height * imgWidth) / canvas.width;
+      const pdf = new jsPDF("p", "mm", "a4");
+
+      // If content is taller than one page, split across pages
+      const pageHeight = 277; // A4 height minus margins
+      let yOffset = 0;
+
+      while (yOffset < imgHeight) {
+        if (yOffset > 0) pdf.addPage();
+        pdf.addImage(
+          canvas.toDataURL("image/png"),
+          "PNG",
+          10, // x margin
+          10 - yOffset, // y position (shifts up for subsequent pages)
+          imgWidth,
+          imgHeight,
+        );
+        yOffset += pageHeight;
+      }
+
+      const slug = report.app.slug || "app";
+      pdf.save(`${slug}-audit-${report.overallScore}.pdf`);
+    } catch (err) {
+      console.error("PDF export failed:", err);
+    } finally {
+      setIsExporting(false);
+    }
+  }, [report, isExporting]);
 
   return (
     <div className="space-y-8">
-      {/* Back link */}
-      <Link
-        href="/audit"
-        className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors"
-      >
-        <ArrowLeft className="h-4 w-4" />
-        Back to search
-      </Link>
+      {/* Back link + Download */}
+      <div className="flex items-center justify-between">
+        <Link
+          href="/audit"
+          className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors"
+        >
+          <ArrowLeft className="h-4 w-4" />
+          Back to search
+        </Link>
+        <button
+          onClick={handleDownloadPdf}
+          disabled={isExporting}
+          className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-md border bg-background hover:bg-accent transition-colors disabled:opacity-50"
+        >
+          {isExporting ? (
+            <Loader2 className="h-4 w-4 animate-spin" />
+          ) : (
+            <Download className="h-4 w-4" />
+          )}
+          {isExporting ? "Exporting..." : "Download PDF"}
+        </button>
+      </div>
 
+      <div ref={reportRef} className="space-y-8">
       {/* Header */}
       <div className="flex flex-col sm:flex-row items-center gap-6">
         {report.app.iconUrl ? (
@@ -236,6 +300,8 @@ export function AuditReport({ report, platform }: { report: AuditReportType; pla
           </div>
         </div>
       )}
+
+      </div>{/* end reportRef */}
 
       {/* CTA Footer */}
       <div className="rounded-lg border bg-card p-6 text-center space-y-3">
