@@ -4021,6 +4021,70 @@ export const systemAdminRoutes: FastifyPluginAsync = async (app) => {
     return { data, hours: lookbackHours };
   });
 
+  // GET /api/system-admin/queue-analytics/hourly — hourly job activity per queue
+  app.get("/queue-analytics/hourly", async (request) => {
+    const { hours } = request.query as { hours?: string };
+    const lookbackHours = Math.min(parseInt(hours || "24", 10) || 24, 48);
+    const cutoff = new Date();
+    cutoff.setHours(cutoff.getHours() - lookbackHours);
+
+    // Scraper queues from scrape_runs
+    const scraperRows = await db.execute(sql`
+      SELECT
+        date_trunc('hour', COALESCE(started_at, created_at))::text AS hour,
+        COALESCE(queue, 'background') AS queue,
+        COUNT(*) FILTER (WHERE status = 'completed') AS completed,
+        COUNT(*) FILTER (WHERE status = 'failed') AS failed,
+        COUNT(*) AS total
+      FROM scrape_runs
+      WHERE COALESCE(started_at, created_at) >= ${cutoff.toISOString()}
+      GROUP BY 1, 2
+      ORDER BY 1
+    `);
+
+    // Email queues from email_logs
+    const emailRows = await db.execute(sql`
+      SELECT
+        date_trunc('hour', created_at)::text AS hour,
+        COUNT(*) FILTER (WHERE status = 'sent') AS completed,
+        COUNT(*) FILTER (WHERE status = 'failed') AS failed,
+        COUNT(*) AS total
+      FROM email_logs
+      WHERE created_at >= ${cutoff.toISOString()}
+      GROUP BY 1
+      ORDER BY 1
+    `);
+
+    const sRows = (scraperRows as any)?.rows ?? scraperRows;
+    const eRows = (emailRows as any)?.rows ?? emailRows;
+
+    // Pivot into chart-friendly format: one row per hour, keys per queue
+    const hourMap = new Map<string, Record<string, number>>();
+
+    for (const r of sRows as any[]) {
+      const h = r.hour;
+      if (!hourMap.has(h)) hourMap.set(h, {});
+      const entry = hourMap.get(h)!;
+      const qName = r.queue === "interactive" ? "interactive" : "background";
+      entry[qName] = Number(r.completed || 0);
+      entry[`${qName}_failed`] = Number(r.failed || 0);
+    }
+
+    for (const r of eRows as any[]) {
+      const h = r.hour;
+      if (!hourMap.has(h)) hourMap.set(h, {});
+      const entry = hourMap.get(h)!;
+      entry["email"] = Number(r.completed || 0);
+      entry["email_failed"] = Number(r.failed || 0);
+    }
+
+    const data = Array.from(hourMap.entries())
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([time, counts]) => ({ time, ...counts }));
+
+    return { data, hours: lookbackHours };
+  });
+
   // GET /api/system-admin/audit-logs — impersonation audit log
   app.get(
     "/audit-logs",

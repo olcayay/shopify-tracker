@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { RefreshCw, Loader2, Activity, Pause, Play } from "lucide-react";
+import { TimeSeriesChart } from "@/components/ui/time-series-chart";
 
 interface QueueCounts {
   waiting: number;
@@ -83,6 +84,8 @@ export default function QueueMonitoringDashboard() {
   const [stats, setStats] = useState<QueueStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [togglingQueue, setTogglingQueue] = useState<string | null>(null);
+  const [hourlyData, setHourlyData] = useState<Record<string, unknown>[]>([]);
+  const [hourlyRange, setHourlyRange] = useState("24h");
 
   const loadStats = useCallback(async () => {
     setLoading(true);
@@ -94,7 +97,17 @@ export default function QueueMonitoringDashboard() {
     }
   }, [fetchWithAuth]);
 
+  const loadHourly = useCallback(async () => {
+    const hours = hourlyRange.replace("h", "");
+    const res = await fetchWithAuth(`/api/system-admin/queue-analytics/hourly?hours=${hours}`);
+    if (res.ok) {
+      const json = await res.json();
+      setHourlyData(json.data || []);
+    }
+  }, [fetchWithAuth, hourlyRange]);
+
   useEffect(() => { loadStats(); }, [loadStats]);
+  useEffect(() => { loadHourly(); }, [loadHourly]);
 
   const togglePause = useCallback(async (key: string, bullmqName: string) => {
     if (!stats) return;
@@ -199,6 +212,38 @@ export default function QueueMonitoringDashboard() {
             );
           })}
         </div>
+      )}
+      {/* Hourly Queue Activity Chart */}
+      {hourlyData.length > 0 && (
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium">Hourly Job Activity</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <TimeSeriesChart
+              data={hourlyData}
+              series={[
+                { key: "background", label: "Background Scraper", color: "#3b82f6" },
+                { key: "interactive", label: "Interactive Scraper", color: "#8b5cf6" },
+                { key: "email", label: "Email (sent)", color: "#10b981" },
+                { key: "background_failed", label: "Background Failed", color: "#ef4444" },
+                { key: "email_failed", label: "Email Failed", color: "#f97316" },
+              ]}
+              height={260}
+              formatXAxis={(v) => {
+                const d = new Date(v);
+                return `${d.getHours().toString().padStart(2, "0")}:00`;
+              }}
+              formatTooltipTime={(v) => {
+                const d = new Date(v);
+                return d.toLocaleString("en-US", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" });
+              }}
+              timeRanges={["12h", "24h", "48h"]}
+              selectedRange={hourlyRange}
+              onRangeChange={setHourlyRange}
+            />
+          </CardContent>
+        </Card>
       )}
     </div>
   );
