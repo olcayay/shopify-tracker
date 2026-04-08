@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import { useAuth } from "@/lib/auth-context";
@@ -86,6 +86,10 @@ export default function FeatureFlagDetailPage() {
   const [confirmDisable, setConfirmDisable] = useState<string | null>(null);
   const [confirmUserRemove, setConfirmUserRemove] = useState<string | null>(null);
 
+  // Stable ref for fetchWithAuth to prevent search effects from re-firing
+  const fetchRef = useRef(fetchWithAuth);
+  fetchRef.current = fetchWithAuth;
+
   const loadFlag = useCallback(async () => {
     const res = await fetchWithAuth(`/api/system-admin/feature-flags/${slug}`);
     if (res.ok) {
@@ -101,7 +105,7 @@ export default function FeatureFlagDetailPage() {
     loadFlag();
   }, [loadFlag]);
 
-  // Debounced account search
+  // Debounced account search (uses fetchRef to avoid re-firing on fetchWithAuth identity change)
   useEffect(() => {
     if (!searchQuery.trim()) {
       setSearchResults([]);
@@ -110,7 +114,7 @@ export default function FeatureFlagDetailPage() {
 
     const timer = setTimeout(async () => {
       setSearching(true);
-      const res = await fetchWithAuth(
+      const res = await fetchRef.current(
         `/api/system-admin/feature-flags/${slug}/accounts/search?q=${encodeURIComponent(searchQuery.trim())}`
       );
       if (res.ok) {
@@ -121,9 +125,9 @@ export default function FeatureFlagDetailPage() {
     }, 300);
 
     return () => clearTimeout(timer);
-  }, [searchQuery, slug, fetchWithAuth]);
+  }, [searchQuery, slug]);
 
-  // Debounced user search
+  // Debounced user search (uses fetchRef to avoid re-firing on fetchWithAuth identity change)
   useEffect(() => {
     if (!userSearchQuery.trim()) {
       setUserSearchResults([]);
@@ -132,7 +136,7 @@ export default function FeatureFlagDetailPage() {
 
     const timer = setTimeout(async () => {
       setUserSearching(true);
-      const res = await fetchWithAuth(
+      const res = await fetchRef.current(
         `/api/system-admin/feature-flags/${slug}/users/search?q=${encodeURIComponent(userSearchQuery.trim())}`
       );
       if (res.ok) {
@@ -143,7 +147,7 @@ export default function FeatureFlagDetailPage() {
     }, 300);
 
     return () => clearTimeout(timer);
-  }, [userSearchQuery, slug, fetchWithAuth]);
+  }, [userSearchQuery, slug]);
 
   async function enableUser(userId: string, enabled: boolean = true) {
     const res = await fetchWithAuth(`/api/system-admin/feature-flags/${slug}/users`, {

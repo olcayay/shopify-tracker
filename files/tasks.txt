@@ -1,3 +1,6 @@
+Feature Flag Search Fix (2026-04-09)
+  PLA-931: Feature flag user/account search broken when entries already exist ✅
+
 Keywords Page Fix (2026-04-09)
   PLA-926: Fix tracked apps showing 0 on /keywords page ✅
 
