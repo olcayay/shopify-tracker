@@ -71,23 +71,28 @@ export function OverviewPlatformCard({ platformId, data, stats, highlightsLoadin
       </CardHeader>
       <CardContent className="pt-0">
         {apps.length > 0 ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
-            {apps.map((app) => (
-              <AppMiniCard key={app.slug} app={app} platformId={platformId} />
+          <div className="flex flex-col divide-y">
+            {apps.slice(0, MAX_VISIBLE_APPS).map((app) => (
+              <AppRow key={app.slug} app={app} platformId={platformId} />
             ))}
+            {apps.length > MAX_VISIBLE_APPS && (
+              <div className="pt-2 text-center">
+                <Link
+                  href={`/${platformId}/apps`}
+                  className="text-xs text-muted-foreground hover:text-primary hover:underline transition-colors"
+                >
+                  View all {apps.length} apps
+                </Link>
+              </div>
+            )}
           </div>
         ) : highlightsLoading && (stats?.apps ?? 0) > 0 ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
+          <div className="flex flex-col divide-y">
             {Array.from({ length: Math.min(stats?.apps ?? 2, 4) }).map((_, i) => (
-              <div key={i} className="flex flex-col gap-2 p-3 rounded-lg border">
-                <div className="flex items-center gap-2">
-                  <Skeleton className="w-8 h-8 rounded-lg shrink-0" />
-                  <Skeleton className="h-4 w-24" />
-                </div>
-                <div className="flex items-center gap-3">
-                  <Skeleton className="h-3 w-12" />
-                  <Skeleton className="h-3 w-8" />
-                </div>
+              <div key={i} className="flex items-center gap-3 py-2">
+                <Skeleton className="w-6 h-6 rounded-md shrink-0" />
+                <Skeleton className="h-4 w-32" />
+                <Skeleton className="h-3 w-12 ml-auto" />
               </div>
             ))}
           </div>
@@ -111,31 +116,30 @@ export function OverviewPlatformCard({ platformId, data, stats, highlightsLoadin
   );
 }
 
-function AppMiniCard({ app, platformId }: { app: AppSummary; platformId: PlatformId }) {
+const MAX_VISIBLE_APPS = 5;
+
+function AppRow({ app, platformId }: { app: AppSummary; platformId: PlatformId }) {
   const brand = PLATFORM_DISPLAY[platformId];
 
   return (
     <Link
       href={`/${platformId}/apps/${app.slug}`}
-      className="flex flex-col gap-2 p-3 rounded-lg border bg-background hover:bg-muted/50 hover:shadow-sm transition-all group"
+      className="flex items-center gap-3 py-2 hover:bg-muted/50 rounded-sm px-1 -mx-1 transition-colors group"
     >
-      <div className="flex items-center gap-2">
-        {app.iconUrl ? (
-          <img src={app.iconUrl} alt="" aria-hidden="true" className="w-8 h-8 rounded-lg shrink-0" />
-        ) : (
-          <div
-            className="w-8 h-8 rounded-lg flex items-center justify-center text-white text-xs font-bold shrink-0"
-            style={{ backgroundColor: brand.color }}
-          >
-            {app.name.charAt(0)}
-          </div>
-        )}
-        <span className="font-medium text-sm truncate group-hover:text-primary transition-colors">
-          {app.name}
-        </span>
-      </div>
-
-      <div className="flex items-center gap-3 text-xs text-muted-foreground">
+      {app.iconUrl ? (
+        <img src={app.iconUrl} alt="" aria-hidden="true" className="w-6 h-6 rounded-md shrink-0" />
+      ) : (
+        <div
+          className="w-6 h-6 rounded-md flex items-center justify-center text-white text-[10px] font-bold shrink-0"
+          style={{ backgroundColor: brand.color }}
+        >
+          {app.name.charAt(0)}
+        </div>
+      )}
+      <span className="font-medium text-sm truncate group-hover:text-primary transition-colors min-w-0">
+        {app.name}
+      </span>
+      <div className="flex items-center gap-3 ml-auto shrink-0 text-xs text-muted-foreground">
         {app.rating != null && (
           <span className="flex items-center gap-0.5">
             <Star className="h-3 w-3 text-amber-500 fill-amber-500" />
@@ -146,7 +150,7 @@ function AppMiniCard({ app, platformId }: { app: AppSummary; platformId: Platfor
           </span>
         )}
         {app.keywordCount > 0 && (
-          <span className="flex items-center gap-0.5">
+          <span className="flex items-center gap-0.5 bg-muted rounded-full px-1.5 py-0.5">
             <Search className="h-3 w-3" />
             {app.keywordCount}
           </span>

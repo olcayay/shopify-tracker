@@ -16,6 +16,15 @@ vi.mock("@/lib/platform-display", () => ({
   },
 }));
 
+const makeApp = (slug: string, name: string, overrides: Partial<{ iconUrl: string | null; rating: number | null; reviewCount: number; keywordCount: number }> = {}) => ({
+  slug,
+  name,
+  iconUrl: overrides.iconUrl ?? null,
+  rating: overrides.rating ?? null,
+  reviewCount: overrides.reviewCount ?? 0,
+  keywordCount: overrides.keywordCount ?? 0,
+});
+
 const mockData = {
   apps: [
     { slug: "my-app", name: "My App", iconUrl: "https://example.com/icon.png", rating: 4.5, reviewCount: 120, keywordCount: 8 },
@@ -47,7 +56,7 @@ describe("OverviewPlatformCard", () => {
     expect(screen.getByText("5 Competitors")).toBeInTheDocument();
   });
 
-  it("renders app mini-cards for each tracked app", () => {
+  it("renders app rows for each tracked app", () => {
     render(
       <OverviewPlatformCard platformId="shopify" data={mockData} />
     );
@@ -118,9 +127,10 @@ describe("OverviewPlatformCard", () => {
     );
     // Should NOT show empty state
     expect(screen.queryByText(/No tracked apps/)).not.toBeInTheDocument();
-    // Should show skeleton placeholders (min of stats.apps=3, cap=4)
-    const skeletonCards = container.querySelectorAll(".rounded-lg.border");
-    expect(skeletonCards.length).toBe(3);
+    // Should show skeleton row placeholders (min of stats.apps=3, cap=4)
+    // Each skeleton row has a parent div with py-2 class
+    const skeletonRows = container.querySelectorAll(".flex.items-center.gap-3.py-2");
+    expect(skeletonRows.length).toBe(3);
   });
 
   it("caps loading shimmer skeletons at 4", () => {
@@ -133,8 +143,8 @@ describe("OverviewPlatformCard", () => {
       />,
     );
     expect(screen.queryByText(/No tracked apps/)).not.toBeInTheDocument();
-    const skeletonCards = container.querySelectorAll(".rounded-lg.border");
-    expect(skeletonCards.length).toBe(4);
+    const skeletonRows = container.querySelectorAll(".flex.items-center.gap-3.py-2");
+    expect(skeletonRows.length).toBe(4);
   });
 
   it("shows empty state when highlights finished loading and no apps", () => {
@@ -160,5 +170,56 @@ describe("OverviewPlatformCard", () => {
     );
     // Even though highlights are loading, stats say 0 apps — show empty state
     expect(screen.getByText(/No tracked apps/)).toBeInTheDocument();
+  });
+
+  it("shows only first 5 apps and a 'View all' link when more than 5 apps", () => {
+    const manyApps = Array.from({ length: 8 }, (_, i) =>
+      makeApp(`app-${i}`, `App ${i}`, { rating: 4.0, reviewCount: 10, keywordCount: 3 }),
+    );
+    render(
+      <OverviewPlatformCard
+        platformId="shopify"
+        data={{ ...mockData, apps: manyApps }}
+      />,
+    );
+    // First 5 should be visible
+    for (let i = 0; i < 5; i++) {
+      expect(screen.getByText(`App ${i}`)).toBeInTheDocument();
+    }
+    // 6th and beyond should NOT be visible
+    expect(screen.queryByText("App 5")).not.toBeInTheDocument();
+    expect(screen.queryByText("App 7")).not.toBeInTheDocument();
+    // "View all" link should appear
+    const viewAll = screen.getByText("View all 8 apps");
+    expect(viewAll).toBeInTheDocument();
+    expect(viewAll.closest("a")).toHaveAttribute("href", "/shopify/apps");
+  });
+
+  it("does not show 'View all' link when apps count is within limit", () => {
+    render(
+      <OverviewPlatformCard platformId="shopify" data={mockData} />,
+    );
+    expect(screen.queryByText(/View all/)).not.toBeInTheDocument();
+  });
+
+  it("renders app rows as compact single-line items in a list layout", () => {
+    const { container } = render(
+      <OverviewPlatformCard platformId="shopify" data={mockData} />,
+    );
+    // Apps should be in a flex column (divide-y list)
+    const appList = container.querySelector(".flex.flex-col.divide-y");
+    expect(appList).toBeInTheDocument();
+    // App rows should be flex items with py-2 (compact rows)
+    const appRows = appList!.querySelectorAll("a.flex.items-center");
+    expect(appRows.length).toBe(2);
+  });
+
+  it("renders keyword count in a badge", () => {
+    render(
+      <OverviewPlatformCard platformId="shopify" data={mockData} />,
+    );
+    // Keyword count 8 should be in a rounded-full badge
+    const badge = screen.getByText("8").closest("span");
+    expect(badge?.className).toContain("rounded-full");
   });
 });
