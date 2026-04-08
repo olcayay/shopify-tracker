@@ -24,14 +24,15 @@ async function fetchApi<T>(path: string, options?: RequestInit & { next?: { reva
   const token = await getAuthToken();
   const url = `${API_BASE}${path}`;
   const method = options?.method?.toUpperCase() || "GET";
-  // GET requests default to 5-minute revalidation; mutations use no-store
+  // GET requests default to 30-second revalidation (authenticated data should be fresh);
+  // mutations use no-store
   const cacheOptions = method !== "GET"
     ? { cache: "no-store" as const }
     : options?.next
       ? { next: options.next }
       : options?.cache
         ? { cache: options.cache }
-        : { next: { revalidate: 300 } };
+        : { next: { revalidate: 30 } };
 
   let res: Response;
   try {

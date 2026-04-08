@@ -326,11 +326,17 @@ app.addHook("onSend", async (request, reply, payload) => {
     reply.header("cache-control", "public, max-age=3600, stale-while-revalidate=7200");
     reply.header("vary", "Accept-Encoding");
   }
-  // Medium cache (5 min): app detail, category detail, keyword detail, scores
+  // Medium cache: app detail, category detail, keyword detail, scores
+  // Authenticated requests get private short cache; anonymous get public long cache
   else if (url.match(/^\/api\/(apps|categories|keywords|developers)\/[^/]+$/) ||
       url.match(/^\/api\/apps\/[^/]+\/(scores|rankings|changes|reviews|similar|featured|ads)/)) {
-    reply.header("cache-control", "public, max-age=300, stale-while-revalidate=600");
-    reply.header("vary", "Accept-Encoding");
+    const hasAuth = !!request.headers.authorization;
+    if (hasAuth) {
+      reply.header("cache-control", "private, max-age=30");
+    } else {
+      reply.header("cache-control", "public, max-age=300, stale-while-revalidate=600");
+    }
+    reply.header("vary", "Accept-Encoding, Authorization");
   }
   // Short cache (1 min): list endpoints, featured apps
   else if (url.match(/^\/api\/(categories|featured-apps|integrations|platform-attributes)\/?$/) ||
