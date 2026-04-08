@@ -551,6 +551,53 @@ export class CanvaModule implements PlatformModule {
    * and intercepting the API responses.
    */
   private async fetchAllSearchResults(keyword: string): Promise<{ A: number; C: any[] }> {
+    const SEARCH_TIMEOUT_MS = 60_000; // 60s per-search timeout
+    const MAX_ATTEMPTS = 2;
+
+    for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+      try {
+        const result = await Promise.race([
+          this.doFetchAllSearchResults(keyword, attempt),
+          new Promise<never>((_, reject) =>
+            setTimeout(() => reject(new Error(`search timed out after ${SEARCH_TIMEOUT_MS / 1000}s`)), SEARCH_TIMEOUT_MS)
+          ),
+        ]);
+
+        if (result.C.length === 0 && attempt < MAX_ATTEMPTS) {
+          log.warn("search returned 0 results, retrying with fresh page", { keyword, attempt });
+          await this.resetBrowserPage();
+          continue;
+        }
+
+        return result;
+      } catch (err) {
+        log.error("fetchAllSearchResults attempt failed", { keyword, attempt, error: String(err) });
+        if (attempt < MAX_ATTEMPTS) {
+          log.info("resetting browser page for retry", { keyword, attempt });
+          await this.resetBrowserPage();
+        } else {
+          throw err;
+        }
+      }
+    }
+
+    return { A: 0, C: [] };
+  }
+
+  /**
+   * Reset the shared browser page — close and re-create it.
+   * Used to recover from Cloudflare blocks, hangs, or stale page state.
+   */
+  private async resetBrowserPage(): Promise<void> {
+    if (this.browserPage) {
+      try { await this.browserPage.close(); } catch { /* ignore */ }
+      this.browserPage = null;
+    }
+    // ensureBrowserPage will create a fresh page + navigate to /apps
+    await this.ensureBrowserPage();
+  }
+
+  private async doFetchAllSearchResults(keyword: string, attempt: number): Promise<{ A: number; C: any[] }> {
     const page = await this.ensureBrowserPage();
 
     // Collect all search API responses
@@ -598,6 +645,7 @@ export class CanvaModule implements PlatformModule {
 
       log.info("search responses captured", {
         keyword,
+        attempt,
         responseCount: searchResponses.length,
         totalResults,
         waitMs: Date.now() - waitStart,
@@ -621,6 +669,7 @@ export class CanvaModule implements PlatformModule {
 
       log.info("search results merged", {
         keyword,
+        attempt,
         totalResults,
         uniqueApps: allApps.length,
       });
@@ -667,6 +716,17 @@ export class CanvaModule implements PlatformModule {
 
     const t0 = Date.now();
     const isSmokeTest = process.env.SMOKE_TEST === "1";
+
+    // If browser+context exist but page was closed (e.g., after resetBrowserPage),
+    // create a new page without relaunching the whole browser.
+    if (this.browser?.isConnected() && this.browserContext) {
+      log.info("creating fresh page on existing browser", { smokeTest: isSmokeTest });
+      this.browserPage = await this.browserContext.newPage();
+      await this.navigateToAppsPage(this.browserPage, isSmokeTest);
+      log.info("fresh page ready", { ms: Date.now() - t0 });
+      return this.browserPage;
+    }
+
     log.info("launching Chrome for Canva API access", { smokeTest: isSmokeTest });
 
     // Prefer installed Chrome for proper TLS fingerprint (Cloudflare bypass),
@@ -713,47 +773,7 @@ export class CanvaModule implements PlatformModule {
       ...(storageState && { storageState }),
     });
     this.browserPage = await this.browserContext.newPage();
-
-    // Navigate to /apps — smoke test uses faster wait strategy
-    const gotoWait = isSmokeTest ? "domcontentloaded" as const : "load" as const;
-    const gotoTimeout = isSmokeTest ? 15_000 : 30_000;
-    await this.browserPage.goto("https://www.canva.com/apps", {
-      waitUntil: gotoWait,
-      timeout: gotoTimeout,
-    });
-    log.info("canva:goto_done", { ms: Date.now() - t0, waitUntil: gotoWait });
-
-    // Wait for Cloudflare challenge to auto-resolve if present
-    const initTitle = await this.browserPage.title();
-    if (initTitle === "Just a moment...") {
-      log.info("Cloudflare challenge on /apps, waiting for auto-resolve");
-      const cfTimeout = isSmokeTest ? 8_000 : 15_000;
-      try {
-        await this.browserPage.waitForFunction(
-          () => document.title !== "Just a moment...",
-          { timeout: cfTimeout },
-        );
-        log.info("Cloudflare challenge resolved on /apps", { newTitle: await this.browserPage.title() });
-        await this.browserPage.waitForTimeout(isSmokeTest ? 1000 : 3000);
-      } catch {
-        log.warn("Cloudflare challenge on /apps did not resolve in time");
-      }
-    }
-
-    // Wait for search input to appear (SPA hydration)
-    const selectorTimeout = isSmokeTest ? 8_000 : 20_000;
-    try {
-      await this.browserPage.waitForSelector(
-        'input[type="search"], input[aria-label*="search" i]',
-        { timeout: selectorTimeout },
-      );
-      log.info("search input found, page hydrated");
-    } catch {
-      log.warn(`search input not found after ${selectorTimeout / 1000}s, continuing anyway`);
-    }
-
-    // Extra settle time for Cloudflare background JS (reduced in smoke test)
-    await this.browserPage.waitForTimeout(isSmokeTest ? 500 : 2000);
+    await this.navigateToAppsPage(this.browserPage, isSmokeTest);
     log.info("canva:browser_ready", { totalMs: Date.now() - t0 });
 
     // Cache the page HTML while we're here
@@ -764,6 +784,51 @@ export class CanvaModule implements PlatformModule {
     }
 
     return this.browserPage;
+  }
+
+  /**
+   * Navigate a page to /apps and wait for Cloudflare + SPA hydration.
+   * Extracted so it can be reused when resetting pages after timeouts.
+   */
+  private async navigateToAppsPage(page: Page, isSmokeTest: boolean): Promise<void> {
+    const gotoWait = isSmokeTest ? "domcontentloaded" as const : "load" as const;
+    const gotoTimeout = isSmokeTest ? 15_000 : 30_000;
+    await page.goto("https://www.canva.com/apps", {
+      waitUntil: gotoWait,
+      timeout: gotoTimeout,
+    });
+
+    // Wait for Cloudflare challenge to auto-resolve if present
+    const initTitle = await page.title();
+    if (initTitle === "Just a moment...") {
+      log.info("Cloudflare challenge on /apps, waiting for auto-resolve");
+      const cfTimeout = isSmokeTest ? 8_000 : 15_000;
+      try {
+        await page.waitForFunction(
+          () => document.title !== "Just a moment...",
+          { timeout: cfTimeout },
+        );
+        log.info("Cloudflare challenge resolved on /apps", { newTitle: await page.title() });
+        await page.waitForTimeout(isSmokeTest ? 1000 : 3000);
+      } catch {
+        log.warn("Cloudflare challenge on /apps did not resolve in time");
+      }
+    }
+
+    // Wait for search input to appear (SPA hydration)
+    const selectorTimeout = isSmokeTest ? 8_000 : 20_000;
+    try {
+      await page.waitForSelector(
+        'input[type="search"], input[aria-label*="search" i]',
+        { timeout: selectorTimeout },
+      );
+      log.info("search input found, page hydrated");
+    } catch {
+      log.warn(`search input not found after ${selectorTimeout / 1000}s, continuing anyway`);
+    }
+
+    // Extra settle time for Cloudflare background JS
+    await page.waitForTimeout(isSmokeTest ? 500 : 2000);
   }
 
   /**

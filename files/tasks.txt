@@ -1,6 +1,7 @@
 Date Serialization Fixes (2026-04-07)
   PLA-867: Fix remaining raw Date objects in sql templates (email-analytics, email-errors, notification-analytics, email-alerts, admin-notifications) ✅
   PLA-866: Fix Zendesk review scraper — switch from browser (0 results) to REST API v2 ✅
+  PLA-865: Fix Canva keyword search timeouts — per-keyword retry with fresh page, 60s timeout ✅
 
 Email System Overhaul — Alert Safeguards & Fixes (2026-04-07)
   PLA-829: Phase 0: Fix digest email platform lock timeout ✅

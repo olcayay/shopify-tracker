@@ -28,6 +28,17 @@ PLA-866: Fix Zendesk review scraper failure
 - Updated: review-parser.ts (JSON parsing), index.ts (API fetch), urls.ts (API URL)
 - 11 new tests replacing 7 old tests (now testing JSON API response parsing)
 
+Canva Search Retry — Timeout Fix (2026-04-08)
+================================================================
+
+PLA-865: Add per-keyword retry with fresh page for Canva search
+- Added 60s per-search timeout in fetchAllSearchResults (was relying on 180s outer timeout)
+- On timeout or 0 results, resets browser page (closes + recreates) and retries once
+- Extracted navigateToAppsPage() to avoid duplication of Cloudflare/SPA wait logic
+- resetBrowserPage() closes just the page, reuses existing browser+context
+- 3 new tests: resetBrowserPage, timeout retry, 0-result retry
+- Also updated 6 stale template rendering snapshots (pre-existing)
+
 Feature Flags — User-Level Support (2026-04-07)
 ================================================================
 

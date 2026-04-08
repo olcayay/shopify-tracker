@@ -160,6 +160,73 @@ describe("CanvaModule fallback", () => {
     });
   });
 
+  describe("search retry and browser reset", () => {
+    it("resetBrowserPage nulls the page so ensureBrowserPage recreates it", async () => {
+      const mockPage = { close: vi.fn().mockResolvedValue(undefined) };
+      (mod as any).browserPage = mockPage;
+      (mod as any).browser = { isConnected: () => true, close: vi.fn() };
+      (mod as any).browserContext = {
+        newPage: vi.fn().mockResolvedValue({
+          goto: vi.fn().mockResolvedValue(undefined),
+          title: vi.fn().mockResolvedValue("Canva Apps"),
+          waitForSelector: vi.fn().mockResolvedValue(undefined),
+          waitForTimeout: vi.fn().mockResolvedValue(undefined),
+          content: vi.fn().mockResolvedValue("<html></html>"),
+        }),
+      };
+
+      await (mod as any).resetBrowserPage();
+
+      // Original page should be closed
+      expect(mockPage.close).toHaveBeenCalled();
+      // browserPage should be set to null then recreated by ensureBrowserPage
+      expect((mod as any).browserPage).not.toBe(mockPage);
+      expect((mod as any).browserPage).not.toBeNull();
+    });
+
+    it("fetchAllSearchResults retries once on timeout", async () => {
+      // Mock doFetchAllSearchResults to timeout first, succeed second
+      let callCount = 0;
+      const mockDoFetch = vi.fn().mockImplementation(async () => {
+        callCount++;
+        if (callCount === 1) {
+          // Simulate a hang — return a promise that never resolves (timeout will catch it)
+          return new Promise(() => {}); // never resolves
+        }
+        return { A: 5, C: [{ A: "app1", B: "Test App" }] };
+      });
+      (mod as any).doFetchAllSearchResults = mockDoFetch;
+      (mod as any).resetBrowserPage = vi.fn().mockResolvedValue(undefined);
+
+      // fetchAllSearchResults should retry after timeout
+      // Use a short timeout for testing by temporarily patching
+      const origMethod = (mod as any).fetchAllSearchResults.bind(mod);
+
+      // Test the retry logic directly
+      const result = await (mod as any).fetchAllSearchResults("test-keyword");
+
+      // Should have called doFetch twice (first timeout, second success)
+      expect(mockDoFetch).toHaveBeenCalledTimes(2);
+      expect(result.C).toHaveLength(1);
+      expect(result.C[0].A).toBe("app1");
+    }, 70_000); // 60s timeout + buffer
+
+    it("fetchAllSearchResults retries on 0 results", async () => {
+      let callCount = 0;
+      const mockDoFetch = vi.fn().mockImplementation(async () => {
+        callCount++;
+        if (callCount === 1) return { A: 0, C: [] };
+        return { A: 3, C: [{ A: "app1", B: "App" }] };
+      });
+      (mod as any).doFetchAllSearchResults = mockDoFetch;
+      (mod as any).resetBrowserPage = vi.fn().mockResolvedValue(undefined);
+
+      const result = await (mod as any).fetchAllSearchResults("test");
+      expect(mockDoFetch).toHaveBeenCalledTimes(2);
+      expect(result.C).toHaveLength(1);
+    });
+  });
+
   describe("withFallback integration", () => {
     it("module methods use withFallback pattern", () => {
       // Verify the source code uses withFallback by checking the module exports the right structure
