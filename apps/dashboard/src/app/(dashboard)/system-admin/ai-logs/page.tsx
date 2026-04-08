@@ -23,15 +23,7 @@ import {
 import { useFormatDate } from "@/lib/format-date";
 import { formatNumber } from "@/lib/format-utils";
 import { ChevronDown, ChevronRight, X, Plus } from "lucide-react";
-import {
-  LineChart,
-  Line,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-} from "recharts";
+import { TimeSeriesChart } from "@/components/ui/time-series-chart";
 
 interface AiLog {
   id: string;
@@ -230,9 +222,13 @@ export default function AiLogsPage() {
   };
 
   const chartData = timeseries.map((p) => ({
-    ...p,
+    time: p.date,
     costNum: parseFloat(p.cost),
-    dateLabel: p.date.slice(5), // MM-DD
+    calls: p.calls,
+    promptTokens: p.promptTokens,
+    completionTokens: p.completionTokens,
+    totalTokens: p.totalTokens,
+    avgDurationMs: p.avgDurationMs,
   }));
 
   return (
@@ -314,24 +310,14 @@ export default function AiLogsPage() {
               <CardTitle className="text-sm font-medium">Cost Over Time</CardTitle>
             </CardHeader>
             <CardContent>
-              <ResponsiveContainer width="100%" height={200}>
-                <LineChart data={chartData}>
-                  <CartesianGrid strokeDasharray="3 3" className="opacity-30" />
-                  <XAxis dataKey="dateLabel" tick={{ fontSize: 11 }} />
-                  <YAxis tick={{ fontSize: 11 }} tickFormatter={(v) => `$${v}`} />
-                  <Tooltip
-                    formatter={(value) => [`$${Number(value).toFixed(4)}`, "Cost"]}
-                    labelFormatter={(label) => `Date: ${label}`}
-                  />
-                  <Line
-                    type="monotone"
-                    dataKey="costNum"
-                    stroke="var(--chart-1)"
-                    strokeWidth={2}
-                    dot={false}
-                  />
-                </LineChart>
-              </ResponsiveContainer>
+              <TimeSeriesChart
+                data={chartData}
+                series={[{ key: "costNum", label: "Cost", color: "#3b82f6" }]}
+                height={200}
+                formatXAxis={(v) => v.slice(5)}
+                formatYAxis={(v) => `$${v}`}
+                formatTooltipTime={(v) => `Date: ${v}`}
+              />
             </CardContent>
           </Card>
 
@@ -341,24 +327,13 @@ export default function AiLogsPage() {
               <CardTitle className="text-sm font-medium">API Calls Over Time</CardTitle>
             </CardHeader>
             <CardContent>
-              <ResponsiveContainer width="100%" height={200}>
-                <LineChart data={chartData}>
-                  <CartesianGrid strokeDasharray="3 3" className="opacity-30" />
-                  <XAxis dataKey="dateLabel" tick={{ fontSize: 11 }} />
-                  <YAxis tick={{ fontSize: 11 }} />
-                  <Tooltip
-                    formatter={(value) => [Number(value), "Calls"]}
-                    labelFormatter={(label) => `Date: ${label}`}
-                  />
-                  <Line
-                    type="monotone"
-                    dataKey="calls"
-                    stroke="var(--chart-2)"
-                    strokeWidth={2}
-                    dot={false}
-                  />
-                </LineChart>
-              </ResponsiveContainer>
+              <TimeSeriesChart
+                data={chartData}
+                series={[{ key: "calls", label: "Calls", color: "#8b5cf6" }]}
+                height={200}
+                formatXAxis={(v) => v.slice(5)}
+                formatTooltipTime={(v) => `Date: ${v}`}
+              />
             </CardContent>
           </Card>
 
@@ -368,34 +343,16 @@ export default function AiLogsPage() {
               <CardTitle className="text-sm font-medium">Tokens Over Time</CardTitle>
             </CardHeader>
             <CardContent>
-              <ResponsiveContainer width="100%" height={200}>
-                <LineChart data={chartData}>
-                  <CartesianGrid strokeDasharray="3 3" className="opacity-30" />
-                  <XAxis dataKey="dateLabel" tick={{ fontSize: 11 }} />
-                  <YAxis tick={{ fontSize: 11 }} />
-                  <Tooltip
-                    formatter={(value, name) => [
-                      formatNumber(Number(value)),
-                      name === "promptTokens" ? "Prompt" : "Completion",
-                    ]}
-                    labelFormatter={(label) => `Date: ${label}`}
-                  />
-                  <Line
-                    type="monotone"
-                    dataKey="promptTokens"
-                    stroke="var(--chart-4)"
-                    strokeWidth={2}
-                    dot={false}
-                  />
-                  <Line
-                    type="monotone"
-                    dataKey="completionTokens"
-                    stroke="var(--chart-5)"
-                    strokeWidth={2}
-                    dot={false}
-                  />
-                </LineChart>
-              </ResponsiveContainer>
+              <TimeSeriesChart
+                data={chartData}
+                series={[
+                  { key: "promptTokens", label: "Prompt", color: "#f59e0b" },
+                  { key: "completionTokens", label: "Completion", color: "#10b981" },
+                ]}
+                height={200}
+                formatXAxis={(v) => v.slice(5)}
+                formatTooltipTime={(v) => `Date: ${v}`}
+              />
             </CardContent>
           </Card>
         </div>
