@@ -33,6 +33,7 @@ import * as templatesSchema from "./schema/templates.js";
 import * as aiSuggestionsSchema from "./schema/ai-suggestions.js";
 import * as activityLogSchema from "./schema/activity-log.js";
 import * as featureFlagsSchema from "./schema/feature-flags.js";
+import * as waitlistSchema from "./schema/waitlist.js";
 
 export const schema = {
   ...scrapeRunsSchema,
@@ -66,6 +67,7 @@ export const schema = {
   ...aiSuggestionsSchema,
   ...activityLogSchema,
   ...featureFlagsSchema,
+  ...waitlistSchema,
 };
 
 export interface DbPoolOptions {
@@ -266,3 +268,4 @@ export {
 
 export { accountActivityLog } from "./schema/activity-log.js";
 export { featureFlags, accountFeatureFlags, userFeatureFlags } from "./schema/feature-flags.js";
+export { waitlist } from "./schema/waitlist.js";

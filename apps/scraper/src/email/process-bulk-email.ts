@@ -115,7 +115,7 @@ export async function processBulkEmail(
   // For daily digest, split into per-platform emails
   if (type === "email_daily_digest") {
     const { splitDigestByPlatform } = await import("./digest-builder.js");
-    const platformDigests = splitDigestByPlatform(data);
+    const platformDigests = splitDigestByPlatform(data as any);
     for (const platformData of platformDigests) {
       const html = builder.buildHtml(platformData);
       const subject = builder.buildSubject(platformData);
