@@ -294,3 +294,7 @@ export type { NotificationStore, NotificationRecipient, NotificationRecord, Emit
 // AI Rate Limiting
 export { checkAiRateLimit, checkMonthlyBudget, DEFAULT_AI_RATE_LIMITS } from "./ai-rate-limiter.js";
 export type { AiRateLimitConfig, RateLimitCheck } from "./ai-rate-limiter.js";
+
+// Metadata Limits
+export { getMetadataLimits } from "./metadata-limits.js";
+export type { MetadataLimits } from "./metadata-limits.js";

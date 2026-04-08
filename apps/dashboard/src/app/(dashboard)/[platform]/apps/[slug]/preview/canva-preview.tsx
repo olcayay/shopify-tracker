@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
-import { getMetadataLimits } from "@/lib/metadata-limits";
+import { getMetadataLimits } from "@appranks/shared";
 import { CharBadge, EditorField, mod } from "./shared";
 
 export interface CanvaAppData {

@@ -1,4 +1,4 @@
-import { getMetadataLimits } from "@/lib/metadata-limits";
+import { getMetadataLimits } from "@appranks/shared";
 import { cn } from "@/lib/utils";
 
 interface ScorecardCheck {

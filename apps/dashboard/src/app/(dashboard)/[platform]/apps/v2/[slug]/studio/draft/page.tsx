@@ -5,7 +5,7 @@ import { useParams } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { getMetadataLimits } from "@/lib/metadata-limits";
+import { getMetadataLimits } from "@appranks/shared";
 import { cn } from "@/lib/utils";
 import { Save, Lock } from "lucide-react";
 import { CardSkeleton } from "@/components/skeletons";

@@ -16,7 +16,7 @@ import { formatNumber } from "@/lib/format-utils";
 import { HealthScoreBar } from "@/components/v2/health-score-bar";
 import { AlertsCard, generateAlerts } from "@/components/v2/alerts-card";
 import { PLATFORMS, isPlatformId, type PlatformId } from "@appranks/shared";
-import { getMetadataLimits } from "@/lib/metadata-limits";
+import { getMetadataLimits } from "@appranks/shared";
 import {
   Eye,
   Users,

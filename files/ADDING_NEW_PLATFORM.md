@@ -31,7 +31,7 @@ Use this as a high-level task tracker. Each item links to a detailed section bel
 - [ ] Add external URL builders to `packages/shared/src/constants/platforms.ts`
 - [ ] Add dashboard URL builders to `apps/dashboard/src/lib/platform-urls.ts`
 - [ ] Add similarity weights and stop words to `packages/shared/src/similarity.ts`
-- [ ] Add metadata character limits to `apps/dashboard/src/lib/metadata-limits.ts`
+- [ ] Add metadata character limits to `packages/shared/src/metadata-limits.ts`
 
 ### Phase 1b: Typed platformData
 - [ ] Create TypeScript interface in `packages/shared/src/types/platform-data/<name>.ts`
@@ -228,12 +228,12 @@ Also has `platform !== "shopify"` checks in `extractCategorySlugs()` and `extrac
 
 ### 2.6 Metadata Character Limits
 
-**File:** `apps/dashboard/src/lib/metadata-limits.ts`
+**File:** `packages/shared/src/metadata-limits.ts`
 
-This is the single source of truth for all listing field character limits. Used by preview editors AND compare pages.
+This is the single source of truth for all listing field character limits. Used by preview editors, compare pages, AND the audit engine.
 
 ```typescript
-import type { MetadataLimits } from "@/lib/metadata-limits";
+import type { MetadataLimits } from "@appranks/shared";
 
 const newplatformLimits: MetadataLimits = {
   appName: 30,           // Max characters for app name
@@ -1994,7 +1994,7 @@ test_newplatform() {
 | `apps/dashboard/src/lib/auth-context.tsx` | Add to `VALID_PLATFORMS` |
 | `apps/dashboard/src/proxy.ts` | Add to `VALID_PLATFORMS` array |
 | `apps/dashboard/src/lib/platform-urls.ts` | Add URL builder cases (4 switch statements) |
-| `apps/dashboard/src/lib/metadata-limits.ts` | Add platform character limits |
+| `packages/shared/src/metadata-limits.ts` | Add platform character limits |
 | `apps/dashboard/src/lib/platform-display.ts` | Add entry to `PLATFORM_DISPLAY` (label, color, gradient, etc.) |
 | `apps/dashboard/src/components/sidebar.tsx` | No changes needed (imports from platform-display.ts) |
 | `apps/dashboard/src/components/admin-scraper-trigger.tsx` | Add to `VALID_PLATFORMS` set |

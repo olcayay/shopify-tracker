@@ -1,3 +1,21 @@
+Listing Audit: Move metadata-limits to shared package (2026-04-08)
+================================================================
+
+PLA-876: Phase 0: Move metadata-limits.ts to shared package
+- Problem: metadata-limits.ts lived in dashboard's lib/ but the new audit engine needs it
+  in packages/shared/ so both API and dashboard can use it
+- Solution:
+  - Moved apps/dashboard/src/lib/metadata-limits.ts → packages/shared/src/metadata-limits.ts
+  - Exported getMetadataLimits and MetadataLimits type from packages/shared/src/index.ts
+  - Updated 8 dashboard files to import from @appranks/shared instead of @/lib/metadata-limits
+  - Moved test from dashboard to packages/shared/src/__tests__/metadata-limits.test.ts
+  - Updated files/ADDING_NEW_PLATFORM.md references (4 locations)
+  - Deleted old files from dashboard
+- Files changed: packages/shared/src/metadata-limits.ts (new), packages/shared/src/index.ts,
+  listing-scorecard.tsx, 3 preview editors, 2 compare pages, 1 studio/draft page,
+  ADDING_NEW_PLATFORM.md
+- Tests: 7 tests in shared (all pass), 10 listing-scorecard tests (all pass), 659 shared total
+
 Queue Monitor: Per-Queue Pause/Resume Controls (2026-04-07)
 ================================================================
 

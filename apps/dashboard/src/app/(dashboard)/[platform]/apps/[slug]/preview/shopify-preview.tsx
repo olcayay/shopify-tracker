@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { formatNumber } from "@/lib/format-utils";
 import { Plus, X as XIcon } from "lucide-react";
-import { getMetadataLimits } from "@/lib/metadata-limits";
+import { getMetadataLimits } from "@appranks/shared";
 import { CharBadge, EditorField, mod } from "./shared";
 
 export interface ShopifyAppData {

@@ -9,7 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ArrowLeft } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { getMetadataLimits } from "@/lib/metadata-limits";
+import { getMetadataLimits } from "@appranks/shared";
 import type { AppData } from "./types";
 import { CompareSection } from "./compare-section";
 import { AppSelector } from "./app-selector";

@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
-import { getMetadataLimits } from "@/lib/metadata-limits";
-import type { MetadataLimits } from "@/lib/metadata-limits";
+import { getMetadataLimits } from "../metadata-limits.js";
+import type { MetadataLimits } from "../metadata-limits.js";
 
 const SUPPORTED_PLATFORMS = [
   "shopify",
@@ -14,6 +14,7 @@ const SUPPORTED_PLATFORMS = [
   "zoho",
   "zendesk",
   "hubspot",
+  "woocommerce",
 ] as const;
 
 const REQUIRED_FIELDS: (keyof MetadataLimits)[] = [
