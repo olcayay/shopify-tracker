@@ -199,6 +199,10 @@ registerAuthMiddleware(app);
 import { requireActiveBilling } from "./middleware/billing-guard.js";
 app.addHook("preHandler", requireActiveBilling());
 
+// Platform access guard: check platform feature flags for platform-specific routes
+import { registerPlatformAccessGuard } from "./middleware/platform-access.js";
+registerPlatformAccessGuard(app);
+
 // Idempotency: cache responses for requests with Idempotency-Key header
 registerIdempotencyOnSend(app);
 

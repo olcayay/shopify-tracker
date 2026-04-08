@@ -5,6 +5,7 @@
 import type { FastifyPluginAsync } from "fastify";
 import { eq, sql, and, ilike, notInArray } from "drizzle-orm";
 import { featureFlags, accountFeatureFlags, userFeatureFlags, accounts, users } from "@appranks/db";
+import { invalidatePlatformAccessCache } from "../middleware/platform-access.js";
 
 const SLUG_REGEX = /^[a-z][a-z0-9-]*$/;
 
@@ -169,6 +170,11 @@ export const featureFlagRoutes: FastifyPluginAsync = async (app) => {
       .where(eq(featureFlags.id, flag.id))
       .returning();
 
+    // Invalidate platform access cache when a platform flag is toggled
+    if (slug.startsWith("platform-")) {
+      invalidatePlatformAccessCache();
+    }
+
     return updated;
   });
 
@@ -210,6 +216,10 @@ export const featureFlagRoutes: FastifyPluginAsync = async (app) => {
       })
       .onConflictDoNothing();
 
+    if (slug.startsWith("platform-")) {
+      invalidatePlatformAccessCache(body.accountId);
+    }
+
     return reply.code(201).send({
       accountId: account.id,
       accountName: account.name,
@@ -245,6 +255,10 @@ export const featureFlagRoutes: FastifyPluginAsync = async (app) => {
 
       if (deleted.length === 0) {
         return reply.code(404).send({ error: "Account does not have this flag enabled" });
+      }
+
+      if (slug.startsWith("platform-")) {
+        invalidatePlatformAccessCache(accountId);
       }
 
       return { message: "Flag disabled for account" };
@@ -337,6 +351,10 @@ export const featureFlagRoutes: FastifyPluginAsync = async (app) => {
         set: { enabled, enabledAt: new Date() },
       });
 
+    if (slug.startsWith("platform-")) {
+      invalidatePlatformAccessCache(user.accountId);
+    }
+
     return reply.code(201).send({
       userId: user.id,
       userEmail: user.email,
@@ -375,6 +393,10 @@ export const featureFlagRoutes: FastifyPluginAsync = async (app) => {
 
       if (deleted.length === 0) {
         return reply.code(404).send({ error: "User does not have this flag override" });
+      }
+
+      if (slug.startsWith("platform-")) {
+        invalidatePlatformAccessCache();
       }
 
       return { message: "User flag override removed" };

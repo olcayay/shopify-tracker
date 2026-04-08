@@ -12,6 +12,18 @@ PLA-917: Seeded platform feature flags for all 12 platforms
 - Added 4 unit tests for the new utility
 - Files: 0127_seed_platform_feature_flags.sql, _journal.json, platforms.ts, platforms.test.ts, index.ts
 
+PLA-918: Added platform feature flag middleware to API routes
+- Global preHandler hook: registerPlatformAccessGuard() in platform-access.ts
+- Automatically checks any request with `?platform=X` query param
+- Three-tier resolution: global → account → user (same as feature flag system)
+- System admins bypass all checks
+- Fails open on DB errors (non-blocking)
+- 2-minute TTL cache keyed by accountId:userId:flagSlug
+- Cache invalidation on flag toggle, account/user assignment changes
+- Skip paths: /api/auth, /api/public, /api/system-admin, /api/admin, etc.
+- 13 unit tests covering all scenarios
+- Files: middleware/platform-access.ts (new), index.ts, feature-flags.ts, platform-access.test.ts (new)
+
 Developers Page UX Improvements (2026-04-08)
 ================================================================
 
