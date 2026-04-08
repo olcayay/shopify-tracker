@@ -1,3 +1,21 @@
+Queue Monitor: Per-Queue Pause/Resume Controls (2026-04-07)
+================================================================
+
+PLA-874: Add per-queue pause/resume controls to queue monitor page
+- Problem: Queue monitor at /system-admin/queues showed stats but had no way to pause/resume
+  individual queues — required direct Redis access to manage queue state
+- Solution:
+  - API: Added 3 new endpoints under /api/system-admin/queues/:queueName/{status,pause,resume}
+    using BullMQ's Queue.pause(), Queue.resume(), Queue.isPaused()
+  - API: Extended /queue-stats response with `paused` object containing isPaused for all 5 queues
+  - Dashboard: Added Pause/Play toggle button (lucide-react icons) next to each queue card
+  - Dashboard: Shows "Paused" badge (amber) when queue is paused, with amber border on card
+  - Dashboard: Optimistic UI update — toggles paused state immediately from API response
+- Valid queues: scraper-jobs-background, scraper-jobs-interactive, email-instant, email-bulk, notifications
+- Files changed: system-admin.ts (API routes), queues/page.tsx (dashboard), system-admin.test.ts,
+  queue-stats.test.ts (mock updates)
+- Tests: 16 new tests (auth enforcement + validation + pause/resume behavior)
+
 BrowserClient OOM Crash Recovery (2026-04-07)
 ================================================================
 

@@ -10,6 +10,9 @@ vi.mock("bullmq", () => {
     getJobCounts = mockGetJobCounts;
     add = vi.fn().mockResolvedValue({ id: "mock-job-1" });
     close = vi.fn().mockResolvedValue(undefined);
+    isPaused = vi.fn().mockResolvedValue(false);
+    pause = vi.fn().mockResolvedValue(undefined);
+    resume = vi.fn().mockResolvedValue(undefined);
   }
   return { Queue: MockQueue };
 });

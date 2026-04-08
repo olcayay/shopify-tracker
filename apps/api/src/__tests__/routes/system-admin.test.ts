@@ -11,10 +11,14 @@ import type { FastifyInstance } from "fastify";
 
 // Mock BullMQ Queue to avoid real Redis connections in CI
 vi.mock("bullmq", () => {
+  let _paused = false;
   class MockQueue {
     add = vi.fn().mockResolvedValue({ id: "mock-job-1" });
     close = vi.fn().mockResolvedValue(undefined);
     getJobCounts = vi.fn().mockResolvedValue({});
+    isPaused = vi.fn().mockImplementation(() => Promise.resolve(_paused));
+    pause = vi.fn().mockImplementation(() => { _paused = true; return Promise.resolve(); });
+    resume = vi.fn().mockImplementation(() => { _paused = false; return Promise.resolve(); });
   }
   return { Queue: MockQueue };
 });
@@ -736,6 +740,150 @@ describe("System admin routes", () => {
       // 200 if mock returns a row, 404 if not — both prove auth passed
       expect(res.statusCode).not.toBe(403);
       expect(res.statusCode).not.toBe(401);
+    });
+  });
+
+  // -----------------------------------------------------------------------
+  // Queue Pause/Resume Controls (PLA-874)
+  // -----------------------------------------------------------------------
+
+  describe("GET /api/system-admin/queues/:queueName/status", () => {
+    it("returns 401 without token", async () => {
+      const res = await app.inject({
+        method: "GET",
+        url: "/api/system-admin/queues/email-instant/status",
+      });
+      expect(res.statusCode).toBe(401);
+    });
+
+    it("returns 403 for non-admin", async () => {
+      const res = await app.inject({
+        method: "GET",
+        url: "/api/system-admin/queues/email-instant/status",
+        headers: authHeaders(userToken()),
+      });
+      expect(res.statusCode).toBe(403);
+    });
+
+    it("returns 400 for invalid queue name", async () => {
+      const res = await app.inject({
+        method: "GET",
+        url: "/api/system-admin/queues/invalid-queue/status",
+        headers: authHeaders(adminToken()),
+      });
+      expect(res.statusCode).toBe(400);
+      const body = res.json();
+      expect(body.error).toContain("Invalid queue");
+    });
+
+    it("returns isPaused status for valid queue", async () => {
+      const res = await app.inject({
+        method: "GET",
+        url: "/api/system-admin/queues/email-instant/status",
+        headers: authHeaders(adminToken()),
+      });
+      expect(res.statusCode).toBe(200);
+      const body = res.json();
+      expect(body).toHaveProperty("queueName", "email-instant");
+      expect(body).toHaveProperty("isPaused");
+      expect(typeof body.isPaused).toBe("boolean");
+    });
+
+    it("accepts all 5 valid queue names", async () => {
+      const validQueues = [
+        "scraper-jobs-background",
+        "scraper-jobs-interactive",
+        "email-instant",
+        "email-bulk",
+        "notifications",
+      ];
+      for (const queueName of validQueues) {
+        const res = await app.inject({
+          method: "GET",
+          url: `/api/system-admin/queues/${queueName}/status`,
+          headers: authHeaders(adminToken()),
+        });
+        expect(res.statusCode).toBe(200);
+        expect(res.json().queueName).toBe(queueName);
+      }
+    });
+  });
+
+  describe("POST /api/system-admin/queues/:queueName/pause", () => {
+    it("returns 401 without token", async () => {
+      const res = await app.inject({
+        method: "POST",
+        url: "/api/system-admin/queues/email-instant/pause",
+      });
+      expect(res.statusCode).toBe(401);
+    });
+
+    it("returns 403 for non-admin", async () => {
+      const res = await app.inject({
+        method: "POST",
+        url: "/api/system-admin/queues/email-instant/pause",
+        headers: authHeaders(userToken()),
+      });
+      expect(res.statusCode).toBe(403);
+    });
+
+    it("returns 400 for invalid queue name", async () => {
+      const res = await app.inject({
+        method: "POST",
+        url: "/api/system-admin/queues/bad-queue/pause",
+        headers: authHeaders(adminToken()),
+      });
+      expect(res.statusCode).toBe(400);
+    });
+
+    it("pauses a valid queue and returns isPaused: true", async () => {
+      const res = await app.inject({
+        method: "POST",
+        url: "/api/system-admin/queues/notifications/pause",
+        headers: authHeaders(adminToken()),
+      });
+      expect(res.statusCode).toBe(200);
+      const body = res.json();
+      expect(body).toEqual({ queueName: "notifications", isPaused: true });
+    });
+  });
+
+  describe("POST /api/system-admin/queues/:queueName/resume", () => {
+    it("returns 401 without token", async () => {
+      const res = await app.inject({
+        method: "POST",
+        url: "/api/system-admin/queues/email-instant/resume",
+      });
+      expect(res.statusCode).toBe(401);
+    });
+
+    it("returns 403 for non-admin", async () => {
+      const res = await app.inject({
+        method: "POST",
+        url: "/api/system-admin/queues/email-instant/resume",
+        headers: authHeaders(userToken()),
+      });
+      expect(res.statusCode).toBe(403);
+    });
+
+    it("returns 400 for invalid queue name", async () => {
+      const res = await app.inject({
+        method: "POST",
+        url: "/api/system-admin/queues/bad-queue/resume",
+        headers: authHeaders(adminToken()),
+      });
+      expect(res.statusCode).toBe(400);
+    });
+
+    it("resumes a valid queue and returns isPaused: false", async () => {
+      const res = await app.inject({
+        method: "POST",
+        url: "/api/system-admin/queues/scraper-jobs-background/resume",
+        headers: authHeaders(adminToken()),
+      });
+      expect(res.statusCode).toBe(200);
+      const body = res.json();
+      expect(body).toEqual({ queueName: "scraper-jobs-background", isPaused: false });
     });
   });
 });

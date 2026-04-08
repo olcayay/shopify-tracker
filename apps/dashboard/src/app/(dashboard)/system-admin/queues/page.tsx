@@ -6,7 +6,7 @@ import { useAuth } from "@/lib/auth-context";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { RefreshCw, Loader2, Activity } from "lucide-react";
+import { RefreshCw, Loader2, Activity, Pause, Play } from "lucide-react";
 
 interface QueueCounts {
   waiting: number;
@@ -16,20 +16,29 @@ interface QueueCounts {
   delayed: number;
 }
 
+interface PausedState {
+  background: boolean;
+  interactive: boolean;
+  emailInstant: boolean;
+  emailBulk: boolean;
+  notifications: boolean;
+}
+
 interface QueueStats {
   background: QueueCounts;
   interactive: QueueCounts;
   emailInstant: QueueCounts | null;
   emailBulk: QueueCounts | null;
   notifications: QueueCounts | null;
+  paused: PausedState;
 }
 
-const QUEUE_LABELS: Record<string, { label: string; description: string; urlKey: string }> = {
-  background: { label: "Background Scraper", description: "Scheduled scraping jobs", urlKey: "background" },
-  interactive: { label: "Interactive Scraper", description: "User-triggered scraping jobs", urlKey: "interactive" },
-  emailInstant: { label: "Email Instant", description: "Transactional emails (password reset, verification)", urlKey: "email-instant" },
-  emailBulk: { label: "Email Bulk", description: "Marketing & alert emails (digests, alerts)", urlKey: "email-bulk" },
-  notifications: { label: "Notifications", description: "In-app & push notifications", urlKey: "notifications" },
+const QUEUE_LABELS: Record<string, { label: string; description: string; urlKey: string; bullmqName: string }> = {
+  background: { label: "Background Scraper", description: "Scheduled scraping jobs", urlKey: "background", bullmqName: "scraper-jobs-background" },
+  interactive: { label: "Interactive Scraper", description: "User-triggered scraping jobs", urlKey: "interactive", bullmqName: "scraper-jobs-interactive" },
+  emailInstant: { label: "Email Instant", description: "Transactional emails (password reset, verification)", urlKey: "email-instant", bullmqName: "email-instant" },
+  emailBulk: { label: "Email Bulk", description: "Marketing & alert emails (digests, alerts)", urlKey: "email-bulk", bullmqName: "email-bulk" },
+  notifications: { label: "Notifications", description: "In-app & push notifications", urlKey: "notifications", bullmqName: "notifications" },
 };
 
 function ClickableBadge({ count, label, variant, queueKey, state }: {
@@ -73,6 +82,7 @@ export default function QueueMonitoringDashboard() {
   const { fetchWithAuth } = useAuth();
   const [stats, setStats] = useState<QueueStats | null>(null);
   const [loading, setLoading] = useState(true);
+  const [togglingQueue, setTogglingQueue] = useState<string | null>(null);
 
   const loadStats = useCallback(async () => {
     setLoading(true);
@@ -85,6 +95,27 @@ export default function QueueMonitoringDashboard() {
   }, [fetchWithAuth]);
 
   useEffect(() => { loadStats(); }, [loadStats]);
+
+  const togglePause = useCallback(async (key: string, bullmqName: string) => {
+    if (!stats) return;
+    const isPaused = stats.paused?.[key as keyof PausedState] ?? false;
+    const action = isPaused ? "resume" : "pause";
+    setTogglingQueue(key);
+    try {
+      const res = await fetchWithAuth(`/api/system-admin/queues/${bullmqName}/${action}`, {
+        method: "POST",
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setStats(prev => prev ? {
+          ...prev,
+          paused: { ...prev.paused, [key]: data.isPaused },
+        } : prev);
+      }
+    } finally {
+      setTogglingQueue(null);
+    }
+  }, [fetchWithAuth, stats]);
 
   return (
     <div className="space-y-6">
@@ -106,24 +137,48 @@ export default function QueueMonitoringDashboard() {
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {Object.entries(QUEUE_LABELS).map(([key, { label, description, urlKey }]) => {
-            const counts = stats?.[key as keyof QueueStats] as QueueCounts | null;
+          {Object.entries(QUEUE_LABELS).map(([key, { label, description, urlKey, bullmqName }]) => {
+            const counts = stats?.[key as keyof Omit<QueueStats, "paused">] as QueueCounts | null;
+            const isPaused = stats?.paused?.[key as keyof PausedState] ?? false;
+            const isToggling = togglingQueue === key;
             return (
-              <Card key={key}>
+              <Card key={key} className={isPaused ? "border-amber-300 dark:border-amber-700" : ""}>
                 <CardHeader className="pb-2">
                   <CardTitle className="text-base flex items-center justify-between">
                     <Link href={`/system-admin/queues/${urlKey}`} className="hover:underline">
                       {label}
                     </Link>
-                    {counts ? (
-                      (counts.active > 0 || counts.waiting > 0) ? (
-                        <Badge variant="default" className="text-xs">Active</Badge>
+                    <div className="flex items-center gap-2">
+                      {counts ? (
+                        isPaused ? (
+                          <Badge variant="outline" className="text-xs bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-300 border-amber-300">Paused</Badge>
+                        ) : (counts.active > 0 || counts.waiting > 0) ? (
+                          <Badge variant="default" className="text-xs">Active</Badge>
+                        ) : (
+                          <Badge variant="secondary" className="text-xs">Idle</Badge>
+                        )
                       ) : (
-                        <Badge variant="secondary" className="text-xs">Idle</Badge>
-                      )
-                    ) : (
-                      <Badge variant="outline" className="text-xs">N/A</Badge>
-                    )}
+                        <Badge variant="outline" className="text-xs">N/A</Badge>
+                      )}
+                      {counts && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-7 w-7 p-0"
+                          disabled={isToggling}
+                          onClick={() => togglePause(key, bullmqName)}
+                          title={isPaused ? "Resume queue" : "Pause queue"}
+                        >
+                          {isToggling ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                          ) : isPaused ? (
+                            <Play className="h-4 w-4 text-green-600" />
+                          ) : (
+                            <Pause className="h-4 w-4 text-amber-600" />
+                          )}
+                        </Button>
+                      )}
+                    </div>
                   </CardTitle>
                   <p className="text-xs text-muted-foreground">{description}</p>
                 </CardHeader>

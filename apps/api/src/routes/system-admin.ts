@@ -3018,15 +3018,20 @@ export const systemAdminRoutes: FastifyPluginAsync = async (app) => {
     const backgroundQueue = getBackgroundQueue();
     const interactiveQueue = getInteractiveQueue();
 
-    const [backgroundCounts, interactiveCounts] = await Promise.all([
+    const [backgroundCounts, interactiveCounts, backgroundPaused, interactivePaused] = await Promise.all([
       backgroundQueue.getJobCounts("waiting", "active", "completed", "failed", "delayed"),
       interactiveQueue.getJobCounts("waiting", "active", "completed", "failed", "delayed"),
+      backgroundQueue.isPaused().catch(() => false),
+      interactiveQueue.isPaused().catch(() => false),
     ]);
 
     // Try to get email/notification queue stats (may not be available in API context)
     let emailInstant = null;
     let emailBulk = null;
     let notifications = null;
+    let emailInstantPaused = false;
+    let emailBulkPaused = false;
+    let notificationsPaused = false;
     try {
       const { Queue } = await import("bullmq");
       const Redis = (await import("ioredis")).default;
@@ -3043,6 +3048,12 @@ export const systemAdminRoutes: FastifyPluginAsync = async (app) => {
         notificationsQ.getJobCounts("waiting", "active", "completed", "failed", "delayed").catch(() => null),
       ]);
 
+      [emailInstantPaused, emailBulkPaused, notificationsPaused] = await Promise.all([
+        emailInstantQ.isPaused().catch(() => false),
+        emailBulkQ.isPaused().catch(() => false),
+        notificationsQ.isPaused().catch(() => false),
+      ]);
+
       await Promise.all([emailInstantQ.close(), emailBulkQ.close(), notificationsQ.close()]);
       await connection.quit();
     } catch {
@@ -3055,6 +3066,13 @@ export const systemAdminRoutes: FastifyPluginAsync = async (app) => {
       emailInstant,
       emailBulk,
       notifications,
+      paused: {
+        background: backgroundPaused,
+        interactive: interactivePaused,
+        emailInstant: emailInstantPaused,
+        emailBulk: emailBulkPaused,
+        notifications: notificationsPaused,
+      },
     };
   });
 
@@ -3210,6 +3228,97 @@ export const systemAdminRoutes: FastifyPluginAsync = async (app) => {
 
         await q.close();
         return result;
+      } finally {
+        await connection.quit();
+      }
+    }
+  );
+
+  // ── Queue Pause/Resume Controls (PLA-874) ─────────────────────────────
+
+  const VALID_QUEUE_NAMES = [
+    "scraper-jobs-background",
+    "scraper-jobs-interactive",
+    "email-instant",
+    "email-bulk",
+    "notifications",
+  ];
+
+  // GET /api/system-admin/queues/:queueName/status — { isPaused: boolean }
+  app.get<{ Params: { queueName: string } }>(
+    "/queues/:queueName/status",
+    async (request, reply) => {
+      const { queueName } = request.params;
+      if (!VALID_QUEUE_NAMES.includes(queueName)) {
+        return reply.code(400).send({
+          error: `Invalid queue. Valid queues: ${VALID_QUEUE_NAMES.join(", ")}`,
+        });
+      }
+
+      const { Queue } = await import("bullmq");
+      const Redis = (await import("ioredis")).default;
+      const redisUrl = process.env.REDIS_URL || "redis://localhost:6379";
+      const connection = new Redis(redisUrl, { connectTimeout: 5000, maxRetriesPerRequest: 1 });
+
+      try {
+        const q = new Queue(queueName, { connection });
+        const isPaused = await q.isPaused();
+        await q.close();
+        return { queueName, isPaused };
+      } finally {
+        await connection.quit();
+      }
+    }
+  );
+
+  // POST /api/system-admin/queues/:queueName/pause — pause a specific queue
+  app.post<{ Params: { queueName: string } }>(
+    "/queues/:queueName/pause",
+    async (request, reply) => {
+      const { queueName } = request.params;
+      if (!VALID_QUEUE_NAMES.includes(queueName)) {
+        return reply.code(400).send({
+          error: `Invalid queue. Valid queues: ${VALID_QUEUE_NAMES.join(", ")}`,
+        });
+      }
+
+      const { Queue } = await import("bullmq");
+      const Redis = (await import("ioredis")).default;
+      const redisUrl = process.env.REDIS_URL || "redis://localhost:6379";
+      const connection = new Redis(redisUrl, { connectTimeout: 5000, maxRetriesPerRequest: 1 });
+
+      try {
+        const q = new Queue(queueName, { connection });
+        await q.pause();
+        await q.close();
+        return { queueName, isPaused: true };
+      } finally {
+        await connection.quit();
+      }
+    }
+  );
+
+  // POST /api/system-admin/queues/:queueName/resume — resume a specific queue
+  app.post<{ Params: { queueName: string } }>(
+    "/queues/:queueName/resume",
+    async (request, reply) => {
+      const { queueName } = request.params;
+      if (!VALID_QUEUE_NAMES.includes(queueName)) {
+        return reply.code(400).send({
+          error: `Invalid queue. Valid queues: ${VALID_QUEUE_NAMES.join(", ")}`,
+        });
+      }
+
+      const { Queue } = await import("bullmq");
+      const Redis = (await import("ioredis")).default;
+      const redisUrl = process.env.REDIS_URL || "redis://localhost:6379";
+      const connection = new Redis(redisUrl, { connectTimeout: 5000, maxRetriesPerRequest: 1 });
+
+      try {
+        const q = new Queue(queueName, { connection });
+        await q.resume();
+        await q.close();
+        return { queueName, isPaused: false };
       } finally {
         await connection.quit();
       }

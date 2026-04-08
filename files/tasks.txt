@@ -1,3 +1,6 @@
+Queue Monitor Enhancements (2026-04-07)
+  PLA-874: Add per-queue pause/resume controls to queue monitor page ✅
+
 Browser Crash Recovery (2026-04-07)
   PLA-864: Fix BrowserClient OOM crash recovery — recycleBrowser + retry once ✅
 
