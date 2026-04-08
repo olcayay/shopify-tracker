@@ -186,8 +186,8 @@ export function TopBar({
       {/* Theme Toggle */}
       <ThemeToggle />
 
-      {/* Notifications */}
-      <NotificationBell />
+      {/* Notifications — gated by feature flag */}
+      {(user?.isSystemAdmin || account?.enabledFeatures?.includes("notifications")) && <NotificationBell />}
 
       {/* Settings */}
       <Link

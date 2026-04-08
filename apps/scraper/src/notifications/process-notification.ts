@@ -22,6 +22,7 @@ import {
   accountTrackedApps,
   accountTrackedKeywords,
   users,
+  featureFlags,
 } from "@appranks/db";
 
 const log = createLogger("notification-worker");
@@ -255,6 +256,16 @@ export async function processNotification(
 ): Promise<void> {
   const { type, userId, accountId, payload, sendPush } = job.data;
   log.info("processing notification", { jobId: job.id, type, userId });
+
+  // Check if notifications feature flag is enabled globally
+  const [flag] = await db
+    .select({ isEnabled: featureFlags.isEnabled })
+    .from(featureFlags)
+    .where(eq(featureFlags.slug, "notifications"));
+  if (!flag?.isEnabled) {
+    log.info("notifications feature flag disabled, skipping", { jobId: job.id, type });
+    return;
+  }
 
   const store = createNotificationStore(db);
 

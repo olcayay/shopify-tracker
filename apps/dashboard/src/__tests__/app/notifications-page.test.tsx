@@ -16,6 +16,11 @@ vi.mock("@/lib/auth-context", () => ({
   useAuth: (...args: any[]) => mockUseAuth(...args),
 }));
 
+vi.mock("@/contexts/feature-flags-context", () => ({
+  useFeatureFlag: (slug: string) => slug === "notifications",
+  useFeatureFlags: () => ({ enabledFeatures: ["notifications"], hasFeature: (s: string) => s === "notifications" }),
+}));
+
 import React from "react";
 import NotificationsPage from "@/app/(dashboard)/notifications/page";
 

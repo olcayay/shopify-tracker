@@ -1,7 +1,9 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
+import { useFeatureFlag } from "@/contexts/feature-flags-context";
 import { formatShortDate } from "@/lib/format-utils";
 import {
   Bell,
@@ -44,7 +46,15 @@ const CATEGORIES = [
 ];
 
 export default function NotificationsPage() {
+  const router = useRouter();
+  const hasNotifications = useFeatureFlag("notifications");
   const { fetchWithAuth } = useAuth();
+
+  // Redirect if notifications feature is disabled
+  useEffect(() => {
+    if (!hasNotifications) router.replace("/overview");
+  }, [hasNotifications, router]);
+
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);

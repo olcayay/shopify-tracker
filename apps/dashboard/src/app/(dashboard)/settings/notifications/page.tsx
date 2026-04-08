@@ -1,15 +1,25 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import { useRouter } from "next/navigation";
 import { Bell, Moon, Clock, TestTube, RefreshCw, Loader2 } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
+import { useFeatureFlag } from "@/contexts/feature-flags-context";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { isPushSupported, getPermissionStatus, isSubscribed } from "@/lib/push-notifications";
 import { toast } from "sonner";
 
 export default function NotificationSettingsPage() {
+  const router = useRouter();
+  const hasNotifications = useFeatureFlag("notifications");
   const { fetchWithAuth } = useAuth();
+
+  // Redirect if notifications feature is disabled
+  useEffect(() => {
+    if (!hasNotifications) router.replace("/settings");
+  }, [hasNotifications, router]);
+
   const [preferences, setPreferences] = useState<{ type: string; inAppEnabled: boolean; pushEnabled: boolean }[]>([]);
   const [pushStatus, setPushStatus] = useState<"loading" | "granted" | "denied" | "default" | "unsupported">("loading");
   const [pushSubscribed, setPushSubscribed] = useState(false);

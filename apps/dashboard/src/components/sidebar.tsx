@@ -100,11 +100,17 @@ function SidebarContent({
   const isGlobalPage = isOnGlobalPage(pathname);
   const isPlatformPage = isOnPlatformPage(pathname);
 
+  // Filter global nav items by feature flags (e.g. hide Notifications when flag is off)
+  const filteredGlobalNav = useMemo(
+    () => globalNavItems.filter((item) => item.href !== "/notifications" || enabledFeatures.includes("notifications")),
+    [enabledFeatures]
+  );
+
   // In collapsed mode, show appropriate nav icons
   const activePlatformItems = useMemo(() => {
-    if (isGlobalPage) return globalNavItems;
+    if (isGlobalPage) return filteredGlobalNav;
     return getNavItems(currentPlatform, isSystemAdmin, enabledFeatures);
-  }, [currentPlatform, isSystemAdmin, isGlobalPage, enabledFeatures]);
+  }, [currentPlatform, isSystemAdmin, isGlobalPage, enabledFeatures, filteredGlobalNav]);
 
   return (
     <>
@@ -137,7 +143,7 @@ function SidebarContent({
           })
         ) : isGlobalPage && !isPlatformPage ? (
           /* Global page: show global nav items as flat list */
-          globalNavItems.map((item) => {
+          filteredGlobalNav.map((item) => {
             const isActive = item.exact
               ? pathname === item.href
               : pathname === item.href || pathname.startsWith(item.href + "/");

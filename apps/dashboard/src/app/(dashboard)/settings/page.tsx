@@ -83,6 +83,7 @@ type UnifiedRow =
 export default function SettingsPage() {
   const { user, account, fetchWithAuth, refreshUser } = useAuth();
   const hasResearch = useFeatureFlag("market-research");
+  const hasNotifications = useFeatureFlag("notifications");
   const [members, setMembers] = useState<Member[]>([]);
   const [invitations, setInvitations] = useState<Invitation[]>([]);
   const [message, setMessage] = useState("");
@@ -596,8 +597,8 @@ export default function SettingsPage() {
         </CardContent>
       </Card>
 
-      {/* Email Notifications */}
-      <Card>
+      {/* Email Notifications — gated by feature flag */}
+      {hasNotifications && (<Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Mail className="h-5 w-5" />
@@ -666,7 +667,7 @@ export default function SettingsPage() {
             </select>
           </div>
         </CardContent>
-      </Card>
+      </Card>)}
 
       {/* Data & Privacy */}
       <Card>

@@ -67,6 +67,7 @@ vi.mock("@appranks/db", () => ({
   accountTrackedApps: { appId: "app_id", accountId: "account_id" },
   accountTrackedKeywords: { keywordId: "keyword_id", accountId: "account_id" },
   users: { id: "id", accountId: "account_id" },
+  featureFlags: { slug: "slug", isEnabled: "is_enabled" },
   sqlArray: vi.fn((arr: any[]) => arr),
 }));
 
@@ -99,10 +100,21 @@ describe("createNotificationStore", () => {
 describe("processNotification", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    // Reset chain mocks
-    mockDbSelect.mockReturnThis();
+    // Reset chain mocks — first select().from().where() returns feature flag (enabled),
+    // subsequent calls return notification data
+    let selectCallCount = 0;
+    mockDbSelect.mockImplementation(() => {
+      selectCallCount++;
+      return mockDb;
+    });
     mockDbFrom.mockReturnThis();
-    mockDbWhere.mockReturnThis();
+    mockDbWhere.mockImplementation(() => {
+      if (selectCallCount === 1) {
+        // Feature flag check — return enabled
+        return Promise.resolve([{ isEnabled: true }]);
+      }
+      return mockDb;
+    });
     mockDbOrderBy.mockReturnThis();
     mockDbLimit.mockResolvedValue([{
       id: "notif-1",
@@ -178,5 +190,55 @@ describe("processNotification", () => {
 
     // Should not throw
     await processNotification(job, mockDb);
+  });
+
+  it("skips processing when notifications feature flag is disabled", async () => {
+    let selectCallCount = 0;
+    mockDbSelect.mockImplementation(() => {
+      selectCallCount++;
+      return mockDb;
+    });
+    mockDbWhere.mockImplementation(() => {
+      if (selectCallCount === 1) {
+        return Promise.resolve([{ isEnabled: false }]);
+      }
+      return mockDb;
+    });
+
+    const job = makeJob({
+      type: "notification_ranking_change",
+      userId: "u1",
+      accountId: "a1",
+      payload: { appName: "Test App" },
+      createdAt: new Date().toISOString(),
+    });
+
+    await processNotification(job, mockDb);
+    expect(mockEmitNotification).not.toHaveBeenCalled();
+  });
+
+  it("skips processing when notifications feature flag does not exist", async () => {
+    let selectCallCount = 0;
+    mockDbSelect.mockImplementation(() => {
+      selectCallCount++;
+      return mockDb;
+    });
+    mockDbWhere.mockImplementation(() => {
+      if (selectCallCount === 1) {
+        return Promise.resolve([]);
+      }
+      return mockDb;
+    });
+
+    const job = makeJob({
+      type: "notification_ranking_change",
+      userId: "u1",
+      accountId: "a1",
+      payload: {},
+      createdAt: new Date().toISOString(),
+    });
+
+    await processNotification(job, mockDb);
+    expect(mockEmitNotification).not.toHaveBeenCalled();
   });
 });

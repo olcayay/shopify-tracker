@@ -42,13 +42,19 @@ export function IconSidebar() {
   // For system admins on non-platform/non-admin/non-global/non-settings pages, show admin items
   const showAdminFallback = isSystemAdmin && !isPlatformPage && !isAdminSection && !isGlobalPage && !isSettingsPage;
 
+  // Filter global nav items by feature flags (e.g. hide Notifications when flag is off)
+  const filteredGlobalNav = useMemo(
+    () => globalNavItems.filter((item) => item.href !== "/notifications" || enabledFeatures.includes("notifications")),
+    [enabledFeatures]
+  );
+
   const items = useMemo(
     () => {
       if (isAdminSection || showAdminFallback) return systemAdminItems;
-      if (isGlobalPage || isSettingsPage) return globalNavItems;
+      if (isGlobalPage || isSettingsPage) return filteredGlobalNav;
       return getNavItems(activePlatform, isSystemAdmin, enabledFeatures);
     },
-    [activePlatform, isSystemAdmin, isAdminSection, showAdminFallback, isGlobalPage, isSettingsPage, enabledFeatures]
+    [activePlatform, isSystemAdmin, isAdminSection, showAdminFallback, isGlobalPage, isSettingsPage, enabledFeatures, filteredGlobalNav]
   );
 
   // Show sidebar on platform pages, admin pages, global pages, settings, or for system admins
