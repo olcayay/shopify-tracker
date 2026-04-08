@@ -28,6 +28,7 @@ import {
   AlertTriangle,
   Activity,
   ToggleLeft,
+  Globe,
   type LucideIcon,
 } from "lucide-react";
 import { PLATFORMS, PLATFORM_IDS, type PlatformId } from "@appranks/shared";
@@ -124,6 +125,7 @@ export const systemAdminItems: NavItem[] = [
   { href: "/system-admin/features", label: "Features", icon: Puzzle },
   { href: "/system-admin/researches", label: "Research", icon: FlaskConical },
   { href: "/system-admin/feature-flags", label: "Feature Flags", icon: ToggleLeft },
+  { href: "/system-admin/platform-access", label: "Platform Access", icon: Globe },
   { href: "/system-admin/packages", label: "Packages", icon: Package },
   { href: "/system-admin/scraper-health", label: "Health", icon: HeartPulse },
   { href: "/system-admin/scraper", label: "Scraper", icon: Bot },
