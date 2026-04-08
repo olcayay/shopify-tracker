@@ -209,17 +209,27 @@ export async function crossPlatformRoutes(app: FastifyInstance) {
       const orderDir = order === "desc" ? sql`DESC` : sql`ASC`;
       const orderClause =
         sort === "platform" ? sql`k.platform` :
+        sort === "totalResults" ? sql`ks.total_results` :
         sql`k.keyword`;
+      const nullsLast = sort === "totalResults" ? sql`NULLS LAST` : sql``;
 
       // Fetch paginated results
       const rows: any[] = await db.execute(sql`
         SELECT
-          k.id, k.platform, k.keyword, k.slug, k.is_active, k.created_at
+          k.id, k.platform, k.keyword, k.slug, k.is_active, k.created_at,
+          ks.total_results, ks.scraped_at AS last_scraped_at
         FROM tracked_keywords k
+        LEFT JOIN LATERAL (
+          SELECT ks2.total_results, ks2.scraped_at
+          FROM keyword_snapshots ks2
+          WHERE ks2.keyword_id = k.id
+          ORDER BY ks2.scraped_at DESC
+          LIMIT 1
+        ) ks ON true
         WHERE k.id IN (${sql.join(keywordIds.map((id: number) => sql`${id}`), sql`, `)})
         ${searchFilter}
         ${platformFilterSql}
-        ORDER BY ${orderClause} ${orderDir}
+        ORDER BY ${orderClause} ${orderDir} ${nullsLast}
         LIMIT ${limit} OFFSET ${offset}
       `) as any[];
 
@@ -253,6 +263,8 @@ export async function crossPlatformRoutes(app: FastifyInstance) {
             trackedApps: appIds
               .map((id: number) => trackedAppDetailsMap.get(id))
               .filter(Boolean),
+            totalResults: r.total_results != null ? Number(r.total_results) : null,
+            lastScrapedAt: r.last_scraped_at || null,
             createdAt: r.created_at,
           };
         }),

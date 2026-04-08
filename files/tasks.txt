@@ -1,3 +1,6 @@
+Keywords Total Results (2026-04-09)
+  PLA-927: Add Total Results column to /keywords page ✅
+
 Developer Page Quick Fixes (2026-04-09)
   PLA-929: Right-align ViewModeToggle on /developers page ✅
   PLA-904: Increase visible app icons from 8 to 10 — already done ✅

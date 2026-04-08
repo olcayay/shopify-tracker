@@ -39,6 +39,7 @@ interface KeywordItem {
   isActive: boolean;
   appCount: number;
   trackedApps: TrackedApp[];
+  totalResults: number | null;
   createdAt: string;
 }
 
@@ -171,12 +172,15 @@ export default function CrossPlatformKeywordsPage() {
             {kw.isActive ? "Active" : "Paused"}
           </span>
         </TableCell>
+        <TableCell className="text-right tabular-nums">
+          {kw.totalResults != null ? kw.totalResults.toLocaleString() : "—"}
+        </TableCell>
       </TableRow>
     );
   }
 
-  const groupedColCount = 3;
-  const flatColCount = 4;
+  const groupedColCount = 4;
+  const flatColCount = 5;
 
   const renderGroupedHeaders = () => (
     <>
@@ -191,6 +195,11 @@ export default function CrossPlatformKeywordsPage() {
         </button>
       </TableHead>
       <TableHead>Status</TableHead>
+      <TableHead className="text-right">
+        <button onClick={() => toggleSort("totalResults")} className="flex items-center gap-1 justify-end hover:text-foreground ml-auto">
+          Total Results <ArrowUpDown className="h-3 w-3" />
+        </button>
+      </TableHead>
     </>
   );
 
@@ -247,12 +256,17 @@ export default function CrossPlatformKeywordsPage() {
                     </button>
                   </TableHead>
                   <TableHead>Status</TableHead>
+                  <TableHead className="text-right">
+                    <button onClick={() => toggleSort("totalResults")} className="flex items-center gap-1 justify-end hover:text-foreground ml-auto">
+                      Total Results <ArrowUpDown className="h-3 w-3" />
+                    </button>
+                  </TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {items.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={4} className="text-center text-muted-foreground py-8">
+                    <TableCell colSpan={5} className="text-center text-muted-foreground py-8">
                       {emptyMessage}
                     </TableCell>
                   </TableRow>
