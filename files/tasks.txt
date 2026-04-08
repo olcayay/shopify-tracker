@@ -1,3 +1,6 @@
+Overview Card Enrichment (2026-04-09)
+  PLA-932: Enrich overview platform card app rows with developer name and competitor count ✅
+
 Competitor Search (2026-04-09)
   PLA-925: Add competitor directly from search bar on /competitors page ✅
 

@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ArrowRight, Star, Search } from "lucide-react";
+import { ArrowRight, Star, Search, Users } from "lucide-react";
 import { DailyHighlights } from "@/components/overview-daily-highlights";
 import { PLATFORMS, type PlatformId } from "@appranks/shared";
 import { PLATFORM_DISPLAY } from "@/lib/platform-display";
@@ -15,6 +15,8 @@ interface AppSummary {
   rating: number | null;
   reviewCount: number;
   keywordCount: number;
+  competitorCount: number;
+  developerName: string | null;
 }
 
 interface PlatformHighlights {
@@ -136,9 +138,16 @@ function AppRow({ app, platformId }: { app: AppSummary; platformId: PlatformId }
           {app.name.charAt(0)}
         </div>
       )}
-      <span className="font-medium text-sm truncate group-hover:text-primary transition-colors min-w-0">
-        {app.name}
-      </span>
+      <div className="min-w-0 flex-1">
+        <span className="font-medium text-sm truncate group-hover:text-primary transition-colors block">
+          {app.name}
+        </span>
+        {app.developerName && (
+          <span className="text-[10px] text-muted-foreground truncate block">
+            {app.developerName}
+          </span>
+        )}
+      </div>
       <div className="flex items-center gap-3 ml-auto shrink-0 text-xs text-muted-foreground">
         {app.rating != null && (
           <span className="flex items-center gap-0.5">
@@ -153,6 +162,12 @@ function AppRow({ app, platformId }: { app: AppSummary; platformId: PlatformId }
           <span className="flex items-center gap-0.5 bg-muted rounded-full px-1.5 py-0.5">
             <Search className="h-3 w-3" />
             {app.keywordCount}
+          </span>
+        )}
+        {app.competitorCount > 0 && (
+          <span className="flex items-center gap-0.5 bg-muted rounded-full px-1.5 py-0.5">
+            <Users className="h-3 w-3" />
+            {app.competitorCount}
           </span>
         )}
       </div>

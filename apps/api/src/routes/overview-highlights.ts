@@ -25,12 +25,27 @@ export async function overviewHighlightsRoutes(app: FastifyInstance) {
           FROM account_tracked_keywords atk
           WHERE atk.account_id = ${accountId}
           GROUP BY atk.tracked_app_id
+        ),
+        comp_counts AS (
+          SELECT aca.tracked_app_id, COUNT(*) AS competitor_count
+          FROM account_competitor_apps aca
+          WHERE aca.account_id = ${accountId}
+          GROUP BY aca.tracked_app_id
+        ),
+        dev_names AS (
+          SELECT s.app_id, s.developer->>'name' AS developer_name
+          FROM app_snapshots s
+          WHERE s.id = (SELECT s2.id FROM app_snapshots s2 WHERE s2.app_id = s.app_id ORDER BY s2.scraped_at DESC LIMIT 1)
         )
         SELECT a.id, a.platform, a.slug, a.name, a.icon_url, a.average_rating, a.rating_count,
-          COALESCE(kc.keyword_count, 0) AS keyword_count
+          COALESCE(kc.keyword_count, 0) AS keyword_count,
+          COALESCE(cc.competitor_count, 0) AS competitor_count,
+          dn.developer_name
         FROM apps a
         JOIN account_tracked_apps ata ON ata.app_id = a.id AND ata.account_id = ${accountId}
         LEFT JOIN kw_counts kc ON kc.tracked_app_id = a.id
+        LEFT JOIN comp_counts cc ON cc.tracked_app_id = a.id
+        LEFT JOIN dev_names dn ON dn.app_id = a.id
         ${platformFilter ? sql`WHERE a.platform = ${platformFilter}` : sql``}
         ORDER BY a.platform, a.name
       `);
@@ -183,6 +198,8 @@ export async function overviewHighlightsRoutes(app: FastifyInstance) {
             rating: a.average_rating != null ? Number(a.average_rating) : null,
             reviewCount: Number(a.rating_count || 0),
             keywordCount: Number(a.keyword_count || 0),
+            competitorCount: Number(a.competitor_count || 0),
+            developerName: a.developer_name || null,
           })),
           highlights: {
             keywordMovers: kwMovers
