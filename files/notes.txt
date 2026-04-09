@@ -1,3 +1,14 @@
+Fix Canva Smoke Test Timeout (2026-04-10)
+================================================================
+
+PLA-961: Fix Canva smoke test timeout on featured check — page.goto exceeds 15s
+- Root cause: 15s smoke test gotoTimeout too tight for Canva behind Cloudflare
+  + Playwright Chromium cold start adds ~14s before navigation even starts
+- Increased smoke test gotoTimeout from 15s to 25s in browser-client.ts
+  - Overall smoke test still has 120s budget, so 25s goto is fine
+  - Benefits all browser-based platforms (Zendesk, Canva, Zoho)
+  - Production timeout (30s) unchanged
+
 Fix Zoho Keyword Scraper Timeout (2026-04-10)
 ================================================================
 

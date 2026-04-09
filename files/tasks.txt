@@ -1,3 +1,6 @@
+Canva Smoke Test Timeout (2026-04-10)
+  PLA-961: Increase smoke test gotoTimeout from 15s to 25s ✅
+
 Zoho Keyword Scraper Timeout (2026-04-10)
   PLA-962: Fix page.content() hang — timeout + waitForSelector ✅
 

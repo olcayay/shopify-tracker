@@ -41,7 +41,7 @@ export class BrowserClient {
     try {
       // Smoke test: use faster wait strategy
       const waitUntil = IS_SMOKE_TEST ? "domcontentloaded" : (opts?.waitUntil ?? "networkidle");
-      const gotoTimeout = IS_SMOKE_TEST ? 15_000 : 30_000;
+      const gotoTimeout = IS_SMOKE_TEST ? 25_000 : 30_000;
       const selectorTimeout = IS_SMOKE_TEST ? 8_000 : 15_000;
       const extraWait = IS_SMOKE_TEST ? 500 : (opts?.extraWaitMs ?? 2000);
 
