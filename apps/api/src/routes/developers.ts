@@ -201,10 +201,12 @@ export async function developerRoutes(app: FastifyInstance) {
     // Filter by enabled + globally visible platforms (system admins bypass)
     const isAdmin = (request as any).user?.isSystemAdmin === true;
     let platformFilterSql = sql``;
+    let trackedAppsPlatformFilterSql = sql``;
     if (!isAdmin) {
       const enabledPlatforms = await getVisiblePlatforms(db, accountId);
       if (enabledPlatforms.length === 0) return { developers: [] };
       platformFilterSql = sql`AND a.platform = ANY(${sqlArray(enabledPlatforms)})`;
+      trackedAppsPlatformFilterSql = sql`AND ta.platform = ANY(${sqlArray(enabledPlatforms)})`;
     }
 
     const rows: any[] = await db.execute(sql`
@@ -226,7 +228,7 @@ export async function developerRoutes(app: FastifyInstance) {
             AND ts.id = (SELECT ts2.id FROM app_snapshots ts2 WHERE ts2.app_id = ta.id ORDER BY ts2.scraped_at DESC LIMIT 1)
           JOIN platform_developers pd2 ON pd2.global_developer_id = g.id
             AND ta.platform = pd2.platform
-          WHERE ts.developer->>'name' = pd2.name
+          WHERE ts.developer->>'name' = pd2.name ${trackedAppsPlatformFilterSql}
         ) AS tracked_apps
       FROM global_developers g
       JOIN platform_developers pd ON pd.global_developer_id = g.id

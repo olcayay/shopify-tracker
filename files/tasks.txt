@@ -1,3 +1,6 @@
+Developer Tracked Apps Platform Filter (2026-04-10)
+  PLA-966: Filter tracked apps by user's enabled platforms in My Developers section ✅
+
 Platform Overview Table Alignment (2026-04-10)
   PLA-967: Fix platform overview table columns — fixed-width right cols, flex first col ✅
 

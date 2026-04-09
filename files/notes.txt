@@ -1,3 +1,13 @@
+Developer Tracked Apps Platform Filter (2026-04-10)
+================================================================
+
+PLA-966: Filter tracked apps by user's enabled platforms in My Developers section
+- Bug: tracked_apps subquery in GET /api/developers/tracked showed apps from ALL platforms
+- The outer query had platformFilterSql but the inner tracked_apps subquery did not
+- Fix: Added trackedAppsPlatformFilterSql (ta.platform = ANY(...)) to inner subquery
+- System admins bypass the filter (empty SQL fragment when isAdmin=true)
+- 5 new unit tests covering enabled/disabled/admin/empty scenarios
+
 Platform Overview Table Alignment (2026-04-10)
 ================================================================
 

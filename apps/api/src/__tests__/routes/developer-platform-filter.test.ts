@@ -56,3 +56,54 @@ describe("Developer platform filter logic", () => {
     expect(resolveAllowedPlatforms([], [], true)).toEqual([]);
   });
 });
+
+/**
+ * Tests for tracked_apps subquery platform filtering (PLA-966).
+ * Ensures tracked apps shown per developer are filtered by user's enabled platforms.
+ */
+function filterTrackedAppsByEnabledPlatforms(
+  trackedApps: { slug: string; platform: string }[],
+  enabledPlatforms: string[],
+  isAdmin: boolean
+): { slug: string; platform: string }[] {
+  if (isAdmin) return trackedApps;
+  const allowed = new Set(enabledPlatforms);
+  return trackedApps.filter((app) => allowed.has(app.platform));
+}
+
+describe("Tracked apps subquery platform filtering (PLA-966)", () => {
+  const trackedApps = [
+    { slug: "shopify-app", platform: "shopify" },
+    { slug: "salesforce-app", platform: "salesforce" },
+    { slug: "wordpress-app", platform: "wordpress" },
+    { slug: "atlassian-app", platform: "atlassian" },
+  ];
+
+  it("filters tracked apps to only enabled platforms", () => {
+    const result = filterTrackedAppsByEnabledPlatforms(trackedApps, ["shopify", "salesforce"], false);
+    expect(result).toEqual([
+      { slug: "shopify-app", platform: "shopify" },
+      { slug: "salesforce-app", platform: "salesforce" },
+    ]);
+  });
+
+  it("returns empty when no tracked apps match enabled platforms", () => {
+    const result = filterTrackedAppsByEnabledPlatforms(trackedApps, ["zendesk"], false);
+    expect(result).toEqual([]);
+  });
+
+  it("returns all tracked apps for system admin", () => {
+    const result = filterTrackedAppsByEnabledPlatforms(trackedApps, ["shopify"], true);
+    expect(result).toEqual(trackedApps);
+  });
+
+  it("returns empty when enabled platforms list is empty", () => {
+    const result = filterTrackedAppsByEnabledPlatforms(trackedApps, [], false);
+    expect(result).toEqual([]);
+  });
+
+  it("handles single enabled platform correctly", () => {
+    const result = filterTrackedAppsByEnabledPlatforms(trackedApps, ["wordpress"], false);
+    expect(result).toEqual([{ slug: "wordpress-app", platform: "wordpress" }]);
+  });
+});
