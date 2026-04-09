@@ -88,7 +88,9 @@ export default function FeatureFlagDetailPage() {
 
   // Stable ref for fetchWithAuth to prevent search effects from re-firing
   const fetchRef = useRef(fetchWithAuth);
-  fetchRef.current = fetchWithAuth;
+  useEffect(() => {
+    fetchRef.current = fetchWithAuth;
+  }, [fetchWithAuth]);
 
   const loadFlag = useCallback(async () => {
     const res = await fetchWithAuth(`/api/system-admin/feature-flags/${slug}`);
