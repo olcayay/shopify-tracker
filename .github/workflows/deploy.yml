@@ -114,11 +114,13 @@ jobs:
       - name: Deploy to all VMs
         run: |
           FAILED=""
-          for vm in appranks-api appranks-scraper appranks-email; do
+          DEPLOY_CMD="cd /opt/appranks && sudo docker compose pull && sudo docker compose up -d"
+          SSH_OPTS="--zone=europe-west1-b --tunnel-through-iap --quiet --ssh-key-expire-after=5m"
+
+          # Required VMs (on-demand instances)
+          for vm in appranks-api appranks-email; do
             echo "::group::Deploying to $vm"
-            if gcloud compute ssh "deploy@$vm" --zone=europe-west1-b \
-              --command="cd /opt/appranks && sudo docker compose pull && sudo docker compose up -d" \
-              --tunnel-through-iap --quiet; then
+            if gcloud compute ssh "deploy@$vm" $SSH_OPTS --command="$DEPLOY_CMD"; then
               echo "✓ $vm deployed successfully"
             else
               echo "::error::$vm deploy failed"
@@ -127,13 +129,13 @@ jobs:
             echo "::endgroup::"
           done
 
-          # AI VM is optional (Spot instance, may be preempted)
-          echo "::group::Deploying to appranks-ai (optional)"
-          gcloud compute ssh "deploy@appranks-ai" --zone=europe-west1-b \
-            --command="cd /opt/appranks && sudo docker compose pull && sudo docker compose up -d" \
-            --tunnel-through-iap --quiet \
-            || echo "::warning::appranks-ai deploy failed (Spot VM may be preempted)"
-          echo "::endgroup::"
+          # Optional VMs (Spot instances, may be preempted)
+          for vm in appranks-scraper appranks-ai; do
+            echo "::group::Deploying to $vm (optional, Spot)"
+            gcloud compute ssh "deploy@$vm" $SSH_OPTS --command="$DEPLOY_CMD" \
+              || echo "::warning::$vm deploy failed (Spot VM may be preempted)"
+            echo "::endgroup::"
+          done
 
           if [ -n "$FAILED" ]; then
             echo "::error::Deploy failed for:$FAILED"
