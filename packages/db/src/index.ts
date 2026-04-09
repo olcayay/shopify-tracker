@@ -269,3 +269,4 @@ export {
 export { accountActivityLog } from "./schema/activity-log.js";
 export { featureFlags, accountFeatureFlags, userFeatureFlags } from "./schema/feature-flags.js";
 export { waitlist } from "./schema/waitlist.js";
+export { supportTickets, supportTicketMessages, supportTicketAttachments } from "./schema/support-tickets.js";
