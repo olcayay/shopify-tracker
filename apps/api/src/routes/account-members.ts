@@ -173,7 +173,7 @@ export const accountMemberRoutes: FastifyPluginAsync = async (app) => {
 
       // Check if email is already a member
       const [existingUser] = await db
-        .select({ id: users.id, accountId: users.accountId })
+        .select({ id: users.id, accountId: users.accountId, role: users.role })
         .from(users)
         .where(eq(users.email, email.toLowerCase()));
 
@@ -184,10 +184,24 @@ export const accountMemberRoutes: FastifyPluginAsync = async (app) => {
             code: "ALREADY_MEMBER",
           });
         }
-        return reply.code(409).send({
-          error: "This email is registered with another organization. Cross-account invitations are not yet supported.",
-          code: "EXISTING_USER_OTHER_ACCOUNT",
-        });
+        // User exists in another account — allow invitation (transfer on acceptance)
+        // But warn if the user is the sole owner of their current account
+        const [ownerCount] = await db
+          .select({ count: sql<number>`count(*)::int` })
+          .from(users)
+          .where(
+            and(
+              eq(users.accountId, existingUser.accountId),
+              eq(users.role, "owner")
+            )
+          );
+        if (ownerCount.count <= 1 && existingUser.role === "owner") {
+          return reply.code(409).send({
+            error: "This user is the sole owner of another organization. They must transfer ownership before they can be invited.",
+            code: "SOLE_OWNER",
+          });
+        }
+        // Allow — invitation will be created, acceptance will transfer the user
       }
 
       // Check if there's already a pending invitation for this email
