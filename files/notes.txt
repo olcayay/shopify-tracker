@@ -1,3 +1,15 @@
+Platform Overview Table Alignment (2026-04-10)
+================================================================
+
+PLA-967: Fix platform overview table columns — structural fix for cross-table alignment
+- Root cause: Right-side columns used content-based/percentage widths → misalignment across tables
+- Solution: Shared COL_WIDTH constants (numeric=100px, badge=100px, text=140px)
+- Applied to all 5 tables: My Apps, Tracked Keywords, Competitor Apps, Bookmarked Features, My Categories
+- First column: no width class → flexes to fill remaining space
+- All right-side column edges now pixel-aligned vertically across tables
+- Removed all w-[40%] percentage-based widths
+- Added 2 unit tests: fixed-width validation + no-percentage-width regression guard
+
 Member Role Management UI (2026-04-10)
 ================================================================
 

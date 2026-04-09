@@ -190,6 +190,49 @@ describe("OverviewPage", () => {
     });
   });
 
+  it("applies shared fixed-width classes to all table headers for cross-table alignment", async () => {
+    setupFetchMocks({
+      features: [{ featureHandle: "f1", featureTitle: "Feature 1", appCount: 10, trackedInFeature: 1, competitorInFeature: 0 }],
+    });
+    const { container } = render(<OverviewPage />);
+    await waitFor(() => {
+      expect(screen.getByText("Overview")).toBeInTheDocument();
+    });
+    // All right-side TableHead elements should use fixed widths from COL_WIDTH
+    const allTh = container.querySelectorAll("th");
+    const widthClasses = Array.from(allTh)
+      .map((th) => th.className)
+      .filter((cls) => cls.includes("w-["));
+    // Every width class should be one of the shared COL_WIDTH values
+    for (const cls of widthClasses) {
+      const match = cls.match(/w-\[\d+px\]/);
+      expect(match).not.toBeNull();
+      expect(["w-[100px]", "w-[140px]"]).toContain(match![0]);
+    }
+    // No table header should use percentage-based widths (the old w-[40%])
+    const percentWidths = Array.from(allTh)
+      .map((th) => th.className)
+      .filter((cls) => /w-\[\d+%\]/.test(cls));
+    expect(percentWidths).toHaveLength(0);
+  });
+
+  it("first column in all tables has no fixed width class", async () => {
+    setupFetchMocks({
+      features: [{ featureHandle: "f1", featureTitle: "Feature 1", appCount: 10, trackedInFeature: 1, competitorInFeature: 0 }],
+    });
+    const { container } = render(<OverviewPage />);
+    await waitFor(() => {
+      expect(screen.getByText("Overview")).toBeInTheDocument();
+    });
+    // Each table's first th should NOT have a width class
+    const tables = container.querySelectorAll("table");
+    for (const table of tables) {
+      const firstTh = table.querySelector("th");
+      expect(firstTh).toBeTruthy();
+      expect(firstTh!.className).not.toMatch(/w-\[/);
+    }
+  });
+
   it("shows system stats for admin users", async () => {
     mockUseAuth.mockReturnValue({
       ...mockAuthContext,

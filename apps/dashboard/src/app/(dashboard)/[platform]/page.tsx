@@ -38,6 +38,13 @@ import { PLATFORM_COLORS, SCRAPER_TYPE_LABELS } from "@/lib/platform-display";
 
 const PAGE_SIZE = 10;
 
+// Shared column widths for cross-table vertical alignment
+const COL_WIDTH = {
+  numeric: 'w-[100px]',   // Total Results, Apps, Rating, Reviews
+  badge: 'w-[100px]',     // Tracked, Competitor, Ranked
+  text: 'w-[140px]',      // Last Change, Categories, Keywords, Competitors
+} as const;
+
 function freshnessColor(
   dateStr: string
 ): "default" | "secondary" | "destructive" {
@@ -344,13 +351,13 @@ export default function OverviewPage() {
                 <TableHeader>
                   <TableRow>
                     <TableHead>App</TableHead>
-                    {caps.hasReviews && <TableHead>Rating</TableHead>}
-                    {caps.hasReviews && <TableHead>Reviews</TableHead>}
-                    <TableHead>Competitors</TableHead>
-                    <TableHead>Keywords</TableHead>
-                    <TableHead>Ranked</TableHead>
-                    <TableHead>Categories</TableHead>
-                    <TableHead>Last Change</TableHead>
+                    {caps.hasReviews && <TableHead className={`${COL_WIDTH.numeric} text-right`}>Rating</TableHead>}
+                    {caps.hasReviews && <TableHead className={`${COL_WIDTH.numeric} text-right`}>Reviews</TableHead>}
+                    <TableHead className={`${COL_WIDTH.badge} text-center`}>Competitors</TableHead>
+                    <TableHead className={`${COL_WIDTH.badge} text-center`}>Keywords</TableHead>
+                    <TableHead className={`${COL_WIDTH.badge} text-center`}>Ranked</TableHead>
+                    <TableHead className={`${COL_WIDTH.text} text-center`}>Categories</TableHead>
+                    <TableHead className={`${COL_WIDTH.text}`}>Last Change</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -373,12 +380,12 @@ export default function OverviewPage() {
                           </div>
                         </TableCell>
                         {caps.hasReviews && (
-                          <TableCell>
+                          <TableCell className={`${COL_WIDTH.numeric} text-right tabular-nums`}>
                             {app.latestSnapshot?.averageRating ?? "\u2014"}
                           </TableCell>
                         )}
                         {caps.hasReviews && (
-                          <TableCell>
+                          <TableCell className={`${COL_WIDTH.numeric} text-right tabular-nums`}>
                             {app.latestSnapshot?.ratingCount != null ? (
                               <Link href={`/${platform}/apps/${app.slug}/reviews`} className="text-primary hover:underline">
                                 {app.latestSnapshot.ratingCount}
@@ -386,28 +393,28 @@ export default function OverviewPage() {
                             ) : "\u2014"}
                           </TableCell>
                         )}
-                        <TableCell>
+                        <TableCell className={`${COL_WIDTH.badge} text-center`}>
                           {app.competitorCount ? (
                             <Link href={`/${platform}/apps/${app.slug}/competitors`} className="text-primary hover:underline">
                               {app.competitorCount}
                             </Link>
                           ) : "\u2014"}
                         </TableCell>
-                        <TableCell>
+                        <TableCell className={`${COL_WIDTH.badge} text-center`}>
                           {app.keywordCount ? (
                             <Link href={`/${platform}/apps/${app.slug}/keywords`} className="text-primary hover:underline">
                               {app.keywordCount}
                             </Link>
                           ) : "\u2014"}
                         </TableCell>
-                        <TableCell>
+                        <TableCell className={`${COL_WIDTH.badge} text-center`}>
                           {app.keywordCount > 0 ? (
                             <Link href={`/${platform}/apps/${app.slug}/keywords`} className="text-primary hover:underline">
                               {app.rankedKeywordCount}/{app.keywordCount}
                             </Link>
                           ) : "\u2014"}
                         </TableCell>
-                        <TableCell className="text-sm">
+                        <TableCell className={`${COL_WIDTH.text} text-center text-sm`}>
                           {appCategories[app.slug]?.length ? (
                             <div className="flex flex-col gap-0.5">
                               {appCategories[app.slug].map((cat) => (
@@ -423,7 +430,7 @@ export default function OverviewPage() {
                             </div>
                           ) : "\u2014"}
                         </TableCell>
-                        <TableCell className="text-sm">
+                        <TableCell className={`${COL_WIDTH.text} text-sm`}>
                           {app.lastChangeAt ? (
                             <Link href={`/${platform}/apps/${app.slug}/changes`} className="text-primary hover:underline">
                               {formatDateOnly(app.lastChangeAt)}
@@ -477,10 +484,10 @@ export default function OverviewPage() {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead className="w-[40%]">Keyword</TableHead>
-                    <TableHead className="text-right">Total Results</TableHead>
-                    <TableHead className="text-center">Tracked</TableHead>
-                    <TableHead className="text-center">Competitor</TableHead>
+                    <TableHead>Keyword</TableHead>
+                    <TableHead className={`${COL_WIDTH.numeric} text-right`}>Total Results</TableHead>
+                    <TableHead className={`${COL_WIDTH.badge} text-center`}>Tracked</TableHead>
+                    <TableHead className={`${COL_WIDTH.badge} text-center`}>Competitor</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -496,10 +503,10 @@ export default function OverviewPage() {
                             {kw.keyword}
                           </Link>
                         </TableCell>
-                        <TableCell className="text-right tabular-nums">
+                        <TableCell className={`${COL_WIDTH.numeric} text-right tabular-nums`}>
                           {kw.latestSnapshot?.totalResults != null ? formatNumber(kw.latestSnapshot.totalResults) : "\u2014"}
                         </TableCell>
-                        <TableCell className="text-center">
+                        <TableCell className={`${COL_WIDTH.badge} text-center`}>
                           {kw.trackedInResults > 0 ? (
                             <Badge className="bg-emerald-500/20 text-emerald-700 dark:text-emerald-400 border-emerald-500/50">
                               <Target className="h-3 w-3 mr-1" />
@@ -509,7 +516,7 @@ export default function OverviewPage() {
                             <span className="text-muted-foreground">{"\u2014"}</span>
                           )}
                         </TableCell>
-                        <TableCell className="text-center">
+                        <TableCell className={`${COL_WIDTH.badge} text-center`}>
                           {kw.competitorInResults > 0 ? (
                             <Badge className="bg-amber-500/20 text-amber-700 dark:text-amber-400 border-amber-500/50">
                               <Eye className="h-3 w-3 mr-1" />
@@ -562,9 +569,9 @@ export default function OverviewPage() {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead className="w-[40%]">App</TableHead>
-                    {caps.hasReviews && <TableHead className="text-right">Rating</TableHead>}
-                    {caps.hasReviews && <TableHead className="text-right">Reviews</TableHead>}
+                    <TableHead>App</TableHead>
+                    {caps.hasReviews && <TableHead className={`${COL_WIDTH.numeric} text-right`}>Rating</TableHead>}
+                    {caps.hasReviews && <TableHead className={`${COL_WIDTH.numeric} text-right`}>Reviews</TableHead>}
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -587,12 +594,12 @@ export default function OverviewPage() {
                           </div>
                         </TableCell>
                         {caps.hasReviews && (
-                          <TableCell className="text-right tabular-nums">
+                          <TableCell className={`${COL_WIDTH.numeric} text-right tabular-nums`}>
                             {c.latestSnapshot?.averageRating ?? "\u2014"}
                           </TableCell>
                         )}
                         {caps.hasReviews && (
-                          <TableCell className="text-right tabular-nums">
+                          <TableCell className={`${COL_WIDTH.numeric} text-right tabular-nums`}>
                             {c.latestSnapshot?.ratingCount ?? "\u2014"}
                           </TableCell>
                         )}
@@ -630,10 +637,10 @@ export default function OverviewPage() {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead className="w-[40%]">Feature</TableHead>
-                    <TableHead className="text-right">Apps</TableHead>
-                    <TableHead className="text-center">Tracked</TableHead>
-                    <TableHead className="text-center">Competitor</TableHead>
+                    <TableHead>Feature</TableHead>
+                    <TableHead className={`${COL_WIDTH.numeric} text-right`}>Apps</TableHead>
+                    <TableHead className={`${COL_WIDTH.badge} text-center`}>Tracked</TableHead>
+                    <TableHead className={`${COL_WIDTH.badge} text-center`}>Competitor</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -649,10 +656,10 @@ export default function OverviewPage() {
                             {f.featureTitle}
                           </Link>
                         </TableCell>
-                        <TableCell className="text-right tabular-nums text-sm text-muted-foreground">
+                        <TableCell className={`${COL_WIDTH.numeric} text-right tabular-nums text-sm text-muted-foreground`}>
                           {f.appCount ?? "\u2014"}
                         </TableCell>
-                        <TableCell className="text-center">
+                        <TableCell className={`${COL_WIDTH.badge} text-center`}>
                           {f.trackedInFeature > 0 ? (
                             <Badge className="bg-emerald-500/20 text-emerald-700 dark:text-emerald-400 border-emerald-500/50">
                               <Target className="h-3 w-3 mr-1" />
@@ -662,7 +669,7 @@ export default function OverviewPage() {
                             <span className="text-muted-foreground">{"\u2014"}</span>
                           )}
                         </TableCell>
-                        <TableCell className="text-center">
+                        <TableCell className={`${COL_WIDTH.badge} text-center`}>
                           {f.competitorInFeature > 0 ? (
                             <Badge className="bg-amber-500/20 text-amber-700 dark:text-amber-400 border-amber-500/50">
                               <Eye className="h-3 w-3 mr-1" />
@@ -705,10 +712,10 @@ export default function OverviewPage() {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead className="w-[40%]">Category</TableHead>
-                    <TableHead className="text-right">Apps</TableHead>
-                    <TableHead className="text-center">Tracked</TableHead>
-                    <TableHead className="text-center">Competitor</TableHead>
+                    <TableHead>Category</TableHead>
+                    <TableHead className={`${COL_WIDTH.numeric} text-right`}>Apps</TableHead>
+                    <TableHead className={`${COL_WIDTH.badge} text-center`}>Tracked</TableHead>
+                    <TableHead className={`${COL_WIDTH.badge} text-center`}>Competitor</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -724,10 +731,10 @@ export default function OverviewPage() {
                             {c.categoryTitle}
                           </Link>
                         </TableCell>
-                        <TableCell className="text-right tabular-nums text-sm text-muted-foreground">
+                        <TableCell className={`${COL_WIDTH.numeric} text-right tabular-nums text-sm text-muted-foreground`}>
                           {c.appCount != null ? formatNumber(c.appCount) : "\u2014"}
                         </TableCell>
-                        <TableCell className="text-center">
+                        <TableCell className={`${COL_WIDTH.badge} text-center`}>
                           {c.trackedInResults > 0 ? (
                             <Badge className="bg-emerald-500/20 text-emerald-700 dark:text-emerald-400 border-emerald-500/50">
                               <Target className="h-3 w-3 mr-1" />
@@ -737,7 +744,7 @@ export default function OverviewPage() {
                             <span className="text-muted-foreground">{"\u2014"}</span>
                           )}
                         </TableCell>
-                        <TableCell className="text-center">
+                        <TableCell className={`${COL_WIDTH.badge} text-center`}>
                           {c.competitorInResults > 0 ? (
                             <Badge className="bg-amber-500/20 text-amber-700 dark:text-amber-400 border-amber-500/50">
                               <Eye className="h-3 w-3 mr-1" />
