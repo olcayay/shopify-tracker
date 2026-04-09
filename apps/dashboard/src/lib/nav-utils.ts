@@ -30,6 +30,7 @@ import {
   ToggleLeft,
   Globe,
   Building2,
+  LifeBuoy,
   type LucideIcon,
 } from "lucide-react";
 import { PLATFORMS, PLATFORM_IDS, type PlatformId } from "@appranks/shared";
@@ -105,6 +106,7 @@ export const globalNavItems: NavItem[] = [
   { href: "/competitors", label: "All Competitors", icon: Star },
   { href: "/developers", label: "Developers", icon: Code },
   { href: "/notifications", label: "Notifications", icon: Bell },
+  { href: "/support", label: "Support", icon: LifeBuoy },
   { href: "/organization", label: "Organization", icon: Building2 },
   { href: "/settings", label: "Settings", icon: Settings },
 ];

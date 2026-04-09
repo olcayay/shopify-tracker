@@ -47,14 +47,11 @@ describe("DashboardFooter", () => {
     expect(privacyLinks[0].closest("a")).toHaveAttribute("href", "/privacy");
   });
 
-  it("has Contact link with mailto:support@appranks.io", () => {
+  it("has Support link to /support", () => {
     render(<DashboardFooter />);
-    const contactLinks = screen.getAllByText("Contact");
-    expect(contactLinks.length).toBeGreaterThan(0);
-    expect(contactLinks[0].closest("a")).toHaveAttribute(
-      "href",
-      "mailto:support@appranks.io"
-    );
+    const supportLinks = screen.getAllByText("Support");
+    expect(supportLinks.length).toBeGreaterThan(0);
+    expect(supportLinks[0].closest("a")).toHaveAttribute("href", "/support");
   });
 
   it("renders gradient divider", () => {

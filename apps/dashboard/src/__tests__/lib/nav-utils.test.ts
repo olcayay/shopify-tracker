@@ -128,7 +128,7 @@ describe("nav-utils", () => {
   describe("globalNavItems", () => {
     it("has correct items", () => {
       const labels = globalNavItems.map((i) => i.label);
-      expect(labels).toEqual(["Overview", "All Apps", "All Keywords", "All Competitors", "Developers", "Notifications", "Organization", "Settings"]);
+      expect(labels).toEqual(["Overview", "All Apps", "All Keywords", "All Competitors", "Developers", "Notifications", "Support", "Organization", "Settings"]);
     });
 
     it("Overview is exact match", () => {

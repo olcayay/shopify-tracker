@@ -33,9 +33,9 @@ export function DashboardFooter() {
               Privacy
             </Link>
             <span>·</span>
-            <a href="mailto:support@appranks.io" className="hover:text-foreground transition-colors">
-              Contact
-            </a>
+            <Link href="/support" className="hover:text-foreground transition-colors">
+              Support
+            </Link>
           </nav>
 
           <span>© {year} AppRanks</span>
@@ -52,9 +52,9 @@ export function DashboardFooter() {
               Privacy
             </Link>
             <span>·</span>
-            <a href="mailto:support@appranks.io" className="hover:text-foreground transition-colors">
-              Contact
-            </a>
+            <Link href="/support" className="hover:text-foreground transition-colors">
+              Support
+            </Link>
           </nav>
           <span>© {year} AppRanks</span>
         </div>
