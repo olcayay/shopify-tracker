@@ -89,7 +89,6 @@ export function AppQuickActions({
           align="center"
           sideOffset={8}
           className="z-50 rounded-lg border bg-popover p-2 shadow-lg animate-in fade-in-0 zoom-in-95 text-popover-foreground"
-          onOpenAutoFocus={(e) => e.preventDefault()}
         >
           <div className="flex flex-col gap-1 min-w-[160px]">
             {isTracked ? (
