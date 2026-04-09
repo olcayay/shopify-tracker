@@ -1,3 +1,16 @@
+Support Tickets — Error Handling Fix (2026-04-09)
+================================================================
+
+PLA-943: Fix 500 error on GET /api/support-tickets endpoint
+- Root cause: likely missing migration in production (migration 0128 not applied)
+- Added try/catch error handling to all 5 route handlers in support-tickets.ts
+  - GET / (list), GET /:ticketId (detail), POST / (create), POST /:ticketId/messages (reply), POST /:ticketId/close
+  - All DB errors now return 503 with user-friendly messages instead of raw 500
+- Improved global error handler (index.ts) to detect "relation does not exist" and "column does not exist" PostgreSQL errors as DB errors (→ 503 instead of 500)
+- Added 3 new DB error tests: list query failure, ticket detail failure, create failure
+- All 17 support-ticket tests pass, full test suite passes (5 packages, 0 failures)
+- Deploy will restart API container → migration 0128 applies automatically
+
 Activity Log — Phase 1 (2026-04-08)
 ================================================================
 

@@ -562,6 +562,8 @@ app.setErrorHandler<Error & { statusCode?: number }>((error, request, reply) => 
     errMsg.includes("timeout") ||
     errMsg.includes("too many clients") ||
     errMsg.includes("terminating connection") ||
+    errMsg.includes("relation") && errMsg.includes("does not exist") ||
+    errMsg.includes("column") && errMsg.includes("does not exist") ||
     error.constructor?.name === "PostgresError";
 
   if (isDbError) {

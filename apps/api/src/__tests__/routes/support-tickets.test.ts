@@ -1,4 +1,6 @@
 import { describe, it, expect, beforeAll, afterAll } from "vitest";
+import Fastify from "fastify";
+import jwt from "jsonwebtoken";
 import {
   buildTestApp,
   userToken,
@@ -14,6 +16,73 @@ async function buildSupportApp(dbOverrides = {}) {
     prefix: "/api/support-tickets",
     db: dbOverrides,
   });
+}
+
+/** Build app with a DB mock that throws on every query (simulates missing table / DB error) */
+async function buildSupportAppWithDbError() {
+  const TEST_JWT_SECRET = "test-secret-key-for-testing-only";
+  const { supportTicketRoutes } = await import("../../routes/support-tickets.js");
+  const app = Fastify({ logger: false });
+
+  app.setErrorHandler((error, _request, reply) => {
+    reply.code(error.statusCode ?? 500).send({ error: error.message || "Internal Server Error" });
+  });
+
+  const dbError = new Error('relation "support_tickets" does not exist');
+  const throwingChain: any = {};
+  const methods = [
+    "select", "selectDistinctOn", "from", "where", "leftJoin", "innerJoin",
+    "orderBy", "groupBy", "limit", "offset", "insert", "values", "returning",
+    "onConflictDoUpdate", "onConflictDoNothing", "update", "set", "delete",
+  ];
+  for (const m of methods) {
+    throwingChain[m] = () => throwingChain;
+  }
+  throwingChain.then = (_resolve: any, reject?: any) => {
+    return Promise.reject(dbError).then(undefined, reject || ((e: any) => { throw e; }));
+  };
+
+  const mockDb: any = {
+    select: () => throwingChain,
+    insert: () => throwingChain,
+    update: () => throwingChain,
+    delete: () => throwingChain,
+    execute: () => Promise.reject(dbError),
+    transaction: async (fn: any) => fn({
+      select: () => throwingChain,
+      insert: () => throwingChain,
+      update: () => throwingChain,
+      delete: () => throwingChain,
+      execute: () => Promise.reject(dbError),
+    }),
+  };
+
+  app.decorate("db", mockDb);
+  app.decorateRequest("user", null as any);
+  app.decorateRequest("isImpersonating", false);
+
+  app.addHook("onRequest", async (request, reply) => {
+    const authHeader = request.headers.authorization;
+    if (!authHeader || !authHeader.startsWith("Bearer ")) {
+      return reply.code(401).send({ error: "Unauthorized" });
+    }
+    try {
+      request.user = jwt.verify(authHeader.slice(7), TEST_JWT_SECRET) as any;
+    } catch {
+      return reply.code(401).send({ error: "Invalid or expired token" });
+    }
+  });
+
+  await app.register(
+    async (instance) => {
+      instance.db = mockDb;
+      await supportTicketRoutes(instance);
+    },
+    { prefix: "/api/support-tickets" }
+  );
+
+  await app.ready();
+  return app;
 }
 
 describe("Support Ticket Routes", () => {
@@ -231,6 +300,45 @@ describe("Support Ticket Routes", () => {
       });
       expect(res.statusCode).toBe(200);
       expect(res.json().message).toBe("Ticket closed");
+    });
+  });
+
+  describe("DB error handling", () => {
+    it("returns 503 when list query fails", async () => {
+      const app = await buildSupportAppWithDbError();
+      const res = await app.inject({
+        method: "GET",
+        url: "/api/support-tickets",
+        headers: authHeaders(userToken()),
+      });
+      expect(res.statusCode).toBe(503);
+      expect(res.json().error).toContain("Failed to load support tickets");
+      await app.close();
+    });
+
+    it("returns 503 when ticket detail query fails", async () => {
+      const app = await buildSupportAppWithDbError();
+      const res = await app.inject({
+        method: "GET",
+        url: "/api/support-tickets/ticket-1",
+        headers: authHeaders(userToken()),
+      });
+      expect(res.statusCode).toBe(503);
+      expect(res.json().error).toContain("Failed to load ticket");
+      await app.close();
+    });
+
+    it("returns 503 when create ticket fails", async () => {
+      const app = await buildSupportAppWithDbError();
+      const res = await app.inject({
+        method: "POST",
+        url: "/api/support-tickets",
+        headers: authHeaders(userToken()),
+        payload: { type: "bug_report", subject: "Test", body: "Details" },
+      });
+      expect(res.statusCode).toBe(503);
+      expect(res.json().error).toContain("Failed to create ticket");
+      await app.close();
     });
   });
 });

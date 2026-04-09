@@ -7,6 +7,7 @@ Support System (2026-04-09)
   PLA-913: Phase 3: User support pages ✅
   PLA-914: Phase 3: Update footer & navigation ✅
   PLA-915: Phase 4: Admin support ticket dashboard ✅
+  PLA-943: Fix 500 error on GET /api/support-tickets endpoint ✅
 
 Invitation Cross-Account (2026-04-09)
   PLA-940: Allow inviting existing platform users to join another account ✅
