@@ -13,6 +13,18 @@ import {
   platformSubjectPrefix,
 } from "./components/index.js";
 
+/** Derive milestoneType from eventType when milestoneType is not set */
+function deriveMilestoneType(eventType: string | undefined): WinCelebrationData["milestoneType"] | undefined {
+  switch (eventType) {
+    case "ranking_top1": return "top1";
+    case "ranking_top3_entry": return "top3";
+    case "review_milestone": return "review_milestone";
+    case "rating_milestone": return "rating_milestone";
+    case "install_milestone": return "install_milestone";
+    default: return undefined;
+  }
+}
+
 export interface WinCelebrationData {
   accountName: string;
   appName: string;
@@ -31,32 +43,40 @@ export interface WinCelebrationData {
 
 const DASHBOARD_URL = process.env.DASHBOARD_URL || "http://localhost:3000";
 
-export function buildWinCelebrationHtml(data: WinCelebrationData, unsubscribeUrl?: string): string {
-  const { appName, platform, milestoneType } = data;
+export function buildWinCelebrationHtml(data: WinCelebrationData & Record<string, any>, unsubscribeUrl?: string): string {
+  const appName = data.appName || "Your App";
+  const platform = data.platform || "";
+  // Derive milestoneType from eventType if not set directly
+  const milestoneType = data.milestoneType || deriveMilestoneType(data.eventType) || "top1";
+  const accountName = data.accountName || appName;
 
   let heroLabel: string;
   let heroValue: string;
 
   switch (milestoneType) {
     case "top1":
-      heroLabel = `${appName} reached #1 for "${data.keyword}"!`;
+      heroLabel = `${appName} reached #1 for "${data.keyword || "a keyword"}"!`;
       heroValue = "🏆 #1";
       break;
     case "top3":
-      heroLabel = `${appName} entered Top 3 for "${data.keyword}"!`;
-      heroValue = `🥇 #${data.position}`;
+      heroLabel = `${appName} entered Top 3 for "${data.keyword || "a keyword"}"!`;
+      heroValue = `🥇 #${data.position || "?"}`;
       break;
     case "review_milestone":
-      heroLabel = `${appName} hit ${data.reviewCount} reviews!`;
-      heroValue = `⭐ ${data.reviewCount}`;
+      heroLabel = `${appName} hit ${data.reviewCount || "a new"} reviews!`;
+      heroValue = `⭐ ${data.reviewCount || "🎉"}`;
       break;
     case "rating_milestone":
-      heroLabel = `${appName} reached ${data.rating}★ rating!`;
-      heroValue = `${data.rating}★`;
+      heroLabel = `${appName} reached ${data.rating || "a new"}★ rating!`;
+      heroValue = `${data.rating || "⭐"}★`;
       break;
     case "install_milestone":
-      heroLabel = `${appName} reached ${data.installCount?.toLocaleString()} installs!`;
-      heroValue = `🚀 ${data.installCount?.toLocaleString()}`;
+      heroLabel = `${appName} reached ${data.installCount?.toLocaleString() || "a milestone in"} installs!`;
+      heroValue = `🚀 ${data.installCount?.toLocaleString() || "🎉"}`;
+      break;
+    default:
+      heroLabel = `${appName} achieved a new milestone!`;
+      heroValue = "🎉";
       break;
   }
 
@@ -87,7 +107,7 @@ export function buildWinCelebrationHtml(data: WinCelebrationData, unsubscribeUrl
   sections += ctaButton("View Details", `${DASHBOARD_URL}/${platform}/apps/${data.appSlug}`);
 
   const content = `
-    ${header("Congratulations! 🎉", `${data.accountName} · ${platformBadge(platform)} ${appName}`)}
+    ${header("Congratulations! 🎉", `${accountName} · ${platformBadge(platform)} ${appName}`)}
     <div style="padding:0 24px 24px;">${sections}</div>
     ${footer(unsubscribeUrl)}
   `;
@@ -95,14 +115,18 @@ export function buildWinCelebrationHtml(data: WinCelebrationData, unsubscribeUrl
   return emailLayout(content, `Congratulations! ${appName}`);
 }
 
-export function buildWinCelebrationSubject(data: WinCelebrationData): string {
-  const { appName, milestoneType, keyword, reviewCount, rating, installCount, position, platform } = data;
+export function buildWinCelebrationSubject(data: WinCelebrationData & Record<string, any>): string {
+  const appName = data.appName || "Your App";
+  const platform = data.platform || "";
+  const milestoneType = data.milestoneType || deriveMilestoneType(data.eventType) || "top1";
+  const { keyword, reviewCount, rating, installCount, position } = data;
   const prefix = platformSubjectPrefix(platform);
   switch (milestoneType) {
-    case "top1": return `${prefix} 🏆 ${appName} is #1 for "${keyword}"!`;
-    case "top3": return `${prefix} 🥇 ${appName} entered Top 3 for "${keyword}" (#${position})`;
-    case "review_milestone": return `${prefix} ⭐ ${appName} reached ${reviewCount} reviews!`;
-    case "rating_milestone": return `${prefix} ⭐ ${appName} hit ${rating}★ rating!`;
-    case "install_milestone": return `${prefix} 🚀 ${appName} reached ${installCount?.toLocaleString()} installs!`;
+    case "top1": return `${prefix} 🏆 ${appName} is #1 for "${keyword || "a keyword"}"!`;
+    case "top3": return `${prefix} 🥇 ${appName} entered Top 3 for "${keyword || "a keyword"}" (#${position || "?"})`;
+    case "review_milestone": return `${prefix} ⭐ ${appName} reached ${reviewCount || "a milestone in"} reviews!`;
+    case "rating_milestone": return `${prefix} ⭐ ${appName} hit ${rating || "a new"}★ rating!`;
+    case "install_milestone": return `${prefix} 🚀 ${appName} reached ${installCount?.toLocaleString() || "a milestone in"} installs!`;
+    default: return `${prefix} 🎉 ${appName} achieved a new milestone!`;
   }
 }

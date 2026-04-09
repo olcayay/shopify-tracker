@@ -1,3 +1,17 @@
+Win Celebration Email Fix (2026-04-09)
+================================================================
+
+PLA-949: Fix win_celebration email template rendering multiple undefined values
+- Root cause: 5 interrelated issues — milestoneType not mapped from eventType, missing accountName,
+  platform slug underscore/hyphen mismatch, buildWinCelebrationData not wired up, no fallbacks
+- Fix 1: platformLabel() and platformBadge() now normalize underscores to hyphens (google_workspace → Google Workspace)
+- Fix 2: process-bulk-email.ts enriches win_celebration data — fetches accountName from DB, maps eventType→milestoneType
+- Fix 3: win-celebration-template.ts has fallbacks for all fields — no more undefined in HTML/subject
+- Fix 4: template-registry.ts updated with all required variables
+- Fix 5: Added deriveMilestoneType() in template as safety net for eventType→milestoneType mapping
+- 19 new tests: 14 template tests (HTML + subject for all milestone types, underscore platform, fallbacks) + 5 platform-badge tests
+- All scraper tests pass (2464), all API tests pass
+
 Support Tickets — Error Handling Fix (2026-04-09)
 ================================================================
 

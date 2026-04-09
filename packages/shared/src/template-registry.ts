@@ -202,8 +202,16 @@ export const EMAIL_TEMPLATE_VARIABLES: Record<EmailType, TemplateVariable[]> = {
   ],
   email_win_celebration: [
     { name: "appName", description: "App name", example: "OrderFlow Pro" },
+    { name: "appSlug", description: "App slug", example: "orderflow-pro--12345" },
+    { name: "platform", description: "Platform ID", example: "shopify" },
+    { name: "accountName", description: "Account name", example: "Acme Inc" },
+    { name: "milestoneType", description: "Milestone type", example: "top1" },
+    { name: "keyword", description: "Keyword (for ranking milestones)", example: "order management" },
     { name: "position", description: "Achieved position", example: "1" },
     { name: "categoryName", description: "Category name", example: "Orders & Shipping" },
+    { name: "reviewCount", description: "Review count (for review milestones)", example: "100" },
+    { name: "rating", description: "Rating (for rating milestones)", example: "4.8" },
+    { name: "installCount", description: "Install count (for install milestones)", example: "10000" },
   ],
   email_re_engagement: [
     { name: "name", description: "User name", example: "Jane Doe" },

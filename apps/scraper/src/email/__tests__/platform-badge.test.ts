@@ -17,8 +17,14 @@ describe("platformLabel", () => {
     expect(platformLabel("woocommerce")).toBe("WooCommerce");
   });
 
-  it("capitalizes unknown platforms", () => {
-    expect(platformLabel("unknown")).toBe("Unknown");
+  it("normalizes underscore platform slugs to proper labels", () => {
+    expect(platformLabel("google_workspace")).toBe("Google Workspace");
+    expect(platformLabel("woocommerce")).toBe("WooCommerce");
+  });
+
+  it("capitalizes unknown platforms with proper word splitting", () => {
+    expect(platformLabel("my_custom_platform")).toBe("My Custom Platform");
+    expect(platformLabel("my-custom-platform")).toBe("My Custom Platform");
   });
 
   it("returns 'Unknown' for undefined/null/empty platform", () => {
@@ -47,5 +53,11 @@ describe("platformBadge", () => {
     const badge = platformBadge("unknown");
     expect(badge).toContain("#6b7280");
     expect(badge).toContain("Unknown");
+  });
+
+  it("uses correct color for underscore platform slugs", () => {
+    const badge = platformBadge("google_workspace");
+    expect(badge).toContain("Google Workspace");
+    expect(badge).toContain("#4285F4");
   });
 });

@@ -36,12 +36,15 @@ const PLATFORM_LABELS: Record<string, string> = {
 /** Get human-readable platform label */
 export function platformLabel(platform: string): string {
   if (!platform) return "Unknown";
-  return PLATFORM_LABELS[platform] || platform.charAt(0).toUpperCase() + platform.slice(1);
+  // Normalize: platform IDs may use underscores (google_workspace) or hyphens (google-workspace)
+  const normalized = platform.replace(/_/g, "-");
+  return PLATFORM_LABELS[normalized] || platform.replace(/[_-]/g, " ").replace(/\b\w/g, c => c.toUpperCase());
 }
 
 /** Render a small colored platform badge for inline use in emails */
 export function platformBadge(platform: string): string {
-  const color = PLATFORM_COLORS[platform] || "#6b7280";
+  const normalized = platform ? platform.replace(/_/g, "-") : "";
+  const color = PLATFORM_COLORS[normalized] || "#6b7280";
   const label = platformLabel(platform);
   return `<span style="display:inline-block;background:${color};color:#fff;padding:2px 8px;border-radius:4px;font-size:11px;font-weight:600;letter-spacing:0.5px;vertical-align:middle;">${label}</span>`;
 }

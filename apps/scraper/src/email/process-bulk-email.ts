@@ -11,6 +11,18 @@ import { sendEmail } from "./pipeline.js";
 
 const log = createLogger("email-bulk");
 
+/** Map eventType from event-detector to milestoneType for win-celebration template */
+function mapEventToMilestone(eventType: string | undefined): string {
+  switch (eventType) {
+    case "ranking_top1": return "top1";
+    case "ranking_top3_entry": return "top3";
+    case "review_milestone": return "review_milestone";
+    case "rating_milestone": return "rating_milestone";
+    case "install_milestone": return "install_milestone";
+    default: return "top1"; // Safe default
+  }
+}
+
 interface BulkEmailBuilder {
   buildData: (db: any, accountId: string, timezone?: string) => Promise<any>;
   buildHtml: (data: any) => string;
@@ -64,7 +76,21 @@ async function getBuilder(type: BulkEmailJobType): Promise<BulkEmailBuilder | nu
     case "email_win_celebration": {
       const { buildWinCelebrationHtml, buildWinCelebrationSubject } = await import("./win-celebration-template.js");
       return {
-        buildData: async () => null,
+        buildData: async (db, accountId) => {
+          // Enrich payload: fetch accountName from DB
+          const { accounts } = await import("@appranks/db");
+          const { eq } = await import("drizzle-orm");
+          try {
+            const [account] = await db
+              .select({ name: accounts.name })
+              .from(accounts)
+              .where(eq(accounts.id, accountId))
+              .limit(1);
+            return { accountName: account?.name || "Your Account" };
+          } catch {
+            return { accountName: "Your Account" };
+          }
+        },
         buildHtml: buildWinCelebrationHtml,
         buildSubject: buildWinCelebrationSubject,
       };
@@ -120,7 +146,8 @@ export async function processBulkEmail(
     throw new Error(`Unknown bulk email type: ${type}`);
   }
 
-  // For digest/weekly, build data from DB. For alerts, use payload directly.
+  // For digest/weekly, build data from DB. For win_celebration, enrich payload.
+  // For other alerts, use payload directly.
   let data = payload;
   if (type === "email_daily_digest" || type === "email_weekly_summary") {
     const timezone = (payload.timezone as string) || "UTC";
@@ -130,6 +157,11 @@ export async function processBulkEmail(
       return; // No data = skip, not an error
     }
     data = builtData;
+  } else if (type === "email_win_celebration") {
+    // Enrich payload with DB data (accountName) and derive milestoneType from eventType
+    const enrichment = await builder.buildData(db, accountId);
+    const milestoneType = mapEventToMilestone(payload?.eventType as string);
+    data = { ...payload, ...enrichment, milestoneType };
   }
 
   // For daily digest, split into per-platform emails

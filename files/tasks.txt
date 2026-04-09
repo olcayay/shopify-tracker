@@ -9,6 +9,9 @@ Support System (2026-04-09)
   PLA-915: Phase 4: Admin support ticket dashboard ✅
   PLA-943: Fix 500 error on GET /api/support-tickets endpoint ✅
 
+Email System Fixes (2026-04-09)
+  PLA-949: Fix win_celebration email template rendering multiple undefined values ✅
+
 Invitation Cross-Account (2026-04-09)
   PLA-940: Allow inviting existing platform users to join another account ✅
 
