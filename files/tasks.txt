@@ -1,3 +1,6 @@
+Invitation Registration Handling (2026-04-09)
+  PLA-942: Handle pending invitations during user registration ✅
+
 Audit Progressive Loading (2026-04-09)
   PLA-930: Add progressive loading animation to audit report page ✅
 

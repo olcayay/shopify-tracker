@@ -47,15 +47,48 @@ export const invitationRoutes: FastifyPluginAsync = async (app) => {
 
       if (existingUser) {
         if (existingUser.accountId === invitation.accountId) {
-          return reply.code(409).send({
-            error: "You are already a member of this organization. Please log in instead.",
+          // Already a member of the target account — mark invitation as accepted
+          await db
+            .update(invitations)
+            .set({ acceptedAt: new Date() })
+            .where(eq(invitations.id, invitation.id));
+
+          return reply.code(200).send({
+            message: "You are already a member of this organization. Invitation marked as accepted.",
             code: "ALREADY_MEMBER",
+            user: { id: existingUser.id, email: invitation.email },
           });
         }
-        return reply.code(409).send({
-          error: "This email is already registered with another organization. Cross-account invitations are not yet supported.",
-          code: "EXISTING_USER_OTHER_ACCOUNT",
-        });
+
+        // User exists in a different account — transfer them to the invited account
+        const [updatedUser] = await db
+          .update(users)
+          .set({
+            accountId: invitation.accountId,
+            role: invitation.role,
+            updatedAt: new Date(),
+          })
+          .where(eq(users.id, existingUser.id))
+          .returning();
+
+        // Mark invitation as accepted
+        await db
+          .update(invitations)
+          .set({ acceptedAt: new Date() })
+          .where(eq(invitations.id, invitation.id));
+
+        import("../utils/activity-log.js").then(m => m.logActivity(db, invitation.accountId, updatedUser.id, "invitation_accepted", "user", updatedUser.id, { email: invitation.email, role: invitation.role, transferredFrom: existingUser.accountId })).catch(() => {});
+
+        return {
+          message: "Invitation accepted. You have been moved to the new organization.",
+          code: "TRANSFERRED",
+          user: {
+            id: updatedUser.id,
+            email: updatedUser.email,
+            name: updatedUser.name,
+            role: updatedUser.role,
+          },
+        };
       }
 
       const passwordHash = await bcrypt.hash(password, 12);

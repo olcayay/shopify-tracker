@@ -52,6 +52,7 @@ const createdUser = {
 function buildSequentialMockDb(opts: {
   selectResults: any[][];
   insertResult?: any[];
+  updateResult?: any[];
 }) {
   let selectCall = 0;
   const db: any = {
@@ -61,7 +62,7 @@ function buildSequentialMockDb(opts: {
       return makeChain(result);
     },
     insert: (..._args: any[]) => makeChain(opts.insertResult ?? []),
-    update: (..._args: any[]) => makeChain([]),
+    update: (..._args: any[]) => makeChain(opts.updateResult ?? []),
     delete: (..._args: any[]) => makeChain([]),
     execute: (..._args: any[]) => Promise.resolve([]),
   };
@@ -362,8 +363,7 @@ describe("Invitation routes", () => {
       await app.close();
     });
 
-    it("returns 409 when user with email already exists in another account", async () => {
-      // Both selects return non-empty: 1st = invitation, 2nd = existing user (different account)
+    it("transfers user to invited account when already registered in another account", async () => {
       const existingUser = {
         id: "user-existing",
         email: "newuser@test.com",
@@ -372,6 +372,7 @@ describe("Invitation routes", () => {
       };
       const mockDb = buildSequentialMockDb({
         selectResults: [[validInvitation], [existingUser]],
+        updateResult: [{ ...existingUser, accountId: "account-001", role: "editor" }],
       });
       const app = await buildInvitationApp(mockDb);
 
@@ -381,11 +382,10 @@ describe("Invitation routes", () => {
         payload: { name: "New User", password: "securepass123" },
       });
 
-      expect(res.statusCode).toBe(409);
-      expect(res.json()).toEqual({
-        error: "This email is already registered with another organization. Cross-account invitations are not yet supported.",
-        code: "EXISTING_USER_OTHER_ACCOUNT",
-      });
+      expect(res.statusCode).toBe(200);
+      const body = res.json();
+      expect(body.code).toBe("TRANSFERRED");
+      expect(body.message).toContain("moved to the new organization");
 
       await app.close();
     });
@@ -408,11 +408,10 @@ describe("Invitation routes", () => {
         payload: { name: "New User", password: "securepass123" },
       });
 
-      expect(res.statusCode).toBe(409);
-      expect(res.json()).toEqual({
-        error: "You are already a member of this organization. Please log in instead.",
-        code: "ALREADY_MEMBER",
-      });
+      expect(res.statusCode).toBe(200);
+      const body = res.json();
+      expect(body.code).toBe("ALREADY_MEMBER");
+      expect(body.message).toContain("already a member");
 
       await app.close();
     });

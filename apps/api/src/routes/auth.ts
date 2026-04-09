@@ -18,6 +18,7 @@ import {
   emailVerificationTokens,
   featureFlags,
   accountFeatureFlags,
+  invitations,
 } from "@appranks/db";
 import { PLATFORM_IDS } from "@appranks/shared";
 import { getJwtSecret, type JwtPayload } from "../middleware/auth.js";
@@ -183,6 +184,26 @@ export const authRoutes: FastifyPluginAsync = async (app) => {
       };
     });
 
+    // Check for pending invitations for this email (non-expired, non-accepted)
+    const pendingInvitations = await db
+      .select({
+        id: invitations.id,
+        accountId: invitations.accountId,
+        role: invitations.role,
+        token: invitations.token,
+        expiresAt: invitations.expiresAt,
+        accountName: accounts.name,
+      })
+      .from(invitations)
+      .leftJoin(accounts, eq(invitations.accountId, accounts.id))
+      .where(
+        and(
+          eq(invitations.email, result.user.email),
+          sql`${invitations.acceptedAt} IS NULL`,
+          sql`${invitations.expiresAt} > NOW()`
+        )
+      );
+
     // Enqueue welcome email (fire-and-forget, don't block the response)
     sendWelcomeEmail(result.user.email, result.user.name, {
       userId: result.user.id,
@@ -205,7 +226,15 @@ export const authRoutes: FastifyPluginAsync = async (app) => {
       })
       .catch(() => {});
 
-    return result;
+    return {
+      ...result,
+      pendingInvitations: pendingInvitations.map((inv) => ({
+        id: inv.id,
+        accountName: inv.accountName || "Unknown",
+        role: inv.role,
+        token: inv.token,
+      })),
+    };
   });
 
   // POST /api/auth/verify-email — verify email with token
