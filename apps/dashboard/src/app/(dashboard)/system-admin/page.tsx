@@ -21,9 +21,8 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Play, Eye, EyeOff } from "lucide-react";
+import { Play } from "lucide-react";
 import { useFormatDate } from "@/lib/format-date";
-import { PLATFORM_IDS, PLATFORMS } from "@appranks/shared";
 
 const SCRAPER_TYPES = [
   { type: "category", label: "Categories" },
@@ -42,8 +41,6 @@ export default function SystemAdminPage() {
   const [triggering, setTriggering] = useState<string | null>(null);
   const [message, setMessage] = useState("");
   const [activeTab, setActiveTab] = useState("accounts");
-  const [platformVis, setPlatformVis] = useState<Record<string, boolean>>({});
-  const [togglingPlatform, setTogglingPlatform] = useState<string | null>(null);
 
   useEffect(() => {
     loadData();
@@ -51,12 +48,11 @@ export default function SystemAdminPage() {
 
   async function loadData() {
     try {
-      const [statsRes, accountsRes, usersRes, runsRes, visRes] = await Promise.all([
+      const [statsRes, accountsRes, usersRes, runsRes] = await Promise.all([
         fetchWithAuth("/api/system-admin/stats"),
         fetchWithAuth("/api/system-admin/accounts"),
         fetchWithAuth("/api/system-admin/users"),
         fetchWithAuth("/api/system-admin/scraper/runs?limit=10"),
-        fetchWithAuth("/api/system-admin/platform-visibility"),
       ]);
 
       if (statsRes.ok) setStats(await statsRes.json());
@@ -66,25 +62,9 @@ export default function SystemAdminPage() {
         const data = await runsRes.json();
         setRuns(data.runs ?? data);
       }
-      if (visRes.ok) setPlatformVis(await visRes.json());
     } catch (err) {
       console.error("Failed to load system admin data:", err);
     }
-  }
-
-  async function togglePlatformVisibility(platform: string) {
-    setTogglingPlatform(platform);
-    const res = await fetchWithAuth(`/api/system-admin/platform-visibility/${platform}`, {
-      method: "PATCH",
-      body: JSON.stringify({ isVisible: !platformVis[platform] }),
-    });
-    if (res.ok) {
-      setPlatformVis((prev) => ({ ...prev, [platform]: !prev[platform] }));
-      setMessage(`${platform} is now ${platformVis[platform] ? "hidden" : "visible"}`);
-    } else {
-      setMessage("Failed to toggle visibility");
-    }
-    setTogglingPlatform(null);
   }
 
   async function triggerScraper(type: string) {
@@ -200,39 +180,6 @@ export default function SystemAdminPage() {
           </Link>
         </div>
       )}
-
-      {/* Platform Visibility */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Platform Visibility</CardTitle>
-          <CardDescription>
-            Control which platforms are visible to regular users
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="flex flex-wrap gap-3">
-            {PLATFORM_IDS.map((pid) => {
-              const isVisible = platformVis[pid] ?? false;
-              return (
-                <Button
-                  key={pid}
-                  variant={isVisible ? "default" : "outline"}
-                  size="sm"
-                  disabled={togglingPlatform !== null}
-                  onClick={() => togglePlatformVisibility(pid)}
-                  className="gap-2"
-                >
-                  {isVisible ? <Eye className="h-3.5 w-3.5" /> : <EyeOff className="h-3.5 w-3.5" />}
-                  {PLATFORMS[pid].name}
-                  <Badge variant={isVisible ? "secondary" : "outline"} className="ml-1 text-[10px]">
-                    {isVisible ? "Visible" : "Hidden"}
-                  </Badge>
-                </Button>
-              );
-            })}
-          </div>
-        </CardContent>
-      </Card>
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList>

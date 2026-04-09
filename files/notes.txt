@@ -1,3 +1,15 @@
+System Admin Platform Visibility Removal (2026-04-09)
+================================================================
+
+PLA-946: Remove redundant Platform Visibility section from system-admin page (Phase 1 — UI only)
+- Removed Platform Visibility card from /system-admin page
+- Removed state: platformVis, togglingPlatform
+- Removed togglePlatformVisibility() function
+- Removed fetch call to /api/system-admin/platform-visibility from loadData()
+- Removed unused imports: Eye, EyeOff, PLATFORM_IDS, PLATFORMS
+- API endpoints and DB columns left intact (Phase 2/3 for later)
+- scraperEnabled and its endpoints untouched
+
 Smart Landing Page Redirect (2026-04-09)
 ================================================================
 
