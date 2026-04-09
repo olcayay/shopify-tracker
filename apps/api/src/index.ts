@@ -285,6 +285,10 @@ await app.register(notificationAnalyticsRoutes, { prefix: "/api/system-admin/not
 await app.register(emailWebhookRoutes, { prefix: "/api/webhooks/email" });
 await app.register(publicRoutes, { prefix: "/api/public" });
 
+// Support ticket endpoints
+const { supportTicketRoutes } = await import("./routes/support-tickets.js");
+await app.register(supportTicketRoutes, { prefix: "/api/support-tickets" });
+
 // Notification endpoints (authenticated)
 const { notificationRoutes } = await import("./routes/notifications.js");
 await app.register(notificationRoutes, { prefix: "/api/notifications" });
