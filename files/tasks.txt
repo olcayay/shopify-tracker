@@ -1,3 +1,6 @@
+Hover Popover Positioning Fix (2026-04-09)
+  PLA-960: Fix hover popover — replace Popover with HoverCard + inline-flex trigger ✅
+
 Developers Sorting Fix (2026-04-09)
   PLA-923: Fix sorting by Apps column on /developers — sql.raw() for ORDER BY ✅
 

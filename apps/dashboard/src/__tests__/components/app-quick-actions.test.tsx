@@ -20,6 +20,18 @@ function makeJsonResponse(data: any) {
   return { ok: true, json: () => Promise.resolve(data) };
 }
 
+/** Fire pointer + mouse enter events (Radix HoverCard uses onPointerEnter) */
+function hoverEnter(el: HTMLElement) {
+  fireEvent.pointerEnter(el);
+  fireEvent.mouseEnter(el);
+}
+
+/** Fire pointer + mouse leave events */
+function hoverLeave(el: HTMLElement) {
+  fireEvent.pointerLeave(el);
+  fireEvent.mouseLeave(el);
+}
+
 describe("AppQuickActions", () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -53,26 +65,27 @@ describe("AppQuickActions", () => {
     expect(screen.getByText("App Name")).toBeInTheDocument();
   });
 
-  it("does not show popover on quick hover (< 800ms)", async () => {
+  it("does not show hover card on quick hover (< 800ms)", async () => {
     render(
       <AppQuickActions {...defaultProps}>
         <span>App Name</span>
       </AppQuickActions>
     );
-    fireEvent.mouseEnter(screen.getByText("App Name"));
+    hoverEnter(screen.getByText("App Name").closest("[data-radix-hover-card-trigger]") || screen.getByText("App Name"));
     act(() => { vi.advanceTimersByTime(500); });
-    fireEvent.mouseLeave(screen.getByText("App Name"));
+    hoverLeave(screen.getByText("App Name").closest("[data-radix-hover-card-trigger]") || screen.getByText("App Name"));
     act(() => { vi.advanceTimersByTime(300); });
     expect(screen.queryByText("Start tracking")).not.toBeInTheDocument();
   });
 
-  it("shows popover after 800ms hover", async () => {
+  it("shows hover card after 800ms hover", async () => {
     render(
       <AppQuickActions {...defaultProps}>
         <span>App Name</span>
       </AppQuickActions>
     );
-    fireEvent.mouseEnter(screen.getByText("App Name"));
+    const trigger = screen.getByText("App Name").closest("[data-radix-hover-card-trigger]") || screen.getByText("App Name");
+    hoverEnter(trigger);
     act(() => { vi.advanceTimersByTime(800); });
     expect(screen.getByText("Start tracking")).toBeInTheDocument();
     expect(screen.getByText("Mark as competitor")).toBeInTheDocument();
@@ -84,7 +97,8 @@ describe("AppQuickActions", () => {
         <span>App Name</span>
       </AppQuickActions>
     );
-    fireEvent.mouseEnter(screen.getByText("App Name"));
+    const trigger = screen.getByText("App Name").closest("[data-radix-hover-card-trigger]") || screen.getByText("App Name");
+    hoverEnter(trigger);
     act(() => { vi.advanceTimersByTime(800); });
     expect(screen.getByText("Already tracking")).toBeInTheDocument();
     expect(screen.queryByText("Start tracking")).not.toBeInTheDocument();
@@ -96,7 +110,8 @@ describe("AppQuickActions", () => {
         <span>App Name</span>
       </AppQuickActions>
     );
-    fireEvent.mouseEnter(screen.getByText("App Name"));
+    const trigger = screen.getByText("App Name").closest("[data-radix-hover-card-trigger]") || screen.getByText("App Name");
+    hoverEnter(trigger);
     act(() => { vi.advanceTimersByTime(800); });
     expect(screen.getByText("Already a competitor")).toBeInTheDocument();
     expect(screen.queryByText("Mark as competitor")).not.toBeInTheDocument();
@@ -118,9 +133,8 @@ describe("AppQuickActions", () => {
       </AppQuickActions>
     );
 
-    // Open popover by setting open state directly via prop interaction
-    // We need real timers for the async click handler
-    fireEvent.mouseEnter(screen.getByText("App Name"));
+    const trigger = screen.getByText("App Name").closest("[data-radix-hover-card-trigger]") || screen.getByText("App Name");
+    hoverEnter(trigger);
     await waitFor(() => {
       expect(screen.getByText("Start tracking")).toBeInTheDocument();
     }, { timeout: 1000 });
@@ -157,7 +171,8 @@ describe("AppQuickActions", () => {
       </AppQuickActions>
     );
 
-    fireEvent.mouseEnter(screen.getByText("App Name"));
+    const trigger = screen.getByText("App Name").closest("[data-radix-hover-card-trigger]") || screen.getByText("App Name");
+    hoverEnter(trigger);
     await waitFor(() => {
       expect(screen.getByText("Mark as competitor")).toBeInTheDocument();
     }, { timeout: 1000 });
@@ -173,7 +188,7 @@ describe("AppQuickActions", () => {
     expect(mockRefreshUser).toHaveBeenCalled();
   });
 
-  it("does not render popover for viewer users", () => {
+  it("does not render hover card for viewer users", () => {
     mockUseAuth.mockReturnValue({
       ...mockAuthContext,
       user: mockViewerUser,
@@ -185,23 +200,37 @@ describe("AppQuickActions", () => {
         <span>App Name</span>
       </AppQuickActions>
     );
-    fireEvent.mouseEnter(screen.getByText("App Name"));
-    act(() => { vi.advanceTimersByTime(800); });
-    expect(screen.queryByText("Start tracking")).not.toBeInTheDocument();
+    // Viewer users get no HoverCard wrapper, just plain children
+    expect(screen.getByText("App Name")).toBeInTheDocument();
+    // No trigger attribute since HoverCard isn't rendered
+    expect(screen.getByText("App Name").closest("[data-radix-hover-card-trigger]")).toBeNull();
   });
 
-  it("dismisses popover on mouse leave", () => {
+  it("dismisses hover card on pointer leave", () => {
     render(
       <AppQuickActions {...defaultProps}>
         <span>App Name</span>
       </AppQuickActions>
     );
-    fireEvent.mouseEnter(screen.getByText("App Name"));
+    const trigger = screen.getByText("App Name").closest("[data-radix-hover-card-trigger]") || screen.getByText("App Name");
+    hoverEnter(trigger);
     act(() => { vi.advanceTimersByTime(800); });
     expect(screen.getByText("Start tracking")).toBeInTheDocument();
 
-    fireEvent.mouseLeave(screen.getByText("App Name"));
+    hoverLeave(trigger);
     act(() => { vi.advanceTimersByTime(300); });
     expect(screen.queryByText("Start tracking")).not.toBeInTheDocument();
+  });
+
+  it("trigger wrapper has inline-flex display for proper positioning in table cells", () => {
+    render(
+      <AppQuickActions {...defaultProps}>
+        <span>App Name</span>
+      </AppQuickActions>
+    );
+    // The trigger div wraps children with inline-flex for proper bounding rect measurement
+    const triggerDiv = screen.getByText("App Name").parentElement;
+    expect(triggerDiv).not.toBeNull();
+    expect(triggerDiv!.classList.contains("inline-flex")).toBe(true);
   });
 });

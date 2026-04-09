@@ -1,3 +1,18 @@
+Fix Hover Popover Positioning on /apps Page (2026-04-09)
+================================================================
+
+PLA-960: Fix hover popover positioning — appears at page center instead of near cursor
+- Root cause: Radix Popover.Trigger inside table cells can't properly measure bounding
+  rect for positioning. The <div> wrapper had default display which caused collapsed
+  dimensions in table-cell layout contexts.
+- Fix: Replaced Popover with HoverCard (Radix's dedicated hover-triggered floating component)
+  - HoverCard.Root with openDelay={800} and closeDelay={200} replaces manual timer logic
+  - Trigger div uses className="inline-flex" for proper bounding rect measurement
+  - Eliminates ~20 lines of manual hover timer management (hoverTimerRef, isInsideRef)
+  - Radix HoverCard handles enter/leave detection natively
+- Tests: 10 tests updated — uses pointerEnter/pointerLeave (HoverCard uses pointer events)
+  + new test verifying trigger wrapper has inline-flex display
+
 Fix Developers Page Sorting by Apps Column (2026-04-09)
 ================================================================
 
