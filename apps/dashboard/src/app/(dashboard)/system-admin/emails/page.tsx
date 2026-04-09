@@ -380,6 +380,7 @@ export default function AdminEmailDashboard() {
                 <Table>
                   <TableHeader>
                     <TableRow>
+                      <TableHead className="w-[90px]">ID</TableHead>
                       <TableHead>Type</TableHead>
                       <TableHead>Recipient</TableHead>
                       <TableHead>Subject</TableHead>
@@ -392,7 +393,7 @@ export default function AdminEmailDashboard() {
                   <TableBody>
                     {emails.length === 0 ? (
                       <TableRow>
-                        <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
+                        <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
                           No emails found
                         </TableCell>
                       </TableRow>
@@ -403,6 +404,13 @@ export default function AdminEmailDashboard() {
                           className={`cursor-pointer hover:bg-muted/50 ${selectedEmailId === e.id ? "bg-muted" : ""}`}
                           onClick={() => handleRowClick(e.id)}
                         >
+                          <TableCell
+                            className="text-xs font-mono text-muted-foreground cursor-pointer hover:text-foreground"
+                            title={`Click to copy: ${e.id}`}
+                            onClick={(ev) => { ev.stopPropagation(); navigator.clipboard.writeText(e.id); }}
+                          >
+                            {e.id.slice(0, 8)}...
+                          </TableCell>
                           <TableCell className="text-xs font-mono">{e.emailType.replace(/_/g, " ")}</TableCell>
                           <TableCell className="text-sm truncate max-w-[160px]">{e.recipientEmail}</TableCell>
                           <TableCell className="text-sm truncate max-w-[200px]">{e.subject}</TableCell>
@@ -543,6 +551,16 @@ function EmailDetailPanel({
         ) : (
           <div className="space-y-4">
             <div className="grid grid-cols-2 gap-2 text-xs">
+              <div className="col-span-2">
+                <span className="text-muted-foreground">ID:</span>{" "}
+                <span
+                  className="font-mono text-[10px] break-all cursor-pointer hover:text-foreground"
+                  title="Click to copy"
+                  onClick={() => navigator.clipboard.writeText(email.id)}
+                >
+                  {email.id}
+                </span>
+              </div>
               <div><span className="text-muted-foreground">Type:</span> <span className="font-mono">{email.emailType}</span></div>
               <div><span className="text-muted-foreground">Recipient:</span> <span className="font-medium">{email.recipientEmail}</span></div>
               <div><span className="text-muted-foreground">Subject:</span> <span className="font-medium">{email.subject}</span></div>

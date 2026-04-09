@@ -170,6 +170,7 @@ export default function AdminNotificationDashboard() {
         <Table>
           <TableHeader>
             <TableRow>
+              <TableHead className="w-[90px]">ID</TableHead>
               <TableHead>Type</TableHead>
               <TableHead>Category</TableHead>
               <TableHead>Title</TableHead>
@@ -181,19 +182,26 @@ export default function AdminNotificationDashboard() {
           <TableBody>
             {loading && notifications.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={6} className="text-center py-8">
+                <TableCell colSpan={7} className="text-center py-8">
                   <Loader2 className="h-5 w-5 animate-spin mx-auto text-muted-foreground" />
                 </TableCell>
               </TableRow>
             ) : notifications.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
+                <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
                   No notifications found.
                 </TableCell>
               </TableRow>
             ) : (
               notifications.map((n) => (
                 <TableRow key={n.id}>
+                  <TableCell
+                    className="text-xs font-mono text-muted-foreground cursor-pointer hover:text-foreground"
+                    title={`Click to copy: ${n.id}`}
+                    onClick={() => navigator.clipboard.writeText(n.id)}
+                  >
+                    {n.id.slice(0, 8)}...
+                  </TableCell>
                   <TableCell className="text-xs">{formatTypeName(n.type)}</TableCell>
                   <TableCell>
                     <Badge variant="outline" className="text-[10px]">

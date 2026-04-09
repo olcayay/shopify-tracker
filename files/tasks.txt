@@ -13,6 +13,7 @@ Email System Fixes (2026-04-09)
   PLA-949: Fix win_celebration email template rendering multiple undefined values ✅
   PLA-947: Fix email_win_celebration skipped despite email_alerts_enabled being true ✅
   PLA-945: Filter out developers with apps only on disabled platforms ✅
+  PLA-948: Show unique ID for emails and notifications in system-admin pages ✅
 
 Invitation Cross-Account (2026-04-09)
   PLA-940: Allow inviting existing platform users to join another account ✅
