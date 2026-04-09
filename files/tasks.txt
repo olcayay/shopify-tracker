@@ -2,7 +2,7 @@ Support System (2026-04-09)
   PLA-907: Phase 0: Database schema & migration for support tickets ✅
   PLA-908: Phase 0: GCS file upload infrastructure
   PLA-909: Phase 1: User-facing support ticket API routes ✅
-  PLA-910: Phase 1: Admin support ticket API routes
+  PLA-910: Phase 1: Admin support ticket API routes ✅
   PLA-911: Phase 2: Email template & notification types
   PLA-913: Phase 3: User support pages
   PLA-914: Phase 3: Update footer & navigation

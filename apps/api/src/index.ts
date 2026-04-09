@@ -288,6 +288,8 @@ await app.register(publicRoutes, { prefix: "/api/public" });
 // Support ticket endpoints
 const { supportTicketRoutes } = await import("./routes/support-tickets.js");
 await app.register(supportTicketRoutes, { prefix: "/api/support-tickets" });
+const { supportAdminRoutes } = await import("./routes/support-admin.js");
+await app.register(supportAdminRoutes, { prefix: "/api/system-admin/support-tickets" });
 
 // Notification endpoints (authenticated)
 const { notificationRoutes } = await import("./routes/notifications.js");
