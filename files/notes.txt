@@ -1,3 +1,15 @@
+Fix Developers Page Sorting by Apps Column (2026-04-09)
+================================================================
+
+PLA-923: Fix broken sorting on developers listing pages — sorting by Apps column didn't work
+- Root cause: drizzle-orm sql`app_count` parameterized the column name as a string value
+  instead of treating it as a SQL identifier. The ORDER BY was sorting by the literal string
+  'app_count' instead of the app_count column.
+- Fix: replaced sql`app_count` with sql.raw() for the ORDER BY clause
+- Added whitelist validation (VALID_SORTS set) to prevent SQL injection via sort parameter
+- Added 3 API tests for sort=apps, sort=platforms, and invalid sort field
+- The admin endpoint already used sql.raw() correctly (wasn't affected)
+
 Fix Excessive Stale Scraper Jobs (2026-04-09)
 ================================================================
 

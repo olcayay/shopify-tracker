@@ -105,6 +105,36 @@ describe("Developer routes", () => {
       expect(body.pagination.page).toBe(2);
       expect(body.pagination.limit).toBe(10);
     });
+
+    it("accepts sort=apps parameter without error", async () => {
+      const res = await app.inject({
+        method: "GET",
+        url: "/api/developers?sort=apps&order=desc",
+        headers: authHeaders(userToken()),
+      });
+
+      expect(res.statusCode).toBe(200);
+    });
+
+    it("accepts sort=platforms parameter without error", async () => {
+      const res = await app.inject({
+        method: "GET",
+        url: "/api/developers?sort=platforms&order=asc",
+        headers: authHeaders(userToken()),
+      });
+
+      expect(res.statusCode).toBe(200);
+    });
+
+    it("defaults to name sort for unknown sort field", async () => {
+      const res = await app.inject({
+        method: "GET",
+        url: "/api/developers?sort=invalid_field",
+        headers: authHeaders(userToken()),
+      });
+
+      expect(res.statusCode).toBe(200);
+    });
   });
 
   // -----------------------------------------------------------------------

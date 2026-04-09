@@ -57,7 +57,8 @@ export async function developerRoutes(app: FastifyInstance) {
       const limit = Math.min(PAGINATION_MAX_LIMIT_SMALL, Math.max(1, parseInt(request.query.limit || String(PAGINATION_DEFAULT_LIMIT), 10)));
       const offset = (page - 1) * limit;
       const search = request.query.search?.trim() || "";
-      const sort = request.query.sort || "name";
+      const VALID_SORTS = new Set(["name", "apps", "platforms"]);
+      const sort = VALID_SORTS.has(request.query.sort || "") ? request.query.sort! : "name";
       const order = request.query.order === "desc" ? "desc" : "asc";
       const platformsParam = request.query.platforms?.trim() || "";
       const requestedPlatforms = platformsParam ? platformsParam.split(",").filter(Boolean) : [];
@@ -107,11 +108,10 @@ export async function developerRoutes(app: FastifyInstance) {
       `) as any[];
       const total = Number(countResult?.count || 0);
 
-      const orderClause =
-        sort === "apps" ? sql`app_count` :
-        sort === "platforms" ? sql`platform_count` :
-        sql`g.name`;
-      const orderDir = order === "desc" ? sql`DESC` : sql`ASC`;
+      // Use sql.raw() for column references — sql`app_count` would parameterize
+      // the identifier as a string value instead of a column reference
+      const orderColumn = sort === "apps" ? "app_count" : sort === "platforms" ? "platform_count" : "g.name";
+      const orderSQL = sql.raw(`(asd.id IS NOT NULL) DESC, ${orderColumn} ${order === "desc" ? "DESC" : "ASC"}`);
 
       // Platform filter for subqueries
       const platformSubFilter = platforms.length > 0
@@ -161,7 +161,7 @@ export async function developerRoutes(app: FastifyInstance) {
           AND asd.account_id = ${accountId}
         ${whereClause}
         GROUP BY g.id, asd.id
-        ORDER BY (asd.id IS NOT NULL) DESC, ${orderClause} ${orderDir}
+        ORDER BY ${orderSQL}
         LIMIT ${limit} OFFSET ${offset}
       `);
 
