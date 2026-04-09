@@ -1,3 +1,16 @@
+Member Role Management UI (2026-04-10)
+================================================================
+
+PLA-964: Add member role management UI — inline select dropdown on Organization page
+- Added role select dropdown in each member row's action cell
+  - canChangeRole(): checks actor level > target level, not self, not owner target
+  - getAssignableRoles(): filters roles below actor level
+  - Owner sees: admin, editor, viewer options
+  - Admin sees: editor, viewer options
+  - Owner row and self row have no dropdown
+- On change: calls PATCH /api/account/members/:userId/role → toast feedback → refreshes list
+- 16 new unit tests for canChangeRole() and getAssignableRoles() permission logic
+
 Add Admin Role with User Management Permissions (2026-04-10)
 ================================================================
 

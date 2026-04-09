@@ -203,6 +203,33 @@ export default function OrganizationPage() {
     );
   }
 
+  /** Role levels for hierarchy comparison (higher = more privileged) */
+  const ROLE_LEVEL: Record<string, number> = { owner: 100, admin: 75, editor: 50, viewer: 25 };
+
+  /** Check if the current user can change a member's role */
+  function canChangeRole(member: Member): boolean {
+    if (!canManageMembers) return false;
+    if (member.id === user?.id) return false; // Can't change own role
+    const actorLevel = ROLE_LEVEL[user?.role || ""] ?? 0;
+    const targetLevel = ROLE_LEVEL[member.role] ?? 0;
+    return actorLevel > targetLevel;
+  }
+
+  /** Get the roles the current user can assign */
+  function getAssignableRoles(): string[] {
+    const actorLevel = ROLE_LEVEL[user?.role || ""] ?? 0;
+    return ["admin", "editor", "viewer"].filter((r) => (ROLE_LEVEL[r] ?? 0) < actorLevel);
+  }
+
+  async function handleRoleChange(memberId: string, newRole: string) {
+    await handleAction(
+      `/api/account/members/${memberId}/role`,
+      "PATCH",
+      { role: newRole },
+      "Role updated"
+    );
+  }
+
   function confirmDeleteMember(m: Member) {
     setConfirmModal({
       open: true,
@@ -404,15 +431,28 @@ export default function OrganizationPage() {
                       </TableCell>
                       {canManageMembers && (
                         <TableCell>
-                          {m.id !== user?.id && m.role !== "owner" && (
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => confirmDeleteMember(m)}
-                            >
-                              <Trash2 className="h-4 w-4 text-destructive" />
-                            </Button>
-                          )}
+                          <div className="flex items-center gap-1">
+                            {canChangeRole(m) && (
+                              <select
+                                value={m.role}
+                                onChange={(e) => handleRoleChange(m.id, e.target.value)}
+                                className="border rounded-md px-2 py-1 text-xs bg-background h-7"
+                              >
+                                {getAssignableRoles().map((r) => (
+                                  <option key={r} value={r}>{r}</option>
+                                ))}
+                              </select>
+                            )}
+                            {m.id !== user?.id && m.role !== "owner" && (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => confirmDeleteMember(m)}
+                              >
+                                <Trash2 className="h-4 w-4 text-destructive" />
+                              </Button>
+                            )}
+                          </div>
                         </TableCell>
                       )}
                     </TableRow>
