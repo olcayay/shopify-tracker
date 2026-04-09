@@ -135,6 +135,7 @@ export const systemAdminItems: NavItem[] = [
   { href: "/system-admin/scraper", label: "Scraper", icon: Bot },
   { href: "/system-admin/ai-logs", label: "AI Logs", icon: BrainCircuit },
   { href: "/system-admin/developers", label: "Developers", icon: Code },
+  { href: "/system-admin/support-tickets", label: "Support", icon: LifeBuoy },
   { href: "/system-admin/platform-requests", label: "Requests", icon: MessageSquarePlus },
   { href: "/system-admin/notifications", label: "Notifications", icon: Bell },
   { href: "/system-admin/notification-templates", label: "Notification Templates", icon: BellDot },
