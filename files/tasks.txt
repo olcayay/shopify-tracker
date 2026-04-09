@@ -1,3 +1,6 @@
+Common Words Keyword Grouping (2026-04-09)
+  PLA-924: Add Common Words keyword grouping to global /keywords page ✅
+
 Invitation Registration Handling (2026-04-09)
   PLA-942: Handle pending invitations during user registration ✅
 

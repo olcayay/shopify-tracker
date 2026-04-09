@@ -23,6 +23,8 @@ import { PlatformGroupedTable, type PlatformGroup } from "@/components/platform-
 import { PLATFORM_DISPLAY } from "@/lib/platform-display";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import type { PlatformId } from "@appranks/shared";
+import { KeywordWordGroupFilter } from "@/components/keyword-word-group-filter";
+import { extractWordGroups, filterKeywordsByWord } from "@/lib/keyword-word-groups";
 
 interface TrackedApp {
   iconUrl: string | null;
@@ -58,6 +60,7 @@ export default function CrossPlatformKeywordsPage() {
   const [sort, setSort] = useState("keyword");
   const [order, setOrder] = useState<"asc" | "desc">("asc");
   const [activePlatforms, setActivePlatforms] = useState<PlatformId[]>(enabledPlatforms);
+  const [activeWordFilter, setActiveWordFilter] = useState<string | null>(null);
   const { viewMode, changeViewMode } = useViewMode("keywords-view-mode", () => setPage(1));
   const limit = viewMode === "grouped" ? 200 : 25;
 
@@ -101,9 +104,20 @@ export default function CrossPlatformKeywordsPage() {
     setPage(1);
   }
 
-  const items = data?.items ?? [];
+  const allItems = data?.items ?? [];
   const pagination = data?.pagination;
   const emptyMessage = search ? "No keywords found matching your search." : "No tracked keywords.";
+
+  // Common words grouping
+  const wordGroups = useMemo(
+    () => extractWordGroups(allItems.map((kw) => kw.keyword)),
+    [allItems]
+  );
+
+  const items = useMemo(
+    () => activeWordFilter ? filterKeywordsByWord(allItems, activeWordFilter) : allItems,
+    [allItems, activeWordFilter]
+  );
 
   const platformGroups = useMemo<PlatformGroup<KeywordItem>[]>(() => {
     if (viewMode !== "grouped") return [];
@@ -226,6 +240,14 @@ export default function CrossPlatformKeywordsPage() {
         </div>
         <Button type="submit" variant="outline" size="sm">Search</Button>
       </form>
+
+      {wordGroups.length > 0 && (
+        <KeywordWordGroupFilter
+          wordGroups={wordGroups}
+          activeWord={activeWordFilter}
+          onSelect={setActiveWordFilter}
+        />
+      )}
 
       {loading && !data ? (
         <TableSkeleton rows={10} cols={viewMode === "grouped" ? groupedColCount : flatColCount} />
