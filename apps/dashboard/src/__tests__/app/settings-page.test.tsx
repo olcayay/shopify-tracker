@@ -35,61 +35,11 @@ vi.mock("@/lib/auth-context", () => ({
 
 vi.mock("@/contexts/feature-flags-context", () => ({
   useFeatureFlag: () => true,
-  useFeatureFlags: () => ({ enabledFeatures: ["market-research"], hasFeature: () => true }),
-}));
-
-vi.mock("@/components/account-usage-cards", () => ({
-  AccountUsageCards: ({ stats }: { stats: any[] }) => (
-    <div data-testid="account-usage-cards">
-      {stats.map((s: any) => (
-        <div key={s.key}>{s.label}</div>
-      ))}
-    </div>
-  ),
-  USAGE_STAT_PRESETS: {
-    apps: { icon: () => null, label: "My Apps", colorClasses: { bg: "", text: "" } },
-    keywords: { icon: () => null, label: "Tracked Keywords", colorClasses: { bg: "", text: "" } },
-    competitors: { icon: () => null, label: "Competitor Apps", colorClasses: { bg: "", text: "" } },
-    research: { icon: () => null, label: "Research Projects", colorClasses: { bg: "", text: "" } },
-    users: { icon: () => null, label: "Users", colorClasses: { bg: "", text: "" } },
-  },
+  useFeatureFlags: () => ({ enabledFeatures: ["notifications"], hasFeature: () => true }),
 }));
 
 import React from "react";
 import SettingsPage from "@/app/(dashboard)/settings/page";
-
-const mockMembers = [
-  { id: "u1", name: "Test User", email: "test@example.com", role: "owner", createdAt: "2026-01-01", lastSeenAt: "2026-04-04T10:00:00Z" },
-  { id: "u2", name: "Bob Editor", email: "bob@example.com", role: "editor", createdAt: "2026-02-15", lastSeenAt: "2026-04-03T08:00:00Z" },
-];
-
-const mockInvitations = [
-  {
-    id: "inv-1", email: "pending@example.com", role: "viewer",
-    createdAt: "2026-04-01", expiresAt: "2026-04-08", acceptedAt: null,
-    invitedByName: "Test User", expired: false, accepted: false,
-  },
-  {
-    id: "inv-2", email: "expired@example.com", role: "editor",
-    createdAt: "2026-03-01", expiresAt: "2026-03-08", acceptedAt: null,
-    invitedByName: "Test User", expired: true, accepted: false,
-  },
-];
-
-function setupMockFetch(overrides?: Record<string, any>) {
-  mockFetchWithAuth.mockImplementation((url: string, options?: any) => {
-    if (url === "/api/account/members" && !options?.method) {
-      return Promise.resolve({ ok: true, json: () => Promise.resolve(overrides?.members ?? mockMembers) });
-    }
-    if (url === "/api/account/invitations" && !options?.method) {
-      return Promise.resolve({ ok: true, json: () => Promise.resolve(overrides?.invitations ?? mockInvitations) });
-    }
-    if (url.startsWith("/api/account/activity-log")) {
-      return Promise.resolve({ ok: true, json: () => Promise.resolve({ logs: [], total: 0, page: 1, limit: 25 }) });
-    }
-    return Promise.resolve({ ok: true, json: () => Promise.resolve({}) });
-  });
-}
 
 describe("SettingsPage", () => {
   beforeEach(() => {
@@ -101,33 +51,13 @@ describe("SettingsPage", () => {
       fetchWithAuth: mockFetchWithAuth,
       refreshUser: mockRefreshUser,
     });
-    setupMockFetch();
+    mockFetchWithAuth.mockResolvedValue({ ok: true, json: () => Promise.resolve({}) });
     mockRefreshUser.mockResolvedValue(undefined);
   });
 
   it("renders page title", () => {
     render(<SettingsPage />);
     expect(screen.getByText("Settings")).toBeInTheDocument();
-  });
-
-  it("renders Account card with package badge", () => {
-    render(<SettingsPage />);
-    expect(screen.getByText("Account")).toBeInTheDocument();
-    expect(screen.getByText("Pro")).toBeInTheDocument();
-  });
-
-  it("renders account description", () => {
-    render(<SettingsPage />);
-    expect(screen.getByText(/My Account/)).toBeInTheDocument();
-  });
-
-  it("renders usage stats via AccountUsageCards", () => {
-    render(<SettingsPage />);
-    expect(screen.getByText("My Apps")).toBeInTheDocument();
-    expect(screen.getByText("Tracked Keywords")).toBeInTheDocument();
-    expect(screen.getByText("Competitor Apps")).toBeInTheDocument();
-    expect(screen.getByText("Research Projects")).toBeInTheDocument();
-    expect(screen.getByText("Users")).toBeInTheDocument();
   });
 
   it("renders Profile card", () => {
@@ -144,236 +74,84 @@ describe("SettingsPage", () => {
     expect(emailInput).toBeInTheDocument();
   });
 
-  it("renders Change Password section", () => {
+  it("renders password change form", () => {
     render(<SettingsPage />);
-    expect(screen.getAllByText("Change Password").length).toBeGreaterThanOrEqual(1);
     expect(screen.getByPlaceholderText("Current password")).toBeInTheDocument();
     expect(screen.getByPlaceholderText("New password (min 8 chars)")).toBeInTheDocument();
     expect(screen.getByPlaceholderText("Confirm new password")).toBeInTheDocument();
   });
 
   it("shows password mismatch error", async () => {
-    const user = userEvent.setup();
     render(<SettingsPage />);
-    await act(async () => {
-      await user.type(screen.getByPlaceholderText("Current password"), "oldpass123");
-      await user.type(screen.getByPlaceholderText("New password (min 8 chars)"), "newpass123");
-      await user.type(screen.getByPlaceholderText("Confirm new password"), "different123");
-      const changePwdBtns = screen.getAllByText("Change Password");
-      const buttonEl = changePwdBtns.find((el) => el.closest("button"));
-      await user.click(buttonEl!);
-    });
+
+    await userEvent.type(screen.getByPlaceholderText("Current password"), "oldpass123");
+    await userEvent.type(screen.getByPlaceholderText("New password (min 8 chars)"), "newpass123");
+    await userEvent.type(screen.getByPlaceholderText("Confirm new password"), "differentpass");
+    await userEvent.click(screen.getByRole("button", { name: "Change Password" }));
+
     expect(screen.getByText("Passwords do not match")).toBeInTheDocument();
   });
 
   it("submits password change when passwords match", async () => {
-    const user = userEvent.setup();
+    mockFetchWithAuth.mockResolvedValue({ ok: true, json: () => Promise.resolve({}) });
     render(<SettingsPage />);
-    await act(async () => {
-      await user.type(screen.getByPlaceholderText("Current password"), "oldpass123");
-      await user.type(screen.getByPlaceholderText("New password (min 8 chars)"), "newpass123");
-      await user.type(screen.getByPlaceholderText("Confirm new password"), "newpass123");
-      const changePwdBtns = screen.getAllByText("Change Password");
-      const buttonEl = changePwdBtns.find((el) => el.closest("button"));
-      await user.click(buttonEl!);
-    });
-    expect(mockFetchWithAuth).toHaveBeenCalledWith(
-      "/api/auth/me",
-      expect.objectContaining({ method: "PATCH" })
-    );
-  });
 
-  it("renders Team Members section for owner", () => {
-    render(<SettingsPage />);
-    expect(screen.getByText("Team Members")).toBeInTheDocument();
-  });
+    await userEvent.type(screen.getByPlaceholderText("Current password"), "oldpass123");
+    await userEvent.type(screen.getByPlaceholderText("New password (min 8 chars)"), "newpass123");
+    await userEvent.type(screen.getByPlaceholderText("Confirm new password"), "newpass123");
+    await userEvent.click(screen.getByRole("button", { name: "Change Password" }));
 
-  it("renders member list with status badges", async () => {
-    render(<SettingsPage />);
     await waitFor(() => {
-      expect(screen.getByText("Bob Editor")).toBeInTheDocument();
-    });
-    expect(screen.getByText("bob@example.com")).toBeInTheDocument();
-    // Active members should have Active badge
-    const activeBadges = screen.getAllByText("Active");
-    expect(activeBadges.length).toBe(2); // 2 active members
-  });
-
-  it("renders invite member form for owner", () => {
-    render(<SettingsPage />);
-    expect(screen.getByText("Send Invitation")).toBeInTheDocument();
-    expect(screen.getByPlaceholderText("Email address")).toBeInTheDocument();
-  });
-
-  it("sends invitation when form is submitted", async () => {
-    const user = userEvent.setup();
-    render(<SettingsPage />);
-    await act(async () => {
-      await user.type(screen.getByPlaceholderText("Email address"), "new@example.com");
-      await user.click(screen.getByText("Send Invitation"));
-    });
-    expect(mockFetchWithAuth).toHaveBeenCalledWith(
-      "/api/account/members/invite",
-      expect.objectContaining({ method: "POST" })
-    );
-  });
-
-  it("shows pending and expired invitations", async () => {
-    render(<SettingsPage />);
-    await waitFor(() => {
-      expect(screen.getByText("pending@example.com")).toBeInTheDocument();
-    });
-    expect(screen.getByText("expired@example.com")).toBeInTheDocument();
-    expect(screen.getByText("Pending")).toBeInTheDocument();
-    expect(screen.getByText("Expired")).toBeInTheDocument();
-  });
-
-  it("shows seats used count for owner", async () => {
-    render(<SettingsPage />);
-    // 2 members + 1 pending invitation = 3 of 5
-    await waitFor(() => {
-      expect(screen.getByText(/3 of 5 seats used/)).toBeInTheDocument();
+      expect(mockFetchWithAuth).toHaveBeenCalledWith("/api/auth/me", expect.objectContaining({
+        method: "PATCH",
+      }));
     });
   });
 
-  it("renders Email Notifications section", () => {
+  it("renders Email Notifications card", () => {
     render(<SettingsPage />);
     expect(screen.getByText("Email Notifications")).toBeInTheDocument();
     expect(screen.getByText("Daily Ranking Digest")).toBeInTheDocument();
   });
 
-  it("shows digest enabled state", () => {
-    render(<SettingsPage />);
-    expect(screen.getByText("Enabled")).toBeInTheDocument();
-  });
-
   it("toggles email digest", async () => {
-    const user = userEvent.setup();
+    mockFetchWithAuth.mockResolvedValue({ ok: true, json: () => Promise.resolve({}) });
     render(<SettingsPage />);
-    await act(async () => {
-      await user.click(screen.getByText("Enabled"));
+
+    await userEvent.click(screen.getByText("Enabled"));
+
+    await waitFor(() => {
+      expect(mockFetchWithAuth).toHaveBeenCalledWith("/api/auth/me", expect.objectContaining({
+        method: "PATCH",
+      }));
     });
-    expect(mockFetchWithAuth).toHaveBeenCalledWith(
-      "/api/auth/me",
-      expect.objectContaining({ method: "PATCH" })
-    );
   });
 
-  it("renders timezone selector", () => {
+  it("renders Data & Privacy card", () => {
     render(<SettingsPage />);
-    expect(screen.getByText("Timezone")).toBeInTheDocument();
-  });
-
-  it("shows account edit form for owner", () => {
-    render(<SettingsPage />);
-    expect(screen.getByDisplayValue("My Account")).toBeInTheDocument();
-    expect(screen.getByDisplayValue("My Company")).toBeInTheDocument();
-  });
-
-  it("submits account update", async () => {
-    const user = userEvent.setup();
-    render(<SettingsPage />);
-    const accountNameInput = screen.getByDisplayValue("My Account");
-    await act(async () => {
-      await user.clear(accountNameInput);
-      await user.type(accountNameInput, "Updated Account");
-      const saveBtns = screen.getAllByText("Save");
-      await user.click(saveBtns[0]);
-    });
-    expect(mockFetchWithAuth).toHaveBeenCalledWith(
-      "/api/account",
-      expect.objectContaining({ method: "PUT" })
-    );
+    expect(screen.getByText("Data & Privacy")).toBeInTheDocument();
+    expect(screen.getByText("Download My Data")).toBeInTheDocument();
   });
 
   it("submits profile update", async () => {
-    const user = userEvent.setup();
+    mockFetchWithAuth.mockResolvedValue({ ok: true, json: () => Promise.resolve({}) });
     render(<SettingsPage />);
+
     const nameInput = screen.getByDisplayValue("Test User");
-    await act(async () => {
-      await user.clear(nameInput);
-      await user.type(nameInput, "Updated Name");
-      await user.click(screen.getByText("Save Changes"));
-    });
-    expect(mockFetchWithAuth).toHaveBeenCalledWith(
-      "/api/auth/me",
-      expect.objectContaining({ method: "PATCH" })
-    );
-  });
+    await userEvent.clear(nameInput);
+    await userEvent.type(nameInput, "New Name");
+    await userEvent.click(screen.getByText("Save Changes"));
 
-  it("shows error message when operation fails", async () => {
-    mockFetchWithAuth.mockImplementation((url: string, options?: any) => {
-      if (url === "/api/account/members" && !options?.method) {
-        return Promise.resolve({ ok: true, json: () => Promise.resolve(mockMembers) });
-      }
-      if (url === "/api/account/invitations" && !options?.method) {
-        return Promise.resolve({ ok: true, json: () => Promise.resolve(mockInvitations) });
-      }
-      return Promise.resolve({ ok: false, json: () => Promise.resolve({ error: "Update failed" }) });
-    });
-    const user = userEvent.setup();
-    render(<SettingsPage />);
-    const nameInput = screen.getByDisplayValue("Test User");
-    await act(async () => {
-      await user.clear(nameInput);
-      await user.type(nameInput, "Updated Name");
-      await user.click(screen.getByText("Save Changes"));
-    });
     await waitFor(() => {
-      expect(screen.getByText("Update failed")).toBeInTheDocument();
+      expect(mockFetchWithAuth).toHaveBeenCalledWith("/api/auth/me", expect.objectContaining({
+        method: "PATCH",
+      }));
     });
   });
 
-  it("does not show delete button for own user", async () => {
+  it("does not render Account, Team Members, or Billing (moved to /organization)", () => {
     render(<SettingsPage />);
-    await waitFor(() => {
-      expect(screen.getByText("Bob Editor")).toBeInTheDocument();
-    });
-    // Owner row should not have delete button, but Bob's row should
-    const deleteButtons = screen.getAllByRole("button").filter(
-      (btn) => btn.querySelector("svg")?.classList.contains("text-destructive") || false
-    );
-    expect(deleteButtons.length).toBeGreaterThanOrEqual(1);
-  });
-
-  it("editor can see team members table but not invite form", async () => {
-    mockUseAuth.mockReturnValue({
-      user: { ...ownerUser, id: "u2", role: "editor", name: "Bob Editor", email: "bob@example.com" },
-      account: mockAccount,
-      isLoading: false,
-      fetchWithAuth: mockFetchWithAuth,
-      refreshUser: mockRefreshUser,
-    });
-    render(<SettingsPage />);
-    expect(screen.getByText("Team Members")).toBeInTheDocument();
-    expect(screen.getByText("People with access to this account")).toBeInTheDocument();
-    await waitFor(() => {
-      expect(screen.getByText("Test User")).toBeInTheDocument();
-    });
+    expect(screen.queryByText("Team Members")).not.toBeInTheDocument();
     expect(screen.queryByText("Send Invitation")).not.toBeInTheDocument();
-    expect(screen.queryByPlaceholderText("Email address")).not.toBeInTheDocument();
-  });
-
-  it("viewer can see team members table but not invite form", async () => {
-    mockUseAuth.mockReturnValue({
-      user: { ...ownerUser, id: "u3", role: "viewer", name: "View User", email: "view@example.com" },
-      account: mockAccount,
-      isLoading: false,
-      fetchWithAuth: mockFetchWithAuth,
-      refreshUser: mockRefreshUser,
-    });
-    render(<SettingsPage />);
-    expect(screen.getByText("Team Members")).toBeInTheDocument();
-    expect(screen.getByText("People with access to this account")).toBeInTheDocument();
-    await waitFor(() => {
-      expect(screen.getByText("Test User")).toBeInTheDocument();
-      expect(screen.getByText("Bob Editor")).toBeInTheDocument();
-    });
-    expect(screen.queryByText("Send Invitation")).not.toBeInTheDocument();
-  });
-
-  it("owner sees seats used in description", () => {
-    render(<SettingsPage />);
-    expect(screen.getByText(/seats used/)).toBeInTheDocument();
   });
 });

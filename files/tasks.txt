@@ -1,3 +1,6 @@
+Organization Page (2026-04-09)
+  PLA-936: Extract Organization page from Settings ✅
+
 Common Words Keyword Grouping (2026-04-09)
   PLA-924: Add Common Words keyword grouping to global /keywords page ✅
 
