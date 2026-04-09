@@ -1,3 +1,6 @@
+Duplicate Search Removal (2026-04-09)
+  PLA-951: Remove duplicate search fields on /apps page ✅
+
 Overview App Card Stats Alignment (2026-04-09)
   PLA-953: Align app card stats as table columns in Overview platform cards ✅
 

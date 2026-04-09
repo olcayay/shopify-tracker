@@ -4,7 +4,6 @@ import { useEffect, useState, useCallback, useMemo } from "react";
 import Link from "next/link";
 import { useAuth } from "@/lib/auth-context";
 import { usePlatformAccess } from "@/hooks/use-platform-access";
-import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import {
   Table,
@@ -14,7 +13,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Search, ChevronLeft, ChevronRight, ArrowUpDown, Star } from "lucide-react";
+import { ChevronLeft, ChevronRight, ArrowUpDown, Star } from "lucide-react";
 import { TableSkeleton } from "@/components/skeletons";
 import { PlatformBadgeCell } from "@/components/platform-badge-cell";
 import { GlobalAppSearch } from "@/components/global-app-search";
@@ -51,7 +50,6 @@ export default function CrossPlatformAppsPage() {
   const { accessiblePlatforms: enabledPlatforms } = usePlatformAccess();
   const [data, setData] = useState<AppResponse | null>(null);
   const [loading, setLoading] = useState(true);
-  const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
   const [sort, setSort] = useState("name");
   const [order, setOrder] = useState<"asc" | "desc">("asc");
@@ -70,7 +68,6 @@ export default function CrossPlatformAppsPage() {
     setLoading(true);
     try {
       const params = new URLSearchParams({ page: String(page), limit: String(limit), sort, order });
-      if (search) params.set("search", search);
       if (activePlatforms.length > 0) {
         params.set("platforms", activePlatforms.join(","));
       }
@@ -80,7 +77,7 @@ export default function CrossPlatformAppsPage() {
     } finally {
       setLoading(false);
     }
-  }, [fetchWithAuth, page, search, sort, order, activePlatforms, enabledPlatforms.length, limit, statusFilter]);
+  }, [fetchWithAuth, page, sort, order, activePlatforms, enabledPlatforms.length, limit, statusFilter]);
 
   useEffect(() => { loadData(); }, [loadData]);
 
@@ -229,22 +226,13 @@ export default function CrossPlatformAppsPage() {
         </div>
       </div>
 
-      <div className="flex gap-4 items-start flex-wrap">
-        <form onSubmit={(e) => { e.preventDefault(); setPage(1); loadData(); }} className="flex gap-2 max-w-md">
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input placeholder="Filter tracked apps..." value={search} onChange={(e) => setSearch(e.target.value)} className="pl-9" />
-          </div>
-          <Button type="submit" variant="outline" size="sm">Filter</Button>
-        </form>
-        <GlobalAppSearch
-          mode="track"
-          trackedSlugs={new Set(items.map((a: any) => a.slug))}
-          onAction={() => loadData()}
-          placeholder="Discover & track new apps..."
-          className="w-full sm:w-72"
-        />
-      </div>
+      <GlobalAppSearch
+        mode="track"
+        trackedSlugs={new Set(items.map((a: any) => a.slug))}
+        onAction={() => loadData()}
+        placeholder="Discover & track new apps..."
+        className="w-full sm:w-72"
+      />
 
       {loading && !data ? (
         <TableSkeleton rows={10} cols={viewMode === "grouped" ? groupedColCount : flatColCount} />

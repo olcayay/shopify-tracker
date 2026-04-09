@@ -1,3 +1,14 @@
+Duplicate Search Removal on /apps (2026-04-09)
+================================================================
+
+PLA-951: Remove duplicate search fields on /apps page — simplify to single search UX
+- Removed the filter input + "Filter" button (server-side name search)
+- Kept only GlobalAppSearch (discover & track new apps)
+- Removed `search` state variable and `?search=` query param from loadData
+- Removed unused imports: Input, Search icon
+- Updated test: "renders search input" → "renders global app search"
+- Platform filter chips + status buttons provide sufficient filtering
+
 Overview App Card Stats Alignment (2026-04-09)
 ================================================================
 
