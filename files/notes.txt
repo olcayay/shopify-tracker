@@ -1,3 +1,13 @@
+Overview App Card Stats Alignment (2026-04-09)
+================================================================
+
+PLA-953: Align app card stats as table columns in Overview platform cards
+- Root cause: Stats (rating, keywords, competitors) were conditionally rendered — missing values caused
+  remaining columns to shift left inconsistently across app rows
+- Fix: Replaced flex with conditional children → CSS grid (grid-cols-3) with fixed min-width (11rem)
+- All 3 stat columns always render; missing values show muted dash placeholder
+- Each column right-justified for consistent alignment across rows
+
 Platform Overview Table Alignment (2026-04-09)
 ================================================================
 

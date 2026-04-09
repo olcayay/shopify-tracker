@@ -1,3 +1,6 @@
+Overview App Card Stats Alignment (2026-04-09)
+  PLA-953: Align app card stats as table columns in Overview platform cards ✅
+
 Platform Overview Table Alignment (2026-04-09)
   PLA-952: Fix table column alignment on platform overview page ✅
 
