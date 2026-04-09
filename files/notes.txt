@@ -1,3 +1,26 @@
+Fix Excessive Stale Scraper Jobs (2026-04-09)
+================================================================
+
+PLA-959: Investigate and fix excessive stale jobs for App Details and Keywords scrapers
+- Root cause analysis: 3 contributing factors identified:
+  1. BullMQ default lockDuration (30s) too short for 30-45 min scraper jobs — event loop
+     delays during browser scraping cause false "stalled" detection
+  2. Retry tracking was broken — meta.retryOf was never stored in scrape_run metadata,
+     so the retry guard never triggered (retryOf from job data didn't flow through)
+  3. MAX_RETRIES=1 too low for Spot VM preemption recovery
+- Fixes applied:
+  - Added BULLMQ_LOCK_DURATION_MS (5 min) and BULLMQ_STALLED_INTERVAL_MS (5 min) to
+    both background and interactive workers — locks renew every 2.5 min
+  - Replaced broken meta.retryOf check with DB-based retry counting: queries recent
+    stale-run-retry scrape_runs per platform+type in 6-hour window
+  - Increased MAX_RETRIES from 1 to 3
+  - Retry count tracked within cleanup cycle (prevents exceeding limit in single pass)
+- Files changed:
+  - apps/scraper/src/constants.ts (new constants)
+  - apps/scraper/src/worker.ts (lockDuration, stalledInterval on both workers)
+  - apps/scraper/src/jobs/cleanup-stale-runs.ts (retry logic rewrite)
+  - apps/scraper/src/__tests__/jobs/cleanup-stale-runs.test.ts (7 tests)
+
 Fix Missing Support Tickets Table — Migration Safety Net (2026-04-09)
 ================================================================
 

@@ -27,6 +27,20 @@ export const LOCK_POLL_INTERVAL_MS = 500;
 /** Graceful shutdown timeout in ms before force-exiting */
 export const GRACEFUL_SHUTDOWN_TIMEOUT_MS = 60_000;
 
+// ── BullMQ stalled job detection ───────────────────────────────────
+/**
+ * BullMQ lock duration in ms. Default is 30s which is too short for
+ * long-running scraper jobs — event loop delays during browser scraping
+ * can cause false "stalled" detection. Set to 5 min so locks renew every 2.5 min.
+ */
+export const BULLMQ_LOCK_DURATION_MS = 300_000; // 5 minutes
+/** How often BullMQ checks for stalled jobs. Matches lockDuration to avoid false positives. */
+export const BULLMQ_STALLED_INTERVAL_MS = 300_000; // 5 minutes
+
+// ── Stale run cleanup ──────────────────────────────────────────────
+/** Max automatic retries when a scrape_run goes stale (per platform+type, rolling 6-hour window) */
+export const MAX_STALE_RUN_RETRIES = 3;
+
 // ── Smoke test mode ────────────────────────────────────────────────
 /** Whether running in smoke test mode (fast path: no delays, minimal retries) */
 export const IS_SMOKE_TEST = process.env.SMOKE_TEST === "1";

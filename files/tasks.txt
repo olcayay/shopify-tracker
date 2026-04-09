@@ -1,3 +1,6 @@
+Stale Scraper Jobs Fix (2026-04-09)
+  PLA-959: Fix excessive stale jobs — BullMQ lock settings + retry tracking rewrite ✅
+
 Migration Safety Net Fix (2026-04-09)
   PLA-957: Fix missing support_tickets table — expand safety-net in migrate.ts ✅
 

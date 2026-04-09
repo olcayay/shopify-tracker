@@ -6,7 +6,12 @@ vi.mock("../../queue.js", () => ({
   enqueueScraperJob: vi.fn().mockResolvedValue("retry-job-1"),
 }));
 
-function createMockDb(runningCount: number, pendingCount: number, staleRuns: any[] = []) {
+function createMockDb(
+  runningCount: number,
+  pendingCount: number,
+  staleRuns: any[] = [],
+  recentRetryCounts: any[] = [],
+) {
   const mockUpdateChain = {
     set: vi.fn().mockReturnThis(),
     where: vi.fn().mockResolvedValue({ rowCount: 0 }),
@@ -14,8 +19,22 @@ function createMockDb(runningCount: number, pendingCount: number, staleRuns: any
 
   const mockSelectChain = {
     from: vi.fn().mockReturnThis(),
-    where: vi.fn().mockResolvedValue(staleRuns),
+    where: vi.fn().mockResolvedValue([]),
+    groupBy: vi.fn().mockResolvedValue(recentRetryCounts),
   };
+
+  // Track select calls: first = stale running runs, second = recent retry counts
+  let selectCallIndex = 0;
+  mockSelectChain.from.mockImplementation(() => {
+    const callIdx = selectCallIndex++;
+    return {
+      where: vi.fn().mockImplementation(() => {
+        if (callIdx === 0) return Promise.resolve(staleRuns);
+        // Second select is the retry count query — returns a chain with groupBy
+        return { groupBy: vi.fn().mockResolvedValue(recentRetryCounts) };
+      }),
+    };
+  });
 
   // Update: first call = smoke-test stale, second = running cleanup, third = pending cleanup
   let updateCallIndex = 0;
@@ -66,12 +85,12 @@ describe("cleanupStaleRuns", () => {
     }
   });
 
-  it("auto-retries retryable stale runs", async () => {
+  it("auto-retries retryable stale runs when under retry limit", async () => {
     const staleRuns = [
       { id: "run-1", scraperType: "reviews", platform: "zendesk", metadata: {} },
       { id: "run-2", scraperType: "category", platform: "shopify", metadata: {} },
     ];
-    const db = createMockDb(2, 0, staleRuns);
+    const db = createMockDb(2, 0, staleRuns, []);
     const { enqueueScraperJob } = await import("../../queue.js");
 
     const result = await cleanupStaleRuns(db);
@@ -90,7 +109,7 @@ describe("cleanupStaleRuns", () => {
     const staleRuns = [
       { id: "run-1", scraperType: "compute_app_scores", platform: "shopify", metadata: {} },
     ];
-    const db = createMockDb(1, 0, staleRuns);
+    const db = createMockDb(1, 0, staleRuns, []);
     const { enqueueScraperJob } = await import("../../queue.js");
 
     const result = await cleanupStaleRuns(db);
@@ -99,16 +118,62 @@ describe("cleanupStaleRuns", () => {
     expect(enqueueScraperJob).not.toHaveBeenCalled();
   });
 
-  it("does not retry runs that are already retries (prevents infinite loops)", async () => {
+  it("does not retry when max retries reached for platform+type", async () => {
     const staleRuns = [
-      { id: "run-retry", scraperType: "reviews", platform: "zendesk", metadata: { retryOf: "original-run-id" } },
+      { id: "run-1", scraperType: "reviews", platform: "zendesk", metadata: {} },
     ];
-    const db = createMockDb(1, 0, staleRuns);
+    // Simulate 3 recent retries already exist for zendesk:reviews
+    const recentRetryCounts = [
+      { platform: "zendesk", scraperType: "reviews", count: 3 },
+    ];
+    const db = createMockDb(1, 0, staleRuns, recentRetryCounts);
     const { enqueueScraperJob } = await import("../../queue.js");
 
     const result = await cleanupStaleRuns(db);
 
     expect(result.retried).toBe(0);
     expect(enqueueScraperJob).not.toHaveBeenCalled();
+  });
+
+  it("retries platform+type combos that have not yet hit max retries", async () => {
+    const staleRuns = [
+      { id: "run-1", scraperType: "reviews", platform: "zendesk", metadata: {} },
+      { id: "run-2", scraperType: "category", platform: "shopify", metadata: {} },
+    ];
+    // zendesk:reviews has 3 retries (at limit), shopify:category has 1 (under limit)
+    const recentRetryCounts = [
+      { platform: "zendesk", scraperType: "reviews", count: 3 },
+      { platform: "shopify", scraperType: "category", count: 1 },
+    ];
+    const db = createMockDb(2, 0, staleRuns, recentRetryCounts);
+    const { enqueueScraperJob } = await import("../../queue.js");
+
+    const result = await cleanupStaleRuns(db);
+
+    expect(result.retried).toBe(1);
+    expect(enqueueScraperJob).toHaveBeenCalledTimes(1);
+    expect(enqueueScraperJob).toHaveBeenCalledWith(expect.objectContaining({
+      type: "category",
+      platform: "shopify",
+      triggeredBy: "stale-run-retry",
+      retryOf: "run-2",
+    }));
+  });
+
+  it("tracks retry count within a single cleanup cycle", async () => {
+    // 4 stale runs for same platform+type, 0 recent retries — should only retry 3 (MAX_RETRIES)
+    const staleRuns = [
+      { id: "run-1", scraperType: "reviews", platform: "zendesk", metadata: {} },
+      { id: "run-2", scraperType: "reviews", platform: "zendesk", metadata: {} },
+      { id: "run-3", scraperType: "reviews", platform: "zendesk", metadata: {} },
+      { id: "run-4", scraperType: "reviews", platform: "zendesk", metadata: {} },
+    ];
+    const db = createMockDb(4, 0, staleRuns, []);
+    const { enqueueScraperJob } = await import("../../queue.js");
+
+    const result = await cleanupStaleRuns(db);
+
+    expect(result.retried).toBe(3);
+    expect(enqueueScraperJob).toHaveBeenCalledTimes(3);
   });
 });

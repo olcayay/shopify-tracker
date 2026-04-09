@@ -31,8 +31,8 @@ const RETRYABLE_TYPES = new Set([
   "featured_apps",
 ]);
 
-/** Max automatic retries per stale run (tracked via metadata.retryOf) */
-const MAX_RETRIES = 1;
+/** Max automatic retries per stale run (per platform+type, rolling 6-hour window) */
+const MAX_RETRIES = 3;
 
 export interface CleanupResult {
   running: number;
@@ -106,15 +106,46 @@ export async function cleanupStaleRuns(db: Database): Promise<CleanupResult> {
   const runningCount = (runningResult as any).rowCount ?? 0;
   const pendingCount = (pendingResult as any).rowCount ?? 0;
 
-  // Auto-retry retryable stale runs (max 1 retry)
+  // Count recent stale-run-retry attempts per platform+type (rolling 6-hour window)
+  // to enforce MAX_RETRIES limit across cleanup cycles
+  let recentRetryCountMap = new Map<string, number>();
+  try {
+    const recentRetries = await db
+      .select({
+        platform: scrapeRuns.platform,
+        scraperType: scrapeRuns.scraperType,
+        count: sql<number>`count(*)::int`,
+      })
+      .from(scrapeRuns)
+      .where(sql`${scrapeRuns.triggeredBy} = 'stale-run-retry' AND ${scrapeRuns.createdAt} > now() - interval '6 hours'`)
+      .groupBy(scrapeRuns.platform, scrapeRuns.scraperType);
+
+    for (const row of recentRetries) {
+      recentRetryCountMap.set(`${row.platform}:${row.scraperType}`, row.count);
+    }
+  } catch (err) {
+    log.warn("failed to query recent retry counts, proceeding with no limit", { error: String(err) });
+  }
+
+  // Auto-retry retryable stale runs (max MAX_RETRIES per platform+type in 6 hours)
   let retried = 0;
   for (const run of staleRunningRuns) {
     if (!run.scraperType || !run.platform) continue;
     if (!RETRYABLE_TYPES.has(run.scraperType)) continue;
 
-    // Check if this run was already a retry (prevent infinite loops)
-    const meta = (run.metadata as Record<string, unknown>) || {};
-    if (meta.retryOf) continue;
+    // Check retry count for this platform+type (prevents retry storms on persistent failures)
+    const retryKey = `${run.platform}:${run.scraperType}`;
+    const currentRetries = recentRetryCountMap.get(retryKey) ?? 0;
+    if (currentRetries >= MAX_RETRIES) {
+      log.warn("max stale retries reached, skipping", {
+        staleRunId: run.id,
+        scraperType: run.scraperType,
+        platform: run.platform,
+        currentRetries,
+        maxRetries: MAX_RETRIES,
+      });
+      continue;
+    }
 
     try {
       const { enqueueScraperJob } = await import("../queue.js");
@@ -125,11 +156,13 @@ export async function cleanupStaleRuns(db: Database): Promise<CleanupResult> {
         retryOf: run.id,
       });
       retried++;
+      recentRetryCountMap.set(retryKey, currentRetries + 1);
       log.info("auto-retried stale run", {
         staleRunId: run.id,
         scraperType: run.scraperType,
         platform: run.platform,
         newJobId: jobId,
+        retryCount: currentRetries + 1,
       });
     } catch (err) {
       log.error("failed to retry stale run", {

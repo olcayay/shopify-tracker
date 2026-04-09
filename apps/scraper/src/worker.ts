@@ -29,6 +29,8 @@ import {
   LOCK_POLL_INTERVAL_MS,
   BACKGROUND_WORKER_CONCURRENCY,
   GRACEFUL_SHUTDOWN_TIMEOUT_MS,
+  BULLMQ_LOCK_DURATION_MS,
+  BULLMQ_STALLED_INTERVAL_MS,
 } from "./constants.js";
 
 const log = createLogger("worker");
@@ -94,6 +96,8 @@ const bgWorker = new Worker<ScraperJobData>(
   {
     connection: getRedisConnection(),
     concurrency: BACKGROUND_WORKER_CONCURRENCY,
+    lockDuration: BULLMQ_LOCK_DURATION_MS,
+    stalledInterval: BULLMQ_STALLED_INTERVAL_MS,
     // No rate limiter — per-platform lock handles serialization
   }
 );
@@ -104,6 +108,8 @@ const intWorker = new Worker<ScraperJobData>(
   {
     connection: getRedisConnection(),
     concurrency: 1,
+    lockDuration: BULLMQ_LOCK_DURATION_MS,
+    stalledInterval: BULLMQ_STALLED_INTERVAL_MS,
   }
 );
 
