@@ -312,7 +312,9 @@ describe("Support Ticket Routes", () => {
         headers: authHeaders(userToken()),
       });
       expect(res.statusCode).toBe(503);
-      expect(res.json().error).toContain("Failed to load support tickets");
+      const body = res.json();
+      expect(body.error).toContain("Failed to load support tickets");
+      expect(body.code).toBe("TABLE_OR_COLUMN_MISSING");
       await app.close();
     });
 
@@ -324,7 +326,9 @@ describe("Support Ticket Routes", () => {
         headers: authHeaders(userToken()),
       });
       expect(res.statusCode).toBe(503);
-      expect(res.json().error).toContain("Failed to load ticket");
+      const body = res.json();
+      expect(body.error).toContain("Failed to load ticket");
+      expect(body.code).toBe("TABLE_OR_COLUMN_MISSING");
       await app.close();
     });
 
@@ -337,7 +341,9 @@ describe("Support Ticket Routes", () => {
         payload: { type: "bug_report", subject: "Test", body: "Details" },
       });
       expect(res.statusCode).toBe(503);
-      expect(res.json().error).toContain("Failed to create ticket");
+      const body = res.json();
+      expect(body.error).toContain("Failed to create ticket");
+      expect(body.code).toBe("TABLE_OR_COLUMN_MISSING");
       await app.close();
     });
   });

@@ -7,6 +7,17 @@ import {
 } from "@appranks/db";
 import { requireRole } from "../middleware/authorize.js";
 
+/** Classify a DB error into a user-safe diagnostic code */
+function dbErrorCode(err: unknown): string {
+  const msg = err instanceof Error ? err.message : String(err);
+  if (msg.includes("does not exist")) return "TABLE_OR_COLUMN_MISSING";
+  if (msg.includes("connection") || msg.includes("ECONNREFUSED")) return "DB_CONNECTION";
+  if (msg.includes("timeout")) return "DB_TIMEOUT";
+  if (msg.includes("violates") || msg.includes("constraint")) return "CONSTRAINT_VIOLATION";
+  if (msg.includes("permission denied")) return "DB_PERMISSION";
+  return "DB_ERROR";
+}
+
 export const supportTicketRoutes: FastifyPluginAsync = async (app) => {
   const db = app.db;
 
@@ -63,7 +74,7 @@ export const supportTicketRoutes: FastifyPluginAsync = async (app) => {
         return reply.code(201).send(result.ticket);
       } catch (err) {
         request.log.error({ err, accountId }, "Failed to create support ticket");
-        return reply.code(503).send({ error: "Failed to create ticket. Please try again." });
+        return reply.code(503).send({ error: "Failed to create ticket. Please try again.", code: dbErrorCode(err) });
       }
     }
   );
@@ -125,7 +136,7 @@ export const supportTicketRoutes: FastifyPluginAsync = async (app) => {
         return { items, nextCursor };
       } catch (err) {
         request.log.error({ err, accountId }, "Failed to list support tickets");
-        return reply.code(503).send({ error: "Failed to load support tickets. Please try again." });
+        return reply.code(503).send({ error: "Failed to load support tickets. Please try again.", code: dbErrorCode(err) });
       }
     }
   );
@@ -176,7 +187,7 @@ export const supportTicketRoutes: FastifyPluginAsync = async (app) => {
         return { ticket, messages };
       } catch (err) {
         request.log.error({ err, ticketId, accountId }, "Failed to get support ticket detail");
-        return reply.code(503).send({ error: "Failed to load ticket. Please try again." });
+        return reply.code(503).send({ error: "Failed to load ticket. Please try again.", code: dbErrorCode(err) });
       }
     }
   );
@@ -238,7 +249,7 @@ export const supportTicketRoutes: FastifyPluginAsync = async (app) => {
         return reply.code(201).send(message);
       } catch (err) {
         request.log.error({ err, ticketId }, "Failed to reply to support ticket");
-        return reply.code(503).send({ error: "Failed to send reply. Please try again." });
+        return reply.code(503).send({ error: "Failed to send reply. Please try again.", code: dbErrorCode(err) });
       }
     }
   );
@@ -282,7 +293,7 @@ export const supportTicketRoutes: FastifyPluginAsync = async (app) => {
         return { message: "Ticket closed" };
       } catch (err) {
         request.log.error({ err, ticketId }, "Failed to close support ticket");
-        return reply.code(503).send({ error: "Failed to close ticket. Please try again." });
+        return reply.code(503).send({ error: "Failed to close ticket. Please try again.", code: dbErrorCode(err) });
       }
     }
   );
