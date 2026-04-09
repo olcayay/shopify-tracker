@@ -113,7 +113,11 @@ export class ZohoModule implements PlatformModule {
     const url = zohoUrls.search(keyword);
     log.info("fetching search page", { keyword, url });
     return withFallback(
-      () => this.browserClient!.fetchPage(url, { waitUntil: "domcontentloaded", extraWaitMs: 3000 }),
+      () => this.browserClient!.fetchPage(url, {
+        waitUntil: "domcontentloaded",
+        extraWaitMs: 3000,
+        waitForSelector: ".default-card-wrapper, .featured-extnBanner, .noResult",
+      }),
       () => this.httpClient.fetchPage(url),
       `zoho/fetchSearchPage/${keyword}`,
       this.tracker,

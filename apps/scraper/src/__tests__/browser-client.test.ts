@@ -116,6 +116,15 @@ describe("BrowserClient", () => {
       expect(mockPage.goto).toHaveBeenCalledTimes(1);
     });
 
+    it("throws timeout error when page.content() hangs", async () => {
+      // Simulate page.content() that never resolves (SPA with long-running JS)
+      mockPage.content.mockImplementation(() => new Promise(() => {}));
+
+      await expect(client.fetchPage("https://example.com")).rejects.toThrow(
+        "page.content() timed out"
+      );
+    }, 10_000);
+
     it("throws if retry also crashes", async () => {
       mockPage.goto
         .mockRejectedValueOnce(new Error("browser has been closed"))

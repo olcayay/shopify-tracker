@@ -60,7 +60,16 @@ export class BrowserClient {
       }
       await page.waitForTimeout(extraWait);
       log.info("browser:page_timing", { url: url.slice(0, 120), gotoMs, selectorMs, extraWait, totalMs: Date.now() - t0 });
-      return await page.content();
+      // Timeout on page.content() to prevent indefinite hangs from SPAs with
+      // long-running JS (PLA-962: Zoho search page caused 34s hang)
+      const contentTimeoutMs = IS_SMOKE_TEST ? 5_000 : 15_000;
+      const html = await Promise.race([
+        page.content(),
+        new Promise<never>((_, reject) =>
+          setTimeout(() => reject(new Error(`page.content() timed out after ${contentTimeoutMs}ms`)), contentTimeoutMs)
+        ),
+      ]);
+      return html;
     } finally {
       await context.close().catch(() => {});
       this.contexts = this.contexts.filter((c) => c !== context);

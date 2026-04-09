@@ -1,3 +1,17 @@
+Fix Zoho Keyword Scraper Timeout (2026-04-10)
+================================================================
+
+PLA-962: Fix Zoho keyword scraper timeout — page.content() hangs after search page load
+- Root cause: page.content() in browser-client.ts had no timeout — Zoho SPA's long-running
+  JS prevented Playwright from serializing DOM, causing 34s hang until SIGTERM
+- Added Promise.race timeout on page.content() in browser-client.ts:
+  - 15s for normal mode, 5s for smoke test mode
+  - Benefits ALL platforms using BrowserClient, not just Zoho
+- Added waitForSelector to Zoho fetchSearchPage():
+  - Waits for ".default-card-wrapper, .featured-extnBanner, .noResult" before extracting
+  - Ensures SPA has rendered search results before page.content() is called
+- Tests: 1 new browser-client test (page.content() timeout triggers error)
+
 Handle Delisted Zoom Apps Gracefully (2026-04-09)
 ================================================================
 

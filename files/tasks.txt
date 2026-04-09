@@ -1,3 +1,6 @@
+Zoho Keyword Scraper Timeout (2026-04-10)
+  PLA-962: Fix page.content() hang — timeout + waitForSelector ✅
+
 Delisted Zoom Apps (2026-04-09)
   PLA-958: Handle delisted Zoom apps — AppNotFoundError + graceful handling ✅
 
