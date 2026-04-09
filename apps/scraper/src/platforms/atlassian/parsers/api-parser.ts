@@ -1,4 +1,4 @@
-import { createLogger } from "@appranks/shared";
+import { createLogger, normalizePricingModel } from "@appranks/shared";
 import type {
   NormalizedAppDetails,
   NormalizedSearchPage,
@@ -213,6 +213,7 @@ export function parseAddonDetails(
     averageRating,
     ratingCount,
     pricingHint,
+    pricingModel: normalizePricingModel(pricingHint),
     iconUrl,
     developer: vendorName
       ? { name: vendorName, url: vendorUrl, website: vendorInfo?.homePage || undefined }

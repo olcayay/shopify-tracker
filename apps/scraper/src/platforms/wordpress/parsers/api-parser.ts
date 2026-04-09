@@ -84,6 +84,7 @@ export function parsePluginInfo(json: Record<string, any>): NormalizedAppDetails
     averageRating: rating,
     ratingCount,
     pricingHint: null, // All wordpress.org plugins are free
+    pricingModel: "Free",
     iconUrl,
     developer: authorName ? { name: authorName, url: authorUrl } : null,
     badges,

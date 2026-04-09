@@ -1,5 +1,5 @@
 import * as cheerio from "cheerio";
-import { createLogger, safeParseFloat } from "@appranks/shared";
+import { createLogger, safeParseFloat, normalizePricingModel } from "@appranks/shared";
 import type { NormalizedAppDetails } from "../../platform-module.js";
 
 const log = createLogger("zendesk:app-parser");
@@ -68,6 +68,7 @@ function buildFromJsonLd(data: any, $: cheerio.CheerioAPI, slug: string): Normal
     averageRating: rating?.ratingValue ? Number(rating.ratingValue) : null,
     ratingCount: rating?.ratingCount ? Number(rating.ratingCount) : null,
     pricingHint: extractPricing($),
+    pricingModel: normalizePricingModel(extractPricing($)),
     iconUrl: data.image || extractIconUrl($),
     developer: data.author ? {
       name: typeof data.author === "string" ? data.author : data.author.name || "",
@@ -98,6 +99,7 @@ function buildFromNextData(data: any, $: cheerio.CheerioAPI, slug: string): Norm
     averageRating: app?.rating?.average ? Number(app.rating.average) : null,
     ratingCount: app?.rating?.count ? Number(app.rating.count) : null,
     pricingHint: app?.pricing || extractPricing($),
+    pricingModel: normalizePricingModel(app?.pricing || extractPricing($)),
     iconUrl: app?.icon || app?.iconUrl || extractIconUrl($),
     developer: app?.author ? {
       name: app.author.name || app.author,
@@ -151,6 +153,7 @@ function parseFromDom($: cheerio.CheerioAPI, slug: string): NormalizedAppDetails
     averageRating: avgRating && !isNaN(avgRating) ? avgRating : null,
     ratingCount,
     pricingHint,
+    pricingModel: normalizePricingModel(pricingHint),
     iconUrl,
     developer,
     badges: [],

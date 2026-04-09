@@ -37,6 +37,7 @@ export const apps = pgTable(
     averageRating: decimal("average_rating", { precision: 3, scale: 2 }),
     ratingCount: integer("rating_count"),
     pricingHint: text("pricing_hint"),
+    pricingModel: varchar("pricing_model", { length: 30 }),
     createdAt: timestamp("created_at").notNull().defaultNow(),
     updatedAt: timestamp("updated_at").notNull().defaultNow(),
     currentVersion: varchar("current_version", { length: 50 }),

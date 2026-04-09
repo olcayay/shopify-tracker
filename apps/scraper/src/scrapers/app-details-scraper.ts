@@ -1,7 +1,7 @@
 import { eq, and, desc, sql } from "drizzle-orm";
 import type { Database } from "@appranks/db";
 import { scrapeRuns, apps, appSnapshots, appFieldChanges, similarAppSightings, categories, appCategoryRankings, ensurePlatformDeveloper } from "@appranks/db";
-import { urls, createLogger, clampRating, clampCount, validatePlatformData, type PlatformId } from "@appranks/shared";
+import { urls, createLogger, clampRating, clampCount, validatePlatformData, normalizePricingModel, type PlatformId } from "@appranks/shared";
 import { AppNotFoundError } from "../utils/app-not-found-error.js";
 
 const log = createLogger("app-details-scraper");
@@ -685,6 +685,7 @@ export class AppDetailsScraper {
           launchedDate: details.launched_date,
           iconUrl: details.icon_url,
           pricingHint: details.pricing || undefined,
+          pricingModel: normalizePricingModel(details.pricing) || undefined,
           ...(validRating != null && { averageRating: String(validRating) }),
           ...(validRatingCount != null && { ratingCount: validRatingCount }),
           ...(metaVersion != null && { currentVersion: metaVersion }),

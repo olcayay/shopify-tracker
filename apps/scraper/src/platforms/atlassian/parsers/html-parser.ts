@@ -1,5 +1,5 @@
 import { load } from "cheerio";
-import { createLogger, safeParseFloat } from "@appranks/shared";
+import { createLogger, safeParseFloat, normalizePricingModel } from "@appranks/shared";
 import type {
   NormalizedAppDetails,
   NormalizedSearchPage,
@@ -102,6 +102,7 @@ function parseFromInitialState(state: Record<string, any>, slug: string): Normal
     averageRating: appData.rating?.stars ?? appData.averageStars ?? null,
     ratingCount: appData.rating?.count ?? appData.reviewCount ?? null,
     pricingHint: appData.pricing?.summary || null,
+    pricingModel: normalizePricingModel(appData.pricing?.summary || null),
     iconUrl: appData.logo?.url || appData.logoUrl || null,
     developer: appData.vendor
       ? { name: appData.vendor.name, url: appData.vendor.links?.base }
@@ -139,6 +140,7 @@ function parseFromDom(html: string, slug: string): NormalizedAppDetails {
     averageRating: safeParseFloat(ratingMatch?.[1]),
     ratingCount: ratingCountMatch ? parseInt(ratingCountMatch[1]) : null,
     pricingHint: pricing || null,
+    pricingModel: normalizePricingModel(pricing || null),
     iconUrl,
     developer: developer ? { name: developer } : null,
     badges,
@@ -200,6 +202,7 @@ function emptyResult(slug: string): NormalizedAppDetails {
     averageRating: null,
     ratingCount: null,
     pricingHint: null,
+    pricingModel: null,
     iconUrl: null,
     developer: null,
     badges: [],

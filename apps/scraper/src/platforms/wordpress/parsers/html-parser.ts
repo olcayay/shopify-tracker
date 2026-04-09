@@ -1,5 +1,5 @@
 import { load } from "cheerio";
-import { createLogger, safeParseFloat } from "@appranks/shared";
+import { createLogger, safeParseFloat, normalizePricingModel } from "@appranks/shared";
 import type {
   NormalizedAppDetails,
   NormalizedCategoryPage,
@@ -79,6 +79,7 @@ export function parsePluginHtml(html: string, slug: string): NormalizedAppDetail
     averageRating,
     ratingCount,
     pricingHint,
+    pricingModel: normalizePricingModel(pricingHint),
     iconUrl,
     developer: developerName ? { name: developerName, url: developerUrl } : null,
     badges: [],

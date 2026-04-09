@@ -911,6 +911,13 @@
       "when": 1775941900000,
       "tag": "0129_email_alerts_all_accounts",
       "breakpoints": true
+    },
+    {
+      "idx": 130,
+      "version": "7",
+      "when": 1776028300000,
+      "tag": "0130_add_pricing_model",
+      "breakpoints": true
     }
   ]
 }

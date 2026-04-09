@@ -252,6 +252,7 @@ export function normalizeCanvaApp(app: CanvaEmbeddedApp): NormalizedAppDetails {
     averageRating: null,  // Canva has no ratings
     ratingCount: null,     // Canva has no reviews
     pricingHint: null,     // Limited pricing info
+    pricingModel: null,
     iconUrl: app.iconUrl || null,
     developer: app.developer
       ? { name: app.developer }
@@ -279,6 +280,7 @@ function normalizeCanvaDetailApp(app: CanvaDetailApp, slug: string): NormalizedA
     averageRating: null,
     ratingCount: null,
     pricingHint: null,
+    pricingModel: null,
     iconUrl: app.iconUrl || null,
     developer: app.developer
       ? {
@@ -433,6 +435,7 @@ function fallback(slug: string): NormalizedAppDetails {
     averageRating: null,
     ratingCount: null,
     pricingHint: null,
+    pricingModel: null,
     iconUrl: null,
     developer: null,
     badges: [],

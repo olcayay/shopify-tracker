@@ -145,6 +145,9 @@ async function run() {
           created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
         )`,
         `CREATE INDEX IF NOT EXISTS idx_support_attachments_ticket ON support_ticket_attachments(ticket_id)`,
+        // PLA-963: pricing_model column (migration 0130)
+        `ALTER TABLE apps ADD COLUMN IF NOT EXISTS pricing_model VARCHAR(30)`,
+        `CREATE INDEX IF NOT EXISTS idx_apps_pricing_model ON apps(pricing_model)`,
       ];
       for (const stmt of safetyStatements) {
         try {

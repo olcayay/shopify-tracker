@@ -1,4 +1,4 @@
-import type { PlatformId, PlatformCapabilities } from "@appranks/shared";
+import type { PlatformId, PlatformCapabilities, PricingModel } from "@appranks/shared";
 
 // --- Normalized types returned by all platform parsers ---
 
@@ -8,6 +8,8 @@ export interface NormalizedAppDetails {
   averageRating: number | null;
   ratingCount: number | null;
   pricingHint: string | null;
+  /** Canonical pricing model — one of: Free, Freemium, Free trial, Free to install, Paid, or null */
+  pricingModel: PricingModel;
   iconUrl: string | null;
   developer: { name: string; url?: string; website?: string } | null;
   badges: string[];

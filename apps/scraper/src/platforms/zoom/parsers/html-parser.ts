@@ -53,6 +53,7 @@ export function parseAppHtml(html: string, slug: string): NormalizedAppDetails {
     averageRating: safeParseFloat(ratingMatch?.[1]),
     ratingCount: ratingCountMatch ? parseInt(ratingCountMatch[1]) : null,
     pricingHint: null,
+    pricingModel: null,
     iconUrl,
     developer: developerName ? { name: developerName } : null,
     badges: [],

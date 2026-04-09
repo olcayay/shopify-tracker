@@ -1,5 +1,5 @@
 import * as cheerio from "cheerio";
-import { createLogger, safeParseFloat } from "@appranks/shared";
+import { createLogger, safeParseFloat, normalizePricingModel } from "@appranks/shared";
 import type { NormalizedAppDetails, NormalizedReviewPage, NormalizedReview } from "../../platform-module.js";
 
 const log = createLogger("wix-app-parser");
@@ -112,6 +112,7 @@ function parseFromJson(data: any, slug: string): NormalizedAppDetails {
     averageRating: app.reviews?.averageRating ?? null,
     ratingCount: app.reviews?.totalCount ?? null,
     pricingHint,
+    pricingModel: normalizePricingModel(pricingHint),
     iconUrl: app.icon || null,
     developer: companyInfo
       ? {
@@ -171,6 +172,7 @@ function parseFromDom(html: string, slug: string): NormalizedAppDetails {
     averageRating,
     ratingCount,
     pricingHint: null,
+    pricingModel: null,
     iconUrl,
     developer: developerName ? { name: developerName } : null,
     badges: [],

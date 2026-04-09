@@ -1,4 +1,4 @@
-import { createLogger } from "@appranks/shared";
+import { createLogger, normalizePricingModel } from "@appranks/shared";
 import type { NormalizedAppDetails } from "../../platform-module.js";
 
 const log = createLogger("salesforce:search-app-parser");
@@ -26,6 +26,7 @@ export function parseAppFromSearchResult(card: Record<string, any>, slug: string
     averageRating: card.averageRating ?? null,
     ratingCount: card.reviewsAmount ?? null,
     pricingHint: card.pricing || null,
+    pricingModel: normalizePricingModel(card.pricing || null),
     iconUrl,
     developer: card.publisher ? { name: card.publisher } : null,
     badges: [],

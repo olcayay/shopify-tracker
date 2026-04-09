@@ -1,4 +1,4 @@
-import { createLogger } from "@appranks/shared";
+import { createLogger, normalizePricingModel } from "@appranks/shared";
 import type { NormalizedAppDetails } from "../../platform-module.js";
 
 const log = createLogger("hubspot:app-parser");
@@ -90,6 +90,7 @@ export function parseHubSpotAppDetails(json: string, slug: string): NormalizedAp
     averageRating: null, // Not available in CHIRP API
     ratingCount: null,
     pricingHint,
+    pricingModel: normalizePricingModel(pricingHint),
     iconUrl,
     developer: companyName ? { name: companyName, url: companyUrl || undefined } : null,
     badges: buildBadges(listing),
@@ -137,6 +138,7 @@ function minimalAppDetails(slug: string): NormalizedAppDetails {
     averageRating: null,
     ratingCount: null,
     pricingHint: null,
+    pricingModel: null,
     iconUrl: null,
     developer: null,
     badges: [],

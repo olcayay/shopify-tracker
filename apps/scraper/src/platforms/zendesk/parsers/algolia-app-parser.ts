@@ -1,4 +1,4 @@
-import { createLogger } from "@appranks/shared";
+import { createLogger, normalizePricingModel } from "@appranks/shared";
 import type { NormalizedAppDetails } from "../../platform-module.js";
 
 const log = createLogger("zendesk:algolia-app-parser");
@@ -35,6 +35,7 @@ export function parseAppFromAlgolia(hit: Record<string, any>, slug: string): Nor
     averageRating: rating.average ?? null,
     ratingCount: rating.total_count ?? null,
     pricingHint: hit.tile_display_price || hit.display_price || null,
+    pricingModel: normalizePricingModel(hit.tile_display_price || hit.display_price || null),
     iconUrl: hit.icon_url || null,
     developer: hit.author_name
       ? { name: hit.author_name, url: hit.author_url || undefined }

@@ -1,4 +1,4 @@
-import { createLogger } from "@appranks/shared";
+import { createLogger, normalizePricingModel } from "@appranks/shared";
 import type { NormalizedAppDetails } from "../../platform-module.js";
 
 const log = createLogger("salesforce-app-parser");
@@ -33,6 +33,7 @@ export function parseSalesforceAppPage(html: string, slug: string): NormalizedAp
     averageRating: listing.reviewsSummary?.averageRating ?? null,
     ratingCount: listing.reviewsSummary?.reviewCount ?? null,
     pricingHint: pricing?.price_model_type || null,
+    pricingModel: normalizePricingModel(pricing?.price_model_type || null),
     iconUrl: extractLogoUrl(listing),
     developer: publisher
       ? {
@@ -272,6 +273,7 @@ function fallback(html: string, slug: string): NormalizedAppDetails {
     averageRating: null,
     ratingCount: null,
     pricingHint: null,
+    pricingModel: null,
     iconUrl: null,
     developer: null,
     badges: [],

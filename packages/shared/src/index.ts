@@ -192,6 +192,10 @@ export type {
   SmokePlatform,
 } from "./constants/smoke-test.js";
 
+// Pricing normalization
+export { PRICING_MODELS, normalizePricingModel } from "./normalize-pricing.js";
+export type { PricingModel } from "./normalize-pricing.js";
+
 // Parse Utilities
 export { safeParseFloat, clampRating, clampCount, clampPosition } from "./parse-utils.js";
 

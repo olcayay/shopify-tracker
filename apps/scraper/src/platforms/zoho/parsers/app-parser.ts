@@ -1,5 +1,5 @@
 import * as cheerio from "cheerio";
-import { createLogger, safeParseFloat } from "@appranks/shared";
+import { createLogger, safeParseFloat, normalizePricingModel } from "@appranks/shared";
 import type { NormalizedAppDetails } from "../../platform-module.js";
 
 const log = createLogger("zoho:app-parser");
@@ -124,6 +124,7 @@ function parseFromDetailsObject(obj: any, slug: string): NormalizedAppDetails {
     averageRating: avgRating,
     ratingCount: ratingCount || null,
     pricingHint: ext.pricing || null,
+    pricingModel: normalizePricingModel(ext.pricing || null),
     iconUrl,
     developer: partner.companyName
       ? {
@@ -185,6 +186,7 @@ function parseFromDom($: cheerio.CheerioAPI, slug: string): NormalizedAppDetails
     averageRating: avgRating && !isNaN(avgRating) ? avgRating : null,
     ratingCount: ratingCount && !isNaN(ratingCount) ? ratingCount : null,
     pricingHint: null,
+    pricingModel: null,
     iconUrl,
     developer: developerName ? { name: developerName } : null,
     badges: [],

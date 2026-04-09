@@ -1,3 +1,20 @@
+Standardize Pricing Model Names Across All Platforms (2026-04-10)
+================================================================
+
+PLA-963: Standardize pricing model names across all platforms
+- Created normalizePricingModel() in packages/shared/src/normalize-pricing.ts
+  - Maps all known pricing strings to canonical values: Free, Freemium, Free trial,
+    Free to install, Paid, or null
+  - Handles case-insensitive matching, dynamic pricing patterns (From $X/mo), and edge cases
+- Added PRICING_MODELS constant and PricingModel type
+- Updated NormalizedAppDetails to include pricingModel field
+- Updated 17 platform parser files to set pricingModel via normalizePricingModel()
+- Added pricingModel column to apps table (varchar(30))
+- Created migration 0130 with backfill from existing pricingHint values
+- Updated app-details-scraper to store pricingModel on app upsert
+- Added safety-net entry for migration 0130
+- 25 new unit tests for normalizePricingModel covering all platforms' raw values
+
 Fix Canva Smoke Test Timeout (2026-04-10)
 ================================================================
 

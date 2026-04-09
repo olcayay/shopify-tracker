@@ -1,4 +1,5 @@
 import type { NormalizedAppDetails } from "../../platform-module.js";
+import { normalizePricingModel } from "@appranks/shared";
 import type { WooCommercePlatformData } from "@appranks/shared";
 
 /** Raw product shape from WooCommerce search API. */
@@ -94,6 +95,7 @@ export function parseWooCommerceAppDetails(json: string, slug: string): Normaliz
     averageRating: typeof product.rating === "number" ? product.rating : null,
     ratingCount: typeof product.reviews_count === "number" ? product.reviews_count : null,
     pricingHint,
+    pricingModel: normalizePricingModel(pricingHint),
     iconUrl,
     developer: product.vendor_name
       ? { name: product.vendor_name, url: product.vendor_url || undefined }

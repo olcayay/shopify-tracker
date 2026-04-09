@@ -1,4 +1,5 @@
 import type { PlatformCapabilities } from "@appranks/shared";
+import { normalizePricingModel } from "@appranks/shared";
 import type {
   PlatformModule,
   NormalizedAppDetails,
@@ -131,6 +132,7 @@ export class ShopifyModule implements PlatformModule {
       averageRating: parsed.average_rating,
       ratingCount: parsed.rating_count,
       pricingHint: parsed.pricing || null,
+      pricingModel: normalizePricingModel(parsed.pricing || null),
       iconUrl: parsed.icon_url,
       developer: parsed.developer
         ? { name: parsed.developer.name, url: parsed.developer.url, website: parsed.developer.website }

@@ -42,6 +42,7 @@ export function parseZoomApp(app: Record<string, any>): NormalizedAppDetails {
     averageRating,
     ratingCount,
     pricingHint: null, // Pricing requires auth
+    pricingModel: null,
     iconUrl,
     developer: companyName ? { name: companyName } : null,
     badges,

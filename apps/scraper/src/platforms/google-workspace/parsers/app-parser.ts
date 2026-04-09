@@ -1,5 +1,5 @@
 import * as cheerio from "cheerio";
-import { createLogger, safeParseFloat } from "@appranks/shared";
+import { createLogger, safeParseFloat, normalizePricingModel } from "@appranks/shared";
 import type { NormalizedAppDetails } from "../../platform-module.js";
 import {
   extractAfData,
@@ -64,6 +64,7 @@ function buildFromEntry(entry: GWorkspaceAppEntry, slug: string, html: string): 
     averageRating: entry.rating || null,
     ratingCount: entry.reviewCount || null,
     pricingHint: domExtras.pricingHint,
+    pricingModel: normalizePricingModel(domExtras.pricingHint),
     iconUrl: entry.iconUrl || null,
     developer: entry.developerName
       ? {
@@ -277,6 +278,7 @@ function parseFromDom(html: string, slug: string): NormalizedAppDetails {
     averageRating,
     ratingCount,
     pricingHint,
+    pricingModel: normalizePricingModel(pricingHint),
     iconUrl,
     developer: developerName
       ? { name: developerName, url: developerWebsite || undefined, website: developerWebsite || undefined }
