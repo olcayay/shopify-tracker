@@ -58,9 +58,9 @@ describe("renderTemplate", () => {
 // NOTIFICATION_TEMPLATE_VARIABLES
 // ---------------------------------------------------------------------------
 describe("NOTIFICATION_TEMPLATE_VARIABLES", () => {
-  it("covers all 23 notification types", () => {
+  it("covers all 26 notification types", () => {
     const types = Object.keys(NOTIFICATION_TEMPLATE_VARIABLES);
-    expect(types.length).toBe(23);
+    expect(types.length).toBe(26);
   });
 
   it("matches NOTIFICATION_TYPES keys", () => {

@@ -222,6 +222,28 @@ const TEMPLATES: Record<NotificationType, (e: NotificationEventData) => Notifica
     icon: null,
     priority: "urgent",
   }),
+  // Support
+  support_ticket_reply: (e) => ({
+    title: truncate(`Reply on ticket #${e.ticketNumber}`, 65),
+    body: truncate(`${e.adminName} replied to "${e.ticketSubject}"`, 150),
+    url: `/support/${e.ticketId || ""}`,
+    icon: null,
+    priority: "normal",
+  }),
+  support_ticket_resolved: (e) => ({
+    title: truncate(`Ticket #${e.ticketNumber} resolved`, 65),
+    body: truncate(`"${e.ticketSubject}" has been marked as resolved.`, 150),
+    url: `/support/${e.ticketId || ""}`,
+    icon: null,
+    priority: "low",
+  }),
+  support_ticket_closed: (e) => ({
+    title: truncate(`Ticket #${e.ticketNumber} closed`, 65),
+    body: truncate(`"${e.ticketSubject}" has been closed.`, 150),
+    url: `/support/${e.ticketId || ""}`,
+    icon: null,
+    priority: "low",
+  }),
 };
 
 export interface DbNotificationTemplate {

@@ -6,6 +6,7 @@ export const NOTIFICATION_CATEGORIES = {
   featured: "featured",
   system: "system",
   account: "account",
+  support: "support",
 } as const;
 
 export type NotificationCategory = typeof NOTIFICATION_CATEGORIES[keyof typeof NOTIFICATION_CATEGORIES];
@@ -41,6 +42,10 @@ export const NOTIFICATION_TYPES = {
   account_member_joined: { category: "account", label: "New Team Member" },
   account_limit_warning: { category: "account", label: "Approaching Limit" },
   account_limit_reached: { category: "account", label: "Limit Reached" },
+  // Support
+  support_ticket_reply: { category: "support", label: "Support Reply" },
+  support_ticket_resolved: { category: "support", label: "Ticket Resolved" },
+  support_ticket_closed: { category: "support", label: "Ticket Closed" },
 } as const;
 
 export type NotificationType = keyof typeof NOTIFICATION_TYPES;

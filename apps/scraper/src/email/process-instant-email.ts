@@ -13,6 +13,7 @@ import {
   invitationTemplate,
   loginAlertTemplate,
   twoFactorCodeTemplate,
+  supportTicketReplyTemplate,
 } from "./templates/transactional/index.js";
 import { emailLayout, header, ctaButton } from "./components/index.js";
 
@@ -60,6 +61,14 @@ export const templateRenderers: Record<InstantEmailJobType, (payload: Record<str
     name: p.name as string,
     code: p.code as string,
     expiryMinutes: p.expiryMinutes as number | undefined,
+  }),
+  email_support_ticket_reply: (p) => supportTicketReplyTemplate({
+    name: p.name as string,
+    ticketNumber: p.ticketNumber as number,
+    ticketSubject: p.ticketSubject as string,
+    adminName: p.adminName as string,
+    replyPreview: p.replyPreview as string,
+    ticketUrl: p.ticketUrl as string,
   }),
 };
 

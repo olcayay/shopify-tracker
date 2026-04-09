@@ -134,3 +134,27 @@ export async function send2FAEmail(
 ): Promise<string> {
   return enqueue("email_2fa_code", email, { name, code }, { name, ...opts, priority: 1 });
 }
+
+export async function sendSupportTicketReplyEmail(
+  email: string,
+  data: {
+    name: string;
+    ticketNumber: number;
+    ticketSubject: string;
+    adminName: string;
+    replyPreview: string;
+    ticketId: string;
+  },
+  opts?: { userId?: string; accountId?: string }
+): Promise<string> {
+  const baseUrl = process.env.DASHBOARD_URL || "http://localhost:3000";
+  const ticketUrl = `${baseUrl}/support/${data.ticketId}`;
+  return enqueue("email_support_ticket_reply", email, {
+    name: data.name,
+    ticketNumber: data.ticketNumber,
+    ticketSubject: data.ticketSubject,
+    adminName: data.adminName,
+    replyPreview: data.replyPreview,
+    ticketUrl,
+  }, { name: data.name, ...opts });
+}

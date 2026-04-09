@@ -10,7 +10,8 @@ export type InstantEmailJobType =
   | "email_welcome"
   | "email_invitation"
   | "email_login_alert"
-  | "email_2fa_code";
+  | "email_2fa_code"
+  | "email_support_ticket_reply";
 
 export interface InstantEmailJobData {
   type: InstantEmailJobType;

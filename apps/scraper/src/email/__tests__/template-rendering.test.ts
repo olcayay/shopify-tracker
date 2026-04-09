@@ -316,6 +316,7 @@ describe("templateRenderers registry", () => {
     "email_invitation",
     "email_login_alert",
     "email_2fa_code",
+    "email_support_ticket_reply",
   ];
 
   for (const type of expectedTypes) {

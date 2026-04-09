@@ -109,6 +109,19 @@ export const NOTIFICATION_TEMPLATE_VARIABLES: Record<NotificationType, TemplateV
   account_member_joined: ACCOUNT_VARS,
   account_limit_warning: ACCOUNT_VARS,
   account_limit_reached: ACCOUNT_VARS,
+  support_ticket_reply: [
+    { name: "ticketNumber", description: "Ticket number", example: "1042" },
+    { name: "ticketSubject", description: "Ticket subject", example: "Cannot log in" },
+    { name: "adminName", description: "Admin who replied", example: "Support Team" },
+  ],
+  support_ticket_resolved: [
+    { name: "ticketNumber", description: "Ticket number", example: "1042" },
+    { name: "ticketSubject", description: "Ticket subject", example: "Cannot log in" },
+  ],
+  support_ticket_closed: [
+    { name: "ticketNumber", description: "Ticket number", example: "1042" },
+    { name: "ticketSubject", description: "Ticket subject", example: "Cannot log in" },
+  ],
 };
 
 // ---------------------------------------------------------------------------

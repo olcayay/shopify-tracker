@@ -12,3 +12,6 @@ export type { LoginAlertData } from "./login-alert.js";
 
 export { twoFactorCodeTemplate } from "./two-factor-code.js";
 export type { TwoFactorCodeData } from "./two-factor-code.js";
+
+export { supportTicketReplyTemplate } from "./support-ticket-reply.js";
+export type { SupportTicketReplyData } from "./support-ticket-reply.js";
