@@ -291,7 +291,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       return res;
     },
-    []
+    [silentRefresh, router]
   );
 
   const fetchWithAuth = useCallback(
