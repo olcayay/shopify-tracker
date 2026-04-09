@@ -142,4 +142,44 @@ describe("Schema critical columns", () => {
     const { accountActivityLog } = await import("../schema/activity-log.js");
     expect(accountActivityLog).toBeDefined();
   });
+
+  it("support tickets tables exist in schema", async () => {
+    const { supportTickets, supportTicketMessages, supportTicketAttachments } =
+      await import("../schema/support-tickets.js");
+    expect(supportTickets).toBeDefined();
+    expect(supportTicketMessages).toBeDefined();
+    expect(supportTicketAttachments).toBeDefined();
+  });
+});
+
+describe("Safety-net coverage", () => {
+  it("migrate.ts safety-net covers all CREATE TABLE from recent migrations (>= 0120)", () => {
+    const migrateContent = readFileSync(
+      resolve(__dirname, "../migrate.ts"),
+      "utf-8"
+    );
+    const sqlFiles = readdirSync(migrationsDir).filter((f) => f.endsWith(".sql"));
+
+    for (const file of sqlFiles) {
+      const migNum = parseInt(file.split("_")[0], 10);
+      if (migNum < 120) continue; // Only enforce for very recent migrations
+
+      const content = readFileSync(resolve(migrationsDir, file), "utf-8");
+      const createTableMatches = content.match(
+        /CREATE TABLE IF NOT EXISTS\s+(\w+)/gi
+      );
+      if (!createTableMatches) continue;
+
+      for (const match of createTableMatches) {
+        const tableName = match
+          .replace(/CREATE TABLE IF NOT EXISTS\s+/i, "")
+          .trim();
+        expect(
+          migrateContent.includes(tableName),
+          `Table "${tableName}" from ${file} is not covered by the safety-net in migrate.ts. ` +
+            `Add a CREATE TABLE IF NOT EXISTS statement to the safetyStatements array to prevent the Drizzle hash-match bug (PLA-647, PLA-957).`
+        ).toBe(true);
+      }
+    }
+  });
 });

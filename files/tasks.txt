@@ -1,3 +1,6 @@
+Migration Safety Net Fix (2026-04-09)
+  PLA-957: Fix missing support_tickets table — expand safety-net in migrate.ts ✅
+
 System Admin Cleanup (2026-04-09)
   PLA-946: Remove redundant Platform Visibility section from system-admin page ✅
 

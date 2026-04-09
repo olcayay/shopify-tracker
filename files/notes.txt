@@ -1,3 +1,18 @@
+Fix Missing Support Tickets Table — Migration Safety Net (2026-04-09)
+================================================================
+
+PLA-957: Fix missing support_tickets table in production — migration 0128 not applied
+- Root cause: Drizzle hash-match bug marks migrations as applied without executing SQL (same as PLA-647)
+- Expanded safety-net in packages/db/src/migrate.ts with CREATE TABLE IF NOT EXISTS for:
+  - support_tickets (+ 5 indexes)
+  - support_ticket_messages (+ 2 indexes)
+  - support_ticket_attachments (+ 1 index)
+- Added schema test: support tickets tables exist in Drizzle schema
+- Added safety-net coverage test: verifies all CREATE TABLE from migrations >= 0120 are covered
+  in the safety-net array (prevents this class of bug for future migrations)
+- Production still needs manual SQL execution via SSH to create the tables
+- All 102 db tests pass, all 5 packages pass (0 failures)
+
 System Admin Platform Visibility Removal (2026-04-09)
 ================================================================
 
