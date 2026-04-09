@@ -1,3 +1,17 @@
+Handle Delisted Zoom Apps Gracefully (2026-04-09)
+================================================================
+
+PLA-958: Handle delisted Zoom apps gracefully in app_details scraper
+- Created AppNotFoundError class (apps/scraper/src/utils/app-not-found-error.ts)
+  - Typed error with slug + platform fields, distinguishable via instanceof
+- Updated Zoom module to throw AppNotFoundError instead of generic Error
+  - withFallback re-throws primary error when both paths fail → instanceof preserved
+- Updated AppDetailsScraper to catch AppNotFoundError in both scrapeTracked() and scrapeAll()
+  - Logs warning instead of error
+  - Counts as "processed" not "failed" — no itemsFailed increment
+  - No scrapeItemError recorded (expected behavior, not a bug)
+- Tests: 3 new tests (AppNotFoundError class) + updated Zoom test to verify instanceof
+
 Fix Hover Popover Positioning on /apps Page (2026-04-09)
 ================================================================
 

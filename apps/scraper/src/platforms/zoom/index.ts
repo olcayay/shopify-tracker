@@ -20,6 +20,7 @@ import { parseZoomSearchPage } from "./parsers/search-parser.js";
 import { parseZoomFeaturedSections } from "./parsers/featured-parser.js";
 import { parseAppHtml, parseCategoryHtml, parseSearchHtml } from "./parsers/html-parser.js";
 import { createLogger } from "@appranks/shared";
+import { AppNotFoundError } from "../../utils/app-not-found-error.js";
 
 const log = createLogger("zoom");
 
@@ -112,7 +113,7 @@ export class ZoomModule implements PlatformModule {
       if (apps.length < 100) break;
     }
 
-    throw new Error(`Zoom app not found after paginating filter API: ${slug}`);
+    throw new AppNotFoundError(slug, "zoom", "exhausted filter API pagination");
   }
 
   private async fetchAppPageViaBrowser(slug: string): Promise<string> {

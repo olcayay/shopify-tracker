@@ -2,6 +2,7 @@ import { eq, and, desc, sql } from "drizzle-orm";
 import type { Database } from "@appranks/db";
 import { scrapeRuns, apps, appSnapshots, appFieldChanges, similarAppSightings, categories, appCategoryRankings, ensurePlatformDeveloper } from "@appranks/db";
 import { urls, createLogger, clampRating, clampCount, validatePlatformData, type PlatformId } from "@appranks/shared";
+import { AppNotFoundError } from "../utils/app-not-found-error.js";
 
 const log = createLogger("app-details-scraper");
 
@@ -154,15 +155,25 @@ export class AppDetailsScraper {
           await this.scrapeApp(app.slug, run.id, triggeredBy, undefined, force);
           itemsScraped++;
         } catch (error) {
-          log.error("failed to scrape app", { slug: app.slug, error: String(error) });
-          itemsFailed++;
-          await recordItemError(this.db, {
-            scrapeRunId: run.id,
-            itemIdentifier: app.slug,
-            itemType: "app",
-            url: this.platformModule ? undefined : urls.app(app.slug),
-            error,
-          });
+          if (error instanceof AppNotFoundError) {
+            // App was delisted/removed from the marketplace — not a scrape failure
+            log.warn("app not found on marketplace (likely delisted)", {
+              slug: app.slug,
+              platform: this.platform,
+              detail: error.message,
+            });
+            itemsScraped++; // count as "processed" not "failed"
+          } else {
+            log.error("failed to scrape app", { slug: app.slug, error: String(error) });
+            itemsFailed++;
+            await recordItemError(this.db, {
+              scrapeRunId: run.id,
+              itemIdentifier: app.slug,
+              itemType: "app",
+              url: this.platformModule ? undefined : urls.app(app.slug),
+              error,
+            });
+          }
         } finally {
           currentlyProcessing.delete(app.slug);
         }
@@ -246,15 +257,24 @@ export class AppDetailsScraper {
             log.info("progress", { scraped: itemsScraped, failed: itemsFailed, total: allApps.length });
           }
         } catch (error) {
-          log.error("failed to scrape app", { slug: app.slug, error: String(error) });
-          itemsFailed++;
-          await recordItemError(this.db, {
-            scrapeRunId: run.id,
-            itemIdentifier: app.slug,
-            itemType: "app",
-            url: this.platformModule ? undefined : urls.app(app.slug),
-            error,
-          });
+          if (error instanceof AppNotFoundError) {
+            log.warn("app not found on marketplace (likely delisted)", {
+              slug: app.slug,
+              platform: this.platform,
+              detail: error.message,
+            });
+            itemsScraped++;
+          } else {
+            log.error("failed to scrape app", { slug: app.slug, error: String(error) });
+            itemsFailed++;
+            await recordItemError(this.db, {
+              scrapeRunId: run.id,
+              itemIdentifier: app.slug,
+              itemType: "app",
+              url: this.platformModule ? undefined : urls.app(app.slug),
+              error,
+            });
+          }
         }
       }, 3);
 

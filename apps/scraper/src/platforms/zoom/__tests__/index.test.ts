@@ -125,16 +125,24 @@ describe("ZoomModule", () => {
       expect(httpClient.fetchPage).toHaveBeenCalledTimes(2);
     });
 
-    it("throws when app not found after all pages", async () => {
+    it("throws AppNotFoundError when app not found after all pages", async () => {
+      const { AppNotFoundError } = await import("../../../utils/app-not-found-error.js");
       const httpClient = new HttpClient();
       // Return a page with fewer than 100 apps → signals last page
-      vi.spyOn(httpClient, "fetchPage").mockResolvedValueOnce(
+      const spy = vi.spyOn(httpClient, "fetchPage").mockResolvedValue(
         makePage([{ id: "other", name: "Other App" }]),
       );
       const mod2 = new ZoomModule(httpClient);
-      await expect(mod2.fetchAppPage("nonexistent")).rejects.toThrow(
-        "Zoom app not found after paginating filter API: nonexistent",
-      );
+      try {
+        await mod2.fetchAppPage("nonexistent");
+        expect.unreachable("should have thrown");
+      } catch (err) {
+        expect(err).toBeInstanceOf(AppNotFoundError);
+        expect((err as AppNotFoundError).slug).toBe("nonexistent");
+        expect((err as AppNotFoundError).platform).toBe("zoom");
+        expect((err as Error).message).toContain("App not found on zoom marketplace: nonexistent");
+      }
+      spy.mockRestore();
     });
   });
 
