@@ -1,3 +1,11 @@
+Support Page Tab-Specific Empty State (2026-04-10)
+================================================================
+
+PLA-965: Fix misleading empty state on support tickets page
+- "All" tab: "No tickets yet" + Create Ticket CTA (unchanged)
+- Status tabs (open, closed, etc.): "No {status} tickets" + neutral message, no Create Ticket button
+- 3 unit tests: generic empty state, tab-specific empty state, all status tabs
+
 Developer Tracked Apps Platform Filter (2026-04-10)
 ================================================================
 

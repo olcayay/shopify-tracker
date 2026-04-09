@@ -1,3 +1,6 @@
+Support Page Tab-Specific Empty State (2026-04-10)
+  PLA-965: Fix misleading empty state on support tickets page ✅
+
 Developer Tracked Apps Platform Filter (2026-04-10)
   PLA-966: Filter tracked apps by user's enabled platforms in My Developers section ✅
 

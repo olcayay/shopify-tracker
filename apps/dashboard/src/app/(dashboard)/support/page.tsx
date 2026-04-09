@@ -116,14 +116,23 @@ export default function SupportPage() {
       {!loading && tickets.length === 0 ? (
         <div className="text-center py-12 text-muted-foreground">
           <LifeBuoy className="h-12 w-12 mx-auto mb-3 opacity-30" />
-          <p className="text-lg font-medium">No tickets yet</p>
-          <p className="text-sm mt-1">Create a new ticket to get help from our team.</p>
-          <Link href="/support/new">
-            <Button variant="outline" className="mt-4">
-              <Plus className="h-4 w-4 mr-1" />
-              Create Ticket
-            </Button>
-          </Link>
+          {activeTab === "all" ? (
+            <>
+              <p className="text-lg font-medium">No tickets yet</p>
+              <p className="text-sm mt-1">Create a new ticket to get help from our team.</p>
+              <Link href="/support/new">
+                <Button variant="outline" className="mt-4">
+                  <Plus className="h-4 w-4 mr-1" />
+                  Create Ticket
+                </Button>
+              </Link>
+            </>
+          ) : (
+            <>
+              <p className="text-lg font-medium">No {STATUS_TAB_LABELS[activeTab].toLowerCase()} tickets</p>
+              <p className="text-sm mt-1">There are no tickets with this status.</p>
+            </>
+          )}
         </div>
       ) : (
         <div className="rounded-md border">
