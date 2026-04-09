@@ -1,3 +1,15 @@
+Platform Overview Table Alignment (2026-04-09)
+================================================================
+
+PLA-952: Fix table column alignment on platform overview page (/[platform])
+- Applied consistent alignment to all 4 tables in [platform]/page.tsx
+- Tracked Keywords: Total Results → text-right, Tracked/Competitor → text-center
+- Competitor Apps: Rating/Reviews → text-right
+- Bookmarked Features: Apps → text-right, Tracked/Competitor → text-center
+- My Categories: Apps → text-right, Tracked/Competitor → text-center
+- All first columns get w-[40%] for consistent width
+- Added tabular-nums to numeric cells for consistent digit width
+
 Cross-Platform Apps Status Filter Fix (2026-04-09)
 ================================================================
 

@@ -1,3 +1,6 @@
+Platform Overview Table Alignment (2026-04-09)
+  PLA-952: Fix table column alignment on platform overview page ✅
+
 Cross-Platform Apps Filter Fix (2026-04-09)
   PLA-954: Fix "tracked" filter on /apps page — server-side filtering ✅
 
