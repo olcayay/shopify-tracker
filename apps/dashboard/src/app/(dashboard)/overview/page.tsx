@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useAuth } from "@/lib/auth-context";
 import { useFeatureFlag } from "@/contexts/feature-flags-context";
@@ -57,6 +58,7 @@ function detectPersona(
 
 export default function CrossPlatformOverviewPage() {
   const { fetchWithAuth, account, user } = useAuth();
+  const router = useRouter();
   const hasResearch = useFeatureFlag("market-research");
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState<Record<string, PlatformStats>>({});
@@ -125,6 +127,17 @@ export default function CrossPlatformOverviewPage() {
     }
   }
 
+  const persona = detectPersona(enabledPlatforms, stats, dataLoaded);
+
+  // Auto-redirect single-platform users to their platform dashboard
+  useEffect(() => {
+    if (loading || persona !== "single_platform" || isSystemAdmin) return;
+    const activePlatform = Object.entries(stats).find(([_, s]) => s.apps > 0)?.[0];
+    if (activePlatform) {
+      router.replace(`/${activePlatform}`);
+    }
+  }, [loading, persona, stats, isSystemAdmin, router]);
+
   if (loading) {
     return (
       <div className="space-y-6">
@@ -164,7 +177,11 @@ export default function CrossPlatformOverviewPage() {
     );
   }
 
-  const persona = detectPersona(enabledPlatforms, stats, dataLoaded);
+  // Show nothing while redirecting single-platform users
+  if (persona === "single_platform" && !isSystemAdmin) {
+    return null;
+  }
+
   const totalApps = Object.values(stats).reduce((sum, s) => sum + s.apps, 0);
   const totalKeywords = Object.values(stats).reduce((sum, s) => sum + s.keywords, 0);
   const totalCompetitors = Object.values(stats).reduce((sum, s) => sum + s.competitors, 0);

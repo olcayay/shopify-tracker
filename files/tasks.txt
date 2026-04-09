@@ -1,3 +1,6 @@
+Smart Landing Page Redirect (2026-04-09)
+  PLA-955: Auto-redirect single-platform users to their platform dashboard ✅
+
 Email Digest Management (2026-04-09)
   PLA-950: Add per-app email digest management to Settings & restore v2 toggle ✅
 

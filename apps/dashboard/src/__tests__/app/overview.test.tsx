@@ -267,6 +267,35 @@ describe("CrossPlatformOverviewPage", () => {
     expect(screen.getByRole("button", { name: /retry/i })).toBeInTheDocument();
   });
 
+  it("renders nothing for single-platform users (redirecting)", async () => {
+    mockFetchWithAuth.mockImplementation((url: string) => {
+      if (url.includes("/api/account/stats")) {
+        return Promise.resolve({
+          ok: true,
+          json: () => Promise.resolve({
+            shopify: { apps: 3, keywords: 2, competitors: 1 },
+            salesforce: { apps: 0, keywords: 0, competitors: 0 },
+          }),
+        });
+      }
+      return Promise.resolve({ ok: true, json: () => Promise.resolve([]) });
+    });
+    const { container } = render(<OverviewPage />);
+    await waitFor(() => {
+      // Single-platform user: component returns null (empty container)
+      expect(container.innerHTML).toBe("");
+    });
+  });
+
+  it("does not redirect multi-platform users", async () => {
+    setupDefaultMocks();
+    render(<OverviewPage />);
+    await waitFor(() => {
+      // Multi-platform: should render the overview content, not redirect
+      expect(screen.getByText("2 platforms")).toBeInTheDocument();
+    });
+  });
+
   it("does not show onboarding when API fails but user has enabled platforms", async () => {
     // All API calls fail — should NOT show welcome/onboarding hero
     mockFetchWithAuth.mockImplementation(() =>

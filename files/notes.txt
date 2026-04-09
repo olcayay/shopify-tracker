@@ -1,3 +1,14 @@
+Smart Landing Page Redirect (2026-04-09)
+================================================================
+
+PLA-955: Auto-redirect single-platform users to their platform dashboard
+- detectPersona() already identifies single_platform users — now acts on it
+- Added useEffect with router.replace(`/${activePlatform}`) when persona is single_platform
+- System admins always see /overview (isSystemAdmin guard)
+- Returns null (no flash) while redirecting single-platform users
+- useEffect placed before loading early-return to comply with React hooks rules
+- 2 new tests: single-platform renders nothing (redirecting), multi-platform renders normally
+
 Per-App Email Digest Management (2026-04-09)
 ================================================================
 
