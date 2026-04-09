@@ -17,6 +17,7 @@ interface PaginationQuery {
   sort?: string;
   order?: string;
   platforms?: string;
+  status?: string;
 }
 
 function parsePagination(query: PaginationQuery) {
@@ -28,7 +29,8 @@ function parsePagination(query: PaginationQuery) {
   const platformFilter = query.platforms
     ? query.platforms.split(",").map((p) => p.trim()).filter(Boolean)
     : [];
-  return { page, limit, offset, search, order, platformFilter };
+  const statusFilter = query.status === "tracked" || query.status === "competitor" ? query.status : "all";
+  return { page, limit, offset, search, order, platformFilter, statusFilter };
 }
 
 function paginationResponse(page: number, limit: number, total: number) {
@@ -45,7 +47,7 @@ export async function crossPlatformRoutes(app: FastifyInstance) {
       request: FastifyRequest<{ Querystring: PaginationQuery }>
     ) => {
       const { accountId } = request.user;
-      const { page, limit, offset, search, order, platformFilter } = parsePagination(request.query);
+      const { page, limit, offset, search, order, platformFilter, statusFilter } = parsePagination(request.query);
       const sort = request.query.sort || "name";
 
       // Get account's enabled platforms
@@ -76,8 +78,12 @@ export async function crossPlatformRoutes(app: FastifyInstance) {
         .where(eq(accountCompetitorApps.accountId, accountId));
       const competitorAppIds = competitorAppRows.map((r: { competitorAppId: number }) => r.competitorAppId);
 
-      // Merge all app IDs (unique)
-      const allAppIds: number[] = [...new Set([...trackedAppIds, ...competitorAppIds])];
+      // Merge app IDs based on status filter
+      const allAppIds: number[] = statusFilter === "tracked"
+        ? [...trackedAppIds]
+        : statusFilter === "competitor"
+        ? [...new Set(competitorAppIds)]
+        : [...new Set([...trackedAppIds, ...competitorAppIds])];
       if (allAppIds.length === 0) {
         return { items: [], pagination: paginationResponse(page, limit, 0) };
       }

@@ -74,12 +74,13 @@ export default function CrossPlatformAppsPage() {
       if (activePlatforms.length > 0) {
         params.set("platforms", activePlatforms.join(","));
       }
+      if (statusFilter !== "all") params.set("status", statusFilter);
       const res = await fetchWithAuth(`/api/cross-platform/apps?${params}`);
       if (res.ok) setData(await res.json());
     } finally {
       setLoading(false);
     }
-  }, [fetchWithAuth, page, search, sort, order, activePlatforms, enabledPlatforms.length, limit]);
+  }, [fetchWithAuth, page, search, sort, order, activePlatforms, enabledPlatforms.length, limit, statusFilter]);
 
   useEffect(() => { loadData(); }, [loadData]);
 
@@ -105,9 +106,7 @@ export default function CrossPlatformAppsPage() {
   }
 
   const items = data?.items ?? [];
-  const filtered = statusFilter === "all" ? items
-    : statusFilter === "tracked" ? items.filter((a) => a.isTracked)
-    : items.filter((a) => a.isCompetitor);
+  const filtered = items;
   const pagination = data?.pagination;
 
   const platformGroups = useMemo<PlatformGroup<AppItem>[]>(() => {

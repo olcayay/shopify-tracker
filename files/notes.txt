@@ -1,3 +1,15 @@
+Cross-Platform Apps Status Filter Fix (2026-04-09)
+================================================================
+
+PLA-954: Fix "tracked" filter on /apps page — client-side filtering on paginated data shows empty results
+- Root cause: Status filter (tracked/competitor) was applied client-side on 25-item paginated results.
+  If tracked apps fell outside page 1 alphabetically, the filter produced empty results.
+- API fix: Added `status` query param to parsePagination() in cross-platform.ts.
+  Filters allAppIds before COUNT/SELECT — tracked uses trackedAppIds, competitor uses competitorAppIds.
+- Dashboard fix: Sends `status` param to API, added statusFilter to useCallback deps, removed client-side .filter().
+- Test fix: Updated 2 dashboard tests from asserting client-side filtering to asserting API receives status param.
+- All 2074 tests passing.
+
 Win Celebration Email Fix (2026-04-09)
 ================================================================
 

@@ -304,27 +304,30 @@ describe("CrossPlatformAppsPage", () => {
     });
   });
 
-  it("filters to only tracked apps client-side when tracked status filter is clicked", async () => {
+  it("sends status=tracked to API when tracked filter is clicked", async () => {
     setupFetchMocks();
     render(<CrossPlatformAppsPage />);
     await waitFor(() => {
       expect(screen.getByText("My Shopify App")).toBeInTheDocument();
     });
     fireEvent.click(screen.getByRole("button", { name: /^tracked$/i }));
-    // Only tracked app should remain visible
-    expect(screen.getByText("My Shopify App")).toBeInTheDocument();
-    expect(screen.queryByText("Salesforce Widget")).not.toBeInTheDocument();
+    await waitFor(() => {
+      const calls = mockFetchWithAuth.mock.calls.map((c: any[]) => c[0]);
+      expect(calls.some((url: string) => url.includes("status=tracked"))).toBe(true);
+    });
   });
 
-  it("filters to only competitor apps client-side when competitor status filter is clicked", async () => {
+  it("sends status=competitor to API when competitor filter is clicked", async () => {
     setupFetchMocks();
     render(<CrossPlatformAppsPage />);
     await waitFor(() => {
       expect(screen.getByText("Salesforce Widget")).toBeInTheDocument();
     });
     fireEvent.click(screen.getByRole("button", { name: /^competitor$/i }));
-    expect(screen.queryByText("My Shopify App")).not.toBeInTheDocument();
-    expect(screen.getByText("Salesforce Widget")).toBeInTheDocument();
+    await waitFor(() => {
+      const calls = mockFetchWithAuth.mock.calls.map((c: any[]) => c[0]);
+      expect(calls.some((url: string) => url.includes("status=competitor"))).toBe(true);
+    });
   });
 
   it("renders app name as link to platform-specific app page", async () => {

@@ -76,6 +76,39 @@ describe("Cross-platform routes", () => {
       expect(body.items).toEqual([]);
       expect(body.pagination.total).toBe(0);
     });
+
+    it("accepts status filter parameter", async () => {
+      const res = await app.inject({
+        method: "GET",
+        url: "/api/cross-platform/apps?status=tracked",
+        headers: authHeaders(userToken()),
+      });
+
+      expect(res.statusCode).toBe(200);
+      const body = res.json();
+      expect(body).toHaveProperty("items");
+      expect(body).toHaveProperty("pagination");
+    });
+
+    it("accepts competitor status filter", async () => {
+      const res = await app.inject({
+        method: "GET",
+        url: "/api/cross-platform/apps?status=competitor",
+        headers: authHeaders(userToken()),
+      });
+
+      expect(res.statusCode).toBe(200);
+    });
+
+    it("ignores invalid status filter values", async () => {
+      const res = await app.inject({
+        method: "GET",
+        url: "/api/cross-platform/apps?status=invalid",
+        headers: authHeaders(userToken()),
+      });
+
+      expect(res.statusCode).toBe(200);
+    });
   });
 
   // -----------------------------------------------------------------------

@@ -1,3 +1,6 @@
+Cross-Platform Apps Filter Fix (2026-04-09)
+  PLA-954: Fix "tracked" filter on /apps page — server-side filtering ✅
+
 Support System (2026-04-09)
   PLA-907: Phase 0: Database schema & migration for support tickets ✅
   PLA-908: Phase 0: GCS file upload infrastructure
