@@ -7,11 +7,33 @@ import {
   appSnapshots,
   accountStarredDevelopers,
   accountPlatforms,
+  platformVisibility,
   sqlArray,
 } from "@appranks/db";
 import { requireSystemAdmin } from "../middleware/authorize.js";
 import { developerNameToSlug } from "@appranks/shared";
 import { PAGINATION_DEFAULT_LIMIT, PAGINATION_MAX_LIMIT_SMALL, PAGINATION_DEFAULT_DEVELOPER_APPS, PAGINATION_MAX_DEVELOPER_APPS, PAGINATION_MAX_LIMIT } from "../constants.js";
+
+/**
+ * Get platforms that are both enabled for the account AND globally visible.
+ * Respects overrideGlobalVisibility — if an account explicitly overrides,
+ * the platform is included even if globally disabled.
+ */
+async function getVisiblePlatforms(db: any, accountId: string): Promise<string[]> {
+  const rows = await db
+    .select({
+      platform: accountPlatforms.platform,
+      override: accountPlatforms.overrideGlobalVisibility,
+      isVisible: platformVisibility.isVisible,
+    })
+    .from(accountPlatforms)
+    .leftJoin(platformVisibility, eq(accountPlatforms.platform, platformVisibility.platform))
+    .where(eq(accountPlatforms.accountId, accountId));
+
+  return rows
+    .filter((r: any) => r.override === true || r.isVisible !== false)
+    .map((r: any) => r.platform);
+}
 
 export async function developerRoutes(app: FastifyInstance) {
   const db = app.db;
@@ -43,15 +65,11 @@ export async function developerRoutes(app: FastifyInstance) {
       // Get account ID (may be null for unauthenticated)
       const accountId = (request as any).user?.accountId || null;
 
-      // Resolve enabled platforms for the user's account (system admins bypass)
+      // Resolve enabled + globally visible platforms for the user's account (system admins bypass)
       const isAdmin = (request as any).user?.isSystemAdmin === true;
       let allowedPlatforms: string[] = [];
       if (!isAdmin && accountId) {
-        const enabledRows = await db
-          .select({ platform: accountPlatforms.platform })
-          .from(accountPlatforms)
-          .where(eq(accountPlatforms.accountId, accountId));
-        allowedPlatforms = enabledRows.map((r) => r.platform);
+        allowedPlatforms = await getVisiblePlatforms(db, accountId);
         if (allowedPlatforms.length === 0) {
           return { developers: [], pagination: { page, limit, total: 0, totalPages: 0 } };
         }
@@ -180,15 +198,11 @@ export async function developerRoutes(app: FastifyInstance) {
     const accountId = (request as any).user?.accountId || null;
     if (!accountId) return { developers: [] };
 
-    // Filter by enabled platforms (system admins bypass)
+    // Filter by enabled + globally visible platforms (system admins bypass)
     const isAdmin = (request as any).user?.isSystemAdmin === true;
     let platformFilterSql = sql``;
     if (!isAdmin) {
-      const enabledRows = await db
-        .select({ platform: accountPlatforms.platform })
-        .from(accountPlatforms)
-        .where(eq(accountPlatforms.accountId, accountId));
-      const enabledPlatforms = enabledRows.map((r) => r.platform);
+      const enabledPlatforms = await getVisiblePlatforms(db, accountId);
       if (enabledPlatforms.length === 0) return { developers: [] };
       platformFilterSql = sql`AND a.platform = ANY(${sqlArray(enabledPlatforms)})`;
     }
