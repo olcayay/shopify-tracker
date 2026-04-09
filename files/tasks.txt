@@ -1,3 +1,6 @@
+Email Digest Management (2026-04-09)
+  PLA-950: Add per-app email digest management to Settings & restore v2 toggle ✅
+
 Duplicate Search Removal (2026-04-09)
   PLA-951: Remove duplicate search fields on /apps page ✅
 

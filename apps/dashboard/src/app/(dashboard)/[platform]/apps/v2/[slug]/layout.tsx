@@ -7,6 +7,7 @@ import { AdminScraperTrigger } from "@/components/admin-scraper-trigger";
 import { buildExternalAppUrl, getPlatformName } from "@/lib/platform-urls";
 import { PLATFORMS, isPlatformId, developerNameToSlug, type PlatformId } from "@appranks/shared";
 import { ExternalLink, Star } from "lucide-react";
+import { EmailDigestToggle } from "../../[slug]/email-digest-toggle";
 import { ScoreBar } from "@/components/v2/score-bar";
 import { V2Nav } from "@/components/v2/v2-nav";
 
@@ -86,6 +87,7 @@ export default async function V2AppDetailLayout({
 
         {/* Action buttons */}
         <div className="flex items-center gap-2 flex-shrink-0">
+          <EmailDigestToggle appId={app.id} isTracked={app.isTrackedByAccount} />
           <a
             href={buildExternalAppUrl(platform as PlatformId, app.slug, app.externalId)}
             target="_blank"

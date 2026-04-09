@@ -34,6 +34,10 @@ vi.mock("@/components/admin-scraper-trigger", () => ({
   AdminScraperTrigger: () => null,
 }));
 
+vi.mock("@/app/(dashboard)/[platform]/apps/[slug]/email-digest-toggle", () => ({
+  EmailDigestToggle: () => null,
+}));
+
 vi.mock("@/components/v2/score-bar", () => ({
   ScoreBar: ({ label, score }: any) => (
     <div data-testid={`score-bar-${label.toLowerCase()}`}>{label}: {score ?? "—"}</div>

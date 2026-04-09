@@ -1,3 +1,17 @@
+Per-App Email Digest Management (2026-04-09)
+================================================================
+
+PLA-950: Add per-app email digest management to Settings page & restore toggle in v2 app detail
+- Part 1: Added EmailDigestToggle to v2 app detail layout (imported from v1's email-digest-toggle.tsx)
+- Part 2: Added "App Email Reports" section to /settings/email-preferences page
+  - Apps grouped by platform with color dot and label
+  - Per-app Switch toggle for dailyDigestEnabled (uses /api/email-preferences/apps/:appId)
+  - Select All / Deselect All per platform group (uses /api/email-preferences/apps/bulk)
+  - Empty state when no tracked apps
+- Created Switch UI component (apps/dashboard/src/components/ui/switch.tsx)
+- Added v2 layout test mock for EmailDigestToggle
+- 8 new tests for the email preferences section
+
 Duplicate Search Removal on /apps (2026-04-09)
 ================================================================
 
