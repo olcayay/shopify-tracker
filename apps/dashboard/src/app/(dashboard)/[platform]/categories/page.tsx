@@ -93,7 +93,7 @@ export default function CategoriesPage() {
   const [sortDir, setSortDir] = useState<SortDir>("asc");
 
   const isFlat = PLATFORMS[platform as PlatformId]?.hasFlatCategories ?? false;
-  const canEdit = user?.role === "owner" || user?.role === "editor";
+  const canEdit = user?.role === "owner" || user?.role === "admin" || user?.role === "editor";
 
   const format = isFlat ? "flat" : "tree";
 

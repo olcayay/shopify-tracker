@@ -52,7 +52,7 @@ export default function ResearchKeywordsPage() {
   const { fetchWithAuth, user } = useAuth();
   const id = params.id as string;
   const platform = params.platform as PlatformId;
-  const canEdit = user?.role === "owner" || user?.role === "editor";
+  const canEdit = user?.role === "owner" || user?.role === "admin" || user?.role === "editor";
 
   const [data, setData] = useState<ResearchData | null>(null);
   const [loading, setLoading] = useState(true);

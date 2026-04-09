@@ -57,7 +57,7 @@ export function useKeywordsSection(appSlug: string) {
     keyword: string;
   } | null>(null);
 
-  const canEdit = user?.role === "owner" || user?.role === "editor";
+  const canEdit = user?.role === "owner" || user?.role === "admin" || user?.role === "editor";
 
   function handleSort(key: string) {
     if (sortBySlug === key) {

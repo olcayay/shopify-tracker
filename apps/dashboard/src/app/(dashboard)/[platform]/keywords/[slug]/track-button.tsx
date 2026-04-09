@@ -34,7 +34,7 @@ export function TrackKeywordButton({
   const [errorMsg, setErrorMsg] = useState("");
   const [showError, setShowError] = useState(false);
 
-  const canEdit = user?.role === "owner" || user?.role === "editor";
+  const canEdit = user?.role === "owner" || user?.role === "admin" || user?.role === "editor";
 
   async function handleClick() {
     // Fast path: if trackedAppSlug prop and not yet tracked, add directly

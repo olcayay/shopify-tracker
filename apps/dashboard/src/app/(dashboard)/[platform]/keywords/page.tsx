@@ -76,7 +76,7 @@ export default function KeywordsPage() {
   const searchRef = useRef<HTMLDivElement>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout>>(undefined);
 
-  const canEdit = user?.role === "owner" || user?.role === "editor";
+  const canEdit = user?.role === "owner" || user?.role === "admin" || user?.role === "editor";
 
   const wordGroups = useMemo(() => {
     return extractWordGroups(keywords.map((kw) => kw.keyword));

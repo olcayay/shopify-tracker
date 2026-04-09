@@ -225,7 +225,7 @@ export const accountTrackingRoutes: FastifyPluginAsync = async (app) => {
   // POST /api/account/tracked-apps
   app.post(
     "/tracked-apps",
-    { preHandler: [requireRole("owner", "editor"), requireIdempotencyKey()] },
+    { preHandler: [requireRole("owner", "admin", "editor"), requireIdempotencyKey()] },
     async (request, reply) => {
       const { accountId } = request.user;
       const { slug } = addTrackedAppSchema.parse(request.body);
@@ -290,7 +290,7 @@ export const accountTrackingRoutes: FastifyPluginAsync = async (app) => {
   // DELETE /api/account/tracked-apps/:slug
   app.delete<{ Params: { slug: string } }>(
     "/tracked-apps/:slug",
-    { preHandler: [requireRole("owner", "editor")] },
+    { preHandler: [requireRole("owner", "admin", "editor")] },
     async (request, reply) => {
       const { accountId } = request.user;
       const slug = decodeURIComponent(request.params.slug);
@@ -414,7 +414,7 @@ export const accountTrackingRoutes: FastifyPluginAsync = async (app) => {
   // POST /api/account/tracked-keywords
   app.post(
     "/tracked-keywords",
-    { preHandler: [requireRole("owner", "editor")] },
+    { preHandler: [requireRole("owner", "admin", "editor")] },
     async (request, reply) => {
       const { accountId } = request.user;
       const { keyword, trackedAppSlug } = addTrackedKeywordSchema.parse(request.body);
@@ -526,7 +526,7 @@ export const accountTrackingRoutes: FastifyPluginAsync = async (app) => {
   // DELETE /api/account/tracked-keywords/:id
   app.delete<{ Params: { id: string } }>(
     "/tracked-keywords/:id",
-    { preHandler: [requireRole("owner", "editor")] },
+    { preHandler: [requireRole("owner", "admin", "editor")] },
     async (request, reply) => {
       const { accountId } = request.user;
       const keywordId = parseInt(request.params.id, 10);
@@ -950,7 +950,7 @@ export const accountTrackingRoutes: FastifyPluginAsync = async (app) => {
   // POST /api/account/competitors — add competitor (requires trackedAppSlug)
   app.post(
     "/competitors",
-    { preHandler: [requireRole("owner", "editor")] },
+    { preHandler: [requireRole("owner", "admin", "editor")] },
     async (request, reply) => {
       const { accountId } = request.user;
       const { slug, trackedAppSlug } = addCompetitorSchema.parse(request.body);
@@ -1056,7 +1056,7 @@ export const accountTrackingRoutes: FastifyPluginAsync = async (app) => {
   // DELETE /api/account/competitors/:slug
   app.delete<{ Params: { slug: string } }>(
     "/competitors/:slug",
-    { preHandler: [requireRole("owner", "editor")] },
+    { preHandler: [requireRole("owner", "admin", "editor")] },
     async (request, reply) => {
       const { accountId } = request.user;
       const slug = decodeURIComponent(request.params.slug);
@@ -1570,7 +1570,7 @@ export const accountTrackingRoutes: FastifyPluginAsync = async (app) => {
   // POST /api/account/tracked-apps/:slug/competitors
   app.post<{ Params: { slug: string } }>(
     "/tracked-apps/:slug/competitors",
-    { preHandler: [requireRole("owner", "editor")] },
+    { preHandler: [requireRole("owner", "admin", "editor")] },
     async (request, reply) => {
       const { accountId } = request.user;
       const trackedAppSlug = decodeURIComponent(request.params.slug);
@@ -1681,7 +1681,7 @@ export const accountTrackingRoutes: FastifyPluginAsync = async (app) => {
   // DELETE /api/account/tracked-apps/:slug/competitors/:competitorSlug
   app.delete<{ Params: { slug: string; competitorSlug: string } }>(
     "/tracked-apps/:slug/competitors/:competitorSlug",
-    { preHandler: [requireRole("owner", "editor")] },
+    { preHandler: [requireRole("owner", "admin", "editor")] },
     async (request, reply) => {
       const { accountId } = request.user;
       const trackedAppSlug = decodeURIComponent(request.params.slug);
@@ -1731,7 +1731,7 @@ export const accountTrackingRoutes: FastifyPluginAsync = async (app) => {
   // PATCH /api/account/tracked-apps/:slug/competitors/reorder
   app.patch<{ Params: { slug: string } }>(
     "/tracked-apps/:slug/competitors/reorder",
-    { preHandler: [requireRole("owner", "editor")] },
+    { preHandler: [requireRole("owner", "admin", "editor")] },
     async (request, reply) => {
       const { accountId } = request.user;
       const trackedAppSlug = decodeURIComponent(request.params.slug);
@@ -1953,7 +1953,7 @@ export const accountTrackingRoutes: FastifyPluginAsync = async (app) => {
   // POST /api/account/tracked-apps/:slug/keywords
   app.post<{ Params: { slug: string } }>(
     "/tracked-apps/:slug/keywords",
-    { preHandler: [requireRole("owner", "editor")] },
+    { preHandler: [requireRole("owner", "admin", "editor")] },
     async (request, reply) => {
       const { accountId } = request.user;
       const trackedAppSlug = decodeURIComponent(request.params.slug);
@@ -2059,7 +2059,7 @@ export const accountTrackingRoutes: FastifyPluginAsync = async (app) => {
   // DELETE /api/account/tracked-apps/:slug/keywords/:keywordId
   app.delete<{ Params: { slug: string; keywordId: string } }>(
     "/tracked-apps/:slug/keywords/:keywordId",
-    { preHandler: [requireRole("owner", "editor")] },
+    { preHandler: [requireRole("owner", "admin", "editor")] },
     async (request, reply) => {
       const { accountId } = request.user;
       const trackedAppSlug = decodeURIComponent(request.params.slug);

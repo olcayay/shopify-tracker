@@ -9,7 +9,7 @@ export interface JwtPayload {
   userId: string;
   email: string;
   accountId: string;
-  role: "owner" | "editor" | "viewer";
+  role: "owner" | "admin" | "editor" | "viewer";
   isSystemAdmin: boolean;
   realAdmin?: {
     userId: string;

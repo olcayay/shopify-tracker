@@ -1,3 +1,24 @@
+Add Admin Role with User Management Permissions (2026-04-10)
+================================================================
+
+PLA-956: Add admin role between owner and editor with user management capabilities
+- Database: Added 'admin' to account_role enum (migration 0131 + pre-migration in migrate.ts)
+- Authorization: Added role hierarchy helpers (hasRoleLevel, canManageRole) to authorize.ts
+  - Numeric levels: owner=100, admin=75, editor=50, viewer=25
+  - canManageRole: actor must be strictly higher than target
+- API routes: 6 member management endpoints now accept admin:
+  - POST /members/invite, GET/DELETE /invitations, POST /invitations/:id/resend
+  - DELETE /members/:userId, PATCH /members/:userId/role
+  - Guard rails: admin can't remove/change owner or other admins, can't promote to owner
+- Activity logging: Added member_role_changed activity log (was missing before)
+- Dashboard:
+  - 21 canEdit checks updated to include admin role
+  - Organization page: invite form, delete buttons, invitation management visible to admin
+  - Admin can invite as admin/editor/viewer (owner can also invite admins)
+  - Role badge: shield emoji for admin users
+- Schemas: addMemberSchema, inviteMemberSchema, updateMemberRoleSchema now accept 'admin'
+- Tests: 14 new authorize tests (admin role, canManageRole, hasRoleLevel)
+
 Standardize Pricing Model Names Across All Platforms (2026-04-10)
 ================================================================
 

@@ -257,7 +257,7 @@ export const supportTicketRoutes: FastifyPluginAsync = async (app) => {
   // POST /api/support-tickets/:ticketId/close — close ticket
   app.post<{ Params: { ticketId: string } }>(
     "/:ticketId/close",
-    { preHandler: [requireRole("owner", "editor")] },
+    { preHandler: [requireRole("owner", "admin", "editor")] },
     async (request, reply) => {
       const { accountId } = request.user;
       const { ticketId } = request.params;

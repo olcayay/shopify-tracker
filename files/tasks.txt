@@ -1,3 +1,6 @@
+Admin Role (2026-04-10)
+  PLA-956: Add admin role — DB enum + auth middleware + API + dashboard ✅
+
 Pricing Model Standardization (2026-04-10)
   PLA-963: Standardize pricing model names — normalizer + 17 parsers + DB column ✅
 

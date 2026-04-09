@@ -85,7 +85,7 @@ export function CompetitorsSection({ appSlug }: { appSlug: string }) {
     localStorage.setItem(`competitors-pin-self-${appSlug}`, JSON.stringify(next));
   }
 
-  const canEdit = user?.role === "owner" || user?.role === "editor";
+  const canEdit = user?.role === "owner" || user?.role === "admin" || user?.role === "editor";
 
   const visibleToggleableColumns = useMemo(() => {
     return TOGGLEABLE_COLUMNS.filter((col) => {

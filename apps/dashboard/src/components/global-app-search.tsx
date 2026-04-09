@@ -52,7 +52,7 @@ export function GlobalAppSearch({
   const fetchRef = useRef(fetchWithAuth);
   useEffect(() => { fetchRef.current = fetchWithAuth; }, [fetchWithAuth]);
 
-  const canEdit = user?.role === "owner" || user?.role === "editor";
+  const canEdit = user?.role === "owner" || user?.role === "admin" || user?.role === "editor";
 
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {

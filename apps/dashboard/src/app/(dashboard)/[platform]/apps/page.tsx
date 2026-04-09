@@ -45,7 +45,7 @@ export default function AppsPage() {
   const [sortDir, setSortDir] = useState<SortDir>("asc");
 
   const caps = isPlatformId(platform as string) ? PLATFORMS[platform as PlatformId] : PLATFORMS.shopify;
-  const canEdit = user?.role === "owner" || user?.role === "editor";
+  const canEdit = user?.role === "owner" || user?.role === "admin" || user?.role === "editor";
 
   // Fetch tracked apps via TanStack Query
   const { data: apps = [], isLoading: appsLoading } = useApiQuery<any[]>(

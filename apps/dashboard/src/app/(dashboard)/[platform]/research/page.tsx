@@ -82,7 +82,7 @@ export default function ResearchListPage() {
   const [nameValue, setNameValue] = useState("");
   const [limitReached, setLimitReached] = useState(false);
 
-  const canEdit = user?.role === "owner" || user?.role === "editor";
+  const canEdit = user?.role === "owner" || user?.role === "admin" || user?.role === "editor";
 
   useEffect(() => {
     loadProjects();

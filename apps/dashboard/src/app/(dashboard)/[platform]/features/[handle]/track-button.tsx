@@ -20,7 +20,7 @@ export function StarFeatureButton({
   const [loading, setLoading] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
 
-  const canEdit = user?.role === "owner" || user?.role === "editor";
+  const canEdit = user?.role === "owner" || user?.role === "admin" || user?.role === "editor";
   if (!canEdit) return null;
 
   async function doStar() {

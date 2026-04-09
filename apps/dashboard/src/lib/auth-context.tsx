@@ -21,7 +21,7 @@ export interface User {
   id: string;
   email: string;
   name: string;
-  role: "owner" | "editor" | "viewer";
+  role: "owner" | "admin" | "editor" | "viewer";
   isSystemAdmin: boolean;
   emailDigestEnabled: boolean;
   timezone: string;

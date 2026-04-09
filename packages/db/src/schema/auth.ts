@@ -12,6 +12,7 @@ import {
 
 export const accountRoleEnum = pgEnum("account_role", [
   "owner",
+  "admin",
   "editor",
   "viewer",
 ]);

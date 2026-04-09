@@ -93,7 +93,7 @@ export default function OrganizationPage() {
 
   // Invite member state
   const [inviteEmail, setInviteEmail] = useState("");
-  const [inviteRole, setInviteRole] = useState<"editor" | "viewer">("viewer");
+  const [inviteRole, setInviteRole] = useState<"admin" | "editor" | "viewer">("viewer");
   const [inviteLoading, setInviteLoading] = useState(false);
 
   // Confirmation modal state
@@ -106,6 +106,8 @@ export default function OrganizationPage() {
   }>({ open: false, title: "", description: "", confirmLabel: "", onConfirm: () => {} });
 
   const isOwner = user?.role === "owner";
+  const isAdmin = user?.role === "admin";
+  const canManageMembers = isOwner || isAdmin;
 
   useEffect(() => {
     if (account) {
@@ -121,7 +123,7 @@ export default function OrganizationPage() {
   async function loadData() {
     const [membersRes, invitationsRes] = await Promise.all([
       fetchWithAuth("/api/account/members"),
-      isOwner ? fetchWithAuth("/api/account/invitations") : Promise.resolve(null),
+      canManageMembers ? fetchWithAuth("/api/account/invitations") : Promise.resolve(null),
     ]);
     if (membersRes.ok) setMembers(await membersRes.json());
     if (invitationsRes?.ok) setInvitations(await invitationsRes.json());
@@ -321,13 +323,13 @@ export default function OrganizationPage() {
         <CardHeader>
           <CardTitle>Team Members</CardTitle>
           <CardDescription>
-            {isOwner
+            {canManageMembers
               ? `Manage who has access to this account \u00B7 ${totalUsed} of ${maxUsers} seats used`
               : "People with access to this account"}
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          {isOwner && (
+          {canManageMembers && (
             <form onSubmit={handleInvite} className="flex gap-2 items-center">
               <Input
                 type="email"
@@ -340,12 +342,13 @@ export default function OrganizationPage() {
               <select
                 value={inviteRole}
                 onChange={(e) =>
-                  setInviteRole(e.target.value as "editor" | "viewer")
+                  setInviteRole(e.target.value as "admin" | "editor" | "viewer")
                 }
                 className="border rounded-md px-3 py-2 text-sm bg-background h-9"
               >
                 <option value="viewer">Viewer</option>
                 <option value="editor">Editor</option>
+                {isOwner && <option value="admin">Admin</option>}
               </select>
               <Button type="submit" variant="outline" disabled={inviteLoading}>
                 <Mail className="h-4 w-4 mr-1" />
@@ -362,7 +365,7 @@ export default function OrganizationPage() {
                 <TableHead>Invited</TableHead>
                 <TableHead>Signed Up</TableHead>
                 <TableHead>Last Login</TableHead>
-                {isOwner && <TableHead className="w-24">Actions</TableHead>}
+                {canManageMembers && <TableHead className="w-24">Actions</TableHead>}
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -382,7 +385,7 @@ export default function OrganizationPage() {
                       </TableCell>
                       <TableCell>
                         <Badge variant="outline">
-                          {m.role === "owner" && "\uD83D\uDC51 "}{m.role}
+                          {m.role === "owner" && "\uD83D\uDC51 "}{m.role === "admin" && "\uD83D\uDEE1\uFE0F "}{m.role}
                         </Badge>
                       </TableCell>
                       <TableCell>
@@ -399,9 +402,9 @@ export default function OrganizationPage() {
                       <TableCell className="text-sm text-muted-foreground">
                         {timeAgo(m.lastSeenAt)}
                       </TableCell>
-                      {isOwner && (
+                      {canManageMembers && (
                         <TableCell>
-                          {m.id !== user?.id && (
+                          {m.id !== user?.id && m.role !== "owner" && (
                             <Button
                               variant="ghost"
                               size="sm"
@@ -442,7 +445,7 @@ export default function OrganizationPage() {
                       </TableCell>
                       <TableCell className="text-sm text-muted-foreground">\u2014</TableCell>
                       <TableCell className="text-sm text-muted-foreground">\u2014</TableCell>
-                      {isOwner && (
+                      {canManageMembers && (
                         <TableCell>
                           <div className="flex gap-1">
                             <Button

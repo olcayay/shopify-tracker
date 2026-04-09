@@ -247,7 +247,7 @@ export const accountExtrasRoutes: FastifyPluginAsync = async (app) => {
   // POST /api/account/starred-categories
   app.post(
     "/starred-categories",
-    { preHandler: [requireRole("owner", "editor")] },
+    { preHandler: [requireRole("owner", "admin", "editor")] },
     async (request, reply) => {
       const { accountId } = request.user;
       const { slug } = addStarredCategorySchema.parse(request.body);
@@ -281,7 +281,7 @@ export const accountExtrasRoutes: FastifyPluginAsync = async (app) => {
   // DELETE /api/account/starred-categories/:slug
   app.delete<{ Params: { slug: string } }>(
     "/starred-categories/:slug",
-    { preHandler: [requireRole("owner", "editor")] },
+    { preHandler: [requireRole("owner", "admin", "editor")] },
     async (request, reply) => {
       const { accountId } = request.user;
       const slug = decodeURIComponent(request.params.slug);
@@ -394,7 +394,7 @@ export const accountExtrasRoutes: FastifyPluginAsync = async (app) => {
   // POST /api/account/starred-features
   app.post(
     "/starred-features",
-    { preHandler: [requireRole("owner", "editor")] },
+    { preHandler: [requireRole("owner", "admin", "editor")] },
     async (request, reply) => {
       const { accountId } = request.user;
       const { handle, title } = addStarredFeatureSchema.parse(request.body);
@@ -420,7 +420,7 @@ export const accountExtrasRoutes: FastifyPluginAsync = async (app) => {
   // DELETE /api/account/starred-features/:handle
   app.delete<{ Params: { handle: string } }>(
     "/starred-features/:handle",
-    { preHandler: [requireRole("owner", "editor")] },
+    { preHandler: [requireRole("owner", "admin", "editor")] },
     async (request, reply) => {
       const { accountId } = request.user;
       const { handle } = request.params;
@@ -471,7 +471,7 @@ export const accountExtrasRoutes: FastifyPluginAsync = async (app) => {
   // POST /api/account/keyword-tags
   app.post(
     "/keyword-tags",
-    { preHandler: [requireRole("owner", "editor")] },
+    { preHandler: [requireRole("owner", "admin", "editor")] },
     async (request, reply) => {
       const { accountId } = request.user;
       const { name, color } = createKeywordTagSchema.parse(request.body);
@@ -496,7 +496,7 @@ export const accountExtrasRoutes: FastifyPluginAsync = async (app) => {
   // PATCH /api/account/keyword-tags/:id
   app.patch<{ Params: { id: string } }>(
     "/keyword-tags/:id",
-    { preHandler: [requireRole("owner", "editor")] },
+    { preHandler: [requireRole("owner", "admin", "editor")] },
     async (request, reply) => {
       const { accountId } = request.user;
       const { id } = request.params;
@@ -532,7 +532,7 @@ export const accountExtrasRoutes: FastifyPluginAsync = async (app) => {
   // DELETE /api/account/keyword-tags/:id
   app.delete<{ Params: { id: string } }>(
     "/keyword-tags/:id",
-    { preHandler: [requireRole("owner", "editor")] },
+    { preHandler: [requireRole("owner", "admin", "editor")] },
     async (request, reply) => {
       const { accountId } = request.user;
       const { id } = request.params;
@@ -554,7 +554,7 @@ export const accountExtrasRoutes: FastifyPluginAsync = async (app) => {
   // POST /api/account/keyword-tags/:id/keywords/:keywordId — assign tag
   app.post<{ Params: { id: string; keywordId: string } }>(
     "/keyword-tags/:id/keywords/:keywordId",
-    { preHandler: [requireRole("owner", "editor")] },
+    { preHandler: [requireRole("owner", "admin", "editor")] },
     async (request, reply) => {
       const { accountId } = request.user;
       const { id: tagId, keywordId } = request.params;
@@ -588,7 +588,7 @@ export const accountExtrasRoutes: FastifyPluginAsync = async (app) => {
   // DELETE /api/account/keyword-tags/:id/keywords/:keywordId — unassign tag
   app.delete<{ Params: { id: string; keywordId: string } }>(
     "/keyword-tags/:id/keywords/:keywordId",
-    { preHandler: [requireRole("owner", "editor")] },
+    { preHandler: [requireRole("owner", "admin", "editor")] },
     async (request, reply) => {
       const { accountId } = request.user;
       const { id: tagId, keywordId } = request.params;
@@ -685,7 +685,7 @@ export const accountExtrasRoutes: FastifyPluginAsync = async (app) => {
   // POST /api/account/starred-developers/:id
   app.post<{ Params: { id: string } }>(
     "/starred-developers/:id",
-    { preHandler: [requireRole("owner", "editor")] },
+    { preHandler: [requireRole("owner", "admin", "editor")] },
     async (request, reply) => {
       const { accountId } = request.user;
       const globalDeveloperId = parseInt(request.params.id, 10);
@@ -722,7 +722,7 @@ export const accountExtrasRoutes: FastifyPluginAsync = async (app) => {
   // DELETE /api/account/starred-developers/:id
   app.delete<{ Params: { id: string } }>(
     "/starred-developers/:id",
-    { preHandler: [requireRole("owner", "editor")] },
+    { preHandler: [requireRole("owner", "admin", "editor")] },
     async (request, reply) => {
       const { accountId } = request.user;
       const globalDeveloperId = parseInt(request.params.id, 10);

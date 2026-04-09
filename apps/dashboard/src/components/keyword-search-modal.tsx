@@ -49,7 +49,7 @@ export function KeywordSearchModal({
   const inputRef = useRef<HTMLInputElement>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout>>(undefined);
 
-  const canEdit = user?.role === "owner" || user?.role === "editor";
+  const canEdit = user?.role === "owner" || user?.role === "admin" || user?.role === "editor";
 
   // Load tracked keyword IDs and my-apps when modal opens
   useEffect(() => {

@@ -15,7 +15,7 @@ export function useVirtualAppEditor() {
   const id = params.id as string;
   const vaId = params.vaId as string;
   const platform = params.platform as string;
-  const canEdit = user?.role === "owner" || user?.role === "editor";
+  const canEdit = user?.role === "owner" || user?.role === "admin" || user?.role === "editor";
 
   const isNew = vaId === "new";
 

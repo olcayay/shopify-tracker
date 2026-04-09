@@ -7,7 +7,7 @@ import {
   users,
   invitations,
 } from "@appranks/db";
-import { requireRole } from "../middleware/authorize.js";
+import { requireRole, canManageRole } from "../middleware/authorize.js";
 import { sendInvitationEmail } from "../lib/email-enqueue.js";
 import { requireIdempotencyKey } from "../middleware/idempotency.js";
 import { RateLimiter } from "../utils/rate-limiter.js";
@@ -112,7 +112,7 @@ export const accountMemberRoutes: FastifyPluginAsync = async (app) => {
   // POST /api/account/members/invite
   app.post(
     "/members/invite",
-    { preHandler: [requireRole("owner")] },
+    { preHandler: [requireRole("owner", "admin")] },
     async (request, reply) => {
       // IP-based rate limit for invitation endpoint
       const rl = invitationLimiter.check(request.user.userId);
@@ -123,6 +123,11 @@ export const accountMemberRoutes: FastifyPluginAsync = async (app) => {
 
       const { accountId, userId } = request.user;
       const { email, role } = inviteMemberSchema.parse(request.body);
+
+      // Admin cannot invite users with a role equal to or above their own
+      if (!canManageRole(request.user.role, role)) {
+        return reply.code(403).send({ error: `Cannot invite a user with role '${role}' — your role does not have sufficient privileges` });
+      }
 
       // Check user limit (members + pending invitations)
       const [account] = await db
@@ -267,7 +272,7 @@ export const accountMemberRoutes: FastifyPluginAsync = async (app) => {
   // GET /api/account/invitations — pending invitations
   app.get(
     "/invitations",
-    { preHandler: [requireRole("owner")] },
+    { preHandler: [requireRole("owner", "admin")] },
     async (request) => {
       const { accountId } = request.user;
 
@@ -298,7 +303,7 @@ export const accountMemberRoutes: FastifyPluginAsync = async (app) => {
   // DELETE /api/account/invitations/:id — cancel/revoke invitation
   app.delete<{ Params: { id: string } }>(
     "/invitations/:id",
-    { preHandler: [requireRole("owner")] },
+    { preHandler: [requireRole("owner", "admin")] },
     async (request, reply) => {
       const { accountId } = request.user;
       const { id } = request.params;
@@ -324,7 +329,7 @@ export const accountMemberRoutes: FastifyPluginAsync = async (app) => {
 
   app.post<{ Params: { id: string } }>(
     "/invitations/:id/resend",
-    { preHandler: [requireRole("owner")] },
+    { preHandler: [requireRole("owner", "admin")] },
     async (request, reply) => {
       const { accountId, userId } = request.user;
       const { id } = request.params;
@@ -396,7 +401,7 @@ export const accountMemberRoutes: FastifyPluginAsync = async (app) => {
   // DELETE /api/account/members/:userId
   app.delete<{ Params: { userId: string } }>(
     "/members/:userId",
-    { preHandler: [requireRole("owner")] },
+    { preHandler: [requireRole("owner", "admin")] },
     async (request, reply) => {
       const { accountId, userId: currentUserId } = request.user;
       const { userId } = request.params;
@@ -414,6 +419,11 @@ export const accountMemberRoutes: FastifyPluginAsync = async (app) => {
         return reply.code(404).send({ error: "User not found in account" });
       }
 
+      // Admin cannot remove users with equal or higher role
+      if (!canManageRole(request.user.role, user.role)) {
+        return reply.code(403).send({ error: "Cannot remove a user with equal or higher role" });
+      }
+
       await db.delete(users).where(eq(users.id, userId));
 
       import("../utils/activity-log.js").then(m => m.logActivity(db, request.user.accountId, request.user.userId, "member_removed", "user", userId, { email: user.email, role: user.role })).catch(() => {});
@@ -424,7 +434,7 @@ export const accountMemberRoutes: FastifyPluginAsync = async (app) => {
   // PATCH /api/account/members/:userId/role
   app.patch<{ Params: { userId: string } }>(
     "/members/:userId/role",
-    { preHandler: [requireRole("owner")] },
+    { preHandler: [requireRole("owner", "admin")] },
     async (request, reply) => {
       const { accountId, userId: currentUserId } = request.user;
       const { userId } = request.params;
@@ -443,11 +453,25 @@ export const accountMemberRoutes: FastifyPluginAsync = async (app) => {
         return reply.code(404).send({ error: "User not found in account" });
       }
 
+      // Actor must be able to manage the target's current role
+      if (!canManageRole(request.user.role, user.role)) {
+        return reply.code(403).send({ error: "Cannot change role of a user with equal or higher role" });
+      }
+
+      // Actor must be able to manage the new role (can't promote above own level)
+      if (!canManageRole(request.user.role, role)) {
+        return reply.code(403).send({ error: `Cannot assign role '${role}' — your role does not have sufficient privileges` });
+      }
+
+      const oldRole = user.role;
       const [updated] = await db
         .update(users)
         .set({ role, updatedAt: new Date() })
         .where(eq(users.id, userId))
         .returning();
+
+      // Log the role change (was missing before PLA-956)
+      import("../utils/activity-log.js").then(m => m.logActivity(db, accountId, currentUserId, "member_role_changed", "user", userId, { email: user.email, oldRole, newRole: role })).catch(() => {});
 
       return {
         id: updated.id,

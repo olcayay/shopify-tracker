@@ -918,6 +918,13 @@
       "when": 1776028300000,
       "tag": "0130_add_pricing_model",
       "breakpoints": true
+    },
+    {
+      "idx": 131,
+      "version": "7",
+      "when": 1776114700000,
+      "tag": "0131_add_admin_role",
+      "breakpoints": true
     }
   ]
 }

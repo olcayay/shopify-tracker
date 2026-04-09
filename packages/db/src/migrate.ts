@@ -52,6 +52,14 @@ async function run() {
           console.error("Pre-migration enum error:", e.message);
         }
       }
+      // PLA-956: Add 'admin' role to account_role enum
+      try {
+        await db.execute(sql`ALTER TYPE account_role ADD VALUE IF NOT EXISTS 'admin' BEFORE 'editor'`);
+      } catch (e: any) {
+        if (!e.message?.includes("already exists")) {
+          console.error("Pre-migration enum error (admin role):", e.message);
+        }
+      }
     }
 
     if (dryRun) {

@@ -223,7 +223,7 @@ describe("Account routes", () => {
         method: "POST",
         url: "/api/account/members",
         headers: authHeaders(userToken({ role: "owner" })),
-        payload: { email: "new@test.com", name: "New User", password: "password123", role: "admin" },
+        payload: { email: "new@test.com", name: "New User", password: "password123", role: "superadmin" },
       });
       expect(res.statusCode).toBe(400);
     });
@@ -715,7 +715,7 @@ describe("Account routes", () => {
         method: "POST",
         url: "/api/account/members/invite",
         headers: authHeaders(userToken({ role: "owner" })),
-        payload: { email: "invite@test.com", role: "admin" },
+        payload: { email: "invite@test.com", role: "superadmin" },
       });
       expect(res.statusCode).toBe(400);
     });

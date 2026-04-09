@@ -121,7 +121,7 @@ describe("Account Member Routes — edge cases", () => {
         method: "PATCH",
         url: "/api/account/members/user-002/role",
         headers: authHeaders(ownerToken()),
-        payload: { role: "admin" },
+        payload: { role: "superadmin" },
       });
       expect(res.statusCode).toBe(400);
     });

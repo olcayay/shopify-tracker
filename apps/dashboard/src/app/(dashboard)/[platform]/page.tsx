@@ -103,7 +103,7 @@ export default function OverviewPage() {
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState("");
 
-  const canEdit = user?.role === "owner" || user?.role === "editor";
+  const canEdit = user?.role === "owner" || user?.role === "admin" || user?.role === "editor";
   const caps = PLATFORMS[platform as PlatformId] || PLATFORMS.shopify;
   const enabledPlatforms = (account?.enabledPlatforms ?? []) as PlatformId[];
   const isPlatformEnabled = enabledPlatforms.includes(platform as PlatformId);

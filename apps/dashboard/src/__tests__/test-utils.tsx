@@ -21,6 +21,13 @@ export const mockAdminUser: User = {
   isSystemAdmin: true,
 };
 
+export const mockAccountAdminUser: User = {
+  ...mockUser,
+  id: "account-admin-1",
+  name: "Account Admin",
+  role: "admin",
+};
+
 export const mockViewerUser: User = {
   ...mockUser,
   id: "viewer-1",

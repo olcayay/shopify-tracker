@@ -45,7 +45,7 @@ export default function CompetitorsPage() {
   const [sortDir, setSortDir] = useState<SortDir>("asc");
   const [hiddenColumns, setHiddenColumns] = useState<Set<string>>(new Set());
 
-  const canEdit = user?.role === "owner" || user?.role === "editor";
+  const canEdit = user?.role === "owner" || user?.role === "admin" || user?.role === "editor";
 
   const visibleToggleableColumns = useMemo(() => {
     return TOGGLEABLE_COLUMNS.filter((col) => {

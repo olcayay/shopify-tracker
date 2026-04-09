@@ -297,7 +297,7 @@ export const researchRoutes: FastifyPluginAsync = async (app) => {
   // POST /api/research-projects — create project
   app.post<{ Body: { name?: string } }>(
     "/",
-    { preHandler: [requireRole("owner", "editor"), requireIdempotencyKey()] },
+    { preHandler: [requireRole("owner", "admin", "editor"), requireIdempotencyKey()] },
     async (request, reply) => {
       const { accountId, userId } = request.user;
       const { name } = createProjectSchema.parse(request.body);
@@ -339,7 +339,7 @@ export const researchRoutes: FastifyPluginAsync = async (app) => {
   // PATCH /api/research-projects/:id — rename project
   app.patch<{ Params: { id: string }; Body: { name: string } }>(
     "/:id",
-    { preHandler: [requireRole("owner", "editor")] },
+    { preHandler: [requireRole("owner", "admin", "editor")] },
     async (request, reply) => {
       const { accountId } = request.user;
       const { id } = request.params;
@@ -361,7 +361,7 @@ export const researchRoutes: FastifyPluginAsync = async (app) => {
   // DELETE /api/research-projects/:id
   app.delete<{ Params: { id: string } }>(
     "/:id",
-    { preHandler: [requireRole("owner", "editor")] },
+    { preHandler: [requireRole("owner", "admin", "editor")] },
     async (request, reply) => {
       const { accountId } = request.user;
       const { id } = request.params;
@@ -383,7 +383,7 @@ export const researchRoutes: FastifyPluginAsync = async (app) => {
   // POST /api/research-projects/:id/keywords — add keyword
   app.post<{ Params: { id: string }; Body: { keyword: string } }>(
     "/:id/keywords",
-    { preHandler: [requireRole("owner", "editor")] },
+    { preHandler: [requireRole("owner", "admin", "editor")] },
     async (request, reply) => {
       const { accountId } = request.user;
       const { id } = request.params;
@@ -466,7 +466,7 @@ export const researchRoutes: FastifyPluginAsync = async (app) => {
   // DELETE /api/research-projects/:id/keywords/:kwId
   app.delete<{ Params: { id: string; kwId: string } }>(
     "/:id/keywords/:kwId",
-    { preHandler: [requireRole("owner", "editor")] },
+    { preHandler: [requireRole("owner", "admin", "editor")] },
     async (request, reply) => {
       const { accountId } = request.user;
       const { id, kwId } = request.params;
@@ -514,7 +514,7 @@ export const researchRoutes: FastifyPluginAsync = async (app) => {
   // POST /api/research-projects/:id/competitors — add competitor
   app.post<{ Params: { id: string }; Body: { slug: string } }>(
     "/:id/competitors",
-    { preHandler: [requireRole("owner", "editor")] },
+    { preHandler: [requireRole("owner", "admin", "editor")] },
     async (request, reply) => {
       const { accountId } = request.user;
       const { id } = request.params;
@@ -611,7 +611,7 @@ export const researchRoutes: FastifyPluginAsync = async (app) => {
   // DELETE /api/research-projects/:id/competitors/:slug
   app.delete<{ Params: { id: string; slug: string } }>(
     "/:id/competitors/:slug",
-    { preHandler: [requireRole("owner", "editor")] },
+    { preHandler: [requireRole("owner", "admin", "editor")] },
     async (request, reply) => {
       const { accountId } = request.user;
       const { id, slug } = request.params;
@@ -1526,7 +1526,7 @@ export const researchRoutes: FastifyPluginAsync = async (app) => {
   // POST /:id/virtual-apps/generate — AI-powered virtual app generation
   app.post<{ Params: { id: string } }>(
     "/:id/virtual-apps/generate",
-    { preHandler: [requireRole("owner", "editor")] },
+    { preHandler: [requireRole("owner", "admin", "editor")] },
     async (request, reply) => {
       try {
       const apiKey = process.env.OPENAI_API_KEY;
@@ -1875,7 +1875,7 @@ Generate differentiated app concepts. Consider:
   // POST /:id/virtual-apps — create virtual app
   app.post<{ Params: { id: string }; Body: Record<string, any> }>(
     "/:id/virtual-apps",
-    { preHandler: [requireRole("owner", "editor")] },
+    { preHandler: [requireRole("owner", "admin", "editor")] },
     async (request, reply) => {
       const { accountId } = request.user;
       const { id } = request.params;
@@ -1921,7 +1921,7 @@ Generate differentiated app concepts. Consider:
   // PATCH /:id/virtual-apps/:vaId — update virtual app
   app.patch<{ Params: { id: string; vaId: string }; Body: Record<string, any> }>(
     "/:id/virtual-apps/:vaId",
-    { preHandler: [requireRole("owner", "editor")] },
+    { preHandler: [requireRole("owner", "admin", "editor")] },
     async (request, reply) => {
       const { accountId } = request.user;
       const { id, vaId } = request.params;
@@ -1978,7 +1978,7 @@ Generate differentiated app concepts. Consider:
   // DELETE /:id/virtual-apps/:vaId — delete virtual app
   app.delete<{ Params: { id: string; vaId: string } }>(
     "/:id/virtual-apps/:vaId",
-    { preHandler: [requireRole("owner", "editor")] },
+    { preHandler: [requireRole("owner", "admin", "editor")] },
     async (request, reply) => {
       const { accountId } = request.user;
       const { id, vaId } = request.params;
@@ -2008,7 +2008,7 @@ Generate differentiated app concepts. Consider:
     Body: { categoryTitle: string; subcategoryTitle: string; featureTitle: string; featureHandle: string; featureUrl?: string };
   }>(
     "/:id/virtual-apps/:vaId/add-category-feature",
-    { preHandler: [requireRole("owner", "editor")] },
+    { preHandler: [requireRole("owner", "admin", "editor")] },
     async (request, reply) => {
       const { accountId } = request.user;
       const { id, vaId } = request.params;
@@ -2058,7 +2058,7 @@ Generate differentiated app concepts. Consider:
     Body: { categoryTitle: string; subcategoryTitle: string; featureHandle: string };
   }>(
     "/:id/virtual-apps/:vaId/remove-category-feature",
-    { preHandler: [requireRole("owner", "editor")] },
+    { preHandler: [requireRole("owner", "admin", "editor")] },
     async (request, reply) => {
       const { accountId } = request.user;
       const { id, vaId } = request.params;
@@ -2105,7 +2105,7 @@ Generate differentiated app concepts. Consider:
   // POST /:id/virtual-apps/:vaId/add-feature
   app.post<{ Params: { id: string; vaId: string }; Body: { feature: string } }>(
     "/:id/virtual-apps/:vaId/add-feature",
-    { preHandler: [requireRole("owner", "editor")] },
+    { preHandler: [requireRole("owner", "admin", "editor")] },
     async (request, reply) => {
       const { accountId } = request.user;
       const { id, vaId } = request.params;
@@ -2141,7 +2141,7 @@ Generate differentiated app concepts. Consider:
   // DELETE /:id/virtual-apps/:vaId/remove-feature
   app.delete<{ Params: { id: string; vaId: string }; Body: { feature: string } }>(
     "/:id/virtual-apps/:vaId/remove-feature",
-    { preHandler: [requireRole("owner", "editor")] },
+    { preHandler: [requireRole("owner", "admin", "editor")] },
     async (request, reply) => {
       const { accountId } = request.user;
       const { id, vaId } = request.params;
@@ -2175,7 +2175,7 @@ Generate differentiated app concepts. Consider:
   // POST /:id/virtual-apps/:vaId/add-integration
   app.post<{ Params: { id: string; vaId: string }; Body: { integration: string } }>(
     "/:id/virtual-apps/:vaId/add-integration",
-    { preHandler: [requireRole("owner", "editor")] },
+    { preHandler: [requireRole("owner", "admin", "editor")] },
     async (request, reply) => {
       const { accountId } = request.user;
       const { id, vaId } = request.params;
@@ -2211,7 +2211,7 @@ Generate differentiated app concepts. Consider:
   // DELETE /:id/virtual-apps/:vaId/remove-integration
   app.delete<{ Params: { id: string; vaId: string }; Body: { integration: string } }>(
     "/:id/virtual-apps/:vaId/remove-integration",
-    { preHandler: [requireRole("owner", "editor")] },
+    { preHandler: [requireRole("owner", "admin", "editor")] },
     async (request, reply) => {
       const { accountId } = request.user;
       const { id, vaId } = request.params;
