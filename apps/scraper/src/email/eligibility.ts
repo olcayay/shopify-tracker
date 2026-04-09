@@ -50,7 +50,8 @@ export async function checkEligibility(
     .limit(1);
 
   if (!flagRow) {
-    return { eligible: false, skipReason: "feature flag 'email_alerts_enabled' not enabled for account" };
+    log.warn("email blocked by feature flag", { emailType, accountId, flag: "email_alerts_enabled" });
+    return { eligible: false, skipReason: `feature flag 'email_alerts_enabled' not enabled for account ${accountId}` };
   }
 
   // 1. Is email type enabled globally?

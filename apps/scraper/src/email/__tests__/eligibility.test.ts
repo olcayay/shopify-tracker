@@ -40,6 +40,7 @@ describe("checkEligibility", () => {
     const result = await checkEligibility(db, BASE_PARAMS);
     expect(result.eligible).toBe(false);
     expect(result.skipReason).toContain("feature flag");
+    expect(result.skipReason).toContain("account-1"); // includes accountId for debugging
   });
 
   it("returns eligible=true when all checks pass (no configs)", async () => {
