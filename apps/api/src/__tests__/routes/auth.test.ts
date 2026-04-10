@@ -497,17 +497,14 @@ describe("POST /api/auth/refresh — validation", () => {
     await app.close();
   });
 
-  it("returns 400 when refreshToken is missing", async () => {
+  it("returns 401 when refreshToken is missing", async () => {
     const res = await app.inject({
       method: "POST",
       url: "/api/auth/refresh",
       payload: {},
     });
-    expect(res.statusCode).toBe(400);
-    expect(res.json().error).toBe("Validation failed");
-    expect(res.json().details).toEqual(
-      expect.arrayContaining([expect.objectContaining({ field: "refreshToken" })]),
-    );
+    expect(res.statusCode).toBe(401);
+    expect(res.json().error).toBe("Missing or invalid refresh token");
   });
 
   it("returns 401 when refresh token is not found in DB", async () => {
@@ -653,7 +650,7 @@ describe("POST /api/auth/logout", () => {
       payload: {},
     });
     expect(res.statusCode).toBe(400);
-    expect(res.json().error).toBe("Validation failed");
+    expect(res.json().error).toBe("Missing or invalid refresh token");
   });
 });
 

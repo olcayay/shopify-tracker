@@ -1,3 +1,12 @@
+Auth Refresh/Logout Validation Fix (2026-04-10)
+================================================================
+
+Fix: POST /api/auth/refresh and /api/auth/logout crash with 500 when refreshToken is missing
+- Root cause: Zod .parse() throws uncaught ZodError when body is empty/invalid
+- Fix: Changed to .safeParse() with explicit 401/400 response
+- Impact: Prevents infinite refresh loop when token expires or cookie is cleared
+- Dashboard was completely broken — refresh 500 → retry → 500 → page never loads
+
 Support Page Tab-Specific Empty State (2026-04-10)
 ================================================================
 

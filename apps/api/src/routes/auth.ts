@@ -511,7 +511,11 @@ export const authRoutes: FastifyPluginAsync = async (app) => {
       return reply.code(429).send({ error: "Too many refresh attempts. Please try again later." });
     }
 
-    const { refreshToken: token } = refreshSchema.parse(request.body);
+    const parsed = refreshSchema.safeParse(request.body);
+    if (!parsed.success) {
+      return reply.code(401).send({ error: "Missing or invalid refresh token" });
+    }
+    const { refreshToken: token } = parsed.data;
 
     const tokenHash = hashToken(token);
 
@@ -582,7 +586,11 @@ export const authRoutes: FastifyPluginAsync = async (app) => {
 
   // POST /api/auth/logout — revoke refresh token + blacklist access token
   app.post("/logout", async (request, reply) => {
-    const { refreshToken: token } = logoutSchema.parse(request.body);
+    const parsed = logoutSchema.safeParse(request.body);
+    if (!parsed.success) {
+      return reply.code(400).send({ error: "Missing or invalid refresh token" });
+    }
+    const { refreshToken: token } = parsed.data;
 
     await db
       .delete(refreshTokens)
