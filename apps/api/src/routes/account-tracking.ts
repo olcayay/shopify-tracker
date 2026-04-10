@@ -598,19 +598,17 @@ export const accountTrackingRoutes: FastifyPluginAsync = async (app) => {
 
     if (rows.length === 0) return [];
 
-    // Get account's tracked keyword IDs (deduplicated)
+    // Derive competitor IDs and fetch tracked keywords in parallel (independent)
+    const competitorSlugs = [...new Set(rows.map((r) => r.appSlug))];
+    const competitorAppIds = [...new Set(rows.map((r) => r._appId))];
+    const compIdToSlug = new Map<number, string>();
+    for (const r of rows) compIdToSlug.set(r._appId, r.appSlug);
+
     const accountKeywords = await db
       .select({ keywordId: accountTrackedKeywords.keywordId })
       .from(accountTrackedKeywords)
       .where(eq(accountTrackedKeywords.accountId, accountId));
     const trackedKeywordIds = [...new Set(accountKeywords.map((k) => k.keywordId))];
-
-    // Count distinct keywords each competitor is ranked in (latest ranking per keyword, non-null position)
-    const competitorSlugs = [...new Set(rows.map((r) => r.appSlug))];
-    const competitorAppIds = [...new Set(rows.map((r) => r._appId))];
-    // Build id->slug map for competitors
-    const compIdToSlug = new Map<number, string>();
-    for (const r of rows) compIdToSlug.set(r._appId, r.appSlug);
 
     let rankedKeywordMap = new Map<string, number>();
     if (trackedKeywordIds.length > 0 && competitorAppIds.length > 0) {
@@ -685,6 +683,12 @@ export const accountTrackingRoutes: FastifyPluginAsync = async (app) => {
     const categoryRankingMap = new Map<string, { categorySlug: string; categoryTitle: string; position: number; prevPosition: number | null; appCount: number | null }[]>();
     if (competitorAppIds.length > 0) {
       const catRankRows: any[] = await db.execute(sql`
+        WITH latest_snapshots AS (
+          SELECT DISTINCT ON (category_id)
+            category_id, app_count
+          FROM category_snapshots
+          ORDER BY category_id, scraped_at DESC
+        )
         SELECT
           a.slug AS app_slug, sub.category_slug, c.title AS category_title,
           sub.position, sub.prev_position, cs.app_count
@@ -706,13 +710,7 @@ export const accountTrackingRoutes: FastifyPluginAsync = async (app) => {
         ) sub
         INNER JOIN apps a ON a.id = sub.app_id
         JOIN categories c ON c.slug = sub.category_slug AND c.platform = ${platform}
-        LEFT JOIN LATERAL (
-          SELECT s.app_count
-          FROM category_snapshots s
-          WHERE s.category_id = c.id
-          ORDER BY s.scraped_at DESC
-          LIMIT 1
-        ) cs ON true
+        LEFT JOIN latest_snapshots cs ON cs.category_id = c.id
         WHERE sub.rn = 1
           AND c.is_listing_page = true
           AND sub.position > 0
