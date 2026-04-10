@@ -219,19 +219,19 @@ export async function crossPlatformRoutes(app: FastifyInstance) {
         sql`k.keyword`;
       const nullsLast = sort === "totalResults" ? sql`NULLS LAST` : sql``;
 
-      // Fetch paginated results
+      // Fetch paginated results with batch DISTINCT ON instead of LATERAL join
       const rows: any[] = await db.execute(sql`
         SELECT
           k.id, k.platform, k.keyword, k.slug, k.is_active, k.created_at,
           ks.total_results, ks.scraped_at AS last_scraped_at
         FROM tracked_keywords k
-        LEFT JOIN LATERAL (
-          SELECT ks2.total_results, ks2.scraped_at
-          FROM keyword_snapshots ks2
-          WHERE ks2.keyword_id = k.id
-          ORDER BY ks2.scraped_at DESC
-          LIMIT 1
-        ) ks ON true
+        LEFT JOIN (
+          SELECT DISTINCT ON (keyword_id)
+            keyword_id, total_results, scraped_at
+          FROM keyword_snapshots
+          WHERE keyword_id IN (${sql.join(keywordIds.map((id: number) => sql`${id}`), sql`, `)})
+          ORDER BY keyword_id, scraped_at DESC
+        ) ks ON ks.keyword_id = k.id
         WHERE k.id IN (${sql.join(keywordIds.map((id: number) => sql`${id}`), sql`, `)})
         ${searchFilter}
         ${platformFilterSql}

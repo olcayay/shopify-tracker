@@ -131,7 +131,7 @@ export default async function V2DashboardPage({
   const caps = isPlatformId(platform) ? PLATFORMS[platform as PlatformId] : PLATFORMS.shopify;
   const base = `/${platform}/apps/v2/${slug}`;
 
-  // Round 1: parallel fetches
+  // All fetches in parallel — competitors/keywords return [] if app isn't tracked (404 caught)
   let app: any;
   let scoresData: any;
   let scoresHistory: any;
@@ -140,9 +140,11 @@ export default async function V2DashboardPage({
   let reviewData: any;
   let featuredData: any;
   let adData: any;
+  let competitors: any[];
+  let keywords: any[];
 
   try {
-    [app, scoresData, scoresHistory, rankings, changes, reviewData, featuredData, adData] = await Promise.all([
+    [app, scoresData, scoresHistory, rankings, changes, reviewData, featuredData, adData, competitors, keywords] = await Promise.all([
       getApp(slug, platform as PlatformId),
       getAppScores(slug, platform as PlatformId).catch(() => ({ visibility: [], power: [], weightedPowerScore: 0 })),
       getAppScoresHistory(slug, 7, undefined, platform as PlatformId).catch(() => ({ history: [] })),
@@ -157,19 +159,11 @@ export default async function V2DashboardPage({
       caps.hasAdTracking
         ? getAppAdSightings(slug, 30, platform as PlatformId).catch(() => ({ sightings: [] }))
         : Promise.resolve({ sightings: [] }),
-    ]);
-  } catch {
-    return <p className="text-muted-foreground">App not found.</p>;
-  }
-
-  // Round 2: tracked-only fetches
-  let competitors: any[] = [];
-  let keywords: any[] = [];
-  if (app.isTrackedByAccount) {
-    [competitors, keywords] = await Promise.all([
       getAppCompetitors(slug, platform as PlatformId).catch(() => []),
       getAppKeywords(slug, platform as PlatformId).catch(() => []),
     ]);
+  } catch {
+    return <p className="text-muted-foreground">App not found.</p>;
   }
 
   const snapshot = app.latestSnapshot;

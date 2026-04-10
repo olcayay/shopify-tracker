@@ -1452,56 +1452,72 @@ export const accountTrackingRoutes: FastifyPluginAsync = async (app) => {
         }
       }
 
-      const result = await Promise.all(
-        allRows.map(async (row) => {
-          const [snapshot] = await db
-            .select({
-              averageRating: appSnapshots.averageRating,
-              ratingCount: appSnapshots.ratingCount,
-              pricing: appSnapshots.pricing,
-              pricingPlans: appSnapshots.pricingPlans,
-              categories: appSnapshots.categories,
-            })
-            .from(appSnapshots)
-            .where(eq(appSnapshots.appId, (row as any)._appId))
-            .orderBy(desc(appSnapshots.scrapedAt))
-            .limit(1);
+      // Batch-fetch latest snapshot per competitor (replaces N+1 per-competitor queries)
+      const compSnapshotMap = new Map<number, { averageRating: number | null; ratingCount: number | null; pricing: string | null; pricingPlans: any; categories: any }>();
+      if (competitorAppIds.length > 0) {
+        const snapRows: any[] = await db.execute(sql`
+          SELECT DISTINCT ON (app_id)
+            app_id, average_rating, rating_count, pricing, pricing_plans, categories
+          FROM app_snapshots
+          WHERE app_id IN (${sql.join(competitorAppIds.map(id => sql`${id}`), sql`, `)})
+          ORDER BY app_id, scraped_at DESC
+        `).then((res: any) => (res as any).rows ?? res);
+        for (const r of snapRows) {
+          compSnapshotMap.set(r.app_id, {
+            averageRating: r.average_rating ? parseFloat(r.average_rating) : null,
+            ratingCount: r.rating_count,
+            pricing: r.pricing,
+            pricingPlans: r.pricing_plans,
+            categories: r.categories,
+          });
+        }
+      }
 
-          const [change] = await db
-            .select({ detectedAt: sql<string | null>`max(detected_at)` })
-            .from(sql`app_field_changes`)
-            .where(sql`app_id = ${(row as any)._appId}`);
+      // Batch-fetch last change date per competitor (replaces N+1 per-competitor queries)
+      const lastChangeMap = new Map<number, string | null>();
+      if (competitorAppIds.length > 0) {
+        const changeRows: any[] = await db.execute(sql`
+          SELECT app_id, max(detected_at) AS detected_at
+          FROM app_field_changes
+          WHERE app_id IN (${sql.join(competitorAppIds.map(id => sql`${id}`), sql`, `)})
+          GROUP BY app_id
+        `).then((res: any) => (res as any).rows ?? res);
+        for (const r of changeRows) {
+          lastChangeMap.set(r.app_id, r.detected_at);
+        }
+      }
 
-          const minPaidPrice = getMinPaidPrice(snapshot?.pricingPlans);
-          const { pricingPlans: _, categories: cats, ...snapshotRest } = snapshot || ({} as any);
-          const appCategories = (cats as any[]) || [];
+      const result = allRows.map((row) => {
+        const snapshot = compSnapshotMap.get((row as any)._appId) || null;
+        const minPaidPrice = getMinPaidPrice(snapshot?.pricingPlans);
+        const { pricingPlans: _, categories: cats, ...snapshotRest } = snapshot || ({} as any);
+        const appCategories = (cats as any[]) || [];
 
-          return {
-            ...row,
-            latestSnapshot: snapshot ? snapshotRest : null,
-            minPaidPrice,
-            lastChangeAt: change?.detectedAt || null,
-            featuredSections: featuredCountMap.get(row.appSlug) ?? 0,
-            adKeywords: adKeywordCountMap.get(row.appSlug) ?? 0,
-            visibilityScore: visibilityMap2.get(row.appSlug)?.visibilityScore ?? null,
-            visibilityKeywordCount: visibilityMap2.get(row.appSlug)?.keywordCount ?? null,
-            visibilityRaw: visibilityMap2.get(row.appSlug)?.visibilityRaw ?? null,
-            weightedPowerScore: weightedPowerMap2.get(row.appSlug) ?? null,
-            powerCategories: powerCategoriesMap2.get(row.appSlug) ?? [],
-            categories: appCategories.map((c: any) => {
-              const catSlug = c.url ? c.url.replace(/.*\/categories\//, "").replace(/\/.*/, "") : null;
-              return { type: c.type || "primary", title: c.title, slug: catSlug };
-            }),
-            categoryRankings: categoryRankingMap.get(row.appSlug) ?? [],
-            reverseSimilarCount: reverseSimilarMap.get(row.appSlug) ?? 0,
-            rankedKeywordCount: rankedKeywordMap.get(row.appSlug) ?? 0,
-            reviewVelocity: velocityMap2.get(row.appSlug) ?? null,
-            similarityScore: similarityMap2.get(row.appSlug) ?? null,
-            isSelf: includeSelf && row.appSlug === slug,
-            ...(includeChanges ? { recentChanges: changesMap.get(row.appSlug) ?? [] } : {}),
-          };
-        })
-      );
+        return {
+          ...row,
+          latestSnapshot: snapshot ? snapshotRest : null,
+          minPaidPrice,
+          lastChangeAt: lastChangeMap.get((row as any)._appId) || null,
+          featuredSections: featuredCountMap.get(row.appSlug) ?? 0,
+          adKeywords: adKeywordCountMap.get(row.appSlug) ?? 0,
+          visibilityScore: visibilityMap2.get(row.appSlug)?.visibilityScore ?? null,
+          visibilityKeywordCount: visibilityMap2.get(row.appSlug)?.keywordCount ?? null,
+          visibilityRaw: visibilityMap2.get(row.appSlug)?.visibilityRaw ?? null,
+          weightedPowerScore: weightedPowerMap2.get(row.appSlug) ?? null,
+          powerCategories: powerCategoriesMap2.get(row.appSlug) ?? [],
+          categories: appCategories.map((c: any) => {
+            const catSlug = c.url ? c.url.replace(/.*\/categories\//, "").replace(/\/.*/, "") : null;
+            return { type: c.type || "primary", title: c.title, slug: catSlug };
+          }),
+          categoryRankings: categoryRankingMap.get(row.appSlug) ?? [],
+          reverseSimilarCount: reverseSimilarMap.get(row.appSlug) ?? 0,
+          rankedKeywordCount: rankedKeywordMap.get(row.appSlug) ?? 0,
+          reviewVelocity: velocityMap2.get(row.appSlug) ?? null,
+          similarityScore: similarityMap2.get(row.appSlug) ?? null,
+          isSelf: includeSelf && row.appSlug === slug,
+          ...(includeChanges ? { recentChanges: changesMap.get(row.appSlug) ?? [] } : {}),
+        };
+      });
 
       return result;
     }
@@ -1770,28 +1786,29 @@ export const accountTrackingRoutes: FastifyPluginAsync = async (app) => {
           )
         );
 
-      // Enrich with latest snapshot
-      const result = await Promise.all(
-        rows.map(async (row) => {
-          const [snapshot] = await db
-            .select({
-              totalResults: keywordSnapshots.totalResults,
-              scrapedAt: keywordSnapshots.scrapedAt,
-            })
-            .from(keywordSnapshots)
-            .where(eq(keywordSnapshots.keywordId, row.keywordId))
-            .orderBy(desc(keywordSnapshots.scrapedAt))
-            .limit(1);
+      // Extract keyword IDs for batch operations
+      const keywordIds = rows.map((r) => r.keywordId);
 
-          return {
-            ...row,
-            latestSnapshot: snapshot || null,
-          };
-        })
-      );
+      // Batch-fetch latest snapshot per keyword (replaces N+1 per-keyword queries)
+      const snapshotMap = new Map<number, { totalResults: number | null; scrapedAt: Date | null }>();
+      if (keywordIds.length > 0) {
+        const snapRows: any[] = await db.execute(sql`
+          SELECT DISTINCT ON (keyword_id)
+            keyword_id, total_results, scraped_at
+          FROM keyword_snapshots
+          WHERE keyword_id IN (${sql.join(keywordIds.map((id: number) => sql`${id}`), sql`, `)})
+          ORDER BY keyword_id, scraped_at DESC
+        `).then((res: any) => (res as any).rows ?? res);
+        for (const r of snapRows) {
+          snapshotMap.set(r.keyword_id, { totalResults: r.total_results, scrapedAt: r.scraped_at });
+        }
+      }
+      const result = rows.map((row) => ({
+        ...row,
+        latestSnapshot: snapshotMap.get(row.keywordId) || null,
+      }));
 
       // Batch-fetch tags for all keywords
-      const keywordIds = rows.map((r) => r.keywordId);
       const tagMap = new Map<
         number,
         Array<{ id: string; name: string; color: string }>

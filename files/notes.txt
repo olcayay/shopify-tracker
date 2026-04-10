@@ -1,3 +1,24 @@
+Keywords Page Performance — N+1 Query Elimination (2026-04-10)
+================================================================
+
+PLA-978: Fix N+1 queries and connection pool starvation causing 40+ second page loads
+
+Changes:
+1. Keywords endpoint (account-tracking.ts): Replace per-keyword snapshot queries in
+   Promise.all with single DISTINCT ON batch query. N queries → 1 query.
+2. Competitors endpoint (account-tracking.ts): Replace per-competitor snapshot + change
+   queries in Promise.all with two batch queries (DISTINCT ON for snapshots, GROUP BY
+   for last change dates). 2N queries → 2 queries.
+3. Connection pool (index.ts): Increase max from 5 → 10 (Cloud SQL allows 25).
+   Also updated pool reset to match.
+4. Cross-platform keywords (cross-platform.ts): Replace LATERAL JOIN with
+   DISTINCT ON subquery + regular LEFT JOIN for latest keyword snapshots.
+5. V2 app page (page.tsx): Eliminate waterfall — competitors/keywords fetched in
+   parallel with all other data instead of waiting for Round 1 to complete.
+
+Impact: Keywords page should load in 2-5s instead of 40+. All endpoints benefit
+from doubled connection pool capacity.
+
 Fix Broken App Search (2026-04-10)
 ================================================================
 

@@ -1,3 +1,6 @@
+Keywords Page Performance (2026-04-10)
+  PLA-978: Fix N+1 queries + connection pool starvation ✅
+
 Fix Broken App Search (2026-04-10)
   PLA-977: Fix missing /api prefix in search fetch URLs ✅
 

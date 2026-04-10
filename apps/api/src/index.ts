@@ -81,7 +81,7 @@ validateEnv([...API_REQUIRED_ENV]);
 
 const databaseUrl = process.env.DATABASE_URL!;
 
-let db = createDb(databaseUrl, { max: 5 });
+let db = createDb(databaseUrl, { max: 10 });
 const healthDb = createHealthCheckDb(databaseUrl);
 
 // Proxy that always delegates to the current `db` reference.
@@ -654,7 +654,7 @@ async function resetPool(): Promise<boolean> {
       await closeDb(oldDb).catch(() => {});
     }
     // Create new pool, then close old one
-    const newDb = createDb(databaseUrl, { max: 5 });
+    const newDb = createDb(databaseUrl, { max: 10 });
     // Verify new pool works
     await Promise.race([
       newDb.execute(sql`SELECT 1`),
