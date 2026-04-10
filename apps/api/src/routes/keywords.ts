@@ -56,14 +56,27 @@ export const keywordRoutes: FastifyPluginAsync = async (app) => {
     const { accountId } = request.user;
     const platform = getPlatformFromQuery(request.query as Record<string, unknown>);
 
-    const trackedRows = await db
-      .select({
-        keywordId: accountTrackedKeywords.keywordId,
-        trackedAppSlug: apps.slug,
-      })
-      .from(accountTrackedKeywords)
-      .leftJoin(apps, eq(apps.id, accountTrackedKeywords.trackedAppId))
-      .where(eq(accountTrackedKeywords.accountId, accountId));
+    // Parallelize: fetch tracked keywords AND tracked/competitor apps simultaneously
+    const [trackedRows, trackedAppRows, competitorRows] = await Promise.all([
+      db
+        .select({
+          keywordId: accountTrackedKeywords.keywordId,
+          trackedAppSlug: apps.slug,
+        })
+        .from(accountTrackedKeywords)
+        .leftJoin(apps, eq(apps.id, accountTrackedKeywords.trackedAppId))
+        .where(eq(accountTrackedKeywords.accountId, accountId)),
+      db
+        .select({ appSlug: apps.slug })
+        .from(accountTrackedApps)
+        .innerJoin(apps, eq(apps.id, accountTrackedApps.appId))
+        .where(eq(accountTrackedApps.accountId, accountId)),
+      db
+        .select({ appSlug: apps.slug })
+        .from(accountCompetitorApps)
+        .innerJoin(apps, eq(apps.id, accountCompetitorApps.competitorAppId))
+        .where(eq(accountCompetitorApps.accountId, accountId)),
+    ]);
 
     if (trackedRows.length === 0) {
       return [];
@@ -79,37 +92,38 @@ export const keywordRoutes: FastifyPluginAsync = async (app) => {
       trackedForAppsMap.set(row.keywordId, existing);
     }
 
-    // Get account's tracked apps and competitors for matching
-    const [trackedAppRows, competitorRows] = await Promise.all([
-      db
-        .select({ appSlug: apps.slug })
-        .from(accountTrackedApps)
-        .innerJoin(apps, eq(apps.id, accountTrackedApps.appId))
-        .where(eq(accountTrackedApps.accountId, accountId)),
-      db
-        .select({ appSlug: apps.slug })
-        .from(accountCompetitorApps)
-        .innerJoin(apps, eq(apps.id, accountCompetitorApps.competitorAppId))
-        .where(eq(accountCompetitorApps.accountId, accountId)),
-    ]);
     const trackedSlugs = trackedAppRows.map((r) => r.appSlug);
     const competitorSlugs = [...new Set(competitorRows.map((r) => r.appSlug))];
+    // Use Sets for O(1) slug matching instead of O(n) Array.includes
+    const trackedSet = new Set(trackedSlugs);
+    const competitorSet = new Set(competitorSlugs);
 
     const ids = [...new Set(trackedRows.map((r) => r.keywordId))];
+
+    // Filter by platform early in the keyword query
     const rows = await db
       .select()
       .from(trackedKeywords)
       .where(and(inArray(trackedKeywords.id, ids), eq(trackedKeywords.platform, platform)))
       .orderBy(trackedKeywords.keyword);
 
-    // Batch-fetch ad app counts per keyword (last 30 days)
+    // Use only platform-filtered keyword IDs for downstream queries
+    const platformIds = rows.map((r) => r.id);
+    if (platformIds.length === 0) {
+      return [];
+    }
+
+    // Batch-fetch ad app counts, tags, and snapshots in parallel
     const adSince = new Date();
     adSince.setDate(adSince.getDate() - 30);
     const adSinceStr = adSince.toISOString().slice(0, 10);
 
-    const adAppCountMap = new Map<number, number>();
-    if (ids.length > 0) {
-      const adAppCounts = await db
+    // Build slug arrays for SQL filtering
+    const allSlugs = [...new Set([...trackedSlugs, ...competitorSlugs])];
+
+    const [adAppCounts, tagRows, latestSnapshots] = await Promise.all([
+      // Ad app counts
+      db
         .select({
           keywordId: keywordAdSightings.keywordId,
           appCount: sql<number>`count(distinct ${keywordAdSightings.appId})`,
@@ -117,24 +131,13 @@ export const keywordRoutes: FastifyPluginAsync = async (app) => {
         .from(keywordAdSightings)
         .where(
           and(
-            inArray(keywordAdSightings.keywordId, ids),
+            inArray(keywordAdSightings.keywordId, platformIds),
             sql`${keywordAdSightings.seenDate} >= ${adSinceStr}`
           )
         )
-        .groupBy(keywordAdSightings.keywordId);
-
-      for (const ac of adAppCounts) {
-        adAppCountMap.set(ac.keywordId, ac.appCount);
-      }
-    }
-
-    // Batch-fetch tags for all keywords
-    const tagMap = new Map<
-      number,
-      Array<{ id: string; name: string; color: string }>
-    >();
-    if (ids.length > 0) {
-      const tagRows = await db
+        .groupBy(keywordAdSightings.keywordId),
+      // Tags
+      db
         .select({
           keywordId: keywordTagAssignments.keywordId,
           tagId: keywordTags.id,
@@ -149,39 +152,61 @@ export const keywordRoutes: FastifyPluginAsync = async (app) => {
         .where(
           and(
             eq(keywordTags.accountId, accountId),
-            inArray(keywordTagAssignments.keywordId, ids)
+            inArray(keywordTagAssignments.keywordId, platformIds)
           )
-        );
-      for (const tr of tagRows) {
-        const list = tagMap.get(tr.keywordId) || [];
-        list.push({ id: tr.tagId, name: tr.tagName, color: tr.tagColor });
-        tagMap.set(tr.keywordId, list);
-      }
+        ),
+      // Latest snapshots — push slug filtering into SQL, avoid transferring full JSONB
+      allSlugs.length > 0
+        ? db.execute(sql`
+            SELECT DISTINCT ON (keyword_id)
+              keyword_id,
+              total_results,
+              scraped_at,
+              jsonb_array_length(results)::int AS app_count,
+              (SELECT jsonb_agg(app) FROM jsonb_array_elements(results) app
+               WHERE app->>'app_slug' = ANY(${sqlArray(allSlugs, "text")})
+              ) AS matched_apps
+            FROM keyword_snapshots
+            WHERE keyword_id = ANY(${sqlArray(platformIds)})
+            ORDER BY keyword_id, scraped_at DESC
+          `)
+        : db.execute(sql`
+            SELECT DISTINCT ON (keyword_id)
+              keyword_id,
+              total_results,
+              scraped_at,
+              jsonb_array_length(results)::int AS app_count,
+              NULL::jsonb AS matched_apps
+            FROM keyword_snapshots
+            WHERE keyword_id = ANY(${sqlArray(platformIds)})
+            ORDER BY keyword_id, scraped_at DESC
+          `),
+    ]);
+
+    const adAppCountMap = new Map<number, number>();
+    for (const ac of adAppCounts) {
+      adAppCountMap.set(ac.keywordId, ac.appCount);
     }
 
-    // Batch-fetch latest snapshots for all keywords (avoids N+1 queries)
-    const snapshotMap = new Map<number, { totalResults: number | null; scrapedAt: Date; appCount: number; results: unknown }>();
-    if (ids.length > 0) {
-      const latestSnapshots = await db.execute(sql`
-        SELECT DISTINCT ON (keyword_id)
-          keyword_id,
-          total_results,
-          scraped_at,
-          jsonb_array_length(results)::int AS app_count,
-          results
-        FROM keyword_snapshots
-        WHERE keyword_id = ANY(${sqlArray(ids)})
-        ORDER BY keyword_id, scraped_at DESC
-      `);
-      const snapRows = (latestSnapshots as any).rows ?? latestSnapshots;
-      for (const row of snapRows) {
-        snapshotMap.set(row.keyword_id, {
-          totalResults: row.total_results,
-          scrapedAt: row.scraped_at,
-          appCount: row.app_count,
-          results: row.results,
-        });
-      }
+    const tagMap = new Map<
+      number,
+      Array<{ id: string; name: string; color: string }>
+    >();
+    for (const tr of tagRows) {
+      const list = tagMap.get(tr.keywordId) || [];
+      list.push({ id: tr.tagId, name: tr.tagName, color: tr.tagColor });
+      tagMap.set(tr.keywordId, list);
+    }
+
+    const snapshotMap = new Map<number, { totalResults: number | null; scrapedAt: Date; appCount: number; matchedApps: any[] | null }>();
+    const snapRows = (latestSnapshots as any).rows ?? latestSnapshots;
+    for (const row of snapRows) {
+      snapshotMap.set(row.keyword_id, {
+        totalResults: row.total_results,
+        scrapedAt: row.scraped_at,
+        appCount: row.app_count,
+        matchedApps: row.matched_apps,
+      });
     }
 
     const result = rows.map((kw) => {
@@ -189,9 +214,9 @@ export const keywordRoutes: FastifyPluginAsync = async (app) => {
 
       const trackedAppsInResults: { app_slug: string; app_name: string; position: number; logo_url?: string }[] = [];
       const competitorAppsInResults: { app_slug: string; app_name: string; position: number; logo_url?: string }[] = [];
-      if (snapshot?.results) {
-        for (const app of snapshot.results as any[]) {
-          if (trackedSlugs.includes(app.app_slug)) {
+      if (snapshot?.matchedApps) {
+        for (const app of snapshot.matchedApps) {
+          if (trackedSet.has(app.app_slug)) {
             trackedAppsInResults.push({
               app_slug: app.app_slug,
               app_name: app.app_name,
@@ -199,7 +224,7 @@ export const keywordRoutes: FastifyPluginAsync = async (app) => {
               logo_url: app.logo_url,
             });
           }
-          if (competitorSlugs.includes(app.app_slug)) {
+          if (competitorSet.has(app.app_slug)) {
             competitorAppsInResults.push({
               app_slug: app.app_slug,
               app_name: app.app_name,

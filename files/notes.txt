@@ -1,3 +1,21 @@
+Keywords API Performance Optimization (2026-04-10)
+===================================================
+
+PLA-983: Optimize GET /api/keywords — response time >3s
+
+Changes:
+1. Parallelized Query 1 (tracked keywords) with Query 2 (tracked/competitor apps) using Promise.all
+2. Pushed JSONB filtering into SQL — instead of transferring full results blob (10KB-100KB+),
+   only extract matched app slugs via jsonb_array_elements subquery
+3. Converted Array.includes() to Set.has() for O(1) slug lookups
+4. Used platform-filtered keyword IDs for downstream queries (ads, tags, snapshots)
+5. Parallelized ad counts, tag fetching, and snapshot queries into a single Promise.all
+6. Skipped migration — idx_account_tracked_keywords_account already exists (migration 0110)
+
+Files changed:
+- apps/api/src/routes/keywords.ts (GET / handler rewritten)
+- apps/api/src/__tests__/routes/keywords.test.ts (+3 Set-based filtering tests)
+
 Header & Sidebar Redesign — Mobile-First Navigation (2026-04-10)
 ================================================================
 

@@ -3,6 +3,7 @@ Header & Sidebar Redesign (2026-04-10)
 
 Keywords Page Performance (2026-04-10)
   PLA-978: Fix N+1 queries + connection pool starvation ✅
+  PLA-983: Optimize GET /api/keywords — parallelize queries, SQL JSONB filtering, Set-based matching ✅
 
 Fix Broken App Search (2026-04-10)
   PLA-977: Fix missing /api prefix in search fetch URLs ✅
