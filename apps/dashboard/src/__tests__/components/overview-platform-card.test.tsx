@@ -16,19 +16,21 @@ vi.mock("@/lib/platform-display", () => ({
   },
 }));
 
-const makeApp = (slug: string, name: string, overrides: Partial<{ iconUrl: string | null; rating: number | null; reviewCount: number; keywordCount: number }> = {}) => ({
+const makeApp = (slug: string, name: string, overrides: Partial<{ iconUrl: string | null; rating: number | null; reviewCount: number; keywordCount: number; competitorCount: number; developerName: string | null }> = {}) => ({
   slug,
   name,
   iconUrl: overrides.iconUrl ?? null,
   rating: overrides.rating ?? null,
   reviewCount: overrides.reviewCount ?? 0,
   keywordCount: overrides.keywordCount ?? 0,
+  competitorCount: overrides.competitorCount ?? 0,
+  developerName: overrides.developerName ?? null,
 });
 
 const mockData = {
   apps: [
-    { slug: "my-app", name: "My App", iconUrl: "https://example.com/icon.png", rating: 4.5, reviewCount: 120, keywordCount: 8 },
-    { slug: "other-app", name: "Other App", iconUrl: null, rating: null, reviewCount: 0, keywordCount: 0 },
+    { slug: "my-app", name: "My App", iconUrl: "https://example.com/icon.png", rating: 4.5, reviewCount: 120, keywordCount: 8, competitorCount: 2, developerName: "Dev Co" },
+    { slug: "other-app", name: "Other App", iconUrl: null, rating: null, reviewCount: 0, keywordCount: 0, competitorCount: 0, developerName: null },
   ],
   highlights: {
     keywordMovers: [],

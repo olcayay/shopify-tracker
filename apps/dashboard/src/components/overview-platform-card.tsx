@@ -148,21 +148,21 @@ function AppRow({ app, platformId }: { app: AppSummary; platformId: PlatformId }
           </span>
         )}
       </div>
-      <div className="grid grid-cols-3 gap-2 ml-auto shrink-0 text-xs text-muted-foreground items-center" style={{ minWidth: "11rem" }}>
-        <span className="flex items-center gap-0.5 justify-end">
+      <div className="flex items-center gap-2 ml-auto shrink-0 text-xs text-muted-foreground">
+        <span className="w-28 flex items-center gap-1 justify-start tabular-nums whitespace-nowrap">
           {app.rating != null ? (
             <>
               <Star className="h-3 w-3 text-amber-500 fill-amber-500" />
               {app.rating.toFixed(1)}
               {app.reviewCount > 0 && (
-                <span className="text-muted-foreground/70">({app.reviewCount})</span>
+                <span className="text-muted-foreground/70">({app.reviewCount.toLocaleString()})</span>
               )}
             </>
           ) : (
             <span className="text-muted-foreground/40">{"\u2014"}</span>
           )}
         </span>
-        <span className="flex items-center gap-0.5 justify-end">
+        <span className="w-12 flex items-center gap-0.5 justify-end">
           {app.keywordCount > 0 ? (
             <span className="flex items-center gap-0.5 bg-muted rounded-full px-1.5 py-0.5">
               <Search className="h-3 w-3" />
@@ -172,7 +172,7 @@ function AppRow({ app, platformId }: { app: AppSummary; platformId: PlatformId }
             <span className="text-muted-foreground/40">{"\u2014"}</span>
           )}
         </span>
-        <span className="flex items-center gap-0.5 justify-end">
+        <span className="w-12 flex items-center gap-0.5 justify-end">
           {app.competitorCount > 0 ? (
             <span className="flex items-center gap-0.5 bg-muted rounded-full px-1.5 py-0.5">
               <Users className="h-3 w-3" />
