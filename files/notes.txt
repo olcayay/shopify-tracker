@@ -1,3 +1,19 @@
+Fix Broken App Search (2026-04-10)
+================================================================
+
+PLA-977: Fix missing /api prefix in GlobalAppSearch and CommandPalette fetch URLs
+- Root cause: fetchWithAuth('/public/apps/search') missing /api prefix → 404 in production
+  Full URL became: https://api.appranks.io/public/apps/search (wrong)
+  Should be: https://api.appranks.io/api/public/apps/search (correct)
+- Affected components:
+  1. global-app-search.tsx:79 — used on /apps and /competitors pages
+  2. command-palette.tsx:90 — header Cmd+K search
+- Fix: Added /api prefix to both fetch URLs
+- audit-search.tsx already had the correct path — served as reference
+- Grep audit confirmed no other instances of the bug
+- Added 4 new regression tests for GlobalAppSearch component
+- Updated 2 existing tests in command-palette.test.tsx
+
 Auth Refresh/Logout Validation Fix (2026-04-10)
 ================================================================
 

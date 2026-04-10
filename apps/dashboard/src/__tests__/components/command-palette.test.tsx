@@ -86,7 +86,7 @@ describe("CommandPalette", () => {
 
     await waitFor(() => {
       expect(mockFetchWithAuth).toHaveBeenCalledWith(
-        expect.stringContaining("/public/apps/search?q=slack")
+        expect.stringContaining("/api/public/apps/search?q=slack")
       );
     });
 
@@ -163,7 +163,7 @@ describe("CommandPalette", () => {
     await new Promise((r) => setTimeout(r, 400));
     // fetchWithAuth should not be called for single char
     const searchCalls = mockFetchWithAuth.mock.calls.filter(
-      (c: any[]) => c[0].includes("/public/apps/search")
+      (c: any[]) => c[0].includes("/api/public/apps/search")
     );
     expect(searchCalls.length).toBe(0);
   });

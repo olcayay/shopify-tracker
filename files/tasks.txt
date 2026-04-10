@@ -1,3 +1,6 @@
+Fix Broken App Search (2026-04-10)
+  PLA-977: Fix missing /api prefix in search fetch URLs ✅
+
 API Performance Optimizations (2026-04-10)
   PLA-968: Parallelize /api/apps queries (5 sequential → 2 parallel batches) ✅
   PLA-969: Add CONNECTION_DESTROYED to db-retry transient errors ✅

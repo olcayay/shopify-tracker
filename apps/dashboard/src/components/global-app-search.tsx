@@ -76,7 +76,7 @@ export function GlobalAppSearch({
     setShowResults(true);
     debounceRef.current = setTimeout(async () => {
       try {
-        const res = await fetchRef.current(`/public/apps/search?q=${encodeURIComponent(q)}&limit=10`);
+        const res = await fetchRef.current(`/api/public/apps/search?q=${encodeURIComponent(q)}&limit=10`);
         if (res.ok) {
           const data = await res.json();
           setResults(Array.isArray(data) ? data : []);
