@@ -10,6 +10,7 @@ import { ExternalLink, Star } from "lucide-react";
 import { EmailDigestToggle } from "../../[slug]/email-digest-toggle";
 import { ScoreBar } from "@/components/v2/score-bar";
 import { V2Nav } from "@/components/v2/v2-nav";
+import { ClassicViewLink } from "@/components/v2/classic-view-link";
 
 export default async function V2AppDetailLayout({
   params,
@@ -116,13 +117,7 @@ export default async function V2AppDetailLayout({
       <div className="flex items-center gap-6 flex-wrap">
         <ScoreBar label="Visibility" score={bestVisibility} maxScore={100} />
         <ScoreBar label="Power" score={powerScore} maxScore={100} />
-        <Link
-          href={`/${platform}/apps/v1/${slug}`}
-          className="text-xs text-muted-foreground hover:text-foreground ml-auto transition-colors"
-          onClick={() => { document.cookie = "app-layout-version=v1; path=/; max-age=31536000"; }}
-        >
-          Back to classic view
-        </Link>
+        <ClassicViewLink platform={platform} slug={slug} />
       </div>
 
       <V2Nav slug={slug} isTracked={app.isTrackedByAccount} />
