@@ -7,6 +7,7 @@ import type { FastifyInstance } from "fastify";
 const TRANSIENT_ERROR_PATTERNS = [
   "ECONNREFUSED",
   "ECONNRESET",
+  "CONNECTION_DESTROYED",
   "connection terminated unexpectedly",
   "Connection terminated unexpectedly",
   "terminating connection due to administrator command",
@@ -25,9 +26,13 @@ const TRANSIENT_PG_CODES = new Set([
 
 const RETRY_DELAY_MS = 500;
 
-export function isTransientDbError(error: Error & { code?: string }): boolean {
+export function isTransientDbError(error: Error & { code?: string; errno?: string }): boolean {
   // Check PostgreSQL error codes
   if (error.code && TRANSIENT_PG_CODES.has(error.code)) {
+    return true;
+  }
+  // Check postgres.js driver error codes (e.g. CONNECTION_DESTROYED during pool reset)
+  if (error.code === "CONNECTION_DESTROYED" || error.errno === "CONNECTION_DESTROYED") {
     return true;
   }
   // Check error message patterns

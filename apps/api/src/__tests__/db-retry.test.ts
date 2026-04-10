@@ -43,6 +43,18 @@ describe("isTransientDbError — connection errors", () => {
   it("detects pool_monitor_timeout", () => {
     expect(isTransientDbError(new Error("pool_monitor_timeout"))).toBe(true);
   });
+
+  it("detects CONNECTION_DESTROYED in message", () => {
+    expect(isTransientDbError(new Error("write CONNECTION_DESTROYED 10.218.0.3:5432"))).toBe(true);
+  });
+
+  it("detects CONNECTION_DESTROYED as error code", () => {
+    expect(isTransientDbError(Object.assign(new Error("connection lost"), { code: "CONNECTION_DESTROYED" }))).toBe(true);
+  });
+
+  it("detects CONNECTION_DESTROYED as errno", () => {
+    expect(isTransientDbError(Object.assign(new Error("connection lost"), { errno: "CONNECTION_DESTROYED" }))).toBe(true);
+  });
 });
 
 describe("isTransientDbError — PostgreSQL error codes", () => {
