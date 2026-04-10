@@ -5,10 +5,8 @@
 -- Existing indexes are (app_id, seen_date) and (app_id, keyword_id, seen_date)
 -- but there's no (keyword_id, seen_date) index for keyword-first lookups.
 
--- breakpoint
-CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_kw_ad_sightings_keyword_date
-  ON keyword_ad_sightings (keyword_id, seen_date);
+CREATE INDEX IF NOT EXISTS idx_kw_ad_sightings_keyword_date
+  ON keyword_ad_sightings (keyword_id, seen_date);--> statement-breakpoint
 
--- breakpoint
-CREATE INDEX CONCURRENTLY IF NOT EXISTS idx_cat_ad_sightings_keyword_date
+CREATE INDEX IF NOT EXISTS idx_cat_ad_sightings_keyword_date
   ON category_ad_sightings (keyword_id, seen_date);
