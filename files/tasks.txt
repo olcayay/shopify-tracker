@@ -4,6 +4,9 @@ Header & Sidebar Redesign (2026-04-10)
 Keywords Page Performance (2026-04-10)
   PLA-978: Fix N+1 queries + connection pool starvation ✅
   PLA-983: Optimize GET /api/keywords — parallelize queries, SQL JSONB filtering, Set-based matching ✅
+  PLA-984: Fix Salesforce slow API — add performance indexes, parallelize starred-categories ✅
+  PLA-982: Optimize starred-categories — parallelize initial queries ✅
+  PLA-979: Optimize GET /api/developers — CTE-based query, expression index ✅
 
 Fix Broken App Search (2026-04-10)
   PLA-977: Fix missing /api prefix in search fetch URLs ✅

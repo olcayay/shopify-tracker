@@ -932,6 +932,13 @@
       "when": 1775813307646,
       "tag": "0132_ad_sightings_keyword_date_indexes",
       "breakpoints": true
+    },
+    {
+      "idx": 133,
+      "version": "7",
+      "when": 1781568000000,
+      "tag": "0133_salesforce_performance_indexes",
+      "breakpoints": true
     }
   ]
 }

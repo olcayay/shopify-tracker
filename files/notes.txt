@@ -16,6 +16,42 @@ Files changed:
 - apps/api/src/routes/keywords.ts (GET / handler rewritten)
 - apps/api/src/__tests__/routes/keywords.test.ts (+3 Set-based filtering tests)
 
+PLA-984: Fix Salesforce platform page slow API responses (7-10s per endpoint)
+
+Changes:
+1. Migration 0133: Added two CONCURRENTLY indexes:
+   - idx_notifications_user_read_archived ON notifications (user_id, is_read, is_archived) — covers unread-count filter
+   - idx_app_cat_rankings_app_cat_scraped ON app_category_rankings (app_id, category_slug, scraped_at DESC) — covers competitors windowed queries
+2. Skipped indexes for app_visibility_scores and app_power_scores — already well-indexed
+3. Skipped notifications user_id index — already exists as idx_notifications_user_unread
+4. Auth/me already optimized (consolidated to single round-trip)
+
+PLA-982: Optimize GET /api/account/starred-categories — parallelize initial queries
+
+Changes:
+1. Parallelized starred rows + tracked apps + competitor apps into single Promise.all
+   (was: starred rows → then [tracked, competitor] in parallel = 2 round-trips, now 1)
+
+Files changed:
+- packages/db/src/migrations/0133_salesforce_performance_indexes.sql (new)
+- packages/db/src/migrations/meta/_journal.json (updated)
+- apps/api/src/routes/account-extras.ts (starred-categories parallelization)
+
+PLA-979: Optimize GET /api/developers — correlated subqueries cause 1s+ response time
+
+Changes:
+1. Rewrote main developers query to use CTEs instead of correlated subqueries:
+   - latest_snapshots CTE: DISTINCT ON (app_id) computed once, not per row
+   - dev_apps CTE: joins platform_developers + apps + latest_snapshots once
+   - dev_app_counts CTE: aggregates app counts from dev_apps
+   - dev_top_apps CTE: builds top 5 app icons from dev_apps
+2. Added expression index: idx_app_snapshots_developer_name ON app_snapshots((developer->>'name'))
+3. Same CTE pattern already used in admin endpoint — consistency fix
+
+Files changed:
+- apps/api/src/routes/developers.ts (GET / query rewrite)
+- packages/db/src/migrations/0133_salesforce_performance_indexes.sql (added developer name index)
+
 Header & Sidebar Redesign — Mobile-First Navigation (2026-04-10)
 ================================================================
 

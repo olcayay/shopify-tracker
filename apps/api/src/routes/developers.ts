@@ -113,54 +113,59 @@ export async function developerRoutes(app: FastifyInstance) {
       const orderColumn = sort === "apps" ? "app_count" : sort === "platforms" ? "platform_count" : "g.name";
       const orderSQL = sql.raw(`(asd.id IS NOT NULL) DESC, ${orderColumn} ${order === "desc" ? "DESC" : "ASC"}`);
 
-      // Platform filter for subqueries
-      const platformSubFilter = platforms.length > 0
-        ? sql`AND a.platform = ANY(${sqlArray(platforms)})`
-        : sql``;
       const platformJoinFilter = platforms.length > 0
         ? sql`AND pd.platform = ANY(${sqlArray(platforms)})`
         : sql``;
+      const platformAppFilter = platforms.length > 0
+        ? sql`AND a.platform = ANY(${sqlArray(platforms)})`
+        : sql``;
 
-      // Get paginated results with counts, platforms array, top app icons, and starred status
+      // Get paginated results using CTEs for latest snapshots (eliminates correlated subqueries)
       const rows: any[] = await db.execute(sql`
+        WITH latest_snapshots AS (
+          SELECT DISTINCT ON (app_id) app_id, developer
+          FROM app_snapshots
+          ORDER BY app_id, scraped_at DESC
+        ),
+        dev_apps AS (
+          SELECT pd.global_developer_id, a.id AS app_id, a.slug, a.name, a.icon_url, a.platform
+          FROM platform_developers pd
+          JOIN apps a ON a.platform = pd.platform ${platformAppFilter}
+          JOIN latest_snapshots ls ON ls.app_id = a.id
+          WHERE ls.developer->>'name' = pd.name
+        ),
+        dev_app_counts AS (
+          SELECT global_developer_id, COUNT(DISTINCT app_id) AS app_count
+          FROM dev_apps
+          GROUP BY global_developer_id
+        ),
+        dev_top_apps AS (
+          SELECT global_developer_id,
+            COALESCE(json_agg(json_build_object(
+              'icon_url', icon_url, 'name', name, 'slug', slug, 'platform', platform
+            ) ORDER BY name) FILTER (WHERE rn <= 5), '[]'::json) AS top_apps
+          FROM (
+            SELECT *, ROW_NUMBER() OVER (PARTITION BY global_developer_id ORDER BY name) AS rn
+            FROM (SELECT DISTINCT ON (global_developer_id, slug) global_developer_id, icon_url, name, slug, platform FROM dev_apps WHERE icon_url IS NOT NULL) d
+          ) ranked
+          GROUP BY global_developer_id
+        )
         SELECT
           g.id, g.slug, g.name, g.website,
           COUNT(DISTINCT pd.platform) AS platform_count,
           COUNT(DISTINCT pd.id) AS link_count,
           ARRAY_AGG(DISTINCT pd.platform) FILTER (WHERE pd.platform IS NOT NULL) AS platforms,
-          (
-            SELECT COALESCE(json_agg(sub), '[]'::json)
-            FROM (
-              SELECT DISTINCT a.icon_url, a.name, a.slug, a.platform
-              FROM apps a
-              JOIN app_snapshots s ON s.app_id = a.id
-              JOIN platform_developers pd2 ON pd2.global_developer_id = g.id
-                AND a.platform = pd2.platform
-              WHERE s.developer->>'name' = pd2.name
-                AND a.icon_url IS NOT NULL
-                AND s.id = (SELECT s2.id FROM app_snapshots s2 WHERE s2.app_id = a.id ORDER BY s2.scraped_at DESC LIMIT 1)
-                ${platformSubFilter}
-              ORDER BY a.name
-              LIMIT 5
-            ) sub
-          ) AS top_apps,
-          (
-            SELECT COUNT(DISTINCT a2.id)
-            FROM apps a2
-            JOIN app_snapshots s2 ON s2.app_id = a2.id
-            JOIN platform_developers pd3 ON pd3.global_developer_id = g.id
-              AND a2.platform = pd3.platform
-            WHERE s2.developer->>'name' = pd3.name
-              AND s2.id = (SELECT s3.id FROM app_snapshots s3 WHERE s3.app_id = a2.id ORDER BY s3.scraped_at DESC LIMIT 1)
-              ${platforms.length > 0 ? sql`AND a2.platform = ANY(${sqlArray(platforms)})` : sql``}
-          ) AS app_count,
+          COALESCE(dta.top_apps, '[]'::json) AS top_apps,
+          COALESCE(dac.app_count, 0) AS app_count,
           CASE WHEN asd.id IS NOT NULL THEN true ELSE false END AS is_starred
         FROM global_developers g
         LEFT JOIN platform_developers pd ON pd.global_developer_id = g.id ${platformJoinFilter}
+        LEFT JOIN dev_app_counts dac ON dac.global_developer_id = g.id
+        LEFT JOIN dev_top_apps dta ON dta.global_developer_id = g.id
         LEFT JOIN account_starred_developers asd ON asd.global_developer_id = g.id
           AND asd.account_id = ${accountId}
         ${whereClause}
-        GROUP BY g.id, asd.id
+        GROUP BY g.id, asd.id, dac.app_count, dta.top_apps
         ORDER BY ${orderSQL}
         LIMIT ${limit} OFFSET ${offset}
       `);

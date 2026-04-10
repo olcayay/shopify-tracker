@@ -42,22 +42,21 @@ export const accountExtrasRoutes: FastifyPluginAsync = async (app) => {
     const { accountId } = request.user;
     const platform = getPlatformFromQuery(request.query as Record<string, unknown>);
 
-    const starredRows = await db
-      .select({
-        categorySlug: categories.slug,
-        createdAt: accountStarredCategories.createdAt,
-        categoryTitle: categories.title,
-        parentSlug: categories.parentSlug,
-      })
-      .from(accountStarredCategories)
-      .innerJoin(
-        categories,
-        eq(categories.id, accountStarredCategories.categoryId)
-      )
-      .where(and(eq(accountStarredCategories.accountId, accountId), eq(categories.platform, platform)));
-
-    // Get tracked + competitor app IDs & slugs for this account (filtered by platform)
-    const [trackedAppsRows2, competitorAppsRows2] = await Promise.all([
+    // Parallelize: starred categories, tracked apps, and competitor apps are independent
+    const [starredRows, trackedAppsRows2, competitorAppsRows2] = await Promise.all([
+      db
+        .select({
+          categorySlug: categories.slug,
+          createdAt: accountStarredCategories.createdAt,
+          categoryTitle: categories.title,
+          parentSlug: categories.parentSlug,
+        })
+        .from(accountStarredCategories)
+        .innerJoin(
+          categories,
+          eq(categories.id, accountStarredCategories.categoryId)
+        )
+        .where(and(eq(accountStarredCategories.accountId, accountId), eq(categories.platform, platform))),
       db.select({ appId: apps.id, appSlug: apps.slug }).from(accountTrackedApps).innerJoin(apps, eq(apps.id, accountTrackedApps.appId)).where(and(eq(accountTrackedApps.accountId, accountId), eq(apps.platform, platform))),
       db.select({ appId: apps.id, appSlug: apps.slug }).from(accountCompetitorApps).innerJoin(apps, eq(apps.id, accountCompetitorApps.competitorAppId)).where(and(eq(accountCompetitorApps.accountId, accountId), eq(apps.platform, platform))),
     ]);
