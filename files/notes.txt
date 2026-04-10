@@ -1,3 +1,30 @@
+Header & Sidebar Redesign — Mobile-First Navigation (2026-04-10)
+================================================================
+
+PLA-976: Enhance mobile header and sidebar for full mobile navigation
+
+Mobile header enhancements (dashboard-shell.tsx):
+- Added search icon button (dispatches Cmd+K to open command palette)
+- Added platform indicator (colored dot + label) on platform pages
+- Added theme toggle (was desktop-only)
+- Added notification bell (was gated, now shows properly)
+- Better spacing with gap-2 and px-3
+
+Mobile sidebar enhancements (sidebar.tsx):
+- Added search bar at top of mobile sidebar sheet
+- Widened sidebar from w-60 to w-72 for better readability
+- Platform accent colors for active nav links (consistent with desktop IconSidebar)
+- 44px minimum touch targets (min-h-[44px]) on all nav links
+- Added aria-label to hamburger menu button
+
+Active-link styling unified:
+- Both SidebarContent and IconSidebar now use platform accent color
+- Falls back to primary color for non-platform pages (settings, system admin)
+
+Tests added:
+- dashboard-shell.test.tsx: 7 tests for mobile header (search, theme, platform indicator, etc.)
+- sidebar.test.tsx: 4 new tests for mobile sidebar search, navigation, accent colors
+
 Keywords Page Performance — N+1 Query Elimination (2026-04-10)
 ================================================================
 

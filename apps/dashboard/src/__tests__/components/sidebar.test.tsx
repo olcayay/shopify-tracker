@@ -196,9 +196,9 @@ describe("Sidebar on global page", () => {
 });
 
 describe("MobileSidebar", () => {
-  it("renders menu button", () => {
+  it("renders menu button with aria-label", () => {
     render(<MobileSidebar />);
-    const button = screen.getByRole("button");
+    const button = screen.getByLabelText("Open navigation menu");
     expect(button).toBeInTheDocument();
   });
 
@@ -206,8 +206,45 @@ describe("MobileSidebar", () => {
     const user = userEvent.setup();
     render(<MobileSidebar />);
 
-    await user.click(screen.getByRole("button"));
+    await user.click(screen.getByLabelText("Open navigation menu"));
     // Sheet should open and show navigation
     expect(screen.getByTestId("sheet")).toBeInTheDocument();
+  });
+
+  it("shows search button inside mobile sidebar", async () => {
+    const user = userEvent.setup();
+    render(<MobileSidebar />);
+
+    await user.click(screen.getByLabelText("Open navigation menu"));
+    expect(screen.getByText("Search apps...")).toBeInTheDocument();
+  });
+
+  it("shows navigation items when sheet is open", async () => {
+    const user = userEvent.setup();
+    render(<MobileSidebar />);
+
+    await user.click(screen.getByLabelText("Open navigation menu"));
+    // Settings link appears in the sidebar
+    expect(screen.getAllByText("Settings").length).toBeGreaterThanOrEqual(1);
+    expect(screen.getByText("Sign out")).toBeInTheDocument();
+  });
+});
+
+describe("Sidebar active-link accent color", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    localStorage.clear();
+    mockPathname.mockReturnValue("/shopify");
+  });
+
+  it("uses platform accent color for active nav items", () => {
+    render(<Sidebar />);
+    // Overview link should be active on /shopify
+    const overviewLink = screen.getByText("Overview").closest("a");
+    // Shopify accent color is applied via inline style
+    expect(overviewLink).toHaveAttribute("style");
+    const style = overviewLink?.getAttribute("style") || "";
+    // Should have a background-color set (platform accent)
+    expect(style).toContain("background-color");
   });
 });

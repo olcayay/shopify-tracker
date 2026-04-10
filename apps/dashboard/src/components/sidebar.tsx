@@ -13,6 +13,7 @@ import {
   PanelLeftClose,
   PanelLeftOpen,
   Menu,
+  Search,
 } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
 import { PLATFORM_LABELS, PLATFORM_COLORS } from "@/lib/platform-display";
@@ -68,18 +69,33 @@ function SidebarContent({
     }
   }, [pathname, user, account, isSystemAdmin, accessiblePlatforms, router]);
 
+  const isGlobalPage = isOnGlobalPage(pathname);
+  const isPlatformPage = isOnPlatformPage(pathname);
+
+  // Accent color for active links — platform color on platform pages, default otherwise
+  const accentColor = isPlatformPage ? PLATFORM_COLORS[currentPlatform] : undefined;
+
   function NavLink({ href, icon: Icon, label, isActive, iconSize = "h-4 w-4", className = "", badge, adminOnly }: {
     href: string; icon: any; label: string; isActive: boolean; iconSize?: string; className?: string; badge?: string; adminOnly?: boolean;
   }) {
+    const activeStyle = isActive && accentColor
+      ? { backgroundColor: accentColor, color: "var(--primary-foreground)" }
+      : undefined;
+
     const content = (
       <Link
         href={href}
         onClick={onNavigate}
-        className={`flex items-center gap-3 rounded-md text-sm transition-colors ${collapsed ? "justify-center px-2 py-2" : "px-3 py-2"} ${className} ${
+        className={`flex items-center gap-3 rounded-md text-sm transition-colors min-h-[44px] ${collapsed ? "justify-center px-2 py-2" : "px-3 py-2"} ${className} ${
           isActive
-            ? "bg-primary text-primary-foreground"
+            ? "font-medium text-primary-foreground"
             : "hover:bg-muted text-muted-foreground hover:text-foreground"
         }`}
+        style={
+          isActive
+            ? activeStyle ?? { backgroundColor: "var(--primary)", color: "var(--primary-foreground)" }
+            : undefined
+        }
       >
         <Icon className={`${iconSize} shrink-0`} />
         {!collapsed && label}
@@ -105,9 +121,6 @@ function SidebarContent({
     }
     return content;
   }
-
-  const isGlobalPage = isOnGlobalPage(pathname);
-  const isPlatformPage = isOnPlatformPage(pathname);
 
   // Filter global nav items by feature flags (e.g. hide Notifications when flag is off)
   const filteredGlobalNav = useMemo(
@@ -380,19 +393,37 @@ function SystemAdminSection({ collapsed, isAdminSection, pathname, onNavigate, N
 export function MobileSidebar() {
   const [open, setOpen] = useState(false);
 
+  function openSearch() {
+    setOpen(false);
+    // Small delay to let the sheet close before opening command palette
+    setTimeout(() => {
+      document.dispatchEvent(new KeyboardEvent("keydown", { key: "k", metaKey: true }));
+    }, 150);
+  }
+
   return (
     <>
       <button
         onClick={() => setOpen(true)}
         className="h-9 w-9 flex items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+        aria-label="Open navigation menu"
       >
         <Menu className="h-5 w-5" />
       </button>
       <Sheet open={open} onOpenChange={setOpen}>
-        <SheetContent side="left" className="w-60 p-2">
+        <SheetContent side="left" className="w-72 p-2">
           <VisuallyHidden.Root>
             <SheetTitle>Navigation</SheetTitle>
           </VisuallyHidden.Root>
+          {/* Search bar at the top of mobile sidebar */}
+          <button
+            onClick={openSearch}
+            className="flex items-center gap-2 w-full px-3 py-2.5 mb-2 rounded-md border bg-muted/50 text-muted-foreground text-sm hover:bg-muted transition-colors min-h-[44px]"
+          >
+            <Search className="h-4 w-4 shrink-0" />
+            <span>Search apps...</span>
+            <kbd className="ml-auto text-[10px] font-mono bg-background border rounded px-1 py-0.5">⌘K</kbd>
+          </button>
           <SidebarContent onNavigate={() => setOpen(false)} />
         </SheetContent>
       </Sheet>
