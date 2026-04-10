@@ -1,3 +1,12 @@
+API Performance Optimizations (2026-04-10)
+  PLA-968: Parallelize /api/apps queries (5 sequential → 2 parallel batches) ✅
+  PLA-969: Add CONNECTION_DESTROYED to db-retry transient errors ✅
+  PLA-970: Replace correlated MAX() with DISTINCT ON in competitors ✅
+  PLA-971: Replace LATERAL joins with CTE pre-aggregation in competitors ✅
+  PLA-972: Add composite indexes for keyword ad sightings ✅
+  PLA-973: Fix remaining LATERAL join in category rankings ✅
+  PLA-974: Zod .parse() audit — global handler already exists, auth fix done ✅
+
 Auth Refresh/Logout Validation Fix (2026-04-10)
   Fix: Zod parse error on missing refreshToken → 500 instead of 401/400 ✅
 
