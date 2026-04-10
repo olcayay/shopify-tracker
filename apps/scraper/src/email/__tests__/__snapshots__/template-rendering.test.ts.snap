@@ -29,7 +29,7 @@ exports[`emailVerificationTemplate > matches snapshot 1`] = `
 <div style="background:#6366f1;padding:24px;text-align:center;">
   <div style="font-size:24px;font-weight:bold;color:#ffffff;letter-spacing:-0.5px;">AppRanks</div>
   <div style="font-size:14px;color:rgba(255,255,255,0.8);margin-top:4px;">Email Verification</div>
-  <div style="font-size:12px;color:rgba(255,255,255,0.6);margin-top:2px;">Apr 9, 2026</div>
+  <div style="font-size:12px;color:rgba(255,255,255,0.6);margin-top:2px;">Apr 10, 2026</div>
 </div>
     <div style="padding:24px;">
       <p style="font-size:16px;line-height:1.6;color:#374151;">Hi Alice,</p>
@@ -94,7 +94,7 @@ exports[`invitationTemplate > matches snapshot 1`] = `
 <div style="background:#6366f1;padding:24px;text-align:center;">
   <div style="font-size:24px;font-weight:bold;color:#ffffff;letter-spacing:-0.5px;">AppRanks</div>
   <div style="font-size:14px;color:rgba(255,255,255,0.8);margin-top:4px;">Team Invitation</div>
-  <div style="font-size:12px;color:rgba(255,255,255,0.6);margin-top:2px;">Apr 9, 2026</div>
+  <div style="font-size:12px;color:rgba(255,255,255,0.6);margin-top:2px;">Apr 10, 2026</div>
 </div>
     <div style="padding:24px;">
       <p style="font-size:16px;line-height:1.6;color:#374151;">Hello,</p>
@@ -157,7 +157,7 @@ exports[`loginAlertTemplate > matches snapshot 1`] = `
 <div style="background:#6366f1;padding:24px;text-align:center;">
   <div style="font-size:24px;font-weight:bold;color:#ffffff;letter-spacing:-0.5px;">AppRanks</div>
   <div style="font-size:14px;color:rgba(255,255,255,0.8);margin-top:4px;">Security Alert</div>
-  <div style="font-size:12px;color:rgba(255,255,255,0.6);margin-top:2px;">Apr 9, 2026</div>
+  <div style="font-size:12px;color:rgba(255,255,255,0.6);margin-top:2px;">Apr 10, 2026</div>
 </div>
     <div style="padding:24px;">
       <p style="font-size:16px;line-height:1.6;color:#374151;">Hi Carol,</p>
@@ -233,7 +233,7 @@ exports[`passwordResetTemplate > matches snapshot 1`] = `
 <div style="background:#6366f1;padding:24px;text-align:center;">
   <div style="font-size:24px;font-weight:bold;color:#ffffff;letter-spacing:-0.5px;">AppRanks</div>
   <div style="font-size:14px;color:rgba(255,255,255,0.8);margin-top:4px;">Password Reset</div>
-  <div style="font-size:12px;color:rgba(255,255,255,0.6);margin-top:2px;">Apr 9, 2026</div>
+  <div style="font-size:12px;color:rgba(255,255,255,0.6);margin-top:2px;">Apr 10, 2026</div>
 </div>
     <div style="padding:24px;">
       <p style="font-size:16px;line-height:1.6;color:#374151;">Hi John Doe,</p>
@@ -301,7 +301,7 @@ exports[`twoFactorCodeTemplate > matches snapshot 1`] = `
 <div style="background:#6366f1;padding:24px;text-align:center;">
   <div style="font-size:24px;font-weight:bold;color:#ffffff;letter-spacing:-0.5px;">AppRanks</div>
   <div style="font-size:14px;color:rgba(255,255,255,0.8);margin-top:4px;">Verification Code</div>
-  <div style="font-size:12px;color:rgba(255,255,255,0.6);margin-top:2px;">Apr 9, 2026</div>
+  <div style="font-size:12px;color:rgba(255,255,255,0.6);margin-top:2px;">Apr 10, 2026</div>
 </div>
     <div style="padding:24px;">
       <p style="font-size:16px;line-height:1.6;color:#374151;">Hi Dave,</p>
@@ -361,7 +361,7 @@ exports[`welcome email (inline) > matches snapshot 1`] = `
 <div style="background:#6366f1;padding:24px;text-align:center;">
   <div style="font-size:24px;font-weight:bold;color:#ffffff;letter-spacing:-0.5px;">AppRanks</div>
   <div style="font-size:14px;color:rgba(255,255,255,0.8);margin-top:4px;">Welcome to AppRanks</div>
-  <div style="font-size:12px;color:rgba(255,255,255,0.6);margin-top:2px;">Apr 9, 2026</div>
+  <div style="font-size:12px;color:rgba(255,255,255,0.6);margin-top:2px;">Apr 10, 2026</div>
 </div>
       <div style="padding:24px;">
         <p style="font-size:16px;line-height:1.6;color:#374151;">Hi NewUser,</p>
