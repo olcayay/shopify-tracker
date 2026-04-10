@@ -8,5 +8,5 @@
 CREATE INDEX IF NOT EXISTS idx_kw_ad_sightings_keyword_date
   ON keyword_ad_sightings (keyword_id, seen_date);--> statement-breakpoint
 
-CREATE INDEX IF NOT EXISTS idx_cat_ad_sightings_keyword_date
-  ON category_ad_sightings (keyword_id, seen_date);
+CREATE INDEX IF NOT EXISTS idx_cat_ad_sightings_category_date
+  ON category_ad_sightings (category_id, seen_date);
