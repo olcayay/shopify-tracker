@@ -47,54 +47,52 @@ export const appRoutes: FastifyPluginAsync = async (app) => {
     const { accountId } = request.user;
     const platform = getPlatformFromQuery(request.query as Record<string, unknown>);
 
-    // Get app IDs tracked by this account
-    const trackedRows = await db
-      .select({ appId: accountTrackedApps.appId })
-      .from(accountTrackedApps)
-      .where(eq(accountTrackedApps.accountId, accountId));
+    // Get tracked app IDs, competitor counts, and keyword counts in parallel
+    const [trackedRows, competitorCounts, keywordCounts] = await Promise.all([
+      db.select({ appId: accountTrackedApps.appId })
+        .from(accountTrackedApps)
+        .where(eq(accountTrackedApps.accountId, accountId)),
+      db.select({
+        trackedAppId: accountCompetitorApps.trackedAppId,
+        count: sql<number>`count(*)::int`,
+      })
+        .from(accountCompetitorApps)
+        .where(eq(accountCompetitorApps.accountId, accountId))
+        .groupBy(accountCompetitorApps.trackedAppId),
+      db.select({
+        trackedAppId: accountTrackedKeywords.trackedAppId,
+        count: sql<number>`count(*)::int`,
+      })
+        .from(accountTrackedKeywords)
+        .where(eq(accountTrackedKeywords.accountId, accountId))
+        .groupBy(accountTrackedKeywords.trackedAppId),
+    ]);
 
     if (trackedRows.length === 0) {
       return [];
     }
 
     const appIds = trackedRows.map((r) => r.appId);
-    const rows = await db
-      .select()
-      .from(apps)
-      .where(and(inArray(apps.id, appIds), eq(apps.platform, platform)))
-      .orderBy(apps.name);
 
-    // Get competitor and keyword counts per tracked app
-    const competitorCounts = await db
-      .select({
-        trackedAppId: accountCompetitorApps.trackedAppId,
-        count: sql<number>`count(*)::int`,
-      })
-      .from(accountCompetitorApps)
-      .where(eq(accountCompetitorApps.accountId, accountId))
-      .groupBy(accountCompetitorApps.trackedAppId);
-
-    const keywordCounts = await db
-      .select({
+    // Fetch apps and keyword associations in parallel (independent queries)
+    const [rows, allKeywordRows] = await Promise.all([
+      db.select()
+        .from(apps)
+        .where(and(inArray(apps.id, appIds), eq(apps.platform, platform)))
+        .orderBy(apps.name),
+      db.select({
         trackedAppId: accountTrackedKeywords.trackedAppId,
-        count: sql<number>`count(*)::int`,
+        keywordId: accountTrackedKeywords.keywordId,
       })
-      .from(accountTrackedKeywords)
-      .where(eq(accountTrackedKeywords.accountId, accountId))
-      .groupBy(accountTrackedKeywords.trackedAppId);
+        .from(accountTrackedKeywords)
+        .where(eq(accountTrackedKeywords.accountId, accountId)),
+    ]);
 
     const compCountMap = new Map(competitorCounts.map((r) => [r.trackedAppId, r.count]));
     const kwCountMap = new Map(keywordCounts.map((r) => [r.trackedAppId, r.count]));
 
     // Get ranked keyword counts per tracked app (single batched query)
     const rankedKwMap = new Map<number, number>();
-    const allKeywordRows = await db
-      .select({
-        trackedAppId: accountTrackedKeywords.trackedAppId,
-        keywordId: accountTrackedKeywords.keywordId,
-      })
-      .from(accountTrackedKeywords)
-      .where(eq(accountTrackedKeywords.accountId, accountId));
 
     if (allKeywordRows.length > 0) {
       const kwByApp = new Map<number, number[]>();
