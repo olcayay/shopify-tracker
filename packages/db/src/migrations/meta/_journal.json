@@ -925,6 +925,13 @@
       "when": 1776114700000,
       "tag": "0131_add_admin_role",
       "breakpoints": true
+    },
+    {
+      "idx": 132,
+      "version": "7",
+      "when": 1775813307646,
+      "tag": "0132_ad_sightings_keyword_date_indexes",
+      "breakpoints": true
     }
   ]
 }
