@@ -155,32 +155,18 @@ export const keywordRoutes: FastifyPluginAsync = async (app) => {
             inArray(keywordTagAssignments.keywordId, platformIds)
           )
         ),
-      // Latest snapshots — push slug filtering into SQL, avoid transferring full JSONB
-      allSlugs.length > 0
-        ? db.execute(sql`
-            SELECT DISTINCT ON (keyword_id)
-              keyword_id,
-              total_results,
-              scraped_at,
-              jsonb_array_length(results)::int AS app_count,
-              (SELECT jsonb_agg(app) FROM jsonb_array_elements(results) app
-               WHERE app->>'app_slug' = ANY(${sqlArray(allSlugs, "text")})
-              ) AS matched_apps
-            FROM keyword_snapshots
-            WHERE keyword_id = ANY(${sqlArray(platformIds)})
-            ORDER BY keyword_id, scraped_at DESC
-          `)
-        : db.execute(sql`
-            SELECT DISTINCT ON (keyword_id)
-              keyword_id,
-              total_results,
-              scraped_at,
-              jsonb_array_length(results)::int AS app_count,
-              NULL::jsonb AS matched_apps
-            FROM keyword_snapshots
-            WHERE keyword_id = ANY(${sqlArray(platformIds)})
-            ORDER BY keyword_id, scraped_at DESC
-          `),
+      // Latest snapshots — 2-step: first get snapshot IDs (light), then filter JSONB only for those
+      db.execute(sql`
+        SELECT keyword_id, total_results, scraped_at,
+          jsonb_array_length(results)::int AS app_count,
+          id AS snapshot_id
+        FROM (
+          SELECT DISTINCT ON (keyword_id) id, keyword_id, total_results, scraped_at, results
+          FROM keyword_snapshots
+          WHERE keyword_id = ANY(${sqlArray(platformIds)})
+          ORDER BY keyword_id, scraped_at DESC
+        ) latest
+      `),
     ]);
 
     const adAppCountMap = new Map<number, number>();
@@ -200,12 +186,30 @@ export const keywordRoutes: FastifyPluginAsync = async (app) => {
 
     const snapshotMap = new Map<number, { totalResults: number | null; scrapedAt: Date; appCount: number; matchedApps: any[] | null }>();
     const snapRows = (latestSnapshots as any).rows ?? latestSnapshots;
+    const snapshotIds = snapRows.map((r: any) => r.snapshot_id).filter(Boolean);
+
+    // Step 2: fetch matched apps from JSONB only for the latest snapshot IDs (much lighter than inline subselect)
+    let matchedAppsMap = new Map<number, any[]>();
+    if (snapshotIds.length > 0 && allSlugs.length > 0) {
+      const matchedRows: any[] = await db.execute(sql`
+        SELECT keyword_id,
+          (SELECT jsonb_agg(app) FROM jsonb_array_elements(results) app
+           WHERE app->>'app_slug' = ANY(${sqlArray(allSlugs, "text")})
+          ) AS matched_apps
+        FROM keyword_snapshots
+        WHERE id = ANY(${sqlArray(snapshotIds)})
+      `).then((res: any) => (res as any).rows ?? res);
+      for (const r of matchedRows) {
+        if (r.matched_apps) matchedAppsMap.set(r.keyword_id, r.matched_apps);
+      }
+    }
+
     for (const row of snapRows) {
       snapshotMap.set(row.keyword_id, {
         totalResults: row.total_results,
         scrapedAt: row.scraped_at,
         appCount: row.app_count,
-        matchedApps: row.matched_apps,
+        matchedApps: matchedAppsMap.get(row.keyword_id) ?? null,
       });
     }
 
