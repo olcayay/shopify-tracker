@@ -800,34 +800,25 @@ export const accountTrackingRoutes: FastifyPluginAsync = async (app) => {
     const visibilityMap = new Map<string, { visibilityScore: number; keywordCount: number; visibilityRaw: number }>(); // key: "trackedAppSlug:competitorSlug"
     if (competitorAppIds.length > 0) {
       try {
-        const visRows = await db
-          .select({
-            trackedAppSlug: sql<string>`ta.slug`,
-            appSlug: sql<string>`ca.slug`,
-            visibilityScore: appVisibilityScores.visibilityScore,
-            keywordCount: appVisibilityScores.keywordCount,
-            visibilityRaw: appVisibilityScores.visibilityRaw,
-          })
-          .from(appVisibilityScores)
-          .innerJoin(sql`apps ta`, sql`ta.id = ${appVisibilityScores.trackedAppId}`)
-          .innerJoin(sql`apps ca`, sql`ca.id = ${appVisibilityScores.appId}`)
-          .where(
-            and(
-              eq(appVisibilityScores.accountId, accountId),
-              inArray(appVisibilityScores.appId, competitorAppIds),
-              sql`${appVisibilityScores.computedAt} = (
-                SELECT MAX(v2.computed_at) FROM app_visibility_scores v2
-                WHERE v2.account_id = ${appVisibilityScores.accountId}
-                  AND v2.tracked_app_id = ${appVisibilityScores.trackedAppId}
-                  AND v2.app_id = ${appVisibilityScores.appId}
-              )`,
-            )
-          );
+        const visRows: any[] = await db.execute(sql`
+          SELECT ta.slug AS tracked_app_slug, ca.slug AS app_slug,
+                 v.visibility_score, v.keyword_count, v.visibility_raw
+          FROM (
+            SELECT DISTINCT ON (account_id, tracked_app_id, app_id)
+              account_id, tracked_app_id, app_id, visibility_score, keyword_count, visibility_raw
+            FROM app_visibility_scores
+            WHERE account_id = ${accountId}
+              AND app_id IN (${sql.join(competitorAppIds.map(id => sql`${id}`), sql`, `)})
+            ORDER BY account_id, tracked_app_id, app_id, computed_at DESC
+          ) v
+          INNER JOIN apps ta ON ta.id = v.tracked_app_id
+          INNER JOIN apps ca ON ca.id = v.app_id
+        `).then((res: any) => (res as any).rows ?? res);
         for (const r of visRows) {
-          visibilityMap.set(`${r.trackedAppSlug}:${r.appSlug}`, {
-            visibilityScore: r.visibilityScore,
-            keywordCount: r.keywordCount,
-            visibilityRaw: parseFloat(String(r.visibilityRaw)),
+          visibilityMap.set(`${r.tracked_app_slug}:${r.app_slug}`, {
+            visibilityScore: r.visibility_score,
+            keywordCount: r.keyword_count,
+            visibilityRaw: parseFloat(String(r.visibility_raw)),
           });
         }
       } catch { /* table may not exist yet */ }
@@ -839,26 +830,34 @@ export const accountTrackingRoutes: FastifyPluginAsync = async (app) => {
     if (competitorAppIds.length > 0) {
       try {
         const powRows: any[] = await db.execute(sql`
+          WITH latest_power AS (
+            SELECT DISTINCT ON (app_id, category_slug)
+              app_id, category_slug, power_score, rating_score, review_score, category_score, momentum_score
+            FROM app_power_scores
+            WHERE app_id IN (${sql.join(competitorAppIds.map(id => sql`${id}`), sql`, `)})
+            ORDER BY app_id, category_slug, computed_at DESC
+          ),
+          latest_cat_snapshots AS (
+            SELECT DISTINCT ON (category_id)
+              category_id, app_count
+            FROM category_snapshots
+            ORDER BY category_id, scraped_at DESC
+          ),
+          latest_cat_rankings AS (
+            SELECT DISTINCT ON (app_id, category_slug)
+              app_id, category_slug, position
+            FROM app_category_rankings
+            WHERE app_id IN (${sql.join(competitorAppIds.map(id => sql`${id}`), sql`, `)})
+              AND position IS NOT NULL
+            ORDER BY app_id, category_slug, scraped_at DESC
+          )
           SELECT a.slug AS app_slug, p.power_score, p.rating_score, p.review_score, p.category_score, p.momentum_score,
                  cs.app_count, rk.position AS rank_position, p.category_slug, c.title AS category_title
-          FROM app_power_scores p
+          FROM latest_power p
           INNER JOIN apps a ON a.id = p.app_id
           INNER JOIN categories c ON c.slug = p.category_slug AND c.is_listing_page = true
-          LEFT JOIN LATERAL (
-            SELECT s.app_count FROM category_snapshots s
-            WHERE s.category_id = c.id
-            ORDER BY s.scraped_at DESC LIMIT 1
-          ) cs ON true
-          LEFT JOIN LATERAL (
-            SELECT r.position FROM app_category_rankings r
-            WHERE r.app_id = p.app_id AND r.category_slug = p.category_slug AND r.position IS NOT NULL
-            ORDER BY r.scraped_at DESC LIMIT 1
-          ) rk ON true
-          WHERE p.app_id IN (${sql.join(competitorAppIds.map(id => sql`${id}`), sql`, `)})
-            AND p.computed_at = (
-              SELECT MAX(p2.computed_at) FROM app_power_scores p2
-              WHERE p2.app_id = p.app_id AND p2.category_slug = p.category_slug
-            )
+          LEFT JOIN latest_cat_snapshots cs ON cs.category_id = c.id
+          LEFT JOIN latest_cat_rankings rk ON rk.app_id = p.app_id AND rk.category_slug = p.category_slug
         `).then((res: any) => (res as any).rows ?? res);
 
         // Group by app, compute weighted average
@@ -1397,33 +1396,24 @@ export const accountTrackingRoutes: FastifyPluginAsync = async (app) => {
             .where(and(eq(apps.slug, slug), eq(apps.platform, platform)))
             .limit(1);
           if (visTrackedAppRow) {
-            const visRows = await db
-              .select({
-                appSlug: sql<string>`ca.slug`,
-                visibilityScore: appVisibilityScores.visibilityScore,
-                keywordCount: appVisibilityScores.keywordCount,
-                visibilityRaw: appVisibilityScores.visibilityRaw,
-              })
-              .from(appVisibilityScores)
-              .innerJoin(sql`apps ca`, sql`ca.id = ${appVisibilityScores.appId}`)
-              .where(
-                and(
-                  eq(appVisibilityScores.accountId, accountId),
-                  eq(appVisibilityScores.trackedAppId, visTrackedAppRow.id),
-                  inArray(appVisibilityScores.appId, competitorAppIds),
-                  sql`${appVisibilityScores.computedAt} = (
-                    SELECT MAX(v2.computed_at) FROM app_visibility_scores v2
-                    WHERE v2.account_id = ${appVisibilityScores.accountId}
-                      AND v2.tracked_app_id = ${appVisibilityScores.trackedAppId}
-                      AND v2.app_id = ${appVisibilityScores.appId}
-                  )`,
-                )
-              );
+            const visRows: any[] = await db.execute(sql`
+              SELECT ca.slug AS app_slug, v.visibility_score, v.keyword_count, v.visibility_raw
+              FROM (
+                SELECT DISTINCT ON (account_id, tracked_app_id, app_id)
+                  account_id, tracked_app_id, app_id, visibility_score, keyword_count, visibility_raw
+                FROM app_visibility_scores
+                WHERE account_id = ${accountId}
+                  AND tracked_app_id = ${visTrackedAppRow.id}
+                  AND app_id IN (${sql.join(competitorAppIds.map(id => sql`${id}`), sql`, `)})
+                ORDER BY account_id, tracked_app_id, app_id, computed_at DESC
+              ) v
+              INNER JOIN apps ca ON ca.id = v.app_id
+            `).then((res: any) => (res as any).rows ?? res);
             for (const r of visRows) {
-              visibilityMap2.set(r.appSlug, {
-                visibilityScore: r.visibilityScore,
-                keywordCount: r.keywordCount,
-                visibilityRaw: parseFloat(String(r.visibilityRaw)),
+              visibilityMap2.set(r.app_slug, {
+                visibilityScore: r.visibility_score,
+                keywordCount: r.keyword_count,
+                visibilityRaw: parseFloat(String(r.visibility_raw)),
               });
             }
           }
@@ -1436,26 +1426,34 @@ export const accountTrackingRoutes: FastifyPluginAsync = async (app) => {
       if (competitorAppIds.length > 0) {
         try {
           const powRows: any[] = await db.execute(sql`
+            WITH latest_power AS (
+              SELECT DISTINCT ON (app_id, category_slug)
+                app_id, category_slug, power_score, rating_score, review_score, category_score, momentum_score
+              FROM app_power_scores
+              WHERE app_id IN (${sql.join(competitorAppIds.map(id => sql`${id}`), sql`, `)})
+              ORDER BY app_id, category_slug, computed_at DESC
+            ),
+            latest_cat_snapshots AS (
+              SELECT DISTINCT ON (category_id)
+                category_id, app_count
+              FROM category_snapshots
+              ORDER BY category_id, scraped_at DESC
+            ),
+            latest_cat_rankings AS (
+              SELECT DISTINCT ON (app_id, category_slug)
+                app_id, category_slug, position
+              FROM app_category_rankings
+              WHERE app_id IN (${sql.join(competitorAppIds.map(id => sql`${id}`), sql`, `)})
+                AND position IS NOT NULL
+              ORDER BY app_id, category_slug, scraped_at DESC
+            )
             SELECT a.slug AS app_slug, p.power_score, p.rating_score, p.review_score, p.category_score, p.momentum_score,
                    cs.app_count, rk.position AS rank_position, p.category_slug, c.title AS category_title
-            FROM app_power_scores p
+            FROM latest_power p
             INNER JOIN apps a ON a.id = p.app_id
             INNER JOIN categories c ON c.slug = p.category_slug AND c.is_listing_page = true
-            LEFT JOIN LATERAL (
-              SELECT s.app_count FROM category_snapshots s
-              WHERE s.category_id = c.id
-              ORDER BY s.scraped_at DESC LIMIT 1
-            ) cs ON true
-            LEFT JOIN LATERAL (
-              SELECT r.position FROM app_category_rankings r
-              WHERE r.app_id = p.app_id AND r.category_slug = p.category_slug AND r.position IS NOT NULL
-              ORDER BY r.scraped_at DESC LIMIT 1
-            ) rk ON true
-            WHERE p.app_id IN (${sql.join(competitorAppIds.map(id => sql`${id}`), sql`, `)})
-              AND p.computed_at = (
-                SELECT MAX(p2.computed_at) FROM app_power_scores p2
-                WHERE p2.app_id = p.app_id AND p2.category_slug = p.category_slug
-              )
+            LEFT JOIN latest_cat_snapshots cs ON cs.category_id = c.id
+            LEFT JOIN latest_cat_rankings rk ON rk.app_id = p.app_id AND rk.category_slug = p.category_slug
           `).then((res: any) => (res as any).rows ?? res);
 
           const appPowerInputs = new Map<string, { powerScore: number; appCount: number }[]>();
