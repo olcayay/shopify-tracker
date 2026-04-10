@@ -1,28 +1,12 @@
 "use client";
 
-import { useState, useEffect } from "react";
 import Link from "next/link";
 import { AlertTriangle, CreditCard } from "lucide-react";
-import { useAuth } from "@/lib/auth-context";
 import { Button } from "@/components/ui/button";
+import { useBillingStatus } from "@/hooks/use-billing-status";
 
 export function GracePeriodBanner() {
-  const { fetchWithAuth, user } = useAuth();
-  const [graceDays, setGraceDays] = useState<number | null>(null);
-  const [status, setStatus] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (!user) return;
-    fetchWithAuth("/api/billing/status")
-      .then(async (res) => {
-        if (res.ok) {
-          const data = await res.json();
-          setStatus(data.status);
-          setGraceDays(data.graceDaysRemaining);
-        }
-      })
-      .catch(() => {});
-  }, [fetchWithAuth, user]);
+  const { status, graceDaysRemaining: graceDays } = useBillingStatus();
 
   if (status !== "past_due" || graceDays === null) return null;
 

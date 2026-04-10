@@ -1,35 +1,20 @@
 "use client";
 
-import { useState, useEffect } from "react";
 import Link from "next/link";
 import { AlertTriangle } from "lucide-react";
-import { useAuth } from "@/lib/auth-context";
 import { Button } from "@/components/ui/button";
+import { useBillingStatus } from "@/hooks/use-billing-status";
 
 export function OverLimitBanner() {
-  const { fetchWithAuth, user } = useAuth();
-  const [overLimit, setOverLimit] = useState(false);
-  const [details, setDetails] = useState("");
+  const { overLimit, usage, limits } = useBillingStatus();
 
-  useEffect(() => {
-    if (!user) return;
-    fetchWithAuth("/api/billing/status")
-      .then(async (res) => {
-        if (!res.ok) return;
-        const data = await res.json();
-        if (data.overLimit?.any) {
-          setOverLimit(true);
-          const parts: string[] = [];
-          if (data.overLimit.apps) parts.push(`${data.usage.trackedApps}/${data.limits.maxTrackedApps} apps`);
-          if (data.overLimit.keywords) parts.push(`${data.usage.trackedKeywords}/${data.limits.maxTrackedKeywords} keywords`);
-          if (data.overLimit.users) parts.push(`${data.usage.users}/${data.limits.maxUsers} users`);
-          setDetails(parts.join(", "));
-        }
-      })
-      .catch(() => {});
-  }, [fetchWithAuth, user]);
+  if (!overLimit?.any) return null;
 
-  if (!overLimit) return null;
+  const parts: string[] = [];
+  if (overLimit.apps && usage && limits) parts.push(`${usage.trackedApps}/${limits.maxTrackedApps} apps`);
+  if (overLimit.keywords && usage && limits) parts.push(`${usage.trackedKeywords}/${limits.maxTrackedKeywords} keywords`);
+  if (overLimit.users && usage && limits) parts.push(`${usage.users}/${limits.maxUsers} users`);
+  const details = parts.join(", ");
 
   return (
     <div className="bg-amber-50 dark:bg-amber-950/30 border-b border-amber-200 dark:border-amber-800 px-4 py-2.5 text-sm flex items-center justify-between">

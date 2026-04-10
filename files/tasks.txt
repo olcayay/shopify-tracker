@@ -9,6 +9,9 @@ Keywords Page Performance (2026-04-10)
   PLA-979: Optimize GET /api/developers — CTE-based query, expression index ✅
   PLA-980: Fix developers table column overlap on small screens ✅
   PLA-981: Fix featured label readability — improve contrast, bump font size ✅
+  PLA-985: Allow unauthenticated access to /audit + other marketing pages ✅
+  PLA-988: Persist v1/v2 layout preference via cookie ✅
+  PLA-986: Fix duplicate API requests — shared billing hook, deduplicate keywords ✅
 
 Fix Broken App Search (2026-04-10)
   PLA-977: Fix missing /api prefix in search fetch URLs ✅

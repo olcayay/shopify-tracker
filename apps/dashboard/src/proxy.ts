@@ -3,7 +3,10 @@ import { PLATFORM_IDS } from "@appranks/shared";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
 
-const PUBLIC_PATHS = ["/", "/login", "/register", "/invite", "/terms", "/privacy", "/health"];
+const PUBLIC_PATHS = [
+  "/", "/login", "/register", "/invite", "/terms", "/privacy", "/health",
+  "/audit", "/changelog", "/contact", "/pricing",
+];
 
 const VALID_PLATFORMS: string[] = PLATFORM_IDS;
 
@@ -67,12 +70,18 @@ export async function proxy(request: NextRequest) {
     );
   }
 
-  // Redirect bare app detail pages to v2 (unless user opted for v1/classic)
+  // Redirect bare app detail pages to v1 or v2 based on user preference cookie
   // Pattern: /{platform}/apps/{slug} and sub-routes, but NOT /apps/v2/ or /apps/v1/
   const appDetailMatch = pathname.match(/^\/([^/]+)\/apps\/(?!v2\/)(?!v1\/)([^/]+)(\/.*)?$/);
   if (appDetailMatch && VALID_PLATFORMS.includes(appDetailMatch[1])) {
     const [, plat, appSlug, rest = ""] = appDetailMatch;
-    // Map v1 tab paths to v2 section paths
+    const layoutPref = request.cookies.get("app-layout-version")?.value;
+    if (layoutPref === "v1") {
+      return NextResponse.redirect(
+        new URL(`/${plat}/apps/v1/${appSlug}${rest}`, request.url)
+      );
+    }
+    // Default: v2
     const v2Path = mapV1PathToV2(rest);
     return NextResponse.redirect(
       new URL(`/${plat}/apps/v2/${appSlug}${v2Path}`, request.url)

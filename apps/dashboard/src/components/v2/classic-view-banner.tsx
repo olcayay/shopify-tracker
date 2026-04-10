@@ -15,6 +15,7 @@ export function ClassicViewBanner() {
         <Link
           href={`/${platform}/apps/v2/${slug}`}
           className="font-medium text-primary hover:underline inline-flex items-center gap-1"
+          onClick={() => { document.cookie = "app-layout-version=v2; path=/; max-age=31536000"; }}
         >
           Switch to new experience
           <ArrowRight className="h-3 w-3 group-hover:translate-x-0.5 transition-transform" />

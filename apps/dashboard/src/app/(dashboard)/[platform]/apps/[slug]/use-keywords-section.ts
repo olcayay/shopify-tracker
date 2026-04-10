@@ -215,11 +215,15 @@ export function useKeywordsSection(appSlug: string) {
     fetchFn: pollPendingKeywords,
   });
 
-  // Fetch opportunity scores when keywords change
+  // Fetch opportunity scores when keywords change (deduplicated by slug set)
+  const prevOpportunitySlugsRef = useRef<string>("");
   useEffect(() => {
     if (keywords.length === 0) return;
     const slugs = keywords.map((kw: any) => kw.keywordSlug).filter(Boolean);
     if (slugs.length === 0) return;
+    const slugsKey = slugs.sort().join(",");
+    if (slugsKey === prevOpportunitySlugsRef.current) return;
+    prevOpportunitySlugsRef.current = slugsKey;
     setOpportunityLoading(true);
     fetchWithAuth("/api/keywords/opportunity", {
       method: "POST",
@@ -295,10 +299,7 @@ export function useKeywordsSection(appSlug: string) {
 
     setSelectedSlugs(selected);
     selectionInitialized.current = true;
-
-    // Build slugs for initial fetch
-    const allSlugs = [appSlug, ...Array.from(selected)].join(",");
-    await loadKeywords(allSlugs);
+    // Keywords will be fetched by the appSlugsParam effect (single fetch path)
   }
 
   async function loadKeywords(slugsParam?: string, silent = false) {

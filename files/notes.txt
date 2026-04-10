@@ -1,3 +1,19 @@
+Dashboard Bug Fixes & Performance (2026-04-10)
+===============================================
+
+PLA-985: Added /audit, /changelog, /contact, /pricing to PUBLIC_PATHS in proxy.ts
+
+PLA-988: Persist v1/v2 layout preference via cookie
+- proxy.ts reads app-layout-version cookie, redirects to v1 if set
+- classic-view-banner.tsx sets cookie=v2 on switch
+- v2/[slug]/layout.tsx sets cookie=v1 on "Back to classic view"
+
+PLA-986: Fix duplicate API requests
+- Created useBillingStatus() shared hook (module-level cache + dedup)
+- Refactored GracePeriodBanner and OverLimitBanner to use shared hook
+- Removed direct loadKeywords() call from loadAppsAndKeywords() — single fetch path via appSlugsParam effect
+- Added ref guard to opportunity fetch to prevent re-fire on same slug set
+
 Keywords API Performance Optimization (2026-04-10)
 ===================================================
 

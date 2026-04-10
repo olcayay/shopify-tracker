@@ -119,6 +119,7 @@ export default async function V2AppDetailLayout({
         <Link
           href={`/${platform}/apps/v1/${slug}`}
           className="text-xs text-muted-foreground hover:text-foreground ml-auto transition-colors"
+          onClick={() => { document.cookie = "app-layout-version=v1; path=/; max-age=31536000"; }}
         >
           Back to classic view
         </Link>

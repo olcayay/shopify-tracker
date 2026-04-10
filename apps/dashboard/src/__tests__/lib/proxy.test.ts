@@ -243,4 +243,40 @@ describe("proxy routing", () => {
     // Should NOT be treated as public - should try to validate token
     expect(mockRedirect).toHaveBeenCalled();
   });
+
+  // Marketing pages — public access without auth
+  it("allows unauthenticated access to /audit", async () => {
+    const { proxy } = await import("@/proxy");
+    const req = createMockRequest("/audit") as any;
+    await proxy(req);
+    expect(mockNext).toHaveBeenCalled();
+  });
+
+  it("allows unauthenticated access to /audit/shopify/some-app", async () => {
+    const { proxy } = await import("@/proxy");
+    const req = createMockRequest("/audit/shopify/some-app") as any;
+    await proxy(req);
+    expect(mockNext).toHaveBeenCalled();
+  });
+
+  it("allows unauthenticated access to /changelog", async () => {
+    const { proxy } = await import("@/proxy");
+    const req = createMockRequest("/changelog") as any;
+    await proxy(req);
+    expect(mockNext).toHaveBeenCalled();
+  });
+
+  it("allows unauthenticated access to /contact", async () => {
+    const { proxy } = await import("@/proxy");
+    const req = createMockRequest("/contact") as any;
+    await proxy(req);
+    expect(mockNext).toHaveBeenCalled();
+  });
+
+  it("allows unauthenticated access to /pricing", async () => {
+    const { proxy } = await import("@/proxy");
+    const req = createMockRequest("/pricing") as any;
+    await proxy(req);
+    expect(mockNext).toHaveBeenCalled();
+  });
 });
