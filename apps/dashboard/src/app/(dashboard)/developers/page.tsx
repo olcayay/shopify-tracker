@@ -399,8 +399,8 @@ export default function DevelopersPage() {
         />
       ) : (
         <>
-          <div className="rounded-md border">
-            <Table className="table-fixed">
+          <div className="rounded-md border overflow-x-auto">
+            <Table className="table-fixed min-w-[800px]">
               <TableHeader>
                 <TableRow>
                   <TableHead className="w-10"></TableHead>

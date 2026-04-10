@@ -352,15 +352,15 @@ function MyFeaturedApps({
                       {app.sections.map((sec) => (
                         <span
                           key={sec.key}
-                          className="inline-flex items-center gap-1 rounded-full bg-muted px-2 py-0.5 text-xs text-muted-foreground"
+                          className="inline-flex items-center gap-1 rounded-full bg-muted px-2 py-0.5 text-xs text-foreground/80"
                         >
                           {sec.sectionTitle}
                           {sec.surface === "category" && (
-                            <span className="text-[10px] opacity-50">
+                            <span className="text-[11px] text-foreground/60">
                               [{sec.surfaceDetail}]
                             </span>
                           )}
-                          <span className="text-[10px] opacity-70">
+                          <span className="text-[11px] text-foreground/60">
                             ({sec.dates.size}d)
                           </span>
                         </span>
@@ -390,13 +390,13 @@ function MyFeaturedApps({
                             {sec.sectionTitle}
                           </button>
                           {sec.surface === "category" && (
-                            <span className="text-[10px] text-muted-foreground ml-1">
+                            <span className="text-[11px] text-foreground/60 ml-1">
                               [{sec.surfaceDetail}]
                             </span>
                           )}
                         </div>
                         <MiniHeatmap dates={sec.dates} dateRange={dateRange} />
-                        <span className="text-[10px] text-muted-foreground shrink-0">
+                        <span className="text-[11px] text-foreground/60 shrink-0">
                           {sec.dates.size}/30d
                         </span>
                       </div>

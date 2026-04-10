@@ -37,6 +37,16 @@ Files changed:
 - packages/db/src/migrations/meta/_journal.json (updated)
 - apps/api/src/routes/account-extras.ts (starred-categories parallelization)
 
+PLA-980: Fix developers table column overlap on small screens
+- Added min-w-[800px] to developers table + overflow-x-auto on container
+- Enables horizontal scroll instead of column compression on narrow viewports
+
+PLA-981: Fix featured label readability
+- Collapsed view: changed text-muted-foreground → text-foreground/80 on pill labels
+- Removed opacity-50 and opacity-70 from category detail and duration text
+- Bumped font size from text-[10px] to text-[11px] for sub-text
+- Expanded view: updated category detail and duration to text-foreground/60, text-[11px]
+
 PLA-979: Optimize GET /api/developers — correlated subqueries cause 1s+ response time
 
 Changes:
