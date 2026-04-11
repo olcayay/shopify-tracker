@@ -1,5 +1,6 @@
 Bug Fixes (2026-04-11)
   PLA-994: Fix developers page — empty table caused by query timeout ✅
+  PLA-998: Fix mobile table overflow — overflow-y-auto + overflow-x-hidden on main ✅
   PLA-997: Fix Audit Report button — correct URL, ClipboardCheck icon, v2 icon sizing ✅
   PLA-993: Enhance command palette — developer search, modal overlap fix, hide pages during search ✅ (re-fixed: overlap race, dev search isolation, badge alignment)
   PLA-975: Fix mobile responsiveness for all dashboard tables — min-w-0 on main ✅

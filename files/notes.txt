@@ -1,6 +1,14 @@
 Bug Fixes (2026-04-11)
 ======================
 
+PLA-998: Fix mobile table overflow — tables still extend beyond viewport
+- Root cause: main element had overflow-auto which scrolls both X and Y; wide tables
+  caused horizontal page scroll instead of scrolling within the table container
+- Fix: Changed main from overflow-auto to overflow-y-auto overflow-x-hidden + max-w-full
+  This forces horizontal scrolling to happen at individual table containers (overflow-x-auto)
+  while preserving vertical page scroll
+- The table.tsx and platform-grouped-table.tsx overflow-x-auto remain the scroll points
+
 PLA-997: Fix Audit Report button — URL, icon, sizing
 - URL: Changed from /${platform}/apps/v2/${slug}/intel to /audit/${platform}/${slug} (both v1+v2)
 - Icon: Changed from FileSearch to ClipboardCheck (lucide-react) — audit/checklist concept

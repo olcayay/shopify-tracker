@@ -79,7 +79,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
       </header>
       <div className="flex flex-1 min-h-0">
         <IconSidebar />
-        <main className="flex-1 min-w-0 p-4 md:p-6 overflow-auto">
+        <main className="flex-1 min-w-0 max-w-full p-4 md:p-6 overflow-y-auto overflow-x-hidden">
           {children}
         </main>
       </div>

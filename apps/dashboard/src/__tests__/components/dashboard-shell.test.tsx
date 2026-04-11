@@ -120,12 +120,14 @@ describe("DashboardShell mobile header", () => {
     expect(screen.getByTestId("mobile-sidebar")).toBeInTheDocument();
   });
 
-  it("main content area has min-w-0 for flex overflow scrolling", () => {
+  it("main content area has min-w-0 and overflow constraints for mobile table scroll", () => {
     render(<DashboardShell>Content</DashboardShell>);
     const main = document.querySelector("main");
     expect(main).toBeInTheDocument();
     expect(main?.className).toContain("min-w-0");
-    expect(main?.className).toContain("overflow-auto");
+    expect(main?.className).toContain("max-w-full");
+    expect(main?.className).toContain("overflow-y-auto");
+    expect(main?.className).toContain("overflow-x-hidden");
   });
 
   it("dispatches Cmd+K event when search button is clicked", async () => {
