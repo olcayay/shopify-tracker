@@ -13,6 +13,7 @@ import {
 } from "@appranks/db";
 import { cacheGet } from "../utils/cache.js";
 import { PLATFORMS, PLATFORM_IDS, isPlatformId, computeAudit } from "@appranks/shared";
+import { filterGloballyVisiblePlatforms } from "../utils/platform-visibility.js";
 
 const PUBLIC_CACHE_TTL = 3600; // 1 hour
 
@@ -198,6 +199,7 @@ export const publicRoutes: FastifyPluginAsync = async (app) => {
     "/developers/:platform/:slug",
     async (request, reply) => {
       const { platform, slug } = request.params;
+      if (!isPlatformId(platform)) return reply.code(400).send({ error: "Invalid platform" });
 
       const result = await cacheGet(`public:dev:${platform}:${slug}`, async () => {
         const [dev] = await db
@@ -213,8 +215,7 @@ export const publicRoutes: FastifyPluginAsync = async (app) => {
 
         if (!dev) return null;
 
-        // Get platform developers
-        const platformDevs = await db
+        const allPlatformDevs = await db
           .select({
             platform: platformDevelopers.platform,
             name: platformDevelopers.name,
@@ -222,9 +223,17 @@ export const publicRoutes: FastifyPluginAsync = async (app) => {
           .from(platformDevelopers)
           .where(eq(platformDevelopers.globalDeveloperId, dev.id));
 
+        const visiblePlatforms = await filterGloballyVisiblePlatforms(
+          db,
+          allPlatformDevs.map((pd) => pd.platform),
+        );
+        if (!visiblePlatforms.includes(platform)) return null;
+
+        const platformDevs = allPlatformDevs.filter((pd) => visiblePlatforms.includes(pd.platform));
+
         // Get apps
-        const devNames = platformDevs.map((pd) => pd.name);
         let appList: any[] = [];
+        const devNames = platformDevs.map((pd) => pd.name);
         if (devNames.length > 0) {
           const appRows = await db.execute(sql`
             SELECT DISTINCT ON (a.id) a.slug, a.name, a.icon_url, a.platform,
@@ -246,7 +255,8 @@ export const publicRoutes: FastifyPluginAsync = async (app) => {
             averageRating: r.average_rating ? parseFloat(r.average_rating) : null,
             ratingCount: r.rating_count,
             pricingHint: r.pricing_hint,
-          }));
+          }))
+            .filter((app: { platform: string }) => visiblePlatforms.includes(app.platform));
         }
 
         return { ...dev, platforms: platformDevs, apps: appList };

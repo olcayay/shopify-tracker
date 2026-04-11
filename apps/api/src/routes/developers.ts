@@ -13,27 +13,7 @@ import {
 import { requireSystemAdmin } from "../middleware/authorize.js";
 import { developerNameToSlug } from "@appranks/shared";
 import { PAGINATION_DEFAULT_LIMIT, PAGINATION_MAX_LIMIT_SMALL, PAGINATION_DEFAULT_DEVELOPER_APPS, PAGINATION_MAX_DEVELOPER_APPS, PAGINATION_MAX_LIMIT } from "../constants.js";
-
-/**
- * Get platforms that are both enabled for the account AND globally visible.
- * Respects overrideGlobalVisibility — if an account explicitly overrides,
- * the platform is included even if globally disabled.
- */
-async function getVisiblePlatforms(db: any, accountId: string): Promise<string[]> {
-  const rows = await db
-    .select({
-      platform: accountPlatforms.platform,
-      override: accountPlatforms.overrideGlobalVisibility,
-      isVisible: platformVisibility.isVisible,
-    })
-    .from(accountPlatforms)
-    .leftJoin(platformVisibility, eq(accountPlatforms.platform, platformVisibility.platform))
-    .where(eq(accountPlatforms.accountId, accountId));
-
-  return rows
-    .filter((r: any) => r.override === true || r.isVisible !== false)
-    .map((r: any) => r.platform);
-}
+import { getVisiblePlatformsForAccount } from "../utils/platform-visibility.js";
 
 export async function developerRoutes(app: FastifyInstance) {
   const db = app.db;
@@ -70,7 +50,7 @@ export async function developerRoutes(app: FastifyInstance) {
       const isAdmin = (request as any).user?.isSystemAdmin === true;
       let allowedPlatforms: string[] = [];
       if (!isAdmin && accountId) {
-        allowedPlatforms = await getVisiblePlatforms(db, accountId);
+        allowedPlatforms = await getVisiblePlatformsForAccount(db, accountId);
         if (allowedPlatforms.length === 0) {
           return { developers: [], pagination: { page, limit, total: 0, totalPages: 0 } };
         }
@@ -212,7 +192,7 @@ export async function developerRoutes(app: FastifyInstance) {
     let platformFilterSql = sql``;
     let trackedAppsPlatformFilterSql = sql``;
     if (!isAdmin) {
-      const enabledPlatforms = await getVisiblePlatforms(db, accountId);
+      const enabledPlatforms = await getVisiblePlatformsForAccount(db, accountId);
       if (enabledPlatforms.length === 0) return { developers: [] };
       platformFilterSql = sql`AND a.platform = ANY(${sqlArray(enabledPlatforms)})`;
       trackedAppsPlatformFilterSql = sql`AND ta.platform = ANY(${sqlArray(enabledPlatforms)})`;
@@ -281,7 +261,7 @@ export async function developerRoutes(app: FastifyInstance) {
     let platformFilterSql = sql``;
     let compAppsPlatformFilterSql = sql``;
     if (!isAdmin) {
-      const enabledPlatforms = await getVisiblePlatforms(db, accountId);
+      const enabledPlatforms = await getVisiblePlatformsForAccount(db, accountId);
       if (enabledPlatforms.length === 0) return { developers: [] };
       const platforms = requestedPlatform
         ? enabledPlatforms.filter((p: string) => p === requestedPlatform)
@@ -353,6 +333,8 @@ export async function developerRoutes(app: FastifyInstance) {
       reply
     ) => {
       const slug = request.params.slug.toLowerCase();
+      const accountId = (request as any).user?.accountId || null;
+      const isAdmin = (request as any).user?.isSystemAdmin === true;
 
       // Get global developer
       const [developer] = await db
@@ -365,8 +347,16 @@ export async function developerRoutes(app: FastifyInstance) {
         return reply.code(404).send({ error: "Developer not found" });
       }
 
+      let allowedPlatforms: string[] | null = null;
+      if (!isAdmin && accountId) {
+        allowedPlatforms = await getVisiblePlatformsForAccount(db, accountId);
+        if (allowedPlatforms.length === 0) {
+          return reply.code(404).send({ error: "Developer not found" });
+        }
+      }
+
       // Get all platform developers linked to this global developer
-      const platformDevs = await db
+      const allPlatformDevs = await db
         .select({
           id: platformDevelopers.id,
           platform: platformDevelopers.platform,
@@ -374,6 +364,14 @@ export async function developerRoutes(app: FastifyInstance) {
         })
         .from(platformDevelopers)
         .where(eq(platformDevelopers.globalDeveloperId, developer.id));
+
+      const platformDevs = allowedPlatforms
+        ? allPlatformDevs.filter((pd: { platform: string }) => allowedPlatforms!.includes(pd.platform))
+        : allPlatformDevs;
+
+      if (platformDevs.length === 0) {
+        return reply.code(404).send({ error: "Developer not found" });
+      }
 
       // For each platform developer, get their apps (from latest snapshots)
       const developerApps: {
@@ -391,7 +389,6 @@ export async function developerRoutes(app: FastifyInstance) {
 
       // Batch-fetch apps for all platform developers in a single query
       if (platformDevs.length > 0) {
-        const devNames = platformDevs.map((pd: { name: string }) => pd.name);
         const devPlatforms = platformDevs.map((pd: { platform: string }) => pd.platform);
         const allAppRows = await db.execute(sql`
           SELECT DISTINCT ON (a.id)
@@ -407,8 +404,10 @@ export async function developerRoutes(app: FastifyInstance) {
             a.active_installs
           FROM ${apps} a
           JOIN ${appSnapshots} s ON s.app_id = a.id
+          JOIN ${platformDevelopers} pd ON pd.global_developer_id = ${developer.id}
+            AND pd.platform = a.platform
           WHERE a.platform = ANY(${sqlArray(devPlatforms)})
-            AND s.developer->>'name' = ANY(${sqlArray(devNames)})
+            AND s.developer->>'name' = pd.name
             AND s.id = (
               SELECT s2.id FROM ${appSnapshots} s2
               WHERE s2.app_id = a.id
@@ -418,6 +417,7 @@ export async function developerRoutes(app: FastifyInstance) {
         `);
         const appData: any[] = (allAppRows as any).rows ?? allAppRows;
         for (const row of appData) {
+          if (!devPlatforms.includes(row.platform)) continue;
           developerApps.push({
             id: row.id,
             platform: row.platform,
@@ -434,15 +434,14 @@ export async function developerRoutes(app: FastifyInstance) {
       }
 
       // Check if developer is starred by current account
-      const detailAccountId = (request as any).user?.accountId || null;
       let isStarred = false;
-      if (detailAccountId) {
+      if (accountId) {
         const [starred] = await db
           .select({ id: accountStarredDevelopers.id })
           .from(accountStarredDevelopers)
           .where(
             and(
-              eq(accountStarredDevelopers.accountId, detailAccountId),
+              eq(accountStarredDevelopers.accountId, accountId),
               eq(accountStarredDevelopers.globalDeveloperId, developer.id)
             )
           )

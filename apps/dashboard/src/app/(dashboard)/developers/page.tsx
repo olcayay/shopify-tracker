@@ -69,6 +69,61 @@ interface DeveloperResponse {
   pagination: { page: number; limit: number; total: number; totalPages: number };
 }
 
+function filterDeveloperForVisiblePlatforms(dev: Developer, enabledPlatforms: PlatformId[]): Developer | null {
+  if (enabledPlatforms.length === 0) return dev;
+
+  const allowed = new Set<string>(enabledPlatforms);
+  const platforms = dev.platforms.filter((platform) => allowed.has(platform));
+  const topApps = dev.topApps.filter((app) => allowed.has(app.platform));
+  if (platforms.length === 0 && topApps.length === 0) return null;
+
+  return {
+    ...dev,
+    platforms,
+    topApps,
+    platformCount: platforms.length,
+    appCount: Math.min(dev.appCount, topApps.length),
+  };
+}
+
+function filterTrackedDeveloperForVisiblePlatforms(
+  dev: TrackedDeveloper,
+  enabledPlatforms: PlatformId[],
+): TrackedDeveloper | null {
+  if (enabledPlatforms.length === 0) return dev;
+
+  const allowed = new Set<string>(enabledPlatforms);
+  const platforms = dev.platforms.filter((platform) => allowed.has(platform));
+  const trackedApps = dev.trackedApps.filter((app) => allowed.has(app.platform));
+  if (platforms.length === 0 && trackedApps.length === 0) return null;
+
+  return {
+    ...dev,
+    platforms,
+    trackedApps,
+    platformCount: platforms.length,
+  };
+}
+
+function filterCompetitorDeveloperForVisiblePlatforms(
+  dev: CompetitorDeveloper,
+  enabledPlatforms: PlatformId[],
+): CompetitorDeveloper | null {
+  if (enabledPlatforms.length === 0) return dev;
+
+  const allowed = new Set<string>(enabledPlatforms);
+  const platforms = dev.platforms.filter((platform) => allowed.has(platform));
+  const competitorApps = dev.competitorApps.filter((app) => allowed.has(app.platform));
+  if (platforms.length === 0 && competitorApps.length === 0) return null;
+
+  return {
+    ...dev,
+    platforms,
+    competitorApps,
+    platformCount: platforms.length,
+  };
+}
+
 function DeveloperSectionEmpty({
   icon: Icon,
   title,
@@ -207,7 +262,24 @@ export default function DevelopersPage() {
     }
   }
 
-  const developers = data?.developers ?? [];
+  const developers = useMemo(
+    () => (data?.developers ?? [])
+      .map((dev) => filterDeveloperForVisiblePlatforms(dev, enabledPlatforms))
+      .filter((dev): dev is Developer => dev !== null),
+    [data?.developers, enabledPlatforms]
+  );
+  const visibleTrackedDevs = useMemo(
+    () => trackedDevs
+      .map((dev) => filterTrackedDeveloperForVisiblePlatforms(dev, enabledPlatforms))
+      .filter((dev): dev is TrackedDeveloper => dev !== null),
+    [trackedDevs, enabledPlatforms]
+  );
+  const visibleCompetitorDevs = useMemo(
+    () => competitorDevs
+      .map((dev) => filterCompetitorDeveloperForVisiblePlatforms(dev, enabledPlatforms))
+      .filter((dev): dev is CompetitorDeveloper => dev !== null),
+    [competitorDevs, enabledPlatforms]
+  );
   const pagination = data?.pagination;
   const emptyMessage = search ? "No developers found matching your search." : "No developers found.";
 
@@ -348,7 +420,7 @@ export default function DevelopersPage() {
           <h2 className="font-semibold text-sm">My Developers</h2>
           <span className="text-xs text-muted-foreground">Developers of your tracked apps</span>
         </div>
-        {trackedDevs.length === 0 ? (
+        {visibleTrackedDevs.length === 0 ? (
           <DeveloperSectionEmpty
             icon={Users}
             title="No tracked app developers yet"
@@ -367,7 +439,7 @@ export default function DevelopersPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {trackedDevs.map((dev) => (
+              {visibleTrackedDevs.map((dev) => (
                 <TableRow key={dev.id}>
                   <TableCell>
                     <Link href={`/developers/${dev.slug}`} className="font-medium hover:underline">
@@ -419,7 +491,7 @@ export default function DevelopersPage() {
           <h2 className="font-semibold text-sm">Competitor Developers</h2>
           <span className="text-xs text-muted-foreground">Developers behind your competitors&apos; apps</span>
         </div>
-        {competitorDevs.length === 0 ? (
+        {visibleCompetitorDevs.length === 0 ? (
           <DeveloperSectionEmpty
             icon={Swords}
             title="No competitor developers yet"
@@ -438,7 +510,7 @@ export default function DevelopersPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {competitorDevs.map((dev) => (
+              {visibleCompetitorDevs.map((dev) => (
                 <TableRow key={dev.id}>
                   <TableCell>
                     <Link href={`/developers/${dev.slug}`} className="font-medium hover:underline">
@@ -563,7 +635,7 @@ export default function DevelopersPage() {
           {pagination && pagination.totalPages > 1 && (
             <div className="flex items-center justify-between">
               <span className="text-sm text-muted-foreground">
-                Page {pagination.page} of {pagination.totalPages} ({pagination.total} developers)
+                Page {pagination.page} of {pagination.totalPages} ({enabledPlatforms.length > 0 ? developers.length : pagination.total} developers)
               </span>
               <div className="flex gap-2">
                 <Button

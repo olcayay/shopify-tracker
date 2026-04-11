@@ -192,6 +192,58 @@ describe("Developer routes", () => {
       expect(res.statusCode).toBe(404);
       expect(res.json()).toEqual({ error: "Developer not found" });
     });
+
+    it("returns 404 when developer exists but account has no visible platforms", async () => {
+      const detailApp = await buildTestApp({
+        routes: developerRoutes,
+        prefix: "/api/developers",
+        db: {
+          selectResult: [],
+          executeResult: [],
+        },
+      });
+
+      let selectCallIdx = 0;
+      const mockDb = (detailApp as any).db;
+      mockDb.select = (..._args: any[]) => {
+        selectCallIdx++;
+        if (selectCallIdx === 1) {
+          return {
+            from: () => ({
+              where: () => ({
+                limit: () => Promise.resolve([mockDeveloper]),
+              }),
+            }),
+          };
+        }
+        if (selectCallIdx === 2) {
+          return {
+            from: () => ({
+              leftJoin: () => ({
+                where: () => Promise.resolve([]),
+              }),
+            }),
+          };
+        }
+        return {
+          from: () => ({
+            where: () => ({
+              limit: () => Promise.resolve([]),
+            }),
+          }),
+        };
+      };
+
+      const res = await detailApp.inject({
+        method: "GET",
+        url: "/api/developers/jotform",
+        headers: authHeaders(userToken()),
+      });
+
+      expect(res.statusCode).toBe(404);
+      expect(res.json()).toEqual({ error: "Developer not found" });
+      await detailApp.close();
+    });
   });
 
   // -----------------------------------------------------------------------

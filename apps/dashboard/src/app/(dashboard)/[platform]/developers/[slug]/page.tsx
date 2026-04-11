@@ -4,6 +4,7 @@ import { useEffect, useState, useMemo } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import { useAuth } from "@/lib/auth-context";
+import { usePlatformAccess } from "@/hooks/use-platform-access";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -51,8 +52,9 @@ interface DeveloperProfile {
 
 export default function PlatformDeveloperPage() {
   const { platform, slug } = useParams();
-  const { fetchWithAuth, account } = useAuth();
-  const enabledPlatforms = (account?.enabledPlatforms ?? []) as PlatformId[];
+  const { fetchWithAuth } = useAuth();
+  const { accessiblePlatforms } = usePlatformAccess();
+  const enabledPlatforms = accessiblePlatforms as PlatformId[];
   const [data, setData] = useState<DeveloperProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -92,9 +94,36 @@ export default function PlatformDeveloperPage() {
     }
   }
 
+  const visibleData = useMemo<DeveloperProfile | null>(() => {
+    if (!data) return null;
+    if (enabledPlatforms.length === 0) return data;
+
+    const allowed = new Set<string>(enabledPlatforms);
+    const apps = data.apps.filter((app) => allowed.has(app.platform));
+    const appCountByPlatform = new Map<string, number>();
+    for (const app of apps) {
+      appCountByPlatform.set(app.platform, (appCountByPlatform.get(app.platform) ?? 0) + 1);
+    }
+
+    const platforms = data.platforms
+      .filter((entry) => allowed.has(entry.platform))
+      .map((entry) => ({
+        ...entry,
+        appCount: appCountByPlatform.get(entry.platform) ?? 0,
+      }))
+      .filter((entry) => entry.appCount > 0);
+
+    return {
+      ...data,
+      apps,
+      platforms,
+      totalApps: apps.length,
+    };
+  }, [data, enabledPlatforms]);
+
   const platformApps = useMemo(
-    () => data?.apps.filter((a) => a.platform === platform) ?? [],
-    [data, platform]
+    () => visibleData?.apps.filter((a) => a.platform === platform) ?? [],
+    [visibleData, platform]
   );
 
   const hasInstalls = useMemo(
@@ -111,7 +140,7 @@ export default function PlatformDeveloperPage() {
     );
   }
 
-  if (error || !data) {
+  if (error || !visibleData) {
     return (
       <div className="space-y-4">
         <h1 className="text-2xl font-bold">Developer Not Found</h1>
@@ -120,10 +149,8 @@ export default function PlatformDeveloperPage() {
     );
   }
 
-  const { developer } = data;
-  const platforms = enabledPlatforms.length > 0
-    ? data.platforms.filter((p) => enabledPlatforms.includes(p.platform as PlatformId))
-    : data.platforms;
+  const { developer } = visibleData;
+  const platforms = visibleData.platforms;
   const otherPlatforms = platforms.filter((p) => p.platform !== platform);
 
   return (
@@ -166,13 +193,13 @@ export default function PlatformDeveloperPage() {
       </div>
 
       {/* Cross-platform banner */}
-      {data.totalApps > platformApps.length && (
+      {visibleData.totalApps > platformApps.length && (
         <Card className="bg-muted/30 border-dashed">
           <CardContent className="py-4">
             <div className="flex items-center justify-between flex-wrap gap-3">
               <div className="flex items-center gap-2 text-sm">
                 <span className="text-muted-foreground">
-                  {developer.name} has <strong className="text-foreground">{data.totalApps} apps</strong> across{" "}
+                  {developer.name} has <strong className="text-foreground">{visibleData.totalApps} apps</strong> across{" "}
                   <strong className="text-foreground">{platforms.length} platforms</strong>
                 </span>
                 {otherPlatforms.length > 0 && (

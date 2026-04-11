@@ -487,8 +487,8 @@ describe("GET /api/public/developers/:platform/:slug", () => {
     expect(res.headers["cache-control"]).toBe("public, max-age=3600, stale-while-revalidate=7200");
   });
 
-  it("returns developer with empty apps when no platform devs matched", async () => {
-    // Developer exists but has no platform developers
+  it("returns 404 when requested developer has no visible platform match", async () => {
+    // Developer exists but has no visible platform developers for the requested platform
     let selectCallIdx = 0;
     app = await buildPublicApp({ selectResult: [MOCK_DEVELOPER], executeResult: [] });
     const mockDb = (app as any).db;
@@ -501,11 +501,8 @@ describe("GET /api/public/developers/:platform/:slug", () => {
     };
 
     const res = await app.inject({ method: "GET", url: "/api/public/developers/shopify/lonely-dev" });
-    expect(res.statusCode).toBe(200);
-
-    const body = res.json();
-    expect(body.platforms).toEqual([]);
-    expect(body.apps).toEqual([]);
+    expect(res.statusCode).toBe(404);
+    expect(res.json()).toEqual({ error: "Developer not found" });
   });
 });
 
