@@ -116,23 +116,27 @@ export async function developerRoutes(app: FastifyInstance) {
       const platformJoinFilter = platforms.length > 0
         ? sql`AND pd.platform = ANY(${sqlArray(platforms)})`
         : sql``;
-      const platformAppFilter = platforms.length > 0
-        ? sql`AND a.platform = ANY(${sqlArray(platforms)})`
+      const devAppsPlatformFilter = platforms.length > 0
+        ? sql`WHERE a.platform = ANY(${sqlArray(platforms)})`
         : sql``;
 
-      // Get paginated results using CTEs for latest snapshots (eliminates correlated subqueries)
+      // Get paginated results using lateral join for latest developer name per app.
+      // Previous CTE approach materialized all latest snapshots and cross-joined
+      // platform_developers × apps per platform, producing millions of intermediate rows
+      // that exceeded the 30s statement timeout on the micro DB instance.
       const rows: any[] = await db.execute(sql`
-        WITH latest_snapshots AS (
-          SELECT DISTINCT ON (app_id) app_id, developer
-          FROM app_snapshots
-          ORDER BY app_id, scraped_at DESC
-        ),
-        dev_apps AS (
+        WITH dev_apps AS (
           SELECT pd.global_developer_id, a.id AS app_id, a.slug, a.name, a.icon_url, a.platform
-          FROM platform_developers pd
-          JOIN apps a ON a.platform = pd.platform ${platformAppFilter}
-          JOIN latest_snapshots ls ON ls.app_id = a.id
-          WHERE ls.developer->>'name' = pd.name
+          FROM apps a
+          JOIN LATERAL (
+            SELECT s.developer->>'name' AS dev_name
+            FROM app_snapshots s
+            WHERE s.app_id = a.id
+            ORDER BY s.scraped_at DESC
+            LIMIT 1
+          ) ls ON ls.dev_name IS NOT NULL
+          JOIN platform_developers pd ON pd.platform = a.platform AND pd.name = ls.dev_name
+          ${devAppsPlatformFilter}
         ),
         dev_app_counts AS (
           SELECT global_developer_id, COUNT(DISTINCT app_id) AS app_count
@@ -443,19 +447,19 @@ export async function developerRoutes(app: FastifyInstance) {
       `);
       const total = Number(countResult?.count || 0);
 
-      // Use CTEs instead of correlated subqueries for platform_developers and app_count
+      // Use lateral join to count apps per developer without cross-joining all apps
       const rows: any[] = await db.execute(sql`
-        WITH latest_snapshots AS (
-          SELECT DISTINCT ON (app_id) app_id, developer
-          FROM app_snapshots
-          ORDER BY app_id, scraped_at DESC
-        ),
-        dev_app_counts AS (
+        WITH dev_app_counts AS (
           SELECT pd.global_developer_id, COUNT(DISTINCT a.id) AS app_count
-          FROM platform_developers pd
-          JOIN apps a ON a.platform = pd.platform
-          JOIN latest_snapshots s ON s.app_id = a.id
-          WHERE s.developer->>'name' = pd.name
+          FROM apps a
+          JOIN LATERAL (
+            SELECT s.developer->>'name' AS dev_name
+            FROM app_snapshots s
+            WHERE s.app_id = a.id
+            ORDER BY s.scraped_at DESC
+            LIMIT 1
+          ) ls ON ls.dev_name IS NOT NULL
+          JOIN platform_developers pd ON pd.platform = a.platform AND pd.name = ls.dev_name
           GROUP BY pd.global_developer_id
         )
         SELECT

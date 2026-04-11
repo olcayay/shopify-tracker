@@ -1,6 +1,19 @@
 Bug Fixes (2026-04-11)
 ======================
 
+PLA-994: Fix developers page — table shows empty results
+- Root cause: CTE `dev_apps` joined platform_developers to apps by platform (cross join),
+  producing millions of intermediate rows that exceeded 30s statement_timeout on db-f1-micro
+- Fix: Replaced CTE + cross-join with LATERAL subquery pattern:
+  1. Start from `apps` table (filtered by platform when available)
+  2. LATERAL subquery fetches latest snapshot's developer name per app (O(1) with index)
+  3. JOIN to platform_developers on (platform, name) using unique index
+- Applied same fix to admin listing query (/admin/list)
+- Previous CTE approach (commit 63fa061a) materialized ALL latest snapshots then cross-joined
+  platform_developers × apps per platform — O(devs × apps) intermediate rows per platform
+- New approach: O(apps) with indexed lookups — no cross join, no full materialization
+- Added 2 tests: empty-platform short-circuit behavior, platforms query parameter
+
 PLA-990: Optimize slow account API endpoints — starred-features + indexes
 - starred-features: Added platform filtering (was scanning ALL apps across ALL platforms)
   JSONB expansion now scoped to current platform via INNER JOIN on apps.platform

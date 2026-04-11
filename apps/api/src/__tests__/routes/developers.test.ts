@@ -135,6 +135,39 @@ describe("Developer routes", () => {
 
       expect(res.statusCode).toBe(200);
     });
+
+    it("returns empty developers array with correct pagination when account has no visible platforms", async () => {
+      // When getVisiblePlatforms returns empty (no account_platforms entries),
+      // the endpoint should short-circuit and return a valid empty response
+      const res = await app.inject({
+        method: "GET",
+        url: "/api/developers",
+        headers: authHeaders(userToken()),
+      });
+
+      expect(res.statusCode).toBe(200);
+      const body = res.json();
+      expect(body.developers).toEqual([]);
+      expect(body.pagination).toEqual({
+        page: 1,
+        limit: expect.any(Number),
+        total: 0,
+        totalPages: 0,
+      });
+    });
+
+    it("accepts platforms query parameter", async () => {
+      const res = await app.inject({
+        method: "GET",
+        url: "/api/developers?platforms=shopify,wix",
+        headers: authHeaders(userToken()),
+      });
+
+      expect(res.statusCode).toBe(200);
+      const body = res.json();
+      expect(body).toHaveProperty("developers");
+      expect(body).toHaveProperty("pagination");
+    });
   });
 
   // -----------------------------------------------------------------------
