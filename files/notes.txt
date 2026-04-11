@@ -1,6 +1,16 @@
 Bug Fixes (2026-04-11)
 ======================
 
+PLA-975: Fix mobile responsiveness for all dashboard tables
+- Root cause: <main> element has flex-1 + overflow-auto but lacked min-w-0
+  In flexbox, default min-width: auto prevents flex items from shrinking below
+  content width — table content expanded main instead of triggering scroll
+- Fix: Added min-w-0 to <main> in dashboard-shell.tsx (one-line CSS fix)
+- Table component already had overflow-x-auto (added in prior attempt)
+- PlatformGroupedTable already had overflow-x-auto on wrapper
+- The min-w-0 was the missing piece that enables the overflow scroll chain
+- Added regression test: main must have min-w-0 + overflow-auto
+
 PLA-993: Enhance command palette — 5 improvements
 - Fix 1: Modal overlap — CommandPalette sets data-command-palette-open on body via useEffect,
   PlatformSwitcher checks for it before responding to Cmd+K

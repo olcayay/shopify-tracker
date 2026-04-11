@@ -120,6 +120,14 @@ describe("DashboardShell mobile header", () => {
     expect(screen.getByTestId("mobile-sidebar")).toBeInTheDocument();
   });
 
+  it("main content area has min-w-0 for flex overflow scrolling", () => {
+    render(<DashboardShell>Content</DashboardShell>);
+    const main = document.querySelector("main");
+    expect(main).toBeInTheDocument();
+    expect(main?.className).toContain("min-w-0");
+    expect(main?.className).toContain("overflow-auto");
+  });
+
   it("dispatches Cmd+K event when search button is clicked", async () => {
     const { default: userEvent } = await import("@testing-library/user-event");
     const user = userEvent.setup();
