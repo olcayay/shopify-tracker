@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, useMemo } from "react";
-import { ChevronDown, ChevronRight, Plus, Minus } from "lucide-react";
+import Link from "next/link";
+import { ChevronDown, ChevronRight, Plus, Minus, ChevronsDownUp, ChevronsUpDown, ChevronLeft } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { formatShortDate } from "@/lib/format-utils";
@@ -9,6 +10,8 @@ import { diffWords, diffArraySummary, type DiffSegment } from "@/lib/text-diff";
 import { diffPricingPlans, formatPlanPrice } from "@/lib/pricing-diff";
 import { getFieldLabels } from "@appranks/shared";
 import type { PricingPlan } from "@appranks/shared";
+
+const PAGE_SIZE = 20;
 
 const FIELD_COLORS: Record<string, string> = {
   name: "bg-blue-100 text-blue-800 dark:bg-blue-900/50 dark:text-blue-300",
@@ -252,7 +255,8 @@ function ChangeRenderer({ entry }: { entry: ChangeEntry }) {
 export function UnifiedChangeLog({ entries, platform }: Props) {
   const [sourceFilter, setSourceFilter] = useState<"all" | "self" | "competitors">("all");
   const [fieldFilter, setFieldFilter] = useState<string>("all");
-  const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
+  const [collapsedIds, setCollapsedIds] = useState<Set<string>>(new Set());
+  const [currentPage, setCurrentPage] = useState(1);
 
   const fieldLabels = useMemo(
     () => getFieldLabels(platform || "shopify"),
@@ -280,15 +284,47 @@ export function UnifiedChangeLog({ entries, platform }: Props) {
     });
   }, [entries, sourceFilter, fieldFilter]);
 
-  const groups = groupByPeriod(filtered);
+  // Pagination
+  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  const safePage = Math.min(currentPage, totalPages);
+  const paginatedEntries = filtered.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
+
+  const groups = groupByPeriod(paginatedEntries);
+
+  // Reset page when filters change
+  const handleSourceFilter = (key: "all" | "self" | "competitors") => {
+    setSourceFilter(key);
+    setCurrentPage(1);
+  };
+  const handleFieldFilter = (value: string) => {
+    setFieldFilter(value);
+    setCurrentPage(1);
+  };
 
   function toggleExpand(id: string) {
-    setExpandedIds((prev) => {
+    setCollapsedIds((prev) => {
       const next = new Set(prev);
       if (next.has(id)) next.delete(id);
       else next.add(id);
       return next;
     });
+  }
+
+  const allExpanded = collapsedIds.size === 0;
+
+  function toggleExpandAll() {
+    if (allExpanded) {
+      // Collapse all visible entries
+      const allIds = new Set<string>();
+      groups.forEach((group) =>
+        group.entries.forEach((entry, i) => {
+          allIds.add(`${entry.appSlug}-${entry.field}-${entry.detectedAt}-${i}`);
+        })
+      );
+      setCollapsedIds(allIds);
+    } else {
+      setCollapsedIds(new Set());
+    }
   }
 
   return (
@@ -299,7 +335,7 @@ export function UnifiedChangeLog({ entries, platform }: Props) {
           {(["all", "self", "competitors"] as const).map((key) => (
             <button
               key={key}
-              onClick={() => setSourceFilter(key)}
+              onClick={() => handleSourceFilter(key)}
               className={cn(
                 "px-3 py-1 text-xs font-medium rounded-md transition-colors",
                 sourceFilter === key
@@ -314,7 +350,7 @@ export function UnifiedChangeLog({ entries, platform }: Props) {
 
         <select
           value={fieldFilter}
-          onChange={(e) => setFieldFilter(e.target.value)}
+          onChange={(e) => handleFieldFilter(e.target.value)}
           className="text-xs border rounded-md px-2 py-1 bg-background"
         >
           <option value="all">All fields</option>
@@ -322,6 +358,17 @@ export function UnifiedChangeLog({ entries, platform }: Props) {
             <option key={f} value={f}>{getFieldLabel(f)}</option>
           ))}
         </select>
+
+        <button
+          onClick={toggleExpandAll}
+          className="flex items-center gap-1 px-2 py-1 text-xs text-muted-foreground hover:text-foreground transition-colors ml-auto"
+          title={allExpanded ? "Collapse All" : "Expand All"}
+        >
+          {allExpanded
+            ? <><ChevronsDownUp className="h-3.5 w-3.5" /> Collapse All</>
+            : <><ChevronsUpDown className="h-3.5 w-3.5" /> Expand All</>
+          }
+        </button>
       </div>
 
       {/* Timeline */}
@@ -335,7 +382,7 @@ export function UnifiedChangeLog({ entries, platform }: Props) {
           <div className="space-y-1">
             {group.entries.map((entry, i) => {
               const entryId = `${entry.appSlug}-${entry.field}-${entry.detectedAt}-${i}`;
-              const isExpanded = expandedIds.has(entryId);
+              const isExpanded = !collapsedIds.has(entryId);
 
               return (
                 <div key={entryId} className="rounded-lg border text-sm">
@@ -352,7 +399,13 @@ export function UnifiedChangeLog({ entries, platform }: Props) {
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 flex-wrap">
-                        <span className="font-medium">{entry.appName}</span>
+                        <Link
+                          href={`/${platform || "shopify"}/apps/v2/${entry.appSlug}/intel/overview`}
+                          className="font-medium hover:underline"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          {entry.appName}
+                        </Link>
                         <Badge variant="outline" className={cn("text-[10px] px-1.5 py-0", FIELD_COLORS[entry.field] || "")}>
                           {getFieldLabel(entry.field)}
                         </Badge>
@@ -381,6 +434,31 @@ export function UnifiedChangeLog({ entries, platform }: Props) {
           </div>
         </div>
       ))}
+
+      {/* Pagination */}
+      {totalPages > 1 && (
+        <div className="flex items-center justify-between pt-2">
+          <span className="text-xs text-muted-foreground">
+            {filtered.length} changes — page {safePage} of {totalPages}
+          </span>
+          <div className="flex items-center gap-1">
+            <button
+              onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+              disabled={safePage <= 1}
+              className="flex items-center gap-1 px-2 py-1 text-xs border rounded-md disabled:opacity-40 hover:bg-muted transition-colors"
+            >
+              <ChevronLeft className="h-3 w-3" /> Previous
+            </button>
+            <button
+              onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+              disabled={safePage >= totalPages}
+              className="flex items-center gap-1 px-2 py-1 text-xs border rounded-md disabled:opacity-40 hover:bg-muted transition-colors"
+            >
+              Next <ChevronRight className="h-3 w-3" />
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

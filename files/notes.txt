@@ -1,3 +1,20 @@
+Intel Changes Page UX (2026-04-11)
+====================================
+
+PLA-1007: Expand by default, clickable app names, pagination
+- Entries now expanded by default — flipped from expandedIds to collapsedIds (empty Set = all expanded)
+- Added Collapse All / Expand All toggle button in filter bar
+- App names are now clickable <Link> elements pointing to /v2/{slug}/intel/overview
+  - Uses stopPropagation to prevent expand/collapse when clicking the link
+- Client-side pagination (20 per page) — Previous/Next controls, page counter
+  - Resets to page 1 when source or field filter changes
+  - Only shows when total entries exceed PAGE_SIZE
+- 7 new tests: expand-by-default, collapse/re-expand, clickable links,
+  Collapse All/Expand All, pagination navigation, filter reset, no-pagination
+- Files changed:
+  - apps/dashboard/src/components/v2/unified-change-log.tsx
+  - apps/dashboard/src/__tests__/components/v2/unified-change-log.test.tsx
+
 Bug Fix: appCardSubtitle scraping (2026-04-11)
 ===============================================
 

@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from "vitest";
-import { render, screen, fireEvent } from "@testing-library/react";
+import { render, screen, fireEvent, within } from "@testing-library/react";
 import React from "react";
 import { UnifiedChangeLog, type ChangeEntry } from "@/components/v2/unified-change-log";
 
@@ -49,17 +49,28 @@ describe("UnifiedChangeLog", () => {
     expect(screen.getAllByText("My App").length).toBeGreaterThanOrEqual(1);
   });
 
-  it("expands entry to show diff content", () => {
+  it("entries are expanded by default showing diff content", () => {
     render(<UnifiedChangeLog entries={entries} />);
-    // Find clickable entry rows (buttons that contain app name)
+    // Entries should be expanded by default — diffs visible without clicking
+    expect(screen.getByText("Old Name")).toBeInTheDocument();
+    expect(screen.getByText("New Name")).toBeInTheDocument();
+  });
+
+  it("collapses entry when clicked and re-expands on second click", () => {
+    render(<UnifiedChangeLog entries={entries} />);
+    // Initially expanded
+    expect(screen.getByText("Old Name")).toBeInTheDocument();
+
+    // Click to collapse
     const entryButtons = screen.getAllByRole("button").filter((btn) =>
       btn.closest("[class*='rounded-lg border']") && btn.textContent?.includes("My App")
     );
-    expect(entryButtons.length).toBeGreaterThan(0);
     fireEvent.click(entryButtons[0]);
-    // Now the diff should be visible — short text shows old (red) → new (green)
+    expect(screen.queryByText("Old Name")).not.toBeInTheDocument();
+
+    // Click again to re-expand
+    fireEvent.click(entryButtons[0]);
     expect(screen.getByText("Old Name")).toBeInTheDocument();
-    expect(screen.getByText("New Name")).toBeInTheDocument();
   });
 
   it("shows empty state when no entries match", () => {
@@ -92,7 +103,7 @@ describe("UnifiedChangeLog", () => {
     expect(screen.getAllByText("Updated").length).toBeGreaterThan(0);
   });
 
-  it("renders features array diff correctly when expanded", () => {
+  it("renders features array diff correctly (expanded by default)", () => {
     const featureEntries: ChangeEntry[] = [
       {
         appSlug: "test",
@@ -108,10 +119,93 @@ describe("UnifiedChangeLog", () => {
     // Summary should show added/removed counts
     expect(screen.getByText("+2, -1 features")).toBeInTheDocument();
 
-    // Expand to see details
-    fireEvent.click(screen.getByText("Test App"));
+    // Expanded by default — details already visible
     expect(screen.getByText("Reporting")).toBeInTheDocument();
     expect(screen.getByText("Dashboard")).toBeInTheDocument();
     expect(screen.getByText("Export")).toBeInTheDocument();
+  });
+
+  it("renders app names as clickable links", () => {
+    render(<UnifiedChangeLog entries={entries} platform="shopify" />);
+    const appLinks = screen.getAllByRole("link", { name: "My App" });
+    expect(appLinks.length).toBeGreaterThan(0);
+    expect(appLinks[0]).toHaveAttribute("href", "/shopify/apps/v2/my-app/intel/overview");
+
+    const rivalLinks = screen.getAllByRole("link", { name: "Rival App" });
+    expect(rivalLinks.length).toBeGreaterThan(0);
+    expect(rivalLinks[0]).toHaveAttribute("href", "/shopify/apps/v2/rival/intel/overview");
+  });
+
+  it("Collapse All / Expand All toggle works", () => {
+    render(<UnifiedChangeLog entries={entries} />);
+    // Initially all expanded — diffs visible
+    expect(screen.getByText("Old Name")).toBeInTheDocument();
+
+    // Click Collapse All
+    fireEvent.click(screen.getByText("Collapse All"));
+    expect(screen.queryByText("Old Name")).not.toBeInTheDocument();
+
+    // Click Expand All
+    fireEvent.click(screen.getByText("Expand All"));
+    expect(screen.getByText("Old Name")).toBeInTheDocument();
+  });
+
+  it("shows pagination when entries exceed page size", () => {
+    // Create 25 entries (PAGE_SIZE is 20)
+    const manyEntries: ChangeEntry[] = Array.from({ length: 25 }, (_, i) => ({
+      appSlug: "test",
+      appName: `App ${i}`,
+      isSelf: true,
+      field: "name",
+      oldValue: `Old ${i}`,
+      newValue: `New ${i}`,
+      detectedAt: new Date(now.getTime() - i * 60000).toISOString(),
+    }));
+    render(<UnifiedChangeLog entries={manyEntries} />);
+
+    // Should show pagination
+    expect(screen.getByText(/page 1 of 2/i)).toBeInTheDocument();
+    expect(screen.getByText("Previous")).toBeInTheDocument();
+    expect(screen.getByText("Next")).toBeInTheDocument();
+
+    // First page shows 20 entries
+    expect(screen.getByText("App 0")).toBeInTheDocument();
+    expect(screen.getByText("App 19")).toBeInTheDocument();
+    expect(screen.queryByText("App 20")).not.toBeInTheDocument();
+
+    // Navigate to page 2
+    fireEvent.click(screen.getByText("Next"));
+    expect(screen.getByText(/page 2 of 2/i)).toBeInTheDocument();
+    expect(screen.getByText("App 20")).toBeInTheDocument();
+    expect(screen.queryByText("App 0")).not.toBeInTheDocument();
+  });
+
+  it("resets page to 1 when filters change", () => {
+    const manyEntries: ChangeEntry[] = Array.from({ length: 25 }, (_, i) => ({
+      appSlug: "test",
+      appName: `App ${i}`,
+      isSelf: i < 20,
+      field: "name",
+      oldValue: `Old ${i}`,
+      newValue: `New ${i}`,
+      detectedAt: new Date(now.getTime() - i * 60000).toISOString(),
+    }));
+    render(<UnifiedChangeLog entries={manyEntries} />);
+
+    // Go to page 2
+    fireEvent.click(screen.getByText("Next"));
+    expect(screen.getByText(/page 2 of 2/i)).toBeInTheDocument();
+
+    // Change source filter — should reset to page 1
+    fireEvent.click(screen.getByRole("button", { name: "Competitors" }));
+    // Only 5 competitor entries, no pagination needed
+    expect(screen.queryByText(/page 2/i)).not.toBeInTheDocument();
+  });
+
+  it("does not show pagination when entries fit in one page", () => {
+    render(<UnifiedChangeLog entries={entries} />);
+    expect(screen.queryByText(/page/i)).not.toBeInTheDocument();
+    expect(screen.queryByText("Previous")).not.toBeInTheDocument();
+    expect(screen.queryByText("Next")).not.toBeInTheDocument();
   });
 });
