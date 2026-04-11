@@ -4,6 +4,7 @@ Intel Changes Page UX (2026-04-11)
   PLA-1010: Phase 0 — Unify v1/v2 Changes pages into shared implementation ✅
   PLA-1011: Phase 1 — Add app filter to Changes page ✅
   PLA-1012: Phase 2 — Add time navigation to AdHeatmap component ✅
+  PLA-1013: Phase 3 — Build Changes calendar heatmap view ✅
 
 Bug Fix: appCardSubtitle scraping (2026-04-11)
   PLA-1001: Fix appCardSubtitle scraping bug — title guard + dismiss false updates ✅

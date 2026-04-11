@@ -2,7 +2,8 @@
 
 import { useState, useMemo } from "react";
 import Link from "next/link";
-import { ChevronDown, ChevronRight, Plus, Minus, ChevronsDownUp, ChevronsUpDown, ChevronLeft } from "lucide-react";
+import { ChevronDown, ChevronRight, Plus, Minus, ChevronsDownUp, ChevronsUpDown, ChevronLeft, List, CalendarDays } from "lucide-react";
+import { ChangeHeatmap } from "@/components/changes/change-heatmap";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { formatShortDate } from "@/lib/format-utils";
@@ -253,6 +254,7 @@ function ChangeRenderer({ entry }: { entry: ChangeEntry }) {
 // ---------------------------------------------------------------------------
 
 export function UnifiedChangeLog({ entries, platform }: Props) {
+  const [viewMode, setViewMode] = useState<"list" | "calendar">("list");
   const [sourceFilter, setSourceFilter] = useState<"all" | "self" | "competitors">("all");
   const [fieldFilter, setFieldFilter] = useState<string>("all");
   const [appFilter, setAppFilter] = useState<string>("all");
@@ -386,105 +388,148 @@ export function UnifiedChangeLog({ entries, platform }: Props) {
           </select>
         )}
 
-        <button
-          onClick={toggleExpandAll}
-          className="flex items-center gap-1 px-2 py-1 text-xs text-muted-foreground hover:text-foreground transition-colors ml-auto"
-          title={allExpanded ? "Collapse All" : "Expand All"}
-        >
-          {allExpanded
-            ? <><ChevronsDownUp className="h-3.5 w-3.5" /> Collapse All</>
-            : <><ChevronsUpDown className="h-3.5 w-3.5" /> Expand All</>
-          }
-        </button>
+        <div className="flex items-center gap-1 ml-auto">
+          <div className="flex items-center gap-0.5 p-0.5 rounded-md bg-muted">
+            <button
+              onClick={() => setViewMode("list")}
+              className={cn(
+                "p-1 rounded transition-colors",
+                viewMode === "list" ? "bg-background shadow-sm" : "text-muted-foreground hover:text-foreground",
+              )}
+              title="List view"
+              aria-label="List view"
+            >
+              <List className="h-3.5 w-3.5" />
+            </button>
+            <button
+              onClick={() => setViewMode("calendar")}
+              className={cn(
+                "p-1 rounded transition-colors",
+                viewMode === "calendar" ? "bg-background shadow-sm" : "text-muted-foreground hover:text-foreground",
+              )}
+              title="Calendar view"
+              aria-label="Calendar view"
+            >
+              <CalendarDays className="h-3.5 w-3.5" />
+            </button>
+          </div>
+
+          {viewMode === "list" && (
+            <button
+              onClick={toggleExpandAll}
+              className="flex items-center gap-1 px-2 py-1 text-xs text-muted-foreground hover:text-foreground transition-colors"
+              title={allExpanded ? "Collapse All" : "Expand All"}
+            >
+              {allExpanded
+                ? <><ChevronsDownUp className="h-3.5 w-3.5" /> Collapse All</>
+                : <><ChevronsUpDown className="h-3.5 w-3.5" /> Expand All</>
+              }
+            </button>
+          )}
+        </div>
       </div>
 
-      {/* Timeline */}
-      {groups.length === 0 && (
-        <p className="text-sm text-muted-foreground text-center py-8">No changes match the current filters.</p>
+      {/* Calendar view */}
+      {viewMode === "calendar" && (
+        filtered.length === 0 ? (
+          <p className="text-sm text-muted-foreground text-center py-8">No changes match the current filters.</p>
+        ) : (
+          <ChangeHeatmap entries={filtered} platform={platform} />
+        )
       )}
 
-      {groups.map((group) => (
-        <div key={group.label} className="space-y-2">
-          <h3 className="text-xs font-medium text-muted-foreground uppercase tracking-wide">{group.label}</h3>
-          <div className="space-y-1">
-            {group.entries.map((entry, i) => {
-              const entryId = `${entry.appSlug}-${entry.field}-${entry.detectedAt}-${i}`;
-              const isExpanded = !collapsedIds.has(entryId);
+      {/* List view */}
+      {viewMode === "list" && (
+        <>
+          {/* Timeline */}
+          {groups.length === 0 && (
+            <p className="text-sm text-muted-foreground text-center py-8">No changes match the current filters.</p>
+          )}
 
-              return (
-                <div key={entryId} className="rounded-lg border text-sm">
-                  {/* Header — always visible, clickable to expand */}
-                  <button
-                    onClick={() => toggleExpand(entryId)}
-                    className="flex items-start gap-3 p-3 w-full text-left hover:bg-muted/30 transition-colors"
-                  >
-                    <div className="mt-0.5">
-                      {isExpanded
-                        ? <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />
-                        : <ChevronRight className="h-3.5 w-3.5 text-muted-foreground" />
-                      }
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <Link
-                          href={`/${platform || "shopify"}/apps/v2/${entry.appSlug}/intel/overview`}
-                          className="font-medium hover:underline"
-                          onClick={(e) => e.stopPropagation()}
-                        >
-                          {entry.appName}
-                        </Link>
-                        <Badge variant="outline" className={cn("text-[10px] px-1.5 py-0", FIELD_COLORS[entry.field] || "")}>
-                          {getFieldLabel(entry.field)}
-                        </Badge>
-                        {entry.isSelf && (
-                          <Badge variant="outline" className="text-[10px] px-1.5 py-0">You</Badge>
-                        )}
-                        <span className="text-[10px] text-muted-foreground ml-auto">
-                          {getChangeSummary(entry)}
+          {groups.map((group) => (
+            <div key={group.label} className="space-y-2">
+              <h3 className="text-xs font-medium text-muted-foreground uppercase tracking-wide">{group.label}</h3>
+              <div className="space-y-1">
+                {group.entries.map((entry, i) => {
+                  const entryId = `${entry.appSlug}-${entry.field}-${entry.detectedAt}-${i}`;
+                  const isExpanded = !collapsedIds.has(entryId);
+
+                  return (
+                    <div key={entryId} className="rounded-lg border text-sm">
+                      {/* Header — always visible, clickable to expand */}
+                      <button
+                        onClick={() => toggleExpand(entryId)}
+                        className="flex items-start gap-3 p-3 w-full text-left hover:bg-muted/30 transition-colors"
+                      >
+                        <div className="mt-0.5">
+                          {isExpanded
+                            ? <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />
+                            : <ChevronRight className="h-3.5 w-3.5 text-muted-foreground" />
+                          }
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <Link
+                              href={`/${platform || "shopify"}/apps/v2/${entry.appSlug}/intel/overview`}
+                              className="font-medium hover:underline"
+                              onClick={(e) => e.stopPropagation()}
+                            >
+                              {entry.appName}
+                            </Link>
+                            <Badge variant="outline" className={cn("text-[10px] px-1.5 py-0", FIELD_COLORS[entry.field] || "")}>
+                              {getFieldLabel(entry.field)}
+                            </Badge>
+                            {entry.isSelf && (
+                              <Badge variant="outline" className="text-[10px] px-1.5 py-0">You</Badge>
+                            )}
+                            <span className="text-[10px] text-muted-foreground ml-auto">
+                              {getChangeSummary(entry)}
+                            </span>
+                          </div>
+                        </div>
+                        <span className="text-xs text-muted-foreground whitespace-nowrap">
+                          {formatShortDate(entry.detectedAt)}
                         </span>
-                      </div>
-                    </div>
-                    <span className="text-xs text-muted-foreground whitespace-nowrap">
-                      {formatShortDate(entry.detectedAt)}
-                    </span>
-                  </button>
+                      </button>
 
-                  {/* Expanded content — type-aware diff */}
-                  {isExpanded && (
-                    <div className="px-3 pb-3 pl-10">
-                      <ChangeRenderer entry={entry} />
+                      {/* Expanded content — type-aware diff */}
+                      {isExpanded && (
+                        <div className="px-3 pb-3 pl-10">
+                          <ChangeRenderer entry={entry} />
+                        </div>
+                      )}
                     </div>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      ))}
+                  );
+                })}
+              </div>
+            </div>
+          ))}
 
-      {/* Pagination */}
-      {totalPages > 1 && (
-        <div className="flex items-center justify-between pt-2">
-          <span className="text-xs text-muted-foreground">
-            {filtered.length} changes — page {safePage} of {totalPages}
-          </span>
-          <div className="flex items-center gap-1">
-            <button
-              onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-              disabled={safePage <= 1}
-              className="flex items-center gap-1 px-2 py-1 text-xs border rounded-md disabled:opacity-40 hover:bg-muted transition-colors"
-            >
-              <ChevronLeft className="h-3 w-3" /> Previous
-            </button>
-            <button
-              onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-              disabled={safePage >= totalPages}
-              className="flex items-center gap-1 px-2 py-1 text-xs border rounded-md disabled:opacity-40 hover:bg-muted transition-colors"
-            >
-              Next <ChevronRight className="h-3 w-3" />
-            </button>
-          </div>
-        </div>
+          {/* Pagination */}
+          {totalPages > 1 && (
+            <div className="flex items-center justify-between pt-2">
+              <span className="text-xs text-muted-foreground">
+                {filtered.length} changes — page {safePage} of {totalPages}
+              </span>
+              <div className="flex items-center gap-1">
+                <button
+                  onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                  disabled={safePage <= 1}
+                  className="flex items-center gap-1 px-2 py-1 text-xs border rounded-md disabled:opacity-40 hover:bg-muted transition-colors"
+                >
+                  <ChevronLeft className="h-3 w-3" /> Previous
+                </button>
+                <button
+                  onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                  disabled={safePage >= totalPages}
+                  className="flex items-center gap-1 px-2 py-1 text-xs border rounded-md disabled:opacity-40 hover:bg-muted transition-colors"
+                >
+                  Next <ChevronRight className="h-3 w-3" />
+                </button>
+              </div>
+            </div>
+          )}
+        </>
       )}
     </div>
   );

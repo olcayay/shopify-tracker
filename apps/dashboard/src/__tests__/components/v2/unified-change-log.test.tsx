@@ -302,4 +302,46 @@ describe("UnifiedChangeLog", () => {
     fireEvent.change(selects[1], { target: { value: "app-a" } });
     expect(screen.queryByText(/page 2/i)).not.toBeInTheDocument();
   });
+
+  it("shows list/calendar view toggle buttons", () => {
+    render(<UnifiedChangeLog entries={entries} />);
+    expect(screen.getByLabelText("List view")).toBeInTheDocument();
+    expect(screen.getByLabelText("Calendar view")).toBeInTheDocument();
+  });
+
+  it("defaults to list view", () => {
+    render(<UnifiedChangeLog entries={entries} />);
+    // List view shows entries and Collapse All button
+    expect(screen.getByText("Collapse All")).toBeInTheDocument();
+    // Calendar view elements should not be present
+    expect(screen.queryByLabelText("Previous period")).not.toBeInTheDocument();
+  });
+
+  it("switches to calendar view when calendar button clicked", () => {
+    render(<UnifiedChangeLog entries={entries} />);
+    fireEvent.click(screen.getByLabelText("Calendar view"));
+    // Calendar view should show navigation and legend
+    expect(screen.getByLabelText("Previous period")).toBeInTheDocument();
+    expect(screen.getByText("Less")).toBeInTheDocument();
+    // List-specific elements should be hidden
+    expect(screen.queryByText("Collapse All")).not.toBeInTheDocument();
+  });
+
+  it("switches back to list view", () => {
+    render(<UnifiedChangeLog entries={entries} />);
+    fireEvent.click(screen.getByLabelText("Calendar view"));
+    fireEvent.click(screen.getByLabelText("List view"));
+    expect(screen.getByText("Collapse All")).toBeInTheDocument();
+    expect(screen.queryByLabelText("Previous period")).not.toBeInTheDocument();
+  });
+
+  it("calendar view respects filters", () => {
+    render(<UnifiedChangeLog entries={entries} />);
+    // Filter to self only
+    fireEvent.click(screen.getByRole("button", { name: "My App" }));
+    // Switch to calendar
+    fireEvent.click(screen.getByLabelText("Calendar view"));
+    // Rival App should not appear in calendar
+    expect(screen.queryByRole("link", { name: "Rival App" })).not.toBeInTheDocument();
+  });
 });
