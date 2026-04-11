@@ -974,6 +974,13 @@
       "when": 1782000000000,
       "tag": "0138_seed_ads_feature_flag",
       "breakpoints": true
+    },
+    {
+      "idx": 139,
+      "version": "7",
+      "when": 1782086400000,
+      "tag": "0139_seed_score_feature_flags",
+      "breakpoints": true
     }
   ]
 }
