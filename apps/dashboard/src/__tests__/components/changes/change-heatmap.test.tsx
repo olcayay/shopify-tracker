@@ -1,7 +1,11 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 import { render, screen, fireEvent } from "@testing-library/react";
 import { ChangeHeatmap } from "@/components/changes/change-heatmap";
 import type { ChangeEntry } from "@/components/changes/unified-change-log";
+
+vi.mock("next/navigation", () => ({
+  usePathname: () => "/shopify/apps/v1/test-app/changes",
+}));
 
 const today = new Date().toISOString().slice(0, 10);
 const yesterday = new Date(Date.now() - 86400000).toISOString().slice(0, 10);
@@ -19,9 +23,11 @@ describe("ChangeHeatmap", () => {
     expect(screen.getByText("App B")).toBeInTheDocument();
   });
 
-  it("returns null for empty entries", () => {
-    const { container } = render(<ChangeHeatmap entries={[]} />);
-    expect(container.innerHTML).toBe("");
+  it("shows empty state with navigation for empty entries", () => {
+    render(<ChangeHeatmap entries={[]} />);
+    expect(screen.getByText("No changes detected in this period.")).toBeInTheDocument();
+    expect(screen.getByLabelText("Previous period")).toBeInTheDocument();
+    expect(screen.getByLabelText("Next period")).toBeInTheDocument();
   });
 
   it("shows 'You' badge for self apps", () => {
@@ -68,7 +74,6 @@ describe("ChangeHeatmap", () => {
   });
 
   it("enables Newer button after navigating to older period", () => {
-    // Need entries in the older period so the component doesn't return null
     const olderDate = new Date(Date.now() - 45 * 86400000).toISOString().slice(0, 10);
     const extendedEntries: ChangeEntry[] = [
       ...entries,
@@ -77,5 +82,63 @@ describe("ChangeHeatmap", () => {
     render(<ChangeHeatmap entries={extendedEntries} />);
     fireEvent.click(screen.getByLabelText("Previous period"));
     expect(screen.getByLabelText("Next period")).not.toBeDisabled();
+  });
+
+  it("keeps navigation visible when navigating to an empty period", () => {
+    // Create entries with a gap — current period has data, 90 days ago has data,
+    // so navigating to the middle period (30-60 days ago) should show empty state
+    const oldDate = new Date(Date.now() - 90 * 86400000).toISOString().slice(0, 10);
+    const gapEntries: ChangeEntry[] = [
+      ...entries,
+      { appSlug: "app-old", appName: "Old App", isSelf: false, field: "name", oldValue: "O", newValue: "N", detectedAt: oldDate + "T10:00:00Z" },
+    ];
+    render(<ChangeHeatmap entries={gapEntries} />);
+    expect(screen.getByText("App A")).toBeInTheDocument();
+
+    // Navigate to older period (30-60 days ago) — no data there
+    fireEvent.click(screen.getByLabelText("Previous period"));
+    // Navigation should still be visible
+    expect(screen.getByLabelText("Previous period")).toBeInTheDocument();
+    expect(screen.getByLabelText("Next period")).toBeInTheDocument();
+    // Empty state message shown
+    expect(screen.getByText("No changes detected in this period.")).toBeInTheDocument();
+  });
+
+  it("recovers from empty period via Newer button", () => {
+    const oldDate = new Date(Date.now() - 90 * 86400000).toISOString().slice(0, 10);
+    const gapEntries: ChangeEntry[] = [
+      ...entries,
+      { appSlug: "app-old", appName: "Old App", isSelf: false, field: "name", oldValue: "O", newValue: "N", detectedAt: oldDate + "T10:00:00Z" },
+    ];
+    render(<ChangeHeatmap entries={gapEntries} />);
+    // Navigate to empty period
+    fireEvent.click(screen.getByLabelText("Previous period"));
+    expect(screen.getByText("No changes detected in this period.")).toBeInTheDocument();
+    // Navigate back
+    fireEvent.click(screen.getByLabelText("Next period"));
+    expect(screen.getByText("App A")).toBeInTheDocument();
+    expect(screen.queryByText("No changes detected in this period.")).not.toBeInTheDocument();
+  });
+
+  it("disables Older button when past earliest data point", () => {
+    // Only today's entries — Older should be disabled immediately since all data is in current window
+    const todayOnlyEntries: ChangeEntry[] = [
+      { appSlug: "app-a", appName: "App A", isSelf: true, field: "name", oldValue: "O", newValue: "N", detectedAt: today + "T10:00:00Z" },
+    ];
+    render(<ChangeHeatmap entries={todayOnlyEntries} />);
+    // Current window includes today, and earliest entry is today — can't go older
+    expect(screen.getByLabelText("Previous period")).toBeDisabled();
+  });
+
+  it("disables Older button for empty entries", () => {
+    render(<ChangeHeatmap entries={[]} />);
+    expect(screen.getByLabelText("Previous period")).toBeDisabled();
+  });
+
+  it("renders app links without /intel/overview", () => {
+    render(<ChangeHeatmap entries={entries} platform="shopify" />);
+    const link = screen.getByRole("link", { name: "App A" });
+    expect(link.getAttribute("href")).not.toContain("/intel/overview");
+    expect(link).toHaveAttribute("href", "/shopify/apps/app-a");
   });
 });

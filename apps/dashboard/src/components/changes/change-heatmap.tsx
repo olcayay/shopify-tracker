@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { buildDateRange, formatShortDate, formatDateRangeLabel, intensityClass } from "@/lib/heatmap-utils";
 import type { ChangeEntry } from "./unified-change-log";
@@ -22,6 +23,10 @@ interface AppRow {
 }
 
 export function ChangeHeatmap({ entries, platform }: ChangeHeatmapProps) {
+  const pathname = usePathname();
+  const appLinkPrefix = pathname.includes("/v2/")
+    ? `/${platform || "shopify"}/apps/v2`
+    : `/${platform || "shopify"}/apps`;
   const [dayOffset, setDayOffset] = useState(0);
 
   const fieldLabels = useMemo(
@@ -66,7 +71,19 @@ export function ChangeHeatmap({ entries, platform }: ChangeHeatmapProps) {
     return { rows, dates };
   }, [entries, dayOffset, fieldLabels]);
 
-  if (rows.length === 0) return null;
+  // Compute earliest entry date to bound the "Older" button
+  const earliestDate = useMemo(() => {
+    if (entries.length === 0) return null;
+    let min = entries[0].detectedAt.slice(0, 10);
+    for (const e of entries) {
+      const d = e.detectedAt.slice(0, 10);
+      if (d < min) min = d;
+    }
+    return min;
+  }, [entries]);
+
+  // Disable "Older" when the current window already starts before the earliest data
+  const canGoOlder = earliestDate !== null && dates[0] > earliestDate;
 
   const labelEvery = Math.max(1, Math.ceil(dates.length / 6));
   const dateRangeLabel = formatDateRangeLabel(dates);
@@ -78,7 +95,8 @@ export function ChangeHeatmap({ entries, platform }: ChangeHeatmapProps) {
         <div className="flex items-center justify-between mb-2">
           <button
             onClick={() => setDayOffset((o) => o + 30)}
-            className="flex items-center gap-1 px-2 py-1 text-xs border rounded-md hover:bg-muted transition-colors"
+            disabled={!canGoOlder}
+            className="flex items-center gap-1 px-2 py-1 text-xs border rounded-md hover:bg-muted transition-colors disabled:opacity-40"
             aria-label="Previous period"
           >
             <ChevronLeft className="h-3 w-3" /> Older
@@ -110,6 +128,11 @@ export function ChangeHeatmap({ entries, platform }: ChangeHeatmapProps) {
           </div>
         </div>
 
+        {/* Empty state */}
+        {rows.length === 0 && (
+          <p className="text-sm text-muted-foreground text-center py-6">No changes detected in this period.</p>
+        )}
+
         {/* Rows */}
         {rows.map((row) => (
           <div
@@ -118,7 +141,7 @@ export function ChangeHeatmap({ entries, platform }: ChangeHeatmapProps) {
           >
             <div className="w-[200px] shrink-0 pr-2 flex items-center gap-1.5 min-w-0">
               <Link
-                href={`/${platform || "shopify"}/apps/v2/${row.slug}/intel/overview`}
+                href={`${appLinkPrefix}/${row.slug}`}
                 className="text-xs text-primary hover:underline truncate"
                 title={row.name}
               >

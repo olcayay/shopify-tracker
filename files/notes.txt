@@ -42,6 +42,17 @@ PLA-1010: Phase 0 — Unify v1/v2 Changes pages into shared implementation
   - apps/dashboard/src/__tests__/app/app-changes.test.tsx (unified test)
   - apps/dashboard/src/__tests__/app/v2/changes.test.tsx (fetchChangeEntries tests)
 
+PLA-1016: Fix calendar heatmap disappearing on empty date ranges (2026-04-11)
+- Removed `return null` when rows empty — always render navigation + empty state message
+- Added "Older" button boundary check: disabled when past earliest entry date
+- Shows "No changes detected in this period." for empty windows
+- Fixed hardcoded v2 URL in heatmap app links (same pattern as PLA-1015)
+- 6 new tests: empty state with nav, navigation to empty period, recovery via Newer,
+  Older disabled at boundary, Older disabled for empty, links without /intel/overview
+- Files changed:
+  - apps/dashboard/src/components/changes/change-heatmap.tsx (bug fix)
+  - apps/dashboard/src/__tests__/components/changes/change-heatmap.test.tsx (updated + new tests)
+
 PLA-1015: Fix broken app links on Changes page (2026-04-11)
 - App links were hardcoded to `/v2/{slug}/intel/overview` — wrong destination and no v1/v2 awareness
 - Fix: use `usePathname()` to detect v1/v2 context, build links as `/{platform}/apps/{slug}` or `/{platform}/apps/v2/{slug}`

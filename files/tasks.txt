@@ -7,6 +7,7 @@ Intel Changes Page UX (2026-04-11)
   PLA-1013: Phase 3 — Build Changes calendar heatmap view ✅
   PLA-1014: Gate ads feature behind feature flag ✅
   PLA-1015: Fix broken app links on Changes page — wrong URL path and missing v1/v2 awareness ✅
+  PLA-1016: Fix calendar heatmap disappearing when navigating to empty date ranges ✅
 
 Bug Fix: appCardSubtitle scraping (2026-04-11)
   PLA-1001: Fix appCardSubtitle scraping bug — title guard + dismiss false updates ✅
