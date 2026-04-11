@@ -20,41 +20,32 @@ vi.mock("@/components/changes/unified-change-log", () => ({
 }));
 
 import ChangesPage from "@/app/(dashboard)/[platform]/apps/[slug]/changes/page";
+import V2ChangesPage from "@/app/(dashboard)/[platform]/apps/v2/[slug]/intel/changes/page";
 
 function renderAsync(jsx: Promise<React.JSX.Element>) {
   return jsx.then((el) => render(el));
 }
 
-describe("ChangesPage (v1 — unified)", () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
+const params = Promise.resolve({ platform: "shopify", slug: "test-app" });
 
-  const params = Promise.resolve({ platform: "shopify", slug: "test-app" });
+describe("ChangesPage (shared implementation)", () => {
+  beforeEach(() => vi.clearAllMocks());
 
   it("renders empty state when no changes", async () => {
-    mockFetchChangeEntries.mockResolvedValue({
-      app: { name: "Test App", isTrackedByAccount: false },
-      entries: [],
-    });
+    mockFetchChangeEntries.mockResolvedValue({ app: { name: "Test App" }, entries: [] });
     await renderAsync(ChangesPage({ params }));
-    expect(
-      screen.getByText("No listing changes detected yet.")
-    ).toBeInTheDocument();
+    expect(screen.getByText("No listing changes detected yet.")).toBeInTheDocument();
   });
 
   it("calls fetchChangeEntries with correct slug and platform", async () => {
-    mockFetchChangeEntries.mockResolvedValue({
-      app: { name: "Test App", isTrackedByAccount: false },
-      entries: [],
-    });
+    mockFetchChangeEntries.mockResolvedValue({ app: { name: "Test App" }, entries: [] });
     await renderAsync(ChangesPage({ params }));
     expect(mockFetchChangeEntries).toHaveBeenCalledWith("test-app", "shopify");
   });
 
   it("renders Change Log heading with entries", async () => {
     mockFetchChangeEntries.mockResolvedValue({
-      app: { name: "Test App", isTrackedByAccount: false },
+      app: { name: "Test App" },
       entries: [
         { appSlug: "test-app", appName: "Test App", isSelf: true, field: "name", oldValue: "Old", newValue: "New", detectedAt: "2026-03-01" },
       ],
@@ -63,9 +54,9 @@ describe("ChangesPage (v1 — unified)", () => {
     expect(screen.getByText("Change Log")).toBeInTheDocument();
   });
 
-  it("passes entries to UnifiedChangeLog", async () => {
+  it("passes entries and platform to UnifiedChangeLog", async () => {
     mockFetchChangeEntries.mockResolvedValue({
-      app: { name: "Test App", isTrackedByAccount: true },
+      app: { name: "Test App" },
       entries: [
         { appSlug: "test-app", appName: "Test App", isSelf: true, field: "name", oldValue: "Old", newValue: "New", detectedAt: "2026-03-02" },
         { appSlug: "rival", appName: "Rival App", isSelf: false, field: "price", oldValue: "10", newValue: "20", detectedAt: "2026-03-01" },
@@ -74,36 +65,31 @@ describe("ChangesPage (v1 — unified)", () => {
     await renderAsync(ChangesPage({ params }));
     expect(screen.getByText("Test App: name (self)")).toBeInTheDocument();
     expect(screen.getByText("Rival App: price (competitor)")).toBeInTheDocument();
-  });
-
-  it("passes platform to UnifiedChangeLog", async () => {
-    mockFetchChangeEntries.mockResolvedValue({
-      app: { name: "Test App", isTrackedByAccount: false },
-      entries: [
-        { appSlug: "test-app", appName: "Test App", isSelf: true, field: "name", oldValue: "Old", newValue: "New", detectedAt: "2026-03-01" },
-      ],
-    });
-    await renderAsync(ChangesPage({ params }));
     expect(screen.getByTestId("change-log")).toHaveAttribute("data-platform", "shopify");
   });
 
   it("handles API error gracefully", async () => {
     mockFetchChangeEntries.mockRejectedValue(new Error("API error"));
     await renderAsync(ChangesPage({ params }));
-    expect(
-      screen.getByText("Failed to load changes.")
-    ).toBeInTheDocument();
+    expect(screen.getByText("Failed to load changes.")).toBeInTheDocument();
   });
 
   it("works with canva platform", async () => {
     const canvaParams = Promise.resolve({ platform: "canva", slug: "test-app" });
     mockFetchChangeEntries.mockResolvedValue({
-      app: { name: "Canva App", isTrackedByAccount: false },
+      app: { name: "Canva App" },
       entries: [
         { appSlug: "test-app", appName: "Canva App", isSelf: true, field: "appIntroduction", oldValue: "Old", newValue: "New", detectedAt: "2026-03-01" },
       ],
     });
     await renderAsync(ChangesPage({ params: canvaParams }));
     expect(screen.getByTestId("change-log")).toHaveAttribute("data-platform", "canva");
+  });
+});
+
+describe("V2ChangesPage — re-exports shared implementation", () => {
+  it("is the same function as ChangesPage", () => {
+    // V2 re-exports from the shared page — they are the same default export
+    expect(V2ChangesPage).toBe(ChangesPage);
   });
 });

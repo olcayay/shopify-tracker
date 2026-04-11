@@ -31,6 +31,17 @@ PLA-1008: Unify changes page — port v2 UnifiedChangeLog to v1
   - apps/dashboard/src/__tests__/app/v2/changes.test.tsx (updated imports)
   - apps/dashboard/src/__tests__/components/v2/unified-change-log.test.tsx (updated import)
 
+PLA-1010: Phase 0 — Unify v1/v2 Changes pages into shared implementation
+- V2 changes page now re-exports from shared base: `export { default } from "../../../../[slug]/changes/page"`
+- Single source of truth: all changes page logic lives in `[slug]/changes/page.tsx`
+- V2 test converted to test fetchChangeEntries utility (6 tests)
+- Page test now covers both v1 and v2 (v2 verified as same function via toBe)
+- Removed unused changes-page.tsx component
+- Files changed:
+  - apps/dashboard/src/app/(dashboard)/[platform]/apps/v2/[slug]/intel/changes/page.tsx (1 line re-export)
+  - apps/dashboard/src/__tests__/app/app-changes.test.tsx (unified test)
+  - apps/dashboard/src/__tests__/app/v2/changes.test.tsx (fetchChangeEntries tests)
+
 Bug Fix: appCardSubtitle scraping (2026-04-11)
 ===============================================
 
