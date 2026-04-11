@@ -3,6 +3,13 @@ name: Deploy to GCP
 on:
   push:
     branches: [main]
+    paths-ignore:
+      - 'files/**'
+      - '*.md'
+      - 'docs/**'
+      - '.claude/**'
+      - 'LICENSE'
+      - '.gitignore'
 
 concurrency:
   group: deploy
