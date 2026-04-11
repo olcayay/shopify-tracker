@@ -228,7 +228,17 @@ describe("SystemAdminPage", () => {
     await act(async () => {
       await user.click(screen.getByRole("tab", { name: /scraper/i }));
     });
-    mockFetchWithAuth.mockResolvedValueOnce(mockOkResponse({}));
+    // Use mockImplementation to handle the trigger URL specifically,
+    // avoiding race conditions where mockResolvedValueOnce gets consumed
+    // by background re-render fetch calls in CI
+    mockFetchWithAuth.mockImplementation((url: string) => {
+      if (url.includes("/scraper/trigger")) return Promise.resolve(mockOkResponse({}));
+      if (url.includes("/stats")) return Promise.resolve(mockOkResponse(mockStats));
+      if (url.includes("/accounts")) return Promise.resolve(mockOkResponse(mockAccounts));
+      if (url.includes("/users")) return Promise.resolve(mockOkResponse(mockUsers));
+      if (url.includes("/runs")) return Promise.resolve(mockOkResponse({ runs: mockRuns }));
+      return Promise.resolve({ ok: false, json: () => Promise.resolve({}) });
+    });
     await act(async () => {
       await user.click(screen.getByText("Categories"));
     });
