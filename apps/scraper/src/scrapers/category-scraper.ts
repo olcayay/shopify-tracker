@@ -30,6 +30,7 @@ import {
 import { parseFeaturedSections } from "../parsers/featured-parser.js";
 import type { PlatformModule, NormalizedCategoryApp } from "../platforms/platform-module.js";
 import { recordItemError } from "../utils/record-item-error.js";
+import { runConcurrent } from "../utils/run-concurrent.js";
 
 export interface ScrapePageOptions {
   pages?: "first" | "all" | number;
@@ -459,14 +460,14 @@ export class CategoryScraper {
       }
     }
 
-    // Recurse into subcategories in parallel (skip in single mode)
+    // Recurse into subcategories with limited parallelism (skip in single mode)
     const children: CategoryNode[] = [];
     if (!this.singleMode && depth < this.maxDepth) {
-      const subResults = await Promise.all(
-        pageData.subcategory_links.map(sub =>
-          this.crawlCategory(sub.slug, slug, depth + 1, runId, pageOptions)
-        )
-      );
+      const subResults: { node: CategoryNode | null; appSlugs: string[] }[] = [];
+      await runConcurrent(pageData.subcategory_links, async (sub) => {
+        const result = await this.crawlCategory(sub.slug, slug, depth + 1, runId, pageOptions);
+        subResults.push(result);
+      }, 3);
       for (const { node: childNode, appSlugs: childSlugs } of subResults) {
         if (childNode) children.push(childNode);
         for (const s of childSlugs) discoveredSlugs.push(s);
@@ -742,6 +743,7 @@ export class CategoryScraper {
     });
 
     // Batch upsert apps in chunks of 100
+    // All rows must have identical column shapes for batch insert
     for (let c = 0; c < appValues.length; c += 100) {
       const chunk = appValues.slice(c, c + 100);
       const upsertedApps = await this.db
@@ -751,11 +753,11 @@ export class CategoryScraper {
           slug: v.appSlug,
           name: v.app.name,
           isBuiltForShopify: !!v.app.is_built_for_shopify,
-          appCardSubtitle: v.subtitle,
-          ...(v.app.logo_url && { iconUrl: v.app.logo_url }),
-          ...(v.hasRating && { averageRating: String(v.validRating) }),
-          ...(v.hasCount && { ratingCount: v.validCount }),
-          ...(v.app.pricing_hint && { pricingHint: v.app.pricing_hint }),
+          appCardSubtitle: v.subtitle ?? null,
+          iconUrl: v.app.logo_url || null,
+          averageRating: v.hasRating ? String(v.validRating) : null,
+          ratingCount: v.hasCount ? v.validCount! : null,
+          pricingHint: v.app.pricing_hint || null,
         })))
         .onConflictDoUpdate({
           target: [apps.platform, apps.slug],
@@ -881,11 +883,11 @@ export class CategoryScraper {
             slug: appSlug,
             name: app.name,
             isBuiltForShopify: !!app.is_built_for_shopify,
-            appCardSubtitle: subtitle,
-            ...(app.logo_url && { iconUrl: app.logo_url }),
-            ...(hasRating && { averageRating: String(validRating2) }),
-            ...(hasCount && { ratingCount: validCount2 }),
-            ...(app.pricing_hint && { pricingHint: app.pricing_hint }),
+            appCardSubtitle: subtitle ?? null,
+            iconUrl: app.logo_url || null,
+            averageRating: hasRating ? String(validRating2) : null,
+            ratingCount: hasCount ? validCount2! : null,
+            pricingHint: app.pricing_hint || null,
           };
         }))
         .onConflictDoUpdate({

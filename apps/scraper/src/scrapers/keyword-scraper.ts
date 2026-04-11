@@ -333,11 +333,11 @@ export class KeywordScraper {
             slug: app.app_slug,
             name: app.app_name,
             isBuiltForShopify: !!app.is_built_for_shopify,
-            appCardSubtitle: app.short_description || undefined,
-            ...(app.logo_url && { iconUrl: app.logo_url }),
-            ...(app.average_rating != null && app.average_rating > 0 && { averageRating: String(app.average_rating) }),
-            ...(app.rating_count != null && app.rating_count > 0 && { ratingCount: app.rating_count }),
-            ...(app.pricing_hint && { pricingHint: app.pricing_hint }),
+            appCardSubtitle: app.short_description || null,
+            iconUrl: app.logo_url || null,
+            averageRating: app.average_rating != null && app.average_rating > 0 ? String(app.average_rating) : null,
+            ratingCount: app.rating_count != null && app.rating_count > 0 ? app.rating_count : null,
+            pricingHint: app.pricing_hint || null,
           })))
           .onConflictDoUpdate({
             target: [apps.platform, apps.slug],
@@ -402,10 +402,10 @@ export class KeywordScraper {
             slug: app.app_slug,
             name: app.app_name,
             isBuiltForShopify: !!app.is_built_for_shopify,
-            ...(app.logo_url && { iconUrl: app.logo_url }),
-            ...(app.average_rating != null && app.average_rating > 0 && { averageRating: String(app.average_rating) }),
-            ...(app.rating_count != null && app.rating_count > 0 && { ratingCount: app.rating_count }),
-            ...(app.pricing_hint && { pricingHint: app.pricing_hint }),
+            iconUrl: app.logo_url || null,
+            averageRating: app.average_rating != null && app.average_rating > 0 ? String(app.average_rating) : null,
+            ratingCount: app.rating_count != null && app.rating_count > 0 ? app.rating_count : null,
+            pricingHint: app.pricing_hint || null,
           })))
           .onConflictDoUpdate({
             target: [apps.platform, apps.slug],
