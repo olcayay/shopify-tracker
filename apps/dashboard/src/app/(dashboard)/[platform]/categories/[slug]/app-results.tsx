@@ -28,6 +28,7 @@ import {
 import { TablePagination } from "@/components/pagination";
 import { PowerScorePopover } from "@/components/power-score-popover";
 import { PLATFORMS, isPlatformId, type PlatformId } from "@appranks/shared";
+import { useFeatureFlags } from "@/contexts/feature-flags-context";
 import { shouldShowAdsClient } from "@/lib/ads-feature";
 
 interface App {
@@ -79,6 +80,7 @@ export function CategoryAppResults({
 }) {
   const { platform } = useParams();
   const caps = isPlatformId(platform as string) ? PLATFORMS[platform as PlatformId] : PLATFORMS.shopify;
+  const { hasFeature } = useFeatureFlags();
   const { formatDateOnly } = useFormatDate();
   const [search, setSearch] = useState("");
   const [sortKey, setSortKey] = useState<SortKey>(isHubPage ? "rating_count" : "position");
