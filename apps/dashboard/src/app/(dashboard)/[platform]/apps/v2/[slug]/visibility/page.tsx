@@ -12,6 +12,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { PLATFORMS, isPlatformId, type PlatformId } from "@appranks/shared";
 import { VisibilityTrendChart } from "@/components/v2/visibility-trend-chart";
 import { shouldShowAds } from "@/lib/ads-feature-server";
+import { hasServerFeature } from "@/lib/score-features-server";
 import { Search, TrendingUp, Award, Megaphone, ArrowRight } from "lucide-react";
 
 export default async function VisibilityOverviewPage({
@@ -22,6 +23,7 @@ export default async function VisibilityOverviewPage({
   const { platform, slug } = await params;
   const caps = isPlatformId(platform) ? PLATFORMS[platform as PlatformId] : PLATFORMS.shopify;
   const showAds = await shouldShowAds(caps);
+  const hasAppPower = await hasServerFeature("app-power");
   const base = `/${platform}/apps/v2/${slug}/visibility`;
 
   let app: any;
@@ -77,7 +79,7 @@ export default async function VisibilityOverviewPage({
   return (
     <div className="space-y-4">
       {/* Trend Chart */}
-      <VisibilityTrendChart history={chartData} />
+      <VisibilityTrendChart history={chartData} showPower={hasAppPower} />
 
       {/* Score Breakdown */}
       {bestVis && (

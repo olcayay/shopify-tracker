@@ -4,12 +4,17 @@ import { render, screen } from "@testing-library/react";
 const mockGetApp = vi.fn();
 const mockGetAppMembership = vi.fn();
 const mockGetAppScores = vi.fn();
+const mockHasServerFeature = vi.fn((slug: string) => slug === "app-visibility" || slug === "app-power");
 
 vi.mock("@/lib/api", () => ({
   getEnabledFeatures: vi.fn().mockResolvedValue([]),
   getApp: (...args: any[]) => mockGetApp(...args),
   getAppMembership: (...args: any[]) => mockGetAppMembership(...args),
   getAppScores: (...args: any[]) => mockGetAppScores(...args),
+}));
+
+vi.mock("@/lib/score-features-server", () => ({
+  hasServerFeature: (slug: string) => mockHasServerFeature(slug),
 }));
 
 vi.mock("@/components/app-icon", () => ({
@@ -92,6 +97,7 @@ function setupMocks(overrides: Record<string, any> = {}) {
 describe("V2AppDetailLayout", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockHasServerFeature.mockImplementation((slug: string) => slug === "app-visibility" || slug === "app-power");
   });
 
   it("renders app name", async () => {
@@ -124,6 +130,14 @@ describe("V2AppDetailLayout", () => {
     await renderAsync(V2AppDetailLayout({ params, children: <div /> }));
     expect(screen.getByTestId("score-bar-visibility")).toHaveTextContent("Visibility: 72");
     expect(screen.getByTestId("score-bar-power")).toHaveTextContent("Power: 55");
+  });
+
+  it("hides visibility score bar when app-visibility is disabled", async () => {
+    mockHasServerFeature.mockImplementation((slug: string) => slug === "app-power");
+    setupMocks();
+    await renderAsync(V2AppDetailLayout({ params, children: <div /> }));
+    expect(screen.queryByTestId("score-bar-visibility")).not.toBeInTheDocument();
+    expect(screen.getByTestId("score-bar-power")).toBeInTheDocument();
   });
 
   it("renders V2Nav with correct props", async () => {

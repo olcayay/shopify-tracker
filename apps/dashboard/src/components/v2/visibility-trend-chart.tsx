@@ -14,9 +14,10 @@ import {
 
 interface VisibilityTrendChartProps {
   history: { date: string; visibilityScore: number | null; powerScore: number | null }[];
+  showPower?: boolean;
 }
 
-export function VisibilityTrendChart({ history }: VisibilityTrendChartProps) {
+export function VisibilityTrendChart({ history, showPower = true }: VisibilityTrendChartProps) {
   if (history.length === 0) {
     return (
       <Card>
@@ -76,15 +77,17 @@ export function VisibilityTrendChart({ history }: VisibilityTrendChartProps) {
               name="Visibility"
               connectNulls
             />
-            <Line
-              type="monotone"
-              dataKey="power"
-              stroke="hsl(142, 71%, 45%)"
-              strokeWidth={2}
-              dot={false}
-              name="Power"
-              connectNulls
-            />
+            {showPower && (
+              <Line
+                type="monotone"
+                dataKey="power"
+                stroke="hsl(142, 71%, 45%)"
+                strokeWidth={2}
+                dot={false}
+                name="Power"
+                connectNulls
+              />
+            )}
           </LineChart>
         </ResponsiveContainer>
       </CardContent>

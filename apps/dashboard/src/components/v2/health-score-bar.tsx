@@ -36,6 +36,8 @@ interface HealthScoreBarProps {
   visibilityDelta: number | null;
   powerScore: number | null;
   powerDelta: number | null;
+  showVisibility?: boolean;
+  showPower?: boolean;
   keywordCount: number;
   avgPosition: number | null;
   featuredCount: number;
@@ -46,68 +48,76 @@ export function HealthScoreBar({
   visibilityDelta,
   powerScore,
   powerDelta,
+  showVisibility = true,
+  showPower = true,
   keywordCount,
   avgPosition,
   featuredCount,
 }: HealthScoreBarProps) {
+  const scoreCardCount = [showVisibility, showPower].filter(Boolean).length;
+
   return (
     <div className="rounded-lg border bg-card p-4 space-y-3">
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+      <div className={`grid grid-cols-1 gap-4 ${scoreCardCount > 1 ? "sm:grid-cols-2" : ""}`}>
         {/* Visibility Score */}
-        <div className="space-y-1.5">
-          <div className="flex items-center justify-between">
-            <span className="text-sm font-medium text-muted-foreground">Visibility</span>
-            <div className="flex items-center gap-1.5">
-              {visibilityScore != null ? (
-                <>
-                  <span className={cn("text-lg font-bold tabular-nums", getScoreTextColor(visibilityScore))}>
-                    {Math.round(visibilityScore)}
-                  </span>
-                  <TrendIndicator delta={visibilityDelta} />
-                </>
-              ) : (
-                <span className="text-sm text-muted-foreground">—</span>
-              )}
+        {showVisibility && (
+          <div className="space-y-1.5">
+            <div className="flex items-center justify-between">
+              <span className="text-sm font-medium text-muted-foreground">Visibility</span>
+              <div className="flex items-center gap-1.5">
+                {visibilityScore != null ? (
+                  <>
+                    <span className={cn("text-lg font-bold tabular-nums", getScoreTextColor(visibilityScore))}>
+                      {Math.round(visibilityScore)}
+                    </span>
+                    <TrendIndicator delta={visibilityDelta} />
+                  </>
+                ) : (
+                  <span className="text-sm text-muted-foreground">—</span>
+                )}
+              </div>
+            </div>
+            <div className="h-2.5 bg-muted rounded-full overflow-hidden">
+              <div
+                className={cn(
+                  "h-full rounded-full transition-all duration-700 ease-out",
+                  visibilityScore != null ? getScoreColor(visibilityScore) : "bg-muted",
+                )}
+                style={{ width: `${Math.min(100, Math.max(0, visibilityScore ?? 0))}%` }}
+              />
             </div>
           </div>
-          <div className="h-2.5 bg-muted rounded-full overflow-hidden">
-            <div
-              className={cn(
-                "h-full rounded-full transition-all duration-700 ease-out",
-                visibilityScore != null ? getScoreColor(visibilityScore) : "bg-muted",
-              )}
-              style={{ width: `${Math.min(100, Math.max(0, visibilityScore ?? 0))}%` }}
-            />
-          </div>
-        </div>
+        )}
 
         {/* Power Score */}
-        <div className="space-y-1.5">
-          <div className="flex items-center justify-between">
-            <span className="text-sm font-medium text-muted-foreground">Power</span>
-            <div className="flex items-center gap-1.5">
-              {powerScore != null ? (
-                <>
-                  <span className={cn("text-lg font-bold tabular-nums", getScoreTextColor(powerScore))}>
-                    {Math.round(powerScore)}
-                  </span>
-                  <TrendIndicator delta={powerDelta} />
-                </>
-              ) : (
-                <span className="text-sm text-muted-foreground">—</span>
-              )}
+        {showPower && (
+          <div className="space-y-1.5">
+            <div className="flex items-center justify-between">
+              <span className="text-sm font-medium text-muted-foreground">Power</span>
+              <div className="flex items-center gap-1.5">
+                {powerScore != null ? (
+                  <>
+                    <span className={cn("text-lg font-bold tabular-nums", getScoreTextColor(powerScore))}>
+                      {Math.round(powerScore)}
+                    </span>
+                    <TrendIndicator delta={powerDelta} />
+                  </>
+                ) : (
+                  <span className="text-sm text-muted-foreground">—</span>
+                )}
+              </div>
+            </div>
+            <div className="h-2.5 bg-muted rounded-full overflow-hidden">
+              <div
+                className={cn(
+                  "h-full rounded-full transition-all duration-700 ease-out",
+                  powerScore != null ? getScoreColor(powerScore) : "bg-muted",
+                )}
+                style={{ width: `${Math.min(100, Math.max(0, powerScore ?? 0))}%` }}
+              />
             </div>
           </div>
-          <div className="h-2.5 bg-muted rounded-full overflow-hidden">
-            <div
-              className={cn(
-                "h-full rounded-full transition-all duration-700 ease-out",
-                powerScore != null ? getScoreColor(powerScore) : "bg-muted",
-              )}
-              style={{ width: `${Math.min(100, Math.max(0, powerScore ?? 0))}%` }}
-            />
-          </div>
-        </div>
+        )}
       </div>
 
       {/* Summary stats */}

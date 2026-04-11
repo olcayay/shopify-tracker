@@ -30,7 +30,7 @@ describe("V2Nav", () => {
   beforeEach(() => {
     mockPathname = "/shopify/apps/v2/test-app";
     mockParams = { platform: "shopify", slug: "test-app" };
-    mockHasFeature = () => false;
+    mockHasFeature = (slug: string) => slug === "app-visibility";
     vi.clearAllMocks();
   });
 
@@ -50,6 +50,13 @@ describe("V2Nav", () => {
     expect(screen.queryByText("Listing Studio")).not.toBeInTheDocument();
   });
 
+  it("hides Visibility when app-visibility is disabled", () => {
+    mockHasFeature = () => false;
+    render(<V2Nav slug="test-app" isTracked={true} />);
+    expect(screen.queryByText("Visibility")).not.toBeInTheDocument();
+    expect(screen.getByText("Market Intel")).toBeInTheDocument();
+  });
+
   it("highlights active section", () => {
     mockPathname = "/shopify/apps/v2/test-app/visibility/keywords";
     render(<V2Nav slug="test-app" isTracked={true} />);
@@ -66,7 +73,7 @@ describe("V2Nav", () => {
   });
 
   it("shows platform-conditional sub-items for shopify", () => {
-    mockHasFeature = (slug: string) => slug === "ads";
+    mockHasFeature = (slug: string) => slug === "app-visibility" || slug === "ads";
     render(<V2Nav slug="test-app" isTracked={true} />);
     const dropdownBtn = screen.getByLabelText("Visibility sub-pages");
     fireEvent.click(dropdownBtn);

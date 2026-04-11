@@ -11,6 +11,7 @@ import { EmailDigestToggle } from "../../[slug]/email-digest-toggle";
 import { ScoreBar } from "@/components/v2/score-bar";
 import { V2Nav } from "@/components/v2/v2-nav";
 import { ClassicViewLink } from "@/components/v2/classic-view-link";
+import { hasServerFeature } from "@/lib/score-features-server";
 
 export default async function V2AppDetailLayout({
   params,
@@ -21,6 +22,10 @@ export default async function V2AppDetailLayout({
 }) {
   const { platform, slug } = await params;
   const caps = isPlatformId(platform) ? PLATFORMS[platform as PlatformId] : PLATFORMS.shopify;
+  const [hasAppVisibility, hasAppPower] = await Promise.all([
+    hasServerFeature("app-visibility"),
+    hasServerFeature("app-power"),
+  ]);
 
   let app: any;
   let membership: any = {};
@@ -29,7 +34,9 @@ export default async function V2AppDetailLayout({
     [app, membership, scores] = await Promise.all([
       getApp(slug, platform as PlatformId),
       getAppMembership(slug, platform as PlatformId).catch(() => ({})),
-      getAppScores(slug, platform as PlatformId).catch(() => ({ visibility: [], power: [], weightedPowerScore: 0 })),
+      hasAppVisibility || hasAppPower
+        ? getAppScores(slug, platform as PlatformId).catch(() => ({ visibility: [], power: [], weightedPowerScore: 0 }))
+        : Promise.resolve({ visibility: [], power: [], weightedPowerScore: 0 }),
     ]);
   } catch {
     return <p className="text-muted-foreground">App not found.</p>;
@@ -38,12 +45,12 @@ export default async function V2AppDetailLayout({
   const snapshot = app.latestSnapshot;
 
   // Compute best visibility score across tracked apps
-  const bestVisibility = scores.visibility?.length > 0
+  const bestVisibility = hasAppVisibility && scores.visibility?.length > 0
     ? Math.max(...scores.visibility.map((v: any) => v.visibilityScore ?? 0))
     : null;
 
   // Weighted power score
-  const powerScore = scores.weightedPowerScore || null;
+  const powerScore = hasAppPower ? (scores.weightedPowerScore || null) : null;
 
   return (
     <div className="space-y-4">
@@ -123,8 +130,8 @@ export default async function V2AppDetailLayout({
 
       {/* Row 2: Score Bars */}
       <div className="flex items-center gap-6 flex-wrap">
-        <ScoreBar label="Visibility" score={bestVisibility} maxScore={100} />
-        <ScoreBar label="Power" score={powerScore} maxScore={100} />
+        {hasAppVisibility && <ScoreBar label="Visibility" score={bestVisibility} maxScore={100} testId="score-bar-visibility" />}
+        {hasAppPower && <ScoreBar label="Power" score={powerScore} maxScore={100} testId="score-bar-power" />}
         <ClassicViewLink platform={platform} slug={slug} />
       </div>
 

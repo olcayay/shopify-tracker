@@ -12,6 +12,7 @@ const mockGetAppFeaturedPlacements = vi.fn();
 const mockGetAppAdSightings = vi.fn();
 const mockGetAppCompetitors = vi.fn();
 const mockGetAppKeywords = vi.fn();
+const mockHasServerFeature = vi.fn((slug: string) => slug === "app-visibility" || slug === "app-power");
 
 vi.mock("@/lib/api", () => ({
   getEnabledFeatures: vi.fn().mockResolvedValue([]),
@@ -25,6 +26,10 @@ vi.mock("@/lib/api", () => ({
   getAppAdSightings: (...args: any[]) => mockGetAppAdSightings(...args),
   getAppCompetitors: (...args: any[]) => mockGetAppCompetitors(...args),
   getAppKeywords: (...args: any[]) => mockGetAppKeywords(...args),
+}));
+
+vi.mock("@/lib/score-features-server", () => ({
+  hasServerFeature: (slug: string) => mockHasServerFeature(slug),
 }));
 
 // Mock complex child components
@@ -92,6 +97,7 @@ function setupDefaultMocks(overrides: Record<string, any> = {}) {
 describe("V2DashboardPage", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockHasServerFeature.mockImplementation((slug: string) => slug === "app-visibility" || slug === "app-power");
   });
 
   it("renders the health score bar", async () => {
@@ -156,5 +162,13 @@ describe("V2DashboardPage", () => {
     await renderAsync(V2DashboardPage({ params }));
     expect(screen.getByText("Go to Visibility")).toBeInTheDocument();
     expect(screen.getByText("Go to Listing Studio")).toBeInTheDocument();
+  });
+
+  it("hides the visibility snapshot when app-visibility is disabled", async () => {
+    mockHasServerFeature.mockImplementation((slug: string) => slug === "app-power");
+    setupDefaultMocks();
+    await renderAsync(V2DashboardPage({ params }));
+    expect(screen.queryByText("Visibility Snapshot")).not.toBeInTheDocument();
+    expect(screen.queryByText("Go to Visibility")).not.toBeInTheDocument();
   });
 });

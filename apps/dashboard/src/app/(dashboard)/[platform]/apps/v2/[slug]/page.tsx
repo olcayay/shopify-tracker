@@ -18,6 +18,7 @@ import { AlertsCard, generateAlerts } from "@/components/v2/alerts-card";
 import { PLATFORMS, isPlatformId, type PlatformId } from "@appranks/shared";
 import { getMetadataLimits } from "@appranks/shared";
 import { shouldShowAds } from "@/lib/ads-feature-server";
+import { hasServerFeature } from "@/lib/score-features-server";
 import {
   Eye,
   Users,
@@ -131,6 +132,10 @@ export default async function V2DashboardPage({
   const { platform, slug } = await params;
   const caps = isPlatformId(platform) ? PLATFORMS[platform as PlatformId] : PLATFORMS.shopify;
   const showAds = await shouldShowAds(caps);
+  const [hasAppVisibility, hasAppPower] = await Promise.all([
+    hasServerFeature("app-visibility"),
+    hasServerFeature("app-power"),
+  ]);
   const base = `/${platform}/apps/v2/${slug}`;
 
   // All fetches in parallel — competitors/keywords return [] if app isn't tracked (404 caught)
@@ -148,8 +153,12 @@ export default async function V2DashboardPage({
   try {
     [app, scoresData, scoresHistory, rankings, changes, reviewData, featuredData, adData, competitors, keywords] = await Promise.all([
       getApp(slug, platform as PlatformId),
-      getAppScores(slug, platform as PlatformId).catch(() => ({ visibility: [], power: [], weightedPowerScore: 0 })),
-      getAppScoresHistory(slug, 7, undefined, platform as PlatformId).catch(() => ({ history: [] })),
+      hasAppVisibility || hasAppPower
+        ? getAppScores(slug, platform as PlatformId).catch(() => ({ visibility: [], power: [], weightedPowerScore: 0 }))
+        : Promise.resolve({ visibility: [], power: [], weightedPowerScore: 0 }),
+      hasAppVisibility || hasAppPower
+        ? getAppScoresHistory(slug, 7, undefined, platform as PlatformId).catch(() => ({ history: [] }))
+        : Promise.resolve({ history: [] }),
       getAppRankings(slug, 30, platform as PlatformId).catch(() => ({})),
       getAppChanges(slug, 10, platform as PlatformId).catch(() => []),
       caps.hasReviews
@@ -171,10 +180,10 @@ export default async function V2DashboardPage({
   const snapshot = app.latestSnapshot;
 
   // Compute scores
-  const bestVisibility = scoresData.visibility?.length > 0
+  const bestVisibility = hasAppVisibility && scoresData.visibility?.length > 0
     ? Math.max(...scoresData.visibility.map((v: any) => v.visibilityScore ?? 0))
     : null;
-  const powerScore = scoresData.weightedPowerScore || null;
+  const powerScore = hasAppPower ? (scoresData.weightedPowerScore || null) : null;
 
   // Compute score deltas from history
   const hist = scoresHistory?.history || [];
@@ -183,10 +192,10 @@ export default async function V2DashboardPage({
   if (hist.length >= 2) {
     const latest = hist[hist.length - 1];
     const oldest = hist[0];
-    if (latest?.visibilityScore != null && oldest?.visibilityScore != null) {
+    if (hasAppVisibility && latest?.visibilityScore != null && oldest?.visibilityScore != null) {
       visDelta = Math.round(latest.visibilityScore - oldest.visibilityScore);
     }
-    if (latest?.powerScore != null && oldest?.powerScore != null) {
+    if (hasAppPower && latest?.powerScore != null && oldest?.powerScore != null) {
       powDelta = Math.round(latest.powerScore - oldest.powerScore);
     }
   }
@@ -220,6 +229,8 @@ export default async function V2DashboardPage({
         visibilityDelta={visDelta}
         powerScore={powerScore}
         powerDelta={powDelta}
+        showVisibility={hasAppVisibility}
+        showPower={hasAppPower}
         keywordCount={rankedKeywords.size}
         avgPosition={avgPosition}
         featuredCount={featuredCount}
@@ -231,6 +242,7 @@ export default async function V2DashboardPage({
       {/* Snapshot Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {/* Visibility Snapshot */}
+        {hasAppVisibility && (
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium flex items-center gap-2">
@@ -276,6 +288,7 @@ export default async function V2DashboardPage({
             </Link>
           </CardContent>
         </Card>
+        )}
 
         {/* Competitive Snapshot */}
         <Card>

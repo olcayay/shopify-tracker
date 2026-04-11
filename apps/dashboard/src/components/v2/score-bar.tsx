@@ -11,14 +11,16 @@ export function ScoreBar({
   label,
   score,
   maxScore = 100,
+  testId,
 }: {
   label: string;
   score: number | null;
   maxScore?: number;
+  testId?: string;
 }) {
   if (score == null) {
     return (
-      <div className="flex items-center gap-2 text-sm">
+      <div className="flex items-center gap-2 text-sm" data-testid={testId}>
         <span className="text-muted-foreground font-medium">{label}:</span>
         <span className="text-muted-foreground/50">—</span>
       </div>
@@ -28,7 +30,7 @@ export function ScoreBar({
   const pct = Math.min(100, Math.max(0, (score / maxScore) * 100));
 
   return (
-    <div className="flex items-center gap-2 text-sm">
+    <div className="flex items-center gap-2 text-sm" data-testid={testId}>
       <span className="text-muted-foreground font-medium">{label}:</span>
       <div className="w-24 h-2 bg-muted rounded-full overflow-hidden">
         <div

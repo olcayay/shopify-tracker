@@ -80,7 +80,9 @@ export function V2Nav({
 
   const sections: NavSection[] = [
     { key: "dashboard", label: "Dashboard", href: base },
-    { key: "visibility", label: "Visibility", href: `${base}/visibility`, subItems: visibilitySubItems },
+    ...(hasFeature("app-visibility")
+      ? [{ key: "visibility", label: "Visibility", href: `${base}/visibility`, subItems: visibilitySubItems }]
+      : []),
     { key: "intel", label: "Market Intel", href: `${base}/intel`, subItems: intelSubItems },
     ...(isTracked
       ? [{ key: "studio", label: "Listing Studio", href: `${base}/studio`, subItems: [
