@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import { AppIcon } from "@/components/app-icon";
@@ -81,6 +81,7 @@ export function CategoryAppResults({
   const { platform } = useParams();
   const { hasFeature } = useFeatureFlags();
   const caps = isPlatformId(platform as string) ? PLATFORMS[platform as PlatformId] : PLATFORMS.shopify;
+  const hasAppSimilarity = hasFeature("app-similarity");
   const { formatDateOnly } = useFormatDate();
   const [search, setSearch] = useState("");
   const [sortKey, setSortKey] = useState<SortKey>(isHubPage ? "rating_count" : "position");
@@ -90,6 +91,13 @@ export function CategoryAppResults({
 
   const trackedSet = useMemo(() => new Set(trackedSlugs), [trackedSlugs]);
   const competitorSet = useMemo(() => new Set(competitorSlugs), [competitorSlugs]);
+
+  useEffect(() => {
+    if (!hasAppSimilarity && sortKey === "reverse_similar") {
+      setSortKey(isHubPage ? "rating_count" : "position");
+      setSortDir(isHubPage ? "desc" : "asc");
+    }
+  }, [hasAppSimilarity, isHubPage, sortKey]);
 
   const filtered = useMemo(() => {
     let result = apps;
@@ -263,7 +271,7 @@ export function CategoryAppResults({
                   Min. Paid <SortIcon col="min_paid" />
                 </TableHead>
               )}
-              {caps.hasSimilarApps && (
+              {caps.hasSimilarApps && hasAppSimilarity && (
                 <TableHead
                   className="cursor-pointer select-none"
                   onClick={() => toggleSort("reverse_similar")}
@@ -373,7 +381,7 @@ export function CategoryAppResults({
                         ) : "\u2014"}
                       </TableCell>
                     )}
-                    {caps.hasSimilarApps && (
+                    {caps.hasSimilarApps && hasAppSimilarity && (
                       <TableCell className="text-sm">
                         {reverseSimilarCounts?.[app.slug] ?? "\u2014"}
                       </TableCell>

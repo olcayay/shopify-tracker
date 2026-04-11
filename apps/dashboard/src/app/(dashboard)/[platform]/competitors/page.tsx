@@ -33,6 +33,7 @@ export default function CompetitorsPage() {
   const caps = isPlatformId(platform as string) ? PLATFORMS[platform as PlatformId] : PLATFORMS.shopify;
   const { fetchWithAuth, user, account, refreshUser } = useAuth();
   const { hasFeature } = useFeatureFlags();
+  const hasAppSimilarity = hasFeature("app-similarity");
   const { formatDateOnly } = useFormatDate();
   const [competitors, setCompetitors] = useState<any[]>([]);
   const [myApps, setMyApps] = useState<any[]>([]);
@@ -54,6 +55,7 @@ export default function CompetitorsPage() {
     return TOGGLEABLE_COLUMNS.filter((col) => {
       if (col.key === "visibility" && !hasFeature("app-visibility")) return false;
       if (col.key === "power" && !hasFeature("app-power")) return false;
+      if ((col.key === "similarity" || col.key === "similar") && !hasAppSimilarity) return false;
       if (col.key === "featured" && !caps.hasFeaturedSections) return false;
       if (col.key === "similar" && !caps.hasSimilarApps) return false;
       if ((col.key === "rating" || col.key === "reviews" || col.key === "v7d" || col.key === "v30d" || col.key === "v90d" || col.key === "momentum") && !caps.hasReviews) return false;
@@ -62,7 +64,7 @@ export default function CompetitorsPage() {
       if (col.key === "launchedDate" && !caps.hasLaunchedDate) return false;
       return true;
     });
-  }, [caps, hasFeature]);
+  }, [caps, hasAppSimilarity, hasFeature]);
 
   useEffect(() => {
     try {
@@ -74,6 +76,7 @@ export default function CompetitorsPage() {
   const isCol = (key: string) => {
     if (key === "visibility" && !hasFeature("app-visibility")) return false;
     if (key === "power" && !hasFeature("app-power")) return false;
+    if ((key === "similarity" || key === "similar") && !hasAppSimilarity) return false;
     if (key === "featured" && !caps.hasFeaturedSections) return false;
     if (key === "similar" && !caps.hasSimilarApps) return false;
     if ((key === "rating" || key === "reviews" || key === "v7d" || key === "v30d" || key === "v90d" || key === "momentum") && !caps.hasReviews) return false;
@@ -86,6 +89,13 @@ export default function CompetitorsPage() {
   useEffect(() => {
     loadData();
   }, []);
+
+  useEffect(() => {
+    if (!hasAppSimilarity && (sortKey === "similarity" || sortKey === "similar")) {
+      setSortKey("name");
+      setSortDir("asc");
+    }
+  }, [hasAppSimilarity, sortKey]);
 
   async function loadData() {
     setLoading(true);

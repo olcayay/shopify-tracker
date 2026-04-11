@@ -24,10 +24,22 @@ export const featureFlagRoutes: FastifyPluginAsync = async (app) => {
         activatedAt: featureFlags.activatedAt,
         deactivatedAt: featureFlags.deactivatedAt,
         createdAt: featureFlags.createdAt,
-        accountCount: sql<number>`(SELECT count(*)::int FROM account_feature_flags WHERE feature_flag_id = ${featureFlags.id})`,
-        userCount: sql<number>`(SELECT count(*)::int FROM user_feature_flags WHERE feature_flag_id = ${featureFlags.id})`,
+        accountCount: sql<number>`count(distinct ${accountFeatureFlags.accountId})::int`,
+        userCount: sql<number>`count(distinct ${userFeatureFlags.userId})::int`,
       })
       .from(featureFlags)
+      .leftJoin(accountFeatureFlags, eq(accountFeatureFlags.featureFlagId, featureFlags.id))
+      .leftJoin(userFeatureFlags, eq(userFeatureFlags.featureFlagId, featureFlags.id))
+      .groupBy(
+        featureFlags.id,
+        featureFlags.slug,
+        featureFlags.name,
+        featureFlags.description,
+        featureFlags.isEnabled,
+        featureFlags.activatedAt,
+        featureFlags.deactivatedAt,
+        featureFlags.createdAt,
+      )
       .orderBy(featureFlags.createdAt);
 
     return { data: rows };

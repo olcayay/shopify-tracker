@@ -981,6 +981,13 @@
       "when": 1782086400000,
       "tag": "0139_seed_score_feature_flags",
       "breakpoints": true
+    },
+    {
+      "idx": 140,
+      "version": "7",
+      "when": 1782162000000,
+      "tag": "0140_seed_app_similarity_feature_flag",
+      "breakpoints": true
     }
   ]
 }

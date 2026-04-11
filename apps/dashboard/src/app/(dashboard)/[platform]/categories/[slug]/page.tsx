@@ -20,6 +20,7 @@ import { CategoryAppResults } from "./app-results";
 import { buildExternalCategoryUrl, getPlatformName } from "@/lib/platform-urls";
 import { PLATFORMS, isPlatformId, type PlatformId } from "@appranks/shared";
 import { shouldShowAds } from "@/lib/ads-feature-server";
+import { hasServerFeature } from "@/lib/score-features-server";
 
 export default async function CategoryDetailPage({
   params,
@@ -39,6 +40,7 @@ export default async function CategoryDetailPage({
 
   const caps = isPlatformId(platform) ? PLATFORMS[platform as PlatformId] : PLATFORMS.shopify;
   const showAds = await shouldShowAds(caps);
+  const hasAppSimilarity = await hasServerFeature("app-similarity");
 
   try {
     // Flatten waterfall: fetch slug-only dependencies in Phase 1
@@ -103,7 +105,9 @@ export default async function CategoryDetailPage({
   const [lastChanges, minPaidPrices, reverseSimilarCounts] = await Promise.all([
     getAppsLastChanges(appSlugs, platform as PlatformId).catch(() => ({} as Record<string, string>)),
     getAppsMinPaidPrices(appSlugs, platform as PlatformId).catch(() => ({} as Record<string, number | null>)),
-    getAppsReverseSimilarCounts(appSlugs, platform as PlatformId).catch(() => ({} as Record<string, number>)),
+    hasAppSimilarity
+      ? getAppsReverseSimilarCounts(appSlugs, platform as PlatformId).catch(() => ({} as Record<string, number>))
+      : Promise.resolve({} as Record<string, number>),
   ]);
 
   // Build score lookup maps (power only, visibility is now account-scoped)

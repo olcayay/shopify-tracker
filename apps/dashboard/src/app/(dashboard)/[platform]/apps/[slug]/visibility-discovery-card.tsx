@@ -10,6 +10,7 @@ import {
   Users,
 } from "lucide-react";
 import { useLayoutVersion, buildAppLink } from "@/hooks/use-layout-version";
+import { useFeatureFlag } from "@/contexts/feature-flags-context";
 
 export function VisibilityDiscoveryCard({
   platform,
@@ -29,6 +30,7 @@ export function VisibilityDiscoveryCard({
   caps: { hasFeaturedSections: boolean; hasAdTracking: boolean; hasSimilarApps: boolean };
 }) {
   const version = useLayoutVersion();
+  const hasAppSimilarity = useFeatureFlag("app-similarity");
 
   return (
     <Card className="h-full">
@@ -89,7 +91,7 @@ export function VisibilityDiscoveryCard({
             )}
 
             {/* Similar Apps */}
-            {caps.hasSimilarApps && (
+            {caps.hasSimilarApps && hasAppSimilarity && (
               <Link
                 href={buildAppLink(platform, slug, "similar", version)}
                 className="block rounded-md p-2 -mx-2 hover:bg-muted/50 transition-colors"

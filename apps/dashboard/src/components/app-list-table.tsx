@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useEffect, useState, useMemo } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -92,6 +92,7 @@ export function AppListTable({
   const { platform } = useParams();
   const { hasFeature } = useFeatureFlags();
   const caps = isPlatformId(platform as string) ? PLATFORMS[platform as PlatformId] : PLATFORMS.shopify;
+  const hasAppSimilarity = hasFeature("app-similarity");
   const { formatDateOnly } = useFormatDate();
   const [sortKey, setSortKey] = useState<SortKey>(caps.hasReviews ? "rating_count" : "name");
   const [sortDir, setSortDir] = useState<SortDir>("desc");
@@ -100,6 +101,13 @@ export function AppListTable({
 
   const trackedSet = useMemo(() => new Set(trackedSlugs), [trackedSlugs]);
   const competitorSet = useMemo(() => new Set(competitorSlugs), [competitorSlugs]);
+
+  useEffect(() => {
+    if (!hasAppSimilarity && sortKey === "similar") {
+      setSortKey(caps.hasReviews ? "rating_count" : "name");
+      setSortDir(caps.hasReviews ? "desc" : "asc");
+    }
+  }, [caps.hasReviews, hasAppSimilarity, sortKey]);
 
   function bestRank(slug: string): number {
     const cats = appCategories[slug];
@@ -348,7 +356,7 @@ export function AppListTable({
               >
                 Cat. Rank <SortIcon col="cat_rank" />
               </TableHead>
-              {caps.hasSimilarApps && (
+              {caps.hasSimilarApps && hasAppSimilarity && (
                 <TableHead
                   className="cursor-pointer select-none text-right"
                   onClick={() => toggleSort("similar")}
@@ -535,7 +543,7 @@ export function AppListTable({
                         "\u2014"
                       )}
                     </TableCell>
-                    {caps.hasSimilarApps && (
+                    {caps.hasSimilarApps && hasAppSimilarity && (
                       <TableCell className="text-sm text-right tabular-nums">
                         {similarCount > 0 ? (
                           <Link

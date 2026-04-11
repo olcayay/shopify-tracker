@@ -27,6 +27,7 @@ export function CompetitorsSection({ appSlug }: { appSlug: string }) {
   const caps = isPlatformId(platform as string) ? PLATFORMS[platform as PlatformId] : PLATFORMS.shopify;
   const { fetchWithAuth, user, account, refreshUser } = useAuth();
   const { hasFeature } = useFeatureFlags();
+  const hasAppSimilarity = hasFeature("app-similarity");
   const { formatDateOnly } = useFormatDate();
   const [competitors, setCompetitors] = useState<any[]>([]);
   const [lastChanges, setLastChanges] = useState<Record<string, string>>({});
@@ -75,6 +76,7 @@ export function CompetitorsSection({ appSlug }: { appSlug: string }) {
   const isCol = (key: string) => {
     if (key === "visibility" && !hasFeature("app-visibility")) return false;
     if (key === "power" && !hasFeature("app-power")) return false;
+    if ((key === "similarity" || key === "similar") && !hasAppSimilarity) return false;
     if (key === "featured" && !caps.hasFeaturedSections) return false;
     if (key === "similar" && !caps.hasSimilarApps) return false;
     if ((key === "rating" || key === "reviews" || key === "v7d" || key === "v30d" || key === "v90d" || key === "momentum") && !caps.hasReviews) return false;
@@ -96,6 +98,7 @@ export function CompetitorsSection({ appSlug }: { appSlug: string }) {
     return TOGGLEABLE_COLUMNS.filter((col) => {
       if (col.key === "visibility" && !hasFeature("app-visibility")) return false;
       if (col.key === "power" && !hasFeature("app-power")) return false;
+      if ((col.key === "similarity" || col.key === "similar") && !hasAppSimilarity) return false;
       if (col.key === "featured" && !caps.hasFeaturedSections) return false;
       if (col.key === "similar" && !caps.hasSimilarApps) return false;
       if ((col.key === "rating" || col.key === "reviews" || col.key === "v7d" || col.key === "v30d" || col.key === "v90d" || col.key === "momentum") && !caps.hasReviews) return false;
@@ -109,7 +112,14 @@ export function CompetitorsSection({ appSlug }: { appSlug: string }) {
       }
       return col;
     });
-  }, [caps, hasFeature, platform]);
+  }, [caps, hasAppSimilarity, hasFeature, platform]);
+
+  useEffect(() => {
+    if (!hasAppSimilarity && (sortKey === "similarity" || sortKey === "similar")) {
+      setSortKey("order");
+      setSortDir("asc");
+    }
+  }, [hasAppSimilarity, sortKey]);
 
   useEffect(() => {
     loadCompetitors();

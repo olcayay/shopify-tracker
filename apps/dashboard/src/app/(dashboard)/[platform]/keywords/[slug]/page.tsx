@@ -26,6 +26,7 @@ import { KeywordSuggestionsTrigger } from "@/components/keyword-suggestions-trig
 import { KeywordPendingPoller } from "./pending-poller";
 import { buildExternalSearchUrl, getPlatformName } from "@/lib/platform-urls";
 import { PLATFORMS, type PlatformId } from "@appranks/shared";
+import { hasServerFeature } from "@/lib/score-features-server";
 
 export default async function KeywordDetailPage({
   params,
@@ -33,6 +34,7 @@ export default async function KeywordDetailPage({
   params: Promise<{ platform: string; slug: string }>;
 }) {
   const { platform, slug } = await params;
+  const hasAppSimilarity = await hasServerFeature("app-similarity");
 
   let keyword: any;
   let rankings: any;
@@ -76,7 +78,9 @@ export default async function KeywordDetailPage({
   const [lastChanges, minPaidPrices, reverseSimilarCounts, launchedDates, appCategories] = await Promise.all([
     getAppsLastChanges(uniqueSlugs, platform as PlatformId).catch(() => ({} as Record<string, string>)),
     getAppsMinPaidPrices(uniqueSlugs, platform as PlatformId).catch(() => ({} as Record<string, number | null>)),
-    getAppsReverseSimilarCounts(uniqueSlugs, platform as PlatformId).catch(() => ({} as Record<string, number>)),
+    hasAppSimilarity
+      ? getAppsReverseSimilarCounts(uniqueSlugs, platform as PlatformId).catch(() => ({} as Record<string, number>))
+      : Promise.resolve({} as Record<string, number>),
     getAppsLaunchedDates(uniqueSlugs, platform as PlatformId).catch(() => ({} as Record<string, string | null>)),
     getAppsCategories(uniqueSlugs, platform as PlatformId).catch(() => ({} as Record<string, { title: string; slug: string; position: number | null }[]>)),
   ]);

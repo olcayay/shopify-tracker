@@ -4,6 +4,7 @@ import { render, screen } from "@testing-library/react";
 const mockGetAppSimilarApps = vi.fn();
 const mockGetAccountTrackedApps = vi.fn();
 const mockGetAccountCompetitors = vi.fn();
+const mockHasServerFeature = vi.fn((slug: string) => slug === "app-similarity");
 
 vi.mock("@/lib/api", () => ({
   getEnabledFeatures: vi.fn().mockResolvedValue([]),
@@ -11,6 +12,20 @@ vi.mock("@/lib/api", () => ({
   getAccountTrackedApps: (...args: any[]) => mockGetAccountTrackedApps(...args),
   getAccountCompetitors: (...args: any[]) => mockGetAccountCompetitors(...args),
 }));
+
+vi.mock("@/lib/score-features-server", () => ({
+  hasServerFeature: (slug: string) => mockHasServerFeature(slug),
+}));
+
+vi.mock("next/navigation", async () => {
+  const actual = await vi.importActual<typeof import("next/navigation")>("next/navigation");
+  return {
+    ...actual,
+    notFound: () => {
+      throw new Error("NEXT_NOT_FOUND");
+    },
+  };
+});
 
 vi.mock("@/components/ad-heatmap", () => ({
   AdHeatmap: ({ sightings }: any) => (
@@ -29,6 +44,7 @@ const params = Promise.resolve({ platform: "shopify", slug: "test-app" });
 describe("V2SimilarAppsPage", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockHasServerFeature.mockImplementation((slug: string) => slug === "app-similarity");
     mockGetAccountTrackedApps.mockResolvedValue([]);
     mockGetAccountCompetitors.mockResolvedValue([]);
   });
@@ -81,5 +97,10 @@ describe("V2SimilarAppsPage", () => {
     mockGetAppSimilarApps.mockRejectedValue(new Error("fail"));
     await renderAsync(V2SimilarAppsPage({ params }));
     expect(screen.getByText(/No similar app data yet/)).toBeInTheDocument();
+  });
+
+  it("throws notFound when app-similarity is disabled", async () => {
+    mockHasServerFeature.mockReturnValue(false);
+    await expect(V2SimilarAppsPage({ params })).rejects.toThrow("NEXT_NOT_FOUND");
   });
 });

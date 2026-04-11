@@ -34,6 +34,7 @@ import {
 } from "lucide-react";
 import { buildExternalAppUrl, getPlatformName } from "@/lib/platform-urls";
 import { PLATFORMS, isPlatformId, type PlatformId } from "@appranks/shared";
+import { useFeatureFlag } from "@/contexts/feature-flags-context";
 
 interface Competitor {
   slug: string; name: string; iconUrl: string | null;
@@ -60,6 +61,7 @@ export default function ResearchCompetitorsPage() {
   const id = params.id as string;
   const platform = params.platform as PlatformId;
   const caps = isPlatformId(platform) ? PLATFORMS[platform] : PLATFORMS.shopify;
+  const hasAppSimilarity = useFeatureFlag("app-similarity");
   const canEdit = user?.role === "owner" || user?.role === "admin" || user?.role === "editor";
 
   const [data, setData] = useState<ResearchData | null>(null);
@@ -186,6 +188,13 @@ export default function ResearchCompetitorsPage() {
   type CompSortKey = "name" | "rating" | "reviews" | "pricing" | "power" | "rankings" | "featured" | "similar" | "launched";
   const [sortKey, setSortKey] = useState<CompSortKey>(caps.hasReviews ? "reviews" : "name");
   const [sortDir, setSortDir] = useState<"asc" | "desc">(caps.hasReviews ? "desc" : "asc");
+
+  useEffect(() => {
+    if (!hasAppSimilarity && sortKey === "similar") {
+      setSortKey(caps.hasReviews ? "reviews" : "name");
+      setSortDir(caps.hasReviews ? "desc" : "asc");
+    }
+  }, [caps.hasReviews, hasAppSimilarity, sortKey]);
 
   function toggleSort(key: CompSortKey) {
     if (sortKey === key) {
@@ -340,7 +349,7 @@ export default function ResearchCompetitorsPage() {
                     <TableHead className="text-right cursor-pointer select-none" onClick={() => toggleSort("power")}>Power <SortIcon col="power" /></TableHead>
                     <TableHead className="text-center cursor-pointer select-none" onClick={() => toggleSort("rankings")}>Keywords Ranked <SortIcon col="rankings" /></TableHead>
                     {caps.hasFeaturedSections && <TableHead className="text-right cursor-pointer select-none" onClick={() => toggleSort("featured")}>Featured <SortIcon col="featured" /></TableHead>}
-                    {caps.hasSimilarApps && <TableHead className="text-right cursor-pointer select-none" onClick={() => toggleSort("similar")}>Similar <SortIcon col="similar" /></TableHead>}
+                    {caps.hasSimilarApps && hasAppSimilarity && <TableHead className="text-right cursor-pointer select-none" onClick={() => toggleSort("similar")}>Similar <SortIcon col="similar" /></TableHead>}
                     <TableHead>Categories</TableHead>
                     {caps.hasLaunchedDate && <TableHead className="text-right cursor-pointer select-none" onClick={() => toggleSort("launched")}>Launched <SortIcon col="launched" /></TableHead>}
                     {canEdit && <TableHead className="w-10" />}
@@ -445,7 +454,7 @@ export default function ResearchCompetitorsPage() {
                             )}
                           </TableCell>
                         )}
-                        {caps.hasSimilarApps && (
+                        {caps.hasSimilarApps && hasAppSimilarity && (
                           <TableCell className="text-right text-sm">
                             {isPending ? (
                               <Skeleton className="h-4 w-6 ml-auto" />

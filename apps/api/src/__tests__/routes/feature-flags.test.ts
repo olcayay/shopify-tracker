@@ -1,3 +1,4 @@
+import { describe, it, expect, afterEach } from "vitest";
 import { buildTestApp, adminToken, userToken, authHeaders, type MockDbOverrides } from "../helpers/test-app.js";
 import { featureFlagRoutes } from "../../routes/feature-flags.js";
 import type { FastifyInstance } from "fastify";
@@ -31,7 +32,7 @@ describe("GET /api/system-admin/feature-flags", () => {
 
   it("returns all flags for admin", async () => {
     app = await buildApp({
-      selectResult: [{ ...mockFlag, accountCount: 3 }],
+      selectResult: [{ ...mockFlag, accountCount: 3, userCount: 7 }],
     });
 
     const res = await app.inject({
@@ -44,6 +45,8 @@ describe("GET /api/system-admin/feature-flags", () => {
     const body = res.json();
     expect(body.data).toHaveLength(1);
     expect(body.data[0].slug).toBe("market-research");
+    expect(body.data[0].accountCount).toBe(3);
+    expect(body.data[0].userCount).toBe(7);
   });
 
   it("returns empty array when no flags exist", async () => {
