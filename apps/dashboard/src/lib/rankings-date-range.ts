@@ -100,11 +100,13 @@ export function getRankingsDateRangeFromSearchParams(
   const parsedTo = to ? parseDateString(to) : null;
 
   if (parsedFrom && parsedTo && parsedFrom <= parsedTo) {
+    const safeFrom = from!;
+    const safeTo = to!;
     return {
       preset: "custom",
-      from,
-      to,
-      days: getRangeDaySpan(from, to),
+      from: safeFrom,
+      to: safeTo,
+      days: getRangeDaySpan(safeFrom, safeTo),
     };
   }
 

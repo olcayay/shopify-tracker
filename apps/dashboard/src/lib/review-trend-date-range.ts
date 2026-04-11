@@ -100,11 +100,13 @@ export function getReviewTrendDateRangeFromSearchParams(
   const parsedTo = to ? parseDateString(to) : null;
 
   if (parsedFrom && parsedTo && parsedFrom <= parsedTo) {
+    const safeFrom = from!;
+    const safeTo = to!;
     return {
       preset: "custom",
-      from,
-      to,
-      days: getReviewTrendRangeDaySpan(from, to),
+      from: safeFrom,
+      to: safeTo,
+      days: getReviewTrendRangeDaySpan(safeFrom, safeTo),
     };
   }
 
