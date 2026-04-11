@@ -24,6 +24,7 @@ import { CompetitorWatchCard } from "./competitor-watch-card";
 import { CompetitorUpdatesCard, ListingChangesCard } from "./listing-changes-card";
 import { AppScoresCard } from "./app-scores-card";
 import { VisibilityDiscoveryCard } from "./visibility-discovery-card";
+import { shouldShowAds } from "@/lib/ads-feature";
 
 export default async function AppOverviewPage({
   params,
@@ -55,7 +56,7 @@ export default async function AppOverviewPage({
       caps.hasFeaturedSections
         ? getAppFeaturedPlacements(slug, 30, platform as PlatformId).catch(() => ({ sightings: [] }))
         : Promise.resolve({ sightings: [] }),
-      caps.hasAdTracking
+      shouldShowAds(caps)
         ? getAppAdSightings(slug, 30, platform as PlatformId).catch(() => ({ sightings: [] }))
         : Promise.resolve({ sightings: [] }),
       caps.hasSimilarApps
@@ -236,7 +237,7 @@ export default async function AppOverviewPage({
 
   const totalVisibility =
     (caps.hasFeaturedSections ? featuredSections.length : 0) +
-    (caps.hasAdTracking ? adKeywords.length : 0) +
+    (shouldShowAds(caps) ? adKeywords.length : 0) +
     (caps.hasSimilarApps ? reverseSimilarSlugs.length : 0);
 
   return (
@@ -326,7 +327,7 @@ export default async function AppOverviewPage({
         featuredSections={featuredSections}
         adKeywords={adKeywords}
         reverseSimilarSlugs={reverseSimilarSlugs}
-        caps={{ hasFeaturedSections: caps.hasFeaturedSections, hasAdTracking: caps.hasAdTracking, hasSimilarApps: caps.hasSimilarApps }}
+        caps={{ hasFeaturedSections: caps.hasFeaturedSections, hasAdTracking: shouldShowAds(caps), hasSimilarApps: caps.hasSimilarApps }}
       />
 
       {/* Listing Audit CTA */}

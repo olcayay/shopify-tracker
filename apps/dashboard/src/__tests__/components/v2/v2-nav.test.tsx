@@ -59,12 +59,14 @@ describe("V2Nav", () => {
   });
 
   it("shows platform-conditional sub-items for shopify", () => {
+    process.env.NEXT_PUBLIC_ADS_ENABLED = "true";
     render(<V2Nav slug="test-app" isTracked={true} />);
     const dropdownBtn = screen.getByLabelText("Visibility sub-pages");
     fireEvent.click(dropdownBtn);
-    // Shopify has Featured and Ads
+    // Shopify has Featured and Ads (when ads feature flag is on)
     expect(screen.getByText("Featured")).toBeInTheDocument();
     expect(screen.getByText("Ads")).toBeInTheDocument();
+    delete process.env.NEXT_PUBLIC_ADS_ENABLED;
   });
 
   it("hides Ads pill for canva platform", () => {

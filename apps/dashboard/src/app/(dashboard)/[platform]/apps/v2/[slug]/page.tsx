@@ -17,6 +17,7 @@ import { HealthScoreBar } from "@/components/v2/health-score-bar";
 import { AlertsCard, generateAlerts } from "@/components/v2/alerts-card";
 import { PLATFORMS, isPlatformId, type PlatformId } from "@appranks/shared";
 import { getMetadataLimits } from "@appranks/shared";
+import { shouldShowAds } from "@/lib/ads-feature";
 import {
   Eye,
   Users,
@@ -156,7 +157,7 @@ export default async function V2DashboardPage({
       caps.hasFeaturedSections
         ? getAppFeaturedPlacements(slug, 30, platform as PlatformId).catch(() => ({ sightings: [] }))
         : Promise.resolve({ sightings: [] }),
-      caps.hasAdTracking
+      shouldShowAds(caps)
         ? getAppAdSightings(slug, 30, platform as PlatformId).catch(() => ({ sightings: [] }))
         : Promise.resolve({ sightings: [] }),
       getAppCompetitors(slug, platform as PlatformId).catch(() => []),

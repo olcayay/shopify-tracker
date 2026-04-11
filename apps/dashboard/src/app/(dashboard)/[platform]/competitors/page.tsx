@@ -18,6 +18,7 @@ import { PLATFORMS, isPlatformId, type PlatformId } from "@appranks/shared";
 import { ConfirmModal } from "@/components/confirm-modal";
 import { AdminScraperTrigger } from "@/components/admin-scraper-trigger";
 import { AppSearchBar } from "@/components/app-search-bar";
+import { shouldShowAds } from "@/lib/ads-feature";
 
 import type { SortKey, SortDir } from "./types";
 import { TOGGLEABLE_COLUMNS, STORAGE_KEY } from "./types";
@@ -53,7 +54,7 @@ export default function CompetitorsPage() {
       if (col.key === "similar" && !caps.hasSimilarApps) return false;
       if ((col.key === "rating" || col.key === "reviews" || col.key === "v7d" || col.key === "v30d" || col.key === "v90d" || col.key === "momentum") && !caps.hasReviews) return false;
       if ((col.key === "pricing" || col.key === "minPaidPrice") && !caps.hasPricing) return false;
-      if (col.key === "adKeywords" && !caps.hasAdTracking) return false;
+      if (col.key === "adKeywords" && !shouldShowAds(caps)) return false;
       if (col.key === "launchedDate" && !caps.hasLaunchedDate) return false;
       return true;
     });
@@ -71,7 +72,7 @@ export default function CompetitorsPage() {
     if (key === "similar" && !caps.hasSimilarApps) return false;
     if ((key === "rating" || key === "reviews" || key === "v7d" || key === "v30d" || key === "v90d" || key === "momentum") && !caps.hasReviews) return false;
     if ((key === "pricing" || key === "minPaidPrice") && !caps.hasPricing) return false;
-    if (key === "adKeywords" && !caps.hasAdTracking) return false;
+    if (key === "adKeywords" && !shouldShowAds(caps)) return false;
     if (key === "launchedDate" && !caps.hasLaunchedDate) return false;
     return !hiddenColumns.has(key);
   };

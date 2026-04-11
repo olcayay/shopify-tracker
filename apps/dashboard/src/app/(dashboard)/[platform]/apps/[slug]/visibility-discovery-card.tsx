@@ -10,6 +10,7 @@ import {
   Users,
 } from "lucide-react";
 import { useLayoutVersion, buildAppLink } from "@/hooks/use-layout-version";
+import { shouldShowAds } from "@/lib/ads-feature";
 
 export function VisibilityDiscoveryCard({
   platform,
@@ -65,7 +66,7 @@ export function VisibilityDiscoveryCard({
             )}
 
             {/* Search Ads */}
-            {caps.hasAdTracking && (
+            {shouldShowAds(caps) && (
               <Link
                 href={buildAppLink(platform, slug, "ads", version)}
                 className="block rounded-md p-2 -mx-2 hover:bg-muted/50 transition-colors"

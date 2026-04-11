@@ -3,6 +3,7 @@
 import { useParams } from "next/navigation";
 import { SubNavPills } from "@/components/v2/sub-nav-pills";
 import { PLATFORMS, isPlatformId, type PlatformId } from "@appranks/shared";
+import { shouldShowAds } from "@/lib/ads-feature";
 
 export function VisibilitySubNav() {
   const { platform, slug } = useParams();
@@ -14,7 +15,7 @@ export function VisibilitySubNav() {
     { label: "Keywords", href: `${base}/keywords` },
     { label: "Rankings", href: `${base}/rankings` },
     ...(caps.hasFeaturedSections ? [{ label: "Featured", href: `${base}/featured` }] : []),
-    ...(caps.hasAdTracking ? [{ label: "Ads", href: `${base}/ads` }] : []),
+    ...(shouldShowAds(caps) ? [{ label: "Ads", href: `${base}/ads` }] : []),
   ];
 
   return <SubNavPills items={items} />;

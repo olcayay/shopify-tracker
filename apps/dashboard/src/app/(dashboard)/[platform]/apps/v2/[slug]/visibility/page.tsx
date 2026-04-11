@@ -11,6 +11,7 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { PLATFORMS, isPlatformId, type PlatformId } from "@appranks/shared";
 import { VisibilityTrendChart } from "@/components/v2/visibility-trend-chart";
+import { shouldShowAds } from "@/lib/ads-feature";
 import { Search, TrendingUp, Award, Megaphone, ArrowRight } from "lucide-react";
 
 export default async function VisibilityOverviewPage({
@@ -42,7 +43,7 @@ export default async function VisibilityOverviewPage({
       caps.hasFeaturedSections
         ? getAppFeaturedPlacements(slug, 30, platform as PlatformId).catch(() => ({ sightings: [] }))
         : Promise.resolve({ sightings: [] }),
-      caps.hasAdTracking
+      shouldShowAds(caps)
         ? getAppAdSightings(slug, 30, platform as PlatformId).catch(() => ({ sightings: [] }))
         : Promise.resolve({ sightings: [] }),
     ]);
@@ -108,8 +109,8 @@ export default async function VisibilityOverviewPage({
 
       {/* Quick Insights */}
       <div className={`grid grid-cols-2 gap-3 ${
-        caps.hasFeaturedSections && caps.hasAdTracking ? "sm:grid-cols-4" :
-        !caps.hasFeaturedSections && !caps.hasAdTracking ? "sm:grid-cols-2" :
+        caps.hasFeaturedSections && shouldShowAds(caps) ? "sm:grid-cols-4" :
+        !caps.hasFeaturedSections && !shouldShowAds(caps) ? "sm:grid-cols-2" :
         "sm:grid-cols-3"
       }`}>
         <Link href={`${base}/keywords`}>
@@ -150,7 +151,7 @@ export default async function VisibilityOverviewPage({
           </Link>
         )}
 
-        {caps.hasAdTracking && (
+        {shouldShowAds(caps) && (
           <Link href={`${base}/ads`}>
             <Card className="hover:ring-1 hover:ring-muted-foreground/20 transition-all h-full">
               <CardContent className="pt-4 flex items-center gap-3">

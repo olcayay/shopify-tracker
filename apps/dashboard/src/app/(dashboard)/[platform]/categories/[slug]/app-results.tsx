@@ -28,6 +28,7 @@ import {
 import { TablePagination } from "@/components/pagination";
 import { PowerScorePopover } from "@/components/power-score-popover";
 import { PLATFORMS, isPlatformId, type PlatformId } from "@appranks/shared";
+import { shouldShowAds } from "@/lib/ads-feature";
 
 interface App {
   position: number;
@@ -329,7 +330,7 @@ export function CategoryAppResults({
                           >
                             {app.name}
                           </Link>
-                          {caps.hasAdTracking && app.is_sponsored && (
+                          {shouldShowAds(caps) && app.is_sponsored && (
                             <Badge variant="secondary" className="ml-1 shrink-0">
                               Ad
                             </Badge>

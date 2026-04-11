@@ -6,6 +6,7 @@ import { useParams, usePathname, useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { PLATFORMS, isPlatformId, type PlatformId } from "@appranks/shared";
 import { ChevronDown } from "lucide-react";
+import { shouldShowAds } from "@/lib/ads-feature";
 
 interface NavSection {
   key: string;
@@ -64,7 +65,7 @@ export function V2Nav({
     { label: "Keywords", href: `${base}/visibility/keywords` },
     { label: "Rankings", href: `${base}/visibility/rankings` },
     ...(caps.hasFeaturedSections ? [{ label: "Featured", href: `${base}/visibility/featured` }] : []),
-    ...(caps.hasAdTracking ? [{ label: "Ads", href: `${base}/visibility/ads` }] : []),
+    ...(shouldShowAds(caps) ? [{ label: "Ads", href: `${base}/visibility/ads` }] : []),
   ];
 
   const intelSubItems = [

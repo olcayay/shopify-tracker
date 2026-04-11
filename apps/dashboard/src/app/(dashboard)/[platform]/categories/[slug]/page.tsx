@@ -19,6 +19,7 @@ import { DataFreshness } from "@/components/data-freshness";
 import { CategoryAppResults } from "./app-results";
 import { buildExternalCategoryUrl, getPlatformName } from "@/lib/platform-urls";
 import { PLATFORMS, isPlatformId, type PlatformId } from "@appranks/shared";
+import { shouldShowAds } from "@/lib/ads-feature";
 
 export default async function CategoryDetailPage({
   params,
@@ -47,7 +48,7 @@ export default async function CategoryDetailPage({
       getAccountTrackedApps(platform as PlatformId).catch(() => []),
       getAccountStarredCategories(platform as PlatformId).catch(() => []),
       getFeaturedApps(30, "category", slug, undefined, platform as PlatformId).catch(() => ({ sightings: [], trackedSlugs: [], competitorSlugs: [] })),
-      caps.hasAdTracking ? getCategoryAds(slug, 30, platform as PlatformId).catch(() => ({ adSightings: [] })) : Promise.resolve({ adSightings: [] }),
+      shouldShowAds(caps) ? getCategoryAds(slug, 30, platform as PlatformId).catch(() => ({ adSightings: [] })) : Promise.resolve({ adSightings: [] }),
       getCategoryScores(slug, 50, platform as PlatformId).catch(() => ({ scores: [], computedAt: null })),
     ]);
   } catch {
@@ -264,7 +265,7 @@ export default async function CategoryDetailPage({
       )}
 
       {/* Sponsored Apps */}
-      {caps.hasAdTracking && (
+      {shouldShowAds(caps) && (
       <Card>
         <CardHeader>
           <CardTitle>

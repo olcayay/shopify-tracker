@@ -6,6 +6,7 @@ import { useParams, usePathname, useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { PLATFORMS, isPlatformId, type PlatformId } from "@appranks/shared";
 import { useLayoutVersion, buildAppLink } from "@/hooks/use-layout-version";
+import { shouldShowAds } from "@/lib/ads-feature";
 
 export function AppNav({
   slug,
@@ -58,7 +59,7 @@ export function AppNav({
     { href: `${base}/changes`, label: "Changes" },
     ...(caps.hasSimilarApps ? [{ href: `${base}/similar`, label: "Similar" }] : []),
     ...(caps.hasFeaturedSections ? [{ href: `${base}/featured`, label: "Featured" }] : []),
-    ...(caps.hasAdTracking ? [{ href: `${base}/ads`, label: "Ads" }] : []),
+    ...(shouldShowAds(caps) ? [{ href: `${base}/ads`, label: "Ads" }] : []),
   ];
 
   return (
