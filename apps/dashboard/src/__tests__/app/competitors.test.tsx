@@ -21,6 +21,11 @@ vi.mock("next/navigation", () => ({
   useParams: () => ({ platform: "shopify" }),
 }));
 
+vi.mock("@/contexts/feature-flags-context", () => ({
+  useFeatureFlag: () => false,
+  useFeatureFlags: () => ({ enabledFeatures: [], hasFeature: () => false }),
+}));
+
 // Mock auth context - use vi.fn() for overriding
 const mockFetchWithAuth = vi.fn();
 const mockUseAuth = vi.fn().mockReturnValue({

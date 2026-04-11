@@ -6,7 +6,8 @@ import { useParams, usePathname, useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { PLATFORMS, isPlatformId, type PlatformId } from "@appranks/shared";
 import { useLayoutVersion, buildAppLink } from "@/hooks/use-layout-version";
-import { shouldShowAds } from "@/lib/ads-feature";
+import { shouldShowAdsClient } from "@/lib/ads-feature";
+import { useFeatureFlags } from "@/contexts/feature-flags-context";
 
 export function AppNav({
   slug,
@@ -16,6 +17,7 @@ export function AppNav({
   isTracked: boolean;
 }) {
   const { platform } = useParams();
+  const { hasFeature } = useFeatureFlags();
   const caps = isPlatformId(platform as string) ? PLATFORMS[platform as PlatformId] : PLATFORMS.shopify;
   const pathname = usePathname();
   const router = useRouter();
@@ -59,7 +61,7 @@ export function AppNav({
     { href: `${base}/changes`, label: "Changes" },
     ...(caps.hasSimilarApps ? [{ href: `${base}/similar`, label: "Similar" }] : []),
     ...(caps.hasFeaturedSections ? [{ href: `${base}/featured`, label: "Featured" }] : []),
-    ...(shouldShowAds(caps) ? [{ href: `${base}/ads`, label: "Ads" }] : []),
+    ...(shouldShowAdsClient(caps, hasFeature) ? [{ href: `${base}/ads`, label: "Ads" }] : []),
   ];
 
   return (

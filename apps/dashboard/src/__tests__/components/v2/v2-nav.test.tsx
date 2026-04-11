@@ -14,6 +14,12 @@ vi.mock("next/navigation", () => ({
   useRouter: () => ({ push: mockPush, replace: mockReplace }),
 }));
 
+let mockHasFeature = (_slug: string) => false;
+vi.mock("@/contexts/feature-flags-context", () => ({
+  useFeatureFlag: (slug: string) => mockHasFeature(slug),
+  useFeatureFlags: () => ({ enabledFeatures: [], hasFeature: (slug: string) => mockHasFeature(slug) }),
+}));
+
 vi.mock("next/link", () => ({
   default: ({ children, href, ...props }: any) => <a href={href} {...props}>{children}</a>,
 }));
@@ -24,6 +30,7 @@ describe("V2Nav", () => {
   beforeEach(() => {
     mockPathname = "/shopify/apps/v2/test-app";
     mockParams = { platform: "shopify", slug: "test-app" };
+    mockHasFeature = () => false;
     vi.clearAllMocks();
   });
 
@@ -59,14 +66,14 @@ describe("V2Nav", () => {
   });
 
   it("shows platform-conditional sub-items for shopify", () => {
-    process.env.NEXT_PUBLIC_ADS_ENABLED = "true";
+    mockHasFeature = (slug: string) => slug === "ads";
     render(<V2Nav slug="test-app" isTracked={true} />);
     const dropdownBtn = screen.getByLabelText("Visibility sub-pages");
     fireEvent.click(dropdownBtn);
     // Shopify has Featured and Ads (when ads feature flag is on)
     expect(screen.getByText("Featured")).toBeInTheDocument();
     expect(screen.getByText("Ads")).toBeInTheDocument();
-    delete process.env.NEXT_PUBLIC_ADS_ENABLED;
+    mockHasFeature = () => false;
   });
 
   it("hides Ads pill for canva platform", () => {

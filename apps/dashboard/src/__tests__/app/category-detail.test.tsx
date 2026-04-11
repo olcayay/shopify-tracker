@@ -30,6 +30,7 @@ const mockGetCategoryAds = vi.fn();
 const mockGetCategoryScores = vi.fn();
 
 vi.mock("@/lib/api", () => ({
+  getEnabledFeatures: vi.fn().mockResolvedValue([]),
   getCategory: (...args: any[]) => mockGetCategory(...args),
   getCategoryHistory: (...args: any[]) => mockGetCategoryHistory(...args),
   getAccountCompetitors: (...args: any[]) => mockGetAccountCompetitors(...args),

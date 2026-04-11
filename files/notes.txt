@@ -42,6 +42,18 @@ PLA-1010: Phase 0 — Unify v1/v2 Changes pages into shared implementation
   - apps/dashboard/src/__tests__/app/app-changes.test.tsx (unified test)
   - apps/dashboard/src/__tests__/app/v2/changes.test.tsx (fetchChangeEntries tests)
 
+PLA-1017: Migrate ads feature flag from env var to DB-backed system (2026-04-11)
+- Replaced NEXT_PUBLIC_ADS_ENABLED env var with DB-backed "ads" feature flag
+- Created migration 0138 to seed "ads" flag (default: disabled)
+- Added getEnabledFeatures() server-side helper in api.ts (cached per-request via React cache())
+- Rewrote ads-feature.ts: shouldShowAds() is now async (server), shouldShowAdsClient() for client
+- Updated 12 consumer files:
+  - 4 server components: use `await shouldShowAds(caps)` with pre-computed showAds variable
+  - 7 client components: use `shouldShowAdsClient(caps, hasFeature)` with useFeatureFlags hook
+  - 1 component (visibility-discovery-card): uses caps.hasAdTracking directly (parent pre-computes)
+- Updated 26 test files to add getEnabledFeatures mock and feature-flags-context mock
+- 8 new tests in ads-feature.test.ts (4 server + 4 client)
+
 PLA-1016: Fix calendar heatmap disappearing on empty date ranges (2026-04-11)
 - Removed `return null` when rows empty — always render navigation + empty state message
 - Added "Older" button boundary check: disabled when past earliest entry date

@@ -29,7 +29,8 @@ import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip
 import type { ReviewVelocityMetrics } from "@/lib/api";
 import { PLATFORMS, isPlatformId, type PlatformId } from "@appranks/shared";
 import { formatCategoryTitle } from "@/lib/platform-urls";
-import { shouldShowAds } from "@/lib/ads-feature";
+import { shouldShowAdsClient } from "@/lib/ads-feature";
+import { useFeatureFlags } from "@/contexts/feature-flags-context";
 
 interface AppItem {
   slug: string;
@@ -89,6 +90,7 @@ export function AppListTable({
   reviewVelocity?: Record<string, ReviewVelocityMetrics>;
 }) {
   const { platform } = useParams();
+  const { hasFeature } = useFeatureFlags();
   const caps = isPlatformId(platform as string) ? PLATFORMS[platform as PlatformId] : PLATFORMS.shopify;
   const { formatDateOnly } = useFormatDate();
   const [sortKey, setSortKey] = useState<SortKey>(caps.hasReviews ? "rating_count" : "name");
@@ -362,7 +364,7 @@ export function AppListTable({
                   <Tooltip><TooltipTrigger asChild><span>Featured <SortIcon col="featured" /></span></TooltipTrigger><TooltipContent>Number of featured sections this app appears in</TooltipContent></Tooltip>
                 </TableHead>
               )}
-              {shouldShowAds(caps) && (
+              {shouldShowAdsClient(caps, hasFeature) && (
                 <TableHead
                   className="cursor-pointer select-none text-right"
                   onClick={() => toggleSort("ads")}
@@ -561,7 +563,7 @@ export function AppListTable({
                         )}
                       </TableCell>
                     )}
-                    {shouldShowAds(caps) && (
+                    {shouldShowAdsClient(caps, hasFeature) && (
                       <TableCell className="text-sm text-right tabular-nums">
                         {adsCount > 0 ? (
                           <Link

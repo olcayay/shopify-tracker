@@ -4,6 +4,7 @@ import { render, screen } from "@testing-library/react";
 const mockGetAppRankings = vi.fn();
 
 vi.mock("@/lib/api", () => ({
+  getEnabledFeatures: vi.fn().mockResolvedValue([]),
   getAppRankings: (...args: any[]) => mockGetAppRankings(...args),
 }));
 

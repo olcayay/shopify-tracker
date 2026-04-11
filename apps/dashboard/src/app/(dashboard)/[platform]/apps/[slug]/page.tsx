@@ -24,7 +24,7 @@ import { CompetitorWatchCard } from "./competitor-watch-card";
 import { CompetitorUpdatesCard, ListingChangesCard } from "./listing-changes-card";
 import { AppScoresCard } from "./app-scores-card";
 import { VisibilityDiscoveryCard } from "./visibility-discovery-card";
-import { shouldShowAds } from "@/lib/ads-feature";
+import { shouldShowAds } from "@/lib/ads-feature-server";
 
 export default async function AppOverviewPage({
   params,
@@ -33,6 +33,7 @@ export default async function AppOverviewPage({
 }) {
   const { platform, slug } = await params;
   const caps = isPlatformId(platform) ? PLATFORMS[platform as PlatformId] : PLATFORMS.shopify;
+  const showAds = await shouldShowAds(caps);
 
   // Round 1: parallel fetches (all apps)
   // Critical: getApp must succeed; everything else degrades gracefully
@@ -56,7 +57,7 @@ export default async function AppOverviewPage({
       caps.hasFeaturedSections
         ? getAppFeaturedPlacements(slug, 30, platform as PlatformId).catch(() => ({ sightings: [] }))
         : Promise.resolve({ sightings: [] }),
-      shouldShowAds(caps)
+      showAds
         ? getAppAdSightings(slug, 30, platform as PlatformId).catch(() => ({ sightings: [] }))
         : Promise.resolve({ sightings: [] }),
       caps.hasSimilarApps
@@ -237,7 +238,7 @@ export default async function AppOverviewPage({
 
   const totalVisibility =
     (caps.hasFeaturedSections ? featuredSections.length : 0) +
-    (shouldShowAds(caps) ? adKeywords.length : 0) +
+    (showAds ? adKeywords.length : 0) +
     (caps.hasSimilarApps ? reverseSimilarSlugs.length : 0);
 
   return (
@@ -327,7 +328,7 @@ export default async function AppOverviewPage({
         featuredSections={featuredSections}
         adKeywords={adKeywords}
         reverseSimilarSlugs={reverseSimilarSlugs}
-        caps={{ hasFeaturedSections: caps.hasFeaturedSections, hasAdTracking: shouldShowAds(caps), hasSimilarApps: caps.hasSimilarApps }}
+        caps={{ hasFeaturedSections: caps.hasFeaturedSections, hasAdTracking: showAds, hasSimilarApps: caps.hasSimilarApps }}
       />
 
       {/* Listing Audit CTA */}

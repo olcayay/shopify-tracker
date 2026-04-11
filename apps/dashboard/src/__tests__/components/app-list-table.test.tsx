@@ -10,6 +10,11 @@ vi.mock("@/components/competitor-button", () => ({
   ),
 }));
 
+vi.mock("@/contexts/feature-flags-context", () => ({
+  useFeatureFlag: () => false,
+  useFeatureFlags: () => ({ enabledFeatures: [], hasFeature: () => false }),
+}));
+
 // Mock format-date hook
 vi.mock("@/lib/format-date", () => ({
   useFormatDate: () => ({

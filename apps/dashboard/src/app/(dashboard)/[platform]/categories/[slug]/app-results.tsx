@@ -28,7 +28,8 @@ import {
 import { TablePagination } from "@/components/pagination";
 import { PowerScorePopover } from "@/components/power-score-popover";
 import { PLATFORMS, isPlatformId, type PlatformId } from "@appranks/shared";
-import { shouldShowAds } from "@/lib/ads-feature";
+import { shouldShowAdsClient } from "@/lib/ads-feature";
+import { useFeatureFlags } from "@/contexts/feature-flags-context";
 
 interface App {
   position: number;
@@ -78,6 +79,7 @@ export function CategoryAppResults({
   };
 }) {
   const { platform } = useParams();
+  const { hasFeature } = useFeatureFlags();
   const caps = isPlatformId(platform as string) ? PLATFORMS[platform as PlatformId] : PLATFORMS.shopify;
   const { formatDateOnly } = useFormatDate();
   const [search, setSearch] = useState("");
@@ -330,7 +332,7 @@ export function CategoryAppResults({
                           >
                             {app.name}
                           </Link>
-                          {shouldShowAds(caps) && app.is_sponsored && (
+                          {shouldShowAdsClient(caps, hasFeature) && app.is_sponsored && (
                             <Badge variant="secondary" className="ml-1 shrink-0">
                               Ad
                             </Badge>

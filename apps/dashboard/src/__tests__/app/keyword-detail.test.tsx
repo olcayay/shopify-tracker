@@ -31,6 +31,7 @@ const mockGetAppsLaunchedDates = vi.fn();
 const mockGetAppsCategories = vi.fn();
 
 vi.mock("@/lib/api", () => ({
+  getEnabledFeatures: vi.fn().mockResolvedValue([]),
   getKeyword: (...args: any[]) => mockGetKeyword(...args),
   getKeywordRankings: (...args: any[]) => mockGetKeywordRankings(...args),
   getKeywordAds: (...args: any[]) => mockGetKeywordAds(...args),

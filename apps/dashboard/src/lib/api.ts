@@ -349,6 +349,19 @@ export function getUserProfile() {
   return fetchApi<any>(`/api/auth/me`, { cache: "no-store" });
 }
 
+/**
+ * Server-side helper: returns the list of enabled feature flag slugs for the current user.
+ * Cached per-request via React's cache() so multiple server components share one fetch.
+ */
+export const getEnabledFeatures = cache(async (): Promise<string[]> => {
+  try {
+    const data = await fetchApi<{ account?: { enabledFeatures?: string[] } }>(`/api/auth/me`, { cache: "no-store" });
+    return data.account?.enabledFeatures ?? [];
+  } catch {
+    return [];
+  }
+});
+
 // --- Account (user-specific, must be fresh) ---
 export function getAccountInfo() {
   return fetchApi<any>(`/api/account`, { cache: "no-store" });

@@ -32,6 +32,7 @@ vi.mock("next/navigation", () => ({
 const mockGetApp = vi.fn();
 
 vi.mock("@/lib/api", () => ({
+  getEnabledFeatures: vi.fn().mockResolvedValue([]),
   getApp: (...args: any[]) => mockGetApp(...args),
 }));
 

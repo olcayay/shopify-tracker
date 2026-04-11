@@ -22,6 +22,7 @@ const mockGetFeaturedSections = vi.fn();
 const mockGetCategories = vi.fn();
 
 vi.mock("@/lib/api", () => ({
+  getEnabledFeatures: vi.fn().mockResolvedValue([]),
   getFeaturedApps: (...args: any[]) => mockGetFeaturedApps(...args),
   getFeaturedSections: (...args: any[]) => mockGetFeaturedSections(...args),
   getCategories: (...args: any[]) => mockGetCategories(...args),

@@ -17,7 +17,7 @@ import { HealthScoreBar } from "@/components/v2/health-score-bar";
 import { AlertsCard, generateAlerts } from "@/components/v2/alerts-card";
 import { PLATFORMS, isPlatformId, type PlatformId } from "@appranks/shared";
 import { getMetadataLimits } from "@appranks/shared";
-import { shouldShowAds } from "@/lib/ads-feature";
+import { shouldShowAds } from "@/lib/ads-feature-server";
 import {
   Eye,
   Users,
@@ -130,6 +130,7 @@ export default async function V2DashboardPage({
 }) {
   const { platform, slug } = await params;
   const caps = isPlatformId(platform) ? PLATFORMS[platform as PlatformId] : PLATFORMS.shopify;
+  const showAds = await shouldShowAds(caps);
   const base = `/${platform}/apps/v2/${slug}`;
 
   // All fetches in parallel — competitors/keywords return [] if app isn't tracked (404 caught)
@@ -157,7 +158,7 @@ export default async function V2DashboardPage({
       caps.hasFeaturedSections
         ? getAppFeaturedPlacements(slug, 30, platform as PlatformId).catch(() => ({ sightings: [] }))
         : Promise.resolve({ sightings: [] }),
-      shouldShowAds(caps)
+      showAds
         ? getAppAdSightings(slug, 30, platform as PlatformId).catch(() => ({ sightings: [] }))
         : Promise.resolve({ sightings: [] }),
       getAppCompetitors(slug, platform as PlatformId).catch(() => []),

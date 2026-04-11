@@ -17,6 +17,7 @@ const mockGetCategoriesBatch = vi.fn();
 const mockGetAppScores = vi.fn();
 
 vi.mock("@/lib/api", () => ({
+  getEnabledFeatures: vi.fn().mockResolvedValue([]),
   getApp: (...args: any[]) => mockGetApp(...args),
   getAppReviews: (...args: any[]) => mockGetAppReviews(...args),
   getAppRankings: (...args: any[]) => mockGetAppRankings(...args),

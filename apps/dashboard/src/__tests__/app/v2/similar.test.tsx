@@ -6,6 +6,7 @@ const mockGetAccountTrackedApps = vi.fn();
 const mockGetAccountCompetitors = vi.fn();
 
 vi.mock("@/lib/api", () => ({
+  getEnabledFeatures: vi.fn().mockResolvedValue([]),
   getAppSimilarApps: (...args: any[]) => mockGetAppSimilarApps(...args),
   getAccountTrackedApps: (...args: any[]) => mockGetAccountTrackedApps(...args),
   getAccountCompetitors: (...args: any[]) => mockGetAccountCompetitors(...args),

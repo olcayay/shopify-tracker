@@ -6,6 +6,7 @@ const mockGetAppHistory = vi.fn();
 const mockGetAppReviewMetrics = vi.fn();
 
 vi.mock("@/lib/api", () => ({
+  getEnabledFeatures: vi.fn().mockResolvedValue([]),
   getAppReviews: (...args: any[]) => mockGetAppReviews(...args),
   getAppHistory: (...args: any[]) => mockGetAppHistory(...args),
   getAppReviewMetrics: (...args: any[]) => mockGetAppReviewMetrics(...args),

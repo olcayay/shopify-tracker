@@ -6,6 +6,7 @@ const mockGetAppMembership = vi.fn();
 const mockGetAppScores = vi.fn();
 
 vi.mock("@/lib/api", () => ({
+  getEnabledFeatures: vi.fn().mockResolvedValue([]),
   getApp: (...args: any[]) => mockGetApp(...args),
   getAppMembership: (...args: any[]) => mockGetAppMembership(...args),
   getAppScores: (...args: any[]) => mockGetAppScores(...args),

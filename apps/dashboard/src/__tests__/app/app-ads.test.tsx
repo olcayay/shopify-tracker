@@ -6,6 +6,7 @@ const mockGetAppAdSightings = vi.fn();
 const mockGetAppCategoryAdSightings = vi.fn();
 
 vi.mock("@/lib/api", () => ({
+  getEnabledFeatures: vi.fn().mockResolvedValue([]),
   getAppAdSightings: (...args: any[]) => mockGetAppAdSightings(...args),
   getAppCategoryAdSightings: (...args: any[]) =>
     mockGetAppCategoryAdSightings(...args),
