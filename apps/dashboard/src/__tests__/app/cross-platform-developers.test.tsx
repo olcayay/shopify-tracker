@@ -113,6 +113,9 @@ function setupFetchMocks(
     if (url.includes("/api/developers/tracked")) {
       return Promise.resolve(makeJsonResponse({ developers: [] }));
     }
+    if (url.includes("/api/developers/competitors")) {
+      return Promise.resolve(makeJsonResponse({ developers: [] }));
+    }
     if (url.includes("/api/developers")) {
       return Promise.resolve(makeJsonResponse(response));
     }
@@ -402,6 +405,9 @@ describe("DevelopersPage (cross-platform)", () => {
       if (url.includes("/api/developers/tracked")) {
         return Promise.resolve(makeJsonResponse({ developers: [] }));
       }
+      if (url.includes("/api/developers/competitors")) {
+        return Promise.resolve(makeJsonResponse({ developers: [] }));
+      }
       if (url.includes("/api/developers")) {
         return Promise.resolve(makeJsonResponse(mockDevelopersResponse));
       }
@@ -478,6 +484,9 @@ describe("DevelopersPage (cross-platform)", () => {
     // Set up with unstarred developer first, starred second
     mockFetchWithAuth.mockImplementation((url: string) => {
       if (url.includes("/api/developers/tracked")) {
+        return Promise.resolve(makeJsonResponse({ developers: [] }));
+      }
+      if (url.includes("/api/developers/competitors")) {
         return Promise.resolve(makeJsonResponse({ developers: [] }));
       }
       if (url.includes("/api/developers")) {
@@ -558,6 +567,9 @@ describe("DevelopersPage (cross-platform)", () => {
           })
         );
       }
+      if (url.includes("/api/developers/competitors")) {
+        return Promise.resolve(makeJsonResponse({ developers: [] }));
+      }
       if (url.includes("/api/developers")) {
         return Promise.resolve(makeJsonResponse(mockDevelopersResponse));
       }
@@ -571,13 +583,15 @@ describe("DevelopersPage (cross-platform)", () => {
     });
   });
 
-  it("hides My Developers section when no tracked developers", async () => {
+  it("shows empty state for My Developers when no tracked developers", async () => {
     setupFetchMocks();
     render(<DevelopersPage />);
     await waitFor(() => {
       expect(screen.getByText("Acme Inc")).toBeInTheDocument();
     });
-    expect(screen.queryByText("My Developers")).not.toBeInTheDocument();
+    // My Developers section is shown with empty state
+    expect(screen.getByText("My Developers")).toBeInTheDocument();
+    expect(screen.getByText("No tracked app developers yet")).toBeInTheDocument();
   });
 
   it("pagination buttons are disabled when on first page", async () => {

@@ -269,6 +269,82 @@ export async function developerRoutes(app: FastifyInstance) {
     };
   });
 
+  // GET /api/developers/competitors — developers of competitor apps
+  app.get("/competitors", async (request) => {
+    const accountId = (request as any).user?.accountId || null;
+    if (!accountId) return { developers: [] };
+
+    const requestedPlatform = (request.query as any).platform?.trim() || "";
+
+    // Filter by enabled + globally visible platforms
+    const isAdmin = (request as any).user?.isSystemAdmin === true;
+    let platformFilterSql = sql``;
+    let compAppsPlatformFilterSql = sql``;
+    if (!isAdmin) {
+      const enabledPlatforms = await getVisiblePlatforms(db, accountId);
+      if (enabledPlatforms.length === 0) return { developers: [] };
+      const platforms = requestedPlatform
+        ? enabledPlatforms.filter((p: string) => p === requestedPlatform)
+        : enabledPlatforms;
+      if (platforms.length === 0) return { developers: [] };
+      platformFilterSql = sql`AND a.platform = ANY(${sqlArray(platforms)})`;
+      compAppsPlatformFilterSql = sql`AND ca.platform = ANY(${sqlArray(platforms)})`;
+    } else if (requestedPlatform) {
+      platformFilterSql = sql`AND a.platform = ${requestedPlatform}`;
+      compAppsPlatformFilterSql = sql`AND ca.platform = ${requestedPlatform}`;
+    }
+
+    const rows: any[] = await db.execute(sql`
+      SELECT
+        g.id, g.slug, g.name,
+        COUNT(DISTINCT pd.platform) AS platform_count,
+        ARRAY_AGG(DISTINCT pd.platform) FILTER (WHERE pd.platform IS NOT NULL) AS platforms,
+        CASE WHEN asd.id IS NOT NULL THEN true ELSE false END AS is_starred,
+        (
+          SELECT COALESCE(json_agg(json_build_object(
+            'slug', ca.slug,
+            'name', ca.name,
+            'platform', ca.platform,
+            'icon_url', ca.icon_url
+          )), '[]'::json)
+          FROM apps ca
+          JOIN account_competitor_apps aca ON aca.competitor_app_id = ca.id AND aca.account_id = ${accountId}
+          JOIN app_snapshots cs ON cs.app_id = ca.id
+            AND cs.id = (SELECT cs2.id FROM app_snapshots cs2 WHERE cs2.app_id = ca.id ORDER BY cs2.scraped_at DESC LIMIT 1)
+          JOIN platform_developers pd2 ON pd2.global_developer_id = g.id
+            AND ca.platform = pd2.platform
+          WHERE cs.developer->>'name' = pd2.name ${compAppsPlatformFilterSql}
+        ) AS competitor_apps
+      FROM global_developers g
+      JOIN platform_developers pd ON pd.global_developer_id = g.id
+      JOIN apps a ON a.platform = pd.platform
+      JOIN app_snapshots s ON s.app_id = a.id
+        AND s.id = (SELECT s2.id FROM app_snapshots s2 WHERE s2.app_id = a.id ORDER BY s2.scraped_at DESC LIMIT 1)
+      JOIN account_competitor_apps aca ON aca.competitor_app_id = a.id AND aca.account_id = ${accountId}
+      LEFT JOIN account_starred_developers asd ON asd.global_developer_id = g.id AND asd.account_id = ${accountId}
+      WHERE s.developer->>'name' = pd.name ${platformFilterSql}
+      GROUP BY g.id, asd.id
+      ORDER BY (asd.id IS NOT NULL) DESC, g.name ASC
+    `);
+
+    return {
+      developers: rows.map((r: any) => ({
+        id: r.id,
+        slug: r.slug,
+        name: r.name,
+        platformCount: Number(r.platform_count || 0),
+        platforms: r.platforms || [],
+        isStarred: r.is_starred === true || r.is_starred === "true",
+        competitorApps: (r.competitor_apps || []).map((a: any) => ({
+          slug: a.slug,
+          name: a.name,
+          platform: a.platform,
+          iconUrl: a.icon_url,
+        })),
+      })),
+    };
+  });
+
   // GET /api/developers/:slug — developer profile + all apps across platforms
   app.get(
     "/:slug",

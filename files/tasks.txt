@@ -1,5 +1,6 @@
 Bug Fixes (2026-04-11)
   PLA-994: Fix developers page — empty table caused by query timeout ✅
+  PLA-999: Enhance developers pages — competitor developers section, empty states ✅
   PLA-995: Improve Activity Log readability — contextual JSX descriptions with links ✅
   PLA-996: Fix Shopify category tree — build tree before filtering, pruneEmptyLeaves ✅
   PLA-998: Fix mobile table overflow — overflow-y-auto + overflow-x-hidden on main ✅

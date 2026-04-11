@@ -1,6 +1,19 @@
 Bug Fixes (2026-04-11)
 ======================
 
+PLA-999: Enhance developers pages — competitor developers, empty states
+- API: New endpoint GET /api/developers/competitors — returns developers of competitor apps
+  - Same pattern as /tracked but joins through account_competitor_apps
+  - Supports ?platform= filter for platform-specific page
+  - Returns competitorApps[] array per developer
+- Dashboard global page: Added Competitor Developers section with Swords icon
+  - Empty state with CTA to /competitors when no competitor developers
+  - My Developers section now always shown (empty state when no tracked developers)
+  - DeveloperSectionEmpty reusable component for empty states
+- Dashboard platform page: Added both My Developers and Competitor Developers sections
+  - Platform-scoped: filters tracked devs by platform, passes platform to competitors API
+  - Empty states with platform-specific CTAs
+
 PLA-995: Improve Activity Log readability — contextual descriptions with links
 - Added member_role_changed to ACTION_LABELS and FILTER_OPTIONS
 - Rewrote getDetails() from plain string → JSX with contextual descriptions

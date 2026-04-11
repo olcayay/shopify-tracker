@@ -14,7 +14,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Search, ChevronLeft, ChevronRight, ArrowUpDown, Bookmark, Users } from "lucide-react";
+import { Search, ChevronLeft, ChevronRight, ArrowUpDown, Bookmark, Users, Swords } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { TableSkeleton } from "@/components/skeletons";
 import { PlatformBadgeCell } from "@/components/platform-badge-cell";
@@ -54,9 +54,46 @@ interface TrackedDeveloper {
   trackedApps: { slug: string; name: string; platform: string; iconUrl: string | null }[];
 }
 
+interface CompetitorDeveloper {
+  id: number;
+  slug: string;
+  name: string;
+  platformCount: number;
+  platforms: string[];
+  isStarred: boolean;
+  competitorApps: { slug: string; name: string; platform: string; iconUrl: string | null }[];
+}
+
 interface DeveloperResponse {
   developers: Developer[];
   pagination: { page: number; limit: number; total: number; totalPages: number };
+}
+
+function DeveloperSectionEmpty({
+  icon: Icon,
+  title,
+  description,
+  ctaLabel,
+  ctaHref,
+}: {
+  icon: React.ElementType;
+  title: string;
+  description: string;
+  ctaLabel: string;
+  ctaHref: string;
+}) {
+  return (
+    <div className="flex flex-col items-center justify-center py-10 px-6 text-center">
+      <div className="h-12 w-12 rounded-full bg-muted flex items-center justify-center mb-4">
+        <Icon className="h-6 w-6 text-muted-foreground" />
+      </div>
+      <h3 className="font-semibold text-sm mb-1">{title}</h3>
+      <p className="text-sm text-muted-foreground max-w-sm mb-4">{description}</p>
+      <Link href={ctaHref}>
+        <Button variant="outline" size="sm">{ctaLabel}</Button>
+      </Link>
+    </div>
+  );
 }
 
 export default function DevelopersPage() {
@@ -64,6 +101,7 @@ export default function DevelopersPage() {
   const { accessiblePlatforms: enabledPlatforms } = usePlatformAccess();
   const [data, setData] = useState<DeveloperResponse | null>(null);
   const [trackedDevs, setTrackedDevs] = useState<TrackedDeveloper[]>([]);
+  const [competitorDevs, setCompetitorDevs] = useState<CompetitorDeveloper[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
@@ -95,14 +133,21 @@ export default function DevelopersPage() {
 
   useEffect(() => { loadData(); }, [loadData]);
 
-  // Fetch tracked app developers once
+  // Fetch tracked + competitor developers once
   useEffect(() => {
     (async () => {
       try {
-        const res = await fetchWithAuth("/api/developers/tracked");
-        if (res.ok) {
-          const body = await res.json();
+        const [trackedRes, competitorRes] = await Promise.all([
+          fetchWithAuth("/api/developers/tracked"),
+          fetchWithAuth("/api/developers/competitors"),
+        ]);
+        if (trackedRes.ok) {
+          const body = await trackedRes.json();
           setTrackedDevs(body.developers ?? []);
+        }
+        if (competitorRes.ok) {
+          const body = await competitorRes.json();
+          setCompetitorDevs(body.developers ?? []);
         }
       } catch { /* ignore */ }
     })();
@@ -297,13 +342,21 @@ export default function DevelopersPage() {
       </div>
 
       {/* My Developers section — developers of tracked apps */}
-      {trackedDevs.length > 0 && (
-        <div className="rounded-lg border bg-card">
-          <div className="flex items-center gap-2 px-4 py-3 border-b">
-            <Users className="h-4 w-4 text-muted-foreground" />
-            <h2 className="font-semibold text-sm">My Developers</h2>
-            <span className="text-xs text-muted-foreground">Developers of your tracked apps</span>
-          </div>
+      <div className="rounded-lg border bg-card">
+        <div className="flex items-center gap-2 px-4 py-3 border-b">
+          <Users className="h-4 w-4 text-muted-foreground" />
+          <h2 className="font-semibold text-sm">My Developers</h2>
+          <span className="text-xs text-muted-foreground">Developers of your tracked apps</span>
+        </div>
+        {trackedDevs.length === 0 ? (
+          <DeveloperSectionEmpty
+            icon={Users}
+            title="No tracked app developers yet"
+            description="Start tracking apps to see their developers here. You'll be able to monitor all the apps each developer builds across platforms."
+            ctaLabel="Browse Apps"
+            ctaHref="/overview"
+          />
+        ) : (
           <Table>
             <TableHeader>
               <TableRow>
@@ -356,8 +409,79 @@ export default function DevelopersPage() {
               ))}
             </TableBody>
           </Table>
+        )}
+      </div>
+
+      {/* Competitor Developers section — developers of competitor apps */}
+      <div className="rounded-lg border bg-card">
+        <div className="flex items-center gap-2 px-4 py-3 border-b">
+          <Swords className="h-4 w-4 text-muted-foreground" />
+          <h2 className="font-semibold text-sm">Competitor Developers</h2>
+          <span className="text-xs text-muted-foreground">Developers behind your competitors&apos; apps</span>
         </div>
-      )}
+        {competitorDevs.length === 0 ? (
+          <DeveloperSectionEmpty
+            icon={Swords}
+            title="No competitor developers yet"
+            description="Add competitors to your tracked apps and their developers will appear here. Track what your competitors' developers are building."
+            ctaLabel="View Competitors"
+            ctaHref="/competitors"
+          />
+        ) : (
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Developer</TableHead>
+                <TableHead>Competitor Apps</TableHead>
+                <TableHead>Platforms</TableHead>
+                <TableHead className="w-36 text-right">Platform Count</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {competitorDevs.map((dev) => (
+                <TableRow key={dev.id}>
+                  <TableCell>
+                    <Link href={`/developers/${dev.slug}`} className="font-medium hover:underline">
+                      {dev.name}
+                    </Link>
+                  </TableCell>
+                  <TableCell>
+                    <div className="flex flex-wrap gap-1.5">
+                      {dev.competitorApps.map((app) => (
+                        <Link
+                          key={`${app.platform}-${app.slug}`}
+                          href={`/${app.platform}/apps/${app.slug}`}
+                          className="flex items-center gap-1 text-xs px-1.5 py-0.5 rounded bg-muted hover:bg-muted/80 transition-colors"
+                          title={app.name}
+                        >
+                          {app.iconUrl && (
+                            <img src={app.iconUrl} alt="" aria-hidden="true" className="w-4 h-4 rounded shrink-0" />
+                          )}
+                          <span className="truncate max-w-[120px]">{app.name}</span>
+                        </Link>
+                      ))}
+                    </div>
+                  </TableCell>
+                  <TableCell>
+                    <div className="flex flex-wrap gap-1.5">
+                      {dev.platforms
+                        .filter((p) => enabledPlatforms.length === 0 || enabledPlatforms.includes(p as PlatformId))
+                        .map((p) => (
+                          <PlatformBadgeCell key={p} platform={p} />
+                        ))}
+                    </div>
+                  </TableCell>
+                  <TableCell className="text-muted-foreground text-right">
+                    {enabledPlatforms.length > 0
+                      ? dev.platforms.filter((p) => enabledPlatforms.includes(p as PlatformId)).length
+                      : dev.platformCount}
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        )}
+      </div>
 
       <div className="space-y-3">
         <div className="flex items-center gap-2">

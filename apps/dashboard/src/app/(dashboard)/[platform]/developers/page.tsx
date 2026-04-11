@@ -20,6 +20,8 @@ import {
   ChevronRight,
   ArrowUpDown,
   Bookmark,
+  Users,
+  Swords,
 } from "lucide-react";
 import {
   Tooltip,
@@ -50,6 +52,26 @@ interface Developer {
   isStarred: boolean;
 }
 
+interface TrackedDeveloper {
+  id: number;
+  slug: string;
+  name: string;
+  platformCount: number;
+  platforms: string[];
+  isStarred: boolean;
+  trackedApps: { slug: string; name: string; platform: string; iconUrl: string | null }[];
+}
+
+interface CompetitorDeveloper {
+  id: number;
+  slug: string;
+  name: string;
+  platformCount: number;
+  platforms: string[];
+  isStarred: boolean;
+  competitorApps: { slug: string; name: string; platform: string; iconUrl: string | null }[];
+}
+
 interface DeveloperResponse {
   developers: Developer[];
   pagination: {
@@ -58,6 +80,33 @@ interface DeveloperResponse {
     total: number;
     totalPages: number;
   };
+}
+
+function DeveloperSectionEmpty({
+  icon: Icon,
+  title,
+  description,
+  ctaLabel,
+  ctaHref,
+}: {
+  icon: React.ElementType;
+  title: string;
+  description: string;
+  ctaLabel: string;
+  ctaHref: string;
+}) {
+  return (
+    <div className="flex flex-col items-center justify-center py-10 px-6 text-center">
+      <div className="h-12 w-12 rounded-full bg-muted flex items-center justify-center mb-4">
+        <Icon className="h-6 w-6 text-muted-foreground" />
+      </div>
+      <h3 className="font-semibold text-sm mb-1">{title}</h3>
+      <p className="text-sm text-muted-foreground max-w-sm mb-4">{description}</p>
+      <Link href={ctaHref}>
+        <Button variant="outline" size="sm">{ctaLabel}</Button>
+      </Link>
+    </div>
+  );
 }
 
 export default function PlatformDevelopersPage() {
@@ -84,6 +133,8 @@ function PlatformDevelopersContent() {
   }, [developerName, platform, router]);
 
   const [data, setData] = useState<DeveloperResponse | null>(null);
+  const [trackedDevs, setTrackedDevs] = useState<TrackedDeveloper[]>([]);
+  const [competitorDevs, setCompetitorDevs] = useState<CompetitorDeveloper[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
@@ -112,6 +163,31 @@ function PlatformDevelopersContent() {
   useEffect(() => {
     if (!developerName) loadData();
   }, [loadData, developerName]);
+
+  // Fetch tracked + competitor developers for this platform
+  useEffect(() => {
+    if (developerName) return;
+    (async () => {
+      try {
+        const [trackedRes, competitorRes] = await Promise.all([
+          fetchWithAuth("/api/developers/tracked"),
+          fetchWithAuth(`/api/developers/competitors?platform=${platform}`),
+        ]);
+        if (trackedRes.ok) {
+          const body = await trackedRes.json();
+          // Filter to only devs with apps on this platform
+          const filtered = (body.developers ?? []).filter((d: TrackedDeveloper) =>
+            d.platforms.includes(String(platform))
+          );
+          setTrackedDevs(filtered);
+        }
+        if (competitorRes.ok) {
+          const body = await competitorRes.json();
+          setCompetitorDevs(body.developers ?? []);
+        }
+      } catch { /* ignore */ }
+    })();
+  }, [fetchWithAuth, platform, developerName]);
 
   function toggleSort(field: string) {
     if (sort === field) {
@@ -224,6 +300,124 @@ function PlatformDevelopersContent() {
         <p className="text-sm text-muted-foreground">
           Browse all developers on this platform
         </p>
+      </div>
+
+      {/* My Developers section */}
+      <div className="rounded-lg border bg-card">
+        <div className="flex items-center gap-2 px-4 py-3 border-b">
+          <Users className="h-4 w-4 text-muted-foreground" />
+          <h2 className="font-semibold text-sm">My Developers</h2>
+          <span className="text-xs text-muted-foreground">Developers of your tracked apps</span>
+        </div>
+        {trackedDevs.length === 0 ? (
+          <DeveloperSectionEmpty
+            icon={Users}
+            title={`No tracked developers on this platform`}
+            description="Track apps on this platform to see their developers here."
+            ctaLabel="Browse Apps"
+            ctaHref={`/${platform}/apps`}
+          />
+        ) : (
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Developer</TableHead>
+                <TableHead>My Tracked Apps</TableHead>
+                <TableHead className="w-28 text-right">App Count</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {trackedDevs.map((dev) => (
+                <TableRow key={dev.id}>
+                  <TableCell>
+                    <Link href={`/${platform}/developers/${dev.slug}`} className="font-medium hover:underline">
+                      {dev.name}
+                    </Link>
+                  </TableCell>
+                  <TableCell>
+                    <div className="flex flex-wrap gap-1.5">
+                      {dev.trackedApps.filter((a) => a.platform === platform).map((app) => (
+                        <Link
+                          key={`${app.platform}-${app.slug}`}
+                          href={`/${app.platform}/apps/${app.slug}`}
+                          className="flex items-center gap-1 text-xs px-1.5 py-0.5 rounded bg-muted hover:bg-muted/80 transition-colors"
+                          title={app.name}
+                        >
+                          {app.iconUrl && (
+                            <img src={app.iconUrl} alt="" aria-hidden="true" className="w-4 h-4 rounded shrink-0" />
+                          )}
+                          <span className="truncate max-w-[120px]">{app.name}</span>
+                        </Link>
+                      ))}
+                    </div>
+                  </TableCell>
+                  <TableCell className="text-muted-foreground text-right">
+                    {dev.trackedApps.filter((a) => a.platform === platform).length}
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        )}
+      </div>
+
+      {/* Competitor Developers section */}
+      <div className="rounded-lg border bg-card">
+        <div className="flex items-center gap-2 px-4 py-3 border-b">
+          <Swords className="h-4 w-4 text-muted-foreground" />
+          <h2 className="font-semibold text-sm">Competitor Developers</h2>
+          <span className="text-xs text-muted-foreground">Developers behind your competitors&apos; apps</span>
+        </div>
+        {competitorDevs.length === 0 ? (
+          <DeveloperSectionEmpty
+            icon={Swords}
+            title={`No competitor developers on this platform`}
+            description="Add competitors to your apps and their developers will appear here."
+            ctaLabel="View Competitors"
+            ctaHref={`/${platform}/competitors`}
+          />
+        ) : (
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Developer</TableHead>
+                <TableHead>Competitor Apps</TableHead>
+                <TableHead className="w-28 text-right">App Count</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {competitorDevs.map((dev) => (
+                <TableRow key={dev.id}>
+                  <TableCell>
+                    <Link href={`/${platform}/developers/${dev.slug}`} className="font-medium hover:underline">
+                      {dev.name}
+                    </Link>
+                  </TableCell>
+                  <TableCell>
+                    <div className="flex flex-wrap gap-1.5">
+                      {dev.competitorApps.map((app) => (
+                        <Link
+                          key={`${app.platform}-${app.slug}`}
+                          href={`/${app.platform}/apps/${app.slug}`}
+                          className="flex items-center gap-1 text-xs px-1.5 py-0.5 rounded bg-muted hover:bg-muted/80 transition-colors"
+                          title={app.name}
+                        >
+                          {app.iconUrl && (
+                            <img src={app.iconUrl} alt="" aria-hidden="true" className="w-4 h-4 rounded shrink-0" />
+                          )}
+                          <span className="truncate max-w-[120px]">{app.name}</span>
+                        </Link>
+                      ))}
+                    </div>
+                  </TableCell>
+                  <TableCell className="text-muted-foreground text-right">
+                    {dev.competitorApps.length}
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        )}
       </div>
 
       <form onSubmit={handleSearch} className="flex gap-2 max-w-md">
