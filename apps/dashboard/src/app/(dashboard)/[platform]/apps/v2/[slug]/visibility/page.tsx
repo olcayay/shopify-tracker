@@ -107,7 +107,11 @@ export default async function VisibilityOverviewPage({
       )}
 
       {/* Quick Insights */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+      <div className={`grid grid-cols-2 gap-3 ${
+        caps.hasFeaturedSections && caps.hasAdTracking ? "sm:grid-cols-4" :
+        !caps.hasFeaturedSections && !caps.hasAdTracking ? "sm:grid-cols-2" :
+        "sm:grid-cols-3"
+      }`}>
         <Link href={`${base}/keywords`}>
           <Card className="hover:ring-1 hover:ring-muted-foreground/20 transition-all h-full">
             <CardContent className="pt-4 flex items-center gap-3">
