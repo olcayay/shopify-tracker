@@ -67,25 +67,62 @@ interface TrackedContextRow {
 }
 
 /**
- * Check if all prerequisite jobs have completed today.
- * Returns list of missing job types, or empty array if all present.
+ * Check if all prerequisite jobs have completed today (or yesterday as fallback).
+ * Returns { missing, usedFallback } — missing is empty if all prerequisites are met.
  */
-async function checkPrerequisites(db: Database, prerequisiteTypes: string[]): Promise<string[]> {
+async function checkPrerequisites(
+  db: Database,
+  prerequisiteTypes: string[],
+  platform: PlatformId,
+): Promise<{ missing: string[]; usedFallback: boolean }> {
   const typeList = sql.join(prerequisiteTypes.map((t) => sql`${t}`), sql`, `);
-  const rows: { scraper_type: string }[] = await db
+
+  // Check today first (platform-scoped)
+  const todayRows: { scraper_type: string }[] = await db
     .execute(
       sql`
       SELECT DISTINCT scraper_type
       FROM scrape_runs
       WHERE status = 'completed'
+        AND platform = ${platform}
         AND started_at >= CURRENT_DATE
         AND scraper_type IN (${typeList})
     `
     )
     .then((res: any) => (res as any).rows ?? res);
 
-  const completed = new Set(rows.map((r) => r.scraper_type));
-  return prerequisiteTypes.filter((t) => !completed.has(t));
+  const completedToday = new Set(todayRows.map((r) => r.scraper_type));
+  const missingToday = prerequisiteTypes.filter((t) => !completedToday.has(t));
+
+  if (missingToday.length === 0) {
+    return { missing: [], usedFallback: false };
+  }
+
+  // Fallback: check yesterday for the missing types
+  const missingTypeList = sql.join(missingToday.map((t) => sql`${t}`), sql`, `);
+  const yesterdayRows: { scraper_type: string }[] = await db
+    .execute(
+      sql`
+      SELECT DISTINCT scraper_type
+      FROM scrape_runs
+      WHERE status = 'completed'
+        AND platform = ${platform}
+        AND started_at >= CURRENT_DATE - INTERVAL '1 day'
+        AND started_at < CURRENT_DATE
+        AND scraper_type IN (${missingTypeList})
+    `
+    )
+    .then((res: any) => (res as any).rows ?? res);
+
+  const completedYesterday = new Set(yesterdayRows.map((r) => r.scraper_type));
+  const stillMissing = missingToday.filter((t) => !completedYesterday.has(t));
+
+  if (stillMissing.length < missingToday.length) {
+    const fallbackTypes = missingToday.filter((t) => completedYesterday.has(t));
+    log.warn("using yesterday's data as fallback for missing prerequisites", { platform, fallbackTypes });
+  }
+
+  return { missing: stillMissing, usedFallback: stillMissing.length === 0 && missingToday.length > 0 };
 }
 
 export async function computeAppScores(
@@ -97,15 +134,18 @@ export async function computeAppScores(
 ): Promise<void> {
   const startTime = Date.now();
 
-  // --- Prerequisite check ---
+  // --- Prerequisite check (platform-scoped, with yesterday fallback) ---
   const prerequisiteTypes = getPrerequisiteTypes(platform);
-  const missing = await checkPrerequisites(db, prerequisiteTypes);
+  const { missing, usedFallback } = await checkPrerequisites(db, prerequisiteTypes, platform);
+  if (usedFallback) {
+    log.warn("running with yesterday's fallback data", { platform });
+  }
   if (missing.length > 0) {
     const nowUtc = new Date().getUTCHours();
     if (nowUtc < CUTOFF_HOUR_UTC) {
-      log.info("prerequisites not met, re-enqueuing with delay", { missing, retryInMs: RETRY_DELAY_MS });
+      log.info("prerequisites not met, re-enqueuing with delay", { missing, platform, retryInMs: RETRY_DELAY_MS });
       await enqueueScraperJob(
-        { type: "compute_app_scores", triggeredBy: `${triggeredBy}:retry` },
+        { type: "compute_app_scores", triggeredBy: `${triggeredBy}:retry`, platform },
         { delay: RETRY_DELAY_MS, queue: (queue as "background" | "interactive") ?? "background" },
       );
       return;
@@ -123,10 +163,10 @@ export async function computeAppScores(
         triggeredBy,
         queue,
         jobId: jobId ?? null,
-        error: `Prerequisites not met: ${missing.join(", ")}`,
+        error: `Prerequisites not met for ${platform}: ${missing.join(", ")}`,
       })
       .returning();
-    log.error("prerequisites not met past cutoff, failing", { missing, runId: run.id });
+    log.error("prerequisites not met past cutoff, failing", { missing, platform, runId: run.id });
     return;
   }
 

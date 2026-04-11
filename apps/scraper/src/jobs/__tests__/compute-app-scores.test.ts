@@ -1,4 +1,4 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 import { PLATFORMS, type PlatformId } from "@appranks/shared";
 
 /**
@@ -66,5 +66,82 @@ describe("getPrerequisiteTypes", () => {
       if (config.hasReviews) expected++;
       expect(types).toHaveLength(expected);
     }
+  });
+});
+
+/**
+ * Replicate checkPrerequisites fallback logic for unit testing.
+ * The real function uses SQL; this tests the classification logic.
+ */
+function classifyPrerequisites(
+  prerequisiteTypes: string[],
+  completedToday: string[],
+  completedYesterday: string[],
+): { missing: string[]; usedFallback: boolean } {
+  const todaySet = new Set(completedToday);
+  const missingToday = prerequisiteTypes.filter((t) => !todaySet.has(t));
+
+  if (missingToday.length === 0) {
+    return { missing: [], usedFallback: false };
+  }
+
+  const yesterdaySet = new Set(completedYesterday);
+  const stillMissing = missingToday.filter((t) => !yesterdaySet.has(t));
+
+  return {
+    missing: stillMissing,
+    usedFallback: stillMissing.length === 0 && missingToday.length > 0,
+  };
+}
+
+describe("checkPrerequisites fallback logic", () => {
+  const allTypes = ["app_details", "category", "keyword_search", "reviews"];
+
+  it("returns no missing when all completed today", () => {
+    const result = classifyPrerequisites(allTypes, allTypes, []);
+    expect(result.missing).toEqual([]);
+    expect(result.usedFallback).toBe(false);
+  });
+
+  it("falls back to yesterday when today is missing some types", () => {
+    const result = classifyPrerequisites(
+      allTypes,
+      ["app_details", "keyword_search", "reviews"], // category missing today
+      ["category"], // but completed yesterday
+    );
+    expect(result.missing).toEqual([]);
+    expect(result.usedFallback).toBe(true);
+  });
+
+  it("reports missing when neither today nor yesterday has the type", () => {
+    const result = classifyPrerequisites(
+      allTypes,
+      ["app_details", "keyword_search"],   // category + reviews missing today
+      ["category"],                          // only category from yesterday
+    );
+    expect(result.missing).toEqual(["reviews"]);
+    expect(result.usedFallback).toBe(false);
+  });
+
+  it("reports all missing when nothing completed today or yesterday", () => {
+    const result = classifyPrerequisites(allTypes, [], []);
+    expect(result.missing).toEqual(allTypes);
+    expect(result.usedFallback).toBe(false);
+  });
+
+  it("does not use fallback when today has all types (even if yesterday also has them)", () => {
+    const result = classifyPrerequisites(allTypes, allTypes, allTypes);
+    expect(result.missing).toEqual([]);
+    expect(result.usedFallback).toBe(false);
+  });
+
+  it("handles partial today + partial yesterday covering all types", () => {
+    const result = classifyPrerequisites(
+      allTypes,
+      ["app_details", "reviews"],           // 2 from today
+      ["category", "keyword_search"],        // 2 from yesterday
+    );
+    expect(result.missing).toEqual([]);
+    expect(result.usedFallback).toBe(true);
   });
 });

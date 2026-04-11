@@ -1,6 +1,14 @@
 Bug Fixes (2026-04-11)
 ======================
 
+PLA-989: compute_app_scores prerequisite check — platform filtering + fallback
+- Bug: checkPrerequisites() did not filter by platform — any platform's completed run satisfied the check
+- Bug: No fallback to yesterday's data — if today's scraper failed, scores failed entirely
+- Fix: Added platform parameter to SQL WHERE clause, matching platform column + idx_scrape_runs_platform_type_started index
+- Fix: Added yesterday fallback — if today's run is missing for a type, checks yesterday's completed runs
+- Added 6 unit tests for the fallback classification logic
+- Error messages now include platform name for easier debugging
+
 PLA-992: Competitor Watch card shows empty state for tracked app with competitors
 - Root cause: getAppCompetitors() in api.ts used `&includeChanges=true` instead of `?includeChanges=true`
   This placed the param BEFORE the `?` added by withPlatform(), making it part of the URL path
