@@ -13,6 +13,22 @@ PLA-1001: Fix appCardSubtitle scraping bug — titles stored as subtitles
 - Tests: 11 new unit tests covering title rejection in fallback, category parser,
   and title-subtitle conflict detection logic
 
+PLA-1003: System Admin — bulk dismiss/delete app updates (2026-04-11)
+- API: 5 new endpoints on /api/system-admin/app-updates:
+  - DELETE /:id — single permanent delete (with FK cascade on label assignments)
+  - POST /bulk-delete — delete multiple by IDs array
+  - POST /bulk-dismiss — set dismiss_reason on multiple by IDs + reason
+  - POST /bulk-restore — clear dismiss_reason on multiple by IDs
+  - Existing PATCH /:id/dismiss unchanged
+- Dashboard: Checkbox selection + bulk actions bar
+  - Select all / individual checkboxes per row
+  - "Delete Selected" button with confirmation dialog
+  - "Restore Selected" button (only shows when dismissed items selected)
+  - Per-row delete (trash icon) with confirmation dialog
+  - Restore button (RotateCcw icon) replaces X for dismissed items
+  - Clear selection button
+- Tests: 11 new tests covering checkboxes, bulk actions, confirmation dialog, API calls
+
 System Admin (2026-04-11)
 ========================
 

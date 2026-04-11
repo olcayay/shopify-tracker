@@ -12,6 +12,8 @@ import {
   X,
   Tag,
   Calendar,
+  Trash2,
+  RotateCcw,
 } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
 import { PageHeader } from "@/components/ui/page-header";
@@ -439,6 +441,86 @@ export default function AppUpdatesPage() {
     );
   };
 
+  // Selection state
+  const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
+  const [confirmDialog, setConfirmDialog] = useState<{
+    open: boolean;
+    title: string;
+    message: string;
+    onConfirm: () => void;
+  }>({ open: false, title: "", message: "", onConfirm: () => {} });
+
+  // Clear selection when data changes (page change, filter change)
+  useEffect(() => {
+    setSelectedIds(new Set());
+  }, [data]);
+
+  const toggleSelect = (id: number) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const toggleSelectAll = () => {
+    if (selectedIds.size === data.length) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(data.map((r) => r.id)));
+    }
+  };
+
+  const handleBulkDelete = () => {
+    const ids = Array.from(selectedIds);
+    setConfirmDialog({
+      open: true,
+      title: "Delete selected updates",
+      message: `Permanently delete ${ids.length} selected update${ids.length > 1 ? "s" : ""}? This cannot be undone.`,
+      onConfirm: async () => {
+        await fetchWithAuth("/api/system-admin/app-updates/bulk-delete", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ ids }),
+        });
+        setConfirmDialog((prev) => ({ ...prev, open: false }));
+        setSelectedIds(new Set());
+        fetchData();
+      },
+    });
+  };
+
+  const handleBulkRestore = async () => {
+    const ids = Array.from(selectedIds);
+    await fetchWithAuth("/api/system-admin/app-updates/bulk-restore", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ ids }),
+    });
+    setData((prev) =>
+      prev.map((row) =>
+        selectedIds.has(row.id) ? { ...row, dismissReason: null } : row
+      )
+    );
+    setSelectedIds(new Set());
+  };
+
+  const handleSingleDelete = (id: number, appName: string) => {
+    setConfirmDialog({
+      open: true,
+      title: "Delete update",
+      message: `Permanently delete this update for "${appName}"? This cannot be undone.`,
+      onConfirm: async () => {
+        await fetchWithAuth(`/api/system-admin/app-updates/${id}`, {
+          method: "DELETE",
+        });
+        setConfirmDialog((prev) => ({ ...prev, open: false }));
+        setData((prev) => prev.filter((row) => row.id !== id));
+      },
+    });
+  };
+
   // Dismiss reason actions
   const handleDismiss = async (changeId: number, reason: string | null) => {
     await fetchWithAuth(`/api/system-admin/app-updates/${changeId}/dismiss`, {
@@ -652,6 +734,14 @@ export default function AppUpdatesPage() {
             <Table>
               <TableHeader>
                 <TableRow>
+                  <TableHead className="w-[40px]">
+                    <input
+                      type="checkbox"
+                      checked={data.length > 0 && selectedIds.size === data.length}
+                      onChange={toggleSelectAll}
+                      className="h-3.5 w-3.5 rounded border-gray-300 dark:border-gray-600"
+                    />
+                  </TableHead>
                   <TableHead className="w-[60px]">ID</TableHead>
                   <TableHead className="w-[180px]">App Name</TableHead>
                   <TableHead className="w-[90px]">Platform</TableHead>
@@ -668,14 +758,14 @@ export default function AppUpdatesPage() {
                     </button>
                   </TableHead>
                   <TableHead className="w-[120px]">Labels</TableHead>
-                  <TableHead className="w-[120px]">Status</TableHead>
+                  <TableHead className="w-[140px]">Status</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {loading ? (
                   <TableRow>
                     <TableCell
-                      colSpan={9}
+                      colSpan={10}
                       className="text-center py-12 text-muted-foreground"
                     >
                       Loading...
@@ -684,7 +774,7 @@ export default function AppUpdatesPage() {
                 ) : data.length === 0 ? (
                   <TableRow>
                     <TableCell
-                      colSpan={9}
+                      colSpan={10}
                       className="text-center py-12 text-muted-foreground"
                     >
                       No app updates found
@@ -692,7 +782,15 @@ export default function AppUpdatesPage() {
                   </TableRow>
                 ) : (
                   data.map((row) => (
-                    <TableRow key={row.id} className="align-top">
+                    <TableRow key={row.id} className={cn("align-top", selectedIds.has(row.id) && "bg-muted/50")}>
+                      <TableCell>
+                        <input
+                          type="checkbox"
+                          checked={selectedIds.has(row.id)}
+                          onChange={() => toggleSelect(row.id)}
+                          className="h-3.5 w-3.5 rounded border-gray-300 dark:border-gray-600"
+                        />
+                      </TableCell>
                       <TableCell className="font-mono text-[10px] text-muted-foreground">
                         {row.id}
                       </TableCell>
@@ -743,34 +841,43 @@ export default function AppUpdatesPage() {
                         />
                       </TableCell>
                       <TableCell>
-                        {row.dismissReason ? (
-                          <div className="flex items-center gap-1">
-                            <Badge variant="destructive" className="text-[10px]">
-                              {row.dismissReason}
-                            </Badge>
-                            <button
-                              onClick={() => handleDismiss(row.id, null)}
-                              className="text-muted-foreground hover:text-foreground"
-                              title="Clear dismiss"
+                        <div className="flex items-center gap-1.5">
+                          {row.dismissReason ? (
+                            <div className="flex items-center gap-1">
+                              <Badge variant="destructive" className="text-[10px]">
+                                {row.dismissReason}
+                              </Badge>
+                              <button
+                                onClick={() => handleDismiss(row.id, null)}
+                                className="text-muted-foreground hover:text-foreground"
+                                title="Restore (clear dismiss)"
+                              >
+                                <RotateCcw className="h-3 w-3" />
+                              </button>
+                            </div>
+                          ) : (
+                            <select
+                              value=""
+                              onChange={(e) => {
+                                if (e.target.value) handleDismiss(row.id, e.target.value);
+                              }}
+                              className="h-7 rounded border border-input bg-background px-1.5 text-[10px] ring-offset-background focus:outline-none focus:ring-1 focus:ring-ring"
                             >
-                              <X className="h-3 w-3" />
-                            </button>
-                          </div>
-                        ) : (
-                          <select
-                            value=""
-                            onChange={(e) => {
-                              if (e.target.value) handleDismiss(row.id, e.target.value);
-                            }}
-                            className="h-7 rounded border border-input bg-background px-1.5 text-[10px] ring-offset-background focus:outline-none focus:ring-1 focus:ring-ring"
+                              <option value="">Active</option>
+                              <option value="duplicate">Duplicate</option>
+                              <option value="false-positive">False Positive</option>
+                              <option value="scraper-error">Scraper Error</option>
+                              <option value="irrelevant">Irrelevant</option>
+                            </select>
+                          )}
+                          <button
+                            onClick={() => handleSingleDelete(row.id, row.appName)}
+                            className="text-muted-foreground hover:text-destructive"
+                            title="Delete permanently"
                           >
-                            <option value="">Active</option>
-                            <option value="duplicate">Duplicate</option>
-                            <option value="false-positive">False Positive</option>
-                            <option value="scraper-error">Scraper Error</option>
-                            <option value="irrelevant">Irrelevant</option>
-                          </select>
-                        )}
+                            <Trash2 className="h-3 w-3" />
+                          </button>
+                        </div>
                       </TableCell>
                     </TableRow>
                   ))
@@ -780,6 +887,69 @@ export default function AppUpdatesPage() {
           </div>
         </CardContent>
       </Card>
+
+      {/* Bulk Actions Bar */}
+      {selectedIds.size > 0 && (
+        <div className="flex items-center gap-3 rounded-lg border bg-muted/50 px-4 py-2.5">
+          <span className="text-sm font-medium">
+            {selectedIds.size} selected
+          </span>
+          <div className="flex gap-2">
+            <Button
+              variant="destructive"
+              size="sm"
+              onClick={handleBulkDelete}
+            >
+              <Trash2 className="h-3.5 w-3.5 mr-1.5" />
+              Delete Selected
+            </Button>
+            {data.some((r) => selectedIds.has(r.id) && r.dismissReason) && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleBulkRestore}
+              >
+                <RotateCcw className="h-3.5 w-3.5 mr-1.5" />
+                Restore Selected
+              </Button>
+            )}
+          </div>
+          <button
+            onClick={() => setSelectedIds(new Set())}
+            className="ml-auto text-xs text-muted-foreground hover:text-foreground"
+          >
+            Clear selection
+          </button>
+        </div>
+      )}
+
+      {/* Confirmation Dialog */}
+      {confirmDialog.open && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+          <div className="w-full max-w-md rounded-lg border bg-background p-6 shadow-lg">
+            <h3 className="text-lg font-semibold">{confirmDialog.title}</h3>
+            <p className="mt-2 text-sm text-muted-foreground">
+              {confirmDialog.message}
+            </p>
+            <div className="mt-4 flex justify-end gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setConfirmDialog((prev) => ({ ...prev, open: false }))}
+              >
+                Cancel
+              </Button>
+              <Button
+                variant="destructive"
+                size="sm"
+                onClick={confirmDialog.onConfirm}
+              >
+                Delete
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Pagination */}
       {pagination.totalPages > 1 && (

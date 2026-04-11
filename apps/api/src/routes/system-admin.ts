@@ -4273,6 +4273,53 @@ export const systemAdminRoutes: FastifyPluginAsync = async (app) => {
     return reply.code(200).send({ ok: true });
   });
 
+  // DELETE /api/system-admin/app-updates/:id — permanently delete a single app update
+  app.delete<{ Params: { id: string } }>("/app-updates/:id", async (request, reply) => {
+    const id = parseInt(request.params.id, 10);
+    // Delete label assignments first (FK constraint)
+    await db.delete(appUpdateLabelAssignments).where(eq(appUpdateLabelAssignments.changeId, id));
+    await db.delete(appFieldChanges).where(eq(appFieldChanges.id, id));
+    return reply.code(204).send();
+  });
+
+  // POST /api/system-admin/app-updates/bulk-delete — permanently delete multiple app updates
+  app.post("/app-updates/bulk-delete", async (request, reply) => {
+    const { ids } = request.body as { ids: number[] };
+    if (!ids || ids.length === 0) {
+      return reply.code(400).send({ error: "ids array is required and must not be empty" });
+    }
+    // Delete label assignments first (FK constraint)
+    await db.delete(appUpdateLabelAssignments).where(inArray(appUpdateLabelAssignments.changeId, ids));
+    const result = await db.delete(appFieldChanges).where(inArray(appFieldChanges.id, ids));
+    return reply.code(200).send({ deleted: ids.length });
+  });
+
+  // POST /api/system-admin/app-updates/bulk-dismiss — set dismiss_reason on multiple updates
+  app.post("/app-updates/bulk-dismiss", async (request, reply) => {
+    const { ids, reason } = request.body as { ids: number[]; reason: string };
+    if (!ids || ids.length === 0 || !reason) {
+      return reply.code(400).send({ error: "ids array and reason are required" });
+    }
+    await db
+      .update(appFieldChanges)
+      .set({ dismissReason: reason })
+      .where(inArray(appFieldChanges.id, ids));
+    return reply.code(200).send({ updated: ids.length });
+  });
+
+  // POST /api/system-admin/app-updates/bulk-restore — clear dismiss_reason on multiple updates
+  app.post("/app-updates/bulk-restore", async (request, reply) => {
+    const { ids } = request.body as { ids: number[] };
+    if (!ids || ids.length === 0) {
+      return reply.code(400).send({ error: "ids array is required and must not be empty" });
+    }
+    await db
+      .update(appFieldChanges)
+      .set({ dismissReason: null })
+      .where(inArray(appFieldChanges.id, ids));
+    return reply.code(200).send({ restored: ids.length });
+  });
+
   // -----------------------------------------------------------------------
   // App Update Labels — CRUD
   // -----------------------------------------------------------------------
