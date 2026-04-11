@@ -2,14 +2,24 @@ import { getApp, getAppReviews, getAppHistory } from "@/lib/api";
 import { PLATFORMS, isPlatformId, type PlatformId } from "@appranks/shared";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { RatingReviewChart } from "@/components/rating-review-chart";
+import { ReviewTrendDatePicker } from "@/components/review-trend-date-picker";
+import {
+  getReviewTrendDateRangeFromSearchParams,
+  getReviewTrendFetchLimit,
+  isReviewSnapshotWithinRange,
+} from "@/lib/review-trend-date-range";
 import { ReviewList } from "../review-list";
 
 export default async function ReviewsPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ platform: string; slug: string }>;
+  searchParams: Promise<{ trendDays?: string; trendFrom?: string; trendTo?: string }>;
 }) {
   const { platform, slug } = await params;
+  const resolvedSearchParams = await searchParams;
+  const dateRange = getReviewTrendDateRangeFromSearchParams(resolvedSearchParams);
   const maxStars = isPlatformId(platform) ? PLATFORMS[platform as PlatformId].maxRatingStars : 5;
 
   let reviewData: any;
@@ -17,16 +27,31 @@ export default async function ReviewsPage({
   try {
     [reviewData, history] = await Promise.all([
       getAppReviews(slug, 10, 0, "newest", platform as PlatformId),
-      getAppHistory(slug, 90, platform as PlatformId).catch(() => ({ snapshots: [] })),
+      getAppHistory(slug, getReviewTrendFetchLimit(dateRange), platform as PlatformId).catch(() => ({ snapshots: [] })),
     ]);
   } catch {
     reviewData = { reviews: [], total: 0, distribution: [] };
   }
 
+  const filteredSnapshots = (history?.snapshots || []).filter((snapshot: any) =>
+    isReviewSnapshotWithinRange(snapshot.scrapedAt, dateRange.from, dateRange.to)
+  );
+
   return (
     <div className="space-y-4">
-      {history?.snapshots?.length > 1 && (
-        <RatingReviewChart snapshots={history.snapshots} />
+      {filteredSnapshots.length > 1 && (
+        <section className="space-y-3">
+          <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+            <div>
+              <h2 className="text-lg font-semibold">Rating & Review Trend</h2>
+              <p className="text-sm text-muted-foreground">
+                Review velocity and rating changes across the selected range.
+              </p>
+            </div>
+            <ReviewTrendDatePicker className="w-full lg:w-auto lg:min-w-[420px]" />
+          </div>
+          <RatingReviewChart snapshots={filteredSnapshots} />
+        </section>
       )}
 
       {reviewData?.distribution?.length > 0 && (

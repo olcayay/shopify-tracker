@@ -4,13 +4,23 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { RatingReviewChart } from "@/components/rating-review-chart";
 import { ReviewList } from "../../../../[slug]/review-list";
 import { Star, TrendingUp, MessageSquare } from "lucide-react";
+import { ReviewTrendDatePicker } from "@/components/review-trend-date-picker";
+import {
+  getReviewTrendDateRangeFromSearchParams,
+  getReviewTrendFetchLimit,
+  isReviewSnapshotWithinRange,
+} from "@/lib/review-trend-date-range";
 
 export default async function V2ReviewsPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ platform: string; slug: string }>;
+  searchParams: Promise<{ trendDays?: string; trendFrom?: string; trendTo?: string }>;
 }) {
   const { platform, slug } = await params;
+  const resolvedSearchParams = await searchParams;
+  const dateRange = getReviewTrendDateRangeFromSearchParams(resolvedSearchParams);
   const caps = isPlatformId(platform) ? PLATFORMS[platform as PlatformId] : PLATFORMS.shopify;
 
   if (!caps.hasReviews) {
@@ -28,7 +38,7 @@ export default async function V2ReviewsPage({
   try {
     [reviewData, historyData, metrics] = await Promise.all([
       getAppReviews(slug, 10, 0, "newest", platform as PlatformId).catch(() => ({ reviews: [], total: 0, distribution: [] })),
-      getAppHistory(slug, 90, platform as PlatformId).catch(() => ({ snapshots: [] })),
+      getAppHistory(slug, getReviewTrendFetchLimit(dateRange), platform as PlatformId).catch(() => ({ snapshots: [] })),
       getAppReviewMetrics(slug, platform as PlatformId).catch(() => null),
     ]);
   } catch {
@@ -37,7 +47,9 @@ export default async function V2ReviewsPage({
 
   const distribution = reviewData?.distribution || [];
   const total = reviewData?.total || 0;
-  const snapshots = historyData?.snapshots || [];
+  const snapshots = (historyData?.snapshots || []).filter((snapshot: any) =>
+    isReviewSnapshotWithinRange(snapshot.scrapedAt, dateRange.from, dateRange.to)
+  );
 
   return (
     <div className="space-y-4">
@@ -106,15 +118,19 @@ export default async function V2ReviewsPage({
       )}
 
       {/* Rating Trend Chart */}
-      {snapshots.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-sm">Rating & Review Trend (90 days)</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <RatingReviewChart snapshots={snapshots} />
-          </CardContent>
-        </Card>
+      {snapshots.length > 1 && (
+        <section className="space-y-3">
+          <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+            <div>
+              <h2 className="text-lg font-semibold">Rating & Review Trend</h2>
+              <p className="text-sm text-muted-foreground">
+                Review velocity and rating changes across the selected range.
+              </p>
+            </div>
+            <ReviewTrendDatePicker className="w-full lg:w-auto lg:min-w-[420px]" />
+          </div>
+          <RatingReviewChart snapshots={snapshots} />
+        </section>
       )}
 
       {/* Review List */}
