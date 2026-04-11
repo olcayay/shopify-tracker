@@ -6,7 +6,7 @@ import { CompetitorButton } from "@/components/competitor-button";
 import { AdminScraperTrigger } from "@/components/admin-scraper-trigger";
 import { buildExternalAppUrl, getPlatformName } from "@/lib/platform-urls";
 import { PLATFORMS, isPlatformId, developerNameToSlug, type PlatformId } from "@appranks/shared";
-import { ExternalLink, Star } from "lucide-react";
+import { ExternalLink, FileSearch, Star } from "lucide-react";
 import { EmailDigestToggle } from "../../[slug]/email-digest-toggle";
 import { ScoreBar } from "@/components/v2/score-bar";
 import { V2Nav } from "@/components/v2/v2-nav";
@@ -89,6 +89,13 @@ export default async function V2AppDetailLayout({
         {/* Action buttons */}
         <div className="flex items-center gap-2 flex-shrink-0">
           <EmailDigestToggle appId={app.id} isTracked={app.isTrackedByAccount} />
+          <Link
+            href={`/${platform}/apps/v2/${app.slug}/intel`}
+            className="inline-flex items-center justify-center h-9 w-9 rounded-md hover:bg-accent transition-colors"
+            title="Audit Report"
+          >
+            <FileSearch className="h-4 w-4 text-muted-foreground" />
+          </Link>
           <a
             href={buildExternalAppUrl(platform as PlatformId, app.slug, app.externalId)}
             target="_blank"

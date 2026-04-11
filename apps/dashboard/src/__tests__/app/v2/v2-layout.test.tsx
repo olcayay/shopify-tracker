@@ -137,4 +137,12 @@ describe("V2AppDetailLayout", () => {
     await renderAsync(V2AppDetailLayout({ params, children: <div /> }));
     expect(screen.getByText("Dev Co")).toBeInTheDocument();
   });
+
+  it("renders Audit Report button linking to intel page", async () => {
+    setupMocks();
+    await renderAsync(V2AppDetailLayout({ params, children: <div /> }));
+    const auditLink = screen.getByTitle("Audit Report");
+    expect(auditLink).toBeInTheDocument();
+    expect(auditLink).toHaveAttribute("href", "/shopify/apps/v2/test-app/intel");
+  });
 });
