@@ -145,9 +145,9 @@ export async function developerRoutes(app: FastifyInstance) {
         ),
         dev_top_apps AS (
           SELECT global_developer_id,
-            COALESCE(json_agg(json_build_object(
+            COALESCE(jsonb_agg(jsonb_build_object(
               'icon_url', icon_url, 'name', name, 'slug', slug, 'platform', platform
-            ) ORDER BY name) FILTER (WHERE rn <= 5), '[]'::json) AS top_apps
+            ) ORDER BY name) FILTER (WHERE rn <= 5), '[]'::jsonb) AS top_apps
           FROM (
             SELECT *, ROW_NUMBER() OVER (PARTITION BY global_developer_id ORDER BY name) AS rn
             FROM (SELECT DISTINCT ON (global_developer_id, slug) global_developer_id, icon_url, name, slug, platform FROM dev_apps WHERE icon_url IS NOT NULL) d
@@ -159,7 +159,7 @@ export async function developerRoutes(app: FastifyInstance) {
           COUNT(DISTINCT pd.platform) AS platform_count,
           COUNT(DISTINCT pd.id) AS link_count,
           ARRAY_AGG(DISTINCT pd.platform) FILTER (WHERE pd.platform IS NOT NULL) AS platforms,
-          COALESCE(dta.top_apps, '[]'::json) AS top_apps,
+          COALESCE(dta.top_apps, '[]'::jsonb) AS top_apps,
           COALESCE(dac.app_count, 0) AS app_count,
           CASE WHEN asd.id IS NOT NULL THEN true ELSE false END AS is_starred
         FROM global_developers g
