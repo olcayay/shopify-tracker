@@ -1,6 +1,7 @@
 Bug Fix: appCardSubtitle scraping (2026-04-11)
   PLA-1001: Fix appCardSubtitle scraping bug — title guard + dismiss false updates ✅
   PLA-1003: System Admin — bulk dismiss/delete app updates with dismiss_reason filtering ✅
+  PLA-1004: Redesign change log items — git-diff style rendering for all field types ✅
   PLA-1005: Fix modal overlap — Cmd+K attribute set before state update ✅
   PLA-1006: Auto-focus search input when CommandPalette opens ✅
 

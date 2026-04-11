@@ -64,7 +64,7 @@ export default async function V2ChangesPage({
   return (
     <div className="space-y-4">
       <h2 className="text-lg font-semibold">Change Log</h2>
-      <UnifiedChangeLog entries={entries} />
+      <UnifiedChangeLog entries={entries} platform={platform} />
     </div>
   );
 }

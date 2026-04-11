@@ -35,7 +35,6 @@ describe("UnifiedChangeLog", () => {
   it("filters by source - competitors only", () => {
     render(<UnifiedChangeLog entries={entries} />);
     fireEvent.click(screen.getByText("Competitors"));
-    // My App self entries should be hidden
     const myAppElements = screen.getAllByText("Rival App");
     expect(myAppElements.length).toBeGreaterThan(0);
   });
@@ -44,8 +43,23 @@ describe("UnifiedChangeLog", () => {
     render(<UnifiedChangeLog entries={entries} />);
     const select = screen.getByRole("combobox");
     fireEvent.change(select, { target: { value: "name" } });
-    // Only the name change should show
+    // Only the name change should show — Rival App should be gone
+    expect(screen.queryByText("Rival App")).not.toBeInTheDocument();
+    // My App still visible (both as filter button and as entry)
+    expect(screen.getAllByText("My App").length).toBeGreaterThanOrEqual(1);
+  });
+
+  it("expands entry to show diff content", () => {
+    render(<UnifiedChangeLog entries={entries} />);
+    // Find clickable entry rows (buttons that contain app name)
+    const entryButtons = screen.getAllByRole("button").filter((btn) =>
+      btn.closest("[class*='rounded-lg border']") && btn.textContent?.includes("My App")
+    );
+    expect(entryButtons.length).toBeGreaterThan(0);
+    fireEvent.click(entryButtons[0]);
+    // Now the diff should be visible — short text shows old (red) → new (green)
     expect(screen.getByText("Old Name")).toBeInTheDocument();
+    expect(screen.getByText("New Name")).toBeInTheDocument();
   });
 
   it("shows empty state when no entries match", () => {
@@ -53,17 +67,51 @@ describe("UnifiedChangeLog", () => {
     expect(screen.getByText("No changes match the current filters.")).toBeInTheDocument();
   });
 
-  it("shows field badges with colors", () => {
+  it("shows field badges with platform labels", () => {
+    render(<UnifiedChangeLog entries={entries} platform="shopify" />);
+    // getFieldLabels("shopify") returns default labels: "App Name", "Details", "Pricing Plans"
+    expect(screen.getAllByText("App Name").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Details").length).toBeGreaterThan(0);
+  });
+
+  it("shows default field labels when no platform provided", () => {
     render(<UnifiedChangeLog entries={entries} />);
-    // Field badges rendered inside Badge components
-    const badges = screen.getAllByText("name");
-    expect(badges.length).toBeGreaterThan(0);
-    expect(screen.getAllByText("appDetails").length).toBeGreaterThan(0);
+    // Without platform, defaults to shopify labels — "App Name" for name field
+    expect(screen.getAllByText("App Name").length).toBeGreaterThan(0);
   });
 
   it("shows You badge for self changes", () => {
     render(<UnifiedChangeLog entries={entries} />);
     const youBadges = screen.getAllByText("You");
     expect(youBadges.length).toBeGreaterThan(0);
+  });
+
+  it("shows change summary badges", () => {
+    render(<UnifiedChangeLog entries={entries} />);
+    // The "Updated" summary should appear for the name change
+    expect(screen.getAllByText("Updated").length).toBeGreaterThan(0);
+  });
+
+  it("renders features array diff correctly when expanded", () => {
+    const featureEntries: ChangeEntry[] = [
+      {
+        appSlug: "test",
+        appName: "Test App",
+        isSelf: true,
+        field: "features",
+        oldValue: JSON.stringify(["Analytics", "Reporting"]),
+        newValue: JSON.stringify(["Analytics", "Dashboard", "Export"]),
+        detectedAt: now.toISOString(),
+      },
+    ];
+    render(<UnifiedChangeLog entries={featureEntries} />);
+    // Summary should show added/removed counts
+    expect(screen.getByText("+2, -1 features")).toBeInTheDocument();
+
+    // Expand to see details
+    fireEvent.click(screen.getByText("Test App"));
+    expect(screen.getByText("Reporting")).toBeInTheDocument();
+    expect(screen.getByText("Dashboard")).toBeInTheDocument();
+    expect(screen.getByText("Export")).toBeInTheDocument();
   });
 });

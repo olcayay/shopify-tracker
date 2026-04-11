@@ -13,6 +13,21 @@ PLA-1001: Fix appCardSubtitle scraping bug — titles stored as subtitles
 - Tests: 11 new unit tests covering title rejection in fallback, category parser,
   and title-subtitle conflict detection logic
 
+PLA-1004: Redesign change log — git-diff style rendering (2026-04-11)
+- Created lib/text-diff.ts — word-level diff using LCS algorithm with
+  sentence-level fallback for very long texts (>500k token pairs)
+- Rewrote unified-change-log.tsx with 5 type-aware renderers:
+  1. ArrayDiffRenderer — features: +/- items with green/red git-diff colors
+  2. PricingDiffRenderer — plan-level breakdown using existing diffPricingPlans()
+  3. WordDiffRenderer — inline word-level diff with red/green highlights
+  4. ShortTextRenderer — old (red strikethrough) → new (green) for short fields
+  5. FallbackRenderer — auto-selects short/long based on value length
+- Added expand/collapse per entry with chevron icons
+- Added summary badges ("Updated", "+3, -1 features", "+1 plan, 2 modified")
+- Field labels now use getFieldLabels(platform) from @appranks/shared
+- Dark mode: all diff colors have proper dark: variants
+- Tests: 13 text-diff + 12 component = 25 total
+
 PLA-1005 + PLA-1006: CommandPalette fixes (2026-04-11)
 - PLA-1005: Fix modal overlap race condition — Cmd+K body attribute now set
   synchronously BEFORE React setOpen(), not inside it. Uses hasAttribute() check

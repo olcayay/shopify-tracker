@@ -1,9 +1,14 @@
 "use client";
 
 import { useState, useMemo } from "react";
+import { ChevronDown, ChevronRight, Plus, Minus } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { formatShortDate } from "@/lib/format-utils";
+import { diffWords, diffArraySummary, type DiffSegment } from "@/lib/text-diff";
+import { diffPricingPlans, formatPlanPrice } from "@/lib/pricing-diff";
+import { getFieldLabels } from "@appranks/shared";
+import type { PricingPlan } from "@appranks/shared";
 
 const FIELD_COLORS: Record<string, string> = {
   name: "bg-blue-100 text-blue-800 dark:bg-blue-900/50 dark:text-blue-300",
@@ -16,6 +21,10 @@ const FIELD_COLORS: Record<string, string> = {
   pricingPlans: "bg-emerald-100 text-emerald-800 dark:bg-emerald-900/50 dark:text-emerald-300",
 };
 
+const LONG_TEXT_FIELDS = new Set(["appDetails", "appIntroduction", "seoMetaDescription"]);
+const SHORT_TEXT_FIELDS = new Set(["name", "seoTitle", "appCardSubtitle"]);
+const ARRAY_FIELDS = new Set(["features"]);
+
 export interface ChangeEntry {
   appSlug: string;
   appName: string;
@@ -24,6 +33,11 @@ export interface ChangeEntry {
   oldValue: string | null;
   newValue: string | null;
   detectedAt: string;
+}
+
+interface Props {
+  entries: ChangeEntry[];
+  platform?: string;
 }
 
 function groupByPeriod(entries: ChangeEntry[]): { label: string; entries: ChangeEntry[] }[] {
@@ -49,15 +63,208 @@ function groupByPeriod(entries: ChangeEntry[]): { label: string; entries: Change
   return groups;
 }
 
-function truncate(text: string | null, maxLen: number): string {
-  if (!text) return "—";
-  if (text.length <= maxLen) return text;
-  return text.slice(0, maxLen) + "…";
+function tryParseJSON<T>(value: string | null): T | null {
+  if (!value) return null;
+  try {
+    return JSON.parse(value);
+  } catch {
+    return null;
+  }
 }
 
-export function UnifiedChangeLog({ entries }: { entries: ChangeEntry[] }) {
+/** Summary badge text for collapsed view */
+function getChangeSummary(entry: ChangeEntry): string {
+  if (entry.field === "features") {
+    const oldArr = tryParseJSON<string[]>(entry.oldValue) || [];
+    const newArr = tryParseJSON<string[]>(entry.newValue) || [];
+    const { added, removed } = diffArraySummary(oldArr, newArr);
+    const parts: string[] = [];
+    if (added.length > 0) parts.push(`+${added.length}`);
+    if (removed.length > 0) parts.push(`-${removed.length}`);
+    return parts.length > 0 ? parts.join(", ") + " features" : "Features reordered";
+  }
+
+  if (entry.field === "pricingPlans") {
+    const oldPlans = tryParseJSON<PricingPlan[]>(entry.oldValue) || [];
+    const newPlans = tryParseJSON<PricingPlan[]>(entry.newValue) || [];
+    const diff = diffPricingPlans(oldPlans, newPlans);
+    const parts: string[] = [];
+    if (diff.added.length > 0) parts.push(`+${diff.added.length} plan${diff.added.length > 1 ? "s" : ""}`);
+    if (diff.removed.length > 0) parts.push(`-${diff.removed.length} plan${diff.removed.length > 1 ? "s" : ""}`);
+    if (diff.modified.length > 0) parts.push(`${diff.modified.length} modified`);
+    return parts.join(", ") || "Plans updated";
+  }
+
+  if (!entry.oldValue) return "Added";
+  if (!entry.newValue) return "Removed";
+  return "Updated";
+}
+
+// ---------------------------------------------------------------------------
+// Change Renderers
+// ---------------------------------------------------------------------------
+
+function ArrayDiffRenderer({ oldValue, newValue }: { oldValue: string | null; newValue: string | null }) {
+  const oldArr = tryParseJSON<string[]>(oldValue) || [];
+  const newArr = tryParseJSON<string[]>(newValue) || [];
+  const { added, removed } = diffArraySummary(oldArr, newArr);
+
+  if (added.length === 0 && removed.length === 0) {
+    return <p className="text-xs text-muted-foreground italic">Order changed (same items)</p>;
+  }
+
+  return (
+    <div className="space-y-0.5 font-mono text-xs">
+      {removed.map((item, i) => (
+        <div key={`r-${i}`} className="flex items-start gap-1.5 bg-red-50 dark:bg-red-950/30 text-red-800 dark:text-red-300 border-l-2 border-red-500 pl-2 py-0.5 rounded-r">
+          <Minus className="h-3 w-3 mt-0.5 shrink-0" />
+          <span className="line-through">{item}</span>
+        </div>
+      ))}
+      {added.map((item, i) => (
+        <div key={`a-${i}`} className="flex items-start gap-1.5 bg-green-50 dark:bg-green-950/30 text-green-800 dark:text-green-300 border-l-2 border-green-500 pl-2 py-0.5 rounded-r">
+          <Plus className="h-3 w-3 mt-0.5 shrink-0" />
+          <span>{item}</span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function PricingDiffRenderer({ oldValue, newValue }: { oldValue: string | null; newValue: string | null }) {
+  const oldPlans = tryParseJSON<PricingPlan[]>(oldValue) || [];
+  const newPlans = tryParseJSON<PricingPlan[]>(newValue) || [];
+  const diff = diffPricingPlans(oldPlans, newPlans);
+
+  if (diff.added.length === 0 && diff.removed.length === 0 && diff.modified.length === 0) {
+    return <p className="text-xs text-muted-foreground italic">Plans reordered (no content changes)</p>;
+  }
+
+  return (
+    <div className="space-y-1.5 text-xs">
+      {diff.removed.map((plan, i) => (
+        <div key={`r-${i}`} className="bg-red-50 dark:bg-red-950/30 text-red-800 dark:text-red-300 border-l-2 border-red-500 pl-2 py-1 rounded-r">
+          <span className="font-medium line-through">{plan.name}</span>
+          <span className="ml-2 text-red-600 dark:text-red-400">{formatPlanPrice(plan)}</span>
+        </div>
+      ))}
+      {diff.added.map((plan, i) => (
+        <div key={`a-${i}`} className="bg-green-50 dark:bg-green-950/30 text-green-800 dark:text-green-300 border-l-2 border-green-500 pl-2 py-1 rounded-r">
+          <span className="font-medium">{plan.name}</span>
+          <span className="ml-2 text-green-600 dark:text-green-400">{formatPlanPrice(plan)}</span>
+        </div>
+      ))}
+      {diff.modified.map((mod, i) => (
+        <div key={`m-${i}`} className="bg-amber-50 dark:bg-amber-950/30 text-amber-800 dark:text-amber-300 border-l-2 border-amber-500 pl-2 py-1 rounded-r">
+          <span className="font-medium">{mod.name}</span>
+          <ul className="mt-0.5 space-y-0.5 list-disc list-inside text-amber-700 dark:text-amber-300/80">
+            {mod.changes.map((change, j) => (
+              <li key={j}>{change}</li>
+            ))}
+          </ul>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function WordDiffRenderer({ oldValue, newValue }: { oldValue: string | null; newValue: string | null }) {
+  const segments = useMemo(
+    () => diffWords(oldValue || "", newValue || ""),
+    [oldValue, newValue]
+  );
+
+  return (
+    <div className="text-xs leading-relaxed whitespace-pre-wrap">
+      {segments.map((seg, i) => (
+        <DiffSpan key={i} segment={seg} />
+      ))}
+    </div>
+  );
+}
+
+function DiffSpan({ segment }: { segment: DiffSegment }) {
+  if (segment.type === "equal") {
+    return <span>{segment.text}</span>;
+  }
+  if (segment.type === "added") {
+    return <span className="bg-green-200/60 dark:bg-green-800/40 text-green-900 dark:text-green-200">{segment.text}</span>;
+  }
+  return <span className="bg-red-200/60 dark:bg-red-800/40 text-red-900 dark:text-red-200 line-through">{segment.text}</span>;
+}
+
+function ShortTextRenderer({ oldValue, newValue }: { oldValue: string | null; newValue: string | null }) {
+  return (
+    <div className="text-xs">
+      {oldValue && (
+        <span className="bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300 line-through px-1 py-0.5 rounded">{oldValue}</span>
+      )}
+      {oldValue && newValue && <span className="mx-1.5 text-muted-foreground">→</span>}
+      {newValue && (
+        <span className="bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300 px-1 py-0.5 rounded">{newValue}</span>
+      )}
+    </div>
+  );
+}
+
+function FallbackRenderer({ oldValue, newValue }: { oldValue: string | null; newValue: string | null }) {
+  // For unknown fields, use short text style for short values, word diff for longer
+  const maxLen = Math.max(oldValue?.length || 0, newValue?.length || 0);
+  if (maxLen < 200) {
+    return <ShortTextRenderer oldValue={oldValue} newValue={newValue} />;
+  }
+  return <WordDiffRenderer oldValue={oldValue} newValue={newValue} />;
+}
+
+function ChangeRenderer({ entry }: { entry: ChangeEntry }) {
+  if (ARRAY_FIELDS.has(entry.field)) {
+    // Try parsing as JSON array; fall back to text diff
+    const oldArr = tryParseJSON<string[]>(entry.oldValue);
+    const newArr = tryParseJSON<string[]>(entry.newValue);
+    if (oldArr || newArr) {
+      return <ArrayDiffRenderer oldValue={entry.oldValue} newValue={entry.newValue} />;
+    }
+  }
+
+  if (entry.field === "pricingPlans") {
+    const oldPlans = tryParseJSON<PricingPlan[]>(entry.oldValue);
+    const newPlans = tryParseJSON<PricingPlan[]>(entry.newValue);
+    if (oldPlans || newPlans) {
+      return <PricingDiffRenderer oldValue={entry.oldValue} newValue={entry.newValue} />;
+    }
+  }
+
+  if (LONG_TEXT_FIELDS.has(entry.field)) {
+    return <WordDiffRenderer oldValue={entry.oldValue} newValue={entry.newValue} />;
+  }
+
+  if (SHORT_TEXT_FIELDS.has(entry.field)) {
+    return <ShortTextRenderer oldValue={entry.oldValue} newValue={entry.newValue} />;
+  }
+
+  return <FallbackRenderer oldValue={entry.oldValue} newValue={entry.newValue} />;
+}
+
+// ---------------------------------------------------------------------------
+// Main Component
+// ---------------------------------------------------------------------------
+
+export function UnifiedChangeLog({ entries, platform }: Props) {
   const [sourceFilter, setSourceFilter] = useState<"all" | "self" | "competitors">("all");
   const [fieldFilter, setFieldFilter] = useState<string>("all");
+  const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
+
+  const fieldLabels = useMemo(
+    () => getFieldLabels(platform || "shopify"),
+    [platform]
+  );
+
+  function getFieldLabel(field: string): string {
+    if (field in fieldLabels) {
+      return fieldLabels[field as keyof typeof fieldLabels];
+    }
+    return field;
+  }
 
   const allFields = useMemo(() => {
     const fields = new Set(entries.map((e) => e.field));
@@ -74,6 +281,15 @@ export function UnifiedChangeLog({ entries }: { entries: ChangeEntry[] }) {
   }, [entries, sourceFilter, fieldFilter]);
 
   const groups = groupByPeriod(filtered);
+
+  function toggleExpand(id: string) {
+    setExpandedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
 
   return (
     <div className="space-y-4">
@@ -103,7 +319,7 @@ export function UnifiedChangeLog({ entries }: { entries: ChangeEntry[] }) {
         >
           <option value="all">All fields</option>
           {allFields.map((f) => (
-            <option key={f} value={f}>{f}</option>
+            <option key={f} value={f}>{getFieldLabel(f)}</option>
           ))}
         </select>
       </div>
@@ -117,29 +333,51 @@ export function UnifiedChangeLog({ entries }: { entries: ChangeEntry[] }) {
         <div key={group.label} className="space-y-2">
           <h3 className="text-xs font-medium text-muted-foreground uppercase tracking-wide">{group.label}</h3>
           <div className="space-y-1">
-            {group.entries.map((entry, i) => (
-              <div key={`${entry.appSlug}-${entry.field}-${entry.detectedAt}-${i}`} className="flex items-start gap-3 rounded-lg border p-3 text-sm">
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <span className="font-medium">{entry.appName}</span>
-                    <Badge variant="outline" className={cn("text-[10px] px-1.5 py-0", FIELD_COLORS[entry.field] || "")}>
-                      {entry.field}
-                    </Badge>
-                    {entry.isSelf && (
-                      <Badge variant="outline" className="text-[10px] px-1.5 py-0">You</Badge>
-                    )}
-                  </div>
-                  <div className="mt-1 text-xs text-muted-foreground">
-                    <span className="line-through">{truncate(entry.oldValue, 80)}</span>
-                    <span className="mx-1">→</span>
-                    <span>{truncate(entry.newValue, 80)}</span>
-                  </div>
+            {group.entries.map((entry, i) => {
+              const entryId = `${entry.appSlug}-${entry.field}-${entry.detectedAt}-${i}`;
+              const isExpanded = expandedIds.has(entryId);
+
+              return (
+                <div key={entryId} className="rounded-lg border text-sm">
+                  {/* Header — always visible, clickable to expand */}
+                  <button
+                    onClick={() => toggleExpand(entryId)}
+                    className="flex items-start gap-3 p-3 w-full text-left hover:bg-muted/30 transition-colors"
+                  >
+                    <div className="mt-0.5">
+                      {isExpanded
+                        ? <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />
+                        : <ChevronRight className="h-3.5 w-3.5 text-muted-foreground" />
+                      }
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="font-medium">{entry.appName}</span>
+                        <Badge variant="outline" className={cn("text-[10px] px-1.5 py-0", FIELD_COLORS[entry.field] || "")}>
+                          {getFieldLabel(entry.field)}
+                        </Badge>
+                        {entry.isSelf && (
+                          <Badge variant="outline" className="text-[10px] px-1.5 py-0">You</Badge>
+                        )}
+                        <span className="text-[10px] text-muted-foreground ml-auto">
+                          {getChangeSummary(entry)}
+                        </span>
+                      </div>
+                    </div>
+                    <span className="text-xs text-muted-foreground whitespace-nowrap">
+                      {formatShortDate(entry.detectedAt)}
+                    </span>
+                  </button>
+
+                  {/* Expanded content — type-aware diff */}
+                  {isExpanded && (
+                    <div className="px-3 pb-3 pl-10">
+                      <ChangeRenderer entry={entry} />
+                    </div>
+                  )}
                 </div>
-                <span className="text-xs text-muted-foreground whitespace-nowrap">
-                  {formatShortDate(entry.detectedAt)}
-                </span>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
       ))}
