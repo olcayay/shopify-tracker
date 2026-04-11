@@ -371,7 +371,7 @@ export function getAccountCompetitors(platform?: PlatformId) {
 }
 
 export function getAppCompetitors(slug: string, platform?: PlatformId, includeChanges = false) {
-  const params = includeChanges ? `&includeChanges=true` : '';
+  const params = includeChanges ? `?includeChanges=true` : '';
   return fetchApi<any[]>(withPlatform(`/api/account/tracked-apps/${encodeURIComponent(slug)}/competitors${params}`, platform), { cache: "no-store" });
 }
 

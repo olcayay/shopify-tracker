@@ -1,3 +1,14 @@
+Bug Fixes (2026-04-11)
+======================
+
+PLA-992: Competitor Watch card shows empty state for tracked app with competitors
+- Root cause: getAppCompetitors() in api.ts used `&includeChanges=true` instead of `?includeChanges=true`
+  This placed the param BEFORE the `?` added by withPlatform(), making it part of the URL path
+  Fastify couldn't match the route → 404 → silently caught by .catch(() => [])
+- Fix: Changed `&` to `?` in params construction
+- Also added error logging to .catch() in page.tsx so API errors are no longer silent
+- Added 2 regression tests in api.test.ts verifying URL construction with includeChanges+platform
+
 Dashboard Bug Fixes & Performance (2026-04-10)
 ===============================================
 

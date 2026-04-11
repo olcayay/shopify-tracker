@@ -80,8 +80,8 @@ export default async function AppOverviewPage({
   await Promise.all([
     ...(app.isTrackedByAccount
       ? [
-          getAppCompetitors(slug, platform as PlatformId, true).catch(() => []).then((c: any[]) => { competitors = c; }),
-          getAppKeywords(slug, platform as PlatformId).catch(() => []).then((k: any[]) => { keywords = k; }),
+          getAppCompetitors(slug, platform as PlatformId, true).catch((e) => { console.error(`[app-detail] Failed to fetch competitors for ${slug}:`, e.message); return []; }).then((c: any[]) => { competitors = c; }),
+          getAppKeywords(slug, platform as PlatformId).catch((e) => { console.error(`[app-detail] Failed to fetch keywords for ${slug}:`, e.message); return []; }).then((k: any[]) => { keywords = k; }),
         ]
       : []),
     ...(catSlugs.length > 0

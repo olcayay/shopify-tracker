@@ -446,6 +446,28 @@ describe("API functions", () => {
       );
     });
 
+    it("getAppCompetitors with includeChanges uses correct query string", async () => {
+      const { getAppCompetitors } = await import("@/lib/api");
+      await getAppCompetitors("my-app", "shopify" as any, true);
+      const url = (global.fetch as ReturnType<typeof vi.fn>).mock.calls[0][0] as string;
+      // includeChanges must be a query param (after ?), not part of the path
+      expect(url).toContain("?");
+      expect(url).toContain("includeChanges=true");
+      expect(url).toContain("platform=shopify");
+      // The & for includeChanges must come AFTER a ?, never before
+      const qIndex = url.indexOf("?");
+      const icIndex = url.indexOf("includeChanges");
+      expect(icIndex).toBeGreaterThan(qIndex);
+    });
+
+    it("getAppCompetitors URL path ends with /competitors before query string", async () => {
+      const { getAppCompetitors } = await import("@/lib/api");
+      await getAppCompetitors("my-app", "shopify" as any, true);
+      const url = (global.fetch as ReturnType<typeof vi.fn>).mock.calls[0][0] as string;
+      const pathPart = url.split("?")[0];
+      expect(pathPart.endsWith("/competitors")).toBe(true);
+    });
+
     it("getAppKeywords fetches by slug", async () => {
       const { getAppKeywords } = await import("@/lib/api");
       await getAppKeywords("my-app");
