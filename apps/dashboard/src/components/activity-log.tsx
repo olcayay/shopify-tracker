@@ -194,7 +194,7 @@ function getDetails(entry: ActivityLogEntry): React.ReactNode {
       return (
         <span>
           <span className="font-medium text-foreground">{(m.email as string) || ""}</span>
-          {m.role && <> as <span className="capitalize">{m.role as string}</span></>}
+          {m.role ? <> as <span className="capitalize">{m.role as string}</span></> : null}
         </span>
       );
     case "member_removed":
@@ -212,9 +212,9 @@ function getDetails(entry: ActivityLogEntry): React.ReactNode {
       return (
         <span>
           <span className="font-medium text-foreground">{(m.email as string) || ""}</span>
-          {m.oldRole && m.newRole && (
+          {m.oldRole && m.newRole ? (
             <> <span className="capitalize">{m.oldRole as string}</span> → <span className="capitalize">{m.newRole as string}</span></>
-          )}
+          ) : null}
         </span>
       );
     case "platform_enabled":
