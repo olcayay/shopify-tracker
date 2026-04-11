@@ -27,7 +27,7 @@ import {
   ChevronDown,
   Folder,
   FolderOpen,
-  Star,
+  Bookmark,
   X,
   Search,
   Target,
@@ -394,7 +394,7 @@ export default function CategoriesPage() {
                           {s.categoryTitle}
                         </Link>
                         {(s.source === "starred" || s.source === "both") && (
-                          <Star className="h-3 w-3 fill-yellow-400 text-yellow-400 shrink-0" />
+                          <Bookmark className="h-3 w-3 fill-amber-500 text-amber-500 shrink-0" />
                         )}
                         {(s.source === "auto" || s.source === "both") && (
                           <Badge variant="secondary" className="text-[10px] px-1 py-0 shrink-0">Auto</Badge>
@@ -622,11 +622,11 @@ export default function CategoriesPage() {
                                     : "opacity-0 group-hover:opacity-100"
                                 } transition-opacity`}
                               >
-                                <Star
+                                <Bookmark
                                   className={`h-3.5 w-3.5 ${
                                     isStarred
-                                      ? "fill-yellow-400 text-yellow-400"
-                                      : "text-muted-foreground hover:text-yellow-400"
+                                      ? "fill-amber-500 text-amber-500"
+                                      : "text-muted-foreground hover:text-amber-500"
                                   }`}
                                 />
                               </button>
@@ -694,8 +694,8 @@ export default function CategoriesPage() {
 
       <ConfirmModal
         open={!!confirmUnstar}
-        title={`Remove Star`}
-        description={`Are you sure you want to remove the star from "${confirmUnstar?.title}"? If the ${entitySingular.toLowerCase()} is auto-detected from your tracked apps, it will remain visible.`}
+        title={`Remove Bookmark`}
+        description={`Are you sure you want to remove the bookmark from "${confirmUnstar?.title}"? If the ${entitySingular.toLowerCase()} is auto-detected from your tracked apps, it will remain visible.`}
         confirmLabel="Remove"
         onConfirm={() => {
           if (confirmUnstar) {
@@ -784,8 +784,8 @@ function CategoryRow({
             onClick={() => toggleStar(node.slug)}
             className={`${isStarred ? "opacity-100" : "opacity-0 group-hover:opacity-100"} transition-opacity ml-1 shrink-0`}
           >
-            <Star
-              className={`h-3.5 w-3.5 ${isStarred ? "fill-yellow-400 text-yellow-400" : "text-muted-foreground hover:text-yellow-400"}`}
+            <Bookmark
+              className={`h-3.5 w-3.5 ${isStarred ? "fill-amber-500 text-amber-500" : "text-muted-foreground hover:text-amber-500"}`}
             />
           </button>
         )}

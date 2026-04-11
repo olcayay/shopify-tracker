@@ -2,7 +2,7 @@ import Link from "next/link";
 import { getFeaturesByCategory, getAccountStarredFeatures } from "@/lib/api";
 import type { PlatformId } from "@appranks/shared";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Star } from "lucide-react";
+import { Bookmark } from "lucide-react";
 import {
   Table,
   TableBody,
@@ -92,7 +92,7 @@ export default async function FeaturesByCategoryPage({
                 {features.map((f: any) => {
                   const isStarred = starredHandles.has(f.handle);
                   return (
-                    <TableRow key={f.handle} className={isStarred ? "border-l-2 border-l-yellow-400 bg-yellow-400/5" : ""}>
+                    <TableRow key={f.handle} className={isStarred ? "border-l-2 border-l-amber-500 bg-amber-500/5" : ""}>
                       <TableCell>
                         <div className="flex items-center gap-1.5">
                           <Link
@@ -102,7 +102,7 @@ export default async function FeaturesByCategoryPage({
                             {f.title}
                           </Link>
                           {isStarred && (
-                            <Star className="h-3.5 w-3.5 fill-yellow-400 text-yellow-400" />
+                            <Bookmark className="h-3.5 w-3.5 fill-amber-500 text-amber-500" />
                           )}
                         </div>
                       </TableCell>

@@ -5,6 +5,7 @@ import { useAuth } from "@/lib/auth-context";
 import { Button } from "@/components/ui/button";
 import { ConfirmModal } from "@/components/confirm-modal";
 import { Bookmark } from "lucide-react";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 
 export function StarFeatureButton({
   featureHandle,
@@ -59,16 +60,20 @@ export function StarFeatureButton({
 
   return (
     <>
-      <Button
-        variant={starred ? "outline" : "default"}
-        size="sm"
-        onClick={handleClick}
-        disabled={loading}
-        className="gap-1.5"
-      >
-        <Bookmark className={`h-4 w-4 ${starred ? "fill-amber-500 text-amber-500" : ""}`} />
-        {starred ? "Bookmarked" : "Bookmark Feature"}
-      </Button>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <Button
+            variant={starred ? "outline" : "default"}
+            size="icon"
+            onClick={handleClick}
+            disabled={loading}
+            aria-label={starred ? "Remove bookmark" : "Bookmark feature"}
+          >
+            <Bookmark className={`h-4 w-4 ${starred ? "fill-amber-500 text-amber-500" : ""}`} />
+          </Button>
+        </TooltipTrigger>
+        <TooltipContent>{starred ? "Remove bookmark" : "Bookmark feature"}</TooltipContent>
+      </Tooltip>
 
       <ConfirmModal
         open={showConfirm}

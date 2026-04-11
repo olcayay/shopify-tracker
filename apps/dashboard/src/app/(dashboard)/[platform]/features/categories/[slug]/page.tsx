@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ExternalLink, Star } from "lucide-react";
+import { ExternalLink, Bookmark } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -113,7 +113,7 @@ export default async function FeatureCategoryDetailPage({
                   return (
                     <TableRow
                       key={feature.handle}
-                      className={isStarred ? "border-l-2 border-l-yellow-400 bg-yellow-400/5" : ""}
+                      className={isStarred ? "border-l-2 border-l-amber-500 bg-amber-500/5" : ""}
                     >
                       <TableCell>
                         <div className="flex items-center gap-1.5">
@@ -124,7 +124,7 @@ export default async function FeatureCategoryDetailPage({
                             {feature.title}
                           </Link>
                           {isStarred && (
-                            <Star className="h-3.5 w-3.5 fill-yellow-400 text-yellow-400" />
+                            <Bookmark className="h-3.5 w-3.5 fill-amber-500 text-amber-500" />
                           )}
                         </div>
                       </TableCell>

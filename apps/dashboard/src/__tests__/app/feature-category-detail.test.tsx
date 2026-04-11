@@ -13,8 +13,11 @@ vi.mock(
   "@/app/(dashboard)/[platform]/features/[handle]/track-button",
   () => ({
     StarFeatureButton: ({ featureHandle, initialStarred }: any) => (
-      <button data-testid={`star-${featureHandle}`}>
-        {initialStarred ? "Bookmarked" : "Bookmark"}
+      <button
+        data-testid={`star-${featureHandle}`}
+        aria-label={initialStarred ? "Remove bookmark" : "Bookmark feature"}
+      >
+        {initialStarred ? "starred" : "idle"}
       </button>
     ),
   }),
@@ -89,7 +92,7 @@ describe("FeatureCategoryDetailPage", () => {
 
     expect(screen.getByRole("link", { name: "Chatbot" }))
       .toHaveAttribute("href", "/shopify/features/chatbot");
-    expect(screen.getByTestId("star-chatbot")).toHaveTextContent("Bookmarked");
+    expect(screen.getByTestId("star-chatbot")).toHaveAttribute("aria-label", "Remove bookmark");
   });
 
   it("shows not found copy when the category request fails", async () => {
