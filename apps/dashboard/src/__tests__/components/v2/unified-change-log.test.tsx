@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from "vitest";
 import { render, screen, fireEvent, within } from "@testing-library/react";
 import React from "react";
-import { UnifiedChangeLog, type ChangeEntry } from "@/components/v2/unified-change-log";
+import { UnifiedChangeLog, type ChangeEntry } from "@/components/changes/unified-change-log";
 
 describe("UnifiedChangeLog", () => {
   const now = new Date();

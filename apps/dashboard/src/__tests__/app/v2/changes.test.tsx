@@ -11,7 +11,7 @@ vi.mock("@/lib/api", () => ({
   getAppCompetitors: (...args: any[]) => mockGetAppCompetitors(...args),
 }));
 
-vi.mock("@/components/v2/unified-change-log", () => ({
+vi.mock("@/components/changes/unified-change-log", () => ({
   UnifiedChangeLog: ({ entries }: { entries: any[] }) => (
     <div data-testid="change-log">
       {entries.length === 0 ? (
@@ -25,7 +25,41 @@ vi.mock("@/components/v2/unified-change-log", () => ({
       )}
     </div>
   ),
-  // Need to export the ChangeEntry type mock too since it's imported
+}));
+
+vi.mock("@/components/changes/fetch-change-entries", () => ({
+  fetchChangeEntries: async (slug: string, platform: string) => {
+    const app = await mockGetApp(slug, platform);
+    const selfChanges = await mockGetAppChanges(slug, 50, platform);
+    const entries = selfChanges.map((c: any) => ({
+      appSlug: slug,
+      appName: app.name,
+      isSelf: true,
+      field: c.field,
+      oldValue: typeof c.oldValue === "string" ? c.oldValue : JSON.stringify(c.oldValue),
+      newValue: typeof c.newValue === "string" ? c.newValue : JSON.stringify(c.newValue),
+      detectedAt: c.detectedAt,
+    }));
+    if (app.isTrackedByAccount) {
+      const competitors = await mockGetAppCompetitors(slug, platform);
+      for (const comp of competitors.slice(0, 10)) {
+        const compChanges = await mockGetAppChanges(comp.appSlug, 20, platform);
+        entries.push(
+          ...compChanges.map((ch: any) => ({
+            appSlug: comp.appSlug,
+            appName: comp.appName,
+            isSelf: false,
+            field: ch.field,
+            oldValue: typeof ch.oldValue === "string" ? ch.oldValue : JSON.stringify(ch.oldValue),
+            newValue: typeof ch.newValue === "string" ? ch.newValue : JSON.stringify(ch.newValue),
+            detectedAt: ch.detectedAt,
+          }))
+        );
+      }
+    }
+    entries.sort((a: any, b: any) => new Date(b.detectedAt).getTime() - new Date(a.detectedAt).getTime());
+    return { app, entries };
+  },
 }));
 
 import V2ChangesPage from "@/app/(dashboard)/[platform]/apps/v2/[slug]/intel/changes/page";

@@ -11,9 +11,25 @@ PLA-1007: Expand by default, clickable app names, pagination
   - Only shows when total entries exceed PAGE_SIZE
 - 7 new tests: expand-by-default, collapse/re-expand, clickable links,
   Collapse All/Expand All, pagination navigation, filter reset, no-pagination
+
+PLA-1008: Unify changes page — port v2 UnifiedChangeLog to v1
+- Moved UnifiedChangeLog from components/v2/ to components/changes/ (shared)
+- Created fetchChangeEntries() shared utility in components/changes/fetch-change-entries.ts
+  - Fetches self changes (50) + competitor changes (20 each, up to 10 competitors)
+  - Only fetches competitors if app.isTrackedByAccount
+  - Returns sorted entries (newest first)
+- V1 page now uses UnifiedChangeLog — gains competitor changes, filters, time grouping,
+  expand/collapse, pagination, word-diff rendering (identical to v2)
+- V2 page simplified to use fetchChangeEntries()
+- Tests rewritten for v1 (7 tests) and updated for v2 (6 tests)
 - Files changed:
-  - apps/dashboard/src/components/v2/unified-change-log.tsx
-  - apps/dashboard/src/__tests__/components/v2/unified-change-log.test.tsx
+  - apps/dashboard/src/components/changes/unified-change-log.tsx (moved from v2/)
+  - apps/dashboard/src/components/changes/fetch-change-entries.ts (new)
+  - apps/dashboard/src/app/(dashboard)/[platform]/apps/[slug]/changes/page.tsx (rewritten)
+  - apps/dashboard/src/app/(dashboard)/[platform]/apps/v2/[slug]/intel/changes/page.tsx (simplified)
+  - apps/dashboard/src/__tests__/app/app-changes.test.tsx (rewritten)
+  - apps/dashboard/src/__tests__/app/v2/changes.test.tsx (updated imports)
+  - apps/dashboard/src/__tests__/components/v2/unified-change-log.test.tsx (updated import)
 
 Bug Fix: appCardSubtitle scraping (2026-04-11)
 ===============================================

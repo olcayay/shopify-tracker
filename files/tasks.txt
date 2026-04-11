@@ -1,5 +1,6 @@
 Intel Changes Page UX (2026-04-11)
   PLA-1007: Expand by default, clickable app names, pagination ✅
+  PLA-1008: Unify changes page — port v2 UnifiedChangeLog to v1 ✅
 
 Bug Fix: appCardSubtitle scraping (2026-04-11)
   PLA-1001: Fix appCardSubtitle scraping bug — title guard + dismiss false updates ✅
