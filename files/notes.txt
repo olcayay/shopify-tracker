@@ -13,6 +13,14 @@ PLA-1001: Fix appCardSubtitle scraping bug — titles stored as subtitles
 - Tests: 11 new unit tests covering title rejection in fallback, category parser,
   and title-subtitle conflict detection logic
 
+PLA-1005 + PLA-1006: CommandPalette fixes (2026-04-11)
+- PLA-1005: Fix modal overlap race condition — Cmd+K body attribute now set
+  synchronously BEFORE React setOpen(), not inside it. Uses hasAttribute() check
+  to determine current state instead of relying on React's prev state.
+- PLA-1006: Auto-focus search input — added inputRef + setTimeout focus in
+  useEffect when open becomes true (same pattern as PlatformSwitcher).
+  Added ref={inputRef} to Command.Input.
+
 PLA-1003: System Admin — bulk dismiss/delete app updates (2026-04-11)
 - API: 5 new endpoints on /api/system-admin/app-updates:
   - DELETE /:id — single permanent delete (with FK cascade on label assignments)

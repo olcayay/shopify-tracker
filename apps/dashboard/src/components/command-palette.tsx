@@ -72,33 +72,38 @@ export function CommandPalette() {
 
   const canEdit = user?.role === "owner" || user?.role === "admin" || user?.role === "editor";
 
-  // Cmd+K opens the palette — set body attribute synchronously so
-  // PlatformSwitcher sees it within the same event dispatch cycle.
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  // Cmd+K opens the palette — set body attribute BEFORE React state update
+  // so PlatformSwitcher's handler (same event cycle) sees it immediately.
   useEffect(() => {
     function handleKeyDown(e: KeyboardEvent) {
       if ((e.metaKey || e.ctrlKey) && e.key === "k") {
         const hasOpenModal = document.querySelector("[data-keyword-search-open]");
         if (hasOpenModal) return;
         e.preventDefault();
-        setOpen((prev) => {
-          const next = !prev;
-          if (next) {
-            document.body.setAttribute("data-command-palette-open", "");
-          } else {
-            document.body.removeAttribute("data-command-palette-open");
-          }
-          return next;
-        });
+        // Set attribute synchronously before setOpen — guarantees PlatformSwitcher
+        // sees it in its own keydown handler within the same event dispatch cycle.
+        const isCurrentlyOpen = document.body.hasAttribute("data-command-palette-open");
+        if (isCurrentlyOpen) {
+          document.body.removeAttribute("data-command-palette-open");
+          setOpen(false);
+        } else {
+          document.body.setAttribute("data-command-palette-open", "");
+          setOpen(true);
+        }
       }
     }
     document.addEventListener("keydown", handleKeyDown);
     return () => document.removeEventListener("keydown", handleKeyDown);
   }, []);
 
-  // Keep body attribute in sync when palette is closed via backdrop click
+  // Keep body attribute in sync when palette is closed via backdrop click;
+  // auto-focus the search input when opening.
   useEffect(() => {
     if (open) {
       document.body.setAttribute("data-command-palette-open", "");
+      setTimeout(() => inputRef.current?.focus(), 0);
     } else {
       document.body.removeAttribute("data-command-palette-open");
     }
@@ -183,6 +188,7 @@ export function CommandPalette() {
           <div className="flex items-center border-b px-3">
             <Search className="h-4 w-4 shrink-0 text-muted-foreground" />
             <Command.Input
+              ref={inputRef}
               value={query}
               onValueChange={setQuery}
               placeholder="Search apps and developers..."
