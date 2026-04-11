@@ -2,7 +2,9 @@
 
 import { useParams } from "next/navigation";
 import Link from "next/link";
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
+import { ChevronLeft, ChevronRight } from "lucide-react";
+import { buildDateRange, formatShortDate, formatDateRangeLabel, intensityClass } from "@/lib/heatmap-utils";
 
 interface Sighting {
   keywordId: number;
@@ -16,33 +18,12 @@ interface AppAdHistoryProps {
   sightings: Sighting[];
 }
 
-function buildDateRange(days: number): string[] {
-  const dates: string[] = [];
-  const today = new Date();
-  for (let i = days - 1; i >= 0; i--) {
-    const d = new Date(today);
-    d.setDate(d.getDate() - i);
-    dates.push(d.toISOString().slice(0, 10));
-  }
-  return dates;
-}
-
-function formatShortDate(dateStr: string): string {
-  const d = new Date(dateStr + "T00:00:00");
-  return `${d.getDate()} ${d.toLocaleString("en", { month: "short" })}`;
-}
-
-function intensityClass(count: number): string {
-  if (count === 0) return "bg-muted/40";
-  if (count === 1) return "bg-primary/25";
-  if (count === 2) return "bg-primary/50";
-  return "bg-primary/80";
-}
-
 export function AppAdHistory({ sightings }: AppAdHistoryProps) {
   const { platform } = useParams();
+  const [dayOffset, setDayOffset] = useState(0);
+
   const { keywords, dates, matrix } = useMemo(() => {
-    const dates = buildDateRange(30);
+    const dates = buildDateRange(30, dayOffset);
 
     const keywordMap = new Map<
       string,
@@ -79,7 +60,7 @@ export function AppAdHistory({ sightings }: AppAdHistoryProps) {
     );
 
     return { keywords, dates, matrix };
-  }, [sightings]);
+  }, [sightings, dayOffset]);
 
   if (keywords.length === 0) {
     return (
@@ -90,10 +71,31 @@ export function AppAdHistory({ sightings }: AppAdHistoryProps) {
   }
 
   const labelEvery = Math.max(1, Math.ceil(dates.length / 6));
+  const dateRangeLabel = formatDateRangeLabel(dates);
 
   return (
     <div className="overflow-x-auto">
       <div className="min-w-[600px]">
+        {/* Time navigation */}
+        <div className="flex items-center justify-between mb-2">
+          <button
+            onClick={() => setDayOffset((o) => o + 30)}
+            className="flex items-center gap-1 px-2 py-1 text-xs border rounded-md hover:bg-muted transition-colors"
+            aria-label="Previous period"
+          >
+            <ChevronLeft className="h-3 w-3" /> Older
+          </button>
+          <span className="text-xs text-muted-foreground">{dateRangeLabel}</span>
+          <button
+            onClick={() => setDayOffset((o) => Math.max(0, o - 30))}
+            disabled={dayOffset === 0}
+            className="flex items-center gap-1 px-2 py-1 text-xs border rounded-md hover:bg-muted transition-colors disabled:opacity-40"
+            aria-label="Next period"
+          >
+            Newer <ChevronRight className="h-3 w-3" />
+          </button>
+        </div>
+
         {/* Date headers */}
         <div className="flex items-end gap-0 mb-1">
           <div className="w-[200px] shrink-0" />
