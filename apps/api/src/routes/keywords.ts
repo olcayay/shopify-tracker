@@ -155,13 +155,13 @@ export const keywordRoutes: FastifyPluginAsync = async (app) => {
             inArray(keywordTagAssignments.keywordId, platformIds)
           )
         ),
-      // Latest snapshots — 2-step: first get snapshot IDs (light), then filter JSONB only for those
+      // Latest snapshots with results — single query, slug matching done in JS
       db.execute(sql`
         SELECT keyword_id, total_results, scraped_at,
           jsonb_array_length(results)::int AS app_count,
-          id AS snapshot_id
+          results
         FROM (
-          SELECT DISTINCT ON (keyword_id) id, keyword_id, total_results, scraped_at, results
+          SELECT DISTINCT ON (keyword_id) keyword_id, total_results, scraped_at, results
           FROM keyword_snapshots
           WHERE keyword_id = ANY(${sqlArray(platformIds)})
           ORDER BY keyword_id, scraped_at DESC
@@ -184,32 +184,23 @@ export const keywordRoutes: FastifyPluginAsync = async (app) => {
       tagMap.set(tr.keywordId, list);
     }
 
+    // Build snapshot map with matched apps (slug matching in JS, not SQL JSONB)
+    const allSlugsSet = new Set(allSlugs);
     const snapshotMap = new Map<number, { totalResults: number | null; scrapedAt: Date; appCount: number; matchedApps: any[] | null }>();
     const snapRows = (latestSnapshots as any).rows ?? latestSnapshots;
-    const snapshotIds = snapRows.map((r: any) => r.snapshot_id).filter(Boolean);
-
-    // Step 2: fetch matched apps from JSONB only for the latest snapshot IDs (much lighter than inline subselect)
-    let matchedAppsMap = new Map<number, any[]>();
-    if (snapshotIds.length > 0 && allSlugs.length > 0) {
-      const matchedRows: any[] = await db.execute(sql`
-        SELECT keyword_id,
-          (SELECT jsonb_agg(app) FROM jsonb_array_elements(results) app
-           WHERE app->>'app_slug' = ANY(${sqlArray(allSlugs, "text")})
-          ) AS matched_apps
-        FROM keyword_snapshots
-        WHERE id = ANY(${sqlArray(snapshotIds)})
-      `).then((res: any) => (res as any).rows ?? res);
-      for (const r of matchedRows) {
-        if (r.matched_apps) matchedAppsMap.set(r.keyword_id, r.matched_apps);
-      }
-    }
 
     for (const row of snapRows) {
+      let matchedApps: any[] | null = null;
+      if (row.results && allSlugsSet.size > 0) {
+        const results: any[] = typeof row.results === "string" ? JSON.parse(row.results) : row.results;
+        const matched = results.filter((app: any) => allSlugsSet.has(app.app_slug));
+        if (matched.length > 0) matchedApps = matched;
+      }
       snapshotMap.set(row.keyword_id, {
         totalResults: row.total_results,
         scrapedAt: row.scraped_at,
         appCount: row.app_count,
-        matchedApps: matchedAppsMap.get(row.keyword_id) ?? null,
+        matchedApps,
       });
     }
 
