@@ -547,19 +547,280 @@ Behind the scenes, AppRanks continuously collects data from all 12 marketplaces,
 AppRanks should be primarily PLG-driven. The core strategy:
 
 1. **Free Public Tools as Top-of-Funnel**
-   - **Listing Audit** (`appranks.io/audit/{platform}/{slug}`): Free, public app listing audit with a score and recommendations. No login required. This is the #1 organic lead gen tool.
-   - **Public Comparison Pages** (`appranks.io/compare/{platform}/{app1}-vs-{app2}`): SEO-optimized comparison pages that rank for "{App A} vs {App B}" searches.
-   - **Public App Pages**: SEO-friendly app profile pages that rank for "{app name} reviews", "{app name} pricing", etc.
-   - **Public Trends**: Platform trend pages that attract researchers and analysts.
 
-2. **Freemium Model**
+   The core growth strategy: build free, public, no-login-required tools that deliver instant value, rank in search engines, and funnel users toward signup. Each tool targets a different search intent and audience segment.
+
+   **Existing Free Tools:**
+   - **Listing Audit** (`/audit/{platform}/{slug}`): Free app listing health check with a score (0-100) and actionable recommendations. Targets: "{app name} shopify review", "is {app} good". **#1 organic lead gen tool.**
+   - **Public Comparison Pages** (`/compare/{platform}/{app1}-vs-{app2}`): Side-by-side app comparison with features, pricing, ratings, similarity score. Targets: "{App A} vs {App B}", "best alternative to {App}".
+   - **Public App Pages** (`/apps/{platform}/{slug}`): SEO-friendly app profile with ratings, pricing, features, screenshots, developer info. Targets: "{app name} reviews", "{app name} pricing", "{app name} alternatives".
+   - **Public Trends** (`/trends/{platform}`): Platform-wide trend dashboard — top movers, new apps, category dynamics. Targets: "shopify app store trends", "wordpress plugin market".
+   - **"Best Of" / "Top N" List Pages** (`/best/{platform}/{category}`): Curated, data-driven ranked lists. Targets: "best {category} apps for {platform}". (See detailed section below.)
+   - **Category Pages** (`/categories/{platform}/{slug}`): Category detail with top apps, app count, and competitive density. Targets: "{category} shopify apps".
+   - **Keyword Insights** (`/insights/{platform}/keywords/{slug}`): Top 10 apps ranking for a specific keyword with trend data. Targets: "{keyword} shopify apps".
+   - **Developer Pages** (`/developers/{platform}/{slug}`): Developer portfolio with all their apps and aggregate stats. Targets: "{company name} shopify apps".
+
+   **New Free Tool Ideas (To Build):**
+
+   **A. Interactive Calculators & Checkers**
+
+   - **App Name Availability Checker** (`/tools/name-check`)
+     - User enters a name → instantly check if it's taken across all 12 marketplaces
+     - Shows existing apps with that name, similar names, and name length limits per platform
+     - Targets: "shopify app name ideas", "is this app name taken", "app naming tool"
+     - Signup hook: "Get notified if this name becomes available" or "Check keyword rankings for this name"
+     - Very low friction, high curiosity — shareable results
+
+   - **Keyword Difficulty Checker** (`/tools/keyword-difficulty/{platform}`)
+     - User enters a keyword → shows: number of competing apps, ad activity level (high/medium/low/none), top 3 ranking apps, estimated difficulty score (easy/medium/hard/very hard)
+     - Free: 3 checks per day without signup, unlimited with free account
+     - Targets: "shopify app store keyword tool", "ASO keyword difficulty", "shopify keyword research"
+     - Signup hook: "Track this keyword daily and see your position change over time"
+
+   - **Pricing Benchmark Tool** (`/tools/pricing-benchmark/{platform}/{category}`)
+     - Shows pricing distribution for a category: % free vs. paid, median price, price range, most common pricing model (freemium, flat, usage-based)
+     - Visual chart: "Where does your price sit compared to the market?"
+     - Targets: "how to price a shopify app", "shopify app pricing strategy", "average SaaS app price"
+     - Signup hook: "Track competitor pricing changes automatically"
+
+   - **Market Size Calculator** (`/tools/market-size/{platform}/{category}`)
+     - Category intelligence at a glance: total apps, average rating, review velocity, competitive density, growth trend (expanding/stable/shrinking), pricing landscape
+     - "Is this market worth entering?" decision support
+     - Targets: "shopify app market size", "wordpress plugin market analysis", "is it worth building a shopify app"
+     - Signup hook: "Deep dive with a full research project — free trial"
+
+   **B. Analysis & Discovery Tools**
+
+   - **Feature Gap Finder** (`/tools/feature-gap/{platform}/{category}`)
+     - Shows the most common features in a category with adoption percentage
+     - User selects their app (or enters features manually) → highlights features they're missing that 70%+ of competitors have
+     - "You're missing 3 features that 80% of top-rated apps in this category have"
+     - Targets: "shopify app features checklist", "what features should my app have", "competitive feature analysis"
+     - Signup hook: "Track when competitors add new features"
+
+   - **Cross-Platform App Finder** (`/tools/cross-platform/{app-slug}`)
+     - "Does this app exist on other marketplaces?" — enter an app name, see if it's on Shopify, WordPress, Salesforce, etc.
+     - Shows cross-platform presence map with ratings comparison per platform
+     - Targets: "is {app} on shopify", "multi-platform saas apps", "{app name} alternatives"
+     - Signup hook: "Track your app's performance across all marketplaces"
+
+   - **Similar App Finder** (`/tools/similar-apps/{platform}/{slug}`)
+     - Enter any app → see the 10 most similar apps ranked by our multi-dimensional similarity score
+     - Breakdown: category overlap, feature overlap, keyword overlap, content similarity
+     - Targets: "apps like {app name}", "alternatives to {app name}", "{app name} competitors"
+     - Signup hook: "Add these as competitors and track them daily"
+
+   - **Developer Scorecard** (`/tools/developer-scorecard/{platform}/{slug}`)
+     - Comprehensive publisher analysis: total apps, average rating across portfolio, total reviews, best performing app, category diversity, platform presence
+     - "How does this developer compare to similar publishers?"
+     - Targets: "{company name} apps", "shopify app developer review", investor due diligence searches
+     - Signup hook: "Monitor this developer's entire portfolio"
+
+   **C. Trend & Report Pages (Auto-Generated, Refreshed Weekly/Monthly)**
+
+   - **Weekly Marketplace Movers** (`/reports/{platform}/weekly-movers`)
+     - Auto-generated every Monday: biggest rank gainers, biggest losers, new entrants, apps that left categories
+     - "This week on Shopify: App X jumped 47 spots in Email Marketing, App Y dropped out of top 50"
+     - Targets: "shopify app store news", "shopify app updates this week"
+     - Signup hook: "Get this report in your inbox every Monday"
+     - Also great for social media sharing and newsletter content
+
+   - **Monthly "State of" Reports** (`/reports/{platform}/monthly/{year}-{month}`)
+     - Monthly snapshot: new apps launched, total apps growth, most competitive categories, fastest growing categories, pricing trends, review velocity trends
+     - "April 2026: 127 new Shopify apps launched, Email Marketing became the most competitive category"
+     - Targets: "shopify app store statistics", "how many shopify apps are there", "shopify marketplace report"
+     - These get cited by blogs, newsletters, and press — building backlinks and authority
+
+   - **"Who Advertises Here" Reports** (`/reports/{platform}/ads/{keyword-slug}`)
+     - Public ad intelligence: which apps are advertising on a given keyword, how frequently, on which days
+     - 30-day heatmap visualization (publicly visible)
+     - Targets: "shopify app store ads", "who advertises on shopify", "shopify app advertising cost"
+     - Signup hook: "Track ad activity across all your keywords"
+
+   - **Category Power Rankings** (`/reports/{platform}/category-power/{category}`)
+     - Quarterly deep-dive: top 20 apps ranked by Power Score with component breakdown (rating, reviews, category rank, momentum)
+     - Shows which apps are rising vs. falling, new entrants vs. incumbents
+     - Targets: "best {category} apps ranked", "top shopify apps by category"
+     - Signup hook: "See your own Power Score and track it daily"
+
+   **D. Embeddable Widgets & Badges (Viral Growth Mechanism)**
+
+   - **"Ranked by AppRanks" Badge** (`/badge/{platform}/{category}/{slug}`)
+     - Embeddable badge for app developers to put on their own website/landing page
+     - Shows: "🏆 #3 in Email Marketing on Shopify — Ranked by AppRanks"
+     - Auto-updates as ranking changes
+     - Every badge is a backlink to the app's AppRanks profile page
+     - Developers WANT to show this off if they rank well — free viral distribution
+     - Also works as: "⭐ Top Rated in {Category}" or "🚀 Fastest Growing in {Category}"
+
+   - **Review Widget** (`/widget/reviews/{platform}/{slug}`)
+     - Embeddable widget showing latest reviews, rating distribution, and review velocity
+     - Developers embed it on their marketing site as social proof
+     - Each widget links back to full review analysis on AppRanks
+
+   - **Comparison Widget** (`/widget/compare/{platform}/{app1}/{app2}`)
+     - Embeddable mini comparison table (compact version of full comparison page)
+     - Blog authors and review sites embed it when writing "X vs Y" articles
+     - Each widget links back to full comparison on AppRanks
+
+   **E. API-Based Free Tools**
+
+   - **Free Public API (Rate-Limited)** (`/api/public/v1/`)
+     - Free tier: 100 requests/day, basic app data + rankings
+     - Developers, bloggers, and researchers use it to build their own content
+     - Every API consumer becomes a potential paid customer when they hit limits
+     - Targets: developers building tools, market researchers, bloggers
+
+   **Free Tool Funnel Summary:**
+
+   | Tool | Search Intent | Target Audience | Friction | Signup Hook |
+   |------|--------------|-----------------|----------|-------------|
+   | Listing Audit | "is my app listing good" | App developers | Zero (no login) | "Track improvements over time" |
+   | App Comparison | "{App A} vs {App B}" | Developers evaluating options | Zero | "Compare with your own app" |
+   | Best Of Lists | "best {category} apps" | Developers, buyers, researchers | Zero | "Track these apps daily" |
+   | Name Checker | "is this name taken" | Pre-launch developers | Zero | "Get notified if available" |
+   | Keyword Difficulty | "can I rank for this keyword" | ASO-focused developers | Low (3 free/day) | "Track this keyword daily" |
+   | Pricing Benchmark | "how should I price my app" | Developers setting pricing | Zero | "Monitor competitor pricing" |
+   | Market Size Calculator | "is this market worth entering" | Pre-launch, PMs, investors | Zero | "Full research project — free trial" |
+   | Feature Gap Finder | "what features am I missing" | Active developers, PMs | Low (select your app) | "Track competitor features" |
+   | Similar App Finder | "apps like {app name}" | Everyone | Zero | "Add as competitors" |
+   | Cross-Platform Finder | "is {app} on other platforms" | Multi-platform publishers | Zero | "Track across platforms" |
+   | Developer Scorecard | "{company} apps review" | Investors, agencies, devs | Zero | "Monitor this portfolio" |
+   | Weekly Movers Report | "shopify app news this week" | Community, newsletter readers | Zero | "Get in your inbox" |
+   | Monthly State-of Report | "shopify market statistics" | Press, researchers, analysts | Zero | "Historical data access" |
+   | Ad Intelligence Report | "who advertises on shopify" | Ad budget planners | Zero | "Track ad activity daily" |
+   | Embeddable Badge | N/A (viral distribution) | Developers with good rankings | Zero | Backlink + brand awareness |
+   | Review Widget | N/A (viral distribution) | Developers wanting social proof | Zero | Backlink + brand awareness |
+   | Free Public API | Developer/researcher need | Developers, bloggers | Low (API key) | Rate limits → paid tier |
+
+   **Expected Page Volume from Free Tools:**
+   - Listing Audit: 1 page per tracked app × 12 platforms = thousands of pages
+   - Comparison Pages: combinatorial (N×N apps) = tens of thousands of possible pages
+   - Best Of Lists: ~950+ pages (see detailed section below)
+   - Category Pages: ~600+ pages
+   - Keyword Insights: 1 per tracked keyword = thousands of pages
+   - Developer Pages: 1 per developer = thousands of pages
+   - Weekly/Monthly Reports: grows over time (52 weekly + 12 monthly per platform per year)
+   - **Total indexable surface: 10,000+ pages within first year, growing continuously**
+
+2. **"Best Of" / "Top N" Curated List Pages — The SEO Powerhouse**
+
+   This is the highest-leverage content play. We already have the data (category rankings, power scores, review metrics, features). We generate public, SEO-optimized list pages that target "best [category] apps for [platform]" searches.
+
+   **URL Patterns:**
+   - `appranks.io/best/{platform}/{category-slug}` — "Best Email Marketing Apps for Shopify"
+   - `appranks.io/best/{platform}/{feature-handle}` — "Best AI Agent Apps for Shopify"
+   - `appranks.io/best/{platform}/top-rated` — "Top Rated Shopify Apps"
+   - `appranks.io/best/{platform}/fastest-growing` — "Fastest Growing Apps on Shopify"
+   - `appranks.io/best/{platform}/new` — "Best New Shopify Apps This Month"
+
+   **Content Types — By Category/Feature (Primary):**
+
+   These pages are auto-generated from our scraped data and ranked by Power Score.
+
+   | List Type | Example Titles | Data Source |
+   |-----------|---------------|-------------|
+   | By Category | "Top 10 Email Marketing Apps for Shopify" | Category rankings + Power Score |
+   | By Feature/Use Case | "Top 5 AI Agent Apps for Shopify" | Feature taxonomy + app snapshots |
+   | By Feature/Use Case | "Top 10 Form Builder Apps for Wix" | Feature taxonomy + app snapshots |
+   | By Integration | "Best Klaviyo-Compatible Shopify Apps" | Integration data from app snapshots |
+   | By Badge | "All Built for Shopify Apps, Ranked" | Badge data + Power Score |
+   | By Badge | "Cloud Fortified Apps on Atlassian" | Badge data + Power Score |
+   | By Pricing | "Best Free Shopify Apps in 2026" | Pricing data + Power Score |
+   | By Pricing | "Best Free WordPress Plugins" | Pricing data + Power Score |
+
+   **Content Types — By Trend/Metric (Dynamic):**
+
+   These pages are auto-refreshed and highlight movement, not just static rankings.
+
+   | List Type | Example Titles | Data Source |
+   |-----------|---------------|-------------|
+   | Fastest Growing | "Fastest Growing Shopify Apps This Month" | Review velocity + momentum scores |
+   | Rising Stars | "Rising Stars: Shopify Apps Gaining Rankings" | Category rank changes (biggest movers) |
+   | Most Featured | "Most Featured Apps on HubSpot Marketplace" | Featured app sighting frequency |
+   | Newly Launched | "Best New Shopify Apps (April 2026)" | Launch date + early Power Score |
+   | Top Rated | "Highest Rated WordPress Plugins (4.9+ Stars)" | Rating filter + review count |
+   | Most Reviewed | "Most Reviewed Salesforce AppExchange Apps" | Review count ranking |
+   | Ad Heavy | "Most Advertised Keywords on Shopify App Store" | Ad sighting heatmap data |
+   | Cross-Platform | "Best Project Management Apps Across All Marketplaces" | Cross-platform category mapping |
+
+   **Concrete Page Examples:**
+
+   *Shopify:*
+   - Top 10 Email Marketing Apps for Shopify
+   - Top 5 AI Agent Apps for Shopify
+   - Top 10 Form Builder Apps for Shopify
+   - Best Free Shopify Apps in 2026
+   - Top 10 SEO Apps for Shopify
+   - Best Loyalty & Rewards Apps for Shopify
+   - Top 10 Dropshipping Apps for Shopify
+   - Fastest Growing Shopify Apps This Month
+   - Best New Shopify Apps (April 2026)
+   - All Built for Shopify Apps, Ranked
+
+   *WordPress:*
+   - Best Free WordPress Plugins in 2026
+   - Top 10 WordPress SEO Plugins
+   - Top 10 WordPress Security Plugins
+   - Top 10 WordPress Form Plugins
+   - Fastest Growing WordPress Plugins This Month
+
+   *Salesforce:*
+   - Top 10 Salesforce AppExchange Apps for Sales Teams
+   - Best Free Salesforce Apps
+   - Top Rated Salesforce AppExchange Apps
+
+   *Atlassian:*
+   - Top 10 Jira Plugins for Project Management
+   - Cloud Fortified Atlassian Apps, Ranked
+   - Best Free Atlassian Marketplace Apps
+
+   *Cross-Platform:*
+   - Best CRM Marketplace Apps Across All Platforms
+   - Best Email Marketing Apps: Shopify vs WordPress vs HubSpot
+   - Most Competitive App Categories Across 12 Marketplaces
+
+   **Page Structure (Per List Page):**
+   1. **Hero**: Title, subtitle, platform badge, "Updated daily" indicator, total app count in category
+   2. **Ranked List**: Top N apps with rank, icon, name, rating (stars + count), pricing, one-line description, Power Score badge, badges (Built for Shopify, etc.)
+   3. **Quick Comparison CTA**: "Compare any 2 apps side by side" → links to comparison tool
+   4. **Category Context**: Brief description of the category, total apps, average rating, competitive density
+   5. **Methodology Note**: "Rankings powered by AppRanks Power Score — a composite of rating quality, review volume, category position, and growth momentum. Updated daily."
+   6. **Related Lists**: Links to related "Top N" pages (sibling categories, same category on other platforms)
+   7. **CTA**: "Track these apps and get daily ranking updates — free" → signup
+   8. **Structured Data**: JSON-LD `ItemList` schema for Google rich results (potential for carousel/listicle snippets)
+
+   **SEO Multiplier Effect:**
+   - 12 platforms × ~50 categories each = ~600 category list pages
+   - 12 platforms × ~20 feature-based lists = ~240 feature list pages
+   - 12 platforms × 5 trend-based lists = ~60 dynamic trend pages
+   - Cross-platform comparisons = ~50 pages
+   - **Total: ~950+ indexable pages from day one**, growing as we add more categories/features
+   - Each page targets a specific long-tail keyword (e.g., "best shopify email marketing apps")
+   - Internal linking between lists, app profiles, audits, and comparisons creates strong topical authority
+
+   **Why This Works:**
+   - "Best X apps for Y" is one of the highest-volume search patterns in the SaaS ecosystem
+   - Most existing results are manually curated blog posts that go stale — our pages are auto-updated daily with real data
+   - Power Score provides objective, transparent ranking methodology (differentiator vs. pay-to-play lists)
+   - Each page is a natural lead-gen funnel: visitor reads list → clicks app → sees audit/comparison → signs up to track
+   - Featured snippet opportunity: Google loves structured list content with clear methodology
+
+   **Implementation Priority:**
+   1. **Phase 1**: Category-based "Top 10" pages for Shopify (highest search volume) — `/best/shopify/{category}`
+   2. **Phase 2**: Extend to all 12 platforms + add feature-based lists
+   3. **Phase 3**: Add trend-based dynamic lists (fastest growing, rising stars, newly launched)
+   4. **Phase 4**: Cross-platform comparison lists + integration-based lists
+
+3. **Freemium Model**
    - Free tier: Track 1 app, 5 keywords, basic rankings — enough to experience value
    - Paid tiers unlock: more apps, unlimited keywords, competitor tracking, ad intelligence, email digests, team access, research projects
 
-3. **SEO Strategy**
+4. **SEO Strategy**
    - Target long-tail keywords: "shopify app ranking tracker", "salesforce appexchange competitor analysis", "wordpress plugin ranking", "hubspot app marketplace analytics"
-   - Generate thousands of indexable pages from public app profiles, comparisons, audits, category pages, keyword insights, and trend reports
+   - Generate thousands of indexable pages from public app profiles, comparisons, audits, category pages, keyword insights, trend reports, and **"Top N" list pages**
    - Each of the 12 platforms creates a new SEO category to dominate
+   - "Best of" list pages alone generate ~950+ indexable URLs targeting high-volume commercial keywords
    - Blog content: "How to rank higher on [Platform] App Store", "Complete guide to [Platform] ASO"
 
 #### Content Marketing
@@ -571,10 +832,12 @@ AppRanks should be primarily PLG-driven. The core strategy:
    - Competitive landscape reports by category (quarterly)
    - "State of [Platform] Marketplace" annual reports
 
-2. **Data-Driven Content**
-   - "Top 50 fastest growing Shopify apps this month" (generated from review velocity data)
-   - "Most competitive categories on [Platform]" (generated from ranking data)
-   - "Ad spending trends across app marketplaces" (generated from ad sighting data)
+2. **Data-Driven Content (Auto-Generated from AppRanks Data)**
+   - "Top 50 fastest growing Shopify apps this month" (from review velocity data)
+   - "Most competitive categories on [Platform]" (from ranking data)
+   - "Ad spending trends across app marketplaces" (from ad sighting data)
+   - Monthly "Marketplace Movers" report: biggest rank changes, new entrants, exits
+   - Quarterly "Category Power Rankings" across all 12 platforms
    - These reports get shared, linked, and cited — building domain authority
 
 3. **Educational Content**
