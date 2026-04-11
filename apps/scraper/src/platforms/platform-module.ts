@@ -112,6 +112,8 @@ export interface PlatformConstants {
   appDetailsConcurrency?: number;
   /** Max seed categories to crawl in parallel (default: 1 = sequential) */
   concurrentSeedCategories?: number;
+  /** Max keywords to scrape in parallel (default: 3) */
+  keywordConcurrency?: number;
 }
 
 // --- Scoring config ---

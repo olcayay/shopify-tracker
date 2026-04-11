@@ -1,4 +1,4 @@
-import { eq, and, sql } from "drizzle-orm";
+import { eq, and, sql, inArray } from "drizzle-orm";
 import type { Database } from "@appranks/db";
 import {
   scrapeRuns,
@@ -365,9 +365,10 @@ export class CategoryScraper {
         breadcrumb: pageData.breadcrumb,
       });
 
+      let firstPageSlugMap: Map<string, number> | undefined;
       if (isListingPage) {
         // Record app rankings from first page (only for listing pages)
-        await this.recordAppRankings(
+        firstPageSlugMap = await this.recordAppRankings(
           pageData.first_page_apps,
           slug,
           runId
@@ -378,7 +379,7 @@ export class CategoryScraper {
       }
 
       // Record category ad sightings for sponsored apps (both listing and hub pages)
-      await this.recordCategoryAdSightings(pageData.first_page_apps, categoryId, runId);
+      await this.recordCategoryAdSightings(pageData.first_page_apps, categoryId, runId, firstPageSlugMap);
 
       // Collect discovered slugs from first page (always, regardless of page type)
       for (const app of pageData.first_page_apps) {
@@ -390,30 +391,36 @@ export class CategoryScraper {
       }
     }
 
-    // Multi-page support: fetch additional pages (listing pages only, default 10 pages)
+    // Multi-page support: fetch additional pages in parallel (listing pages only, default 10 pages)
     if (isListingPage && depth > 0 && pageOptions?.pages !== "first") {
       const maxPages = pageOptions?.pages === "all" ? 50
         : typeof pageOptions?.pages === "number" ? pageOptions.pages
         : 10;
 
-      if (maxPages > 1) {
-        let currentPage = 1;
-        let currentHtml = html;
+      if (maxPages > 1 && hasNextPage(html)) {
+        // Optimistically launch parallel fetches for pages 2-maxPages
+        // HttpClient's waitForSlot() enforces rate limiting globally
+        const pagePromises: Promise<{ page: number; html: string; ok: boolean }>[] = [];
+        for (let p = 2; p <= maxPages; p++) {
+          const pageUrl = urls.categoryAll(slug, p);
+          pagePromises.push(
+            this.httpClient.fetchPage(pageUrl)
+              .then(pageHtml => ({ page: p, html: pageHtml, ok: true }))
+              .catch(error => {
+                log.warn("failed to fetch category page", { slug, page: p, error: String(error) });
+                return { page: p, html: "", ok: false };
+              })
+          );
+        }
+        const pageResults = await Promise.all(pagePromises);
+
+        // Process results in order, stop at first failure or empty page
         let totalAppsRecorded = pageData.first_page_apps.length;
+        for (const result of pageResults) {
+          if (!result.ok) break;
 
-        while (currentPage < maxPages && hasNextPage(currentHtml)) {
-          currentPage++;
-          // Use /all?page=N directly to avoid redirect issues
-          // (Shopify 302-redirects /categories/{slug}?page=N and may drop the page param)
-          const pageUrl = urls.categoryAll(slug, currentPage);
-          try {
-            currentHtml = await this.httpClient.fetchPage(pageUrl);
-          } catch (error) {
-            log.warn("failed to fetch category page", { slug, page: currentPage, error: String(error) });
-            break;
-          }
-
-          const nextPageData = parseCategoryPage(currentHtml, pageUrl);
+          const pageUrl = urls.categoryAll(slug, result.page);
+          const nextPageData = parseCategoryPage(result.html, pageUrl);
 
           // Deduplicate across pages (sponsored apps can appear on multiple pages)
           const newApps = nextPageData.first_page_apps.filter(app => {
@@ -424,18 +431,18 @@ export class CategoryScraper {
           });
 
           // Record additional page app rankings with global position offset
-          await this.recordAppRankings(newApps, slug, runId, totalAppsRecorded);
-          await this.recordCategoryAdSightings(newApps, categoryId, runId);
+          const pageSlugMap = await this.recordAppRankings(newApps, slug, runId, totalAppsRecorded);
+          await this.recordCategoryAdSightings(newApps, categoryId, runId, pageSlugMap);
           totalAppsRecorded += newApps.length;
           for (const app of newApps) {
             const appSlug = app.app_url.replace("https://apps.shopify.com/", "");
             if (appSlug) discoveredSlugs.push(appSlug);
           }
 
-          // Debug logging — helps diagnose data extraction issues per page
+          // Debug logging
           const sampleApp = nextPageData.first_page_apps[0];
           log.info("category page scraped", {
-            slug, page: currentPage,
+            slug, page: result.page,
             totalParsed: nextPageData.first_page_apps.length,
             newApps: newApps.length,
             sampleHasLogo: !!sampleApp?.logo_url,
@@ -443,26 +450,24 @@ export class CategoryScraper {
             sampleHasPricing: !!sampleApp?.pricing_hint,
           });
 
-          // If page returned 0 new apps, we've likely hit the end or a loop
+          // If page returned 0 new apps, we've likely hit the end
           if (newApps.length === 0) {
-            log.info("no new apps found, stopping pagination", { slug, page: currentPage });
+            log.info("no new apps found, stopping pagination", { slug, page: result.page });
             break;
           }
         }
       }
     }
 
-    // Recurse into subcategories (skip in single mode)
+    // Recurse into subcategories in parallel (skip in single mode)
     const children: CategoryNode[] = [];
     if (!this.singleMode && depth < this.maxDepth) {
-      for (const sub of pageData.subcategory_links) {
-        const { node: childNode, appSlugs: childSlugs } = await this.crawlCategory(
-          sub.slug,
-          slug,
-          depth + 1,
-          runId,
-          pageOptions
-        );
+      const subResults = await Promise.all(
+        pageData.subcategory_links.map(sub =>
+          this.crawlCategory(sub.slug, slug, depth + 1, runId, pageOptions)
+        )
+      );
+      for (const { node: childNode, appSlugs: childSlugs } of subResults) {
         if (childNode) children.push(childNode);
         for (const s of childSlugs) discoveredSlugs.push(s);
       }
@@ -713,84 +718,98 @@ export class CategoryScraper {
   /**
    * Ensure each app from first_page_apps exists in the apps table,
    * then record their category ranking positions.
+   * Returns a slug→id map for reuse by downstream methods (ad sightings, etc.)
    */
   private async recordAppRankings(
     appList: { app_url: string; name: string; short_description?: string; is_built_for_shopify?: boolean; is_sponsored?: boolean; position?: number; logo_url?: string; average_rating?: number; rating_count?: number; pricing_hint?: string }[],
     categorySlug: string,
     runId: string,
     positionOffset = 0
-  ): Promise<void> {
+  ): Promise<Map<string, number>> {
+    if (appList.length === 0) return new Map();
     const now = new Date();
+    const slugToIdMap = new Map<string, number>();
 
-    for (let i = 0; i < appList.length; i++) {
-      const app = appList[i];
-      const appSlug = app.app_url.replace(
-        "https://apps.shopify.com/",
-        ""
-      );
-
-      // Sponsored listings show ad boilerplate instead of real subtitle — skip subtitle update
+    // Prepare app values for batch upsert
+    const appValues = appList.map(app => {
+      const appSlug = app.app_url.replace("https://apps.shopify.com/", "");
       const subtitle = app.is_sponsored ? undefined : (app.short_description || undefined);
-
-      // Only write rating/count if genuinely > 0 and within valid range
       const validRating = clampRating(app.average_rating);
       const hasRating = validRating != null && validRating > 0;
       const validCount = clampCount(app.rating_count);
       const hasCount = validCount != null && validCount > 0;
+      return { appSlug, subtitle, validRating, hasRating, validCount, hasCount, app };
+    });
 
-      // Upsert app master record with all listing data
-      const [upsertedApp] = await this.db
+    // Batch upsert apps in chunks of 100
+    for (let c = 0; c < appValues.length; c += 100) {
+      const chunk = appValues.slice(c, c + 100);
+      const upsertedApps = await this.db
         .insert(apps)
-        .values({
-          platform: "shopify",
-          slug: appSlug,
-          name: app.name,
-          isBuiltForShopify: !!app.is_built_for_shopify,
-          appCardSubtitle: subtitle,
-          ...(app.logo_url && { iconUrl: app.logo_url }),
-          ...(hasRating && { averageRating: String(validRating) }),
-          ...(hasCount && { ratingCount: validCount }),
-          ...(app.pricing_hint && { pricingHint: app.pricing_hint }),
-        })
+        .values(chunk.map(v => ({
+          platform: "shopify" as const,
+          slug: v.appSlug,
+          name: v.app.name,
+          isBuiltForShopify: !!v.app.is_built_for_shopify,
+          appCardSubtitle: v.subtitle,
+          ...(v.app.logo_url && { iconUrl: v.app.logo_url }),
+          ...(v.hasRating && { averageRating: String(v.validRating) }),
+          ...(v.hasCount && { ratingCount: v.validCount }),
+          ...(v.app.pricing_hint && { pricingHint: v.app.pricing_hint }),
+        })))
         .onConflictDoUpdate({
           target: [apps.platform, apps.slug],
           set: {
-            name: app.name,
-            isBuiltForShopify: !!app.is_built_for_shopify,
-            ...(subtitle !== undefined && { appCardSubtitle: subtitle }),
-            ...(app.logo_url && { iconUrl: app.logo_url }),
-            ...(hasRating && { averageRating: String(app.average_rating) }),
-            ...(hasCount && { ratingCount: app.rating_count }),
-            ...(app.pricing_hint && { pricingHint: app.pricing_hint }),
+            name: sql`excluded.name`,
+            isBuiltForShopify: sql`excluded.is_built_for_shopify`,
+            appCardSubtitle: sql`excluded.app_card_subtitle`,
+            iconUrl: sql`COALESCE(excluded.icon_url, ${apps.iconUrl})`,
+            averageRating: sql`COALESCE(excluded.average_rating, ${apps.averageRating})`,
+            ratingCount: sql`COALESCE(excluded.rating_count, ${apps.ratingCount})`,
+            pricingHint: sql`COALESCE(excluded.pricing_hint, ${apps.pricingHint})`,
             updatedAt: now,
           },
         })
-        .returning({ id: apps.id });
+        .returning({ id: apps.id, slug: apps.slug });
 
-      // Record ranking with global position across pages
-      // onConflictDoNothing prevents duplicates from concurrent scrapes (R-40)
-      const position = clampPosition(positionOffset + (app.position || i + 1));
-      if (position != null) {
-        await this.db.insert(appCategoryRankings).values({
-          appId: upsertedApp.id,
-          categorySlug,
-          scrapeRunId: runId,
-          scrapedAt: now,
-          position,
-        }).onConflictDoNothing();
+      for (const row of upsertedApps) {
+        slugToIdMap.set(row.slug, row.id);
       }
     }
+
+    // Batch insert rankings in chunks
+    const rankingValues: { appId: number; categorySlug: string; scrapeRunId: string; scrapedAt: Date; position: number }[] = [];
+    for (let i = 0; i < appList.length; i++) {
+      const app = appList[i];
+      const appSlug = app.app_url.replace("https://apps.shopify.com/", "");
+      const appId = slugToIdMap.get(appSlug);
+      if (!appId) continue;
+      const position = clampPosition(positionOffset + (app.position || i + 1));
+      if (position != null) {
+        rankingValues.push({ appId, categorySlug, scrapeRunId: runId, scrapedAt: now, position });
+      }
+    }
+    for (let c = 0; c < rankingValues.length; c += 100) {
+      const chunk = rankingValues.slice(c, c + 100);
+      await this.db.insert(appCategoryRankings).values(chunk).onConflictDoNothing();
+    }
+
+    return slugToIdMap;
   }
 
   /**
    * Record category ad sightings for sponsored apps.
+   * Uses slugToIdMap from recordAppRankings to avoid extra SELECT queries.
    */
   private async recordCategoryAdSightings(
     appList: { app_url: string; is_sponsored?: boolean }[],
     categoryId: number,
-    runId: string
+    runId: string,
+    slugToIdMap?: Map<string, number>
   ): Promise<void> {
     const sponsoredApps = appList.filter((a) => a.is_sponsored);
+    if (sponsoredApps.length === 0) return;
+
     log.info("recording category ad sightings", {
       categoryId,
       totalApps: appList.length,
@@ -799,44 +818,41 @@ export class CategoryScraper {
     });
     const todayStr = new Date().toISOString().slice(0, 10);
 
-    for (const app of appList) {
-      if (!app.is_sponsored) continue;
+    // Resolve app IDs — use map if available, otherwise batch-fetch
+    let resolvedMap = slugToIdMap;
+    if (!resolvedMap || resolvedMap.size === 0) {
+      resolvedMap = new Map();
+      const slugs = sponsoredApps.map(a => a.app_url.replace("https://apps.shopify.com/", "")).filter(Boolean);
+      if (slugs.length > 0) {
+        const rows = await this.db.select({ id: apps.id, slug: apps.slug }).from(apps).where(inArray(apps.slug, slugs));
+        for (const r of rows) resolvedMap.set(r.slug, r.id);
+      }
+    }
+
+    // Batch insert ad sightings
+    const sightingValues: { appId: number; categoryId: number; seenDate: string; firstSeenRunId: string; lastSeenRunId: string; timesSeenInDay: number }[] = [];
+    for (const app of sponsoredApps) {
       const appSlug = app.app_url.replace("https://apps.shopify.com/", "");
-      if (!appSlug) continue;
+      const appId = resolvedMap.get(appSlug);
+      if (!appId) continue;
+      sightingValues.push({ appId, categoryId, seenDate: todayStr, firstSeenRunId: runId, lastSeenRunId: runId, timesSeenInDay: 1 });
+    }
 
-      // Look up the app ID
-      const [appRecord] = await this.db
-        .select({ id: apps.id })
-        .from(apps)
-        .where(eq(apps.slug, appSlug))
-        .limit(1);
-
-      if (!appRecord) continue;
-
+    for (let c = 0; c < sightingValues.length; c += 100) {
+      const chunk = sightingValues.slice(c, c + 100);
       await this.db
         .insert(categoryAdSightings)
-        .values({
-          appId: appRecord.id,
-          categoryId,
-          seenDate: todayStr,
-          firstSeenRunId: runId,
-          lastSeenRunId: runId,
-          timesSeenInDay: 1,
-        })
+        .values(chunk)
         .onConflictDoUpdate({
-          target: [
-            categoryAdSightings.appId,
-            categoryAdSightings.categoryId,
-            categoryAdSightings.seenDate,
-          ],
+          target: [categoryAdSightings.appId, categoryAdSightings.categoryId, categoryAdSightings.seenDate],
           set: {
             lastSeenRunId: runId,
             timesSeenInDay: sql`${categoryAdSightings.timesSeenInDay} + 1`,
           },
         });
-
-      this.categoryAdSightingsCount++;
     }
+
+    this.categoryAdSightingsCount += sightingValues.length;
   }
 
   /**
@@ -846,38 +862,42 @@ export class CategoryScraper {
   private async ensureAppRecords(
     appList: { app_url: string; name: string; short_description?: string; is_built_for_shopify?: boolean; is_sponsored?: boolean; logo_url?: string; average_rating?: number; rating_count?: number; pricing_hint?: string }[]
   ): Promise<void> {
+    if (appList.length === 0) return;
     const now = new Date();
-    for (const app of appList) {
-      const appSlug = app.app_url.replace("https://apps.shopify.com/", "");
-      const subtitle = app.is_sponsored ? undefined : (app.short_description || undefined);
-      const validRating2 = clampRating(app.average_rating);
-      const hasRating = validRating2 != null && validRating2 > 0;
-      const validCount2 = clampCount(app.rating_count);
-      const hasCount = validCount2 != null && validCount2 > 0;
 
+    for (let c = 0; c < appList.length; c += 100) {
+      const chunk = appList.slice(c, c + 100);
       await this.db
         .insert(apps)
-        .values({
-          platform: "shopify",
-          slug: appSlug,
-          name: app.name,
-          isBuiltForShopify: !!app.is_built_for_shopify,
-          appCardSubtitle: subtitle,
-          ...(app.logo_url && { iconUrl: app.logo_url }),
-          ...(hasRating && { averageRating: String(validRating2) }),
-          ...(hasCount && { ratingCount: validCount2 }),
-          ...(app.pricing_hint && { pricingHint: app.pricing_hint }),
-        })
-        .onConflictDoUpdate({
-          target: [apps.platform, apps.slug],
-          set: {
+        .values(chunk.map(app => {
+          const appSlug = app.app_url.replace("https://apps.shopify.com/", "");
+          const subtitle = app.is_sponsored ? undefined : (app.short_description || undefined);
+          const validRating2 = clampRating(app.average_rating);
+          const hasRating = validRating2 != null && validRating2 > 0;
+          const validCount2 = clampCount(app.rating_count);
+          const hasCount = validCount2 != null && validCount2 > 0;
+          return {
+            platform: "shopify" as const,
+            slug: appSlug,
             name: app.name,
             isBuiltForShopify: !!app.is_built_for_shopify,
-            ...(subtitle !== undefined && { appCardSubtitle: subtitle }),
+            appCardSubtitle: subtitle,
             ...(app.logo_url && { iconUrl: app.logo_url }),
             ...(hasRating && { averageRating: String(validRating2) }),
             ...(hasCount && { ratingCount: validCount2 }),
             ...(app.pricing_hint && { pricingHint: app.pricing_hint }),
+          };
+        }))
+        .onConflictDoUpdate({
+          target: [apps.platform, apps.slug],
+          set: {
+            name: sql`excluded.name`,
+            isBuiltForShopify: sql`excluded.is_built_for_shopify`,
+            appCardSubtitle: sql`excluded.app_card_subtitle`,
+            iconUrl: sql`COALESCE(excluded.icon_url, ${apps.iconUrl})`,
+            averageRating: sql`COALESCE(excluded.average_rating, ${apps.averageRating})`,
+            ratingCount: sql`COALESCE(excluded.rating_count, ${apps.ratingCount})`,
+            pricingHint: sql`COALESCE(excluded.pricing_hint, ${apps.pricingHint})`,
             updatedAt: now,
           },
         });
@@ -1068,66 +1088,73 @@ export class CategoryScraper {
     }
 
     const todayStr = new Date().toISOString().slice(0, 10);
+    const now = new Date();
 
+    // Collect all unique apps across sections for batch upsert
+    const allFeaturedApps = sections.flatMap(s => s.apps);
+    if (allFeaturedApps.length === 0) return;
+
+    // Batch upsert app master records
+    const slugToIdMap = new Map<string, number>();
+    for (let c = 0; c < allFeaturedApps.length; c += 100) {
+      const chunk = allFeaturedApps.slice(c, c + 100);
+      const upserted = await this.db
+        .insert(apps)
+        .values(chunk.map(app => ({
+          platform: "shopify" as const,
+          slug: app.slug,
+          name: app.name,
+          iconUrl: app.iconUrl || null,
+        })))
+        .onConflictDoUpdate({
+          target: [apps.platform, apps.slug],
+          set: {
+            name: sql`excluded.name`,
+            iconUrl: sql`COALESCE(excluded.icon_url, ${apps.iconUrl})`,
+            updatedAt: now,
+          },
+        })
+        .returning({ id: apps.id, slug: apps.slug });
+      for (const r of upserted) slugToIdMap.set(r.slug, r.id);
+    }
+
+    // Batch insert featured sightings
+    const sightingValues: { appId: number; surface: string; surfaceDetail: string; sectionHandle: string; sectionTitle: string; position: number | null; seenDate: string; firstSeenRunId: string; lastSeenRunId: string; timesSeenInDay: number }[] = [];
     for (const section of sections) {
       for (const app of section.apps) {
-        // Upsert app master record
-        const [upsertedApp] = await this.db
-          .insert(apps)
-          .values({
-            platform: "shopify",
-            slug: app.slug,
-            name: app.name,
-            iconUrl: app.iconUrl || null,
-          })
-          .onConflictDoUpdate({
-            target: [apps.platform, apps.slug],
-            set: {
-              name: app.name,
-              ...(app.iconUrl ? { iconUrl: app.iconUrl } : {}),
-              updatedAt: new Date(),
-            },
-          })
-          .returning({ id: apps.id });
-
-        // Upsert featured sighting
-        await this.db
-          .insert(featuredAppSightings)
-          .values({
-            appId: upsertedApp.id,
-            surface: section.surface,
-            surfaceDetail: section.surfaceDetail,
-            sectionHandle: section.sectionHandle,
-            sectionTitle: section.sectionTitle,
-            position: app.position,
-            seenDate: todayStr,
-            firstSeenRunId: runId,
-            lastSeenRunId: runId,
-            timesSeenInDay: 1,
-          })
-          .onConflictDoUpdate({
-            target: [
-              featuredAppSightings.appId,
-              featuredAppSightings.sectionHandle,
-              featuredAppSightings.surfaceDetail,
-              featuredAppSightings.seenDate,
-            ],
-            set: {
-              lastSeenRunId: runId,
-              position: app.position,
-              sectionTitle: section.sectionTitle,
-              timesSeenInDay: sql`${featuredAppSightings.timesSeenInDay} + 1`,
-            },
-          });
-
-        this.featuredSightingsCount++;
+        const appId = slugToIdMap.get(app.slug);
+        if (!appId) continue;
+        sightingValues.push({
+          appId, surface: section.surface, surfaceDetail: section.surfaceDetail,
+          sectionHandle: section.sectionHandle, sectionTitle: section.sectionTitle,
+          position: app.position, seenDate: todayStr, firstSeenRunId: runId,
+          lastSeenRunId: runId, timesSeenInDay: 1,
+        });
       }
     }
+
+    for (let c = 0; c < sightingValues.length; c += 100) {
+      const chunk = sightingValues.slice(c, c + 100);
+      await this.db
+        .insert(featuredAppSightings)
+        .values(chunk)
+        .onConflictDoUpdate({
+          target: [featuredAppSightings.appId, featuredAppSightings.sectionHandle, featuredAppSightings.surfaceDetail, featuredAppSightings.seenDate],
+          set: {
+            lastSeenRunId: runId,
+            position: sql`excluded.position`,
+            sectionTitle: sql`excluded.section_title`,
+            timesSeenInDay: sql`${featuredAppSightings.timesSeenInDay} + 1`,
+          },
+        });
+    }
+
+    this.featuredSightingsCount += sightingValues.length;
 
     log.info("recorded featured sightings", {
       url: pageUrl,
       sections: sections.length,
-      sightings: sections.reduce((sum, s) => sum + s.apps.length, 0),
+      sightings: sightingValues.length,
     });
   }
 
