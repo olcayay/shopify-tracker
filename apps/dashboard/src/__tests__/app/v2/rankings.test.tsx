@@ -28,6 +28,10 @@ vi.mock("@/components/data-freshness", () => ({
   ),
 }));
 
+vi.mock("@/components/rankings-date-picker", () => ({
+  RankingsDatePicker: () => <div data-testid="rankings-date-picker" />,
+}));
+
 import V2RankingsPage from "@/app/(dashboard)/[platform]/apps/v2/[slug]/visibility/rankings/page";
 
 function renderAsync(jsx: Promise<React.JSX.Element>) {
@@ -35,6 +39,7 @@ function renderAsync(jsx: Promise<React.JSX.Element>) {
 }
 
 const params = Promise.resolve({ platform: "shopify", slug: "test-app" });
+const emptySearchParams = Promise.resolve({});
 
 describe("V2RankingsPage", () => {
   beforeEach(() => {
@@ -43,18 +48,18 @@ describe("V2RankingsPage", () => {
 
   it("shows 'No ranking data yet' when no rankings", async () => {
     mockGetAppRankings.mockResolvedValue({});
-    await renderAsync(V2RankingsPage({ params }));
+    await renderAsync(V2RankingsPage({ params, searchParams: emptySearchParams }));
     expect(screen.getByText(/No ranking data yet/)).toBeInTheDocument();
   });
 
   it("renders Category Rankings card when data exists", async () => {
     mockGetAppRankings.mockResolvedValue({
       categoryRankings: [
-        { categorySlug: "tools", categoryTitle: "Tools", position: 5, scrapedAt: "2026-03-01" },
+        { categorySlug: "tools", categoryTitle: "Tools", position: 5, scrapedAt: "2026-04-01" },
       ],
       keywordRankings: [],
     });
-    await renderAsync(V2RankingsPage({ params }));
+    await renderAsync(V2RankingsPage({ params, searchParams: emptySearchParams }));
     expect(screen.getByText("Category Rankings")).toBeInTheDocument();
   });
 
@@ -62,10 +67,10 @@ describe("V2RankingsPage", () => {
     mockGetAppRankings.mockResolvedValue({
       categoryRankings: [],
       keywordRankings: [
-        { keyword: "pos", keywordSlug: "pos", position: 3, scrapedAt: "2026-03-01" },
+        { keyword: "pos", keywordSlug: "pos", position: 3, scrapedAt: "2026-04-01" },
       ],
     });
-    await renderAsync(V2RankingsPage({ params }));
+    await renderAsync(V2RankingsPage({ params, searchParams: emptySearchParams }));
     expect(screen.getByText("Keyword Rankings")).toBeInTheDocument();
   });
 
@@ -76,19 +81,19 @@ describe("V2RankingsPage", () => {
       ],
       keywordRankings: [],
     });
-    await renderAsync(V2RankingsPage({ params }));
+    await renderAsync(V2RankingsPage({ params, searchParams: emptySearchParams }));
     expect(screen.getByTestId("data-freshness")).toBeInTheDocument();
   });
 
   it("calls getAppRankings with correct params", async () => {
     mockGetAppRankings.mockResolvedValue({});
-    await renderAsync(V2RankingsPage({ params }));
+    await renderAsync(V2RankingsPage({ params, searchParams: emptySearchParams }));
     expect(mockGetAppRankings).toHaveBeenCalledWith("test-app", 30, "shopify");
   });
 
   it("handles API error gracefully (shows no data message)", async () => {
     mockGetAppRankings.mockRejectedValue(new Error("fail"));
-    await renderAsync(V2RankingsPage({ params }));
+    await renderAsync(V2RankingsPage({ params, searchParams: emptySearchParams }));
     expect(screen.getByText(/No ranking data yet/)).toBeInTheDocument();
   });
 
@@ -96,11 +101,28 @@ describe("V2RankingsPage", () => {
     mockGetAppRankings.mockResolvedValue({
       categoryRankings: [],
       keywordRankings: [
-        { keyword: "pos", keywordSlug: "pos", position: 3, scrapedAt: "2026-03-01" },
-        { keyword: "checkout", keywordSlug: "checkout", position: 7, scrapedAt: "2026-03-01" },
+        { keyword: "pos", keywordSlug: "pos", position: 3, scrapedAt: "2026-04-01" },
+        { keyword: "checkout", keywordSlug: "checkout", position: 7, scrapedAt: "2026-04-01" },
       ],
     });
-    await renderAsync(V2RankingsPage({ params }));
+    await renderAsync(V2RankingsPage({ params, searchParams: emptySearchParams }));
     expect(screen.getByText("2 entries")).toBeInTheDocument();
+  });
+
+  it("renders the shared rankings date picker", async () => {
+    mockGetAppRankings.mockResolvedValue({});
+    await renderAsync(V2RankingsPage({ params, searchParams: emptySearchParams }));
+    expect(screen.getByTestId("rankings-date-picker")).toBeInTheDocument();
+  });
+
+  it("uses the selected preset days from search params", async () => {
+    mockGetAppRankings.mockResolvedValue({});
+    await renderAsync(
+      V2RankingsPage({
+        params,
+        searchParams: Promise.resolve({ days: "90" }),
+      })
+    );
+    expect(mockGetAppRankings).toHaveBeenCalledWith("test-app", 90, "shopify");
   });
 });

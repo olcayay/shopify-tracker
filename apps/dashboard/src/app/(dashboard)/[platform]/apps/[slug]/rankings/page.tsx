@@ -15,20 +15,47 @@ import {
 import { RankingChart } from "@/components/ranking-chart";
 import { AdHeatmap } from "@/components/ad-heatmap";
 import { DataFreshness } from "@/components/data-freshness";
+import { RankingsDatePicker } from "@/components/rankings-date-picker";
+import {
+  getRankingsDateRangeFromSearchParams,
+  getRankingsFetchDays,
+  isDateWithinRange,
+} from "@/lib/rankings-date-range";
 
 export default async function RankingsPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ platform: string; slug: string }>;
+  searchParams: Promise<{ days?: string; from?: string; to?: string }>;
 }) {
   const { platform, slug } = await params;
+  const resolvedSearchParams = await searchParams;
+  const dateRange = getRankingsDateRangeFromSearchParams(resolvedSearchParams);
 
   let rankings: any;
   try {
-    rankings = await getAppRankings(slug, 30, platform as PlatformId);
+    rankings = await getAppRankings(
+      slug,
+      getRankingsFetchDays(dateRange),
+      platform as PlatformId
+    );
   } catch {
     rankings = {};
   }
+
+  rankings = {
+    ...rankings,
+    categoryRankings: (rankings?.categoryRankings || []).filter((ranking: any) =>
+      isDateWithinRange(ranking.scrapedAt, dateRange.from, dateRange.to)
+    ),
+    keywordRankings: (rankings?.keywordRankings || []).filter((ranking: any) =>
+      isDateWithinRange(ranking.scrapedAt, dateRange.from, dateRange.to)
+    ),
+    keywordAds: (rankings?.keywordAds || []).filter((ad: any) =>
+      isDateWithinRange(ad.seenDate, dateRange.from, dateRange.to)
+    ),
+  };
 
   // Group keyword ads
   const adsByKeyword = new Map<string, { keyword: string; keywordSlug: string; lastSeen: string; totalSightings: number; sightings: any[] }>();
@@ -60,7 +87,10 @@ export default async function RankingsPage({
 
   return (
     <div className="space-y-4">
-      <DataFreshness dateStr={latestRanking?.scrapedAt} />
+      <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+        <DataFreshness dateStr={latestRanking?.scrapedAt} />
+        <RankingsDatePicker className="w-full lg:w-auto lg:min-w-[420px]" />
+      </div>
       {rankings?.categoryRankings?.length > 0 && (
         <Card>
           <CardHeader>
