@@ -3,10 +3,12 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useRouter, useParams } from "next/navigation";
 import { Command } from "cmdk";
-import { Search, BarChart3, Key, Globe, Settings, Home, Star, Plus, UserPlus } from "lucide-react";
+import { Search, BarChart3, Key, Globe, Settings, Home, Star, Plus, UserPlus, Users } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
 import { getPlatformColor, PLATFORM_DISPLAY } from "@/lib/platform-display";
+import { PlatformBadgeCell } from "@/components/platform-badge-cell";
 import { toast } from "sonner";
+import type { PlatformId } from "@appranks/shared";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -30,6 +32,13 @@ interface AppResult {
   pricingHint: string | null;
 }
 
+interface DeveloperResult {
+  id: number;
+  slug: string;
+  name: string;
+  platforms: string[];
+}
+
 // ---------------------------------------------------------------------------
 // Static pages
 // ---------------------------------------------------------------------------
@@ -38,6 +47,7 @@ const PAGES: PageResult[] = [
   { id: "overview", label: "Overview", href: "/overview", icon: <Home className="h-4 w-4" />, group: "Pages" },
   { id: "apps", label: "Tracked Apps", href: "/apps", icon: <BarChart3 className="h-4 w-4" />, group: "Pages" },
   { id: "competitors", label: "Competitors", href: "/competitors", icon: <Globe className="h-4 w-4" />, group: "Pages" },
+  { id: "developers", label: "Developers", href: "/developers", icon: <Users className="h-4 w-4" />, group: "Pages" },
   { id: "settings", label: "Settings", href: "/settings", icon: <Settings className="h-4 w-4" />, group: "Pages" },
   { id: "pricing", label: "Pricing", href: "/pricing", icon: <BarChart3 className="h-4 w-4" />, group: "Pages" },
 ];
@@ -50,6 +60,7 @@ export function CommandPalette() {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
   const [appResults, setAppResults] = useState<AppResult[]>([]);
+  const [developerResults, setDeveloperResults] = useState<DeveloperResult[]>([]);
   const [loading, setLoading] = useState(false);
   const { fetchWithAuth, user } = useAuth();
   const router = useRouter();
@@ -75,23 +86,39 @@ export function CommandPalette() {
     return () => document.removeEventListener("keydown", handleKeyDown);
   }, []);
 
-  // Search apps when query changes (cross-platform via public search)
-  const searchApps = useCallback((q: string) => {
+  // Sync body attribute so PlatformSwitcher can detect when palette is open
+  useEffect(() => {
+    if (open) {
+      document.body.setAttribute("data-command-palette-open", "");
+    } else {
+      document.body.removeAttribute("data-command-palette-open");
+    }
+    return () => document.body.removeAttribute("data-command-palette-open");
+  }, [open]);
+
+  // Search apps + developers when query changes
+  const searchAll = useCallback((q: string) => {
     if (debounceRef.current) clearTimeout(debounceRef.current);
     if (q.length < 2) {
       setAppResults([]);
+      setDeveloperResults([]);
       setLoading(false);
       return;
     }
     setLoading(true);
     debounceRef.current = setTimeout(async () => {
       try {
-        const res = await fetchRef.current(
-          `/api/public/apps/search?q=${encodeURIComponent(q)}&limit=10`
-        );
-        if (res.ok) {
-          const data = await res.json();
+        const [appsRes, devsRes] = await Promise.all([
+          fetchRef.current(`/api/public/apps/search?q=${encodeURIComponent(q)}&limit=10`),
+          fetchRef.current(`/api/developers?search=${encodeURIComponent(q)}&limit=5`),
+        ]);
+        if (appsRes.ok) {
+          const data = await appsRes.json();
           setAppResults(Array.isArray(data) ? data : []);
+        }
+        if (devsRes.ok) {
+          const data = await devsRes.json();
+          setDeveloperResults(data.developers ?? []);
         }
       } catch {
         /* ignore */
@@ -102,8 +129,8 @@ export function CommandPalette() {
   }, []);
 
   useEffect(() => {
-    searchApps(query);
-  }, [query, searchApps]);
+    searchAll(query);
+  }, [query, searchAll]);
 
   async function handleTrack(app: AppResult, e: React.MouseEvent) {
     e.stopPropagation();
@@ -130,59 +157,59 @@ export function CommandPalette() {
 
   if (!open) return null;
 
+  const hasSearchResults = appResults.length > 0 || developerResults.length > 0;
+  const isSearching = query.length >= 2;
+
   return (
-    <div className="fixed inset-0 z-50">
+    <div className="fixed inset-0 z-50" data-command-palette-open>
       <div className="fixed inset-0 bg-black/50" onClick={() => setOpen(false)} />
       <div className="fixed top-[20%] left-1/2 -translate-x-1/2 w-full max-w-lg">
         <Command
           className="rounded-lg border bg-background shadow-lg overflow-hidden"
-          shouldFilter={appResults.length === 0}
+          shouldFilter={!isSearching}
         >
           <div className="flex items-center border-b px-3">
             <Search className="h-4 w-4 shrink-0 text-muted-foreground" />
             <Command.Input
               value={query}
               onValueChange={setQuery}
-              placeholder="Search apps across all platforms..."
+              placeholder="Search apps and developers..."
               className="flex h-10 w-full bg-transparent py-3 px-2 text-sm outline-none placeholder:text-muted-foreground"
             />
           </div>
           <Command.List className="max-h-80 overflow-y-auto p-1">
-            {!loading && (
+            {!loading && isSearching && !hasSearchResults && (
               <Command.Empty className="py-6 text-center text-sm text-muted-foreground">
                 No results found.
               </Command.Empty>
             )}
 
-            {loading && appResults.length === 0 && (
+            {loading && !hasSearchResults && (
               <div className="py-6 text-center text-sm text-muted-foreground">
                 Searching...
               </div>
             )}
 
-            {/* Pages */}
-            {(() => {
-              const items = PAGES;
-              return (
-                <Command.Group heading="Pages" className="px-1 py-1.5 text-xs font-medium text-muted-foreground">
-                  {items.map((result) => (
-                    <Command.Item
-                      key={result.id}
-                      value={result.label}
-                      onSelect={() => {
-                        setOpen(false);
-                        setQuery("");
-                        router.push(result.href);
-                      }}
-                      className="flex items-center gap-2 rounded-md px-2 py-1.5 text-sm cursor-pointer aria-selected:bg-accent"
-                    >
-                      {result.icon}
-                      {result.label}
-                    </Command.Item>
-                  ))}
-                </Command.Group>
-              );
-            })()}
+            {/* Pages — hidden when search results are displayed */}
+            {!isSearching && (
+              <Command.Group heading="Pages" className="px-1 py-1.5 text-xs font-medium text-muted-foreground">
+                {PAGES.map((result) => (
+                  <Command.Item
+                    key={result.id}
+                    value={result.label}
+                    onSelect={() => {
+                      setOpen(false);
+                      setQuery("");
+                      router.push(result.href);
+                    }}
+                    className="flex items-center gap-2 rounded-md px-2 py-1.5 text-sm cursor-pointer aria-selected:bg-accent"
+                  >
+                    {result.icon}
+                    {result.label}
+                  </Command.Item>
+                ))}
+              </Command.Group>
+            )}
 
             {/* App Results */}
             {appResults.length > 0 && (
@@ -212,19 +239,9 @@ export function CommandPalette() {
                         <div className="h-6 w-6 rounded bg-muted shrink-0" />
                       )}
 
-                      {/* App name + platform */}
+                      {/* App name + rating */}
                       <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-1.5">
-                          <span className="truncate font-medium">{app.name}</span>
-                          <span className="inline-flex items-center gap-1 text-[10px] text-muted-foreground shrink-0">
-                            <span
-                              className="w-1.5 h-1.5 rounded-full"
-                              style={{ backgroundColor: color }}
-                            />
-                            {platformLabel}
-                          </span>
-                        </div>
-                        {/* Rating */}
+                        <span className="truncate font-medium block">{app.name}</span>
                         {app.averageRating != null && (
                           <div className="flex items-center gap-1 text-[10px] text-muted-foreground">
                             <Star className="h-2.5 w-2.5 fill-yellow-400 text-yellow-400" />
@@ -235,6 +252,15 @@ export function CommandPalette() {
                           </div>
                         )}
                       </div>
+
+                      {/* Platform badge — right-aligned */}
+                      <span className="inline-flex items-center gap-1 text-[10px] text-muted-foreground shrink-0 ml-auto">
+                        <span
+                          className="w-1.5 h-1.5 rounded-full"
+                          style={{ backgroundColor: color }}
+                        />
+                        {platformLabel}
+                      </span>
 
                       {/* Action buttons */}
                       {canEdit && (
@@ -251,6 +277,37 @@ export function CommandPalette() {
                     </Command.Item>
                   );
                 })}
+              </Command.Group>
+            )}
+
+            {/* Developer Results */}
+            {developerResults.length > 0 && (
+              <Command.Group heading="Developers" className="px-1 py-1.5 text-xs font-medium text-muted-foreground">
+                {developerResults.map((dev) => (
+                  <Command.Item
+                    key={`dev-${dev.id}`}
+                    value={`developer ${dev.name}`}
+                    onSelect={() => {
+                      setOpen(false);
+                      setQuery("");
+                      router.push(`/developers/${dev.slug}`);
+                    }}
+                    className="flex items-center gap-2 rounded-md px-2 py-1.5 text-sm cursor-pointer aria-selected:bg-accent"
+                  >
+                    <Users className="h-4 w-4 text-muted-foreground shrink-0" />
+                    <span className="truncate font-medium flex-1 min-w-0">{dev.name}</span>
+                    <div className="flex items-center gap-1 shrink-0">
+                      {dev.platforms.slice(0, 3).map((p) => (
+                        <PlatformBadgeCell key={p} platform={p} size="sm" />
+                      ))}
+                      {dev.platforms.length > 3 && (
+                        <span className="text-[10px] text-muted-foreground">
+                          +{dev.platforms.length - 3}
+                        </span>
+                      )}
+                    </div>
+                  </Command.Item>
+                ))}
               </Command.Group>
             )}
           </Command.List>

@@ -48,10 +48,12 @@ export function PlatformSwitcher() {
     }
   }, [filtered.length, selectedIndex]);
 
-  // Cmd+K listener
+  // Cmd+K listener — defer to CommandPalette when it's open
   const handleKeyDown = useCallback(
     (e: KeyboardEvent) => {
       if ((e.metaKey || e.ctrlKey) && e.key === "k") {
+        // CommandPalette sets this attribute in capture phase; skip if present
+        if (document.body.hasAttribute("data-command-palette-open")) return;
         e.preventDefault();
         setOpen((v) => !v);
       }

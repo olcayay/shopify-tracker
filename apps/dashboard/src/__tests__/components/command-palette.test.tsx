@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach, beforeAll } from "vitest";
+import { describe, it, expect, vi, beforeEach, beforeAll, afterEach } from "vitest";
 import { render, screen, waitFor, fireEvent } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import React from "react";
@@ -50,38 +50,86 @@ const MOCK_APPS = [
   },
 ];
 
+const MOCK_DEVELOPERS = [
+  { id: 1, slug: "jotform", name: "Jotform", platforms: ["shopify", "wix"] },
+  { id: 2, slug: "acme-inc", name: "Acme Inc", platforms: ["salesforce"] },
+];
+
+const PLACEHOLDER = "Search apps and developers...";
+
+function mockFetchResponses() {
+  mockFetchWithAuth.mockImplementation((url: string) => {
+    if (url.includes("/api/public/apps/search")) {
+      return Promise.resolve({ ok: true, json: () => Promise.resolve(MOCK_APPS) });
+    }
+    if (url.includes("/api/developers")) {
+      return Promise.resolve({ ok: true, json: () => Promise.resolve({ developers: MOCK_DEVELOPERS }) });
+    }
+    return Promise.resolve({ ok: true, json: () => Promise.resolve([]) });
+  });
+}
+
 describe("CommandPalette", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mockFetchWithAuth.mockResolvedValue({
-      ok: true,
-      json: () => Promise.resolve(MOCK_APPS),
-    });
+    mockFetchResponses();
+  });
+
+  afterEach(() => {
+    document.body.removeAttribute("data-command-palette-open");
   });
 
   it("does not render when not open", () => {
     render(<CommandPalette />);
-    expect(screen.queryByPlaceholderText("Search apps across all platforms...")).not.toBeInTheDocument();
+    expect(screen.queryByPlaceholderText(PLACEHOLDER)).not.toBeInTheDocument();
   });
 
   it("opens on Cmd+K", async () => {
     render(<CommandPalette />);
     fireEvent.keyDown(document, { key: "k", metaKey: true });
-    expect(screen.getByPlaceholderText("Search apps across all platforms...")).toBeInTheDocument();
+    expect(screen.getByPlaceholderText(PLACEHOLDER)).toBeInTheDocument();
   });
 
-  it("shows page results", async () => {
+  it("sets data-command-palette-open on body when open", async () => {
+    render(<CommandPalette />);
+    expect(document.body.hasAttribute("data-command-palette-open")).toBe(false);
+    fireEvent.keyDown(document, { key: "k", metaKey: true });
+    await waitFor(() => {
+      expect(document.body.hasAttribute("data-command-palette-open")).toBe(true);
+    });
+  });
+
+  it("shows page results including Developers", async () => {
     render(<CommandPalette />);
     fireEvent.keyDown(document, { key: "k", metaKey: true });
     expect(screen.getByText("Overview")).toBeInTheDocument();
     expect(screen.getByText("Settings")).toBeInTheDocument();
+    expect(screen.getByText("Developers")).toBeInTheDocument();
+  });
+
+  it("hides pages when search results are displayed", async () => {
+    render(<CommandPalette />);
+    fireEvent.keyDown(document, { key: "k", metaKey: true });
+
+    // Pages visible initially
+    expect(screen.getByText("Overview")).toBeInTheDocument();
+
+    const input = screen.getByPlaceholderText(PLACEHOLDER);
+    await userEvent.type(input, "slack");
+
+    await waitFor(() => {
+      expect(screen.getByText("Slack")).toBeInTheDocument();
+    });
+
+    // Pages should be hidden
+    expect(screen.queryByText("Overview")).not.toBeInTheDocument();
   });
 
   it("searches apps across platforms with results", async () => {
     render(<CommandPalette />);
     fireEvent.keyDown(document, { key: "k", metaKey: true });
 
-    const input = screen.getByPlaceholderText("Search apps across all platforms...");
+    const input = screen.getByPlaceholderText(PLACEHOLDER);
     await userEvent.type(input, "slack");
 
     await waitFor(() => {
@@ -96,16 +144,36 @@ describe("CommandPalette", () => {
     });
   });
 
+  it("searches developers alongside apps", async () => {
+    render(<CommandPalette />);
+    fireEvent.keyDown(document, { key: "k", metaKey: true });
+
+    const input = screen.getByPlaceholderText(PLACEHOLDER);
+    await userEvent.type(input, "jotform");
+
+    await waitFor(() => {
+      expect(mockFetchWithAuth).toHaveBeenCalledWith(
+        expect.stringContaining("/api/developers?search=jotform")
+      );
+    });
+
+    await waitFor(() => {
+      expect(screen.getByText("Jotform")).toBeInTheDocument();
+      expect(screen.getByText("Acme Inc")).toBeInTheDocument();
+    });
+  });
+
   it("shows platform badges on results", async () => {
     render(<CommandPalette />);
     fireEvent.keyDown(document, { key: "k", metaKey: true });
 
-    const input = screen.getByPlaceholderText("Search apps across all platforms...");
+    const input = screen.getByPlaceholderText(PLACEHOLDER);
     await userEvent.type(input, "test");
 
     await waitFor(() => {
-      expect(screen.getByText("Shopify")).toBeInTheDocument();
-      expect(screen.getByText("Salesforce")).toBeInTheDocument();
+      // Platform badges appear in both app results and developer results
+      expect(screen.getAllByText("Shopify").length).toBeGreaterThanOrEqual(1);
+      expect(screen.getAllByText("Salesforce").length).toBeGreaterThanOrEqual(1);
     });
   });
 
@@ -113,7 +181,7 @@ describe("CommandPalette", () => {
     render(<CommandPalette />);
     fireEvent.keyDown(document, { key: "k", metaKey: true });
 
-    const input = screen.getByPlaceholderText("Search apps across all platforms...");
+    const input = screen.getByPlaceholderText(PLACEHOLDER);
     await userEvent.type(input, "slack");
 
     await waitFor(() => {
@@ -129,7 +197,7 @@ describe("CommandPalette", () => {
     render(<CommandPalette />);
     fireEvent.keyDown(document, { key: "k", metaKey: true });
 
-    const input = screen.getByPlaceholderText("Search apps across all platforms...");
+    const input = screen.getByPlaceholderText(PLACEHOLDER);
     await userEvent.type(input, "test");
 
     await waitFor(() => {
@@ -142,7 +210,7 @@ describe("CommandPalette", () => {
     render(<CommandPalette />);
     fireEvent.keyDown(document, { key: "k", metaKey: true });
 
-    const input = screen.getByPlaceholderText("Search apps across all platforms...");
+    const input = screen.getByPlaceholderText(PLACEHOLDER);
     await userEvent.type(input, "test");
 
     await waitFor(() => {
@@ -156,7 +224,7 @@ describe("CommandPalette", () => {
     render(<CommandPalette />);
     fireEvent.keyDown(document, { key: "k", metaKey: true });
 
-    const input = screen.getByPlaceholderText("Search apps across all platforms...");
+    const input = screen.getByPlaceholderText(PLACEHOLDER);
     await userEvent.type(input, "a");
 
     // Should not trigger search

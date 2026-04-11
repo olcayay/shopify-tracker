@@ -1,5 +1,6 @@
 Bug Fixes (2026-04-11)
   PLA-994: Fix developers page — empty table caused by query timeout ✅
+  PLA-993: Enhance command palette — developer search, modal overlap fix, hide pages during search ✅
   PLA-992: Fix Competitor Watch card empty state — malformed URL query string ✅
   PLA-989: Fix compute_app_scores — platform-scoped prerequisites + yesterday fallback ✅
   PLA-990: Optimize slow account API endpoints — platform filter + DESC indexes ✅

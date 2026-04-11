@@ -1,6 +1,16 @@
 Bug Fixes (2026-04-11)
 ======================
 
+PLA-993: Enhance command palette — 5 improvements
+- Fix 1: Modal overlap — CommandPalette sets data-command-palette-open on body via useEffect,
+  PlatformSwitcher checks for it before responding to Cmd+K
+- Fix 2: Developer search — parallel fetch to /api/developers?search=&limit=5 alongside app search
+- Fix 3: Added Developers page to PAGES array with Users icon
+- Fix 4: Pages group hidden when search query >= 2 chars (shows only when palette first opens)
+- Fix 5: Platform badge right-aligned in app results (moved out of name container, ml-auto)
+- Added size prop ("sm" | "default") to PlatformBadgeCell for compact developer badges
+- Updated all command palette tests + added 3 new tests (body attribute, developer search, pages hiding)
+
 PLA-994: Fix developers page — table shows empty results
 - Root cause: CTE `dev_apps` joined platform_developers to apps by platform (cross join),
   producing millions of intermediate rows that exceeded 30s statement_timeout on db-f1-micro
