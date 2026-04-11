@@ -31,6 +31,10 @@ import {
   Eye,
 } from "lucide-react";
 import { ConfirmModal } from "@/components/confirm-modal";
+import {
+  buildFeatureCategoryPath,
+  buildFeatureSubcategoryPath,
+} from "@/lib/feature-category-links";
 
 interface FeatureNode {
   handle: string;
@@ -456,7 +460,7 @@ export default function FeaturesPage() {
                         <Folder className="h-4 w-4 text-muted-foreground shrink-0" />
                       )}
                       <Link
-                        href={`/features/category?category=${encodeURIComponent(cat.title)}`}
+                        href={buildFeatureCategoryPath(platform as string, cat.title)}
                         className="text-sm text-primary hover:underline font-medium truncate ml-1"
                         onClick={(e) => e.stopPropagation()}
                       >
@@ -494,7 +498,7 @@ export default function FeaturesPage() {
                                 <Folder className="h-4 w-4 text-muted-foreground shrink-0" />
                               )}
                               <Link
-                                href={`/features/category?${new URLSearchParams({ category: cat.title, subcategory: sub.title }).toString()}`}
+                                href={buildFeatureSubcategoryPath(platform as string, cat.title, sub.title)}
                                 className="text-sm text-primary hover:underline font-medium truncate ml-1"
                                 onClick={(e) => e.stopPropagation()}
                               >

@@ -16,21 +16,27 @@ import { featureRoutes } from "../../routes/features.js";
 const sampleTreeRows = [
   {
     category_title: "Store management",
+    category_url: "https://example.com/store-management",
     subcategory_title: "Inventory",
     feature_handle: "inventory-sync",
     feature_title: "Inventory sync",
+    feature_url: "https://example.com/inventory-sync",
   },
   {
     category_title: "Store management",
+    category_url: "https://example.com/store-management",
     subcategory_title: "Inventory",
     feature_handle: "stock-alerts",
     feature_title: "Stock alerts",
+    feature_url: "https://example.com/stock-alerts",
   },
   {
     category_title: "Marketing",
+    category_url: "https://example.com/marketing",
     subcategory_title: "Email",
     feature_handle: "email-campaigns",
     feature_title: "Email campaigns",
+    feature_url: "https://example.com/email-campaigns",
   },
 ];
 
@@ -239,6 +245,57 @@ describe("Feature routes", () => {
       expect(res.statusCode).toBe(200);
       const body = res.json();
       expect(Array.isArray(body)).toBe(true);
+    });
+  });
+
+  // -----------------------------------------------------------------------
+  // GET /api/features/categories/:slug
+  // -----------------------------------------------------------------------
+
+  describe("GET /api/features/categories/:slug", () => {
+    let app: FastifyInstance;
+
+    beforeAll(async () => {
+      app = await buildTestApp({
+        routes: featureRoutes,
+        prefix: "/api/features",
+        db: { executeResult: sampleTreeRows },
+      });
+    });
+
+    afterAll(async () => {
+      await app.close();
+    });
+
+    it("returns category detail for a matching slug", async () => {
+      const res = await app.inject({
+        method: "GET",
+        url: "/api/features/categories/store-management",
+        headers: authHeaders(userToken()),
+      });
+
+      expect(res.statusCode).toBe(200);
+      const body = res.json();
+      expect(body.slug).toBe("store-management");
+      expect(body.title).toBe("Store management");
+      expect(body.subcategoryCount).toBe(1);
+      expect(body.featureCount).toBe(2);
+      expect(body.subcategories[0]).toEqual({
+        title: "Inventory",
+        featureCount: 2,
+      });
+      expect(body.features[0]).toHaveProperty("subcategoryTitle");
+    });
+
+    it("returns 404 for an unknown category slug", async () => {
+      const res = await app.inject({
+        method: "GET",
+        url: "/api/features/categories/unknown-category",
+        headers: authHeaders(userToken()),
+      });
+
+      expect(res.statusCode).toBe(404);
+      expect(res.json()).toEqual({ error: "Feature category not found" });
     });
   });
 });

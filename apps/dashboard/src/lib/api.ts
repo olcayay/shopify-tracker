@@ -334,6 +334,10 @@ export function getFeaturesByCategory(category?: string, subcategory?: string, p
   return fetchApi<any[]>(withPlatform(`/api/features/by-category?${params.toString()}`, platform));
 }
 
+export function getFeatureCategoryDetail(slug: string, platform?: PlatformId) {
+  return fetchApi<any>(withPlatform(`/api/features/categories/${encodeURIComponent(slug)}`, platform));
+}
+
 // --- Integrations ---
 export function getIntegration(name: string, platform?: PlatformId) {
   return fetchApi<any>(withPlatform(`/api/integrations/${encodeURIComponent(name)}`, platform));

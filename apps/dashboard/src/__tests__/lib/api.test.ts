@@ -534,6 +534,15 @@ describe("API functions", () => {
         expect.any(Object)
       );
     });
+
+    it("getFeatureCategoryDetail fetches by slug", async () => {
+      const { getFeatureCategoryDetail } = await import("@/lib/api");
+      await getFeatureCategoryDetail("chat");
+      expect(global.fetch).toHaveBeenCalledWith(
+        expect.stringContaining("/api/features/categories/chat"),
+        expect.any(Object)
+      );
+    });
   });
 
   describe("Integrations API", () => {

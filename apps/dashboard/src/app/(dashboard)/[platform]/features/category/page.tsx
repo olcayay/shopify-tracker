@@ -12,6 +12,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { StarFeatureButton } from "../[handle]/track-button";
+import { buildFeatureCategoryPath } from "@/lib/feature-category-links";
 
 export default async function FeaturesByCategoryPage({
   params,
@@ -55,7 +56,7 @@ export default async function FeaturesByCategoryPage({
           {category && subcategory ? (
             <>
               <Link
-                href={`/${platform}/features/category?category=${encodeURIComponent(category)}`}
+                href={buildFeatureCategoryPath(platform, category)}
                 className="hover:underline"
               >
                 {category}

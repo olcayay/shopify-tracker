@@ -6,8 +6,99 @@ import {
   accountTrackedFeatures,
 } from "@appranks/db";
 import { cacheGet } from "../utils/cache.js";
+import { slugifyTitle } from "../utils/slugify.js";
 
 const FEATURE_TREE_TTL = 43200; // 12 hours
+
+type FeatureCategoryTreeNode = {
+  title: string;
+  slug: string;
+  url: string | null;
+  subcategories: {
+    title: string;
+    features: {
+      handle: string;
+      title: string;
+      url: string | null;
+    }[];
+  }[];
+};
+
+async function getFeatureTree(db: any): Promise<FeatureCategoryTreeNode[]> {
+  return cacheGet("features:tree:full", async () => {
+    const rows = await db.execute(sql`
+      SELECT DISTINCT
+        cat->>'title' AS category_title,
+        cat->>'url' AS category_url,
+        sub->>'title' AS subcategory_title,
+        f->>'feature_handle' AS feature_handle,
+        f->>'title' AS feature_title,
+        f->>'url' AS feature_url
+      FROM (
+        SELECT DISTINCT ON (app_id) categories
+        FROM app_snapshots
+        ORDER BY app_id, scraped_at DESC
+      ) latest,
+      jsonb_array_elements(latest.categories) AS cat,
+      jsonb_array_elements(cat->'subcategories') AS sub,
+      jsonb_array_elements(sub->'features') AS f
+      ORDER BY category_title, subcategory_title, feature_title
+    `);
+
+    const data = (rows as any).rows ?? rows;
+    const catMap = new Map<string, {
+      title: string;
+      slug: string;
+      url: string | null;
+      subcategories: Map<string, {
+        title: string;
+        features: Map<string, { handle: string; title: string; url: string | null }>;
+      }>;
+    }>();
+
+    for (const row of data) {
+      const categoryTitle = row.category_title;
+      const subcategoryTitle = row.subcategory_title;
+      if (!categoryTitle || !subcategoryTitle || !row.feature_handle || !row.feature_title) continue;
+
+      if (!catMap.has(categoryTitle)) {
+        catMap.set(categoryTitle, {
+          title: categoryTitle,
+          slug: slugifyTitle(categoryTitle),
+          url: row.category_url || null,
+          subcategories: new Map(),
+        });
+      }
+
+      const category = catMap.get(categoryTitle)!;
+      if (!category.subcategories.has(subcategoryTitle)) {
+        category.subcategories.set(subcategoryTitle, {
+          title: subcategoryTitle,
+          features: new Map(),
+        });
+      }
+
+      const subcategory = category.subcategories.get(subcategoryTitle)!;
+      if (!subcategory.features.has(row.feature_handle)) {
+        subcategory.features.set(row.feature_handle, {
+          handle: row.feature_handle,
+          title: row.feature_title,
+          url: row.feature_url || null,
+        });
+      }
+    }
+
+    return Array.from(catMap.values()).map((category) => ({
+      title: category.title,
+      slug: category.slug,
+      url: category.url,
+      subcategories: Array.from(category.subcategories.values()).map((subcategory) => ({
+        title: subcategory.title,
+        features: Array.from(subcategory.features.values()),
+      })),
+    }));
+  }, FEATURE_TREE_TTL);
+}
 
 export const featureRoutes: FastifyPluginAsync = async (app) => {
   const db = app.db;
@@ -15,47 +106,12 @@ export const featureRoutes: FastifyPluginAsync = async (app) => {
   // GET /api/features/tree — all features grouped as category > subcategory > features
   // Cached for 12 hours — changes only when scraper runs
   app.get("/tree", async () => {
-    return cacheGet("features:tree", async () => {
-      const rows = await db.execute(sql`
-        SELECT DISTINCT
-          cat->>'title' AS category_title,
-          sub->>'title' AS subcategory_title,
-          f->>'feature_handle' AS feature_handle,
-          f->>'title' AS feature_title
-        FROM (
-          SELECT DISTINCT ON (app_id) categories
-          FROM app_snapshots
-          ORDER BY app_id, scraped_at DESC
-        ) latest,
-        jsonb_array_elements(latest.categories) AS cat,
-        jsonb_array_elements(cat->'subcategories') AS sub,
-        jsonb_array_elements(sub->'features') AS f
-        ORDER BY category_title, subcategory_title, feature_title
-      `);
-
-      const data = (rows as any).rows ?? rows;
-
-      const catMap = new Map<string, Map<string, { handle: string; title: string }[]>>();
-      for (const row of data) {
-        const cat = row.category_title;
-        const sub = row.subcategory_title;
-        if (!catMap.has(cat)) catMap.set(cat, new Map());
-        const subMap = catMap.get(cat)!;
-        if (!subMap.has(sub)) subMap.set(sub, []);
-        subMap.get(sub)!.push({ handle: row.feature_handle, title: row.feature_title });
-      }
-
-      const tree = [];
-      for (const [catTitle, subMap] of catMap) {
-        const subcategories = [];
-        for (const [subTitle, features] of subMap) {
-          subcategories.push({ title: subTitle, features });
-        }
-        tree.push({ title: catTitle, subcategories });
-      }
-
-      return tree;
-    }, FEATURE_TREE_TTL);
+    const tree = await getFeatureTree(db);
+    return tree.map((category) => ({
+      title: category.title,
+      slug: category.slug,
+      subcategories: category.subcategories,
+    }));
   });
 
   // GET /api/features/search?q= — search features by title
@@ -135,6 +191,40 @@ export const featureRoutes: FastifyPluginAsync = async (app) => {
 
     return (rows as any).rows ?? rows;
   });
+
+  // GET /api/features/categories/:slug — parent feature category detail
+  app.get<{ Params: { slug: string } }>(
+    "/categories/:slug",
+    async (request, reply) => {
+      const { slug } = request.params;
+      const tree = await getFeatureTree(db);
+      const category = tree.find((entry) => entry.slug === slug);
+
+      if (!category) {
+        return reply.code(404).send({ error: "Feature category not found" });
+      }
+
+      const features = category.subcategories.flatMap((subcategory) =>
+        subcategory.features.map((feature) => ({
+          ...feature,
+          subcategoryTitle: subcategory.title,
+        })),
+      );
+
+      return {
+        slug: category.slug,
+        title: category.title,
+        url: category.url,
+        subcategoryCount: category.subcategories.length,
+        featureCount: features.length,
+        subcategories: category.subcategories.map((subcategory) => ({
+          title: subcategory.title,
+          featureCount: subcategory.features.length,
+        })),
+        features,
+      };
+    },
+  );
 
   // GET /api/features/:handle — feature detail + apps that have it
   app.get<{ Params: { handle: string } }>(

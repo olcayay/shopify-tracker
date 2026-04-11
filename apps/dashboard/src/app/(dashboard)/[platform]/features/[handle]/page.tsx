@@ -15,6 +15,10 @@ import {
 import { StarFeatureButton } from "./track-button";
 import { AppListTable } from "@/components/app-list-table";
 import type { PlatformId } from "@appranks/shared";
+import {
+  buildFeatureCategoryPath,
+  buildFeatureSubcategoryPath,
+} from "@/lib/feature-category-links";
 
 export default async function FeatureDetailPage({
   params,
@@ -56,7 +60,7 @@ export default async function FeatureDetailPage({
             <p className="text-sm text-muted-foreground mb-1">
               {feature.categoryTitle && (
                 <Link
-                  href={`/${platform}/features/category?category=${encodeURIComponent(feature.categoryTitle)}`}
+                  href={buildFeatureCategoryPath(platform, feature.categoryTitle)}
                   className="hover:underline hover:text-foreground transition-colors"
                 >
                   {feature.categoryTitle}
@@ -65,7 +69,11 @@ export default async function FeatureDetailPage({
               {feature.categoryTitle && feature.subcategoryTitle && " > "}
               {feature.subcategoryTitle && (
                 <Link
-                  href={`/${platform}/features/category?${new URLSearchParams({ ...(feature.categoryTitle ? { category: feature.categoryTitle } : {}), subcategory: feature.subcategoryTitle }).toString()}`}
+                  href={buildFeatureSubcategoryPath(
+                    platform,
+                    feature.categoryTitle || feature.subcategoryTitle,
+                    feature.subcategoryTitle,
+                  )}
                   className="hover:underline hover:text-foreground transition-colors"
                 >
                   {feature.subcategoryTitle}
