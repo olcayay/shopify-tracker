@@ -106,6 +106,10 @@ export interface PlatformConstants {
   defaultPagesPerCategory: number;
   trackedFields: string[];
   rateLimit: { minDelayMs: number; maxDelayMs: number };
+  /** Max concurrent HTTP requests per HttpClient instance (default: 2) */
+  httpMaxConcurrency?: number;
+  /** Max concurrent app detail scrapes (default: 3) */
+  appDetailsConcurrency?: number;
   /** Max seed categories to crawl in parallel (default: 1 = sequential) */
   concurrentSeedCategories?: number;
 }

@@ -11,7 +11,7 @@ import { KeywordSuggestionScraper } from "./scrapers/keyword-suggestion-scraper.
 import { ReviewScraper } from "./scrapers/review-scraper.js";
 import { HttpClient } from "./http-client.js";
 import { BrowserClient } from "./browser-client.js";
-import { getModule } from "./platforms/registry.js";
+import { getModule, getPlatformConstants } from "./platforms/registry.js";
 import { FallbackTracker } from "./utils/fallback-tracker.js";
 import { createLinearErrorTask } from "./utils/create-linear-error-task.js";
 import { recordSuccess, recordFailure } from "./circuit-breaker.js";
@@ -151,10 +151,12 @@ export function createProcessJob(db: ReturnType<typeof createDb>, queueName?: st
     const opts = job.data.options;
     const pageOptions = opts?.pages !== undefined ? { pages: opts.pages } : undefined;
 
-    // Per-job HttpClient so parallel platforms have independent rate limits
+    // Per-job HttpClient — use platform-specific rate limits when available
+    const platformConstants = getPlatformConstants(platform);
     const httpClient = new HttpClient({
-      delayMs: parseInt(process.env.SCRAPER_DELAY_MS || String(HTTP_DEFAULT_DELAY_MS), 10),
-      maxConcurrency: parseInt(process.env.SCRAPER_MAX_CONCURRENCY || String(HTTP_DEFAULT_MAX_CONCURRENCY), 10),
+      delayMs: parseInt(process.env.SCRAPER_DELAY_MS || String(platformConstants?.rateLimit?.minDelayMs ?? HTTP_DEFAULT_DELAY_MS), 10),
+      maxConcurrency: parseInt(process.env.SCRAPER_MAX_CONCURRENCY || String(platformConstants?.httpMaxConcurrency ?? HTTP_DEFAULT_MAX_CONCURRENCY), 10),
+      platform,
     });
 
     // Create browser client for platforms that need SPA rendering

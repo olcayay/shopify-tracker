@@ -10,7 +10,7 @@ import { KeywordScraper } from "./scrapers/keyword-scraper.js";
 import { ReviewScraper } from "./scrapers/review-scraper.js";
 import { HttpClient } from "./http-client.js";
 import { BrowserClient } from "./browser-client.js";
-import { getModule } from "./platforms/registry.js";
+import { getModule, getPlatformConstants } from "./platforms/registry.js";
 
 import { randomUUID } from "node:crypto";
 
@@ -100,10 +100,13 @@ function createNoopDb(): any {
 const db = isSmokeTest ? createNoopDb() : createDb(databaseUrl!, { max: 3 });
 
 // Smoke test: no delays, minimal retries (fast path)
+// Use platform-specific rate limits when available
+const cliPlatformConstants = getPlatformConstants(platformArg);
 const httpClient = new HttpClient({
-  delayMs: isSmokeTest ? 0 : parseInt(process.env.SCRAPER_DELAY_MS || "2000", 10),
-  maxConcurrency: parseInt(process.env.SCRAPER_MAX_CONCURRENCY || "2", 10),
+  delayMs: isSmokeTest ? 0 : parseInt(process.env.SCRAPER_DELAY_MS || String(cliPlatformConstants?.rateLimit?.minDelayMs ?? 2000), 10),
+  maxConcurrency: parseInt(process.env.SCRAPER_MAX_CONCURRENCY || String(cliPlatformConstants?.httpMaxConcurrency ?? 2), 10),
   maxRetries: isSmokeTest ? 1 : undefined,
+  platform: platformArg,
 });
 
 // Track active run ID for cleanup on signal/timeout

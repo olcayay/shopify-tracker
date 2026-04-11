@@ -41,11 +41,21 @@ const DEFAULT_OPTIONS: HttpClientConfig = {
   maxConcurrency: HTTP_DEFAULT_MAX_CONCURRENCY,
 };
 
+/** Maximum adaptive delay multiplier (4x base delay) */
+const ADAPTIVE_MAX_MULTIPLIER = 4.0;
+/** Consecutive successes needed before reducing delay multiplier */
+const ADAPTIVE_RECOVERY_THRESHOLD = 20;
+/** Recovery factor — multiplier shrinks by 10% per threshold */
+const ADAPTIVE_RECOVERY_FACTOR = 0.9;
+
 export class HttpClient {
   private options: HttpClientConfig;
   private platform?: string;
   private lastRequestTime = 0;
   private activeRequests = 0;
+  /** Adaptive delay multiplier — increases on 429, recovers on consecutive successes */
+  private delayMultiplier = 1.0;
+  private consecutiveSuccesses = 0;
 
   constructor(options: HttpClientOptions = {}) {
     const { platform, ...rest } = options;
@@ -90,13 +100,37 @@ export class HttpClient {
       await this.sleep(HTTP_CONCURRENCY_POLL_MS);
     }
 
-    // Enforce delay between requests
+    // Enforce delay between requests (scaled by adaptive multiplier)
+    const effectiveDelay = this.options.delayMs * this.delayMultiplier;
     const now = Date.now();
     const elapsed = now - this.lastRequestTime;
-    if (elapsed < this.options.delayMs) {
-      await this.sleep(this.options.delayMs - elapsed);
+    if (elapsed < effectiveDelay) {
+      await this.sleep(effectiveDelay - elapsed);
     }
     this.lastRequestTime = Date.now();
+  }
+
+  /** Record a successful request — may reduce adaptive delay */
+  private recordSuccess(): void {
+    this.consecutiveSuccesses++;
+    if (this.consecutiveSuccesses >= ADAPTIVE_RECOVERY_THRESHOLD && this.delayMultiplier > 1.0) {
+      const prev = this.delayMultiplier;
+      this.delayMultiplier = Math.max(1.0, this.delayMultiplier * ADAPTIVE_RECOVERY_FACTOR);
+      this.consecutiveSuccesses = 0;
+      if (prev !== this.delayMultiplier) {
+        log.info("adaptive delay recovered", { multiplier: this.delayMultiplier.toFixed(2), effectiveDelayMs: Math.round(this.options.delayMs * this.delayMultiplier) });
+      }
+    }
+  }
+
+  /** Record a 429 rate limit — increases adaptive delay */
+  private recordRateLimit(): void {
+    this.consecutiveSuccesses = 0;
+    const prev = this.delayMultiplier;
+    this.delayMultiplier = Math.min(ADAPTIVE_MAX_MULTIPLIER, this.delayMultiplier * 2.0);
+    if (prev !== this.delayMultiplier) {
+      log.warn("adaptive delay increased", { multiplier: this.delayMultiplier.toFixed(2), effectiveDelayMs: Math.round(this.options.delayMs * this.delayMultiplier) });
+    }
   }
 
   private async fetchWithRetry(url: string, extraHeaders?: Record<string, string>): Promise<string> {
@@ -112,6 +146,7 @@ export class HttpClient {
             Accept:
               "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
             "Accept-Language": "en-US,en;q=0.9",
+            "Accept-Encoding": "gzip, deflate, br",
             ...extraHeaders,
           },
           redirect: "follow",
@@ -122,6 +157,7 @@ export class HttpClient {
           const err = new Error(`HTTP ${response.status}: ${response.statusText}`);
           // 429 Too Many Requests — retry with aggressive backoff
           if (response.status === 429) {
+            this.recordRateLimit();
             const retryAfter = response.headers.get("Retry-After");
             // Use Retry-After header, or 4s * 2^attempt (4s, 8s, 16s, 32s, 64s)
             const waitMs = retryAfter
@@ -160,6 +196,7 @@ export class HttpClient {
         if (text.length > HTTP_MAX_RESPONSE_SIZE) {
           log.warn("response body too large", { url, size: text.length });
         }
+        this.recordSuccess();
         return text;
       } catch (error) {
         lastError = error as Error;
@@ -205,6 +242,7 @@ export class HttpClient {
           ...init,
           headers: {
             "User-Agent": ua,
+            "Accept-Encoding": "gzip, deflate, br",
             ...init.headers,
           },
           signal: init.signal ?? AbortSignal.timeout(HTTP_REQUEST_TIMEOUT_MS),
@@ -213,6 +251,7 @@ export class HttpClient {
         if (!response.ok) {
           const err = new Error(`HTTP ${response.status}: ${response.statusText}`);
           if (response.status === 429) {
+            this.recordRateLimit();
             const retryAfter = response.headers.get("Retry-After");
             const waitMs = retryAfter
               ? parseInt(retryAfter, 10) * 1000
@@ -238,6 +277,7 @@ export class HttpClient {
           throw err;
         }
 
+        this.recordSuccess();
         return await response.text();
       } catch (error) {
         lastError = error as Error;

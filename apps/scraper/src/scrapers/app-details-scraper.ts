@@ -26,6 +26,13 @@ import type { PlatformModule } from "../platforms/platform-module.js";
 import { runConcurrent } from "../utils/run-concurrent.js";
 import { recordItemError } from "../utils/record-item-error.js";
 
+/** Pre-fetched data maps to avoid per-app DB queries in batch scraping */
+export interface PreFetchedData {
+  existingApps: Map<string, { id: number }>;
+  recentSnapshots: Map<number, Date>;
+  currentApps: Map<string, { name: string; currentVersion: string | null }>;
+}
+
 /** Known platform boilerplate meta descriptions — indicate scraper got shell page, not app content */
 const BOILERPLATE_META: Record<string, string[]> = {
   shopify: ["Shopify App Store, download apps for your Shopify store"],
@@ -103,6 +110,54 @@ export class AppDetailsScraper {
     return this.platform === "shopify";
   }
 
+  /** Bulk-fetch app data for all platform apps to avoid per-app DB queries */
+  private async buildPreFetchedData(force?: boolean): Promise<PreFetchedData> {
+    const existingApps = new Map<string, { id: number }>();
+    const recentSnapshots = new Map<number, Date>();
+    const currentApps = new Map<string, { name: string; currentVersion: string | null }>();
+
+    // Fetch all existing apps for this platform
+    const allExisting = await this.db
+      .select({ id: apps.id, slug: apps.slug, name: apps.name, currentVersion: apps.currentVersion })
+      .from(apps)
+      .where(eq(apps.platform, this.platform));
+
+    for (const app of allExisting) {
+      existingApps.set(app.slug, { id: app.id });
+      currentApps.set(app.slug, { name: app.name, currentVersion: app.currentVersion });
+    }
+
+    // Fetch most recent snapshot dates (for 12h skip check)
+    if (!force && allExisting.length > 0) {
+      const appIds = allExisting.map((a) => a.id);
+      // Process in chunks to avoid query size limits
+      const chunkSize = 500;
+      for (let i = 0; i < appIds.length; i += chunkSize) {
+        const chunk = appIds.slice(i, i + chunkSize);
+        const snapshots = await this.db
+          .select({
+            appId: appSnapshots.appId,
+            scrapedAt: sql<Date>`MAX(${appSnapshots.scrapedAt})`.as("scrapedAt"),
+          })
+          .from(appSnapshots)
+          .where(sql`${appSnapshots.appId} IN (${sql.join(chunk.map((id) => sql`${id}`), sql`, `)})`)
+          .groupBy(appSnapshots.appId);
+
+        for (const snap of snapshots) {
+          recentSnapshots.set(snap.appId, new Date(snap.scrapedAt));
+        }
+      }
+    }
+
+    log.info("pre-fetched app data", {
+      existingApps: existingApps.size,
+      recentSnapshots: recentSnapshots.size,
+      platform: this.platform,
+    });
+
+    return { existingApps, recentSnapshots, currentApps };
+  }
+
   /** Scrape details for all tracked apps */
   async scrapeTracked(triggeredBy?: string, queue?: string, force?: boolean): Promise<void> {
     const trackedApps = await this.db
@@ -136,6 +191,7 @@ export class AppDetailsScraper {
     let itemsFailed = 0;
 
     const currentlyProcessing = new Set<string>();
+    const preFetched = await this.buildPreFetchedData(force);
 
     try {
       await runConcurrent(trackedApps, async (app, index) => {
@@ -152,7 +208,7 @@ export class AppDetailsScraper {
         }).where(eq(scrapeRuns.id, run.id));
 
         try {
-          await this.scrapeApp(app.slug, run.id, triggeredBy, undefined, force);
+          await this.scrapeApp(app.slug, run.id, triggeredBy, undefined, force, preFetched);
           itemsScraped++;
         } catch (error) {
           if (error instanceof AppNotFoundError) {
@@ -177,7 +233,7 @@ export class AppDetailsScraper {
         } finally {
           currentlyProcessing.delete(app.slug);
         }
-      }, 3);
+      }, this.platformModule?.constants?.appDetailsConcurrency ?? 3);
 
       await this.db
         .update(scrapeRuns)
@@ -247,11 +303,12 @@ export class AppDetailsScraper {
     const startTime = Date.now();
     let itemsScraped = 0;
     let itemsFailed = 0;
+    const preFetchedAll = await this.buildPreFetchedData(force);
 
     try {
       await runConcurrent(allApps, async (app) => {
         try {
-          await this.scrapeApp(app.slug, run.id, triggeredBy, undefined, force);
+          await this.scrapeApp(app.slug, run.id, triggeredBy, undefined, force, preFetchedAll);
           itemsScraped++;
           if (itemsScraped % 50 === 0) {
             log.info("progress", { scraped: itemsScraped, failed: itemsFailed, total: allApps.length });
@@ -276,7 +333,7 @@ export class AppDetailsScraper {
             });
           }
         }
-      }, 3);
+      }, this.platformModule?.constants?.appDetailsConcurrency ?? 3);
 
       await this.db
         .update(scrapeRuns)
@@ -311,30 +368,44 @@ export class AppDetailsScraper {
   }
 
   /** Scrape a single app by slug */
-  async scrapeApp(slug: string, runId?: string, triggeredBy?: string, queue?: string, force?: boolean): Promise<void> {
+  async scrapeApp(slug: string, runId?: string, triggeredBy?: string, queue?: string, force?: boolean, preFetched?: PreFetchedData): Promise<void> {
     log.info("scraping app", { slug, force });
 
-    // Look up the app's integer ID (or create if needed later)
-    const [existingApp] = await this.db
-      .select({ id: apps.id })
-      .from(apps)
-      .where(and(eq(apps.slug, slug), eq(apps.platform, this.platform)))
-      .limit(1);
+    // Look up the app's integer ID — use pre-fetched data if available
+    const existingApp = preFetched
+      ? (preFetched.existingApps.get(slug) ?? undefined)
+      : await this.db
+          .select({ id: apps.id })
+          .from(apps)
+          .where(and(eq(apps.slug, slug), eq(apps.platform, this.platform)))
+          .limit(1)
+          .then((rows) => rows[0]);
 
     // Skip if already scraped within 12 hours (unless force=true)
     if (!force && existingApp) {
-      const [recentSnapshot] = await this.db
-        .select({ scrapedAt: appSnapshots.scrapedAt })
-        .from(appSnapshots)
-        .where(eq(appSnapshots.appId, existingApp.id))
-        .orderBy(desc(appSnapshots.scrapedAt))
-        .limit(1);
+      if (preFetched) {
+        const recentDate = preFetched.recentSnapshots.get(existingApp.id);
+        if (recentDate) {
+          const hoursSince = (Date.now() - recentDate.getTime()) / (1000 * 60 * 60);
+          if (hoursSince < 12) {
+            log.info("skipping recently scraped app", { slug, hoursSince: hoursSince.toFixed(1) });
+            return;
+          }
+        }
+      } else {
+        const [recentSnapshot] = await this.db
+          .select({ scrapedAt: appSnapshots.scrapedAt })
+          .from(appSnapshots)
+          .where(eq(appSnapshots.appId, existingApp.id))
+          .orderBy(desc(appSnapshots.scrapedAt))
+          .limit(1);
 
-      if (recentSnapshot) {
-        const hoursSince = (Date.now() - recentSnapshot.scrapedAt.getTime()) / (1000 * 60 * 60);
-        if (hoursSince < 12) {
-          log.info("skipping recently scraped app", { slug, hoursSince: hoursSince.toFixed(1) });
-          return;
+        if (recentSnapshot) {
+          const hoursSince = (Date.now() - recentSnapshot.scrapedAt.getTime()) / (1000 * 60 * 60);
+          if (hoursSince < 12) {
+            log.info("skipping recently scraped app", { slug, hoursSince: hoursSince.toFixed(1) });
+            return;
+          }
         }
       }
     }
@@ -567,10 +638,13 @@ export class AppDetailsScraper {
       // Change detection: compare against current state
       const changes: { field: string; oldValue: string | null; newValue: string | null }[] = [];
 
-      const [currentApp] = await this.db
-        .select({ name: apps.name, currentVersion: apps.currentVersion })
-        .from(apps)
-        .where(and(eq(apps.slug, slug), eq(apps.platform, this.platform)));
+      const currentApp = preFetched
+        ? (preFetched.currentApps.get(slug) ?? undefined)
+        : await this.db
+            .select({ name: apps.name, currentVersion: apps.currentVersion })
+            .from(apps)
+            .where(and(eq(apps.slug, slug), eq(apps.platform, this.platform)))
+            .then((rows) => rows[0]);
 
       if (currentApp && currentApp.name !== details.app_name) {
         changes.push({ field: "name", oldValue: currentApp.name, newValue: details.app_name });
@@ -716,19 +790,24 @@ export class AppDetailsScraper {
       const appId = upsertedApp.id;
 
       if (changes.length > 0) {
-        // Dedup: filter out changes where the most recent recorded change already has the same new_value
-        const dedupedChanges = [];
-        for (const c of changes) {
-          const [lastChange] = await this.db
-            .select({ newValue: appFieldChanges.newValue })
-            .from(appFieldChanges)
-            .where(and(eq(appFieldChanges.appId, appId), eq(appFieldChanges.field, c.field)))
-            .orderBy(desc(appFieldChanges.detectedAt))
-            .limit(1);
-          if (!lastChange || lastChange.newValue !== c.newValue) {
-            dedupedChanges.push(c);
-          }
+        // Dedup: single query to fetch most recent change per field for this app
+        const latestChanges = await this.db
+          .select({ field: appFieldChanges.field, newValue: appFieldChanges.newValue })
+          .from(appFieldChanges)
+          .where(eq(appFieldChanges.appId, appId))
+          .orderBy(desc(appFieldChanges.detectedAt));
+
+        // Build lookup: first occurrence per field = most recent value
+        const latestByField = new Map<string, string | null>();
+        for (const c of latestChanges) {
+          if (!latestByField.has(c.field)) latestByField.set(c.field, c.newValue);
         }
+
+        const dedupedChanges = changes.filter((c) => {
+          const last = latestByField.get(c.field);
+          return last === undefined || last !== c.newValue;
+        });
+
         if (dedupedChanges.length > 0) {
           await this.db.insert(appFieldChanges).values(
             dedupedChanges.map((c) => ({

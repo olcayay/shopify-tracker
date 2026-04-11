@@ -28,7 +28,9 @@ export const SHOPIFY_CONSTANTS: PlatformConstants = {
     "pricingPlans",
     "support",
   ],
-  rateLimit: { minDelayMs: 1500, maxDelayMs: 3000 },
+  rateLimit: { minDelayMs: 500, maxDelayMs: 1500 },
+  httpMaxConcurrency: 6,
+  appDetailsConcurrency: 8,
 };
 
 export const SHOPIFY_SCORING: PlatformScoringConfig = {

@@ -93,6 +93,7 @@ vi.mock("../browser-client.js", () => {
 const mockPlatformModule = { name: "mock-module" };
 vi.mock("../platforms/registry.js", () => ({
   getModule: vi.fn().mockReturnValue({ name: "mock-module" }),
+  getPlatformConstants: vi.fn().mockReturnValue(undefined),
 }));
 
 // Mock circuit breaker

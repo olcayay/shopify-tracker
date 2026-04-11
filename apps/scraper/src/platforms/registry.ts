@@ -1,5 +1,5 @@
 import type { PlatformId } from "@appranks/shared";
-import type { PlatformModule } from "./platform-module.js";
+import type { PlatformModule, PlatformConstants } from "./platform-module.js";
 import { ShopifyModule } from "./shopify/index.js";
 import { SalesforceModule } from "./salesforce/index.js";
 import { CanvaModule } from "./canva/index.js";
@@ -12,6 +12,18 @@ import { ZohoModule } from "./zoho/index.js";
 import { ZendeskModule } from "./zendesk/index.js";
 import { HubSpotModule } from "./hubspot/index.js";
 import { WooCommerceModule } from "./woocommerce/index.js";
+import { SHOPIFY_CONSTANTS } from "./shopify/constants.js";
+import { SALESFORCE_CONSTANTS } from "./salesforce/constants.js";
+import { CANVA_CONSTANTS } from "./canva/constants.js";
+import { WIX_CONSTANTS } from "./wix/constants.js";
+import { WORDPRESS_CONSTANTS } from "./wordpress/constants.js";
+import { GOOGLE_WORKSPACE_CONSTANTS } from "./google-workspace/constants.js";
+import { ATLASSIAN_CONSTANTS } from "./atlassian/constants.js";
+import { ZOOM_CONSTANTS } from "./zoom/constants.js";
+import { ZOHO_CONSTANTS } from "./zoho/constants.js";
+import { ZENDESK_CONSTANTS } from "./zendesk/constants.js";
+import { HUBSPOT_CONSTANTS } from "./hubspot/constants.js";
+import { WOOCOMMERCE_CONSTANTS } from "./woocommerce/constants.js";
 import type { HttpClient } from "../http-client.js";
 import type { BrowserClient } from "../browser-client.js";
 import type { FallbackTracker } from "../utils/fallback-tracker.js";
@@ -75,4 +87,24 @@ export function getModule(platformId: PlatformId, httpClient?: HttpClient, brows
 /** Clear the module cache (useful for testing) */
 export function clearModuleCache(): void {
   moduleCache.clear();
+}
+
+const constantsMap: Record<string, PlatformConstants> = {
+  shopify: SHOPIFY_CONSTANTS,
+  salesforce: SALESFORCE_CONSTANTS,
+  canva: CANVA_CONSTANTS,
+  wix: WIX_CONSTANTS,
+  wordpress: WORDPRESS_CONSTANTS,
+  google_workspace: GOOGLE_WORKSPACE_CONSTANTS,
+  atlassian: ATLASSIAN_CONSTANTS,
+  zoom: ZOOM_CONSTANTS,
+  zoho: ZOHO_CONSTANTS,
+  zendesk: ZENDESK_CONSTANTS,
+  hubspot: HUBSPOT_CONSTANTS,
+  woocommerce: WOOCOMMERCE_CONSTANTS,
+};
+
+/** Get platform constants without creating a full module (no httpClient needed) */
+export function getPlatformConstants(platformId: PlatformId): PlatformConstants | undefined {
+  return constantsMap[platformId];
 }

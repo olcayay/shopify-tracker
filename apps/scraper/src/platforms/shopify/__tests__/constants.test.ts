@@ -30,8 +30,13 @@ describe("SHOPIFY_CONSTANTS", () => {
 
   it("has rate limit configuration", () => {
     expect(SHOPIFY_CONSTANTS.rateLimit).toBeDefined();
-    expect(SHOPIFY_CONSTANTS.rateLimit!.minDelayMs).toBe(1500);
-    expect(SHOPIFY_CONSTANTS.rateLimit!.maxDelayMs).toBe(3000);
+    expect(SHOPIFY_CONSTANTS.rateLimit!.minDelayMs).toBe(500);
+    expect(SHOPIFY_CONSTANTS.rateLimit!.maxDelayMs).toBe(1500);
+  });
+
+  it("has concurrency settings", () => {
+    expect(SHOPIFY_CONSTANTS.httpMaxConcurrency).toBe(6);
+    expect(SHOPIFY_CONSTANTS.appDetailsConcurrency).toBe(8);
   });
 
   it("tracks expected fields", () => {
