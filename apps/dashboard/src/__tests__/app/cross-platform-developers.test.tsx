@@ -32,6 +32,13 @@ vi.mock("@/contexts/feature-flags-context", () => ({
   useFeatureFlags: () => ({ enabledFeatures: [], hasFeature: () => true }),
 }));
 
+vi.mock("@/hooks/use-platform-access", () => ({
+  usePlatformAccess: () => ({
+    accessiblePlatforms: [],
+    hasPlatformAccess: () => true,
+  }),
+}));
+
 // Mock components
 vi.mock("@/components/skeletons", () => ({
   TableSkeleton: ({ rows, cols }: any) => (

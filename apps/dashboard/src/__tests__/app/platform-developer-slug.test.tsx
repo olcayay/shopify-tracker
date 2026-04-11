@@ -16,6 +16,11 @@ vi.mock("@/lib/auth-context", () => ({
   }),
 }));
 
+vi.mock("@/contexts/feature-flags-context", () => ({
+  useFeatureFlag: () => true,
+  useFeatureFlags: () => ({ enabledFeatures: [], hasFeature: () => true }),
+}));
+
 vi.mock("@/components/skeletons", () => ({
   TableSkeleton: () => <div data-testid="table-skeleton">Loading...</div>,
 }));
