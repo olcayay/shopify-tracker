@@ -196,16 +196,19 @@ export class AppDetailsScraper {
     try {
       await runConcurrent(trackedApps, async (app, index) => {
         currentlyProcessing.add(app.slug);
-        await this.db.update(scrapeRuns).set({
-          metadata: {
-            items_scraped: itemsScraped,
-            items_failed: itemsFailed,
-            duration_ms: Date.now() - startTime,
-            currently_processing: [...currentlyProcessing],
-            current_index: index,
-            total_apps: trackedApps.length,
-          },
-        }).where(eq(scrapeRuns.id, run.id));
+        // Update progress metadata periodically (not every app) to reduce DB pressure
+        if (index % 5 === 0 || index === trackedApps.length - 1) {
+          await this.db.update(scrapeRuns).set({
+            metadata: {
+              items_scraped: itemsScraped,
+              items_failed: itemsFailed,
+              duration_ms: Date.now() - startTime,
+              currently_processing: [...currentlyProcessing],
+              current_index: index,
+              total_apps: trackedApps.length,
+            },
+          }).where(eq(scrapeRuns.id, run.id));
+        }
 
         try {
           await this.scrapeApp(app.slug, run.id, triggeredBy, undefined, force, preFetched);
@@ -790,11 +793,15 @@ export class AppDetailsScraper {
       const appId = upsertedApp.id;
 
       if (changes.length > 0) {
-        // Dedup: single query to fetch most recent change per field for this app
+        // Dedup: fetch only the most recent change per changed field (not all history)
+        const changedFields = changes.map((c) => c.field);
         const latestChanges = await this.db
           .select({ field: appFieldChanges.field, newValue: appFieldChanges.newValue })
           .from(appFieldChanges)
-          .where(eq(appFieldChanges.appId, appId))
+          .where(and(
+            eq(appFieldChanges.appId, appId),
+            sql`${appFieldChanges.field} IN (${sql.join(changedFields.map((f) => sql`${f}`), sql`, `)})`,
+          ))
           .orderBy(desc(appFieldChanges.detectedAt));
 
         // Build lookup: first occurrence per field = most recent value

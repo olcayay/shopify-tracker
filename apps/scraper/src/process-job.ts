@@ -40,9 +40,10 @@ export function initWorkerDeps() {
 
   // Worker uses a smaller pool than API to avoid saturating DB connections.
   // API pool: max 10 (fast queries for dashboard).
-  // Worker pool: max 5, longer statement timeout for scraping operations.
+  // Worker pool: max 10, longer statement timeout for scraping operations.
+  // Needs headroom for 8+ concurrent app scrapes per platform.
   const db = createDb(databaseUrl, {
-    max: 5,
+    max: 10,
     statementTimeout: 60000, // 60s for heavy scraping queries
   });
   return { db };
