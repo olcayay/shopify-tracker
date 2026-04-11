@@ -11,13 +11,16 @@ PLA-975: Fix mobile responsiveness for all dashboard tables
 - The min-w-0 was the missing piece that enables the overflow scroll chain
 - Added regression test: main must have min-w-0 + overflow-auto
 
-PLA-993: Enhance command palette — 5 improvements
-- Fix 1: Modal overlap — CommandPalette sets data-command-palette-open on body via useEffect,
-  PlatformSwitcher checks for it before responding to Cmd+K
-- Fix 2: Developer search — parallel fetch to /api/developers?search=&limit=5 alongside app search
-- Fix 3: Added Developers page to PAGES array with Users icon
-- Fix 4: Pages group hidden when search query >= 2 chars (shows only when palette first opens)
-- Fix 5: Platform badge right-aligned in app results (moved out of name container, ml-auto)
+PLA-993: Enhance command palette — 5 improvements + 3 bugfixes
+- Fix 1: Modal overlap — FIXED race condition. Previous approach set data-command-palette-open
+  via useEffect (async), so PlatformSwitcher handler would fire before attribute was set.
+  Now sets attribute synchronously inside the keydown handler's setState callback.
+- Fix 2: Developer search — FIXED by separating Promise.all into independent try/catch chains.
+  Previously one API failure would block the other. Now each search runs independently.
+  Also added Array.isArray(data?.developers) guard for safer response handling.
+- Fix 3: Platform badge alignment — moved badge inside name container on same row as app name
+  (was outside as sibling, causing vertical centering misalignment with rating below)
+- Tests: 14 tests (was 11) — added synchronous attribute test, close attribute test, isolated failure test
 - Added size prop ("sm" | "default") to PlatformBadgeCell for compact developer badges
 - Updated all command palette tests + added 3 new tests (body attribute, developer search, pages hiding)
 

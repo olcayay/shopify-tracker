@@ -72,21 +72,30 @@ export function CommandPalette() {
 
   const canEdit = user?.role === "owner" || user?.role === "admin" || user?.role === "editor";
 
-  // Cmd+K opens the palette
+  // Cmd+K opens the palette — set body attribute synchronously so
+  // PlatformSwitcher sees it within the same event dispatch cycle.
   useEffect(() => {
     function handleKeyDown(e: KeyboardEvent) {
       if ((e.metaKey || e.ctrlKey) && e.key === "k") {
         const hasOpenModal = document.querySelector("[data-keyword-search-open]");
         if (hasOpenModal) return;
         e.preventDefault();
-        setOpen((prev) => !prev);
+        setOpen((prev) => {
+          const next = !prev;
+          if (next) {
+            document.body.setAttribute("data-command-palette-open", "");
+          } else {
+            document.body.removeAttribute("data-command-palette-open");
+          }
+          return next;
+        });
       }
     }
     document.addEventListener("keydown", handleKeyDown);
     return () => document.removeEventListener("keydown", handleKeyDown);
   }, []);
 
-  // Sync body attribute so PlatformSwitcher can detect when palette is open
+  // Keep body attribute in sync when palette is closed via backdrop click
   useEffect(() => {
     if (open) {
       document.body.setAttribute("data-command-palette-open", "");
@@ -107,24 +116,27 @@ export function CommandPalette() {
     }
     setLoading(true);
     debounceRef.current = setTimeout(async () => {
-      try {
-        const [appsRes, devsRes] = await Promise.all([
-          fetchRef.current(`/api/public/apps/search?q=${encodeURIComponent(q)}&limit=10`),
-          fetchRef.current(`/api/developers?search=${encodeURIComponent(q)}&limit=5`),
-        ]);
-        if (appsRes.ok) {
-          const data = await appsRes.json();
-          setAppResults(Array.isArray(data) ? data : []);
-        }
-        if (devsRes.ok) {
-          const data = await devsRes.json();
-          setDeveloperResults(data.developers ?? []);
-        }
-      } catch {
-        /* ignore */
-      } finally {
-        setLoading(false);
-      }
+      // Run searches independently so one failure doesn't block the other
+      const appsPromise = fetchRef.current(`/api/public/apps/search?q=${encodeURIComponent(q)}&limit=10`)
+        .then(async (res) => {
+          if (res.ok) {
+            const data = await res.json();
+            setAppResults(Array.isArray(data) ? data : []);
+          }
+        })
+        .catch(() => { /* app search failed silently */ });
+
+      const devsPromise = fetchRef.current(`/api/developers?search=${encodeURIComponent(q)}&limit=5`)
+        .then(async (res) => {
+          if (res.ok) {
+            const data = await res.json();
+            setDeveloperResults(Array.isArray(data?.developers) ? data.developers : []);
+          }
+        })
+        .catch(() => { /* developer search failed silently */ });
+
+      await Promise.all([appsPromise, devsPromise]);
+      setLoading(false);
     }, 300);
   }, []);
 
@@ -239,9 +251,19 @@ export function CommandPalette() {
                         <div className="h-6 w-6 rounded bg-muted shrink-0" />
                       )}
 
-                      {/* App name + rating */}
+                      {/* App name + badge + rating */}
                       <div className="flex-1 min-w-0">
-                        <span className="truncate font-medium block">{app.name}</span>
+                        <div className="flex items-center gap-2">
+                          <span className="truncate font-medium flex-1">{app.name}</span>
+                          {/* Platform badge — right-aligned, same row as name */}
+                          <span className="inline-flex items-center gap-1 text-[10px] text-muted-foreground shrink-0">
+                            <span
+                              className="w-1.5 h-1.5 rounded-full"
+                              style={{ backgroundColor: color }}
+                            />
+                            {platformLabel}
+                          </span>
+                        </div>
                         {app.averageRating != null && (
                           <div className="flex items-center gap-1 text-[10px] text-muted-foreground">
                             <Star className="h-2.5 w-2.5 fill-yellow-400 text-yellow-400" />
@@ -252,15 +274,6 @@ export function CommandPalette() {
                           </div>
                         )}
                       </div>
-
-                      {/* Platform badge — right-aligned */}
-                      <span className="inline-flex items-center gap-1 text-[10px] text-muted-foreground shrink-0 ml-auto">
-                        <span
-                          className="w-1.5 h-1.5 rounded-full"
-                          style={{ backgroundColor: color }}
-                        />
-                        {platformLabel}
-                      </span>
 
                       {/* Action buttons */}
                       {canEdit && (

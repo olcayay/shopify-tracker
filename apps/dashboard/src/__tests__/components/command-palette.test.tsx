@@ -90,13 +90,20 @@ describe("CommandPalette", () => {
     expect(screen.getByPlaceholderText(PLACEHOLDER)).toBeInTheDocument();
   });
 
-  it("sets data-command-palette-open on body when open", async () => {
+  it("sets data-command-palette-open on body synchronously on Cmd+K", () => {
     render(<CommandPalette />);
     expect(document.body.hasAttribute("data-command-palette-open")).toBe(false);
     fireEvent.keyDown(document, { key: "k", metaKey: true });
-    await waitFor(() => {
-      expect(document.body.hasAttribute("data-command-palette-open")).toBe(true);
-    });
+    // Attribute must be set synchronously (no waitFor) to prevent PlatformSwitcher race
+    expect(document.body.hasAttribute("data-command-palette-open")).toBe(true);
+  });
+
+  it("removes data-command-palette-open on body when closed via Cmd+K", () => {
+    render(<CommandPalette />);
+    fireEvent.keyDown(document, { key: "k", metaKey: true });
+    expect(document.body.hasAttribute("data-command-palette-open")).toBe(true);
+    fireEvent.keyDown(document, { key: "k", metaKey: true });
+    expect(document.body.hasAttribute("data-command-palette-open")).toBe(false);
   });
 
   it("shows page results including Developers", async () => {
@@ -217,6 +224,28 @@ describe("CommandPalette", () => {
       expect(mockFetchWithAuth).toHaveBeenCalledWith(
         expect.stringContaining("limit=10")
       );
+    });
+  });
+
+  it("shows app results even when developer search fails", async () => {
+    mockFetchWithAuth.mockImplementation((url: string) => {
+      if (url.includes("/api/public/apps/search")) {
+        return Promise.resolve({ ok: true, json: () => Promise.resolve(MOCK_APPS) });
+      }
+      if (url.includes("/api/developers")) {
+        return Promise.reject(new Error("Network error"));
+      }
+      return Promise.resolve({ ok: true, json: () => Promise.resolve([]) });
+    });
+
+    render(<CommandPalette />);
+    fireEvent.keyDown(document, { key: "k", metaKey: true });
+
+    const input = screen.getByPlaceholderText(PLACEHOLDER);
+    await userEvent.type(input, "slack");
+
+    await waitFor(() => {
+      expect(screen.getByText("Slack")).toBeInTheDocument();
     });
   });
 
