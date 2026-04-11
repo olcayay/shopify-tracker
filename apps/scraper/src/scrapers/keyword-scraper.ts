@@ -251,12 +251,13 @@ export class KeywordScraper {
       const newSubtitle = app.short_description || null;
 
       // Detect appCardSubtitle changes
-      if (newSubtitle) {
+      // Guard: skip if new subtitle matches the app name (title→subtitle confusion from parser fallback)
+      if (newSubtitle && newSubtitle.toLowerCase() !== app.app_name.toLowerCase()) {
         const [existing] = await this.db
-          .select({ id: apps.id, appCardSubtitle: apps.appCardSubtitle })
+          .select({ id: apps.id, appCardSubtitle: apps.appCardSubtitle, name: apps.name })
           .from(apps)
           .where(and(eq(apps.slug, app.app_slug), eq(apps.platform, this.platform)));
-        if (existing && existing.appCardSubtitle !== newSubtitle) {
+        if (existing && existing.appCardSubtitle !== newSubtitle && existing.name?.toLowerCase() !== newSubtitle.toLowerCase()) {
           // Dedup: skip if the most recent change for this app+field already has the same new_value
           const [lastChange] = await this.db
             .select({ newValue: appFieldChanges.newValue })

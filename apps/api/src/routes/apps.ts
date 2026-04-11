@@ -1,5 +1,5 @@
 import type { FastifyPluginAsync } from "fastify";
-import { eq, desc, sql, and, inArray, ilike } from "drizzle-orm";
+import { eq, desc, sql, and, inArray, ilike, isNull } from "drizzle-orm";
 import { computeWeightedPowerScore, validatePlatformData, createLogger, PLATFORMS } from "@appranks/shared";
 import { slugsBodySchema } from "../schemas/apps.js";
 import { getPlatformFromQuery } from "../utils/platform.js";
@@ -153,6 +153,7 @@ export const appRoutes: FastifyPluginAsync = async (app) => {
         SELECT DISTINCT ON (app_id) app_id, detected_at
         FROM app_field_changes
         WHERE app_id IN (${sql.join(appIds2.map((id) => sql`${id}`), sql`,`)})
+          AND dismiss_reason IS NULL
         ORDER BY app_id, detected_at DESC
       `),
     ]);
@@ -1053,7 +1054,7 @@ export const appRoutes: FastifyPluginAsync = async (app) => {
       return db
         .select()
         .from(appFieldChanges)
-        .where(eq(appFieldChanges.appId, changeApp.id))
+        .where(and(eq(appFieldChanges.appId, changeApp.id), isNull(appFieldChanges.dismissReason)))
         .orderBy(desc(appFieldChanges.detectedAt))
         .limit(maxLimit);
     }

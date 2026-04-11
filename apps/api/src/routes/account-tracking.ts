@@ -822,6 +822,7 @@ export const accountTrackingRoutes: FastifyPluginAsync = async (app) => {
             SELECT app_id, max(detected_at) AS detected_at
             FROM app_field_changes
             WHERE app_id = ANY(${sqlArray(compAppIdsForBatch)})
+              AND dismiss_reason IS NULL
             GROUP BY app_id
           `)
         : Promise.resolve([])
@@ -1432,6 +1433,7 @@ export const accountTrackingRoutes: FastifyPluginAsync = async (app) => {
             SELECT *, ROW_NUMBER() OVER (PARTITION BY app_id ORDER BY detected_at DESC) AS rn
             FROM app_field_changes
             WHERE app_id = ANY(${sqlArray(competitorAppIds)})
+              AND dismiss_reason IS NULL
           ) c
           INNER JOIN apps a ON a.id = c.app_id
           WHERE c.rn <= 3
@@ -1480,6 +1482,7 @@ export const accountTrackingRoutes: FastifyPluginAsync = async (app) => {
           SELECT app_id, max(detected_at) AS detected_at
           FROM app_field_changes
           WHERE app_id IN (${sql.join(competitorAppIds.map(id => sql`${id}`), sql`, `)})
+            AND dismiss_reason IS NULL
           GROUP BY app_id
         `).then((res: any) => (res as any).rows ?? res);
         for (const r of changeRows) {

@@ -89,7 +89,7 @@ function parseSearchAppCards($: cheerio.CheerioAPI, positionOffset = 0): Keyword
 
     const cardText = $card.text();
     const { rating, count } = extractRating(cardText);
-    const shortDescription = extractDescription($card);
+    const shortDescription = extractDescription($card, appName);
     const pricingHint = extractPricingHint($card);
 
     apps.push({
@@ -135,8 +135,11 @@ function isAdText(text: string): boolean {
 }
 
 function extractDescription(
-  $card: cheerio.Cheerio<AnyNode>
+  $card: cheerio.Cheerio<AnyNode>,
+  appName?: string
 ): string {
+  const nameLower = appName?.toLowerCase() || "";
+
   // Shopify renders the app card subtitle in a <div> with these Tailwind classes
   const descDiv = $card.find("div.tw-text-fg-secondary.tw-text-body-xs:not(:has(*))");
   if (descDiv.length > 0) {
@@ -156,7 +159,9 @@ function extractDescription(
       !text.includes("total reviews") &&
       !text.includes("highest standards") &&
       !text.includes("Built for Shopify") &&
-      !text.includes("Included with Shopify")
+      !text.includes("Included with Shopify") &&
+      // Guard: reject text that matches the app title (prevents title→subtitle confusion)
+      !(nameLower && text.toLowerCase() === nameLower)
     ) {
       bestDesc = text;
     }

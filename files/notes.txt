@@ -1,3 +1,18 @@
+Bug Fix: appCardSubtitle scraping (2026-04-11)
+===============================================
+
+PLA-1001: Fix appCardSubtitle scraping bug — titles stored as subtitles
+- Parser fix: extractDescription() fallback in search-parser.ts and category-parser.ts
+  now rejects text matching the app title (case-insensitive comparison)
+- Scraper guard: keyword-scraper.ts subtitle change detection now checks both
+  parsed app_name and DB app.name against new subtitle before recording change
+- Migration 0137: Marks existing false records with dismiss_reason='title-subtitle-conflict'
+  where old_value matched the app's current name in the apps table
+- API filtering: All public endpoints that query app_field_changes now filter
+  WHERE dismiss_reason IS NULL (apps.ts, account-tracking.ts, overview-highlights.ts, system-admin.ts)
+- Tests: 11 new unit tests covering title rejection in fallback, category parser,
+  and title-subtitle conflict detection logic
+
 System Admin (2026-04-11)
 ========================
 

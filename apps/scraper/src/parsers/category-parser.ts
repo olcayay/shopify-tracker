@@ -242,7 +242,7 @@ function parseAppCards($: cheerio.CheerioAPI): FirstPageApp[] {
       $card.find('[class*="built-for-shopify"]').length > 0;
 
     // Extract short description
-    const shortDescription = extractDescription($, $card);
+    const shortDescription = extractDescription($, $card, name);
 
     // Extract pricing hint (e.g. "Free plan available", "$9.99/month")
     const pricingHint = extractPricingHint($, $card);
@@ -296,8 +296,11 @@ function isAdText(text: string): boolean {
 
 function extractDescription(
   $: cheerio.CheerioAPI,
-  $card: cheerio.Cheerio<AnyNode>
+  $card: cheerio.Cheerio<AnyNode>,
+  appName?: string
 ): string {
+  const nameLower = appName?.toLowerCase() || "";
+
   // Shopify renders the app card subtitle in a <div> with these Tailwind classes
   const descDiv = $card.find("div.tw-text-fg-secondary.tw-text-body-xs:not(:has(*))");
   if (descDiv.length > 0) {
@@ -317,6 +320,8 @@ function extractDescription(
       !text.includes("highest standards") &&
       !text.includes("Built for Shopify") &&
       !text.includes("Included with Shopify") &&
+      // Guard: reject text that matches the app title (prevents title→subtitle confusion)
+      !(nameLower && text.toLowerCase() === nameLower) &&
       text.length > bestDesc.length
     ) {
       bestDesc = text;

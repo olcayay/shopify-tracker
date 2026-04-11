@@ -1855,7 +1855,7 @@ export const systemAdminRoutes: FastifyPluginAsync = async (app) => {
         )`,
         lastChangeAt: sql<string | null>`(
           SELECT max(detected_at) FROM app_field_changes
-          WHERE app_id = "apps"."id"
+          WHERE app_id = "apps"."id" AND dismiss_reason IS NULL
         )`,
       })
       .from(apps);

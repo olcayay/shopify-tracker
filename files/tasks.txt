@@ -1,3 +1,6 @@
+Bug Fix: appCardSubtitle scraping (2026-04-11)
+  PLA-1001: Fix appCardSubtitle scraping bug — title guard + dismiss false updates ✅
+
 System Admin (2026-04-11)
   PLA-1000: App Updates page — cross-platform change analysis ✅
   PLA-1000: App Updates v2 — ID column, date presets, labels, layout fixes ✅
