@@ -172,6 +172,9 @@ async function run() {
         )`,
         `CREATE INDEX IF NOT EXISTS idx_app_update_label_assignments_change ON app_update_label_assignments(change_id)`,
         `CREATE INDEX IF NOT EXISTS idx_app_update_label_assignments_label ON app_update_label_assignments(label_id)`,
+        // PLA-1001: dismiss_reason on app_field_changes (migration 0136)
+        `ALTER TABLE app_field_changes ADD COLUMN IF NOT EXISTS dismiss_reason VARCHAR(50)`,
+        `CREATE INDEX IF NOT EXISTS idx_app_field_changes_dismiss_reason ON app_field_changes(dismiss_reason)`,
       ];
       for (const stmt of safetyStatements) {
         try {

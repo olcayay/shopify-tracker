@@ -1,4 +1,4 @@
-import { eq, sql, and } from "drizzle-orm";
+import { eq, sql, and, desc } from "drizzle-orm";
 import type { Database } from "@appranks/db";
 import {
   scrapeRuns,
@@ -255,15 +255,24 @@ export class KeywordScraper {
         const [existing] = await this.db
           .select({ id: apps.id, appCardSubtitle: apps.appCardSubtitle })
           .from(apps)
-          .where(eq(apps.slug, app.app_slug));
+          .where(and(eq(apps.slug, app.app_slug), eq(apps.platform, this.platform)));
         if (existing && existing.appCardSubtitle !== newSubtitle) {
-          await this.db.insert(appFieldChanges).values({
-            appId: existing.id,
-            field: "appCardSubtitle",
-            oldValue: existing.appCardSubtitle,
-            newValue: newSubtitle,
-            scrapeRunId: runId,
-          });
+          // Dedup: skip if the most recent change for this app+field already has the same new_value
+          const [lastChange] = await this.db
+            .select({ newValue: appFieldChanges.newValue })
+            .from(appFieldChanges)
+            .where(and(eq(appFieldChanges.appId, existing.id), eq(appFieldChanges.field, "appCardSubtitle")))
+            .orderBy(desc(appFieldChanges.detectedAt))
+            .limit(1);
+          if (!lastChange || lastChange.newValue !== newSubtitle) {
+            await this.db.insert(appFieldChanges).values({
+              appId: existing.id,
+              field: "appCardSubtitle",
+              oldValue: existing.appCardSubtitle,
+              newValue: newSubtitle,
+              scrapeRunId: runId,
+            });
+          }
         }
       }
 

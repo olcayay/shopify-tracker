@@ -108,9 +108,11 @@ export const appFieldChanges = pgTable(
     scrapeRunId: uuid("scrape_run_id")
       .notNull()
       .references(() => scrapeRuns.id),
+    dismissReason: varchar("dismiss_reason", { length: 50 }),
   },
   (table) => [
     index("idx_app_field_changes_app_id").on(table.appId, table.detectedAt),
+    index("idx_app_field_changes_dismiss_reason").on(table.dismissReason),
   ]
 );
 

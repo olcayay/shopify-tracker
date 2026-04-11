@@ -33,6 +33,21 @@ PLA-1000 v2: Enhancements — ID column, date presets, labels, layout fixes
   - Column widths set explicitly (ID 60px, Before/After 280px each with min-w-200px)
 - Tests: 24 unit tests (up from 15), includes label CRUD auth/validation
 
+PLA-1002: Fix duplicate app field changes — dedup logic + dismiss_reason flag
+- Root cause: 6,014 duplicate rows (84% of 7,135 total) caused by stale baseline comparisons
+  - keyword-scraper: compared apps.appCardSubtitle without platform filter, baseline never updated
+  - app-details-scraper: no dedup check before insert, stale snapshot comparison
+- Fix (scrapers):
+  - keyword-scraper: added platform filter to WHERE clause, added dedup check against last app_field_changes
+  - app-details-scraper: added dedup check — skips insert if latest change already has same new_value
+- Fix (DB): migration 0136 adds `dismiss_reason VARCHAR(50)` to app_field_changes
+  - Existing duplicates auto-flagged as 'duplicate' via UPDATE
+  - Index on dismiss_reason for filter performance
+- Fix (API): dismissReason filter param + PATCH /app-updates/:id/dismiss endpoint
+- Fix (UI): Status column with dismiss dropdown (duplicate, false-positive, scraper-error, irrelevant)
+  - Filter by dismiss status (Active, Dismissed, specific reason)
+  - Badge + clear button for dismissed items
+
 Bug Fixes (2026-04-11)
 ======================
 

@@ -4130,6 +4130,7 @@ export const systemAdminRoutes: FastifyPluginAsync = async (app) => {
       dateTo?: string;
       sortOrder?: string;
       labelId?: string;
+      dismissReason?: string;
     };
 
     const page = Math.max(1, parseInt(query.page || "1", 10));
@@ -4161,6 +4162,13 @@ export const systemAdminRoutes: FastifyPluginAsync = async (app) => {
         )`
       );
     }
+    if (query.dismissReason === "none") {
+      conditions.push(sql`${appFieldChanges.dismissReason} IS NULL`);
+    } else if (query.dismissReason === "any") {
+      conditions.push(sql`${appFieldChanges.dismissReason} IS NOT NULL`);
+    } else if (query.dismissReason) {
+      conditions.push(eq(appFieldChanges.dismissReason, query.dismissReason));
+    }
 
     const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
 
@@ -4180,6 +4188,7 @@ export const systemAdminRoutes: FastifyPluginAsync = async (app) => {
         oldValue: appFieldChanges.oldValue,
         newValue: appFieldChanges.newValue,
         detectedAt: appFieldChanges.detectedAt,
+        dismissReason: appFieldChanges.dismissReason,
       })
       .from(appFieldChanges)
       .innerJoin(apps, eq(appFieldChanges.appId, apps.id))
@@ -4215,7 +4224,7 @@ export const systemAdminRoutes: FastifyPluginAsync = async (app) => {
     }));
 
     // Get distinct field names, platforms, and all labels for filter dropdowns
-    const [distinctFields, distinctPlatforms, allLabels] = await Promise.all([
+    const [distinctFields, distinctPlatforms, allLabels, distinctDismissReasons] = await Promise.all([
       db
         .selectDistinct({ field: appFieldChanges.field })
         .from(appFieldChanges)
@@ -4229,6 +4238,11 @@ export const systemAdminRoutes: FastifyPluginAsync = async (app) => {
         .select()
         .from(appUpdateLabels)
         .orderBy(appUpdateLabels.name),
+      db
+        .selectDistinct({ dismissReason: appFieldChanges.dismissReason })
+        .from(appFieldChanges)
+        .where(sql`${appFieldChanges.dismissReason} IS NOT NULL`)
+        .orderBy(appFieldChanges.dismissReason),
     ]);
 
     return {
@@ -4243,8 +4257,20 @@ export const systemAdminRoutes: FastifyPluginAsync = async (app) => {
         fields: distinctFields.map((r) => r.field),
         platforms: distinctPlatforms.map((r) => r.platform),
         labels: allLabels,
+        dismissReasons: distinctDismissReasons.map((r) => r.dismissReason).filter(Boolean) as string[],
       },
     };
+  });
+
+  // PATCH /api/system-admin/app-updates/:id/dismiss — set or clear dismiss reason
+  app.patch<{ Params: { id: string } }>("/app-updates/:id/dismiss", async (request, reply) => {
+    const id = parseInt(request.params.id, 10);
+    const { reason } = request.body as { reason: string | null };
+    await db
+      .update(appFieldChanges)
+      .set({ dismissReason: reason })
+      .where(eq(appFieldChanges.id, id));
+    return reply.code(200).send({ ok: true });
   });
 
   // -----------------------------------------------------------------------

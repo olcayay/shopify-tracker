@@ -136,6 +136,7 @@ interface AppUpdate {
   oldValue: string | null;
   newValue: string | null;
   detectedAt: string;
+  dismissReason: string | null;
   labels: UpdateLabel[];
 }
 
@@ -151,6 +152,7 @@ interface ApiResponse {
     fields: string[];
     platforms: string[];
     labels: UpdateLabel[];
+    dismissReasons: string[];
   };
 }
 
@@ -287,6 +289,8 @@ export default function AppUpdatesPage() {
   const [customFrom, setCustomFrom] = useState("");
   const [customTo, setCustomTo] = useState("");
   const [labelFilter, setLabelFilter] = useState("");
+  const [dismissFilter, setDismissFilter] = useState("");
+  const [availableDismissReasons, setAvailableDismissReasons] = useState<string[]>([]);
   const [sortOrder, setSortOrder] = useState<"desc" | "asc">("desc");
   const [page, setPage] = useState(1);
 
@@ -325,6 +329,7 @@ export default function AppUpdatesPage() {
       if (effectiveDateRange?.from) params.set("dateFrom", effectiveDateRange.from);
       if (effectiveDateRange?.to) params.set("dateTo", effectiveDateRange.to);
       if (labelFilter) params.set("labelId", labelFilter);
+      if (dismissFilter) params.set("dismissReason", dismissFilter);
 
       const res = await fetchWithAuth(
         `/api/system-admin/app-updates?${params}`
@@ -336,6 +341,7 @@ export default function AppUpdatesPage() {
         setAvailableFields(json.filters.fields);
         setAvailablePlatforms(json.filters.platforms);
         setAllLabels(json.filters.labels);
+        setAvailableDismissReasons(json.filters.dismissReasons || []);
       }
     } finally {
       setLoading(false);
@@ -350,6 +356,7 @@ export default function AppUpdatesPage() {
     effectiveDateRange?.from,
     effectiveDateRange?.to,
     labelFilter,
+    dismissFilter,
   ]);
 
   useEffect(() => {
@@ -359,7 +366,7 @@ export default function AppUpdatesPage() {
   // Reset page when filters change
   useEffect(() => {
     setPage(1);
-  }, [platform, field, datePreset, customFrom, customTo, labelFilter]);
+  }, [platform, field, datePreset, customFrom, customTo, labelFilter, dismissFilter]);
 
   const toggleSort = () => {
     setSortOrder((prev) => (prev === "desc" ? "asc" : "desc"));
@@ -432,6 +439,20 @@ export default function AppUpdatesPage() {
     );
   };
 
+  // Dismiss reason actions
+  const handleDismiss = async (changeId: number, reason: string | null) => {
+    await fetchWithAuth(`/api/system-admin/app-updates/${changeId}/dismiss`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ reason }),
+    });
+    setData((prev) =>
+      prev.map((row) =>
+        row.id === changeId ? { ...row, dismissReason: reason } : row
+      )
+    );
+  };
+
   const SortIcon = sortOrder === "desc" ? ArrowDown : ArrowUp;
 
   return (
@@ -493,6 +514,20 @@ export default function AppUpdatesPage() {
               {allLabels.map((l) => (
                 <option key={l.id} value={l.id}>
                   {l.name}
+                </option>
+              ))}
+            </select>
+            <select
+              value={dismissFilter}
+              onChange={(e) => setDismissFilter(e.target.value)}
+              className="h-9 rounded-md border border-input bg-background px-3 text-sm ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring"
+            >
+              <option value="">All Status</option>
+              <option value="none">Active (no dismiss)</option>
+              <option value="any">Dismissed (any reason)</option>
+              {availableDismissReasons.map((r) => (
+                <option key={r} value={r}>
+                  Dismissed: {r}
                 </option>
               ))}
             </select>
@@ -633,13 +668,14 @@ export default function AppUpdatesPage() {
                     </button>
                   </TableHead>
                   <TableHead className="w-[120px]">Labels</TableHead>
+                  <TableHead className="w-[120px]">Status</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {loading ? (
                   <TableRow>
                     <TableCell
-                      colSpan={8}
+                      colSpan={9}
                       className="text-center py-12 text-muted-foreground"
                     >
                       Loading...
@@ -648,7 +684,7 @@ export default function AppUpdatesPage() {
                 ) : data.length === 0 ? (
                   <TableRow>
                     <TableCell
-                      colSpan={8}
+                      colSpan={9}
                       className="text-center py-12 text-muted-foreground"
                     >
                       No app updates found
@@ -705,6 +741,36 @@ export default function AppUpdatesPage() {
                           onAssign={handleAssignLabel}
                           onRemove={handleRemoveLabel}
                         />
+                      </TableCell>
+                      <TableCell>
+                        {row.dismissReason ? (
+                          <div className="flex items-center gap-1">
+                            <Badge variant="destructive" className="text-[10px]">
+                              {row.dismissReason}
+                            </Badge>
+                            <button
+                              onClick={() => handleDismiss(row.id, null)}
+                              className="text-muted-foreground hover:text-foreground"
+                              title="Clear dismiss"
+                            >
+                              <X className="h-3 w-3" />
+                            </button>
+                          </div>
+                        ) : (
+                          <select
+                            value=""
+                            onChange={(e) => {
+                              if (e.target.value) handleDismiss(row.id, e.target.value);
+                            }}
+                            className="h-7 rounded border border-input bg-background px-1.5 text-[10px] ring-offset-background focus:outline-none focus:ring-1 focus:ring-ring"
+                          >
+                            <option value="">Active</option>
+                            <option value="duplicate">Duplicate</option>
+                            <option value="false-positive">False Positive</option>
+                            <option value="scraper-error">Scraper Error</option>
+                            <option value="irrelevant">Irrelevant</option>
+                          </select>
+                        )}
                       </TableCell>
                     </TableRow>
                   ))

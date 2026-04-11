@@ -1,6 +1,7 @@
 System Admin (2026-04-11)
   PLA-1000: App Updates page — cross-platform change analysis ✅
   PLA-1000: App Updates v2 — ID column, date presets, labels, layout fixes ✅
+  PLA-1002: Fix duplicate app field changes — dedup logic + dismiss_reason flag ✅
 
 Bug Fixes (2026-04-11)
   PLA-994: Fix developers page — empty table caused by query timeout ✅

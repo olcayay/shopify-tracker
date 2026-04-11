@@ -716,16 +716,31 @@ export class AppDetailsScraper {
       const appId = upsertedApp.id;
 
       if (changes.length > 0) {
-        await this.db.insert(appFieldChanges).values(
-          changes.map((c) => ({
-            appId,
-            field: c.field,
-            oldValue: c.oldValue,
-            newValue: c.newValue,
-            scrapeRunId: runId!,
-          }))
-        );
-        log.info("detected field changes", { slug, fields: changes.map((c) => c.field) });
+        // Dedup: filter out changes where the most recent recorded change already has the same new_value
+        const dedupedChanges = [];
+        for (const c of changes) {
+          const [lastChange] = await this.db
+            .select({ newValue: appFieldChanges.newValue })
+            .from(appFieldChanges)
+            .where(and(eq(appFieldChanges.appId, appId), eq(appFieldChanges.field, c.field)))
+            .orderBy(desc(appFieldChanges.detectedAt))
+            .limit(1);
+          if (!lastChange || lastChange.newValue !== c.newValue) {
+            dedupedChanges.push(c);
+          }
+        }
+        if (dedupedChanges.length > 0) {
+          await this.db.insert(appFieldChanges).values(
+            dedupedChanges.map((c) => ({
+              appId,
+              field: c.field,
+              oldValue: c.oldValue,
+              newValue: c.newValue,
+              scrapeRunId: runId!,
+            }))
+          );
+          log.info("detected field changes", { slug, fields: dedupedChanges.map((c) => c.field) });
+        }
       }
 
       // Resolve category slugs before saving snapshot
