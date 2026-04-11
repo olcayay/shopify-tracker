@@ -1,6 +1,14 @@
 Bug Fixes (2026-04-11)
 ======================
 
+PLA-996: Fix Shopify category tree — top-level categories missing, subcategories flat
+- Root cause: API filtered empty categories (appCount=null) BEFORE building the tree
+  Hub categories like "Finding products" have no direct apps → filtered out → children orphaned
+- Fix: Build tree with ALL categories first, then pruneEmptyLeaves() removes only
+  nodes that have no apps AND no children with apps. Parent hub categories preserved.
+- Exported buildTree() and pruneEmptyLeaves() for unit testing
+- 7 new tests: buildTree hierarchy + orphan handling, pruneEmptyLeaves multi-level pruning
+
 PLA-998: Fix mobile table overflow — tables still extend beyond viewport
 - Root cause: main element had overflow-auto which scrolls both X and Y; wide tables
   caused horizontal page scroll instead of scrolling within the table container

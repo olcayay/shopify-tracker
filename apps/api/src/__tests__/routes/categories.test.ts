@@ -536,3 +536,124 @@ describe("Category routes — with mock data", () => {
     });
   });
 });
+
+// =========================================================================
+// Unit tests for buildTree and pruneEmptyLeaves
+// =========================================================================
+
+describe("buildTree", () => {
+  let buildTree: typeof import("../../routes/categories.js").buildTree;
+
+  beforeAll(async () => {
+    const mod = await import("../../routes/categories.js");
+    buildTree = mod.buildTree;
+  });
+
+  it("returns roots for categories with no parentSlug", () => {
+    const rows = [
+      { id: 1, slug: "marketing", parentSlug: null, title: "Marketing" },
+      { id: 2, slug: "checkout", parentSlug: null, title: "Checkout" },
+    ];
+    const tree = buildTree(rows, []);
+    expect(tree).toHaveLength(2);
+    expect(tree[0].slug).toBe("marketing");
+    expect(tree[1].slug).toBe("checkout");
+  });
+
+  it("nests children under their parent via parentSlug", () => {
+    const rows = [
+      { id: 1, slug: "finding-products", parentSlug: null, title: "Finding products" },
+      { id: 2, slug: "finding-products-dropshipping", parentSlug: "finding-products", title: "Dropshipping" },
+      { id: 3, slug: "finding-products-wholesale", parentSlug: "finding-products", title: "Wholesale" },
+    ];
+    const tree = buildTree(rows, []);
+    expect(tree).toHaveLength(1);
+    expect(tree[0].slug).toBe("finding-products");
+    expect(tree[0].children).toHaveLength(2);
+    expect(tree[0].children[0].slug).toBe("finding-products-dropshipping");
+  });
+
+  it("promotes orphaned categories (missing parent) to roots", () => {
+    const rows = [
+      { id: 2, slug: "finding-products-dropshipping", parentSlug: "finding-products", title: "Dropshipping" },
+      { id: 3, slug: "finding-products-wholesale", parentSlug: "finding-products", title: "Wholesale" },
+    ];
+    const tree = buildTree(rows, []);
+    expect(tree).toHaveLength(2);
+  });
+});
+
+describe("pruneEmptyLeaves", () => {
+  let pruneEmptyLeaves: typeof import("../../routes/categories.js").pruneEmptyLeaves;
+
+  beforeAll(async () => {
+    const mod = await import("../../routes/categories.js");
+    pruneEmptyLeaves = mod.pruneEmptyLeaves;
+  });
+
+  it("removes leaf nodes with no apps", () => {
+    const tree = [
+      { slug: "empty-leaf", appCount: null, children: [] },
+      { slug: "has-apps", appCount: 5, children: [] },
+    ];
+    const result = pruneEmptyLeaves(tree);
+    expect(result).toHaveLength(1);
+    expect(result[0].slug).toBe("has-apps");
+  });
+
+  it("keeps parent with no apps if children have apps", () => {
+    const tree = [
+      {
+        slug: "finding-products",
+        appCount: null,
+        children: [
+          { slug: "dropshipping", appCount: 10, children: [] },
+          { slug: "wholesale", appCount: 5, children: [] },
+        ],
+      },
+    ];
+    const result = pruneEmptyLeaves(tree);
+    expect(result).toHaveLength(1);
+    expect(result[0].slug).toBe("finding-products");
+    expect(result[0].children).toHaveLength(2);
+  });
+
+  it("removes parent with no apps when children also have no apps", () => {
+    const tree = [
+      {
+        slug: "empty-parent",
+        appCount: null,
+        children: [
+          { slug: "empty-child", appCount: null, children: [] },
+        ],
+      },
+    ];
+    const result = pruneEmptyLeaves(tree);
+    expect(result).toHaveLength(0);
+  });
+
+  it("handles multi-level pruning correctly", () => {
+    const tree = [
+      {
+        slug: "root",
+        appCount: null,
+        children: [
+          {
+            slug: "mid",
+            appCount: null,
+            children: [
+              { slug: "leaf-with-apps", appCount: 3, children: [] },
+              { slug: "leaf-empty", appCount: 0, children: [] },
+            ],
+          },
+        ],
+      },
+    ];
+    const result = pruneEmptyLeaves(tree);
+    expect(result).toHaveLength(1);
+    expect(result[0].slug).toBe("root");
+    expect(result[0].children[0].slug).toBe("mid");
+    expect(result[0].children[0].children).toHaveLength(1);
+    expect(result[0].children[0].children[0].slug).toBe("leaf-with-apps");
+  });
+});

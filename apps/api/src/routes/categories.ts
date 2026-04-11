@@ -62,18 +62,17 @@ export const categoryRoutes: FastifyPluginAsync = async (app) => {
 
     // Hide empty categories (appCount 0 or null) from non-system-admin users
     const isAdmin = request.user?.isSystemAdmin === true;
-    const filtered = isAdmin
-      ? rows
-      : rows.filter((r) => r.appCount != null && r.appCount > 0);
 
     if (format === "flat") {
-      return filtered;
+      return isAdmin
+        ? rows
+        : rows.filter((r) => r.appCount != null && r.appCount > 0);
     }
 
     // Query junction table for multi-parent relationships (graceful fallback if table doesn't exist yet)
     let junctionRows: { categoryId: number; parentCategoryId: number }[] = [];
     try {
-      const categoryIds = filtered.map((r) => r.id);
+      const categoryIds = rows.map((r) => r.id);
       if (categoryIds.length > 0) {
         junctionRows = await db
           .select({
@@ -87,8 +86,12 @@ export const categoryRoutes: FastifyPluginAsync = async (app) => {
       // category_parents table may not exist yet (pre-migration)
     }
 
-    // Build tree: roots are those with null parentSlug
-    return buildTree(filtered, junctionRows);
+    // Build tree with ALL categories (including hub parents with no apps)
+    // then prune empty leaves for non-admins. This preserves the hierarchy
+    // so parent categories like "Finding products" appear even if they have
+    // no direct apps — as long as their children do.
+    const tree = buildTree(rows, junctionRows);
+    return isAdmin ? tree : pruneEmptyLeaves(tree);
   });
 
   // GET /api/categories/features-by-slugs?slugs=slug1,slug2
@@ -847,7 +850,8 @@ export const categoryRoutes: FastifyPluginAsync = async (app) => {
   );
 };
 
-function buildTree(
+/** @internal exported for testing */
+export function buildTree(
   rows: { id: number; slug: string; parentSlug: string | null; [key: string]: any }[],
   junctionRows?: { categoryId: number; parentCategoryId: number }[]
 ) {
@@ -909,4 +913,22 @@ function buildTree(
   }
 
   return roots;
+}
+
+/**
+ * Recursively removes empty leaf nodes from the category tree.
+ * A node is kept if it has apps (appCount > 0) OR has children that have apps.
+ * This preserves hub/parent categories that don't list apps themselves
+ * but contain subcategories that do.
+ */
+/** @internal exported for testing */
+export function pruneEmptyLeaves(nodes: any[]): any[] {
+  return nodes
+    .map((node) => ({
+      ...node,
+      children: pruneEmptyLeaves(node.children || []),
+    }))
+    .filter((node) =>
+      (node.appCount != null && node.appCount > 0) || node.children.length > 0
+    );
 }
