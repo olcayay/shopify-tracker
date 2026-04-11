@@ -392,36 +392,28 @@ export class CategoryScraper {
       }
     }
 
-    // Multi-page support: fetch additional pages in parallel (listing pages only, default 10 pages)
+    // Multi-page support: fetch additional pages sequentially (listing pages only, default 10 pages)
     if (isListingPage && depth > 0 && pageOptions?.pages !== "first") {
       const maxPages = pageOptions?.pages === "all" ? 50
         : typeof pageOptions?.pages === "number" ? pageOptions.pages
         : 10;
 
-      if (maxPages > 1 && hasNextPage(html)) {
-        // Optimistically launch parallel fetches for pages 2-maxPages
-        // HttpClient's waitForSlot() enforces rate limiting globally
-        const pagePromises: Promise<{ page: number; html: string; ok: boolean }>[] = [];
-        for (let p = 2; p <= maxPages; p++) {
-          const pageUrl = urls.categoryAll(slug, p);
-          pagePromises.push(
-            this.httpClient.fetchPage(pageUrl)
-              .then(pageHtml => ({ page: p, html: pageHtml, ok: true }))
-              .catch(error => {
-                log.warn("failed to fetch category page", { slug, page: p, error: String(error) });
-                return { page: p, html: "", ok: false };
-              })
-          );
-        }
-        const pageResults = await Promise.all(pagePromises);
-
-        // Process results in order, stop at first failure or empty page
+      if (maxPages > 1) {
+        let currentPage = 1;
+        let currentHtml = html;
         let totalAppsRecorded = pageData.first_page_apps.length;
-        for (const result of pageResults) {
-          if (!result.ok) break;
 
-          const pageUrl = urls.categoryAll(slug, result.page);
-          const nextPageData = parseCategoryPage(result.html, pageUrl);
+        while (currentPage < maxPages && hasNextPage(currentHtml)) {
+          currentPage++;
+          const pageUrl = urls.categoryAll(slug, currentPage);
+          try {
+            currentHtml = await this.httpClient.fetchPage(pageUrl);
+          } catch (error) {
+            log.warn("failed to fetch category page", { slug, page: currentPage, error: String(error) });
+            break;
+          }
+
+          const nextPageData = parseCategoryPage(currentHtml, pageUrl);
 
           // Deduplicate across pages (sponsored apps can appear on multiple pages)
           const newApps = nextPageData.first_page_apps.filter(app => {
@@ -440,10 +432,9 @@ export class CategoryScraper {
             if (appSlug) discoveredSlugs.push(appSlug);
           }
 
-          // Debug logging
           const sampleApp = nextPageData.first_page_apps[0];
           log.info("category page scraped", {
-            slug, page: result.page,
+            slug, page: currentPage,
             totalParsed: nextPageData.first_page_apps.length,
             newApps: newApps.length,
             sampleHasLogo: !!sampleApp?.logo_url,
@@ -451,9 +442,8 @@ export class CategoryScraper {
             sampleHasPricing: !!sampleApp?.pricing_hint,
           });
 
-          // If page returned 0 new apps, we've likely hit the end
           if (newApps.length === 0) {
-            log.info("no new apps found, stopping pagination", { slug, page: result.page });
+            log.info("no new apps found, stopping pagination", { slug, page: currentPage });
             break;
           }
         }

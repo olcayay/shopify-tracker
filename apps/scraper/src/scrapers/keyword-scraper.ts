@@ -191,59 +191,33 @@ export class KeywordScraper {
     let totalResults: number | null = null;
     let organicCount = 0;
 
-    // Fetch page 1 first to check if there are results and more pages
-    const page1Start = Date.now();
-    const page1Html = await this.httpClient.fetchPage(urls.search(keyword, 1), { "Turbo-Frame": "search_page" });
-    const page1Data = parseSearchPage(page1Html, keyword, 1, 0);
-    log.info("keyword:page_fetched", { keyword, page: 1, pageMs: Date.now() - page1Start, apps: page1Data.apps.length, hasNext: page1Data.has_next_page });
-    totalResults = page1Data.total_results;
+    for (let page = 1; page <= MAX_PAGES; page++) {
+      const pageStart = Date.now();
+      const searchUrl = urls.search(keyword, page);
+      const html = await this.httpClient.fetchPage(searchUrl, {
+        "Turbo-Frame": "search_page",
+      });
+      const data = parseSearchPage(html, keyword, page, organicCount);
+      log.info("keyword:page_fetched", { keyword, page, pageMs: Date.now() - pageStart, apps: data.apps.length, hasNext: data.has_next_page });
 
-    for (const app of page1Data.apps) {
-      if (app.is_sponsored) {
-        if (seenSponsoredSlugs.has(app.app_slug)) continue;
-        seenSponsoredSlugs.add(app.app_slug);
-      } else {
-        if (seenOrganicSlugs.has(app.app_slug)) continue;
-        seenOrganicSlugs.add(app.app_slug);
-        if (!app.is_built_in) organicCount++;
-      }
-      allApps.push(app);
-    }
+      if (page === 1) totalResults = data.total_results;
 
-    // Fetch remaining pages in parallel if page 1 has more
-    if (page1Data.has_next_page && MAX_PAGES > 1) {
-      const pagePromises: Promise<{ page: number; html: string; ok: boolean }>[] = [];
-      for (let p = 2; p <= MAX_PAGES; p++) {
-        pagePromises.push(
-          this.httpClient.fetchPage(urls.search(keyword, p), { "Turbo-Frame": "search_page" })
-            .then(html => ({ page: p, html, ok: true }))
-            .catch(() => ({ page: p, html: "", ok: false }))
-        );
-      }
-      const pageResults = await Promise.all(pagePromises);
-
-      // Process results in order for correct deduplication and position tracking
-      for (const result of pageResults) {
-        if (!result.ok) break;
-        const data = parseSearchPage(result.html, keyword, result.page, organicCount);
-        log.info("keyword:page_fetched", { keyword, page: result.page, apps: data.apps.length, hasNext: data.has_next_page });
-
-        for (const app of data.apps) {
-          if (app.is_sponsored) {
-            if (seenSponsoredSlugs.has(app.app_slug)) continue;
-            seenSponsoredSlugs.add(app.app_slug);
-          } else {
-            if (seenOrganicSlugs.has(app.app_slug)) continue;
-            seenOrganicSlugs.add(app.app_slug);
-            if (!app.is_built_in) organicCount++;
-          }
-          allApps.push(app);
+      // Deduplicate across pages, per type (same app can be both sponsored and organic)
+      for (const app of data.apps) {
+        if (app.is_sponsored) {
+          if (seenSponsoredSlugs.has(app.app_slug)) continue;
+          seenSponsoredSlugs.add(app.app_slug);
+        } else {
+          if (seenOrganicSlugs.has(app.app_slug)) continue;
+          seenOrganicSlugs.add(app.app_slug);
+          if (!app.is_built_in) organicCount++;
         }
+        allApps.push(app);
+      }
 
-        if (!data.has_next_page) {
-          log.info("no more pages", { keyword, stoppedAtPage: result.page });
-          break;
-        }
+      if (!data.has_next_page) {
+        log.info("no more pages", { keyword, stoppedAtPage: page });
+        break;
       }
     }
 
