@@ -320,6 +320,7 @@ export const accountExtrasRoutes: FastifyPluginAsync = async (app) => {
   // GET /api/account/starred-features
   app.get("/starred-features", async (request) => {
     const { accountId } = request.user;
+    const platform = getPlatformFromQuery(request.query as Record<string, unknown>);
 
     const rows = await db
       .select({
@@ -335,7 +336,22 @@ export const accountExtrasRoutes: FastifyPluginAsync = async (app) => {
     const handles = rows.map((r) => r.featureHandle);
     const handleList = sql.join(handles.map((h) => sql`${h}`), sql`,`);
 
-    // Get category info + app slugs per feature in one query
+    // Get tracked + competitor app IDs first (for scoped feature counting)
+    const [trackedAppsRows, competitorAppsRows] = await Promise.all([
+      db.select({ appId: accountTrackedApps.appId, appSlug: apps.slug })
+        .from(accountTrackedApps)
+        .innerJoin(apps, eq(apps.id, accountTrackedApps.appId))
+        .where(eq(accountTrackedApps.accountId, accountId)),
+      db.select({ appId: accountCompetitorApps.competitorAppId, appSlug: apps.slug })
+        .from(accountCompetitorApps)
+        .innerJoin(apps, eq(apps.id, accountCompetitorApps.competitorAppId))
+        .where(eq(accountCompetitorApps.accountId, accountId)),
+    ]);
+    const trackedSet = new Set(trackedAppsRows.map((a) => a.appSlug));
+    const competitorSet = new Set(competitorAppsRows.map((a) => a.appSlug));
+
+    // Get category info + app slugs per feature — platform-filtered, LATERAL join
+    // avoids cartesian explosion by only expanding features for matching apps
     const enrichResult = await db.execute(sql`
       SELECT
         f->>'feature_handle' AS handle,
@@ -345,6 +361,7 @@ export const accountExtrasRoutes: FastifyPluginAsync = async (app) => {
       FROM (
         SELECT DISTINCT ON (s.app_id) s.id, s.app_id, s.categories
         FROM app_snapshots s
+        INNER JOIN apps a2 ON a2.id = s.app_id AND a2.platform = ${platform}
         ORDER BY s.app_id, s.scraped_at DESC
       ) s
       INNER JOIN apps a ON a.id = s.app_id,
@@ -365,14 +382,6 @@ export const accountExtrasRoutes: FastifyPluginAsync = async (app) => {
       if (!featureAppsMap.has(r.handle)) featureAppsMap.set(r.handle, new Set());
       featureAppsMap.get(r.handle)!.add(r.app_slug);
     }
-
-    // Get tracked + competitor slugs for this account
-    const [trackedAppsRows, competitorAppsRows] = await Promise.all([
-      db.select({ appSlug: apps.slug }).from(accountTrackedApps).innerJoin(apps, eq(apps.id, accountTrackedApps.appId)).where(eq(accountTrackedApps.accountId, accountId)),
-      db.select({ appSlug: apps.slug }).from(accountCompetitorApps).innerJoin(apps, eq(apps.id, accountCompetitorApps.competitorAppId)).where(eq(accountCompetitorApps.accountId, accountId)),
-    ]);
-    const trackedSet = new Set(trackedAppsRows.map((a) => a.appSlug));
-    const competitorSet = new Set(competitorAppsRows.map((a) => a.appSlug));
 
     return rows.map((r) => {
       const cat = catMap.get(r.featureHandle);

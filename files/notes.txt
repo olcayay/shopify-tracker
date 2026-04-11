@@ -1,6 +1,14 @@
 Bug Fixes (2026-04-11)
 ======================
 
+PLA-990: Optimize slow account API endpoints — starred-features + indexes
+- starred-features: Added platform filtering (was scanning ALL apps across ALL platforms)
+  JSONB expansion now scoped to current platform via INNER JOIN on apps.platform
+- Moved tracked/competitor app fetch BEFORE enrichment query (reordered for parallel use)
+- Migration 0134: Added DESC indexes for visibility scores + category snapshots
+  (existing ASC indexes can't efficiently serve DISTINCT ON + ORDER BY DESC)
+- Most proposed indexes from ticket already existed in migrations 0132/0133
+
 PLA-989: compute_app_scores prerequisite check — platform filtering + fallback
 - Bug: checkPrerequisites() did not filter by platform — any platform's completed run satisfied the check
 - Bug: No fallback to yesterday's data — if today's scraper failed, scores failed entirely

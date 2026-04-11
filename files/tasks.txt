@@ -1,6 +1,7 @@
 Bug Fixes (2026-04-11)
   PLA-992: Fix Competitor Watch card empty state — malformed URL query string ✅
   PLA-989: Fix compute_app_scores — platform-scoped prerequisites + yesterday fallback ✅
+  PLA-990: Optimize slow account API endpoints — platform filter + DESC indexes ✅
 
 Header & Sidebar Redesign (2026-04-10)
   PLA-976: Mobile-first responsive navigation ✅
