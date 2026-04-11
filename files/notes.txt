@@ -1,6 +1,13 @@
 Bug Fixes (2026-04-11)
 ======================
 
+PLA-997: Fix Audit Report button — URL, icon, sizing
+- URL: Changed from /${platform}/apps/v2/${slug}/intel to /audit/${platform}/${slug} (both v1+v2)
+- Icon: Changed from FileSearch to ClipboardCheck (lucide-react) — audit/checklist concept
+- V2 icon sizing: Added iconClassName prop to EmailDigestToggle and CompetitorButton
+  - V2 passes iconClassName="h-4 w-4" for consistent h-4 w-4 convention
+  - V1 keeps default h-5 w-5 (unchanged)
+
 PLA-975: Fix mobile responsiveness for all dashboard tables
 - Root cause: <main> element has flex-1 + overflow-auto but lacked min-w-0
   In flexbox, default min-width: auto prevents flex items from shrinking below

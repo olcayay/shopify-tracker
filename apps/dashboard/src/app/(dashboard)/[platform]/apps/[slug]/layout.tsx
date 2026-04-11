@@ -4,7 +4,7 @@ import { formatDateOnly } from "@/lib/format-date";
 import { getApp, getAppMembership } from "@/lib/api";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { ExternalLink } from "lucide-react";
+import { ExternalLink, ClipboardCheck } from "lucide-react";
 import { TrackAppButton } from "./track-button";
 import { CompetitorButton } from "@/components/competitor-button";
 import { AdminScraperTrigger } from "@/components/admin-scraper-trigger";
@@ -75,6 +75,13 @@ export default async function AppDetailLayout({
           </div>
         </div>
         <div className="flex items-center gap-2">
+          <Link
+            href={`/audit/${platform}/${slug}`}
+            title="Audit Report"
+            className="inline-flex items-center justify-center h-9 w-9 rounded-md hover:bg-accent transition-colors"
+          >
+            <ClipboardCheck className="h-5 w-5 text-muted-foreground" />
+          </Link>
           <a
             href={buildExternalAppUrl(platform as PlatformId, app.slug, app.externalId)}
             target="_blank"

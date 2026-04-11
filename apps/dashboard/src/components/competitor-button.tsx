@@ -16,6 +16,7 @@ export function CompetitorButton({
   trackedAppSlug,
   competitorForApps,
   size = "default",
+  iconClassName,
 }: {
   appSlug: string;
   appName?: string;
@@ -23,6 +24,7 @@ export function CompetitorButton({
   trackedAppSlug?: string;
   competitorForApps?: string[];
   size?: "default" | "sm";
+  iconClassName?: string;
 }) {
   const { fetchWithAuth, refreshUser, account } = useAuth();
   const [starred, setStarred] = useState(initialStarred);
@@ -196,7 +198,7 @@ export function CompetitorButton({
   }
 
   const sizeClasses = size === "sm" ? "h-7 w-7" : "h-9 w-9";
-  const iconClasses = size === "sm" ? "h-3.5 w-3.5" : "h-5 w-5";
+  const iconClasses = iconClassName ?? (size === "sm" ? "h-3.5 w-3.5" : "h-5 w-5");
 
   const limitInfo = account
     ? `${account.usage.competitorApps}/${account.limits.maxCompetitorApps}`

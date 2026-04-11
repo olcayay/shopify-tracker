@@ -9,9 +9,11 @@ import { toast } from "sonner";
 export function EmailDigestToggle({
   appId,
   isTracked,
+  iconClassName = "h-5 w-5",
 }: {
   appId: number;
   isTracked: boolean;
+  iconClassName?: string;
 }) {
   const { fetchWithAuth } = useAuth();
   const [enabled, setEnabled] = useState(true);
@@ -65,7 +67,7 @@ export function EmailDigestToggle({
               : "hover:bg-accent text-muted-foreground"
           }`}
         >
-          <Icon className="h-5 w-5" />
+          <Icon className={iconClassName} />
         </button>
       </TooltipTrigger>
       <TooltipContent>
