@@ -29,7 +29,8 @@ describe("UnifiedChangeLog", () => {
   it("filters by source - self only", () => {
     render(<UnifiedChangeLog entries={entries} />);
     fireEvent.click(screen.getByRole("button", { name: "My App" }));
-    expect(screen.queryByText("Rival App")).not.toBeInTheDocument();
+    // Rival App entry link should be gone (text may still appear in app filter dropdown)
+    expect(screen.queryAllByRole("link", { name: "Rival App" })).toHaveLength(0);
   });
 
   it("filters by source - competitors only", () => {
@@ -41,12 +42,13 @@ describe("UnifiedChangeLog", () => {
 
   it("filters by field", () => {
     render(<UnifiedChangeLog entries={entries} />);
-    const select = screen.getByRole("combobox");
-    fireEvent.change(select, { target: { value: "name" } });
-    // Only the name change should show — Rival App should be gone
-    expect(screen.queryByText("Rival App")).not.toBeInTheDocument();
-    // My App still visible (both as filter button and as entry)
-    expect(screen.getAllByText("My App").length).toBeGreaterThanOrEqual(1);
+    const selects = screen.getAllByRole("combobox");
+    const fieldSelect = selects[0]; // First select is field filter
+    fireEvent.change(fieldSelect, { target: { value: "name" } });
+    // Only the name change should show — Rival App entry link should be gone
+    expect(screen.queryAllByRole("link", { name: "Rival App" })).toHaveLength(0);
+    // My App still visible as entry link
+    expect(screen.getAllByRole("link", { name: "My App" }).length).toBeGreaterThanOrEqual(1);
   });
 
   it("entries are expanded by default showing diff content", () => {
@@ -207,5 +209,97 @@ describe("UnifiedChangeLog", () => {
     expect(screen.queryByText(/page/i)).not.toBeInTheDocument();
     expect(screen.queryByText("Previous")).not.toBeInTheDocument();
     expect(screen.queryByText("Next")).not.toBeInTheDocument();
+  });
+
+  it("shows app filter dropdown with unique app names", () => {
+    render(<UnifiedChangeLog entries={entries} />);
+    // App filter should be present (more than 1 app)
+    const selects = screen.getAllByRole("combobox");
+    const appSelect = selects[1]; // Second select is app filter
+    expect(appSelect).toBeInTheDocument();
+    // Check options: All apps + My App + Rival App
+    const options = within(appSelect).getAllByRole("option");
+    expect(options).toHaveLength(3);
+    expect(options[0]).toHaveTextContent("All apps");
+    expect(options.map((o) => o.textContent)).toContain("My App");
+    expect(options.map((o) => o.textContent)).toContain("Rival App");
+  });
+
+  it("filters by app when app is selected", () => {
+    render(<UnifiedChangeLog entries={entries} />);
+    const selects = screen.getAllByRole("combobox");
+    const appSelect = selects[1];
+    // Select "Rival App"
+    fireEvent.change(appSelect, { target: { value: "rival" } });
+    // Only Rival App entries should show
+    expect(screen.getAllByText("Rival App").length).toBeGreaterThan(0);
+    // My App entries should be hidden (but "My App" button in source filter remains)
+    const myAppLinks = screen.queryAllByRole("link", { name: "My App" });
+    expect(myAppLinks).toHaveLength(0);
+  });
+
+  it("shows all entries when 'All apps' is selected", () => {
+    render(<UnifiedChangeLog entries={entries} />);
+    const selects = screen.getAllByRole("combobox");
+    const appSelect = selects[1];
+    // Filter to rival first
+    fireEvent.change(appSelect, { target: { value: "rival" } });
+    expect(screen.queryAllByRole("link", { name: "My App" })).toHaveLength(0);
+    // Reset to all
+    fireEvent.change(appSelect, { target: { value: "all" } });
+    expect(screen.getAllByRole("link", { name: "My App" }).length).toBeGreaterThan(0);
+    expect(screen.getAllByRole("link", { name: "Rival App" }).length).toBeGreaterThan(0);
+  });
+
+  it("app filter works with source and field filters combined", () => {
+    const multiEntries: ChangeEntry[] = [
+      { appSlug: "app-a", appName: "App A", isSelf: true, field: "name", oldValue: "O", newValue: "N", detectedAt: now.toISOString() },
+      { appSlug: "app-a", appName: "App A", isSelf: true, field: "features", oldValue: "[]", newValue: "[]", detectedAt: now.toISOString() },
+      { appSlug: "app-b", appName: "App B", isSelf: false, field: "name", oldValue: "X", newValue: "Y", detectedAt: now.toISOString() },
+      { appSlug: "app-b", appName: "App B", isSelf: false, field: "features", oldValue: "[]", newValue: "[]", detectedAt: now.toISOString() },
+    ];
+    render(<UnifiedChangeLog entries={multiEntries} />);
+
+    // Filter to App B + name field
+    const selects = screen.getAllByRole("combobox");
+    fireEvent.change(selects[1], { target: { value: "app-b" } }); // app filter
+    fireEvent.change(selects[0], { target: { value: "name" } }); // field filter
+
+    // Only App B's name change should show
+    const links = screen.getAllByRole("link");
+    expect(links).toHaveLength(1);
+    expect(links[0]).toHaveTextContent("App B");
+  });
+
+  it("hides app filter when only one app exists", () => {
+    const singleAppEntries: ChangeEntry[] = [
+      { appSlug: "my-app", appName: "My App", isSelf: true, field: "name", oldValue: "O", newValue: "N", detectedAt: now.toISOString() },
+    ];
+    render(<UnifiedChangeLog entries={singleAppEntries} />);
+    // Only field filter select should exist (no app filter)
+    const selects = screen.getAllByRole("combobox");
+    expect(selects).toHaveLength(1);
+  });
+
+  it("resets page when app filter changes", () => {
+    const manyEntries: ChangeEntry[] = Array.from({ length: 25 }, (_, i) => ({
+      appSlug: i < 15 ? "app-a" : "app-b",
+      appName: i < 15 ? "App A" : "App B",
+      isSelf: true,
+      field: "name",
+      oldValue: `Old ${i}`,
+      newValue: `New ${i}`,
+      detectedAt: new Date(now.getTime() - i * 60000).toISOString(),
+    }));
+    render(<UnifiedChangeLog entries={manyEntries} />);
+
+    // Go to page 2
+    fireEvent.click(screen.getByText("Next"));
+    expect(screen.getByText(/page 2 of 2/i)).toBeInTheDocument();
+
+    // Change app filter — should reset to page 1
+    const selects = screen.getAllByRole("combobox");
+    fireEvent.change(selects[1], { target: { value: "app-a" } });
+    expect(screen.queryByText(/page 2/i)).not.toBeInTheDocument();
   });
 });

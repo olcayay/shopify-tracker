@@ -255,6 +255,7 @@ function ChangeRenderer({ entry }: { entry: ChangeEntry }) {
 export function UnifiedChangeLog({ entries, platform }: Props) {
   const [sourceFilter, setSourceFilter] = useState<"all" | "self" | "competitors">("all");
   const [fieldFilter, setFieldFilter] = useState<string>("all");
+  const [appFilter, setAppFilter] = useState<string>("all");
   const [collapsedIds, setCollapsedIds] = useState<Set<string>>(new Set());
   const [currentPage, setCurrentPage] = useState(1);
 
@@ -275,14 +276,23 @@ export function UnifiedChangeLog({ entries, platform }: Props) {
     return [...fields].sort();
   }, [entries]);
 
+  const allApps = useMemo(() => {
+    const seen = new Map<string, string>();
+    for (const e of entries) {
+      if (!seen.has(e.appSlug)) seen.set(e.appSlug, e.appName);
+    }
+    return [...seen.entries()].sort((a, b) => a[1].localeCompare(b[1]));
+  }, [entries]);
+
   const filtered = useMemo(() => {
     return entries.filter((e) => {
       if (sourceFilter === "self" && !e.isSelf) return false;
       if (sourceFilter === "competitors" && e.isSelf) return false;
       if (fieldFilter !== "all" && e.field !== fieldFilter) return false;
+      if (appFilter !== "all" && e.appSlug !== appFilter) return false;
       return true;
     });
-  }, [entries, sourceFilter, fieldFilter]);
+  }, [entries, sourceFilter, fieldFilter, appFilter]);
 
   // Pagination
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
@@ -298,6 +308,10 @@ export function UnifiedChangeLog({ entries, platform }: Props) {
   };
   const handleFieldFilter = (value: string) => {
     setFieldFilter(value);
+    setCurrentPage(1);
+  };
+  const handleAppFilter = (value: string) => {
+    setAppFilter(value);
     setCurrentPage(1);
   };
 
@@ -358,6 +372,19 @@ export function UnifiedChangeLog({ entries, platform }: Props) {
             <option key={f} value={f}>{getFieldLabel(f)}</option>
           ))}
         </select>
+
+        {allApps.length > 1 && (
+          <select
+            value={appFilter}
+            onChange={(e) => handleAppFilter(e.target.value)}
+            className="text-xs border rounded-md px-2 py-1 bg-background"
+          >
+            <option value="all">All apps</option>
+            {allApps.map(([slug, name]) => (
+              <option key={slug} value={slug}>{name}</option>
+            ))}
+          </select>
+        )}
 
         <button
           onClick={toggleExpandAll}
