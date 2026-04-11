@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback } from "react";
 import { usePolling } from "@/hooks/use-polling";
 import { useParams, useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
+import { useFeatureFlag } from "@/contexts/feature-flags-context";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -45,6 +46,7 @@ export default function ResearchProjectPage() {
   const id = params.id as string;
   const platform = params.platform as string;
   const canEdit = user?.role === "owner" || user?.role === "admin" || user?.role === "editor";
+  const hasKeywordScore = useFeatureFlag("keyword-score");
 
   const [data, setData] = useState<ResearchData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -406,7 +408,7 @@ export default function ResearchProjectPage() {
       )}
 
       {/* Opportunities */}
-      {hasRichData && data.opportunities.length > 0 && (
+      {hasKeywordScore && hasRichData && data.opportunities.length > 0 && (
         <SectionWrapper id="section-opportunities" title="Keyword Opportunities" icon={TrendingUp} subtitle="Best opportunities based on your research">
           <OpportunityTable opportunities={data.opportunities} />
         </SectionWrapper>

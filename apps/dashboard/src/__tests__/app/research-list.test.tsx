@@ -5,6 +5,7 @@ import { useParams } from "next/navigation";
 
 const mockFetchWithAuth = vi.fn();
 const mockPush = vi.fn();
+const mockHasFeature = vi.fn((slug: string) => slug === "keyword-score");
 
 vi.mock("next/navigation", async (importOriginal) => {
   const actual = (await importOriginal()) as Record<string, unknown>;
@@ -41,6 +42,10 @@ vi.mock("@/lib/auth-context", () => ({
   }),
 }));
 
+vi.mock("@/contexts/feature-flags-context", () => ({
+  useFeatureFlag: (slug: string) => mockHasFeature(slug),
+}));
+
 // Mock skeletons
 vi.mock("@/components/skeletons", () => ({
   TableSkeleton: () => <div data-testid="table-skeleton">Loading...</div>,
@@ -73,6 +78,7 @@ import ResearchListPage from "@/app/(dashboard)/[platform]/research/page";
 describe("ResearchListPage", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockHasFeature.mockImplementation((slug: string) => slug === "keyword-score");
     vi.mocked(useParams).mockReturnValue({ platform: "shopify" });
   });
 
@@ -252,6 +258,71 @@ describe("ResearchListPage", () => {
       expect(screen.getByText(/Created/)).toBeInTheDocument();
       expect(screen.getByText(/Updated/)).toBeInTheDocument();
     });
+  });
+
+  it("hides the opportunities summary card when keyword-score is disabled", async () => {
+    mockHasFeature.mockReturnValue(false);
+    mockFetchWithAuth.mockImplementation((url: string) => {
+      if (url === "/api/research-projects") {
+        return Promise.resolve({
+          ok: true,
+          json: () =>
+            Promise.resolve([
+              {
+                id: "p1",
+                name: "Research Project",
+                creatorName: "Alice",
+                createdAt: "2026-03-01T00:00:00Z",
+                updatedAt: "2026-03-20T00:00:00Z",
+              },
+            ]),
+        });
+      }
+      return Promise.resolve({
+        ok: true,
+        json: () =>
+          Promise.resolve({
+            project: { id: "p1", name: "Research Project" },
+            keywords: [{ id: 1, keyword: "pos", slug: "pos", totalResults: 10, scrapedAt: "2026-03-10T00:00:00Z" }],
+            competitors: [
+              {
+                slug: "comp-a",
+                name: "Competitor A",
+                iconUrl: null,
+                averageRating: 4.5,
+                ratingCount: 100,
+                minPaidPrice: 9.99,
+                powerScore: 70,
+              },
+              {
+                slug: "comp-b",
+                name: "Competitor B",
+                iconUrl: null,
+                averageRating: 4.2,
+                ratingCount: 80,
+                minPaidPrice: 19.99,
+                powerScore: 65,
+              },
+            ],
+            keywordRankings: {},
+            competitorSuggestions: [],
+            keywordSuggestions: [],
+            wordAnalysis: [],
+            categories: [],
+            featureCoverage: [{ feature: "analytics", title: "Analytics", count: 1, total: 2, competitors: ["comp-a"], isGap: true }],
+            opportunities: [{ keyword: "pos", slug: "pos", opportunityScore: 75, room: 0.8, demand: 0.6, competitorCount: 2, totalResults: 10 }],
+            virtualApps: [],
+          }),
+      });
+    });
+
+    render(<ResearchListPage />);
+
+    await waitFor(() => {
+      expect(screen.getByText("Research Project")).toBeInTheDocument();
+    });
+
+    expect(screen.queryByText("Opportunities")).not.toBeInTheDocument();
   });
 
   it("navigates to project detail when creating new project", async () => {

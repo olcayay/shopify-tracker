@@ -1,8 +1,14 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { KeywordOpportunityPopover } from "@/components/keyword-opportunity-popover";
 import type { KeywordOpportunityMetrics } from "@appranks/shared";
+
+const mockHasFeature = vi.fn((slug: string) => slug === "keyword-score");
+
+vi.mock("@/contexts/feature-flags-context", () => ({
+  useFeatureFlag: (slug: string) => mockHasFeature(slug),
+}));
 
 const mockMetrics: KeywordOpportunityMetrics = {
   opportunityScore: 65,
@@ -47,6 +53,10 @@ const mockMetrics: KeywordOpportunityMetrics = {
 };
 
 describe("KeywordOpportunityPopover", () => {
+  beforeEach(() => {
+    mockHasFeature.mockImplementation((slug: string) => slug === "keyword-score");
+  });
+
   it("renders the trigger children", () => {
     render(
       <KeywordOpportunityPopover metrics={mockMetrics}>
@@ -134,5 +144,20 @@ describe("KeywordOpportunityPopover", () => {
     const allText = document.body.textContent || "";
     expect(allText).toContain("25%");
     expect(allText).toContain("60%");
+  });
+
+  it("does not open the popover when the feature flag is disabled", async () => {
+    const user = userEvent.setup();
+    mockHasFeature.mockReturnValue(false);
+
+    render(
+      <KeywordOpportunityPopover metrics={mockMetrics}>
+        <button>View Opportunity</button>
+      </KeywordOpportunityPopover>
+    );
+
+    await user.click(screen.getByText("View Opportunity"));
+
+    expect(screen.queryByText("Opportunity Score")).not.toBeInTheDocument();
   });
 });

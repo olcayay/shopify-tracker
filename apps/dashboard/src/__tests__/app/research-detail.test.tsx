@@ -5,6 +5,7 @@ import { useParams } from "next/navigation";
 
 const mockFetchWithAuth = vi.fn();
 const mockPush = vi.fn();
+const mockHasFeature = vi.fn((slug: string) => slug === "keyword-score");
 
 vi.mock("next/navigation", async (importOriginal) => {
   const actual = (await importOriginal()) as Record<string, unknown>;
@@ -37,6 +38,10 @@ vi.mock("@/lib/auth-context", () => ({
     isLoading: false,
     fetchWithAuth: mockFetchWithAuth,
   }),
+}));
+
+vi.mock("@/contexts/feature-flags-context", () => ({
+  useFeatureFlag: (slug: string) => mockHasFeature(slug),
 }));
 
 // Mock components that have complex dependencies
@@ -249,6 +254,7 @@ const fullProjectData = {
 describe("ResearchProjectPage", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockHasFeature.mockImplementation((slug: string) => slug === "keyword-score");
     vi.mocked(useParams).mockReturnValue({
       platform: "shopify",
       id: "project-1",
@@ -406,5 +412,22 @@ describe("ResearchProjectPage", () => {
         screen.getByText("Keyword Opportunities")
       ).toBeInTheDocument();
     });
+  });
+
+  it("hides Keyword Opportunities section when keyword-score is disabled", async () => {
+    mockHasFeature.mockReturnValue(false);
+    mockFetchWithAuth.mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve(fullProjectData),
+    });
+
+    render(<ResearchProjectPage />);
+
+    await waitFor(() => {
+      expect(screen.getByText("Test Research Project")).toBeInTheDocument();
+    });
+
+    expect(screen.queryByText("Keyword Opportunities")).not.toBeInTheDocument();
+    expect(screen.queryByText("Opportunities")).not.toBeInTheDocument();
   });
 });

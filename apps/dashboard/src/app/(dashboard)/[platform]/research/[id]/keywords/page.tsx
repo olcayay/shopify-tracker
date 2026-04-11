@@ -33,6 +33,7 @@ import {
 import { LiveSearchTrigger } from "@/components/live-search-trigger";
 import { buildExternalSearchUrl, getPlatformName } from "@/lib/platform-urls";
 import type { PlatformId } from "@appranks/shared";
+import { useFeatureFlag } from "@/contexts/feature-flags-context";
 
 interface ResearchData {
   project: { id: string; name: string };
@@ -53,6 +54,7 @@ export default function ResearchKeywordsPage() {
   const id = params.id as string;
   const platform = params.platform as PlatformId;
   const canEdit = user?.role === "owner" || user?.role === "admin" || user?.role === "editor";
+  const hasKeywordScore = useFeatureFlag("keyword-score");
 
   const [data, setData] = useState<ResearchData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -216,6 +218,13 @@ export default function ResearchKeywordsPage() {
   const [sortKey, setSortKey] = useState<KwSortKey>("keyword");
   const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
 
+  useEffect(() => {
+    if (!hasKeywordScore && sortKey === "opportunity") {
+      setSortKey("results");
+      setSortDir("desc");
+    }
+  }, [hasKeywordScore, sortKey]);
+
   function toggleSort(key: KwSortKey) {
     if (sortKey === key) {
       setSortDir((d) => (d === "asc" ? "desc" : "asc"));
@@ -362,7 +371,9 @@ export default function ResearchKeywordsPage() {
                       </TableHead>
                     ))}
                     <TableHead className="text-right cursor-pointer select-none" onClick={() => toggleSort("results")}>Results <SortIcon col="results" /></TableHead>
-                    <TableHead className="text-right cursor-pointer select-none" onClick={() => toggleSort("opportunity")}>Opportunity <SortIcon col="opportunity" /></TableHead>
+                    {hasKeywordScore && (
+                      <TableHead className="text-right cursor-pointer select-none" onClick={() => toggleSort("opportunity")}>Opportunity Score <SortIcon col="opportunity" /></TableHead>
+                    )}
                     <TableHead className="w-16" />
                   </TableRow>
                 </TableHeader>
@@ -404,20 +415,22 @@ export default function ResearchKeywordsPage() {
                             <span className={animate}>{kw.totalResults != null ? formatNumber(kw.totalResults) : "\u2014"}</span>
                           )}
                         </TableCell>
-                        <TableCell className="text-right">
-                          {isPending ? (
-                            <Skeleton className="h-5 w-8 ml-auto rounded-full" />
-                          ) : opp ? (
-                            <Badge
-                              variant={opp.opportunityScore >= 60 ? "default" : "secondary"}
-                              className={`${animate} ${opp.opportunityScore >= 60 ? "bg-green-600" : opp.opportunityScore >= 30 ? "bg-amber-500" : ""}`}
-                            >
-                              {opp.opportunityScore}
-                            </Badge>
-                          ) : (
-                            <span className="text-muted-foreground">{"\u2014"}</span>
-                          )}
-                        </TableCell>
+                        {hasKeywordScore && (
+                          <TableCell className="text-right">
+                            {isPending ? (
+                              <Skeleton className="h-5 w-8 ml-auto rounded-full" />
+                            ) : opp ? (
+                              <Badge
+                                variant={opp.opportunityScore >= 60 ? "default" : "secondary"}
+                                className={`${animate} ${opp.opportunityScore >= 60 ? "bg-green-600" : opp.opportunityScore >= 30 ? "bg-amber-500" : ""}`}
+                              >
+                                {opp.opportunityScore}
+                              </Badge>
+                            ) : (
+                              <span className="text-muted-foreground">{"\u2014"}</span>
+                            )}
+                          </TableCell>
+                        )}
                         <TableCell>
                           <div className="flex items-center gap-0.5">
                             <LiveSearchTrigger keyword={kw.keyword} variant="icon" />

@@ -8,6 +8,7 @@ import { isPlatformId, PLATFORMS } from "@appranks/shared";
 import type { PlatformId } from "@appranks/shared";
 import type { KeywordOpportunityMetrics } from "@appranks/shared";
 import { extractWordGroups, filterKeywordsByWord } from "@/lib/keyword-word-groups";
+import { useFeatureFlag } from "@/contexts/feature-flags-context";
 import type { SimpleApp } from "./keywords-section-types";
 import { getDetailValue } from "./keywords-section-types";
 
@@ -15,6 +16,7 @@ export function useKeywordsSection(appSlug: string) {
   const { platform } = useParams();
   const caps = isPlatformId(platform as string) ? PLATFORMS[platform as PlatformId] : PLATFORMS.shopify;
   const { fetchWithAuth, user, account, refreshUser } = useAuth();
+  const hasKeywordScore = useFeatureFlag("keyword-score");
   const [keywords, setKeywords] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [query, setQuery] = useState("");
@@ -218,6 +220,14 @@ export function useKeywordsSection(appSlug: string) {
   // Fetch opportunity scores when keywords change (deduplicated by slug set)
   const prevOpportunitySlugsRef = useRef<string>("");
   useEffect(() => {
+    if (!hasKeywordScore) {
+      prevOpportunitySlugsRef.current = "";
+      setOpportunityData({});
+      setOpportunityLoading(false);
+      setShowScoreDetails(false);
+      return;
+    }
+
     if (keywords.length === 0) return;
     const slugs = keywords.map((kw: any) => kw.keywordSlug).filter(Boolean);
     if (slugs.length === 0) return;
@@ -237,7 +247,14 @@ export function useKeywordsSection(appSlug: string) {
       })
       .catch(() => {})
       .finally(() => setOpportunityLoading(false));
-  }, [keywords]);
+  }, [fetchWithAuth, hasKeywordScore, keywords]);
+
+  useEffect(() => {
+    if (!hasKeywordScore && (sortBySlug === "_score" || sortBySlug.startsWith("_s_") || sortBySlug.startsWith("_fp_") || sortBySlug.startsWith("_c_"))) {
+      setSortBySlug(appSlug);
+      setSortDirection("asc");
+    }
+  }, [appSlug, hasKeywordScore, sortBySlug]);
 
   // Click outside handler for suggestions
   useEffect(() => {

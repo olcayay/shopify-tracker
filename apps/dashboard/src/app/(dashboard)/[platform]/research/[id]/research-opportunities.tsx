@@ -14,6 +14,7 @@ import {
 import { ArrowUpDown, ArrowUp, ArrowDown } from "lucide-react";
 import Link from "next/link";
 import { formatNumber } from "@/lib/format-utils";
+import { useFeatureFlag } from "@/contexts/feature-flags-context";
 
 export function OpportunityTable({
   opportunities,
@@ -23,10 +24,18 @@ export function OpportunityTable({
     room: number; demand: number; competitorCount: number; totalResults: number | null;
   }[];
 }) {
+  const hasKeywordScore = useFeatureFlag("keyword-score");
   const { platform } = useParams();
   type OppSortKey = "keyword" | "opportunity" | "room" | "demand" | "competitors";
-  const [sortKey, setSortKey] = useState<OppSortKey>("opportunity");
+  const [sortKey, setSortKey] = useState<OppSortKey>(hasKeywordScore ? "opportunity" : "demand");
   const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
+
+  React.useEffect(() => {
+    if (!hasKeywordScore && sortKey === "opportunity") {
+      setSortKey("demand");
+      setSortDir("desc");
+    }
+  }, [hasKeywordScore, sortKey]);
 
   function toggleSort(key: OppSortKey) {
     if (sortKey === key) {
@@ -68,7 +77,9 @@ export function OpportunityTable({
         <TableHeader>
           <TableRow>
             <TableHead className="cursor-pointer select-none" onClick={() => toggleSort("keyword")} aria-sort={sortKey === "keyword" ? (sortDir === "asc" ? "ascending" : "descending") : "none"}>Keyword <SortIcon col="keyword" /></TableHead>
-            <TableHead className="text-right cursor-pointer select-none" onClick={() => toggleSort("opportunity")} aria-sort={sortKey === "opportunity" ? (sortDir === "asc" ? "ascending" : "descending") : "none"}>Opportunity <SortIcon col="opportunity" /></TableHead>
+            {hasKeywordScore && (
+              <TableHead className="text-right cursor-pointer select-none" onClick={() => toggleSort("opportunity")} aria-sort={sortKey === "opportunity" ? (sortDir === "asc" ? "ascending" : "descending") : "none"}>Opportunity Score <SortIcon col="opportunity" /></TableHead>
+            )}
             <TableHead className="text-right cursor-pointer select-none" onClick={() => toggleSort("room")} aria-sort={sortKey === "room" ? (sortDir === "asc" ? "ascending" : "descending") : "none"}>Room <SortIcon col="room" /></TableHead>
             <TableHead className="text-right cursor-pointer select-none" onClick={() => toggleSort("demand")} aria-sort={sortKey === "demand" ? (sortDir === "asc" ? "ascending" : "descending") : "none"}>Demand <SortIcon col="demand" /></TableHead>
             <TableHead className="text-right cursor-pointer select-none" onClick={() => toggleSort("competitors")} aria-sort={sortKey === "competitors" ? (sortDir === "asc" ? "ascending" : "descending") : "none"}>Competitors <SortIcon col="competitors" /></TableHead>
@@ -82,11 +93,13 @@ export function OpportunityTable({
                   {opp.keyword}
                 </Link>
               </TableCell>
-              <TableCell className="text-right">
-                <Badge variant={opp.opportunityScore >= 60 ? "default" : "secondary"}>
-                  {opp.opportunityScore}
-                </Badge>
-              </TableCell>
+              {hasKeywordScore && (
+                <TableCell className="text-right">
+                  <Badge variant={opp.opportunityScore >= 60 ? "default" : "secondary"}>
+                    {opp.opportunityScore}
+                  </Badge>
+                </TableCell>
+              )}
               <TableCell className="text-right text-sm">
                 <span className={opp.room >= 0.7 ? "text-green-600 dark:text-green-400" : opp.room >= 0.4 ? "text-yellow-600 dark:text-yellow-500" : "text-red-600 dark:text-red-400"}>
                   {roomLabel(opp.room)}

@@ -20,6 +20,7 @@ import { LiveSearchTrigger } from "@/components/live-search-trigger";
 import { KeywordTagBadge } from "@/components/keyword-tag-badge";
 import { KeywordTagManager } from "@/components/keyword-tag-manager";
 import { KeywordOpportunityPopover } from "@/components/keyword-opportunity-popover";
+import { useFeatureFlag } from "@/contexts/feature-flags-context";
 import type { KeywordOpportunityMetrics } from "@appranks/shared";
 import { type SimpleApp, SCORE_DETAIL_COLUMNS, getDetailValue, formatDetailValue, detailCellClass } from "./keywords-section-types";
 
@@ -70,11 +71,14 @@ export function KeywordsTable({
   onDeleteTag: (tagId: string) => Promise<void>;
   onUpdateTag: (tagId: string, color: string, name?: string) => Promise<void>;
 }) {
+  const hasKeywordScore = useFeatureFlag("keyword-score");
+  const showKeywordScoreDetails = hasKeywordScore && showScoreDetails;
+
   return (
     <Table>
       <TableHeader>
         <TableRow>
-          <TableHead {...(showScoreDetails ? { rowSpan: 2 } : {})}>
+          <TableHead {...(showKeywordScoreDetails ? { rowSpan: 2 } : {})}>
             <button
               onClick={() => onSort("_alpha")}
               className="flex items-center gap-0.5"
@@ -87,7 +91,7 @@ export function KeywordsTable({
             </button>
           </TableHead>
           {selectedApps.map((app) => (
-            <TableHead key={app.slug} className="text-center w-16" {...(showScoreDetails ? { rowSpan: 2 } : {})}>
+            <TableHead key={app.slug} className="text-center w-16" {...(showKeywordScoreDetails ? { rowSpan: 2 } : {})}>
               <button
                 onClick={() => onSort(app.slug)}
                 className="flex items-center justify-center gap-0.5 mx-auto"
@@ -104,32 +108,34 @@ export function KeywordsTable({
               </button>
             </TableHead>
           ))}
-          <TableHead className="text-right" {...(showScoreDetails ? { rowSpan: 2 } : {})}>Total Results</TableHead>
-          <TableHead className="text-center w-16" {...(showScoreDetails ? { rowSpan: 2 } : {})}>
-            <div className="flex items-center justify-center gap-1">
-              <button
-                onClick={() => onSort("_score")}
-                className="flex items-center justify-center gap-0.5"
-                title={"Opportunity score (0-100)\nWeighted: Room 40%, Demand 25%, Maturity 10%, Quality 25%\nClick column icon to expand score details."}
-              >
-                Score
-                {sortBySlug === "_score" && (
-                  <ArrowDown className={cn("h-3 w-3 text-muted-foreground transition-transform", sortDirection === "asc" && "rotate-180")} />
-                )}
-              </button>
-              <button
-                onClick={onToggleScoreDetails}
-                className={cn(
-                  "p-0.5 rounded hover:bg-accent transition-colors",
-                  showScoreDetails && "bg-accent text-foreground"
-                )}
-                title="Toggle score details"
-              >
-                <Columns3 className="h-3.5 w-3.5 text-muted-foreground" />
-              </button>
-            </div>
-          </TableHead>
-          {showScoreDetails && (
+          <TableHead className="text-right" {...(showKeywordScoreDetails ? { rowSpan: 2 } : {})}>Total Results</TableHead>
+          {hasKeywordScore && (
+            <TableHead className="text-center w-16" {...(showKeywordScoreDetails ? { rowSpan: 2 } : {})}>
+              <div className="flex items-center justify-center gap-1">
+                <button
+                  onClick={() => onSort("_score")}
+                  className="flex items-center justify-center gap-0.5"
+                  title={"Opportunity score (0-100)\nWeighted: Room 40%, Demand 25%, Maturity 10%, Quality 25%\nClick column icon to expand score details."}
+                >
+                  Score
+                  {sortBySlug === "_score" && (
+                    <ArrowDown className={cn("h-3 w-3 text-muted-foreground transition-transform", sortDirection === "asc" && "rotate-180")} />
+                  )}
+                </button>
+                <button
+                  onClick={onToggleScoreDetails}
+                  className={cn(
+                    "p-0.5 rounded hover:bg-accent transition-colors",
+                    showKeywordScoreDetails && "bg-accent text-foreground"
+                  )}
+                  title="Toggle score details"
+                >
+                  <Columns3 className="h-3.5 w-3.5 text-muted-foreground" />
+                </button>
+              </div>
+            </TableHead>
+          )}
+          {showKeywordScoreDetails && (
             <>
               <TableHead colSpan={4} className="bg-muted/30 text-xs font-medium text-muted-foreground text-center border-b">Scores</TableHead>
               <TableHead colSpan={5} className="bg-muted/30 text-xs font-medium text-muted-foreground text-center border-b">First Page</TableHead>
@@ -137,10 +143,10 @@ export function KeywordsTable({
               <TableHead colSpan={4} className="bg-muted/30 text-xs font-medium text-muted-foreground text-center border-b">Top Apps</TableHead>
             </>
           )}
-          <TableHead className="w-10" {...(showScoreDetails ? { rowSpan: 2 } : {})} />
-          {canEdit && <TableHead className="w-12" {...(showScoreDetails ? { rowSpan: 2 } : {})} />}
+          <TableHead className="w-10" {...(showKeywordScoreDetails ? { rowSpan: 2 } : {})} />
+          {canEdit && <TableHead className="w-12" {...(showKeywordScoreDetails ? { rowSpan: 2 } : {})} />}
         </TableRow>
-        {showScoreDetails && (
+        {showKeywordScoreDetails && (
           <TableRow>
             {SCORE_DETAIL_COLUMNS.map(({ key, label, tooltip }) => (
               <TableHead key={key} className="text-[11px] text-muted-foreground text-center px-2">
@@ -249,29 +255,31 @@ export function KeywordsTable({
                 kw.latestSnapshot?.totalResults != null ? kw.latestSnapshot.totalResults.toLocaleString() : "\u2014"
               )}
             </TableCell>
-            <TableCell className="text-center">
-              {opportunityLoading ? (
-                <Skeleton className="h-5 w-8 mx-auto rounded-full" />
-              ) : opportunityData[kw.keywordSlug] ? (
-                <KeywordOpportunityPopover metrics={opportunityData[kw.keywordSlug]}>
-                  <button
-                    className={cn(
-                      "inline-flex items-center justify-center h-6 min-w-[2rem] px-1.5 rounded-full text-xs font-semibold tabular-nums cursor-pointer transition-colors hover:opacity-80",
-                      opportunityData[kw.keywordSlug].opportunityScore >= 60
-                        ? "bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-300"
-                        : opportunityData[kw.keywordSlug].opportunityScore >= 30
-                          ? "bg-amber-100 text-amber-800 dark:bg-amber-900/50 dark:text-amber-300"
-                          : "bg-red-100 text-red-800 dark:bg-red-900/50 dark:text-red-300"
-                    )}
-                  >
-                    {opportunityData[kw.keywordSlug].opportunityScore}
-                  </button>
-                </KeywordOpportunityPopover>
-              ) : (
-                <span className="text-muted-foreground">&mdash;</span>
-              )}
-            </TableCell>
-            {showScoreDetails && SCORE_DETAIL_COLUMNS.map(({ key }) => {
+            {hasKeywordScore && (
+              <TableCell className="text-center">
+                {opportunityLoading ? (
+                  <Skeleton className="h-5 w-8 mx-auto rounded-full" />
+                ) : opportunityData[kw.keywordSlug] ? (
+                  <KeywordOpportunityPopover metrics={opportunityData[kw.keywordSlug]}>
+                    <button
+                      className={cn(
+                        "inline-flex items-center justify-center h-6 min-w-[2rem] px-1.5 rounded-full text-xs font-semibold tabular-nums cursor-pointer transition-colors hover:opacity-80",
+                        opportunityData[kw.keywordSlug].opportunityScore >= 60
+                          ? "bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-300"
+                          : opportunityData[kw.keywordSlug].opportunityScore >= 30
+                            ? "bg-amber-100 text-amber-800 dark:bg-amber-900/50 dark:text-amber-300"
+                            : "bg-red-100 text-red-800 dark:bg-red-900/50 dark:text-red-300"
+                      )}
+                    >
+                      {opportunityData[kw.keywordSlug].opportunityScore}
+                    </button>
+                  </KeywordOpportunityPopover>
+                ) : (
+                  <span className="text-muted-foreground">&mdash;</span>
+                )}
+              </TableCell>
+            )}
+            {showKeywordScoreDetails && SCORE_DETAIL_COLUMNS.map(({ key }) => {
               const data = opportunityData[kw.keywordSlug];
               const val = data ? getDetailValue(key, data) : null;
               return (
@@ -288,7 +296,7 @@ export function KeywordsTable({
                 </TableCell>
               );
             })}
-            {showScoreDetails && [0, 1, 2, 3].map((i) => {
+            {showKeywordScoreDetails && [0, 1, 2, 3].map((i) => {
               const data = opportunityData[kw.keywordSlug];
               const app = data?.topApps[i];
               return (

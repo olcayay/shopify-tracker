@@ -13,6 +13,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Plus, FlaskConical, Trash2, User, Star, Pencil, Check, X } from "lucide-react";
 import { ConfirmModal } from "@/components/confirm-modal";
 import { formatNumber, formatFullDate } from "@/lib/format-utils";
+import { useFeatureFlag } from "@/contexts/feature-flags-context";
 
 // ─── Types ──────────────────────────────────────────────────
 
@@ -321,8 +322,9 @@ export default function ResearchListPage() {
 // ─── Summary Cards (same logic as detail page) ─────────────
 
 function ProjectSummaryCards({ data }: { data: ResearchData }) {
+  const hasKeywordScore = useFeatureFlag("keyword-score");
   const hasCompetitors = data.competitors.length >= 2;
-  const hasOpportunities = data.opportunities.length > 0;
+  const hasOpportunities = hasKeywordScore && data.opportunities.length > 0;
   const hasKeywords = data.keywords.length > 0;
   const hasVirtualApps = (data.virtualApps?.length ?? 0) > 0;
 

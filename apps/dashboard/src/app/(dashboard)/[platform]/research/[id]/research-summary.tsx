@@ -8,6 +8,7 @@ import { Star } from "lucide-react";
 import { PLATFORMS, isPlatformId, type PlatformId } from "@appranks/shared";
 import type { ResearchData } from "./research-types";
 import { formatNumber } from "@/lib/format-utils";
+import { useFeatureFlag } from "@/contexts/feature-flags-context";
 
 // ─── Helpers ──────────────────────────────────────────────────
 
@@ -48,10 +49,11 @@ function StatCard({ emoji, title, gradient, children }: {
 // ─── SummaryCards ─────────────────────────────────────────────
 
 export function SummaryCards({ data }: { data: ResearchData }) {
+  const hasKeywordScore = useFeatureFlag("keyword-score");
   const { platform } = useParams();
   const caps = isPlatformId(platform as string) ? PLATFORMS[platform as PlatformId] : PLATFORMS.shopify;
   const hasCompetitors = data.competitors.length >= 2;
-  const hasOpportunities = data.opportunities.length > 0;
+  const hasOpportunities = hasKeywordScore && data.opportunities.length > 0;
   const hasKeywords = data.keywords.length > 0;
   const hasVirtualAppsEarly = (data.virtualApps?.length ?? 0) > 0;
 

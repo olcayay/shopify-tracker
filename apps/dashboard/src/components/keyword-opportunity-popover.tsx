@@ -5,6 +5,7 @@ import { Popover } from "radix-ui";
 import { Star, Shield, TrendingUp } from "lucide-react";
 import type { KeywordOpportunityMetrics } from "@appranks/shared";
 import { formatNumber } from "@/lib/format-utils";
+import { useFeatureFlag } from "@/contexts/feature-flags-context";
 
 function ScoreBar({ label, value, weight }: { label: string; value: number; weight: number }) {
   const pct = Math.round(value * 100);
@@ -45,7 +46,12 @@ export function KeywordOpportunityPopover({
   metrics: KeywordOpportunityMetrics;
   children: React.ReactNode;
 }) {
+  const hasKeywordScore = useFeatureFlag("keyword-score");
   const { opportunityScore, scores, stats, topApps } = metrics;
+
+  if (!hasKeywordScore) {
+    return <>{children}</>;
+  }
 
   return (
     <Popover.Root>
