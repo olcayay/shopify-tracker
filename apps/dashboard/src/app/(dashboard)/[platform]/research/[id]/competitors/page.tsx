@@ -34,6 +34,7 @@ import {
 } from "lucide-react";
 import { buildExternalAppUrl, getPlatformName } from "@/lib/platform-urls";
 import { PLATFORMS, isPlatformId, type PlatformId } from "@appranks/shared";
+import { useFeatureFlags } from "@/contexts/feature-flags-context";
 
 interface Competitor {
   slug: string; name: string; iconUrl: string | null;
@@ -57,9 +58,11 @@ interface ResearchData {
 export default function ResearchCompetitorsPage() {
   const params = useParams();
   const { fetchWithAuth, user } = useAuth();
+  const { hasFeature } = useFeatureFlags();
   const id = params.id as string;
   const platform = params.platform as PlatformId;
   const caps = isPlatformId(platform) ? PLATFORMS[platform] : PLATFORMS.shopify;
+  const hasAppSimilarity = hasFeature("app-similarity");
   const canEdit = user?.role === "owner" || user?.role === "admin" || user?.role === "editor";
 
   const [data, setData] = useState<ResearchData | null>(null);
