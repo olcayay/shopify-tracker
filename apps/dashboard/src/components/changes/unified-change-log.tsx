@@ -2,6 +2,7 @@
 
 import { useState, useMemo } from "react";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { ChevronDown, ChevronRight, Plus, Minus, ChevronsDownUp, ChevronsUpDown, ChevronLeft, List, CalendarDays } from "lucide-react";
 import { ChangeHeatmap } from "@/components/changes/change-heatmap";
 import { Badge } from "@/components/ui/badge";
@@ -254,6 +255,10 @@ function ChangeRenderer({ entry }: { entry: ChangeEntry }) {
 // ---------------------------------------------------------------------------
 
 export function UnifiedChangeLog({ entries, platform }: Props) {
+  const pathname = usePathname();
+  const appLinkPrefix = pathname.includes("/v2/")
+    ? `/${platform || "shopify"}/apps/v2`
+    : `/${platform || "shopify"}/apps`;
   const [viewMode, setViewMode] = useState<"list" | "calendar">("list");
   const [sourceFilter, setSourceFilter] = useState<"all" | "self" | "competitors">("all");
   const [fieldFilter, setFieldFilter] = useState<string>("all");
@@ -470,7 +475,7 @@ export function UnifiedChangeLog({ entries, platform }: Props) {
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2 flex-wrap">
                             <Link
-                              href={`/${platform || "shopify"}/apps/v2/${entry.appSlug}/intel/overview`}
+                              href={`${appLinkPrefix}/${entry.appSlug}`}
                               className="font-medium hover:underline"
                               onClick={(e) => e.stopPropagation()}
                             >

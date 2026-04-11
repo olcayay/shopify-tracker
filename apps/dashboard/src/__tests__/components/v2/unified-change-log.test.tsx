@@ -3,6 +3,10 @@ import { render, screen, fireEvent, within } from "@testing-library/react";
 import React from "react";
 import { UnifiedChangeLog, type ChangeEntry } from "@/components/changes/unified-change-log";
 
+vi.mock("next/navigation", () => ({
+  usePathname: () => "/shopify/apps/v1/my-app/changes",
+}));
+
 describe("UnifiedChangeLog", () => {
   const now = new Date();
   const yesterday = new Date(now.getTime() - 86400000);
@@ -131,11 +135,11 @@ describe("UnifiedChangeLog", () => {
     render(<UnifiedChangeLog entries={entries} platform="shopify" />);
     const appLinks = screen.getAllByRole("link", { name: "My App" });
     expect(appLinks.length).toBeGreaterThan(0);
-    expect(appLinks[0]).toHaveAttribute("href", "/shopify/apps/v2/my-app/intel/overview");
+    expect(appLinks[0]).toHaveAttribute("href", "/shopify/apps/my-app");
 
     const rivalLinks = screen.getAllByRole("link", { name: "Rival App" });
     expect(rivalLinks.length).toBeGreaterThan(0);
-    expect(rivalLinks[0]).toHaveAttribute("href", "/shopify/apps/v2/rival/intel/overview");
+    expect(rivalLinks[0]).toHaveAttribute("href", "/shopify/apps/rival");
   });
 
   it("Collapse All / Expand All toggle works", () => {

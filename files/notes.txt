@@ -4,7 +4,7 @@ Intel Changes Page UX (2026-04-11)
 PLA-1007: Expand by default, clickable app names, pagination
 - Entries now expanded by default — flipped from expandedIds to collapsedIds (empty Set = all expanded)
 - Added Collapse All / Expand All toggle button in filter bar
-- App names are now clickable <Link> elements pointing to /v2/{slug}/intel/overview
+- App names are now clickable <Link> elements with v1/v2-aware URLs
   - Uses stopPropagation to prevent expand/collapse when clicking the link
 - Client-side pagination (20 per page) — Previous/Next controls, page counter
   - Resets to page 1 when source or field filter changes
@@ -41,6 +41,17 @@ PLA-1010: Phase 0 — Unify v1/v2 Changes pages into shared implementation
   - apps/dashboard/src/app/(dashboard)/[platform]/apps/v2/[slug]/intel/changes/page.tsx (1 line re-export)
   - apps/dashboard/src/__tests__/app/app-changes.test.tsx (unified test)
   - apps/dashboard/src/__tests__/app/v2/changes.test.tsx (fetchChangeEntries tests)
+
+PLA-1015: Fix broken app links on Changes page (2026-04-11)
+- App links were hardcoded to `/v2/{slug}/intel/overview` — wrong destination and no v1/v2 awareness
+- Fix: use `usePathname()` to detect v1/v2 context, build links as `/{platform}/apps/{slug}` or `/{platform}/apps/v2/{slug}`
+- Added appLinkPrefix derived from pathname in UnifiedChangeLog component
+- 6 new tests: v1 links, v2 links, no /intel/overview, default platform, non-shopify platform, self app
+- Updated existing test to match new URL format
+- Files changed:
+  - apps/dashboard/src/components/changes/unified-change-log.tsx (bug fix)
+  - apps/dashboard/src/__tests__/components/unified-change-log.test.tsx (new)
+  - apps/dashboard/src/__tests__/components/v2/unified-change-log.test.tsx (updated)
 
 Bug Fix: appCardSubtitle scraping (2026-04-11)
 ===============================================
