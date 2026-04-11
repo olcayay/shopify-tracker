@@ -1,3 +1,20 @@
+System Admin (2026-04-11)
+========================
+
+PLA-1000: App Updates page — cross-platform change analysis
+- API: New endpoint GET /api/system-admin/app-updates
+  - Joins app_field_changes → apps for name, slug, platform
+  - Filters: platform, field, search (app name LIKE), dateFrom, dateTo
+  - Sorting: detectedAt asc/desc
+  - Pagination: page/limit with total count
+  - Returns distinct fields and platforms for filter dropdowns
+- Dashboard: New page at /system-admin/app-updates
+  - Filter bar: search input (debounced), platform dropdown, property dropdown, date range
+  - Table: App Name (linked), Platform badge, Property badge (color-coded), Before/After (expandable), Detection Date (sortable)
+  - Pagination with page controls
+- Sidebar: Added "App Updates" entry with GitCompareArrows icon
+- Tests: 15 unit tests (auth enforcement, pagination, filters, edge cases)
+
 Bug Fixes (2026-04-11)
 ======================
 

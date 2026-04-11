@@ -1,3 +1,6 @@
+System Admin (2026-04-11)
+  PLA-1000: App Updates page — cross-platform change analysis ✅
+
 Bug Fixes (2026-04-11)
   PLA-994: Fix developers page — empty table caused by query timeout ✅
   PLA-999: Enhance developers pages — competitor developers section, empty states ✅

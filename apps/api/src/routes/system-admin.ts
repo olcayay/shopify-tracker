@@ -39,6 +39,7 @@ import {
   notifications,
   featureFlags,
   accountFeatureFlags,
+  appFieldChanges,
 } from "@appranks/db";
 import { isPlatformId, PLATFORM_IDS, SCRAPER_SCHEDULES, getNextRunFromCron, getScheduleIntervalMs, findSchedule, SMOKE_PLATFORMS, SMOKE_CHECKS, BROWSER_PLATFORMS, getSmokeCheck, getSmokePlatform, countTotalSmokeChecks } from "@appranks/shared";
 import type { SmokeCheckName } from "@appranks/shared";
@@ -4114,6 +4115,98 @@ export const systemAdminRoutes: FastifyPluginAsync = async (app) => {
       return { logs, total: count, page, limit };
     },
   );
+
+  // GET /api/system-admin/app-updates — global app field changes across all platforms
+  app.get("/app-updates", async (request) => {
+    const query = request.query as {
+      page?: string;
+      limit?: string;
+      platform?: string;
+      field?: string;
+      search?: string;
+      dateFrom?: string;
+      dateTo?: string;
+      sortOrder?: string;
+    };
+
+    const page = Math.max(1, parseInt(query.page || "1", 10));
+    const limit = Math.min(200, Math.max(1, parseInt(query.limit || "50", 10)));
+    const offset = (page - 1) * limit;
+    const sortOrder = query.sortOrder === "asc" ? "asc" : "desc";
+
+    const conditions = [];
+
+    if (query.platform) {
+      conditions.push(eq(apps.platform, query.platform));
+    }
+    if (query.field) {
+      conditions.push(eq(appFieldChanges.field, query.field));
+    }
+    if (query.search) {
+      conditions.push(like(apps.name, `%${query.search}%`));
+    }
+    if (query.dateFrom) {
+      conditions.push(gte(appFieldChanges.detectedAt, new Date(query.dateFrom)));
+    }
+    if (query.dateTo) {
+      conditions.push(lte(appFieldChanges.detectedAt, new Date(query.dateTo)));
+    }
+
+    const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
+
+    const baseQuery = db
+      .select({
+        id: appFieldChanges.id,
+        appName: apps.name,
+        appSlug: apps.slug,
+        platform: apps.platform,
+        field: appFieldChanges.field,
+        oldValue: appFieldChanges.oldValue,
+        newValue: appFieldChanges.newValue,
+        detectedAt: appFieldChanges.detectedAt,
+      })
+      .from(appFieldChanges)
+      .innerJoin(apps, eq(appFieldChanges.appId, apps.id));
+
+    const [{ count: total }] = await db
+      .select({ count: sql<number>`count(*)::int` })
+      .from(appFieldChanges)
+      .innerJoin(apps, eq(appFieldChanges.appId, apps.id))
+      .where(whereClause);
+
+    const data = await baseQuery
+      .where(whereClause)
+      .orderBy(sortOrder === "asc" ? appFieldChanges.detectedAt : desc(appFieldChanges.detectedAt))
+      .limit(limit)
+      .offset(offset);
+
+    // Get distinct field names and platforms for filter dropdowns
+    const [distinctFields, distinctPlatforms] = await Promise.all([
+      db
+        .selectDistinct({ field: appFieldChanges.field })
+        .from(appFieldChanges)
+        .orderBy(appFieldChanges.field),
+      db
+        .selectDistinct({ platform: apps.platform })
+        .from(appFieldChanges)
+        .innerJoin(apps, eq(appFieldChanges.appId, apps.id))
+        .orderBy(apps.platform),
+    ]);
+
+    return {
+      data,
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages: Math.ceil(total / limit),
+      },
+      filters: {
+        fields: distinctFields.map((r) => r.field),
+        platforms: distinctPlatforms.map((r) => r.platform),
+      },
+    };
+  });
 };
 
 /**

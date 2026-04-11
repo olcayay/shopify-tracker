@@ -53,6 +53,7 @@ export interface MockDbOverrides {
 export function createMockDb(overrides: MockDbOverrides = {}) {
   const db: any = {
     select: (...args: any[]) => chainable(overrides.selectResult ?? []),
+    selectDistinct: (...args: any[]) => chainable(overrides.selectResult ?? []),
     selectDistinctOn: (...args: any[]) => chainable(overrides.selectResult ?? []),
     insert: (...args: any[]) => chainable(overrides.insertResult ?? []),
     update: (...args: any[]) => chainable([]),
@@ -65,6 +66,7 @@ export function createMockDb(overrides: MockDbOverrides = {}) {
     transaction: async (fn: (tx: any) => Promise<any>) => {
       const tx: any = {
         select: (...args: any[]) => chainable(overrides.selectResult ?? []),
+        selectDistinct: (...args: any[]) => chainable(overrides.selectResult ?? []),
         selectDistinctOn: (...args: any[]) => chainable(overrides.selectResult ?? []),
         insert: (...args: any[]) => chainable(overrides.insertResult ?? []),
         update: (...args: any[]) => chainable([]),
